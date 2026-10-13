@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reed Piano · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-instrument="reeds">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Reed Piano</h1>
+      <span class="sub">struck steel reeds, tuned with solder, heard as one plate of a charged capacitor</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card">
+          <div class="card-head">
+            <h2>Slow motion: reed, hammer and pickup slot</h2>
+            <div class="tools"><span id="motion-read"></span><button id="replay">Replay</button></div>
+          </div>
+          <canvas id="motion"></canvas>
+          <div class="caption">Left: the reed from the side (height exaggerated), the hammer below, the comb at the tip. Right: the slot end-on, with the potential solved as the reed moves; the grounded reed draws the field lines from the charged comb, most strongly where they overlap.</div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Pickup capacitance C(y)</h2><span class="muted" id="pickup-read"></span></div>
+          <canvas id="pickup"></canvas>
+          <div class="caption">Reed–comb capacitance vs the reed's height above the comb's mid-plane, from Laplace's equation. Band: this strike's swing; line: the rest height. Below: the comb voltage it produces. A swing that reaches over the top of the curve folds the waveform: even harmonics, the bark.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: bending modes of <b id="focus-name">C4</b></span></div>
+          <canvas id="spectrum"></canvas>
+          <div class="caption">Markers: the reed's own bending modes, inharmonic (mode 2 at 6–11 × f₁) and faint after the felt. The harmonics on the faint grid come from the pickup's C(y), not from the reed.</div>
+        </div>
+        <div class="card" id="info-card" data-view="Reed and modes">
+          <div class="card-head"><h2>Reed <span id="info-title">C4</span></h2><span class="muted" id="info-sub"></span></div>
+          <dl id="info"></dl>
+          <table id="modes"></table>
+          <div class="caption">This key's reed and its bending modes (FEM): ratio to f₁ beside a bare cantilever's, ring time, and each mode's level at the slot after the last strike.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>damper pedal: hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/reeds-main.js"></script>
+</body>
+</html>

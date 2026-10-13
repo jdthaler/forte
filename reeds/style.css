@@ -1,0 +1,10 @@
+/* The page's own palette and any layout beyond shared/instrument.css. */
+:root {
+  --accent: #e8a0c8;
+  --accent-2: #7cc6d8;
+  --accent-ink: #2a0f1e;
+  --steel: #c8ccd4;
+  --solder: #a9adb8;
+  --felt: #d9cfb8;
+}
+#motion-read { font-variant-numeric: tabular-nums; }
