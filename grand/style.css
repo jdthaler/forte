@@ -1,0 +1,10 @@
+/* The page's own palette and any layout beyond shared/instrument.css. */
+:root {
+  --accent: #7fb2ff;   /* piezo, bridge force */
+  --accent-2: #f2b46c; /* hammer, soundboard */
+  --accent-ink: #06101f;
+  --string: #c8ccd4;
+}
+
+#info { margin-bottom: 6px; }
+#modes td:first-child, #modes th:first-child { text-align: right; }
