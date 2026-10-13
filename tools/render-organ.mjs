@@ -5,7 +5,7 @@ import { mkdirSync } from 'node:fs';
 import { OrganEngine } from '../organ/src/organ-engine.js';
 import { buildGenerator } from '../organ/src/tonewheels.js';
 import { DEFAULTS, PRESETS } from '../organ/src/organ-params.js';
-import { roomIR } from '../src/impulses.js';
+import { roomIR } from '../shared/impulses.js';
 import { convolve, writeWav, FS_SHIM } from './audio-util.mjs';
 
 const FS = 48000;

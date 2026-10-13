@@ -1,0 +1,168 @@
+{
+ "blackhole": [
+  {
+   "file": "01-one-note-as-spin-rises-from-0-to-1-minus-1e-6.m4a",
+   "title": "One note as spin rises from 0 to 1 minus 1e 6"
+  },
+  {
+   "file": "02-phrase-gw150914-like-remnant.m4a",
+   "title": "Phrase gw150914 like remnant"
+  },
+  {
+   "file": "03-same-phrase-near-extremal-harmonic-bells.m4a",
+   "title": "Same phrase near extremal harmonic bells"
+  },
+  {
+   "file": "04-equal-masses-then-lopsided-q8.m4a",
+   "title": "Equal masses then lopsided q8"
+  },
+  {
+   "file": "05-face-on-then-edge-on-listen-in-stereo.m4a",
+   "title": "Face on then edge on listen in stereo"
+  },
+  {
+   "file": "06-inspiral-merger-ringdown-chirps.m4a",
+   "title": "Inspiral merger ringdown chirps"
+  }
+ ],
+ "huygens": [
+  {
+   "file": "01-c-major-uncoupled-then-coupled.m4a",
+   "title": "C major uncoupled then coupled"
+  },
+  {
+   "file": "02-coupling-swept-0-to-9pct-under-a-held-seventh-chord.m4a",
+   "title": "Coupling swept 0 to 9pct under a held seventh chord"
+  },
+  {
+   "file": "03-badly-tuned-keyboard-uncoupled-then-coupled.m4a",
+   "title": "Badly tuned keyboard uncoupled then coupled"
+  },
+  {
+   "file": "04-minor-second-merges-into-unison-as-coupling-rises.m4a",
+   "title": "Minor second merges into unison as coupling rises"
+  },
+  {
+   "file": "05-drifting-resistors-uncoupled-then-coupled.m4a",
+   "title": "Drifting resistors uncoupled then coupled"
+  }
+ ],
+ "organ": [
+  {
+   "file": "01-jazz-comping-perc-3rd-leslie-slow.m4a",
+   "title": "Jazz comping perc 3rd leslie slow"
+  },
+  {
+   "file": "02-full-organ-leslie-slow-fast-slow.m4a",
+   "title": "Full organ leslie slow fast slow"
+  },
+  {
+   "file": "03-motor-switched-off-mid-chord.m4a",
+   "title": "Motor switched off mid chord"
+  },
+  {
+   "file": "04-tuning-real-gears-then-ideal-harmonics.m4a",
+   "title": "Tuning real gears then ideal harmonics"
+  },
+  {
+   "file": "05-key-click-hard-contacts-then-click-filter.m4a",
+   "title": "Key click hard contacts then click filter"
+  },
+  {
+   "file": "06-scanner-vibrato-V3-then-chorus-C3.m4a",
+   "title": "Scanner vibrato V3 then chorus C3"
+  },
+  {
+   "file": "07-rock-grind-overdrive.m4a",
+   "title": "Rock grind overdrive"
+  },
+  {
+   "file": "08-mains-50Hz-on-a-60Hz-organ.m4a",
+   "title": "Mains 50Hz on a 60Hz organ"
+  }
+ ],
+ "piano": [
+  {
+   "file": "00-concert-grand-steel-wire.m4a",
+   "title": "Concert grand steel wire"
+  },
+  {
+   "file": "01-square-bar.m4a",
+   "title": "Square bar"
+  },
+  {
+   "file": "02-triangular-bar.m4a",
+   "title": "Triangular bar"
+  },
+  {
+   "file": "03-ribbon-face-on.m4a",
+   "title": "Ribbon face on"
+  },
+  {
+   "file": "04-ribbon-twisted-by-an-off-centre-strike.m4a",
+   "title": "Ribbon twisted by an off centre strike"
+  },
+  {
+   "file": "05-ribbon-rolled-30-both-bending-axes.m4a",
+   "title": "Ribbon rolled 30 both bending axes"
+  },
+  {
+   "file": "06-ribbon-edge-on-hard-axis.m4a",
+   "title": "Ribbon edge on hard axis"
+  },
+  {
+   "file": "07-thin-ribbon-40-1-torsion-transverse.m4a",
+   "title": "Thin ribbon 40 1 torsion transverse"
+  },
+  {
+   "file": "08-triangular-tapered-ribbon.m4a",
+   "title": "Triangular tapered ribbon"
+  },
+  {
+   "file": "09-carbon-fibre-ribbon-soft-in-shear.m4a",
+   "title": "Carbon fibre ribbon soft in shear"
+  },
+  {
+   "file": "10-nylon-strings.m4a",
+   "title": "Nylon strings"
+  },
+  {
+   "file": "11-hammer-at-the-middle-odd-partials-only.m4a",
+   "title": "Hammer at the middle odd partials only"
+  },
+  {
+   "file": "12-thick-stiff-wire-very-inharmonic.m4a",
+   "title": "Thick stiff wire very inharmonic"
+  }
+ ],
+ "tines": [
+  {
+   "file": "01-stage-piano-phrase.m4a",
+   "title": "Stage piano phrase"
+  },
+  {
+   "file": "02-same-note-pp-to-ff-pickup-bark.m4a",
+   "title": "Same note pp to ff pickup bark"
+  },
+  {
+   "file": "03-pickup-voicing-centred-then-off-centre.m4a",
+   "title": "Pickup voicing centred then off centre"
+  },
+  {
+   "file": "04-tone-bar-matched-then-removed.m4a",
+   "title": "Tone bar matched then removed"
+  },
+  {
+   "file": "05-tone-bar-detuned-40-cents.m4a",
+   "title": "Tone bar detuned 40 cents"
+  },
+  {
+   "file": "06-strike-point-default-then-at-clamp.m4a",
+   "title": "Strike point default then at clamp"
+  },
+  {
+   "file": "07-suitcase-stereo-vibrato.m4a",
+   "title": "Suitcase stereo vibrato"
+  }
+ ]
+}

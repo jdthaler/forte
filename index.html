@@ -3,89 +3,51 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ribbon Piano</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Forte — keyboard instruments built from physics</title>
+  <meta name="description" content="Playable keyboard instruments synthesised live from their physics: pianos, tonewheel organs, electric pianos, synchronising oscillators and black holes. Play with a computer keyboard or MIDI.">
+  <meta property="og:title" content="Forte — keyboard instruments built from physics">
+  <meta property="og:description" content="Pianos, organs, electric pianos, synchronising oscillators and black holes — every sound computed from the equations of motion, with the physics on the knobs.">
+  <link rel="stylesheet" href="landing.css">
 </head>
 <body>
-  <header>
-    <div class="brand">
-      <h1>Ribbon Piano</h1>
-      <span class="sub">physically modelled strings, bars &amp; ribbons</span>
-      <a class="nav" href="organ/">Tonewheel organ</a>
-      <a class="nav" href="rhodes/">Tine piano</a>
-      <a class="nav" href="sync/">Huygens keyboard</a>
-      <a class="nav" href="ringdown/">Black-hole keyboard</a>
-    </div>
-    <div class="status">
-      <button id="start" class="primary">Start audio</button>
-      <button id="midi-btn">Enable MIDI</button>
-      <span id="midi" class="pill">MIDI off</span>
-      <span id="cpu" class="pill">audio off</span>
-      <button id="panic" title="Silence everything">Panic</button>
+  <header class="hero">
+    <canvas id="modes" aria-hidden="true"></canvas>
+    <div class="hero-text">
+      <h1>Forte</h1>
+      <p class="lede">Keyboard instruments built from physics.</p>
+      <p class="intro">
+        Every sound here is computed live in your browser from the equations of motion of its instrument —
+        stiff strings and felt hammers, gear-driven tonewheels, steel tines, bouncing contacts, neon lamps, spinning black holes.
+        No samples. Play with your computer keyboard or a MIDI keyboard, and turn the knobs that real instruments hide:
+        the shape of the string, where the hammer lands, how stiff the felt is, how fast the black hole spins.
+      </p>
+      <p class="hero-links"><a href="#instruments" class="button primary">Choose an instrument</a> <a href="https://github.com/jdthaler/forte" class="button">Source on GitHub</a></p>
     </div>
   </header>
 
-  <main>
-    <aside id="controls">
-      <div class="preset-row">
-        <select id="preset" aria-label="Preset"></select>
-        <button id="reset">Reset</button>
-      </div>
-      <div id="groups"></div>
-    </aside>
+  <main id="instruments"></main>
 
-    <section id="views">
-      <div class="card" id="motion-card">
-        <div class="card-head">
-          <h2>Slow motion after the strike</h2>
-          <div class="tools">
-            <label>speed
-              <select id="speed">
-                <option value="0.01">1/100</option>
-                <option value="0.00333" selected>1/300</option>
-                <option value="0.001">1/1000</option>
-              </select>
-            </label>
-            <button id="replay">Replay</button>
-          </div>
-        </div>
-        <canvas id="motion"></canvas>
-      </div>
-
-      <div class="row">
-        <div class="card" id="spectrum-card">
-          <div class="card-head">
-            <h2>Partials</h2>
-            <div class="tabs" role="tablist">
-              <button class="tab active" data-mode="spectrum">Spectrum</button>
-              <button class="tab" data-mode="inharm">Inharmonicity</button>
-            </div>
-          </div>
-          <div class="caption" id="spec-caption"></div>
-          <canvas id="spectrum"></canvas>
-          <div class="legend" id="legend"></div>
-        </div>
-
-        <div class="card" id="info-card">
-          <div class="card-head"><h2 id="info-title">C4</h2><span id="info-sub" class="muted"></span></div>
-          <canvas id="section"></canvas>
-          <dl id="info"></dl>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <div class="kb-help">
-      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
-      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
-      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="vel"></b></span>
-      <span>sustain: hold <kbd>Space</kbd> <b id="sus" class="off">off</b></span>
+  <section class="how">
+    <div>
+      <h2>Physics, not samples</h2>
+      <p>Each instrument is reduced to its vibrating parts — modes of strings, beams, plates, circuits or spacetime — and integrated sample by sample in an AudioWorklet. Nonlinear parts (hammers, pickups, friction, flames) are solved exactly at every step. Each page explains its equations and shows the physics as you play.</p>
     </div>
-    <div id="keyboard"></div>
+    <div>
+      <h2>Play it</h2>
+      <p>The bottom two letter rows of your keyboard are the white and black keys (<kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd>); arrow keys shift the octave and adjust each instrument’s main control. A MIDI keyboard works in Chrome and Edge. Headphones help: some instruments are in stereo for physical reasons.</p>
+    </div>
+    <div>
+      <h2>Open and tested</h2>
+      <p>Everything is plain JavaScript with no build step, MIT-licensed, and checked by physics tests — against textbook cantilevers, published black-hole frequencies, Arnold tongues and more. Each instrument’s README has the equations, the numbers, and what is simplified.</p>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>© 2026 Jesse Thaler · <a href="https://github.com/jdthaler/forte/blob/main/LICENSE">MIT License</a> · <a href="https://github.com/jdthaler/forte">GitHub</a></span>
+    <span class="muted">Instrument names like Hammond, Rhodes and Wurlitzer belong to their owners; Forte’s instruments are physical models inspired by them.</span>
   </footer>
 
-  <div id="toast" hidden></div>
-  <script type="module" src="src/main.js"></script>
+  <audio id="player" preload="none"></audio>
+  <script type="module" src="landing.js"></script>
 </body>
 </html>

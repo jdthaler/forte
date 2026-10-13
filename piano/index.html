@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ribbon Piano · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-instrument="piano">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Ribbon Piano</h1>
+      <span class="sub">physically modelled strings, bars &amp; ribbons</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="card" id="motion-card">
+        <div class="card-head">
+          <h2>Slow motion after the strike</h2>
+          <div class="tools">
+            <label>speed
+              <select id="speed">
+                <option value="0.01">1/100</option>
+                <option value="0.00333" selected>1/300</option>
+                <option value="0.001">1/1000</option>
+              </select>
+            </label>
+            <button id="replay">Replay</button>
+          </div>
+        </div>
+        <canvas id="motion"></canvas>
+      </div>
+
+      <div class="row">
+        <div class="card" id="spectrum-card">
+          <div class="card-head">
+            <h2>Partials</h2>
+            <div class="tabs" role="tablist">
+              <button class="tab active" data-mode="spectrum">Spectrum</button>
+              <button class="tab" data-mode="inharm">Inharmonicity</button>
+            </div>
+          </div>
+          <div class="caption" id="spec-caption"></div>
+          <canvas id="spectrum"></canvas>
+          <div class="legend" id="legend"></div>
+        </div>
+
+        <div class="card" id="info-card">
+          <div class="card-head"><h2 id="info-title">C4</h2><span id="info-sub" class="muted"></span></div>
+          <canvas id="section"></canvas>
+          <dl id="info"></dl>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="vel"></b></span>
+      <span>sustain: hold <kbd>Space</kbd> <b id="sus" class="off">off</b></span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

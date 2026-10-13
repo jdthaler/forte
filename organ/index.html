@@ -3,18 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Tonewheel Organ</title>
+  <title>Tonewheel Organ · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-instrument="organ">
   <header>
     <div class="brand">
+      <nav data-forte-nav></nav>
       <h1>Tonewheel Organ</h1>
       <span class="sub">a physically modelled B-3 and Leslie</span>
-      <a class="nav" href="../">Ribbon piano</a>
-      <a class="nav" href="../rhodes/">Tine piano</a>
-      <a class="nav" href="../sync/">Huygens keyboard</a>
-      <a class="nav" href="../ringdown/">Black-hole keyboard</a>
     </div>
     <div class="status">
       <button id="start" class="primary">Start audio</button>
@@ -110,6 +108,7 @@
   </footer>
 
   <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
   <script type="module" src="src/organ-main.js"></script>
 </body>
 </html>

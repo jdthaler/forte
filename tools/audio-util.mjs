@@ -1,6 +1,6 @@
 // audio-util.mjs — FFT convolution, WAV writing, an AudioContext stand-in for Node.
 
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 
 export function fft(re, im, inv) {
   const n = re.length;
@@ -59,3 +59,48 @@ export const FS_SHIM = (FS) => ({
   sampleRate: FS,
   createBuffer: (c, n) => { const ch = Array.from({ length: c }, () => new Float32Array(n)); return { getChannelData: (i) => ch[i] }; },
 });
+
+// Run an engine (the shared/worklet.js contract) through a list of events,
+// in 128-sample blocks like the AudioWorklet. Events:
+//   [t, 'on', key, velocity, data?] | [t, 'off', key] | [t, 'sus', bool] | [t, 'params', P] | [t, 'msg', {…}]
+export function renderEngine(engine, seconds, events, FS) {
+  const n = Math.round(seconds * FS), L = new Float64Array(n), R = new Float64Array(n);
+  const bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
+  const ev = events.map(([t, type, a, b, c]) => ({ s: Math.round(t * FS), type, a, b, c })).sort((x, y) => x.s - y.s);
+  let j = 0;
+  for (let s = 0; s < n; s += bl) {
+    while (j < ev.length && ev[j].s <= s) {
+      const { type, a, b, c } = ev[j++];
+      if (type === 'on') engine.noteOn(a, b, c);
+      else if (type === 'off') engine.noteOff(a);
+      else if (type === 'sus') engine.setSustain?.(a);
+      else if (type === 'params') engine.setParams(a);
+      else engine.handle?.(a);
+    }
+    engine.process(bL, bR, bl);
+    for (let i = 0; i < bl && s + i < n; i++) { L[s + i] = bL[i]; R[s + i] = bR[i]; }
+  }
+  return [L, R];
+}
+
+// Add the same synthetic room the pages use (shared/impulses.js), `amount` 0..1.
+export async function withRoom([L, R], amount, FS, seconds = 2.0) {
+  const { roomIR } = await import('../shared/impulses.js');
+  const ir = roomIR(FS_SHIM(FS), seconds);
+  return [L, R].map((x, ch) => {
+    const h = ir.getChannelData(ch);
+    let e = 0; for (const v of h) e += v * v;
+    const r = convolve(x, h.map((v) => v / Math.sqrt(e)));
+    return x.map((v, i) => v + 0.6 * amount * r[i]);
+  });
+}
+
+// Write examples/<slug>/<name>.wav normalised to −3 dBFS peak.
+export function saveExample(slug, name, out, FS) {
+  let pk = 1e-9;
+  for (const ch of out) for (const v of ch) pk = Math.max(pk, Math.abs(v));
+  const url = new URL(`../examples/${slug}/${name}.wav`, import.meta.url);
+  mkdirSync(new URL('./', url), { recursive: true });
+  writeWav(url, out, 0.7 / pk, FS);
+  console.log(`examples/${slug}/${name}.wav`);
+}

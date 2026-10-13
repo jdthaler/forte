@@ -2,7 +2,7 @@
 
 import { GROUPS, ALL_PARAMS, DEFAULTS, PRESETS } from './organ-params.js';
 import { buildGenerator, keyAnalysis, keyWheel, percWheel, centsOff, wheelSpec, wheelName, gearFreq, etFreq, DRAWBARS, NUM_WHEELS, KEY_LO, KEY_HI, drawbarGain } from './tonewheels.js';
-import { roomIR } from '../../src/impulses.js';
+import { roomIR } from '../../shared/impulses.js';
 import { GeneratorView, LeslieView, OutputView, drawScanner, BAR_COLORS } from './organ-viz.js';
 
 const $ = (s) => document.querySelector(s);

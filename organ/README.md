@@ -6,8 +6,8 @@ line, a tube drive, and a rotating horn and drum heard by two microphones.
 There are no samples and no envelopes. The attack is the key contacts
 closing.
 
-Run the same server as the piano (`python3 -m http.server 8765` in the project
-root) and open <http://localhost:8765/organ/>.
+Play it at <https://forte.jthaler.net/organ/> (or locally — see the
+[main README](../README.md)).
 
 | Input | |
 |---|---|

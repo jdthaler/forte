@@ -4,11 +4,11 @@
 // self-oscillator. Prints how far each interval stays from just intonation.
 // Usage: node tools/lock-comparison.mjs        (takes ~1 minute)
 
-import { stringModel } from '../sync/experiments/bowed-string.js';
-import { SyncEngine } from '../sync/experiments/bowed-engine.js';
-import { PipeEngine } from '../sync/experiments/reed-pipe-engine.js';
-import { NeonEngine } from '../sync/src/neon-engine.js';
-import { keyFreq } from '../sync/src/tuning.js';
+import { stringModel } from '../huygens/experiments/bowed-string.js';
+import { SyncEngine } from '../huygens/experiments/bowed-engine.js';
+import { PipeEngine } from '../huygens/experiments/reed-pipe-engine.js';
+import { NeonEngine } from '../huygens/src/neon-engine.js';
+import { keyFreq } from '../huygens/src/tuning.js';
 
 const FS = 48000, c = (r) => 1200 * Math.log2(r);
 const pairs = [[67, 1.5, 'fifth'], [64, 1.25, 'major third']];

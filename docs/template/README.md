@@ -1,0 +1,42 @@
+# {name}
+
+One paragraph: what the instrument is, what is physical about it, and what
+you can hear that a sample could not give you.
+
+Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/{slug}/>
+(or locally — see the [main README](../README.md)).
+
+| Input | |
+|---|---|
+| `Z…/` and `Q…]` rows | play |
+| `←` `→` | octave |
+| `↑` `↓` | velocity |
+| `Space` | sustain |
+| MIDI | notes, velocity, sustain pedal (CC64) |
+
+## The physics
+
+The model, from the mechanism to the sound, one stage per paragraph. Give
+the equations and the numbers (and where the numbers come from). Say which
+parameters on the page change what.
+
+## What to listen for
+
+The physical effects the demos in `examples/{slug}/` isolate, and how to
+hear each one on the page.
+
+## Files
+
+```
+{slug}/index.html, style.css          page
+{slug}/src/{slug}-model.js            physics (no audio, no DOM)
+{slug}/src/{slug}-engine.js           real-time engine (AudioWorklet and Node)
+{slug}/src/{slug}-params.js           parameters and presets
+{slug}/src/{slug}-main.js             page wiring and views
+test/{slug}-tests.mjs                 node test/{slug}-tests.mjs
+tools/render-{slug}.mjs               node tools/render-{slug}.mjs → examples/{slug}/
+```
+
+## Simplifications
+
+What is left out or approximated, and how much it matters.

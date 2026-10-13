@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Black-Hole Keyboard · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-instrument="blackhole">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Black-Hole Keyboard</h1>
+      <span class="sub">every key a Kerr black hole, ringing in its quasinormal modes</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="voices" class="pill">audio off</span>
+      <button id="panic">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card">
+          <div class="card-head"><h2>Quasinormal spectrum</h2><span class="muted" id="plane-read"></span></div>
+          <canvas id="plane"></canvas>
+          <div class="caption">Every mode (l, m, n) of a Kerr hole as spin runs from 0 to 1 − 10⁻⁶ (lines), and where it is now (dots, sized by how loudly this merger excites it). Right is higher pitch; higher up rings longer. As a → 1 the l = m modes slide onto m·Ω_H (dashed) and stop damping.</div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2 id="bh-title">The black hole under C4</h2></div>
+          <canvas id="kerr"></canvas>
+          <dl id="info"></dl>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card">
+          <div class="card-head">
+            <h2>Gravitational waves of the last note</h2>
+            <div class="tabs"><button class="tab active" data-mode="wave">Strain</button><button class="tab" data-mode="spec">Spectrum</button></div>
+          </div>
+          <canvas id="wave"></canvas>
+          <div class="legend"><span><i style="background:var(--plus)"></i>h₊ (left)</span><span><i style="background:var(--cross)"></i>h× (right)</span></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Modes in this note</h2></div>
+          <table id="modes"></table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>spin <kbd>↑</kbd><kbd>↓</kbd> <b id="spin-read"></b></span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/ringdown-main.js"></script>
+</body>
+</html>
