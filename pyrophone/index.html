@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pyrophone · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-instrument="pyrophone">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Pyrophone</h1>
+      <span class="sub">flames in glass tubes that sing by themselves: thermoacoustics and a subcritical Hopf bifurcation</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card">
+          <div class="card-head"><h2>Bifurcation diagram</h2><span class="muted" id="bif-info"></span></div>
+          <canvas id="bif"></canvas>
+          <div class="caption">Steady amplitude against heater gain. Solid: stable, dashed: unstable. In the shaded band between the fold and the Hopf point a silent tube stays silent and a singing one keeps singing. Dots: the tubes sounding now.</div>
+        </div>
+        <div class="card" data-view="Tube">
+          <div class="card-head"><h2>Tube <b id="focus-name">C4</b></h2><span class="muted" id="tube-info"></span></div>
+          <canvas id="tube"></canvas>
+          <div class="caption">The standing wave, strobed into slow motion. Gas slices move with the air (orange: compressed, blue: rarefied); the flame sits at x_f.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the hot tube's modes (blue), the predicted harmonics of the note (orange)</span></div>
+          <canvas id="spectrum"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Phase portrait of mode 1</h2></div>
+          <canvas id="phase"></canvas>
+          <div class="caption">(η₁, η̇₁/ω) of the focused tube. Inside the dashed cycle a sound dies; outside it spirals out to the solid one.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>hold <kbd>Space</kbd> to keep the flames apart <b id="hold" class="off">off</b></span>
+      <span>mod wheel: flame power</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/pyrophone-main.js"></script>
+</body>
+</html>
