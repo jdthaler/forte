@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tine Piano</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1>Tine Piano</h1>
+      <span class="sub">a physically modelled Rhodes-style electric piano</span>
+      <a class="nav" href="../">Ribbon piano</a>
+      <a class="nav" href="../organ/">Tonewheel organ</a>
+      <a class="nav" href="../sync/">Huygens keyboard</a>
+      <a class="nav" href="../ringdown/">Black-hole keyboard</a>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card">
+          <div class="card-head">
+            <h2>Slow motion: tine, tone bar, pickup</h2>
+            <div class="tools">
+              <label>speed
+                <select id="speed">
+                  <option value="0.02">1/50</option>
+                  <option value="0.005" selected>1/200</option>
+                  <option value="0.001">1/1000</option>
+                </select>
+              </label>
+              <button id="replay">Replay</button>
+            </div>
+          </div>
+          <canvas id="motion"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Pickup transfer</h2><span class="muted" id="pickup-read"></span></div>
+          <canvas id="pickup"></canvas>
+          <div class="caption">Curve: flux Φ through the coil vs tine-tip height Y. Band: how far this strike swings the tip. Output ∝ −dΦ/dt, shown below for a few cycles. A wide swing across the bump makes harmonics.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: coupled modes of <b id="focus-name">C4</b></span></div>
+          <canvas id="spectrum"></canvas>
+          <div class="legend" id="legend"></div>
+        </div>
+        <div class="card" id="info-card">
+          <div class="card-head"><h2 id="info-title">C4</h2><span class="muted" id="info-sub"></span></div>
+          <dl id="info"></dl>
+          <table id="modes"></table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="vel"></b></span>
+      <span>sustain: hold <kbd>Space</kbd> <b id="sus" class="off">off</b></span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="src/rhodes-main.js"></script>
+</body>
+</html>

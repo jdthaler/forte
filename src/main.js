@@ -1,0 +1,633 @@
+// main.js — UI, audio graph, computer keyboard + MIDI input, model cache.
+
+import { GROUPS, ALL_PARAMS, DEFAULTS, PRESETS } from './params.js';
+import { computeKeyModel, buildVoiceData, noteName, MATERIALS } from './physics.js';
+import { PianoEngine } from './engine.js';
+import { soundboardIR, roomIR } from './impulses.js';
+import { MotionView, SpectrumView, drawSection, FAMILY } from './viz.js';
+
+const $ = (s) => document.querySelector(s);
+const STORE = 'ribbon-piano/params/v1';
+const KEY_LO = 21, KEY_HI = 108;
+
+// ---------------------------------------------------------------------------
+// state
+
+function loadParams() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE) || 'null');
+    return s ? { ...DEFAULTS, ...s } : { ...DEFAULTS };
+  } catch { return { ...DEFAULTS }; }
+}
+function saveParams() {
+  try { localStorage.setItem(STORE, JSON.stringify(P)); } catch { /* storage unavailable */ }
+}
+
+let P = loadParams();
+let version = 1;
+let fs = 48000;
+let base = 48;                 // MIDI note of the lower-row "Z" key
+let focusKey = 60;
+let sustain = false;
+const cache = new Map();       // key → { version, model, data }
+const sent = new Set();        // keys whose current-version data the worklet holds
+const held = new Map();        // keyboard code → MIDI key
+const sounding = new Map();    // MIDI key → number of sources holding it
+
+function keyData(key) {
+  let c = cache.get(key);
+  if (!c || c.version !== version) {
+    const model = computeKeyModel(key, P, fs);
+    c = { version, model, data: buildVoiceData(model, P, version) };
+    cache.set(key, c);
+  }
+  return c;
+}
+
+const engineParams = () => ({ gainV: P.gainV, gainH: P.gainH, gainT: P.gainT, damper: P.damper, width: P.width });
+
+// ---------------------------------------------------------------------------
+// audio
+
+let audio = null, audioStarting = null;
+
+function startAudio() {
+  if (audio) {
+    if (audio.ctx.state !== 'running') audio.ctx.resume();
+    return Promise.resolve(audio);
+  }
+  if (audioStarting) return audioStarting;
+  audioStarting = (async () => {
+    const ctx = new AudioContext({ latencyHint: 'interactive' });
+    await ctx.audioWorklet.addModule('src/engine.js');
+    await ctx.audioWorklet.addModule('src/worklet.js');
+    const node = new AudioWorkletNode(ctx, 'piano-processor', {
+      numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
+    });
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 8192;
+    analyser.smoothingTimeConstant = 0.55;
+    const dry = ctx.createGain(), sb = ctx.createConvolver(), sbGain = ctx.createGain();
+    const bus = ctx.createGain(), room = ctx.createConvolver(), roomGain = ctx.createGain();
+    const master = ctx.createGain(), limiter = ctx.createDynamicsCompressor();
+    sb.buffer = soundboardIR(ctx);
+    room.buffer = roomIR(ctx);
+    limiter.threshold.value = -4;
+    limiter.knee.value = 4;
+    limiter.ratio.value = 12;
+    limiter.attack.value = 0.002;
+    limiter.release.value = 0.2;
+    node.connect(analyser);
+    node.connect(dry).connect(bus);
+    node.connect(sb).connect(sbGain).connect(bus);
+    bus.connect(master);
+    bus.connect(room).connect(roomGain).connect(master);
+    master.connect(limiter).connect(ctx.destination);
+    node.port.onmessage = (e) => onWorklet(e.data);
+
+    if (ctx.sampleRate !== fs) { fs = ctx.sampleRate; bumpVersion(); }
+    audio = { ctx, node, analyser, dry, sbGain, roomGain, master };
+    applyMix();
+    node.port.postMessage({ type: 'params', params: engineParams() });
+    node.port.postMessage({ type: 'sustain', on: sustain });
+    spectrum.setAnalyser(analyser);
+    if (ctx.state !== 'running') await ctx.resume();
+    $('#start').textContent = `Audio on · ${(ctx.sampleRate / 1000).toFixed(1)} kHz`;
+    $('#start').classList.add('running');
+    return audio;
+  })();
+  audioStarting.catch((err) => { toast(`Audio failed to start: ${err.message}`); audioStarting = null; });
+  return audioStarting;
+}
+
+function applyMix() {
+  if (!audio) return;
+  const t = audio.ctx.currentTime;
+  audio.dry.gain.setTargetAtTime(1 - 0.75 * P.soundboard, t, 0.02);
+  audio.sbGain.gain.setTargetAtTime(1.1 * P.soundboard, t, 0.02);
+  audio.roomGain.gain.setTargetAtTime(0.55 * P.room, t, 0.02);
+  audio.master.gain.setTargetAtTime(P.volume, t, 0.02);
+}
+
+function onWorklet(m) {
+  if (m.type === 'stats') {
+    const el = $('#cpu');
+    el.textContent = `CPU ${(m.load * 100).toFixed(0)} % · ${m.voices} voices · ${m.modes} modes`;
+    el.classList.toggle('hot', m.load > 0.7);
+  } else if (m.type === 'error') {
+    toast(`${noteName(m.key)}: ${m.message} — voice silenced`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// notes
+
+async function noteOn(key, velocity) {
+  if (key < KEY_LO || key > KEY_HI) return;
+  sounding.set(key, (sounding.get(key) || 0) + 1);
+  keyboardView.set(key, true);
+  const a = await startAudio();
+  const c = keyData(key);
+  const msg = { type: 'noteOn', key, velocity };
+  if (!sent.has(key)) { msg.data = c.data; sent.add(key); }
+  a.node.port.postMessage(msg);
+  setFocus(key, velocity);
+}
+
+function noteOff(key) {
+  const n = (sounding.get(key) || 0) - 1;
+  if (n > 0) { sounding.set(key, n); return; }
+  sounding.delete(key);
+  keyboardView.set(key, false);
+  if (audio) audio.node.port.postMessage({ type: 'noteOff', key });
+  else if (audioStarting) audioStarting.then((a) => a.node.port.postMessage({ type: 'noteOff', key }));
+}
+
+function setSustain(on) {
+  sustain = on;
+  const el = $('#sus');
+  el.textContent = on ? 'on' : 'off';
+  el.className = on ? 'on' : 'off';
+  if (audio) audio.node.port.postMessage({ type: 'sustain', on });
+}
+
+function panic() {
+  if (audio) audio.node.port.postMessage({ type: 'panic' });
+  sounding.clear();
+  held.clear();
+  keyboardView.clearAll();
+}
+
+// ---------------------------------------------------------------------------
+// computer keyboard
+
+const LOW = ['KeyZ', 'KeyS', 'KeyX', 'KeyD', 'KeyC', 'KeyV', 'KeyG', 'KeyB', 'KeyH', 'KeyN', 'KeyJ', 'KeyM', 'Comma', 'KeyL', 'Period', 'Semicolon', 'Slash'];
+const LOW_LBL = ['z', 's', 'x', 'd', 'c', 'v', 'g', 'b', 'h', 'n', 'j', 'm', ',', 'l', '.', ';', '/'];
+const HIGH = ['KeyQ', 'Digit2', 'KeyW', 'Digit3', 'KeyE', 'KeyR', 'Digit5', 'KeyT', 'Digit6', 'KeyY', 'Digit7', 'KeyU', 'KeyI', 'Digit9', 'KeyO', 'Digit0', 'KeyP', 'BracketLeft', 'Equal', 'BracketRight'];
+const HIGH_LBL = ['q', '2', 'w', '3', 'e', 'r', '5', 't', '6', 'y', '7', 'u', 'i', '9', 'o', '0', 'p', '[', '=', ']'];
+
+function codeToKey(code) {
+  let i = LOW.indexOf(code);
+  if (i >= 0) return base + i;
+  i = HIGH.indexOf(code);
+  if (i >= 0) return base + 12 + i;
+  return null;
+}
+
+function keyLabels() {
+  const map = new Map();
+  LOW_LBL.forEach((l, i) => map.set(base + i, l));
+  HIGH_LBL.forEach((l, i) => { if (!map.has(base + 12 + i)) map.set(base + 12 + i, l); });
+  return map;
+}
+
+function typingTarget(t) {
+  return t && (t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !['range', 'checkbox'].includes(t.type)));
+}
+
+window.addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey || typingTarget(e.target)) return;
+  const onSlider = e.target && e.target.tagName === 'INPUT';
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (!e.repeat) setSustain(true);
+    return;
+  }
+  if (!onSlider && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) {
+    e.preventDefault();
+    shiftOctave(e.code === 'ArrowLeft' ? -12 : 12);
+    return;
+  }
+  if (!onSlider && (e.code === 'ArrowUp' || e.code === 'ArrowDown')) {
+    e.preventDefault();
+    setParam('velocity', Math.min(6, Math.max(0.2, P.velocity * (e.code === 'ArrowUp' ? 1.25 : 0.8))));
+    return;
+  }
+  const key = codeToKey(e.code);
+  if (key === null) return;
+  e.preventDefault();
+  if (e.repeat || held.has(e.code)) return;
+  held.set(e.code, key);
+  noteOn(key, P.velocity);
+});
+
+window.addEventListener('keyup', (e) => {
+  if (e.code === 'Space') { setSustain(false); return; }
+  const key = held.get(e.code);
+  if (key !== undefined) { held.delete(e.code); noteOff(key); }
+});
+
+window.addEventListener('blur', () => {
+  for (const key of held.values()) noteOff(key);
+  held.clear();
+});
+
+function shiftOctave(d) {
+  const nb = base + d;
+  if (nb < KEY_LO - 3 || nb + 31 > KEY_HI + 12) return;
+  for (const key of held.values()) noteOff(key);
+  held.clear();
+  base = nb;
+  updateHelp();
+  keyboardView.labels(keyLabels());
+}
+
+function updateHelp() {
+  $('#oct').textContent = `${noteName(Math.max(KEY_LO, base))}–${noteName(Math.min(KEY_HI, base + 31))}`;
+  $('#vel').textContent = `${P.velocity.toFixed(2)} m/s`;
+}
+
+// ---------------------------------------------------------------------------
+// MIDI
+
+const velFromMidi = (v) => 0.25 * 24 ** (v / 127); // 0.25 … 6 m/s hammer speed
+
+function initMIDI() {
+  if (!navigator.requestMIDIAccess) {
+    $('#midi').textContent = 'Web MIDI unsupported (use Chrome/Edge)';
+    return;
+  }
+  navigator.requestMIDIAccess().then((acc) => {
+    const bind = () => {
+      const names = [];
+      for (const inp of acc.inputs.values()) { inp.onmidimessage = onMIDI; names.push(inp.name); }
+      $('#midi').textContent = names.length ? `MIDI: ${names.join(', ')}` : 'MIDI: no devices';
+    };
+    bind();
+    acc.onstatechange = bind;
+    $('#midi-btn').hidden = true;
+  }, () => { $('#midi').textContent = 'MIDI: permission denied'; });
+}
+
+function onMIDI(ev) {
+  const [st, d1, d2] = ev.data;
+  const cmd = st & 0xf0;
+  if (cmd === 0x90 && d2 > 0) noteOn(d1, velFromMidi(d2));
+  else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) noteOff(d1);
+  else if (cmd === 0xb0 && d1 === 64) setSustain(d2 >= 64);
+  else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) panic();
+}
+
+// ---------------------------------------------------------------------------
+// on-screen keyboard
+
+const keyboardView = (() => {
+  const root = $('#keyboard');
+  const els = new Map();
+  const isBlack = (m) => [1, 3, 6, 8, 10].includes(m % 12);
+  const whites = [];
+  for (let m = KEY_LO; m <= KEY_HI; m++) if (!isBlack(m)) whites.push(m);
+  const ww = 100 / whites.length;
+  let wi = 0;
+  for (let m = KEY_LO; m <= KEY_HI; m++) {
+    const el = document.createElement('div');
+    el.dataset.key = m;
+    if (isBlack(m)) {
+      el.className = 'bk';
+      el.style.left = `${(wi - 0.32) * ww}%`;
+      el.style.width = `${0.64 * ww}%`;
+    } else {
+      el.className = 'wk';
+      el.style.left = `${wi * ww}%`;
+      el.style.width = `${ww}%`;
+      if (m % 12 === 0) {
+        const c = document.createElement('span');
+        c.className = 'c-label';
+        c.textContent = noteName(m);
+        el.appendChild(c);
+      }
+      wi++;
+    }
+    const lbl = document.createElement('span');
+    lbl.className = 'k-label';
+    el.appendChild(lbl);
+    root.appendChild(el);
+    els.set(m, el);
+  }
+  // pointer play: vertical position sets velocity
+  let pointerKey = null;
+  const velAt = (e, el) => {
+    const r = el.getBoundingClientRect();
+    const f = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+    return 0.4 + 5.2 * f ** 1.5;
+  };
+  root.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest('[data-key]');
+    if (!el) return;
+    root.setPointerCapture(e.pointerId);
+    pointerKey = +el.dataset.key;
+    noteOn(pointerKey, velAt(e, el));
+  });
+  const up = () => { if (pointerKey !== null) { noteOff(pointerKey); pointerKey = null; } };
+  root.addEventListener('pointerup', up);
+  root.addEventListener('pointercancel', up);
+  return {
+    set(m, on) { els.get(m)?.classList.toggle('down', on); },
+    focus(m) { for (const [k, el] of els) el.classList.toggle('focus', k === m); },
+    clearAll() { for (const el of els.values()) el.classList.remove('down'); },
+    labels(map) {
+      for (const [m, el] of els) {
+        el.querySelector('.k-label').textContent = map.get(m) ?? '';
+        el.classList.toggle('mapped', map.has(m));
+      }
+    },
+  };
+})();
+
+// ---------------------------------------------------------------------------
+// parameter controls
+
+const controls = new Map();
+
+function toSlider(p, v) {
+  if (p.log) return (1000 * Math.log(v / p.min)) / Math.log(p.max / p.min);
+  return (1000 * (v - p.min)) / (p.max - p.min);
+}
+function fromSlider(p, t) {
+  let v = p.log ? p.min * (p.max / p.min) ** (t / 1000) : p.min + ((p.max - p.min) * t) / 1000;
+  if (p.step) v = Math.round(v / p.step) * p.step;
+  return Math.min(p.max, Math.max(p.min, v));
+}
+
+function buildControls() {
+  const root = $('#groups');
+  for (const g of GROUPS) {
+    const det = document.createElement('details');
+    det.className = 'group';
+    det.open = g.id !== 'output';
+    det.innerHTML = `<summary>${g.title}</summary>`;
+    for (const p of g.params) {
+      const wrap = document.createElement('div');
+      wrap.className = 'param';
+      let input, val = null;
+      if (p.type === 'select') {
+        wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;
+        input = document.createElement('select');
+        input.id = `p-${p.id}`;
+        for (const [k, name] of p.options) input.add(new Option(name, k));
+        input.addEventListener('change', () => { setParam(p.id, input.value); input.blur(); });
+        wrap.appendChild(input);
+      } else if (p.type === 'checkbox') {
+        wrap.classList.add('check');
+        input = document.createElement('input');
+        input.type = 'checkbox';
+        input.id = `p-${p.id}`;
+        input.addEventListener('change', () => setParam(p.id, input.checked));
+        const lab = document.createElement('label');
+        lab.htmlFor = input.id;
+        lab.textContent = p.label;
+        wrap.append(input, lab);
+      } else {
+        wrap.innerHTML = `<div class="row"><label for="p-${p.id}">${p.label}</label><span class="val"></span></div>`;
+        val = wrap.querySelector('.val');
+        input = document.createElement('input');
+        input.type = 'range';
+        input.min = 0; input.max = 1000; input.step = 1;
+        input.id = `p-${p.id}`;
+        input.addEventListener('input', () => setParam(p.id, fromSlider(p, +input.value), { fromSlider: true }));
+        input.addEventListener('dblclick', () => setParam(p.id, p.def));
+        wrap.appendChild(input);
+      }
+      if (p.hint) {
+        const h = document.createElement('div');
+        h.className = 'hint';
+        h.textContent = p.hint;
+        wrap.appendChild(h);
+      }
+      det.appendChild(wrap);
+      controls.set(p.id, { p, input, val, wrap });
+    }
+    root.appendChild(det);
+  }
+  const ps = $('#preset');
+  ps.add(new Option('Presets…', ''));
+  PRESETS.forEach((pr, i) => ps.add(new Option(pr.name, i)));
+  ps.addEventListener('change', () => {
+    if (ps.value === '') return;
+    const keep = { volume: P.volume, room: P.room, soundboard: P.soundboard, velocity: P.velocity, maxFreq: P.maxFreq };
+    setAll({ ...DEFAULTS, ...keep, ...PRESETS[+ps.value].p });
+    ps.blur();
+  });
+  $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }); $('#preset').value = ''; });
+}
+
+function refreshControl(id) {
+  const c = controls.get(id);
+  if (!c) return;
+  const v = P[id];
+  if (c.p.type === 'select') c.input.value = v;
+  else if (c.p.type === 'checkbox') c.input.checked = !!v;
+  else {
+    c.input.value = toSlider(c.p, v);
+    c.val.textContent = c.p.fmt ? c.p.fmt(v) : String(v);
+  }
+}
+
+function refreshVisibility() {
+  for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(P) : false;
+}
+
+function setAll(newP) {
+  P = newP;
+  for (const id of controls.keys()) refreshControl(id);
+  refreshVisibility();
+  bumpVersion();
+  if (audio) audio.node.port.postMessage({ type: 'params', params: engineParams() });
+  applyMix();
+  updateHelp();
+  saveParams();
+  modelChanged();
+}
+
+function setParam(id, v, opts = {}) {
+  const p = ALL_PARAMS.find((q) => q.id === id);
+  if (P[id] === v) return;
+  P[id] = v;
+  if (!opts.fromSlider || p.type) refreshControl(id);
+  else {
+    const c = controls.get(id);
+    c.val.textContent = p.fmt ? p.fmt(v) : String(v);
+  }
+  saveParams();
+  if (id === 'velocity') { updateHelp(); refreshControl(id); return; }
+  if (p.kind === 'engine') {
+    if (audio) audio.node.port.postMessage({ type: 'params', params: engineParams() });
+    modelChangedSoon(true);
+  } else if (p.kind === 'mix') applyMix();
+  else if (p.kind === 'model') {
+    refreshVisibility();
+    bumpVersion();
+    modelChangedSoon();
+  }
+  $('#preset').value = '';
+}
+
+function bumpVersion() {
+  version++;
+  sent.clear();
+}
+
+let mcTimer = 0;
+function modelChangedSoon() {
+  clearTimeout(mcTimer);
+  mcTimer = setTimeout(modelChanged, 140);
+}
+
+function modelChanged() {
+  setFocus(focusKey, lastVelocity);
+  precompute();
+}
+
+// Compute nearby keys in the background so playing stays snappy (tapered
+// members need a Rayleigh–Ritz eigen-solve per key).
+let pq = [], pqTimer = 0;
+function precompute() {
+  const center = base + 15;
+  pq = [];
+  for (let m = KEY_LO; m <= KEY_HI; m++) pq.push(m);
+  pq.sort((a, b) => Math.abs(a - center) - Math.abs(b - center));
+  clearTimeout(pqTimer);
+  pqTimer = setTimeout(pqTick, 60);
+}
+function pqTick() {
+  const t0 = performance.now();
+  while (pq.length && performance.now() - t0 < 10) keyData(pq.shift());
+  if (pq.length) pqTimer = setTimeout(pqTick, 4);
+}
+
+// ---------------------------------------------------------------------------
+// focus key: info panel, cross-section, slow motion, partials
+
+const motion = new MotionView($('#motion'));
+const spectrum = new SpectrumView($('#spectrum'));
+let lastVelocity = 2.5;
+let simTimer = 0;
+
+function setFocus(key, velocity) {
+  focusKey = key;
+  lastVelocity = velocity;
+  keyboardView.focus(key);
+  const c = keyData(key);
+  showInfo(c.model);
+  drawSection($('#section'), c.model, P);
+  clearTimeout(simTimer);
+  simTimer = setTimeout(() => runSim(key, velocity), 30);
+}
+
+function runSim(key, velocity) {
+  const { model, data } = keyData(key);
+  const eng = new PianoEngine(fs);
+  eng.setParams(engineParams());
+  const v = eng.noteOn(key, data, velocity);
+  const period = 1 / model.info.f0;
+  const total = Math.round(Math.min(0.05, Math.max(0.008, 4 * period)) * fs);
+  const stride = Math.max(1, Math.ceil(total / 700));
+  const frames = [], eta = [];
+  const L = new Float32Array(stride), R = new Float32Array(stride);
+  let amps = null, hEta = 0, hVel = 0;
+  for (let s = 0; s < total; s += stride) {
+    frames.push(v.snapshot(new Float64Array(data.n)));
+    if (v.hammerOn) { hEta = v.eta; hVel = (v.eta - v.etaPrev) * fs; } else hEta += hVel * (stride / fs);
+    eta.push(hEta);
+    eng.process(L, R, stride);
+    if (!amps && !v.hammerOn) amps = v.modeAmplitudes(eng);
+  }
+  for (let guard = 0; !amps && guard < 10000; guard++) {
+    eng.process(L, R, stride);
+    if (!v.hammerOn) amps = v.modeAmplitudes(eng);
+  }
+  const contactMs = (v.contactSamples / fs) * 1000;
+  motion.set({
+    frames, eta: Float64Array.from(eta), dt: stride / fs, model, data, P: { ...P },
+    title: `${noteName(key)} · ${velocity.toFixed(2)} m/s`,
+  });
+  // partials: sum unison copies in power
+  const groups = new Map();
+  let maxA = 0;
+  for (let j = 0; j < data.n; j++) {
+    const id = data.famId[j] * 10000 + data.idx[j];
+    const g = groups.get(id) || { fam: data.famId[j], n: data.idx[j], f: 0, pow: 0 };
+    if (data.uni[j] === 0) g.f = data.freq[j];
+    g.pow += amps[j] ** 2;
+    groups.set(id, g);
+  }
+  for (const g of groups.values()) maxA = Math.max(maxA, g.pow);
+  const list = [...groups.values()].map((g) => ({ f: g.f, fam: g.fam, n: g.n, db: 10 * Math.log10(g.pow / maxA + 1e-30) }));
+  const present = [...new Set(data.famId)].sort();
+  const families = present.map((fam) => ({ fam, f: Array.from(model.families[fam].omega, (w) => w / (2 * Math.PI)) }));
+  spectrum.set({ f0: model.info.f0, list, families });
+  $('#legend').innerHTML = present.map((f) => `<span><i style="background:${FAMILY[f].color}"></i>${legendName(f)}</span>`).join('')
+    + `<span>hammer contact ${contactMs.toFixed(2)} ms · peak force ${v.Fmax.toFixed(1)} N</span>`;
+}
+
+function legendName(f) {
+  if (P.shape === 'ribbon') return ['bending, easy axis', 'bending, hard axis', 'torsion'][f];
+  return ['bending (hammer plane)', 'bending (perpendicular)', 'torsion'][f];
+}
+
+function showInfo(model) {
+  const i = model.info, s = model.sec;
+  $('#info-title').textContent = `${i.name} · ${i.f0.toFixed(2)} Hz`;
+  $('#info-sub').textContent = `${MATERIALS[P.material].name}, ${P.shape}`;
+  const cents = (a, b) => 1200 * Math.log2(a / b);
+  const dims = P.shape === 'round' ? `Ø ${(s.w * 1000).toFixed(3)} mm`
+    : P.shape === 'square' ? `${(s.w * 1000).toFixed(3)} mm square`
+      : P.shape === 'triangle' ? `side ${(s.w * 1000).toFixed(3)} mm`
+        : `${(s.w * 1000).toFixed(2)} × ${(s.t * 1000).toFixed(3)} mm`;
+  const rows = [
+    ['Speaking length', `${(i.L * 100).toFixed(1)} cm`],
+    ['Core section', dims + (i.uniform ? '' : ' (mean)')],
+    ['Mass / length', `${(i.mu * 1000).toFixed(2)} g/m${i.dMu ? ` (incl. ${(i.dMu * 1000).toFixed(1)} winding)` : ''}`],
+    ['Tension', `${i.T.toFixed(0)} N`],
+    ['Stress / breaking', `${(i.strengthRatio * 100).toFixed(0)} %${i.strengthRatio > 1 ? ' — would snap!' : ''}`, i.strengthRatio > 1],
+    ['Inharmonicity B', P.shape === 'ribbon' ? `${i.B1.toExponential(2)} easy · ${i.B2.toExponential(2)} hard` : i.B1.toExponential(2)],
+  ];
+  if (P.shape === 'ribbon') {
+    const other = i.tuneAxis === 'I1' ? i.f1hard : i.f1;
+    rows.push([i.tuneAxis === 'I1' ? 'Hard-axis f₁' : 'Easy-axis f₁', `${cents(other, i.f0) >= 0 ? '+' : ''}${cents(other, i.f0).toFixed(1)} ¢`]);
+  }
+  rows.push(['Torsion f₁', `${i.f1torsion.toFixed(0)} Hz = ${i.torsionRatio.toFixed(3)} × f₁${model.sec.lever && P.offset ? '' : ' (not excited)'}`]);
+  rows.push(['Wave speeds', `transverse ${i.cT.toFixed(0)} m/s · torsional ${i.cTheta.toFixed(0)} m/s`]);
+  if (!i.tuned) rows.push(['Tuning', 'too stiff to reach pitch — plays sharp', true]);
+  $('#info').innerHTML = rows.map(([k, v, warn]) => `<dt>${k}</dt><dd${warn ? ' class="warn"' : ''}>${v}</dd>`).join('');
+}
+
+// ---------------------------------------------------------------------------
+// misc UI
+
+let toastTimer = 0;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 3500);
+}
+
+$('#start').addEventListener('click', (e) => { startAudio(); e.currentTarget.blur(); });
+$('#midi-btn').addEventListener('click', (e) => { initMIDI(); e.currentTarget.blur(); });
+$('#panic').addEventListener('click', (e) => { panic(); e.currentTarget.blur(); });
+$('#replay').addEventListener('click', (e) => { motion.replay(); e.currentTarget.blur(); });
+$('#speed').addEventListener('change', (e) => { motion.speed = +e.target.value; motion.replay(); e.target.blur(); });
+const CAPTIONS = {
+  spectrum: 'Stems: partials just after the strike (dB re. loudest). Grey: live output. Faint lines: exact harmonics n·f₀.',
+  inharm: 'Deviation of partial n from n × that family’s own fundamental, in cents (stiffness stretches; taper bends).',
+};
+function setSpecMode(mode) {
+  document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x.dataset.mode === mode));
+  spectrum.mode = mode;
+  $('#spec-caption').textContent = CAPTIONS[mode];
+}
+for (const b of document.querySelectorAll('.tab')) {
+  b.addEventListener('click', () => { setSpecMode(b.dataset.mode); b.blur(); });
+}
+setSpecMode('spectrum');
+window.addEventListener('resize', () => drawSection($('#section'), keyData(focusKey).model, P));
+
+buildControls();
+for (const id of controls.keys()) refreshControl(id);
+refreshVisibility();
+updateHelp();
+keyboardView.labels(keyLabels());
+setFocus(60, P.velocity);
+precompute();

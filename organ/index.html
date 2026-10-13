@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tonewheel Organ</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1>Tonewheel Organ</h1>
+      <span class="sub">a physically modelled B-3 and Leslie</span>
+      <a class="nav" href="../">Ribbon piano</a>
+      <a class="nav" href="../rhodes/">Tine piano</a>
+      <a class="nav" href="../sync/">Huygens keyboard</a>
+      <a class="nav" href="../ringdown/">Black-hole keyboard</a>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Release every key">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="card" id="console">
+        <div class="drawbar-wrap">
+          <div id="drawbars" role="group" aria-label="Drawbars"></div>
+          <input id="registration" aria-label="Registration" spellcheck="false" autocomplete="off">
+        </div>
+        <div class="switches">
+          <div class="sw-group">
+            <span class="sw-title">Percussion</span>
+            <div class="tabs-row" id="perc">
+              <button data-k="percOn">On</button>
+              <button data-k="percSoft">Soft</button>
+              <button data-k="percFast">Fast</button>
+              <button data-k="percThird">3rd</button>
+            </div>
+          </div>
+          <div class="sw-group">
+            <span class="sw-title">Vibrato &amp; chorus</span>
+            <div class="seg" id="vib">
+              <button data-v="off">Off</button><button data-v="V1">V1</button><button data-v="C1">C1</button>
+              <button data-v="V2">V2</button><button data-v="C2">C2</button><button data-v="V3">V3</button><button data-v="C3">C3</button>
+            </div>
+            <canvas id="scanner"></canvas>
+          </div>
+          <div class="sw-group">
+            <span class="sw-title">Leslie <kbd>Space</kbd></span>
+            <div class="seg" id="leslie">
+              <button data-v="bypass">Bypass</button><button data-v="stop">Stop</button><button data-v="slow">Slow</button><button data-v="fast">Fast</button>
+            </div>
+          </div>
+          <div class="sw-group">
+            <span class="sw-title">Generator motor <kbd>`</kbd></span>
+            <div class="motor-row">
+              <button id="motor" class="motor on">Run</button>
+              <span id="shaft" class="readout">1200 rpm</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="card" id="gen-card">
+          <div class="card-head"><h2>Tone generator — 91 wheels</h2><span class="muted" id="gen-mode"></span></div>
+          <canvas id="generator"></canvas>
+          <div class="caption" id="gen-caption">Bars: each wheel’s tuning error vs equal temperament (gears are small-integer ratios). Glow: wheels the held keys are drawing on. Hover for details.</div>
+        </div>
+        <div class="card" id="leslie-card">
+          <div class="card-head"><h2>Leslie, from above</h2><span class="muted" id="leslie-read"></span></div>
+          <canvas id="leslie-view"></canvas>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="card" id="out-card">
+          <div class="card-head"><h2>Output</h2><span class="muted">live spectrum · markers: the nine tones of <b id="focus-name">C4</b></span></div>
+          <canvas id="output"></canvas>
+        </div>
+        <div class="card" id="table-card">
+          <div class="card-head"><h2>What <span id="focus-name2">C4</span> really plays</h2></div>
+          <table id="analysis"></table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>expression <kbd>↑</kbd><kbd>↓</kbd> <b id="expr"></b></span>
+      <span>Leslie slow/fast <kbd>Space</kbd> · motor <kbd>`</kbd></span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="src/organ-main.js"></script>
+</body>
+</html>

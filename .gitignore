@@ -1,0 +1,7 @@
+# local tooling
+.claude/
+.DS_Store
+node_modules/
+
+# full-resolution renders (the site ships compressed .m4a copies)
+*.wav

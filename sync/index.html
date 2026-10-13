@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Huygens Keyboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1>Huygens Keyboard</h1>
+      <span class="sub">relaxation oscillators that pull each other into tune</span>
+      <a class="nav" href="../">Ribbon piano</a>
+      <a class="nav" href="../organ/">Tonewheel organ</a>
+      <a class="nav" href="../rhodes/">Tine piano</a>
+      <a class="nav" href="../ringdown/">Black-hole keyboard</a>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card">
+          <div class="card-head"><h2>What the chord is actually playing</h2><span class="muted" id="hold-read"></span></div>
+          <table id="notes"></table>
+          <table id="pairs"></table>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Lamp firings</h2><span class="muted">triggered on the lowest note · locked chords stand still</span></div>
+          <canvas id="raster"></canvas>
+        </div>
+      </div>
+      <div class="card" id="stair-card">
+        <div class="card-head">
+          <h2>Where two oscillators lock</h2>
+          <span class="muted" id="stair-read">C4 plus a second oscillator at every natural interval up to an octave</span>
+        </div>
+        <canvas id="stair"></canvas>
+        <div class="caption">Top: how far the coupling pulls the interval at the current strength (flat zero = no lock; a sloped segment = captured onto the ratio above it). Bottom: Arnold tongues, coloured where the pair is locked to a simple ratio, for every coupling strength. Dashed line: your current coupling; blue dots: the chord you are holding.</div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>coupling <kbd>↑</kbd><kbd>↓</kbd> <b id="kick-read"></b></span>
+      <span>hold notes: <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+  <div id="toast" hidden></div>
+  <script type="module" src="src/sync-main.js"></script>
+</body>
+</html>
