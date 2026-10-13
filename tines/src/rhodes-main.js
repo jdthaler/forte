@@ -5,6 +5,7 @@ import { computeKey, noteName, KEY_LO, KEY_HI } from './tine.js';
 import { RhodesEngine } from './rhodes-engine.js';
 import { roomIR } from '../../shared/impulses.js';
 import { MotionView, PickupView, SpectrumView, MODE_COLORS, modeKind } from './rhodes-viz.js';
+import { createKeyboard } from '../../shared/keyboard.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'tine-piano/params/v1';
@@ -189,43 +190,7 @@ function onMIDI(ev) {
 // ---------------------------------------------------------------------------
 // on-screen keyboard (73 keys)
 
-const keyboardView = (() => {
-  const root = $('#keyboard'), els = new Map();
-  const black = (m) => [1, 3, 6, 8, 10].includes(m % 12);
-  const whites = [];
-  for (let m = KEY_LO; m <= KEY_HI; m++) if (!black(m)) whites.push(m);
-  const ww = 100 / whites.length;
-  let wi = 0;
-  for (let m = KEY_LO; m <= KEY_HI; m++) {
-    const el = document.createElement('div');
-    el.dataset.key = m;
-    if (black(m)) { el.className = 'bk'; el.style.left = `${(wi - 0.32) * ww}%`; el.style.width = `${0.64 * ww}%`; }
-    else {
-      el.className = 'wk'; el.style.left = `${wi * ww}%`; el.style.width = `${ww}%`;
-      if (m % 12 === 0) { const c = document.createElement('span'); c.className = 'c-label'; c.textContent = noteName(m); el.appendChild(c); }
-      wi++;
-    }
-    const lbl = document.createElement('span'); lbl.className = 'k-label'; el.appendChild(lbl);
-    root.appendChild(el); els.set(m, el);
-  }
-  let pk = null;
-  const velAt = (e, el) => { const r = el.getBoundingClientRect(); const f = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)); return 0.3 + 4.2 * f ** 1.5; };
-  root.addEventListener('pointerdown', (e) => {
-    const el = e.target.closest('[data-key]');
-    if (!el) return;
-    root.setPointerCapture(e.pointerId);
-    pk = +el.dataset.key; noteOn(pk, velAt(e, el));
-  });
-  const up = () => { if (pk !== null) { noteOff(pk); pk = null; } };
-  root.addEventListener('pointerup', up);
-  root.addEventListener('pointercancel', up);
-  return {
-    set(m, on) { els.get(m)?.classList.toggle('down', on); },
-    focus(m) { for (const [k, el] of els) el.classList.toggle('focus', k === m); },
-    clearAll() { for (const el of els.values()) el.classList.remove('down'); },
-    labels(map) { for (const [m, el] of els) { el.querySelector('.k-label').textContent = map.get(m) ?? ''; el.classList.toggle('mapped', map.has(m)); } },
-  };
-})();
+const keyboardView = createKeyboard($('#keyboard'), { lo: KEY_LO, hi: KEY_HI, onDown: (k, f) => noteOn(k, 0.3 + 4.2 * f ** 1.5), onUp: noteOff }); // depth into the key → hammer speed (m/s)
 
 // ---------------------------------------------------------------------------
 // parameters

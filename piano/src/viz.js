@@ -30,7 +30,7 @@ export class MotionView {
     this.speed = 1 / 300;
     this.t0 = performance.now();
     this.paused = false;
-    const loop = () => { this.draw(); requestAnimationFrame(loop); };
+    const loop = () => { requestAnimationFrame(loop); if (this.cv.offsetParent) this.draw(); }; // skip while hidden
     requestAnimationFrame(loop);
   }
 
@@ -218,7 +218,7 @@ export class SpectrumView {
     this.partials = null;
     this.analyser = null;
     this.fft = null;
-    const loop = () => { this.draw(); requestAnimationFrame(loop); };
+    const loop = () => { requestAnimationFrame(loop); if (this.cv.offsetParent) this.draw(); }; // skip while hidden
     requestAnimationFrame(loop);
   }
 

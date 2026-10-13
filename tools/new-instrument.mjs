@@ -28,7 +28,7 @@ const T = new URL('docs/template/', R);
 for (const f of readdirSync(new URL('src/', T))) {
   write(`${slug}/src/${f.replace('template-', `${slug}-`)}`, common(readFileSync(new URL(`src/${f}`, T), 'utf8')).replaceAll('../../../shared/', '../../shared/'));
 }
-write(`${slug}/index.html`, common(readFileSync(new URL('index.html', T), 'utf8')).replaceAll('../../shared/', '../shared/').replace(' data-root="../../"', ''));
+write(`${slug}/index.html`, common(readFileSync(new URL('index.html', T), 'utf8')).replace(' data-root="../../"', '').replaceAll('"../../', '"../'));
 write(`${slug}/style.css`, readFileSync(new URL('style.css', T), 'utf8'));
 write(`${slug}/README.md`, common(readFileSync(new URL('README.md', T), 'utf8')).replaceAll('{slug}', slug).replaceAll('{name}', name));
 for (const [from, to] of [['test/template-tests.mjs', `test/${slug}-tests.mjs`], ['tools/render-template.mjs', `tools/render-${slug}.mjs`]]) {

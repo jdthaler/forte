@@ -38,6 +38,7 @@
 //   onParam(id, value, P, param, dragging)   id = '*' after a preset or reset
 
 import { roomIR } from './impulses.js';
+import { createKeyboard } from './keyboard.js';
 
 const $ = (s) => document.querySelector(s);
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -208,45 +209,9 @@ export function createShell(cfg) {
     }
   }
 
-  // ---- on-screen keyboard ------------------------------------------------------
-  shell.keys = (() => {
-    const root = $('#keyboard'), els = new Map();
-    const black = (m) => [1, 3, 6, 8, 10].includes(m % 12);
-    const whites = [];
-    for (let m = LO; m <= HI; m++) if (!black(m)) whites.push(m);
-    const ww = 100 / whites.length;
-    let wi = 0;
-    for (let m = LO; m <= HI; m++) {
-      const el = document.createElement('div');
-      el.dataset.key = m;
-      if (black(m)) { el.className = 'bk'; el.style.left = `${(wi - 0.32) * ww}%`; el.style.width = `${0.64 * ww}%`; }
-      else {
-        el.className = 'wk'; el.style.left = `${wi * ww}%`; el.style.width = `${ww}%`;
-        if (m % 12 === 0) { const c = document.createElement('span'); c.className = 'c-label'; c.textContent = noteName(m); el.appendChild(c); }
-        wi++;
-      }
-      const lbl = document.createElement('span'); lbl.className = 'k-label'; el.appendChild(lbl);
-      root.appendChild(el); els.set(m, el);
-    }
-    let pk = null;
-    root.addEventListener('pointerdown', (e) => {
-      const el = e.target.closest('[data-key]');
-      if (!el) return;
-      root.setPointerCapture(e.pointerId);
-      const r = el.getBoundingClientRect();
-      pk = +el.dataset.key;
-      down(pk, 0.2 + 0.8 * Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)));
-    });
-    const release = () => { if (pk !== null) { up(pk); pk = null; } };
-    root.addEventListener('pointerup', release);
-    root.addEventListener('pointercancel', release);
-    return {
-      set(m, on) { els.get(m)?.classList.toggle('down', on); },
-      focus(m) { for (const [k, el] of els) el.classList.toggle('focus', k === m); },
-      clearAll() { for (const el of els.values()) el.classList.remove('down'); },
-      labels(map) { for (const [m, el] of els) { el.querySelector('.k-label').textContent = map.get(m) ?? ''; el.classList.toggle('mapped', map.has(m)); } },
-    };
-  })();
+  // ---- on-screen keyboard (multi-touch; shared/keyboard.js) ----------------------
+  if (cfg.space && !document.body.dataset.space) document.body.dataset.space = cfg.space === 'hold' ? 'Hold' : 'Sustain';
+  shell.keys = createKeyboard($('#keyboard'), { lo: LO, hi: HI, onDown: (k, f) => down(k, 0.2 + 0.8 * f), onUp: up });
 
   // ---- MIDI ----------------------------------------------------------------------
   function initMIDI() {

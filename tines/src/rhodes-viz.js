@@ -26,7 +26,7 @@ export class MotionView {
     this.D = null;
     this.speed = 0.005;
     this.t0 = performance.now();
-    const loop = () => { this.draw(); requestAnimationFrame(loop); };
+    const loop = () => { requestAnimationFrame(loop); if (this.cv.offsetParent) this.draw(); }; // skip while hidden
     requestAnimationFrame(loop);
   }
 
@@ -148,7 +148,7 @@ export class PickupView {
   constructor(canvas) {
     this.cv = canvas;
     this.D = null;
-    const loop = () => { this.draw(); requestAnimationFrame(loop); };
+    const loop = () => { requestAnimationFrame(loop); if (this.cv.offsetParent) this.draw(); }; // skip while hidden
     requestAnimationFrame(loop);
   }
   set(d) { this.D = d; }
@@ -206,7 +206,7 @@ export class PickupView {
 export class SpectrumView {
   constructor(canvas) {
     this.cv = canvas; this.analyser = null; this.modes = null; this.f0 = 0;
-    const loop = () => { this.draw(); requestAnimationFrame(loop); };
+    const loop = () => { requestAnimationFrame(loop); if (this.cv.offsetParent) this.draw(); }; // skip while hidden
     requestAnimationFrame(loop);
   }
   setAnalyser(a) { this.analyser = a; this.fft = new Float32Array(a.frequencyBinCount); }

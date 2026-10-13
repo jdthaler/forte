@@ -5,6 +5,7 @@ import { QNMBank, keyVoice, noteName, KEY_LO, KEY_HI, spinFromU } from './ringdo
 import { RingdownEngine } from './ringdown-engine.js';
 import { roomIR } from '../../shared/impulses.js';
 import { drawPlane, drawKerr, WaveView } from './ringdown-viz.js';
+import { createKeyboard } from '../../shared/keyboard.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'blackhole-keyboard/params/v1';
@@ -123,41 +124,7 @@ function onMIDI(ev) {
   else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) post({ type: 'panic' });
 }
 
-const keyboardView = (() => {
-  const root = $('#keyboard'), els = new Map();
-  const black = (m) => [1, 3, 6, 8, 10].includes(m % 12);
-  const whites = [];
-  for (let m = KEY_LO; m <= KEY_HI; m++) if (!black(m)) whites.push(m);
-  const ww = 100 / whites.length;
-  let wi = 0;
-  for (let m = KEY_LO; m <= KEY_HI; m++) {
-    const el = document.createElement('div');
-    el.dataset.key = m;
-    if (black(m)) { el.className = 'bk'; el.style.left = `${(wi - 0.32) * ww}%`; el.style.width = `${0.64 * ww}%`; }
-    else {
-      el.className = 'wk'; el.style.left = `${wi * ww}%`; el.style.width = `${ww}%`;
-      if (m % 12 === 0) { const c = document.createElement('span'); c.className = 'c-label'; c.textContent = noteName(m); el.appendChild(c); }
-      wi++;
-    }
-    const lbl = document.createElement('span'); lbl.className = 'k-label'; el.appendChild(lbl);
-    root.appendChild(el); els.set(m, el);
-  }
-  let pk = null;
-  root.addEventListener('pointerdown', (e) => {
-    const el = e.target.closest('[data-key]');
-    if (!el) return;
-    root.setPointerCapture(e.pointerId);
-    const r = el.getBoundingClientRect();
-    pk = +el.dataset.key; noteOn(pk, 0.3 + 0.7 * Math.min(1, (e.clientY - r.top) / r.height));
-  });
-  const up = () => { if (pk !== null) { noteOff(pk); pk = null; } };
-  root.addEventListener('pointerup', up);
-  root.addEventListener('pointercancel', up);
-  return {
-    set(m, on) { els.get(m)?.classList.toggle('down', on); },
-    labels(map) { for (const [m, el] of els) { el.querySelector('.k-label').textContent = map.get(m) ?? ''; el.classList.toggle('mapped', map.has(m)); } },
-  };
-})();
+const keyboardView = createKeyboard($('#keyboard'), { lo: KEY_LO, hi: KEY_HI, onDown: (k, f) => noteOn(k, 0.3 + 0.7 * f), onUp: noteOff });
 
 // ---------------------------------------------------------------------------
 // parameters
@@ -283,14 +250,15 @@ function showInfo(v) {
 }
 
 function frame() {
+  requestAnimationFrame(frame);
+  const shown = (cv) => cv.offsetParent !== null; // views can be hidden from the Views menu
   if (bank && focusVoice) {
     const a = spinFromU(P.spinU);
     const lvl = (m) => Math.hypot(m.cpr, m.cpi) + Math.hypot(m.cxr, m.cxi);
-    drawPlane($('#plane'), bank, a, focusVoice.modes.map((m) => ({ l: m.l, m: m.m, n: m.n, level: lvl(m) })));
-    drawKerr($('#kerr'), a, P.inclination);
+    if (shown($('#plane'))) drawPlane($('#plane'), bank, a, focusVoice.modes.map((m) => ({ l: m.l, m: m.m, n: m.n, level: lvl(m) })));
+    if (shown($('#kerr'))) drawKerr($('#kerr'), a, P.inclination);
   }
-  wave.draw();
-  requestAnimationFrame(frame);
+  if (shown(wave.cv)) wave.draw();
 }
 
 let toastTimer = 0;

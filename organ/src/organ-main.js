@@ -4,6 +4,7 @@ import { GROUPS, ALL_PARAMS, DEFAULTS, PRESETS } from './organ-params.js';
 import { buildGenerator, keyAnalysis, keyWheel, percWheel, centsOff, wheelSpec, wheelName, gearFreq, etFreq, DRAWBARS, NUM_WHEELS, KEY_LO, KEY_HI, drawbarGain } from './tonewheels.js';
 import { roomIR } from '../../shared/impulses.js';
 import { GeneratorView, LeslieView, OutputView, drawScanner, BAR_COLORS } from './organ-viz.js';
+import { createKeyboard } from '../../shared/keyboard.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'tonewheel-organ/params/v1';
@@ -206,41 +207,7 @@ function onMIDI(ev) {
 // ---------------------------------------------------------------------------
 // on-screen keyboard (61 keys)
 
-const keyboardView = (() => {
-  const root = $('#keyboard'), els = new Map();
-  const black = (m) => [1, 3, 6, 8, 10].includes(m % 12);
-  const whites = [];
-  for (let m = KEY_LO; m <= KEY_HI; m++) if (!black(m)) whites.push(m);
-  const ww = 100 / whites.length;
-  let wi = 0;
-  for (let m = KEY_LO; m <= KEY_HI; m++) {
-    const el = document.createElement('div');
-    el.dataset.key = m;
-    if (black(m)) { el.className = 'bk'; el.style.left = `${(wi - 0.32) * ww}%`; el.style.width = `${0.64 * ww}%`; }
-    else {
-      el.className = 'wk'; el.style.left = `${wi * ww}%`; el.style.width = `${ww}%`;
-      if (m % 12 === 0) { const c = document.createElement('span'); c.className = 'c-label'; c.textContent = noteName(m); el.appendChild(c); }
-      wi++;
-    }
-    const lbl = document.createElement('span'); lbl.className = 'k-label'; el.appendChild(lbl);
-    root.appendChild(el); els.set(m, el);
-  }
-  let pk = null;
-  root.addEventListener('pointerdown', (e) => {
-    const el = e.target.closest('[data-key]');
-    if (!el) return;
-    root.setPointerCapture(e.pointerId);
-    pk = +el.dataset.key; keyDown(pk);
-  });
-  const up = () => { if (pk !== null) { keyUp(pk); pk = null; } };
-  root.addEventListener('pointerup', up);
-  root.addEventListener('pointercancel', up);
-  return {
-    set(m, on) { els.get(m)?.classList.toggle('down', on); },
-    clearAll() { for (const el of els.values()) el.classList.remove('down'); },
-    labels(map) { for (const [m, el] of els) { el.querySelector('.k-label').textContent = map.get(m) ?? ''; el.classList.toggle('mapped', map.has(m)); } },
-  };
-})();
+const keyboardView = createKeyboard($('#keyboard'), { lo: KEY_LO, hi: KEY_HI, onDown: (k) => keyDown(k), onUp: keyUp });
 
 // ---------------------------------------------------------------------------
 // drawbars and console switches
@@ -465,11 +432,12 @@ function refreshFocus() {
 }
 
 function frame() {
-  genView.draw();
-  leslieView.draw(P);
-  output.draw(keyAnalysis(focusKey, P)[2].actual * (lastState ? lastState.shaft : 1));
-  drawScanner($('#scanner'), lastState, P);
   requestAnimationFrame(frame);
+  const shown = (cv) => cv.offsetParent !== null; // views can be hidden from the Views menu
+  if (shown(genView.cv)) genView.draw();
+  if (shown(leslieView.cv)) leslieView.draw(P);
+  if (shown(output.cv)) output.draw(keyAnalysis(focusKey, P)[2].actual * (lastState ? lastState.shaft : 1));
+  if (shown($('#scanner'))) drawScanner($('#scanner'), lastState, P);
 }
 
 // ---------------------------------------------------------------------------

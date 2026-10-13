@@ -2,12 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Tonewheel Organ · Forte</title>
   <link rel="stylesheet" href="../shared/forte.css">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forte">
 </head>
-<body data-instrument="organ">
+<body data-instrument="organ" data-space="Leslie fast/slow" data-space-mode="tap">
   <header>
     <div class="brand">
       <nav data-forte-nav></nav>
@@ -33,7 +41,7 @@
     </aside>
 
     <section id="views">
-      <div class="card" id="console">
+      <div class="card" id="console" data-view="Drawbars and switches">
         <div class="drawbar-wrap">
           <div id="drawbars" role="group" aria-label="Drawbars"></div>
           <input id="registration" aria-label="Registration" spellcheck="false" autocomplete="off">
@@ -89,7 +97,7 @@
           <div class="card-head"><h2>Output</h2><span class="muted">live spectrum · markers: the nine tones of <b id="focus-name">C4</b></span></div>
           <canvas id="output"></canvas>
         </div>
-        <div class="card" id="table-card">
+        <div class="card" id="table-card" data-view="What a key really plays">
           <div class="card-head"><h2>What <span id="focus-name2">C4</span> really plays</h2></div>
           <table id="analysis"></table>
         </div>

@@ -131,6 +131,26 @@ Space is `sustain` (a damper pedal sent to the engine) or `hold` (the shell
 latches keys while Space is down). Pick whichever makes physical sense,
 and say which in the footer help.
 
+**Tablets and layout.** `shared/layout.js` and `shared/layout.css`
+(loaded last in `<head>`) give every page the same tablet-friendly
+layout:
+- a Controls toggle (a column on wide screens, a slide-over panel on
+  narrow ones);
+- a Views ▾ menu that shows or hides each `#views .card`;
+- a multi-touch keyboard (`shared/keyboard.js`: chords, glissando, Pencil
+  pressure, a 2–5-octave window with ◀ ▶);
+- an on-screen pedal button that presses Space.
+
+To fit in:
+- Give a card whose `<h2>` changes at runtime a stable name with
+  `data-view="…"`.
+- Start every animation loop with `requestAnimationFrame` and skip
+  hidden canvases. `animate(draw, canvas)` does both.
+- Make drawing code survive a tiny canvas.
+- Pages that don't use the shell set `data-space="Sustain"` on `<body>`
+  (`data-space-mode="tap"` when Space toggles something) for the pedal
+  button. The shell sets it from `space`.
+
 ### Tests
 
 Copy the pattern in `test/template-tests.mjs`. Each file is a plain Node

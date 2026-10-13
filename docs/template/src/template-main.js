@@ -46,6 +46,6 @@ animate(() => {
   }
   const xs = x0 + shell.P.strike * (x1 - x0);
   ctx.strokeStyle = css('--text'); ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.moveTo(xs, 0); ctx.lineTo(xs, h); ctx.stroke(); ctx.setLineDash([]);
-});
+}, $('#bar'));
 
 update();

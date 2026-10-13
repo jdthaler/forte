@@ -5,6 +5,7 @@ import { computeKeyModel, buildVoiceData, noteName, MATERIALS } from './physics.
 import { PianoEngine } from './engine.js';
 import { soundboardIR, roomIR } from '../../shared/impulses.js';
 import { MotionView, SpectrumView, drawSection, FAMILY } from './viz.js';
+import { createKeyboard } from '../../shared/keyboard.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'ribbon-piano/params/v1';
@@ -272,68 +273,7 @@ function onMIDI(ev) {
 // ---------------------------------------------------------------------------
 // on-screen keyboard
 
-const keyboardView = (() => {
-  const root = $('#keyboard');
-  const els = new Map();
-  const isBlack = (m) => [1, 3, 6, 8, 10].includes(m % 12);
-  const whites = [];
-  for (let m = KEY_LO; m <= KEY_HI; m++) if (!isBlack(m)) whites.push(m);
-  const ww = 100 / whites.length;
-  let wi = 0;
-  for (let m = KEY_LO; m <= KEY_HI; m++) {
-    const el = document.createElement('div');
-    el.dataset.key = m;
-    if (isBlack(m)) {
-      el.className = 'bk';
-      el.style.left = `${(wi - 0.32) * ww}%`;
-      el.style.width = `${0.64 * ww}%`;
-    } else {
-      el.className = 'wk';
-      el.style.left = `${wi * ww}%`;
-      el.style.width = `${ww}%`;
-      if (m % 12 === 0) {
-        const c = document.createElement('span');
-        c.className = 'c-label';
-        c.textContent = noteName(m);
-        el.appendChild(c);
-      }
-      wi++;
-    }
-    const lbl = document.createElement('span');
-    lbl.className = 'k-label';
-    el.appendChild(lbl);
-    root.appendChild(el);
-    els.set(m, el);
-  }
-  // pointer play: vertical position sets velocity
-  let pointerKey = null;
-  const velAt = (e, el) => {
-    const r = el.getBoundingClientRect();
-    const f = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
-    return 0.4 + 5.2 * f ** 1.5;
-  };
-  root.addEventListener('pointerdown', (e) => {
-    const el = e.target.closest('[data-key]');
-    if (!el) return;
-    root.setPointerCapture(e.pointerId);
-    pointerKey = +el.dataset.key;
-    noteOn(pointerKey, velAt(e, el));
-  });
-  const up = () => { if (pointerKey !== null) { noteOff(pointerKey); pointerKey = null; } };
-  root.addEventListener('pointerup', up);
-  root.addEventListener('pointercancel', up);
-  return {
-    set(m, on) { els.get(m)?.classList.toggle('down', on); },
-    focus(m) { for (const [k, el] of els) el.classList.toggle('focus', k === m); },
-    clearAll() { for (const el of els.values()) el.classList.remove('down'); },
-    labels(map) {
-      for (const [m, el] of els) {
-        el.querySelector('.k-label').textContent = map.get(m) ?? '';
-        el.classList.toggle('mapped', map.has(m));
-      }
-    },
-  };
-})();
+const keyboardView = createKeyboard($('#keyboard'), { lo: KEY_LO, hi: KEY_HI, onDown: (k, f) => noteOn(k, 0.4 + 5.2 * f ** 1.5), onUp: noteOff }); // depth into the key → hammer speed (m/s)
 
 // ---------------------------------------------------------------------------
 // parameter controls

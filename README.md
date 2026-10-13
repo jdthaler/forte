@@ -43,6 +43,14 @@ instrument's equivalent. **Enable MIDI** connects a MIDI keyboard (Chrome
 and Edge), including velocity, the sustain pedal and, where it means
 something, the mod wheel.
 
+**On an iPad or other tablet**, play the on-screen keys with as many
+fingers as you like. Slide across the keys for a glissando, and strike
+lower on a key, or press harder with an Apple Pencil, to play louder. ◀ ▶
+move the octave window, and the pedal button next to them stands in for
+`Space`. **Controls** and **Views ▾** in the header choose what is on
+screen; hide everything for a full-screen keyboard. Use *Share → Add to
+Home Screen* to run Forte as a full-screen app.
+
 ## Running locally
 
 There is no build step. Serve the folder over HTTP, since AudioWorklets

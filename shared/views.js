@@ -14,9 +14,10 @@ export function fit(cv) {
   return { ctx, w, h };
 }
 
-// Call draw() every animation frame (the browser pauses this in hidden tabs).
-export function animate(draw) {
-  const loop = (t) => { draw(t); requestAnimationFrame(loop); };
+// Call draw() every animation frame (the browser pauses this in hidden tabs),
+// skipping frames while `canvas` is hidden (e.g. from the Views menu).
+export function animate(draw, canvas = null) {
+  const loop = (t) => { requestAnimationFrame(loop); if (!canvas || canvas.offsetParent !== null) draw(t); };
   requestAnimationFrame(loop);
 }
 
@@ -25,7 +26,7 @@ export function animate(draw) {
 export class SpectrumView {
   constructor(canvas, { fLo = 25, fHi = 20000, dbTop = -10, dbRange = 100 } = {}) {
     Object.assign(this, { cv: canvas, fLo, fHi, dbTop, dbRange, analyser: null, f0: 0, markers: [] });
-    animate(() => this.draw());
+    animate(() => this.draw(), canvas);
   }
   setAnalyser(a) { this.analyser = a; this.fft = new Float32Array(a.frequencyBinCount); }
   set(f0, markers = []) { this.f0 = f0; this.markers = markers; }
@@ -75,7 +76,7 @@ export class SpectrumView {
 export class ScopeView {
   constructor(canvas, { ms = 20 } = {}) {
     Object.assign(this, { cv: canvas, ms, analyser: null, f0: 0, periods: 3 });
-    animate(() => this.draw());
+    animate(() => this.draw(), canvas);
   }
   setAnalyser(a) { this.analyser = a; this.buf = new Float32Array(a.fftSize); }
   setPitch(f0, periods = 3) { this.f0 = f0; this.periods = periods; }

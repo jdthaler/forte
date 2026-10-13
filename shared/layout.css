@@ -1,0 +1,120 @@
+/* layout.css — the app layout of every instrument page, loaded after the
+   page's own style.css. The page fills the screen: header on top, the
+   keyboard pinned to the bottom, the controls and views in between, each
+   scrolling on its own. Body classes from shared/layout.js:
+     hide-controls   controls column hidden (wide screens)
+     drawer-open     controls slid over the views (narrow screens)
+     no-views        every view hidden → controls take the space (or the keyboard does)
+     kb-s … kb-xl    keyboard height */
+
+body[data-instrument] {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+body[data-instrument] > header { padding-top: max(10px, env(safe-area-inset-top)); }
+body[data-instrument] > main { min-height: 0; overflow: hidden; position: relative; }
+body[data-instrument] #controls,
+body[data-instrument] #views {
+  max-height: none;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+body[data-instrument] > footer { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+
+/* controls panel */
+.drawer-close { display: none; }
+body.hide-controls > main { grid-template-columns: 1fr; }
+body.hide-controls #controls { display: none; }
+
+/* views */
+#views .card.view-hidden { display: none; }
+#views .row:has(> .card.view-hidden) { grid-template-columns: 1fr; }
+#views .row:not(:has(> .card:not(.view-hidden))) { display: none; }
+body.no-views #views { display: none; }
+body.no-views > main { grid-template-columns: 1fr; }
+body.no-views #groups { columns: 300px; column-gap: 28px; }
+body.no-views details.group { break-inside: avoid; }
+/* nothing but the keyboard: let it fill the screen */
+body.no-views.hide-controls { grid-template-rows: auto 1fr; }
+body.no-views.hide-controls > main { display: none; }
+body.no-views.hide-controls > footer { display: flex; flex-direction: column; min-height: 0; }
+body.no-views.hide-controls > footer::before {
+  content: "Views and controls are hidden. Bring them back with Views ▾ and Controls.";
+  flex: 1; display: flex; align-items: center; justify-content: center; text-align: center;
+  color: var(--muted); padding: 12px;
+}
+body.no-views.hide-controls #keyboard { height: clamp(var(--kb-h, 115px), 50vh, 520px); }
+
+/* keyboard */
+body[data-instrument] #keyboard {
+  height: var(--kb-h, 115px);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+body.kb-s { --kb-h: 80px; }
+body.kb-m { --kb-h: 115px; }
+body.kb-l { --kb-h: 170px; }
+body.kb-xl { --kb-h: 250px; }
+#keyboard .wk, #keyboard .bk { touch-action: none; }
+
+/* layout bar (header) */
+.forte-layout { display: flex; gap: 8px; align-items: center; }
+.forte-layout > button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.forte-views { position: relative; }
+.forte-views summary {
+  list-style: none; cursor: pointer; padding: 5px 10px; border-radius: 7px;
+  border: 1px solid var(--line); background: #24242a; color: var(--text);
+}
+.forte-views summary::-webkit-details-marker { display: none; }
+.forte-views summary::after { content: " ▾"; color: var(--muted); }
+.forte-views-menu {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 50;
+  min-width: 250px; max-width: 86vw; padding: 8px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--panel); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+.forte-views-item { display: flex; gap: 10px; align-items: center; padding: 7px 8px; border-radius: 7px; cursor: pointer; }
+.forte-views-item:hover { background: rgba(255, 255, 255, 0.06); }
+.forte-views-item input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+.forte-views-foot { display: flex; gap: 8px; margin-top: 6px; padding: 8px 6px 2px; border-top: 1px solid var(--line); }
+
+/* keyboard tools (footer) */
+body[data-instrument] .kb-help { align-items: center; }
+.forte-kbtools { margin-left: auto; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.forte-kbtools button, .forte-kbtools select { padding: 3px 9px; }
+.forte-kbtools button:disabled { opacity: 0.35; cursor: default; }
+.forte-kbrange { min-width: 64px; text-align: center; color: var(--text); font-variant-numeric: tabular-nums; }
+.forte-pedal { min-width: 84px; }
+.forte-pedal.on, .forte-latch.on { background: var(--accent); color: var(--accent-ink, #111); border-color: transparent; }
+
+/* narrow screens (tablet portrait): the controls slide over the views */
+@media (max-width: 1050px) {
+  body[data-instrument]:not(.no-views) > main { grid-template-columns: 1fr; }
+  body[data-instrument]:not(.no-views) #controls {
+    display: none;
+    position: absolute; z-index: 30; top: 0; bottom: 0; left: 0;
+    width: min(380px, 92vw);
+    border-right: 1px solid var(--line); border-bottom: 0;
+    box-shadow: 10px 0 40px rgba(0, 0, 0, 0.6);
+  }
+  body.drawer-open:not(.no-views) #controls { display: block; }
+  body[data-instrument]:not(.no-views) .drawer-close { display: block; width: 100%; margin-bottom: 10px; }
+}
+@media (max-width: 1250px) {
+  body[data-instrument] .brand .sub { display: none; }
+}
+
+/* touch screens: bigger targets, no computer-keyboard hints */
+@media (pointer: coarse) {
+  body[data-instrument] input[type=range] { height: 30px; }
+  body[data-instrument] button, body[data-instrument] select, .forte-views summary { min-height: 36px; touch-action: manipulation; }
+}
+@media (any-hover: none) {
+  body[data-instrument] .kb-help > span:has(kbd), body[data-instrument] #keyboard .k-label { display: none; }
+  body[data-instrument] #keyboard .wk.mapped::before { display: none; }
+}

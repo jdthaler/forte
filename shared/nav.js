@@ -7,6 +7,7 @@
 //   <script type="module" src="../shared/nav.js"></script>
 
 import { INSTRUMENTS, SECTIONS, FORTE_VERSION, byId } from './registry.js';
+import './layout.js';
 
 const here = document.body.dataset.instrument || '';
 const root = document.body.dataset.root ?? '../';

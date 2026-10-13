@@ -9,7 +9,49 @@ release may change the sound or the parameters.
 Each release is tagged in git as `forte-vX.Y.Z` or `<instrument>-vX.Y.Z`,
 for example `piano-v0.1.0`.
 
-## 2026-10-13
+## 2026-10-13 — tablets
+
+### Forte 0.2.0
+- Tablet-friendly layout on every instrument page:
+  - the page fills the screen, with the keyboard pinned to the bottom;
+  - a **Controls** toggle: a column on wide screens, a slide-over panel on
+    narrow ones;
+  - a **Views ▾** menu to show or hide each visualisation;
+  - hiding everything leaves a full-screen keyboard;
+  - choices are remembered per instrument.
+- A shared on-screen keyboard (`shared/keyboard.js`):
+  - multi-touch chords and glissando;
+  - velocity from where you strike the key, or from Apple Pencil pressure;
+  - a 2–5-octave window with ◀ ▶, and four key sizes.
+- An on-screen pedal button for whatever Space does (sustain, hold,
+  Leslie speed), with a latch.
+- iOS:
+  - an AudioContext created on a touch is resumed;
+  - audio plays through the silent switch;
+  - bigger touch targets, no long-press callouts, and safe areas for the
+    notch and home bar.
+- An app icon and web manifest, so Forte can be added to the home screen
+  and run full-screen.
+- Hidden views are no longer drawn, which saves battery.
+- A drawing error can no longer stop a page's animation.
+
+### Ribbon Piano 0.1.1
+- Uses the shared multi-touch keyboard and tablet layout; skips drawing hidden views.
+
+### Tonewheel Organ 0.1.1
+- Uses the shared multi-touch keyboard and tablet layout; skips drawing hidden views.
+- The Leslie view no longer throws when its canvas is very small.
+
+### Tine Piano 0.1.1
+- Uses the shared multi-touch keyboard and tablet layout; skips drawing hidden views.
+
+### Huygens Keyboard 0.1.1
+- Uses the shared multi-touch keyboard and tablet layout; skips drawing hidden views.
+
+### Black-Hole Keyboard 0.1.1
+- Uses the shared multi-touch keyboard and tablet layout; skips drawing hidden views.
+
+## 2026-10-13 — first release
 
 ### Forte 0.1.0
 - Landing page, one page per instrument, instrument menu, and a version

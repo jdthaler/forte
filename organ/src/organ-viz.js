@@ -103,6 +103,7 @@ export class LeslieView {
     const mics = [[-Math.sin(sp) * D, Math.cos(sp) * D], [Math.sin(sp) * D, Math.cos(sp) * D]];
     const xMax = Math.max(0.4, Math.sin(sp) * D + 0.15), yMax = Math.max(0.45, Math.cos(sp) * D + 0.15);
     const s = Math.min((w - 20) / (2 * xMax), (h - 30) / (yMax + 0.4));
+    if (!(s > 5)) return; // too small to draw
     const cx = w / 2, cy = 14 + 0.36 * s;
     const X = (x) => cx + x * s, Y = (y) => cy + y * s;
 
