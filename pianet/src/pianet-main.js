@@ -186,4 +186,5 @@ function drawForce() {
   }
 }
 
-animate(() => { if (dirty) update(); drawReed(); drawForce(); });
+const shown = (cv) => cv.offsetParent !== null; // views can be hidden from the Views menu
+animate(() => { if (dirty) update(); if (shown($('#reed'))) drawReed(); if (shown($('#force'))) drawForce(); });

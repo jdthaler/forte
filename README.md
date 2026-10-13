@@ -18,10 +18,10 @@ lands, the pickup's offset, how fast the black hole spins.
 | ✅ | [Ribbon Piano](piano/) | the concert grand | modal stiff strings, nonlinear felt hammers, a shared bridge; strings swappable for square/triangular bars and twisting ribbons |
 | ✅ | [Tonewheel Organ](organ/) | Hammond B-3 + Leslie 122 | gear ratios and shared wheels, contact bounce, LC-ladder scanner vibrato, rotating Doppler horn and drum |
 | ✅ | [Tine Piano](tines/) | Fender Rhodes | finite-element tine + tone bar as an asymmetric tuning fork, nonlinear electromagnetic pickup |
-| 🛠 | Electric Grand | Yamaha CP-70 | piano strings heard through piezo pickups at the bridge |
+| ✅ | [Electric Grand](grand/) | Yamaha CP-70 | short stiff strings in two polarisations, a piezo under the bridge (or a soundboard, for comparison) |
 | 🛠 | Reed Piano | Wurlitzer 200A | struck steel reeds, electrostatic pickup |
 | 🛠 | Tangent Clavier | Hohner Clavinet | string struck against an anvil, two magnetic pickups |
-| 🛠 | Sticky-Pad Piano | Hohner Pianet | reeds plucked by adhesive pads |
+| ✅ | [Sticky-Pad Piano](pianet/) | Hohner Pianet | reeds plucked by rate-dependent adhesion (fracture mechanics of the pad), magnetic or electrostatic pickup |
 | 🛠 | Viola Organista | Leonardo da Vinci (1488) | strings bowed by rosined wheels: stick–slip friction |
 | 🛠 | Glass Armonica | Benjamin Franklin (1761) | friction-driven glass shell modes, water loading |
 | 🛠 | Pyrophone | Frédéric Kastner (1873) | flames in tubes: thermoacoustic Hopf bifurcation |

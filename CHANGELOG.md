@@ -9,6 +9,24 @@ release may change the sound or the parameters.
 Each release is tagged in git as `forte-vX.Y.Z` or `<instrument>-vX.Y.Z`,
 for example `piano-v0.1.0`.
 
+## 2026-10-13 — new instruments
+
+### Electric Grand 0.1.0
+- After the Yamaha CP-70: stiff strings scaled to the CP-70 (one string per
+  note in the bass, two above), each in two polarisations with Weinreich
+  double decay.
+- Felt hammers with nonlinear contact.
+- A piezo pickup that senses the bridge force, with the preamp's
+  high-pass and EQ, or, for comparison, a modal soundboard radiating to two
+  microphones.
+
+### Sticky-Pad Piano 0.1.0
+- After the Hohner Pianet: reeds plucked by tacky pads, with release set
+  by rate-dependent adhesion (Kendall flat-punch fracture).
+- The pad chokes the reed when it lands again.
+- Solder-tuned reeds solved by finite elements.
+- Magnetic (Pianet T) or electrostatic (Pianet N) pickup.
+
 ## 2026-10-13 — tablets
 
 ### Forte 0.2.0

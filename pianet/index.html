@@ -2,11 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Sticky-Pad Piano · Forte</title>
   <link rel="stylesheet" href="../shared/forte.css">
   <link rel="stylesheet" href="../shared/instrument.css">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forte">
 </head>
 <body data-instrument="pianet">
   <header>
@@ -52,7 +60,7 @@
           <canvas id="spectrum"></canvas>
           <div class="caption">The reed's overtones are not harmonic (about 8–12 × f₁ with the solder); the harmonics in between come from the pickup's nonlinearity.</div>
         </div>
-        <div class="card" id="info-card">
+        <div class="card" id="info-card" data-view="Reed details">
           <div class="card-head"><h2>Reed of <b id="focus-name">C4</b></h2></div>
           <dl id="info"></dl>
           <table class="modes" id="modes"></table>

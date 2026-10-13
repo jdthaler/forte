@@ -25,6 +25,36 @@
    "title": "Inspiral merger ringdown chirps"
   }
  ],
+ "grand": [
+  {
+   "file": "01-cp70-ballad.m4a",
+   "title": "Cp70 ballad"
+  },
+  {
+   "file": "02-piezo-then-soundboard-piezo-then-microphone.m4a",
+   "title": "Piezo then soundboard piezo then microphone"
+  },
+  {
+   "file": "03-bass-short-cp70-strings-then-concert-grand-strings.m4a",
+   "title": "Bass short cp70 strings then concert grand strings"
+  },
+  {
+   "file": "04-weinreich-one-string-then-two-strings-on-a-soundboard.m4a",
+   "title": "Weinreich one string then two strings on a soundboard"
+  },
+  {
+   "file": "05-strike-at-one-eighth-then-middle-then-near-the-end.m4a",
+   "title": "Strike at one eighth then middle then near the end"
+  },
+  {
+   "file": "06-preamp-flat-then-stage-eq-then-low-impedance.m4a",
+   "title": "Preamp flat then stage eq then low impedance"
+  },
+  {
+   "file": "07-unisons-in-tune-then-honky-tonk.m4a",
+   "title": "Unisons in tune then honky tonk"
+  }
+ ],
  "huygens": [
   {
    "file": "01-c-major-uncoupled-then-coupled.m4a",
@@ -79,6 +109,40 @@
   {
    "file": "08-mains-50Hz-on-a-60Hz-organ.m4a",
    "title": "Mains 50Hz on a 60Hz organ"
+  }
+ ],
+ "pianet": [
+  {
+   "file": "01-moody-minor-phrase.m4a",
+   "title": "Moody minor phrase"
+  },
+  {
+   "file": "02-key-speed-3-to-40-cm-per-s-rate-dependent-tack.m4a",
+   "title": "Key speed 3 to 40 cm per s rate dependent tack"
+  },
+  {
+   "file": "03-fresh-pads-then-aged-then-nearly-dead.m4a",
+   "title": "Fresh pads then aged then nearly dead"
+  },
+  {
+   "file": "04-magnetic-pickup-T-then-electrostatic-N.m4a",
+   "title": "Magnetic pickup T then electrostatic N"
+  },
+  {
+   "file": "05-staccato-chokes-then-the-same-with-sustain.m4a",
+   "title": "Staccato chokes then the same with sustain"
+  },
+  {
+   "file": "06-plate-edge-level-then-raised-odd-then-even-harmonics.m4a",
+   "title": "Plate edge level then raised odd then even harmonics"
+  },
+  {
+   "file": "07-light-then-heavy-solder-tips.m4a",
+   "title": "Light then heavy solder tips"
+  },
+  {
+   "file": "08-phrase-through-a-valve-combo.m4a",
+   "title": "Phrase through a valve combo"
   }
  ],
  "piano": [
