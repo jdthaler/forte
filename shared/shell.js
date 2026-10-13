@@ -33,6 +33,8 @@
 //   onAudio(audio)  once, with { ctx, node, tone, master, roomGain, analyser }
 //   onMessage(msg)  messages from the engine ('stats' already updates #cpu)
 //   onNoteOn(key, vel)  onNoteOff(key)  onSustain(on)  onPanic()  onCC(cc, value)
+//   onPressure(value, key|null)  onBend(value)   (MIDI aftertouch 0..1 and pitch bend −1..1; the
+//                   engine also receives { type: 'pressure', value, key } and { type: 'bend', value })
 //   onParam(id, value, P, param, dragging)   id = '*' after a preset or reset
 
 import { roomIR } from './impulses.js';
@@ -268,6 +270,14 @@ export function createShell(cfg) {
         shell.setParam(p.id, p.log ? p.min * (p.max / p.min) ** (d2 / 127) : p.min + ((p.max - p.min) * d2) / 127);
       } else if (d1 === 120 || d1 === 123) shell.panic();
       cfg.onCC?.(d1, d2);
+    } else if (cmd === 0xd0 || cmd === 0xa0) { // channel / polyphonic aftertouch
+      const value = (cmd === 0xd0 ? d1 : d2) / 127, key = cmd === 0xa0 ? d1 : null;
+      shell.post({ type: 'pressure', value, key });
+      cfg.onPressure?.(value, key);
+    } else if (cmd === 0xe0) { // pitch bend, −1 … 1
+      const value = Math.max(-1, ((d2 << 7) + d1 - 8192) / 8191);
+      shell.post({ type: 'bend', value });
+      cfg.onBend?.(value);
     }
   }
 

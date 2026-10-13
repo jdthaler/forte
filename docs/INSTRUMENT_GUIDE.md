@@ -77,7 +77,7 @@ export class GongEngine {
   noteOff(key) { … }
   setSustain(on) { … }             // optional
   allNotesOff() { … }              // optional (Panic)
-  handle(msg) { … }                // optional: any other message type you post
+  handle(msg) { … }                // optional: other messages, incl. MIDI { type: 'pressure', value, key } and { type: 'bend', value }
   voiceCount() { … }               // optional, shown in the CPU pill
   process(L, R, n) { … }           // fill n samples (n = 128 in the browser)
 }
