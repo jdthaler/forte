@@ -1,0 +1,12 @@
+/* The page's own palette and any layout beyond shared/instrument.css. */
+:root {
+  --accent: #ffcf70;
+  --accent-2: #7cc8ff;
+  --accent-ink: #1d1402;
+  --steel: #c8ccd4;
+  --solder: #9aa0a8;
+  --foam: #c98a5a;
+  --bond: #ff7a6b;
+}
+#info { margin-bottom: 10px; }
+#phase { font-variant-numeric: tabular-nums; }
