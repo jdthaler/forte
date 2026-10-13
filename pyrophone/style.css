@@ -1,0 +1,7 @@
+/* The page's own palette and any layout beyond shared/instrument.css. */
+:root {
+  --accent: #ff7a45;
+  --accent-2: #7cb8ff;
+  --accent-ink: #1f0b03;
+}
+#bif-info b { color: var(--text); font-weight: 600; }
