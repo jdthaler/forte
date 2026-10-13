@@ -61,3 +61,23 @@
 a.forte-menu-item:hover { background: rgba(255, 255, 255, 0.06); }
 .forte-menu-item.current { background: rgba(255, 255, 255, 0.08); }
 .forte-menu-item.soon { opacity: 0.5; }
+.forte-menu-foot { margin: 10px 6px 2px; padding-top: 8px; border-top: 1px solid var(--line, #2b2833); color: var(--muted, #9a9284); font-size: 11px; }
+.forte-menu-foot a { color: inherit; }
+.forte-version {
+  color: var(--muted, #9a9284);
+  font: 11px ui-monospace, Menlo, monospace;
+  text-decoration: none;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line, #2b2833);
+}
+.forte-version:hover { color: var(--text, #ece8e1); }
+.forte-warning {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  padding: 8px 14px;
+  background: #3a2a10;
+  color: #ffe2b0;
+  border-bottom: 1px solid #7a5520;
+  font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.forte-warning a { color: #fff; }

@@ -1,12 +1,12 @@
-// nav.js — the Forte header on every instrument page: a link home and an
-// instrument switcher built from the registry.
+// nav.js — the Forte header on every instrument page: a link home, an
+// instrument switcher built from the registry, and the instrument's version.
 //
 // Usage on an instrument page:
 //   <body data-instrument="organ">
 //   <header> … <nav data-forte-nav></nav> … </header>
 //   <script type="module" src="../shared/nav.js"></script>
 
-import { INSTRUMENTS, SECTIONS } from './registry.js';
+import { INSTRUMENTS, SECTIONS, FORTE_VERSION, byId } from './registry.js';
 
 const here = document.body.dataset.instrument || '';
 const root = document.body.dataset.root ?? '../';
@@ -39,9 +39,34 @@ for (const slot of document.querySelectorAll('[data-forte-nav]')) {
       menu.appendChild(a);
     }
   }
+  const credit = document.createElement('div');
+  credit.className = 'forte-menu-foot';
+  credit.innerHTML = `Forte ${FORTE_VERSION} · Vibe coded by Jesse Thaler · <a href="https://github.com/jdthaler/forte">source</a>`;
+  menu.appendChild(credit);
   det.appendChild(menu);
-  slot.replaceChildren(home, det);
+  const parts = [home, det];
+  const inst = byId(here);
+  if (inst?.version) {
+    const v = document.createElement('a');
+    v.className = 'forte-version';
+    v.href = 'https://github.com/jdthaler/forte/blob/main/CHANGELOG.md';
+    v.textContent = `v${inst.version}`;
+    v.title = `${inst.name} ${inst.version} · Forte ${FORTE_VERSION} — changelog`;
+    parts.push(v);
+  }
+  slot.replaceChildren(...parts);
   // close the menu when clicking elsewhere or pressing Escape
   document.addEventListener('click', (e) => { if (!det.contains(e.target)) det.open = false; });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') det.open = false; });
+}
+
+// AudioWorklet only exists on secure pages (https:// or localhost): say so up front.
+if (!window.isSecureContext || !window.AudioWorkletNode) {
+  const bar = document.createElement('div');
+  bar.className = 'forte-warning';
+  const https = `https://${location.host}${location.pathname}`;
+  bar.innerHTML = window.isSecureContext
+    ? 'This browser cannot run Forte’s audio (no AudioWorklet). Please use a current Chrome, Edge, Firefox or Safari.'
+    : `Audio needs a secure connection. Open <a href="${https}">${https}</a> instead.`;
+  document.body.prepend(bar);
 }

@@ -59,6 +59,7 @@ function startAudio() {
   if (audioStarting) return audioStarting;
   audioStarting = (async () => {
     const ctx = new AudioContext({ latencyHint: 'interactive' });
+    if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
     await ctx.audioWorklet.addModule('src/engine.js');
     await ctx.audioWorklet.addModule('src/worklet.js');
     const node = new AudioWorkletNode(ctx, 'piano-processor', {

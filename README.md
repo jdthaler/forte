@@ -1,7 +1,7 @@
 # Forte
 
 **Keyboard instruments built from physics.** Play them at
-**<https://forte.jthaler.net>**.
+**<https://forte.jthaler.net>**. Vibe coded by Jesse Thaler.
 
 Every sound in Forte is computed live in the browser from the equations of
 motion of its instrument: stiff strings and felt hammers, gear-driven
@@ -84,6 +84,22 @@ docs/template/               the starting point (struck bars)
 To add an instrument, run
 `node tools/new-instrument.mjs <slug> <EngineName> "<Name>"` and follow
 [docs/INSTRUMENT_GUIDE.md](docs/INSTRUMENT_GUIDE.md).
+
+## Versions
+
+Forte and each instrument carry their own
+[semantic version](https://semver.org), shown on each page and on the
+landing page. They are listed in `shared/registry.js` (and in
+`package.json` for Forte), logged in [CHANGELOG.md](CHANGELOG.md), and
+tagged in git as `forte-vX.Y.Z` or `<instrument>-vX.Y.Z`. Everything is
+pre-release (0.x) for now:
+
+* **MINOR** (0.**x**.0) for new features, or for changes to an
+  instrument's sound or parameters.
+* **PATCH** (0.x.**y**) for fixes that leave the intended sound alone.
+
+From 1.0 on, an instrument's MAJOR version will change only when saved
+settings or the sound of existing presets break.
 
 ## License
 

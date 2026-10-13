@@ -77,6 +77,7 @@ export function createShell(cfg) {
     starting = (async () => {
       const ctx = new AudioContext({ latencyHint: 'interactive' });
       const w = cfg.worklet;
+      if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
       for (const m of w.modules) await ctx.audioWorklet.addModule(m);
       if (!w.processor) await ctx.audioWorklet.addModule(new URL('./worklet.js', import.meta.url));
       const node = new AudioWorkletNode(ctx, w.processor || 'forte-processor', {

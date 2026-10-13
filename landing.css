@@ -60,6 +60,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 8px; }
 .card.ready:hover { border-color: color-mix(in srgb, var(--c) 55%, var(--line)); }
 .card h3 { margin: 4px 0 0; font-size: 19px; }
 .card h3 a { text-decoration: none; }
+.card h3 .ver { float: right; margin-top: 3px; color: var(--muted); font: 11px ui-monospace, Menlo, monospace; font-weight: 400; }
 .card .after { color: var(--muted); font-size: 12.5px; margin-top: -4px; }
 .card p { margin: 2px 0 0; color: #cfcac0; font-size: 14px; flex: 1; }
 .card .tags { color: color-mix(in srgb, var(--c) 75%, white); font-size: 12px; letter-spacing: 0.2px; }

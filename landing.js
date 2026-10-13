@@ -1,7 +1,7 @@
 // landing.js — instrument cards from the registry, demo playback, and a
 // background of standing waves (a string's normal modes, slowly beating).
 
-import { INSTRUMENTS, SECTIONS } from './shared/registry.js';
+import { INSTRUMENTS, SECTIONS, FORTE_VERSION } from './shared/registry.js';
 
 const main = document.querySelector('#instruments');
 const player = document.querySelector('#player');
@@ -23,7 +23,7 @@ function render() {
       const demo = (examples[inst.id] || [])[0];
       const title = inst.ready ? `<a href="${inst.id}/">${inst.name}</a>` : inst.name;
       card.innerHTML = `
-        <h3>${title}</h3>
+        <h3>${title}${inst.version ? `<span class="ver">v${inst.version}</span>` : ''}</h3>
         ${inst.after ? `<div class="after">after ${inst.after}</div>` : ''}
         <p>${inst.tagline}</p>
         <div class="tags">${inst.physics}</div>
@@ -49,6 +49,7 @@ function render() {
 player.addEventListener('pause', () => { if (playing) { playing.classList.remove('on'); playing.textContent = '▶ Listen'; playing = null; } });
 player.addEventListener('ended', () => player.dispatchEvent(new Event('pause')));
 
+document.querySelector('#forte-version').textContent = FORTE_VERSION;
 render();
 fetch('examples/index.json').then((r) => (r.ok ? r.json() : {})).then((j) => { examples = j; render(); }).catch(() => {});
 

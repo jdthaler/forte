@@ -1,5 +1,12 @@
 // registry.js — every Forte instrument, for the landing page and the header
 // switcher. `ready: false` instruments are listed as "in the workshop".
+//
+// Versions follow semantic versioning (https://semver.org), one for Forte
+// itself (the site and shared/) and one per instrument. 0.x is pre-release.
+// Keep FORTE_VERSION equal to package.json's, and log every bump in
+// CHANGELOG.md (test/site-tests.mjs checks both).
+
+export const FORTE_VERSION = '0.1.0';
 
 export const SECTIONS = [
   { id: 'history', title: 'Instruments from history', blurb: 'Real keyboards — some famous, some forgotten — rebuilt from their physics, with every mechanism exposed as a knob.' },
@@ -8,7 +15,7 @@ export const SECTIONS = [
 
 export const INSTRUMENTS = [
   {
-    id: 'piano', name: 'Ribbon Piano', section: 'history', ready: true,
+    id: 'piano', name: 'Ribbon Piano', section: 'history', ready: true, version: '0.1.0',
     after: 'the concert grand',
     tagline: 'Stiff strings, felt hammers and a shared bridge — then swap the strings for square bars, triangular bars or twisting ribbons.',
     physics: 'Modal strings · nonlinear hammers · torsion',
@@ -22,14 +29,14 @@ export const INSTRUMENTS = [
     accent: '#7fb2ff',
   },
   {
-    id: 'organ', name: 'Tonewheel Organ', section: 'history', ready: true,
+    id: 'organ', name: 'Tonewheel Organ', section: 'history', ready: true, version: '0.1.0',
     after: 'the Hammond B-3 and Leslie',
     tagline: '91 spinning gear-driven wheels, bouncing key contacts, a scanner on an LC delay line and a rotating Doppler horn.',
     physics: 'Gear ratios · shared wheels · Doppler',
     accent: '#f0b35a',
   },
   {
-    id: 'tines', name: 'Tine Piano', section: 'history', ready: true,
+    id: 'tines', name: 'Tine Piano', section: 'history', ready: true, version: '0.1.0',
     after: 'the Fender Rhodes',
     tagline: 'Each key an asymmetric tuning fork of steel tine and brass bar, heard through a nonlinear magnetic pickup.',
     physics: 'Coupled cantilevers · pickup nonlinearity',
@@ -78,7 +85,7 @@ export const INSTRUMENTS = [
     accent: '#ff7a45',
   },
   {
-    id: 'huygens', name: 'Huygens Keyboard', section: 'new', ready: true,
+    id: 'huygens', name: 'Huygens Keyboard', section: 'new', ready: true, version: '0.1.0',
     tagline: 'Relaxation oscillators that pull each other into just intonation — Arnold tongues you can play.',
     physics: 'Pulse-coupled oscillators · mode locking',
     accent: '#ff8a3d',
@@ -90,7 +97,7 @@ export const INSTRUMENTS = [
     accent: '#e6c15a',
   },
   {
-    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'new', ready: true,
+    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'new', ready: true, version: '0.1.0',
     tagline: 'Every key a Kerr black hole, ringing in quasinormal modes computed from the Teukolsky equation.',
     physics: 'General relativity · quasinormal modes',
     accent: '#b18cff',

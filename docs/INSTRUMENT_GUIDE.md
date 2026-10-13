@@ -162,6 +162,18 @@ WAVs are git-ignored. Commit the `.m4a` files.
 
 ### Going live
 
-Add the instrument to `shared/registry.js` (`ready: true`). The landing
-page and every menu pick it up. Run every test file, check the page in a
+Add the instrument to `shared/registry.js` with `ready: true, version: '0.1.0'`
+and add a `### <Name> 0.1.0` entry to `CHANGELOG.md`. The landing page and
+every menu pick it up, and `test/site-tests.mjs` checks that all of this
+agrees.
+
+### Versions
+
+Each instrument has its own semantic version, kept in the registry.
+While it is 0.x, bump MINOR for new features or changes to the sound or
+parameters, and PATCH for fixes that leave the intended sound alone. Bump
+Forte's version (`FORTE_VERSION` and `package.json`) for changes to
+`shared/`, the landing page or the tools. Log every bump in `CHANGELOG.md`
+under the date, then tag the release commit (`git tag <slug>-vX.Y.Z`)
+and push the tags. Run every test file, check the page in a
 browser (audio, MIDI, presets, views, narrow-screen layout), and push.
