@@ -199,6 +199,36 @@
    "title": "Thick stiff wire very inharmonic"
   }
  ],
+ "reeds": [
+  {
+   "file": "01-soul-ballad-tremolo-through-the-speakers.m4a",
+   "title": "Soul ballad tremolo through the speakers"
+  },
+  {
+   "file": "02-same-note-pp-to-ff-the-bark-grows.m4a",
+   "title": "Same note pp to ff the bark grows"
+  },
+  {
+   "file": "03-reed-centred-in-the-slot-then-off-centre-then-riding-high.m4a",
+   "title": "Reed centred in the slot then off centre then riding high"
+  },
+  {
+   "file": "04-solder-light-then-heavy-same-pitch.m4a",
+   "title": "Solder light then heavy same pitch"
+  },
+  {
+   "file": "05-tremolo-photocell-on-a-held-chord.m4a",
+   "title": "Tremolo photocell on a held chord"
+  },
+  {
+   "file": "06-direct-out-then-built-in-speakers.m4a",
+   "title": "Direct out then built in speakers"
+  },
+  {
+   "file": "07-feed-resistor-22-megohm-then-1-megohm-constant-charge-vs-voltage.m4a",
+   "title": "Feed resistor 22 megohm then 1 megohm constant charge vs voltage"
+  }
+ ],
  "tines": [
   {
    "file": "01-stage-piano-phrase.m4a",

@@ -19,7 +19,7 @@ lands, the pickup's offset, how fast the black hole spins.
 | ✅ | [Tonewheel Organ](organ/) | Hammond B-3 + Leslie 122 | gear ratios and shared wheels, contact bounce, LC-ladder scanner vibrato, rotating Doppler horn and drum |
 | ✅ | [Tine Piano](tines/) | Fender Rhodes | finite-element tine + tone bar as an asymmetric tuning fork, nonlinear electromagnetic pickup |
 | ✅ | [Electric Grand](grand/) | Yamaha CP-70 | short stiff strings in two polarisations, a piezo under the bridge (or a soundboard, for comparison) |
-| 🛠 | Reed Piano | Wurlitzer 200A | struck steel reeds, electrostatic pickup |
+| ✅ | [Reed Piano](reeds/) | Wurlitzer 200A | solder-tuned steel reeds, an electrostatic pickup whose capacitance comes from Laplace's equation, photocell tremolo |
 | 🛠 | Tangent Clavier | Hohner Clavinet | string struck against an anvil, two magnetic pickups |
 | ✅ | [Sticky-Pad Piano](pianet/) | Hohner Pianet | reeds plucked by rate-dependent adhesion (fracture mechanics of the pad), magnetic or electrostatic pickup |
 | 🛠 | Viola Organista | Leonardo da Vinci (1488) | strings bowed by rosined wheels: stick–slip friction |

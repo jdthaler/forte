@@ -11,6 +11,14 @@ for example `piano-v0.1.0`.
 
 ## 2026-10-13 — new instruments
 
+### Reed Piano 0.1.0
+- After the Wurlitzer 200A: solder-tuned steel reeds (finite elements with
+  tip mass and rotary inertia) and an energy-conserving felt hammer.
+- An electrostatic pickup whose C(y) comes from solving Laplace's equation
+  in the comb slot, with the RC feed network (constant charge to constant
+  voltage) and the field's pull on the reed.
+- Preamp clipping, LED/photocell tremolo, built-in speakers or direct out.
+
 ### Electric Grand 0.1.0
 - After the Yamaha CP-70: stiff strings scaled to the CP-70 (one string per
   note in the bass, two above), each in two polarisations with Weinreich
