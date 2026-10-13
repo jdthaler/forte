@@ -11,6 +11,14 @@ for example `piano-v0.1.0`.
 
 ## 2026-10-13 — new instruments
 
+### Pyrophone 0.1.0
+- After Kastner's flame organ: each key is a Galerkin Rijke tube (10
+  open–open modes) driven by a lagged King's-law heat source.
+- A subcritical Hopf bifurcation, so tubes are bistable and notes
+  "remember having sung"; the hysteresis thresholds match harmonic balance.
+- Slow self-excited onsets and warm-up pitch drift (c ∝ √T).
+- Bifurcation diagram, tube and phase-portrait views.
+
 ### Reed Piano 0.1.0
 - After the Wurlitzer 200A: solder-tuned steel reeds (finite elements with
   tip mass and rotary inertia) and an energy-conserving felt hammer.

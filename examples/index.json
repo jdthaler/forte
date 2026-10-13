@@ -199,6 +199,36 @@
    "title": "Thick stiff wire very inharmonic"
   }
  ],
+ "pyrophone": [
+  {
+   "file": "01-chorale.m4a",
+   "title": "Chorale"
+  },
+  {
+   "file": "02-hysteresis-power-up-then-down.m4a",
+   "title": "Hysteresis power up then down"
+  },
+  {
+   "file": "03-flame-moved-from-top-to-bottom.m4a",
+   "title": "Flame moved from top to bottom"
+  },
+  {
+   "file": "04-warm-up-cold-tube-then-warm-tube.m4a",
+   "title": "Warm up cold tube then warm tube"
+  },
+  {
+   "file": "05-staccato-then-held-slow-onsets.m4a",
+   "title": "Staccato then held slow onsets"
+  },
+  {
+   "file": "06-chord-soft-then-loud-blooms-from-the-top.m4a",
+   "title": "Chord soft then loud blooms from the top"
+  },
+  {
+   "file": "07-tubes-that-remember-key-up-in-the-bistable-band.m4a",
+   "title": "Tubes that remember key up in the bistable band"
+  }
+ ],
  "reeds": [
   {
    "file": "01-soul-ballad-tremolo-through-the-speakers.m4a",

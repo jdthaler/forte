@@ -24,7 +24,7 @@ lands, the pickup's offset, how fast the black hole spins.
 | ✅ | [Sticky-Pad Piano](pianet/) | Hohner Pianet | reeds plucked by rate-dependent adhesion (fracture mechanics of the pad), magnetic or electrostatic pickup |
 | 🛠 | Viola Organista | Leonardo da Vinci (1488) | strings bowed by rosined wheels: stick–slip friction |
 | 🛠 | Glass Armonica | Benjamin Franklin (1761) | friction-driven glass shell modes, water loading |
-| 🛠 | Pyrophone | Frédéric Kastner (1873) | flames in tubes: thermoacoustic Hopf bifurcation |
+| ✅ | [Pyrophone](pyrophone/) | Frédéric Kastner (1873) | flame-driven Rijke tubes on a subcritical Hopf bifurcation: slow self-excited onsets, hysteresis, warm-up drift |
 | ✅ | [Huygens Keyboard](huygens/) | — | pulse-coupled relaxation oscillators that lock chords into just intonation (Arnold tongues) |
 | ✅ | [Black-Hole Keyboard](blackhole/) | — | Kerr quasinormal modes from the Teukolsky equation, h₊ and h× in stereo |
 | 🛠 | Gong Keyboard | — | von Kármán plates: from bell to crash with amplitude |
