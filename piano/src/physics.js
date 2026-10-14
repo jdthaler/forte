@@ -111,6 +111,7 @@ export function windingMass(m) {
   return mu * (Ttarget / Tplain - 1);
 }
 
+// Piecewise-linear through the points, extrapolated beyond the ends.
 function interp(m, pts) {
   if (m <= pts[0][0]) {
     const [x0, y0] = pts[0], [x1, y1] = pts[1];
@@ -124,11 +125,29 @@ function interp(m, pts) {
   }
 }
 
-// Felt hammers after Chaigne & Askenfelt (1994): F = K δ^p.
+// Felt hammers after Chaigne & Askenfelt (1994): F = K δ^p, per string, from
+// their C2, C4 and C7 values (extrapolated beyond C7). The Grand Piano builds
+// on this table; the Ribbon Piano uses pianoHammer below.
 export function hammerDefaults(m) {
   const mass = clamp(interp(m, [[36, 4.9e-3], [60, 2.97e-3], [96, 2.2e-3]]), 1.8e-3, 7e-3);
   const K = Math.exp(interp(m, [[36, Math.log(4e8)], [60, Math.log(4.5e9)], [96, Math.log(1e11)]]));
   const p = clamp(interp(m, [[36, 2.3], [60, 2.5], [96, 3.0]]), 2.1, 3.3);
+  const width = clamp(0.010 + (60 - m) * 0.00025, 0.003, 0.022);
+  return { mass, K, p, width };
+}
+
+// The Ribbon Piano's hammers: C&A's values at C2 and C4 (the hammer of a
+// ν-string note is ν of these side by side), refitted in the treble. C&A's
+// single C7 set, extrapolated, keeps the hammer on the string for 1.1 ms all
+// the way to C8 at a medium blow, several periods of a top-octave note, so C7–C8
+// came out 16–34 dB below C4. Real treble hammers are voiced much harder and
+// touch the string for well under 1 ms (Askenfelt & Jansson 1990), so above C4
+// K rises faster: contact ≈ 1.2 ms at C6, 0.7 ms at C7, 0.4 ms at C8 at
+// 1.2 m/s. Mass and p follow C&A up to C7 and level off above it.
+export function pianoHammer(m) {
+  const mass = clamp(interp(m, [[36, 4.9e-3], [60, 2.97e-3], [96, 2.2e-3], [108, 1.9e-3]]), 1.8e-3, 7e-3);
+  const K = Math.exp(interp(m, [[36, Math.log(4e8)], [60, Math.log(4.5e9)], [84, Math.log(8e10)], [96, Math.log(3e12)], [108, Math.log(8e12)]]));
+  const p = clamp(interp(m, [[36, 2.3], [60, 2.5], [96, 3.0], [108, 3.0]]), 2.1, 3.0);
   const width = clamp(0.010 + (60 - m) * 0.00025, 0.003, 0.022);
   return { mass, K, p, width };
 }
@@ -223,6 +242,9 @@ function hannFT(kk, w) {
 // ---------------------------------------------------------------------------
 // Per-key model
 
+// At most this many partials per family (CPU). With "Highest partial" at
+// 12 kHz the cap binds from A0 to A1: the stretched partials of A0 stop at
+// 5.6 kHz, C1's at 6.6 kHz (the info panel shows it per key).
 export const NMAX_MODES = 140;
 
 export function computeKeyModel(m, P, fs = 48000) {
@@ -243,7 +265,7 @@ export function computeKeyModel(m, P, fs = 48000) {
   const secAt = (x) => sectionProps(shape, A0, aspect, prof(x));
   const dTheta = dMu * 2 * (sec0.Ip / sec0.A); // winding sits outside the core
 
-  const hd = hammerDefaults(m);
+  const hd = pianoHammer(m);
   const beta = clamp(P.strikePos, 0.01, 0.5);
   const xh = beta * L;
   const wH = Math.min(hd.width * P.hammerWidth, 2 * xh, 0.5 * L);
@@ -422,22 +444,26 @@ export function buildVoiceData(model, P, version = 0) {
   const nu = Math.round(clamp(P.unisons, 1, 3));
   const det = nu === 1 ? [0] : nu === 2 ? [-0.5, 0.5] : [-1, 0, 1];
   const psi = (P.roll * PI) / 180;
-  const cps = Math.cos(psi), sps = Math.sin(psi);
-  const lever = (P.offset || 0) * model.sec.lever;
+  let cps = Math.cos(psi), sps = Math.sin(psi);
+  // snap exact face-on / edge-on so the family the hammer cannot reach
+  // (weight ~1e-16) is dropped and its partner touches only one bridge channel
+  if (Math.abs(cps) < 1e-6) { cps = 0; sps = Math.sign(sps); }
+  if (Math.abs(sps) < 1e-6) { sps = 0; cps = Math.sign(cps); }
+  // a tapered member is struck, and meets the bridge, where it is that wide
+  const lever = (P.offset || 0) * model.secAt(model.xh).lever;
+  const halfBridge = model.secAt(model.L).half;
   const Gv = BRIDGE_G * P.bridge, Gh = Gv * P.bridgeH;
   const sGv = Math.sqrt(Gv), sGh = Math.sqrt(Gh);
   const b1 = 0.25 * P.lossLow, b3 = 2.5e-9 * P.lossHigh;
   const polDet = 2 ** ((P.polDetune || 0) / 1200);
   const [fam1, fam2, famT] = model.families;
 
-  const use = [
-    { fam: fam1, id: 0, hw: cps, v: cps, h: sps, t: 0, det: 1, loss: 1 },
-  ];
-  if (Math.abs(sps) > 1e-6) {
-    use.push({ fam: fam2, id: 1, hw: -sps, v: -sps, h: cps, t: 0, det: polDet, loss: 1 });
-  }
+  const use = [];
+  if (cps !== 0) use.push({ fam: fam1, id: 0, hw: cps, v: cps, h: sps, t: 0, det: 1, loss: 1 });
+  if (sps !== 0) use.push({ fam: fam2, id: 1, hw: -sps, v: -sps, h: cps, t: 0, det: polDet, loss: 1 });
   if (Math.abs(lever) > 1e-12) {
-    use.push({ fam: famT, id: 2, hw: lever, v: 0, h: 0, t: 1 / model.sec.half, det: 1, loss: P.torsionLoss });
+    // torsion is heard as the edge force of the bridge torque: τ / half-width there
+    use.push({ fam: famT, id: 2, hw: lever, v: 0, h: 0, t: 1 / halfBridge, det: 1, loss: P.torsionLoss });
   }
 
   let N = 0;
@@ -471,7 +497,7 @@ export function buildVoiceData(model, P, version = 0) {
   const p = hd.p + dp;
   const K = hd.K * P.hardness * 1e-3 ** (hd.p - p) * nu; // keep F(1 mm) fixed when p changes
   return {
-    version, key: model.key, n: N,
+    version, key: model.key, n: N, unisons: nu,
     freq, sigma, w, cv, ch, ct, famId, uni, idx,
     hammer: { mass: hd.mass * P.hammerMass * nu, K, p, alpha: P.hysteresis },
     // "voicing": the per-key loudness balance a technician sets by needling

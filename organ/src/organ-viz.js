@@ -1,6 +1,7 @@
 // organ-viz.js — generator map, Leslie top view, output spectrum/scope, scanner.
 
 import { NUM_WHEELS, wheelSpec, PC_NAMES } from './tonewheels.js';
+import { leslieGeometry } from './organ-engine.js';
 
 function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 
@@ -100,17 +101,19 @@ export class LeslieView {
     const dt = st ? (performance.now() - this.t) / 1000 : 0;
     const hornA = st ? st.hornAng + 2 * Math.PI * st.hornHz * dt : 0;
     const drumA = st ? st.drumAng + 2 * Math.PI * st.drumHz * dt : 1.3;
-    const D = P.micDist, sp = (P.micSpread * Math.PI) / 360;
+    const { wall, micDist: D } = leslieGeometry(P), sp = (P.micSpread * Math.PI) / 360;
     const mics = [[-Math.sin(sp) * D, Math.cos(sp) * D], [Math.sin(sp) * D, Math.cos(sp) * D]];
-    const xMax = Math.max(0.4, Math.sin(sp) * D + 0.15), yMax = Math.max(0.45, Math.cos(sp) * D + 0.15);
-    const s = Math.min((w - 20) / (2 * xMax), (h - 30) / (yMax + 0.4));
+    const cab = wall - 0.02; // wall is the reflecting surface; draw the panel just inside it
+    const top = cab + 0.06;
+    const xMax = Math.max(0.4, cab + 0.1, Math.sin(sp) * D + 0.15), yMax = Math.max(0.45, cab + 0.1, Math.cos(sp) * D + 0.15);
+    const s = Math.min((w - 20) / (2 * xMax), (h - 30) / (yMax + top + 0.04));
     if (!(s > 5)) return; // too small to draw
-    const cx = w / 2, cy = 14 + 0.36 * s;
+    const cx = w / 2, cy = 14 + top * s;
     const X = (x) => cx + x * s, Y = (y) => cy + y * s;
 
     // cabinet
     ctx.fillStyle = '#3a2a1c'; ctx.strokeStyle = '#6b5038'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.roundRect(X(-0.3), Y(-0.3), 0.6 * s, 0.6 * s, 6); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(X(-cab), Y(-cab), 2 * cab * s, 2 * cab * s, 6); ctx.fill(); ctx.stroke();
     ctx.lineWidth = 1;
 
     // drum (bass rotor): dark cylinder with a scoop opening
@@ -122,7 +125,8 @@ export class LeslieView {
     ctx.lineWidth = 1;
 
     // sound paths from horn mouth to mics
-    const hx = 0.18 * Math.sin(hornA), hy = 0.18 * Math.cos(hornA);
+    const rh = P.hornRadius, k = rh / 0.18; // horn drawn to scale
+    const hx = rh * Math.sin(hornA), hy = rh * Math.cos(hornA);
     ctx.strokeStyle = 'rgba(240,179,90,0.25)';
     ctx.setLineDash([3, 4]);
     if (P.leslieOn) for (const [mx, my] of mics) { ctx.beginPath(); ctx.moveTo(X(hx), Y(hy)); ctx.lineTo(X(mx), Y(my)); ctx.stroke(); }
@@ -131,17 +135,17 @@ export class LeslieView {
     // horn: one live bell + a dummy counterweight
     const ux = Math.sin(hornA), uy = Math.cos(hornA), px = -uy, py = ux;
     ctx.strokeStyle = '#cfc6b8'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(X(-0.1 * ux), Y(-0.1 * uy)); ctx.lineTo(X(0.12 * ux), Y(0.12 * uy)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(X(-0.1 * k * ux), Y(-0.1 * k * uy)); ctx.lineTo(X(0.12 * k * ux), Y(0.12 * k * uy)); ctx.stroke();
     ctx.lineWidth = 1;
     ctx.fillStyle = '#e9e1d2';
     ctx.beginPath();
-    ctx.moveTo(X(0.1 * ux + 0.015 * px), Y(0.1 * uy + 0.015 * py));
-    ctx.lineTo(X(0.19 * ux + 0.06 * px), Y(0.19 * uy + 0.06 * py));
-    ctx.lineTo(X(0.19 * ux - 0.06 * px), Y(0.19 * uy - 0.06 * py));
-    ctx.lineTo(X(0.1 * ux - 0.015 * px), Y(0.1 * uy - 0.015 * py));
+    ctx.moveTo(X(0.1 * k * ux + 0.015 * px), Y(0.1 * k * uy + 0.015 * py));
+    ctx.lineTo(X(rh * ux + 0.06 * px), Y(rh * uy + 0.06 * py));
+    ctx.lineTo(X(rh * ux - 0.06 * px), Y(rh * uy - 0.06 * py));
+    ctx.lineTo(X(0.1 * k * ux - 0.015 * px), Y(0.1 * k * uy - 0.015 * py));
     ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#7d756a';
-    ctx.beginPath(); ctx.arc(X(-0.12 * ux), Y(-0.12 * uy), 0.03 * s, 0, 2 * Math.PI); ctx.fill();
+    ctx.beginPath(); ctx.arc(X(-0.12 * k * ux), Y(-0.12 * k * uy), 0.03 * s, 0, 2 * Math.PI); ctx.fill();
 
     // mics
     ctx.font = '11px system-ui, sans-serif'; ctx.textAlign = 'center';

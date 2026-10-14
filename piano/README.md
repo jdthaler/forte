@@ -19,9 +19,12 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/piano/>.
 | `↑` `↓` | hammer velocity (m/s) |
 | hold `Space` | sustain pedal |
 | mouse on the on-screen keys | play; click lower on a key = harder |
-| **Enable MIDI** button | any connected MIDI keyboard: velocity → hammer speed, CC64 = sustain |
+| **Enable MIDI** button | any connected MIDI keyboard: velocity → hammer speed, CC64 = sustain, CC67 = una corda (soft pedal) |
 
 Settings persist in the browser (localStorage). Double-click a slider to reset it.
+The string, hammer and damping sliders rebuild a key's modes, so you hear
+them from the next note. The output gains and the stereo spread act at once,
+gliding over about 10 ms so they don't click.
 
 ## What is being simulated
 
@@ -56,17 +59,45 @@ The pieces that couple to the modes:
   *implicitly* each sample (scalar Newton), so even very hard felt stays
   stable. The force is spread over the contact width, which naturally filters
   out high partials. Re-striking a ringing string hits it where it currently is.
+  The felt values are per string, after Chaigne & Askenfelt (1994) at C2 and
+  C4. Their single C7 set, extrapolated upwards, kept the hammer on the string
+  for about 1.1 ms all the way to C8, several periods of a top-octave note, so
+  C7–C8 came out 16–34 dB below C4. Real treble hammers are voiced much
+  harder and touch the string for well under 1 ms (Askenfelt & Jansson 1990),
+  so the treble felt is refitted: at a medium blow (1.2 m/s) the contact
+  lasts about 1.2 ms at C6, 0.7 ms at C7 and 0.4 ms at C8. Mass and exponent
+  level off above C7 instead of being extrapolated. Every key from C6 to C8 is
+  now within 7 dB of C4 at MIDI velocity 64 (both channels summed). Soft notes
+  are still weaker in the treble (down to −11 dB at velocity 40), because the
+  felt there is more nonlinear (p = 3 against 2.5 at C4). The top notes start
+  loud and decay fast, so a fortissimo there peaks near 1.8, against 0.5 at C4.
 * **Strike geometry**: position along the string, *roll angle ψ* (the
   section's rotation relative to the hammer, which splits the blow between the
   two bending axes), and *lateral offset* (an off-centre hit on a flat face
-  exerts a torque, which drives torsion).
+  exerts a torque, which drives torsion). On a tapered member the lever of
+  that torque is the half-width under the hammer.
+* **Una corda** (the soft pedal: MIDI CC 67, or the checkbox under *Hammer*)
+  shifts the action so each hammer misses one string of its unison (2 of 3,
+  or 1 of 2). The struck strings share the blow, and the felt touches one
+  string fewer. The missed string is driven only through the bridge, so the
+  unison starts out of phase and more of its energy sits in the slowly
+  decaying antisymmetric motion: softer, with more aftersound. Three seconds
+  after a C3 strike, 3 dB more of the attack remains than without the pedal.
+  It applies to the next strikes, as on a real piano.
 * **Bridge**: a resistive termination of conductance *G*, shared by every
   mode of every unison string and both polarizations. In modal form it is the
   rank-one damping matrix `c cᵀ` with `c_n = √G F_bridge,n / ω_n`. This one
   matrix gives frequency-dependent bridge losses (σ = G(T + EIk²)/L), and also
   Weinreich's **double decay** and aftersound: in-phase unison motion drains
   fast, while the detuned remainder rings on. The audio output is the bridge
-  velocity.
+  velocity. The engine applies the bridge one sample late. On its own that
+  would damp the high partials too little (by a factor sinc(ωΔt): 9 % at
+  5.7 kHz, 35 % at 12 kHz), so each mode's own, exactly discretized decay
+  makes up the shortfall. The measured decay of the partials matches
+  G(T + EIk²)/L to 0.3 % up to 12 kHz (tested).
+* **Torsion pickup**: torsion does not move the bridge's vertical channel. It
+  is heard as the edge force of its torque at the bridge, the torque divided
+  by the half-width there (*Torsion pickup* sets its level).
 * **Soundboard and room**: synthetic impulse responses (dense plate modes and
   a diffuse tail), applied with ConvolverNodes.
 
@@ -107,7 +138,8 @@ numbers below are for C4 and come from the model:
    direction is ~12× *more* stiff: roll the ribbon (ψ ≠ 0) and the hammer also
    drives a second partial series stretched by hundreds of cents, a full
    octave sharp by about the 23rd partial. The result is metallic and
-   bell-like. Edge-on (ψ = 90°), it is all bell.
+   bell-like. Edge-on (ψ = 90°), it is all bell, and the easy-axis partials,
+   which the hammer cannot reach, are not computed at all.
 3. **Twisting is where ribbons really differ.** For a thin ribbon,
    `c_θ² ≈ 4(t/w)² G/ρ + c_T²`, so torsional waves slow down toward the
    transverse speed as the ribbon thins. An off-centre strike adds a second,
@@ -153,6 +185,10 @@ src/params.js             every parameter, with ranges, hints and presets
   moves off the centroid, which would couple bending to torsion. Euler–Bernoulli
   bending (no shear or rotary inertia) is fine for these slender members.
 * The soundboard is a stand-in impulse response, not a modelled plate.
+* **The lowest notes are band-limited.** Each motion family keeps at most 140
+  partials, to save CPU. With *Highest partial* at 12 kHz the cap binds from
+  A0 to A1: A0's stretched partials stop at 5.6 kHz, C1's at 6.6 kHz. The
+  info panel shows the partial count and the highest partial for each key.
 * CPU: ~1.7 ns per mode per sample; the engine caps the oscillator count and
   steals the quietest voices. If the CPU pill turns red, lower **Highest
   partial** or **Strings per note**.

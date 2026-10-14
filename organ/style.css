@@ -151,6 +151,34 @@ canvas { width: 100%; flex: 1; min-height: 0; display: block; }
 .drawbar .ft { margin-top: 5px; font-size: 11px; color: var(--muted); white-space: nowrap; }
 #registration { width: 130px; text-align: center; font: 600 14px ui-monospace, Menlo, monospace; letter-spacing: 1px; cursor: text; }
 
+/* expression (swell) pedal: the on-screen stand-in for ↑ ↓ and MIDI CC 11 */
+.swell-wrap { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.swell { --e: 0.85; width: 40px; cursor: ns-resize; touch-action: none; outline: none; }
+.swell .track {
+  position: relative;
+  width: 40px;
+  height: 150px;
+  background: linear-gradient(#0b0a09, #15130f);
+  border-radius: 6px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+}
+.swell .fill {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: calc(var(--e) * 100%);
+  background: linear-gradient(to top, rgba(240, 179, 90, 0.12), rgba(240, 179, 90, 0.42));
+}
+.swell .shoe {
+  position: absolute; left: 3px; right: 3px; height: 16px;
+  bottom: calc(var(--e) * (100% - 16px));
+  border: 1px solid #6b5c49;
+  border-radius: 4px;
+  background: repeating-linear-gradient(to bottom, #2c2722 0 2px, #3a332b 2px 4px);
+}
+.swell:focus-visible .track { box-shadow: 0 0 0 2px var(--accent); }
+.swell-wrap .ft { font-size: 11px; color: var(--muted); text-align: center; white-space: nowrap; line-height: 1.3; }
+.swell-wrap .ft b { color: var(--text); font-weight: 600; }
+
 .switches { display: grid; grid-template-columns: repeat(2, minmax(190px, 1fr)); gap: 12px 20px; align-content: start; flex: 1; min-width: 380px; }
 .sw-group { display: flex; flex-direction: column; gap: 5px; }
 .sw-title { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; }

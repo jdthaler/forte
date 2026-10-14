@@ -1,6 +1,7 @@
 // rhodes-params.js — knobs, grouped for the UI, and presets.
 //
-// kind: 'model'  → recompute the key mechanics (modes)
+// kind: 'model'  → recompute the key mechanics (modes); heard from the next note
+//       'pickup' → the pickups' placement and voicing: live, even on ringing notes
 //       'engine' → audio thread only
 //       'mix'    → Web Audio graph
 //       'play'   → computer-keyboard velocity
@@ -24,12 +25,12 @@ export const GROUPS = [
     id: 'bar', title: 'Tone bar & mount',
     params: [
       { id: 'barMass', label: 'Tone bar mass', kind: 'model', min: 0.01, max: 60, def: 15, log: true, fmt: x,
-        hint: '× tine mass. Tiny = no tone bar: the tine shakes its mount and dies fast.' },
+        hint: '× tine mass. Tiny = no tone bar: the tine shakes its mount and dies fast. (Next note.)' },
       { id: 'barTune', label: 'Tone bar tuning', kind: 'model', min: -100, max: 100, step: 1, def: 0, fmt: (v) => `${v > 0 ? '+' : ''}${v.toFixed(0)} ¢`,
-        hint: 'Matched to the tine, the fork’s antisymmetric mode leaves the block still and sustains.' },
-      { id: 'blockMass', label: 'Block + harp mass', kind: 'model', min: 5, max: 2000, def: 100, log: true, fmt: x },
-      { id: 'mountRatio', label: 'Mount resonance', kind: 'model', min: 0.1, max: 3, def: 0.45, log: true, fmt: (v) => `${v.toFixed(2)} × f₀` },
-      { id: 'mountDamp', label: 'Grommet damping ζ', kind: 'model', min: 0.02, max: 2, def: 0.8, log: true, fmt: (v) => v.toFixed(2) },
+        hint: 'Matched to the tine, the fork’s antisymmetric mode leaves the block still and sustains. (Next note.)' },
+      { id: 'blockMass', label: 'Block + harp mass', kind: 'model', min: 5, max: 2000, def: 100, log: true, fmt: x, hint: '(Next note.)' },
+      { id: 'mountRatio', label: 'Mount resonance', kind: 'model', min: 0.1, max: 3, def: 0.45, log: true, fmt: (v) => `${v.toFixed(2)} × f₀`, hint: '(Next note.)' },
+      { id: 'mountDamp', label: 'Grommet damping ζ', kind: 'model', min: 0.02, max: 2, def: 0.8, log: true, fmt: (v) => v.toFixed(2), hint: '(Next note.)' },
     ],
   },
   {
@@ -46,11 +47,11 @@ export const GROUPS = [
   {
     id: 'pickup', title: 'Pickup',
     params: [
-      { id: 'gap', label: 'Tine-to-pickup gap', kind: 'model', min: 0.4, max: 5, step: 0.05, def: 1.2, fmt: (v) => `${v.toFixed(2)} mm`,
-        hint: 'Closer = narrower flux bump = more harmonics for the same swing ("bark").' },
-      { id: 'offset', label: 'Vertical voicing', kind: 'model', min: -1.2, max: 1.2, step: 0.01, def: 0.4, fmt: (v) => (Math.abs(v) < 0.005 ? 'centred' : `${v > 0 ? '+' : ''}${v.toFixed(2)} w`),
-        hint: 'Tine rest position relative to the pole axis. Centred → mostly the octave; off-centre → fundamental + even harmonics.' },
-      { id: 'poleRadius', label: 'Pole piece radius', kind: 'model', min: 0.3, max: 4, step: 0.05, def: 1, fmt: (v) => `${v.toFixed(2)} mm` },
+      { id: 'gap', label: 'Tine-to-pickup gap', kind: 'pickup', min: 0.4, max: 5, step: 0.05, def: 1.2, fmt: (v) => `${v.toFixed(2)} mm`,
+        hint: 'Closer = narrower flux bump = more harmonics for the same swing ("bark"). Live, even on ringing notes.' },
+      { id: 'offset', label: 'Vertical voicing', kind: 'pickup', min: -1.2, max: 1.2, step: 0.01, def: 0.4, fmt: (v) => (Math.abs(v) < 0.005 ? 'centred' : `${v > 0 ? '+' : ''}${v.toFixed(2)} w`),
+        hint: 'Tine rest position relative to the pole axis. Centred → mostly the octave; off-centre → fundamental + even harmonics. Live.' },
+      { id: 'poleRadius', label: 'Pole piece radius', kind: 'pickup', min: 0.3, max: 4, step: 0.05, def: 1, fmt: (v) => `${v.toFixed(2)} mm`, hint: 'Live.' },
       { id: 'cable', label: 'Cable capacitance', kind: 'engine', min: 100, max: 6000, def: 1000, log: true,
         fmt: (v) => `${v.toFixed(0)} pF → ${(1 / (2 * Math.PI * Math.sqrt(v * 1e-12)) / 1000).toFixed(1)} kHz`,
         hint: 'Resonates with the ~1 H of pickup coils: a long cable is a low-pass.' },
@@ -60,9 +61,9 @@ export const GROUPS = [
   {
     id: 'damping', title: 'Damping',
     params: [
-      { id: 'tineLoss', label: 'Tine loss', kind: 'model', min: 0.1, max: 10, def: 1, log: true, fmt: x },
-      { id: 'hfLoss', label: 'High-mode loss', kind: 'model', min: 0.1, max: 10, def: 0.7, log: true, fmt: x, hint: 'How long the bell partial rings.' },
-      { id: 'barLoss', label: 'Tone bar loss', kind: 'model', min: 0.1, max: 10, def: 1, log: true, fmt: x },
+      { id: 'tineLoss', label: 'Tine loss', kind: 'model', min: 0.1, max: 10, def: 1, log: true, fmt: x, hint: '(Next note.)' },
+      { id: 'hfLoss', label: 'High-mode loss', kind: 'model', min: 0.1, max: 10, def: 0.7, log: true, fmt: x, hint: 'How long the bell partial rings. (Next note.)' },
+      { id: 'barLoss', label: 'Tone bar loss', kind: 'model', min: 0.1, max: 10, def: 1, log: true, fmt: x, hint: '(Next note.)' },
       { id: 'damper', label: 'Damper felt', kind: 'engine', min: 2, max: 150, def: 35, log: true, fmt: (v) => `${v.toFixed(0)} s⁻¹` },
     ],
   },
@@ -73,8 +74,8 @@ export const GROUPS = [
       { id: 'tremRate', label: 'Stereo vibrato rate', kind: 'engine', min: 0.5, max: 10, step: 0.05, def: 4, fmt: (v) => `${v.toFixed(2)} Hz` },
       { id: 'drive', label: 'Amp drive', kind: 'engine', min: 0, max: 1, step: 0.01, def: 0.15, fmt: (v) => v.toFixed(2) },
       { id: 'tone', label: 'Speaker top end', kind: 'engine', min: 1500, max: 14000, def: 6000, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz` },
-      { id: 'voicing', label: 'Register voicing', kind: 'model', min: -8, max: 4, step: 0.1, def: -3.5, fmt: (v) => `${v.toFixed(1)} dB/oct`,
-        hint: 'Pickup emf ∝ frequency, so an unvoiced bass is quiet. Real instruments are balanced by voicing.' },
+      { id: 'voicing', label: 'Register voicing', kind: 'pickup', min: -8, max: 4, step: 0.1, def: -3.5, fmt: (v) => `${v.toFixed(1)} dB/oct`,
+        hint: 'Pickup emf ∝ frequency, so an unvoiced bass is quiet. Real instruments are balanced by voicing. Live.' },
       { id: 'room', label: 'Room', kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.2, fmt: (v) => v.toFixed(2) },
       { id: 'volume', label: 'Volume', kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => v.toFixed(2) },
     ],

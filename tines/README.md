@@ -53,10 +53,18 @@ computed at 2× oversampling and then decimated.
   bump, so the fundamental cancels and you hear the octave. Technicians voice a
   Rhodes by moving the pickups (the *Vertical voicing* and *Gap* sliders).
 
+The pickup sliders (gap, vertical voicing, pole radius, register voicing)
+act live, even on a ringing note. The pickup moves to its new place over
+about 40 ms, starting and stopping smoothly, and the change of flux through
+the coil is heard as a soft thump rather than a click. The tine, tone-bar,
+hammer and damping sliders rebuild the key's modes, so you hear them from
+the next note.
+
 **Electrical and amp.** About 1 H of pickup coils against the cable
 capacitance makes a resonant low-pass (≈5 kHz with 1 nF). After that come the
 Suitcase-style stereo vibrato (an auto-pan), a soft-clipping power amp, a
-speaker roll-off and a room.
+speaker roll-off and a room. Their controls glide to a new setting over about
+10 ms instead of jumping once per audio block, which would click.
 
 `examples/tines/` has short renders, one effect each: velocity → bark,
 centred vs off-centre pickup, tone bar matched vs removed vs detuned,

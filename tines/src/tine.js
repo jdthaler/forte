@@ -100,6 +100,17 @@ export function barShape(xi) {
   return (2 * f(xi)) / f(1);
 }
 
+// Pickup for key m: the gap g (axial, closer in the treble) and the pole radius
+// set the width w of the flux bump, w² = g² + r²; the tine rests yoff above the
+// pole axis; gain is the register voicing. Cheap, so the engine recomputes it
+// live when a pickup slider moves.
+export function pickupFor(m, P) {
+  const gap = P.gap * 1e-3 * (1 - 0.35 * clamp((m - KEY_LO) / (KEY_HI - KEY_LO), 0, 1));
+  const wid = Math.sqrt(gap * gap + (P.poleRadius * 1e-3) ** 2);
+  const gain = 10 ** ((P.voicing * Math.log2(keyFreq(m) / 261.63)) / 20);
+  return { gap, wid, yoff: P.offset * wid, gain };
+}
+
 // Hammer tips: neoprene, graded softer in the bass (Hertz-like F = K δ^p).
 export function hammerDefaults(m) {
   const t = clamp((m - KEY_LO) / (KEY_HI - KEY_LO), 0, 1);
@@ -177,10 +188,7 @@ export function computeKey(m, P, fs = 48000) {
   const kept = modes.filter((md) => md.f < 0.45 * 2 * fs && md.f > 5);
 
   const hd = hammerDefaults(m);
-  // pickup: gap g (axial) and pole radius set the width of the flux bump
-  const gap = P.gap * 1e-3 * (1 - 0.35 * clamp((m - KEY_LO) / (KEY_HI - KEY_LO), 0, 1)); // closer in the treble
-  const wid = Math.sqrt(gap * gap + (P.poleRadius * 1e-3) ** 2);
-  const voicingGain = 10 ** ((P.voicing * Math.log2(f0 / 261.63)) / 20);
+  const { gap, wid, yoff, gain } = pickupFor(m, P);
   const info = {
     key: m, name: noteName(m), f0, L, d, mt: tine.mt, ms: tine.ms, s: tine.s, xh,
     tineRatios: tine.omega.slice(0, nq).map((o) => o / tine.omega[0]),
@@ -196,7 +204,7 @@ export function computeKey(m, P, fs = 48000) {
       w: Float64Array.from(kept, (md) => md.w),
       pk: Float64Array.from(kept, (md) => md.pk),
       hammer: { mass: hd.mass * P.hammerMass, K: hd.K * P.hardness, p: hd.p + P.tipExp, alpha: P.hysteresis },
-      pickup: { wid, yoff: P.offset * wid, gain: voicingGain },
+      pickup: { wid, yoff, gain },
       hasDamper: m <= 94,
     },
     // coupled-mode shapes for the slow-motion view

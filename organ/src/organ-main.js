@@ -178,8 +178,14 @@ function shiftOctave(d) {
   updateHelp();
 }
 function updateHelp() {
+  const db = `${((P.expression - 1) * 40).toFixed(0)} dB`;
   $('#oct').textContent = `${noteName(Math.max(KEY_LO, base))}–${noteName(Math.min(KEY_HI, base + 31))}`;
-  $('#expr').textContent = `${((P.expression - 1) * 40).toFixed(0)} dB`;
+  $('#expr').textContent = db;
+  $('#swell-read').textContent = db;
+  const sw = $('#swell');
+  sw.style.setProperty('--e', P.expression);
+  sw.setAttribute('aria-valuenow', String(P.expression));
+  sw.setAttribute('aria-valuetext', db);
 }
 
 // MIDI: notes, CC1 / CC64 → Leslie fast/slow, CC11 → expression
@@ -246,6 +252,25 @@ function setDrawbar(d, v) {
   const db = [...P.drawbars]; db[d] = v;
   setP({ drawbars: db });
 }
+
+// expression (swell) pedal on screen: tablets have no ↑ ↓ keys and no CC 11.
+// The engine glides to each new setting, so dragging it is click-free.
+const swell = $('#swell');
+const setExpression = (v) => setP({ expression: Math.round(Math.max(0, Math.min(1, v)) * 100) / 100 });
+const swellFromY = (y) => {
+  const r = swell.querySelector('.track').getBoundingClientRect();
+  setExpression(1 - (y - r.top - 8) / Math.max(1, r.height - 16));
+};
+swell.addEventListener('pointerdown', (e) => { swell.setPointerCapture(e.pointerId); swell.focus(); swellFromY(e.clientY); });
+swell.addEventListener('pointermove', (e) => { if (swell.hasPointerCapture(e.pointerId)) swellFromY(e.clientY); });
+swell.addEventListener('wheel', (e) => { e.preventDefault(); setExpression(P.expression + (e.deltaY > 0 ? -0.02 : 0.02)); }, { passive: false });
+swell.addEventListener('keydown', (e) => {
+  const step = { ArrowUp: 0.05, ArrowRight: 0.05, ArrowDown: -0.05, ArrowLeft: -0.05, PageUp: 0.2, PageDown: -0.2 }[e.code];
+  if (step !== undefined) setExpression(P.expression + step);
+  else if (e.code === 'Home' || e.code === 'End') setExpression(e.code === 'End' ? 1 : 0);
+  else return;
+  e.preventDefault(); e.stopPropagation();
+});
 
 const regString = (a) => `${a[0]}${a[1]} ${a[2]}${a[3]}${a[4]}${a[5]} ${a[6]}${a[7]}${a[8]}`;
 $('#registration').addEventListener('change', (e) => {

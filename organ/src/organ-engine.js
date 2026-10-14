@@ -2,7 +2,7 @@
 //
 //   motor ─▶ 91 tonewheels ─▶ key contacts ─▶ 9 busbars ─▶ drawbars ─┐
 //                        └─▶ percussion (1′ contacts, single-trigger) ┤
-//     preamp (expression) ─▶ scanner vibrato (LC delay line) ─▶ tube drive
+//     preamp (expression) ─▶ scanner vibrato (LC delay line) ─▶ tube drive + coupling capacitor
 //       ─▶ Leslie: crossover ─▶ rotating horn + drum (Doppler, directivity,
 //                                cabinet reflection) ─▶ two microphones
 //
@@ -11,6 +11,25 @@
 const TAU = 2 * Math.PI;
 const C_SOUND = 343;
 const NW = 92; // wheel arrays are 1-based
+const HARM = [0.5, 1.5, 1, 2, 3, 4, 5, 6, 8]; // drawbar footages as harmonics of 8′
+const SMOOTH_T = 0.015; // s: live gains, drive and crossover glide (no zipper noise)
+
+// Tube drive: a triode biased off-centre, y = n·(tanh(k·x + B0) − tanh B0). The
+// bias B0 sits outside the gain k = 15·drive², so the curve stays asymmetric
+// (even harmonics) without turning into a rectifier. n is set so a full chord
+// (DRIVE_REF) comes out at its own level: more drive compresses the dynamics
+// and adds grit, and the output can never exceed n(1 + tanh B0).
+const DRIVE_B0 = 0.25, DRIVE_REF = 0.25, DRIVE_TB0 = Math.tanh(DRIVE_B0);
+function driveNorm(k) { return k > 1e-6 ? DRIVE_REF / (Math.tanh(k * DRIVE_REF + DRIVE_B0) - DRIVE_TB0) : 0; }
+const near = (a, b) => Math.abs(a - b) <= 1e-7 * (1 + Math.abs(b));
+
+// Leslie cabinet: rotor axis to rear wall; it grows if the horn is made longer,
+// and the mics stay at least MIC_CLEAR outside it.
+const CABINET = 0.32, MIC_CLEAR = 0.08;
+export function leslieGeometry(p) {
+  const wall = Math.max(CABINET, p.hornRadius + 0.04);
+  return { wall, micDist: Math.max(p.micDist, wall + MIC_CLEAR) };
+}
 
 export const ORGAN_DEFAULTS = {
   drawbars: [8, 8, 8, 0, 0, 0, 0, 0, 0],
@@ -74,6 +93,7 @@ export class OrganEngine {
     this.rand = rng(7);
     this.listeners = [];
     this.now = 0;
+    this.peak = 0;
 
     // generator
     this.gen = null;
@@ -83,8 +103,9 @@ export class OrganEngine {
     for (let w = 1; w < NW; w++) { const ph = TAU * this.rand(); this.cr[w] = Math.cos(ph); this.ci[w] = Math.sin(ph); }
     this.speed = 1; // shaft speed / synchronous speed
 
-    // keys and busbars
+    // keys and busbars (keyArr: the same keys, iterated without allocating)
     this.keys = new Map();
+    this.keyArr = [];
     this.held = 0;
     this.num = new Float64Array(10);
     this.den = new Float64Array(10);
@@ -104,8 +125,11 @@ export class OrganEngine {
     this.drumBuf = new Float64Array(this.bufLen);
     this.wi = 0;
     this.lp1 = new Biquad(); this.lp2 = new Biquad(); this.hp1 = new Biquad(); this.hp2 = new Biquad();
+    this.mics = new Float64Array(4);
     this.dcIn = 0; this.dcOut = 0;
+    this.aSm = 1 - Math.exp(-this.dt / SMOOTH_T);
     this.updateDerived();
+    this.snapLive();
   }
 
   emit(ev) { for (const f of this.listeners) f(ev); }
@@ -113,7 +137,7 @@ export class OrganEngine {
   configure(gen) {
     this.gen = gen;
     this.updateRotations();
-    for (const k of this.keys.values()) this.initKeyOsc(k);
+    for (let i = 0; i < this.keyArr.length; i++) this.initKeyOsc(this.keyArr[i]);
   }
 
   setParams(p) {
@@ -122,13 +146,40 @@ export class OrganEngine {
     if (p.drawbars) this.p.drawbars = [...p.drawbars];
     if (this.p.sections !== prevSections) { this.I.fill(0); this.V.fill(0); }
     this.updateDerived();
+    // glide while anything is audible; jump when only the leakage hiss is left
+    if (this.keyArr.length || this.peak > 1e-3) this.gliding = true; else this.snapLive();
+  }
+
+  // Targets of the parameters that glide while the organ plays.
+  liveTargets() {
+    const p = this.p;
+    this.tPre = 0.11 * this.expGain;
+    this.tDrive = p.drive;
+    this.tLam = p.loading;
+    this.tMaster = p.master;
+    this.tHornG = Math.min(1, 1 + p.balance);
+    this.tDrumG = Math.min(1, 1 - p.balance);
+    this.tRefl = p.reflections;
+    this.tXo = p.crossover;
+  }
+
+  snapLive() {
+    this.liveTargets();
+    this.sPre = this.tPre; this.sDrive = this.tDrive; this.sLam = this.tLam; this.sMaster = this.tMaster;
+    this.sHornG = this.tHornG; this.sDrumG = this.tDrumG; this.sRefl = this.tRefl; this.sXo = this.tXo;
+    this.driveK = 15 * this.sDrive * this.sDrive; this.driveN = driveNorm(this.driveK);
+    this.setCrossover(this.sXo);
+    this.gliding = false;
+  }
+
+  setCrossover(f) {
+    const q = 0.7071, fs = this.fs;
+    this.lp1.set('lp', f, q, fs); this.lp2.set('lp', f, q, fs);
+    this.hp1.set('hp', f, q, fs); this.hp2.set('hp', f, q, fs);
   }
 
   updateDerived() {
-    const p = this.p, fs = this.fs;
-    const q = 0.7071;
-    this.lp1.set('lp', p.crossover, q, fs); this.lp2.set('lp', p.crossover, q, fs);
-    this.hp1.set('hp', p.crossover, q, fs); this.hp2.set('hp', p.crossover, q, fs);
+    const p = this.p;
     this.alphaC = p.contactTime <= 0 ? 1 : 1 - Math.exp(-this.dt / (p.contactTime * 1e-6));
     const tau = p.percFast ? p.percFastTau : p.percSlowTau;
     this.percDecay = Math.exp(-this.dt / tau);
@@ -143,10 +194,7 @@ export class OrganEngine {
     this.lcTau = Math.max(p.sectionDelay * 1e-6, 1.25 * h);
     this.lcN = Math.max(2, Math.min(60, Math.round(p.sections)));
     this.lcK = h / this.lcTau;
-    this.driveK = 1 + 14 * p.drive * p.drive;
-    this.driveB = 0.2 * p.drive;
-    const sech2 = 1 - Math.tanh(this.driveK * this.driveB) ** 2;
-    this.driveNorm = 1 / (this.driveK * sech2);
+    this.liveTargets();
   }
 
   updateRotations() {
@@ -160,14 +208,14 @@ export class OrganEngine {
       const s = 1.5 - 0.5 * m;
       this.cr[w] *= s; this.ci[w] *= s;
     }
-    for (const k of this.keys.values()) this.updateKeyRot(k);
+    for (let i = 0; i < this.keyArr.length; i++) this.updateKeyRot(this.keyArr[i]);
   }
 
   // "harmonic" (ideal additive) mode: each key owns nine exact harmonics
   initKeyOsc(k) {
     if (!k.hc) {
       k.hc = new Float64Array(9); k.hs = new Float64Array(9); k.hrc = new Float64Array(9); k.hrs = new Float64Array(9);
-      k.hv = new Float64Array(9);
+      k.hv = new Float64Array(9); k.hmute = new Uint8Array(9);
       for (let d = 0; d < 9; d++) { const ph = TAU * this.rand(); k.hc[d] = Math.cos(ph); k.hs[d] = Math.sin(ph); }
     }
     this.updateKeyRot(k);
@@ -175,13 +223,11 @@ export class OrganEngine {
 
   updateKeyRot(k) {
     if (!k.hc || !this.gen) return;
-    const H = [0.5, 1.5, 1, 2, 3, 4, 5, 6, 8];
     const f0 = this.gen.keyHz[k.idx];
     for (let d = 0; d < 9; d++) {
-      const f = f0 * H[d];
+      const f = f0 * HARM[d];
       const dd = f < 0.45 * this.fs ? TAU * f * this.speed * this.dt : 0;
       k.hrc[d] = Math.cos(dd); k.hrs[d] = Math.sin(dd);
-      k.hmute = k.hmute || new Uint8Array(9);
       k.hmute[d] = f < 0.45 * this.fs ? 0 : 1;
       const m = k.hc[d] * k.hc[d] + k.hs[d] * k.hs[d], s = 1.5 - 0.5 * m;
       k.hc[d] *= s; k.hs[d] *= s;
@@ -221,6 +267,7 @@ export class OrganEngine {
       k = { key, idx, g: new Float64Array(9), tgt: new Uint8Array(9), order: Array.from({ length: 9 }, () => kr()), down: false, ev: [], evi: 0 };
       if (this.gen && this.gen.harmonic) this.initKeyOsc(k);
       this.keys.set(key, k);
+      this.keyArr.push(k);
     }
     if (k.down) return;
     if (this.held === 0) this.percEnv = 1; // single trigger: re-arms only when all keys are up
@@ -238,7 +285,7 @@ export class OrganEngine {
   }
 
   allOff() {
-    for (const k of this.keys.values()) if (k.down) this.keyUp(k.key);
+    for (let i = 0; i < this.keyArr.length; i++) if (this.keyArr[i].down) this.keyUp(this.keyArr[i].key);
   }
 
   process(L, R, n) {
@@ -263,24 +310,43 @@ export class OrganEngine {
     const percMap = p.percThird ? g.perc3 : g.perc2, percD = p.percThird ? 4 : 3;
     const harmonic = g.harmonic;
     const num = this.num, den = this.den, dbg = this.dbg;
-    const lam = p.loading, alphaC = this.alphaC;
-    const keys = [...this.keys.values()];
+    const alphaC = this.alphaC;
+    const keys = this.keyArr;
     const speed = this.speed;
-    const pre = 0.11 * this.expGain;
     const vibOn = p.vib in VIB_DEPTH, chorus = vibOn && p.vib[0] === 'C';
     const lcN = this.lcN, lcK = this.lcK, I = this.I, V = this.V;
     const scanInc = p.scanRate * speed * this.dt;
     const depth = vibOn ? VIB_DEPTH[p.vib] * lcN : 0;
-    const dK = this.driveK, dB = this.driveB, dNorm = this.driveNorm, tB = Math.tanh(dK * dB);
     const fs = this.fs, mask = this.mask, hb = this.hornBuf, db = this.drumBuf;
-    const sp = (p.micSpread * Math.PI) / 360, D = p.micDist;
-    const mics = [[-Math.sin(sp) * D, Math.cos(sp) * D], [Math.sin(sp) * D, Math.cos(sp) * D]];
-    const rH = p.hornRadius, rD = 0.15, wall = 0.32, refl = p.reflections;
-    const hornG = Math.min(1, 1 + p.balance), drumG = Math.min(1, 1 - p.balance);
+    // as leslieGeometry(p), without allocating
+    const wall = Math.max(CABINET, p.hornRadius + 0.04), D = Math.max(p.micDist, wall + MIC_CLEAR);
+    const sp = (p.micSpread * Math.PI) / 360;
+    const mics = this.mics;
+    mics[0] = -Math.sin(sp) * D; mics[1] = Math.cos(sp) * D; mics[2] = Math.sin(sp) * D; mics[3] = mics[1];
+    const rH = p.hornRadius, rD = 0.15;
     const hornInc = TAU * this.hornHz * this.dt, drumInc = TAU * this.drumHz * this.dt;
+    // live parameters: glide sample by sample towards their targets while gliding
+    const gliding = this.gliding, aS = this.aSm;
+    const tPre = this.tPre, tLam = this.tLam, tMaster = this.tMaster, tHornG = this.tHornG, tDrumG = this.tDrumG, tRefl = this.tRefl;
+    let pre = this.sPre, lam = this.sLam, master = this.sMaster, hornG = this.sHornG, drumG = this.sDrumG, refl = this.sRefl;
+    let dK = this.driveK, dN = this.driveN;
     let peak = 0;
 
     for (let s = 0; s < n; s++) {
+      if (gliding) {
+        pre += (tPre - pre) * aS; lam += (tLam - lam) * aS; master += (tMaster - master) * aS;
+        hornG += (tHornG - hornG) * aS; drumG += (tDrumG - drumG) * aS; refl += (tRefl - refl) * aS;
+        if (this.sDrive !== this.tDrive) {
+          this.sDrive += (this.tDrive - this.sDrive) * aS;
+          if (Math.abs(this.tDrive - this.sDrive) < 1e-6) this.sDrive = this.tDrive;
+          dK = 15 * this.sDrive * this.sDrive; dN = driveNorm(dK);
+        }
+        if (this.sXo !== this.tXo) {
+          this.sXo += (this.tXo - this.sXo) * aS;
+          if (Math.abs(this.tXo - this.sXo) < 0.01) this.sXo = this.tXo;
+          this.setCrossover(this.sXo);
+        }
+      }
       // --- tonewheels (EMF ∝ shaft speed)
       let leakSum = 0;
       for (let w = 1; w < NW; w++) {
@@ -330,7 +396,8 @@ export class OrganEngine {
           den[9] += kg[8];
         }
       }
-      // busbar loading: Millman's theorem with source/load resistance ratio
+      // busbar loading, Millman's theorem: n wheels of source resistance R_s on a
+      // busbar loaded by R_L give Σv·(1+λ)/(1+λn), λ = R_L/R_s
       let x = 0;
       for (let d = 0; d < 9; d++) if (den[d] > 0) x += dbg[d] * num[d] * (1 + lam) / (1 + lam * den[d]);
       if (den[9] > 0) x += this.percGain * this.percEnv * num[9] * (1 + lam) / (1 + lam * den[9]);
@@ -356,12 +423,10 @@ export class OrganEngine {
         x = chorus ? 0.5 * (x + pick) : pick;
       }
 
-      // --- tube drive (asymmetric soft clip) with DC blocker
-      if (p.drive > 0) {
-        x = (Math.tanh(dK * (x + dB)) - tB) * dNorm;
-        const y = x - this.dcIn + 0.9995 * this.dcOut;
-        this.dcIn = x; this.dcOut = y; x = y;
-      }
+      // --- tube drive (biased soft clip, see DRIVE_B0) and the coupling capacitor
+      if (dK > 1e-6) x = dN * (Math.tanh(dK * x + DRIVE_B0) - DRIVE_TB0);
+      const yDC = x - this.dcIn + 0.9995 * this.dcOut;
+      this.dcIn = x; this.dcOut = yDC; x = yDC;
 
       let yl, yr;
       if (!p.leslieOn) {
@@ -377,16 +442,17 @@ export class OrganEngine {
         const sd = Math.sin(this.drumAng), cd = Math.cos(this.drumAng);
         yl = 0; yr = 0;
         for (let m = 0; m < 2; m++) {
-          const mx = mics[m][0], my = mics[m][1];
-          // horn: highly directional bell at radius rH; plus its image in the rear wall
-          let dx = mx - rH * sh, dy = my - rH * chh, dd = Math.hypot(dx, dy);
+          const mx = mics[2 * m], my = mics[2 * m + 1];
+          // horn: highly directional bell at radius rH; plus its image in the rear
+          // wall. The mics are outside the cabinet; dd ≥ 5 cm guards the 1/r law.
+          let dx = mx - rH * sh, dy = my - rH * chh, dd = Math.max(0.05, Math.hypot(dx, dy));
           let ca = (dx * sh + dy * chh) / dd, dir = (1 + ca) / 2;
           let y = hornG * (0.08 + 0.92 * dir * dir) * (D / dd) * readFrac(hb, mask, this.wi, (dd / C_SOUND) * fs);
           dy = my + 2 * wall + rH * chh; dd = Math.hypot(dx, dy);
           ca = (dx * sh - dy * chh) / dd; dir = (1 + ca) / 2;
           y += refl * hornG * (0.08 + 0.92 * dir * dir) * (D / dd) * readFrac(hb, mask, this.wi, (dd / C_SOUND) * fs);
           // drum: rotating baffle, broader pattern
-          dx = mx - rD * sd; dy = my - rD * cd; dd = Math.hypot(dx, dy);
+          dx = mx - rD * sd; dy = my - rD * cd; dd = Math.max(0.05, Math.hypot(dx, dy));
           ca = (dx * sd + dy * cd) / dd;
           y += drumG * (0.45 + 0.55 * (1 + ca) / 2) * (D / dd) * readFrac(db, mask, this.wi, (dd / C_SOUND) * fs);
           dy = my + 2 * wall + rD * cd; dd = Math.hypot(dx, dy);
@@ -395,20 +461,33 @@ export class OrganEngine {
           if (m === 0) yl = y; else yr = y;
         }
       }
-      yl *= p.master; yr *= p.master;
+      yl *= master; yr *= master;
       L[s] = yl; R[s] = yr;
       const a = Math.max(Math.abs(yl), Math.abs(yr));
       if (a > peak) peak = a;
       this.now++;
     }
 
-    // retire keys whose contacts are all open
-    for (const k of keys) {
-      if (k.down || k.evi < k.ev.length) continue;
-      let any = false;
-      for (let d = 0; d < 9; d++) if (k.g[d] > 0) any = true;
-      if (!any) this.keys.delete(k.key);
+    // the glide: write back, and stop once everything has arrived
+    if (gliding) {
+      if (near(pre, tPre) && near(lam, tLam) && near(master, tMaster) && near(hornG, tHornG) && near(drumG, tDrumG)
+        && near(refl, tRefl) && this.sDrive === this.tDrive && this.sXo === this.tXo) {
+        pre = tPre; lam = tLam; master = tMaster; hornG = tHornG; drumG = tDrumG; refl = tRefl;
+        this.gliding = false;
+      }
+      this.sPre = pre; this.sLam = lam; this.sMaster = master; this.sHornG = hornG; this.sDrumG = drumG; this.sRefl = refl;
+      this.driveK = dK; this.driveN = dN;
     }
+
+    // retire keys whose contacts are all open
+    let j = 0;
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      let any = k.down || k.evi < k.ev.length;
+      for (let d = 0; d < 9 && !any; d++) if (k.g[d] > 0) any = true;
+      if (any) keys[j++] = k; else this.keys.delete(k.key);
+    }
+    keys.length = j;
     if (!(peak < 1e3)) { // NaN or blow-up: reset the delay line and rotors
       this.I.fill(0); this.V.fill(0); this.hornBuf.fill(0); this.drumBuf.fill(0);
       this.emit({ type: 'error', message: 'numerical instability — signal path reset' });

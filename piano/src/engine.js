@@ -17,15 +17,22 @@
 //
 // For speed, modes are stored in four contiguous segments according to which
 // bridge channels they touch: V only | H only | V and H | torsion (output only).
+//
+// Una corda (soft pedal) shifts the action so each hammer misses one string of
+// its unison: the struck strings share the blow, and the third (or second) is
+// driven only through the bridge.
 
 const TWO_PI = 2 * Math.PI;
 const OUT_SCALE = 24; // bridge velocity → full-scale audio
+const SMOOTH_T = 0.01; // s: one-pole glide of live gains and pan (no zipper noise)
+const MAXB = 256;      // render in chunks of at most this many samples
 
 export const ENGINE_DEFAULTS = {
   gainV: 1, gainH: 0.35, gainT: 0.6, master: 1,
   damper: 25,      // s⁻¹ extra decay when a damper rests on the string
   width: 0.6,      // stereo spread across the keyboard
   maxModes: 4500,  // CPU budget (total oscillators across all voices)
+  unaCorda: false, // soft pedal: each hammer strikes one string fewer
 };
 
 const KILL_SIGMA = 250;
@@ -37,6 +44,7 @@ class Voice {
     this.key = key;
     this.version = d.version;
     this.N = N;
+    const nu = d.unisons || 1, una = nu > 1 ? nu / (nu - 1) : 1;
 
     // order modes by segment; perm[i] = index in the incoming data
     const seg = (j) => (d.ct[j] !== 0 ? 3 : d.cv[j] !== 0 && d.ch[j] !== 0 ? 2 : d.ch[j] !== 0 ? 1 : 0);
@@ -53,30 +61,46 @@ class Voice {
     const F = () => new Float64Array(N);
     this.q = F(); this.q1 = F();
     this.a1 = F(); this.a2 = F(); this.a1d = F(); this.a2d = F();
-    this.w = F(); this.bw = F(); this.fbv = F(); this.fbh = F();
+    this.wN = F(); this.bwN = F(); this.wU = F(); this.bwU = F(); this.fbv = F(); this.fbh = F();
     this.cvk = F(); this.chk = F(); this.ctk = F();
     this.om = F(); this.sig = F();
-    let comp = 0;
+    let comp = 0, compU = 0;
     for (let i = 0; i < N; i++) {
       const j = perm[i];
-      const om = TWO_PI * d.freq[j], sig = d.sigma[j];
+      const om = TWO_PI * d.freq[j];
+      // The bridge feeds back the previous sample's bridge velocity through the
+      // impulse-invariant gain b, which damps each mode by only r·sinc(ωk)·c²/2
+      // (9 % short at 5.7 kHz). The shortfall goes into the mode's own, exactly
+      // discretised decay, so its bridge loss is c²/2 at every frequency while
+      // the explicit loop (and its stability) stays as it was.
+      const c2 = d.cv[j] * d.cv[j] + d.ch[j] * d.ch[j];
+      const r0 = Math.exp(-d.sigma[j] * k), th = Math.sqrt(Math.max(om * om - d.sigma[j] ** 2, 1e-6)) * k;
+      const sig = d.sigma[j] + 0.5 * c2 * (1 - (r0 * Math.sin(th)) / th);
       this.om[i] = om; this.sig[i] = sig;
       const r = Math.exp(-sig * k);
       const od = Math.sqrt(Math.max(om * om - sig * sig, 1e-6));
       this.a1[i] = 2 * r * Math.cos(od * k);
       this.a2[i] = r * r;
       const b = (k * r * Math.sin(od * k)) / od; // impulse-invariant input gain
-      this.w[i] = d.w[j];
-      this.bw[i] = b * d.w[j];
+      this.wN[i] = d.w[j];
+      this.bwN[i] = b * d.w[j];
       comp += b * d.w[j] * d.w[j];
+      // una corda: the last string of the unison is missed, the others share the blow
+      const wu = nu > 1 && d.uni[j] === nu - 1 ? 0 : d.w[j] * una;
+      this.wU[i] = wu;
+      this.bwU[i] = b * wu;
+      compU += b * wu * wu;
       this.fbv[i] = b * d.cv[j];
       this.fbh[i] = b * d.ch[j];
       this.cvk[i] = d.cv[j] / k;
       this.chk[i] = d.ch[j] / k;
       this.ctk[i] = d.ct[j] / k;
     }
-    this.comp = comp;
+    this.compN = comp; this.compU = compU;
     this.hammer = d.hammer;
+    // the felt touches one string fewer, so its contact stiffness drops by (ν−1)/ν
+    this.KU = d.hammer.K / una;
+    this.w = this.wN; this.bw = this.bwN; this.comp = comp; this.hK = d.hammer.K;
     this.outV = d.outV * OUT_SCALE;
     this.outH = d.outH * OUT_SCALE;
     this.hasDamper = d.hasDamper;
@@ -93,7 +117,7 @@ class Voice {
     this.age = 0;
     this.damperSigma = eng.p.damper;
     this.computeDamped();
-    this.setPan(eng);
+    this.setPan(eng, true);
   }
 
   setDamperSigma(sd) {
@@ -113,11 +137,14 @@ class Voice {
     }
   }
 
-  setPan(eng) {
+  // A new voice starts at its pan; a width change glides there (see render).
+  setPan(eng, snap = false) {
     const x = Math.max(-1, Math.min(1, ((this.key - 64.5) / 43.5) * eng.p.width));
     const ang = ((x + 1) * Math.PI) / 4;
-    this.panL = Math.cos(ang) * Math.SQRT2;
-    this.panR = Math.sin(ang) * Math.SQRT2;
+    this.tPanL = Math.cos(ang) * Math.SQRT2;
+    this.tPanR = Math.sin(ang) * Math.SQRT2;
+    if (snap) { this.panL = this.tPanL; this.panR = this.tPanR; }
+    this.panMoving = this.panL !== this.tPanL || this.panR !== this.tPanR;
   }
 
   updateDamping(eng) {
@@ -132,8 +159,14 @@ class Voice {
   }
 
   // Launch the hammer at the string's current position (works for re-strikes).
-  strike(v) {
+  // unaCorda: the shifted action strikes one string fewer.
+  strike(v, unaCorda = false) {
     const k = this.k;
+    const una = unaCorda && this.KU !== this.hammer.K;
+    this.w = una ? this.wU : this.wN;
+    this.bw = una ? this.bwU : this.bwN;
+    this.comp = una ? this.compU : this.compN;
+    this.hK = una ? this.KU : this.hammer.K;
     let u = 0;
     for (let i = 0; i < this.N; i++) u += this.w[i] * this.q[i];
     this.eta = u - 1.5 * v * k;
@@ -150,7 +183,7 @@ class Voice {
 
   // Solve D + C·F(D) = dFree for the felt compression D one step ahead.
   contactForce(dFree) {
-    const h = this.hammer, p = h.p, K = h.K, a = this.alphaK;
+    const h = this.hammer, p = h.p, K = this.hK, a = this.alphaK;
     const C = this.comp + this.kOverM;
     const dp = this.dPrev > 0 ? Math.pow(this.dPrev, p) : 0;
     if (dFree <= 0) { this.dPrev = dFree; return 0; }
@@ -171,45 +204,48 @@ class Voice {
     return fr > 0 ? K * fr : 0;
   }
 
-  render(L, R, n, eng) {
+  // Add n samples to L, R starting at off. eng.gV/gH/gT hold the (smoothed)
+  // output gains for these samples.
+  render(L, R, off, n, eng) {
     const N = this.N, e0 = this.e0, e1 = this.e1, e2 = this.e2;
-    const q = this.q, q1 = this.q1;
+    // qa holds q[n], qb q[n−1]; each step writes q[n+1] over q[n−1], then they swap
+    let qa = this.q, qb = this.q1;
     const A1 = this.damped ? this.a1d : this.a1, A2 = this.damped ? this.a2d : this.a2;
     const FBV = this.fbv, FBH = this.fbh, CV = this.cvk, CH = this.chk, CT = this.ctk;
-    const gm = eng.p.master;
-    const gv = eng.p.gainV * this.outV * gm, gh = eng.p.gainH * this.outH * gm, gt = eng.p.gainT * this.outV * gm;
-    const pl = this.panL, pr = this.panR;
+    const GV = eng.gV, GH = eng.gH, GT = eng.gT, oV = this.outV, oH = this.outH;
+    let pl = this.panL, pr = this.panR;
+    const panMoving = this.panMoving, tl = this.tPanL, tr = this.tPanR, aS = eng.aSm;
     let sv = this.sv, sh = this.sh, peak = 0;
     for (let s = 0; s < n; s++) {
       let nsv = 0, nsh = 0, nst = 0;
       if (!this.hammerOn) {
         for (let i = 0; i < e0; i++) {
-          const q0 = q[i], qn = A1[i] * q0 - A2[i] * q1[i] - FBV[i] * sv;
-          q1[i] = q0; q[i] = qn;
+          const q0 = qa[i], qn = A1[i] * q0 - A2[i] * qb[i] - FBV[i] * sv;
+          qb[i] = qn;
           nsv += CV[i] * (qn - q0);
         }
         for (let i = e0; i < e1; i++) {
-          const q0 = q[i], qn = A1[i] * q0 - A2[i] * q1[i] - FBH[i] * sh;
-          q1[i] = q0; q[i] = qn;
+          const q0 = qa[i], qn = A1[i] * q0 - A2[i] * qb[i] - FBH[i] * sh;
+          qb[i] = qn;
           nsh += CH[i] * (qn - q0);
         }
         for (let i = e1; i < e2; i++) {
-          const q0 = q[i], qn = A1[i] * q0 - A2[i] * q1[i] - FBV[i] * sv - FBH[i] * sh;
-          q1[i] = q0; q[i] = qn;
+          const q0 = qa[i], qn = A1[i] * q0 - A2[i] * qb[i] - FBV[i] * sv - FBH[i] * sh;
+          qb[i] = qn;
           const dq = qn - q0;
           nsv += CV[i] * dq; nsh += CH[i] * dq;
         }
         for (let i = e2; i < N; i++) {
-          const q0 = q[i], qn = A1[i] * q0 - A2[i] * q1[i];
-          q1[i] = q0; q[i] = qn;
+          const q0 = qa[i], qn = A1[i] * q0 - A2[i] * qb[i];
+          qb[i] = qn;
           nst += CT[i] * (qn - q0);
         }
       } else {
         const W = this.w, BW = this.bw;
         let uf = 0;
         for (let i = 0; i < N; i++) {
-          const q0 = q[i], qn = A1[i] * q0 - A2[i] * q1[i] - FBV[i] * sv - FBH[i] * sh;
-          q1[i] = q0; q[i] = qn;
+          const qn = A1[i] * qa[i] - A2[i] * qb[i] - FBV[i] * sv - FBH[i] * sh;
+          qb[i] = qn;
           uf += W[i] * qn;
         }
         const etaF = 2 * this.eta - this.etaPrev;
@@ -217,13 +253,13 @@ class Voice {
         this.etaPrev = this.eta;
         this.eta = etaF - this.kOverM * F;
         if (F > 0) {
-          for (let i = 0; i < N; i++) q[i] += BW[i] * F;
+          for (let i = 0; i < N; i++) qb[i] += BW[i] * F;
           this.contact = true;
           this.contactSamples++;
           if (F > this.Fmax) this.Fmax = F;
         }
         for (let i = 0; i < N; i++) {
-          const dq = q[i] - q1[i];
+          const dq = qb[i] - qa[i];
           nsv += CV[i] * dq; nsh += CH[i] * dq; nst += CT[i] * dq;
         }
         this.hammerSamples++;
@@ -232,14 +268,21 @@ class Voice {
           eng.emit({ type: 'hammer', key: this.key, contactMs: (this.contactSamples / eng.fs) * 1000, Fmax: this.Fmax });
         }
       }
+      const t = qa; qa = qb; qb = t;
       sv = nsv; sh = nsh;
-      const y = gv * nsv + gh * nsh + gt * nst;
-      L[s] += pl * y;
-      R[s] += pr * y;
+      const y = oV * (GV[s] * nsv + GT[s] * nst) + oH * GH[s] * nsh;
+      if (panMoving) { pl += (tl - pl) * aS; pr += (tr - pr) * aS; }
+      L[off + s] += pl * y;
+      R[off + s] += pr * y;
       const ay = y < 0 ? -y : y;
       if (ay > peak) peak = ay;
     }
+    this.q = qa; this.q1 = qb;
     this.sv = sv; this.sh = sh;
+    if (panMoving) {
+      if (Math.abs(tl - pl) + Math.abs(tr - pr) < 1e-7) { pl = tl; pr = tr; this.panMoving = false; }
+      this.panL = pl; this.panR = pr;
+    }
     this.peak = peak;
     this.age += n;
     if (!(peak < 1e3)) { // NaN or blow-up: silence this voice
@@ -285,9 +328,19 @@ export class PianoEngine {
     this.sustain = false;
     this.hammerMaxSamples = Math.round(0.08 * fs);
     this.listeners = [];
+    // output gains glide to their targets sample by sample
+    this.aSm = 1 - Math.exp(-1 / (SMOOTH_T * fs));
+    this.gV = new Float64Array(MAXB); this.gH = new Float64Array(MAXB); this.gT = new Float64Array(MAXB);
+    this.snapGains();
+    this.overBudget = false;
   }
 
   emit(ev) { for (const f of this.listeners) f(ev); }
+
+  snapGains() {
+    const p = this.p;
+    this.sV = p.gainV * p.master; this.sH = p.gainH * p.master; this.sT = p.gainT * p.master;
+  }
 
   setParams(p) {
     const old = this.p;
@@ -296,6 +349,7 @@ export class PianoEngine {
       for (const v of this.voices) v.setDamperSigma(this.p.damper);
     }
     if (p.width !== undefined) for (const v of this.voices) v.setPan(this);
+    if (!this.voices.length) this.snapGains(); // nothing sounds: no need to glide
   }
 
   noteOn(key, data, velocity) {
@@ -308,7 +362,7 @@ export class PianoEngine {
     }
     v.keyDown = true;
     v.updateDamping(this);
-    v.strike(velocity);
+    v.strike(velocity, !!this.p.unaCorda);
     this.enforceBudget(v);
     return v;
   }
@@ -333,17 +387,23 @@ export class PianoEngine {
     return n;
   }
 
+  // Over the oscillator budget: release the quietest voices. A voice whose
+  // hammer is still in flight has not been heard yet (its peak is 0), so it is
+  // never a victim; if only those remain, try again once they have sounded.
   enforceBudget(keep) {
     let total = 0;
-    for (const v of this.voices) if (!v.killing) total += v.N;
+    const vs = this.voices;
+    for (let i = 0; i < vs.length; i++) if (!vs[i].killing) total += vs[i].N;
+    this.overBudget = false;
     while (total > this.p.maxModes) {
       let victim = null, score = Infinity;
-      for (const v of this.voices) {
-        if (v === keep || v.killing) continue;
+      for (let i = 0; i < vs.length; i++) {
+        const v = vs[i];
+        if (v === keep || v.killing || v.hammerOn || v.age === 0) continue;
         const s = (v.peak * (v.damped ? 0.1 : 1)) / (1 + v.age * this.k);
         if (s < score) { score = s; victim = v; }
       }
-      if (!victim) break;
+      if (!victim) { this.overBudget = true; break; }
       victim.kill();
       total -= victim.N;
     }
@@ -352,8 +412,21 @@ export class PianoEngine {
   process(L, R, n) {
     L.fill(0, 0, n);
     R.fill(0, 0, n);
-    const vs = this.voices;
-    for (let i = 0; i < vs.length; i++) vs[i].render(L, R, n, this);
+    const vs = this.voices, p = this.p, a = this.aSm;
+    const tV = p.gainV * p.master, tH = p.gainH * p.master, tT = p.gainT * p.master;
+    const GV = this.gV, GH = this.gH, GT = this.gT;
+    for (let off = 0; off < n; off += MAXB) {
+      const m = Math.min(MAXB, n - off);
+      let sV = this.sV, sH = this.sH, sT = this.sT;
+      for (let s = 0; s < m; s++) {
+        sV += (tV - sV) * a; sH += (tH - sH) * a; sT += (tT - sT) * a;
+        GV[s] = sV; GH[s] = sH; GT[s] = sT;
+      }
+      if (Math.abs(tV - sV) + Math.abs(tH - sH) + Math.abs(tT - sT) < 1e-9) { sV = tV; sH = tH; sT = tT; }
+      this.sV = sV; this.sH = sH; this.sT = sT;
+      for (let i = 0; i < vs.length; i++) if (!vs[i].dead) vs[i].render(L, R, off, m, this);
+    }
+    if (this.overBudget) this.enforceBudget(null);
     let j = 0;
     for (let i = 0; i < vs.length; i++) {
       const v = vs[i];

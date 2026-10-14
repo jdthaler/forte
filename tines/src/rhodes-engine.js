@@ -5,10 +5,23 @@
 // The voices run 2× oversampled, because the pickup's nonlinearity makes
 // harmonics far above the tine's own partials. The sum is decimated with a
 // windowed-sinc FIR.
+//
+// Live controls glide rather than jump once per block (which clicks): the
+// pickup's position, width and voicing per voice, and the harp resonance,
+// speaker roll-off, amp drive, vibrato depth and level for the whole output.
+
+import { pickupFor } from './tine.js';
 
 const TAU = 2 * Math.PI;
 const OS = 2;
 const OUT_SCALE = 3.6e-4;
+const MAXN = 2048;        // output samples per internal block (the mix buffer holds OS × this)
+const SMOOTH_T = 0.01;    // s: glide of the output-stage controls
+// A pickup being moved glides through two one-poles of this time constant, so
+// it starts and stops moving smoothly: the flux change through the coil is
+// heard as a soft thump (as when a technician moves one), not a click.
+const PICKUP_T = 0.01;
+const PICKUP_KEYS = ['gap', 'offset', 'poleRadius', 'voicing'];
 
 export const RHODES_ENGINE_DEFAULTS = {
   damper: 35, cable: 1000, resQ: 2,
@@ -32,6 +45,9 @@ class Biquad {
   }
 }
 
+// harp: ~1 H of pickup coils against the cable capacitance → resonant low-pass
+const harpHz = (cablePF) => 1 / (TAU * Math.sqrt(1.0 * cablePF * 1e-12));
+
 class Voice {
   constructor(eng, key, d) {
     const N = d.n, k = 1 / eng.fs2;
@@ -51,7 +67,10 @@ class Voice {
     }
     this.comp = comp;
     this.hammer = d.hammer;
-    this.wid = d.pickup.wid; this.yoff = d.pickup.yoff; this.gain = d.pickup.gain;
+    // the engine's own pickup settings win over the (possibly cached) voice data
+    const pu = eng.p.gap !== undefined ? pickupFor(key, eng.p) : d.pickup;
+    this.wid = this.wid1 = this.tWid = pu.wid; this.yoff = this.yoff1 = this.tYoff = pu.yoff; this.gain = this.gain1 = this.tGain = pu.gain;
+    this.pickupMoving = false;
     this.phiPrev = this.flux(this.yoff);
     this.hasDamper = d.hasDamper;
     this.keyDown = true; this.damped = false; this.killing = false; this.dead = false;
@@ -61,6 +80,12 @@ class Voice {
   }
 
   flux(Y) { const z = 1 + (Y / this.wid) ** 2; return 1 / (z * Math.sqrt(z)); }
+
+  // move the pickup (gap / voicing / pole) under a sounding note: glide there
+  retargetPickup(pu) {
+    this.tWid = pu.wid; this.tYoff = pu.yoff; this.tGain = pu.gain;
+    this.pickupMoving = this.tWid !== this.wid || this.tYoff !== this.yoff || this.tGain !== this.gain;
+  }
 
   setDamper(sd) {
     const k = this.k;
@@ -110,7 +135,10 @@ class Voice {
   render(buf, n, eng) {
     const N = this.N, q = this.q, q1 = this.q1, PK = this.pk;
     const A1 = this.damped ? this.a1d : this.a1, A2 = this.damped ? this.a2d : this.a2;
-    const g = this.gain * OUT_SCALE * eng.fs2, yoff = this.yoff, iw2 = 1 / (this.wid * this.wid);
+    const gs = OUT_SCALE * eng.fs2, moving = this.pickupMoving, aP = eng.aPick;
+    const tWid = this.tWid, tYoff = this.tYoff, tGain = this.tGain;
+    let wid = this.wid, yoff = this.yoff, gain = this.gain, wid1 = this.wid1, yoff1 = this.yoff1, gain1 = this.gain1;
+    let g = gain * gs, iw2 = 1 / (wid * wid);
     let phiPrev = this.phiPrev, peak = 0, yMin = this.yMin, yMax = this.yMax;
     for (let s = 0; s < n; s++) {
       let y = 0;
@@ -143,6 +171,11 @@ class Voice {
       }
       if (y < yMin) yMin = y;
       if (y > yMax) yMax = y;
+      if (moving) {
+        wid1 += (tWid - wid1) * aP; yoff1 += (tYoff - yoff1) * aP; gain1 += (tGain - gain1) * aP;
+        wid += (wid1 - wid) * aP; yoff += (yoff1 - yoff) * aP; gain += (gain1 - gain) * aP;
+        g = gain * gs; iw2 = 1 / (wid * wid);
+      }
       // pickup: emf ∝ −dΦ/dt of the tip position relative to the pole
       const z = 1 + (y + yoff) * (y + yoff) * iw2;
       const phi = 1 / (z * Math.sqrt(z));
@@ -151,6 +184,13 @@ class Voice {
       buf[s] += out;
       const a = out < 0 ? -out : out;
       if (a > peak) peak = a;
+    }
+    if (moving) {
+      if (Math.abs(tWid - wid) + Math.abs(tWid - wid1) < 1e-9 * tWid && Math.abs(tYoff - yoff) + Math.abs(tYoff - yoff1) < 1e-9 * tWid
+        && Math.abs(tGain - gain) + Math.abs(tGain - gain1) < 1e-9 * tGain) {
+        wid = wid1 = tWid; yoff = yoff1 = tYoff; gain = gain1 = tGain; this.pickupMoving = false;
+      }
+      this.wid = wid; this.yoff = yoff; this.gain = gain; this.wid1 = wid1; this.yoff1 = yoff1; this.gain1 = gain1;
     }
     this.phiPrev = phiPrev; this.yMin = yMin; this.yMax = yMax;
     this.peak = peak; this.age += n;
@@ -171,13 +211,15 @@ export class RhodesEngine {
     this.voices = []; this.byKey = new Map(); this.sustain = false;
     this.hammerMax = Math.round(0.05 * this.fs2);
     this.listeners = [];
-    this.mono = new Float64Array(4096);
-    // decimation FIR: Blackman-windowed sinc, cutoff at the output Nyquist
+    this.mono = new Float64Array(OS * MAXN);
+    // decimation FIR: Blackman-windowed sinc, cutoff at the output Nyquist. That
+    // is a half-band filter: every tap an even distance from the centre (other
+    // than the centre) is exactly zero, and block() skips them.
     const T = 63, h = new Float64Array(T), c = 0.25;
     let sum = 0;
     for (let i = 0; i < T; i++) {
       const m = i - (T - 1) / 2, x = 2 * Math.PI * c * m;
-      const sinc = m === 0 ? 1 : Math.sin(x) / x;
+      const sinc = m === 0 ? 1 : m % 2 === 0 ? 0 : Math.sin(x) / x;
       const win = 0.42 - 0.5 * Math.cos((2 * Math.PI * i) / (T - 1)) + 0.08 * Math.cos((4 * Math.PI * i) / (T - 1));
       h[i] = sinc * win; sum += h[i];
     }
@@ -186,29 +228,34 @@ export class RhodesEngine {
     this.histL = new Float64Array(128); this.histR = new Float64Array(128); this.hi = 0;
     this.harp = new Biquad();
     this.hpL = new Biquad(); this.hpR = new Biquad(); this.lpL = new Biquad(); this.lpR = new Biquad();
+    this.hpL.set('hp', 70, 0.7, fs); this.hpR.set('hp', 70, 0.7, fs);
     this.tremPhase = 0;
-    this.updateFilters();
+    this.aSm = 1 - Math.exp(-1 / (SMOOTH_T * this.fs2));
+    this.aPick = 1 - Math.exp(-1 / (PICKUP_T * this.fs2));
+    this.overLimit = false;
+    this.snapLive();
   }
 
   emit(ev) { for (const f of this.listeners) f(ev); }
 
-  updateFilters() {
+  // Jump the output stage straight to the current settings (nothing sounding).
+  snapLive() {
     const p = this.p;
-    // harp: ~1 H of pickup coils against the cable capacitance → resonant low-pass
-    const fRes = 1 / (TAU * Math.sqrt(1.0 * p.cable * 1e-12));
-    this.harp.set('lp', fRes, p.resQ, this.fs2);
-    this.hpL.set('hp', 70, 0.7, this.fs); this.hpR.set('hp', 70, 0.7, this.fs);
-    this.lpL.set('lp', p.tone, 0.7, this.fs); this.lpR.set('lp', p.tone, 0.7, this.fs);
-    // power-amp saturation: unity small-signal gain, a little make-up when pushed
-    this.driveK = 1 + 10 * p.drive * p.drive;
-    this.driveN = (1 + 0.6 * p.drive) / this.driveK;
+    this.sCable = p.cable; this.sResQ = p.resQ; this.sTone = p.tone;
+    this.sDrive = p.drive; this.sDepth = p.tremDepth; this.sMaster = p.master;
+    this.harp.set('lp', harpHz(this.sCable), this.sResQ, this.fs2);
+    this.lpL.set('lp', this.sTone, 0.7, this.fs); this.lpR.set('lp', this.sTone, 0.7, this.fs);
+    this.gliding = false;
   }
 
   setParams(p) {
     const old = this.p;
     this.p = { ...old, ...p };
-    if (p.damper !== undefined && p.damper !== old.damper) for (const v of this.voices) v.setDamper(this.p.damper);
-    this.updateFilters();
+    if (p.damper !== undefined && p.damper !== old.damper) for (let i = 0; i < this.voices.length; i++) this.voices[i].setDamper(this.p.damper);
+    if (this.p.gap !== undefined && PICKUP_KEYS.some((k) => p[k] !== undefined && p[k] !== old[k])) {
+      for (let i = 0; i < this.voices.length; i++) this.voices[i].retargetPickup(pickupFor(this.voices[i].key, this.p));
+    }
+    if (this.voices.length) this.gliding = true; else this.snapLive();
   }
 
   noteOn(key, data, velocity) {
@@ -219,46 +266,103 @@ export class RhodesEngine {
       this.voices.push(v); this.byKey.set(key, v);
     }
     v.keyDown = true; v.updateDamping(this); v.strike(velocity);
-    if (this.voices.length > this.p.maxVoices) {
-      let victim = null, score = Infinity;
-      for (const u of this.voices) if (u !== v && !u.killing && u.peak < score) { score = u.peak; victim = u; }
-      if (victim) victim.kill();
-    }
+    this.trimVoices(v);
     return v;
   }
+
+  // Over the voice limit: release the quietest. A voice whose hammer is still
+  // in flight has not been heard yet (peak 0), so it is never the victim; if
+  // only those are left, try again once they have sounded.
+  trimVoices(keep) {
+    const vs = this.voices;
+    let live = 0;
+    for (let i = 0; i < vs.length; i++) if (!vs[i].killing) live++;
+    this.overLimit = false;
+    while (live > this.p.maxVoices) {
+      let victim = null, score = Infinity;
+      for (let i = 0; i < vs.length; i++) {
+        const u = vs[i];
+        if (u !== keep && !u.killing && !u.hammerOn && u.age > 0 && u.peak < score) { score = u.peak; victim = u; }
+      }
+      if (!victim) { this.overLimit = true; break; }
+      victim.kill(); live--;
+    }
+  }
+
   noteOff(key) { const v = this.byKey.get(key); if (v) { v.keyDown = false; v.updateDamping(this); } }
-  setSustain(on) { this.sustain = !!on; for (const v of this.voices) v.updateDamping(this); }
-  allNotesOff() { for (const v of this.voices) v.kill(); }
+  setSustain(on) { this.sustain = !!on; for (let i = 0; i < this.voices.length; i++) this.voices[i].updateDamping(this); }
+  allNotesOff() { for (let i = 0; i < this.voices.length; i++) this.voices[i].kill(); }
 
   process(L, R, n) {
-    const n2 = n * OS, mono = this.mono, p = this.p;
-    mono.fill(0, 0, n2);
-    for (const v of this.voices) v.render(mono, n2, this);
-    let j = 0;
-    for (const v of this.voices) {
-      if (v.dead) { if (this.byKey.get(v.key) === v) this.byKey.delete(v.key); } else this.voices[j++] = v;
-    }
-    this.voices.length = j;
+    for (let off = 0; off < n; off += MAXN) this.block(L, R, off, Math.min(MAXN, n - off));
+  }
 
-    const hL = this.histL, hR = this.histR, fir = this.fir, T = this.T;
-    const tremInc = p.tremRate / this.fs2, depth = p.tremDepth, dk = this.driveK, dn = this.driveN, drive = p.drive > 0;
+  block(L, R, off, n) {
+    const n2 = n * OS, mono = this.mono, p = this.p, vs = this.voices;
+    mono.fill(0, 0, n2);
+    for (let i = 0; i < vs.length; i++) vs[i].render(mono, n2, this);
+    let j = 0;
+    for (let i = 0; i < vs.length; i++) {
+      const v = vs[i];
+      if (v.dead) { if (this.byKey.get(v.key) === v) this.byKey.delete(v.key); } else vs[j++] = v;
+    }
+    vs.length = j;
+    if (this.overLimit) this.trimVoices(null);
+
+    const hL = this.histL, hR = this.histR, fir = this.fir, T = this.T, TC = (T - 1) >> 1; // TC: centre tap
+    const tremInc = p.tremRate / this.fs2;
+    const gliding = this.gliding, a = this.aSm;
+    const tCable = p.cable, tResQ = p.resQ, tTone = p.tone, tDrive = p.drive, tDepth = p.tremDepth, tMaster = p.master;
+    let depth = this.sDepth, master = this.sMaster, drive = this.sDrive;
+    // power-amp saturation: unity small-signal gain, a little make-up when
+    // pushed; below drive 0.02 it fades into a straight wire
+    let dk = 1 + 10 * drive * drive, dn = (1 + 0.6 * drive) / dk, dmix = Math.min(1, drive / 0.02);
     for (let s = 0; s < n2; s++) {
-      let x = this.harp.run(mono[s]);
+      if (gliding) {
+        depth += (tDepth - depth) * a; master += (tMaster - master) * a;
+        if (drive !== tDrive) {
+          drive += (tDrive - drive) * a;
+          if (Math.abs(tDrive - drive) < 1e-6) drive = tDrive;
+          dk = 1 + 10 * drive * drive; dn = (1 + 0.6 * drive) / dk; dmix = Math.min(1, drive / 0.02);
+        }
+        if (this.sCable !== tCable || this.sResQ !== tResQ) {
+          this.sCable += (tCable - this.sCable) * a; this.sResQ += (tResQ - this.sResQ) * a;
+          if (Math.abs(tCable - this.sCable) < 1e-3 && Math.abs(tResQ - this.sResQ) < 1e-6) { this.sCable = tCable; this.sResQ = tResQ; }
+          this.harp.set('lp', harpHz(this.sCable), this.sResQ, this.fs2);
+        }
+        if (this.sTone !== tTone) {
+          this.sTone += (tTone - this.sTone) * a;
+          if (Math.abs(tTone - this.sTone) < 0.01) this.sTone = tTone;
+          if (s & 1) { this.lpL.set('lp', this.sTone, 0.7, this.fs); this.lpR.set('lp', this.sTone, 0.7, this.fs); }
+        }
+      }
+      const x = this.harp.run(mono[s]);
       // suitcase "vibrato": an opto-coupled stereo auto-pan
       this.tremPhase += tremInc;
       if (this.tremPhase >= 1) this.tremPhase -= 1;
-      const lfo = Math.sin(TAU * this.tremPhase);
-      let l = x * (1 - depth * 0.5 * (1 + lfo)), r = x * (1 - depth * 0.5 * (1 - lfo));
-      if (drive) { l = Math.tanh(dk * l) * dn; r = Math.tanh(dk * r) * dn; }
+      let l = x, r = x;
+      if (depth !== 0) {
+        const lfo = Math.sin(TAU * this.tremPhase);
+        l = x * (1 - depth * 0.5 * (1 + lfo)); r = x * (1 - depth * 0.5 * (1 - lfo));
+      }
+      if (drive > 0) { l += dmix * (Math.tanh(dk * l) * dn - l); r += dmix * (Math.tanh(dk * r) * dn - r); }
       this.hi = (this.hi + 1) & 127;
       hL[this.hi] = l; hR[this.hi] = r;
       if (s & 1) {
-        let al = 0, ar = 0;
-        for (let t = 0; t < T; t++) { const idx = (this.hi - t) & 127; al += fir[t] * hL[idx]; ar += fir[t] * hR[idx]; }
-        const o = s >> 1;
-        L[o] = this.lpL.run(this.hpL.run(al)) * p.master;
-        R[o] = this.lpR.run(this.hpR.run(ar)) * p.master;
+        const hc = (this.hi - TC) & 127;
+        let al = fir[TC] * hL[hc], ar = fir[TC] * hR[hc];
+        for (let t = 0; t < T; t += 2) { const idx = (this.hi - t) & 127; al += fir[t] * hL[idx]; ar += fir[t] * hR[idx]; }
+        const o = off + (s >> 1);
+        L[o] = this.lpL.run(this.hpL.run(al)) * master;
+        R[o] = this.lpR.run(this.hpR.run(ar)) * master;
       }
+    }
+    if (gliding) {
+      if (Math.abs(tDepth - depth) < 1e-7 && Math.abs(tMaster - master) < 1e-7 * (1 + tMaster)
+        && drive === tDrive && this.sCable === tCable && this.sResQ === tResQ && this.sTone === tTone) {
+        depth = tDepth; master = tMaster; this.gliding = false;
+      }
+      this.sDepth = depth; this.sMaster = master; this.sDrive = drive;
     }
   }
 }

@@ -352,7 +352,8 @@ export function drawSection(canvas, model, P) {
   const { ctx, w, h } = fitCanvas(canvas);
   ctx.clearRect(0, 0, w, h);
   const muted = css('--muted'), text = css('--text');
-  const sec = model.sec;
+  const tapered = !model.info.uniform;
+  const sec = tapered ? model.secAt(model.xh) : model.sec; // the section the hammer meets
   const psi = (P.roll * Math.PI) / 180;
 
   // left: cross-section
@@ -390,7 +391,7 @@ export function drawSection(canvas, model, P) {
   ctx.moveTo(cx + off, tipY); ctx.lineTo(cx + off - 5, tipY + 9); ctx.lineTo(cx + off + 5, tipY + 9); ctx.closePath(); ctx.fill();
   ctx.fillStyle = muted; ctx.font = '10px system-ui, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('hammer', cx + off, ay + 12);
-  ctx.fillText(`${(sec.w * 1000).toFixed(2)} × ${(sec.t * 1000).toFixed(2)} mm`, cx, 12);
+  ctx.fillText(`${(sec.w * 1000).toFixed(2)} × ${(sec.t * 1000).toFixed(2)} mm${tapered ? ' at hammer' : ''}`, cx, 12);
 
   // right: planform (top view)
   const px0 = cw + 26, px1 = w - 12, py = h * 0.5;
