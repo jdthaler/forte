@@ -36,6 +36,16 @@ replace the bar physics with yours.
   what you can hear, and what is simplified. The README is also the
   page's **How it works** notes, so write it for players as well as for
   developers.
+* **Credit prior art.** End the README with `## Prior art and references`
+  (`test/site-tests.mjs` checks for it), covering:
+  - the original instrument and its inventors (with patents);
+  - the physics, credited to the people who worked it out;
+  - earlier models and syntheses of the instrument, academic and
+    commercial, each with a link and one neutral line.
+  Verify every citation against a real source (a DOI, the publisher, a
+  patent record or the product's own page), and leave out what you can't
+  verify. Project-wide credits are in [PRIOR_ART.md](PRIOR_ART.md), shown
+  at `/credits/`.
 
 ## Anatomy
 

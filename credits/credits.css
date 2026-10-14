@@ -1,0 +1,15 @@
+/* credits.css — the prior-art page: the landing page's look, the notes' typography. */
+.credits-head {
+  max-width: 1180px; margin: 0 auto;
+  padding: max(28px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) 8px max(24px, env(safe-area-inset-left));
+}
+.credits-head .forte-home { display: inline-block; margin-bottom: 18px; }
+.credits-head h1 { font: 400 clamp(34px, 6vw, 56px)/1.05 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; margin: 0 0 12px; }
+.credits-head .lede { font-size: 16px; color: #c9c4ba; max-width: 760px; margin: 0; }
+.credits-main { padding-top: 6px; }
+.credits-main .forte-notes-text { max-width: 82ch; }
+.credits-main .forte-notes-toc { margin: 8px 0 4px; }
+.credits-main .forte-notes-text li { overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .credits-head { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+}

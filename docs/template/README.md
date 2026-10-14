@@ -40,3 +40,14 @@ tools/render-{slug}.mjs               node tools/render-{slug}.mjs → examples/
 ## Simplifications
 
 What is left out or approximated, and how much it matters.
+
+## Prior art and references
+
+**The original instrument.** Inventors, patents, first descriptions.
+
+**The physics.** The papers this model relies on, credited to their
+authors: Authors (year). "Title." *Venue* volume, pages. [doi:…](https://doi.org/…)
+
+**Earlier models and syntheses.** Academic and commercial physical
+models of this instrument, each with a link and one neutral line:
+[Name](https://…) (Developer, year).
