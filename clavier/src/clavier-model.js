@@ -135,6 +135,18 @@ export function pickupX(key, P) {
 export function pickupMix(sel) {
   return { lower: [1, 0], upper: [0, 1], sum: [1, 1], diff: [1, -1] }[sel] || [1, 1];
 }
+// The pickup's flux, relative to rest, for a string that has moved x field
+// depths towards its pole: e^x − 1. The exponential is a fit near the rest
+// position (Gabrielli et al., Remaggi et al.); within about a field depth of
+// rest the string reaches the pole's near field, where the flux can grow no
+// faster than it does at the face, so beyond x = 1 it continues along its
+// tangent. (Unbounded, a 2 mm gap and a 0.5 mm field gave e⁴: 55× the gain.)
+export const fieldFlux = (x) => (x <= 1 ? Math.expm1(x) : Math.E - 1 + Math.E * (x - 1));
+// Output level at the default gap whatever the gap: the string's swing, and so
+// the signal, is proportional to g, and this matches the levels (as a player
+// would reset the amplifier) so the gap changes the touch, not the volume.
+export const GAP_REF = 0.5e-3;
+
 // A pickup hears mode n through its shape at x, averaged over the pole's width.
 export function pickupWeight(n, x, L) {
   const u = (n * Math.PI * POLE_WIDTH) / (2 * L);

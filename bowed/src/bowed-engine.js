@@ -24,6 +24,7 @@ const SHAPE_N = 96;        // points along the string for the view
 const TRACE = 2048;        // bow-point velocity history for the view
 const POST_EVERY = 2048;   // samples between view updates (≈ 23 per second)
 const STROBE = 1 / 48;     // the shape is sampled stroboscopically: the corner advances 1/48 period per frame
+const FLYWHEEL = 0.5;      // s: the crank's flywheel smooths changes of treadle speed
 
 export class OrganistaEngine {
   constructor(fs) {
@@ -46,13 +47,15 @@ export class OrganistaEngine {
     this.hp = [new Biquad(), new Biquad()]; this.mass = new OnePole(4000, fs); // the bridge's mass rolls off the top
     this.dl = new Float64Array(64); this.dw = 0; // right mic is a little further away
     this.etaBody = -1;
+    this.faults = 0;
+    this.fly = 1 - Math.exp(-1 / (FLYWHEEL * fs));
   }
 
   setParams(P) {
     const old = this.P;
     this.P = P;
     this.Fr = friction(P);
-    this.vB = P.speed;
+    this.vBt = P.speed; if (!old) this.vB = P.speed; // the wheel follows the treadle through the flywheel
     for (let k = RANGE[0]; k <= RANGE[1]; k++) {
       const s = this.S[k];
       s.design(loopDesign(k, P, s.fs));
@@ -69,16 +72,17 @@ export class OrganistaEngine {
   buildBody(eta) {
     this.etaBody = eta;
     const modes = boardModes(F_BODY, eta), M = modes.length, fs = this.fs;
-    Object.assign(this, { M, a1: new Float64Array(M), a2: new Float64Array(M), q1: new Float64Array(M), q2: new Float64Array(M),
-      drive: new Float64Array(M * NSEG), wLr: new Float64Array(M), wLi: new Float64Array(M), wRr: new Float64Array(M), wRi: new Float64Array(M), om: new Float64Array(M) });
+    const F = () => new Float64Array(M);
+    Object.assign(this, { M, a1: F(), a2: F(), q1: F(), q2: F(), drive: new Float64Array(M * NSEG), cLr: F(), cLi: F(), cRr: F(), cRi: F() });
     modes.forEach((m, i) => {
-      const c = modeCoeffs(m.f, m.sigma, fs);
-      this.a1[i] = c.a1; this.a2[i] = c.a2; this.om[i] = TAU * m.f;
+      const c = modeCoeffs(m.f, m.sigma, fs), om = TAU * m.f;
+      this.a1[i] = c.a1; this.a2[i] = c.a2;
       for (let g = 0; g < NSEG; g++) {
         const [x, y] = bridgePoint(RANGE[0] + ((RANGE[1] - RANGE[0]) * g) / (NSEG - 1));
         this.drive[i * NSEG + g] = (c.b * plateShape(m.m, m.n, x, y, BOARD)) / m.M;
       }
-      [[this.wLr, this.wLi], [this.wRr, this.wRi]].forEach(([r, im], j) => { r[i] = m.w[j][0]; im[i] = m.w[j][1]; });
+      // mic j hears Re[w_j V]: w_r·v − w_i·(ω q) for a mode ringing at ω, written as w_r·v + w_i·a/ω
+      [[this.cLr, this.cLi], [this.cRr, this.cRi]].forEach(([r, im], j) => { r[i] = (m.w[j][0] * fs) / 2; im[i] = (m.w[j][1] * fs * fs) / om; });
     });
     // above the modelled modes the board is dense: radiate the bridge force directly
     this.hp[0].set('hp', F_BODY, 0.5412, fs); this.hp[1].set('hp', F_BODY, 1.3066, fs);
@@ -126,15 +130,21 @@ export class OrganistaEngine {
   voiceCount() { let n = 0; for (let i = 0; i < this.nAct; i++) if (this.act[i].down) n++; return n; }
 
   process(L, R, n) {
-    if (!this.P || (this.nAct === 0 && this.bodyE < 1e-18)) { L.fill(0, 0, n); R.fill(0, 0, n); this.t += n; return; }
+    if (!this.P || (this.nAct === 0 && this.bodyE < 1e-18)) {
+      L.fill(0, 0, n); R.fill(0, 0, n); this.t += n;
+      if (this.P) this.vB = this.vBt + (this.vB - this.vBt) * Math.exp(-n / (FLYWHEEL * this.fs));
+      return;
+    }
     const P = this.P, Fr = this.Fr, kB = this.kB, fs = this.fs, M = this.M, seg = this.seg, segOn = this.segOn;
     // the bridge segments that carry sounding strings this block
     let nSeg = 0;
     for (let g = 0; g < NSEG; g++) for (let j = 0; j < this.nAct; j++) if (this.act[j].seg === g) { segOn[nSeg++] = g; break; }
     const dph = (TAU * P.treadleRate) / fs, swing = P.treadle;
-    const sDamp = 6.91 / P.damper, fo = this.S[this.focus];
+    const sDamp = 6.91 / P.damper, fo = this.S[this.focus], fly = this.fly, vBt = this.vBt;
+    let vBm = this.vB;
     for (let i = 0; i < n; i++) {
-      const vB = this.vB * (1 + swing * Math.sin(this.ph));
+      vBm += (vBt - vBm) * fly;
+      const vB = vBm * (1 + swing * Math.sin(this.ph));
       this.ph += dph; if (this.ph > TAU) this.ph -= TAU;
       let za = 0;
       for (let j = 0; j < this.nAct; j++) { const s = this.act[j]; za += s.Z * s.ob; }
@@ -147,7 +157,9 @@ export class OrganistaEngine {
           if (s.FN < s.FT) s.FN = Math.min(s.FT, s.FN + s.up);
           else if (s.FN > s.FT) { s.FN = Math.max(s.FT, s.FN - (s.down ? s.up : s.dn)); if (s.FN === 0 && this.damped(s)) s.setDamper(true, sDamp); }
         }
-        const f = s.tick(Vt - s.kself * s.ob, vB, s.FN, Fr);
+        let f = s.tick(Vt - s.kself * s.ob, vB * s.wheel, s.FN, Fr);
+        const chk = f + s.ob; // a NaN or ∞ here would reach every string through the shared bridge
+        if (chk - chk !== 0) { this.fault(s); f = 0; }
         seg[s.seg] += f; ftot += f;
       }
       // soundboard
@@ -156,11 +168,14 @@ export class OrganistaEngine {
         const o = m * NSEG;
         let d = 0;
         for (let k = 0; k < nSeg; k++) d += this.drive[o + segOn[k]] * seg[segOn[k]];
-        const q = this.a1[m] * this.q1[m] - this.a2[m] * this.q2[m] + d;
-        const v = (q - this.q1[m]) * fs, wq = this.om[m] * q;
-        this.q2[m] = this.q1[m]; this.q1[m] = q;
-        l += this.wLr[m] * v - this.wLi[m] * wq;
-        r += this.wRr[m] * v - this.wRi[m] * wq;
+        const q1 = this.q1[m], q2 = this.q2[m], q = this.a1[m] * q1 - this.a2[m] * q2 + d;
+        // modal velocity and acceleration, both centred on the previous sample:
+        // v = (q − q2)·fs/2, a = (q − 2q1 + q2)·fs²; the quadrature part of the
+        // radiation is −a/ω (= ω·q at resonance, and 0 for the board's static sag)
+        const dv = q - q2, da = q - 2 * q1 + q2;
+        this.q2[m] = q1; this.q1[m] = q;
+        l += this.cLr[m] * dv + this.cLi[m] * da;
+        r += this.cRr[m] * dv + this.cRi[m] * da;
       }
       const hf = G_DIRECT * this.mass.run(this.hp[1].run(this.hp[0].run(ftot)));
       this.dl[this.dw] = hf; this.dw = (this.dw + 1) & 63;
@@ -169,12 +184,25 @@ export class OrganistaEngine {
       if (fo.active) { this.trace[this.tw] = fo.vs; this.tw = (this.tw + 1) % TRACE; }
       if (this.t + i === this.shotAt && fo.active) { fo.shape(this.shape); this.shot = true; }
     }
+    this.vB = vBm;
     this.t += n;
     let e = 0;
     for (let m = 0; m < M; m++) e += this.q1[m] * this.q1[m];
     this.bodyE = e;
     this.retire();
+    if (this.faults) {
+      this.faults = 0;
+      if (this.post) this.post({ type: 'error', message: 'A string went numerically unstable at these settings and was stopped.' });
+    }
     if (this.post && (this.shot || this.t - this.lastPost >= 2 * POST_EVERY)) this.report();
+  }
+
+  // A string that has gone non-finite (or blown up) is silenced and stopped,
+  // alone: the others play on. Its key has to be pressed again.
+  fault(s) {
+    s.clear(); s.down = false; s.FT = 0; s.FN = 0; s.after = 0;
+    s.setDamper(!this.P.lifted, 6.91 / this.P.damper);
+    this.faults++;
   }
 
   // Strings that are damped and silent leave the loop (unless the dampers are lifted).
@@ -182,6 +210,7 @@ export class OrganistaEngine {
     let j = 0;
     for (let i = 0; i < this.nAct; i++) {
       const s = this.act[i];
+      if (!(s.e < 1e6 * s.os * 128)) this.fault(s); // |v| > 1 km/s, or NaN
       const quiet = !s.down && s.FN === 0 && !this.P.lifted && s.e < 1e-14 * s.os * 128;
       s.e = 0;
       s.idle = quiet ? s.idle + 1 : 0;
@@ -201,7 +230,7 @@ export class OrganistaEngine {
     for (let i = 0; i < TRACE; i++) this.traceOut[i] = this.trace[(this.tw + i) % TRACE];
     const P0 = this.fs / s.L.f0, Pact = this.motion.kind === 'helmholtz' ? P0 / this.motion.spp : P0;
     this.post({
-      type: 'state', key: this.focus, FN: s.FN, FT: s.FT, vB: this.vB, beta: s.L.beta, down: s.down, active: s.active,
+      type: 'state', key: this.focus, FN: s.FN, FT: s.FT, vB: this.vB * s.wheel, beta: s.L.beta, down: s.down, active: s.active,
       kind: this.motion.kind, spp: this.motion.spp, shape: this.shape, trace: this.traceOut, period: Pact, f: this.fs / Pact,
     });
     this.lastPost = this.t;

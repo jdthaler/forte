@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import {
   stringDesign, speakingFreq, gauge, releasedFreqs, pickupWeight, pickupX, pickupMix,
   toneAnalog, toneResponse, toneBiquad, TONE_NET, PICKUP_R, MEASURED_B, STEEL, NONSPEAK, duffingShift,
-  pressureCents, sigma1, LO, HI, MUTE_R,
+  pressureCents, sigma1, tensionCents, LO, HI, MUTE_R,
 } from '../clavier/src/clavier-model.js';
 import { ClavierEngine } from '../clavier/src/clavier-engine.js';
 import { DEFAULTS, GROUPS, PRESETS } from '../clavier/src/clavier-params.js';
@@ -26,7 +26,7 @@ const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const cents = (a, b) => 1200 * Math.log2(a / b);
 
 // Run an engine through events, in 128-sample blocks like the AudioWorklet.
-// events: [t, 'on', key, vel] | [t, 'off', key] | [t, 'msg', {...}] | [t, 'sus', bool]
+// events: [t, 'on', key, vel] | [t, 'off', key] | [t, 'msg', {...}] | [t, 'sus', bool] | [t, 'params', P]
 function render(params, sec, events, setup) {
   const e = new ClavierEngine(FS);
   e.setParams(params);
@@ -36,7 +36,7 @@ function render(params, sec, events, setup) {
   for (let s = 0; s < n; s += bl) {
     while (j < ev.length && ev[j][0] <= s) {
       const [, type, a, b] = ev[j++];
-      if (type === 'on') e.noteOn(a, b); else if (type === 'off') e.noteOff(a); else if (type === 'sus') e.setSustain(a); else e.handle(a);
+      if (type === 'on') e.noteOn(a, b); else if (type === 'off') e.noteOff(a); else if (type === 'sus') e.setSustain(a); else if (type === 'params') e.setParams(a); else e.handle(a);
     }
     if (setup) setup(e, s);
     e.process(L, R, bl);
@@ -260,6 +260,42 @@ test('release: the yarn stops the note within 0.2 s; without yarn it rings on at
   const fr = releasedFreqs(key, P({ yarn: 20 }), 1)[0], f = peakFreq(y, fr, sec(0.45), sec(1.2), 60);
   assert.ok(Math.abs(cents(f, fr)) < 4, `${f.toFixed(2)} Hz vs ${fr.toFixed(2)} Hz`);
   assert.ok(Math.abs(cents(f, f0) + 300) < 25, `${cents(f, f0).toFixed(1)} ¢ below the held pitch`);
+  // the open string sits 307–320 ¢ below the held note, not 300 (it relaxes to T₀): what the page shows
+  for (const k of [29, 41, 53, 65, 77, 88]) {
+    const c = cents(releasedFreqs(k, DEFAULTS, 1)[0], keyFreq(k));
+    assert.ok(c < -305 && c > -322, `key ${k}: released ${c.toFixed(1)} ¢`);
+  }
+});
+
+test('tension glide (Kirchhoff–Carrier) on F1: 14 ¢ sharp at ff, about 9 at mf and 4 at pp, down to ≤ 2 ¢ after 2 s', () => {
+  const glide = (vel) => {
+    const out = [];
+    note(29, P(), vel, 2.0, (e, s) => { if ([sec(0.01), sec(2.0) - 128].some((t) => s === t - (t % 128))) { const v = e.byKey.get(29); out.push(tensionCents(v.S, v.kcGain * (v.Q - (v.s * v.s) / v.S.L))); } });
+    return out;
+  };
+  const ff = glide(1), mf = glide(0.3), pp = glide(0.05);
+  assert.ok(ff[0] > 11 && ff[0] < 17, `ff starts ${ff[0].toFixed(1)} ¢`);
+  assert.ok(mf[0] > 6 && mf[0] < 11, `mf (0.3) starts ${mf[0].toFixed(1)} ¢`);
+  assert.ok(pp[0] > 2 && pp[0] < 6, `pp (0.05) starts ${pp[0].toFixed(1)} ¢`);
+  for (const g of [ff, mf, pp]) assert.ok(g[1] < 2, `after 2 s: ${g[1].toFixed(2)} ¢`);
+  console.log(`        F1 starts ${ff[0].toFixed(1)} / ${mf[0].toFixed(1)} / ${pp[0].toFixed(1)} ¢ sharp at velocity 1 / 0.3 / 0.05`);
+});
+
+test('a held note keeps its pitch when the tip sliders move (the next note gets the new tip)', () => {
+  const key = 60, f0 = keyFreq(key);
+  for (const [id, val] of [['tip', 0.6], ['tip', 0.05], ['wrap', 1.5], ['wrap', 10]]) {
+    const x = render(P(), 2.0, [[0, 'on', key, 0.5], [0.8, 'params', P({ [id]: val })]]);
+    const before = peakFreq(x, f0, sec(0.3), sec(0.8), 80), after = peakFreq(x, f0, sec(1.2), sec(2.0), 80);
+    assert.ok(Math.abs(cents(after, before)) < 0.5, `${id} → ${val}: ${cents(after, before).toFixed(2)} ¢`);
+  }
+});
+
+test('the amplifier gain glides: a jump of the knob mid-note leaves no step in the output', () => {
+  const Q = P({ soft: true, medium: false, treble: false }); // a smooth (low-passed) signal, where a step would show
+  const x = render(Q, 1.4, [[0, 'on', 33, 0.7], [1.0, 'params', { ...Q, gain: 12 }]]);
+  const d2 = (a, b) => { let m = 0; for (let i = sec(a) + 2; i < sec(b); i++) m = Math.max(m, Math.abs(x[i] - 2 * x[i - 1] + x[i - 2])); return m; };
+  const g = 10 ** (12 / 20), steady = d2(0.7, 1.0);
+  assert.ok(d2(0.99, 1.4) < 1.5 * g * steady, `2nd difference ${d2(0.99, 1.4).toExponential(2)} vs ${(g * steady).toExponential(2)} (steady × the new gain)`);
 });
 
 test('pickup switches: out of phase, the fundamental drops by the model\'s |W_A − W_B| / |W_A + W_B|', () => {
@@ -298,7 +334,18 @@ test('stability: every parameter at its min and max, with aftertouch, wheel, mut
     for (const v of vals) {
       const Q = P({ [p.id]: v }), x = render(Q, 0.9, ev);
       let pk = 0; for (const y of x) { assert.ok(Number.isFinite(y), `${p.id} = ${v}: NaN`); pk = Math.max(pk, Math.abs(y)); }
-      assert.ok(pk / 10 ** (Q.gain / 20) < 2.5, `${p.id} = ${v}: peak ${pk.toFixed(2)}`);
+      assert.ok(pk / 10 ** (Q.gain / 20) < 1.5, `${p.id} = ${v}: peak ${pk.toFixed(2)}`);
+    }
+  }
+});
+
+test('level at the extremes: the gap no longer sets the loudness, and the pickups\' field stays bounded', () => {
+  const pk = (o, key) => { const x = note(key, P(o), 1, 0.4); let p = 0; for (const v of x) p = Math.max(p, Math.abs(v)); return p; };
+  for (const key of [29, 45]) {
+    const base = pk({}, key);
+    for (const o of [{ gap: 2 }, { gap: 0.2 }, { gap: 2, field: 0.5 }, { gap: 2, field: 0.5, pickup: 'lower', keyMass: 40, press: 20 }]) {
+      const p = pk(o, key);
+      assert.ok(p < 0.5 && p > 0.3 * base, `key ${key} ${JSON.stringify(o)}: peak ${p.toFixed(2)} (default ${base.toFixed(2)})`); // were up to 1.4 and 49
     }
   }
 });

@@ -18,7 +18,7 @@
 // The pickups sense the speaking length's height under each pole through an
 // exponential field; the selected tone networks make one biquad on the sum.
 
-import { keyModel, pickupX, pickupMix, pickupWeight, toneBiquad, tipK, ANVIL_K, ANVIL_LOSS, KEY_DAMPING, REST_GAP, RETURN_FORCE, PRESS_MAX, MUTE_K, MUTE_R } from './clavier-model.js';
+import { keyModel, pickupX, pickupMix, pickupWeight, toneBiquad, tipK, fieldFlux, GAP_REF, ANVIL_K, ANVIL_LOSS, KEY_DAMPING, REST_GAP, RETURN_FORCE, PRESS_MAX, MUTE_K, MUTE_R } from './clavier-model.js';
 import { strikeSpeed } from './clavier-params.js';
 
 const OUT = 0.1;               // pickup signal (m/s) → output
@@ -49,6 +49,9 @@ class Voice {
     this.ms = (mu * L) / 3; this.Cb = Cb; this.Cy = Cy;
     this.mass = this.ms - Cb / (k * k);              // residual mass of the speaking static shape (> 0)
     this.kcGain = S.EA / (2 * L);                     // ΔT = EA/2L · ∫u_x²
+    // the tip and its wrap belong to this string as tuned (S.dTnom): a slider
+    // move changes the next note, not the pitch of one already held
+    this.Kr = tipK(eng.P); this.wrapK = S.EA / (L * 2 * eng.P.wrap * 1e-3);
     // state
     this.s = 0; this.s1 = 0; this.eta = -REST_GAP; this.eta1 = -REST_GAP;
     this.C1 = 0; this.C0 = 0; this.um = 0; this.Q = 0;
@@ -66,7 +69,7 @@ class Voice {
     this.xl = X.lower / L; this.xu = X.upper / L;
     [this.gl, this.gu] = pickupMix(P.pickup);
     this.lam = P.field * 1e-3;
-    this.Pl = this.lam * Math.expm1(this.ul / this.lam); this.Pu = -this.lam * Math.expm1(-this.uu / this.lam);
+    this.Pl = this.lam * fieldFlux(this.ul / this.lam); this.Pu = -this.lam * fieldFlux(-this.uu / this.lam);
   }
 
   setMuteX(P) {
@@ -89,13 +92,14 @@ class Voice {
     const A1 = this.A1, A2 = this.A2, eps = this.eps, cc = this.c, beta = this.beta;
     const w = this.w, Wl = this.Wl, Wu = this.Wu, phi = this.phi, gam = this.gam;
     const B1 = this.B1, B2 = this.B2, by = this.by;
-    const Kr = eng.Kr, lr = P.tipLoss, Mt = P.keyMass * 1e-3, gap = S.gap, L = S.L;
+    const Kr = this.Kr, lr = P.tipLoss, Mt = P.keyMass * 1e-3, gap = S.gap, L = S.L;
     const mass = this.mass, Cy = this.Cy, Cb = this.Cb;
     const muteK = MUTE_K * eng.muteLevel, muteR = MUTE_R * eng.muteLevel, muted = eng.muteLevel > 1e-4;
     const G = muteK + muteR / k, Pb = this.Pb, Pg = this.Pg, xm = this.xm;
     const den = 1 + G * Pg, lamM = xm - Pb / k2;
-    const kc = P.kc, kcGain = this.kcGain, wrapK = S.EA / (L * 2 * P.wrap * 1e-3), dTnom = S.dTnom, Tt = S.T;
-    const lpF = eng.lpF, lpFall = eng.lpFall, gl = this.gl * S.mag * OUT * eng.fs, gu = this.gu * S.mag * OUT * eng.fs, lamP = this.lam, xl = this.xl, xu = this.xu;
+    const kc = P.kc, kcGain = this.kcGain, wrapK = this.wrapK, dTnom = S.dTnom, Tt = S.T;
+    const lev = S.mag * OUT * eng.fs * (GAP_REF / S.gap), gl = this.gl * lev, gu = this.gu * lev; // levels matched across gaps
+    const lpF = eng.lpF, lpFall = eng.lpFall, lamP = this.lam, xl = this.xl, xu = this.xu;
     const target = this.down ? P.press + PRESS_MAX * Math.max(this.pressure, eng.bend) : -RETURN_FORCE;
     // q holds q[n], q1 holds q[n−1]; each sample q1 is overwritten with q[n+1] and the two swap
     let q = this.q, q1 = this.q1, r = this.r, r1 = this.r1;
@@ -175,7 +179,7 @@ class Voice {
       if (Fa > this.Fpeak) this.Fpeak = Fa;
       // pickups: Φ ∝ e^(±u/λ); output ∝ dΦ/dt, normalised to the string's velocity
       const ul = xl * s + yl, uu = xu * s + yu;
-      const nPl = lamP * Math.expm1(ul / lamP), nPu = -lamP * Math.expm1(-uu / lamP);
+      const nPl = lamP * fieldFlux(ul / lamP), nPu = -lamP * fieldFlux(-uu / lamP);
       let y = gl * (nPl - Pl) + gu * (nPu - Pu);
       Pl = nPl; Pu = nPu; this.ul = ul; this.uu = uu;
       if (this.killing) { fade *= eng.killDecay; y *= fade; }
@@ -211,6 +215,7 @@ export class ClavierEngine {
     this.tone = { b0: 0, b1: 0, b2: 0, a1: 0, a2: 0, z1: 0, z2: 0 };
     this.shL = shelf('low', 130, -3, fs); this.shH = shelf('high', 4000, 3, fs); // amplifier (Gabrielli et al. 2013)
     this.dcx = 0; this.dcy = 0; this.dcR = Math.exp((-2 * Math.PI * 8) / fs);
+    this.gain = -1; this.lpG = 1 - Math.exp(-1 / (0.01 * fs)); // the volume pot, smoothed over 10 ms
     this.listeners = [];
   }
 
@@ -220,7 +225,6 @@ export class ClavierEngine {
     const old = this.P;
     this.P = { ...P };
     if (!old || Object.keys(P).some((id) => !LIVE.has(id) && P[id] !== old[id])) { this.version++; this.cache.clear(); }
-    this.Kr = tipK(this.P);
     const tb = toneBiquad(this.P, this.fs);
     Object.assign(this.tone, tb);
     if (old) for (const v of this.voices) {
@@ -275,8 +279,10 @@ export class ClavierEngine {
     let j = 0;
     for (const v of this.voices) { if (v.dead) { if (this.byKey.get(v.key) === v) this.byKey.delete(v.key); } else this.voices[j++] = v; }
     this.voices.length = j;
-    const T = this.tone, sL = this.shL, sH = this.shH, R0 = this.dcR, gain = 10 ** (P.gain / 20);
+    const T = this.tone, sL = this.shL, sH = this.shH, R0 = this.dcR, gT = 10 ** (P.gain / 20), lpG = this.lpG;
+    let gain = this.gain < 0 ? gT : this.gain;
     for (let i = 0; i < n; i++) {
+      gain += lpG * (gT - gain);
       const x = mono[i];
       let y = T.b0 * x + T.z1;
       T.z1 = T.b1 * x - T.a1 * y + T.z2; T.z2 = T.b2 * x - T.a2 * y;
@@ -284,6 +290,7 @@ export class ClavierEngine {
       const d = y - this.dcx + R0 * this.dcy; this.dcx = y; this.dcy = d;
       L[i] = gain * d; R[i] = gain * d;
     }
+    this.gain = gain;
   }
 }
 

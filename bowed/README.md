@@ -19,7 +19,15 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/bowed/>
 | `←` `→` | octave |
 | `↑` `↓` | key pressure (bow force) |
 | hold `Space` | hold: keys stay down (the string stays on the wheel) |
-| MIDI | notes and velocity; **aftertouch** (channel or polyphonic) presses harder; mod wheel = key pressure; CC64 = hold |
+| MIDI | notes and velocity; **aftertouch** (channel or polyphonic) presses harder; **mod wheel = treadle** (wheel speed: rest = 25 cm/s, full = 1 m/s); CC64 = hold |
+
+The mod wheel is the treadle, the real instrument's swell: Helmholtz amplitude
+is proportional to the wheel speed, so a held note grows 9–12 dB as the wheel
+goes up (through the flywheel, over about half a second) and stays in
+Helmholtz motion. Speed also raises Schelleng's force limits, so a note
+*started* with the wheel above about 60 cm/s and a normal touch begins in
+surface sound in the lower two octaves: press harder (aftertouch or ↑), as a
+player pumping the treadle does.
 
 Space is *hold*, not a damper pedal. A bowed note lasts only while its string
 is on the wheel, so the useful pedal keeps keys down. Letting released strings
@@ -30,9 +38,11 @@ ring is a separate switch (*Dampers lifted*).
 **The instrument.** Zubrzycki's instrument has 61 steel strings over a spruce
 soundboard in a case shaped like a baby grand. Four wheels wrapped in horsehair
 turn on a crankshaft that the player pumps with a pedal, and each key presses
-its string against a wheel. This model has 49 keys (C2–C6), one wheel speed
-for all strings, and the wheel touching every string at the same fraction β of
-its length from the bridge.
+its string against a wheel. This model has 49 keys (C2–C6) and four wheels,
+one per register (C2–B2, C3–B3, C4–D5, E♭5–C6). Each wheel touches its strings
+at one fraction β of their length from the bridge, and the voicing of the
+registers (below) gives the upper wheels more surface speed and the treble
+wheel a smaller β.
 
 **Strings** (`bowed-model.js: stringDesign`). The scale is harpsichord-like:
 C5 is 36 cm, and lengths double every 1.25 octaves going down (foreshortened to
@@ -60,8 +70,14 @@ The string's own losses (air and internal friction) are distributed, so each
 round trip gets a one-pole low-pass for its share of the travel time. The
 target decay rate is σ(f) = 0.35 + 1.4·(f/kHz)² s⁻¹, raised up to 7× at high
 frequency for the wound bass, where the winding rubs on the core. The filter's
-gain at DC is capped at 1, so the loop stays passive for any setting. The nut
-reflects with −1. Every string ends on one shared bridge.
+gain at DC is capped just below 1, so the loop stays passive for any setting;
+a trip so short that its own loss is already below that margin (the bridge
+side, with the wheel near the bridge and low losses) gets a flat gain instead
+(tested on all 49 keys at every combination of the β, loss and mobility
+extremes, at 44.1, 48 and 96 kHz). The nut reflects with −1. Every string ends
+on one shared bridge. Should a string ever go non-finite, the engine stops
+that string alone before its wave reaches the bridge, and the others play on
+(tested).
 
 **Torsion.** The wheel grips the string's *surface*, which also moves when the
 string rolls. Torsional waves travel at c_t = √(G/ρ) = 3180 m/s whatever the
@@ -70,6 +86,15 @@ tension, and a solid wire's torsional impedance, seen at its surface, is
 with Q = 40 for the fundamental torsional mode (836 Hz at C2, 7.7 kHz at C6).
 Woodhouse & Loach measured Q of that order on cello strings. Friction drives
 both waveguides, with admittances 1/(2Z₀) and 1/(2Z_t).
+
+*The torsional echo.* Each slip also twists the string. The transverse corner
+returns from the bridge after 2βL/c, the twist from the nut after
+2(1 − β)L/c_t, and the two coincide at β* = c/(c + c_t): 0.073 at C2, 0.10 at
+C4, 0.121 at C6. Just below β* the returning twist meets the end of the slip,
+the next capture comes late, and the bowed note runs 15–35 ¢ flatter than a
+little to either side. On F4 the flattening dips from −9 ¢ to −28 ¢ at
+β = 0.092 (β* = 0.099), and without torsion the dip is gone (tested). The
+treble wheel is set to keep its strings clear of it (below).
 
 **Friction.** The friction curve is the hyperbolic fit to steady sliding of
 rosin,
@@ -121,24 +146,24 @@ own losses and slips twice or more per period: Schelleng's *surface sound*.
 Measured the way Schoonderwaldt et al. did it (establish Helmholtz motion,
 then sweep the force slowly):
 
-| case | F_min model → measured | F_max model → measured |
+| case (default wheels) | F_min model → measured | F_max model → measured |
 |---|---|---|
 | C3, β = 0.12, v_B = 25 cm/s | 37 → 61 mN (× 1.6) | 3.69 → 2.88 N (× 0.78) |
-| C4 | 21 → 32 mN (× 1.5) | 2.98 → 2.40 N (× 0.80) |
-| C5 | 14 → 19 mN (× 1.4) | 2.39 → 2.57 N (× 1.08) |
-| C6 | 9.8 → 8.8 mN (× 0.9) | 1.88 → 1.94 N (× 1.03) |
-| C4, β = 0.06 | 82 → 104 mN (× 1.3) | 5.82 → 4.56 N (× 0.78) |
-| C4, β = 0.24 | 5.5 → 8.0 mN (× 1.5) | 1.56 → 0.91 N (× 0.59) |
-| C4, v_B = 50 cm/s | 41 → 58 mN (× 1.4) | 5.82 → 4.77 N (× 0.82) |
-| C4, v_B = 12.5 cm/s | 11 → 18 mN (× 1.6) | 1.56 → 1.46 N (× 0.94) |
+| C4, β = 0.12, v_B = 27.5 cm/s | 23 → 35 mN (× 1.6) | 3.26 → 2.77 N (× 0.85) |
+| C5, β = 0.12, v_B = 27.5 cm/s | 15 → 16 mN (× 1.1) | 2.62 → 2.82 N (× 1.08) |
+| C6, β = 0.09, v_B = 40 cm/s | 28 → 7.6 mN (× 0.3) | 3.95 → 3.62 N (× 0.92) |
+| C4, β = 0.06 | 90 → 110 mN (× 1.2) | 6.39 → 5.05 N (× 0.79) |
+| C4, β = 0.24 | 6.0 → 8.5 mN (× 1.4) | 1.70 → 1.10 N (× 0.65) |
+| C4, v_B = 55 cm/s | 45 → 64 mN (× 1.4) | 6.39 → 5.24 N (× 0.82) |
+| C4, v_B = 14 cm/s | 12 → 21 mN (× 1.7) | 1.70 → 1.64 N (× 0.96) |
 
 The upper bound holds well, with slope −1 in β (tested). The lower bound has
-slope ≈ −2 in β (tested), but comes out 1.3–1.6× Schelleng's value below C6. His
+slope ≈ −2 in β (tested), but comes out 1.2–1.7× Schelleng's value below C5. His
 derivation assumes a lossless string on a resistive bridge (Raman's model).
 The rounded corner of a lossy string adds a friction-force ripple that
 triggers premature slips earlier, which is how Schoonderwaldt et al. explain
 the same discrepancy in their measurements. They also found the measured F_min
-nearly independent of v_B. Here it still scales as v_B^0.86, closer to
+nearly independent of v_B. Here it still scales as v_B^0.8, closer to
 Schelleng than to their violin.
 
 **Attacks.** The wheel is already turning when the key brings the string to
@@ -153,11 +178,11 @@ motion (15 regular periods in a row) at default settings:
 
 | key (period) | hard key, 8 ms | normal, 11 ms | soft, 16 ms | lazy, 54 ms | very lazy, 200 ms |
 |---|---|---|---|---|---|
-| C2 (15 ms) | 122 ms | 184 ms | 273 ms | 318 ms | 539 ms |
-| C3 (7.6 ms) | 107 | 106 | 145 | 398 | 207 |
-| C4 (3.8 ms) | 118 | 88 | 87 | 84 | 241 |
-| C5 (1.9 ms) | 65 | 49 | 112 | 75 | 145 |
-| C6 (0.96 ms) | 21 | 21 | 60 | 47 | 119 |
+| C2 (15 ms) | 153 ms | 183 ms | 242 ms | 255 ms | 361 ms |
+| C3 (7.6 ms) | 107 | 128 | 247 | 578 | 250 |
+| C4 (3.8 ms) | 100 | 78 | 151 | 129 | 224 |
+| C5 (1.9 ms) | 50 | 33 | 51 | 54 | 152 |
+| C6 (0.95 ms) | 42 | 39 | 57 | 69 | 164 |
 
 The *Attack map* view computes this live, for the key you play and the knobs
 you set, over every rise time and final force (a Guettler diagram for a
@@ -165,13 +190,20 @@ wheel). It is not smooth. Bowed-string transients are notoriously sensitive,
 and the map has islands. One hazard is real: a few patterns with two slips per
 period, including a near-symmetric "octave" pattern, are stable almost
 everywhere Helmholtz motion is. A string that falls into one keeps whistling,
-just as a violin E string can. At the voiced touch every key settles. At soft
-touches about 1 note in 100 whistles (2 of 294 in a sweep of every key at six
-velocities). Press harder (aftertouch, or ↑) and it
-snaps into Helmholtz motion, then stays there when you ease off: hysteresis.
+just as a violin E string can. About 1 note in 100 whistles: 2 of 294 in a
+sweep of every key at six velocities at 48 kHz (F3 at 0.45, B♭3 at 0.6), 1 of
+294 at 44.1 kHz; over 2940 notes (12 velocities, five rosin-grain seeds) the
+rate is 1.1 %, mostly in the lower two octaves. Which notes whistle is
+chaotic: at 48 kHz every key settles at the voiced touch, at 44.1 kHz G3 does
+not. Press harder (aftertouch, or ↑) and it snaps into Helmholtz motion, then
+stays there when you ease off: hysteresis. (A brief force overshoot at the end
+of the key's travel, which a violinist uses to "catch" the string, was tried:
+at up to twice the steady force for 30–100 ms it moved the rate between 0.8
+and 1.2 %, within the scatter, and so it is not in the model. Freeing a
+string once it whistles takes about F_max for a tenth of a second.)
 
 **Voicing.** Each key is regulated so that a normal touch (velocity 0.7)
-presses with half of Schelleng's maximum at the default wheel. Below about
+presses with half of Schelleng's maximum at its wheel's default speed. Below about
 0.25 F_max a fresh note starts in surface sound; near 0.9 F_max the motion turns
 raucous; in between, half way, the attacks settle most reliably.
 Velocity changes the force only between 0.75× and 1.11×; mostly it changes how
@@ -179,14 +211,42 @@ fast the force rises. The voicing is a fixed table, as on the real instrument.
 Change the wheel speed or position and the operating point moves around
 Schelleng's diagram. The view shows it moving.
 
+**The registers.** On one wheel at one β the keyboard is uneven: the steady
+level spans 19 dB across the 49 keys, and the top octave sits about 7 dB
+below the rest (its Z₀ is lower, and the board radiates its fundamentals
+poorly, below coincidence). The four wheels voice it, as a builder would:
+
+| wheel | keys | surface speed | β |
+|---|---|---|---|
+| 1 | C2–B2 | the treadle's, 25 cm/s | β (0.12) |
+| 2 | C3–B3 | × 1 | β |
+| 3 | C4–D5 | × 1.1 | β |
+| 4 | E♭5–C6 | × 1.6 | 0.75 β |
+
+Faster is louder at the same place on Schelleng's diagram (the voiced force
+follows v_B). The treble wheel also sits nearer the bridge, both for level and
+to keep its strings below the torsional echo (above; at one β = 0.12 the top
+keys would sit on it, C6 bowed 33 ¢ flat). Moving β *up* to quieten a note
+does not work: at the voiced force, a string bowed further from the bridge
+starts in a two-slip whistle far more often (8 % of all touches at 1.15 β,
+against 1 %). With the voicing, and with the strings loading the board (below),
+the register medians agree within 1.8 dB and the 49 keys span 12.4 dB, 6.2 dB
+from the 10th to the 90th percentile (steady RMS, tested). What is left are
+the board's strong notes, whose fundamental sits on a plate mode: F2–F♯2
+(mode (2,1), 90 Hz), C3, E♭4 ((1,3), 312 Hz) and F♯5–A♭5, 5–8 dB above their
+neighbours, as strong notes are on any soundboard.
+
 **Flattening, and tuning while bowing.** A bowed string sounds flat of its free
 frequency, more so the harder it is pressed (McIntyre & Woodhouse 1979). The
 slip comes late and the corner is rounded. Here, at the voiced touch, the flat
-runs from 4 ¢ (C2) through 9 ¢ (C4) to 33 ¢ (C6). The rosin lag adds to it,
-most at the top, where a slip lasts only five lags. A tuner tunes by ear while
-the instrument plays, so each free string is set that much sharp
-(`tools/bowed-tuning.mjs`). The bowed notes are then within ±1 ¢ of equal
-temperament (tested on all 49 keys from the audio, within ±3 ¢). Consequences
+runs from 4.5 ¢ (C2) through 9 ¢ (C4) and 12 ¢ (C5) to 19 ¢ (C6). The rosin
+lag adds to it, most at the top, where a slip lasts only about four lags. A
+tuner tunes by ear while the instrument plays, so each free string is set that
+much sharp (`tools/bowed-tuning.mjs`). The bowed notes are then within ±1 ¢ of
+equal temperament at both 48 and 44.1 kHz (tested on all 49 keys from the
+audio). The table belongs to the oversampling plan, which is fixed at 48 kHz
+and kept at 44.1 kHz (choosing it from the rate put B3, C4, B4 and C5 2–3 ¢
+sharp there). Consequences
 you can hear: pressing harder lowers the pitch (tested), and a released string
 rings sharp by its tuning offset (tested), most noticeably in the top octave
 with the dampers lifted.
@@ -202,8 +262,19 @@ all. The same plate's modes (f₁₁ = 47 Hz, 0.036 modes/Hz, 77 below 2.4 kHz)
 radiate the sound. Each mode is driven at eight points along the bridge and
 heard by two microphones through the far-field radiation of a baffled,
 simply supported plate (Wallace 1972). Odd–odd modes radiate as monopoles at
-low frequency; the others hardly radiate until coincidence (1.6 kHz). Above
-the modelled modes the board is dense, so the bridge force radiates directly.
+low frequency; the others hardly radiate until coincidence (1.6 kHz). Wallace's
+weight is complex, w_r + i w_i per unit modal velocity, and its quadrature
+part is taken from the mode's acceleration, −a/ω (equal to ω·q at resonance).
+Taken from the displacement instead, it radiated the board's static sag under
+the mean friction force: a DC offset of up to a fifth of the note's peak and a
+sub-audio thump at every key-down and key-up. Now the mean is below 0.3 % of
+the peak, and below 20 Hz the output stays within 5 % of it (tested: < 12 %).
+The strings load the board in return. Seen from the bridge each string is a
+dashpot of its wave impedance Z₀, so plate mode m loses σ = Σ Z₀,k φ_m(x_k)²/2M
+to the 49 strings on top of the wood's π f η: 4.4 times the wood's loss for
+(1,1) and roughly equal to it for the next few, which tames the board's
+strongest resonances by 2–3.5 dB (tested against the sum). Above the
+modelled modes the board is dense, so the bridge force radiates directly.
 Its level matches the modes' mean (−45 dB per newton), and a one-pole at
 4 kHz rolls it off for the bridge's mass. The tests check the plate model
 against Weyl's mode count, the mean point conductance (= Y∞ within 15 %), and
@@ -217,20 +288,22 @@ about 10× the energy it does when C♯3 is bowed. It would be more if the free
 strings were not tuned sharp, which puts C4's resonance about 1 Hz off C3's
 second harmonic.
 
-**Sampling.** A slip lasts β of a period, only five samples at C6 at 48 kHz,
+**Sampling.** A slip lasts β of a period, only four samples at C6 at 48 kHz,
 and it must be resolved. Without torsion and rosin lag, C6's measured minimum
-force is 0.2×, 0.8× and 1.3× Schelleng's value at 48, 96 and 192 kHz: it has
-not converged at the output rate. The bridge side of the waveguide also needs
-a couple of samples, which limits how close to the bridge the wheel can sit.
-So each string runs at 1×, 2× or 4× the output rate (C4 and below, to C5, to
-C6), keeping at least ~180 samples per period. Within one output sample the
+force (at β = 0.12) is 0.2×, 0.8× and 1.3× Schelleng's value at 48, 96 and
+192 kHz: it has not converged at the output rate. The bridge side of the
+waveguide also needs a couple of samples, which limits how close to the bridge
+the wheel can sit. So each string runs at 1×, 2× or 4× 48 kHz (C4 and below,
+to C5, to C6), keeping at least ~180 samples per period. The plan is that of
+48 kHz at every rate: at 44.1 kHz each string keeps its factor, at 96 kHz it
+halves. Within one output sample the
 other strings' pull on the bridge is held. Each string's own bridge reflection
 stays exact, and its bridge force is low-passed (4th-order at 18 kHz) and
 decimated.
 
 **Cost.** Ten held notes take about 10 % of one core (measured in Node on an
 Apple M2 Max). With the dampers lifted all 49 strings run, and it takes about
-26 %. Damped, silent strings leave the loop, and a silent instrument costs
+25 %. Damped, silent strings leave the loop, and a silent instrument costs
 nothing.
 
 ## What to listen for
@@ -238,7 +311,7 @@ nothing.
 `examples/bowed/` (regenerate with `node tools/render-bowed.mjs`):
 
 1. **Chorale in G.** Four voices over a falling bass, with a cadence. The
-   treadle swells the wheel speed from 20 to 30 cm/s into the phrase and eases
+   treadle swells the bass wheels' speed from 20 to 30 cm/s into the phrase and eases
    off; louder comes from faster, since Helmholtz amplitude ∝ v_B. The player
    presses in proportion, which keeps every note in the same place on
    Schelleng's diagram. Listen for the bass taking a beat longer to speak.
@@ -290,30 +363,34 @@ tools/render-bowed.mjs                node tools/render-bowed.mjs → examples/b
 
 ## Simplifications
 
-* **One wheel, one β.** The real instrument has four wheels, each serving a
-  register, so β changes along each wheel's range. Here every string meets the
-  wheel at the same fraction of its length. The contact is a point: the wheel's
-  width (Pitteroff & Woodhouse's finite bow width) and the hair's compliance
-  are left out. So is the wheel's own dynamics: pressing many keys does not
-  slow the flywheel.
+* **Four wheels, each with one β.** On the real instrument β also changes
+  along each wheel's range, with the geometry of strings, bridge and wheels.
+  Here each wheel meets all its strings at the same fraction of their length,
+  and its speed and β are a voicing choice of mine (above), not measurements.
+  The contact is a point: the wheel's width (Pitteroff & Woodhouse's finite
+  bow width) and the hair's compliance are left out. The flywheel is a
+  first-order lag on the treadle setting; pressing many keys does not slow it.
 * **Friction.** The friction curve with a first-order lag stands in for
   Woodhouse's thermal model of rosin, which tracks the contact temperature
   through heat diffusion. The lag reproduces the curve in steady sliding and
   removes its unphysical instant response. It is not fitted to measurements,
-  and it exaggerates flattening at the top (33 ¢ at C6), where a slip lasts
-  only five lag times.
+  and it may exaggerate flattening at the top (19 ¢ at C6), where a slip lasts
+  only about four lag times.
 * **Strings.** No stiffness (B ≤ 1.5·10⁻⁴), so the free string is harmonic.
   The wound bass's extra loss is a simple factor, and its torsion uses the
   solid-wire formula. One polarisation: the string moves only along the wheel's
   surface, and the key's push toward the wheel does not change the tension.
 * **Bridge.** The strings see the board's average (real) admittance. They do
   not see its modal peaks, so there are no wolf notes. The modes appear only in
-  the radiated sound. The board is a rectangle with smeared ribs, not a
+  the radiated sound, damped by the wood and by the strings' load on the
+  bridge. Their radiation damping, 30–50 % of the wood's loss below 1 kHz by
+  Wallace's far field, is left out.
+  The board is a rectangle with smeared ribs, not a
   harpsichord's bentside shape, and the eight drive points share the bridge.
 * **Attacks are chaotic.** Bowed-string transients really are. One
   consequence is a small chance that a note locks into a two-slip whistle,
-  about 1 % at soft touches and never at the default touch. Pressing harder
-  frees it.
+  about 1 % of touches, which ones depending on the sample rate. Pressing
+  harder frees it.
 * **Range and tuning.** 49 keys (C2–C6) rather than Zubrzycki's 61. The tuning
   table is computed at default settings. Changing the wheel, the friction or
   the string losses changes the flattening and so the pitch, as it would on the

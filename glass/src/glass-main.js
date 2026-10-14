@@ -2,7 +2,7 @@
 
 import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
-import { GROUPS, PRESETS } from './glass-params.js';
+import { GROUPS, PRESETS, DEFAULTS } from './glass-params.js';
 import { KEY_LO, KEY_HI, bowl, freeLines, ringRatio, speakingThreshold, regulation, rimSpeed, transport } from './glass-model.js';
 import { MIC, TRACE } from './glass-engine.js';
 
@@ -23,7 +23,10 @@ const shell = createShell({
   chain: { volume: 'volume', room: 'room' },
   space: 'hold',
   arrows: { param: 'press', step: 0.5 },
-  modWheel: 'speed',
+  // MIDI mod wheel = treadle speed, from the default (wheel at rest) to twice
+  // it: louder (the rim moves faster) and a faster warble. Not the slider's
+  // full 3 rev/s: above about 1 rev/s the big bowls can no longer speak.
+  onCC: (cc, v) => { if (cc === 1) shell.setParam('speed', +(DEFAULTS.speed * 2 ** (v / 127)).toFixed(3)); },
   onAudio: (a) => {
     spectrum.setAnalyser(a.analyser);
     // a long FFT of our own for the doublet zoom (1.5 Hz bins at 48 kHz)

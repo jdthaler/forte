@@ -3,7 +3,7 @@
 import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { GROUPS, PRESETS } from './bowed-params.js';
-import { RANGE, loopDesign, schelleng, friction, keyForce, riseTime, helmholtz, helmholtzEnvelope, VOICED } from './bowed-model.js';
+import { RANGE, loopDesign, schelleng, friction, keyForce, riseTime, helmholtz, helmholtzEnvelope, VOICED, wheelOf } from './bowed-model.js';
 import { BowedString, settleTime } from './string.js';
 
 const $ = (s) => document.querySelector(s);
@@ -24,7 +24,7 @@ const shell = createShell({
   chain: { volume: 'volume', room: 'room' },
   space: 'hold',
   arrows: { param: 'force', step: 0.05 },
-  modWheel: 'force',
+  modWheel: 'speed', // the treadle: the instrument's swell (Helmholtz amplitude ∝ v_B)
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onMessage: (m) => {
     if (m.type !== 'state') return;
@@ -52,7 +52,7 @@ function update() {
 }
 
 function info() {
-  const P = shell.P, L = design(), S = schelleng(L, P), h = helmholtz(L.beta, P.speed);
+  const P = shell.P, L = design(), S = schelleng(L, P), h = helmholtz(L.beta, L.vB);
   const F = st && st.key === focus && st.active ? st.FN : keyForce(focus, P.velocity, P.force);
   const kind = st && st.key === focus && st.active ? st.kind : 'none';
   const rows = [
@@ -60,9 +60,9 @@ function info() {
     ['wave speed, Z₀', `${L.c.toFixed(0)} m/s, ${L.Z0.toFixed(3)} kg/s`],
     ['free string', `${L.f0.toFixed(2)} Hz (+${(1200 * Math.log2(L.f0 / L.fKey)).toFixed(1)} ¢; bowing flattens it)`],
     ['decay of free string', `T60 = ${(6.91 / L.sigma1).toFixed(1)} s`],
-    ['wheel', `β = ${L.beta.toFixed(3)} (${(L.beta * L.L * 1000).toFixed(0)} mm from bridge), v_B = ${(P.speed * 100).toFixed(0)} cm/s`],
+    ['wheel', `no. ${wheelOf(focus) + 1} of 4: β = ${L.beta.toFixed(3)} (${(L.beta * L.L * 1000).toFixed(0)} mm from bridge), v_B = ${(L.vB * 100).toFixed(0)} cm/s`],
     ['Helmholtz slip', `${(h.vSlip * 100).toFixed(0)} cm/s for ${(L.beta * 100).toFixed(0)} % of each period`],
-    ['corner amplitude at wheel', `${(P.speed * (1 - L.beta) * 1000 / L.f0).toFixed(2)} mm peak to peak`],
+    ['corner amplitude at wheel', `${(L.vB * (1 - L.beta) * 1000 / L.f0).toFixed(2)} mm peak to peak`],
     ['Schelleng F_min … F_max', `${fmtN(S.Fmin)} … ${fmtN(S.Fmax)}`],
     ['voiced touch', fmtN(VOICED[focus])],
     ['force now', `${fmtN(F)} = ${(F / S.Fmax).toFixed(2)} F_max`],
@@ -78,7 +78,7 @@ animate(() => {
   if (cvS.offsetParent === null) return;
   const { ctx, w, h } = fit(cvS);
   ctx.clearRect(0, 0, w, h);
-  const P = shell.P, L = design();
+  const L = design();
   const x0 = 26, x1 = Math.max(x0 + 10, w - 26), yc = h * 0.42, X = (u) => x0 + u * (x1 - x0);
   const xb = X(L.beta), R = Math.max(2, Math.min(h * 0.22, 60));
   // bridge and nut
@@ -92,7 +92,7 @@ animate(() => {
   // the wheel, under the string, turning at the bow speed
   const pressed = st && st.key === focus && st.active && st.FN > 0;
   const wy = yc + R + 3;
-  wheelAngle += (P.speed / 0.08) / 60;
+  wheelAngle += (L.vB / 0.08) / 60;
   ctx.strokeStyle = css('--accent'); ctx.lineWidth = 2; ctx.globalAlpha = pressed ? 1 : 0.5;
   ctx.beginPath(); ctx.arc(xb, wy, R, 0, 2 * Math.PI); ctx.stroke();
   ctx.lineWidth = 1;
@@ -104,7 +104,7 @@ animate(() => {
   // shape and Helmholtz envelope
   const N = 96, env = new Float64Array(N);
   let emax = 1e-9;
-  for (let j = 0; j < N; j++) { env[j] = helmholtzEnvelope((j / (N - 1)) * L.L, L.L, L.beta, P.speed, L.f0); emax = Math.max(emax, env[j]); }
+  for (let j = 0; j < N; j++) { env[j] = helmholtzEnvelope((j / (N - 1)) * L.L, L.L, L.beta, L.vB, L.f0); emax = Math.max(emax, env[j]); }
   const shape = st && st.key === focus && st.active ? st.shape : null;
   if (shape) {
     if (!mean || mean.length !== N) mean = Float64Array.from(shape);
@@ -134,7 +134,7 @@ animate(() => {
   ctx.clearRect(0, 0, w, h);
   const P = shell.P, L = design();
   const bLo = 0.02, bHi = 0.5;
-  const S = (b) => schelleng({ ...L, beta: b }, P, b, P.speed);
+  const S = (b) => schelleng({ ...L, beta: b }, P, b, L.vB);
   const fLo = Math.max(1e-5, S(bHi).Fmin / 4), fHi = S(bLo).Fmax * 4;
   const pl = 40, pr = 8, pt = 8, pb = 22, W = Math.max(1, w - pl - pr), H = Math.max(1, h - pt - pb);
   const X = (b) => pl + (W * Math.log(b / bLo)) / Math.log(bHi / bLo);
@@ -184,11 +184,11 @@ animate(() => {
   if (cvV.offsetParent === null) return;
   const { ctx, w, h } = fit(cvV);
   ctx.clearRect(0, 0, w, h);
-  const P = shell.P, L = design(), hz = helmholtz(L.beta, P.speed);
-  const vTop = 1.6 * P.speed, vBot = 1.25 * hz.vSlip;
+  const L = design(), vB = L.vB, hz = helmholtz(L.beta, vB);
+  const vTop = 1.6 * vB, vBot = 1.25 * hz.vSlip;
   const Y = (v) => 6 + ((h - 18) * (vTop - v)) / (vTop - vBot);
   ctx.font = '10px system-ui, sans-serif'; ctx.textAlign = 'left';
-  for (const [v, lab, c] of [[P.speed, 'v_B (stick)', '--helm'], [0, '0', '--grid'], [hz.vSlip, '−v_B(1−β)/β (slip)', '--multi']]) {
+  for (const [v, lab, c] of [[vB, 'v_B (stick)', '--helm'], [0, '0', '--grid'], [hz.vSlip, '−v_B(1−β)/β (slip)', '--multi']]) {
     ctx.strokeStyle = css(c); ctx.setLineDash(v ? [4, 4] : []); ctx.beginPath(); ctx.moveTo(0, Y(v)); ctx.lineTo(w, Y(v)); ctx.stroke();
     ctx.fillStyle = css('--muted'); ctx.fillText(lab, 4, Y(v) - 3);
   }
@@ -198,7 +198,7 @@ animate(() => {
   const span = Math.min(n - 2, Math.round(3 * per));
   // trigger on the last slip onset that leaves a full window
   let end = n - 1;
-  for (let i = n - 2; i > span; i--) if (x[i] < 0.5 * P.speed && x[i - 1] >= 0.5 * P.speed && i + per * 0.3 < n) { end = Math.min(n - 1, i + Math.round(per * 0.3)); break; }
+  for (let i = n - 2; i > span; i--) if (x[i] < 0.5 * vB && x[i - 1] >= 0.5 * vB && i + per * 0.3 < n) { end = Math.min(n - 1, i + Math.round(per * 0.3)); break; }
   const a = end - span;
   ctx.strokeStyle = css('--text'); ctx.lineWidth = 1.5; ctx.beginPath();
   for (let i = 0; i <= span; i++) { const X = (i / span) * w, v = Math.max(vBot, Math.min(vTop, x[a + i])); if (i) ctx.lineTo(X, Y(v)); else ctx.moveTo(X, Y(v)); }
@@ -227,7 +227,7 @@ const attackMap = (() => {
       const t0 = performance.now();
       while (done < NX * NY && performance.now() - t0 < budgetMs) {
         const i = done % NX, j = Math.floor(done / NX);
-        grid[done] = settleTime(str, Fr, P.speed, fracs[j] * Fmax, rises[i], 0.5) * L.f0; // in periods
+        grid[done] = settleTime(str, Fr, L.vB, fracs[j] * Fmax, rises[i], 0.5) * L.f0; // in periods
         done++;
       }
     },

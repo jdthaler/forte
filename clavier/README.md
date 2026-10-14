@@ -134,10 +134,13 @@ with ∫u_x² = s²/L + Σ (nπ/L)² (L/2) q_n². It enters every mode's recursi
 coefficient each sample. For one mode of amplitude A this is a Duffing
 oscillator, Δω/ω = 3EAk²A²/32T, and the engine matches that to 15 %
 (tested). On the D6's slack bass this is the audible part. F1 at full
-velocity starts 13 ¢ sharp and settles to about 1 ¢ over 2 s as the high
-partials, which carry most of the stretch, die away. Even at pp, F1 starts
-~9 ¢ sharp, because the anvil sets the amplitude, not the touch. From F2
-up the glide is under 4 ¢.
+velocity starts 14 ¢ sharp, is still 7 ¢ sharp after 0.3 s and settles to
+about 1.5 ¢ after 2 s, as the high partials, which carry most of the
+stretch (∫u_x² weights partial n by n²), die away. The anvil fixes how far
+the string is carried, but the touch decides how many high partials the
+carry excites (the carry-time cutoff v/g), so softer notes glide less: F1
+starts 9 ¢ sharp at velocity 0.3 and 4 ¢ at pp (0.05). From F2 up the glide
+is under 4 ¢.
 The update is linearised (explicit), not energy-conserving, so ΔT is
 clamped to −50…+60 % of T. It never gets near that.
 
@@ -149,7 +152,11 @@ there stops the note: 40 dB in well under 0.2 s (tested). The release
 itself plucks the long string, so you hear a short thunk three semitones
 down. Turn the yarn down (*No yarn* preset) and that pitch rings on. The
 engine finds it within 4 ¢ of the coupled eigenvalue (tested), with no
-special case for releases.
+special case for releases. That eigenvalue is 307–320 ¢ below the held note,
+not the ideal 300: the open string relaxes from the tuned tension T to its
+rest tension T₀ (0.5–3 % less: the pinch's stretch is let go), and the
+yarn and the stiffness shift it a few cents more. The page's info row shows
+the coupled value.
 
 **Pickups.** Two single-coil bars run across all the strings near the
 tailpiece. On a D6 the "bridge" pickup sits over the strings near the
@@ -165,7 +172,15 @@ falls off as exp(−distance/λ), λ = 2 mm (Gabrielli et al. and Remaggi et
 al. find a negative exponential). The lower pickup sees Φ ∝ e^(u/λ) and the
 upper e^(−u/λ), and the output is dΦ/dt, normalised to the string's
 velocity. That is linear for small swings, with some second-harmonic growl
-on loud bass notes. A string's signal also scales with the steel in it (its
+on loud bass notes. The exponential is a fit near the rest position: within
+about a field depth of it the string is in the pole's near field, where the
+flux can grow no faster than at the face, so beyond u = λ it continues along
+its tangent. (Unbounded, a 2 mm gap with a 0.5 mm field multiplied the gain
+by e⁴ = 55 and peaked at 42.) The string's swing, and with it the signal, is
+proportional to the gap g; the output is scaled by 0.5 mm/g, as a player
+would reset the volume, so the *gap* slider changes the touch (carry time)
+and the growl, not the loudness (a 2 mm gap was 12 dB louder, F1 peaking at
+1.4). A string's signal also scales with the steel in it (its
 core cross-section), so the wound bass is louder than the plain treble. The
 D6's own gauge step at D♯3/E3 shows up, which is why replacement sets add a
 transitional 0.011″ gauge. The switches give A alone, B alone, A + B or
@@ -214,7 +229,7 @@ solved with the tangent, both contacts and the felt by 2-D Newton with
 backtracking, usually 1–3 iterations; (3) every mode takes its share of the
 result. The pickups' nonlinearity is mild, so there is no oversampling. Ten
 bass voices (the most modes) run at 17 % of real time in Node on an Apple
-laptop; a spread chord at 11 %.
+laptop; a spread chord at 9 %.
 
 ## What to listen for
 
@@ -240,7 +255,10 @@ laptop; a spread chord at 11 %.
    tension modulation off. Listen for the slight droop at the start.
 
 On the page, the slow-motion view replays the engine's own simulation of
-the last key: flight, carry, pinch, ringing, release. The comb view shows
+the last key: flight, carry, pinch, ringing, release, with the felt drawn
+when the mute bar is on (the checkbox or Space). It is computed only while
+the view is open, when the page is idle, so it never delays a note; the
+released string's frequencies are kept per key. The comb view shows
 what the selected pickups hear of each partial. The mode table lists the
 held partials, their stiffness sharpening and T60.
 
@@ -252,7 +270,7 @@ clavier/src/clavier-model.js           physics (no audio, no DOM): scale, modes,
 clavier/src/clavier-engine.js          real-time engine (AudioWorklet and Node)
 clavier/src/clavier-params.js          parameters and presets
 clavier/src/clavier-main.js            page wiring and views
-test/clavier-tests.mjs                 node test/clavier-tests.mjs  (19 tests, ~13 s)
+test/clavier-tests.mjs                 node test/clavier-tests.mjs  (23 tests, ~15 s)
 tools/render-clavier.mjs               node tools/render-clavier.mjs → examples/clavier/
 ```
 
@@ -269,7 +287,8 @@ tools/render-clavier.mjs               node tools/render-clavier.mjs → example
 * **One polarisation.** Only vertical motion. Gabrielli et al. measure the
   pickups' response to horizontal motion 25 dB down. There is no whirling
   and no longitudinal modes.
-* **Pickups.** A 1-D exponential field per pickup and a fixed 8 mm aperture.
+* **Pickups.** A 1-D exponential field per pickup (continued linearly beyond
+  one field depth, a stand-in for the pole's near field) and a fixed 8 mm aperture.
   The upper pickup's tilt is modelled only as a slant in its distance. The
   coil impedance is flat (Gabrielli et al. measure ±1 dB), and R_p = 10 kΩ
   is assumed.

@@ -2,20 +2,23 @@
 //
 // First the physics against independent results (Mersenne, the infinite
 // plate, Wallace's radiation, the friction curve, Helmholtz and Raman's ideal
-// motion, Schelleng's bounds), then the engine against the model (pitch,
-// decay, the regimes of the Schelleng diagram, attacks, dampers, sympathy),
-// then level, stability and speed.
+// motion, Schelleng's bounds, the torsional echo), then the engine against
+// the model (pitch at 48 and 44.1 kHz, decay, the regimes of the Schelleng
+// diagram, attacks, dampers, sympathy, the flywheel, the registers' voicing),
+// then level, sub-audio content, stability and speed.
 
 import assert from 'node:assert/strict';
 import {
   RANGE, STEEL, stringDesign, loopDesign, schelleng, friction, frictionForce, mu, keyForce, riseTime, helmholtz,
   plateYinf, plateDensity, plateFreq, plateShape, boardModes, wallace, BOARD, VOICED, TUNE_TABLE,
+  lossFilter, oversample, torsionEcho, stringLoad, wheelOf,
 } from '../bowed/src/bowed-model.js';
 import { BowedString, simulate, settleTime } from '../bowed/src/string.js';
 import { OrganistaEngine } from '../bowed/src/bowed-engine.js';
 import { DEFAULTS, GROUPS } from '../bowed/src/bowed-params.js';
 import { renderEngine } from '../tools/audio-util.mjs';
 import { keyFreq } from '../shared/dsp.js';
+import { bowedFreq } from '../tools/bowed-tuning.mjs';
 
 const FS = 48000;
 let failures = 0;
@@ -27,19 +30,32 @@ function test(name, fn) {
 const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const cents = (f, g) => 1200 * Math.log2(f / g);
 
-function play(events, sec, params = P()) {
-  const e = new OrganistaEngine(FS);
+function play(events, sec, params = P(), fs = FS) {
+  const e = new OrganistaEngine(fs);
   e.setParams(params);
-  return { e, out: renderEngine(e, sec, events, FS) };
+  return { e, out: renderEngine(e, sec, events, fs) };
 }
 // Frequency of a periodic signal in x[a, b): autocorrelation peak near m periods.
-function pitchOf(x, a, b, f0) {
-  const N0 = FS / f0, m = Math.max(1, Math.round(1500 / N0)), lag0 = Math.round(m * N0);
+function pitchOf(x, a, b, f0, fs = FS) {
+  a = Math.round(a); b = Math.round(b);
+  const N0 = fs / f0, m = Math.max(1, Math.round(1500 / N0)), lag0 = Math.round(m * N0);
   const ac = (lag) => { let s = 0; for (let i = a; i < b - lag; i++) s += x[i] * x[i + lag]; return s; };
   let best = -Infinity, bl = lag0;
   for (let lag = Math.round(lag0 - 0.4 * N0); lag <= lag0 + 0.4 * N0; lag++) { const s = ac(lag); if (s > best) { best = s; bl = lag; } }
   const y0 = ac(bl - 1), y1 = ac(bl), y2 = ac(bl + 1);
-  return (m * FS) / (bl + (0.5 * (y0 - y2)) / (y0 - 2 * y1 + y2));
+  return (m * fs) / (bl + (0.5 * (y0 - y2)) / (y0 - 2 * y1 + y2));
+}
+// Two one-pole low-passes at 20 Hz: what is left below the audio band.
+function subAudio(x) { const a = 1 - Math.exp((-2 * Math.PI * 20) / FS); let y1 = 0, y2 = 0; return Float64Array.from(x, (v) => { y1 += a * (v - y1); y2 += a * (y1 - y2); return y2; }); }
+// Steady level (dB) of a key held at the voiced touch, started in Helmholtz
+// motion (so that a stray attack cannot spoil it): RMS above 30 Hz, 0.5–1 s.
+function steadyLevel(key) {
+  const e = new OrganistaEngine(FS); e.setParams(P()); e.noteOn(key, 0.7);
+  const s = e.S[key]; s.FN = s.FT; s.initHelmholtz(s.L.vB);
+  const [x] = renderEngine(e, 1.0, [], FS), a = 1 - Math.exp((-2 * Math.PI * 30) / FS);
+  let lp = 0, sum = 0;
+  for (let i = 0; i < x.length; i++) { lp += a * (x[i] - lp); if (i >= FS / 2) sum += (x[i] - lp) ** 2; }
+  return 10 * Math.log10(sum / (FS / 2));
 }
 // Amplitude of frequency f in x[a, b) (Hann-windowed).
 function tone(x, f, a, b) {
@@ -48,7 +64,7 @@ function tone(x, f, a, b) {
   return Math.hypot(re, im);
 }
 // A string started in ideal Helmholtz motion, then bowed with force(t).
-function bowed(key, params, force, sec, vB = params.speed) {
+function bowed(key, params, force, sec, vB = loopDesign(key, params, FS).vB) {
   const s = new BowedString(key, FS);
   s.design(loopDesign(key, params, s.fs)); s.initHelmholtz(vB);
   return simulate(s, friction(params), vB, force, sec);
@@ -58,11 +74,11 @@ function bowed(key, params, force, sec, vB = params.speed) {
 // (or up) and note where it is lost for good (≥ 15 periods).
 function measuredBound(key, params, dir) {
   const s = new BowedString(key, FS), L = loopDesign(key, params, s.fs), S = schelleng(L, params), Fr = friction(params);
-  s.design(L); s.initHelmholtz(params.speed);
+  s.design(L); s.initHelmholtz(L.vB);
   // establish Helmholtz motion (a faster wheel needs a firmer start)
   let F1 = 0;
   for (const x of [0.4, 0.55, 0.7]) {
-    for (let i = 0; i < 0.3 * FS; i++) s.tick(0, params.speed, x * S.Fmax, Fr);
+    for (let i = 0; i < 0.3 * FS; i++) s.tick(0, L.vB, x * S.Fmax, Fr);
     if (s.motion(12).kind === 'helmholtz') { F1 = x * S.Fmax; break; }
   }
   if (!F1) return { S, F: null };
@@ -70,7 +86,7 @@ function measuredBound(key, params, dir) {
   const step = 480, need = Math.ceil((15 * FS) / L.f0 / step) + 2;
   let bad = 0, lost = null;
   for (let i = 0; i < Tsw * FS; i++) {
-    s.tick(0, params.speed, force(i / FS), Fr);
+    s.tick(0, L.vB, force(i / FS), Fr);
     if (i % step) continue;
     const m = s.motion(12);
     bad = m.kind === 'helmholtz' ? 0 : bad + 1;
@@ -127,13 +143,40 @@ test('friction junction: the implicit solution lies on the friction curve, stick
   }
 });
 
+test('loop filters: finite and passive on all 49 keys at the sliders\' extremes and their combinations (44.1, 48, 96 kHz)', () => {
+  const ext = (id) => { const p = GROUPS.flatMap((g) => g.params).find((q) => q.id === id); return [p.min, p.def, p.max]; };
+  for (const fs of [44100, 48000, 96000]) for (const beta of ext('beta')) for (const losses of ext('losses')) for (const mobility of ext('mobility')) for (const torsionQ of [5, 300]) {
+    const pp = P({ beta, losses, mobility, torsionQ });
+    for (let k = RANGE[0]; k <= RANGE[1]; k++) {
+      const L = loopDesign(k, pp, fs * oversample(k, fs)), at = `key ${k} at ${fs} Hz, β ${beta}, losses ${losses}, mobility ${mobility}`;
+      for (const [g, p, D] of [[L.gb, L.pb, L.Db], [L.gn, L.pn, L.Dn]]) {
+        assert.ok(Number.isFinite(g + p + D + L.rtb + L.rtn), `${at}: g ${g}, p ${p}, D ${D}`);
+        assert.ok(g > 0 && g <= 1 && p >= 0 && p < 1 && D >= 1, `${at}: g ${g}, p ${p}, D ${D}`); // DC gain ≤ 1; a delay of ≥ 1 sample
+      }
+    }
+  }
+  // a trip so short that its own loss is below the passivity margin: a flat gain G₀ < 1, no low-pass
+  const short = lossFilter(554, 1, 4000, 30, 192000, 1e-5);
+  assert.ok(short.p === 0 && short.g === Math.exp(-1e-5), `p ${short.p}, g ${short.g}`);
+});
+test('the strings load the board: each plate mode loses Σ Z₀φ²/2M to them, 2–6 × the wood\'s own loss for (1,1)', () => {
+  const modes = boardModes(2400, 0.03), M = (BOARD.rhoH * BOARD.a * BOARD.b) / 4, u = (k) => (k - RANGE[0]) / (RANGE[1] - RANGE[0]);
+  for (const m of modes.slice(0, 6)) {
+    let s = 0;
+    for (let k = RANGE[0]; k <= RANGE[1]; k++) s += stringDesign(k).Z0 * plateShape(m.m, m.n, BOARD.a * (0.18 + 0.6 * u(k)), BOARD.b * (0.78 - 0.5 * u(k))) ** 2;
+    assert.ok(Math.abs(m.sigma - Math.PI * m.f * 0.03 - s / (2 * M)) < 1e-9 * m.sigma, `(${m.m},${m.n})`);
+  }
+  const wood = Math.PI * modes[0].f * 0.03, ratio = stringLoad(1, 1) / wood;
+  assert.ok(ratio > 2 && ratio < 6, `(1,1): strings ${stringLoad(1, 1).toFixed(1)} s⁻¹, wood ${wood.toFixed(1)} s⁻¹`);
+});
+
 console.log('the bowed string');
 test('Helmholtz motion (Raman): sticks for 1 − β of the period at v_B, slips back at −v_B(1 − β)/β', () => {
   for (const [key, beta] of [[48, 0.12], [60, 0.2]]) { // Raman's string has no torsion
-    const pp = P({ beta, torsionQ: 0 }), { v } = bowed(key, pp, () => 0.4 * schelleng(loopDesign(key, pp, FS), pp).Fmax, 0.8);
-    const h = helmholtz(beta, pp.speed);
+    const pp = P({ beta, torsionQ: 0 }), L = loopDesign(key, pp, FS), { v } = bowed(key, pp, () => 0.4 * schelleng(L, pp).Fmax, 0.8);
+    const h = helmholtz(L.beta, L.vB);
     let stick = 0, slip = 0, vs = 0;
-    for (let i = 0.4 * FS; i < 0.8 * FS; i++) { if (Math.abs(v[i] - pp.speed) < 0.02 * pp.speed) stick++; else if (v[i] < 0.5 * h.vSlip) { slip++; vs += v[i]; } }
+    for (let i = 0.4 * FS; i < 0.8 * FS; i++) { if (Math.abs(v[i] - L.vB) < 0.02 * L.vB) stick++; else if (v[i] < 0.5 * h.vSlip) { slip++; vs += v[i]; } }
     const n = 0.4 * FS;
     assert.ok(Math.abs(stick / n - h.stick) < 0.04, `key ${key}: stuck ${(stick / n).toFixed(3)} of the time, ideal ${h.stick.toFixed(3)}`);
     assert.ok(Math.abs(vs / slip / h.vSlip - 1) < 0.15, `slip velocity ${(vs / slip).toFixed(2)} vs ${h.vSlip.toFixed(2)} m/s`);
@@ -168,8 +211,8 @@ test('the string\'s free decay matches its loop losses (bridge dashpot + string)
   const pp = P({ mobility: 4 });
   for (const key of [48, 66]) {
     const s = new BowedString(key, FS), L = loopDesign(key, pp, s.fs);
-    s.design(L); s.initHelmholtz(pp.speed);
-    const { fbr } = simulate(s, friction(pp), pp.speed, () => 0, 1.2);
+    s.design(L); s.initHelmholtz(L.vB);
+    const { fbr } = simulate(s, friction(pp), L.vB, () => 0, 1.2);
     const W = 8192, a = tone(fbr, L.f0, 0.1 * FS, 0.1 * FS + W), b = tone(fbr, L.f0, 1.0 * FS, 1.0 * FS + W);
     const sigma = Math.log(a / b) / 0.9;
     assert.ok(Math.abs(sigma / L.sigma1 - 1) < 0.1, `key ${key}: σ = ${sigma.toFixed(2)} vs ${L.sigma1.toFixed(2)} s⁻¹`);
@@ -178,15 +221,38 @@ test('the string\'s free decay matches its loop losses (bridge dashpot + string)
   }
 });
 
+test('the torsional echo: near β* = c/(c + c_t), where the twist a slip launches returns from the nut with the corner, the note runs flat', () => {
+  const key = 65, be = torsionEcho(key);
+  const flat = (o) => { const pp = P(o), L = loopDesign(key, pp, FS); return cents(bowedFreq(key, pp, 0.5 * schelleng(L, pp).Fmax).f, L.f0); };
+  const scan = []; for (let b = 0.08; b < 0.1301; b += 0.004) scan.push([b, flat({ beta: b })]);
+  const worst = scan.reduce((m, x) => (x[1] < m[1] ? x : m)), away = Math.min(scan[0][1], scan.at(-1)[1]);
+  assert.ok(Math.abs(worst[0] - be) < 0.012, `flattest at β = ${worst[0].toFixed(3)}; β* = ${be.toFixed(3)}`);
+  assert.ok(worst[1] < away - 8, `${worst[1].toFixed(1)} ¢ there, ${away.toFixed(1)} ¢ well away from it`);
+  const plain = [0.088, 0.096, 0.104, 0.12].map((b) => flat({ beta: b, torsionQ: 0 })); // a string that cannot roll
+  assert.ok(Math.max(...plain) - Math.min(...plain) < 3, `without torsion: ${plain.map((c) => c.toFixed(1)).join(', ')} ¢`);
+  console.log(`        F4: ${worst[1].toFixed(1)} ¢ at β = ${worst[0].toFixed(3)} (β* = ${be.toFixed(3)}), ${away.toFixed(1)} ¢ well away from it`);
+});
+
 console.log('engine');
-test('tuning: every key within ±3 ¢ of 12-TET at the voiced touch (measured from the output)', () => {
-  let worst = 0, wk = 0;
-  for (let k = RANGE[0]; k <= RANGE[1]; k++) {
-    const { out } = play([[0, 'on', k, 0.7]], 1.3);
-    const f = pitchOf(out[0], 0.75 * FS, 1.3 * FS, keyFreq(k)), c = cents(f, keyFreq(k));
-    if (Math.abs(c) > Math.abs(worst)) { worst = c; wk = k; }
+test('tuning: every key within ±1 ¢ of 12-TET at the voiced touch, at 48 and at 44.1 kHz (measured from the output)', () => {
+  for (const fs of [48000, 44100]) {
+    let worst = 0, wk = 0;
+    const stray = [];
+    for (let k = RANGE[0]; k <= RANGE[1]; k++) {
+      let { e, out } = play([[0, 'on', k, 0.7]], 1.3, P(), fs);
+      if (e.S[k].motion(16).kind !== 'helmholtz') { // a stray two-slip start (≈ 1 % of notes): tune it in Helmholtz motion
+        stray.push(k);
+        e = new OrganistaEngine(fs); e.setParams(P()); e.noteOn(k, 0.7);
+        const s = e.S[k]; s.FN = s.FT; s.initHelmholtz(s.L.vB);
+        out = renderEngine(e, 1.3, [], fs);
+      }
+      const c = cents(pitchOf(out[0], 0.75 * fs, 1.3 * fs, keyFreq(k), fs), keyFreq(k));
+      if (Math.abs(c) > Math.abs(worst)) { worst = c; wk = k; }
+    }
+    assert.ok(Math.abs(worst) < 1, `${fs} Hz: worst ${worst.toFixed(2)} ¢ at key ${wk}`);
+    assert.ok(stray.length <= 2, `${fs} Hz: keys ${stray.join(', ')} did not settle`);
+    console.log(`        ${fs} Hz: worst ${worst.toFixed(2)} ¢ (key ${wk}); not yet in Helmholtz motion at 1.3 s: ${stray.join(', ') || 'none'}`);
   }
-  assert.ok(Math.abs(worst) < 3, `worst ${worst.toFixed(2)} ¢ at key ${wk}`);
 });
 test('flattening: the bowed pitch falls with force; the free string rings at the tuner\'s offset', () => {
   for (const key of [48, 72]) {
@@ -218,9 +284,9 @@ test('attacks (Guettler): a quick key settles within 30 periods; a lazy one take
     const pp = P(), s = new BowedString(key, FS), L = loopDesign(key, pp, s.fs), Fr = friction(pp);
     s.design(L);
     const FN = keyForce(key, 0.7, 1);
-    quick.push(settleTime(s, Fr, pp.speed, FN, riseTime(0.7, 8), 1) * L.f0);
-    lazy.push(settleTime(s, Fr, pp.speed, FN, 0.15, 1) * L.f0);
-    assert.equal(settleTime(s, Fr, pp.speed, 1.5 * schelleng(L, pp).Fmax, 0.005, 0.6), Infinity, `key ${key} raucous`);
+    quick.push(settleTime(s, Fr, L.vB, FN, riseTime(0.7, 8), 1) * L.f0);
+    lazy.push(settleTime(s, Fr, L.vB, FN, 0.15, 1) * L.f0);
+    assert.equal(settleTime(s, Fr, L.vB, 1.5 * schelleng(L, pp).Fmax, 0.005, 0.6), Infinity, `key ${key} raucous`);
   }
   const med = (a) => [...a].sort((x, y) => x - y)[a.length >> 1];
   assert.ok(med(quick) < 30, `quick keys: ${quick.map((x) => x.toFixed(0)).join(', ')} periods`);
@@ -273,8 +339,49 @@ test('no clicks: key-down and release are smooth; the attack scratch stays withi
   }
 });
 
+test('the flywheel: the wheels follow a change of treadle speed with a 0.5 s time constant (no step for the mod wheel)', () => {
+  const e = new OrganistaEngine(FS); e.setParams(P());
+  renderEngine(e, 0.1, [[0, 'on', 60, 0.7]], FS);
+  e.setParams(P({ speed: 0.5 }));
+  renderEngine(e, 0.5, [], FS);
+  const frac = (e.vB - 0.25) / 0.25;
+  assert.ok(Math.abs(frac - (1 - Math.exp(-1))) < 0.01, `after 0.5 s: ${(frac * 100).toFixed(1)} % of the way`);
+});
+test('voicing: the four wheels even out the registers (medians within 3 dB); every key within 13 dB (one wheel: 7 and 19 dB)', () => {
+  const lv = []; for (let k = RANGE[0]; k <= RANGE[1]; k++) lv.push(steadyLevel(k));
+  const med = (a) => [...a].sort((x, y) => x - y)[a.length >> 1];
+  const reg = [0, 1, 2, 3].map((w) => med(lv.filter((_, i) => wheelOf(RANGE[0] + i) === w)));
+  const spread = Math.max(...reg) - Math.min(...reg), span = Math.max(...lv) - Math.min(...lv);
+  assert.ok(spread < 3, `register medians ${reg.map((x) => x.toFixed(1)).join(', ')} dB`);
+  assert.ok(span < 13, `keys ${Math.min(...lv).toFixed(1)} … ${Math.max(...lv).toFixed(1)} dB`);
+  console.log(`        register medians ${reg.map((x) => x.toFixed(1)).join(', ')} dB; keys within ${span.toFixed(1)} dB`);
+});
+test('a string that goes non-finite is stopped alone: the bridge stays clean and the other note plays on', () => {
+  const e = new OrganistaEngine(FS), msgs = []; e.setParams(P()); e.post = (m) => msgs.push(m.type);
+  const [a] = renderEngine(e, 0.8, [[0, 'on', 48, 0.7], [0, 'on', 60, 0.7], [0.4, 'off', 60]], FS);
+  const [b] = renderEngine(e, 0.8, [[0, 'on', 60, 0.7]], FS);
+  e.S[60].fb.fill(NaN); // e.g. a loop filter gone bad
+  const [c] = renderEngine(e, 0.8, [], FS);
+  assert.ok(c.every(Number.isFinite), 'output stays finite');
+  assert.ok(!e.S[60].down && e.S[48].down && e.S[48].motion(16).kind === 'helmholtz', 'C4 stopped, C3 still bowed');
+  assert.ok(msgs.includes('error'), 'the page is told');
+  const rms = (x, i0) => { let s = 0; for (let i = i0; i < x.length; i++) s += x[i] * x[i]; return Math.sqrt(s / (x.length - i0)); };
+  assert.ok(Math.abs(20 * Math.log10(rms(c, 0.3 * FS) / rms(a, 0.6 * FS))) < 1.5, 'C3 at its level');
+  void b;
+});
+
 console.log('level, stability, speed');
-test('level: single forte notes peak 0.03–0.5 (bass ≈ 0.2, treble weaker as on a harpsichord); a 10-note chord stays under 1', () => {
+test('no DC, no sub-audio thump: below 20 Hz the output stays within 12 % of the note\'s peak at key-down and key-up', () => {
+  for (const key of [36, 60]) {
+    const { out } = play([[0.5, 'on', key, 0.7], [2.0, 'off', key]], 3), x = out[0], lf = subAudio(x);
+    let pk = 0, mean = 0, lfp = 0;
+    for (let i = 1.5 * FS; i < 2 * FS; i++) { pk = Math.max(pk, Math.abs(x[i])); mean += x[i] / (0.5 * FS); }
+    for (const v of lf) lfp = Math.max(lfp, Math.abs(v));
+    assert.ok(lfp < 0.12 * pk, `key ${key}: < 20 Hz ${lfp.toFixed(4)} vs peak ${pk.toFixed(3)}`);
+    assert.ok(Math.abs(mean) < 0.01 * pk, `key ${key}: mean ${mean.toExponential(1)} vs peak ${pk.toFixed(3)}`);
+  }
+});
+test('level: single forte notes peak 0.03–0.5 (0.07–0.19 from C2 to C6); a 10-note chord stays under 1', () => {
   for (const k of [36, 48, 60, 72, 84]) {
     const { out } = play([[0, 'on', k, 1]], 1);
     let pk = 0; for (const v of out[0]) pk = Math.max(pk, Math.abs(v));
