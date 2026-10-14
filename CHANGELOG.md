@@ -9,6 +9,30 @@ release may change the sound or the parameters.
 Each release is tagged in git as `forte-vX.Y.Z` or `<instrument>-vX.Y.Z`,
 for example `piano-v0.1.0`.
 
+## 2026-10-14 — phones
+
+### Forte 0.3.1
+- Instrument pages lay out properly on an iPhone. In portrait they
+  squeezed every view into a sliver between a three-row header and the
+  keyboard; in landscape the views got no room at all.
+  - On phones the page scrolls, so Safari can tuck its toolbars away, and
+    the keyboard sticks to the bottom. Views keep their full size (two to
+    a row in landscape), and wide tables scroll inside their card.
+  - The header is two rows in portrait and one in landscape: the
+    instrument's name shortens to fit, and the CPU meter takes the place
+    of **Start audio** once the audio is on.
+  - **Controls** replaces the views instead of sliding over a sliver of
+    them, with **Close** kept in reach while you scroll.
+  - The **Instruments** and **Views ▾** menus open inside the screen.
+  - Keys are at most 38 % of the screen's height, and a phone starts with
+    two octaves, not three.
+- iPhone and iPad have no Web MIDI in any browser, so the MIDI button,
+  status and hints are hidden there.
+- iOS: no text inflation in landscape, no zoom when a dropdown is tapped,
+  no pull-to-refresh mid-phrase on a phone, and the landing page and
+  instrument pages keep clear of the notch in landscape.
+- Toasts sit just above the keyboard and its tools, however they wrap.
+
 ## 2026-10-13 — review fixes
 
 An adversarial review of the whole project (six reviewers, one per area)

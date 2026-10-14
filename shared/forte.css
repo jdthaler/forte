@@ -2,6 +2,9 @@
    instrument switcher. Instrument pages keep their own palettes and layouts
    and load this first; it only uses their CSS variables with fallbacks. */
 
+/* iOS Safari enlarges text when the phone turns to landscape unless told not to */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
 [data-forte-nav] { display: flex; align-items: center; gap: 10px; }
 
 .forte-home {

@@ -10,6 +10,7 @@
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; } /* no text inflation in landscape on iOS */
 body {
   background: var(--bg);
   color: var(--text);
@@ -22,7 +23,7 @@ kbd { font: 12px ui-monospace, Menlo, monospace; border: 1px solid var(--line); 
 /* hero */
 .hero { position: relative; min-height: 440px; display: flex; align-items: flex-end; overflow: hidden; border-bottom: 1px solid var(--line); }
 #modes { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.85; }
-.hero-text { position: relative; max-width: 860px; padding: 64px 32px 44px; }
+.hero-text { position: relative; max-width: 860px; padding: 64px max(32px, env(safe-area-inset-right)) 44px max(32px, env(safe-area-inset-left)); }
 .hero h1 {
   font: 400 clamp(56px, 10vw, 104px)/0.95 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   letter-spacing: 1px;
@@ -40,7 +41,7 @@ kbd { font: 12px ui-monospace, Menlo, monospace; border: 1px solid var(--line); 
 .button.primary { background: var(--accent); color: #1b1203; border-color: transparent; }
 
 /* instrument grid */
-main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 8px; }
+main { max-width: 1180px; margin: 0 auto; padding: 28px max(24px, env(safe-area-inset-right)) 8px max(24px, env(safe-area-inset-left)); }
 .section-head { margin: 34px 0 14px; }
 .section-head h2 { font: 400 28px/1.2 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; margin: 0 0 4px; }
 .section-head p { margin: 0; color: var(--muted); max-width: 760px; }
@@ -75,16 +76,16 @@ main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 8px; }
 .card:not(.ready) { opacity: 0.8; }
 
 /* how it works */
-.how { max-width: 1180px; margin: 30px auto 0; padding: 18px 24px 8px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 22px; border-top: 1px solid var(--line); }
+.how { max-width: 1180px; margin: 30px auto 0; padding: 18px max(24px, env(safe-area-inset-right)) 8px max(24px, env(safe-area-inset-left)); display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 22px; border-top: 1px solid var(--line); }
 .how h2 { font: 400 21px/1.3 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; margin: 8px 0 6px; }
 .how p { margin: 0; color: #c9c4ba; font-size: 14px; }
 
-.foot { max-width: 1180px; margin: 34px auto 0; padding: 18px 24px 40px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; border-top: 1px solid var(--line); }
+.foot { max-width: 1180px; margin: 34px auto 0; padding: 18px max(24px, env(safe-area-inset-right)) max(40px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); display: flex; flex-direction: column; gap: 4px; font-size: 13px; border-top: 1px solid var(--line); }
 .foot a { color: var(--accent); text-decoration: none; }
 
 @media (max-width: 600px) {
-  .hero-text { padding: 48px 18px 30px; }
-  main, .how, .foot { padding-left: 16px; padding-right: 16px; }
+  .hero-text { padding: 48px max(18px, env(safe-area-inset-right)) 30px max(18px, env(safe-area-inset-left)); }
+  main, .how, .foot { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
   .grid { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { #modes { display: none; } }

@@ -11,8 +11,10 @@
 const body = document.body;
 const STORE = `forte/${body.dataset.instrument || 'page'}/layout/v1`;
 const touch = matchMedia('(pointer: coarse)').matches;
+const phone = touch && Math.min(screen.width, screen.height) < 500;
 const narrow = matchMedia('(max-width: 1050px)');
-const DEFAULTS = { controls: true, hidden: [], kb: touch ? 'l' : 'm', octaves: touch ? 3 : 0, start: null };
+const DEFAULTS = { controls: true, hidden: [], kb: touch ? 'l' : 'm', octaves: phone ? 2 : touch ? 3 : 0, start: null };
+if (touch && !navigator.requestMIDIAccess) body.classList.add('no-midi'); // every browser on iPhone and iPad
 const prefs = (() => {
   let s = {};
   try { s = JSON.parse(localStorage.getItem(STORE) || '{}') || {}; } catch { /* corrupt */ }
@@ -103,6 +105,9 @@ if (header && (sidebar || views.length)) {
 narrow.addEventListener('change', apply);
 apply();
 document.querySelector('#toast')?.setAttribute('role', 'status');
+// --footer-h: toasts sit just above the keyboard and its tools, however they wrap
+const footer = document.querySelector('body > footer');
+if (footer && window.ResizeObserver) new ResizeObserver(() => body.style.setProperty('--footer-h', `${footer.offsetHeight}px`)).observe(footer);
 
 // ---------------------------------------------------------------------------
 // keyboard tools (called by shared/keyboard.js once the page builds its keys)

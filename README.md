@@ -41,17 +41,19 @@ up. `←`/`→` shift the octave, and `↑`/`↓` adjust each instrument's main
 control (usually velocity). `Space` is the sustain pedal or that
 instrument's equivalent (hold, mute bar, Leslie speed), on every
 instrument except the black hole, where there is nothing to hold.
-**Enable MIDI** connects a MIDI keyboard (Chrome, Edge and Firefox),
+**Enable MIDI** connects a MIDI keyboard (Chrome, Edge and Firefox; no
+browser on iPhone or iPad has Web MIDI, so the button is hidden there),
 including velocity, the sustain pedal, aftertouch and, where it means
 something, the mod wheel.
 
-**On an iPad or other tablet**, play the on-screen keys with as many
+**On a tablet or phone**, play the on-screen keys with as many
 fingers as you like. Slide across the keys for a glissando, and strike
 lower on a key, or press harder with an Apple Pencil, to play louder. ◀ ▶
 move the octave window, and the pedal button next to them stands in for
 `Space`. **Controls** and **Views ▾** in the header choose what is on
-screen; hide everything for a full-screen keyboard. Use *Share → Add to
-Home Screen* to run Forte as a full-screen app.
+screen; hide everything for a full-screen keyboard. On a phone the page
+scrolls above the keys, which stay put; turn it sideways for wider keys.
+Use *Share → Add to Home Screen* to run Forte as a full-screen app.
 
 ## Running locally
 
