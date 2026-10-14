@@ -9,6 +9,15 @@ release may change the sound or the parameters.
 Each release is tagged in git as `forte-vX.Y.Z` or `<instrument>-vX.Y.Z`,
 for example `piano-v0.1.0`.
 
+## 2026-10-14 — the workshop
+
+### Forte 0.3.2
+- Ten instruments added to the workshop (shown on the landing page and in
+  the menus), each with a build brief in `docs/WORKSHOP.md`:
+  - from history: Harpsichord, Pipe Organ, Carillon, Vibraphone,
+    Free-Reed Organ and Duddell's Singing Arc;
+  - new: Star Keyboard, Wind Harp, Bubble Organ and Spring Keyboard.
+
 ## 2026-10-14 — phones
 
 ### Forte 0.3.1

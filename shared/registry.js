@@ -6,7 +6,7 @@
 // Keep FORTE_VERSION equal to package.json's, and log every bump in
 // CHANGELOG.md (test/site-tests.mjs checks both).
 
-export const FORTE_VERSION = '0.3.1';
+export const FORTE_VERSION = '0.3.2';
 
 export const SECTIONS = [
   { id: 'history', title: 'Instruments from history', blurb: 'Real keyboards — some famous, some forgotten — rebuilt from their physics, with every mechanism exposed as a knob.' },
@@ -85,6 +85,48 @@ export const INSTRUMENTS = [
     accent: '#ff7a45',
   },
   {
+    id: 'harpsichord', name: 'Harpsichord', section: 'history', ready: false,
+    after: 'the Flemish double-manual harpsichord (Ruckers, 1600s)',
+    tagline: 'A quill bends, slips off the string and plucks it; stops change where and how it plucks.',
+    physics: 'Plectrum contact and release · plucked stiff strings',
+    accent: '#f4d39b',
+  },
+  {
+    id: 'pipes', name: 'Pipe Organ', section: 'history', ready: false,
+    after: 'the Baroque pipe organ',
+    tagline: 'Air jets flutter against the pipe mouths: each note starts with a chiff, overblows when pushed, and sags when the wind runs short.',
+    physics: 'Jet–edge feedback · flue pipes · shared wind',
+    accent: '#9fb4ff',
+  },
+  {
+    id: 'carillon', name: 'Carillon', section: 'history', ready: false,
+    after: 'the Flemish carillon (Hemony bells, 1650s)',
+    tagline: 'Bronze bells tuned partial by partial; the pitch you hear, the strike note, is not in the spectrum at all.',
+    physics: 'Bell shell modes · virtual pitch',
+    accent: '#d9b45f',
+  },
+  {
+    id: 'vibraphone', name: 'Vibraphone', section: 'history', ready: false,
+    after: 'the Deagan vibraharp (1927)',
+    tagline: 'Undercut aluminium bars over tuned tubes, with motor-driven discs that open and close the resonators.',
+    physics: 'Tuned bars · coupled resonators · rotating valves',
+    accent: '#5fd0c8',
+  },
+  {
+    id: 'harmonium', name: 'Free-Reed Organ', section: 'history', ready: false,
+    after: 'the harmonium and the accordion',
+    tagline: 'Brass reeds driven by the airflow they choke; paired reeds tuned a little apart give the musette shimmer.',
+    physics: 'Self-excited free reeds · bellows pressure',
+    accent: '#ff9fb0',
+  },
+  {
+    id: 'arc', name: 'Singing Arc', section: 'history', ready: false,
+    after: "William Duddell's singing arc (1900)",
+    tagline: 'An electric arc lamp that sings: its negative resistance drives an LC circuit, and the arc itself is the loudspeaker.',
+    physics: 'Negative resistance · LC oscillator · plasma heating',
+    accent: '#ffe36b',
+  },
+  {
     id: 'huygens', name: 'Huygens Keyboard', section: 'new', ready: true, version: '0.2.0', trim: 9.5,
     tagline: 'Relaxation oscillators that pull each other into just intonation — Arnold tongues you can play.',
     physics: 'Pulse-coupled oscillators · mode locking',
@@ -107,6 +149,30 @@ export const INSTRUMENTS = [
     tagline: 'Each key a wavepacket in a potential well: notes that collapse, return an octave up as the packet splits, and revive on the beat.',
     physics: 'Schrödinger equation · quantum revivals',
     accent: '#73e2b8',
+  },
+  {
+    id: 'stars', name: 'Star Keyboard', section: 'new', ready: false,
+    tagline: 'Every key a Sun-like star whose oscillations are rung continuously by convection: combs of modes that breathe rather than strike.',
+    physics: 'Asteroseismology · stochastically driven modes',
+    accent: '#ff6f91',
+  },
+  {
+    id: 'windharp', name: 'Wind Harp', section: 'new', ready: false,
+    tagline: 'Strings sung by the wind: shed vortices lock onto a harmonic and hop to the next as the wind rises.',
+    physics: 'Vortex shedding · lock-in · wake oscillators',
+    accent: '#a8e6a1',
+  },
+  {
+    id: 'bubbles', name: 'Bubble Organ', section: 'new', ready: false,
+    tagline: 'Every note a bubble ringing at its Minnaert frequency; depth, gas and pressure retune it.',
+    physics: 'Bubble acoustics · Minnaert resonance',
+    accent: '#6fb8ff',
+  },
+  {
+    id: 'springs', name: 'Spring Keyboard', section: 'new', ready: false,
+    tagline: 'Struck coil springs whose waves travel at different speeds by pitch, so every note arrives as a chirp.',
+    physics: 'Helical springs · dispersion',
+    accent: '#c0c0d8',
   },
 ];
 
