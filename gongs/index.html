@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gong Keyboard · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-instrument="gongs">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Gong Keyboard</h1>
+      <span class="sub">von Kármán plates and shallow shells: a bell when struck softly, a crash when struck hard</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-view="Gong surface">
+          <div class="card-head"><h2>The gong <b id="plate-key">A3</b></h2><span class="muted" id="plate-read">strike a key</span></div>
+          <canvas id="plate"></canvas>
+          <div class="caption">Displacement of the last gong struck, from its live mode amplitudes (exaggerated, motion slowed). ● mallet, ■ microphones. A soft strike shows one ring pattern; a hard one breaks into fine, restless detail.</div>
+        </div>
+        <div class="card" id="info-card" data-view="Mode table">
+          <div class="card-head"><h2>Modes of <b id="focus-name">A3</b></h2><span class="muted" id="focus-size"></span></div>
+          <table class="modes" id="modes"></table>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · log frequency</span></div>
+          <canvas id="spectro"></canvas>
+          <div class="caption">A hard strike starts with a few lines; within a fraction of a second the space between them fills up to the top: the energy cascade.</div>
+        </div>
+        <div class="card" data-view="Energy cascade">
+          <div class="card-head"><h2>Energy cascade</h2><span class="muted" id="bands-read"></span></div>
+          <canvas id="bands"></canvas>
+          <div class="legend" id="bands-legend"></div>
+          <div class="caption">Energy in octave bands of the struck gong's modes, relative to its pitch (top), and the strike tone's pitch (bottom): it falls as a flat gong rings down, rises for a dome.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>hand off the gong (sustain): hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>mod wheel: strike point</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/gongs-main.js"></script>
+</body>
+</html>

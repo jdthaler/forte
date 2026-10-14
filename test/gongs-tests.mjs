@@ -1,0 +1,318 @@
+// Gong keyboard checks. Run: node test/gongs-tests.mjs
+//
+// First the plate against textbook results (Bessel zeros, Leissa's circular
+// plate frequencies, Reissner's shallow-shell shift, the symmetry of the von
+// Kármán bracket), then the nonlinear dynamics against independent
+// integrations and the normal-form backbone, then the engine: tuning, decay,
+// energy, regimes, level, stability and CPU.
+
+import assert from 'node:assert/strict';
+import { besselJ, besselI, plateModes, tripleL, radial, gaussLegendre } from '../gongs/src/plate.js';
+import TABLE from '../gongs/data/gong-modes.js';
+import { shell, backbone, potential, keyGong, interpR, NU } from '../gongs/src/gongs-model.js';
+import { GongEngine } from '../gongs/src/gongs-engine.js';
+import { DEFAULTS, GROUPS, PRESETS } from '../gongs/src/gongs-params.js';
+import { keyFreq } from '../shared/dsp.js';
+
+const FS = 48000;
+let failures = 0;
+function test(name, fn) {
+  const t = performance.now();
+  try { fn(); console.log('  ok  ', name, `(${((performance.now() - t) / 1000).toFixed(1)} s)`); } catch (e) { failures++; console.log('  FAIL', name, '\n       ', e.message); }
+}
+const P = (o = {}) => ({ ...DEFAULTS, ...o });
+const cents = (r) => 1200 * Math.log2(r);
+
+// Render through the engine in 128-sample blocks, like the AudioWorklet. events: [t, 'on'|'off', key, vel]
+function render(params, sec, events, post) {
+  const e = new GongEngine(FS);
+  if (post) e.post = post;
+  e.setParams(params);
+  const n = Math.round(sec * FS), L = new Float64Array(n), R = new Float64Array(n), bl = new Float32Array(128), br = new Float32Array(128);
+  const ev = events.map(([t, ty, k, v]) => ({ s: Math.round(t * FS), ty, k, v })).sort((a, b) => a.s - b.s);
+  let j = 0;
+  for (let s = 0; s < n; s += 128) {
+    while (j < ev.length && ev[j].s <= s) { const q = ev[j++]; if (q.ty === 'on') e.noteOn(q.k, q.v); else e.noteOff(q.k); }
+    e.process(bl, br, 128);
+    for (let i = 0; i < 128 && s + i < n; i++) { L[s + i] = bl[i]; R[s + i] = br[i]; }
+  }
+  return { L, R, e };
+}
+// Hann-windowed amplitude at f over x[a, b).
+function tone(x, f, a, b) {
+  const w = (2 * Math.PI * f) / FS; let re = 0, im = 0;
+  for (let i = a; i < b; i++) { const h = 0.5 - 0.5 * Math.cos((2 * Math.PI * (i - a)) / (b - a)); re += h * x[i] * Math.cos(w * i); im += h * x[i] * Math.sin(w * i); }
+  return Math.hypot(re, im);
+}
+// Frequency of the strongest peak near f (golden-section search on the windowed amplitude).
+function peak(x, f, a, b, span = 0.03) {
+  let lo = f * (1 - span), hi = f * (1 + span);
+  const g = (u) => -tone(x, u, a, b);
+  // coarse scan first, then refine
+  let best = lo, bv = Infinity;
+  for (let i = 0; i <= 60; i++) { const u = lo + ((hi - lo) * i) / 60, v = g(u); if (v < bv) { bv = v; best = u; } }
+  lo = best - (hi - lo) / 60; hi = best + (hi - lo) / 60;
+  for (let it = 0; it < 40; it++) { const m1 = lo + (hi - lo) * 0.382, m2 = lo + (hi - lo) * 0.618; if (g(m1) < g(m2)) hi = m2; else lo = m1; }
+  return 0.5 * (lo + hi);
+}
+// Mean frequency of a sampled oscillation from its upward zero crossings (per unit time step k).
+function zfreq(xs, k) {
+  const z = [];
+  for (let i = 1; i < xs.length; i++) if (xs[i - 1] < 0 && xs[i] >= 0) z.push(i - 1 + xs[i - 1] / (xs[i - 1] - xs[i]));
+  return (2 * Math.PI * (z.length - 1)) / ((z[z.length - 1] - z[0]) * k);
+}
+// A voice released from rest with only mode p displaced by a, damping off.
+function freeVoice(key, params, p, a) {
+  const e = new GongEngine(FS); e.setParams(params);
+  const x0 = new Array(64).fill(0); x0[p] = a;
+  const v = e.place(key, x0);
+  v.g.sigma.fill(0); v.setDamping();
+  return v;
+}
+
+console.log('plate');
+test('Bessel functions: zeros of J₀, J₁ and tabulated values', () => {
+  assert.ok(Math.abs(besselJ(0, 2.404825557695773)) < 1e-14 && Math.abs(besselJ(1, 3.831705970207512)) < 1e-14);
+  assert.ok(Math.abs(besselJ(0, 30) - -0.08636798358104) < 1e-12, 'J₀(30), integral branch');
+  assert.ok(Math.abs(besselI(0, 1) - 1.266065877752008) < 1e-14 && Math.abs(besselI(2, 10) / 2281.518967726 - 1) < 1e-12);
+});
+test('free-edge plate (ν = 0.3) matches Leissa, Vibration of Plates, table 2.3', () => {
+  const ref = [['2,0', 5.3583], ['0,1', 9.0031], ['3,0', 12.439], ['1,1', 20.475], ['4,0', 21.835], ['5,0', 33.495], ['2,1', 35.260], ['0,2', 38.443]];
+  const md = plateModes('free', { nu: 0.3, lam2Max: 40 });
+  ref.forEach(([lab, l2], i) => {
+    const [m] = lab.split(',').map(Number);
+    assert.equal(md[i].m, m, `mode ${i} is (${lab})`);
+    assert.ok(Math.abs(md[i].lam2 / l2 - 1) < 2e-4, `(${lab}) λ² = ${md[i].lam2.toFixed(4)} vs ${l2}`);
+  });
+});
+test('clamped plate (= the in-plane Airy basis) matches the classical λ²', () => {
+  const ref = [10.2158, 21.2604, 34.8770, 39.7711, 51.0300, 60.8287, 69.6658, 84.5826, 89.1041, 90.7390];
+  const md = plateModes('clamped', { lam2Max: 95 });
+  ref.forEach((l2, i) => assert.ok(Math.abs(md[i].lam2 - l2) < 2e-4, `${md[i].lam2} vs ${l2}`));
+  TABLE.free.inplane.slice(0, 4).forEach((p, i) => assert.ok(Math.abs(Math.sqrt(p.z4) - ref[i]) < 2e-4, 'Airy basis = clamped modes'));
+});
+test('tabulated mode shapes are orthonormal: ∫ Φ_p Φ_q dA = δ_pq', () => {
+  const { x, w } = gaussLegendre(120), md = TABLE.free.modes;
+  for (const p of [0, 1, 6, 7, 20]) for (const q of [0, 1, 6, 7, 20]) {
+    if (md[p].m !== md[q].m) continue;
+    let s = 0;
+    for (let i = 0; i < x.length; i++) s += w[i] * x[i] * interpR(md[p].R, x[i]) * interpR(md[q].R, x[i]);
+    s *= md[p].m ? Math.PI : 2 * Math.PI;
+    assert.ok(Math.abs(s - (p === q ? 1 : 0)) < 2e-4, `<${p}|${q}> = ${s}`);
+  }
+});
+test('von Kármán coupling: angular selection rule, and ∫Φ_k L(Φ_p,Ψ) = ∫Ψ L(Φ_p,Φ_k) (energy-consistent)', () => {
+  for (const bc of ['free', 'clamped']) {
+    const T = TABLE[bc], { H } = T;
+    for (let e = 0; e < H.n.length; e++) {
+      const j = T.inplane[H.n[e]].j, mp = T.modes[H.p[e]].m, mq = T.modes[H.q[e]].m;
+      assert.ok(j === mp + mq || j === Math.abs(mp - mq), `${bc}: j=${j} from m=${mp},${mq}`);
+    }
+  }
+  const md = plateModes('free', { nu: NU, lam2Max: 40 }), ps = plateModes('clamped', { lam2Max: 200, mMax: 6 });
+  for (const [k, p, n] of [[0, 0, 0], [1, 0, 2], [2, 3, 5], [4, 6, 9]]) {
+    const psi = ps.filter((s) => s.m === md[k].m + md[p].m || s.m === Math.abs(md[k].m - md[p].m))[n % 3];
+    const a = tripleL(psi, md[p], md[k]), b = tripleL(md[k], md[p], psi);
+    assert.ok(Math.abs(a - b) < 1e-6 * (1 + Math.abs(a)), `${a} vs ${b}`);
+  }
+});
+test('stretching energy: the modal tensor equals a direct 1-D solution of the compatibility equation', () => {
+  // For an axisymmetric deflection w(r), ∇⁴F = −½L(w,w) integrates once to (∇²F)' = −w_r²/(2r);
+  // F = F' = 0 at the rim fixes ∇²F(1). The tensor says ∫(∇²F)² dA = Σ_n (H^n_pp)²/(4ζ_n⁴).
+  for (const bc of ['free', 'clamped']) {
+    const md = plateModes(bc, { nu: NU, lam2Max: 45 }).filter((m) => m.m === 0), T = TABLE[bc];
+    for (const mode of md) {
+      const M = 4000, r = (i) => i / M, wr = Float64Array.from({ length: M + 1 }, (_, i) => radial(mode, Math.max(r(i), 1e-9)).R1);
+      const I = new Float64Array(M + 1);
+      for (let i = M - 1; i >= 0; i--) I[i] = I[i + 1] + 0.5 * ((i ? wr[i] ** 2 / (2 * r(i)) : 0) + wr[i + 1] ** 2 / (2 * r(i + 1))) / M;
+      let J = 0; for (let i = 0; i < M; i++) J += (0.5 * (r(i) * I[i] + r(i + 1) * I[i + 1])) / M;
+      let direct = 0; for (let i = 0; i < M; i++) direct += (0.5 * ((I[i] - 2 * J) ** 2 * r(i) + (I[i + 1] - 2 * J) ** 2 * r(i + 1))) / M;
+      direct *= 2 * Math.PI;
+      const q = T.modes.findIndex((m) => m.m === 0 && Math.abs(m.lam2 - mode.lam2) < 1e-4);
+      let modal = 0;
+      for (let e = 0; e < T.H.n.length; e++) if (T.H.p[e] === q && T.H.q[e] === q) modal += T.H.v[e] ** 2 / (4 * T.inplane[T.H.n[e]].z4);
+      assert.ok(Math.abs(modal / direct - 1) < 2e-4, `${bc} (0,·) λ²=${mode.lam2.toFixed(2)}: ${modal} vs ${direct}`);
+    }
+  }
+});
+test('shallow shell: free axisymmetric modes obey Reissner, ω² = ω_plate² + E/(ρR²); (2,0) is nearly inextensional', () => {
+  for (const rise of [0.5, 1.5, 3]) {
+    const S = shell('free', rise), kap = 2 * rise;
+    for (let i = 0; i < 12; i++) if (S.m[i] === 0) {
+      const reiss = Math.sqrt(S.plateOm[i] ** 2 + 12 * (1 - NU * NU) * kap * kap);
+      assert.ok(Math.abs(S.Om[i] / reiss - 1) < 1e-4, `rise ${rise}: ${S.label[i]} ${S.Om[i]} vs ${reiss}`);
+    }
+    const memb = (S.Om[0] ** 2 - S.plateOm[0] ** 2) / (12 * (1 - NU * NU) * kap * kap); // fraction of the closed-shell stiffening
+    assert.ok(S.m[0] === 2 && memb < 0.005, `(2,0) takes ${(100 * memb).toFixed(2)} % of the membrane stiffening`);
+    const C = shell('clamped', rise), t = C.tuned;
+    assert.ok(C.Om[t] > C.plateOm[t] && C.Om[t] < Math.sqrt(C.plateOm[t] ** 2 + 12 * (1 - NU * NU) * kap * kap), 'clamped: between plate and Reissner bound');
+  }
+});
+
+console.log('nonlinear dynamics');
+test('free vibration: SAV scheme = RK4 reference = normal-form backbone (flat hardens, dome softens)', () => {
+  for (const [rise, a] of [[0, 0.1], [1.5, 0.07]]) {
+    const v = freeVoice(57, P({ rise }), shell('free', rise).tuned, a), S = v.S, p = S.tuned, N = v.N;
+    const n = Math.round((24 * 2 * Math.PI) / S.Om[p] / v.k), xs = new Float64Array(n);
+    for (let i = 0; i < n; i++) { v.step(); xs[i] = v.x[p]; }
+    const sav = cents(zfreq(xs, v.k) / S.Om[p]);
+    // RK4 on the same equations, at a quarter of the step
+    const h = v.k / 4, X = new Float64Array(N), V = new Float64Array(N), xr = new Float64Array(4 * n);
+    X[p] = a;
+    const acc = (x, out) => { const { g } = potential(S, x, N); for (let j = 0; j < N; j++) out[j] = -(S.Om[j] ** 2) * x[j] - g[j]; };
+    const k1 = new Float64Array(N), k2 = new Float64Array(N), k3 = new Float64Array(N), k4 = new Float64Array(N), Y = new Float64Array(N);
+    for (let i = 0; i < 4 * n; i++) {
+      acc(X, k1); for (let j = 0; j < N; j++) Y[j] = X[j] + 0.5 * h * V[j];
+      acc(Y, k2); for (let j = 0; j < N; j++) Y[j] = X[j] + 0.5 * h * V[j] + 0.25 * h * h * k1[j];
+      acc(Y, k3); for (let j = 0; j < N; j++) Y[j] = X[j] + h * V[j] + 0.5 * h * h * k2[j];
+      acc(Y, k4);
+      for (let j = 0; j < N; j++) { X[j] += h * V[j] + (h * h / 6) * (k1[j] + k2[j] + k3[j]); V[j] += (h / 6) * (k1[j] + 2 * k2[j] + 2 * k3[j] + k4[j]); }
+      xr[i] = X[p];
+    }
+    const rk = cents(zfreq(xr, h) / S.Om[p]), nf = cents(Math.sqrt(1 + 2 * backbone(S, p, N) * a * a));
+    assert.ok(Math.abs(sav - rk) < 0.1, `rise ${rise}: SAV ${sav.toFixed(2)} ¢ vs RK4 ${rk.toFixed(2)} ¢`);
+    assert.ok(Math.abs(rk - nf) < 0.06 * Math.abs(nf), `rise ${rise}: RK4 ${rk.toFixed(2)} ¢ vs backbone ${nf.toFixed(2)} ¢`);
+    assert.ok(rise ? nf < -0.5 : nf > 2, `sign: ${nf.toFixed(2)} ¢`);
+  }
+});
+test('hardening → softening: the backbone of the strike tone changes sign at a dome rise of ~0.7 h', () => {
+  const b = (rise) => { const S = shell('free', rise); return backbone(S, S.tuned); };
+  assert.ok(b(0) > 0.3 && b(0.5) > 0 && b(1) < 0 && b(2) < 0, `${b(0)}, ${b(0.5)}, ${b(1)}, ${b(2)}`);
+  let lo = 0.5, hi = 1;
+  for (let i = 0; i < 20; i++) { const m = 0.5 * (lo + hi); if (b(m) > 0) lo = m; else hi = m; }
+  assert.ok(lo > 0.6 && lo < 0.85, `crossover at rise ${lo.toFixed(3)} h`);
+});
+test('energy is conserved to round-off through a fortissimo strike (damping off)', () => {
+  const e = new GongEngine(FS); e.setParams(P({ rise: 1.2, strike: 0.35 }));
+  e.noteOn(55, 1);
+  const v = e.voices[0], h = v.hit, k = v.h, mu = 1 / (Math.PI * h.Mi); // k: the scheme's step (substeps included)
+  v.g.sigma.fill(0); v.setDamping();
+  const pot = (d) => (d > 0 ? 0.4 * h.K * d ** 2.5 : 0);
+  const total = () => { // plate (scheme's energy form) + ψ²/2 + mallet + contact, at the half step
+    let E = 0;
+    for (let i = 0; i < v.N; i++) { const vel = (v.x[i] - v.x1[i]) / k, w2 = (2 - v.A[i]) / (k * k); E += 0.5 * vel * vel + 0.5 * w2 * v.x[i] * v.x1[i]; }
+    const m = v.hit || h;
+    return E + 0.5 * (v.psi * v.psi - v.eps0) + 0.5 * Math.PI * mu * ((m.xm - m.xm1) / k) ** 2 + 0.5 * (pot(m.d0) + pot(m.dm1));
+  };
+  const E0 = total(), steps = Math.round(0.3 * FS / v.R);
+  let worst = 0, Vmax = 0;
+  for (let s = 0; s < steps; s++) { v.step(); const E = total(); worst = Math.max(worst, Math.abs(E / E0 - 1)); Vmax = Math.max(Vmax, Math.abs(v.V)); }
+  assert.ok(h.steps > 5 && h.Fmax > 0, 'the mallet touched');
+  assert.ok(worst < 1e-9, `relative energy error ${worst.toExponential(2)}`);
+  assert.ok(Vmax > 0.02 * E0, `and the strike was strongly nonlinear (V_nl up to ${(100 * Vmax / E0).toFixed(1)} % of the energy)`);
+});
+
+console.log('engine');
+test('tuning: every key (C2–C6) has its strike tone within ±3 ¢ of 12-TET (soft centre strike, from the output)', () => {
+  let worst = 0, wk = 0;
+  for (let key = 36; key <= 84; key += 1) {
+    const { L } = render(P({ strike: 0, speed: 0.5, eta: 1e-4 }), 0.75, [[0, 'on', key, 0.2]]);
+    const f = keyFreq(key), a = Math.round(0.05 * FS), f1 = peak(L, f, a, L.length, 0.02), c = cents(f1 / f);
+    if (Math.abs(c) > Math.abs(worst)) { worst = c; wk = key; }
+  }
+  console.log(`        worst ${worst.toFixed(2)} ¢ (key ${wk})`);
+  assert.ok(Math.abs(worst) < 3, `worst ${worst.toFixed(2)} ¢ at key ${wk}`);
+});
+test('decay of the strike tone matches the loss model (internal + thermoelastic + radiation)', () => {
+  const p = P({ strike: 0, speed: 0.5 }), key = 52, g = keyGong(key, p, FS), sig = g.sigma[g.S.tuned];
+  const { L } = render(p, 2.4, [[0, 'on', key, 0.2]]), f = keyFreq(key), W = 16384, a = Math.round(0.2 * FS), b = Math.round(2.0 * FS);
+  const meas = Math.log(tone(L, f, a, a + W) / tone(L, f, b, b + W)) / ((b - a) / FS);
+  assert.ok(Math.abs(meas / sig - 1) < 0.03, `σ ${meas.toFixed(4)} vs model ${sig.toFixed(4)} /s (T60 ${(6.91 / sig).toFixed(1)} s)`);
+});
+test('a centre strike rings only axisymmetric modes; off centre wakes the asymmetric ones', () => {
+  const key = 57, S = shell('free', 0), w0 = keyGong(key, P(), FS).w0, f20 = (S.Om[0] * w0) / (2 * Math.PI), f0 = keyFreq(key);
+  const c = render(P({ strike: 0 }), 0.6, [[0, 'on', key, 0.6]]), o = render(P({ strike: 0.5 }), 0.6, [[0, 'on', key, 0.3]]).L;
+  const v = c.e.voices[0], asym = [...v.x].filter((_, i) => v.S.m[i] !== 0), sym = [...v.x].filter((_, i) => v.S.m[i] === 0);
+  assert.ok(asym.every((q) => q === 0) && sym.some((q) => q !== 0), 'centre, even at mf: every m ≠ 0 coordinate exactly zero (an invariant subspace)');
+  const r = (x) => tone(x, f20, 4800, 4800 + 16384) / tone(x, f0, 4800, 4800 + 16384);
+  assert.ok(r(o) > 0.05, `off centre: (2,0)/(0,1) = ${r(o).toFixed(3)}`);
+});
+// energy share above 4× the pitch, from the engine's view messages
+function cascade(params, vel, key = 57, t = 0.15) {
+  const msgs = [];
+  render(params, t + 0.02, [[0, 'on', key, vel]], (m) => msgs.push({ t: m.t, band: Array.from(m.band), E: m.E, cents: m.cents }));
+  const m = msgs.reduce((b, q) => (Math.abs(q.t - t) < Math.abs(b.t - t) ? q : b));
+  return { hi: (m.band[3] + m.band[4] + m.band[5]) / m.E, top: (m.band[4] + m.band[5]) / m.E, cents: m.cents, msgs };
+}
+test('soft = bell, hard = crash: the energy above 8× the pitch grows by orders of magnitude with velocity', () => {
+  const pp = cascade(P(), 0.15), mf = cascade(P(), 0.5), ff = cascade(P(), 1);
+  assert.ok(pp.top < 1e-3, `pp: ${pp.top.toExponential(1)}`);
+  assert.ok(ff.top > 0.03 && ff.top > 100 * pp.top, `ff: ${ff.top.toExponential(1)} vs pp ${pp.top.toExponential(1)}`);
+  assert.ok(mf.top > pp.top && mf.top < ff.top, `mf in between: ${mf.top.toExponential(1)}`);
+});
+test('thinner plates are more nonlinear at the same strike (deflection in thicknesses ∝ (a/h)²)', () => {
+  const thin = cascade(P({ thick: 0.005 }), 0.45), thick = cascade(P({ thick: 0.02 }), 0.45);
+  assert.ok(thin.top > 30 * thick.top, `thin ${thin.top.toExponential(1)} vs thick ${thick.top.toExponential(1)}`);
+});
+test('pitch glides: a flat gong starts sharp and falls; a dome (rise 2.5 h) starts flat and rises', () => {
+  const flat = cascade(P({ strike: 0.04, rise: 0 }), 0.4, 57, 2.1).msgs, dome = cascade(P({ strike: 0.04, rise: 2.5 }), 0.6, 57, 2.1).msgs;
+  const at = (ms, t) => ms.reduce((b, q) => (Math.abs(q.t - t) < Math.abs(b.t - t) ? q : b)).cents;
+  const f = [0.05, 0.5, 2].map((t) => at(flat, t)), d = [0.05, 0.5, 2].map((t) => at(dome, t));
+  assert.ok(f[0] > 100 && f[1] < 0.75 * f[0] && Math.abs(f[2]) < 0.25 * f[0], `flat: ${f.map((c) => c.toFixed(0)).join(' → ')} ¢`);
+  assert.ok(d[0] < -100 && d[1] > d[0] && Math.abs(d[2]) < -0.33 * d[0], `dome: ${d.map((c) => c.toFixed(0)).join(' → ')} ¢`);
+});
+test('level: a forte note peaks 0.1–0.5 across the keyboard; onsets are band-limited (no clicks); releases die away', () => {
+  const peaks = [];
+  for (const key of [36, 48, 60, 72, 84]) {
+    const p = P({ release: 0.25 }), g = keyGong(key, p, FS), fTop = (g.S.Om[g.Nv - 1] * g.w0) / (2 * Math.PI);
+    const { L, R } = render(p, 1.5, [[0.01, 'on', key, 0.8], [0.8, 'off', key]]);
+    let pk = 0, jump = 0, pk1 = 0, rel = 0, before = 0;
+    for (let i = 1; i < L.length; i++) pk = Math.max(pk, Math.abs(L[i]), Math.abs(R[i]));
+    const on = Math.round(0.01 * FS), off = Math.round(0.8 * FS);
+    for (let i = on - 64; i < on + 960; i++) { jump = Math.max(jump, Math.abs(L[i] - L[i - 1])); pk1 = Math.max(pk1, Math.abs(L[i])); }
+    for (let i = off - 960; i < off; i++) before = Math.max(before, Math.abs(L[i] - L[i - 1]));
+    for (let i = off; i < off + 960; i++) rel = Math.max(rel, Math.abs(L[i] - L[i - 1]));
+    assert.ok(pk > 0.1 && pk < 0.5, `key ${key}: peak ${pk.toFixed(3)}`);
+    peaks.push(`${key}:${pk.toFixed(2)}`);
+    assert.ok(jump < 1.5 * ((2 * Math.PI * fTop) / FS) * pk1, `key ${key}: onset step ${jump.toFixed(4)} exceeds the band limit of a ${fTop.toFixed(0)} Hz signal of peak ${pk1.toFixed(3)}`);
+    assert.ok(rel <= 1.01 * before, `key ${key}: release step ${rel.toExponential(2)} vs ${before.toExponential(2)} before`);
+    let tail = 0;
+    for (let i = L.length - 4800; i < L.length; i++) tail = Math.max(tail, Math.abs(L[i]));
+    assert.ok(tail < 1e-3 * pk, `key ${key}: after release ${tail.toExponential(1)}`);
+  }
+  console.log(`        peaks at velocity 0.8: ${peaks.join(' ')}`);
+});
+test('stability: every parameter at its min and max, ff restrikes — no NaN, peaks bounded', () => {
+  const sliders = GROUPS.flatMap((g) => g.params).filter((p) => p.type !== 'select' && p.type !== 'checkbox');
+  const cases = [];
+  for (const p of sliders) for (const v of [p.min, p.max]) cases.push({ [p.id]: v });
+  for (const bc of ['free', 'clamped']) for (const material of ['bronze', 'steel', 'aluminium']) cases.push({ bc, material, rise: 4, thick: 0.003, speed: 12 });
+  let worst = 0, wc = null;
+  for (const c of cases) {
+    const { L, R } = render(P(c), 0.35, [[0, 'on', 40, 1], [0.05, 'on', 40, 1], [0.1, 'on', 79, 1], [0.12, 'on', 96, 1]]);
+    for (let i = 0; i < L.length; i++) {
+      const a = Math.max(Math.abs(L[i]), Math.abs(R[i]));
+      assert.ok(Number.isFinite(a), `${JSON.stringify(c)}: NaN at ${i}`);
+      if (a > worst) { worst = a; wc = c; }
+    }
+  }
+  console.log(`        loudest: ${worst.toFixed(2)} with ${JSON.stringify(wc)} (four fff strikes; the shell's limiter follows)`);
+  assert.ok(worst < 4, `largest peak ${worst.toFixed(2)}`);
+});
+test('passivity: struck ff, through substep changes and projections, no preset ever gains energy (the guard never acts)', () => {
+  for (const pr of PRESETS) for (const key of [43, 60, 79]) {
+    const e = new GongEngine(FS); e.setParams(P(pr.p)); e.noteOn(key, 1);
+    const v = e.voices[0], bl = new Float32Array(128), br = new Float32Array(128);
+    let worst = 0;
+    for (let b = 0; b < Math.round(0.4 * FS / 128); b++) { e.process(bl, br, 128); worst = Math.max(worst, v.energyD() / v.Einj); }
+    assert.ok(worst < 1 + 1e-6 && v.guards === 0, `${pr.name}, key ${key}: E/E_in ${worst.toFixed(6)}, guards ${v.guards}`);
+  }
+});
+test('CPU: 4 gongs struck ff, all nonlinear, under 30 % of real time (10 reported)', () => {
+  const t = (keys) => {
+    const e = new GongEngine(FS); e.setParams(P());
+    for (const k of keys) e.noteOn(k, 1);
+    const bl = new Float32Array(128), br = new Float32Array(128), n = Math.round(0.5 * FS / 128);
+    for (let i = 0; i < 20; i++) e.process(bl, br, 128);
+    const t0 = performance.now();
+    for (let i = 0; i < n; i++) e.process(bl, br, 128);
+    assert.ok(e.voices.every((v) => v.nl), 'still nonlinear');
+    return (performance.now() - t0) / 1000 / (n * 128 / FS);
+  };
+  const four = t([55, 60, 62, 65]), ten = t([48, 52, 55, 57, 60, 62, 64, 65, 67, 69]);
+  console.log(`        4 voices ${(100 * four).toFixed(1)} %, 10 voices ${(100 * ten).toFixed(1)} % of real time`);
+  assert.ok(four < 0.3, `${(100 * four).toFixed(1)} %`);
+});
+
+console.log(failures ? `\n${failures} FAILED` : '\nall passed');
+process.exit(failures ? 1 : 0);
