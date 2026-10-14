@@ -33,6 +33,9 @@ tagged; this changelog and the commit titles record them.
   no dependencies. Its output matches the `marked` library's text and
   inline markup for every README. `test/notes-tests.mjs` checks the
   renderer and renders every README.
+- Tests: the Tine Piano's 20-voice timing test is now named like the other
+  timing tests (`CPU: …`), so CI skips it too. It had failed once on a
+  slow shared runner.
 
 ## 2026-10-14 — the workshop
 
