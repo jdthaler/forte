@@ -83,14 +83,26 @@ export function renderEngine(engine, seconds, events, FS) {
   return [L, R];
 }
 
-// Add the same synthetic room the pages use (shared/impulses.js), `amount` 0..1.
+// A ConvolverNode normalises its impulse response (normalize = true, the default; Web Audio
+// spec, "calculateNormalizationScale"): scale = GainCalibration (0.00125, −58 dB) / RMS over all
+// channels × 44100 / sampleRate. Renders must apply the same scale, or the demos come out
+// wetter than the pages.
+export function webAudioIR(buf, FS, channels = 2) {
+  const ch = Array.from({ length: channels }, (_, i) => buf.getChannelData(i));
+  let p = 0;
+  for (const d of ch) for (const v of d) p += v * v;
+  let rms = Math.sqrt(p / (channels * ch[0].length));
+  if (!(rms >= 0.000125)) rms = 0.000125;
+  const scale = (0.00125 / rms) * (44100 / FS);
+  return ch.map((d) => Float64Array.from(d, (v) => v * scale));
+}
+
+// Add the same synthetic room the pages use (shared/impulses.js, via shell.js), `amount` 0..1.
 export async function withRoom([L, R], amount, FS, seconds = 2.0) {
   const { roomIR } = await import('../shared/impulses.js');
-  const ir = roomIR(FS_SHIM(FS), seconds);
+  const ir = webAudioIR(roomIR(FS_SHIM(FS), seconds), FS);
   return [L, R].map((x, ch) => {
-    const h = ir.getChannelData(ch);
-    let e = 0; for (const v of h) e += v * v;
-    const r = convolve(x, h.map((v) => v / Math.sqrt(e)));
+    const r = convolve(x, ir[ch]);
     return x.map((v, i) => v + 0.6 * amount * r[i]);
   });
 }

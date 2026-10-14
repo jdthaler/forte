@@ -6,7 +6,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "test": "for f in test/*-tests.mjs; do echo \"== $f\"; node \"$f\" || exit 1; done",
+    "test": "node tools/test-all.mjs",
     "serve": "python3 -m http.server 8765"
   }
 }

@@ -6,7 +6,7 @@ import { NeonEngine } from '../huygens/src/neon-engine.js';
 import { tunedFreq } from '../huygens/src/tuning.js';
 import { DEFAULTS } from '../huygens/src/sync-params.js';
 import { soundboardIR, roomIR } from '../shared/impulses.js';
-import { convolve, writeWav, FS_SHIM } from './audio-util.mjs';
+import { convolve, writeWav, FS_SHIM, webAudioIR } from './audio-util.mjs';
 
 const FS = 48000;
 
@@ -38,9 +38,8 @@ function lowpass(x, fc) {
   for (let i = 0; i < x.length; i++) { const v = b0 * x[i] + b1 * x1 + b0 * x2 - a1 * y1 - a2 * y2; x2 = x1; x1 = x[i]; y2 = y1; y1 = v; y[i] = v; }
   return y;
 }
-const unit = (d) => { let e = 0; for (const v of d) e += v * v; return d.map((v) => v / Math.sqrt(e)); };
 const sb = soundboardIR(FS_SHIM(FS), 0.3), rm = roomIR(FS_SHIM(FS), 2.0);
-const SB = [unit(sb.getChannelData(0)), unit(sb.getChannelData(1))], RM = [unit(rm.getChannelData(0)), unit(rm.getChannelData(1))];
+const SB = webAudioIR(sb, FS), RM = webAudioIR(rm, FS); // as the page's ConvolverNodes scale them
 function finish(out, P = DEFAULTS) {
   return out.map((x, ch) => {
     const t = lowpass(x, P.tone), b = convolve(t, SB[ch]);

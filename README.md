@@ -39,8 +39,10 @@ The bottom two letter rows are the keyboard: `Z`–`/` for the white keys
 from C, with the black keys on the row above. `Q`–`]` continues an octave
 up. `←`/`→` shift the octave, and `↑`/`↓` adjust each instrument's main
 control (usually velocity). `Space` is the sustain pedal or that
-instrument's equivalent. **Enable MIDI** connects a MIDI keyboard (Chrome
-and Edge), including velocity, the sustain pedal and, where it means
+instrument's equivalent (hold, mute bar, Leslie speed), on every
+instrument except the black hole, where there is nothing to hold.
+**Enable MIDI** connects a MIDI keyboard (Chrome, Edge and Firefox),
+including velocity, the sustain pedal, aftertouch and, where it means
 something, the mod wheel.
 
 **On an iPad or other tablet**, play the on-screen keys with as many

@@ -28,7 +28,7 @@
 //   space         'sustain' (Space / CC64 = damper pedal, sent to the engine) | 'hold' (keys latch
 //                 while Space is down; shell sends the noteOffs on release) | null
 //   arrows        { param: id, step } — ↑/↓ nudge that parameter (by `step`; a log parameter by 1/24 of its range)
-//   modWheel      param id driven by MIDI CC1
+//   modWheel      param id driven by MIDI CC1 (wheel at rest = the default, fully up = the maximum)
 // Hooks (all optional, all in addition to the default engine messages):
 //   onAudio(audio)  once, with { ctx, node, tone, master, roomGain, analyser }
 //   onMessage(msg)  messages from the engine ('stats' already updates #cpu)
@@ -64,7 +64,17 @@ export function createShell(cfg) {
   const ALL = cfg.groups.flatMap((g) => g.params);
   const DEFAULTS = Object.fromEntries(ALL.map((p) => [p.id, p.def]));
   const STORE = `forte/${cfg.id}/params/v1`;
-  const load = () => { try { const s = JSON.parse(localStorage.getItem(STORE) || 'null'); return s ? { ...DEFAULTS, ...s } : { ...DEFAULTS }; } catch { return { ...DEFAULTS }; } };
+  // Stored settings may be from an older version: keep only known ids, with valid values.
+  const valid = (p, v) => {
+    if (p.type === 'select') return p.options.some(([k]) => k === v) ? v : p.def;
+    if (p.type === 'checkbox') return typeof v === 'boolean' ? v : p.def;
+    return typeof v === 'number' && Number.isFinite(v) ? Math.min(p.max, Math.max(p.min, v)) : p.def;
+  };
+  const load = () => {
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch { /* corrupt */ }
+    return Object.fromEntries(ALL.map((p) => [p.id, s && p.id in s ? valid(p, s[p.id]) : p.def]));
+  };
   const save = () => { try { localStorage.setItem(STORE, JSON.stringify(shell.P)); } catch { /* storage unavailable */ } };
 
   const shell = { P: load(), DEFAULTS, ALL, audio: null, base: cfg.base ?? 48, sustain: false };
@@ -75,8 +85,9 @@ export function createShell(cfg) {
   shell.startAudio = () => {
     if (shell.audio) { if (shell.audio.ctx.state !== 'running') shell.audio.ctx.resume(); return Promise.resolve(shell.audio); }
     if (starting) return starting;
+    let ctx = null;
     starting = (async () => {
-      const ctx = new AudioContext({ latencyHint: 'interactive' });
+      ctx = new AudioContext({ latencyHint: 'interactive' });
       const w = cfg.worklet;
       if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
       for (const m of w.modules) await ctx.audioWorklet.addModule(m);
@@ -104,27 +115,33 @@ export function createShell(cfg) {
         const m = e.data;
         if (m.type === 'stats' && $('#cpu')) {
           const el = $('#cpu');
-          el.textContent = m.load !== undefined ? `CPU ${(m.load * 100).toFixed(0)} %${m.voices !== undefined ? ` · ${m.voices} voices` : ''}` : `${m.voices} voices`;
-          el.classList.toggle('hot', (m.load || 0) > 0.7);
+          const pct = (x) => `${(x * 100).toFixed(0)} %`;
+          el.textContent = `CPU ${pct(m.load)}${m.peak !== undefined ? ` (peak ${pct(m.peak)})` : ''}${m.voices !== undefined ? ` · ${m.voices} voices` : ''}`;
+          el.title = 'Average and worst audio-block time, as a share of the time available. A peak over 100 % is an audible dropout.';
+          el.classList.toggle('hot', (m.peak ?? m.load) > 0.8);
         }
         else if (m.type === 'error') toast(m.message);
         cfg.onMessage?.(m);
       };
+      node.onprocessorerror = () => toast('The audio engine stopped. Reload the page to restart it.');
+      // Params go first, straight to the port. Everything else waits for `starting` and is
+      // posted in order (shell.post), so a quick note-off can never overtake its note-on.
+      node.port.postMessage(paramsMessage());
+      if (cfg.space === 'sustain') node.port.postMessage({ type: 'sustain', on: shell.sustain });
+      if (ctx.state !== 'running') await ctx.resume();
       shell.audio = { ctx, node, tone, master, roomGain, analyser };
       shell.applyMix();
-      sendParams();
-      if (cfg.space === 'sustain') node.port.postMessage({ type: 'sustain', on: shell.sustain });
       cfg.onAudio?.(shell.audio);
-      if (ctx.state !== 'running') await ctx.resume();
       if ($('#start')) { $('#start').textContent = `Audio on · ${(ctx.sampleRate / 1000).toFixed(1)} kHz`; $('#start').classList.add('running'); }
       return shell.audio;
     })();
-    starting.catch((err) => { toast(`Audio failed to start: ${err.message}`); starting = null; });
+    starting.catch((err) => { toast(`Audio failed to start: ${err.message}`); ctx?.close?.().catch(() => {}); starting = null; });
     return starting;
   };
-  const sendParams = () => shell.post({ type: 'params', params: cfg.engineParams ? cfg.engineParams(shell.P) : { ...shell.P } });
+  const paramsMessage = () => ({ type: 'params', params: cfg.engineParams ? cfg.engineParams(shell.P) : { ...shell.P } });
+  const sendParams = () => shell.post(paramsMessage());
   shell.sendParams = sendParams;
-  shell.post = (m) => { if (shell.audio) shell.audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m)); };
+  shell.post = (m) => { if (shell.audio) shell.audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
   shell.applyMix = () => {
     const a = shell.audio, ch = cfg.chain || {}, P = shell.P;
     if (!a) return;
@@ -140,7 +157,8 @@ export function createShell(cfg) {
     latched.delete(key);
     sounding.set(key, (sounding.get(key) || 0) + 1);
     shell.keys.set(key, true);
-    await shell.startAudio();
+    if (shell.audio) shell.startAudio(); // resumes a suspended context; no await, so order is kept
+    else try { await shell.startAudio(); } catch { return; }
     shell.post({ type: 'noteOn', key, velocity: vel, data: cfg.noteData?.(key, vel) });
     cfg.onNoteOn?.(key, vel);
   }
@@ -151,7 +169,7 @@ export function createShell(cfg) {
     if (cfg.space === 'hold' && shell.sustain) { latched.add(key); return; }
     shell.keys.set(key, false);
     const off = () => { shell.post({ type: 'noteOff', key }); cfg.onNoteOff?.(key); };
-    if (shell.audio) off(); else if (starting) starting.then(off);
+    if (shell.audio) off(); else if (starting) starting.then(off, () => {});
   }
   shell.noteOn = down; shell.noteOff = up;
   shell.activeKeys = () => [...new Set([...sounding.keys(), ...latched])].sort((a, b) => a - b);
@@ -168,12 +186,15 @@ export function createShell(cfg) {
   // ---- computer keyboard -----------------------------------------------------
   const codeToKey = (code) => { let i = LOW.indexOf(code); if (i >= 0) return shell.base + i; i = HIGH.indexOf(code); return i >= 0 ? shell.base + 12 + i : null; };
   const labels = () => { const m = new Map(); LOW_LBL.forEach((l, i) => m.set(shell.base + i, l)); HIGH_LBL.forEach((l, i) => { if (!m.has(shell.base + 12 + i)) m.set(shell.base + 12 + i, l); }); return m; };
-  const typing = (t) => t && (t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !['range', 'checkbox'].includes(t.type)));
+  const typing = (t) => t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !['range', 'checkbox'].includes(t.type)));
+  let spaceHeld = false; // the real Space bar (the on-screen pedal sends synthetic events)
   const kbVel = () => (shell.P.velocity !== undefined ? shell.P.velocity : 0.75);
   window.addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
-    const onSlider = e.target?.tagName === 'INPUT';
-    if (e.code === 'Space' && cfg.space) { e.preventDefault(); if (!e.repeat) setSustain(true); return; }
+    // a focused <select> would swallow note keys (or type-ahead into a preset): hand them back
+    if (e.target?.tagName === 'SELECT') { if (e.code === 'Space' || codeToKey(e.code) !== null) e.target.blur(); else return; }
+    const onSlider = e.target?.tagName === 'INPUT' && e.target.type === 'range';
+    if (e.code === 'Space' && cfg.space) { e.preventDefault(); if (e.isTrusted) spaceHeld = true; if (!e.repeat) setSustain(true); return; }
     if (!onSlider && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) { e.preventDefault(); shiftOctave(e.code === 'ArrowLeft' ? -12 : 12); return; }
     if (!onSlider && cfg.arrows && (e.code === 'ArrowUp' || e.code === 'ArrowDown')) {
       e.preventDefault();
@@ -192,11 +213,14 @@ export function createShell(cfg) {
     down(key, kbVel());
   });
   window.addEventListener('keyup', (e) => {
-    if (e.code === 'Space' && cfg.space) { setSustain(false); return; }
+    if (e.code === 'Space' && cfg.space) { if (e.isTrusted) spaceHeld = false; setSustain(false); return; }
     const key = held.get(e.code);
     if (key !== undefined) { held.delete(e.code); up(key); }
   });
-  window.addEventListener('blur', () => { for (const k of held.values()) up(k); held.clear(); });
+  // Losing focus means no keyup will come: release held keys and a held Space bar.
+  const letGo = () => { for (const k of held.values()) up(k); held.clear(); if (spaceHeld) { spaceHeld = false; setSustain(false); } };
+  window.addEventListener('blur', letGo);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) letGo(); });
   function shiftOctave(d) {
     const nb = shell.base + d;
     if (nb < LO - 12 || nb > HI - 12) return;
@@ -217,7 +241,7 @@ export function createShell(cfg) {
 
   // ---- MIDI ----------------------------------------------------------------------
   function initMIDI() {
-    if (!navigator.requestMIDIAccess) { $('#midi').textContent = 'Web MIDI unsupported (use Chrome/Edge)'; return; }
+    if (!navigator.requestMIDIAccess) { $('#midi').textContent = 'No Web MIDI in this browser (try Chrome, Edge or Firefox)'; return; }
     navigator.requestMIDIAccess().then((acc) => {
       const bind = () => {
         const names = [];
@@ -234,8 +258,12 @@ export function createShell(cfg) {
     else if (cmd === 0xb0) {
       if (d1 === 64 && cfg.space) setSustain(d2 >= 64);
       else if (d1 === 1 && cfg.modWheel) {
-        const p = ALL.find((q) => q.id === cfg.modWheel);
-        shell.setParam(p.id, p.log ? p.min * (p.max / p.min) ** (d2 / 127) : p.min + ((p.max - p.min) * d2) / 127);
+        // The wheel rests at 0, so rest = the parameter's default and full = its maximum
+        // (a resting wheel must not drag the instrument to the bottom of its range).
+        const p = ALL.find((q) => q.id === cfg.modWheel), u = d2 / 127;
+        let v = p.log ? p.def * (p.max / p.def) ** u : p.def + (p.max - p.def) * u;
+        if (p.step) v = Math.round(v / p.step) * p.step;
+        shell.setParam(p.id, Math.min(p.max, Math.max(p.min, v)));
       } else if (d1 === 120 || d1 === 123) shell.panic();
       cfg.onCC?.(d1, d2);
     } else if (cmd === 0xd0 || cmd === 0xa0) { // channel / polyphonic aftertouch
@@ -274,7 +302,7 @@ export function createShell(cfg) {
       } else if (p.type === 'checkbox') {
         wrap.classList.add('check');
         input = document.createElement('input'); input.type = 'checkbox'; input.id = `p-${p.id}`;
-        input.addEventListener('change', () => shell.setParam(p.id, input.checked));
+        input.addEventListener('change', () => { shell.setParam(p.id, input.checked); input.blur(); });
         const lab = document.createElement('label'); lab.htmlFor = input.id; lab.textContent = p.label;
         wrap.append(input, lab);
       } else {
@@ -298,7 +326,11 @@ export function createShell(cfg) {
     const v = shell.P[id];
     if (c.p.type === 'select') c.input.value = v;
     else if (c.p.type === 'checkbox') c.input.checked = !!v;
-    else { if (!dragging) c.input.value = toSlider(c.p, v); c.val.textContent = c.p.fmt ? c.p.fmt(v) : String(v); }
+    else {
+      if (!dragging) c.input.value = toSlider(c.p, v);
+      c.val.textContent = c.p.fmt ? c.p.fmt(v) : String(v);
+      c.input.setAttribute('aria-valuetext', c.val.textContent);
+    }
   }
   const refreshVisibility = () => { for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(shell.P) : false; };
   shell.setParam = (id, v, dragging = false) => {

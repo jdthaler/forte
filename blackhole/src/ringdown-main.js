@@ -21,9 +21,9 @@ const engineParams = () => ({ stereo: P.stereo ? 1 : 0, releaseMute: P.releaseMu
 // ---------------------------------------------------------------------------
 // audio
 
-let audio = null, starting = null;
+let audio = null, starting = null, live = false; // live: the context has resumed; until then notes queue in order
 function startAudio() {
-  if (audio) { if (audio.ctx.state !== 'running') audio.ctx.resume(); return Promise.resolve(audio); }
+  if (live) { if (audio.ctx.state !== 'running') audio.ctx.resume(); return Promise.resolve(audio); }
   if (starting) return starting;
   starting = (async () => {
     const ctx = new AudioContext({ latencyHint: 'interactive' });
@@ -39,12 +39,16 @@ function startAudio() {
     tone.connect(master);
     tone.connect(room).connect(roomGain).connect(master);
     master.connect(limiter).connect(ctx.destination);
-    node.port.onmessage = (e) => { if (e.data.type === 'stats') $('#voices').textContent = `${e.data.voices} ringing`; };
+    node.port.onmessage = (e) => {
+      if (e.data.type === 'stats') $('#voices').textContent = `${e.data.voices} ringing`;
+      else if (e.data.type === 'error') toast(e.data.message);
+    };
     if (ctx.sampleRate !== fs) { fs = ctx.sampleRate; cache = new Map(); }
     audio = { ctx, node, tone, roomGain, master };
     applyMix();
     node.port.postMessage({ type: 'params', params: engineParams() });
     if (ctx.state !== 'running') await ctx.resume();
+    live = true;
     $('#start').textContent = `Audio on · ${(fs / 1000).toFixed(1)} kHz`;
     $('#start').classList.add('running');
     return audio;
@@ -52,7 +56,7 @@ function startAudio() {
   starting.catch((err) => { toast(`Audio failed to start: ${err.message}`); starting = null; });
   return starting;
 }
-const post = (m) => { if (audio) audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m)); };
+const post = (m) => { if (live) audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
 function applyMix() {
   if (!audio) return;
   const t = audio.ctx.currentTime;
@@ -79,11 +83,13 @@ const HIGH = ['KeyQ', 'Digit2', 'KeyW', 'Digit3', 'KeyE', 'KeyR', 'Digit5', 'Key
 const HIGH_LBL = ['q', '2', 'w', '3', 'e', 'r', '5', 't', '6', 'y', '7', 'u', 'i', '9', 'o', '0', 'p', '[', '=', ']'];
 function codeToKey(code) { let i = LOW.indexOf(code); if (i >= 0) return base + i; i = HIGH.indexOf(code); return i >= 0 ? base + 12 + i : null; }
 function keyLabels() { const m = new Map(); LOW_LBL.forEach((l, i) => m.set(base + i, l)); HIGH_LBL.forEach((l, i) => { if (!m.has(base + 12 + i)) m.set(base + 12 + i, l); }); return m; }
-const typing = (t) => t && (t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !['range', 'checkbox'].includes(t.type)));
+const typing = (t) => t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !['range', 'checkbox'].includes(t.type)));
 
 window.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
-  const onSlider = e.target?.tagName === 'INPUT';
+  // a focused <select> would swallow note keys (or type-ahead into a preset): hand them back
+  if (e.target?.tagName === 'SELECT') { if (e.code === 'Space' || codeToKey(e.code) !== null) e.target.blur(); else return; }
+  const onSlider = e.target?.tagName === 'INPUT' && e.target.type === 'range';
   if (!onSlider && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) { e.preventDefault(); shiftOctave(e.code === 'ArrowLeft' ? -12 : 12); return; }
   if (!onSlider && (e.code === 'ArrowUp' || e.code === 'ArrowDown')) {
     e.preventDefault();
@@ -106,7 +112,7 @@ function updateHelp() {
 }
 
 function initMIDI() {
-  if (!navigator.requestMIDIAccess) { $('#midi').textContent = 'Web MIDI unsupported (use Chrome/Edge)'; return; }
+  if (!navigator.requestMIDIAccess) { $('#midi').textContent = 'No Web MIDI in this browser (try Chrome, Edge or Firefox)'; return; }
   navigator.requestMIDIAccess().then((acc) => {
     const bind = () => {
       const names = [];

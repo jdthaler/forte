@@ -6,7 +6,7 @@ import { OrganEngine } from '../organ/src/organ-engine.js';
 import { buildGenerator } from '../organ/src/tonewheels.js';
 import { DEFAULTS, PRESETS } from '../organ/src/organ-params.js';
 import { roomIR } from '../shared/impulses.js';
-import { convolve, writeWav, FS_SHIM } from './audio-util.mjs';
+import { convolve, writeWav, FS_SHIM, webAudioIR } from './audio-util.mjs';
 
 const FS = 48000;
 const reg = (s) => s.replace(/\s/g, '').split('').map(Number);
@@ -40,8 +40,7 @@ function render(P0, seconds, events) {
 const chord = (t0, t1, keys) => keys.flatMap((k) => [[t0, 'down', k], [t1, 'up', k]]);
 
 const room = roomIR(FS_SHIM(FS), 1.8);
-const unit = (d) => { let e = 0; for (const v of d) e += v * v; return d.map((v) => v / Math.sqrt(e)); };
-const RN = [unit(room.getChannelData(0)), unit(room.getChannelData(1))];
+const RN = webAudioIR(room, FS); // as the page's ConvolverNode scales it
 function finish(out, roomAmt = 0.2) {
   return out.map((x, ch) => {
     const r = convolve(x, RN[ch]);

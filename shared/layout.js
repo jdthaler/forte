@@ -13,7 +13,17 @@ const STORE = `forte/${body.dataset.instrument || 'page'}/layout/v1`;
 const touch = matchMedia('(pointer: coarse)').matches;
 const narrow = matchMedia('(max-width: 1050px)');
 const DEFAULTS = { controls: true, hidden: [], kb: touch ? 'l' : 'm', octaves: touch ? 3 : 0, start: null };
-const prefs = (() => { try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(STORE) || '{}') }; } catch { return { ...DEFAULTS }; } })();
+const prefs = (() => {
+  let s = {};
+  try { s = JSON.parse(localStorage.getItem(STORE) || '{}') || {}; } catch { /* corrupt */ }
+  return { // keep only well-formed stored values
+    controls: typeof s.controls === 'boolean' ? s.controls : DEFAULTS.controls,
+    hidden: Array.isArray(s.hidden) ? s.hidden.filter((k) => typeof k === 'string') : [],
+    kb: ['s', 'm', 'l', 'xl'].includes(s.kb) ? s.kb : DEFAULTS.kb,
+    octaves: [0, 2, 3, 4, 5].includes(s.octaves) ? s.octaves : DEFAULTS.octaves,
+    start: Number.isInteger(s.start) ? s.start : null,
+  };
+})();
 const save = () => { try { localStorage.setItem(STORE, JSON.stringify(prefs)); } catch { /* storage unavailable */ } };
 
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -92,6 +102,7 @@ if (header && (sidebar || views.length)) {
 }
 narrow.addEventListener('change', apply);
 apply();
+document.querySelector('#toast')?.setAttribute('role', 'status');
 
 // ---------------------------------------------------------------------------
 // keyboard tools (called by shared/keyboard.js once the page builds its keys)
@@ -158,7 +169,13 @@ const contexts = new Set();
 for (const name of ['AudioContext', 'webkitAudioContext']) {
   const Base = window[name];
   if (!Base) continue;
-  window[name] = class extends Base { constructor(...a) { super(...a); contexts.add(this); } };
+  window[name] = class extends Base {
+    constructor(...a) {
+      super(...a);
+      contexts.add(this);
+      this.addEventListener('statechange', () => { if (this.state === 'closed') contexts.delete(this); });
+    }
+  };
 }
 const unlock = () => { for (const c of contexts) if (c.state !== 'running' && c.state !== 'closed') c.resume().catch(() => {}); };
 for (const ev of ['pointerup', 'touchend', 'keydown']) document.addEventListener(ev, unlock, true);

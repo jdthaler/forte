@@ -14,9 +14,10 @@ function fitCanvas(cv) {
   const dpr = window.devicePixelRatio || 1;
   const r = cv.getBoundingClientRect();
   const w = Math.max(10, Math.round(r.width)), h = Math.max(10, Math.round(r.height));
-  if (cv.width !== w * dpr || cv.height !== h * dpr) { cv.width = w * dpr; cv.height = h * dpr; }
+  const W = Math.round(w * dpr), H = Math.round(h * dpr); // integers, or the bitmap is reset every frame
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
   const ctx = cv.getContext('2d');
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.setTransform(W / w, 0, 0, H / h, 0, 0);
   return { ctx, w, h };
 }
 

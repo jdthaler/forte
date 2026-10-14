@@ -1,5 +1,7 @@
 // rhodes-worklet.js — AudioWorklet wrapper (rhodes-engine.js is added first).
 
+import { runGuarded } from '../../shared/guard.js';
+
 const now = () => (globalThis.performance?.now ? globalThis.performance.now() : Date.now());
 
 class RhodesProcessor extends AudioWorkletProcessor {
@@ -35,7 +37,7 @@ class RhodesProcessor extends AudioWorkletProcessor {
     if (!out || !out.length) return true;
     const L = out[0], R = out.length > 1 ? out[1] : this.spare;
     const t0 = now();
-    this.engine.process(L, R, L.length);
+    runGuarded(this, L, R, L.length, () => this.engine.allNotesOff());
     this.busy += now() - t0;
     if (++this.blocks >= 96) {
       const budget = (this.blocks * L.length * 1000) / sampleRate;

@@ -1,6 +1,8 @@
 // worklet.js — AudioWorklet wrapper around PianoEngine (engine.js must be
 // added to the worklet first; it registers itself on globalThis).
 
+import { runGuarded } from '../../shared/guard.js';
+
 const now = () => (globalThis.performance?.now ? globalThis.performance.now() : Date.now());
 
 class PianoProcessor extends AudioWorkletProcessor {
@@ -38,7 +40,7 @@ class PianoProcessor extends AudioWorkletProcessor {
     const L = out[0];
     const R = out.length > 1 ? out[1] : this.spare;
     const t0 = now();
-    this.engine.process(L, R, L.length);
+    runGuarded(this, L, R, L.length, () => this.engine.allNotesOff());
     this.busy += now() - t0;
     if (++this.blocks >= 96) {
       const budget = (this.blocks * L.length * 1000) / sampleRate;

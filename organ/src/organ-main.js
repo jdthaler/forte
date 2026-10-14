@@ -30,10 +30,10 @@ const sounding = new Map(); // key → count of sources holding it
 // ---------------------------------------------------------------------------
 // audio
 
-let audio = null, starting = null;
+let audio = null, starting = null, live = false; // live: the context has resumed; until then notes queue in order
 
 function startAudio() {
-  if (audio) { if (audio.ctx.state !== 'running') audio.ctx.resume(); return Promise.resolve(audio); }
+  if (live) { if (audio.ctx.state !== 'running') audio.ctx.resume(); return Promise.resolve(audio); }
   if (starting) return starting;
   starting = (async () => {
     const ctx = new AudioContext({ latencyHint: 'interactive' });
@@ -56,10 +56,11 @@ function startAudio() {
     fs = ctx.sampleRate;
     audio = { ctx, node, analyser, roomGain, master };
     sendConfig();
-    sendParams();
+    node.port.postMessage({ type: 'params', params: { ...P, leslieOn: P.leslieOn } });
     applyMix();
     output.setAnalyser(analyser);
     if (ctx.state !== 'running') await ctx.resume();
+    live = true;
     $('#start').textContent = `Audio on · ${(fs / 1000).toFixed(1)} kHz`;
     $('#start').classList.add('running');
     return audio;
@@ -68,7 +69,7 @@ function startAudio() {
   return starting;
 }
 
-const post = (m) => { if (audio) audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m)); };
+const post = (m) => { if (live) audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
 function sendConfig() { if (audio) audio.node.port.postMessage({ type: 'config', gen: buildGenerator(P, fs) }); }
 function sendParams() { post({ type: 'params', params: { ...P, leslieOn: P.leslieOn } }); }
 function applyMix() {
@@ -139,11 +140,13 @@ function keyLabels() {
   HIGH_LBL.forEach((l, i) => { if (!m.has(base + 12 + i)) m.set(base + 12 + i, l); });
   return m;
 }
-const typing = (t) => t && (t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !['range', 'checkbox'].includes(t.type)));
+const typing = (t) => t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !['range', 'checkbox'].includes(t.type)));
 
 window.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
-  const onSlider = e.target?.tagName === 'INPUT' || e.target?.classList?.contains('drawbar');
+  // a focused <select> would swallow note keys (or type-ahead into a preset): hand them back
+  if (e.target?.tagName === 'SELECT') { if (e.code === 'Space' || codeToKey(e.code) !== null) e.target.blur(); else return; }
+  const onSlider = (e.target?.tagName === 'INPUT' && e.target.type === 'range') || e.target?.classList?.contains('drawbar');
   if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) setP({ leslie: P.leslie === 'fast' ? 'slow' : 'fast', leslieOn: true }); return; }
   if (e.code === 'Backquote') { e.preventDefault(); if (!e.repeat) setP({ motor: !P.motor }); return; }
   if (!onSlider && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) { e.preventDefault(); shiftOctave(e.code === 'ArrowLeft' ? -12 : 12); return; }
@@ -181,7 +184,7 @@ function updateHelp() {
 
 // MIDI: notes, CC1 / CC64 → Leslie fast/slow, CC11 → expression
 function initMIDI() {
-  if (!navigator.requestMIDIAccess) { $('#midi').textContent = 'Web MIDI unsupported (use Chrome/Edge)'; return; }
+  if (!navigator.requestMIDIAccess) { $('#midi').textContent = 'No Web MIDI in this browser (try Chrome, Edge or Firefox)'; return; }
   navigator.requestMIDIAccess().then((acc) => {
     const bind = () => {
       const names = [];

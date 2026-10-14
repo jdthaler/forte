@@ -13,7 +13,10 @@
 //   voiceCount?()                 shown in the CPU pill
 //   engine.post(msg)              set by this wrapper: send a message to the page
 
-const now = () => (globalThis.performance?.now ? globalThis.performance.now() : Date.now());
+import { runGuarded } from './guard.js';
+
+const fine = !!globalThis.performance?.now; // some browsers' audio threads only have Date.now (1 ms ticks)
+const now = () => (fine ? globalThis.performance.now() : Date.now());
 
 class ForteProcessor extends AudioWorkletProcessor {
   constructor(options) {
@@ -25,6 +28,7 @@ class ForteProcessor extends AudioWorkletProcessor {
     this.engine.post = (m) => this.port.postMessage(m);
     this.port.onmessage = (e) => this.handle(e.data);
     this.busy = 0;
+    this.worst = 0;
     this.blocks = 0;
     this.spare = new Float32Array(128);
   }
@@ -48,14 +52,18 @@ class ForteProcessor extends AudioWorkletProcessor {
   process(inputs, outputs) {
     const out = outputs[0];
     if (!out || !out.length) return true;
-    const L = out[0], R = out.length > 1 ? out[1] : this.spare;
+    const L = out[0], R = out.length > 1 ? out[1] : this.spare, n = L.length;
     const t0 = now();
-    this.engine.process(L, R, L.length);
-    this.busy += now() - t0;
+    runGuarded(this, L, R, n, () => this.engine.allNotesOff?.());
+    const dt = now() - t0;
+    this.busy += dt;
+    if (dt > this.worst) this.worst = dt;
     if (++this.blocks >= 96) {
-      const budget = (this.blocks * L.length * 1000) / sampleRate;
-      this.port.postMessage({ type: 'stats', load: this.busy / budget, voices: this.engine.voiceCount?.() });
+      const block = (n * 1000) / sampleRate;
+      // the worst block needs a sub-millisecond clock; with 1 ms ticks only the average is meaningful
+      this.port.postMessage({ type: 'stats', load: this.busy / (this.blocks * block), peak: fine ? this.worst / block : undefined, voices: this.engine.voiceCount?.() });
       this.busy = 0;
+      this.worst = 0;
       this.blocks = 0;
     }
     return true;

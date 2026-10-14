@@ -7,7 +7,7 @@ import { computeKeyModel, buildVoiceData } from '../piano/src/physics.js';
 import { PianoEngine } from '../piano/src/engine.js';
 import { DEFAULTS, PRESETS } from '../piano/src/params.js';
 import { soundboardIR, roomIR } from '../shared/impulses.js';
-import { convolve, writeWav, FS_SHIM } from './audio-util.mjs';
+import { convolve, writeWav, FS_SHIM, webAudioIR } from './audio-util.mjs';
 
 const FS = 48000;
 const SECONDS = 8;
@@ -49,14 +49,7 @@ function renderDry(P) {
 }
 
 const shim = FS_SHIM(FS);
-function unitEnergy(buf, ch) {
-  const d = buf.getChannelData(ch);
-  let e = 0;
-  for (const v of d) e += v * v;
-  return d.map((v) => v / Math.sqrt(e));
-}
-const SB = soundboardIR(shim), ROOM = roomIR(shim);
-const SBN = [unitEnergy(SB, 0), unitEnergy(SB, 1)], ROOMN = [unitEnergy(ROOM, 0), unitEnergy(ROOM, 1)];
+const SBN = webAudioIR(soundboardIR(shim), FS), ROOMN = webAudioIR(roomIR(shim), FS); // as the page's ConvolverNodes scale them
 
 function mix([L, R], P) {
   return [L, R].map((x, ch) => {

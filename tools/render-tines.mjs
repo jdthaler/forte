@@ -6,7 +6,7 @@ import { computeKey } from '../tines/src/tine.js';
 import { RhodesEngine } from '../tines/src/rhodes-engine.js';
 import { DEFAULTS, PRESETS } from '../tines/src/rhodes-params.js';
 import { roomIR } from '../shared/impulses.js';
-import { convolve, writeWav, FS_SHIM } from './audio-util.mjs';
+import { convolve, writeWav, FS_SHIM, webAudioIR } from './audio-util.mjs';
 
 const FS = 48000;
 const preset = (i) => ({ ...DEFAULTS, ...PRESETS[i].p });
@@ -35,8 +35,7 @@ const chord = (t0, t1, keys, vel) => keys.flatMap((k) => [[t0, 'on', k, vel], [t
 const cat = (...parts) => [0, 1].map((c) => Float64Array.from(parts.flatMap((p) => [...p[c]])));
 
 const room = roomIR(FS_SHIM(FS), 1.8);
-const unit = (d) => { let e = 0; for (const v of d) e += v * v; return d.map((v) => v / Math.sqrt(e)); };
-const RN = [unit(room.getChannelData(0)), unit(room.getChannelData(1))];
+const RN = webAudioIR(room, FS); // as the page's ConvolverNode scales it
 const finish = (out, amt = 0.2) => out.map((x, ch) => { const r = convolve(x, RN[ch]); return x.map((v, i) => v + 0.6 * amt * r[i]); });
 
 const demos = [

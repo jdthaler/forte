@@ -6,7 +6,7 @@ import { QNMBank, keyVoice, uFromSpin } from '../blackhole/src/ringdown-model.js
 import { RingdownEngine } from '../blackhole/src/ringdown-engine.js';
 import { DEFAULTS } from '../blackhole/src/ringdown-params.js';
 import { roomIR } from '../shared/impulses.js';
-import { convolve, writeWav, FS_SHIM } from './audio-util.mjs';
+import { convolve, writeWav, FS_SHIM, webAudioIR } from './audio-util.mjs';
 
 const FS = 48000;
 const bank = new QNMBank(JSON.parse(readFileSync(new URL('../blackhole/data/qnm-table.json', import.meta.url))));
@@ -27,8 +27,7 @@ function render(P0, seconds, events) {
   return [L, R];
 }
 const room = roomIR(FS_SHIM(FS), 2.2);
-const unit = (d) => { let e = 0; for (const v of d) e += v * v; return d.map((v) => v / Math.sqrt(e)); };
-const RM = [unit(room.getChannelData(0)), unit(room.getChannelData(1))];
+const RM = webAudioIR(room, FS); // as the page's ConvolverNode scales it
 const finish = (out, amt = 0.25) => out.map((x, ch) => { const r = convolve(x, RM[ch]); return x.map((v, i) => v + 0.6 * amt * r[i]); });
 const D = { ...DEFAULTS };
 const phrase = (t0, vel = 0.9) => [[0, 57], [0.35, 60], [0.7, 64], [1.05, 69], [1.4, 72], [1.75, 76], [2.1, 69], [2.45, 64], [2.8, 45]].map(([t, k]) => [t0 + t, k, vel]);

@@ -118,3 +118,6 @@ body[data-instrument] .kb-help { align-items: center; }
   body[data-instrument] .kb-help > span:has(kbd), body[data-instrument] #keyboard .k-label { display: none; }
   body[data-instrument] #keyboard .wk.mapped::before { display: none; }
 }
+
+/* toasts: announced, never in the way of the keys */
+body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--kb-h, 115px) + 64px); max-width: min(90vw, 560px); }

@@ -1,5 +1,7 @@
 // ringdown-worklet.js — AudioWorklet wrapper (ringdown-engine.js is added first).
 
+import { runGuarded } from '../../shared/guard.js';
+
 class RingdownProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
@@ -18,7 +20,7 @@ class RingdownProcessor extends AudioWorkletProcessor {
     const out = outputs[0];
     if (!out || !out.length) return true;
     const L = out[0], R = out.length > 1 ? out[1] : this.spare;
-    this.engine.process(L, R, L.length);
+    runGuarded(this, L, R, L.length, () => this.engine.allOff());
     if (++this.blocks >= 48) { this.port.postMessage({ type: 'stats', voices: this.engine.voices.length }); this.blocks = 0; }
     return true;
   }

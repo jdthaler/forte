@@ -62,5 +62,5 @@ export const PRESETS = [
   { name: 'Dephasing: no way back', p: { dephase: 3 } },
   { name: 'Fixed n̄: chords revive in polyrhythm', p: { lock: false, nbar: 60 } },
   { name: 'Three levels: a chord of Bohr lines', p: { sigma: 0.6, detector: 'x' } },
-  { name: 'Tight packet: bright, brief, many echoes', p: { sigma: 4.5 } },
+  { name: 'Tight packet: bright, brief, many echoes', p: { sigma: 4 } },
 ];

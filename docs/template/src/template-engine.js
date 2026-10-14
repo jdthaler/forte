@@ -63,7 +63,9 @@ export class TemplateEngine {
         L[i] += gl * s; R[i] += gr * s;
       }
     }
-    this.voices = this.voices.filter((v) => v.level > 1e-4);
+    let j = 0; // drop finished voices in place (no allocation on the audio thread)
+    for (const v of this.voices) if (v.level > 1e-4) this.voices[j++] = v;
+    this.voices.length = j;
   }
 }
 

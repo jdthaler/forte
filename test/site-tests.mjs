@@ -2,7 +2,7 @@
 // Run: node test/site-tests.mjs
 
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { INSTRUMENTS, SECTIONS, FORTE_VERSION } from '../shared/registry.js';
 
 let failures = 0;
@@ -53,6 +53,23 @@ test('every demo in examples/index.json exists', () => {
   const index = JSON.parse(read('examples/index.json'));
   for (const [id, list] of Object.entries(index)) for (const d of list) assert.ok(has(`examples/${id}/${d.file}`), `${id}/${d.file}`);
 });
+
+console.log('parameters and presets');
+for (const i of ready) {
+  const file = readdirSync(new URL(`${i.id}/src/`, R)).find((f) => /params\.js$/.test(f));
+  const mod = await import(new URL(`${i.id}/src/${file}`, R));
+  test(`${i.name}: presets use real parameters, with values in range`, () => {
+    const params = new Map(mod.GROUPS.flatMap((g) => g.params).map((p) => [p.id, p]));
+    for (const pr of mod.PRESETS) for (const [id, v] of Object.entries(pr.p)) {
+      const p = params.get(id);
+      if (!p) continue; // instruments may keep non-slider state in presets (e.g. drawbars)
+      if (p.type === 'select') assert.ok(p.options.some(([k]) => k === v), `${pr.name}: ${id} = ${v} is not an option`);
+      else if (p.type === 'checkbox') assert.equal(typeof v, 'boolean', `${pr.name}: ${id}`);
+      else if (typeof v === 'number') assert.ok(v >= p.min - 1e-9 && v <= p.max + 1e-9, `${pr.name}: ${id} = ${v} outside [${p.min}, ${p.max}]`);
+    }
+    for (const p of params.values()) if (p.type !== 'select' && p.type !== 'checkbox' && typeof p.def === 'number') assert.ok(p.def >= p.min && p.def <= p.max, `default of ${p.id}`);
+  });
+}
 
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');
 process.exit(failures ? 1 : 0);

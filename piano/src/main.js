@@ -50,10 +50,10 @@ const engineParams = () => ({ gainV: P.gainV, gainH: P.gainH, gainT: P.gainT, da
 // ---------------------------------------------------------------------------
 // audio
 
-let audio = null, audioStarting = null;
+let audio = null, audioStarting = null, live = false; // live: the context has resumed; until then notes queue in order
 
 function startAudio() {
-  if (audio) {
+  if (live) {
     if (audio.ctx.state !== 'running') audio.ctx.resume();
     return Promise.resolve(audio);
   }
@@ -94,6 +94,7 @@ function startAudio() {
     node.port.postMessage({ type: 'sustain', on: sustain });
     spectrum.setAnalyser(analyser);
     if (ctx.state !== 'running') await ctx.resume();
+    live = true;
     $('#start').textContent = `Audio on · ${(ctx.sampleRate / 1000).toFixed(1)} kHz`;
     $('#start').classList.add('running');
     return audio;
@@ -117,7 +118,7 @@ function onWorklet(m) {
     el.textContent = `CPU ${(m.load * 100).toFixed(0)} % · ${m.voices} voices · ${m.modes} modes`;
     el.classList.toggle('hot', m.load > 0.7);
   } else if (m.type === 'error') {
-    toast(`${noteName(m.key)}: ${m.message} — voice silenced`);
+    toast(m.key !== undefined ? `${noteName(m.key)}: ${m.message} — voice silenced` : m.message);
   }
 }
 
@@ -141,8 +142,8 @@ function noteOff(key) {
   if (n > 0) { sounding.set(key, n); return; }
   sounding.delete(key);
   keyboardView.set(key, false);
-  if (audio) audio.node.port.postMessage({ type: 'noteOff', key });
-  else if (audioStarting) audioStarting.then((a) => a.node.port.postMessage({ type: 'noteOff', key }));
+  if (live) audio.node.port.postMessage({ type: 'noteOff', key });
+  else if (audioStarting) audioStarting.then((a) => a.node.port.postMessage({ type: 'noteOff', key }), () => {});
 }
 
 function setSustain(on) {
@@ -150,7 +151,8 @@ function setSustain(on) {
   const el = $('#sus');
   el.textContent = on ? 'on' : 'off';
   el.className = on ? 'on' : 'off';
-  if (audio) audio.node.port.postMessage({ type: 'sustain', on });
+  if (live) audio.node.port.postMessage({ type: 'sustain', on });
+  else if (audioStarting) audioStarting.then((a) => a.node.port.postMessage({ type: 'sustain', on }), () => {});
 }
 
 function panic() {
@@ -184,14 +186,17 @@ function keyLabels() {
 }
 
 function typingTarget(t) {
-  return t && (t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !['range', 'checkbox'].includes(t.type)));
+  return t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !['range', 'checkbox'].includes(t.type)));
 }
 
 window.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || typingTarget(e.target)) return;
-  const onSlider = e.target && e.target.tagName === 'INPUT';
+  // a focused <select> would swallow note keys (or type-ahead into a preset): hand them back
+  if (e.target?.tagName === 'SELECT') { if (e.code === 'Space' || codeToKey(e.code) !== null) e.target.blur(); else return; }
+  const onSlider = e.target?.tagName === 'INPUT' && e.target.type === 'range';
   if (e.code === 'Space') {
     e.preventDefault();
+    if (e.isTrusted) spaceHeld = true;
     if (!e.repeat) setSustain(true);
     return;
   }
@@ -214,15 +219,21 @@ window.addEventListener('keydown', (e) => {
 });
 
 window.addEventListener('keyup', (e) => {
-  if (e.code === 'Space') { setSustain(false); return; }
+  if (e.code === 'Space') { if (e.isTrusted) spaceHeld = false; setSustain(false); return; }
   const key = held.get(e.code);
   if (key !== undefined) { held.delete(e.code); noteOff(key); }
 });
 
-window.addEventListener('blur', () => {
+// Losing focus means no keyup will come: release held keys and a held Space bar
+// (the on-screen pedal sends synthetic events and keeps its own state).
+let spaceHeld = false;
+function letGo() {
   for (const key of held.values()) noteOff(key);
   held.clear();
-});
+  if (spaceHeld) { spaceHeld = false; setSustain(false); }
+}
+window.addEventListener('blur', letGo);
+document.addEventListener('visibilitychange', () => { if (document.hidden) letGo(); });
 
 function shiftOctave(d) {
   const nb = base + d;
@@ -246,7 +257,7 @@ const velFromMidi = (v) => 0.25 * 24 ** (v / 127); // 0.25 … 6 m/s hammer spee
 
 function initMIDI() {
   if (!navigator.requestMIDIAccess) {
-    $('#midi').textContent = 'Web MIDI unsupported (use Chrome/Edge)';
+    $('#midi').textContent = 'No Web MIDI in this browser (try Chrome, Edge or Firefox)';
     return;
   }
   navigator.requestMIDIAccess().then((acc) => {
