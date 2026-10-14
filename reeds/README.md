@@ -287,3 +287,93 @@ tools/reeds-slot-table.mjs            node tools/reeds-slot-table.mjs → reeds/
   re-voices the treble.
 * **The frame stop is lossless,** and only the slot point (1.5 mm from the
   tip) touches it.
+
+## Prior art and references
+
+### The original instrument and its inventors
+
+Benjamin F. Miessner patented electrostatic pickups for struck vibrators in
+the early 1930s. His later reed-piano patents, and those of Clifford W.
+Andersen, were assigned to Wurlitzer.
+
+* Miessner, B. F. (1933). "Method and apparatus for the production of
+  music." US 1,929,027.
+  [Google Patents](https://patents.google.com/patent/US1929027A/en):
+  among its arrangements, a struck vibrator and a fixed plate charged from
+  a DC source through a resistance that keeps the charge nearly constant,
+  so the vibration appears as an AC voltage across the capacity.
+* Andersen, C. W. (1961). "Electronic piano." US 2,974,555 (Wurlitzer,
+  filed 1955).
+  [Google Patents](https://patents.google.com/patent/US2974555A/en):
+  vibrating reeds with sheet-metal pickups capacitively coupled to them and
+  shaped to balance the fundamental against the harmonics.
+* Miessner, B. F. (1960). "Electronic piano." US 2,942,512 (Wurlitzer).
+  [Google Patents](https://patents.google.com/patent/US2942512A/en):
+  reed and pickup arrangements in which the reed–pickup capacity
+  variation, departing from a sinusoid within each cycle, generates the
+  partials.
+* Miessner, B. F. (1962). "Electronic piano." US 3,038,363 (Wurlitzer).
+  [Google Patents](https://patents.google.com/patent/US3038363A/en):
+  tuned cantilever reeds and an electrostatic pickup arranged so that the
+  reed modulates the capacity asymmetrically.
+
+### Physics and engineering literature
+
+* Laura, P. A. A., Pombo, J. L. & Susemihl, E. A. (1974). "A note on the
+  vibrations of a clamped-free beam with a mass at the free end."
+  *J. Sound Vib.* 37(2), 161–168.
+  [doi:10.1016/S0022-460X(74)80325-1](https://doi.org/10.1016/S0022-460X%2874%2980325-1)
+* Han, S. M., Benaroya, H. & Wei, T. (1999). "Dynamics of transversely
+  vibrating beams using four engineering theories." *J. Sound Vib.*
+  225(5), 935–988.
+  [doi:10.1006/jsvi.1999.2257](https://doi.org/10.1006/jsvi.1999.2257)
+* Sader, J. E. (1998). "Frequency response of cantilever beams immersed in
+  viscous fluids with applications to the atomic force microscope."
+  *J. Appl. Phys.* 84(1), 64–76.
+  [doi:10.1063/1.368002](https://doi.org/10.1063/1.368002)
+* Chaigne, A. & Askenfelt, A. (1994). "Numerical simulations of piano
+  strings. I. A physical model for a struck string using finite difference
+  methods." *J. Acoust. Soc. Am.* 95(2), 1112–1118.
+  [doi:10.1121/1.408459](https://doi.org/10.1121/1.408459)
+* Chatziioannou, V. & van Walstijn, M. (2015). "Energy conserving schemes
+  for the simulation of musical instrument contact dynamics."
+  *J. Sound Vib.* 339, 262–279.
+  [doi:10.1016/j.jsv.2014.11.017](https://doi.org/10.1016/j.jsv.2014.11.017)
+* Pfeifle, F. & Münster, M. (2017). "Tone production of the Wurlitzer and
+  Rhodes e-pianos." In A. Schneider (ed.), *Studies in Musical Acoustics
+  and Psychoacoustics*, Springer, 75–107.
+  [doi:10.1007/978-3-319-47292-8_3](https://doi.org/10.1007/978-3-319-47292-8_3):
+  high-speed camera measurements and finite-difference models of both
+  instruments.
+
+### Earlier models and syntheses
+
+Academic:
+
+* Pfeifle, F. (2017). "Real-time physical model of a Wurlitzer and Rhodes
+  electric piano." *Proc. 20th Int. Conf. Digital Audio Effects (DAFx-17)*,
+  Edinburgh, 17–24.
+  [DAFx archive](https://dafx.de/paper-archive/details/W0D0fMDJBUxiacAi_398wg):
+  the reed as a non-uniform cantilever with large-deflection effects, its
+  capacitance curve computed from the electric field on slices through the
+  reed and pickup geometry, and the output taken as the current
+  u₀ dC/dt at constant supply voltage; finite-difference schemes on FPGA
+  hardware, compared with measurements (modelled).
+
+Software and instruments:
+
+* [EVP88](https://help.apple.com/logicpro/mac/9.1.6/en/logicpro/instruments/chapter_9_section_1.html)
+  (Apple, Logic Pro): component modelling of Rhodes, Wurlitzer and Hohner
+  Electra pianos, including the reeds and tines in their pickups' fields.
+* [Lounge Lizard EP-5](https://www.applied-acoustics.com/lounge-lizard-ep-5/)
+  (Applied Acoustics Systems): a physical-modelling engine with dedicated
+  reed and tine models.
+* [Pianoteq Electric Pianos](https://www.modartt.com/electric) (Modartt):
+  a physically modelled Vintage Reeds instrument, with presets after the
+  200A.
+* [Wurli V](https://www.arturia.com/products/software-instruments/wurli-v/overview)
+  (Arturia): physical modelling of the reeds, pickups, preamp and output
+  circuit.
+* [Wurly](https://www.audiothing.net/instruments/wurly/) (AudioThing):
+  modelled reed and pickup geometry and electric section, with a mechanical
+  section of models and samples and sampled speakers (hybrid).
