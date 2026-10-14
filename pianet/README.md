@@ -320,25 +320,68 @@ tools/render-pianet.mjs               node tools/render-pianet.mjs → examples/
 * The valve combo is a generic soft clipper and speaker filter, not a model
   of a particular amplifier.
 
-## Sources
+## Prior art and references
 
-* R. D. Blevins, *Formulas for Natural Frequency and Mode Shape* (1979):
+### The original instrument and its inventor
+
+Ernst Zacharias designed the Pianet for Hohner, after his earlier Cembalet.
+The sticky-pad mechanism is described in his patent with Richard Bierl.
+
+* Bierl, R. & Zacharias, E. (1969). "Oscillating generator particularly
+  designed for polyphonic musical instruments." US 3,423,514 (Hohner;
+  German priority 1961).
+  [Google Patents](https://patents.google.com/patent/US3423514A/en):
+  a key-borne pad of soft foam faced with a leathery layer rests on the
+  reed and deflects it; given a pressure-sensitive adhesive face, it drags
+  the reed with it as the key moves until the reed's restoring force
+  breaks the bond.
+* Hohner Pianet history and materials: Wikipedia,
+  [*Hohner Pianet*](https://en.wikipedia.org/wiki/Hohner_Pianet), after
+  Lenhoff, A. & Robertson, D. (2019). *Classic Keys: Keyboard Sounds That
+  Launched Rock Music.* University of North Texas Press,
+  ISBN 978-1-57441-776-0. Models up to 1977 had leather pads on urethane
+  foam, ground stainless reeds and variable-capacitance pickups; the T and
+  M (1977 until production ended around 1983) had moulded silicone pads,
+  rolled spring-steel reeds and electromagnetic pickups.
+* Pianet T pickup coils in series, wound alternately: G.-W. Raes,
+  [notes on the Logos Foundation's robotised Pianet T](https://logosfoundation.org/instrum_gwr/pianet/pianet.html).
+* Electrostatic pickup geometry in the Pianet N: Wikipedia,
+  [*Electrostatic pickup*](https://en.wikipedia.org/wiki/Electrostatic_pickup).
+
+### Physics and engineering literature
+
+* Blevins, R. D. (1979). *Formulas for Natural Frequency and Mode Shape*:
   cantilever with a tip mass.
-* K. Kendall, "The adhesion and surface energy of elastic solids",
-  J. Phys. D 4, 1186 (1971): flat-punch pull-off.
-* A. N. Gent & J. Schultz, "Effect of wetting liquids on the strength of
-  adhesion of viscoelastic materials", J. Adhesion 3, 281 (1972).
-* D. Maugis & M. Barquins, "Fracture mechanics and the adherence of
-  viscoelastic bodies", J. Phys. D 11, 1989 (1978): G − G₀ = G₀ φ(a_T v),
-  φ ∝ v^0.6.
-* C. Zener, "Internal friction in solids II: general theory of thermoelastic
-  internal friction", Phys. Rev. 53, 90 (1938).
-* Hohner Pianet history and materials: Wikipedia, *Hohner Pianet* (after
-  Lenhoff & Robertson, *Classic Keys*, 2019). Models up to 1977 had leather
-  pads on urethane foam, ground stainless reeds and variable-capacitance
-  pickups; the T and M (1977–83) had moulded silicone pads, rolled
-  spring-steel reeds and electromagnetic pickups.
-* Pianet T pickup coils in series, wound alternately: G.-W. Raes, notes on
-  the Logos Foundation's robotised Pianet T (logosfoundation.org).
-* Electrostatic pickup geometry in the Pianet N: Wikipedia, *Electrostatic
-  pickup*.
+* Laura, P. A. A., Pombo, J. L. & Susemihl, E. A. (1974). "A note on the
+  vibrations of a clamped-free beam with a mass at the free end."
+  *J. Sound Vib.* 37(2), 161–168.
+  [doi:10.1016/S0022-460X(74)80325-1](https://doi.org/10.1016/S0022-460X%2874%2980325-1)
+  (the same tip-mass frequency equation).
+* Kendall, K. (1971). "The adhesion and surface energy of elastic solids."
+  *J. Phys. D: Appl. Phys.* 4(8), 1186–1195.
+  [doi:10.1088/0022-3727/4/8/320](https://doi.org/10.1088/0022-3727/4/8/320):
+  flat-punch pull-off.
+* Gent, A. N. & Schultz, J. (1972). "Effect of wetting liquids on the
+  strength of adhesion of viscoelastic material." *J. Adhesion* 3(4),
+  281–294.
+  [doi:10.1080/00218467208072199](https://doi.org/10.1080/00218467208072199)
+* Maugis, D. & Barquins, M. (1978). "Fracture mechanics and the adherence
+  of viscoelastic bodies." *J. Phys. D: Appl. Phys.* 11(14), 1989–2023.
+  [doi:10.1088/0022-3727/11/14/011](https://doi.org/10.1088/0022-3727/11/14/011):
+  G − G₀ = G₀ φ(a_T v), φ ∝ v^0.6.
+* Zener, C. (1937). "Internal friction in solids. I. Theory of internal
+  friction in reeds." *Phys. Rev.* 52(3), 230–235.
+  [doi:10.1103/PhysRev.52.230](https://doi.org/10.1103/PhysRev.52.230)
+* Zener, C. (1938). "Internal friction in solids II. General theory of
+  thermoelastic internal friction." *Phys. Rev.* 53(1), 90–99.
+  [doi:10.1103/PhysRev.53.90](https://doi.org/10.1103/PhysRev.53.90)
+* Horton, N. G. & Moore, T. R. (2009). "Modeling the magnetic pickup of an
+  electric guitar." *Am. J. Phys.* 77(2), 144–150.
+  [doi:10.1119/1.2990663](https://doi.org/10.1119/1.2990663)
+  (a magnetic pickup sensing a moving steel element).
+
+### Earlier models and syntheses
+
+* [Pianoteq Hohner Collection](https://www.modartt.com/hohner_collection)
+  (Modartt): physically modelled Pianet N and Pianet T (with the Clavinet
+  D6 and Electra-Piano), with adjustable pickup position.
