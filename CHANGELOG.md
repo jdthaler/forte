@@ -10,6 +10,51 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-14 — spring keyboard
+
+### Spring Keyboard 0.1.0
+- New instrument: a keyboard of struck steel springs, C2–C6, each a helical
+  spring with a magnetic bead at each end, as in a spring-reverb tank. A
+  mallet taps one bead; the other bead is the pickup.
+- **The waves:** Wittrick's helical rod (bending, twist, stretch and shear,
+  with shear and rotary inertia) solved for every wavenumber as a 6 × 6
+  symmetric eigenproblem, with exact group velocities. Checked against
+  Hoppe's and Michell's ring modes, rigid-body motion and the slinky line
+  (the open-coiled spring's compliance, both low-frequency speeds within
+  10⁻⁵); the reduced thin-spring model agrees at small helix angle (low
+  branch within 0.02 %, F_C within 0.3 %).
+- **F_C and T_D:** the transition frequency where the slow branch ends
+  (0.4 % above Parker & Bilbao's formula in the reduced model) and the echo time
+  T_D = 2L/c₀; below F_C every echo is a rising chirp, above it a falling
+  one, as the spring-reverb measurements describe.
+- **Tuning:** every key is the C4 spring (5.4 mm coil, 0.45 mm wire, 3°,
+  23.6 turns) scaled to its note, its lowest mode first put on the note,
+  then the whole spring rescaled until a virtual-pitch estimate of what is
+  heard (subharmonic summation, Hermes 1988, on the first 0.4 s after an mf
+  strike) lands on it. That corrects a drift of −21 ¢ (C2) to −9 ¢ (C6): the
+  lowest mode now sits 21 ¢ to 5 ¢ sharp. It is recomputed whenever the
+  knobs that shape the sound change. F_C ≈ 16 f₀: 1.07 kHz on C2 to
+  17.0 kHz on C6.
+- **Sound:** modes at k = nπ/L on both acoustic sheets (101–243 per spring
+  below 18 kHz), each weighted by how much it turns (or slides) the beads
+  at both ends; damping from the mounts (a loss per reflection, so the band
+  below F_C rings longest), the steel's loss factor, an oil bath, a hand on
+  the coils (mod wheel) and a felt damper that falls on key-up (sustain
+  holds it off; release velocity sets how fast).
+- **Playable:** one to three springs a key cut a little apart, centred on
+  the note (their echoes blur), coil radius, wire diameter and helix angle (F_C moves; the
+  turning and stretching waves mix), beads driven in rotation or along the
+  axis, bead inertia, mallet contact time, and a Slinky family whose F_C is
+  below hearing, so every echo is a falling whistle.
+- The page solves each key's springs and sends them with the note, so the
+  audio thread never solves an eigenproblem.
+- Views: the echoes of the last strike (a short-window spectrogram from the
+  engine, with the model's arrival times), the dispersion and the round
+  trip's group delay with T_D and F_C, the struck spring slowed down, and a
+  live spectrogram. Seven demos.
+- Performance controls: springs per key, mount loss, hand, mallet, room
+  and volume. Perform shows the echoes and the spectrogram.
+
 ## 2026-10-14 — carillon
 
 ### Carillon 0.1.0

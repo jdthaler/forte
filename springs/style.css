@@ -1,0 +1,7 @@
+/* The page's own palette and any layout beyond shared/instrument.css. */
+:root {
+  --accent: #c0c0d8;
+  --accent-2: #f2b366;
+  --accent-ink: #14141f;
+  --axial: #7fd1c7;
+}

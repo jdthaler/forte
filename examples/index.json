@@ -571,6 +571,36 @@
    "title": "Feed resistor 22 megohm then 1 megohm constant charge vs voltage"
   }
  ],
+ "springs": [
+  {
+   "file": "01-a-tune-on-the-springs.m4a",
+   "title": "A tune on the springs"
+  },
+  {
+   "file": "02-one-spring-struck-at-c2-c3-and-c4.m4a",
+   "title": "One spring struck at c2 c3 and c4"
+  },
+  {
+   "file": "03-one-then-two-then-three-springs.m4a",
+   "title": "One then two then three springs"
+  },
+  {
+   "file": "04-light-mounts-then-an-oil-bath.m4a",
+   "title": "Light mounts then an oil bath"
+  },
+  {
+   "file": "05-the-coil-widens-and-the-chirps-come-down.m4a",
+   "title": "The coil widens and the chirps come down"
+  },
+  {
+   "file": "06-soft-mallet-then-hard-tap.m4a",
+   "title": "Soft mallet then hard tap"
+  },
+  {
+   "file": "07-slinky-whistles.m4a",
+   "title": "Slinky whistles"
+  }
+ ],
  "tines": [
   {
    "file": "01-stage-piano-phrase.m4a",

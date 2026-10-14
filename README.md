@@ -55,9 +55,9 @@ The front page sorts them into four kinds, as here.
 | ✅ | [Black-Hole Keyboard](blackhole/) | Kerr quasinormal modes from the Teukolsky equation, h₊ and h× in stereo |
 | ✅ | [Quantum Keyboard](quantum/) | exact wavepackets in square, Morse, hydrogen-Rydberg, gravitational and harmonic wells: collapse, fractional and full revivals, decoherence |
 | ✅ | [Bubble Organ](bubbles/) | Minnaert bubbles with heat flow, radiation and viscosity; the free surface above raises the pitch; depth, pressure, gas and liquid retune the keyboard |
+| ✅ | [Spring Keyboard](springs/) | struck helical springs in modal form, from Wittrick's helical-rod dispersion: each key's spring cut so its heard pitch lands on the note, every echo a chirp rising to the transition frequency F_C; one to three springs a key, magnetic beads in rotation or along the axis, oil and mount damping, and a Slinky whose whistles fall |
 | 🛠 | Star Keyboard | asteroseismology: stochastically driven p-modes, échelle combs, rotation splitting |
 | 🛠 | Wind Harp | vortex shedding locking onto string harmonics, with hysteresis |
-| 🛠 | Spring Keyboard | dispersive waves on helical springs: every note a chirp |
 
 ✅ playable · 🛠 in the workshop ([build briefs](docs/WORKSHOP.md)). Each instrument's README has its equations,
 numbers, sources, and a list of what is simplified. The same notes open on

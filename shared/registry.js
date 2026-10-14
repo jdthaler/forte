@@ -165,6 +165,12 @@ export const INSTRUMENTS = [
     accent: '#6fb8ff',
   },
   {
+    id: 'springs', name: 'Spring Keyboard', section: 'phenomena', ready: true, version: '0.1.0', trim: 11.5,
+    tagline: 'Struck steel coils, each cut to sound its note; their waves travel at different speeds by pitch, so every echo arrives as a chirp.',
+    physics: 'Helical rods (Wittrick) · dispersion · chirped echoes',
+    accent: '#c0c0d8',
+  },
+  {
     id: 'stars', name: 'Star Keyboard', section: 'phenomena', ready: false,
     tagline: 'Every key a Sun-like star whose oscillations are rung continuously by convection: combs of modes that breathe rather than strike.',
     physics: 'Asteroseismology · stochastically driven modes',
@@ -175,12 +181,6 @@ export const INSTRUMENTS = [
     tagline: 'Strings sung by the wind: shed vortices lock onto a harmonic and hop to the next as the wind rises.',
     physics: 'Vortex shedding · lock-in · wake oscillators',
     accent: '#a8e6a1',
-  },
-  {
-    id: 'springs', name: 'Spring Keyboard', section: 'phenomena', ready: false,
-    tagline: 'Struck coil springs whose waves travel at different speeds by pitch, so every note arrives as a chirp.',
-    physics: 'Helical springs · dispersion',
-    accent: '#c0c0d8',
   },
 ];
 
