@@ -10,6 +10,38 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-14 — pipe organ
+
+### Pipe Organ 0.1.0
+- New instrument, after the Baroque pipe organ: one manual, C–f³ (54
+  keys), with Principal 8′, Octave 4′, Gedackt 8′ (stopped) and a Mixture
+  III of octaves and pure fifths that breaks back at each c. Six pipes a
+  key on Töpfer's normal scale, each a tube in modal form (open 1 : 2 : 3,
+  stopped 1 : 3 : 5) with Levine & Schwinger's open-end correction, a mouth
+  correction from Rayleigh's conductivity of the mouth (1.58 D for a
+  diapason mouth), and wall and radiation losses (Q₁ from 127 to 24).
+- **The jet:** the jet-drive model of Verge et al. and Fabre & Hirschberg.
+  The jet leaves the flue at √(2p/ρ), is bent by the flow through the
+  mouth, carries the bend across the cut-up at 0.4 × its speed (through a
+  low-pass), splits on the labium as a tanh, and drives the pipe with the
+  rate of change of the flow it puts in, less the vortex shedding at the
+  labium. A linear analysis gives every pipe's speaking window in
+  U_j/(fW) and its growth, which the engine matches (10 %, 3 ¢).
+- **Playing:** every key on every stop speaks its fundamental at the
+  default 700 Pa (half level within 410 ms, the bass slowest), tuned to
+  ±0.4 ¢ in the engine. Velocity sets how fast the pallet opens: a fast
+  one brings the upper modes in first, the chiff. More wind (or a lower
+  cut-up) overblows the pipes to the octave (open) or twelfth (stopped),
+  and they come back only far lower, at a fixed U_j/(fW).
+- **The wind:** a reservoir, a trunk with air mass and a chest that every
+  pipe drains, from steady (a Schwimmer) to flexible: big chords sag the
+  wind and a flexible one rings at 5.5 Hz. The pitch hardly follows (5 %
+  less wind: 0.35–2.2 ¢, least for high-Q pipes). A tremulant valve.
+  Stereo from the C and C♯ sides of the chest.
+- Views: the jet in the mouth in slow motion, pressure against flow at the
+  mouth, the chest's wind, and the spectrum with the pipe's modes. Seven
+  demos.
+
 ## 2026-10-14 — free-reed organ
 
 ### Free-Reed Organ 0.1.0

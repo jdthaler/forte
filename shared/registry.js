@@ -92,7 +92,7 @@ export const INSTRUMENTS = [
     accent: '#f4d39b',
   },
   {
-    id: 'pipes', name: 'Pipe Organ', section: 'history', ready: false,
+    id: 'pipes', name: 'Pipe Organ', section: 'history', ready: true, version: '0.1.0', trim: 2,
     after: 'the Baroque pipe organ',
     tagline: 'Air jets flutter against the pipe mouths: each note starts with a chiff, overblows when pushed, and sags when the wind runs short.',
     physics: 'Jet–edge feedback · flue pipes · shared wind',

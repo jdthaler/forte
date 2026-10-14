@@ -26,7 +26,7 @@ lands, the pickup's offset, how fast the black hole spins.
 | ✅ | [Glass Armonica](glass/) | Benjamin Franklin (1761) | wet-finger stick–slip on Rayleigh shell modes; split doublets warble as the bowls turn (Bryan effect); water loading |
 | ✅ | [Pyrophone](pyrophone/) | Frédéric Kastner (1873) | flame-driven Rijke tubes on a subcritical Hopf bifurcation: slow self-excited onsets, hysteresis, warm-up drift |
 | ✅ | [Harpsichord](harpsichord/) | Flemish double-manual (Ruckers) | plectra as tapered cantilevers that catch, bend and slip off stiff strings (implicit contacts with friction); three choirs, coupler, buff and lute stops, a modal soundboard |
-| 🛠 | Pipe Organ | Baroque organ | jet–edge feedback in flue pipes, chiff, overblowing, wind sag |
+| ✅ | [Pipe Organ](pipes/) | Baroque organ | flue pipes as tubes in modal form driven by a delayed, amplified jet that splits on the labium (jet drive with vortex shedding; speaking windows from a linear analysis): chiff with the pallet's speed, overblowing with hysteresis; Principal, Octave, stopped Gedackt and Mixture; a wind chest that sags and breathes, tremulant |
 | 🛠 | Carillon | Flemish carillon (Hemony) | bell shell modes and the strike note: a pitch not in the spectrum |
 | ✅ | [Vibraphone](vibraphone/) | Deagan vibraharp (1927) | undercut bars tuned 1 : 4 : 10 by finite elements, each coupled to a stopped tube; motor-driven discs open and close the tubes (tremolo) |
 | ✅ | [Free-Reed Organ](harmonium/) | harmonium and accordion | brass reeds driven through their slots by the inertia of the air that feeds them (implicit reed–air coupling, thresholds from a linear analysis); musette, 16′ and 4′ ranks, reservoir and expression stop, cassotto |
