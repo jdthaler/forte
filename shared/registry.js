@@ -6,7 +6,7 @@
 // Keep FORTE_VERSION equal to package.json's, and log every bump in
 // CHANGELOG.md (test/site-tests.mjs checks both).
 
-export const FORTE_VERSION = '0.3.1';
+export const FORTE_VERSION = '0.4.0';
 
 export const SECTIONS = [
   { id: 'history', title: 'Instruments from history', blurb: 'Real keyboards — some famous, some forgotten — rebuilt from their physics, with every mechanism exposed as a knob.' },

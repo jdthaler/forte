@@ -151,7 +151,7 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
   /* the title shrinks before the header wraps: one line in landscape, two in portrait */
   body[data-instrument] .brand { flex: 1 1 15rem; min-width: 0; flex-wrap: nowrap; align-items: center; gap: 8px; }
   body[data-instrument] .brand h1 { font-size: 15px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  body[data-instrument] .brand .sub, body[data-instrument] .forte-version { display: none; }
+  body[data-instrument] .brand .sub { display: none; }
   body[data-instrument] [data-forte-nav] { flex: none; gap: 4px; }
   body[data-instrument] .status { gap: 6px; }
   body[data-instrument] > header button { white-space: nowrap; }

@@ -30,7 +30,9 @@ replace the bar physics with yours.
   model has a closed form. Then test that the engine produces what the
   model predicts (pitch, decay, spectrum).
 * **Honest README.** Give the equations, the numbers and their sources,
-  what you can hear, and what is simplified.
+  what you can hear, and what is simplified. The README is also the
+  page's **How it works** notes, so write it for players as well as for
+  developers.
 
 ## Anatomy
 
@@ -60,7 +62,8 @@ Split the model across more files when it grows (`<slug>/src/plate.js`,
 | `views.js` | `fit`, `css`, `animate`, `SpectrumView` (live spectrum + model markers), `ScopeView` |
 | `impulses.js` | `roomIR` (the synthetic room the shell uses) |
 | `registry.js` | the instrument list behind the landing page and the menus |
-| `instrument.css`, `forte.css` | page layout; Forte nav |
+| `notes.js`, `markdown.js` | **How it works**: the page's README in a dialog (button by the title, or a link to `…/#about`) |
+| `instrument.css`, `forte.css` | page layout; Forte nav and notes |
 
 The older five instruments predate the shell and have their own page code.
 New instruments should use the shell.
@@ -151,6 +154,11 @@ To fit in:
 - Start every animation loop with `requestAnimationFrame` and skip
   hidden canvases. `animate(draw, canvas)` does both.
 - Make drawing code survive a tiny canvas.
+- Write the README in the Markdown that `shared/markdown.js` renders for
+  the notes: headings, paragraphs, lists, pipe tables, fenced code, inline
+  code, bold, italics and links. A paragraph indented by two spaces is
+  shown as a display equation, exactly as written. The `## Files` section
+  is left out of the notes. `test/notes-tests.mjs` renders every README.
 - Keep the header to the standard buttons and pills: on a phone it has
   to fit two rows (one in landscape). Wide tables scroll inside their card.
 - Pages that don't use the shell set `data-space="Sustain"` on `<body>`

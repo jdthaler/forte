@@ -9,6 +9,30 @@ release may change the sound or the parameters.
 Each release is tagged in git as `forte-vX.Y.Z` or `<instrument>-vX.Y.Z`,
 for example `piano-v0.1.0`.
 
+## 2026-10-14 — how it works
+
+### Forte 0.4.0
+- Every instrument page has **How it works** next to its name: the
+  instrument's README (its physics, equations, numbers, sources and
+  simplifications) in a dialog, without leaving the page. On a phone it
+  fills the screen, and the button is an ⓘ.
+  - Contents chips jump to each section. Equations are shown as display
+    lines, tables scroll sideways when they are wide, and links to the
+    source go to GitHub. The README's *Files* section, for developers, is
+    left out.
+  - Keys pressed while reading scroll the notes instead of playing the
+    instrument; Escape, **Close** or a click outside closes them.
+  - A link to `…/#about` opens an instrument with its notes showing. Each
+    card on the landing page has a **How it works** link.
+  - The instrument's version (and its changelog link) moved from the
+    header into the notes, which makes room for the button: no header
+    gains a row, and on an iPad the organ's and the Pianet's lose one.
+    Below 1250px wide the button is just its ⓘ.
+- `shared/markdown.js` renders the READMEs: a small Markdown renderer with
+  no dependencies. Its output matches the `marked` library's text and
+  inline markup for every README. `test/notes-tests.mjs` checks the
+  renderer and renders every README.
+
 ## 2026-10-14 — phones
 
 ### Forte 0.3.1
