@@ -71,9 +71,9 @@ export const INSTRUMENTS = [
     accent: '#d79a62',
   },
   {
-    id: 'glass', name: 'Glass Armonica', section: 'history', ready: false,
+    id: 'glass', name: 'Glass Armonica', section: 'history', ready: true, version: '0.1.0',
     after: "Benjamin Franklin's armonica (1761)",
-    tagline: 'Wet fingers on spinning glass bowls: friction drives the shell modes, water tunes them.',
+    tagline: 'Wet fingers on spinning glass bowls: stick–slip friction drives the shell modes, and rotation makes the doublets warble.',
     physics: 'Shell modes · friction · fluid loading',
     accent: '#9fe7ff',
   },

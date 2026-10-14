@@ -59,6 +59,36 @@
    "title": "Bass ff tension glide then none"
   }
  ],
+ "glass": [
+  {
+   "file": "01-adagio-in-c-held-chords.m4a",
+   "title": "Adagio in c held chords"
+  },
+  {
+   "file": "02-treadle-slow-then-fast-warble.m4a",
+   "title": "Treadle slow then fast warble"
+  },
+  {
+   "file": "03-perfect-bowl-then-split-doublet.m4a",
+   "title": "Perfect bowl then split doublet"
+  },
+  {
+   "file": "04-finger-pressure-silent-speaking-squealing.m4a",
+   "title": "Finger pressure silent speaking squealing"
+  },
+  {
+   "file": "05-water-poured-into-a-ringing-bowl.m4a",
+   "title": "Water poured into a ringing bowl"
+  },
+  {
+   "file": "06-dry-fingers-then-wet.m4a",
+   "title": "Dry fingers then wet"
+  },
+  {
+   "file": "07-finger-lifted-free-bowl-precesses.m4a",
+   "title": "Finger lifted free bowl precesses"
+  }
+ ],
  "grand": [
   {
    "file": "01-cp70-ballad.m4a",

@@ -11,6 +11,16 @@ for example `piano-v0.1.0`.
 
 ## 2026-10-13 — new instruments
 
+### Glass Armonica 0.1.0
+- After Franklin's armonica: hemispherical bowls with Rayleigh's
+  inextensional shell modes (n = 2–6). Wall thickness solved for pitch
+  comes out at Franklin's "tenth of an inch".
+- Mode doublets integrated in the rotating bowl's frame, with Coriolis
+  coupling (Bryan effect) and an adjustable split.
+- A wet-skin finger pad with Stribeck friction, solved implicitly.
+- Treadle speed, water loading (French), and sphere-harmonic radiation to
+  two microphones.
+
 ### Tangent Clavier 0.1.0
 - After the Hohner Clavinet D6: the rubber tangent strikes the string and
   clamps it on the anvil (coupled Hertzian contacts, Newton-solved).
