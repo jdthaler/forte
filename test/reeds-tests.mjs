@@ -19,7 +19,10 @@ import { renderEngine } from '../tools/audio-util.mjs';
 const FS = 48000, TAU = 2 * Math.PI;
 let failures = 0;
 const t00 = performance.now();
-function test(name, fn) { try { fn(); console.log('  ok  ', name); } catch (e) { failures++; console.log('  FAIL', name, '\n       ', e.message); } }
+function test(name, fn) {
+  // CPU budgets are set on a desktop machine; shared CI runners are slower and noisy
+  if (process.env.CI && /^CPU|real time|costlier/.test(name)) { console.log('  skip', name, '(timing; skipped on CI)'); return; }
+  try { fn(); console.log('  ok  ', name); } catch (e) { failures++; console.log('  FAIL', name, '\n       ', e.message); } }
 const note = (s) => console.log(`        ${s}`);
 const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const DRY = { output: 'direct', drive: 0, tremDepth: 0 };

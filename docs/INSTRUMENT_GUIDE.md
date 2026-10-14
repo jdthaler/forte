@@ -100,7 +100,9 @@ Rules of thumb:
   implicit/symplectic schemes. Solve nonlinear contacts implicitly
   (Newton), and oversample nonlinear stages when they alias.
 * **Level:** a single forte note peaks around 0.1–0.5, so a chord fits under
-  the shell's limiter. Test it.
+  the shell's limiter. Test it. Loudness across instruments is matched
+  afterwards with the registry's `trim` (dB): run `node tools/loudness.mjs`,
+  set the trim it suggests, and `test/level-tests.mjs` keeps it there.
 * **Stereo** only for a physical reason: two pickups, two mics, the pan
   of the key across the instrument, or h₊/h×.
 
@@ -165,7 +167,12 @@ the whole file under ~30 s. Aim for 10–25 tests that cover:
 5. sane output level, no NaNs, no denormal blow-ups, and silence after
    release;
 6. CPU: a rough timing check that 10 voices render faster than real time
-   by a healthy margin.
+   by a healthy margin. Name it `CPU: …`: timing tests are skipped on CI
+   (`process.env.CI`), whose shared machines are too slow and noisy to
+   hold a desktop budget.
+
+`npm test` runs every suite in parallel (`tools/test-all.mjs`) and
+reports all failures; `node tools/test-all.mjs <name>` runs a subset.
 
 ### Demos
 

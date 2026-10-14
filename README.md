@@ -72,6 +72,11 @@ Each instrument has a physics test suite: Node ≥ 18, no dependencies.
 npm test
 ```
 
+It runs the suites in parallel and reports every failure. It includes a
+site check (registry, versions, presets) and a level check: every
+instrument is trimmed to about the same loudness at its defaults
+(`tools/loudness.mjs`).
+
 You can also run one suite, e.g. `node test/blackhole-tests.mjs`. The
 suites compare the models with independent results: Euler–Bernoulli
 cantilever ratios, Hammond gear tables, published Kerr quasinormal

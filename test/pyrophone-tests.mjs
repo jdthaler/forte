@@ -15,7 +15,10 @@ import { renderEngine } from '../tools/audio-util.mjs';
 
 const FS = 48000;
 let failures = 0;
-function test(name, fn) { try { fn(); console.log('  ok  ', name); } catch (e) { failures++; console.log('  FAIL', name, '\n       ', e.message); } }
+function test(name, fn) {
+  // CPU budgets are set on a desktop machine; shared CI runners are slower and noisy
+  if (process.env.CI && /^CPU|real time|costlier/.test(name)) { console.log('  skip', name, '(timing; skipped on CI)'); return; }
+  try { fn(); console.log('  ok  ', name); } catch (e) { failures++; console.log('  FAIL', name, '\n       ', e.message); } }
 const P = (o = {}) => ({ ...DEFAULTS, drift: 0, ...o });
 const cents = (r) => 1200 * Math.log2(r);
 const BIF = bifurcation(DEFAULTS), F1 = BIF.fam[0], BH = F1.hopf.beta; // BH: the threshold, the unit of the flame power

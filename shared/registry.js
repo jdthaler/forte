@@ -6,7 +6,7 @@
 // Keep FORTE_VERSION equal to package.json's, and log every bump in
 // CHANGELOG.md (test/site-tests.mjs checks both).
 
-export const FORTE_VERSION = '0.2.1';
+export const FORTE_VERSION = '0.3.0';
 
 export const SECTIONS = [
   { id: 'history', title: 'Instruments from history', blurb: 'Real keyboards — some famous, some forgotten — rebuilt from their physics, with every mechanism exposed as a knob.' },
@@ -15,95 +15,95 @@ export const SECTIONS = [
 
 export const INSTRUMENTS = [
   {
-    id: 'piano', name: 'Ribbon Piano', section: 'history', ready: true, version: '0.2.0',
+    id: 'piano', name: 'Ribbon Piano', section: 'history', ready: true, version: '0.2.0', trim: 3,
     after: 'the concert grand',
     tagline: 'Stiff strings, felt hammers and a shared bridge — then swap the strings for square bars, triangular bars or twisting ribbons.',
     physics: 'Modal strings · nonlinear hammers · torsion',
     accent: '#5aa9ff',
   },
   {
-    id: 'grand', name: 'Electric Grand', section: 'history', ready: true, version: '0.2.0',
+    id: 'grand', name: 'Electric Grand', section: 'history', ready: true, version: '0.2.0', trim: 3.5,
     after: 'the Yamaha CP-70',
     tagline: 'A real piano action with no soundboard: piezo pickups under the bridge hear the strings directly.',
     physics: 'Bridge force · piezoelectric pickup',
     accent: '#7fb2ff',
   },
   {
-    id: 'organ', name: 'Tonewheel Organ', section: 'history', ready: true, version: '0.2.0',
+    id: 'organ', name: 'Tonewheel Organ', section: 'history', ready: true, version: '0.2.0', trim: 2,
     after: 'the Hammond B-3 and Leslie',
     tagline: '91 spinning gear-driven wheels, bouncing key contacts, a scanner on an LC delay line and a rotating Doppler horn.',
     physics: 'Gear ratios · shared wheels · Doppler',
     accent: '#f0b35a',
   },
   {
-    id: 'tines', name: 'Tine Piano', section: 'history', ready: true, version: '0.2.0',
+    id: 'tines', name: 'Tine Piano', section: 'history', ready: true, version: '0.2.0', trim: -3,
     after: 'the Fender Rhodes',
     tagline: 'Each key an asymmetric tuning fork of steel tine and brass bar, heard through a nonlinear magnetic pickup.',
     physics: 'Coupled cantilevers · pickup nonlinearity',
     accent: '#ef5a4a',
   },
   {
-    id: 'reeds', name: 'Reed Piano', section: 'history', ready: true, version: '0.2.0',
+    id: 'reeds', name: 'Reed Piano', section: 'history', ready: true, version: '0.2.0', trim: -1,
     after: 'the Wurlitzer 200A',
     tagline: 'Struck steel reeds tuned with solder, sensed as one plate of a charged capacitor.',
     physics: 'Cantilever reeds · electrostatic pickup',
     accent: '#e8a0c8',
   },
   {
-    id: 'clavier', name: 'Tangent Clavier', section: 'history', ready: true, version: '0.2.0',
+    id: 'clavier', name: 'Tangent Clavier', section: 'history', ready: true, version: '0.2.0', trim: 4.5,
     after: 'the Hohner Clavinet',
     tagline: 'A rubber tangent pins the string to an anvil; two magnetic pickups comb-filter the twang.',
     physics: 'Impact on an anvil · pickup position',
     accent: '#c6e36a',
   },
   {
-    id: 'pianet', name: 'Sticky-Pad Piano', section: 'history', ready: true, version: '0.2.0',
+    id: 'pianet', name: 'Sticky-Pad Piano', section: 'history', ready: true, version: '0.2.0', trim: -4.5,
     after: 'the Hohner Pianet',
     tagline: 'No hammers at all: tacky pads grab each reed and let it go.',
     physics: 'Adhesion and release · reed pickup',
     accent: '#ffcf70',
   },
   {
-    id: 'bowed', name: 'Viola Organista', section: 'history', ready: true, version: '0.2.0',
+    id: 'bowed', name: 'Viola Organista', section: 'history', ready: true, version: '0.2.0', trim: 3,
     after: "Leonardo da Vinci's design (1488)",
     tagline: 'Rosined wheels bow the strings while you hold the keys: stick–slip friction, from scratch.',
     physics: 'Friction · Helmholtz motion',
     accent: '#d79a62',
   },
   {
-    id: 'glass', name: 'Glass Armonica', section: 'history', ready: true, version: '0.2.0',
+    id: 'glass', name: 'Glass Armonica', section: 'history', ready: true, version: '0.2.0', trim: 0.5,
     after: "Benjamin Franklin's armonica (1761)",
     tagline: 'Wet fingers on spinning glass bowls: stick–slip friction drives the shell modes, and rotation makes the doublets warble.',
     physics: 'Shell modes · friction · fluid loading',
     accent: '#9fe7ff',
   },
   {
-    id: 'pyrophone', name: 'Pyrophone', section: 'history', ready: true, version: '0.1.0',
+    id: 'pyrophone', name: 'Pyrophone', section: 'history', ready: true, version: '0.2.0', trim: -3.5,
     after: "Frédéric Kastner's flame organ (1873)",
     tagline: 'Flames in glass tubes sing by themselves once they cross a threshold — and remember having sung.',
     physics: 'Thermoacoustics · Hopf bifurcation',
     accent: '#ff7a45',
   },
   {
-    id: 'huygens', name: 'Huygens Keyboard', section: 'new', ready: true, version: '0.2.0',
+    id: 'huygens', name: 'Huygens Keyboard', section: 'new', ready: true, version: '0.2.0', trim: 9.5,
     tagline: 'Relaxation oscillators that pull each other into just intonation — Arnold tongues you can play.',
     physics: 'Pulse-coupled oscillators · mode locking',
     accent: '#ff8a3d',
   },
   {
-    id: 'gongs', name: 'Gong Keyboard', section: 'new', ready: true, version: '0.1.1',
+    id: 'gongs', name: 'Gong Keyboard', section: 'new', ready: true, version: '0.2.0', trim: 7,
     tagline: 'Thin plates whose stiffness grows with amplitude: strike softly for a bell, hard for a crash.',
     physics: 'Von Kármán plates · wave turbulence',
     accent: '#e6c15a',
   },
   {
-    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'new', ready: true, version: '0.2.0',
+    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'new', ready: true, version: '0.2.0', trim: 14,
     tagline: 'Every key a Kerr black hole, ringing in quasinormal modes computed from the Teukolsky equation.',
     physics: 'General relativity · quasinormal modes',
     accent: '#b18cff',
   },
   {
-    id: 'quantum', name: 'Quantum Keyboard', section: 'new', ready: true, version: '0.1.0',
+    id: 'quantum', name: 'Quantum Keyboard', section: 'new', ready: true, version: '0.2.0', trim: 9.5,
     tagline: 'Each key a wavepacket in a potential well: notes that collapse, return an octave up as the packet splits, and revive on the beat.',
     physics: 'Schrödinger equation · quantum revivals',
     accent: '#73e2b8',

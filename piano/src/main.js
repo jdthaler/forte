@@ -6,6 +6,7 @@ import { PianoEngine } from './engine.js';
 import { soundboardIR, roomIR } from '../../shared/impulses.js';
 import { MotionView, SpectrumView, drawSection, FAMILY } from './viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
+import { trimGain } from '../../shared/registry.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'ribbon-piano/params/v1';
@@ -109,7 +110,7 @@ function applyMix() {
   audio.dry.gain.setTargetAtTime(1 - 0.75 * P.soundboard, t, 0.02);
   audio.sbGain.gain.setTargetAtTime(1.1 * P.soundboard, t, 0.02);
   audio.roomGain.gain.setTargetAtTime(0.55 * P.room, t, 0.02);
-  audio.master.gain.setTargetAtTime(P.volume, t, 0.02);
+  audio.master.gain.setTargetAtTime(P.volume * trimGain('piano'), t, 0.02); // level-matched across instruments
 }
 
 function onWorklet(m) {

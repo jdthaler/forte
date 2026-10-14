@@ -5,6 +5,7 @@ import { QNMBank, keyVoice, noteName, KEY_LO, KEY_HI, spinFromU, strainCurve } f
 import { roomIR } from '../../shared/impulses.js';
 import { drawPlane, drawKerr, WaveView, Lazy } from './ringdown-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
+import { trimGain } from '../../shared/registry.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'blackhole-keyboard/params/v1';
@@ -61,7 +62,7 @@ function applyMix() {
   const t = audio.ctx.currentTime;
   audio.tone.frequency.setTargetAtTime(P.tone, t, 0.02);
   audio.roomGain.gain.setTargetAtTime(0.6 * P.room, t, 0.02);
-  audio.master.gain.setTargetAtTime(P.volume, t, 0.02);
+  audio.master.gain.setTargetAtTime(P.volume * trimGain('blackhole'), t, 0.02); // level-matched across instruments
 }
 
 // ---------------------------------------------------------------------------

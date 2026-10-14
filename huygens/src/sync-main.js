@@ -6,6 +6,7 @@ import { soundboardIR, roomIR } from '../../shared/impulses.js';
 import { StairView, RasterView } from './sync-viz.js';
 import { FiringLog } from './lock-analysis.js';
 import { createKeyboard } from '../../shared/keyboard.js';
+import { trimGain } from '../../shared/registry.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'huygens-keyboard/params/v1';
@@ -70,7 +71,7 @@ function applyMix() {
   audio.dry.gain.setTargetAtTime(1 - 0.7 * P.body, t, 0.02);
   audio.bodyGain.gain.setTargetAtTime(1.2 * P.body, t, 0.02);
   audio.roomGain.gain.setTargetAtTime(0.6 * P.room, t, 0.02);
-  audio.master.gain.setTargetAtTime(P.volume, t, 0.02);
+  audio.master.gain.setTargetAtTime(P.volume * trimGain('huygens'), t, 0.02); // level-matched across instruments
 }
 
 let lastTable = 0;

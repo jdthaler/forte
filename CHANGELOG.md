@@ -14,6 +14,73 @@ for example `piano-v0.1.0`.
 An adversarial review of the whole project (six reviewers, one per area)
 found the bugs and inaccuracies below; each fix has a regression test.
 
+### Forte 0.3.0
+- **Level matching:** every instrument is trimmed (registry `trim`) to about
+  −23 LUFS for one default note. The spread was 22 LU. The black hole stays
+  a little quieter so its short chirps keep their headroom.
+  `tools/loudness.mjs` measures this, and `test/level-tests.mjs` enforces it.
+- **Start-up ordering:** messages queue in order until the audio context has
+  resumed, so a quick first note-off can't overtake its note-on (shell and
+  the five older pages).
+- **Engine failures:** an exception or a non-finite sample in any engine
+  zeroes the block, stops the voices and shows a message
+  (`shared/guard.js`), instead of silencing the page or poisoning the reverb.
+- **Touch aftertouch:** pressure from a held key (Apple Pencil, or sliding
+  the finger toward you) reaches the engines as polyphonic aftertouch.
+- **Stale caches:** a page that loads a mix of cached old and new files right
+  after an update offers a reload that refreshes them (`shared/boot.js`).
+- **Demos match the live mix:** render tools scale impulse responses as the
+  browser's ConvolverNode does. Demos were about 9 dB too wet, and the piano
+  soundboard 16 dB too strong.
+- **Keyboard and pedal:** releasing a held Space bar when the window loses
+  focus. Dropdowns no longer swallow note keys. Checkboxes no longer disable
+  the arrow keys.
+- **MIDI mod wheel:** rest is the parameter's default (with an optional
+  range); it used to pull some instruments to the bottom of their range.
+- **Saved state:** stored settings and layout preferences are validated.
+- **Smaller fixes:** canvases no longer reset every frame at fractional
+  pixel ratios; the CPU pill shows the worst block where the audio thread
+  has a fine clock; screen-reader values on sliders; toasts stay clear of
+  the keys.
+- **Tests:** `npm test` runs every suite in parallel and reports all
+  failures. A site test checks presets against their parameters. Timing
+  tests skip on CI, where they had been failing on slower shared machines
+  since 0.2.
+
+### Pyrophone 0.2.0
+- No NaN at maximum bore and damping: overdamped tube modes now take an
+  exact cosh/sinh step.
+- Flame power is set as a multiple of each tube's threshold, with a ceiling
+  below the scream. A wide bore or heavy damping no longer silences every
+  key, and low damping no longer screams. Presets keep their sound. The
+  stored setting was renamed, so old saved values are discarded rather than
+  misread.
+- Released tubes that keep singing no longer drift flat: warm-up follows the
+  singing, not the key.
+
+### Gong Keyboard 0.2.0
+- No energy runaway: the reviewer's settings peaked at 34× full scale, now
+  about 1.1. Forcing is weighted so the scheme conserves the physical
+  energy, substep changes are energy-neutral, and passivity is checked every
+  step.
+- When the nonlinear-voice cap demotes a gong it keeps its pitch, instead of
+  snapping from a +180–570 ¢ glide back to 0.
+- Physical energy is now conserved within a few percent (it grew 1.7–2.6×).
+- Coupling tables are built on the page, not on the audio thread (a slider
+  tick cost up to 4.9 ms there).
+- The "Clamped" rim is relabelled: it is free to slide in its plane, which
+  is why it isn't less nonlinear.
+
+### Quantum Keyboard 0.2.0
+- Always in tune: when the tempo lock would need an impossible n̄, the pitch
+  stays exact and the revival is flagged as off the beat. Some keys were
+  more than an octave out.
+- No DC thump at the start of Electrode notes.
+- A pair budget across voices: 24 hydrogen voices took 66 % of a core, now
+  32 %.
+- README: the fractional-revival harmonics for even q, and revival rates
+  versus times, corrected.
+
 ### Electric Grand 0.2.0
 - New **stretch tuning** (on by default): each octave's 2:1 partials
   coincide, as a tuner would set them (−12 ¢ at E1, +25 ¢ at E7). Unstretched,

@@ -5,6 +5,7 @@ import { buildGenerator, keyAnalysis, keyWheel, percWheel, centsOff, wheelSpec, 
 import { roomIR } from '../../shared/impulses.js';
 import { GeneratorView, LeslieView, OutputView, drawScanner, BAR_COLORS } from './organ-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
+import { trimGain } from '../../shared/registry.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'tonewheel-organ/params/v1';
@@ -76,7 +77,7 @@ function applyMix() {
   if (!audio) return;
   const t = audio.ctx.currentTime;
   audio.roomGain.gain.setTargetAtTime(0.6 * P.room, t, 0.02);
-  audio.master.gain.setTargetAtTime(P.volume, t, 0.02);
+  audio.master.gain.setTargetAtTime(P.volume * trimGain('organ'), t, 0.02); // level-matched across instruments
 }
 
 function onWorklet(m) {
