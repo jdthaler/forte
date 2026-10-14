@@ -41,9 +41,47 @@ tagged; this changelog and the commit titles record them.
   latest bubble's waveform against the model's envelope; Devin's damping
   constants and κ across the keyboard; the live spectrum. Seven demos.
 
-### Forte 0.4.2
+### Forte 0.5.1
 - `tools/loudness.mjs` finds every ready shell-based instrument from the
   registry, so a new instrument no longer needs a line there.
+
+## 2026-10-14 — prior art and credits
+
+### Forte 0.5.0
+- **Prior art and credits.** A new page at `/credits/` (from
+  `docs/PRIOR_ART.md`) credits the field Forte builds on:
+  - the history of physical-modelling synthesis, from Kelly & Lochbaum
+    (1962) and Hiller & Ruiz (1971) to today;
+  - where each technique Forte uses comes from;
+  - the algorithms and data in its shared code (with licences);
+  - about 45 physical-modelling instruments and projects, commercial and
+    open source;
+  - earlier sonifications.
+  About 90 references and 180 links, each checked against a DOI record,
+  publisher, patent or official page. The landing page links to it.
+- Every instrument's README, which is also its **How it works** notes, now
+  ends with **Prior art and references**: the original instrument and its
+  patents, the physics credited to its originators, and earlier models and
+  syntheses (academic and commercial), all verified. Along the way:
+  - several citations were corrected (titles, pages, years and
+    attributions);
+  - the viola organista's "first built in 2013" now credits the bowed
+    keyboards built since Haiden's Geigenwerk (c. 1575);
+  - the "new physics" section no longer implies its phenomena were never
+    used for sound before.
+- `test/site-tests.mjs` checks that each ready instrument's README ends with
+  its prior art, and that the credits page is linked. The instrument guide
+  and template ask for it.
+- The How it works renderer accepts link targets with parentheses, as many
+  DOIs have.
+
+### Glass Armonica 0.2.1
+- The model's comment cites Rayleigh's spherical-shell pages (vol. 1,
+  pp. 395–420), not the sections on bells.
+
+### Black-Hole Keyboard 0.2.1
+- The model's comment credits the amplitude fits in the form used here to
+  Gossan, Veitch & Sathyaprakash (2012).
 
 ## 2026-10-14 — vibraphone
 

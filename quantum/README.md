@@ -129,7 +129,7 @@ unless noted):
   the note goes **silent** (more than 30 dB down, tested). The twelfth sounds at
   T_rev/6 and T_rev/3, and the fifth harmonic at T_rev/10 and T_rev/5. The carpet
   is the Talbot carpet (Berry & Klein 1996).
-* **Morse** (anharmonic molecule). The spectrum is exactly quadratic, so the
+* **Morse** (anharmonic molecule; Morse 1929). The spectrum is exactly quadratic, so the
   revivals are exact too (up to a classical time shift). The *Height in
   the well* knob, η = E(n̄)/D, sets κ for each key: κ = 2(n̄+½)/(1 − √(1−η)).
   Near the bottom the motion is nearly harmonic (with the antenna, the Δn = 2
@@ -141,20 +141,21 @@ unless noted):
   checked against a finite-difference diagonalisation, to 2·10⁻⁴.
 * **Hydrogen Rydberg packet.** Radial packets with l = 1 (one-photon
   excitation from an s state, as in Yeazell, Mallalieu & Stroud 1990).
-  ⟨n|r|n+k⟩ comes from Heisenberg's correspondence principle: the Fourier
+  ⟨n|r|n+k⟩ comes from Heisenberg's correspondence principle (Heisenberg 1925;
+  Percival & Richards 1970; Naccache 1972): the Fourier
   series of a Kepler orbit, r/a = 1 + e²/2 − Σ(2e/k)J′ₖ(ke) cos kM, with
-  a = n_c², n_c = (n+n′)/2 and the Langer eccentricity e = √(1 − (l+½)²/n_c²).
+  a = n_c², n_c = (n+n′)/2 and the Langer (1937) eccentricity e = √(1 − (l+½)²/n_c²).
   Checked against exact integrals of Laguerre radial functions: 0.14 % at
   n = 20, k = 1; 2.5 % at k = 5; errors fall like (k/n)². The cubic term
   degrades the revivals. At t = T_sr/6, j³ ≡ j (mod 6) turns the cubic phases
   into a time shift. If n̄ is a multiple of 4, T_sr/6 = (n̄/8)T_rev is also a
   full or half revival, and the packet comes back nearly whole: a **super-revival**
-  (Bluhm & Kostelecký 1994). The preset (n̄ = 44, σₙ = 1.3, on C3) has
+  (Bluhm & Kostelecký 1995). The preset (n̄ = 44, σₙ = 1.3, on C3) has
   T_rev = 224 ms and T_sr/6 = 1.23 s. The return probability reaches 0.95 at
   T_sr/6 but only 0.80 near T_sr/4. On this scale a real n = 44 atom (T_cl =
   13 ps, T_rev = 380 ps, T_sr = 12.5 ns) is slowed down 6·10⁸ times.
 * **Quantum bouncer** (a neutron or a cold atom bouncing on a mirror in
-  gravity: Gea-Banacloche 1999; neutron states seen by Nesvizhevsky et al.
+  gravity: Gibbs 1975; Gea-Banacloche 1999; neutron states seen by Nesvizhevsky et al.
   2002; atoms bounced by Aminoff et al. 1993). Eₙ = mgℓ|aₙ|, with the Airy
   zeros from A&S Table 10.13 for n ≤ 10 and the asymptotic series 10.4.94
   above (agreeing to 10⁻⁸ on the table). The matrix elements −2ℓ/(zₘ−zₙ)²
@@ -177,8 +178,8 @@ processes act on the density matrix ρ_mn:
 * **Pure dephasing Γ_φ = 1/T_φ**: phase noise on the classical motion. To
   leading order in σₙ/n̄, any noisy parameter of the well (its width, its
   depth, a stray field) shifts the levels linearly in n,
-  δEₙ ≈ ħξ(t)(n − n̄). For white noise this is the Lindblad operator √(2Γ_φ) n̂,
-  and the coherences decay as
+  δEₙ ≈ ħξ(t)(n − n̄). For white noise this is the Lindblad operator √(2Γ_φ) n̂
+  (Lindblad 1976; Gorini, Kossakowski & Sudarshan 1976), and the coherences decay as
 
     ρ_mn ∝ e^(−Γ_φ (m−n)² t).
 
@@ -187,8 +188,9 @@ processes act on the density matrix ρ_mn:
   **erases the fine fractional revivals first, then the half revival, then
   the full one**. The attack, which is over in t_coll ≪ T_φ, is untouched.
   This is the difference between the reversible collapse (the quantised
-  analogue of an inhomogeneous T₂*, undone by the revival like a spin echo)
-  and irreversible decoherence. The tests check e^(−T_rev/T_φ) for the
+  analogue of an inhomogeneous T₂*, undone by the revival like a spin echo,
+  Hahn 1950) and irreversible decoherence (Zeh 1970; Zurek 1981; Joos & Zeh
+  1985). The tests check e^(−T_rev/T_φ) for the
   fundamental at the revival, < 10⁻⁶ for the 3rd harmonic, and a 97 %
   intact attack.
 
@@ -301,15 +303,197 @@ tools/render-quantum.mjs               node tools/render-quantum.mjs → example
 * The views ignore T₁ (the carpet is normalised to the surviving population)
   and are strobed.
 
-## References
+## Prior art and references
 
-* I. Sh. Averbukh, N. F. Perelman, Phys. Lett. A 139, 449 (1989): fractional revivals.
-* R. W. Robinett, Phys. Rep. 392, 1 (2004): quantum wave packet revivals (time scales, the box, the bouncer).
-* M. V. Berry, S. Klein, J. Mod. Opt. 43, 2139 (1996): integer, fractional and fractal Talbot effects; M. V. Berry, I. Marzoli, W. Schleich, Physics World 14(6), 39 (2001): quantum carpets.
-* J. A. Yeazell, M. Mallalieu, C. R. Stroud Jr., Phys. Rev. Lett. 64, 2007 (1990): collapse and revival of a Rydberg wave packet.
-* R. Bluhm, V. A. Kostelecký, Phys. Rev. A 50, R4445 (1994): super-revivals; R. Bluhm, V. A. Kostelecký, J. A. Porter, Am. J. Phys. 64, 944 (1996).
-* S. Vasan, R. J. Cross, J. Chem. Phys. 78, 3869 (1983); J. A. C. Gallas, Phys. Rev. A 21, 1829 (1980): Morse matrix elements.
-* M. J. J. Vrakking, D. M. Villeneuve, A. Stolow, Phys. Rev. A 54, R37 (1996): fractional revivals of a molecular wave packet.
-* J. Gea-Banacloche, Am. J. Phys. 67, 776 (1999): the quantum bouncing ball. V. V. Nesvizhevsky et al., Nature 415, 297 (2002). C. G. Aminoff et al., Phys. Rev. Lett. 71, 3083 (1993).
-* P. F. Naccache, J. Phys. B 5, 1308 (1972): correspondence-principle matrix elements.
-* M. Abramowitz, I. A. Stegun, *Handbook of Mathematical Functions*, §10.4: Airy zeros.
+The physics this instrument plays is that of the work below. Every work cited
+above is listed here, with its DOI or a stable link.
+
+### The physics, credited to its originators
+
+**Collapse and revival**
+
+* Jaynes, E. T. & Cummings, F. W. (1963). "Comparison of quantum and
+  semiclassical radiation theories with application to the beam maser."
+  *Proc. IEEE* 51(1), 89–109.
+  [doi:10.1109/PROC.1963.1664](https://doi.org/10.1109/PROC.1963.1664).
+* Eberly, J. H., Narozhny, N. B. & Sanchez-Mondragon, J. J. (1980). "Periodic
+  spontaneous collapse and revival in a simple quantum model." *Phys. Rev.
+  Lett.* 44(20), 1323–1326.
+  [doi:10.1103/PhysRevLett.44.1323](https://doi.org/10.1103/PhysRevLett.44.1323).
+  Collapse and revival in the Jaynes–Cummings model.
+* Parker, J. & Stroud, C. R. (1986). "Coherence and decay of Rydberg wave
+  packets." *Phys. Rev. Lett.* 56(7), 716–719.
+  [doi:10.1103/PhysRevLett.56.716](https://doi.org/10.1103/PhysRevLett.56.716).
+  Revivals predicted for Rydberg wavepackets.
+* Alber, G., Ritsch, H. & Zoller, P. (1986). "Generation and detection of
+  Rydberg wave packets by short laser pulses." *Phys. Rev. A* 34(2),
+  1058–1064.
+  [doi:10.1103/PhysRevA.34.1058](https://doi.org/10.1103/PhysRevA.34.1058).
+* Rempe, G., Walther, H. & Klein, N. (1987). "Observation of quantum collapse
+  and revival in a one-atom maser." *Phys. Rev. Lett.* 58(4), 353–356.
+  [doi:10.1103/PhysRevLett.58.353](https://doi.org/10.1103/PhysRevLett.58.353).
+* ten Wolde, A., Noordam, L. D., Lagendijk, A. & van Linden van den Heuvell,
+  H. B. (1988). "Observation of radially localized atomic electron wave
+  packets." *Phys. Rev. Lett.* 61(18), 2099–2101.
+  [doi:10.1103/PhysRevLett.61.2099](https://doi.org/10.1103/PhysRevLett.61.2099).
+* Averbukh, I. Sh. & Perelman, N. F. (1989). "Fractional revivals:
+  universality in the long-term evolution of quantum wave packets beyond the
+  correspondence principle dynamics." *Phys. Lett. A* 139(9), 449–453.
+  [doi:10.1016/0375-9601(89)90943-2](https://doi.org/10.1016/0375-9601%2889%2990943-2).
+  The fractional revivals of p/q copies.
+* Nauenberg, M. (1989). "Quantum wave packets on Kepler elliptic orbits."
+  *Phys. Rev. A* 40(2), 1133–1136.
+  [doi:10.1103/PhysRevA.40.1133](https://doi.org/10.1103/PhysRevA.40.1133).
+* Yeazell, J. A., Mallalieu, M. & Stroud, C. R. (1990). "Observation of the
+  collapse and revival of a Rydberg electronic wave packet." *Phys. Rev. Lett.*
+  64(17), 2007–2010.
+  [doi:10.1103/PhysRevLett.64.2007](https://doi.org/10.1103/PhysRevLett.64.2007).
+* Yeazell, J. A. & Stroud, C. R. (1991). "Observation of fractional revivals in
+  the evolution of a Rydberg atomic wave packet." *Phys. Rev. A* 43(9),
+  5153–5156.
+  [doi:10.1103/PhysRevA.43.5153](https://doi.org/10.1103/PhysRevA.43.5153).
+* Bluhm, R. & Kostelecký, V. A. (1994). "Quantum defects and the long-term
+  behavior of radial Rydberg wave packets." *Phys. Rev. A* 50(6),
+  R4445–R4448.
+  [doi:10.1103/PhysRevA.50.R4445](https://doi.org/10.1103/PhysRevA.50.R4445).
+  What quantum defects do to the revivals of an alkali atom.
+* Bluhm, R. & Kostelecký, V. A. (1995). "Long-term evolution and revival
+  structure of Rydberg wave packets for hydrogen and alkali-metal atoms."
+  *Phys. Rev. A* 51(6), 4767–4786.
+  [doi:10.1103/PhysRevA.51.4767](https://doi.org/10.1103/PhysRevA.51.4767).
+  Super-revivals.
+* Bluhm, R., Kostelecký, V. A. & Porter, J. A. (1996). "The evolution and
+  revival structure of localized quantum wave packets." *Am. J. Phys.* 64(7),
+  944–953. [doi:10.1119/1.18304](https://doi.org/10.1119/1.18304).
+* Leichtle, C., Averbukh, I. Sh. & Schleich, W. P. (1996). "Generic structure
+  of multilevel quantum beats." *Phys. Rev. Lett.* 77(19), 3999–4002.
+  [doi:10.1103/PhysRevLett.77.3999](https://doi.org/10.1103/PhysRevLett.77.3999).
+* Vrakking, M. J. J., Villeneuve, D. M. & Stolow, A. (1996). "Observation of
+  fractional revivals of a molecular wave packet." *Phys. Rev. A* 54(1),
+  R37–R40. [doi:10.1103/PhysRevA.54.R37](https://doi.org/10.1103/PhysRevA.54.R37).
+  Half and quarter revivals in the B state of Br₂.
+* Aronstein, D. L. & Stroud, C. R. (1997). "Fractional wave-function revivals
+  in the infinite square well." *Phys. Rev. A* 55(6), 4526–4537.
+  [doi:10.1103/PhysRevA.55.4526](https://doi.org/10.1103/PhysRevA.55.4526).
+* Robinett, R. W. (2004). "Quantum wave packet revivals." *Phys. Rep.*
+  392(1–2), 1–119.
+  [doi:10.1016/j.physrep.2003.11.002](https://doi.org/10.1016/j.physrep.2003.11.002).
+  The review behind the time scales, the box and the bouncer here.
+
+**The Talbot effect and quantum carpets**
+
+* Talbot, H. F. (1836). "Facts relating to optical science. No. IV."
+  *Phil. Mag.* 9(56), 401–407.
+  [doi:10.1080/14786443608649032](https://doi.org/10.1080/14786443608649032).
+* Rayleigh, Lord (1881). "On copying diffraction-gratings, and on some
+  phenomena connected therewith." *Phil. Mag.* 11(67), 196–205.
+  [doi:10.1080/14786448108626995](https://doi.org/10.1080/14786448108626995).
+* Kinzel, W. (1995). "Bilder elementarer Quantenmechanik." *Phys. Bl.* 51(12),
+  1190–1191.
+  [doi:10.1002/phbl.19950511215](https://doi.org/10.1002/phbl.19950511215).
+* Berry, M. V. & Klein, S. (1996). "Integer, fractional and fractal Talbot
+  effects." *J. Mod. Opt.* 43(10), 2139–2164.
+  [doi:10.1080/09500349608232876](https://doi.org/10.1080/09500349608232876).
+* Großmann, F., Rost, J.-M. & Schleich, W. P. (1997). "Spacetime structures in
+  simple quantum systems." *J. Phys. A* 30(9), L277–L283.
+  [doi:10.1088/0305-4470/30/9/004](https://doi.org/10.1088/0305-4470/30/9/004).
+* Berry, M. V., Marzoli, I. & Schleich, W. (2001). "Quantum carpets, carpets of
+  light." *Physics World* 14(6), 39–46.
+  [doi:10.1088/2058-7058/14/6/30](https://doi.org/10.1088/2058-7058/14/6/30).
+
+**The wells and their matrix elements**
+
+* Morse, P. M. (1929). "Diatomic molecules according to the wave mechanics.
+  II. Vibrational levels." *Phys. Rev.* 34(1), 57–64.
+  [doi:10.1103/PhysRev.34.57](https://doi.org/10.1103/PhysRev.34.57).
+* Gallas, J. A. C. (1980). "Some matrix elements for Morse oscillators."
+  *Phys. Rev. A* 21(6), 1829–1834.
+  [doi:10.1103/PhysRevA.21.1829](https://doi.org/10.1103/PhysRevA.21.1829).
+* Vasan, V. S. & Cross, R. J. (1983). "Matrix elements for Morse oscillators."
+  *J. Chem. Phys.* 78(6), 3869–3871.
+  [doi:10.1063/1.445164](https://doi.org/10.1063/1.445164).
+* Gibbs, R. L. (1975). "The quantum bouncer." *Am. J. Phys.* 43(1), 25–28.
+  [doi:10.1119/1.10024](https://doi.org/10.1119/1.10024).
+* Aminoff, C. G., Steane, A. M., Bouyer, P., Desbiolles, P., Dalibard, J. &
+  Cohen-Tannoudji, C. (1993). "Cesium atoms bouncing in a stable gravitational
+  cavity." *Phys. Rev. Lett.* 71(19), 3083–3086.
+  [doi:10.1103/PhysRevLett.71.3083](https://doi.org/10.1103/PhysRevLett.71.3083).
+* Gea-Banacloche, J. (1999). "A quantum bouncing ball." *Am. J. Phys.* 67(9),
+  776–782. [doi:10.1119/1.19124](https://doi.org/10.1119/1.19124).
+* Nesvizhevsky, V. V. et al. (2002). "Quantum states of neutrons in the Earth's
+  gravitational field." *Nature* 415, 297–299.
+  [doi:10.1038/415297a](https://doi.org/10.1038/415297a).
+* Abramowitz, M. & Stegun, I. A. (eds.) (1964). *Handbook of Mathematical
+  Functions.* NBS Applied Mathematics Series 55. §10.4: Airy functions and
+  their zeros (10.4.94). Its successor, the NIST DLMF, gives the same in
+  [§9.9](https://dlmf.nist.gov/9.9).
+* Heisenberg, W. (1925). "Über quantentheoretische Umdeutung kinematischer und
+  mechanischer Beziehungen." *Z. Phys.* 33(1), 879–893.
+  [doi:10.1007/BF01328377](https://doi.org/10.1007/BF01328377).
+* Langer, R. E. (1937). "On the connection formulas and the solutions of the
+  wave equation." *Phys. Rev.* 51(8), 669–676.
+  [doi:10.1103/PhysRev.51.669](https://doi.org/10.1103/PhysRev.51.669).
+* Percival, I. C. & Richards, D. (1970). "A correspondence principle for
+  strongly coupled states." *J. Phys. B* 3(8), 1035–1046.
+  [doi:10.1088/0022-3700/3/8/005](https://doi.org/10.1088/0022-3700/3/8/005).
+* Naccache, P. F. (1972). "Matrix elements and correspondence principles."
+  *J. Phys. B* 5(7), 1308–1319.
+  [doi:10.1088/0022-3700/5/7/008](https://doi.org/10.1088/0022-3700/5/7/008).
+
+**Decoherence and dephasing**
+
+* Hahn, E. L. (1950). "Spin echoes." *Phys. Rev.* 80(4), 580–594.
+  [doi:10.1103/PhysRev.80.580](https://doi.org/10.1103/PhysRev.80.580).
+* Zeh, H. D. (1970). "On the interpretation of measurement in quantum theory."
+  *Found. Phys.* 1(1), 69–76.
+  [doi:10.1007/BF00708656](https://doi.org/10.1007/BF00708656).
+* Lindblad, G. (1976). "On the generators of quantum dynamical semigroups."
+  *Commun. Math. Phys.* 48(2), 119–130.
+  [doi:10.1007/BF01608499](https://doi.org/10.1007/BF01608499).
+* Gorini, V., Kossakowski, A. & Sudarshan, E. C. G. (1976). "Completely
+  positive dynamical semigroups of N-level systems." *J. Math. Phys.* 17(5),
+  821–825. [doi:10.1063/1.522979](https://doi.org/10.1063/1.522979).
+* Zurek, W. H. (1981). "Pointer basis of quantum apparatus: into what mixture
+  does the wave packet collapse?" *Phys. Rev. D* 24(6), 1516–1525.
+  [doi:10.1103/PhysRevD.24.1516](https://doi.org/10.1103/PhysRevD.24.1516).
+* Joos, E. & Zeh, H. D. (1985). "The emergence of classical properties through
+  interaction with the environment." *Z. Phys. B* 59(2), 223–243.
+  [doi:10.1007/BF01725541](https://doi.org/10.1007/BF01725541).
+* Zurek, W. H. (1991). "Decoherence and the transition from quantum to
+  classical." *Physics Today* 44(10), 36–44.
+  [doi:10.1063/1.881293](https://doi.org/10.1063/1.881293).
+* Zurek, W. H. (2003). "Decoherence, einselection, and the quantum origins of
+  the classical." *Rev. Mod. Phys.* 75(3), 715–775.
+  [doi:10.1103/RevModPhys.75.715](https://doi.org/10.1103/RevModPhys.75.715).
+
+### Earlier sonification and music projects
+
+* [Quantum Music](http://quantummusic.org/) (Institute of Musicology SASA,
+  Belgrade, with LP Duo and partners, 2015–2018; continued as Beyond Quantum
+  Music, 2019–22): new hybrid keyboard instruments and a sound library drawn
+  from quantum-physics experiments and formulas, for concerts and an
+  installation.
+* Miranda, E. R. (ed.) (2022). *Quantum Computer Music: Foundations, Methods
+  and Advanced Concepts.* Springer.
+  [doi:10.1007/978-3-031-13909-3](https://doi.org/10.1007/978-3-031-13909-3).
+* [QuTune](https://github.com/iccmr-quantum) (ICCMR, University of Plymouth):
+  open-source tools for making music with quantum computers.
+* Miranda, E. R., Thomas, P. & Itaboraí, P. V. (2023). "Q1Synth: a quantum
+  computer musical instrument." *Appl. Sci.* 13(4), 2386.
+  [doi:10.3390/app13042386](https://doi.org/10.3390/app13042386).
+* [Variational Quantum Harmonizer](https://github.com/iccmr-quantum/VQH)
+  (Itaboraí, Schwägerl, Aguado Yáñez, Crippa, Jansen, Miranda & Thomas, 2023;
+  [doi:10.5281/zenodo.10206731](https://doi.org/10.5281/zenodo.10206731)):
+  sonifies the variational quantum eigensolver as it runs, on simulators or
+  quantum hardware, for live performance.
+* Rocchesso, D. & Mannone, M. (2020). "A quantum vocal theory of sound."
+  *Quantum Inf. Process.* 19(9), 292.
+  [doi:10.1007/s11128-020-02772-9](https://doi.org/10.1007/s11128-020-02772-9).
+* [1-D Quantum Mechanics](https://www.falstad.com/qm1d/) (Paul Falstad): an
+  interactive applet of superpositions of bound states evolving in the
+  infinite well and other selectable 1-D potentials.
+* [Square Well](https://physics.weber.edu/schroeder/software/SquareWell.html)
+  (Daniel V. Schroeder, Weber State University): a superposition of the eight
+  lowest infinite-well states, set and watched through clock-face phasors.
+* [Superposition states in an infinite square well](https://www.st-andrews.ac.uk/physics/quvis/simulations_html5/sims/SuperpositionStates/SuperpositionStates.html)
+  (QuVis, University of St Andrews): an interactive simulation of the same.

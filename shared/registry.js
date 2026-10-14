@@ -6,11 +6,11 @@
 // Keep FORTE_VERSION equal to package.json's, and log every bump in
 // CHANGELOG.md (test/site-tests.mjs checks both).
 
-export const FORTE_VERSION = '0.4.2';
+export const FORTE_VERSION = '0.5.1';
 
 export const SECTIONS = [
   { id: 'history', title: 'Instruments from history', blurb: 'Real keyboards — some famous, some forgotten — rebuilt from their physics, with every mechanism exposed as a knob.' },
-  { id: 'new', title: 'Instruments only physics can build', blurb: 'Keyboards that could not exist, or never have: synchronising circuits, chaotic plates, black holes and wavefunctions.' },
+  { id: 'new', title: 'Instruments only physics can build', blurb: 'Keyboards made of phenomena rather than mechanisms: synchronising oscillators, nonlinear plates, black holes and wavefunctions, each played from the keys. Several have been modelled or sonified before; see the prior art and credits.' },
 ];
 
 export const INSTRUMENTS = [
@@ -71,7 +71,7 @@ export const INSTRUMENTS = [
     accent: '#d79a62',
   },
   {
-    id: 'glass', name: 'Glass Armonica', section: 'history', ready: true, version: '0.2.0', trim: 0.5,
+    id: 'glass', name: 'Glass Armonica', section: 'history', ready: true, version: '0.2.1', trim: 0.5,
     after: "Benjamin Franklin's armonica (1761)",
     tagline: 'Wet fingers on spinning glass bowls: stick–slip friction drives the shell modes, and rotation makes the doublets warble.',
     physics: 'Shell modes · friction · fluid loading',
@@ -139,7 +139,7 @@ export const INSTRUMENTS = [
     accent: '#e6c15a',
   },
   {
-    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'new', ready: true, version: '0.2.0', trim: 14,
+    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'new', ready: true, version: '0.2.1', trim: 14,
     tagline: 'Every key a Kerr black hole, ringing in quasinormal modes computed from the Teukolsky equation.',
     physics: 'General relativity · quasinormal modes',
     accent: '#b18cff',

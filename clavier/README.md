@@ -9,7 +9,8 @@ the yarn chokes it. Every part of that is integrated live: the impact on the
 anvil, the clamped boundary, the pitch that rises as you press harder, the
 glide of a loud bass note, and the "thunk" on release. A sample could not
 give you the pressure vibrato, the pickup switches on any note, or a
-tangent that bounces.
+tangent that bounces. Other physical models of the Clavinet are listed under
+*Prior art and references*.
 
 Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/clavier/>
 (or locally — see the [main README](../README.md)).
@@ -290,8 +291,8 @@ tools/render-clavier.mjs               node tools/render-clavier.mjs → example
 * **Pickups.** A 1-D exponential field per pickup (continued linearly beyond
   one field depth, a stand-in for the pole's near field) and a fixed 8 mm aperture.
   The upper pickup's tilt is modelled only as a slant in its distance. The
-  coil impedance is flat (Gabrielli et al. measure ±1 dB), and R_p = 10 kΩ
-  is assumed.
+  coil impedance is flat (Gabrielli et al. measure less than 1 dB of
+  variation in its response), and R_p = 10 kΩ is assumed.
 * **Losses are phenomenological.** σ₁ + h f². Gabrielli et al. report
   ripples in the partials' T60 and slow beating on some notes, which they
   don't explain; neither is modelled. Nor is the knock of the tangent
@@ -303,11 +304,76 @@ tools/render-clavier.mjs               node tools/render-clavier.mjs → example
   and the key's flight adds up to 5 ms at pianissimo. That is real physics,
   and it makes the bass slightly late.
 
-Sources: L. Gabrielli, V. Välimäki, H. Penttinen, S. Squartini, S. Bilbao,
-"A digital waveguide-based approach for Clavinet modeling and synthesis",
-*EURASIP J. Adv. Signal Process.* 2013:103 (mechanism, pickups, tone
-networks, inharmonicity, release pitch); L. Remaggi et al., "A pickup model
-for the Clavinet", DAFx-12; the Hohner Clavinet D6 owner's manual;
-K. H. Hunt & F. R. E. Crossley (1975) for the contact damping; R. Craig &
-M. Bampton (1968) for the component modes; G. F. Carrier (1945) for
-tension modulation.
+## Prior art and references
+
+### The original instrument and its inventor
+
+Ernst Zacharias designed the Clavinet for Hohner; his patent describes the
+tangent that clamps the string against an anvil, with the damping on one
+side of it. The D6's pressure response is described in the Hohner Clavinet
+D6 owner's manual.
+
+* Zacharias, E. (1969). "String instruments having a keyboard."
+  US 3,447,410 (Hohner; German priority 1966).
+  [Google Patents](https://patents.google.com/patent/US3447410A/en): the
+  key drives a tangent that clamps the string against an anvil, so that it
+  vibrates on the far side, while a damper acts on the string on the near
+  side only; on release the string leaves the anvil again.
+
+### Physics and engineering literature
+
+* Gabrielli, L., Välimäki, V., Penttinen, H., Squartini, S. & Bilbao, S.
+  (2013). "A digital waveguide-based approach for Clavinet modeling and
+  synthesis." *EURASIP J. Adv. Signal Process.* 2013, 103.
+  [doi:10.1186/1687-6180-2013-103](https://doi.org/10.1186/1687-6180-2013-103):
+  measurements of a D6 (mechanism, pickups, tone networks, inharmonicity,
+  release pitch), the main source for this model.
+* Hunt, K. H. & Crossley, F. R. E. (1975). "Coefficient of restitution
+  interpreted as damping in vibroimpact." *J. Appl. Mech.* 42(2), 440–445.
+  [doi:10.1115/1.3423596](https://doi.org/10.1115/1.3423596): the contact
+  damping.
+* Craig, R. R. & Bampton, M. C. C. (1968). "Coupling of substructures for
+  dynamic analyses." *AIAA J.* 6(7), 1313–1319.
+  [doi:10.2514/3.4741](https://doi.org/10.2514/3.4741): the component
+  modes.
+* Carrier, G. F. (1945). "On the non-linear vibration problem of the
+  elastic string." *Q. Appl. Math.* 3(2), 157–165.
+  [doi:10.1090/qam/12351](https://doi.org/10.1090/qam/12351): tension
+  modulation.
+* Horton, N. G. & Moore, T. R. (2009). "Modeling the magnetic pickup of an
+  electric guitar." *Am. J. Phys.* 77(2), 144–150.
+  [doi:10.1119/1.2990663](https://doi.org/10.1119/1.2990663)
+
+### Earlier models and syntheses
+
+Academic:
+
+* Gabrielli, L., Välimäki, V. & Bilbao, S. (2011). "Real-time emulation of
+  the Clavinet." *Proc. International Computer Music Conference (ICMC
+  2011)*, Huddersfield, 249–252.
+  [Edinburgh Research Explorer](https://www.research.ed.ac.uk/en/publications/real-time-emulation-of-the-clavinet-an-electromechanical-keyboard/):
+  a digital waveguide string with a velocity-dependent polynomial
+  excitation pulse and a beating generator, in Pure Data (modelled).
+* Remaggi, L., Gabrielli, L., de Paiva, R. C. D., Välimäki, V. &
+  Squartini, S. (2012). "A pickup model for the Clavinet." *Proc. 15th Int.
+  Conf. Digital Audio Effects (DAFx-12)*, York.
+  [DAFx archive](https://dafx.de/paper-archive/details/LLNq5mLTHOeoFVjy2lRN-w):
+  the single-coil pickups from inspection and electrical measurement, with
+  a nonlinear magnetic flux, inserted into a waveguide string (modelled).
+* Gabrielli et al. (2013), above: the waveguide model with dispersion,
+  ripple and beating filters, the pickup nonlinearity, and the tone-tab
+  and amplifier filters, running with 10-voice polyphony on an embedded
+  device (modelled).
+
+Software and instruments:
+
+* [EVD6](https://help.apple.com/logicpro/mac/9.1.6/en/logicpro/instruments/chapter_8_section_1.html)
+  (Apple, Logic Pro): component modelling of the D6, including string
+  buzz, key clicks and the pickups.
+* [Clavinet V](https://www.arturia.com/products/software-instruments/clavinet-v/overview)
+  (Arturia): a physically modelled Clavinet.
+* [Pianoteq Hohner Collection](https://www.modartt.com/hohner_collection)
+  (Modartt): a physically modelled Clavinet D6, with its pickup selector.
+* [Model D6](https://www.genuinesoundware.com/?a=showproduct&b=58) (GSi):
+  a physically modelled Clavinet; GSi states that the same engine runs in
+  the Crumar Seven and Mojo 61 keyboards.

@@ -32,7 +32,8 @@ and built a keyboard that moves them apart.
 
 **The tube.** The model is the Galerkin model of a Rijke tube used by
 Balasubramanian & Sujith (2008, *Phys. Fluids* 20, 044103), Juniper (2011,
-*J. Fluid Mech.* 667) and Magri & Juniper (2013, *J. Fluid Mech.* 719).
+*J. Fluid Mech.* 667, 272–308) and Magri & Juniper (2013, *J. Fluid Mech.*
+719, 183–202).
 Lengths are in units of L and time in units of L/c, so every tube obeys the same
 equations. In those units, with acoustic velocity u (in units of the mean draught ū) and
 pressure p,
@@ -278,3 +279,97 @@ tools/render-pyrophone.mjs                  node tools/render-pyrophone.mjs → 
   instrument cannot do (switch it off to hear the difference). The level is
   equalised across the keyboard. The radiation is two point sources with no
   diffraction around the tube.
+
+## Prior art and references
+
+The instrument is Kastner's, the singing tube was found and explained over the
+century before him, and the model is the Rijke-tube model of the
+thermoacoustics literature, used here as published.
+
+### The original instrument and its history
+
+* **Higgins (1777)** found that a hydrogen flame low in a glass tube sounds a
+  note ([Science Museum Group](https://collection.sciencemuseumgroup.org.uk/objects/co5867);
+  Kastner's obituary, below).
+* **Sondhauss (1850)** and **Rijke (1859)**, in the physics list below: tubes
+  sounded by heat, and the heated gauze that sings only in the lower half of
+  the tube.
+* **Frédéric Kastner** patented the pyrophone in 1873; one of his
+  instruments (France, 1873–76) is in the Science Museum Group collection
+  ([object 1876-590](https://collection.sciencemuseumgroup.org.uk/objects/co5867)).
+  * Kastner, F. (1873). *Expériences nouvelles sur les flammes chantantes et
+    invention du pyrophone*. Paris: impr. A. Chaix.
+    [BnF](https://catalogue.bnf.fr/ark:/12148/cb30674558h).
+  * Kastner, F. (1875). *Les flammes chantantes*. Paris: E. Dentu, 117 pp.
+    [BnF](https://catalogue.bnf.fr/ark:/12148/cb30674559v). 3rd ed., *Les
+    flammes chantantes: théorie des vibrations et considérations sur
+    l'électricité* (Paris: Dentu and Lacroix, 1876):
+    [scan](https://archive.org/details/lesflammeschant00librgoog).
+  * Kastner, G. E. F. (1875). "Improvement in pyrophones." US Patent 164,458,
+    filed 24 December 1874, granted 15 June 1875: the sound is made or stopped
+    "by separating or isolating the flames or bringing them together".
+    [Google Patents](https://patents.google.com/patent/US164458).
+  * Anon. (1882). "Frederic Kastner." *Nature* 26, 304 (obituary).
+    [doi:10.1038/026304a0](https://doi.org/10.1038/026304a0).
+* **Trimpin's [FireOrgan](https://annex.exploratorium.edu/AIDS/trimpin.state.html)**
+  (Exploratorium, 1996): flames driving air through hand-blown glass tubes,
+  set off by visitors.
+
+### The physics literature
+
+* Sondhauss, C. (1850). "Ueber die Schallschwingungen der Luft in erhitzten
+  Glasröhren und in gedeckten Pfeifen von ungleicher Weite." *Ann. Phys.* 155,
+  1–34. [doi:10.1002/andp.18501550102](https://doi.org/10.1002/andp.18501550102).
+* Rijke, P. L. (1859). "Notiz über eine neue Art, die in einer an beiden Enden
+  offenen Röhre enthaltene Luft in Schwingungen zu versetzen." *Ann. Phys.*
+  183, 339–343. [doi:10.1002/andp.18591830616](https://doi.org/10.1002/andp.18591830616).
+* Kirchhoff, G. (1868). "Ueber den Einfluss der Wärmeleitung in einem Gase auf
+  die Schallbewegung." *Ann. Phys.* 210, 177–193.
+  [doi:10.1002/andp.18682100602](https://doi.org/10.1002/andp.18682100602).
+* Rayleigh, Lord (1878). "The explanation of certain acoustical phenomena."
+  *Nature* 18, 319–321. [doi:10.1038/018319a0](https://doi.org/10.1038/018319a0).
+* Rayleigh, Lord (1896). *The Theory of Sound*, 2nd ed., vol. 2. London:
+  Macmillan. §§ 322g–322j: the maintenance of vibrations by heat, singing
+  flames, Sondhauss's tubes and Rijke's tube.
+  [archive.org](https://archive.org/details/theoryofsound02raylrich).
+* King, L. V. (1914). "On the convection of heat from small cylinders in a
+  stream of fluid: determination of the convection constants of small platinum
+  wires with applications to hot-wire anemometry." *Phil. Trans. R. Soc. A*
+  214, 373–432. [doi:10.1098/rsta.1914.0023](https://doi.org/10.1098/rsta.1914.0023).
+* Heckl, M. A. (1990). "Non-linear acoustic effects in the Rijke tube."
+  *Acustica* 72, 63.
+* Raun, R. L., Beckstead, M. W., Finlinson, J. C. & Brooks, K. P. (1993). "A
+  review of Rijke tubes, Rijke burners and related devices." *Prog. Energy
+  Combust. Sci.* 19, 313–364.
+  [doi:10.1016/0360-1285(93)90007-2](https://doi.org/10.1016/0360-1285(93)90007-2).
+* Matveev, K. I. (2003). *Thermo-acoustic instabilities in the Rijke tube:
+  experiments and modeling*. PhD thesis, California Institute of Technology.
+* Matveev, K. I. & Culick, F. E. C. (2003). "A study of the transition to
+  instability in a Rijke tube with axial temperature gradient." *J. Sound
+  Vib.* 264, 689–706.
+  [doi:10.1016/S0022-460X(02)01217-8](https://doi.org/10.1016/S0022-460X(02)01217-8).
+* Balasubramanian, K. & Sujith, R. I. (2008). "Thermoacoustic instability in a
+  Rijke tube: non-normality and nonlinearity." *Phys. Fluids* 20, 044103.
+  [doi:10.1063/1.2895634](https://doi.org/10.1063/1.2895634).
+* Juniper, M. P. (2011). "Triggering in the horizontal Rijke tube:
+  non-normality, transient growth and bypass transition." *J. Fluid Mech.*
+  667, 272–308.
+  [doi:10.1017/S0022112010004453](https://doi.org/10.1017/S0022112010004453).
+* Waugh, I. C. & Juniper, M. P. (2011). "Triggering in a thermoacoustic system
+  with stochastic noise." *Int. J. Spray Combust. Dyn.* 3, 225–241.
+  [doi:10.1260/1756-8277.3.3.225](https://doi.org/10.1260/1756-8277.3.3.225).
+* Magri, L. & Juniper, M. P. (2013). "Sensitivity analysis of a time-delayed
+  thermo-acoustic system via an adjoint-based approach." *J. Fluid Mech.* 719,
+  183–202. [doi:10.1017/jfm.2012.639](https://doi.org/10.1017/jfm.2012.639).
+
+### Earlier models and syntheses
+
+The engine is the reduced-order Galerkin model of a Rijke tube with Heckl's
+heat-release law, as published by Balasubramanian & Sujith (2008), Juniper
+(2011) and Magri & Juniper (2013), with Matveev's damping; here it is played
+from a keyboard, with the tuning, warm-up and radiation described above. An
+array of Rijke tubes has been modelled and controlled as an organ before:
+
+* Pučejdl, K., Hurák, Z. & Zemánek, J. (2020). "Rijke organ: modeling and
+  control of array of Rijke tubes." *IFAC-PapersOnLine* 53(2), 8866–8871.
+  [doi:10.1016/j.ifacol.2020.12.1404](https://doi.org/10.1016/j.ifacol.2020.12.1404).

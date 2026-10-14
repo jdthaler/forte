@@ -1,7 +1,10 @@
 # Viola Organista
 
-Leonardo da Vinci's bowed keyboard, sketched in the Codex Atlanticus
-(c. 1488–89) and first built by Sławomir Zubrzycki in 2013. Pressing a key
+Leonardo da Vinci's bowed keyboard, sketched in his notebooks of c. 1488–89
+(the Codex Atlanticus among them), as built by Sławomir Zubrzycki and first
+played by him in Kraków in 2013. Bowed keyboards were built long before, from
+Hans Haiden's Geigenwerk of c. 1575 to Akio Obuchi's of the 1990s (see
+[Prior art](#prior-art-and-references)). Pressing a key
 pulls a steel string down onto a wheel that is already turning. The wheel is
 wrapped in rosined horsehair and driven by a treadle, so the key does not
 strike or pluck the string: it bows it, for as long as you hold it. Every note
@@ -396,24 +399,141 @@ tools/render-bowed.mjs                node tools/render-bowed.mjs → examples/b
   the string losses changes the flattening and so the pitch, as it would on the
   instrument.
 
-## References
+## Prior art and references
 
-Helmholtz, *On the Sensations of Tone* (1863); C. V. Raman, *Indian Assoc.
-Cult. Sci. Bull.* 15 (1918); J. C. Schelleng, "The bowed string and the
-player", *JASA* 53, 26 (1973); M. E. McIntyre & J. Woodhouse, "On the
-fundamentals of bowed-string dynamics", *Acustica* 43, 93 (1979); M. E.
-McIntyre, R. T. Schumacher & J. Woodhouse, "On the oscillations of musical
-instruments", *JASA* 74, 1325 (1983); J. O. Smith, "Physical modeling using
-digital waveguides", *Computer Music J.* 16(4) (1992); D. P. Hess & A. Soom,
-"Friction at a lubricated line contact operating at oscillating sliding
-velocities", *J. Tribology* 112, 147 (1990); J. Woodhouse & A. R. Loach,
-"Torsional behaviour of cello strings", *Acustica* 85 (1999); J. H. Smith &
-J. Woodhouse, "The tribology of rosin", *J. Mech. Phys. Solids* 48, 1633
-(2000); K. Guettler, "On the creation of the Helmholtz motion in bowed
-strings", *Acta Acustica* 88, 970 (2002); J. Woodhouse, "Bowed string
-simulation using a thermal friction model", *Acta Acustica* 89, 355 (2003);
-E. Schoonderwaldt, K. Guettler & A. Askenfelt, "An empirical investigation of
-bow-force limits in the Schelleng diagram", *Acta Acustica* 94, 604 (2008);
-C. E. Wallace, "Radiation resistance of a rectangular panel", *JASA* 51, 946
-(1972); L. Cremer, M. Heckl & B. A. T. Petersson, *Structure-Borne Sound*
-(Springer).
+Everything above stands on earlier work: the instrument is Leonardo's and its
+builders', the physics is the bowed-string literature below, and bowed strings
+have been synthesised by physical modelling for forty years.
+
+### The original instrument and its history
+
+* **Leonardo da Vinci**, sketches of the *viola organista* in his notebooks of
+  c. 1488–89, among them the [Codex Atlanticus](https://codex-atlanticus.ambrosiana.it/)
+  (Biblioteca Ambrosiana, Milan). It was not built in his lifetime. The
+  standard study is E. Winternitz (1982). *Leonardo da Vinci as a Musician*.
+  Yale University Press, pp. 137–167.
+* **Hans Haiden's Geigenwerk** (Nuremberg, c. 1575). The keys pull the strings
+  down onto friction wheels that a treadle or crank keeps turning, five wheels
+  on Haiden's instrument; the player varied the loudness through the wheel
+  speed. It is pictured as the "Nürmbergisch Geigenwerck" in M. Praetorius,
+  *Syntagma musicum* II, *De Organographia* (Wolfenbüttel, 1619), with the
+  plates in *Theatrum Instrumentorum* (1620); English translation by
+  D. Z. Crookes (Clarendon Press, 1986), p. 69.
+* **Fray Raymundo Truchado's Geigenwerk**, inscribed 1625 (the date has been
+  questioned), with four wheels: Musical Instruments Museum, Brussels
+  (no. IV-21).
+* **Akio Obuchi** has built Geigenwerke since 1993, including one after
+  Leonardo's viola organista
+  ([workshop](http://obuchi.music.coocan.jp/Geigenwerk/index-e.htm)). The one
+  he described in 1994 has four wheels, one per octave of a four-octave
+  compass, as this model's registers do: A. Obuchi (1994). "Making a bowed
+  keyboard instrument." *Journal of the American Musical Instrument Society*,
+  111–115. [PDF](https://amis.mircat.org/jamis/1994_111.pdf). He used a
+  version of the viola organista in a concert in Italy in 2004
+  ([Classical Music, 2013](https://www.classical-music.com/news/leonardo-da-vincis-viola-organista-played-public)).
+* **Sławomir Zubrzycki** built his viola organista in 2009–2012 and premiered
+  it in recitals at the Royal Kraków Piano Festival in October 2013
+  ([festival](https://www.cracowpianofestival.com/17th-piano-festival-2025/artists-2025/slawomir-zubrzycki_25/)),
+  at the Academy of Music in Kraków.
+
+### The physics literature
+
+* Helmholtz, H. von (1863). *Die Lehre von den Tonempfindungen als
+  physiologische Grundlage für die Theorie der Musik*. Braunschweig. English
+  translation by A. J. Ellis, *On the Sensations of Tone* (1875; 2nd ed. 1885).
+* Raman, C. V. (1918). "On the mechanical theory of the vibrations of bowed
+  strings and of musical instruments of the violin family, with experimental
+  verification of the results: Part I." *Bull. Indian Assoc. Cultiv. Sci.* 15,
+  1–158.
+* Friedlander, F. G. (1953). "On the oscillations of a bowed string." *Proc.
+  Camb. Phil. Soc.* 49, 516–530.
+  [doi:10.1017/S0305004100028681](https://doi.org/10.1017/S0305004100028681).
+* Keller, J. B. (1953). "Bowing of violin strings." *Comm. Pure Appl. Math.*
+  6, 483–495. [doi:10.1002/cpa.3160060404](https://doi.org/10.1002/cpa.3160060404).
+* Wallace, C. E. (1972). "Radiation resistance of a rectangular panel." *J.
+  Acoust. Soc. Am.* 51, 946–952.
+  [doi:10.1121/1.1912943](https://doi.org/10.1121/1.1912943).
+* Schelleng, J. C. (1973). "The bowed string and the player." *J. Acoust. Soc.
+  Am.* 53, 26–41. [doi:10.1121/1.1913322](https://doi.org/10.1121/1.1913322).
+* McIntyre, M. E. & Woodhouse, J. (1979). "On the fundamentals of bowed-string
+  dynamics." *Acustica* 43, 93–108.
+* McIntyre, M. E., Schumacher, R. T. & Woodhouse, J. (1983). "On the
+  oscillations of musical instruments." *J. Acoust. Soc. Am.* 74, 1325–1345.
+  [doi:10.1121/1.390157](https://doi.org/10.1121/1.390157).
+* Cremer, L. (1984). *The Physics of the Violin*, trans. J. S. Allen.
+  [MIT Press](https://mitpress.mit.edu/9780262031028/the-physics-of-the-violin/).
+* Hess, D. P. & Soom, A. (1990). "Friction at a lubricated line contact
+  operating at oscillating sliding velocities." *J. Tribology* 112, 147–152.
+  [doi:10.1115/1.2920220](https://doi.org/10.1115/1.2920220).
+* Pitteroff, R. & Woodhouse, J. (1998). "Mechanics of the contact area between
+  a violin bow and a string," Parts I–III. *Acustica* 84, 543–562, 744–757 and
+  929–946.
+* Woodhouse, J. & Loach, A. R. (1999). "The torsional behaviour of cello
+  strings." *Acustica* 85, 734–740.
+* Smith, J. H. & Woodhouse, J. (2000). "The tribology of rosin." *J. Mech.
+  Phys. Solids* 48, 1633–1681.
+  [doi:10.1016/S0022-5096(99)00067-8](https://doi.org/10.1016/S0022-5096(99)00067-8).
+* Guettler, K. (2002). "On the creation of the Helmholtz motion in bowed
+  strings." *Acta Acustica united with Acustica* 88, 970–985.
+  [PDF](https://knutsacoustics.com/files/actaacustica-on-the-creation.pdf).
+* Woodhouse, J. (2003). "Bowed string simulation using a thermal friction
+  model." *Acta Acustica united with Acustica* 89, 355–368.
+* Woodhouse, J. & Galluzzo, P. M. (2004). "The bowed string as we know it
+  today." *Acta Acustica united with Acustica* 90, 579–589.
+  [PDF](https://euphonics.org/wp-content/uploads/2022/03/BowedStringReview.pdf).
+* Cremer, L., Heckl, M. & Petersson, B. A. T. (2005). *Structure-Borne Sound*,
+  3rd ed. Springer. [doi:10.1007/b137728](https://doi.org/10.1007/b137728).
+* Schoonderwaldt, E., Guettler, K. & Askenfelt, A. (2008). "An empirical
+  investigation of bow-force limits in the Schelleng diagram." *Acta Acustica
+  united with Acustica* 94, 604–622.
+  [doi:10.3813/AAA.918070](https://doi.org/10.3813/AAA.918070).
+
+### Earlier models and syntheses
+
+The stick–slip junction, the waveguide string and the friction curve here
+follow the time-domain bowed-string models of McIntyre, Schumacher & Woodhouse
+(1983, above) and Smith (1986). Earlier physical models and syntheses of bowed
+strings:
+
+* Smith, J. O. (1986). "Efficient simulation of the reed-bore and bow-string
+  mechanisms." *Proc. Int. Computer Music Conf.* (The Hague), 275–280; also in
+  [CCRMA report STAN-M-39](https://ccrma.stanford.edu/STANM/stanms/stanm39/)
+  (1987). The digital-waveguide bowed string.
+* Smith, J. O. (1992). "Physical modeling using digital waveguides." *Computer
+  Music J.* 16(4), 74. [doi:10.2307/3680470](https://doi.org/10.2307/3680470).
+* Woodhouse, J. (1992). "Physical modeling of bowed strings." *Computer Music
+  J.* 16(4), 43. [doi:10.2307/3680468](https://doi.org/10.2307/3680468).
+* Serafin, S., Avanzini, F. & Rocchesso, D. (2003). "Bowed string simulation
+  using an elasto-plastic friction model." *Proc. Stockholm Music Acoustics
+  Conf. (SMAC 2003)*, 95.
+* Serafin, S. (2004). *The sound of friction: real-time models, playability and
+  musical applications*. PhD thesis, Stanford University.
+* Demoucron, M. (2008). *On the control of virtual violins: physical modelling
+  and control of bowed string instruments*. PhD thesis, Université Pierre et
+  Marie Curie (Paris 6).
+* Maestre, E., Spa, C. & Smith, J. O. (2014). "A bowed string physical model
+  including finite-width thermal friction and hair dynamics." *Proc. Int.
+  Computer Music Conf.* (Athens).
+* Desvages, C. & Bilbao, S. (2016). "Two-polarisation physical model of bowed
+  strings with nonlinear contact and friction forces, and application to
+  gesture-based sound synthesis." *Applied Sciences* 6(5), 135.
+  [doi:10.3390/app6050135](https://doi.org/10.3390/app6050135).
+* Smith, J. O. [*Physical Audio Signal Processing*, "Bowed
+  strings"](https://ccrma.stanford.edu/~jos/pasp/Bowed_Strings.html) (CCRMA,
+  online book): the waveguide bowed string and its bow–string junction.
+* [STK `Bowed`](https://ccrma.stanford.edu/software/stk/classstk_1_1Bowed.html)
+  (P. R. Cook & G. P. Scavone, Synthesis ToolKit, 1995–): open-source
+  real-time bowed string after Smith (1986) and McIntyre, Schumacher &
+  Woodhouse (1983).
+* [Modalys](https://support.ircam.fr/docs/Modalys/current/) (IRCAM): a
+  framework for virtual instruments built from physical models, with bowing
+  among its connections between objects.
+* [Sculpture](https://support.apple.com/guide/logicpro/sculpture-overview-lgsia12ea31/mac)
+  (Apple, Logic Pro): a component-modelling string synthesizer whose string can
+  be bowed, plucked or struck.
+* [SWAM Solo Strings](https://audiomodeling.com/bundles/swam-solo-strings)
+  (Audio Modeling): physically modelled violin, viola, cello and double bass,
+  played through a modelled bow–string interaction.
+* [String Studio VS-3](https://www.applied-acoustics.com/string-studio-vs-3/)
+  (Applied Acoustics Systems): a synthesizer whose oscillators are modelled
+  strings excited by picks, bows or hammers.
