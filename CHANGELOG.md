@@ -27,8 +27,10 @@ tagged; this changelog and the commit titles record them.
   follows.
 - **Performance controls:** each instrument's parameters marked
   `perform: true` sit in a strip above the keys, in both modes, so they
-  never move; a checkbox there becomes a stop that lights up. The
-  Controls panel keeps the rest.
+  never move; a checkbox there becomes a stop that lights up. In
+  Discover, a control with a hint has an ⓘ button that opens the hint in
+  a bubble above it (a tap, so it works on a tablet). The Controls panel
+  keeps the rest.
 - **Discover | Perform** on every instrument page. Discover is the page as
   it was. Perform shows only the one or two views each instrument marks
   `data-perform`, side by side (stacked on a tall screen) and filling it,

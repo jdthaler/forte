@@ -72,15 +72,56 @@ const drawerMode = () => narrow.matches && !body.classList.contains('no-views');
 
 // The performance controls live in a strip above the keys in both modes, so nothing
 // moves when the mode changes; the Controls panel keeps the rest. (The page keeps its
-// references to them.) Their hints become tooltips.
+// references to them.) In Discover, a control with a hint gets an ⓘ button that opens
+// the hint in a bubble above it: a tap works where a tooltip would not (iPad, phones).
 const strip = el('div', 'forte-perform');
 strip.setAttribute('role', 'group');
 strip.setAttribute('aria-label', 'Performance controls');
+const bubble = el('div', 'forte-hint-pop');
+bubble.id = 'forte-hint-pop';
+bubble.setAttribute('role', 'note');
+bubble.hidden = true;
+let bubbleFor = null;
+function closeHint() {
+  if (!bubbleFor) return;
+  bubbleFor.setAttribute('aria-expanded', 'false');
+  bubbleFor = null; bubble.hidden = true;
+}
+function openHint(btn, tile, title, text) {
+  if (bubbleFor === btn) { closeHint(); return; }
+  closeHint();
+  bubble.replaceChildren(el('b', '', title), el('span', '', text));
+  if (!bubble.isConnected) body.appendChild(bubble);
+  bubble.hidden = false; bubbleFor = btn;
+  btn.setAttribute('aria-expanded', 'true');
+  // above the control, inside the window
+  const r = tile.getBoundingClientRect(), w = bubble.offsetWidth;
+  bubble.style.left = `${Math.max(8, Math.min(r.left, innerWidth - w - 8))}px`;
+  bubble.style.bottom = `${innerHeight - r.top + 6}px`;
+}
+document.addEventListener('pointerdown', (e) => { if (bubbleFor && !bubble.contains(e.target) && !bubbleFor.contains(e.target)) closeHint(); }, true);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeHint(); });
+window.addEventListener('resize', closeHint);
+document.addEventListener('scroll', closeHint, true);
 function placePerform() {
   if (!sidebar || !footer) return;
   for (const p of sidebar.querySelectorAll('.param[data-perform]')) {
-    const label = p.querySelector('label')?.textContent ?? '', hint = p.querySelector('.hint')?.textContent;
-    if (!p.title) p.title = hint ? `${label}: ${hint}` : label;
+    const lab = p.querySelector('label'), label = lab?.textContent ?? '', hint = p.querySelector('.hint')?.textContent;
+    if (!p.title) p.title = label; // the whole name, when the tile cuts it short
+    if (hint && lab) {
+      const info = button('i');
+      info.className = 'forte-info';
+      info.setAttribute('aria-label', `About ${label}`);
+      info.setAttribute('aria-expanded', 'false');
+      info.setAttribute('aria-controls', bubble.id);
+      info.addEventListener('click', () => { openHint(info, p, label, hint); info.blur(); });
+      // first in the tile's top line: before the label (and the checkbox), or with the
+      // label in a line of its own above a dropdown
+      const row = lab.closest('.row');
+      if (row) row.prepend(info);
+      else if (p.classList.contains('check')) p.prepend(info);
+      else { const head = el('div', 'forte-tile-head'); lab.before(head); head.append(info, lab); }
+    }
     strip.appendChild(p);
   }
   if (strip.childElementCount && !strip.isConnected) footer.prepend(strip);

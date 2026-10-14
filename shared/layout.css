@@ -141,6 +141,25 @@ body[data-instrument] .kb-help { align-items: center; }
 .forte-perform .param.check:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 70%, transparent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
 .forte-perform .param.check:has(input:checked) > label { color: var(--text); }
 
+/* ⓘ on a performance control that has a hint (Discover only): a tap opens the hint in
+   a bubble above it, where a tooltip would need a mouse */
+body[data-instrument] .forte-info {
+  position: relative; flex: none; display: inline-grid; place-items: center;
+  width: 17px; height: 17px; min-height: 0; padding: 0; margin: 0;
+  border-radius: 50%; border: 1.5px solid currentColor; background: transparent; color: var(--muted);
+  font: italic 700 10.5px/1 Georgia, "Iowan Old Style", serif; cursor: pointer;
+}
+body[data-instrument] .forte-info::after { content: ""; position: absolute; inset: -9px; } /* a finger-sized target */
+body[data-instrument] .forte-info:hover, body[data-instrument] .forte-info[aria-expanded="true"] { color: var(--accent); }
+body.perform .forte-info { display: none; }
+.forte-tile-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.forte-hint-pop {
+  position: fixed; z-index: 60; max-width: min(340px, calc(100vw - 16px)); padding: 9px 12px;
+  border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--text);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55); font-size: 12.5px; line-height: 1.45;
+}
+.forte-hint-pop b { display: block; margin-bottom: 3px; color: var(--accent); font-weight: 600; }
+
 details.group:not(:has(.param)) { display: none; }
 
 /* Perform: the chosen views fill the space side by side (stacked when the screen is

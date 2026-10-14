@@ -140,7 +140,9 @@ Mark the controls a player reaches for *while playing* with
 `perform: true`: stops and registrations, tremolo and drive, the mallet
 or the bow, the main physical knob (the black hole's spin), `room` and
 `volume`. They sit in a strip above the keys in both modes, so they never
-move; a checkbox there becomes a stop that lights up. Mark 3–10 of them,
+move; a checkbox there becomes a stop that lights up, and in Discover a
+control with a `hint` gets an ⓘ button that opens it (a tap, not a
+tooltip, so it works on a tablet). Mark 3–10 of them,
 `volume` among them (`test/site-tests.mjs` checks). Leave the physics you
 set once (materials, dimensions, voicing) to the Controls panel and the
 presets.
