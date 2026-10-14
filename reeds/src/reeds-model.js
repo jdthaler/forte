@@ -199,15 +199,27 @@ export function keyModel(m, P, fs = 48000) {
 // a power law in g at fixed y). Returns C(y) in farads on the table's y grid.
 
 export function capCurve(gapMM) {
+  const c = new Float64Array(SLOT_Y.n);
+  fillCap(c, gapMM);
+  return { c, y0: SLOT_Y.min, dy: SLOT_Y.step, n: SLOT_Y.n };
+}
+// The same, written into c (SLOT_Y.n values) without allocating: the engine
+// glides the gap with it while notes sound.
+const LOG_C = SLOT_C.map((row) => Float64Array.from(row, Math.log));
+export function fillCap(c, gapMM) {
   const g = clamp(gapMM, SLOT_GAPS[0], SLOT_GAPS[SLOT_GAPS.length - 1]);
   let i = 0;
   while (i < SLOT_GAPS.length - 2 && g > SLOT_GAPS[i + 1]) i++;
   const u = Math.log(g / SLOT_GAPS[i]) / Math.log(SLOT_GAPS[i + 1] / SLOT_GAPS[i]);
-  const A = SLOT_C[i], B = SLOT_C[i + 1], s = EPS0 * PICKUP.ell;
-  const c = new Float64Array(SLOT_Y.n);
-  for (let k = 0; k < SLOT_Y.n; k++) c[k] = s * Math.exp((1 - u) * Math.log(A[k]) + u * Math.log(B[k]));
-  return { c, y0: SLOT_Y.min, dy: SLOT_Y.step, n: SLOT_Y.n };
+  const A = LOG_C[i], B = LOG_C[i + 1], s = EPS0 * PICKUP.ell;
+  for (let k = 0; k < SLOT_Y.n; k++) c[k] = s * Math.exp((1 - u) * A[k] + u * B[k]);
 }
+
+// The grounded frame above and below the comb (SLOT_GEOM.H = 6 mm from its
+// mid-plane) is also an end stop: a reed swinging that far meets it face-on at
+// |y| = H − h/2 = 5.75 mm. The engine treats it as a stiff, lossless contact.
+// The C(y) table runs one step past it, so the pickup is defined over the whole travel.
+export const STOP = { y: SLOT_GEOM.H - SLOT_GEOM.h / 2, K: 1e6 };
 
 // C, dC/dy and d²C/dy² at height y (m) by Catmull–Rom interpolation of the table.
 export function capAt(T, y) {

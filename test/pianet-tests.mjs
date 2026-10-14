@@ -8,7 +8,7 @@
 import assert from 'node:assert/strict';
 import { unitReed, tipMassRoots } from '../pianet/src/reed.js';
 import {
-  keyReed, Pluck, PlateRail, pullOff, pullOffFast, workOfAdhesion, emFlux, emH2, esCap, releaseCurve, PAD, ES, KEY_LO, KEY_HI,
+  keyReed, Pluck, PlateRail, pullOff, pullOffFast, workOfAdhesion, emFlux, emH2, esCap, releaseCurve, voicingT, PAD, ES, EM_ELL, KEY_LO, KEY_HI,
 } from '../pianet/src/pianet-model.js';
 import { PianetEngine } from '../pianet/src/pianet-engine.js';
 import { GROUPS, DEFAULTS, PRESETS } from '../pianet/src/pianet-params.js';
@@ -21,18 +21,19 @@ const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const cents = (a, b) => 1200 * Math.log2(a / b);
 const dB = (a, b) => 20 * Math.log10(a / b);
 
-// Render through the engine in 128-sample blocks. events: [[t, 'on', key, vel] | [t, 'off', key] | [t, 'sus', on]]
-function render(params, sec, events, msgs = []) {
-  const e = new PianetEngine(FS);
+// Render through the engine in 128-sample blocks.
+// events: [[t, 'on', key, vel] | [t, 'off', key] | [t, 'sus', on] | [t, 'params', P]]
+function render(params, sec, events, msgs = [], fs = FS) {
+  const e = new PianetEngine(fs);
   e.setParams(params);
   e.post = (m) => msgs.push(m);
-  const n = Math.round(sec * FS), L = new Float32Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
-  const ev = events.map(([t, ...r]) => [Math.round(t * FS), ...r]).sort((a, b) => a[0] - b[0]);
+  const n = Math.round(sec * fs), L = new Float32Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
+  const ev = events.map(([t, ...r]) => [Math.round(t * fs), ...r]).sort((a, b) => a[0] - b[0]);
   let j = 0;
   for (let s = 0; s < n; s += bl) {
     while (j < ev.length && ev[j][0] <= s) {
       const [, type, a, b] = ev[j++];
-      if (type === 'on') e.noteOn(a, b); else if (type === 'off') e.noteOff(a); else e.setSustain(a);
+      if (type === 'on') e.noteOn(a, b); else if (type === 'off') e.noteOff(a); else if (type === 'params') e.setParams(a); else e.setSustain(a);
     }
     e.process(bL, bR, bl);
     L.set(bL.subarray(0, Math.min(bl, n - s)), s);
@@ -205,12 +206,33 @@ test('re-tacking: a pad that lands on a moving reed must wait for it to stop bef
   const soon = F(5), rested = F(200);
   assert.ok(soon < 0.75 * rested, `5 ms after landing ${soon.toFixed(2)} N, rested ${rested.toFixed(2)} N`);
 });
+test('sustain: re-pressing a latched key drops its pad, which re-tacks and plucks again (≈ the first note\'s level)', () => {
+  for (const m of [48, 60, 72]) {
+    const pk = (x, a, b) => peak(x.subarray(Math.round(a * FS), Math.round(b * FS)));
+    const ev = [[0, 'sus', true], [0, 'on', m, 0.7], [0.2, 'off', m]];
+    const once = render(P(), 0.65, ev).L, twice = render(P(), 0.65, [...ev, [0.5, 'on', m, 0.7], [0.55, 'off', m]]).L;
+    const first = pk(twice, 0, 0.1), again = pk(twice, 0.5, 0.62), ringing = pk(once, 0.5, 0.62);
+    assert.ok(dB(again, first) > -2.5 && dB(again, ringing) > 5, `${m}: re-press ${dB(again, first).toFixed(1)} dB re the first note, ${dB(again, ringing).toFixed(1)} dB over the ringing note`);
+    // it speaks once the pad has landed and re-tacked: 25–90 ms after the key
+    let t = 0; const thr = 0.5 * again; for (let i = Math.round(0.5 * FS); i < twice.length; i++) if (Math.abs(twice[i] - once[i]) > thr) { t = i / FS - 0.5; break; }
+    assert.ok(t > 0.025 && t < 0.09, `${m}: re-press speaks after ${(t * 1e3).toFixed(0)} ms`);
+  }
+});
 test('the T\'s pole piece is an end stop: a reed swinging past the gap bounces off it', () => {
   const p = new Pluck(keyReed(36, P(), 96000), P(), 96000), g = 0.5e-3;
   p.stop = g; p.press(1);
   let lo = 0;
   for (let i = 0; i < 0.3 * 96000; i++) lo = Math.min(lo, p.step());
   assert.ok(p.hits > 0 && lo > -g - 0.1e-3, `lowest tip ${(lo * 1e3).toFixed(3)} mm, pole at ${-g * 1e3} mm, ${p.hits} samples in contact`);
+});
+test('magnetic pickup, fixed magnet: at small swings the output goes as 1/(ℓ + g)² with the pole gap', () => {
+  const m = 72, f = keyFreq(m), a = Math.round(0.1 * FS), b = Math.round(0.35 * FS);
+  const lvl = (gap) => tone(note(m, P({ gap, tone: 20000 }), 0.1, 0.4), f, a, b);
+  const g = (gap) => EM_ELL + gap * 1e-3 * voicingT(m);
+  for (const gap of [1, 2, 3]) {
+    const meas = dB(lvl(gap), lvl(0.5)), want = 40 * Math.log10(g(0.5) / g(gap));
+    assert.ok(Math.abs(meas - want) < 0.5, `gap ${gap} mm: ${meas.toFixed(2)} dB vs ${want.toFixed(2)} dB`);
+  }
 });
 test('magnetic pickup: a closer pole is louder and barks more', () => {
   const h = (gap) => { const x = note(57, P({ gap, tone: 20000 }), 0.7, 0.5), a = Math.round(0.1 * FS), b = a + 16384; return [tone(x, 220, a, b), dB(tone(x, 440, a, b), tone(x, 220, a, b))]; };
@@ -249,11 +271,53 @@ test('every parameter at its limits: finite, bounded, silent after release', () 
   }
   console.log(`        ${cases.length} cases, loudest 4-note chord peak ${worst.toFixed(2)}`);
 });
-test('level: a forte note peaks between 0.1 and 0.5 on every register, both pickups', () => {
-  for (const pickup of ['em', 'es']) for (const m of [36, 48, 60, 72, 84, 96]) {
-    const pk = peak(note(m, P({ pickup }), 1, 0.4));
-    assert.ok(pk > 0.1 && pk < 0.5, `${pickup} ${m}: ${pk.toFixed(3)}`);
+test('level: a forte note peaks between 0.1 and 0.5 on every register, both pickups, at 44.1 and 48 kHz', () => {
+  for (const fs of [44100, 48000]) for (const pickup of ['em', 'es']) for (const m of [36, 48, 60, 72, 84, 96]) {
+    const pk = peak(render(P({ pickup }), 0.4, [[0, 'on', m, 1]], [], fs).L);
+    assert.ok(pk > 0.1 && pk < 0.5, `${fs} Hz ${pickup} ${m}: ${pk.toFixed(3)}`);
   }
+});
+test('level does not depend on the sample rate (44.1, 48, 96 kHz), either pickup, with or without the combo', () => {
+  for (const o of [{}, { pickup: 'es' }, { amp: 'combo' }]) {
+    const lv = [44100, 48000, 96000].map((fs) => { const { L } = render(P(o), 0.8, [[0, 'on', 60, 0.8]], [], fs); return rms(L, Math.round(0.1 * fs), Math.round(0.7 * fs)); });
+    assert.ok(Math.abs(dB(lv[0], lv[1])) < 0.3 && Math.abs(dB(lv[2], lv[1])) < 0.3, `${JSON.stringify(o)}: ${lv.map((x) => dB(x, lv[1]).toFixed(2)).join(', ')} dB re 48 kHz`);
+  }
+});
+test('knobs glide: moving the pole gap, plate gap or edge, or switching the combo, mid-note does not click', () => {
+  const cases = [[{}, { gap: 0.4 }], [{}, { gap: 2.5 }], [{}, { amp: 'combo', drive: 0.8 }], [{ amp: 'combo' }, { amp: 'off' }], [{}, { pickup: 'es' }],
+    [{ pickup: 'es' }, { plateGap: 0.15 }], [{ pickup: 'es' }, { offset: 0 }]];
+  for (const [base, change] of cases) {
+    const p0 = P(base), c = Math.round(0.3 * FS / 128) * 128;
+    const { L } = render(p0, 0.55, [[0, 'on', 48, 0.7], [0.3, 'params', { ...p0, ...change }]]);
+    // the note's own largest step, before the change and once the glide has settled
+    let typ = 0, jump = 0;
+    for (let i = c - 4800; i < c; i++) typ = Math.max(typ, Math.abs(L[i] - L[i - 1]));
+    for (let i = c + 7200; i < c + 9600; i++) typ = Math.max(typ, Math.abs(L[i] - L[i - 1]));
+    for (let i = c; i < c + 2400; i++) jump = Math.max(jump, Math.abs(L[i] - L[i - 1]));
+    assert.ok(jump < 1.5 * typ, `${JSON.stringify(base)} → ${JSON.stringify(change)}: jump ${(jump / typ).toFixed(2)}× the note's largest step`);
+  }
+});
+test('presets: none is far louder than the default (mf phrase, rms), and chords stay under the limiter', () => {
+  const ph = (o) => {
+    const ev = [], keys = [40, 52, 60, 67, 76, 88];
+    keys.forEach((k, i) => ev.push([i * 0.4, 'on', k, 0.6], [i * 0.4 + 0.35, 'off', k]));
+    [48, 55, 64, 67].forEach((k) => ev.push([2.4, 'on', k, 0.9], [3.4, 'off', k]));
+    const { L } = render(P(o), 3.7, ev);
+    return [rms(L, 0, L.length), peak(L)];
+  };
+  const [ref] = ph({});
+  for (const pr of PRESETS) {
+    const [r, pk] = ph(pr.p);
+    assert.ok(dB(r, ref) < 4.5 && pk < 2, `${pr.name}: ${dB(r, ref).toFixed(1)} dB, chord peak ${pk.toFixed(2)}`);
+  }
+});
+test('hints: a higher rate exponent gives more touch response; stiffer foam is louder in the middle and treble', () => {
+  const lv = (m, o, vel) => rms(note(m, P({ tone: 20000, ...o }), vel, 0.4), Math.round(0.1 * FS), Math.round(0.4 * FS));
+  const range = (m, rate) => dB(lv(m, { rate }, 1), lv(m, { rate }, 0.05));
+  assert.ok(range(60, 1) > range(60, 0.1) + 2 && range(84, 1) > range(84, 0.1) + 2, `C4 ${range(60, 0.1).toFixed(1)} → ${range(60, 1).toFixed(1)} dB`);
+  assert.ok(range(36, 0.1) < 0, `rate-blind bass: ff − pp = ${range(36, 0.1).toFixed(1)} dB`);
+  for (const m of [60, 84]) assert.ok(lv(m, { padK: 0.1 }, 0.7) < lv(m, {}, 0.7) && lv(m, {}, 0.7) < lv(m, { padK: 5 }, 0.7), `${m}: pad stiffness`);
+  assert.ok(lv(36, {}, 0.7) > Math.max(lv(36, { padK: 0.1 }, 0.7), lv(36, { padK: 5 }, 0.7)), 'C2 loudest near the default foam');
 });
 test('CPU: 10 voices render well inside real time', () => {
   const e = new PianetEngine(FS); e.setParams(P());

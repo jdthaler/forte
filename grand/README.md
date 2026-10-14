@@ -37,21 +37,23 @@ also offers a 1/2/3 acoustic-grand stringing.
 
 (Fletcher 1964). The length follows a piano-like L ∝ f^−0.9 in the treble,
 folded into the harp's depth so that the lowest string is 0.68 m. Plain
-steel wire runs from ⌀1.06 mm at C4 to ⌀0.81 mm at E7. Below F3 the strings
-are copper-wound to a tension of 500 N, because a short string needs a lot
-of mass to reach a low pitch. Each key's tension is *solved* so the stiff
-string's fundamental is exactly on 12-TET: T = 4L²f₀²μ − EI k₁². The concert
-scale (*Scale design*) reuses the Ribbon Piano's smoothed concert-grand
-layout. Both use the same steel (E = 200 GPa).
+steel wire runs from ⌀1.06 mm at C4 to ⌀0.81 mm at E7. From E1 to F3
+(keys 28–53) the strings are copper-wound, to a tension of 500 N at their
+12-TET pitch, because a short string needs a lot of mass to reach a low
+pitch. Each key's tension is *solved* so the stiff string's fundamental
+lands exactly on its tuning target f₀: T = 4L²f₀²μ − EI k₁². The target is a
+stretched scale (below). The concert scale (*Scale design*) reuses the
+Ribbon Piano's smoothed concert-grand layout. Both use the same steel
+(E = 200 GPa).
 
 | key | L (cm) | wire | T (N) | B | partial 10 | concert grand: L, B, partial 10 |
 |---|---|---|---|---|---|---|
-| E1 | 68.0 | ⌀1.49 core, wound ⌀5.5 | 499 | 2.0e-3 | +159 ¢ | 198 cm, 5.6e-5, +5 ¢ |
-| E2 | 67.9 | ⌀1.31 core, wound ⌀2.7 | 499 | 1.2e-3 | +100 ¢ | 162 cm, 8.3e-5, +7 ¢ |
-| C3 | 67.1 | ⌀1.21 core, wound ⌀1.7 | 500 | 9.1e-4 | +75 ¢ | 113 cm, 1.9e-4, +16 ¢ |
-| C4 | 52.8 | ⌀1.06 plain | 533 | 8.4e-4 | +69 ¢ | 62 cm, 4.4e-4, +37 ¢ |
+| E1 | 68.0 | ⌀1.49 core, wound ⌀5.5 | 492 | 2.1e-3 | +161 ¢ | 198 cm, 5.6e-5, +5 ¢ |
+| E2 | 67.9 | ⌀1.31 core, wound ⌀2.7 | 496 | 1.3e-3 | +101 ¢ | 162 cm, 8.3e-5, +7 ¢ |
+| C3 | 67.1 | ⌀1.21 core, wound ⌀1.7 | 497 | 9.2e-4 | +75 ¢ | 113 cm, 1.9e-4, +16 ¢ |
+| C4 | 52.8 | ⌀1.06 plain | 532 | 8.4e-4 | +69 ¢ | 62 cm, 4.4e-4, +37 ¢ |
 | A4 | 34.4 | ⌀1.00 plain | 563 | 1.5e-3 | +117 ¢ | 39 cm, 8.6e-4, +71 ¢ |
-| E7 | 6.9 | ⌀0.81 plain | 519 | 1.7e-2 | — | 8 cm, 8.6e-3, — |
+| E7 | 6.9 | ⌀0.81 plain | 535 | 1.6e-2 | — | 8 cm, 8.4e-3, — |
 
 So a short string must be thick and heavily loaded to sound low, and
 B ∝ d⁴/(TL²) punishes exactly that. The CP-70's E1 is 37× more
@@ -59,8 +61,21 @@ inharmonic than a concert grand's. Its 10th partial is 1.6 semitones
 sharp of 10f₁ and its 20th is 5 semitones sharp. That stretched, clangy
 series is the electric grand's bass "zing". Measurements on real pianos show
 the same trend: the smaller the piano, the larger B (Young 1952; Fletcher &
-Rossing, ch. 12). The tensions sit at 13–46 % of breaking stress. *Wire bending
+Rossing, ch. 12). The tensions sit at 13–47 % of breaking stress. *Wire bending
 stiffness* scales EI, and 0 makes the strings ideal and harmonic.
+
+**Stretch tuning.** A stiff string's partial 2 sits above twice its
+fundamental, by s = 1200 log₂(√(1 + 4B)/√(1 + B)) ≈ 2600 B cents, so on this
+scale 12-TET octaves beat: A5–A6 at 10 Hz, C6–C7 at 15 Hz, E6–E7 at 25 Hz. A
+tuner sets each octave beatless instead, with partial 2 of the lower note on
+the fundamental of the upper. *Stretch tuning* (on by default) does the same,
+outward from a temperament octave around A4 (E♭4–D5, A4 at 440 Hz, the
+stretch spread evenly across it), with each key's own B: a Railsback curve.
+On the CP-70 scale it runs from −12 ¢ at E1 through −1.5 ¢ at C4 to +17 ¢ at
+C7 and +25 ¢ at E7. The concert scale, five times less inharmonic in the
+bass, needs −1.5 to +14 ¢. The tests check that every 2:1 octave coincides
+(to 10⁻³ Hz in the model, and within 0.5 Hz in the output at C6–C7 and
+A5–A6), and that with it off every key is within 3 ¢ of 12-TET.
 
 **Strings in modal form.** Each partial n of each unison string, in each
 polarisation, is a damped oscillator advanced with the exact two-pole
@@ -70,7 +85,10 @@ b₃ = 2·10⁻⁹ s (internal friction), raised ×1.5 and ×2.25 for wound stri
 This is the form Chaigne & Askenfelt (1994) use. The unisons are mistuned by
 ±d/2. *Unison mistuning* sets d, and it varies 0.6–1.4× from key to key, the
 way a tuner's errors do. Partials run up to *Highest partial* (10 kHz):
-142 oscillators for E1 and 116 for the bichord C4.
+142 oscillators for E1 and 116 for the bichord C4. A voice stops
+integrating its top partials once each has died below −140 dBFS (until the
+key is struck again), so a held or pedalled note gets cheaper as its treble
+fades (see *CPU* below).
 
 **Hammer.** A felt hammer is a mass on a nonlinear, hysteretic spring,
 F = K[δᵖ + α d(δᵖ)/dt]₊. It uses Chaigne & Askenfelt's graded values (C2 / C4 /
@@ -81,7 +99,10 @@ implicitly every sample, with a scalar Newton iteration against all modes,
 as in `piano/src/engine.js`. Key velocity maps to 0.25–6 m/s (Askenfelt &
 Jansson 1991). At C4 mf (2.3 m/s) the felt is in contact for 2.0 ms and
 peaks at 19 N. Harder felt and faster blows shorten the contact.
-*Strike position* (default L/8) removes the partials with a node there.
+*Strike position* (default 0.12 L, about L/8.3) weakens the partials with a
+node near the hammer, the 8th most. The action needs about 60 ms to bring
+the hammer back for another blow, so a key repeated faster than that (16
+times a second) gets no new blow.
 
 **The bridge, two polarisations, Weinreich.** The string pushes on the
 bridge with
@@ -94,7 +115,13 @@ mode of every unison string in that direction. On its own, a mode drains
 σ_b = G(T + EIkₙ²)/L into the bridge. This is the small-G root of the exact
 end condition tan kL = iG√(Tμ), and the tests check the two against each
 other. Shared, it is Weinreich's (1977) coupled-strings physics. In-phase
-unison motion drains N σ_b, antiphase motion none. The hammer starts both
+unison motion drains N σ_b, antiphase motion none. The engine solves this
+damping implicitly, with the bridge velocity centred on each step (a
+rank-one Sherman–Morrison solve: one scalar per polarisation per sample),
+and sets each mode's recursion so that on its own it decays at exactly
+σ_int + σ_b. A bridge velocity lagged by a sample would drain the top
+partials too weakly (by 30 % at 15 kHz). Every partial up to 15 kHz now
+drains at its model rate, at 44.1 and 48 kHz alike (tested to 3 %). The hammer starts both
 strings in phase, so with a mobile bridge the note first falls fast (the
 prompt sound) and then rings on in what does not reach the bridge (the
 aftersound). Each string vibrates in two polarisations:
@@ -127,12 +154,12 @@ F_H (*Piezo sideways sensitivity*). The element is a capacitor
 first-order high-pass at 1/(2πRC): 34 Hz at 470 kΩ, 723 Hz at 22 kΩ
 (*Preamp input resistance*). The force weights each partial by its slope,
 not its displacement: by n(1 + Bn²)/(1 + B) relative to the displacement,
-or 2√(E T/L) per joule of modal energy. So the piezo hears the strings
-bright. For C4 the spectral centroid of the partials goes from 296 Hz in
+or 2√((T + EIkₙ²)/L) newtons per √J of modal energy. So the piezo hears
+the strings bright. For C4 the spectral centroid of the partials goes from 296 Hz in
 displacement to 429 Hz in bridge force. A short string makes more force per
 joule, but the top octave and a half still takes little energy from the
-hammer, because the felt's contact (0.7–1.5 ms) outlasts the string's period
-(0.4–0.8 ms). Those piezos are trimmed up to +4.5 dB, the way a technician
+hammer, because the felt's contact (0.9–1.3 ms at mf) outlasts the string's
+period (0.4–1.1 ms). Those piezos are trimmed up to +4.5 dB, the way a technician
 voices a scale. The pickups are panned by their place along the bridge to
 the preamp's stereo outputs.
 
@@ -161,7 +188,7 @@ numbers are in the range reported for piano soundboards (e.g. Ege, Boutillon
   conductance Re Y(ωₙ). Its mean over frequency is 1/(8√(Dρh)) = 1.5·10⁻³
   s/kg, the infinite-plate value (Cremer & Heckl); the test finds it within
   5 %. Partials that land on a board resonance drain fast and the rest
-  slowly. On C4, T60 is 1.2 s for partial 6 and 8.9 s for the fundamental.
+  slowly. On C4, T60 is 1.2 s for partial 6 and 9.0 s for the fundamental.
   Near a resonance the drain is capped at what the board itself can
   dissipate, ηω/4: past that, string and board share the energy rather than
   pass it on (Gough 1981).
@@ -172,14 +199,45 @@ numbers are in the range reported for piano soundboards (e.g. Ege, Boutillon
   with an even index nearly cancel themselves, and odd–odd modes radiate as
   monopoles. The board is not baffled, so below c/(2πℓ) ≈ 110 Hz (ℓ = 0.5 m)
   its two faces short-circuit, a first-order high-pass. The microphones hear
-  the plate's acceleration.
+  the plate's acceleration. Each mode's radiation phase is kept as a sign,
+  relative to the board's centre (the delay common to every mode is
+  dropped): monopole-like modes reach both microphones in phase and
+  dipole-like ones in antiphase. On a phrase the two channels correlate at
+  0.95, so the pair sums to mono without loss.
+* **Above the modal band.** The plate's modes are integrated one by one up
+  to 6 kHz. The modes above still radiate, and through each mode's mass line
+  the integrated ones do too. A residual path carries the rest: per
+  microphone, a 4th-order high-pass at the band's edge and six 4th-order
+  band-passes a third of an octave wide (×1.25), up to 3.8 × 6 kHz. Each band's
+  power is the diffuse-field estimate n(f) ω ⟨(Rφ)²⟩/(4η) from the same
+  plate's modes in that band, and the band gains are solved together so
+  their skirts are accounted for. Against the same plate integrated mode by
+  mode to 25 kHz, every band from 6 to 16 kHz is within 1.5 dB for boards
+  9–16 mm thick (tested at 9 and 14 mm). Without the residual the 9 mm board
+  was 1–5 dB short there. The strings drain into the board at the
+  infinite-plate conductance above 6 kHz, as before.
 
 The soundboard costs the strings their sustain. Over eight keys, a note
-falls 23.6 dB in 3 s on the board against 16.7 dB on the frame. It adds the
+falls 23.6 dB in 3 s on the board against 16.8 dB on the frame. It adds the
 Weinreich double decay. It colours the sound: some partials and some notes
-(E4) are loud, others weak, and the hammer's push, passed to the bridge,
+(E♭4) are loud, others weak, and the hammer's push, passed to the bridge,
 knocks the board's low modes. The microphones are trimmed to sit about 4 dB
-below the piezo, so that the board's loudest note stays under the limiter.
+below the frame's piezo (on an mf phrase, −4.2 dB both in mono and in
+stereo), so that the board's loudest note (E♭4, peaking at 0.56 at ff)
+stays under the limiter.
+
+**CPU.** Every oscillator costs about the same, so the engine keeps a
+budget (4000 by default). Past it, the quietest, oldest voices fade out.
+Partials that have died away stop being integrated, so the cost follows
+what is still sounding. In Node on an Apple M2 Max, ten voices take 7–9 %
+of a core, a pedalled 25-note arpeggio 13–16 %, the concert-grand preset
+14–17 % and acoustic stringing to 16 kHz 15–18 % (before: 13, 25, 27 and
+36 %);
+just after a big chord is struck it costs the full count for a moment. On
+the page the budget follows the audio thread's measured load. Over 60 % on
+average, or 90 % in the worst block, it shrinks by a quarter, and under
+30 % it grows back by a tenth. Touch devices, usually slower, start from a
+ceiling of 2400.
 
 ## What to listen for
 
@@ -188,19 +246,21 @@ below the piezo, so that the board's loudest note stays under the limiter.
 1. **CP-70 ballad**: pedalled chords over the short bass strings.
 2. **Piezo, then soundboard (piezo), then soundboard (microphones)**: the
    same C3–G3–E4 chord three times.
-   * On the frame it falls 12 dB in 2 s.
-   * On the soundboard, through the same piezo, it falls 20 dB in 2 s. Only
+   * On the frame it falls 14 dB in 2 s.
+   * On the soundboard, through the same piezo, it falls 18 dB in 2 s. Only
      the bridge changed.
    * Through the microphones you hear the board's resonant colour and knock,
-     and about 4 dB less level.
+     and about 5 dB less level than on the frame.
 3. **Bass: CP-70 strings, then concert-grand strings**: E1, then A1 + E2.
    The short strings' upper partials are stretched by over a semitone, so
    you hear a metallic, clangy zing. The long strings sound round and
    harmonic.
 4. **Weinreich: one string, then two, on a soundboard**: middle C. One
-   string, struck square on, decays as one exponential (5.3 then
-   5.1 dB/s). Two strings with 1.5 ¢ of mistuning and a 10° tilt give a
-   prompt sound at 10.2 dB/s, then an aftersound at 2.8 dB/s.
+   string, struck square on, decays as one exponential (4.9 dB/s
+   throughout, the model's σ_int + σ_b). Two strings with 1.5 ¢ of mistuning
+   and a 10° tilt give a prompt sound at 7.8 dB/s in the first half second,
+   then fall at 4.4 dB/s on average over the next three, through the slow
+   beat of the mistuned pair.
 5. **Strike position**: C3 struck at L/8, then at L/2, then at L/25.
    * At L/2 the even partials vanish: the 250 Hz octave band (the 2nd
      partial) falls by 29 dB, and the note is hollow and clarinet-like.
@@ -209,8 +269,11 @@ below the piezo, so that the board's loudest note stays under the limiter.
    middle −5, treble +7 dB); then a 22 kΩ preamp input, whose 723 Hz
    high-pass takes the body out of the piezo (7 dB quieter, thin).
 7. **Unisons in tune, then honky-tonk**: an A major chord with 0.3 ¢ and
-   then 10 ¢ between each note's two strings. The envelope roughness rises
-   from 0.3 to 1.1 dB. This is the out-of-tune CP-70 sound many remember.
+   then 10 ¢ between each note's two strings. The envelope roughness (the
+   spread of the 20 ms level about its trend) rises from 0.3 to 1.8 dB. This
+   is the out-of-tune CP-70 sound many remember. (With the octaves stretched,
+   A3 and A4 no longer beat against each other; in 12-TET the in-tune take
+   measures 0.95 dB.)
 
 On the page, the slow-motion view replays the focused key's strike. You
 see the kink leave the hammer and reflect, and the bridge force (what the
@@ -220,7 +283,7 @@ displacement and at the transducer. *Why the piezo is bright* plots those
 two (and the microphone's) side by side.
 
 Regenerate the demos with `node tools/render-grand.mjs`. Run the tests with
-`node test/grand-tests.mjs` (23 tests, ~17 s).
+`node test/grand-tests.mjs` (31 tests, ~21 s).
 
 ## Files
 
@@ -229,7 +292,7 @@ grand/index.html, style.css          page
 grand/src/grand-model.js             physics: scale, strings, hammer data, bridge, soundboard (no audio, no DOM)
 grand/src/grand-engine.js            real-time engine: modes, implicit hammer, bridge channels, board, piezo, EQ
 grand/src/grand-params.js            parameters and presets
-grand/src/grand-main.js              page wiring; slow-motion string, modes table, spectrum, partial weights
+grand/src/grand-main.js              page wiring; slow-motion string, modes table, spectrum, partial weights; load-following oscillator budget
 test/grand-tests.mjs                 node test/grand-tests.mjs
 tools/render-grand.mjs               node tools/render-grand.mjs → examples/grand/
 ```
@@ -258,14 +321,19 @@ The engine imports the felt-hammer grading and the concert scale from
   supported rectangle. A real board is crowned, ribbed, orthotropic and
   irregular, and its modes above ~1 kHz localise between ribs. The
   radiation phase of each mode is kept only as a sign. The two microphones
-  are in the far field, with no room. The shell's *Room* adds one.
+  are in the far field, with no room. The shell's *Room* adds one. Above
+  6 kHz the board radiates through the statistical residual. On thin boards
+  (5–7 mm), whose radiation toward the microphones peaks just above 6 kHz
+  and then falls very steeply, it runs up to 9 dB hot between 6 and 12 kHz
+  (without it they were 10–22 dB short).
 * **Hammer and dampers.** The hammer has no shank flex or escapement, and it
   strikes all of a key's strings equally. A real hammer's uneven contact
   also starts the antiphase unison motion directly. The damper is a felt
   pad at 16 % of the length, so partials with a node under it ring on.
   Keys above E6 have no dampers.
-* **Tuning is unstretched.** The fundamentals are on 12-TET. With B this
-  large, a tuner would stretch the CP-70's octaves noticeably.
+* **Stretch tuning is octaves only.** It sets every 2:1 octave beatless, from a
+  temperament octave in which the stretch is spread evenly. A tuner would
+  weigh fifths and the 4:2 and 6:3 octaves too, especially in the bass.
 * The CP-70's tremolo (an electronic amplitude modulation, on some units)
   is left out.
 

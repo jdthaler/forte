@@ -110,8 +110,10 @@ solver uses successive over-relaxation on nested 0.1/0.05/0.025 mm grids,
 and the reed's charge comes from Gauss's law. It is exact for a uniform
 field (tested to 10⁻⁶), and halving its resolution (0.05 mm) changes C by
 only 0.7 % at g = 0.3 mm.
-`tools/reeds-slot-table.mjs` sweeps the reed's height y from −4.5 to +4.5 mm
-at eight gaps from 0.1 to 1.5 mm (18 minutes). The engine interpolates that
+`tools/reeds-slot-table.mjs` sweeps the reed's height y from −5.8 to +5.8 mm
+at eight gaps from 0.1 to 1.5 mm (about 24 minutes). That is the reed's
+whole travel: it meets the frame at ±5.75 mm, and the last row on each side
+only gives the interpolation its neighbour. The engine interpolates the
 table: Catmull–Rom in y, power-law in g, within 3 % of a fresh solve between
 tabulated gaps (tested). At g = 0.3 mm:
 
@@ -126,6 +128,14 @@ tabulated gaps (tested). At g = 0.3 mm:
   parallel-plate value. C(0) grows sixfold as the gap closes from 1.5 to
   0.1 mm, which makes a narrow gap much louder, but the *shape* of C(y), and
   so the bark, hardly changes with the gap.
+
+**The frame is an end stop.** A reed swinging far enough meets the grounded
+frame face-on, at |y| = H − h/2 = 5.75 mm from the comb's mid-plane. The
+engine treats this as a stiff, lossless contact (10⁶ N/m at the slot),
+solved implicitly. As voiced, nothing comes near it: a forte A1 swings out
+to 1.96 mm. Only extreme settings reach it, such as solder ×0.05 or the rest
+height at ±2 mm with the strike near the tip, and the tip then bounces off
+the frame with a clack (tested: it never passes 5.76 mm).
 
 **The bark.** The reed rests 0.3 mm above the comb's mid-plane (**Reed height
 in the slot**), where C(y) is already bending over. A soft note swings
@@ -189,12 +199,22 @@ resonance (130 Hz, Q 0.9), a first-order open-back cancellation below
 110 Hz, −4 dB at 220 Hz, flat to 1.3 kHz, +5.7 dB at 2.6 kHz, −11 dB at
 10 kHz. The bass fundamentals all but vanish and the ear rebuilds them from
 the pickup's harmonics. **Output: direct** is the preamp, DC-blocked at
-12 Hz.
+12 Hz and trimmed 4.4 dB below the speakers' passband: with the bass left
+in, that makes the two outputs about equally loud on a phrase (within
+0.2 dB for the *Direct out, clean* preset). Switching between them
+crossfades over 20 ms, and the speaker filters always run.
 
 **Engine.** The reeds, comb node, tremolo and preamp run at 2× the audio
-rate, then a 47-tap Blackman-sinc decimator. The engine is mono, like the
-instrument. Ten sounding voices take 4 % of one core (Apple M2 Max, Node).
-A voice frees itself once its tip moves less than 3 nm (30 nm once damped).
+rate, then a 47-tap Blackman-sinc decimator (applied folded: it is
+symmetric). The engine is mono, like the instrument. Ten sounding voices
+take 4 % of one core (Apple M2 Max, Node). A voice frees itself once its tip
+moves less than 3 nm (30 nm once damped). *Gap* and *Reed height* glide to
+a new setting with a 20 ms time constant: the slot's rest point and its
+C(y) table move smoothly under the sounding reeds (the table is blended
+from one block to the next), so the knobs do not click. *Solder mass*,
+*Strike point* and *Hammer felt hardness* re-cut the reeds and apply to new
+notes. A key struck again after one of them moved gets a new reed, and its
+old one fades out in about 20 ms.
 
 ## What to listen for
 
@@ -235,7 +255,7 @@ reeds/src/reeds-engine.js             real-time engine (AudioWorklet and Node), 
 reeds/src/reeds-params.js             parameters and presets
 reeds/src/reeds-main.js               page wiring, info and mode table
 reeds/src/reeds-views.js              slow-motion reed and slot, C(y) view
-test/reeds-tests.mjs                  node test/reeds-tests.mjs (22 tests, ~3 s)
+test/reeds-tests.mjs                  node test/reeds-tests.mjs (28 tests, ~4 s)
 tools/render-reeds.mjs                node tools/render-reeds.mjs → examples/reeds/
 tools/reeds-slot-table.mjs            node tools/reeds-slot-table.mjs → reeds/src/slot-table.js
 ```
@@ -262,5 +282,8 @@ tools/reeds-slot-table.mjs            node tools/reeds-slot-table.mjs → reeds/
   200A's schematic, and not measured speaker responses. The power amplifier is
   assumed clean.
 * **The treble is quieter** (about −7 dB at C7 re A3 at the same velocity,
-  through the speakers). A displacement-sensing pickup favours the long bass
-  reeds, and nothing here re-voices the treble.
+  through the speakers; on the direct out a forte C7 peaks at only 0.06). A
+  displacement-sensing pickup favours the long bass reeds, and nothing here
+  re-voices the treble.
+* **The frame stop is lossless,** and only the slot point (1.5 mm from the
+  tip) touches it.

@@ -8,12 +8,13 @@
 import assert from 'node:assert/strict';
 import {
   reedFEM, tipMassRoots, tuneReed, keyModel, capCurve, capAt, pickupNode, electrostaticShift, hammerSpeed,
-  STEEL, REED, PICKUP, KEY_LO, KEY_HI, keyFreq, EPS0, SLOT_GEOM,
+  STEEL, REED, PICKUP, STOP, KEY_LO, KEY_HI, keyFreq, EPS0, SLOT_GEOM,
 } from '../reeds/src/reeds-model.js';
 import { makeSlot, placeReed, solve, reedCharge, slotProfile } from '../reeds/src/slot-field.js';
-import { SLOT_GAPS } from '../reeds/src/slot-table.js';
+import { SLOT_GAPS, SLOT_Y } from '../reeds/src/slot-table.js';
 import { ReedEngine, Voice, traceStrike } from '../reeds/src/reeds-engine.js';
-import { DEFAULTS, GROUPS } from '../reeds/src/reeds-params.js';
+import { DEFAULTS, GROUPS, PRESETS } from '../reeds/src/reeds-params.js';
+import { renderEngine } from '../tools/audio-util.mjs';
 
 const FS = 48000, TAU = 2 * Math.PI;
 let failures = 0;
@@ -26,13 +27,13 @@ const cents = (a, b) => 1200 * Math.log2(a / b);
 const dB = (a, b) => 20 * Math.log10(a / b);
 
 // Render one note through the engine, 128-sample blocks like the AudioWorklet.
-function render(key, params, vel, sec, { off = Infinity, sustain = false } = {}) {
-  const e = new ReedEngine(FS);
+function render(key, params, vel, sec, { off = Infinity, sustain = false, fs = FS } = {}) {
+  const e = new ReedEngine(fs);
   e.setParams(params); e.setSustain(sustain);
   e.noteOn(key, vel);
-  const n = Math.round(sec * FS), L = new Float32Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
+  const n = Math.round(sec * fs), L = new Float32Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
   for (let s = 0; s < n; s += bl) {
-    if (s <= off * FS && s + bl > off * FS) e.noteOff(key);
+    if (s <= off * fs && s + bl > off * fs) e.noteOff(key);
     e.process(bL, bR, bl); L.set(bL.subarray(0, Math.min(bl, n - s)), s);
   }
   return { L, e };
@@ -128,6 +129,26 @@ test('Laplace table: matches a fresh solve between tabulated gaps; C(y) even, la
   for (const y of [0.3e-3, 1.1e-3, 2.5e-3]) assert.ok(Math.abs(capAt(T, y).C / capAt(T, -y).C - 1) < 1e-6);
   for (let y = 0.05e-3; y < 4e-3; y += 0.05e-3) assert.ok(capAt(T, y).dC < 0, `C falls as the reed leaves the comb (y=${y})`);
   note(`gap ${g} mm: C(0) = ${(capAt(T, 0).C * 1e12).toFixed(3)} pF, C(1 mm) = ${(capAt(T, 1e-3).C * 1e12).toFixed(3)} pF (ℓ = ${PICKUP.ell * 1e3} mm)`);
+});
+test('the table covers the reed\'s whole travel: out to the frame, where the tip stops', () => {
+  const top = SLOT_Y.min + (SLOT_Y.n - 1) * SLOT_Y.step; // the cubic needs one row beyond the last point it uses
+  assert.ok(Math.abs(SLOT_Y.min + top) < 1e-12 && top - SLOT_Y.step >= STOP.y - 1e-9, `table ±${(top * 1e3).toFixed(2)} mm, stop at ±${(STOP.y * 1e3).toFixed(2)} mm`);
+  assert.ok(Math.abs(STOP.y - (SLOT_GEOM.H - SLOT_GEOM.h / 2)) < 1e-12);
+  // the most extreme reeds and strikes meet the frame and bounce off it
+  let worst = 0, hits = 0;
+  for (const o of [{ solder: 0.05, strike: 0.9 }, { solder: 0.05, strike: 0.9, offset: 2 }, { solder: 0.05, strike: 0.9, offset: -2, hardness: 10 }]) {
+    for (const m of [KEY_LO, 45]) {
+      const p = P(o), t = traceStrike(keyModel(m, p, 2 * FS).voice, p, 1, FS, 0.15);
+      for (const y of t.y) worst = Math.max(worst, Math.abs(p.offset * 1e-3 + y));
+    }
+    const { e } = render(KEY_LO, P(o), 1, 0.15); hits += e.voices[0].hits;
+  }
+  assert.ok(worst < STOP.y + 0.05e-3 && hits > 0, `tip reaches ${(worst * 1e3).toFixed(3)} mm (frame contact at ${(STOP.y * 1e3).toFixed(2)} mm), ${hits} samples in contact`);
+  // as voiced, even a forte A1 stays well clear of it
+  const t = traceStrike(keyModel(KEY_LO, P(), 2 * FS).voice, P(), 1, FS, 0.15);
+  let far = 0; for (const y of t.y) far = Math.max(far, Math.abs(DEFAULTS.offset * 1e-3 + y));
+  assert.ok(far < 0.5 * STOP.y, `A1 ff swings to ${(far * 1e3).toFixed(2)} mm`);
+  note(`frame contact at ±${(STOP.y * 1e3).toFixed(2)} mm; extreme reeds reach ${(worst * 1e3).toFixed(2)} mm; A1 ff as voiced ${(far * 1e3).toFixed(2)} mm`);
 });
 test('narrow gaps approach the parallel-plate value 2ε₀ h/g; wide gaps are all fringe', () => {
   const r = SLOT_GAPS.map((g) => capAt(capCurve(g), 0).C / (EPS0 * PICKUP.ell) / ((2 * REED.h) / (g * 1e-3))); // C′/(2ε₀h/g)
@@ -250,6 +271,18 @@ test('speakers: the A1 fundamental drops out, the cone break-up near 2.6 kHz is 
   assert.ok(g(f) - g(18 * f) < -15, `fundamental ${g(f).toFixed(1)} dB vs 990 Hz ${g(18 * f).toFixed(1)} dB`);
   assert.ok(g(h48) - g(18 * f) > 3, `2.6 kHz ${g(h48).toFixed(1)} dB vs 990 Hz ${g(18 * f).toFixed(1)} dB`);
 });
+test('a key struck again after a reed knob moved does not double: the old reed fades out', () => {
+  // the page sends a new model (a new version) after solder, strike or hardness change
+  const d0 = { ...keyModel(57, P(), 2 * FS).voice, version: 1 }, d1 = { ...keyModel(57, P({ hardness: 1.02 }), 2 * FS).voice, version: 2 };
+  for (const sus of [true, false]) {
+    const e = new ReedEngine(FS); e.setParams(P());
+    const ev = [[0, 'sus', sus], [0, 'on', 57, 0.7, d0], [0.5, 'params', P({ hardness: 1.02 })], [0.5, 'on', 57, 0.7, d1]];
+    renderEngine(e, 0.8, ev, FS);
+    const left = e.voices.filter((v) => v.key === 57);
+    assert.equal(left.length, 1, `${sus ? 'pedal' : 'no pedal'}: ${left.length} voices for the key`);
+    assert.equal(left[0].data, d1);
+  }
+});
 test('dampers stop the note on release; the pedal keeps it; released notes free their voice', () => {
   const lvl = (sus) => { const { L, e } = render(60, P(), 0.8, 1.2, { off: 0.3, sustain: sus }); return { r: peakOf(L.subarray(Math.round(1.0 * FS))), e }; };
   const held = lvl(true), damped = lvl(false);
@@ -259,17 +292,39 @@ test('dampers stop the note on release; the pedal keeps it; released notes free 
 });
 
 console.log('level, stability, clicks, CPU');
-test('a forte note peaks at 0.1–0.5 anywhere on the keyboard; a 6-note forte chord stays under 1', () => {
-  let lo = 1, hi = 0;
-  for (const m of [33, 40, 48, 57, 64, 72, 81, 88, 96]) { const p = peakOf(render(m, P(), 1, 0.4).L); lo = Math.min(lo, p); hi = Math.max(hi, p); }
-  assert.ok(lo > 0.1 && hi < 0.5, `peaks ${lo.toFixed(3)} … ${hi.toFixed(3)}`);
-  const e = new ReedEngine(FS); e.setParams(P());
-  for (const m of [36, 48, 55, 60, 64, 67]) e.noteOn(m, 1);
-  const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
-  let pk = 0;
-  for (let i = 0; i < 0.5 * FS / bl; i++) { e.process(L, R, bl); pk = Math.max(pk, peakOf(L)); }
-  assert.ok(pk < 1, `chord ${pk}`);
-  note(`single forte notes ${lo.toFixed(2)} … ${hi.toFixed(2)}; chord ${pk.toFixed(2)}`);
+test('a forte note peaks at 0.1–0.5 anywhere on the keyboard (direct out: 0.05–0.5), at 44.1 and 48 kHz; a 6-note forte chord stays under 1', () => {
+  const read = [];
+  for (const output of ['speaker', 'direct']) {
+    let lo = 1, hi = 0, pk = 0;
+    for (const fs of [44100, 48000]) {
+      for (const m of [33, 40, 48, 57, 64, 72, 81, 88, 96]) { const p = peakOf(render(m, P({ output }), 1, 0.4, { fs }).L); lo = Math.min(lo, p); hi = Math.max(hi, p); }
+      const e = new ReedEngine(fs); e.setParams(P({ output }));
+      for (const m of [36, 48, 55, 60, 64, 67]) e.noteOn(m, 1);
+      const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
+      for (let i = 0; i < 0.5 * fs / bl; i++) { e.process(L, R, bl); pk = Math.max(pk, peakOf(L)); }
+    }
+    // without the speakers' 2.6 kHz peak the top octave is quieter (see Simplifications)
+    assert.ok(lo > (output === 'speaker' ? 0.1 : 0.05) && hi < 0.5, `${output}: peaks ${lo.toFixed(3)} … ${hi.toFixed(3)}`);
+    assert.ok(pk < 1, `${output}: chord ${pk}`);
+    read.push(`${output}: single forte notes ${lo.toFixed(2)} … ${hi.toFixed(2)}, chord ${pk.toFixed(2)}`);
+  }
+  note(read.join('; '));
+});
+test('presets: none is far louder than the default (mf phrase, rms); chords stay under 1', () => {
+  const ph = (o) => {
+    const ev = [], keys = [40, 52, 60, 67, 76, 88];
+    keys.forEach((k, i) => ev.push([i * 0.4, 'on', k, 0.6], [i * 0.4 + 0.35, 'off', k]));
+    [48, 55, 64, 67].forEach((k) => ev.push([2.4, 'on', k, 0.9], [3.4, 'off', k]));
+    const e = new ReedEngine(FS); e.setParams(P(o));
+    const [x] = renderEngine(e, 3.7, ev, FS);
+    let s = 0; for (const v of x) s += v * v;
+    return [Math.sqrt(s / x.length), peakOf(x)];
+  };
+  const [ref] = ph({});
+  for (const pr of PRESETS) {
+    const [r, pk] = ph(pr.p);
+    assert.ok(dB(r, ref) < 4.5 && pk < 1, `${pr.name}: ${dB(r, ref).toFixed(1)} dB, chord peak ${pk.toFixed(2)}`);
+  }
 });
 test('stable at every parameter\'s min and max (alone and all together): finite, peak < 2', () => {
   const sliders = GROUPS.flatMap((g) => g.params).filter((p) => p.type !== 'select' && p.type !== 'checkbox');
@@ -295,6 +350,18 @@ test('no clicks at onset or release: no sample jump far above the signal\'s own 
     const jump = (a, b) => { let j = 0; for (let i = a; i < b; i++) j = Math.max(j, Math.abs(L[i] - L[i - 1])); return j; };
     const on = jump(1, Math.round(0.02 * FS)), off = jump(Math.round(0.5 * FS), Math.round(0.6 * FS));
     assert.ok(on < 12 * typ && off < 6 * typ, `key ${m} vel ${vel}: onset ${(on / typ).toFixed(1)}×, release ${(off / typ).toFixed(1)}× typical slope`);
+  }
+});
+test('knobs glide: gap, reed height and output switches mid-note do not click', () => {
+  for (const [base, change] of [[DRY, { gap: 0.15 }], [DRY, { gap: 0.6 }], [DRY, { offset: 0 }], [DRY, { offset: 1.2 }], [DRY, { output: 'speaker' }], [{}, { output: 'direct' }]]) {
+    const p0 = P(base), c = Math.round(0.3 * FS / 128) * 128, e = new ReedEngine(FS); e.setParams(p0);
+    const [L] = renderEngine(e, 0.55, [[0, 'on', 57, 0.7], [0.3, 'params', { ...p0, ...change }]], FS);
+    // the note's own largest step, before the change and once the glide has settled
+    let typ = 0, jump = 0;
+    for (let i = c - 4800; i < c; i++) typ = Math.max(typ, Math.abs(L[i] - L[i - 1]));
+    for (let i = c + 7200; i < c + 9600; i++) typ = Math.max(typ, Math.abs(L[i] - L[i - 1]));
+    for (let i = c; i < c + 2400; i++) jump = Math.max(jump, Math.abs(L[i] - L[i - 1]));
+    assert.ok(jump < 1.5 * typ, `${JSON.stringify(change)}: jump ${(jump / typ).toFixed(2)}× the note's largest step`);
   }
 });
 test('CPU: 10 sounding voices at ≤ 30 % of real time', () => {

@@ -122,19 +122,27 @@ export function keyReed(m, P, fs = 96000) {
 }
 
 // ---- pickups -------------------------------------------------------------------
-// Pickup gap and plate offset are voiced per key like a technician would: in
-// proportion to √(swing) ∝ f^(−1/2), so every reed sweeps a similar fraction
-// of its pickup's nonlinear range. The knobs give the C4 values.
+// The gaps are voiced per key like a technician would; the knobs give the C4
+// values. The N's plate gap and edge height go ∝ √(swing) ∝ f^(−1/2), so every
+// reed sweeps a similar fraction of the plate's nonlinear range.
 export const voicing = (m) => Math.sqrt(261.63 / keyFreq(m));
+// The T's pole gaps: below C4 also ∝ √(swing), which is as close as a bass
+// reed's ff swing allows (it has to clear its pole). Above C4 only ∝ f^(−1/4):
+// a smaller gap means more flux (below), so √ gaps would make the treble
+// louder; the wider ones keep it level with the middle.
+export function voicingT(m) { const r = 261.63 / keyFreq(m); return r >= 1 ? Math.sqrt(r) : Math.sqrt(Math.sqrt(r)); }
 
 // Pianet T, variable reluctance: a magnet pole under the reed tip at gap g.
 // The steel tip closes the magnetic circuit; the rest of the circuit (magnet,
-// return path through air) is an equivalent air gap ℓ. Flux, relative to rest:
-//   Φ(y)/Φ₀ = (ℓ + g) / (ℓ + g + y),   y = tip height (up = away from the pole)
-// Output = −N dΦ/dt. The pole face is also an end stop for the tip (Pluck.stop);
-// the flux is clamped there as a guard.
-export const EM_ELL = 1.5e-3;
-export function emFlux(y, g) { const d = g + y; return (EM_ELL + g) / (EM_ELL + (d > 0 ? d : 0)); }
+// return path through air) is an equivalent air gap ℓ. Every pickup has the
+// same magnet (a fixed MMF), so the flux is ∝ 1/(ℓ + g + y). Relative to a reed
+// at rest at the reference gap g_ref = 1 mm:
+//   Φ(y)/Φ_ref = (ℓ + g_ref) / (ℓ + g + y),   y = tip height (up = away from the pole)
+// A closer pole gives more flux and a steeper dΦ/dy: the output at small swings
+// goes as 1/(ℓ + g)². Output = −N dΦ/dt. The pole face is also an end stop for
+// the tip (Pluck.stop); the flux is clamped there as a guard.
+export const EM_ELL = 1.5e-3, EM_GREF = 1e-3;
+export function emFlux(y, g) { const d = g + y; return (EM_ELL + EM_GREF) / (EM_ELL + (d > 0 ? d : 0)); }
 // For y = Y sin ωt: Φ ∝ 1/(1 + ε sin) with ε = Y/(ℓ+g); successive harmonics fall by
 //   ρ = (1 − √(1 − ε²)) / ε, so in dΦ/dt the 2nd/1st ratio is 2ρ.
 export function emH2(Y, g) { const e = Y / (EM_ELL + g); return (2 * (1 - Math.sqrt(1 - e * e))) / e; }
