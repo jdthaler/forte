@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tangent Clavier · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-instrument="clavier">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Tangent Clavier</h1>
+      <span class="sub">a rubber tangent pins each string to an anvil; two magnetic pickups hear the twang</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-view="Slow motion">
+          <div class="card-head">
+            <h2>Slow motion · <b id="sim-name">C4</b></h2>
+            <div class="tools">
+              <select id="speed" aria-label="Playback speed">
+                <option value="0.02">1/50</option>
+                <option value="0.005" selected>1/200</option>
+                <option value="0.001">1/1000</option>
+              </select>
+              <button id="replay">Replay</button>
+            </div>
+          </div>
+          <canvas id="string"></canvas>
+          <div class="caption">The key's last strike, simulated: the tangent carries the string onto the anvil, the speaking length rings against it, and on release the whole string, yarn and all, swings free. Height exaggerated.</div>
+        </div>
+        <div class="card" id="info-card" data-view="Mode table">
+          <div class="card-head"><h2>String of <b id="focus-name">C4</b></h2><span class="muted" id="focus-sub"></span></div>
+          <dl id="info"></dl>
+          <table class="modes" id="modes"></table>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card">
+          <div class="card-head"><h2>Pickup comb</h2><span class="muted" id="comb-sub"></span></div>
+          <canvas id="comb"></canvas>
+          <div class="legend" id="comb-legend"></div>
+          <div class="caption">Each pickup hears partial n in proportion to sin(nπx/L): partials with a node over a pole vanish. The switches add the two pickups, or subtract them to cancel what they share.</div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: held partials, and (faint) the released string's</span></div>
+          <canvas id="spectrum"></canvas>
+          <div class="caption">Partials run sharp of the faint harmonic grid in the bass (stiffness); press harder and they all shift up together.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>mute bar: hold <kbd>Space</kbd> (or pedal) <b id="hold" class="off">off</b></span>
+      <span>key pressure: aftertouch or the pitch wheel <b id="press-read">+0 ¢</b></span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/clavier-main.js"></script>
+</body>
+</html>
