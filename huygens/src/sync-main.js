@@ -297,7 +297,7 @@ function recomputeStair(full) {
         const m = e.data;
         if (m.type === 'stair') {
           stair.stair = { xs: m.xs, ys: m.ys };
-          $('#stair-read').textContent = `C4 plus a second lamp · coupling ${(P.kick * 100).toFixed(1)} % (δ = ${m.delta.toFixed(4)})${m.exact ? '' : ' · simulated'}`;
+          $('#stair-read').textContent = `C4 plus a second lamp · coupling ${(P.kick * 100).toFixed(1)} %${m.delta !== undefined ? ` (δ = ${m.delta.toFixed(4)})` : ''}${m.exact ? '' : ' · simulated'}`;
         } else if (m.type === 'row') { stair.nRows = m.rows; stair.rows[m.r] = m; }
         stair.touch();
       };

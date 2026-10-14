@@ -9,6 +9,44 @@ release may change the sound or the parameters.
 Each release is tagged in git as `forte-vX.Y.Z` or `<instrument>-vX.Y.Z`,
 for example `piano-v0.1.0`.
 
+## 2026-10-13 — review fixes
+
+An adversarial review of the whole project (six reviewers, one per area)
+found the bugs and inaccuracies below; each fix has a regression test.
+
+### Huygens Keyboard 0.2.0
+- Default coupling raised to 5.5 %: at 4.5 % no coupling could lock the
+  minor sixth, so C–E–G–C′ and its inversions never went just. Now all
+  nine tested voicings lock at C2–C5. The trade-off is documented: a bare
+  semitone pair merges into a unison from 4.6 %. A "Weaker (4.5 %)" preset
+  keeps the old behaviour.
+- The Arnold-tongue staircase is now the exact, deterministic lock map
+  (tongue edges (p−δ)/q ≤ r ≤ p/(q−δ)) instead of a random 0.5 s
+  simulation that under-reported the fifth and fourth.
+- README corrected: kicks below threshold leave no trace, there is no chaos
+  between tongues, and supply voltages only rescale δ. Capture times are now
+  bounded and documented.
+- No more low thump on release (keyed output with a 15 Hz coupling
+  capacitor).
+- Lock detection from shared firings (no flicker in the bass).
+- Stereo width updates sounding notes.
+- The worklet posts state at ≤ 30 Hz (it took 25 % of DSP time), and views
+  redraw only on change.
+
+### Black-Hole Keyboard 0.2.0
+- No notch at the chirp→ringdown handover (phase and amplitude matched).
+- The inspiral control is now "octaves below ISCO" (part of the old range
+  did nothing), and inspirals last at most 2 s.
+- QNM table regenerated with deeper continued fractions: (2,−2,2) at
+  a = 1 − 10⁻⁶ was 14 ¢ off. Interpolation uses one-sided end slopes, so
+  errors are ≤ 0.021 ¢ almost everywhere, against up to 3.5 ¢ near a = 0.
+- Voice stealing fades the quietest voice instead of cutting the oldest.
+- The strain view is evaluated in closed form once per frame, with no
+  2.5 s offline render on every key.
+- README corrected: GW150914's remnant (62 M☉, ≈ 250–270 Hz, near middle C),
+  the range of the excitation model, and the l ≠ m quality factors.
+- New m < 0 reference values (Berti, Cardoso & Will 2006).
+
 ## 2026-10-13 — gong performance
 
 ### Gong Keyboard 0.1.1

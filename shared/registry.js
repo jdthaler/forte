@@ -85,7 +85,7 @@ export const INSTRUMENTS = [
     accent: '#ff7a45',
   },
   {
-    id: 'huygens', name: 'Huygens Keyboard', section: 'new', ready: true, version: '0.1.1',
+    id: 'huygens', name: 'Huygens Keyboard', section: 'new', ready: true, version: '0.2.0',
     tagline: 'Relaxation oscillators that pull each other into just intonation — Arnold tongues you can play.',
     physics: 'Pulse-coupled oscillators · mode locking',
     accent: '#ff8a3d',
@@ -97,7 +97,7 @@ export const INSTRUMENTS = [
     accent: '#e6c15a',
   },
   {
-    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'new', ready: true, version: '0.1.1',
+    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'new', ready: true, version: '0.2.0',
     tagline: 'Every key a Kerr black hole, ringing in quasinormal modes computed from the Teukolsky equation.',
     physics: 'General relativity · quasinormal modes',
     accent: '#b18cff',
