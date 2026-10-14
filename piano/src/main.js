@@ -1,7 +1,7 @@
 // main.js — UI, audio graph, computer keyboard + MIDI input, model cache.
 
 import { GROUPS, ALL_PARAMS, DEFAULTS, PRESETS } from './params.js';
-import { computeKeyModel, buildVoiceData, noteName, MATERIALS } from './physics.js';
+import { computeKeyModel, buildVoiceData, noteName, MATERIALS, NMAX_MODES } from './physics.js';
 import { PianoEngine } from './engine.js';
 import { soundboardIR, roomIR } from '../../shared/impulses.js';
 import { MotionView, SpectrumView, drawSection, FAMILY } from './viz.js';
@@ -45,7 +45,7 @@ function keyData(key) {
   return c;
 }
 
-const engineParams = () => ({ gainV: P.gainV, gainH: P.gainH, gainT: P.gainT, damper: P.damper, width: P.width });
+const engineParams = () => ({ gainV: P.gainV, gainH: P.gainH, gainT: P.gainT, damper: P.damper, width: P.width, unaCorda: !!P.unaCorda });
 
 // ---------------------------------------------------------------------------
 // audio
@@ -278,6 +278,7 @@ function onMIDI(ev) {
   if (cmd === 0x90 && d2 > 0) noteOn(d1, velFromMidi(d2));
   else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) noteOff(d1);
   else if (cmd === 0xb0 && d1 === 64) setSustain(d2 >= 64);
+  else if (cmd === 0xb0 && d1 === 67) setParam('unaCorda', d2 >= 64); // soft pedal
   else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) panic();
 }
 
@@ -540,6 +541,8 @@ function showInfo(model) {
   }
   rows.push(['Torsion f₁', `${i.f1torsion.toFixed(0)} Hz = ${i.torsionRatio.toFixed(3)} × f₁${model.sec.lever && P.offset ? '' : ' (not excited)'}`]);
   rows.push(['Wave speeds', `transverse ${i.cT.toFixed(0)} m/s · torsional ${i.cTheta.toFixed(0)} m/s`]);
+  const fam = model.families[0], fTop = fam.omega[fam.n - 1] / (2 * Math.PI);
+  rows.push(['Partials', `${fam.n}, up to ${(fTop / 1000).toFixed(2)} kHz${fam.n >= NMAX_MODES ? ` (capped at ${NMAX_MODES})` : ''}`]);
   if (!i.tuned) rows.push(['Tuning', 'too stiff to reach pitch — plays sharp', true]);
   $('#info').innerHTML = rows.map(([k, v, warn]) => `<dt>${k}</dt><dd${warn ? ' class="warn"' : ''}>${v}</dd>`).join('');
 }

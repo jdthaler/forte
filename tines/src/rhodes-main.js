@@ -1,7 +1,7 @@
 // rhodes-main.js — UI, audio graph, keyboard / MIDI, model cache, views.
 
 import { GROUPS, ALL_PARAMS, DEFAULTS, PRESETS } from './rhodes-params.js';
-import { computeKey, noteName, KEY_LO, KEY_HI } from './tine.js';
+import { computeKey, pickupFor, noteName, KEY_LO, KEY_HI } from './tine.js';
 import { RhodesEngine } from './rhodes-engine.js';
 import { roomIR } from '../../shared/impulses.js';
 import { MotionView, PickupView, SpectrumView, MODE_COLORS, modeKind } from './rhodes-viz.js';
@@ -28,7 +28,18 @@ function keyData(key) {
   }
   return c;
 }
-const engineParams = () => ({ damper: P.damper, cable: P.cable, resQ: P.resQ, tremRate: P.tremRate, tremDepth: P.tremDepth, drive: P.drive, tone: P.tone });
+const engineParams = () => ({
+  damper: P.damper, cable: P.cable, resQ: P.resQ, tremRate: P.tremRate, tremDepth: P.tremDepth, drive: P.drive, tone: P.tone,
+  gap: P.gap, offset: P.offset, poleRadius: P.poleRadius, voicing: P.voicing, // pickups: the engine moves them live
+});
+// The pickup settings don't change the modes: patch the cached keys instead of recomputing them.
+function repickup() {
+  for (const [key, c] of cache) {
+    const { gap, wid, yoff, gain } = pickupFor(key, P);
+    c.model.info.gap = gap; c.model.info.wid = wid;
+    c.model.voice.pickup = c.data.pickup = { wid, yoff, gain };
+  }
+}
 
 // ---------------------------------------------------------------------------
 // audio
@@ -264,7 +275,8 @@ function setParam(id, v, dragging = false) {
   $('#preset').value = '';
   if (p.kind === 'play') { updateHelp(); return; }
   if (p.kind === 'mix') { applyMix(); return; }
-  if (p.kind === 'engine') post({ type: 'params', params: engineParams() });
+  if (p.kind === 'pickup') repickup();
+  if (p.kind === 'engine' || p.kind === 'pickup') post({ type: 'params', params: engineParams() });
   else bump();
   clearTimeout(mcTimer);
   mcTimer = setTimeout(modelChanged, 120);

@@ -89,6 +89,62 @@ test('dampers stop the note on release; sustain pedal keeps it', () => {
   };
   assert.ok(level(true) > 30 * level(false));
 });
+test('voice stealing never takes a chord that has just been struck', () => {
+  const e = new RhodesEngine(FS); e.setParams(P()); e.setSustain(true);
+  const vd = (k) => ({ ...computeKey(k, P(), FS).voice, version: 1 });
+  const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
+  for (let k = KEY_LO; k < KEY_LO + 40; k++) { e.noteOn(k, vd(k), 1.8); for (let i = 0; i < 4; i++) e.process(L, R, bl); }
+  const chord = [72, 76, 79, 84].map((k) => e.noteOn(k, vd(k), 1.8));
+  assert.ok(chord.every((v) => !v.killing), `killed: ${chord.filter((v) => v.killing).map((v) => v.key)}`);
+  e.process(L, R, bl);
+  assert.ok(e.voices.filter((v) => !v.killing).length <= e.p.maxVoices, 'the limit holds once the chord has sounded');
+});
+test('long blocks (the page’s pickup-waveform view asks for up to 3500 samples) stay finite', () => {
+  for (const key of [KEY_LO, 33, 45]) {
+    const k = computeKey(key, P(), FS), e = new RhodesEngine(FS);
+    e.setParams({ ...P(), ...DRY });
+    e.noteOn(key, { ...k.voice, version: 1 }, 1.8);
+    const n = Math.round((3 / k.info.f0) * FS), L = new Float32Array(n), R = new Float32Array(n);
+    e.process(L, R, Math.round(0.02 * FS));
+    e.process(L, R, n);
+    let pk = 0;
+    for (const s of L) { assert.ok(Number.isFinite(s), `key ${key}, ${n} samples`); pk = Math.max(pk, Math.abs(s)); }
+    assert.ok(pk > 1e-4, `key ${key}: silent`);
+  }
+});
+// strongest 3rd-difference spike just after a change, re that signal's RMS before it
+function clickAfter(change, keys = [52, 55]) {
+  const e = new RhodesEngine(FS); e.setParams(P());
+  for (const key of keys) e.noteOn(key, { ...computeKey(key, P(), FS).voice, version: 1 }, 1.8);
+  const n = FS, x = new Float64Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl), at = 24064;
+  for (let s = 0; s < n; s += bl) { if (s === at) change(e); e.process(bL, bR, bl); for (let i = 0; i < bl; i++) x[s + i] = bL[i]; }
+  const d3 = (i) => x[i] - 3 * x[i - 1] + 3 * x[i - 2] - x[i - 3];
+  let pk = 0, e2 = 0, c = 0;
+  for (let i = at - 192; i < at + 192; i++) pk = Math.max(pk, Math.abs(d3(i)));
+  for (let i = at - 2300; i < at - 400; i++) { e2 += d3(i) ** 2; c++; }
+  return { ratio: pk / Math.sqrt(e2 / c), x };
+}
+test('live controls glide: speaker, amp drive, vibrato depth and harp make no click', () => {
+  for (const [name, ch] of [['speaker 6 → 2 kHz', { tone: 2000 }], ['drive 0.15 → 0.8', { drive: 0.8 }], ['vibrato depth 0 → 0.8', { tremDepth: 0.8 }], ['cable 1 → 5 nF', { cable: 5000 }], ['drive → 0', { drive: 0 }]]) {
+    const { ratio } = clickAfter((e) => e.setParams(ch));
+    assert.ok(ratio < 8, `${name}: spike ${ratio.toFixed(1)}× the background`);
+  }
+});
+test('pickup voicing is live: centring a ringing tine trades its fundamental for the octave, without a click', () => {
+  const g = (x, f, a, b) => goertzel(x, f, a, b);
+  const { ratio, x } = clickAfter((e) => e.setParams({ offset: 0 }), [57]);
+  assert.ok(ratio < 8, `spike ${ratio.toFixed(1)}×`);
+  const before = g(x, 220, 0.2 * FS, 0.5 * FS) / g(x, 440, 0.2 * FS, 0.5 * FS);
+  const after = g(x, 220, 0.6 * FS, 0.9 * FS) / g(x, 440, 0.6 * FS, 0.9 * FS);
+  assert.ok(before > 1 && after < 0.1, `fundamental / octave: ${before.toFixed(2)} before, ${after.toFixed(3)} after`);
+  // and a gap change reaches every sounding voice
+  const e = new RhodesEngine(FS); e.setParams(P());
+  const v = e.noteOn(60, { ...computeKey(60, P(), FS).voice, version: 1 }, 1.8);
+  e.setParams({ gap: 0.6 });
+  const L = new Float32Array(128), R = new Float32Array(128);
+  for (let i = 0; i < 100; i++) e.process(L, R, 128);
+  assert.ok(Math.abs(v.wid / computeKey(60, P({ gap: 0.6 }), FS).voice.pickup.wid - 1) < 1e-6);
+});
 test('stable across extremes', () => {
   const cases = [P({ gap: 0.4, poleRadius: 0.3, offset: 1.2, drive: 1, hardness: 10, tipExp: 1 }), P({ barMass: 0.01, blockMass: 5, mountDamp: 2, mountRatio: 3 }),
     P({ tineDiameter: 2.8, springMass: 1.5, springPos: 1, strike: 40, hysteresis: 1e-3, hardness: 0.1 }), P({ barMass: 60, barTune: -100, mountDamp: 0.02, tremDepth: 1 })];

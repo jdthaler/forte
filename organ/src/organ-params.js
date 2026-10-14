@@ -27,7 +27,7 @@ export const GROUPS = [
       { id: 'leakage', label: 'Background leakage', kind: 'gen', min: -90, max: -40, step: 1, def: -70, fmt: (v) => db(v, -90),
         hint: 'All 91 wheels bleed faintly into the wiring — the “breath” of an old B-3.' },
       { id: 'loading', label: 'Busbar loading', kind: 'engine', min: 0, max: 2, step: 0.01, def: 0.25, fmt: (v) => v.toFixed(2),
-        hint: 'Source/load resistance: more keys on a busbar → each gets quieter. Chords compress.' },
+        hint: 'Load/source resistance R_L/R_s. Higher: keys on the same busbar average instead of adding, so chords compress.' },
     ],
   },
   {
@@ -71,8 +71,9 @@ export const GROUPS = [
         hint: 'The heavy bass rotor lags the light horn — the classic ramp.' },
       { id: 'drumDecel', label: 'Drum slow-down τ', kind: 'engine', min: 0.5, max: 12, def: 5.5, log: true, fmt: f2('s') },
       { id: 'hornRadius', label: 'Horn radius', kind: 'engine', min: 0.05, max: 0.35, step: 0.005, def: 0.18, fmt: (v) => `${(v * 100).toFixed(1)} cm`,
-        hint: 'Doppler swing ∝ radius × speed: ±v/c in frequency.' },
-      { id: 'micDist', label: 'Mic distance', kind: 'engine', min: 0.3, max: 3, def: 0.8, log: true, fmt: f2('m') },
+        hint: 'Doppler swing ∝ radius × speed: ±v/c in frequency. Past 28 cm the cabinet grows to fit the horn.' },
+      { id: 'micDist', label: 'Mic distance', kind: 'engine', min: 0.5, max: 3, def: 0.8, log: true, fmt: f2('m'),
+        hint: 'From the rotor axis. The mics stay outside the cabinet (≥ 8 cm past its wall).' },
       { id: 'micSpread', label: 'Mic spread', kind: 'engine', min: 0, max: 180, step: 1, def: 120, fmt: (v) => `${v.toFixed(0)}°` },
       { id: 'crossover', label: 'Crossover', kind: 'engine', min: 300, max: 2000, def: 800, log: true, fmt: (v) => `${v.toFixed(0)} Hz` },
       { id: 'balance', label: 'Drum ↔ horn', kind: 'engine', min: -1, max: 1, step: 0.01, def: 0, fmt: (v) => (Math.abs(v) < 0.01 ? 'even' : v > 0 ? `horn +${(v * 100).toFixed(0)}%` : `drum +${(-v * 100).toFixed(0)}%`) },
@@ -82,7 +83,8 @@ export const GROUPS = [
   {
     id: 'amp', title: 'Amp & output',
     params: [
-      { id: 'drive', label: 'Tube drive', kind: 'engine', min: 0, max: 1, step: 0.01, def: 0.15, fmt: (v) => v.toFixed(2) },
+      { id: 'drive', label: 'Tube drive', kind: 'engine', min: 0, max: 1, step: 0.01, def: 0.15, fmt: (v) => v.toFixed(2),
+        hint: 'Gain into an off-centre-biased tube: even harmonics, then compression. A full chord keeps its level.' },
       { id: 'expression', label: 'Expression pedal', kind: 'engine', min: 0, max: 1, step: 0.01, def: 0.85, fmt: (v) => `${((v - 1) * 40).toFixed(0)} dB`,
         hint: 'Before the drive, so it changes the grit too. MIDI CC 11.' },
       { id: 'room', label: 'Room', kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.2, fmt: (v) => v.toFixed(2) },

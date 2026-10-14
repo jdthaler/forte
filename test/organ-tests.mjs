@@ -87,18 +87,28 @@ test('motor off: pitch and level fall together as the generator coasts', () => {
   assert.ok(Math.abs(a1 / a0 - ratio) < 0.06, `level ${a1 / a0} vs pitch ${ratio}`);
   console.log(`        after 2.6 s coasting: pitch ×${ratio.toFixed(3)} (${(1200 * Math.log2(ratio)).toFixed(0)} ¢), level ×${(a1 / a0).toFixed(3)}`);
 });
-test('scanner vibrato V3: pitch swing matches the LC line (±2Nτ·f_scan)', () => {
+test('scanner vibrato V3: median pitch swing is the LC line’s ±2Nτ·f_scan (±5 %)', () => {
   const params = P({ ...DRY, drawbars: [0, 0, 8, 0, 0, 0, 0, 0, 0], vib: 'V3' });
-  const e = engine(params);
-  e.keyDown(81); // A5 880 Hz, well below the ladder cutoff
-  const { L } = run(e, 1.2);
-  const t = zcTimes(L.subarray(9600));
-  let lo = Infinity, hi = 0;
-  for (let i = 4; i < t.length; i++) { const f = (4 * FS) / (t[i] - t[i - 4]); lo = Math.min(lo, f); hi = Math.max(hi, f); }
-  const swing = (hi - lo) / (hi + lo); // ≈ fractional deviation
   const expect = 2 * params.sections * params.sectionDelay * 1e-6 * params.scanRate;
-  assert.ok(swing > 0.75 * expect && swing < 1.35 * expect, `swing ${swing} vs ${expect}`);
-  console.log(`        ±${(1200 * Math.log2(1 + swing)).toFixed(1)} ¢ (ideal-line prediction ±${(1200 * Math.log2(1 + expect)).toFixed(1)} ¢)`);
+  const c = (x) => 1200 * Math.log2(1 + x);
+  // per-cycle frequency; the triangular scan makes it a square wave, so take the
+  // medians of its upper and lower halves, and the extremes
+  const swings = (key) => {
+    const e = engine(params);
+    e.keyDown(key);
+    const { L } = run(e, 1.5);
+    const t = zcTimes(L.subarray(9600)), f = [];
+    for (let i = 1; i < t.length; i++) f.push(FS / (t[i] - t[i - 1]));
+    const s = [...f].sort((a, b) => a - b), med = s[s.length >> 1];
+    const up = s.filter((x) => x > med), dn = s.filter((x) => x < med);
+    const hi = up[up.length >> 1], lo = dn[dn.length >> 1];
+    return { median: (hi - lo) / (hi + lo), extreme: (s[s.length - 1] - s[0]) / (s[s.length - 1] + s[0]) };
+  };
+  const a4 = swings(69), a5 = swings(81);
+  assert.ok(Math.abs(a4.median / expect - 1) < 0.05, `A4 median swing ±${c(a4.median).toFixed(2)} ¢ vs ±${c(expect).toFixed(2)} ¢`);
+  // the per-section phase steps ripple more at higher frequency, so the extremes grow
+  assert.ok(a5.extreme > a4.extreme && a4.extreme > a4.median, 'extremes should grow with frequency');
+  console.log(`        median ±${c(a4.median).toFixed(1)} ¢ (ideal line ±${c(expect).toFixed(1)} ¢); extremes ±${c(a4.extreme).toFixed(1)} ¢ at A4, ±${c(a5.extreme).toFixed(1)} ¢ at A5`);
 });
 test('Leslie horn: Doppler swing ≈ ±v/c', () => {
   const params = P({ ...DRY, drawbars: [0, 0, 0, 0, 0, 0, 0, 0, 8], leslieOn: true, leslie: 'fast', reflections: 0, crossover: 300, micDist: 3 });
@@ -148,6 +158,62 @@ test('key click: contact bounce makes a broadband transient, soft contacts remov
   };
   const hard = hf(0), soft = hf(1500);
   assert.ok(hard > 4 * soft, `hard ${hard.toFixed(4)}, soft ${soft.toFixed(4)}`);
+});
+test('tube drive: even harmonics grow with drive, a full chord stays bounded', () => {
+  const peak = (x, a = 0) => { let m = 0; for (let i = a; i < x.length; i++) m = Math.max(m, Math.abs(x[i])); return m; };
+  const h2 = (drive) => {
+    const e = engine(P({ ...DRY, drawbars: [0, 0, 8, 0, 0, 0, 0, 0, 0], drive }));
+    e.keyDown(57);
+    const { L } = run(e, 0.6);
+    const g = (f) => { let re = 0, im = 0; for (let i = 9600; i < 28800; i++) { const w = 0.5 - 0.5 * Math.cos((2 * Math.PI * (i - 9600)) / 19199); re += w * L[i] * Math.cos((2 * Math.PI * f * i) / FS); im += w * L[i] * Math.sin((2 * Math.PI * f * i) / FS); } return Math.hypot(re, im); };
+    return { db: 20 * Math.log10(g(440) / g(220)), level: rms(L, 9600) };
+  };
+  const d0 = h2(0), d15 = h2(0.15), d50 = h2(0.5), d100 = h2(1);
+  assert.ok(d15.db < d50.db && d50.db < d100.db && d100.db > -30, `H2: ${d15.db.toFixed(1)}, ${d50.db.toFixed(1)}, ${d100.db.toFixed(1)} dB`);
+  assert.ok(Math.abs(20 * Math.log10(d15.level / d0.level)) < 0.5, 'a little drive leaves the level alone');
+  // ten keys, every drawbar out, pedal down, drive full: was a rectifier peaking at 13
+  const e = engine(P({ ...DRY, drawbars: [8, 8, 8, 8, 8, 8, 8, 8, 8], expression: 1, drive: 1, loading: 0 }));
+  for (const k of [36, 43, 48, 52, 55, 60, 64, 67, 72, 76]) e.keyDown(k, 127);
+  const { L } = run(e, 0.5);
+  assert.ok(peak(L, 4800) < 1, `peak ${peak(L, 4800).toFixed(2)}`);
+  console.log(`        H2 re fundamental: drive 0.15 ${d15.db.toFixed(0)} dB, 0.5 ${d50.db.toFixed(0)} dB, 1 ${d100.db.toFixed(0)} dB; 10-key chord at full drive peaks ${peak(L, 4800).toFixed(2)}`);
+});
+test('Leslie: the horn cannot sweep through the mics', () => {
+  const e = engine(P({ hornRadius: 0.3, micDist: 0.3, leslie: 'fast', vib: 'off', drive: 0 }));
+  e.hornHz = e.p.hornFast; e.drumHz = e.p.drumFast;
+  for (const k of [60, 64, 67]) e.keyDown(k);
+  const { L, R } = run(e, 1.5);
+  let pk = 0, s2 = 0;
+  for (let i = 9600; i < L.length; i++) { pk = Math.max(pk, Math.abs(L[i]), Math.abs(R[i])); s2 += L[i] * L[i]; }
+  const crest = 20 * Math.log10(pk / Math.sqrt(s2 / (L.length - 9600)));
+  assert.ok(pk < 1 && crest < 20, `peak ${pk.toFixed(2)}, crest ${crest.toFixed(1)} dB`);
+});
+test('expression pedal glides: a 2 dB step makes no click', () => {
+  const e = engine(P({ ...DRY, drawbars: [8, 8, 8, 0, 0, 0, 0, 0, 0] }));
+  for (const k of [60, 64, 67]) e.keyDown(k);
+  const { L } = run(e, 0.6, (t) => { if (t >= 0.3 && e.p.expression !== 0.8) e.setParams({ expression: 0.8 }); });
+  const d3 = (i) => L[i] - 3 * L[i - 1] + 3 * L[i - 2] - L[i - 3];
+  const S = (t) => Math.round(t * FS);
+  let ref = 0, c = 0, pk = 0, pk0 = 0;
+  for (let i = S(0.1); i < S(0.28); i++) { ref += d3(i) ** 2; c++; pk0 = Math.max(pk0, Math.abs(d3(i))); }
+  for (let i = S(0.29); i < S(0.33); i++) pk = Math.max(pk, Math.abs(d3(i)));
+  assert.ok(pk < 2 * pk0, `spike ${(pk / Math.sqrt(ref / c)).toFixed(1)}× RMS, background peaks ${(pk0 / Math.sqrt(ref / c)).toFixed(1)}×`);
+  const lv = (a, b) => 20 * Math.log10(rms(L, S(a), S(b)));
+  assert.ok(Math.abs(lv(0.5, 0.6) - lv(0.15, 0.25) + 2) < 0.2, 'the level still drops 2 dB');
+});
+test('process() builds no per-block key lists', () => {
+  const e = engine(P());
+  for (const k of [48, 55, 60, 64]) e.keyDown(k);
+  run(e, 0.05);
+  const values = Map.prototype.values, keys = Map.prototype[Symbol.iterator];
+  let calls = 0;
+  Map.prototype.values = function (...a) { calls++; return values.apply(this, a); };
+  Map.prototype[Symbol.iterator] = function (...a) { calls++; return keys.apply(this, a); };
+  try { run(e, 0.1); } finally { Map.prototype.values = values; Map.prototype[Symbol.iterator] = keys; }
+  assert.equal(calls, 0);
+  for (const k of [48, 55, 60, 64]) e.keyUp(k);
+  run(e, 0.1);
+  assert.equal(e.keyArr.length, 0); assert.equal(e.keys.size, 0);
 });
 test('stable and finite across extreme settings', () => {
   const cases = [
