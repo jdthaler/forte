@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Vibraphone · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="vibraphone">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Vibraphone</h1>
+      <span class="sub">undercut aluminium bars over tuned tubes, with motor-driven discs that open and close the resonators</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-view="Bar and modes">
+          <div class="card-head"><h2>The bar <b id="bar-key">C4</b></h2><span class="muted" id="bar-read"></span></div>
+          <canvas id="bar"></canvas>
+          <div class="caption">The struck bar to scale (thickness ×3) and its first three bending modes, moving with their live amplitudes, slowed down. The arch cut underneath is what puts them at 1 : 4 : 10. ○ cords at mode 1’s nodes, ▼ mallet, ▬ damper felt, ⌒ tube mouth.</div>
+        </div>
+        <div class="card" id="info-card" data-view="Mode table">
+          <div class="card-head"><h2>Modes of <b id="focus-name">C4</b></h2><span class="muted" id="focus-size"></span></div>
+          <table class="modes" id="modes"></table>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Tube and disc">
+          <div class="card-head"><h2>Resonator</h2><span class="muted" id="tube-read">strike a key</span></div>
+          <canvas id="tube"></canvas>
+          <div class="legend"><span><i style="background:var(--accent)"></i>bar</span><span><i style="background:var(--accent-2)"></i>tube</span><span><i style="background:#e6c15a"></i>coupling κ</span><span><i style="background:#9a9aa8"></i>tube’s own pitch</span></div>
+          <div class="caption">Left: the tube under the struck bar, its air pressure in a quarter-wave standing wave (largest at the closed bottom), and the disc in its mouth turning with the shaft. Right: how the disc’s angle sets the coupling and the tube’s pitch over one turn (● now), and the energy in bar and tube over the last 4 s.</div>
+        </div>
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: bending (gold), torsion (blue), tube (teal)</span></div>
+          <canvas id="spectrum"></canvas>
+          <div class="caption">A tuned bar’s partials land on the harmonic grid at 4 and 10 × f₁ (two octaves, and three octaves and a major third); a plain bar’s at 2.76 and 5.40 do not.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>damper pedal (lifts the felt): hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>mod wheel: shaft speed</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/vibraphone-main.js"></script>
+</body>
+</html>

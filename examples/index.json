@@ -442,5 +442,39 @@
    "file": "07-suitcase-stereo-vibrato.m4a",
    "title": "Suitcase stereo vibrato"
   }
+ ],
+ "vibraphone": [
+  {
+   "file": "01-ballad-slow-motor-pedal-down.m4a",
+   "title": "Ballad slow motor pedal down"
+  },
+  {
+   "file": "02-motor-off-then-on-held-chord.m4a",
+   "title": "Motor off then on held chord"
+  },
+  {
+   "file": "03-with-resonators-then-without.m4a",
+   "title": "With resonators then without"
+  },
+  {
+   "file": "04-tuned-bars-then-plain-bars.m4a",
+   "title": "Tuned bars then plain bars"
+  },
+  {
+   "file": "05-tube-close-bar-and-tube-beat.m4a",
+   "title": "Tube close bar and tube beat"
+  },
+  {
+   "file": "06-discs-aligned-then-twisted.m4a",
+   "title": "Discs aligned then twisted"
+  },
+  {
+   "file": "07-soft-yarn-then-hard-cord-mallets.m4a",
+   "title": "Soft yarn then hard cord mallets"
+  },
+  {
+   "file": "08-centre-end-and-node-strikes.m4a",
+   "title": "Centre end and node strikes"
+  }
  ]
 }
