@@ -34,6 +34,15 @@ tagged; this changelog and the commit titles record them.
   inline markup for every README. `test/notes-tests.mjs` checks the
   renderer and renders every README.
 
+## 2026-10-14 — the workshop
+
+### Forte 0.3.2
+- Ten instruments added to the workshop (shown on the landing page and in
+  the menus), each with a build brief in `docs/WORKSHOP.md`:
+  - from history: Harpsichord, Pipe Organ, Carillon, Vibraphone,
+    Free-Reed Organ and Duddell's Singing Arc;
+  - new: Star Keyboard, Wind Harp, Bubble Organ and Spring Keyboard.
+
 ## 2026-10-14 — phones
 
 ### Forte 0.3.1

@@ -25,12 +25,22 @@ lands, the pickup's offset, how fast the black hole spins.
 | ✅ | [Viola Organista](bowed/) | Leonardo da Vinci (1488) | strings bowed by a rosined wheel: implicit stick–slip friction, Helmholtz motion, live Schelleng diagram, sympathetic strings on a shared soundboard |
 | ✅ | [Glass Armonica](glass/) | Benjamin Franklin (1761) | wet-finger stick–slip on Rayleigh shell modes; split doublets warble as the bowls turn (Bryan effect); water loading |
 | ✅ | [Pyrophone](pyrophone/) | Frédéric Kastner (1873) | flame-driven Rijke tubes on a subcritical Hopf bifurcation: slow self-excited onsets, hysteresis, warm-up drift |
+| 🛠 | Harpsichord | Flemish double-manual (Ruckers) | quill plucks: plectrum contact and slip, buff and lute stops |
+| 🛠 | Pipe Organ | Baroque organ | jet–edge feedback in flue pipes, chiff, overblowing, wind sag |
+| 🛠 | Carillon | Flemish carillon (Hemony) | bell shell modes and the strike note: a pitch not in the spectrum |
+| 🛠 | Vibraphone | Deagan vibraharp (1927) | undercut bars, coupled tube resonators, motor-driven discs |
+| 🛠 | Free-Reed Organ | harmonium and accordion | self-excited free reeds, musette beating, bellows expression |
+| 🛠 | Singing Arc | Duddell's singing arc (1900) | negative-resistance arc driving an LC circuit; the arc is the loudspeaker |
 | ✅ | [Huygens Keyboard](huygens/) | — | pulse-coupled relaxation oscillators that lock chords into just intonation (Arnold tongues) |
 | ✅ | [Black-Hole Keyboard](blackhole/) | — | Kerr quasinormal modes from the Teukolsky equation, h₊ and h× in stereo |
 | ✅ | [Gong Keyboard](gongs/) | — | von Kármán plates and shallow shells in modal form (energy-stable SAV scheme): bell → shimmer → crash with how hard you strike, pitch glides down (flat) or up (domed) |
 | ✅ | [Quantum Keyboard](quantum/) | — | exact wavepackets in square, Morse, hydrogen-Rydberg, gravitational and harmonic wells: collapse, fractional and full revivals, decoherence |
+| 🛠 | Star Keyboard | — | asteroseismology: stochastically driven p-modes, échelle combs, rotation splitting |
+| 🛠 | Wind Harp | — | vortex shedding locking onto string harmonics, with hysteresis |
+| 🛠 | Bubble Organ | — | Minnaert bubbles: depth, gas and pressure set the pitch |
+| 🛠 | Spring Keyboard | — | dispersive waves on helical springs: every note a chirp |
 
-✅ playable. Each instrument's README has its equations,
+✅ playable · 🛠 in the workshop ([build briefs](docs/WORKSHOP.md)). Each instrument's README has its equations,
 numbers, sources, and a list of what is simplified. The same notes open on
 the instrument's page under **How it works**, next to its name.
 
@@ -96,6 +106,7 @@ test/<instrument>-tests.mjs  physics and engine tests
 tools/                       demo renderers, data generators, scaffolding
 examples/<instrument>/       rendered demos (.m4a)
 docs/INSTRUMENT_GUIDE.md     how to build a new instrument
+docs/WORKSHOP.md             briefs for the instruments in the workshop
 docs/template/               the starting point (struck bars)
 ```
 
