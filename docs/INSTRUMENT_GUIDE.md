@@ -226,6 +226,6 @@ While it is 0.x, bump MINOR for new features or changes to the sound or
 parameters, and PATCH for fixes that leave the intended sound alone. Bump
 Forte's version (`FORTE_VERSION` and `package.json`) for changes to
 `shared/`, the landing page or the tools. Log every bump in `CHANGELOG.md`
-under the date, then tag the release commit (`git tag <slug>-vX.Y.Z`)
-and push the tags. Run every test file, check the page in a
-browser (audio, MIDI, presets, views, narrow-screen layout), and push.
+under the date (releases are not tagged). Run every test file, check the
+page in a browser (audio, MIDI, presets, views, narrow-screen layout), and
+push.

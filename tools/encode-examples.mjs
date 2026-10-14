@@ -1,10 +1,19 @@
 // Compress rendered demos for the web and index them.
 // examples/<instrument>/*.wav  →  examples/<instrument>/*.m4a  +  examples/index.json
-// Usage: node tools/encode-examples.mjs [slug …]   (uses macOS afconvert; WAVs stay local)
+// Usage: node tools/encode-examples.mjs [slug …]   (macOS afconvert, or ffmpeg elsewhere; WAVs stay local)
 // With slugs, only those instruments' WAVs are (re-)encoded; the index always covers everything.
 
 import { readdirSync, writeFileSync, statSync, existsSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
+
+// AAC at 112 kb/s: macOS afconvert if it is there, otherwise ffmpeg's own AAC encoder
+let encoder;
+function encode(src, dst) {
+  encoder ??= ['afconvert', 'ffmpeg'].find((cmd) => !spawnSync(cmd, ['-h'], { stdio: 'ignore' }).error);
+  if (encoder === 'afconvert') execFileSync('afconvert', ['-f', 'm4af', '-d', 'aac', '-b', '112000', src, dst]);
+  else if (encoder === 'ffmpeg') execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', src, '-c:a', 'aac', '-b:a', '112k', '-movflags', '+faststart', dst]);
+  else throw new Error('encoding needs afconvert (macOS) or ffmpeg');
+}
 
 const root = new URL('../examples/', import.meta.url);
 const only = process.argv.slice(2);
@@ -17,7 +26,7 @@ for (const inst of readdirSync(root).filter((d) => d !== 'template' && statSync(
     const m4a = wav.replace(/\.wav$/, '.m4a');
     const src = new URL(wav, dir).pathname, dst = new URL(m4a, dir).pathname;
     if ((!only.length || only.includes(inst)) && (!existsSync(dst) || statSync(dst).mtimeMs < statSync(src).mtimeMs)) {
-      execFileSync('afconvert', ['-f', 'm4af', '-d', 'aac', '-b', '112000', src, dst]);
+      encode(src, dst);
     }
     if (!existsSync(dst)) continue;
     const title = wav.replace(/\.wav$/, '').replace(/^\d+-/, '').replace(/-/g, ' ');

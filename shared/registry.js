@@ -6,7 +6,7 @@
 // Keep FORTE_VERSION equal to package.json's, and log every bump in
 // CHANGELOG.md (test/site-tests.mjs checks both).
 
-export const FORTE_VERSION = '0.4.0';
+export const FORTE_VERSION = '0.4.1';
 
 export const SECTIONS = [
   { id: 'history', title: 'Instruments from history', blurb: 'Real keyboards — some famous, some forgotten — rebuilt from their physics, with every mechanism exposed as a knob.' },
@@ -106,7 +106,7 @@ export const INSTRUMENTS = [
     accent: '#d9b45f',
   },
   {
-    id: 'vibraphone', name: 'Vibraphone', section: 'history', ready: false,
+    id: 'vibraphone', name: 'Vibraphone', section: 'history', ready: true, version: '0.1.0', trim: 3,
     after: 'the Deagan vibraharp (1927)',
     tagline: 'Undercut aluminium bars over tuned tubes, with motor-driven discs that open and close the resonators.',
     physics: 'Tuned bars · coupled resonators · rotating valves',

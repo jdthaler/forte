@@ -10,6 +10,46 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-14 — vibraphone
+
+### Vibraphone 0.1.0
+- New instrument, after the Deagan vibraharp (1927): 37 aluminium bars,
+  F3–F6, over stopped resonator tubes, with a motor turning a butterfly
+  disc in every tube's mouth.
+- **Bars:** each bar's arch-shaped undercut is shaped by a Timoshenko
+  beam finite-element model so that its first three bending modes sit at
+  1 : 4 : 10 (every key within 0.01 ¢ in the model; a plain bar rings at
+  1 : 2.76 : 5.40). Bending modes 4 and 5 and two torsional modes come
+  along untuned. Losses from the aluminium, heat flow across the bar
+  (Zener), the cords at mode 1's nodes, and the bar's own radiation.
+- **Resonators:** bar mode 1 and the tube's quarter-wave mode are two
+  oscillators sharing the air in the gap. Pressed close they split and
+  trade energy (beats); at the default gap the tube draws the bar's energy
+  out as sound: the fundamental is 12–34 dB louder, swells for up to
+  0.35 s after the strike, and the bar's ring drops from a minute or less
+  (13 s at F6) to a few seconds.
+- **Motor:** a disc closing the mouth adds end correction, which detunes
+  the tube and weakens its coupling. The tremolo runs at twice the shaft
+  speed (1–12 Hz), the shaft spins up and parks open or closed, and the
+  discs' phase can step along the shaft and between the naturals' and
+  accidentals' shafts.
+- **Mallets:** a yarn head on the bar as an implicit, energy-consistent
+  Hertz-type contact (F = Kδ^2.3): hardness, mass, speed, and where it
+  lands along and across the bar.
+- **Damper:** a felt bar on every bar unless the pedal (Space, CC64) is
+  down or the key is held; also a pedal lock. Air temperature detunes
+  tubes and bars.
+- Views: the bar to scale with its undercut and live mode shapes; the
+  tube's standing wave, the disc and the coupling over one turn, with the
+  energy in bar and tube; the live spectrum with the model's lines; and a
+  mode table. Eight demos.
+
+### Forte 0.4.1
+- `tools/encode-examples.mjs` encodes demos with ffmpeg where macOS
+  `afconvert` is missing (Linux, cloud sessions).
+- `tools/loudness.mjs` measures the Vibraphone.
+- The instrument guide no longer says to tag releases.
+
 ## 2026-10-14 — how it works
 
 ### Forte 0.4.0

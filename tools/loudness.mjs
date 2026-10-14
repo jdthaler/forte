@@ -48,10 +48,11 @@ function measure([L, Rr]) {
 const scale = ([L, Rr], g) => [L.map((v) => v * g), Rr.map((v) => v * g)];
 const defaults = (m) => Object.fromEntries(m.GROUPS.flatMap((g) => g.params).map((p) => [p.id, p.def]));
 
-// The nine shell-based instruments: engine class, default params, computer-key velocity.
+// The shell-based instruments: engine class, default params, computer-key velocity.
 const SHELL = [
   ['grand', 'GrandEngine'], ['reeds', 'ReedEngine'], ['clavier', 'ClavierEngine'], ['pianet', 'PianetEngine'],
   ['bowed', 'OrganistaEngine'], ['glass', 'ArmonicaEngine'], ['pyrophone', 'PyrophoneEngine'], ['gongs', 'GongEngine'], ['quantum', 'QuantumEngine'],
+  ['vibraphone', 'VibraphoneEngine'],
 ];
 
 export async function measureAll() {
