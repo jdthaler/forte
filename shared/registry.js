@@ -91,7 +91,7 @@ export const INSTRUMENTS = [
     accent: '#ff8a3d',
   },
   {
-    id: 'gongs', name: 'Gong Keyboard', section: 'new', ready: false,
+    id: 'gongs', name: 'Gong Keyboard', section: 'new', ready: true, version: '0.1.0',
     tagline: 'Thin plates whose stiffness grows with amplitude: strike softly for a bell, hard for a crash.',
     physics: 'Von Kármán plates · wave turbulence',
     accent: '#e6c15a',

@@ -11,6 +11,17 @@ for example `piano-v0.1.0`.
 
 ## 2026-10-13 — new instruments
 
+### Gong Keyboard 0.1.0
+- Every key a free or clamped circular plate: 41 Bessel modes with sparse
+  von Kármán coupling (angular selection rules).
+- Optional shallow-shell dome, so flat gongs glide down and domed ones
+  glide up.
+- Exact modal recursion with an energy-stable scalar-auxiliary-variable
+  nonlinearity.
+- Hertz mallet, thermoelastic, internal and radiation losses.
+- Views: gong surface, spectrogram, energy cascade.
+- Known: heavy on CPU when many loud gongs ring at once.
+
 ### Viola Organista 0.1.0
 - After Leonardo's design: steel strings bowed by a rosined wheel. Each
   string is a lossy waveguide with torsion, driven by the hyperbolic

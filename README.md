@@ -27,10 +27,10 @@ lands, the pickup's offset, how fast the black hole spins.
 | ✅ | [Pyrophone](pyrophone/) | Frédéric Kastner (1873) | flame-driven Rijke tubes on a subcritical Hopf bifurcation: slow self-excited onsets, hysteresis, warm-up drift |
 | ✅ | [Huygens Keyboard](huygens/) | — | pulse-coupled relaxation oscillators that lock chords into just intonation (Arnold tongues) |
 | ✅ | [Black-Hole Keyboard](blackhole/) | — | Kerr quasinormal modes from the Teukolsky equation, h₊ and h× in stereo |
-| 🛠 | Gong Keyboard | — | von Kármán plates: from bell to crash with amplitude |
+| ✅ | [Gong Keyboard](gongs/) | — | von Kármán plates and shallow shells in modal form (energy-stable SAV scheme): bell → shimmer → crash with how hard you strike, pitch glides down (flat) or up (domed) |
 | ✅ | [Quantum Keyboard](quantum/) | — | exact wavepackets in square, Morse, hydrogen-Rydberg, gravitational and harmonic wells: collapse, fractional and full revivals, decoherence |
 
-✅ playable · 🛠 in the workshop. Each instrument's README has its equations,
+✅ playable. Each instrument's README has its equations,
 numbers, sources, and a list of what is simplified.
 
 ## Playing

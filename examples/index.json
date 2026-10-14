@@ -115,6 +115,36 @@
    "title": "Finger lifted free bowl precesses"
   }
  ],
+ "gongs": [
+  {
+   "file": "01-slow-gong-melody.m4a",
+   "title": "Slow gong melody"
+  },
+  {
+   "file": "02-pp-mf-fff-bell-to-crash.m4a",
+   "title": "Pp mf fff bell to crash"
+  },
+  {
+   "file": "03-flat-glides-down-dome-glides-up.m4a",
+   "title": "Flat glides down dome glides up"
+  },
+  {
+   "file": "04-thick-stays-a-bell-thin-crashes.m4a",
+   "title": "Thick stays a bell thin crashes"
+  },
+  {
+   "file": "05-centre-then-rim-strike.m4a",
+   "title": "Centre then rim strike"
+  },
+  {
+   "file": "06-tam-tam-roll-swells-to-crash.m4a",
+   "title": "Tam tam roll swells to crash"
+  },
+  {
+   "file": "07-hanging-then-clamped.m4a",
+   "title": "Hanging then clamped"
+  }
+ ],
  "grand": [
   {
    "file": "01-cp70-ballad.m4a",
