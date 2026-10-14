@@ -192,3 +192,172 @@ src/params.js             every parameter, with ranges, hints and presets
 * CPU: ~1.7 ns per mode per sample; the engine caps the oscillator count and
   steals the quietest voices. If the CPU pill turns red, lower **Highest
   partial** or **Strings per note**.
+
+## Prior art and references
+
+### The original instrument
+
+Bartolomeo Cristofori built the first pianos in Florence for the Medici
+court. A Medici inventory of 1700 already lists one, and Scipione Maffei
+described its hammer action in the *Giornale de' letterati d'Italia* in
+1711. Three of Cristofori's pianos survive, dated 1720, 1722 and 1726.
+
+* Pollens, S. (2022). "The Invention of the Piano." In *A History of
+  Stringed Keyboard Instruments*, Cambridge University Press, 313–361.
+  [doi:10.1017/9781108379915.007](https://doi.org/10.1017/9781108379915.007)
+* [Grand piano, Bartolomeo Cristofori, Florence, 1720](https://www.metmuseum.org/art/collection/search/501788)
+  (The Metropolitan Museum of Art, New York).
+* [Hammerflügel, Bartolomeo Cristofori, Florence, 1726](https://mfm.uni-leipzig.de/fr/ausgewaehlte-exponate/exponate/cristofori.php)
+  (Museum für Musikinstrumente der Universität Leipzig).
+
+### The physics
+
+**Stiff strings and inharmonicity**
+
+* Shankland, R. S. & Coltman, J. W. (1939). "The departure of the overtones
+  of a vibrating wire from a true harmonic series." *J. Acoust. Soc. Am.*
+  10, 161–166. [doi:10.1121/1.1915971](https://doi.org/10.1121/1.1915971)
+* Schuck, O. H. & Young, R. W. (1943). "Observations on the vibrations of
+  piano strings." *J. Acoust. Soc. Am.* 15, 1–11.
+  [doi:10.1121/1.1916221](https://doi.org/10.1121/1.1916221)
+* Young, R. W. (1952). "Inharmonicity of plain wire piano strings."
+  *J. Acoust. Soc. Am.* 24, 267–273.
+  [doi:10.1121/1.1906888](https://doi.org/10.1121/1.1906888)
+* Fletcher, H. (1964). "Normal vibration frequencies of a stiff piano
+  string." *J. Acoust. Soc. Am.* 36, 203–209.
+  [doi:10.1121/1.1918933](https://doi.org/10.1121/1.1918933). The
+  inharmonicity coefficient B.
+* Conklin, H. A. (1996). "Design and tone in the mechanoacoustic piano.
+  Part III. Piano strings and scale design." *J. Acoust. Soc. Am.* 100,
+  1286–1298. [doi:10.1121/1.416017](https://doi.org/10.1121/1.416017)
+
+**Hammer and felt**
+
+* Hunt, K. H. & Crossley, F. R. E. (1975). "Coefficient of restitution
+  interpreted as damping in vibroimpact." *J. Appl. Mech.* 42, 440–445.
+  [doi:10.1115/1.3423596](https://doi.org/10.1115/1.3423596). A nonlinear
+  contact force whose damping grows with the compression.
+* Boutillon, X. (1988). "Model for piano hammers: Experimental
+  determination and digital simulation." *J. Acoust. Soc. Am.* 83, 746–754.
+  [doi:10.1121/1.396117](https://doi.org/10.1121/1.396117)
+* Askenfelt, A. & Jansson, E. V. (1990). "From touch to string vibrations.
+  I: Timing in the grand piano action." *J. Acoust. Soc. Am.* 88, 52–63.
+  [doi:10.1121/1.399933](https://doi.org/10.1121/1.399933). Includes the
+  hammer–string contact times quoted above. Parts II (*J. Acoust. Soc. Am.*
+  90, 2383–2393, 1991,
+  [doi:10.1121/1.402043](https://doi.org/10.1121/1.402043)) and III
+  (93, 2181–2196, 1993,
+  [doi:10.1121/1.406680](https://doi.org/10.1121/1.406680)) follow the key,
+  hammer and string.
+* Chaigne, A. & Askenfelt, A. (1994). "Numerical simulations of piano
+  strings. I. A physical model for a struck string using finite difference
+  methods." *J. Acoust. Soc. Am.* 95, 1112–1118.
+  [doi:10.1121/1.408459](https://doi.org/10.1121/1.408459). And "II.
+  Comparisons with measurements and systematic exploration of some
+  hammer-string parameters." 95, 1631–1640.
+  [doi:10.1121/1.408549](https://doi.org/10.1121/1.408549). The source of
+  the C2 and C4 felt values.
+* Stulov, A. (1995). "Hysteretic model of the grand piano hammer felt."
+  *J. Acoust. Soc. Am.* 97, 2577–2585.
+  [doi:10.1121/1.411912](https://doi.org/10.1121/1.411912)
+* Conklin, H. A. (1996). "Design and tone in the mechanoacoustic piano.
+  Part I. Piano hammers and tonal effects." *J. Acoust. Soc. Am.* 99,
+  3286–3296. [doi:10.1121/1.414947](https://doi.org/10.1121/1.414947)
+
+**Coupled strings and the bridge**
+
+* Weinreich, G. (1977). "Coupled piano strings." *J. Acoust. Soc. Am.* 62,
+  1474–1484. [doi:10.1121/1.381677](https://doi.org/10.1121/1.381677). The
+  double decay and the aftersound.
+* Gough, C. E. (1981). "The theory of string resonances on musical
+  instruments." *Acustica* 49, 124–141.
+* Conklin, H. A. (1996). "Design and tone in the mechanoacoustic piano.
+  Part II. Piano structure." *J. Acoust. Soc. Am.* 100, 695–708.
+  [doi:10.1121/1.416233](https://doi.org/10.1121/1.416233)
+
+**Torsional and longitudinal waves**
+
+* Gillan, F. S. & Elliott, S. J. (1989). "Measurement of the torsional modes
+  of vibration of strings on instruments of the violin family." *J. Sound
+  Vib.* 130, 347–351.
+  [doi:10.1016/0022-460X(89)90562-2](https://doi.org/10.1016/0022-460X%2889%2990562-2)
+* Giordano, N. & Korty, A. J. (1996). "Motion of a piano string:
+  Longitudinal vibrations and the role of the bridge." *J. Acoust. Soc. Am.*
+  100, 3899–3908. [doi:10.1121/1.417219](https://doi.org/10.1121/1.417219)
+* Conklin, H. A. (1999). "Generation of partials due to nonlinear mixing in
+  a stringed instrument." *J. Acoust. Soc. Am.* 105, 536–545.
+  [doi:10.1121/1.424589](https://doi.org/10.1121/1.424589). Phantom
+  partials.
+* Bank, B. & Sujbert, L. (2005). "Generation of longitudinal vibrations in
+  piano strings: From physics to sound synthesis." *J. Acoust. Soc. Am.*
+  117, 2268–2278. [doi:10.1121/1.1868212](https://doi.org/10.1121/1.1868212)
+
+**Methods and overviews**
+
+* Ritz, W. (1909). "Über eine neue Methode zur Lösung gewisser
+  Variationsprobleme der mathematischen Physik." *J. reine angew. Math.*
+  135, 1–61. [doi:10.1515/crll.1909.135.1](https://doi.org/10.1515/crll.1909.135.1).
+  The Rayleigh–Ritz method used for tapered members.
+* Morrison, J. D. & Adrien, J.-M. (1993). "MOSAIC: A framework for modal
+  synthesis." *Computer Music J.* 17(1), 45–56.
+  [doi:10.2307/3680569](https://doi.org/10.2307/3680569)
+* *[Five Lectures on the Acoustics of the Piano](https://www.speech.kth.se/music/5_lectures/)*
+  (1990). Royal Swedish Academy of Music. Lectures by H. A. Conklin,
+  A. Askenfelt & E. Jansson, D. E. Hall, G. Weinreich and K. Wogram.
+* Fletcher, N. H. & Rossing, T. D. (1998). "The Piano." Ch. 12 of *The
+  Physics of Musical Instruments*, 2nd ed., Springer, 352–398.
+  [doi:10.1007/978-0-387-21603-4_12](https://doi.org/10.1007/978-0-387-21603-4_12)
+
+### Earlier models and syntheses of the piano
+
+**Academic**
+
+* Fletcher, H., Blackham, E. D. & Stratton, R. (1962). "Quality of piano
+  tones." *J. Acoust. Soc. Am.* 34, 749–761.
+  [doi:10.1121/1.1918192](https://doi.org/10.1121/1.1918192). Piano tones
+  resynthesised from up to 100 partials and compared with real ones by a
+  listening jury.
+* Hiller, L. & Ruiz, P. (1971). "Synthesizing musical sounds by solving the
+  wave equation for vibrating objects: Part 1." *J. Audio Eng. Soc.* 19,
+  462–470. Finite-difference synthesis of string tones.
+* Chaigne & Askenfelt (1994), above: a finite-difference piano string
+  struck by a nonlinear felt hammer.
+* Smith, J. O. & Van Duyne, S. A. (1995). "Commuted piano synthesis."
+  *Proc. Int. Computer Music Conf.*, Banff, 319–326.
+  [Overview](https://ccrma.stanford.edu/~jos/pasp/Commuted_Piano_Synthesis.html).
+  Digital-waveguide strings, with the soundboard folded into the
+  excitation.
+* Bank, B., Avanzini, F., Borin, G., De Poli, G., Fontana, F. & Rocchesso,
+  D. (2003). "Physically informed signal processing methods for piano sound
+  synthesis: a research overview." *EURASIP J. Adv. Signal Process.* 2003,
+  464536. [doi:10.1155/S1110865703304093](https://doi.org/10.1155/S1110865703304093)
+* Bensa, J., Bilbao, S., Kronland-Martinet, R. & Smith, J. O. (2003). "The
+  simulation of piano string vibration: From physical models to finite
+  difference schemes and digital waveguides." *J. Acoust. Soc. Am.* 114,
+  1095–1107. [doi:10.1121/1.1587146](https://doi.org/10.1121/1.1587146)
+* Giordano, N. & Jiang, M. (2004). "Physical modeling of the piano."
+  *EURASIP J. Adv. Signal Process.* 2004, 981942.
+  [doi:10.1155/S111086570440105X](https://doi.org/10.1155/S111086570440105X)
+* Bilbao, S. (2009). *Numerical Sound Synthesis: Finite Difference Schemes
+  and Simulation in Musical Acoustics*. Wiley.
+  [doi:10.1002/9780470749012](https://doi.org/10.1002/9780470749012)
+* Bank, B., Zambon, S. & Fontana, F. (2010). "A modal-based real-time piano
+  synthesizer." *IEEE Trans. Audio Speech Lang. Process.* 18, 809–821.
+  [doi:10.1109/TASL.2010.2040524](https://doi.org/10.1109/TASL.2010.2040524)
+* Chabassier, J., Chaigne, A. & Joly, P. (2013). "Modeling and simulation
+  of a grand piano." *J. Acoust. Soc. Am.* 134, 648–665.
+  [doi:10.1121/1.4809649](https://doi.org/10.1121/1.4809649)
+
+**Commercial and software**
+
+* [Pianoteq](https://www.modartt.com/pianoteq) (Modartt, 2006): a piano
+  computed in real time from a physical model of hammers, strings and
+  soundboard.
+* [V-Piano](https://www.roland.com/global/products/v-piano/) (Roland, 2009):
+  a hardware piano whose sound is modelled rather than sampled.
+* [Piano V](https://www.arturia.com/products/software-instruments/piano-v/overview)
+  (Arturia): a software piano that simulates the physics and acoustics of
+  the instrument.
+* [Modalys](https://support.ircam.fr/docs/Modalys/3.3/co/Introduction.html)
+  (IRCAM): a modal-synthesis program for strings, plates and tubes, first
+  developed as MOSAIC by J.-M. Adrien.
