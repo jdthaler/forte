@@ -1,0 +1,284 @@
+// Quantum Keyboard checks. Run: node test/quantum-tests.mjs
+//
+// First the physics against independent results (finite-difference
+// diagonalisation, exact radial integrals, tabulated Airy zeros, the
+// Averbukh–Perelman fractional revivals), then the engine against the model.
+
+import assert from 'node:assert/strict';
+import {
+  well, morseX, morseKappa, airyZero, airyZeroC, besselJp, hydrogenR, makePacket, autocorr, signalAt, derivs,
+} from '../quantum/src/quantum-model.js';
+import { QuantumEngine } from '../quantum/src/quantum-engine.js';
+import { DEFAULTS, GROUPS } from '../quantum/src/quantum-params.js';
+import { symEig } from '../shared/linalg.js';
+import { keyFreq } from '../shared/dsp.js';
+
+const FS = 48000, PI = Math.PI;
+let failures = 0;
+function test(name, fn) { try { fn(); console.log('  ok  ', name); } catch (e) { failures++; console.log('  FAIL', name, '\n       ', e.message); } }
+const P = (o = {}) => ({ ...DEFAULTS, ...o });
+const cents = (a, b) => 1200 * Math.log2(a / b);
+const rel = (a, b) => Math.abs(a / b - 1);
+
+// Render through the engine in 128-sample blocks (Float64 buffers), left channel.
+function render(params, events, sec) {
+  const e = new QuantumEngine(FS);
+  e.setParams(params);
+  const n = Math.round(sec * FS), L = new Float64Array(n), R = new Float64Array(n), bl = 128, bL = new Float64Array(bl), bR = new Float64Array(bl);
+  const ev = events.map(([t, ...r]) => [Math.round(t * FS), ...r]).sort((a, b) => a[0] - b[0]);
+  let j = 0;
+  for (let s = 0; s < n; s += bl) {
+    while (j < ev.length && ev[j][0] <= s) { const [, type, k, v] = ev[j++]; if (type === 'on') e.noteOn(k, v); else if (type === 'off') e.noteOff(k); }
+    e.process(bL, bR, bl);
+    L.set(bL.subarray(0, Math.min(bl, n - s)), s); R.set(bR.subarray(0, Math.min(bl, n - s)), s);
+  }
+  return { L, R, M: L.map((v, i) => v + R[i]), e };
+}
+const note = (params, key, sec, vel = 1) => render(params, [[0, 'on', key, vel]], sec);
+// Amplitude of frequency f in x[a, b) (Hann-windowed Goertzel).
+function tone(x, f, a, b) {
+  const w = (2 * PI * f) / FS; let re = 0, im = 0;
+  for (let i = a; i < b; i++) { const h = 0.5 - 0.5 * Math.cos((2 * PI * (i - a)) / (b - a)); re += h * x[i] * Math.cos(w * i); im += h * x[i] * Math.sin(w * i); }
+  return (2 * Math.hypot(re, im)) / ((b - a) / 2);
+}
+function rms(x, a, b) { let s = 0; for (let i = a; i < b; i++) s += x[i] * x[i]; return Math.sqrt(s / (b - a)); }
+// Instantaneous frequency near the launch: demodulate at f0, Gaussian low-pass
+// (σ_t = 1 period, which removes the other Bohr harmonics to 1e-8), and take the
+// phase slope between two times.
+function launchPitch(x, f0, t1, t2) {
+  const st = 1 / f0, w = (2 * PI * f0) / FS;
+  const ph = (t) => {
+    const c = Math.round(t * FS), r = Math.round(4 * st * FS);
+    let re = 0, im = 0;
+    for (let i = Math.max(0, c - r); i <= c + r; i++) { const g = Math.exp(-0.5 * ((i - c) / (st * FS)) ** 2); re += g * x[i] * Math.cos(w * i); im -= g * x[i] * Math.sin(w * i); }
+    return Math.atan2(im, re);
+  };
+  let d = ph(t2) - ph(t1);
+  d -= 2 * PI * Math.round(d / (2 * PI));
+  return f0 * (1 + d / (2 * PI * f0 * (t2 - t1)));
+}
+// Finite-difference eigenstates of −ψ″/2μ + Vψ (Dirichlet on [x0, x1]).
+function fdEig(V, x0, x1, N, mu, count) {
+  const h = (x1 - x0) / (N + 1), xs = Float64Array.from({ length: N }, (_, i) => x0 + (i + 1) * h);
+  const A = Array.from({ length: N }, () => new Float64Array(N)), t = 1 / (2 * mu * h * h);
+  for (let i = 0; i < N; i++) { A[i][i] = 2 * t + V(xs[i]); if (i) A[i][i - 1] = -t; if (i < N - 1) A[i][i + 1] = -t; }
+  const d = symEig(A, N), idx = [...d.keys()].sort((a, b) => d[a] - d[b]).slice(0, count);
+  const vecs = idx.map((c) => {
+    const v = xs.map((_, r) => A[r][c]);
+    let s = 0; for (const q of v) s += q * q * h;
+    const k = v.findIndex((q) => Math.abs(q) > 1e-3 * Math.sqrt(s)), sg = v[k] < 0 ? -1 : 1; // first lobe on the inner side > 0
+    return v.map((q) => (sg * q) / Math.sqrt(s));
+  });
+  const xmn = (m, n) => { let s = 0; for (let i = 0; i < N; i++) s += vecs[m][i] * vecs[n][i] * xs[i] * h; return s; };
+  return { E: idx.map((i) => d[i]), xmn, h };
+}
+// Richardson-extrapolated (O(h²)) energies and matrix elements from two grids.
+function fdPair(V, x0, x1, mu, count, N = 280) {
+  const a = fdEig(V, x0, x1, N, mu, count), b = fdEig(V, x0, x1, 2 * N + 1, mu, count), r = b.h ** 2 / (a.h ** 2 - b.h ** 2);
+  const ex = (u, v) => v + (v - u) * r;
+  return { E: (n) => ex(a.E[n], b.E[n]), x: (m, n) => ex(a.xmn(m, n), b.xmn(m, n)) };
+}
+
+console.log('physics');
+test('square well: x_mn = −8mn/π²(m²−n²)² (quadrature), → −2/π²k² (triangle-wave Fourier series)', () => {
+  const W = well('box'), N = 20000;
+  for (const [m, n] of [[1, 2], [3, 8], [10, 13], [50, 51], [4, 6]]) {
+    let s = 0;
+    for (let i = 0; i < N; i++) { const x = (i + 0.5) / N; s += 2 * x * Math.sin(m * PI * x) * Math.sin(n * PI * x); }
+    assert.ok(Math.abs(s / N - W.x(m, n)) < 1e-7, `${m},${n}: ${s / N} vs ${W.x(m, n)}`);
+  }
+  for (const k of [1, 3, 5]) assert.ok(rel(W.x(2000, 2000 + k), -2 / (PI * PI * k * k)) < 1e-3, `k = ${k}`);
+});
+test('Morse: E_v and x_mn (Vasan & Cross) match a finite-difference diagonalisation', () => {
+  const kap = 24, D = kap / 4, fd = fdPair((x) => D * (1 - Math.exp(-x)) ** 2, -1.5, 14, 2 * D, 9);
+  for (let v = 0; v < 9; v++) assert.ok(Math.abs(fd.E(v) - ((v + 0.5) - (v + 0.5) ** 2 / kap)) < 5e-4, `E_${v}: ${fd.E(v)} vs ${(v + 0.5) - (v + 0.5) ** 2 / kap}`);
+  for (const [m, n] of [[0, 1], [3, 4], [7, 8], [0, 2], [2, 5], [1, 4]]) assert.ok(Math.abs(fd.x(m, n) - morseX(m, n, kap)) < 2e-4, `x_${m}${n}: ${fd.x(m, n)} vs ${morseX(m, n, kap)}`);
+});
+test('bouncer: Airy zeros (A&S 10.4.94 vs table), z_mn = −2/(z_m−zₙ)², ⟨z⟩ₙ = 2Eₙ/3 (virial)', () => {
+  for (let n = 3; n <= 10; n++) assert.ok(Math.abs(airyZeroC(n) - airyZero(n)) < 1e-8, `a_${n}`);
+  const fd = fdPair((z) => z, 0, 28, 0.5, 8);
+  for (let n = 0; n < 8; n++) assert.ok(Math.abs(fd.E(n) - airyZero(n + 1)) < 2e-4, `E_${n + 1}: ${fd.E(n)}`);
+  const W = well('bouncer');
+  for (const [m, n] of [[0, 1], [1, 2], [0, 2], [2, 5], [4, 7]]) assert.ok(Math.abs(fd.x(m, n) - W.x(m + 1, n + 1)) < 2e-4, `z_${m + 1}${n + 1}`);
+  for (const n of [0, 3, 6]) assert.ok(Math.abs(fd.x(n, n) - (2 * airyZero(n + 1)) / 3) < 2e-4, `virial n=${n + 1}`);
+});
+test('hydrogen: Kepler-orbit ⟨n|r|n+k⟩ vs exact radial integrals (l = 1)', () => {
+  assert.ok(Math.abs(besselJp(1, 0) - 0.5) < 1e-12 && Math.abs(besselJp(1, 1) - (0.7651976866 - 0.4400505857)) < 1e-9);
+  const lag = (deg, al, x) => { let a = 1, b = 1 + al - x; if (!deg) return 1; for (let j = 1; j < deg; j++) { const c = ((2 * j + 1 + al - x) * b - (j + al) * a) / (j + 1); a = b; b = c; } return b; };
+  const u = (n, r) => { const rho = (2 * r) / n; return r * rho * Math.exp(-rho / 2) * lag(n - 2, 3, rho); }; // l = 1
+  const exact = (n1, n2) => {
+    const R = 2.5 * n2 * n2 + 40, M = 60000, h = R / M;
+    let a = 0, b = 0, c = 0;
+    for (let i = 1; i < M; i++) { const r = i * h, p = u(n1, r), q = u(n2, r); a += p * p; b += q * q; c += p * q * r; }
+    return c / Math.sqrt(a * b);
+  };
+  const tol = { 1: 0.003, 2: 0.006, 5: 0.03 };
+  for (const n of [20, 40]) for (const k of [1, 2, 5]) {
+    const ex = exact(n, n + k), sc = hydrogenR(n, n + k);
+    assert.ok(rel(sc, ex) < tol[k], `n=${n} k=${k}: ${sc.toFixed(3)} vs ${ex.toFixed(3)}`);
+  }
+});
+test('time scales from E′, E″, E‴: T_rev/T_cl = 2n̄ (box), κ−2n̄−1 (Morse), 2n̄/3 and T_sr/T_rev = 3n̄/4 (hydrogen), 6(n̄−¼) (bouncer)', () => {
+  const ratios = (id, nbar, o = {}) => { const d = derivs(well(id, P(o), nbar), nbar); return [2 * d.d1 / Math.abs(d.d2), Math.abs(3 * d.d2 / d.d3)]; };
+  assert.ok(rel(ratios('box', 50)[0], 100) < 1e-12);
+  assert.ok(rel(ratios('morse', 30, { eta: 0.5 })[0], morseKappa(30, 0.5) - 61) < 1e-12);
+  const [h1, h2] = ratios('hydrogen', 60);
+  assert.ok(rel(h1, 40) < 1e-12 && rel(h2, 45) < 1e-12, `H ${h1}, ${h2}`);
+  assert.ok(rel(ratios('bouncer', 200)[0], 6 * 199.75) < 1e-4, `bouncer ${ratios('bouncer', 200)[0]}`);
+  // the packet's own clock agrees to O(σ²/n̄) (its pitch is the mean Bohr frequency)
+  const pk = makePacket(57, P({ lock: false, nbar: 200, detector: 'x' }));
+  assert.ok(rel(pk.Trev / pk.Tcl, 400) < 1e-3, `box packet ${pk.Trev / pk.Tcl}`);
+});
+test('autocorrelation: exact revival in the box; Averbukh–Perelman fractions in Morse (½ at T/4, ⅓ at T/3 and T/6, 1 at T/2)', () => {
+  const near = (pk, t) => { let b = 0; for (let u = t - pk.Tcl; u <= t + pk.Tcl; u += pk.Tcl / 64) b = Math.max(b, autocorr(pk, u)); return b; };
+  const box = makePacket(57, P({ lock: false, nbar: 40 }));
+  assert.ok(Math.abs(autocorr(box, box.Trev) - 1) < 1e-9, `box |A(T_rev)|² = ${autocorr(box, box.Trev)}`);
+  const pk = makePacket(57, P({ potential: 'morse', lock: false, nbar: 40, eta: 0.5 }));
+  const want = [[1 / 4, 0.5], [1 / 3, 1 / 3], [1 / 6, 1 / 3], [1 / 8, 0.25], [1 / 2, 1], [1, 1]];
+  for (const [f, a] of want) { const v = near(pk, f * pk.Trev); assert.ok(Math.abs(v - a) < 0.03, `T_rev·${f.toFixed(3)}: ${v.toFixed(3)} (want ${a.toFixed(3)})`); }
+});
+test('hydrogen: revivals degrade (cubic term) and return at T_sr/6 (n̄ = 44, a multiple of 4)', () => {
+  const pk = makePacket(48, P({ potential: 'hydrogen', lock: false, nbar: 44, sigma: 1.3 }));
+  const near = (t) => { let b = 0; for (let u = t - 0.6 * pk.Trev; u <= t + 0.6 * pk.Trev; u += pk.Tcl / 48) b = Math.max(b, autocorr(pk, u)); return b; };
+  const s6 = near(pk.Tsr / 6), q8 = near(pk.Tsr / 8), q4 = near(pk.Tsr / 4);
+  assert.ok(s6 > 0.92 && q8 < 0.86 && q4 < 0.84, `T_sr/6 ${s6.toFixed(2)}, T_sr/8 ${q8.toFixed(2)}, T_sr/4 ${q4.toFixed(2)}`);
+});
+
+console.log('engine');
+test('every key is on pitch at the launch (±3 ¢): square well, tempo-locked', () => {
+  let worst = 0, wk = 0;
+  for (let k = 36; k <= 96; k++) {
+    const pk = makePacket(k, P()), f0 = keyFreq(k), { L } = note(P(), k, 0.12);
+    const f = launchPitch(L, f0, 2.5 / f0, 2.5 / f0 + 0.3 * pk.tColl);
+    if (Math.abs(cents(f, f0)) > Math.abs(worst)) { worst = cents(f, f0); wk = k; }
+  }
+  assert.ok(Math.abs(worst) < 3, `worst ${worst.toFixed(2)} ¢ at key ${wk}`);
+  console.log(`        worst key ${wk}: ${worst.toFixed(2)} ¢`);
+});
+test('…and for every well and detector, tempo-locked or at fixed n̄', () => {
+  // fixed n̄ chosen so the launch lasts ≥ 8 periods (T_rev ≥ 200 T_cl); a packet that
+  // collapses within a few periods has no sharper pitch than its mean Bohr frequency.
+  const fixed = { box: 100, morse: 45, hydrogen: 300, bouncer: 34, harmonic: 60 };
+  let worst = 0, what = '';
+  for (const potential of Object.keys(fixed)) for (const detector of ['x', 'v', 'a']) for (const lock of [true, false]) for (const k of [48, 69, 90]) {
+    const p = P({ potential, detector, lock, nbar: fixed[potential] }), pk = makePacket(k, p), f0 = keyFreq(k), { L } = note(p, k, 0.12);
+    const t1 = 2.5 / f0, c = cents(launchPitch(L, f0, t1, t1 + Math.min(0.03, 0.3 * pk.tColl)), f0);
+    if (Math.abs(c) > Math.abs(worst)) { worst = c; what = `${potential}/${detector}/${lock ? 'tempo' : `n̄=${fixed[potential]}`}/key ${k}`; }
+  }
+  assert.ok(Math.abs(worst) < 3, `worst ${worst.toFixed(2)} ¢ (${what})`);
+  console.log(`        worst ${worst.toFixed(2)} ¢ (${what})`);
+});
+test('engine = model: every well and detector, sample for sample, with T₁ and T_φ', () => {
+  for (const potential of ['box', 'morse', 'hydrogen', 'bouncer', 'harmonic']) for (const detector of ['x', 'v', 'a']) {
+    const p = P({ potential, detector, T1: 2, dephase: 1 / 0.7 }), e = new QuantumEngine(FS);
+    e.setParams(p); e.noteOn(60, 1);
+    const v = e.voices[0], c0 = v.count, n = Math.round(1.4 * FS), bl = 128, bL = new Float64Array(bl), bR = new Float64Array(bl), L = new Float64Array(n);
+    for (let s = 0; s < n; s += bl) { bL.fill(0); bR.fill(0); e.process(bL, bR, bl); L.set(bL.subarray(0, Math.min(bl, n - s)), s); }
+    for (const t of [0.003, 0.2, 0.5, 0.6667, 1.0, 1.3333]) {
+      const i = Math.round(t * FS), m = 0.3 * v.pan[0] * signalAt(v.pk, (c0 + i + 1) / FS, { T1: 2, Tphi: 0.7 });
+      assert.ok(Math.abs(L[i] - m) < 1e-9, `${potential}/${detector} t=${t}: ${L[i]} vs ${m}`);
+    }
+  }
+});
+test('revivals are sample-accurate: the square well repeats its launch after T_rev = 1 s', () => {
+  const p = P({ bpm: 120, beats: 2, T1: 1e9 }), { L } = render(p, [[0, 'on', 57, 1]], 1.1);
+  let err = 0, pk = 0;
+  for (let i = 1000; i < 4800; i++) { err = Math.max(err, Math.abs(L[i + FS] - L[i])); pk = Math.max(pk, Math.abs(L[i])); }
+  assert.ok(err < 1e-9 * pk + 1e-12, `max difference ${err.toExponential(2)} (peak ${pk.toFixed(3)})`);
+});
+test('fractional revivals: Morse plays the octave at T_rev/4, the twelfth at T_rev/3; the box is silent at T_rev/4', () => {
+  const k = 57, f0 = keyFreq(k), T = (2 * 60) / 90; // default tempo: T_rev = 4/3 s
+  const dom = (x, t) => { const a = Math.round((t - 0.04) * FS), b = Math.round((t + 0.04) * FS); return [1, 2, 3, 4, 5].map((h) => tone(x, h * f0, a, b)); };
+  const { L: M } = note(P({ potential: 'morse', T1: 1e9 }), k, 0.5);
+  const q4 = dom(M, T / 4), q3 = dom(M, T / 3);
+  assert.ok(q4[1] > 4 * Math.max(q4[0], q4[2], q4[3]), `Morse T/4: ${q4.map((v) => v.toFixed(4))}`);
+  assert.ok(q3[2] > 4 * Math.max(q3[0], q3[1], q3[3]), `Morse T/3: ${q3.map((v) => v.toFixed(4))}`);
+  const { L: B } = note(P({ T1: 1e9 }), k, 0.5);
+  const b0 = rms(B, Math.round(0.005 * FS), Math.round(0.045 * FS)), b4 = rms(B, Math.round((T / 4 - 0.02) * FS), Math.round((T / 4 + 0.02) * FS));
+  assert.ok(b4 < 0.03 * b0, `box rms at T/4 is ${(20 * Math.log10(b4 / b0)).toFixed(1)} dB re launch`);
+});
+test('harmonic oscillator never dephases: one pure line whose amplitude follows T₁ only', () => {
+  const { L } = note(P({ potential: 'harmonic', T1: 2, detector: 'a' }), 57, 3.1), f0 = keyFreq(57);
+  const a = tone(L, f0, 4800, 4800 + 9600), b = tone(L, f0, 4800 + 2 * FS, 4800 + 2 * FS + 9600);
+  assert.ok(Math.abs(b / a - Math.exp(-1)) < 1e-3, `ratio ${b / a}`);
+  assert.ok(tone(L, 2 * f0, 4800, 14400) < 1e-4 * a && tone(L, 3 * f0, 4800, 14400) < 1e-4 * a);
+});
+test('T₁: the revival returns e^(−T_rev/T₁) quieter', () => {
+  const T1 = 1.5, { L } = render(P({ bpm: 120, beats: 2, T1 }), [[0, 'on', 57, 1]], 1.1);
+  const r = rms(L, FS + 300, FS + 2700) / rms(L, 300, 2700);
+  assert.ok(Math.abs(r / Math.exp(-1 / T1) - 1) < 1e-6, `ratio ${r} vs ${Math.exp(-1 / T1)}`);
+});
+test('pure dephasing (rate k²/T_φ) kills the revival, not the attack', () => {
+  const base = P({ bpm: 120, beats: 2, T1: 1e9 }), Tphi = 0.4, f0 = keyFreq(57);
+  const { L: A } = note(base, 57, 1.1), { L: D } = note({ ...base, dephase: 1 / Tphi }, 57, 1.1);
+  // the fundamental is the Δn = 1 coherences: e^(−t/T_φ) at the attack and at the revival
+  const g0 = tone(D, f0, 0, 960) / tone(A, f0, 0, 960), g1 = tone(D, f0, FS - 1200, FS + 1200) / tone(A, f0, FS - 1200, FS + 1200);
+  assert.ok(g0 > 0.97, `attack (first 20 ms) keeps ${g0.toFixed(3)} of its fundamental`);
+  assert.ok(Math.abs(g1 / Math.exp(-1 / Tphi) - 1) < 0.02, `revival keeps ${g1.toFixed(4)} vs e^(−T_rev/T_φ) = ${Math.exp(-1 / Tphi).toFixed(4)}`);
+  // Δn = 3 (the third harmonic): e^(−9 T_rev/T_φ)
+  const g3 = tone(D, 3 * f0, FS - 1200, FS + 1200) / tone(A, 3 * f0, FS - 1200, FS + 1200);
+  assert.ok(g3 < 1e-6, `3rd harmonic kept ${g3.toExponential(2)}`);
+});
+test('fixed n̄: revival time ∝ 1/f, so C–G revive in 3:2 polyrhythm (engine envelope)', () => {
+  const p = P({ lock: false, nbar: 50, T1: 1e9 }), env = [];
+  for (const k of [60, 67]) {
+    const pk = makePacket(k, p), { L } = note(p, k, 0.5 * pk.Trev + 0.05);
+    let best = 0, bt = 0; // the half revival: loudest point near T_rev/2
+    for (let t = 0.42 * pk.Trev; t < 0.58 * pk.Trev; t += 0.0005) { const r = rms(L, Math.round((t - 0.004) * FS), Math.round((t + 0.004) * FS)); if (r > best) { best = r; bt = t; } }
+    env.push({ pk, bt });
+    assert.ok(Math.abs(bt - 0.5 * pk.Trev) < 0.01 * pk.Trev, `key ${k}: peak at ${bt.toFixed(4)} s, T_rev/2 = ${(pk.Trev / 2).toFixed(4)} s`);
+  }
+  assert.ok(Math.abs(env[0].pk.Trev / env[1].pk.Trev - 2 ** (7 / 12)) < 1e-3);
+});
+test('the spectrum is the Bohr lines: a 3-level packet in the box has lines at (2n+1)E₁/h', () => {
+  const p = P({ lock: false, nbar: 20, sigma: 0.6, detector: 'x', T1: 1e9 }), pk = makePacket(57, p);
+  const { L } = note(p, 57, 3);
+  for (const pr of pk.pairs.filter((q) => q.k === 1 && Math.abs(q.w) > 0.1)) {
+    const f = pr.f, a = tone(L, f, 4800, 4800 + 2 * FS);
+    assert.ok(a > 20 * tone(L, f + 0.25 * (2 / pk.Trev), 4800, 4800 + 2 * FS), `line ${f.toFixed(2)} Hz`);
+    assert.ok(Math.abs((f * pk.Trev) - (2 * pk.ns[pr.i] + 1)) < 1e-6, `${f * pk.Trev} vs 2n+1`);
+  }
+});
+test('level: a forte note peaks 0.1–0.5 for every well and detector', () => {
+  for (const potential of ['box', 'morse', 'hydrogen', 'bouncer', 'harmonic']) for (const detector of ['x', 'v', 'a']) for (const k of [36, 60, 96]) {
+    const { L, R } = note(P({ potential, detector }), k, 0.6);
+    let pk = 0; for (let i = 0; i < L.length; i++) pk = Math.max(pk, Math.abs(L[i]), Math.abs(R[i]));
+    assert.ok(pk > 0.1 && pk < 0.5, `${potential}/${detector}/${k}: peak ${pk.toFixed(3)}`);
+  }
+});
+test('every knob at its extremes: finite, no blow-up, peak < 0.6', () => {
+  const ranged = GROUPS.flatMap((g) => g.params).filter((q) => q.min !== undefined);
+  for (const potential of ['box', 'morse', 'hydrogen', 'bouncer', 'harmonic']) for (const detector of ['x', 'v', 'a']) for (const q of ranged) for (const v of [q.min, q.max]) for (const lock of [true, false]) {
+    const p = P({ potential, detector, lock, [q.id]: v }), { L } = render(p, [[0, 'on', 36, 1], [0, 'on', 96, 1], [0.15, 'off', 36], [0.15, 'off', 96]], 0.3);
+    let pk = 0; for (const x of L) { assert.ok(Number.isFinite(x), `${potential}/${detector} ${q.id}=${v}: NaN`); pk = Math.max(pk, Math.abs(x)); }
+    assert.ok(pk < 0.6, `${potential}/${detector} ${q.id}=${v}: peak ${pk}`);
+  }
+});
+test('no clicks: the launch is no steeper than the packet\'s own first bounces; release is smooth; silence after the quench', () => {
+  for (const potential of ['box', 'morse', 'hydrogen', 'bouncer', 'harmonic']) for (const detector of ['x', 'v', 'a']) for (const k of [36, 60, 84, 96]) {
+    const p = P({ potential, detector, release: 0.05 }), { M } = render(p, [[0, 'on', k, 1], [0.3, 'off', k]], 1.2), T = 1 / keyFreq(k);
+    const slope = (a, b) => { let m = 0; for (let i = Math.max(1, Math.round(a * FS)); i < Math.round(b * FS); i++) m = Math.max(m, Math.abs(M[i] - M[i - 1])); return m; };
+    const on = slope(0, 0.75 * T), own = slope(0.75 * T, 3 * T);
+    assert.ok(on < 1.6 * own, `${potential}/${detector}/${k}: onset slope ${(on / own).toFixed(2)}× the note's own`);
+    const around = slope(0.3 - 0.001, 0.3 + 0.001), local = Math.max(slope(0.3 - 0.006, 0.3 - 0.001), slope(0.3 + 0.001, 0.3 + 0.006));
+    assert.ok(around < 1.2 * local, `${potential}/${detector}/${k}: release ${(around / local).toFixed(2)}`);
+    assert.ok(rms(M, Math.round(1.0 * FS), M.length) < 1e-4 * rms(M, 0, Math.round(0.3 * FS)), `${potential}/${detector}/${k}: not silent`);
+  }
+});
+test('CPU: 10 voices render well under real time', () => {
+  const run = (p) => {
+    const e = new QuantumEngine(FS); e.setParams(p);
+    for (const k of [36, 43, 48, 52, 55, 60, 64, 67, 72, 84]) e.noteOn(k, 0.8);
+    const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl), n = Math.round((2 * FS) / bl);
+    for (let i = 0; i < 100; i++) e.process(L, R, bl);
+    const t0 = performance.now();
+    for (let i = 0; i < n; i++) e.process(L, R, bl);
+    return (performance.now() - t0) / 1000 / 2;
+  };
+  const def = run(P({ T1: 30 })), worst = run(P({ potential: 'hydrogen', sigma: 4, detector: 'a', T1: 30 }));
+  console.log(`        10 voices: ${(100 * def).toFixed(1)} % of real time (defaults), ${(100 * worst).toFixed(1)} % (hydrogen, σ = 4, antenna: 300 pairs each)`);
+  assert.ok(def < 0.3 && worst < 0.4, `${def}, ${worst}`);
+});
+
+console.log(failures ? `\n${failures} FAILED` : '\nall passed');
+process.exit(failures ? 1 : 0);

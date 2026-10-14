@@ -1,0 +1,8 @@
+/* The page's own palette and any layout beyond shared/instrument.css. */
+:root {
+  --accent: #73e2b8;
+  --accent-2: #b48cff;
+  --accent-ink: #04170f;
+}
+.row.even { grid-template-columns: 1fr 1fr; }
+@media (max-width: 1050px) { .row.even { grid-template-columns: 1fr; } }
