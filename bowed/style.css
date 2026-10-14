@@ -1,0 +1,21 @@
+/* The page's own palette and layout beyond shared/instrument.css:
+   rosin amber, spruce, and blue and red for the failures of bowing. */
+:root {
+  --accent: #d79a62;
+  --accent-2: #8fb7e8;
+  --accent-ink: #1f1206;
+  --helm: #d79a62;
+  --multi: #8fb7e8;
+  --rauc: #ff6b6b;
+  --spruce: #c9b38a;
+}
+
+@media (min-width: 1051px) {
+  #views { grid-template-rows: minmax(250px, 1fr) minmax(230px, 0.9fr) minmax(230px, 0.9fr); }
+}
+#info-card { overflow: auto; }
+#info { margin-top: 2px; }
+#info dd.helmholtz { color: var(--helm); }
+#info dd.multiple { color: var(--multi); }
+#info dd.raucous { color: var(--rauc); }
+#motion-read b { font-weight: 600; }
