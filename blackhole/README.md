@@ -87,8 +87,9 @@ keyboard plays, only (2,1,0) has l ≠ m (Q = 7.6 at a = 1 − 10⁻⁶). The
 quasinormal-spectrum plot shows all of this as spin moves.
 
 **How it's struck.** The perturbation is a binary merger, and the remnant's
-mode amplitudes follow numerical-relativity fits (Kamaretsos, Hannam, Husa &
-Sathyaprakash 2012) in the symmetric mass ratio ν = q/(1+q)²:
+mode amplitudes follow fits to the numerical-relativity amplitudes of
+Kamaretsos, Hannam, Husa & Sathyaprakash (2012), in the form Gossan, Veitch
+& Sathyaprakash (2012) gave them in the symmetric mass ratio ν = q/(1+q)²:
 
   A₂₂ = 0.864ν,  A₂₁ = 0.52(1−4ν)^0.71 A₂₂,  A₃₃ = 0.44(1−4ν)^0.45 A₂₂,
   A₄₄ = [5.4(ν−0.22)² + 0.04] A₂₂
@@ -145,3 +146,195 @@ check it against the engine's output.
 equal vs lopsided mergers; face-on vs edge-on (listen in stereo); and full
 inspiral–merger–ringdown chirps. Regenerate with
 `node tools/render-blackhole.mjs`. Tests: `node test/blackhole-tests.mjs`.
+
+## Prior art and references
+
+### The original source: black holes and their ringing
+
+* Regge, T. & Wheeler, J. A. (1957). "Stability of a Schwarzschild
+  singularity." *Phys. Rev.* 108, 1063–1069.
+  [doi:10.1103/PhysRev.108.1063](https://doi.org/10.1103/PhysRev.108.1063)
+* Kerr, R. P. (1963). "Gravitational field of a spinning mass as an example
+  of algebraically special metrics." *Phys. Rev. Lett.* 11, 237–238.
+  [doi:10.1103/PhysRevLett.11.237](https://doi.org/10.1103/PhysRevLett.11.237)
+* Vishveshwara, C. V. (1970). "Scattering of gravitational radiation by a
+  Schwarzschild black-hole." *Nature* 227, 936–938.
+  [doi:10.1038/227936a0](https://doi.org/10.1038/227936a0). The damped
+  ringing of a scattered wave packet.
+* Press, W. H. (1971). "Long wave trains of gravitational waves from a
+  vibrating black hole." *Astrophys. J.* 170, L105.
+  [doi:10.1086/180849](https://doi.org/10.1086/180849)
+* Teukolsky, S. A. (1972). "Rotating black holes: separable wave equations
+  for gravitational and electromagnetic perturbations." *Phys. Rev. Lett.*
+  29, 1114–1118.
+  [doi:10.1103/PhysRevLett.29.1114](https://doi.org/10.1103/PhysRevLett.29.1114)
+* Teukolsky, S. A. (1973). "Perturbations of a rotating black hole. I.
+  Fundamental equations for gravitational, electromagnetic, and
+  neutrino-field perturbations." *Astrophys. J.* 185, 635.
+  [doi:10.1086/152444](https://doi.org/10.1086/152444)
+* Chandrasekhar, S. & Detweiler, S. (1975). "The quasi-normal modes of the
+  Schwarzschild black hole." *Proc. R. Soc. Lond. A* 344, 441–452.
+  [doi:10.1098/rspa.1975.0112](https://doi.org/10.1098/rspa.1975.0112)
+* Abbott, B. P. et al. (LIGO Scientific and Virgo Collaborations) (2016).
+  "Observation of gravitational waves from a binary black hole merger."
+  *Phys. Rev. Lett.* 116, 061102.
+  [doi:10.1103/PhysRevLett.116.061102](https://doi.org/10.1103/PhysRevLett.116.061102)
+* Abbott, B. P. et al. (2016). "Properties of the binary black hole merger
+  GW150914." *Phys. Rev. Lett.* 116, 241102.
+  [doi:10.1103/PhysRevLett.116.241102](https://doi.org/10.1103/PhysRevLett.116.241102).
+  The remnant's 62 M☉ and spin 0.67 quoted above.
+
+### The physics
+
+**Computing the modes**
+
+* Detweiler, S. (1980). "Black holes and gravitational waves. III. The
+  resonant frequencies of rotating holes." *Astrophys. J.* 239, 292.
+  [doi:10.1086/158109](https://doi.org/10.1086/158109)
+* Leaver, E. W. (1985). "An analytic representation for the quasi-normal
+  modes of Kerr black holes." *Proc. R. Soc. Lond. A* 402, 285–298.
+  [doi:10.1098/rspa.1985.0119](https://doi.org/10.1098/rspa.1985.0119). The
+  continued-fraction method `src/qnm.js` implements.
+* Echeverria, F. (1989). "Gravitational-wave measurements of the mass and
+  angular momentum of a black hole." *Phys. Rev. D* 40, 3194–3203.
+  [doi:10.1103/PhysRevD.40.3194](https://doi.org/10.1103/PhysRevD.40.3194)
+* Kokkotas, K. D. & Schmidt, B. G. (1999). "Quasi-normal modes of stars and
+  black holes." *Living Rev. Relativ.* 2, 2.
+  [doi:10.12942/lrr-1999-2](https://doi.org/10.12942/lrr-1999-2)
+* Nollert, H.-P. (1999). "Quasinormal modes: the characteristic 'sound' of
+  black holes and neutron stars." *Class. Quantum Grav.* 16, R159–R216.
+  [doi:10.1088/0264-9381/16/12/201](https://doi.org/10.1088/0264-9381/16/12/201)
+* Dreyer, O., Kelly, B., Krishnan, B., Finn, L. S., Garrison, D. &
+  Lopez-Aleman, R. (2004). "Black-hole spectroscopy: testing general
+  relativity through gravitational-wave observations." *Class. Quantum
+  Grav.* 21, 787–803.
+  [doi:10.1088/0264-9381/21/4/003](https://doi.org/10.1088/0264-9381/21/4/003)
+* Berti, E., Cardoso, V. & Will, C. M. (2006). "Gravitational-wave
+  spectroscopy of massive black holes with the space interferometer LISA."
+  *Phys. Rev. D* 73, 064030.
+  [doi:10.1103/PhysRevD.73.064030](https://doi.org/10.1103/PhysRevD.73.064030).
+  Tables II and V are the test values above.
+* Hod, S. (2008). "Slow relaxation of rapidly rotating black holes."
+  *Phys. Rev. D* 78, 084035.
+  [doi:10.1103/PhysRevD.78.084035](https://doi.org/10.1103/PhysRevD.78.084035)
+* Berti, E., Cardoso, V. & Starinets, A. O. (2009). "Quasinormal modes of
+  black holes and black branes." *Class. Quantum Grav.* 26, 163001.
+  [doi:10.1088/0264-9381/26/16/163001](https://doi.org/10.1088/0264-9381/26/16/163001)
+* Yang, H., Zhang, F., Zimmerman, A., Nichols, D. A., Berti, E. & Chen, Y.
+  (2013). "Branching of quasinormal modes for nearly extremal Kerr black
+  holes." *Phys. Rev. D* 87, 041502.
+  [doi:10.1103/PhysRevD.87.041502](https://doi.org/10.1103/PhysRevD.87.041502)
+* Cook, G. B. & Zalutskiy, M. (2014). "Gravitational perturbations of the
+  Kerr geometry: High-accuracy study." *Phys. Rev. D* 90, 124021.
+  [doi:10.1103/PhysRevD.90.124021](https://doi.org/10.1103/PhysRevD.90.124021)
+
+**Exciting the modes and the inspiral**
+
+* Peters, P. C. & Mathews, J. (1963). "Gravitational radiation from point
+  masses in a Keplerian orbit." *Phys. Rev.* 131, 435–440.
+  [doi:10.1103/PhysRev.131.435](https://doi.org/10.1103/PhysRev.131.435)
+* Peters, P. C. (1964). "Gravitational radiation and the motion of two point
+  masses." *Phys. Rev.* 136, B1224–B1232.
+  [doi:10.1103/PhysRev.136.B1224](https://doi.org/10.1103/PhysRev.136.B1224).
+  With Peters & Mathews, the leading-order chirp.
+* Newman, E. T. & Penrose, R. (1966). "Note on the Bondi-Metzner-Sachs
+  group." *J. Math. Phys.* 7, 863–870.
+  [doi:10.1063/1.1931221](https://doi.org/10.1063/1.1931221); Goldberg,
+  J. N., Macfarlane, A. J., Newman, E. T., Rohrlich, F. & Sudarshan,
+  E. C. G. (1967). "Spin-s spherical harmonics and ð." *J. Math. Phys.* 8,
+  2155–2161. [doi:10.1063/1.1705135](https://doi.org/10.1063/1.1705135).
+  Spin-weighted spherical harmonics.
+* Bardeen, J. M., Press, W. H. & Teukolsky, S. A. (1972). "Rotating black
+  holes: locally nonrotating frames, energy extraction, and scalar
+  synchrotron radiation." *Astrophys. J.* 178, 347.
+  [doi:10.1086/151796](https://doi.org/10.1086/151796). Innermost stable
+  circular orbits.
+* Buonanno, A., Cook, G. B. & Pretorius, F. (2007). "Inspiral, merger, and
+  ring-down of equal-mass black-hole binaries." *Phys. Rev. D* 75, 124018.
+  [doi:10.1103/PhysRevD.75.124018](https://doi.org/10.1103/PhysRevD.75.124018)
+* Kamaretsos, I., Hannam, M., Husa, S. & Sathyaprakash, B. S. (2012).
+  "Black-hole hair loss: Learning about binary progenitors from ringdown
+  signals." *Phys. Rev. D* 85, 024018.
+  [doi:10.1103/PhysRevD.85.024018](https://doi.org/10.1103/PhysRevD.85.024018)
+* Gossan, S., Veitch, J. & Sathyaprakash, B. S. (2012). "Bayesian model
+  selection for testing the no-hair theorem with black hole ringdowns."
+  *Phys. Rev. D* 85, 124056.
+  [doi:10.1103/PhysRevD.85.124056](https://doi.org/10.1103/PhysRevD.85.124056).
+  The amplitude fits in ν used here (their Eqs. 5–8).
+* Kamaretsos, I., Hannam, M. & Sathyaprakash, B. S. (2012). "Is black-hole
+  ringdown a memory of its progenitor?" *Phys. Rev. Lett.* 109, 141102.
+  [doi:10.1103/PhysRevLett.109.141102](https://doi.org/10.1103/PhysRevLett.109.141102)
+
+**Ringdowns observed**
+
+* Abbott, B. P. et al. (2016). "Tests of general relativity with GW150914."
+  *Phys. Rev. Lett.* 116, 221101.
+  [doi:10.1103/PhysRevLett.116.221101](https://doi.org/10.1103/PhysRevLett.116.221101)
+* Isi, M., Giesler, M., Farr, W. M., Scheel, M. A. & Teukolsky, S. A.
+  (2019). "Testing the no-hair theorem with GW150914." *Phys. Rev. Lett.*
+  123, 111102.
+  [doi:10.1103/PhysRevLett.123.111102](https://doi.org/10.1103/PhysRevLett.123.111102)
+* Giesler, M., Isi, M., Scheel, M. A. & Teukolsky, S. A. (2019). "Black hole
+  ringdown: the importance of overtones." *Phys. Rev. X* 9, 041060.
+  [doi:10.1103/PhysRevX.9.041060](https://doi.org/10.1103/PhysRevX.9.041060)
+* Abbott, R. et al. (2021). "Tests of general relativity with binary black
+  holes from the second LIGO-Virgo gravitational-wave transient catalog."
+  *Phys. Rev. D* 103, 122002.
+  [doi:10.1103/PhysRevD.103.122002](https://doi.org/10.1103/PhysRevD.103.122002)
+* Abbott, R. et al. (LIGO, Virgo and KAGRA Collaborations) (2025). "Tests of
+  general relativity with GWTC-3." *Phys. Rev. D* 112, 084080.
+  [doi:10.1103/PhysRevD.112.084080](https://doi.org/10.1103/PhysRevD.112.084080)
+* Abac, A. G. et al. (LIGO, Virgo and KAGRA Collaborations) (2025).
+  "GW250114: Testing Hawking's area law and the Kerr nature of black
+  holes." *Phys. Rev. Lett.* 135, 111403.
+  [doi:10.1103/kw5g-d732](https://doi.org/10.1103/kw5g-d732)
+
+### Earlier software, audio and sonifications
+
+**Software for the same computation**
+
+* Stein, L. C. (2019). "qnm: A Python package for calculating Kerr
+  quasinormal modes, separation constants, and spherical-spheroidal mixing
+  coefficients." *J. Open Source Softw.* 4(42), 1683.
+  [doi:10.21105/joss.01683](https://doi.org/10.21105/joss.01683).
+  [Code](https://github.com/duetosymmetry/qnm): a Leaver solver with
+  Cook and Zalutskiy's spectral treatment of the angular equation.
+* [Ringdown data and routines](https://centra.tecnico.ulisboa.pt/network/grit/files/ringdown/)
+  (E. Berti, CENTRA, Técnico Lisboa): tabulated Kerr quasinormal
+  frequencies and separation constants, accompanying Berti, Cardoso & Will
+  (2006) and Berti, Cardoso & Starinets (2009).
+* [QNM](https://bhptoolkit.org/modules/qnm-mathematica/) (Black Hole
+  Perturbation Toolkit): a Mathematica package for Teukolsky quasinormal
+  modes of Schwarzschild and Kerr holes, with a Leaver option.
+* [pyRing](https://lscsoft.docs.ligo.org/pyring/) (G. Carullo, W. Del
+  Pozzo and J. Veitch): time-domain Bayesian inference for black-hole
+  ringdowns.
+* [ringdown](https://github.com/maxisi/ringdown) (M. Isi and W. M. Farr):
+  Bayesian analysis of black-hole ringdowns in gravitational-wave data;
+  Isi & Farr (2021), "Analyzing black-hole ringdowns",
+  [arXiv:2107.05609](https://arxiv.org/abs/2107.05609).
+
+**Gravitational waves as sound**
+
+* [The Sound of Two Black Holes Colliding](https://www.ligo.caltech.edu/video/ligo20160211v2)
+  (LIGO Lab, Caltech, 2016): GW150914 at its true frequencies and shifted
+  up into the audible range.
+* [GW250114 vs. GW150914 audio](https://www.ligo.caltech.edu/video/ligo20250910v1)
+  (LIGO Lab, Caltech; D. Davis, 2025): both signals at their original
+  pitch and raised by 30 %.
+* [Audio files](https://gwosc.org/audio/) (Gravitational Wave Open Science
+  Center): sound files of detected events, with the matching templates.
+* [Sounds of Spacetime](https://www.soundsofspacetime.org/) (M. Favata and
+  students, Montclair State University): an audio guide to the
+  gravitational waves of coalescing binaries.
+* Hughes, S. A. (2003). "Listening to the universe with gravitational-wave
+  astronomy." *Ann. Phys.* 303, 142–178.
+  [doi:10.1016/S0003-4916(02)00025-8](https://doi.org/10.1016/S0003-4916%2802%2900025-8).
+  His [gravitational-wave sounds](https://web.mit.edu/sahughes/www/sounds.html)
+  include inspirals into Kerr black holes.
+* [Black Hole Hunter](https://www.blackholehunter.org/) (Cardiff University
+  Gravitational Physics Group): a game of picking out a black-hole signal
+  by ear in detector noise.
+* Valle, A. & Korol, V. (2022). "For LISA. A piano-based sonification
+  project of gravitational waves."
+  [arXiv:2202.04621](https://arxiv.org/abs/2202.04621)
