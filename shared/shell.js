@@ -28,7 +28,8 @@
 //   space         'sustain' (Space / CC64 = damper pedal, sent to the engine) | 'hold' (keys latch
 //                 while Space is down; shell sends the noteOffs on release) | null
 //   arrows        { param: id, step } — ↑/↓ nudge that parameter (by `step`; a log parameter by 1/24 of its range)
-//   modWheel      param id driven by MIDI CC1 (wheel at rest = the default, fully up = the maximum)
+//   modWheel      param id driven by MIDI CC1 (wheel at rest = the default, fully up = the maximum),
+//                 or { param, max } to stop short of the slider's maximum
 // Hooks (all optional, all in addition to the default engine messages):
 //   onAudio(audio)  once, with { ctx, node, tone, master, roomGain, analyser }
 //   onMessage(msg)  messages from the engine ('stats' already updates #cpu)
@@ -264,8 +265,9 @@ export function createShell(cfg) {
       else if (d1 === 1 && cfg.modWheel) {
         // The wheel rests at 0, so rest = the parameter's default and full = its maximum
         // (a resting wheel must not drag the instrument to the bottom of its range).
-        const p = ALL.find((q) => q.id === cfg.modWheel), u = d2 / 127;
-        let v = p.log ? p.def * (p.max / p.def) ** u : p.def + (p.max - p.def) * u;
+        const mw = typeof cfg.modWheel === 'string' ? { param: cfg.modWheel } : cfg.modWheel;
+        const p = ALL.find((q) => q.id === mw.param), u = d2 / 127, top = mw.max ?? p.max;
+        let v = p.log ? p.def * (top / p.def) ** u : p.def + (top - p.def) * u;
         if (p.step) v = Math.round(v / p.step) * p.step;
         shell.setParam(p.id, Math.min(p.max, Math.max(p.min, v)));
       } else if (d1 === 120 || d1 === 123) shell.panic();

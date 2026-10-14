@@ -50,7 +50,7 @@ export const INSTRUMENTS = [
     accent: '#e8a0c8',
   },
   {
-    id: 'clavier', name: 'Tangent Clavier', section: 'history', ready: true, version: '0.1.0',
+    id: 'clavier', name: 'Tangent Clavier', section: 'history', ready: true, version: '0.2.0',
     after: 'the Hohner Clavinet',
     tagline: 'A rubber tangent pins the string to an anvil; two magnetic pickups comb-filter the twang.',
     physics: 'Impact on an anvil · pickup position',
@@ -64,14 +64,14 @@ export const INSTRUMENTS = [
     accent: '#ffcf70',
   },
   {
-    id: 'bowed', name: 'Viola Organista', section: 'history', ready: true, version: '0.1.0',
+    id: 'bowed', name: 'Viola Organista', section: 'history', ready: true, version: '0.2.0',
     after: "Leonardo da Vinci's design (1488)",
     tagline: 'Rosined wheels bow the strings while you hold the keys: stick–slip friction, from scratch.',
     physics: 'Friction · Helmholtz motion',
     accent: '#d79a62',
   },
   {
-    id: 'glass', name: 'Glass Armonica', section: 'history', ready: true, version: '0.1.0',
+    id: 'glass', name: 'Glass Armonica', section: 'history', ready: true, version: '0.2.0',
     after: "Benjamin Franklin's armonica (1761)",
     tagline: 'Wet fingers on spinning glass bowls: stick–slip friction drives the shell modes, and rotation makes the doublets warble.',
     physics: 'Shell modes · friction · fluid loading',

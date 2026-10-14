@@ -14,6 +14,39 @@ for example `piano-v0.1.0`.
 An adversarial review of the whole project (six reviewers, one per area)
 found the bugs and inaccuracies below; each fix has a regression test.
 
+### Tangent Clavier 0.2.0
+- The rubber-tip and tip-width sliders no longer detune held notes (+32 ¢ at
+  the "Soft tips" setting).
+- Pickup flux is bounded beyond one field depth, and output scales with the
+  gap, so a 2 mm gap no longer peaks at 1.4.
+- No main-thread hitch after bass notes: released frequencies are cached,
+  and the slow-motion simulation runs only while its view is visible.
+- The release-pitch readout shows the coupled eigenvalue (−307 to −320 ¢,
+  not the ideal −300).
+- README glide figures corrected (touch matters about 4× at F1).
+- Gain smoothed per sample; the mute felt is drawn when Space engages it.
+
+### Viola Organista 0.2.0
+- No more NaN: a string whose loop filter would have gone non-passive
+  (β at its minimum, low losses) took the whole instrument down until Panic.
+  Now it gets a flat gain, plus a per-string guard. Tested on all 49 keys
+  at every extreme, at 44.1, 48 and 96 kHz.
+- No DC offset or thump at key down and up: plate radiation now uses −a/ω,
+  which is zero for static deflection.
+- In tune at 44.1 kHz as well as 48 kHz (worst 0.89 ¢).
+- Four wheels (per-register speed and bow position), and the strings damp
+  the board: the keyboard's level span narrows from 19 dB to 12 dB.
+- The mod wheel now drives treadle speed, the instrument's real swell, with
+  a 0.5 s flywheel.
+
+### Glass Armonica 0.2.0
+- "Dry fingers" now gives a faint rubbing whisper instead of near silence.
+- The "Pressing hard" preset is re-voiced (it was 16–19 dB louder than the
+  defaults).
+- Mod wheel: treadle 0.5–1 rev/s (beyond about 1.2 rev/s the big bowls stop
+  speaking).
+- README speaking times corrected.
+
 ### Ribbon Piano 0.2.0
 - The top octave and a half is now audible: a refit treble hammer, with
   felt no longer extrapolated past C7. C6–C8 is within 7 dB of C4 at mf

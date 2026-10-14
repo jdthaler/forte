@@ -26,7 +26,7 @@ const shell = createShell({
   // MIDI mod wheel = treadle speed, from the default (wheel at rest) to twice
   // it: louder (the rim moves faster) and a faster warble. Not the slider's
   // full 3 rev/s: above about 1 rev/s the big bowls can no longer speak.
-  onCC: (cc, v) => { if (cc === 1) shell.setParam('speed', +(DEFAULTS.speed * 2 ** (v / 127)).toFixed(3)); },
+  modWheel: { param: 'speed', max: 2 * DEFAULTS.speed }, // 0.5–1 rev/s: faster than ~1.2 rev/s the big bowls stop speaking
   onAudio: (a) => {
     spectrum.setAnalyser(a.analyser);
     // a long FFT of our own for the doublet zoom (1.5 Hz bins at 48 kHz)
