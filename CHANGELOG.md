@@ -11,6 +11,15 @@ for example `piano-v0.1.0`.
 
 ## 2026-10-13 — new instruments
 
+### Tangent Clavier 0.1.0
+- After the Hohner Clavinet D6: the rubber tangent strikes the string and
+  clamps it on the anvil (coupled Hertzian contacts, Newton-solved).
+- Speaking and yarn-damped segments of the string; release thunk.
+- Key pressure / aftertouch raises the tension (ΔT = EA·ΔL/L).
+- Kirchhoff–Carrier pitch glide in the bass.
+- Upper and lower pickups (A, B, A+B, A−B), the four tone tabs, and the
+  felt mute bar on Space.
+
 ### Quantum Keyboard 0.1.0
 - Each key launches a Gaussian wavepacket, summed exactly over eigenstates
   with exact dipole matrix elements.

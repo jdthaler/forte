@@ -25,6 +25,40 @@
    "title": "Inspiral merger ringdown chirps"
   }
  ],
+ "clavier": [
+  {
+   "file": "01-funky-riff-in-e-minor.m4a",
+   "title": "Funky riff in e minor"
+  },
+  {
+   "file": "02-pickups-lower-upper-in-phase-out-of-phase.m4a",
+   "title": "Pickups lower upper in phase out of phase"
+  },
+  {
+   "file": "03-tone-tabs-soft-medium-treble-brilliant.m4a",
+   "title": "Tone tabs soft medium treble brilliant"
+  },
+  {
+   "file": "04-aftertouch-vibrato-then-slow-press.m4a",
+   "title": "Aftertouch vibrato then slow press"
+  },
+  {
+   "file": "05-mute-bar-off-on-then-pedalled.m4a",
+   "title": "Mute bar off on then pedalled"
+  },
+  {
+   "file": "06-release-thunk-with-yarn-then-without.m4a",
+   "title": "Release thunk with yarn then without"
+  },
+  {
+   "file": "07-velocity-pp-to-ff-brightness.m4a",
+   "title": "Velocity pp to ff brightness"
+  },
+  {
+   "file": "08-bass-ff-tension-glide-then-none.m4a",
+   "title": "Bass ff tension glide then none"
+  }
+ ],
  "grand": [
   {
    "file": "01-cp70-ballad.m4a",
