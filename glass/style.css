@@ -1,0 +1,20 @@
+/* The page's own palette and any layout beyond shared/instrument.css. */
+:root {
+  --accent: #9fe7ff;
+  --accent-2: #f2c879;
+  --accent-ink: #04161d;
+  --n2: #9fe7ff;
+  --n3: #c7a6ff;
+  --n4: #8be3a6;
+  --n5: #ffb38a;
+  --n6: #ff8fb8;
+}
+
+#views { grid-template-rows: minmax(250px, 1.15fr) minmax(220px, 1fr) auto; }
+#views .row:last-child { grid-template-columns: 1.45fr 1fr; }
+#modes td:first-child, #modes th:first-child { text-align: left; }
+#info { grid-template-columns: auto 1fr; }
+@media (max-width: 1050px) {
+  #views { grid-template-rows: auto auto auto; }
+  #views .row:last-child { grid-template-columns: 1fr; }
+}
