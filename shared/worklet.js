@@ -7,7 +7,7 @@
 //   new Engine(sampleRate)
 //   process(L, R, n)              fill n samples (R may be a scratch buffer for mono pages)
 //   noteOn(key, velocity, data)   velocity 0..1; data = whatever the page attached
-//   noteOff(key)
+//   noteOff(key, velocity)       velocity: a MIDI note-off's release velocity 0..1, or undefined
 //   setParams(P)                  full parameter object, or the page's engineParams(P)
 //   setSustain?(on)   allNotesOff?()   handle?(msg)   (any other message type)
 //   voiceCount?()                 shown in the CPU pill
@@ -38,7 +38,7 @@ class ForteProcessor extends AudioWorkletProcessor {
     try {
       switch (m.type) {
         case 'noteOn': e.noteOn(m.key, m.velocity, m.data); break;
-        case 'noteOff': e.noteOff(m.key); break;
+        case 'noteOff': e.noteOff(m.key, m.velocity); break;
         case 'params': e.setParams(m.params); break;
         case 'sustain': e.setSustain?.(m.on); break;
         case 'panic': e.allNotesOff?.(); break;

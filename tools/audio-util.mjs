@@ -72,7 +72,7 @@ export function renderEngine(engine, seconds, events, FS) {
     while (j < ev.length && ev[j].s <= s) {
       const { type, a, b, c } = ev[j++];
       if (type === 'on') engine.noteOn(a, b, c);
-      else if (type === 'off') engine.noteOff(a);
+      else if (type === 'off') engine.noteOff(a, b); // b: release velocity, if given
       else if (type === 'sus') engine.setSustain?.(a);
       else if (type === 'params') engine.setParams(a);
       else engine.handle?.(a);

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Harpsichord · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="harpsichord">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Harpsichord</h1>
+      <span class="sub">plectra catch the strings, bend, slide and slip off; stops change where and how they pluck</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-view="Pluck in slow motion">
+          <div class="card-head"><h2>The pluck, slowed down <b id="pluck-key">C4</b></h2><span class="muted" id="pluck-read">play a key</span></div>
+          <canvas id="pluck"></canvas>
+          <div class="readout" id="pluck-info"></div>
+          <div class="caption">Looking along the string at the plucking point, slowed down: the jack rises, its plectrum (to scale, deflection true) catches the string (●, dashed: where it rests), bends, and the string slides out along it until it slips off the tip. Beside it: the plectrum’s force on the string and the string’s height there, as the jack rises.</div>
+        </div>
+        <div class="card" data-view="The scale">
+          <div class="card-head"><h2>The scale</h2><span class="muted" id="scale-read"></span></div>
+          <canvas id="scale"></canvas>
+          <div class="legend"><span><i style="background:#d9a441"></i>brass</span><span><i style="background:#9fb4c8"></i>iron</span><span><i style="background:var(--accent)"></i>plucking points</span><span><i style="background:#d8a0ff"></i>inharmonicity B</span></div>
+          <div class="caption">Every key’s 8′ and 4′ string to scale (log length), where each row of jacks plucks it, and how stiff it is (B, right axis). The plucked fraction of the string grows from 1/20 in the bass to 1/4 at the top.</div>
+        </div>
+      </div>
+      <div class="row single">
+        <div class="card" data-view="Comb filter and spectrum">
+          <div class="card-head"><h2>The pluck’s comb and the spectrum</h2><span class="muted" id="comb-read">live output · stems: the model’s partials</span></div>
+          <canvas id="comb"></canvas>
+          <div class="caption">Stems: each partial’s force on the bridge when the string is let go from the shape the plectrum pulled it into, ∝ sin(nπβ)/n (β = plucking point / length), one colour per row plucking; dashed: the comb’s envelope, with its notches at multiples of f₁/β. Grey: the live output.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>no damper pedal: hold <kbd>Space</kbd> to keep keys down <b id="hold" class="off">off</b></span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/harpsichord-main.js"></script>
+</body>
+</html>
