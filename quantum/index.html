@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quantum Keyboard · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-instrument="quantum">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Quantum Keyboard</h1>
+      <span class="sub">every key launches a quantum wavepacket: it collapses, splits into copies, and revives</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-view="Quantum carpet">
+          <div class="card-head"><h2>Quantum carpet · <b id="focus-name">A3</b></h2><span class="muted" id="carpet-info"></span></div>
+          <canvas id="carpet"></canvas>
+          <div class="caption">|ψ(x, t)|²: position up, time across, sampled once per classical period so the bouncing slows to a crawl. The packet smears out (collapse), splits into q copies at T_rev/q, re-forms mirrored at T_rev/2 and whole at T_rev. The line is now.</div>
+        </div>
+        <div class="card" data-view="Packet in the well">
+          <div class="card-head"><h2>Wavepacket in the well</h2><span class="muted" id="well-info"></span></div>
+          <canvas id="well"></canvas>
+          <div class="caption">The potential, |ψ(x)|² now (same strobe as the carpet) drawn at the packet's energy, and the levels it is made of: bar length = |cₙ|².</div>
+        </div>
+      </div>
+      <div class="row even">
+        <div class="card">
+          <div class="card-head"><h2>Return probability |⟨ψ(0)|ψ(t)⟩|²</h2><span class="muted" id="ac-info"></span></div>
+          <canvas id="autocorr"></canvas>
+          <div class="caption">1 at the launch; ½ at T_rev/4 and ⅓ at T_rev/3 (two and three copies, one of them back home); 1 again at T_rev. Faint: with pure dephasing.</div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: Bohr frequencies (Eₙ₊ₖ − Eₙ)/h</span></div>
+          <canvas id="spectrum"></canvas>
+          <div class="caption">Each Δn = k makes a cluster of lines near k × the note, spaced 2k/T_rev apart: neighbouring lines beat at the revival.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>sustain pedal: hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>mod wheel: dephasing</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/quantum-main.js"></script>
+</body>
+</html>
