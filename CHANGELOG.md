@@ -9,6 +9,21 @@ release may change the sound or the parameters.
 Each release is tagged in git as `forte-vX.Y.Z` or `<instrument>-vX.Y.Z`,
 for example `piano-v0.1.0`.
 
+## 2026-10-13 — gong performance
+
+### Gong Keyboard 0.1.1
+- Performance pass for tablets. The worst 128-sample block in a loud
+  pedalled melody fell from 77–213 % of its time budget to under 50 %.
+  Average load roughly halved, and the first strike no longer stalls.
+- The hot paths are warmed up and the buffers allocated before audio
+  starts; voice fields keep fixed types, so the JIT doesn't de-optimise
+  mid-note.
+- New *Nonlinear voices* control (default 4). Gongs past the cap keep
+  ringing linearly instead of being cut.
+- A more robust switch to the linear fast path, and quiet tails use only
+  their strongest couplings.
+- Substeps capped. New `tools/bench-gongs.mjs` and a worst-block test.
+
 ## 2026-10-13 — new instruments
 
 ### Gong Keyboard 0.1.0
