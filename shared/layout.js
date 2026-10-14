@@ -4,17 +4,19 @@
 //           so that they are always in view; Controls (a column on wide screens, a
 //           slide-over panel on narrow ones); Views ▾ (show or hide each
 //           visualisation); and, in Perform, Full screen;
-//   footer: in Perform, the performance controls (parameters marked `perform: true`,
-//           which the page gives data-perform) in a strip above the keys; the on-screen
-//           keyboard's octave window (◀ ▶), size, and a pedal button for whatever Space
-//           does on this page (<body data-space="Sustain">; data-space-mode="tap" when
-//           Space toggles something instead of being held).
-// Discover shows every control and every view, with their explanations. Perform keeps
-// the pictures, larger and without captions, tables or hints, and the controls a player
-// reaches for mid-phrase. The mode is the same on every page; which views show, and
-// whether the Controls column does, are remembered per instrument and per mode.
-// Also handles iOS audio quirks. Imported by shared/nav.js, so it runs before the
-// page's own scripts.
+//   footer: the performance controls (parameters marked `perform: true`, which the
+//           page gives data-perform) in a strip above the keys, in both modes; the
+//           on-screen keyboard's octave window (◀ ▶), size, and a pedal button for
+//           whatever Space does on this page (<body data-space="Sustain">;
+//           data-space-mode="tap" when Space toggles something instead of being held).
+// Discover shows every view, with its explanations, and the rest of the controls in
+// the Controls panel. Perform is for playing and for a projector: just the views
+// marked data-perform (one or two), filling the screen, with no text in them (no
+// titles, readouts, captions, legends or tables, and nothing drawn by fillText on
+// their canvases; a card with data-keep-text keeps its own). The mode is the same on
+// every page; which views show, and whether the Controls column does, are remembered
+// per instrument and per mode. Also handles iOS audio quirks. Imported by
+// shared/nav.js, so it runs before the page's own scripts.
 
 const body = document.body;
 const STORE = `forte/${body.dataset.instrument || 'page'}/layout/v1`;
@@ -57,35 +59,43 @@ const views = [...document.querySelectorAll('#views .card')].map((card, i) => {
   const label = card.dataset.view || card.querySelector('h2')?.textContent.trim() || `View ${i + 1}`;
   return { card, label, key: card.id || label.toLowerCase().replace(/[^a-z0-9]+/g, '-') };
 });
-const pictureless = views.filter((v) => !v.card.querySelector('canvas')).map((v) => v.key);
+// Perform starts with the views marked data-perform (else those with a picture)
+const staged = views.filter((v) => v.card.hasAttribute('data-perform'));
+const offStage = views.filter((v) => (staged.length ? !staged.includes(v) : !v.card.querySelector('canvas'))).map((v) => v.key);
 const performing = () => mode === 'perform';
-const hiddenViews = () => (performing() ? prefs.perform.hidden ?? pictureless : prefs.hidden);
+const hiddenViews = () => (performing() ? prefs.perform.hidden ?? offStage : prefs.hidden);
 const setHidden = (list) => { if (performing()) prefs.perform.hidden = list; else prefs.hidden = list; save(); apply(); };
 const showControls = () => (performing() ? prefs.perform.controls : prefs.controls);
 let drawerOpen = false, ctlBtn = null;
 const modeBtns = [];
 const drawerMode = () => narrow.matches && !body.classList.contains('no-views');
 
-// Perform moves the performance controls out of the Controls panel into a strip above
-// the keys (the page keeps its references to them), and Discover puts them back.
+// The performance controls live in a strip above the keys in both modes, so nothing
+// moves when the mode changes; the Controls panel keeps the rest. (The page keeps its
+// references to them.) Their hints become tooltips.
 const strip = el('div', 'forte-perform');
 strip.setAttribute('role', 'group');
 strip.setAttribute('aria-label', 'Performance controls');
-const homes = new Map();
 function placePerform() {
   if (!sidebar || !footer) return;
-  if (performing()) {
-    for (const p of sidebar.querySelectorAll('.param[data-perform]')) {
-      const home = document.createComment('');
-      p.before(home); homes.set(p, home); strip.appendChild(p);
-      if (!p.title) p.title = p.querySelector('label')?.textContent ?? ''; // the label, if it is cut short
-    }
-    if (strip.childElementCount && !strip.isConnected) footer.prepend(strip);
-  } else {
-    for (const [p, home] of homes) home.replaceWith(p);
-    homes.clear();
-    strip.remove();
+  for (const p of sidebar.querySelectorAll('.param[data-perform]')) {
+    const label = p.querySelector('label')?.textContent ?? '', hint = p.querySelector('.hint')?.textContent;
+    if (!p.title) p.title = hint ? `${label}: ${hint}` : label;
+    strip.appendChild(p);
   }
+  if (strip.childElementCount && !strip.isConnected) footer.prepend(strip);
+}
+
+// In Perform the views carry no text, including what their canvases draw: fillText and
+// strokeText do nothing on a canvas in #views, unless its card has data-keep-text.
+const quiet = new WeakMap();
+const silenced = (cv) => {
+  if (!quiet.has(cv)) quiet.set(cv, !!cv?.closest?.('#views') && !cv.closest('[data-keep-text]'));
+  return quiet.get(cv);
+};
+for (const name of ['fillText', 'strokeText']) {
+  const proto = window.CanvasRenderingContext2D?.prototype, draw = proto?.[name];
+  if (draw) proto[name] = function (...args) { if (!(performing() && silenced(this.canvas))) draw.apply(this, args); };
 }
 
 function apply() {
@@ -98,6 +108,7 @@ function apply() {
     if (!off) shown++;
   }
   body.classList.toggle('perform', performing());
+  document.documentElement.classList.toggle('perform', performing()); // for :root's colours (shared/layout.css)
   for (const b of modeBtns) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
   body.classList.toggle('no-views', views.length > 0 && shown === 0);
   body.classList.toggle('hide-controls', !!sidebar && !drawerMode() && !showControls());

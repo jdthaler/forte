@@ -76,14 +76,15 @@ browser on iPhone or iPad has Web MIDI, so the button is hidden there),
 including velocity, the sustain pedal, aftertouch and, where it means
 something, the mod wheel.
 
-Every instrument page has two modes, switched at the top. **Discover**
-shows every control, every view of the physics and what each one means.
-**Perform** keeps the pictures, large and without the captions and tables
-(they work on a projector, and **Full screen** fills it), and puts the
-handful of controls a player reaches for in a strip above the keys:
-stops and registrations, tremolo, drive, the mallet, the spin, the room
-and the volume. The presets are at the top in both. The mode is the same
-on every page; each page remembers its own views in each mode.
+Every instrument page has two modes, switched at the top. In both, the
+presets are at the top and the handful of controls a player reaches for
+sit in a strip above the keys: stops and registrations, tremolo, drive,
+the mallet, the spin, the room and the volume. **Discover** adds every
+other control, every view of the physics and what each one means.
+**Perform** shows just one or two views, filling the screen, with no text
+in them: for playing, or for a projector (**Full screen** fills it). The
+mode is the same on every page; each page remembers its own views in
+each mode.
 
 **On a tablet or phone**, play the on-screen keys with as many
 fingers as you like. Slide across the keys for a glissando, and strike

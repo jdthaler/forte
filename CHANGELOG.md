@@ -25,14 +25,19 @@ tagged; this changelog and the commit titles record them.
   `phenomena`) replace the two ("from history", "only physics can build"),
   with the ready instruments first in each. Every page's Instruments menu
   follows.
+- **Performance controls:** each instrument's parameters marked
+  `perform: true` sit in a strip above the keys, in both modes, so they
+  never move; a checkbox there becomes a stop that lights up. The
+  Controls panel keeps the rest.
 - **Discover | Perform** on every instrument page. Discover is the page as
-  it was. Perform keeps the pictures, larger and without their captions,
-  readouts, tables, hints or How it works; starts with the views that have
-  no picture hidden and the Controls column closed; puts each instrument's
-  performance controls (parameters marked `perform: true`) in a strip
-  above the keys, where a checkbox becomes a stop that lights up; and
-  offers **Full screen** for a projector. The mode is the same on every
-  page; each page remembers its views and Controls in each mode.
+  it was. Perform shows only the one or two views each instrument marks
+  `data-perform`, side by side (stacked on a tall screen) and filling it,
+  with no text: no titles, readouts, captions, legends or tables, and no
+  text drawn on their canvases (`fillText` is silenced there; a card with
+  `data-keep-text` keeps its own). It hides How it works, starts with the
+  Controls column closed, and offers **Full screen** for a projector. The
+  mode is the same on every page; each page remembers its views and
+  Controls in each mode.
 - **Presets** and **Reset** move from the Controls panel to the header, so
   they are always in view.
 - Header: once the audio is on, the CPU meter takes the place of "Start
@@ -40,83 +45,106 @@ tagged; this changelog and the commit titles record them.
   for; the subtitle shows only on screens wider than 1700 px; the layout
   and audio buttons sit on the right on whichever row they land.
 - The shell gives `perform: true` parameters `data-perform`; the template
-  marks four. The guide and the README describe the modes.
+  marks four, and two views. The guide and the README describe the modes.
 - Site tests: four sections, ready instruments first; presets where the
   header can take them; the front page's tabs and About; 3–10 performance
-  controls per instrument, volume among them.
+  controls per instrument, volume among them; one or two views marked for
+  Perform on every page.
 
 ### Ribbon Piano 0.3.0
-- Perform: felt hardness, velocity, una corda, soundboard, room and volume.
+- Performance controls: felt hardness, velocity, una corda, soundboard,
+  room and volume.
+- Perform shows the string in slow motion and its partials.
 
 ### Harpsichord 0.2.0
-- Perform: the registration (manual, coupler, front and back 8′, 4′, lute,
-  buff), room and volume.
+- Performance controls: the registration (manual, coupler, front and back
+  8′, 4′, lute, buff), room and volume.
+- Perform shows the pluck in slow motion and the comb and spectrum.
 
 ### Pipe Organ 0.2.0
-- Perform: the stops (Principal 8′, Octave 4′, Gedackt 8′, Mixture III),
-  tremulant, wind pressure, room and volume.
+- Performance controls: the stops (Principal 8′, Octave 4′, Gedackt 8′,
+  Mixture III), tremulant, wind pressure, room and volume.
+- Perform shows the jet in the mouth and the spectrum.
 
 ### Free-Reed Organ 0.2.0
-- Perform: the stops (8′, musette, 16′, 4′, percussion), bellows pressure,
-  expression stop, room and volume.
+- Performance controls: the stops (8′, musette, 16′, 4′, percussion),
+  bellows pressure, expression stop, room and volume.
+- Perform shows the reed in its slot and the flow loop.
 
 ### Vibraphone 0.2.0
-- Perform: motor and shaft speed, mallet hardness, velocity, pedal lock,
-  room and volume.
+- Performance controls: motor and shaft speed, mallet hardness, velocity,
+  pedal lock, room and volume.
+- Perform shows the bar and its modes, and the tube and disc.
 
 ### Electric Grand 0.3.0
-- Perform: velocity, felt hardness, piezo ↔ microphone, the preamp's bass,
-  middle and treble, room and volume.
+- Performance controls: velocity, felt hardness, piezo ↔ microphone, the
+  preamp's bass, middle and treble, room and volume.
+- Perform shows the slow-motion hammer and string, and the spectrum.
 
 ### Tonewheel Organ 0.3.0
-- Perform: tube drive, room and volume, under the console (drawbars,
-  percussion, vibrato, Leslie and swell), which stays in view.
+- Performance controls: tube drive, room and volume, under the console
+  (drawbars, percussion, vibrato, Leslie and swell), which stays in view.
+- Perform shows the console and the Leslie.
 
 ### Tine Piano 0.3.0
-- Perform: velocity, the suitcase's vibrato depth and rate, amp drive,
-  speaker top end, room and volume.
+- Performance controls: velocity, the suitcase's vibrato depth and rate,
+  amp drive, speaker top end, room and volume.
+- Perform shows the tine in slow motion and the spectrum.
 
 ### Reed Piano 0.3.0
-- Perform: velocity, preamp drive, tremolo depth and rate, output, room and
-  volume.
+- Performance controls: velocity, preamp drive, tremolo depth and rate,
+  output, room and volume.
+- Perform shows the reed in slow motion and the spectrum.
 
 ### Tangent Clavier 0.3.0
-- Perform: velocity, the pickup selector, the four tone tabs, the mute,
-  room and volume.
+- Performance controls: velocity, the pickup selector, the four tone tabs,
+  the mute, room and volume.
+- Perform shows the string in slow motion and the spectrum.
 
 ### Sticky-Pad Piano 0.3.0
-- Perform: velocity, tone, amplifier and its drive, room and volume.
+- Performance controls: velocity, tone, amplifier and its drive, room and
+  volume.
+- Perform shows the pad and reed in slow motion, and the spectrum.
 
 ### Viola Organista 0.3.0
-- Perform: wheel speed, bow position, key pressure and travel time, dampers
-  lifted, room and volume.
+- Performance controls: wheel speed, bow position, key pressure and travel
+  time, dampers lifted, room and volume.
+- Perform shows the string on the wheel and its stick–slip velocity.
 
 ### Glass Armonica 0.3.0
-- Perform: finger pressure, skin moisture, treadle speed, room and volume.
+- Performance controls: finger pressure, skin moisture, treadle speed,
+  room and volume.
+- Perform shows the bowl and the spectrum.
 
 ### Pyrophone 0.3.0
-- Perform: flame power, velocity, key-up flame, flame turbulence, room and
-  volume.
+- Performance controls: flame power, velocity, key-up flame, flame
+  turbulence, room and volume.
+- Perform shows the tube and the phase portrait.
 
 ### Huygens Keyboard 0.3.0
-- Perform: pulse coupling, tuning (and just tonic), key attack and release,
-  tone, room and volume.
+- Performance controls: pulse coupling, tuning (and just tonic), key
+  attack and release, tone, room and volume.
+- Perform shows the lamp firings and the locking map.
 
 ### Gong Keyboard 0.3.0
-- Perform: dome rise, mallet stiffness, strike point, velocity, hand
-  damping, room and volume.
+- Performance controls: dome rise, mallet stiffness, strike point,
+  velocity, hand damping, room and volume.
+- Perform shows the gong and the spectrogram.
 
 ### Black-Hole Keyboard 0.3.0
-- Perform: spin, mass ratio, inclination, the inspiral, tone, room and
-  volume.
+- Performance controls: spin, mass ratio, inclination, the inspiral, tone,
+  room and volume.
+- Perform shows the black hole and its gravitational waves.
 
 ### Quantum Keyboard 0.3.0
-- Perform: potential, tempo, revival time, dephasing, velocity, room and
-  volume.
+- Performance controls: potential, tempo, revival time, dephasing,
+  velocity, room and volume.
+- Perform shows the quantum carpet and the wavepacket.
 
 ### Bubble Organ 0.2.0
-- Perform: nozzle depth, gas, bubbles per second, irregularity, velocity,
-  room and volume.
+- Performance controls: nozzle depth, gas, bubbles per second,
+  irregularity, velocity, room and volume.
+- Perform shows the tank and the latest bubble.
 
 ## 2026-10-14 — pipe organ
 

@@ -89,6 +89,12 @@ test('instrument pages keep their presets in the controls, for the header to tak
     assert.ok(html.includes('id="reset"'), `${i.id}: #reset`);
   }
 });
+test('instrument pages mark one or two views for Perform (data-perform)', () => {
+  for (const i of [...ready, { id: 'docs/template' }]) {
+    const n = (read(`${i.id}/index.html`).match(/<div class="card"[^>]* data-perform[\s>]/g) || []).length;
+    assert.ok(n >= 1 && n <= 2, `${i.id}: ${n} views marked data-perform`);
+  }
+});
 test('the landing page has the category tabs, the instrument list and an About dialog', () => {
   const html = read('index.html');
   for (const id of ['cats', 'instruments', 'about', 'about-open']) assert.ok(html.includes(`id="${id}"`), `#${id}`);

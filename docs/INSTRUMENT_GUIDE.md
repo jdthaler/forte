@@ -139,10 +139,11 @@ physical idea and give it a descriptive name.
 Mark the controls a player reaches for *while playing* with
 `perform: true`: stops and registrations, tremolo and drive, the mallet
 or the bow, the main physical knob (the black hole's spin), `room` and
-`volume`. Perform mode shows them, and only them, in a strip above the
-keys; a checkbox becomes a stop that lights up. Mark 3–10 of them, `volume`
-among them (`test/site-tests.mjs` checks). Leave the physics you set once
-(materials, dimensions, voicing) to Discover and the presets.
+`volume`. They sit in a strip above the keys in both modes, so they never
+move; a checkbox there becomes a stop that lights up. Mark 3–10 of them,
+`volume` among them (`test/site-tests.mjs` checks). Leave the physics you
+set once (materials, dimensions, voicing) to the Controls panel and the
+presets.
 
 ### Page and views
 
@@ -161,11 +162,15 @@ and say which in the footer help.
 (loaded last in `<head>`) give every page the same touch-friendly
 layout:
 - **Discover | Perform** at the top. Discover is the page as built.
-  Perform hides the explanations (`.caption`, `<dl>` readouts, hints,
-  How it works), starts with the views that have no `<canvas>` hidden
-  and the Controls column closed, moves the `perform: true` controls into
-  a strip above the keys, and offers Full screen. The mode is shared by
-  every page; the views and Controls are remembered per page and mode;
+  Perform is for playing and for a projector: it shows only the views
+  marked `data-perform` (one or two), side by side or stacked to fill the
+  screen, with no text in them. The card's `.card-head`, `.caption`,
+  `.legend`, `.readout`, `<dl>` and `<table>` are hidden, and `fillText`
+  draws nothing on their canvases (a card with `data-keep-text`, such as
+  the organ's console, keeps its text). The Controls column starts
+  closed, and Full screen appears. The mode is shared by every page; the
+  views and Controls are remembered per page and mode;
+- the `perform: true` controls, in a strip above the keys in both modes;
 - the presets (`.preset-row` in `#controls`), moved into the header so
   they are always in view;
 - a Controls toggle (a column on wide screens, a slide-over panel on
@@ -180,8 +185,12 @@ layout:
 To fit in:
 - Give a card whose `<h2>` changes at runtime a stable name with
   `data-view="…"`.
-- Draw the views so they still read without their captions, in Perform
-  and on a projector: a title, axes and the picture.
+- Mark the one or two views that best show the instrument playing with
+  `data-perform` on their `.card` (`test/site-tests.mjs` checks). In
+  Perform they lose their titles, captions and canvas text and grow to
+  fill the screen, so draw them to read as pictures, and let their
+  canvases stretch (Perform sizes them with flex, overriding a fixed
+  height).
 - Start every animation loop with `requestAnimationFrame` and skip
   hidden canvases. `animate(draw, canvas)` does both.
 - Make drawing code survive a tiny canvas.

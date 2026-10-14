@@ -3,8 +3,8 @@
    keyboard pinned to the bottom, the controls and views in between, each
    scrolling on its own. Phones are different (see the end): the page scrolls
    and the keyboard sticks to the bottom. Body classes from shared/layout.js:
-     perform         Perform mode: the pictures without their explanations, and
-                     the performance controls in a strip above the keys
+     perform         Perform mode: one or two views (data-perform), filling the
+                     screen, with no text in them
      hide-controls   controls column hidden (wide screens)
      drawer-open     controls slid over the views (narrow screens; on phones they replace them)
      no-views        every view hidden → controls take the space (or the keyboard does)
@@ -118,8 +118,8 @@ body[data-instrument] .kb-help { align-items: center; }
 .forte-pedal { min-width: 84px; }
 .forte-pedal.on, .forte-latch.on { background: var(--accent); color: var(--accent-ink, #111); border-color: transparent; }
 
-/* Perform: the performance controls in a strip above the keys (moved there by
-   shared/layout.js), and the views as pictures, without captions, tables or hints */
+/* the performance controls: a strip above the keys in both modes (moved there by
+   shared/layout.js); their groups in the Controls panel may be left empty */
 .forte-perform { display: flex; flex-wrap: wrap; gap: 6px 8px; margin-bottom: 8px; }
 .forte-perform .param {
   flex: 1 1 150px; max-width: 250px; min-width: 0; margin: 0; padding: 5px 10px 3px;
@@ -141,17 +141,29 @@ body[data-instrument] .kb-help { align-items: center; }
 .forte-perform .param.check:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 70%, transparent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
 .forte-perform .param.check:has(input:checked) > label { color: var(--text); }
 
-body.perform details.group:not(:has(.param)) { display: none; }
-body.perform #views .caption,
-body.perform #views dl,
+details.group:not(:has(.param)) { display: none; }
+
+/* Perform: the chosen views fill the space side by side (stacked when the screen is
+   taller than wide), with no text in them: no titles, readouts, tools, captions,
+   legends or tables (shared/layout.js also stops their canvases drawing text). */
 body.perform .brand .sub,
 body.perform .forte-about,
 body.perform #midi,
 body.perform #cpu:not(.hot),
-body.perform .kb-help > span { display: none; }
-body.perform #views { gap: 10px; }
-body.perform #views .card { background: color-mix(in srgb, var(--card) 55%, var(--bg)); border-color: transparent; }
-body.perform #views .card-head h2 { font-weight: 500; color: var(--muted); }
+body.perform .kb-help > span,
+body.perform #views .card:not([data-keep-text]) :is(.card-head, .caption, .legend, .readout, .tabs, dl, table) { display: none; }
+body.perform:not(.no-views) #views {
+  display: grid; gap: 12px;
+  grid-template-columns: none; grid-template-rows: minmax(0, 1fr);
+  grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
+}
+body.perform #views .row { display: contents; }
+body.perform #views .card { background: transparent; border-color: transparent; padding: 4px; }
+:root.perform { --card: var(--bg); } /* views draw label backdrops in the card's colour: they vanish too */
+body.perform #views .card:not([data-keep-text]) canvas { flex: 1 1 0; height: auto; min-height: 0; }
+@media (orientation: portrait) {
+  body.perform:not(.no-views) #views { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-flow: row; grid-auto-rows: minmax(0, 1fr); }
+}
 
 /* narrow screens (tablet portrait): the controls slide over the views */
 @media (max-width: 1050px) {
@@ -230,6 +242,8 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
     padding: 6px max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
   }
   body[data-instrument] .kb-help { gap: 6px; margin-bottom: 6px; }
+  /* Perform: each view fills the room above the keys (the page scrolls between them) */
+  body.perform:not(.no-views) #views .card { height: max(140px, calc(100svh - var(--footer-h, 320px) - 20px)); }
   /* the performance strip shows a row and a half, and scrolls within itself */
   .forte-perform { max-height: 98px; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; margin-bottom: 6px; }
   .forte-perform .param { flex-basis: 140px; padding: 4px 8px 2px; }
