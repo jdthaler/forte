@@ -11,6 +11,21 @@ for example `piano-v0.1.0`.
 
 ## 2026-10-13 — new instruments
 
+### Viola Organista 0.1.0
+- After Leonardo's design: steel strings bowed by a rosined wheel. Each
+  string is a lossy waveguide with torsion, driven by the hyperbolic
+  friction curve solved implicitly, with rosin lag and grain noise.
+- A shared bridge and spruce soundboard (sympathetic strings, radiation).
+- Schelleng bounds measured against theory.
+- Strings tuned so the *bowed* pitch is in tune.
+- Treadle speed, key pressure and aftertouch on bow force; dampers-lifted
+  switch.
+- Views: travelling Helmholtz corner, live Schelleng diagram, attack map.
+
+### Forte 0.2.1
+- ↑/↓ step a log-scale parameter by a fixed fraction of its range, instead
+  of a fixed amount (finer control of key pressure at the low end).
+
 ### Glass Armonica 0.1.0
 - After Franklin's armonica: hemispherical bowls with Rayleigh's
   inextensional shell modes (n = 2–6). Wall thickness solved for pitch

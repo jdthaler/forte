@@ -27,7 +27,7 @@
 //   noteData(key, vel)  extra data attached to each noteOn message (e.g. a precomputed modal model)
 //   space         'sustain' (Space / CC64 = damper pedal, sent to the engine) | 'hold' (keys latch
 //                 while Space is down; shell sends the noteOffs on release) | null
-//   arrows        { param: id, step } — ↑/↓ nudge that parameter
+//   arrows        { param: id, step } — ↑/↓ nudge that parameter (by `step`; a log parameter by 1/24 of its range)
 //   modWheel      param id driven by MIDI CC1
 // Hooks (all optional, all in addition to the default engine messages):
 //   onAudio(audio)  once, with { ctx, node, tone, master, roomGain, analyser }
@@ -177,9 +177,11 @@ export function createShell(cfg) {
     if (!onSlider && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) { e.preventDefault(); shiftOctave(e.code === 'ArrowLeft' ? -12 : 12); return; }
     if (!onSlider && cfg.arrows && (e.code === 'ArrowUp' || e.code === 'ArrowDown')) {
       e.preventDefault();
-      const p = ALL.find((q) => q.id === cfg.arrows.param);
-      const v = shell.P[p.id] + (e.code === 'ArrowUp' ? 1 : -1) * cfg.arrows.step;
-      shell.setParam(p.id, Math.min(p.max, Math.max(p.min, Math.round(v / (p.step || 1e-9)) * (p.step || 1e-9))));
+      const p = ALL.find((q) => q.id === cfg.arrows.param), dir = e.code === 'ArrowUp' ? 1 : -1;
+      // linear parameters step by `step`; log parameters by 1/24 of the slider's travel
+      let v = p.log ? shell.P[p.id] * (p.max / p.min) ** (dir / 24) : shell.P[p.id] + dir * cfg.arrows.step;
+      if (p.step) v = Math.round(v / p.step) * p.step;
+      shell.setParam(p.id, Math.min(p.max, Math.max(p.min, v)));
       return;
     }
     const key = codeToKey(e.code);

@@ -6,7 +6,7 @@
 // Keep FORTE_VERSION equal to package.json's, and log every bump in
 // CHANGELOG.md (test/site-tests.mjs checks both).
 
-export const FORTE_VERSION = '0.2.0';
+export const FORTE_VERSION = '0.2.1';
 
 export const SECTIONS = [
   { id: 'history', title: 'Instruments from history', blurb: 'Real keyboards — some famous, some forgotten — rebuilt from their physics, with every mechanism exposed as a knob.' },
@@ -64,7 +64,7 @@ export const INSTRUMENTS = [
     accent: '#ffcf70',
   },
   {
-    id: 'bowed', name: 'Viola Organista', section: 'history', ready: false,
+    id: 'bowed', name: 'Viola Organista', section: 'history', ready: true, version: '0.1.0',
     after: "Leonardo da Vinci's design (1488)",
     tagline: 'Rosined wheels bow the strings while you hold the keys: stick–slip friction, from scratch.',
     physics: 'Friction · Helmholtz motion',
