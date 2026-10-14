@@ -9,7 +9,7 @@
 // delay line is read half a sample early to keep the lag exactly τ.
 
 import { keyFreq, keyPan } from '../../shared/dsp.js';
-import { tube, tubeKey, heat, tuning, betaOn, T_HOT } from './pyrophone-model.js';
+import { tube, tubeKey, heat, tuning, betaOn, silenceLimit, screamLimit, T_HOT } from './pyrophone-model.js';
 
 const TAU = 2 * Math.PI;
 const OUT = 0.045;          // output scale: a forte note peaks ≈ 0.2–0.4
@@ -20,6 +20,7 @@ const SEP = 0.012;          // s, time for the flames to part or rejoin
 const POST_EVERY = 0.016;   // s, view updates
 const PRESS = 0.25;         // aftertouch: full pressure parts the flames 25 % further
 const PUFF = 3;             // extra turbulence just after the flames part (× velocity)
+const SING = 0.1;           // rms flow at the flame above which a tube counts as singing (its cycles reach ≳ 0.35)
 
 class Voice {
   constructor(eng, key) {
@@ -33,7 +34,7 @@ class Voice {
     this.beta = 0; this.betaT = 0; this.press = 0; this.vel0 = 0;
     this.xf = -1; this.h = 0; this.dampKey = '';
     this.gain = 1; this.fade = 0; this.dead = false;
-    this.turb = 0; this.amp = 0; this.amp2 = 0; this.peak = 0; this.keyDown = false; this.age = 0; this.since = 0; this.rel = 0; this.chkT = 0; this.chkA = Infinity;
+    this.turb = 0; this.amp = 0; this.amp2 = 0; this.peak = 0; this.song = 0; this.keyDown = false; this.age = 0; this.since = 0; this.rel = 0; this.chkT = 0; this.chkA = Infinity;
     // strobe + phase portrait for the views
     this.prevE1 = 0; this.period = 100; this.sinceZ = 0; this.strobe = 0; this.snapAt = -1; this.wantSnap = false; this.watch = false;
     this.trail = new Float32Array(512); this.ti = 0; this.tdec = 1; this.tcount = 0;
@@ -44,7 +45,7 @@ class Voice {
   // Tube length from the tuning: the steady limit cycle (at this β) lands on
   // the key's frequency when the gas is fully warm, f = W c_hot / (2π L).
   tune(eng, beta) {
-    const W = eng.tune.W(eng.P.autotune ? beta : betaOn(eng.P, 0.7));
+    const W = eng.tune.W(eng.P.autotune ? beta : betaOn(eng.P, 0.7, eng.bH(), eng.betaMax));
     this.W = W;
     this.hHot = (TAU * keyFreq(this.key)) / (W * this.fs); // L/c_hot units per sample
   }
@@ -65,8 +66,15 @@ class Voice {
     if (h !== this.h || eng.dampKey !== this.dampKey) {
       this.h = h; this.dampKey = eng.dampKey;
       for (let j = 0; j < N; j++) {
-        const w0 = sys.w[j], s = sys.zeta[j] / 2, wd = Math.sqrt(w0 * w0 - s * s);
-        const e = Math.exp(-s * h), c = Math.cos(wd * h), sn = Math.sin(wd * h) / wd;
+        // c = cos(ω_d h), sn = sin(ω_d h)/ω_d with ω_d² = ω² − (ζ/2)²; for an overdamped mode
+        // (ζ/2 > ω: a wide, lossy tube's top modes) the same with cosh and sinh, and at the
+        // boundary their common limit c = 1, sn = h (series in ω_d²h², exact to rounding)
+        const w0 = sys.w[j], s = sys.zeta[j] / 2, d2 = w0 * w0 - s * s, x2 = d2 * h * h;
+        let c, sn;
+        if (x2 > 1e-4) { const wd = Math.sqrt(d2); c = Math.cos(wd * h); sn = Math.sin(wd * h) / wd; }
+        else if (x2 < -1e-4) { const wd = Math.sqrt(-d2); c = Math.cosh(wd * h); sn = Math.sinh(wd * h) / wd; }
+        else { c = 1 - (x2 / 2) * (1 - x2 / 12); sn = h * (1 - (x2 / 6) * (1 - x2 / 20)); }
+        const e = Math.exp(-s * h);
         this.m11[j] = e * (c + s * sn); this.m12[j] = e * sn;
         this.m21[j] = -e * w0 * w0 * sn; this.m22[j] = e * (c - s * sn);
         this.b1[j] = (1 - this.m11[j]) / (w0 * w0);
@@ -85,13 +93,13 @@ class Voice {
     const W = this.W, iW2 = 1 / (W * W), c1 = Math.abs(cf[0]);
     const [gl, gr] = this.pan, og = OUT * this.gain;
     let hw = this.hw, beta = this.beta, turb = this.turb, seed = eng.seed;
-    let fade = this.fade, gain = 1, peak = 0;
+    let fade = this.fade, gain = 1, peak = 0, uf2 = 0;
     for (let i = 0; i < n; i++) {
       beta += kb * (this.betaT - beta);
       // flame velocity now, and as the flame felt it τ ago
       let uf = 0;
       for (let j = 0; j < N; j++) uf += cf[j] * eta[j];
-      hist[hw] = uf; hw = (hw + 1) & mask;
+      hist[hw] = uf; hw = (hw + 1) & mask; uf2 += uf * uf;
       const a = hist[(hw - 1 - di) & mask], b = hist[(hw - 2 - di) & mask];
       // turbulence at the flame: low-passed white noise, rms = noise (× mean draught)
       seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5;
@@ -115,7 +123,7 @@ class Voice {
     this.hw = hw; this.beta = beta; this.turb = turb; eng.seed = seed; this.fade = fade;
     this.amp = Math.sqrt(eta[0] * eta[0] + vel[0] * vel[0] * iW2) * c1;
     this.amp2 = Math.sqrt(eta[1] * eta[1] + vel[1] * vel[1] * iW2 * 0.25) * Math.abs(cf[1]);
-    this.peak = peak;
+    this.peak = peak; this.song = Math.sqrt(uf2 / n); // rms flow at the flame, whatever mode sings
     if (fade >= eng.fadeLen) this.dead = true;
     if (!Number.isFinite(this.amp)) { this.dead = true; eta.fill(0); vel.fill(0); hist.fill(0); }
   }
@@ -164,18 +172,25 @@ export class PyrophoneEngine {
       this.sys = tube(P);
       this.dampKey = `${P.bore}|${P.damp}`;
       // The page sends the tuning precomputed (P.tune); in Node it is computed
-      // here, lazily, at the next note-on. While a slider is dragged the page may
+      // here, lazily, at the next note-on (and the threshold alone, which is
+      // quicker, when a held key needs it). While a slider is dragged the page may
       // still send the previous table: keep using it until the new one arrives.
-      if (!P.tune) this.tune = null;
+      if (!P.tune) { this.tune = null; this.betaH = null; }
     }
     if (P.tune && P.tune !== this.tuneSrc && (P.tune.key === key || !this.tune)) { this.tuneSrc = P.tune; this.setTune(P.tune); }
     if (old && old.listen !== P.listen) for (const v of this.voices) v.xf = -1;
     // held keys follow the flame power (mod wheel); released ones the key-up power
-    for (const v of this.voices) v.betaT = v.keyDown ? betaOn(P, v.vel0) * (1 + PRESS * v.press) : this.betaUp();
+    for (const v of this.voices) v.betaT = v.keyDown ? this.betaDown(v.vel0, v.press) : this.betaUp();
   }
-  setTune(t) { this.tune = unpack(t); this.betaH = t.betaH; }
+  setTune(t) { this.tune = unpack(t); this.betaH = t.betaH; this.betaMax = t.betaMax; }
   tuneNow() { if (!this.tune) this.setTune(tuning(this.P)); return this.tune; }
-  betaUp() { return this.P.keyup * (this.betaH ?? this.tuneNow().betaH); }
+  bH() { // the threshold β_H, and the ceiling below the scream
+    if (this.betaH == null) { const s = silenceLimit(this.sys); this.betaH = s.beta; this.betaMax = screamLimit(this.sys, s.mode); }
+    return this.betaH;
+  }
+  // flames apart: K β_H (0.4 + 0.6 v); aftertouch parts them up to 25 % further (below the scream)
+  betaDown(vel, press) { const bH = this.bH(); return Math.min(this.betaMax, betaOn(this.P, vel, bH, this.betaMax) * (1 + PRESS * press)); }
+  betaUp() { return this.P.keyup * this.bH(); }
 
   coolTheta(key) { // the tube's warmth, cooled since it last sounded
     return this.warm[key] * Math.exp(-(this.time - this.warmAt[key]) / (this.P.warm * this.fs));
@@ -185,7 +200,7 @@ export class PyrophoneEngine {
     if (!this.P) return;
     this.tuneNow();
     let v = this.voices.find((x) => x.key === key && !x.fade);
-    const beta = betaOn(this.P, velocity);
+    const beta = betaOn(this.P, velocity, this.bH(), this.betaMax);
     if (!v) {
       if (this.voices.length >= MAXV) this.steal();
       v = new Voice(this, key);
@@ -194,7 +209,7 @@ export class PyrophoneEngine {
     } else if (v.amp < 0.02) v.tune(this, beta); // a silent tube may be re-cut; a singing one keeps its length
     v.vel0 = velocity; v.press = this.pressure; v.since = 0;
     v.keyDown = true;
-    v.betaT = beta * (1 + PRESS * v.press);
+    v.betaT = this.betaDown(velocity, v.press);
     this.focus = key;
   }
   noteOff(key) {
@@ -210,7 +225,7 @@ export class PyrophoneEngine {
   handle(m) {
     if (m.type === 'pressure') { // aftertouch: lean on a key to part its flames further
       if (m.key == null) this.pressure = m.value;
-      for (const v of this.voices) if (v.keyDown && (m.key == null || m.key === v.key)) { v.press = m.value; v.betaT = betaOn(this.P, v.vel0) * (1 + PRESS * m.value); }
+      for (const v of this.voices) if (v.keyDown && (m.key == null || m.key === v.key)) { v.press = m.value; v.betaT = this.betaDown(v.vel0, m.value); }
     }
   }
   voiceCount() { return this.voices.length; }
@@ -220,20 +235,22 @@ export class PyrophoneEngine {
     if (!this.P) return;
     const P = this.P, dt = n / this.fs, kw = 1 - Math.exp(-dt / P.warm);
     for (const v of this.voices) {
-      // warm-up: the gas heats while the flames are apart, cools when they rejoin
-      v.theta += kw * ((v.keyDown ? 1 : 0) - v.theta);
+      // warm-up: the gas heats while the flames are apart or the tube sings (a tube that
+      // remembers its note after release stays hot, and in tune), and cools once it is silent
+      v.theta += kw * ((v.keyDown || v.song > SING ? 1 : 0) - v.theta);
       v.watch = v.key === this.focus;
       v.coeffs(this);
       v.render(this, L, R, n);
       v.age += dt; v.since += dt; v.rel += dt;
       // A released tube that has stopped singing fades out and is freed: once it
       // is inaudible, or once it is quiet and no longer dying away (only the
-      // flames' breath is left).
+      // flames' breath is left). Its level: the flow at the flame, in whatever mode it sings.
       if (!v.keyDown && !v.fade) {
-        if (v.peak < 1e-3) v.fade = 1;
-        else if (v.rel > 0.25 && v.peak < 0.05 && v.rel - v.chkT > 0.1) {
-          if (v.peak > 0.8 * v.chkA) v.fade = 1;
-          v.chkT = v.rel; v.chkA = v.peak;
+        const a = Math.SQRT2 * v.song;
+        if (a < 1e-3) v.fade = 1;
+        else if (v.rel > 0.25 && a < 0.05 && v.rel - v.chkT > 0.1) {
+          if (a > 0.8 * v.chkA) v.fade = 1;
+          v.chkT = v.rel; v.chkA = a;
         }
       }
     }

@@ -37,7 +37,8 @@ bronze). The linear modes are
 with C and λ fixed by the rim. A gong hangs on cords, so its rim is **free**
 (no bending moment, no Kirchhoff shear: W″ + ν(W′ − m²W) = 0 and
 (∇²W)′ − (1−ν)m²(W′ − W) = 0 at r = 1). The page also offers a **clamped** rim
-(W = W′ = 0). `src/plate.js` finds the roots of the characteristic
+(W = W′ = 0: the edge cannot move or tilt, but it can still slide in its own
+plane; see §2). `src/plate.js` finds the roots of the characteristic
 determinants, with Bessel functions from their power series and, for large
 arguments, from the periodic integral (1/2π)∫cos(mτ − x sin τ)dτ, where the
 trapezoidal rule converges exponentially.
@@ -186,16 +187,25 @@ Velocity sets the impact speed, v = v_max·vel² (v_max = 9 m/s by default).
 
 Each mode follows the exact damped recursion, written in energy form,
 
-  (1+σ̃h) x⁺ − 2c̃ x + (1−σ̃h) x⁻ = h² [ φ F − g (ψ⁺ + ψ⁻)/2 ],
+  (1+σ̃h) x⁺ − 2c̃ x + (1−σ̃h) x⁻ = h² W [ φ F − g (ψ⁺ + ψ⁻)/2 ],   W = sinc²(Ωh),
 
 so its frequency and decay are exact at any step h. The nonlinear force uses a
 **scalar auxiliary variable** (SAV; Shen, Xu & Yang 2018; for musical systems
 Bilbao, Ducceschi & Zama 2023). ψ ≈ √(2V_nl + ε₀) is advanced by
 ψ⁺ = ψ⁻ + g·(x⁺ − x⁻)/2 with g = ∇V_nl/√(2V_nl + ε₀) taken at xⁿ. For any g at
-all, Σ½(δx)² + ½ω̃²x⁺x + ψ²/2 + mallet + contact is conserved exactly when σ = 0.
-x⁺ comes from a rank-one (Sherman–Morrison) solve, so a step costs one gradient,
-two passes over the sparse coupling list, and O(modes) more. The tests check
-energy to 10⁻⁹ through a fortissimo strike.
+all, Σ(1/W)[½(δx)² + ½ω̃²x⁺x] + ψ²/2 + mallet + contact is conserved exactly when
+σ = 0. For a mode oscillating with amplitude a, (1/W)[½(δx)² + ½ω̃²x⁺x] is exactly
+its physical energy ½Ω²a², at any step: the weight W is what makes the
+conserved quantity the physical energy. (Without it the conserved plate term is
+sinc²(Ωh)·½Ω²a², and energy the coupling hands from the low modes to the top
+ones, where Ωh ≈ 2 and sinc² ≈ 0.2, could grow up to fivefold; it did, by 1.7×
+on real strikes and 2.6× in free vibration.) W = 1 − Ω²h²/3 + … leaves the low
+modes alone. x⁺ comes from a rank-one (Sherman–Morrison) solve, so a step costs
+one gradient, two passes over the sparse coupling list, and O(modes) more. The
+tests check the scheme's energy to 10⁻⁹ through a fortissimo strike, and the
+physical energy, from the mode amplitudes, with damping off: it stays within
+2 % of what the strike left in the plate, and within 4 % in free vibration of
+the C5 gong at full nonlinearity.
 
 The SAV is only second-order accurate, and a drifting ψ lets the ε₀ "reservoir"
 leak into the modes. So:
@@ -203,28 +213,48 @@ leak into the modes. So:
 * **Consistency projection.** Each step ψ is reset to √(V(xⁿ) + V(xⁿ⁻¹) + ε₀),
   and the plate velocity (with the mallet's, so the contact is untouched) is
   rescaled by s ≈ 1 to keep the scheme's energy unchanged. This is in the spirit
-  of relaxed and generalised SAV schemes.
+  of relaxed and generalised SAV schemes. Near a turning point, where the plate
+  has little motion to give, ψ may lag by a step.
 * **Adaptive substeps.** The size of that correction is the error estimate.
   Above 2 % per step the voice halves its step, and comes back once it has
   been below 0.2 % for 20 ms. At the strike the step is also chosen to give the
   Hertz contact at least 6 points. State changes between step sizes are exact
-  for modal motion under a constant contact force. Since the projection already
+  for modal motion (about each mode's mean, or under a constant contact force),
+  and what the modal picture misses is put right by rescaling the velocity, so
+  a change of step neither adds nor removes energy. Since the projection already
   keeps the energy right, this is capped at 2 substeps, and at 2 voices
   substepping at once, so that no audio block costs much more than the next.
 * **Snap-through.** A dome hit hard can invert. The cubic part of V_nl then goes
   far below zero (in the shell-mode split, the stretching energy is carried by
-  the linear stiffness), and ε₀ is raised as needed. It is only a reference level.
-* **Passivity guard**, the last resort: the gong may not hold more energy than
-  its mallets gave it. The guard has fired only at absurd settings (a 3 ‰ steel
-  dome hit at 12 m/s), and the tests check that it never acts for any preset.
+  the linear stiffness), and ε₀ is raised as needed. It is only a reference level
+  (and g is scaled with the raised one).
+* **Passivity guard**, the last resort, checked every step: the gong may not
+  hold more physical energy (plate, V_nl and mallet) than its mallets gave it,
+  by more than 10⁻⁶ (5 % while ψ lags). It acts only when the plate is driven so
+  far, tens of thicknesses, that a step no longer resolves its motion: the
+  thinnest plates with the deepest domes hit hardest (for example a 3 ‰ clamped
+  bronze dome, 4 h, at 12 m/s). Then it takes out what the scheme would invent,
+  from the velocity or, if need be, by scaling the whole motion down, and lowers
+  the bound by 0.1 % each time, so that such a gong dies away within a fraction
+  of a second instead of ringing on in a state the model no longer describes.
+  The tests check that it never acts for any preset, and that six such domes
+  struck twice each (once a runaway to 34× full scale) now stay under 2.
+* **Output.** A soft clip above 2 (towards 4) is the backstop after all that;
+  playing at sane settings never reaches it.
 
 Against an RK4 integration of the same modal equations at a quarter of the step,
 the free-vibration frequency agrees to 0.1 ¢, and both match the normal-form
 backbone at small amplitude, for the flat plate and for the dome.
 
 **Rates and cost.** Each voice runs at fs/R (R = 2, 4 or 8), the lowest rate
-that holds all its modes below fs/3R (where Ωh ≤ 2, the SAV stays accurate). A
-polyphase Kaiser-windowed sinc interpolates each rate back to fs. A voice's
+that holds all its modes below fs/3R, so Ωh ≤ 2.07. A polyphase Kaiser-windowed
+sinc interpolates each rate back to fs. At that step the scheme still conserves
+the physical energy (above), but the top modes' response to the coupling is not
+converged: near the threshold of the cascade (A3–C5 struck at velocity 0.8) the
+share of energy above 4× the pitch comes out about 3 dB higher than with 2, 4 or 8
+substeps (which scatter by ±1.5 dB among themselves); well into the crash (velocity 1) all
+agree. Two substeps throughout would cost 1.5× on average and push the worst
+audio block past half its budget, so the step stays. A voice's
 nonlinear cost follows how nonlinear it is, measured by
 r = (|V₄| + V₃²/E)/E (the largest value over each audio block, held for about
 two periods of the strike tone, since V_nl itself nearly vanishes as the tone
@@ -241,17 +271,32 @@ crosses zero):
   loudest: exact linear modal decay, about 15× cheaper.
 
 At most **Nonlinear voices** gongs (default 4) run their coupling at once.
-Beyond that the least nonlinear one rings on linearly: its pitch glide and
-cascade freeze where they are, and it never stops sounding. The engine also
+Beyond that the least nonlinear one rings on linearly, carrying on from where it
+is: each mode keeps the frequency it had (timed from its last few zero crossings
+about its mean) and its mean position (a dome that has snapped through stays
+snapped), and each shift then fades with that mode's squared amplitude, as a
+nonlinear shift would. Its cascade freezes, but its pitch neither jumps nor
+stops gliding: cut off at +175 ¢ mid-glide, a flat opera gong measures +174 ¢
+over the next four periods, against +169 ¢ left nonlinear; in a six-note chord
+at velocity 0.8, a gong cut off at +620 ¢ measures +617 ¢ (+607 ¢ uncut); over
+chords, the opera gongs and the tam-tam, the difference stays under 40 ¢ (it
+used to drop to 0, up to 600 ¢ at once). Only a gong whose free vibration has
+been timed for about 2.5 periods is handed over: at the cap, the two next in
+line keep timing theirs (so the cap may be exceeded for those periods). A gong
+whose coupling dies away by itself (r below 2×10⁻⁴, a 0.3 ¢ shift) simply goes
+on as exact linear modes. The engine also
 runs every code path once, on a silent gong, when it is created (about 35 ms,
 before the audio starts), so that the JIT has compiled them and no block pays
-for that later.
+for that later. The coupling tables for a setting of Dome rise, Coupling terms
+and Rim (3–5 ms to build) are built on the page and sent with the parameters,
+so moving those sliders never stalls the audio thread.
 
 On this machine (Apple M2 Max, Node), four gongs struck fff at once, all on the
-full coupling, take **24 % of real time**. Ten take 22 % under the default cap
+full coupling, take **25 % of real time**. Ten take 25 % under the default cap
 (55 % if all ten run nonlinear). A 16-note fff melody, one note every 0.25 s
-with the pedal held, averages 18 %, and its worst 128-sample block is under
-half its budget (`node tools/bench-gongs.mjs`).
+with the pedal held, averages 19 %, and its worst 128-sample block takes about
+half its budget (41–56 % over three runs; 33 % keeping each block's fastest of
+three runs, which removes the machine's own hiccups) (`node tools/bench-gongs.mjs`).
 
 ### 7. Damping
 
@@ -306,7 +351,7 @@ scale. The test measures it from the output of a soft centre strike at all
    the energy drains back down.
 3. **03-flat-glides-down-dome-glides-up**: the same opera-gong strike on E4. The
    flat plate starts +220 ¢ sharp and falls into tune within a second; the
-   2.5 h dome starts −195 ¢ flat and rises over two.
+   2.5 h dome starts −190 ¢ flat and rises over two.
 4. **04-thick-stays-a-bell-thin-crashes**: the same 4.4 m/s strike on h/a = 2 %
    (a bell) and on 0.4 % (a crash: 30 % of the energy above 2 kHz).
 5. **05-centre-then-rim-strike**: dead centre gives one clean tone. Near the rim
@@ -316,8 +361,10 @@ scale. The test measures it from the output of a soft centre strike at all
    beater. A hum swells and, past a threshold, the cascade switches on (half the
    energy above 2 kHz), then sinks back into the hum.
 7. **07-hanging-then-clamped**: the same strike on the free gong and on the
-   plate clamped in a frame. Different mode ratios, no (2,0) below the
-   fundamental, a stiffer and less nonlinear plate.
+   plate with its rim clamped. Different mode ratios, no (2,0) below the
+   fundamental, a stiffer plate. It also sounds less nonlinear, but that is
+   because its rim may still slide in its plane (see Simplifications): a rim
+   really held in a frame would stretch about three times as much.
 
 On the page, the **gong** view draws the struck gong's displacement from its
 live mode amplitudes, with the motion slowed. The **spectrogram** shows the
@@ -336,7 +383,7 @@ gongs/src/gongs-engine.js            real-time engine: SAV scheme, mallet, subst
 gongs/src/gongs-params.js            parameters and presets
 gongs/src/gongs-main.js              page wiring and views
 gongs/data/gong-modes.js             generated tables (node tools/gongs-modes.mjs, ~1 s)
-test/gongs-tests.mjs                 node test/gongs-tests.mjs (21 tests, ~13 s)
+test/gongs-tests.mjs                 node test/gongs-tests.mjs (26 tests, ~22 s)
 tools/render-gongs.mjs               node tools/render-gongs.mjs → examples/gongs/
 tools/bench-gongs.mjs                node tools/bench-gongs.mjs: real-time load, block by block
 ```
@@ -360,9 +407,23 @@ tools/bench-gongs.mjs                node tools/bench-gongs.mjs: real-time load,
 * **The integrator.** Against RK4 it is accurate at moderate amplitude. At
   deflections of several thicknesses it is an energy-correct, structure-correct
   approximation driven by the projection and the substeps, not a converged
-  solution. The weakly nonlinear tail runs on the 200 strongest couplings, and
-  past the nonlinear-voice cap a gong rings on linearly: both are
-  CPU savings that change the sound only slightly.
+  solution: near the cascade's threshold its top modes take a few dB more
+  energy than at a finer step (§6). At tens of thicknesses (the thinnest, most
+  domed plates hit hardest) it cannot follow the plate, and the guard damps it.
+  The weakly nonlinear tail runs on the 200 strongest couplings, and past the
+  nonlinear-voice cap a gong rings on linearly from where it is (its pitch glide
+  continues, as a decaying per-mode shift; its cascade stops): both are CPU
+  savings that change the sound only slightly.
+* **The clamped rim slides.** The Airy basis keeps the in-plane edge free
+  (F = F′ = 0, N_rr = N_rθ = 0) for both rims, so "clamped" holds the edge's
+  position and slope but lets it slide radially. A plate really held in a frame
+  is immovable in its plane too, and stretches more: for the axisymmetric
+  (0,0) mode, a 1-D finite-element solution for the radial strain gives 2.98×
+  the stretching energy (5.8× for the free plate's (0,1)). So the clamped
+  plate's weak nonlinearity here (backbone 0.11 for the flat plate, against
+  0.42 free) is an artefact of the edge condition: an immovable rim would put it
+  near 0.33. An immovable in-plane edge needs a different Airy basis (its
+  conditions on F are not local), and is not offered.
 * **Geometry.** A uniform flat plate or spherical cap. Real gongs have
   bosses, turned rims, hammered thickness variations, and (opera gongs) a
   flat centre with a conical shoulder. ν is fixed at 0.33 for the mode shapes of

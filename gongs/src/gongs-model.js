@@ -148,6 +148,15 @@ export function shell(bc = 'free', rise = 0, terms = 600) {
 
 export const LITE = 200;
 
+// The part of shell() the engine needs, as plain data (typed arrays), so the page can build
+// the tables (a few ms) and post them to the AudioWorklet instead of the audio thread
+// building them. tablesId(P) names the set a parameter object asks for.
+export const tablesId = (P) => `${P.bc}|${P.rise}|${P.terms}`;
+export function engineTables(S) {
+  const { bc, rise, terms, N, NS, Om, m, R, C, tuned, full, lite } = S;
+  return { id: `${bc}|${rise}|${terms}`, bc, rise, terms, N, NS, Om, m, R, C, tuned, full, lite };
+}
+
 // Coupling rows for the engine: pass 1 by in-plane mode (sorted by the larger mode index, for
 // per-key prefixes), pass 2 by transverse mode (sorted by partner index); curvature terms both ways.
 function pack(H, Et, N, NS) {
@@ -229,8 +238,7 @@ export function backbone(S, p, Nv = S.N) {
 // scaled in size (a ∝ 1/f), and the motion in units of the thickness is the
 // same at every key: only the time scale changes.
 export const OS_MAX_HZ = 26000, CAP = 0.33;
-export function keyGong(key, P, fs) {
-  const S = shell(P.bc, P.rise, P.terms);
+export function keyGong(key, P, fs, S = shell(P.bc, P.rise, P.terms)) {
   const mat = MATERIALS[P.material] || MATERIALS.bronze, cp = plateSpeed(mat);
   const f0 = keyFreq(key), w0 = (TAU * f0) / S.Om[S.tuned]; // 1/τ
   const a = (P.thick * cp) / (Math.sqrt(12) * w0), h = P.thick * a;

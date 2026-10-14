@@ -9,7 +9,7 @@
 import assert from 'node:assert/strict';
 import { besselJ, besselI, plateModes, tripleL, radial, gaussLegendre } from '../gongs/src/plate.js';
 import TABLE from '../gongs/data/gong-modes.js';
-import { shell, backbone, potential, keyGong, interpR, NU } from '../gongs/src/gongs-model.js';
+import { shell, backbone, potential, keyGong, interpR, engineTables, NU } from '../gongs/src/gongs-model.js';
 import { GongEngine } from '../gongs/src/gongs-engine.js';
 import { DEFAULTS, GROUPS, PRESETS } from '../gongs/src/gongs-params.js';
 import { keyFreq } from '../shared/dsp.js';
@@ -188,9 +188,12 @@ test('energy is conserved to round-off through a fortissimo strike (damping off)
   const v = e.voices[0], h = v.hit, k = v.h, mu = 1 / (Math.PI * h.Mi); // k: the scheme's step (substeps included)
   v.g.sigma.fill(0); v.setDamping();
   const pot = (d) => (d > 0 ? 0.4 * h.K * d ** 2.5 : 0);
-  const total = () => { // plate (scheme's energy form) + ψ²/2 + mallet + contact, at the half step
+  const total = () => { // plate (scheme's energy form, weighted by 1/sinc²(Ωh)) + ψ²/2 + mallet + contact, at the half step
     let E = 0;
-    for (let i = 0; i < v.N; i++) { const vel = (v.x[i] - v.x1[i]) / k, w2 = (2 - v.A[i]) / (k * k); E += 0.5 * vel * vel + 0.5 * w2 * v.x[i] * v.x1[i]; }
+    for (let i = 0; i < v.N; i++) {
+      const vel = (v.x[i] - v.x1[i]) / k, w2 = (2 - v.A[i]) / (k * k), W = (Math.sin(v.S.Om[i] * k) / (v.S.Om[i] * k)) ** 2;
+      E += (0.5 * vel * vel + 0.5 * w2 * v.x[i] * v.x1[i]) / W;
+    }
     const m = v.hit || h;
     return E + 0.5 * (v.psi * v.psi - v.eps0) + 0.5 * Math.PI * mu * ((m.xm - m.xm1) / k) ** 2 + 0.5 * (pot(m.d0) + pot(m.dm1));
   };
@@ -198,8 +201,51 @@ test('energy is conserved to round-off through a fortissimo strike (damping off)
   let worst = 0, Vmax = 0;
   for (let s = 0; s < steps; s++) { v.step(); const E = total(); worst = Math.max(worst, Math.abs(E / E0 - 1)); Vmax = Math.max(Vmax, Math.abs(v.V)); }
   assert.ok(h.steps > 5 && h.Fmax > 0, 'the mallet touched');
-  assert.ok(worst < 1e-9, `relative energy error ${worst.toExponential(2)}`);
+  assert.ok(worst < 1e-9 && v.guards === 0, `relative energy error ${worst.toExponential(2)}, guards ${v.guards}`);
   assert.ok(Vmax > 0.02 * E0, `and the strike was strongly nonlinear (V_nl up to ${(100 * Vmax / E0).toFixed(1)} % of the energy)`);
+});
+// Physical energy from the mode amplitudes (independent of the step: ½Ω²a² per mode for a
+// sinusoid, from the midpoint X and the difference d), plus V_nl from the dense reference.
+function physE(v) {
+  const X = new Float64Array(v.N);
+  let E = 0;
+  for (let i = 0; i < v.N; i++) {
+    const Om = v.S.Om[i], c = Math.cos((Om * v.h) / 2), s = Math.sin((Om * v.h) / 2), d = v.x[i] - v.x1[i];
+    X[i] = 0.5 * (v.x[i] + v.x1[i]);
+    E += 0.5 * Om * Om * ((X[i] * X[i]) / (c * c) + (d * d) / (4 * s * s));
+  }
+  return E + (v.nl ? potential(v.S, X, v.N).V : 0);
+}
+test('the conserved energy is the physical one: undamped, strikes and free vibration never gain (top modes at Ωh ≈ 2)', () => {
+  // with the energy weights; without them the cascade into the top modes multiplied the energy (×1.7 struck, ×2.6 free)
+  let worst = 0, wk = '';
+  for (const key of [57, 69, 72, 84]) for (const vel of [0.8, 1]) {
+    const e = new GongEngine(FS); e.setParams(P({ eta: 1e-5, thermal: 0, radiation: 0 })); e.setSustain(true);
+    e.noteOn(key, vel);
+    const v = e.voices[0], bl = new Float32Array(128), br = new Float32Array(128);
+    v.g.sigma.fill(0); v.setDamping(); v.lite = v.full; // (the dense reference has the full coupling set)
+    let E0 = null;
+    for (let b = 0; b < Math.round((0.5 * FS) / 128); b++) {
+      e.process(bl, br, 128);
+      if (v.hit || !v.nl) continue;
+      const E = physE(v);
+      if (E0 === null) E0 = E;
+      if (E / E0 > worst) { worst = E / E0; wk = `key ${key} v ${vel}`; }
+    }
+  }
+  assert.ok(worst < 1.15, `struck: up to ${worst.toFixed(3)}× the energy just after contact (${wk})`);
+  // free vibration of the C5 gong (top mode at Ωh = 2.07): its strike tone at 2 h, a little of everything else
+  const e = new GongEngine(FS); e.setParams(P());
+  const S = shell('free', DEFAULTS.rise), x0 = new Array(64).fill(0);
+  for (let i = 0; i < 64; i++) x0[i] = 0.01 * Math.sin(1.7 * i + 0.3) * (S.Om[S.tuned] / S.Om[i]);
+  x0[S.tuned] = 2;
+  const v = e.place(72, x0);
+  v.g.sigma.fill(0); v.adapt = false; v.lite = v.full; v.setDamping();
+  const E0 = physE(v);
+  let lo = 1, hi = 1;
+  for (let s = 1; s <= Math.round((0.4 * v.g.w0) / v.k); s++) { v.step(); if (s % 50 === 0) { const r = physE(v) / E0; lo = Math.min(lo, r); hi = Math.max(hi, r); } }
+  assert.ok(hi < 1.1 && lo > 0.9, `free vibration: energy between ${lo.toFixed(3)} and ${hi.toFixed(3)} of its start`);
+  console.log(`        struck: ≤ ${worst.toFixed(3)}×; free vibration at C5: ${lo.toFixed(3)}–${hi.toFixed(3)}×`);
 });
 
 console.log('engine');
@@ -255,17 +301,18 @@ test('level: a forte note peaks 0.1–0.5 across the keyboard; onsets are band-l
   const peaks = [];
   for (const key of [36, 48, 60, 72, 84]) {
     const p = P({ release: 0.25 }), g = keyGong(key, p, FS), fTop = (g.S.Om[g.Nv - 1] * g.w0) / (2 * Math.PI);
-    const { L, R } = render(p, 1.5, [[0.01, 'on', key, 0.8], [0.8, 'off', key]]);
-    let pk = 0, jump = 0, pk1 = 0, rel = 0, before = 0;
+    const { L, R } = render(p, 1.5, [[0.01, 'on', key, 0.8], [0.8, 'off', key]]), held = render(p, 0.85, [[0.01, 'on', key, 0.8]]).L;
+    let pk = 0, jump = 0, pk1 = 0, rel = 0, before = 0, still = 0;
     for (let i = 1; i < L.length; i++) pk = Math.max(pk, Math.abs(L[i]), Math.abs(R[i]));
     const on = Math.round(0.01 * FS), off = Math.round(0.8 * FS);
     for (let i = on - 64; i < on + 960; i++) { jump = Math.max(jump, Math.abs(L[i] - L[i - 1])); pk1 = Math.max(pk1, Math.abs(L[i])); }
     for (let i = off - 960; i < off; i++) before = Math.max(before, Math.abs(L[i] - L[i - 1]));
-    for (let i = off; i < off + 960; i++) rel = Math.max(rel, Math.abs(L[i] - L[i - 1]));
+    for (let i = off; i < off + 960; i++) { rel = Math.max(rel, Math.abs(L[i] - L[i - 1])); still = Math.max(still, Math.abs(held[i] - held[i - 1])); }
     assert.ok(pk > 0.1 && pk < 0.5, `key ${key}: peak ${pk.toFixed(3)}`);
     peaks.push(`${key}:${pk.toFixed(2)}`);
     assert.ok(jump < 1.5 * ((2 * Math.PI * fTop) / FS) * pk1, `key ${key}: onset step ${jump.toFixed(4)} exceeds the band limit of a ${fTop.toFixed(0)} Hz signal of peak ${pk1.toFixed(3)}`);
-    assert.ok(rel <= 1.01 * before, `key ${key}: release step ${rel.toExponential(2)} vs ${before.toExponential(2)} before`);
+    // no click: after release no sample step exceeds those before it, or those of the same gong left ringing
+    assert.ok(rel <= 1.01 * Math.max(before, still), `key ${key}: release step ${rel.toExponential(2)} vs ${before.toExponential(2)} before, ${still.toExponential(2)} undamped`);
     let tail = 0;
     for (let i = L.length - 4800; i < L.length; i++) tail = Math.max(tail, Math.abs(L[i]));
     assert.ok(tail < 1e-3 * pk, `key ${key}: after release ${tail.toExponential(1)}`);
@@ -298,19 +345,97 @@ test('passivity: struck ff, through substep changes and projections, no preset e
     assert.ok(worst < 1 + 1e-6 && v.guards === 0, `${pr.name}, key ${key}: E/E_in ${worst.toFixed(6)}, guards ${v.guards}`);
   }
 });
+// Six keys, each struck twice at full velocity 60 ms apart, released at 1.2 s (the review's pattern).
+function sixTwice(params, fs, sec, each) {
+  const e = new GongEngine(fs); e.setParams(params);
+  const ev = [];
+  [36, 50, 57, 64, 71, 84].forEach((k, i) => ev.push([0.02 * i, 'on', k], [0.02 * i + 0.06, 'on', k], [1.2, 'off', k]));
+  ev.sort((a, b) => a[0] - b[0]);
+  const bl = new Float32Array(128), br = new Float32Array(128);
+  let j = 0, peak = 0, bus = 0, nan = false;
+  for (let s = 0; s < sec * fs; s += 128) {
+    while (j < ev.length && ev[j][0] * fs <= s) { const q = ev[j++]; if (q[1] === 'on') e.noteOn(q[2], 1); else e.noteOff(q[2]); }
+    e.process(bl, br, 128);
+    for (let i = 0; i < 128; i++) { const a = Math.max(Math.abs(bl[i]), Math.abs(br[i])); if (!(a < Infinity)) nan = true; else if (a > peak) peak = a; }
+    for (const v of e.voices) { if (v.peak > bus) bus = v.peak; each?.(v); }
+  }
+  return { peak, bus, nan };
+}
+test('regression: a 3 ‰ clamped bronze dome (4 h) at 12 m/s, six keys struck twice (44.1 kHz) — no energy from nowhere', () => {
+  // was: after a snap-through the energy ran away to 588× what the mallets gave, and the output peaked at 34
+  const p = P({ thick: 0.003, rise: 4, bc: 'clamped', thermal: 0, radiation: 3, strike: 0, speed: 12, listen: 0, release: 30, terms: 2000 });
+  let worst = 0;
+  const r = sixTwice(p, 44100, 2, (v) => { if (v.nl) worst = Math.max(worst, v.energyD() / v.Einj); });
+  assert.ok(!r.nan && worst <= 1.05, `energy up to ${worst.toFixed(3)}× what the mallets gave`);
+  assert.ok(r.peak < 2, `output peak ${r.peak.toFixed(2)}`);
+  console.log(`        energy ≤ ${worst.toFixed(3)}× the mallets'; output peak ${r.peak.toFixed(2)}`);
+});
+test('seeded random combinations of parameter extremes at 44.1 and 48 kHz: no NaN, bounded output', () => {
+  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'velocity'].includes(q.id));
+  let seed = 12345, worst = { bus: 0 }, clipped = 0, n = 0;
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  for (const fs of [44100, 48000]) for (let c = 0; c < 12; c++) {
+    const p = { ...DEFAULTS };
+    for (const q of sliders) {
+      if (rnd() < 0.5) continue;
+      if (q.type === 'select') p[q.id] = q.options[Math.floor(rnd() * q.options.length)][0];
+      else p[q.id] = rnd() < 0.5 ? q.min : q.max;
+    }
+    const r = sixTwice(p, fs, 1.6);
+    assert.ok(!r.nan, `${fs} Hz, ${JSON.stringify(p)}: NaN`);
+    if (r.bus > worst.bus) worst = { ...r, p, fs };
+    if (r.peak > 2) clipped++;
+    n++;
+  }
+  // (before: up to 481 on one voice's bus and 248 out; the soft clip keeps the output under 4)
+  assert.ok(worst.bus < 25 && worst.peak < 4, `${worst.fs} Hz: one gong's bus peaks at ${worst.bus.toFixed(1)} (output ${worst.peak.toFixed(2)}) with ${JSON.stringify(worst.p)}`);
+  console.log(`        ${n} combinations: loudest gong ${worst.bus.toFixed(1)}, the soft clip engaged in ${clipped}`);
+});
+test('regression: a gong cut off from its coupling (nonlinear-voice cap) keeps its pitch, then glides home', () => {
+  // was: a forced switch to the linear path dropped a +184 ¢ glide to 0 in one step
+  const glide = (p, key, vel, ts, cut) => {
+    const e = new GongEngine(FS); e.setParams(p); e.noteOn(key, vel);
+    const v = e.voices[0], t = v.S.tuned, xs = [], bl = new Float32Array(128), br = new Float32Array(128), step = v.step.bind(v);
+    let at = -1;
+    v.step = () => { step(); xs.push(v.x[t]); };
+    for (let s = 0; s < 0.5 * FS; s += 128) { if (s >= ts * FS && at < 0) { at = xs.length; if (cut) v.linear(); } e.process(bl, br, 128); }
+    const W = Math.round((4 * 2 * Math.PI) / (v.S.Om[t] * v.k)), c = (a, b) => { // zero crossings about the mean, in cents re Ω
+      let m = 0; for (let i = a; i < b; i++) m += xs[i]; m /= b - a;
+      const z = []; for (let i = a + 1; i < b; i++) if (xs[i - 1] < m && xs[i] >= m) z.push(i - 1 + (xs[i - 1] - m) / (xs[i - 1] - xs[i]));
+      return cents((2 * Math.PI * (z.length - 1)) / ((z[z.length - 1] - z[0]) * v.k) / v.S.Om[t]);
+    };
+    return { before: c(at - W, at), after: c(at, at + W), m: v.m };
+  };
+  // (nlvoices 1: the one gong is at the cap, so it keeps the measurements a hand-over needs)
+  for (const [name, p, key] of [['flat opera gong E4', P({ rise: 0, strike: 0.03, speed: 5.5, nlvoices: 1 }), 64], ['default A3', P({ nlvoices: 1 }), 57]]) {
+    const ref = glide(p, key, 0.7, 0.2, false), cut = glide(p, key, 0.7, 0.2, true);
+    assert.ok(cut.m === 1 && Math.abs(cut.before) > 150, `${name}: gliding ${cut.before.toFixed(0)} ¢ when cut`);
+    assert.ok(Math.abs(cut.after - ref.after) < 20, `${name}: ${cut.before.toFixed(0)} → ${cut.after.toFixed(0)} ¢ when cut off, ${ref.after.toFixed(0)} ¢ left nonlinear`);
+    console.log(`        ${name}: ${cut.before.toFixed(0)} → ${cut.after.toFixed(0)} ¢ when cut off, ${ref.after.toFixed(0)} ¢ left nonlinear`);
+  }
+});
+test('the page builds the coupling tables; the engine plays on what it is sent', () => {
+  const p = P({ rise: 1.37, terms: 450 }), sent = structuredClone(engineTables(shell(p.bc, p.rise, p.terms))); // as postMessage delivers them
+  const e = new GongEngine(FS); e.setParams({ ...p, tables: sent }); e.setParams({ ...p, volume: 0.5 }); // later messages carry no tables
+  e.noteOn(60, 0.8);
+  assert.ok(e.voices[0].S === sent, 'the voice runs on the tables it was sent');
+  const L1 = render({ ...p, tables: sent }, 0.3, [[0, 'on', 60, 0.8]]).L, L2 = render(p, 0.3, [[0, 'on', 60, 0.8]]).L;
+  assert.ok(L1.every((x, i) => x === L2[i]), 'and sounds exactly as with the tables built in place');
+});
 // Blocks of 128 samples, timed one by one, as the AudioWorklet runs them.
 function blockTimes(params, events, seconds, pedal = false) {
   const e = new GongEngine(FS); e.setParams(params); e.setSustain(pedal);
   const bl = new Float32Array(128), br = new Float32Array(128), nb = Math.round((seconds * FS) / 128), times = new Float64Array(nb);
-  let maxNl = 0;
+  let maxNl = 0, cut = 0;
   for (let b = 0; b < nb; b++) {
     for (const [t, k, v] of events) if (Math.round((t * FS) / 128) === b) e.noteOn(k, v);
-    const t0 = performance.now();
+    const before = e.voices.slice(), t0 = performance.now();
     e.process(bl, br, 128);
     times[b] = performance.now() - t0;
     maxNl = Math.max(maxNl, e.voices.filter((u) => u.nl).length);
+    for (const u of before) if (!e.voices.includes(u) && u.peak > 1e-5) cut++; // a gong that stopped while still audible
   }
-  return { times, maxNl, voices: e.voiceCount() };
+  return { times, maxNl, voices: e.voiceCount(), cut };
 }
 test('CPU: 4 gongs struck fff, all on the full nonlinear coupling, under 30 % of real time', () => {
   const t = (keys, p) => {
@@ -336,7 +461,7 @@ test('no audio block much costlier than the rest: worst block of an fff melody (
   for (let i = 0; i < a.times.length; i++) { const t = Math.min(a.times[i], b.times[i]); if (t > worst) { worst = t; at = i; } }
   console.log(`        worst block ${(worst / base).toFixed(1)}× one fff gong's (${(1000 * worst).toFixed(0)} µs at ${((at * 128) / FS).toFixed(2)} s); at most ${a.maxNl} nonlinear of ${a.voices} ringing`);
   assert.ok(a.maxNl <= DEFAULTS.nlvoices, `${a.maxNl} nonlinear voices at once (cap ${DEFAULTS.nlvoices})`);
-  assert.ok(a.voices === new Set(melody.map((m) => m[1])).size, `every gong still rings (${a.voices})`);
+  assert.ok(a.cut === 0, `every gong rings until it has died away (${a.cut} cut off, ${a.voices} ringing at 5 s)`);
   assert.ok(worst < 8 * base, `worst block ${(worst / base).toFixed(1)}× the one-gong block`);
 });
 

@@ -22,6 +22,7 @@
 import { keyFreq } from '../../shared/dsp.js';
 
 const PI = Math.PI;
+export const DC_FADE = 0.06; // s: the electrode's AC coupling, a raised-cosine fade of the Franck–Condon reference (sub-audio)
 
 // |aₙ|, zeros of Ai: Abramowitz & Stegun Table 10.13 for n ≤ 10, asymptotic
 // series 10.4.94/10.4.105 above (error < 1e-10 there).
@@ -163,13 +164,17 @@ function nbarGuess(id, R, P) {
 
 // n̄ for a key: either the knob, or (tempo lock) the n̄ whose revival time is
 // `beats` beats at `bpm`. With the lock, T_rev is exact and the pitch is solved for.
-export function solveNbar(key, P) {
-  const id = P.potential, info = WELLS[id], d = DETECTORS[P.detector] ?? 2, lim = nbarLimits(id, P.sigma);
+// The lock can ask for an n̄ outside the well's range (very long revivals on high keys,
+// very short ones on low keys); then n̄ stays at the limit, `locked` is false, and
+// makePacket keeps the pitch exact and lets the revival fall off the beat.
+export function solveNbar(key, P, info = {}) {
+  const id = P.potential, w = WELLS[id], d = DETECTORS[P.detector] ?? 2, lim = nbarLimits(id, P.sigma);
+  info.locked = false;
   if (!P.lock || id === 'harmonic') return Math.min(lim.hi, Math.max(lim.lo, P.nbar));
   const f0 = keyFreq(key), T = (P.beats * 60) / P.bpm, R = f0 * T;
   // g(n̄) = pitch(n̄) − f0 with the time scale fixed by T_rev = T.
   const g = (nb) => {
-    const W = well(id, P, nb), S = packetStates(W, info.launch, nb, P.sigma);
+    const W = well(id, P, nb), S = packetStates(W, w.launch, nb, P.sigma);
     return (2 * meanBohr(W, S, d)) / (Math.abs(derivs(W, nb).d2) * T) - f0;
   };
   let x0 = Math.min(lim.hi, Math.max(lim.lo, nbarGuess(id, R, P))), g0 = g(x0);
@@ -178,6 +183,7 @@ export function solveNbar(key, P) {
     const x2 = Math.min(lim.hi, Math.max(lim.lo, x1 - (g1 * (x1 - x0)) / (g1 - g0)));
     x0 = x1; g0 = g1; x1 = x2; g1 = g(x1);
   }
+  info.locked = Math.abs(g1) < 1e-6 * f0;
   return x1;
 }
 
@@ -188,13 +194,13 @@ export function solveNbar(key, P) {
 //   `maxPairs` strongest, or above fMax, are dropped.
 export function makePacket(key, P, { fMax = 20000, maxPairs = 300, rel = 1e-3 } = {}) {
   const id = P.potential, info = WELLS[id], d = DETECTORS[P.detector] ?? 2, sigma = P.sigma;
-  const f0 = keyFreq(key), nbar = solveNbar(key, P), W = well(id, P, nbar);
+  const lock = {}, f0 = keyFreq(key), nbar = solveNbar(key, P, lock), W = well(id, P, nbar);
   const S = packetStates(W, info.launch, nbar, sigma), N = S.ns.length;
   const dv = derivs(W, nbar), wbar = meanBohr(W, S, d);
   // Time scale s: Hz per natural frequency unit (f = s·ΔE). With the tempo lock T_rev is
-  // exact (s = 2/|E″|T) and n̄ was solved so the pitch lands on the key; otherwise the
-  // pitch is exact (s = f0/ω̄).
-  const locked = P.lock && id !== 'harmonic';
+  // exact (s = 2/|E″|T) and n̄ was solved so the pitch lands on the key; otherwise, and
+  // whenever the lock could not reach the beat, the pitch is exact (s = f0/ω̄).
+  const locked = lock.locked;
   const s = locked ? 2 / (Math.abs(dv.d2) * ((P.beats * 60) / P.bpm)) : f0 / wbar;
   let cmax = 0;
   for (const v of S.c) cmax = Math.max(cmax, Math.abs(v));
@@ -213,14 +219,18 @@ export function makePacket(key, P, { fMax = 20000, maxPairs = 300, rel = 1e-3 } 
   const wmax = all.length ? Math.abs(all[0].w) : 1;
   let pairs = all.filter((p) => Math.abs(p.w) >= rel * wmax).slice(0, maxPairs);
   // Detector gain: over the first period after launch, the peak is ≤ 1 and the rms ≤ 0.4,
-  // so impulsive (high crest factor) and smooth signals sit at similar loudness.
-  const fp = s * wbar, M = 128;
+  // so impulsive (high crest factor) and smooth signals sit at similar loudness. For the
+  // electrode the peak is of what it actually reads, the dipole less its Franck–Condon
+  // reference while that fades (DC_FADE; see signalAt): the packet swings to one side of
+  // where it started, so in the first period the reading reaches about twice the swing.
+  const fp = s * wbar, M = 128, dc0 = d === 0 ? pairs.reduce((a, p) => a + p.w, 0) : 0;
   let peak = 1e-30, ss = 0;
-  for (let q = 0; q < M; q++) {
+  for (let q = 0; q < 1.5 * M; q++) {
     const t = q / (M * fp);
     let y = 0;
     for (const p of pairs) y += p.w * (d === 1 ? -Math.sin(2 * PI * p.f * t) : Math.cos(2 * PI * p.f * t));
-    peak = Math.max(peak, Math.abs(y)); ss += y * y;
+    if (q < M) ss += y * y;
+    peak = Math.max(peak, Math.abs(y - (t < DC_FADE ? 0.5 * dc0 * (1 + Math.cos((PI * t) / DC_FADE)) : 0)));
   }
   const pk = Math.max(peak, 2.5 * Math.sqrt(ss / M));
   pairs = pairs.map((p) => ({ ...p, w: p.w / pk })).sort((a, b) => a.k - b.k || a.i - b.i);
@@ -228,6 +238,8 @@ export function makePacket(key, P, { fMax = 20000, maxPairs = 300, rel = 1e-3 } 
   const Tsr = harm || Math.abs(dv.d3) <= 1e-9 * Math.abs(dv.d1 * dv.d2) ? Infinity : 6 / (s * Math.abs(dv.d3));
   return {
     key, id, d, f0, pitch: fp, nbar, sigma, ns: S.ns, c: S.c, E: S.E, scale: s, pairs,
+    // the tempo lock asked for an n̄ beyond the well's range: the pitch is kept, the revival is off the beat
+    offBeat: !!P.lock && id !== 'harmonic' && !locked,
     Tcl: 1 / fp, Trev, Tsr, tColl: Trev / (2 * Math.SQRT2 * PI * sigma), kap: W.kap,
     // The electrode reads the dipole relative to where the pump found the atom: the
     // packet is born at the Franck–Condon point x(0), so the signal starts at zero.
@@ -257,7 +269,7 @@ export function autocorr(pk, t, Tphi = Infinity) {
 // The detector signal straight from the model (for tests and views):
 // Σ_pairs w·cos(2πft) (or −sin for the coil), times the decoherence of each Δn,
 // minus the electrode's Franck–Condon reference (faded over `dcFade` seconds).
-export function signalAt(pk, t, { T1 = Infinity, Tphi = Infinity, dcFade = 0.06 } = {}) {
+export function signalAt(pk, t, { T1 = Infinity, Tphi = Infinity, dcFade = DC_FADE } = {}) {
   let y = t <= 0 ? -pk.dc : t < dcFade ? -0.5 * pk.dc * (1 + Math.cos((PI * t) / dcFade)) * Math.exp(-t / T1) : 0;
   for (const p of pk.pairs) {
     const ph = 2 * PI * p.f * t, dec = Math.exp(-t / T1 - (p.k * p.k * t) / Tphi);

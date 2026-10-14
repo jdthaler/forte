@@ -265,6 +265,87 @@ test('no clicks: the launch is no steeper than the packet\'s own first bounces; 
     assert.ok(rms(M, Math.round(1.0 * FS), M.length) < 1e-4 * rms(M, 0, Math.round(0.3 * FS)), `${potential}/${detector}/${k}: not silent`);
   }
 });
+test('regression: tempo extremes keep every key on pitch; a revival the well cannot reach falls off the beat, flagged', () => {
+  // was: n̄ clamped to its range with no fallback, so hydrogen at 40 BPM × 8 beats played C7 3181 ¢ flat
+  let worst = 0, wk = '', off = 0;
+  for (const potential of ['box', 'morse', 'hydrogen', 'bouncer']) for (const [bpm, beats] of [[40, 8], [200, 0.5], [40, 0.5], [200, 8], [90, 2]]) for (const key of [36, 48, 60, 72, 84, 96]) {
+    const p = P({ potential, bpm, beats }), pk = makePacket(key, p), c = cents(pk.pitch, keyFreq(key)), T = (beats * 60) / bpm;
+    if (Math.abs(c) > Math.abs(worst)) { worst = c; wk = `${potential} ${bpm}×${beats} key ${key}`; }
+    if (pk.offBeat) off++; else assert.ok(rel(pk.Trev, T) < 1e-6, `${potential} ${bpm}×${beats} key ${key}: locked, T_rev ${pk.Trev} vs ${T}`);
+  }
+  assert.ok(Math.abs(worst) < 0.01, `model pitch: worst ${worst.toFixed(3)} ¢ (${wk})`);
+  assert.ok(makePacket(96, P({ potential: 'hydrogen', bpm: 40, beats: 8 })).offBeat && makePacket(36, P({ potential: 'hydrogen', bpm: 200, beats: 0.5 })).offBeat, 'and the extremes say so');
+  // from the engine's output, where the packet is classical enough to have a pitch for a few periods
+  // (at n̄ = 12, the hydrogen floor, it collapses within one: the model's launch pitch is the check there)
+  for (const [potential, bpm, beats, key] of [['hydrogen', 40, 8, 96], ['hydrogen', 40, 8, 72], ['box', 40, 8, 96]]) {
+    const p = P({ potential, bpm, beats, detector: 'x' }), f0 = keyFreq(key), { M } = note(p, key, 0.2), t1 = 0.03, f = launchPitch(M, f0, t1, t1 + 3 / f0);
+    assert.ok(Math.abs(cents(f, f0)) < 3, `${potential} ${bpm}×${beats} key ${key}: ${cents(f, f0).toFixed(2)} ¢ from the output`);
+  }
+  console.log(`        ${off} of 120 keys × tempos off the beat; pitch exact everywhere`);
+});
+test('regression: the electrode\'s Franck–Condon reference is in its gain: notes peak ≤ 0.3, six-note chords ≈ 1', () => {
+  // was: the fade of the reference was left out of the normalisation (notes 0.36, chords 1.24, the Rydberg preset 1.41)
+  for (const potential of ['box', 'morse', 'hydrogen', 'bouncer', 'harmonic']) for (const k of [36, 57, 84]) {
+    const { L, R, e } = note(P({ potential, detector: 'x' }), k, 0.3), [gl, gr] = e.voices[0].pan;
+    let pk = 0; for (let i = 0; i < L.length; i++) pk = Math.max(pk, Math.abs(L[i]) / gl, Math.abs(R[i]) / gr); // (before the pan)
+    assert.ok(pk <= 0.3 * 1.001, `${potential}/${k}: peak ${pk.toFixed(3)} before the pan`);
+  }
+  for (const o of [{ detector: 'x' }, { potential: 'hydrogen', lock: false, nbar: 44, sigma: 1.3, detector: 'x', T1: 20 }, { sigma: 0.6, detector: 'x' }]) {
+    const { L, R } = render(P(o), [48, 52, 55, 60, 64, 67].map((k) => [0, 'on', k, 1]), 0.4);
+    let pk = 0; for (let i = 0; i < L.length; i++) pk = Math.max(pk, Math.abs(L[i]), Math.abs(R[i]));
+    assert.ok(pk < 1.15, `${JSON.stringify(o)}: six-note chord peaks ${pk.toFixed(2)}`);
+  }
+});
+// (six notes struck at once on the electrode all start on the same side: their first swings add)
+test('chords: six forte notes stay under 1.3 for every well and detector, locked and at fixed n̄', () => {
+  let worst = 0, wc = '';
+  for (const potential of ['box', 'morse', 'hydrogen', 'bouncer', 'harmonic']) for (const detector of ['x', 'v', 'a']) for (const lock of [true, false]) {
+    const { L, R } = render(P({ potential, detector, lock }), [36, 48, 55, 60, 64, 72].map((k) => [0, 'on', k, 1]), 0.25);
+    let pk = 0; for (let i = 0; i < L.length; i++) pk = Math.max(pk, Math.abs(L[i]), Math.abs(R[i]));
+    if (pk > worst) { worst = pk; wc = `${potential}/${detector}/${lock ? 'locked' : 'fixed n̄'}`; }
+  }
+  assert.ok(worst < 1.3, `loudest chord ${worst.toFixed(2)} (${wc})`);
+  console.log(`        loudest six-note chord ${worst.toFixed(2)} (${wc})`);
+});
+test('polyphony: all voices together sum at most 3000 pairs, the weakest dropped first', () => {
+  // was: 24 hydrogen voices at σ = 4 with the antenna summed 7200 pairs (67 % of a core)
+  const p = P({ potential: 'hydrogen', sigma: 4, detector: 'a', T1: 30 }), e = new QuantumEngine(FS); e.setParams(p); e.setSustain(true);
+  const bl = new Float64Array(128), br = new Float64Array(128);
+  for (let i = 0; i < 24; i++) { e.noteOn(48 + i, 0.8); for (let b = 0; b < 8; b++) e.process(bl, br, 128); }
+  const total = e.voices.reduce((s, v) => s + v.active, 0), last = e.voices[e.voices.length - 1], first = e.voices[0];
+  assert.ok(total <= 3000 * 1.02, `${total} pairs summed`);
+  // the newest note keeps its strongest lines: what it drops is a small part of its signal
+  const kept = (v) => { let a = 0, s = 0; for (let g = 0; g < v.G; g++) for (let i = v.ga[g], q = v.gw[g]; i < v.gb[g]; i++, q++) a += v.w[q] ** 2; for (const q of v.pk.pairs) s += q.w ** 2; return a / s; };
+  assert.ok(kept(last) > 0.85 && last.active >= first.active, `newest note keeps ${(100 * kept(last)).toFixed(1)} % of its power (${last.active} pairs; the oldest ${first.active})`);
+  console.log(`        24 voices: ${total} pairs; the newest keeps ${last.active} (${(100 * kept(last)).toFixed(1)} % of its power), the oldest ${first.active}`);
+});
+test('seeded random combinations of knob extremes at 44.1 and 48 kHz: no NaN, bounded output', () => {
+  const ranged = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'velocity'].includes(q.id));
+  let seed = 12345, worst = { pk: 0 };
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  for (const fs of [44100, 48000]) for (let c = 0; c < 15; c++) {
+    const p = P();
+    for (const q of ranged) {
+      if (rnd() < 0.5) continue;
+      if (q.type === 'select') p[q.id] = q.options[Math.floor(rnd() * q.options.length)][0];
+      else if (q.type === 'checkbox') p[q.id] = rnd() < 0.5;
+      else p[q.id] = rnd() < 0.5 ? q.min : q.max;
+    }
+    const e = new QuantumEngine(fs); e.setParams(p);
+    const n = Math.round(1.5 * fs), bl = new Float64Array(128), br = new Float64Array(128);
+    let pk = 0;
+    for (let s = 0; s < n; s += 128) {
+      if (s === 0) [36, 50, 57, 64, 71, 84, 96].forEach((k) => e.noteOn(k, 1, makePacket(k, p, { fMax: Math.min(20000, 0.45 * fs) })));
+      if (s === Math.round(0.06 * fs / 128) * 128) [36, 50, 57, 64, 71, 84, 96].forEach((k) => e.noteOn(k, 1));
+      if (s === Math.round(1.2 * fs / 128) * 128) [36, 50, 57, 64, 71, 84, 96].forEach((k) => e.noteOff(k));
+      e.process(bl, br, 128);
+      for (let i = 0; i < 128; i++) { assert.ok(Number.isFinite(bl[i] + br[i]), `${fs} Hz ${JSON.stringify(p)}: NaN`); pk = Math.max(pk, Math.abs(bl[i]), Math.abs(br[i])); }
+    }
+    if (pk > worst.pk) worst = { pk, p, fs };
+  }
+  assert.ok(worst.pk < 2, `${worst.fs} Hz: seven notes struck twice peak ${worst.pk.toFixed(2)} with ${JSON.stringify(worst.p)}`);
+  console.log(`        loudest of 30 (seven notes struck twice): ${worst.pk.toFixed(2)}`);
+});
 test('CPU: 10 voices render well under real time', () => {
   const run = (p) => {
     const e = new QuantumEngine(FS); e.setParams(p);

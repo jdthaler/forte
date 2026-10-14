@@ -60,7 +60,12 @@ flat odd harmonics. The pump bandwidth band-limits that train: the k-th
 harmonic needs pairs n, n+k that are both populated, and their overlap is
 Σ cₙcₙ₊ₖ = e^(−k²/8σₙ²). A tight packet (large σₙ) is bright, and a broad
 one (small σₙ) is nearly a sine. The detector gain is set per key, so the
-launch peaks at ≤ 0.3 with an rms ≤ 0.12 at full velocity.
+launch peaks at ≤ 0.3 with an rms ≤ 0.12 at full velocity. For the electrode
+that peak is of what it reads, reference included: the packet swings to one
+side of where it started, so for the first tens of milliseconds the reading
+reaches about twice the swing, and the electrode's notes are correspondingly
+quieter once the reference has faded. Six electrode notes struck together
+still add their first swings: such a chord peaks at about 1–1.2.
 
 **Mapping to the keyboard.** A packet's pitch is its classical frequency
 (dE/dn)/h. Precisely, the pitch at launch is the instantaneous frequency of
@@ -76,10 +81,16 @@ instantaneous frequency drifts as it collapses. Two modes set n̄:
   10⁻¹⁰) so that the pitch lands on the key. At 90 BPM with T_rev = 2 beats
   (1.333 s), A3 needs n̄ = 147 in the box, 60 in the Morse well, 440 in
   hydrogen, and 49 for the bouncer. Every note then revives on the beat.
+  Since T_rev/T_cl grows with n̄, the longest revivals on the highest keys, and
+  the shortest on the lowest, ask for an n̄ outside the well's range (above
+  6000, or below 12 for hydrogen): at 40 BPM × 8 beats, C7 would need n̄ ≈ 12 600
+  in the box and C5 ≈ 9 400 in hydrogen. Then n̄ stays at its limit, the pitch is
+  kept exact, and the revival falls off the beat; the page says so, and the
+  carpet shows the actual T_rev in beats.
 * **Fixed n̄**: the same n̄ on every key. T_rev = (T_rev/T_cl)/f, so the
-  revival time scales as 1/f, and a chord's frequency ratios become rhythm
-  ratios (C–E–G–C at n̄ = 150: half-revivals at 574, 455, 383, 287 ms, i.e.
-  4 : 5 : 6 : 8 in time).
+  revival time scales as 1/f, and a chord's frequency ratios become ratios of
+  revival rates (C–E–G–C at n̄ = 150: half-revivals at 574, 455, 383, 287 ms,
+  rates 4 : 5 : 6 : 8, so times 1/4 : 1/5 : 1/6 : 1/8).
 
 **Time scales from the spectrum** (Robinett 2004). Expand Eₙ about n̄:
 
@@ -91,13 +102,14 @@ time of the fundamental; 75 ms at the default settings, for every key). At
 t = T_rev the quadratic phases are all multiples of 2π, and the packet is
 back. At T_rev/2 the phases are (−1)ⁿ: one copy, half a period shifted.
 At t = (p/q)T_rev the phase pattern repeats every q levels, and the packet
-is q copies (q odd) or q/2 copies (q even), spaced T_cl/q apart (Averbukh &
-Perelman 1989). The dipole of q equally weighted copies keeps only the
-harmonics that are multiples of q. So **at T_rev/q you hear the q-th harmonic**:
-the octave at T_rev/4, the twelfth at T_rev/3 and T_rev/6, the 5th harmonic at
-T_rev/5. The return probability |⟨ψ(0)|ψ(t)⟩|² is then 1/(number of copies);
-the tests find ½ at T_rev/4, ⅓ at T_rev/3 and T_rev/6, and ¼ at T_rev/8 in
-the Morse well.
+is q copies spaced T_cl/q apart if q is odd, or q/2 copies spaced 2T_cl/q apart
+if q is even (Averbukh & Perelman 1989). The dipole of c equally weighted
+copies keeps only the harmonics that are multiples of c. So **at T_rev/q you
+hear the q-th harmonic for odd q, the (q/2)-th for even q**: the octave at
+T_rev/4, the twelfth at T_rev/3 and T_rev/6, the 5th harmonic at T_rev/5 and
+T_rev/10, the double octave at T_rev/8. The return probability |⟨ψ(0)|ψ(t)⟩|²
+is then 1/(number of copies); the tests find ½ at T_rev/4, ⅓ at T_rev/3 and
+T_rev/6, and ¼ at T_rev/8 in the Morse well.
 
 **The five wells** (natural units, ħ = 1; all spectra and matrix elements exact
 unless noted):
@@ -191,7 +203,12 @@ strongest are dropped. The pump builds the coherences as g(t)²,
 g = ½(1 + erf(t/√2τ)), with the τ that gives σₙ (at least 0.1 ms). The packet
 is computed on the page and sent with the note (about 1 ms). Ten voices take
 9 % of real time at the defaults and 28 % in the worst case (hydrogen,
-σₙ = 4, antenna: 300 pairs each), on an M2 Max in Node.
+σₙ = 4, antenna: 300 pairs each), on an M2 Max in Node. All voices together
+sum at most 3000 pairs: when a new note would take the total past that, the
+weakest pairs of all, by their amplitude at that moment (velocity, T₁ decay and
+dephasing included), are dropped for good, so faded notes give theirs up
+first. 24 such voices struck together then take 31 % of a core instead of
+67 %, each keeping its 125 strongest lines (91 % of its power).
 
 ## What to listen for
 
@@ -212,7 +229,8 @@ is computed on the page and sent with the note (about 1 ms). Ten voices take
    back sharp around T_sr/6 = 1.2 s and 2.5 s.
 5. **The same phrase, coherent, then dephased** (T_φ = 0.3 s). Identical
    attacks; in the second half nothing comes back.
-6. **A chord at fixed n̄ = 150**: C–E–G–C revive in 4 : 5 : 6 : 8 time.
+6. **A chord at fixed n̄ = 150**: C–E–G–C revive at rates 4 : 5 : 6 : 8 (the
+   top C twice as often as the bottom one).
 7. **Level spread**: σₙ = 0.6 (three levels: a slow beating chord of Bohr
    lines, no packet at all), 2, then 4 (a tight, bright packet that
    collapses in 37 ms and throws many echoes).
@@ -241,7 +259,7 @@ quantum/src/quantum-waves.js           eigenfunctions on a grid (Numerov / close
 quantum/src/quantum-engine.js          real-time engine (AudioWorklet and Node)
 quantum/src/quantum-params.js          parameters and presets
 quantum/src/quantum-main.js            page wiring and views
-test/quantum-tests.mjs                 node test/quantum-tests.mjs (19 tests, ~8 s)
+test/quantum-tests.mjs                 node test/quantum-tests.mjs (26 tests, ~15 s)
 tools/render-quantum.mjs               node tools/render-quantum.mjs → examples/quantum/
 ```
 
@@ -274,7 +292,9 @@ tools/render-quantum.mjs               node tools/render-quantum.mjs → example
   interferometry, Ramsey fringes between packets) is not modelled.
 * **Pair budget.** At most 300 pairs per voice, down to −60 dB. The antenna
   on hydrogen or the bouncer at σₙ = 4 needs more, and loses its weakest top
-  harmonics (about −20 dB of the energy).
+  harmonics (about −20 dB of the energy). Past 3000 pairs over all voices the
+  weakest go, everywhere. A dropped line stops at once rather than fading, but
+  it is weaker than every line still sounding.
 * **The bouncer** has the asymptotic Airy series above n = 10 (error
   < 10⁻⁹). T_rev for hydrogen and the bouncer is the local estimate from E″.
   Their true best revival times shift by O(σₙ²/n̄²).

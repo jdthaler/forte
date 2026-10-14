@@ -3,13 +3,22 @@
 import { createShell, noteName } from '../../shared/shell.js';
 import { fit, css, animate } from '../../shared/views.js';
 import { GROUPS, PRESETS } from './gongs-params.js';
-import { keyGong, interpR, backbone, contactTime, MICS } from './gongs-model.js';
+import { keyGong, interpR, backbone, contactTime, MICS, shell as couplings, engineTables, tablesId } from './gongs-model.js';
 
 const $ = (s) => document.querySelector(s);
 const BANDS = ['below the pitch', '1–2×', '2–4×', '4–8×', '8–16×', '>16×'];
 const BAND_COL = ['#8a8aa0', '#e6c15a', '#f0a050', '#ef7a5a', '#d860a0', '#9a7cff'];
-let focus = 57, live = null, history = [], analyser = null;
+let focus = 57, live = null, history = [], analyser = null, sentTables = null;
 const rate = () => shell?.audio?.ctx.sampleRate || 48000;
+// The coupling tables (a few ms to build) are built here, on the page, and travel with the
+// parameters whenever Dome rise, Coupling terms or Rim changes them, so the audio thread
+// never builds them.
+const engineParams = (P) => {
+  const id = tablesId(P);
+  if (id === sentTables) return P;
+  sentTables = id;
+  return { ...P, tables: engineTables(couplings(P.bc, P.rise, P.terms)) };
+};
 
 const shell = createShell({
   id: 'gongs',
@@ -22,6 +31,7 @@ const shell = createShell({
   space: 'sustain',
   arrows: { param: 'velocity', step: 0.05 },
   modWheel: 'strike',
+  engineParams,
   onAudio: (a) => { analyser = a.analyser; update(); },
   onNoteOn: (key) => { focus = key; shell.keys.focus(key); update(); },
   onParam: () => update(),

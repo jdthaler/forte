@@ -38,7 +38,7 @@ const shell = createShell({
   chain: { volume: 'volume', room: 'room' },
   space: 'hold',
   arrows: { param: 'velocity', step: 0.05 },
-  modWheel: 'power',
+  modWheel: 'flame',
   engineParams: (P) => ({ ...P, tune: currentTune(P) }),
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onMessage: (m) => {
@@ -59,14 +59,14 @@ const Wof = (b) => tune.Ws[Math.min(tune.Ws.length - 1, Math.max(0, Math.round(b
 // Text, markers and the predicted cycle: they change with the focused key or the parameters.
 function update() {
   if (!bif) return;
-  const P = shell.P, f0 = keyFreq(focus), b = betaOn(P, P.velocity), W = Wof(b), f1 = bif.fam[0];
+  const P = shell.P, f0 = keyFreq(focus), b = betaOn(P, P.velocity, tune.betaH, tune.betaMax), W = Wof(b), f1 = bif.fam[0];
   // the tube that plays this key: acoustic length from the tuning, less the open-end corrections 0.61 a
   const Leff = (C_HOT * W) / (2 * Math.PI * f0), Lg = Leff / (1 + 1.22 * P.bore);
   $('#focus-name').textContent = noteName(focus);
   $('#tube-info').textContent = `${(Lg * 100).toFixed(1)} cm long · ${(2 * P.bore * Lg * 100).toFixed(1)} cm bore`;
   $('#bif-info').innerHTML = tune.mode === 0
     ? 'no mode is driven: Rayleigh\'s criterion fails for all of them'
-    : `silence breaks at <b>β = ${tune.betaH.toFixed(3)}</b> (mode ${tune.mode})${tune.fold ? ` · fold <b>${tune.fold.toFixed(3)}</b>` : ''} · key at ${P.velocity.toFixed(2)} → <b>${(b / tune.betaH).toFixed(2)} ×</b>`;
+    : `silence breaks at <b>β = ${tune.betaH.toFixed(3)}</b> (mode ${tune.mode})${tune.fold ? ` · fold <b>${tune.fold.toFixed(3)}</b>` : ''} · key at ${P.velocity.toFixed(2)} → <b>${(b / tune.betaH).toFixed(2)} ×</b>${tune.betaMax / tune.betaH < P.flame * 1.25 ? ` (held below the scream, ${(tune.betaMax / tune.betaH).toFixed(1)} ×)` : ''}`;
   // spectrum markers: the hot tube's modes, and the predicted harmonics of the steady note
   pred = f1 ? orbitAt(bif.sys, f1, b) : null;
   const markers = [];
@@ -98,7 +98,7 @@ function growth(b) {
 
 // Drawing scale for the tube: the largest steady cycle the keys can reach.
 function tubeScale() {
-  const f1 = bif.fam[0], pt = f1 && (orbitAt(bif.sys, f1, betaOn(shell.P, 1)) || pred);
+  const f1 = bif.fam[0], pt = f1 && (orbitAt(bif.sys, f1, betaOn(shell.P, 1, tune.betaH, tune.betaMax)) || pred);
   const s = { p: 1, u: 1, xi: 0.05, y: 1 };
   if (!pt) return s;
   s.p = s.u = s.xi = 1e-9;
@@ -118,7 +118,7 @@ function tubeScale() {
 // One loop per canvas; each skips its canvas while the card is hidden.
 const now = () => {
   const fresh = !!foc && performance.now() - focAt < 250;
-  return { P: shell.P, fresh, bNow: fresh ? foc.beta : betaOn(shell.P, shell.P.velocity) };
+  return { P: shell.P, fresh, bNow: fresh ? foc.beta : betaOn(shell.P, shell.P.velocity, tune.betaH, tune.betaMax) };
 };
 const shown = (cv) => bif && cv.offsetParent !== null;
 
@@ -147,7 +147,7 @@ animate(() => {
   }
   let uf = 0;
   for (let j = 0; j < N_MODES; j++) uf += bif.sys.cf[j] * eta[j];
-  const q = (bNow / betaOn(P, 1)) * (0.4 + heat(uf) + 0.58);
+  const q = (bNow / betaOn(P, 1, tune.betaH, tune.betaMax)) * (0.4 + heat(uf) + 0.58);
   drawTube(cvTube, { eta, vel, xf: P.xf, q, scale, label });
 }, cvTube);
 

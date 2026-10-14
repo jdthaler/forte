@@ -7,17 +7,18 @@
 // stability and CPU.
 
 import assert from 'node:assert/strict';
-import { tube, root, hopf, weakRoot, describing, bifurcation, tuning, steadyY, orbitAt, orbitSpectrum, betaOn, damping, T_HOT } from '../pyrophone/src/pyrophone-model.js';
+import { tube, root, hopf, weakRoot, describing, bifurcation, tuning, steadyY, orbitAt, orbitSpectrum, betaOn, damping, silenceLimit, T_HOT, B_MAX } from '../pyrophone/src/pyrophone-model.js';
 import { PyrophoneEngine } from '../pyrophone/src/pyrophone-engine.js';
 import { DEFAULTS, GROUPS } from '../pyrophone/src/pyrophone-params.js';
 import { keyFreq } from '../shared/dsp.js';
+import { renderEngine } from '../tools/audio-util.mjs';
 
 const FS = 48000;
 let failures = 0;
 function test(name, fn) { try { fn(); console.log('  ok  ', name); } catch (e) { failures++; console.log('  FAIL', name, '\n       ', e.message); } }
 const P = (o = {}) => ({ ...DEFAULTS, drift: 0, ...o });
 const cents = (r) => 1200 * Math.log2(r);
-const BIF = bifurcation(DEFAULTS), F1 = BIF.fam[0];
+const BIF = bifurcation(DEFAULTS), F1 = BIF.fam[0], BH = F1.hopf.beta; // BH: the threshold, the unit of the flame power
 
 // Run the engine in 128-sample blocks, like the AudioWorklet. events: [t, fn(engine)];
 // probe(engine, t) is called every `every` seconds. Returns both channels and the engine.
@@ -127,7 +128,7 @@ test('every key C3–C6 settles within ±3 ¢ of equal temperament (auto-tuned, 
 test('onset grows at the linear growth rate of the model', () => {
   const k = 72, Pm = P({ noise: 2e-4 }), amps = [];
   const { e } = run(Pm, 0.4, [note(0, k, 0.7)], (eng, t) => amps.push([t, eng.voices[0].amp]), 0.002);
-  const s = root(BIF.sys, 0, betaOn(Pm, 0.7)), pred = (s[0] * 2 * Math.PI * keyFreq(k)) / e.voices[0].W;
+  const s = root(BIF.sys, 0, betaOn(Pm, 0.7, BH)), pred = (s[0] * 2 * Math.PI * keyFreq(k)) / e.voices[0].W;
   const slope = slopeFit(amps.filter(([t, a]) => t > 0.06 && a > 2e-3 && a < 3e-2)); // after the start-up transient, before saturation
   assert.ok(Math.abs(slope / pred - 1) < 0.03, `measured ${slope.toFixed(2)}/s, theory ${pred.toFixed(2)}/s`);
 });
@@ -141,7 +142,7 @@ test('after release the tube rings down at the acoustic damping rate ζ₁/2', (
 });
 test('steady amplitude equals the harmonic-balance limit cycle at three velocities', () => {
   for (const v of [0.1, 0.5, 1]) {
-    const Pm = P({ noise: 0.002 }), y = steadyY(BIF, betaOn(Pm, v));
+    const Pm = P({ noise: 0.002 }), y = steadyY(BIF, betaOn(Pm, v, BH));
     let a = 0, n = 0;
     run(Pm, 1.2, [note(0, 76, v)], (eng, t) => { if (t > 0.8) { a += eng.voices[0].amp; n++; } });
     assert.ok(Math.abs(a / n / y - 1) < 0.02, `v ${v}: engine ${(a / n).toFixed(4)}, model ${y.toFixed(4)}`);
@@ -150,20 +151,23 @@ test('steady amplitude equals the harmonic-balance limit cycle at three velociti
 test('hysteresis: a silent tube starts above the Hopf point, a singing one stops below the fold (both ±3 %)', () => {
   // flames fully apart (v = 1), so β = K; C6's short acoustic time makes the thresholds quick to probe
   const bH = F1.hopf.beta, bF = F1.fold.beta, k = 84;
-  const fromSilence = (b) => run(P({ power: b, noise: 0.002 }), 1.5, [note(0, k, 1)]).e.voices[0].amp;
-  const fromSinging = (b) => { const base = P({ power: 0.15, noise: 0.002 }); return run(base, 1.6, [note(0, k, 1), set(0.4, { power: b }, base)]).e.voices[0].amp; };
+  const fromSilence = (b) => run(P({ flame: b / BH, noise: 0.002 }), 1.5, [note(0, k, 1)]).e.voices[0].amp;
+  const fromSinging = (b) => { const base = P({ flame: 0.15 / BH, noise: 0.002 }); return run(base, 1.6, [note(0, k, 1), set(0.4, { flame: b / BH }, base)]).e.voices[0].amp; };
   assert.ok(fromSilence(0.97 * bH) < 0.01, 'just below the Hopf point a silent tube stays silent');
   assert.ok(fromSilence(1.08 * bH) > 0.3, 'just above it, it starts');
   assert.ok(fromSinging(0.97 * bH) > 0.3 && fromSinging(1.03 * bF) > 0.3, 'a singing tube keeps singing below the Hopf point, down to the fold');
   assert.ok(fromSinging(0.97 * bF) < 0.01, 'and stops just below the fold');
 });
 test('noise-induced triggering: in the bistable band, strong turbulence kicks a silent tube into song', () => {
-  const b = 0.985 * F1.hopf.beta, amp = (noise) => run(P({ power: b, noise }), 1.5, [note(0, 84, 1)]).e.voices[0].amp;
+  const b = 0.985 * F1.hopf.beta, amp = (noise) => run(P({ flame: b / BH, noise }), 1.5, [note(0, 84, 1)]).e.voices[0].amp;
   const calm = amp(0.004), rough = amp(0.1);
   assert.ok(calm < 0.01 && rough > 0.3, `turbulence 0.4 %: ${calm.toFixed(4)}, 10 %: ${rough.toFixed(3)}`);
 });
-test("flame position (Rayleigh): ⅓ sings the note, ⅔ the octave, ⅞ nothing", () => {
-  const f0 = keyFreq(60), dom = (xf) => { const r = run(P({ xf }), 2, [note(0, 60, 1)]); return [peakFreq(r.out, FS, 2 * FS, 200, 600) / f0, peak(r)]; };
+test("flame position (Rayleigh): ⅓ sings the note, ⅔ the octave, ⅞ nothing (one flame, β = 0.3, moved along the tube)", () => {
+  const f0 = keyFreq(60), dom = (xf) => { // the flame power is in units of each position's own threshold: hold β fixed instead
+    const bH = silenceLimit(tube(P({ xf }))).beta, r = run(P({ xf, flame: 0.3 / bH }), 2, [note(0, 60, 1)]);
+    return [peakFreq(r.out, FS, 2 * FS, 200, 600) / f0, peak(r)];
+  };
   const [a, pa] = dom(1 / 3), [b] = dom(2 / 3), [, c] = dom(0.875);
   assert.ok(Math.abs(a - 1) < 0.003, `x_f = 1/3: ${a.toFixed(4)} × f`);
   assert.ok(Math.abs(b - 2) < 0.1, `x_f = 2/3: ${b.toFixed(4)} × f`);
@@ -175,7 +179,7 @@ test('the flame at ⅓ sits on the pressure node of mode 3: no 3rd harmonic; mov
   assert.ok(a < -40 && b > -20, `H3: ${a.toFixed(1)} dB at ⅓, ${b.toFixed(1)} dB at 0.4`);
 });
 test('the radiated spectrum matches the limit cycle at the top mouth and side-on (where the even modes cancel)', () => {
-  const k = 64, f0 = keyFreq(k), pt = orbitAt(BIF.sys, F1, betaOn(DEFAULTS, 0.8));
+  const k = 64, f0 = keyFreq(k), pt = orbitAt(BIF.sys, F1, betaOn(DEFAULTS, 0.8, BH));
   for (const listen of [0, 1]) {
     const { out } = run(P({ listen, noise: 0.002 }), 1.5, [note(0, k, 0.8)]), pred = orbitSpectrum(BIF.sys, pt, listen);
     for (const h of [2, 4, 5, 7]) {
@@ -196,7 +200,7 @@ test('warm-up: a cold tube starts flat by 600·log₂(T/(T−ΔT)) ¢ and settle
 test('without auto-tune, playing harder pulls the pitch as the limit cycle predicts', () => {
   const Pm = P({ autotune: false, noise: 0.002 }), tn = tuning(Pm, BIF), f0 = keyFreq(69);
   const c = (v) => { const { out } = run(Pm, 1.2, [note(0, 69, v)]); return cents(freq(out, f0, 0.8 * FS, 1.2 * FS) / f0); };
-  const W = (v) => { const x = betaOn(Pm, v) / tn.db, i = Math.floor(x); return tn.Ws[i] + (x - i) * (tn.Ws[i + 1] - tn.Ws[i]); };
+  const W = (v) => { const x = betaOn(Pm, v, BH) / tn.db, i = Math.floor(x); return tn.Ws[i] + (x - i) * (tn.Ws[i + 1] - tn.Ws[i]); };
   const meas = c(1) - c(0.2), pred = cents(W(1) / W(0.2));
   assert.ok(pred > 2 && Math.abs(meas - pred) < 0.5, `measured ${meas.toFixed(2)} ¢, predicted ${pred.toFixed(2)} ¢`);
 });
@@ -217,10 +221,95 @@ test('every parameter at its min and max: finite, bounded output; released tubes
     const r = run(Pm, 4, [note(0, 50, 1), note(0, 67, 0.6), note(0.05, 84, 1), off(1.2, 50), off(1.2, 67), off(1.2, 84)]);
     for (const x of r.out) assert.ok(Number.isFinite(x), `${p.id} = ${v}: NaN`);
     const pk = peak(r);
-    assert.ok(pk < 1.5, `${p.id} = ${v}: peak ${pk.toFixed(2)}`);
+    // (the loudest: a 270° flame lag, where the tube sings in mode 5, five times the key's pitch)
+    assert.ok(pk < 2, `${p.id} = ${v}: peak ${pk.toFixed(2)}`);
     // with the key-up power in the bistable band, singing tubes are meant to keep singing
     if (!(p.id === 'keyup' && v > 0.9)) assert.ok(r.e.voiceCount() === 0 && r.out[r.out.length - 1] === 0, `${p.id} = ${v}: ${r.e.voiceCount()} tubes left`);
   }
+});
+test('regression: overdamped upper modes (widest bore, most damping) are integrated exactly, without NaN', () => {
+  // was: ζ/2 > jπ for modes 8–10 made √(ω² − ζ²/4) NaN
+  const Pm = P({ bore: 0.15, damp: 4 }), sys = tube(Pm);
+  assert.ok(sys.zeta[9] / 2 > sys.w[9], 'mode 10 is overdamped here');
+  const r = run(Pm, 2, [note(0, 60, 1), note(0, 72, 1), off(1.5, 60), off(1.5, 72)]), v = r.e;
+  assert.ok(r.out.every(Number.isFinite) && peak(r) > 0.05, `finite, and the tubes sing (peak ${peak(r).toFixed(3)})`);
+  // the one-step matrices against the exact solution from the characteristic roots
+  const e = new PyrophoneEngine(FS); e.setParams(Pm); e.noteOn(60, 1);
+  const tb = e.voices[0]; e.process(new Float32Array(128), new Float32Array(128), 128);
+  for (const j of [0, 7, 9]) {
+    const h = tb.h, s = sys.zeta[j] / 2, w = sys.w[j], d = s * s - w * w;
+    // η(h) for η(0) = 1, η̇(0) = 0 and for η(0) = 0, η̇(0) = 1
+    let m11, m12;
+    if (d > 0) { const q = Math.sqrt(d), r1 = -s + q, r2 = -s - q; m11 = (r1 * Math.exp(r2 * h) - r2 * Math.exp(r1 * h)) / (r1 - r2); m12 = (Math.exp(r1 * h) - Math.exp(r2 * h)) / (r1 - r2); }
+    else { const q = Math.sqrt(-d); m11 = Math.exp(-s * h) * (Math.cos(q * h) + (s / q) * Math.sin(q * h)); m12 = (Math.exp(-s * h) * Math.sin(q * h)) / q; }
+    assert.ok(Math.abs(tb.m11[j] - m11) < 1e-12 && Math.abs(tb.m12[j] - m12) < 1e-12 * h, `mode ${j + 1}: ${tb.m11[j]} vs ${m11}, ${tb.m12[j]} vs ${m12}`);
+  }
+  void v;
+});
+test('regression: the flame power is in units of the threshold, so damping and bore no longer decide between silence and a scream', () => {
+  // was (power as an absolute β): damping ×0.5 at full power screamed (rms ×4, a six-note chord peaked at 4.95);
+  // the widest bore or the most damping left every key silent at the default power
+  const rms = (x, a, b) => { let s = 0; for (let i = a; i < b; i++) s += x[i] * x[i]; return Math.sqrt(s / (b - a)); };
+  const harmonic = (out, f0) => { // share of the power in the harmonics of the note
+    const a = 2 * FS, b = 3 * FS, f = peakFreq(out, a, b, 0.97 * f0, 1.03 * f0), n = b - a;
+    let hs = 0; for (let h = 1; h <= 10; h++) hs += (2 * level(out, h * f, a, b) / (n / 2)) ** 2 / 2;
+    return hs / rms(out, a, b) ** 2;
+  };
+  const ref = rms(run(P(), 3, [note(0, 60, 1)]).out, 2 * FS, 3 * FS);
+  for (const damp of [0.5, 4]) {
+    const { out } = run(P({ damp, flame: 6 }), 3, [note(0, 60, 1)]), h = harmonic(out, keyFreq(60)), l = rms(out, 2 * FS, 3 * FS);
+    assert.ok(h > 0.9 && l < 1.6 * ref, `damping × ${damp}, full power: ${(100 * h).toFixed(0)} % harmonic, rms ${(l / ref).toFixed(2)}× the default`);
+  }
+  const chord = peak(run(P({ damp: 0.5, flame: 6 }), 2, [48, 55, 64, 71, 74, 79].map((k) => note(0, k, 1))));
+  assert.ok(chord < 1.25, `six-note chord, damping × 0.5, full power: peak ${chord.toFixed(2)}`);
+  for (const o of [{ bore: 0.15 }, { damp: 4 }]) {
+    const pk = peak(run(P(o), 2, [note(0, 60, 0.7)]));
+    assert.ok(pk > 0.1, `${JSON.stringify(o)}, default power: peak ${pk.toFixed(3)} (it sings)`);
+  }
+});
+test('regression: a tube that remembers its note after release stays hot, and in tune', () => {
+  // was: warm-up followed the key, so a released tube still singing drifted flat (−14 ¢; −69 ¢ with cold glass)
+  // After release it sings on at the key-up gain, whose limit cycle is a little lower (the
+  // flame's reactance raises W less): that step is the model's, W(β_up)/W(β_down). Then no drift.
+  const tn = tuning(DEFAULTS, BIF), Wt = (b) => { const x = b / tn.db, i = Math.floor(x); return tn.Ws[i] + (x - i) * (tn.Ws[i + 1] - tn.Ws[i]); };
+  const step = cents(Wt(0.93 * BH) / Wt(betaOn(DEFAULTS, 0.8, BH, tn.betaMax)));
+  for (const [dT, tw] of [[4, 1], [30, 3]]) { // the default, and cold glass (still warming when released)
+    const k = 64, f0 = keyFreq(k), { out, e } = run(P({ keyup: 0.93, drift: dT, warm: tw }), 11, [note(0, k, 0.8), off(5, k)]);
+    const c = (t) => cents(freq(out, f0, Math.round((t - 0.2) * FS), Math.round((t + 0.2) * FS)) / f0);
+    const warm = (t) => 600 * Math.log2((T_HOT - dT * Math.exp(-t / tw)) / T_HOT); // c ∝ √T, warming all along
+    const ts = [4.5, 5.5, 8, 10.5], got = ts.map(c), want = ts.map((t) => warm(t) + (t > 5 ? step : 0));
+    assert.ok(e.voices.length === 1 && got.every((x, i) => Math.abs(x - want[i]) < 1), `ΔT ${dT} K: ${got.map((x) => x.toFixed(1)).join(', ')} ¢ vs ${want.map((x) => x.toFixed(1)).join(', ')} ¢ (released at 5 s)`);
+  }
+});
+test('chords: six forte notes stay under 1 at the default flame power, and under 1.25 at the top of its range', () => {
+  for (const power of [1.5, 3.4, 6]) {
+    const pk = peak(run(P({ flame: power }), 2, [48, 55, 64, 71, 74, 79].map((k) => note(0, k, 1))));
+    assert.ok(pk < (power > 4 ? 1.25 : 1), `K = ${power}: peak ${pk.toFixed(2)}`);
+  }
+});
+test('seeded random combinations of parameter extremes at 44.1 and 48 kHz: no NaN, bounded output', () => {
+  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'velocity'].includes(q.id));
+  let seed = 12345, worst = { pk: 0 };
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  for (const fs of [44100, 48000]) for (let c = 0; c < 10; c++) {
+    const Pm = { ...DEFAULTS };
+    for (const q of sliders) {
+      if (rnd() < 0.5) continue;
+      Pm[q.id] = q.type === 'checkbox' ? rnd() < 0.5 : rnd() < 0.5 ? q.min : q.max;
+    }
+    if (Pm.keyup > 0.9) Pm.keyup = 0.2; // (in the bistable band, tubes are meant to sing on)
+    const e = new PyrophoneEngine(fs); e.setParams(Pm);
+    const ev = [];
+    [50, 57, 64, 71, 84].forEach((k, i) => ev.push([0.02 * i, 'on', k, 1], [0.02 * i + 0.06, 'on', k, 1], [1.2, 'off', k]));
+    const [L, R] = renderEngine(e, 2.5, ev, fs);
+    let pk = 0;
+    for (let i = 0; i < L.length; i++) { assert.ok(Number.isFinite(L[i] + R[i]), `${fs} Hz ${JSON.stringify(Pm)}: NaN`); pk = Math.max(pk, Math.abs(L[i]), Math.abs(R[i])); }
+    if (pk > worst.pk) worst = { pk, Pm, fs };
+  }
+  // five notes struck twice at full velocity; the loudest are tubes whose flame sits at an end
+  // or whose lag is near 270°, singing in a high mode (several times the key's pitch)
+  assert.ok(worst.pk < 3, `${worst.fs} Hz: peak ${worst.pk.toFixed(2)} with ${JSON.stringify(worst.Pm)}`);
+  console.log(`        loudest of 20: ${worst.pk.toFixed(2)}`);
 });
 test('CPU: 10 tubes render in well under 30 % of real time', () => {
   const e = new PyrophoneEngine(FS);
