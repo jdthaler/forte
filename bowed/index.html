@@ -44,7 +44,7 @@
 
     <section id="views">
       <div class="row">
-        <div class="card" data-view="String on the wheel">
+        <div class="card" data-perform data-view="String on the wheel">
           <div class="card-head"><h2>The string on the wheel, <b id="focus-name">C4</b></h2><span class="muted" id="motion-read"></span></div>
           <canvas id="string"></canvas>
           <div class="caption">The string's shape, rebuilt from its travelling waves and sampled stroboscopically (each frame 1/48 of a period later). In Helmholtz motion it is two straight lines meeting at a corner that runs round the dashed parabolas once per period: it sticks to the wheel while the corner is on the far side and slips while the corner passes between wheel and bridge.</div>
@@ -56,7 +56,7 @@
         </div>
       </div>
       <div class="row">
-        <div class="card">
+        <div class="card" data-perform>
           <div class="card-head"><h2>Velocity of the string under the wheel</h2><span class="muted">stick and slip</span></div>
           <canvas id="bowv"></canvas>
           <div class="caption">Stuck, the string's surface moves with the wheel (v<sub>B</sub>, upper line); once per period it slips back at −v<sub>B</sub>(1 − β)/β (lower line) for a fraction β of the period. Extra dips are extra slips: surface sound below F<sub>min</sub>, chaos above F<sub>max</sub>.</div>

@@ -44,7 +44,7 @@
 
     <section id="views">
       <div class="row">
-        <div class="card" data-view="Slow motion">
+        <div class="card" data-perform data-view="Slow motion">
           <div class="card-head">
             <h2>Slow motion · <b id="sim-name">C4</b></h2>
             <div class="tools">
@@ -72,7 +72,7 @@
           <div class="legend" id="comb-legend"></div>
           <div class="caption">Each pickup hears partial n in proportion to sin(nπx/L): partials with a node over a pole vanish. The switches add the two pickups, or subtract them to cancel what they share.</div>
         </div>
-        <div class="card">
+        <div class="card" data-perform>
           <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: held partials, and (faint) the released string's</span></div>
           <canvas id="spectrum"></canvas>
           <div class="caption">Partials run sharp of the faint harmonic grid in the bass (stiffness); press harder and they all shift up together.</div>

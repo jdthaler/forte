@@ -6,14 +6,15 @@
 //
 // Expected DOM (copy docs/template/index.html):
 //   #start #midi-btn #midi #cpu #panic   header buttons / status pills
-//   #preset #reset #groups               sidebar: presets and parameter groups
+//   #preset #reset #groups               sidebar: presets (shared/layout.js moves them to the header) and parameter groups
 //   #keyboard #oct #toast                keys, octave readout, toast
 //   optional: #ctl-read (readout of the ↑/↓ parameter), #hold (Space indicator)
 //
 // Config:
 //   id            instrument slug (localStorage key)
 //   groups        parameter groups: [{ title, open?, params: [{ id, label, min, max, def, step?, log?,
-//                 fmt?, hint?, type?: 'select' | 'checkbox', options?: [[value, name]…], showIf?(P) }] }]
+//                 fmt?, hint?, type?: 'select' | 'checkbox', options?: [[value, name]…], showIf?(P),
+//                 perform? }] }]   perform: true puts the control in Perform's strip above the keys
 //   presets       [{ name, p: { …overrides } }]
 //   keep          param ids kept when switching presets (e.g. ['volume', 'room'])
 //   range         [lowest MIDI key, highest MIDI key]   (default [36, 96])
@@ -298,6 +299,7 @@ export function createShell(cfg) {
     for (const p of g.params) {
       const wrap = document.createElement('div');
       wrap.className = 'param';
+      if (p.perform) wrap.dataset.perform = ''; // shown above the keys in Perform (shared/layout.js)
       let input, val = null;
       if (p.type === 'select') {
         wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;

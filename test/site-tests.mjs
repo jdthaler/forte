@@ -43,6 +43,15 @@ test('ids are unique slugs; sections and accents are valid', () => {
     assert.ok(i.name && i.tagline && i.physics, i.id);
   }
 });
+test('four sections, each with a tab name and at least one ready instrument; ready ones listed first', () => {
+  assert.equal(SECTIONS.length, 4);
+  for (const sec of SECTIONS) {
+    assert.ok(sec.title && sec.short && sec.blurb, sec.id);
+    const list = INSTRUMENTS.filter((i) => i.section === sec.id);
+    assert.ok(list.some((i) => i.ready), `${sec.id} has nothing to play`);
+    assert.ok(list.findIndex((i) => !i.ready) === -1 || list.slice(list.findIndex((i) => !i.ready)).every((i) => !i.ready), `${sec.id}: a workshop instrument before a ready one`);
+  }
+});
 test('every ready instrument has a page, a README and a test suite', () => {
   for (const i of ready) {
     for (const f of [`${i.id}/index.html`, `${i.id}/README.md`, `test/${i.id}-tests.mjs`]) assert.ok(has(f), f);
@@ -72,10 +81,35 @@ test('the project-wide prior art exists and the site links to it', () => {
   assert.ok(read('index.html').includes('href="credits/"'), 'landing page links to credits/');
 });
 
+console.log('pages');
+test('instrument pages keep their presets in the controls, for the header to take', () => {
+  for (const i of ready) {
+    const html = read(`${i.id}/index.html`);
+    assert.ok(/<aside id="controls">\s*<div class="preset-row">\s*<select id="preset"/.test(html), `${i.id}: #controls > .preset-row > #preset`);
+    assert.ok(html.includes('id="reset"'), `${i.id}: #reset`);
+  }
+});
+test('instrument pages mark one or two views for Perform (data-perform)', () => {
+  for (const i of [...ready, { id: 'docs/template' }]) {
+    const n = (read(`${i.id}/index.html`).match(/<div class="card"[^>]* data-perform[\s>]/g) || []).length;
+    assert.ok(n >= 1 && n <= 2, `${i.id}: ${n} views marked data-perform`);
+  }
+});
+test('the landing page has the category tabs, the instrument list and an About dialog', () => {
+  const html = read('index.html');
+  for (const id of ['cats', 'instruments', 'about', 'about-open']) assert.ok(html.includes(`id="${id}"`), `#${id}`);
+});
+
 console.log('parameters and presets');
 for (const i of ready) {
   const file = readdirSync(new URL(`${i.id}/src/`, R)).find((f) => /params\.js$/.test(f));
   const mod = await import(new URL(`${i.id}/src/${file}`, R));
+  test(`${i.name}: a few performance controls (perform: true), volume among them`, () => {
+    const perform = mod.GROUPS.flatMap((g) => g.params).filter((p) => p.perform);
+    assert.ok(perform.length >= 3 && perform.length <= 10, `${perform.length} performance controls (3–10 fit above the keys)`);
+    assert.ok(perform.some((p) => p.id === 'volume'), 'volume');
+    for (const p of perform) assert.equal(p.perform, true, p.id);
+  });
   test(`${i.name}: presets use real parameters, with values in range`, () => {
     const params = new Map(mod.GROUPS.flatMap((g) => g.params).map((p) => [p.id, p]));
     for (const pr of mod.PRESETS) for (const [id, v] of Object.entries(pr.p)) {

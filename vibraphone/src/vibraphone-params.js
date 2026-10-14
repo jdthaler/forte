@@ -30,9 +30,9 @@ export const GROUPS = [
   {
     title: 'Motor',
     params: [
-      { id: 'motor', label: 'Motor', type: 'select', def: 'run', options: [['run', 'Running'], ['open', 'Off, discs open'], ['closed', 'Off, discs closed']],
+      { id: 'motor', label: 'Motor', perform: true, type: 'select', def: 'run', options: [['run', 'Running'], ['open', 'Off, discs open'], ['closed', 'Off, discs closed']],
         hint: 'The motor turns a shaft with a butterfly disc in every tube’s mouth. Stopped, the shaft turns to the chosen position and parks there.' },
-      { id: 'speed', label: 'Shaft speed', min: 0.5, max: 6, def: 2.25, step: 0.05, fmt: (v) => `${v.toFixed(2)} rev/s → ${(2 * v).toFixed(1)} Hz`, showIf: (P) => P.motor === 'run',
+      { id: 'speed', label: 'Shaft speed', perform: true, min: 0.5, max: 6, def: 2.25, step: 0.05, fmt: (v) => `${v.toFixed(2)} rev/s → ${(2 * v).toFixed(1)} Hz`, showIf: (P) => P.motor === 'run',
         hint: 'Each disc opens its tube twice per turn, so the tremolo runs at twice the shaft speed. The shaft takes a moment to spin up or down.' },
       { id: 'cd', label: 'Disc size', min: 0.3, max: 0.97, def: 0.7, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} % of the bore`,
         hint: 'How much of the mouth a disc covers face-on. Bigger discs close the tube further: a deeper tremolo.' },
@@ -45,7 +45,7 @@ export const GROUPS = [
   {
     title: 'Mallet',
     params: [
-      { id: 'hardness', label: 'Mallet hardness', min: 30, max: 10000, def: 800, log: true, fmt: (v) => `${v.toFixed(0)} N at 1 mm (${yarn(v)})`,
+      { id: 'hardness', label: 'Mallet hardness', perform: true, min: 30, max: 10000, def: 800, log: true, fmt: (v) => `${v.toFixed(0)} N at 1 mm (${yarn(v)})`,
         hint: 'The head’s force when squashed by 1 mm (F = Kδ^2.3). Harder heads leave the bar sooner and reach the upper modes; softer ones give a round, dark tone.' },
       { id: 'mass', label: 'Mallet head mass', min: 5, max: 40, def: 12, step: 0.5, fmt: (v) => `${v.toFixed(1)} g`,
         hint: 'A heavier head stays on the bar longer: more fundamental, less shimmer.' },
@@ -55,7 +55,7 @@ export const GROUPS = [
         hint: 'Striking towards a long edge twists the bar: its torsional modes join in.' },
       { id: 'speedMax', label: 'Mallet speed at full velocity', min: 0.5, max: 5, def: 3, step: 0.1, fmt: (v) => `${v.toFixed(1)} m/s`,
         hint: 'The head’s speed for velocity 1. Faster strikes squash the yarn further and stiffen the contact: louder and brighter, not just louder.' },
-      { id: 'velocity', label: 'Velocity (computer keys)', min: 0.05, max: 1, def: 0.6, step: 0.01, fmt: (v) => v.toFixed(2) },
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.6, step: 0.01, fmt: (v) => v.toFixed(2) },
     ],
   },
   {
@@ -63,15 +63,15 @@ export const GROUPS = [
     params: [
       { id: 'damp', label: 'Damper felt', min: 0.05, max: 3, def: 0.3, log: true, fmt: (v) => `T₆₀ ${v < 1 ? v.toFixed(2) : v.toFixed(1)} s`,
         hint: 'The felt bar that presses on every bar unless the pedal is down: how fast it stops the fundamental. Space or the pedal lifts it; a held key also keeps it off its own bar.' },
-      { id: 'pedalLock', label: 'Pedal held down (nothing damped)', type: 'checkbox', def: false,
+      { id: 'pedalLock', label: 'Pedal held down (nothing damped)', perform: true, type: 'checkbox', def: false,
         hint: 'Every note rings until it dies away by itself.' },
     ],
   },
   {
     title: 'Output',
     params: [
-      { id: 'room', label: 'Room', min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
-      { id: 'volume', label: 'Volume', min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
 ];

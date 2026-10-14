@@ -230,6 +230,7 @@ function buildControls() {
     for (const p of g.params) {
       const wrap = document.createElement('div');
       wrap.className = 'param';
+      if (p.perform) wrap.dataset.perform = ''; // above the keys in Perform (shared/layout.js)
       wrap.innerHTML = `<div class="row"><label for="p-${p.id}">${p.label}</label><span class="val"></span></div>`;
       const input = document.createElement('input');
       input.type = 'range'; input.min = 0; input.max = 1000; input.step = 1; input.id = `p-${p.id}`;

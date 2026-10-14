@@ -8,8 +8,8 @@ export const GROUPS = [
   {
     title: 'Wheel',
     params: [
-      { id: 'speed', label: 'Wheel speed (bow speed)', min: 0.05, max: 1, def: 0.25, log: true, fmt: (v) => `${(v * 100).toFixed(0)} cm/s`, hint: 'Surface speed of the rosined bass wheels, set by the treadle (the larger upper wheels run 1.1× from C4 and 1.6× from E♭5; a flywheel smooths changes over ½ s). Helmholtz amplitude ∝ v_B/β: faster is louder. Both of Schelleng\'s force limits scale with it. MIDI mod wheel: rest = 25 cm/s, up to 1 m/s.' },
-      { id: 'beta', label: 'Bow position β', min: 0.04, max: 0.4, def: 0.12, step: 0.005, fmt: (v) => `${(v * 100).toFixed(1)} % from bridge`, hint: 'Where the wheels meet the strings (the treble wheel, E♭5 up, at 0.75 β). Near the bridge (sul ponticello) is louder and brighter but needs more force; far (sul tasto) is soft and flutey.' },
+      { id: 'speed', label: 'Wheel speed (bow speed)', perform: true, min: 0.05, max: 1, def: 0.25, log: true, fmt: (v) => `${(v * 100).toFixed(0)} cm/s`, hint: 'Surface speed of the rosined bass wheels, set by the treadle (the larger upper wheels run 1.1× from C4 and 1.6× from E♭5; a flywheel smooths changes over ½ s). Helmholtz amplitude ∝ v_B/β: faster is louder. Both of Schelleng\'s force limits scale with it. MIDI mod wheel: rest = 25 cm/s, up to 1 m/s.' },
+      { id: 'beta', label: 'Bow position β', perform: true, min: 0.04, max: 0.4, def: 0.12, step: 0.005, fmt: (v) => `${(v * 100).toFixed(1)} % from bridge`, hint: 'Where the wheels meet the strings (the treble wheel, E♭5 up, at 0.75 β). Near the bridge (sul ponticello) is louder and brighter but needs more force; far (sul tasto) is soft and flutey.' },
       { id: 'treadle', label: 'Treadle unevenness', min: 0, max: 0.2, def: 0.02, step: 0.005, fmt: pct, hint: 'The foot pumps the crank in strokes; the flywheel smooths them. Wheel speed swings this much, once per stroke.' },
       { id: 'treadleRate', label: 'Treadle rate', min: 0.3, max: 3, def: 1.1, step: 0.05, fmt: (v) => `${v.toFixed(2)} strokes/s` },
     ],
@@ -17,8 +17,8 @@ export const GROUPS = [
   {
     title: 'Keys',
     params: [
-      { id: 'force', label: 'Key pressure', min: 0.05, max: 6, def: 1, log: true, fmt: (v) => `× ${v.toFixed(2)}`, hint: 'Bow force relative to the voiced touch (half of Schelleng\'s maximum). Low: whistly surface sound (double slips). High: raucous crunch. MIDI aftertouch adds to it.' },
-      { id: 'attack', label: 'Key travel time', min: 1, max: 150, def: 8, log: true, fmt: ms, hint: 'How long a full-speed key takes to bring the string onto the wheel at full force (slower keys take longer). The attack\'s quality comes out of the stick–slip physics.' },
+      { id: 'force', label: 'Key pressure', perform: true, min: 0.05, max: 6, def: 1, log: true, fmt: (v) => `× ${v.toFixed(2)}`, hint: 'Bow force relative to the voiced touch (half of Schelleng\'s maximum). Low: whistly surface sound (double slips). High: raucous crunch. MIDI aftertouch adds to it.' },
+      { id: 'attack', label: 'Key travel time', perform: true, min: 1, max: 150, def: 8, log: true, fmt: ms, hint: 'How long a full-speed key takes to bring the string onto the wheel at full force (slower keys take longer). The attack\'s quality comes out of the stick–slip physics.' },
       { id: 'velocity', label: 'Velocity (computer keys)', min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2), hint: 'Faster keys bring the force up sooner and press a little harder.' },
     ],
   },
@@ -42,14 +42,14 @@ export const GROUPS = [
       { id: 'mobility', label: 'Bridge mobility', min: 0.2, max: 5, def: 1, log: true, fmt: (v) => `${(v * 8.5).toFixed(1)} mm/(N·s)`, hint: 'The soundboard\'s point admittance at the bridge (×1 = the plate\'s 8.5 mm/s per N). More: louder, shorter ring, higher minimum force, stronger sympathetic coupling.' },
       { id: 'boardEta', label: 'Soundboard loss factor', min: 0.005, max: 0.1, def: 0.03, log: true, fmt: (v) => `η = ${v.toFixed(3)}`, hint: 'Damping of the spruce board\'s modes (Q ≈ 1/η).' },
       { id: 'damper', label: 'Damper time', min: 0.03, max: 3, def: 0.25, log: true, fmt: (v) => `T60 ${v.toFixed(2)} s`, hint: 'How quickly the felt stops a released string.' },
-      { id: 'lifted', label: 'Dampers lifted (all strings ring in sympathy)', type: 'checkbox', def: false, hint: 'Every string is free: released notes ring on, and the bridge makes the others resonate with what you play.' },
+      { id: 'lifted', label: 'Dampers lifted (all strings ring in sympathy)', perform: true, type: 'checkbox', def: false, hint: 'Every string is free: released notes ring on, and the bridge makes the others resonate with what you play.' },
     ],
   },
   {
     title: 'Output',
     params: [
-      { id: 'room', label: 'Room', min: 0, max: 1, def: 0.3, step: 0.01, fmt: pct },
-      { id: 'volume', label: 'Volume', min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.3, step: 0.01, fmt: pct },
+      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
 ];

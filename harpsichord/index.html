@@ -44,7 +44,7 @@
 
     <section id="views">
       <div class="row">
-        <div class="card" data-view="Pluck in slow motion">
+        <div class="card" data-perform data-view="Pluck in slow motion">
           <div class="card-head"><h2>The pluck, slowed down <b id="pluck-key">C4</b></h2><span class="muted" id="pluck-read">play a key</span></div>
           <canvas id="pluck"></canvas>
           <div class="readout" id="pluck-info"></div>
@@ -58,7 +58,7 @@
         </div>
       </div>
       <div class="row single">
-        <div class="card" data-view="Comb filter and spectrum">
+        <div class="card" data-perform data-view="Comb filter and spectrum">
           <div class="card-head"><h2>The pluck’s comb and the spectrum</h2><span class="muted" id="comb-read">live output · stems: the model’s partials</span></div>
           <canvas id="comb"></canvas>
           <div class="caption">Stems: each partial’s force on the bridge when the string is let go from the shape the plectrum pulled it into, ∝ sin(nπβ)/n (β = plucking point / length), one colour per row plucking; dashed: the comb’s envelope, with its notches at multiples of f₁/β. Grey: the live output.</div>
