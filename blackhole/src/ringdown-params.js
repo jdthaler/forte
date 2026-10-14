@@ -30,7 +30,9 @@ export const GROUPS = [
       { id: 'retrograde', label: 'Counter-rotating modes', kind: 'model', min: 0, max: 1, step: 0.01, def: 0, fmt: (v) => v.toFixed(2),
         hint: 'Modes travelling against the spin (m < 0), weakly excited in aligned mergers.' },
       { id: 'inspiral', label: 'Play the inspiral first (chirp)', kind: 'model', type: 'checkbox', def: false },
-      { id: 'inspiralOct', label: 'Inspiral starts', kind: 'model', min: 1, max: 5, step: 0.1, def: 3, fmt: (v) => `${v.toFixed(1)} octaves below`, showIf: (P) => P.inspiral },
+      { id: 'inspiralOct', label: 'Inspiral starts', kind: 'model', min: 0.25, max: 3, step: 0.05, def: 1.5,
+        fmt: (v) => `${v.toFixed(2)} octaves below ISCO`, showIf: (P) => P.inspiral,
+        hint: 'Measured down from the wave frequency at the innermost stable circular orbit, f_ISCO = c³/(6√6 πGM) for the binary’s total mass M. The chirp lasts τ_c ∝ f^(−8/3), capped at 2 s. For the lowest keys the whole inspiral is under 20 Hz: you hear the merger.' },
     ],
   },
   {
@@ -57,6 +59,6 @@ export const PRESETS = [
   { name: 'Lopsided merger (q = 8): odd modes appear', p: { massRatio: 8 } },
   { name: 'Seen edge-on (ι = 90°): linear polarisation', p: { inclination: 90 } },
   { name: 'Early ringdown (t₀ = 0): overtone burst', p: { t0: 0, overtones: 1.5 } },
-  { name: 'Inspiral + merger + ringdown (LIGO chirp)', p: { inspiral: true, inspiralOct: 3 } },
+  { name: 'Inspiral + merger + ringdown (LIGO chirp)', p: { inspiral: true, inspiralOct: 1.5 } },
   { name: 'Counter-rotating modes too', p: { retrograde: 0.7, massRatio: 3 } },
 ];

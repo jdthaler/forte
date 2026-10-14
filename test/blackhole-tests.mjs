@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { solveQNM, trackQNM, separationConstant, SCHWARZSCHILD, C } from '../blackhole/src/qnm.js';
-import { QNMBank, keyVoice, swsh, uFromSpin, keyFreq, excitation } from '../blackhole/src/ringdown-model.js';
+import { QNMBank, keyVoice, swsh, uFromSpin, keyFreq, excitation, strainCurve, chirpSchedule, MSUN_S } from '../blackhole/src/ringdown-model.js';
 import { RingdownEngine } from '../blackhole/src/ringdown-engine.js';
 import { DEFAULTS } from '../blackhole/src/ringdown-params.js';
 
@@ -46,11 +46,52 @@ test('continued-fraction depth is converged (N vs 2N) at a = 1 − 10⁻⁵, ove
   assert.ok(C.abs(C.sub(r1.omega, r2.omega)) < 1e-9);
 });
 
+test('counter-rotating (m < 0) modes and overtones match Berti, Cardoso & Will (2006), Table II', () => {
+  // [l, m, n, a, Re Mω, −Im Mω], quoted to 4 digits
+  const ref = [
+    [2, -2, 0, 0.5, 0.3243, 0.0890], [2, -1, 0, 0.5, 0.3515, 0.0881], [2, -2, 0, 0.9, 0.2972, 0.0883],
+    [2, -2, 0, 0.98, 0.2927, 0.0881], [2, -1, 0, 0.98, 0.3439, 0.0837], [2, -2, 1, 0.98, 0.2515, 0.2768],
+    [2, -2, 2, 0.98, 0.1858, 0.5051], [2, -1, 2, 0.98, 0.2686, 0.4527], [3, -3, 0, 0.9, 0.4735, 0.0913],
+    [3, -2, 0, 0.98, 0.5146, 0.0894], [4, -4, 0, 0.98, 0.6235, 0.0919], [2, 1, 0, 0.98, 0.5642, 0.0516],
+  ];
+  for (const [l, m, n, a, re, im] of ref) {
+    const w = bank.omega(l, m, n, a);
+    assert.ok(Math.abs(w.re - re) < 6e-5 && Math.abs(-w.im - im) < 6e-5, `(${l},${m},${n}) a=${a}: ${w.re.toFixed(5)} ${w.im.toFixed(5)}`);
+  }
+});
+test('separation constants match Berti, Cardoso & Will (2006), Table V', () => {
+  for (const [m, re, im] of [[2, 2.1098, 0.2111], [-2, 4.6662, -0.1816]]) {
+    const p = trackQNM(2, m, 0, [0, 0.3, 0.6, 0.8, 0.9]).at(-1);
+    assert.ok(Math.abs(p.A.re - re) < 6e-5 && Math.abs(p.A.im - im) < 6e-5, `m=${m}: ${p.A.re} ${p.A.im}`);
+  }
+});
+test('counter-rotating overtones are converged near extremality too (N vs 2N at a = 1 − 10⁻⁶)', () => {
+  const a = 1 - 1e-6;
+  for (const [l, m, n] of [[2, -2, 2], [2, -1, 2]]) {
+    const w = bank.omega(l, m, n, a);
+    const r1 = solveQNM({ l, m, n, a, guess: C.cx(w.re, w.im) });
+    const r2 = solveQNM({ l, m, n, a, guess: r1.omega, N: 2 * r1.depth });
+    assert.ok(C.abs(C.sub(r1.omega, r2.omega)) < 1e-7 && C.abs(C.sub(r1.omega, C.cx(w.re, w.im))) < 1e-6, `(${l},${m},${n})`);
+  }
+});
+
 console.log('table and harmonics');
-test('table interpolation matches fresh solves (< 0.1 ¢)', () => {
-  for (const [l, m, n, a] of [[2, 2, 0, 0.42], [4, 4, 1, 0.97], [2, -2, 0, 0.88], [3, 2, 0, 0.99993]]) {
+test('table interpolation matches fresh solves (< 0.02 ¢)', () => {
+  for (const [l, m, n, a] of [[2, 2, 0, 0.42], [4, 4, 1, 0.97], [2, -2, 0, 0.88], [3, 2, 0, 0.99993], [2, 2, 2, 0.8817823], [2, 1, 2, 0.888197]]) {
     const w = bank.omega(l, m, n, a), ex = solveQNM({ l, m, n, a, guess: C.cx(w.re, w.im) }).omega;
-    assert.ok(Math.abs(w.re / ex.re - 1) < 5e-5 && Math.abs(w.im / ex.im - 1) < 2e-4, `(${l},${m},${n}) a=${a}`);
+    assert.ok(Math.abs(1200 * Math.log2(w.re / ex.re)) < 0.02 && Math.abs(w.im / ex.im - 1) < 1e-4, `(${l},${m},${n}) a=${a}`);
+  }
+});
+test('interpolation is as good in the end intervals of the table (a → 0 and a → 1 − 10⁻⁶)', () => {
+  const U = bank.u, ends = [];
+  for (const f of [0.25, 0.5, 0.75]) {
+    ends.push(1 - 10 ** -(f * U[1]));
+    ends.push(1 - 10 ** -(U.at(-2) + f * (U.at(-1) - U.at(-2))));
+  }
+  for (const [l, m, n] of [[2, 2, 0], [2, 2, 2], [3, 3, 0], [2, 1, 0], [2, -2, 0], [4, 4, 0]]) for (const a of ends) {
+    const w = bank.omega(l, m, n, a), ex = solveQNM({ l, m, n, a, guess: C.cx(w.re, w.im) }).omega;
+    const dc = 1200 * Math.log2(w.re / ex.re), dg = w.im / ex.im - 1;
+    assert.ok(Math.abs(dc) < 0.01 && Math.abs(dg) < 1e-4, `(${l},${m},${n}) a=${a}: ${dc.toFixed(4)} ¢, damping ${(100 * dg).toFixed(4)} %`);
   }
 });
 test('l = m modes become a harmonic series 2 : 3 : 4 as a → 1', () => {
@@ -101,13 +142,103 @@ test('inspiral chirps up and hands over to the ringdown', () => {
   const e = new RingdownEngine(48000); e.noteOn(v, 1);
   const L = new Float32Array(128), R = new Float32Array(128);
   let fPrev = 0, mono = true, ringAt = null;
-  for (let s = 0; s < 48000 * 2 && !ringAt; s += 128) {
+  for (let s = 0; s < 48000 * 3 && !ringAt; s += 128) {
     e.process(L, R, 128);
     const c = e.voices[0].chirp;
     if (c.stage < 3) { if (c.f < fPrev - 1e-9) mono = false; fPrev = c.f; }
     if (e.voices[0].ring) ringAt = s;
   }
   assert.ok(mono && ringAt > 0);
+});
+test('the strain is continuous through the handover: no notch at the merger', () => {
+  // face-on, |h| = √(h₊² + h×²) is the envelope; it must follow the ringdown's, |Σ C ζ(t)|
+  for (const [key, spinU, overtones] of [[45, DEFAULTS.spinU, 1], [69, DEFAULTS.spinU, 0], [57, 3, 1], [81, 3, 0]]) {
+    const v = keyVoice(key, { ...DEFAULTS, inspiral: true, inspiralOct: 1.5, inclination: 0, spinU, overtones }, bank, 48000);
+    const e = new RingdownEngine(48000); e.noteOn(v, 1);
+    const L = new Float32Array(1), R = new Float32Array(1), h = [];
+    let at = -1;
+    for (let s = 0; s < 48000 * 3 && (at < 0 || s < at + 2000); s++) { e.process(L, R, 1); h.push(Math.hypot(L[0], R[0])); if (at < 0 && e.voices[0].ring) at = s; }
+    const per = 48000 / keyFreq(key);
+    for (let i = 0; i < per; i++) {
+      const t = i / 48000;
+      let sr = 0, si = 0;
+      for (const md of v.modes) { const g = Math.exp(-md.gamma * t), th = 2 * Math.PI * md.f * t; sr += g * (md.cpr * Math.cos(th) + md.cpi * Math.sin(th)); si += g * (md.cpi * Math.cos(th) - md.cpr * Math.sin(th)); }
+      const ratio = h[at + i] / (0.35 * Math.hypot(sr, si));
+      assert.ok(ratio > 0.97 && ratio < 1.15, `key ${key}: |h| at ${(i / per).toFixed(2)} cycles is ${ratio.toFixed(3)} of the ringdown's`);
+    }
+    assert.ok(Math.abs(h[at - 1] / (0.35 * Math.hypot(...v.modes.reduce(([x, y], m) => [x + m.cpr, y + m.cpi], [0, 0]))) - 1) < 0.03, 'chirp ends at the ringdown amplitude');
+  }
+});
+test('the plotted strain (closed form) is what the engine plays', () => {
+  for (const P of [{ ...DEFAULTS }, { ...DEFAULTS, spinU: 4, massRatio: 4, inclination: 70, retrograde: 0.5 }, { ...DEFAULTS, inspiral: true, inspiralOct: 1 }]) {
+    const v = keyVoice(60, P, bank, 48000), n = 1200, cv = strainCurve(v, n);
+    const total = Math.round(cv.dur * 48000) + 1, e = new RingdownEngine(48000); e.noteOn(v, 1);
+    const hp = new Float32Array(total + 128), hx = new Float32Array(total + 128), L = new Float32Array(128), R = new Float32Array(128);
+    for (let s = 0; s < total; s += 128) { e.process(L, R, 128); hp.set(L, s); hx.set(R, s); }
+    let err = 0, mx = 0, dot = 0, nA = 0, nB = 0;
+    for (let i = 0; i < n; i++) {
+      const t = (cv.dur * i * 48000) / (n - 1), s = Math.floor(t), u = t - s;   // engine output, interpolated
+      const a = 0.35 * cv.hp[i], b = hp[s] + u * (hp[s + 1] - hp[s]), x = 0.35 * cv.hx[i], y = hx[s] + u * (hx[s + 1] - hx[s]);
+      err = Math.max(err, Math.abs(a - b), Math.abs(x - y)); mx = Math.max(mx, Math.abs(b), Math.abs(y));
+      dot += a * b + x * y; nA += a * a + x * x; nB += b * b + y * y;
+    }
+    const corr = dot / Math.sqrt(nA * nB);
+    if (P.inspiral) assert.ok(corr > 0.98, `chirp: correlation ${corr}`);
+    else assert.ok(err < 2e-3 * mx, `ringdown: worst ${(err / mx).toExponential(2)} of peak`);
+  }
+  const v = keyVoice(36, { ...DEFAULTS, spinU: 6, retrograde: 1, massRatio: 3, overtones: 2 }, bank, 48000), t0 = performance.now();
+  for (let i = 0; i < 10; i++) strainCurve(v, 2000);
+  const ms = (performance.now() - t0) / 10;
+  assert.ok(ms < 10, `${ms.toFixed(1)} ms per plot`);
+  console.log(`        strain plot: ${ms.toFixed(2)} ms for 2000 points, ${v.modes.length} modes (was an offline render of up to 2.5 s)`);
+});
+test('the inspiral starts a set number of octaves below ISCO, and lasts at most 2 s', () => {
+  const at = (key, oct) => keyVoice(key, { ...DEFAULTS, inspiral: true, inspiralOct: oct }, bank, 48000).chirp;
+  for (const key of [48, 60, 84]) {
+    const c1 = at(key, 0.5), c2 = at(key, 1);
+    assert.ok(Math.abs(c1.fStart / c1.fIsco - 2 ** -0.5) < 1e-12 && Math.abs(c2.fStart / c2.fIsco - 0.5) < 1e-12, `${key}`);
+  }
+  for (let key = 36; key <= 96; key += 6) for (const oct of [1.5, 3]) {
+    const c = at(key, oct), { t2 } = chirpSchedule(c);
+    assert.ok(c.tc <= 2 + 1e-9 && t2 < 2.1, `${key}, ${oct} octaves: τ_c ${c.tc.toFixed(2)} s`);
+  }
+});
+test('voice stealing fades the quietest voice instead of cutting the oldest', () => {
+  const P = { ...DEFAULTS, spinU: 6, t0: 10, overtones: 0.4, massRatio: 1, inclination: 0 };
+  const loud = keyVoice(36, P, bank, 48000), quiet = keyVoice(36, P, bank, 48000);
+  const play = (max) => {
+    const e = new RingdownEngine(48000); e.setParams({ maxVoices: max });
+    const arr = e.voices, L = new Float32Array(128), R = new Float32Array(128), out = [];
+    e.noteOn(loud, 1);
+    for (let i = 0; i < 20; i++) e.process(L, R, 128);
+    e.noteOn(quiet, 0.05);
+    for (let i = 0; i < 20; i++) e.process(L, R, 128);
+    e.noteOn(loud, 1);                                     // over the limit when max = 2
+    for (let i = 0; i < 40; i++) { e.process(L, R, 128); out.push(...L); }
+    assert.equal(e.voices, arr, 'voices compacted in place');
+    return { out, e };
+  };
+  const { out: a, e } = play(2), { out: b } = play(10);
+  assert.equal(e.voices.length, 2);
+  assert.ok(e.voices.every((v) => v.vel === 1), 'the quiet voice went');
+  let jump = 0, amp = 0;
+  for (let i = 1; i < a.length; i++) { jump = Math.max(jump, Math.abs((a[i] - b[i]) - (a[i - 1] - b[i - 1]))); amp = Math.max(amp, Math.abs(a[i] - b[i])); }
+  assert.ok(amp > 0 && jump < 0.05 * amp, `largest step ${(jump / amp).toFixed(3)} of the stolen voice's level`);
+});
+test('near extremality the l = m modes, and some l ≠ m overtones, ring at mΩ_H', () => {
+  const a = 1 - 1e-6, OmH = a / (2 * (1 + Math.sqrt(1 - a * a)));
+  const long = new Set(['2,1,2', '3,2,1', '3,2,2', '4,3,0', '4,3,1', '4,3,2']);
+  for (const md of bank.modes) if (md.m > 0) {
+    const w = bank.omega(md.l, md.m, md.n, a), Q = w.re / (-2 * w.im), k = `${md.l},${md.m},${md.n}`;
+    if (md.l === md.m || long.has(k)) assert.ok(Q > 140 && Math.abs(w.re / (md.m * OmH) - 1) < 4e-3, `${k}: Q ${Q.toFixed(0)}`);
+    else assert.ok(Q < 30, `${k}: Q ${Q.toFixed(1)}`);
+  }
+});
+test('GW150914’s remnant (62 M☉, a ≈ 0.67) rings near middle C: ≈ 271 Hz in its own frame, ≈ 249 Hz as observed', () => {
+  const w = bank.omega(2, 2, 0, 0.67), f = (M) => w.re / (2 * Math.PI * M * MSUN_S);
+  assert.ok(Math.abs(f(62) - 271) < 1.5 && Math.abs(f(62 * 1.09) - 249) < 1.5, `${f(62)}, ${f(62 * 1.09)}`);
+  const c4 = keyVoice(60, DEFAULTS, bank, 48000).info;
+  assert.ok(Math.abs(c4.a - 0.69) < 1e-3 && Math.abs(c4.Msun - 65.2) < 0.1 && Math.abs(c4.rPlusKm - 166) < 1);
 });
 
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');

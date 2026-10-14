@@ -21,20 +21,32 @@ const cents = (p, q) => 1200 * Math.log2(p / q);
 // colour a lock by its complexity (p + q): simple ratios bright and warm
 function lockColor(code) {
   const p = Math.floor(code / 100), q = code % 100, c = p + q;
-  const hue = (200 + c * 23) % 360, light = Math.max(38, 70 - c * 2.5);
+  const hue = (200 + c * 23) % 360, light = Math.max(30, 70 - c * 2);
   return `hsl(${hue} 80% ${light}%)`;
 }
 
-export class StairView {
+// Redraw a view only when it has changed, it is visible, and the page is
+// animating: data changes call touch(); size changes (including being shown
+// again from the Views menu) are caught by a ResizeObserver.
+class Lazy {
   constructor(canvas) {
-    this.cv = canvas;
+    this.cv = canvas; this.dirty = true;
+    if (globalThis.ResizeObserver) new ResizeObserver(() => { this.dirty = true; }).observe(canvas);
+  }
+  touch() { this.dirty = true; }
+  frame() { if (this.dirty && this.cv.offsetParent !== null) { this.dirty = false; this.draw(); } }
+}
+
+export class StairView extends Lazy {
+  constructor(canvas) {
+    super(canvas);
     this.stair = null;       // { xs, ys }
     this.rows = [];          // tongue rows: { kick, xs, row }
     this.nRows = 24; this.kmax = 0.15;
     this.kick = 0.06;
     this.marks = [];         // current chord: natural intervals (cents)
   }
-  reset(full) { this.stair = null; if (full) this.rows = []; }
+  reset(full) { this.stair = null; if (full) this.rows = []; this.touch(); }
   draw() {
     const { ctx, w, h } = fit(this.cv);
     ctx.clearRect(0, 0, w, h);
@@ -104,9 +116,9 @@ export class StairView {
 }
 
 // Firing raster, triggered on the lowest note so a locked chord stands still.
-export class RasterView {
-  constructor(canvas) { this.cv = canvas; this.state = null; }
-  set(st) { this.state = st; }
+export class RasterView extends Lazy {
+  constructor(canvas) { super(canvas); this.state = null; }
+  set(st) { this.state = st; this.touch(); }
   draw() {
     const { ctx, w, h } = fit(this.cv);
     ctx.clearRect(0, 0, w, h);
@@ -119,11 +131,22 @@ export class RasterView {
     }
     const rows = [...st.fires].filter((r) => r.times.length > 2).sort((a, b) => a.key - b.key);
     if (!rows.length) return;
-    const root = rows[0], per = (root.times[root.times.length - 1] - root.times[0]) / (root.times.length - 1);
+    const root = rows[0], nr = root.times.length;
+    const per = (root.times[nr - 1] - root.times[Math.max(0, nr - 9)]) / (Math.min(nr, 9) - 1);
     const span = 4 * per;
-    // trigger: the latest root firing that leaves a full window after it
-    let trig = root.times[0];
-    for (const t of root.times) if (t + span <= st.t) trig = t;
+    // trigger: of the root firings that leave a full window after them, the
+    // latest one shared with the most other notes (a locked chord's pattern
+    // restarts there, so the picture stands still)
+    const others = rows.slice(1).map((r) => new Set(r.times));
+    let trig = root.times[0], best = -1;
+    for (let i = nr - 1; i >= 0; i--) {
+      const t = root.times[i];
+      if (t + span > st.t) continue;
+      if (st.t - t > 0.6 * st.fs + span) break;
+      let shared = 0;
+      for (const s of others) if (s.has(t)) shared++;
+      if (shared > best) { best = shared; trig = t; }
+    }
     const padL = 46, padR = 8, rh = Math.min(26, (h - 10) / rows.length);
     const X = (t) => padL + ((w - padL - padR) * (t - trig)) / span;
     rows.forEach((r, i) => {

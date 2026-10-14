@@ -4,6 +4,7 @@ import { GROUPS, ALL_PARAMS, DEFAULTS, PRESETS } from './sync-params.js';
 import { tunedFreq, keyFreq, noteName, nearestRatio, intervalName, KEY_LO, KEY_HI } from './tuning.js';
 import { soundboardIR, roomIR } from '../../shared/impulses.js';
 import { StairView, RasterView } from './sync-viz.js';
+import { FiringLog } from './lock-analysis.js';
 import { createKeyboard } from '../../shared/keyboard.js';
 
 const $ = (s) => document.querySelector(s);
@@ -12,7 +13,8 @@ function load() { try { const s = JSON.parse(localStorage.getItem(STORE) || 'nul
 function save() { try { localStorage.setItem(STORE, JSON.stringify(P)); } catch { /* unavailable */ } }
 
 let P = load();
-let base = 48, holding = false, lastState = null;
+let base = 48, holding = false;
+const log = new FiringLog(3); // the last 3 s of every sounding lamp's firings
 const held = new Map(), sounding = new Map(), latched = new Set();
 
 const engineParams = () => ({
@@ -74,10 +76,10 @@ function applyMix() {
 let lastTable = 0;
 function onWorklet(m) {
   if (m.type === 'state') {
-    lastState = m;
-    raster.set(m);
+    log.ingest(m);
+    if (m.fires.length || raster.state?.fires.length) raster.set(log.recent(1));
     const now = performance.now();
-    if (now - lastTable > 120) { lastTable = now; updateTables(m); }
+    if (now - lastTable > 120) { lastTable = now; updateTables(log.analyze(), log.hold); }
   } else if (m.type === 'stats') {
     const el = $('#cpu');
     el.textContent = `CPU ${(m.load * 100).toFixed(0)} %`;
@@ -116,7 +118,7 @@ function setHold(on) {
     refreshMarks();
   }
 }
-function panic() { post({ type: 'panic' }); sounding.clear(); latched.clear(); held.clear(); keyboardView.clearAll(); refreshMarks(); }
+function panic() { post({ type: 'panic' }); log.clear(); sounding.clear(); latched.clear(); held.clear(); keyboardView.clearAll(); refreshMarks(); }
 const activeKeys = () => [...new Set([...sounding.keys(), ...latched])].sort((a, b) => a - b);
 
 const LOW = ['KeyZ', 'KeyS', 'KeyX', 'KeyD', 'KeyC', 'KeyV', 'KeyG', 'KeyB', 'KeyH', 'KeyN', 'KeyJ', 'KeyM', 'Comma', 'KeyL', 'Period', 'Semicolon', 'Slash'];
@@ -286,15 +288,18 @@ const stair = new StairView($('#stair'));
 const raster = new RasterView($('#raster'));
 let worker = null, stairTimer = 0;
 function recomputeStair(full) {
-  stair.kick = P.kick;
+  stair.kick = P.kick; stair.touch();
   clearTimeout(stairTimer);
   stairTimer = setTimeout(() => {
     if (!worker) {
       worker = new Worker('src/staircase-worker.js', { type: 'module' });
       worker.onmessage = (e) => {
         const m = e.data;
-        if (m.type === 'stair') { stair.stair = { xs: m.xs, ys: m.ys }; $('#stair-read').textContent = `C4 plus a second oscillator · coupling ${(P.kick * 100).toFixed(1)} %`; }
-        else if (m.type === 'row') { stair.nRows = m.rows; stair.rows[m.r] = m; }
+        if (m.type === 'stair') {
+          stair.stair = { xs: m.xs, ys: m.ys };
+          $('#stair-read').textContent = `C4 plus a second lamp · coupling ${(P.kick * 100).toFixed(1)} % (δ = ${m.delta.toFixed(4)})${m.exact ? '' : ' · simulated'}`;
+        } else if (m.type === 'row') { stair.nRows = m.rows; stair.rows[m.r] = m; }
+        stair.touch();
       };
     }
     stair.reset(full);
@@ -304,14 +309,16 @@ function recomputeStair(full) {
 
 function refreshMarks() {
   const keys = activeKeys();
+  stair.touch();
   if (keys.length < 2) { stair.marks = []; return; }
   const f0 = tunedFreq(keys[0], P);
   stair.marks = keys.slice(1).map((k) => 1200 * Math.log2(tunedFreq(k, P) / f0));
 }
 
-function updateTables(st) {
-  const live = st.osc.filter((o) => o.f > 0).sort((a, b) => a.key - b.key);
-  $('#hold-read').textContent = st.hold ? `supply servo ${(1200 * -st.hold).toFixed(1)} ¢` : '';
+// an: log.analyze(). Locks come from shared firings, so their ratios are exact.
+function updateTables(an, hold) {
+  const live = an.notes;
+  $('#hold-read').textContent = hold ? `supply servo ${(1200 * -hold).toFixed(1)} ¢` : '';
   if (!live.length) {
     $('#notes').innerHTML = '<tr><td class="free">Play or hold a chord (Space latches notes)</td></tr>';
     $('#pairs').innerHTML = '';
@@ -327,21 +334,20 @@ function updateTables(st) {
       return `<tr><td>${noteName(o.key)}</td><td>${cd >= 0 ? '+' : ''}${cd.toFixed(1)} ¢</td><td>${cp >= 0 ? '+' : ''}${cp.toFixed(1)} ¢</td><td>${meter(cp, cd)}</td></tr>`;
     }).join('');
   const rows = [];
-  for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) {
-    const a = live[i], b = live[j], r = b.f / a.f, nr = nearestRatio(r, 9);
-    const design = nearestRatio(b.fTarget / a.fTarget, 9);
-    const locked = Math.abs(nr.cents) < 0.5;
-    const beat = Math.abs(nr.q * b.f - nr.p * a.f);
+  for (const { a, b, lock, ratio: r, design, beat } of an.pairs) {
+    const nr = nearestRatio(r, 9);
     rows.push(`<tr><td>${noteName(a.key)}–${noteName(b.key)} <span class="muted">${intervalName(b.key - a.key)}</span></td>`
       + `<td>${(1200 * Math.log2(b.fTarget / a.fTarget)).toFixed(1)} ¢</td><td>${(1200 * Math.log2(r)).toFixed(1)} ¢</td>`
       + `<td>${nr.p}:${nr.q} = ${(1200 * Math.log2(nr.p / nr.q)).toFixed(1)} ¢</td>`
-      + (locked ? `<td class="locked">locked ${nr.p}:${nr.q}</td>` : `<td class="free">${design.p}:${design.q} off by ${(1200 * Math.log2(r / (design.p / design.q))).toFixed(1)} ¢ · beats ${beat.toFixed(1)} Hz</td>`)
+      + (lock ? `<td class="locked">locked ${lock.p}:${lock.q}${lock.q > 16 ? ' (long pattern)' : ''}</td>`
+        : `<td class="free">${design.p}:${design.q} off by ${(1200 * Math.log2(r / (design.p / design.q))).toFixed(1)} ¢ · beats ${beat.toFixed(1)} Hz</td>`)
       + '</tr>');
   }
   $('#pairs').innerHTML = rows.length ? '<tr><th>pair</th><th>designed</th><th>now</th><th>nearest simple ratio</th><th>status</th></tr>' + rows.slice(0, 15).join('') : '';
 }
 
-function frame() { requestAnimationFrame(frame); if (stair.cv.offsetParent) stair.draw(); if (raster.cv.offsetParent) raster.draw(); } // skip hidden views
+// views redraw only when something changed (and only while visible)
+function frame() { requestAnimationFrame(frame); stair.frame(); raster.frame(); }
 
 let toastTimer = 0;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3500); }
@@ -354,6 +360,6 @@ for (const id of controls.keys()) refreshControl(id);
 refreshVisibility();
 keyboardView.labels(keyLabels());
 updateHelp();
-updateTables({ osc: [], hold: 0 });
+updateTables({ notes: [], pairs: [] }, 0);
 recomputeStair(true);
 requestAnimationFrame(frame);
