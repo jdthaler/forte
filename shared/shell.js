@@ -39,6 +39,7 @@
 
 import { roomIR } from './impulses.js';
 import { createKeyboard } from './keyboard.js';
+import { trimGain } from './registry.js';
 
 const $ = (s) => document.querySelector(s);
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -148,7 +149,7 @@ export function createShell(cfg) {
     const t = a.ctx.currentTime;
     if (a.tone && ch.tone) a.tone.frequency.setTargetAtTime(P[ch.tone], t, 0.02);
     if (a.roomGain && ch.room) a.roomGain.gain.setTargetAtTime(0.6 * P[ch.room], t, 0.02);
-    if (ch.volume) a.master.gain.setTargetAtTime(P[ch.volume], t, 0.02);
+    if (ch.volume) a.master.gain.setTargetAtTime(P[ch.volume] * trimGain(cfg.id), t, 0.02);
   };
 
   // ---- notes ---------------------------------------------------------------
@@ -237,7 +238,10 @@ export function createShell(cfg) {
 
   // ---- on-screen keyboard (multi-touch; shared/keyboard.js) ----------------------
   if (cfg.space && !document.body.dataset.space) document.body.dataset.space = cfg.space === 'hold' ? 'Hold' : 'Sustain';
-  shell.keys = createKeyboard($('#keyboard'), { lo: LO, hi: HI, onDown: (k, f) => down(k, 0.2 + 0.8 * f), onUp: up });
+  shell.keys = createKeyboard($('#keyboard'), {
+    lo: LO, hi: HI, onDown: (k, f) => down(k, 0.2 + 0.8 * f), onUp: up,
+    onPressure: (key, value) => { shell.post({ type: 'pressure', value, key }); cfg.onPressure?.(value, key); }, // as MIDI poly aftertouch
+  });
 
   // ---- MIDI ----------------------------------------------------------------------
   function initMIDI() {

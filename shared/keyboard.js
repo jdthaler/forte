@@ -3,8 +3,10 @@
 // key you strike it (or from Apple Pencil pressure), and a window of a few
 // octaves with ◀ ▶ shifting, for touch screens (set from shared/layout.js).
 //
-//   const kb = createKeyboard(root, { lo, hi, onDown(key, f), onUp(key) })
+//   const kb = createKeyboard(root, { lo, hi, onDown(key, f), onUp(key), onPressure?(key, p) })
 //   f ∈ [0, 1]: 0 at the top of the key, 1 at the front edge (map it to your velocity)
+//   p ∈ [0, 1]: aftertouch from a held key — Pencil pressure, or sliding the finger toward
+//               you by half a key's height (so an ordinary touch, which wobbles, sends ~0)
 //   kb.set(key, on)  kb.focus(key)  kb.clearAll()  kb.labels(Map key → text)
 
 import { attachKeyboard } from './layout.js';
@@ -14,7 +16,7 @@ const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B�
 const noteName = (m) => NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 
-export function createKeyboard(root, { lo, hi, onDown, onUp }) {
+export function createKeyboard(root, { lo, hi, onDown, onUp, onPressure }) {
   let wLo = lo, wHi = hi, octaves = 0, focusKey = null, labelMap = new Map();
   const isDown = new Set(), els = new Map(), listeners = [];
 
@@ -67,16 +69,21 @@ export function createKeyboard(root, { lo, hi, onDown, onUp }) {
     e.preventDefault();
     try { root.setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
     const key = +el.dataset.key, f = depth(e, el);
-    fingers.set(e.pointerId, { key, f });
+    fingers.set(e.pointerId, { key, f, y0: e.clientY, h: el.getBoundingClientRect().height, p: 0 });
     press(key, f);
   });
   root.addEventListener('pointermove', (e) => {
     const p = fingers.get(e.pointerId);
     if (!p) return;
     const el = keyAt(e.clientX, e.clientY);
-    if (!el || +el.dataset.key === p.key) return;
-    const key = +el.dataset.key;
-    release(p.key); p.key = key; press(key, p.f);
+    if (el && +el.dataset.key !== p.key) { // glissando
+      const key = +el.dataset.key;
+      release(p.key); p.key = key; press(key, p.f); p.y0 = e.clientY; p.p = 0;
+      return;
+    }
+    if (!onPressure) return;
+    const v = e.pointerType === 'pen' ? clamp(e.pressure, 0, 1) : clamp((e.clientY - p.y0) / (0.5 * p.h), 0, 1);
+    if (Math.abs(v - p.p) > 0.01 || (v === 0) !== (p.p === 0)) { p.p = v; onPressure(p.key, v); }
   });
   const end = (e) => { const p = fingers.get(e.pointerId); if (!p) return; fingers.delete(e.pointerId); release(p.key); };
   for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) root.addEventListener(ev, end);

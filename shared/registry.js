@@ -111,3 +111,7 @@ export const INSTRUMENTS = [
 ];
 
 export const byId = (id) => INSTRUMENTS.find((i) => i.id === id);
+
+// Output trim (`trim`, dB) so that instruments sit at about the same loudness at their
+// defaults (tools/loudness.mjs measures them; test/level-tests.mjs keeps them there).
+export const trimGain = (id) => 10 ** ((byId(id)?.trim ?? 0) / 20);
