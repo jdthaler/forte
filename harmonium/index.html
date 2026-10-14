@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Free-Reed Organ · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="harmonium">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Free-Reed Organ</h1>
+      <span class="sub">brass reeds swing through their slots, driven by the air they choke; detuned pairs beat</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-view="Reed in its slot">
+          <div class="card-head"><h2>The reed in its slot, slowed down <b id="slot-key">C4</b></h2><span class="muted" id="slot-read">play a key</span></div>
+          <canvas id="slot"></canvas>
+          <div class="readout" id="slot-info"></div>
+          <div class="caption">A cut along the reed, to scale: the brass tongue (riveted at the left) swings down through its slot in the plate and out the other side, one cycle stretched over two seconds. The wind presses from above; the air escapes through the gap round the tongue, whose open area (bar, right) is choked to the clearance while the tongue is inside the slot.</div>
+        </div>
+        <div class="card" data-view="Flow and displacement">
+          <div class="card-head"><h2>Flow against displacement</h2><span class="muted" id="loop-read"></span></div>
+          <canvas id="loop"></canvas>
+          <div class="legend"><span><i style="background:var(--accent)"></i>flow through the gap, this cycle</span><span><i style="background:#9fb4c8"></i>the gap at steady wind (quasi-steady)</span><span><i style="background:#3a3f4a"></i>inside the slot</span></div>
+          <div class="caption">The flow through the gap against the tongue’s tip position (into the slot →). Dashed: what the reservoir’s pressure would push through each opening if the air had no mass. The live loop leans off it because the air feeding the reed must speed up and slow down: that lag is what drives the reed.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Musette beats">
+          <div class="card-head"><h2>Musette: the reeds beat</h2><span class="muted" id="beat-read">musette off</span></div>
+          <canvas id="beats"></canvas>
+          <div class="readout" id="beat-info"></div>
+          <div class="caption">The sound of the last key over the last four seconds. With the musette on, its reeds are a few cents apart and the sound swells and fades at their frequency difference; ticks mark that predicted beat period.</div>
+        </div>
+        <div class="card" data-view="The wind">
+          <div class="card-head"><h2>The wind</h2><span class="muted" id="wind-read"></span></div>
+          <canvas id="wind"></canvas>
+          <div class="legend"><span><i style="background:var(--accent)"></i>reservoir pressure</span><span><i style="background:#9fb4c8"></i>the bellows’ effort</span><span><i style="background:#ffd27a"></i>air drawn (L/s, right)</span><span><i style="background:#ff6b6b"></i>last key’s threshold</span></div>
+          <div class="caption">The pressure every reed blows against, over the last eight seconds. Chords draw air and the pressure sags; the reservoir smooths the pumping, the expression stop does not. Below the red line the last key’s reed cannot start.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>hold <kbd>Space</kbd> to keep keys down <b id="hold" class="off">off</b></span>
+      <span>mod wheel, aftertouch: more wind</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/harmonium-main.js"></script>
+</body>
+</html>

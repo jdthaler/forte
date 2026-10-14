@@ -29,7 +29,7 @@ lands, the pickup's offset, how fast the black hole spins.
 | 🛠 | Pipe Organ | Baroque organ | jet–edge feedback in flue pipes, chiff, overblowing, wind sag |
 | 🛠 | Carillon | Flemish carillon (Hemony) | bell shell modes and the strike note: a pitch not in the spectrum |
 | ✅ | [Vibraphone](vibraphone/) | Deagan vibraharp (1927) | undercut bars tuned 1 : 4 : 10 by finite elements, each coupled to a stopped tube; motor-driven discs open and close the tubes (tremolo) |
-| 🛠 | Free-Reed Organ | harmonium and accordion | self-excited free reeds, musette beating, bellows expression |
+| ✅ | [Free-Reed Organ](harmonium/) | harmonium and accordion | brass reeds driven through their slots by the inertia of the air that feeds them (implicit reed–air coupling, thresholds from a linear analysis); musette, 16′ and 4′ ranks, reservoir and expression stop, cassotto |
 | 🛠 | Singing Arc | Duddell's singing arc (1900) | negative-resistance arc driving an LC circuit; the arc is the loudspeaker |
 | ✅ | [Huygens Keyboard](huygens/) | — | pulse-coupled relaxation oscillators that lock chords into just intonation (Arnold tongues) |
 | ✅ | [Black-Hole Keyboard](blackhole/) | — | Kerr quasinormal modes from the Teukolsky equation, h₊ and h× in stereo |

@@ -205,6 +205,40 @@
    "title": "Unisons in tune then honky tonk"
   }
  ],
+ "harmonium": [
+  {
+   "file": "01-old-hundredth-on-the-8-foot-and-voix-celeste.m4a",
+   "title": "Old hundredth on the 8 foot and voix celeste"
+  },
+  {
+   "file": "02-one-reed-then-musette-of-two-then-three.m4a",
+   "title": "One reed then musette of two then three"
+  },
+  {
+   "file": "03-wind-rising-from-a-whisper-to-full.m4a",
+   "title": "Wind rising from a whisper to full"
+  },
+  {
+   "file": "04-slow-key-fast-key-then-percussion.m4a",
+   "title": "Slow key fast key then percussion"
+  },
+  {
+   "file": "05-pumped-through-the-reservoir-then-the-expression-stop.m4a",
+   "title": "Pumped through the reservoir then the expression stop"
+  },
+  {
+   "file": "06-accordion-musette-open-then-in-the-cassotto.m4a",
+   "title": "Accordion musette open then in the cassotto"
+  },
+  {
+   "file": "07-eight-foot-then-with-sixteen-then-full-organ.m4a",
+   "title": "Eight foot then with sixteen then full organ"
+  },
+  {
+   "file": "08-gentle-wind-near-threshold-then-normal.m4a",
+   "title": "Gentle wind near threshold then normal"
+  }
+ ],
  "harpsichord": [
   {
    "file": "01-bach-prelude-in-c-on-two-8-foot-choirs.m4a",
