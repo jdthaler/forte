@@ -99,10 +99,10 @@ export const INSTRUMENTS = [
     accent: '#9fb4ff',
   },
   {
-    id: 'carillon', name: 'Carillon', section: 'history', ready: false,
+    id: 'carillon', name: 'Carillon', section: 'history', ready: true, version: '0.1.0', trim: 3.5,
     after: 'the Flemish carillon (Hemony bells, 1650s)',
-    tagline: 'Bronze bells tuned partial by partial; the pitch you hear, the strike note, is not in the spectrum at all.',
-    physics: 'Bell shell modes · virtual pitch',
+    tagline: 'Bronze bells tuned partial by partial; the note you hear, the strike note, is a virtual pitch made by partials an octave and more above it.',
+    physics: 'Bell modes by finite elements · Hertz clapper · virtual pitch',
     accent: '#d9b45f',
   },
   {

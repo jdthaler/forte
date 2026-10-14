@@ -10,6 +10,50 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-14 — carillon
+
+### Carillon 0.1.0
+- New instrument, after the Low Countries carillon (Hemony): 49 bronze
+  bells, C3–C7 at sounding pitch, each tuned by its nominal an octave
+  above its key, in three registers with their own ribs, heavier towards
+  the treble (wall thickness × 0.5, 0.72 and 1).
+- **The bell:** axisymmetric solid finite elements (eight-node
+  quadrilaterals on the rib's cross-section, one cos mθ / sin mθ family at a
+  time, banded subspace iteration), checked against Hoppe's and Rayleigh's
+  ring, Rayleigh's inextensional cylinder modes and the dense eigensolver,
+  and converged under refinement. A thick ring shows how far thin-shell
+  formulas go wrong.
+- **The founder's tuning:** a Levenberg–Marquardt search moves each rib's
+  thickness, radius and height at ten stations until hum, prime, tierce,
+  quint and nominal sit at 0.5 : 1 : 1.2 : 1.5 : 2 (minor-third bells) or
+  with the tierce at 1.25 (major-third bells, from a different starting rib,
+  aiming more softly at the deciem, superquint and octave nominal too),
+  moving the rib no further than it must.
+  `tools/carillon-profile.mjs` writes the six ribs and their modes to
+  `bell-table.js`.
+- **Sound:** every mode below 8–12 × the prime as an exact two-pole
+  recursion, a doublet for each m ≥ 1; damping from bronze's loss and
+  multipole radiation (the hum rings longest); a radiation-weighted sum at
+  the listener, with spreading and ISO 9613-1 air absorption over the
+  distance from the tower.
+- **Doublets:** an asymmetry ε cos 2mθ splits each pair by Δf/f = εκ/2
+  (degenerate perturbation theory, κ from the FEM); the strike angle shares
+  the strike between the pair as cos and sin mα, so bells warble unless
+  struck on an axis.
+- **The clapper:** Hertz contact solved implicitly every sample against
+  every mode of the bell where it is; about 1 ms on C4; iron or a softer
+  insert, its mass, the strike height and an even touch across the
+  keyboard.
+- **The strike note:** subharmonic summation finds it an octave below the
+  nominal, live, on the partials as heard; given only the nominal,
+  superquint and octave nominal it still finds it, where no partial lies.
+  In the top bells it names the hum.
+- **Historic bells:** untuned castings, each partial moved by the FEM's
+  sensitivities to random wall errors, seeded per bell.
+- Views: the bell's section and a partial's shape, from the side and from
+  below, with its live level; the partial table; the strike note; the
+  spectrum. Seven demos.
+
 ## 2026-10-14 — pipe organ
 
 ### Pipe Organ 0.1.0
