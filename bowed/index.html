@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Viola Organista · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-instrument="bowed">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Viola Organista</h1>
+      <span class="sub">Leonardo's bowed keyboard: rosined wheels, stick–slip friction, Helmholtz motion</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-view="String on the wheel">
+          <div class="card-head"><h2>The string on the wheel, <b id="focus-name">C4</b></h2><span class="muted" id="motion-read"></span></div>
+          <canvas id="string"></canvas>
+          <div class="caption">The string's shape, rebuilt from its travelling waves and sampled stroboscopically (each frame 1/48 of a period later). In Helmholtz motion it is two straight lines meeting at a corner that runs round the dashed parabolas once per period: it sticks to the wheel while the corner is on the far side and slips while the corner passes between wheel and bridge.</div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Schelleng diagram</h2><span class="muted" id="force-read"></span></div>
+          <canvas id="schelleng"></canvas>
+          <div class="caption">Helmholtz motion needs F<sub>min</sub> &lt; F &lt; F<sub>max</sub>, with F<sub>max</sub> ∝ v<sub>B</sub>/β and F<sub>min</sub> ∝ v<sub>B</sub>/β². The dot is this key now: its force (press harder, use aftertouch or ↑↓) and the wheel position. Its colour is what the string is actually doing.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card">
+          <div class="card-head"><h2>Velocity of the string under the wheel</h2><span class="muted">stick and slip</span></div>
+          <canvas id="bowv"></canvas>
+          <div class="caption">Stuck, the string's surface moves with the wheel (v<sub>B</sub>, upper line); once per period it slips back at −v<sub>B</sub>(1 − β)/β (lower line) for a fraction β of the period. Extra dips are extra slips: surface sound below F<sub>min</sub>, chaos above F<sub>max</sub>.</div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · lines: harmonics of the key</span></div>
+          <canvas id="spectrum"></canvas>
+          <div class="caption">Helmholtz motion drives the bridge with a sawtooth (harmonics ∝ 1/n); the soundboard's modes colour it.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Attack map">
+          <div class="card-head"><h2>Attack map for <b id="attack-name">C4</b></h2><span class="muted" id="attack-read"></span></div>
+          <canvas id="attack"></canvas>
+          <div class="caption">How long the string takes to settle into Helmholtz motion after the key goes down, simulated here for every key travel time and final force (a Guettler diagram for a wheel that is already turning). Light: a clean start within a few periods; dark: prolonged slipping or chaos. The ring is where this key's touch lands.</div>
+        </div>
+        <div class="card" id="info-card">
+          <div class="card-head"><h2>This string</h2></div>
+          <dl class="info" id="info"></dl>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows; hold keys to keep bowing</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>key pressure <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>hold: <kbd>Space</kbd> keeps keys down <b id="hold" class="off">off</b></span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/bowed-main.js"></script>
+</body>
+</html>
