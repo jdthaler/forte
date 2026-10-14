@@ -138,6 +138,8 @@ radiates 5 % of its free-field power (C4: 15 ¢, 7 %; A4: 5 ¢, 20 %; C6: 83 %),
 which is why the bass rings so long at the defaults. Ten metres down the
 image is gone and A3's ring shortens from 1.35 s to 0.31 s. The image term
 is the leading one in R/2d; the model caps R/2d at ¼, a bubble 2R below the
+surface. The same rise in pitch is described by Leighton (1994) and used for
+liquid sounds by van den Doel (2005), up to √2 for a bubble touching the
 surface.
 
 ### 6. The keyboard: which bubbles
@@ -409,34 +411,110 @@ tools/render-bubbles.mjs               node tools/render-bubbles.mjs → example
   glycerol's surface tension and sound speed are interpolated between water
   and glycerol (its density and viscosity are tabulated values).
 
-## Sources
+## Prior art and references
 
-* M. Minnaert, "On musical air-bubbles and the sounds of running water",
-  *Philosophical Magazine* 16, 235 (1933).
-* C. Devin, "Survey of thermal, radiation, and viscous damping of
-  pulsating air bubbles in water", *J. Acoust. Soc. Am.* 31, 1654 (1959).
-* A. Prosperetti, "Thermal effects and damping mechanisms in the forced
-  radial oscillations of gas bubbles in liquids", *J. Acoust. Soc. Am.* 61,
-  17 (1977).
-* K. W. Commander and A. Prosperetti, "Linear pressure waves in bubbly
-  liquids: comparison between theory and experiments", *J. Acoust. Soc.
-  Am.* 85, 732 (1989): the linearised bubble with Φ, in the form used here.
-* T. G. Leighton, *The Acoustic Bubble*, Academic Press (1994).
-* C. E. Brennen, *Cavitation and Bubble Dynamics*, Oxford University Press
-  (1995): Rayleigh–Plesset, surface tension and the natural frequency.
-* M. Strasberg, "The pulsation frequency of nonspherical gas bubbles in
-  liquids", *J. Acoust. Soc. Am.* 25, 536 (1953).
-* M. Strasberg, "Gas bubbles as sources of sound in liquids", *J. Acoust.
-  Soc. Am.* 28, 20 (1956).
-* M. S. Longuet-Higgins, "Monopole emission of sound by asymmetric bubble
-  oscillations. Part 1. Normal modes" and "Part 2. An initial-value
-  problem", *J. Fluid Mech.* 201, 525 and 543 (1989).
-* G. B. Deane and H. Czerski, "A mechanism stimulating sound production
-  from air bubbles released from a nozzle", *J. Acoust. Soc. Am.* 123, EL126
-  (2008).
-* R. Clift, J. R. Grace and M. E. Weber, *Bubbles, Drops, and Particles*,
-  Academic Press (1978): the Hadamard–Rybczynski speed and bubble shapes.
-* H. D. Mendelson, "The prediction of bubble terminal velocities from wave
-  theory", *AIChE J.* 13, 250 (1967).
-* J. B. Segur and H. E. Oberstar, "Viscosity of glycerol and its aqueous
-  solutions", *Ind. Eng. Chem.* 43, 2117 (1951).
+**The physics, and the people who worked it out.**
+- Lord Rayleigh (1917). "On the pressure developed in a liquid during the
+  collapse of a spherical cavity." *Phil. Mag.* 34(200), 94–98.
+  [doi:10.1080/14786440808635681](https://doi.org/10.1080/14786440808635681).
+  The equation of radial motion of a spherical cavity in a liquid.
+- M. Minnaert (1933). "On musical air-bubbles and the sounds of running
+  water." *Phil. Mag.* 16(104), 235–248.
+  [doi:10.1080/14786443309462277](https://doi.org/10.1080/14786443309462277).
+  Identified the bubble's volume pulsation as the source of the sound and
+  derived its frequency.
+- M. Strasberg (1953). "The pulsation frequency of nonspherical gas
+  bubbles in liquids." *J. Acoust. Soc. Am.* 25(3), 536–537.
+  [doi:10.1121/1.1907076](https://doi.org/10.1121/1.1907076). The
+  equal-volume sphere used here for flattened bubbles.
+- M. Strasberg (1956). "Gas bubbles as sources of sound in liquids."
+  *J. Acoust. Soc. Am.* 28(1), 20–26.
+  [doi:10.1121/1.1908212](https://doi.org/10.1121/1.1908212).
+- C. Devin (1959). "Survey of thermal, radiation, and viscous damping of
+  pulsating air bubbles in water." *J. Acoust. Soc. Am.* 31(12),
+  1654–1667. [doi:10.1121/1.1907675](https://doi.org/10.1121/1.1907675).
+- A. Prosperetti (1977). "Thermal effects and damping mechanisms in the
+  forced radial oscillations of gas bubbles in liquids." *J. Acoust. Soc.
+  Am.* 61(1), 17–27. [doi:10.1121/1.381252](https://doi.org/10.1121/1.381252).
+  The complex thermal factor Φ used here.
+- K. W. Commander & A. Prosperetti (1989). "Linear pressure waves in
+  bubbly liquids: comparison between theory and experiments." *J. Acoust.
+  Soc. Am.* 85(2), 732–746.
+  [doi:10.1121/1.397599](https://doi.org/10.1121/1.397599). The linearised
+  bubble with Φ, in the form used here.
+- T. G. Leighton & A. J. Walton (1987). "An experimental study of the
+  sound emitted from gas bubbles in a liquid." *Eur. J. Phys.* 8(2),
+  98–104. [doi:10.1088/0143-0807/8/2/005](https://doi.org/10.1088/0143-0807/8/2/005).
+- M. S. Longuet-Higgins (1989). "Monopole emission of sound by asymmetric
+  bubble oscillations. Part 1. Normal modes" and "Part 2. An initial-value
+  problem." *J. Fluid Mech.* 201, 525–541 and 543–565.
+  [Part 1](https://www.cambridge.org/core/journals/journal-of-fluid-mechanics/article/monopole-emission-of-sound-by-asymmetric-bubble-oscillations-part-1-normal-modes/2DFBAD97795CC340755BCFA47D19DFFA),
+  [Part 2](https://www.cambridge.org/core/journals/journal-of-fluid-mechanics/article/abs/monopole-emission-of-sound-by-asymmetric-bubble-oscillations-part-2-an-initialvalue-problem/2B068CABEA57CA14ABA9749E44485394).
+- H. C. Pumphrey, L. A. Crum & L. Bjørnø (1989). "Underwater sound
+  produced by individual drop impacts and rainfall." *J. Acoust. Soc. Am.*
+  85(4), 1518–1526. [doi:10.1121/1.397353](https://doi.org/10.1121/1.397353).
+- M. S. Longuet-Higgins (1990). "Bubble noise spectra." *J. Acoust. Soc.
+  Am.* 87(2), 652–661. [doi:10.1121/1.398934](https://doi.org/10.1121/1.398934).
+- H. N. Oğuz & A. Prosperetti (1990). "Bubble entrainment by the impact of
+  drops on liquid surfaces." *J. Fluid Mech.* 219, 143–179.
+  [doi:10.1017/S0022112090002890](https://doi.org/10.1017/S0022112090002890).
+- M. S. Longuet-Higgins, B. R. Kerman & K. Lunde (1991). "The release of
+  air bubbles from an underwater nozzle." *J. Fluid Mech.* 230, 365–390.
+  [doi:10.1017/S0022112091000836](https://doi.org/10.1017/S0022112091000836).
+- A. Prosperetti & H. N. Oğuz (1993). "The impact of drops on liquid
+  surfaces and the underwater noise of rain." *Annu. Rev. Fluid Mech.* 25,
+  577–602. [doi:10.1146/annurev.fl.25.010193.003045](https://doi.org/10.1146/annurev.fl.25.010193.003045).
+- T. G. Leighton (1994). *The Acoustic Bubble*. Academic Press, London.
+  Ch. 3, "The freely-oscillating bubble", pp. 129–286:
+  [doi:10.1016/B978-0-12-441920-9.50008-0](https://doi.org/10.1016/B978-0-12-441920-9.50008-0).
+- C. E. Brennen (1995). *Cavitation and Bubble Dynamics*. Oxford
+  University Press. Rayleigh–Plesset, surface tension and the natural
+  frequency.
+- G. B. Deane & H. Czerski (2008). "A mechanism stimulating sound
+  production from air bubbles released from a nozzle." *J. Acoust. Soc.
+  Am.* 123(6), EL126–EL132.
+  [doi:10.1121/1.2908198](https://doi.org/10.1121/1.2908198). The neck's
+  collapse as the kick that starts the ring, used here.
+
+**Rising bubbles and the liquids.**
+- R. Clift, J. R. Grace & M. E. Weber (1978). *Bubbles, Drops, and
+  Particles*. Academic Press. The Hadamard–Rybczynski speed and bubble
+  shapes.
+- H. D. Mendelson (1967). "The prediction of bubble terminal velocities
+  from wave theory." *AIChE J.* 13(2), 250–253.
+- J. B. Segur & H. E. Oberstar (1951). "Viscosity of glycerol and its
+  aqueous solutions." *Ind. Eng. Chem.* 43(9), 2117–2120.
+  [doi:10.1021/ie50501a040](https://doi.org/10.1021/ie50501a040).
+
+**Earlier models and syntheses.**
+- K. van den Doel (2005). "Physically based models for liquid sounds."
+  *ACM Trans. Appl. Percept.* 2(4), 534–546.
+  [doi:10.1145/1101530.1101554](https://doi.org/10.1145/1101530.1101554).
+  Real-time synthesis of streams, pouring, rain and waves from stochastic
+  populations of Minnaert bubbles, with a rising-pitch term for bubbles
+  near the surface.
+- C. Zheng & D. L. James (2009). "Harmonic fluids." *ACM Trans. Graph.*
+  28(3) (SIGGRAPH 2009).
+  [doi:10.1145/1531326.1531343](https://doi.org/10.1145/1531326.1531343).
+  Bubble oscillators driven by 3D fluid animations, each radiated through
+  a precomputed acoustic transfer function.
+- W. Moss, H. Yeh, J.-M. Hong, M. C. Lin & D. Manocha (2010). "Sounding
+  liquids: automatic sound synthesis from fluid simulation." *ACM Trans.
+  Graph.* 29(3).
+  [doi:10.1145/1805964.1805965](https://doi.org/10.1145/1805964.1805965).
+  Couples bubble-resonance equations to shallow-water and grid–SPH fluid
+  simulators.
+- C. Drioli & D. Rocchesso (2011). "Acoustic rendering of particle-based
+  simulation of liquids in motion." *J. Multimodal User Interfaces*
+  5(3–4), 187–195.
+  [doi:10.1007/s12193-011-0063-7](https://doi.org/10.1007/s12193-011-0063-7).
+  Sound rendering for particle-based liquid simulations.
+- T. R. Langlois, C. Zheng & D. L. James (2016). "Toward animating water
+  with complex acoustic bubbles." *ACM Trans. Graph.* 35(4).
+  [doi:10.1145/2897824.2925904](https://doi.org/10.1145/2897824.2925904).
+  Bubble sounds from two-phase simulations, with frequency shifts from
+  bubble shape and proximity to surfaces.
+- K. Xue, R. M. Aronson, J.-H. Wang, T. R. Langlois & D. L. James (2023).
+  "Improved water sound synthesis using coupled bubbles." *ACM Trans.
+  Graph.* 42(4). [doi:10.1145/3592424](https://doi.org/10.1145/3592424).
+  Coupled-bubble oscillators for the low-frequency sound of bubble clouds.
