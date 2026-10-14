@@ -1,17 +1,34 @@
 // grand-main.js — the page: wires the shell to the engine and draws the views.
 // The slow-motion view re-runs the focused key's strike on the main thread
 // with the same engine, sample by sample, and records the string.
+// It also keeps the engine's oscillator budget in step with the audio thread's
+// measured load.
 
 import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { GROUPS, PRESETS } from './grand-params.js';
 import { boardModel, boardResponse, decayRates, hammerSpeed } from './grand-model.js';
-import { GrandEngine } from './grand-engine.js';
+import { GrandEngine, MODE_BUDGET } from './grand-engine.js';
 
 const $ = (s) => document.querySelector(s);
 const FS = 48000, TAU = 2 * Math.PI;
 const spectrum = new SpectrumView($('#spectrum'));
 let focus = 60, focusVel = 0.7, sim = null, board = null, boardKey = '', timer = 0, t0 = performance.now();
+
+// CPU: the worklet reports the share of each render quantum spent in the engine
+// (about four times a second). Over 60 % on average, or 90 % in the worst
+// block, the budget of oscillators shrinks by a quarter (the quietest, oldest
+// voices fade); under 30 % it grows back by a tenth. Touch devices, usually
+// slower, start from and return to a lower ceiling.
+const CEILING = matchMedia('(pointer: coarse)').matches ? 2400 : MODE_BUDGET;
+let budget = CEILING;
+const sendBudget = () => shell.post({ type: 'budget', modes: budget });
+function adapt({ load, peak }) {
+  if (!Number.isFinite(load)) return;
+  const hot = load > 0.6 || peak > 0.9, cool = load < 0.3 && !(peak > 0.6);
+  const next = hot ? Math.max(800, Math.round(budget * 0.75)) : cool ? Math.min(CEILING, Math.round(budget * 1.1)) : budget;
+  if (next !== budget) { budget = next; sendBudget(); }
+}
 
 const shell = createShell({
   id: 'grand',
@@ -23,7 +40,8 @@ const shell = createShell({
   chain: { volume: 'volume', room: 'room' },
   space: 'sustain',
   arrows: { param: 'velocity', step: 0.05 },
-  onAudio: (a) => spectrum.setAnalyser(a.analyser),
+  onAudio: (a) => { spectrum.setAnalyser(a.analyser); sendBudget(); },
+  onMessage: (m) => { if (m.type === 'stats') adapt(m); },
   onNoteOn: (key, vel) => { focus = key; focusVel = vel; schedule(); },
   onParam: (id) => { if (id !== 'volume' && id !== 'room' && id !== 'velocity') schedule(); },
 });
@@ -57,14 +75,14 @@ function simulate(key, vel) {
     if (v.hammerOn) { lastEta = v.eta; lastVel = (v.eta - v.etaPrev) * FS; tOff = s; }
     if (s % stride === 0) {
       const y = new Float32Array(NX);
-      for (let j = 0; j < nP; j++) { const q = v.q[j]; for (let i = 0; i < NX; i++) y[i] += q * phi[j * NX + i]; }
+      for (let j = 0; j < nP; j++) { const q = v.q[j * d.ns]; for (let i = 0; i < NX; i++) y[i] += q * phi[j * NX + i]; }
       frames.push(y); eta.push(v.hammerOn ? v.eta : lastEta + (lastVel * (s - tOff)) / FS);
     }
   }
-  // modal amplitudes of string 0 (V) after the strike
+  // modal amplitudes of string 0 (V) after the strike (the strings of a partial sit side by side)
   const amp = new Float64Array(nP);
   for (let j = 0; j < nP; j++) { // amplitude of a sinusoid from two consecutive samples
-    const c = Math.cos((TAU * d.freq[j]) / FS), q0 = v.q[j], q1 = v.q1[j];
+    const i = j * d.ns, c = Math.cos((TAU * d.freq[i]) / FS), q0 = v.q[i], q1 = v.q1[i];
     amp[j] = Math.sqrt(Math.max(0, (q0 * q0 + q1 * q1 - 2 * q0 * q1 * c) / (1 - c * c)));
   }
   let maxY = 1e-9;
@@ -100,6 +118,7 @@ function update() {
     ['String', `L = ${(S.L * 100).toFixed(1)} cm · ${S.wound ? `⌀${(S.d * 1e3).toFixed(2)} mm core, copper-wound to ⌀${(S.dOut * 1e3).toFixed(1)} mm` : `plain steel ⌀${(S.d * 1e3).toFixed(2)} mm`}`],
     ['Tension', `${S.T.toFixed(0)} N (${((100 * S.stress) / 2.2e9).toFixed(0)} % of breaking) · μ = ${(S.mu * 1e3).toFixed(1)} g/m`],
     ['Inharmonicity', `B = ${S.B.toExponential(2)}${ps[9] ? ` · 10th partial ${ps[9].stretch >= 0 ? '+' : ''}${ps[9].stretch.toFixed(0)} ¢` : ''}`],
+    ['Tuning', P.stretch === false ? '12-TET' : `${S.cents >= 0 ? '+' : ''}${S.cents.toFixed(1)} ¢ from 12-TET (stretched: every octave beatless)`],
     ['Hammer', `${(d.hammer.mass / ns * 1e3).toFixed(1)} g at ${sim.v0.toFixed(2)} m/s, x = ${(d.xh * 100).toFixed(1)} cm · contact ${sim.contactMs.toFixed(2)} ms, peak ${sim.Fmax.toFixed(0)} N`],
     ['Bridge', B ? `soundboard: Re Y(f₁) = ${sci(ps[0].GV)} s/kg (board mean ${sci(B.Ginf)}) · σ_b = ${sb.toFixed(2)} s⁻¹` : `frame: G = ${sci(P.gFrame)} s/kg · σ_b = ${sb.toFixed(3)} s⁻¹ per string`],
     ['Unison', ns > 1 ? `coupling ${ns}σ_b = ${(ns * sb).toFixed(3)} s⁻¹ vs mistuning 2πΔf = ${dw.toFixed(3)} s⁻¹ → ${dw > ns * sb ? 'they beat' : 'they lock'}` : 'one string'],

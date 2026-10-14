@@ -24,7 +24,10 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/pianet/>
 The real Pianet spans F1–F6. Here it spans C2–C7 like the other Forte
 keyboards. The Pianet itself had no sustain pedal, and lifting every pad at
 once would pluck every reed. So `Space` does not lift pads: it latches the
-pads of keys you have played until you let go.
+pads of keys you have played until you let go. Pressing a latched key again
+drops its pad onto the ringing reed; once the pad has landed, choked the
+reed and re-tacked to 95 % of its disc (40–55 ms), the key lifts it and
+plucks again, within a dB of a fresh note.
 
 ## The physics
 
@@ -121,7 +124,8 @@ The crack law has two limits with closed forms, and both are tested:
 **What this does to the touch.** A faster key loads the bond faster, and the
 reed is released from further up. At C4 the pad lets go at 0.47 N (3 cm/s),
 0.59 N (11 cm/s) and 0.78 N (40 cm/s), against a static tack of 0.25 N. Notes
-get 3–6.5 dB louder from pp to ff: weak, but real. On a stiff treble reed this
+get 2.5–7.5 dB louder from pp to ff (sustained level), most in the bass:
+weak, but real. On a stiff treble reed this
 is exactly the crack law at the loading rate k_series·V, which the engine
 follows to within 15 %. Two side effects:
 
@@ -157,17 +161,23 @@ few ms of its pad landing comes out weaker.
 **Pianet T: variable reluctance.** A magnet pole sits under each reed tip at
 gap g. The steel tip closes the magnetic circuit; the rest of the circuit
 (the magnet and the return path through air) is lumped into an equivalent
-air gap ℓ = 1.5 mm:
+air gap ℓ = 1.5 mm. Every pickup has the same magnet (a fixed magnetomotive
+force), so the flux goes as 1/(ℓ + g + y). Relative to a reed at rest at the
+reference gap g_ref = 1 mm,
 
-  Φ(y)/Φ₀ = (ℓ + g) / (ℓ + g + y),   e = −N dΦ/dt,
+  Φ(y)/Φ_ref = (ℓ + g_ref) / (ℓ + g + y),   e = −N dΦ/dt,
 
-where y is the tip's height (up = away from the pole). The swing towards the
-pole changes the flux more than the swing away, which gives a 2nd harmonic.
-For y = Y sin ωt the harmonics fall by ρ = (1 − √(1 − ε²))/ε with
-ε = Y/(ℓ + g), so in the output H₂/H₁ = 2ρ ≈ ε (tested). At mf with the
-default voicing the 2nd harmonic is at −9 dB (C2), −14 (C3), −20 (C4),
-−27 (C5) and −36 dB (C6): a little bark in the bass and a pure treble. The
-output follows the tip's *velocity*. The coils are wired in series and wound
+where y is the tip's height (up = away from the pole). A closer pole means
+more flux and a steeper dΦ/dy: at small swings the output goes as
+1/(ℓ + g)² (tested: a pole moved from 0.42 to 2.5 mm at C5 costs 13 dB).
+The swing towards the pole changes the flux more than the swing away, which
+gives a 2nd harmonic. For y = Y sin ωt the harmonics fall by
+ρ = (1 − √(1 − ε²))/ε with ε = Y/(ℓ + g), so in the output H₂/H₁ = 2ρ ≈ ε
+(tested). At mf with the default voicing the 2nd harmonic is at −9 dB (C2),
+−14 (C3), −20 (C4), −28 (C5) and −37 dB (C6): a little bark in the bass and
+a pure treble. The output follows the tip's *velocity*: it is the flux step
+per sample times the sample rate, so the level is the same at 44.1, 48 and
+96 kHz (tested). The coils are wired in series and wound
 alternately (Raes), so neighbouring keys have opposite polarity. About 1 H of
 coils against the cable makes a resonant low-pass near 7 kHz (assumed, Q 1.2).
 If the swing exceeds the gap, the tip **strikes the pole piece**: an elastic
@@ -207,19 +217,32 @@ while the reed is held up, and then the reed swings back through it. The
 test checks the rail against the first-order high-pass between the two
 regimes.
 
-**Voicing.** Both gaps (and the plate edge) are scaled per key by
-√(f_C4/f) ∝ √(swing). Each reed then sweeps a similar part of its pickup's
-nonlinear range, and the levels come out even across the keyboard. The knobs
-set the C4 values.
+**Voicing.** The knobs set the C4 values, and each key is voiced from
+them. The N's plate gap and edge height go as √(f_C4/f) ∝ √(swing), so every
+reed sweeps a similar part of the plate's nonlinear range. The T's pole gaps
+follow √(swing) below C4 too: a bass reed's forte swing (±1.96 mm at C2)
+has to clear its pole (2 mm). Above C4 they close only as (f_C4/f)^¼,
+because a closer pole means more flux: with √ gaps the top octave would
+come out 4 dB louder than the middle at mf, as voiced it is 2 dB louder. Forte notes then peak at 0.28–0.38 across the
+keyboard (T) and 0.20–0.45 (N). With a fixed magnet the bass, whose gaps
+cannot close, sits about 3 dB below the middle at mf.
 
 ### 6. Output
 
 An RC low-pass (the *Tone* knob) stands for the tone pot and cable. The
 optional valve combo is generic: asymmetric tanh clipping at 2×, then a
 10″ speaker's band-pass (80 Hz high-pass, cone resonance, a 2.4 kHz
-presence peak, 5 kHz roll-off). The instrument is mono: one pickup rail.
-The voices run 2× oversampled and are decimated with a 63-tap
-windowed-sinc FIR. Ten voices take 2.6 % of real time in Node.
+presence peak, 5 kHz roll-off). Switching it in or out crossfades over
+20 ms. The instrument is mono: one pickup rail. The voices run 2×
+oversampled and are decimated with a 63-tap windowed-sinc FIR (applied
+folded: it is symmetric). Ten voices take 2.5 % of real time in Node.
+
+Moving a pickup knob while notes ring does not click. The pole gap, the
+plate gap and the edge height follow their knobs through two 15 ms lags in
+series, so a pickup starts moving with zero speed: the T's output, which is
+the flux's rate of change, cannot step. Moving a magnet pole does induce a
+little voltage, a soft thump, as it would on the real thing. Switching
+pickups ducks the output to zero over 10 ms and back.
 
 ## What to listen for
 
@@ -285,6 +308,7 @@ tools/render-pianet.mjs               node tools/render-pianet.mjs → examples/
   tip) are assumptions; the T's real pole may sit off the reed's path. The
   magnet's pull on the reed is ignored, though it would flatten a reed set
   close to its pole slightly. The pole stop is a linear spring with no loss.
+  The tip-mass and reed-loss knobs re-cut the reeds and apply to new notes.
 * **The electrostatic pickup is a 2-D image-charge model** of a line charge
   near a plate edge, and the bias values (300 V, 10 MΩ, 150 pF) are typical
   rather than documented. Intermodulation through the shared rail is modelled

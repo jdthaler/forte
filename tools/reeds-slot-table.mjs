@@ -7,13 +7,18 @@
 // from the one before, so SOR only has to remove short-wavelength error on
 // the fine grid. C(y) is even in y (the slot is symmetric about the comb's
 // mid-plane), so only y ≥ 0 is solved.
+//
+// The sweep covers the reed's whole travel: it touches the grounded frame at
+// |y| = H − h/2 = 5.75 mm (the engine's end stop), and one more row at 5.8 mm
+// (the reed's top clipped by the frame) gives the cubic interpolation its last
+// neighbour.
 
 import { writeFileSync } from 'node:fs';
 import { makeSlot, placeReed, solve, reedCharge, EPS0, SLOT_GEOM } from '../reeds/src/slot-field.js';
 
 const mm = 1e-3;
 const GAPS = [0.1, 0.15, 0.2, 0.3, 0.45, 0.65, 1.0, 1.5];
-const DY = 0.05, YMAX = 4.5, DXS = [0.1, 0.05, 0.025];
+const DY = 0.05, YMAX = 5.8, DXS = [0.1, 0.05, 0.025];
 
 // bilinear prolongation of a coarse solution onto a grid with half the step
 function prolong(C, F) {
@@ -50,6 +55,8 @@ writeFileSync(new URL('../reeds/src/slot-table.js', import.meta.url), `// slot-t
 // Mutual capacitance per unit insertion depth between one reed and the comb,
 // C′(y)/ε₀ (dimensionless), for reed heights y = ${-YMAX} … ${YMAX} mm above the comb's
 // mid-plane in steps of ${DY} mm (rows), one row per gap in SLOT_GAPS (mm).
+// The reed touches the frame at ±${(SLOT_GEOM.H - SLOT_GEOM.h / 2) / mm} mm; the last row on each side has
+// its top clipped by the frame and only serves the interpolation.
 // Geometry: reed ${SLOT_GEOM.h / mm} × ${SLOT_GEOM.b / mm} mm, comb ${SLOT_GEOM.t / mm} mm thick, teeth ${SLOT_GEOM.tooth / mm} mm wide,
 // grounded frame ±${SLOT_GEOM.H / mm} mm; grid ${DXS[DXS.length - 1]} mm.
 

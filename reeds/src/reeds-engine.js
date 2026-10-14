@@ -7,14 +7,23 @@
 //
 // The reeds and everything up to the decimator run 2× oversampled: the slot's
 // C(y) turns a large swing into many harmonics.
+//
+// Knob moves do not click: the gap and the reed's rest height glide (the C(y)
+// table is blended from block to block), and switching outputs crossfades
+// (the speaker filters always run).
 
 import { TAU, Biquad, DCBlock } from '../../shared/dsp.js';
-import { keyModel, capCurve, pickupNode, hammerSpeed, PREAMP, LOSS } from './reeds-model.js';
+import { keyModel, fillCap, pickupNode, hammerSpeed, PREAMP, LOSS, STOP } from './reeds-model.js';
+import { SLOT_Y } from './slot-table.js';
 
 const OS = 2;
 const OUT = 0.5;           // volts at the preamp → output units
+const DIRECT = 0.6;        // direct out, trimmed 4.4 dB below the speakers' passband: the speakers drop the bass, so the two come out about as loud
 const HAMMER_MAX = 0.03;   // s: longest the hammer may stay in flight
-const KILL = 300;          // s⁻¹: voice stealing / panic
+const KILL = 300;          // s⁻¹: voice stealing / panic / a re-strike with new reed parameters
+const GLIDE = 0.02;        // s: the gap and the rest height follow their knobs with this time constant
+const XFADE = 0.02;        // s: switching between speakers and direct out crossfades over this
+const XMAX = SLOT_Y.n - 3 - 1e-9; // last table position the cubic interpolation can use
 
 export class Voice {
   constructor(eng, key, d) {
@@ -23,7 +32,7 @@ export class Voice {
     const F = () => new Float64Array(N);
     this.q = F(); this.q1 = F(); this.a1 = F(); this.a2 = F(); this.a1d = F(); this.a2d = F();
     this.w = F(); this.bw = F(); this.pk = F(); this.bp = F(); this.om = F(); this.sig = F(); this.dw = F();
-    let comp = 0;
+    let comp = 0, cpk = 0;
     for (let i = 0; i < N; i++) {
       const om = TAU * d.freq[i], sig = d.sigma[i];
       this.om[i] = om; this.sig[i] = sig; this.dw[i] = d.dampW[i];
@@ -31,9 +40,10 @@ export class Voice {
       this.a1[i] = 2 * r * Math.cos(od * k); this.a2[i] = r * r;
       const b = (k * r * Math.sin(od * k)) / od; // response to a unit force impulse (unit modal mass)
       this.w[i] = d.w[i]; this.bw[i] = b * d.w[i]; comp += b * d.w[i] * d.w[i];
-      this.pk[i] = d.pk[i]; this.bp[i] = b * d.pk[i];
+      this.pk[i] = d.pk[i]; this.bp[i] = b * d.pk[i]; cpk += b * d.pk[i] * d.pk[i];
     }
     this.comp = comp; // strike-point compliance over one step: Σ b w²
+    this.cStop = cpk; this.stopDen = 1 / (1 + STOP.K * cpk); this.hits = 0; // the same at the slot, for the frame stop
     this.hammer = d.hammer;
     this.keyDown = true; this.damped = false; this.killing = false; this.dead = false;
     this.hammerOn = false; this.quiet = 0; this.peak = 0;
@@ -50,7 +60,7 @@ export class Voice {
     }
   }
   updateDamping(eng) { this.damped = this.killing || (!this.keyDown && !eng.sustain); }
-  kill(eng) { this.killing = true; this.setDamper(eng.damperSigma); this.damped = true; }
+  kill(eng) { if (this.killing) return; this.killing = true; this.setDamper(eng.damperSigma); this.damped = true; }
 
   // Launch the hammer from just below the reed's current position at speed v.
   strike(v) {
@@ -99,11 +109,15 @@ export class Voice {
   }
 
   // Adds this reed's capacitance change δC(t) = C(y₀ + y) − C(y₀) (farads) to buf.
+  // While a knob glides, the slot (table, y₀ and the rest values) moves linearly
+  // across the block from the engine's current state to its next (…N) one.
   render(buf, n, eng) {
     const N = this.N, q = this.q, q1 = this.q1, PK = this.pk, BP = this.bp;
     const A1 = this.damped ? this.a1d : this.a1, A2 = this.damped ? this.a2d : this.a2;
-    const T = eng.cap, c = T.c, ty0 = T.y0, idy = 1 / T.dy, xmax = T.n - 3 - 1e-9;
-    const y0 = eng.y0, cRest = eng.cRest, dRest = eng.dRest, kF = eng.kF;
+    const c = eng.capA, cB = eng.capB, ty0 = SLOT_Y.min, idy = 1 / SLOT_Y.step, xmax = XMAX;
+    const blend = eng.blend, two = eng.twoTables, inv = 1 / n, kF = eng.kF, yS = STOP.y, kS = STOP.K, sDen = this.stopDen, cS = this.cStop;
+    const y0a = eng.y0, cRa = eng.cRest, dRa = eng.dRest, dy0 = eng.y0N - y0a, dcR = eng.cRestN - cRa, ddR = eng.dRestN - dRa;
+    let y0 = y0a, cRest = cRa, dRest = dRa, t = 0;
     let peak = 0, yMin = this.yMin, yMax = this.yMax;
     for (let s = 0; s < n; s++) {
       let y = 0;
@@ -130,16 +144,30 @@ export class Voice {
         for (let i = 0; i < N; i++) y += PK[i] * q[i];
         if (++this.hammerSamples > eng.hammerMax || (this.contact && F === 0 && this.dPrev < -2e-4)) this.hammerOn = false;
       }
+      if (blend) { t = (s + 1) * inv; y0 = y0a + t * dy0; cRest = cRa + t * dcR; dRest = dRa + t * ddR; }
+      // the frame: a stiff elastic stop at |y₀ + y| = H − h/2, solved implicitly
+      const ya = y0 + y;
+      if (ya > yS || ya < -yS) {
+        const Fs = kS * ((ya > 0 ? yS : -yS) - ya) * sDen;
+        for (let i = 0; i < N; i++) q[i] += BP[i] * Fs;
+        y += cS * Fs; this.hits++;
+      }
       if (y < yMin) yMin = y; else if (y > yMax) yMax = y;
       // the slot: C(y₀ + y) and dC/dy by Catmull–Rom on the Laplace table
       let x = (y0 + y - ty0) * idy;
       if (x < 1) x = 1; else if (x > xmax) x = xmax;
-      const j = x | 0, f = x - j, p0 = c[j - 1], p1 = c[j], p2 = c[j + 1], p3 = c[j + 2];
-      const b1 = 0.5 * (p2 - p0), b2 = p0 - 2.5 * p1 + 2 * p2 - 0.5 * p3, b3 = 0.5 * (p3 - p0) + 1.5 * (p1 - p2);
-      const dC = ((b3 * f + b2) * f + b1) * f + p1 - cRest;
-      buf[s] += dC;
+      const j = x | 0, f = x - j;
+      let p0 = c[j - 1], p1 = c[j], p2 = c[j + 1], p3 = c[j + 2];
+      let b1 = 0.5 * (p2 - p0), b2 = p0 - 2.5 * p1 + 2 * p2 - 0.5 * p3, b3 = 0.5 * (p3 - p0) + 1.5 * (p1 - p2);
+      let C = ((b3 * f + b2) * f + b1) * f + p1, dCdx = (3 * b3 * f + 2 * b2) * f + b1;
+      if (two) { // the gap is gliding: blend toward the next block's table
+        p0 = cB[j - 1]; p1 = cB[j]; p2 = cB[j + 1]; p3 = cB[j + 2];
+        b1 = 0.5 * (p2 - p0); b2 = p0 - 2.5 * p1 + 2 * p2 - 0.5 * p3; b3 = 0.5 * (p3 - p0) + 1.5 * (p1 - p2);
+        C += t * (((b3 * f + b2) * f + b1) * f + p1 - C); dCdx += t * ((3 * b3 * f + 2 * b2) * f + b1 - dCdx);
+      }
+      buf[s] += C - cRest;
       // the field pulls the reed toward higher C: F = ½V² dC/dy (static part balanced at rest)
-      const Fe = kF * (((3 * b3 * f + 2 * b2) * f + b1) * idy - dRest);
+      const Fe = kF * (dCdx * idy - dRest);
       for (let i = 0; i < N; i++) q[i] += BP[i] * Fe;
       const a = y < 0 ? -y : y;
       if (a > peak) peak = a;
@@ -170,26 +198,40 @@ export class ReedEngine {
       sum += h[i];
     }
     for (let i = 0; i < T; i++) h[i] /= sum;
-    this.fir = h; this.T = T; this.hist = new Float64Array(64); this.hi = 0;
+    // symmetric, so it is applied folded; the history is written twice (i and
+    // i + 64) so the taps read straight back from hist[hi + 64]
+    this.fir = h; this.T = T; this.hist = new Float64Array(128); this.hi = 0;
     // pickup node, tremolo photocell, preamp
     this.u = 0; this.xPrev = 0; this.ldr = 0; this.tremPhase = 0;
     this.dc = new DCBlock(12, fs);
     this.spk = [new Biquad(), new Biquad(), new Biquad(), new Biquad()];
     this.spkHP1 = { a: 0, x1: 0, y1: 0 };
+    // the slot: C(y) for the current gap (capA) and, while it glides, the next block's (capB)
+    this.capA = new Float64Array(SLOT_Y.n); this.capB = new Float64Array(SLOT_Y.n);
+    this.gap = this.gapT = this.gapN = 0; this.y0 = this.y0T = this.y0N = 0;
+    this.cRest = this.cRestN = this.dRest = this.dRestN = 0; this.blend = false; this.twoTables = false;
+    this.mix = 1; this.mixStep = 1 / (XFADE * fs); // 1 = speakers, 0 = direct out
+  }
+
+  // C and dC/dy of table c at height y (Catmull–Rom), into this.rC, this.rD.
+  restAt(c, y) {
+    const x = Math.min(Math.max((y - SLOT_Y.min) / SLOT_Y.step, 1), XMAX), j = x | 0, f = x - j;
+    const p0 = c[j - 1], p1 = c[j], p2 = c[j + 1], p3 = c[j + 2];
+    const b1 = 0.5 * (p2 - p0), b2 = p0 - 2.5 * p1 + 2 * p2 - 0.5 * p3, b3 = 0.5 * (p3 - p0) + 1.5 * (p1 - p2);
+    this.rC = ((b3 * f + b2) * f + b1) * f + p1;
+    this.rD = ((3 * b3 * f + 2 * b2) * f + b1) / SLOT_Y.step;
   }
 
   setParams(P) {
     const old = this.P;
     this.P = P;
     const k = 1 / this.fs2;
-    if (!old || old.gap !== P.gap) this.cap = capCurve(P.gap);
-    if (!old || old.gap !== P.gap || old.offset !== P.offset) {
-      this.y0 = P.offset * 1e-3;
-      const c = this.cap, x = Math.min(Math.max((this.y0 - c.y0) / c.dy, 1), c.n - 3 - 1e-9), j = x | 0, f = x - j;
-      const p0 = c.c[j - 1], p1 = c.c[j], p2 = c.c[j + 1], p3 = c.c[j + 2];
-      const b1 = 0.5 * (p2 - p0), b2 = p0 - 2.5 * p1 + 2 * p2 - 0.5 * p3, b3 = 0.5 * (p3 - p0) + 1.5 * (p1 - p2);
-      this.cRest = ((b3 * f + b2) * f + b1) * f + p1;
-      this.dRest = ((3 * b3 * f + 2 * b2) * f + b1) / c.dy;
+    // the slot glides to the new gap and rest height in process()
+    this.gapT = P.gap; this.y0T = P.offset * 1e-3;
+    if (!old) {
+      this.gap = P.gap; this.y0 = this.y0T; fillCap(this.capA, P.gap);
+      this.restAt(this.capA, this.y0); this.cRest = this.rC; this.dRest = this.rD;
+      this.mix = P.output === 'speaker' ? 1 : 0;
     }
     this.kF = 0.5 * P.bias * P.bias;
     // comb node: exact update for δC linear within a step
@@ -223,7 +265,7 @@ export class ReedEngine {
     const d = data || this.model(key);
     let v = this.byKey.get(key);
     if (!v || v.dead || v.killing || (data && v.version !== data.version) || (!data && v.data !== d)) {
-      if (v && !v.dead) { v.keyDown = false; v.updateDamping(this); }
+      if (v && !v.dead) v.kill(this); // struck again with new reed parameters: the old reed fades out quickly
       v = new Voice(this, key, d); v.data = d;
       this.voices.push(v); this.byKey.set(key, v);
     }
@@ -242,7 +284,24 @@ export class ReedEngine {
   process(L, R, n) {
     const n2 = n * OS, mono = this.mono, P = this.P;
     mono.fill(0, 0, n2);
+    // glide the slot toward the knobs: this block runs from the current state to the next
+    const gl = this.gap !== this.gapT, yl = this.y0 !== this.y0T;
+    this.blend = gl || yl; this.twoTables = gl;
+    if (this.blend) {
+      const a = 1 - Math.exp(-n / (GLIDE * this.fs));
+      let gN = this.gap + a * (this.gapT - this.gap), yN = this.y0 + a * (this.y0T - this.y0);
+      if (Math.abs(this.gapT - gN) < 1e-6 * this.gapT) gN = this.gapT;
+      if (Math.abs(this.y0T - yN) < 1e-9) yN = this.y0T;
+      if (gl) fillCap(this.capB, gN);
+      this.restAt(gl ? this.capB : this.capA, yN);
+      this.gapN = gN; this.y0N = yN; this.cRestN = this.rC; this.dRestN = this.rD;
+    } else { this.y0N = this.y0; this.cRestN = this.cRest; this.dRestN = this.dRest; }
     if (P) for (const v of this.voices) v.render(mono, n2, this);
+    if (this.blend) {
+      if (gl) { const t = this.capA; this.capA = this.capB; this.capB = t; }
+      this.gap = this.gapN; this.y0 = this.y0N; this.cRest = this.cRestN; this.dRest = this.dRestN;
+      this.blend = this.twoTables = false;
+    }
     let j = 0;
     for (const v of this.voices) {
       if (v.dead) { if (this.byKey.get(v.key) === v) this.byKey.delete(v.key); } else this.voices[j++] = v;
@@ -250,10 +309,10 @@ export class ReedEngine {
     this.voices.length = j;
     if (!P) { L.fill(0, 0, n); R.fill(0, 0, n); return; }
 
-    const hist = this.hist, fir = this.fir, T = this.T, A = this.nodeA, B = this.nodeB;
+    const hist = this.hist, fir = this.fir, T = this.T, Th = (T - 1) >> 1, A = this.nodeA, B = this.nodeB;
     const gain = PREAMP.gain, D = this.drive, iD = 1 / D, depth = P.tremDepth, inc = this.tremInc;
-    const speaker = P.output === 'speaker', s0 = this.spk[0], s1 = this.spk[1], s2 = this.spk[2], s3 = this.spk[3], hp = this.spkHP1;
-    let u = this.u, xPrev = this.xPrev, ldr = this.ldr, ph = this.tremPhase, hi = this.hi;
+    const mixT = P.output === 'speaker' ? 1 : 0, mStep = this.mixStep, s0 = this.spk[0], s1 = this.spk[1], s2 = this.spk[2], s3 = this.spk[3], hp = this.spkHP1;
+    let u = this.u, xPrev = this.xPrev, ldr = this.ldr, ph = this.tremPhase, hi = this.hi, mix = this.mix;
     for (let s = 0; s < n2; s++) {
       // comb node voltage (AC part), v′ = −v/τ − (V_b/C0) δC′
       const x = mono[s];
@@ -268,19 +327,20 @@ export class ReedEngine {
       v *= D;
       v = v > 0 ? 1.6 * Math.tanh(v / 1.6) : 1.1 * Math.tanh(v / 1.1);
       v *= iD;
-      hi = (hi + 1) & 63; hist[hi] = v;
+      hi = (hi + 1) & 63; hist[hi] = hist[hi + 64] = v;
       if (s & 1) {
-        let a = 0;
-        for (let t = 0; t < T; t++) a += fir[t] * hist[(hi - t) & 63];
-        let o = this.dc.run(a);
-        if (speaker) {
-          const yh = hp.a * (hp.y1 + o - hp.x1); hp.x1 = o; hp.y1 = yh;
-          o = s3.run(s2.run(s1.run(s0.run(yh))));
-        }
-        L[s >> 1] = OUT * o;
+        const b = hi + 64, e = b - T + 1;
+        let a = fir[Th] * hist[b - Th];
+        for (let t = 0; t < Th; t++) a += fir[t] * (hist[b - t] + hist[e + t]);
+        const o = this.dc.run(a);
+        // the speakers always run, so switching outputs is a crossfade, not a jump
+        const yh = hp.a * (hp.y1 + o - hp.x1); hp.x1 = o; hp.y1 = yh;
+        const sp = s3.run(s2.run(s1.run(s0.run(yh))));
+        L[s >> 1] = OUT * (DIRECT * o + mix * (sp - DIRECT * o));
+        if (mix !== mixT) mix = mixT > mix ? Math.min(mixT, mix + mStep) : Math.max(mixT, mix - mStep);
       }
     }
-    this.u = u; this.xPrev = xPrev; this.ldr = ldr; this.tremPhase = ph; this.hi = hi;
+    this.u = u; this.xPrev = xPrev; this.ldr = ldr; this.tremPhase = ph; this.hi = hi; this.mix = mix;
     for (let i = 0; i < n; i++) R[i] = L[i];
   }
 }
