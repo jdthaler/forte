@@ -10,6 +10,50 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-14 — harpsichord
+
+### Harpsichord 0.1.0
+- New instrument, after a Flemish Ruckers double as rebuilt in France with
+  a five-octave compass (FF–f³, 61 keys): three choirs of strings (front
+  8′, back 8′ and 4′), iron from B♭ up and brass below, on a Ruckers-like
+  scale (c² = 355 mm, Pythagorean in the treble, foreshortened to 1.65 m
+  in the bass). Each string is a stiff string in modal form (up to 90
+  partials, B from 6×10⁻⁶ to 8×10⁻⁴), tuned exactly through its
+  inharmonicity at A = 440 or 415 Hz, in equal temperament, ¼-comma
+  meantone or Werckmeister III.
+- **The pluck:** each plectrum (Delrin or quill) is a tapered cantilever
+  under the string. It catches the string, bends, and the string slides out
+  along it against friction and its own sideways stiffness until it slips
+  off the tip. The contacts (plectra, damper felts, buff pads) are solved
+  implicitly every sample. Voicing (tip stiffness and overlap), friction,
+  the plucking point of each row and the stagger between rows all change
+  the release, and the comb filter of the plucking point.
+- **Registration as on a French double:** upper manual (front 8′, and a
+  lute row plucking the back 8′ strings by the nut), lower manual (back 8′
+  and 4′), and a shove coupler; the buff stop presses leather pads on the
+  back 8′ strings by the nut.
+- **Key up:** the jacks fall; the plectra brush past on their tongues and
+  the damper felts land, more gently the slower the key comes up (MIDI
+  release velocity, sent by the page; other keys use a free drop). Key and
+  jack knocks reach the board. Velocity barely matters, as on a real
+  harpsichord: about 1 dB and a slightly brighter pluck on one choir.
+- **The soundboard:** an equivalent orthotropic plate (77 modes) driven along
+  the 8′ and 4′ bridges, draining each partial at its conductance there,
+  and heard by two microphones (bass end left, treble end right); it can be
+  switched off to hear the bridge force alone.
+- Views: the pluck in slow motion (jack, bending plectrum, string and the
+  force); the scale across the compass with every row's plucking point and
+  the inharmonicity; the pluck's comb over the live spectrum. Eight demos.
+
+### Forte 0.5.2
+- MIDI release velocity reaches the engines: the shell's note-off carries
+  it and `shared/worklet.js` passes it on as `noteOff(key, velocity)`
+  (undefined when the keyboard sends none); `tools/audio-util.mjs`
+  renders can give one too. The Harpsichord uses it for how fast the
+  jacks fall.
+- The root README lists the Vibraphone, Bubble Organ and Harpsichord as
+  playable, and `docs/WORKSHOP.md` points their briefs at the instruments.
+
 ## 2026-10-14 — bubble organ
 
 ### Bubble Organ 0.1.0

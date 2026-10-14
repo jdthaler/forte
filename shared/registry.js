@@ -6,7 +6,7 @@
 // Keep FORTE_VERSION equal to package.json's, and log every bump in
 // CHANGELOG.md (test/site-tests.mjs checks both).
 
-export const FORTE_VERSION = '0.5.1';
+export const FORTE_VERSION = '0.5.2';
 
 export const SECTIONS = [
   { id: 'history', title: 'Instruments from history', blurb: 'Real keyboards — some famous, some forgotten — rebuilt from their physics, with every mechanism exposed as a knob.' },
@@ -85,7 +85,7 @@ export const INSTRUMENTS = [
     accent: '#ff7a45',
   },
   {
-    id: 'harpsichord', name: 'Harpsichord', section: 'history', ready: false,
+    id: 'harpsichord', name: 'Harpsichord', section: 'history', ready: true, version: '0.1.0', trim: -2,
     after: 'the Flemish double-manual harpsichord (Ruckers, 1600s)',
     tagline: 'A quill bends, slips off the string and plucks it; stops change where and how it plucks.',
     physics: 'Plectrum contact and release · plucked stiff strings',

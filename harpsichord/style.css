@@ -1,0 +1,10 @@
+/* The page's own palette and any layout beyond shared/instrument.css. */
+:root {
+  --accent: #f4d39b;
+  --accent-2: #c98b5a;
+  --accent-ink: #231705;
+  --brass: #d9a441;
+  --iron: #9fb4c8;
+}
+#pluck-info { font-size: 11px; font-variant-numeric: tabular-nums; color: var(--text); padding-top: 4px; min-height: 2.8em; }
+#pluck-info span { white-space: nowrap; }

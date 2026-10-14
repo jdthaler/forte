@@ -1,0 +1,375 @@
+// Harpsichord checks. Run: node test/harpsichord-tests.mjs
+//
+// The string against stiff-string theory, the scale, the temperaments and the
+// cantilever against beam theory; the pluck against an ideal pluck, energy
+// conservation and an independent quasi-static solution; then the engine
+// against the model: tuning, the comb, the registers, touch, dampers, voices,
+// levels and stability.
+
+import assert from 'node:assert/strict';
+import {
+  KEY_LO, KEY_HI, C2, stringDesign, stringLength, partialFreq, keyPitch, temperamentCents, temperamentOffsets, PYTH_COMMA,
+  isBrass, simulatePluck, plectrumFor, pluckPoint, registration, stringPartials, boardAdmittance, bridgePoint, buildString,
+  jackSpeed, fallSpeed, ROWS,
+} from '../harpsichord/src/harpsichord-model.js';
+import { makePlectrum, beamC, beamG, beamPhi, quasiStaticRelease, releaseForceClosed } from '../harpsichord/src/plectrum.js';
+import { PT } from '../harpsichord/src/string.js';
+import { HarpsichordEngine } from '../harpsichord/src/harpsichord-engine.js';
+import { DEFAULTS, GROUPS, PRESETS } from '../harpsichord/src/harpsichord-params.js';
+
+const FS = 48000;
+let failures = 0;
+function test(name, fn) {
+  // CPU budgets are set on a desktop machine; shared CI runners are slower and noisy
+  if (process.env.CI && /^CPU|real time|costlier/.test(name)) { console.log('  skip', name, '(timing; skipped on CI)'); return; }
+  try { fn(); console.log('  ok  ', name); } catch (e) { failures++; console.log('  FAIL', name, '\n       ', e.message); }
+}
+const P = (o = {}) => ({ ...DEFAULTS, ...o });
+const cents = (a, b) => 1200 * Math.log2(a / b);
+const near = (a, b, tol, what = '') => assert.ok(Math.abs(a - b) <= tol * Math.abs(b), `${what} ${a} vs ${b} (±${(tol * 100).toFixed(2)} %)`);
+// One row alone: lower manual, coupler off, only that register (the lute plays from the upper manual).
+const solo = (row, o = {}) => P({ manual: ROWS[row].manual, coupler: false, front8: row === 'front', back8: row === 'back', four: row === 'four', lute: row === 'lute', detune: 0, ...o });
+
+// Run the engine through events ([t, 'on', key, vel] | [t, 'off', key, relVel?] | [t, 'params', P] | [t, 'msg', m]),
+// in 128-sample blocks like the AudioWorklet; tap(engine, s) after every block.
+function run(params, events, sec, { fs = FS, tap } = {}) {
+  const e = new HarpsichordEngine(fs);
+  e.setParams(params);
+  const n = Math.round(sec * fs), L = new Float64Array(n), R = new Float64Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
+  const ev = events.map(([t, ...r]) => [Math.round(t * fs), ...r]).sort((a, b) => a[0] - b[0]);
+  let j = 0;
+  for (let s = 0; s < n; s += bl) {
+    while (j < ev.length && ev[j][0] <= s) {
+      const [, type, a, b] = ev[j++];
+      if (type === 'on') e.noteOn(a, b); else if (type === 'off') e.noteOff(a, b); else if (type === 'params') e.setParams(a); else if (type === 'msg') e.handle(a); else if (type === 'panic') e.allNotesOff();
+    }
+    e.process(bL, bR, bl);
+    for (let i = 0; i < bl && s + i < n; i++) { L[s + i] = bL[i]; R[s + i] = bR[i]; }
+    tap?.(e, s);
+  }
+  return Object.assign(L, { R, engine: e });
+}
+// |DTFT| of x[a, b) at f, Hann-windowed.
+function tone(x, f, a, b, fs = FS) {
+  const w = (2 * Math.PI * f) / fs; let re = 0, im = 0;
+  for (let i = a; i < b; i++) { const h = 0.5 - 0.5 * Math.cos((2 * Math.PI * (i - a)) / (b - a)); re += h * x[i] * Math.cos(w * i); im += h * x[i] * Math.sin(w * i); }
+  return Math.hypot(re, im) / ((b - a) / 4);
+}
+// The strongest peak in [f0, f1] (golden-section on |DTFT| after a coarse scan).
+function peak(x, f0, f1, a, b, fs = FS) {
+  let best = f0, bv = -1;
+  const step = (f1 - f0) / 24;
+  for (let f = f0; f <= f1; f += step) { const v = tone(x, f, a, b, fs); if (v > bv) { bv = v; best = f; } }
+  let lo = best - step, hi = best + step;
+  const g = (Math.sqrt(5) - 1) / 2;
+  for (let it = 0; it < 32; it++) { const m1 = hi - g * (hi - lo), m2 = lo + g * (hi - lo); if (tone(x, m1, a, b, fs) > tone(x, m2, a, b, fs)) hi = m2; else lo = m1; }
+  return 0.5 * (lo + hi);
+}
+const peakAbs = (x, a = 0, b = x.length) => { let p = 0; for (let i = a; i < b; i++) p = Math.max(p, Math.abs(x[i])); return p; };
+const rms = (x, a, b) => { let s = 0; for (let i = a; i < b; i++) s += x[i] * x[i]; return Math.sqrt(s / (b - a)); };
+// Spectral centroid (Hz) of x[a, b) over the first 40 partials of string S (they are stretched: Bn²).
+function centroid(x, S, a, b, n = 40) {
+  let s = 0, w = 0;
+  for (let k = 1; k <= n; k++) { const f = partialFreq(S, k); if (f > 12000) break; const v = tone(x, f, a, b) ** 2; s += v * f; w += v; }
+  return s / w;
+}
+// Free-oscillation amplitude of partial i of a string (exact for an undamped partial).
+const amp = (st, i) => { const w = st.W[i], c = Math.cos(w * st.h), a = st.q[i], b = st.q1[i]; return Math.sqrt(Math.max(0, a * a - 2 * c * a * b + b * b)) / Math.abs(Math.sin(w * st.h)); };
+const lossless = { loss: 1e-9, bridgeScale: 0 };
+
+console.log('the strings');
+test('stiff string: fₙ = n f₁ √((1 + Bn²)/(1 + B)), B = π²EI/TL² = π³Ed⁴/64TL² (Fletcher 1964); at a fixed pitch and length B ∝ d², and ∝ 1/T at a fixed wire', () => {
+  for (const [m, ch] of [[29, 'back'], [60, 'back'], [89, 'four']]) {
+    const S = stringDesign(m, ch, P());
+    near(S.B, (Math.PI ** 3 * S.mat.E * S.d ** 4) / (64 * S.T * S.L * S.L), 1e-12, 'B');
+    near(partialFreq(S, 1), S.f0, 1e-12, 'f₁ on target');
+    for (const n of [2, 5, 13]) near(partialFreq(S, n), n * S.f0 * Math.sqrt((1 + S.B * n * n) / (1 + S.B)), 1e-12, `f${n}`);
+  }
+  // the same string, twice as thick: T ∝ d² at a fixed pitch, so B ∝ d⁴/T ∝ d²
+  const S = stringDesign(60, 'back', P()), E = S.mat.E, f = S.f0, L = S.L;
+  const B = (d) => { const mu = (S.mat.rho * Math.PI * d * d) / 4, EI = (E * Math.PI * d ** 4) / 64, T = 4 * L * L * f * f * mu - (EI * Math.PI ** 2) / (L * L); return (Math.PI ** 2 * EI) / (T * L * L); };
+  near(B(2 * S.d) / B(S.d), 4, 2e-3, 'B(2d)/B(d)');
+  // and at a fixed wire, a 415 Hz tuning (T × 0.89) raises B by 1/0.89
+  const S4 = stringDesign(60, 'back', P({ pitch: 415 }));
+  near(S4.B / S.B, S.T / S4.T, 1e-9, 'B ∝ 1/T');
+  near(S4.T / S.T, (415 / 440) ** 2, 2e-3, 'T ∝ f²');
+  assert.ok(S.B > 5e-6 && S.B < 1e-4, `C4: B = ${S.B}`);
+});
+test('the scale: c² is 355 mm and the treble Pythagorean (L·f constant, iron at σ = 4ρ(Lf)² = 1.08 GPa); the bass foreshortened (FF 1.65 m) and brass up to A; tensions 20–63 N', () => {
+  near(stringLength(C2, 'back'), 0.355, 1e-12, 'c²'); near(stringLength(C2, 'four'), 0.1775, 1e-12, '4′ c²');
+  for (const m of [72, 77, 84, 89]) { const S = stringDesign(m, 'back', P({ detune: 0 })); near(S.L * S.f0, 0.355 * keyPitch(72, P()), 0.015, `L·f at ${m}`); near(S.stress, 4 * S.mat.rho * (S.L * S.f0) ** 2, 0.01, 'σ'); }
+  near(stringDesign(C2, 'back', P({ detune: 0 })).stress, 1.08e9, 0.01, 'iron stress at c²');
+  assert.ok(stringLength(KEY_LO, 'back') < 1.7 && stringLength(KEY_LO, 'back') > 1.5, `FF ${stringLength(KEY_LO, 'back')}`);
+  assert.ok(isBrass(45, 'back') && !isBrass(46, 'back') && isBrass(40, 'four') && !isBrass(41, 'four'));
+  for (let m = KEY_LO; m <= KEY_HI; m++) for (const ch of ['back', 'four']) {
+    const S = stringDesign(m, ch, P());
+    assert.ok(S.T > 19.5 && S.T < 63, `${m} ${ch}: T = ${S.T.toFixed(1)} N`);
+    assert.ok(S.stress < (S.mat.name === 'brass' ? 0.75e9 : 1.15e9), `${m} ${ch}: σ = ${(S.stress / 1e9).toFixed(2)} GPa`);
+  }
+});
+test('temperaments: ¼-comma meantone has pure major thirds (386.31 ¢) and 696.58 ¢ fifths, with the wolf G♯–E♭; Werckmeister III and equal close the circle', () => {
+  const c = temperamentCents('meantone'), iv = (a, b) => (((c[b] - c[a]) % 1200) + 1200) % 1200;
+  for (const [a, b] of [[0, 4], [5, 9], [7, 11], [2, 6], [9, 1], [3, 7], [10, 2]]) near(iv(a, b), 1200 * Math.log2(5 / 4), 1e-9, `third ${a}–${b}`);
+  for (const [a, b] of [[0, 7], [7, 2], [3, 10]]) near(iv(a, b), 696.578, 1e-5, `fifth ${a}–${b}`);
+  assert.ok(Math.abs(iv(8, 3) - 737.64) < 0.01, `wolf ${iv(8, 3)}`);
+  const w = temperamentCents('werckmeister'), iw = (a, b) => (((w[b] - w[a]) % 1200) + 1200) % 1200;
+  near(iw(0, 7), 701.955 - PYTH_COMMA / 4, 1e-6, 'C–G'); near(iw(11, 6), 701.955 - PYTH_COMMA / 4, 1e-6, 'B–F♯'); near(iw(5, 0), 701.955, 1e-6, 'F–C pure');
+  assert.ok(temperamentOffsets('equal').every((x) => Math.abs(x) < 1e-9));
+  assert.equal(temperamentOffsets('meantone')[9], 0);
+  near(keyPitch(69, P({ pitch: 415, temperament: 'meantone' })), 415, 1e-12, 'A stays the pitch standard');
+});
+
+console.log('the plectrum and the pluck');
+test('cantilever: a uniform plectrum has c(s) = s³/3EI, slope g(s) = s²/2EI and foreshortening 0.6 w²/s (beam theory), within 0.5 %; a tapered one bends more near its tip', () => {
+  const u = makePlectrum({ kTip: 2500, overlap: 0.6e-3, taper: 0 }), EI = u.EI0, L = u.len;
+  for (const s of [0.5 * L, 0.8 * L, L]) {
+    near(beamC(u, s), s ** 3 / (3 * EI), 5e-3, `c(${s})`);
+    near(beamG(u, s), s ** 2 / (2 * EI), 5e-3, `g(${s})`);
+    const F = 2, w = F * beamC(u, s);
+    near(F * F * beamPhi(u, s), (0.6 * w * w) / s, 5e-3, 'foreshortening');
+  }
+  near(1 / beamC(u, L), 2500, 1e-9, 'tip stiffness');
+  const q = makePlectrum({ kTip: 2500, overlap: 0.6e-3, material: 'quill' });
+  near(1 / beamC(q, q.len), 2500, 1e-9, 'quill tip stiffness');
+  assert.ok(beamC(q, 0.6 * q.len) / beamC(q, q.len) < beamC(u, 0.6 * u.len) / beamC(u, u.len), 'the quill’s compliance is concentrated towards its tip');
+});
+test('ideal pluck: slow and frictionless, the string is let go from its static shape — partial amplitudes ∝ sin(nπx_p/L)/(n²(1 + Bn²)) within 1.5 % (within 0.3 % of the fundamental for every partial)', () => {
+  for (const [m, row] of [[72, 'back'], [60, 'front'], [48, 'back'], [36, 'back']]) {
+    const r = simulatePluck(m, row, solo(row, { mu: 0, stiff: 4000, ...lossless }), { V: 0.01, sec: 1.0, until: 0.002 });
+    assert.ok(r.released !== null, 'released');
+    const st = r.st, S = st.S, x = r.x, A1 = amp(st, 0), pred = (n) => Math.abs(Math.sin((n * Math.PI * x) / S.L)) / (n * n * (1 + S.B * n * n));
+    for (let i = 1; i < Math.min(20, st.N); i++) {
+      const want = pred(i + 1) / pred(1), got = amp(st, i) / A1;
+      assert.ok(Math.abs(got - want) < 3e-3, `${m} ${row} partial ${i + 1}: ${got.toFixed(5)} vs ${want.toFixed(5)}`);
+      if (want > 0.05) assert.ok(Math.abs(got / want - 1) < 0.015, `${m} ${row} partial ${i + 1}: ${((got / want - 1) * 100).toFixed(2)} %`);
+    }
+  }
+});
+test('energy: the string carries the work the plectrum did on it, ∫F du, to 2 % at 48 kHz (the discretisation: 0.4 % at 96, 0.1 % at 192 kHz); a slow push stores ½F²C (C its static compliance)', () => {
+  for (const [m, row, mu] of [[72, 'back', 0], [60, 'front', 0.3], [36, 'back', 0.2], [60, 'four', 0.3]]) {
+    const r = simulatePluck(m, row, solo(row, { mu, ...lossless }), { V: 0.02, sec: 0.8, until: 0.003 });
+    const E = r.st.energy(), W = r.st.work;
+    near(E, W, 0.02, `${m} ${row}: E vs W`);
+    near(E, 0.5 * r.rel.F ** 2 * r.st.staticCompliance(PT.MAIN), 0.03, `${m} ${row}: ½F²C`);
+  }
+  const err = (fs) => { const r = simulatePluck(72, 'back', solo('back', { mu: 0, ...lossless }), { V: 0.02, sec: 0.8, until: 0.003, fs }); return Math.abs(r.st.energy() / r.st.work - 1); };
+  const e48 = err(48000), e96 = err(96000), e192 = err(192000);
+  assert.ok(e96 < 0.3 * e48 && e192 < 0.3 * e96 && e192 < 2e-3, `|E/W − 1|: ${e48.toExponential(1)}, ${e96.toExponential(1)}, ${e192.toExponential(1)}`);
+});
+test('the release: the engine lets go where the quasi-static equilibrium does (force within 2 %), Delrin and quill, with and without friction', () => {
+  for (const [m, row, mat, mu] of [[72, 'back', 'delrin', 0], [72, 'front', 'quill', null], [48, 'back', 'delrin', null], [84, 'four', 'quill', 0.5]]) {
+    const p = solo(row, { material: mat, mu, ...lossless });
+    const r = simulatePluck(m, row, p, { V: 0.01, sec: 1.5, until: 0.001 });
+    const qs = quasiStaticRelease(r.pl, r.st.staticCompliance(PT.MAIN), r.st.Kz[PT.MAIN]);
+    near(r.rel.F, qs.F, 0.02, `${m} ${row} ${mat}: release force`);
+    near(r.rel.s, r.pl.len, 0.01, 'at the tip');
+  }
+});
+test('release force grows as √(EI): frictionless F = √(2EI K_z o)/ℓ, with friction the root of gF² − μ(1 + K_z o g)F − K_z o = 0 (g = ℓ²/2EI); stiffer plectra let go later, after (u + w)/V', () => {
+  const S = stringDesign(72, 'back', P()), x = pluckPoint(72, 'back', P()), Kz = (S.T * S.L) / (x * (S.L - x));
+  const st = buildString(72, 'back', P(), FS); st.setPoint(PT.MAIN, x); const Cs = st.staticCompliance(PT.MAIN);
+  let prevF = 0, prevT = 0;
+  for (const k of [1000, 2000, 3500, 5000]) {
+    for (const mu of [0, 0.25]) {
+      const pl = makePlectrum({ kTip: k, overlap: 0.3e-3, taper: 0, mu, foreshortening: false });
+      const qs = quasiStaticRelease(pl, Cs, Kz);
+      near(qs.F, releaseForceClosed(pl.EI0, pl.len, Kz, pl.overlap, mu), 0.01, `k = ${k}, μ = ${mu}`);
+      if (mu === 0) near(releaseForceClosed(pl.EI0, pl.len, Kz, pl.overlap), Math.sqrt(2 * pl.EI0 * Kz * pl.overlap) / pl.len, 1e-9, 'μ = 0 form');
+    }
+    const p = solo('back', { stiff: k, overlap: 0.4, ...lossless });
+    const V = 0.05, r = simulatePluck(72, 'back', p, { V, sec: 0.5, until: 0.001 });
+    const tTouch = r.trace.t[r.trace.F.findIndex((f) => f > 0)], dt = r.released - tTouch;
+    near(dt, (r.rel.u + r.rel.w) / V, 0.05, `k = ${k}: time from touch to release`);
+    assert.ok(r.rel.F > prevF && dt > prevT, `stiffer lets go later and harder (k = ${k})`);
+    prevF = r.rel.F; prevT = dt;
+  }
+});
+
+console.log('the engine');
+test('tuning: every key FF–f³ sounds within ±2 ¢ of its target (back 8′, 48 kHz; every fourth key at 44.1 kHz), the 4′ an octave above, in meantone at A = 415 too', () => {
+  const p = solo('back', { soundboard: false });
+  for (let m = KEY_LO; m <= KEY_HI; m++) {
+    const x = run(p, [[0, 'on', m, 0.7]], 0.75), f = keyPitch(m, p), a = Math.round(0.15 * FS), b = x.length;
+    const got = peak(x, f * 2 ** (-12 / 1200), f * 2 ** (12 / 1200), a, b);
+    assert.ok(Math.abs(cents(got, f)) < 2, `${m}: ${cents(got, f).toFixed(2)} ¢`);
+  }
+  for (let m = KEY_LO; m <= KEY_HI; m += 4) {
+    const fs = 44100, x = run(p, [[0, 'on', m, 0.7]], 0.75, { fs }), f = keyPitch(m, p);
+    const got = peak(x, f * 2 ** (-12 / 1200), f * 2 ** (12 / 1200), Math.round(0.15 * fs), x.length, fs);
+    assert.ok(Math.abs(cents(got, f)) < 2, `${m} at 44.1 kHz: ${cents(got, f).toFixed(2)} ¢`);
+  }
+  for (const m of [41, 60, 76]) {
+    const p4 = solo('four', { soundboard: false }), x = run(p4, [[0, 'on', m, 0.7]], 0.6), f = 2 * keyPitch(m, p4);
+    const got = peak(x, f * 0.99, f * 1.01, Math.round(0.1 * FS), x.length);
+    assert.ok(Math.abs(cents(got, f)) < 2, `4′ ${m}: ${cents(got, f).toFixed(2)} ¢ from the octave`);
+    assert.ok(tone(x, f / 2, 4800, x.length) < 0.05 * tone(x, f, 4800, x.length), 'nothing at the 8′ pitch');
+  }
+  const pm = solo('back', { soundboard: false, pitch: 415, temperament: 'meantone' });
+  for (const m of [60, 64, 68, 63]) {
+    const x = run(pm, [[0, 'on', m, 0.7]], 0.6), f = keyPitch(m, pm), got = peak(x, f * 0.993, f * 1.007, 4800, x.length);
+    assert.ok(Math.abs(cents(got, f)) < 2, `meantone ${m}: ${cents(got, f).toFixed(2)} ¢`);
+  }
+});
+test('the comb: plucked at 1/5 of its length (and its multiples), c²’s 5th and 10th partials are missing from the sound; the model’s comb predicts every partial within 2 dB', () => {
+  const L = stringLength(72, 'back'), p = solo('back', { soundboard: false, xBack: (L / 5) * 1000 });
+  const x = run(p, [[0, 'on', 72, 0.7]], 0.5), S = stringDesign(72, 'back', p), a = 2400, b = x.length;
+  const lev = (n) => tone(x, partialFreq(S, n), a, b);
+  assert.ok(lev(5) < 0.03 * Math.min(lev(4), lev(6)), `5th: ${(20 * Math.log10(lev(5) / lev(4))).toFixed(1)} dB re 4th`);
+  assert.ok(lev(10) < 0.05 * Math.min(lev(9), lev(11)), '10th');
+  // others: ∝ sin(nπβ)/n (bridge force), times each partial's own decay over the window
+  const parts = stringPartials(S, p).partials;
+  for (const n of [1, 2, 3, 4, 6, 7]) {
+    const w = (k) => Math.abs(Math.sin(k * Math.PI / 5)) / k * Math.exp(-parts[k - 1].sigma * (a + b) / 2 / FS);
+    const want = 20 * Math.log10(w(n) / w(1)), got = 20 * Math.log10(lev(n) / lev(1));
+    assert.ok(Math.abs(got - want) < 2, `partial ${n}: ${got.toFixed(1)} dB vs ${want.toFixed(1)} dB`);
+  }
+});
+test('registers: the front 8′ is brighter than the back, the lute brighter still with a weak fundamental; the buff kills the upper partials (×5 faster) but hardly the fundamental; manuals and coupler pick the right jacks', () => {
+  const m = 60, f = keyPitch(m, P()), a = 2400, b = Math.round(0.4 * FS), S = stringDesign(m, 'back', solo('back'));
+  const go = (row, o = {}) => run(solo(row, { soundboard: false, ...o }), [[0, 'on', m, 0.7]], 0.4);
+  const cB = centroid(go('back'), S, a, b), cF = centroid(go('front'), stringDesign(m, 'front', solo('front')), a, b), xl = go('lute'), cL = centroid(xl, S, a, b);
+  assert.ok(cF > 1.15 * cB && cL > 1.3 * cF, `centroids back ${cB.toFixed(0)}, front ${cF.toFixed(0)}, lute ${cL.toFixed(0)} Hz`);
+  const xb = go('back');
+  const fund = (x) => tone(x, f, a, b) / rms(x, a, b);
+  assert.ok(fund(xl) < 0.7 * fund(xb), `the lute’s fundamental is weak: ${fund(xl).toFixed(2)} vs ${fund(xb).toFixed(2)} of the rms`);
+  // the buff: decay of partials 1 and 8 with and without it
+  const dec = (x, k) => 20 * Math.log10(tone(x, k * f, Math.round(0.6 * FS), Math.round(1.0 * FS)) / tone(x, k * f, Math.round(0.1 * FS), Math.round(0.5 * FS)));
+  const plain = run(solo('back', { soundboard: false }), [[0, 'on', m, 0.7]], 1.0), buff = run(solo('back', { soundboard: false, buff: true }), [[0, 'on', m, 0.7]], 1.0);
+  assert.ok(dec(buff, 8) < 5 * dec(plain, 8) || dec(buff, 8) < -40, `8th partial: ${dec(plain, 8).toFixed(1)} → ${dec(buff, 8).toFixed(1)} dB per 0.5 s`);
+  assert.ok(dec(buff, 1) > dec(plain, 1) - 3, `fundamental: ${dec(plain, 1).toFixed(1)} → ${dec(buff, 1).toFixed(1)} dB per 0.5 s`);
+  // registration
+  const r = (o) => registration(P(o)).rows.sort().join(' ');
+  assert.equal(r({}), 'back front');
+  assert.equal(r({ coupler: false }), 'back');
+  assert.equal(r({ manual: 'upper' }), 'front');
+  assert.equal(r({ four: true, coupler: false }), 'back four');
+  assert.equal(r({ lute: true, manual: 'upper' }), 'front lute');
+  assert.equal(r({ lute: true }), 'front lute');
+  assert.deepEqual(registration(P({ manual: 'upper' })).lift, { front: true, back: true, four: false });
+});
+test('touch: on one choir, pp to ff changes the level by under 3 dB and the brightness a little (the plectrum lets go where it lets go); faster keys pluck sooner and knock louder', () => {
+  const m = 60, S = stringDesign(m, 'back', solo('back')), go = (v, o = {}) => run(solo('back', o), [[0, 'on', m, v]], 0.5);
+  const lo = go(0.1), hi = go(1);
+  const t0 = (x) => x.findIndex((v) => Math.abs(v) > 1e-3);
+  const a = t0(lo), b = t0(hi), W = Math.round(0.3 * FS);
+  const dB = 20 * Math.log10(rms(hi, b, b + W) / rms(lo, a, a + W));
+  assert.ok(dB > 0 && dB < 3, `pp → ff: ${dB.toFixed(2)} dB`);
+  const cl = centroid(lo, S, a, a + W), ch = centroid(hi, S, b, b + W);
+  assert.ok(ch > cl && ch < cl * 1.3, `centroid ${cl.toFixed(0)} → ${ch.toFixed(0)} Hz`);
+  assert.ok(b < a, 'a faster key plucks sooner');
+  const knock = (v) => rms(run(solo('back', { back8: false }), [[0, 'on', m, v]], 0.3), 0, Math.round(0.3 * FS));
+  assert.ok(knock(1) > 5 * knock(0.1), 'the key knock grows with speed');
+});
+test('dampers: key up stops the note (−40 dB within 0.35 s from C4 up, −25 dB at C3, the bass more slowly); the plectrum passes back under the string; a quicker release (MIDI release velocity) thumps louder', () => {
+  for (const [m, want] of [[48, -25], [60, -40], [72, -40], [84, -40]]) {
+    const x = run(P(), [[0, 'on', m, 0.7], [0.5, 'off', m]], 0.9), before = rms(x, Math.round(0.4 * FS), Math.round(0.5 * FS)), after = rms(x, Math.round(0.75 * FS), Math.round(0.85 * FS));
+    assert.ok(20 * Math.log10(after / before) < want, `${m}: ${(20 * Math.log10(after / before)).toFixed(1)} dB`);
+  }
+  const x = run(P(), [[0, 'on', 36, 0.7], [0.5, 'off', 36]], 1.2), d = 20 * Math.log10(rms(x, Math.round(1.05 * FS), Math.round(1.15 * FS)) / rms(x, Math.round(0.4 * FS), Math.round(0.5 * FS)));
+  assert.ok(d < -20, `C2 damps: ${d.toFixed(1)} dB in 0.6 s`);
+  // the plectra are back under their strings, ready to pluck again
+  const e = run(P(), [[0, 'on', 60, 0.7], [0.3, 'off', 60]], 0.45).engine, v = e.byKey.get(60);
+  assert.ok(!v || ['back', 'front'].every((c) => v.strings[c].phase[0] === 'under'), 'plectra back under');
+  // thump: the same note released slowly and quickly, energy just after the dampers land
+  const thump = (r) => { const y = run(P({ room: 0 }), [[0, 'on', 55, 0.7], [0.3, 'off', 55, r]], 0.6), base = run(P({ room: 0 }), [[0, 'on', 55, 0.7]], 0.6); let s = 0; for (let i = Math.round(0.3 * FS); i < Math.round(0.42 * FS); i++) s += (y[i] - base[i]) ** 2; return s; };
+  const slow = thump(0.1), quick = thump(1);
+  assert.ok(quick > 2 * slow, `release thump ${(10 * Math.log10(quick / slow)).toFixed(1)} dB louder when quick`);
+  // the note-off's release velocity sets the jacks' fall; none gives the default
+  const quickOff = run(P(), [[0, 'on', 55, 0.7], [0.3, 'off', 55, 1]], 0.4).engine;
+  assert.ok(Math.abs(quickOff.voices[0].vDown - fallSpeed(1)) < 1e-12, 'release velocity from the note-off');
+});
+test('re-plucking a sounding key plucks the same strings (no second voice), even quickly; physics knobs give the next press new strings and fade the old', () => {
+  let maxV = 0, plucks = 0;
+  const x = run(P(), [[0, 'on', 60, 0.7], [0.2, 'off', 60], [0.24, 'on', 60, 0.7], [0.3, 'off', 60], [0.31, 'on', 60, 0.7], [0.5, 'on', 60, 0.7]], 1.0, {
+    tap: (e) => { maxV = Math.max(maxV, e.voiceCount()); if (!e._l) { e._l = true; e.listeners.push((m) => { if (m.type === 'pluck') plucks++; }); } },
+  });
+  assert.equal(maxV, 1, 'one voice');
+  assert.ok(plucks >= 6, `${plucks} plucks (2 strings × 3 presses, and the repeated note-on)`);
+  assert.ok(peakAbs(x, Math.round(0.9 * FS)) > 0.01, 'still sounding');
+  let v2 = 0;
+  run(P(), [[0, 'on', 60, 0.7], [0.2, 'params', P({ detune: 5 })], [0.25, 'on', 60, 0.7]], 0.4, { tap: (e) => { v2 = Math.max(v2, e.voiceCount()); } });
+  assert.equal(v2, 2, 'a retuned key gets new strings; the old voice fades');
+});
+test('voice stealing: past 16 keys the quietest released one fades out (no click); a key that has not sounded yet is never taken', () => {
+  const ev = [];
+  for (let i = 0; i < 24; i++) ev.push([0.02 * i, 'on', 36 + i, 0.7], [0.02 * i + 0.05, 'off', 36 + i]);
+  ev.push([0.6, 'on', 84, 0.05]); // a slow key: its jack is still rising when the next one comes
+  ev.push([0.605, 'on', 85, 0.7]);
+  let maxV = 0, slowSounded = false;
+  const x = run(P({ room: 0 }), ev, 1.0, { tap: (e) => { maxV = Math.max(maxV, e.voices.filter((v) => !v.killing).length); const v = e.byKey.get(84); if (v && v.sounded) slowSounded = true; } });
+  assert.ok(maxV <= 16, `${maxV} live voices`);
+  assert.ok(slowSounded, 'the slow key was not stolen before it sounded');
+  let jump = 0;
+  for (let i = 1; i < x.length; i++) jump = Math.max(jump, Math.abs(x[i] - x[i - 1]));
+  assert.ok(jump < 0.08, `largest sample step ${jump.toFixed(3)}`);
+});
+test('level: a forte note peaks at 0.1–0.5 across the keyboard at 44.1 and 48 kHz (8′ 8′, and with the 4′); full chords stay under 1', () => {
+  for (const fs of [44100, 48000]) for (const four of [false, true]) for (const m of [29, 41, 53, 60, 65, 72, 81, 89]) {
+    const x = run(P({ four }), [[0, 'on', m, 1]], 0.6, { fs }), pk = Math.max(peakAbs(x), peakAbs(x.R));
+    assert.ok(pk > 0.1 && pk < 0.5, `${m} ${four ? '8 8 4' : '8 8'} at ${fs}: ${pk.toFixed(3)}`);
+  }
+  const ch = run(P({ four: true }), [41, 48, 53, 57, 60, 64, 67, 72].map((m) => [0, 'on', m, 1]), 1.0);
+  assert.ok(Math.max(peakAbs(ch), peakAbs(ch.R)) < 1, `chord ${Math.max(peakAbs(ch), peakAbs(ch.R)).toFixed(3)}`);
+});
+test('stability: seeded random combinations of extreme settings at 44.1 and 48 kHz, changed mid-note: no NaN, bounded, silent after Panic', () => {
+  let seed = 12345;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) >>> 0; return seed / 4294967296; };
+  const all = GROUPS.flatMap((g) => g.params).filter((p) => !['volume', 'room'].includes(p.id));
+  const pick = (p) => (p.type === 'select' ? p.options[Math.floor(rnd() * p.options.length)][0] : p.type === 'checkbox' ? rnd() < 0.5 : rnd() < 0.5 ? p.min : p.max);
+  for (let trial = 0; trial < 10; trial++) {
+    const fs = trial % 2 ? 44100 : 48000, a = P(Object.fromEntries(all.map((p) => [p.id, pick(p)]))), b = P(Object.fromEntries(all.map((p) => [p.id, pick(p)])));
+    const keys = [KEY_LO, 45, 60, 73, KEY_HI];
+    const ev = keys.flatMap((k, i) => [[0.01 * i, 'on', k, rnd()], [0.6, 'off', k, rnd()]]);
+    ev.push([0.3, 'params', b], [0.35, 'on', 60, 1], [1.3, 'panic']);
+    const x = run(a, ev, 1.6, { fs });
+    let bad = 0;
+    for (let i = 0; i < x.length; i++) if (!Number.isFinite(x[i]) || !Number.isFinite(x.R[i])) bad++;
+    assert.equal(bad, 0, `trial ${trial}: NaN`);
+    assert.ok(peakAbs(x) < 2.5 && peakAbs(x.R) < 2.5, `trial ${trial}: peak ${peakAbs(x).toFixed(2)}`);
+    assert.ok(peakAbs(x, x.length - Math.round(0.1 * fs)) < 1e-3, `trial ${trial}: tail ${peakAbs(x, x.length - Math.round(0.1 * fs)).toFixed(4)}`);
+  }
+});
+test('decay: a held note’s partials die at the model’s rate, σ = air + wire + Re Y(f)·bₙ²/2ωₙ² into the board (= Re Y·T/L for a flexible string), within 10 %', () => {
+  for (const m of [48, 60, 72]) {
+    const p = solo('back', { soundboard: false }), S = stringDesign(m, 'back', p), parts = stringPartials(S, p).partials;
+    const [bx, by] = bridgePoint(m, 'back');
+    near(parts[0].sigB, (boardAdmittance(bx, by, parts[0].f)[0] * (S.T + S.EI * (Math.PI / S.L) ** 2)) / S.L, 1e-9, 'σ_b = Re Y (T + EIk²)/L');
+    const x = run(p, [[0, 'on', m, 0.7]], 2.2);
+    for (const n of [1, 3]) {
+      const f = parts[n - 1].f, W = Math.round(0.4 * FS), a1 = tone(x, f, Math.round(0.3 * FS), Math.round(0.3 * FS) + W), a2 = tone(x, f, Math.round(1.7 * FS), Math.round(1.7 * FS) + W);
+      const sig = Math.log(a1 / a2) / 1.4;
+      near(sig, parts[n - 1].sigma, 0.1, `${m} partial ${n}`);
+    }
+  }
+});
+test('stereo: above the board’s modal band each bridge point is heard mostly by the nearer microphone (bass left, treble right); the low modes ring the whole board; the bridge force alone is panned by key', () => {
+  const hp = (x, f) => { // 2nd-order Butterworth high-pass
+    const w = (2 * Math.PI * f) / FS, c = Math.cos(w), al = Math.sin(w) / Math.SQRT2, a0 = 1 + al, b0 = (1 + c) / 2 / a0, b1 = -(1 + c) / a0, a1 = (-2 * c) / a0, a2 = (1 - al) / a0;
+    const y = new Float64Array(x.length); let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    for (let i = 0; i < x.length; i++) { const v = b0 * x[i] + b1 * x1 + b0 * x2 - a1 * y1 - a2 * y2; x2 = x1; x1 = x[i]; y2 = y1; y1 = v; y[i] = v; }
+    return y;
+  };
+  for (const [sb, fc] of [[true, 2500], [false, 30]]) {
+    const bal = (keys) => { let l = 0, r = 0; for (const k of keys) { const x = run(P({ soundboard: sb }), [[0, 'on', k, 0.7]], 0.4); l += rms(hp(x, fc), 0, x.length) ** 2; r += rms(hp(x.R, fc), 0, x.length) ** 2; } return 10 * Math.log10(l / r); };
+    const lo = bal([29, 32, 35, 38, 41]), mid = bal([57, 59, 61]), hi = bal([78, 81, 84, 87]);
+    assert.ok(lo > 3 && hi < -3 && Math.abs(mid) < 3, `board ${sb}, above ${fc} Hz: bass ${lo.toFixed(1)}, middle ${mid.toFixed(1)}, treble ${hi.toFixed(1)} dB (L re R)`);
+  }
+});
+test('presets use their own parameters, and each plays without NaN', () => {
+  const ids = new Set(GROUPS.flatMap((g) => g.params).map((p) => p.id));
+  for (const pr of PRESETS) {
+    for (const id of Object.keys(pr.p)) assert.ok(ids.has(id), `${pr.name}: ${id}`);
+    const x = run(P(pr.p), [[0, 'on', 60, 0.7], [0.02, 'on', 67, 0.7]], 0.3);
+    assert.ok(x.every(Number.isFinite) && peakAbs(x) > 0.005, `${pr.name}: peak ${peakAbs(x)}`);
+  }
+});
+test('CPU: 10 keys of 8′ 8′ 4′ coupled (30 strings) at 48 kHz in under 30 % of real time', () => {
+  const keys = [41, 45, 48, 52, 55, 60, 64, 67, 72, 76];
+  const t0 = performance.now();
+  run(P({ four: true }), keys.map((k, i) => [0.005 * i, 'on', k, 0.7]), 3);
+  const load = (performance.now() - t0) / 3000;
+  assert.ok(load < 0.3, `${(load * 100).toFixed(1)} % of real time`);
+});
+
+console.log(failures ? `\n${failures} FAILED` : '\nall passed');
+process.exit(failures ? 1 : 0);

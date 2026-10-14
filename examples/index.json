@@ -205,6 +205,40 @@
    "title": "Unisons in tune then honky tonk"
   }
  ],
+ "harpsichord": [
+  {
+   "file": "01-bach-prelude-in-c-on-two-8-foot-choirs.m4a",
+   "title": "Bach prelude in c on two 8 foot choirs"
+  },
+  {
+   "file": "02-front-back-lute-then-buff.m4a",
+   "title": "Front back lute then buff"
+  },
+  {
+   "file": "03-four-foot-alone-then-full.m4a",
+   "title": "Four foot alone then full"
+  },
+  {
+   "file": "04-plucking-point-from-nut-to-middle.m4a",
+   "title": "Plucking point from nut to middle"
+  },
+  {
+   "file": "05-light-heavy-and-quill-voicing.m4a",
+   "title": "Light heavy and quill voicing"
+  },
+  {
+   "file": "06-touch-pp-ff-then-slow-and-quick-release.m4a",
+   "title": "Touch pp ff then slow and quick release"
+  },
+  {
+   "file": "07-equal-then-meantone-thirds.m4a",
+   "title": "Equal then meantone thirds"
+  },
+  {
+   "file": "08-soundboard-then-bridge-force-alone.m4a",
+   "title": "Soundboard then bridge force alone"
+  }
+ ],
  "huygens": [
   {
    "file": "01-c-major-uncoupled-then-coupled.m4a",

@@ -164,13 +164,13 @@ export function createShell(cfg) {
     shell.post({ type: 'noteOn', key, velocity: vel, data: cfg.noteData?.(key, vel) });
     cfg.onNoteOn?.(key, vel);
   }
-  function up(key) {
+  function up(key, velocity) { // velocity: a MIDI note-off's release velocity (0..1), if it sent one
     const n = (sounding.get(key) || 0) - 1;
     if (n > 0) { sounding.set(key, n); return; }
     sounding.delete(key);
     if (cfg.space === 'hold' && shell.sustain) { latched.add(key); return; }
     shell.keys.set(key, false);
-    const off = () => { shell.post({ type: 'noteOff', key }); cfg.onNoteOff?.(key); };
+    const off = () => { shell.post({ type: 'noteOff', key, velocity }); cfg.onNoteOff?.(key); };
     if (shell.audio) off(); else if (starting) starting.then(off, () => {});
   }
   shell.noteOn = down; shell.noteOff = up;
@@ -259,7 +259,7 @@ export function createShell(cfg) {
   function onMIDI(ev) {
     const [st, d1, d2] = ev.data, cmd = st & 0xf0;
     if (cmd === 0x90 && d2 > 0) down(d1, d2 / 127);
-    else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) up(d1);
+    else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) up(d1, cmd === 0x80 ? d2 / 127 : undefined);
     else if (cmd === 0xb0) {
       if (d1 === 64 && cfg.space) setSustain(d2 >= 64);
       else if (d1 === 1 && cfg.modWheel) {

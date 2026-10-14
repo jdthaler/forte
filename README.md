@@ -25,10 +25,10 @@ lands, the pickup's offset, how fast the black hole spins.
 | ✅ | [Viola Organista](bowed/) | Leonardo da Vinci (1488) | strings bowed by a rosined wheel: implicit stick–slip friction, Helmholtz motion, live Schelleng diagram, sympathetic strings on a shared soundboard |
 | ✅ | [Glass Armonica](glass/) | Benjamin Franklin (1761) | wet-finger stick–slip on Rayleigh shell modes; split doublets warble as the bowls turn (Bryan effect); water loading |
 | ✅ | [Pyrophone](pyrophone/) | Frédéric Kastner (1873) | flame-driven Rijke tubes on a subcritical Hopf bifurcation: slow self-excited onsets, hysteresis, warm-up drift |
-| 🛠 | Harpsichord | Flemish double-manual (Ruckers) | quill plucks: plectrum contact and slip, buff and lute stops |
+| ✅ | [Harpsichord](harpsichord/) | Flemish double-manual (Ruckers) | plectra as tapered cantilevers that catch, bend and slip off stiff strings (implicit contacts with friction); three choirs, coupler, buff and lute stops, a modal soundboard |
 | 🛠 | Pipe Organ | Baroque organ | jet–edge feedback in flue pipes, chiff, overblowing, wind sag |
 | 🛠 | Carillon | Flemish carillon (Hemony) | bell shell modes and the strike note: a pitch not in the spectrum |
-| 🛠 | Vibraphone | Deagan vibraharp (1927) | undercut bars, coupled tube resonators, motor-driven discs |
+| ✅ | [Vibraphone](vibraphone/) | Deagan vibraharp (1927) | undercut bars tuned 1 : 4 : 10 by finite elements, each coupled to a stopped tube; motor-driven discs open and close the tubes (tremolo) |
 | 🛠 | Free-Reed Organ | harmonium and accordion | self-excited free reeds, musette beating, bellows expression |
 | 🛠 | Singing Arc | Duddell's singing arc (1900) | negative-resistance arc driving an LC circuit; the arc is the loudspeaker |
 | ✅ | [Huygens Keyboard](huygens/) | — | pulse-coupled relaxation oscillators that lock chords into just intonation (Arnold tongues) |
@@ -37,7 +37,7 @@ lands, the pickup's offset, how fast the black hole spins.
 | ✅ | [Quantum Keyboard](quantum/) | — | exact wavepackets in square, Morse, hydrogen-Rydberg, gravitational and harmonic wells: collapse, fractional and full revivals, decoherence |
 | 🛠 | Star Keyboard | — | asteroseismology: stochastically driven p-modes, échelle combs, rotation splitting |
 | 🛠 | Wind Harp | — | vortex shedding locking onto string harmonics, with hysteresis |
-| 🛠 | Bubble Organ | — | Minnaert bubbles: depth, gas and pressure set the pitch |
+| ✅ | [Bubble Organ](bubbles/) | — | Minnaert bubbles with heat flow, radiation and viscosity; the free surface above raises the pitch; depth, pressure, gas and liquid retune the keyboard |
 | 🛠 | Spring Keyboard | — | dispersive waves on helical springs: every note a chirp |
 
 ✅ playable · 🛠 in the workshop ([build briefs](docs/WORKSHOP.md)). Each instrument's README has its equations,

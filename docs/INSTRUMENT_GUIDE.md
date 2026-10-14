@@ -90,7 +90,7 @@ export class GongEngine {
   constructor(fs) { … }
   setParams(P) { … }               // the whole parameter object (or the page's engineParams(P))
   noteOn(key, velocity, data) { … } // velocity 0..1; data from the page's noteData(key, vel), if any
-  noteOff(key) { … }
+  noteOff(key, velocity) { … }      // velocity: MIDI release velocity 0..1, or undefined
   setSustain(on) { … }             // optional
   allNotesOff() { … }              // optional (Panic)
   handle(msg) { … }                // optional: other messages, incl. MIDI { type: 'pressure', value, key } and { type: 'bend', value }
