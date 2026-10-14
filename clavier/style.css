@@ -1,0 +1,16 @@
+/* The page's own palette and any layout beyond shared/instrument.css. */
+:root {
+  --accent: #c6e36a;
+  --accent-2: #e39a6a;
+  --accent-ink: #141a03;
+  --steel: #c9ccd4;
+  --yarn: #b48a5e;
+  --rubber: #2c2c31;
+}
+#info { grid-template-columns: auto 1fr auto 1fr; }
+#info-card .modes { margin-top: 4px; }
+#info-card { overflow: auto; }
+.tools select, .tools button { padding: 3px 8px; font-size: 12px; }
+@media (max-width: 600px) {
+  #info { grid-template-columns: auto 1fr; }
+}
