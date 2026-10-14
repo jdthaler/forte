@@ -67,14 +67,6 @@ Read first:
 7. **Merge** with a merge commit (not squash or rebase) once `physics` is
    green on the pull request's latest commit and nothing conflicts, and
    only when the owner has asked for the merge.
-8. **Tag** the merge commit on `main`, one annotated tag per version
-   bumped, then push it:
 
-   ```bash
-   git tag -a forte-v0.3.1 -m "forte 0.3.1" <merge commit>
-   git push origin forte-v0.3.1
-   ```
-
-   An instrument's tag is its id: `gongs-v0.1.1`, with message
-   `gongs 0.1.1`. Claude Code cloud sessions can push branches but not
-   tags (GitHub answers 403), so there the owner pushes the tag.
+Releases are not tagged any more (Claude Code cloud sessions cannot push
+tags). The changelog and the commit titles record each version.

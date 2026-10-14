@@ -6,8 +6,9 @@ landing page and the tools). An instrument's version covers its folder,
 its tests and its demos. Everything is pre-release (0.x) for now, so any
 release may change the sound or the parameters.
 
-Each release is tagged in git as `forte-vX.Y.Z` or `<instrument>-vX.Y.Z`,
-for example `piano-v0.1.0`.
+Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
+`<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
+tagged; this changelog and the commit titles record them.
 
 ## 2026-10-14 — how it works
 
