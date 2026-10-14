@@ -45,7 +45,7 @@ const demos = [
   ['04-rydberg-atom-fast-revivals-and-super-revivals', () => play(P({ potential: 'hydrogen', lock: false, nbar: 44, sigma: 1.3, detector: 'x', T1: 30 }), 7, held(0.05, 48, 6.9, 0.9), 0.3)],
   ['05-same-phrase-coherent-then-dephased-tphi-0p3s', () => cat(
     play(P(MORSE), 4.9, melody(4), 0.5), gap(0.2), play(P({ ...MORSE, dephase: 1 / 0.3 }), 4.9, melody(4), 0.5))],
-  // fixed n̄ = 150: T_rev = 2n̄/f, so C–E–G–C revive in 4 : 5 : 6 : 8 time
+  // fixed n̄ = 150: T_rev = 2n̄/f, so C–E–G–C revive at rates 4 : 5 : 6 : 8 (times 1/4 : 1/5 : 1/6 : 1/8)
   ['06-fixed-nbar-chord-revives-in-polyrhythm', () => play(P({ lock: false, nbar: 150, T1: 6, detector: 'v' }), 8, [60, 64, 67, 72].flatMap((k) => held(0.05, k, 7.9, 0.6)), 0.3)],
   ['07-level-spread-three-levels-then-sigma-2-then-sigma-4', () => cat(
     play(P({ sigma: 0.6, T1: 6 }), 3, held(0.05, 57, 2.9, 0.8)), gap(0.2),

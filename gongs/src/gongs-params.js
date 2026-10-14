@@ -14,8 +14,8 @@ export const GROUPS = [
         hint: 'Thinner gongs bend further, in thicknesses, for the same strike: the nonlinearity grows as (a/h)². Tam-tams are ~4 ‰.' },
       { id: 'rise', label: 'Dome rise (curvature)', min: 0, max: 4, def: 0.4, step: 0.05, fmt: (v) => (v ? `${v.toFixed(2)} h` : 'flat'),
         hint: 'A shallow spherical cap, rising this many thicknesses at the rim. Flat plates stiffen when struck hard (pitch glides down); domes above ~0.7 h soften (pitch glides up).' },
-      { id: 'bc', label: 'Rim', type: 'select', def: 'free', options: [['free', 'Free (hanging gong)'], ['clamped', 'Clamped (in a frame)']],
-        hint: 'Free: the gong hangs on cords. Clamped: the rim is held, like a drum shell; the in-plane edge stays free in both.' },
+      { id: 'bc', label: 'Rim', type: 'select', def: 'free', options: [['free', 'Free (hanging gong)'], ['clamped', 'Clamped (held, free to slide in its plane)']],
+        hint: 'Free: the gong hangs on cords. Clamped: the rim cannot move or tilt, but, as in the free gong, it may slide in its own plane; so it is less nonlinear than a plate held fast in a frame, which would stretch about three times as much.' },
       { id: 'eta', label: 'Internal friction η', min: 1e-5, max: 1e-2, def: 1.5e-4, log: true, fmt: sci,
         hint: 'Material loss factor, the same at every frequency. Thermoelastic and radiation losses are added on top (see the mode table).' },
       { id: 'thermal', label: 'Thermoelastic loss', min: 0, max: 2, def: 1, step: 0.05, fmt: (v) => `${v.toFixed(2)} ×`,
@@ -64,6 +64,6 @@ export const PRESETS = [
   { name: 'Opera gong, pitch bends down (flat, centre)', p: { rise: 0, strike: 0.03, speed: 5.5 } },
   { name: 'Thick bronze: stays linear (a bell plate)', p: { thick: 0.03 } },
   { name: 'Steel sheet struck near the rim', p: { material: 'steel', thick: 0.005, strike: 0.75, hardness: 300 } },
-  { name: 'Clamped plate in a frame', p: { bc: 'clamped', strike: 0.2 } },
+  { name: 'Clamped rim (held, free to slide in its plane)', p: { bc: 'clamped', strike: 0.2 } },
   { name: 'Struck dead centre (no asymmetric modes)', p: { strike: 0 } },
 ];

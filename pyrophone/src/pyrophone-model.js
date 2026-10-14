@@ -34,8 +34,12 @@ const L_REF = 0.6;                                       // m, tube length at wh
 
 const S3 = Math.sqrt(1 / 3);
 export const GAIN = Math.sqrt(3) / 2; // d heat / du at u = 0
-// The flame's heat release per unit β for a flame velocity u.
-export const heat = (u) => Math.sqrt(Math.abs(1 / 3 + u)) - S3;
+// The flame's heat release per unit β for a flame velocity u. A flame cannot release more
+// heat than its fuel holds: King's law is capped where the flow past it reaches U_SAT
+// (|1/3 + u| = 3, three times the mean heat release). Every limit cycle at the normal
+// settings stays well inside (|u| ≲ 1.3); only extreme flames and lags reach it.
+export const U_SAT = 3;
+export const heat = (u) => Math.sqrt(Math.min(U_SAT, Math.abs(1 / 3 + u))) - S3;
 
 // Wall and end losses from the bore (radius/length a/L):
 //   radiation: |R| ≈ 1 − (ka)²/2 per open end (Levine & Schwinger) → ζ_rad = (ka)² = (πa/L)² j²
@@ -108,7 +112,7 @@ export function root(sys, m, beta, lagMode) {
 // crosses zero, found by marching the root in β and refining by regula falsi.
 export function hopf(sys, m, bMax = B_MAX) {
   const z = sys.zeta[m], w = sys.w[m], db = 0.02;
-  let s = [-z / 2, Math.sqrt(w * w - z * z / 4)], b = 0;
+  let s = [-z / 2, Math.sqrt(Math.max(w * w - z * z / 4, 1e-9))], b = 0;
   while (b < bMax) {
     const s1 = newton((x) => charF(sys, m, b + db, x), s);
     if (s1[0] >= 0) {
@@ -138,7 +142,8 @@ export function weakRoot(P, j, beta) {
 // For u_f = U cos θ, the first harmonic of the heat release relative to the
 // linear one: D(U) = (1/πU) ∫ heat(U cos θ) cos θ dθ / (√3/2). D = 1 + (27/32)U² + …
 // for small U: it RISES, which is what makes the Hopf bifurcation subcritical.
-// It peaks (1.198) at U = 1/3, where the heat transfer first reverses, then falls.
+// It peaks (1.2034) at U = 0.3355, just past U = 1/3 where the heat transfer first
+// reverses (D(1/3) = 8√2/(3π) = 1.2004), then falls.
 export function describing(U, M = 2048) {
   if (U < 1e-9) return 1;
   let s = 0;
@@ -341,7 +346,26 @@ export function tuning(P, bif = bifurcation(P)) {
     s = newton((x) => charF(sys, j - 1, beta, x), s);
     Ws.push((st.length && beta >= st[0].beta ? interp(st, beta, 'W') : s[1]) / j);
   }
-  return { key: bif.key, b0: 0, db, Ws, betaH: first.beta, mode: first.mode, fold: fam && fam.fold && first.mode ? fam.fold.beta : null };
+  return { key: bif.key, b0: 0, db, Ws, betaH: first.beta, betaMax: screamLimit(sys, first.mode), mode: first.mode, fold: fam && fam.fold && first.mode ? fam.fold.beta : null };
+}
+
+// The scream. Further past threshold, a higher mode goes unstable too, and the tube
+// screams: an inharmonic, loud fight between the two. With the note already sounding, it
+// starts at 0.84–1.8 × that mode's own Hopf point (measured over bore, damping, flame
+// position and lag; 1.45 × at the defaults, mode 5 at β = 0.67). The keys' heater gain is
+// held below SCREAM × the lowest Hopf point of any mode above the third other than the
+// singing one, and within B_MAX. Modes 1–3 may join in: they lock to the note (a strong
+// third harmonic, the octave taking over, period doubling, the mixtures low in the tube).
+export const SCREAM = 0.8;
+export function screamLimit(sys, mode) {
+  let best = B_MAX / SCREAM;
+  for (let m = 3; m < sys.N; m++) {
+    const j = m + 1;
+    if (j === mode) continue;
+    const h = hopf(sys, m, best); // (every mode: through the others, even one Rayleigh leaves undriven can go unstable)
+    if (h && h.beta < best) best = h.beta;
+  }
+  return Math.min(B_MAX, SCREAM * best);
 }
 
 // The heater gain at which silence first goes unstable, and in which mode (the
@@ -365,5 +389,8 @@ export function steadyY(bif, beta) {
 }
 
 // Heater gain for a key pressed at velocity v: the key parts the flames,
-// β = K (0.4 + 0.6 v). Key up: β = (key-up fraction) × the Hopf threshold.
-export const betaOn = (P, v) => P.power * (0.4 + 0.6 * v);
+// β = K β_H (0.4 + 0.6 v), with the flame power K in units of the threshold β_H
+// (the Hopf point of silence, tuning().betaH), so that it means the same for every
+// bore, damping and flame; below the scream (tuning().betaMax, see screamLimit).
+// Key up: β = (key-up fraction) × β_H.
+export const betaOn = (P, v, betaH, betaMax = B_MAX) => Math.min(betaMax, P.flame * betaH * (0.4 + 0.6 * v));

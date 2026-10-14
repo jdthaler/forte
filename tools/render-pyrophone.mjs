@@ -7,11 +7,13 @@
 
 import { PyrophoneEngine } from '../pyrophone/src/pyrophone-engine.js';
 import { DEFAULTS } from '../pyrophone/src/pyrophone-params.js';
-import { bifurcation } from '../pyrophone/src/pyrophone-model.js';
+import { bifurcation, tube, silenceLimit } from '../pyrophone/src/pyrophone-model.js';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
 
 const FS = 48000, SLUG = 'pyrophone';
 const D = { ...DEFAULTS };
+// The flame power is in units of the tube's threshold β_H; these demos set a heater gain β itself.
+const K = (P, beta) => beta / silenceLimit(tube(P)).beta;
 const play = (P, seconds, events) => { const e = new PyrophoneEngine(FS); e.setParams(P); return renderEngine(e, seconds, events, FS); };
 const hold = (t0, t1, keys, vel) => keys.flatMap((k) => [[t0, 'on', k, vel], [t1, 'off', k]]);
 const ramp = (P, t0, t1, f, dt = 0.01) => { const ev = []; for (let t = t0; t <= t1 + 1e-9; t += dt) ev.push([t, 'params', { ...P, ...f((t - t0) / (t1 - t0)) }]); return ev; };
@@ -36,17 +38,17 @@ function chorale() {
 // 02: hysteresis. One tube, flames fully apart; the power is raised slowly past
 // the Hopf point and then lowered: it keeps singing well below where it started.
 function hysteresis() {
-  const P = { ...D, noise: 0.008, drift: 0, power: 0.072 };
-  return play(P, 10, [[0, 'on', 60, 1], ...ramp(P, 0, 3.8, (u) => ({ power: lerp(0.072, 0.118, u) })), ...ramp(P, 4.3, 9.3, (u) => ({ power: lerp(0.118, 0.05, u) })), [9.5, 'off', 60]]);
+  const P0 = { ...D, noise: 0.008, drift: 0 }, P = { ...P0, flame: K(P0, 0.072) }; // (v = 1: β = K β_H)
+  return play(P, 10, [[0, 'on', 60, 1], ...ramp(P, 0, 3.8, (u) => ({ flame: K(P0, lerp(0.072, 0.118, u)) })), ...ramp(P, 4.3, 9.3, (u) => ({ flame: K(P0, lerp(0.118, 0.05, u)) })), [9.5, 'off', 60]]);
 }
 
-// 03: the flame moved slowly from near the top of the tube to near the bottom,
-// key held. Rayleigh's criterion switches modes on and off: silence, the twelfth
-// (mode 3), the octave, the octave with its subharmonic, silence, the
+// 03: the flame (one flame, β = 0.3) moved slowly from near the top of the tube to
+// near the bottom, key held. Rayleigh's criterion switches modes on and off: silence,
+// the twelfth (mode 3), the octave, the octave with its subharmonic, silence, the
 // fundamental, and a brighter locked mixture of modes 1–3 near the bottom.
 function flameSweep() {
-  const P = { ...D, drift: 0, xf: 0.92, listen: 0.3 };
-  return play(P, 10.5, [[0, 'on', 60, 1], ...ramp(P, 0.2, 9.9, (u) => ({ xf: lerp(0.92, 0.06, u) })), [10, 'off', 60]]);
+  const P = { ...D, drift: 0, xf: 0.92, listen: 0.3 }, at = (xf) => ({ xf, flame: K({ ...P, xf }, 0.3) });
+  return play({ ...P, ...at(0.92) }, 10.5, [[0, 'on', 60, 1], ...ramp(P, 0.2, 9.9, (u) => at(lerp(0.92, 0.06, u))), [10, 'off', 60]]);
 }
 
 // 04: warm-up. A cold tube starts flat and slides up as its gas heats (c ∝ √T);

@@ -2,7 +2,7 @@
 // The packet of each note is computed here (makePacket, ~1 ms) and sent with the
 // noteOn, so the worklet never does setup work.
 
-import { createShell, noteName } from '../../shared/shell.js';
+import { createShell, noteName, toast } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { GROUPS, PRESETS } from './quantum-params.js';
 import { makePacket, WELLS } from './quantum-model.js';
@@ -12,7 +12,13 @@ const $ = (s) => document.querySelector(s);
 const spectrum = new SpectrumView($('#spectrum'));
 const LIVE_ONLY = new Set(['volume', 'room', 'velocity', 'T1', 'release']); // these don't change the views
 
-let focus = 57, pk = null, onsetAt = null, dirty = true, dephDirty = true;
+let focus = 57, pk = null, onsetAt = null, dirty = true, dephDirty = true, warned = false;
+// A key whose revival the tempo lock cannot put on the beat (the n̄ it needs is outside the
+// well's range) keeps its pitch; say so, once per setting.
+function offBeat(p) {
+  if (p.offBeat && !warned) { warned = true; toast(`${noteName(p.key)}: its revival cannot land on the beat at this tempo (n̄ at the well's limit); it plays in tune, off the beat.`); }
+  return p;
+}
 const fMax = () => Math.min(20000, 0.45 * (shell?.audio?.ctx.sampleRate || 48000));
 const now = () => (shell.audio ? shell.audio.ctx.currentTime : performance.now() / 1000);
 const Tphi = () => (shell.P.dephase > 0 ? 1 / shell.P.dephase : Infinity);
@@ -28,10 +34,10 @@ const shell = createShell({
   space: 'sustain',
   arrows: { param: 'velocity', step: 0.05 },
   modWheel: 'dephase',
-  noteData: (key) => makePacket(key, shell.P, { fMax: fMax() }),
+  noteData: (key) => offBeat(makePacket(key, shell.P, { fMax: fMax() })),
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key) => { if (key !== focus) { focus = key; dirty = true; } onsetAt = now(); shell.keys.focus(key); },
-  onParam: (id) => { if (id === 'dephase') dephDirty = true; else if (!LIVE_ONLY.has(id)) dirty = true; },
+  onParam: (id) => { if (id === 'dephase') dephDirty = true; else if (!LIVE_ONLY.has(id)) { dirty = true; warned = false; } },
 });
 
 // ---- the focused key's packet, its eigenfunctions, and time scales -------------
@@ -57,7 +63,9 @@ function refresh() {
   $('#focus-name').textContent = noteName(focus);
   const rev = Number.isFinite(pk.Trev) ? `T_rev ${fmtT(pk.Trev)} = ${(pk.Trev / pk.Tcl).toFixed(0)} periods · collapse ${fmtT(pk.tColl)}` : 'no revivals: equally spaced levels never dephase';
   const sr = Number.isFinite(pk.Tsr) && pk.Tsr < 1e4 ? ` · T_sr ${fmtT(pk.Tsr)}` : '';
-  $('#carpet-info').textContent = `n̄ ${pk.nbar.toFixed(pk.nbar < 20 ? 1 : 0)} · σₙ ${pk.sigma.toFixed(2)} · ${rev}${sr}`;
+  // the tempo lock wanted an n̄ outside the well's range: the pitch is kept, the revival is not on the beat
+  const beat = pk.offBeat ? ` · off the beat: T_rev = ${((pk.Trev * shell.P.bpm) / 60).toFixed(2)} beats (n̄ at its ${pk.nbar < 100 ? 'lowest' : 'highest'})` : '';
+  $('#carpet-info').textContent = `n̄ ${pk.nbar.toFixed(pk.nbar < 20 ? 1 : 0)} · σₙ ${pk.sigma.toFixed(2)} · ${rev}${sr}${beat}`;
   $('#well-info').textContent = `${WELLS[pk.id].name} · levels ${pk.ns[0]}–${pk.ns[pk.ns.length - 1]}`;
   // spectrum markers: the strongest Bohr lines
   const top = [...pk.pairs].sort((a, b) => Math.abs(b.w) - Math.abs(a.w)).slice(0, 160), wm = Math.abs(top[0]?.w || 1);

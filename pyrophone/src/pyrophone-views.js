@@ -11,7 +11,7 @@ const dot = (ctx, x, y, r, fill = true) => { ctx.beginPath(); ctx.arc(x, y, r, 0
 // The β axis is logarithmic and spans the threshold and every key's operating point.
 export function betaRange(tune, P) {
   const bH = tune.betaH;
-  return [0.12 * bH, Math.max(2.4 * bH, 1.25 * betaOn(P, 1))];
+  return [0.12 * bH, Math.max(2.4 * bH, 1.25 * betaOn(P, 1, bH, tune.betaMax))];
 }
 
 // ---- bifurcation diagram ------------------------------------------------------
@@ -44,11 +44,11 @@ export function drawBif(cv, st) {
   ctx.setLineDash([]); ctx.fillStyle = muted; ctx.textAlign = 'right';
   ctx.fillText('flow at the flame reverses (u′ = −ū/3)', w - padR - 2, Y(1 / 3) - 4);
   // operating range: keys down (velocity 0…1) and keys up
-  const bOn0 = betaOn(P, 0), bOn1 = betaOn(P, 1), bUp = P.keyup * tune.betaH;
+  const bOn0 = betaOn(P, 0, tune.betaH, tune.betaMax), bOn1 = betaOn(P, 1, tune.betaH, tune.betaMax), bUp = P.keyup * tune.betaH;
   ctx.fillStyle = 'rgba(255,122,69,0.08)'; ctx.fillRect(X(bOn0), padT, X(bOn1) - X(bOn0), h - padT - padB);
   ctx.fillStyle = acc; ctx.textAlign = 'center'; ctx.globalAlpha = 0.8;
   ctx.fillText('keys down', (X(bOn0) + X(bOn1)) / 2, padT + 10);
-  ctx.strokeStyle = acc; ctx.setLineDash([1, 3]); line(ctx, [[X(betaOn(P, P.velocity)), padT + 14], [X(betaOn(P, P.velocity)), h - padB]]);
+  ctx.strokeStyle = acc; ctx.setLineDash([1, 3]); line(ctx, [[X(betaOn(P, P.velocity, tune.betaH, tune.betaMax)), padT + 14], [X(betaOn(P, P.velocity, tune.betaH, tune.betaMax)), h - padB]]);
   ctx.globalAlpha = 1;
   ctx.strokeStyle = acc2; ctx.fillStyle = acc2;
   const xu = bUp > b0 ? X(bUp) : padL + 1;

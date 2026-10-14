@@ -11,15 +11,18 @@
 //   * pairs are grouped by Δn = k: pure dephasing multiplies group k by e^(−k²t/T_φ),
 //     population decay multiplies everything by e^(−t/T₁);
 //   * the pump pulse builds the packet over its own duration τ = 1/(√2 σ ω): the
-//     coherences grow as g(t)², g = ½(1 + erf(t/√2τ)).
+//     coherences grow as g(t)², g = ½(1 + erf(t/√2τ));
+//   * all voices together sum at most BUDGET pairs: when a new note would exceed it, the
+//     weakest pairs of all (by their present amplitude) are dropped first.
 
 import { keyPan } from '../../shared/dsp.js';
-import { makePacket } from './quantum-model.js';
+import { makePacket, DC_FADE } from './quantum-model.js';
 
 const OUT = 0.3;        // launch peak at full velocity
 const MAX_VOICES = 24;
+const MAX_PAIRS = 300;  // per voice (makePacket's limit)
+const BUDGET = 3000;    // pairs summed per sample, over all voices (about 30 % of a laptop core)
 const TAU_MIN = 1e-4;   // shortest pump ramp, s (keeps the onset below Nyquist)
-const DC_FADE = 0.06;    // s: the electrode's AC coupling (a raised-cosine fade, sub-audio)
 
 function erf(x) { // Abramowitz & Stegun 7.1.26, |error| < 1.5e-7
   const s = x < 0 ? -1 : 1, a = Math.abs(x), t = 1 / (1 + 0.3275911 * a);
@@ -70,7 +73,36 @@ class Voice {
     this.env = OUT * vel;
     this.pan = keyPan(key);
     this.released = false; this.quench = false; this.stolen = false; this.dead = false;
+    this.s0 = 0; this.s1 = S; this.active = NP; // the states rotated, and the pairs summed (see trim)
     this.rates(eng);
+  }
+  // The present amplitude of every pair still summed, appended to buf from index m.
+  strengths(buf, m) {
+    const { w, gD, ga, gb, gw, G } = this, e = this.env;
+    for (let g = 0; g < G; g++) {
+      if (gD[g] === 0) continue;
+      const f = e * gD[g];
+      for (let i = ga[g], q = gw[g]; i < gb[g]; i++, q++) buf[m++] = f * Math.abs(w[q]);
+    }
+    return m;
+  }
+  // Drop the pairs weaker than tau. Within a group (one Δn) the weights fall off towards
+  // both ends of its run (the packet's Gaussian), so the group shrinks from its ends; the
+  // states no group uses any more stop being rotated.
+  trim(tau) {
+    const { w, gD, ga, gb, gw, gk, G } = this, e = this.env;
+    let s0 = Infinity, s1 = 0, n = 0;
+    for (let g = 0; g < G; g++) {
+      if (gD[g] === 0) continue;
+      const cut = tau / (e * gD[g]);
+      let a = ga[g], b = gb[g];
+      while (a < b && Math.abs(w[gw[g] + a - ga[g]]) < cut) a++;
+      while (b > a && Math.abs(w[gw[g] + b - 1 - ga[g]]) < cut) b--;
+      if (a === b) { gD[g] = 0; continue; }
+      gw[g] += a - ga[g]; ga[g] = a; gb[g] = b;
+      s0 = Math.min(s0, a); s1 = Math.max(s1, b + gk[g]); n += b - a;
+    }
+    this.s0 = n ? s0 : 0; this.s1 = n ? s1 : 0; this.active = n;
   }
   rates(eng) { // T₁ (or the release quench) and T_φ, applied live
     const P = eng.P, fs = eng.fs;
@@ -82,16 +114,16 @@ class Voice {
   // Exact phases from the sample counter: aₙ = e^(−iθₙ·count).
   sync() {
     const c = this.count;
-    for (let s = 0; s < this.S; s++) { const ph = this.th[s] * c; this.re[s] = Math.cos(ph); this.im[s] = -Math.sin(ph); }
+    for (let s = this.s0; s < this.s1; s++) { const ph = this.th[s] * c; this.re[s] = Math.cos(ph); this.im[s] = -Math.sin(ph); }
   }
   render(L, R, n) {
     this.sync();
-    const { re, im, cr, ci, w, gD, gR, gk, ga, gb, gw, S, G, useIm } = this;
+    const { re, im, cr, ci, w, gD, gR, gk, ga, gb, gw, s0, s1, G, useIm } = this;
     const gl = this.pan[0], gr = this.pan[1];
     let env = this.env;
     for (let t = 0; t < n; t++) {
       const c = ++this.count, dec = c >= 0; // decoherence clocks start at the pump's centre
-      for (let s = 0; s < S; s++) {
+      for (let s = s0; s < s1; s++) {
         const x = re[s], y = im[s];
         re[s] = x * cr[s] + y * ci[s]; im[s] = y * cr[s] - x * ci[s];
       }
@@ -125,6 +157,7 @@ export class QuantumEngine {
     this.P = null;
     this.voices = [];
     this.sustain = false;
+    this.buf = new Float64Array((MAX_VOICES + 2) * MAX_PAIRS); // pair amplitudes, for the budget
   }
   setParams(P) {
     this.P = P;
@@ -147,6 +180,20 @@ export class QuantumEngine {
       if (v.stolen) continue;
       if (++live > MAX_VOICES) { v.stolen = true; v.rates(this); }
     }
+    this.budget();
+  }
+  // At most BUDGET pairs summed per sample, over all voices: past it, the weakest pairs of
+  // all, by their amplitude now (velocity, T₁ decay and dephasing included), are dropped for
+  // good. Old, faded notes give up theirs first; a big chord keeps each note's strongest lines.
+  budget() {
+    let n = 0;
+    for (const v of this.voices) n += v.active;
+    if (n <= BUDGET) return;
+    let m = 0;
+    for (const v of this.voices) m = v.strengths(this.buf, m);
+    if (m <= BUDGET) return;
+    const tau = this.buf.subarray(0, m).sort()[m - BUDGET];
+    for (const v of this.voices) v.trim(tau);
   }
   noteOff(key) {
     for (const v of this.voices) if (v.key === key && !v.released) {

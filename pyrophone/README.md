@@ -55,7 +55,9 @@ c₂ = 1.48 (L/a)√(2πν/cL). The default bore, a/L = 1/30, gives c₁ = 0.011
 c₂ = 0.037, so the fundamental has Q = π/ζ₁ = 66 and its losses are mostly at
 the wall. Wide tubes radiate more and lose their upper modes (∝ j²); narrow ones
 lose their fundamental to the wall. Magri & Juniper's hot-wire tube has
-c₁ = 0.01, c₂ = 0.004.
+c₁ = 0.01, c₂ = 0.004. At the widest bore with the most damping (a/L = 0.15,
+× 4) modes 8–10 are overdamped (ζⱼ/2 > jπ); there ka > 1 too, beyond where the
+end-loss formula holds.
 
 **The flame.** Heckl's (1990) modified King's law gives the heat-release
 fluctuation for a flame velocity u_f, felt a lag τ late:
@@ -64,8 +66,11 @@ fluctuation for a flame velocity u_f, felt a lag τ late:
 
 King's law makes heat transfer grow like √(flow speed). Heckl's 1/3 makes
 the law reverse when the oscillating flow at the flame cancels a third of the
-draught. β, the heater gain, is in Magri & Juniper's normalisation; the linear
-gain is (√3/2)β. Small perturbations ∝ e^{st} obey a scalar characteristic
+draught. A flame cannot release more heat than its fuel holds, so the law is
+capped where |1/3 + u_f| = 3 (three times the mean heat release); every limit
+cycle at the normal settings stays well inside it, and only extreme flame
+positions and lags reach it. β, the heater gain, is in Magri & Juniper's
+normalisation; the linear gain is (√3/2)β. Small perturbations ∝ e^{st} obey a scalar characteristic
 equation, 1 = (√3/2) β e^{−sτ} Σⱼ cos(jπx_f)·(−2jπ sin(jπx_f)) / (s² + ζⱼs + (jπ)²),
 which the model solves by Newton continuation from β = 0. The tests reproduce
 Magri & Juniper's published eigenvalues (−0.0056 + 3.1848i at β = 0.1 and
@@ -99,10 +104,11 @@ gently: it jumps to an amplitude of 0.41. Between fold and Hopf, the dashed
 unstable cycle is the threshold a kick must cross.
 
 **Keys, velocity, turbulence.** A key parts the flames in 12 ms, setting
-β = K(0.4 + 0.6v) for velocity v and flame power K (default 0.3, so 1.4–3.4×
-threshold). Releasing it rejoins them, to β = (key-up power) × β_H (default
-20 %), and the tube rings down at its acoustic damping: T60 = 0.7 s at C4,
-1.4 s at C3. If the key-up power is put inside the bistable band (above
+β = K β_H (0.4 + 0.6v) for velocity v and flame power K, which is in units of
+the threshold β_H, so that it means the same for every bore, damping and flame
+position (default K = 3.4: 1.4–3.4× threshold, β = 0.12–0.30 at the defaults).
+Releasing it rejoins them, to β = (key-up power) × β_H (default 20 %), and the
+tube rings down at its acoustic damping: T60 = 0.7 s at C4, 1.4 s at C3. If the key-up power is put inside the bistable band (above
 ≈ 87 %), a tube that has sung keeps singing after release, and one that has not
 stays silent. The flame is turbulent: white noise, low-passed at 300 Hz, is
 added to the velocity the flame feels, rms 2 % of the draught by default, plus a
@@ -121,9 +127,23 @@ physical time that is Re s × c/L, so it is proportional to the pitch:
 
 At velocity 0.1 (1.6× threshold) C3 takes a second. Chords bloom from the
 top down. Further past threshold the tube also sings louder (amplitude 0.44 at
-β = 0.1, 0.69 at 0.25, 0.88 at 0.55) and brighter. Above β ≈ 0.67 (at the
-defaults) mode 5 is driven too and the tube screams, so the power slider stops
-at 0.6.
+β = 0.1, 0.69 at 0.25, 0.88 at 0.55) and brighter.
+
+**The scream.** Further still, a higher mode goes unstable as well, out of tune
+with the note, and the tube screams: loud and inharmonic. At the defaults mode
+5's own Hopf point is β = 0.67 (7.6× threshold), but with the note already
+sounding the scream starts only at β ≈ 0.8–1.0 (measured: the harmonic share of
+the sound drops from 92 % to 13 %, and its level more than doubles). Over bore, damping,
+flame position and lag, the measured onset lies at 0.84–1.8× the Hopf point of
+the screaming mode. So the keys' gain is held below 0.8× the lowest Hopf point
+of any mode above the third (other than the one that sings): 6.1× threshold at
+the defaults (the power slider stops at 6×, and full aftertouch at 7.5× is held
+there), 2× for a narrow bore (a/L = 1/100, whose upper modes are relatively less
+damped and scream from about 4.5×), and close to threshold where the flame or
+the lag makes several modes nearly equally unstable. Modes 1–3 may still join
+in, since they lock to the note: a strong third harmonic, the octave taking
+over, period doubling, the mixtures low in the tube. The bifurcation view says
+when the keys are held below the scream.
 
 **Tuning and warm-up.** Every tube is a scaled copy (same x_f, τ in units of
 L/c, bore), so they all share one bifurcation diagram. A tube's pitch is
@@ -137,9 +157,13 @@ sounds exactly j times the key's frequency. Turn the auto-tuner off and the tube
 are cut for velocity 0.7, so playing from v = 0.2 to 1 raises the pitch by
 6.6 ¢: the physics of a fixed tube. The gas in a singing tube is at
 T_hot = 400 K; a fresh tube is ΔT cooler (default 4 K) and warms with a
-time constant τ_w (default 1 s). Since c ∝ √T, a cold note starts
-600 log₂(T_hot/(T_hot − ΔT)) = 8.7 ¢ flat and slides up into tune. Every tube
-remembers its temperature and cools with the same τ_w, so a note replayed
+time constant τ_w (default 1 s) while its flames are apart or it sings. Since
+c ∝ √T, a cold note starts 600 log₂(T_hot/(T_hot − ΔT)) = 8.7 ¢ flat and slides
+up into tune. A tube that keeps singing after release (key-up power in the
+bistable band) stays hot, so its pitch does not drift; it only steps down by
+the few cents its lower key-up gain gives the limit cycle (5.4 ¢ for a key
+played at 0.8). Every silent
+tube cools with the same τ_w and remembers its temperature, so a note replayed
 soon after starts warm, in tune. Every key is tested to settle within 3 ¢ of
 equal temperament (measured worst case 0.2 ¢).
 
@@ -154,7 +178,8 @@ Tubes are panned across the stereo field by position.
 **Numerics.** Each mode advances by the exact solution of its oscillator over
 one sample with the flame's force held (zero-order hold), at the tube's own
 time step c(T)/(L f_s), so the linear acoustics is exact at every pitch and
-temperature. The hold delays the force by half a sample, so the flame's delay
+temperature; for an overdamped mode the solution is the same with cosh and
+sinh. The hold delays the force by half a sample, so the flame's delay
 line is read half a sample early. A tube costs about 0.2 % of a core; 10 tubes
 render at 2 % of real time in Node. The tests hold the engine to the model:
 growth rate and ring-down within 3 %, limit-cycle amplitude within 2 %, both
@@ -176,13 +201,14 @@ frequencies and the harmonic levels harmonic balance predicts.
 
 1. **Chorale.** Seven chords. Held common tones carry through; every new note
    sighs in at its own rate, the bass slowest.
-2. **Hysteresis.** One tube, flames fully apart, with the power slowly raised
-   from 0.072 to 0.118 and lowered to 0.05. It starts near β = 0.11, a little past
+2. **Hysteresis.** One tube, flames fully apart, with the heater gain slowly raised
+   from β = 0.072 to 0.118 and lowered to 0.05 (0.8× to 1.3× threshold and back
+   to 0.6×). It starts near β = 0.11, a little past
    the Hopf point because growth there is slow, and keeps singing on the way
    down to ≈ 0.07, near the fold. It stops well below where it started. On the
    page: hold a key with Space and move the mod wheel.
-3. **The flame moved from the top to the bottom** of a held tube. Rayleigh's
-   map, heard: silence, the twelfth (mode 3), the octave, the octave with a
+3. **The flame moved from the top to the bottom** of a held tube, at a fixed
+   β = 0.3. Rayleigh's map, heard: silence, the twelfth (mode 3), the octave, the octave with a
    subharmonic (period doubling), silence near the middle, the fundamental,
    then a brighter locked mixture of modes 1–3 near the bottom.
 4. **Warm-up.** A cold tube (ΔT = 30 K, 67 ¢) slides up into tune over a few
@@ -210,7 +236,7 @@ pyrophone/src/pyrophone-engine.js           real-time engine (AudioWorklet and N
 pyrophone/src/pyrophone-params.js           parameters and presets
 pyrophone/src/pyrophone-main.js             page wiring
 pyrophone/src/pyrophone-views.js            bifurcation diagram, tube, phase portrait
-test/pyrophone-tests.mjs                    node test/pyrophone-tests.mjs (20 tests, ~5 s)
+test/pyrophone-tests.mjs                    node test/pyrophone-tests.mjs (25 tests, ~15 s)
 tools/render-pyrophone.mjs                  node tools/render-pyrophone.mjs → examples/pyrophone/
 ```
 
@@ -238,9 +264,16 @@ tools/render-pyrophone.mjs                  node tools/render-pyrophone.mjs → 
   Secondary instabilities (period doubling, the quasi-periodic fight between
   modes 1 and 2 near the bottom at high power) appear only in the time-domain
   engine.
+* **The scream's ceiling** comes from linear stability (each mode's Hopf point)
+  and a margin from measured onsets, not from a stability analysis of the
+  sounding cycle. Where several modes are nearly equally unstable (a flame at
+  either end, a lag near 270°), the tube can still fight between neighbouring
+  modes close to threshold; it does so quietly (a note peaks under 0.9).
+* **The fuel limit** on the heat release (three times its mean) is a plain cap
+  on King's law, not a model of a flame's saturation.
 * **Warm-up** is one lumped thermal time constant, with T_hot fixed and
-  independent of the flame power. Turbulence is low-passed white noise with a
-  fixed corner.
+  independent of the flame power: the gas is either heating (flames apart, or
+  singing) or cooling. Turbulence is low-passed white noise with a fixed corner.
 * **Auto-tune** cuts each tube for the velocity it is played at, which a real
   instrument cannot do (switch it off to hear the difference). The level is
   equalised across the keyboard. The radiation is two point sources with no

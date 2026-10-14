@@ -43,7 +43,7 @@ const demos = [
     ev.push([4.3, 'on', 55, 1], [4.33, 'on', 53, 0.9]);
     return play(preset('Tam-tam', { release: 8 }), 9.5, ev);
   }],
-  // A free bronze gong, then the same plate clamped in a frame: other mode ratios, and the clamped rim's stiffer (2,0)-less spectrum.
+  // A free bronze gong, then the same plate with its rim clamped (free to slide in its plane): other mode ratios, and a stiffer, (2,0)-less spectrum.
   ['07-hanging-then-clamped', () => cat(
     play(P({ strike: 0.3, release: 1 }), 3.5, hit(0.05, 55, 0.6, 2.8)),
     play(P({ bc: 'clamped', strike: 0.3, release: 1 }), 3.5, hit(0.05, 55, 0.6, 2.8)))],
