@@ -298,20 +298,46 @@ test('passivity: struck ff, through substep changes and projections, no preset e
     assert.ok(worst < 1 + 1e-6 && v.guards === 0, `${pr.name}, key ${key}: E/E_in ${worst.toFixed(6)}, guards ${v.guards}`);
   }
 });
-test('CPU: 4 gongs struck ff, all nonlinear, under 30 % of real time (10 reported)', () => {
-  const t = (keys) => {
-    const e = new GongEngine(FS); e.setParams(P());
+// Blocks of 128 samples, timed one by one, as the AudioWorklet runs them.
+function blockTimes(params, events, seconds, pedal = false) {
+  const e = new GongEngine(FS); e.setParams(params); e.setSustain(pedal);
+  const bl = new Float32Array(128), br = new Float32Array(128), nb = Math.round((seconds * FS) / 128), times = new Float64Array(nb);
+  let maxNl = 0;
+  for (let b = 0; b < nb; b++) {
+    for (const [t, k, v] of events) if (Math.round((t * FS) / 128) === b) e.noteOn(k, v);
+    const t0 = performance.now();
+    e.process(bl, br, 128);
+    times[b] = performance.now() - t0;
+    maxNl = Math.max(maxNl, e.voices.filter((u) => u.nl).length);
+  }
+  return { times, maxNl, voices: e.voiceCount() };
+}
+test('CPU: 4 gongs struck fff, all on the full nonlinear coupling, under 30 % of real time', () => {
+  const t = (keys, p) => {
+    const e = new GongEngine(FS); e.setParams(p);
     for (const k of keys) e.noteOn(k, 1);
-    const bl = new Float32Array(128), br = new Float32Array(128), n = Math.round(0.5 * FS / 128);
-    for (let i = 0; i < 20; i++) e.process(bl, br, 128);
+    const bl = new Float32Array(128), br = new Float32Array(128), n = Math.round((0.25 * FS) / 128);
+    for (let i = 0; i < 10; i++) e.process(bl, br, 128);
     const t0 = performance.now();
     for (let i = 0; i < n; i++) e.process(bl, br, 128);
-    assert.ok(e.voices.every((v) => v.nl), 'still nonlinear');
-    return (performance.now() - t0) / 1000 / (n * 128 / FS);
+    return { load: (performance.now() - t0) / 1000 / ((n * 128) / FS), full: e.voices.filter((v) => v.nl && v.cs === v.full).length };
   };
-  const four = t([55, 60, 62, 65]), ten = t([48, 52, 55, 57, 60, 62, 64, 65, 67, 69]);
-  console.log(`        4 voices ${(100 * four).toFixed(1)} %, 10 voices ${(100 * ten).toFixed(1)} % of real time`);
-  assert.ok(four < 0.3, `${(100 * four).toFixed(1)} %`);
+  const four = t([55, 60, 62, 65], P()), ten = t([48, 52, 55, 57, 60, 62, 64, 65, 67, 69], P()), tenAll = t([48, 52, 55, 57, 60, 62, 64, 65, 67, 69], P({ nlvoices: 16 }));
+  console.log(`        4 voices ${(100 * four.load).toFixed(1)} %; 10 voices ${(100 * ten.load).toFixed(1)} % (${ten.full} nonlinear, the default cap), ${(100 * tenAll.load).toFixed(1)} % with all 10 nonlinear`);
+  assert.equal(four.full, 4, 'all four on the full coupling');
+  assert.ok(four.load < 0.3, `${(100 * four.load).toFixed(1)} %`);
+});
+test('no audio block much costlier than the rest: worst block of an fff melody (pedal held) ≤ 8× one gong\'s', () => {
+  // the same work twice; for each block keep the faster run, which removes the machine's own hiccups
+  const melody = [60, 62, 64, 65, 67, 69, 71, 72, 74, 72, 71, 69, 67, 65, 64, 62].map((k, i) => [0.05 + 0.25 * i, k, 1]);
+  const a = blockTimes(P(), melody, 5, true), b = blockTimes(P(), melody, 5, true);
+  const one = blockTimes(P(), [[0.05, 60, 1]], 0.35).times.slice(30, 120), base = one.reduce((s, v) => s + v, 0) / one.length;
+  let worst = 0, at = 0;
+  for (let i = 0; i < a.times.length; i++) { const t = Math.min(a.times[i], b.times[i]); if (t > worst) { worst = t; at = i; } }
+  console.log(`        worst block ${(worst / base).toFixed(1)}× one fff gong's (${(1000 * worst).toFixed(0)} µs at ${((at * 128) / FS).toFixed(2)} s); at most ${a.maxNl} nonlinear of ${a.voices} ringing`);
+  assert.ok(a.maxNl <= DEFAULTS.nlvoices, `${a.maxNl} nonlinear voices at once (cap ${DEFAULTS.nlvoices})`);
+  assert.ok(a.voices === new Set(melody.map((m) => m[1])).size, `every gong still rings (${a.voices})`);
+  assert.ok(worst < 8 * base, `worst block ${(worst / base).toFixed(1)}× the one-gong block`);
 });
 
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');

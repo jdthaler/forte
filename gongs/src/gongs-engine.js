@@ -18,43 +18,62 @@
 // Accuracy: each step ψ is pinned to √(2V + ε₀) (energy-neutral, see project()),
 // and the size of that correction is the error estimate: when it grows (a hard
 // strike on a thin plate: deflections of several thicknesses) the voice halves
-// its step, up to 8 substeps per sample, and returns to one when it calms down.
+// its step, and returns to one when it calms down. Since the projection already
+// keeps the energy right, this is capped (2 substeps, 2 voices at a time) so that
+// no audio block costs much more than its neighbours.
 //
 // Voices run at fs/R (R = 2, 4 or 8, the lowest rate that holds all their modes
 // below fs/3R, where Ωh ≤ 2 keeps the SAV accurate); each rate has a bus and a
 // polyphase interpolator back to fs.
 
 import { keyPan } from '../../shared/dsp.js';
-import { keyGong, modeLoss, mallet, rowEnds, interpR, MICS as MIC } from './gongs-model.js';
+import { keyGong, modeLoss, mallet, rowEnds, interpR, shell, MICS as MIC } from './gongs-model.js';
+import { DEFAULTS } from './gongs-params.js';
 
 const OUT = 0.14;         // output per m/s of surface velocity (at the strike tone's weight)
 const TAPS = 24;          // interpolator taps per phase
 const MAX_VOICES = 16;
-const NL_OFF = 1e-8;      // nonlinear energy fraction below which a voice runs linear
-const UP = 2e-2, DOWN = 2e-3, CALM = 0.02, MAX_SUB = 8; // substep control: per-step energy defect, seconds of calm
+// A voice runs linear once its nonlinear energy measure r = (|V₄| + V₃²/E)/E (held over a
+// couple of periods, see render) is below NL_OFF: the pitch shift left is ~¾r (0.3 ¢), and the
+// nonlinear exchange time ~1/(rω) is longer than the ring. A voice that is quiet (under
+// −60 dB, or 30 dB below the loudest gong) goes linear already at r < NL_QUIET.
+const NL_OFF = 2e-4, NL_QUIET = 1e-3, QUIET = 1e-3, MASKED = 0.03;
+// Below LITE_R (pitch shifts under ~1 %) a voice uses only the strongest couplings (model.LITE).
+const LITE_R = 1e-2;
+// Substep control: per-step energy defect up/down thresholds, seconds of calm before
+// stepping back, at most MAX_SUB substeps, and at most SUB_VOICES voices substepping at once.
+const UP = 2e-2, DOWN = 2e-3, CALM = 0.02, MAX_SUB = 2, SUB_VOICES = 2;
 const POST_BLOCKS = 12;
 
 class Voice {
   constructor(eng, key, P) {
     const g = keyGong(key, P, eng.fs), S = g.S, N = g.Nv;
+    this.eng = eng;
     this.g = g; this.S = S; this.key = key; this.N = N; this.R = g.R; this.k = g.k; this.P = P;
     const F = () => new Float64Array(N);
     this.x = F(); this.x1 = F(); this.xs = F(); this.gv = F(); this.a0 = F(); this.a1 = F();
     this.phi = F(); this.mL = F(); this.mR = F(); this.wd = F(); this.sg = F();
     this.cf = [1, 2, 4, 8].map(() => ({ A: F(), B: F(), iD: F() }));
     this.Q = new Float64Array(S.NS); this.L = new Float64Array(S.NS); this.y = new Float64Array(S.NS); this.z = new Float64Array(S.NS);
-    this.end1 = rowEnds(S.p1.off, S.p1.j, N, new Int32Array(S.NS));
-    this.end2 = rowEnds(S.p2.off, S.p2.q, N, new Int32Array(N));
-    this.endE = rowEnds(S.e1.off, S.e1.i, N, new Int32Array(S.NS));
-    this.rows = Int32Array.from([...Array(S.NS).keys()].filter((n) => this.end1[n] > S.p1.off[n]));
+    // the full coupling set while strongly nonlinear, the lite one (strongest terms only) in the tail
+    const view = (c) => {
+      const end1 = rowEnds(c.p1.off, c.p1.j, N, new Int32Array(S.NS));
+      return { p1: c.p1, p2: c.p2, e1: c.e1, e2: c.e2, end1, end2: rowEnds(c.p2.off, c.p2.q, N, new Int32Array(N)),
+        endE: rowEnds(c.e1.off, c.e1.i, N, new Int32Array(S.NS)), rows: Int32Array.from([...Array(S.NS).keys()].filter((n) => end1[n] > c.p1.off[n])) };
+    };
+    this.full = view(S.full); this.lite = view(S.lite); this.cs = this.full;
     this.vScale = g.h * g.w0; // m/s per unit of dx̄/dt̄
     this.setOutput(P);
-    this.extra = 0; this.released = false; this.damped = false; this.killing = false; this.dead = false;
-    this.m = 1; this.h = this.k; this.calm = 0; this.adapt = true;
+    // Every field is created here, and every real-valued one starts as a double (−0 acts as 0
+    // in all the arithmetic below, but V8 cannot store it as a small integer). The object's
+    // hidden class then never changes later, which would de-optimise the hot loops mid-note.
+    this.extra = -0; this.released = false; this.damped = false; this.killing = false; this.dead = false;
+    this.m = 1; this.h = this.k; this.calm = -0; this.adapt = true;
+    this.A = this.cf[0].A; this.B = this.cf[0].B; this.iD = this.cf[0].iD;
     this.setDamping();
-    this.nl = false; this.psi = 0; this.eps0 = 1; this.V = 0; this.Vprev = 0; this.V3 = 0; this.V4 = 0; this.defect = 0;
-    this.hit = null; this.quiet = 0; this.age = 0; this.peak = 0; this.contactMs = 0; this.Einj = 0; this.guards = 0; this.lastF = 0;
-    this.ph = 0; this.cents = 0; this.phInit = false; this.dc = 0;
+    this.nl = false; this.psi = -0; this.eps0 = 1.5; this.V = -0; this.Vprev = -0; this.V3 = -0; this.V4 = -0; this.defect = -0;
+    this.hit = null; this.quiet = 0; this.age = 0; this.peak = -0; this.contactMs = -0; this.Einj = -0; this.guards = 0; this.lastF = -0; this.nlr = -0; this.v4max = -0; this.v3max = -0;
+    this.ph = -0; this.cents = -0; this.phInit = false; this.dc = -0; this.KE = -0; this.vImpact = -0;
   }
 
   // What reaches the listener: each mode's surface velocity, weighted by (σ_rad)^(far/2)
@@ -130,7 +149,7 @@ class Voice {
   // Counted in this.guards; the tests check that it never acts for the presets.
   guard() {
     const E = this.energyD();
-    if (!(E > 1.3 * this.Einj)) return;
+    if (!(E > (this.eng.warming ? 0 : 1.3) * this.Einj)) return;
     const { x, x1, h, N } = this;
     let K = 0;
     for (let i = 0; i < N; i++) { const v = (x[i] - x1[i]) / h; K += 0.5 * v * v; }
@@ -151,11 +170,12 @@ class Voice {
 
   strike(vel, P) {
     const ml = mallet(this.g, P, vel), S = this.S, rs = P.strike;
-    // resolve the contact with ≥ 12 steps: Hertz contact time of the mallet on a rigid flat
-    // (a lower bound; the plate's own give lengthens it), 3.218 (M²/(K² v))^{1/5}
+    // resolve the contact with ≥ 6 steps (at most 4 substeps): Hertz contact time of the mallet
+    // on a rigid flat (a lower bound; the plate's own give lengthens it), 3.218 (M²/(K² v))^{1/5}.
+    // The discrete-gradient contact conserves energy at any step; this only shapes the pulse.
     const tc = 3.218 * ((Math.PI * ml.mu) ** 2 / (ml.K * ml.K * Math.max(ml.vbar, 1e-6))) ** 0.2;
     let m = 1;
-    while (m < MAX_SUB && (12 * this.k) / m > tc) m *= 2;
+    while (m < MAX_SUB && (6 * this.k) / m > tc) m *= 2;
     if (m > this.m) this.setSub(m);
     for (let i = 0; i < this.N; i++) this.phi[i] = interpR(S.R[i], rs); // on the line θ = 0
     let w = 0, w1 = 0;
@@ -163,12 +183,13 @@ class Voice {
     const vb = ml.vbar, h = this.h;
     // the mallet starts one step short of the surface, moving at v̄ (plus the surface's own motion)
     const xm = w - vb * h, xm1 = xm - vb * h - (w - w1);
-    this.hit = { K: ml.K, Mi: 1 / (Math.PI * ml.mu), xm, xm1, d0: xm - w, dm1: xm1 - w1, touched: false, t: 0, tmax: (6 * Math.PI) / S.Om[S.tuned], Fmax: 0, steps: 0 };
+    this.hit = { K: ml.K, Mi: 1 / (Math.PI * ml.mu), xm, xm1, d0: xm - w, dm1: xm1 - w1, touched: false, t: -0, tmax: (6 * Math.PI) / S.Om[S.tuned], Fmax: -0, steps: 0 };
     const KE = 0.5 * Math.PI * ml.mu * vb * vb;
     this.gradient(); this.Vprev = this.V;
     this.eps0 = 2 * (this.energy() + Math.abs(this.V) + KE) + 1e-12;
     this.psi = Math.sqrt(Math.max(2 * this.V + this.eps0, 1e-12 * this.eps0));
-    this.nl = true; this.released = false; this.damped = false; this.setDamping();
+    this.nl = true; this.nlr = -0; this.v4max = -0; this.v3max = -0; this.released = false; this.damped = false; this.setDamping();
+    if (this.cs !== this.full) { this.cs = this.full; this.gradient(); this.Vprev = this.V; }
     this.age = 0; this.phInit = false; this.vImpact = ml.v; this.KE = KE;
     this.Einj = this.energyD();
   }
@@ -186,27 +207,33 @@ class Voice {
 
   // V_nl(x) and g = ∇V_nl (into gv), over this key's modes. Returns V.
   gradient() {
-    const S = this.S, x = this.x, Q = this.Q, L = this.L, y = this.y, z = this.z, C = S.C, gv = this.gv, N = this.N;
-    const o1 = S.p1.off, I1 = S.p1.i, J1 = S.p1.j, H1 = S.p1.h, e1o = S.e1.off, EI = S.e1.i, EV = S.e1.v, end1 = this.end1, endE = this.endE, rows = this.rows;
+    const c = this.cs, x = this.x, Q = this.Q, L = this.L, y = this.y, z = this.z, C = this.S.C, gv = this.gv, N = this.N;
+    const o1 = c.p1.off, IJ = c.p1.ij, H1 = c.p1.h, e1o = c.e1.off, EI = c.e1.i, EV = c.e1.v, end1 = c.end1, endE = c.endE, rows = c.rows;
     let V3 = 0, V4 = 0;
     for (let r = 0; r < rows.length; r++) {
       const n = rows[r];
       let q0 = 0, q1 = 0, e = o1[n];
       const e1 = end1[n];
-      for (; e + 1 < e1; e += 2) { q0 += H1[e] * x[I1[e]] * x[J1[e]]; q1 += H1[e + 1] * x[I1[e + 1]] * x[J1[e + 1]]; }
-      if (e < e1) q0 += H1[e] * x[I1[e]] * x[J1[e]];
+      for (; e + 1 < e1; e += 2) { // (i, j) packed as i·256 + j
+        const a = IJ[e], b = IJ[e + 1];
+        q0 += H1[e] * x[a >> 8] * x[a & 255]; q1 += H1[e + 1] * x[b >> 8] * x[b & 255];
+      }
+      if (e < e1) { const a = IJ[e]; q0 += H1[e] * x[a >> 8] * x[a & 255]; }
       let l = 0;
       for (let f = e1o[n], f1 = endE[n]; f < f1; f++) l += EV[f] * x[EI[f]];
-      const q = q0 + q1, c = C[n];
-      Q[n] = q; L[n] = l; V4 += 0.5 * c * q * q; V3 += 2 * c * q * l;
-      y[n] = 2 * c * (q + 2 * l); z[n] = 2 * c * q;
+      const q = q0 + q1, cn = C[n];
+      Q[n] = q; L[n] = l; V4 += 0.5 * cn * q * q; V3 += 2 * cn * q * l;
+      y[n] = 2 * cn * (q + 2 * l); z[n] = 2 * cn * q;
     }
-    const o2 = S.p2.off, N2 = S.p2.n, Q2 = S.p2.q, H2 = S.p2.h, end2 = this.end2, e2o = S.e2.off, EN = S.e2.n, EV2 = S.e2.v;
+    const o2 = c.p2.off, NQ = c.p2.nq, H2 = c.p2.h, end2 = c.end2, e2o = c.e2.off, EN = c.e2.n, EV2 = c.e2.v;
     for (let i = 0; i < N; i++) {
       let g0 = 0, g1 = 0, e = o2[i];
       const e1 = end2[i];
-      for (; e + 1 < e1; e += 2) { g0 += y[N2[e]] * H2[e] * x[Q2[e]]; g1 += y[N2[e + 1]] * H2[e + 1] * x[Q2[e + 1]]; }
-      if (e < e1) g0 += y[N2[e]] * H2[e] * x[Q2[e]];
+      for (; e + 1 < e1; e += 2) { // (n, q) packed as n·256 + q
+        const a = NQ[e], b = NQ[e + 1];
+        g0 += y[a >> 8] * H2[e] * x[a & 255]; g1 += y[b >> 8] * H2[e + 1] * x[b & 255];
+      }
+      if (e < e1) { const a = NQ[e]; g0 += y[a >> 8] * H2[e] * x[a & 255]; }
       for (let f = e2o[i], f1 = e2o[i + 1]; f < f1; f++) g0 += z[EN[f]] * EV2[f];
       gv[i] = g0 + g1;
     }
@@ -259,6 +286,9 @@ class Voice {
     let gx1 = 0, gb = 0, ga0 = 0;
     if (this.nl) {
       const V = this.gradient(), it = 1 / Math.sqrt(Math.max(2 * V + this.eps0, 1e-12 * this.eps0));
+      const v4 = this.V4 < 0 ? -this.V4 : this.V4, v3 = this.V3 * this.V3;
+      if (v4 > this.v4max) this.v4max = v4;
+      if (v3 > this.v3max) this.v3max = v3;
       this.project(V);
       for (let i = 0; i < N; i++) { gv[i] *= it; gx1 += gv[i] * x1[i]; }
     } else gv.fill(0);
@@ -306,8 +336,8 @@ class Voice {
       const a = l < 0 ? -l : l;
       if (a > peak) peak = a;
       if (this.nl && this.adapt) { // substep control
-        if (this.defect > UP && this.m < MAX_SUB) this.setSub(2 * this.m);
-        else if (this.m > 1 && this.defect < DOWN) { if ((this.calm += this.k / this.g.w0) > CALM) this.setSub(this.m / 2); }
+        if (this.defect > (eng.warming ? -1 : UP) && this.m < MAX_SUB && eng.subVoices < SUB_VOICES) { this.setSub(2 * this.m); eng.subVoices++; }
+        else if (this.m > 1 && this.defect < (eng.warming ? Infinity : DOWN)) { if ((this.calm += this.k / this.g.w0) > CALM) this.setSub(this.m / 2); }
         else this.calm = 0;
         this.defect = 0;
       }
@@ -327,15 +357,26 @@ class Voice {
     }
     this.ph = ph; this.phInit = true;
     if (this.nl) this.guard();
-    if (this.nl && !this.hit) {
-      const E = this.energy();
-      if (E <= 0 || Math.abs(this.V4) + (this.V3 * this.V3) / E < NL_OFF * E) { this.nl = false; if (this.m > 1) this.setSub(1); }
+    // r = (|V₄| + V₃²/E)/E is instantaneous: it nearly vanishes as the strike tone crosses zero.
+    // So take its largest value over the block's steps, held for about two periods of the tone.
+    if (this.nl) {
+      const E = Math.max(this.energy(), 1e-30), r = (this.v4max + this.v3max / E) / E;
+      this.nlr = Math.max(r, this.nlr * Math.exp((-n * this.k * this.S.Om[this.S.tuned]) / (4 * Math.PI)));
+      this.v4max = -0; this.v3max = -0;
+      const quiet = peak < QUIET || peak < MASKED * eng.loudest;
+      if (!this.hit && (this.nlr < (eng.warming === 2 ? Infinity : NL_OFF) || (this.nlr < NL_QUIET && quiet))) this.linear();
+      else if (!this.hit) { // weakly nonlinear: the lite coupling set (ψ is re-synced, energy-neutrally, by the next projection)
+        const cs = this.nlr < (eng.warming === 3 ? Infinity : LITE_R) ? this.lite : this.nlr > 2 * LITE_R ? this.full : this.cs;
+        if (cs !== this.cs) { this.cs = cs; this.gradient(); this.Vprev = this.V; }
+      }
     }
     if (!this.nl && !this.hit) {
       this.quiet = peak < (this.damped ? 1e-5 : 3e-6) ? this.quiet + 1 : 0;
       if (this.quiet > 40) this.dead = true;
     }
   }
+
+  linear() { this.nl = false; this.nlr = 0; if (this.m > 1) this.setSub(1); } // from here on, exact modal decay
 
   // view data: mode amplitudes (in thicknesses) and energy per octave band of the key's pitch
   snapshot(amp, band) {
@@ -410,14 +451,38 @@ export class GongEngine {
     this.P = null;
     this.voices = [];
     this.sustain = false;
-    this.buses = [null, null, null, null]; // R = 1, 2, 4, 8
+    this.buses = [1, 2, 4, 8].map((R) => new Upsampler(R)); // all allocated here, none on the audio thread later
     this.blocks = 0;
     this.focus = null;
     this.amp = new Float32Array(64); this.band = new Float32Array(6);
+    this.subVoices = 0; this.warming = 0; this.post = null; this.loudest = -0; this.loud = -0;
+    this.warmUp();
+  }
+  // Run every hot path (noteOn, strike, contact, nonlinear steps, substeps, linear steps,
+  // the nonlinear-voice limit, the interpolators) through process() on scratch buffers, so
+  // that the JIT has compiled them and the default tables exist before the first real
+  // note; then forget it all.
+  warmUp() {
+    const L = new Float32Array(128), R = new Float32Array(128);
+    this.process(L, R, 128); // before any parameters arrive, as in the worklet
+    this.P = { ...DEFAULTS, nlvoices: 1 };
+    this.post = () => {}; // the view messages too (and post is then not a constant to V8)
+    this.noteOn(57, 1); this.noteOn(45, 0.5); this.noteOn(50, 0.7);
+    for (let i = 0; i < 160; i++) {
+      // forced phases take every substep switch, the guard and the switch to the linear path
+      // through their usual branches; the normal phases in between take the common ones
+      this.warming = i < 25 ? 1 : i < 45 ? 0 : i < 55 ? 3 : i < 70 ? 2 : 0;
+      if (i === 90) this.allNotesOff(); // and voices fading out and being removed
+      this.process(L, R, 128);
+    }
+    this.warming = 0;
+    this.voices = []; this.focus = null; this.P = null; this.post = null; this.blocks = 0; this.subVoices = 0;
+    for (const u of this.buses) { u.hl.fill(0); u.hr.fill(0); u.inL.fill(0); u.inR.fill(0); u.idle = 99; }
   }
   setParams(P) {
     const old = this.P;
     this.P = P;
+    shell(P.bc, P.rise, P.terms); // build (or fetch) the coupling tables now, not at the next strike
     if (old && (old.eta !== P.eta || old.radiation !== P.radiation || old.thermal !== P.thermal || old.release !== P.release)) {
       for (const v of this.voices) {
         v.P = { ...v.P, eta: P.eta, radiation: P.radiation, thermal: P.thermal, release: P.release };
@@ -431,11 +496,7 @@ export class GongEngine {
     this.sustain = on;
     if (!on) for (const v of this.voices) if (v.released && !v.damped) { v.damped = true; v.setDamping(); }
   }
-  bus(R) {
-    const i = Math.round(Math.log2(R));
-    if (!this.buses[i]) this.buses[i] = new Upsampler(R);
-    return this.buses[i];
-  }
+  bus(R) { return this.buses[R === 1 ? 0 : R === 2 ? 1 : R === 4 ? 2 : 3]; }
   add(v) { this.voices.push(v); this.bus(v.R); this.focus = v; return v; }
   noteOn(key, velocity) {
     if (!this.P) return;
@@ -469,12 +530,30 @@ export class GongEngine {
   place(key, x0) { return this.add(new Voice(this, key, this.P)).setState(x0); } // a voice in a given state (tests)
   allNotesOff() { for (const v of this.voices) { v.killing = true; v.setDamping(); } }
   voiceCount() { return this.voices.length; }
+  // Polyphony of the expensive part: at most P.nlvoices gongs run their nonlinear
+  // coupling at once. Beyond that the one whose nonlinearity matters least (smallest r)
+  // carries on linearly: it keeps ringing, with its pitch glide and cascade frozen.
+  limitNonlinear() {
+    const V = this.voices, cap = Math.max(1, this.P?.nlvoices ?? 4);
+    let count = 0;
+    for (let i = 0; i < V.length; i++) if (V[i].nl && !V[i].killing) count++;
+    while (count > cap) {
+      let w = null;
+      for (let i = 0; i < V.length; i++) { const v = V[i]; if (v.nl && !v.killing && !v.hit && (!w || v.nlr < w.nlr)) w = v; }
+      if (!w) break;
+      w.linear(); count--;
+    }
+  }
   process(L, R, n) {
     L.fill(0, 0, n); R.fill(0, 0, n);
+    this.limitNonlinear();
     const B = this.buses, V = this.voices;
-    for (let i = 0; i < B.length; i++) if (B[i]) { B[i].inL.fill(0, 0, n / B[i].R); B[i].inR.fill(0, 0, n / B[i].R); }
-    for (let i = 0; i < V.length; i++) { const v = V[i], b = this.bus(v.R); v.render(b.inL, b.inR, n / v.R, this); b.idle = 0; }
-    for (let i = 0; i < B.length; i++) if (B[i] && B[i].idle++ < 4) B[i].run(n / B[i].R, L, R);
+    this.subVoices = 0;
+    for (let i = 0; i < V.length; i++) if (V[i].m > 1) this.subVoices++;
+    this.loudest = this.loud; this.loud = -0; // the loudest voice's peak in the last block, for masking
+    for (let i = 0; i < B.length; i++) { B[i].inL.fill(0, 0, n / B[i].R); B[i].inR.fill(0, 0, n / B[i].R); }
+    for (let i = 0; i < V.length; i++) { const v = V[i], b = this.bus(v.R); v.render(b.inL, b.inR, n / v.R, this); b.idle = 0; if (v.peak > this.loud) this.loud = v.peak; }
+    for (let i = 0; i < B.length; i++) if (B[i].idle++ < 4) B[i].run(n / B[i].R, L, R);
     let j = 0;
     for (let i = 0; i < V.length; i++) if (!V[i].dead) V[j++] = V[i];
     V.length = j;

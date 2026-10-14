@@ -45,6 +45,8 @@ export const GROUPS = [
         hint: 'Close up you hear the plate’s motion, ruled by its strike tone. Out in the room you hear what it radiates, and a gong smaller than the wavelength radiates its low modes poorly: the high modes, and the crash, come forward.' },
       { id: 'release', label: 'Hand damping on release', min: 0.1, max: 30, def: 2.5, log: true, fmt: (v) => `T₆₀ ${v.toFixed(1)} s`,
         hint: 'A hand on the gong when the key is let go (Space or the pedal holds it off). MIDI aftertouch presses harder.' },
+      { id: 'nlvoices', label: 'Nonlinear voices', min: 1, max: 16, def: 4, step: 1, fmt: (v) => `${v.toFixed(0)} at once`,
+        hint: 'How many gongs may run their (costly) nonlinear coupling at once; beyond that the least nonlinear one rings on linearly. Lower it if a tablet crackles, raise it on a fast computer.' },
       { id: 'terms', label: 'Coupling terms', min: 200, max: 2000, def: 600, step: 50, log: true, fmt: (v) => `${v.toFixed(0)}`,
         hint: 'How many of the strongest von Kármán coupling terms are kept. More is more accurate turbulence, and more CPU.' },
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.3, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
