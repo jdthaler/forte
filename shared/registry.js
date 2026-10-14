@@ -22,7 +22,7 @@ export const INSTRUMENTS = [
     accent: '#5aa9ff',
   },
   {
-    id: 'grand', name: 'Electric Grand', section: 'history', ready: true, version: '0.1.0',
+    id: 'grand', name: 'Electric Grand', section: 'history', ready: true, version: '0.2.0',
     after: 'the Yamaha CP-70',
     tagline: 'A real piano action with no soundboard: piezo pickups under the bridge hear the strings directly.',
     physics: 'Bridge force · piezoelectric pickup',
@@ -43,7 +43,7 @@ export const INSTRUMENTS = [
     accent: '#ef5a4a',
   },
   {
-    id: 'reeds', name: 'Reed Piano', section: 'history', ready: true, version: '0.1.0',
+    id: 'reeds', name: 'Reed Piano', section: 'history', ready: true, version: '0.2.0',
     after: 'the Wurlitzer 200A',
     tagline: 'Struck steel reeds tuned with solder, sensed as one plate of a charged capacitor.',
     physics: 'Cantilever reeds · electrostatic pickup',
@@ -57,7 +57,7 @@ export const INSTRUMENTS = [
     accent: '#c6e36a',
   },
   {
-    id: 'pianet', name: 'Sticky-Pad Piano', section: 'history', ready: true, version: '0.1.0',
+    id: 'pianet', name: 'Sticky-Pad Piano', section: 'history', ready: true, version: '0.2.0',
     after: 'the Hohner Pianet',
     tagline: 'No hammers at all: tacky pads grab each reed and let it go.',
     physics: 'Adhesion and release · reed pickup',

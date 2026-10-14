@@ -14,6 +14,37 @@ for example `piano-v0.1.0`.
 An adversarial review of the whole project (six reviewers, one per area)
 found the bugs and inaccuracies below; each fix has a regression test.
 
+### Electric Grand 0.2.0
+- New **stretch tuning** (on by default): each octave's 2:1 partials
+  coincide, as a tuner would set them (−12 ¢ at E1, +25 ¢ at E7). Unstretched,
+  the C6–C7 octave beat at 15 Hz.
+- High partials drain into the bridge at the right rate (an implicit
+  bridge solve; it was 31 % slow at 15 kHz).
+- Above 6 kHz the soundboard radiates through a residual path, instead of
+  draining the strings silently.
+- The microphones no longer cancel in mono: a phase-convention error put the
+  mic path 12 dB down; it now matches the README's −4 dB.
+- Re-striking a ringing note no longer doubles its voice.
+- A 60 ms hammer repetition limit.
+- CPU roughly halved: dead partials stop being computed, and the voice
+  budget adapts to measured load, with a lower ceiling on tablets.
+
+### Reed Piano 0.2.0
+- The C(y) table now covers ±5.8 mm, with the frame as an end stop: a light
+  reed at ff swung off the table and through the frame.
+- No clicks when the gap, reed height or output is changed while notes
+  sound.
+- Re-striking a ringing note no longer doubles its voice.
+
+### Sticky-Pad Piano 0.2.0
+- Re-pressing a key with the sustain pedal down plays again: the pad
+  drops, re-tacks and plucks. It used to be silent.
+- The magnetic pickup's level no longer depends on the sample rate.
+- Its pole-gap law corrected to a fixed magnet MMF (Φ₀ ∝ 1/(ℓ+g)), with the
+  gaps re-voiced.
+- No clicks when knobs move.
+- Preset levels evened out.
+
 ### Tangent Clavier 0.2.0
 - The rubber-tip and tip-width sliders no longer detune held notes (+32 ¢ at
   the "Soft tips" setting).
