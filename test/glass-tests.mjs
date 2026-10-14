@@ -10,7 +10,7 @@ import {
   speakingThreshold, regulation, transport, pulpDamping, KEY_LO, KEY_HI, REF,
 } from '../glass/src/glass-model.js';
 import { ArmonicaEngine } from '../glass/src/glass-engine.js';
-import { DEFAULTS, GROUPS } from '../glass/src/glass-params.js';
+import { DEFAULTS, GROUPS, PRESETS } from '../glass/src/glass-params.js';
 import { keyFreq } from '../shared/dsp.js';
 
 const FS = 48000, PI = Math.PI;
@@ -250,10 +250,13 @@ test('water lowers the bowl by the predicted amount (no retuning)', () => {
     assert.ok(want < keyFreq(64) * 0.995, 'it went flat');
   }
 });
-test('dry fingers do not speak; wet fingers do', () => {
-  const lvl = (wet) => { const { L, R } = hold(69, 0.6, 2, P({ wet })); return rms(L, 1.5 * FS, 2 * FS) + rms(R, 1.5 * FS, 2 * FS); };
-  const dry = lvl(0.05), wet = lvl(0.85);
-  assert.ok(wet > 30 * dry, `wet/dry ${(20 * Math.log10(wet / dry)).toFixed(1)} dB`);
+test('dry fingers do not speak, they whisper (the ridges catch more); wet fingers sing', () => {
+  const look = (wet) => { const { L, R } = hold(69, 0.6, 2, P({ wet })); return { lvl: rms(L, 1.5 * FS, 2 * FS) + rms(R, 1.5 * FS, 2 * FS), n2: tone(L, 440, 1.5 * FS, 2 * FS) }; };
+  const dry = look(0.05), wet = look(0.85);
+  assert.ok(wet.n2 > 100 * dry.n2, `(2,0): wet/dry ${(20 * Math.log10(wet.n2 / dry.n2)).toFixed(1)} dB`);
+  assert.ok(wet.lvl > 10 * dry.lvl, `wet/dry ${(20 * Math.log10(wet.lvl / dry.lvl)).toFixed(1)} dB`);
+  assert.ok(20 * Math.log10(dry.lvl / 2) > -60, `dry: ${(20 * Math.log10(dry.lvl / 2)).toFixed(1)} dBFS, too faint to hear`); // was −63 for a triad
+  console.log(`        A4: dry ${(20 * Math.log10(dry.lvl / 2)).toFixed(1)} dBFS, wet ${(20 * Math.log10(wet.lvl / 2)).toFixed(1)} dBFS`);
 });
 test('pressure window: too light is silent, the middle sings (2,0), pressing hard squeals in higher modes', () => {
   const key = 64, b = bowl(key, P(QUIET));
@@ -277,6 +280,24 @@ test('MIDI aftertouch presses harder: a too-light note speaks when pressure arri
 console.log('safety');
 test('output level: a forte note peaks 0.08–0.6 anywhere on the keyboard', () => {
   for (const k of [53, 60, 69, 79, 88, 93]) { const { L, R } = hold(k, 1, 1.5, P()); const p = peak(L, R); assert.ok(p > 0.08 && p < 0.6, `${k}: ${p}`); }
+});
+test('every preset, played at the computer keys\' touch, peaks below 0.6 (the squeal preset was 1.6)', () => {
+  for (const pr of PRESETS) for (const k of [53, 60, 67, 81]) {
+    const { L, R } = hold(k, DEFAULTS.velocity, 2.5, P(pr.p)), p = peak(L, R);
+    assert.ok(p < 0.6, `${pr.name}, key ${k}: ${p.toFixed(2)}`);
+  }
+});
+test('speaking time (to within 6 dB of full): 0.4–0.8 s at mid velocity, 0.85–1.6 s for a light touch', () => {
+  const onset = (key, vel) => {
+    const { L, R } = hold(key, vel, 3, P()), x = L.map((v, i) => Math.abs(v) + Math.abs(R[i])), W = 960;
+    const env = []; for (let i = 0; i + W <= x.length; i += W) { let p = 0; for (let j = i; j < i + W; j++) p = Math.max(p, x[j]); env.push(p); }
+    const full = Math.max(...env.slice(-25));
+    return env.findIndex((p) => p > 0.5 * full) * (W / FS);
+  };
+  const mid = [53, 67, 81, 93].map((k) => onset(k, 0.6)), soft = [53, 67, 81, 93].map((k) => onset(k, 0.2));
+  for (const t of mid) assert.ok(t > 0.4 && t < 0.8, `velocity 0.6: ${mid.map((x) => x.toFixed(2)).join(', ')} s`);
+  for (const t of soft) assert.ok(t > 0.85 && t < 1.6, `velocity 0.2: ${soft.map((x) => x.toFixed(2)).join(', ')} s`);
+  console.log(`        F3, G4, A5, A6: ${mid.map((x) => x.toFixed(2)).join(' / ')} s at 0.6; ${soft.map((x) => x.toFixed(2)).join(' / ')} s at 0.2`);
 });
 test('every parameter at its min and max: finite, bounded, and silent after a release', () => {
   const ids = GROUPS.flatMap((g) => g.params).filter((p) => p.type !== 'select' && p.type !== 'checkbox');

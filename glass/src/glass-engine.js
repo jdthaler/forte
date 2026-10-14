@@ -130,7 +130,7 @@ export class ArmonicaEngine {
     }
     this.theta = th % TAU;
     const W = this.Wbar;
-    const { mud, dmu, v0, beta } = this.fr, noise = P.rough;
+    const { mud, dmu, v0, beta, noise } = this.fr;
     const lam = 1 - Math.exp(-k / SKIN.land);
     const Yp = 1 / (SKIN.m / k + SKIN.c + SKIN.k * k), mk = SKIN.m / k; // pad: u⁺ = u0 − Yp F
 

@@ -10,7 +10,7 @@ export const GROUPS = [
       { id: 'press', label: 'Finger pressure', min: 0.1, max: 20, def: 6, log: true, fmt: (v) => `${v.toFixed(1)} × speaking threshold`, hint: 'Normal force, as a multiple of each bowl\'s threshold (velocity scales it 0.6–1.4×). Below 1 the skin just slides; above, the bowl swells in faster the harder you press; far above, the skin squeals in the higher modes. MIDI aftertouch presses harder.' },
       { id: 'wet', label: 'Skin moisture', min: 0, max: 1, def: 0.85, step: 0.01, fmt: (v) => `${v < 0.25 ? 'dry' : v < 0.6 ? 'damp' : 'wet'} · ${pct(v)}`, hint: 'Wet skin on clean glass grabs: its friction falls steeply with slip speed. Dry fingers only whisper.' },
       { id: 'v0', label: 'Stribeck speed v₀', min: 0.05, max: 2, def: 0.5, log: true, fmt: (v) => `${(v * 100).toFixed(0)} cm/s`, hint: 'Slip speed over which wet-skin friction falls from static to sliding. The rims move at 10–40 cm/s.' },
-      { id: 'rough', label: 'Skin ridges (friction noise)', min: 0, max: 0.1, def: 0.02, step: 0.001, fmt: pct, hint: 'Random friction from fingerprint ridges passing the rim: a breath of hiss, and the seed each note grows from.' },
+      { id: 'rough', label: 'Skin ridges (friction noise)', min: 0, max: 0.1, def: 0.02, step: 0.001, fmt: pct, hint: 'Random friction from fingerprint ridges passing the rim: a breath of hiss, and the seed each note grows from. For wet skin; drier ridges catch more (up to 6×).' },
       { id: 'velocity', label: 'Velocity (computer keys)', min: 0.05, max: 1, def: 0.6, step: 0.01, fmt: (v) => v.toFixed(2), hint: 'How firmly the finger lands.' },
     ],
   },
@@ -47,7 +47,7 @@ export const PRESETS = [
   { name: 'Fast treadle (big bowls struggle)', p: { speed: 1.2 } },
   { name: 'Badly blown bowls (deep warble)', p: { split: 30 } },
   { name: 'Dry fingers (no grip)', p: { wet: 0.1 } },
-  { name: 'Pressing hard (the skin squeals)', p: { press: 16 } },
+  { name: 'Pressing hard (the skin squeals)', p: { press: 10 } },
   { name: 'Bowls half full of water', p: { water: 0.5 } },
   { name: 'Lead crystal (rings for ages)', p: { loss: 1e-4 } },
 ];

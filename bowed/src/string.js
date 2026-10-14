@@ -64,6 +64,7 @@ export class BowedString {
     this.gb = L.gb * (1 - L.pb); this.pb = L.pb;
     this.gn = L.gn * (1 - L.pn); this.pn = L.pn;
     this.T0 = L.N0;
+    this.wheel = L.wheel ?? 1;       // this string's wheel turns this much faster than the treadle setting
   }
   // Felt damper: extra loss per round trip, as the factor exp(−σ_d / f₀).
   setDamper(on, sigma) { this.dampT = on ? Math.exp(-sigma / this.L.f0) : 1; }

@@ -18,7 +18,12 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/glass/>
 | `←` `→` | octave |
 | `↑` `↓` | finger pressure |
 | `Space` | hold the notes that are down (latch) |
-| MIDI | notes and velocity; **aftertouch presses harder**; **mod wheel = treadle speed**; sustain pedal = hold |
+| MIDI | notes and velocity; **aftertouch presses harder**; **mod wheel = treadle speed** (rest = 0.5 rev/s, full = 1 rev/s); sustain pedal = hold |
+
+The mod wheel turns the treadle from its default up to twice as fast: louder
+(the rim moves faster) and a faster warble. It stops at 1 rev/s, where every
+bowl still speaks; the *Treadle speed* slider goes on to 3 rev/s, where the
+big bowls cannot hold their pattern (below).
 
 ## The physics
 
@@ -100,7 +105,10 @@ at V = Ωa (12–37 cm/s at 0.5 rev/s). The contact has three parts:
   steeply with slip speed: the "squeaky clean" grab (Adams, Briscoe & Johnson
   2007; Derler & Gerhardt 2012). *Skin moisture* moves Δμ from 0.03 (dry) to
   0.83 (wet). Franklin's advice was the same: wet fingers, no grease, a little
-  chalk.
+  chalk. Below 60 % moisture the water film no longer smooths the fingerprint
+  ridges: they catch on the glass, and the friction's random fluctuation (the
+  *Skin ridges* knob) grows, to 6× when quite dry. That is the rubbing whisper
+  of a dry finger, about 35 dB below a singing bowl.
 * *A skin pad*: mass 20 mg, shear stiffness 2 N/mm and damping 8 N·s/m, a
   Kelvin–Voigt element between the finger bone and the contact (order of
   magnitude after Wiertlewski & Hayward 2012). It is stiff at low frequency
@@ -135,16 +143,26 @@ the treadle faster and the big bowls stop speaking (try the *Fast treadle*
 preset).
 
 Above threshold the note grows exponentially from the friction noise and the
-finger's landing. It takes 0.3–0.6 s to speak at mid velocity and over a
-second for a light touch. That is the armonica's famous slow, "breathing"
-attack, and the demos have the fingers go down early to allow for it. Once
+finger's landing. It takes 0.45–0.7 s to come within 6 dB of its full level
+at mid velocity (0.6), 0.2–0.5 s at full velocity, and 0.9–1.5 s for a light
+touch (0.2), slowest around C5 (tested on four bowls). That is the
+armonica's famous slow, "breathing" attack, and the demos have the fingers
+go down early to allow for it. Once
 speaking, the skin **sticks once per cycle** (tested). The rim's tangential
 velocity swings by about the rim speed, as a bowed string's does by the bow
 speed, so the full level is set more by the treadle than by force. Pressure
 sets how fast a note swells and, by pressing less, how fast it fades: in
 Franklin's words, tones "may be swelled and softened at pleasure". Press far
 harder and N(−μ′) approaches the skin's own damping. The pad itself becomes
-unstable and the skin **squeals** in the bowl's (3,0)–(6,0) modes.
+unstable and the skin **squeals** in the bowl's (3,0)–(6,0) modes. A squeal is
+loud: those modes radiate far better than (2,0), whose quadrupole is a poor
+radiator (ε₂ = 0.008 for G3 against ≈ 1 for (6,0)). The squeal starts at about
+10× threshold in the bass (the *Pressing hard* preset, peaks 0.5 against
+0.08–0.25 for a sung note); at 16× the middle bowls squeal too, peaking at
+1.6, and at 20× with full aftertouch and velocity up to 3, which the page's
+limiter catches. Nothing in the model limits a squeal but the friction itself; a
+real fingertip's surface layer may well round off such kilohertz force
+swings, but its tangential compliance is not known well enough to model.
 
 *Key regulation.* The thresholds range from 0.25 N (A6) to 0.94 N (F3). Like
 a technician regulating a keyboard, each key's finger force is set as a
@@ -152,7 +170,7 @@ multiple of its own threshold for a wet finger at the reference speed (the
 *Finger pressure* knob, default 6×), then scaled 0.6–1.4× by velocity and up
 to 2× by aftertouch. Changing moisture, Stribeck speed or treadle speed moves
 the true threshold away from this regulation, which is what makes dry fingers
-fall silent.
+fall silent (all but the whisper).
 
 **Warble.** The S pattern is fixed in the room while the split doublet turns
 with the glass. The pattern sees the stiffness of each member in turn, 2n
@@ -231,7 +249,7 @@ glass/src/glass-model.js             shell modes, Bryan factor, water loading, r
 glass/src/glass-engine.js            real-time engine (AudioWorklet and Node)
 glass/src/glass-params.js            parameters and presets
 glass/src/glass-main.js              page wiring and views
-test/glass-tests.mjs                 node test/glass-tests.mjs  (22 tests, ~8 s)
+test/glass-tests.mjs                 node test/glass-tests.mjs  (24 tests, ~9 s)
 tools/render-glass.mjs               node tools/render-glass.mjs → examples/glass/
 ```
 

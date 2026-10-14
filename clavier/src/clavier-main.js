@@ -26,6 +26,7 @@ const shell = createShell({
   arrows: { param: 'velocity', step: 0.05 },
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key, vel) => { focus = key; focusVel = vel; shell.keys.focus(key); update(); simulate(); },
+  onSustain: () => simulate(), // Space puts the mute bar on the strings: show it in slow motion
   onParam: (id, v, P, p, dragging) => {
     update();
     if (!dragging && !['volume', 'room', 'gain', 'soft', 'medium', 'treble', 'brilliant', 'velocity'].includes(id)) simulate();
@@ -40,12 +41,24 @@ const db = (x) => 20 * Math.log10(Math.max(Math.abs(x), 1e-6));
 // The focus key: info, mode table, spectrum markers, pickup comb.
 
 let M = null; // { S, modes, released, X }
+// The released string's frequencies are a 100-DOF eigen-solve in the bass
+// (~5 ms): keep them per key for the parameters they depend on.
+const releasedCache = new Map();
+function releasedOf(key, P) {
+  const sig = [key, P.stiff, P.gap, P.tip, P.wrap].join();
+  if (!releasedCache.has(sig)) {
+    let fr = [];
+    try { fr = releasedFreqs(key, P, 8); } catch { /* singular for odd settings: skip the markers */ }
+    if (releasedCache.size > 256) releasedCache.clear();
+    releasedCache.set(sig, fr);
+  }
+  return releasedCache.get(sig);
+}
 function update() {
   const P = shell.P, S = stringDesign(focus, P), { modes } = keyModel(focus, P, FS), X = pickupX(focus, P), [gl, gu] = pickupMix(P.pickup);
   const pick = modes.map((m) => gl * pickupWeight(m.n, X.lower, S.L) + gu * pickupWeight(m.n, X.upper, S.L));
   const pmax = Math.max(...pick.map(Math.abs), 1e-9);
-  let released = [];
-  try { released = releasedFreqs(focus, P, 8); } catch { /* singular for odd settings: skip the markers */ }
+  const released = releasedOf(focus, P);
   M = { S, modes, released, X, pick, pmax };
   spectrum.set(S.f0, [
     ...modes.map((m, i) => ({ f: m.f, alpha: 0.2 + 0.7 * Math.min(1, Math.abs(pick[i]) / pmax) })),
@@ -61,7 +74,7 @@ function update() {
     ['Stiffness', `B = ${S.B.toExponential(1)}`], ['Pull off anvil', `${S.pull.toFixed(2)} N`],
     ['Carry time', `${(tau * 1e3).toFixed(2)} ms → first null ${(v / (P.gap * 1e-3) / 1000).toFixed(1)} kHz`],
     ['Full pressure', `+${pressureCents(focus, P.press + PRESS_MAX, P).toFixed(0)} ¢`],
-    ['Released', `${S.fRelease.toFixed(1)} Hz (−300 ¢)`],
+    ['Released', released.length ? `${released[0].toFixed(1)} Hz (−${(-1200 * Math.log2(released[0] / S.f0)).toFixed(0)} ¢: the open string, L + Ln)` : '—'],
     ['Pickups', `A ${(X.lower * 100).toFixed(1)} cm, B ${(X.upper * 100).toFixed(1)} cm from tailpiece`],
   ];
   $('#info').innerHTML = rows.map(([k, val]) => `<dt>${k}</dt><dd>${val}</dd>`).join('');
@@ -110,14 +123,24 @@ $('#comb-legend').innerHTML = `<span><i style="background:${css('--accent')}"></
 // Slow motion: run the real engine for one strike, a hold and a release, then
 // replay the string's shape slowly.
 
-let sim = null, simT0 = performance.now(), speed = 0.005, simTimer = 0;
+let sim = null, simT0 = performance.now(), speed = 0.005, simWant = false, simQueued = false;
 $('#speed').addEventListener('change', (e) => { speed = +e.target.value; simT0 = performance.now(); e.target.blur(); });
 $('#replay').addEventListener('click', (e) => { simT0 = performance.now(); e.currentTarget.blur(); });
 
-function simulate() { clearTimeout(simTimer); simTimer = setTimeout(runSim, 40); }
+// The simulation costs up to ~20 ms (a bass note), so it runs only while the
+// view is on screen, and then when the main thread is idle (the view's own
+// draw loop asks for it), never in the middle of playing a note.
+function simulate() { simWant = true; }
+function kickSim() {
+  if (!simWant || simQueued) return;
+  simQueued = true;
+  const go = () => { simQueued = false; if (simWant && $('#string').offsetParent !== null) { simWant = false; runSim(); } };
+  if (window.requestIdleCallback) requestIdleCallback(go, { timeout: 300 }); else setTimeout(go, 60);
+}
 function runSim() {
-  const P = shell.P, key = focus, vel = focusVel ?? P.velocity, e = new ClavierEngine(FS);
+  const P = shell.P, key = focus, vel = focusVel ?? P.velocity, e = new ClavierEngine(FS), muted = P.muteOn || shell.sustain;
   e.setParams({ ...P, room: 0 });
+  e.setSustain(shell.sustain); e.muteLevel = muted ? P.mute : 0; // the felt is already on the strings
   const S = stringDesign(key, P), hold = Math.min(0.09, Math.max(0.012, 4 / S.f0)), tail = Math.min(0.08, Math.max(0.012, 3 / S.fRelease));
   const n1 = Math.round((hold + 0.004) * FS), n2 = Math.round(tail * FS), stride = Math.max(1, Math.ceil((n1 + n2) / 900));
   e.noteOn(key, vel);
@@ -131,7 +154,7 @@ function runSim() {
   const nx = 160, ny = 32, N = v.N, Mm = v.M, sinT = new Float32Array(nx * N), cosT = new Float32Array(ny * Mm);
   for (let i = 0; i < nx; i++) for (let j = 0; j < N; j++) sinT[i * N + j] = Math.sin((v.mdl.modes[j].n * Math.PI * i) / (nx - 1));
   for (let i = 0; i < ny; i++) for (let j = 0; j < Mm; j++) cosT[i * Mm + j] = Math.cos(((j + 0.5) * Math.PI * i) / (ny - 1));
-  sim = { frames, S, P: { ...P }, key, vel, nx, ny, N, Mm, sinT, cosT, tRel: n1 / FS, X: pickupX(key, P) };
+  sim = { frames, S, P: { ...P }, key, vel, nx, ny, N, Mm, sinT, cosT, tRel: n1 / FS, X: pickupX(key, P), muted };
   $('#sim-name').textContent = `${noteName(key)} · ${strikeSpeed(vel).toFixed(1)} m/s`;
   simT0 = performance.now();
 }
@@ -139,6 +162,7 @@ function runSim() {
 animate(() => {
   const cv = $('#string');
   if (cv.offsetParent === null) return;
+  kickSim();
   const { ctx, w, h } = fit(cv), muted = css('--muted');
   ctx.clearRect(0, 0, w, h);
   if (!sim) {
@@ -146,7 +170,7 @@ animate(() => {
     ctx.fillText('Play a note to see the tangent pin its string', w / 2, h / 2);
     return;
   }
-  const { frames, S, P, nx, ny, N, Mm, sinT, cosT, X } = sim, last = frames[frames.length - 1].t;
+  const { frames, S, P, nx, ny, N, Mm, sinT, cosT, X, muted: felt } = sim, last = frames[frames.length - 1].t;
   const tw = ((performance.now() - simT0) / 1000) % (last / speed + 1.2), tS = Math.min(last, tw * speed);
   let fi = 0; while (fi < frames.length - 1 && frames[fi + 1].t <= tS) fi++;
   const F = frames[fi], Lt = S.L + S.Ln, g = S.gap;
@@ -166,8 +190,8 @@ animate(() => {
     ctx.fillStyle = css('--text'); ctx.font = '10px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(lbl, px, py + 10);
     ctx.globalAlpha = 1;
   }
-  // mute felt
-  if (P.muteOn) { const mx = XP(Lt - P.muteX * 1e-3); ctx.fillStyle = 'rgba(160,140,120,0.6)'; ctx.fillRect(mx - 6, Y(0) - 14, 12, 12); }
+  // mute felt (the Mute checkbox, or Space)
+  if (felt) { const mx = XP(Lt - P.muteX * 1e-3); ctx.fillStyle = 'rgba(160,140,120,0.6)'; ctx.fillRect(mx - 6, Y(0) - 14, 12, 12); }
   // anvil (below) and tailpiece / tuning pin
   ctx.fillStyle = '#7d828c'; ctx.fillRect(xa - 5, Y(g), 10, Math.max(2, Y(hi) - Y(g)));
   ctx.fillStyle = '#4a4d55'; ctx.fillRect(x1, Y(0) - 18, 8, 36);

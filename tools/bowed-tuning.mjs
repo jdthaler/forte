@@ -2,7 +2,9 @@
 // A bowed string sounds flat of its free frequency, more so at higher bow
 // force (the flattening effect; McIntyre & Woodhouse 1979). So each string's
 // free frequency is set a few cents sharp, until the *bowed* note at the
-// voiced touch (velocity 0.7, key pressure ×1, default wheel) is on 12-TET.
+// voiced touch (velocity 0.7, key pressure ×1, default wheels) is on 12-TET.
+// The table belongs to the 48 kHz oversampling plan (bowed-model.js:
+// oversample), which 44.1 kHz shares.
 // Writes bowed/src/bowed-tuning.js (cents, C2 … C6).
 // Usage: node tools/bowed-tuning.mjs
 
@@ -11,19 +13,19 @@ import { RANGE, TUNE_TABLE, loopDesign, schelleng, friction, keyForce } from '..
 import { BowedString } from '../bowed/src/string.js';
 import { DEFAULTS } from '../bowed/src/bowed-params.js';
 
-const FS = 48000, P = DEFAULTS, Fr = friction(P);
+const FS = 48000, P = DEFAULTS;
 
 // Repetition rate of the bowed string (slips per second) in steady Helmholtz
 // motion at force FN: start firmly (0.6 F_max) so that it is Helmholtz
 // motion, settle at FN, and average the regular slip intervals.
 export function bowedFreq(key, P, FN, fs = FS) {
-  const s = new BowedString(key, fs), L = loopDesign(key, P, s.fs);
+  const s = new BowedString(key, fs), L = loopDesign(key, P, s.fs), Fr = friction(P);
   s.design(L);
-  s.initHelmholtz(P.speed);
+  s.initHelmholtz(L.vB);
   const F0 = 0.6 * schelleng(L, P).Fmax;
   let n0 = 0, last = -1, sum = 0, n = 0;
   for (let i = 0; i < 1.2 * fs; i++) {
-    s.tick(0, P.speed, i < 0.3 * fs ? F0 : i < 0.5 * fs ? F0 + ((FN - F0) * (i - 0.3 * fs)) / (0.2 * fs) : FN, Fr);
+    s.tick(0, L.vB, i < 0.3 * fs ? F0 : i < 0.5 * fs ? F0 + ((FN - F0) * (i - 0.3 * fs)) / (0.2 * fs) : FN, Fr);
     if (s.nSlip === n0) continue;
     n0 = s.nSlip;
     if (i > 0.75 * fs && last >= 0 && Math.abs(s.t - last - s.T0) < 0.05 * s.T0) { sum += s.t - last; n++; }
@@ -34,15 +36,15 @@ export function bowedFreq(key, P, FN, fs = FS) {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   for (let it = 0; it < 4; it++) {
-    let worst = 0;
+    let worst = 0, wk = 0;
     for (let k = RANGE[0]; k <= RANGE[1]; k++) {
       const L = loopDesign(k, P, FS), { f, kind } = bowedFreq(k, P, keyForce(k, 0.7, 1));
       const err = 1200 * Math.log2(f / L.fKey);
       if (kind !== 'helmholtz') console.log(`  key ${k}: ${kind}`);
       TUNE_TABLE[k - RANGE[0]] = (TUNE_TABLE[k - RANGE[0]] || 0) - err;
-      worst = Math.max(worst, Math.abs(err));
+      if (Math.abs(err) > Math.abs(worst)) { worst = err; wk = k; }
     }
-    console.log(`pass ${it + 1}: worst error before correction ${worst.toFixed(2)} ¢`);
+    console.log(`pass ${it + 1}: worst error before correction ${worst.toFixed(2)} ¢ (key ${wk})`);
   }
   const vals = TUNE_TABLE.map((c) => +c.toFixed(2));
   writeFileSync(new URL('../bowed/src/bowed-tuning.js', import.meta.url),

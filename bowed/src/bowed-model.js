@@ -80,9 +80,22 @@ export function wallace(m, n, f, theta, phi, B = BOARD) {
   return [-g * pi, g * pr]; // × i k
 }
 
-// Modes of the board up to fMax, with loss factor eta, as drive / radiation
-// data for the engine: f, sigma, modal mass, and the two microphones'
-// complex radiation weights (left mic over the bass side, right over the treble).
+// The strings load the board. Seen from the bridge, each string is a dashpot
+// of its wave impedance Z₀ (its far end is too far away to matter while a
+// board mode rings), so plate mode (m, n), of modal mass M, loses
+//   σ_s = Σ_k Z₀,k φ(x_k)² / 2M
+// to the 49 strings on top of the wood's own π f η: 4.4 times the wood's loss
+// for (1,1), and roughly equal to it for the next few modes.
+export function stringLoad(m, n, B = BOARD) {
+  let s = 0;
+  for (let k = RANGE[0]; k <= RANGE[1]; k++) { const [x, y] = bridgePoint(k, B); s += stringDesign(k).Z0 * plateShape(m, n, x, y, B) ** 2; }
+  return s / (2 * ((B.rhoH * B.a * B.b) / 4));
+}
+
+// Modes of the board up to fMax, with loss factor eta (plus the strings'
+// load), as drive / radiation data for the engine: f, sigma, modal mass, and
+// the two microphones' complex radiation weights (left mic over the bass
+// side, right over the treble).
 export const MICS = [[0.7, Math.PI * 0.92], [0.7, Math.PI * 0.08]];
 export function boardModes(fMax, eta, B = BOARD) {
   const out = [];
@@ -90,7 +103,7 @@ export function boardModes(fMax, eta, B = BOARD) {
     const f = plateFreq(m, n, B);
     if (f > fMax) { if (n === 1) m = 99; break; }
     const w = MICS.map(([th, ph]) => wallace(m, n, f, th, ph, B));
-    out.push({ m, n, f, sigma: Math.PI * f * eta, M: (B.rhoH * B.a * B.b) / 4, w });
+    out.push({ m, n, f, sigma: Math.PI * f * eta + stringLoad(m, n, B), M: (B.rhoH * B.a * B.b) / 4, w });
   }
   return out.sort((x, y) => x.f - y.f);
 }
@@ -162,17 +175,50 @@ export function lossFilter(f0, s0, fh, sh, fs, dur) {
     const A = (R2 * Math.cos(wh) - c0) / (R2 - 1);
     p = A > 1 ? A - Math.sqrt(A * A - 1) : 1;
   }
-  // a passive filter: the gain at DC, g, must not exceed 1 (else the loop grows)
-  const q2 = 0.9999 ** 2, B = (q2 - G0 * G0 * c0) / (q2 - G0 * G0);
-  p = Math.max(0, Math.min(p, B - Math.sqrt(B * B - 1)));
+  // a passive filter: the gain at DC, g, must not exceed q < 1 (else the loop grows).
+  // g ≤ q is p² − 2Bp + 1 ≥ 0, so p ≤ B − √(B² − 1); a trip so short that G0 ≥ q
+  // already (the bridge side near the bridge, low losses) gets a flat gain G0 < 1.
+  const q = 0.9999;
+  if (G0 < q) {
+    const B = (q * q - G0 * G0 * c0) / (q * q - G0 * G0); // > 1 when G0 < q
+    p = Math.max(0, Math.min(p, B - Math.sqrt(B * B - 1)));
+  } else p = 0;
   const g = (G0 * Math.sqrt(1 - 2 * p * c0 + p * p)) / (1 - p);
   const tau = Math.atan2(p * Math.sin(w0), 1 - p * c0) / w0;
   return { g, p, tau };
 }
 
-// Each string's waveguide runs at os × the output rate, os = 1, 2 or 4, so
-// that a period spans at least ~180 samples (see string.js).
-export const oversample = (key, fs) => Math.min(4, 2 ** Math.max(0, Math.ceil(Math.log2((180 * keyFreq(key)) / fs))));
+// Each string's waveguide runs at os × the output rate, os = 1, 2 or 4 at
+// 48 kHz, so that a period spans at least ~180 samples (see string.js). The
+// plan is fixed at 48 kHz and other rates keep its internal rate as nearly as
+// an integer allows (44.1 kHz: the same os; 96 kHz: half): the bowed pitch
+// depends a little on the internal rate, and TUNE was measured on this plan.
+const os48 = (key) => Math.min(4, 2 ** Math.max(0, Math.ceil(Math.log2((180 * keyFreq(key)) / 48000))));
+export const oversample = (key, fs) => Math.max(1, Math.round((os48(key) * 48000) / fs));
+
+// ---- the four wheels: how fast, and where, each register is bowed ------------
+// Four wheels on one crankshaft, one per register: C2–B2, C3–B3, C4–D5 and
+// E♭5–C6. Helmholtz amplitude is 2Z₀v_B/β, and the treble, with its lower Z₀
+// and a board that radiates its fundamentals poorly, would fall ~7 dB below the
+// rest on one wheel. So the builder voices the registers:
+// * the upper wheels are larger, so their surface runs faster (WHEEL_SPEED,
+//   relative to the treadle setting, which is the bass wheels' speed);
+// * the treble wheel meets its strings nearer the bridge (WHEEL_BETA, relative
+//   to the β knob), which also keeps it clear of the torsional echo (below).
+// Moving β up instead would cost speaking: at the voiced force a string bowed
+// further from the bridge starts in a two-slip whistle more often (8 % of all
+// touches at 1.15 β, against 1 %).
+export const WHEEL_KEYS = [36, 48, 60, 75], WHEEL_SPEED = [1, 1, 1.1, 1.6], WHEEL_BETA = [1, 1, 1, 0.75];
+export const wheelOf = (key) => (key >= WHEEL_KEYS[3] ? 3 : key >= WHEEL_KEYS[2] ? 2 : key >= WHEEL_KEYS[1] ? 1 : 0);
+export const wheelSpeed = (key) => WHEEL_SPEED[wheelOf(key)];
+export const wheelBeta = (key) => WHEEL_BETA[wheelOf(key)];
+// The torsional echo. After a slip the transverse corner comes back from the
+// bridge after 2βL/c, and the torsional wave the slip launched comes back from
+// the nut after 2(1 − β)L/c_t. At β* = c/(c + c_t) the two arrive together;
+// the next slip comes late and the bowed note runs 15–35 ¢ flatter than a
+// little to either side (β* = 0.073 at C2 … 0.121 at C6: on one wheel at
+// β = 0.12 the top keys would sit on it).
+export const torsionEcho = (key) => { const { c } = stringDesign(key); return c / (c + C_TORSION); };
 
 // Everything a key's waveguide needs: its round-trip delays (bridge side 2·Db,
 // nut side 2·Dn, in samples), a loss filter for each side (the string's own
@@ -181,7 +227,7 @@ export const oversample = (key, fs) => Math.min(4, 2 ** Math.max(0, Math.ceil(Ma
 export function loopDesign(key, P, fs) {
   const s = stringDesign(key), G = bridgeG(P);
   const N0 = fs / s.f0;
-  const beta = Math.min(0.5, Math.max(P.beta, 2.6 / N0)); // the bridge side needs ≥ 1.3 samples each way
+  const beta = Math.min(0.5, Math.max(P.beta * wheelBeta(key), 2.6 / N0)); // the bridge side needs ≥ 1.3 samples each way
   const fh = Math.min(0.35 * fs, Math.max(4000, 3 * s.f0));
   const s0 = stringSigma(s.f0, P, key), sh = stringSigma(fh, P, key);
   const lb = lossFilter(s.f0, s0, fh, sh, fs, beta / s.f0), ln = lossFilter(s.f0, s0, fh, sh, fs, (1 - beta) / s.f0);
@@ -194,7 +240,7 @@ export function loopDesign(key, P, fs) {
   const Zt = P.torsionQ > 0 ? (s.mu * C_TORSION) / 2 : 0, ft = C_TORSION / (2 * s.L), st = (Math.PI * ft) / Math.max(1, P.torsionQ);
   const Dtb = Math.max(2, (2 * beta * s.L * fs) / C_TORSION), Dtn = Math.max(2, (2 * (1 - beta) * s.L * fs) / C_TORSION);
   return {
-    ...s, G, Zall: Z_ALL, N0, beta, Db, Dn, gb: lb.g, pb: lb.p, gn: ln.g, pn: ln.p, rB, sigma1,
+    ...s, G, Zall: Z_ALL, N0, beta, wheel: wheelSpeed(key), vB: P.speed * wheelSpeed(key), Db, Dn, gb: lb.g, pb: lb.p, gn: ln.g, pn: ln.p, rB, sigma1,
     Zt, ft, Dtb, Dtn, rtb: Math.exp((-st * Dtb) / fs), rtn: Math.exp((-st * Dtn) / fs),
   };
 }
@@ -205,7 +251,7 @@ export function loopDesign(key, P, fs) {
 // relative speed is ≈ v_B/β, so the effective μs − μ is (μs − μd)·v_B/(v_B + β v₀).
 // R is the bridge resistance that would give the string's actual decay σ₁:
 // a string on a dashpot R loses 2Z₀/R per period, so R = 2 Z₀ f₀ / σ₁.
-export function schelleng(L, P, beta = L.beta, vB = P.speed) {
+export function schelleng(L, P, beta = L.beta, vB = L.vB ?? P.speed) {
   const F = friction(P), dmu = F.mus - F.mud, R = (2 * L.Z0 * L.f0) / L.sigma1;
   const w = vB + beta * F.v0;
   return {
@@ -252,7 +298,7 @@ export function classifyMotion(iv, n = iv.length, out = {}) {
 
 // ---- the key action -----------------------------------------------------------
 // The builder regulates each key so that a normal touch (velocity 0.7) on the
-// default wheel presses with half of Schelleng's maximum force: well above
+// default wheels presses with half of Schelleng's maximum force: well above
 // where a fresh note starts in surface sound (≈ 0.25 F_max), below where the
 // motion turns raucous (≈ 0.9 F_max), and where attacks settle most reliably
 // into Helmholtz motion (see the tests and the attack map). The table is

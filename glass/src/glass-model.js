@@ -182,10 +182,13 @@ export function freeLines(m, rot) {
 // is positive, so oscillations start softly (supercritically). Water softens
 // the stratum corneum and, on clean (hydrophilic) glass, gives the high,
 // steeply falling friction of boundary-lubricated skin: the "squeaky clean"
-// grab. Dry skin barely weakens with speed (Δμ small).
+// grab. Dry skin barely weakens with speed (Δμ small), but its ridges are no
+// longer smoothed by a water film: they catch on the glass, and the friction
+// fluctuates more, up to 6× the wet skin's ridge noise when quite dry (the
+// rubbing whisper of a dry finger). `noise` is that relative fluctuation.
 export function friction(P) {
-  const w = Math.min(1, Math.max(0, P.wet));
-  return { mud: 0.3 + 0.1 * w, dmu: 0.03 + 0.8 * w * w, v0: P.v0, beta: 0.02 };
+  const w = Math.min(1, Math.max(0, P.wet)), dry = Math.min(1, Math.max(0, (0.6 - w) / 0.6));
+  return { mud: 0.3 + 0.1 * w, dmu: 0.03 + 0.8 * w * w, v0: P.v0, beta: 0.02, noise: (P.rough ?? 0) * (1 + 5 * dry) };
 }
 export const mu = (u, fr) => fr.mud + fr.dmu / (1 + (u / fr.v0) ** 2) + fr.beta * u;
 export function frictionSlope(u, fr) { // −dμ/du: positive where friction weakens with speed

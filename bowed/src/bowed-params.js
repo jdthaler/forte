@@ -8,8 +8,8 @@ export const GROUPS = [
   {
     title: 'Wheel',
     params: [
-      { id: 'speed', label: 'Wheel speed (bow speed)', min: 0.05, max: 1, def: 0.25, log: true, fmt: (v) => `${(v * 100).toFixed(0)} cm/s`, hint: 'Surface speed of the rosined wheels, set by the treadle. Helmholtz amplitude ∝ v_B/β: faster is louder. Both of Schelleng\'s force limits scale with it.' },
-      { id: 'beta', label: 'Bow position β', min: 0.04, max: 0.4, def: 0.12, step: 0.005, fmt: (v) => `${(v * 100).toFixed(1)} % from bridge`, hint: 'Where the wheel meets the string. Near the bridge (sul ponticello) is louder and brighter but needs more force; far (sul tasto) is soft and flutey.' },
+      { id: 'speed', label: 'Wheel speed (bow speed)', min: 0.05, max: 1, def: 0.25, log: true, fmt: (v) => `${(v * 100).toFixed(0)} cm/s`, hint: 'Surface speed of the rosined bass wheels, set by the treadle (the larger upper wheels run 1.1× from C4 and 1.6× from E♭5; a flywheel smooths changes over ½ s). Helmholtz amplitude ∝ v_B/β: faster is louder. Both of Schelleng\'s force limits scale with it. MIDI mod wheel: rest = 25 cm/s, up to 1 m/s.' },
+      { id: 'beta', label: 'Bow position β', min: 0.04, max: 0.4, def: 0.12, step: 0.005, fmt: (v) => `${(v * 100).toFixed(1)} % from bridge`, hint: 'Where the wheels meet the strings (the treble wheel, E♭5 up, at 0.75 β). Near the bridge (sul ponticello) is louder and brighter but needs more force; far (sul tasto) is soft and flutey.' },
       { id: 'treadle', label: 'Treadle unevenness', min: 0, max: 0.2, def: 0.02, step: 0.005, fmt: pct, hint: 'The foot pumps the crank in strokes; the flywheel smooths them. Wheel speed swings this much, once per stroke.' },
       { id: 'treadleRate', label: 'Treadle rate', min: 0.3, max: 3, def: 1.1, step: 0.05, fmt: (v) => `${v.toFixed(2)} strokes/s` },
     ],
