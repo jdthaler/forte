@@ -113,7 +113,7 @@ export const INSTRUMENTS = [
     accent: '#5fd0c8',
   },
   {
-    id: 'harmonium', name: 'Free-Reed Organ', section: 'history', ready: false,
+    id: 'harmonium', name: 'Free-Reed Organ', section: 'history', ready: true, version: '0.1.0', trim: -7,
     after: 'the harmonium and the accordion',
     tagline: 'Brass reeds driven by the airflow they choke; paired reeds tuned a little apart give the musette shimmer.',
     physics: 'Self-excited free reeds · bellows pressure',

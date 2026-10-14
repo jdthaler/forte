@@ -10,6 +10,38 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-14 — free-reed organ
+
+### Free-Reed Organ 0.1.0
+- New instrument, after the harmonium and the accordion: 61 keys (C2–C7),
+  each with a reed in five ranks: 8′, the musette's two 8′s tuned sharp and
+  flat (±12 ¢ by default), 16′ and 4′, each opened by its stop.
+- **The reed:** a brass cantilever with a tuning weight at its tip below
+  G3, in two bending modes, swinging through a close-fitting slot. The
+  open area follows the tongue's height along its edges: the clearance
+  while it overlaps the slot, the perimeter times the distance clear of it
+  outside.
+- **The air:** a jet through the gap with its own air mass (unsteady
+  Bernoulli), a small cell fed through a throat from the reservoir, and the
+  volume the tongue sweeps. The reed is a blown-closed valve driven by the
+  inertia of the air that feeds it. A linear analysis gives every reed's
+  threshold (22 Pa at C1 to 258 Pa at C8) and its growth rate, which the
+  engine matches.
+- **Playing:** every key speaks at the default 800 Pa within 90–260 ms,
+  sooner with more wind, with a fast key (the pallet opens in 3–30 ms) or
+  with Martin's percussion. The pitch falls slightly as the wind rises
+  (−6 ¢ from 800 to 2500 Pa). Reeds are tuned at the playing wind to ±3 ¢
+  across the keyboard.
+- **The wind:** feeders into a spring-loaded reservoir (a ten-key chord
+  sags it 3 %), the expression stop that bypasses it, foot pumping, and the
+  bellows pressure on the mod wheel and aftertouch. An accordion's
+  cassotto can be put round the reeds: a Helmholtz chamber that softens
+  the upper harmonics.
+- Integrated per sample with an implicit (Newton, BDF2) step for the air,
+  reeds above 440 Hz at twice the sample rate. Views: the reed in its slot
+  in slow motion, flow against displacement, the musette's beats, and the
+  wind. Eight demos.
+
 ## 2026-10-14 — harpsichord
 
 ### Harpsichord 0.1.0
