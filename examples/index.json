@@ -229,6 +229,40 @@
    "title": "Tubes that remember key up in the bistable band"
   }
  ],
+ "quantum": [
+  {
+   "file": "01-a-phrase-whose-notes-return-on-the-beat-morse-well.m4a",
+   "title": "A phrase whose notes return on the beat morse well"
+  },
+  {
+   "file": "02-one-note-fractional-revivals-square-well-then-morse.m4a",
+   "title": "One note fractional revivals square well then morse"
+  },
+  {
+   "file": "03-harmonic-oscillator-never-dephases-then-square-well.m4a",
+   "title": "Harmonic oscillator never dephases then square well"
+  },
+  {
+   "file": "04-rydberg-atom-fast-revivals-and-super-revivals.m4a",
+   "title": "Rydberg atom fast revivals and super revivals"
+  },
+  {
+   "file": "05-same-phrase-coherent-then-dephased-tphi-0p3s.m4a",
+   "title": "Same phrase coherent then dephased tphi 0p3s"
+  },
+  {
+   "file": "06-fixed-nbar-chord-revives-in-polyrhythm.m4a",
+   "title": "Fixed nbar chord revives in polyrhythm"
+  },
+  {
+   "file": "07-level-spread-three-levels-then-sigma-2-then-sigma-4.m4a",
+   "title": "Level spread three levels then sigma 2 then sigma 4"
+  },
+  {
+   "file": "08-detectors-electrode-coil-antenna.m4a",
+   "title": "Detectors electrode coil antenna"
+  }
+ ],
  "reeds": [
   {
    "file": "01-soul-ballad-tremolo-through-the-speakers.m4a",

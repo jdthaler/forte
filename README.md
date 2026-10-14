@@ -28,7 +28,7 @@ lands, the pickup's offset, how fast the black hole spins.
 | ✅ | [Huygens Keyboard](huygens/) | — | pulse-coupled relaxation oscillators that lock chords into just intonation (Arnold tongues) |
 | ✅ | [Black-Hole Keyboard](blackhole/) | — | Kerr quasinormal modes from the Teukolsky equation, h₊ and h× in stereo |
 | 🛠 | Gong Keyboard | — | von Kármán plates: from bell to crash with amplitude |
-| 🛠 | Quantum Keyboard | — | wavepackets in a well: notes that fade and revive |
+| ✅ | [Quantum Keyboard](quantum/) | — | exact wavepackets in square, Morse, hydrogen-Rydberg, gravitational and harmonic wells: collapse, fractional and full revivals, decoherence |
 
 ✅ playable · 🛠 in the workshop. Each instrument's README has its equations,
 numbers, sources, and a list of what is simplified.

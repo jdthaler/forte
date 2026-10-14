@@ -103,8 +103,8 @@ export const INSTRUMENTS = [
     accent: '#b18cff',
   },
   {
-    id: 'quantum', name: 'Quantum Keyboard', section: 'new', ready: false,
-    tagline: 'Each key a wavepacket in a potential well: notes that fade away and come back at the revival time.',
+    id: 'quantum', name: 'Quantum Keyboard', section: 'new', ready: true, version: '0.1.0',
+    tagline: 'Each key a wavepacket in a potential well: notes that collapse, return an octave up as the packet splits, and revive on the beat.',
     physics: 'Schrödinger equation · quantum revivals',
     accent: '#73e2b8',
   },

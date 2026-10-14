@@ -11,6 +11,16 @@ for example `piano-v0.1.0`.
 
 ## 2026-10-13 — new instruments
 
+### Quantum Keyboard 0.1.0
+- Each key launches a Gaussian wavepacket, summed exactly over eigenstates
+  with exact dipole matrix elements.
+- Five wells: infinite square, Morse, hydrogen Rydberg, quantum bouncer and
+  harmonic oscillator.
+- What you hear is the electrode, coil or antenna signal (⟨x⟩, ⟨ẋ⟩, ⟨ẍ⟩).
+- Revivals land on the beat (n̄ solved per key) and are sample-accurate.
+- T₁ decay and pure dephasing.
+- Quantum carpet, packet, return-probability and spectrum views.
+
 ### Pyrophone 0.1.0
 - After Kastner's flame organ: each key is a Galerkin Rijke tube (10
   open–open modes) driven by a lagged King's-law heat source.
