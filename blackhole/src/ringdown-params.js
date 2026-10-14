@@ -13,23 +13,23 @@ export const GROUPS = [
   {
     id: 'hole', title: 'Black hole',
     params: [
-      { id: 'spinU', label: 'Spin', kind: 'model', min: 0, max: 6, step: 0.005, def: uFromSpin(0.69), fmt: fmtSpin,
+      { id: 'spinU', label: 'Spin', perform: true, kind: 'model', min: 0, max: 6, step: 0.005, def: uFromSpin(0.69), fmt: fmtSpin,
         hint: 'Kerr parameter a = J/M², on a log scale toward extremality. Slow holes go “thud”; near-extremal ones ring like bells. ↑ / ↓ keys, MIDI mod wheel.' },
     ],
   },
   {
     id: 'merger', title: 'How it was struck (a binary merger)',
     params: [
-      { id: 'massRatio', label: 'Mass ratio q', kind: 'model', min: 1, max: 20, def: 1.2, log: true, fmt: (v) => `${v.toFixed(2)} : 1`,
+      { id: 'massRatio', label: 'Mass ratio q', perform: true, kind: 'model', min: 1, max: 20, def: 1.2, log: true, fmt: (v) => `${v.toFixed(2)} : 1`,
         hint: 'Equal masses excite only even-m modes. Lopsided mergers switch on (2,1) and (3,3): “black-hole hair loss”.' },
-      { id: 'inclination', label: 'Viewing inclination ι', kind: 'model', min: 0, max: 180, step: 1, def: 30, fmt: (v) => `${v.toFixed(0)}°`,
+      { id: 'inclination', label: 'Viewing inclination ι', perform: true, kind: 'model', min: 0, max: 180, step: 1, def: 30, fmt: (v) => `${v.toFixed(0)}°`,
         hint: 'Angle between the spin axis and your line of sight. Face-on: circular polarisation; edge-on: linear.' },
       { id: 't0', label: 'Ringdown start', kind: 'model', min: 0, max: 30, step: 0.5, def: 5, fmt: (v) => `${v.toFixed(1)} M after peak`,
         hint: 'Start closer to the merger and the fast-dying overtones (2,2,1), (2,2,2) are still loud.' },
       { id: 'overtones', label: 'Overtone strength', kind: 'model', min: 0, max: 2, step: 0.01, def: 1, fmt: (v) => v.toFixed(2) },
       { id: 'retrograde', label: 'Counter-rotating modes', kind: 'model', min: 0, max: 1, step: 0.01, def: 0, fmt: (v) => v.toFixed(2),
         hint: 'Modes travelling against the spin (m < 0), weakly excited in aligned mergers.' },
-      { id: 'inspiral', label: 'Play the inspiral first (chirp)', kind: 'model', type: 'checkbox', def: false },
+      { id: 'inspiral', label: 'Play the inspiral first (chirp)', perform: true, kind: 'model', type: 'checkbox', def: false },
       { id: 'inspiralOct', label: 'Inspiral starts', kind: 'model', min: 0.25, max: 3, step: 0.05, def: 1.5,
         fmt: (v) => `${v.toFixed(2)} octaves below ISCO`, showIf: (P) => P.inspiral,
         hint: 'Measured down from the wave frequency at the innermost stable circular orbit, f_ISCO = c³/(6√6 πGM) for the binary’s total mass M. The chirp lasts τ_c ∝ f^(−8/3), capped at 2 s. For the lowest keys the whole inspiral is under 20 Hz: you hear the merger.' },
@@ -40,9 +40,9 @@ export const GROUPS = [
     params: [
       { id: 'stereo', label: 'Left = h₊, right = h× (polarisations)', kind: 'engine', type: 'checkbox', def: true },
       { id: 'releaseMute', label: 'Key release mutes', kind: 'engine', type: 'checkbox', def: false, hint: 'Unphysical, but handy for long near-extremal rings.' },
-      { id: 'tone', label: 'Tone (low-pass)', kind: 'mix', min: 500, max: 20000, def: 14000, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz` },
-      { id: 'room', label: 'Room', kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.25, fmt: (v) => v.toFixed(2) },
-      { id: 'volume', label: 'Volume', kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => v.toFixed(2) },
+      { id: 'tone', label: 'Tone (low-pass)', perform: true, kind: 'mix', min: 500, max: 20000, def: 14000, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz` },
+      { id: 'room', label: 'Room', perform: true, kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.25, fmt: (v) => v.toFixed(2) },
+      { id: 'volume', label: 'Volume', perform: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => v.toFixed(2) },
     ],
   },
 ];

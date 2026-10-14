@@ -19,74 +19,112 @@ body {
 a { color: inherit; }
 .muted { color: var(--muted); }
 kbd { font: 12px ui-monospace, Menlo, monospace; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; background: #1d1d24; }
+.button {
+  display: inline-block; text-decoration: none; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04); color: var(--text); font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; cursor: pointer;
+}
+.button:hover { border-color: #4a4a58; }
 
-/* hero */
-.hero { position: relative; min-height: 440px; display: flex; align-items: flex-end; overflow: hidden; border-bottom: 1px solid var(--line); }
-#modes { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.85; }
-.hero-text { position: relative; max-width: 860px; padding: 64px max(32px, env(safe-area-inset-right)) 44px max(32px, env(safe-area-inset-left)); }
-.hero h1 {
-  font: 400 clamp(56px, 10vw, 104px)/0.95 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+/* the top: name, one line, and the way to everything about the project */
+.top { position: relative; overflow: hidden; border-bottom: 1px solid var(--line); }
+#modes { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.8; }
+.top-inner {
+  position: relative; max-width: 1180px; margin: 0 auto;
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 14px 28px; flex-wrap: wrap;
+  padding: max(26px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) 22px max(24px, env(safe-area-inset-left));
+}
+.title { flex: 1 1 520px; min-width: 0; }
+.top h1 {
+  font: 400 clamp(46px, 7vw, 72px)/0.95 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   letter-spacing: 1px;
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   background: linear-gradient(100deg, #fff 20%, #f0b35a 55%, #b18cff 95%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-.lede { font-size: clamp(19px, 2.4vw, 24px); margin: 0 0 14px; color: #f3efe7; }
-.intro { color: #c9c4ba; max-width: 720px; margin: 0 0 22px; }
-.button {
-  display: inline-block; text-decoration: none; padding: 8px 16px; border-radius: 8px; border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.04); font-weight: 600; font-size: 14px; margin: 0 8px 8px 0;
-}
-.button:hover { border-color: #4a4a58; }
-.button.primary { background: var(--accent); color: #1b1203; border-color: transparent; }
+.lede { font-size: clamp(15px, 1.6vw, 17px); margin: 0; color: #d9d4ca; max-width: 680px; }
+.top-links { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* instrument grid */
-main { max-width: 1180px; margin: 0 auto; padding: 28px max(24px, env(safe-area-inset-right)) 8px max(24px, env(safe-area-inset-left)); }
-.section-head { margin: 34px 0 14px; }
-.section-head h2 { font: 400 28px/1.2 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; margin: 0 0 4px; }
-.section-head p { margin: 0; color: var(--muted); max-width: 760px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+/* the four kinds of instrument: tabs that stay at the top while the cards scroll */
+.cats {
+  position: sticky; top: 0; z-index: 10;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.cats-inner {
+  max-width: 1180px; margin: 0 auto; display: flex; gap: 6px; flex-wrap: wrap;
+  padding: 10px max(24px, env(safe-area-inset-right)) 10px max(24px, env(safe-area-inset-left));
+}
+.cats a {
+  display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+  padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line);
+  color: var(--muted); font-weight: 600; font-size: 14.5px;
+}
+.cats a:hover { color: var(--text); border-color: #4a4a58; }
+.cats a[aria-current] { color: #1b1203; background: var(--accent); border-color: transparent; }
+.cats .n { font: 500 12px ui-monospace, Menlo, monospace; opacity: 0.75; }
+
+/* instrument cards */
+main { max-width: 1180px; margin: 0 auto; padding: 4px max(24px, env(safe-area-inset-right)) 8px max(24px, env(safe-area-inset-left)); }
+.section-head { margin: 26px 0 12px; }
+.section-head h2 { font: 400 26px/1.2 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; margin: 0 0 4px; }
+.section-head p { margin: 0; color: var(--muted); max-width: 780px; font-size: 14.5px; }
+.section-head a { color: var(--accent); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
 .card {
-  position: relative; display: flex; flex-direction: column; gap: 8px;
-  background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 16px 14px;
+  position: relative; display: flex; flex-direction: column; gap: 6px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px 13px;
   overflow: hidden;
 }
-.card::before {
-  content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--c);
-}
+.card::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--c); }
 .card::after {
   content: ""; position: absolute; width: 220px; height: 220px; right: -90px; top: -110px; border-radius: 50%;
   background: radial-gradient(circle, color-mix(in srgb, var(--c) 22%, transparent), transparent 70%); pointer-events: none;
 }
-.card.ready:hover { border-color: color-mix(in srgb, var(--c) 55%, var(--line)); }
+.card:hover { border-color: color-mix(in srgb, var(--c) 55%, var(--line)); background: color-mix(in srgb, var(--c) 4%, var(--card)); }
 .card h3 { margin: 4px 0 0; font-size: 19px; }
 .card h3 a { text-decoration: none; }
+/* the whole card opens the instrument; the buttons in it sit above that link */
+.card-link::after { content: ""; position: absolute; inset: 0; z-index: 1; }
+.card-link:focus-visible { outline: none; }
+.card:has(.card-link:focus-visible) { outline: 2px solid var(--c); outline-offset: 2px; }
 .card h3 .ver { float: right; margin-top: 3px; color: var(--muted); font: 11px ui-monospace, Menlo, monospace; font-weight: 400; }
-.card .after { color: var(--muted); font-size: 12.5px; margin-top: -4px; }
+.card .after { color: var(--muted); font-size: 12.5px; margin-top: -3px; }
 .card p { margin: 2px 0 0; color: #cfcac0; font-size: 14px; flex: 1; }
 .card .tags { color: color-mix(in srgb, var(--c) 75%, white); font-size: 12px; letter-spacing: 0.2px; }
-.card .actions { display: flex; gap: 8px; margin-top: 6px; align-items: center; }
-.card .actions a, .card .actions button {
+.card .actions { display: flex; gap: 8px; margin-top: 4px; align-items: center; flex-wrap: wrap; }
+.card .actions > * {
   font: 600 13px system-ui, sans-serif; padding: 6px 12px; border-radius: 7px; border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.04); color: var(--text); text-decoration: none; cursor: pointer;
+  background: rgba(255, 255, 255, 0.04); color: var(--text); text-decoration: none;
 }
-.card .actions a.play { background: var(--c); color: #111; border-color: transparent; }
+.card .actions a, .card .actions button { position: relative; z-index: 2; cursor: pointer; }
+.card .actions a:hover, .card .actions button:hover { border-color: #4a4a58; }
+.card .actions .play { background: var(--c); color: #111; border-color: transparent; }
 .card .actions button.on { border-color: var(--c); color: var(--c); }
-.card .soon { color: var(--muted); font-size: 12.5px; border: 1px dashed var(--line); border-radius: 7px; padding: 5px 10px; }
-.card:not(.ready) { opacity: 0.8; }
-
-/* how it works */
-.how { max-width: 1180px; margin: 30px auto 0; padding: 18px max(24px, env(safe-area-inset-right)) 8px max(24px, env(safe-area-inset-left)); display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 22px; border-top: 1px solid var(--line); }
-.how h2 { font: 400 21px/1.3 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; margin: 8px 0 6px; }
-.how p { margin: 0; color: #c9c4ba; font-size: 14px; }
-.how a { color: var(--accent); }
+.workshop { margin: 12px 0 0; font-size: 13.5px; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+.workshop .soon {
+  color: var(--muted); border: 1px dashed var(--line); border-radius: 999px; padding: 2px 10px 2px 8px; cursor: help;
+}
+.workshop .soon::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--c); margin-right: 6px; vertical-align: 1px; opacity: 0.7; }
 
 .foot { max-width: 1180px; margin: 34px auto 0; padding: 18px max(24px, env(safe-area-inset-right)) max(40px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); display: flex; flex-direction: column; gap: 4px; font-size: 13px; border-top: 1px solid var(--line); }
 .foot a { color: var(--accent); text-decoration: none; }
 
+/* the About dialog borrows the instrument pages' notes (shared/forte.css) */
+.forte-notes-text h2:first-of-type { margin-top: 22px; }
+
 @media (max-width: 600px) {
-  .hero-text { padding: 48px max(18px, env(safe-area-inset-right)) 30px max(18px, env(safe-area-inset-left)); }
-  main, .how, .foot { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
-  .grid { grid-template-columns: 1fr; }
+  .top-inner { padding: max(18px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 16px max(16px, env(safe-area-inset-left)); }
+  .title { flex-basis: 100%; }
+  .top-links .button { padding: 6px 12px; font-size: 13.5px; }
+  .cats-inner { padding: 8px max(16px, env(safe-area-inset-right)) 8px max(16px, env(safe-area-inset-left)); gap: 5px; }
+  .cats a { padding: 5px 11px; font-size: 14px; gap: 6px; }
+  main, .foot { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  .section-head { margin-top: 20px; }
+  .section-head h2 { font-size: 23px; }
+  .grid { grid-template-columns: 1fr; gap: 10px; }
+  .card { padding: 12px 14px 11px; gap: 5px; }
+  .card h3 { font-size: 17.5px; }
+  .card p { font-size: 13.5px; }
 }
 @media (prefers-reduced-motion: reduce) { #modes { display: none; } }

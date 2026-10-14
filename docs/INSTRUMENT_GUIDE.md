@@ -136,6 +136,17 @@ Rules of thumb:
 velocity-sensitive. Presets override defaults. Make each preset show one
 physical idea and give it a descriptive name.
 
+Mark the controls a player reaches for *while playing* with
+`perform: true`: stops and registrations, tremolo and drive, the mallet
+or the bow, the main physical knob (the black hole's spin), `room` and
+`volume`. They sit in a strip above the keys in both modes, so they never
+move; a checkbox there becomes a stop that lights up, and in Discover a
+control with a `hint` gets an ⓘ button that opens it (a tap, not a
+tooltip, so it works on a tablet). Mark 3–10 of them,
+`volume` among them (`test/site-tests.mjs` checks). Leave the physics you
+set once (materials, dimensions, voicing) to the Controls panel and the
+presets.
+
 ### Page and views
 
 Copy the template's DOM. The sidebar, header, keyboard and footer are
@@ -152,6 +163,18 @@ and say which in the footer help.
 **Tablets, phones and layout.** `shared/layout.js` and `shared/layout.css`
 (loaded last in `<head>`) give every page the same touch-friendly
 layout:
+- **Discover | Perform** at the top. Discover is the page as built.
+  Perform is for playing and for a projector: it shows only the views
+  marked `data-perform` (one or two), side by side or stacked to fill the
+  screen, with no text in them. The card's `.card-head`, `.caption`,
+  `.legend`, `.readout`, `<dl>` and `<table>` are hidden, and `fillText`
+  draws nothing on their canvases (a card with `data-keep-text`, such as
+  the organ's console, keeps its text). The Controls column starts
+  closed, and Full screen appears. The mode is shared by every page; the
+  views and Controls are remembered per page and mode;
+- the `perform: true` controls, in a strip above the keys in both modes;
+- the presets (`.preset-row` in `#controls`), moved into the header so
+  they are always in view;
 - a Controls toggle (a column on wide screens, a slide-over panel on
   narrow ones);
 - a Views ▾ menu that shows or hides each `#views .card`;
@@ -164,6 +187,12 @@ layout:
 To fit in:
 - Give a card whose `<h2>` changes at runtime a stable name with
   `data-view="…"`.
+- Mark the one or two views that best show the instrument playing with
+  `data-perform` on their `.card` (`test/site-tests.mjs` checks). In
+  Perform they lose their titles, captions and canvas text and grow to
+  fill the screen, so draw them to read as pictures, and let their
+  canvases stretch (Perform sizes them with flex, overriding a fixed
+  height).
 - Start every animation loop with `requestAnimationFrame` and skip
   hidden canvases. `animate(draw, canvas)` does both.
 - Make drawing code survive a tiny canvas.
@@ -215,7 +244,9 @@ WAVs are git-ignored. Commit the `.m4a` files.
 ### Going live
 
 Add the instrument to `shared/registry.js` with `ready: true, version: '0.1.0'`
-and add a `### <Name> 0.1.0` entry to `CHANGELOG.md`. The landing page and
+in one of the four sections (`traditional`, `electric`, `experimental`,
+or `phenomena` for instruments only physics can build), after the other
+ready ones in it, and add a `### <Name> 0.1.0` entry to `CHANGELOG.md`. The landing page and
 every menu pick it up, and `test/site-tests.mjs` checks that all of this
 agrees.
 
