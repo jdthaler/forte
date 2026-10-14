@@ -131,33 +131,44 @@ export function shell(bc = 'free', rise = 0, terms = 600) {
       if (t !== 0) { const ci = A.cols[i], cj = B.cols[j]; Ht.push({ n, i: Math.min(ci, cj), j: Math.max(ci, cj), v: t }); }
     }
   }
-  const wt = Float64Array.from(Ht, (h) => (Math.sqrt(S.C[h.n]) * Math.abs(h.v)) / (S.Om[h.i] * S.Om[h.j]));
+  const wt = Float64Array.from(Ht, (h) => (h.w = (Math.sqrt(S.C[h.n]) * Math.abs(h.v)) / (S.Om[h.i] * S.Om[h.j])));
   const cut = terms < Ht.length ? Float64Array.from(wt).sort()[Ht.length - terms] : 0;
   const keep = Ht.filter((_, e) => wt[e] >= cut).slice(0, terms);
   S.H = keep; S.E = Et;
-  const Hk = keep;
-  // packed rows for the engine: pass 1 by in-plane mode (sorted by max index, for per-key prefixes),
-  // pass 2 by transverse mode (sorted by partner index); curvature terms both ways.
+  // Packed for the engine: the full set, and a lite set of the strongest LITE terms, enough for
+  // weakly nonlinear motion (the lowest modes' normal-form pitch shifts agree to a few %), which
+  // a voice uses in its long tail.
+  S.full = pack(keep, Et, N, NS);
+  S.lite = pack(keep.slice().sort((a, b) => b.w - a.w).slice(0, LITE), Et, N, NS);
+  Object.assign(S, S.full); // S.p1, p2, e1, e2: the full set
+  cache.set(id, S);
+  if (cache.size > 24) cache.delete(cache.keys().next().value);
+  return S;
+}
+
+export const LITE = 200;
+
+// Coupling rows for the engine: pass 1 by in-plane mode (sorted by the larger mode index, for
+// per-key prefixes), pass 2 by transverse mode (sorted by partner index); curvature terms both ways.
+function pack(H, Et, N, NS) {
   const rows = (list, nRows, row, order) => {
     const sorted = list.slice().sort((a, b) => row(a) - row(b) || order(a) - order(b)), off = new Int32Array(nRows + 1);
     for (const e of sorted) off[row(e) + 1]++;
     for (let r = 0; r < nRows; r++) off[r + 1] += off[r];
     return { off, sorted };
   };
-  const r1 = rows(Hk, NS, (h) => h.n, (h) => h.j);
-  S.p1 = { off: r1.off, i: Int32Array.from(r1.sorted, (h) => h.i), j: Int32Array.from(r1.sorted, (h) => h.j), h: Float64Array.from(r1.sorted, (h) => (h.i === h.j ? 1 : 2) * h.v) };
+  const r1 = rows(H, NS, (h) => h.n, (h) => h.j);
+  const p1 = { off: r1.off, i: Int32Array.from(r1.sorted, (h) => h.i), j: Int32Array.from(r1.sorted, (h) => h.j), ij: Int32Array.from(r1.sorted, (h) => (h.i << 8) | h.j), h: Float64Array.from(r1.sorted, (h) => (h.i === h.j ? 1 : 2) * h.v) };
   const full = [];
-  for (const h of Hk) { full.push({ k: h.i, n: h.n, q: h.j, v: h.v }); if (h.i !== h.j) full.push({ k: h.j, n: h.n, q: h.i, v: h.v }); }
+  for (const h of H) { full.push({ k: h.i, n: h.n, q: h.j, v: h.v }); if (h.i !== h.j) full.push({ k: h.j, n: h.n, q: h.i, v: h.v }); }
   const r2 = rows(full, N, (h) => h.k, (h) => h.q);
-  S.p2 = { off: r2.off, n: Int32Array.from(r2.sorted, (h) => h.n), q: Int32Array.from(r2.sorted, (h) => h.q), h: Float64Array.from(r2.sorted, (h) => h.v) };
-  const used = new Set(Hk.map((h) => h.n)), Eu = Et.filter((e) => used.has(e.n));
+  const p2 = { off: r2.off, n: Int32Array.from(r2.sorted, (h) => h.n), q: Int32Array.from(r2.sorted, (h) => h.q), nq: Int32Array.from(r2.sorted, (h) => (h.n << 8) | h.q), h: Float64Array.from(r2.sorted, (h) => h.v) };
+  const used = new Set(H.map((h) => h.n)), Eu = Et.filter((e) => used.has(e.n));
   const r3 = rows(Eu, NS, (e) => e.n, (e) => e.i);
-  S.e1 = { off: r3.off, i: Int32Array.from(r3.sorted, (e) => e.i), v: Float64Array.from(r3.sorted, (e) => e.v) };
+  const e1 = { off: r3.off, i: Int32Array.from(r3.sorted, (e) => e.i), v: Float64Array.from(r3.sorted, (e) => e.v) };
   const r4 = rows(Eu, N, (e) => e.i, (e) => e.n);
-  S.e2 = { off: r4.off, n: Int32Array.from(r4.sorted, (e) => e.n), v: Float64Array.from(r4.sorted, (e) => e.v) };
-  cache.set(id, S);
-  if (cache.size > 24) cache.delete(cache.keys().next().value);
-  return S;
+  const e2 = { off: r4.off, n: Int32Array.from(r4.sorted, (e) => e.n), v: Float64Array.from(r4.sorted, (e) => e.v) };
+  return { p1, p2, e1, e2 };
 }
 
 // End of each packed row when only modes < Nv are present (rows sorted by that index).

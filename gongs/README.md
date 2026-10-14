@@ -205,11 +205,12 @@ leak into the modes. So:
   rescaled by s ≈ 1 to keep the scheme's energy unchanged. This is in the spirit
   of relaxed and generalised SAV schemes.
 * **Adaptive substeps.** The size of that correction is the error estimate.
-  Above 2 % per step the voice halves its step, down to 8 substeps per sample,
-  and comes back once it has been below 0.2 % for 20 ms. At the strike, the step
-  is also chosen to resolve the Hertz contact with at least 12 points. State
-  changes between step sizes are exact for modal motion under a constant
-  contact force.
+  Above 2 % per step the voice halves its step, and comes back once it has
+  been below 0.2 % for 20 ms. At the strike the step is also chosen to give the
+  Hertz contact at least 6 points. State changes between step sizes are exact
+  for modal motion under a constant contact force. Since the projection already
+  keeps the energy right, this is capped at 2 substeps, and at 2 voices
+  substepping at once, so that no audio block costs much more than the next.
 * **Snap-through.** A dome hit hard can invert. The cubic part of V_nl then goes
   far below zero (in the shell-mode split, the stretching energy is carried by
   the linear stiffness), and ε₀ is raised as needed. It is only a reference level.
@@ -222,13 +223,35 @@ the free-vibration frequency agrees to 0.1 ¢, and both match the normal-form
 backbone at small amplitude, for the flat plate and for the dome.
 
 **Rates and cost.** Each voice runs at fs/R (R = 2, 4 or 8), the lowest rate
-that holds all its modes below fs/3R (where Ωh ≤ 2, the SAV stays accurate). It
-uses its 600 strongest couplings: H̃ in shell coordinates, ranked by the weight
-√C_n|H̃|/(Ω_iΩ_j), which measures each term's share of V when the modes share
-energy equally. A polyphase Kaiser-windowed sinc interpolates each rate back
-to fs. A voice drops the nonlinear part once V_nl is below 10⁻⁸ of its energy,
-because its pitch is then linear to far better than 0.01 ¢. On this machine (Apple M2 Max, Node),
-four gongs struck fff at once take **25 % of real time**, and ten take 60 %.
+that holds all its modes below fs/3R (where Ωh ≤ 2, the SAV stays accurate). A
+polyphase Kaiser-windowed sinc interpolates each rate back to fs. A voice's
+nonlinear cost follows how nonlinear it is, measured by
+r = (|V₄| + V₃²/E)/E (the largest value over each audio block, held for about
+two periods of the strike tone, since V_nl itself nearly vanishes as the tone
+crosses zero):
+
+* r > 10⁻²: the 600 strongest couplings, H̃ in shell coordinates ranked by
+  √C_n|H̃|/(Ω_iΩ_j), each term's share of V when the modes share energy equally;
+* 2×10⁻⁴ < r < 10⁻²: the 200 strongest only. That is weakly nonlinear motion
+  (pitch shift under ~1 %), and the lowest modes' normal-form pitch shifts
+  are the same with 200 terms as with 600 (to 6 % for a dome, exactly for a
+  flat plate);
+* r < 2×10⁻⁴ (a pitch shift of ~0.3 ¢; the nonlinear exchange time 1/(rω)
+  outlasts the ring), or r < 10⁻³ for a gong under −60 dB or 30 dB below the
+  loudest: exact linear modal decay, about 15× cheaper.
+
+At most **Nonlinear voices** gongs (default 4) run their coupling at once.
+Beyond that the least nonlinear one rings on linearly: its pitch glide and
+cascade freeze where they are, and it never stops sounding. The engine also
+runs every code path once, on a silent gong, when it is created (about 35 ms,
+before the audio starts), so that the JIT has compiled them and no block pays
+for that later.
+
+On this machine (Apple M2 Max, Node), four gongs struck fff at once, all on the
+full coupling, take **24 % of real time**. Ten take 22 % under the default cap
+(55 % if all ten run nonlinear). A 16-note fff melody, one note every 0.25 s
+with the pedal held, averages 18 %, and its worst 128-sample block is under
+half its budget (`node tools/bench-gongs.mjs`).
 
 ### 7. Damping
 
@@ -313,8 +336,9 @@ gongs/src/gongs-engine.js            real-time engine: SAV scheme, mallet, subst
 gongs/src/gongs-params.js            parameters and presets
 gongs/src/gongs-main.js              page wiring and views
 gongs/data/gong-modes.js             generated tables (node tools/gongs-modes.mjs, ~1 s)
-test/gongs-tests.mjs                 node test/gongs-tests.mjs (20 tests, ~11 s)
+test/gongs-tests.mjs                 node test/gongs-tests.mjs (21 tests, ~13 s)
 tools/render-gongs.mjs               node tools/render-gongs.mjs → examples/gongs/
+tools/bench-gongs.mjs                node tools/bench-gongs.mjs: real-time load, block by block
 ```
 
 ## Simplifications
@@ -336,7 +360,9 @@ tools/render-gongs.mjs               node tools/render-gongs.mjs → examples/go
 * **The integrator.** Against RK4 it is accurate at moderate amplitude. At
   deflections of several thicknesses it is an energy-correct, structure-correct
   approximation driven by the projection and the substeps, not a converged
-  solution.
+  solution. The weakly nonlinear tail runs on the 200 strongest couplings, and
+  past the nonlinear-voice cap a gong rings on linearly: both are
+  CPU savings that change the sound only slightly.
 * **Geometry.** A uniform flat plate or spherical cap. Real gongs have
   bosses, turned rims, hammered thickness variations, and (opera gongs) a
   flat centre with a conical shoulder. ν is fixed at 0.33 for the mode shapes of
