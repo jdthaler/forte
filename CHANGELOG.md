@@ -14,6 +14,40 @@ for example `piano-v0.1.0`.
 An adversarial review of the whole project (six reviewers, one per area)
 found the bugs and inaccuracies below; each fix has a regression test.
 
+### Ribbon Piano 0.2.0
+- The top octave and a half is now audible: a refit treble hammer, with
+  felt no longer extrapolated past C7. C6–C8 is within 7 dB of C4 at mf
+  (it was 16–34 dB down).
+- High partials now decay at the model's rate: they were damped too little,
+  by 9 % at 5.7 kHz and 35 % at 12 kHz. The test now measures the engine's
+  decay rates instead of checking the formula against itself.
+- New chords no longer lose notes to voice stealing.
+- Strike offset on tapered ribbons uses the width under the hammer.
+- "Ribbon, edge-on" no longer computes an inaudible mode family (CPU
+  20 % → 5 %).
+- No zipper noise on bridge force or stereo spread.
+- Next-note controls say so.
+- New **una corda** (MIDI CC67 or a checkbox): the hammers strike 2 of 3
+  strings, bringing out Weinreich's aftersound.
+
+### Tonewheel Organ 0.2.0
+- The tube drive no longer turns into a high-gain half-wave rectifier (a
+  10-key chord at full drive peaked at 13; now 0.37).
+- The Leslie horn can no longer sweep through the microphones.
+- No zipper noise on expression.
+- New on-screen **swell pedal** in the console, for tablets.
+- No allocation on the audio thread.
+- README: the vibrato's extra swing comes from per-tap phase ripple at the
+  terminations, not ladder dispersion (the test now checks the median
+  swing); busbar-loading label and gear-beat numbers corrected.
+
+### Tine Piano 0.2.0
+- The pickup controls (gap, vertical voicing, pole radius) act on sounding
+  notes.
+- The pickup-waveform view is no longer NaN for E1–C♯2.
+- New chords no longer lose notes to voice stealing.
+- No zipper noise on speaker, drive or vibrato.
+
 ### Huygens Keyboard 0.2.0
 - Default coupling raised to 5.5 %: at 4.5 % no coupling could lock the
   minor sixth, so C–E–G–C′ and its inversions never went just. Now all

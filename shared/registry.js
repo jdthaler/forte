@@ -15,7 +15,7 @@ export const SECTIONS = [
 
 export const INSTRUMENTS = [
   {
-    id: 'piano', name: 'Ribbon Piano', section: 'history', ready: true, version: '0.1.1',
+    id: 'piano', name: 'Ribbon Piano', section: 'history', ready: true, version: '0.2.0',
     after: 'the concert grand',
     tagline: 'Stiff strings, felt hammers and a shared bridge — then swap the strings for square bars, triangular bars or twisting ribbons.',
     physics: 'Modal strings · nonlinear hammers · torsion',
@@ -29,14 +29,14 @@ export const INSTRUMENTS = [
     accent: '#7fb2ff',
   },
   {
-    id: 'organ', name: 'Tonewheel Organ', section: 'history', ready: true, version: '0.1.1',
+    id: 'organ', name: 'Tonewheel Organ', section: 'history', ready: true, version: '0.2.0',
     after: 'the Hammond B-3 and Leslie',
     tagline: '91 spinning gear-driven wheels, bouncing key contacts, a scanner on an LC delay line and a rotating Doppler horn.',
     physics: 'Gear ratios · shared wheels · Doppler',
     accent: '#f0b35a',
   },
   {
-    id: 'tines', name: 'Tine Piano', section: 'history', ready: true, version: '0.1.1',
+    id: 'tines', name: 'Tine Piano', section: 'history', ready: true, version: '0.2.0',
     after: 'the Fender Rhodes',
     tagline: 'Each key an asymmetric tuning fork of steel tine and brass bar, heard through a nonlinear magnetic pickup.',
     physics: 'Coupled cantilevers · pickup nonlinearity',
