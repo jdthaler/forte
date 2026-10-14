@@ -51,6 +51,36 @@
    "title": "Chord released with dampers then dampers lifted sympathetic ring"
   }
  ],
+ "bubbles": [
+  {
+   "file": "01-a-tune-over-two-brooks.m4a",
+   "title": "A tune over two brooks"
+  },
+  {
+   "file": "02-surface-then-20-m-down-then-quarter-atmosphere.m4a",
+   "title": "Surface then 20 m down then quarter atmosphere"
+  },
+  {
+   "file": "03-air-helium-argon-then-sf6.m4a",
+   "title": "Air helium argon then sf6"
+  },
+  {
+   "file": "04-water-then-glycerol.m4a",
+   "title": "Water then glycerol"
+  },
+  {
+   "file": "05-deep-then-shallow-bubbles-rise-in-pitch.m4a",
+   "title": "Deep then shallow bubbles rise in pitch"
+  },
+  {
+   "file": "06-quick-neck-snap-then-slow.m4a",
+   "title": "Quick neck snap then slow"
+  },
+  {
+   "file": "07-metronome-then-torrent.m4a",
+   "title": "Metronome then torrent"
+  }
+ ],
  "clavier": [
   {
    "file": "01-funky-riff-in-e-minor.m4a",

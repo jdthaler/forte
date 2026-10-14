@@ -1,0 +1,10 @@
+/* The page's own palette and any layout beyond shared/instrument.css. */
+:root {
+  --accent: #6fb8ff;
+  --accent-2: #9fe7d8;
+  --accent-ink: #04172a;
+  --water: #0d2236;
+  --water-deep: #081626;
+}
+#wave-info { font-size: 11px; font-variant-numeric: tabular-nums; color: var(--text); padding-top: 4px; min-height: 2.8em; }
+#wave-info span { white-space: nowrap; }
