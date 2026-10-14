@@ -7,8 +7,8 @@ export const GROUPS = [
   {
     title: 'Finger',
     params: [
-      { id: 'press', label: 'Finger pressure', min: 0.1, max: 20, def: 6, log: true, fmt: (v) => `${v.toFixed(1)} × speaking threshold`, hint: 'Normal force, as a multiple of each bowl\'s threshold (velocity scales it 0.6–1.4×). Below 1 the skin just slides; above, the bowl swells in faster the harder you press; far above, the skin squeals in the higher modes. MIDI aftertouch presses harder.' },
-      { id: 'wet', label: 'Skin moisture', min: 0, max: 1, def: 0.85, step: 0.01, fmt: (v) => `${v < 0.25 ? 'dry' : v < 0.6 ? 'damp' : 'wet'} · ${pct(v)}`, hint: 'Wet skin on clean glass grabs: its friction falls steeply with slip speed. Dry fingers only whisper.' },
+      { id: 'press', label: 'Finger pressure', perform: true, min: 0.1, max: 20, def: 6, log: true, fmt: (v) => `${v.toFixed(1)} × speaking threshold`, hint: 'Normal force, as a multiple of each bowl\'s threshold (velocity scales it 0.6–1.4×). Below 1 the skin just slides; above, the bowl swells in faster the harder you press; far above, the skin squeals in the higher modes. MIDI aftertouch presses harder.' },
+      { id: 'wet', label: 'Skin moisture', perform: true, min: 0, max: 1, def: 0.85, step: 0.01, fmt: (v) => `${v < 0.25 ? 'dry' : v < 0.6 ? 'damp' : 'wet'} · ${pct(v)}`, hint: 'Wet skin on clean glass grabs: its friction falls steeply with slip speed. Dry fingers only whisper.' },
       { id: 'v0', label: 'Stribeck speed v₀', min: 0.05, max: 2, def: 0.5, log: true, fmt: (v) => `${(v * 100).toFixed(0)} cm/s`, hint: 'Slip speed over which wet-skin friction falls from static to sliding. The rims move at 10–40 cm/s.' },
       { id: 'rough', label: 'Skin ridges (friction noise)', min: 0, max: 0.1, def: 0.02, step: 0.001, fmt: pct, hint: 'Random friction from fingerprint ridges passing the rim: a breath of hiss, and the seed each note grows from. For wet skin; drier ridges catch more (up to 6×).' },
       { id: 'velocity', label: 'Velocity (computer keys)', min: 0.05, max: 1, def: 0.6, step: 0.01, fmt: (v) => v.toFixed(2), hint: 'How firmly the finger lands.' },
@@ -17,7 +17,7 @@ export const GROUPS = [
   {
     title: 'Spindle',
     params: [
-      { id: 'speed', label: 'Treadle speed', min: 0.1, max: 3, def: 0.5, log: true, fmt: (v) => `${v.toFixed(2)} rev/s · ${(v * 60).toFixed(0)} rpm`, hint: 'Rim speed under the finger (how loud a bowl can sing) and the warble rate. Too fast and the big bowls cannot hold their pattern still.' },
+      { id: 'speed', label: 'Treadle speed', perform: true, min: 0.1, max: 3, def: 0.5, log: true, fmt: (v) => `${v.toFixed(2)} rev/s · ${(v * 60).toFixed(0)} rpm`, hint: 'Rim speed under the finger (how loud a bowl can sing) and the warble rate. Too fast and the big bowls cannot hold their pattern still.' },
       { id: 'treadle', label: 'Treadle unevenness', min: 0, max: 0.3, def: 0.06, step: 0.005, fmt: pct, hint: 'Speed swing once per turn from the foot\'s push, smoothed by the flywheel.' },
     ],
   },
@@ -32,8 +32,8 @@ export const GROUPS = [
   {
     title: 'Output',
     params: [
-      { id: 'room', label: 'Room', min: 0, max: 1, def: 0.3, step: 0.01, fmt: pct },
-      { id: 'volume', label: 'Volume', min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.3, step: 0.01, fmt: pct },
+      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
 ];

@@ -136,6 +136,14 @@ Rules of thumb:
 velocity-sensitive. Presets override defaults. Make each preset show one
 physical idea and give it a descriptive name.
 
+Mark the controls a player reaches for *while playing* with
+`perform: true`: stops and registrations, tremolo and drive, the mallet
+or the bow, the main physical knob (the black hole's spin), `room` and
+`volume`. Perform mode shows them, and only them, in a strip above the
+keys; a checkbox becomes a stop that lights up. Mark 3–10 of them, `volume`
+among them (`test/site-tests.mjs` checks). Leave the physics you set once
+(materials, dimensions, voicing) to Discover and the presets.
+
 ### Page and views
 
 Copy the template's DOM. The sidebar, header, keyboard and footer are
@@ -152,6 +160,14 @@ and say which in the footer help.
 **Tablets, phones and layout.** `shared/layout.js` and `shared/layout.css`
 (loaded last in `<head>`) give every page the same touch-friendly
 layout:
+- **Discover | Perform** at the top. Discover is the page as built.
+  Perform hides the explanations (`.caption`, `<dl>` readouts, hints,
+  How it works), starts with the views that have no `<canvas>` hidden
+  and the Controls column closed, moves the `perform: true` controls into
+  a strip above the keys, and offers Full screen. The mode is shared by
+  every page; the views and Controls are remembered per page and mode;
+- the presets (`.preset-row` in `#controls`), moved into the header so
+  they are always in view;
 - a Controls toggle (a column on wide screens, a slide-over panel on
   narrow ones);
 - a Views ▾ menu that shows or hides each `#views .card`;
@@ -164,6 +180,8 @@ layout:
 To fit in:
 - Give a card whose `<h2>` changes at runtime a stable name with
   `data-view="…"`.
+- Draw the views so they still read without their captions, in Perform
+  and on a projector: a title, axes and the picture.
 - Start every animation loop with `requestAnimationFrame` and skip
   hidden canvases. `animate(draw, canvas)` does both.
 - Make drawing code survive a tiny canvas.
@@ -215,7 +233,9 @@ WAVs are git-ignored. Commit the `.m4a` files.
 ### Going live
 
 Add the instrument to `shared/registry.js` with `ready: true, version: '0.1.0'`
-and add a `### <Name> 0.1.0` entry to `CHANGELOG.md`. The landing page and
+in one of the four sections (`traditional`, `electric`, `experimental`,
+or `phenomena` for instruments only physics can build), after the other
+ready ones in it, and add a `### <Name> 0.1.0` entry to `CHANGELOG.md`. The landing page and
 every menu pick it up, and `test/site-tests.mjs` checks that all of this
 agrees.
 

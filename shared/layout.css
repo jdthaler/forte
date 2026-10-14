@@ -3,6 +3,8 @@
    keyboard pinned to the bottom, the controls and views in between, each
    scrolling on its own. Phones are different (see the end): the page scrolls
    and the keyboard sticks to the bottom. Body classes from shared/layout.js:
+     perform         Perform mode: the pictures without their explanations, and
+                     the performance controls in a strip above the keys
      hide-controls   controls column hidden (wide screens)
      drawer-open     controls slid over the views (narrow screens; on phones they replace them)
      no-views        every view hidden → controls take the space (or the keyboard does)
@@ -66,8 +68,29 @@ body.kb-l { --kb-h: 170px; }
 body.kb-xl { --kb-h: 250px; }
 #keyboard .wk, #keyboard .bk { touch-action: none; }
 
+/* header: the title, then the mode and the presets, then the layout bar and audio */
+body[data-instrument] > header { gap: 8px 16px; }
+body[data-instrument] .brand { flex: 1 1 auto; flex-wrap: nowrap; align-items: center; min-width: 0; }
+body[data-instrument] .brand h1 { white-space: nowrap; }
+/* the subtitle takes what room is left, and no more */
+body[data-instrument] .brand .sub { flex: 1 1 0; min-width: 0; contain: inline-size; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.forte-play { display: flex; align-items: center; gap: 8px; }
+/* on the right, on whichever row it lands (the Views menu opens leftwards from it) */
+body[data-instrument] > header .status { margin-left: auto; justify-content: flex-end; }
+.forte-mode { display: inline-flex; flex: none; padding: 2px; gap: 2px; border: 1px solid var(--line); border-radius: 9px; background: rgba(0, 0, 0, 0.28); }
+body[data-instrument] .forte-mode button { border: 0; border-radius: 7px; background: transparent; color: var(--muted); padding: 4px 11px; }
+body[data-instrument] .forte-mode button:hover { color: var(--text); }
+body[data-instrument] .forte-mode button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink, #111); font-weight: 600; }
+body[data-instrument] .forte-presets { margin: 0; gap: 6px; flex: 0 1 auto; min-width: 0; }
+body[data-instrument] .forte-presets select { flex: 0 1 auto; width: clamp(150px, 15vw, 250px); min-width: 0; text-overflow: ellipsis; }
+/* "Start audio" until the audio is on, then the CPU meter (the black hole's voice count) in its place */
+body[data-instrument] #start.running,
+body[data-instrument] #start:not(.running) ~ :is(#cpu, #voices) { display: none; }
+.pill[hidden] { display: none; }
+
 /* layout bar (header) */
 .forte-layout { display: flex; gap: 8px; align-items: center; }
+body:not(.perform) .forte-fullscreen { display: none; }
 .forte-layout > button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 .forte-views { position: relative; }
 .forte-views summary {
@@ -95,6 +118,41 @@ body[data-instrument] .kb-help { align-items: center; }
 .forte-pedal { min-width: 84px; }
 .forte-pedal.on, .forte-latch.on { background: var(--accent); color: var(--accent-ink, #111); border-color: transparent; }
 
+/* Perform: the performance controls in a strip above the keys (moved there by
+   shared/layout.js), and the views as pictures, without captions, tables or hints */
+.forte-perform { display: flex; flex-wrap: wrap; gap: 6px 8px; margin-bottom: 8px; }
+.forte-perform .param {
+  flex: 1 1 150px; max-width: 250px; min-width: 0; margin: 0; padding: 5px 10px 3px;
+  border: 1px solid var(--line); border-radius: 8px; background: rgba(255, 255, 255, 0.03);
+}
+.forte-perform .param[hidden] { display: none; }
+.forte-perform .param .hint { display: none; }
+/* label and value share the line; the value, which changes as you play, comes first */
+.forte-perform .param .row { font-size: 12px; gap: 6px; }
+.forte-perform .param .row label { flex: 1 1 0; min-width: 2.5em; }
+.forte-perform .param .row .val { flex: 0 1 auto; max-width: 72%; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.forte-perform .param .row label, .forte-perform .param > label { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.forte-perform .param > label { display: block; font-size: 12px; }
+.forte-perform .param select { margin: 2px 0 3px; padding: 3px 6px; }
+.forte-perform .param input[type=range] { margin: 2px 0 0; }
+/* a checkbox is a stop: the whole tile toggles, and lights when on */
+.forte-perform .param.check { flex: 0 1 auto; flex-wrap: nowrap; gap: 7px; padding: 6px 11px; cursor: pointer; }
+.forte-perform .param.check > label { cursor: pointer; font-size: 12.5px; }
+.forte-perform .param.check:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 70%, transparent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.forte-perform .param.check:has(input:checked) > label { color: var(--text); }
+
+body.perform details.group:not(:has(.param)) { display: none; }
+body.perform #views .caption,
+body.perform #views dl,
+body.perform .brand .sub,
+body.perform .forte-about,
+body.perform #midi,
+body.perform #cpu:not(.hot),
+body.perform .kb-help > span { display: none; }
+body.perform #views { gap: 10px; }
+body.perform #views .card { background: color-mix(in srgb, var(--card) 55%, var(--bg)); border-color: transparent; }
+body.perform #views .card-head h2 { font-weight: 500; color: var(--muted); }
+
 /* narrow screens (tablet portrait): the controls slide over the views */
 @media (max-width: 1050px) {
   body[data-instrument]:not(.no-views) > main { grid-template-columns: minmax(0, 1fr); }
@@ -108,7 +166,8 @@ body[data-instrument] .kb-help { align-items: center; }
   body.drawer-open:not(.no-views) #controls { display: block; }
   body[data-instrument]:not(.no-views) .drawer-close { display: block; width: 100%; margin-bottom: 10px; }
 }
-@media (max-width: 1250px) {
+/* the subtitle only where it has room beside the mode and the presets */
+@media (max-width: 1700px) {
   body[data-instrument] .brand .sub { display: none; }
 }
 
@@ -153,12 +212,9 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
   body[data-instrument] .brand h1 { font-size: 15px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   body[data-instrument] .brand .sub { display: none; }
   body[data-instrument] [data-forte-nav] { flex: none; gap: 4px; }
-  body[data-instrument] .status { gap: 6px; }
+  body[data-instrument] > header .status { gap: 6px; margin-left: 0; justify-content: flex-start; } /* menus open below the header here */
   body[data-instrument] > header button { white-space: nowrap; }
   body[data-instrument] .pill { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-  /* "Start audio" until the audio is on, then the CPU meter (the black hole's voice count) in its place */
-  body[data-instrument] #start.running,
-  body[data-instrument] #start:not(.running) ~ :is(#cpu, #voices) { display: none; }
   body[data-instrument] .forte-switch, body[data-instrument] .forte-views { position: static; }
   body[data-instrument] .forte-menu,
   body[data-instrument] .forte-views-menu { top: calc(100% + 4px); max-height: 70vh; max-height: 70svh; overflow: auto; }
@@ -174,12 +230,25 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
     padding: 6px max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
   }
   body[data-instrument] .kb-help { gap: 6px; margin-bottom: 6px; }
+  /* the performance strip shows a row and a half, and scrolls within itself */
+  .forte-perform { max-height: 98px; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; margin-bottom: 6px; }
+  .forte-perform .param { flex-basis: 140px; padding: 4px 8px 2px; }
+  body[data-instrument] .forte-perform input[type=range] { height: 26px; }
+  body[data-instrument] .forte-fullscreen { display: none; }
+  body[data-instrument] .forte-presets { flex: 1 1 auto; }
+  body[data-instrument] .forte-presets select { flex: 1 1 auto; width: 0; min-width: 8.5em; }
   .forte-kbtools { gap: 6px; }
   .forte-pedal { min-width: 0; }
   body[data-instrument] #keyboard { height: min(var(--kb-h, 115px), 38vh); height: min(var(--kb-h, 115px), 38svh); }
 }
-/* phones in landscape: the views two to a row */
+/* phones in portrait: the mode and the presets get a row of their own */
+@media (max-width: 600px) {
+  body[data-instrument] .forte-play { flex: 1 1 100%; }
+}
+/* phones in landscape: the views two to a row, and one row of the performance strip */
 @media (max-width: 1050px) and (max-height: 500px) {
+  .forte-perform { max-height: 64px; }
+  body[data-instrument] .forte-play { flex: 1 1 auto; }
   body[data-instrument] #views .row:not(.single):not(:has(> .card.view-hidden)) { grid-template-columns: 1fr 1fr; }
 }
 /* 16px text in dropdowns on phones, or iOS zooms the page in when one is tapped */

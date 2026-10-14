@@ -13,8 +13,8 @@ export const GROUPS = [
   {
     title: 'Action',
     params: [
-      { id: 'velocity', label: 'Velocity (computer keys)', min: 0.05, max: 1, step: 0.01, def: 0.7, fmt: (v) => `${hammerSpeed(v).toFixed(2)} m/s`, hint: 'Hammer speed at the string. MIDI velocity maps to 0.25–6 m/s.' },
-      { id: 'hardness', label: 'Felt hardness', min: 0.2, max: 5, def: 1, log: true, fmt: x, hint: 'Felt stiffness K in F = Kδᵖ. Harder felt: shorter contact, more high partials. Applies to new notes.' },
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, step: 0.01, def: 0.7, fmt: (v) => `${hammerSpeed(v).toFixed(2)} m/s`, hint: 'Hammer speed at the string. MIDI velocity maps to 0.25–6 m/s.' },
+      { id: 'hardness', label: 'Felt hardness', perform: true, min: 0.2, max: 5, def: 1, log: true, fmt: x, hint: 'Felt stiffness K in F = Kδᵖ. Harder felt: shorter contact, more high partials. Applies to new notes.' },
       { id: 'strike', label: 'Strike position', min: 0.03, max: 0.5, step: 0.001, def: 0.12, fmt: (v) => `${v.toFixed(3)} L (1/${(1 / v).toFixed(1)})`, hint: 'Partials with a node at the hammer are missing: striking at 1/8 removes the 8th, 16th, …; at the middle, every even partial. Applies to new notes.' },
       { id: 'damper', label: 'Damper', min: 3, max: 80, def: 25, log: true, fmt: (v) => `${v.toFixed(0)} s⁻¹`, hint: 'Decay rate the damper felt adds on release (less on partials with a node under it). Keys above E6 have none.' },
     ],
@@ -44,7 +44,7 @@ export const GROUPS = [
   {
     title: 'Pickup',
     params: [
-      { id: 'listen', label: 'Piezo ↔ soundboard microphone', min: 0, max: 1, step: 0.01, def: 1, fmt: (v) => (v === 0 ? 'piezo' : v === 1 ? 'microphone' : `${(100 * (1 - v)).toFixed(0)} % piezo`), showIf: board, hint: 'The same strings through two transducers: the force under the bridge, or the soundboard\'s radiated sound at two microphones.' },
+      { id: 'listen', label: 'Piezo ↔ soundboard microphone', perform: true, min: 0, max: 1, step: 0.01, def: 1, fmt: (v) => (v === 0 ? 'piezo' : v === 1 ? 'microphone' : `${(100 * (1 - v)).toFixed(0)} % piezo`), showIf: board, hint: 'The same strings through two transducers: the force under the bridge, or the soundboard\'s radiated sound at two microphones.' },
       { id: 'pickH', label: 'Piezo sideways sensitivity', min: 0, max: 1, step: 0.01, def: 0.25, fmt: (v) => v.toFixed(2), hint: 'The piezo stack is squeezed by vertical force; sideways force reaches it only weakly. Raise it to hear the H polarisation beat.' },
       { id: 'rIn', label: 'Preamp input resistance', min: 10, max: 10000, def: 470, log: true, fmt: (v) => `${ohms(v)} → ${(1 / (2 * Math.PI * v * 1e3 * 10e-9)).toFixed(0)} Hz`, hint: 'The piezo is a charge source with 10 nF of capacitance: with the input resistance it forms a high-pass at 1/(2πRC). Low R thins the bass.' },
     ],
@@ -52,17 +52,17 @@ export const GROUPS = [
   {
     title: 'EQ (preamp)',
     params: [
-      { id: 'bass', label: 'Bass (shelf 120 Hz)', min: -15, max: 15, step: 0.5, def: 0, fmt: db },
-      { id: 'mid', label: 'Middle (peak 1 kHz)', min: -15, max: 15, step: 0.5, def: 0, fmt: db },
-      { id: 'treble', label: 'Treble (shelf 3.5 kHz)', min: -15, max: 15, step: 0.5, def: 0, fmt: db, hint: 'Applies to the piezo signal (the CP-70\'s onboard EQ), not to the microphones.' },
+      { id: 'bass', label: 'Bass (shelf 120 Hz)', perform: true, min: -15, max: 15, step: 0.5, def: 0, fmt: db },
+      { id: 'mid', label: 'Middle (peak 1 kHz)', perform: true, min: -15, max: 15, step: 0.5, def: 0, fmt: db },
+      { id: 'treble', label: 'Treble (shelf 3.5 kHz)', perform: true, min: -15, max: 15, step: 0.5, def: 0, fmt: db, hint: 'Applies to the piezo signal (the CP-70\'s onboard EQ), not to the microphones.' },
     ],
   },
   {
     title: 'Output',
     params: [
       { id: 'maxFreq', label: 'Highest partial', min: 3000, max: 16000, def: 10000, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz`, hint: 'Partials above this are left out (new notes). Lower it if the CPU meter runs hot; the engine also sheds the quietest voices when the audio thread is overloaded.' },
-      { id: 'room', label: 'Room', min: 0, max: 1, step: 0.01, def: 0.12, fmt: (v) => `${(v * 100).toFixed(0)} %` },
-      { id: 'volume', label: 'Volume', min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'room', label: 'Room', perform: true, min: 0, max: 1, step: 0.01, def: 0.12, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
 ];

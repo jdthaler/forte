@@ -5,9 +5,10 @@
   <script src="shared/boot.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Forte — keyboard instruments built from physics</title>
-  <meta name="description" content="Playable keyboard instruments synthesised live from their physics: pianos, tonewheel organs, electric pianos, synchronising oscillators and black holes. Play with a computer keyboard or MIDI.">
+  <meta name="description" content="Playable keyboard instruments synthesised live from their physics: pianos, harpsichords, pipe organs, electric pianos, tonewheel organs, flame organs, synchronising oscillators and black holes. Play with a computer keyboard, a touch screen or MIDI.">
   <meta property="og:title" content="Forte — keyboard instruments built from physics">
-  <meta property="og:description" content="Pianos, organs, electric pianos, synchronising oscillators and black holes — every sound computed from the equations of motion, with the physics on the knobs.">
+  <meta property="og:description" content="Pianos, organs, electric pianos, flame organs and black holes — every sound computed from the equations of motion, with the physics on the knobs.">
+  <link rel="stylesheet" href="shared/forte.css">
   <link rel="stylesheet" href="landing.css">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -19,42 +20,54 @@
   <meta name="theme-color" content="#0b0b0e">
 </head>
 <body>
-  <header class="hero">
+  <header class="top">
     <canvas id="modes" aria-hidden="true"></canvas>
-    <div class="hero-text">
-      <h1>Forte</h1>
-      <p class="lede">Keyboard instruments built from physics.</p>
-      <p class="intro">
-        Every sound here is computed live in your browser from the equations of motion of its instrument —
-        stiff strings and felt hammers, gear-driven tonewheels, steel tines, bouncing contacts, neon lamps, spinning black holes.
-        No samples. Play with your computer keyboard or a MIDI keyboard, and turn the knobs that real instruments hide:
-        the shape of the string, where the hammer lands, how stiff the felt is, how fast the black hole spins.
-      </p>
-      <p class="hero-links"><a href="#instruments" class="button primary">Choose an instrument</a> <a href="https://github.com/jdthaler/forte" class="button">Source on GitHub</a></p>
+    <div class="top-inner">
+      <div class="title">
+        <h1>Forte</h1>
+        <p class="lede">Keyboard instruments built from physics. Every sound is computed live from its equations of motion: no samples. Pick one and play it with your keyboard, your fingers or MIDI.</p>
+      </div>
+      <nav class="top-links" aria-label="About the project">
+        <button type="button" class="button" id="about-open">About Forte</button>
+        <a class="button" href="credits/">Credits</a>
+        <a class="button" href="https://github.com/jdthaler/forte">GitHub</a>
+      </nav>
     </div>
   </header>
 
+  <nav class="cats" id="cats" aria-label="Kinds of instrument"></nav>
   <main id="instruments"></main>
-
-  <section class="how">
-    <div>
-      <h2>Physics, not samples</h2>
-      <p>Each instrument is reduced to its vibrating parts — modes of strings, beams, plates, circuits or spacetime — and integrated sample by sample in an AudioWorklet. Nonlinear parts (hammers, pickups, friction, flames) are solved implicitly at every step. Each page explains its equations and shows the physics as you play.</p>
-    </div>
-    <div>
-      <h2>Play it</h2>
-      <p>The bottom two letter rows of your keyboard are the white and black keys (<kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd>); arrow keys shift the octave and adjust each instrument’s main control. On a phone or tablet, play the on-screen keys with as many fingers as you like. A MIDI keyboard works in Chrome, Edge and Firefox. Headphones help: some instruments are in stereo for physical reasons.</p>
-    </div>
-    <div>
-      <h2>Open and tested</h2>
-      <p>Everything is plain JavaScript with no build step, MIT-licensed, and checked by physics tests — against textbook cantilevers, published black-hole frequencies, Arnold tongues and more. Each instrument’s <em>How it works</em> notes give the equations, the numbers, what is simplified, and the work it builds on. It all rests on decades of musical acoustics and physical-modelling synthesis by others: see the <a href="credits/">prior art and credits</a>.</p>
-    </div>
-  </section>
 
   <footer class="foot">
     <span>Vibe coded by Jesse Thaler · Forte <a href="https://github.com/jdthaler/forte/blob/main/CHANGELOG.md" id="forte-version">0.1.0</a> · <a href="credits/">Prior art and credits</a> · <a href="https://github.com/jdthaler/forte/blob/main/LICENSE">MIT License</a> · <a href="https://github.com/jdthaler/forte">GitHub</a></span>
     <span class="muted">Instrument names like Hammond, Rhodes and Wurlitzer belong to their owners; Forte’s instruments are physical models inspired by them.</span>
   </footer>
+
+  <dialog class="forte-notes" id="about" aria-labelledby="about-title">
+    <div class="forte-notes-bar">
+      <div><span class="forte-notes-kicker">About</span><h2 id="about-title">Forte</h2></div>
+      <button type="button" class="forte-notes-close" id="about-close">Close ✕</button>
+    </div>
+    <div class="forte-notes-body" tabindex="-1">
+      <article class="forte-notes-text">
+        <p>
+          Every sound here is computed live in your browser from the equations of motion of its instrument:
+          stiff strings and felt hammers, gear-driven tonewheels, steel tines, bouncing contacts, quills, flames, neon lamps, spinning black holes.
+          No samples. Play with your computer keyboard, a touch screen or a MIDI keyboard, and turn the knobs that real instruments hide:
+          the shape of the string, where the hammer lands, how stiff the felt is, how fast the black hole spins.
+        </p>
+        <h2>Physics, not samples</h2>
+        <p>Each instrument is reduced to its vibrating parts (modes of strings, beams, plates, pipes, circuits or spacetime) and integrated sample by sample in an AudioWorklet. Nonlinear parts (hammers, pickups, friction, flames) are solved implicitly at every step. Each page explains its equations in <em>How it works</em> and shows the physics as you play.</p>
+        <h2>Discover and perform</h2>
+        <p>Every instrument page has two modes. <strong>Discover</strong> shows every control, every view of the physics, and what each one means. <strong>Perform</strong> keeps the pictures, large and uncluttered (they work on a projector), and puts the few controls you reach for while playing in a strip above the keys. The presets are at the top in both.</p>
+        <h2>Play it</h2>
+        <p>The bottom two letter rows of your keyboard are the white and black keys (<kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd>); arrow keys shift the octave and adjust each instrument’s main control, and <kbd>Space</kbd> is the pedal. On a phone or tablet, play the on-screen keys with as many fingers as you like. A MIDI keyboard works in Chrome, Edge and Firefox. Headphones help: some instruments are in stereo for physical reasons.</p>
+        <h2>Open and tested</h2>
+        <p>Everything is plain JavaScript with no build step, MIT-licensed, and checked by physics tests: against textbook cantilevers, published black-hole frequencies, Arnold tongues and more. Each instrument’s <em>How it works</em> notes give the equations, the numbers, what is simplified, and the work it builds on. It all rests on decades of musical acoustics and physical-modelling synthesis by others: see the <a href="credits/">prior art and credits</a>.</p>
+        <p class="forte-notes-src">Vibe coded by Jesse Thaler · Forte <span id="about-version"></span> · <a href="https://github.com/jdthaler/forte">source on GitHub</a> · <a href="https://github.com/jdthaler/forte/blob/main/CHANGELOG.md">changelog</a></p>
+      </article>
+    </div>
+  </dialog>
 
   <audio id="player" preload="none"></audio>
   <script type="module" src="landing.js"></script>

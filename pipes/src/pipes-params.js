@@ -10,15 +10,15 @@ export const GROUPS = [
   {
     title: 'Stops',
     params: [
-      { id: 'principal', label: 'Principal 8′', type: 'checkbox', def: true,
+      { id: 'principal', label: 'Principal 8′', perform: true, type: 'checkbox', def: true,
         hint: 'Open metal pipes at the written pitch, on Töpfer’s normal scale: the organ’s own sound.' },
-      { id: 'octave', label: 'Octave 4′', type: 'checkbox', def: false,
+      { id: 'octave', label: 'Octave 4′', perform: true, type: 'checkbox', def: false,
         hint: 'Open pipes an octave higher: half the length, brighter.' },
-      { id: 'gedackt', label: 'Gedackt 8′', type: 'checkbox', def: false,
+      { id: 'gedackt', label: 'Gedackt 8′', perform: true, type: 'checkbox', def: false,
         hint: 'Stopped pipes at the written pitch: capped at the top, so half as long and sounding only the odd harmonics (1, 3, 5…): a soft, hollow flute.' },
-      { id: 'mixture', label: 'Mixture III', type: 'checkbox', def: false,
+      { id: 'mixture', label: 'Mixture III', perform: true, type: 'checkbox', def: false,
         hint: 'Three small open pipes a key, sounding octaves and fifths far above the note (1⅓′ 1′ ⅔′ in the bass), breaking back an octave at each c so they never get too small: the organ’s brilliance.' },
-      { id: 'tremulant', label: 'Tremulant', type: 'checkbox', def: false,
+      { id: 'tremulant', label: 'Tremulant', perform: true, type: 'checkbox', def: false,
         hint: 'A valve that opens and shuts a leak from the wind chest several times a second: the wind, and with it every pipe, pulses.' },
       { id: 'tremRate', label: 'Tremulant rate', min: 2, max: 10, def: 5.5, step: 0.1, fmt: (v) => `${v.toFixed(1)} beats/s`, showIf: (P) => P.tremulant,
         hint: 'How fast the tremulant’s valve beats.' },
@@ -29,7 +29,7 @@ export const GROUPS = [
   {
     title: 'Wind',
     params: [
-      { id: 'pressure', label: 'Wind pressure', min: 150, max: 6000, def: 700, log: true, fmt: pa,
+      { id: 'pressure', label: 'Wind pressure', perform: true, min: 150, max: 6000, def: 700, log: true, fmt: pa,
         hint: 'The pressure the bellows’ weights set. The jets go faster (U = √(2p/ρ)), the pipes louder and brighter, the pitch barely higher; far above the voiced 700 Pa the pipes overblow to their next mode (an open pipe’s octave, a stopped one’s twelfth), and come back only well below where they jumped (lower the cut-up to bring that within reach). Too little and the pipes speak late and weak, then barely at all. Mod wheel: up to 3000 Pa.' },
       { id: 'wind', label: 'Wind: steady … flexible', min: 0, max: 1, def: 0.35, step: 0.01, fmt: (v) => (v < 0.15 ? `steady (Schwimmer) ${(v * 100).toFixed(0)} %` : v > 0.85 ? `flexible (long trunk) ${(v * 100).toFixed(0)} %` : `${(v * 100).toFixed(0)} % flexible`),
         hint: 'Steady: a regulator in the chest holds the pressure. Flexible, the Baroque way: the chest is fed only through the trunk from the bellows, so big chords drain it, the pressure dips and the wind “breathes”, ringing at a few hertz.' },
@@ -55,8 +55,8 @@ export const GROUPS = [
   {
     title: 'Output',
     params: [
-      { id: 'room', label: 'Room (church)', min: 0, max: 1, def: 0.55, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
-      { id: 'volume', label: 'Volume', min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'room', label: 'Room (church)', perform: true, min: 0, max: 1, def: 0.55, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
 ];

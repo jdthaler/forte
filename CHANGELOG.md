@@ -10,6 +10,114 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-14 — front page by kind of instrument; Discover and Perform
+
+### Forte 0.6.0
+- **Front page:** choosing an instrument comes first. A short title with
+  **About Forte** (a dialog with the introduction and the notes that were
+  on the page), **Credits** and **GitHub**, then tabs for four kinds of
+  instrument that stay at the top as the cards scroll: *Traditional*,
+  *Electric*, *Experimental* (experiments from history) and *Phenomena*
+  (instruments only physics can build), or *All*. Each tab has its own
+  link (`#electric`). A whole card opens its instrument; the instruments
+  in the workshop are listed by name under their kind.
+- **Registry:** four sections (`traditional`, `electric`, `experimental`,
+  `phenomena`) replace the two ("from history", "only physics can build"),
+  with the ready instruments first in each. Every page's Instruments menu
+  follows.
+- **Discover | Perform** on every instrument page. Discover is the page as
+  it was. Perform keeps the pictures, larger and without their captions,
+  readouts, tables, hints or How it works; starts with the views that have
+  no picture hidden and the Controls column closed; puts each instrument's
+  performance controls (parameters marked `perform: true`) in a strip
+  above the keys, where a checkbox becomes a stop that lights up; and
+  offers **Full screen** for a projector. The mode is the same on every
+  page; each page remembers its views and Controls in each mode.
+- **Presets** and **Reset** move from the Controls panel to the header, so
+  they are always in view.
+- Header: once the audio is on, the CPU meter takes the place of "Start
+  audio" (as it did on phones); the MIDI status shows once MIDI is asked
+  for; the subtitle shows only on screens wider than 1700 px; the layout
+  and audio buttons sit on the right on whichever row they land.
+- The shell gives `perform: true` parameters `data-perform`; the template
+  marks four. The guide and the README describe the modes.
+- Site tests: four sections, ready instruments first; presets where the
+  header can take them; the front page's tabs and About; 3–10 performance
+  controls per instrument, volume among them.
+
+### Ribbon Piano 0.3.0
+- Perform: felt hardness, velocity, una corda, soundboard, room and volume.
+
+### Harpsichord 0.2.0
+- Perform: the registration (manual, coupler, front and back 8′, 4′, lute,
+  buff), room and volume.
+
+### Pipe Organ 0.2.0
+- Perform: the stops (Principal 8′, Octave 4′, Gedackt 8′, Mixture III),
+  tremulant, wind pressure, room and volume.
+
+### Free-Reed Organ 0.2.0
+- Perform: the stops (8′, musette, 16′, 4′, percussion), bellows pressure,
+  expression stop, room and volume.
+
+### Vibraphone 0.2.0
+- Perform: motor and shaft speed, mallet hardness, velocity, pedal lock,
+  room and volume.
+
+### Electric Grand 0.3.0
+- Perform: velocity, felt hardness, piezo ↔ microphone, the preamp's bass,
+  middle and treble, room and volume.
+
+### Tonewheel Organ 0.3.0
+- Perform: tube drive, room and volume, under the console (drawbars,
+  percussion, vibrato, Leslie and swell), which stays in view.
+
+### Tine Piano 0.3.0
+- Perform: velocity, the suitcase's vibrato depth and rate, amp drive,
+  speaker top end, room and volume.
+
+### Reed Piano 0.3.0
+- Perform: velocity, preamp drive, tremolo depth and rate, output, room and
+  volume.
+
+### Tangent Clavier 0.3.0
+- Perform: velocity, the pickup selector, the four tone tabs, the mute,
+  room and volume.
+
+### Sticky-Pad Piano 0.3.0
+- Perform: velocity, tone, amplifier and its drive, room and volume.
+
+### Viola Organista 0.3.0
+- Perform: wheel speed, bow position, key pressure and travel time, dampers
+  lifted, room and volume.
+
+### Glass Armonica 0.3.0
+- Perform: finger pressure, skin moisture, treadle speed, room and volume.
+
+### Pyrophone 0.3.0
+- Perform: flame power, velocity, key-up flame, flame turbulence, room and
+  volume.
+
+### Huygens Keyboard 0.3.0
+- Perform: pulse coupling, tuning (and just tonic), key attack and release,
+  tone, room and volume.
+
+### Gong Keyboard 0.3.0
+- Perform: dome rise, mallet stiffness, strike point, velocity, hand
+  damping, room and volume.
+
+### Black-Hole Keyboard 0.3.0
+- Perform: spin, mass ratio, inclination, the inspiral, tone, room and
+  volume.
+
+### Quantum Keyboard 0.3.0
+- Perform: potential, tempo, revival time, dephasing, velocity, room and
+  volume.
+
+### Bubble Organ 0.2.0
+- Perform: nozzle depth, gas, bubbles per second, irregularity, velocity,
+  room and volume.
+
 ## 2026-10-14 — pipe organ
 
 ### Pipe Organ 0.1.0
