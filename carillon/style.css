@@ -1,0 +1,15 @@
+/* The page's own palette and any layout beyond shared/instrument.css. */
+:root {
+  --accent: #d9b45f;
+  --accent-2: #8fc7d8;
+  --accent-ink: #1d1505;
+  --bronze: #b08d57;
+  --strike: #ff6b5a;
+}
+.table-wrap { overflow-x: auto; max-width: 100%; }
+#partials tr { cursor: pointer; }
+#partials tr.sel td { color: var(--accent); }
+#partials tr.named td:first-child { font-weight: 600; }
+#partials td.bar { min-width: 64px; }
+#partials td.bar i { display: inline-block; height: 8px; background: var(--accent); border-radius: 2px; vertical-align: middle; }
+#partials td.note { color: var(--muted); font-size: 11px; padding-top: 6px; text-align: left; white-space: normal; cursor: default; }

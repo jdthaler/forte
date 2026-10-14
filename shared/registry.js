@@ -58,10 +58,10 @@ export const INSTRUMENTS = [
     accent: '#5fd0c8',
   },
   {
-    id: 'carillon', name: 'Carillon', section: 'traditional', ready: false,
+    id: 'carillon', name: 'Carillon', section: 'traditional', ready: true, version: '0.1.0', trim: 3.5,
     after: 'the Flemish carillon (Hemony bells, 1650s)',
-    tagline: 'Bronze bells tuned partial by partial; the pitch you hear, the strike note, is not in the spectrum at all.',
-    physics: 'Bell shell modes · virtual pitch',
+    tagline: 'Bronze bells tuned partial by partial; the note you hear, the strike note, is a virtual pitch made by partials an octave and more above it.',
+    physics: 'Bell modes by finite elements · Hertz clapper · virtual pitch',
     accent: '#d9b45f',
   },
   {
@@ -165,6 +165,12 @@ export const INSTRUMENTS = [
     accent: '#6fb8ff',
   },
   {
+    id: 'springs', name: 'Spring Keyboard', section: 'phenomena', ready: true, version: '0.1.0', trim: 11.5,
+    tagline: 'Struck steel coils, each cut to sound its note; their waves travel at different speeds by pitch, so every echo arrives as a chirp.',
+    physics: 'Helical rods (Wittrick) · dispersion · chirped echoes',
+    accent: '#c0c0d8',
+  },
+  {
     id: 'stars', name: 'Star Keyboard', section: 'phenomena', ready: false,
     tagline: 'Every key a Sun-like star whose oscillations are rung continuously by convection: combs of modes that breathe rather than strike.',
     physics: 'Asteroseismology · stochastically driven modes',
@@ -175,12 +181,6 @@ export const INSTRUMENTS = [
     tagline: 'Strings sung by the wind: shed vortices lock onto a harmonic and hop to the next as the wind rises.',
     physics: 'Vortex shedding · lock-in · wake oscillators',
     accent: '#a8e6a1',
-  },
-  {
-    id: 'springs', name: 'Spring Keyboard', section: 'phenomena', ready: false,
-    tagline: 'Struck coil springs whose waves travel at different speeds by pitch, so every note arrives as a chirp.',
-    physics: 'Helical springs · dispersion',
-    accent: '#c0c0d8',
   },
 ];
 

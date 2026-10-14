@@ -81,6 +81,36 @@
    "title": "Metronome then torrent"
   }
  ],
+ "carillon": [
+  {
+   "file": "01-ode-to-joy-on-the-carillon.m4a",
+   "title": "Ode to joy on the carillon"
+  },
+  {
+   "file": "02-minor-third-bells-then-major-third-bells.m4a",
+   "title": "Minor third bells then major third bells"
+  },
+  {
+   "file": "03-a-bell-then-only-its-nominal-group-then-a-sine-at-its-strike-note.m4a",
+   "title": "A bell then only its nominal group then a sine at its strike note"
+  },
+  {
+   "file": "04-uneven-bell-struck-on-its-axis-then-between-the-axes.m4a",
+   "title": "Uneven bell struck on its axis then between the axes"
+  },
+  {
+   "file": "05-iron-clapper-then-soft-insert.m4a",
+   "title": "Iron clapper then soft insert"
+  },
+  {
+   "file": "06-tuned-bells-then-historic-untuned-bells.m4a",
+   "title": "Tuned bells then historic untuned bells"
+  },
+  {
+   "file": "07-under-the-tower-then-across-the-town-square.m4a",
+   "title": "Under the tower then across the town square"
+  }
+ ],
  "clavier": [
   {
    "file": "01-funky-riff-in-e-minor.m4a",
@@ -539,6 +569,36 @@
   {
    "file": "07-feed-resistor-22-megohm-then-1-megohm-constant-charge-vs-voltage.m4a",
    "title": "Feed resistor 22 megohm then 1 megohm constant charge vs voltage"
+  }
+ ],
+ "springs": [
+  {
+   "file": "01-a-tune-on-the-springs.m4a",
+   "title": "A tune on the springs"
+  },
+  {
+   "file": "02-one-spring-struck-at-c2-c3-and-c4.m4a",
+   "title": "One spring struck at c2 c3 and c4"
+  },
+  {
+   "file": "03-one-then-two-then-three-springs.m4a",
+   "title": "One then two then three springs"
+  },
+  {
+   "file": "04-light-mounts-then-an-oil-bath.m4a",
+   "title": "Light mounts then an oil bath"
+  },
+  {
+   "file": "05-the-coil-widens-and-the-chirps-come-down.m4a",
+   "title": "The coil widens and the chirps come down"
+  },
+  {
+   "file": "06-soft-mallet-then-hard-tap.m4a",
+   "title": "Soft mallet then hard tap"
+  },
+  {
+   "file": "07-slinky-whistles.m4a",
+   "title": "Slinky whistles"
   }
  ],
  "tines": [

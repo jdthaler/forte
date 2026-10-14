@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Spring Keyboard · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="springs">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Spring Keyboard</h1>
+      <span class="sub">struck steel coils whose waves travel at different speeds by pitch: every echo arrives as a chirp</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Echoes">
+          <div class="card-head"><h2>Echoes of <b id="echo-key">the last strike</b></h2><span class="muted" id="echo-read">strike a key</span></div>
+          <canvas id="echo"></canvas>
+          <div class="caption">What the far bead heard after the last strike: time across, frequency up, a short-window spectrogram from the engine. Dotted: when the model says each frequency arrives, after one length of wire, three, five… Below F_C (dashed) every echo is a rising chirp, the low notes first; above it, faint falling ones.</div>
+        </div>
+        <div class="card" data-view="Dispersion">
+          <div class="card-head"><h2>Dispersion of <b id="disp-key">C4</b></h2><span class="muted" id="disp-read"></span></div>
+          <canvas id="disp"></canvas>
+          <div class="caption">Left: frequency against wavenumber for the two wave families of Wittrick’s helix (bright where the beads drive them), and the spring’s modes (dots, k = nπ/L). Right: the round trip’s group delay 2L/c_g. It starts at the echo time T_D, climbs without limit at F_C, where the waves stop, and falls again above.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="The spring">
+          <div class="card-head"><h2>The spring, slowed down</h2><span class="muted" id="spring-read"></span></div>
+          <canvas id="spring"></canvas>
+          <div class="caption">The struck spring from the side, its twist exaggerated and slowed so a round trip takes two seconds; colour: how fast the wire turns. Below: that twisting speed along the wire. The pulse leaves the struck bead (left) and spreads as it goes, its quick ripples trailing.</div>
+        </div>
+        <div class="card" data-perform data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · log frequency</span></div>
+          <canvas id="spectro"></canvas>
+          <div class="caption">The modes pile up just below F_C (ticks), where the waves crawl and the bead mounts hardly damp them: that band rings longest.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>dampers off (sustain): hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>mod wheel: hand on the spring</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/springs-main.js"></script>
+</body>
+</html>

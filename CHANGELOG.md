@@ -10,6 +10,98 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-14 — spring keyboard
+
+### Spring Keyboard 0.1.0
+- New instrument: a keyboard of struck steel springs, C2–C6, each a helical
+  spring with a magnetic bead at each end, as in a spring-reverb tank. A
+  mallet taps one bead; the other bead is the pickup.
+- **The waves:** Wittrick's helical rod (bending, twist, stretch and shear,
+  with shear and rotary inertia) solved for every wavenumber as a 6 × 6
+  symmetric eigenproblem, with exact group velocities. Checked against
+  Hoppe's and Michell's ring modes, rigid-body motion and the slinky line
+  (the open-coiled spring's compliance, both low-frequency speeds within
+  10⁻⁵); the reduced thin-spring model agrees at small helix angle (low
+  branch within 0.02 %, F_C within 0.3 %).
+- **F_C and T_D:** the transition frequency where the slow branch ends
+  (0.4 % above Parker & Bilbao's formula in the reduced model) and the echo time
+  T_D = 2L/c₀; below F_C every echo is a rising chirp, above it a falling
+  one, as the spring-reverb measurements describe.
+- **Tuning:** every key is the C4 spring (5.4 mm coil, 0.45 mm wire, 3°,
+  23.6 turns) scaled to its note, its lowest mode first put on the note,
+  then the whole spring rescaled until a virtual-pitch estimate of what is
+  heard (subharmonic summation, Hermes 1988, on the first 0.4 s after an mf
+  strike) lands on it. That corrects a drift of −21 ¢ (C2) to −9 ¢ (C6): the
+  lowest mode now sits 21 ¢ to 5 ¢ sharp. It is recomputed whenever the
+  knobs that shape the sound change. F_C ≈ 16 f₀: 1.07 kHz on C2 to
+  17.0 kHz on C6.
+- **Sound:** modes at k = nπ/L on both acoustic sheets (101–243 per spring
+  below 18 kHz), each weighted by how much it turns (or slides) the beads
+  at both ends; damping from the mounts (a loss per reflection, so the band
+  below F_C rings longest), the steel's loss factor, an oil bath, a hand on
+  the coils (mod wheel) and a felt damper that falls on key-up (sustain
+  holds it off; release velocity sets how fast).
+- **Playable:** one to three springs a key cut a little apart, centred on
+  the note (their echoes blur), coil radius, wire diameter and helix angle (F_C moves; the
+  turning and stretching waves mix), beads driven in rotation or along the
+  axis, bead inertia, mallet contact time, and a Slinky family whose F_C is
+  below hearing, so every echo is a falling whistle.
+- The page solves each key's springs and sends them with the note, so the
+  audio thread never solves an eigenproblem.
+- Views: the echoes of the last strike (a short-window spectrogram from the
+  engine, with the model's arrival times), the dispersion and the round
+  trip's group delay with T_D and F_C, the struck spring slowed down, and a
+  live spectrogram. Seven demos.
+- Performance controls: springs per key, mount loss, hand, mallet, room
+  and volume. Perform shows the echoes and the spectrogram.
+
+## 2026-10-14 — carillon
+
+### Carillon 0.1.0
+- New instrument, after the Low Countries carillon (Hemony): 49 bronze
+  bells, C3–C7 at sounding pitch, each tuned by its nominal an octave
+  above its key, in three registers with their own ribs, heavier towards
+  the treble (wall thickness × 0.5, 0.72 and 1).
+- **The bell:** axisymmetric solid finite elements (eight-node
+  quadrilaterals on the rib's cross-section, one cos mθ / sin mθ family at a
+  time, banded subspace iteration), checked against Hoppe's and Rayleigh's
+  ring, Rayleigh's inextensional cylinder modes and the dense eigensolver,
+  and converged under refinement. A thick ring shows how far thin-shell
+  formulas go wrong.
+- **The founder's tuning:** a Levenberg–Marquardt search moves each rib's
+  thickness, radius and height at ten stations until hum, prime, tierce,
+  quint and nominal sit at 0.5 : 1 : 1.2 : 1.5 : 2 (minor-third bells) or
+  with the tierce at 1.25 (major-third bells, from a different starting rib,
+  aiming more softly at the deciem, superquint and octave nominal too),
+  moving the rib no further than it must.
+  `tools/carillon-profile.mjs` writes the six ribs and their modes to
+  `bell-table.js`.
+- **Sound:** every mode below 8–12 × the prime as an exact two-pole
+  recursion, a doublet for each m ≥ 1; damping from bronze's loss and
+  multipole radiation (the hum rings longest); a radiation-weighted sum at
+  the listener, with spreading and ISO 9613-1 air absorption over the
+  distance from the tower.
+- **Doublets:** an asymmetry ε cos 2mθ splits each pair by Δf/f = εκ/2
+  (degenerate perturbation theory, κ from the FEM); the strike angle shares
+  the strike between the pair as cos and sin mα, so bells warble unless
+  struck on an axis.
+- **The clapper:** Hertz contact solved implicitly every sample against
+  every mode of the bell where it is; about 1 ms on C4; iron or a softer
+  insert, its mass, the strike height and an even touch across the
+  keyboard.
+- **The strike note:** subharmonic summation finds it an octave below the
+  nominal, live, on the partials as heard; given only the nominal,
+  superquint and octave nominal it still finds it, where no partial lies.
+  In the top bells it names the hum.
+- **Historic bells:** untuned castings, each partial moved by the FEM's
+  sensitivities to random wall errors, seeded per bell.
+- Views: the bell's section and a partial's shape, from the side and from
+  below, with its live level; the partial table; the strike note; the
+  spectrum. Seven demos.
+- Performance controls: bell profile, asymmetry, clapper face, strike
+  angle, distance, room and volume. Perform shows the bell and its mode,
+  and the spectrum.
+
 ## 2026-10-14 — front page by kind of instrument; Discover and Perform
 
 ### Forte 0.6.0

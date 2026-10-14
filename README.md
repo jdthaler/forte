@@ -24,7 +24,7 @@ The front page sorts them into four kinds, as here.
 | ✅ | [Pipe Organ](pipes/) | Baroque organ | flue pipes as tubes in modal form driven by a delayed, amplified jet that splits on the labium (jet drive with vortex shedding; speaking windows from a linear analysis): chiff with the pallet's speed, overblowing with hysteresis; Principal, Octave, stopped Gedackt and Mixture; a wind chest that sags and breathes, tremulant |
 | ✅ | [Free-Reed Organ](harmonium/) | harmonium and accordion | brass reeds driven through their slots by the inertia of the air that feeds them (implicit reed–air coupling, thresholds from a linear analysis); musette, 16′ and 4′ ranks, reservoir and expression stop, cassotto |
 | ✅ | [Vibraphone](vibraphone/) | Deagan vibraharp (1927) | undercut bars tuned 1 : 4 : 10 by finite elements, each coupled to a stopped tube; motor-driven discs open and close the tubes (tremolo) |
-| 🛠 | Carillon | Flemish carillon (Hemony) | bell shell modes and the strike note: a pitch not in the spectrum |
+| ✅ | [Carillon](carillon/) | Flemish carillon (Hemony) | bronze bells solved by axisymmetric finite elements and tuned by their profile (minor- or major-third), struck by a Hertzian clapper; doublets that warble with asymmetry and strike angle; air absorption over distance; the strike note found by subharmonic summation |
 
 ### Electric instruments
 
@@ -55,9 +55,9 @@ The front page sorts them into four kinds, as here.
 | ✅ | [Black-Hole Keyboard](blackhole/) | Kerr quasinormal modes from the Teukolsky equation, h₊ and h× in stereo |
 | ✅ | [Quantum Keyboard](quantum/) | exact wavepackets in square, Morse, hydrogen-Rydberg, gravitational and harmonic wells: collapse, fractional and full revivals, decoherence |
 | ✅ | [Bubble Organ](bubbles/) | Minnaert bubbles with heat flow, radiation and viscosity; the free surface above raises the pitch; depth, pressure, gas and liquid retune the keyboard |
+| ✅ | [Spring Keyboard](springs/) | struck helical springs in modal form, from Wittrick's helical-rod dispersion: each key's spring cut so its heard pitch lands on the note, every echo a chirp rising to the transition frequency F_C; one to three springs a key, magnetic beads in rotation or along the axis, oil and mount damping, and a Slinky whose whistles fall |
 | 🛠 | Star Keyboard | asteroseismology: stochastically driven p-modes, échelle combs, rotation splitting |
 | 🛠 | Wind Harp | vortex shedding locking onto string harmonics, with hysteresis |
-| 🛠 | Spring Keyboard | dispersive waves on helical springs: every note a chirp |
 
 ✅ playable · 🛠 in the workshop ([build briefs](docs/WORKSHOP.md)). Each instrument's README has its equations,
 numbers, sources, and a list of what is simplified. The same notes open on
