@@ -10,7 +10,7 @@ export const FORTE_VERSION = '0.4.0';
 
 export const SECTIONS = [
   { id: 'history', title: 'Instruments from history', blurb: 'Real keyboards — some famous, some forgotten — rebuilt from their physics, with every mechanism exposed as a knob.' },
-  { id: 'new', title: 'Instruments only physics can build', blurb: 'Keyboards that could not exist, or never have: synchronising circuits, chaotic plates, black holes and wavefunctions.' },
+  { id: 'new', title: 'Instruments only physics can build', blurb: 'Keyboards made of phenomena rather than mechanisms: synchronising oscillators, nonlinear plates, black holes and wavefunctions, each played from the keys. Several have been modelled or sonified before; see the prior art and credits.' },
 ];
 
 export const INSTRUMENTS = [

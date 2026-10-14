@@ -162,7 +162,8 @@ function inline(s, ctx) {
   const hold = (html) => `\uE000${held.push(html) - 1}\uE001`;
   s = s.replace(/(`+)([\s\S]*?[^`])\1(?!`)/g, (_, __, code) => hold(`<code>${esc(code.replace(/\n/g, ' ').trim())}</code>`));
   s = s.replace(/<((?:https?:\/\/|mailto:)[^>\s]+)>/g, (_, url) => hold(link(url, esc(url), ctx)));
-  s = s.replace(/\[((?:[^[\]]|\[[^\]]*\])+)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g, (_, text, url) => hold(link(url, inline(text, ctx), ctx)));
+  // the destination may contain balanced parentheses, as DOIs often do: 10.1016/0022-460X(83)90…
+  s = s.replace(/\[((?:[^[\]]|\[[^\]]*\])+)\]\(\s*<?((?:[^()\s<>]|\([^()\s]*\))+)>?(?:\s+"[^"]*")?\s*\)/g, (_, text, url) => hold(link(url, inline(text, ctx), ctx)));
   s = s.replace(/\\([\\`*_{}[\]()#+\-.!|<>~])/g, (_, c) => hold(esc(c)));
   s = esc(s);
   s = s.replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g, '<strong>$1</strong>');

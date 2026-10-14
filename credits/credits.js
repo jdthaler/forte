@@ -10,7 +10,8 @@ const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>'
 fetch('../docs/PRIOR_ART.md')
   .then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))))
   .then((md) => {
-    const { html, sections } = renderMarkdown(md, { base: `${REPO}docs/`, idPrefix: 'c-' });
+    // the chips above the text are the contents, so the document's own list is left out
+    const { html, sections } = renderMarkdown(md, { base: `${REPO}docs/`, idPrefix: 'c-', skip: ['Contents'] });
     text.innerHTML = html;
     toc.innerHTML = sections.map((s) => `<a href="#${s.id}">${esc(s.text)}</a>`).join('');
     if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();

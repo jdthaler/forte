@@ -9,7 +9,8 @@ the yarn chokes it. Every part of that is integrated live: the impact on the
 anvil, the clamped boundary, the pitch that rises as you press harder, the
 glide of a loud bass note, and the "thunk" on release. A sample could not
 give you the pressure vibrato, the pickup switches on any note, or a
-tangent that bounces.
+tangent that bounces. Other physical models of the Clavinet are listed under
+*Prior art and references*.
 
 Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/clavier/>
 (or locally — see the [main README](../README.md)).

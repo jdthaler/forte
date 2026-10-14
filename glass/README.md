@@ -7,7 +7,9 @@ flexural modes. A fingertip, modelled as a skin pad with stick–slip friction,
 drives the bowl while the bowl turns underneath it. You can hear things a
 sample cannot give you: notes that need a moment to *speak*, a warble whose
 rate follows the treadle, bowls that keep ringing and precessing after the
-finger lifts, and pitch that slides down as water is poured in.
+finger lifts, and pitch that slides down as water is poured in. Earlier
+physical models of rubbed and singing glass are listed under *Prior art and
+references*.
 
 Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/glass/>
 (or locally — see the [main README](../README.md)).

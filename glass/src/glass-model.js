@@ -4,7 +4,7 @@
 // Each key is a thin hemispherical glass bowl on a horizontal spindle. Its
 // sound is the flexural (inextensional) modes of the shell, n = 2, 3, 4, …
 // nodal meridians. Rayleigh found the exact inextensional displacement field
-// of a spherical shell (Theory of Sound §§ 233–235): with θ the polar angle
+// of a spherical shell (Rayleigh, Theory of Sound, 2nd ed., vol. 1, pp. 395–420): with θ the polar angle
 // from the pole (the neck) and φ the azimuth,
 //   u = sinθ tⁿ cos nφ,  v = sinθ tⁿ sin nφ,  w = −(n + cosθ) tⁿ cos nφ,   t = tan(θ/2)
 // (meridional, azimuthal, outward normal). It stretches nothing, so all the

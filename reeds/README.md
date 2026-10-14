@@ -8,7 +8,9 @@ on where the tip is. The famous Wurlitzer bark is not distortion added
 afterwards. It is the shape of that capacitance curve, here computed from
 Laplace's equation, read out by a lopsided swing. A sample could not give you
 the bark growing continuously with how hard you play, or let you move the
-reed in its slot, change the solder or starve the pickup of charge.
+reed in its slot, change the solder or starve the pickup of charge. Other
+physical models of the 200A, listed under *Prior art and references*, share
+some of that freedom.
 
 Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/reeds/>
 (or locally, see the [main README](../README.md)).

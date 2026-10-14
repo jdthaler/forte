@@ -57,6 +57,21 @@ test('every demo in examples/index.json exists', () => {
   for (const [id, list] of Object.entries(index)) for (const d of list) assert.ok(has(`examples/${id}/${d.file}`), `${id}/${d.file}`);
 });
 
+console.log('credits');
+test('every ready instrument\'s README ends with its prior art and references', () => {
+  for (const i of ready) {
+    const md = read(`${i.id}/README.md`);
+    const at = md.indexOf('\n## Prior art and references');
+    assert.ok(at > 0, `${i.id}: no "## Prior art and references" section`);
+    assert.ok(!md.slice(at + 1).includes('\n## '), `${i.id}: prior art should be the last section`);
+    assert.ok(/doi\.org|https?:\/\//.test(md.slice(at)), `${i.id}: prior art has no links`);
+  }
+});
+test('the project-wide prior art exists and the site links to it', () => {
+  assert.ok(has('docs/PRIOR_ART.md') && has('credits/index.html'));
+  assert.ok(read('index.html').includes('href="credits/"'), 'landing page links to credits/');
+});
+
 console.log('parameters and presets');
 for (const i of ready) {
   const file = readdirSync(new URL(`${i.id}/src/`, R)).find((f) => /params\.js$/.test(f));
