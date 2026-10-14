@@ -130,6 +130,16 @@ pre-release (0.x) for now:
 From 1.0 on, an instrument's MAJOR version will change only when saved
 settings or the sound of existing presets break.
 
+## Credits
+
+Forte builds on decades of musical acoustics and physical-modelling
+synthesis: the inventors of the instruments it models, the physicists who
+worked out how they vibrate, and the researchers and companies who built
+physical-modelling instruments first. [docs/PRIOR_ART.md](docs/PRIOR_ART.md),
+also at <https://forte.jthaler.net/credits/>, credits the field. Each
+instrument's README (its **How it works** notes) ends with its own prior
+art and references.
+
 ## License
 
 [MIT](LICENSE) © 2026 Jesse Thaler. Instrument names such as Hammond,

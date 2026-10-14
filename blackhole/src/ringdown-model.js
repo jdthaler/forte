@@ -12,8 +12,9 @@
 //   h₊ − i h× = Σ_lmn [ A_lmn e^{−iω t} ₋₂Y_lm(ι) + (−1)^l A*_lmn e^{+iω* t} ₋₂Y_l,−m(ι) ]
 //
 // (the second term is the mirror mode of a non-precessing binary). Mode
-// amplitudes follow numerical-relativity fits (Kamaretsos, Hannam, Husa &
-// Sathyaprakash 2012) in the symmetric mass ratio ν = q/(1+q)²:
+// amplitudes follow the numerical-relativity fits of Kamaretsos, Hannam,
+// Husa & Sathyaprakash (2012), in the form Gossan, Veitch & Sathyaprakash
+// (2012, PRD 85, 124056, Eqs. 5–8) give in the symmetric mass ratio ν = q/(1+q)²:
 //   A₂₂ = 0.864ν,  A₂₁ = 0.52(1−4ν)^0.71 A₂₂,  A₃₃ = 0.44(1−4ν)^0.45 A₂₂,
 //   A₄₄ = [5.4(ν−0.22)² + 0.04] A₂₂.
 // Equal masses (ν = ¼) switch the odd-m modes off entirely.

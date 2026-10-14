@@ -79,3 +79,98 @@ stand-in, not a magnetostatic solution for the real pole piece. The tone
 bar is a single mode. The grommet's resonance is set per register as a
 fraction of each note's frequency. The damper is a viscous felt at 60% of
 the tine length, and the hammer has no escapement mechanics.
+
+## Prior art and references
+
+### The original instrument and its inventor
+
+Harold Rhodes patented the struck tine with its resonant inertia bar and
+electromagnetic pickup, and then a series of refinements of this
+"asymmetrical tuning fork", one of them with Clarence L. Fender.
+
+* Rhodes, H. B. (1961). "Electrical musical instrument in the nature of a
+  piano." US 2,972,922.
+  [Google Patents](https://patents.google.com/patent/US2972922A/en): a
+  small-diameter tine with a resonated inertia bar and an electromagnetic
+  pickup.
+* Rhodes, H. B. (1968). "Electric piano incorporating multicomponent tuning
+  forks." US 3,418,417.
+  [Google Patents](https://patents.google.com/patent/US3418417A/en)
+* Fender, C. L. & Rhodes, H. B. (1972). "Tone generator with vibratory
+  bars." US 3,644,656.
+  [Google Patents](https://patents.google.com/patent/US3644656A/en): a
+  light round tine and a heavy twisted inertia bar cantilevered from a
+  common base.
+* Rhodes, H. B. & Woodyard, S. J. (1983). "Tuning fork mounting assembly in
+  electromechanical pianos." US 4,373,418.
+  [Google Patents](https://patents.google.com/patent/US4373418A/en):
+  a single-screw, elastomer-isolated fork mount to lengthen the sustain of
+  the treble forks.
+
+### Physics and engineering literature
+
+* Han, S. M., Benaroya, H. & Wei, T. (1999). "Dynamics of transversely
+  vibrating beams using four engineering theories." *J. Sound Vib.*
+  225(5), 935–988.
+  [doi:10.1006/jsvi.1999.2257](https://doi.org/10.1006/jsvi.1999.2257)
+  (the Euler–Bernoulli cantilever and its overtones).
+* Hunt, K. H. & Crossley, F. R. E. (1975). "Coefficient of restitution
+  interpreted as damping in vibroimpact." *J. Appl. Mech.* 42(2), 440–445.
+  [doi:10.1115/1.3423596](https://doi.org/10.1115/1.3423596)
+* Stulov, A. (1995). "Hysteretic model of the grand piano hammer felt."
+  *J. Acoust. Soc. Am.* 97(4), 2577–2585.
+  [doi:10.1121/1.411912](https://doi.org/10.1121/1.411912)
+* Horton, N. G. & Moore, T. R. (2009). "Modeling the magnetic pickup of an
+  electric guitar." *Am. J. Phys.* 77(2), 144–150.
+  [doi:10.1119/1.2990663](https://doi.org/10.1119/1.2990663)
+* Shear, G. & Wright, M. (2011). "The electromagnetically sustained Rhodes
+  piano." *Proc. NIME 2011*, Oslo, 14–17.
+  [doi:10.5281/zenodo.1178161](https://doi.org/10.5281/zenodo.1178161)
+* Muenster, M., Pfeifle, F., Weinrich, T. & Keil, M. (2014).
+  "Nonlinearities and self-organization in the sound production of the
+  Rhodes piano." *J. Acoust. Soc. Am.* 136(4), 2164 (abstract).
+  [doi:10.1121/1.4899833](https://doi.org/10.1121/1.4899833)
+* Pfeifle, F. & Münster, M. (2017). "Tone production of the Wurlitzer and
+  Rhodes e-pianos." In A. Schneider (ed.), *Studies in Musical Acoustics
+  and Psychoacoustics*, Springer, 75–107.
+  [doi:10.1007/978-3-319-47292-8_3](https://doi.org/10.1007/978-3-319-47292-8_3):
+  high-speed camera measurements and finite-difference models of both
+  instruments.
+
+### Earlier models and syntheses
+
+Academic:
+
+* Falaize, A. & Hélie, T. (2017). "Passive simulation of the nonlinear
+  port-Hamiltonian modeling of a Rhodes Piano." *J. Sound Vib.* 390,
+  289–309. [doi:10.1016/j.jsv.2016.11.008](https://doi.org/10.1016/j.jsv.2016.11.008):
+  a nonlinear hammer, a modal Euler–Bernoulli tine and a nonlinear
+  magnetic pickup, joined as one power-balanced port-Hamiltonian system
+  with a passivity-preserving scheme (modelled).
+* Pfeifle, F. (2017). "Real-time physical model of a Wurlitzer and Rhodes
+  electric piano." *Proc. 20th Int. Conf. Digital Audio Effects (DAFx-17)*,
+  Edinburgh, 17–24.
+  [DAFx archive](https://dafx.de/paper-archive/details/W0D0fMDJBUxiacAi_398wg):
+  finite-difference models of the vibrating parts and of the pickup, run
+  on FPGA hardware and compared with measurements (modelled).
+* Sønderbo, T. L. (2024). *Real-time physical model of the Rhodes Electric
+  Piano.* Master's thesis, Aalborg University.
+  [AAU](https://projekter.aau.dk/real-time-physical-model-of-the-rhodes-electric-piano-3db454c0.html):
+  FDTD tine, hammer and damper with MPE control, and a non-physical pickup
+  (modelled).
+
+Software and instruments:
+
+* [EVP88](https://help.apple.com/logicpro/mac/9.1.6/en/logicpro/instruments/chapter_9_section_1.html)
+  (Apple, Logic Pro): component modelling of Rhodes, Wurlitzer and Hohner
+  Electra pianos, including the tines, tone bars and reeds in their
+  pickups' fields.
+* [Lounge Lizard EP-5](https://www.applied-acoustics.com/lounge-lizard-ep-5/)
+  (Applied Acoustics Systems): a physical-modelling engine with dedicated
+  tine and reed models.
+* [Pianoteq Electric Pianos](https://www.modartt.com/electric) (Modartt):
+  physically modelled Vintage Tines MKI and MKII.
+* [Stage-73 V](https://www.arturia.com/products/software-instruments/stage-73-v/overview)
+  (Arturia): a physically modelled tine piano with pedal and amp models.
+* [Magic Tines](https://www.genuinesoundware.com/?a=showproduct&b=64)
+  (GSi): a tine piano combining sampling and modelling (hybrid).

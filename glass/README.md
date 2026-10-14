@@ -7,7 +7,9 @@ flexural modes. A fingertip, modelled as a skin pad with stick–slip friction,
 drives the bowl while the bowl turns underneath it. You can hear things a
 sample cannot give you: notes that need a moment to *speak*, a warble whose
 rate follows the treadle, bowls that keep ringing and precessing after the
-finger lifts, and pitch that slides down as water is poured in.
+finger lifts, and pitch that slides down as water is poured in. Earlier
+physical models of rubbed and singing glass are listed under *Prior art and
+references*.
 
 Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/glass/>
 (or locally — see the [main README](../README.md)).
@@ -30,9 +32,10 @@ big bowls cannot hold their pattern (below).
 **The bowls.** Franklin's glasses were blown "as near as possible in the form
 of hemispheres", 9 in across for the lowest G and 3 in for the highest, in
 quarter-inch steps, with walls "about a tenth of an inch near the brim". He
-tuned them by grinding. His letter to Beccaria (1762) is reprinted in the
-*Encyclopaedia Britannica*, 3rd ed. (1797), "Armonica". Here each key's
-diameter is linear in key number from 9 in (G3) to 3 in (G6), extrapolated to
+tuned them by grinding. His letter to Beccaria (13 July 1762) was printed in
+his *Experiments and Observations on Electricity* (1769) and reprinted in the
+*Encyclopaedia Britannica*, 3rd ed., vol. 8 (1797), under "Harmonica". Here
+each key's diameter is linear in key number from 9 in (G3) to 3 in (G6), extrapolated to
 F3–A6. The wall thickness is solved so that the (2,0) mode is on pitch. It
 comes out at 1.75–2.8 mm, mean 2.49 mm, which matches Franklin's tenth of an
 inch (2.54 mm) without being fitted to it (tested).
@@ -45,8 +48,9 @@ inch (2.54 mm) without being fitted to it (tested).
 | G6 1568 Hz | 3.0 in | 1.97 mm | 45 g | 12 cm/s | 0.30 N | 3 s | 0.14 |
 
 **Rayleigh's shell modes.** A thin shell bends far more easily than it
-stretches, so its low modes are *inextensional*. Rayleigh (1881; *Theory of
-Sound* §§ 232–235) found the exact inextensional field of a spherical shell.
+stretches, so its low modes are *inextensional*. Rayleigh (1881; *The Theory
+of Sound*, 2nd ed., vol. 1, pp. 395–420 on shells) found the exact
+inextensional field of a spherical shell.
 With θ the polar angle from the neck, φ the azimuth and t = tan(θ/2):
 
   u = sinθ tⁿ cos nφ,  v = sinθ tⁿ sin nφ,  w = −(n + cosθ) tⁿ cos nφ
@@ -285,11 +289,94 @@ Ten bowls rubbed at once render at about 8 % of real time in Node.
 * **Treadle** speed variation is a once-per-turn sinusoid smoothed by a
   first-order flywheel.
 
-Sources: Franklin to Beccaria, 13 July 1762; Lord Rayleigh, *Proc. London
-Math. Soc.* 13, 4 (1881) and *The Theory of Sound* (1894); G. H. Bryan, *Proc.
-Camb. Phil. Soc.* 7, 101 (1890); A. P. French, *Am. J. Phys.* 51, 688 (1983);
-T. D. Rossing, *J. Acoust. Soc. Am.* 95, 1106 (1994); G. Jundt et al.,
-*J. Acoust. Soc. Am.* 119, 3793 (2006); B. Armstrong-Hélouvry et al.,
-*Automatica* 30, 1083 (1994); M. J. Adams, B. J. Briscoe, S. A. Johnson,
-*Tribol. Lett.* 26, 239 (2007); S. Derler, L.-C. Gerhardt, *Tribol. Lett.* 45,
-1 (2012); M. Wiertlewski, V. Hayward, *J. Biomech.* 45, 1869 (2012).
+## Prior art and references
+
+The instrument is Franklin's, built on the musical glasses before it; the
+shell, rotation and wine-glass physics is the literature below; and rubbed
+glasses have been synthesised by physical modelling before.
+
+### The original instrument and its history
+
+* **Musical glasses.** Richard Pockrich (or Puckeridge) gave concerts on
+  tuned, water-filled glasses in Ireland and England from about 1741, first
+  striking them with sticks and later rubbing their rims with wet fingers.
+  Edward Hussey Delaval's set, made "with a better choice and form of
+  glasses", was the first Franklin heard (Franklin's letter and its editors'
+  notes, below).
+* **Benjamin Franklin's armonica** (by 1761). Franklin, B. (1762). Letter to
+  Giambatista Beccaria, London, 13 July 1762. In *Experiments and Observations
+  on Electricity* (1769 ed.), pp. 427–433.
+  [Founders Online](https://founders.archives.gov/documents/Franklin/01-10-02-0057),
+  with the editors' history of the musical glasses and the armonica. Reprinted
+  in the *Encyclopaedia Britannica*, 3rd ed., vol. 8 (1797), "Harmonica"
+  ([transcription](https://jimclifford.ca/early_encyclopedia_britannica/articles/1797/eb_3rd_1797_010840.html)).
+* **Mozart** wrote the Adagio for armonica solo, K. 356 (617a), and the Adagio
+  and Rondo for armonica, flute, oboe, viola and cello, K. 617, in 1791 for
+  Marianne Kirchgessner
+  ([Köchel catalogue, K. 617](https://kv.mozarteum.at/en/work/7129)).
+* **Gerhard Finkenbeiner** revived the armonica, building it from quartz-glass
+  bowls in Waltham, Massachusetts, from 1982
+  ([Christian Science Monitor, 1983](https://www.csmonitor.com/1983/1129/112916.html);
+  [G. Finkenbeiner Inc.](https://www.finkenbeiner.com/gh.html)).
+
+### The physics literature
+
+* Hoppe, R. (1871). "Vibrationen eines Ringes in seiner Ebene." *J. reine
+  angew. Math.* 73, 158–170.
+  [doi:10.1515/crll.1871.73.158](https://doi.org/10.1515/crll.1871.73.158).
+* Rayleigh, Lord (1881). "On the infinitesimal bending of surfaces of
+  revolution." *Proc. London Math. Soc.* s1-13, 4–16.
+  [doi:10.1112/plms/s1-13.1.4](https://doi.org/10.1112/plms/s1-13.1.4).
+* Bryan, G. H. (1890). "On the beats in the vibrations of a revolving cylinder
+  or bell." *Proc. Camb. Phil. Soc.* 7, 101–111.
+* Rayleigh, Lord (1894). *The Theory of Sound*, 2nd ed., vol. 1. London:
+  Macmillan. The rotating cylindrical shell with Bryan's result (p. 387), the
+  beats of bells (p. 389), and shells, including the inextensional modes of a
+  spherical shell (pp. 395–420).
+* French, A. P. (1983). "In vino veritas: a study of wineglass acoustics."
+  *Am. J. Phys.* 51, 688–694.
+  [doi:10.1119/1.13147](https://doi.org/10.1119/1.13147).
+* Rossing, T. D. (1990). "Wine glasses, bell modes, and Lord Rayleigh." *Phys.
+  Teach.* 28, 582–585. [doi:10.1119/1.2343166](https://doi.org/10.1119/1.2343166).
+* Rossing, T. D. (1994). "Acoustics of the glass harmonica." *J. Acoust. Soc.
+  Am.* 95, 1106–1111. [doi:10.1121/1.408458](https://doi.org/10.1121/1.408458).
+* Armstrong-Hélouvry, B., Dupont, P. & Canudas de Wit, C. (1994). "A survey of
+  models, analysis tools and compensation methods for the control of machines
+  with friction." *Automatica* 30, 1083–1138 (the Stribeck curve among them).
+  [doi:10.1016/0005-1098(94)90209-7](https://doi.org/10.1016/0005-1098(94)90209-7).
+* Jundt, G., Radu, A., Fort, E., Duda, J., Vach, H. & Fletcher, N. (2006).
+  "Vibrational modes of partly filled wine glasses." *J. Acoust. Soc. Am.* 119,
+  3793–3798. [doi:10.1121/1.2198183](https://doi.org/10.1121/1.2198183).
+* Adams, M. J., Briscoe, B. J. & Johnson, S. A. (2007). "Friction and
+  lubrication of human skin." *Tribol. Lett.* 26, 239–253.
+  [doi:10.1007/s11249-007-9206-0](https://doi.org/10.1007/s11249-007-9206-0).
+* Derler, S. & Gerhardt, L.-C. (2012). "Tribology of skin: review and analysis
+  of experimental results for the friction coefficient of human skin."
+  *Tribol. Lett.* 45, 1–27.
+  [doi:10.1007/s11249-011-9854-y](https://doi.org/10.1007/s11249-011-9854-y).
+* Wiertlewski, M. & Hayward, V. (2012). "Mechanical behavior of the fingertip
+  in the range of frequencies and displacements relevant to touch." *J.
+  Biomech.* 45, 1869–1874.
+  [doi:10.1016/j.jbiomech.2012.05.045](https://doi.org/10.1016/j.jbiomech.2012.05.045).
+
+### Earlier models and syntheses
+
+The finger's stick–slip contact is solved the way bowed-string models solve
+the bow (McIntyre, Schumacher & Woodhouse 1983; Smith 1986; see the
+[viola organista](../bowed/README.md#prior-art-and-references)). Earlier
+physical models of rubbed and bowed glasses and bowls:
+
+* [STK `BandedWG`](https://ccrma.stanford.edu/software/stk/classstk_1_1BandedWG.html)
+  (G. Essl, 1999–2004, in the Synthesis ToolKit): banded-waveguide model of
+  bowed bars, glasses and bowls, with a "glass harmonica" preset, after Essl &
+  Cook's banded waveguides (Int. Computer Music Conf., 1999).
+* Essl, G., Serafin, S., Cook, P. R. & Smith, J. O. (2004). "Theory of banded
+  waveguides." *Computer Music J.* 28(1), 37–50.
+  [doi:10.1162/014892604322970634](https://doi.org/10.1162/014892604322970634).
+* Essl, G., Serafin, S., Cook, P. R. & Smith, J. O. (2004). "Musical
+  applications of banded waveguides." *Computer Music J.* 28(1), 51–63.
+  [doi:10.1162/014892604322970643](https://doi.org/10.1162/014892604322970643).
+* Avanzini, F., Serafin, S. & Rocchesso, D. (2005). "Interactive simulation of
+  rigid body interaction with friction-induced sound generation." *IEEE Trans.
+  Speech Audio Process.* 13, 1073–1081.
+  [doi:10.1109/TSA.2005.852984](https://doi.org/10.1109/TSA.2005.852984).

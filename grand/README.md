@@ -27,8 +27,9 @@ keyboard. It has no soundboard. Each string has its own piezoelectric
 pickup on the harp casting, feeding a preamp with a three-band EQ. The
 bass strings are 67.9 cm (26¾ in), about a third of a concert grand's. The
 lowest 15 keys have one string each and the rest have two, where a piano
-has three. (Sources: Wikipedia's *Yamaha CP-70* page; the SMEM museum
-and Hollowsun descriptions.) The model follows this. *Strings per note*
+has three. (Sources: Wikipedia's [*Yamaha CP-70*](https://en.wikipedia.org/wiki/Yamaha_CP-70)
+page; the SMEM museum and Hollowsun descriptions. More under *Prior art
+and references* below.) The model follows this. *Strings per note*
 also offers a 1/2/3 acoustic-grand stringing.
 
 **Scale and inharmonicity.** A stiff string pinned at both ends has
@@ -337,10 +338,107 @@ The engine imports the felt-hammer grading and the concert scale from
 * The CP-70's tremolo (an electronic amplitude modulation, on some units)
   is left out.
 
-References: H. Fletcher, JASA 36, 203 (1964); R. W. Young, JASA 24, 267
-(1952); G. Weinreich, JASA 62, 1474 (1977); A. Chaigne & A. Askenfelt,
-JASA 95, 1112 and 1631 (1994); A. Askenfelt & E. Jansson, JASA 90, 2383
-(1991); C. Gough, Acustica 49, 124 (1981); L. Cremer, M. Heckl &
-B. Petersson, *Structure-Borne Sound* (infinite-plate mobility); K. Ege,
-X. Boutillon & M. Rébillat, J. Sound Vib. 332, 1288 (2013); N. Fletcher &
-T. Rossing, *The Physics of Musical Instruments*, ch. 12.
+## Prior art and references
+
+### The original instrument
+
+Yamaha's CP-70 was first made in 1976, with 73 keys. The 88-key CP-80 and
+the CP-70B followed at the 1978 NAMM show, and production ran to 1985. The
+strings are heard through piezoelectric pickups mounted on the harp
+casting ([Wikipedia](https://en.wikipedia.org/wiki/Yamaha_CP-70)). Nippon
+Gakki (Yamaha) patented the pickups:
+
+* Katayama, S. & Murakami, K. [US 4,189,969](https://patents.google.com/patent/US4189969A/en),
+  "Pickup unit and pickup assembly for musical instrument" (Nippon Gakki;
+  priority 1976, granted 1980): a piezoelectric element moulded into a
+  resin block whose crest carries the string.
+* Murakami, K. [US 4,211,139](https://patents.google.com/patent/US4211139A/en),
+  "Pickup mechanism" (Nippon Gakki; priority 1977, granted 1980): an
+  electric piano's bridge on a vibration-transmitting plate that carries
+  the pickup.
+
+Earlier pianos that picked up their strings electrically:
+
+* The [Neo-Bechstein](https://bechstein.com/die-welt-von-bechstein/tradition/1930-1945/)
+  (Bechstein, Walther Nernst and Siemens & Halske, shown in 1931): a short
+  grand without a soundboard, its strings in groups of five over
+  microphone-like capsules.
+* Benioff, H. [US 3,049,958](https://patents.google.com/patent/US3049958A/en),
+  "Electro-piano" (priority 1959, granted 1962): piano strings picked up
+  piezoelectrically.
+* Martin, D. W. & Stein, J. L. [US 3,519,721](https://patents.google.com/patent/US3519721A/en),
+  "Electropiano with plural piezoelectric pickups on unitary acoustic
+  rail" (granted 1970).
+
+### The physics
+
+The string, hammer and coupled-string literature is listed under the
+[Ribbon Piano](../piano/README.md#prior-art-and-references). The papers
+this page draws on directly:
+
+* Railsback, O. L. (1938). "Scale temperament as applied to piano tuning."
+  *J. Acoust. Soc. Am.* 9, 274 (abstract).
+  [doi:10.1121/1.1902056](https://doi.org/10.1121/1.1902056). The
+  stretched tuning curve.
+* Young, R. W. (1952). "Inharmonicity of plain wire piano strings."
+  *J. Acoust. Soc. Am.* 24, 267–273.
+  [doi:10.1121/1.1906888](https://doi.org/10.1121/1.1906888)
+* Fletcher, H. (1964). "Normal vibration frequencies of a stiff piano
+  string." *J. Acoust. Soc. Am.* 36, 203–209.
+  [doi:10.1121/1.1918933](https://doi.org/10.1121/1.1918933)
+* Wallace, C. E. (1972). "Radiation resistance of a rectangular panel."
+  *J. Acoust. Soc. Am.* 51, 946–952.
+  [doi:10.1121/1.1912943](https://doi.org/10.1121/1.1912943). Radiation of
+  a baffled plate's modes.
+* Weinreich, G. (1977). "Coupled piano strings." *J. Acoust. Soc. Am.* 62,
+  1474–1484. [doi:10.1121/1.381677](https://doi.org/10.1121/1.381677)
+* Gough, C. E. (1981). "The theory of string resonances on musical
+  instruments." *Acustica* 49, 124–141.
+* Askenfelt, A. & Jansson, E. V. (1991). "From touch to string vibrations.
+  II: The motion of the key and hammer." *J. Acoust. Soc. Am.* 90,
+  2383–2393. [doi:10.1121/1.402043](https://doi.org/10.1121/1.402043)
+* Chaigne, A. & Askenfelt, A. (1994). "Numerical simulations of piano
+  strings. I. A physical model for a struck string using finite difference
+  methods." *J. Acoust. Soc. Am.* 95, 1112–1118.
+  [doi:10.1121/1.408459](https://doi.org/10.1121/1.408459). And "II.
+  Comparisons with measurements and systematic exploration of some
+  hammer-string parameters." 95, 1631–1640.
+  [doi:10.1121/1.408549](https://doi.org/10.1121/1.408549)
+* Giordano, N. (1998). "Mechanical impedance of a piano soundboard."
+  *J. Acoust. Soc. Am.* 103, 2128–2133.
+  [doi:10.1121/1.421358](https://doi.org/10.1121/1.421358)
+* Fletcher, N. H. & Rossing, T. D. (1998). "The Piano." Ch. 12 of *The
+  Physics of Musical Instruments*, 2nd ed., Springer, 352–398.
+  [doi:10.1007/978-0-387-21603-4_12](https://doi.org/10.1007/978-0-387-21603-4_12)
+* Cremer, L., Heckl, M. & Petersson, B. A. T. (2005). *Structure-Borne
+  Sound*, 3rd ed. Springer.
+  [doi:10.1007/b137728](https://doi.org/10.1007/b137728). The
+  infinite-plate mobility.
+* Ege, K., Boutillon, X. & Rébillat, M. (2013). "Vibroacoustics of the
+  piano soundboard: (Non)linearity and modal properties in the low- and
+  mid-frequency ranges." *J. Sound Vib.* 332, 1288–1305.
+  [doi:10.1016/j.jsv.2012.10.012](https://doi.org/10.1016/j.jsv.2012.10.012)
+* Bristow-Johnson, R. [*Audio EQ Cookbook*](https://www.w3.org/TR/audio-eq-cookbook/),
+  W3C Working Group Note (2021, ed. R. Toy). The peaking-filter design
+  used for the middle band.
+
+### Earlier models of the electric grand
+
+* [CP-80](https://www.modartt.com/cp-80) for Pianoteq (Modartt, 2007): a
+  CP-80 add-on for Pianoteq's physically modelled engine, now in Modartt's
+  KIViR collection of historical instruments.
+* [Electric Grand EG70](https://rekkerd.org/soundfontsit-releases-electric-grand-eg70/)
+  (SoundFonts.it, 2008): announced as a physical-modelling simulation of
+  the CP-70.
+* [CP-70 V](https://www.arturia.com/products/software-instruments/cp-70-v/overview)
+  (Arturia): sampling combined with modelled circuitry.
+* [Electric Grand CP-70](https://www.spectrasonics.net/products/keyscape/models/electric-grand-cp70/)
+  (Spectrasonics): a CP-70 in the Keyscape keyboard collection.
+* [EGP](https://www.uvi.net/egp) (UVI): a sample-based electric grand
+  inspired by the CP-70.
+* [cp80-model](https://github.com/beneke7/cp80-model) (2026): an
+  open-source real-time model of the CP-70/CP-80 with modal strings,
+  nonlinear hammer contact and a piezo readout of the bridge force.
+* The acoustic-piano models (Pianoteq, Roland's V-Piano and the academic
+  ones) are listed under the
+  [Ribbon Piano](../piano/README.md#prior-art-and-references).

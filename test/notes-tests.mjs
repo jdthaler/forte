@@ -36,6 +36,10 @@ test('headings, paragraphs, bold, italics, code and links', () => {
   assert.ok(!h.includes('Title'), 'the # title is returned separately');
   assert.equal(renderMarkdown('# Title\n\n## A\n\n## A').sections.map((s) => s.id).join(' '), 'a a-2');
 });
+test('link targets may contain balanced parentheses (DOIs often do)', () => {
+  const h = md('See [doi:10.1016/0022-460X(83)90508-2](https://doi.org/10.1016/0022-460X(83)90508-2) (Perrin 1983).');
+  assert.match(h, /<a href="https:\/\/doi\.org\/10\.1016\/0022-460X\(83\)90508-2"[^>]*>doi:10\.1016\/0022-460X\(83\)90508-2<\/a> \(Perrin 1983\)\./);
+});
 test('math notation stays as written: E*, F*/F₀, Φ_ms, x_k + ω_k², 2 * 3 * 4', () => {
   for (const s of ['the modulus E* of the pair', 'F*/F₀ = 1.004 and G = F²/(8π a³ E*)', 'modes Φ_ms(r, θ) and J_m', 'ẍ_k + ω_k² x_k', 'so 2 * 3 * 4 = 24']) {
     const h = md(s);

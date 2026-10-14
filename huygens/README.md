@@ -4,7 +4,8 @@ A keyboard whose notes are self-sustained oscillators that **pull each other
 into tune**. Hold an equal-tempered C-major chord and the oscillators lock
 onto the just ratios 4:5:6. Add B♭ and, with a little more coupling, it
 becomes the pure harmonic seventh 7:4. The mechanism is the one Huygens
-noticed in 1665, when two pendulum clocks on the same beam fell into step.
+noticed in 1665, when two pendulum clocks hung from a shared support fell
+into step, swinging in opposite directions.
 
 Play it at <https://forte.jthaler.net/huygens/> (or locally — see the
 [main README](../README.md)).
@@ -180,3 +181,127 @@ no resonator, so they lock over musical intervals.
 sweep under a held seventh chord; a badly tuned keyboard rescued; a minor
 second merging into a unison; drifting resistors held together. Regenerate
 with `node tools/render-huygens.mjs`. Tests: `node test/huygens-tests.mjs`.
+
+## Prior art and references
+
+### The original observation and the oscillator
+
+In February 1665 Christiaan Huygens found that two of his pendulum clocks,
+hung a foot or two apart, kept time together, their pendulums moving in
+opposite directions, and that they drifted apart once separated. He
+described it in letters to his father and to Robert Moray of the Royal
+Society. His notes describe each clock hanging from its own beam, the
+beams resting on the same two chairs.
+
+* Huygens, C. Letter to Constantijn Huygens, 26 February 1665 (No. 1335),
+  and letter to R. Moray, 27 February 1665 (No. 1338). *Œuvres complètes*,
+  Tome V (1893, ed. D. Bierens de Haan), 243–244 and 246–249.
+  [No. 1335](https://www.dbnl.org/tekst/huyg003oeuv05_01/huyg003oeuv05_01_0138.php),
+  [No. 1338](https://www.dbnl.org/tekst/huyg003oeuv05_01/huyg003oeuv05_01_0141.php)
+  (DBNL).
+* Huygens, C. Notes of 1665 on the "sympathy" of clocks. *Œuvres
+  complètes*, Tome XVII (1932), 183–186.
+  [DBNL](https://www.dbnl.org/tekst/huyg003oeuv17_01/huyg003oeuv17_01_0030.php)
+* Bennett, M., Schatz, M. F., Rockwood, H. & Wiesenfeld, K. (2002).
+  "Huygens's clocks." *Proc. R. Soc. Lond. A* 458, 563–579.
+  [doi:10.1098/rspa.2001.0888](https://doi.org/10.1098/rspa.2001.0888)
+
+The keys' circuit, a capacitor charged through a resistor with a neon lamp
+across it, goes back to Pearson and Anson. Van der Pol named relaxation
+oscillations, and with van der Mark drove this neon-lamp circuit with a
+sinusoid and heard it lock to integer fractions of the drive.
+
+* Pearson, S. O. & Anson, H. St. G. (1922). "The neon tube as a means of
+  producing intermittent currents." *Proc. Phys. Soc. London* 34, 204–212.
+  [doi:10.1088/1478-7814/34/1/341](https://doi.org/10.1088/1478-7814/34/1/341)
+* van der Pol, B. (1926). "On 'relaxation-oscillations'." *Phil. Mag.*
+  (7) 2, 978–992.
+  [doi:10.1080/14786442608564127](https://doi.org/10.1080/14786442608564127)
+* van der Pol, B. & van der Mark, J. (1927). "Frequency demultiplication."
+  *Nature* 120, 363–364.
+  [doi:10.1038/120363a0](https://doi.org/10.1038/120363a0)
+
+### The physics
+
+* Adler, R. (1946). "A study of locking phenomena in oscillators."
+  *Proc. IRE* 34, 351–357.
+  [doi:10.1109/JRPROC.1946.229930](https://doi.org/10.1109/JRPROC.1946.229930).
+  The locking range used in *Why not strings or pipes?*
+* Arnold, V. I. (1961). "Small denominators. I. Mappings of the
+  circumference onto itself." *Izv. Akad. Nauk SSSR Ser. Mat.* 25, 21–86.
+  English translation: *Amer. Math. Soc. Transl.* (2) 46, 213–284 (1965).
+  [doi:10.1090/trans2/046/11](https://doi.org/10.1090/trans2/046/11). The
+  tongues of the circle map.
+* Winfree, A. T. (1967). "Biological rhythms and the behavior of
+  populations of coupled oscillators." *J. Theor. Biol.* 16, 15–42.
+  [doi:10.1016/0022-5193(67)90051-3](https://doi.org/10.1016/0022-5193%2867%2990051-3)
+* Peskin, C. S. (1975). [*Mathematical Aspects of Heart Physiology*](https://math.nyu.edu/~peskin/heartnotes/index.html).
+  Courant Institute of Mathematical Sciences lecture notes, 268–278 (as
+  cited by Mirollo & Strogatz). Pulse-coupled integrate-and-fire
+  oscillators as a model of the cardiac pacemaker.
+* Keener, J. P., Hoppensteadt, F. C. & Rinzel, J. (1981). "Integrate-and-fire
+  models of nerve membrane response to oscillatory input." *SIAM J. Appl.
+  Math.* 41, 503–517. [doi:10.1137/0141042](https://doi.org/10.1137/0141042)
+* Jensen, M. H., Bak, P. & Bohr, T. (1983). "Complete devil's staircase,
+  fractal dimension, and universality of mode-locking structure in the
+  circle map." *Phys. Rev. Lett.* 50, 1637–1639.
+  [doi:10.1103/PhysRevLett.50.1637](https://doi.org/10.1103/PhysRevLett.50.1637)
+* Kuramoto, Y. (1984). *Chemical Oscillations, Waves, and Turbulence*.
+  Springer. [doi:10.1007/978-3-642-69689-3](https://doi.org/10.1007/978-3-642-69689-3)
+* Bak, P. (1986). "The devil's staircase." *Physics Today* 39(12), 38–45.
+  [doi:10.1063/1.881047](https://doi.org/10.1063/1.881047)
+* Mirollo, R. E. & Strogatz, S. H. (1990). "Synchronization of
+  pulse-coupled biological oscillators." *SIAM J. Appl. Math.* 50,
+  1645–1662. [doi:10.1137/0150098](https://doi.org/10.1137/0150098). Firing
+  by absorption, as here.
+* Pikovsky, A., Rosenblum, M. & Kurths, J. (2001). *Synchronization: A
+  Universal Concept in Nonlinear Sciences*. Cambridge University Press.
+  [doi:10.1017/CBO9780511755743](https://doi.org/10.1017/CBO9780511755743)
+* Pantaleone, J. (2002). "Synchronization of metronomes." *Am. J. Phys.*
+  70, 992–1000. [doi:10.1119/1.1501118](https://doi.org/10.1119/1.1501118)
+* Strogatz, S. (2003). [*Sync: The Emerging Science of Spontaneous Order*](https://www.publishersweekly.com/9780786868445).
+  Hyperion.
+* Abel, M., Ahnert, K. & Bergweiler, S. (2009). "Synchronization of sound
+  sources." *Phys. Rev. Lett.* 103, 114301.
+  [doi:10.1103/PhysRevLett.103.114301](https://doi.org/10.1103/PhysRevLett.103.114301).
+  Organ pipes pulling each other into tune.
+* Fischer, J. L., Bader, R. & Abel, M. (2016). "Aeroacoustical coupling
+  and synchronization of organ pipes." *J. Acoust. Soc. Am.* 140,
+  2344–2351. [doi:10.1121/1.4964135](https://doi.org/10.1121/1.4964135)
+
+### Earlier instruments and works
+
+Friedrich Trautwein's Trautonium already sounded glow-lamp relaxation
+oscillators, and Oskar Sala's Mixtur-Trautonium synchronised such
+oscillators to sound subharmonics of the played note: relaxation
+oscillators locked at integer ratios.
+
+* Trautwein, F. [AT 132824](https://patents.google.com/patent/AT132824B/de),
+  "Vorrichtung zur Erzeugung von Musik auf elektrischem Wege" (priority
+  1931, published 1933): tone generators made of a glow lamp, a capacitor
+  and a resistor, producing relaxation oscillations.
+* Sala, O. [DE 917470](https://patents.google.com/patent/DE917470C/de),
+  "Synchronisationsvorrichtung für elektrische Musikinstrumente" (filed
+  1952, published 1954), and [US 2,740,892](https://patents.google.com/patent/US2740892A/en),
+  "Synchronizing system for electrical musical instruments" (granted 1956):
+  gas-discharge relaxation generators synchronised to a played
+  oscillator to give its subharmonics.
+* Marsh, A. (2019). ["How the Trautonium found favor with Nazis and gave
+  Hitchcock's *The Birds* its distinctive screech"](https://spectrum.ieee.org/how-the-trautonium-found-favor-with-nazis-and-gave-hitchcocks-emthe-birdsem-its-distinctive-screech).
+  *IEEE Spectrum*. The Trautonium's neon relaxation oscillator.
+* [Trautonium](https://doepfer.de/traut/traut_e.htm) (Doepfer): a
+  description of the Mixtur-Trautonium's subharmonic dividers.
+* [Subharmonicon](https://www.moogmusic.com/synthesizers/subharmonicon/)
+  (Moog Music): an analog synthesizer of subharmonic oscillators and
+  polyrhythmic sequencers, after the Mixtur-Trautonium, Theremin's
+  Rhythmicon and Joseph Schillinger.
+* Lem, N. (2019). ["Sound in multiples: synchrony and interaction design
+  using coupled-oscillator networks"](https://www.smc2019.uma.es/articles/P3/P3_09_SMC2019_paper.pdf).
+  *Proc. Sound and Music Computing Conf.* (SMC 2019), Málaga. Kuramoto
+  networks for music.
+* Lucas, P. P., Fasciani, S., Szorkovszky, A. & Glette, K. (2024).
+  "Interactive sonification of 3D swarmalators." *Proc. NIME 2024*,
+  252–260. [doi:10.5281/zenodo.13904846](https://doi.org/10.5281/zenodo.13904846)
+* Moon, G. (2024). "Coupled oscillator networks: perspectives on
+  synchronization and nonlinear musical frameworks." *Proc. NIME 2024*,
+  413–418. [doi:10.5281/zenodo.13904895](https://doi.org/10.5281/zenodo.13904895)

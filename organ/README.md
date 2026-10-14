@@ -139,3 +139,117 @@ filter networks, which shape the level across the keyboard; motor "hunting";
 the preamp's frequency response; and cabinet resonances beyond one reflection.
 The tonewheel waveform is a sine plus adjustable 2nd and 3rd harmonics, not
 a computed tooth-and-pickup field.
+
+## Prior art and references
+
+### The original instruments and their inventors
+
+Laurens Hammond patented the tonewheel organ in 1934. John M. Hanert, at
+Hammond, patented the scanner vibrato (an artificial transmission line read
+by a rotating capacitive scanner) and the harmonic percussion. Don Leslie
+patented the rotating-speaker cabinet.
+
+* Hammond, L. (1934). "Electrical musical instrument." US 1,956,350.
+  [Google Patents](https://patents.google.com/patent/US1956350A/en)
+* Hanert, J. M. (1945). "Electrical musical apparatus." US 2,382,413.
+  [Google Patents](https://patents.google.com/patent/US2382413A/en):
+  vibrato from an artificial line of many sections, its phase scanned at
+  about 6 Hz.
+* Hanert, J. M. (1950). "Electrical musical apparatus." US 2,509,923.
+  [Google Patents](https://patents.google.com/patent/US2509923A/en):
+  a rotating capacitor plate scanning the taps of the line; vibrato and
+  chorus.
+* Hammond, L. & Hanert, J. M. (1951). "Vibrato apparatus." US 2,560,568.
+  [Google Patents](https://patents.google.com/patent/US2560568A/en):
+  the scanning rotor and line assembly.
+* Hanert, J. M. (1960). "Electrical musical instrument with percussion
+  apparatus." US 2,951,412 (filed 1954).
+  [Google Patents](https://patents.google.com/patent/US2951412A/en):
+  a percussion envelope applied to the second- or third-harmonic busbar.
+* Leslie, D. J. (1949). "Rotatable tremulant sound producer." US 2,489,653.
+  [Google Patents](https://patents.google.com/patent/US2489653A/en)
+* Leslie, D. J. (1963). "Speaker system for adding tremolo." US 3,080,786.
+  [Google Patents](https://patents.google.com/patent/US3080786A/en)
+
+### Physics and engineering literature
+
+* Millman, J. (1940). "A useful network theorem." *Proceedings of the IRE*
+  28(9), 413–417.
+  [doi:10.1109/JRPROC.1940.225885](https://doi.org/10.1109/JRPROC.1940.225885)
+  (the busbar loading above).
+* Henricksen, C. A. (1981). "Unearthing the mysteries of the Leslie
+  cabinet." *Recording Engineer/Producer*, April 1981.
+  [Online copy](http://www.theatreorgans.com/hammond/faq/mystery/mystery.html)
+* Allen, J. B. & Berkley, D. A. (1979). "Image method for efficiently
+  simulating small-room acoustics." *J. Acoust. Soc. Am.* 65(4), 943–950.
+  [doi:10.1121/1.382599](https://doi.org/10.1121/1.382599) (image sources,
+  as used for the cabinet's rear wall).
+* Laakso, T. I., Välimäki, V., Karjalainen, M. & Laine, U. K. (1996).
+  "Splitting the unit delay." *IEEE Signal Processing Magazine* 13(1),
+  30–60. [doi:10.1109/79.482137](https://doi.org/10.1109/79.482137)
+  (fractional delay lines, as used for the Doppler paths).
+* Werner, K. J. & Abel, J. S. (2016). "Modal processor effects inspired by
+  Hammond tonewheel organs." *Applied Sciences* 6(7), 185.
+  [doi:10.3390/app6070185](https://doi.org/10.3390/app6070185)
+
+### Earlier models and syntheses
+
+Academic:
+
+* Smith, J., Serafin, S., Abel, J. & Berners, D. (2002). "Doppler
+  simulation and the Leslie." *Proc. 5th Int. Conf. Digital Audio Effects
+  (DAFx-02)*, Hamburg, 13–20.
+  [DAFx archive](https://dafx.de/paper-archive/details/WPBALpaJ-PqTYEeC5oevig):
+  the horn as a moving source through interpolating delay lines, with
+  angle-dependent filters calibrated on a measured Leslie horn (modelled).
+* Kronland-Martinet, R. & Voinier, T. (2008). "Real-time perceptual
+  simulation of moving sources: application to the Leslie cabinet and 3D
+  sound immersion." *EURASIP J. Audio, Speech, and Music Processing* 2008,
+  849696. [doi:10.1155/2008/849696](https://doi.org/10.1155/2008/849696):
+  a perceptual moving-source model applied to the Leslie.
+* Herrera, J., Hanson, C. & Abel, J. S. (2009). "Discrete time emulation of
+  the Leslie speaker." *127th AES Convention*, New York, paper 7925.
+  [CCRMA](https://ccrma.stanford.edu/papers/discrete-time-emulation-of-leslie-speaker):
+  horn and drum as time-varying FIR filters interpolated from impulse
+  responses measured over rotor angle, with first-order speed changes
+  that have different time constants up and down (hybrid: measured
+  responses).
+* Pekonen, J., Pihlajamäki, T. & Välimäki, V. (2011). "Computationally
+  efficient Hammond organ synthesis." *Proc. 14th Int. Conf. Digital Audio
+  Effects (DAFx-11)*, Paris, 19–22.
+  [DAFx archive](https://dafx.de/paper-archive/details/Va-Hsjj4g396c-1d8ofv2w):
+  additive tonewheel synthesis with a key-click model, and a Leslie built
+  from time-varying spectral delay filters (signal model).
+* Werner, K. J., Dunkel, W. R. & Germain, F. G. (2016). "A computational
+  model of the Hammond organ vibrato/chorus using wave digital filters."
+  *Proc. 19th Int. Conf. Digital Audio Effects (DAFx-16)*, Brno, 271–278.
+  [DAFx archive](https://dafx.de/paper-archive/details/nd_rFZKONvryB6uA-7xKrg):
+  the scanner's LC ladder as a wave digital filter, with a simplified,
+  physically informed scanner (circuit-modelled).
+
+Software and instruments:
+
+* [setBfree](https://setbfree.org/) (open source; Fredrik Kilander's
+  Beatrix engine, packaged and extended by Robin Gareus and others): a DSP
+  tonewheel organ emulator with a Leslie simulation.
+* [VB3-II](https://www.genuinesoundware.com/?a=showproduct&b=44) (GSi,
+  2023; first released as VB3 in 2006): a modelled 91-wheel tonewheel
+  generator with virtual nine-contact keying and a rotary-speaker simulator.
+* [EVB3](https://help.apple.com/logicpro/mac/9.1.6/en/logicpro/instruments/chapter_7_section_1.html)
+  (Apple, Logic Pro): component-modelling synthesis of the tonewheel
+  generator, with scanner vibrato, percussion and a rotor-cabinet emulation.
+* [B-3 V](https://www.arturia.com/products/software-instruments/b-3-v/overview)
+  (Arturia): a component model of the tonewheel organ with a rotary-speaker
+  emulation.
+* [Hammond B-3X](https://www.ikmultimedia.com/products/hammondb3x/)
+  (IK Multimedia): a physically modelled B-3 and Leslie, licensed by Hammond.
+* [Nord Organ 3](https://www.nordkeyboards.com/products/nord-organ-3/)
+  (Nord Keyboards): a hardware B3 organ model with chorus/vibrato and a
+  rotary-speaker emulation.
+* [XK-5](https://hammondorganco.com/products/portables/xk-5) (Hammond):
+  Hammond's own digital re-creation of the tonewheel generator, with a
+  hybrid multi-contact keying system (three mechanical contacts per key,
+  each triggering three virtual ones) and a digital Leslie.
+* [Vintage Organs](https://www.native-instruments.com/en/products/komplete/keys/vintage-organs/)
+  (Native Instruments): sampled organs with a real-time rotary-speaker and
+  cabinet emulation (hybrid).

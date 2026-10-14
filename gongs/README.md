@@ -109,7 +109,7 @@ thicknesses). This is the imperfect-plate treatment of Camier, Touzé & Thomas
   K_c = 4ΣC_n E^n E^nᵀ κ², stiffens the plate. It is diagonalised per angular
   block into "shell modes" (`shell()` in `gongs-model.js`; K_c is summed over about
   200 in-plane modes, ζ² ≤ 3000, which converges it to 10⁻⁵). For the free plate's
-  axisymmetric modes the result is **exactly Reissner's (1955)** shallow-shell
+  axisymmetric modes the result is **exactly Reissner's (1955b)** shallow-shell
   formula ω² = ω_plate² + E/(ρR²), that is ω̄² = λ⁴ + 12(1−ν²)κ². These modes have
   zero mean, so they are Laplacians of clamped functions, and the bound
   K_c ≤ 12(1−ν²)κ² is attained. The tests check this to 10⁻⁴. The (2,0) mode
@@ -169,7 +169,7 @@ Steel, with its higher c_p, is tamer than bronze at the same speed.
 
 ### 5. The mallet
 
-The mallet is a Hertzian sphere, F = K δ^{3/2} with K = (4/3)E* √R. Its head
+The mallet is a Hertzian sphere (Hertz 1882), F = K δ^{3/2} with K = (4/3)E* √R. Its head
 modulus runs from yarn (0.3 MPa) through felt (2 MPa) and rubber (10 MPa) to wood
 (2 GPa). Its mass is a fraction μ of the gong's, and it moves as
 ẍ_m = −F̄/(πμ) in these units. The contact force is the discrete gradient of the
@@ -213,7 +213,8 @@ leak into the modes. So:
 * **Consistency projection.** Each step ψ is reset to √(V(xⁿ) + V(xⁿ⁻¹) + ε₀),
   and the plate velocity (with the mallet's, so the contact is untouched) is
   rescaled by s ≈ 1 to keep the scheme's energy unchanged. This is in the spirit
-  of relaxed and generalised SAV schemes. Near a turning point, where the plate
+  of relaxed (Jiang, Zhang & Zhao 2022) and generalised (Cheng, Liu & Shen 2021)
+  SAV schemes. Near a turning point, where the plate
   has little motion to give, ψ may lag by a step.
 * **Adaptive substeps.** The size of that correction is the error estimate.
   Above 2 % per step the voice halves its step, and comes back once it has
@@ -303,7 +304,7 @@ three runs, which removes the machine's own hiccups) (`node tools/bench-gongs.mj
 Each mode loses energy at σ = ωη/2, with the loss factor η the sum of three terms:
 
 * **internal friction** η_int (a knob, default 1.5×10⁻⁴);
-* **thermoelastic relaxation** (Zener): Δ ωτ_th/(1 + ω²τ_th²), with
+* **thermoelastic relaxation** (Zener 1937): Δ ωτ_th/(1 + ω²τ_th²), with
   Δ = Eα²T/(ρc)·(1+ν)/(1−ν) = 6×10⁻³ for bronze and τ_th = h²/(π²D_th). Heat flows
   across the thickness between the compressed and the stretched face. This is
   the term that does not scale with size: it peaks at 3 Hz for the 2.4 mm C2
@@ -438,30 +439,217 @@ tools/bench-gongs.mjs                node tools/bench-gongs.mjs: real-time load,
   are thicker and domed. The Thickness, Dome and Thermoelastic loss knobs show
   why.
 
-### Sources
+## Prior art and references
 
-A. W. Leissa, *Vibration of Plates*, NASA SP-160 (1969). · C. Touzé, O. Thomas,
-A. Chaigne, "Asymmetric non-linear forced vibrations of free-edge circular
-plates, part 1: theory", *J. Sound Vib.* 258 (2002). · C. Touzé, O. Thomas,
-A. Chaigne, "Hardening/softening behaviour in non-linear oscillations of
-structural systems using non-linear normal modes", *J. Sound Vib.* 273 (2004).
-· O. Thomas, C. Touzé, A. Chaigne, "Non-linear vibrations of free-edge thin
-spherical shells: modal interaction rules and 1:1:2 internal resonance",
-*Int. J. Solids Struct.* 42 (2005). · O. Thomas, S. Bilbao, "Geometrically
-nonlinear flexural vibrations of plates: in-plane boundary conditions and some
-symmetry properties", *J. Sound Vib.* 315 (2008). · C. Camier, C. Touzé,
-O. Thomas, "Non-linear vibrations of imperfect free-edge circular plates and
-shells", *Eur. J. Mech. A/Solids* 28 (2009). · M. Ducceschi, C. Touzé, "Modal
-approach for nonlinear vibrations of damped impacted plates: application to
-sound synthesis of gongs and cymbals", *J. Sound Vib.* 344 (2015). ·
-S. Bilbao, *Numerical Sound Synthesis*, Wiley (2009), ch. 4 and 13. ·
-J. Shen, J. Xu, J. Yang, "The scalar auxiliary variable (SAV) approach for
-gradient flows", *J. Comput. Phys.* 353 (2018). · S. Bilbao, M. Ducceschi,
-F. Zama, "Explicit exactly energy-conserving methods for Hamiltonian systems",
-*J. Comput. Phys.* 472 (2023). · E. Reissner, "On transverse vibrations of thin,
-shallow elastic shells", *Q. Appl. Math.* 13 (1955). · N. H. Fletcher,
-"Nonlinear frequency shifts in quasispherical-cap shells: pitch glide in Chinese
-gongs", *J. Acoust. Soc. Am.* 78 (1985). · A. Chaigne, C. Lambourg, "Time-domain
-simulation of damped impacted plates", *J. Acoust. Soc. Am.* 109 (2001). ·
-G. Maidanik, "Response of ribbed panels to reverberant acoustic fields",
-*J. Acoust. Soc. Am.* 34 (1962).
+The physics this instrument computes, and the idea of synthesising gongs from
+it, come from the work below. Every work cited above is listed here, with its
+DOI or a stable link.
+
+### The physics, credited to its originators
+
+**Plate and shell equations**
+
+* Kirchhoff, G. (1850). "Über das Gleichgewicht und die Bewegung einer
+  elastischen Scheibe." *J. reine angew. Math.* 40, 51–88.
+  [doi:10.1515/crll.1850.40.51](https://doi.org/10.1515/crll.1850.40.51).
+  Thin-plate bending and its free-edge conditions (§1).
+* Bryan, G. H. (1890). "On the stability of a plane plate under thrusts in its
+  own plane, with applications to the 'buckling' of the sides of a ship."
+  *Proc. London Math. Soc.* s1-22, 54–67.
+  [doi:10.1112/plms/s1-22.1.54](https://doi.org/10.1112/plms/s1-22.1.54).
+  Plate bending coupled to in-plane forces.
+* Kármán, T. von (1910). "Festigkeitsprobleme im Maschinenbau." In
+  *Encyklopädie der Mathematischen Wissenschaften* IV (Mechanik), 311–385.
+  Teubner, Leipzig.
+  [doi:10.1007/978-3-663-16028-1_5](https://doi.org/10.1007/978-3-663-16028-1_5)
+  (reprint). The large-deflection plate equations of §2.
+* Reissner, E. (1955a). "On transverse vibrations of thin, shallow elastic
+  shells." *Q. Appl. Math.* 13(2), 169–176.
+  [doi:10.1090/qam/69715](https://doi.org/10.1090/qam/69715).
+* Reissner, E. (1955b). "On axi-symmetrical vibrations of shallow spherical
+  shells." *Q. Appl. Math.* 13(3), 279–290.
+  [doi:10.1090/qam/91034](https://doi.org/10.1090/qam/91034). The free-edge
+  shell's axisymmetric frequencies, obtained from the flat plate's (§3).
+* Leissa, A. W. (1969). *Vibration of Plates.* NASA SP-160.
+  [NTRS 19700009156](https://ntrs.nasa.gov/citations/19700009156). The
+  circular-plate frequencies the tests check.
+
+**Nonlinear vibration of plates and shells, and the sound of gongs**
+
+* Rossing, T. D. & Fletcher, N. H. (1983). "Nonlinear vibrations in plates and
+  gongs." *J. Acoust. Soc. Am.* 73(1), 345–351.
+  [doi:10.1121/1.388816](https://doi.org/10.1121/1.388816).
+* Fletcher, N. H. (1985). "Nonlinear frequency shifts in quasispherical-cap
+  shells: pitch glide in Chinese gongs." *J. Acoust. Soc. Am.* 78(6),
+  2069–2073. [doi:10.1121/1.392664](https://doi.org/10.1121/1.392664).
+  Hardening or softening with dome height (§3).
+* Legge, K. A. & Fletcher, N. H. (1989). "Nonlinearity, chaos, and the sound of
+  shallow gongs." *J. Acoust. Soc. Am.* 86(6), 2439–2443.
+  [doi:10.1121/1.398451](https://doi.org/10.1121/1.398451).
+* Fletcher, N. H. & Rossing, T. D. (1998). "Cymbals, gongs, plates, and steel
+  drums." Ch. 20 of *The Physics of Musical Instruments*, 2nd ed., 649–674.
+  Springer.
+  [doi:10.1007/978-0-387-21603-4_20](https://doi.org/10.1007/978-0-387-21603-4_20).
+  First edition 1991,
+  [doi:10.1007/978-1-4612-2980-3](https://doi.org/10.1007/978-1-4612-2980-3).
+* Touzé, C., Thomas, O. & Chaigne, A. (2002). "Asymmetric non-linear forced
+  vibrations of free-edge circular plates. Part 1: Theory." *J. Sound Vib.*
+  258(4), 649–676.
+  [doi:10.1006/jsvi.2002.5143](https://doi.org/10.1006/jsvi.2002.5143). The
+  modal von Kármán formulation with free in-plane edges (§2).
+* Touzé, C., Thomas, O. & Chaigne, A. (2004). "Hardening/softening behaviour in
+  non-linear oscillations of structural systems using non-linear normal modes."
+  *J. Sound Vib.* 273(1–2), 77–101.
+  [doi:10.1016/j.jsv.2003.04.005](https://doi.org/10.1016/j.jsv.2003.04.005).
+  The normal-form pitch shifts of §3.
+* Thomas, O., Touzé, C. & Chaigne, A. (2005). "Non-linear vibrations of
+  free-edge thin spherical shells: modal interaction rules and 1:1:2 internal
+  resonance." *Int. J. Solids Struct.* 42(11–12), 3339–3373.
+  [doi:10.1016/j.ijsolstr.2004.10.028](https://doi.org/10.1016/j.ijsolstr.2004.10.028).
+* Chaigne, A., Touzé, C. & Thomas, O. (2005). "Nonlinear vibrations and chaos
+  in gongs and cymbals." *Acoust. Sci. Tech.* 26(5), 403–409.
+  [doi:10.1250/ast.26.403](https://doi.org/10.1250/ast.26.403).
+* Thomas, O. & Bilbao, S. (2008). "Geometrically nonlinear flexural vibrations
+  of plates: in-plane boundary conditions and some symmetry properties."
+  *J. Sound Vib.* 315(3), 569–590.
+  [doi:10.1016/j.jsv.2008.04.014](https://doi.org/10.1016/j.jsv.2008.04.014).
+* Camier, C., Touzé, C. & Thomas, O. (2009). "Non-linear vibrations of
+  imperfect free-edge circular plates and shells." *Eur. J. Mech. A/Solids*
+  28(3), 500–515.
+  [doi:10.1016/j.euromechsol.2008.11.005](https://doi.org/10.1016/j.euromechsol.2008.11.005).
+  The imperfect-plate treatment of the dome (§3).
+* Ducceschi, M., Touzé, C., Bilbao, S. & Webb, C. J. (2014). "Nonlinear
+  dynamics of rectangular plates: investigation of modal interaction in free
+  and forced vibrations." *Acta Mech.* 225(1), 213–232.
+  [doi:10.1007/s00707-013-0931-1](https://doi.org/10.1007/s00707-013-0931-1).
+* Ducceschi, M. & Touzé, C. (2015). "Modal approach for nonlinear vibrations of
+  damped impacted plates: application to sound synthesis of gongs and
+  cymbals." *J. Sound Vib.* 344, 313–331.
+  [doi:10.1016/j.jsv.2015.01.029](https://doi.org/10.1016/j.jsv.2015.01.029).
+  Gongs and cymbals synthesised from struck, damped von Kármán plates in modal
+  coordinates.
+
+**Wave turbulence in plates**
+
+* Zakharov, V. E. & Filonenko, N. N. (1967). "Weak turbulence of capillary
+  waves." *J. Appl. Mech. Tech. Phys.* 8(5), 37–40.
+  [doi:10.1007/BF00915178](https://doi.org/10.1007/BF00915178).
+* Zakharov, V. E., L'vov, V. S. & Falkovich, G. (1992). *Kolmogorov Spectra of
+  Turbulence I.* Springer.
+  [doi:10.1007/978-3-642-50052-7](https://doi.org/10.1007/978-3-642-50052-7).
+* Düring, G., Josserand, C. & Rica, S. (2006). "Weak turbulence for a vibrating
+  plate: can one hear a Kolmogorov spectrum?" *Phys. Rev. Lett.* 97, 025503.
+  [doi:10.1103/PhysRevLett.97.025503](https://doi.org/10.1103/PhysRevLett.97.025503).
+* Boudaoud, A., Cadot, O., Odille, B. & Touzé, C. (2008). "Observation of wave
+  turbulence in vibrating plates." *Phys. Rev. Lett.* 100, 234504.
+  [doi:10.1103/PhysRevLett.100.234504](https://doi.org/10.1103/PhysRevLett.100.234504).
+* Mordant, N. (2008). "Are there waves in elastic wave turbulence?"
+  *Phys. Rev. Lett.* 100, 234505.
+  [doi:10.1103/PhysRevLett.100.234505](https://doi.org/10.1103/PhysRevLett.100.234505).
+* Touzé, C., Bilbao, S. & Cadot, O. (2012). "Transition scenario to turbulence
+  in thin vibrating plates." *J. Sound Vib.* 331(2), 412–433.
+  [doi:10.1016/j.jsv.2011.09.016](https://doi.org/10.1016/j.jsv.2011.09.016).
+
+**Numerics**
+
+* Bilbao, S. (2008). "A family of conservative finite difference schemes for
+  the dynamical von Karman plate equations." *Numer. Methods Partial Differ.
+  Equ.* 24(1), 193–216.
+  [doi:10.1002/num.20260](https://doi.org/10.1002/num.20260).
+* Bilbao, S. (2009). *Numerical Sound Synthesis: Finite Difference Schemes and
+  Simulation in Musical Acoustics.* Wiley.
+  [doi:10.1002/9780470749012](https://doi.org/10.1002/9780470749012). Ch. 4
+  (the oscillator in musical acoustics: the mallet's contact, §5) and ch. 13
+  (nonlinear plate vibration).
+* Bilbao, S. (2010). "Percussion synthesis based on models of nonlinear shell
+  vibration." *IEEE Trans. Audio Speech Lang. Process.* 18(4), 872–880.
+  [doi:10.1109/TASL.2009.2029710](https://doi.org/10.1109/TASL.2009.2029710).
+* Bilbao, S., Thomas, O., Touzé, C. & Ducceschi, M. (2015). "Conservative
+  numerical methods for the full von Kármán plate equations." *Numer. Methods
+  Partial Differ. Equ.* 31(6), 1948–1970.
+  [doi:10.1002/num.21974](https://doi.org/10.1002/num.21974).
+* Yang, X. (2016). "Linear, first and second-order, unconditionally energy
+  stable numerical schemes for the phase field model of homopolymer blends."
+  *J. Comput. Phys.* 327, 294–316.
+  [doi:10.1016/j.jcp.2016.09.029](https://doi.org/10.1016/j.jcp.2016.09.029).
+  Invariant energy quadratisation, from which SAV grew.
+* Shen, J., Xu, J. & Yang, J. (2018). "The scalar auxiliary variable (SAV)
+  approach for gradient flows." *J. Comput. Phys.* 353, 407–416.
+  [doi:10.1016/j.jcp.2017.10.021](https://doi.org/10.1016/j.jcp.2017.10.021).
+* Shen, J., Xu, J. & Yang, J. (2019). "A new class of efficient and robust
+  energy stable schemes for gradient flows." *SIAM Rev.* 61(3), 474–506.
+  [doi:10.1137/17M1150153](https://doi.org/10.1137/17M1150153).
+* Cheng, Q., Liu, C. & Shen, J. (2021). "Generalized SAV approaches for
+  gradient systems." *J. Comput. Appl. Math.* 394, 113532.
+  [doi:10.1016/j.cam.2021.113532](https://doi.org/10.1016/j.cam.2021.113532).
+* Jiang, M., Zhang, Z. & Zhao, J. (2022). "Improving the accuracy and
+  consistency of the scalar auxiliary variable (SAV) method with relaxation."
+  *J. Comput. Phys.* 456, 110954.
+  [doi:10.1016/j.jcp.2022.110954](https://doi.org/10.1016/j.jcp.2022.110954).
+* Bilbao, S., Ducceschi, M. & Zama, F. (2023). "Explicit exactly
+  energy-conserving methods for Hamiltonian systems." *J. Comput. Phys.* 472,
+  111697. [doi:10.1016/j.jcp.2022.111697](https://doi.org/10.1016/j.jcp.2022.111697).
+  SAV for musical systems (§6).
+* Bilbao, S., Webb, C., Wang, Z. & Ducceschi, M. (2023). "Real-time gong
+  synthesis." *Proc. 26th Int. Conf. on Digital Audio Effects (DAFx23)*,
+  Copenhagen. [PDF](https://www.dafx.de/paper-archive/2023/DAFx23_paper_19.pdf).
+  A Föppl–von Kármán plate in real time, by finite differences with an
+  explicit, energy-quadratised nonlinear step.
+
+**Contact, damping and radiation**
+
+* Hertz, H. (1882). "Ueber die Berührung fester elastischer Körper."
+  *J. reine angew. Math.* 92, 156–171.
+  [doi:10.1515/crll.1882.92.156](https://doi.org/10.1515/crll.1882.92.156).
+* Zener, C. (1937). "Internal friction in solids. I. Theory of internal
+  friction in reeds." *Phys. Rev.* 52(3), 230–235.
+  [doi:10.1103/PhysRev.52.230](https://doi.org/10.1103/PhysRev.52.230).
+* Zener, C. (1938). "Internal friction in solids II. General theory of
+  thermoelastic internal friction." *Phys. Rev.* 53(1), 90–99.
+  [doi:10.1103/PhysRev.53.90](https://doi.org/10.1103/PhysRev.53.90).
+* Maidanik, G. (1962). "Response of ribbed panels to reverberant acoustic
+  fields." *J. Acoust. Soc. Am.* 34(6), 809–826.
+  [doi:10.1121/1.1918200](https://doi.org/10.1121/1.1918200).
+* Chaigne, A. & Lambourg, C. (2001). "Time-domain simulation of damped impacted
+  plates. I. Theory and experiments." *J. Acoust. Soc. Am.* 109(4),
+  1422–1432. [doi:10.1121/1.1354200](https://doi.org/10.1121/1.1354200).
+* Chatziioannou, V. & van Walstijn, M. (2015). "Energy conserving schemes for
+  the simulation of musical instrument contact dynamics." *J. Sound Vib.* 339,
+  262–279.
+  [doi:10.1016/j.jsv.2014.11.017](https://doi.org/10.1016/j.jsv.2014.11.017).
+
+### Earlier models and syntheses
+
+* [NESS: Cymbals and Gongs](https://www.ness.music.ed.ac.uk/archives/systems/cymbals-and-gongs.html)
+  (University of Edinburgh and EPCC, 2012–2016): the Next Generation Sound
+  Synthesis project's nonlinear flat-plate and spherical-shell models of gongs
+  and cymbals, with sound examples.
+* [VK-Gong](https://vkgong.ensta-paris.fr/) (Aragonès, Camier, Ducceschi,
+  Thomas & Touzé, ENSTA Paris, 2017): MATLAB and C++ code, under CC BY-NC-SA
+  4.0, for large-amplitude von Kármán vibration of circular and rectangular
+  plates and of imperfect plates (shallow shells), by the modal method.
+* [Modelling gongs](https://physicalaudio.co.uk/modelling-gongs/) (Physical
+  Audio, 2023): sound examples of a real-time Föppl–von Kármán gong with
+  energy-quadratisation and SAV numerics, being developed into a playable
+  instrument.
+* [Physical Audio](https://physicalaudio.co.uk/) (Physical Audio Ltd, plugins
+  since 2018): commercial plugins grown out of NESS, among them
+  [Modus](https://physicalaudio.co.uk/products/modus/) (strings and plates
+  joined by springs and rattles, by modal synthesis) and
+  [Dynamic Plate Reverb](https://physicalaudio.co.uk/products/dynamic-plate-reverb/)
+  (the modes of a Kirchhoff plate).
+* [Modalys](https://forum.ircam.fr/projects/detail/modalys/) (IRCAM; begun as
+  MOSAIC, Morrison & Adrien 1993,
+  [doi:10.2307/3680569](https://doi.org/10.2307/3680569)): modal synthesis of
+  connected objects, among them
+  [free and clamped circular plates](https://support.ircam.fr/docs/Modalys/3.6/Objects/ObjectReference/index.html).
+* [Chromaphone 3](https://www.applied-acoustics.com/chromaphone-3/) (Applied
+  Acoustics Systems): a synthesiser of physically modelled resonators, plate
+  and membrane among them.
+* [Collision](https://www.ableton.com/en/manual/live-instrument-reference/)
+  (Ableton with Applied Acoustics Systems): mallet-percussion physical
+  modelling in Ableton Live, with beam, marimba, string, membrane, plate, pipe
+  and tube resonators.
+* [Pianoteq Steelpans](https://modartt.com/steelpans) (Modartt, 2012):
+  physically modelled steel drum, hand pan, Spacedrum and tank drum, with
+  controls for the "blooming" of their overtones.
