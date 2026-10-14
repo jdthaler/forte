@@ -53,7 +53,7 @@ const D = { ...DEFAULTS };
 const demos = [
   ['01-c-major-uncoupled-then-coupled', () => finish(cat(
     render({ ...D, kick: 0 }, 3.5, hold(0.05, 3.2, [48, 60, 64, 67])),
-    render({ ...D, kick: 0.045 }, 3.5, hold(0.05, 3.2, [48, 60, 64, 67]))))],
+    render(D, 3.5, hold(0.05, 3.2, [48, 60, 64, 67]))))],
   ['02-coupling-swept-0-to-9pct-under-a-held-seventh-chord', () => finish(
     render(D, 12, hold(0.05, 11.6, [48, 60, 64, 67, 70]), (t) => ({ kick: Math.min(0.09, (0.09 * t) / 10) })))],
   ['03-badly-tuned-keyboard-uncoupled-then-coupled', () => {

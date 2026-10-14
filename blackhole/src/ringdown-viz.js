@@ -12,6 +12,18 @@ function fit(cv) {
 }
 export const L_COLORS = { 2: '#7cc0ff', 3: '#ffb35a', 4: '#8fe38f' };
 
+// A canvas view that redraws only when it has changed and is visible: data
+// changes call touch(); size changes (including being shown again from the
+// Views menu) are caught by a ResizeObserver. Subclasses or owners set draw().
+export class Lazy {
+  constructor(canvas) {
+    this.cv = canvas; this.dirty = true;
+    if (globalThis.ResizeObserver) new ResizeObserver(() => { this.dirty = true; }).observe(canvas);
+  }
+  touch() { this.dirty = true; }
+  frame() { if (this.dirty && this.cv.offsetParent !== null) { this.dirty = false; this.draw(); } }
+}
+
 // ---------------------------------------------------------------------------
 export function drawPlane(cv, bank, a, excited) {
   const { ctx, w, h } = fit(cv);
@@ -109,9 +121,9 @@ export function drawKerr(cv, a, iotaDeg) {
 }
 
 // ---------------------------------------------------------------------------
-export class WaveView {
-  constructor(cv) { this.cv = cv; this.mode = 'wave'; this.d = null; }
-  set(d) { this.d = d; }
+export class WaveView extends Lazy {
+  constructor(cv) { super(cv); this.mode = 'wave'; this.d = null; }
+  set(d) { this.d = d; this.touch(); }   // { hp, hx, dur, fs, modes }: evenly spaced over dur seconds
   draw() {
     const { ctx, w, h } = fit(this.cv);
     ctx.clearRect(0, 0, w, h);
@@ -120,15 +132,14 @@ export class WaveView {
     if (!d) { ctx.fillStyle = muted; ctx.textAlign = 'center'; ctx.fillText('Play a key', w / 2, h / 2); return; }
     const padL = 40, padR = 10, top = 8, bot = h - 18;
     if (this.mode === 'wave') {
-      const n = d.hp.length, T = (n / d.fs) * 1000;
+      const n = d.hp.length, T = d.dur * 1000;
       let mx = 1e-12;
       for (let i = 0; i < n; i++) mx = Math.max(mx, Math.abs(d.hp[i]), Math.abs(d.hx[i]));
       const X = (i) => padL + ((w - padL - padR) * i) / (n - 1), Y = (v) => (top + bot) / 2 - (((bot - top) / 2) * 0.95 * v) / mx;
       ctx.strokeStyle = grid; ctx.beginPath(); ctx.moveTo(padL, Y(0)); ctx.lineTo(w - padR, Y(0)); ctx.stroke();
-      const step = Math.max(1, Math.floor(n / (2 * (w - padL))));
       for (const [arr, col] of [[d.hx, css('--cross')], [d.hp, css('--plus')]]) {
         ctx.strokeStyle = col; ctx.beginPath();
-        for (let i = 0; i < n; i += step) { if (i) ctx.lineTo(X(i), Y(arr[i])); else ctx.moveTo(X(i), Y(arr[i])); }
+        for (let i = 0; i < n; i++) { if (i) ctx.lineTo(X(i), Y(arr[i])); else ctx.moveTo(X(i), Y(arr[i])); }
         ctx.stroke();
       }
       ctx.fillStyle = muted; ctx.textAlign = 'center';

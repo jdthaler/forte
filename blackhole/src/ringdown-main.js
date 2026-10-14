@@ -1,10 +1,9 @@
 // ringdown-main.js — UI, audio graph, keyboard / MIDI, views.
 
 import { GROUPS, ALL_PARAMS, DEFAULTS, PRESETS, fmtSpin } from './ringdown-params.js';
-import { QNMBank, keyVoice, noteName, KEY_LO, KEY_HI, spinFromU } from './ringdown-model.js';
-import { RingdownEngine } from './ringdown-engine.js';
+import { QNMBank, keyVoice, noteName, KEY_LO, KEY_HI, spinFromU, strainCurve } from './ringdown-model.js';
 import { roomIR } from '../../shared/impulses.js';
-import { drawPlane, drawKerr, WaveView } from './ringdown-viz.js';
+import { drawPlane, drawKerr, WaveView, Lazy } from './ringdown-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
 
 const $ = (s) => document.querySelector(s);
@@ -211,27 +210,23 @@ function setParam(id, v, dragging = false) {
 // focus key: views
 
 const wave = new WaveView($('#wave'));
-let focusVoice = null;
+const plane = new Lazy($('#plane')), kerr = new Lazy($('#kerr'));
+let focusVoice = null, focusDue = false;
+// Views follow the last key played. A chord's keys arrive together, so the
+// work is done once, on the next animation frame.
 function setFocus(key, vel) {
   if (!bank) return;
-  focusKey = key; lastVel = vel;
-  const v = voiceFor(key);
+  focusKey = key; lastVel = vel; focusDue = true;
+}
+function renderFocus() {
+  focusDue = false;
+  const v = voiceFor(focusKey);
   focusVoice = v;
-  // render the note offline for the strain view
-  const eng = new RingdownEngine(fs);
-  eng.setParams(engineParams());
-  eng.noteOn(v, 1);
-  const tau = v.modes.length ? Math.max(...v.modes.filter((m) => m.n === 0).map((m) => m.tau)) : 0.01;
-  const chirpT = v.chirp ? (5 / 256) * v.chirp.Mc ** (-5 / 3) * (Math.PI * v.chirp.fStart) ** (-8 / 3) : 0;
-  const n = Math.min(Math.round(fs * 2.5), Math.max(256, Math.round(fs * (chirpT + 6 * tau))));
-  const hp = new Float32Array(n), hx = new Float32Array(n);
-  const L = new Float32Array(128), R = new Float32Array(128);
-  for (let s = 0; s < n; s += 128) {
-    eng.process(L, R, 128);
-    for (let i = 0; i < 128 && s + i < n; i++) { hp[s + i] = L[i]; hx[s + i] = R[i]; }
-  }
-  wave.set({ hp, hx, fs, modes: v.modes });
+  // the strain in closed form, at about two points per pixel
+  const n = Math.max(400, Math.min(4000, 2 * Math.round(wave.cv.clientWidth || 600)));
+  wave.set({ ...strainCurve(v, n), fs, modes: v.modes });
   showInfo(v);
+  plane.touch(); kerr.touch();
 }
 
 function showInfo(v) {
@@ -255,16 +250,15 @@ function showInfo(v) {
     + v.modes.slice().sort((a, b) => lvl(b) - lvl(a)).map((m) => `<tr><td>(${m.l}, ${m.m}, ${m.n})${m.m < 0 ? ' <span class="muted">counter-rot.</span>' : ''}</td><td>${m.f.toFixed(1)}</td><td>${(m.f / f0).toFixed(3)}</td><td>${(m.tau * 1000).toFixed(2)}</td><td>${m.Q.toFixed(1)}</td><td>${(20 * Math.log10(lvl(m) / mx)).toFixed(1)} dB</td></tr>`).join('');
 }
 
+// Views redraw only when something changed, and only while visible.
+const lvl = (m) => Math.hypot(m.cpr, m.cpi) + Math.hypot(m.cxr, m.cxi);
+plane.draw = () => drawPlane(plane.cv, bank, spinFromU(P.spinU), focusVoice.modes.map((m) => ({ l: m.l, m: m.m, n: m.n, level: lvl(m) })));
+kerr.draw = () => drawKerr(kerr.cv, spinFromU(P.spinU), P.inclination);
 function frame() {
   requestAnimationFrame(frame);
-  const shown = (cv) => cv.offsetParent !== null; // views can be hidden from the Views menu
-  if (bank && focusVoice) {
-    const a = spinFromU(P.spinU);
-    const lvl = (m) => Math.hypot(m.cpr, m.cpi) + Math.hypot(m.cxr, m.cxi);
-    if (shown($('#plane'))) drawPlane($('#plane'), bank, a, focusVoice.modes.map((m) => ({ l: m.l, m: m.m, n: m.n, level: lvl(m) })));
-    if (shown($('#kerr'))) drawKerr($('#kerr'), a, P.inclination);
-  }
-  if (shown(wave.cv)) wave.draw();
+  if (bank && focusDue) renderFocus();
+  if (bank && focusVoice) { plane.frame(); kerr.frame(); }
+  wave.frame();
 }
 
 let toastTimer = 0;
@@ -274,7 +268,7 @@ $('#midi-btn').addEventListener('click', (e) => { initMIDI(); e.currentTarget.bl
 $('#panic').addEventListener('click', (e) => { post({ type: 'panic' }); e.currentTarget.blur(); });
 for (const b of document.querySelectorAll('.tab')) b.addEventListener('click', () => {
   document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x === b));
-  wave.mode = b.dataset.mode; b.blur();
+  wave.mode = b.dataset.mode; wave.touch(); b.blur();
 });
 
 buildControls();

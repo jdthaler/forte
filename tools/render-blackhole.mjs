@@ -52,7 +52,7 @@ const demos = [
     const notes = [[0, 52], [0.5, 59], [1.0, 64]];
     return finish(render(P, 4.2, [...notes.map(([t, k]) => [0.05 + t, k, 1, { inclination: 0 }]), ...notes.map(([t, k]) => [2.1 + t, k, 1, { inclination: 90 }])]));
   }],
-  ['06-inspiral-merger-ringdown-chirps', () => finish(render({ ...D, inspiral: true, inspiralOct: 3, spinU: 1.5 }, 5, [[0.05, 45, 1], [1.4, 52, 1], [2.4, 57, 1], [3.2, 64, 1], [3.8, 69, 1]]))],
+  ['06-inspiral-merger-ringdown-chirps', () => finish(render({ ...D, inspiral: true, inspiralOct: 1.3, spinU: 1.5 }, 5, [[0.05, 45, 1], [1.4, 52, 1], [2.4, 57, 1], [3.2, 64, 1], [3.8, 69, 1]]))],
 ];
 
 mkdirSync(new URL('../examples/blackhole/', import.meta.url), { recursive: true });

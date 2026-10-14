@@ -11,9 +11,9 @@ export const GROUPS = [
   {
     id: 'coupling', title: 'Coupling',
     params: [
-      { id: 'kick', label: 'Pulse coupling', kind: 'engine', min: 0, max: 0.15, step: 0.001, def: 0.045,
+      { id: 'kick', label: 'Pulse coupling', kind: 'engine', min: 0, max: 0.15, step: 0.001, def: 0.055,
         fmt: (v) => (v === 0 ? 'off' : `${(v * 100).toFixed(1)} % of swing`),
-        hint: 'How far a lamp’s discharge lifts the voltage across the others (shared cathode resistor). ↑/↓ or MIDI mod wheel.' },
+        hint: 'How far a lamp’s discharge lifts the voltage across the others (shared cathode resistor). Minor sixths need 5.2 %, but above 4.6 % a bare semitone merges into one pitch. ↑/↓ or MIDI mod wheel.' },
       { id: 'rSrc', label: 'Rail-sag coupling', kind: 'engine', min: 0, max: 200e3, step: 1000, def: 0,
         fmt: (v) => (v === 0 ? 'off' : `${(v / 1000).toFixed(0)} kΩ`),
         hint: 'Slow coupling through the shared supply’s source resistance. Weak — compare it with the pulses.' },
@@ -61,9 +61,10 @@ export const ALL_PARAMS = GROUPS.flatMap((g) => g.params);
 export const DEFAULTS = Object.fromEntries(ALL_PARAMS.map((p) => [p.id, p.def]));
 
 export const PRESETS = [
-  { name: 'Default (4.5%): every consonance locks, semitones stay apart', p: {} },
+  { name: 'Default (5.5%): triads lock just in every voicing; bare semitones merge', p: {} },
   { name: 'Uncoupled: plain equal temperament', p: { kick: 0 } },
-  { name: 'Barely coupled (1%): only octaves, fifths, fourths', p: { kick: 0.01 } },
+  { name: 'Barely coupled (1%): octaves, fifths, fourths lock; thirds beat', p: { kick: 0.01 } },
+  { name: 'Weaker (4.5%): semitones stay apart, minor sixths miss 8:5', p: { kick: 0.045 } },
   { name: 'Strong (7%): minor 7th → 7:4, semitones merge', p: { kick: 0.07 } },
   { name: 'Very strong (11%): minor 6ths collapse into fifths', p: { kick: 0.11 } },
   { name: 'Badly tuned, rescued by coupling', p: { mistune: 25, kick: 0.06 } },

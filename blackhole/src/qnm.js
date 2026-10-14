@@ -102,7 +102,9 @@ export const SCHWARZSCHILD = {
 // One QNM at spin a (M = 1). Returns Mω, A and convergence info.
 export function solveQNM({ l, m, n, a, guess, Aguess = null, s = -2, N = null }) {
   const aL = a / 2;
-  const depth = N ?? Math.min(20000, Math.round(400 + 60 / Math.sqrt(Math.max(1e-6, 1 - a))));
+  // The radial fraction converges more slowly as a → 1, slowest for the
+  // counter-rotating overtones: (2,−2,2) at a = 1 − 10⁻⁶ needs ~10⁵ terms.
+  const depth = N ?? Math.round(400 + 150 / Math.sqrt(Math.max(1e-7, 1 - a)));
   let A = Aguess;
   const f = (wL) => {
     A = separationConstant(cx(aL * wL.re, aL * wL.im), l, m, s, A);

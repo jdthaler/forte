@@ -6,13 +6,27 @@
 // the lamp fires and dumps it to the extinction voltage V_e; then it charges
 // again. Period: T = R_i C ln[(V_rail − V_e)/(V_rail − V_s)].
 //
-// All oscillators hang on one rail, fed through a source resistance R_src and
-// smoothed by a reservoir capacitor C_rail. Every firing changes the current
-// drawn from the rail, so the rail dips and every *other* oscillator's
-// charging slows a little. A relaxation oscillator's phase is easily nudged
-// (it has no resonator to hold it), so the oscillators lock onto rational
-// frequency ratios over wide ranges: Arnold tongues, a devil's staircase, and
-// irregular (chaotic) motion between the steps.
+// Coupling. The lamps share a cathode resistor: when one fires, every other
+// lamp sees its voltage lifted by a kick K for an instant. A lamp that is
+// within K of striking fires in the same instant (and may set off others); any
+// other lamp is left exactly as it was, so sub-threshold kicks leave no trace.
+// In time, a lamp is captured if its next firing was due within δ of its own
+// period, δ = ln[(S − V_s + K)/(S − V_s)] / g, the same for every key (see
+// sync-theory.js). Two lamps that have fired together repeat their motion
+// exactly from then on: every interval locks to some ratio p:q, the p:q lock
+// needs (p − δ)/q ≤ f_hi/f_lo ≤ p/(q − δ), and there is no unlocked (or
+// chaotic) motion between the steps of the two-lamp staircase. A chord whose
+// pairs want incompatible ratios can settle into a long repeating pattern.
+//
+// Optionally the rail has a source resistance R_src and a reservoir capacitor
+// C_rail: every firing then also dips the rail a little, a slow, weak,
+// continuous coupling.
+//
+// Keys. A key powers its oscillator up through a small RC (attack) and keys
+// its output, like an organ keyer; on release the output fades (release) while
+// the oscillator keeps running, and it is switched off once silent. The output
+// is taken through a coupling capacitor (a 15 Hz high-pass), so there is no DC
+// and no thump when a note stops.
 //
 // Firing times are found analytically within each sample, so pitch and lock
 // are exact; the sawtooth output is band-limited with polyBLEP.
@@ -24,14 +38,15 @@ export const NEON_DEFAULTS = {
   vStrike: 90,        // lamp striking voltage
   vExt: 60,           // lamp extinction voltage
   cap: 10e-9,         // timing capacitor (F)
-  kick: 0.04,         // pulse coupling: lamp-voltage kick as a fraction of (V_s − V_e)
+  kick: 0.055,        // pulse coupling: lamp-voltage kick as a fraction of (V_s − V_e)
   rSrc: 0,            // source resistance: slow coupling through rail sag (Ω)
   cRail: 2e-9,        // rail reservoir capacitance (F)
   regulate: 1,        // 1 = regulator removes the average sag
   pitchHold: 1,       // 1 = slow supply servo keeps the average pitch on target
   holdTime: 0.4,      // its time constant (s)
-  attack: 0.004,      // key contact: rail switched in through a small RC
-  release: 0.03,
+  attack: 0.004,      // key contact: oscillator powered up and output keyed through a small RC
+  release: 0.03,      // output keyer fade after release
+  dcCut: 15,          // output coupling capacitor (high-pass corner, Hz)
   drift: 0, driftRate: 0.25,
   master: 1, width: 0.5,
   maxOsc: 32,
@@ -42,13 +57,22 @@ class Osc {
     this.key = key; this.fTarget = d.f;
     this.C = eng.p.cap;
     this.retune(d.f, eng.p);
-    this.V = eng.p.vExt + (eng.p.vStrike - eng.p.vExt) * Math.random(); // random initial phase
-    this.gate = 0; this.keyDown = true; this.dead = false;
-    this.fires = new Float64Array(256); this.nf = 0;
+    // initial phase: random (a real key), or given (0 = just fired) for analysis
+    const ph = d.phase ?? Math.random(), p = eng.p;
+    this.V = p.vNom - (p.vNom - p.vExt) * Math.exp(-ph * Math.log((p.vNom - p.vExt) / (p.vNom - p.vStrike)));
+    this.gate = d.settled ? 1 : 0;   // output keyer
+    this.power = d.settled ? 1 : 0;  // supply connection
+    this.keyDown = true; this.dead = false;
+    this.fires = new Float64Array(256); this.nf = 0; this.sent = 0;
     this.prevOut = 0; // one-sample delay for the polyBLEP
+    this.hx = 0; this.hy = 0; // coupling-capacitor high-pass state
     this.I = 0;     // current drawn from the rail this sample
     this.drift = 0; this.driftCents = 0;
-    const x = Math.max(-1, Math.min(1, ((key - 66) / 30) * eng.p.width));
+    this.setPan(p.width);
+  }
+
+  setPan(width) {
+    const x = Math.max(-1, Math.min(1, ((this.key - 66) / 30) * width));
     this.panL = Math.cos(((x + 1) * Math.PI) / 4) * Math.SQRT2;
     this.panR = Math.sin(((x + 1) * Math.PI) / 4) * Math.SQRT2;
   }
@@ -73,8 +97,11 @@ class Osc {
   // would strike on its own during this sample.
   plan(vr, eng) {
     const p = eng.p, k = eng.k, vs = p.vStrike;
-    this.gate += ((this.keyDown ? 1 : 0) - this.gate) * (this.keyDown ? eng.attackAlpha : eng.releaseAlpha);
-    this.supply = vr * this.gate;
+    if (this.keyDown) {
+      this.gate += (1 - this.gate) * eng.attackAlpha;
+      this.power += (1 - this.power) * eng.attackAlpha;
+    } else this.gate -= this.gate * eng.releaseAlpha;
+    this.supply = vr * this.power;
     this.V0 = this.V;
     this.fireAt = -1;
     const S = this.supply;
@@ -109,9 +136,12 @@ class Osc {
       this.prevOut += (h * d * d) / 2;          // polyBLEP, sample before
       cur += (-h * (1 - d) * (1 - d)) / 2;      // polyBLEP, sample after
     }
-    const out = this.prevOut;
+    const keyed = this.prevOut;
     this.prevOut = cur * this.gate;
-    return out;
+    // coupling capacitor: y[n] = x[n] − x[n−1] + ρ y[n−1]
+    const y = keyed - this.hx + eng.dcRho * this.hy;
+    this.hx = keyed; this.hy = y;
+    return y;
   }
 
   // Mean frequency over the last `win` seconds: least-squares slope of firing
@@ -148,19 +178,20 @@ export class NeonEngine {
     this.osc = []; this.byKey = new Map();
     this.t = 0; this.vr = this.p.vNom; this.Ilp = 0;
     this.hold = 0;      // pitch-hold correction, octaves
-    this.listeners = [];
+    this.order = [];    // lamps firing this sample, by firing time (reused)
     this.update();
   }
-  emit(ev) { for (const f of this.listeners) f(ev); }
   update() {
     this.attackAlpha = 1 - Math.exp(-this.k / Math.max(1e-4, this.p.attack));
     this.releaseAlpha = 1 - Math.exp(-this.k / Math.max(1e-4, this.p.release));
     this.regAlpha = 1 - Math.exp(-this.k * TWO_PI * 4);
+    this.dcRho = Math.exp(-this.k * TWO_PI * Math.max(0, this.p.dcCut));
   }
   setParams(p) {
     const old = this.p;
     this.p = { ...this.p, ...p };
     if (['vNom', 'vStrike', 'vExt'].some((k) => old[k] !== this.p[k])) for (const o of this.osc) o.retune(o.fTarget, this.p);
+    if (old.width !== this.p.width) for (const o of this.osc) o.setPan(this.p.width);
     this.update();
   }
   retune(key, f) { const o = this.byKey.get(key); if (o) o.retune(f, this.p); }
@@ -186,7 +217,7 @@ export class NeonEngine {
     if (p.pitchHold) {
       let err = 0, n = 0;
       for (const o of this.osc) {
-        if (!o.keyDown || o.gate < 0.9) continue;
+        if (!o.keyDown || o.power < 0.9) continue;
         const f = o.frequency(this.t, 0.12, this.fs);
         if (f > 0) { err += Math.log2(f / o.fTarget) + this.hold; n++; }
       }
@@ -200,8 +231,8 @@ export class NeonEngine {
   }
 
   process(L, R, n) {
-    const os = this.osc, p = this.p, k = this.k;
-    for (const o of os) o.applyDrift(this, n * k);
+    const os = this.osc, p = this.p, k = this.k, order = this.order;
+    for (let j = 0; j < os.length; j++) os[j].applyDrift(this, n * k);
     const vSet = this.supplySetpoint(n * k);
     const tauRail = p.rSrc * p.cRail, eR = tauRail > 0 ? Math.exp(-k / tauRail) : 0;
     const g = 0.004 * p.master;
@@ -213,21 +244,20 @@ export class NeonEngine {
       // Pulse coupling through the shared cathode resistor: when a lamp
       // fires, its discharge current briefly lifts the voltage across every
       // other lamp by `kick`. Any lamp that close to striking fires in the
-      // same instant (and may set off others).
+      // same instant (and may set off others); the rest are untouched.
       if (kick > 0 && os.length > 1) {
-        const order = [];
-        for (const o of os) if (o.fireAt >= 0) order.push(o);
-        order.sort((a, b) => a.fireAt - b.fireAt);
-        for (let e = 0; e < order.length; e++) {
-          const x = order[e].fireAt;
-          for (const o of os) {
-            if (o === order[e] || o.gate < 0.5) continue;
+        let no = 0;
+        for (let j = 0; j < os.length; j++) if (os[j].fireAt >= 0) no = insertByTime(order, no, os[j]);
+        for (let e = 0; e < no; e++) {
+          const src = order[e], x = src.fireAt;
+          for (let j = 0; j < os.length; j++) {
+            const o = os[j];
+            if (o === src || o.power < 0.5) continue;
             if (o.fireAt >= 0 && o.fireAt <= x) continue;
             if (o.voltageAt(x, k) + kick >= p.vStrike) {
-              const was = o.fireAt;
+              if (o.fireAt >= 0) no = removeAt(order, no, order.indexOf(o, e + 1));
               o.fireAt = x;
-              if (was < 0) order.push(o);
-              order.sort((a, b) => a.fireAt - b.fireAt);
+              no = insertByTime(order, no, o);   // lands after src: equal times keep arrival order
             }
           }
         }
@@ -246,7 +276,8 @@ export class NeonEngine {
       this.t++;
     }
     let j = 0;
-    for (const o of os) {
+    for (let i = 0; i < os.length; i++) {
+      const o = os[i];
       if (!o.keyDown && o.gate < 1e-4) o.dead = true;
       if (o.dead) { if (this.byKey.get(o.key) === o) this.byKey.delete(o.key); } else os[j++] = o;
     }
@@ -255,6 +286,28 @@ export class NeonEngine {
 
   report(win = 0.3) {
     return this.osc.map((o) => ({ key: o.key, f: o.keyDown ? o.frequency(this.t, win, this.fs) : 0, fTarget: o.fTarget, drift: o.driftCents }));
+  }
+
+  // For the page: firings since the last call, packed as [key, n, t₁ … t_n,
+  // key, n, …] (sounding keys only, times in samples) into buf. Returns the
+  // length used.
+  drainFirings(buf) {
+    let w = 0;
+    for (const o of this.osc) {
+      const n = Math.min(o.nf - o.sent, 256);
+      if (!o.keyDown || w + 2 + n > buf.length) { o.sent = o.nf; continue; }
+      buf[w++] = o.key; buf[w++] = n;
+      for (let j = o.nf - n; j < o.nf; j++) buf[w++] = o.fires[j & 255];
+      o.sent = o.nf;
+    }
+    return w;
+  }
+
+  // [key, design frequency, drift (¢)] for each sounding key, into buf
+  summary(buf) {
+    let w = 0;
+    for (const o of this.osc) if (o.keyDown && w + 3 <= buf.length) { buf[w++] = o.key; buf[w++] = o.fTarget; buf[w++] = o.driftCents; }
+    return w;
   }
 
   // firing times (in samples) of each sounding oscillator since `since`
@@ -269,6 +322,18 @@ export class NeonEngine {
       return { key: o.key, times: out.reverse() };
     });
   }
+}
+
+// keep order[0..n) sorted by firing time; equal times keep arrival order
+function insertByTime(order, n, o) {
+  let i = n;
+  while (i > 0 && order[i - 1].fireAt > o.fireAt) { order[i] = order[i - 1]; i--; }
+  order[i] = o;
+  return n + 1;
+}
+function removeAt(order, n, i) {
+  for (let j = i; j < n - 1; j++) order[j] = order[j + 1];
+  return n - 1;
 }
 
 globalThis.NeonEngine = NeonEngine;
