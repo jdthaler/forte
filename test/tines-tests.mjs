@@ -158,7 +158,7 @@ test('stable across extremes', () => {
 });
 
 console.log('performance');
-test('20 sounding keys', () => {
+test('CPU: 20 sounding keys render in under 40 % of one core', () => {
   const e = new RhodesEngine(FS); e.setParams(P());
   for (let i = 0; i < 20; i++) { const key = 36 + 3 * i; e.noteOn(key, { ...computeKey(key, P(), FS).voice, version: 1 }, 2); }
   const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);

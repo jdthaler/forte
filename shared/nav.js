@@ -1,13 +1,15 @@
-// nav.js — the Forte header on every instrument page: a link home, an
-// instrument switcher built from the registry, and the instrument's version.
+// nav.js — the Forte header on every instrument page: a link home and an
+// instrument switcher built from the registry. It also brings in the page
+// layout (layout.js) and How it works (notes.js), which shows the version.
 //
 // Usage on an instrument page:
 //   <body data-instrument="organ">
 //   <header> … <nav data-forte-nav></nav> … </header>
 //   <script type="module" src="../shared/nav.js"></script>
 
-import { INSTRUMENTS, SECTIONS, FORTE_VERSION, byId } from './registry.js';
+import { INSTRUMENTS, SECTIONS, FORTE_VERSION } from './registry.js';
 import './layout.js';
+import './notes.js';
 
 const here = document.body.dataset.instrument || '';
 const root = document.body.dataset.root ?? '../';
@@ -45,17 +47,7 @@ for (const slot of document.querySelectorAll('[data-forte-nav]')) {
   credit.innerHTML = `Forte ${FORTE_VERSION} · Vibe coded by Jesse Thaler · <a href="https://github.com/jdthaler/forte">source</a>`;
   menu.appendChild(credit);
   det.appendChild(menu);
-  const parts = [home, det];
-  const inst = byId(here);
-  if (inst?.version) {
-    const v = document.createElement('a');
-    v.className = 'forte-version';
-    v.href = 'https://github.com/jdthaler/forte/blob/main/CHANGELOG.md';
-    v.textContent = `v${inst.version}`;
-    v.title = `${inst.name} ${inst.version} · Forte ${FORTE_VERSION} — changelog`;
-    parts.push(v);
-  }
-  slot.replaceChildren(...parts);
+  slot.replaceChildren(home, det);
   // close the menu when clicking elsewhere or pressing Escape
   document.addEventListener('click', (e) => { if (!det.contains(e.target)) det.open = false; });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') det.open = false; });

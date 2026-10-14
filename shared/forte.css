@@ -84,3 +84,99 @@ a.forte-menu-item:hover { background: rgba(255, 255, 255, 0.06); }
   font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 .forte-warning a { color: #fff; }
+
+/* How it works (shared/notes.js): a button by the title, and the README in a dialog */
+.forte-about {
+  display: inline-flex; align-items: center; gap: 6px; align-self: center; flex: none;
+  font: 600 12px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--accent, #f0b35a);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--accent, #f0b35a) 45%, transparent);
+  border-radius: 999px;
+  padding: 4px 10px 4px 5px;
+  cursor: pointer;
+}
+.forte-about:hover { border-color: var(--accent, #f0b35a); background: color-mix(in srgb, var(--accent, #f0b35a) 12%, transparent); }
+.forte-about-i {
+  display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%;
+  border: 1.5px solid currentColor; font: italic 700 11px/1 Georgia, "Iowan Old Style", serif;
+}
+
+.forte-notes {
+  width: min(880px, calc(100vw - 32px));
+  height: min(88vh, 1100px); height: min(88dvh, 1100px);
+  max-width: none; max-height: none;
+  padding: 0;
+  border: 1px solid var(--line, #2b2833);
+  border-radius: 14px;
+  background: var(--panel, #151518);
+  color: var(--text, #ece8e1);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+  font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+  overflow: hidden;
+}
+.forte-notes[open] { display: flex; flex-direction: column; }
+.forte-notes::backdrop { background: rgba(4, 4, 8, 0.66); }
+.forte-notes-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 18px 12px 28px; border-bottom: 1px solid var(--line, #2b2833);
+}
+.forte-notes-kicker { color: var(--accent, #f0b35a); font-size: 11px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; }
+.forte-notes-ver .forte-version { margin-left: 10px; vertical-align: 1px; }
+.forte-notes-bar h2 { margin: 0; font: 400 24px/1.2 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; }
+.forte-notes-body { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 4px 28px 28px; outline: none; }
+.forte-notes-toc { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 0; }
+.forte-notes-toc a {
+  color: var(--muted, #9a9284); font-size: 12.5px; line-height: 1.4; text-decoration: none;
+  border: 1px solid var(--line, #2b2833); border-radius: 999px; padding: 3px 10px;
+}
+.forte-notes-toc a:hover { color: var(--text, #ece8e1); border-color: var(--accent, #f0b35a); }
+.forte-notes-text { max-width: 74ch; color: color-mix(in srgb, var(--text, #ece8e1) 88%, var(--muted, #9a9284)); }
+.forte-notes-text h2 {
+  margin: 30px 0 10px; padding-top: 14px; border-top: 1px solid var(--line, #2b2833);
+  color: var(--text, #ece8e1); font: 400 23px/1.25 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+.forte-notes-text h3 { margin: 24px 0 6px; color: var(--text, #ece8e1); font-size: 16px; }
+.forte-notes-text h4 { margin: 18px 0 4px; color: var(--text, #ece8e1); font-size: 15px; }
+.forte-notes-text p { margin: 12px 0; }
+.forte-notes-text ul, .forte-notes-text ol { margin: 12px 0; padding-left: 24px; }
+.forte-notes-text li { margin: 5px 0; }
+.forte-notes-text li > p { margin: 6px 0; }
+.forte-notes-text strong { color: var(--text, #ece8e1); }
+.forte-notes-text a { color: var(--accent, #f0b35a); }
+.forte-notes-text code { padding: 1px 4px; border-radius: 4px; background: rgba(255, 255, 255, 0.07); font: 0.86em ui-monospace, Menlo, monospace; }
+.forte-notes-text pre {
+  margin: 14px 0; padding: 10px 12px; overflow-x: auto;
+  border: 1px solid var(--line, #2b2833); border-radius: 8px; background: rgba(255, 255, 255, 0.03);
+  font: 12.5px/1.5 ui-monospace, Menlo, monospace;
+}
+.forte-notes-text pre code { padding: 0; background: none; font: inherit; }
+/* a display equation, kept as written */
+.forte-notes-text pre.eq {
+  padding: 4px 0 4px 16px; border: 0; border-left: 2px solid color-mix(in srgb, var(--accent, #f0b35a) 55%, transparent); border-radius: 0;
+  background: none; color: var(--text, #ece8e1);
+  font: 16px/1.65 "STIX Two Math", "Cambria Math", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+.forte-notes-text .table { margin: 14px 0; overflow-x: auto; }
+.forte-notes-text table { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.forte-notes-text th, .forte-notes-text td { padding: 5px 12px 5px 0; border-bottom: 1px solid var(--line, #2b2833); text-align: left; vertical-align: top; }
+.forte-notes-text th { color: var(--muted, #9a9284); font-weight: 600; }
+.forte-notes-src { margin: 30px 0 0; padding-top: 12px; border-top: 1px solid var(--line, #2b2833); color: var(--muted, #9a9284); font-size: 12.5px; }
+.forte-notes-src a { color: inherit; }
+.forte-notes-status { color: var(--muted, #9a9284); }
+
+/* below 1250px the header is tight (the subtitle is hidden too): just the icon */
+@media (max-width: 1249px) {
+  .forte-about { width: 28px; height: 28px; padding: 0; justify-content: center; border-radius: 50%; }
+  .forte-about-label { display: none; }
+}
+@media (max-width: 1249px) and (pointer: coarse) {
+  .forte-about { width: 36px; height: 36px; }
+}
+/* phones: the notes fill the screen */
+@media (max-width: 600px), (max-width: 1050px) and (max-height: 500px) {
+  .forte-notes { width: 100%; height: 100%; border: 0; border-radius: 0; }
+  .forte-notes-bar { padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 8px max(16px, env(safe-area-inset-left)); }
+  .forte-notes-bar h2 { font-size: 20px; }
+  .forte-notes-body { padding: 0 max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+}

@@ -41,7 +41,8 @@ lands, the pickup's offset, how fast the black hole spins.
 | 🛠 | Spring Keyboard | — | dispersive waves on helical springs: every note a chirp |
 
 ✅ playable · 🛠 in the workshop ([build briefs](docs/WORKSHOP.md)). Each instrument's README has its equations,
-numbers, sources, and a list of what is simplified.
+numbers, sources, and a list of what is simplified. The same notes open on
+the instrument's page under **How it works**, next to its name.
 
 ## Playing
 
@@ -100,7 +101,7 @@ engine plays what its model predicts.
 ```
 index.html, landing.*        the landing page
 <instrument>/                one folder per instrument: page, src/, README
-shared/                      shell, generic AudioWorklet, DSP and linear algebra, nav, registry, styles
+shared/                      shell, generic AudioWorklet, DSP and linear algebra, nav, notes, registry, styles
 test/<instrument>-tests.mjs  physics and engine tests
 tools/                       demo renderers, data generators, scaffolding
 examples/<instrument>/       rendered demos (.m4a)

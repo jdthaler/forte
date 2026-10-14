@@ -30,6 +30,7 @@ function render() {
         <div class="actions">
           ${inst.ready ? `<a class="play" href="${inst.id}/">Play →</a>` : '<span class="soon">In the workshop</span>'}
           ${demo ? `<button type="button" data-src="examples/${inst.id}/${demo.file}" title="${demo.title}">▶ Listen</button>` : ''}
+          ${inst.ready ? `<a href="${inst.id}/#about" title="The physics of the ${inst.name}">How it works</a>` : ''}
         </div>`;
       grid.appendChild(card);
     }
