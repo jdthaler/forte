@@ -6,7 +6,7 @@
 // Keep FORTE_VERSION equal to package.json's, and log every bump in
 // CHANGELOG.md (test/site-tests.mjs checks both).
 
-export const FORTE_VERSION = '0.5.0';
+export const FORTE_VERSION = '0.5.1';
 
 export const SECTIONS = [
   { id: 'history', title: 'Instruments from history', blurb: 'Real keyboards — some famous, some forgotten — rebuilt from their physics, with every mechanism exposed as a knob.' },
@@ -163,7 +163,7 @@ export const INSTRUMENTS = [
     accent: '#a8e6a1',
   },
   {
-    id: 'bubbles', name: 'Bubble Organ', section: 'new', ready: false,
+    id: 'bubbles', name: 'Bubble Organ', section: 'new', ready: true, version: '0.1.0', trim: 1.5,
     tagline: 'Every note a bubble ringing at its Minnaert frequency; depth, gas and pressure retune it.',
     physics: 'Bubble acoustics · Minnaert resonance',
     accent: '#6fb8ff',

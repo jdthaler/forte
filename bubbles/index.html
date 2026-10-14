@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Bubble Organ · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="bubbles">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Bubble Organ</h1>
+      <span class="sub">every note a gas bubble ringing at its Minnaert frequency; depth, pressure, gas and liquid retune it</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-view="Tank">
+          <div class="card-head"><h2>The tank</h2><span class="muted" id="tank-read"></span></div>
+          <canvas id="tank"></canvas>
+          <div class="caption">Side view, to scale (bubbles drawn twice their size): the row of nozzles on the bottom, low notes on the left, and the bubbles rising at their terminal speed, coloured by pitch and glowing while they ring. ◉ the two hydrophones you listen through, 35 cm in front of the row.</div>
+        </div>
+        <div class="card" data-view="Latest bubble">
+          <div class="card-head"><h2>Latest bubble <b id="wave-key"></b></h2><span class="muted" id="wave-read">play a key</span></div>
+          <canvas id="wave"></canvas>
+          <div class="readout" id="wave-info"></div>
+          <div class="caption">The pressure the engine computed for the last bubble released (one hydrophone’s share, in pascals), and the model’s decay envelope e<sup>−bt</sup> (dashed). Its pitch and damping δ = 1/Q, split into heat flow, radiation and viscosity.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Damping">
+          <div class="card-head"><h2>Damping across the keyboard</h2><span class="muted" id="devin-read"></span></div>
+          <canvas id="devin"></canvas>
+          <div class="legend"><span><i style="background:#ff9a5a"></i>heat flow δ<sub>th</sub></span><span><i style="background:#6fb8ff"></i>radiation δ<sub>rad</sub></span><span><i style="background:#9fe39f"></i>viscosity δ<sub>vis</sub></span><span><i style="background:#ebebef"></i>total</span><span><i style="background:#d8a0ff"></i>κ (right axis)</span></div>
+          <div class="caption">Devin’s damping constants for every key’s bubble under the current settings (log scale), and the gas’s effective polytropic exponent κ, between 1 (isothermal) and γ (adiabatic).</div>
+        </div>
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: each held key’s predicted ring</span></div>
+          <canvas id="spectrum"></canvas>
+          <div class="caption">A bubble rings at one frequency: no overtones. A held key’s brook smears its line by the size spread.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>hold a key for a brook; hold <kbd>Space</kbd> to keep them running <b id="hold" class="off">off</b></span>
+      <span>mod wheel: bubbles per second</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/bubbles-main.js"></script>
+</body>
+</html>

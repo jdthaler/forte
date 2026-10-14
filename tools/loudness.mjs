@@ -48,18 +48,19 @@ function measure([L, Rr]) {
 const scale = ([L, Rr], g) => [L.map((v) => v * g), Rr.map((v) => v * g)];
 const defaults = (m) => Object.fromEntries(m.GROUPS.flatMap((g) => g.params).map((p) => [p.id, p.def]));
 
-// The shell-based instruments: engine class, default params, computer-key velocity.
-const SHELL = [
-  ['grand', 'GrandEngine'], ['reeds', 'ReedEngine'], ['clavier', 'ClavierEngine'], ['pianet', 'PianetEngine'],
-  ['bowed', 'OrganistaEngine'], ['glass', 'ArmonicaEngine'], ['pyrophone', 'PyrophoneEngine'], ['gongs', 'GongEngine'], ['quantum', 'QuantumEngine'],
-  ['vibraphone', 'VibraphoneEngine'],
-];
+// The five older pages have their own audio chains (below). Every other ready instrument is
+// built on the shell: <id>/src/<id>-engine.js exports one …Engine class, <id>-params.js its
+// defaults, and the computer keyboard plays P.velocity.
+const OLDER = ['piano', 'tines', 'organ', 'huygens', 'blackhole'];
 
 export async function measureAll() {
   const rows = [];
-  for (const [id, cls] of SHELL) {
+  const { INSTRUMENTS } = await mod('shared/registry.js');
+  for (const { id } of INSTRUMENTS.filter((i) => i.ready && !OLDER.includes(i.id))) {
     const P = defaults(await mod(`${id}/src/${id}-params.js`));
-    const E = (await mod(`${id}/src/${id}-engine.js`))[cls];
+    const engines = Object.values(await mod(`${id}/src/${id}-engine.js`)).filter((v) => typeof v === 'function' && /Engine$/.test(v.name));
+    if (engines.length !== 1) throw new Error(`${id}/src/${id}-engine.js should export exactly one …Engine class`);
+    const E = engines[0];
     rows.push({ id, ...measure(scale(run(new E(FS), (e) => { e.setParams(P); e.noteOn(KEY, P.velocity ?? 0.75); }), P.volume)) });
   }
   { // piano: dry (1 − 0.75 sb) + soundboard (1.1 sb), then volume

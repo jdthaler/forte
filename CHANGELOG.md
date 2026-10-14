@@ -10,6 +10,41 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-14 — bubble organ
+
+### Bubble Organ 0.1.0
+- New instrument: a row of 52 nozzles (A3–C8) on the floor of a tank.
+  Each key releases a gas bubble that rings at its Minnaert frequency;
+  holding a key keeps the nozzle bubbling (a brook), at a set rate with
+  seeded random gaps and a size spread.
+- **Each bubble** is a linearised Rayleigh–Plesset oscillator with
+  Prosperetti's complex polytropic index for heat flow in the gas (checked
+  against Devin's 1959 real form and both asymptotes), surface tension,
+  and Devin's thermal, viscous and radiation damping. The free surface
+  above acts as an inverted image source: it raises the pitch of the big
+  bubbles and stops them radiating, so the bass rings for a second.
+- **The tank retunes the keyboard:** nozzle depth (p₀ = p_air + ρgh, pitch
+  ∝ √p₀), the air pressure above the water (a partial vacuum takes it
+  about an octave down, and ringing bubbles follow), the gas (air, helium,
+  argon, SF₆: helium falls short of √γ in small bubbles, which lose heat)
+  and the liquid (water, 90 % glycerol, glycerol, whose viscosity kills
+  the treble but not the bass). **Keep in tune** re-sizes the bubbles
+  instead.
+- **The kick at pinch-off** is a pressure step, a share of the Laplace
+  pressure 2σ/R, ramped over the neck's snap time and integrated exactly:
+  every bubble starts at the same pressure, and a slow snap barely rings
+  the small ones.
+- Bubbles rise at their terminal speed, swell and glide in pitch as they
+  go: a few cents down when deep, up as they near the surface, where they
+  burst. Two hydrophones place each nozzle in stereo.
+- Views: the tank with the bubbles rising to scale, coloured by pitch; the
+  latest bubble's waveform against the model's envelope; Devin's damping
+  constants and κ across the keyboard; the live spectrum. Seven demos.
+
+### Forte 0.5.1
+- `tools/loudness.mjs` finds every ready shell-based instrument from the
+  registry, so a new instrument no longer needs a line there.
+
 ## 2026-10-14 — prior art and credits
 
 ### Forte 0.5.0
