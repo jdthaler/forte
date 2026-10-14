@@ -1,0 +1,10 @@
+/* The page's own palette and any layout beyond shared/instrument.css. */
+:root {
+  --accent: #9fb4ff;
+  --accent-2: #ffd27a;
+  --accent-ink: #0b1230;
+  --metal: #b9bfca;
+  --wood: #6a5440;
+}
+#jet-info { font-size: 11px; font-variant-numeric: tabular-nums; color: var(--text); padding-top: 4px; min-height: 2.8em; }
+#jet-info span { white-space: nowrap; }

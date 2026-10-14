@@ -417,6 +417,36 @@
    "title": "Thick stiff wire very inharmonic"
   }
  ],
+ "pipes": [
+  {
+   "file": "01-toccata-in-d-minor-opening-on-the-plenum.m4a",
+   "title": "Toccata in d minor opening on the plenum"
+  },
+  {
+   "file": "02-principal-gedackt-octave-and-mixture-in-turn.m4a",
+   "title": "Principal gedackt octave and mixture in turn"
+  },
+  {
+   "file": "03-a-fast-pallet-then-a-slow-one-the-chiff.m4a",
+   "title": "A fast pallet then a slow one the chiff"
+  },
+  {
+   "file": "04-the-wind-rises-the-pipe-overblows-and-drops-back-late.m4a",
+   "title": "The wind rises the pipe overblows and drops back late"
+  },
+  {
+   "file": "05-a-big-chord-on-a-steady-wind-then-a-flexible-one.m4a",
+   "title": "A big chord on a steady wind then a flexible one"
+  },
+  {
+   "file": "06-gedackt-then-with-the-tremulant.m4a",
+   "title": "Gedackt then with the tremulant"
+  },
+  {
+   "file": "07-cut-up-high-then-as-voiced-then-low.m4a",
+   "title": "Cut up high then as voiced then low"
+  }
+ ],
  "pyrophone": [
   {
    "file": "01-chorale.m4a",
