@@ -34,7 +34,7 @@ const prefs = (() => {
   return { // keep only well-formed stored values
     controls: typeof s.controls === 'boolean' ? s.controls : DEFAULTS.controls,
     hidden: strings(s.hidden) ?? [],
-    // Perform: the Controls column starts hidden, and so do views without a picture (null)
+    // Perform: the Controls column starts hidden; hidden: null = all but the data-perform views
     perform: { controls: typeof p.controls === 'boolean' ? p.controls : false, hidden: strings(p.hidden) },
     kb: ['s', 'm', 'l', 'xl'].includes(s.kb) ? s.kb : DEFAULTS.kb,
     octaves: [0, 2, 3, 4, 5].includes(s.octaves) ? s.octaves : DEFAULTS.octaves,
@@ -175,7 +175,7 @@ if (header && (sidebar || views.length)) {
   seg.setAttribute('aria-label', 'Mode');
   for (const [m, text, title] of [
     ['discover', 'Discover', 'Every control and every view, with the explanations'],
-    ['perform', 'Perform', 'The pictures, large, and the controls to play with'],
+    ['perform', 'Perform', 'One or two views, filling the screen, for playing or a projector'],
   ]) {
     const b = button(text, title);
     b.dataset.mode = m;
