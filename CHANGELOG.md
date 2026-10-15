@@ -10,6 +10,47 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-15 — a compact page: controls, views and keys
+
+### Forte 0.7.0
+- **Controls and views apart.** The middle of every page is pictures only;
+  every control sits at the edges. The main views (the ones Perform shows)
+  are large, side by side or stacked; the others are tabs underneath, in
+  a panel that folds away. Right above the keys are the controls you play
+  with: the performance controls and any control surface a page marks
+  `data-control` (the organ's drawbars and switches, which were a view),
+  then **More controls**, which opens the rest (a column on wide screens,
+  a panel over the views on narrow ones). A handle on the footer's edge
+  folds the controls away.
+- **The keys fill the width** at the key size you pick (− +), as in
+  GarageBand: an octave or so on a phone, most of the range on a laptop.
+  ◀ ▶ move an octave, and an overview of the whole range, with the keys on
+  screen framed and the keys you hold lit, drags anywhere. This replaces
+  the octave count and the separate key height. The keyboard's tools fit
+  one row on a phone.
+- **Fewer, merged buttons.** The instrument's name is now the menu of
+  every instrument, with Forte's home page first (it was three things:
+  the Forte link, Instruments ▾ and the title). Reset is "Default
+  settings" in the presets menu. The Controls button became More
+  controls, above the keys, and Views ▾ became the tabs. The footer's
+  hints for the computer keyboard and MIDI, with their readouts, wait
+  behind ⌨. The phone header is two rows.
+- **Explanations behind ⓘ.** A view's caption opens from an ⓘ in its
+  title; a parameter's hint in the Controls panel slides open from an ⓘ
+  by its name.
+- **More direct controls.** Above the keys, a dropdown with a few short
+  choices is a row of buttons, one tap each (the harpsichord's manual,
+  the vibraphone's motor, the bubble organ's gas, the clavier's pickups).
+- Site test: a control surface is never marked as a Perform view. The
+  guide and the README describe the new layout.
+
+### Tonewheel Organ 0.4.0
+- The console (drawbars, swell, percussion, vibrato and chorus, Leslie,
+  generator motor) is a control surface above the keys, as on the real
+  instrument, rather than a view. The tone generator and the Leslie are
+  the main views; the output spectrum and "what a key really plays" are
+  tabs.
+
 ## 2026-10-15 — views on tablets
 
 ### Forte 0.6.1

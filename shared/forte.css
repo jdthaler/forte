@@ -1,6 +1,7 @@
-/* forte.css — pieces shared by every Forte page: the home link and the
-   instrument switcher. Instrument pages keep their own palettes and layouts
-   and load this first; it only uses their CSS variables with fallbacks. */
+/* forte.css — pieces shared by every Forte page: the home link (the credits
+   page), the instrument menu that is each instrument's title, and the notes.
+   Instrument pages keep their own palettes and layouts and load this first; it
+   only uses their CSS variables with fallbacks. */
 
 /* iOS Safari enlarges text when the phone turns to landscape unless told not to */
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
@@ -20,19 +21,19 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .forte-home::before { content: "𝆑 "; color: var(--accent, #f0b35a); font-weight: 400; }
 .forte-home:hover { border-color: var(--accent, #f0b35a); }
 
-.forte-switch { position: relative; }
+.forte-switch { position: relative; min-width: 0; }
+/* the instrument's name is the menu's button: Forte's mark, the <h1>, a caret */
 .forte-switch summary {
-  list-style: none;
-  cursor: pointer;
-  color: var(--muted, #9a9284);
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 7px;
-  border: 1px solid transparent;
+  list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; min-width: 0;
+  padding: 3px 10px 3px 8px; border-radius: 8px; border: 1px solid var(--line, #2b2833);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+  color: var(--text, #ece8e1);
 }
 .forte-switch summary::-webkit-details-marker { display: none; }
-.forte-switch summary::after { content: " ▾"; }
-.forte-switch[open] summary, .forte-switch summary:hover { border-color: var(--line, #2b2833); color: var(--text, #ece8e1); }
+.forte-switch summary h1 { margin: 0; min-width: 0; }
+.forte-mark { color: var(--accent, #f0b35a); font-size: 15px; line-height: 1; }
+.forte-caret { color: var(--muted, #9a9284); font-size: 11px; }
+.forte-switch[open] summary, .forte-switch summary:hover { border-color: var(--accent, #f0b35a); }
 .forte-menu {
   position: absolute;
   z-index: 50;
@@ -47,6 +48,14 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   background: var(--panel, #151518);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
 }
+.forte-menu-home {
+  display: grid; gap: 1px; padding: 7px 8px 9px; margin-bottom: 4px; border-radius: 7px;
+  color: var(--text, #ece8e1); text-decoration: none; border-bottom: 1px solid var(--line, #2b2833);
+}
+.forte-menu-home b { font-weight: 700; font-size: 14px; }
+.forte-menu-home b::before { content: "𝆑 "; color: var(--accent, #f0b35a); font-weight: 400; }
+.forte-menu-home span { color: var(--muted, #9a9284); font-size: 11.5px; }
+.forte-menu-home:hover { background: rgba(255, 255, 255, 0.06); }
 .forte-menu-sec { color: var(--muted, #9a9284); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.7px; margin: 8px 6px 4px; }
 .forte-menu-item {
   display: grid;

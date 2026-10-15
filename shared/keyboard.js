@@ -1,7 +1,8 @@
 // keyboard.js — the on-screen keyboard on every Forte page. Multi-touch,
 // glissando (slide a finger across the keys), velocity from how far down the
-// key you strike it (or from Apple Pencil pressure), and a window of a few
-// octaves with ◀ ▶ shifting, for touch screens (set from shared/layout.js).
+// key you strike it (or from Apple Pencil pressure), and a window onto the
+// instrument's range that shared/layout.js sizes to the screen: as many keys as
+// fit at the chosen key width, moved with ◀ ▶ or the overview above the keys.
 //
 //   const kb = createKeyboard(root, { lo, hi, onDown(key, f), onUp(key), onPressure?(key, p) })
 //   f ∈ [0, 1]: 0 at the top of the key, 1 at the front edge (map it to your velocity)
@@ -17,8 +18,9 @@ const noteName = (m) => NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 
 export function createKeyboard(root, { lo, hi, onDown, onUp, onPressure }) {
-  let wLo = lo, wHi = hi, octaves = 0, focusKey = null, labelMap = new Map();
-  const isDown = new Set(), els = new Map(), listeners = [];
+  let wLo = lo, wHi = hi, focusKey = null, labelMap = new Map();
+  const isDown = new Set(), els = new Map(), listeners = [], keyListeners = [];
+  const keysChanged = () => { for (const fn of keyListeners) fn(isDown); };
 
   function build() {
     root.replaceChildren(); els.clear();
@@ -43,14 +45,6 @@ export function createKeyboard(root, { lo, hi, onDown, onUp, onPressure }) {
       root.appendChild(el); els.set(m, el);
     }
     for (const fn of listeners) fn(wLo, wHi);
-  }
-
-  // A window of n octaves from C to C (n = 0: every key), kept inside [lo, hi].
-  function place(start) {
-    if (!octaves || hi - lo <= 12 * octaves) { wLo = lo; wHi = hi; return; }
-    const span = 12 * octaves;
-    wLo = clamp(start, lo, hi - span);
-    wHi = wLo + span;
   }
 
   // ---- pointers: each finger is independent; a key sounds while any finger is on it
@@ -90,16 +84,21 @@ export function createKeyboard(root, { lo, hi, onDown, onUp, onPressure }) {
   root.addEventListener('contextmenu', (e) => e.preventDefault());
 
   const kb = {
-    set(m, on) { if (on) isDown.add(m); else isDown.delete(m); els.get(m)?.classList.toggle('down', on); },
+    set(m, on) { if (on) isDown.add(m); else isDown.delete(m); els.get(m)?.classList.toggle('down', on); keysChanged(); },
     focus(m) { focusKey = m; for (const [k, el] of els) el.classList.toggle('focus', k === m); },
-    clearAll() { isDown.clear(); for (const el of els.values()) el.classList.remove('down'); },
+    clearAll() { isDown.clear(); for (const el of els.values()) el.classList.remove('down'); keysChanged(); },
     labels(map) { labelMap = map; for (const [m, el] of els) { el.querySelector('.k-label').textContent = map.get(m) ?? ''; el.classList.toggle('mapped', map.has(m)); } },
-    // window control (used by shared/layout.js)
+    // the window onto the range (used by shared/layout.js)
     range: () => [wLo, wHi],
     bounds: () => [lo, hi],
-    setOctaves(n, start) { octaves = n; place(start ?? 12 * Math.floor((wLo + wHi) / 24) - 12 * Math.floor(n / 2)); build(); },
-    shift(d) { if (!octaves) return; place(wLo + d); build(); },
+    isBlack: (m) => BLACK.has(((m % 12) + 12) % 12),
+    setWindow(a, b) {
+      a = clamp(a, lo, hi); b = clamp(b, a, hi);
+      if (a === wLo && b === wHi && els.size) return;
+      wLo = a; wHi = b; build();
+    },
     onWindow(fn) { listeners.push(fn); },
+    onKeys(fn) { keyListeners.push(fn); }, // fn(set of keys down), on every change
   };
   build();
   attachKeyboard(kb);
