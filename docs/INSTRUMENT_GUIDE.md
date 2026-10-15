@@ -7,8 +7,8 @@ physics. Start from the template:
 node tools/new-instrument.mjs <slug> <EngineName> "<Display Name>"
 ```
 
-Instruments waiting to be built, each with a physics brief, are in
-[WORKSHOP.md](WORKSHOP.md).
+Build briefs for new instruments (the physics, the effects, the tests and
+the prior art) go in [WORKSHOP.md](WORKSHOP.md).
 
 This creates a working (if simple) instrument: struck free–free bars,
 with a page, an engine, tests, a render tool and a README skeleton. It
