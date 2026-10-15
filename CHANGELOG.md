@@ -10,6 +10,51 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-15 — star keyboard
+
+### Star Keyboard 0.1.0
+- New instrument: every key a star, C2–C7, sped up a fixed K = 510,800 times
+  (μHz to Hz), chosen so that the Sun itself sounds on G6.
+- **The keyboard is an evolutionary track** (0.9–1.8 M☉, 1 M☉ by default):
+  dwarfs on the top keys, subgiants in the middle, red giants below (ν_max
+  4123 μHz on C7 to 130 μHz on C2 at 1 M☉). The zero-age main sequence from
+  Tout et al. (1996), a main sequence through the Sun, subgiants, and the
+  red-giant branch on the Hayashi line; above the track's own start the path
+  continues down the zero-age main sequence.
+- **The modes:** Δν ∝ √(mean density) and ν_max ∝ g/√T_eff with Huber et
+  al.'s solar values (135.1 and 3090 μHz); the asymptotic relation to second
+  order with small separations and a curvature, under a Gaussian envelope of
+  width 0.66 ν_max^0.88; visibilities 1 : 1.5 : 0.6 : 0.05 for l = 0–3;
+  linewidths a power law in T_eff over a floor (1 μHz for the Sun, 0.13 μHz
+  for red giants). Up to 340 m components per star.
+- **Mixed modes** in subgiants and red giants from tan θ_p = q tan θ_g, every
+  root found by bisection; each mode's core inertia ζ sets its period
+  spacing, its share of the p mode's power (1 − ζ) and its linewidth.
+- **Rotation** splits every multiplet by m(Ω/2π)(1 − C_nl), mixed modes by
+  their core and envelope rates weighted by ζ; **inclination** shares each
+  multiplet's power among its m components as E_lm(i) (Gizon & Solanki 2003).
+- **The sound:** every mode an exact two-pole oscillator pushed once a block
+  by Gaussian random forces while the key is down (convective driving), so
+  each line is a Lorentzian of its own width with a set mean power; key-up
+  stops the driving and every mode rings down at its linewidth; the pedal
+  keeps the convection on; a flare at a random point on the star kicks every
+  mode at key-down, coherently across orders, so its wave packet echoes
+  every 1/Δν.
+- **Tuning:** each key's star is the one on the track whose heard pitch, the
+  power-weighted mean log frequency of its modes, lands on the note (within
+  0.02 ¢ on every key; ν_max then sits 10–24 ¢ above it).
+- **δ Scuti stars** as a second family: three radial modes at P₁/P₀ = 0.773
+  and P₂/P₁ = 0.802 and a few nonradial ones, each growing by the Landau
+  equation dA/dt = (γ − βA²)A to a steady amplitude, with compressed growth
+  times.
+- Views: the échelle diagram and the power spectrum of the focus star, its
+  modes sized by their power now; the star, showing one mode's pattern
+  turning at the set inclination; and a Hertzsprung–Russell diagram with
+  the star on every key. Seven demos.
+- Performance controls: rotation, inclination, convective driving, flare
+  kick, room and volume. Perform shows the échelle diagram and the star.
+  The mod wheel spins the stars up; aftertouch drives them harder.
+
 ## 2026-10-14 — spring keyboard
 
 ### Spring Keyboard 0.1.0

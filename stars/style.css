@@ -1,0 +1,16 @@
+/* The page's own palette and any layout beyond shared/instrument.css. */
+:root {
+  --accent: #ff6f91;
+  --accent-2: #ffd27a;
+  --accent-ink: #2a0610;
+  --l0: #ffd27a;
+  --l1: #ff6f91;
+  --l2: #7cc8ff;
+  --l3: #9fe39f;
+  --space: #07070d;
+}
+.legend i.l0 { background: var(--l0); }
+.legend i.l1 { background: var(--l1); }
+.legend i.l2 { background: var(--l2); }
+.legend i.l3 { background: var(--l3); }
+#echelle, #sphere { cursor: crosshair; }
