@@ -619,7 +619,7 @@ data):
   <https://epapers.bham.ac.uk/id/eprint/2090/>; and the Kepler mission's
   "orchestra" of Sun-like stars (University of Birmingham, 2011),
   <https://www.birmingham.ac.uk/news-archive/2011/kepler-listens-to-an-orchestra-of-solar-type-stars>.
-  These are the starting point for the planned Star Keyboard.
+  These were the starting point for the Star Keyboard.
 * **Quantum music.** *Quantum Music* (2015–2018), a Creative Europe
   project coordinated by the Institute of Musicology SASA in Belgrade with
   physicists and musicians, which built a "hybrid piano",
