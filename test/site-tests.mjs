@@ -95,6 +95,13 @@ test('instrument pages mark one or two views for Perform (data-perform)', () => 
     assert.ok(n >= 1 && n <= 2, `${i.id}: ${n} views marked data-perform`);
   }
 });
+test('a control surface (data-control) is a control, not a view: never marked for Perform', () => {
+  for (const i of ready) {
+    for (const m of read(`${i.id}/index.html`).matchAll(/<div class="card"([^>]*)>/g)) {
+      assert.ok(!(m[1].includes('data-control') && m[1].includes('data-perform')), `${i.id}: a card is both`);
+    }
+  }
+});
 test('the landing page has the category tabs, the instrument list and an About dialog', () => {
   const html = read('index.html');
   for (const id of ['cats', 'instruments', 'about', 'about-open']) assert.ok(html.includes(`id="${id}"`), `#${id}`);

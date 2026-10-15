@@ -161,42 +161,50 @@ latches keys while Space is down). Pick whichever makes physical sense,
 and say which in the footer help.
 
 **Tablets, phones and layout.** `shared/layout.js` and `shared/layout.css`
-(loaded last in `<head>`) give every page the same touch-friendly
-layout:
-- **Discover | Perform** at the top. Discover is the page as built.
-  Perform is for playing and for a projector: it shows only the views
-  marked `data-perform` (one or two), side by side or stacked to fill the
-  screen, with no text in them. The card's `.card-head`, `.caption`,
-  `.legend`, `.readout`, `<dl>` and `<table>` are hidden, and `fillText`
-  draws nothing on their canvases (a card with `data-keep-text`, such as
-  the organ's console, keeps its text). The Controls column starts
-  closed, and Full screen appears. The mode is shared by every page; the
-  views and Controls are remembered per page and mode;
-- the `perform: true` controls, in a strip above the keys in both modes;
-- the presets (`.preset-row` in `#controls`), moved into the header so
-  they are always in view;
-- a Controls toggle (a column on wide screens, a slide-over panel on
-  narrow ones);
-- a Views ▾ menu that shows or hides each `#views .card`;
-- a multi-touch keyboard (`shared/keyboard.js`: chords, glissando, Pencil
-  pressure, a 2–5-octave window with ◀ ▶);
-- an on-screen pedal button that presses Space;
-- on phones, a page that scrolls above a keyboard stuck to the bottom,
-  with Controls in place of the views.
-- on tablets and narrow windows (601–1050 px wide), the views in one
-  scrolling column, each row as tall as its content; on wide screens a row
-  of views is never squeezed below its text (its canvases take any
-  shortage) and the views scroll instead.
+(loaded last in `<head>`) give every page the same layout, top to bottom:
+- **The header.** The instrument's name is also the menu (Forte's home
+  page and every instrument, from `shared/nav.js`; the page's `<h1>`
+  moves into it). Then How it works, **Discover | Perform**, the presets
+  (`.preset-row` in `#controls`, moved here; its menu gains "Default
+  settings", which presses the page's `#reset`), audio, MIDI and Panic.
+- **The views: pictures only.** The cards marked `data-perform` (one or
+  two: `test/site-tests.mjs` checks) are the main views, large, side by
+  side (stacked on a tall screen). The others sit in a tabbed panel below
+  them that folds away. A card's `.caption` waits behind an ⓘ in its
+  title.
+- **The controls, above the keys.** A card marked `data-control` is a
+  control surface, not a view (the organ's drawbars and switches): it
+  moves here, ahead of the `perform: true` parameters. A dropdown there
+  with a few short choices becomes a row of buttons. "More controls"
+  opens `#controls`, the rest of the parameters, grouped (a column on
+  wide screens, a panel sliding over the views on narrow ones), where
+  each hint waits behind an ⓘ. A handle on the footer's edge folds the
+  controls away.
+- **The keyboard bar and the keys** (`shared/keyboard.js`: multi-touch,
+  glissando, Pencil pressure). As many keys as fit the width at the
+  chosen key size (− +), like GarageBand: ◀ ▶ move an octave, and an
+  overview of the whole range, with the keys on screen framed, drags
+  anywhere. The pedal button presses Space. The page's footer hints
+  (`.kb-help`: computer keys, MIDI, readouts) go behind ⌨.
+- **Perform** is for playing and for a projector: only the main views,
+  filling the screen, with no text in them. The card's `.card-head`,
+  `.caption`, `.legend`, `.readout`, `<dl>` and `<table>` are hidden, and
+  `fillText` draws nothing on their canvases (a card with
+  `data-keep-text` keeps its text). Full screen appears. The mode is the
+  same on every page; the rest is remembered per page.
+- On phones the page scrolls above the controls and keys, which stay put,
+  and "More controls" replaces the views.
 
 To fit in:
 - Give a card whose `<h2>` changes at runtime a stable name with
   `data-view="…"`.
 - Mark the one or two views that best show the instrument playing with
-  `data-perform` on their `.card` (`test/site-tests.mjs` checks). In
-  Perform they lose their titles, captions and canvas text and grow to
-  fill the screen, so draw them to read as pictures, and let their
-  canvases stretch (Perform sizes them with flex, overriding a fixed
-  height).
+  `data-perform` on their `.card`. In Perform they lose their titles,
+  captions and canvas text and grow to fill the screen, so draw them to
+  read as pictures, and let their canvases stretch (Perform sizes them
+  with flex, overriding a fixed height).
+- Keep controls out of the views. A custom control surface (drawbars, a
+  console) is a `.card` with `data-control`; it goes above the keys.
 - Start every animation loop with `requestAnimationFrame` and skip
   hidden canvases. `animate(draw, canvas)` does both.
 - Make drawing code survive a tiny canvas.
@@ -206,7 +214,7 @@ To fit in:
   shown as a display equation, exactly as written. The `## Files` section
   is left out of the notes. `test/notes-tests.mjs` renders every README.
 - Keep the header to the standard buttons and pills: on a phone it has
-  to fit two rows (one in landscape). Wide tables scroll inside their card.
+  to fit two rows. Wide tables scroll inside their card.
 - Pages that don't use the shell set `data-space="Sustain"` on `<body>`
   (`data-space-mode="tap"` when Space toggles something) for the pedal
   button. The shell sets it from `space`.

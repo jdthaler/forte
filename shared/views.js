@@ -16,7 +16,7 @@ export function fit(cv) {
 }
 
 // Call draw() every animation frame (the browser pauses this in hidden tabs),
-// skipping frames while `canvas` is hidden (e.g. from the Views menu).
+// skipping frames while `canvas` is hidden (a folded or unselected view tab, Perform).
 export function animate(draw, canvas = null) {
   const loop = (t) => { requestAnimationFrame(loop); if (!canvas || canvas.offsetParent !== null) draw(t); };
   requestAnimationFrame(loop);
