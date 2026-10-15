@@ -1,4 +1,38 @@
 {
+ "arc": [
+  {
+   "file": "01-god-save-the-queen-on-one-arc.m4a",
+   "title": "God save the queen on one arc"
+  },
+  {
+   "file": "02-arc-current-raised-singing-then-hissing.m4a",
+   "title": "Arc current raised singing then hissing"
+  },
+  {
+   "file": "03-two-keys-on-one-arc-capacitors-in-parallel.m4a",
+   "title": "Two keys on one arc capacitors in parallel"
+  },
+  {
+   "file": "04-small-coil-then-big-coil.m4a",
+   "title": "Small coil then big coil"
+  },
+  {
+   "file": "05-a-slow-column-cannot-sing-the-top-notes.m4a",
+   "title": "A slow column cannot sing the top notes"
+  },
+  {
+   "file": "06-first-kind-then-second-kind.m4a",
+   "title": "First kind then second kind"
+  },
+  {
+   "file": "07-six-arcs-in-chords.m4a",
+   "title": "Six arcs in chords"
+  },
+  {
+   "file": "08-the-talking-arc.m4a",
+   "title": "The talking arc"
+  }
+ ],
  "blackhole": [
   {
    "file": "01-one-note-as-spin-rises-from-0-to-1-minus-1e-6.m4a",

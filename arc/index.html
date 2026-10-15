@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Singing Arc · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="arc">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Singing Arc</h1>
+      <span class="sub">a carbon arc lamp whose falling characteristic drives a tuned circuit; the arc is its own loudspeaker</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="V–I loop">
+          <div class="card-head"><h2>The arc's V–I plane</h2><span class="muted" id="vi-read">play a key</span></div>
+          <canvas id="vi"></canvas>
+          <div class="legend"><span><i class="l-ayr"></i>Ayrton's curve</span><span><i class="l-stat"></i>static curve with the hot-carbon floor</span><span><i class="l-loop"></i>the operating point, live</span><span><i class="l-load"></i>supply load line</span></div>
+          <div class="caption">Voltage across the arc against the current through it. A steady arc sits on its falling static curve, where the supply's load line crosses it. Singing, the operating point runs round a loop: above the curve while the current rises (the column is still cool), below it while it falls (still hot). The shaded strip on the left is where the column has collapsed and the hot carbons re-strike it; past the dashed line the arc hisses.</div>
+        </div>
+        <div class="card" data-perform data-view="The arc">
+          <div class="card-head"><h2>The arc, slowed down</h2><span class="muted" id="glow-read"></span></div>
+          <canvas id="glow"></canvas>
+          <div class="caption">The column between the carbons (positive on the left, with its crater), its glow following the power u·i and its width the heat it holds, strobed so that one cycle takes about a second. The column's breathing is the sound: its pressure follows dP/dt.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Circuit">
+          <div class="card-head"><h2>Duddell's circuit</h2><span class="muted" id="ckt-read"></span></div>
+          <canvas id="circuit"></canvas>
+          <dl class="info" id="info"></dl>
+          <div class="caption">Dots: the current (the musical branch's in slow motion). Lit: the capacitors switched in.</div>
+        </div>
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: Kelvin's formula for the key's capacitor (blue), the note (yellow)</span></div>
+          <canvas id="spectrum"></canvas>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>arc current <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>hold <kbd>Space</kbd>: keys stay down <b id="hold" class="off">off</b></span>
+      <span>keys only close contacts: velocity does nothing · mod wheel: arc current</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/arc-main.js"></script>
+</body>
+</html>

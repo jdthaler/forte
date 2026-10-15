@@ -10,6 +10,54 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-15 — singing arc
+
+### Singing Arc 0.1.0
+- New instrument: William Duddell's singing arc (1900), C3–C6, played as he
+  played it. Each key switches a capacitor across a fixed coil (20 mH) in
+  parallel with a carbon arc that burns on 220 V DC through a rheostat and a
+  0.5 H choke. Velocity does nothing: a key only closes a contact.
+- **The arc:** Ayrton's falling characteristic for solid carbons,
+  V = a + b·l + (c + d·l)/I (38.88 V, 2.074 V/mm, 11.66 W, 10.54 W/mm), is
+  the static limit of a Mayr-type column whose heat loss is chosen to
+  reproduce it, with a thermal time constant τ (5–300 µs, default 26 µs).
+  Its small-signal impedance, derived analytically and checked against a
+  numerical linearisation, has three regimes. It is negative at low
+  frequency (−B/I², −4.8 Ω at 3 A), and inductive (0.40 mH: the hysteresis
+  loop, and the note's flattening). It turns positive above
+  ωτ = 2w√(K/R₀ − 1) (4.8 kHz): the arc's ceiling.
+- **Linear analysis:** the whole circuit's quartic (musical mode, column,
+  choke) gives each note's growth rate (110 /s at the defaults) and starting
+  frequency (1.0–2.0 % below Kelvin's formula). The engine matches both
+  within 0.11 % and 0.07 ¢, and matches the thresholds in coil resistance
+  and in τ.
+- **Large signal:** Ayrton's hyperbola alone is subcritical and puts the arc
+  out. The white-hot carbons give the column a floor, set by a re-strike
+  voltage (1.1–2.5 × the burning voltage), which holds the oscillation in
+  the first kind. A high re-strike voltage gives the second kind, where the
+  arc goes out and re-strikes every cycle. The arc is bistable between the
+  threshold current (12 A) and the fold (about 17 A).
+- **The keyboard:** each key's capacitor is cut so that its steady note is in
+  tune (worst 0.08 ¢), by integrating the circuit to its cycle. A preset cuts
+  them by Kelvin's formula instead: 1–5.7 % flat.
+  - One arc: held keys put their capacitors in parallel and the pitch drops.
+  - Several arcs: 2–6 lamps, a key each; a note can be stolen only after
+    40 ms, and it fades first.
+  - Contacts close in 0.5 ms. They open with a spark that fades the note in
+    about 10 ms and goes out at a current zero.
+- **Hiss** above a hissing current that grows with the gap (7 A at 3 mm),
+  as conductance noise.
+- **The sound:** the column is its own loudspeaker, radiating the
+  thermophone's pressure (γ − 1)/(4π c² r)·dP/dt at a listening distance.
+- **Simon's talking arc:** a synthesised singer at a microphone (a Rosenberg
+  pulse, Peterson & Barney's formants), coupled into the arc through a
+  transformer.
+- Implicit integration (trapezoidal circuit, θ-method column, Newton) at 4×
+  the sample rate: six singing arcs take about 19 % of one core.
+- Views: the V–I plane with the operating point's loop drawn live, the arc's
+  glow strobed into slow motion, Duddell's circuit, and a spectrum. Eight
+  demos and 30 tests.
+
 ## 2026-10-15 — wind harp
 
 ### Wind Harp 0.1.0
