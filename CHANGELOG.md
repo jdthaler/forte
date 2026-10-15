@@ -10,6 +10,23 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-15 — views on tablets
+
+### Forte 0.6.1
+- Views no longer spill out of their cards on tablets and in narrow
+  windows. Between 601 and 1050 px wide the views stack in one column
+  inside a screen-high, scrolling panel, but the rows kept their
+  wide-screen sizing and were squeezed to fit the screen: every page's
+  230 px canvases overlapped the cards below them, at 900 px, at
+  1024 × 768 and on an iPad in portrait. There, each row is now as tall as
+  its content and the column scrolls.
+- On every screen, a row of views directly in `#views` is never squeezed
+  below its own content; its canvases still flex. This shows the
+  Tonewheel Organ's whole console (the drawbars' footages, the swell and
+  the vibrato and Leslie switches) and the Glass Armonica's mode table at
+  1440 × 900, where they were cut off; their views now scroll a little.
+- Phones and Perform are unchanged.
+
 ## 2026-10-15 — singing arc
 
 ### Singing Arc 0.1.0

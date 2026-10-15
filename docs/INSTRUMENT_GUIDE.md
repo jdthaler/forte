@@ -183,6 +183,10 @@ layout:
 - an on-screen pedal button that presses Space;
 - on phones, a page that scrolls above a keyboard stuck to the bottom,
   with Controls in place of the views.
+- on tablets and narrow windows (601–1050 px wide), the views in one
+  scrolling column, each row as tall as its content; on wide screens a row
+  of views is never squeezed below its text (its canvases take any
+  shortage) and the views scroll instead.
 
 To fit in:
 - Give a card whose `<h2>` changes at runtime a stable name with
