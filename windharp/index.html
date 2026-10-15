@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Wind Harp · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="windharp">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Wind Harp</h1>
+      <span class="sub">strings sung by the wind: the shed vortices lock onto a harmonic and hop as the wind rises</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Lock-in map">
+          <div class="card-head"><h2>Lock-in map of <b id="map-key">C4</b></h2><span class="muted" id="map-read">play a key</span></div>
+          <canvas id="map"></canvas>
+          <div class="legend"><span><i class="l-band"></i>unstable band (linear)</span><span><i class="l-hyst"></i>locked branch reaches (balance)</span><span><i class="l-st"></i>Strouhal frequency</span><span><i class="l-op"></i>the wind now</span></div>
+          <div class="caption">Frequency against wind speed for one string. The curve is its Strouhal frequency St·U/D; the horizontal lines are its harmonics. Where the curve crosses a harmonic, the dark band is where the linear analysis finds the string and its wake unstable together (lock-in); the pale extension is how far a string already locked holds on (hysteresis). The dot is the wind now, with its gusts trailing.</div>
+        </div>
+        <div class="card" data-perform data-view="Vortex street">
+          <div class="card-head"><h2>The string and its wake, slowed down</h2><span class="muted" id="street-read"></span></div>
+          <canvas id="street"></canvas>
+          <div class="caption">Above: the string from the side, its swing magnified, with the wake at each station (dots: bright when shedding in step with the string). Below: across the string at its liveliest point, the wind blowing left to right, vortices peeling off alternately into a von Kármán street while the string swings across the wind.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted" id="spec-read">live output · log frequency</span></div>
+          <canvas id="spec"></canvas>
+          <div class="caption">The last few seconds of sound, low notes at the bottom. Hops between harmonics show as steps; a gust that loses the lock leaves a gap with the faint aeolian tone sliding with the wind.</div>
+        </div>
+        <div class="card" id="info-card" data-view="The string">
+          <div class="card-head"><h2>The string of <b id="tab-key">C4</b></h2><span class="muted" id="tab-read"></span></div>
+          <dl class="info" id="info"></dl>
+          <table class="modes" id="bands"></table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>wind <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>sustain (shutters stay open): hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>mod wheel, aftertouch: more wind</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/windharp-main.js"></script>
+</body>
+</html>

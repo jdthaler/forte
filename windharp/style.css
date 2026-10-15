@@ -1,0 +1,16 @@
+/* The page's own palette and any layout beyond shared/instrument.css. */
+:root {
+  --accent: #a8e6a1;
+  --accent-2: #f2d37a;
+  --accent-ink: #0d2410;
+  --band: rgba(168, 230, 161, 0.85);
+  --hyst: rgba(168, 230, 161, 0.3);
+  --strouhal: #8fc4ff;
+  --vortex: #8fc4ff;
+  --air: #0b1016;
+}
+.legend i.l-band { background: var(--band); }
+.legend i.l-hyst { background: var(--hyst); }
+.legend i.l-st { background: var(--strouhal); }
+.legend i.l-op { background: var(--accent-2); border-radius: 50%; }
+#bands td:first-child, #bands th:first-child { text-align: left; }

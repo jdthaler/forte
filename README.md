@@ -57,7 +57,7 @@ The front page sorts them into four kinds, as here.
 | ✅ | [Bubble Organ](bubbles/) | Minnaert bubbles with heat flow, radiation and viscosity; the free surface above raises the pitch; depth, pressure, gas and liquid retune the keyboard |
 | ✅ | [Spring Keyboard](springs/) | struck helical springs in modal form, from Wittrick's helical-rod dispersion: each key's spring cut so its heard pitch lands on the note, every echo a chirp rising to the transition frequency F_C; one to three springs a key, magnetic beads in rotation or along the axis, oil and mount damping, and a Slinky whose whistles fall |
 | ✅ | [Star Keyboard](stars/) | asteroseismology on an evolutionary track (dwarfs to red giants, sped up 510,800 times): p modes driven at random by convection, each a Lorentzian of its own linewidth, from the asymptotic relation and the scaling relations; mixed modes in red giants, rotational splitting, inclination, a flare kick, and self-excited δ Scuti stars |
-| 🛠 | Wind Harp | vortex shedding locking onto string harmonics, with hysteresis |
+| ✅ | [Wind Harp](windharp/) | stiff nylon strings in a wind, each with van der Pol wake oscillators along it (Facchinetti, de Langre & Biolley): the wake locks onto a harmonic inside the band a linear analysis predicts (de Langre's coupled-mode flutter) and holds on past it (hysteresis, from a harmonic balance); every string cut to lock on its note at 4 m/s, so the wind hops each string up or down its own series; shutters that slide open, seeded gusts, mass–damping, Kircher's unison harp, the aeolian tone as a dipole |
 
 ✅ playable · 🛠 in the workshop ([build briefs](docs/WORKSHOP.md)). Each instrument's README has its equations,
 numbers, sources, and a list of what is simplified. The same notes open on
