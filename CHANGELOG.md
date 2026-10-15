@@ -10,6 +10,57 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-15 — wind harp
+
+### Wind Harp 0.1.0
+- New instrument: the Aeolian harp made playable, G3–C7. Every key is a
+  nylon string behind a shutter; pressing the key slides the shutter open
+  (velocity sets how fast, 300 ms to 10 ms) and the wind sets it singing.
+- **The wake:** van der Pol wake oscillators at stations along each string
+  (Facchinetti, de Langre & Biolley 2004), driven by the string's local
+  acceleration and loading it with their lift, with the published ε = 0.3,
+  A = 12, C_L0 = 0.3 and γ = 0.8; shedding at St(Re)·U/D from Williamson &
+  Brown's two-term fit, none below Re = 47 (a Landau-like onset), and Ω set
+  so that a fixed cylinder's wake sheds exactly at f_s (κ = 0.99442).
+- **The strings:** stiff, in modal form, one wake station per mode (8–16),
+  cut so that at the reference wind of 4 m/s each sheds at its key's note
+  and locks onto its 3rd harmonic (the sounding harmonic n₀ is a knob, 2–6):
+  diameters 0.29–4.9 mm, lengths 30–100 cm, tensions 14–360 N, Re 77–1300.
+  The treble keys have courses in unison, as fine top strings often are:
+  one string to a key to B4, two from C5 to C7 (67 strings), tuned 1.2 ¢
+  apart with gauges 0.5 % apart (seeded), each locking on its own, so a
+  course shimmers. Every key sounds its note within 0.5 ¢.
+- **The linear analysis:** de Langre's coupled-mode flutter gives each
+  harmonic's lock-in band, |δ − 1| < √(AM) (about ±2.2 % in wind), and its
+  growth rate; a harmonic balance of the distributed wake gives the locked
+  swing and how far the lock holds beyond the band (the hysteresis). The
+  engine matches both: growth within 2 % with the wake's own growth turned
+  down, lock-in where the bands begin and end, the hysteresis folds within
+  2 %, the locked swing within 1.5 %.
+- **Wind:** a slider (and the mod wheel and aftertouch) from 1 to 8 m/s
+  hops every sounding string up or down its own harmonic series; seeded
+  gusts with a von Kármán-like spectrum make strings flicker between
+  harmonics; the string's Q and a metal winding set the mass–damping, and
+  with it the swing (which follows m*ζ alone) and the band (∝ 1/√m*).
+- **Kircher's harp:** every string tuned to one note, only the gauge
+  differing, so each key sounds the harmonic of the unison its gauge locks
+  onto, and the wind makes chords of harmonics.
+- **The sound:** the bridge force through a tapered, mass-like top with
+  five broad box resonances and a first-order shelf for the top's radiation
+  efficiency (rising 6 dB an octave from 500 Hz to 4 kHz), heard by two
+  microphones, plus the wake's lift radiated as a dipole (the aeolian tone,
+  34–42 dB under a locked key). With the courses and the tapered top this
+  voices the compass evenly: a forte note peaks at 0.14–0.35 on every key.
+- Low strings step at a half or a quarter of the sample rate (ωh ≤ 0.4),
+  their force interpolated back: ten keys across the compass take about
+  20 % of one core.
+- Views: a lock-in map (the Strouhal frequency against the wind across the
+  string's harmonics, with the linear bands, the hysteresis and the wind
+  now), the string and its vortex street in slow motion, a spectrogram, and
+  the last key's string. Six demos.
+- Performance controls: wind speed, gustiness, velocity (shutter speed),
+  room and volume. Perform shows the lock-in map and the vortex street.
+
 ## 2026-10-15 — star keyboard
 
 ### Star Keyboard 0.1.0

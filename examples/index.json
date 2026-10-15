@@ -694,5 +694,31 @@
    "file": "08-centre-end-and-node-strikes.m4a",
    "title": "Centre end and node strikes"
   }
+ ],
+ "windharp": [
+  {
+   "file": "01-a-slow-tune-in-a-breathing-wind.m4a",
+   "title": "A slow tune in a breathing wind"
+  },
+  {
+   "file": "02-one-string-as-the-wind-rises-and-falls.m4a",
+   "title": "One string as the wind rises and falls"
+  },
+  {
+   "file": "03-gusts-make-a-string-flicker.m4a",
+   "title": "Gusts make a string flicker"
+  },
+  {
+   "file": "04-kircher-harp-unison-strings-in-a-rising-wind.m4a",
+   "title": "Kircher harp unison strings in a rising wind"
+  },
+  {
+   "file": "05-light-then-heavy-string.m4a",
+   "title": "Light then heavy string"
+  },
+  {
+   "file": "06-slow-then-fast-shutters.m4a",
+   "title": "Slow then fast shutters"
+  }
  ]
 }

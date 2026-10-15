@@ -177,8 +177,8 @@ export const INSTRUMENTS = [
     accent: '#ff6f91',
   },
   {
-    id: 'windharp', name: 'Wind Harp', section: 'phenomena', ready: false,
-    tagline: 'Strings sung by the wind: shed vortices lock onto a harmonic and hop to the next as the wind rises.',
+    id: 'windharp', name: 'Wind Harp', section: 'phenomena', ready: true, version: '0.1.0', trim: -4,
+    tagline: 'Strings sung by the wind: the vortices they shed lock onto one of their harmonics, and hop up the series as the wind rises.',
     physics: 'Vortex shedding · lock-in · wake oscillators',
     accent: '#a8e6a1',
   },
