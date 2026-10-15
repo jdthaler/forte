@@ -40,6 +40,17 @@ body.hide-controls #controls { display: none; }
 #views .row:has(> .card.view-hidden) { grid-template-columns: 1fr; }
 #views .row:not(:has(> .card:not(.view-hidden))) { display: none; }
 body.no-views #views { display: none; }
+/* a row of views is never squeezed below its content (the canvases, which flex,
+   take any shortage): on a short screen the views scroll instead */
+body[data-instrument]:not(.perform) #views > .row,
+body[data-instrument]:not(.perform) #views > .card { min-height: auto; }
+/* tablets and narrow windows stack the views in one scrolling column, each row
+   as tall as its content, so a canvas (230px at least, from the page's own
+   style) never spills out of a card squeezed to fit the screen (phones, below,
+   scroll the whole page and keep the page's own rows) */
+@media (min-width: 601px) and (max-width: 1050px) and (min-height: 501px) {
+  body[data-instrument]:not(.perform) #views { grid-template-rows: none; grid-auto-rows: max-content; align-content: start; }
+}
 body.no-views > main { grid-template-columns: 1fr; }
 body.no-views #groups { columns: 300px; column-gap: 28px; }
 body.no-views details.group { break-inside: avoid; }
