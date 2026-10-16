@@ -8,7 +8,7 @@
 // Keep FORTE_VERSION equal to package.json's, and log every bump in
 // CHANGELOG.md (test/site-tests.mjs checks both).
 
-export const FORTE_VERSION = '0.7.0';
+export const FORTE_VERSION = '0.7.1';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
@@ -23,7 +23,7 @@ export const SECTIONS = [
 
 export const INSTRUMENTS = [
   {
-    id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.3.0', trim: 3,
+    id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.3.1', trim: 3,
     after: 'the concert grand',
     tagline: 'Stiff strings, felt hammers and a shared bridge — then swap the strings for square bars, triangular bars or twisting ribbons.',
     physics: 'Modal strings · nonlinear hammers · torsion',
@@ -72,14 +72,14 @@ export const INSTRUMENTS = [
     accent: '#7fb2ff',
   },
   {
-    id: 'organ', name: 'Tonewheel Organ', section: 'electric', ready: true, version: '0.4.0', trim: 2,
+    id: 'organ', name: 'Tonewheel Organ', section: 'electric', ready: true, version: '0.4.1', trim: 2,
     after: 'the Hammond B-3 and Leslie',
     tagline: '91 spinning gear-driven wheels, bouncing key contacts, a scanner on an LC delay line and a rotating Doppler horn.',
     physics: 'Gear ratios · shared wheels · Doppler',
     accent: '#f0b35a',
   },
   {
-    id: 'tines', name: 'Tine Piano', section: 'electric', ready: true, version: '0.3.0', trim: -3,
+    id: 'tines', name: 'Tine Piano', section: 'electric', ready: true, version: '0.3.1', trim: -3,
     after: 'the Fender Rhodes',
     tagline: 'Each key an asymmetric tuning fork of steel tine and brass bar, heard through a nonlinear magnetic pickup.',
     physics: 'Coupled cantilevers · pickup nonlinearity',
@@ -114,14 +114,14 @@ export const INSTRUMENTS = [
     accent: '#d79a62',
   },
   {
-    id: 'glass', name: 'Glass Armonica', section: 'experimental', ready: true, version: '0.3.0', trim: 0.5,
+    id: 'glass', name: 'Glass Armonica', section: 'experimental', ready: true, version: '0.3.1', trim: 0.5,
     after: "Benjamin Franklin's armonica (1761)",
     tagline: 'Wet fingers on spinning glass bowls: stick–slip friction drives the shell modes, and rotation makes the doublets warble.',
     physics: 'Shell modes · friction · fluid loading',
     accent: '#9fe7ff',
   },
   {
-    id: 'pyrophone', name: 'Pyrophone', section: 'experimental', ready: true, version: '0.3.0', trim: -3.5,
+    id: 'pyrophone', name: 'Pyrophone', section: 'experimental', ready: true, version: '0.3.1', trim: -3.5,
     after: "Frédéric Kastner's flame organ (1873)",
     tagline: 'Flames in glass tubes sing by themselves once they cross a threshold — and remember having sung.',
     physics: 'Thermoacoustics · Hopf bifurcation',
@@ -135,7 +135,7 @@ export const INSTRUMENTS = [
     accent: '#ffe36b',
   },
   {
-    id: 'huygens', name: 'Huygens Keyboard', section: 'phenomena', ready: true, version: '0.3.0', trim: 9.5,
+    id: 'huygens', name: 'Huygens Keyboard', section: 'phenomena', ready: true, version: '0.3.1', trim: 9.5,
     tagline: 'Relaxation oscillators that pull each other into just intonation — Arnold tongues you can play.',
     physics: 'Pulse-coupled oscillators · mode locking',
     accent: '#ff8a3d',
@@ -147,7 +147,7 @@ export const INSTRUMENTS = [
     accent: '#e6c15a',
   },
   {
-    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'phenomena', ready: true, version: '0.3.0', trim: 14,
+    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'phenomena', ready: true, version: '0.3.1', trim: 14,
     tagline: 'Every key a Kerr black hole, ringing in quasinormal modes computed from the Teukolsky equation.',
     physics: 'General relativity · quasinormal modes',
     accent: '#b18cff',
@@ -177,7 +177,7 @@ export const INSTRUMENTS = [
     accent: '#ff6f91',
   },
   {
-    id: 'windharp', name: 'Wind Harp', section: 'phenomena', ready: true, version: '0.1.0', trim: -4,
+    id: 'windharp', name: 'Wind Harp', section: 'phenomena', ready: true, version: '0.1.1', trim: -4,
     tagline: 'Strings sung by the wind: the vortices they shed lock onto one of their harmonics, and hop up the series as the wind rises.',
     physics: 'Vortex shedding · lock-in · wake oscillators',
     accent: '#a8e6a1',

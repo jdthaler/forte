@@ -5,6 +5,7 @@ import { buildGenerator, keyAnalysis, keyWheel, percWheel, centsOff, wheelSpec, 
 import { roomIR } from '../../shared/impulses.js';
 import { GeneratorView, LeslieView, OutputView, drawScanner, BAR_COLORS } from './organ-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
+import { controlOwns, focusedByPointer } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 
 const $ = (s) => document.querySelector(s);
@@ -146,12 +147,12 @@ const typing = (t) => t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' &
 window.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
   // a focused <select> would swallow note keys (or type-ahead into a preset): hand them back
-  if (e.target?.tagName === 'SELECT') { if (e.code === 'Space' || codeToKey(e.code) !== null) e.target.blur(); else return; }
-  const onSlider = (e.target?.tagName === 'INPUT' && e.target.type === 'range') || e.target?.classList?.contains('drawbar');
+  if (controlOwns(e)) return; // a control reached with Tab keeps its own keys (shared/focus.js)
+  if (e.target?.tagName === 'SELECT') { if (e.code === 'Space' || e.code.startsWith('Arrow') || codeToKey(e.code) !== null) e.target.blur(); else return; }
   if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) setP({ leslie: P.leslie === 'fast' ? 'slow' : 'fast', leslieOn: true }); return; }
   if (e.code === 'Backquote') { e.preventDefault(); if (!e.repeat) setP({ motor: !P.motor }); return; }
-  if (!onSlider && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) { e.preventDefault(); shiftOctave(e.code === 'ArrowLeft' ? -12 : 12); return; }
-  if (!onSlider && (e.code === 'ArrowUp' || e.code === 'ArrowDown')) {
+  if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight')) { e.preventDefault(); shiftOctave(e.code === 'ArrowLeft' ? -12 : 12); return; }
+  if ((e.code === 'ArrowUp' || e.code === 'ArrowDown')) {
     e.preventDefault();
     setP({ expression: Math.min(1, Math.max(0, P.expression + (e.code === 'ArrowUp' ? 0.05 : -0.05))) });
     return;
@@ -241,6 +242,7 @@ const drawbarEls = DRAWBARS.map((db, d) => {
   el.addEventListener('pointermove', (e) => { if (el.hasPointerCapture(e.pointerId)) setFromY(e.clientY); });
   el.addEventListener('wheel', (e) => { e.preventDefault(); setDrawbar(d, P.drawbars[d] + (e.deltaY > 0 ? 1 : -1)); }, { passive: false });
   el.addEventListener('keydown', (e) => {
+    if (focusedByPointer(el)) return; // dragged with the pointer: the arrows go back to the keyboard
     if (e.code === 'ArrowDown' || e.code === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); setDrawbar(d, P.drawbars[d] + (e.code === 'ArrowDown' ? 1 : -1)); }
   });
   $('#drawbars').appendChild(el);
@@ -266,6 +268,7 @@ swell.addEventListener('pointerdown', (e) => { swell.setPointerCapture(e.pointer
 swell.addEventListener('pointermove', (e) => { if (swell.hasPointerCapture(e.pointerId)) swellFromY(e.clientY); });
 swell.addEventListener('wheel', (e) => { e.preventDefault(); setExpression(P.expression + (e.deltaY > 0 ? -0.02 : 0.02)); }, { passive: false });
 swell.addEventListener('keydown', (e) => {
+  if (focusedByPointer(swell)) return; // dragged with the pointer: the arrows go back to the keyboard
   const step = { ArrowUp: 0.05, ArrowRight: 0.05, ArrowDown: -0.05, ArrowLeft: -0.05, PageUp: 0.2, PageDown: -0.2 }[e.code];
   if (step !== undefined) setExpression(P.expression + step);
   else if (e.code === 'Home' || e.code === 'End') setExpression(e.code === 'End' ? 1 : 0);

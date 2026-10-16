@@ -31,6 +31,8 @@
 //   arrows        { param: id, step } — ↑/↓ nudge that parameter (by `step`; a log parameter by 1/24 of its range)
 //   modWheel      param id driven by MIDI CC1 (wheel at rest = the default, fully up = the maximum),
 //                 or { param, max } to stop short of the slider's maximum
+//   holdHint      { text, ms } for an instrument that speaks only while a key is held: the first
+//                 time a key is let go within `ms` (default 300), `text` shows as a toast
 // Hooks (all optional, all in addition to the default engine messages):
 //   onAudio(audio)  once, with { ctx, node, tone, master, roomGain, analyser }
 //   onMessage(msg)  messages from the engine ('stats' already updates #cpu)
@@ -42,6 +44,10 @@
 import { roomIR } from './impulses.js';
 import { createKeyboard } from './keyboard.js';
 import { trimGain } from './registry.js';
+import { controlOwns, focusedByPointer } from './focus.js';
+// after a change, a control picked with the pointer lets go of the focus (the keys go back to the
+// instrument); one reached with Tab keeps it, so the next Space or arrow works it again
+const release = (el) => { if (focusedByPointer(el)) el.blur(); };
 
 const $ = (s) => document.querySelector(s);
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -155,8 +161,12 @@ export function createShell(cfg) {
   };
 
   // ---- notes ---------------------------------------------------------------
+  // an instrument that speaks only while held says so the first time a key is let go too soon
+  const pressedAt = new Map();
+  let holdHinted = false;
   async function down(key, vel) {
     if (key < LO || key > HI) return;
+    if (cfg.holdHint) pressedAt.set(key, performance.now());
     latched.delete(key);
     sounding.set(key, (sounding.get(key) || 0) + 1);
     shell.keys.set(key, true);
@@ -169,6 +179,9 @@ export function createShell(cfg) {
     const n = (sounding.get(key) || 0) - 1;
     if (n > 0) { sounding.set(key, n); return; }
     sounding.delete(key);
+    if (cfg.holdHint && !holdHinted && !shell.sustain && performance.now() - (pressedAt.get(key) ?? -Infinity) < (cfg.holdHint.ms ?? 300)) {
+      holdHinted = true; toast(cfg.holdHint.text);
+    }
     if (cfg.space === 'hold' && shell.sustain) { latched.add(key); return; }
     shell.keys.set(key, false);
     const off = () => { shell.post({ type: 'noteOff', key, velocity }); cfg.onNoteOff?.(key); };
@@ -194,12 +207,15 @@ export function createShell(cfg) {
   const kbVel = () => (shell.P.velocity !== undefined ? shell.P.velocity : 0.75);
   window.addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
-    // a focused <select> would swallow note keys (or type-ahead into a preset): hand them back
-    if (e.target?.tagName === 'SELECT') { if (e.code === 'Space' || codeToKey(e.code) !== null) e.target.blur(); else return; }
-    const onSlider = e.target?.tagName === 'INPUT' && e.target.type === 'range';
+    // a control reached with Tab keeps its own keys (Space ticks a stop, arrows move a slider);
+    // one last touched with the mouse or a finger hands them back (shared/focus.js)
+    if (controlOwns(e)) return;
+    // a <select> picked from with the pointer would swallow note keys, or step to the next preset
+    // on an arrow: hand them back
+    if (e.target?.tagName === 'SELECT') { if (e.code === 'Space' || e.code.startsWith('Arrow') || codeToKey(e.code) !== null) e.target.blur(); else return; }
     if (e.code === 'Space' && cfg.space) { e.preventDefault(); if (e.isTrusted) spaceHeld = true; if (!e.repeat) setSustain(true); return; }
-    if (!onSlider && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) { e.preventDefault(); shiftOctave(e.code === 'ArrowLeft' ? -12 : 12); return; }
-    if (!onSlider && cfg.arrows && (e.code === 'ArrowUp' || e.code === 'ArrowDown')) {
+    if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') { e.preventDefault(); shiftOctave(e.code === 'ArrowLeft' ? -12 : 12); return; }
+    if (cfg.arrows && (e.code === 'ArrowUp' || e.code === 'ArrowDown')) {
       e.preventDefault();
       const p = ALL.find((q) => q.id === cfg.arrows.param), dir = e.code === 'ArrowUp' ? 1 : -1;
       // linear parameters step by `step`; log parameters by 1/24 of the slider's travel
@@ -216,7 +232,7 @@ export function createShell(cfg) {
     down(key, kbVel());
   });
   window.addEventListener('keyup', (e) => {
-    if (e.code === 'Space' && cfg.space) { if (e.isTrusted) spaceHeld = false; setSustain(false); return; }
+    if (e.code === 'Space' && cfg.space && !controlOwns(e)) { if (e.isTrusted) spaceHeld = false; setSustain(false); return; }
     const key = held.get(e.code);
     if (key !== undefined) { held.delete(e.code); up(key); }
   });
@@ -305,12 +321,12 @@ export function createShell(cfg) {
         wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;
         input = document.createElement('select'); input.id = `p-${p.id}`;
         for (const [k, name] of p.options) input.add(new Option(name, k));
-        input.addEventListener('change', () => { shell.setParam(p.id, typeof p.def === 'number' ? +input.value : input.value); input.blur(); });
+        input.addEventListener('change', () => { shell.setParam(p.id, typeof p.def === 'number' ? +input.value : input.value); release(input); });
         wrap.appendChild(input);
       } else if (p.type === 'checkbox') {
         wrap.classList.add('check');
         input = document.createElement('input'); input.type = 'checkbox'; input.id = `p-${p.id}`;
-        input.addEventListener('change', () => { shell.setParam(p.id, input.checked); input.blur(); });
+        input.addEventListener('change', () => { shell.setParam(p.id, input.checked); release(input); });
         const lab = document.createElement('label'); lab.htmlFor = input.id; lab.textContent = p.label;
         wrap.append(input, lab);
       } else {
@@ -363,7 +379,7 @@ export function createShell(cfg) {
       if (ps.value === '') return;
       const keep = Object.fromEntries((cfg.keep || []).map((k) => [k, shell.P[k]]));
       shell.setAll({ ...DEFAULTS, ...keep, ...cfg.presets[+ps.value].p });
-      ps.blur();
+      release(ps);
     });
   }
   $('#reset')?.addEventListener('click', () => { shell.setAll({ ...DEFAULTS }); if ($('#preset')) $('#preset').value = ''; });

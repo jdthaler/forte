@@ -21,6 +21,7 @@ const shell = createShell({
   chain: { volume: 'volume', room: 'room' },
   space: 'sustain',
   arrows: { param: 'wind', step: 0.05 },
+  holdHint: { ms: 400, text: 'Hold the key: the shutter must stay open while the wind sets the string singing, up to a second in the bass.' },
   modWheel: { param: 'wind', max: U_MAX },
   onAudio: (a) => { analyser = a.ctx.createAnalyser(); analyser.fftSize = 8192; analyser.smoothingTimeConstant = 0; a.node.connect(analyser); },
   onNoteOn: (key) => { focus = key; shell.keys.focus?.(key); update(); },

@@ -23,6 +23,7 @@ const shell = createShell({
   chain: { volume: 'volume', room: 'room' },
   space: 'hold',
   arrows: { param: 'press', step: 0.5 },
+  holdHint: { ms: 400, text: 'Hold the key: a glass sings only while the finger stays on its rim, and takes about half a second to speak.' },
   // MIDI mod wheel = treadle speed, from the default (wheel at rest) to twice
   // it: louder (the rim moves faster) and a faster warble. Not the slider's
   // full 3 rev/s: above about 1 rev/s the big bowls can no longer speak.
