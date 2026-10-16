@@ -25,27 +25,30 @@ const uint16_t kKeep[] = {kVolume};
 class SmokeEngine : public Engine {
  public:
   explicit SmokeEngine(double fs) : Engine(fs) { voices.reserve(32); }
-  void setParams(const double *P) override { decay = P[kDecay]; volume = P[kVolume]; }
+  void setParams(const double *P) override { decay = P[kDecay]; } // the volume is the chain's
   void noteOn(int key, double velocity) override {
     double f = 440 * std::pow(2.0, (key - 69) / 12.0), w = 2 * std::numbers::pi * f / fs;
     if (voices.size() < voices.capacity()) voices.push_back({w, 0, 0.2 * velocity, std::exp(-6.9 / (decay * fs)), key});
   }
-  void noteOff(int key, double) override { for (auto &v : voices) if (v.key == key) v.r = std::exp(-6.9 / (0.1 * fs)); }
+  void noteOff(int key, double) override { for (auto &v : voices) if (v.key == key) { v.off = true; if (!sustain) damp(v); } }
+  void setSustain(bool on) override { sustain = on; if (!on) for (auto &v : voices) if (v.off) damp(v); }
   void allNotesOff() override { voices.clear(); }
   int voiceCount() const override { return (int)voices.size(); }
   void process(float *L, float *R, int n) override {
     for (int i = 0; i < n; i++) {
       double s = 0;
       for (auto &v : voices) { s += v.a * std::sin(v.ph); v.ph += v.w; v.a *= v.r; }
-      L[i] = R[i] = (float)(volume * s);
+      L[i] = R[i] = (float)s;
     }
     std::erase_if(voices, [](const Voice &v) { return v.a < 1e-5; });
   }
 
  private:
-  struct Voice { double w, ph, a, r; int key; };
+  struct Voice { double w, ph, a, r; int key; bool off = false; };
+  void damp(Voice &v) { v.r = std::exp(-6.9 / (0.1 * fs)); }
   std::vector<Voice> voices;
-  double decay = 1, volume = 0.8;
+  bool sustain = false;
+  double decay = 1;
 };
 
 const InstrumentInfo kInfo = {

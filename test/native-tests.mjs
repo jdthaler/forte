@@ -34,6 +34,9 @@ await test('the plugins\' text matches the pages\' for most of every parameter\'
 await test('generated files are fresh (node tools/gen-native-params.mjs --check)', () => {
   execFileSync(process.execPath, [new URL('tools/gen-native-params.mjs', R).pathname, '--check'], { stdio: 'pipe' });
 });
+await test('the C++ tests\' JavaScript vectors are fresh (node tools/gen-native-vectors.mjs --check)', () => {
+  execFileSync(process.execPath, [new URL('tools/gen-native-vectors.mjs', R).pathname, '--check'], { stdio: 'pipe' });
+});
 
 const ported = portedSlugs();
 console.log(`ported instruments: ${ported.length ? ported.join(', ') : 'none yet'} (${ENGINE} engine)`);

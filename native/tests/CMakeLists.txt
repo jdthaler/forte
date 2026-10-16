@@ -1,5 +1,5 @@
 # Native unit tests (CTest), and the CI-only smoke-test plugin.
-add_executable(forte_tests core-tests.cpp)
+add_executable(forte_tests core-tests.cpp shared-tests.cpp)
 target_link_libraries(forte_tests PRIVATE forte_core)
 if (EMSCRIPTEN) # run in Node; the repository's package.json makes .js an ES module
   set_target_properties(forte_tests PROPERTIES SUFFIX ".cjs")
@@ -11,4 +11,8 @@ if (FORTE_PLUGINS AND FORTE_SMOKE)
   add_library(forte_smoke STATIC smoke/smoke.cpp)
   target_link_libraries(forte_smoke PUBLIC forte_core)
   forte_add_plugin(smoke NAME "Forte Smoke Test" VERSION 0.0.1 AU_SUBTYPE Smok INSTRUMENT forte_smoke)
+  # the shared plugin driven as a host drives it, on the smoke-test instrument
+  add_executable(forte_plugin_tests plugin-tests.cpp)
+  target_link_libraries(forte_plugin_tests PRIVATE forte_plugin forte_smoke)
+  add_test(NAME plugin COMMAND forte_plugin_tests)
 endif()
