@@ -10,6 +10,9 @@ Read first:
   in `shared/`, the engine contract, parameters and tests. Read it before
   changing an instrument or `shared/`.
 - `CHANGELOG.md`: the versioning rules are at the top.
+- `docs/PLUGINS.md`: the plan (and its decisions) for native plugins and
+  the move of the physics to C++ and WebAssembly. Read it before working on
+  `native/` or an instrument's port.
 
 ## Commands
 
