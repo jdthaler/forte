@@ -2,6 +2,7 @@
 // ported: struck sine partials, two parameters, a preset. Never shipped.
 
 #include <cmath>
+#include <numbers>
 #include <vector>
 
 #include "forte/instrument.h"
@@ -24,7 +25,7 @@ class SmokeEngine : public Engine {
   explicit SmokeEngine(double fs) : Engine(fs) { voices.reserve(32); }
   void setParams(const double *P) override { decay = P[kDecay]; volume = P[kVolume]; }
   void noteOn(int key, double velocity) override {
-    double f = 440 * std::pow(2.0, (key - 69) / 12.0), w = 2 * M_PI * f / fs;
+    double f = 440 * std::pow(2.0, (key - 69) / 12.0), w = 2 * std::numbers::pi * f / fs;
     if (voices.size() < voices.capacity()) voices.push_back({w, 0, 0.2 * velocity, std::exp(-6.9 / (decay * fs)), key});
   }
   void noteOff(int key, double) override { for (auto &v : voices) if (v.key == key) v.r = std::exp(-6.9 / (0.1 * fs)); }
