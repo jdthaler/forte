@@ -10,8 +10,9 @@ native/core + native/instruments/<slug>   C++: engines and models
         └── WebAssembly   loaded by the site's AudioWorklet, and called by its views
 ```
 
-Status: **steps 0 and 1 done** (the native setup, see [native/README.md](../native/README.md);
-every instrument headless in JavaScript); steps 2 and 3 for the template under way. The decisions below were made by the owner on
+Status: **steps 0–2 done** (the native setup, see [native/README.md](../native/README.md);
+every instrument headless in JavaScript; the shared native core); step 3 for the template
+under way. The decisions below were made by the owner on
 2026-10-16. Follow [CLAUDE.md](../CLAUDE.md) for the workflow (branch, test,
 version, pull request, merge only when asked) and update this file as steps
 land.
@@ -170,7 +171,19 @@ The plan as it was:
    loader that returns the JavaScript class, or the WebAssembly one when
    `FORTE_ENGINE=wasm`.
 
-### 2. The shared native core
+### 2. The shared native core — done (Forte 0.10.0)
+What landed (`native/core`, described in native/README.md): the ports of `dsp.js`,
+`impulses.js` and `guard.js` and Eigen for `linalg.js`, checked against the JavaScript
+(`tools/gen-native-vectors.mjs`); the output chain with a zero-latency convolver and a limiter
+after Web Audio's; a message queue for `Engine::post`; flush-to-zero; and `KeyData`, which
+builds per-key data on a worker thread and hands it over without locks. The shared plugin uses
+the chain, splits the engine's blocks at events, and handles MIDI controllers; it is tested as
+a host drives it at 44.1–192 kHz and any block size (`native/tests/plugin-tests.cpp`).
+How an engine uses `KeyData`: it owns one, calls `prepare(version, lo, hi)` when the parameters
+its notes depend on change, `get(key, version)` in `noteOn` (a note whose data isn't ready
+waits for it, a few milliseconds), `acquire`/`release` for a voice that keeps it, and
+`audioCycle()` after each block. The plan as it was:
+
 1. The engine base class mirroring the JavaScript contract, plus a way to post
    messages to the page or UI (a lock-free queue).
 2. Ports of `dsp.js`, `impulses.js` (bit-exact, same seeds) and `guard.js`;

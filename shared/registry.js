@@ -12,7 +12,7 @@
 // manufacturer is Frte), for its native plugin (docs/PLUGINS.md). Never change it: hosts
 // find saved projects' plugins by it. The VST3 class ids are in native/ids.json.
 
-export const FORTE_VERSION = '0.9.0';
+export const FORTE_VERSION = '0.10.0';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',

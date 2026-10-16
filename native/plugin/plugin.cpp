@@ -1,6 +1,7 @@
 // plugin.cpp — one CLAP plugin for any Forte instrument (an InstrumentInfo): notes and MIDI as
 // the pages take them (shared/shell.js, shared/midi.js), the parameters with a Preset choice,
-// state, and a stereo output. clap-wrapper builds the VST3, AU v2 and standalone from it.
+// state, and a stereo output through the pages' output chain (forte/chain.h). clap-wrapper
+// builds the VST3, AU v2 and standalone from it.
 
 #include "plugin.h"
 
@@ -18,6 +19,10 @@
 #include <clapwrapper/auv2.h>
 #include <clapwrapper/vst3.h>
 
+#include "forte/chain.h"
+#include "forte/denormals.h"
+#include "forte/guard.h"
+
 namespace forte {
 namespace {
 
@@ -33,6 +38,7 @@ struct Plugin {
   std::vector<uint32_t> ids; // hashed parameter ids, by index
 
   std::unique_ptr<Engine> engine;
+  OutputChain chain;
   std::vector<double> P;               // the audio thread's values
   std::unique_ptr<std::atomic<double>[]> shown; // what the host reads (main thread)
   std::vector<double> pending;         // values from a state load, for the audio thread
@@ -139,6 +145,17 @@ struct Plugin {
     set(i, v, out);
     if (P[i] != before) tell(i, out);
   }
+  // another controller the descriptor maps to a parameter: a toggle is on at 64 and above,
+  // any other parameter moves across its range
+  void controller(int cc, int v, const clap_output_events_t *out) {
+    for (int i = 0; i < I.controllerCount; i++) if (I.controllers[i].cc == cc) {
+      const int k = I.controllers[i].param;
+      const ParamInfo &p = I.params[k];
+      const double before = P[k];
+      set(k, p.kind == ParamKind::toggle ? (v >= 64 ? 1 : 0) : p.min + (p.max - p.min) * v / 127.0, out);
+      if (P[k] != before) tell(k, out);
+    }
+  }
   void midi(const uint8_t *d, const clap_output_events_t *out) {
     int cmd = d[0] & 0xf0, ch = d[0] & 0x0f;
     if (cmd == 0x90 && d[2] > 0) noteOn(ch, d[1], d[2] / 127.0);
@@ -147,6 +164,7 @@ struct Plugin {
       if (d[1] == 64 && I.space != Space::none) pedal(d[2] >= 64);
       else if (d[1] == 1) modWheel(d[2], out);
       else if (d[1] == 120 || d[1] == 123) panic();
+      else controller(d[1], d[2], out);
     } else if (cmd == 0xd0) { if (engine) engine->pressure(d[1] / 127.0, -1); }
     else if (cmd == 0xa0) { if (engine) engine->pressure(d[2] / 127.0, d[1]); }
     else if (cmd == 0xe0) {
@@ -184,6 +202,7 @@ struct Plugin {
     loadPending.store(false, std::memory_order_release);
   }
   clap_process_status process(const clap_process_t *proc) {
+    NoDenormals ftz;
     takePending();
     const uint32_t n = proc->frames_count;
     float *L = nullptr, *R = nullptr;
@@ -203,22 +222,19 @@ struct Plugin {
       }
       uint32_t end = pos + kBlock < n ? pos + kBlock : n;
       if (next < count) { uint32_t t = in->get(in, next)->time; if (t < end) end = t; }
-      if (dirty && engine) { engine->setParams(P.data()); dirty = false; }
+      if (dirty && engine) { engine->setParams(P.data()); chain.setParams(P.data()); dirty = false; }
       if (L) render(L + pos, R ? R + pos : spare, end - pos);
       pos = end;
     }
     while (next < count) event(in->get(in, next++), proc->out_events);
     return CLAP_PROCESS_CONTINUE;
   }
-  // the engine, then a guard: an error or a NaN stops the notes rather than the instrument (shared/guard.js)
+  // the engine, a guard (a NaN stops the notes rather than the instrument, shared/guard.js), the chain
   void render(float *L, float *R, uint32_t n) {
     if (!engine) { std::memset(L, 0, n * sizeof *L); std::memset(R, 0, n * sizeof *R); return; }
     engine->process(L, R, (int)n);
-    for (uint32_t i = 0; i < n; i++) if (!std::isfinite(L[i] + R[i])) {
-      std::memset(L, 0, n * sizeof *L); std::memset(R, 0, n * sizeof *R);
-      engine->allNotesOff();
-      return;
-    }
+    if (!guardBlock(L, R, (int)n)) engine->allNotesOff();
+    chain.process(L, R, (int)n);
   }
 
   // ---- state: "forte <slug> <version>" then "<id> <value>" per line ----------------------------
@@ -387,7 +403,9 @@ bool pluginInit(const clap_plugin_t *) { return true; }
 void pluginDestroy(const clap_plugin_t *p) { delete self(p); }
 bool pluginActivate(const clap_plugin_t *p, double fs, uint32_t, uint32_t) {
   Plugin *s = self(p);
+  // a new engine at the host's rate (any, 44.1–192 kHz), and the chain's impulse responses for it
   s->engine.reset(s->I.create(fs));
+  s->chain.configure(s->I.chain, fs);
   s->panic();
   if (s->I.space == Space::sustain) s->engine->setSustain(false);
   s->dirty = true;
@@ -396,7 +414,7 @@ bool pluginActivate(const clap_plugin_t *p, double fs, uint32_t, uint32_t) {
 void pluginDeactivate(const clap_plugin_t *p) { self(p)->engine.reset(); }
 bool pluginStartProcessing(const clap_plugin_t *p) { self(p)->processing = true; return true; }
 void pluginStopProcessing(const clap_plugin_t *p) { self(p)->processing = false; }
-void pluginReset(const clap_plugin_t *p) { self(p)->panic(); }
+void pluginReset(const clap_plugin_t *p) { self(p)->panic(); self(p)->chain.reset(); }
 clap_process_status pluginProcess(const clap_plugin_t *p, const clap_process_t *proc) { return self(p)->process(proc); }
 const void *pluginGetExtension(const clap_plugin_t *, const char *id) {
   if (!std::strcmp(id, CLAP_EXT_AUDIO_PORTS)) return &audioPorts;

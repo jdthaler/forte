@@ -10,6 +10,24 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-16 — the shared native core
+
+### Forte 0.10.0
+- **`native/core`: what the engines share, in C++** (step 2 of docs/PLUGINS.md), checked against
+  the JavaScript it ports (`tools/gen-native-vectors.mjs` writes what the JavaScript computes;
+  the native tests compare, natively and as WebAssembly):
+  - `shared/dsp.js` operation for operation; `shared/impulses.js` from the same seeded random
+    sequence, bit for bit; `shared/linalg.js` on Eigen; `shared/guard.js`.
+  - The output chain of `shared/chain.js` (tone, soundboard or body, room, volume and trim)
+    and a limiter with Web Audio's compressor curve and makeup gain. The convolutions have no
+    latency and spread their work: about 3 % of a core for the room at 48 kHz.
+  - Real-time plumbing: a lock-free queue for what an engine posts, flush-to-zero, and
+    per-key data (a page's `noteData`) built on a worker thread and handed to the audio thread
+    without locks, freed when no voice holds it.
+- **The plugins play through the output chain**, take MIDI controllers mapped to parameters
+  (the piano's soft pedal), and are tested as a host drives them: 44.1 to 192 kHz, blocks of
+  1 to 4096 samples (the same sound), notes and the pedal, presets, the mod wheel, state.
+
 ## 2026-10-16 — instruments without their pages
 
 ### Forte 0.9.0

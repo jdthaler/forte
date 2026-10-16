@@ -11,8 +11,10 @@ cmake/dependencies.cmake            every dependency, pinned to a commit
 cmake/forte.cmake                   forte_add_plugin(): an instrument's plugins
 emscripten-version                  the Emscripten the WebAssembly is built with
 ids.json                            each instrument's VST3 class id: generated once, never changed
-core/                               the engine contract (engine.h), parameters (params.h),
-                                    the instrument description (instrument.h), shared DSP
+core/                               the engine contract (engine.h), parameters (params.h), the
+                                    instrument description (instrument.h), and what the engines
+                                    share: dsp.h, impulses.h, linalg.h (Eigen), the output chain
+                                    (chain.h: tone, body, room, volume, limiter), background.h
 plugin/                             the CLAP plugin every instrument shares
 instruments/<slug>/                 a ported instrument: engine, model, generated tables
 tests/                              native unit tests (CTest); tests/smoke, a CI-only plugin
@@ -59,6 +61,30 @@ cd ../forte/native && cmake --preset wasm && cmake --build --preset wasm && ctes
 The built WebAssembly is committed next to each instrument's page, so the site still needs no
 build step; CI rebuilds it and fails if the committed files are stale.
 
+## The shared core
+
+`core/` is `shared/` in C++, checked against it: `tools/gen-native-vectors.mjs` writes what the
+JavaScript computes (`tests/js-vectors.h`) and `tests/shared-tests.cpp` compares.
+
+- `dsp.h`: `modeCoeffs`, `Biquad`, `OnePole`, `DCBlock`, `Delay`, `keyPan`, … operation for
+  operation, in double precision, as `shared/dsp.js`.
+- `impulses.h`: the soundboard and room responses from the same seeded Mulberry32 as
+  `shared/impulses.js`: the random sequence is bit for bit the same, the responses equal to the
+  last bit of float32 but where `exp`, `sin` or `cos` round differently from V8's.
+- `linalg.h`: `symEig`, `genEig` and `cholesky` on Eigen. Eigenvalues ascending as in
+  `shared/linalg.js`; an eigenvector's sign is arbitrary in both, so a port must not depend on
+  it. Where JavaScript throws, these return nothing (the engines have no exceptions).
+- `chain.h`: the output chain the pages build with `shared/chain.js` (Web Audio's low-pass and
+  its convolver's normalisation, the room and soundboard), plus `limiter.h`, the compressor
+  curve and makeup gain of Web Audio's DynamicsCompressorNode without its 6 ms look-ahead.
+  The convolutions have no latency (direct taps, then partitioned FFT stages that spread
+  their work): about 3 % of a core for the room at 48 kHz, 5 % with a soundboard.
+- Real-time plumbing: `queue.h` (lock-free single-producer, single-consumer), `Message` and
+  `Engine::post` for what an engine tells a page, `denormals.h` (flush to zero while
+  processing), `guard.h` (shared/guard.js), and `background.h`: per-key data built on a worker
+  thread (a page's `noteData`) and handed to the audio thread without locks or allocation,
+  freed once no voice holds it. Without threads (WebAssembly) it builds in place.
+
 ## The plugins
 
 Every instrument is the same CLAP plugin (`plugin/plugin.cpp`) around its own engine and its
@@ -73,6 +99,9 @@ clap-wrapper builds the VST3, AU v2 and standalone from the CLAP. Each plugin:
   then the preset's values, as the pages do);
 - saves its state as text (`forte <slug> <version>`, then `<id> <value>` per line), so a
   project survives parameters being added;
+- plays through the output chain, with flush-to-zero, a NaN guard, and engine blocks of at
+  most 128 samples split at each event, whatever the host's block; a new sample rate makes a
+  new engine and new impulse responses (tested at 44.1 to 192 kHz and blocks of 1 to 4096);
 - has no latency, and no window of its own: the DAW shows its generic panel.
 
 Identifiers: CLAP `net.jthaler.forte.<slug>`, vendor Forte, AU manufacturer `Frte` with the
