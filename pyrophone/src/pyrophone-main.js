@@ -38,6 +38,7 @@ const shell = createShell({
   chain: { volume: 'volume', room: 'room' },
   space: 'hold',
   arrows: { param: 'velocity', step: 0.05 },
+  holdHint: { ms: 350, text: 'Hold the key: the flame takes a moment to set the tube singing.' },
   modWheel: 'flame',
   engineParams: (P) => ({ ...P, tune: currentTune(P) }),
   onAudio: (a) => spectrum.setAnalyser(a.analyser),

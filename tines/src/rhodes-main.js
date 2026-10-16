@@ -6,6 +6,7 @@ import { RhodesEngine } from './rhodes-engine.js';
 import { roomIR } from '../../shared/impulses.js';
 import { MotionView, PickupView, SpectrumView, MODE_COLORS, modeKind } from './rhodes-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
+import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 
 const $ = (s) => document.querySelector(s);
@@ -145,11 +146,11 @@ const typing = (t) => t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' &
 window.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
   // a focused <select> would swallow note keys (or type-ahead into a preset): hand them back
-  if (e.target?.tagName === 'SELECT') { if (e.code === 'Space' || codeToKey(e.code) !== null) e.target.blur(); else return; }
-  const onSlider = e.target?.tagName === 'INPUT' && e.target.type === 'range';
+  if (controlOwns(e)) return; // a control reached with Tab keeps its own keys (shared/focus.js)
+  if (e.target?.tagName === 'SELECT') { if (e.code === 'Space' || e.code.startsWith('Arrow') || codeToKey(e.code) !== null) e.target.blur(); else return; }
   if (e.code === 'Space') { e.preventDefault(); if (e.isTrusted) spaceHeld = true; if (!e.repeat) setSustain(true); return; }
-  if (!onSlider && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) { e.preventDefault(); shiftOctave(e.code === 'ArrowLeft' ? -12 : 12); return; }
-  if (!onSlider && (e.code === 'ArrowUp' || e.code === 'ArrowDown')) {
+  if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight')) { e.preventDefault(); shiftOctave(e.code === 'ArrowLeft' ? -12 : 12); return; }
+  if ((e.code === 'ArrowUp' || e.code === 'ArrowDown')) {
     e.preventDefault();
     setParam('velocity', Math.min(5, Math.max(0.2, P.velocity * (e.code === 'ArrowUp' ? 1.25 : 0.8))));
     return;
@@ -162,7 +163,7 @@ window.addEventListener('keydown', (e) => {
   noteOn(key, P.velocity);
 });
 window.addEventListener('keyup', (e) => {
-  if (e.code === 'Space') { if (e.isTrusted) spaceHeld = false; setSustain(false); return; }
+  if (e.code === 'Space' && !controlOwns(e)) { if (e.isTrusted) spaceHeld = false; setSustain(false); return; }
   const key = held.get(e.code);
   if (key !== undefined) { held.delete(e.code); noteOff(key); }
 });

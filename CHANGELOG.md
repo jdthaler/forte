@@ -10,6 +10,55 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-16 — keys for the keyboard, and hold to sound
+
+### Forte 0.7.1
+- **Keyboard-only players can set stops and switches.** Space was always
+  the pedal, so a stop, view toggle or checkbox reached with Tab could not
+  be ticked. Now a control reached with Tab keeps the keys it uses: Space
+  ticks a checkbox or presses a button, and the arrows move a slider or step
+  a list (`shared/focus.js`). It keeps the focus after a change, so the next
+  Space or arrow works it again.
+- **A control touched with the mouse or a finger hands the keys back.**
+  After dragging a slider, the arrows moved that slider instead of the
+  octave and velocity. After the presets menu was opened and dismissed, the
+  next ↓ silently picked "Default settings" and threw away every change.
+  Now the arrows go to the instrument, and Space stays the pedal.
+- **`holdHint`** (shell config): for an instrument that speaks only while
+  a key is held, a toast says so the first time a key is let go too soon.
+  On a phone or tablet, which hide the hints behind ⌨, nothing said so before.
+
+### Ribbon Piano 0.3.1
+- The same key rules as the other pages (`shared/focus.js`).
+
+### Tine Piano 0.3.1
+- The same key rules as the other pages (`shared/focus.js`).
+
+### Huygens Keyboard 0.3.1
+- The same key rules as the other pages (`shared/focus.js`).
+
+### Black-Hole Keyboard 0.3.1
+- The same key rules as the other pages (`shared/focus.js`).
+
+### Tonewheel Organ 0.4.1
+- The same key rules. A drawbar or the swell pedal dragged with the mouse
+  no longer takes the arrows; reached with Tab, it still moves with them.
+
+### Glass Armonica 0.3.1
+- A first very short press shows a hint: hold the key. A tap is 25–45 dB
+  quieter than a held note, because the finger takes about half a second
+  to set the glass singing.
+
+### Wind Harp 0.1.1
+- A first very short press shows a hint: hold the key. The wind takes up
+  to a second, in the bass, to set a string singing, so a tap is close to
+  silent.
+
+### Pyrophone 0.3.1
+- A first very short press shows a hint: hold the key. The flame takes a
+  moment to set the tube singing; a tap on the lowest keys is about 20 dB
+  quieter than a held note.
+
 ## 2026-10-15 — a compact page: controls, views and keys
 
 ### Forte 0.7.0
