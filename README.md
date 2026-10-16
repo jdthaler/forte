@@ -145,6 +145,7 @@ index.html, landing.*        the landing page
 shared/                      shell, generic AudioWorklet, DSP and linear algebra, nav, notes, registry, styles
 test/<instrument>-tests.mjs  physics and engine tests
 tools/                       demo renderers, data generators, scaffolding
+native/                      the instruments' physics in C++: plugins and WebAssembly (docs/PLUGINS.md)
 examples/<instrument>/       rendered demos (.m4a)
 docs/INSTRUMENT_GUIDE.md     how to build a new instrument
 docs/WORKSHOP.md             briefs for the instruments in the workshop

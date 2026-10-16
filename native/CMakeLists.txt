@@ -23,10 +23,13 @@ else()
 endif()
 option(FORTE_PLUGINS "Build the plugins (CLAP, VST3, AU v2, standalone)" ${forte_plugins_default})
 option(FORTE_TESTS "Build the native unit tests (CTest)" ON)
-option(FORTE_SMOKE "Build the CI-only smoke-test plugin (tests/smoke)" ON)
 
 # The repository root: the web build writes its WebAssembly next to each instrument's page.
 get_filename_component(FORTE_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/.. ABSOLUTE)
+if (EMSCRIPTEN)
+  # the committed WebAssembly must not depend on where it was built
+  add_compile_options(-ffile-prefix-map=${FORTE_ROOT}=. -ffile-prefix-map=${CMAKE_BINARY_DIR}=build)
+endif()
 
 include(cmake/dependencies.cmake)
 include(cmake/forte.cmake)

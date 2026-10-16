@@ -16,8 +16,10 @@ core/                               the engine contract (engine.h), parameters (
                                     share: dsp.h, impulses.h, linalg.h (Eigen), the output chain
                                     (chain.h: tone, body, room, volume, limiter), background.h
 plugin/                             the CLAP plugin every instrument shares
-instruments/<slug>/                 a ported instrument: engine, model, generated tables
-tests/                              native unit tests (CTest); tests/smoke, a CI-only plugin
+web/engine-api.cpp                  the engine contract as C functions, for the WebAssembly
+instruments/<slug>/                 a ported instrument: engine, model, generated tables (the
+                                    template so far; docs/INSTRUMENT_GUIDE.md, "The native port")
+tests/                              native unit tests (CTest); tests/smoke, a test instrument
 ```
 
 ## Building
@@ -58,8 +60,12 @@ source ./emsdk_env.sh
 cd ../forte/native && cmake --preset wasm && cmake --build --preset wasm && ctest --preset wasm
 ```
 
-The built WebAssembly is committed next to each instrument's page, so the site still needs no
-build step; CI rebuilds it and fails if the committed files are stale.
+Each ported instrument's build lands next to its page (`<slug>/wasm/<slug>.wasm`, the template's
+in `docs/template/wasm/`) and is committed, so the site still needs no build step; CI rebuilds
+it and fails if the committed file is stale. It is a standalone module with no JavaScript glue:
+`shared/wasm.js` loads it in the page, the AudioWorklet and Node, and wraps the C functions of
+`web/engine-api.cpp` in a class with the engine contract. `FORTE_ENGINE=wasm` runs the Node
+tests on it.
 
 ## The shared core
 

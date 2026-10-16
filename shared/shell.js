@@ -22,6 +22,8 @@
 //   base          MIDI note of the lower-row "Z" key    (default 48)
 //   engine        { name: 'XEngine', module: URL of src/x-engine.js }: run by shared/worklet.js (see
 //                 the engine contract there)
+//   wasm          { name: 'XWasmEngine', module, binary }: the engine's WebAssembly build, run instead
+//                 when it loads (shared/wasm.js; ?engine=js in the page's address forces the JavaScript)
 //   worklet       instead of engine: { modules: ['src/x-engine.js'], engine: 'XEngine', outputs?: 2 },
 //                 or { modules: […, 'src/x-worklet.js'], processor: 'x-processor' } for a custom processor
 //   chain         the output chain (shared/chain.js): { volume, room?, tone?, body?, … }
@@ -61,6 +63,9 @@ const LOW = ['KeyZ', 'KeyS', 'KeyX', 'KeyD', 'KeyC', 'KeyV', 'KeyG', 'KeyB', 'Ke
 const LOW_LBL = ['z', 's', 'x', 'd', 'c', 'v', 'g', 'b', 'h', 'n', 'j', 'm', ',', 'l', '.', ';', '/'];
 const HIGH = ['KeyQ', 'Digit2', 'KeyW', 'Digit3', 'KeyE', 'KeyR', 'Digit5', 'KeyT', 'Digit6', 'KeyY', 'Digit7', 'KeyU', 'KeyI', 'Digit9', 'KeyO', 'Digit0', 'KeyP', 'BracketLeft', 'Equal', 'BracketRight'];
 const HIGH_LBL = ['q', '2', 'w', '3', 'e', 'r', '5', 't', '6', 'y', '7', 'u', 'i', '9', 'o', '0', 'p', '[', '=', ']'];
+
+// Run an instrument's WebAssembly build, unless the address says ?engine=js.
+export const useWasm = () => { try { return new URLSearchParams(location.search).get('engine') !== 'js'; } catch { return true; } };
 
 let toastTimer = 0;
 export function toast(msg) {
@@ -103,10 +108,20 @@ export function createShell(cfg) {
       const w = cfg.worklet || { modules: [cfg.engine.module], engine: cfg.engine.name };
       if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
       for (const m of w.modules) await ctx.audioWorklet.addModule(m);
+      // the WebAssembly build, if there is one: its bytes go to the worklet, which falls back to
+      // the JavaScript engine if it can't run them
+      let wasm;
+      if (cfg.wasm && useWasm()) {
+        try {
+          const bytes = await (await fetch(cfg.wasm.binary)).arrayBuffer();
+          await ctx.audioWorklet.addModule(cfg.wasm.module);
+          wasm = { name: cfg.wasm.name, bytes };
+        } catch (err) { console.warn(`${cfg.id}: the WebAssembly engine did not load (${err.message}); the JavaScript one plays`); }
+      }
       if (!w.processor) await ctx.audioWorklet.addModule(new URL('./worklet.js', import.meta.url));
       const node = new AudioWorkletNode(ctx, w.processor || 'forte-processor', {
         numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [w.outputs || 2],
-        processorOptions: { engine: w.engine },
+        processorOptions: { engine: w.engine, wasm },
       });
       const chain = createChain(ctx, node, cfg.chain || {});
       const analyser = ctx.createAnalyser(); analyser.fftSize = 8192; analyser.smoothingTimeConstant = 0.55;
@@ -117,10 +132,14 @@ export function createShell(cfg) {
           const el = $('#cpu');
           const pct = (x) => `${(x * 100).toFixed(0)} %`;
           el.textContent = `CPU ${pct(m.load)}${m.peak !== undefined ? ` (peak ${pct(m.peak)})` : ''}${m.voices !== undefined ? ` · ${m.voices} voices` : ''}`;
-          el.title = 'Average and worst audio-block time, as a share of the time available. A peak over 100 % is an audible dropout.';
+          el.title = `Average and worst audio-block time, as a share of the time available. A peak over 100 % is an audible dropout.${shell.engineKind ? ` Engine: ${shell.engineKind === 'wasm' ? 'WebAssembly (C++)' : 'JavaScript'}.` : ''}`;
           el.classList.toggle('hot', (m.peak ?? m.load) > 0.8);
         }
         else if (m.type === 'error') toast(m.message);
+        else if (m.type === 'engine') {
+          shell.engineKind = m.kind; document.body.dataset.engine = m.kind;
+          if (m.reason) console.warn(`${cfg.id}: the WebAssembly engine failed (${m.reason}); the JavaScript one plays`);
+        }
         cfg.onMessage?.(m);
       };
       node.onprocessorerror = () => toast('The audio engine stopped. Reload the page to restart it.');
@@ -138,7 +157,8 @@ export function createShell(cfg) {
     starting.catch((err) => { toast(`Audio failed to start: ${err.message}`); ctx?.close?.().catch(() => {}); starting = null; });
     return starting;
   };
-  const paramsMessage = () => ({ type: 'params', params: cfg.engineParams ? cfg.engineParams(shell.P) : { ...shell.P } });
+  // (P as well: a WebAssembly engine takes all the parameters)
+  const paramsMessage = () => ({ type: 'params', params: cfg.engineParams ? cfg.engineParams(shell.P) : { ...shell.P }, ...(cfg.wasm && { P: { ...shell.P } }) });
   const sendParams = () => shell.post(paramsMessage());
   shell.sendParams = sendParams;
   shell.post = (m) => { if (shell.audio) shell.audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };

@@ -20,11 +20,10 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { loadInstrument, paramsOf } from './headless.mjs';
 import { INSTRUMENTS, TEMPLATE, FORTE_VERSION, byId } from '../shared/registry.js';
+import { PAGE_ONLY } from '../shared/wasm.js'; // parameters only a page uses: the computer keys' velocity
 
 const R = new URL('../', import.meta.url);
 
-// Parameters only a page uses: the computer keys' velocity (MIDI brings its own).
-const PAGE_ONLY = ['velocity'];
 const CPP_KEYWORDS = new Set('alignas alignof and asm auto bitand bitor bool break case catch char class compl concept const consteval constexpr constinit const_cast continue default delete do double dynamic_cast else enum explicit export extern false float for friend goto if inline int long mutable namespace new noexcept not nullptr operator or private protected public register reinterpret_cast requires return short signed sizeof static static_assert static_cast struct switch template this thread_local throw true try typedef typeid typename union unsigned using virtual void volatile wchar_t while xor count'.split(' '));
 const ident = (s) => (CPP_KEYWORDS.has(s) ? `${s}_` : s);
 const isIdent = (s) => typeof s === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(s);
@@ -172,11 +171,12 @@ export function vst3Bytes(hex) {
 
 export async function generate(slug) {
   const I = await loadInstrument(slug);
-  const reg = slug === 'template' ? TEMPLATE : byId(slug);
+  // an instrument not yet in the registry names its plugin in its descriptor (tools/new-instrument.mjs)
+  const reg = slug === 'template' ? TEMPLATE : byId(slug) ?? (I.plugin && { name: I.plugin.name, plugin: { code: I.plugin.code }, version: '0.0.0' });
   if (!reg) throw new Error(`${slug} is not in shared/registry.js`);
   const ids = JSON.parse(readFileSync(new URL('native/ids.json', R), 'utf8'));
   if (!ids[slug]) throw new Error(`${slug} has no VST3 class id in native/ids.json`);
-  const version = slug === 'template' ? FORTE_VERSION : reg.version;
+  const version = slug === 'template' ? FORTE_VERSION : reg.version ?? '0.0.0';
   const pageOnly = I.pageOnly ?? PAGE_ONLY;
   const params = [];
   for (const g of I.groups) for (const p of g.params) if (!pageOnly.includes(p.id)) params.push({ ...p, group: g.title });

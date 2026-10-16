@@ -76,7 +76,7 @@ test('every ready instrument and the template have a unique four-character AU su
   const all = [...ready, TEMPLATE], codes = all.map((i) => i.plugin?.code);
   for (const [k, c] of codes.entries()) assert.match(c ?? '', /^[\x21-\x7e][\x20-\x7e]{2}[\x21-\x7e]$/, `${all[k].id}: plugin.code`);
   assert.equal(new Set(codes).size, codes.length, 'codes are unique');
-  assert.ok(!codes.includes('Smok'), 'Smok is the CI smoke-test plugin\'s');
+  assert.ok(!codes.includes('Smok'), 'Smok is the native test instrument\'s (native/tests/smoke)');
 });
 test('every ready instrument and the template have a unique VST3 class id (native/ids.json)', () => {
   const ids = JSON.parse(read('native/ids.json'));

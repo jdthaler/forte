@@ -32,8 +32,11 @@ hear each one on the page.
 {slug}/src/{slug}-model.js            physics (no audio, no DOM)
 {slug}/src/{slug}-engine.js           real-time engine (AudioWorklet and Node)
 {slug}/src/{slug}-params.js           parameters and presets
+{slug}/src/{slug}-instrument.js       the descriptor: everything but the page
 {slug}/src/{slug}-main.js             page wiring and views
-test/{slug}-tests.mjs                 node test/{slug}-tests.mjs
+{slug}/src/{slug}-wasm.js, {slug}/wasm/{slug}.wasm   the engine and model built from the C++
+native/instruments/{slug}/            the C++ port (plugins and WebAssembly)
+test/{slug}-tests.mjs                 node test/{slug}-tests.mjs (FORTE_ENGINE=wasm: on the WebAssembly)
 tools/render-{slug}.mjs               node tools/render-{slug}.mjs → examples/{slug}/
 ```
 

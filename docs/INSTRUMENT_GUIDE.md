@@ -11,7 +11,8 @@ Build briefs for new instruments (the physics, the effects, the tests and
 the prior art) go in [WORKSHOP.md](WORKSHOP.md).
 
 This creates a working (if simple) instrument: struck free–free bars,
-with a page, an engine, tests, a render tool and a README skeleton. It
+with a page, an engine, tests, a render tool, a README skeleton and its
+native port (C++ for the plugins and the WebAssembly; see "The native port"). It
 lives at `docs/template/` and is playable at `/docs/template/`. Then
 replace the bar physics with yours.
 
@@ -305,9 +306,45 @@ node tools/encode-examples.mjs <slug>     # → .m4a + examples/index.json
 
 WAVs are git-ignored. Commit the `.m4a` files.
 
+### The native port
+
+Each instrument is also C++ (docs/PLUGINS.md): the same physics, built as plugins (CLAP, VST3,
+AU, standalone) and as WebAssembly, which the page runs when it can. `tools/new-instrument.mjs`
+starts one with the template's port, already working:
+
+```
+native/instruments/<slug>/<slug>-model.*, <slug>-engine.*   the model and engine in C++, operation for operation
+native/instruments/<slug>/<slug>-instrument.cpp              its InstrumentInfo: the tables with its engine
+native/instruments/<slug>/<slug>-web.cpp                     the model functions the views call
+native/instruments/<slug>/<slug>-params.h, -info.cmake       generated from the descriptor (tools/gen-native-params.mjs)
+native/instruments/<slug>/reference.json                     the JavaScript's sound, summarised (tools/render-reference.mjs)
+<slug>/wasm/<slug>.wasm                                      built by the wasm preset; committed
+<slug>/src/<slug>-wasm.js                                    the WebAssembly as an engine class, and the model for the views
+```
+
+The descriptor's `wasm` field names the build; the shell sends it to the worklet, which runs it
+and falls back to the JavaScript engine if it cannot (`?engine=js` in the page's address forces
+the JavaScript). A WebAssembly engine takes all the parameters and computes its own per-note
+data (`forte/background.h`), so `engineParams` and `noteData` stay the JavaScript engine's.
+The views call the WebAssembly model once it has loaded.
+
+When you change the physics, change both and check they agree:
+
+```bash
+node tools/gen-native-params.mjs <slug>        # after changing parameters or presets
+node tools/render-reference.mjs <slug>         # after changing the JavaScript's sound
+cd native && cmake --build --preset wasm       # needs Emscripten (native/README.md)
+FORTE_ENGINE=wasm node test/<slug>-tests.mjs   # the same tests, on the WebAssembly
+FORTE_ENGINE=wasm node test/native-tests.mjs   # and the reference
+```
+
+`test/native-tests.mjs` (in `npm test`) fails if the generated files are stale; CI also fails
+if the committed WebAssembly isn't what the source builds, and validates the plugins.
+
 ### Going live
 
-Add the instrument to `shared/registry.js` with `ready: true, version: '0.1.0'`
+Add the instrument to `shared/registry.js` with `ready: true, version: '0.1.0'` and the
+AU code from its descriptor (`plugin: { code }`, which then leaves the descriptor)
 in one of the four sections (`traditional`, `electric`, `experimental`,
 or `phenomena` for instruments only physics can build), after the other
 ready ones in it, and add a `### <Name> 0.1.0` entry to `CHANGELOG.md`. The landing page and

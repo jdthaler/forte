@@ -10,6 +10,27 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-16 — the template in C++, as plugins and on its page
+
+### Forte 0.11.0
+- **The template is the first instrument with a native port** (step 3 of docs/PLUGINS.md): its
+  model and engine in C++ (`native/instruments/template`), with tables generated from its
+  descriptor and a reference rendered from its JavaScript.
+  - **Plugins:** Template Bars as CLAP, VST3, AU v2 and a standalone app, built and validated in
+    CI on macOS, Windows and Linux (the smoke-test plugin is retired). 10 voices take under
+    1 % of a core at 48 kHz.
+  - **WebAssembly:** 32 KB, committed in `docs/template/wasm/`. Its test suite passes on it
+    (`FORTE_ENGINE=wasm`), and it plays what the JavaScript plays to float32 rounding.
+  - **The page runs it**: its worklet plays the WebAssembly engine and its views call the
+    WebAssembly model, both falling back to the JavaScript if they cannot load
+    (`?engine=js` in the address forces the JavaScript). The CPU pill's tooltip says which.
+- **`shared/wasm.js`**: an instrument's WebAssembly loaded in a page, an AudioWorklet or Node, as
+  a class with the engine contract. `shared/worklet.js` runs it when a page sends one, and the
+  shell sends it when the descriptor names one (`wasm`).
+- **`tools/new-instrument.mjs` starts the native port too**: the C++ engine and model, the
+  generated tables and reference, a VST3 class id and an AU code. docs/INSTRUMENT_GUIDE.md has a
+  new section, "The native port".
+
 ## 2026-10-16 — the shared native core
 
 ### Forte 0.10.0

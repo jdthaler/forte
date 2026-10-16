@@ -1,9 +1,15 @@
 // template-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName } from '../../../shared/shell.js';
+import { createShell, noteName, useWasm } from '../../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../../shared/views.js';
 import { INSTRUMENT } from './template-instrument.js';
-import { keyModes, modeShape, BETA_L } from './template-model.js';
+import * as jsModel from './template-model.js';
+import { wasmModel } from './template-wasm.js';
+
+// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
+// physics as the engine, in C++), the JavaScript one until then or if it can't load.
+let model = jsModel;
+if (useWasm()) wasmModel().then((m) => { model = m; update(); }, (err) => console.warn(`template: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
 
 const $ = (s) => document.querySelector(s);
 const spectrum = new SpectrumView($('#spectrum'));
@@ -18,7 +24,7 @@ const shell = createShell({
 });
 
 function update() {
-  const modes = keyModes(focus, shell.P);
+  const modes = model.keyModes(focus, shell.P);
   spectrum.set(modes[0].f, modes.map((m) => ({ f: m.f, alpha: 0.3 + 0.6 * Math.min(1, Math.abs(m.amp)) })));
   $('#focus-name').textContent = noteName(focus);
   $('#modes').innerHTML = '<tr><th>mode</th><th>f (Hz)</th><th>ratio</th><th>T60 (s)</th><th>strike gain</th></tr>'
@@ -34,9 +40,9 @@ animate(() => {
     const yc = ((n + 0.5) * h) / 4, A = h / 12;
     ctx.strokeStyle = css('--grid'); ctx.beginPath(); ctx.moveTo(x0, yc); ctx.lineTo(x1, yc); ctx.stroke();
     ctx.strokeStyle = cols[n]; ctx.lineWidth = 2; ctx.beginPath();
-    for (let i = 0; i <= 200; i++) { const u = i / 200, X = x0 + u * (x1 - x0), Y = yc - (A * modeShape(n, u)) / 2; if (i) ctx.lineTo(X, Y); else ctx.moveTo(X, Y); }
+    for (let i = 0; i <= 200; i++) { const u = i / 200, X = x0 + u * (x1 - x0), Y = yc - (A * model.modeShape(n, u)) / 2; if (i) ctx.lineTo(X, Y); else ctx.moveTo(X, Y); }
     ctx.stroke(); ctx.lineWidth = 1;
-    ctx.fillStyle = css('--muted'); ctx.font = '10px system-ui, sans-serif'; ctx.fillText(`mode ${n + 1}  (βL = ${BETA_L[n].toFixed(3)})`, x0, yc - A - 2);
+    ctx.fillStyle = css('--muted'); ctx.font = '10px system-ui, sans-serif'; ctx.fillText(`mode ${n + 1}  (βL = ${model.BETA_L[n].toFixed(3)})`, x0, yc - A - 2);
   }
   const xs = x0 + shell.P.strike * (x1 - x0);
   ctx.strokeStyle = css('--text'); ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.moveTo(xs, 0); ctx.lineTo(xs, h); ctx.stroke(); ctx.setLineDash([]);

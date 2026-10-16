@@ -1,5 +1,6 @@
-// smoke.cpp — a CI-only instrument that proves the plugin pipeline before any real one is
-// ported: struck sine partials, two parameters, a preset. Never shipped.
+// smoke.cpp — a test instrument for the shared plugin (tests/plugin-tests.cpp): struck sines,
+// a pedal, a mod wheel, two parameters and a preset. It proved the plugin pipeline in CI until
+// the template was ported; it is not built as a plugin.
 
 #include <cmath>
 #include <numbers>
