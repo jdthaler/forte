@@ -2,26 +2,17 @@
 
 import { createShell, noteName } from '../../shared/shell.js';
 import { fit, css, animate } from '../../shared/views.js';
-import { GROUPS, PRESETS } from './stars-params.js';
-import { KEY_LO, KEY_HI, TAU, SUN, keyStar, starId, starAt, zams, legendre } from './stars-model.js';
+import { INSTRUMENT, starFor as cached, isBuilt as cachedOnly } from './stars-instrument.js';
+import { KEY_LO, KEY_HI, TAU, SUN, starAt, zams, legendre } from './stars-model.js';
 
 const $ = (s) => document.querySelector(s);
 let focus = 60, amps = null, analyser = null, fbuf = null, selected = -1, shown = -1, shownAt = 0;
 const LCOL = () => [css('--l0'), css('--l1'), css('--l2'), css('--l3')];
 
-// ---- the stars, built here and sent with each note (a red giant's mixed modes take a few ms) ------------
-const built = new Map();
-function starFor(key, P = shell.P) {
-  const id = `${starId(P)}|${key}`;
-  let c = built.get(id);
-  if (!c) {
-    c = keyStar(key, P);
-    if (built.size > 400) built.delete(built.keys().next().value);
-    built.set(id, c);
-  }
-  return c;
-}
-const isBuilt = (key, P = shell.P) => built.get(`${starId(P)}|${key}`);
+// ---- the stars, sent with each note (a red giant's mixed modes take a few ms): the descriptor keeps
+// them, and the page builds them ahead in spare moments ---------------------------------------------------
+const starFor = (key, P = shell.P) => cached(key, P);
+const isBuilt = (key, P = shell.P) => cachedOnly(key, P);
 let warmTimer = 0;
 function prewarm() {
   clearTimeout(warmTimer);
@@ -32,17 +23,8 @@ function prewarm() {
 }
 
 const shell = createShell({
-  id: 'stars',
-  groups: GROUPS,
-  presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'],
-  range: [KEY_LO, KEY_HI],
-  worklet: { modules: ['src/stars-engine.js'], engine: 'StarEngine' },
-  chain: { volume: 'volume', room: 'room' },
-  space: 'sustain',
+  ...INSTRUMENT,
   arrows: { param: 'velocity', step: 0.05 },
-  modWheel: 'spin',
-  noteData: (key) => { const d = starFor(key); return { id: d.id, key: d.key, K: d.K, family: d.family, N: d.N, modes: d.modes }; }, // what the engine needs
   onAudio: (a) => {
     // a finer analyser of our own for the spectrum view (the comb of a red giant is a few Hz apart)
     analyser = a.ctx.createAnalyser(); analyser.fftSize = 32768; analyser.smoothingTimeConstant = 0.6;

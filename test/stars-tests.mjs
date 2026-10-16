@@ -12,9 +12,13 @@ import {
   KEY_LO, KEY_HI, SUN, K0, SUN_KEY, VIS, keyFreq, cents, deltaNu, nuMax, envWidth, zams, starAt, seismic, pModes, mixedModes, thetaPOf,
   multiplets, heardPitch, Elm, splitWeights, keyStar, starId, DS,
 } from '../stars/src/stars-model.js';
-import { StarEngine, OUT, voicing } from '../stars/src/stars-engine.js';
+import { INSTRUMENT } from '../stars/src/stars-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
+import { OUT, voicing } from '../stars/src/stars-engine.js';
 import { DEFAULTS, GROUPS, PRESETS } from '../stars/src/stars-params.js';
 import { fft } from '../tools/audio-util.mjs';
+
+const StarEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000;
 let failures = 0;

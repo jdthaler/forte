@@ -20,8 +20,8 @@ export const exactMap = (P) => !(P.rSrc > 0);
 function simulate(P, cents, kick) {
   const e = new NeonEngine(FS);
   e.setParams({ ...P, kick, pitchHold: 0, drift: 0 });
-  e.noteOn(60, { f: F0, phase: 0, settled: true });
-  e.noteOn(61, { f: F0 * 2 ** (cents / 1200), phase: 0, settled: true });
+  e.noteOn(60, 1, { f: F0, phase: 0, settled: true });
+  e.noteOn(61, 1, { f: F0 * 2 ** (cents / 1200), phase: 0, settled: true });
   const L = new Float32Array(256), R = new Float32Array(256);
   for (let s = 0; s < 0.6 * FS; s += 256) e.process(L, R, 256);
   const [a, b] = e.report(0.4);

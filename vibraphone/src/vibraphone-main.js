@@ -2,8 +2,8 @@
 
 import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
-import { GROUPS, PRESETS } from './vibraphone-params.js';
-import { KEY_LO, KEY_HI, voiceData, barModel, tubeGeometry, tubeState, coupling, barTempScale, DAMPER_X, malletOf } from './vibraphone-model.js';
+import { INSTRUMENT, dataFor, isBuilt } from './vibraphone-instrument.js';
+import { KEY_LO, KEY_HI, barModel, tubeGeometry, tubeState, coupling, barTempScale, DAMPER_X, malletOf } from './vibraphone-model.js';
 import { thickness, EB_RATIOS } from './bar.js';
 
 const $ = (s) => document.querySelector(s);
@@ -11,38 +11,22 @@ const TAU = 2 * Math.PI;
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 80, fHi: 20000 });
 let focus = 60, live = null, history = [], etPeak = 0;
 
-// The bars' modal data (a few ms each) is built here and sent with each note, so the
-// audio thread never solves a bar. Built ahead, a key at a time, when the page is idle.
-const cache = new Map();
-const dataFor = (key, depth) => {
-  const id = `${key}|${depth}`;
-  let d = cache.get(id);
-  if (!d) { d = voiceData(key, depth); d.id = id; cache.set(id, d); }
-  return d;
-};
+// The bars' modal data (a few ms each) is sent with each note, so the audio thread never
+// solves a bar (the descriptor keeps it). Built ahead, a key at a time, when the page is idle.
 let warm = null;
 function warmUp() {
   clearTimeout(warm);
   const depth = shell.P.depth, keys = [];
-  for (let k = KEY_LO; k <= KEY_HI; k++) if (!cache.has(`${k}|${depth}`)) keys.push(k);
+  for (let k = KEY_LO; k <= KEY_HI; k++) if (!isBuilt(k, depth)) keys.push(k);
   keys.sort((a, b) => Math.abs(a - focus) - Math.abs(b - focus));
   const step = () => { const k = keys.shift(); if (k === undefined || depth !== shell.P.depth) return; dataFor(k, depth); warm = setTimeout(step, 15); };
   warm = setTimeout(step, 200);
 }
 
 const shell = createShell({
-  id: 'vibraphone',
-  groups: GROUPS,
-  presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'],
-  range: [KEY_LO, KEY_HI],
+  ...INSTRUMENT,
   base: 60, // Z = C4: the instrument starts at F3, so a C3 base left Z–E silent
-  worklet: { modules: ['src/vibraphone-engine.js'], engine: 'VibraphoneEngine' },
-  chain: { volume: 'volume', room: 'room' },
-  space: 'sustain',
   arrows: { param: 'velocity', step: 0.05 },
-  modWheel: 'speed',
-  noteData: (key) => dataFor(key, shell.P.depth),
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key) => { if (key !== focus) history = []; focus = key; shell.keys.focus(key); update(); },
   onParam: (id) => { if (id === 'depth' || id === '*') warmUp(); update(); },

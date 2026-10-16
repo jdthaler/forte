@@ -21,6 +21,11 @@
 // Una corda (soft pedal) shifts the action so each hammer misses one string of
 // its unison: the struck strings share the blow, and the third (or second) is
 // driven only through the bridge.
+//
+// Engine contract: shared/worklet.js. noteOn's data is the key's voice data
+// (piano-instrument.js noteData); the engine keeps the last one sent per key,
+// so the page sends it only when it changes. Hammer and instability events go
+// to the page through this.post (set by shared/worklet.js; absent in Node).
 
 const TWO_PI = 2 * Math.PI;
 const OUT_SCALE = 24; // bridge velocity → full-scale audio
@@ -327,7 +332,7 @@ export class PianoEngine {
     this.byKey = new Map();
     this.sustain = false;
     this.hammerMaxSamples = Math.round(0.08 * fs);
-    this.listeners = [];
+    this.data = new Map(); // key → its latest voice data
     // output gains glide to their targets sample by sample
     this.aSm = 1 - Math.exp(-1 / (SMOOTH_T * fs));
     this.gV = new Float64Array(MAXB); this.gH = new Float64Array(MAXB); this.gT = new Float64Array(MAXB);
@@ -335,7 +340,7 @@ export class PianoEngine {
     this.overBudget = false;
   }
 
-  emit(ev) { for (const f of this.listeners) f(ev); }
+  emit(ev) { this.post?.(ev); }
 
   snapGains() {
     const p = this.p;
@@ -352,7 +357,11 @@ export class PianoEngine {
     if (!this.voices.length) this.snapGains(); // nothing sounds: no need to glide
   }
 
-  noteOn(key, data, velocity) {
+  // velocity: hammer speed in m/s (not 0..1). A sounding voice is struck again, unless
+  // the key's data has a new version (the model changed): then a new voice starts.
+  noteOn(key, velocity, data) {
+    if (data) this.data.set(key, data); else data = this.data.get(key);
+    if (!data) return;
     let v = this.byKey.get(key);
     if (!v || v.dead || v.killing || v.version !== data.version) {
       if (v && !v.dead) { v.keyDown = false; v.updateDamping(this); }
@@ -386,6 +395,9 @@ export class PianoEngine {
     for (const v of this.voices) n += v.N;
     return n;
   }
+
+  voiceCount() { return this.voices.length; }
+  stats() { return { modes: this.modeCount() }; } // the CPU pill shows the oscillators too
 
   // Over the oscillator budget: release the quietest voices. A voice whose
   // hammer is still in flight has not been heard yet (its peak is 0), so it is

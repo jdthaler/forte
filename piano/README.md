@@ -162,9 +162,10 @@ numbers below are for C4 and come from the model:
 ```
 index.html, style.css     UI (this folder)
 src/physics.js            sections, scale design, closed-form + Ritz modes, tuning, voice data
-src/engine.js             real-time modal engine: hammer, bridge coupling, dampers (also runs in Node)
-src/worklet.js            AudioWorklet wrapper
-src/main.js               UI, audio graph, keyboard / MIDI, model cache, focus-key analysis
+src/piano-instrument.js   the instrument without its page: parameters, engine, voice data (cached), output chain
+src/engine.js             real-time modal engine: hammer, bridge coupling, dampers (also runs in Node;
+                          in the browser through ../shared/worklet.js)
+src/main.js               UI, keyboard / MIDI, focus-key analysis
 src/viz.js                slow-motion 3D view, partial spectrum / inharmonicity, cross-section
 ../shared/impulses.js     synthetic soundboard and room impulse responses
 src/params.js             every parameter, with ranges, hints and presets

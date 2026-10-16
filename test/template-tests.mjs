@@ -7,9 +7,11 @@
 
 import assert from 'node:assert/strict';
 import { BETA_L, modeShape, pulseSpectrum, keyModes } from '../docs/template/src/template-model.js';
-import { TemplateEngine } from '../docs/template/src/template-engine.js';
-import { DEFAULTS } from '../docs/template/src/template-params.js';
+import { INSTRUMENT, DEFAULTS } from '../docs/template/src/template-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { keyFreq } from '../shared/dsp.js';
+
+const TemplateEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000;
 let failures = 0;

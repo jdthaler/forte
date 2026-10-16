@@ -2,8 +2,8 @@
 
 import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
-import { GROUPS, PRESETS } from './bowed-params.js';
-import { RANGE, loopDesign, schelleng, friction, keyForce, riseTime, helmholtz, helmholtzEnvelope, VOICED, wheelOf } from './bowed-model.js';
+import { INSTRUMENT } from './bowed-instrument.js';
+import { loopDesign, schelleng, friction, keyForce, riseTime, helmholtz, helmholtzEnvelope, VOICED, wheelOf } from './bowed-model.js';
 import { BowedString, settleTime } from './string.js';
 
 const $ = (s) => document.querySelector(s);
@@ -14,17 +14,9 @@ let focus = 60, st = null, mean = null;
 const trail = [];
 
 const shell = createShell({
-  id: 'bowed',
-  groups: GROUPS,
-  presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'],
-  range: RANGE,
+  ...INSTRUMENT,
   base: 48,
-  worklet: { modules: ['src/bowed-engine.js'], engine: 'OrganistaEngine' },
-  chain: { volume: 'volume', room: 'room' },
-  space: 'hold',
   arrows: { param: 'force', step: 0.05 },
-  modWheel: 'speed', // the treadle: the instrument's swell (Helmholtz amplitude ∝ v_B)
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onMessage: (m) => {
     if (m.type !== 'state') return;

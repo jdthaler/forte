@@ -9,9 +9,13 @@ import {
   stringScale, partialFreq, cpLength, stringCount, keyModel, boardModel, boardMobility, boardResponse, sinFT, keyFreq, stretchCents, octaveStretch,
   STEEL, BOARD, KEY_LO, KEY_HI,
 } from '../grand/src/grand-model.js';
-import { GrandEngine, C_PIEZO, EQ } from '../grand/src/grand-engine.js';
+import { C_PIEZO, EQ } from '../grand/src/grand-engine.js';
+import { INSTRUMENT } from '../grand/src/grand-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../grand/src/grand-params.js';
 import { renderEngine } from '../tools/audio-util.mjs';
+
+const GrandEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000, TAU = 2 * Math.PI;
 const t00 = performance.now();

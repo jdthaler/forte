@@ -8,10 +8,13 @@ import assert from 'node:assert/strict';
 import {
   well, morseX, morseKappa, airyZero, airyZeroC, besselJp, hydrogenR, makePacket, autocorr, signalAt, derivs,
 } from '../quantum/src/quantum-model.js';
-import { QuantumEngine } from '../quantum/src/quantum-engine.js';
+import { INSTRUMENT } from '../quantum/src/quantum-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS } from '../quantum/src/quantum-params.js';
 import { symEig } from '../shared/linalg.js';
 import { keyFreq } from '../shared/dsp.js';
+
+const QuantumEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000, PI = Math.PI;
 let failures = 0;

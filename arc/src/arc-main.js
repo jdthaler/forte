@@ -2,7 +2,7 @@
 
 import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
-import { GROUPS, PRESETS } from './arc-params.js';
+import { INSTRUMENT, bankParams } from './arc-instrument.js';
 import {
   KEY_LO, KEY_HI, TAU, SUPPLY, TALK, keyFreq, arcOp, staticV, ayrtonV, capFor, startCap, kelvinC, tuneKey, linearAnalysis, circuit,
   thresholdR, thresholdCurrent, upperLimit, hissCurrent,
@@ -13,18 +13,10 @@ let focus = 60, msg = null, op = null, table = null, job = null;
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 50, fHi: 16000 });
 
 const shell = createShell({
-  id: 'arc',
-  groups: GROUPS,
-  presets: PRESETS,
-  keep: ['volume', 'room', 'dist'],
-  range: [KEY_LO, KEY_HI],
+  ...INSTRUMENT,
   base: 48,
-  worklet: { modules: ['src/arc-engine.js'], engine: 'ArcEngine' },
-  chain: { volume: 'volume', room: 'room' },
-  space: 'hold',
   arrows: { param: 'current' },
-  modWheel: 'current',
-  engineParams: (P) => ({ ...P, table }),
+  engineParams: (P) => ({ ...P, table }), // the bank cut so far (retune): in the end, the descriptor's capBank(P)
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key) => { focus = key; update(); },
   onParam: () => { retune(); update(); },
@@ -32,9 +24,10 @@ const shell = createShell({
 });
 
 // ---- the capacitors: each key's cut for the sounding note (the steady cycle, integrated), a few
-// keys per tick so the page stays responsive; meanwhile the quick start-frequency table serves ----
+// keys per tick so the page stays responsive; meanwhile the quick start-frequency table serves.
+// The finished table is the descriptor's capBank(P), cut a key at a time ----
 function retune() {
-  const P = shell.P, key = tuneKey(P);
+  const P = bankParams(shell.P), key = tuneKey(P);
   if ((table && table.key === key) || (job && job.key === key)) return;
   const o = arcOp(P), quick = new Float64Array(KEY_HI - KEY_LO + 1);
   for (let k = KEY_LO; k <= KEY_HI; k++) quick[k - KEY_LO] = P.tune === 'kelvin' ? kelvinC(keyFreq(k), P.coil * 1e-3) : startCap(k, P, o);

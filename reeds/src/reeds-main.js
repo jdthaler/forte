@@ -2,42 +2,27 @@
 
 import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, css } from '../../shared/views.js';
-import { GROUPS, PRESETS } from './reeds-params.js';
-import { keyModel, capCurve, pickupNode, electrostaticShift, hammerSpeed, KEY_LO, KEY_HI } from './reeds-model.js';
+import { INSTRUMENT, reedModel } from './reeds-instrument.js';
+import { capCurve, pickupNode, electrostaticShift, hammerSpeed } from './reeds-model.js';
 import { traceStrike } from './reeds-engine.js';
 import { MotionView, PickupView } from './reeds-views.js';
 
 const $ = (s) => document.querySelector(s);
-const FS = 48000;
-const MODEL = new Set(['solder', 'strike', 'hardness']); // parameters that change the reeds themselves
+const FS = 48000; // the views' rate
 const spectrum = new SpectrumView($('#spectrum'));
 const motion = new MotionView($('#motion'));
 const pickup = new PickupView($('#pickup'), motion);
-let focus = 60, lastVel = 0.6, version = 1, traceTimer = 0;
-const cache = new Map();
+let focus = 60, lastVel = 0.6, traceTimer = 0;
 
-// The modal model of a key, computed here (a few ms) and sent with each noteOn.
-function modelFor(key) {
-  let c = cache.get(key);
-  if (!c || c.version !== version) { c = { version, model: keyModel(key, shell.P, 2 * FS) }; cache.set(key, c); }
-  return c.model;
-}
+// The modal model of a key (the descriptor's, which also sends it with each noteOn).
+const modelFor = (key) => reedModel(key, shell.P, FS);
 
 const shell = createShell({
-  id: 'reeds',
-  groups: GROUPS,
-  presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'],
-  range: [KEY_LO, KEY_HI],
-  worklet: { modules: ['src/reeds-engine.js'], engine: 'ReedEngine' },
-  chain: { volume: 'volume', room: 'room' },
-  space: 'sustain',
+  ...INSTRUMENT,
   arrows: { param: 'velocity', step: 0.05 },
-  noteData: (key) => ({ ...modelFor(key).voice, version }),
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key, vel) => { focus = key; lastVel = vel; shell.keys.focus(key); update(true); },
   onParam: (id, v, P, p, dragging) => {
-    if (id === '*' || MODEL.has(id)) { version++; cache.clear(); }
     if (id === 'velocity') lastVel = v;
     // re-simulate the strike for the views, but not on every slider tick
     clearTimeout(traceTimer);
@@ -55,7 +40,7 @@ function update(retrace) {
   spectrum.set(f0, model.modes.map((m) => ({ f: m.f, color: m.n ? css('--accent-2') : css('--accent'), alpha: m.n ? 0.6 : 0.85 })));
   let trace = null;
   if (retrace) {
-    trace = traceStrike({ ...model.voice, version }, P, lastVel, FS, 0.12, Math.round(2 * FS * Math.min(0.06, 5 / f0)));
+    trace = traceStrike(INSTRUMENT.noteData(focus, lastVel, P, FS), P, lastVel, FS, 0.12, Math.round(2 * FS * Math.min(0.06, 5 / f0)));
     motion.set(trace, model, P, T);
     pickup.set({ T, y0: P.offset * 1e-3, trace, f0 });
   } else {

@@ -12,9 +12,12 @@ import {
   KEY_LO, KEY_HI, BRASS, CD, RANKS, WIND, P_NOM, keyFreq, tipMassRoots, modeShape, reedScale, reedModel, reedDesign, slotArea, gapWidth, areaAt,
   equilibrium, linearRoot, threshold, rankFreq, cassotto, noteName,
 } from '../harmonium/src/harmonium-model.js';
-import { HarmoniumEngine } from '../harmonium/src/harmonium-engine.js';
+import { INSTRUMENT } from '../harmonium/src/harmonium-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../harmonium/src/harmonium-params.js';
 import { fft } from '../tools/audio-util.mjs';
+
+const HarmoniumEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000;
 let failures = 0;

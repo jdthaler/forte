@@ -4,7 +4,7 @@
 
 import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
-import { GROUPS, PRESETS } from './pianet-params.js';
+import { INSTRUMENT } from './pianet-instrument.js';
 import { keyReed, simulatePluck, releaseCurve, keySpeed, workOfAdhesion, voicing, voicingT, PAD } from './pianet-model.js';
 
 const $ = (s) => document.querySelector(s);
@@ -14,13 +14,7 @@ const SHOW = 4.5, HOLD = 1.0; // seconds of slow motion, then a pause
 let focus = 60, focusVel = null, sim = null, curve = null, kr = null, shapes = null, t0 = 0, frame = 0, lastRelease = null, dirty = true;
 
 const shell = createShell({
-  id: 'pianet',
-  groups: GROUPS,
-  presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'],
-  worklet: { modules: ['src/pianet-engine.js'], engine: 'PianetEngine' },
-  chain: { volume: 'volume', room: 'room' },
-  space: 'sustain',
+  ...INSTRUMENT,
   arrows: { param: 'velocity', step: 0.05 },
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key, vel) => { focus = key; focusVel = vel; dirty = true; },

@@ -10,9 +10,12 @@ import { unitReed, tipMassRoots } from '../pianet/src/reed.js';
 import {
   keyReed, Pluck, PlateRail, pullOff, pullOffFast, workOfAdhesion, emFlux, emH2, esCap, releaseCurve, voicingT, PAD, ES, EM_ELL, KEY_LO, KEY_HI,
 } from '../pianet/src/pianet-model.js';
-import { PianetEngine } from '../pianet/src/pianet-engine.js';
+import { INSTRUMENT } from '../pianet/src/pianet-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { GROUPS, DEFAULTS, PRESETS } from '../pianet/src/pianet-params.js';
 import { keyFreq } from '../shared/dsp.js';
+
+const PianetEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000;
 let failures = 0;

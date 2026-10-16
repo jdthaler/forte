@@ -6,7 +6,12 @@
 //       ─▶ Leslie: crossover ─▶ rotating horn + drum (Doppler, directivity,
 //                                cabinet reflection) ─▶ two microphones
 //
-// Runs in the AudioWorklet (exposed on globalThis) and in Node for tests.
+// Runs in the AudioWorklet (shared/worklet.js; exposed on globalThis) and in Node for tests,
+// on the engine contract there. setParams is all a host sends: the generator's tables are
+// built here from the parameters and the sample rate (tonewheels.js buildGenerator).
+// Every 6 blocks of 128 samples it posts its state (shaft, rotors, scanner) for the views.
+
+import { buildGenerator, GEN_PARAMS } from './tonewheels.js';
 
 const TAU = 2 * Math.PI;
 const C_SOUND = 343;
@@ -32,6 +37,7 @@ export function leslieGeometry(p) {
 }
 
 export const ORGAN_DEFAULTS = {
+  tuning: 'gears', mains: 60, wheelHarm: 0.4, crosstalk: -48, leakage: -70,
   drawbars: [8, 8, 8, 0, 0, 0, 0, 0, 0],
   motor: true, inertia: 6, spinUp: 1.2,
   loading: 0.25,
@@ -91,12 +97,13 @@ export class OrganEngine {
     this.dt = 1 / fs;
     this.p = { ...ORGAN_DEFAULTS, drawbars: [...ORGAN_DEFAULTS.drawbars] };
     this.rand = rng(7);
-    this.listeners = [];
     this.now = 0;
     this.peak = 0;
+    this.stateClock = 0; // samples since the last state message
 
-    // generator
+    // generator (built by the first setParams)
     this.gen = null;
+    this.genOf = null; // the GEN_PARAMS values it was built from
     this.cr = new Float64Array(NW); this.ci = new Float64Array(NW);
     this.rc = new Float64Array(NW); this.rs = new Float64Array(NW);
     this.v = new Float64Array(NW);
@@ -132,8 +139,6 @@ export class OrganEngine {
     this.snapLive();
   }
 
-  emit(ev) { for (const f of this.listeners) f(ev); }
-
   configure(gen) {
     this.gen = gen;
     this.updateRotations();
@@ -146,6 +151,11 @@ export class OrganEngine {
     if (p.drawbars) this.p.drawbars = [...p.drawbars];
     if (this.p.sections !== prevSections) { this.I.fill(0); this.V.fill(0); }
     this.updateDerived();
+    // the generator: built on the first call, rebuilt when a parameter it depends on changes
+    if (!this.gen || GEN_PARAMS.some((k, i) => this.p[k] !== this.genOf[i])) {
+      this.genOf = GEN_PARAMS.map((k) => this.p[k]);
+      this.configure(buildGenerator(this.p, this.fs));
+    }
     // glide while anything is audible; jump when only the leakage hiss is left
     if (this.keyArr.length || this.peak > 1e-3) this.gliding = true; else this.snapLive();
   }
@@ -257,7 +267,8 @@ export class OrganEngine {
     k.evi = 0;
   }
 
-  keyDown(key, velocity = 100) {
+  // velocity 0..1 (MIDI velocity / 127; the computer keys play 100): it sets the key speed
+  noteOn(key, velocity = 100 / 127) {
     const idx = key - 36;
     if (idx < 0 || idx > 60) return;
     let k = this.keys.get(key);
@@ -273,10 +284,10 @@ export class OrganEngine {
     if (this.held === 0) this.percEnv = 1; // single trigger: re-arms only when all keys are up
     this.held++;
     k.down = true;
-    this.schedule(k, true, 0.5 + velocity / 127);
+    this.schedule(k, true, 0.5 + velocity);
   }
 
-  keyUp(key) {
+  noteOff(key) {
     const k = this.keys.get(key);
     if (!k || !k.down) return;
     k.down = false;
@@ -284,14 +295,22 @@ export class OrganEngine {
     this.schedule(k, false, 1.2);
   }
 
-  allOff() {
-    for (let i = 0; i < this.keyArr.length; i++) if (this.keyArr[i].down) this.keyUp(this.keyArr[i].key);
+  allNotesOff() {
+    for (let i = 0; i < this.keyArr.length; i++) if (this.keyArr[i].down) this.noteOff(this.keyArr[i].key);
+  }
+
+  voiceCount() { return this.keys.size; } // keys sounding, or still opening their contacts
+
+  // every 768 samples (6 blocks of 128, as the page's views expect): the state for the views
+  tick(n) {
+    this.stateClock += n;
+    if (this.stateClock >= 768) { this.stateClock -= 768; this.post?.(this.state()); }
   }
 
   process(L, R, n) {
     const p = this.p, g = this.gen;
     L.fill(0, 0, n); R.fill(0, 0, n);
-    if (!g) return;
+    if (!g) { this.tick(n); return; }
     const dtb = n * this.dt;
 
     // motor: synchronous lock when powered, viscous + Coulomb coast-down when not
@@ -490,9 +509,10 @@ export class OrganEngine {
     keys.length = j;
     if (!(peak < 1e3)) { // NaN or blow-up: reset the delay line and rotors
       this.I.fill(0); this.V.fill(0); this.hornBuf.fill(0); this.drumBuf.fill(0);
-      this.emit({ type: 'error', message: 'numerical instability — signal path reset' });
+      this.post?.({ type: 'error', message: 'numerical instability — signal path reset' });
     }
     this.peak = peak;
+    this.tick(n);
   }
 
   state() {

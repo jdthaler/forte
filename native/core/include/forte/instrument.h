@@ -25,6 +25,13 @@ struct Chain {
   double trimDb = 0;       // the registry's trim
 };
 
+// Another MIDI controller that moves a parameter (the descriptor's controllers): a toggle is on
+// at 64 and above; any other parameter moves across its range.
+struct Controller {
+  uint8_t cc;
+  int16_t param;
+};
+
 struct InstrumentInfo {
   const char *slug;
   const char *name;        // the plugin's name: the instrument's ("Gong Keyboard")
@@ -44,6 +51,8 @@ struct InstrumentInfo {
   Space space;
   int modWheel = -1;       // CC1 drives this parameter: at rest its default, fully up modWheelMax
   double modWheelMax = 0;
+  const Controller *controllers = nullptr;
+  int controllerCount = 0;
   Chain chain;
   double (*midiVelocity)(double v) = nullptr; // MIDI velocity/127 → the engine's, if not the same
 

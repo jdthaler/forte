@@ -3,7 +3,6 @@
 
 import { mkdirSync } from 'node:fs';
 import { OrganEngine } from '../organ/src/organ-engine.js';
-import { buildGenerator } from '../organ/src/tonewheels.js';
 import { DEFAULTS, PRESETS } from '../organ/src/organ-params.js';
 import { roomIR } from '../shared/impulses.js';
 import { convolve, writeWav, FS_SHIM, webAudioIR } from './audio-util.mjs';
@@ -15,9 +14,7 @@ const preset = (i) => ({ ...DEFAULTS, ...PRESETS[i].p });
 // events: [time, 'down'|'up', key] or [time, 'set', {params}]
 function render(P0, seconds, events) {
   const e = new OrganEngine(FS);
-  let P = { ...P0 };
-  e.setParams(P);
-  e.configure(buildGenerator(P, FS));
+  e.setParams(P0); // the engine builds its generator, and rebuilds it when tuning, mains … change
   const n = Math.round(seconds * FS), L = new Float64Array(n), R = new Float64Array(n);
   const bl = 64, bL = new Float32Array(bl), bR = new Float32Array(bl);
   const ev = events.map(([t, type, x]) => ({ s: Math.round(t * FS), type, x })).sort((a, b) => a.s - b.s);
@@ -25,12 +22,8 @@ function render(P0, seconds, events) {
   for (let s = 0; s < n; s += bl) {
     while (j < ev.length && ev[j].s <= s) {
       const { type, x } = ev[j++];
-      if (type === 'down') e.keyDown(x); else if (type === 'up') e.keyUp(x);
-      else {
-        const gen = Object.keys(x).some((k) => ['tuning', 'mains', 'wheelHarm', 'crosstalk', 'leakage'].includes(k));
-        P = { ...P, ...x }; e.setParams(x);
-        if (gen) e.configure(buildGenerator(P, FS));
-      }
+      if (type === 'down') e.noteOn(x); else if (type === 'up') e.noteOff(x);
+      else e.setParams(x);
     }
     e.process(bL, bR, bl);
     for (let i = 0; i < bl && s + i < n; i++) { L[s + i] = bL[i]; R[s + i] = bR[i]; }

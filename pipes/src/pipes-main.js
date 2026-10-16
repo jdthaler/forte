@@ -2,8 +2,8 @@
 
 import { createShell } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
-import { GROUPS, PRESETS } from './pipes-params.js';
-import { KEY_LO, KEY_HI, RANKS, STOPS, CP, AIR, pipeFreq, pipeModel, engaged, organName, footage, rankHarm } from './pipes-model.js';
+import { INSTRUMENT } from './pipes-instrument.js';
+import { RANKS, STOPS, CP, AIR, pipeFreq, pipeModel, engaged, organName, footage, rankHarm } from './pipes-model.js';
 import { TUNING } from './tuning-table.js';
 
 const $ = (s) => document.querySelector(s);
@@ -15,17 +15,9 @@ let clock = 0;
 const spectrum = new SpectrumView($('#spectrum'));
 
 const shell = createShell({
-  id: 'pipes',
-  groups: GROUPS,
-  presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'],
-  range: [KEY_LO, KEY_HI],
+  ...INSTRUMENT,
   base: 48,
-  worklet: { modules: ['src/pipes-engine.js'], engine: 'PipeEngine' },
-  chain: { volume: 'volume', room: 'room' },
-  space: 'hold',
   arrows: { param: 'velocity', step: 0.05 },
-  modWheel: { param: 'pressure', max: 3000 },
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key) => { focus = key; shell.keys.focus?.(key); updateModel(); },
   onParam: () => updateModel(),

@@ -39,7 +39,7 @@ function renderDry(P) {
   for (let s = 0; s < n; s += bl) {
     while (e < events.length && events[e].s <= s) {
       const ev = events[e++];
-      if (ev.on) eng.noteOn(ev.key, vd(ev.key), ev.v); else eng.noteOff(ev.key);
+      if (ev.on) eng.noteOn(ev.key, ev.v, vd(ev.key)); else eng.noteOff(ev.key);
     }
     eng.process(bL, bR, bl);
     L.set(bL.subarray(0, Math.min(bl, n - s)), s);

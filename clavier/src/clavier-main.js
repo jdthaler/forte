@@ -2,10 +2,11 @@
 
 import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
-import { GROUPS, PRESETS, strikeSpeed } from './clavier-params.js';
+import { strikeSpeed } from './clavier-params.js';
+import { INSTRUMENT } from './clavier-instrument.js';
 import {
   keyModel, stringDesign, releasedFreqs, pickupX, pickupMix, pickupWeight, pressureCents,
-  STEEL, REST_GAP, PRESS_MAX, LO, HI,
+  STEEL, REST_GAP, PRESS_MAX,
 } from './clavier-model.js';
 import { ClavierEngine } from './clavier-engine.js';
 
@@ -15,14 +16,7 @@ const spectrum = new SpectrumView($('#spectrum'));
 let focus = 60, focusVel = null, pressure = 0, bend = 0;
 
 const shell = createShell({
-  id: 'clavier',
-  groups: GROUPS,
-  presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'],
-  range: [LO, HI],
-  worklet: { modules: ['src/clavier-engine.js'], engine: 'ClavierEngine' },
-  chain: { volume: 'volume', room: 'room' },
-  space: 'sustain',                                  // the engine reads it as the mute bar
+  ...INSTRUMENT,
   arrows: { param: 'velocity', step: 0.05 },
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key, vel) => { focus = key; focusVel = vel; shell.keys.focus(key); update(); simulate(); },

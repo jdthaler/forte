@@ -14,9 +14,12 @@ import {
   harmonicParams, coupledRoots, flutterGrowth, lockBand, balance, lockedState, lockedDist, modeShapeAt, lockedAmplitude, lockedRange,
   homeHarmonic, massDamping, gustSpectrum, gustModel, GUST, courseDesign, courseSize, COURSE, shelfGain,
 } from '../windharp/src/windharp-model.js';
-import { WindHarpEngine } from '../windharp/src/windharp-engine.js';
+import { INSTRUMENT } from '../windharp/src/windharp-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../windharp/src/windharp-params.js';
 import { fft } from '../tools/audio-util.mjs';
+
+const WindHarpEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000;
 let failures = 0;

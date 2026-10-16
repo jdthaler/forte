@@ -1,10 +1,10 @@
 // quantum-main.js — the page: wires the shell to the engine and draws the views.
-// The packet of each note is computed here (makePacket, ~1 ms) and sent with the
-// noteOn, so the worklet never does setup work.
+// The packet of each note is computed here (the descriptor's noteData: makePacket, ~1 ms)
+// and sent with the noteOn, so the worklet never does setup work.
 
 import { createShell, noteName, toast } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
-import { GROUPS, PRESETS } from './quantum-params.js';
+import { INSTRUMENT, fMax as fMaxAt } from './quantum-instrument.js';
 import { makePacket, WELLS } from './quantum-model.js';
 import { waveGrid, density } from './quantum-waves.js';
 
@@ -19,22 +19,15 @@ function offBeat(p) {
   if (p.offBeat && !warned) { warned = true; toast(`${noteName(p.key)}: its revival cannot land on the beat at this tempo (n̄ at the well's limit); it plays in tune, off the beat.`); }
   return p;
 }
-const fMax = () => Math.min(20000, 0.45 * (shell?.audio?.ctx.sampleRate || 48000));
+const fMax = () => fMaxAt(shell?.audio?.ctx.sampleRate || 48000);
 const now = () => (shell.audio ? shell.audio.ctx.currentTime : performance.now() / 1000);
 const Tphi = () => (shell.P.dephase > 0 ? 1 / shell.P.dephase : Infinity);
 const fmtT = (t) => (!Number.isFinite(t) ? '∞' : t < 1 ? `${(t * 1000).toFixed(0)} ms` : `${t.toFixed(t < 10 ? 2 : 1)} s`);
 
 const shell = createShell({
-  id: 'quantum',
-  groups: GROUPS,
-  presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'],
-  worklet: { modules: ['src/quantum-engine.js'], engine: 'QuantumEngine' },
-  chain: { volume: 'volume', room: 'room' },
-  space: 'sustain',
+  ...INSTRUMENT,
   arrows: { param: 'velocity', step: 0.05 },
-  modWheel: 'dephase',
-  noteData: (key) => offBeat(makePacket(key, shell.P, { fMax: fMax() })),
+  noteData: (key, vel, P, fs) => offBeat(INSTRUMENT.noteData(key, vel, P, fs)),
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key) => { if (key !== focus) { focus = key; dirty = true; } onsetAt = now(); shell.keys.focus(key); },
   onParam: (id) => { if (id === 'dephase') dephDirty = true; else if (!LIVE_ONLY.has(id)) { dirty = true; warned = false; } },

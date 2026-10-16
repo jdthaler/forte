@@ -79,7 +79,9 @@ function rng(seed) {
   };
 }
 
-// Everything the audio engine needs to know about the generator.
+// Everything the audio engine needs to know about the generator, from these parameters and
+// the sample rate. The engine builds it itself whenever one of them changes.
+export const GEN_PARAMS = ['tuning', 'mains', 'wheelHarm', 'crosstalk', 'leakage'];
 export function buildGenerator(P, fs) {
   const r = rng(91);
   const wheelHz = new Float64Array(NUM_WHEELS + 1);

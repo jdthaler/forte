@@ -2,7 +2,7 @@
 
 import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
-import { GROUPS, PRESETS } from './bubbles-params.js';
+import { INSTRUMENT } from './bubbles-instrument.js';
 import {
   KEY_LO, KEY_HI, ROW, HYDRO, P_ATM, G, keyFreq, nozzleX, nozzleEnv, keyRadius, acoustics, riseDistance,
   ambient, liquidOf, gasOf, peakPressure, snapGain,
@@ -22,17 +22,9 @@ let focus = 72, fs = 48000, wave = null, rows = [], active = 0, shownCount = -1,
 const bubbles = [], pops = [], held = new Set();
 
 const shell = createShell({
-  id: 'bubbles',
-  groups: GROUPS,
-  presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'],
-  range: [KEY_LO, KEY_HI],
+  ...INSTRUMENT,
   base: 60,
-  worklet: { modules: ['src/bubbles-engine.js'], engine: 'BubbleEngine' },
-  chain: { volume: 'volume', room: 'room' },
-  space: 'hold',
   arrows: { param: 'velocity', step: 0.05 },
-  modWheel: 'rate',
   onAudio: (a) => { spectrum.setAnalyser(a.analyser); fs = a.ctx.sampleRate; },
   onNoteOn: (key) => { focus = key; held.add(key); shell.keys.focus(key); update(); },
   onNoteOff: (key) => { held.delete(key); update(); },

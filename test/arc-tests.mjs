@@ -15,8 +15,11 @@ import {
   linearAnalysis, stateMatrix, circuit, kelvinC, thresholdR, thresholdCurrent, upperLimit, steadyNote, keyCaps, hissCurrent, pressureGain,
   pressureGainFirstPrinciples, polyRoots, AIR,
 } from '../arc/src/arc-model.js';
-import { ArcEngine } from '../arc/src/arc-engine.js';
+import { INSTRUMENT } from '../arc/src/arc-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../arc/src/arc-params.js';
+
+const ArcEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000;
 let failures = 0;

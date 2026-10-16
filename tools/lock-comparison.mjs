@@ -47,7 +47,7 @@ console.log('\nNeon relaxation oscillators, pulse-coupled (no resonator)');
 for (const kick of [0, 0.01, 0.03]) {
   const row = pairs.map(([k, ratio, name]) => `${name} ${fmt(c(measure(() => {
     const e = new NeonEngine(FS); e.setParams({ kick, pitchHold: 0 });
-    for (const key of [60, k]) e.noteOn(key, { f: keyFreq(key) });
+    for (const key of [60, k]) e.noteOn(key, 1, { f: keyFreq(key) });
     return { e, report: (x) => x.report(1.0) };
   }) / ratio))}`);
   console.log(`  kick ${(kick * 100).toFixed(0).padStart(2)} %             ${row.join('   ')}`);

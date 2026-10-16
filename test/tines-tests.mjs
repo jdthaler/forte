@@ -1,8 +1,11 @@
 // Tine piano checks. Run: node test/tines-tests.mjs
 import assert from 'node:assert/strict';
 import { cantilever, computeKey, keyFreq, KEY_LO, KEY_HI } from '../tines/src/tine.js';
-import { RhodesEngine } from '../tines/src/rhodes-engine.js';
 import { DEFAULTS } from '../tines/src/rhodes-params.js';
+import { INSTRUMENT } from '../tines/src/tines-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
+
+const RhodesEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000;
 let failures = 0;
@@ -17,7 +20,7 @@ function render(key, params, vel, sec, eng = {}) {
   const k = computeKey(key, params, FS);
   const e = new RhodesEngine(FS);
   e.setParams({ ...params, ...eng });
-  const v = e.noteOn(key, { ...k.voice, version: 1 }, vel);
+  const v = e.noteOn(key, vel, { ...k.voice, version: 1 });
   const n = Math.round(sec * FS), L = new Float32Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
   for (let s = 0; s < n; s += bl) { e.process(bL, bR, bl); L.set(bL.subarray(0, Math.min(bl, n - s)), s); }
   return { L, k, v, e };
@@ -81,7 +84,7 @@ test('dampers stop the note on release; sustain pedal keeps it', () => {
     const k = computeKey(60, P(), FS), e = new RhodesEngine(FS);
     e.setParams(P());
     e.setSustain(sustain);
-    e.noteOn(60, { ...k.voice, version: 1 }, 2);
+    e.noteOn(60, 2, { ...k.voice, version: 1 });
     const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
     for (let i = 0; i < 0.3 * FS / bl; i++) e.process(L, R, bl);
     e.noteOff(60);
@@ -96,8 +99,8 @@ test('voice stealing never takes a chord that has just been struck', () => {
   const e = new RhodesEngine(FS); e.setParams(P()); e.setSustain(true);
   const vd = (k) => ({ ...computeKey(k, P(), FS).voice, version: 1 });
   const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
-  for (let k = KEY_LO; k < KEY_LO + 40; k++) { e.noteOn(k, vd(k), 1.8); for (let i = 0; i < 4; i++) e.process(L, R, bl); }
-  const chord = [72, 76, 79, 84].map((k) => e.noteOn(k, vd(k), 1.8));
+  for (let k = KEY_LO; k < KEY_LO + 40; k++) { e.noteOn(k, 1.8, vd(k)); for (let i = 0; i < 4; i++) e.process(L, R, bl); }
+  const chord = [72, 76, 79, 84].map((k) => e.noteOn(k, 1.8, vd(k)));
   assert.ok(chord.every((v) => !v.killing), `killed: ${chord.filter((v) => v.killing).map((v) => v.key)}`);
   e.process(L, R, bl);
   assert.ok(e.voices.filter((v) => !v.killing).length <= e.p.maxVoices, 'the limit holds once the chord has sounded');
@@ -106,7 +109,7 @@ test('long blocks (the page’s pickup-waveform view asks for up to 3500 samples
   for (const key of [KEY_LO, 33, 45]) {
     const k = computeKey(key, P(), FS), e = new RhodesEngine(FS);
     e.setParams({ ...P(), ...DRY });
-    e.noteOn(key, { ...k.voice, version: 1 }, 1.8);
+    e.noteOn(key, 1.8, { ...k.voice, version: 1 });
     const n = Math.round((3 / k.info.f0) * FS), L = new Float32Array(n), R = new Float32Array(n);
     e.process(L, R, Math.round(0.02 * FS));
     e.process(L, R, n);
@@ -118,7 +121,7 @@ test('long blocks (the page’s pickup-waveform view asks for up to 3500 samples
 // strongest 3rd-difference spike just after a change, re that signal's RMS before it
 function clickAfter(change, keys = [52, 55]) {
   const e = new RhodesEngine(FS); e.setParams(P());
-  for (const key of keys) e.noteOn(key, { ...computeKey(key, P(), FS).voice, version: 1 }, 1.8);
+  for (const key of keys) e.noteOn(key, 1.8, { ...computeKey(key, P(), FS).voice, version: 1 });
   const n = FS, x = new Float64Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl), at = 24064;
   for (let s = 0; s < n; s += bl) { if (s === at) change(e); e.process(bL, bR, bl); for (let i = 0; i < bl; i++) x[s + i] = bL[i]; }
   const d3 = (i) => x[i] - 3 * x[i - 1] + 3 * x[i - 2] - x[i - 3];
@@ -142,7 +145,7 @@ test('pickup voicing is live: centring a ringing tine trades its fundamental for
   assert.ok(before > 1 && after < 0.1, `fundamental / octave: ${before.toFixed(2)} before, ${after.toFixed(3)} after`);
   // and a gap change reaches every sounding voice
   const e = new RhodesEngine(FS); e.setParams(P());
-  const v = e.noteOn(60, { ...computeKey(60, P(), FS).voice, version: 1 }, 1.8);
+  const v = e.noteOn(60, 1.8, { ...computeKey(60, P(), FS).voice, version: 1 });
   e.setParams({ gap: 0.6 });
   const L = new Float32Array(128), R = new Float32Array(128);
   for (let i = 0; i < 100; i++) e.process(L, R, 128);
@@ -160,7 +163,7 @@ test('stable across extremes', () => {
 console.log('performance');
 test('CPU: 20 sounding keys render in under 40 % of one core', () => {
   const e = new RhodesEngine(FS); e.setParams(P());
-  for (let i = 0; i < 20; i++) { const key = 36 + 3 * i; e.noteOn(key, { ...computeKey(key, P(), FS).voice, version: 1 }, 2); }
+  for (let i = 0; i < 20; i++) { const key = 36 + 3 * i; e.noteOn(key, 2, { ...computeKey(key, P(), FS).voice, version: 1 }); }
   const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
   for (let i = 0; i < 50; i++) e.process(L, R, bl);
   const blocks = 2000, t0 = performance.now();

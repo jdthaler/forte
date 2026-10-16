@@ -2,8 +2,8 @@
 
 import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
-import { GROUPS, PRESETS, DEFAULTS } from './glass-params.js';
-import { KEY_LO, KEY_HI, bowl, freeLines, ringRatio, speakingThreshold, regulation, rimSpeed, transport } from './glass-model.js';
+import { INSTRUMENT } from './glass-instrument.js';
+import { bowl, freeLines, ringRatio, speakingThreshold, regulation, rimSpeed, transport } from './glass-model.js';
 import { MIC, TRACE } from './glass-engine.js';
 
 const $ = (s) => document.querySelector(s);
@@ -13,21 +13,10 @@ let focus = 69, model = null, state = null, zoomA = null, zoomBuf = null;
 const famColor = (n) => css(`--n${Math.min(n, 6)}`);
 
 const shell = createShell({
-  id: 'glass',
-  groups: GROUPS,
-  presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'],
-  range: [KEY_LO, KEY_HI],
+  ...INSTRUMENT,
   base: 60,
-  worklet: { modules: ['src/glass-engine.js'], engine: 'ArmonicaEngine' },
-  chain: { volume: 'volume', room: 'room' },
-  space: 'hold',
   arrows: { param: 'press', step: 0.5 },
   holdHint: { ms: 400, text: 'Hold the key: a glass sings only while the finger stays on its rim, and takes about half a second to speak.' },
-  // MIDI mod wheel = treadle speed, from the default (wheel at rest) to twice
-  // it: louder (the rim moves faster) and a faster warble. Not the slider's
-  // full 3 rev/s: above about 1 rev/s the big bowls can no longer speak.
-  modWheel: { param: 'speed', max: 2 * DEFAULTS.speed }, // 0.5–1 rev/s: faster than ~1.2 rev/s the big bowls stop speaking
   onAudio: (a) => {
     spectrum.setAnalyser(a.analyser);
     // a long FFT of our own for the doublet zoom (1.5 Hz bins at 48 kHz)

@@ -14,11 +14,14 @@ import {
   lossFilter, oversample, torsionEcho, stringLoad, wheelOf,
 } from '../bowed/src/bowed-model.js';
 import { BowedString, simulate, settleTime } from '../bowed/src/string.js';
-import { OrganistaEngine } from '../bowed/src/bowed-engine.js';
+import { INSTRUMENT } from '../bowed/src/bowed-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS } from '../bowed/src/bowed-params.js';
 import { renderEngine } from '../tools/audio-util.mjs';
 import { keyFreq } from '../shared/dsp.js';
 import { bowedFreq } from '../tools/bowed-tuning.mjs';
+
+const OrganistaEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000;
 let failures = 0;

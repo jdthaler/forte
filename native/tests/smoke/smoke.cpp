@@ -11,9 +11,11 @@ namespace {
 using namespace forte;
 
 enum { kDecay, kVolume, kCount };
+const FormatSegment kSeconds[] = {{INFINITY, "", " s", 1, 0, 2, false, false, false, false}};
+const FormatSegment kDb[] = {{0.0005, "", " dB", 0, -60, 1, false, false, false, false}, {INFINITY, "", " dB", 20, 0, 1, true, false, false, false}};
 const ParamInfo kParams[kCount] = {
-  {"decay", "Ring time", "Tone", ParamKind::continuous, 0.1, 10, 1, 0, true, true, nullptr, 0, {"", " s", 1, 0, 2}},
-  {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, {"", " dB", 20, 0, 1, true, 1e-3}},
+  {"decay", "Ring time", "Tone", ParamKind::continuous, 0.1, 10, 1, 0, true, true, nullptr, 0, kSeconds, 1},
+  {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kDb, 2},
 };
 const PresetValue kLong[] = {{kDecay, 6}};
 const Preset kPresets[] = {{"Long ring", kLong, 1}};

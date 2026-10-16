@@ -3,8 +3,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { solveQNM, trackQNM, separationConstant, SCHWARZSCHILD, C } from '../blackhole/src/qnm.js';
 import { QNMBank, keyVoice, swsh, uFromSpin, keyFreq, excitation, strainCurve, chirpSchedule, MSUN_S } from '../blackhole/src/ringdown-model.js';
-import { RingdownEngine } from '../blackhole/src/ringdown-engine.js';
+import { INSTRUMENT } from '../blackhole/src/blackhole-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS } from '../blackhole/src/ringdown-params.js';
+
+const RingdownEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 let failures = 0;
 function test(name, fn) {
@@ -130,7 +133,7 @@ test('each key is tuned on its (2,2,0) mode; rendered pitch and decay match', ()
   const m220 = v.modes.find((m) => m.l === 2 && m.m === 2 && m.n === 0);
   assert.ok(Math.abs(m220.f / keyFreq(57) - 1) < 1e-9);
   v.modes = [m220];
-  const e = new RingdownEngine(48000); e.noteOn(v, 1);
+  const e = new RingdownEngine(48000); e.noteOn(v.key, 1, v);
   const n = 48000 * 0.3, L = new Float32Array(n), R = new Float32Array(n), bL = new Float32Array(128), bR = new Float32Array(128);
   for (let s = 0; s < n; s += 128) { e.process(bL, bR, 128); L.set(bL.subarray(0, Math.min(128, n - s)), s); }
   const zc = []; for (let i = 1; i < n; i++) if (L[i - 1] < 0 && L[i] >= 0) zc.push(i - 1 + L[i - 1] / (L[i - 1] - L[i]));
@@ -142,7 +145,7 @@ test('each key is tuned on its (2,2,0) mode; rendered pitch and decay match', ()
 });
 test('inspiral chirps up and hands over to the ringdown', () => {
   const v = keyVoice(57, { ...DEFAULTS, inspiral: true, inspiralOct: 2 }, bank, 48000);
-  const e = new RingdownEngine(48000); e.noteOn(v, 1);
+  const e = new RingdownEngine(48000); e.noteOn(v.key, 1, v);
   const L = new Float32Array(128), R = new Float32Array(128);
   let fPrev = 0, mono = true, ringAt = null;
   for (let s = 0; s < 48000 * 3 && !ringAt; s += 128) {
@@ -157,7 +160,7 @@ test('the strain is continuous through the handover: no notch at the merger', ()
   // face-on, |h| = √(h₊² + h×²) is the envelope; it must follow the ringdown's, |Σ C ζ(t)|
   for (const [key, spinU, overtones] of [[45, DEFAULTS.spinU, 1], [69, DEFAULTS.spinU, 0], [57, 3, 1], [81, 3, 0]]) {
     const v = keyVoice(key, { ...DEFAULTS, inspiral: true, inspiralOct: 1.5, inclination: 0, spinU, overtones }, bank, 48000);
-    const e = new RingdownEngine(48000); e.noteOn(v, 1);
+    const e = new RingdownEngine(48000); e.noteOn(v.key, 1, v);
     const L = new Float32Array(1), R = new Float32Array(1), h = [];
     let at = -1;
     for (let s = 0; s < 48000 * 3 && (at < 0 || s < at + 2000); s++) { e.process(L, R, 1); h.push(Math.hypot(L[0], R[0])); if (at < 0 && e.voices[0].ring) at = s; }
@@ -175,7 +178,7 @@ test('the strain is continuous through the handover: no notch at the merger', ()
 test('the plotted strain (closed form) is what the engine plays', () => {
   for (const P of [{ ...DEFAULTS }, { ...DEFAULTS, spinU: 4, massRatio: 4, inclination: 70, retrograde: 0.5 }, { ...DEFAULTS, inspiral: true, inspiralOct: 1 }]) {
     const v = keyVoice(60, P, bank, 48000), n = 1200, cv = strainCurve(v, n);
-    const total = Math.round(cv.dur * 48000) + 1, e = new RingdownEngine(48000); e.noteOn(v, 1);
+    const total = Math.round(cv.dur * 48000) + 1, e = new RingdownEngine(48000); e.noteOn(v.key, 1, v);
     const hp = new Float32Array(total + 128), hx = new Float32Array(total + 128), L = new Float32Array(128), R = new Float32Array(128);
     for (let s = 0; s < total; s += 128) { e.process(L, R, 128); hp.set(L, s); hx.set(R, s); }
     let err = 0, mx = 0, dot = 0, nA = 0, nB = 0;
@@ -212,11 +215,11 @@ test('voice stealing fades the quietest voice instead of cutting the oldest', ()
   const play = (max) => {
     const e = new RingdownEngine(48000); e.setParams({ maxVoices: max });
     const arr = e.voices, L = new Float32Array(128), R = new Float32Array(128), out = [];
-    e.noteOn(loud, 1);
+    e.noteOn(loud.key, 1, loud);
     for (let i = 0; i < 20; i++) e.process(L, R, 128);
-    e.noteOn(quiet, 0.05);
+    e.noteOn(quiet.key, 0.05, quiet);
     for (let i = 0; i < 20; i++) e.process(L, R, 128);
-    e.noteOn(loud, 1);                                     // over the limit when max = 2
+    e.noteOn(loud.key, 1, loud);                           // over the limit when max = 2
     for (let i = 0; i < 40; i++) { e.process(L, R, 128); out.push(...L); }
     assert.equal(e.voices, arr, 'voices compacted in place');
     return { out, e };

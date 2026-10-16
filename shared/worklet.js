@@ -11,6 +11,7 @@
 //   setParams(P)                  full parameter object, or the page's engineParams(P)
 //   setSustain?(on)   allNotesOff?()   handle?(msg)   (any other message type)
 //   voiceCount?()                 shown in the CPU pill
+//   stats?()                      more fields for the page's stats message (e.g. { modes })
 //   engine.post(msg)              set by this wrapper: send a message to the page
 
 import { runGuarded } from './guard.js';
@@ -61,7 +62,7 @@ class ForteProcessor extends AudioWorkletProcessor {
     if (++this.blocks >= 96) {
       const block = (n * 1000) / sampleRate;
       // the worst block needs a sub-millisecond clock; with 1 ms ticks only the average is meaningful
-      this.port.postMessage({ type: 'stats', load: this.busy / (this.blocks * block), peak: fine ? this.worst / block : undefined, voices: this.engine.voiceCount?.() });
+      this.port.postMessage({ type: 'stats', load: this.busy / (this.blocks * block), peak: fine ? this.worst / block : undefined, voices: this.engine.voiceCount?.(), ...this.engine.stats?.() });
       this.busy = 0;
       this.worst = 0;
       this.blocks = 0;

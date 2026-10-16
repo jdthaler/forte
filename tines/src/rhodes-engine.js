@@ -9,6 +9,11 @@
 // Live controls glide rather than jump once per block (which clicks): the
 // pickup's position, width and voicing per voice, and the harp resonance,
 // speaker roll-off, amp drive, vibrato depth and level for the whole output.
+//
+// Engine contract: shared/worklet.js. noteOn's data is the key's voice data
+// (tines-instrument.js noteData); the engine keeps the last one sent per key,
+// so the page sends it only when it changes. Hammer and instability events
+// go to the page through this.post (set by shared/worklet.js; absent in Node).
 
 import { pickupFor } from './tine.js';
 
@@ -166,7 +171,7 @@ class Voice {
         this.hammerSamples++;
         if (this.hammerSamples > eng.hammerMax || (this.contact && F === 0 && this.dPrev < -2e-3)) {
           this.hammerOn = false;
-          eng.emit({ type: 'hammer', key: this.key, contactMs: (this.contactSamples / eng.fs2) * 1000, Fmax: this.Fmax });
+          eng.post?.({ type: 'hammer', key: this.key, contactMs: (this.contactSamples / eng.fs2) * 1000, Fmax: this.Fmax });
         }
       }
       if (y < yMin) yMin = y;
@@ -194,7 +199,7 @@ class Voice {
     }
     this.phiPrev = phiPrev; this.yMin = yMin; this.yMax = yMax;
     this.peak = peak; this.age += n;
-    if (!(peak < 1e3)) { this.dead = true; eng.emit({ type: 'error', key: this.key, message: 'numerical instability' }); return; }
+    if (!(peak < 1e3)) { this.dead = true; eng.post?.({ type: 'error', key: this.key, message: 'numerical instability' }); return; }
     if (!this.hammerOn) {
       this.quiet = peak < (this.damped ? 2e-5 : 2e-6) ? this.quiet + 1 : 0;
       if (this.quiet > 60) this.dead = true;
@@ -210,7 +215,7 @@ export class RhodesEngine {
     this.p = { ...RHODES_ENGINE_DEFAULTS };
     this.voices = []; this.byKey = new Map(); this.sustain = false;
     this.hammerMax = Math.round(0.05 * this.fs2);
-    this.listeners = [];
+    this.keyData = new Map(); // key → the voice data last sent for it
     this.mono = new Float64Array(OS * MAXN);
     // decimation FIR: Blackman-windowed sinc, cutoff at the output Nyquist. That
     // is a half-band filter: every tap an even distance from the centre (other
@@ -236,8 +241,6 @@ export class RhodesEngine {
     this.snapLive();
   }
 
-  emit(ev) { for (const f of this.listeners) f(ev); }
-
   // Jump the output stage straight to the current settings (nothing sounding).
   snapLive() {
     const p = this.p;
@@ -258,7 +261,11 @@ export class RhodesEngine {
     if (this.voices.length) this.gliding = true; else this.snapLive();
   }
 
-  noteOn(key, data, velocity) {
+  // data: the key's voice data, or undefined to reuse the last sent. Returns the voice (the page's view reads it).
+  noteOn(key, velocity, data) {
+    if (data) this.keyData.set(key, data);
+    data = this.keyData.get(key);
+    if (!data) return undefined;
     let v = this.byKey.get(key);
     if (!v || v.dead || v.killing || v.version !== data.version) {
       if (v && !v.dead) { v.keyDown = false; v.updateDamping(this); }
@@ -292,6 +299,7 @@ export class RhodesEngine {
   noteOff(key) { const v = this.byKey.get(key); if (v) { v.keyDown = false; v.updateDamping(this); } }
   setSustain(on) { this.sustain = !!on; for (let i = 0; i < this.voices.length; i++) this.voices[i].updateDamping(this); }
   allNotesOff() { for (let i = 0; i < this.voices.length; i++) this.voices[i].kill(); }
+  voiceCount() { return this.voices.length; }
 
   process(L, R, n) {
     for (let off = 0; off < n; off += MAXN) this.block(L, R, off, Math.min(MAXN, n - off));

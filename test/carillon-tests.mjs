@@ -13,8 +13,11 @@ import {
   BELL_TABLE, KEY_LO, KEY_HI, keyFreq, cents, bellOf, bellModes, clapperOf, hertzTime, clapperSpeed, strikeNote, struckPartials,
   doubletSplit, airAbsorption, radiationEfficiency, historic, IDEAL,
 } from '../carillon/src/carillon-model.js';
-import { CarillonEngine } from '../carillon/src/carillon-engine.js';
+import { INSTRUMENT } from '../carillon/src/carillon-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../carillon/src/carillon-params.js';
+
+const CarillonEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000;
 let failures = 0;

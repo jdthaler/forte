@@ -6,7 +6,7 @@
 
 import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
-import { GROUPS, PRESETS } from './grand-params.js';
+import { INSTRUMENT } from './grand-instrument.js';
 import { boardModel, boardResponse, decayRates, hammerSpeed } from './grand-model.js';
 import { GrandEngine, MODE_BUDGET } from './grand-engine.js';
 
@@ -31,14 +31,7 @@ function adapt({ load, peak }) {
 }
 
 const shell = createShell({
-  id: 'grand',
-  groups: GROUPS,
-  presets: PRESETS,
-  keep: ['volume', 'room', 'velocity', 'maxFreq'],
-  range: [28, 100],
-  worklet: { modules: ['src/grand-engine.js'], engine: 'GrandEngine' },
-  chain: { volume: 'volume', room: 'room' },
-  space: 'sustain',
+  ...INSTRUMENT,
   arrows: { param: 'velocity', step: 0.05 },
   onAudio: (a) => { spectrum.setAnalyser(a.analyser); sendBudget(); },
   onMessage: (m) => { if (m.type === 'stats') adapt(m); },

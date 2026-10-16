@@ -12,9 +12,13 @@ import {
 } from '../reeds/src/reeds-model.js';
 import { makeSlot, placeReed, solve, reedCharge, slotProfile } from '../reeds/src/slot-field.js';
 import { SLOT_GAPS, SLOT_Y } from '../reeds/src/slot-table.js';
-import { ReedEngine, Voice, traceStrike } from '../reeds/src/reeds-engine.js';
+import { Voice, traceStrike } from '../reeds/src/reeds-engine.js';
+import { INSTRUMENT } from '../reeds/src/reeds-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../reeds/src/reeds-params.js';
 import { renderEngine } from '../tools/audio-util.mjs';
+
+const ReedEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000, TAU = 2 * Math.PI;
 let failures = 0;

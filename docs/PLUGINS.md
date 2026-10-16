@@ -10,8 +10,8 @@ native/core + native/instruments/<slug>   C++: engines and models
         └── WebAssembly   loaded by the site's AudioWorklet, and called by its views
 ```
 
-Status: **step 0 done** (the native setup; see [native/README.md](../native/README.md));
-steps 1–3 for the template under way. The decisions below were made by the owner on
+Status: **steps 0 and 1 done** (the native setup, see [native/README.md](../native/README.md);
+every instrument headless in JavaScript); steps 2 and 3 for the template under way. The decisions below were made by the owner on
 2026-10-16. Follow [CLAUDE.md](../CLAUDE.md) for the workflow (branch, test,
 version, pull request, merge only when asked) and update this file as steps
 land.
@@ -123,9 +123,30 @@ ids. The plan as it was:
    validators run in CI. Listening in a DAW is the owner's job, noted in each
    pull request.
 
-### 1. Make each instrument headless in JavaScript first
-This is a refactor that leaves the sound unchanged; it is useful even before
-any C++ exists.
+### 1. Make each instrument headless in JavaScript first — done (Forte 0.9.0)
+What landed:
+- Every instrument and the template has `<slug>/src/<slug>-instrument.js`, exporting
+  `INSTRUMENT` (the fields are in docs/INSTRUMENT_GUIDE.md, "The descriptor"). Besides the
+  plan's list it has `controllers` (other MIDI CCs, e.g. the piano's soft pedal),
+  `midiVelocity` (the piano, tines and black hole map velocity themselves), `keyVelocity` and
+  `load` (the black hole's QNM table). Every demo renders byte for byte as before.
+- The five older pages keep their own keys, MIDI and controls (moving them onto the shell is
+  left for their ports), but their engines are on the shared contract, they run in
+  `shared/worklet.js`, and every page builds its output chain with `shared/chain.js`.
+- `tools/headless.mjs` plays any instrument from its descriptor in Node, as its page does.
+- `tools/gen-native-params.mjs` writes `native/instruments/<slug>/<slug>-params.h` and
+  `<slug>-info.cmake` for ported instruments (`--report` for any). Units come from sampling
+  each `fmt`: 430 of 440 parameters get a text matching the page's over 95–100 % of their
+  travel, 10 fall back to a plain number (`--report` lists them; a descriptor could carry an
+  explicit unit for them). `native/tests/format-vectors.h` checks the C++ formats as the
+  JavaScript does.
+- `tools/render-reference.mjs` writes `native/instruments/<slug>/reference.json`.
+- `tools/engine.mjs` (`loadEngine`) gives every test suite its engine.
+- For later ports: the organ's console (drawbars, percussion, vibrato and Leslie switches,
+  the motor) lives outside `GROUPS`, so its plugin needs them added as parameters; its CC1
+  and CC64 switch the Leslie, which `controllers` can't express yet.
+
+The plan as it was:
 1. Give each instrument a descriptor module (`<slug>/src/<slug>-instrument.js`)
    holding everything that isn't the page:
    - `GROUPS` and `PRESETS`;
