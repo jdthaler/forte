@@ -101,15 +101,20 @@ body.deck-shut .forte-deck { display: none; }
 body[data-instrument] .forte-deck .forte-surface { flex: 0 1 auto; min-width: 0; margin: 0; }
 .forte-perform { flex: 1 1 340px; min-width: 0; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px 8px; }
 .forte-perform .param {
-  flex: 1 1 128px; max-width: 250px; min-width: 0; margin: 0; padding: 5px 10px 3px;
+  flex: 1 1 150px; max-width: 280px; min-width: 0; margin: 0; padding: 5px 10px 3px;
   border: 1px solid var(--line); border-radius: 8px; background: rgba(255, 255, 255, 0.03);
 }
 .forte-perform .param[hidden] { display: none; }
 .forte-perform .param .hint { display: none; }
-/* label and value share the line; the value, which changes as you play, comes first */
-.forte-perform .param .row { font-size: 12px; gap: 6px; }
-.forte-perform .param .row label { flex: 1 1 0; min-width: 2.5em; }
-.forte-perform .param .row .val { flex: 0 1 auto; max-width: 72%; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* label and value share the line. At rest the label comes first, and the value shows only if it
+   fits whole beside it (shared/layout.js marks the tile .tight when it doesn't); while the
+   control moves (.live) the value takes the line */
+.forte-perform .param .row { position: relative; font-size: 12px; gap: 6px; }
+.forte-perform .param .row label { flex: 0 1 auto; min-width: 0; margin-right: auto; }
+.forte-perform .param .row .val { flex: 0 0 auto; }
+.forte-perform .param.tight:not(.live) .row .val { position: absolute; right: 0; visibility: hidden; }
+.forte-perform .param.live .row label { flex: 1 1 0; min-width: 2em; }
+.forte-perform .param.live .row .val { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .forte-perform .param .row label, .forte-perform .param label { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .forte-perform .param > label, .forte-perform .forte-param-head > label { display: block; font-size: 12px; min-width: 0; }
 .forte-perform .param select { margin: 2px 0 3px; padding: 3px 6px; }
@@ -117,7 +122,7 @@ body[data-instrument] .forte-deck .forte-surface { flex: 0 1 auto; min-width: 0;
 .forte-perform .forte-info { order: -1; } /* first in its line */
 /* a checkbox is a stop: it lights up when on */
 .forte-perform .param.check { flex: 0 1 auto; flex-wrap: nowrap; gap: 7px; padding: 6px 11px; cursor: pointer; }
-.forte-perform .param.check > label { cursor: pointer; font-size: 12.5px; }
+.forte-perform .param.check > label { cursor: pointer; font-size: 12.5px; line-height: 1.25; white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .forte-perform .param.check:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 70%, transparent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
 .forte-perform .param.check:has(input:checked) > label { color: var(--text); }
 /* a few short choices: a row of buttons instead of a dropdown */
@@ -239,10 +244,12 @@ body.perform #views .card:not([data-keep-text]) canvas { flex: 1 1 0; height: au
 @media (pointer: coarse) {
   body[data-instrument] input[type=range] { height: 30px; }
   body[data-instrument] button, body[data-instrument] select { min-height: 36px; touch-action: manipulation; }
+  body[data-instrument] .forte-kbbar button { min-height: 44px; } /* the pedal, Latch, ◀ ▶, − +: hit mid-phrase */
   .forte-kbmap { height: 34px; }
 }
 @media (any-hover: none) {
   body[data-instrument] .forte-keys, body[data-instrument] #keyboard .k-label { display: none; }
+  .forte-perform .param.keys-only { display: none; } /* velocity for the computer keys (↑ ↓ still set it) */
   body[data-instrument] #keyboard .wk.mapped::before { display: none; }
 }
 
@@ -297,20 +304,36 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
   }
   /* Perform: each view fills the room above the keys (the page scrolls between them) */
   body.perform:not(.no-views) #views .card { height: max(140px, calc(100svh - var(--footer-h, 320px) - 20px)); }
-  /* the deck shows a row and a half, and scrolls within itself (a control surface gets more) */
-  .forte-deck { max-height: 98px; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; margin-bottom: 6px; }
+  /* the deck shows a row and a half, and scrolls within itself (a control surface gets more);
+     a scroll comes to rest on a row of whole tiles */
+  .forte-deck { max-height: 98px; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; margin-bottom: 6px; scroll-snap-type: y proximity; }
+  .forte-perform > .param { scroll-snap-align: start; }
   .forte-deck:has(> .forte-surface) { max-height: 45svh; }
   .forte-perform { flex-basis: 100%; }
   .forte-perform .param { flex-basis: 140px; padding: 4px 8px 2px; }
+  body[data-instrument] .forte-seg button { padding-inline: 6px; }
   body[data-instrument] .forte-perform input[type=range] { height: 26px; }
   .forte-pedal { min-width: 0; }
   body[data-instrument] .forte-kbsize button { width: 30px; }
   body[data-instrument] #keyboard { height: min(var(--kb-h, 115px), 38vh); height: min(var(--kb-h, 115px), 38svh); }
 }
-/* phones in landscape: one row of the deck (a control surface scrolls in a little more) */
+/* phones in landscape: the deck and the keyboard bar share one row above the keys, so the views
+   keep some height. The deck shows one row of whole tiles and scrolls a row at a time (a control
+   surface scrolls in a little more); the overview of the range shrinks to a thumbnail. */
 @media (max-width: 1050px) and (max-height: 500px) {
-  .forte-deck { max-height: 64px; }
-  .forte-deck:has(> .forte-surface) { max-height: 28svh; }
+  body[data-instrument] > footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; align-items: center; }
+  body[data-instrument] > footer > * { grid-column: 1 / -1; }
+  body[data-instrument]:not(.deck-shut) > footer > .forte-deck { grid-column: 1; grid-row: 1; margin: 0 0 6px; }
+  body[data-instrument]:not(.deck-shut) > footer:has(> .forte-deck) > .kb-help { grid-column: 2; grid-row: 1; margin: 0 0 6px; }
+  body:not(.deck-shut) .forte-keys-pop { left: auto; right: 0; }
+  .forte-deck { max-height: 62px; scroll-snap-type: y mandatory; }
+  .forte-deck:has(> .forte-surface) { max-height: 28svh; scroll-snap-type: none; }
+  .forte-perform .param { flex-basis: 118px; }
+  .forte-perform .forte-seg { margin: 2px 0 1px; }
+  body[data-instrument] .forte-perform .forte-seg button { min-height: 26px; padding-block: 2px; }
+  body[data-instrument] .forte-perform .param select { min-height: 30px; margin: 1px 0 2px; }
+  body:not(.deck-shut) .forte-kbmap { flex: 0 0 72px; min-width: 0; } /* beside the controls: a thumbnail */
+  body[data-instrument] #keyboard { height: min(var(--kb-h, 115px), 36svh); }
   body[data-instrument] .forte-play { order: 0; flex: 1 1 auto; }
   body[data-instrument] .forte-stage { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
 }

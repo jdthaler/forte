@@ -6,8 +6,10 @@
 //
 //   const kb = createKeyboard(root, { lo, hi, onDown(key, f), onUp(key), onPressure?(key, p) })
 //   f ∈ [0, 1]: 0 at the top of the key, 1 at the front edge (map it to your velocity)
-//   p ∈ [0, 1]: aftertouch from a held key — Pencil pressure, or sliding the finger toward
-//               you by half a key's height (so an ordinary touch, which wobbles, sends ~0)
+//   p ∈ [0, 1]: aftertouch from a held key — Pencil pressure, or leaning: sliding the finger
+//               along the key, toward you or away, by a third of a white key's length (past a
+//               few pixels, so an ordinary touch, which wobbles, sends 0). A slide along the key
+//               stays on it; a glissando is a slide across the keys.
 //   kb.set(key, on)  kb.focus(key)  kb.clearAll()  kb.labels(Map key → text)
 
 import { attachKeyboard } from './layout.js';
@@ -63,20 +65,25 @@ export function createKeyboard(root, { lo, hi, onDown, onUp, onPressure }) {
     e.preventDefault();
     try { root.setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
     const key = +el.dataset.key, f = depth(e, el);
-    fingers.set(e.pointerId, { key, f, y0: e.clientY, h: el.getBoundingClientRect().height, p: 0 });
+    fingers.set(e.pointerId, { key, f, y0: e.clientY, h: root.getBoundingClientRect().height, p: 0 });
     press(key, f);
   });
   root.addEventListener('pointermove', (e) => {
     const p = fingers.get(e.pointerId);
     if (!p) return;
     const el = keyAt(e.clientX, e.clientY);
-    if (el && +el.dataset.key !== p.key) { // glissando
-      const key = +el.dataset.key;
-      release(p.key); p.key = key; press(key, p.f); p.y0 = e.clientY; p.p = 0;
-      return;
+    if (el && +el.dataset.key !== p.key) {
+      // a glissando once the finger leaves the key sideways; up or down it is a lean (a black
+      // key's finger slides onto the white key below it, and a white key's onto a black one)
+      const r = els.get(p.key)?.getBoundingClientRect();
+      if (!r || e.clientX < r.left || e.clientX >= r.right) {
+        const key = +el.dataset.key;
+        release(p.key); p.key = key; press(key, p.f); p.y0 = e.clientY; p.p = 0;
+        return;
+      }
     }
     if (!onPressure) return;
-    const v = e.pointerType === 'pen' ? clamp(e.pressure, 0, 1) : clamp((e.clientY - p.y0) / (0.5 * p.h), 0, 1);
+    const v = e.pointerType === 'pen' ? clamp(e.pressure, 0, 1) : clamp((Math.abs(e.clientY - p.y0) - 4) / (p.h / 3), 0, 1);
     if (Math.abs(v - p.p) > 0.01 || (v === 0) !== (p.p === 0)) { p.p = v; onPressure(p.key, v); }
   });
   const end = (e) => { const p = fingers.get(e.pointerId); if (!p) return; fingers.delete(e.pointerId); release(p.key); };

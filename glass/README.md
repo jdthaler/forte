@@ -21,6 +21,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/glass/>
 | `↑` `↓` | finger pressure |
 | `Space` | hold the notes that are down (latch) |
 | MIDI | notes and velocity; **aftertouch presses harder**; **mod wheel = treadle speed** (rest = 0.5 rev/s, full = 1 rev/s); sustain pedal = hold |
+| Touch | lean on a held key (slide the finger along it, either way, or press harder with an Apple Pencil) = aftertouch: the finger presses harder |
 
 The mod wheel turns the treadle from its default up to twice as fast: louder
 (the rim moves faster) and a faster warble. It stops at 1 rev/s, where every

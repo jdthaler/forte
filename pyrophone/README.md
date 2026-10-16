@@ -19,6 +19,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/pyrophone/>
 | `↑` `↓` | velocity (how far a key parts the flames) |
 | `Space` | hold: keys stay down (flames stay apart) while Space is held |
 | MIDI | notes, velocity, sustain pedal (= hold); **mod wheel = flame power**; aftertouch parts the flames further |
+| Touch | lean on a held key (slide the finger along it, either way, or press harder with an Apple Pencil) = aftertouch: parts the flames further |
 
 ## The physics
 

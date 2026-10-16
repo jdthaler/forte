@@ -84,7 +84,8 @@ pictures of the physics as it plays: the main ones large, the rest behind
 tabs underneath. At the bottom, right above the keys, are the controls a
 player reaches for (stops and registrations, tremolo, drive, the mallet,
 the spin, the room and the volume, or the organ's drawbars), with **More
-controls** for everything else. Explanations wait behind ⓘ buttons.
+controls** for everything else. Each shows its name, and its value while
+you move it. Explanations wait behind ⓘ buttons.
 
 There are two modes. **Discover** shows it all. **Perform** shows just
 the main views, filling the screen, with no text in them: for playing,
@@ -96,11 +97,15 @@ GarageBand's: a phone shows an octave or so, a laptop most of the range.
 ◀ ▶ move an octave, and the overview of the whole range above them drags
 anywhere. On a tablet or phone, play with as many fingers as you like:
 slide across the keys for a glissando, and strike lower on a key, or
-press harder with an Apple Pencil, to play louder. The pedal button
-stands in for `Space`, and ⌨ lists the computer keys. The handle on top
-of the controls folds them away. On a phone the page scrolls above the
-keys, which stay put; turn it sideways for wider keys. Use *Share → Add
-to Home Screen* to run Forte as a full-screen app.
+press harder with an Apple Pencil, to play louder. On the nine with
+aftertouch (Viola Organista, Tangent Clavier, Free-Reed Organ, Glass
+Armonica, Pyrophone, Gong Keyboard, Bubble Organ, Star Keyboard and Wind
+Harp), lean on a held key: slide the finger along it, either way, to
+press harder. The pedal button stands in for `Space`, and ⌨ lists the
+computer keys. The handle on top of the controls folds them away. On a
+phone the page scrolls above the keys, which stay put; turn it sideways
+for wider keys, with the controls beside the keyboard's tools. Use
+*Share → Add to Home Screen* to run Forte as a full-screen app.
 
 ## Running locally
 

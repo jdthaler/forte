@@ -10,7 +10,43 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
-## 2026-10-16 — MIDI that stays on, and notes that let go
+## 2026-10-16 — controls you can read, and room on a sideways phone
+
+### Forte 0.7.3
+- **The controls above the keys say what they are.** The value took the
+  line first, so most labels were cut to a few letters ("As…", "Clap…",
+  "Dome ri…"): 44 of 161 on a desktop, 66 at 900 px, 70 on an iPad. Now
+  the label comes first, without its explanation ("Dome rise (curvature)"
+  shows as "Dome rise"; the whole name stays in the tooltip, the ⓘ and the
+  control's accessible name). The value shows beside it when both fit,
+  and always while the control moves (a drag, the arrows, the mod wheel, a
+  preset) and for a moment after. The tooltip has both. Cut labels: 3 on
+  a desktop, 4 at 900 px, 6 on an iPad, 2 on an upright phone (18 on a
+  sideways one, whose tiles are narrower).
+- **A sideways phone has room for the views.** The controls, the keyboard
+  bar and the keys took 261 of 340 px, leaving the views a 24 px sliver,
+  and on 11 pages not one control was wholly in sight. Now the controls
+  share a row with the keyboard bar (whose overview shrinks to a
+  thumbnail), show one row of whole tiles and scroll a row at a time, and
+  the keys take at most 36 % of the height: 207 px, and the views get
+  three times the room. On phones a scroll of the controls comes to rest
+  on whole tiles.
+- **A second finger works the controls.** While one finger held a key, a
+  tap with another on a stop, Latch, ◀ ▶, − + or a tab did nothing (the
+  browser sees a two-finger gesture and sends no click). Now it clicks.
+- **Aftertouch by touch.** Leaning (sliding a held finger along the key)
+  counted only toward you, so a loud strike near the front edge had
+  nowhere to go, and on a black key the lean slid onto the next note as a
+  glissando. Now a lean either way counts, a third of the key's length
+  for full pressure, past a few pixels of wobble; it stays on its key, and
+  only a slide across the keys is a glissando. The nine instruments with
+  aftertouch say so under *Touch* in How it works.
+- **No velocity slider on touch screens.** "Velocity (computer keys)" took
+  the first place above the keys on 12 pages, and a touch sets velocity by
+  where it strikes. It is left out on touch screens (↑ ↓ still set it).
+- **Bigger keyboard-bar buttons on touch screens** (44 px: the pedal,
+  Latch, ◀ ▶, − +), and the Tangent Clavier's pickup selector fits its
+  tile on a phone.
 
 ### Forte 0.7.2
 - **MIDI stays on from page to page.** Each instrument is its own page, so

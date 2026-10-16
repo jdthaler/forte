@@ -22,6 +22,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/clavier/>
 | `↑` `↓` | velocity (tangent speed) |
 | `Space` | mute bar, while held (the D6 has no sustain pedal) |
 | MIDI | notes, velocity, CC64 = mute bar, **aftertouch = key pressure** (channel or polyphonic), pitch wheel up = press every held key harder |
+| Touch | lean on a held key (slide the finger along it, either way, or press harder with an Apple Pencil) = aftertouch: key pressure: the tangent presses the string harder |
 
 ## The physics
 

@@ -21,6 +21,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/gongs/>
 | `↑` `↓` | velocity (the mallet's speed goes as velocity²) |
 | `Space` | sustain: keeps your hand off the gongs after key-up |
 | MIDI | notes, velocity, sustain pedal (CC64); **mod wheel = strike point**; aftertouch = a hand pressed on the gong |
+| Touch | lean on a held key (slide the finger along it, either way, or press harder with an Apple Pencil) = aftertouch: a hand pressed on the gong |
 
 ## The physics
 
