@@ -320,7 +320,9 @@ bool paramsGetInfo(const clap_plugin_t *p, uint32_t index, clap_param_info_t *in
   std::memset(info, 0, sizeof *info);
   ParamInfo q = infoAt(s, (int)index);
   info->id = s->ids[index];
-  if (q.kind == ParamKind::continuous) info->flags = CLAP_PARAM_IS_AUTOMATABLE | (q.step > 0 ? CLAP_PARAM_IS_STEPPED : 0);
+  // CLAP's "stepped" means whole numbers (AU: indexed): only choices and toggles. A continuous
+  // parameter's own step (0.01, 0.5) is applied when it is set.
+  if (q.kind == ParamKind::continuous) info->flags = CLAP_PARAM_IS_AUTOMATABLE;
   else info->flags = CLAP_PARAM_IS_STEPPED | (q.kind == ParamKind::choice ? CLAP_PARAM_IS_ENUM : 0) | ((int)index < s->I.paramCount ? CLAP_PARAM_IS_AUTOMATABLE : 0);
   std::snprintf(info->name, sizeof info->name, "%s", q.label);
   std::snprintf(info->module, sizeof info->module, "%s", q.group);

@@ -4,6 +4,9 @@
 
 cmake_minimum_required(VERSION 3.25)
 project(forte-native LANGUAGES C CXX)
+if (APPLE)
+  enable_language(OBJC OBJCXX) # clap-wrapper's AU and standalone are Objective-C++
+endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
