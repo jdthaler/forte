@@ -36,7 +36,7 @@ const shell = createShell({
   presets: PRESETS,
   keep: ['volume', 'room', 'velocity'],
   range: [KEY_LO, KEY_HI],
-  base: 48,
+  base: 60, // Z = C4: the instrument starts at F3, so a C3 base left Z–E silent
   worklet: { modules: ['src/vibraphone-engine.js'], engine: 'VibraphoneEngine' },
   chain: { volume: 'volume', room: 'room' },
   space: 'sustain',

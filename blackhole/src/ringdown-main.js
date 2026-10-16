@@ -5,6 +5,7 @@ import { QNMBank, keyVoice, noteName, KEY_LO, KEY_HI, spinFromU, strainCurve } f
 import { roomIR } from '../../shared/impulses.js';
 import { drawPlane, drawKerr, WaveView, Lazy } from './ringdown-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
+import { startMIDI, resumeMIDI, wheelValue } from '../../shared/midi.js';
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 
@@ -106,28 +107,20 @@ window.addEventListener('keydown', (e) => {
 });
 window.addEventListener('keyup', (e) => { const key = held.get(e.code); if (key !== undefined) { held.delete(e.code); noteOff(key); } });
 window.addEventListener('blur', () => { for (const k of held.values()) noteOff(k); held.clear(); });
-function shiftOctave(d) { const nb = base + d; if (nb < KEY_LO - 12 || nb > KEY_HI - 12) return; base = nb; keyboardView.labels(keyLabels()); updateHelp(); }
+function shiftOctave(d) { const nb = base + d; if (nb + 11 < KEY_LO || nb > KEY_HI - 12) return; /* never a whole row of computer keys out of range */ base = nb; keyboardView.labels(keyLabels()); updateHelp(); }
 function updateHelp() {
   $('#oct').textContent = `${noteName(Math.max(KEY_LO, base))}–${noteName(Math.min(KEY_HI, base + 31))}`;
   $('#spin-read').textContent = fmtSpin(P.spinU);
 }
 
 function initMIDI() {
-  if (!navigator.requestMIDIAccess) { $('#midi').textContent = 'No Web MIDI in this browser (try Chrome, Edge or Firefox)'; return; }
-  navigator.requestMIDIAccess().then((acc) => {
-    const bind = () => {
-      const names = [];
-      for (const inp of acc.inputs.values()) { inp.onmidimessage = onMIDI; names.push(inp.name); }
-      $('#midi').textContent = names.length ? `MIDI: ${names.join(', ')}` : 'MIDI: no devices';
-    };
-    bind(); acc.onstatechange = bind; $('#midi-btn').hidden = true;
-  }, () => { $('#midi').textContent = 'MIDI: permission denied'; });
+  startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn') });
 }
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data, cmd = st & 0xf0;
   if (cmd === 0x90 && d2 > 0) noteOn(d1, (d2 / 127) ** 1.5);
   else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) noteOff(d1);
-  else if (cmd === 0xb0 && d1 === 1) setParam('spinU', Math.round((6 * d2) / 127 * 1000) / 1000);
+  else if (cmd === 0xb0 && d1 === 1) setParam('spinU', wheelValue(ALL_PARAMS.find((q) => q.id === 'spinU'), d2)); // at rest: the default spin
   else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) post({ type: 'panic' });
 }
 
@@ -268,6 +261,7 @@ let toastTimer = 0;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3500); }
 $('#start').addEventListener('click', (e) => { startAudio(); e.currentTarget.blur(); });
 $('#midi-btn').addEventListener('click', (e) => { initMIDI(); e.currentTarget.blur(); });
+resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
 $('#panic').addEventListener('click', (e) => { post({ type: 'panic' }); e.currentTarget.blur(); });
 for (const b of document.querySelectorAll('.tab')) b.addEventListener('click', () => {
   document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x === b));

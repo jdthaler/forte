@@ -75,6 +75,7 @@ Split the model across more files when it grows (`<slug>/src/plate.js`,
 | `views.js` | `fit`, `css`, `animate`, `SpectrumView` (live spectrum + model markers), `ScopeView` |
 | `impulses.js` | `roomIR` (the synthetic room the shell uses) |
 | `registry.js` | the instrument list behind the landing page and the menus |
+| `midi.js` | Web MIDI for every page (the shell and the five older pages): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default. |
 | `focus.js` | who gets a key press: a control reached with Tab keeps the keys it uses (Space ticks a stop, arrows move a slider); one last touched with the mouse or a finger hands them back to the instrument. Every page's key handler asks `controlOwns(e)` first. |
 | `notes.js`, `markdown.js` | **How it works**: the page's README in a dialog (button by the title, or a link to `…/#about`) |
 | `instrument.css`, `forte.css` | page layout; Forte nav and notes |

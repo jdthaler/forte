@@ -6,6 +6,7 @@ import { RhodesEngine } from './rhodes-engine.js';
 import { roomIR } from '../../shared/impulses.js';
 import { MotionView, PickupView, SpectrumView, MODE_COLORS, modeKind } from './rhodes-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
+import { startMIDI, resumeMIDI } from '../../shared/midi.js';
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 
@@ -122,8 +123,9 @@ function setSustain(on) {
   $('#sus').textContent = on ? 'on' : 'off';
   $('#sus').className = on ? 'on' : 'off';
   post({ type: 'sustain', on });
+  document.dispatchEvent(new CustomEvent('forte-sustain', { detail: on })); // the on-screen pedal and Latch follow
 }
-function panic() { post({ type: 'panic' }); sounding.clear(); held.clear(); keyboardView.clearAll(); }
+function panic() { post({ type: 'panic' }); sounding.clear(); held.clear(); keyboardView.clearAll(); if (sustain) setSustain(false); }
 
 const LOW = ['KeyZ', 'KeyS', 'KeyX', 'KeyD', 'KeyC', 'KeyV', 'KeyG', 'KeyB', 'KeyH', 'KeyN', 'KeyJ', 'KeyM', 'Comma', 'KeyL', 'Period', 'Semicolon', 'Slash'];
 const LOW_LBL = ['z', 's', 'x', 'd', 'c', 'v', 'g', 'b', 'h', 'n', 'j', 'm', ',', 'l', '.', ';', '/'];
@@ -175,7 +177,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) letGo
 
 function shiftOctave(d) {
   const nb = base + d;
-  if (nb < KEY_LO - 12 || nb > KEY_HI - 12) return;
+  if (nb + 11 < KEY_LO || nb > KEY_HI - 12) return; // never a whole row of computer keys out of range
   for (const k of held.values()) noteOff(k);
   held.clear();
   base = nb;
@@ -189,15 +191,7 @@ function updateHelp() {
 
 const velFromMidi = (v) => 0.25 * 20 ** (v / 127); // 0.25 … 5 m/s
 function initMIDI() {
-  if (!navigator.requestMIDIAccess) { $('#midi').textContent = 'No Web MIDI in this browser (try Chrome, Edge or Firefox)'; return; }
-  navigator.requestMIDIAccess().then((acc) => {
-    const bind = () => {
-      const names = [];
-      for (const inp of acc.inputs.values()) { inp.onmidimessage = onMIDI; names.push(inp.name); }
-      $('#midi').textContent = names.length ? `MIDI: ${names.join(', ')}` : 'MIDI: no devices';
-    };
-    bind(); acc.onstatechange = bind; $('#midi-btn').hidden = true;
-  }, () => { $('#midi').textContent = 'MIDI: permission denied'; });
+  startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn') });
 }
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data, cmd = st & 0xf0;
@@ -377,6 +371,7 @@ function toast(msg) {
 }
 $('#start').addEventListener('click', (e) => { startAudio(); e.currentTarget.blur(); });
 $('#midi-btn').addEventListener('click', (e) => { initMIDI(); e.currentTarget.blur(); });
+resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
 $('#panic').addEventListener('click', (e) => { panic(); e.currentTarget.blur(); });
 $('#replay').addEventListener('click', (e) => { motion.replay(); e.currentTarget.blur(); });
 $('#speed').addEventListener('change', (e) => { motion.speed = +e.target.value; motion.replay(); e.target.blur(); });

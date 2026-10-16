@@ -517,6 +517,11 @@ export function attachKeyboard(kb) {
       pedal.addEventListener('pointerdown', (e) => { e.preventDefault(); try { pedal.setPointerCapture(e.pointerId); } catch { /* gone */ } if (latched) setLatch(false); else set(true); });
       for (const ev of ['pointerup', 'pointercancel']) pedal.addEventListener(ev, () => { if (!latched) set(false); });
       latch.addEventListener('click', () => setLatch(!latched));
+      // the pedal follows the page: Space, a MIDI pedal and Panic light it or let it go too
+      document.addEventListener('forte-sustain', (e) => {
+        on = e.detail; pedal.classList.toggle('on', on);
+        if (!on && latched) { latched = false; latch.classList.remove('on'); }
+      });
       bar.append(pedal, latch);
     }
   }

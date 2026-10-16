@@ -8,7 +8,7 @@
 // Keep FORTE_VERSION equal to package.json's, and log every bump in
 // CHANGELOG.md (test/site-tests.mjs checks both).
 
-export const FORTE_VERSION = '0.7.1';
+export const FORTE_VERSION = '0.7.2';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
@@ -23,7 +23,7 @@ export const SECTIONS = [
 
 export const INSTRUMENTS = [
   {
-    id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.3.1', trim: 3,
+    id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.3.2', trim: 3,
     after: 'the concert grand',
     tagline: 'Stiff strings, felt hammers and a shared bridge — then swap the strings for square bars, triangular bars or twisting ribbons.',
     physics: 'Modal strings · nonlinear hammers · torsion',
@@ -51,7 +51,7 @@ export const INSTRUMENTS = [
     accent: '#ff9fb0',
   },
   {
-    id: 'vibraphone', name: 'Vibraphone', section: 'traditional', ready: true, version: '0.2.0', trim: 3,
+    id: 'vibraphone', name: 'Vibraphone', section: 'traditional', ready: true, version: '0.2.1', trim: 3,
     after: 'the Deagan vibraharp (1927)',
     tagline: 'Undercut aluminium bars over tuned tubes, with motor-driven discs that open and close the resonators.',
     physics: 'Tuned bars · coupled resonators · rotating valves',
@@ -72,14 +72,14 @@ export const INSTRUMENTS = [
     accent: '#7fb2ff',
   },
   {
-    id: 'organ', name: 'Tonewheel Organ', section: 'electric', ready: true, version: '0.4.1', trim: 2,
+    id: 'organ', name: 'Tonewheel Organ', section: 'electric', ready: true, version: '0.4.2', trim: 2,
     after: 'the Hammond B-3 and Leslie',
     tagline: '91 spinning gear-driven wheels, bouncing key contacts, a scanner on an LC delay line and a rotating Doppler horn.',
     physics: 'Gear ratios · shared wheels · Doppler',
     accent: '#f0b35a',
   },
   {
-    id: 'tines', name: 'Tine Piano', section: 'electric', ready: true, version: '0.3.1', trim: -3,
+    id: 'tines', name: 'Tine Piano', section: 'electric', ready: true, version: '0.3.2', trim: -3,
     after: 'the Fender Rhodes',
     tagline: 'Each key an asymmetric tuning fork of steel tine and brass bar, heard through a nonlinear magnetic pickup.',
     physics: 'Coupled cantilevers · pickup nonlinearity',
@@ -135,7 +135,7 @@ export const INSTRUMENTS = [
     accent: '#ffe36b',
   },
   {
-    id: 'huygens', name: 'Huygens Keyboard', section: 'phenomena', ready: true, version: '0.3.1', trim: 9.5,
+    id: 'huygens', name: 'Huygens Keyboard', section: 'phenomena', ready: true, version: '0.3.2', trim: 9.5,
     tagline: 'Relaxation oscillators that pull each other into just intonation — Arnold tongues you can play.',
     physics: 'Pulse-coupled oscillators · mode locking',
     accent: '#ff8a3d',
@@ -147,7 +147,7 @@ export const INSTRUMENTS = [
     accent: '#e6c15a',
   },
   {
-    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'phenomena', ready: true, version: '0.3.1', trim: 14,
+    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'phenomena', ready: true, version: '0.3.2', trim: 14,
     tagline: 'Every key a Kerr black hole, ringing in quasinormal modes computed from the Teukolsky equation.',
     physics: 'General relativity · quasinormal modes',
     accent: '#b18cff',

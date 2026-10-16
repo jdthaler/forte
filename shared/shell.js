@@ -45,6 +45,7 @@ import { roomIR } from './impulses.js';
 import { createKeyboard } from './keyboard.js';
 import { trimGain } from './registry.js';
 import { controlOwns, focusedByPointer } from './focus.js';
+import { startMIDI, resumeMIDI, wheelValue } from './midi.js';
 // after a change, a control picked with the pointer lets go of the focus (the keys go back to the
 // instrument); one reached with Tab keeps it, so the next Space or arrow works it again
 const release = (el) => { if (focusedByPointer(el)) el.blur(); };
@@ -196,8 +197,10 @@ export function createShell(cfg) {
     if (cfg.space === 'sustain') shell.post({ type: 'sustain', on });
     if (cfg.space === 'hold' && !on) { for (const k of latched) { shell.keys.set(k, false); shell.post({ type: 'noteOff', key: k }); cfg.onNoteOff?.(k); } latched.clear(); }
     cfg.onSustain?.(on);
+    document.dispatchEvent(new CustomEvent('forte-sustain', { detail: on })); // the on-screen pedal and Latch follow
   }
-  shell.panic = () => { sounding.clear(); latched.clear(); held.clear(); shell.keys.clearAll(); shell.post({ type: 'panic' }); cfg.onPanic?.(); };
+  // Panic lets go of everything, the pedal (and Latch) included
+  shell.panic = () => { sounding.clear(); latched.clear(); held.clear(); shell.keys.clearAll(); if (shell.sustain) setSustain(false); shell.post({ type: 'panic' }); cfg.onPanic?.(); };
 
   // ---- computer keyboard -----------------------------------------------------
   const codeToKey = (code) => { let i = LOW.indexOf(code); if (i >= 0) return shell.base + i; i = HIGH.indexOf(code); return i >= 0 ? shell.base + 12 + i : null; };
@@ -242,7 +245,7 @@ export function createShell(cfg) {
   document.addEventListener('visibilitychange', () => { if (document.hidden) letGo(); });
   function shiftOctave(d) {
     const nb = shell.base + d;
-    if (nb < LO - 12 || nb > HI - 12) return;
+    if (nb + 11 < LO || nb > HI - 12) return; // never a whole row of computer keys out of range
     for (const k of held.values()) up(k);
     held.clear(); shell.base = nb; shell.keys.labels(labels()); updateHelp();
   }
@@ -263,15 +266,7 @@ export function createShell(cfg) {
 
   // ---- MIDI ----------------------------------------------------------------------
   function initMIDI() {
-    if (!navigator.requestMIDIAccess) { $('#midi').textContent = 'No Web MIDI in this browser (try Chrome, Edge or Firefox)'; return; }
-    navigator.requestMIDIAccess().then((acc) => {
-      const bind = () => {
-        const names = [];
-        for (const inp of acc.inputs.values()) { inp.onmidimessage = onMIDI; names.push(inp.name); }
-        $('#midi').textContent = names.length ? `MIDI: ${names.join(', ')}` : 'MIDI: no devices';
-      };
-      bind(); acc.onstatechange = bind; $('#midi-btn').hidden = true;
-    }, () => { $('#midi').textContent = 'MIDI: permission denied'; });
+    startMIDI({ onMIDI, status: (t) => { if ($('#midi')) $('#midi').textContent = t; }, button: $('#midi-btn') });
   }
   function onMIDI(ev) {
     const [st, d1, d2] = ev.data, cmd = st & 0xf0;
@@ -283,10 +278,8 @@ export function createShell(cfg) {
         // The wheel rests at 0, so rest = the parameter's default and full = its maximum
         // (a resting wheel must not drag the instrument to the bottom of its range).
         const mw = typeof cfg.modWheel === 'string' ? { param: cfg.modWheel } : cfg.modWheel;
-        const p = ALL.find((q) => q.id === mw.param), u = d2 / 127, top = mw.max ?? p.max;
-        let v = p.log ? p.def * (top / p.def) ** u : p.def + (top - p.def) * u;
-        if (p.step) v = Math.round(v / p.step) * p.step;
-        shell.setParam(p.id, Math.min(p.max, Math.max(p.min, v)));
+        const p = ALL.find((q) => q.id === mw.param);
+        shell.setParam(p.id, wheelValue(p, d2, mw.max ?? p.max));
       } else if (d1 === 120 || d1 === 123) shell.panic();
       cfg.onCC?.(d1, d2);
     } else if (cmd === 0xd0 || cmd === 0xa0) { // channel / polyphonic aftertouch
@@ -385,6 +378,7 @@ export function createShell(cfg) {
   $('#reset')?.addEventListener('click', () => { shell.setAll({ ...DEFAULTS }); if ($('#preset')) $('#preset').value = ''; });
   $('#start')?.addEventListener('click', (e) => { shell.startAudio(); e.currentTarget.blur(); });
   $('#midi-btn')?.addEventListener('click', (e) => { initMIDI(); e.currentTarget.blur(); });
+  resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
   $('#panic')?.addEventListener('click', (e) => { shell.panic(); e.currentTarget.blur(); });
 
   for (const id of controls.keys()) refresh(id);
