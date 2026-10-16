@@ -7,8 +7,12 @@
 // itself (the site and shared/) and one per instrument. 0.x is pre-release.
 // Keep FORTE_VERSION equal to package.json's, and log every bump in
 // CHANGELOG.md (test/site-tests.mjs checks both).
+//
+// `plugin.code` is the instrument's Audio Unit subtype (four characters, unique; the
+// manufacturer is Frte), for its native plugin (docs/PLUGINS.md). Never change it: hosts
+// find saved projects' plugins by it. The VST3 class ids are in native/ids.json.
 
-export const FORTE_VERSION = '0.7.3';
+export const FORTE_VERSION = '0.8.0';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
@@ -24,6 +28,7 @@ export const SECTIONS = [
 export const INSTRUMENTS = [
   {
     id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.3.2', trim: 3,
+    plugin: { code: 'Ribn' },
     after: 'the concert grand',
     tagline: 'Stiff strings, felt hammers and a shared bridge — then swap the strings for square bars, triangular bars or twisting ribbons.',
     physics: 'Modal strings · nonlinear hammers · torsion',
@@ -31,6 +36,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'harpsichord', name: 'Harpsichord', section: 'traditional', ready: true, version: '0.2.0', trim: -2,
+    plugin: { code: 'Hrps' },
     after: 'the Flemish double-manual harpsichord (Ruckers, 1600s)',
     tagline: 'A quill bends, slips off the string and plucks it; stops change where and how it plucks.',
     physics: 'Plectrum contact and release · plucked stiff strings',
@@ -38,6 +44,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'pipes', name: 'Pipe Organ', section: 'traditional', ready: true, version: '0.2.0', trim: 2,
+    plugin: { code: 'Pipe' },
     after: 'the Baroque pipe organ',
     tagline: 'Air jets flutter against the pipe mouths: each note starts with a chiff, overblows when pushed, and sags when the wind runs short.',
     physics: 'Jet–edge feedback · flue pipes · shared wind',
@@ -45,6 +52,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'harmonium', name: 'Free-Reed Organ', section: 'traditional', ready: true, version: '0.2.0', trim: -7,
+    plugin: { code: 'Harm' },
     after: 'the harmonium and the accordion',
     tagline: 'Brass reeds driven by the airflow they choke; paired reeds tuned a little apart give the musette shimmer.',
     physics: 'Self-excited free reeds · bellows pressure',
@@ -52,6 +60,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'vibraphone', name: 'Vibraphone', section: 'traditional', ready: true, version: '0.2.1', trim: 3,
+    plugin: { code: 'Vibe' },
     after: 'the Deagan vibraharp (1927)',
     tagline: 'Undercut aluminium bars over tuned tubes, with motor-driven discs that open and close the resonators.',
     physics: 'Tuned bars · coupled resonators · rotating valves',
@@ -59,6 +68,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'carillon', name: 'Carillon', section: 'traditional', ready: true, version: '0.1.0', trim: 3.5,
+    plugin: { code: 'Carl' },
     after: 'the Flemish carillon (Hemony bells, 1650s)',
     tagline: 'Bronze bells tuned partial by partial; the note you hear, the strike note, is a virtual pitch made by partials an octave and more above it.',
     physics: 'Bell modes by finite elements · Hertz clapper · virtual pitch',
@@ -66,6 +76,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'grand', name: 'Electric Grand', section: 'electric', ready: true, version: '0.3.0', trim: 3.5,
+    plugin: { code: 'EGrd' },
     after: 'the Yamaha CP-70',
     tagline: 'A real piano action with no soundboard: piezo pickups under the bridge hear the strings directly.',
     physics: 'Bridge force · piezoelectric pickup',
@@ -73,6 +84,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'organ', name: 'Tonewheel Organ', section: 'electric', ready: true, version: '0.4.2', trim: 2,
+    plugin: { code: 'Tonw' },
     after: 'the Hammond B-3 and Leslie',
     tagline: '91 spinning gear-driven wheels, bouncing key contacts, a scanner on an LC delay line and a rotating Doppler horn.',
     physics: 'Gear ratios · shared wheels · Doppler',
@@ -80,6 +92,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'tines', name: 'Tine Piano', section: 'electric', ready: true, version: '0.3.2', trim: -3,
+    plugin: { code: 'Tine' },
     after: 'the Fender Rhodes',
     tagline: 'Each key an asymmetric tuning fork of steel tine and brass bar, heard through a nonlinear magnetic pickup.',
     physics: 'Coupled cantilevers · pickup nonlinearity',
@@ -87,6 +100,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'reeds', name: 'Reed Piano', section: 'electric', ready: true, version: '0.3.0', trim: -1,
+    plugin: { code: 'Reed' },
     after: 'the Wurlitzer 200A',
     tagline: 'Struck steel reeds tuned with solder, sensed as one plate of a charged capacitor.',
     physics: 'Cantilever reeds · electrostatic pickup',
@@ -94,6 +108,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'clavier', name: 'Tangent Clavier', section: 'electric', ready: true, version: '0.3.0', trim: 4.5,
+    plugin: { code: 'Clav' },
     after: 'the Hohner Clavinet',
     tagline: 'A rubber tangent pins the string to an anvil; two magnetic pickups comb-filter the twang.',
     physics: 'Impact on an anvil · pickup position',
@@ -101,6 +116,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'pianet', name: 'Sticky-Pad Piano', section: 'electric', ready: true, version: '0.3.0', trim: -4.5,
+    plugin: { code: 'Pnet' },
     after: 'the Hohner Pianet',
     tagline: 'No hammers at all: tacky pads grab each reed and let it go.',
     physics: 'Adhesion and release · reed pickup',
@@ -108,6 +124,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'bowed', name: 'Viola Organista', section: 'experimental', ready: true, version: '0.3.0', trim: 3,
+    plugin: { code: 'Viol' },
     after: "Leonardo da Vinci's design (1488)",
     tagline: 'Rosined wheels bow the strings while you hold the keys: stick–slip friction, from scratch.',
     physics: 'Friction · Helmholtz motion',
@@ -115,6 +132,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'glass', name: 'Glass Armonica', section: 'experimental', ready: true, version: '0.3.1', trim: 0.5,
+    plugin: { code: 'Glas' },
     after: "Benjamin Franklin's armonica (1761)",
     tagline: 'Wet fingers on spinning glass bowls: stick–slip friction drives the shell modes, and rotation makes the doublets warble.',
     physics: 'Shell modes · friction · fluid loading',
@@ -122,6 +140,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'pyrophone', name: 'Pyrophone', section: 'experimental', ready: true, version: '0.3.1', trim: -3.5,
+    plugin: { code: 'Pyro' },
     after: "Frédéric Kastner's flame organ (1873)",
     tagline: 'Flames in glass tubes sing by themselves once they cross a threshold — and remember having sung.',
     physics: 'Thermoacoustics · Hopf bifurcation',
@@ -129,6 +148,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'arc', name: 'Singing Arc', section: 'experimental', ready: true, version: '0.1.0', trim: 7,
+    plugin: { code: 'SArc' },
     after: "William Duddell's singing arc (1900)",
     tagline: 'An electric arc lamp that sings: its negative resistance drives an LC circuit, and the arc itself is the loudspeaker.',
     physics: 'Negative resistance · LC oscillator · plasma heating',
@@ -136,53 +156,65 @@ export const INSTRUMENTS = [
   },
   {
     id: 'huygens', name: 'Huygens Keyboard', section: 'phenomena', ready: true, version: '0.3.2', trim: 9.5,
+    plugin: { code: 'Huyg' },
     tagline: 'Relaxation oscillators that pull each other into just intonation — Arnold tongues you can play.',
     physics: 'Pulse-coupled oscillators · mode locking',
     accent: '#ff8a3d',
   },
   {
     id: 'gongs', name: 'Gong Keyboard', section: 'phenomena', ready: true, version: '0.3.0', trim: 7,
+    plugin: { code: 'Gong' },
     tagline: 'Thin plates whose stiffness grows with amplitude: strike softly for a bell, hard for a crash.',
     physics: 'Von Kármán plates · wave turbulence',
     accent: '#e6c15a',
   },
   {
     id: 'blackhole', name: 'Black-Hole Keyboard', section: 'phenomena', ready: true, version: '0.3.2', trim: 14,
+    plugin: { code: 'BHol' },
     tagline: 'Every key a Kerr black hole, ringing in quasinormal modes computed from the Teukolsky equation.',
     physics: 'General relativity · quasinormal modes',
     accent: '#b18cff',
   },
   {
     id: 'quantum', name: 'Quantum Keyboard', section: 'phenomena', ready: true, version: '0.3.0', trim: 9.5,
+    plugin: { code: 'Qntm' },
     tagline: 'Each key a wavepacket in a potential well: notes that collapse, return an octave up as the packet splits, and revive on the beat.',
     physics: 'Schrödinger equation · quantum revivals',
     accent: '#73e2b8',
   },
   {
     id: 'bubbles', name: 'Bubble Organ', section: 'phenomena', ready: true, version: '0.2.0', trim: 1.5,
+    plugin: { code: 'Bubl' },
     tagline: 'Every note a bubble ringing at its Minnaert frequency; depth, gas and pressure retune it.',
     physics: 'Bubble acoustics · Minnaert resonance',
     accent: '#6fb8ff',
   },
   {
     id: 'springs', name: 'Spring Keyboard', section: 'phenomena', ready: true, version: '0.1.0', trim: 11.5,
+    plugin: { code: 'Sprg' },
     tagline: 'Struck steel coils, each cut to sound its note; their waves travel at different speeds by pitch, so every echo arrives as a chirp.',
     physics: 'Helical rods (Wittrick) · dispersion · chirped echoes',
     accent: '#c0c0d8',
   },
   {
     id: 'stars', name: 'Star Keyboard', section: 'phenomena', ready: true, version: '0.1.0', trim: 7,
+    plugin: { code: 'Star' },
     tagline: 'Every key a Sun-like star whose oscillations are rung continuously by convection: combs of modes that breathe rather than strike.',
     physics: 'Asteroseismology · stochastically driven modes',
     accent: '#ff6f91',
   },
   {
     id: 'windharp', name: 'Wind Harp', section: 'phenomena', ready: true, version: '0.1.1', trim: -4,
+    plugin: { code: 'WHrp' },
     tagline: 'Strings sung by the wind: the vortices they shed lock onto one of their harmonics, and hop up the series as the wind rises.',
     physics: 'Vortex shedding · lock-in · wake oscillators',
     accent: '#a8e6a1',
   },
 ];
+
+// The template (docs/template/), the starting point for new instruments: not listed, but it
+// is built as a plugin too, so it has a code.
+export const TEMPLATE = { id: 'template', name: 'Template Bars', plugin: { code: 'Tmpl' } };
 
 export const byId = (id) => INSTRUMENTS.find((i) => i.id === id);
 

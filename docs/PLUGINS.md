@@ -10,7 +10,8 @@ native/core + native/instruments/<slug>   C++: engines and models
         └── WebAssembly   loaded by the site's AudioWorklet, and called by its views
 ```
 
-Status: **planned**. The decisions below were made by the owner on
+Status: **step 0 done** (the native setup; see [native/README.md](../native/README.md));
+steps 1–3 for the template under way. The decisions below were made by the owner on
 2026-10-16. Follow [CLAUDE.md](../CLAUDE.md) for the workflow (branch, test,
 version, pull request, merge only when asked) and update this file as steps
 land.
@@ -20,7 +21,7 @@ land.
 | | Decision | Why |
 |---|---|---|
 | Language | **C++** (C++20) | Every plugin format is first-class, including AU and later AUv3; Emscripten compiles it to WebAssembly. |
-| Framework | **[iPlug2](https://github.com/iPlug2/iPlug2)** | Permissive (zlib-like) licence, so the repo stays MIT. Check its CLAP support at the start; if it is not solid, build CLAP with the CLAP SDK directly (MIT). |
+| Framework | **The [CLAP SDK](https://github.com/free-audio/clap) and [clap-wrapper](https://github.com/free-audio/clap-wrapper)** (changed 2026-10-16, see below) | Each plugin is written once as a CLAP; clap-wrapper builds its VST3, AU v2 and standalone, on all three platforms. Everything is MIT (the VST3 SDK since 3.8), so the repo stays MIT. |
 | Packaging | **One plugin per instrument** | Each has a fixed parameter list, which DAWs need for automation and saved projects. All are built from one codebase and shipped together. |
 | Names | Vendor **Forte**; each plugin is the instrument's name ("Gong Keyboard") | IDs `net.jthaler.forte.<slug>`; AU manufacturer code `Frte`. |
 | Website | **Switches to the WebAssembly**, instrument by instrument | Once an instrument's existing tests pass on its WebAssembly build. Its JavaScript engine stays as a fallback until the port has proved itself, then is retired. |
@@ -31,6 +32,15 @@ land.
 | Built WebAssembly | **Committed**, like the demo `.m4a` files | The site keeps needing no build step to serve or to run locally. CI rebuilds with a pinned Emscripten and fails if the committed files are stale. |
 | Pilot | **The template, then the Bubble Organ** | The template proves the pipeline on trivial physics and becomes the native starting point for new instruments; the bubble organ exercises dropdowns, presets, the hold pedal and the mod wheel. |
 | Plugin UI | **The DAW's generic panel** in phase 1 | No custom window to build or maintain while the physics is ported. A web-based editor reusing the site's views can come later. |
+
+**The framework, changed.** The plan first chose iPlug2. Checked at the start (iPlug2 master,
+August 2026), it has no Linux support at all: its README lists macOS, iOS, Windows and the web,
+and its CMake stops with "Linux not yet supported" for the core and "not yet implemented" for
+VST3 and CLAP. The owner chose the CLAP SDK with clap-wrapper instead (over keeping iPlug2
+without Linux plugins, a second plugin layer for Linux, or DPF). Phase 1 uses the DAW's generic
+panel anyway, so iPlug2's UI toolkit wasn't needed. Formats, identifiers and CI are as planned.
+clap-wrapper doesn't map CLAP's preset discovery to VST3 program lists or AU factory presets,
+so the factory presets are a Preset parameter in every format.
 
 ## What exists to build on
 
@@ -76,15 +86,28 @@ land.
 
 ## Steps
 
-### 0. Set up
+### 0. Set up — done (Forte 0.8.0)
+What landed: `native/` as below, with `plugin/` a CLAP plugin shared by every instrument and
+`forte_add_plugin()` (`native/cmake/forte.cmake`) making its CLAP, VST3, AU v2 and standalone
+through clap-wrapper's clap-first build; dependencies pinned by commit in
+`native/cmake/dependencies.cmake` (CLAP 1.2.10, clap-wrapper 0.16.0, VST3 SDK 3.8.0, AudioUnitSDK
+1.1.0, RtAudio 6.0.1, RtMidi 6.0.0, WIL, Eigen 3.4.1) and Emscripten in
+`native/emscripten-version` (6.0.10); presets `linux`, `macos` (universal), `windows`, `wasm`;
+the `native` workflow (`.github/workflows/native.yml`) building, unit-testing and validating on
+all three platforms (clap-validator 0.4.1, Steinberg's validator, `auval -strict`), keeping the
+built plugins as artifacts for 14 days, and rebuilding the WebAssembly. Until the template is
+ported, a CI-only plugin (`native/tests/smoke`) proves the pipeline. The registry has each
+instrument's AU subtype (`plugin.code`) and a `TEMPLATE` entry; `native/ids.json` the VST3 class
+ids. The plan as it was:
+
 1. Create `native/`:
    - `core/`: engine base class, DSP, linear algebra (Eigen), impulses,
      the output chain, parameter metadata, NaN guard;
    - `instruments/<slug>/`: each instrument's engine, model and data;
-   - `plugin/`: one iPlug2 project, instantiated per instrument by CMake;
+   - `plugin/`: one plugin project, instantiated per instrument by CMake;
    - `web/`: the Emscripten bindings;
    - `tests/`: native unit tests (CTest).
-2. Pin the dependencies: iPlug2 (with the VST3 and CLAP SDKs it fetches),
+2. Pin the dependencies: the plugin framework (with the VST3 and CLAP SDKs it uses),
    Eigen, and an Emscripten version. Write CMake presets for macOS, Windows,
    Linux and WebAssembly.
 3. Add CI jobs (GitHub Actions):

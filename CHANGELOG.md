@@ -10,6 +10,26 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-16 — the native setup
+
+### Forte 0.8.0
+- **`native/`: the instruments' physics will be C++, built as plugins and as WebAssembly**
+  (docs/PLUGINS.md, step 0). There is no instrument in it yet: this sets up the build, the
+  shared plugin and CI.
+  - One CLAP plugin serves every instrument (`native/plugin`). clap-wrapper makes its VST3, AU v2
+    and standalone app, on macOS, Windows and Linux. It takes notes and MIDI as the pages do
+    (velocity, the pedal or Hold, the mod wheel, aftertouch, pitch bend), has the instrument's
+    parameters and a Preset parameter for its presets, saves its state, and has no latency.
+  - The plan's framework, iPlug2, has no Linux support; the CLAP SDK with clap-wrapper (MIT)
+    replaces it, with the same formats.
+  - Every dependency is pinned to a commit, Emscripten to a version (6.0.10).
+  - A new workflow, `native`, builds the plugins on all three platforms, runs the unit tests,
+    clap-validator, Steinberg's VST3 validator and `auval -strict`, and keeps the plugins for
+    14 days. Until the template is ported, a CI-only smoke-test plugin goes through it.
+- **Plugin identities.** Each instrument has a four-character Audio Unit code in the registry
+  (`plugin.code`), and a VST3 class id in `native/ids.json`; `test/site-tests.mjs` checks both
+  are unique. Neither may ever change.
+
 ## 2026-10-16 — controls you can read, and room on a sideways phone
 
 ### Forte 0.7.3

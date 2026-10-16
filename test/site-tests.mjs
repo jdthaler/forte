@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
-import { INSTRUMENTS, SECTIONS, FORTE_VERSION } from '../shared/registry.js';
+import { INSTRUMENTS, SECTIONS, FORTE_VERSION, TEMPLATE } from '../shared/registry.js';
 
 let failures = 0;
 function test(name, fn) {
@@ -64,6 +64,20 @@ test('every ready instrument has a page, a README and a test suite', () => {
 test('every demo in examples/index.json exists', () => {
   const index = JSON.parse(read('examples/index.json'));
   for (const [id, list] of Object.entries(index)) for (const d of list) assert.ok(has(`examples/${id}/${d.file}`), `${id}/${d.file}`);
+});
+
+console.log('plugins');
+test('every ready instrument and the template have a unique four-character AU subtype', () => {
+  const all = [...ready, TEMPLATE], codes = all.map((i) => i.plugin?.code);
+  for (const [k, c] of codes.entries()) assert.match(c ?? '', /^[\x21-\x7e][\x20-\x7e]{2}[\x21-\x7e]$/, `${all[k].id}: plugin.code`);
+  assert.equal(new Set(codes).size, codes.length, 'codes are unique');
+  assert.ok(!codes.includes('Smok'), 'Smok is the CI smoke-test plugin\'s');
+});
+test('every ready instrument and the template have a unique VST3 class id (native/ids.json)', () => {
+  const ids = JSON.parse(read('native/ids.json'));
+  for (const i of [...ready, TEMPLATE]) assert.match(ids[i.id]?.vst3 ?? '', /^[0-9A-F]{32}$/, `${i.id}: vst3`);
+  const all = Object.values(ids).map((x) => x.vst3);
+  assert.equal(new Set(all).size, all.length, 'ids are unique');
 });
 
 console.log('credits');
