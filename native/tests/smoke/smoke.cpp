@@ -49,11 +49,12 @@ class SmokeEngine : public Engine {
 };
 
 const InstrumentInfo kInfo = {
-  "smoke", "Forte Smoke Test", "0.0.1", "CI-only: proves the plugin pipeline.", "Smok",
-  {0x46, 0x6f, 0x72, 0x74, 0x65, 0x53, 0x6d, 0x6f, 0x6b, 0x65, 0x54, 0x65, 0x73, 0x74, 0x00, 0x01},
-  kParams, kCount, kPresets, 1, kKeep, 1,
-  21, 108, Space::sustain, kDecay, 10, {kVolume}, nullptr,
-  [](double fs) -> Engine * { return new SmokeEngine(fs); },
+  .slug = "smoke", .name = "Forte Smoke Test", .version = "0.0.1", .description = "CI-only: proves the plugin pipeline.", .auSubtype = "Smok",
+  .vst3Id = {0x46, 0x6f, 0x72, 0x74, 0x65, 0x53, 0x6d, 0x6f, 0x6b, 0x65, 0x54, 0x65, 0x73, 0x74, 0x00, 0x01},
+  .params = kParams, .paramCount = kCount, .presets = kPresets, .presetCount = 1, .keep = kKeep, .keepCount = 1,
+  .keyLo = 21, .keyHi = 108, .space = Space::sustain, .modWheel = kDecay, .modWheelMax = 10,
+  .chain = {.volume = kVolume},
+  .create = [](double fs) -> Engine * { return new SmokeEngine(fs); },
 };
 
 } // namespace
