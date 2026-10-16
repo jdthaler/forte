@@ -10,6 +10,62 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-16 — MIDI that stays on, and notes that let go
+
+### Forte 0.7.2
+- **MIDI stays on from page to page.** Each instrument is its own page, so
+  moving to another one meant clicking Enable MIDI again, and a keyboard
+  played on the new page made no sound until then. Now, once MIDI has been
+  turned on, every page turns it on by itself while the browser still
+  grants it (`shared/midi.js`). Until it has been, no page asks.
+- **No stuck notes from MIDI.** Each device's notes are tracked per
+  channel. A note struck again before its note-off lets the old one go
+  first, so one note-off always silences it (two note-ons and one note-off
+  used to leave it sounding for good). A note-off for a note that isn't
+  down on that channel is dropped, so two channels holding one key keep it
+  sounding until both let go. A keyboard unplugged mid-phrase lets go of
+  its notes and of its sustain pedal instead of leaving them on.
+- **Panic lets go of the pedal and Latch too.** It silenced the notes but
+  left sustain (or Latch) on, so the next notes rang on. The on-screen
+  pedal and Latch now follow Space, a MIDI pedal and Panic, and Latch goes
+  off whenever sustain does.
+- **A mod wheel at rest leaves the instrument at its default.** The wheel
+  rests at 0, which now gives the parameter's default exactly (not a value
+  rounded to its step), with the maximum fully up.
+- **The octave never moves a whole row of computer keys off the
+  instrument.** `←` went one octave further than any key could sound,
+  leaving the bottom row dead.
+
+### Ribbon Piano 0.3.2
+- MIDI through `shared/midi.js`: on again on the next page, notes tracked
+  per channel and device. Panic lets go of the pedal.
+
+### Tine Piano 0.3.2
+- MIDI through `shared/midi.js`. Panic lets go of the pedal. `←` stops
+  before the bottom row of computer keys falls off the instrument.
+
+### Tonewheel Organ 0.4.2
+- MIDI through `shared/midi.js`. `←` stops before the bottom row of
+  computer keys falls below the manual. It used to fold up an octave there,
+  so both rows played the same notes.
+
+### Huygens Keyboard 0.3.2
+- MIDI through `shared/midi.js`. Panic lets go of Hold. `←` stops before
+  the bottom row of computer keys falls off the instrument.
+- **The mod wheel at rest gives the default coupling (0.055).** It gave 0,
+  so a nudge of the wheel and back turned the coupling off and the clocks
+  stopped locking.
+
+### Black-Hole Keyboard 0.3.2
+- MIDI through `shared/midi.js`. `←` stops before the bottom row of
+  computer keys falls off the instrument.
+- **The mod wheel at rest gives the default spin (a = 0.69).** It gave
+  a = 0, a non-spinning hole.
+
+### Vibraphone 0.2.1
+- **`Z` plays C4.** The bars start at F3, and the keys started at C3, so
+  `Z` to `E` (five keys of the bottom row) made no sound.
+
 ## 2026-10-16 — keys for the keyboard, and hold to sound
 
 ### Forte 0.7.1

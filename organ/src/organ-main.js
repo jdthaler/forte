@@ -5,6 +5,7 @@ import { buildGenerator, keyAnalysis, keyWheel, percWheel, centsOff, wheelSpec, 
 import { roomIR } from '../../shared/impulses.js';
 import { GeneratorView, LeslieView, OutputView, drawScanner, BAR_COLORS } from './organ-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
+import { startMIDI, resumeMIDI } from '../../shared/midi.js';
 import { controlOwns, focusedByPointer } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 
@@ -172,7 +173,7 @@ window.addEventListener('blur', () => { for (const k of held.values()) keyUp(k);
 
 function shiftOctave(d) {
   const nb = base + d;
-  if (nb < KEY_LO - 12 || nb > KEY_HI - 12) return;
+  if (nb + 11 < KEY_LO || nb > KEY_HI - 12) return; // never a whole row of computer keys out of range
   for (const k of held.values()) keyUp(k);
   held.clear();
   base = nb;
@@ -192,15 +193,7 @@ function updateHelp() {
 
 // MIDI: notes, CC1 / CC64 → Leslie fast/slow, CC11 → expression
 function initMIDI() {
-  if (!navigator.requestMIDIAccess) { $('#midi').textContent = 'No Web MIDI in this browser (try Chrome, Edge or Firefox)'; return; }
-  navigator.requestMIDIAccess().then((acc) => {
-    const bind = () => {
-      const names = [];
-      for (const inp of acc.inputs.values()) { inp.onmidimessage = onMIDI; names.push(inp.name); }
-      $('#midi').textContent = names.length ? `MIDI: ${names.join(', ')}` : 'MIDI: no devices';
-    };
-    bind(); acc.onstatechange = bind; $('#midi-btn').hidden = true;
-  }, () => { $('#midi').textContent = 'MIDI: permission denied'; });
+  startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn') });
 }
 let lastSustain = false;
 function onMIDI(ev) {
@@ -485,6 +478,7 @@ function toast(msg) {
 
 $('#start').addEventListener('click', (e) => { startAudio(); e.currentTarget.blur(); });
 $('#midi-btn').addEventListener('click', (e) => { initMIDI(); e.currentTarget.blur(); });
+resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
 $('#panic').addEventListener('click', (e) => { panic(); e.currentTarget.blur(); });
 
 buildControls();

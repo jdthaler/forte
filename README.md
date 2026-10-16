@@ -74,7 +74,8 @@ instrument except the black hole, where there is nothing to hold.
 **Enable MIDI** connects a MIDI keyboard (Chrome, Edge and Firefox; no
 browser on iPhone or iPad has Web MIDI, so the button is hidden there),
 including velocity, the sustain pedal, aftertouch and, where it means
-something, the mod wheel.
+something, the mod wheel. Once MIDI is on, every other instrument page
+turns it on by itself.
 
 Each instrument page reads top to bottom. At the top, the instrument's
 name opens the menu of every instrument (and Forte's home page), next to

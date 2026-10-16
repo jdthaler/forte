@@ -6,6 +6,7 @@ import { PianoEngine } from './engine.js';
 import { soundboardIR, roomIR } from '../../shared/impulses.js';
 import { MotionView, SpectrumView, drawSection, FAMILY } from './viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
+import { startMIDI, resumeMIDI } from '../../shared/midi.js';
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 
@@ -155,6 +156,7 @@ function setSustain(on) {
   el.className = on ? 'on' : 'off';
   if (live) audio.node.port.postMessage({ type: 'sustain', on });
   else if (audioStarting) audioStarting.then((a) => a.node.port.postMessage({ type: 'sustain', on }), () => {});
+  document.dispatchEvent(new CustomEvent('forte-sustain', { detail: on })); // the on-screen pedal and Latch follow
 }
 
 function panic() {
@@ -162,6 +164,7 @@ function panic() {
   sounding.clear();
   held.clear();
   keyboardView.clearAll();
+  if (sustain) setSustain(false); // Panic lets go of the pedal too
 }
 
 // ---------------------------------------------------------------------------
@@ -258,20 +261,7 @@ function updateHelp() {
 const velFromMidi = (v) => 0.25 * 24 ** (v / 127); // 0.25 … 6 m/s hammer speed
 
 function initMIDI() {
-  if (!navigator.requestMIDIAccess) {
-    $('#midi').textContent = 'No Web MIDI in this browser (try Chrome, Edge or Firefox)';
-    return;
-  }
-  navigator.requestMIDIAccess().then((acc) => {
-    const bind = () => {
-      const names = [];
-      for (const inp of acc.inputs.values()) { inp.onmidimessage = onMIDI; names.push(inp.name); }
-      $('#midi').textContent = names.length ? `MIDI: ${names.join(', ')}` : 'MIDI: no devices';
-    };
-    bind();
-    acc.onstatechange = bind;
-    $('#midi-btn').hidden = true;
-  }, () => { $('#midi').textContent = 'MIDI: permission denied'; });
+  startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn') });
 }
 
 function onMIDI(ev) {
@@ -564,6 +554,7 @@ function toast(msg) {
 
 $('#start').addEventListener('click', (e) => { startAudio(); e.currentTarget.blur(); });
 $('#midi-btn').addEventListener('click', (e) => { initMIDI(); e.currentTarget.blur(); });
+resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
 $('#panic').addEventListener('click', (e) => { panic(); e.currentTarget.blur(); });
 $('#replay').addEventListener('click', (e) => { motion.replay(); e.currentTarget.blur(); });
 $('#speed').addEventListener('change', (e) => { motion.speed = +e.target.value; motion.replay(); e.target.blur(); });
