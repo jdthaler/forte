@@ -1,6 +1,7 @@
 # forte.cmake — building an instrument.
 
 set(FORTE_PLUGIN_DIR ${CMAKE_CURRENT_LIST_DIR}/../plugin)
+set(FORTE_WEB_DIR ${CMAKE_CURRENT_LIST_DIR}/../web)
 
 # forte_add_plugin(<slug> NAME <name> VERSION <x.y.z> AU_SUBTYPE <code> INSTRUMENT <library>)
 #
@@ -30,4 +31,24 @@ function(forte_add_plugin slug)
     AUV2_INSTRUMENT_TYPE "aumu"
     STANDALONE_CONFIGURATIONS standalone "${A_NAME}" "net.jthaler.forte.${slug}"
   )
+endfunction()
+
+# forte_add_wasm(<slug> INSTRUMENT <library> OUT <path.wasm> [SOURCES <model bindings…>])
+#
+# The instrument's WebAssembly for the website: the engine contract (web/engine-api.cpp) and the
+# model functions its views call (SOURCES), as a standalone .wasm with no JavaScript glue
+# (shared/wasm.js loads it), copied to OUT, next to the page. It is committed; CI rebuilds it
+# with the pinned Emscripten and fails if the committed file differs.
+function(forte_add_wasm slug)
+  cmake_parse_arguments(A "" "INSTRUMENT;OUT" "SOURCES" ${ARGN})
+  set(t forte_${slug}_wasm)
+  add_executable(${t} ${FORTE_WEB_DIR}/engine-api.cpp ${A_SOURCES})
+  target_link_libraries(${t} PRIVATE ${A_INSTRUMENT})
+  set_target_properties(${t} PROPERTIES OUTPUT_NAME ${slug} SUFFIX ".wasm")
+  target_compile_options(${t} PRIVATE -fno-exceptions)
+  target_link_options(${t} PRIVATE --no-entry -sSTANDALONE_WASM -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=4mb
+    -sSTACK_SIZE=256kb -fno-exceptions -sFILESYSTEM=0 -sEXPORTED_FUNCTIONS=_malloc,_free)
+  get_filename_component(dir ${A_OUT} DIRECTORY)
+  add_custom_command(TARGET ${t} POST_BUILD COMMAND ${CMAKE_COMMAND} -E make_directory ${dir}
+                     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${t}> ${A_OUT} VERBATIM)
 endfunction()

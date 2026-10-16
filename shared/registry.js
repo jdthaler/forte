@@ -12,7 +12,7 @@
 // manufacturer is Frte), for its native plugin (docs/PLUGINS.md). Never change it: hosts
 // find saved projects' plugins by it. The VST3 class ids are in native/ids.json.
 
-export const FORTE_VERSION = '0.10.0';
+export const FORTE_VERSION = '0.11.0';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
@@ -214,7 +214,10 @@ export const INSTRUMENTS = [
 
 // The template (docs/template/), the starting point for new instruments: not listed, but it
 // is built as a plugin too, so it has a code.
-export const TEMPLATE = { id: 'template', name: 'Template Bars', plugin: { code: 'Tmpl' } };
+export const TEMPLATE = {
+  id: 'template', name: 'Template Bars', plugin: { code: 'Tmpl' },
+  tagline: 'The starting point for a new instrument: struck free–free bars.',
+};
 
 export const byId = (id) => INSTRUMENTS.find((i) => i.id === id);
 

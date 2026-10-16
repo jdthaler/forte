@@ -10,9 +10,10 @@ native/core + native/instruments/<slug>   C++: engines and models
         └── WebAssembly   loaded by the site's AudioWorklet, and called by its views
 ```
 
-Status: **steps 0–2 done** (the native setup, see [native/README.md](../native/README.md);
-every instrument headless in JavaScript; the shared native core); step 3 for the template
-under way. The decisions below were made by the owner on
+Status: **steps 0–2 done, and step 3 for the template** (the native setup, see
+[native/README.md](../native/README.md); every instrument headless in JavaScript; the shared
+native core; the template ported, its page running the WebAssembly). Next: the Bubble Organ,
+after the owner has reviewed the pipeline. The decisions below were made by the owner on
 2026-10-16. Follow [CLAUDE.md](../CLAUDE.md) for the workflow (branch, test,
 version, pull request, merge only when asked) and update this file as steps
 land.
@@ -198,6 +199,24 @@ waits for it, a few milliseconds), `acquire`/`release` for a voice that keeps it
    - re-initialising on sample-rate changes (44.1–192 kHz) and any block size.
 
 ### 3. The pilot: the template, then the Bubble Organ
+**The template: done (Forte 0.11.0).** `native/instruments/template` has its model and engine in
+C++, its generated tables and its reference; its WebAssembly (32 KB) is committed in
+`docs/template/wasm/`; `FORTE_ENGINE=wasm` runs its test suite and the reference comparison
+(the WebAssembly matches the JavaScript to float32 rounding); its plugins (CLAP, VST3, AU v2,
+standalone) are built and validated in CI on all three platforms and kept as artifacts; 10 voices
+take under 1 % of a core at 48 kHz in C++. The page runs the WebAssembly in its worklet and its
+views call the WebAssembly model, both falling back to the JavaScript. `tools/new-instrument.mjs`
+starts new instruments with this port. Learned on the way:
+- An AudioWorklet has no `URL` and no `TextDecoder`, and Chrome resolves `addModule` even when
+  the module throws: a module the worklet loads must not build URLs at import (the descriptor
+  does), so `<slug>-wasm.js` takes the parameter groups, not the descriptor.
+- A WebAssembly engine takes all the parameters (`fullParams`), not the page's
+  `engineParams(P)`, and computes its per-note data itself; the shell sends both.
+- `?engine=js` in a page's address forces the JavaScript engine, for comparing by ear.
+- The smoke-test plugin is retired; its instrument stays as the plugin tests' test instrument.
+
+**The Bubble Organ** comes next, once the owner has reviewed the pipeline.
+
 Each instrument goes through this checklist, which is its definition of
 done:
 1. Port the engine and model to C++, with generated parameters and converted

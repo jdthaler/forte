@@ -41,6 +41,19 @@ await test('the C++ tests\' JavaScript vectors are fresh (node tools/gen-native-
 const ported = portedSlugs();
 console.log(`ported instruments: ${ported.length ? ported.join(', ') : 'none yet'} (${ENGINE} engine)`);
 for (const slug of ported) {
+  await test(`${slug}: its WebAssembly build is committed, loads, and has the descriptor's parameters`, async () => {
+    const I = await loadInstrument(slug);
+    assert.ok(I.wasm, `${slug}: the descriptor has no wasm`);
+    assert.ok(existsSync(new URL(I.wasm.binary)), I.wasm.binary);
+    const W = await loadEngine(I, 'wasm');
+    assert.equal(W.name, I.wasm.name);
+    const e = new W(48000), L = new Float32Array(128), R = new Float32Array(128);
+    e.setParams(Object.fromEntries(I.groups.flatMap((g) => g.params).map((p) => [p.id, p.def])));
+    e.noteOn(Math.round((I.range[0] + I.range[1]) / 2), 0.7);
+    let pk = 0;
+    for (let b = 0; b < 40; b++) { e.process(L, R, 128); for (const v of L) pk = Math.max(pk, Math.abs(v)); }
+    assert.ok(pk > 1e-4 && Number.isFinite(pk), `peak ${pk}`);
+  });
   await test(`${slug}: plays as its JavaScript reference (tools/render-reference.mjs)`, async () => {
     assert.ok(existsSync(referenceFile(slug)), `no native/instruments/${slug}/reference.json`);
     const ref = JSON.parse(readFileSync(referenceFile(slug), 'utf8'));

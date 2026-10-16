@@ -7,11 +7,21 @@ if (EMSCRIPTEN) # run in Node; the repository's package.json makes .js an ES mod
 endif()
 add_test(NAME core COMMAND forte_tests)
 
-if (FORTE_PLUGINS AND FORTE_SMOKE)
+if (TARGET forte_template)
+  add_executable(forte_template_tests template-tests.cpp)
+  target_link_libraries(forte_template_tests PRIVATE forte_template)
+  if (EMSCRIPTEN)
+    set_target_properties(forte_template_tests PROPERTIES SUFFIX ".cjs")
+    target_link_options(forte_template_tests PRIVATE -sALLOW_MEMORY_GROWTH=1 -sENVIRONMENT=node)
+  endif()
+  add_test(NAME template COMMAND forte_template_tests)
+endif()
+
+if (FORTE_PLUGINS)
+  # the shared plugin driven as a host drives it, on a test instrument (tests/smoke) with a mod
+  # wheel, a pedal and a preset
   add_library(forte_smoke STATIC smoke/smoke.cpp)
   target_link_libraries(forte_smoke PUBLIC forte_core)
-  forte_add_plugin(smoke NAME "Forte Smoke Test" VERSION 0.0.1 AU_SUBTYPE Smok INSTRUMENT forte_smoke)
-  # the shared plugin driven as a host drives it, on the smoke-test instrument
   add_executable(forte_plugin_tests plugin-tests.cpp)
   target_link_libraries(forte_plugin_tests PRIVATE forte_plugin forte_smoke)
   add_test(NAME plugin COMMAND forte_plugin_tests)

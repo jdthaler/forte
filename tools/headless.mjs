@@ -42,13 +42,15 @@ export class Player {
     this.setParams(P);
     if (I.space === 'sustain') this.engine.setSustain?.(false);
   }
-  setParams(P) { this.P = { ...P }; this.engine.setParams(this.I.engineParams ? this.I.engineParams(this.P) : { ...this.P }); }
+  // a WebAssembly engine takes all the parameters (fullParams) and computes its own per-note data
+  setParams(P) { this.P = { ...P }; this.engine.setParams(this.I.engineParams && !this.full ? this.I.engineParams(this.P) : { ...this.P }); }
+  get full() { return !!this.engine.constructor.fullParams; }
   set(id, v) { this.setParams({ ...this.P, [id]: v }); }
   noteOn(key, vel) {
     const [lo, hi] = this.I.range || [36, 96];
     if (key < lo || key > hi) return;
     this.latched.delete(key);
-    this.engine.noteOn(key, vel, this.I.noteData?.(key, vel, this.P, this.fs));
+    this.engine.noteOn(key, vel, this.full ? undefined : this.I.noteData?.(key, vel, this.P, this.fs));
   }
   noteOff(key, vel) {
     if (this.I.space === 'hold' && this.sustained) { this.latched.add(key); return; }
