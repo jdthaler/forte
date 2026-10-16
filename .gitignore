@@ -5,3 +5,6 @@ node_modules/
 
 # full-resolution renders (the site ships compressed .m4a copies)
 *.wav
+
+# native builds (native/README.md)
+native/build/

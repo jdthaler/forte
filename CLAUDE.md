@@ -20,6 +20,9 @@ Read first:
   need HTTP).
 - `npm test` runs every `test/*-tests.mjs` in parallel; `npm test gongs`
   runs one suite.
+- `cd native && cmake --preset linux && cmake --build --preset linux &&
+  ctest --preset linux` builds the plugins and the native tests
+  (`native/README.md`; the `wasm` preset needs Emscripten).
 - `CI=1 npm test` is what GitHub Actions runs: it skips the CPU-timing
   tests. They are calibrated on a desktop machine and fail on slow or
   shared ones, so when one fails, run the same test on `main` before

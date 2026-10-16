@@ -1,0 +1,134 @@
+name: native
+
+# The C++ side (native/, docs/PLUGINS.md): the plugins built and validated on macOS, Windows and
+# Linux, and the WebAssembly rebuilt with the pinned Emscripten.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: native-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CLAP_VALIDATOR: '0.4.1'
+
+jobs:
+  plugins:
+    name: plugins (${{ matrix.preset }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-24.04, preset: linux }
+          - { os: macos-15, preset: macos }
+          - { os: windows-2022, preset: windows }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Linux packages (the standalone's audio, MIDI and window)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ninja-build libasound2-dev libjack-jackd2-dev libx11-dev
+      - name: Ninja
+        if: runner.os == 'macOS'
+        run: command -v ninja || brew install ninja
+
+      - name: Cache the fetched dependencies
+        uses: actions/cache@v4
+        with:
+          path: native/build/${{ matrix.preset }}/_deps/*-src
+          key: deps-${{ matrix.preset }}-${{ hashFiles('native/cmake/dependencies.cmake') }}
+
+      - name: Configure
+        working-directory: native
+        run: cmake --preset ${{ matrix.preset }}
+      - name: Build
+        working-directory: native
+        run: cmake --build --preset ${{ matrix.preset }} --parallel
+      - name: Unit tests
+        working-directory: native
+        run: ctest --preset ${{ matrix.preset }}
+
+      - name: Ad-hoc signing (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          find native/build/macos/plugins -maxdepth 1 \( -name '*.clap' -o -name '*.vst3' -o -name '*.component' -o -name '*.app' \) \
+            -exec codesign --force --deep --sign - {} \;
+
+      - name: Cache clap-validator
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/clap-validator*
+          key: clap-validator-${{ runner.os }}-${{ env.CLAP_VALIDATOR }}
+      - name: clap-validator
+        run: |
+          command -v clap-validator || cargo install --locked --git https://github.com/free-audio/clap-validator --tag "$CLAP_VALIDATOR" clap-validator
+          find native/build/${{ matrix.preset }}/plugins -name '*.clap' -prune -print0 |
+            while IFS= read -r -d '' p; do echo "== $p"; clap-validator validate "$p" || exit 1; done
+
+      - name: VST3 validator
+        run: |
+          cmake --build native/build/${{ matrix.preset }} --target vst3_validator --config Release
+          v=$(find native/build/${{ matrix.preset }}/validator-build/bin -type f \( -name validator -o -name validator.exe \) | head -1)
+          find native/build/${{ matrix.preset }}/plugins -name '*.vst3' -prune -print0 |
+            while IFS= read -r -d '' p; do echo "== $p"; "$v" "$p" || exit 1; done
+
+      - name: auval (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          for p in native/build/macos/plugins/*.component; do
+            cp -R "$p" ~/Library/Audio/Plug-Ins/Components/
+            plist="$p/Contents/Info.plist"
+            type=$(/usr/libexec/PlistBuddy -c 'Print :AudioComponents:0:type' "$plist")
+            sub=$(/usr/libexec/PlistBuddy -c 'Print :AudioComponents:0:subtype' "$plist")
+            manu=$(/usr/libexec/PlistBuddy -c 'Print :AudioComponents:0:manufacturer' "$plist")
+            killall -9 AudioComponentRegistrar || true
+            echo "== $p ($type $sub $manu)"
+            auval -strict -v "$type" "$sub" "$manu"
+          done
+
+      - name: Keep the plugins (to try in a DAW)
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugins-${{ matrix.preset }}
+          path: |
+            native/build/${{ matrix.preset }}/plugins
+            !native/build/${{ matrix.preset }}/plugins/**/*.pdb
+          retention-days: 14
+
+  wasm:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Emscripten (the version in native/emscripten-version)
+        run: |
+          v=$(cat native/emscripten-version)
+          git clone --depth 1 --branch "$v" https://github.com/emscripten-core/emsdk "$RUNNER_TEMP/emsdk"
+          "$RUNNER_TEMP/emsdk/emsdk" install "$v"
+          "$RUNNER_TEMP/emsdk/emsdk" activate "$v"
+          echo "EMSDK=$RUNNER_TEMP/emsdk" >> "$GITHUB_ENV"
+          sudo apt-get install -y ninja-build
+      - name: Build
+        working-directory: native
+        run: |
+          source "$EMSDK/emsdk_env.sh"
+          cmake --preset wasm
+          cmake --build --preset wasm --parallel
+      - name: Unit tests (in Node)
+        working-directory: native
+        run: ctest --preset wasm
+      - name: The committed WebAssembly is what this source builds
+        run: |
+          git status --porcelain
+          git diff --exit-code -- '*.wasm' || { echo "::error::Rebuild the WebAssembly (native/README.md) and commit it."; exit 1; }
