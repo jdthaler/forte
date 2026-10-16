@@ -10,6 +10,181 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-16 — instruments without their pages
+
+### Forte 0.9.0
+- **Every instrument has a headless descriptor** (step 1 of docs/PLUGINS.md):
+  `<slug>/src/<slug>-instrument.js` holds its parameters and presets, keys, pedal, mod
+  wheel and other controllers, MIDI velocity curve, engine, `engineParams`, `noteData` and
+  output chain. Pages spread it into the shell; Node plays any instrument from it
+  (`tools/headless.mjs`). The sound is unchanged: every demo renders byte for byte as before,
+  and every instrument measures as loud as before.
+- **One engine contract and one worklet for all.** The five older pages' engines (Ribbon
+  Piano, Tonewheel Organ, Tine Piano, Huygens and Black-Hole Keyboards) now have the shared
+  methods and run in `shared/worklet.js`; their own worklets are gone. Engines may add
+  `stats()` to the CPU pill's message.
+- **`shared/chain.js`**: the output chain after the engine (tone, body or soundboard, room,
+  volume × trim, limiter), built from the descriptor's `chain`. The shell and the older pages
+  use it, and `tools/loudness.mjs` measures every instrument through it.
+- **Tools for the native ports:**
+  - `tools/gen-native-params.mjs` writes an instrument's C++ parameter and preset tables from
+    its descriptor. The JavaScript `fmt` of each parameter is turned into piecewise text
+    formats that match the page's text over 95–100 % of nearly every parameter's travel (10
+    of 440 fall back to a plain number); `native/core` formats them exactly as JavaScript does.
+  - `tools/render-reference.mjs` plays fixed scripts (notes, velocities, chords, the pedal,
+    the mod wheel, aftertouch, bend, each preset) and summarises them for a port to match.
+  - `tools/engine.mjs`: the test suites get their engine through `loadEngine`, so
+    `FORTE_ENGINE=wasm` will run them on an instrument's WebAssembly build.
+  - `test/native-tests.mjs` checks every descriptor converts and the generated files are
+    fresh; `test/site-tests.mjs` checks every instrument has a descriptor its page uses.
+
+### Ribbon Piano 0.3.3
+- A descriptor, `piano/src/piano-instrument.js`, holds everything but the page (step 1 of
+  docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo renders
+  byte for byte as before.
+- The engine is on the shared engine contract and runs in `shared/worklet.js`, and the page
+  builds its output chain (soundboard, room, limiter) with `shared/chain.js`. The descriptor
+  has the MIDI velocity curve and the soft pedal (CC67). A key still ringing and struck again
+  after a change that leaves the strings alone (a preset that changes only the mix, say) is
+  struck again rather than doubled.
+
+### Harpsichord 0.2.1
+- A descriptor, `harpsichord/src/harpsichord-instrument.js`, holds everything but the page
+  (step 1 of docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every
+  demo renders byte for byte as before.
+
+### Pipe Organ 0.2.1
+- A descriptor, `pipes/src/pipes-instrument.js`, holds everything but the page (step 1 of
+  docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo renders
+  byte for byte as before.
+
+### Free-Reed Organ 0.2.1
+- A descriptor, `harmonium/src/harmonium-instrument.js`, holds everything but the page (step 1
+  of docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo
+  renders byte for byte as before.
+
+### Vibraphone 0.2.2
+- A descriptor, `vibraphone/src/vibraphone-instrument.js`, holds everything but the page (step
+  1 of docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo
+  renders byte for byte as before.
+
+### Carillon 0.1.1
+- A descriptor, `carillon/src/carillon-instrument.js`, holds everything but the page (step 1 of
+  docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo renders
+  byte for byte as before.
+
+### Electric Grand 0.3.1
+- A descriptor, `grand/src/grand-instrument.js`, holds everything but the page (step 1 of
+  docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo renders
+  byte for byte as before.
+
+### Tonewheel Organ 0.4.3
+- A descriptor, `organ/src/organ-instrument.js`, holds everything but the page (step 1 of
+  docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo renders
+  byte for byte as before.
+- The engine is on the shared contract (`noteOn`, `noteOff`, `allNotesOff`) and runs in
+  `shared/worklet.js`; it builds its tonewheel generator itself when the tuning, mains,
+  harmonics, crosstalk or leakage change, rather than being sent one. The page builds its
+  output chain with `shared/chain.js`. Choosing a preset no longer redraws the key contacts'
+  random bounce.
+
+### Tine Piano 0.3.3
+- A descriptor, `tines/src/tines-instrument.js`, holds everything but the page (step 1 of
+  docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo renders
+  byte for byte as before.
+- The engine is on the shared contract and runs in `shared/worklet.js`; the page builds its
+  output chain with `shared/chain.js`. The descriptor has the MIDI velocity curve. A key still
+  ringing and struck again after a preset that leaves the tines alone is struck again rather
+  than doubled.
+
+### Reed Piano 0.3.1
+- A descriptor, `reeds/src/reeds-instrument.js`, holds everything but the page (step 1 of
+  docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo renders
+  byte for byte as before.
+- Each reed's model is computed at the engine's own rate (it was fixed at 48 kHz; the same at
+  every rate above 10 kHz). A key still ringing and struck again after a preset that leaves
+  solder, strike and hardness alone is struck again rather than faded out and restarted.
+
+### Tangent Clavier 0.3.1
+- A descriptor, `clavier/src/clavier-instrument.js`, holds everything but the page (step 1 of
+  docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo renders
+  byte for byte as before.
+
+### Sticky-Pad Piano 0.3.1
+- A descriptor, `pianet/src/pianet-instrument.js`, holds everything but the page (step 1 of
+  docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo renders
+  byte for byte as before.
+
+### Viola Organista 0.3.1
+- A descriptor, `bowed/src/bowed-instrument.js`, holds everything but the page (step 1 of
+  docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo renders
+  byte for byte as before.
+
+### Glass Armonica 0.3.2
+- A descriptor, `glass/src/glass-instrument.js`, holds everything but the page (step 1 of
+  docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo renders
+  byte for byte as before.
+
+### Pyrophone 0.3.2
+- A descriptor, `pyrophone/src/pyrophone-instrument.js`, holds everything but the page (step 1
+  of docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo
+  renders byte for byte as before.
+
+### Singing Arc 0.1.1
+- A descriptor, `arc/src/arc-instrument.js`, holds everything but the page (step 1 of
+  docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo renders
+  byte for byte as before.
+- Fixed: opening the page in talk mode, or moving the current, gap, τ or re-strike there (the
+  mod wheel moves the current), cut the capacitor bank with the talk circuit, and switching
+  back to the arcs kept it: C4 played at 83 Hz. The bank is now always cut for the arcs.
+
+### Huygens Keyboard 0.3.3
+- A descriptor, `huygens/src/huygens-instrument.js`, holds everything but the page (step 1 of
+  docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo renders
+  byte for byte as before.
+- The engine is on the shared contract and runs in `shared/worklet.js` (retuning arrives as a
+  message); the page builds its output chain (tone, body, room) with `shared/chain.js`.
+
+### Gong Keyboard 0.3.1
+- A descriptor, `gongs/src/gongs-instrument.js`, holds everything but the page (step 1 of
+  docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo renders
+  byte for byte as before.
+- The plate's coupling tables are part of the descriptor's engine parameters; the page still
+  sends them only when they change.
+
+### Black-Hole Keyboard 0.3.3
+- A descriptor, `blackhole/src/blackhole-instrument.js`, holds everything but the page (step 1
+  of docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo
+  renders byte for byte as before.
+- The engine is on the shared contract and runs in `shared/worklet.js`; the QNM table loads
+  through the descriptor. The page builds its output chain with `shared/chain.js`; the
+  descriptor has the MIDI velocity curve.
+
+### Quantum Keyboard 0.3.1
+- A descriptor, `quantum/src/quantum-instrument.js`, holds everything but the page (step 1 of
+  docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo renders
+  byte for byte as before.
+
+### Bubble Organ 0.2.1
+- A descriptor, `bubbles/src/bubbles-instrument.js`, holds everything but the page (step 1 of
+  docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo renders
+  byte for byte as before.
+
+### Spring Keyboard 0.1.1
+- A descriptor, `springs/src/springs-instrument.js`, holds everything but the page (step 1 of
+  docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo renders
+  byte for byte as before.
+
+### Star Keyboard 0.1.1
+- A descriptor, `stars/src/stars-instrument.js`, holds everything but the page (step 1 of
+  docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo renders
+  byte for byte as before.
+
+### Wind Harp 0.1.2
+- A descriptor, `windharp/src/windharp-instrument.js`, holds everything but the page (step 1 of
+  docs/PLUGINS.md); the page and the tests use it. The sound is unchanged: every demo renders
+  byte for byte as before.
+
 ## 2026-10-16 — the native setup
 
 ### Forte 0.8.0

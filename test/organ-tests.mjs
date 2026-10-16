@@ -1,8 +1,11 @@
 // Tonewheel organ checks. Run: node test/organ-tests.mjs
 import assert from 'node:assert/strict';
-import { gearFreq, etFreq, centsOff, keyWheel, keyAnalysis, buildGenerator, NUM_WHEELS, wheelSpec } from '../organ/src/tonewheels.js';
-import { OrganEngine } from '../organ/src/organ-engine.js';
+import { gearFreq, etFreq, centsOff, keyWheel, keyAnalysis, NUM_WHEELS, wheelSpec } from '../organ/src/tonewheels.js';
+import { INSTRUMENT } from '../organ/src/organ-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS } from '../organ/src/organ-params.js';
+
+const OrganEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000;
 let failures = 0;
@@ -15,8 +18,7 @@ const P = (o = {}) => ({ ...DEFAULTS, ...o });
 
 function engine(params) {
   const e = new OrganEngine(FS);
-  e.setParams(params);
-  e.configure(buildGenerator(params, FS));
+  e.setParams(params); // builds the generator too
   return e;
 }
 function run(e, seconds, onBlock) {
@@ -71,7 +73,7 @@ test('drawbar "harmonics" are tempered: 1⅗′ ≈ +13.7 ¢, 2⅔′ ≈ −2 �
 console.log('engine');
 test('one key, 8′ only: plays its wheel’s frequency', () => {
   const e = engine(P({ ...DRY, drawbars: [0, 0, 8, 0, 0, 0, 0, 0, 0] }));
-  e.keyDown(69);
+  e.noteOn(69);
   const { L } = run(e, 0.5);
   const f = zcFreq(L, 4800, 24000);
   assert.ok(Math.abs(f - 440) < 0.05, `f=${f}`);
@@ -80,7 +82,7 @@ test('one key, 8′ only: plays its wheel’s frequency', () => {
 test('motor off: pitch and level fall together as the generator coasts', () => {
   const params = P({ ...DRY, drawbars: [0, 0, 8, 0, 0, 0, 0, 0, 0], inertia: 4 });
   const e = engine(params);
-  e.keyDown(69);
+  e.noteOn(69);
   const { L } = run(e, 3.5, (t) => { if (t >= 0.5 && e.p.motor) e.setParams({ motor: false }); });
   const f0 = zcFreq(L, 4800, 19200), f1 = zcFreq(L, 3.0 * FS, 3.3 * FS);
   const a0 = rms(L, 4800, 19200), a1 = rms(L, 3.0 * FS, 3.3 * FS);
@@ -97,7 +99,7 @@ test('scanner vibrato V3: median pitch swing is the LC line’s ±2Nτ·f_scan (
   // medians of its upper and lower halves, and the extremes
   const swings = (key) => {
     const e = engine(params);
-    e.keyDown(key);
+    e.noteOn(key);
     const { L } = run(e, 1.5);
     const t = zcTimes(L.subarray(9600)), f = [];
     for (let i = 1; i < t.length; i++) f.push(FS / (t[i] - t[i - 1]));
@@ -116,7 +118,7 @@ test('Leslie horn: Doppler swing ≈ ±v/c', () => {
   const params = P({ ...DRY, drawbars: [0, 0, 0, 0, 0, 0, 0, 0, 8], leslieOn: true, leslie: 'fast', reflections: 0, crossover: 300, micDist: 3 });
   const e = engine(params);
   e.hornHz = params.hornFast; e.drumHz = params.drumFast;
-  e.keyDown(60); // 1′ of C4 → 2093 Hz into the horn
+  e.noteOn(60); // 1′ of C4 → 2093 Hz into the horn
   const { L } = run(e, 1.0);
   const t = zcTimes(L.subarray(4800));
   let lo = Infinity, hi = 0;
@@ -129,7 +131,7 @@ test('Leslie horn: Doppler swing ≈ ±v/c', () => {
 test('busbar loading compresses chords', () => {
   const level = (loading, keys) => {
     const e = engine(P({ ...DRY, drawbars: [0, 0, 8, 0, 0, 0, 0, 0, 0], loading }));
-    for (const k of keys) e.keyDown(k);
+    for (const k of keys) e.noteOn(k);
     const { L } = run(e, 0.4);
     return rms(L, 4800);
   };
@@ -139,20 +141,20 @@ test('busbar loading compresses chords', () => {
 });
 test('percussion is single-trigger (legato does not re-strike)', () => {
   const e = engine(P({ ...DRY, percOn: true }));
-  e.keyDown(60);
+  e.noteOn(60);
   run(e, 0.3);
   const envBefore = e.percEnv;
-  e.keyDown(64);
+  e.noteOn(64);
   assert.equal(e.percEnv, envBefore);
-  e.keyUp(60); e.keyUp(64);
+  e.noteOff(60); e.noteOff(64);
   run(e, 0.05);
-  e.keyDown(67);
+  e.noteOn(67);
   assert.equal(e.percEnv, 1);
 });
 test('key click: contact bounce makes a broadband transient, soft contacts remove it', () => {
   const hf = (contactTime) => {
     const e = engine(P({ ...DRY, drawbars: [0, 0, 8, 0, 0, 0, 0, 0, 0], spread: 1.5, bounce: 1, contactTime }));
-    e.keyDown(48);
+    e.noteOn(48);
     const { L } = run(e, 0.05);
     let d2 = 0;
     for (let i = 2; i < 960; i++) { const d = L[i] - 2 * L[i - 1] + L[i - 2]; d2 += d * d; }
@@ -165,7 +167,7 @@ test('tube drive: even harmonics grow with drive, a full chord stays bounded', (
   const peak = (x, a = 0) => { let m = 0; for (let i = a; i < x.length; i++) m = Math.max(m, Math.abs(x[i])); return m; };
   const h2 = (drive) => {
     const e = engine(P({ ...DRY, drawbars: [0, 0, 8, 0, 0, 0, 0, 0, 0], drive }));
-    e.keyDown(57);
+    e.noteOn(57);
     const { L } = run(e, 0.6);
     const g = (f) => { let re = 0, im = 0; for (let i = 9600; i < 28800; i++) { const w = 0.5 - 0.5 * Math.cos((2 * Math.PI * (i - 9600)) / 19199); re += w * L[i] * Math.cos((2 * Math.PI * f * i) / FS); im += w * L[i] * Math.sin((2 * Math.PI * f * i) / FS); } return Math.hypot(re, im); };
     return { db: 20 * Math.log10(g(440) / g(220)), level: rms(L, 9600) };
@@ -175,7 +177,7 @@ test('tube drive: even harmonics grow with drive, a full chord stays bounded', (
   assert.ok(Math.abs(20 * Math.log10(d15.level / d0.level)) < 0.5, 'a little drive leaves the level alone');
   // ten keys, every drawbar out, pedal down, drive full: was a rectifier peaking at 13
   const e = engine(P({ ...DRY, drawbars: [8, 8, 8, 8, 8, 8, 8, 8, 8], expression: 1, drive: 1, loading: 0 }));
-  for (const k of [36, 43, 48, 52, 55, 60, 64, 67, 72, 76]) e.keyDown(k, 127);
+  for (const k of [36, 43, 48, 52, 55, 60, 64, 67, 72, 76]) e.noteOn(k, 1);
   const { L } = run(e, 0.5);
   assert.ok(peak(L, 4800) < 1, `peak ${peak(L, 4800).toFixed(2)}`);
   console.log(`        H2 re fundamental: drive 0.15 ${d15.db.toFixed(0)} dB, 0.5 ${d50.db.toFixed(0)} dB, 1 ${d100.db.toFixed(0)} dB; 10-key chord at full drive peaks ${peak(L, 4800).toFixed(2)}`);
@@ -183,7 +185,7 @@ test('tube drive: even harmonics grow with drive, a full chord stays bounded', (
 test('Leslie: the horn cannot sweep through the mics', () => {
   const e = engine(P({ hornRadius: 0.3, micDist: 0.3, leslie: 'fast', vib: 'off', drive: 0 }));
   e.hornHz = e.p.hornFast; e.drumHz = e.p.drumFast;
-  for (const k of [60, 64, 67]) e.keyDown(k);
+  for (const k of [60, 64, 67]) e.noteOn(k);
   const { L, R } = run(e, 1.5);
   let pk = 0, s2 = 0;
   for (let i = 9600; i < L.length; i++) { pk = Math.max(pk, Math.abs(L[i]), Math.abs(R[i])); s2 += L[i] * L[i]; }
@@ -192,7 +194,7 @@ test('Leslie: the horn cannot sweep through the mics', () => {
 });
 test('expression pedal glides: a 2 dB step makes no click', () => {
   const e = engine(P({ ...DRY, drawbars: [8, 8, 8, 0, 0, 0, 0, 0, 0] }));
-  for (const k of [60, 64, 67]) e.keyDown(k);
+  for (const k of [60, 64, 67]) e.noteOn(k);
   const { L } = run(e, 0.6, (t) => { if (t >= 0.3 && e.p.expression !== 0.8) e.setParams({ expression: 0.8 }); });
   const d3 = (i) => L[i] - 3 * L[i - 1] + 3 * L[i - 2] - L[i - 3];
   const S = (t) => Math.round(t * FS);
@@ -205,7 +207,7 @@ test('expression pedal glides: a 2 dB step makes no click', () => {
 });
 test('process() builds no per-block key lists', () => {
   const e = engine(P());
-  for (const k of [48, 55, 60, 64]) e.keyDown(k);
+  for (const k of [48, 55, 60, 64]) e.noteOn(k);
   run(e, 0.05);
   const values = Map.prototype.values, keys = Map.prototype[Symbol.iterator];
   let calls = 0;
@@ -213,7 +215,7 @@ test('process() builds no per-block key lists', () => {
   Map.prototype[Symbol.iterator] = function (...a) { calls++; return keys.apply(this, a); };
   try { run(e, 0.1); } finally { Map.prototype.values = values; Map.prototype[Symbol.iterator] = keys; }
   assert.equal(calls, 0);
-  for (const k of [48, 55, 60, 64]) e.keyUp(k);
+  for (const k of [48, 55, 60, 64]) e.noteOff(k);
   run(e, 0.1);
   assert.equal(e.keyArr.length, 0); assert.equal(e.keys.size, 0);
 });
@@ -225,7 +227,7 @@ test('stable and finite across extreme settings', () => {
   ];
   for (const c of cases) {
     const e = engine(c);
-    for (const k of [36, 48, 55, 60, 64, 67, 72, 84, 96]) e.keyDown(k, 127);
+    for (const k of [36, 48, 55, 60, 64, 67, 72, 84, 96]) e.noteOn(k, 1);
     const { L, R } = run(e, 0.6, (t) => { if (t > 0.3) e.setParams({ motor: false, leslie: 'stop' }); });
     for (let i = 0; i < L.length; i++) assert.ok(Number.isFinite(L[i]) && Math.abs(L[i]) < 20 && Number.isFinite(R[i]));
   }
@@ -234,7 +236,7 @@ test('stable and finite across extreme settings', () => {
 console.log('performance');
 test('real-time budget: 10 keys, full drawbars, chorus, drive, Leslie', () => {
   const e = engine(P({ drawbars: [8, 8, 8, 8, 8, 8, 8, 8, 8], vib: 'C3', leslie: 'fast', drive: 0.5, percOn: true }));
-  for (const k of [36, 43, 48, 52, 55, 60, 64, 67, 72, 76]) e.keyDown(k);
+  for (const k of [36, 43, 48, 52, 55, 60, 64, 67, 72, 76]) e.noteOn(k);
   const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
   for (let i = 0; i < 100; i++) e.process(L, R, bl);
   const blocks = 3000, t0 = performance.now();

@@ -24,7 +24,7 @@ function render(P, seconds, events) {
   for (let s = 0; s < n; s += bl) {
     while (j < ev.length && ev[j].s <= s) {
       const { type, a, b } = ev[j++];
-      if (type === 'on') e.noteOn(a, vd(a), b); else if (type === 'off') e.noteOff(a); else e.setSustain(a);
+      if (type === 'on') e.noteOn(a, b, vd(a)); else if (type === 'off') e.noteOff(a); else e.setSustain(a);
     }
     e.process(bL, bR, bl);
     for (let i = 0; i < bl && s + i < n; i++) { L[s + i] = bL[i]; R[s + i] = bR[i]; }

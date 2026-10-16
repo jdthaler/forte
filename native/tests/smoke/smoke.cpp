@@ -12,9 +12,11 @@ namespace {
 using namespace forte;
 
 enum { kDecay, kVolume, kCount };
+const FormatSegment kSeconds[] = {{INFINITY, "", " s", 1, 0, 2, false, false, false, false}};
+const FormatSegment kDb[] = {{0.0005, "", " dB", 0, -60, 1, false, false, false, false}, {INFINITY, "", " dB", 20, 0, 1, true, false, false, false}};
 const ParamInfo kParams[kCount] = {
-  {"decay", "Ring time", "Tone", ParamKind::continuous, 0.1, 10, 1, 0, true, true, nullptr, 0, {"", " s", 1, 0, 2}},
-  {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, {"", " dB", 20, 0, 1, true, 1e-3}},
+  {"decay", "Ring time", "Tone", ParamKind::continuous, 0.1, 10, 1, 0, true, true, nullptr, 0, kSeconds, 1},
+  {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kDb, 2},
 };
 const PresetValue kLong[] = {{kDecay, 6}};
 const Preset kPresets[] = {{"Long ring", kLong, 1}};
@@ -47,11 +49,12 @@ class SmokeEngine : public Engine {
 };
 
 const InstrumentInfo kInfo = {
-  "smoke", "Forte Smoke Test", "0.0.1", "CI-only: proves the plugin pipeline.", "Smok",
-  {0x46, 0x6f, 0x72, 0x74, 0x65, 0x53, 0x6d, 0x6f, 0x6b, 0x65, 0x54, 0x65, 0x73, 0x74, 0x00, 0x01},
-  kParams, kCount, kPresets, 1, kKeep, 1,
-  21, 108, Space::sustain, kDecay, 10, {kVolume}, nullptr,
-  [](double fs) -> Engine * { return new SmokeEngine(fs); },
+  .slug = "smoke", .name = "Forte Smoke Test", .version = "0.0.1", .description = "CI-only: proves the plugin pipeline.", .auSubtype = "Smok",
+  .vst3Id = {0x46, 0x6f, 0x72, 0x74, 0x65, 0x53, 0x6d, 0x6f, 0x6b, 0x65, 0x54, 0x65, 0x73, 0x74, 0x00, 0x01},
+  .params = kParams, .paramCount = kCount, .presets = kPresets, .presetCount = 1, .keep = kKeep, .keepCount = 1,
+  .keyLo = 21, .keyHi = 108, .space = Space::sustain, .modWheel = kDecay, .modWheelMax = 10,
+  .chain = {.volume = kVolume},
+  .create = [](double fs) -> Engine * { return new SmokeEngine(fs); },
 };
 
 } // namespace

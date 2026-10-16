@@ -1,9 +1,11 @@
-// main.js — UI, audio graph, computer keyboard + MIDI input, model cache.
+// main.js — the page: UI, views, computer keyboard + MIDI input. The instrument
+// itself (parameters, engine, voice data, output chain) is in piano-instrument.js.
 
-import { GROUPS, ALL_PARAMS, DEFAULTS, PRESETS } from './params.js';
-import { computeKeyModel, buildVoiceData, noteName, MATERIALS, NMAX_MODES } from './physics.js';
-import { PianoEngine } from './engine.js';
-import { soundboardIR, roomIR } from '../../shared/impulses.js';
+import { ALL_PARAMS } from './params.js';
+import { INSTRUMENT, GROUPS, DEFAULTS, PRESETS, keyModel } from './piano-instrument.js';
+import { noteName, MATERIALS, NMAX_MODES } from './physics.js';
+import { PianoEngine } from './engine.js'; // the slow-motion view runs its own copy
+import { createChain } from '../../shared/chain.js';
 import { MotionView, SpectrumView, drawSection, FAMILY } from './viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
 import { startMIDI, resumeMIDI } from '../../shared/midi.js';
@@ -12,7 +14,7 @@ import { trimGain } from '../../shared/registry.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'ribbon-piano/params/v1';
-const KEY_LO = 21, KEY_HI = 108;
+const [KEY_LO, KEY_HI] = INSTRUMENT.range;
 
 // ---------------------------------------------------------------------------
 // state
@@ -28,27 +30,16 @@ function saveParams() {
 }
 
 let P = loadParams();
-let version = 1;
-let fs = 48000;
+let fs = 48000;                // the audio context's rate, once it runs
 let base = 48;                 // MIDI note of the lower-row "Z" key
 let focusKey = 60;
 let sustain = false;
-const cache = new Map();       // key → { version, model, data }
-const sent = new Set();        // keys whose current-version data the worklet holds
+const sent = new Map();        // MIDI key → the voice data the engine holds for it
 const held = new Map();        // keyboard code → MIDI key
 const sounding = new Map();    // MIDI key → number of sources holding it
 
-function keyData(key) {
-  let c = cache.get(key);
-  if (!c || c.version !== version) {
-    const model = computeKeyModel(key, P, fs);
-    c = { version, model, data: buildVoiceData(model, P, version) };
-    cache.set(key, c);
-  }
-  return c;
-}
-
-const engineParams = () => ({ gainV: P.gainV, gainH: P.gainH, gainT: P.gainT, damper: P.damper, width: P.width, unaCorda: !!P.unaCorda });
+const keyData = (key) => keyModel(key, P, fs); // { model, data }, cached in piano-instrument.js
+const engineParams = () => INSTRUMENT.engineParams(P);
 
 // ---------------------------------------------------------------------------
 // audio
@@ -64,34 +55,22 @@ function startAudio() {
   audioStarting = (async () => {
     const ctx = new AudioContext({ latencyHint: 'interactive' });
     if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
-    await ctx.audioWorklet.addModule('src/engine.js');
-    await ctx.audioWorklet.addModule('src/worklet.js');
-    const node = new AudioWorkletNode(ctx, 'piano-processor', {
+    await ctx.audioWorklet.addModule(INSTRUMENT.engine.module);
+    await ctx.audioWorklet.addModule(new URL('../../shared/worklet.js', import.meta.url));
+    const node = new AudioWorkletNode(ctx, 'forte-processor', {
       numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
+      processorOptions: { engine: INSTRUMENT.engine.name },
     });
+    // dry + soundboard, room, volume, limiter (shared/chain.js); the analyser hears the strings alone
+    const chain = createChain(ctx, node, INSTRUMENT.chain);
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 8192;
     analyser.smoothingTimeConstant = 0.55;
-    const dry = ctx.createGain(), sb = ctx.createConvolver(), sbGain = ctx.createGain();
-    const bus = ctx.createGain(), room = ctx.createConvolver(), roomGain = ctx.createGain();
-    const master = ctx.createGain(), limiter = ctx.createDynamicsCompressor();
-    sb.buffer = soundboardIR(ctx);
-    room.buffer = roomIR(ctx);
-    limiter.threshold.value = -4;
-    limiter.knee.value = 4;
-    limiter.ratio.value = 12;
-    limiter.attack.value = 0.002;
-    limiter.release.value = 0.2;
-    node.connect(analyser);
-    node.connect(dry).connect(bus);
-    node.connect(sb).connect(sbGain).connect(bus);
-    bus.connect(master);
-    bus.connect(room).connect(roomGain).connect(master);
-    master.connect(limiter).connect(ctx.destination);
+    chain.tap.connect(analyser);
     node.port.onmessage = (e) => onWorklet(e.data);
 
-    if (ctx.sampleRate !== fs) { fs = ctx.sampleRate; bumpVersion(); }
-    audio = { ctx, node, analyser, dry, sbGain, roomGain, master };
+    fs = ctx.sampleRate; // the voice data's version includes it: keys are rebuilt if it is not 48 kHz
+    audio = { ctx, node, analyser, chain };
     applyMix();
     node.port.postMessage({ type: 'params', params: engineParams() });
     node.port.postMessage({ type: 'sustain', on: sustain });
@@ -107,12 +86,7 @@ function startAudio() {
 }
 
 function applyMix() {
-  if (!audio) return;
-  const t = audio.ctx.currentTime;
-  audio.dry.gain.setTargetAtTime(1 - 0.75 * P.soundboard, t, 0.02);
-  audio.sbGain.gain.setTargetAtTime(1.1 * P.soundboard, t, 0.02);
-  audio.roomGain.gain.setTargetAtTime(0.55 * P.room, t, 0.02);
-  audio.master.gain.setTargetAtTime(P.volume * trimGain('piano'), t, 0.02); // level-matched across instruments
+  if (audio) audio.chain.apply(P, trimGain(INSTRUMENT.id)); // level-matched across instruments
 }
 
 function onWorklet(m) {
@@ -133,9 +107,9 @@ async function noteOn(key, velocity) {
   sounding.set(key, (sounding.get(key) || 0) + 1);
   keyboardView.set(key, true);
   const a = await startAudio();
-  const c = keyData(key);
+  const data = INSTRUMENT.noteData(key, velocity, P, fs);
   const msg = { type: 'noteOn', key, velocity };
-  if (!sent.has(key)) { msg.data = c.data; sent.add(key); }
+  if (sent.get(key) !== data) { msg.data = data; sent.set(key, data); } // the engine keeps the last one
   a.node.port.postMessage(msg);
   setFocus(key, velocity);
 }
@@ -258,8 +232,6 @@ function updateHelp() {
 // ---------------------------------------------------------------------------
 // MIDI
 
-const velFromMidi = (v) => 0.25 * 24 ** (v / 127); // 0.25 … 6 m/s hammer speed
-
 function initMIDI() {
   startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn') });
 }
@@ -267,7 +239,7 @@ function initMIDI() {
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data;
   const cmd = st & 0xf0;
-  if (cmd === 0x90 && d2 > 0) noteOn(d1, velFromMidi(d2));
+  if (cmd === 0x90 && d2 > 0) noteOn(d1, INSTRUMENT.midiVelocity(d2 / 127)); // 0.25 … 6 m/s hammer speed
   else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) noteOff(d1);
   else if (cmd === 0xb0 && d1 === 64) setSustain(d2 >= 64);
   else if (cmd === 0xb0 && d1 === 67) setParam('unaCorda', d2 >= 64); // soft pedal
@@ -350,7 +322,7 @@ function buildControls() {
   PRESETS.forEach((pr, i) => ps.add(new Option(pr.name, i)));
   ps.addEventListener('change', () => {
     if (ps.value === '') return;
-    const keep = { volume: P.volume, room: P.room, soundboard: P.soundboard, velocity: P.velocity, maxFreq: P.maxFreq };
+    const keep = Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]]));
     setAll({ ...DEFAULTS, ...keep, ...PRESETS[+ps.value].p });
     ps.blur();
   });
@@ -377,7 +349,6 @@ function setAll(newP) {
   P = newP;
   for (const id of controls.keys()) refreshControl(id);
   refreshVisibility();
-  bumpVersion();
   if (audio) audio.node.port.postMessage({ type: 'params', params: engineParams() });
   applyMix();
   updateHelp();
@@ -400,17 +371,11 @@ function setParam(id, v, opts = {}) {
     if (audio) audio.node.port.postMessage({ type: 'params', params: engineParams() });
     modelChangedSoon(true);
   } else if (p.kind === 'mix') applyMix();
-  else if (p.kind === 'model') {
+  else if (p.kind === 'model') { // a new version of the voice data (piano-instrument.js)
     refreshVisibility();
-    bumpVersion();
     modelChangedSoon();
   }
   $('#preset').value = '';
-}
-
-function bumpVersion() {
-  version++;
-  sent.clear();
 }
 
 let mcTimer = 0;
@@ -464,7 +429,7 @@ function runSim(key, velocity) {
   const { model, data } = keyData(key);
   const eng = new PianoEngine(fs);
   eng.setParams(engineParams());
-  const v = eng.noteOn(key, data, velocity);
+  const v = eng.noteOn(key, velocity, data);
   const period = 1 / model.info.f0;
   const total = Math.round(Math.min(0.05, Math.max(0.008, 4 * period)) * fs);
   const stride = Math.max(1, Math.ceil(total / 700));

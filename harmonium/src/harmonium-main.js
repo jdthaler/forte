@@ -2,8 +2,8 @@
 
 import { createShell, noteName } from '../../shared/shell.js';
 import { fit, css, animate } from '../../shared/views.js';
-import { GROUPS, PRESETS } from './harmonium-params.js';
-import { KEY_LO, KEY_HI, RANKS, AIR, CD, rankFreq, reedModel, modeShape, areaAt, threshold, engaged } from './harmonium-model.js';
+import { INSTRUMENT } from './harmonium-instrument.js';
+import { RANKS, AIR, CD, rankFreq, reedModel, modeShape, areaAt, threshold, engaged } from './harmonium-model.js';
 
 const $ = (s) => document.querySelector(s);
 const RANK_COL = ['#c98bff', '#ff9fb0', '#ffd27a', '#7cc8ff', '#9fe39f'];
@@ -14,17 +14,9 @@ const windHist = { t: new Float64Array(1024), P: new Float64Array(1024), E: new 
 let clock = 0, envKey = 0; // seconds of audio seen, from the engine's posts; the key the envelope belongs to
 
 const shell = createShell({
-  id: 'harmonium',
-  groups: GROUPS,
-  presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'],
-  range: [KEY_LO, KEY_HI],
+  ...INSTRUMENT,
   base: 48,
-  worklet: { modules: ['src/harmonium-engine.js'], engine: 'HarmoniumEngine' },
-  chain: { volume: 'volume', room: 'room' },
-  space: 'hold',
   arrows: { param: 'velocity', step: 0.05 },
-  modWheel: 'pressure',
   onNoteOn: (key) => { focus = key; shell.keys.focus?.(key); updateModel(); },
   onParam: () => { updateModel(); },
   onMessage: (m) => {

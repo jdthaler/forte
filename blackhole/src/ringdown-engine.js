@@ -7,15 +7,20 @@
 // rises through a short merger bridge, and hands over to the ringdown with
 // the same phase and amplitude (ringdown-model.js has the schedule in closed
 // form).
+//
+// The engine contract is shared/worklet.js's: noteOn(key, velocity, voice), the
+// voice from keyVoice (ringdown-model.js). Under shared/worklet.js it posts the
+// page { type: 'voices', voices } every 48 blocks of 128 samples.
 
 const TAU = 2 * Math.PI;
 
 export const RINGDOWN_DEFAULTS = { stereo: 1, releaseMute: 0, master: 1, maxVoices: 48 };
 const STEAL_TAU = 0.0015;   // a stolen voice fades out with this time constant (gone in ~10 ms)
+const VOICES_EVERY = 48 * 128; // samples between voice counts for the page
 
 class Voice {
-  constructor(eng, d, vel) {
-    this.key = d.key; this.vel = vel; this.keyDown = true;
+  constructor(eng, key, d, vel) {
+    this.key = key; this.vel = vel; this.keyDown = true;
     const k = eng.k, n = d.modes.length;
     const F = () => new Float64Array(n);
     this.n = n;
@@ -119,18 +124,20 @@ export class RingdownEngine {
     this.voices = [];
     this.stealStep = Math.exp(-this.k / STEAL_TAU);
     this.muteStep = Math.exp(-this.k / 0.04);
+    this.sinceVoices = 0;
   }
   setParams(p) { this.p = { ...this.p, ...p }; }
-  noteOn(data, vel) {
+  noteOn(key, vel, data) {
     // over the limit: fade out the quietest voice that is not already going
     let live = 0, quiet = null;
     for (const v of this.voices) if (!v.stolen) { live++; if (!quiet || v.level < quiet.level) quiet = v; }
     if (live >= this.p.maxVoices && quiet) quiet.stolen = true;
-    this.voices.push(new Voice(this, data, vel));
+    this.voices.push(new Voice(this, key, data, vel));
     if (this.voices.length > 2 * this.p.maxVoices) this.voices.shift();   // hard limit, never reached in practice
   }
   noteOff(key) { for (const v of this.voices) if (v.key === key) v.keyDown = false; }
-  allOff() { this.voices.length = 0; }
+  allNotesOff() { this.voices.length = 0; }
+  voiceCount() { return this.voices.length; }
   process(L, R, n) {
     L.fill(0, 0, n); R.fill(0, 0, n);
     const vs = this.voices;
@@ -141,6 +148,7 @@ export class RingdownEngine {
       if (!v.dead) vs[j++] = v;
     }
     vs.length = j;
+    if (this.post && (this.sinceVoices += n) >= VOICES_EVERY) { this.sinceVoices = 0; this.post({ type: 'voices', voices: vs.length }); }
   }
 }
 

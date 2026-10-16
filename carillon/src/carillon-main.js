@@ -2,9 +2,9 @@
 
 import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
-import { GROUPS, PRESETS } from './carillon-params.js';
+import { INSTRUMENT } from './carillon-instrument.js';
 import {
-  KEY_LO, KEY_HI, TAU, bellOf, bellModes, clapperOf, clapperSpeed, hertzTime, strikeNote, struckPartials, asymmetryOf, doubletSplit,
+  TAU, bellOf, bellModes, clapperOf, clapperSpeed, hertzTime, strikeNote, struckPartials, asymmetryOf, doubletSplit,
   PARTIAL_NAMES, DESIGNATION, idealRatio, cents,
 } from './carillon-model.js';
 import { geomOf, innerAt, outerAt } from './bell-profile.js';
@@ -14,15 +14,8 @@ const spectrum = new SpectrumView($('#spectrum'), { fLo: 40, fHi: 16000 });
 let focus = 60, sel = null, live = null, levelHist = [], atStrike = null;
 
 const shell = createShell({
-  id: 'carillon',
-  groups: GROUPS,
-  presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'],
-  range: [KEY_LO, KEY_HI],
+  ...INSTRUMENT,
   base: 60,
-  worklet: { modules: ['src/carillon-engine.js'], engine: 'CarillonEngine' },
-  chain: { volume: 'volume', room: 'room' },
-  space: 'sustain',
   arrows: { param: 'velocity', step: 0.05 },
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key) => { if (key !== focus) levelHist = []; focus = key; atStrike = null; shell.keys.focus?.(key); update(); },

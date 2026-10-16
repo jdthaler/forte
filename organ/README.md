@@ -123,8 +123,8 @@ happening.
 ```
 organ/index.html, style.css      UI
 organ/src/tonewheels.js          gears, wheels, drawbar → wheel map, foldback, analysis
+organ/src/organ-instrument.js    the instrument without its page: parameters, presets, engine, output chain
 organ/src/organ-engine.js        DSP: generator, contacts, busbars, percussion, LC scanner, drive, Leslie
-organ/src/organ-worklet.js       AudioWorklet wrapper
 organ/src/organ-main.js          console, drawbars, keyboard / MIDI, views
 organ/src/organ-viz.js           generator map, Leslie top view, spectrum + scope, scanner
 organ/src/organ-params.js        parameters and registrations

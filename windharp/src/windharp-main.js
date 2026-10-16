@@ -2,27 +2,19 @@
 
 import { createShell, noteName } from '../../shared/shell.js';
 import { fit, css, animate } from '../../shared/views.js';
-import { GROUPS, PRESETS } from './windharp-params.js';
+import { INSTRUMENT } from './windharp-instrument.js';
 import {
-  KEY_LO, KEY_HI, TAU, U_REF, U_MAX, AIR, RE_C, stringDesign, shedding, lockBand, lockedRange, lockedAmplitude, homeHarmonic, massDamping, courseOffsets,
+  TAU, U_REF, U_MAX, AIR, RE_C, stringDesign, shedding, lockBand, lockedRange, lockedAmplitude, homeHarmonic, massDamping, courseOffsets,
 } from './windharp-model.js';
 
 const $ = (s) => document.querySelector(s);
 let focus = 60, harp = null, analyser = null, fbuf = null;
 
 const shell = createShell({
-  id: 'windharp',
-  groups: GROUPS,
-  presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'],
-  range: [KEY_LO, KEY_HI],
+  ...INSTRUMENT,
   base: 60,
-  worklet: { modules: ['src/windharp-engine.js'], engine: 'WindHarpEngine' },
-  chain: { volume: 'volume', room: 'room' },
-  space: 'sustain',
   arrows: { param: 'wind', step: 0.05 },
   holdHint: { ms: 400, text: 'Hold the key: the shutter must stay open while the wind sets the string singing, up to a second in the bass.' },
-  modWheel: { param: 'wind', max: U_MAX },
   onAudio: (a) => { analyser = a.ctx.createAnalyser(); analyser.fftSize = 8192; analyser.smoothingTimeConstant = 0; a.node.connect(analyser); },
   onNoteOn: (key) => { focus = key; shell.keys.focus?.(key); update(); },
   onParam: () => update(),

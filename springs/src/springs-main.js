@@ -2,27 +2,17 @@
 
 import { createShell, noteName } from '../../shared/shell.js';
 import { fit, css, animate } from '../../shared/views.js';
-import { GROUPS, PRESETS } from './springs-params.js';
-import { KEY_LO, KEY_HI, TAU, tuneSpring, scaleSpring, keySprings, geometryId, dispersionCurve, modeSigma, pulseLength, pulseSpectrum, cents } from './springs-model.js';
+import { INSTRUMENT, springsFor as cached } from './springs-instrument.js';
+import { KEY_LO, KEY_HI, TAU, tuneSpring, scaleSpring, dispersionCurve, modeSigma, pulseLength, pulseSpectrum, cents } from './springs-model.js';
 
 const $ = (s) => document.querySelector(s);
 let focus = 60, echo = null, analyser = null, strikeAt = -1, strikeVel = 0.7;
 const rate = () => shell?.audio?.ctx.sampleRate || 48000;
 
-// ---- the springs and their modes, built here and sent with each note ----------------------------------
-// (a few hundred 6 × 6 eigenproblems for a bass key: too slow for the audio thread, so the page
-// builds them, keeps them, and works through the keyboard in spare moments after a change)
-const built = new Map();
-function springsFor(key, P = shell.P, fs = rate()) {
-  const id = `${geometryId(P)}|${key}|${fs}`;
-  let c = built.get(id);
-  if (!c) {
-    c = keySprings(key, P, fs);
-    if (built.size > 300) built.delete(built.keys().next().value);
-    built.set(id, c);
-  }
-  return c;
-}
+// ---- the springs and their modes, sent with each note ----------------------------------------------
+// (a few hundred 6 × 6 eigenproblems for a bass key: too slow for the audio thread, so the descriptor
+// keeps them, and the page works through the keyboard in spare moments after a change)
+const springsFor = (key, P = shell.P, fs = rate()) => cached(key, P, fs);
 let warmTimer = 0;
 function prewarm() {
   clearTimeout(warmTimer);
@@ -33,17 +23,8 @@ function prewarm() {
 }
 
 const shell = createShell({
-  id: 'springs',
-  groups: GROUPS,
-  presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'],
-  range: [KEY_LO, KEY_HI],
-  worklet: { modules: ['src/springs-engine.js'], engine: 'SpringEngine' },
-  chain: { volume: 'volume', room: 'room' },
-  space: 'sustain',
+  ...INSTRUMENT,
   arrows: { param: 'velocity', step: 0.05 },
-  modWheel: 'hand',
-  noteData: (key) => springsFor(key),
   onAudio: (a) => { analyser = a.analyser; prewarm(); },
   onNoteOn: (key, vel) => { focus = key; strikeAt = performance.now() / 1000; strikeVel = vel; shell.keys.focus?.(key); update(); },
   onParam: (id, v, P, p, dragging) => { if (!dragging || !['coil', 'wire', 'helix'].includes(id)) update(); else updateSoon(); prewarm(); },

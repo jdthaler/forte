@@ -1,8 +1,10 @@
-// ringdown-main.js — UI, audio graph, keyboard / MIDI, views.
+// ringdown-main.js — the page: UI, audio graph, keyboard / MIDI, views. The instrument
+// itself (parameters, QNM table, voices, engine, chain) is blackhole-instrument.js.
 
-import { GROUPS, ALL_PARAMS, DEFAULTS, PRESETS, fmtSpin } from './ringdown-params.js';
-import { QNMBank, keyVoice, noteName, KEY_LO, KEY_HI, spinFromU, strainCurve } from './ringdown-model.js';
-import { roomIR } from '../../shared/impulses.js';
+import { INSTRUMENT, GROUPS, DEFAULTS, PRESETS, voiceFor } from './blackhole-instrument.js';
+import { ALL_PARAMS, fmtSpin } from './ringdown-params.js';
+import { noteName, KEY_LO, KEY_HI, spinFromU, strainCurve } from './ringdown-model.js';
+import { createChain } from '../../shared/chain.js';
 import { drawPlane, drawKerr, WaveView, Lazy } from './ringdown-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
 import { startMIDI, resumeMIDI, wheelValue } from '../../shared/midi.js';
@@ -16,9 +18,7 @@ function save() { try { localStorage.setItem(STORE, JSON.stringify(P)); } catch 
 
 let P = load(), bank = null, fs = 48000, base = 48, focusKey = 60, lastVel = 1;
 const held = new Map();
-let cache = new Map();
-const voiceFor = (key) => { if (!cache.has(key)) cache.set(key, keyVoice(key, P, bank, fs)); return cache.get(key); };
-const engineParams = () => ({ stereo: P.stereo ? 1 : 0, releaseMute: P.releaseMute ? 1 : 0 });
+const engineParams = () => INSTRUMENT.engineParams(P);
 
 // ---------------------------------------------------------------------------
 // audio
@@ -30,23 +30,18 @@ function startAudio() {
   starting = (async () => {
     const ctx = new AudioContext({ latencyHint: 'interactive' });
     if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
-    await ctx.audioWorklet.addModule('src/ringdown-engine.js');
-    await ctx.audioWorklet.addModule('src/ringdown-worklet.js');
-    const node = new AudioWorkletNode(ctx, 'ringdown-processor', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
-    const tone = ctx.createBiquadFilter(); tone.type = 'lowpass'; tone.Q.value = 0.6;
-    const room = ctx.createConvolver(), roomGain = ctx.createGain(), master = ctx.createGain(), limiter = ctx.createDynamicsCompressor();
-    room.buffer = roomIR(ctx, 2.2);
-    limiter.threshold.value = -3; limiter.knee.value = 3; limiter.ratio.value = 12; limiter.attack.value = 0.002; limiter.release.value = 0.15;
-    node.connect(tone);
-    tone.connect(master);
-    tone.connect(room).connect(roomGain).connect(master);
-    master.connect(limiter).connect(ctx.destination);
+    await ctx.audioWorklet.addModule(INSTRUMENT.engine.module);
+    await ctx.audioWorklet.addModule(new URL('../../shared/worklet.js', import.meta.url));
+    const node = new AudioWorkletNode(ctx, 'forte-processor', {
+      numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { engine: INSTRUMENT.engine.name },
+    });
+    const chain = createChain(ctx, node, INSTRUMENT.chain); // tone → master (+ room) → limiter
     node.port.onmessage = (e) => {
-      if (e.data.type === 'stats') $('#voices').textContent = `${e.data.voices} ringing`;
+      if (e.data.type === 'voices') $('#voices').textContent = `${e.data.voices} ringing`; // the engine's, every 48 blocks
       else if (e.data.type === 'error') toast(e.data.message);
     };
-    if (ctx.sampleRate !== fs) { fs = ctx.sampleRate; cache = new Map(); }
-    audio = { ctx, node, tone, roomGain, master };
+    fs = ctx.sampleRate; // voices are cached per sample rate (voiceFor)
+    audio = { ctx, node, chain };
     applyMix();
     node.port.postMessage({ type: 'params', params: engineParams() });
     if (ctx.state !== 'running') await ctx.resume();
@@ -59,22 +54,16 @@ function startAudio() {
   return starting;
 }
 const post = (m) => { if (live) audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
-function applyMix() {
-  if (!audio) return;
-  const t = audio.ctx.currentTime;
-  audio.tone.frequency.setTargetAtTime(P.tone, t, 0.02);
-  audio.roomGain.gain.setTargetAtTime(0.6 * P.room, t, 0.02);
-  audio.master.gain.setTargetAtTime(P.volume * trimGain('blackhole'), t, 0.02); // level-matched across instruments
-}
+function applyMix() { if (audio) audio.chain.apply(P, trimGain('blackhole')); } // trim: level-matched across instruments
 
 // ---------------------------------------------------------------------------
 // keys
 
-async function noteOn(key, vel = 1) {
+async function noteOn(key, vel = INSTRUMENT.keyVelocity) { // computer keys: keyVelocity (1)
   if (key < KEY_LO || key > KEY_HI || !bank) return;
   keyboardView.set(key, true);
   const a = await startAudio();
-  a.node.port.postMessage({ type: 'noteOn', data: voiceFor(key), vel });
+  a.node.port.postMessage({ type: 'noteOn', key, velocity: vel, data: INSTRUMENT.noteData(key, vel, P, a.ctx.sampleRate) });
   setFocus(key, vel);
 }
 function noteOff(key) { keyboardView.set(key, false); post({ type: 'noteOff', key }); }
@@ -118,9 +107,9 @@ function initMIDI() {
 }
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data, cmd = st & 0xf0;
-  if (cmd === 0x90 && d2 > 0) noteOn(d1, (d2 / 127) ** 1.5);
+  if (cmd === 0x90 && d2 > 0) noteOn(d1, INSTRUMENT.midiVelocity(d2 / 127));
   else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) noteOff(d1);
-  else if (cmd === 0xb0 && d1 === 1) setParam('spinU', wheelValue(ALL_PARAMS.find((q) => q.id === 'spinU'), d2)); // at rest: the default spin
+  else if (cmd === 0xb0 && d1 === 1) setParam(INSTRUMENT.modWheel, wheelValue(ALL_PARAMS.find((q) => q.id === INSTRUMENT.modWheel), d2)); // at rest: the default spin
   else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) post({ type: 'panic' });
 }
 
@@ -172,7 +161,7 @@ function buildControls() {
   PRESETS.forEach((pr, i) => ps.add(new Option(pr.name, i)));
   ps.addEventListener('change', () => {
     if (ps.value === '') return;
-    setAll({ ...DEFAULTS, volume: P.volume, room: P.room, tone: P.tone, stereo: P.stereo, ...PRESETS[+ps.value].p });
+    setAll({ ...DEFAULTS, ...Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]])), ...PRESETS[+ps.value].p });
     ps.blur();
   });
   $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }); $('#preset').value = ''; });
@@ -185,7 +174,7 @@ function refreshControl(id, dragging = false) {
 }
 function refreshVisibility() { for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(P) : false; }
 function setAll(np) {
-  P = np; cache = new Map();
+  P = np;
   for (const id of controls.keys()) refreshControl(id);
   refreshVisibility(); post({ type: 'params', params: engineParams() }); applyMix(); updateHelp(); save();
   setFocus(focusKey, lastVel);
@@ -199,7 +188,7 @@ function setParam(id, v, dragging = false) {
   $('#preset').value = '';
   if (p.kind === 'mix') applyMix();
   else if (p.kind === 'engine') post({ type: 'params', params: engineParams() });
-  else { cache = new Map(); clearTimeout(focusTimer); focusTimer = setTimeout(() => setFocus(focusKey, lastVel), 60); }
+  else { clearTimeout(focusTimer); focusTimer = setTimeout(() => setFocus(focusKey, lastVel), 60); } // voiceFor recomputes
 }
 
 // ---------------------------------------------------------------------------
@@ -216,7 +205,7 @@ function setFocus(key, vel) {
 }
 function renderFocus() {
   focusDue = false;
-  const v = voiceFor(focusKey);
+  const v = voiceFor(focusKey, P, fs);
   focusVoice = v;
   // the strain in closed form, at about two points per pixel
   const n = Math.max(400, Math.min(4000, 2 * Math.round(wave.cv.clientWidth || 600)));
@@ -273,5 +262,5 @@ for (const id of controls.keys()) refreshControl(id);
 refreshVisibility();
 keyboardView.labels(keyLabels());
 updateHelp();
-fetch('data/qnm-table.json').then((r) => r.json()).then((t) => { bank = new QNMBank(t); setFocus(60, 1); });
+INSTRUMENT.load().then((b) => { bank = b; setFocus(60, 1); });
 requestAnimationFrame(frame);

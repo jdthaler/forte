@@ -1,8 +1,9 @@
 // organ-main.js — console UI, audio graph, keyboard / MIDI, visualisations.
 
 import { GROUPS, ALL_PARAMS, DEFAULTS, PRESETS } from './organ-params.js';
-import { buildGenerator, keyAnalysis, keyWheel, percWheel, centsOff, wheelSpec, wheelName, gearFreq, etFreq, DRAWBARS, NUM_WHEELS, KEY_LO, KEY_HI, drawbarGain } from './tonewheels.js';
-import { roomIR } from '../../shared/impulses.js';
+import { INSTRUMENT } from './organ-instrument.js';
+import { keyAnalysis, keyWheel, percWheel, centsOff, wheelSpec, wheelName, gearFreq, etFreq, DRAWBARS, NUM_WHEELS, KEY_LO, KEY_HI, drawbarGain } from './tonewheels.js';
+import { createChain } from '../../shared/chain.js';
 import { GeneratorView, LeslieView, OutputView, drawScanner, BAR_COLORS } from './organ-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
 import { startMIDI, resumeMIDI } from '../../shared/midi.js';
@@ -41,25 +42,20 @@ function startAudio() {
   starting = (async () => {
     const ctx = new AudioContext({ latencyHint: 'interactive' });
     if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
-    await ctx.audioWorklet.addModule('src/organ-engine.js');
-    await ctx.audioWorklet.addModule('src/organ-worklet.js');
-    const node = new AudioWorkletNode(ctx, 'organ-processor', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
+    await ctx.audioWorklet.addModule(INSTRUMENT.engine.module);
+    await ctx.audioWorklet.addModule(new URL('../../shared/worklet.js', import.meta.url));
+    const node = new AudioWorkletNode(ctx, 'forte-processor', {
+      numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { engine: INSTRUMENT.engine.name },
+    });
+    const chain = createChain(ctx, node, INSTRUMENT.chain); // node → master (+ room) → limiter
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 8192;
     analyser.smoothingTimeConstant = 0.6;
-    const room = ctx.createConvolver(), roomGain = ctx.createGain(), master = ctx.createGain(), limiter = ctx.createDynamicsCompressor();
-    room.buffer = roomIR(ctx, 1.8);
-    limiter.threshold.value = -3; limiter.knee.value = 3; limiter.ratio.value = 12;
-    limiter.attack.value = 0.002; limiter.release.value = 0.15;
-    node.connect(analyser);
-    node.connect(master);
-    node.connect(room).connect(roomGain).connect(master);
-    master.connect(limiter).connect(ctx.destination);
+    chain.tap.connect(analyser);
     node.port.onmessage = (e) => onWorklet(e.data);
     fs = ctx.sampleRate;
-    audio = { ctx, node, analyser, roomGain, master };
-    sendConfig();
-    node.port.postMessage({ type: 'params', params: { ...P, leslieOn: P.leslieOn } });
+    audio = { ctx, node, analyser, chain };
+    node.port.postMessage({ type: 'params', params: INSTRUMENT.engineParams(P) }); // the engine builds its generator from these
     applyMix();
     output.setAnalyser(analyser);
     if (ctx.state !== 'running') await ctx.resume();
@@ -73,14 +69,8 @@ function startAudio() {
 }
 
 const post = (m) => { if (live) audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
-function sendConfig() { if (audio) audio.node.port.postMessage({ type: 'config', gen: buildGenerator(P, fs) }); }
-function sendParams() { post({ type: 'params', params: { ...P, leslieOn: P.leslieOn } }); }
-function applyMix() {
-  if (!audio) return;
-  const t = audio.ctx.currentTime;
-  audio.roomGain.gain.setTargetAtTime(0.6 * P.room, t, 0.02);
-  audio.master.gain.setTargetAtTime(P.volume * trimGain('organ'), t, 0.02); // level-matched across instruments
-}
+function sendParams() { post({ type: 'params', params: INSTRUMENT.engineParams(P) }); }
+function applyMix() { if (audio) audio.chain.apply(P, trimGain(INSTRUMENT.id)); } // volume level-matched across instruments
 
 function onWorklet(m) {
   if (m.type === 'state') {
@@ -91,7 +81,7 @@ function onWorklet(m) {
     $('#leslie-read').textContent = P.leslieOn ? `horn ${(m.hornHz * 60).toFixed(0)} rpm · drum ${(m.drumHz * 60).toFixed(0)} rpm` : '';
   } else if (m.type === 'stats') {
     const el = $('#cpu');
-    el.textContent = `CPU ${(m.load * 100).toFixed(0)} % · ${m.keys} keys`;
+    el.textContent = `CPU ${(m.load * 100).toFixed(0)} % · ${m.voices} keys`;
     el.classList.toggle('hot', m.load > 0.7);
   } else if (m.type === 'error') toast(m.message);
 }
@@ -99,14 +89,14 @@ function onWorklet(m) {
 // ---------------------------------------------------------------------------
 // keys
 
-async function keyDown(key, velocity = 100) {
+async function keyDown(key, velocity = 100 / 127) { // velocity 0..1: the computer keys play MIDI 100
   while (key < KEY_LO) key += 12;
   while (key > KEY_HI) key -= 12;
   sounding.set(key, (sounding.get(key) || 0) + 1);
   keyboardView.set(key, true);
   if (sounding.get(key) === 1) {
     await startAudio();
-    audio.node.port.postMessage({ type: 'keyDown', key, velocity });
+    audio.node.port.postMessage({ type: 'noteOn', key, velocity });
   }
   focusKey = key;
   refreshFocus();
@@ -119,11 +109,11 @@ function keyUp(key) {
   if (n > 0) { sounding.set(key, n); return; }
   sounding.delete(key);
   keyboardView.set(key, false);
-  post({ type: 'keyUp', key });
+  post({ type: 'noteOff', key });
   refreshActivity();
 }
 function panic() {
-  post({ type: 'allOff' });
+  post({ type: 'panic' });
   sounding.clear(); held.clear(); keyboardView.clearAll(); refreshActivity();
 }
 
@@ -198,7 +188,7 @@ function initMIDI() {
 let lastSustain = false;
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data, cmd = st & 0xf0;
-  if (cmd === 0x90 && d2 > 0) keyDown(d1, d2);
+  if (cmd === 0x90 && d2 > 0) keyDown(d1, d2 / 127);
   else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) keyUp(d1);
   else if (cmd === 0xb0) {
     if (d1 === 1) setP({ leslie: d2 >= 64 ? 'fast' : 'slow' });
@@ -357,7 +347,7 @@ function buildControls() {
   PRESETS.forEach((pr, i) => ps.add(new Option(pr.name, i)));
   ps.addEventListener('change', () => {
     if (ps.value === '') return;
-    const keep = { volume: P.volume, room: P.room, expression: P.expression, motor: true };
+    const keep = Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]])); // and the motor back on (DEFAULTS)
     replaceP({ ...DEFAULTS, ...keep, ...PRESETS[+ps.value].p });
     ps.blur();
   });
@@ -386,8 +376,8 @@ function setP(changes, fromSliderDrag = false) {
     if (GEN_KEYS.has(k)) gen = true; else if (MIX_KEYS.has(k)) mix = true; else eng = true;
     refreshControl(k, fromSliderDrag);
   }
-  if (gen) { sendConfig(); refreshGenerator(); }
-  if (eng) sendParams();
+  if (gen) refreshGenerator();
+  if (gen || eng) sendParams(); // the engine rebuilds its generator when a 'gen' parameter changed
   if (mix) applyMix();
   refreshConsole();
   refreshFocus();
@@ -400,7 +390,7 @@ function setP(changes, fromSliderDrag = false) {
 function replaceP(newP) {
   P = { ...newP, drawbars: [...newP.drawbars] };
   for (const id of controls.keys()) refreshControl(id);
-  sendConfig(); sendParams(); applyMix();
+  sendParams(); applyMix();
   refreshConsole(); refreshGenerator(); refreshFocus(); refreshActivity(); updateHelp(); save();
 }
 

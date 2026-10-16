@@ -10,9 +10,12 @@ import assert from 'node:assert/strict';
 import { besselJ, besselI, plateModes, tripleL, radial, gaussLegendre } from '../gongs/src/plate.js';
 import TABLE from '../gongs/data/gong-modes.js';
 import { shell, backbone, potential, keyGong, interpR, engineTables, NU } from '../gongs/src/gongs-model.js';
-import { GongEngine } from '../gongs/src/gongs-engine.js';
+import { INSTRUMENT } from '../gongs/src/gongs-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../gongs/src/gongs-params.js';
 import { keyFreq } from '../shared/dsp.js';
+
+const GongEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000;
 let failures = 0;

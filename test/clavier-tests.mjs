@@ -11,10 +11,13 @@ import {
   toneAnalog, toneResponse, toneBiquad, TONE_NET, PICKUP_R, MEASURED_B, STEEL, NONSPEAK, duffingShift,
   pressureCents, sigma1, tensionCents, LO, HI, MUTE_R,
 } from '../clavier/src/clavier-model.js';
-import { ClavierEngine } from '../clavier/src/clavier-engine.js';
+import { INSTRUMENT } from '../clavier/src/clavier-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../clavier/src/clavier-params.js';
 import { symEig } from '../shared/linalg.js';
 import { keyFreq } from '../shared/dsp.js';
+
+const ClavierEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000;
 let failures = 0;

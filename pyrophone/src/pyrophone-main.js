@@ -2,8 +2,8 @@
 
 import { createShell, noteName, keyFreq } from '../../shared/shell.js';
 import { SpectrumView, animate } from '../../shared/views.js';
-import { GROUPS, PRESETS } from './pyrophone-params.js';
-import { bifurcation, tuning, tubeKey, root, betaOn, orbitAt, orbitSpectrum, steadyY, heat, N_MODES, C_HOT } from './pyrophone-model.js';
+import { INSTRUMENT, tubeTuning } from './pyrophone-instrument.js';
+import { tubeKey, root, betaOn, orbitAt, orbitSpectrum, steadyY, heat, N_MODES, C_HOT } from './pyrophone-model.js';
 import { drawBif, drawTube, drawPhase, orbitState } from './pyrophone-views.js';
 
 const $ = (s) => document.querySelector(s);
@@ -12,11 +12,12 @@ let focus = 60, bif = null, tune = null, modelKey = '', lastCalc = 0, timer = 0;
 let live = { pts: [] }, foc = null, focAt = 0, trail = [], theta = 0, scale = null, pred = null, rootCache = [NaN, null];
 const eta = new Float64Array(N_MODES), vel = new Float64Array(N_MODES);
 
-// The bifurcation analysis (harmonic balance, ~50 ms) runs when a tube parameter
-// changes, at most every 200 ms while a slider is dragged; the engine gets the
-// resulting tuning table with its parameters.
+// The bifurcation analysis (harmonic balance, ~50 ms; tubeTuning in the descriptor) runs
+// when a tube parameter changes, at most every 200 ms while a slider is dragged; the engine
+// gets the resulting tuning table with its parameters (the descriptor's engineParams, with
+// the last table until the next one is ready).
 function recompute(P) {
-  bif = bifurcation(P); tune = tuning(P, bif); modelKey = tubeKey(P); lastCalc = performance.now();
+  ({ bif, tune } = tubeTuning(P)); modelKey = tubeKey(P); lastCalc = performance.now();
   update();
 }
 function currentTune(P) {
@@ -28,19 +29,11 @@ function currentTune(P) {
 }
 
 const shell = createShell({
-  id: 'pyrophone',
-  groups: GROUPS,
-  presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'],
-  range: [48, 84],
+  ...INSTRUMENT,
   base: 48,
-  worklet: { modules: ['src/pyrophone-engine.js'], engine: 'PyrophoneEngine' },
-  chain: { volume: 'volume', room: 'room' },
-  space: 'hold',
   arrows: { param: 'velocity', step: 0.05 },
   holdHint: { ms: 350, text: 'Hold the key: the flame takes a moment to set the tube singing.' },
-  modWheel: 'flame',
-  engineParams: (P) => ({ ...P, tune: currentTune(P) }),
+  engineParams: (P) => ({ ...P, tune: currentTune(P) }), // INSTRUMENT.engineParams, throttled while dragging
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onMessage: (m) => {
     if (m.type !== 'tubes') return;

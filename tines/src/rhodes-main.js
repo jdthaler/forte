@@ -1,9 +1,11 @@
-// rhodes-main.js — UI, audio graph, keyboard / MIDI, model cache, views.
+// rhodes-main.js — the page: UI, audio graph, keyboard / MIDI, views. The instrument
+// (engine, parameters, key models, output chain) is tines-instrument.js.
 
-import { GROUPS, ALL_PARAMS, DEFAULTS, PRESETS } from './rhodes-params.js';
-import { computeKey, pickupFor, noteName, KEY_LO, KEY_HI } from './tine.js';
+import { ALL_PARAMS } from './rhodes-params.js';
+import { INSTRUMENT, GROUPS, DEFAULTS, PRESETS, keyModel } from './tines-instrument.js';
+import { noteName } from './tine.js';
 import { RhodesEngine } from './rhodes-engine.js';
-import { roomIR } from '../../shared/impulses.js';
+import { createChain } from '../../shared/chain.js';
 import { MotionView, PickupView, SpectrumView, MODE_COLORS, modeKind } from './rhodes-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
 import { startMIDI, resumeMIDI } from '../../shared/midi.js';
@@ -11,6 +13,7 @@ import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 
 const $ = (s) => document.querySelector(s);
+const [KEY_LO, KEY_HI] = INSTRUMENT.range;
 const STORE = 'tine-piano/params/v1';
 
 function load() {
@@ -19,30 +22,10 @@ function load() {
 function save() { try { localStorage.setItem(STORE, JSON.stringify(P)); } catch { /* unavailable */ } }
 
 let P = load();
-let version = 1, fs = 48000, base = 48, focusKey = 60, lastVel = 1.8, sustain = false;
-const cache = new Map(), sent = new Set(), held = new Map(), sounding = new Map();
-
-function keyData(key) {
-  let c = cache.get(key);
-  if (!c || c.version !== version) {
-    const model = computeKey(key, P, fs);
-    c = { version, model, data: { ...model.voice, version } };
-    cache.set(key, c);
-  }
-  return c;
-}
-const engineParams = () => ({
-  damper: P.damper, cable: P.cable, resQ: P.resQ, tremRate: P.tremRate, tremDepth: P.tremDepth, drive: P.drive, tone: P.tone,
-  gap: P.gap, offset: P.offset, poleRadius: P.poleRadius, voicing: P.voicing, // pickups: the engine moves them live
-});
-// The pickup settings don't change the modes: patch the cached keys instead of recomputing them.
-function repickup() {
-  for (const [key, c] of cache) {
-    const { gap, wid, yoff, gain } = pickupFor(key, P);
-    c.model.info.gap = gap; c.model.info.wid = wid;
-    c.model.voice.pickup = c.data.pickup = { wid, yoff, gain };
-  }
-}
+let fs = 48000, base = 48, focusKey = 60, lastVel = 1.8, sustain = false;
+// sent: key → the version of the voice data the engine holds (it keeps the last sent; resent when it changes)
+const sent = new Map(), held = new Map(), sounding = new Map();
+const engineParams = () => INSTRUMENT.engineParams(P);
 
 // ---------------------------------------------------------------------------
 // audio
@@ -54,21 +37,18 @@ function startAudio() {
   starting = (async () => {
     const ctx = new AudioContext({ latencyHint: 'interactive' });
     if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
-    await ctx.audioWorklet.addModule('src/rhodes-engine.js');
-    await ctx.audioWorklet.addModule('src/rhodes-worklet.js');
-    const node = new AudioWorkletNode(ctx, 'rhodes-processor', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
+    await ctx.audioWorklet.addModule(INSTRUMENT.engine.module);
+    await ctx.audioWorklet.addModule(new URL('../../shared/worklet.js', import.meta.url));
+    const node = new AudioWorkletNode(ctx, 'forte-processor', {
+      numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { engine: INSTRUMENT.engine.name },
+    });
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 8192; analyser.smoothingTimeConstant = 0.55;
-    const room = ctx.createConvolver(), roomGain = ctx.createGain(), master = ctx.createGain(), limiter = ctx.createDynamicsCompressor();
-    room.buffer = roomIR(ctx, 1.8);
-    limiter.threshold.value = -3; limiter.knee.value = 3; limiter.ratio.value = 12; limiter.attack.value = 0.002; limiter.release.value = 0.15;
-    node.connect(analyser);
-    node.connect(master);
-    node.connect(room).connect(roomGain).connect(master);
-    master.connect(limiter).connect(ctx.destination);
+    const chain = createChain(ctx, node, INSTRUMENT.chain); // room and master, limiter (shared/chain.js)
+    chain.tap.connect(analyser);
     node.port.onmessage = (e) => onWorklet(e.data);
-    if (ctx.sampleRate !== fs) { fs = ctx.sampleRate; bump(); }
-    audio = { ctx, node, analyser, roomGain, master };
+    fs = ctx.sampleRate; // the key models' version includes it: a new rate means new voice data
+    audio = { ctx, node, analyser, chain };
     applyMix();
     node.port.postMessage({ type: 'params', params: engineParams() });
     node.port.postMessage({ type: 'sustain', on: sustain });
@@ -83,12 +63,7 @@ function startAudio() {
   return starting;
 }
 const post = (m) => { if (live) audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
-function applyMix() {
-  if (!audio) return;
-  const t = audio.ctx.currentTime;
-  audio.roomGain.gain.setTargetAtTime(0.6 * P.room, t, 0.02);
-  audio.master.gain.setTargetAtTime(P.volume * trimGain('tines'), t, 0.02); // level-matched across instruments
-}
+function applyMix() { if (audio) audio.chain.apply(P, trimGain(INSTRUMENT.id)); } // trim: level-matched across instruments
 function onWorklet(m) {
   if (m.type === 'stats') {
     const el = $('#cpu');
@@ -105,9 +80,9 @@ async function noteOn(key, velocity) {
   sounding.set(key, (sounding.get(key) || 0) + 1);
   keyboardView.set(key, true);
   const a = await startAudio();
-  const c = keyData(key);
+  const data = INSTRUMENT.noteData(key, velocity, P, fs);
   const msg = { type: 'noteOn', key, velocity };
-  if (!sent.has(key)) { msg.data = c.data; sent.add(key); }
+  if (sent.get(key) !== data.version) { msg.data = data; sent.set(key, data.version); }
   a.node.port.postMessage(msg);
   setFocus(key, velocity);
 }
@@ -189,13 +164,12 @@ function updateHelp() {
   $('#vel').textContent = `${P.velocity.toFixed(2)} m/s`;
 }
 
-const velFromMidi = (v) => 0.25 * 20 ** (v / 127); // 0.25 … 5 m/s
 function initMIDI() {
   startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn') });
 }
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data, cmd = st & 0xf0;
-  if (cmd === 0x90 && d2 > 0) noteOn(d1, velFromMidi(d2));
+  if (cmd === 0x90 && d2 > 0) noteOn(d1, INSTRUMENT.midiVelocity(d2 / 127)); // hammer speed, m/s
   else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) noteOff(d1);
   else if (cmd === 0xb0 && d1 === 64) setSustain(d2 >= 64);
   else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) panic();
@@ -243,7 +217,7 @@ function buildControls() {
   PRESETS.forEach((pr, i) => ps.add(new Option(pr.name, i)));
   ps.addEventListener('change', () => {
     if (ps.value === '') return;
-    const keep = { volume: P.volume, room: P.room, velocity: P.velocity };
+    const keep = Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]]));
     setAll({ ...DEFAULTS, ...keep, ...PRESETS[+ps.value].p });
     ps.blur();
   });
@@ -255,11 +229,10 @@ function refreshControl(id, dragging = false) {
   if (!dragging) c.input.value = toSlider(c.p, P[id]);
   c.val.textContent = c.p.fmt ? c.p.fmt(P[id]) : String(P[id]);
 }
-function bump() { version++; sent.clear(); }
 function setAll(np) {
   P = np;
   for (const id of controls.keys()) refreshControl(id);
-  bump(); post({ type: 'params', params: engineParams() }); applyMix(); updateHelp(); save();
+  post({ type: 'params', params: engineParams() }); applyMix(); updateHelp(); save();
   modelChanged();
 }
 let mcTimer = 0;
@@ -272,9 +245,8 @@ function setParam(id, v, dragging = false) {
   $('#preset').value = '';
   if (p.kind === 'play') { updateHelp(); return; }
   if (p.kind === 'mix') { applyMix(); return; }
-  if (p.kind === 'pickup') repickup();
+  // 'model': the key models (and their version) follow P, so the next note sends new data
   if (p.kind === 'engine' || p.kind === 'pickup') post({ type: 'params', params: engineParams() });
-  else bump();
   clearTimeout(mcTimer);
   mcTimer = setTimeout(modelChanged, 120);
 }
@@ -288,7 +260,7 @@ function precompute() {
   clearTimeout(pqTimer);
   pqTimer = setTimeout(function tick() {
     const t0 = performance.now();
-    while (pq.length && performance.now() - t0 < 8) keyData(pq.shift());
+    while (pq.length && performance.now() - t0 < 8) keyModel(pq.shift(), P, fs);
     if (pq.length) pqTimer = setTimeout(tick, 4);
   }, 60);
 }
@@ -304,7 +276,7 @@ let simTimer = 0;
 function setFocus(key, vel) {
   focusKey = key; lastVel = vel;
   keyboardView.focus(key);
-  const { model } = keyData(key);
+  const model = keyModel(key, P, fs);
   showInfo(model);
   spectrum.set(model.info.f0, model.modes);
   clearTimeout(simTimer);
@@ -312,10 +284,10 @@ function setFocus(key, vel) {
 }
 
 function runSim(key, vel) {
-  const { model, data } = keyData(key);
+  const model = keyModel(key, P, fs), data = INSTRUMENT.noteData(key, vel, P, fs);
   const eng = new RhodesEngine(fs);
   eng.setParams({ ...engineParams(), cable: 100, tone: 20000, drive: 0, tremDepth: 0 });
-  const v = eng.noteOn(key, data, vel);
+  const v = eng.noteOn(key, vel, data);
   const f0 = model.info.f0;
   const total = Math.round(Math.min(0.06, Math.max(0.006, 5 / f0)) * fs);
   const stride = Math.max(1, Math.ceil(total / 600));

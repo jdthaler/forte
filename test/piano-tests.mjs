@@ -1,8 +1,11 @@
 // Physics + engine checks. Run: node test/piano-tests.mjs
 import assert from 'node:assert/strict';
 import { genEig, computeKeyModel, buildVoiceData, keyFreq, BRIDGE_G, sectionProps, MATERIALS, pianoHammer } from '../piano/src/physics.js';
-import { PianoEngine } from '../piano/src/engine.js';
 import { DEFAULTS } from '../piano/src/params.js';
+import { INSTRUMENT } from '../piano/src/piano-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
+
+const PianoEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000;
 let failures = 0;
@@ -127,7 +130,7 @@ function render(key, params, seconds, vel = 2.5) {
   const eng = new PianoEngine(FS);
   const n = Math.round(seconds * FS), L = new Float32Array(n), R = new Float32Array(n);
   const bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
-  const v = eng.noteOn(key, vd, vel);
+  const v = eng.noteOn(key, vel, vd);
   let contactMs = null;
   for (let s = 0; s < n; s += bl) {
     eng.process(bL, bR, bl);
@@ -227,8 +230,8 @@ test('voice stealing never takes a chord that has just been struck', () => {
   eng.setSustain(true);
   const vd = (k) => buildVoiceData(computeKeyModel(k, P(), FS), P(), 1);
   const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
-  for (let k = 60; k <= 100 && eng.modeCount() + 60 < 1500; k++) { eng.noteOn(k, vd(k), 2.5); for (let i = 0; i < 10; i++) eng.process(L, R, bl); }
-  const chord = [48, 52, 55, 59].map((k) => eng.noteOn(k, vd(k), 2.5)); // one block, unheard yet
+  for (let k = 60; k <= 100 && eng.modeCount() + 60 < 1500; k++) { eng.noteOn(k, 2.5, vd(k)); for (let i = 0; i < 10; i++) eng.process(L, R, bl); }
+  const chord = [48, 52, 55, 59].map((k) => eng.noteOn(k, 2.5, vd(k))); // one block, unheard yet
   assert.ok(chord.every((v) => !v.killing), `killed: ${chord.filter((v) => v.killing).map((v) => v.key)}`);
   let live = 0;
   for (const v of eng.voices) if (!v.killing) live += v.N;
@@ -239,7 +242,7 @@ test('live gains and stereo spread glide: no zipper click', () => {
   // ratio of the strongest 3rd-difference spike near the change to its RMS before it
   const click = (change) => {
     const p = P(), eng = new PianoEngine(FS), vdat = buildVoiceData(computeKeyModel(48, p, FS), p, 1);
-    eng.noteOn(48, vdat, 2.5);
+    eng.noteOn(48, 2.5, vdat);
     const n = FS, x = new Float64Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
     for (let s = 0; s < n; s += bl) { if (s === 24064) change(eng); eng.process(bL, bR, bl); for (let i = 0; i < bl; i++) x[s + i] = bL[i]; }
     const d3 = (i) => x[i] - 3 * x[i - 1] + 3 * x[i - 2] - x[i - 3];
@@ -280,7 +283,7 @@ test('una corda: the missed string is driven through the bridge, and the afterso
     const vdat = buildVoiceData(computeKeyModel(48, p, FS), p, 1);
     const eng = new PianoEngine(FS);
     eng.setParams({ unaCorda: una });
-    const v = eng.noteOn(48, vdat, 2.5);
+    const v = eng.noteOn(48, 2.5, vdat);
     const n = 4 * FS, x = new Float64Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
     let missed = 0, hit = 0;
     for (let s = 0; s < n; s += bl) {
@@ -325,7 +328,7 @@ test('real-time budget', () => {
   let modes = 0;
   for (const key of [36, 43, 48, 52, 55, 60, 64, 67, 72, 76]) {
     const vd = buildVoiceData(computeKeyModel(key, params, FS), params, 1);
-    eng.noteOn(key, vd, 2.5);
+    eng.noteOn(key, 2.5, vd);
     modes += vd.n;
   }
   const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);

@@ -9,9 +9,12 @@ import {
   rayleigh, rayleighField, ringRatio, ringBryan, bowl, bowlRadius, freeLines, waterLoad, radiationEff, liquidJ,
   speakingThreshold, regulation, transport, pulpDamping, KEY_LO, KEY_HI, REF,
 } from '../glass/src/glass-model.js';
-import { ArmonicaEngine } from '../glass/src/glass-engine.js';
+import { INSTRUMENT } from '../glass/src/glass-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../glass/src/glass-params.js';
 import { keyFreq } from '../shared/dsp.js';
+
+const ArmonicaEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000, PI = Math.PI;
 let failures = 0;

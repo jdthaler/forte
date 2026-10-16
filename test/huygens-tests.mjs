@@ -1,11 +1,14 @@
 // Huygens keyboard checks. Run: node test/huygens-tests.mjs
 import assert from 'node:assert/strict';
-import { NeonEngine } from '../huygens/src/neon-engine.js';
+import { INSTRUMENT } from '../huygens/src/huygens-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { tunedFreq, keyFreq, nearestRatio } from '../huygens/src/tuning.js';
 import { DEFAULTS } from '../huygens/src/sync-params.js';
 import { deltaOf, kickFor, tongue, lockRatio, captureBound } from '../huygens/src/sync-theory.js';
 import { stairPoint, QMAX } from '../huygens/src/staircase.js';
 import { FiringLog, pairLock } from '../huygens/src/lock-analysis.js';
+
+const NeonEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000;
 let failures = 0;
@@ -19,7 +22,7 @@ function rng(seed) { let s = seed >>> 0; return () => { s = (Math.imul(s, 166452
 function run(keys, eng, sec = 2.5, P = DEFAULTS) {
   const e = new NeonEngine(FS);
   e.setParams({ pitchHold: 0, ...eng });
-  for (const k of keys) e.noteOn(k, { f: tunedFreq(k, P) });
+  for (const k of keys) e.noteOn(k, 1, { f: tunedFreq(k, P) });
   const L = new Float32Array(128), R = new Float32Array(128);
   let pk = 0, finite = true;
   for (let s = 0; s < sec * FS; s += 128) {
@@ -35,7 +38,7 @@ function run(keys, eng, sec = 2.5, P = DEFAULTS) {
 function syncPair(f0, cents, kick, { fs = 24000, sec = 0.8, circuit = CIRCUIT } = {}) {
   const e = new NeonEngine(fs);
   e.setParams({ kick, pitchHold: 0, vNom: circuit[0], vStrike: circuit[1], vExt: circuit[2] });
-  const os = [e.noteOn(60, { f: f0, phase: 0, settled: true }), e.noteOn(61, { f: f0 * 2 ** (cents / 1200), phase: 0, settled: true })];
+  const os = [e.noteOn(60, 1, { f: f0, phase: 0, settled: true }), e.noteOn(61, 1, { f: f0 * 2 ** (cents / 1200), phase: 0, settled: true })];
   const L = new Float32Array(64), R = new Float32Array(64), T = [[], []], seen = [0, 0];
   for (let s = 0; s < sec * fs; s += 64) {
     e.process(L, R, 64);
@@ -171,7 +174,7 @@ await test('at the default every voicing of the major and minor triads goes just
   const r = rng(3), fs = 24000;
   const just = (keys, iv, kick) => {
     const e = new NeonEngine(fs); e.setParams({ kick, pitchHold: 1 });
-    for (const k of keys) e.noteOn(k, { f: keyFreq(k), phase: r() });
+    for (const k of keys) e.noteOn(k, 1, { f: keyFreq(k), phase: r() });
     const L = new Float32Array(256), R = new Float32Array(256);
     for (let s = 0; s < 6 * fs; s += 256) e.process(L, R, 256);
     const f = e.report(1.5).map((o) => o.f);
@@ -191,7 +194,7 @@ await test('chords: a dominant seventh settles into a long 67:85:100:120 pattern
   const chord = (kick, root, phases) => {
     const fs = 24000, e = new NeonEngine(fs); e.setParams({ kick, pitchHold: 1 });
     const keys = [root, root + 4, root + 7, root + 10], log = new FiringLog(3);
-    keys.forEach((k, i) => e.noteOn(k, { f: keyFreq(k), phase: phases[i] }));
+    keys.forEach((k, i) => e.noteOn(k, 1, { f: keyFreq(k), phase: phases[i] }));
     const L = new Float32Array(256), R = new Float32Array(256), fb = new Float64Array(32 * 258), ob = new Float64Array(96);
     for (let s = 0; s < 8 * fs; s += 256) {
       e.process(L, R, 256);
@@ -210,7 +213,7 @@ await test('a pair locks within one beat of its ratio: t ≤ (1 − δ(p+q))/|p 
   const d = delta(DEFAULTS.kick), fs = 24000;
   const capture = (k1, k2, ph1, ph2) => {
     const e = new NeonEngine(fs); e.setParams({ kick: DEFAULTS.kick, pitchHold: 1 });
-    const a = e.noteOn(k1, { f: keyFreq(k1), phase: ph1, settled: true }), b = e.noteOn(k2, { f: keyFreq(k2), phase: ph2, settled: true });
+    const a = e.noteOn(k1, 1, { f: keyFreq(k1), phase: ph1, settled: true }), b = e.noteOn(k2, 1, { f: keyFreq(k2), phase: ph2, settled: true });
     const L = new Float32Array(64), R = new Float32Array(64);
     let sa = 0, sb = 0;
     for (let s = 0; s < 5 * fs; s += 64) {
@@ -234,7 +237,7 @@ console.log('sound');
 await test('key release: no low thump (output keyed, then a coupling capacitor)', () => {
   for (const key of [36, 60, 84]) {
     const e = new NeonEngine(FS); e.setParams({ kick: 0, pitchHold: 1 });
-    e.noteOn(key, { f: keyFreq(key) });
+    e.noteOn(key, 1, { f: keyFreq(key) });
     const n = FS * 1.5, off = FS - (FS % 128), out = new Float64Array(n), L = new Float32Array(128), R = new Float32Array(128);
     for (let s = 0; s < n; s += 128) { if (s === off) e.noteOff(key); e.process(L, R, 128); out.set(L.subarray(0, Math.min(128, n - s)), s); }
     let pk = 0, mean = 0;
@@ -250,7 +253,7 @@ await test('key release: no low thump (output keyed, then a coupling capacitor)'
 });
 await test('stereo spread follows the knob for notes already sounding', () => {
   const e = new NeonEngine(FS);
-  const o = e.noteOn(84, { f: keyFreq(84) });
+  const o = e.noteOn(84, 1, { f: keyFreq(84) });
   const before = o.panR / o.panL;
   e.setParams({ width: 0 });
   assert.ok(before > 1.2 && Math.abs(o.panR / o.panL - 1) < 1e-12);
@@ -264,9 +267,9 @@ await test('the worklet posts at most 30 states a second, each with only the new
   globalThis.AudioWorkletProcessor = class { constructor() { this.port = { postMessage: (m) => sent.push(m) }; } };
   let Proc = null;
   globalThis.registerProcessor = (name, cls) => { Proc = cls; };
-  await import('../huygens/src/sync-worklet.js');
-  const p = new Proc();
-  for (const k of [48, 52, 55, 60, 64, 67, 70, 72, 76, 79, 84, 88]) p.handle({ type: 'noteOn', key: k, f: keyFreq(k) });
+  await import('../shared/worklet.js');
+  const p = new Proc({ processorOptions: { engine: 'NeonEngine' } });
+  for (const k of [48, 52, 55, 60, 64, 67, 70, 72, 76, 79, 84, 88]) p.handle({ type: 'noteOn', key: k, velocity: 1, data: { f: keyFreq(k) } });
   const out = [[new Float32Array(128), new Float32Array(128)]];
   const blocks = 2 * FS / 128;
   for (let i = 0; i < blocks; i++) p.process([], out);
@@ -281,7 +284,7 @@ await test('the worklet posts at most 30 states a second, each with only the new
 await test('lock display: a locked bass triad reads locked in every update; an unlocked chord never', () => {
   const view = (keys, kick, phases, sec = 8, from = 4) => {
     const e = new NeonEngine(FS); e.setParams({ kick, pitchHold: 1 });
-    keys.forEach((k, i) => e.noteOn(k, { f: keyFreq(k), phase: phases[i] }));
+    keys.forEach((k, i) => e.noteOn(k, 1, { f: keyFreq(k), phase: phases[i] }));
     const L = new Float32Array(128), R = new Float32Array(128), fb = new Float64Array(32 * 258), ob = new Float64Array(96);
     const log = new FiringLog(3), every = Math.ceil(FS / 128 / 30), seen = [];
     for (let b = 0; b * 128 < sec * FS; b++) {
@@ -320,7 +323,7 @@ await test('finite output and sane level across settings', () => {
 });
 await test('performance: 24 oscillators', () => {
   const e = new NeonEngine(FS); e.setParams({ kick: 0.08 });
-  for (let i = 0; i < 24; i++) e.noteOn(36 + 2 * i, { f: keyFreq(36 + 2 * i) });
+  for (let i = 0; i < 24; i++) e.noteOn(36 + 2 * i, 1, { f: keyFreq(36 + 2 * i) });
   const L = new Float32Array(128), R = new Float32Array(128);
   for (let i = 0; i < 50; i++) e.process(L, R, 128);
   const blocks = 2000, t0 = performance.now();

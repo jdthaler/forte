@@ -13,9 +13,12 @@ import {
   toepferD, ellipseConductivity, agm, mouthCorrection, wallAlpha, modeSigma, modeFreq, linearRoot, speakingWindow, thetaAt, loopGain,
   pressureAt, windSystem, chestPan, organName,
 } from '../pipes/src/pipes-model.js';
-import { PipeEngine } from '../pipes/src/pipes-engine.js';
+import { INSTRUMENT } from '../pipes/src/pipes-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../pipes/src/pipes-params.js';
 import { TUNING } from '../pipes/src/tuning-table.js';
+
+const PipeEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000, TAU = 2 * Math.PI;
 let failures = 0;

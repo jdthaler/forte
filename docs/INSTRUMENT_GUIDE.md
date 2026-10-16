@@ -55,7 +55,8 @@ replace the bar physics with yours.
 <slug>/src/<slug>-model.js    the physics: pure functions, no DOM, no audio
 <slug>/src/<slug>-engine.js   real-time engine class (AudioWorklet and Node)
 <slug>/src/<slug>-params.js   GROUPS, DEFAULTS, PRESETS
-<slug>/src/<slug>-main.js     createShell(…) + views
+<slug>/src/<slug>-instrument.js  the descriptor: everything but the page (below)
+<slug>/src/<slug>-main.js     createShell({ ...INSTRUMENT, … }) + views
 <slug>/README.md
 test/<slug>-tests.mjs         run by CI (any test/*-tests.mjs)
 tools/render-<slug>.mjs       demos → examples/<slug>/NN-name.wav
@@ -70,6 +71,7 @@ Split the model across more files when it grows (`<slug>/src/plate.js`,
 |---|---|
 | `shell.js` | everything common to instrument pages: audio graph (room, volume, tone, limiter, analyser), computer keyboard and on-screen keys, MIDI (notes, velocity, CC64, CC1), parameter sidebar with presets and local storage, octave shift, toasts. See the header for the config. |
 | `worklet.js` | the generic AudioWorklet processor. It loads your engine by its `globalThis` name. |
+| `chain.js` | the output chain after the engine, built from the descriptor's `chain`: tone low-pass, body or soundboard, room, volume × trim, limiter. Every page uses it; the plugins rebuild it in C++. |
 | `dsp.js` | `modeCoeffs` (exact two-pole modal resonator), `Biquad`, `OnePole`, `DCBlock`, `Delay` (fractional), `keyPan`, `keyFreq`, `sigmaFromT60` |
 | `linalg.js` | `symEig`, `genEig` (generalised symmetric), `cholesky` |
 | `views.js` | `fit`, `css`, `animate`, `SpectrumView` (live spectrum + model markers), `ScopeView` |
@@ -80,8 +82,41 @@ Split the model across more files when it grows (`<slug>/src/plate.js`,
 | `notes.js`, `markdown.js` | **How it works**: the page's README in a dialog (button by the title, or a link to `…/#about`) |
 | `instrument.css`, `forte.css` | page layout; Forte nav and notes |
 
-The older five instruments predate the shell and have their own page code.
-New instruments should use the shell.
+The older five instruments predate the shell and have their own page code
+(keys, MIDI, controls), though they share the descriptor, `worklet.js` and
+`chain.js`. New instruments should use the shell.
+
+### The descriptor
+
+`<slug>/src/<slug>-instrument.js` exports `INSTRUMENT`: everything a host needs to play the
+instrument without its page. The page spreads it into `createShell`; the Node tools and tests
+play the instrument from it (`tools/headless.mjs`); `tools/gen-native-params.mjs` turns it into
+the C++ tables of the native plugins (docs/PLUGINS.md). It must not touch the DOM, Web Audio or
+browser globals when it is imported.
+
+```js
+export const INSTRUMENT = {
+  id: 'gongs',
+  groups: GROUPS, presets: PRESETS,
+  keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
+  range: [36, 84],                      // the MIDI keys it plays
+  space: 'sustain',                     // Space and CC64: 'sustain' (a damper, sent to the engine), 'hold' (keys latch) or null
+  modWheel: 'strike',                   // CC1 (or { param, max })
+  controllers: { 67: 'unaCorda' },      // other MIDI controllers → parameters (a toggle is on at 64)
+  engine: { name: 'GongEngine', module: new URL('./gongs-engine.js', import.meta.url).href },
+  engineParams: (P) => ({ ...P, tables: couplingTables(P) }), // what setParams receives (default: P)
+  noteData: (key, vel, P, fs) => …,     // data sent with each note (default: none)
+  midiVelocity: (v) => …,               // MIDI velocity / 127 → the engine's (default: the same)
+  keyVelocity: 1,                       // what the computer keys play when there is no `velocity` parameter
+  chain: { volume: 'volume', room: 'room' }, // shared/chain.js: also roomSeconds, roomGain, tone, body, limiter
+  load: async () => …,                  // data to load before the first note (default: none)
+};
+```
+
+`engineParams` and `noteData` are pure: functions of their arguments (with caches keyed on
+what they depend on). A page that precomputes in idle time or builds a table progressively may
+pass its own, as long as the engine ends up with the same values. Page-only settings (`base`,
+`arrows`, `holdHint` and the `on…` hooks) stay in the page.
 
 ### Engine contract
 
@@ -90,13 +125,14 @@ The class runs unchanged in the AudioWorklet and in Node:
 ```js
 export class GongEngine {
   constructor(fs) { … }
-  setParams(P) { … }               // the whole parameter object (or the page's engineParams(P))
-  noteOn(key, velocity, data) { … } // velocity 0..1; data from the page's noteData(key, vel), if any
+  setParams(P) { … }               // the whole parameter object (or the descriptor's engineParams(P))
+  noteOn(key, velocity, data) { … } // velocity 0..1; data from the descriptor's noteData(key, vel, P, fs), if any
   noteOff(key, velocity) { … }      // velocity: MIDI release velocity 0..1, or undefined
   setSustain(on) { … }             // optional
   allNotesOff() { … }              // optional (Panic)
   handle(msg) { … }                // optional: other messages, incl. MIDI { type: 'pressure', value, key } and { type: 'bend', value }
   voiceCount() { … }               // optional, shown in the CPU pill
+  stats() { … }                    // optional: more fields for the page's stats message
   process(L, R, n) { … }           // fill n samples (n = 128 in the browser)
 }
 globalThis.GongEngine = GongEngine;
@@ -235,7 +271,10 @@ To fit in:
 ### Tests
 
 Copy the pattern in `test/template-tests.mjs`. Each file is a plain Node
-script that prints `ok`/`FAIL` lines and exits non-zero on failure. Keep
+script that prints `ok`/`FAIL` lines and exits non-zero on failure. Get the
+engine class with `await loadEngine(INSTRUMENT)` (`tools/engine.mjs`), not by
+importing it: with `FORTE_ENGINE=wasm` the same tests run on the instrument's
+WebAssembly build once it is ported. Keep
 the whole file under ~30 s. Aim for 10–25 tests that cover:
 
 1. the model against independent physics;

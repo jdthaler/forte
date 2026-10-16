@@ -30,6 +30,11 @@
 //
 // Firing times are found analytically within each sample, so pitch and lock
 // are exact; the sawtooth output is band-limited with polyBLEP.
+//
+// The engine contract is shared/worklet.js's: noteOn(key, velocity, { f }) (a
+// lamp has no touch: velocity is ignored), handle({ type: 'retune', list:
+// [[key, f]…] }) for keys already sounding. Under shared/worklet.js it posts
+// the page a 'state' (the new firings) at most 30 times a second.
 
 const TWO_PI = 2 * Math.PI;
 
@@ -180,6 +185,10 @@ export class NeonEngine {
     this.hold = 0;      // pitch-hold correction, octaves
     this.order = [];    // lamps firing this sample, by firing time (reused)
     this.update();
+    // state for the page (this.post), at most 30 times a second: only the new firings
+    this.stateEvery = 128 * Math.ceil(fs / 128 / 30); this.sinceState = 0; // samples (whole 128-sample blocks)
+    this.fireBuf = new Float64Array(32 * 258);
+    this.oscBuf = new Float64Array(32 * 3);
   }
   update() {
     this.attackAlpha = 1 - Math.exp(-this.k / Math.max(1e-4, this.p.attack));
@@ -195,7 +204,8 @@ export class NeonEngine {
     this.update();
   }
   retune(key, f) { const o = this.byKey.get(key); if (o) o.retune(f, this.p); }
-  noteOn(key, data) {
+  handle(m) { if (m.type === 'retune') for (const [key, f] of m.list) this.retune(key, f); }
+  noteOn(key, vel, data) {
     let o = this.byKey.get(key);
     if (o && !o.dead) { o.keyDown = true; if (data.f !== o.fTarget) o.retune(data.f, this.p); return o; }
     if (o) o.keyDown = false;
@@ -205,7 +215,8 @@ export class NeonEngine {
     return o;
   }
   noteOff(key) { const o = this.byKey.get(key); if (o) o.keyDown = false; }
-  allOff() { for (const o of this.osc) o.keyDown = false; }
+  allNotesOff() { for (const o of this.osc) o.keyDown = false; }
+  voiceCount() { return this.osc.length; }
 
   // Every oscillator's period is R_i C·g(V) with the same g(V) =
   // ln[(V − V_e)/(V − V_s)], so the supply voltage scales the whole keyboard
@@ -282,6 +293,11 @@ export class NeonEngine {
       if (o.dead) { if (this.byKey.get(o.key) === o) this.byKey.delete(o.key); } else os[j++] = o;
     }
     os.length = j;
+    if (this.post && (this.sinceState += n) >= this.stateEvery) {
+      this.sinceState = 0;
+      const nf = this.drainFirings(this.fireBuf), no = this.summary(this.oscBuf);
+      this.post({ type: 'state', t: this.t, fs: this.fs, hold: this.hold, osc: this.oscBuf.slice(0, no), fires: this.fireBuf.slice(0, nf) });
+    }
   }
 
   report(win = 0.3) {

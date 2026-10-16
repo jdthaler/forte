@@ -13,9 +13,12 @@ import {
   virtualPitch, heardPartials, playedSpring, HEAR, MF,
 } from '../springs/src/springs-model.js';
 import { fft } from '../tools/audio-util.mjs';
-import { SpringEngine } from '../springs/src/springs-engine.js';
+import { INSTRUMENT } from '../springs/src/springs-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../springs/src/springs-params.js';
 import { Biquad } from '../shared/dsp.js';
+
+const SpringEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000;
 let failures = 0;

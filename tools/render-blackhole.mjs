@@ -20,7 +20,7 @@ function render(P0, seconds, events) {
   const ev = events.map(([t, key, vel, p]) => ({ s: Math.round(t * FS), key, vel, P: { ...P0, ...(p || {}) } })).sort((a, b) => a.s - b.s);
   let j = 0;
   for (let s = 0; s < n; s += bl) {
-    while (j < ev.length && ev[j].s <= s) { const x = ev[j++]; e.noteOn(keyVoice(x.key, x.P, bank, FS), x.vel); }
+    while (j < ev.length && ev[j].s <= s) { const x = ev[j++]; e.noteOn(x.key, x.vel, keyVoice(x.key, x.P, bank, FS)); }
     e.process(bL, bR, bl);
     for (let i = 0; i < bl && s + i < n; i++) { L[s + i] = bL[i]; R[s + i] = bR[i]; }
   }

@@ -14,8 +14,11 @@ import {
   zener, ZENER_DELTA, openFraction, air, voiceData,
 } from '../vibraphone/src/vibraphone-model.js';
 import { BAR_TABLE } from '../vibraphone/src/bar-table.js';
-import { VibraphoneEngine } from '../vibraphone/src/vibraphone-engine.js';
+import { INSTRUMENT } from '../vibraphone/src/vibraphone-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../vibraphone/src/vibraphone-params.js';
+
+const VibraphoneEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000;
 let failures = 0;

@@ -6,10 +6,15 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { INSTRUMENTS, SECTIONS, FORTE_VERSION, TEMPLATE } from '../shared/registry.js';
 
 let failures = 0;
-function test(name, fn) {
+function test(name, fn) { // returns a promise for an async test
   // CPU budgets are set on a desktop machine; shared CI runners are slower and noisy
   if (process.env.CI && /^CPU|real time|costlier/.test(name)) { console.log('  skip', name, '(timing; skipped on CI)'); return; }
-  try { fn(); console.log('  ok  ', name); } catch (e) { failures++; console.log('  FAIL', name, '\n       ', e.message); } }
+  const fail = (e) => { failures++; console.log('  FAIL', name, '\n       ', e.message); };
+  try {
+    const r = fn();
+    if (r?.then) return r.then(() => console.log('  ok  ', name), fail);
+    console.log('  ok  ', name);
+  } catch (e) { fail(e); } }
 const R = new URL('../', import.meta.url);
 const read = (p) => readFileSync(new URL(p, R), 'utf8');
 const has = (p) => existsSync(new URL(p, R));
@@ -120,6 +125,32 @@ test('the landing page has the category tabs, the instrument list and an About d
   const html = read('index.html');
   for (const id of ['cats', 'instruments', 'about', 'about-open']) assert.ok(html.includes(`id="${id}"`), `#${id}`);
 });
+
+console.log('descriptors');
+const described = [...ready.map((i) => ({ id: i.id, dir: i.id })), { id: 'template', dir: 'docs/template' }];
+for (const { id, dir } of described) {
+  const file = `${dir}/src/${id}-instrument.js`;
+  await test(`${id}: a headless descriptor (${file}) that its page uses`, async () => {
+    assert.ok(has(file), file);
+    const { INSTRUMENT: I } = await import(new URL(file, R));
+    assert.equal(I.id, id);
+    const params = new Map(I.groups.flatMap((g) => g.params).map((p) => [p.id, p]));
+    assert.ok(params.size && Array.isArray(I.presets), 'groups and presets');
+    const [lo, hi] = I.range;
+    assert.ok(Number.isInteger(lo) && Number.isInteger(hi) && lo >= 0 && hi <= 127 && lo < hi, `range ${I.range}`);
+    assert.ok(['sustain', 'hold', null].includes(I.space), `space ${I.space}`);
+    const mw = typeof I.modWheel === 'string' ? I.modWheel : I.modWheel?.param;
+    if (mw) assert.ok(params.has(mw), `modWheel ${mw}`);
+    for (const k of ['volume', 'room', 'tone']) if (I.chain[k]) assert.ok(params.has(I.chain[k]), `chain.${k} ${I.chain[k]}`);
+    if (I.chain.body) assert.ok(params.has(I.chain.body.param), `chain.body ${I.chain.body.param}`);
+    assert.ok(params.has(I.chain.volume), 'chain.volume');
+    const E = (await import(I.engine.module))[I.engine.name];
+    assert.equal(typeof E, 'function', `${I.engine.module} exports ${I.engine.name}`);
+    for (const m of ['setParams', 'noteOn', 'noteOff', 'process']) assert.equal(typeof E.prototype[m], 'function', `${I.engine.name}.${m}`);
+    const pages = readdirSync(new URL(`${dir}/src/`, R)).filter((f) => /main\.js$/.test(f));
+    assert.ok(pages.some((f) => read(`${dir}/src/${f}`).includes(`${id}-instrument.js`)), 'the page imports it');
+  });
+}
 
 console.log('parameters and presets');
 for (const i of ready) {

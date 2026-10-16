@@ -1,8 +1,10 @@
-// sync-main.js — UI, audio graph, keyboard / MIDI, lock analysis, views.
+// sync-main.js — the page: UI, audio graph, keyboard / MIDI, lock analysis, views.
+// The instrument itself (parameters, engine, chain) is huygens-instrument.js.
 
-import { GROUPS, ALL_PARAMS, DEFAULTS, PRESETS } from './sync-params.js';
+import { INSTRUMENT, GROUPS, DEFAULTS, PRESETS } from './huygens-instrument.js';
+import { ALL_PARAMS } from './sync-params.js';
 import { tunedFreq, keyFreq, noteName, nearestRatio, intervalName, KEY_LO, KEY_HI } from './tuning.js';
-import { soundboardIR, roomIR } from '../../shared/impulses.js';
+import { createChain } from '../../shared/chain.js';
 import { StairView, RasterView } from './sync-viz.js';
 import { FiringLog } from './lock-analysis.js';
 import { createKeyboard } from '../../shared/keyboard.js';
@@ -20,11 +22,7 @@ let base = 48, holding = false;
 const log = new FiringLog(3); // the last 3 s of every sounding lamp's firings
 const held = new Map(), sounding = new Map(), latched = new Set();
 
-const engineParams = () => ({
-  kick: P.kick, rSrc: P.rSrc, pitchHold: P.pitchHold ? 1 : 0, drift: P.drift, driftRate: P.driftRate,
-  vNom: P.vNom, vStrike: Math.min(P.vStrike, P.vNom - 5), vExt: Math.min(P.vExt, P.vStrike - 5),
-  attack: P.attack, release: P.release, width: P.width,
-});
+const engineParams = () => INSTRUMENT.engineParams(P);
 
 // ---------------------------------------------------------------------------
 // audio
@@ -36,24 +34,14 @@ function startAudio() {
   starting = (async () => {
     const ctx = new AudioContext({ latencyHint: 'interactive' });
     if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
-    await ctx.audioWorklet.addModule('src/neon-engine.js');
-    await ctx.audioWorklet.addModule('src/sync-worklet.js');
-    const node = new AudioWorkletNode(ctx, 'sync-processor', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
-    const tone = ctx.createBiquadFilter(); tone.type = 'lowpass'; tone.Q.value = 0.6;
-    const dry = ctx.createGain(), body = ctx.createConvolver(), bodyGain = ctx.createGain();
-    const bus = ctx.createGain(), room = ctx.createConvolver(), roomGain = ctx.createGain();
-    const master = ctx.createGain(), limiter = ctx.createDynamicsCompressor();
-    body.buffer = soundboardIR(ctx, 0.3);
-    room.buffer = roomIR(ctx, 2.0);
-    limiter.threshold.value = -4; limiter.knee.value = 4; limiter.ratio.value = 12; limiter.attack.value = 0.002; limiter.release.value = 0.15;
-    node.connect(tone);
-    tone.connect(dry).connect(bus);
-    tone.connect(body).connect(bodyGain).connect(bus);
-    bus.connect(master);
-    bus.connect(room).connect(roomGain).connect(master);
-    master.connect(limiter).connect(ctx.destination);
+    await ctx.audioWorklet.addModule(INSTRUMENT.engine.module);
+    await ctx.audioWorklet.addModule(new URL('../../shared/worklet.js', import.meta.url));
+    const node = new AudioWorkletNode(ctx, 'forte-processor', {
+      numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { engine: INSTRUMENT.engine.name },
+    });
+    const chain = createChain(ctx, node, INSTRUMENT.chain); // tone → dry + body → room → limiter
     node.port.onmessage = (e) => onWorklet(e.data);
-    audio = { ctx, node, tone, dry, bodyGain, roomGain, master };
+    audio = { ctx, node, chain };
     applyMix();
     node.port.postMessage({ type: 'params', params: engineParams() });
     if (ctx.state !== 'running') await ctx.resume();
@@ -66,15 +54,7 @@ function startAudio() {
   return starting;
 }
 const post = (m) => { if (live) audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
-function applyMix() {
-  if (!audio) return;
-  const t = audio.ctx.currentTime;
-  audio.tone.frequency.setTargetAtTime(P.tone, t, 0.02);
-  audio.dry.gain.setTargetAtTime(1 - 0.7 * P.body, t, 0.02);
-  audio.bodyGain.gain.setTargetAtTime(1.2 * P.body, t, 0.02);
-  audio.roomGain.gain.setTargetAtTime(0.6 * P.room, t, 0.02);
-  audio.master.gain.setTargetAtTime(P.volume * trimGain('huygens'), t, 0.02); // level-matched across instruments
-}
+function applyMix() { if (audio) audio.chain.apply(P, trimGain('huygens')); } // trim: level-matched across instruments
 
 let lastTable = 0;
 function onWorklet(m) {
@@ -99,7 +79,7 @@ async function noteOn(key) {
   sounding.set(key, (sounding.get(key) || 0) + 1);
   keyboardView.set(key, true);
   const a = await startAudio();
-  a.node.port.postMessage({ type: 'noteOn', key, f: tunedFreq(key, P) });
+  a.node.port.postMessage({ type: 'noteOn', key, velocity: 1, data: INSTRUMENT.noteData(key, 1, P, a.ctx.sampleRate) });
   refreshMarks();
 }
 function noteOff(key) {
@@ -180,7 +160,7 @@ function onMIDI(ev) {
   const [st, d1, d2] = ev.data, cmd = st & 0xf0;
   if (cmd === 0x90 && d2 > 0) noteOn(d1);
   else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) noteOff(d1);
-  else if (cmd === 0xb0 && d1 === 1) setParam('kick', wheelValue(ALL_PARAMS.find((q) => q.id === 'kick'), d2)); // at rest: the default coupling
+  else if (cmd === 0xb0 && d1 === 1) setParam(INSTRUMENT.modWheel, wheelValue(ALL_PARAMS.find((q) => q.id === INSTRUMENT.modWheel), d2)); // at rest: the default coupling
   else if (cmd === 0xb0 && d1 === 64) setHold(d2 >= 64);
   else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) panic();
 }
@@ -242,7 +222,7 @@ function buildControls() {
   PRESETS.forEach((pr, i) => ps.add(new Option(pr.name, i)));
   ps.addEventListener('change', () => {
     if (ps.value === '') return;
-    setAll({ ...DEFAULTS, volume: P.volume, room: P.room, tone: P.tone, body: P.body, ...PRESETS[+ps.value].p });
+    setAll({ ...DEFAULTS, ...Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]])), ...PRESETS[+ps.value].p });
     ps.blur();
   });
   $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }); $('#preset').value = ''; });

@@ -19,7 +19,7 @@ function render(P, seconds, events, ramp) {
   const ev = events.map(([t, type, key]) => ({ s: Math.round(t * FS), type, key })).sort((a, b) => a.s - b.s);
   let j = 0;
   for (let s = 0; s < n; s += bl) {
-    while (j < ev.length && ev[j].s <= s) { const x = ev[j++]; if (x.type === 'on') e.noteOn(x.key, { f: tunedFreq(x.key, P) }); else e.noteOff(x.key); }
+    while (j < ev.length && ev[j].s <= s) { const x = ev[j++]; if (x.type === 'on') e.noteOn(x.key, 1, { f: tunedFreq(x.key, P) }); else e.noteOff(x.key); }
     if (ramp) e.setParams(ramp(s / FS));
     e.process(bL, bR, bl);
     for (let i = 0; i < bl && s + i < n; i++) { L[s + i] = bL[i]; R[s + i] = bR[i]; }

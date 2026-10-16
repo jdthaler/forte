@@ -2,7 +2,7 @@
 
 import { createShell, noteName } from '../../shared/shell.js';
 import { fit, css, animate } from '../../shared/views.js';
-import { GROUPS, PRESETS } from './harpsichord-params.js';
+import { INSTRUMENT } from './harpsichord-instrument.js';
 import {
   KEY_LO, KEY_HI, ROWS, registration, simulatePluck, stringDesign, stringLength, pluckPoint, jackSpeed, isBrass, stringPartials, t60, ACTION,
 } from './harpsichord-model.js';
@@ -14,15 +14,8 @@ const ROW_NAME = { front: 'front 8′', back: 'back 8′', four: '4′', lute: '
 let focus = 60, vel = 0.7, analyser = null, fft = null, sim = null, simT0 = 0, engineInfo = null, simTimer = 0, combState = null;
 
 const shell = createShell({
-  id: 'harpsichord',
-  groups: GROUPS,
-  presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'],
-  range: [KEY_LO, KEY_HI],
+  ...INSTRUMENT,
   base: 48,
-  worklet: { modules: ['src/harpsichord-engine.js'], engine: 'HarpsichordEngine' },
-  chain: { volume: 'volume', room: 'room' },
-  space: 'hold',
   arrows: { param: 'velocity', step: 0.05 },
   onAudio: (a) => { analyser = a.analyser; fft = new Float32Array(analyser.frequencyBinCount); },
   onNoteOn: (key, v) => { focus = key; vel = v; shell.keys.focus(key); engineInfo = null; update(); runSim(); },

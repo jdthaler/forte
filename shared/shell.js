@@ -10,7 +10,8 @@
 //   #keyboard #oct #toast                keys, octave readout, toast
 //   optional: #ctl-read (readout of the ↑/↓ parameter), #hold (Space indicator)
 //
-// Config:
+// Config: the instrument's descriptor (<slug>/src/<slug>-instrument.js: id, groups, presets, keep,
+// range, space, modWheel, engine, engineParams, noteData, chain), spread in, plus the page's own:
 //   id            instrument slug (localStorage key)
 //   groups        parameter groups: [{ title, open?, params: [{ id, label, min, max, def, step?, log?,
 //                 fmt?, hint?, type?: 'select' | 'checkbox', options?: [[value, name]…], showIf?(P),
@@ -19,13 +20,14 @@
 //   keep          param ids kept when switching presets (e.g. ['volume', 'room'])
 //   range         [lowest MIDI key, highest MIDI key]   (default [36, 96])
 //   base          MIDI note of the lower-row "Z" key    (default 48)
-//   worklet       { modules: ['src/x-engine.js'], engine: 'XEngine', outputs?: 2 }
-//                 uses shared/worklet.js (see the engine contract there); or give
-//                 { modules: […, 'src/x-worklet.js'], processor: 'x-processor' } for a custom one
-//   chain         { volume: param id, room?: param id (0..1), tone?: param id (Hz) }
-//                 node → [tone low-pass] → master (+ room reverb) → limiter → speakers; analyser on node
+//   engine        { name: 'XEngine', module: URL of src/x-engine.js }: run by shared/worklet.js (see
+//                 the engine contract there)
+//   worklet       instead of engine: { modules: ['src/x-engine.js'], engine: 'XEngine', outputs?: 2 },
+//                 or { modules: […, 'src/x-worklet.js'], processor: 'x-processor' } for a custom processor
+//   chain         the output chain (shared/chain.js): { volume, room?, tone?, body?, … }
+//                 node → [tone low-pass] → [body] → master (+ room reverb) → limiter → speakers; analyser before the body
 //   engineParams(P)   what the engine's setParams receives (default: all of P); posted on start and on change
-//   noteData(key, vel)  extra data attached to each noteOn message (e.g. a precomputed modal model)
+//   noteData(key, vel, P, fs)  extra data attached to each noteOn message (e.g. a precomputed modal model)
 //   space         'sustain' (Space / CC64 = damper pedal, sent to the engine) | 'hold' (keys latch
 //                 while Space is down; shell sends the noteOffs on release) | null
 //   arrows        { param: id, step } — ↑/↓ nudge that parameter (by `step`; a log parameter by 1/24 of its range)
@@ -34,14 +36,14 @@
 //   holdHint      { text, ms } for an instrument that speaks only while a key is held: the first
 //                 time a key is let go within `ms` (default 300), `text` shows as a toast
 // Hooks (all optional, all in addition to the default engine messages):
-//   onAudio(audio)  once, with { ctx, node, tone, master, roomGain, analyser }
+//   onAudio(audio)  once, with { ctx, node, tone, master, roomGain, analyser, chain }
 //   onMessage(msg)  messages from the engine ('stats' already updates #cpu)
 //   onNoteOn(key, vel)  onNoteOff(key)  onSustain(on)  onPanic()  onCC(cc, value)
 //   onPressure(value, key|null)  onBend(value)   (MIDI aftertouch 0..1 and pitch bend −1..1; the
 //                   engine also receives { type: 'pressure', value, key } and { type: 'bend', value })
 //   onParam(id, value, P, param, dragging)   id = '*' after a preset or reset
 
-import { roomIR } from './impulses.js';
+import { createChain } from './chain.js';
 import { createKeyboard } from './keyboard.js';
 import { trimGain } from './registry.js';
 import { controlOwns, focusedByPointer } from './focus.js';
@@ -98,7 +100,7 @@ export function createShell(cfg) {
     let ctx = null;
     starting = (async () => {
       ctx = new AudioContext({ latencyHint: 'interactive' });
-      const w = cfg.worklet;
+      const w = cfg.worklet || { modules: [cfg.engine.module], engine: cfg.engine.name };
       if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
       for (const m of w.modules) await ctx.audioWorklet.addModule(m);
       if (!w.processor) await ctx.audioWorklet.addModule(new URL('./worklet.js', import.meta.url));
@@ -106,21 +108,9 @@ export function createShell(cfg) {
         numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [w.outputs || 2],
         processorOptions: { engine: w.engine },
       });
-      const ch = cfg.chain || {};
-      let out = node;
-      let tone = null;
-      if (ch.tone) { tone = ctx.createBiquadFilter(); tone.type = 'lowpass'; tone.Q.value = 0.6; out.connect(tone); out = tone; }
-      const master = ctx.createGain(), limiter = ctx.createDynamicsCompressor();
-      limiter.threshold.value = -3; limiter.knee.value = 3; limiter.ratio.value = 12; limiter.attack.value = 0.002; limiter.release.value = 0.15;
-      out.connect(master);
-      let roomGain = null;
-      if (ch.room) {
-        const room = ctx.createConvolver(); room.buffer = roomIR(ctx, 2.0);
-        roomGain = ctx.createGain(); out.connect(room).connect(roomGain).connect(master);
-      }
+      const chain = createChain(ctx, node, cfg.chain || {});
       const analyser = ctx.createAnalyser(); analyser.fftSize = 8192; analyser.smoothingTimeConstant = 0.55;
-      out.connect(analyser);
-      master.connect(limiter).connect(ctx.destination);
+      chain.tap.connect(analyser);
       node.port.onmessage = (e) => {
         const m = e.data;
         if (m.type === 'stats' && $('#cpu')) {
@@ -139,7 +129,7 @@ export function createShell(cfg) {
       node.port.postMessage(paramsMessage());
       if (cfg.space === 'sustain') node.port.postMessage({ type: 'sustain', on: shell.sustain });
       if (ctx.state !== 'running') await ctx.resume();
-      shell.audio = { ctx, node, tone, master, roomGain, analyser };
+      shell.audio = { ctx, node, tone: chain.tone, master: chain.master, roomGain: chain.roomGain, analyser, chain };
       shell.applyMix();
       cfg.onAudio?.(shell.audio);
       if ($('#start')) { $('#start').textContent = `Audio on · ${(ctx.sampleRate / 1000).toFixed(1)} kHz`; $('#start').classList.add('running'); }
@@ -152,14 +142,7 @@ export function createShell(cfg) {
   const sendParams = () => shell.post(paramsMessage());
   shell.sendParams = sendParams;
   shell.post = (m) => { if (shell.audio) shell.audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
-  shell.applyMix = () => {
-    const a = shell.audio, ch = cfg.chain || {}, P = shell.P;
-    if (!a) return;
-    const t = a.ctx.currentTime;
-    if (a.tone && ch.tone) a.tone.frequency.setTargetAtTime(P[ch.tone], t, 0.02);
-    if (a.roomGain && ch.room) a.roomGain.gain.setTargetAtTime(0.6 * P[ch.room], t, 0.02);
-    if (ch.volume) a.master.gain.setTargetAtTime(P[ch.volume] * trimGain(cfg.id), t, 0.02);
-  };
+  shell.applyMix = () => { if (shell.audio) shell.audio.chain.apply(shell.P, trimGain(cfg.id)); };
 
   // ---- notes ---------------------------------------------------------------
   // an instrument that speaks only while held says so the first time a key is let go too soon
@@ -173,7 +156,7 @@ export function createShell(cfg) {
     shell.keys.set(key, true);
     if (shell.audio) shell.startAudio(); // resumes a suspended context; no await, so order is kept
     else try { await shell.startAudio(); } catch { return; }
-    shell.post({ type: 'noteOn', key, velocity: vel, data: cfg.noteData?.(key, vel) });
+    shell.post({ type: 'noteOn', key, velocity: vel, data: cfg.noteData?.(key, vel, shell.P, shell.audio.ctx.sampleRate) });
     cfg.onNoteOn?.(key, vel);
   }
   function up(key, velocity) { // velocity: a MIDI note-off's release velocity (0..1), if it sent one

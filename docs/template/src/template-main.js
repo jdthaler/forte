@@ -2,7 +2,7 @@
 
 import { createShell, noteName } from '../../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../../shared/views.js';
-import { GROUPS, PRESETS } from './template-params.js';
+import { INSTRUMENT } from './template-instrument.js';
 import { keyModes, modeShape, BETA_L } from './template-model.js';
 
 const $ = (s) => document.querySelector(s);
@@ -10,13 +10,7 @@ const spectrum = new SpectrumView($('#spectrum'));
 let focus = 60;
 
 const shell = createShell({
-  id: 'template',
-  groups: GROUPS,
-  presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'],
-  worklet: { modules: ['src/template-engine.js'], engine: 'TemplateEngine' },
-  chain: { volume: 'volume', room: 'room' },
-  space: 'sustain',
+  ...INSTRUMENT,
   arrows: { param: 'velocity', step: 0.05 },
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key) => { focus = key; update(); },

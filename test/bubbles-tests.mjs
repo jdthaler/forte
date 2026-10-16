@@ -11,8 +11,11 @@ import {
   GASES, LIQUIDS, P_ATM, G, KEY_LO, KEY_HI, R_REF, keyFreq, phi, devin, acoustics, nozzleEnv, tuneRadius, nominalRadius,
   riseSpeed, riseDistance, glideAt, bubbleModel, hydrophoneGains, peakPressure, snapGain, ambient,
 } from '../bubbles/src/bubbles-model.js';
-import { BubbleEngine } from '../bubbles/src/bubbles-engine.js';
+import { INSTRUMENT } from '../bubbles/src/bubbles-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../bubbles/src/bubbles-params.js';
+
+const BubbleEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000;
 let failures = 0;

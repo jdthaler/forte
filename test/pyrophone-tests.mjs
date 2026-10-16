@@ -8,10 +8,13 @@
 
 import assert from 'node:assert/strict';
 import { tube, root, hopf, weakRoot, describing, bifurcation, tuning, steadyY, orbitAt, orbitSpectrum, betaOn, damping, silenceLimit, T_HOT, B_MAX } from '../pyrophone/src/pyrophone-model.js';
-import { PyrophoneEngine } from '../pyrophone/src/pyrophone-engine.js';
+import { INSTRUMENT } from '../pyrophone/src/pyrophone-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS } from '../pyrophone/src/pyrophone-params.js';
 import { keyFreq } from '../shared/dsp.js';
 import { renderEngine } from '../tools/audio-util.mjs';
+
+const PyrophoneEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000;
 let failures = 0;

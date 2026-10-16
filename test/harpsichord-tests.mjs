@@ -14,8 +14,11 @@ import {
 } from '../harpsichord/src/harpsichord-model.js';
 import { makePlectrum, beamC, beamG, beamPhi, quasiStaticRelease, releaseForceClosed } from '../harpsichord/src/plectrum.js';
 import { PT } from '../harpsichord/src/string.js';
-import { HarpsichordEngine } from '../harpsichord/src/harpsichord-engine.js';
+import { INSTRUMENT } from '../harpsichord/src/harpsichord-instrument.js';
+import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../harpsichord/src/harpsichord-params.js';
+
+const HarpsichordEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
 const FS = 48000;
 let failures = 0;
