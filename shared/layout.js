@@ -231,11 +231,42 @@ function segment(p, label) {
   sync();
 }
 
+// A tile above the keys shows its label at rest, with the value beside it only if both fit whole
+// (.tight when they don't), and its value while the value moves (a drag, the arrows, the mod
+// wheel, a preset) and for a moment after, so it can be read (.live). Its tooltip has both.
+function live(p, name) {
+  const row = p.querySelector('.row'), lab = row?.querySelector('label'), val = row?.querySelector('.val');
+  if (!lab || !val) return;
+  const title = () => { p.title = `${name}: ${val.textContent}`; };
+  const input = p.querySelector('input[type=range]');
+  const fit = () => {
+    const info = row.querySelector('.forte-info'), gap = parseFloat(getComputedStyle(row).columnGap) || 0;
+    const need = lab.scrollWidth + gap + val.scrollWidth + (info?.offsetWidth ? info.offsetWidth + gap : 0);
+    p.classList.toggle('tight', need > row.clientWidth + 0.5);
+  };
+  let timer = 0, held = false;
+  const show = () => {
+    p.classList.add('live'); clearTimeout(timer);
+    if (!held) timer = setTimeout(() => p.classList.remove('live'), 1500);
+  };
+  new MutationObserver(() => { show(); fit(); title(); }).observe(val, { childList: true, characterData: true, subtree: true });
+  if (window.ResizeObserver) new ResizeObserver(fit).observe(row);
+  fit(); title();
+  if (!input) return;
+  input.addEventListener('pointerdown', () => { held = true; show(); });
+  for (const ev of ['pointerup', 'pointercancel']) input.addEventListener(ev, () => { held = false; show(); });
+}
+// Above the keys a label drops its explanation, "(…)" or "= …": "Dome rise (curvature)" is
+// "Dome rise". The whole name stays the control's name, its tooltip and its ⓘ's title.
+const shortLabel = (t) => t.replace(/\s*\([^()]*\)\s*$/, '').replace(/\s+=\s.*$/, '').trim() || t;
+
 // Once the page has built its parameters: each gets its ⓘ, and the ones marked
 // data-perform move above the keys (the page keeps its references to them).
 function placeControls() {
   if (!sidebar) return;
-  for (const p of sidebar.querySelectorAll('.param:not([data-placed])')) {
+  const fresh = sidebar.querySelectorAll('.param:not([data-placed])');
+  if (fresh.length) requestAnimationFrame(() => { deck.scrollTop = 0; }); // the first row, once laid out
+  for (const p of fresh) {
     p.dataset.placed = '';
     const lab = p.querySelector('label'), label = lab?.textContent ?? '', hint = p.querySelector('.hint')?.textContent;
     const row = lab?.closest('.row');
@@ -253,6 +284,14 @@ function placeControls() {
         info.addEventListener('click', () => { openHint(info, p, label, hint); info.blur(); });
       }
       segment(p, label);
+      const short = shortLabel(label);
+      if (lab && short !== label) {
+        lab.textContent = short;
+        p.querySelector('input, select')?.setAttribute('aria-label', label);
+      }
+      live(p, label);
+      // velocity for the computer keys: a touch sets it by where it strikes, MIDI by the note
+      if (p.querySelector('#p-velocity')) p.classList.add('keys-only');
       strip.insertBefore(p, more);
     } else if (info) {
       info.addEventListener('click', () => { info.setAttribute('aria-expanded', String(p.classList.toggle('hint-open'))); info.blur(); });
@@ -530,6 +569,36 @@ export function attachKeyboard(kb) {
   else window.addEventListener('resize', () => fit());
   fit();
 }
+
+// ---------------------------------------------------------------------------
+// A second finger: while one finger holds a key, a tap with another gets no click from the
+// browser (it sees a two-finger gesture), so a stop, Latch, ◀ ▶ or a tab would not answer.
+// Such a tap, lifted where it landed, clicks the control itself.
+
+const TAPPABLE = 'button, label, summary, input[type=checkbox], input[type=radio], [role=button], [role=tab], [role=switch]';
+const taps = new Map(); // pointer id → the control it landed on, and where
+let tapped = null;      // our click, should the browser click as well
+document.addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'touch' || e.isPrimary) return;
+  const t = e.target.closest?.(TAPPABLE);
+  if (t && !t.closest('#keyboard')) taps.set(e.pointerId, { t, x: e.clientX, y: e.clientY });
+}, true);
+document.addEventListener('pointercancel', (e) => taps.delete(e.pointerId), true);
+document.addEventListener('pointerup', (e) => {
+  const tap = taps.get(e.pointerId);
+  if (!tap) return;
+  taps.delete(e.pointerId);
+  const over = document.elementFromPoint(e.clientX, e.clientY)?.closest?.(TAPPABLE);
+  if (over !== tap.t || tap.t.disabled || Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 12) return;
+  tapped = { t: tap.t, at: performance.now() };
+  tap.t.click();
+}, true);
+document.addEventListener('click', (e) => {
+  if (!tapped || !e.isTrusted) return;
+  const mine = performance.now() - tapped.at < 700 && tapped.t.contains(e.target);
+  tapped = null;
+  if (mine) { e.preventDefault(); e.stopImmediatePropagation(); } // one tap, one click
+}, true);
 
 // ---------------------------------------------------------------------------
 // iOS / Safari audio: resume any AudioContext on the next touch (a context made

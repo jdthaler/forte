@@ -144,7 +144,13 @@ or the bow, the main physical knob (the black hole's spin), `room` and
 `volume`. They sit in a strip above the keys in both modes, so they never
 move; a checkbox there becomes a stop that lights up, and in Discover a
 control with a `hint` gets an ⓘ button that opens it (a tap, not a
-tooltip, so it works on a tablet). Mark 3–10 of them,
+tooltip, so it works on a tablet). A tile shows its label at rest, with
+the value beside it only if both fit, and its value while it moves. The
+strip drops a label's explanation, a trailing "(…)" or "= …", so put the
+name first: "Dome rise (curvature)" shows as "Dome rise" (the whole label
+stays in the tooltip, the ⓘ and the control's accessible name). On a touch
+screen the `velocity` parameter, which only the computer keys use, leaves
+the strip. Mark 3–10 of them,
 `volume` among them (`test/site-tests.mjs` checks). Leave the physics you
 set once (materials, dimensions, voicing) to the Controls panel and the
 presets.
@@ -183,7 +189,8 @@ and say which in the footer help.
   each hint waits behind an ⓘ. A handle on the footer's edge folds the
   controls away.
 - **The keyboard bar and the keys** (`shared/keyboard.js`: multi-touch,
-  glissando, Pencil pressure). As many keys as fit the width at the
+  glissando across the keys, aftertouch from leaning on a held key along
+  its length or from Pencil pressure). As many keys as fit the width at the
   chosen key size (− +), like GarageBand: ◀ ▶ move an octave, and an
   overview of the whole range, with the keys on screen framed, drags
   anywhere. The pedal button presses Space. The page's footer hints
@@ -195,7 +202,11 @@ and say which in the footer help.
   `data-keep-text` keeps its text). Full screen appears. The mode is the
   same on every page; the rest is remembered per page.
 - On phones the page scrolls above the controls and keys, which stay put,
-  and "More controls" replaces the views.
+  and "More controls" replaces the views. Turned sideways, the controls
+  share a row with the keyboard bar and show one row of tiles at a time.
+- While one finger holds a key, a tap with another finger works any
+  button, stop or tab (browsers give such a tap no click; `layout.js`
+  clicks for it).
 
 To fit in:
 - Give a card whose `<h2>` changes at runtime a stable name with

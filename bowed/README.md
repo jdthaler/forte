@@ -23,6 +23,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/bowed/>
 | `↑` `↓` | key pressure (bow force) |
 | hold `Space` | hold: keys stay down (the string stays on the wheel) |
 | MIDI | notes and velocity; **aftertouch** (channel or polyphonic) presses harder; **mod wheel = treadle** (wheel speed: rest = 25 cm/s, full = 1 m/s); CC64 = hold |
+| Touch | lean on a held key (slide the finger along it, either way, or press harder with an Apple Pencil) = aftertouch: presses the key harder (more bow force) |
 
 The mod wheel is the treadle, the real instrument's swell: Helmholtz amplitude
 is proportional to the wheel speed, so a held note grows 9–12 dB as the wheel

@@ -26,6 +26,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/stars/>
 | `↑` `↓` | velocity: how hard the convection drives the star, and the size of the flare |
 | `Space` | sustain: the convection stays on after the keys come up |
 | MIDI | notes, velocity, sustain pedal (CC64), aftertouch (the convection drives harder, up to twice the amplitude); the mod wheel (CC1) spins the stars up |
+| Touch | lean on a held key (slide the finger along it, either way, or press harder with an Apple Pencil) = aftertouch: the convection drives harder |
 
 ## The physics
 

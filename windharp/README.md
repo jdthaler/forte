@@ -28,6 +28,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/windharp/>
 | `↑` `↓` | wind speed |
 | `Space` | sustain: the shutters stay open after the keys come up |
 | MIDI | notes, velocity (how fast the shutter opens), release velocity (how fast it shuts), sustain pedal (CC64); **mod wheel and aftertouch = more wind** (channel aftertouch for every string, polyphonic for its own) |
+| Touch | lean on a held key (slide the finger along it, either way, or press harder with an Apple Pencil) = aftertouch: more wind on that string |
 
 ## The physics
 

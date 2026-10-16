@@ -22,6 +22,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/bubbles/>
 | `↑` `↓` | velocity: how hard the neck snaps as the bubble pinches off |
 | `Space` | hold: keys latch while it is down, so their brooks keep running |
 | MIDI | notes, velocity, hold pedal (CC64); **mod wheel = bubbles per second**; aftertouch = more gas, more bubbles |
+| Touch | lean on a held key (slide the finger along it, either way, or press harder with an Apple Pencil) = aftertouch: more gas, more bubbles |
 
 ## The physics
 

@@ -23,6 +23,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/harmonium/>
 | `↑` `↓` | velocity: how fast the key opens its pallet |
 | `Space` | hold: keys stay down while it is held (an organ has no damper pedal) |
 | MIDI | notes, velocity, release velocity, hold pedal (CC64); **mod wheel and aftertouch = more wind** |
+| Touch | lean on a held key (slide the finger along it, either way, or press harder with an Apple Pencil) = aftertouch: more wind |
 
 ## The physics
 
