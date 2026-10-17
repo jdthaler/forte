@@ -110,7 +110,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'clavier', name: 'Tangent Clavier', section: 'electric', ready: true, version: '0.3.1', trim: 4.5,
-    plugin: { code: 'Clav' },
+    plugin: { code: 'Clav', ready: true },
     after: 'the Hohner Clavinet',
     tagline: 'A rubber tangent pins the string to an anvil; two magnetic pickups comb-filter the twang.',
     physics: 'Impact on an anvil · pickup position',

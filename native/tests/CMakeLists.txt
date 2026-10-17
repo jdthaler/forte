@@ -8,22 +8,17 @@ endif()
 add_test(NAME core COMMAND forte_tests)
 
 # each ported instrument's own native tests: <slug>-tests.cpp
-foreach(slug template bubbles vibraphone carillon glass gongs piano harpsichord)
+foreach(slug template bubbles vibraphone carillon glass gongs piano harpsichord clavier)
   if (TARGET forte_${slug})
     add_executable(forte_${slug}_tests ${slug}-tests.cpp)
     target_link_libraries(forte_${slug}_tests PRIVATE forte_${slug})
-    if (EMSCRIPTEN)
+    if (EMSCRIPTEN) # with the stack the instrument's WebAssembly has (forte_add_wasm): Eigen keeps blocks of up to 128 KB on it
       set_target_properties(forte_${slug}_tests PROPERTIES SUFFIX ".cjs")
-      target_link_options(forte_${slug}_tests PRIVATE -sALLOW_MEMORY_GROWTH=1 -sENVIRONMENT=node)
+      target_link_options(forte_${slug}_tests PRIVATE -sALLOW_MEMORY_GROWTH=1 -sENVIRONMENT=node -sSTACK_SIZE=256kb)
     endif()
     add_test(NAME ${slug} COMMAND forte_${slug}_tests)
   endif()
 endforeach()
-if (EMSCRIPTEN AND TARGET forte_piano_tests)
-  # Eigen's dense solvers keep blocks of up to 128 KB on the stack: the piano's Ritz solves (up to
-  # 220 × 220) need the stack the instrument's own build has (forte_add_wasm), not the default 64 KB
-  target_link_options(forte_piano_tests PRIVATE -sSTACK_SIZE=256kb)
-endif()
 
 if (FORTE_PLUGINS)
   # the shared plugin driven as a host drives it, on a test instrument (tests/smoke) with a mod
