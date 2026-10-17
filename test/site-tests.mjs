@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { INSTRUMENTS, SECTIONS, FORTE_VERSION, TEMPLATE } from '../shared/registry.js';
 import { ASSETS, notes } from '../tools/plugin-release.mjs';
+import { LATEST, SYSTEMS, archive, downloads, withPlugins } from '../shared/plugins.js';
 
 let failures = 0;
 function test(name, fn) { // returns a promise for an async test
@@ -92,17 +93,24 @@ test('plugin.ready marks exactly the instruments with a native port', () => {
     assert.equal(!!i.plugin?.ready, ported && i.ready, `${i.id}: plugin.ready should be ${ported && i.ready}`);
   }
 });
-test('the release\'s archives are the ones CI packages and the landing page links to', () => {
-  const html = read('index.html'), ci = read('.github/workflows/native.yml');
-  assert.ok(html.includes('id="plugins"') && html.includes('id="plugin-list"'), '#plugins, #plugin-list');
-  for (const f of Object.values(ASSETS)) {
-    assert.ok(html.includes(`https://github.com/jdthaler/forte/releases/latest/download/${f}`), `index.html links ${f}`);
-    assert.ok(ci.includes(`dist/${f}`), `native.yml packages ${f}`);
-    assert.ok(read('.github/workflows/release-plugins.yml').includes(f), `release-plugins.yml checks ${f}`);
-  }
+test('the release\'s archives are the ones CI packages and the pages link to', () => {
+  const html = read('index.html'), sh = read('tools/package-plugins.sh');
+  assert.ok(html.includes('id="plugins"') && html.includes('id="plugin-list"') && html.includes('id="plugin-rows"'), '#plugins, #plugin-list, #plugin-rows');
+  for (const f of Object.values(ASSETS)) assert.ok(html.includes(`${LATEST}${f}`), `index.html links ${f}`);
+  assert.ok(read('.github/workflows/native.yml').includes('tools/package-plugins.sh ${{ matrix.preset }}'), 'native.yml packages the plugins');
+  assert.ok(read('.github/workflows/release-plugins.yml').includes('plugin-release.mjs --files'), 'release-plugins.yml checks every archive');
+  // the script names its archives Forte-<id>-<system> and Forte-plugins-<system>, as shared/plugins.js does
+  assert.ok(sh.includes('pack "Forte-$id"') && sh.includes('pack Forte-plugins'), 'package-plugins.sh archive names');
+  for (const [, suffix] of SYSTEMS) assert.ok(sh.includes(`dist/$out-${suffix}"`), `package-plugins.sh writes *-${suffix}`);
+  assert.deepEqual(downloads('gongs').map((d) => d.file), ['Forte-gongs-macos.zip', 'Forte-gongs-windows.zip', 'Forte-gongs-linux.tar.gz']);
   const md = notes();
-  for (const i of INSTRUMENTS.filter((i) => i.plugin?.ready)) assert.ok(md.includes(`| ${i.version} |`) && md.includes(i.name), `notes list ${i.name}`);
+  for (const i of withPlugins()) assert.ok(md.includes(`| ${i.version} |`) && md.includes(i.name) && md.includes(archive(i.id, 'macos.zip')), `notes list ${i.name}`);
   assert.ok(md.includes('xattr -dr com.apple.quarantine'), 'notes give the xattr command');
+});
+test('each instrument with plugins offers them on its page (How it works, shared/notes.js)', () => {
+  const js = read('shared/notes.js');
+  assert.ok(js.includes('downloads(inst.id)') && js.includes("'#plugin'"), 'notes.js lists the downloads and opens at #plugin');
+  for (const i of withPlugins()) assert.ok(read(`${i.id}/index.html`).includes('../shared/nav.js'), `${i.id} loads nav.js (and notes.js)`);
 });
 
 console.log('credits');

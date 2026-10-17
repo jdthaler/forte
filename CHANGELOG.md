@@ -10,6 +10,23 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-17 — each instrument's plugins on its page, released by themselves
+
+### Forte 0.17.0
+- **Each instrument's plugins alone**: a release now holds `Forte-<slug>-macos.zip`,
+  `-windows.zip` and `-linux.tar.gz` for each instrument with plugins, next to every instrument
+  together (`Forte-plugins-…`). `tools/package-plugins.sh` makes them all in the `native`
+  workflow; `shared/plugins.js` names them for the pages.
+- **On each instrument's page**: a ↓ Plugin button next to How it works opens the notes at the
+  instrument's downloads (also at `…/#plugin`), and the front page's Plugins section lists each
+  instrument with its macOS, Windows and Linux downloads under the downloads of all of them.
+  The cards' *Plugin* links go to the instrument's downloads.
+- **Releases publish themselves**: `release-plugins` runs after every green `native` run on
+  main, and releases when an instrument's version or anything under `native/` changed since the
+  latest release (its `manifest.txt`), so a newly ported instrument is downloadable once it is
+  merged. The batch 1 instruments were missing from the downloads because a release had to be
+  started by hand. Tags are `plugins-v<Forte version>`, then `-2`, `-3`… within one version.
+
 ## 2026-10-17 — the strings in C++ (step 4, second batch)
 
 ### Ribbon Piano 0.4.0

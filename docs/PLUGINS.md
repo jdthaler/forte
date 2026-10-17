@@ -319,21 +319,24 @@ regressions, remove its JavaScript engine and model in a separate pull
 request.
 
 ### 5. Distribution
-Done (Forte 0.13.0):
-1. The `native` workflow packages each system's plugins (all but the template's, with
-   [native/INSTALL.md](../native/INSTALL.md)) as `Forte-plugins-macos.zip`,
-   `Forte-plugins-windows.zip` and `Forte-plugins-linux.tar.gz`: the `release-<preset>`
-   artifacts. The macOS bundles are ad-hoc signed; INSTALL.md gives the `xattr` command.
-2. The `release-plugins` workflow, which the owner starts from GitHub's Actions tab on main,
-   attaches the archives of main's latest green `native` run to a GitHub Release tagged
-   `plugins-v<Forte version>` (it creates the tag itself, since sessions don't push tags),
-   with notes from `tools/plugin-release.mjs`.
+Done (Forte 0.13.0; per instrument and automatic in 0.17.0):
+1. The `native` workflow packages each system's plugins with `tools/package-plugins.sh`: every
+   instrument's together (`Forte-plugins-macos.zip`, `-windows.zip`, `-linux.tar.gz`) and each
+   one's alone (`Forte-<slug>-macos.zip`…), all but the template's, with
+   [native/INSTALL.md](../native/INSTALL.md): the `release-<preset>` artifacts. The macOS bundles
+   are ad-hoc signed; INSTALL.md gives the `xattr` command.
+2. The `release-plugins` workflow runs after every green `native` run on main and attaches its
+   archives to a GitHub Release when what they're built from changed since the latest release
+   (`tools/plugin-release.mjs --manifest`: each instrument's version and the `native/` tree). It
+   creates the tag itself (`plugins-v<Forte version>`, then `-2`, `-3`…), since sessions don't
+   push tags, and writes the notes. It can also be started from the Actions tab.
 3. Each plugin's version is its instrument's (`<slug>-info.cmake`, generated).
-4. The front page's Plugins section lists the instruments with `plugin.ready` in the registry
-   and links `releases/latest/download/<archive>`; so does the README.
+4. `shared/plugins.js` names the archives. The front page's Plugins section links every
+   instrument's together and each one's alone; an instrument's page has them under ↓ Plugin,
+   at the top of How it works (`…/#plugin`).
 
 A port sets `plugin: { code, ready: true }` in `shared/registry.js` (`test/site-tests.mjs`
-checks it against `native/instruments/`), and its plugins ship with the next release.
+checks it against `native/instruments/`), and its plugins are released when it is merged.
 
 **Notarised macOS builds** would remove the `xattr` step. They need the owner's Apple
 Developer Program membership (99 USD a year), a *Developer ID Application* certificate and an
