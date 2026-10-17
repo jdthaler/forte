@@ -212,7 +212,7 @@ starts new instruments with this port. Learned on the way:
   does), so `<slug>-wasm.js` takes the parameter groups, not the descriptor.
 - A WebAssembly engine takes all the parameters (`fullParams`), not the page's
   `engineParams(P)`, and computes its per-note data itself; the shell sends both.
-- The engine switch at the top of a ported page's Controls panel picks C++ or JavaScript, for
+- The engine switch in a ported page's header (C++ | JS) picks the C++ or the JavaScript, for
   comparing by ear (remembered for every page; `?engine=js` or `?engine=wasm` in the address
   overrides it). It goes when the JavaScript engines do.
 - The smoke-test plugin is retired; its instrument stays as the plugin tests' test instrument.

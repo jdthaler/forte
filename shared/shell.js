@@ -23,7 +23,7 @@
 //   engine        { name: 'XEngine', module: URL of src/x-engine.js }: run by shared/worklet.js (see
 //                 the engine contract there)
 //   wasm          { name: 'XWasmEngine', module, binary }: the engine's WebAssembly build, run instead
-//                 when it loads (shared/wasm.js). The Controls panel's engine switch picks C++ or JavaScript
+//                 when it loads (shared/wasm.js). The header's engine switch picks C++ or JavaScript
 //                 for every page; ?engine=js or ?engine=wasm in the page's address overrides it
 //   worklet       instead of engine: { modules: ['src/x-engine.js'], engine: 'XEngine', outputs?: 2 },
 //                 or { modules: […, 'src/x-worklet.js'], processor: 'x-processor' } for a custom processor
@@ -73,21 +73,19 @@ export const useWasm = () => {
   try { const q = new URLSearchParams(location.search).get('engine'); if (q) return q !== 'js'; } catch { /* no address */ }
   try { return localStorage.getItem(ENGINE) !== 'js'; } catch { return true; }
 };
-// The engine switch, at the top of the Controls panel: C++ or JavaScript. Picking the other one
-// reloads the page with it (the views load their model with the page, so they switch too), and
-// every page remembers it. A note says so when the C++ did not load and the JavaScript plays instead.
+// The engine switch, in the header beside Discover | Perform: C++ or JavaScript. Picking the
+// other one reloads the page with it (the views load their model with the page, so they switch
+// too), and every page remembers it. Amber when the C++ did not load and the JavaScript plays.
 function engineSwitch() {
-  const groups = $('#groups');
-  if (!groups) return () => {};
+  const play = $('.forte-play');
+  if (!play) return () => {};
   const box = document.createElement('div');
-  box.className = 'forte-engine';
+  box.className = 'forte-mode forte-engine';
   box.setAttribute('role', 'group');
   box.setAttribute('aria-label', 'Engine');
-  const seg = document.createElement('div');
-  seg.className = 'forte-seg';
-  const btns = [['wasm', 'C++', 'The C++ engine, built to WebAssembly: the same code as the plugins'], ['js', 'JavaScript', 'The JavaScript engine']].map(([kind, text, title]) => {
+  const btns = [['wasm', 'C++', 'The C++ engine, built to WebAssembly: the same code as the plugins'], ['js', 'JS', 'The JavaScript engine']].map(([kind, text, title]) => {
     const b = document.createElement('button');
-    b.textContent = text; b.title = title; b.dataset.engine = kind;
+    b.textContent = text; b.title = `${title}. Switching reloads the page.`; b.dataset.engine = kind;
     b.addEventListener('click', () => {
       if (b.getAttribute('aria-pressed') === 'true') { b.blur(); return; }
       const url = new URL(location.href);
@@ -97,17 +95,12 @@ function engineSwitch() {
     });
     return b;
   });
-  const note = document.createElement('span');
-  note.className = 'forte-engine-note';
-  const label = document.createElement('span');
-  label.className = 'forte-engine-label'; label.textContent = 'Engine';
-  seg.append(...btns);
-  box.append(label, seg, note);
-  groups.before(box);
+  box.append(...btns);
+  play.appendChild(box);
   const show = (kind, fellBack) => {
     for (const b of btns) b.setAttribute('aria-pressed', String(b.dataset.engine === kind));
     box.classList.toggle('fallback', !!fellBack);
-    note.textContent = fellBack ? 'the C++ did not load' : '';
+    box.title = fellBack ? 'The C++ engine did not load, so the JavaScript one plays' : '';
   };
   show(useWasm() ? 'wasm' : 'js');
   return (kind) => show(kind, kind === 'js' && useWasm());

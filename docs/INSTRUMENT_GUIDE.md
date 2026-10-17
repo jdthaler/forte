@@ -209,9 +209,10 @@ and say which in the footer help.
 (loaded last in `<head>`) give every page the same layout, top to bottom:
 - **The header.** The instrument's name is also the menu (Forte's home
   page and every instrument, from `shared/nav.js`; the page's `<h1>`
-  moves into it). Then How it works, **Discover | Perform**, the presets
-  (`.preset-row` in `#controls`, moved here; its menu gains "Default
-  settings", which presses the page's `#reset`), audio, MIDI and Panic.
+  moves into it). Then How it works, **Discover | Perform**, **C++ | JS**
+  on a page with a `wasm` build (`shared/shell.js`), audio, MIDI and
+  Panic. The presets (`.preset-row`) stay at the top of `#controls`; their
+  menu gains "Default settings", which presses the page's `#reset`.
 - **The views: pictures only.** The cards marked `data-perform` (one or
   two: `test/site-tests.mjs` checks) are the main views, large, side by
   side (stacked on a tall screen). The others sit in a tabbed panel below
@@ -324,7 +325,7 @@ native/instruments/<slug>/reference.json                     the JavaScript's so
 
 The descriptor's `wasm` field names the build; the shell sends it to the worklet, which runs it
 and falls back to the JavaScript engine if it cannot. While the JavaScript engines remain, the
-page also gets an engine switch (C++ or JavaScript) at the top of its Controls panel, remembered
+page also gets an engine switch (C++ | JS) in its header, beside Discover | Perform, remembered
 for every page; `?engine=js` or `?engine=wasm` in the address overrides it. A WebAssembly engine takes all the parameters and computes its own per-note
 data (`forte/background.h`), so `engineParams` and `noteData` stay the JavaScript engine's.
 WebAssembly has no threads, so that data is built in place on a key's first note; where that
