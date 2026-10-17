@@ -19,7 +19,7 @@ constexpr double SEP = 0.012;        // s, time for the flames to part or rejoin
 constexpr double POST_EVERY = 0.016; // s, view updates
 constexpr double PRESS = 0.25;       // aftertouch: full pressure parts the flames 25 % further
 constexpr double PUFF = 3;           // extra turbulence just after the flames part (× velocity)
-constexpr double SING = 0.1;         // rms flow at the flame above which a tube counts as singing
+constexpr double SINGING = 0.1;      // rms flow at the flame above which a tube counts as singing
 constexpr double SQRT2 = std::numbers::sqrt2;
 
 double jsRound(double x) { return std::floor(x + 0.5); } // Math.round
@@ -306,7 +306,7 @@ void PyrophoneEngine::process(float *L, float *R, int n) {
     Voice &v = *voices[i];
     // warm-up: the gas heats while the flames are apart or the tube sings (a tube that remembers
     // its note after release stays hot, and in tune), and cools once it is silent
-    v.theta += kw * ((v.keyDown || v.song > SING ? 1 : 0) - v.theta);
+    v.theta += kw * ((v.keyDown || v.song > SINGING ? 1 : 0) - v.theta);
     v.watch = v.key == focus;
     v.coeffs(*this);
     v.render(*this, L, R, n);
