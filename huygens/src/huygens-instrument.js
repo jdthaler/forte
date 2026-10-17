@@ -16,6 +16,9 @@ export const INSTRUMENT = {
   space: 'hold',                            // Space and CC64 latch the keys
   modWheel: 'kick',                         // CC1: the pulse coupling, from its default up
   engine: { name: 'NeonEngine', module: new URL('./neon-engine.js', import.meta.url).href },
+  // the same physics in C++ (native/instruments/huygens), built as WebAssembly: the page runs it
+  // when it can, the JavaScript engine otherwise
+  wasm: { name: 'HuygensWasmEngine', module: new URL('./huygens-wasm.js', import.meta.url).href, binary: new URL('../wasm/huygens.wasm', import.meta.url).href },
   // the lamp voltages kept in order, 5 V apart: V_ext < V_s < supply
   engineParams: (P) => ({
     kick: P.kick, rSrc: P.rSrc, pitchHold: P.pitchHold ? 1 : 0, drift: P.drift, driftRate: P.driftRate,

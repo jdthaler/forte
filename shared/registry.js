@@ -14,7 +14,7 @@
 // `plugin.ready` marks an instrument whose native port is built and released as plugins (it has
 // a native/instruments/<id>/ folder); the landing page lists those under Plugins.
 
-export const FORTE_VERSION = '0.22.0';
+export const FORTE_VERSION = '0.23.0';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
@@ -29,7 +29,7 @@ export const SECTIONS = [
 
 export const INSTRUMENTS = [
   {
-    id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.4.0', trim: 3,
+    id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.4.1', trim: 3,
     plugin: { code: 'Ribn', ready: true },
     after: 'the concert grand',
     tagline: 'Stiff strings, felt hammers and a shared bridge — then swap the strings for square bars, triangular bars or twisting ribbons.',
@@ -85,7 +85,7 @@ export const INSTRUMENTS = [
     accent: '#7fb2ff',
   },
   {
-    id: 'organ', name: 'Tonewheel Organ', section: 'electric', ready: true, version: '0.4.3', trim: 2,
+    id: 'organ', name: 'Tonewheel Organ', section: 'electric', ready: true, version: '0.4.4', trim: 2,
     plugin: { code: 'Tonw' },
     after: 'the Hammond B-3 and Leslie',
     tagline: '91 spinning gear-driven wheels, bouncing key contacts, a scanner on an LC delay line and a rotating Doppler horn.',
@@ -141,24 +141,24 @@ export const INSTRUMENTS = [
     accent: '#9fe7ff',
   },
   {
-    id: 'pyrophone', name: 'Pyrophone', section: 'experimental', ready: true, version: '0.3.2', trim: -3.5,
-    plugin: { code: 'Pyro' },
+    id: 'pyrophone', name: 'Pyrophone', section: 'experimental', ready: true, version: '0.4.0', trim: -3.5,
+    plugin: { code: 'Pyro', ready: true },
     after: "Frédéric Kastner's flame organ (1873)",
     tagline: 'Flames in glass tubes sing by themselves once they cross a threshold — and remember having sung.',
     physics: 'Thermoacoustics · Hopf bifurcation',
     accent: '#ff7a45',
   },
   {
-    id: 'arc', name: 'Singing Arc', section: 'experimental', ready: true, version: '0.1.1', trim: 7,
-    plugin: { code: 'SArc' },
+    id: 'arc', name: 'Singing Arc', section: 'experimental', ready: true, version: '0.2.0', trim: 7,
+    plugin: { code: 'SArc', ready: true },
     after: "William Duddell's singing arc (1900)",
     tagline: 'An electric arc lamp that sings: its negative resistance drives an LC circuit, and the arc itself is the loudspeaker.',
     physics: 'Negative resistance · LC oscillator · plasma heating',
     accent: '#ffe36b',
   },
   {
-    id: 'huygens', name: 'Huygens Keyboard', section: 'phenomena', ready: true, version: '0.3.4', trim: 9.5,
-    plugin: { code: 'Huyg' },
+    id: 'huygens', name: 'Huygens Keyboard', section: 'phenomena', ready: true, version: '0.4.0', trim: 9.5,
+    plugin: { code: 'Huyg', ready: true },
     tagline: 'Relaxation oscillators that pull each other into just intonation — Arnold tongues you can play.',
     physics: 'Pulse-coupled oscillators · mode locking',
     accent: '#ff8a3d',
@@ -206,8 +206,8 @@ export const INSTRUMENTS = [
     accent: '#ff6f91',
   },
   {
-    id: 'windharp', name: 'Wind Harp', section: 'phenomena', ready: true, version: '0.1.2', trim: -4,
-    plugin: { code: 'WHrp' },
+    id: 'windharp', name: 'Wind Harp', section: 'phenomena', ready: true, version: '0.2.0', trim: -4,
+    plugin: { code: 'WHrp', ready: true },
     tagline: 'Strings sung by the wind: the vortices they shed lock onto one of their harmonics, and hop up the series as the wind rises.',
     physics: 'Vortex shedding · lock-in · wake oscillators',
     accent: '#a8e6a1',

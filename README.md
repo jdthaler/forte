@@ -120,7 +120,8 @@ for wider keys, with the controls beside the keyboard's tools. Use
 
 The instruments ported to C++ so far (the Ribbon Piano, Harpsichord, Pipe Organ, Free-Reed Organ,
 Vibraphone, Carillon, Electric Grand, Tine Piano, Reed Piano, Tangent Clavier, Sticky-Pad Piano,
-Viola Organista, Glass Armonica, Gong Keyboard and Bubble Organ) also come as plugins for a DAW: AU,
+Viola Organista, Glass Armonica, Pyrophone, Singing Arc, Huygens Keyboard, Gong Keyboard,
+Bubble Organ and Wind Harp) also come as plugins for a DAW: AU,
 VST3 and CLAP, and a standalone app, for macOS, Windows and Linux. Download every instrument
 together from **All Plugins** on the front page, or one instrument from **↓ Plugin** next to
 **How it works** on its page; both are also in the

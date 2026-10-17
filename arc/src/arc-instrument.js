@@ -28,6 +28,10 @@ export const INSTRUMENT = {
   space: 'hold',                     // Space and CC64 latch the keys down; the host sends the noteOffs on release
   modWheel: 'current',               // CC1: the arc current, from its default up to its maximum
   engine: { name: 'ArcEngine', module: new URL('./arc-engine.js', import.meta.url).href },
+  // the same physics in C++ (native/instruments/arc), built as WebAssembly: the page runs it when it
+  // can, the JavaScript engine otherwise. It cuts its own bank (each key's on its first note), or
+  // plays the one the page offers with a note (arc-wasm.js)
+  wasm: { name: 'ArcWasmEngine', module: new URL('./arc-wasm.js', import.meta.url).href, binary: new URL('../wasm/arc.wasm', import.meta.url).href },
   engineParams: (P) => ({ ...P, table: capBank(P) }), // ~0.3 s to cut a bank: the page cuts it a few keys at a time
   chain: { volume: 'volume', room: 'room' },
 };

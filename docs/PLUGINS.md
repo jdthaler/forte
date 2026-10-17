@@ -13,8 +13,9 @@ native/core + native/instruments/<slug>   C++: engines and models
 Status: **steps 0–3 and 5 done** (the native setup, see [native/README.md](../native/README.md); every
 instrument headless in JavaScript; the shared native core; the template and the Bubble Organ
 ported, their pages running the WebAssembly; the plugins released from GitHub and linked from the
-front page; step 4's first three batches, the modal bars, bells and plates, the strings, and the
-reeds and pickups). Next: step 4's fourth batch, the self-oscillators. The decisions below were made by the owner on
+front page; step 4's first four batches, the modal bars, bells and plates, the strings, the
+reeds and pickups, and the self-oscillators). Next: step 4's fifth batch, the table-driven
+instruments. The decisions below were made by the owner on
 2026-10-16. Follow [CLAUDE.md](../CLAUDE.md) for the workflow (branch, test,
 version, pull request, merge only when asked) and update this file as steps
 land.
@@ -323,7 +324,25 @@ Separate sessions can work in parallel once step 3 is done.
    - A page that sends page-built data with a note must know which engine plays it: the shell
      waits for the worklet's engine message before the first note (Forte 0.19.0).
    - Native tests run as WebAssembly see `CI` through `native/tests/node-env.js`.
-4. Self-oscillators: Huygens, arc, pyrophone, wind harp.
+4. Self-oscillators: Huygens, arc, pyrophone, wind harp. **Done** (Huygens Keyboard 0.4.0,
+   Singing Arc 0.2.0, Pyrophone 0.4.0, Wind Harp 0.2.0, Forte 0.23.0), in one pull request with a
+   commit per instrument. All four play what the JavaScript plays bit for bit, their seeded noise,
+   turbulence and gusts included, so no reference needed statistics. In C++, ten voices take 2 %
+   of a core (Huygens), 2–3 % (pyrophone) and 10 % (wind harp); the arc's six lamps 20 %.
+   Learned on the way:
+   - Chaotic or noisy is not a reason to give up on matching: with V8's fdlibm for every
+     transcendental (and ports of `Math.hypot` and `Math.log2`, which fdlibm lacks) and the
+     JavaScript's own seeded generators, even self-oscillators match bit for bit. An engine that
+     used `Math.random()` (Huygens) gets a seeded generator first.
+   - A table the page already builds (the arc's capacitors, the pyrophone's tuning) goes to the
+     worklet with the note (`noteData`) or in its own message posted before the parameters
+     (`fullParams` hands a WebAssembly engine only `m.P`); in the plugin it is `KeyData` slot 0
+     with a version, and a note plays the last table until the new one is ready.
+   - An engine whose physics depends on the block length (the wind harp's wind) needs long blocks
+     passed whole: `shared/wasm.js` splits blocks into 128s.
+   - Test hooks that hold a voice across `process()` need live getters over a stable pointer, and
+     engines the Node tests drop can be freed with a `FinalizationRegistry`.
+   - A parameter whose default sits off its step must read back as itself (Forte 0.23.0).
 5. Table-driven: black hole, quantum, stars, springs.
 6. The organ.
 

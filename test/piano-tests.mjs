@@ -11,7 +11,7 @@ const FS = 48000;
 let failures = 0;
 function test(name, fn) {
   // CPU budgets are set on a desktop machine; shared CI runners are slower and noisy
-  if (process.env.CI && /^CPU|real time|costlier/.test(name)) { console.log('  skip', name, '(timing; skipped on CI)'); return; }
+  if (process.env.CI && /^CPU|real[- ]time|costlier/.test(name)) { console.log('  skip', name, '(timing; skipped on CI)'); return; }
   try { fn(); console.log('  ok  ', name); }
   catch (e) { failures++; console.log('  FAIL', name, '\n       ', e.message); }
 }

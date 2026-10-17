@@ -35,8 +35,24 @@
 // lamp has no touch: velocity is ignored), handle({ type: 'retune', list:
 // [[key, f]…] }) for keys already sounding. Under shared/worklet.js it posts
 // the page a 'state' (the new firings) at most 30 times a second.
+//
+// The random numbers (each key's starting phase, the resistors' drift) come
+// from a seeded generator, so renders and tests repeat exactly and the C++
+// port (native/instruments/huygens) draws the same ones.
 
 const TWO_PI = 2 * Math.PI;
+
+// mulberry32 (as shared/impulses.js): small, fast and seedable
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+export const SEED = 0x48757967; // 'Huyg'
 
 export const NEON_DEFAULTS = {
   vNom: 150,          // supply (V)
@@ -63,7 +79,7 @@ class Osc {
     this.C = eng.p.cap;
     this.retune(d.f, eng.p);
     // initial phase: random (a real key), or given (0 = just fired) for analysis
-    const ph = d.phase ?? Math.random(), p = eng.p;
+    const ph = d.phase ?? eng.rand(), p = eng.p;
     this.V = p.vNom - (p.vNom - p.vExt) * Math.exp(-ph * Math.log((p.vNom - p.vExt) / (p.vNom - p.vStrike)));
     this.gate = d.settled ? 1 : 0;   // output keyer
     this.power = d.settled ? 1 : 0;  // supply connection
@@ -92,7 +108,7 @@ class Osc {
     const p = eng.p;
     if (p.drift <= 0 && this.driftCents === 0) return;
     const tau = 1 / Math.max(0.01, p.driftRate);
-    const g = Math.sqrt(-2 * Math.log(Math.random() + 1e-12)) * Math.cos(TWO_PI * Math.random());
+    const g = Math.sqrt(-2 * Math.log(eng.rand() + 1e-12)) * Math.cos(TWO_PI * eng.rand());
     this.drift += (-this.drift / tau) * dt + p.drift * Math.sqrt((2 * dt) / tau) * g;
     this.driftCents = p.drift > 0 ? this.drift : 0;
     this.tau = this.R * this.C * 2 ** (-this.driftCents / 1200); // resistor wander
@@ -177,8 +193,9 @@ export function tuneR(f, p) {
 }
 
 export class NeonEngine {
-  constructor(fs) {
+  constructor(fs, seed = SEED) {
     this.fs = fs; this.k = 1 / fs;
+    this.rand = rng(seed);
     this.p = { ...NEON_DEFAULTS };
     this.osc = []; this.byKey = new Map();
     this.t = 0; this.vr = this.p.vNom; this.Ilp = 0;

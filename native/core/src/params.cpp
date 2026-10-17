@@ -13,9 +13,10 @@ namespace forte {
 double constrain(const ParamInfo &p, double v) {
   if (!std::isfinite(v)) return p.def;
   if (p.kind != ParamKind::continuous) v = std::round(v);
-  else if (p.step > 0) {
+  else if (p.step > 0 && v != p.def) {
     // a value already on its step stays as it is: k·step need not round-trip (70 × 0.01 is not
-    // 0.7), and a default or a saved state must read back as itself
+    // 0.7), and a default or a saved state must read back as itself (the default even off its
+    // step: the pyrophone's flame at ⅓ on a 0.001 step)
     const double s = std::round(v / p.step) * p.step;
     if (std::fabs(s - v) > 1e-9 * p.step) v = s;
   }

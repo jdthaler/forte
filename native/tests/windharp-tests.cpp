@@ -1,0 +1,206 @@
+// windharp-tests.cpp — the wind harp in C++: the model gives the JavaScript's strings and lock-in
+// analysis, a key locks onto its harmonic at the balance's swing at every sample rate, the shutters
+// and the pedal, aftertouch, voice stealing and a flood of keys, blocks of any length, the views'
+// messages, and ten keys within the CPU budget. The physics tests are the JavaScript suite's, run
+// on the WebAssembly (FORTE_ENGINE=wasm).
+
+#include <chrono>
+#include <cmath>
+#include <cstdlib>
+#include <memory>
+#include <vector>
+
+#include "check.h"
+#include "windharp-engine.h"
+
+using namespace forte;
+using namespace forte::windharp;
+
+static std::vector<double> defaults() {
+  std::vector<double> P(p::count);
+  for (int i = 0; i < p::count; i++) P[i] = kParams[i].def;
+  return P;
+}
+static DesignParams designParams(const std::vector<double> &P) {
+  DesignParams d;
+  d.n0 = P[p::n0]; d.tuning = (int)P[p::tuning]; d.unison = P[p::unison]; d.mass = P[p::mass]; d.q = P[p::q];
+  return d;
+}
+static bool render(WindHarpEngine &e, double sec, int block = 128, double *peak = nullptr) {
+  std::vector<float> L(block), R(block);
+  bool finite = true;
+  for (int s = 0; s < (int)(sec * e.fs); s += block) {
+    e.process(L.data(), R.data(), block);
+    for (int i = 0; i < block; i++) {
+      finite = finite && std::isfinite(L[i]) && std::isfinite(R[i]);
+      if (peak) *peak = std::max({*peak, (double)std::fabs(L[i]), (double)std::fabs(R[i])});
+    }
+  }
+  return finite;
+}
+static const WindHarpEngine::Voice *voiceOf(const WindHarpEngine &e, int key) { return key >= 0 && key < 128 ? e.byKey[key] : nullptr; }
+static double rel(double a, double b) { return std::fabs(a / b - 1); }
+
+// What windharp-model.js gives (key, tuning, n0, mass, Q, the course's string; its D, L, T, f0, N,
+// home harmonic, band, growth, locked range and swing at the band's middle)
+struct Vector { int key, tuning; double n0, mass, q; int idx; double D, L, T, f0; int N, n; double lo, hi, growth, upTo, downTo, Y; };
+static const Vector VECTORS[] = {
+  {60, 0, 3, 1, 500, 0, 0.0036166325050421559, 0.85997184954317607, 259.72478653453146, 86.538926502383219, 8, 3, 3.8944495355332180, 4.0675377161037387, 17.905848817563474, 4.1386197754339200, 3.8323345554424648, 0.047215932098758004},
+  {84, 0, 3, 1, 500, 1, 0.00075389466268517460, 0.42832184443507715, 45.493986584825748, 348.85064153464043, 8, 3, 3.8949824664158643, 4.0831383777405801, 87.023006328273837, 4.1953855320802171, 3.7975492627371272, 0.073361967855165564},
+  {79, 1, 3, 1, 500, 1, 0.0010665307115640666, 0.57136387047396175, 51.167510560597954, 196.04439239432449, 10, 4, 3.9033882341814166, 4.0872447109199959, 61.411337929996023, 4.1913725969657429, 3.8130259563278419, 0.061428138253775327},
+  {67, 0, 6, 6, 2000, 0, 0.0023304313203249077, 0.99081231172795947, 487.00362025609525, 65.192432363567534, 14, 6, 3.9439320530993109, 4.0157686328833799, 11.714162840240810, 4.1028829115115864, 3.8643441111359453, 0.036990279703598083},
+};
+
+TEST("windharp: the model's strings and lock-in analysis are the JavaScript's") {
+  for (const Vector &v : VECTORS) {
+    DesignParams d;
+    d.tuning = v.tuning; d.n0 = v.n0; d.mass = v.mass; d.q = v.q;
+    CourseOffset o[COURSE_MAX];
+    courseOffsets(v.key, o);
+    const StringDesign S = stringDesign(v.key, d, o[v.idx]);
+    CHECK(S.D == v.D && S.L == v.L && S.T == v.T && S.f0 == v.f0 && S.N == v.N); // the engine's numbers: to the last bit
+    CHECK(homeHarmonic(S) == v.n);
+    Band b;
+    LockedRange r;
+    CHECK(lockBand(S, v.n, b) && lockedRange(S, v.n, r));
+    CHECK(rel(b.lo, v.lo) < 1e-12 && rel(b.hi, v.hi) < 1e-12 && rel(b.growth, v.growth) < 1e-9);
+    CHECK(rel(r.upTo, v.upTo) < 1e-9 && rel(r.downTo, v.downTo) < 1e-9);
+    CHECK(rel(lockedAmplitude(S, v.n, b.mid), v.Y) < 1e-9);
+  }
+}
+
+TEST("windharp: at the reference wind a key locks onto its 3rd harmonic with the balance's swing (less up to 12 % for the turbulence), at 44.1 to 192 kHz") {
+  for (double fs : {44100.0, 48000.0, 96000.0, 192000.0}) for (int key : {60, 84}) {
+    auto P = defaults();
+    auto e = std::make_unique<WindHarpEngine>(fs);
+    e->setParams(P.data());
+    e->noteOn(key, 1);
+    double pk = 0;
+    CHECK(render(*e, key < 72 ? 4 : 1.5, 128, &pk));
+    const auto *v = voiceOf(*e, key);
+    CHECK(v != nullptr);
+    if (!v) continue;
+    const StringDesign &S = v->strings[0].S;
+    const auto d = WindHarpEngine::dominant(v->strings[0]);
+    const double Y = lockedAmplitude(S, 3, U_REF);
+    CHECK(d.n == 3 && d.amp / S.D > 0.88 * Y && d.amp / S.D < 1.03 * Y); // the turbulence takes a little off
+    CHECK(pk > 0.05 && pk < 1);
+    CHECK(v->ns == courseSize(key));
+  }
+}
+
+TEST("windharp: a shut key rings down and retires; the pedal holds the shutter open; aftertouch blows harder; Panic fades every key") {
+  const double fs = 48000;
+  auto P = defaults();
+  auto e = std::make_unique<WindHarpEngine>(fs);
+  e->setParams(P.data());
+  e->setSustain(true);
+  e->noteOn(93, 1);
+  render(*e, 0.3);
+  e->noteOff(93, 0.5);
+  render(*e, 0.3);
+  CHECK(voiceOf(*e, 93) && voiceOf(*e, 93)->x == 1); // held by the pedal
+  e->setSustain(false);
+  render(*e, 0.2);
+  CHECK(voiceOf(*e, 93) && voiceOf(*e, 93)->x == 0 && voiceOf(*e, 93)->target == 0);
+  render(*e, 4);
+  CHECK(e->voiceCount() == 0);
+  // aftertouch, on the channel and on a key
+  e->noteOn(76, 0.7);
+  render(*e, 0.1);
+  const double U0 = e->U;
+  e->pressure(1, -1);
+  render(*e, 0.5);
+  CHECK(rel(e->U, 1.5 * U0) < 0.01);
+  e->pressure(1, 76);
+  render(*e, 0.5);
+  CHECK(rel(voiceOf(*e, 76)->strings[0].Ucur, 2.25 * U0) < 0.01);
+  e->allNotesOff();
+  render(*e, 0.5);
+  CHECK(e->voiceCount() == 0);
+}
+
+TEST("windharp: past 12 keys the quietest released one fades; a flood of re-struck keys stays within the pool") {
+  const double fs = 48000;
+  auto P = defaults();
+  auto e = std::make_unique<WindHarpEngine>(fs);
+  e->setParams(P.data());
+  for (int i = 0; i < 12; i++) { e->noteOn(57 + 3 * i, 0.8); render(*e, 0.02); }
+  for (int i = 0; i < 12; i++) e->noteOff(57 + 3 * i, -1);
+  render(*e, 0.1);
+  e->noteOn(94, 0.8);
+  e->noteOn(95, 0.8);
+  int live = 0;
+  for (int i = 0; i < e->nv; i++) if (!e->voices[i]->fading && !e->voices[i]->dead) live++;
+  CHECK(live <= WindHarpEngine::MAX_VOICES);
+  // every key at once, struck again and again with a new tuning each time: every press makes new strings
+  for (int r = 0; r < 6; r++) {
+    P[p::n0] = 2 + r % 5;
+    e->setParams(P.data());
+    for (int k = KEY_LO; k <= KEY_HI; k++) e->noteOn(k, 0.9);
+    CHECK(render(*e, 0.01));
+    CHECK(e->nv <= WindHarpEngine::POOL);
+  }
+  e->allNotesOff();
+  render(*e, 0.5);
+  CHECK(e->voiceCount() == 0);
+}
+
+TEST("windharp: a block of any length plays as the JavaScript takes it (up to 512 samples whole), without NaN") {
+  for (int block : {1, 7, 64, 128, 256, 512, 1000}) {
+    auto P = defaults();
+    P[p::gust] = 0.1;
+    auto e = std::make_unique<WindHarpEngine>(48000);
+    e->setParams(P.data());
+    e->noteOn(67, 0.8);
+    e->noteOn(88, 0.8);
+    double pk = 0;
+    CHECK(render(*e, 1.5, block, &pk));
+    CHECK(pk > 0.05 && pk < 2);
+  }
+}
+
+TEST("windharp: the views' messages: the focused string's modes and wake, the sounding keys, the summary last") {
+  const double fs = 48000;
+  auto P = defaults();
+  SpscQueue<Message> q(256);
+  auto e = std::make_unique<WindHarpEngine>(fs);
+  e->messages = &q;
+  e->setParams(P.data());
+  e->noteOn(60, 1);
+  e->noteOn(84, 1);
+  render(*e, 1.5);
+  Message m;
+  int arrays = 0, keys = 0, summaries = 0;
+  Message last;
+  while (q.pop(m)) {
+    if (m.type == msg::array) { arrays++; CHECK(m.count > 0 && m.count <= N_MAX); }
+    else if (m.type == msg::keys) { keys++; CHECK(m.values[0] == 0 && m.count == 7); }
+    else if (m.type == msg::harp) {
+      summaries++;
+      CHECK(m.key == 84 && m.values[2] == 2 && m.values[15] == 2 && m.values[14] == 2);
+      last = m;
+    }
+  }
+  CHECK(last.values[8] == 3 && last.values[9] > 0.03); // locked on its 3rd harmonic
+  CHECK(summaries > 10 && arrays == 6 * summaries && keys == summaries);
+}
+
+TEST("CPU: ten sounding keys across the compass (15 strings) at 48 kHz take a small part of a core") {
+  if (std::getenv("CI")) { std::printf("       (timing; skipped on CI)\n"); return; }
+  const double fs = 48000;
+  auto P = defaults();
+  auto e = std::make_unique<WindHarpEngine>(fs);
+  e->setParams(P.data());
+  for (int k : {55, 59, 62, 67, 71, 74, 79, 83, 86, 91}) e->noteOn(k, 0.8);
+  render(*e, 0.5);
+  const auto t0 = std::chrono::steady_clock::now();
+  render(*e, 4);
+  const double share = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() / 4;
+  int strings = 0;
+  for (int i = 0; i < e->nv; i++) strings += e->voices[i]->ns;
+  std::printf("       %d keys, %d strings: %.2f %% of a core\n", e->voiceCount(), strings, 100 * share);
+  CHECK(share < 0.3);
+}
+
+int main() { return check::run(); }

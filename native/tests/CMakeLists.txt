@@ -10,7 +10,7 @@ set(forte_node_env --pre-js ${CMAKE_CURRENT_SOURCE_DIR}/node-env.js)
 add_test(NAME core COMMAND forte_tests)
 
 # each ported instrument's own native tests: <slug>-tests.cpp
-foreach(slug template bubbles vibraphone carillon glass gongs piano harpsichord clavier grand bowed tines reeds harmonium pianet pipes)
+foreach(slug template bubbles vibraphone carillon glass gongs piano harpsichord clavier grand bowed tines reeds harmonium pianet pipes arc pyrophone windharp huygens)
   if (TARGET forte_${slug})
     add_executable(forte_${slug}_tests ${slug}-tests.cpp)
     target_link_libraries(forte_${slug}_tests PRIVATE forte_${slug})

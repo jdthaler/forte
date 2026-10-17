@@ -1,21 +1,42 @@
 // arc-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName } from '../../shared/shell.js';
+import { createShell, noteName, useWasm } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT, bankParams } from './arc-instrument.js';
-import {
-  KEY_LO, KEY_HI, TAU, SUPPLY, TALK, keyFreq, arcOp, staticV, ayrtonV, capFor, startCap, kelvinC, tuneKey, linearAnalysis, circuit,
-  thresholdR, thresholdCurrent, upperLimit, hissCurrent,
-} from './arc-model.js';
+import * as jsModel from './arc-model.js';
+import { KEY_LO, KEY_HI, TAU, SUPPLY, TALK, keyFreq, ayrtonV, kelvinC, tuneKey } from './arc-model.js';
+import { wasmModel } from './arc-wasm.js';
+
+// The views and the capacitor bank use the WebAssembly model once it has loaded (the same physics
+// as the engine, in C++: it gives the JavaScript's numbers), the JavaScript one until then or if it
+// can't load.
+let model = jsModel;
+if (useWasm()) wasmModel().then((m) => { model = m; update(); }, (err) => console.warn(`arc: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
 
 const $ = (s) => document.querySelector(s);
 let focus = 60, msg = null, op = null, table = null, job = null;
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 50, fHi: 16000 });
 
+// The WebAssembly engine takes all the parameters, not engineParams: the bank cut so far goes with
+// each note instead ([1 if it is cut for the parameters now, else 0, then a capacitor per key]), so
+// its audio thread never cuts a capacitor (a few ms each).
+let packed = null;
+function noteData() {
+  if (shell.engineKind !== 'wasm' || !table) return undefined;
+  const current = table.key === tuneKey(bankParams(shell.P)) ? 1 : 0;
+  if (packed?.table !== table || packed.current !== current) {
+    const data = new Float64Array(table.caps.length + 1);
+    data[0] = current; data.set(table.caps, 1);
+    packed = { table, current, data };
+  }
+  return packed.data;
+}
+
 const shell = createShell({
   ...INSTRUMENT,
   base: 48,
   arrows: { param: 'current' },
+  noteData,
   engineParams: (P) => ({ ...P, table }), // the bank cut so far (retune): in the end, the descriptor's capBank(P)
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key) => { focus = key; update(); },
@@ -29,8 +50,8 @@ const shell = createShell({
 function retune() {
   const P = bankParams(shell.P), key = tuneKey(P);
   if ((table && table.key === key) || (job && job.key === key)) return;
-  const o = arcOp(P), quick = new Float64Array(KEY_HI - KEY_LO + 1);
-  for (let k = KEY_LO; k <= KEY_HI; k++) quick[k - KEY_LO] = P.tune === 'kelvin' ? kelvinC(keyFreq(k), P.coil * 1e-3) : startCap(k, P, o);
+  const o = model.arcOp(P), quick = new Float64Array(KEY_HI - KEY_LO + 1);
+  for (let k = KEY_LO; k <= KEY_HI; k++) quick[k - KEY_LO] = P.tune === 'kelvin' ? kelvinC(keyFreq(k), P.coil * 1e-3) : model.startCap(k, P, o);
   if (!table || P.tune === 'kelvin') { table = { key: P.tune === 'kelvin' ? key : `start|${key}`, lo: KEY_LO, caps: quick }; shell.sendParams(); }
   if (P.tune === 'kelvin') { job = null; return; }
   job = { key, P: { ...P }, op: o, caps: new Float64Array(KEY_HI - KEY_LO + 1), k: KEY_LO };
@@ -40,7 +61,7 @@ function step() {
   const j = job;
   if (!j) return;
   const t0 = performance.now();
-  while (j.k <= KEY_HI && performance.now() - t0 < 12) { j.caps[j.k - KEY_LO] = capFor(j.k, j.P, j.op); j.k++; }
+  while (j.k <= KEY_HI && performance.now() - t0 < 12) { j.caps[j.k - KEY_LO] = model.capFor(j.k, j.P, j.op); j.k++; }
   if (j !== job) return;
   if (j.k <= KEY_HI) { setTimeout(step, 0); return; }
   table = { key: j.key, lo: KEY_LO, caps: j.caps }; job = null;
@@ -51,7 +72,7 @@ function step() {
 let readTimer = 0;
 const fmtHz = (f) => (f >= 1000 ? `${(f / 1000).toFixed(2)} kHz` : `${f.toFixed(1)} Hz`);
 function update() {
-  op = arcOp(shell.P);
+  op = model.arcOp(shell.P);
   clearTimeout(readTimer);
   readTimer = setTimeout(readouts, 60);
   const P = shell.P, talk = P.mode === 'talk', C = capOf(focus), L = talk ? TALK.L : P.coil * 1e-3;
@@ -61,20 +82,20 @@ function update() {
 const capOf = (key) => (shell.P.mode === 'talk' ? TALK.C : table?.caps[key - KEY_LO] ?? kelvinC(keyFreq(key), shell.P.coil * 1e-3));
 function readouts() {
   const P = shell.P, o = op, talk = P.mode === 'talk', C = capOf(focus), L = talk ? TALK.L : P.coil * 1e-3;
-  const la = linearAnalysis(circuit(P, C, o)), fK = 1 / (TAU * Math.sqrt(L * C));
+  const la = model.linearAnalysis(model.circuit(P, C, o)), fK = 1 / (TAU * Math.sqrt(L * C));
   const row = (k, v) => `<dt>${k}</dt><dd>${v}</dd>`;
   const rows = [
     row('arc', `${o.I0.toFixed(2)} A at ${o.u0.toFixed(1)} V, slope ${o.Rd.toFixed(2)} Ω`),
     row('column', `τ ${P.tau.toFixed(0)} µs, L_arc ${(o.Larc * 1e6).toFixed(0)} µH`),
     row('re-strike', `${o.Ur.toFixed(0)} V, below ${o.Xm.toFixed(2)} A`),
-    row('hisses above', `${hissCurrent(P.gap).toFixed(1)} A`),
+    row('hisses above', `${model.hissCurrent(P.gap).toFixed(1)} A`),
     row(talk ? 'condenser' : `${noteName(focus)}'s capacitor`, `${(C * 1e6).toFixed(2)} µF (Kelvin: ${fmtHz(fK)})`),
     row('note starts', la.sigma > 0 ? `${fmtHz(la.f)}, ×e every ${(1000 / la.sigma).toFixed(0)} ms` : `no: decays at ${(-la.sigma).toFixed(0)}/s`),
   ];
   if (!talk) {
     const Ck = kelvinC(keyFreq(focus), L);
-    rows.push(row('sings while', `coil < ${thresholdR(P, Ck).toFixed(2)} Ω, arc < ${thresholdCurrent(P, Ck).toFixed(1)} A`));
-    rows.push(row('upper limit', fmtHz(upperLimit(P))));
+    rows.push(row('sings while', `coil < ${model.thresholdR(P, Ck).toFixed(2)} Ω, arc < ${model.thresholdCurrent(P, Ck).toFixed(1)} A`));
+    rows.push(row('upper limit', fmtHz(model.upperLimit(P))));
   }
   $('#info').innerHTML = rows.join('');
 }
@@ -88,7 +109,7 @@ animate(() => {
   const f = msg && msg.trail ? msg : null, tr = f?.trail, N = tr ? tr.length / 2 : 0;
   let tiMax = 0, tuMax = 0;
   for (let k = 0; k < N; k++) { tiMax = Math.max(tiMax, tr[2 * k]); tuMax = Math.max(tuMax, tr[2 * k + 1]); }
-  const Ih = hissCurrent(P.gap), iMax = Math.max(2.5 * o.I0, 1.08 * tiMax, Math.min(1.15 * Ih, 4 * o.I0)), uMax = Math.max(1.3 * o.Ur, 1.08 * tuMax, 1.25 * o.u0);
+  const Ih = model.hissCurrent(P.gap), iMax = Math.max(2.5 * o.I0, 1.08 * tiMax, Math.min(1.15 * Ih, 4 * o.I0)), uMax = Math.max(1.3 * o.Ur, 1.08 * tuMax, 1.25 * o.u0);
   const padL = 36, padR = 10, padT = 8, padB = 20, W = Math.max(10, w - padL - padR), H = Math.max(10, h - padT - padB);
   const X = (i) => padL + (W * i) / iMax, Y = (u) => padT + H * (1 - u / uMax);
   ctx.font = '10px system-ui, sans-serif'; ctx.lineWidth = 1;
@@ -105,7 +126,7 @@ animate(() => {
   // Ayrton's hyperbola, and the model's static curve (with the floor)
   const curve = (fn, i0) => { ctx.beginPath(); let s = false; for (let k = 0; k <= 240; k++) { const i = i0 + ((iMax - i0) * k) / 240, u = fn(i); if (!(u < uMax * 1.5)) { s = false; continue; } if (s) ctx.lineTo(X(i), Y(u)); else { ctx.moveTo(X(i), Y(u)); s = true; } } ctx.stroke(); };
   ctx.setLineDash([3, 3]); ctx.strokeStyle = css('--ayrton'); curve((i) => ayrtonV(i, P.gap), Math.max(0.05, o.B / (uMax - o.A))); ctx.setLineDash([]);
-  ctx.strokeStyle = css('--static'); ctx.globalAlpha = 0.7; curve((i) => staticV(i, o), 0.002); ctx.globalAlpha = 1;
+  ctx.strokeStyle = css('--static'); ctx.globalAlpha = 0.7; curve((i) => model.staticV(i, o), 0.002); ctx.globalAlpha = 1;
   // the supply's load line u = E − R_b·i through the operating point
   ctx.strokeStyle = css('--load'); ctx.beginPath();
   const iA = Math.max(0, (SUPPLY.E - uMax) / o.Rb), iB = Math.min(iMax, SUPPLY.E / o.Rb);

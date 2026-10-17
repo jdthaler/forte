@@ -16,5 +16,8 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: a pedal that keeps the shutters open, sent to the engine
   modWheel: { param: 'wind', max: U_MAX }, // CC1: the wind, up to its top speed
   engine: { name: 'WindHarpEngine', module: new URL('./windharp-engine.js', import.meta.url).href },
+  // the same physics in C++ (native/instruments/windharp), built as WebAssembly: the page runs it
+  // when it can, the JavaScript engine otherwise
+  wasm: { name: 'WindHarpWasmEngine', module: new URL('./windharp-wasm.js', import.meta.url).href, binary: new URL('../wasm/windharp.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room' },
 };

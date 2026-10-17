@@ -187,6 +187,19 @@ render at 2 % of real time in Node. The tests hold the engine to the model:
 growth rate and ring-down within 3 %, limit-cycle amplitude within 2 %, both
 thresholds of the hysteresis loop within 3 %, harmonic levels within 1.5 dB.
 
+**In C++.** The same engine and model run as WebAssembly on this page (the
+JavaScript is the fallback; `?engine=js` in the address forces it) and as
+plugins (CLAP, VST3, AU and a standalone app), where the Space pedal is Hold
+on CC64, the mod wheel is the flame power and aftertouch parts the flames.
+The WebAssembly plays what the JavaScript plays bit for bit, turbulence
+included (the same seeded generator, and V8's own `sin`, `exp` and `hypot`),
+and the views' bifurcation diagram, orbits and tuning come from the same C++.
+The tuning table (harmonic balance, about 15 ms in C++) is built on a worker
+thread in the plugins, and on the page by its WebAssembly model, which hands
+it to the engine with the parameters; while a tube slider moves, the tubes are
+cut from the last table until the new one is in. Ten tubes take about 2 % of a
+core in C++.
+
 **The views.** The bifurcation diagram (from harmonic balance) shows the
 stable and unstable branches, the Hopf point, the fold and the bistable band,
 where the keys put β up and down, and a live dot for every sounding tube.
@@ -238,7 +251,9 @@ pyrophone/src/pyrophone-engine.js           real-time engine (AudioWorklet and N
 pyrophone/src/pyrophone-params.js           parameters and presets
 pyrophone/src/pyrophone-main.js             page wiring
 pyrophone/src/pyrophone-views.js            bifurcation diagram, tube, phase portrait
-test/pyrophone-tests.mjs                    node test/pyrophone-tests.mjs (25 tests, ~15 s)
+pyrophone/src/pyrophone-wasm.js             the C++ engine and model as WebAssembly (pyrophone/wasm/pyrophone.wasm)
+native/instruments/pyrophone/               the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
+test/pyrophone-tests.mjs                    node test/pyrophone-tests.mjs (25 tests, ~15 s; FORTE_ENGINE=wasm: on the WebAssembly)
 tools/render-pyrophone.mjs                  node tools/render-pyrophone.mjs → examples/pyrophone/
 ```
 

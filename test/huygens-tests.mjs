@@ -314,6 +314,24 @@ await test('lock display: a locked bass triad reads locked in every update; an u
   }
 });
 
+await test('the views\' WebAssembly model (huygens-wasm.js) gives the JavaScript\'s tunings, δ and lock map exactly', async () => {
+  const { wasmModel } = await import('../huygens/src/huygens-wasm.js');
+  const m = await wasmModel();
+  for (const P of [DEFAULTS, { ...DEFAULTS, tuning: 'just', tonic: 5, mistune: 33.5 }, { ...DEFAULTS, mistune: 40 }])
+    for (let k = 36; k <= 96; k++) assert.equal(m.tunedFreq(k, P), tunedFreq(k, P), `key ${k}`);
+  const r = rng(5);
+  for (let i = 0; i < 300; i++) {
+    const kick = 0.15 * r(), circ = [100 + 300 * r(), 70 + 30 * r(), 40 + 25 * r()];
+    assert.equal(m.deltaOf(kick, ...circ), deltaOf(kick, ...circ));
+    const ratio = 1 + r(), d = deltaOf(kick, ...circ);
+    assert.deepEqual(m.lockRatio(ratio, d), lockRatio(ratio, d));
+  }
+  const P = INSTRUMENT.engineParams(DEFAULTS);
+  for (let c = 0; c <= 1200; c += 37) assert.deepEqual(stairPoint(P, c, 0.04, m), stairPoint(P, c, 0.04));
+  const sag = { ...P, rSrc: 150e3 };                           // simulated points: the WebAssembly engine
+  for (const c of [386, 700, 1000]) assert.deepEqual(stairPoint(sag, c, 0.05, m), stairPoint(sag, c, 0.05));
+});
+
 console.log('robustness');
 await test('finite output and sane level across settings', () => {
   for (const eng of [{ kick: 0.15, rSrc: 200e3 }, { kick: 0, vNom: 400 }, { kick: 0.1, vNom: 100, vStrike: 95, vExt: 85, drift: 20, driftRate: 2 }]) {
