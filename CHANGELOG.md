@@ -28,7 +28,7 @@ tagged; this changelog and the commit titles record them.
   - **The page runs it**, falling back to the JavaScript (`?engine=js` forces it); the header has
     the C++ | JS switch, and the analysis table, generator map and Leslie view call its model.
 
-### Forte 0.25.0
+### Forte 0.26.0
 - A descriptor's `console` (state the page keeps beside its parameter groups) becomes plugin
   parameters, set by the presets and passed to a WebAssembly engine (`tools/gen-native-params.mjs`,
   `shared/wasm.js`, `tools/headless.mjs`).
@@ -38,6 +38,20 @@ tagged; this changelog and the commit titles record them.
 - `forte/fdlibm.h`: V8's `tanh`, `expm1` and `Math.hypot`.
 - Every instrument's committed WebAssembly is rebuilt, because the shared controller table grew;
   the sound and the parameters are unchanged.
+
+## 2026-10-17 — one plugin format at a time, and the standalone checked where it is
+
+### Forte 0.25.0
+- **One format at a time** in the downloads' Makefile: `make install-au`, `install-vst3`,
+  `install-clap` and `install-app` (the standalone), and the same for `verify-` and
+  `uninstall-`.
+- **`make check`** checks the plugins in the unpacked folder without installing anything: the
+  signature and the download quarantine on a Mac, the libraries they need on Linux, and
+  clap-validator for the CLAPs when it is installed. `make check-app` checks just the
+  standalone, which runs from the folder.
+- The `native` workflow also runs `make check`, a format alone, and `make check-app` on a
+  quarantined copy of the standalones (which it must refuse) on macOS and Linux; the site test
+  covers them on a stand-in download. `install.sh` keeps to macOS's bash 3.2.
 
 ## 2026-10-17 — the table-driven instruments in C++ (step 4, fifth batch)
 

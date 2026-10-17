@@ -144,9 +144,22 @@ jobs:
           if [ "$RUNNER_OS" = macOS ]; then ditto -x -k dist/Forte-plugins-macos.zip "$RUNNER_TEMP/try"
           else tar -xzf dist/Forte-plugins-linux.tar.gz -C "$RUNNER_TEMP/try"; fi
           cd "$RUNNER_TEMP/try/Forte plugins"
+          make check
           make install
           make verify
           make uninstall
+          # one format alone, and the standalone checked where it was unpacked, quarantined as a
+          # browser's download would be
+          make install-clap
+          make verify-clap
+          if make verify-vst3; then echo '::error::make verify-vst3 passed with no VST3 installed'; exit 1; fi
+          make uninstall-clap
+          if [ "$RUNNER_OS" = macOS ]; then
+            for a in *.app; do xattr -w com.apple.quarantine '0083;00000000;Safari;' "$a"; done
+            if make check-app; then echo '::error::make check-app passed a quarantined app'; exit 1; fi
+            for a in *.app; do xattr -dr com.apple.quarantine "$a"; done
+          fi
+          make check-app
       - uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.preset }}
