@@ -111,7 +111,7 @@ for wider keys, with the controls beside the keyboard's tools. Use
 
 ## Plugins
 
-The instruments ported to C++ so far (the Ribbon Piano, Harpsichord, Vibraphone, Carillon,
+The instruments ported to C++ so far (the Ribbon Piano, Harpsichord, Pipe Organ, Vibraphone, Carillon,
 Electric Grand, Tangent Clavier, Viola Organista, Glass Armonica, Gong Keyboard and Bubble Organ) also come as plugins for a DAW: AU,
 VST3 and CLAP, and a standalone app, for macOS, Windows and Linux. Download them from the
 **Plugins** section of the front page or from the

@@ -1,10 +1,16 @@
 // pipes-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell } from '../../shared/shell.js';
+import { createShell, useWasm } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './pipes-instrument.js';
-import { RANKS, STOPS, CP, AIR, pipeFreq, pipeModel, engaged, organName, footage, rankHarm } from './pipes-model.js';
+import { RANKS, STOPS, CP, AIR, KEY_LO, KEY_HI, pipeFreq, pipeModel, engaged, organName, footage, rankHarm } from './pipes-model.js';
 import { TUNING } from './tuning-table.js';
+import { wasmModel } from './pipes-wasm.js';
+
+// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
+// physics as the engine, in C++), the JavaScript one until then or if it can't load.
+let M = { pipeModel, pipeFreq, tuning: TUNING.lookup }, wasm = null;
+if (useWasm()) wasmModel().then((m) => { M = wasm = m; updateModel(); warmUp(); }, (err) => console.warn(`pipes: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
 
 const $ = (s) => document.querySelector(s);
 const RANK_ORDER = [0, 2, 1, 3, 4, 5]; // as the engine picks the pipe to show
@@ -14,14 +20,46 @@ const windHist = { t: new Float64Array(1024), P: new Float64Array(1024), S: new 
 let clock = 0;
 const spectrum = new SpectrumView($('#spectrum'));
 
+// A key's six pipes (each voiced by a linear analysis, about a millisecond a key) go with its note
+// to the WebAssembly engine, built by the page's WebAssembly model, so the audio thread never
+// voices them; the JavaScript engine voices its own. Built ahead, a key at a time, when the page is
+// idle.
+const packed = new Map();
+const wasmEngine = () => wasm && shell.engineKind !== 'js'; // until the worklet says, expect the WebAssembly
+const voicing = (P) => `${P.cutup}|${P.gain}|${P.offset}`;
+function keyData(key, P) {
+  const id = `${key}|${voicing(P)}`;
+  let d = packed.get(id);
+  if (!d) { d = wasm.keyModels(key, P); if (packed.size > 256) packed.clear(); packed.set(id, d); }
+  return d;
+}
+const noteData = (key, vel, P) => (wasmEngine() ? keyData(key, P) : undefined);
+let warm = null;
+function warmUp() {
+  clearTimeout(warm);
+  if (!wasmEngine()) return;
+  const v = voicing(shell.P), keys = [];
+  for (let k = KEY_LO; k <= KEY_HI; k++) if (!packed.has(`${k}|${v}`)) keys.push(k);
+  keys.sort((a, b) => Math.abs(a - focus) - Math.abs(b - focus));
+  const step = () => {
+    const k = keys.shift();
+    if (k === undefined || v !== voicing(shell.P) || !wasmEngine()) return;
+    keyData(k, shell.P);
+    warm = setTimeout(step, 15);
+  };
+  warm = setTimeout(step, 200);
+}
+
 const shell = createShell({
   ...INSTRUMENT,
+  noteData,
   base: 48,
   arrows: { param: 'velocity', step: 0.05 },
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key) => { focus = key; shell.keys.focus?.(key); updateModel(); },
-  onParam: () => updateModel(),
+  onParam: (id) => { if (['cutup', 'gain', 'offset', '*'].includes(id)) warmUp(); updateModel(); },
   onMessage: (m) => {
+    if (m.type === 'engine') { warmUp(); return; } // the worklet says which engine plays
     if (m.type !== 'pipe') return;
     msg = m;
     clock += (6 * 128) / m.fs;
@@ -44,8 +82,8 @@ const mm = (x, d = 1) => `${(x * 1000).toFixed(d)} mm`;
 function updateModel() {
   const P = shell.P, on = engaged(P);
   if (!on[shown]) shown = RANK_ORDER.find((r) => on[r]) ?? 0;
-  const f = pipeFreq(focus, shown), stopped = RANKS[shown].stopped;
-  model = pipeModel(f, stopped, P, { tune: TUNING.lookup(f, stopped) });
+  const f = M.pipeFreq(focus, shown), stopped = RANKS[shown].stopped;
+  model = M.pipeModel(f, stopped, P, { tune: M.tuning(f, stopped) });
   const name = shown >= 3 ? `Mixture rank ${footage(rankHarm(focus, shown))}` : STOPS[RANKS[shown].stop].name;
   $('#jet-key').textContent = organName(focus);
   $('#jet-read').textContent = `${name}, ${f.toFixed(1)} Hz`;
