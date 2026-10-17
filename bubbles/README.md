@@ -321,6 +321,12 @@ side than on the other. Low notes are on the left because the row runs low to hi
 * A single forte bubble peaks at 0.16–0.21 (velocity 1) wherever it is on
   the keyboard; a four-key forte chord stays under 1 even though the first
   bubbles of a chord all kick together.
+* **In C++**: the same engine and model run as WebAssembly on this page (the
+  JavaScript is the fallback; `?engine=js` in the address forces it) and as
+  plugins (CLAP, VST3, AU and a standalone app), where the Space pedal is
+  Hold on CC64 and the mod wheel raises the rate. The WebAssembly plays what
+  the JavaScript plays to within 10⁻¹⁰, and the same test suite passes on it.
+  Ten keys at 40 bubbles/s take about 5 % of a core in C++.
 
 ## What to listen for
 
@@ -368,7 +374,9 @@ bubbles/src/bubbles-model.js           bubble acoustics: Minnaert, heat flow (Φ
 bubbles/src/bubbles-engine.js          real-time engine: nozzles, seeded brooks, bubble pool (AudioWorklet and Node)
 bubbles/src/bubbles-params.js          parameters and presets
 bubbles/src/bubbles-main.js            page wiring and views
-test/bubbles-tests.mjs                 node test/bubbles-tests.mjs (24 tests, ~6 s)
+bubbles/src/bubbles-wasm.js            the C++ engine and model as WebAssembly (bubbles/wasm/bubbles.wasm)
+native/instruments/bubbles/            the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
+test/bubbles-tests.mjs                 node test/bubbles-tests.mjs (24 tests, ~6 s; FORTE_ENGINE=wasm: on the WebAssembly)
 tools/render-bubbles.mjs               node tools/render-bubbles.mjs → examples/bubbles/
 ```
 

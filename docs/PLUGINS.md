@@ -10,10 +10,9 @@ native/core + native/instruments/<slug>   C++: engines and models
         └── WebAssembly   loaded by the site's AudioWorklet, and called by its views
 ```
 
-Status: **steps 0–2 done, and step 3 for the template** (the native setup, see
-[native/README.md](../native/README.md); every instrument headless in JavaScript; the shared
-native core; the template ported, its page running the WebAssembly). Next: the Bubble Organ,
-after the owner has reviewed the pipeline. The decisions below were made by the owner on
+Status: **steps 0–3 done** (the native setup, see [native/README.md](../native/README.md); every
+instrument headless in JavaScript; the shared native core; the template and the Bubble Organ
+ported, their pages running the WebAssembly). Next: step 4, the rest in batches. The decisions below were made by the owner on
 2026-10-16. Follow [CLAUDE.md](../CLAUDE.md) for the workflow (branch, test,
 version, pull request, merge only when asked) and update this file as steps
 land.
@@ -215,7 +214,22 @@ starts new instruments with this port. Learned on the way:
 - `?engine=js` in a page's address forces the JavaScript engine, for comparing by ear.
 - The smoke-test plugin is retired; its instrument stays as the plugin tests' test instrument.
 
-**The Bubble Organ** comes next, once the owner has reviewed the pipeline.
+**The Bubble Organ: done (Bubble Organ 0.3.0, Forte 0.12.0).** `native/instruments/bubbles` has
+its model (heat flow, losses, the surface's image, rise and glide) and engine (nozzles, seeded
+brooks, the bubble pool) in C++; its WebAssembly (51 KB) is in `bubbles/wasm/`; its 24-test suite
+passes on it, which plays what the JavaScript plays to within 10⁻¹⁰ (the same seeded random
+numbers, so the brooks are the same bubbles); its plugins have the hold pedal (CC64), the rate on
+the mod wheel, aftertouch for more bubbles, the twelve presets and the gas and liquid as
+dropdowns; ten brooks at 40 bubbles/s take about 5 % of a core in C++. Learned on the way:
+- An engine that tells its page more than a `Message` holds (30 floats) posts several, and its
+  `<slug>-wasm.js` gathers them: `wasmEngine(I, { messages })` gets `messages(m, engine)`, which
+  returns the page's message or null. The bubble organ posts each release, a summary per block
+  and its latest bubble's waveform in pieces.
+- Messages carry float32: a page must not compare their values exactly with its parameters (the
+  bubbles' depth did).
+- A test suite that reaches into its engine (a log of releases, the pool, constructor options)
+  gets the same hooks from the WebAssembly class: `forte_engine(handle)` gives the engine to the
+  instrument's own exports.
 
 Each instrument goes through this checklist, which is its definition of
 done:
@@ -241,7 +255,7 @@ done:
    `tools/`, log both in the changelog, and update the instrument's README and
    the guide. In the pull request, ask the owner to listen in a DAW.
 
-The template goes first, so that `tools/new-instrument.mjs` can create new
+The template went first, so that `tools/new-instrument.mjs` can create new
 instruments natively. Update `docs/INSTRUMENT_GUIDE.md` to match.
 
 ### 4. Port the rest, in batches

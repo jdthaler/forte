@@ -328,6 +328,13 @@ the JavaScript). A WebAssembly engine takes all the parameters and computes its 
 data (`forte/background.h`), so `engineParams` and `noteData` stay the JavaScript engine's.
 The views call the WebAssembly model once it has loaded.
 
+An engine that posts to its page (`this.post`) posts `Message`s in C++ (`Engine::post`: a type, a
+key and up to 30 float32 values); its `<slug>-wasm.js` turns them back into the page's messages,
+gathering several into one where a message is bigger (`wasmEngine(I, { messages(m, engine) })`,
+which returns null until it has one). A test suite that reaches into its engine (the bubble
+organ's log, pool and constructor options) gets the same from the WebAssembly class, through
+exports that take `forte_engine(handle)`: see `bubbles/src/bubbles-wasm.js`.
+
 When you change the physics, change both and check they agree:
 
 ```bash

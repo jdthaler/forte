@@ -38,6 +38,8 @@ FORTE_EXPORT Handle *forte_create(double fs) {
   return h;
 }
 FORTE_EXPORT void forte_destroy(Handle *h) { delete h; }
+// the engine itself, for an instrument's own exports (its tests' hooks)
+FORTE_EXPORT forte::Engine *forte_engine(Handle *h) { return h->engine.get(); }
 FORTE_EXPORT double *forte_params(Handle *h) { return h->P.get(); }
 FORTE_EXPORT void forte_set_params(Handle *h) { h->engine->setParams(h->P.get()); }
 FORTE_EXPORT void forte_note_on(Handle *h, int key, double velocity) { h->engine->noteOn(key, velocity); }

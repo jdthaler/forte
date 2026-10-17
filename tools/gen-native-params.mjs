@@ -133,9 +133,15 @@ export function inferFormat(p) {
     return out;
   };
   for (const r of runs) segs.push(...fitRun(r.xs, 0));
+  // each segment ends where fmt stops writing it: found by bisection between the samples on either
+  // side, to the last double (so a value written as the next segment's reads back into it)
+  const fits = (g, v) => formatBy([{ ...g, upTo: Infinity }], v) === parse(String(fmt(v)), which).text;
   const merged = segs.map((g, i) => {
     const { xs, ...seg } = g;
-    return { ...seg, upTo: i + 1 < segs.length ? (xs[xs.length - 1].v + segs[i + 1].xs[0].v) / 2 : Infinity };
+    if (i + 1 >= segs.length) return { ...seg, upTo: Infinity };
+    let a = xs[xs.length - 1].v, b = segs[i + 1].xs[0].v;
+    for (let mid = (a + b) / 2; mid > a && mid < b; mid = a + (b - a) / 2) if (fits(seg, mid)) a = mid; else b = mid;
+    return { ...seg, upTo: a };
   });
   const match = (segments) => {
     const vs = travel(p, 1000);

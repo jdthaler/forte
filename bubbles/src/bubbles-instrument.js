@@ -16,5 +16,8 @@ export const INSTRUMENT = {
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
   modWheel: 'rate',                     // CC1: the bubble rate, from its default up to its maximum
   engine: { name: 'BubbleEngine', module: new URL('./bubbles-engine.js', import.meta.url).href },
+  // the same physics in C++ (native/instruments/bubbles), built as WebAssembly: the page runs it
+  // when it can, the JavaScript engine otherwise
+  wasm: { name: 'BubbleWasmEngine', module: new URL('./bubbles-wasm.js', import.meta.url).href, binary: new URL('../wasm/bubbles.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room' },
 };

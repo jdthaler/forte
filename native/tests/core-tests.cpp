@@ -78,6 +78,19 @@ TEST("every instrument's parameters read as the JavaScript writes them, and read
   }
   CHECK(bad == 0);
 }
+TEST("every parameter's text reads back to the same text on either side of where its format changes (clap-validator's round trip)") {
+  int bad = 0;
+  for (const auto &vec : vectors::kAll) for (int i = 0; i + 1 < vec.param.formatCount; i++) {
+    const double edge = vec.param.format[i].upTo;
+    for (double v : {std::nextafter(edge, -INFINITY), edge, std::nextafter(edge, INFINITY), edge * (1 - 1e-4), edge * (1 + 1e-4) + 1e-9}) {
+      if (!(v >= vec.param.min && v <= vec.param.max)) continue;
+      const std::string t = text(vec.param, v);
+      double back;
+      if (!parseValue(vec.param, t.c_str(), back) || text(vec.param, back) != t) { if (bad++ < 10) std::printf("       %s(%.17g): \"%s\" reads back as \"%s\"\n", vec.name, v, t.c_str(), text(vec.param, back).c_str()); }
+    }
+  }
+  CHECK(bad == 0);
+}
 TEST("parameter ids hash to stable 31-bit numbers") {
   CHECK(paramHash("volume") == paramHash("volume"));
   CHECK(paramHash("volume") != paramHash("room"));
