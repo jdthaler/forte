@@ -367,6 +367,17 @@ the whole instrument by −4 dB.
   and whose wake has died just rings, at a fraction of the cost.
 - **No allocation** in `process()`: a key's strings are built when it is
   first pressed.
+- **In C++**: the same engine and model run as WebAssembly on this page (the
+  JavaScript is the fallback; `?engine=js` in the address forces it) and as
+  plugins (CLAP, VST3, AU and a standalone app), where CC64 is the pedal
+  that keeps the shutters open, the mod wheel blows the wind up to its top
+  speed and aftertouch (channel or per key) blows harder. Seeded alike,
+  with V8's own `sin`, `exp` and `pow`, the WebAssembly plays what the
+  JavaScript plays bit for bit, gusts and turbulence included, and the same
+  test suite passes on it; the page's map and table come from its model.
+  A string's design is a closed form, made as the key is pressed into a
+  fixed pool of voices. Ten keys across the compass take about 10 % of a
+  core in C++.
 
 ## What to listen for
 
@@ -412,7 +423,9 @@ windharp/src/windharp-model.js            Strouhal–Reynolds, the wake, the str
 windharp/src/windharp-engine.js           real-time engine (AudioWorklet and Node)
 windharp/src/windharp-params.js           parameters and presets
 windharp/src/windharp-main.js             page wiring and views
-test/windharp-tests.mjs                   node test/windharp-tests.mjs (26 tests, about 26 s)
+windharp/src/windharp-wasm.js             the C++ engine and model as WebAssembly (windharp/wasm/windharp.wasm)
+native/instruments/windharp/              the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
+test/windharp-tests.mjs                   node test/windharp-tests.mjs (26 tests, about 26 s; FORTE_ENGINE=wasm: on the WebAssembly)
 tools/render-windharp.mjs                 node tools/render-windharp.mjs → examples/windharp/
 ```
 

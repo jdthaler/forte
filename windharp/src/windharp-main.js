@@ -1,11 +1,17 @@
 // windharp-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName } from '../../shared/shell.js';
+import { createShell, noteName, useWasm } from '../../shared/shell.js';
 import { fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './windharp-instrument.js';
-import {
-  TAU, U_REF, U_MAX, AIR, RE_C, stringDesign, shedding, lockBand, lockedRange, lockedAmplitude, homeHarmonic, massDamping, courseOffsets,
-} from './windharp-model.js';
+import * as jsModel from './windharp-model.js';
+import { wasmModel } from './windharp-wasm.js';
+
+const { TAU, U_REF, U_MAX, AIR, RE_C } = jsModel;
+// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
+// physics as the engine, in C++), the JavaScript one until then or if it can't load.
+let phys = jsModel;
+if (useWasm()) wasmModel().then((m) => { phys = m; F = null; update(); }, (err) => console.warn(`windharp: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+const shedding = (U, D) => phys.shedding(U, D);
 
 const $ = (s) => document.querySelector(s);
 let focus = 60, harp = null, analyser = null, fbuf = null;
@@ -25,11 +31,11 @@ const shell = createShell({
 let F = null;
 const fmtHz = (f) => (f >= 1000 ? `${(f / 1000).toFixed(2)} kHz` : `${f.toFixed(f < 100 ? 1 : 0)} Hz`);
 function update() {
-  const P = shell.P, S = stringDesign(focus, P), id = `${focus}|${P.n0}|${P.tuning}|${P.unison}|${P.mass}|${P.q}`;
+  const P = shell.P, S = phys.stringDesign(focus, P), id = `${focus}|${P.n0}|${P.tuning}|${P.unison}|${P.mass}|${P.q}`;
   if (!F || F.id !== id) {
     const bands = [];
-    for (let n = 1; n <= S.N; n++) { const b = lockBand(S, n); if (b) bands.push({ ...b, range: null, Y: null }); }
-    F = { id, S, bands, next: 0, home: homeHarmonic(S) };
+    for (let n = 1; n <= S.N; n++) { const b = phys.lockBand(S, n); if (b) bands.push({ ...b, range: null, Y: null }); }
+    F = { id, S, bands, next: 0, home: phys.homeHarmonic(S) };
   }
   const name = noteName(focus);
   $('#map-key').textContent = name; $('#tab-key').textContent = name;
@@ -37,9 +43,9 @@ function update() {
 }
 function refine() { // one harmonic's locked range per frame
   if (!F || F.next >= F.bands.length) return;
-  const b = F.bands[F.next++], r = lockedRange(F.S, b.n);
+  const b = F.bands[F.next++], r = phys.lockedRange(F.S, b.n);
   b.range = r || { downTo: b.lo, upTo: b.hi, Ymid: 0 };
-  b.Y = r ? r.Ymid : lockedAmplitude(F.S, b.n, b.mid);
+  b.Y = r ? r.Ymid : phys.lockedAmplitude(F.S, b.n, b.mid);
   table();
 }
 function table() {
@@ -47,7 +53,7 @@ function table() {
   const S = F.S, P = shell.P, Re0 = S.Re0, nowU = harp?.Uv || P.wind, nowRe = (nowU * S.D) / AIR.nu;
   const row = (k, v) => `<dt>${k}</dt><dd>${v}</dd>`;
   $('#info').innerHTML = [
-    row('strings to the key', (() => { const c = courseOffsets(focus); return c.length === 1 ? 'one' : `${c.length === 2 ? 'two' : 'three'} in unison, ${c.map((o) => `${o.cents >= 0 ? '+' : '−'}${Math.abs(o.cents).toFixed(1)} ¢`).join(', ')}`; })()),
+    row('strings to the key', (() => { const c = phys.courseOffsets(focus); return c.length === 1 ? 'one' : `${c.length === 2 ? 'two' : 'three'} in unison, ${c.map((o) => `${o.cents >= 0 ? '+' : '−'}${Math.abs(o.cents).toFixed(1)} ¢`).join(', ')}`; })()),
     row('diameter', `${(S.D * 1e3).toFixed(S.D < 1e-3 ? 3 : 2)} mm nylon${P.mass > 1 ? `, wound (× ${P.mass.toFixed(2)} mass)` : ''}`),
     row('length, tension', `${(S.L * 100).toFixed(1)} cm, ${S.T.toFixed(S.T < 100 ? 1 : 0)} N (${(S.stress / 1e6).toFixed(0)} MPa)`),
     row('fundamental', `${fmtHz(S.f0)}, inharmonicity B = ${S.B.toExponential(1)}`),
@@ -58,7 +64,7 @@ function table() {
     })()),
     row('Reynolds number', `${Re0.toFixed(0)} at ${U_REF} m/s; ${nowRe.toFixed(0)} now${nowRe < RE_C ? ' (no shedding)' : ''}`),
     row('mass ratio m* = m/ρD²', `${S.mu.toFixed(0)}`),
-    row('mass–damping m*ζ', `${massDamping(S).toFixed(2)} (Scruton number ${(2 * massDamping(S)).toFixed(2)})`),
+    row('mass–damping m*ζ', `${phys.massDamping(S).toFixed(2)} (Scruton number ${(2 * phys.massDamping(S)).toFixed(2)})`),
   ].join('');
   const shown = F.bands.filter((b) => b.lo < U_MAX * 1.05);
   $('#bands').innerHTML = '<tr><th>n</th><th>f_n</th><th>band (m/s)</th><th>holds (m/s)</th><th>growth</th><th>Ŷ/D</th></tr>'
