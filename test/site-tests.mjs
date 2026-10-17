@@ -2,7 +2,10 @@
 // Run: node test/site-tests.mjs
 
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, mkdtempSync, mkdirSync, writeFileSync, copyFileSync, rmSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { INSTRUMENTS, SECTIONS, FORTE_VERSION, TEMPLATE } from '../shared/registry.js';
 import { ASSETS, notes } from '../tools/plugin-release.mjs';
 import { LATEST, SYSTEMS, archive, downloads, withPlugins } from '../shared/plugins.js';
@@ -108,6 +111,30 @@ test('the release\'s archives are the ones CI packages and the pages link to', (
   const md = notes();
   for (const i of withPlugins()) assert.ok(md.includes(`| ${i.version} |`) && md.includes(i.name) && md.includes(archive(i.id, 'macos.zip')), `notes list ${i.name}`);
   assert.ok(md.includes('xattr -dr com.apple.quarantine'), 'notes give the xattr command');
+});
+test('the macOS and Linux downloads install and verify themselves (make install, make verify)', () => {
+  const sh = read('tools/package-plugins.sh'), mk = read('native/install.mk');
+  assert.ok(sh.includes('cp native/install.mk "$dir/Makefile"') && sh.includes('cp native/install.sh "$dir/"'), 'package-plugins.sh adds the Makefile and install.sh');
+  for (const t of ['install', 'verify', 'uninstall']) assert.ok(mk.includes('bash ./install.sh $@') && mk.includes(t), `the Makefile runs install.sh ${t}`);
+  const ci = read('.github/workflows/native.yml');
+  assert.ok(ci.includes('make install') && ci.includes('make verify'), 'native.yml runs the Makefile on the archive');
+  if (process.platform !== 'linux') return;
+  // a folder like a download, with a stand-in CLAP and standalone, installed into a scratch home
+  const t = mkdtempSync(join(tmpdir(), 'forte-install-')), dl = join(t, 'Gong Keyboard');
+  try {
+    mkdirSync(dl);
+    copyFileSync(new URL('native/install.sh', R), join(dl, 'install.sh'));
+    writeFileSync(join(dl, 'Gong Keyboard.clap'), 'clap');
+    writeFileSync(join(dl, 'Gong Keyboard'), 'app', { mode: 0o755 });
+    const run = (cmd) => execFileSync('bash', [join(dl, 'install.sh'), cmd], { env: { ...process.env, HOME: join(t, 'home'), PATH: '/usr/bin:/bin' }, encoding: 'utf8' });
+    run('install');
+    assert.ok(has(join(t, 'home/.clap/Gong Keyboard.clap')) && has(join(t, 'home/.local/bin/Gong Keyboard')), 'installed');
+    assert.match(run('verify'), /All installed and working/);
+    rmSync(join(t, 'home/.clap/Gong Keyboard.clap'));
+    assert.throws(() => run('verify'), (e) => /Gong Keyboard\.clap is not installed/.test(e.stdout));
+    run('uninstall');
+    assert.ok(!has(join(t, 'home/.local/bin/Gong Keyboard')), 'uninstalled');
+  } finally { rmSync(t, { recursive: true, force: true }); }
 });
 test('each instrument with plugins offers them on its page (its Plugin dialog, shared/notes.js)', () => {
   const js = read('shared/notes.js');

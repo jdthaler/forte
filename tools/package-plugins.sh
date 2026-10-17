@@ -2,7 +2,8 @@
 # package-plugins.sh — the archives a plugin release ships (docs/PLUGINS.md, step 5), from the
 # plugins one system built: Forte-plugins-<system> with every instrument that has plugins
 # (`plugin.ready` in shared/registry.js), and Forte-<id>-<system> with each one alone, each with
-# native/INSTALL.md. The template's plugins are left out. The archives keep the bundles'
+# native/INSTALL.md, and on macOS and Linux native/install.sh with its Makefile (make install,
+# make verify). The template's plugins are left out. The archives keep the bundles'
 # executable bits and macOS's signatures. Run from the repository's root after building:
 #
 #   tools/package-plugins.sh <linux|macos|windows>     writes dist/
@@ -34,6 +35,7 @@ pack() {
     [ "$n" -gt 0 ] || { echo "no plugins built for $name in $plugins" >&2; exit 1; }
   done
   cp native/INSTALL.md "$dir"/
+  [ "$preset" = windows ] || { cp native/install.mk "$dir/Makefile"; cp native/install.sh "$dir/"; }
   case "$preset" in
     macos) ditto -c -k --sequesterRsrc --keepParent "$dir" "dist/$out-macos.zip" ;;
     windows) (cd "$root/$out" && 7z a -tzip -bso0 "../../../../dist/$out-windows.zip" "$folder") ;;
