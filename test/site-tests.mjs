@@ -112,10 +112,11 @@ test('the release\'s archives are the ones CI packages and the pages link to', (
   for (const i of withPlugins()) assert.ok(md.includes(`| ${i.version} |`) && md.includes(i.name) && md.includes(archive(i.id, 'macos.zip')), `notes list ${i.name}`);
   assert.ok(md.includes('xattr -dr com.apple.quarantine'), 'notes give the xattr command');
 });
-test('the macOS and Linux downloads install and verify themselves (make install, make verify)', () => {
+test('the macOS and Linux downloads install and verify themselves (make install, make verify, make check-app…)', () => {
   const sh = read('tools/package-plugins.sh'), mk = read('native/install.mk');
   assert.ok(sh.includes('cp native/install.mk "$dir/Makefile"') && sh.includes('cp native/install.sh "$dir/"'), 'package-plugins.sh adds the Makefile and install.sh');
-  for (const t of ['install', 'verify', 'uninstall']) assert.ok(mk.includes('bash ./install.sh $@') && mk.includes(t), `the Makefile runs install.sh ${t}`);
+  assert.ok(mk.includes('install verify uninstall check:') && mk.includes('bash ./install.sh $@'), 'the Makefile runs install.sh install, verify, uninstall and check');
+  for (const t of ['install', 'verify', 'uninstall', 'check']) assert.ok(mk.includes(`${t}-%:\n\t@bash ./install.sh ${t} $*`), `make ${t}-<format> runs install.sh ${t} <format>`);
   const ci = read('.github/workflows/native.yml');
   assert.ok(ci.includes('make install') && ci.includes('make verify'), 'native.yml runs the Makefile on the archive');
   if (process.platform !== 'linux') return;
@@ -126,7 +127,16 @@ test('the macOS and Linux downloads install and verify themselves (make install,
     copyFileSync(new URL('native/install.sh', R), join(dl, 'install.sh'));
     writeFileSync(join(dl, 'Gong Keyboard.clap'), 'clap');
     writeFileSync(join(dl, 'Gong Keyboard'), 'app', { mode: 0o755 });
-    const run = (cmd) => execFileSync('bash', [join(dl, 'install.sh'), cmd], { env: { ...process.env, HOME: join(t, 'home'), PATH: '/usr/bin:/bin' }, encoding: 'utf8' });
+    const run = (...args) => execFileSync('bash', [join(dl, 'install.sh'), ...args], { env: { ...process.env, HOME: join(t, 'home'), PATH: '/usr/bin:/bin' }, encoding: 'utf8' });
+    // the standalone checked where it is, then one format alone
+    assert.match(run('check', 'app'), /ok {4}Gong Keyboard\n[^]*runs from this folder/);
+    run('install', 'clap');
+    assert.ok(has(join(t, 'home/.clap/Gong Keyboard.clap')) && !has(join(t, 'home/.local/bin/Gong Keyboard')), 'make install-clap installs the CLAP alone');
+    assert.match(run('verify', 'clap'), /All installed and working/);
+    assert.throws(() => run('verify', 'app'), (e) => /Gong Keyboard is not installed \(make install-app\)/.test(e.stdout));
+    assert.throws(() => run('install', 'vst4'), (e) => /Unknown format 'vst4'/.test(e.stderr));
+    run('uninstall', 'clap');
+    assert.ok(!has(join(t, 'home/.clap/Gong Keyboard.clap')), 'make uninstall-clap');
     run('install');
     assert.ok(has(join(t, 'home/.clap/Gong Keyboard.clap')) && has(join(t, 'home/.local/bin/Gong Keyboard')), 'installed');
     assert.match(run('verify'), /All installed and working/);
