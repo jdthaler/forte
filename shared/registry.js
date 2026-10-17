@@ -14,7 +14,7 @@
 // `plugin.ready` marks an instrument whose native port is built and released as plugins (it has
 // a native/instruments/<id>/ folder); the landing page lists those under Plugins.
 
-export const FORTE_VERSION = '0.14.0';
+export const FORTE_VERSION = '0.15.0';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
@@ -29,7 +29,7 @@ export const SECTIONS = [
 
 export const INSTRUMENTS = [
   {
-    id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.3.3', trim: 3,
+    id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.4.0', trim: 3,
     plugin: { code: 'Ribn', ready: true },
     after: 'the concert grand',
     tagline: 'Stiff strings, felt hammers and a shared bridge — then swap the strings for square bars, triangular bars or twisting ribbons.',
@@ -37,7 +37,7 @@ export const INSTRUMENTS = [
     accent: '#5aa9ff',
   },
   {
-    id: 'harpsichord', name: 'Harpsichord', section: 'traditional', ready: true, version: '0.2.1', trim: -2,
+    id: 'harpsichord', name: 'Harpsichord', section: 'traditional', ready: true, version: '0.3.0', trim: -2,
     plugin: { code: 'Hrps', ready: true },
     after: 'the Flemish double-manual harpsichord (Ruckers, 1600s)',
     tagline: 'A quill bends, slips off the string and plucks it; stops change where and how it plucks.',
@@ -77,7 +77,7 @@ export const INSTRUMENTS = [
     accent: '#d9b45f',
   },
   {
-    id: 'grand', name: 'Electric Grand', section: 'electric', ready: true, version: '0.3.1', trim: 3.5,
+    id: 'grand', name: 'Electric Grand', section: 'electric', ready: true, version: '0.4.0', trim: 3.5,
     plugin: { code: 'EGrd', ready: true },
     after: 'the Yamaha CP-70',
     tagline: 'A real piano action with no soundboard: piezo pickups under the bridge hear the strings directly.',
@@ -109,7 +109,7 @@ export const INSTRUMENTS = [
     accent: '#e8a0c8',
   },
   {
-    id: 'clavier', name: 'Tangent Clavier', section: 'electric', ready: true, version: '0.3.1', trim: 4.5,
+    id: 'clavier', name: 'Tangent Clavier', section: 'electric', ready: true, version: '0.4.0', trim: 4.5,
     plugin: { code: 'Clav', ready: true },
     after: 'the Hohner Clavinet',
     tagline: 'A rubber tangent pins the string to an anvil; two magnetic pickups comb-filter the twang.',
@@ -125,7 +125,7 @@ export const INSTRUMENTS = [
     accent: '#ffcf70',
   },
   {
-    id: 'bowed', name: 'Viola Organista', section: 'experimental', ready: true, version: '0.3.1', trim: 3,
+    id: 'bowed', name: 'Viola Organista', section: 'experimental', ready: true, version: '0.4.0', trim: 3,
     plugin: { code: 'Viol', ready: true },
     after: "Leonardo da Vinci's design (1488)",
     tagline: 'Rosined wheels bow the strings while you hold the keys: stick–slip friction, from scratch.',

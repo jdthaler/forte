@@ -81,7 +81,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "bowed", .name = "Viola Organista", .version = "0.3.1",
+    .slug = "bowed", .name = "Viola Organista", .version = "0.4.0",
     .description = "Rosined wheels bow the strings while you hold the keys: stick–slip friction, from scratch.", .auSubtype = "Viol",
     .vst3Id = {0x8f, 0x96, 0xa7, 0x75, 0x8f, 0xce, 0x93, 0xf2, 0x83, 0xec, 0xa4, 0x57, 0x6e, 0xab, 0xc3, 0x2c},
     .params = kParams, .paramCount = p::count,
