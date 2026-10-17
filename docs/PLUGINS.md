@@ -331,9 +331,9 @@ Done (Forte 0.13.0; per instrument and automatic in 0.17.0):
    creates the tag itself (`plugins-v<Forte version>`, then `-2`, `-3`…), since sessions don't
    push tags, and writes the notes. It can also be started from the Actions tab.
 3. Each plugin's version is its instrument's (`<slug>-info.cmake`, generated).
-4. `shared/plugins.js` names the archives. The front page's Plugins section links every
-   instrument's together and each one's alone; an instrument's page has them under ↓ Plugin,
-   at the top of How it works (`…/#plugin`).
+4. `shared/plugins.js` names the archives. The front page's All Plugins overlay links every
+   instrument's together; an instrument's page has its own under ↓ Plugin, in a dialog of its
+   own (`…/#plugin`; on phones, a line at the top of How it works opens it).
 
 A port sets `plugin: { code, ready: true }` in `shared/registry.js` (`test/site-tests.mjs`
 checks it against `native/instruments/`), and its plugins are released when it is merged.
