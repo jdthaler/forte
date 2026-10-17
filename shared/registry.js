@@ -38,7 +38,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'harpsichord', name: 'Harpsichord', section: 'traditional', ready: true, version: '0.2.1', trim: -2,
-    plugin: { code: 'Hrps' },
+    plugin: { code: 'Hrps', ready: true },
     after: 'the Flemish double-manual harpsichord (Ruckers, 1600s)',
     tagline: 'A quill bends, slips off the string and plucks it; stops change where and how it plucks.',
     physics: 'Plectrum contact and release · plucked stiff strings',
