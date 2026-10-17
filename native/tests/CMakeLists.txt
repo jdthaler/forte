@@ -8,13 +8,13 @@ endif()
 add_test(NAME core COMMAND forte_tests)
 
 # each ported instrument's own native tests: <slug>-tests.cpp
-foreach(slug template bubbles vibraphone carillon glass gongs)
+foreach(slug template bubbles vibraphone carillon glass gongs piano harpsichord clavier grand bowed)
   if (TARGET forte_${slug})
     add_executable(forte_${slug}_tests ${slug}-tests.cpp)
     target_link_libraries(forte_${slug}_tests PRIVATE forte_${slug})
-    if (EMSCRIPTEN)
+    if (EMSCRIPTEN) # with the stack the instrument's WebAssembly has (forte_add_wasm): Eigen keeps blocks of up to 128 KB on it
       set_target_properties(forte_${slug}_tests PROPERTIES SUFFIX ".cjs")
-      target_link_options(forte_${slug}_tests PRIVATE -sALLOW_MEMORY_GROWTH=1 -sENVIRONMENT=node)
+      target_link_options(forte_${slug}_tests PRIVATE -sALLOW_MEMORY_GROWTH=1 -sENVIRONMENT=node -sSTACK_SIZE=256kb)
     endif()
     add_test(NAME ${slug} COMMAND forte_${slug}_tests)
   endif()

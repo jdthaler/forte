@@ -76,7 +76,8 @@ export const useWasm = () => {
 // The engine switch, in the header beside Discover | Perform: C++ or JavaScript. Picking the
 // other one reloads the page with it (the views load their model with the page, so they switch
 // too), and every page remembers it. Amber when the C++ did not load and the JavaScript plays.
-function engineSwitch() {
+// Returns show(kind), for the worklet's engine message. (Exported for pages without the shell.)
+export function engineSwitch() {
   const play = $('.forte-play');
   if (!play) return () => {};
   const box = document.createElement('div');

@@ -1,14 +1,22 @@
 // clavier-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName } from '../../shared/shell.js';
+import { createShell, noteName, useWasm } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { strikeSpeed } from './clavier-params.js';
 import { INSTRUMENT } from './clavier-instrument.js';
-import {
-  keyModel, stringDesign, releasedFreqs, pickupX, pickupMix, pickupWeight, pressureCents,
-  STEEL, REST_GAP, PRESS_MAX,
-} from './clavier-model.js';
+import * as jsModel from './clavier-model.js';
+import { STEEL, REST_GAP, PRESS_MAX } from './clavier-model.js';
 import { ClavierEngine } from './clavier-engine.js';
+import { wasmModel } from './clavier-wasm.js';
+
+// The views draw what the engine plays: the WebAssembly model once it has loaded (the same physics
+// as the engine, in C++), and the slow motion runs the WebAssembly engine; the JavaScript ones
+// until then or if it can't load.
+let model = { ...jsModel, Engine: ClavierEngine };
+if (useWasm()) {
+  wasmModel().then((m) => { model = m; releasedCache.clear(); update(); simulate(); },
+    (err) => console.warn(`clavier: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+}
 
 const $ = (s) => document.querySelector(s);
 const FS = 48000;
@@ -42,15 +50,15 @@ function releasedOf(key, P) {
   const sig = [key, P.stiff, P.gap, P.tip, P.wrap].join();
   if (!releasedCache.has(sig)) {
     let fr = [];
-    try { fr = releasedFreqs(key, P, 8); } catch { /* singular for odd settings: skip the markers */ }
+    try { fr = model.releasedFreqs(key, P, 8); } catch { /* singular for odd settings: skip the markers */ }
     if (releasedCache.size > 256) releasedCache.clear();
     releasedCache.set(sig, fr);
   }
   return releasedCache.get(sig);
 }
 function update() {
-  const P = shell.P, S = stringDesign(focus, P), { modes } = keyModel(focus, P, FS), X = pickupX(focus, P), [gl, gu] = pickupMix(P.pickup);
-  const pick = modes.map((m) => gl * pickupWeight(m.n, X.lower, S.L) + gu * pickupWeight(m.n, X.upper, S.L));
+  const P = shell.P, { S, modes } = model.keyModel(focus, P, FS), X = model.pickupX(focus, P), [gl, gu] = model.pickupMix(P.pickup);
+  const pick = modes.map((m) => gl * model.pickupWeight(m.n, X.lower, S.L) + gu * model.pickupWeight(m.n, X.upper, S.L));
   const pmax = Math.max(...pick.map(Math.abs), 1e-9);
   const released = releasedOf(focus, P);
   M = { S, modes, released, X, pick, pmax };
@@ -67,7 +75,7 @@ function update() {
     ['Tension', `${S.T.toFixed(1)} N, ${(S.stress / 1e6).toFixed(0)} MPa (${((100 * S.stress) / STEEL.strength).toFixed(0)} % of breaking)`],
     ['Stiffness', `B = ${S.B.toExponential(1)}`], ['Pull off anvil', `${S.pull.toFixed(2)} N`],
     ['Carry time', `${(tau * 1e3).toFixed(2)} ms → first null ${(v / (P.gap * 1e-3) / 1000).toFixed(1)} kHz`],
-    ['Full pressure', `+${pressureCents(focus, P.press + PRESS_MAX, P).toFixed(0)} ¢`],
+    ['Full pressure', `+${model.pressureCents(focus, P.press + PRESS_MAX, P).toFixed(0)} ¢`],
     ['Released', released.length ? `${released[0].toFixed(1)} Hz (−${(-1200 * Math.log2(released[0] / S.f0)).toFixed(0)} ¢: the open string, L + Ln)` : '—'],
     ['Pickups', `A ${(X.lower * 100).toFixed(1)} cm, B ${(X.upper * 100).toFixed(1)} cm from tailpiece`],
   ];
@@ -80,7 +88,7 @@ function update() {
 }
 
 function showPress() {
-  const P = shell.P, F = P.press + PRESS_MAX * Math.max(pressure, bend), c = pressureCents(focus, F, P);
+  const P = shell.P, F = P.press + PRESS_MAX * Math.max(pressure, bend), c = model.pressureCents(focus, F, P);
   $('#press-read').textContent = `${F.toFixed(1)} N · ${c >= 0 ? '+' : ''}${c.toFixed(1)} ¢`;
 }
 
@@ -88,11 +96,11 @@ function showPress() {
 animate(() => {
   const cv = $('#comb');
   if (cv.offsetParent === null || !M) return;
-  const { ctx, w, h } = fit(cv), P = shell.P, { S, X } = M, [gl, gu] = pickupMix(P.pickup);
+  const { ctx, w, h } = fit(cv), P = shell.P, { S, X } = M, [gl, gu] = model.pickupMix(P.pickup);
   ctx.clearRect(0, 0, w, h);
   const n = Math.min(32, Math.max(4, M.modes.length)), padL = 30, padB = 16, padT = 6;
   const A = [], B = [], C = [];
-  for (let i = 1; i <= n; i++) { const a = pickupWeight(i, X.lower, S.L), b = pickupWeight(i, X.upper, S.L); A.push(a); B.push(b); C.push(gl * a + gu * b); }
+  for (let i = 1; i <= n; i++) { const a = model.pickupWeight(i, X.lower, S.L), b = model.pickupWeight(i, X.upper, S.L); A.push(a); B.push(b); C.push(gl * a + gu * b); }
   const top = Math.max(...A.map(Math.abs), ...B.map(Math.abs), ...C.map(Math.abs), 1e-9), range = 40;
   const Xp = (i) => padL + ((i + 0.5) * (w - padL - 4)) / n, Y = (v) => padT + ((h - padT - padB) * Math.min(range, -db(v / top))) / range;
   ctx.font = '10px system-ui, sans-serif'; ctx.strokeStyle = css('--grid'); ctx.fillStyle = css('--muted'); ctx.textAlign = 'right';
@@ -132,10 +140,10 @@ function kickSim() {
   if (window.requestIdleCallback) requestIdleCallback(go, { timeout: 300 }); else setTimeout(go, 60);
 }
 function runSim() {
-  const P = shell.P, key = focus, vel = focusVel ?? P.velocity, e = new ClavierEngine(FS), muted = P.muteOn || shell.sustain;
+  const P = shell.P, key = focus, vel = focusVel ?? P.velocity, e = new model.Engine(FS), muted = P.muteOn || shell.sustain;
   e.setParams({ ...P, room: 0 });
   e.setSustain(shell.sustain); e.muteLevel = muted ? P.mute : 0; // the felt is already on the strings
-  const S = stringDesign(key, P), hold = Math.min(0.09, Math.max(0.012, 4 / S.f0)), tail = Math.min(0.08, Math.max(0.012, 3 / S.fRelease));
+  const S = model.stringDesign(key, P), hold = Math.min(0.09, Math.max(0.012, 4 / S.f0)), tail = Math.min(0.08, Math.max(0.012, 3 / S.fRelease));
   const n1 = Math.round((hold + 0.004) * FS), n2 = Math.round(tail * FS), stride = Math.max(1, Math.ceil((n1 + n2) / 900));
   e.noteOn(key, vel);
   const v = e.byKey.get(key), L = new Float32Array(stride), R = new Float32Array(stride), frames = [];
@@ -148,7 +156,8 @@ function runSim() {
   const nx = 160, ny = 32, N = v.N, Mm = v.M, sinT = new Float32Array(nx * N), cosT = new Float32Array(ny * Mm);
   for (let i = 0; i < nx; i++) for (let j = 0; j < N; j++) sinT[i * N + j] = Math.sin((v.mdl.modes[j].n * Math.PI * i) / (nx - 1));
   for (let i = 0; i < ny; i++) for (let j = 0; j < Mm; j++) cosT[i * Mm + j] = Math.cos(((j + 0.5) * Math.PI * i) / (ny - 1));
-  sim = { frames, S, P: { ...P }, key, vel, nx, ny, N, Mm, sinT, cosT, tRel: n1 / FS, X: pickupX(key, P), muted };
+  sim = { frames, S, P: { ...P }, key, vel, nx, ny, N, Mm, sinT, cosT, tRel: n1 / FS, X: model.pickupX(key, P), muted };
+  e.destroy?.(); // (a WebAssembly engine's memory)
   $('#sim-name').textContent = `${noteName(key)} · ${strikeSpeed(vel).toFixed(1)} m/s`;
   simT0 = performance.now();
 }
@@ -175,7 +184,7 @@ animate(() => {
   ctx.strokeStyle = 'rgba(200,204,212,0.22)'; ctx.setLineDash([4, 5]);
   ctx.beginPath(); ctx.moveTo(x0, Y(0)); ctx.lineTo(x1, Y(0)); ctx.stroke(); ctx.setLineDash([]);
   // pickups (A under the string, B over it), drawn where they sit along the speaking length
-  const [gl, gu] = pickupMix(P.pickup);
+  const [gl, gu] = model.pickupMix(P.pickup);
   for (const [x, up, on, lbl] of [[X.lower, false, gl !== 0, 'A'], [X.upper, true, gu !== 0, 'B']]) {
     const px = XP(Lt - x), py = up ? Y(lo) + 2 : Y(hi) - 16;
     ctx.globalAlpha = on ? 1 : 0.35;

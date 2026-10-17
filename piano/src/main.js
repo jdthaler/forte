@@ -1,10 +1,14 @@
 // main.js — the page: UI, views, computer keyboard + MIDI input. The instrument
 // itself (parameters, engine, voice data, output chain) is in piano-instrument.js.
+// The worklet runs the WebAssembly build (piano-wasm.js) when it can, and the views call
+// its model once it has loaded; both fall back to the JavaScript (?engine=js forces it).
 
 import { ALL_PARAMS } from './params.js';
 import { INSTRUMENT, GROUPS, DEFAULTS, PRESETS, keyModel } from './piano-instrument.js';
 import { noteName, MATERIALS, NMAX_MODES } from './physics.js';
 import { PianoEngine } from './engine.js'; // the slow-motion view runs its own copy
+import { PianoWasmEngine, wasmModel } from './piano-wasm.js';
+import { useWasm, engineSwitch } from '../../shared/shell.js';
 import { createChain } from '../../shared/chain.js';
 import { MotionView, SpectrumView, drawSection, FAMILY } from './viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
@@ -38,8 +42,22 @@ const sent = new Map();        // MIDI key → the voice data the engine holds f
 const held = new Map();        // keyboard code → MIDI key
 const sounding = new Map();    // MIDI key → number of sources holding it
 
-const keyData = (key) => keyModel(key, P, fs); // { model, data }, cached in piano-instrument.js
+// The WebAssembly model (piano-wasm.js) once it has loaded: { model, data, packed } per key, as
+// the JavaScript's keyModel gives { model, data }; both cache the latest version of each key.
+let wasm = null;
+if (useWasm()) {
+  wasmModel().then((m) => { wasm = m; modelChanged(); },
+    (err) => console.warn(`piano: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+}
+const keyData = (key) => (wasm ? wasm.keyModel(key, P, fs) : keyModel(key, P, fs));
+// (P as well: a WebAssembly engine takes all the parameters)
+const paramsMessage = () => ({ type: 'params', params: INSTRUMENT.engineParams(P), P: { ...P } });
 const engineParams = () => INSTRUMENT.engineParams(P);
+let engineKind = null; // what the worklet runs: 'wasm' or 'js' (it says so when it starts)
+// What a note sends the engine: the JavaScript engine takes the key's voice data object; the
+// WebAssembly one that data packed by the page's WebAssembly model, or, without that model,
+// nothing (it then builds the key itself).
+const noteData = (key, velocity) => (engineKind === 'wasm' ? wasm?.keyModel(key, P, fs).packed : INSTRUMENT.noteData(key, velocity, P, fs));
 
 // ---------------------------------------------------------------------------
 // audio
@@ -56,11 +74,22 @@ function startAudio() {
     const ctx = new AudioContext({ latencyHint: 'interactive' });
     if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
     await ctx.audioWorklet.addModule(INSTRUMENT.engine.module);
+    // the WebAssembly build: its bytes go to the worklet, which falls back to the JavaScript
+    // engine if it can't run them
+    let wasmBuild;
+    if (INSTRUMENT.wasm && useWasm()) {
+      try {
+        const bytes = await (await fetch(INSTRUMENT.wasm.binary)).arrayBuffer();
+        await ctx.audioWorklet.addModule(INSTRUMENT.wasm.module);
+        wasmBuild = { name: INSTRUMENT.wasm.name, bytes };
+      } catch (err) { console.warn(`piano: the WebAssembly engine did not load (${err.message}); the JavaScript one plays`); }
+    }
     await ctx.audioWorklet.addModule(new URL('../../shared/worklet.js', import.meta.url));
     const node = new AudioWorkletNode(ctx, 'forte-processor', {
       numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
-      processorOptions: { engine: INSTRUMENT.engine.name },
+      processorOptions: { engine: INSTRUMENT.engine.name, wasm: wasmBuild },
     });
+    const kind = new Promise((resolve) => { engineStarted = resolve; }); // notes wait to know which engine plays
     // dry + soundboard, room, volume, limiter (shared/chain.js); the analyser hears the strings alone
     const chain = createChain(ctx, node, INSTRUMENT.chain);
     const analyser = ctx.createAnalyser();
@@ -72,9 +101,10 @@ function startAudio() {
     fs = ctx.sampleRate; // the voice data's version includes it: keys are rebuilt if it is not 48 kHz
     audio = { ctx, node, analyser, chain };
     applyMix();
-    node.port.postMessage({ type: 'params', params: engineParams() });
+    node.port.postMessage(paramsMessage());
     node.port.postMessage({ type: 'sustain', on: sustain });
     spectrum.setAnalyser(analyser);
+    await kind;
     if (ctx.state !== 'running') await ctx.resume();
     live = true;
     $('#start').textContent = `Audio on · ${(ctx.sampleRate / 1000).toFixed(1)} kHz`;
@@ -89,11 +119,20 @@ function applyMix() {
   if (audio) audio.chain.apply(P, trimGain(INSTRUMENT.id)); // level-matched across instruments
 }
 
+let engineStarted = null;
+const showEngine = INSTRUMENT.wasm ? engineSwitch() : () => {}; // C++ | JS in the header
 function onWorklet(m) {
   if (m.type === 'stats') {
     const el = $('#cpu');
     el.textContent = `CPU ${(m.load * 100).toFixed(0)} % · ${m.voices} voices · ${m.modes} modes`;
+    el.title = `Engine: ${engineKind === 'wasm' ? 'WebAssembly (C++)' : 'JavaScript'}`;
     el.classList.toggle('hot', m.load > 0.7);
+  } else if (m.type === 'engine') {
+    engineKind = m.kind;
+    document.body.dataset.engine = m.kind;
+    showEngine(m.kind);
+    if (m.reason) console.warn(`piano: the WebAssembly engine failed (${m.reason}); the JavaScript one plays`);
+    engineStarted?.(m.kind);
   } else if (m.type === 'error') {
     toast(m.key !== undefined ? `${noteName(m.key)}: ${m.message} — voice silenced` : m.message);
   }
@@ -107,9 +146,9 @@ async function noteOn(key, velocity) {
   sounding.set(key, (sounding.get(key) || 0) + 1);
   keyboardView.set(key, true);
   const a = await startAudio();
-  const data = INSTRUMENT.noteData(key, velocity, P, fs);
+  const data = noteData(key, velocity);
   const msg = { type: 'noteOn', key, velocity };
-  if (sent.get(key) !== data) { msg.data = data; sent.set(key, data); } // the engine keeps the last one
+  if (data && sent.get(key) !== data) { msg.data = data; sent.set(key, data); } // the engine keeps the last one
   a.node.port.postMessage(msg);
   setFocus(key, velocity);
 }
@@ -349,7 +388,7 @@ function setAll(newP) {
   P = newP;
   for (const id of controls.keys()) refreshControl(id);
   refreshVisibility();
-  if (audio) audio.node.port.postMessage({ type: 'params', params: engineParams() });
+  if (audio) audio.node.port.postMessage(paramsMessage());
   applyMix();
   updateHelp();
   saveParams();
@@ -368,7 +407,7 @@ function setParam(id, v, opts = {}) {
   saveParams();
   if (id === 'velocity') { updateHelp(); refreshControl(id); return; }
   if (p.kind === 'engine') {
-    if (audio) audio.node.port.postMessage({ type: 'params', params: engineParams() });
+    if (audio) audio.node.port.postMessage(paramsMessage());
     modelChangedSoon(true);
   } else if (p.kind === 'mix') applyMix();
   else if (p.kind === 'model') { // a new version of the voice data (piano-instrument.js)
@@ -425,11 +464,13 @@ function setFocus(key, velocity) {
   simTimer = setTimeout(() => runSim(key, velocity), 30);
 }
 
+// The first moments after the strike, on this thread: the WebAssembly engine on the WebAssembly
+// model's data once it has loaded, the JavaScript engine otherwise.
 function runSim(key, velocity) {
-  const { model, data } = keyData(key);
-  const eng = new PianoEngine(fs);
-  eng.setParams(engineParams());
-  const v = eng.noteOn(key, velocity, data);
+  const { model, data, packed } = keyData(key);
+  const eng = wasm ? new PianoWasmEngine(fs) : new PianoEngine(fs);
+  eng.setParams(wasm ? { ...P } : engineParams());
+  const v = eng.noteOn(key, velocity, wasm ? packed : data);
   const period = 1 / model.info.f0;
   const total = Math.round(Math.min(0.05, Math.max(0.008, 4 * period)) * fs);
   const stride = Math.max(1, Math.ceil(total / 700));
@@ -447,7 +488,8 @@ function runSim(key, velocity) {
     eng.process(L, R, stride);
     if (!v.hammerOn) amps = v.modeAmplitudes(eng);
   }
-  const contactMs = (v.contactSamples / fs) * 1000;
+  const contactMs = (v.contactSamples / fs) * 1000, Fmax = v.Fmax;
+  eng.destroy?.();
   motion.set({
     frames, eta: Float64Array.from(eta), dt: stride / fs, model, data, P: { ...P },
     title: `${noteName(key)} · ${velocity.toFixed(2)} m/s`,
@@ -468,7 +510,7 @@ function runSim(key, velocity) {
   const families = present.map((fam) => ({ fam, f: Array.from(model.families[fam].omega, (w) => w / (2 * Math.PI)) }));
   spectrum.set({ f0: model.info.f0, list, families });
   $('#legend').innerHTML = present.map((f) => `<span><i style="background:${FAMILY[f].color}"></i>${legendName(f)}</span>`).join('')
-    + `<span>hammer contact ${contactMs.toFixed(2)} ms · peak force ${v.Fmax.toFixed(1)} N</span>`;
+    + `<span>hammer contact ${contactMs.toFixed(2)} ms · peak force ${Fmax.toFixed(1)} N</span>`;
 }
 
 function legendName(f) {

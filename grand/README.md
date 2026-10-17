@@ -240,6 +240,17 @@ average, or 90 % in the worst block, it shrinks by a quarter, and under
 30 % it grows back by a tenth. Touch devices, usually slower, start from a
 ceiling of 2400.
 
+**In C++.** The same engine and model run as WebAssembly on this page (the
+JavaScript is the fallback; `?engine=js` in the address forces it), and the
+slow-motion view and the mode table re-run the strike with them; and as
+plugins (CLAP, VST3, AU and a standalone app), where CC64 is the damper
+pedal. The WebAssembly plays what the JavaScript plays to float32 rounding
+(within 4·10⁻⁹ on the reference scripts), and the same test suite passes on
+it. In the plugins, a key's partials (and the soundboard, a few
+milliseconds) are built on a worker thread for the parameters they depend
+on; the WebAssembly builds them when they are first needed, as the
+JavaScript does. Ten bass-heavy voices take about 6 % of a core in C++.
+
 ## What to listen for
 
 `examples/grand/`, each isolating one effect:
@@ -294,12 +305,14 @@ grand/src/grand-model.js             physics: scale, strings, hammer data, bridg
 grand/src/grand-engine.js            real-time engine: modes, implicit hammer, bridge channels, board, piezo, EQ
 grand/src/grand-params.js            parameters and presets
 grand/src/grand-main.js              page wiring; slow-motion string, modes table, spectrum, partial weights; load-following oscillator budget
-test/grand-tests.mjs                 node test/grand-tests.mjs
+grand/src/grand-wasm.js              the C++ engine and model as WebAssembly (grand/wasm/grand.wasm)
+native/instruments/grand/            the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
+test/grand-tests.mjs                 node test/grand-tests.mjs (FORTE_ENGINE=wasm: on the WebAssembly)
 tools/render-grand.mjs               node tools/render-grand.mjs → examples/grand/
 ```
 
 The engine imports the felt-hammer grading and the concert scale from
-`piano/src/physics.js`.
+`piano/src/physics.js` (the C++ model has its own copy of those four functions).
 
 ## Simplifications
 

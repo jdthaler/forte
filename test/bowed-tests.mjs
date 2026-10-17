@@ -8,6 +8,7 @@
 // then level, sub-audio content, stability and speed.
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   RANGE, STEEL, stringDesign, loopDesign, schelleng, friction, frictionForce, mu, keyForce, riseTime, helmholtz,
   plateYinf, plateDensity, plateFreq, plateShape, boardModes, wallace, BOARD, VOICED, TUNE_TABLE,
@@ -19,7 +20,7 @@ import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS } from '../bowed/src/bowed-params.js';
 import { renderEngine } from '../tools/audio-util.mjs';
 import { keyFreq } from '../shared/dsp.js';
-import { bowedFreq } from '../tools/bowed-tuning.mjs';
+import { bowedFreq, tuneHeader } from '../tools/bowed-tuning.mjs';
 
 const OrganistaEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
@@ -173,6 +174,10 @@ test('the strings load the board: each plate mode loses Σ Z₀φ²/2M to them, 
   }
   const wood = Math.PI * modes[0].f * 0.03, ratio = stringLoad(1, 1) / wood;
   assert.ok(ratio > 2 && ratio < 6, `(1,1): strings ${stringLoad(1, 1).toFixed(1)} s⁻¹, wood ${wood.toFixed(1)} s⁻¹`);
+});
+
+test('the C++ port tunes from the same table (native/instruments/bowed/bowed-tuning.h is fresh: node tools/bowed-tuning.mjs --native)', () => {
+  assert.equal(readFileSync(new URL('../native/instruments/bowed/bowed-tuning.h', import.meta.url), 'utf8'), tuneHeader(TUNE_TABLE));
 });
 
 console.log('the bowed string');
