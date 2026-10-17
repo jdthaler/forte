@@ -102,7 +102,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'reeds', name: 'Reed Piano', section: 'electric', ready: true, version: '0.3.1', trim: -1,
-    plugin: { code: 'Reed' },
+    plugin: { code: 'Reed', ready: true },
     after: 'the Wurlitzer 200A',
     tagline: 'Struck steel reeds tuned with solder, sensed as one plate of a charged capacitor.',
     physics: 'Cantilever reeds · electrostatic pickup',

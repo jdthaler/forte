@@ -17,6 +17,8 @@ import { INSTRUMENT } from '../reeds/src/reeds-instrument.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../reeds/src/reeds-params.js';
 import { renderEngine } from '../tools/audio-util.mjs';
+import { readFileSync } from 'node:fs';
+import { nativeTable, headerFile } from '../tools/reeds-native-table.mjs';
 
 const ReedEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
@@ -156,6 +158,9 @@ test('the table covers the reed\'s whole travel: out to the frame, where the tip
   let far = 0; for (const y of t.y) far = Math.max(far, Math.abs(DEFAULTS.offset * 1e-3 + y));
   assert.ok(far < 0.5 * STOP.y, `A1 ff swings to ${(far * 1e3).toFixed(2)} mm`);
   note(`frame contact at ±${(STOP.y * 1e3).toFixed(2)} mm; extreme reeds reach ${(worst * 1e3).toFixed(2)} mm; A1 ff as voiced ${(far * 1e3).toFixed(2)} mm`);
+});
+test('the C++ port plays from the same table (native/instruments/reeds/slot-table.h is fresh: node tools/reeds-native-table.mjs)', () => {
+  assert.equal(readFileSync(headerFile, 'utf8'), nativeTable());
 });
 test('narrow gaps approach the parallel-plate value 2ε₀ h/g; wide gaps are all fringe', () => {
   const r = SLOT_GAPS.map((g) => capAt(capCurve(g), 0).C / (EPS0 * PICKUP.ell) / ((2 * REED.h) / (g * 1e-3))); // C′/(2ε₀h/g)
