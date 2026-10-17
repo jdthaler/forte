@@ -27,6 +27,9 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine
   modWheel: 'speed',                    // CC1: the motor's speed
   engine: { name: 'VibraphoneEngine', module: new URL('./vibraphone-engine.js', import.meta.url).href },
+  // the same physics in C++ (native/instruments/vibraphone), built as WebAssembly: the page runs it
+  // when it can, the JavaScript engine otherwise
+  wasm: { name: 'VibraphoneWasmEngine', module: new URL('./vibraphone-wasm.js', import.meta.url).href, binary: new URL('../wasm/vibraphone.wasm', import.meta.url).href },
   noteData: (key, vel, P) => dataFor(key, P.depth),
   chain: { volume: 'volume', room: 'room' },
 };

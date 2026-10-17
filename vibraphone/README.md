@@ -333,6 +333,17 @@ note peaks at 0.27–0.32 across the keyboard.
   thread never solves a bar.
 * Ten sounding bars with the motor running take about 4 % of one core
   (Node, on the shared cloud machine this was built on).
+* **In C++**: the same engine and model run as WebAssembly on this page (the
+  JavaScript is the fallback; `?engine=js` in the address forces it) and as
+  plugins (CLAP, VST3, AU and a standalone app), where CC64 is the damper
+  pedal and the mod wheel the shaft speed. The page builds each bar with the
+  WebAssembly model and sends it with the note, as it does for the
+  JavaScript; a plugin builds every bar on a worker thread as soon as the
+  undercut knob settles, and a note whose bar isn't ready yet waits a few
+  milliseconds for it. The WebAssembly plays what the JavaScript plays to
+  within 10⁻⁷ of the peak (float32 output rounding), and the same test suite
+  passes on it. Ten bars take about 2 % of a core in C++; a bar's modes take
+  2–7 ms to build.
 
 ## What to listen for
 
@@ -384,8 +395,10 @@ vibraphone/src/vibraphone-model.js        bars, losses, radiation, tubes, coupli
 vibraphone/src/vibraphone-engine.js       real-time engine (AudioWorklet and Node)
 vibraphone/src/vibraphone-params.js       parameters and presets
 vibraphone/src/vibraphone-main.js         page wiring and views
-test/vibraphone-tests.mjs                 node test/vibraphone-tests.mjs (23 tests, ~20 s)
-tools/vibraphone-bars.mjs                 node tools/vibraphone-bars.mjs → vibraphone/src/bar-table.js
+vibraphone/src/vibraphone-wasm.js         the C++ engine and model as WebAssembly (vibraphone/wasm/vibraphone.wasm)
+native/instruments/vibraphone/            the C++ port: FEM, model, engine, generated tables, reference (plugins and WebAssembly)
+test/vibraphone-tests.mjs                 node test/vibraphone-tests.mjs (24 tests, ~35 s; FORTE_ENGINE=wasm: on the WebAssembly)
+tools/vibraphone-bars.mjs                 node tools/vibraphone-bars.mjs → vibraphone/src/bar-table.js and its C++ copy
 tools/render-vibraphone.mjs               node tools/render-vibraphone.mjs → examples/vibraphone/
 ```
 

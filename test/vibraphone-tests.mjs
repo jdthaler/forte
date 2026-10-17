@@ -17,6 +17,8 @@ import { BAR_TABLE } from '../vibraphone/src/bar-table.js';
 import { INSTRUMENT } from '../vibraphone/src/vibraphone-instrument.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../vibraphone/src/vibraphone-params.js';
+import { readFileSync } from 'node:fs';
+import { barTableHeader } from '../tools/vibraphone-bars.mjs';
 
 const VibraphoneEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
@@ -127,6 +129,9 @@ test('the optimiser, started cold, reproduces the table (F3, A4, F6)', () => {
     assert.ok(Math.abs(r.L / row[1] - 1) < 1e-5 && Math.abs(r.A - row[2]) < 1e-4 && Math.abs(r.D - row[3]) < 1e-4, `key ${k}: L ${r.L} vs ${row[1]}`);
     assert.ok(r.residualCents.every((c) => Math.abs(c) < 0.01));
   }
+});
+test('the C++ port plays from the same table (native/instruments/vibraphone/bar-table.h is fresh: node tools/vibraphone-bars.mjs --native)', () => {
+  assert.equal(readFileSync(new URL('../native/instruments/vibraphone/bar-table.h', import.meta.url), 'utf8'), barTableHeader(BAR_TABLE));
 });
 test('a plain bar (no undercut) must be half as long again to sound the same note, and rings at 1 : 2.7 : 5.3', () => {
   for (const k of [KEY_LO, 71, KEY_HI]) {

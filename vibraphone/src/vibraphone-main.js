@@ -1,10 +1,17 @@
 // vibraphone-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName } from '../../shared/shell.js';
+import { createShell, noteName, useWasm } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT, dataFor, isBuilt } from './vibraphone-instrument.js';
-import { KEY_LO, KEY_HI, barModel, tubeGeometry, tubeState, coupling, barTempScale, DAMPER_X, malletOf } from './vibraphone-model.js';
+import * as jsModel from './vibraphone-model.js';
+import { KEY_LO, KEY_HI, DAMPER_X } from './vibraphone-model.js';
 import { thickness, EB_RATIOS } from './bar.js';
+import { wasmModel } from './vibraphone-wasm.js';
+
+// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
+// physics as the engine, in C++), the JavaScript one until then or if it can't load.
+let model = { ...jsModel, thickness }, wasm = null;
+if (useWasm()) wasmModel().then((m) => { model = wasm = m; update(); warmUp(); }, (err) => console.warn(`vibraphone: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
 
 const $ = (s) => document.querySelector(s);
 const TAU = 2 * Math.PI;
@@ -12,25 +19,43 @@ const spectrum = new SpectrumView($('#spectrum'), { fLo: 80, fHi: 20000 });
 let focus = 60, live = null, history = [], etPeak = 0;
 
 // The bars' modal data (a few ms each) is sent with each note, so the audio thread never
-// solves a bar (the descriptor keeps it). Built ahead, a key at a time, when the page is idle.
+// solves a bar: the JavaScript's (the descriptor keeps it) for the JavaScript engine, the
+// WebAssembly model's, packed, for the WebAssembly engine. Built ahead, a key at a time, when the
+// page is idle.
+const packed = new Map();
+const wasmEngine = () => wasm && shell.engineKind !== 'js'; // until the worklet says, expect the WebAssembly
+function wasmData(key, depth) {
+  const id = `${key}|${depth}`;
+  let d = packed.get(id);
+  if (!d) { d = wasm.voiceData(key, depth); if (packed.size > 256) packed.clear(); packed.set(id, d); }
+  return d;
+}
+const noteData = (key, vel, P) => (wasmEngine() ? wasmData(key, P.depth) : dataFor(key, P.depth));
 let warm = null;
 function warmUp() {
   clearTimeout(warm);
-  const depth = shell.P.depth, keys = [];
-  for (let k = KEY_LO; k <= KEY_HI; k++) if (!isBuilt(k, depth)) keys.push(k);
+  const depth = shell.P.depth, keys = [], w = wasmEngine();
+  for (let k = KEY_LO; k <= KEY_HI; k++) if (w ? !packed.has(`${k}|${depth}`) : !isBuilt(k, depth)) keys.push(k);
   keys.sort((a, b) => Math.abs(a - focus) - Math.abs(b - focus));
-  const step = () => { const k = keys.shift(); if (k === undefined || depth !== shell.P.depth) return; dataFor(k, depth); warm = setTimeout(step, 15); };
+  const step = () => {
+    const k = keys.shift();
+    if (k === undefined || depth !== shell.P.depth || w !== wasmEngine()) return;
+    if (w) wasmData(k, depth); else dataFor(k, depth);
+    warm = setTimeout(step, 15);
+  };
   warm = setTimeout(step, 200);
 }
 
 const shell = createShell({
   ...INSTRUMENT,
+  noteData,
   base: 60, // Z = C4: the instrument starts at F3, so a C3 base left Z–E silent
   arrows: { param: 'velocity', step: 0.05 },
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key) => { if (key !== focus) history = []; focus = key; shell.keys.focus(key); update(); },
   onParam: (id) => { if (id === 'depth' || id === '*') warmUp(); update(); },
   onMessage: (m) => {
+    if (m.type === 'engine') { warmUp(); return; } // the worklet says which engine plays
     if (m.type !== 'vibe') return;
     live = { ...m, amp: Float64Array.from(m.amp), t: performance.now() / 1000 };
     etPeak = Math.max(m.Et, etPeak * 0.995);
@@ -46,10 +71,10 @@ let B = null, TG = null, TS = null;
 const fmtHz = (f) => (f < 1000 ? f.toFixed(1) : f.toFixed(0));
 function update() {
   const P = shell.P;
-  B = barModel(focus, P.depth);
-  TG = tubeGeometry(focus, B);
-  TS = tubeState(TG, B.modes[0].f, { gap: P.gap / 1000, detune: P.detune, temp: P.temp, cd: P.cd });
-  const g = B.geom, ts = barTempScale(P.temp), f1 = B.modes[0].f * ts, name = noteName(focus);
+  B = model.barModel(focus, P.depth);
+  TG = model.tubeGeometry(focus, B);
+  TS = model.tubeState(TG, B.modes[0].f, { gap: P.gap / 1000, detune: P.detune, temp: P.temp, cd: P.cd });
+  const g = B.geom, ts = model.barTempScale(P.temp), f1 = B.modes[0].f * ts, name = noteName(focus);
   $('#focus-name').textContent = name; $('#bar-key').textContent = name;
   $('#focus-size').textContent = `${(100 * g.L).toFixed(1)} × ${(1000 * g.b).toFixed(0)} × ${(1000 * g.h0).toFixed(1)} mm · ${(1000 * B.mass).toFixed(0)} g`;
   // the strike point's share of each mode, relative to the strongest
@@ -63,7 +88,7 @@ function update() {
     const plain = m.kind === 'bend' ? EB_RATIOS[m.n - 1].toFixed(2) : '';
     return `<tr class="${target ? 'tuned' : m.kind === 'tors' ? 'tors' : ''}"><td>${label}</td><td>${fmtHz(m.f * ts)}</td><td>${m.ratio.toFixed(3)}</td><td>${target ?? '—'}</td><td>${plain}</td><td>${T60 < 10 ? T60.toFixed(2) : T60.toFixed(1)}</td><td>${db > -60 ? db.toFixed(0) : '—'}</td></tr>`;
   });
-  const open = coupling(TS, 0, f1), shut = coupling(TS, Math.PI / 2, f1), M = malletOf(P);
+  const open = model.coupling(TS, 0, f1), shut = model.coupling(TS, Math.PI / 2, f1), M = model.malletOf(P);
   const rate = P.motor === 'run' ? `${(2 * P.speed).toFixed(1)} Hz (2 openings × ${P.speed.toFixed(2)} rev/s)` : P.motor === 'open' ? 'off, discs open' : 'off, discs closed';
   $('#modes').innerHTML = '<tr><th>mode</th><th>f (Hz)</th><th>× f₁</th><th>tuned</th><th>plain bar</th><th>T₆₀ alone (s)</th><th>at strike (dB)</th></tr>' + rows.join('')
     + `<tr><td colspan="7" class="note">${g.cut.d > 0 ? `Cut: ${(2 * g.cut.a * 100).toFixed(1)} cm long, ${(1000 * g.cut.d).toFixed(1)} mm deep at the flat centre (${(1000 * B.hmin).toFixed(1)} mm left), ${(2 * g.cut.c * 100).toFixed(1)} cm of it flat.` : 'No undercut: a plain bar, cut long enough to sound the note.'} `
@@ -85,7 +110,7 @@ animate(() => {
   const ex = Math.min(3 * sx, (0.22 * h) / g.h0), top = 18, X = (x) => x0 + x * sx;
   ctx.beginPath(); ctx.moveTo(X(0), top);
   ctx.lineTo(X(g.L), top);
-  for (let i = 200; i >= 0; i--) { const x = (i / 200) * g.L; ctx.lineTo(X(x), top + ex * thickness(g.cut, x - g.L / 2)); }
+  for (let i = 200; i >= 0; i--) { const x = (i / 200) * g.L; ctx.lineTo(X(x), top + ex * model.thickness(g.cut, x - g.L / 2)); }
   ctx.closePath();
   const grd = ctx.createLinearGradient(0, top, 0, top + ex * g.h0);
   grd.addColorStop(0, '#d7dde4'); grd.addColorStop(1, '#7f8892');
@@ -123,7 +148,7 @@ animate(() => {
     for (let k = 0; k < B.xs.length; k++) { const Xp = X(B.xs[k]), Yp = yc - (A * sc * m.w[k]) / wm; if (k) ctx.lineTo(Xp, Yp); else ctx.moveTo(Xp, Yp); }
     ctx.stroke(); ctx.globalAlpha = 1; ctx.lineWidth = 1;
     const dbs = fresh && amps[i] > 0 ? ` · ${(20 * Math.log10(amps[i] / amax)).toFixed(0)} dB` : '';
-    const label = `mode ${i + 1}: ${fmtHz(m.f * barTempScale(P.temp))} Hz = ${m.ratio.toFixed(3)} × f₁${dbs}`, ly = yc - rowH / 2 + 10;
+    const label = `mode ${i + 1}: ${fmtHz(m.f * model.barTempScale(P.temp))} Hz = ${m.ratio.toFixed(3)} × f₁${dbs}`, ly = yc - rowH / 2 + 10;
     ctx.fillStyle = css('--card') || '#1a1a1e'; ctx.globalAlpha = 0.75; ctx.fillRect(x0 + 18, ly - 9, ctx.measureText(label).width + 6, 12); ctx.globalAlpha = 1;
     ctx.fillStyle = css('--muted'); ctx.fillText(label, x0 + 21, ly);
   }
@@ -136,7 +161,7 @@ animate(() => {
   if (!B || !TS) return;
   const { ctx, w, h } = fit(tcv);
   ctx.clearRect(0, 0, w, h);
-  const P = shell.P, fresh = live && live.key === focus, f1 = B.modes[0].f * barTempScale(P.temp);
+  const P = shell.P, fresh = live && live.key === focus, f1 = B.modes[0].f * model.barTempScale(P.temp);
   const theta = live ? (fresh ? live.theta : live.shaft) : 0;
   // left: tube (closed at the bottom), bar section on top, disc in the mouth
   const tw = Math.min(70, w * 0.22), tx = 14 + tw * 0.15, ty = 34, th = h - ty - 10, cx = tx + tw / 2;
@@ -168,13 +193,13 @@ animate(() => {
   if (pw > 40) {
     ctx.strokeStyle = css('--grid'); ctx.strokeRect(px, py, pw, ph);
     const n = 120, ks = [], fs = [];
-    for (let i = 0; i <= n; i++) { const c = coupling(TS, (i / n) * TAU, f1); ks.push(c.kappa); fs.push(1200 * Math.log2(c.ft / f1)); }
+    for (let i = 0; i <= n; i++) { const c = model.coupling(TS, (i / n) * TAU, f1); ks.push(c.kappa); fs.push(1200 * Math.log2(c.ft / f1)); }
     const kmax = Math.max(...ks) * 1.1, fmin = Math.min(...fs, -50) * 1.1;
     const line = (arr, map, col) => { ctx.strokeStyle = col; ctx.beginPath(); arr.forEach((v, i) => { const X = px + (i / n) * pw, Y = map(v); if (i) ctx.lineTo(X, Y); else ctx.moveTo(X, Y); }); ctx.stroke(); };
     const Yk = (v) => py + ph - (v / kmax) * ph, Yf = (v) => py + ((v - 0) / fmin) * ph;
     ctx.lineWidth = 1.5; line(ks, Yk, '#e6c15a'); line(fs, Yf, '#9a9aa8'); ctx.lineWidth = 1;
     let ang = ((theta % TAU) + TAU) % TAU;
-    const c = coupling(TS, ang, f1), Xa = px + (ang / TAU) * pw;
+    const c = model.coupling(TS, ang, f1), Xa = px + (ang / TAU) * pw;
     ctx.fillStyle = '#e6c15a'; ctx.beginPath(); ctx.arc(Xa, Yk(c.kappa), 3.5, 0, TAU); ctx.fill();
     ctx.fillStyle = '#9a9aa8'; ctx.beginPath(); ctx.arc(Xa, Yf(1200 * Math.log2(c.ft / f1)), 3, 0, TAU); ctx.fill();
     ctx.fillStyle = css('--muted');
