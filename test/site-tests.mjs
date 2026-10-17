@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { INSTRUMENTS, SECTIONS, FORTE_VERSION, TEMPLATE } from '../shared/registry.js';
+import { ASSETS, notes } from '../tools/plugin-release.mjs';
 
 let failures = 0;
 function test(name, fn) { // returns a promise for an async test
@@ -83,6 +84,25 @@ test('every ready instrument and the template have a unique VST3 class id (nativ
   for (const i of [...ready, TEMPLATE]) assert.match(ids[i.id]?.vst3 ?? '', /^[0-9A-F]{32}$/, `${i.id}: vst3`);
   const all = Object.values(ids).map((x) => x.vst3);
   assert.equal(new Set(all).size, all.length, 'ids are unique');
+});
+
+test('plugin.ready marks exactly the instruments with a native port', () => {
+  for (const i of INSTRUMENTS) {
+    const ported = has(`native/instruments/${i.id}/CMakeLists.txt`);
+    assert.equal(!!i.plugin?.ready, ported && i.ready, `${i.id}: plugin.ready should be ${ported && i.ready}`);
+  }
+});
+test('the release\'s archives are the ones CI packages and the landing page links to', () => {
+  const html = read('index.html'), ci = read('.github/workflows/native.yml');
+  assert.ok(html.includes('id="plugins"') && html.includes('id="plugin-list"'), '#plugins, #plugin-list');
+  for (const f of Object.values(ASSETS)) {
+    assert.ok(html.includes(`https://github.com/jdthaler/forte/releases/latest/download/${f}`), `index.html links ${f}`);
+    assert.ok(ci.includes(`dist/${f}`), `native.yml packages ${f}`);
+    assert.ok(read('.github/workflows/release-plugins.yml').includes(f), `release-plugins.yml checks ${f}`);
+  }
+  const md = notes();
+  for (const i of INSTRUMENTS.filter((i) => i.plugin?.ready)) assert.ok(md.includes(`| ${i.version} |`) && md.includes(i.name), `notes list ${i.name}`);
+  assert.ok(md.includes('xattr -dr com.apple.quarantine'), 'notes give the xattr command');
 });
 
 console.log('credits');
