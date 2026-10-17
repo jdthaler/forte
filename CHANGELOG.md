@@ -86,7 +86,8 @@ tagged; this changelog and the commit titles record them.
   on a 0.001 step) reads back as itself, so a saved state reloads exactly (clap-validator's state
   reproducibility test).
 - **`plugin.ready`** for the four, so they are on the front page's Plugins section and in the next
-  release; the template's generated files and WebAssembly carry Forte 0.23.0.
+  release, each with the plugin window (controls and keyboard) in its page's colour; the
+  template's generated files and WebAssembly carry Forte 0.23.0.
 ## 2026-10-17 — 6 ms less between a key and its sound
 
 ### Forte 0.21.1
