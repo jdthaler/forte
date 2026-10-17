@@ -49,8 +49,15 @@ body[data-instrument] .forte-mode button[aria-pressed="true"] { background: var(
 /* the engine switch (shared/shell.js), on pages with a C++ build: amber when the C++ did not load */
 body[data-instrument] .forte-engine.fallback { border-color: var(--warn); }
 body[data-instrument] .forte-engine.fallback button[aria-pressed="true"] { background: var(--warn); }
-/* the presets, at the top of the Controls panel */
+/* the presets: in the keyboard bar, or on a phone the first tile above the keys (shared/layout.js) */
 body[data-instrument] .forte-presets select { text-overflow: ellipsis; }
+.forte-preset-tile {
+  flex: 1 1 150px; max-width: 280px; min-width: 0; padding: 5px 10px 3px;
+  border: 1px solid var(--line); border-radius: 8px; background: rgba(255, 255, 255, 0.03);
+}
+.forte-preset-tile > label { display: block; font-size: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+body[data-instrument] .forte-preset-tile .forte-presets { margin: 0; }
+body[data-instrument] .forte-preset-tile select { width: 100%; margin: 2px 0 3px; padding: 3px 6px; }
 body[data-instrument] .forte-presets #reset { display: none; } /* "Default settings" in the menu presses it */
 /* "Start audio" until the audio is on, then the CPU meter (the black hole's voice count) in its place */
 body[data-instrument] #start.running,
@@ -177,6 +184,12 @@ body[data-instrument] .forte-kbbar button { padding: 3px 9px; }
 .forte-kbmap canvas { display: block; width: 100%; height: 100%; min-height: 0; }
 .forte-kbbar.all-keys > :is(.forte-kbmap, .forte-kbstep) { display: none; } /* every key fits */
 .forte-kbsize { display: flex; gap: 2px; margin-left: auto; }
+.forte-kbpresets { margin-left: auto; min-width: 0; }
+.forte-kbpresets:empty { display: none; }
+.forte-kbpresets + .forte-kbsize { margin-left: 0; }
+body[data-instrument] .forte-kbpresets .forte-preset-tile { padding: 0; border: 0; background: none; max-width: none; }
+.forte-kbpresets .forte-preset-tile > label { display: none; }
+body[data-instrument] .forte-kbpresets select { width: clamp(150px, 15vw, 240px); margin: 0; }
 body[data-instrument] .forte-kbsize button { width: 32px; padding: 3px 0; font-weight: 600; }
 .forte-pedal { min-width: 84px; }
 .forte-pedal.on, .forte-latch.on { background: var(--accent); color: var(--accent-ink, #111); border-color: transparent; }
@@ -333,6 +346,7 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
   .forte-perform .forte-seg { margin: 2px 0 1px; }
   body[data-instrument] .forte-perform .forte-seg button { min-height: 26px; padding-block: 2px; }
   body[data-instrument] .forte-perform .param select { min-height: 30px; margin: 1px 0 2px; }
+  body[data-instrument] .forte-preset-tile select { min-height: 30px; margin: 1px 0 2px; }
   body:not(.deck-shut) .forte-kbmap { flex: 0 0 72px; min-width: 0; } /* beside the controls: a thumbnail */
   body[data-instrument] #keyboard { height: min(var(--kb-h, 115px), 36svh); }
   body[data-instrument] .forte-play { order: 0; flex: 1 1 auto; }

@@ -9,10 +9,10 @@
 //           a page marks data-control (the organ's drawbars) and the parameters
 //           marked `perform: true` (which the page gives data-perform), then "More
 //           controls" for the rest (#controls: a column on wide screens, a panel
-//           that slides over the views on narrow ones), the presets at its top (with
-//           "Default settings", which stands in for the page's Reset button). A handle
-//           folds them away.
-//           Then the keyboard bar (◀ an overview of the whole range ▶, key size,
+//           that slides over the views on narrow ones). A handle folds them away.
+//           Then the keyboard bar (◀ an overview of the whole range ▶, the presets
+//           (with "Default settings", which stands in for the page's Reset button;
+//           on a phone they lead the controls above the keys instead), key size,
 //           the pedal, and ⌨ for the page's computer-keyboard and MIDI hints) and
 //           the keys: as many as fit the width at the chosen key size.
 // Explanations wait behind ⓘ buttons: a parameter's hint, a view's caption.
@@ -313,6 +313,13 @@ function addDefaults() {
 // header: the mode, Full screen and MIDI (and the presets' "Default settings")
 
 const modeBtns = [];
+let presetTile = null, presetSlot = null;
+const phoneQuery = matchMedia('(max-width: 600px), (max-width: 1050px) and (max-height: 500px)'); // as shared/layout.css
+function placePresets() {
+  if (!presetTile) return;
+  if (presetSlot && !phoneQuery.matches) presetSlot.appendChild(presetTile);
+  else if (presetTile.parentNode !== strip) strip.prepend(presetTile);
+}
 function setMode(m) {
   if (m === mode) return;
   mode = m; drawerOpen = false;
@@ -335,10 +342,20 @@ if (header) {
     seg.appendChild(b); modeBtns.push(b);
   }
   play.appendChild(seg);
-  // the presets stay at the top of the Controls panel (the header has the engine switch)
+  // the presets: in the keyboard bar, or on a phone (where the bar is full) the first tile of
+  // the controls above the keys; on a page with neither, the top of the Controls panel
   const presets = sidebar?.querySelector('.preset-row');
   if (presets) {
     presets.classList.add('forte-presets');
+    if (strip.isConnected) {
+      presetTile = el('div', 'forte-preset-tile');
+      const lab = el('label', '', 'Preset');
+      const sel = presets.querySelector('select');
+      if (sel?.id) lab.htmlFor = sel.id;
+      presetTile.append(lab, presets);
+      placePresets();
+      phoneQuery.addEventListener('change', placePresets);
+    }
     // "Default settings": stop the page seeing it as a preset, and reset instead
     presets.addEventListener('change', (e) => {
       if (e.target.value !== '__default') return;
@@ -538,7 +555,9 @@ export function attachKeyboard(kb) {
   sizes.setAttribute('role', 'group');
   sizes.setAttribute('aria-label', 'Key size');
   sizes.append(smaller, larger);
-  bar.append(prev, map, next, sizes);
+  presetSlot = el('div', 'forte-kbpresets');
+  bar.append(prev, map, next, presetSlot, sizes);
+  placePresets();
 
   // The pedal: a button that presses Space, so pages need no touch-specific code.
   const label = body.dataset.space;

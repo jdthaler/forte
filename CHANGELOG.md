@@ -10,6 +10,14 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-17 — the presets above the keys
+
+### Forte 0.18.0
+- **The presets move above the keys:** into the keyboard bar, beside the range overview, on a
+  tablet or a computer, and on a phone (where that bar is full) the first control in the strip
+  above the keys. No more opening More controls to change preset. "Default settings" works as
+  before, and no page's layout grows (phones scroll that strip as before).
+
 ## 2026-10-17 — an engine switch on the ported pages, the presets in Controls
 
 ### Forte 0.15.0
