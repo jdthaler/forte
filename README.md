@@ -79,12 +79,13 @@ turns it on by itself.
 
 Each instrument page reads top to bottom. At the top, the instrument's
 name opens the menu of every instrument (and Forte's home page), next to
-**How it works**, the mode and the presets. In the middle are the views,
+**How it works** and the mode (and, on an instrument with a C++ build,
+**C++ | JS**, which picks the engine). In the middle are the views,
 pictures of the physics as it plays: the main ones large, the rest behind
 tabs underneath. At the bottom, right above the keys, are the controls a
 player reaches for (stops and registrations, tremolo, drive, the mallet,
 the spin, the room and the volume, or the organ's drawbars), with **More
-controls** for everything else. Each shows its name, and its value while
+controls** for everything else, the presets at its top. Each shows its name, and its value while
 you move it. Explanations wait behind ⓘ buttons.
 
 There are two modes. **Discover** shows it all. **Perform** shows just

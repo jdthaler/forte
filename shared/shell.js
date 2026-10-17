@@ -23,7 +23,8 @@
 //   engine        { name: 'XEngine', module: URL of src/x-engine.js }: run by shared/worklet.js (see
 //                 the engine contract there)
 //   wasm          { name: 'XWasmEngine', module, binary }: the engine's WebAssembly build, run instead
-//                 when it loads (shared/wasm.js; ?engine=js in the page's address forces the JavaScript)
+//                 when it loads (shared/wasm.js). The header's engine switch picks C++ or JavaScript
+//                 for every page; ?engine=js or ?engine=wasm in the page's address overrides it
 //   worklet       instead of engine: { modules: ['src/x-engine.js'], engine: 'XEngine', outputs?: 2 },
 //                 or { modules: […, 'src/x-worklet.js'], processor: 'x-processor' } for a custom processor
 //   chain         the output chain (shared/chain.js): { volume, room?, tone?, body?, … }
@@ -64,8 +65,47 @@ const LOW_LBL = ['z', 's', 'x', 'd', 'c', 'v', 'g', 'b', 'h', 'n', 'j', 'm', ','
 const HIGH = ['KeyQ', 'Digit2', 'KeyW', 'Digit3', 'KeyE', 'KeyR', 'Digit5', 'KeyT', 'Digit6', 'KeyY', 'Digit7', 'KeyU', 'KeyI', 'Digit9', 'KeyO', 'Digit0', 'KeyP', 'BracketLeft', 'Equal', 'BracketRight'];
 const HIGH_LBL = ['q', '2', 'w', '3', 'e', 'r', '5', 't', '6', 'y', '7', 'u', 'i', '9', 'o', '0', 'p', '[', '=', ']'];
 
-// Run an instrument's WebAssembly build, unless the address says ?engine=js.
-export const useWasm = () => { try { return new URLSearchParams(location.search).get('engine') !== 'js'; } catch { return true; } };
+// Run an instrument's WebAssembly build, unless the address says ?engine=js or, without
+// ?engine=, the engine switch was last set to JavaScript (on any page).
+// The switch is for the beta: it goes with the JavaScript engines (docs/PLUGINS.md).
+const ENGINE = 'forte/engine/v1';
+export const useWasm = () => {
+  try { const q = new URLSearchParams(location.search).get('engine'); if (q) return q !== 'js'; } catch { /* no address */ }
+  try { return localStorage.getItem(ENGINE) !== 'js'; } catch { return true; }
+};
+// The engine switch, in the header beside Discover | Perform: C++ or JavaScript. Picking the
+// other one reloads the page with it (the views load their model with the page, so they switch
+// too), and every page remembers it. Amber when the C++ did not load and the JavaScript plays.
+// Returns show(kind), for the worklet's engine message. (Exported for pages without the shell.)
+export function engineSwitch() {
+  const play = $('.forte-play');
+  if (!play) return () => {};
+  const box = document.createElement('div');
+  box.className = 'forte-mode forte-engine';
+  box.setAttribute('role', 'group');
+  box.setAttribute('aria-label', 'Engine');
+  const btns = [['wasm', 'C++', 'The C++ engine, built to WebAssembly: the same code as the plugins'], ['js', 'JS', 'The JavaScript engine']].map(([kind, text, title]) => {
+    const b = document.createElement('button');
+    b.textContent = text; b.title = `${title}. Switching reloads the page.`; b.dataset.engine = kind;
+    b.addEventListener('click', () => {
+      if (b.getAttribute('aria-pressed') === 'true') { b.blur(); return; }
+      const url = new URL(location.href);
+      url.searchParams.delete('engine');
+      try { localStorage.setItem(ENGINE, kind); } catch { url.searchParams.set('engine', kind); } // no storage: the address says
+      location.replace(url);
+    });
+    return b;
+  });
+  box.append(...btns);
+  play.appendChild(box);
+  const show = (kind, fellBack) => {
+    for (const b of btns) b.setAttribute('aria-pressed', String(b.dataset.engine === kind));
+    box.classList.toggle('fallback', !!fellBack);
+    box.title = fellBack ? 'The C++ engine did not load, so the JavaScript one plays' : '';
+  };
+  show(useWasm() ? 'wasm' : 'js');
+  return (kind) => show(kind, kind === 'js' && useWasm());
+}
 
 let toastTimer = 0;
 export function toast(msg) {
@@ -95,6 +135,7 @@ export function createShell(cfg) {
   const save = () => { try { localStorage.setItem(STORE, JSON.stringify(shell.P)); } catch { /* storage unavailable */ } };
 
   const shell = { P: load(), DEFAULTS, ALL, audio: null, base: cfg.base ?? 48, sustain: false };
+  const showEngine = cfg.wasm ? engineSwitch() : () => {};
   const held = new Map(), sounding = new Map(), latched = new Set();
 
   // ---- audio ---------------------------------------------------------------
@@ -137,7 +178,7 @@ export function createShell(cfg) {
         }
         else if (m.type === 'error') toast(m.message);
         else if (m.type === 'engine') {
-          shell.engineKind = m.kind; document.body.dataset.engine = m.kind;
+          shell.engineKind = m.kind; document.body.dataset.engine = m.kind; showEngine(m.kind);
           if (m.reason) console.warn(`${cfg.id}: the WebAssembly engine failed (${m.reason}); the JavaScript one plays`);
         }
         cfg.onMessage?.(m);

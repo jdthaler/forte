@@ -32,7 +32,7 @@ body[data-instrument] #views {
 }
 body[data-instrument] > footer { position: relative; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
 
-/* ---- header: the name (and menu), the mode and the presets, then audio --------- */
+/* ---- header: the name (and menu), the mode (and engine), then audio ------------- */
 body[data-instrument] > header { gap: 8px 16px; }
 body[data-instrument] .brand { flex: 1 1 auto; flex-wrap: nowrap; align-items: center; gap: 10px; min-width: 0; }
 body[data-instrument] [data-forte-nav] { min-width: 0; }
@@ -46,8 +46,11 @@ body[data-instrument] > header .status { margin-left: auto; justify-content: fle
 body[data-instrument] .forte-mode button { border: 0; border-radius: 7px; background: transparent; color: var(--muted); padding: 4px 11px; }
 body[data-instrument] .forte-mode button:hover { color: var(--text); }
 body[data-instrument] .forte-mode button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink, #111); font-weight: 600; }
-body[data-instrument] .forte-presets { margin: 0; gap: 6px; flex: 0 1 auto; min-width: 0; }
-body[data-instrument] .forte-presets select { flex: 0 1 auto; width: clamp(150px, 15vw, 250px); min-width: 0; text-overflow: ellipsis; }
+/* the engine switch (shared/shell.js), on pages with a C++ build: amber when the C++ did not load */
+body[data-instrument] .forte-engine.fallback { border-color: var(--warn); }
+body[data-instrument] .forte-engine.fallback button[aria-pressed="true"] { background: var(--warn); }
+/* the presets, at the top of the Controls panel */
+body[data-instrument] .forte-presets select { text-overflow: ellipsis; }
 body[data-instrument] .forte-presets #reset { display: none; } /* "Default settings" in the menu presses it */
 /* "Start audio" until the audio is on, then the CPU meter (the black hole's voice count) in its place */
 body[data-instrument] #start.running,
@@ -261,7 +264,7 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
 
 /* ---- phones (portrait, or landscape under 500px tall): the page scrolls, so Safari
    can tuck its toolbars away, and the controls and keys stick to the bottom. The
-   header is two rows (name and audio, then mode and presets) and scrolls away with
+   header is two rows (name and audio, then mode and engine) and scrolls away with
    the views; Controls replaces the views instead of sliding over a sliver of them;
    the menus open below the header, inside the screen. */
 @media (max-width: 600px), (max-width: 1050px) and (max-height: 500px) {
@@ -290,8 +293,6 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
   body[data-instrument] .forte-switch { position: static; }
   body[data-instrument] .forte-menu { top: calc(100% + 4px); max-height: 70vh; max-height: 70svh; overflow: auto; }
   body[data-instrument] .forte-menu { left: max(8px, env(safe-area-inset-left)); width: min(400px, calc(100vw - 16px)); }
-  body[data-instrument] .forte-presets { flex: 1 1 auto; }
-  body[data-instrument] .forte-presets select { flex: 1 1 auto; width: 0; min-width: 8.5em; }
   body[data-instrument] .forte-fullscreen { display: none; }
 
   body.drawer-open:not(.no-views) #views { display: none; }

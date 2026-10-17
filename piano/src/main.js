@@ -8,7 +8,7 @@ import { INSTRUMENT, GROUPS, DEFAULTS, PRESETS, keyModel } from './piano-instrum
 import { noteName, MATERIALS, NMAX_MODES } from './physics.js';
 import { PianoEngine } from './engine.js'; // the slow-motion view runs its own copy
 import { PianoWasmEngine, wasmModel } from './piano-wasm.js';
-import { useWasm } from '../../shared/shell.js';
+import { useWasm, engineSwitch } from '../../shared/shell.js';
 import { createChain } from '../../shared/chain.js';
 import { MotionView, SpectrumView, drawSection, FAMILY } from './viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
@@ -120,6 +120,7 @@ function applyMix() {
 }
 
 let engineStarted = null;
+const showEngine = INSTRUMENT.wasm ? engineSwitch() : () => {}; // C++ | JS in the header
 function onWorklet(m) {
   if (m.type === 'stats') {
     const el = $('#cpu');
@@ -129,6 +130,7 @@ function onWorklet(m) {
   } else if (m.type === 'engine') {
     engineKind = m.kind;
     document.body.dataset.engine = m.kind;
+    showEngine(m.kind);
     if (m.reason) console.warn(`piano: the WebAssembly engine failed (${m.reason}); the JavaScript one plays`);
     engineStarted?.(m.kind);
   } else if (m.type === 'error') {

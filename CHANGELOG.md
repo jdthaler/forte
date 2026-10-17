@@ -78,14 +78,28 @@ tagged; this changelog and the commit titles record them.
   - **WebAssembly** in `bowed/wasm/`; the 29-test suite passes on it. **The page runs it**, and
     the loop design, voicing and attack map use the same C++, falling back to the JavaScript.
 
-### Forte 0.15.0
+### Forte 0.16.0
 - **`forte/background.h`**: without threads (WebAssembly), per-key data an engine replaced is
   freed once no voice holds it, instead of kept until the engine goes (memory grew each time a
   physics knob moved). The vibraphone's and glass armonica's WebAssembly are rebuilt.
 - **Native tests** run as WebAssembly with the 256 KB stack the instruments' modules have:
   Eigen keeps blocks of up to 128 KB on it.
+- **The engine switch** (C++ | JS) on the Ribbon Piano's page too, which has its own page code:
+  `shared/shell.js` exports `engineSwitch()`.
 - **`plugin.ready`** for the five, so the front page's Plugins section lists them; the template's
-  generated files and WebAssembly carry Forte 0.15.0.
+  generated files and WebAssembly carry Forte 0.16.0.
+
+## 2026-10-17 — an engine switch on the ported pages, the presets in Controls
+
+### Forte 0.15.0
+- **Engine switch:** every page with a C++ build (Bubble Organ, Vibraphone, Carillon, Glass
+  Armonica, Gong Keyboard, and each port to come) has a **C++ | JS** switch in its header,
+  beside Discover | Perform. Picking the other engine reloads the page with it, views included,
+  and every page remembers the choice. If the C++ fails to load, the switch shows JS in amber.
+  `?engine=js` or `?engine=wasm` in the address still overrides it. It is for the beta, and goes
+  when the JavaScript engines do.
+- **The presets move to the top of the Controls panel** (under More controls on a phone), with
+  "Default settings" as before, to make room for it in the header.
 
 ## 2026-10-17 — modal bars, bells and plates in C++ (step 4, first batch)
 

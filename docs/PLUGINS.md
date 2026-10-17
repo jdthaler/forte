@@ -213,7 +213,9 @@ starts new instruments with this port. Learned on the way:
   does), so `<slug>-wasm.js` takes the parameter groups, not the descriptor.
 - A WebAssembly engine takes all the parameters (`fullParams`), not the page's
   `engineParams(P)`, and computes its per-note data itself; the shell sends both.
-- `?engine=js` in a page's address forces the JavaScript engine, for comparing by ear.
+- The engine switch in a ported page's header (C++ | JS) picks the C++ or the JavaScript, for
+  comparing by ear (remembered for every page; `?engine=js` or `?engine=wasm` in the address
+  overrides it). It goes when the JavaScript engines do.
 - The smoke-test plugin is retired; its instrument stays as the plugin tests' test instrument.
 
 **The Bubble Organ: done (Bubble Organ 0.3.0, Forte 0.12.0).** `native/instruments/bubbles` has
@@ -284,7 +286,7 @@ Separate sessions can work in parallel once step 3 is done.
    - A test hook can hand back `Float64Array` views into the engine's memory, so a test that
      writes the engine's state works unchanged.
 2. Strings: piano, grand, harpsichord, clavier, bowed. **Done** (Ribbon Piano 0.4.0, Harpsichord
-   0.3.0, Electric Grand 0.4.0, Tangent Clavier 0.4.0, Viola Organista 0.4.0, Forte 0.15.0), again
+   0.3.0, Electric Grand 0.4.0, Tangent Clavier 0.4.0, Viola Organista 0.4.0, Forte 0.16.0), again
    in one pull request with a commit per instrument. All five play what the JavaScript plays to
    float32 rounding or better; the viola organista's chaotic friction matches bit for bit. In C++,
    ten voices take 4 % of a core (piano), 5 % (harpsichord, grand), 6 % (bowed; 18 % with the
@@ -293,7 +295,7 @@ Separate sessions can work in parallel once step 3 is done.
      inputs, which a chaotic instrument amplifies. `native/instruments/bowed/fdlibm.*` is V8's own
      fdlibm; a port that must match the JavaScript exactly through chaos can use it (move it to
      `native/core` when a second instrument does).
-   - Without threads, `KeyData` must free what it replaced as blocks go by (Forte 0.15.0), or the
+   - Without threads, `KeyData` must free what it replaced as blocks go by (Forte 0.16.0), or the
      WebAssembly's memory grows each time a knob moves. A page view that runs a WebAssembly engine
      on the main thread (a slow motion) calls `destroy()` afterwards.
    - A shared object that every key's data depends on (the grand's soundboard) can live in an
