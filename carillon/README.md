@@ -369,6 +369,17 @@ random angles), so the bells warble each their own way.
   ringing take about 12 % of one core at 48 kHz in Node, on the shared
   machine this was built on. A forte note peaks at 0.15–0.45 anywhere
   on the keyboard.
+- **In C++**: the same engine and model run as WebAssembly on this page (the
+  JavaScript is the fallback; `?engine=js` in the address forces it), and the
+  views draw from the WebAssembly model; and as plugins (CLAP, VST3, AU and
+  a standalone app), with velocity as the baton stroke and CC64 as the pedal
+  that changes nothing. The ribs and modes are the FEM's table, converted
+  number for number to C++ (`native/instruments/carillon/bell-table.h`): the
+  FEM runs only when the bells are designed, never while they play. The
+  WebAssembly plays what the JavaScript plays to within 4 × 10⁻⁸ of the peak
+  (a float32 rounding), and the same test suite passes on it. Ten bells
+  ringing take about 4 % of a core in C++; striking ten at once, a quarter of
+  a millisecond.
 
 ## What to listen for
 
@@ -419,8 +430,11 @@ carillon/src/carillon-model.js            bells, losses, radiation, doublets, cl
 carillon/src/carillon-engine.js           real-time engine (AudioWorklet and Node)
 carillon/src/carillon-params.js           parameters and presets
 carillon/src/carillon-main.js             page wiring and views
-test/carillon-tests.mjs                   node test/carillon-tests.mjs (25 tests, ~20 s)
-tools/carillon-profile.mjs                node tools/carillon-profile.mjs → carillon/src/bell-table.js (~20 min)
+carillon/src/carillon-wasm.js             the C++ engine and model as WebAssembly (carillon/wasm/carillon.wasm)
+native/instruments/carillon/              the C++ port: model, engine, the table as a generated header, reference (plugins and WebAssembly)
+test/carillon-tests.mjs                   node test/carillon-tests.mjs (26 tests, ~20 s; FORTE_ENGINE=wasm: on the WebAssembly)
+tools/carillon-profile.mjs                node tools/carillon-profile.mjs → carillon/src/bell-table.js and its C++ (~20 min)
+tools/carillon-native-table.mjs           node tools/carillon-native-table.mjs → native/instruments/carillon/bell-table.h
 tools/render-carillon.mjs                 node tools/render-carillon.mjs → examples/carillon/
 ```
 
