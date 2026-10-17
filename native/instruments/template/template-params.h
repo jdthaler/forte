@@ -46,7 +46,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "template", .name = "Template Bars", .version = "0.24.0",
+    .slug = "template", .name = "Template Bars", .version = "0.25.0",
     .description = "The starting point for a new instrument: struck free–free bars.", .auSubtype = "Tmpl",
     .vst3Id = {0x9b, 0xd4, 0xc6, 0x8d, 0x71, 0xb3, 0xf7, 0x69, 0x72, 0x7d, 0x41, 0xf6, 0x33, 0x57, 0x13, 0x55},
     .params = kParams, .paramCount = p::count,

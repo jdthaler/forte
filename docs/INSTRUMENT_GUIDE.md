@@ -104,7 +104,9 @@ export const INSTRUMENT = {
   range: [36, 84],                      // the MIDI keys it plays
   space: 'sustain',                     // Space and CC64: 'sustain' (a damper, sent to the engine), 'hold' (keys latch) or null
   modWheel: 'strike',                   // CC1 (or { param, max })
-  controllers: { 67: 'unaCorda' },      // other MIDI controllers → parameters (a toggle is on at 64)
+  controllers: { 67: 'unaCorda' },      // other MIDI controllers → parameters (a toggle is on at 64);
+                                        // { param, values: [a, b] } picks b from 64 up, { param, toggle: [a, b] } flips on each press
+  console: { groups, defaults, get },   // state the page keeps beside its groups (the organ's drawbars): plugin parameters too
   engine: { name: 'GongEngine', module: new URL('./gongs-engine.js', import.meta.url).href },
   engineParams: (P) => ({ ...P, tables: couplingTables(P) }), // what setParams receives (default: P)
   noteData: (key, vel, P, fs) => …,     // data sent with each note (default: none)
@@ -114,6 +116,12 @@ export const INSTRUMENT = {
   load: async () => …,                  // data to load before the first note (default: none)
 };
 ```
+
+A `console` holds controls the page draws itself rather than as sliders: its `groups` are
+parameters as `GROUPS` are, `defaults` the page's state and `get(P)` maps the plugin's
+parameters back to that state (the organ's nine drawbars to one array). The plugins list them
+after the groups' parameters and every preset sets all of them. A CC64 `toggle` controller on
+an instrument with no Space mode is played by the plugin window's Space bar.
 
 `engineParams` and `noteData` are pure: functions of their arguments (with caches keyed on
 what they depend on). A page that precomputes in idle time or builds a table progressively may

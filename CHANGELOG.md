@@ -10,6 +10,35 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-17 — the tonewheel organ in C++ (step 4, last batch)
+
+### Tonewheel Organ 0.5.0
+- **Ported to C++** (`native/instruments/organ`): the tone generator and the engine (the motor,
+  91 wheels, the key contacts with their seeded bounce, the busbars, percussion, the scanner's LC
+  line, the tube drive and the Leslie), operation for operation, with V8's fdlibm.
+  - **Plugins:** Tonewheel Organ as CLAP, VST3, AU v2 and a standalone app. The console is
+    parameters of its own: nine drawbars, percussion on, soft, fast and third, vibrato and chorus,
+    the Leslie bypassed, slow, fast or stopped, and the motor; the nine presets set all of it. The
+    mod wheel puts the Leslie on fast, each press of a sustain pedal or the window's Space bar
+    flips it, and CC11 is the expression pedal. The generator's tables are rebuilt in place
+    without allocating. Ten keys with every drawbar, chorus, drive and the Leslie take 2.5 % of a
+    core.
+  - **WebAssembly:** 61 KB in `organ/wasm/`. The test suite passes on it, and it plays what the
+    JavaScript plays bit for bit.
+  - **The page runs it**, falling back to the JavaScript (`?engine=js` forces it); the header has
+    the C++ | JS switch, and the analysis table, generator map and Leslie view call its model.
+
+### Forte 0.25.0
+- A descriptor's `console` (state the page keeps beside its parameter groups) becomes plugin
+  parameters, set by the presets and passed to a WebAssembly engine (`tools/gen-native-params.mjs`,
+  `shared/wasm.js`, `tools/headless.mjs`).
+- `controllers` can switch a choice between two values, by level (`values`) or flipped by each
+  press (`toggle`); the plugin window's Space bar plays a CC64 toggle, and CC1 reaches
+  `controllers` when an instrument has no mod-wheel parameter.
+- `forte/fdlibm.h`: V8's `tanh`, `expm1` and `Math.hypot`.
+- Every instrument's committed WebAssembly is rebuilt, because the shared controller table grew;
+  the sound and the parameters are unchanged.
+
 ## 2026-10-17 — the table-driven instruments in C++ (step 4, fifth batch)
 
 ### Black-Hole Keyboard 0.4.0

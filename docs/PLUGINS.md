@@ -13,9 +13,10 @@ native/core + native/instruments/<slug>   C++: engines and models
 Status: **steps 0–3 and 5 done** (the native setup, see [native/README.md](../native/README.md); every
 instrument headless in JavaScript; the shared native core; the template and the Bubble Organ
 ported, their pages running the WebAssembly; the plugins released from GitHub and linked from the
-front page; step 4's first five batches, the modal bars, bells and plates, the strings, the
-reeds and pickups, the self-oscillators and the table-driven instruments). Next: step 4's last
-batch, the tonewheel organ. The decisions below were made by the owner on
+front page; step 4, every instrument in six batches: the modal bars, bells and plates, the
+strings, the reeds and pickups, the self-oscillators, the table-driven instruments and the
+tonewheel organ). Next: let the WebAssembly engines run for a while, then remove the JavaScript
+ones; step 6 is unscheduled. The decisions below were made by the owner on
 2026-10-16. Follow [CLAUDE.md](../CLAUDE.md) for the workflow (branch, test,
 version, pull request, merge only when asked) and update this file as steps
 land.
@@ -146,9 +147,9 @@ What landed:
   JavaScript does.
 - `tools/render-reference.mjs` writes `native/instruments/<slug>/reference.json`.
 - `tools/engine.mjs` (`loadEngine`) gives every test suite its engine.
-- For later ports: the organ's console (drawbars, percussion, vibrato and Leslie switches,
-  the motor) lives outside `GROUPS`, so its plugin needs them added as parameters; its CC1
-  and CC64 switch the Leslie, which `controllers` can't express yet.
+- The organ's console (drawbars, percussion, vibrato and Leslie switches, the motor) lives
+  outside `GROUPS`: the descriptor's `console` makes it plugin parameters, and `controllers`'
+  `values` and `toggle` forms switch the Leslie from CC1 and CC64 (Forte 0.25.0).
 
 The plan as it was:
 1. Give each instrument a descriptor module (`<slug>/src/<slug>-instrument.js`)
@@ -363,7 +364,21 @@ Separate sessions can work in parallel once step 3 is done.
      passes everything at or above it, as Web Audio's (Forte 0.24.0).
    - `Math.log2` has copies in huygens and springs; `forte/fdlibm.h` now has V8's own, for the
      next port that needs it.
-6. The organ.
+6. The organ. **Done** (Tonewheel Organ 0.5.0, Forte 0.25.0). It plays what the JavaScript plays
+   bit for bit; ten keys with every drawbar, chorus, drive and the Leslie take 2.5 % of a core in
+   C++. Learned on the way:
+   - State a page keeps beside its parameter groups becomes plugin parameters through the
+     descriptor's `console`, with `get(P)` mapping them back to the page's shape; presets set all
+     of it, so a host recalls the whole registration.
+   - A choice switched by a controller (the Leslie on CC1 and CC64) is a `controllers` entry with
+     `values` or `toggle`; the plugin tells the host of each change, and the window's Space bar
+     plays a CC64 toggle.
+   - Tables that depend on the sample rate and the parameters (the tone generator) can be fixed
+     size and rebuilt in place on the audio thread when they are cheap (3 µs here).
+   - `forte/fdlibm.h` gains V8's `tanh`, `expm1` and `Math.hypot`; glibc's tanh differs from V8's
+     in the last bit for about one argument in 2000.
+   - Growing a shared struct (`forte::Controller`) changes every committed `.wasm` by its layout
+     alone: rebuild them all in the same pull request, or the `wasm` job fails.
 
 Chaotic instruments (gong crashes, bowed friction, flames, wind) can't match
 the JavaScript sample for sample; their tests are statistical already, and

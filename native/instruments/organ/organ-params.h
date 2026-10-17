@@ -145,7 +145,7 @@ inline const Controller kControllers[] = {{1, p::leslie, Controller::values, 1, 
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "organ", .name = "Tonewheel Organ", .version = "0.4.4",
+    .slug = "organ", .name = "Tonewheel Organ", .version = "0.5.0",
     .description = "91 spinning gear-driven wheels, bouncing key contacts, a scanner on an LC delay line and a rotating Doppler horn.", .auSubtype = "Tonw",
     .vst3Id = {0x43, 0xe5, 0xc5, 0x1c, 0xb9, 0x9f, 0x6a, 0xa1, 0x90, 0xef, 0x05, 0x66, 0x9a, 0xde, 0xb6, 0xab},
     .params = kParams, .paramCount = p::count,
