@@ -346,7 +346,9 @@ FORTE_ENGINE=wasm node test/native-tests.mjs   # and the reference
 ```
 
 `test/native-tests.mjs` (in `npm test`) fails if the generated files are stale; CI also fails
-if the committed WebAssembly isn't what the source builds, and validates the plugins.
+if the committed WebAssembly isn't what the source builds, and validates the plugins. Once the
+port is done, set `plugin: { code, ready: true }` in `shared/registry.js`: the front page then
+lists it under Plugins, and the next plugin release (the `release-plugins` workflow) ships it.
 
 ### Going live
 

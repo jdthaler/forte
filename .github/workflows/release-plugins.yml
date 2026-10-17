@@ -1,0 +1,74 @@
+name: release-plugins
+
+# Publishes the plugins as a GitHub Release (docs/PLUGINS.md, step 5), which the front page's
+# Plugins section downloads from (releases/latest/download/<asset>). The owner starts it from
+# the Actions tab, on main. It builds nothing: it takes the archives that the `native` run of
+# main's latest commit built and validated (its release-<preset> artifacts), and creates the
+# tag itself, since sessions can't push tags.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag for the release (leave empty for plugins-v<Forte version>)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: release-plugins
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Release from main only
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Start this workflow on main (it releases what main's native run built)."
+          exit 1
+
+      - name: The tag is new
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          tag="$INPUT_TAG"
+          [ -n "$tag" ] || tag=$(node tools/plugin-release.mjs --tag)
+          [[ "$tag" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "::error::Tags are letters, digits, dots, dashes and underscores."; exit 1; }
+          if gh release view "$tag" >/dev/null 2>&1 || git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then
+            echo "::error::$tag already exists. Bump Forte's version, or give another tag."
+            exit 1
+          fi
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+
+      - name: The archives from this commit's native run
+        run: |
+          run=$(gh run list --workflow native.yml --branch main --commit "$GITHUB_SHA" --event push --status success \
+                  --json databaseId --jq '.[0].databaseId')
+          if [ -z "$run" ]; then
+            echo "::error::No successful native run for $GITHUB_SHA on main yet. Wait for it to finish green, then start this again."
+            exit 1
+          fi
+          echo "native run $run"
+          gh run download "$run" --pattern 'release-*' --dir dl
+          mkdir dist && find dl -type f -exec mv {} dist/ \;
+          ls -la dist
+          for f in Forte-plugins-macos.zip Forte-plugins-windows.zip Forte-plugins-linux.tar.gz; do
+            [ -f "dist/$f" ] || { echo "::error::$f is missing from native run $run"; exit 1; }
+          done
+
+      - name: Release
+        run: |
+          node tools/plugin-release.mjs > notes.md
+          (cd dist && sha256sum * > SHA256SUMS.txt)
+          gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "Forte plugins ($TAG)" --notes-file notes.md --latest

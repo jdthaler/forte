@@ -12,7 +12,12 @@ let examples = {};
 let playing = null;
 
 const ALL = 'all';
-const current = () => { const h = location.hash.slice(1); return SECTIONS.some((s) => s.id === h) ? h : ALL; };
+let shown = ALL; // the tab, kept while the hash is #about or #plugins
+const current = () => {
+  const h = location.hash.slice(1);
+  if (h === 'about' || h === 'plugins') return shown;
+  return (shown = SECTIONS.some((s) => s.id === h) ? h : ALL);
+};
 const ready = (sec) => INSTRUMENTS.filter((i) => i.section === sec && i.ready);
 
 function renderTabs() {
@@ -36,6 +41,7 @@ function card(inst) {
         <span class="play" aria-hidden="true">Play →</span>
         ${demo ? `<button type="button" data-src="examples/${inst.id}/${demo.file}" title="${attr(demo.title)}">▶ Listen</button>` : ''}
         <a href="${inst.id}/#about" title="The physics of the ${inst.name}">How it works</a>
+        ${inst.plugin?.ready ? `<a href="#plugins" title="The ${inst.name} as a plugin for your DAW">Plugin</a>` : ''}
       </div>
     </article>`;
 }
@@ -83,7 +89,18 @@ cats.addEventListener('click', (e) => {
   cats.querySelector(`[data-cat="${id}"]`)?.focus({ preventScroll: true });
 });
 window.addEventListener('popstate', render);
-window.addEventListener('hashchange', () => { if (location.hash === '#about') openAbout(); else render(); });
+window.addEventListener('hashchange', () => {
+  if (location.hash === '#about') openAbout();
+  else if (location.hash === '#plugins') toPlugins();
+  else render();
+});
+
+// Plugins (also at …/#plugins): the instruments ported to C++, downloaded from the latest
+// GitHub Release (the release-plugins workflow). The hash leaves the tabs as they are.
+const plugins = INSTRUMENTS.filter((i) => i.ready && i.plugin?.ready);
+const names = plugins.map((i) => `the <a href="${i.id}/">${i.name}</a>`);
+$('#plugin-list').innerHTML = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0] ?? '';
+function toPlugins() { $('#plugins').scrollIntoView(); }
 
 // About (also at …/#about)
 const about = $('#about');
@@ -101,6 +118,7 @@ if (location.hash === '#about') openAbout();
 $('#forte-version').textContent = FORTE_VERSION;
 $('#about-version').textContent = FORTE_VERSION;
 render();
+if (location.hash === '#plugins') toPlugins();
 fetch('examples/index.json').then((r) => (r.ok ? r.json() : {})).then((j) => { examples = j; render(); }).catch(() => {});
 
 // --- background: the first few modes of a plucked string, drifting ---------

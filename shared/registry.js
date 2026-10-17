@@ -11,8 +11,10 @@
 // `plugin.code` is the instrument's Audio Unit subtype (four characters, unique; the
 // manufacturer is Frte), for its native plugin (docs/PLUGINS.md). Never change it: hosts
 // find saved projects' plugins by it. The VST3 class ids are in native/ids.json.
+// `plugin.ready` marks an instrument whose native port is built and released as plugins (it has
+// a native/instruments/<id>/ folder); the landing page lists those under Plugins.
 
-export const FORTE_VERSION = '0.12.0';
+export const FORTE_VERSION = '0.13.0';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
@@ -184,7 +186,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'bubbles', name: 'Bubble Organ', section: 'phenomena', ready: true, version: '0.3.0', trim: 1.5,
-    plugin: { code: 'Bubl' },
+    plugin: { code: 'Bubl', ready: true },
     tagline: 'Every note a bubble ringing at its Minnaert frequency; depth, gas and pressure retune it.',
     physics: 'Bubble acoustics · Minnaert resonance',
     accent: '#6fb8ff',

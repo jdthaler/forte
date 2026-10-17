@@ -104,6 +104,29 @@ jobs:
             !native/build/${{ matrix.preset }}/plugins/**/*.pdb
           retention-days: 14
 
+      # What a release ships (the release-plugins workflow attaches these): the instruments'
+      # plugins without the template's, with native/INSTALL.md, in one archive that keeps the
+      # bundles' executable bits and the macOS signatures (the artifact above loses both).
+      - name: Package the plugins for a release
+        run: |
+          plugins=native/build/${{ matrix.preset }}/plugins
+          root=native/build/pkg; pkg="$root/Forte plugins"
+          rm -rf "$root"; mkdir -p "$pkg" dist
+          find "$plugins" -mindepth 1 -maxdepth 1 ! -name 'Template Bars*' ! -name '*.pdb' -exec cp -R {} "$pkg"/ \;
+          cp native/INSTALL.md "$pkg"/
+          ls -la "$pkg"
+          case "${{ matrix.preset }}" in
+            macos) ditto -c -k --sequesterRsrc --keepParent "$pkg" dist/Forte-plugins-macos.zip ;;
+            windows) (cd "$root" && 7z a -tzip ../../../dist/Forte-plugins-windows.zip "Forte plugins") ;;
+            linux) tar -czf dist/Forte-plugins-linux.tar.gz -C "$root" "Forte plugins" ;;
+          esac
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.preset }}
+          path: dist/*
+          compression-level: 0
+          retention-days: 30
+
   wasm:
     runs-on: ubuntu-24.04
     steps:
