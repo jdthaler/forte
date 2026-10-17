@@ -10,6 +10,20 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-17 — the front page's overlays, and each plugin in its own dialog
+
+### Forte 0.20.0
+- **Plugin and How it works are separate**: an instrument's ↓ Plugin button (and `…/#plugin`)
+  opens a dialog of its own with the downloads, and How it works holds just the notes. On
+  phones, where the ↓ Plugin button doesn't fit, a line at the top of How it works opens it.
+- **The front page offers every instrument's plugins together only**: the per-instrument rows
+  are gone (each instrument's download is on its page), and the downloads move from the bottom
+  of the page into an **All Plugins** overlay (also at `#plugins`).
+- **Credits is an overlay** on the front page too (also at `#credits`), rendering
+  `docs/PRIOR_ART.md` as `credits/` does; `credits/` stays for links from elsewhere.
+- **About Forte shows the app's icon**, and the cards' **Play** buttons light up, lift and nudge
+  their arrow forward under the pointer.
+
 ## 2026-10-17 — the reeds and pickups in C++ (step 4, third batch)
 
 ### Tine Piano 0.4.0

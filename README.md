@@ -114,10 +114,10 @@ for wider keys, with the controls beside the keyboard's tools. Use
 The instruments ported to C++ so far (the Ribbon Piano, Harpsichord, Pipe Organ, Free-Reed Organ,
 Vibraphone, Carillon, Electric Grand, Tine Piano, Reed Piano, Tangent Clavier, Sticky-Pad Piano,
 Viola Organista, Glass Armonica, Gong Keyboard and Bubble Organ) also come as plugins for a DAW: AU,
-VST3 and CLAP, and a standalone app, for macOS, Windows and Linux. Download them from the
-**Plugins** section of the front page or from the
-[latest release](https://github.com/jdthaler/forte/releases/latest): every instrument together, or
-one at a time (also under **↓ Plugin** next to **How it works** on its page). Then follow
+VST3 and CLAP, and a standalone app, for macOS, Windows and Linux. Download every instrument
+together from **All Plugins** on the front page, or one instrument from **↓ Plugin** next to
+**How it works** on its page; both are also in the
+[latest release](https://github.com/jdthaler/forte/releases/latest). Then follow
 [native/INSTALL.md](native/INSTALL.md). They are unsigned, so a Mac needs one Terminal command
 (`xattr`) before it loads them. The rest follow as they are ported
 ([docs/PLUGINS.md](docs/PLUGINS.md)).
