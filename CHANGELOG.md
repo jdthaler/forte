@@ -10,6 +10,20 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-17 — one plugin format at a time, and the standalone checked where it is
+
+### Forte 0.25.0
+- **One format at a time** in the downloads' Makefile: `make install-au`, `install-vst3`,
+  `install-clap` and `install-app` (the standalone), and the same for `verify-` and
+  `uninstall-`.
+- **`make check`** checks the plugins in the unpacked folder without installing anything: the
+  signature and the download quarantine on a Mac, the libraries they need on Linux, and
+  clap-validator for the CLAPs when it is installed. `make check-app` checks just the
+  standalone, which runs from the folder.
+- The `native` workflow also runs `make check`, a format alone, and `make check-app` on a
+  quarantined copy of the standalones (which it must refuse) on macOS and Linux; the site test
+  covers them on a stand-in download. `install.sh` keeps to macOS's bash 3.2.
+
 ## 2026-10-17 — the table-driven instruments in C++ (step 4, fifth batch)
 
 ### Black-Hole Keyboard 0.4.0

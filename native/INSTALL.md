@@ -21,7 +21,11 @@ make install    # copy the plugins to your plugin folders; on a Mac, also clear 
 make verify     # check each one is installed and loads (on a Mac, auval tests the Audio Units)
 ```
 
-`make uninstall` removes them again, and `make` alone explains the rest. On a Mac, `make` comes
+To do one format alone, add it: `make install-au`, `make install-vst3`, `make install-clap` or
+`make install-app` (the standalone), and the same for `verify-` and `uninstall-`. `make check`
+checks the plugins in the folder without installing anything, and `make check-app` the
+standalone alone, which runs from the folder too. `make uninstall` removes them again, and
+`make` alone explains the rest. On a Mac, `make` comes
 with Apple's command line tools: if macOS offers to install them, accept (or run
 `xcode-select --install`). Without make, `bash install.sh install` does the same. The
 standalone apps go in `~/Applications` on a Mac and `~/.local/bin` on Linux. Nothing needs
