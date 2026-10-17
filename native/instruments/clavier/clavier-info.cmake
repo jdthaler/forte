@@ -2,3 +2,4 @@
 set(FORTE_NAME "Tangent Clavier")
 set(FORTE_VERSION "0.4.0")
 set(FORTE_AU_SUBTYPE "Clav")
+set(FORTE_ACCENT "#c6e36a")

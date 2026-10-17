@@ -2,3 +2,4 @@
 set(FORTE_NAME "Pipe Organ")
 set(FORTE_VERSION "0.3.0")
 set(FORTE_AU_SUBTYPE "Pipe")
+set(FORTE_ACCENT "#9fb4ff")
