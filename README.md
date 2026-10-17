@@ -85,7 +85,8 @@ pictures of the physics as it plays: the main ones large, the rest behind
 tabs underneath. At the bottom, right above the keys, are the controls a
 player reaches for (stops and registrations, tremolo, drive, the mallet,
 the spin, the room and the volume, or the organ's drawbars), with **More
-controls** for everything else, the presets at its top. Each shows its name, and its value while
+controls** for everything else, and the presets just above the keys (the
+first control on a phone). Each shows its name, and its value while
 you move it. Explanations wait behind ⓘ buttons.
 
 There are two modes. **Discover** shows it all. **Perform** shows just
