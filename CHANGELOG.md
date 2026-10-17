@@ -87,6 +87,10 @@ tagged; this changelog and the commit titles record them.
   - **The page runs it**: it voices each key's pipes with its WebAssembly model and sends them with
     the note, and its views call that model, falling back to the JavaScript.
 
+### Viola Organista 0.4.1
+- `bowed.wasm` rebuilt now that V8's fdlibm lives in `native/core`: it plays the same, sample for
+  sample.
+
 ### Forte 0.19.0
 - **V8's fdlibm moves to `native/core`** (`forte/fdlibm.h`), now that the Viola Organista and the
   Sticky-Pad Piano both use it.
