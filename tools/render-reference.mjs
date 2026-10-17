@@ -31,6 +31,9 @@ export function scripts(I) {
   ];
   if (I.space) list.push({ name: 'pedal', seconds: 2, events: [[0, 'pedal', true], on(0, 60, 0.7), off(0.1, 60), on(0.2, 64, 0.7), off(0.3, 64), on(0.4, 67, 0.7), off(0.5, 67), [1.2, 'pedal', false]] });
   if (I.modWheel) list.push({ name: 'mod wheel', seconds: 2, events: [on(0, 60, 0.7), [0.5, 'wheel', 127], [1.2, 'wheel', 0], off(1.5, 60)] });
+  // controllers that switch a value (the organ's Leslie: CC1 to one side, CC64 presses flip it)
+  const switches = Object.entries(I.controllers ?? {}).filter(([, c]) => typeof c === 'object').map(([n]) => +n);
+  if (switches.length) list.push({ name: 'switches', seconds: 2.4, events: [on(0, 60, 0.7), ...switches.flatMap((n, i) => [[0.3 + i, 'cc', n, 127], [0.8 + i, 'cc', n, 0]]), off(2, 60)] });
   list.push({ name: 'aftertouch', seconds: 1.8, events: [on(0, 60, 0.7), [0.4, 'pressure', 1, c4], [1, 'pressure', 0, c4], off(1.3, 60)] });
   list.push({ name: 'pitch bend', seconds: 1.8, events: [on(0, 60, 0.7), [0.4, 'bend', 1], [1, 'bend', 0], off(1.3, 60)] });
   I.presets.forEach((pr, i) => list.push({ name: `preset: ${pr.name}`, preset: i, seconds: 1.6, events: [on(0, 60, 0.7), off(1, 60)] }));

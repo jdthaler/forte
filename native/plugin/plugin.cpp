@@ -67,6 +67,7 @@ struct Plugin {
   uint8_t sounding[128]{};
   bool latched[128]{};
   bool sustain = false;
+  uint8_t ccLast[128]{}; // each controller's last value (a toggle flips on a press)
 
   // the editor: its events for the audio thread, what it shows, the keys sounding for it
   const clap_host_params_t *hostParams = nullptr;
@@ -177,15 +178,30 @@ struct Plugin {
     if (P[i] != before) tell(i, out);
   }
   // another controller the descriptor maps to a parameter: a toggle is on at 64 and above,
-  // any other parameter moves across its range
+  // any other parameter moves across its range; or a choice switched between two values
+  // (instrument.h, Controller)
   void controller(int cc, int v, const clap_output_events_t *out) {
+    const bool press = v >= 64 && ccLast[cc & 127] < 64;
+    ccLast[cc & 127] = (uint8_t)v;
     for (int i = 0; i < I.controllerCount; i++) if (I.controllers[i].cc == cc) {
-      const int k = I.controllers[i].param;
+      const Controller &c = I.controllers[i];
+      const int k = c.param;
       const ParamInfo &p = I.params[k];
       const double before = P[k];
-      set(k, p.kind == ParamKind::toggle ? (v >= 64 ? 1 : 0) : p.min + (p.max - p.min) * v / 127.0, out);
+      if (c.mode != Controller::range) {
+        if (before != c.a && before != c.b) continue;
+        if (c.mode == Controller::values) set(k, v >= 64 ? c.b : c.a, out);
+        else if (press) set(k, before == c.a ? c.b : c.a, out);
+      } else set(k, p.kind == ParamKind::toggle ? (v >= 64 ? 1 : 0) : p.min + (p.max - p.min) * v / 127.0, out);
       if (P[k] != before) tell(k, out);
     }
+  }
+  // the controller on 64 that switches a choice, when Space and CC64 are not a pedal (the
+  // organ's Leslie): the window's Space bar plays it
+  const Controller *spaceSwitch() const {
+    if (I.space != Space::none) return nullptr;
+    for (int i = 0; i < I.controllerCount; i++) if (I.controllers[i].cc == 64 && I.controllers[i].mode == Controller::toggle) return &I.controllers[i];
+    return nullptr;
   }
   void midi(const uint8_t *d, const clap_output_events_t *out) {
     int cmd = d[0] & 0xf0, ch = d[0] & 0x0f;
@@ -193,7 +209,7 @@ struct Plugin {
     else if (cmd == 0x80 || cmd == 0x90) noteOff(ch, d[1], cmd == 0x80 ? d[2] / 127.0 : -1);
     else if (cmd == 0xb0) {
       if (d[1] == 64 && I.space != Space::none) pedal(d[2] >= 64);
-      else if (d[1] == 1) modWheel(d[2], out);
+      else if (d[1] == 1 && I.modWheel >= 0) modWheel(d[2], out);
       else if (d[1] == 120 || d[1] == 123) panic();
       else controller(d[1], d[2], out);
     } else if (cmd == 0xd0) { if (engine) engine->pressure(d[1] / 127.0, -1); }
@@ -278,7 +294,10 @@ struct Plugin {
       case UiEvent::begin: case UiEvent::end: gesture(e.i, e.type == UiEvent::begin, out); break;
       case UiEvent::on: noteOn(0, e.i, e.v); break;
       case UiEvent::off: noteOff(0, e.i, -1); break;
-      case UiEvent::pedal: if (I.space != Space::none) pedal(e.v > 0); break;
+      case UiEvent::pedal:
+        if (I.space != Space::none) pedal(e.v > 0);
+        else if (spaceSwitch()) controller(64, e.v > 0 ? 127 : 0, out);
+        break;
       case UiEvent::pressure: if (engine) engine->pressure(e.v, e.i); break;
       case UiEvent::panic: panic(); break;
     }
@@ -310,6 +329,7 @@ struct Plugin {
   //   gesture(i, on)      a slider grabbed or let go (the host records automation between)
   //   note(key, vel)      a key: vel 0..1 as MIDI velocity / 127, 0 to let go
   //   pressure(key, v)  pedal(on)  panic()
+  //                       (pedal: Space; with space "switch", CC64's switch, as describe's switch says)
   ParamInfo infoOf(int i) const { return i < I.paramCount ? I.params[i] : presetParam(); }
   double along(int i, double v) const { const ParamInfo p = infoOf(i); return p.kind == ParamKind::continuous ? toNormalized(p, v) : v; }
   std::string text(int i, double v) const {
@@ -345,7 +365,16 @@ struct Plugin {
     d.addMember("accent", accent);
     d.addMember("keyLo", I.keyLo);
     d.addMember("keyHi", I.keyHi);
-    d.addMember("space", std::string(I.space == Space::sustain ? "sustain" : I.space == Space::hold ? "hold" : ""));
+    const Controller *sw = spaceSwitch();
+    d.addMember("space", std::string(I.space == Space::sustain ? "sustain" : I.space == Space::hold ? "hold" : sw ? "switch" : ""));
+    if (sw) { // what Space switches: "Leslie", "Slow", "Fast"
+      const ParamInfo &p = I.params[sw->param];
+      Value s = createEmptyArray();
+      s.addArrayElement(std::string(p.label));
+      s.addArrayElement(std::string(p.choices[sw->a]));
+      s.addArrayElement(std::string(p.choices[sw->b]));
+      d.addMember("switch", s);
+    }
     d.addMember("presets", hasPresets ? I.paramCount : -1); // the Preset parameter's index
     d.addMember("params", params);
     sent.assign(nParams, NAN); // the next poll sends every value

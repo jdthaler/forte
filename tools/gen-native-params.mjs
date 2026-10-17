@@ -186,6 +186,10 @@ export async function generate(slug) {
   const pageOnly = I.pageOnly ?? PAGE_ONLY;
   const params = [];
   for (const g of I.groups) for (const p of g.params) if (!pageOnly.includes(p.id)) params.push({ ...p, group: g.title });
+  // a console (the organ's drawbars and switches): state the page keeps in P beside the groups,
+  // plugin parameters after them; console.get(P) gives their values
+  const consoleIds = new Set();
+  for (const g of I.console?.groups ?? []) for (const p of g.params) { params.push({ ...p, group: g.title }); consoleIds.add(p.id); }
   const index = new Map(params.map((p, i) => [p.id, i]));
   const ns = cppNamespace(slug), report = [], out = [];
   const valueOf = (p, v) => {
@@ -234,21 +238,36 @@ export async function generate(slug) {
   }
   w('};');
   w();
-  const skipped = new Set();
+  const skipped = new Set(), consoleFields = Object.keys(I.console?.defaults ?? {});
+  // a preset sets the whole console, as the page's (its defaults, then the preset's)
+  const presetValues = (pr) => [
+    ...Object.entries(pr.p).filter(([id]) => {
+      if (index.has(id) && !consoleIds.has(id)) return true;
+      if (!pageOnly.includes(id) && !consoleFields.includes(id)) skipped.add(id);
+      return false;
+    }),
+    ...(I.console ? Object.entries(I.console.get({ ...structuredClone(I.console.defaults), ...pr.p })).filter(([id]) => consoleIds.has(id)) : []),
+  ];
   I.presets.forEach((pr, k) => {
-    const vals = Object.entries(pr.p).filter(([id]) => { if (index.has(id)) return true; if (!pageOnly.includes(id)) skipped.add(id); return false; });
+    const vals = presetValues(pr);
     if (vals.length) w(`inline const PresetValue kPreset${k}[] = {${vals.map(([id, v]) => `{p::${ident(id)}, ${num(valueOf(params[index.get(id)], v))}}`).join(', ')}};`);
   });
   w('inline const Preset kPresets[] = {');
   I.presets.forEach((pr, k) => {
-    const n = Object.keys(pr.p).filter((id) => index.has(id)).length;
+    const n = presetValues(pr).length;
     w(`  {${cstr(pr.name)}, ${n ? `kPreset${k}` : 'nullptr'}, ${n}},`);
   });
   w('};');
   const keep = (I.keep || []).filter((id) => index.has(id));
   w(`inline const uint16_t kKeep[] = {${keep.length ? keep.map((id) => `p::${ident(id)}`).join(', ') : '0'}};`);
-  const ccs = Object.entries(I.controllers || {}).filter(([, id]) => index.has(id));
-  w(`inline const Controller kControllers[] = {${ccs.length ? ccs.map(([n, id]) => `{${n}, p::${ident(id)}}`).join(', ') : '{0, -1}'}};`);
+  // a controller: a parameter's id, or a switch between two of a choice's values (instrument.h)
+  const ccs = Object.entries(I.controllers || {}).filter(([, c]) => index.has(typeof c === 'string' ? c : c.param));
+  const controller = ([n, c]) => {
+    if (typeof c === 'string') return `{${n}, p::${ident(c)}}`;
+    const p = params[index.get(c.param)], [a, b] = (c.values ?? c.toggle).map((v) => valueOf(p, v));
+    return `{${n}, p::${ident(c.param)}, Controller::${c.values ? 'values' : 'toggle'}, ${a}, ${b}}`;
+  };
+  w(`inline const Controller kControllers[] = {${ccs.length ? ccs.map(controller).join(', ') : '{0, -1}'}};`);
   w();
   const ch = I.chain || {}, at = (id) => (id && index.has(id) ? `p::${ident(id)}` : '-1');
   const mw = typeof I.modWheel === 'string' ? { param: I.modWheel } : I.modWheel;

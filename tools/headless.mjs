@@ -25,7 +25,8 @@ export async function loadInstrument(slug) {
 }
 
 export const paramsOf = (I) => I.groups.flatMap((g) => g.params);
-export const defaultsOf = (I) => Object.fromEntries(paramsOf(I).map((p) => [p.id, p.def]));
+// (with a console's state, which the page keeps in P beside the groups: the organ's drawbars)
+export const defaultsOf = (I) => ({ ...Object.fromEntries(paramsOf(I).map((p) => [p.id, p.def])), ...structuredClone(I.console?.defaults ?? {}) });
 
 // Parameters after choosing preset i from P (the shell's rule: defaults, then the kept
 // parameters, then the preset's own values).
@@ -70,10 +71,20 @@ export class Player {
     this.set(p.id, wheelValue(p, v, mw.max ?? p.max));
   }
   // another controller (the descriptor's controllers: CC → parameter): a toggle is on at 64 and
-  // above; any other parameter moves across its range
+  // above; any other parameter moves across its range. Or a switch between two values of P's:
+  // { param, values: [below 64, at 64 and above] }, or { param, toggle: [a, b] } flipped by each
+  // press (a value other than those is left alone).
   cc(n, v) {
     const id = this.I.controllers?.[n];
     if (!id) return;
+    if (typeof id === 'object') {
+      const last = (this.ccs ??= {})[n] ?? 0, [a, b] = id.values ?? id.toggle, now = this.P[id.param];
+      this.ccs[n] = v;
+      if (now !== a && now !== b) return;
+      if (id.values) this.set(id.param, v >= 64 ? b : a);
+      else if (v >= 64 && last < 64) this.set(id.param, now === a ? b : a);
+      return;
+    }
     const p = paramsOf(this.I).find((q) => q.id === id);
     this.set(id, p.type === 'checkbox' ? v >= 64 : p.min + ((p.max - p.min) * v) / 127);
   }

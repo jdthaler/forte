@@ -239,7 +239,14 @@ function build() {
     el.addEventListener('change', () => { set(D.presets, +el.value); el.blur(); });
     register(D.presets, { el });
   }
-  if (D.space) {
+  if (D.space === 'switch') { // Space and CC64 switch a choice (the organ's Leslie): a press flips it
+    const b = $('#pedal'), [what, a, z] = D.switch;
+    b.hidden = false;
+    b.textContent = what;
+    b.title = `The Space bar, or the sustain pedal (CC64): ${what} ${a} ↔ ${z}`;
+    b.addEventListener('pointerdown', (e) => { e.preventDefault(); setPedal(true); setPedal(false); });
+    $('#space-help').innerHTML = `, <kbd>Space</kbd> switches ${what} ${a} ↔ ${z}`;
+  } else if (D.space) {
     const b = $('#pedal');
     b.hidden = false;
     b.textContent = D.space === 'hold' ? 'Hold' : 'Sustain';
@@ -265,7 +272,7 @@ function up(key) {
   forte('note', key, 0);
   paintKey(key);
 }
-function setPedal(on) { pedal = pedalHere = on; forte('pedal', on ? 1 : 0); $('#pedal').setAttribute('aria-pressed', String(on)); }
+function setPedal(on) { pedal = pedalHere = on; forte('pedal', on ? 1 : 0); if (D.space !== 'switch') $('#pedal').setAttribute('aria-pressed', String(on)); }
 function panic() { local.clear(); held.clear(); forte('panic'); pedal = pedalHere = false; $('#pedal').setAttribute('aria-pressed', 'false'); paintAll(); }
 
 // ---- the keyboard (shared/keyboard.js): a window onto the range that fits the width ------------
@@ -402,7 +409,7 @@ async function poll() {
       const changed = [...next].filter((k) => !remote.has(k)).concat([...remote].filter((k) => !next.has(k)));
       remote = next;
       for (const k of changed) paintKey(k);
-      if (D.space && r.pedal !== pedal) { pedal = r.pedal; $('#pedal').setAttribute('aria-pressed', String(pedal)); }
+      if (D.space && D.space !== 'switch' && r.pedal !== pedal) { pedal = r.pedal; $('#pedal').setAttribute('aria-pressed', String(pedal)); }
     }
   } catch { /* the plugin went away */ }
   setTimeout(poll, 40);
