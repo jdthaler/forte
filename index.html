@@ -28,9 +28,9 @@
         <p class="lede">Keyboard instruments built from physics. Every sound is computed live from its equations of motion: no samples. Pick one and play it with your keyboard, your fingers or MIDI.</p>
       </div>
       <nav class="top-links" aria-label="About the project">
-        <button type="button" class="button" id="about-open">About Forte</button>
-        <a class="button" href="#plugins">Plugins</a>
-        <a class="button" href="credits/">Credits</a>
+        <button type="button" class="button" data-sheet="about">About Forte</button>
+        <a class="button" href="#plugins" data-sheet="plugins">All Plugins</a>
+        <a class="button" href="credits/" data-sheet="credits">Credits</a>
         <a class="button" href="https://github.com/jdthaler/forte">GitHub</a>
       </nav>
     </div>
@@ -39,31 +39,18 @@
   <nav class="cats" id="cats" aria-label="Kinds of instrument"></nav>
   <main id="instruments"></main>
 
-  <section class="plugins" id="plugins" aria-labelledby="plugins-title">
-    <div class="section-head">
-      <h2 id="plugins-title">Plugins</h2>
-      <p>Play <span id="plugin-list">the ported instruments</span> in your DAW, from the same physics in C++: AU, VST3 and CLAP plugins and standalone apps. More instruments follow as their physics moves to C++.</p>
-    </div>
-    <h3 class="downloads-head">Every instrument</h3>
-    <div class="downloads">
-      <a class="button" href="https://github.com/jdthaler/forte/releases/latest/download/Forte-plugins-macos.zip">macOS <span>AU · VST3 · CLAP · app</span></a>
-      <a class="button" href="https://github.com/jdthaler/forte/releases/latest/download/Forte-plugins-windows.zip">Windows <span>VST3 · CLAP · app</span></a>
-      <a class="button" href="https://github.com/jdthaler/forte/releases/latest/download/Forte-plugins-linux.tar.gz">Linux <span>VST3 · CLAP · app</span></a>
-    </div>
-    <h3 class="downloads-head">One instrument</h3>
-    <ul class="plugin-rows" id="plugin-rows"></ul>
-    <p class="muted">Free and unsigned: on a Mac, one Terminal command lets them load. <a href="https://github.com/jdthaler/forte/blob/main/native/INSTALL.md">How to install</a> · <a href="https://github.com/jdthaler/forte/releases">All releases</a></p>
-  </section>
-
   <footer class="foot">
-    <span>Vibe coded by Jesse Thaler · Forte <a href="https://github.com/jdthaler/forte/blob/main/CHANGELOG.md" id="forte-version">0.1.0</a> · <a href="credits/">Prior art and credits</a> · <a href="https://github.com/jdthaler/forte/blob/main/LICENSE">MIT License</a> · <a href="https://github.com/jdthaler/forte">GitHub</a></span>
+    <span>Vibe coded by Jesse Thaler · Forte <a href="https://github.com/jdthaler/forte/blob/main/CHANGELOG.md" id="forte-version">0.1.0</a> · <a href="credits/" data-sheet="credits">Prior art and credits</a> · <a href="https://github.com/jdthaler/forte/blob/main/LICENSE">MIT License</a> · <a href="https://github.com/jdthaler/forte">GitHub</a></span>
     <span class="muted">Instrument names like Hammond, Rhodes and Wurlitzer belong to their owners; Forte’s instruments are physical models inspired by them.</span>
   </footer>
 
   <dialog class="forte-notes" id="about" aria-labelledby="about-title">
     <div class="forte-notes-bar">
-      <div><span class="forte-notes-kicker">About</span><h2 id="about-title">Forte</h2></div>
-      <button type="button" class="forte-notes-close" id="about-close">Close ✕</button>
+      <div class="about-head">
+        <img class="app-icon" src="icons/icon-192.png" width="52" height="52" alt="Forte's app icon">
+        <div><span class="forte-notes-kicker">About</span><h2 id="about-title">Forte</h2></div>
+      </div>
+      <button type="button" class="forte-notes-close">Close ✕</button>
     </div>
     <div class="forte-notes-body" tabindex="-1">
       <article class="forte-notes-text">
@@ -78,11 +65,41 @@
         <h2>Discover and perform</h2>
         <p>Every instrument page has two modes. In both, the presets and the few controls you reach for while playing sit in a strip above the keys. <strong>Discover</strong> adds every other control, every view of the physics, and what each one means. <strong>Perform</strong> shows just one or two views, filling the screen with no text in them: for playing, or for a projector.</p>
         <h2>Play it</h2>
-        <p>The bottom two letter rows of your keyboard are the white and black keys (<kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd>); arrow keys shift the octave and adjust each instrument’s main control, and <kbd>Space</kbd> is the pedal. On a phone or tablet, play the on-screen keys with as many fingers as you like. A MIDI keyboard works in Chrome, Edge and Firefox. Headphones help: some instruments are in stereo for physical reasons.</p>
+        <p>The bottom two letter rows of your keyboard are the white and black keys (<kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd>); arrow keys shift the octave and adjust each instrument’s main control, and <kbd>Space</kbd> is the pedal. On a phone or tablet, play the on-screen keys with as many fingers as you like. A MIDI keyboard works in Chrome, Edge and Firefox. Headphones help: some instruments are in stereo for physical reasons. Use wired ones: Bluetooth headphones and speakers delay every note by 100–200 ms, enough to make any instrument feel sluggish.</p>
         <h2>Open and tested</h2>
-        <p>Everything is plain JavaScript with no build step, MIT-licensed, and checked by physics tests: against textbook cantilevers, published black-hole frequencies, Arnold tongues and more. Each instrument’s <em>How it works</em> notes give the equations, the numbers, what is simplified, and the work it builds on. It all rests on decades of musical acoustics and physical-modelling synthesis by others: see the <a href="credits/">prior art and credits</a>.</p>
+        <p>Everything is plain JavaScript with no build step, MIT-licensed, and checked by physics tests: against textbook cantilevers, published black-hole frequencies, Arnold tongues and more. Each instrument’s <em>How it works</em> notes give the equations, the numbers, what is simplified, and the work it builds on. It all rests on decades of musical acoustics and physical-modelling synthesis by others: see the <a href="credits/" data-sheet="credits">prior art and credits</a>.</p>
         <p class="forte-notes-src">Vibe coded by Jesse Thaler · Forte <span id="about-version"></span> · <a href="https://github.com/jdthaler/forte">source on GitHub</a> · <a href="https://github.com/jdthaler/forte/blob/main/CHANGELOG.md">changelog</a></p>
       </article>
+    </div>
+  </dialog>
+
+  <dialog class="forte-notes forte-sheet" id="plugins" aria-labelledby="plugins-title">
+    <div class="forte-notes-bar">
+      <div><span class="forte-notes-kicker">Download</span><h2 id="plugins-title">All Plugins</h2></div>
+      <button type="button" class="forte-notes-close">Close ✕</button>
+    </div>
+    <div class="forte-notes-body" tabindex="-1">
+      <section class="forte-plugin">
+        <p>Play <span id="plugin-list">the ported instruments</span> in your DAW, from the same physics in C++: AU, VST3 and CLAP plugins and standalone apps, all in one download. More instruments follow as their physics moves to C++.</p>
+        <div class="forte-plugin-get">
+          <a class="button" href="https://github.com/jdthaler/forte/releases/latest/download/Forte-plugins-macos.zip">macOS<span>AU · VST3 · CLAP · app</span></a>
+          <a class="button" href="https://github.com/jdthaler/forte/releases/latest/download/Forte-plugins-windows.zip">Windows<span>VST3 · CLAP · app</span></a>
+          <a class="button" href="https://github.com/jdthaler/forte/releases/latest/download/Forte-plugins-linux.tar.gz">Linux<span>VST3 · CLAP · app</span></a>
+        </div>
+        <p class="forte-plugin-more">Just one instrument? Its page has its own download, under ↓ Plugin. Free and unsigned: on a Mac, one Terminal command lets them load. <a href="https://github.com/jdthaler/forte/blob/main/native/INSTALL.md">How to install</a> · <a href="https://github.com/jdthaler/forte/releases">All releases</a></p>
+      </section>
+    </div>
+  </dialog>
+
+  <dialog class="forte-notes" id="credits" aria-labelledby="credits-title">
+    <div class="forte-notes-bar">
+      <div><span class="forte-notes-kicker">Credits</span><h2 id="credits-title">Prior art and credits</h2></div>
+      <button type="button" class="forte-notes-close">Close ✕</button>
+    </div>
+    <div class="forte-notes-body" tabindex="-1">
+      <nav class="forte-notes-toc" aria-label="Contents"></nav>
+      <article class="forte-notes-text"><p class="forte-notes-status">Loading…</p></article>
+      <p class="forte-notes-src">Also <a href="credits/">a page of its own</a> · <a href="https://github.com/jdthaler/forte/blob/main/docs/PRIOR_ART.md">on GitHub</a></p>
     </div>
   </dialog>
 

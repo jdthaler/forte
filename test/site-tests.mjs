@@ -95,7 +95,9 @@ test('plugin.ready marks exactly the instruments with a native port', () => {
 });
 test('the release\'s archives are the ones CI packages and the pages link to', () => {
   const html = read('index.html'), sh = read('tools/package-plugins.sh');
-  assert.ok(html.includes('id="plugins"') && html.includes('id="plugin-list"') && html.includes('id="plugin-rows"'), '#plugins, #plugin-list, #plugin-rows');
+  assert.ok(html.includes('id="plugins"') && html.includes('id="plugin-list"'), '#plugins, #plugin-list');
+  // the front page offers every instrument together; each instrument's own download is on its page
+  for (const i of withPlugins()) assert.ok(!html.includes(archive(i.id, 'macos.zip')), `index.html leaves ${i.name}'s own download to its page`);
   for (const f of Object.values(ASSETS)) assert.ok(html.includes(`${LATEST}${f}`), `index.html links ${f}`);
   assert.ok(read('.github/workflows/native.yml').includes('tools/package-plugins.sh ${{ matrix.preset }}'), 'native.yml packages the plugins');
   assert.ok(read('.github/workflows/release-plugins.yml').includes('plugin-release.mjs --files'), 'release-plugins.yml checks every archive');
@@ -107,7 +109,7 @@ test('the release\'s archives are the ones CI packages and the pages link to', (
   for (const i of withPlugins()) assert.ok(md.includes(`| ${i.version} |`) && md.includes(i.name) && md.includes(archive(i.id, 'macos.zip')), `notes list ${i.name}`);
   assert.ok(md.includes('xattr -dr com.apple.quarantine'), 'notes give the xattr command');
 });
-test('each instrument with plugins offers them on its page (How it works, shared/notes.js)', () => {
+test('each instrument with plugins offers them on its page (its Plugin dialog, shared/notes.js)', () => {
   const js = read('shared/notes.js');
   assert.ok(js.includes('downloads(inst.id)') && js.includes("'#plugin'"), 'notes.js lists the downloads and opens at #plugin');
   for (const i of withPlugins()) assert.ok(read(`${i.id}/index.html`).includes('../shared/nav.js'), `${i.id} loads nav.js (and notes.js)`);
@@ -149,9 +151,14 @@ test('a control surface (data-control) is a control, not a view: never marked fo
     }
   }
 });
-test('the landing page has the category tabs, the instrument list and an About dialog', () => {
+test('the landing page has the category tabs, the instrument list and the About, All Plugins and Credits overlays', () => {
   const html = read('index.html');
-  for (const id of ['cats', 'instruments', 'about', 'about-open']) assert.ok(html.includes(`id="${id}"`), `#${id}`);
+  for (const id of ['cats', 'instruments', 'about', 'plugins', 'credits']) assert.ok(html.includes(`id="${id}"`), `#${id}`);
+  for (const id of ['about', 'plugins', 'credits']) {
+    assert.ok(new RegExp(`<dialog[^>]* id="${id}"`).test(html), `#${id} is a dialog`);
+    assert.ok(html.includes(`data-sheet="${id}"`), `a button opens #${id}`);
+  }
+  assert.ok(html.includes('src="icons/icon-192.png"'), 'About shows the app icon');
 });
 
 console.log('descriptors');

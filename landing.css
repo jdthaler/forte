@@ -99,7 +99,20 @@ main { max-width: 1180px; margin: 0 auto; padding: 4px max(24px, env(safe-area-i
 }
 .card .actions a, .card .actions button { position: relative; z-index: 2; cursor: pointer; }
 .card .actions a:hover, .card .actions button:hover { border-color: #4a4a58; }
-.card .actions .play { background: var(--c); color: #111; border-color: transparent; }
+.card .actions .play {
+  background: var(--c); color: #111; border-color: transparent;
+  transition: background-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.card .actions .play span { display: inline-block; transition: transform 0.15s; }
+/* Play's rollover: it brightens, lifts and glows, and its arrow steps forward */
+.card .actions .play:hover, .card:has(.card-link:focus-visible) .actions .play {
+  border-color: transparent; background: color-mix(in srgb, var(--c) 78%, white);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 30%, transparent), 0 4px 14px color-mix(in srgb, var(--c) 40%, transparent);
+  transform: translateY(-1px);
+}
+.card .actions .play:hover span, .card:has(.card-link:focus-visible) .actions .play span { transform: translateX(3px); }
+.card .actions .play:active { transform: none; box-shadow: none; }
+@media (hover: none) { .card .actions .play:hover { background: var(--c); box-shadow: none; transform: none; } .card .actions .play:hover span { transform: none; } }
 .card .actions button.on { border-color: var(--c); color: var(--c); }
 .workshop { margin: 12px 0 0; font-size: 13.5px; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
 .workshop .soon {
@@ -107,27 +120,19 @@ main { max-width: 1180px; margin: 0 auto; padding: 4px max(24px, env(safe-area-i
 }
 .workshop .soon::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--c); margin-right: 6px; vertical-align: 1px; opacity: 0.7; }
 
-/* plugins: the downloads, under the instruments whatever the tab */
-.plugins { max-width: 1180px; margin: 22px auto 0; padding: 0 max(24px, env(safe-area-inset-right)) 0 max(24px, env(safe-area-inset-left)); scroll-margin-top: 64px; }
-.plugins .section-head a, .plugins p a { color: var(--accent); }
-.plugins > p { font-size: 13.5px; margin: 10px 0 0; }
-.downloads { display: flex; gap: 8px; flex-wrap: wrap; }
-.downloads .button { display: inline-flex; flex-direction: column; gap: 1px; padding: 9px 16px; }
-.downloads .button span { color: var(--muted); font: 500 12px ui-monospace, Menlo, monospace; }
-.downloads-head { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin: 16px 0 8px; }
-.plugin-rows { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 6px 12px; }
-.plugin-rows li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 7px 10px 7px 12px; border: 1px solid var(--line); border-left: 3px solid var(--c); border-radius: 8px; background: var(--card); }
-.plugin-rows .name { font-weight: 600; text-decoration: none; }
-.plugin-rows .ver { color: var(--muted); font: 11px ui-monospace, Menlo, monospace; }
-.plugin-rows .get { margin-left: auto; display: flex; gap: 6px; }
-.plugin-rows .get a { font: 600 12.5px system-ui, sans-serif; padding: 4px 9px; border-radius: 6px; border: 1px solid var(--line); text-decoration: none; color: var(--text); background: rgba(255, 255, 255, 0.04); }
-.plugin-rows .get a:hover { border-color: var(--c); }
-
 .foot { max-width: 1180px; margin: 34px auto 0; padding: 18px max(24px, env(safe-area-inset-right)) max(40px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); display: flex; flex-direction: column; gap: 4px; font-size: 13px; border-top: 1px solid var(--line); }
 .foot a { color: var(--accent); text-decoration: none; }
 
-/* the About dialog borrows the instrument pages' notes (shared/forte.css) */
+/* the overlays (About, All Plugins, Credits) borrow the instrument pages' notes (shared/forte.css) */
 .forte-notes-text h2:first-of-type { margin-top: 22px; }
+.about-head { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.app-icon { width: 52px; height: 52px; border-radius: 12px; flex: none; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); }
+#credits .forte-notes-text li { overflow-wrap: anywhere; }
+.forte-notes-close {
+  flex: none; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); cursor: pointer;
+  background: rgba(255, 255, 255, 0.04); color: var(--text); font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.forte-notes-close:hover { border-color: #4a4a58; }
 
 @media (max-width: 600px) {
   .top-inner { padding: max(18px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 16px max(16px, env(safe-area-inset-left)); }
@@ -135,13 +140,13 @@ main { max-width: 1180px; margin: 0 auto; padding: 4px max(24px, env(safe-area-i
   .top-links .button { padding: 6px 12px; font-size: 13.5px; }
   .cats-inner { padding: 8px max(16px, env(safe-area-inset-right)) 8px max(16px, env(safe-area-inset-left)); gap: 5px; }
   .cats a { padding: 5px 11px; font-size: 14px; gap: 6px; }
-  main, .foot, .plugins { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  main, .foot { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
   .section-head { margin-top: 20px; }
   .section-head h2 { font-size: 23px; }
   .grid { grid-template-columns: 1fr; gap: 10px; }
-  .plugin-rows { grid-template-columns: 1fr; }
   .card { padding: 12px 14px 11px; gap: 5px; }
   .card h3 { font-size: 17.5px; }
   .card p { font-size: 13.5px; }
+  .app-icon { width: 40px; height: 40px; border-radius: 9px; }
 }
 @media (prefers-reduced-motion: reduce) { #modes { display: none; } }
