@@ -5,6 +5,8 @@ if (EMSCRIPTEN) # run in Node; the repository's package.json makes .js an ES mod
   set_target_properties(forte_tests PROPERTIES SUFFIX ".cjs")
   target_link_options(forte_tests PRIVATE -sALLOW_MEMORY_GROWTH=1 -sENVIRONMENT=node)
 endif()
+# Node's CI reaches getenv (node-env.js), so the timing tests skip on CI as natively
+set(forte_node_env --pre-js ${CMAKE_CURRENT_SOURCE_DIR}/node-env.js)
 add_test(NAME core COMMAND forte_tests)
 
 # each ported instrument's own native tests: <slug>-tests.cpp
@@ -14,7 +16,7 @@ foreach(slug template bubbles vibraphone carillon glass gongs piano harpsichord 
     target_link_libraries(forte_${slug}_tests PRIVATE forte_${slug})
     if (EMSCRIPTEN) # with the stack the instrument's WebAssembly has (forte_add_wasm): Eigen keeps blocks of up to 128 KB on it
       set_target_properties(forte_${slug}_tests PROPERTIES SUFFIX ".cjs")
-      target_link_options(forte_${slug}_tests PRIVATE -sALLOW_MEMORY_GROWTH=1 -sENVIRONMENT=node -sSTACK_SIZE=256kb)
+      target_link_options(forte_${slug}_tests PRIVATE -sALLOW_MEMORY_GROWTH=1 -sENVIRONMENT=node -sSTACK_SIZE=256kb ${forte_node_env})
     endif()
     add_test(NAME ${slug} COMMAND forte_${slug}_tests)
   endif()
