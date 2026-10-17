@@ -114,6 +114,14 @@ main { max-width: 1180px; margin: 0 auto; padding: 4px max(24px, env(safe-area-i
 .downloads { display: flex; gap: 8px; flex-wrap: wrap; }
 .downloads .button { display: inline-flex; flex-direction: column; gap: 1px; padding: 9px 16px; }
 .downloads .button span { color: var(--muted); font: 500 12px ui-monospace, Menlo, monospace; }
+.downloads-head { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin: 16px 0 8px; }
+.plugin-rows { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 6px 12px; }
+.plugin-rows li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 7px 10px 7px 12px; border: 1px solid var(--line); border-left: 3px solid var(--c); border-radius: 8px; background: var(--card); }
+.plugin-rows .name { font-weight: 600; text-decoration: none; }
+.plugin-rows .ver { color: var(--muted); font: 11px ui-monospace, Menlo, monospace; }
+.plugin-rows .get { margin-left: auto; display: flex; gap: 6px; }
+.plugin-rows .get a { font: 600 12.5px system-ui, sans-serif; padding: 4px 9px; border-radius: 6px; border: 1px solid var(--line); text-decoration: none; color: var(--text); background: rgba(255, 255, 255, 0.04); }
+.plugin-rows .get a:hover { border-color: var(--c); }
 
 .foot { max-width: 1180px; margin: 34px auto 0; padding: 18px max(24px, env(safe-area-inset-right)) max(40px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); display: flex; flex-direction: column; gap: 4px; font-size: 13px; border-top: 1px solid var(--line); }
 .foot a { color: var(--accent); text-decoration: none; }
@@ -131,6 +139,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 4px max(24px, env(safe-area-i
   .section-head { margin-top: 20px; }
   .section-head h2 { font-size: 23px; }
   .grid { grid-template-columns: 1fr; gap: 10px; }
+  .plugin-rows { grid-template-columns: 1fr; }
   .card { padding: 12px 14px 11px; gap: 5px; }
   .card h3 { font-size: 17.5px; }
   .card p { font-size: 13.5px; }

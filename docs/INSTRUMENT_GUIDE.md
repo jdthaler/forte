@@ -211,8 +211,7 @@ and say which in the footer help.
   page and every instrument, from `shared/nav.js`; the page's `<h1>`
   moves into it). Then How it works, **Discover | Perform**, **C++ | JS**
   on a page with a `wasm` build (`shared/shell.js`), audio, MIDI and
-  Panic. The presets (`.preset-row`) stay at the top of `#controls`; their
-  menu gains "Default settings", which presses the page's `#reset`.
+  Panic.
 - **The views: pictures only.** The cards marked `data-perform` (one or
   two: `test/site-tests.mjs` checks) are the main views, large, side by
   side (stacked on a tall screen). The others sit in a tabbed panel below
@@ -231,7 +230,10 @@ and say which in the footer help.
   its length or from Pencil pressure). As many keys as fit the width at the
   chosen key size (− +), like GarageBand: ◀ ▶ move an octave, and an
   overview of the whole range, with the keys on screen framed, drags
-  anywhere. The pedal button presses Space. The page's footer hints
+  anywhere. The presets (`.preset-row`, moved here from `#controls`) sit
+  beside them; their menu gains "Default settings", which presses the
+  page's `#reset`. On a phone, where the bar is full, they are the first
+  control above the keys instead. The pedal button presses Space. The page's footer hints
   (`.kb-help`: computer keys, MIDI, readouts) go behind ⌨.
 - **Perform** is for playing and for a projector: only the main views,
   filling the screen, with no text in them. The card's `.card-head`,

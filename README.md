@@ -85,7 +85,8 @@ pictures of the physics as it plays: the main ones large, the rest behind
 tabs underneath. At the bottom, right above the keys, are the controls a
 player reaches for (stops and registrations, tremolo, drive, the mallet,
 the spin, the room and the volume, or the organ's drawbars), with **More
-controls** for everything else, the presets at its top. Each shows its name, and its value while
+controls** for everything else, and the presets just above the keys (the
+first control on a phone). Each shows its name, and its value while
 you move it. Explanations wait behind ⓘ buttons.
 
 There are two modes. **Discover** shows it all. **Perform** shows just
@@ -114,14 +115,16 @@ The instruments ported to C++ so far (the Ribbon Piano, Harpsichord, Vibraphone,
 Electric Grand, Tangent Clavier, Viola Organista, Glass Armonica, Gong Keyboard and Bubble Organ) also come as plugins for a DAW: AU,
 VST3 and CLAP, and a standalone app, for macOS, Windows and Linux. Download them from the
 **Plugins** section of the front page or from the
-[latest release](https://github.com/jdthaler/forte/releases/latest), and follow
+[latest release](https://github.com/jdthaler/forte/releases/latest): every instrument together, or
+one at a time (also under **↓ Plugin** next to **How it works** on its page). Then follow
 [native/INSTALL.md](native/INSTALL.md). They are unsigned, so a Mac needs one Terminal command
 (`xattr`) before it loads them. The rest follow as they are ported
 ([docs/PLUGINS.md](docs/PLUGINS.md)).
 
-To publish a release, run the **release-plugins** workflow from the Actions tab on `main`
-once the `native` workflow is green on main's latest commit. It releases the plugins that run
-built, tagged `plugins-v<Forte version>`; bump Forte's version before the next one.
+Releases publish themselves: after each green `native` run on `main`, the **release-plugins**
+workflow releases that run's plugins if an instrument's version or anything under `native/`
+changed since the latest release (tagged `plugins-v<Forte version>`, with `-2`, `-3`… when
+Forte's version didn't change). It can also be started by hand from the Actions tab.
 
 ## Running locally
 
