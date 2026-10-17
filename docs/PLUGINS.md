@@ -13,8 +13,8 @@ native/core + native/instruments/<slug>   C++: engines and models
 Status: **steps 0–3 and 5 done** (the native setup, see [native/README.md](../native/README.md); every
 instrument headless in JavaScript; the shared native core; the template and the Bubble Organ
 ported, their pages running the WebAssembly; the plugins released from GitHub and linked from the
-front page; step 4's first two batches, the modal bars, bells and plates, and the strings). Next:
-step 4's third batch, the reeds and pickups. The decisions below were made by the owner on
+front page; step 4's first three batches, the modal bars, bells and plates, the strings, and the
+reeds and pickups). Next: step 4's fourth batch, the self-oscillators. The decisions below were made by the owner on
 2026-10-16. Follow [CLAUDE.md](../CLAUDE.md) for the workflow (branch, test,
 version, pull request, merge only when asked) and update this file as steps
 land.
@@ -292,9 +292,9 @@ Separate sessions can work in parallel once step 3 is done.
    ten voices take 4 % of a core (piano), 5 % (harpsichord, grand), 6 % (bowed; 18 % with the
    dampers lifted) and 14 % (clavier). Learned on the way:
    - The system's `sin`, `exp`, `pow`… differ from V8's in the last bit for a few percent of
-     inputs, which a chaotic instrument amplifies. `native/instruments/bowed/fdlibm.*` is V8's own
-     fdlibm; a port that must match the JavaScript exactly through chaos can use it (move it to
-     `native/core` when a second instrument does).
+     inputs, which a chaotic instrument amplifies. `forte/fdlibm.h` (in `native/core` since Forte
+     0.19.0) is V8's own fdlibm; a port that must match the JavaScript exactly through chaos can
+     use it.
    - Without threads, `KeyData` must free what it replaced as blocks go by (Forte 0.16.0), or the
      WebAssembly's memory grows each time a knob moves. A page view that runs a WebAssembly engine
      on the main thread (a slow motion) calls `destroy()` afterwards.
@@ -305,7 +305,24 @@ Separate sessions can work in parallel once step 3 is done.
    - Don't name an instrument's files after system headers (`string.h`): the folder is on the
      include path.
    - After a call that may grow the WebAssembly's memory, take `memory.buffer` again before writing.
-3. Reeds and pickups: tines, reeds, pianet, harmonium, pipes.
+3. Reeds and pickups: tines, reeds, pianet, harmonium, pipes. **Done** (Tine Piano 0.4.0, Reed
+   Piano 0.4.0, Sticky-Pad Piano 0.4.0, Free-Reed Organ 0.3.0, Pipe Organ 0.3.0, Forte 0.19.0), in
+   one pull request with a commit per instrument. The sticky-pad piano, free-reed organ and pipe
+   organ play what the JavaScript plays to float32 rounding or better (the pipes mostly bit for
+   bit); the tine piano to 4 × 10⁻⁶ and the reed piano's own reeds to 5 × 10⁻⁶ (below). In C++,
+   ten voices take 1 % of a core (pianet), 5 % (reeds), 7 % (harmonium; 20 % with the musette),
+   13 % (tines) and 15 % (pipes, three stops). Learned on the way:
+   - A stiff finite-element eigenproblem (the tine, the reed) is badly conditioned: Eigen and
+     `linalg.js` round it differently, so a port matches to 10⁻⁶ rather than float rounding. Its
+     tests compare the engines on the same per-key data, which the page builds with the
+     WebAssembly model anyway.
+   - A page engine can decay into denormals that the native build flushes (the pianet's pad face
+     made every voice ten times as costly in the JavaScript): flush small state by hand.
+   - Large per-voice buffers (the pipes' delay lines) are reserved up front in the plugin but grown
+     on demand in the WebAssembly, where the Node tests make hundreds of engines.
+   - A page that sends page-built data with a note must know which engine plays it: the shell
+     waits for the worklet's engine message before the first note (Forte 0.19.0).
+   - Native tests run as WebAssembly see `CI` through `native/tests/node-env.js`.
 4. Self-oscillators: Huygens, arc, pyrophone, wind harp.
 5. Table-driven: black hole, quantum, stars, springs.
 6. The organ.

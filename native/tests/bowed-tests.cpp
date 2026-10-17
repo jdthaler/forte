@@ -13,7 +13,7 @@
 
 #include "bowed-engine.h"
 #include "check.h"
-#include "fdlibm.h"
+#include "forte/fdlibm.h"
 
 using namespace forte;
 using namespace forte::bowed;

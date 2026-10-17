@@ -1,9 +1,17 @@
 // harmonium-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName } from '../../shared/shell.js';
+import { createShell, noteName, useWasm } from '../../shared/shell.js';
 import { fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './harmonium-instrument.js';
-import { RANKS, AIR, CD, rankFreq, reedModel, modeShape, areaAt, threshold, engaged } from './harmonium-model.js';
+import * as jsModel from './harmonium-model.js';
+import { RANKS, AIR, CD, areaAt, engaged } from './harmonium-model.js';
+import { wasmModel } from './harmonium-wasm.js';
+
+// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
+// physics as the engine, in C++), the JavaScript one until then or if it can't load. (areaAt
+// only reads the reed's area table, which the model built.)
+let phys = jsModel;
+if (useWasm()) wasmModel().then((m) => { phys = m; updateModel(); }, (err) => console.warn(`harmonium: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
 
 const $ = (s) => document.querySelector(s);
 const RANK_COL = ['#c98bff', '#ff9fb0', '#ffd27a', '#7cc8ff', '#9fe39f'];
@@ -42,13 +50,13 @@ const span = (s) => `<span>${s}</span>`;
 function updateModel() {
   const P = shell.P, on = engaged(P);
   if (!on[shown]) shown = [1, 2, 3, 0, 4].find((r) => on[r]) ?? 1;
-  model = reedModel(rankFreq(focus, shown, P), P);
+  model = phys.reedModel(phys.rankFreq(focus, shown, P), P);
   const g = model.geo, md = model.modes;
   $('#slot-key').textContent = noteName(focus);
   $('#slot-read').textContent = `${RANKS[shown].name} reed: ${(g.L * 1e3).toFixed(1)} × ${(g.b * 1e3).toFixed(1)} × ${(g.h * 1e3).toFixed(2)} mm brass${g.mu > 0 ? `, tip weight ${(model.M * 1e3).toFixed(2)} g` : ''}`;
   clearTimeout(thrTimer);
   thrTimer = setTimeout(() => {
-    thr = threshold(model, 2e4);
+    thr = phys.threshold(model, 2e4);
     info();
   }, 80);
   info();
@@ -120,12 +128,12 @@ animate(() => {
   ctx.fillStyle = css('--muted'); ctx.fillText(`plate ${(g.e * 1e3).toFixed(1)} mm, slot`, X(g.L * 0.55), Y(g.e) + 12);
   // the set (rest): dashed
   ctx.strokeStyle = css('--muted'); ctx.globalAlpha = 0.5; ctx.setLineDash([2, 3]); ctx.beginPath();
-  for (let i = 0; i <= 40; i++) { const u = i / 40, wv = -g.y0 * modeShape(g.lam[0], u); if (i) ctx.lineTo(X(u * g.L), Y(wv)); else ctx.moveTo(X(u * g.L), Y(wv)); }
+  for (let i = 0; i <= 40; i++) { const u = i / 40, wv = -g.y0 * phys.modeShape(g.lam[0], u); if (i) ctx.lineTo(X(u * g.L), Y(wv)); else ctx.moveTo(X(u * g.L), Y(wv)); }
   ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
   // the tongue: thickness h above its downstream face w(x) = y ψ(x)
   ctx.beginPath();
-  for (let i = 0; i <= 50; i++) { const u = i / 50, wv = y * modeShape(g.lam[0], u); if (i) ctx.lineTo(X(u * g.L), Y(wv)); else ctx.moveTo(X(u * g.L), Y(wv)); }
-  for (let i = 50; i >= 0; i--) { const u = i / 50, wv = y * modeShape(g.lam[0], u) - g.h; ctx.lineTo(X(u * g.L), Y(wv)); }
+  for (let i = 0; i <= 50; i++) { const u = i / 50, wv = y * phys.modeShape(g.lam[0], u); if (i) ctx.lineTo(X(u * g.L), Y(wv)); else ctx.moveTo(X(u * g.L), Y(wv)); }
+  for (let i = 50; i >= 0; i--) { const u = i / 50, wv = y * phys.modeShape(g.lam[0], u) - g.h; ctx.lineTo(X(u * g.L), Y(wv)); }
   ctx.closePath(); ctx.fillStyle = '#d9a441'; ctx.fill();
   if (g.mu > 0) { const r = Math.max(2, 0.04 * g.L * s); ctx.fillStyle = '#b8862e'; ctx.fillRect(X(g.L) - 2 * r, Y(y - g.h) - r, 2 * r, r); }
   // the rivet

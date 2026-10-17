@@ -373,7 +373,7 @@ bowed/src/bowed-params.js             parameters and presets
 bowed/src/bowed-tuning.js             tuning table (generated)
 bowed/src/bowed-main.js               page wiring and views
 bowed/src/bowed-wasm.js               the C++ engine and model as WebAssembly (bowed/wasm/bowed.wasm)
-native/instruments/bowed/             the C++ port: model, string, engine, V8's math (fdlibm), generated tables, reference
+native/instruments/bowed/             the C++ port: model, string, engine, generated tables, reference (V8's math, fdlibm, is in native/core)
 test/bowed-tests.mjs                  node test/bowed-tests.mjs  (FORTE_ENGINE=wasm: on the WebAssembly)
 tools/bowed-tuning.mjs                node tools/bowed-tuning.mjs → bowed/src/bowed-tuning.js and its C++ copy
 tools/render-bowed.mjs                node tools/render-bowed.mjs → examples/bowed/

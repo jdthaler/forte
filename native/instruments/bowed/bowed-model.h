@@ -16,7 +16,7 @@
 #include <numbers>
 #include <vector>
 
-#include "fdlibm.h"
+#include "forte/fdlibm.h"
 #include "forte/dsp.h"
 
 namespace forte::bowed {

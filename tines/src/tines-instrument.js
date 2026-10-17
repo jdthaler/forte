@@ -33,6 +33,9 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine
   midiVelocity: (v) => 0.25 * 20 ** v,  // MIDI velocity / 127 → hammer speed, 0.25 … 5 m/s
   engine: { name: 'RhodesEngine', module: new URL('./rhodes-engine.js', import.meta.url).href },
+  // the same physics in C++ (native/instruments/tines), built as WebAssembly: the page runs it when
+  // it can, the JavaScript engine otherwise
+  wasm: { name: 'TinesWasmEngine', module: new URL('./tines-wasm.js', import.meta.url).href, binary: new URL('../wasm/tines.wasm', import.meta.url).href },
   engineParams: (P) => ({
     damper: P.damper, cable: P.cable, resQ: P.resQ, tremRate: P.tremRate, tremDepth: P.tremDepth, drive: P.drive, tone: P.tone,
     gap: P.gap, offset: P.offset, poleRadius: P.poleRadius, voicing: P.voicing, // pickups: the engine moves them live

@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include "fdlibm.h"
+#include "forte/fdlibm.h"
 #include "forte/dsp.h"
 
 namespace forte::bowed {

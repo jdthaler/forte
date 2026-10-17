@@ -362,6 +362,17 @@ and the treble near the middle.
   0.4 s, while 8′ C, with its Q of 127, takes more than a second.
 - **Allocation.** None in `process()`: pipes are built when a key is first
   pressed, from models cached per pitch and voicing.
+- **In C++**: the same engine and model run as WebAssembly on this page (the
+  JavaScript is the fallback; `?engine=js` in the address forces it) and as
+  plugins (CLAP, VST3, AU and a standalone app), where the Space pedal is
+  Hold on CC64 and the mod wheel raises the wind from 700 to 3000 Pa. A key's
+  six pipes are voiced off the audio thread (the plugins' worker; on the
+  page, its own WebAssembly model, which sends them with the note), and the
+  voices and their delay lines are set aside in advance. The WebAssembly
+  plays what the JavaScript plays to within 2 × 10⁻⁸ of full scale (most
+  scripts bit for bit), and the same test suite passes on it. Ten keys of
+  Principal, Octave and Gedackt (30 pipes) take about 13–16 % of a core in
+  C++ on the same loaded machine, ten Principal pipes about 7–8 %.
 
 ## What to listen for
 
@@ -406,8 +417,10 @@ pipes/src/tuning-table.js             each pipe's correction from the linear ana
 pipes/src/pipes-engine.js             real-time engine (AudioWorklet and Node)
 pipes/src/pipes-params.js             parameters and presets
 pipes/src/pipes-main.js               page wiring and views
-test/pipes-tests.mjs                  node test/pipes-tests.mjs (25 tests, ~22 s)
-tools/pipes-tuning.mjs                node tools/pipes-tuning.mjs → pipes/src/tuning-table.js
+pipes/src/pipes-wasm.js               the C++ engine and model as WebAssembly (pipes/wasm/pipes.wasm)
+native/instruments/pipes/             the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
+test/pipes-tests.mjs                  node test/pipes-tests.mjs (26 tests, ~20 s; FORTE_ENGINE=wasm: on the WebAssembly)
+tools/pipes-tuning.mjs                node tools/pipes-tuning.mjs → pipes/src/tuning-table.js and native/instruments/pipes/tuning-table.h
 tools/render-pipes.mjs                node tools/render-pipes.mjs → examples/pipes/
 ```
 
