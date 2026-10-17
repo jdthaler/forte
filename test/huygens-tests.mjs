@@ -266,7 +266,7 @@ await test('the worklet posts at most 30 states a second, each with only the new
   globalThis.NeonEngine = NeonEngine;
   globalThis.AudioWorkletProcessor = class { constructor() { this.port = { postMessage: (m) => sent.push(m) }; } };
   let Proc = null;
-  globalThis.registerProcessor = (name, cls) => { Proc = cls; };
+  globalThis.registerProcessor = (name, cls) => { if (name === 'forte-processor') Proc = cls; };
   await import('../shared/worklet.js');
   const p = new Proc({ processorOptions: { engine: 'NeonEngine' } });
   for (const k of [48, 52, 55, 60, 64, 67, 70, 72, 76, 79, 84, 88]) p.handle({ type: 'noteOn', key: k, velocity: 1, data: { f: keyFreq(k) } });

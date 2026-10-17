@@ -90,7 +90,8 @@ JavaScript computes (`tests/js-vectors.h`) and `tests/shared-tests.cpp` compares
   it. Where JavaScript throws, these return nothing (the engines have no exceptions).
 - `chain.h`: the output chain the pages build with `shared/chain.js` (Web Audio's low-pass and
   its convolver's normalisation, the room and soundboard), plus `limiter.h`, the compressor
-  curve and makeup gain of Web Audio's DynamicsCompressorNode without its 6 ms look-ahead.
+  curve and makeup gain of Web Audio's DynamicsCompressorNode without its 6 ms look-ahead (the
+  pages run the same limiter, `shared/limiter.js`).
   The convolutions have no latency (direct taps, then partitioned FFT stages that spread
   their work): about 3 % of a core for the room at 48 kHz, 5 % with a soundboard.
 - Real-time plumbing: `queue.h` (lock-free single-producer, single-consumer), `Message` and
