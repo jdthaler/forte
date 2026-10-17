@@ -193,7 +193,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'springs', name: 'Spring Keyboard', section: 'phenomena', ready: true, version: '0.1.1', trim: 11.5,
-    plugin: { code: 'Sprg' },
+    plugin: { code: 'Sprg', ready: true },
     tagline: 'Struck steel coils, each cut to sound its note; their waves travel at different speeds by pitch, so every echo arrives as a chirp.',
     physics: 'Helical rods (Wittrick) · dispersion · chirped echoes',
     accent: '#c0c0d8',
