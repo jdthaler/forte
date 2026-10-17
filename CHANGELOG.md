@@ -10,6 +10,78 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-17 — the table-driven instruments in C++ (step 4, fifth batch)
+
+### Black-Hole Keyboard 0.4.0
+- **Ported to C++** (`native/instruments/blackhole`): the quasinormal-mode bank with its cubic
+  Hermite interpolation, the spherical harmonics, the merger's excitation, each key's voice, the
+  inspiral's chirp and the strain curve, and the ringdown engine, operation for operation, with V8's
+  fdlibm, `Math.log10` and `Math.hypot`. Leaver's table is converted number for number to
+  `qnm-table.h` (`node tools/blackhole-native-table.mjs`, also written by `tools/qnm-table.mjs`),
+  and a test keeps it fresh.
+  - **Plugins:** Black-Hole Keyboard as CLAP, VST3, AU v2 and a standalone app: velocity^1.5 as on
+    the page, the spin on the mod wheel, the ten presets. A key's voice is built from the table in
+    microseconds as the note starts. Ten voices take about 1.5 % of a core.
+  - **WebAssembly:** 159 KB in `blackhole/wasm/` (mostly the table). The test suite passes on it,
+    and it plays what the JavaScript plays bit for bit, inspirals included.
+  - **The page runs it**: the QNM plane, the strain plot and the mode table call the WebAssembly
+    model and each note plays the voice they show, falling back to the JavaScript; the header has
+    the C++ | JS switch.
+- **Cheaper:** a mode that has died away goes to zero instead of decaying into denormals beside
+  a long fundamental, which made the JavaScript engine four times costlier on near-extremal
+  rings. The sound is unchanged.
+
+### Quantum Keyboard 0.4.0
+- **Ported to C++** (`native/instruments/quantum`): the five wells' spectra and matrix elements,
+  the tempo lock, each key's wavepacket, the exact phasor sum with T₁, dephasing, the pump's ramp,
+  voice stealing and the 3000-pair budget, and the views' eigenfunctions, operation for operation,
+  with V8's fdlibm.
+  - **Plugins:** Quantum Keyboard as CLAP, VST3, AU v2 and a standalone app: CC64 the damper, the
+    mod wheel the dephasing rate, the nine presets. Each key's packet is built on a worker thread
+    for the knobs as they are. Ten voices take about 4 % of a core (12 % with hydrogen at σ = 4 on
+    the antenna).
+  - **WebAssembly:** 76 KB in `quantum/wasm/`. The test suite passes on it, and it plays what the
+    JavaScript plays bit for bit.
+  - **The page runs it**, and computes its packets and eigenfunctions with the WebAssembly model,
+    falling back to the JavaScript.
+
+### Star Keyboard 0.2.0
+- **Ported to C++** (`native/instruments/stars`): the model (the scaling relations, the track, the
+  asymptotic and mixed modes, the tuning of every key, the δ Scuti stars) and the engine (the
+  stochastically driven modes, the flare, the Landau growth), operation for operation, with V8's
+  fdlibm and the JavaScript's seeded generators, its warm-up included.
+  - **Plugins:** Star Keyboard as CLAP, VST3, AU v2 and a standalone app: CC64 the sustain pedal,
+    the mod wheel spins the stars up, aftertouch drives the convection harder, the eleven presets.
+    Each key's star is built on a worker thread when the kind, mass or speed-up changes. Ten stars
+    take about 12 % of a core.
+  - **WebAssembly:** 86 KB in `stars/wasm/`. The test suite passes on it, and it plays what the
+    JavaScript plays bit for bit, its random convection and flares included.
+  - **The page runs it**: it builds each key's star with the WebAssembly model and sends it with
+    the note, and its views use that model, falling back to the JavaScript.
+
+### Spring Keyboard 0.2.0
+- **Ported to C++** (`native/instruments/springs`): the helical springs' rods (the same Jacobi
+  rotations, and the same solver cache, so neighbouring keys share a solver as in the JavaScript),
+  the tuning by ear, the dispersion and the engine, operation for operation, with V8's fdlibm.
+  - **Plugins:** Spring Keyboard as CLAP, VST3, AU v2 and a standalone app: velocity, CC64 the
+    damper pedal, the mod wheel the hand on the springs, the eleven presets. Each key's springs
+    (about 3 ms) are built on a worker thread as soon as the geometry settles. Ten keys take about
+    8–10 % of a core.
+  - **WebAssembly:** 88 KB in `springs/wasm/`. The test suite passes on it, and it plays what the
+    JavaScript plays bit for bit.
+  - **The page runs it**: it builds each key's springs with the WebAssembly model and sends them
+    with the note, and the echo and dispersion views draw from the WebAssembly, falling back to the
+    JavaScript.
+
+### Forte 0.24.0
+- **The plugins' tone low-pass** passes everything at or above Nyquist, as Web Audio's does,
+  instead of going unstable (clap-validator's 8 kHz run gave NaN with the black hole's 14 kHz
+  tone). Below Nyquist it computes what it did; no WebAssembly changed.
+- **`forte/fdlibm.h`** gains V8's `tan`, `log1p`, `log2` and `log10` (the star keyboard's tuning).
+- **Tools:** `tools/blackhole-native-table.mjs` (new) writes the QNM table's C++ copy.
+- **`plugin.ready`** for the four, so they are on the front page's Plugins section and in the next
+  release; the template's generated files and WebAssembly carry Forte 0.24.0.
+
 ## 2026-10-17 — the self-oscillators in C++ (step 4, fourth batch)
 
 ### Huygens Keyboard 0.4.0

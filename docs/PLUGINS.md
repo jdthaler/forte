@@ -13,9 +13,9 @@ native/core + native/instruments/<slug>   C++: engines and models
 Status: **steps 0–3 and 5 done** (the native setup, see [native/README.md](../native/README.md); every
 instrument headless in JavaScript; the shared native core; the template and the Bubble Organ
 ported, their pages running the WebAssembly; the plugins released from GitHub and linked from the
-front page; step 4's first four batches, the modal bars, bells and plates, the strings, the
-reeds and pickups, and the self-oscillators). Next: step 4's fifth batch, the table-driven
-instruments. The decisions below were made by the owner on
+front page; step 4's first five batches, the modal bars, bells and plates, the strings, the
+reeds and pickups, the self-oscillators and the table-driven instruments). Next: step 4's last
+batch, the tonewheel organ. The decisions below were made by the owner on
 2026-10-16. Follow [CLAUDE.md](../CLAUDE.md) for the workflow (branch, test,
 version, pull request, merge only when asked) and update this file as steps
 land.
@@ -343,7 +343,26 @@ Separate sessions can work in parallel once step 3 is done.
    - Test hooks that hold a voice across `process()` need live getters over a stable pointer, and
      engines the Node tests drop can be freed with a `FinalizationRegistry`.
    - A parameter whose default sits off its step must read back as itself (Forte 0.23.0).
-5. Table-driven: black hole, quantum, stars, springs.
+5. Table-driven: black hole, quantum, stars, springs. **Done** (Black-Hole Keyboard 0.4.0,
+   Quantum Keyboard 0.4.0, Star Keyboard 0.2.0, Spring Keyboard 0.2.0, Forte 0.24.0), in one pull
+   request with a commit per instrument. All four play what the JavaScript plays bit for bit. In
+   C++, ten voices take 1.5 % of a core (black hole), 4 % (quantum), 8–10 % (springs) and 12 %
+   (stars). Learned on the way:
+   - "Table-driven" turned out to mean one real table (the black hole's, converted by a
+     `--native` writer); the stars and springs are closed forms and solves, the quantum keyboard's
+     table ten Airy zeros copied as literals.
+   - Anything the JavaScript does that touches shared random state (the stars' JIT warm-up) or
+     depends on call order (the springs' solver cache keyed by `toFixed`) must be ported
+     literally, or the bits part.
+   - Page-built per-note data can be larger than the 64 KB scratch area (the springs'): give it
+     its own buffers. A wrapper can take the JavaScript's own shape and pack it, so the page's data
+     and a test's made-up data go through one path.
+   - A suite that compares Float64 renders to 10⁻⁹ needs a double-precision render hook in the
+     WebAssembly (`render<T>()`).
+   - A web filter default can sit above a plugin host's Nyquist (8 kHz): the chain's low-pass now
+     passes everything at or above it, as Web Audio's (Forte 0.24.0).
+   - `Math.log2` has copies in huygens and springs; `forte/fdlibm.h` now has V8's own, for the
+     next port that needs it.
 6. The organ.
 
 Chaotic instruments (gong crashes, bowed friction, flames, wind) can't match

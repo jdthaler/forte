@@ -69,7 +69,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "blackhole", .name = "Black-Hole Keyboard", .version = "0.3.3",
+    .slug = "blackhole", .name = "Black-Hole Keyboard", .version = "0.4.0",
     .description = "Every key a Kerr black hole, ringing in quasinormal modes computed from the Teukolsky equation.", .auSubtype = "BHol",
     .vst3Id = {0x5f, 0xef, 0x66, 0x73, 0x53, 0x79, 0xc9, 0x85, 0x2f, 0x95, 0xda, 0x33, 0x4a, 0xc9, 0x74, 0x92},
     .params = kParams, .paramCount = p::count,

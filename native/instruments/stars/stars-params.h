@@ -73,7 +73,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "stars", .name = "Star Keyboard", .version = "0.1.1",
+    .slug = "stars", .name = "Star Keyboard", .version = "0.2.0",
     .description = "Every key a Sun-like star whose oscillations are rung continuously by convection: combs of modes that breathe rather than strike.", .auSubtype = "Star",
     .vst3Id = {0xa6, 0x1a, 0x0b, 0x1f, 0xcc, 0xe5, 0x83, 0xb4, 0x0f, 0xb9, 0x13, 0xe4, 0x1d, 0xf9, 0x68, 0x3b},
     .params = kParams, .paramCount = p::count,

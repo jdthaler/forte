@@ -14,7 +14,7 @@
 // `plugin.ready` marks an instrument whose native port is built and released as plugins (it has
 // a native/instruments/<id>/ folder); the landing page lists those under Plugins.
 
-export const FORTE_VERSION = '0.23.0';
+export const FORTE_VERSION = '0.24.0';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
@@ -171,14 +171,14 @@ export const INSTRUMENTS = [
     accent: '#e6c15a',
   },
   {
-    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'phenomena', ready: true, version: '0.3.3', trim: 14,
+    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'phenomena', ready: true, version: '0.4.0', trim: 14,
     plugin: { code: 'BHol', ready: true },
     tagline: 'Every key a Kerr black hole, ringing in quasinormal modes computed from the Teukolsky equation.',
     physics: 'General relativity · quasinormal modes',
     accent: '#b18cff',
   },
   {
-    id: 'quantum', name: 'Quantum Keyboard', section: 'phenomena', ready: true, version: '0.3.1', trim: 9.5,
+    id: 'quantum', name: 'Quantum Keyboard', section: 'phenomena', ready: true, version: '0.4.0', trim: 9.5,
     plugin: { code: 'Qntm', ready: true },
     tagline: 'Each key a wavepacket in a potential well: notes that collapse, return an octave up as the packet splits, and revive on the beat.',
     physics: 'Schrödinger equation · quantum revivals',
@@ -192,14 +192,14 @@ export const INSTRUMENTS = [
     accent: '#6fb8ff',
   },
   {
-    id: 'springs', name: 'Spring Keyboard', section: 'phenomena', ready: true, version: '0.1.1', trim: 11.5,
+    id: 'springs', name: 'Spring Keyboard', section: 'phenomena', ready: true, version: '0.2.0', trim: 11.5,
     plugin: { code: 'Sprg', ready: true },
     tagline: 'Struck steel coils, each cut to sound its note; their waves travel at different speeds by pitch, so every echo arrives as a chirp.',
     physics: 'Helical rods (Wittrick) · dispersion · chirped echoes',
     accent: '#c0c0d8',
   },
   {
-    id: 'stars', name: 'Star Keyboard', section: 'phenomena', ready: true, version: '0.1.1', trim: 7,
+    id: 'stars', name: 'Star Keyboard', section: 'phenomena', ready: true, version: '0.2.0', trim: 7,
     plugin: { code: 'Star', ready: true },
     tagline: 'Every key a Sun-like star whose oscillations are rung continuously by convection: combs of modes that breathe rather than strike.',
     physics: 'Asteroseismology · stochastically driven modes',

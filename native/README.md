@@ -20,8 +20,8 @@ web/engine-api.cpp                  the engine contract as C functions, for the 
 instruments/<slug>/                 a ported instrument: engine, model, generated tables (the
                                     template, bubbles, vibraphone, carillon, glass, gongs, piano,
                                     harpsichord, grand, clavier, bowed, tines, reeds,
-                                    pianet, harmonium, pipes, huygens, arc, pyrophone and
-                                    windharp so far;
+                                    pianet, harmonium, pipes, huygens, arc, pyrophone,
+                                    windharp, blackhole, quantum, stars and springs so far;
                                     docs/INSTRUMENT_GUIDE.md,
                                     "The native port")
 tests/                              native unit tests (CTest); tests/smoke, a test instrument
