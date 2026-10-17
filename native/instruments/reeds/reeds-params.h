@@ -71,7 +71,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "reeds", .name = "Reed Piano", .version = "0.3.1",
+    .slug = "reeds", .name = "Reed Piano", .version = "0.4.0",
     .description = "Struck steel reeds tuned with solder, sensed as one plate of a charged capacitor.", .auSubtype = "Reed",
     .vst3Id = {0xb4, 0x92, 0xc8, 0x0f, 0x45, 0x5f, 0x25, 0x27, 0x94, 0x34, 0xa2, 0x29, 0x43, 0x76, 0x8a, 0xf0},
     .params = kParams, .paramCount = p::count,

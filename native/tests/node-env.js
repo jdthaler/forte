@@ -1,4 +1,5 @@
-// node-env.js — linked into the native tests built as WebAssembly (--pre-js): Emscripten's getenv
-// doesn't see Node's environment, so copy CI across, and the tests skip their timing checks on
-// CI as they do natively.
-Module['preRun'] = [].concat(Module['preRun'] || [], () => { if (process.env.CI) ENV['CI'] = process.env.CI; });
+// Emscripten's getenv reads its own ENV, not Node's: hand the tests CI, so the CPU timing tests
+// skip on GitHub as the Linux ones do. A module that never calls getenv has no ENV.
+Module['preRun'] = [].concat(Module['preRun'] || [], () => {
+  if (process.env.CI && typeof ENV !== 'undefined') ENV['CI'] = process.env.CI;
+});

@@ -87,7 +87,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "pipes", .name = "Pipe Organ", .version = "0.2.1",
+    .slug = "pipes", .name = "Pipe Organ", .version = "0.3.0",
     .description = "Air jets flutter against the pipe mouths: each note starts with a chiff, overblows when pushed, and sags when the wind runs short.", .auSubtype = "Pipe",
     .vst3Id = {0x49, 0xc2, 0xd7, 0x5e, 0x94, 0xa4, 0xa8, 0x86, 0x5b, 0x88, 0x22, 0xe7, 0x5b, 0x5a, 0x0f, 0xfb},
     .params = kParams, .paramCount = p::count,

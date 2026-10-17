@@ -87,7 +87,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "harmonium", .name = "Free-Reed Organ", .version = "0.2.1",
+    .slug = "harmonium", .name = "Free-Reed Organ", .version = "0.3.0",
     .description = "Brass reeds driven by the airflow they choke; paired reeds tuned a little apart give the musette shimmer.", .auSubtype = "Harm",
     .vst3Id = {0x65, 0xea, 0x91, 0x2c, 0xfa, 0x91, 0xc7, 0x5d, 0xe1, 0x93, 0xa5, 0xce, 0x34, 0x0e, 0x50, 0xdc},
     .params = kParams, .paramCount = p::count,

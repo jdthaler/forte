@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-#include "fdlibm.h"
+#include "forte/fdlibm.h"
 #include "forte/linalg.h"
 
 namespace forte::pianet {

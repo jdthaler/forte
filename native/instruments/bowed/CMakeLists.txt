@@ -1,7 +1,7 @@
 # The Viola Organista (bowed/): its engine and model in C++, its plugins and its WebAssembly.
 include(bowed-info.cmake) # generated: FORTE_NAME, FORTE_VERSION, FORTE_AU_SUBTYPE
 
-add_library(forte_bowed STATIC fdlibm.cpp bowed-model.cpp bowed-string.cpp bowed-engine.cpp bowed-instrument.cpp)
+add_library(forte_bowed STATIC bowed-model.cpp bowed-string.cpp bowed-engine.cpp bowed-instrument.cpp)
 target_include_directories(forte_bowed PUBLIC .)
 target_link_libraries(forte_bowed PUBLIC forte_core)
 

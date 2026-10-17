@@ -10,6 +10,96 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-17 — the reeds and pickups in C++ (step 4, third batch)
+
+### Tine Piano 0.4.0
+- **Ported to C++** (`native/instruments/tines`): the finite-element tine with its tuning spring,
+  the coupled tine, tone bar and block, the hammer tips and pickups, and the engine (the implicit
+  hysteretic hammer, the nonlinear pickup, the harp's resonance, the stereo vibrato, the amp's
+  drive, the half-band decimation, the speaker), operation for operation.
+  - **Plugins:** Tine Piano as CLAP, VST3, AU v2 and a standalone app: velocity as the hammer's
+    speed (0.25–5 m/s), CC64 the damper pedal, the ten presets, the room in the output chain. Each
+    key's modes are built on a worker thread. Ten notes take about 13 % of a core.
+  - **WebAssembly:** 118 KB in `tines/wasm/`. The test suite passes on it, and it plays what the
+    JavaScript plays to within 4 × 10⁻⁶ of the peak: the tine's eigenproblem is badly
+    conditioned, so Eigen and `linalg.js` round it differently.
+  - **The page runs it**: it builds each key's modes with its WebAssembly model and sends them with
+    the note, and the info panel, mode table, spectrum and slow motion call that model, all falling
+    back to the JavaScript.
+
+### Reed Piano 0.4.0
+- **Ported to C++** (`native/instruments/reeds`): the reed's finite elements, tuning, losses and
+  felt hammers, the slot's C(y) (`slot-table.h`, converted from `slot-table.js` by
+  `node tools/reeds-native-table.mjs`), and the engine with its implicit felt contact, frame stop,
+  gliding slot, comb node, photocell tremolo, preamp, decimator and speakers.
+  - **Plugins:** Reed Piano as CLAP, VST3, AU v2 and a standalone app: velocity, CC64 the damper
+    pedal, the nine presets. Every reed is built on a worker thread when Solder mass, Strike point
+    or Hammer felt hardness settles. Ten voices take about 5 % of a core.
+  - **WebAssembly:** 138 KB in `reeds/wasm/`. The test suite passes on it; on the same reed it
+    plays what the JavaScript plays to float32 rounding (5 × 10⁻⁸ of the peak), with its own reeds
+    to 5 × 10⁻⁶ (the eigensolver).
+  - **The page runs it**: it builds each key's reed with the WebAssembly model and sends it with the
+    note, and its views call that model, falling back to the JavaScript.
+
+### Sticky-Pad Piano 0.4.0
+- **Ported to C++** (`native/instruments/pianet`): the reeds, the pad's bond and its peel, and the
+  pickups, with V8's fdlibm for their sines and exponentials.
+  - **Plugins:** Sticky-Pad Piano as CLAP, VST3, AU v2 and a standalone app: velocity, CC64 the
+    sustain pedal, the ten presets, the pickup and amplifier as dropdowns. Each key's reed is built
+    on a worker thread for the tip mass and loss. Ten voices take about 1 % of a core.
+  - **WebAssembly:** 116 KB in `pianet/wasm/`. The test suite passes on it, and it plays what the
+    JavaScript plays to float32 rounding (within 6 × 10⁻⁸ of the peak).
+  - **The page runs it**; its slow motion, mode table and release plot use the WebAssembly model,
+    falling back to the JavaScript.
+- **Fixed:** Panic, voice stealing past 40 voices and re-pressing a key after a new tip mass or
+  loss made the engine throw (a retired voice's fade was read out of scope), and a retired voice
+  that had gone to sleep never faded out.
+- **Cheaper:** the free pad face no longer decays into denormals, which made every voice ten times
+  as costly on the page.
+
+### Free-Reed Organ 0.3.0
+- **Ported to C++** (`native/instruments/harmonium`): the tip-weighted tongue, the slot's area, the
+  voicer's design and the threshold analysis, the implicit reed step with 2× oversampling, the wind
+  and the cassotto. `tuning-table.h` is the C++ copy of the tuning table
+  (`node tools/harmonium-tuning.mjs --native`), and a test keeps it fresh.
+  - **Plugins:** Free-Reed Organ as CLAP, VST3, AU v2 and a standalone app: velocity opens the
+    pallet, CC64 holds the keys, the mod wheel raises the bellows' pressure (to 2500 Pa),
+    aftertouch blows harder, the fifteen presets. Each key's reeds are designed on a worker thread
+    when the voicing knobs change. Ten keys take about 7 % of a core, 20 % with the three-reed
+    musette.
+  - **WebAssembly:** 69 KB in `harmonium/wasm/`. The test suite passes on it, and it plays what
+    the JavaScript plays to within 1.2 × 10⁻⁸ of the peak.
+  - **The page runs it**, and its views use the WebAssembly model, falling back to the JavaScript.
+
+### Pipe Organ 0.3.0
+- **Ported to C++** (`native/instruments/pipes`): the pipes' scale, end corrections and losses, the
+  voicing and the jet's linear analysis, and the engine (the jet's delay and low-pass, the
+  labium, the pipes' modes, 2× oversampling, pallets, sliders, the wind and the tremulant, the
+  same seeded turbulence). `tuning-table.h` is the C++ copy of the tuning table
+  (`node tools/pipes-tuning.mjs --native`), and a test keeps it fresh.
+  - **Plugins:** Pipe Organ as CLAP, VST3, AU v2 and a standalone app: velocity sets the pallet's
+    speed (the chiff), CC64 holds the keys, the mod wheel raises the wind (to 3000 Pa), the
+    seventeen presets. The worker voices every key ahead; the 40 voices and their delay lines are
+    set aside in advance (about 7 MB an instance). Ten keys of three stops take about 15 % of a
+    core.
+  - **WebAssembly:** 71 KB in `pipes/wasm/`. The test suite passes on it, and it plays what the
+    JavaScript plays to within 2 × 10⁻⁸ of the peak (most reference scripts bit for bit).
+  - **The page runs it**: it voices each key's pipes with its WebAssembly model and sends them with
+    the note, and its views call that model, falling back to the JavaScript.
+
+### Forte 0.19.0
+- **V8's fdlibm moves to `native/core`** (`forte/fdlibm.h`), now that the Viola Organista and the
+  Sticky-Pad Piano both use it.
+- **Notes wait for the engine:** when a page has a C++ build, starting audio waits (up to a
+  second) for the worklet to say which engine it runs, so the first note's page-built data is
+  never sent to an engine that cannot read it.
+- **Native tests as WebAssembly see `CI`** (`native/tests/node-env.js`), so they skip the CPU
+  timing tests on GitHub as the Linux ones do.
+- **Tools** write the new ports' C++ tables: `tools/reeds-native-table.mjs` (new),
+  `tools/harmonium-tuning.mjs --native` and `tools/pipes-tuning.mjs --native`.
+- **`plugin.ready`** for the five, so they are on the front page's Plugins section and in the
+  next release; the template's generated files and WebAssembly carry Forte 0.19.0.
+
 ## 2026-10-17 — the presets above the keys
 
 ### Forte 0.18.0
