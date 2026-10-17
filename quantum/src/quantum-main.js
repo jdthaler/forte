@@ -2,11 +2,18 @@
 // The packet of each note is computed here (the descriptor's noteData: makePacket, ~1 ms)
 // and sent with the noteOn, so the worklet never does setup work.
 
-import { createShell, noteName, toast } from '../../shared/shell.js';
+import { createShell, noteName, toast, useWasm } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT, fMax as fMaxAt } from './quantum-instrument.js';
 import { makePacket, WELLS } from './quantum-model.js';
 import { waveGrid, density } from './quantum-waves.js';
+import { wasmModel } from './quantum-wasm.js';
+
+// The packets (for the engine and the views) and the views' eigenfunctions come from the
+// WebAssembly model once it has loaded (the same physics as the engine, in C++, to the last bit),
+// from the JavaScript one until then or if it can't load. Either engine plays either's packets.
+let model = { makePacket, waveGrid };
+if (useWasm()) wasmModel().then((m) => { model = m; dirty = true; }, (err) => console.warn(`quantum: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
 
 const $ = (s) => document.querySelector(s);
 const spectrum = new SpectrumView($('#spectrum'));
@@ -27,7 +34,7 @@ const fmtT = (t) => (!Number.isFinite(t) ? '∞' : t < 1 ? `${(t * 1000).toFixed
 const shell = createShell({
   ...INSTRUMENT,
   arrows: { param: 'velocity', step: 0.05 },
-  noteData: (key, vel, P, fs) => offBeat(INSTRUMENT.noteData(key, vel, P, fs)),
+  noteData: (key, vel, P, fs) => offBeat(model.makePacket(key, P, { fMax: fMaxAt(fs) })),
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key) => { if (key !== focus) { focus = key; dirty = true; } onsetAt = now(); shell.keys.focus(key); },
   onParam: (id) => { if (id === 'dephase') dephDirty = true; else if (!LIVE_ONLY.has(id)) { dirty = true; warned = false; } },
@@ -52,7 +59,7 @@ function strobe(tau) {
 
 function refresh() {
   dirty = false; dephDirty = true;
-  pk = makePacket(focus, shell.P, { fMax: fMax() });
+  pk = model.makePacket(focus, shell.P, { fMax: fMax() });
   $('#focus-name').textContent = noteName(focus);
   const rev = Number.isFinite(pk.Trev) ? `T_rev ${fmtT(pk.Trev)} = ${(pk.Trev / pk.Tcl).toFixed(0)} periods · collapse ${fmtT(pk.tColl)}` : 'no revivals: equally spaced levels never dephase';
   const sr = Number.isFinite(pk.Tsr) && pk.Tsr < 1e4 ? ` · T_sr ${fmtT(pk.Tsr)}` : '';
@@ -111,7 +118,7 @@ function drawCarpet() {
   const padL = 30, padB = 16, pw = Math.max(10, w - padL - 6), ph = Math.max(10, h - padB - 4);
   const W = Math.max(8, Math.min(560, Math.floor(pw))), H = Math.max(8, Math.min(220, Math.floor(ph)));
   if (!carpet.G || W !== carpet.W || H !== carpet.H || dephDirty) {
-    if (!carpet.G || H !== carpet.H) carpet.G = waveGrid(pk, shell.P, 2 * H);
+    if (!carpet.G || H !== carpet.H) carpet.G = model.waveGrid(pk, shell.P, 2 * H);
     carpet.W = W; carpet.H = H; carpet.done = 0; carpet.j0 = 0; dephDirty = false;
     carpet.img = new ImageData(W, H); carpet.lut = lut();
     carpet.off = carpet.off || document.createElement('canvas');
@@ -159,7 +166,7 @@ function drawWell() {
   ctx.clearRect(0, 0, w, h);
   const ladder = Math.max(40, Math.min(110, 0.24 * w)), padL = 8, padB = 16, pw = Math.max(10, w - ladder - padL - 10), ph = Math.max(10, h - padB - 6);
   const rows = Math.max(16, Math.min(400, Math.floor(pw)));
-  if (!wellG || wellG.ys.length !== rows) { wellG = waveGrid(pk, shell.P, rows); wellBuf.d = new Float64Array(rows); wellBuf.ref = densityRef(wellG); }
+  if (!wellG || wellG.ys.length !== rows) { wellG = model.waveGrid(pk, shell.P, rows); wellBuf.d = new Float64Array(rows); wellBuf.ref = densityRef(wellG); }
   const G = wellG, [E0, E1] = G.Erange, ys = G.ys;
   const X = (i) => padL + ((i + 0.5) / rows) * pw, Y = (E) => 6 + ph * (1 - (E - E0) / (E1 - E0));
   // the potential

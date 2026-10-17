@@ -212,6 +212,17 @@ dephasing included), are dropped for good, so faded notes give theirs up
 first. 24 such voices struck together then take 31 % of a core instead of
 67 %, each keeping its 125 strongest lines (91 % of its power).
 
+**In C++.** The same engine and model run as WebAssembly on this page (the
+JavaScript is the fallback; `?engine=js` in the address forces it) and as
+plugins (CLAP, VST3, AU and a standalone app), where the Space pedal is the
+damper on CC64 and the mod wheel is the dephasing rate. The WebAssembly plays
+what the JavaScript plays bit for bit, packets, revivals and the pair budget
+included (V8's own `sin`, `cos`, `exp` and `pow`), and the page's packets and
+the views' eigenfunctions come from the same C++. Each key's packet is built
+on a worker thread in the plugins, for the knobs as they are, and on the page
+by its WebAssembly model, which sends it with the note. Ten voices take about
+4 % of a core in C++ at the defaults and 12 % in the worst case above.
+
 ## What to listen for
 
 `examples/quantum/`:
@@ -261,7 +272,9 @@ quantum/src/quantum-waves.js           eigenfunctions on a grid (Numerov / close
 quantum/src/quantum-engine.js          real-time engine (AudioWorklet and Node)
 quantum/src/quantum-params.js          parameters and presets
 quantum/src/quantum-main.js            page wiring and views
-test/quantum-tests.mjs                 node test/quantum-tests.mjs (26 tests, ~15 s)
+quantum/src/quantum-wasm.js            the C++ engine and model as WebAssembly (quantum/wasm/quantum.wasm)
+native/instruments/quantum/            the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
+test/quantum-tests.mjs                 node test/quantum-tests.mjs (26 tests, ~15 s; FORTE_ENGINE=wasm: on the WebAssembly)
 tools/render-quantum.mjs               node tools/render-quantum.mjs → examples/quantum/
 ```
 

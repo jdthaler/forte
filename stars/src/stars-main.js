@@ -1,18 +1,32 @@
 // stars-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName } from '../../shared/shell.js';
+import { createShell, noteName, useWasm } from '../../shared/shell.js';
 import { fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT, starFor as cached, isBuilt as cachedOnly } from './stars-instrument.js';
-import { KEY_LO, KEY_HI, TAU, SUN, starAt, zams, legendre } from './stars-model.js';
+import * as jsModel from './stars-model.js';
+import { KEY_LO, KEY_HI, TAU, SUN, starId } from './stars-model.js';
+import { wasmModel } from './stars-wasm.js';
 
 const $ = (s) => document.querySelector(s);
 let focus = 60, amps = null, analyser = null, fbuf = null, selected = -1, shown = -1, shownAt = 0;
 const LCOL = () => [css('--l0'), css('--l1'), css('--l2'), css('--l3')];
 
-// ---- the stars, sent with each note (a red giant's mixed modes take a few ms): the descriptor keeps
-// them, and the page builds them ahead in spare moments ---------------------------------------------------
-const starFor = (key, P = shell.P) => cached(key, P);
-const isBuilt = (key, P = shell.P) => cachedOnly(key, P);
+// The views draw what the engine plays: the WebAssembly model once it has loaded (the same physics
+// as the engine, in C++), the JavaScript one until then or if it can't load.
+let model = jsModel, wasm = null;
+if (useWasm()) wasmModel().then((m) => { model = wasm = m; update(); prewarm(); }, (err) => console.warn(`stars: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+
+// ---- the stars, sent with each note (a red giant's mixed modes take a few ms) to either engine: kept
+// (the descriptor keeps the JavaScript's), and built ahead in spare moments ---------------------------
+const built = new Map(); // the WebAssembly model's
+function starFor(key, P = shell.P) {
+  if (!wasm) return cached(key, P);
+  const id = `${starId(P)}|${key}`;
+  let d = built.get(id);
+  if (!d) { d = wasm.keyStar(key, P); if (built.size > 400) built.delete(built.keys().next().value); built.set(id, d); }
+  return d;
+}
+const isBuilt = (key, P = shell.P) => (wasm ? built.get(`${starId(P)}|${key}`) : cachedOnly(key, P));
 let warmTimer = 0;
 function prewarm() {
   clearTimeout(warmTimer);
@@ -24,6 +38,7 @@ function prewarm() {
 
 const shell = createShell({
   ...INSTRUMENT,
+  noteData: (key, vel, P) => { const d = starFor(key, P); return { id: d.id, key: d.key, K: d.K, family: d.family, N: d.N, modes: d.modes }; }, // what the engines need
   arrows: { param: 'velocity', step: 0.05 },
   onAudio: (a) => {
     // a finer analyser of our own for the spectrum view (the comb of a red giant is a few Hz apart)
@@ -72,7 +87,7 @@ function livePower(d) {
 const incl = () => (shell.P.incl * Math.PI) / 180;
 function expected(d) {
   const md = d.modes, out = new Float64Array(d.N), c = Math.cos(incl()), F = [1, 1, 2, 6, 24, 120, 720], V = [1, 1.5, 0.6, 0.05];
-  for (let i = 0; i < d.N; i++) { const l = md.l[i], a = Math.abs(md.m[i]), pl = legendre(l, a, c); out[i] = V[l] * (F[l - a] / F[l + a]) * pl * pl * (d.family === 'dscuti' ? md.asat[i] ** 2 : md.p[i]); }
+  for (let i = 0; i < d.N; i++) { const l = md.l[i], a = Math.abs(md.m[i]), pl = model.legendre(l, a, c); out[i] = V[l] * (F[l - a] / F[l + a]) * pl * pl * (d.family === 'dscuti' ? md.asat[i] ** 2 : md.p[i]); }
   return out;
 }
 
@@ -235,14 +250,14 @@ animate((t) => {
   }
   const l = i >= 0 ? md.l[i] : 0, m = i >= 0 ? md.m[i] : 0, a = Math.abs(m), base = starColour(d.star.T);
   const sec = t / 1000, spin = shell.P.spin, rot = (TAU * sec * spin) / 12, puls = TAU * sec * 0.7;
-  let pmax = 0; for (let k = 0; k <= 64; k++) pmax = Math.max(pmax, Math.abs(legendre(l, a, -1 + k / 32)));
+  let pmax = 0; for (let k = 0; k <= 64; k++) pmax = Math.max(pmax, Math.abs(model.legendre(l, a, -1 + k / 32)));
   const live = livePower(d), ex = expected(d), depth = i >= 0 ? Math.min(1, 0.6 + 0.4 * Math.sqrt((live.live ? live.p[i] : ex[i]) / Math.max(1e-12, ex[i]))) : 0;
   const { ct, ph, mu, edge } = grid, data = img.data;
   const hot = [255, 252, 240], cold = [30, 40, 140];
   for (let k = 0; k < S * S; k++) {
     const q = 4 * k;
     if (mu[k] < 0) { data[q + 3] = 0; continue; }
-    const v = depth * (l === 0 ? Math.cos(puls) : (legendre(l, a, ct[k]) / pmax) * Math.cos(m * (ph[k] - rot) - puls));
+    const v = depth * (l === 0 ? Math.cos(puls) : (model.legendre(l, a, ct[k]) / pmax) * Math.cos(m * (ph[k] - rot) - puls));
     // limb-darkened disc in the star's colour; outward (v > 0) brighter and whiter, inward darker and bluer
     // faint equator and four meridians, turning with the star, so its spin and tilt read at any phase
     const sn = Math.sqrt(Math.max(0, 1 - ct[k] * ct[k])), grid = Math.abs(ct[k]) < 0.018 || sn * Math.abs(Math.sin(2 * (ph[k] - rot))) < 0.018 * sn + 0.006 ? 0.8 : 1;
@@ -279,7 +294,7 @@ animate(() => {
   const P = shell.P, padL = 40, padB = 18, padT = 6, padR = 8, W = Math.max(10, w - padL - padR), H = Math.max(10, h - padT - padB);
   let tMax = 5900, lMin = 0.6, lMax = 20;
   for (let k = KEY_LO; k <= KEY_HI; k++) { const d = isBuilt(k); if (d) { tMax = Math.max(tMax, d.star.T); lMin = Math.min(lMin, d.star.L); lMax = Math.max(lMax, d.star.L); } }
-  if (P.family !== 'dscuti') for (let k = 0; k <= 40; k++) { const st = starAt((k / 40) * 0.6 - 0.05, P.mass); tMax = Math.max(tMax, st.T); }
+  if (P.family !== 'dscuti') for (let k = 0; k <= 40; k++) { const st = model.starAt((k / 40) * 0.6 - 0.05, P.mass); tMax = Math.max(tMax, st.T); }
   const T0 = Math.min(10000, tMax * 1.04), T1 = 4300, L0 = Math.max(0.05, lMin / 1.6), L1 = Math.min(400, lMax * 1.8);
   const X = (T) => padL + (W * Math.log(T0 / T)) / Math.log(T0 / T1), Y = (L) => padT + (H * Math.log(L1 / L)) / Math.log(L1 / L0);
   ctx.font = '10px system-ui, sans-serif'; ctx.strokeStyle = css('--grid'); ctx.fillStyle = css('--muted'); ctx.lineWidth = 1;
@@ -289,13 +304,13 @@ animate(() => {
   for (const L of [0.1, 0.3, 1, 3, 10, 30, 100, 300]) { if (L < L0 || L > L1) continue; ctx.beginPath(); ctx.moveTo(padL, Y(L)); ctx.lineTo(padL + W, Y(L)); ctx.stroke(); ctx.fillText(`${L} L☉`, padL - 3, Y(L) + 3); }
   // the zero-age main sequence (Tout et al. 1996)
   ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.setLineDash([3, 3]); ctx.beginPath();
-  for (let k = 0; k <= 60; k++) { const z = zams(0.6 + (k / 60) * 1.5); if (k) ctx.lineTo(X(z.T), Y(z.L)); else ctx.moveTo(X(z.T), Y(z.L)); }
+  for (let k = 0; k <= 60; k++) { const z = model.zams(0.6 + (k / 60) * 1.5); if (k) ctx.lineTo(X(z.T), Y(z.L)); else ctx.moveTo(X(z.T), Y(z.L)); }
   ctx.stroke(); ctx.setLineDash([]);
-  ctx.fillStyle = css('--muted'); ctx.textAlign = 'left'; { const z = zams(Math.min(1.3, shell.P.mass ?? 1)); ctx.fillText('ZAMS', X(z.T) + 6, Y(z.L) + 12); }
+  ctx.fillStyle = css('--muted'); ctx.textAlign = 'left'; { const z = model.zams(Math.min(1.3, shell.P.mass ?? 1)); ctx.fillText('ZAMS', X(z.T) + 6, Y(z.L) + 12); }
   // the track
   if (P.family !== 'dscuti') {
     ctx.strokeStyle = css('--accent'); ctx.globalAlpha = 0.55; ctx.lineWidth = 1.5; ctx.beginPath();
-    for (let k = 0; k <= 160; k++) { const st = starAt((k / 160) * 2.4, P.mass); const x = X(st.T), y = Y(Math.min(L1, st.L)); if (k) ctx.lineTo(x, y); else ctx.moveTo(x, y); }
+    for (let k = 0; k <= 160; k++) { const st = model.starAt((k / 160) * 2.4, P.mass); const x = X(st.T), y = Y(Math.min(L1, st.L)); if (k) ctx.lineTo(x, y); else ctx.moveTo(x, y); }
     ctx.stroke(); ctx.globalAlpha = 1; ctx.lineWidth = 1;
   }
   // the Sun

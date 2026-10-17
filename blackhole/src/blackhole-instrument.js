@@ -45,6 +45,9 @@ export const INSTRUMENT = {
   midiVelocity: (v) => v ** 1.5,              // MIDI velocity / 127 → the engine's
   keyVelocity: 1,                             // the velocity the computer keys play (no velocity parameter)
   engine: { name: 'RingdownEngine', module: new URL('./ringdown-engine.js', import.meta.url).href },
+  // the same physics in C++ (native/instruments/blackhole), built as WebAssembly: the page runs it
+  // when it can, the JavaScript engine otherwise
+  wasm: { name: 'BlackholeWasmEngine', module: new URL('./blackhole-wasm.js', import.meta.url).href, binary: new URL('../wasm/blackhole.wasm', import.meta.url).href },
   engineParams: (P) => ({ stereo: P.stereo ? 1 : 0, releaseMute: P.releaseMute ? 1 : 0 }),
   noteData: (key, vel, P, fs) => voiceFor(key, P, fs), // the hole's modes (and chirp); velocity scales them in the engine
   chain: { volume: 'volume', room: 'room', roomSeconds: 2.2, tone: 'tone' },

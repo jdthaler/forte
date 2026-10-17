@@ -415,6 +415,19 @@ relation of this form, ω ∝ k² times the coil radius. Modes stop at 3 kHz
   shared machine this was built on, the slowest block about half its time. Ten
   bass keys at once take about 16–19 %, ten keys of three springs about
   20 %, ten Slinkys about 22 %.
+- **In C++**: the same engine and model run as WebAssembly on this page (the
+  JavaScript is the fallback; `?engine=js` in the address forces it) and as
+  plugins (CLAP, VST3, AU and a standalone app), where CC64 is the damper
+  pedal and the mod wheel the hand on the springs. The page builds each
+  key's springs with the WebAssembly model and sends them with the note, as
+  it does for the JavaScript; a plugin builds every key on a worker thread
+  as soon as the geometry settles, and a note whose springs aren't ready yet
+  waits a few milliseconds for them. The C++ solves the same Jacobi
+  rotations with V8's own `sin`, `cos`, `exp`, `pow` and `log2`, so its
+  springs, their tuning and the sound are the JavaScript's bit for bit, and
+  the same test suite passes on it. Ten keys struck in turn take about 8–10 %
+  of a core in C++, all ten at once about 10 %; a key's springs take about
+  3 ms to build.
 
 ## What to listen for
 
@@ -463,7 +476,9 @@ springs/src/springs-model.js             Wittrick's helical rod (6 × 6 per wave
 springs/src/springs-engine.js            real-time engine (AudioWorklet and Node)
 springs/src/springs-params.js            parameters and presets
 springs/src/springs-main.js              page wiring, building the springs for each note, and views
-test/springs-tests.mjs                   node test/springs-tests.mjs (23 tests, about 12 s)
+springs/src/springs-wasm.js              the C++ engine and model as WebAssembly (springs/wasm/springs.wasm)
+native/instruments/springs/              the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
+test/springs-tests.mjs                   node test/springs-tests.mjs (23 tests, about 12 s; FORTE_ENGINE=wasm: on the WebAssembly)
 tools/render-springs.mjs                 node tools/render-springs.mjs → examples/springs/
 ```
 
