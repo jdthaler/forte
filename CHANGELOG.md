@@ -10,6 +10,14 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-17 — the Windows plugin download, flattened
+
+### Forte 0.13.1
+- **`Forte-plugins-windows.zip` holds just the instrument's plugins**, like the other two: the
+  `native` workflow's packaging now finds the bundles wherever the build put them. Visual
+  Studio nests them (`CLAP/Release/`, `VST3/`, `Standalone-…/Release/`), so the first release
+  (`plugins-v0.13.0`) had those folders in its Windows zip, with the template's plugins inside.
+
 ## 2026-10-17 — plugin downloads
 
 ### Forte 0.13.0
