@@ -1,0 +1,454 @@
+<!doctype html>
+<!-- editor.html — the plugins' window (editor.h): the instrument's controls, from the plugin's
+     own parameter list, and a keyboard to play it with the mouse, a finger or the computer's keys,
+     in the site's style (shared/instrument.css, shared/keyboard.js, shared/shell.js). Every call
+     goes through window.forte(method, …args) (plugin.cpp, "The editor's calls"). Opened as a
+     file, it plays a made-up instrument, to work on it in a browser. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forte</title>
+<style>
+  :root {
+    --bg: #0e0e10; --panel: #151518; --card: #1a1a1e; --line: #2a2a31;
+    --text: #ebebef; --muted: #9393a0; --accent: #f0b35a; --accent-2: #7cb8ff; --key-down: #f6d29c;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 13px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column; user-select: none; -webkit-user-select: none; cursor: default;
+  }
+  button, select {
+    font: inherit; color: var(--text); background: #1f1f24; border: 1px solid var(--line);
+    border-radius: 7px; padding: 4px 10px; cursor: pointer;
+  }
+  :root { color-scheme: dark; }
+  button:hover, select:hover { border-color: var(--accent); }
+  /* the same controls in every web view (WebKit on macOS and Linux, Edge on Windows) */
+  select {
+    -webkit-appearance: none; appearance: none; padding-right: 26px; background-repeat: no-repeat;
+    background-position: right 9px center; background-size: 9px 6px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 6'%3E%3Cpath d='M0 0h9L4.5 6z' fill='%239393a0'/%3E%3C/svg%3E");
+  }
+  select option { background: #1f1f24; color: var(--text); }
+  button[aria-pressed="true"] { background: var(--accent); color: #111; border-color: transparent; }
+
+  header {
+    display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+    background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: baseline; gap: 8px; min-width: 0; margin-right: auto; }
+  .brand b { font-size: 15px; font-weight: 700; white-space: nowrap; }
+  .brand b::before { content: "𝆑 "; color: var(--accent); font-weight: 400; }
+  .brand span { color: var(--muted); font: 11px ui-monospace, Menlo, monospace; }
+  #preset { flex: 0 1 280px; min-width: 0; text-overflow: ellipsis; }
+  .brand b { overflow: hidden; text-overflow: ellipsis; }
+  .tools { display: flex; gap: 8px; align-items: center; color: var(--muted); }
+
+  main { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 14px; }
+  #groups { columns: 250px; column-gap: 12px; }
+  .group {
+    break-inside: avoid; -webkit-column-break-inside: avoid; display: inline-block; width: 100%;
+    margin: 0 0 12px; padding: 8px 12px 10px; background: var(--card);
+    border: 1px solid var(--line); border-radius: var(--radius);
+  }
+  .group h2 { margin: 0 0 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); }
+  .param { padding: 4px 0; }
+  .param .row { display: flex; justify-content: space-between; gap: 8px; }
+  .param .val { color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .param.check { display: flex; align-items: center; gap: 8px; }
+  .param select { width: 100%; margin-top: 3px; }
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 16px; margin: 4px 0 0; background: transparent; cursor: pointer; }
+  input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--accent) var(--fill, 0%), #34343c var(--fill, 0%)); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; margin-top: -5px; border-radius: 50%; background: #f2f2f4; border: 0; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4); }
+  input[type=range]:focus-visible { outline: none; }
+  input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--accent-2); }
+  input[type=checkbox] {
+    -webkit-appearance: none; appearance: none; flex: none; width: 15px; height: 15px; margin: 0; cursor: pointer;
+    border: 1px solid #55555f; border-radius: 4px; background: #1f1f24; display: grid; place-content: center;
+  }
+  input[type=checkbox]:checked { background: var(--accent); border-color: transparent; }
+  input[type=checkbox]:checked::after { content: ""; width: 8px; height: 4px; border: solid #111; border-width: 0 0 2px 2px; transform: translateY(-1px) rotate(-45deg); }
+
+  footer { background: var(--panel); border-top: 1px solid var(--line); padding: 8px 14px 10px; }
+  #perform { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; }
+  #perform:empty { display: none; }
+  #perform .param { flex: 1 1 150px; max-width: 240px; padding: 0; }
+  .kb-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; color: var(--muted); font-size: 12px; }
+  .kb-bar .grow { flex: 1; }
+  .kb-bar button { padding: 2px 9px; }
+  kbd { font: 11px ui-monospace, Menlo, monospace; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; color: var(--text); background: #222228; }
+  #keyboard { position: relative; height: clamp(70px, 18vh, 130px); touch-action: none; }
+  /* a short window keeps the keys and the groups; the strip's controls are in their groups too */
+  @media (max-height: 560px) { #perform { display: none; } }
+  .wk, .bk { position: absolute; top: 0; border-radius: 0 0 4px 4px; display: flex; align-items: flex-end; justify-content: center; }
+  .wk { background: #eeeeec; border: 1px solid #94948f; height: 100%; color: #555; font-size: 10px; padding-bottom: 4px; }
+  .bk { background: #151517; border: 1px solid #000; height: 62%; z-index: 2; color: #aaa; font-size: 9px; padding-bottom: 3px; }
+  .wk.mapped::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent); opacity: 0.7; }
+  .bk.mapped { background: #26262c; }
+  .wk.down { background: var(--key-down); }
+  .bk.down { background: var(--accent); color: #000; }
+  .wk .c-label { position: absolute; bottom: 18px; color: #8a8a85; font-size: 9px; }
+  .k-label { pointer-events: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><b id="name">Forte</b><span id="version"></span></div>
+  <select id="preset" title="Preset" hidden></select>
+  <div class="tools">
+    <button id="pedal" hidden title="The Space bar, or the sustain pedal (CC64)">Sustain</button>
+    <button id="panic" title="Let go of every note">Panic</button>
+  </div>
+</header>
+<main><div id="groups"></div></main>
+<footer>
+  <div id="perform"></div>
+  <div class="kb-bar">
+    <button id="down" title="Lower (←)">◀</button>
+    <span id="range"></span>
+    <button id="up" title="Higher (→)">▶</button>
+    <span class="grow"></span>
+    <span>Play with <kbd>Z</kbd>…<kbd>/</kbd> and <kbd>Q</kbd>…<kbd>]</kbd><span id="space-help"></span></span>
+  </div>
+  <div id="keyboard"></div>
+</footer>
+<script>
+'use strict';
+// ---- the plugin, or a stand-in when the page is opened in a browser -------------------------
+const forte = window.forte || mockForte();
+
+const $ = (s) => document.querySelector(s);
+const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+const BLACK = new Set([1, 3, 6, 8, 10]);
+const noteName = (m) => NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+// the computer's keys, as on the site's pages (shared/shell.js)
+const LOW = ['KeyZ', 'KeyS', 'KeyX', 'KeyD', 'KeyC', 'KeyV', 'KeyG', 'KeyB', 'KeyH', 'KeyN', 'KeyJ', 'KeyM', 'Comma', 'KeyL', 'Period', 'Semicolon', 'Slash'];
+const LOW_LBL = ['z', 's', 'x', 'd', 'c', 'v', 'g', 'b', 'h', 'n', 'j', 'm', ',', 'l', '.', ';', '/'];
+const HIGH = ['KeyQ', 'Digit2', 'KeyW', 'Digit3', 'KeyE', 'KeyR', 'Digit5', 'KeyT', 'Digit6', 'KeyY', 'Digit7', 'KeyU', 'KeyI', 'Digit9', 'KeyO', 'Digit0', 'KeyP', 'BracketLeft', 'Equal', 'BracketRight'];
+const HIGH_LBL = ['q', '2', 'w', '3', 'e', 'r', '5', 't', '6', 'y', '7', 'u', 'i', '9', 'o', '0', 'p', '[', '=', ']'];
+
+let D, LO, HI;
+const controls = new Map(); // parameter index → [{ el, val }]
+let values = [];            // parameter index → x (slider position, choice index, toggle)
+
+function lighter(hex, t) { // the accent mixed with white, for a white key held down
+  const n = parseInt(hex.slice(1), 16);
+  if (hex.length !== 7 || Number.isNaN(n)) return '#f6d29c';
+  const c = [n >> 16, (n >> 8) & 255, n & 255].map((v) => Math.round(v + (255 - v) * t));
+  return `rgb(${c.join(',')})`;
+}
+
+// ---- controls ---------------------------------------------------------------------------------
+function control(i, compact) {
+  const p = D.params[i];
+  const box = document.createElement('div');
+  box.className = 'param';
+  const label = document.createElement('label');
+  if (p.kind === 'toggle') {
+    box.classList.add('check');
+    const el = document.createElement('input');
+    el.type = 'checkbox';
+    el.addEventListener('change', () => set(i, el.checked ? 1 : 0));
+    label.textContent = p.label;
+    label.addEventListener('click', () => { el.checked = !el.checked; set(i, el.checked ? 1 : 0); });
+    box.append(el, label);
+    return [box, { el }];
+  }
+  const row = document.createElement('div');
+  row.className = 'row';
+  const val = document.createElement('span');
+  val.className = 'val';
+  label.textContent = p.label;
+  row.append(label, val);
+  box.append(row);
+  if (p.kind === 'choice') {
+    const el = document.createElement('select');
+    p.choices.forEach((c, k) => { const o = document.createElement('option'); o.value = k; o.textContent = c; el.appendChild(o); });
+    el.addEventListener('change', () => { set(i, +el.value); el.blur(); });
+    box.append(el);
+    val.hidden = true;
+    return [box, { el, val }];
+  }
+  const el = document.createElement('input');
+  el.type = 'range'; el.min = 0; el.max = 1; el.step = 'any';
+  let grabbed = false;
+  const grab = () => { if (!grabbed) { grabbed = true; forte('gesture', i, 1); } };
+  const letGo = () => { if (grabbed) { grabbed = false; forte('gesture', i, 0); } };
+  el.addEventListener('pointerdown', grab);
+  el.addEventListener('keydown', (e) => { if (e.code.startsWith('Arrow') || e.code === 'Home' || e.code === 'End' || e.code.startsWith('Page')) grab(); });
+  el.addEventListener('input', () => { grab(); el.style.setProperty('--fill', `${100 * el.value}%`); set(i, +el.value); });
+  el.addEventListener('change', letGo);
+  el.addEventListener('pointerup', () => { letGo(); el.blur(); });
+  el.addEventListener('keyup', letGo);
+  el.addEventListener('blur', letGo);
+  el.addEventListener('dblclick', () => { forte('gesture', i, 1); set(i, p.def); forte('gesture', i, 0); }); // back to the default
+  box.append(el);
+  if (compact) box.title = p.group;
+  return [box, { el, val }];
+}
+function register(i, c) { if (!controls.has(i)) controls.set(i, []); controls.get(i).push(c); }
+function show(i, x, text) {
+  values[i] = x;
+  for (const c of controls.get(i) || []) {
+    if (c.el.type === 'checkbox') c.el.checked = x > 0.5;
+    else if (c.el.tagName === 'SELECT') c.el.value = String(Math.round(x));
+    else { if (document.activeElement !== c.el || !c.el.matches(':active')) c.el.value = x; c.el.style.setProperty('--fill', `${100 * x}%`); }
+    if (c.val) c.val.textContent = text;
+  }
+}
+async function set(i, x) {
+  const r = await forte('set', i, x);
+  if (r) show(i, r.x, r.text);
+}
+
+function build() {
+  document.title = D.name;
+  $('#name').textContent = D.name;
+  $('#version').textContent = D.version;
+  document.documentElement.style.setProperty('--accent', D.accent);
+  document.documentElement.style.setProperty('--key-down', lighter(D.accent, 0.55));
+  const groups = new Map();
+  D.params.forEach((p, i) => {
+    if (i === D.presets) return;
+    const g = p.group || 'Sound';
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(i);
+  });
+  const root = $('#groups');
+  for (const [title, list] of groups) {
+    const card = document.createElement('section');
+    card.className = 'group';
+    const h = document.createElement('h2');
+    h.textContent = title;
+    card.appendChild(h);
+    for (const i of list) { const [box, c] = control(i); card.appendChild(box); register(i, c); }
+    root.appendChild(card);
+  }
+  // the controls a player reaches for while playing, above the keys too
+  D.params.forEach((p, i) => { if (p.perform && i !== D.presets) { const [box, c] = control(i); $('#perform').appendChild(box); register(i, c); } });
+  if (D.presets >= 0) {
+    const el = $('#preset');
+    D.params[D.presets].choices.forEach((c, k) => { const o = document.createElement('option'); o.value = k; o.textContent = c; el.appendChild(o); });
+    el.hidden = false;
+    el.addEventListener('change', () => { set(D.presets, +el.value); el.blur(); });
+    register(D.presets, { el });
+  }
+  if (D.space) {
+    const b = $('#pedal');
+    b.hidden = false;
+    b.textContent = D.space === 'hold' ? 'Hold' : 'Sustain';
+    b.addEventListener('pointerdown', (e) => { e.preventDefault(); setPedal(!pedal); });
+    $('#space-help').innerHTML = `, <kbd>Space</kbd> ${D.space === 'hold' ? 'holds' : 'sustains'}`;
+  }
+}
+
+// ---- notes --------------------------------------------------------------------------------------
+const local = new Map(); // key → how many hands (pointer fingers, computer keys) hold it here
+let remote = new Set(), pedal = false, pedalHere = false;
+function down(key, vel) {
+  if (key < LO || key > HI) return;
+  const n = (local.get(key) || 0) + 1;
+  local.set(key, n);
+  if (n === 1) forte('note', key, vel);
+  paintKey(key);
+}
+function up(key) {
+  const n = (local.get(key) || 0) - 1;
+  if (n > 0) { local.set(key, n); return; }
+  local.delete(key);
+  forte('note', key, 0);
+  paintKey(key);
+}
+function setPedal(on) { pedal = pedalHere = on; forte('pedal', on ? 1 : 0); $('#pedal').setAttribute('aria-pressed', String(on)); }
+function panic() { local.clear(); held.clear(); forte('panic'); pedal = pedalHere = false; $('#pedal').setAttribute('aria-pressed', 'false'); paintAll(); }
+
+// ---- the keyboard (shared/keyboard.js): a window onto the range that fits the width ------------
+const kbRoot = $('#keyboard');
+let wLo = 48, wHi = 84, base = 48;
+const els = new Map();
+const isDown = (m) => local.has(m) || remote.has(m);
+function paintKey(m) { els.get(m)?.classList.toggle('down', isDown(m)); }
+function paintAll() { for (const m of els.keys()) paintKey(m); }
+function labels() {
+  const map = new Map();
+  LOW_LBL.forEach((l, i) => map.set(base + i, l));
+  HIGH_LBL.forEach((l, i) => { if (!map.has(base + 12 + i)) map.set(base + 12 + i, l); });
+  return map;
+}
+function buildKeys() {
+  kbRoot.replaceChildren(); els.clear();
+  const map = labels();
+  let nw = 0;
+  for (let m = wLo; m <= wHi; m++) if (!BLACK.has(m % 12)) nw++;
+  const ww = 100 / nw;
+  let wi = 0;
+  for (let m = wLo; m <= wHi; m++) {
+    const el = document.createElement('div');
+    el.dataset.key = m;
+    if (BLACK.has(m % 12)) { el.className = 'bk'; el.style.left = `${(wi - 0.32) * ww}%`; el.style.width = `${0.64 * ww}%`; }
+    else {
+      el.className = 'wk'; el.style.left = `${wi * ww}%`; el.style.width = `${ww}%`;
+      if (m % 12 === 0) { const c = document.createElement('span'); c.className = 'c-label'; c.textContent = noteName(m); el.appendChild(c); }
+      wi++;
+    }
+    const lbl = document.createElement('span');
+    lbl.className = 'k-label'; lbl.textContent = map.get(m) ?? '';
+    el.appendChild(lbl);
+    el.classList.toggle('mapped', map.has(m));
+    el.classList.toggle('down', isDown(m));
+    kbRoot.appendChild(el); els.set(m, el);
+  }
+  $('#range').textContent = `${noteName(wLo)}–${noteName(wHi)}`;
+  $('#down').disabled = wLo <= LO; $('#up').disabled = wHi >= HI;
+}
+// as many keys as fit at about 24 px a white key, starting on a C, around the computer's keys
+function layoutKeys() {
+  const whites = Math.max(7, Math.floor(kbRoot.clientWidth / 24));
+  let lo = base - 12 * Math.floor(Math.max(0, whites - 18) / 14);
+  lo = clamp(lo - (((lo % 12) + 12) % 12), LO - (((LO % 12) + 12) % 12), HI);
+  let n = 0, hi = lo;
+  for (let m = lo; m <= 127 && n < whites; m++) { if (!BLACK.has(m % 12)) n++; hi = m; }
+  if (hi > HI) { const over = hi - HI; hi = HI; lo = Math.max(LO, lo - over); while (BLACK.has(((lo % 12) + 12) % 12) && lo > LO) lo--; }
+  wLo = Math.max(LO, lo); wHi = Math.min(HI, hi);
+  buildKeys();
+}
+function shift(d) {
+  const nb = base + d;
+  if (nb + 11 < LO || nb > HI - 12) return; // never a whole row of computer keys out of range
+  for (const k of held.values()) up(k);
+  held.clear(); base = nb; layoutKeys();
+}
+$('#down').addEventListener('click', (e) => { shift(-12); e.currentTarget.blur(); });
+$('#up').addEventListener('click', (e) => { shift(12); e.currentTarget.blur(); });
+new ResizeObserver(() => { if (D) layoutKeys(); }).observe(kbRoot);
+
+// pointers: each finger is independent, glissando across the keys, velocity from how far down
+// the key it strikes, pressure from leaning along the key
+const fingers = new Map();
+const depth = (e, el) => {
+  if (e.pointerType === 'pen' && e.pressure > 0) return clamp(e.pressure, 0, 1);
+  const r = el.getBoundingClientRect();
+  return clamp((e.clientY - r.top) / r.height, 0, 1);
+};
+const keyAt = (x, y) => { const el = document.elementFromPoint(x, y)?.closest?.('[data-key]'); return el && kbRoot.contains(el) ? el : null; };
+kbRoot.addEventListener('pointerdown', (e) => {
+  const el = e.target.closest('[data-key]');
+  if (!el || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  e.preventDefault();
+  try { kbRoot.setPointerCapture(e.pointerId); } catch { /* gone */ }
+  const key = +el.dataset.key, f = depth(e, el);
+  fingers.set(e.pointerId, { key, f, y0: e.clientY, h: kbRoot.getBoundingClientRect().height, p: 0 });
+  down(key, 0.2 + 0.8 * f);
+});
+kbRoot.addEventListener('pointermove', (e) => {
+  const p = fingers.get(e.pointerId);
+  if (!p) return;
+  const el = keyAt(e.clientX, e.clientY);
+  if (el && +el.dataset.key !== p.key) {
+    const r = els.get(p.key)?.getBoundingClientRect();
+    if (!r || e.clientX < r.left || e.clientX >= r.right) {
+      up(p.key); p.key = +el.dataset.key; down(p.key, 0.2 + 0.8 * p.f); p.y0 = e.clientY; p.p = 0;
+      return;
+    }
+  }
+  const v = e.pointerType === 'pen' ? clamp(e.pressure, 0, 1) : clamp((Math.abs(e.clientY - p.y0) - 4) / (p.h / 3), 0, 1);
+  if (Math.abs(v - p.p) > 0.01 || (v === 0) !== (p.p === 0)) { p.p = v; forte('pressure', p.key, v); }
+});
+const end = (e) => { const p = fingers.get(e.pointerId); if (!p) return; fingers.delete(e.pointerId); up(p.key); };
+for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) kbRoot.addEventListener(ev, end);
+kbRoot.addEventListener('contextmenu', (e) => e.preventDefault());
+
+// the computer's keys
+const held = new Map(); // code → key
+const codeToKey = (code) => { let i = LOW.indexOf(code); if (i >= 0) return base + i; i = HIGH.indexOf(code); return i >= 0 ? base + 12 + i : null; };
+const velocity = () => { const i = D.params.findIndex((p) => p.id === 'velocity'); return i >= 0 && D.params[i].kind === 'continuous' ? 0.2 + 0.8 * values[i] : 0.75; };
+window.addEventListener('keydown', (e) => {
+  if (!D || e.metaKey || e.ctrlKey || e.altKey) return;
+  const t = e.target;
+  // a slider reached with Tab keeps its arrows; anything else hands the keys to the instrument
+  if (t?.type === 'range' && e.code.startsWith('Arrow')) return;
+  if (t?.tagName === 'SELECT' || t?.tagName === 'INPUT' || t?.tagName === 'BUTTON') { if (e.code === 'Space' || e.code.startsWith('Arrow') || codeToKey(e.code) !== null) t.blur(); else return; }
+  if (e.code === 'Space' && D.space) { e.preventDefault(); if (!e.repeat) setPedal(true); return; }
+  if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') { e.preventDefault(); shift(e.code === 'ArrowLeft' ? -12 : 12); return; }
+  const key = codeToKey(e.code);
+  if (key === null) return;
+  e.preventDefault();
+  if (e.repeat || held.has(e.code)) return;
+  held.set(e.code, key);
+  down(key, velocity());
+});
+window.addEventListener('keyup', (e) => {
+  if (e.code === 'Space' && D?.space) { setPedal(false); return; }
+  const key = held.get(e.code);
+  if (key !== undefined) { held.delete(e.code); up(key); }
+});
+// losing the focus means no keyup will come
+window.addEventListener('blur', () => { for (const k of held.values()) up(k); held.clear(); if (pedalHere) setPedal(false); });
+$('#panic').addEventListener('click', (e) => { panic(); e.currentTarget.blur(); });
+
+// ---- what the plugin changed: the host's automation, a preset, MIDI notes and the pedal --------
+async function poll() {
+  try {
+    const r = await forte('poll');
+    if (r) {
+      for (const [i, x, text] of r.p) show(i, x, text);
+      const next = new Set(r.keys);
+      const changed = [...next].filter((k) => !remote.has(k)).concat([...remote].filter((k) => !next.has(k)));
+      remote = next;
+      for (const k of changed) paintKey(k);
+      if (D.space && r.pedal !== pedal) { pedal = r.pedal; $('#pedal').setAttribute('aria-pressed', String(pedal)); }
+    }
+  } catch { /* the plugin went away */ }
+  setTimeout(poll, 40);
+}
+
+(async () => {
+  D = await forte('describe');
+  LO = D.keyLo; HI = D.keyHi;
+  // the computer's lower row starts on C3, or the first C the instrument has
+  base = 48 >= LO && 48 <= HI - 12 ? 48 : Math.min(Math.ceil(LO / 12) * 12, Math.max(LO, HI - 12));
+  values = D.params.map((p) => p.def);
+  build();
+  layoutKeys();
+  poll();
+})();
+
+// A made-up instrument for working on this page in a browser.
+function mockForte() {
+  const params = [
+    { id: 'strike', label: 'Strike position', group: 'Hammer', kind: 'continuous', perform: true, def: 0.3, choices: [] },
+    { id: 'hardness', label: 'Hardness', group: 'Hammer', kind: 'continuous', perform: false, def: 0.5, choices: [] },
+    { id: 'material', label: 'Material', group: 'Bar', kind: 'choice', perform: false, def: 0, choices: ['Rosewood', 'Aluminium', 'Glass'] },
+    { id: 'damp', label: 'Damping', group: 'Bar', kind: 'continuous', perform: false, def: 0.4, choices: [] },
+    { id: 'motor', label: 'Motor', group: 'Resonators', kind: 'toggle', perform: true, def: 1, choices: [] },
+    { id: 'rate', label: 'Motor rate', group: 'Resonators', kind: 'continuous', perform: true, def: 0.5, choices: [] },
+    { id: 'room', label: 'Room', group: 'Output', kind: 'continuous', perform: false, def: 0.3, choices: [] },
+    { id: 'volume', label: 'Volume', group: 'Output', kind: 'continuous', perform: true, def: 0.7, choices: [] },
+    { id: 'preset', label: 'Preset', group: '', kind: 'choice', perform: false, def: 0, choices: ['Default settings', 'Bright', 'Dark'] },
+  ];
+  const v = params.map((p) => p.def), keys = new Set();
+  let pedal = false;
+  const text = (i) => (params[i].kind === 'choice' ? params[i].choices[v[i]] : params[i].kind === 'toggle' ? (v[i] ? 'on' : 'off') : `${(100 * v[i]).toFixed(1)} %`);
+  const sent = v.map(() => NaN);
+  return async (m, ...a) => {
+    if (m === 'describe') return { slug: 'mock', name: 'Practice Bars', version: '0.0.0', accent: '#5fd0c8', keyLo: 53, keyHi: 89, space: 'sustain', presets: 8, params };
+    if (m === 'set') { v[a[0]] = a[1]; sent[a[0]] = a[1]; return { x: a[1], text: text(a[0]) }; }
+    if (m === 'note') { if (a[1] > 0) keys.add(a[0]); else keys.delete(a[0]); }
+    if (m === 'pedal') pedal = !!a[0];
+    if (m === 'poll') {
+      const p = [];
+      v.forEach((x, i) => { if (x !== sent[i]) { sent[i] = x; p.push([i, x, text(i)]); } });
+      return { p, keys: [...keys], pedal };
+    }
+    return null;
+  };
+}
+</script>
+</body>
+</html>

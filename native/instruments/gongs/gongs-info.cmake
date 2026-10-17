@@ -2,3 +2,4 @@
 set(FORTE_NAME "Gong Keyboard")
 set(FORTE_VERSION "0.4.0")
 set(FORTE_AU_SUBTYPE "Gong")
+set(FORTE_ACCENT "#e6c15a")

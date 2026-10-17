@@ -2,3 +2,4 @@
 set(FORTE_NAME "Glass Armonica")
 set(FORTE_VERSION "0.4.0")
 set(FORTE_AU_SUBTYPE "Glas")
+set(FORTE_ACCENT "#9fe7ff")

@@ -10,6 +10,21 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-17 — a window for the plugins: controls and a keyboard
+
+### Forte 0.20.0
+- **The plugins have a window**: every format (CLAP, VST3, AU and the standalone app) shows the
+  instrument's controls in their groups, the presets, the controls a player reaches for above
+  the keys, and a keyboard to play with the mouse, a finger or the computer's keys (Z…/ and
+  Q…], ◀ ▶ or ← → for the octave, Space for the pedal), as on the instrument's page and in its
+  colour. Keys played by MIDI light up, and the host's automation moves the sliders. The
+  standalone apps no longer need a MIDI keyboard. Moving a slider records automation in a DAW
+  (gesture begin and end); double-clicking one sets its default.
+- It is a web view (choc, ISC): WKWebView on macOS, WebView2 on Windows, WebKitGTK on Linux
+  (the Linux plugins now need WebKitGTK 4.1, `native/INSTALL.md`). The page is
+  `native/plugin/editor.html`, built into each plugin; `tests/plugin-tests.cpp` drives its calls.
+- `<slug>-info.cmake` carries the page's colour (`FORTE_ACCENT`) for the window.
+
 ## 2026-10-17 — the reeds and pickups in C++ (step 4, third batch)
 
 ### Tine Piano 0.4.0

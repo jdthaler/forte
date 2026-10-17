@@ -43,7 +43,8 @@ If git can't reach gitlab.com (some sandboxes), fetch Eigen's archive at the pin
 with `-DFETCHCONTENT_SOURCE_DIR_EIGEN=<that folder>`.
 
 The plugins land in `build/<preset>/plugins/`. On Linux, the standalone needs ALSA and JACK
-headers (`libasound2-dev libjack-jackd2-dev`) and X11 (`libx11-dev`).
+headers (`libasound2-dev libjack-jackd2-dev`) and X11 (`libx11-dev`), and the window's web
+view needs GTK and WebKitGTK (`libgtk-3-dev libwebkit2gtk-4.1-dev`).
 
 To validate them as CI does:
 
@@ -116,7 +117,15 @@ clap-wrapper builds the VST3, AU v2 and standalone from the CLAP. Each plugin:
 - plays through the output chain, with flush-to-zero, a NaN guard, and engine blocks of at
   most 128 samples split at each event, whatever the host's block; a new sample rate makes a
   new engine and new impulse responses (tested at 44.1 to 192 kHz and blocks of 1 to 4096);
-- has no latency, and no window of its own: the DAW shows its generic panel.
+- has no latency;
+- has a window (`editor.h`, `editor.cpp`, `editor.html`): the instrument's controls in their
+  groups, the presets, the controls a player reaches for above the keys, and a keyboard played
+  with the mouse, a finger or the computer's keys (as on the pages), lit by the notes that come
+  in by MIDI. It is a web view from [choc](https://github.com/Tracktion/choc): WKWebView on
+  macOS, WebView2 on Windows (part of Windows 10 and 11), WebKitGTK in an X11 window on Linux.
+  The page calls the plugin through `window.forte(method, …)`; the tests make the same calls
+  without a window. Open `editor.html` in a browser to work on it: it plays a made-up
+  instrument there. `-DFORTE_EDITOR=OFF` builds the plugins without it.
 
 Identifiers: CLAP `net.jthaler.forte.<slug>`, vendor Forte, AU manufacturer `Frte` with the
 instrument's subtype from the registry (`plugin.code`), VST3 class id from `ids.json`.

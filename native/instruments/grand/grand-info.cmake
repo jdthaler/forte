@@ -2,3 +2,4 @@
 set(FORTE_NAME "Electric Grand")
 set(FORTE_VERSION "0.4.0")
 set(FORTE_AU_SUBTYPE "EGrd")
+set(FORTE_ACCENT "#7fb2ff")
