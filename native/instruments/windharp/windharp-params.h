@@ -61,7 +61,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "windharp", .name = "Wind Harp", .version = "0.1.2",
+    .slug = "windharp", .name = "Wind Harp", .version = "0.2.0",
     .description = "Strings sung by the wind: the vortices they shed lock onto one of their harmonics, and hop up the series as the wind rises.", .auSubtype = "WHrp",
     .vst3Id = {0x7e, 0x1c, 0x2a, 0xe3, 0x7e, 0xf1, 0xfb, 0x28, 0x10, 0x3b, 0x42, 0xa4, 0x07, 0xff, 0x78, 0x87},
     .params = kParams, .paramCount = p::count,

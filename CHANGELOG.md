@@ -10,6 +10,81 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-17 — the self-oscillators in C++ (step 4, fourth batch)
+
+### Huygens Keyboard 0.4.0
+- **Ported to C++** (`native/instruments/huygens`): the tuning and the theory of synchronisation
+  (δ, the lock ratio), and the neon engine (the analytic firing times, the kick cascade, polyBLEP,
+  the keyer, the coupling capacitor, rail sag, drift and the pitch-hold servo), operation for
+  operation, with V8's fdlibm and its `Math.log2`.
+  - **Plugins:** Huygens Keyboard as CLAP, VST3, AU v2 and a standalone app: CC64 holds the keys,
+    the mod wheel the pulse coupling, the ten presets. The engine retunes held keys itself when the
+    tuning changes. Ten coupled keys take about 2 % of a core.
+  - **WebAssembly:** 35 KB in `huygens/wasm/`. The test suite passes on it, and it plays what the
+    JavaScript plays bit for bit.
+  - **The page runs it**: its notes' tunings and the lock map (its worker included) come from the
+    WebAssembly model, falling back to the JavaScript, and the header has the C++ | JS switch.
+- **Repeatable:** each key's starting phase and the lamps' drift come from a seeded generator, not
+  `Math.random()`, so renders and tests repeat exactly.
+
+### Singing Arc 0.2.0
+- **Ported to C++** (`native/instruments/arc`): Ayrton's curve and the Mayr column with its
+  hot-carbon floor, the circuit's linear analysis, the steady note and each key's capacitor, the
+  engine (Duddell's circuit at four times the sample rate, the contacts, the seeded flicker and
+  hiss, the thermophone) and Simon's talking arc, operation for operation, with V8's fdlibm.
+  - **Plugins:** Singing Arc as CLAP, VST3, AU v2 and a standalone app: CC64 latches the keys, the
+    mod wheel raises the arc current, the eleven presets. Each key's capacitor is cut on a worker
+    thread when a knob it depends on settles; until then a key plays its last one. Six singing
+    lamps (the most there are) take about 20 % of a core.
+  - **WebAssembly:** 73 KB in `arc/wasm/`. The test suite passes on it, and it plays what the
+    JavaScript plays bit for bit and cuts the same capacitors to the last bit.
+  - **The page runs it**: it sends the capacitor bank it has cut with each note, so the audio
+    thread never cuts one, and its views use the WebAssembly model, falling back to the JavaScript.
+
+### Pyrophone 0.4.0
+- **Ported to C++** (`native/instruments/pyrophone`): the Rijke tube (modes, losses, King's law,
+  linear stability, Hopf points, harmonic balance, the branches and the tuning table) and the
+  engine with its seeded turbulence, operation for operation, with V8's fdlibm and `Math.hypot`.
+  - **Plugins:** Pyrophone as CLAP, VST3, AU v2 and a standalone app: velocity, CC64 holds the
+    keys, the mod wheel the flame's power, aftertouch parts the flames, the eight presets. The
+    tuning table (harmonic balance) is built on a worker thread; while a tube knob moves, the tubes
+    are cut from the last one. Ten tubes take 2–3 % of a core.
+  - **WebAssembly:** 78 KB in `pyrophone/wasm/`. The test suite passes on it, and it plays what the
+    JavaScript plays bit for bit, turbulence included.
+  - **The page runs it**: it builds the tuning table with its WebAssembly model and sends it to the
+    worklet, and the bifurcation diagram and orbits come from the same model, falling back to the
+    JavaScript.
+
+### Wind Harp 0.2.0
+- **Ported to C++** (`native/instruments/windharp`): the model (the Strouhal–Reynolds fit and the
+  onset, the strings and their courses, de Langre's linear analysis, the harmonic balance and the
+  locked range) and the engine (the van der Pol wake stations, the strings' modes, the low strings
+  at a half or a quarter of the rate, the seeded gusts and turbulence, the soundbox, the
+  shutters), operation for operation, with V8's fdlibm.
+  - **Plugins:** Wind Harp as CLAP, VST3, AU v2 and a standalone app: velocity sets the shutter's
+    speed and release velocity how fast it shuts, CC64 keeps the shutters open, the mod wheel blows
+    the wind up to 8 m/s, aftertouch (channel or per key) blows harder, the tuning as a dropdown,
+    the seven presets. Ten keys (15 strings) take about 10 % of a core.
+  - **WebAssembly:** 72 KB in `windharp/wasm/`. The test suite passes on it, and it plays what the
+    JavaScript plays bit for bit, gusts included: blocks longer than 128 samples are played whole,
+    as the JavaScript plays them, since the wind changes once a block.
+  - **The page runs it**, and its lock-in map and string table come from the WebAssembly model,
+    falling back to the JavaScript.
+
+### Ribbon Piano 0.4.1
+- Its "real-time budget" timing test is skipped on CI like every other suite's timing tests: the
+  hyphen had kept it out of the skip, so it failed on loaded machines.
+
+### Tonewheel Organ 0.4.4
+- Its "real-time budget" timing test is skipped on CI, as the Ribbon Piano's is.
+
+### Forte 0.20.0
+- **Native parameters:** a default that sits off its parameter's step (the pyrophone's flame at ⅓
+  on a 0.001 step) reads back as itself, so a saved state reloads exactly (clap-validator's state
+  reproducibility test).
+- **`plugin.ready`** for the four, so they are on the front page's Plugins section and in the next
+  release; the template's generated files and WebAssembly carry Forte 0.20.0.
+
 ## 2026-10-17 — the reeds and pickups in C++ (step 4, third batch)
 
 ### Tine Piano 0.4.0
