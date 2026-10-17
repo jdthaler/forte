@@ -9,10 +9,13 @@
 #                    clap-validator for the CLAPs if you have it
 #   make uninstall   remove them again
 #   make check       check the plugins in this folder can load, without installing anything
+#   make unquarantine  clear the Mac's download quarantine on the plugins in this folder, where
+#                    they are, without installing or moving them
 #
 # Add a format to do just that one: au (macOS), vst3, clap or app (the standalone), e.g.
-#   make install-au, make verify-vst3, make uninstall-clap, make check-app
-# The standalone runs from this folder too: make check-app, then open it.
+#   make install-au, make verify-vst3, make uninstall-clap, make check-app, make unquarantine-app
+# The standalone runs from this folder too: make unquarantine-app, make check-app, then open it.
+# For a copy somewhere else, name its folder: make unquarantine-app APP_DIR=/Applications.
 #
 # Nothing needs sudo: everything goes in your own Library (macOS) or home folder (Linux). The
 # folders can be changed, e.g. `make install VST3_DIR=/some/where` (also CLAP_DIR, AU_DIR and
@@ -20,12 +23,12 @@
 # them (or run `xcode-select --install`). The work is in install.sh, which runs without make too.
 # native/install.mk in https://github.com/jdthaler/forte.
 
-.PHONY: help install verify uninstall check
+.PHONY: help install verify uninstall check unquarantine
 help:
 	@sed -n '/^$$/q; s/^# \{0,1\}//p' Makefile
-install verify uninstall check:
+install verify uninstall check unquarantine:
 	@bash ./install.sh $@
-# one format: make install-au, verify-vst3, uninstall-clap, check-app…
+# one format: make install-au, verify-vst3, uninstall-clap, check-app, unquarantine-app…
 install-%:
 	@bash ./install.sh install $*
 verify-%:
@@ -34,3 +37,5 @@ uninstall-%:
 	@bash ./install.sh uninstall $*
 check-%:
 	@bash ./install.sh check $*
+unquarantine-%:
+	@bash ./install.sh unquarantine $*

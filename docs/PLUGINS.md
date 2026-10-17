@@ -149,7 +149,7 @@ What landed:
 - `tools/engine.mjs` (`loadEngine`) gives every test suite its engine.
 - The organ's console (drawbars, percussion, vibrato and Leslie switches, the motor) lives
   outside `GROUPS`: the descriptor's `console` makes it plugin parameters, and `controllers`'
-  `values` and `toggle` forms switch the Leslie from CC1 and CC64 (Forte 0.26.0).
+  `values` and `toggle` forms switch the Leslie from CC1 and CC64 (Forte 0.28.0).
 
 The plan as it was:
 1. Give each instrument a descriptor module (`<slug>/src/<slug>-instrument.js`)
@@ -364,7 +364,7 @@ Separate sessions can work in parallel once step 3 is done.
      passes everything at or above it, as Web Audio's (Forte 0.24.0).
    - `Math.log2` has copies in huygens and springs; `forte/fdlibm.h` now has V8's own, for the
      next port that needs it.
-6. The organ. **Done** (Tonewheel Organ 0.5.0, Forte 0.26.0). It plays what the JavaScript plays
+6. The organ. **Done** (Tonewheel Organ 0.5.0, Forte 0.28.0). It plays what the JavaScript plays
    bit for bit; ten keys with every drawbar, chorus, drive and the Leslie take 2.5 % of a core in
    C++. Learned on the way:
    - State a page keeps beside its parameter groups becomes plugin parameters through the
@@ -397,9 +397,10 @@ Done (Forte 0.13.0; per instrument and automatic in 0.17.0):
    are ad-hoc signed; INSTALL.md gives the `xattr` command. The macOS and Linux archives also
    hold [native/install.sh](../native/install.sh) and, as their `Makefile`,
    [native/install.mk](../native/install.mk): `make install`, `make verify` (auval on macOS,
-   missing libraries on Linux, clap-validator if present), `make uninstall` and `make check`
-   (the download in place, nothing installed), each also for one format (`make install-au`,
-   `make check-app`…), which the workflow runs on every instrument's archive before keeping it.
+   missing libraries on Linux, clap-validator if present), `make uninstall`, `make check`
+   (the download in place, nothing installed) and `make unquarantine` (clears the Mac's
+   quarantine where the plugins are, or in a folder named with `APP_DIR=`…), each also for one
+   format (`make install-au`, `make check-app`, `make unquarantine-app`…), which the workflow runs on every instrument's archive before keeping it.
 2. The `release-plugins` workflow runs after every green `native` run on main and attaches its
    archives to a GitHub Release when what they're built from changed since the latest release
    (`tools/plugin-release.mjs --manifest`: each instrument's version and the `native/` tree). It

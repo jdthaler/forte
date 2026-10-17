@@ -28,7 +28,7 @@ tagged; this changelog and the commit titles record them.
   - **The page runs it**, falling back to the JavaScript (`?engine=js` forces it); the header has
     the C++ | JS switch, and the analysis table, generator map and Leslie view call its model.
 
-### Forte 0.26.0
+### Forte 0.28.0
 - A descriptor's `console` (state the page keeps beside its parameter groups) becomes plugin
   parameters, set by the presets and passed to a WebAssembly engine (`tools/gen-native-params.mjs`,
   `shared/wasm.js`, `tools/headless.mjs`).
@@ -38,6 +38,18 @@ tagged; this changelog and the commit titles record them.
 - `forte/fdlibm.h`: V8's `tanh`, `expm1` and `Math.hypot`.
 - Every instrument's committed WebAssembly is rebuilt, because the shared controller table grew;
   the sound and the parameters are unchanged.
+
+## 2026-10-17 — clear the quarantine where the plugins are
+
+### Forte 0.27.0
+- **`make unquarantine`** in the downloads' Makefile clears macOS's download quarantine on the
+  plugins in the unpacked folder, where they are, so the standalone opens from there without
+  being moved or installed. `make unquarantine-app` (or `-au`, `-vst3`, `-clap`) does one
+  format, and naming a folder clears the copies there instead, e.g.
+  `make unquarantine-app APP_DIR=/Applications`. On Linux there is nothing to clear and it says
+  so. `make check` and `make verify` now point at it when they find a quarantined plugin.
+- The `native` workflow quarantines the standalones, unpacked and installed, and checks that
+  `make unquarantine-app` clears them; the site test covers the Linux path.
 
 ## 2026-10-17 — one plugin format at a time, and the standalone checked where it is
 

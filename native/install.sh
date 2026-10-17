@@ -3,16 +3,20 @@
 # in each download next to the plugins and a Makefile that runs it (native/install.mk), and works
 # on whichever plugins are in its folder: one instrument's or every instrument's.
 #
-#   bash install.sh install | verify | uninstall | check [au] [vst3] [clap] [app]
+#   bash install.sh install | verify | uninstall | check | unquarantine [au] [vst3] [clap] [app]
 #
 # (or make install, make install-au, make check-app…). With formats named, only those: au, vst3,
 # clap, or app (the standalone). install, verify and uninstall work on the installed copies;
-# check checks the plugins in this folder as they are, without installing anything.
-# The folders can be changed through VST3_DIR, CLAP_DIR, AU_DIR and APP_DIR.
+# check checks the plugins in this folder as they are, without installing anything, and
+# unquarantine clears macOS's download quarantine on them where they are, without moving them.
+# The folders can be changed through VST3_DIR, CLAP_DIR, AU_DIR and APP_DIR; unquarantine works
+# on the copies in a folder named that way (e.g. APP_DIR=/Applications) instead of this one's.
 # native/install.sh in https://github.com/jdthaler/forte.
 set -euo pipefail
 cd "$(dirname "$0")"
 OS=$(uname -s)
+# the folders named on the command line (or in the environment), for unquarantine
+named=" ${AU_DIR:+au} ${VST3_DIR:+vst3} ${CLAP_DIR:+clap} ${APP_DIR:+app} "
 case "$OS" in
   Darwin)
     PLUGINS="$HOME/Library/Audio/Plug-Ins"
@@ -41,6 +45,8 @@ each() {
 
 # dir <kind>: the folder that kind goes in
 dir() { case "$1" in au) echo "$AU_DIR" ;; vst3) echo "$VST3_DIR" ;; clap) echo "$CLAP_DIR" ;; app) echo "$APP_DIR" ;; esac; }
+# var <kind>: the name of the variable that sets its folder
+var() { case "$1" in au) echo AU_DIR ;; vst3) echo VST3_DIR ;; clap) echo CLAP_DIR ;; app) echo APP_DIR ;; esac; }
 
 cmd=${1:-}
 # (macOS's bash 3.2 calls an empty array unbound under set -u, so kinds is never empty)
@@ -91,7 +97,7 @@ verify() {
     if [ ! -e "$p" ]; then fail "$p is not installed (make install-$kind)"; continue; fi
     if ! diff -rq "$name" "$p" >/dev/null 2>&1; then fail "$p differs from this download (make install-$kind)"; continue; fi
     if [ "$OS" = Darwin ] && xattr -r "$p" 2>/dev/null | grep -q com.apple.quarantine; then
-      fail "$p is still quarantined (make install-$kind)"; continue
+      fail "$p is still quarantined (make install-$kind, or make unquarantine-$kind $(var "$kind")=\"$(dir "$kind")\" to clear it where it is)"; continue
     fi
     loads "$kind" "$p" || continue
     if [ "$kind" = au ]; then
@@ -118,7 +124,7 @@ check() {
   local kind name
   while read -r kind name; do
     if [ "$OS" = Darwin ] && xattr -r "$name" 2>/dev/null | grep -q com.apple.quarantine; then
-      fail "$name is quarantined, so macOS won't open it: run xattr -dr com.apple.quarantine \"$name\" (make install-$kind does it as it installs)"
+      fail "$name is quarantined, so macOS won't open it: make unquarantine-$kind clears it here (make install-$kind does it as it installs)"
       continue
     fi
     loads "$kind" "$name" || continue
@@ -126,6 +132,24 @@ check() {
   done <<< "$list"
   if [ "$bad" -gt 0 ]; then echo "$bad problem(s)"; exit 1; fi
   if grep -q '^app ' <<< "$list"; then echo "All can load. The standalone runs from this folder: open it, no install needed."; else echo "All can load."; fi
+}
+
+# unquarantine: clears the download quarantine on the plugins in this folder, where they are, so
+# macOS will open them without moving them. With a folder named (APP_DIR=/Applications…), on the
+# copies of this download's plugins in that folder instead.
+unquarantine() {
+  local kind name p
+  if [ "$OS" != Darwin ]; then echo "Only macOS quarantines downloads: nothing to clear here."; return; fi
+  while read -r kind name; do
+    if [[ "$named" == *" $kind "* ]]; then p="$(dir "$kind")/$name"; else p=$name; fi
+    if [ ! -e "$p" ]; then fail "$p is not there"; continue; fi
+    if xattr -r "$p" 2>/dev/null | grep -q com.apple.quarantine; then
+      xattr -dr com.apple.quarantine "$p"; echo "cleared $p"
+    else
+      echo "ok    $p (not quarantined)"
+    fi
+  done <<< "$list"
+  if [ "$bad" -gt 0 ]; then echo "$bad problem(s)"; exit 1; fi
 }
 
 uninstall() {
@@ -137,6 +161,6 @@ uninstall() {
 }
 
 case "$cmd" in
-  install|verify|uninstall|check) "$cmd" ;;
-  *) echo "usage: bash install.sh install|verify|uninstall|check [au] [vst3] [clap] [app]" >&2; exit 2 ;;
+  install|verify|uninstall|check|unquarantine) "$cmd" ;;
+  *) echo "usage: bash install.sh install|verify|uninstall|check|unquarantine [au] [vst3] [clap] [app]" >&2; exit 2 ;;
 esac
