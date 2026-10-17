@@ -2,3 +2,4 @@
 set(FORTE_NAME "Sticky-Pad Piano")
 set(FORTE_VERSION "0.4.0")
 set(FORTE_AU_SUBTYPE "Pnet")
+set(FORTE_ACCENT "#ffcf70")

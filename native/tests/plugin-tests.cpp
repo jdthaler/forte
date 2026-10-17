@@ -174,4 +174,47 @@ TEST("plugin: values read as the page shows them, and typed values are understoo
   CHECK(in.params->value_to_text(in.p, in.id("Preset"), 1, text, sizeof text) && std::string(text) == "Long ring");
 }
 
+TEST("plugin: the editor's calls set parameters, play notes and show what the host changed") {
+  Instance in(48000);
+  auto bridge = (const forte::EditorBridge *)in.p->get_extension(in.p, forte::kEditorBridge);
+  CHECK(bridge != nullptr);
+  auto call = [&](const char *json) { return bridge->call(in.p, json); };
+  const std::string d = call("[\"describe\"]");
+  CHECK(d.find("\"name\": \"Forte Smoke Test\"") != std::string::npos);
+  CHECK(d.find("\"Long ring\"") != std::string::npos && d.find("\"presets\": 2") != std::string::npos);
+  CHECK(d.find("\"space\": \"sustain\"") != std::string::npos);
+  CHECK(call("[\"poll\"]").find("[1, 0.4, \"-1.9 dB\"]") != std::string::npos); // every value once
+  CHECK(call("[\"poll\"]").find("\"p\": []") != std::string::npos);            // then only changes
+
+  // a slider half way along: Ring time is a log parameter, 0.1 … 10 s
+  CHECK(call("[\"gesture\", 0, 1]") == "null");
+  CHECK(call("[\"set\", 0, 0.5]").find("\"text\": \"1.00 s\"") != std::string::npos);
+  CHECK(std::fabs(in.value("Ring time") - 1) < 1e-9); // the host reads it at once
+  call("[\"set\", 1, 0.75]");
+  CHECK(call("[\"poll\"]").find("\"p\": []") != std::string::npos); // the editor's own changes don't come back
+  call("[\"gesture\", 0, 0]");
+  Events ev;
+  in.run(128, 128, ev);
+  CHECK(std::fabs(in.value("Volume") - 1.5) < 1e-12);
+  bool told = false;
+  for (auto &e : ev.out) told |= e.param_id == in.id("Volume") && std::fabs(e.value - 1.5) < 1e-12;
+  CHECK(told); // the host records it
+
+  // a key from the editor sounds, and shows as down; the host's preset comes back to the editor
+  call("[\"note\", 69, 0.8]");
+  Events preset;
+  preset.param(0, in.id("Preset"), 1);
+  auto L = in.run(4800, 128, preset);
+  CHECK(peak(L) > 0.01);
+  const std::string polled = call("[\"poll\"]");
+  CHECK(polled.find("\"keys\": [69]") != std::string::npos);
+  CHECK(polled.find("[2, 1, \"Long ring\"]") != std::string::npos && polled.find("\"6.00 s\"") != std::string::npos);
+  call("[\"note\", 69, 0]");
+  call("[\"panic\"]");
+  Events none;
+  L = in.run(4800, 128, none);
+  CHECK(call("[\"poll\"]").find("\"keys\": []") != std::string::npos);
+  CHECK(call("[\"set\", 99, 1]") == "null" && call("[\"nonsense\"]") == "null" && call("not json") == "error");
+}
+
 int main() { return check::run(); }

@@ -2,3 +2,4 @@
 set(FORTE_NAME "Bubble Organ")
 set(FORTE_VERSION "0.3.0")
 set(FORTE_AU_SUBTYPE "Bubl")
+set(FORTE_ACCENT "#6fb8ff")

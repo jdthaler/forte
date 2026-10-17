@@ -27,6 +27,7 @@ if (FORTE_PLUGINS)
     GIT_SUBMODULES base public.sdk pluginterfaces cmake)
   forte_fetch(rtaudio https://github.com/thestk/rtaudio b4f04903312e0e0efffbe77655172e0f060dc085)             # 6.0.1, standalone audio
   forte_fetch(rtmidi https://github.com/thestk/rtmidi 1e5b49925aa60065db52de44c366d446a902547b)               # 6.0.0, standalone MIDI
+  forte_fetch(choc https://github.com/Tracktion/choc 1c3ab9ed0b59a145ad6a2f38e35b601117a657b4)                # 2026-10-08 (ISC), the editor's web view
   set(CLAP_SDK_ROOT ${clap_SOURCE_DIR} CACHE PATH "" FORCE)
   set(VST3_SDK_ROOT ${vst3sdk_SOURCE_DIR} CACHE PATH "" FORCE)
   set(RTAUDIO_SDK_ROOT ${rtaudio_SOURCE_DIR} CACHE PATH "" FORCE)

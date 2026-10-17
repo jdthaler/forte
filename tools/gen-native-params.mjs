@@ -4,7 +4,7 @@
 // native/instruments/<slug>/ folder) it writes
 //   native/instruments/<slug>/<slug>-params.h   ids, labels, ranges, log scaling, steps, choices,
 //                                               defaults, units, presets, keys, pedal, wheel, chain
-//   native/instruments/<slug>/<slug>-info.cmake the plugin's name, version and AU subtype
+//   native/instruments/<slug>/<slug>-info.cmake the plugin's name, version, AU subtype and colour
 // from the descriptor, shared/registry.js and native/ids.json.
 //
 // Units: a parameter's JavaScript `fmt` is a function, so its text is inferred by sampling it:
@@ -281,6 +281,7 @@ export async function generate(slug) {
     `set(FORTE_NAME ${cstr(reg.name)})`,
     `set(FORTE_VERSION ${cstr(version)})`,
     `set(FORTE_AU_SUBTYPE ${cstr(reg.plugin.code)})`,
+    `set(FORTE_ACCENT ${cstr(reg.accent ?? '#f0b35a')})`,
     '',
   ].join('\n');
   return { header: `${out.join('\n')}\n`, cmake, report, skipped: [...skipped] };

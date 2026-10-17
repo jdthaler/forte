@@ -2,8 +2,9 @@
 
 Each instrument comes in every format its system has: CLAP, VST3 and a standalone app on
 macOS, Windows and Linux, and an Audio Unit (AU) on macOS. They are instruments: put one on
-an instrument or MIDI track. They have no window of their own yet, so the DAW shows its
-generic panel of sliders. The plugins are built from the same C++ as the instruments on
+an instrument or MIDI track. Each has a window with the instrument's controls, its presets and
+a keyboard you can play with the mouse or the computer's keys (Z…/ and Q…], as on the website),
+so the standalone apps play without a MIDI keyboard. The plugins are built from the same C++ as the instruments on
 <https://forte.jthaler.net>, and sound the same.
 
 Download every instrument together from <https://forte.jthaler.net/#plugins> (All Plugins),
@@ -53,6 +54,9 @@ Unpack the download (`tar -xzf Forte-plugins-linux.tar.gz`), then:
 - VST3: copy each `.vst3` to `~/.vst3`.
 - CLAP: copy each `.clap` to `~/.clap`.
 - The standalone apps run from anywhere.
+
+The plugins' window needs WebKitGTK 4.1, which most desktops already have (on Debian and
+Ubuntu, `sudo apt install libwebkit2gtk-4.1-0`), and X11 or XWayland.
 
 ## Making the DAW find them
 
