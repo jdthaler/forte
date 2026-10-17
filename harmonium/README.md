@@ -313,7 +313,8 @@ jet at the tip, and the open area.
   velocity); the sealed cell's air stops the reed, 40 dB down within 0.25 s
   at C4, though a long bass reed rings on a little.
 - **Allocation.** None in `process()`: reeds and their area tables are built
-  when a key is first pressed and cached per key and voicing.
+  when a key is first pressed and cached per key and voicing (in the
+  plugins, on a worker thread).
 
 ## What to listen for
 
@@ -359,10 +360,27 @@ harmonium/src/tuning-table.js             each reed's sounding/natural frequency
 harmonium/src/harmonium-engine.js         real-time engine (AudioWorklet and Node)
 harmonium/src/harmonium-params.js         parameters and presets
 harmonium/src/harmonium-main.js           page wiring and views
-test/harmonium-tests.mjs                  node test/harmonium-tests.mjs (23 tests, ~15 s)
-tools/harmonium-tuning.mjs                node tools/harmonium-tuning.mjs → harmonium/src/tuning-table.js
+harmonium/src/harmonium-wasm.js           the C++ engine and model as WebAssembly (harmonium/wasm/harmonium.wasm)
+native/instruments/harmonium/             the C++ port: model, engine, generated tables (the tuning table among
+                                          them), reference (plugins and WebAssembly)
+test/harmonium-tests.mjs                  node test/harmonium-tests.mjs (23 tests, ~15 s; FORTE_ENGINE=wasm: on the WebAssembly)
+tools/harmonium-tuning.mjs                node tools/harmonium-tuning.mjs → harmonium/src/tuning-table.js and its C++ copy
 tools/render-harmonium.mjs                node tools/render-harmonium.mjs → examples/harmonium/
 ```
+
+**In C++**: the same engine and model run as WebAssembly on this page (the
+JavaScript is the fallback; `?engine=js` in the address forces it) and as
+plugins (CLAP, VST3, AU and a standalone app), where the Space pedal is Hold
+on CC64, the mod wheel raises the bellows pressure from its setting to
+2500 Pa and aftertouch blows harder (up to double), as on the page. The
+reeds are self-oscillators, but nothing in them is chaotic: the WebAssembly
+plays what the JavaScript plays to float32 rounding (within 10⁻⁸ of the peak,
+the turbulence's seeded noise included), and the same test suite passes on
+it; the views' reeds and thresholds come from the WebAssembly model too. In
+the plugins each key's reeds are designed off the audio thread when the
+voicing knobs change; on the page, as in the JavaScript, on a key's first
+note (about 1 ms). Ten keys on the 8′ take about 7 % of a core in C++; with
+the three-reed musette (30 reeds), about 20 %.
 
 ## Simplifications
 

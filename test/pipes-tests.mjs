@@ -8,6 +8,7 @@
 // tremulant, stereo, voices, levels, stability and CPU.
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   AIR, KEY_LO, KEY_HI, RANKS, CP, PHI_C, P_NOM, LS_END, MIXTURE, SCALE, keyFreq, pipeFreq, pipeModel, rankHarm, mixtureRanks,
   toepferD, ellipseConductivity, agm, mouthCorrection, wallAlpha, modeSigma, modeFreq, linearRoot, speakingWindow, thetaAt, loopGain,
@@ -17,6 +18,7 @@ import { INSTRUMENT } from '../pipes/src/pipes-instrument.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../pipes/src/pipes-params.js';
 import { TUNING } from '../pipes/src/tuning-table.js';
+import { tuningHeader } from '../tools/pipes-tuning.mjs';
 
 const PipeEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
@@ -308,6 +310,10 @@ test('the Mixture: three ranks of octaves and pure fifths (×2, 3, 4, 6, 8, 12 t
     assert.ok(Math.abs(cents(fr, want)) < 3, `${organName(k)} rank ${r - 2}: ${fr.toFixed(2)} vs ${want.toFixed(2)} Hz`);
   }
   assert.ok(Math.abs(cents(rankHarm(60, 3), 2) - 701.955) < 1e-3); // 2⅔′ over 4′: a pure fifth
+});
+
+test('the C++ port tunes from the same table (native/instruments/pipes/tuning-table.h is fresh: node tools/pipes-tuning.mjs --native)', () => {
+  assert.equal(readFileSync(new URL('../native/instruments/pipes/tuning-table.h', import.meta.url), 'utf8'), tuningHeader(TUNING.table));
 });
 
 console.log('effects');

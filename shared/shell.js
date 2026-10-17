@@ -167,6 +167,9 @@ export function createShell(cfg) {
       const chain = createChain(ctx, node, cfg.chain || {});
       const analyser = ctx.createAnalyser(); analyser.fftSize = 8192; analyser.smoothingTimeConstant = 0.55;
       chain.tap.connect(analyser);
+      // notes wait for the worklet to say which engine plays, so per-note data is built for it
+      let engineKnown;
+      const known = new Promise((r) => { engineKnown = r; });
       node.port.onmessage = (e) => {
         const m = e.data;
         if (m.type === 'stats' && $('#cpu')) {
@@ -180,6 +183,7 @@ export function createShell(cfg) {
         else if (m.type === 'engine') {
           shell.engineKind = m.kind; document.body.dataset.engine = m.kind; showEngine(m.kind);
           if (m.reason) console.warn(`${cfg.id}: the WebAssembly engine failed (${m.reason}); the JavaScript one plays`);
+          engineKnown();
         }
         cfg.onMessage?.(m);
       };
@@ -189,6 +193,7 @@ export function createShell(cfg) {
       node.port.postMessage(paramsMessage());
       if (cfg.space === 'sustain') node.port.postMessage({ type: 'sustain', on: shell.sustain });
       if (ctx.state !== 'running') await ctx.resume();
+      if (cfg.wasm) await Promise.race([known, new Promise((r) => setTimeout(r, 1000))]);
       shell.audio = { ctx, node, tone: chain.tone, master: chain.master, roomGain: chain.roomGain, analyser, chain };
       shell.applyMix();
       cfg.onAudio?.(shell.audio);
