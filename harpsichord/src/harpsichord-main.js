@@ -1,12 +1,17 @@
 // harpsichord-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName } from '../../shared/shell.js';
+import { createShell, noteName, useWasm } from '../../shared/shell.js';
 import { fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './harpsichord-instrument.js';
-import {
-  KEY_LO, KEY_HI, ROWS, registration, simulatePluck, stringDesign, stringLength, pluckPoint, jackSpeed, isBrass, stringPartials, t60, ACTION,
-} from './harpsichord-model.js';
+import * as jsModel from './harpsichord-model.js';
+import { KEY_LO, KEY_HI, ROWS, jackSpeed, t60, ACTION } from './harpsichord-model.js';
 import { beamC, beamG } from './plectrum.js';
+import { wasmModel } from './harpsichord-wasm.js';
+
+// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
+// physics as the engine, in C++), the JavaScript one until then or if it can't load.
+let model = { ...jsModel, beamC, beamG };
+if (useWasm()) wasmModel().then((m) => { model = m; update(); runSim(); }, (err) => console.warn(`harpsichord: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
 
 const $ = (s) => document.querySelector(s);
 const ROW_COL = { front: '#f4d39b', back: '#c98b5a', four: '#7cc8ff', lute: '#ff8fa3' };
@@ -28,13 +33,13 @@ const shell = createShell({
 });
 
 // The row whose pluck the slow-motion view shows: the first one that plucks this key.
-const shownRow = () => registration(shell.P).rows[0] || null;
+const shownRow = () => model.registration(shell.P).rows[0] || null;
 
 // ---- the slow-motion pluck: the model's own pluck, offline --------------------------------
 function runSim() {
   const row = shownRow();
   if (!row) { sim = null; $('#pluck-info').textContent = 'No row plucks on this manual: engage a register.'; return; }
-  const r = simulatePluck(focus, row, shell.P, { V: jackSpeed(vel), sec: 0.25, every: 2, until: 0.004 });
+  const r = model.simulatePluck(focus, row, shell.P, { V: jackSpeed(vel), sec: 0.25, every: 2, until: 0.004 });
   sim = { ...r, row, V: jackSpeed(vel) };
   simT0 = performance.now() / 1000;
   const rel = r.rel, i0 = r.trace.F.findIndex((f) => f > 0);
@@ -76,7 +81,7 @@ animate(() => {
   ctx.strokeRect(X(zMin) + 0.5, Y(yj + 3e-3) + 0.5, X(0) - X(zMin) - 1, Y(yj - 6e-3) - Y(yj + 3e-3) - 1);
   ctx.fillStyle = css('--muted'); ctx.save(); ctx.translate(X(zMin) + 11, Y(yj - 1e-3)); ctx.rotate(-Math.PI / 2); ctx.fillText('jack', 0, 0); ctx.restore();
   // the plectrum, bent by F at s: a cubic up to s (deflection F c(s), slope F g(s)), straight beyond
-  const ws = F * beamC(pl, sC), th = F * beamG(pl, sC), th2 = ACTION.thick;
+  const ws = F * model.beamC(pl, sC), th = F * model.beamG(pl, sC), th2 = ACTION.thick;
   const defl = (z) => {
     if (F <= 0) return 0;
     if (z >= sC) return ws + th * (z - sC);
@@ -131,13 +136,13 @@ animate(() => {
 const scv = $('#scale');
 let scaleRows = [];
 function update() {
-  const P = shell.P, reg = registration(P);
+  const P = shell.P, reg = model.registration(P);
   scaleRows = [];
   for (let m = KEY_LO; m <= KEY_HI; m++) {
-    const e = stringDesign(m, 'back', P), f = stringDesign(m, 'four', P);
-    scaleRows.push({ m, L8: e.L, L4: f.L, B8: e.B, B4: f.B, brass8: isBrass(m, 'back'), brass4: isBrass(m, 'four'), x: { front: pluckPoint(m, 'front', P), back: pluckPoint(m, 'back', P), four: pluckPoint(m, 'four', P), lute: pluckPoint(m, 'lute', P) } });
+    const e = model.stringDesign(m, 'back', P), f = model.stringDesign(m, 'four', P);
+    scaleRows.push({ m, L8: e.L, L4: f.L, B8: e.B, B4: f.B, brass8: model.isBrass(m, 'back'), brass4: model.isBrass(m, 'four'), x: { front: model.pluckPoint(m, 'front', P), back: model.pluckPoint(m, 'back', P), four: model.pluckPoint(m, 'four', P), lute: model.pluckPoint(m, 'lute', P) } });
   }
-  const S = stringDesign(focus, 'back', P), parts = stringPartials(S, P).partials;
+  const S = model.stringDesign(focus, 'back', P), parts = model.stringPartials(S, P).partials;
   $('#scale-read').textContent = `${noteName(focus)} 8′: ${(S.L * 1000).toFixed(0)} mm ${S.mat.name} ⌀${(S.d * 1000).toFixed(2)} · ${S.T.toFixed(0)} N · B ${S.B.toExponential(1)} · T₆₀ ${t60(parts[0].sigma).toFixed(1)} s`;
   $('#scale-read').title = `${noteName(focus)}, back 8′ string: length, wire, tension (stress ${(S.stress / 1e9).toFixed(2)} GPa), inharmonicity, and its fundamental's decay time`;
   combState = { reg, P };
@@ -223,7 +228,7 @@ animate(() => {
   const { reg, P } = combState, top = livePk > -80 ? Math.min(-3, livePk) : -12;
   let yLab = padT + 12;
   for (const row of reg.rows) {
-    const ch = ROWS[row].string, S = stringDesign(focus, ch, P), x = pluckPoint(focus, row, P), beta = x / S.L;
+    const ch = ROWS[row].string, S = model.stringDesign(focus, ch, P), x = model.pluckPoint(focus, row, P), beta = x / S.L;
     // stems: partial n's bridge force ∝ sin(nπβ)/n (the stiffness cancels: bₙ φₙ(x)/ωₙ² ∝ sin(kₙx)/kₙ)
     const k1 = Math.PI / S.L, col = ROW_COL[row];
     ctx.strokeStyle = col; ctx.lineWidth = 2;

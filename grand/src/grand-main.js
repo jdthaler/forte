@@ -1,14 +1,20 @@
 // grand-main.js — the page: wires the shell to the engine and draws the views.
 // The slow-motion view re-runs the focused key's strike on the main thread
-// with the same engine, sample by sample, and records the string.
+// with the same engine, sample by sample, and records the string: the
+// WebAssembly engine and model once they have loaded (the same physics as the
+// worklet's, in C++), the JavaScript ones until then or if they can't load.
 // It also keeps the engine's oscillator budget in step with the audio thread's
 // measured load.
 
-import { createShell, noteName } from '../../shared/shell.js';
+import { createShell, noteName, useWasm } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './grand-instrument.js';
 import { boardModel, boardResponse, decayRates, hammerSpeed } from './grand-model.js';
 import { GrandEngine, MODE_BUDGET } from './grand-engine.js';
+import { wasmModel } from './grand-wasm.js';
+
+let model = { boardModel, boardResponse, decayRates, hammerSpeed, Engine: GrandEngine };
+if (useWasm()) wasmModel().then((m) => { model = m; boardKey = ''; schedule(); }, (err) => console.warn(`grand: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
 
 const $ = (s) => document.querySelector(s);
 const FS = 48000, TAU = 2 * Math.PI;
@@ -43,14 +49,14 @@ function schedule() { clearTimeout(timer); timer = setTimeout(update, 40); }
 
 function getBoard(P) {
   if (P.mount !== 'board') return null;
-  if (boardKey !== String(P.boardH)) { board = boardModel(P); boardKey = String(P.boardH); }
+  if (boardKey !== String(P.boardH)) { board = model.boardModel(P); boardKey = String(P.boardH); }
   return board;
 }
 
 // Re-run the strike of `key` and record string 0's vertical shape, the hammer,
 // and the bridge and contact forces, for a few periods.
 function simulate(key, vel) {
-  const P = shell.P, eng = new GrandEngine(FS);
+  const P = shell.P, eng = new model.Engine(FS);
   eng.setParams({ ...P });
   const v = eng.noteOn(key, vel), d = v.data, S = d.S, nP = d.partials.length;
   const dur = Math.min(0.08, Math.max(0.02, 2.5 / S.f0)), pre = 0.15 * dur;
@@ -58,7 +64,7 @@ function simulate(key, vel) {
   const NX = 121, nrm = Math.sqrt(2 / (S.mu * S.L)), phi = new Float64Array(nP * NX);
   for (let j = 0; j < nP; j++) for (let i = 0; i < NX; i++) phi[j * NX + i] = nrm * Math.sin((d.partials[j].k * S.L * i) / (NX - 1));
   const frames = [], eta = [], fB = new Float64Array(nPre + nS), fC = new Float64Array(nPre + nS);
-  const v0 = hammerSpeed(vel), etaStart = v.eta;
+  const v0 = model.hammerSpeed(vel), etaStart = v.eta;
   for (let s = -nPre; s < 0; s += stride) { frames.push(new Float32Array(NX)); eta.push(etaStart + (v0 * s) / FS); }
   const L1 = new Float32Array(1), R1 = new Float32Array(1);
   let lastEta = v.eta, lastVel = v0, tOff = 0;
@@ -83,7 +89,9 @@ function simulate(key, vel) {
   for (const e of eta) if (Number.isFinite(e)) maxY = Math.max(maxY, Math.min(Math.abs(e), 3 * maxY));
   let Fm = 1e-9, Fc = 1e-9;
   for (let s = 0; s < fB.length; s++) { Fm = Math.max(Fm, Math.abs(fB[s])); Fc = Math.max(Fc, fC[s]); }
-  return { d, S, frames, eta, fB, fC, Fm, Fc, amp, stride, nPre, dur, pre, maxY, contactMs: (v.contactSamples / FS) * 1000, Fmax: v.Fmax, v0, P: { ...P } };
+  const out = { d, S, frames, eta, fB, fC, Fm, Fc, amp, stride, nPre, dur, pre, maxY, contactMs: (v.contactSamples / FS) * 1000, Fmax: v.Fmax, v0, P: { ...P } };
+  eng.destroy?.(); // the WebAssembly engine's memory
+  return out;
 }
 
 const sci = (v) => v.toExponential(1);
@@ -97,7 +105,7 @@ function update() {
 
   // per-partial levels after the strike: displacement, bridge force, microphone
   const disp = ps.map((p, j) => amp[j]), force = ps.map((p, j) => Math.abs(p.b) * amp[j]);
-  const micL = B ? ps.map((p, j) => force[j] * boardResponse(B, d.seg, p.f, 0)) : null;
+  const micL = B ? ps.map((p, j) => force[j] * model.boardResponse(B, d.seg, p.f, 0)) : null;
   const dB = (arr) => { const m = Math.max(...arr, 1e-30); return arr.map((a) => 20 * Math.log10(Math.max(a, 1e-30) / m)); };
   sim.levels = { disp: dB(disp), force: dB(force), mic: micL ? dB(micL) : null };
   const heard = mic ? sim.levels.mic : sim.levels.force;
@@ -121,7 +129,7 @@ function update() {
   const t60 = (s) => (6.91 / s >= 100 ? '>100' : (6.91 / s).toFixed(s > 3 ? 2 : 1));
   $('#modes').innerHTML = `<tr><th>n</th><th>f (Hz)</th><th>¢ vs n·f₁</th><th>T60 prompt</th><th>T60 after</th><th>strike</th><th>${mic ? 'mic' : 'piezo'}</th></tr>`
     + ps.slice(0, 40).map((p, j) => {
-      const r = decayRates(p, ns);
+      const r = model.decayRates(p, ns);
       return `<tr><td>${p.n}</td><td>${p.f.toFixed(1)}</td><td>${p.stretch >= 0 ? '+' : ''}${p.stretch.toFixed(1)}</td><td>${t60(r.prompt)} s</td><td>${t60(r.after)} s</td><td>${sim.levels.disp[j].toFixed(0)} dB</td><td>${heard[j].toFixed(0)} dB</td></tr>`;
     }).join('');
 }

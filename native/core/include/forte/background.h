@@ -85,7 +85,12 @@ class KeyData {
   void acquire(Ref r) { if (r.entry) r.entry->holds.fetch_add(1, std::memory_order_relaxed); }
   void release(Ref r) { if (r.entry) r.entry->holds.fetch_sub(1, std::memory_order_release); }
   // The audio thread, after each block.
-  void audioCycle() { cycles.fetch_add(1, std::memory_order_release); }
+  void audioCycle() {
+    cycles.fetch_add(1, std::memory_order_release);
+#if !FORTE_THREADS
+    collect(); // no worker to free what get() replaced: free it here, once no voice holds it
+#endif
+  }
 
   struct Entry {
     uint64_t version;

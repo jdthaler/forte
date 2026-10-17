@@ -38,6 +38,9 @@ export const INSTRUMENT = {
   // noteOn's velocity is the hammer's speed in m/s; MIDI velocity / 127 → 0.25 … 6 m/s
   midiVelocity: (v) => 0.25 * 24 ** v,
   engine: { name: 'PianoEngine', module: new URL('./engine.js', import.meta.url).href },
+  // the same physics in C++ (native/instruments/piano), built as WebAssembly: the page runs it when
+  // it can, the JavaScript engine otherwise
+  wasm: { name: 'PianoWasmEngine', module: new URL('./piano-wasm.js', import.meta.url).href, binary: new URL('../wasm/piano.wasm', import.meta.url).href },
   engineParams: (P) => ({ gainV: P.gainV, gainH: P.gainH, gainT: P.gainT, damper: P.damper, width: P.width, unaCorda: !!P.unaCorda }),
   noteData: (key, vel, P, fs) => keyModel(key, P, fs).data,
   chain: {

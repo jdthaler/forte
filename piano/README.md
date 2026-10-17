@@ -101,6 +101,17 @@ The pieces that couple to the modes:
 * **Soundboard and room**: synthetic impulse responses (dense plate modes and
   a diffuse tail), applied with ConvolverNodes.
 
+In C++, the same model and engine run as WebAssembly on this page (the
+JavaScript is the fallback; `?engine=js` in the address forces it): the page
+builds each key's modes with its own WebAssembly model and sends them with the
+note, and the views (info panel, cross-section, slow motion, partials) call
+that model too. They also run as plugins (CLAP, VST3, AU and a standalone
+app), with MIDI velocity as hammer speed, CC64 the damper pedal, CC67 the soft
+pedal, and the soundboard and room in the plugin's own output chain; there
+each key's modes are built on a background thread. The WebAssembly plays what
+the JavaScript plays to within 2·10⁻⁹ (float rounding), and the same test
+suite passes on it. Ten notes take about 4 % of a core in C++.
+
 The tension of each key is not set by hand. As a piano tuner would, the model
 retunes it so the fundamental of whichever bending axis faces the hammer
 lands on equal temperament. Lengths, gauges and bass winding follow a
@@ -167,9 +178,11 @@ src/engine.js             real-time modal engine: hammer, bridge coupling, dampe
                           in the browser through ../shared/worklet.js)
 src/main.js               UI, keyboard / MIDI, focus-key analysis
 src/viz.js                slow-motion 3D view, partial spectrum / inharmonicity, cross-section
+src/piano-wasm.js         the C++ engine and model as WebAssembly (wasm/piano.wasm)
+../native/instruments/piano/  the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
 ../shared/impulses.js     synthetic soundboard and room impulse responses
 src/params.js             every parameter, with ranges, hints and presets
-../test/piano-tests.mjs   physics + engine checks:  node test/piano-tests.mjs
+../test/piano-tests.mjs   physics + engine checks:  node test/piano-tests.mjs (FORTE_ENGINE=wasm: on the WebAssembly)
 ../tools/render-piano.mjs offline renders of the presets
 ```
 

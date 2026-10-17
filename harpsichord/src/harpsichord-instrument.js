@@ -15,5 +15,8 @@ export const INSTRUMENT = {
   range: [KEY_LO, KEY_HI],              // MIDI keys: FF–f³, 29–89
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
   engine: { name: 'HarpsichordEngine', module: new URL('./harpsichord-engine.js', import.meta.url).href },
+  // the same physics in C++ (native/instruments/harpsichord), built as WebAssembly: the page runs it
+  // when it can, the JavaScript engine otherwise
+  wasm: { name: 'HarpsichordWasmEngine', module: new URL('./harpsichord-wasm.js', import.meta.url).href, binary: new URL('../wasm/harpsichord.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room' },
 };

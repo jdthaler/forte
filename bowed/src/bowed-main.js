@@ -1,13 +1,30 @@
 // bowed-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName } from '../../shared/shell.js';
+import { createShell, noteName, useWasm } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './bowed-instrument.js';
-import { loopDesign, schelleng, friction, keyForce, riseTime, helmholtz, helmholtzEnvelope, VOICED, wheelOf } from './bowed-model.js';
+import * as jsModel from './bowed-model.js';
 import { BowedString, settleTime } from './string.js';
+import { wasmModel } from './bowed-wasm.js';
 
 const $ = (s) => document.querySelector(s);
 const FS = 48000;
+
+// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
+// physics as the engine, in C++), the JavaScript one until then or if it can't load. The attack
+// map bows the focused key's string alone (settleTime on it, at its oversampled rate).
+let str = null;
+const jsPhys = {
+  ...jsModel,
+  attackLoop: (key, P) => jsModel.loopDesign(key, P, FS * jsModel.oversample(key, FS)),
+  settleTime(key, P, vB, FN, rise, sec) {
+    if (!str || str.key !== key) str = new BowedString(key, FS);
+    str.design(jsModel.loopDesign(key, P, str.fs));
+    return settleTime(str, jsModel.friction(P), vB, FN, rise, sec);
+  },
+};
+let phys = jsPhys;
+if (useWasm()) wasmModel().then((m) => { phys = m; update(); }, (err) => console.warn(`bowed: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 40, fHi: 16000, dbTop: -10, dbRange: 90 });
 const KIND = { helmholtz: 'Helmholtz motion', multiple: 'multiple slipping (surface sound)', raucous: 'raucous', none: '—' };
 let focus = 60, st = null, mean = null;
@@ -32,7 +49,7 @@ const shell = createShell({
 });
 
 const fmtN = (F) => (F >= 1 ? `${F.toFixed(2)} N` : `${(F * 1000).toFixed(F < 0.01 ? 1 : 0)} mN`);
-const design = () => loopDesign(focus, shell.P, FS);
+const design = () => phys.loopDesign(focus, shell.P, FS);
 
 function update() {
   const L = design();
@@ -44,19 +61,19 @@ function update() {
 }
 
 function info() {
-  const P = shell.P, L = design(), S = schelleng(L, P), h = helmholtz(L.beta, L.vB);
-  const F = st && st.key === focus && st.active ? st.FN : keyForce(focus, P.velocity, P.force);
+  const P = shell.P, L = design(), S = phys.schelleng(L, P), h = phys.helmholtz(L.beta, L.vB);
+  const F = st && st.key === focus && st.active ? st.FN : phys.keyForce(focus, P.velocity, P.force);
   const kind = st && st.key === focus && st.active ? st.kind : 'none';
   const rows = [
     ['string', `${(L.L * 100).toFixed(0)} cm, ${L.T.toFixed(0)} N, ${L.wound ? 'wound' : 'plain'} steel`],
     ['wave speed, Z₀', `${L.c.toFixed(0)} m/s, ${L.Z0.toFixed(3)} kg/s`],
     ['free string', `${L.f0.toFixed(2)} Hz (+${(1200 * Math.log2(L.f0 / L.fKey)).toFixed(1)} ¢; bowing flattens it)`],
     ['decay of free string', `T60 = ${(6.91 / L.sigma1).toFixed(1)} s`],
-    ['wheel', `no. ${wheelOf(focus) + 1} of 4: β = ${L.beta.toFixed(3)} (${(L.beta * L.L * 1000).toFixed(0)} mm from bridge), v_B = ${(L.vB * 100).toFixed(0)} cm/s`],
+    ['wheel', `no. ${phys.wheelOf(focus) + 1} of 4: β = ${L.beta.toFixed(3)} (${(L.beta * L.L * 1000).toFixed(0)} mm from bridge), v_B = ${(L.vB * 100).toFixed(0)} cm/s`],
     ['Helmholtz slip', `${(h.vSlip * 100).toFixed(0)} cm/s for ${(L.beta * 100).toFixed(0)} % of each period`],
     ['corner amplitude at wheel', `${(L.vB * (1 - L.beta) * 1000 / L.f0).toFixed(2)} mm peak to peak`],
     ['Schelleng F_min … F_max', `${fmtN(S.Fmin)} … ${fmtN(S.Fmax)}`],
-    ['voiced touch', fmtN(VOICED[focus])],
+    ['voiced touch', fmtN(phys.VOICED[focus])],
     ['force now', `${fmtN(F)} = ${(F / S.Fmax).toFixed(2)} F_max`],
     ['motion', KIND[kind]],
   ];
@@ -96,7 +113,7 @@ animate(() => {
   // shape and Helmholtz envelope
   const N = 96, env = new Float64Array(N);
   let emax = 1e-9;
-  for (let j = 0; j < N; j++) { env[j] = helmholtzEnvelope((j / (N - 1)) * L.L, L.L, L.beta, L.vB, L.f0); emax = Math.max(emax, env[j]); }
+  for (let j = 0; j < N; j++) { env[j] = phys.helmholtzEnvelope((j / (N - 1)) * L.L, L.L, L.beta, L.vB, L.f0); emax = Math.max(emax, env[j]); }
   const shape = st && st.key === focus && st.active ? st.shape : null;
   if (shape) {
     if (!mean || mean.length !== N) mean = Float64Array.from(shape);
@@ -126,7 +143,7 @@ animate(() => {
   ctx.clearRect(0, 0, w, h);
   const P = shell.P, L = design();
   const bLo = 0.02, bHi = 0.5;
-  const S = (b) => schelleng({ ...L, beta: b }, P, b, L.vB);
+  const S = (b) => phys.schelleng({ ...L, beta: b }, P, b, L.vB);
   const fLo = Math.max(1e-5, S(bHi).Fmin / 4), fHi = S(bLo).Fmax * 4;
   const pl = 40, pr = 8, pt = 8, pb = 22, W = Math.max(1, w - pl - pr), H = Math.max(1, h - pt - pb);
   const X = (b) => pl + (W * Math.log(b / bLo)) / Math.log(bHi / bLo);
@@ -165,7 +182,7 @@ animate(() => {
   }
   ctx.globalAlpha = 1;
   const live = st && st.key === focus && st.active && st.FN > fLo;
-  const F = live ? st.FN : keyForce(focus, P.velocity, P.force);
+  const F = live ? st.FN : phys.keyForce(focus, P.velocity, P.force);
   ctx.beginPath(); ctx.arc(X(L.beta), Y(Math.max(F, fLo)), 6, 0, 2 * Math.PI);
   if (live) { ctx.fillStyle = col(st.kind); ctx.fill(); } else { ctx.strokeStyle = css('--text'); ctx.stroke(); }
 }, cvD);
@@ -176,7 +193,7 @@ animate(() => {
   if (cvV.offsetParent === null) return;
   const { ctx, w, h } = fit(cvV);
   ctx.clearRect(0, 0, w, h);
-  const L = design(), vB = L.vB, hz = helmholtz(L.beta, vB);
+  const L = design(), vB = L.vB, hz = phys.helmholtz(L.beta, vB);
   const vTop = 1.6 * vB, vBot = 1.25 * hz.vSlip;
   const Y = (v) => 6 + ((h - 18) * (vTop - v)) / (vTop - vBot);
   ctx.font = '10px system-ui, sans-serif'; ctx.textAlign = 'left';
@@ -205,21 +222,19 @@ const attackMap = (() => {
   const NX = 14, NY = 12, rises = [], fracs = [];
   for (let i = 0; i < NX; i++) rises.push(0.001 * 150 ** (i / (NX - 1)));
   for (let j = 0; j < NY; j++) fracs.push(0.08 + (0.92 * j) / (NY - 1));
-  let grid = new Float64Array(NX * NY), done = 0, key = -1, str = null, Fr = null, Fmax = 1, sig = '';
+  let grid = new Float64Array(NX * NY), done = 0, Fmax = 1, sig = '';
   const signature = (P) => [focus, P.speed, P.beta, P.mus, P.mud, P.v0, P.memory, P.torsionQ, P.losses, P.mobility].join();
   return {
     rises, fracs, NX, NY,
     invalidate() { const s = signature(shell.P); if (s !== sig) { sig = s; done = 0; grid.fill(NaN); } },
     step(budgetMs) {
       if (done >= NX * NY) return;
-      const P = shell.P;
-      if (key !== focus || !str) { key = focus; str = new BowedString(focus, FS); }
-      const L = loopDesign(focus, P, str.fs);
-      str.design(L); Fr = friction(P); Fmax = schelleng(L, P).Fmax;
+      const P = shell.P, L = phys.attackLoop(focus, P);
+      Fmax = phys.schelleng(L, P).Fmax;
       const t0 = performance.now();
       while (done < NX * NY && performance.now() - t0 < budgetMs) {
         const i = done % NX, j = Math.floor(done / NX);
-        grid[done] = settleTime(str, Fr, L.vB, fracs[j] * Fmax, rises[i], 0.5) * L.f0; // in periods
+        grid[done] = phys.settleTime(focus, P, L.vB, fracs[j] * Fmax, rises[i], 0.5) * L.f0; // in periods
         done++;
       }
     },
@@ -261,7 +276,7 @@ animate(() => {
     ctx.fillStyle = css('--muted'); ctx.fillText(lab, pl + W + 24, pt + 14 + k * 16);
   });
   // this key's touch
-  const P = shell.P, rise = riseTime(P.velocity, P.attack) * 1000, frac = keyForce(focus, P.velocity, P.force) / attackMap.Fmax;
+  const P = shell.P, rise = phys.riseTime(P.velocity, P.attack) * 1000, frac = phys.keyForce(focus, P.velocity, P.force) / attackMap.Fmax;
   const xx = XR(Math.max(1, Math.min(150, rise))), yy = YF(Math.max(0.08, Math.min(1.04, frac)));
   ctx.strokeStyle = css('--accent-2'); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(xx, yy, Math.max(1, Math.min(7, cw / 2)), 0, 2 * Math.PI); ctx.stroke(); ctx.lineWidth = 1;
   $('#attack-read').textContent = attackMap.done < NX * NY ? `computing ${Math.round((100 * attackMap.done) / (NX * NY))} %` : `touch: ${rise.toFixed(0)} ms rise, ${frac.toFixed(2)} F_max`;

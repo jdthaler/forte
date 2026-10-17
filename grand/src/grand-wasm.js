@@ -1,0 +1,109 @@
+// grand-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// (native/instruments/grand): GrandWasmEngine, with the engine contract, and the model's functions
+// for the views. The page runs it when it can and falls back to the JavaScript (grand-engine.js).
+
+import { GROUPS } from './grand-params.js';
+import { wasmEngine, scratch, nativeParams, nativeValue } from '../../shared/wasm.js';
+
+// (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
+const BUILD = { id: 'grand', name: 'GrandWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/grand.wasm', import.meta.url).href };
+
+// The C++ engine's message (grand-engine.h, msg) back into the JavaScript engine's 'error'.
+const messages = (m) => (m.type === 1 ? { type: 'error', message: 'numerical instability', key: m.key } : null);
+
+const Base = wasmEngine(BUILD, { messages });
+
+// A key's model, packed by the WebAssembly (grand-web.cpp, pack), as grand-model.js's keyModel
+// returns it.
+const SCALE = ['key', 'f0', 'cents', 'L', 'd', 'dOut', 'mu', 'muCore', 'wound', 'T', 'EI', 'B', 'stress', 'cT'];
+const PARTIAL = ['n', 'k', 'f', 'w', 'b', 'sigInt', 'GV', 'GH', 'bridgeV', 'bridgeH', 'fH', 'phiH', 'damp', 'stretch'];
+function unpackKey(x, at) {
+  const a = new Float64Array(x.memory.buffer, at, x.grand_packed()).slice();
+  const [key, ns, d0, d1, d2, seg, beta, xh, wH, xd, mass, K, p, alpha, hasDamper, n, nV, np] = a;
+  let i = 18;
+  const take = (m) => { const v = a.subarray(i, i + m); i += m; return v; };
+  const S = Object.fromEntries(SCALE.map((k, j) => [k, a[i + j]]));
+  S.wound = S.wound > 0; i += SCALE.length;
+  const partials = [];
+  for (let j = 0; j < np; j++) { const v = take(PARTIAL.length); partials.push(Object.fromEntries(PARTIAL.map((k, l) => [k, v[l]]))); }
+  const freq = take(n), sigma = take(n), w = take(n), c = take(n), bf = take(n), damp = take(n);
+  const str = Uint8Array.from(take(n)), idx = Uint16Array.from(take(n));
+  return {
+    key, S, ns, det: [d0, d1, d2].slice(0, ns), partials, seg, beta, xh, wH, xd,
+    hammer: { mass, K, p, alpha }, hasDamper: hasDamper > 0, n, nV, freq, sigma, w, c, bf, damp, str, idx,
+  };
+}
+
+// A voice of the WebAssembly engine, read back as the JavaScript engine's Voice: its state, its
+// modes (q and q1, live views into the engine's memory) and its key's model.
+const STATE = ['key', 'active', 'killing', 'dead', 'struck', 'contactSamples', 'Fmax', 'eta', 'etaPrev', 'FV', 'F', 'hammerOn', 'age', 'N', 'nV', 'ns', 'keyDown', 'damped', 'peak', 'FH', 'v0'];
+const FLAGS = new Set(['killing', 'dead', 'hammerOn', 'keyDown', 'damped']);
+class WasmVoice {
+  constructor(p) { this.p = p; }
+  state(i) {
+    const x = Base.exports, s = scratch(x);
+    x.grand_voice_state(this.p, s.at);
+    return s.f64(STATE.length)[i];
+  }
+  view(name, fn) { // a Float64Array over the engine's memory, renewed if the memory grew
+    const x = Base.exports, k = `_${name}`;
+    if (!this[k] || this[k].buffer !== x.memory.buffer) this[k] = new Float64Array(x.memory.buffer, fn(this.p), this.N);
+    return this[k];
+  }
+  get q() { return this.view('q', Base.exports.grand_voice_q); }
+  get q1() { return this.view('q1', Base.exports.grand_voice_q1); }
+  get data() { return (this._data ??= unpackKey(Base.exports, Base.exports.grand_voice_model(this.p))); }
+}
+STATE.forEach((k, i) => Object.defineProperty(WasmVoice.prototype, k, { get() { const v = this.state(i); return FLAGS.has(k) ? v > 0 : v; } }));
+
+// The engine, with the JavaScript engine's hooks: noteOn returns the key's voice, e.voices lists
+// them, and handle() takes the page's oscillator budget.
+export class GrandWasmEngine extends Base {
+  constructor(fs) {
+    super(fs);
+    this.e = Base.exports.forte_engine(this.h);
+  }
+  noteOn(key, velocity) {
+    super.noteOn(key, velocity);
+    const p = Base.exports.grand_by_key(this.e, key);
+    return p ? new WasmVoice(p) : null;
+  }
+  handle(m) {
+    if (m.type === 'budget') { if (Number.isFinite(m.modes)) Base.exports.grand_budget(this.e, m.modes); }
+    else super.handle(m);
+  }
+  get voices() {
+    const x = Base.exports;
+    return Array.from({ length: x.grand_voices(this.e) }, (_, i) => new WasmVoice(x.grand_voice(this.e, i)));
+  }
+}
+export const ready = () => GrandWasmEngine.ready();
+
+// The model's functions the views call (grand-model.js's keyModel, boardModel, boardResponse,
+// boardMobility, decayRates, hammerSpeed), computed by the WebAssembly, and the engine itself for
+// the slow-motion view's re-run of a strike (destroy() it after).
+const BOARD = ['K', 'D', 'rhoh', 'fRes', 'Ginf', 'mb', 'fBridge', 'f11', 'density', 'fc', 'micGain'];
+export async function wasmModel() {
+  const x = await ready(), s = scratch(x), params = nativeParams(BUILD);
+  return {
+    Engine: GrandWasmEngine,
+    keyModel(m, P, board = null, fs = 48000) {
+      const a = s.f64(params.length);
+      params.forEach((p, i) => { a[i] = nativeValue(p, P[p.id]); });
+      return unpackKey(x, x.grand_key_model(s.at, m, fs));
+    },
+    boardModel(P) {
+      const boardH = P.boardH ?? 9;
+      x.grand_board(boardH, s.at);
+      const a = s.f64(BOARD.length), B = { boardH };
+      BOARD.forEach((k, i) => { B[k] = a[i]; });
+      return B;
+    },
+    boardResponse: (B, seg, f, mic) => x.grand_board_response(B.boardH, seg, f, mic),
+    boardMobility(B, seg, f) { x.grand_board_mobility(B.boardH, seg, f, s.at); return Array.from(s.f64(2)); },
+    decayRates(p, ns) { x.grand_decay_rates(p.sigInt, p.bridgeV, p.bridgeH, ns, s.at); const r = s.f64(2); return { prompt: r[0], after: r[1] }; },
+    hammerSpeed: (vel) => x.grand_hammer_speed(vel),
+  };
+}
+
+globalThis.GrandWasmEngine = GrandWasmEngine;

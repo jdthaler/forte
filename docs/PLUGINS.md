@@ -13,7 +13,8 @@ native/core + native/instruments/<slug>   C++: engines and models
 Status: **steps 0–3 and 5 done** (the native setup, see [native/README.md](../native/README.md); every
 instrument headless in JavaScript; the shared native core; the template and the Bubble Organ
 ported, their pages running the WebAssembly; the plugins released from GitHub and linked from the
-front page; step 4's first batch, the modal bars, bells and plates). Next: step 4's second batch, the strings. The decisions below were made by the owner on
+front page; step 4's first two batches, the modal bars, bells and plates, and the strings). Next:
+step 4's third batch, the reeds and pickups. The decisions below were made by the owner on
 2026-10-16. Follow [CLAUDE.md](../CLAUDE.md) for the workflow (branch, test,
 version, pull request, merge only when asked) and update this file as steps
 land.
@@ -284,7 +285,26 @@ Separate sessions can work in parallel once step 3 is done.
      `ready(key)`), rather than for a number of samples: under load the worker lags the render.
    - A test hook can hand back `Float64Array` views into the engine's memory, so a test that
      writes the engine's state works unchanged.
-2. Strings: piano, grand, harpsichord, clavier, bowed.
+2. Strings: piano, grand, harpsichord, clavier, bowed. **Done** (Ribbon Piano 0.4.0, Harpsichord
+   0.3.0, Electric Grand 0.4.0, Tangent Clavier 0.4.0, Viola Organista 0.4.0, Forte 0.16.0), again
+   in one pull request with a commit per instrument. All five play what the JavaScript plays to
+   float32 rounding or better; the viola organista's chaotic friction matches bit for bit. In C++,
+   ten voices take 4 % of a core (piano), 5 % (harpsichord, grand), 6 % (bowed; 18 % with the
+   dampers lifted) and 14 % (clavier). Learned on the way:
+   - The system's `sin`, `exp`, `pow`… differ from V8's in the last bit for a few percent of
+     inputs, which a chaotic instrument amplifies. `native/instruments/bowed/fdlibm.*` is V8's own
+     fdlibm; a port that must match the JavaScript exactly through chaos can use it (move it to
+     `native/core` when a second instrument does).
+   - Without threads, `KeyData` must free what it replaced as blocks go by (Forte 0.16.0), or the
+     WebAssembly's memory grows each time a knob moves. A page view that runs a WebAssembly engine
+     on the main thread (a slow motion) calls `destroy()` afterwards.
+   - A shared object that every key's data depends on (the grand's soundboard) can live in an
+     unused `KeyData` slot (key 0) with its own version.
+   - Eigen keeps blocks of up to 128 KB on the stack: native tests run as WebAssembly with the
+     modules' 256 KB stack.
+   - Don't name an instrument's files after system headers (`string.h`): the folder is on the
+     include path.
+   - After a call that may grow the WebAssembly's memory, take `memory.buffer` again before writing.
 3. Reeds and pickups: tines, reeds, pianet, harmonium, pipes.
 4. Self-oscillators: Huygens, arc, pyrophone, wind harp.
 5. Table-driven: black hole, quantum, stars, springs.

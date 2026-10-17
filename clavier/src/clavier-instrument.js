@@ -15,5 +15,8 @@ export const INSTRUMENT = {
   range: [LO, HI],                      // MIDI keys: F1–E6, 29–88
   space: 'sustain',                     // Space and CC64: sent to the engine, which reads it as the mute bar
   engine: { name: 'ClavierEngine', module: new URL('./clavier-engine.js', import.meta.url).href },
+  // the same physics in C++ (native/instruments/clavier), built as WebAssembly: the page runs it
+  // when it can, the JavaScript engine otherwise
+  wasm: { name: 'ClavierWasmEngine', module: new URL('./clavier-wasm.js', import.meta.url).href, binary: new URL('../wasm/clavier.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room' },
 };

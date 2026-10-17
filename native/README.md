@@ -18,8 +18,9 @@ core/                               the engine contract (engine.h), parameters (
 plugin/                             the CLAP plugin every instrument shares
 web/engine-api.cpp                  the engine contract as C functions, for the WebAssembly
 instruments/<slug>/                 a ported instrument: engine, model, generated tables (the
-                                    template, bubbles, vibraphone, carillon, glass and gongs so
-                                    far; docs/INSTRUMENT_GUIDE.md,
+                                    template, bubbles, vibraphone, carillon, glass, gongs, piano,
+                                    harpsichord, grand, clavier and bowed so far;
+                                    docs/INSTRUMENT_GUIDE.md,
                                     "The native port")
 tests/                              native unit tests (CTest); tests/smoke, a test instrument
 ```

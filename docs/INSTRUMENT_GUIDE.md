@@ -332,7 +332,7 @@ for every page; `?engine=js` or `?engine=wasm` in the address overrides it. A We
 data (`forte/background.h`), so `engineParams` and `noteData` stay the JavaScript engine's.
 WebAssembly has no threads, so that data is built in place on a key's first note; where that
 takes milliseconds, the page builds it with its own WebAssembly model and sends it with the note,
-as the vibraphone's bars (`vibraphone/src/vibraphone-wasm.js`). The views call the WebAssembly
+as the vibraphone's bars and the piano's strings (`vibraphone/src/vibraphone-wasm.js`). The views call the WebAssembly
 model once it has loaded.
 
 An engine that posts to its page (`this.post`) posts `Message`s in C++ (`Engine::post`: a type, a
