@@ -3,10 +3,12 @@
 // instrument's version. The button sits next to the page title; a link to
 // …/#about opens the notes straight away.
 // The README's "Files" section (for developers) is left out; its links point
-// at the repository. Imported by shared/nav.js.
+// at the repository. An instrument with plugins (`plugin.ready`) gets their downloads at the
+// top of its notes; …/#plugin opens the notes there. Imported by shared/nav.js.
 
 import { renderMarkdown } from './markdown.js';
 import { byId, FORTE_VERSION } from './registry.js';
+import { downloads, INSTALL } from './plugins.js';
 
 const REPO = 'https://github.com/jdthaler/forte/blob/main/';
 const HASH = '#about';
@@ -17,6 +19,18 @@ const title = document.querySelector('body > header h1');
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 let dialog = null, body = null, loaded = null;
+const inst = byId(document.body.dataset.instrument || '');
+
+// the instrument's plugins, from the latest release (shared/plugins.js)
+function plugin() {
+  if (!inst?.plugin?.ready) return '';
+  const get = downloads(inst.id).map((d) => `<a class="button" href="${d.url}">${d.name}<span>${d.formats}</span></a>`).join('');
+  return `<section class="forte-plugin" id="about-plugin" aria-label="Plugin">
+      <p><b>Play the ${esc(inst.name)} in your DAW:</b> the same physics in C++, as AU, VST3 and CLAP plugins and a standalone app.</p>
+      <div class="forte-plugin-get">${get}</div>
+      <p class="forte-plugin-more">Free and unsigned: on a Mac, one Terminal command lets them load. <a href="${INSTALL}" target="_blank" rel="noopener">How to install</a> · <a href="${root.href}#plugins">Every instrument's plugins</a></p>
+    </section>`;
+}
 
 function build() {
   dialog = document.createElement('dialog');
@@ -29,7 +43,6 @@ function build() {
     </div>
     <div class="forte-notes-body" tabindex="-1"><p class="forte-notes-status">Loading…</p></div>`;
   dialog.querySelector('#forte-notes-title').textContent = title?.textContent.trim() || 'Notes';
-  const inst = byId(document.body.dataset.instrument || '');
   if (inst?.version) {
     const v = document.createElement('a');
     v.className = 'forte-version';
@@ -69,12 +82,12 @@ function load() {
       const toc = sections.length > 2
         ? `<nav class="forte-notes-toc" aria-label="Contents">${sections.map((s) => `<a href="#${s.id}">${esc(s.text)}</a>`).join('')}</nav>`
         : '';
-      body.innerHTML = `${toc}<article class="forte-notes-text">${html}</article>
+      body.innerHTML = `${plugin()}${toc}<article class="forte-notes-text">${html}</article>
         <p class="forte-notes-src">These notes are this instrument's <a href="${REPO}${dir}README.md" target="_blank" rel="noopener">README</a>, with its source code.</p>`;
     })
     .catch(() => {
       loaded = null; // try again next time
-      body.innerHTML = `<p class="forte-notes-status">The notes didn't load. Read them on <a href="${REPO}${dir}README.md" target="_blank" rel="noopener">GitHub</a>.</p>`;
+      body.innerHTML = `${plugin()}<p class="forte-notes-status">The notes didn't load. Read them on <a href="${REPO}${dir}README.md" target="_blank" rel="noopener">GitHub</a>.</p>`;
     });
   return loaded;
 }
@@ -86,7 +99,7 @@ export function openNotes() {
     body.focus({ preventScroll: true });
   }
   if (location.hash !== HASH) history.replaceState(null, '', HASH);
-  load();
+  return load();
 }
 
 if (title) {
@@ -98,5 +111,18 @@ if (title) {
   btn.innerHTML = '<span class="forte-about-i" aria-hidden="true">i</span><span class="forte-about-label">How it works</span>';
   btn.addEventListener('click', openNotes);
   title.after(btn);
+  // the plugin's downloads, one tap away: the notes, opened at them
+  const toPlugin = () => openNotes().finally(() => body.querySelector('#about-plugin')?.scrollIntoView({ block: 'start' }));
+  if (inst?.plugin?.ready) {
+    const get = document.createElement('button');
+    get.type = 'button';
+    get.className = 'forte-about forte-get';
+    get.title = `Download the ${inst.name} as a plugin for your DAW`;
+    get.setAttribute('aria-label', 'Download the plugin');
+    get.innerHTML = '<span class="forte-about-i" aria-hidden="true">↓</span><span class="forte-about-label">Plugin</span>';
+    get.addEventListener('click', toPlugin);
+    btn.after(get);
+  }
   if (location.hash === HASH) openNotes();
+  else if (location.hash === '#plugin') toPlugin();
 }

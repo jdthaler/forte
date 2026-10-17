@@ -4,6 +4,7 @@
 // (a string's normal modes, slowly beating).
 
 import { INSTRUMENTS, SECTIONS, FORTE_VERSION } from './shared/registry.js';
+import { withPlugins, downloads } from './shared/plugins.js';
 
 const $ = (s) => document.querySelector(s);
 const attr = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -41,7 +42,7 @@ function card(inst) {
         <span class="play" aria-hidden="true">Play →</span>
         ${demo ? `<button type="button" data-src="examples/${inst.id}/${demo.file}" title="${attr(demo.title)}">▶ Listen</button>` : ''}
         <a href="${inst.id}/#about" title="The physics of the ${inst.name}">How it works</a>
-        ${inst.plugin?.ready ? `<a href="#plugins" title="The ${inst.name} as a plugin for your DAW">Plugin</a>` : ''}
+        ${inst.plugin?.ready ? `<a href="${inst.id}/#plugin" title="Download the ${inst.name} as a plugin for your DAW">Plugin</a>` : ''}
       </div>
     </article>`;
 }
@@ -97,9 +98,12 @@ window.addEventListener('hashchange', () => {
 
 // Plugins (also at …/#plugins): the instruments ported to C++, downloaded from the latest
 // GitHub Release (the release-plugins workflow). The hash leaves the tabs as they are.
-const plugins = INSTRUMENTS.filter((i) => i.ready && i.plugin?.ready);
+const plugins = withPlugins();
 const names = plugins.map((i) => `the <a href="${i.id}/">${i.name}</a>`);
 $('#plugin-list').innerHTML = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0] ?? '';
+$('#plugin-rows').innerHTML = plugins.map((i) => `
+  <li style="--c: ${i.accent}"><a class="name" href="${i.id}/">${i.name}</a><span class="ver">v${i.version}</span>
+    <span class="get">${downloads(i.id).map((d) => `<a href="${d.url}" title="${attr(`${i.name}: ${d.formats} for ${d.name}`)}">${d.name}</a>`).join('')}</span></li>`).join('');
 function toPlugins() { $('#plugins').scrollIntoView(); }
 
 // About (also at …/#about)

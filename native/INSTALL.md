@@ -6,8 +6,9 @@ an instrument or MIDI track. They have no window of their own yet, so the DAW sh
 generic panel of sliders. The plugins are built from the same C++ as the instruments on
 <https://forte.jthaler.net>, and sound the same.
 
-They are free and unsigned: macOS and Windows will warn about them until you allow them,
-as below.
+Download every instrument together or one at a time, from <https://forte.jthaler.net/#plugins>
+or from an instrument's page (↓ Plugin). They are free and unsigned: macOS and Windows will
+warn about them until you allow them, as below.
 
 ## macOS
 

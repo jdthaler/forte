@@ -1,12 +1,20 @@
 name: release-plugins
 
-# Publishes the plugins as a GitHub Release (docs/PLUGINS.md, step 5), which the front page's
-# Plugins section downloads from (releases/latest/download/<asset>). The owner starts it from
-# the Actions tab, on main. It builds nothing: it takes the archives that the `native` run of
-# main's latest commit built and validated (its release-<preset> artifacts), and creates the
-# tag itself, since sessions can't push tags.
+# Publishes the plugins as a GitHub Release (docs/PLUGINS.md, step 5), which the front page and
+# each instrument's How it works download from (releases/latest/download/<archive>). It builds
+# nothing: it takes the archives that a green `native` run on main built and validated (its
+# release-<preset> artifacts), and creates the tag itself, since sessions can't push tags.
+#
+# It runs by itself after every green `native` run on main, and publishes only when what the
+# plugins are built from changed since the latest release (tools/plugin-release.mjs --manifest:
+# each instrument's version and the native/ tree), so a new port reaches the downloads when
+# it is merged. It can also be started from the Actions tab on main, which always publishes.
 
 on:
+  workflow_run:
+    workflows: [native]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       tag:
@@ -23,52 +31,80 @@ concurrency:
 
 jobs:
   release:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-24.04
     env:
       GH_TOKEN: ${{ github.token }}
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
 
       - name: Release from main only
-        if: github.ref != 'refs/heads/main'
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
         run: |
           echo "::error::Start this workflow on main (it releases what main's native run built)."
           exit 1
 
+      - name: Anything new since the latest release?
+        run: |
+          node tools/plugin-release.mjs --manifest > manifest.txt
+          cat manifest.txt
+          if [ "${{ github.event_name }}" = workflow_run ] &&
+             gh release download --pattern manifest.txt --output latest-manifest.txt 2>/dev/null &&
+             cmp -s manifest.txt latest-manifest.txt; then
+            echo "::notice::The latest release already has these plugins; nothing to publish."
+            echo "SKIP=1" >> "$GITHUB_ENV"
+          fi
+
       - name: The tag is new
+        if: env.SKIP != '1'
         env:
           INPUT_TAG: ${{ inputs.tag }}
         run: |
+          taken() { gh release view "$1" >/dev/null 2>&1 || git ls-remote --exit-code --tags origin "refs/tags/$1" >/dev/null; }
           tag="$INPUT_TAG"
-          [ -n "$tag" ] || tag=$(node tools/plugin-release.mjs --tag)
-          [[ "$tag" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "::error::Tags are letters, digits, dots, dashes and underscores."; exit 1; }
-          if gh release view "$tag" >/dev/null 2>&1 || git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then
-            echo "::error::$tag already exists. Bump Forte's version, or give another tag."
-            exit 1
+          if [ -n "$tag" ]; then
+            [[ "$tag" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "::error::Tags are letters, digits, dots, dashes and underscores."; exit 1; }
+            ! taken "$tag" || { echo "::error::$tag already exists. Give another tag."; exit 1; }
+          else
+            # plugins-v<Forte version>, or plugins-v<Forte version>-2, -3… when an instrument
+            # changed without Forte's version
+            base=$(node tools/plugin-release.mjs --tag); tag=$base; n=1
+            while taken "$tag"; do n=$((n + 1)); tag="$base-$n"; done
           fi
           echo "TAG=$tag" >> "$GITHUB_ENV"
 
-      - name: The archives from this commit's native run
+      - name: The archives from the native run
+        if: env.SKIP != '1'
         run: |
-          run=$(gh run list --workflow native.yml --branch main --commit "$GITHUB_SHA" --event push --status success \
-                  --json databaseId --jq '.[0].databaseId')
+          run="${{ github.event.workflow_run.id }}"
           if [ -z "$run" ]; then
-            echo "::error::No successful native run for $GITHUB_SHA on main yet. Wait for it to finish green, then start this again."
+            run=$(gh run list --workflow native.yml --branch main --commit "$SHA" --event push --status success \
+                    --json databaseId --jq '.[0].databaseId')
+          fi
+          if [ -z "$run" ]; then
+            echo "::error::No successful native run for $SHA on main yet. Wait for it to finish green, then start this again."
             exit 1
           fi
           echo "native run $run"
           gh run download "$run" --pattern 'release-*' --dir dl
           mkdir dist && find dl -type f -exec mv {} dist/ \;
           ls -la dist
-          for f in Forte-plugins-macos.zip Forte-plugins-windows.zip Forte-plugins-linux.tar.gz; do
+          for f in $(node tools/plugin-release.mjs --files); do
             [ -f "dist/$f" ] || { echo "::error::$f is missing from native run $run"; exit 1; }
           done
 
       - name: Release
+        if: env.SKIP != '1'
         run: |
           node tools/plugin-release.mjs > notes.md
+          cp manifest.txt dist/
           (cd dist && sha256sum * > SHA256SUMS.txt)
-          gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "Forte plugins ($TAG)" --notes-file notes.md --latest
+          gh release create "$TAG" dist/* --target "$SHA" --title "Forte plugins ($TAG)" --notes-file notes.md --latest
