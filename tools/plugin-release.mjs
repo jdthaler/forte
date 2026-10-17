@@ -12,6 +12,7 @@
 
 import { readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 import { FORTE_VERSION } from '../shared/registry.js';
 import { SYSTEMS, archive, withPlugins } from '../shared/plugins.js';
 
@@ -60,7 +61,7 @@ export function notes() {
   ].join('\n');
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1]).href) { // (a plain file:// + path fails on Windows)
   const arg = process.argv[2];
   console.log(arg === '--tag' ? `plugins-v${FORTE_VERSION}`
     : arg === '--plugins' ? released().map((i) => `${i.id}\t${i.name}`).join('\n')

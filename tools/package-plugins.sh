@@ -47,5 +47,6 @@ while IFS=$'\t' read -r id name; do
   names+=("$name")
   pack "Forte-$id" "$name" "$name"
 done < <(node tools/plugin-release.mjs --plugins)
+[ "${#names[@]}" -gt 0 ] || { echo "tools/plugin-release.mjs --plugins listed no instruments" >&2; exit 1; }
 pack Forte-plugins "Forte plugins" "${names[@]}"
 ls -l dist
