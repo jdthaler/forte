@@ -145,7 +145,25 @@ check it against the engine's output.
 1 − 10⁻⁶; a phrase on GW150914-like holes and the same phrase near-extremal;
 equal vs lopsided mergers; face-on vs edge-on (listen in stereo); and full
 inspiral–merger–ringdown chirps. Regenerate with
-`node tools/render-blackhole.mjs`. Tests: `node test/blackhole-tests.mjs`.
+`node tools/render-blackhole.mjs`. Tests: `node test/blackhole-tests.mjs`
+(`FORTE_ENGINE=wasm`: on the WebAssembly).
+
+## In C++
+
+The same engine and model run as WebAssembly on this page (the JavaScript is
+the fallback; `?engine=js` in the address forces it), where the views (the
+QNM plane, the strain plot, the black hole's numbers) call them too, and as
+plugins (CLAP, VST3, AU and a standalone app): MIDI velocity maps as on the
+page, the mod wheel raises the spin from its default toward 1 − 10⁻⁶, and
+the ten presets are there. The Leaver table is the same one, converted
+number for number to a C++ header (`tools/blackhole-native-table.mjs`); a
+key's voice is cheap to build from it (a few microseconds, no solving), so
+the C++ builds it as a note starts, as the page does. With V8's own
+exponentials, logarithms, powers and sines, the WebAssembly plays what the
+JavaScript plays bit for bit, inspirals included, and the same test suite
+passes on it. Ten twelve-mode voices take about 1–2 % of a core in C++. The
+port is in `native/instruments/blackhole/`, its WebAssembly in
+`blackhole/wasm/` (wrapped by `blackhole/src/blackhole-wasm.js`).
 
 ## Prior art and references
 

@@ -1,11 +1,13 @@
 // Precompute Kerr QNM frequencies for the ringdown keyboard.
-// Usage: node tools/qnm-table.mjs   → blackhole/data/qnm-table.json
+// Usage: node tools/qnm-table.mjs   → blackhole/data/qnm-table.json, and its C++ copy
+// (native/instruments/blackhole/qnm-table.h, tools/blackhole-native-table.mjs)
 //
 // Grid in u = −log10(1 − a): dense from Schwarzschild (u = 0) to
 // a = 1 − 10⁻⁶ (u = 6). Each mode is tracked continuously in spin.
 
 import { writeFileSync } from 'node:fs';
 import { trackQNM } from '../blackhole/src/qnm.js';
+import { header, headerFile } from './blackhole-native-table.mjs';
 
 const us = [];
 for (let a = 0; a < 0.9 - 1e-9; a += 0.025) us.push(-Math.log10(1 - a));
@@ -33,3 +35,4 @@ writeFileSync(new URL('../blackhole/data/qnm-table.json', import.meta.url), JSON
   note: 'Kerr gravitational QNMs (s = -2), M omega with M = 1, by Leaver continued fractions. u = -log10(1 - a).',
   u: us.map((u) => +u.toPrecision(8)), modes,
 }));
+writeFileSync(headerFile, header());

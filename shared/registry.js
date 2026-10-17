@@ -172,7 +172,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'blackhole', name: 'Black-Hole Keyboard', section: 'phenomena', ready: true, version: '0.3.3', trim: 14,
-    plugin: { code: 'BHol' },
+    plugin: { code: 'BHol', ready: true },
     tagline: 'Every key a Kerr black hole, ringing in quasinormal modes computed from the Teukolsky equation.',
     physics: 'General relativity · quasinormal modes',
     accent: '#b18cff',
