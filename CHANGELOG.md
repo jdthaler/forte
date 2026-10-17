@@ -10,6 +10,18 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-17 — clear the quarantine where the plugins are
+
+### Forte 0.27.0
+- **`make unquarantine`** in the downloads' Makefile clears macOS's download quarantine on the
+  plugins in the unpacked folder, where they are, so the standalone opens from there without
+  being moved or installed. `make unquarantine-app` (or `-au`, `-vst3`, `-clap`) does one
+  format, and naming a folder clears the copies there instead, e.g.
+  `make unquarantine-app APP_DIR=/Applications`. On Linux there is nothing to clear and it says
+  so. `make check` and `make verify` now point at it when they find a quarantined plugin.
+- The `native` workflow quarantines the standalones, unpacked and installed, and checks that
+  `make unquarantine-app` clears them; the site test covers the Linux path.
+
 ## 2026-10-17 — one plugin format at a time, and the standalone checked where it is
 
 ### Forte 0.25.0

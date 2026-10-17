@@ -24,7 +24,10 @@ make verify     # check each one is installed and loads (on a Mac, auval tests t
 To do one format alone, add it: `make install-au`, `make install-vst3`, `make install-clap` or
 `make install-app` (the standalone), and the same for `verify-` and `uninstall-`. `make check`
 checks the plugins in the folder without installing anything, and `make check-app` the
-standalone alone, which runs from the folder too. `make uninstall` removes them again, and
+standalone alone, which runs from the folder too. On a Mac, `make unquarantine` (or
+`make unquarantine-app`…) clears the download quarantine on the plugins where they are, without
+moving them; for a copy somewhere else, name its folder, e.g.
+`make unquarantine-app APP_DIR=/Applications`. `make uninstall` removes them again, and
 `make` alone explains the rest. On a Mac, `make` comes
 with Apple's command line tools: if macOS offers to install them, accept (or run
 `xcode-select --install`). Without make, `bash install.sh install` does the same. The
