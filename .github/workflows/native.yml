@@ -71,7 +71,11 @@ jobs:
         run: |
           command -v ccache >/dev/null && ccache --zero-stats
           cmake --build --preset ${{ matrix.preset }} --parallel
-          command -v ccache >/dev/null && ccache --show-stats || true
+      - name: ccache statistics
+        if: runner.os != 'Windows'
+        run: |
+          ccache --show-stats
+          { echo '### ccache (${{ matrix.preset }})'; echo '```'; ccache --show-stats; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Unit tests
         working-directory: native
         run: ctest --preset ${{ matrix.preset }}
