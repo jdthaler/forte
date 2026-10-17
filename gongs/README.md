@@ -300,6 +300,20 @@ with the pedal held, averages 19 %, and its worst 128-sample block takes about
 half its budget (41–56 % over three runs; 33 % keeping each block's fastest of
 three runs, which removes the machine's own hiccups) (`node tools/bench-gongs.mjs`).
 
+**In C++**: the same engine and model run as WebAssembly on this page (the
+JavaScript is the fallback; `?engine=js` in the address forces it) and as
+plugins (CLAP, VST3, AU and a standalone app), where CC64 is the sustain pedal,
+the mod wheel moves the strike point out towards the rim, and aftertouch presses
+a hand on the gong. Wherever the motion is not chaotic the WebAssembly plays what
+the JavaScript plays to float rounding (5×10⁻⁸ of the peak); in a crash, the last
+bit (V8's and the C++'s `exp`, `sin` and eigenvectors) grows into a different crash
+within about 50 ms, exactly as nudging the JavaScript's own velocities by 10⁻¹²
+does, and the same statistical test suite passes on it. There the coupling tables
+are built on a worker thread, and a note struck before they are ready waits for
+them (a few milliseconds). Ten gongs struck fff take about 20 % of a core in C++
+(40 % with all ten nonlinear), on a shared Linux machine where the JavaScript
+needs about three times as long.
+
 ### 7. Damping
 
 Each mode loses energy at σ = ωη/2, with the loss factor η the sum of three terms:
@@ -384,8 +398,11 @@ gongs/src/gongs-model.js             shell modes, coupling selection, scaling pe
 gongs/src/gongs-engine.js            real-time engine: SAV scheme, mallet, substeps, rates (AudioWorklet and Node)
 gongs/src/gongs-params.js            parameters and presets
 gongs/src/gongs-main.js              page wiring and views
+gongs/src/gongs-wasm.js              the C++ engine and model as WebAssembly (gongs/wasm/gongs.wasm)
 gongs/data/gong-modes.js             generated tables (node tools/gongs-modes.mjs, ~1 s)
-test/gongs-tests.mjs                 node test/gongs-tests.mjs (26 tests, ~22 s)
+native/instruments/gongs/            the C++ port: model, engine, the tables as a header
+                                     (node tools/gongs-native-table.mjs), reference (plugins and WebAssembly)
+test/gongs-tests.mjs                 node test/gongs-tests.mjs (27 tests, ~22 s; FORTE_ENGINE=wasm: on the WebAssembly)
 tools/render-gongs.mjs               node tools/render-gongs.mjs → examples/gongs/
 tools/bench-gongs.mjs                node tools/bench-gongs.mjs: real-time load, block by block
 ```

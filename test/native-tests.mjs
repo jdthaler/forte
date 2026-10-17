@@ -9,7 +9,7 @@ import { INSTRUMENTS } from '../shared/registry.js';
 import { generate, portedSlugs } from '../tools/gen-native-params.mjs';
 import { loadInstrument } from '../tools/headless.mjs';
 import { loadEngine, ENGINE } from '../tools/engine.mjs';
-import { scripts, play, summarise, compare, referenceFile, TOLERANCE } from '../tools/render-reference.mjs';
+import { scripts, play, summarise, compare, referenceFile, toleranceFor } from '../tools/render-reference.mjs';
 
 let failures = 0;
 async function test(name, fn) {
@@ -61,7 +61,7 @@ for (const slug of ported) {
     for (const s of scripts(I)) {
       const r = ref.scripts.find((x) => x.name === s.name);
       assert.ok(r, `${s.name}: not in the reference`);
-      const errs = compare(r.summary, summarise(play(I, Engine, s)), { ...TOLERANCE, ...I.reference });
+      const errs = compare(r.summary, summarise(play(I, Engine, s)), toleranceFor(I, s));
       assert.deepEqual(errs, [], `${s.name}: ${errs.join('; ')}`);
     }
   });

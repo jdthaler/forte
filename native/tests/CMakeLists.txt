@@ -8,7 +8,7 @@ endif()
 add_test(NAME core COMMAND forte_tests)
 
 # each ported instrument's own native tests: <slug>-tests.cpp
-foreach(slug template bubbles vibraphone carillon glass)
+foreach(slug template bubbles vibraphone carillon glass gongs)
   if (TARGET forte_${slug})
     add_executable(forte_${slug}_tests ${slug}-tests.cpp)
     target_link_libraries(forte_${slug}_tests PRIVATE forte_${slug})

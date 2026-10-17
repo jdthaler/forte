@@ -84,8 +84,10 @@ export function summarise([L, Rr]) {
 
 // How far a port may be from the reference. The level is compared only where the reference is
 // above −80 dB. Instruments with chaotic or random parts set looser ones in their descriptor
-// (reference: { level, cents, centroid }).
+// (reference: { level, cents, centroid }), or a function of the script giving them, for instruments
+// chaotic in some scripts only.
 export const TOLERANCE = { level: 0.5, cents: 2, centroid: 0.02, decay: 0.5 };
+export const toleranceFor = (I, script) => ({ ...TOLERANCE, ...(typeof I.reference === 'function' ? I.reference(script) : I.reference) });
 
 export function compare(ref, got, tol = TOLERANCE) {
   const errs = [];
@@ -113,7 +115,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     for (const s of list) {
       const r = ref.scripts.find((x) => x.name === s.name);
       if (!r) { console.log(`  FAIL ${s.name}: not in the reference (render it again)`); failed++; continue; }
-      const errs = compare(r.summary, summarise(play(I, Engine, s)), { ...TOLERANCE, ...I.reference });
+      const errs = compare(r.summary, summarise(play(I, Engine, s)), toleranceFor(I, s));
       console.log(`  ${errs.length ? 'FAIL' : 'ok  '} ${s.name}${errs.length ? `\n        ${errs.slice(0, 4).join('\n        ')}` : ''}`);
       if (errs.length) failed++;
     }
