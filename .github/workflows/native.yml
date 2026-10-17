@@ -40,6 +40,23 @@ jobs:
         if: runner.os == 'macOS'
         run: command -v ninja || brew install ninja
 
+      # A compiler cache, so a change recompiles only what it touches instead of every
+      # instrument's plugins and the SDKs from scratch. The Ninja presets only: the Visual Studio
+      # generator (windows) takes no compiler launcher.
+      - name: ccache
+        if: runner.os != 'Windows'
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then sudo apt-get install -y ccache; else command -v ccache || brew install ccache; fi
+          for lang in C CXX OBJC OBJCXX; do echo "CMAKE_${lang}_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"; done
+          { echo "CCACHE_DIR=$RUNNER_TEMP/ccache"; echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE"; echo "CCACHE_MAXSIZE=500M"; } >> "$GITHUB_ENV"
+      - name: Cache the compiler's output
+        if: runner.os != 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/ccache
+          key: ccache-${{ matrix.preset }}-${{ github.sha }}
+          restore-keys: ccache-${{ matrix.preset }}-
+
       - name: Cache the fetched dependencies
         uses: actions/cache@v4
         with:
@@ -51,7 +68,14 @@ jobs:
         run: cmake --preset ${{ matrix.preset }}
       - name: Build
         working-directory: native
-        run: cmake --build --preset ${{ matrix.preset }} --parallel
+        run: |
+          command -v ccache >/dev/null && ccache --zero-stats
+          cmake --build --preset ${{ matrix.preset }} --parallel
+      - name: ccache statistics
+        if: runner.os != 'Windows'
+        run: |
+          ccache --show-stats
+          { echo '### ccache (${{ matrix.preset }})'; echo '```'; ccache --show-stats; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Unit tests
         working-directory: native
         run: ctest --preset ${{ matrix.preset }}
