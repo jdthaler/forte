@@ -86,7 +86,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'organ', name: 'Tonewheel Organ', section: 'electric', ready: true, version: '0.4.4', trim: 2,
-    plugin: { code: 'Tonw' },
+    plugin: { code: 'Tonw', ready: true },
     after: 'the Hammond B-3 and Leslie',
     tagline: '91 spinning gear-driven wheels, bouncing key contacts, a scanner on an LC delay line and a rotating Doppler horn.',
     physics: 'Gear ratios · shared wheels · Doppler',

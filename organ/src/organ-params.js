@@ -4,6 +4,8 @@
 //       'engine' → sent to the audio thread as-is
 //       'mix'    → Web Audio graph (room, volume)
 
+import { DRAWBARS } from './tonewheels.js';
+
 const f1 = (u) => (v) => `${v.toFixed(1)} ${u}`;
 const f2 = (u) => (v) => `${v.toFixed(2)} ${u}`;
 const db = (v, off = -80) => (v <= off + 1 ? 'off' : `${v.toFixed(0)} dB`);
@@ -97,6 +99,40 @@ export const CONSOLE_DEFAULTS = {
   drawbars: [8, 8, 8, 0, 0, 0, 0, 0, 0],
   percOn: false, percSoft: false, percFast: true, percThird: true,
   vib: 'C3', leslieOn: true, leslie: 'slow', motor: true,
+};
+
+// The console as plugin parameters (the descriptor's console; tools/gen-native-params.mjs,
+// shared/wasm.js): the page keeps it in P as CONSOLE_DEFAULTS has it, and get(P) gives these
+// parameters' values from such a P. The Leslie's one switch has the bypass, the two speeds, and
+// the rotors stopped (the engine's brake: any speed but slow or fast).
+export const CONSOLE_GROUPS = [
+  {
+    id: 'drawbars', title: 'Drawbars',
+    params: DRAWBARS.map((b, d) => ({ id: `drawbar${d + 1}`, label: `${b.label} drawbar`, min: 0, max: 8, step: 1, def: CONSOLE_DEFAULTS.drawbars[d], fmt: (v) => v.toFixed(0) })),
+  },
+  {
+    id: 'switches', title: 'Console',
+    params: [
+      { id: 'percOn', label: 'Percussion', type: 'checkbox', def: CONSOLE_DEFAULTS.percOn },
+      { id: 'percSoft', label: 'Percussion soft', type: 'checkbox', def: CONSOLE_DEFAULTS.percSoft },
+      { id: 'percFast', label: 'Percussion fast', type: 'checkbox', def: CONSOLE_DEFAULTS.percFast },
+      { id: 'percThird', label: 'Percussion third', type: 'checkbox', def: CONSOLE_DEFAULTS.percThird },
+      { id: 'vib', label: 'Vibrato / chorus', perform: true, type: 'select', def: CONSOLE_DEFAULTS.vib,
+        options: [['off', 'Off'], ['V1', 'V1'], ['V2', 'V2'], ['V3', 'V3'], ['C1', 'C1'], ['C2', 'C2'], ['C3', 'C3']] },
+      { id: 'leslie', label: 'Leslie', perform: true, type: 'select', def: CONSOLE_DEFAULTS.leslieOn ? CONSOLE_DEFAULTS.leslie : 'bypass',
+        options: [['bypass', 'Bypass'], ['slow', 'Slow'], ['fast', 'Fast'], ['stop', 'Stopped']] },
+      { id: 'motor', label: 'Motor', type: 'checkbox', def: CONSOLE_DEFAULTS.motor },
+    ],
+  },
+];
+export const CONSOLE = {
+  groups: CONSOLE_GROUPS,
+  defaults: CONSOLE_DEFAULTS,
+  get: (P) => ({
+    ...Object.fromEntries(P.drawbars.map((v, d) => [`drawbar${d + 1}`, v])),
+    percOn: P.percOn, percSoft: P.percSoft, percFast: P.percFast, percThird: P.percThird,
+    vib: P.vib, leslie: P.leslieOn ? P.leslie : 'bypass', motor: P.motor,
+  }),
 };
 
 export const ALL_PARAMS = GROUPS.flatMap((g) => g.params);
