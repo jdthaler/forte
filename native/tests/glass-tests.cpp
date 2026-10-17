@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <memory>
+#include <thread>
 #include <vector>
 
 #include "check.h"
@@ -28,6 +29,13 @@ static std::vector<float> render(ArmonicaEngine &e, int n, std::vector<float> *r
   return L;
 }
 // frequency from interpolated upward zero crossings over [a, b)
+// the worker builds bowls in its own time: wait for the key's, so a test doesn't depend on the
+// machine's load (in WebAssembly it is built at once)
+static void waitFor(ArmonicaEngine &e, int key) {
+  for (int i = 0; i < 5000 && !e.ready(key); i++) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  CHECK(e.ready(key));
+}
+
 static double zeroCrossFreq(const std::vector<float> &x, int a, int b, double fs) {
   double first = -1, last = -1;
   int n = 0;
@@ -69,6 +77,8 @@ TEST("glass: a rubbed A4 speaks at 440 Hz, its bowl built on the worker thread, 
   e.setParams(P.data());
   e.noteOn(69, 0.6); // at once: in the plugin the bowl may not be built yet, and the voice waits for it
   CHECK(e.voiceCount() == 1);
+  render(e, 128);
+  waitFor(e, 69); // the voice picks its bowl up at the next block
   auto L = render(e, (int)(1.6 * fs));
   const double f = zeroCrossFreq(L, (int)(1.0 * fs), (int)(1.6 * fs), fs);
   CHECK(std::fabs(1200 * std::log2(f / 440)) < 3);
@@ -87,10 +97,12 @@ TEST("glass: water poured into a ringing bowl lowers it (the voices pick up the 
   auto engine = std::make_unique<ArmonicaEngine>(fs); // big for a WebAssembly stack
   ArmonicaEngine &e = *engine;
   e.setParams(P.data());
+  waitFor(e, 64);
   e.noteOn(64, 0.6);
   render(e, (int)(1.5 * fs));
   P[p::water] = 0.6;
   e.setParams(P.data());
+  waitFor(e, 64);
   BowlParams bp;
   bp.water = 0.6;
   const double want = bowl(64, bp).modes[0].f;
@@ -108,6 +120,7 @@ TEST("glass: the views' messages: the focused bowl's modes, its contact trace, t
   ArmonicaEngine &e = *engine;
   e.messages = &q;
   e.setParams(P.data());
+  waitFor(e, 69);
   e.noteOn(69, 0.7);
   render(e, (int)(0.8 * fs));
   Message m;

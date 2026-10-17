@@ -53,6 +53,8 @@ class ArmonicaEngine : public Engine {
   void allNotesOff() override;
   void pressure(double value, int key) override; // aftertouch: the finger presses harder
   int voiceCount() const override { return count; }
+  // the tests: whether the key's bowl for the current parameters is built (asks for it if not)
+  bool ready(int key) { return bool(bowls.get(key, version)); }
   void process(float *L, float *R, int n) override;
 
   struct Voice {

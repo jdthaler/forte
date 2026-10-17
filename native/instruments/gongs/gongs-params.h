@@ -78,7 +78,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "gongs", .name = "Gong Keyboard", .version = "0.3.1",
+    .slug = "gongs", .name = "Gong Keyboard", .version = "0.4.0",
     .description = "Thin plates whose stiffness grows with amplitude: strike softly for a bell, hard for a crash.", .auSubtype = "Gong",
     .vst3Id = {0x19, 0x95, 0xa8, 0xd7, 0xba, 0xa4, 0x2d, 0x01, 0x17, 0x89, 0xce, 0x8b, 0xce, 0x9e, 0x0e, 0xf6},
     .params = kParams, .paramCount = p::count,

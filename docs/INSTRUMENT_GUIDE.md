@@ -326,14 +326,20 @@ The descriptor's `wasm` field names the build; the shell sends it to the worklet
 and falls back to the JavaScript engine if it cannot (`?engine=js` in the page's address forces
 the JavaScript). A WebAssembly engine takes all the parameters and computes its own per-note
 data (`forte/background.h`), so `engineParams` and `noteData` stay the JavaScript engine's.
-The views call the WebAssembly model once it has loaded.
+WebAssembly has no threads, so that data is built in place on a key's first note; where that
+takes milliseconds, the page builds it with its own WebAssembly model and sends it with the note,
+as the vibraphone's bars (`vibraphone/src/vibraphone-wasm.js`). The views call the WebAssembly
+model once it has loaded.
 
 An engine that posts to its page (`this.post`) posts `Message`s in C++ (`Engine::post`: a type, a
 key and up to 30 float32 values); its `<slug>-wasm.js` turns them back into the page's messages,
 gathering several into one where a message is bigger (`wasmEngine(I, { messages(m, engine) })`,
 which returns null until it has one). A test suite that reaches into its engine (the bubble
 organ's log, pool and constructor options) gets the same from the WebAssembly class, through
-exports that take `forte_engine(handle)`: see `bubbles/src/bubbles-wasm.js`.
+exports that take `forte_engine(handle)`: see `bubbles/src/bubbles-wasm.js`. Messages carry
+float32, so a page that compares a value from one with its own parameter maps it back (the
+carillon's wrapper does). An instrument chaotic in some scripts only (the gongs' crashes) gives
+its descriptor a `reference` that is a function of the script, with looser tolerances there.
 
 When you change the physics, change both and check they agree:
 

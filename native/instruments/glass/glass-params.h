@@ -66,7 +66,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "glass", .name = "Glass Armonica", .version = "0.3.2",
+    .slug = "glass", .name = "Glass Armonica", .version = "0.4.0",
     .description = "Wet fingers on spinning glass bowls: stick–slip friction drives the shell modes, and rotation makes the doublets warble.", .auSubtype = "Glas",
     .vst3Id = {0xe8, 0x61, 0xf8, 0x2c, 0xa6, 0x06, 0xc8, 0xca, 0x74, 0xcb, 0x17, 0x39, 0xf8, 0xa3, 0xcb, 0xee},
     .params = kParams, .paramCount = p::count,
