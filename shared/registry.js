@@ -78,7 +78,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'grand', name: 'Electric Grand', section: 'electric', ready: true, version: '0.3.1', trim: 3.5,
-    plugin: { code: 'EGrd' },
+    plugin: { code: 'EGrd', ready: true },
     after: 'the Yamaha CP-70',
     tagline: 'A real piano action with no soundboard: piezo pickups under the bridge hear the strings directly.',
     physics: 'Bridge force · piezoelectric pickup',
