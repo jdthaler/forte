@@ -5,6 +5,12 @@ add_library(forte_core STATIC
 target_include_directories(forte_core PUBLIC include)
 target_link_libraries(forte_core PUBLIC forte_eigen)
 target_compile_features(forte_core PUBLIC cxx_std_20)
+# No fused multiply-adds in the plugins: JavaScript rounds every product, and on Apple silicon clang
+# would fuse them (x86-64 without -mfma has none), so the plugins give the JavaScript's numbers to
+# the last bit on every machine. The WebAssembly has no fused multiply-add to begin with.
+if (NOT MSVC AND NOT EMSCRIPTEN)
+  target_compile_options(forte_core PUBLIC -ffp-contract=off)
+endif()
 if (NOT EMSCRIPTEN)
   find_package(Threads REQUIRED)
   target_link_libraries(forte_core PUBLIC Threads::Threads)

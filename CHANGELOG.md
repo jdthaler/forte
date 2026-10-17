@@ -79,6 +79,9 @@ tagged; this changelog and the commit titles record them.
 - Its "real-time budget" timing test is skipped on CI, as the Ribbon Piano's is.
 
 ### Forte 0.21.0
+- **No fused multiply-adds in the plugins** (`-ffp-contract=off` on `forte_core` and every
+  instrument): on Apple silicon clang fused them, so the macOS plugins differed from the
+  JavaScript in the last bit (the wind harp's native test caught it). The WebAssembly is unchanged.
 - **Native parameters:** a default that sits off its parameter's step (the pyrophone's flame at ⅓
   on a 0.001 step) reads back as itself, so a saved state reloads exactly (clap-validator's state
   reproducibility test).
