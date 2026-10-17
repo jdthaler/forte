@@ -94,7 +94,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'tines', name: 'Tine Piano', section: 'electric', ready: true, version: '0.3.3', trim: -3,
-    plugin: { code: 'Tine' },
+    plugin: { code: 'Tine', ready: true },
     after: 'the Fender Rhodes',
     tagline: 'Each key an asymmetric tuning fork of steel tine and brass bar, heard through a nonlinear magnetic pickup.',
     physics: 'Coupled cantilevers · pickup nonlinearity',

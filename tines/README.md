@@ -69,7 +69,25 @@ speaker roll-off and a room. Their controls glide to a new setting over about
 `examples/tines/` has short renders, one effect each: velocity → bark,
 centred vs off-centre pickup, tone bar matched vs removed vs detuned,
 strike point, and stereo vibrato. Regenerate with `node tools/render-tines.mjs`.
-Tests: `node test/tines-tests.mjs`.
+Tests: `node test/tines-tests.mjs` (`FORTE_ENGINE=wasm`: on the WebAssembly).
+
+In C++, the same model and engine run as WebAssembly on this page (the
+JavaScript is the fallback; `?engine=js` in the address forces it, and the
+C++ | JS switch in the header picks one): the page builds each key's modes
+with its own WebAssembly model and sends them with the note, and the views
+(info panel, mode table, slow motion, pickup transfer) call that model too.
+They also run as plugins (CLAP, VST3, AU and a standalone app), with MIDI
+velocity as hammer speed (0.25–5 m/s), CC64 the damper pedal, and the room in
+the plugin's own output chain; there each key's modes are built on a
+background thread. The two eigen-solves per key are badly conditioned (the
+tine's finite-element stiffnesses span about ten decades), so the C++ (on
+Eigen) and the JavaScript round them differently: their modes agree to a few
+parts in 10⁹ at the default settings (10⁻⁶ for the stiffest tines), and the
+WebAssembly plays what the JavaScript plays to within 4·10⁻⁶ of the peak
+(about −110 dB). The same test suite passes on it. Ten notes take about
+13 % of a core in C++. The C++ port is in `native/instruments/tines/`, the
+WebAssembly in `wasm/tines.wasm` and its JavaScript side in
+`src/tines-wasm.js`.
 
 ## Simplifications
 
