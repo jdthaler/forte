@@ -16,5 +16,6 @@ export const INSTRUMENT = {
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
   modWheel: 'pressure',                 // CC1: wind pressure, from its default up to its maximum
   engine: { name: 'HarmoniumEngine', module: new URL('./harmonium-engine.js', import.meta.url).href },
+  wasm: { name: 'HarmoniumWasmEngine', module: new URL('./harmonium-wasm.js', import.meta.url).href, binary: new URL('../wasm/harmonium.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room' },
 };
