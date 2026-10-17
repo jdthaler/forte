@@ -118,7 +118,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'pianet', name: 'Sticky-Pad Piano', section: 'electric', ready: true, version: '0.3.1', trim: -4.5,
-    plugin: { code: 'Pnet' },
+    plugin: { code: 'Pnet', ready: true },
     after: 'the Hohner Pianet',
     tagline: 'No hammers at all: tacky pads grab each reed and let it go.',
     physics: 'Adhesion and release · reed pickup',
