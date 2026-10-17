@@ -60,7 +60,7 @@ class Voice {
     if (now) { this.g = this.g1 = this.gT; this.ye = this.ye1 = this.yeT; }
     this.c0 = esCap(this.p.yRest, this.g, this.ye);
   }
-  retire() { this.dying = true; }
+  retire() { this.dying = true; this.sleep = false; } // (a sleeping voice wakes to fade out)
 }
 
 export class PianetEngine {
@@ -194,7 +194,7 @@ export class PianetEngine {
         if (this.post) { const m = v.msg, r = p.rel; m.y = r.y; m.F = r.F; m.v = r.v; m.t = r.t; m.V = r.V; this.post(m); }
       }
       // bookkeeping: retire faded voices; sleep or free reeds that have stopped
-      if (v.dying && fade <= 0) v.dead = true;
+      if (v.dying && v.fade <= 0) v.dead = true;
       else if (!(Math.abs(p.y) < 1)) { v.dead = true; if (this.post) this.post({ type: 'error', message: 'numerical instability', key: v.key }); }
       else if (p.hv === 0 && !v.pending && !(p.F > 0 && p.a > 0) && p.energy() < 1e-13) { // (a bond under tension may still be creeping)
         if (++v.quiet > 20) { if (p.down || v.held) v.sleep = true; else if (p.a > PAD.aMin * PAD.a0) v.dead = true; }

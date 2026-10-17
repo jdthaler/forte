@@ -1,11 +1,17 @@
 // pianet-main.js — the page: wires the shell to the engine and draws the views.
 // The slow-motion view and the release plot rerun the key's mechanism
-// offline (pianet-model.js, the same Pluck the engine plays).
+// offline (the same Pluck the engine plays): with the WebAssembly model once
+// it has loaded (the worklet's physics, in C++), the JavaScript one
+// (pianet-model.js) until then or if it can't load.
 
-import { createShell, noteName } from '../../shared/shell.js';
+import { createShell, noteName, useWasm } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './pianet-instrument.js';
 import { keyReed, simulatePluck, releaseCurve, keySpeed, workOfAdhesion, voicing, voicingT, PAD } from './pianet-model.js';
+import { wasmModel } from './pianet-wasm.js';
+
+let model = { keyReed, simulatePluck, releaseCurve, keySpeed, workOfAdhesion, voicing, voicingT, PAD };
+if (useWasm()) wasmModel().then((m) => { model = m; dirty = true; }, (err) => console.warn(`pianet: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
 
 const $ = (s) => document.querySelector(s);
 const spectrum = new SpectrumView($('#spectrum'));
@@ -28,9 +34,9 @@ const mm = (x) => (x * 1e3).toFixed(x < 1e-4 ? 3 : 2);
 function update() {
   dirty = false;
   const P = shell.P;
-  kr = keyReed(focus, P);
-  sim = simulatePluck(focus, P, vel(), { periods: 5, frames: 600 });
-  curve = releaseCurve(focus, P, VELS);
+  kr = model.keyReed(focus, P);
+  sim = model.simulatePluck(focus, P, vel(), { periods: 5, frames: 600 });
+  curve = model.releaseCurve(focus, P, VELS);
   shapes = kr.modes.map((_, n) => Array.from({ length: 41 }, (__, j) => kr.shape(n, (j / 40) * kr.L)));
   t0 = performance.now();
   shell.keys.focus(focus);
@@ -46,13 +52,13 @@ function update() {
       const t = (x) => (x >= 1 ? `${x.toFixed(1)} s` : `${(x * 1e3).toFixed(0)} ms`);
       return `<tr><td>${n + 1}</td><td>${md.f.toFixed(1)}</td><td>${md.ratio.toFixed(2)}</td><td>${t(md.T60)}</td><td>${t(6.91 / sd)}</td><td>${n ? `${lvl[n].toFixed(0)} dB` : '0 dB'}</td></tr>`;
     }).join('');
-  const es = P.pickup === 'es', v = voicing(focus), vT = voicingT(focus);
+  const es = P.pickup === 'es', v = model.voicing(focus), vT = model.voicingT(focus);
   const rows = [
     ['reed', `${(kr.L * 1e3).toFixed(1)} × ${(kr.b * 1e3).toFixed(1)} × ${(kr.h * 1e3).toFixed(2)} mm steel, ${(kr.Msolder * 1e3).toFixed(2)} g solder`],
     ['stiffness at pad', `${(kr.kc / 1e3).toFixed(2)} N/mm (pad at ${(kr.xc * 1e3).toFixed(1)} mm)`],
-    ['key speed', `${(keySpeed(vel()) * 100).toFixed(1)} cm/s at the pad (velocity ${vel().toFixed(2)})`],
+    ['key speed', `${(model.keySpeed(vel()) * 100).toFixed(1)} cm/s at the pad (velocity ${vel().toFixed(2)})`],
     ['release', r ? `${r.F.toFixed(2)} N at ${mm(r.y)} mm, ${(r.t * 1e3).toFixed(1)} ms after the key starts` : 'none: the bond holds'],
-    ['bond', `F₀ = ${(P.tack * 1e3).toFixed(0)} mN → G₀ = ${workOfAdhesion(P.tack).toFixed(2)} J/m² over a ${(PAD.a0 * 1e3).toFixed(2)} mm disc`],
+    ['bond', `F₀ = ${(P.tack * 1e3).toFixed(0)} mN → G₀ = ${model.workOfAdhesion(P.tack).toFixed(2)} J/m² over a ${(model.PAD.a0 * 1e3).toFixed(2)} mm disc`],
     ['pickup here', es ? `plate ${(P.plateGap * v).toFixed(2)} mm from the tip, edge ${(P.offset * v).toFixed(2)} mm up` : `pole ${(P.gap * vT).toFixed(2)} mm under the tip`],
   ];
   $('#info').innerHTML = rows.map(([k, x]) => `<dt>${k}</dt><dd>${x}</dd>`).join('');
@@ -65,7 +71,7 @@ function drawReed() {
   if (!sim) return;
   const N = sim.t.length, el = ((performance.now() - t0) / 1000) % (SHOW + HOLD);
   const i = (frame = Math.min(N - 1, Math.floor((Math.min(1, el / SHOW)) * (N - 1))));
-  const P = shell.P, es = P.pickup === 'es', v = voicing(focus), g = es ? P.plateGap * 1e-3 * v : P.gap * 1e-3 * voicingT(focus), ye = P.offset * 1e-3 * v;
+  const P = shell.P, es = P.pickup === 'es', v = model.voicing(focus), g = es ? P.plateGap * 1e-3 * v : P.gap * 1e-3 * model.voicingT(focus), ye = P.offset * 1e-3 * v;
   const hm = 0.68 * h, yr = 0.5 * hm, xa = 0.1 * w, xb = 0.78 * w, X = (x) => xa + (x / kr.L) * (xb - xa);
   let ymax = 0.3 * g;
   for (let j = 0; j < N; j++) ymax = Math.max(ymax, Math.abs(sim.y[j]), Math.abs(sim.yc[j]));
@@ -106,7 +112,7 @@ function drawReed() {
   for (let k = 1; k < 4; k++) { const yy = hold + ((face - hold) * k) / 4; ctx.beginPath(); ctx.moveTo(xc - pw / 2, yy); ctx.lineTo(xc + pw / 2, yy); ctx.stroke(); }
   ctx.fillStyle = '#2a2018'; ctx.fillRect(xc - pw / 2, face - 1, pw, 3);
   const a = sim.a[i];
-  if (a > PAD.aMin) { ctx.fillStyle = css('--bond'); ctx.fillRect(xc - (a * pw) / 2, face + 1, a * pw, 3); }
+  if (a > model.PAD.aMin) { ctx.fillStyle = css('--bond'); ctx.fillRect(xc - (a * pw) / 2, face + 1, a * pw, 3); }
   ctx.fillStyle = css('--muted'); ctx.fillText('pad (foam + tacky face)', xc + pw / 2 + 6, Math.max(12, hold + 10));
 
   // phase readout

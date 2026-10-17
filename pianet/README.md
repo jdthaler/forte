@@ -244,6 +244,18 @@ the flux's rate of change, cannot step. Moving a magnet pole does induce a
 little voltage, a soft thump, as it would on the real thing. Switching
 pickups ducks the output to zero over 10 ms and back.
 
+**In C++.** The same engine and model run as WebAssembly on this page (the
+JavaScript is the fallback; `?engine=js` in the address forces it), and the
+slow-motion view, the mode table and the release plot re-run the pluck with
+the WebAssembly model; and as plugins (CLAP, VST3, AU and a standalone
+app), where CC64 is the sustain pedal. The WebAssembly plays what the
+JavaScript plays to float32 rounding (within 6·10⁻⁸ on the reference
+scripts), and the same test suite passes on it. In the plugins, each key's
+reed is built on a worker thread for the tip mass and loss the knobs are
+at; the WebAssembly builds it when it is first needed, as the JavaScript
+does (well under a millisecond). Ten voices take about 1 % of a core in
+C++.
+
 ## What to listen for
 
 `examples/pianet/`, regenerated with `node tools/render-pianet.mjs`:
@@ -284,7 +296,9 @@ pianet/src/pianet-model.js            reeds per key, pad, adhesion law, pickups,
 pianet/src/pianet-engine.js           real-time engine (AudioWorklet and Node)
 pianet/src/pianet-params.js           parameters and presets
 pianet/src/pianet-main.js             page wiring and views
-test/pianet-tests.mjs                 node test/pianet-tests.mjs
+pianet/src/pianet-wasm.js             the C++ engine and model as WebAssembly (pianet/wasm/pianet.wasm)
+native/instruments/pianet/            the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
+test/pianet-tests.mjs                 node test/pianet-tests.mjs (FORTE_ENGINE=wasm: on the WebAssembly)
 tools/render-pianet.mjs               node tools/render-pianet.mjs → examples/pianet/
 ```
 

@@ -218,6 +218,21 @@ from one block to the next), so the knobs do not click. *Solder mass*,
 notes. A key struck again after one of them moved gets a new reed, and its
 old one fades out in about 20 ms.
 
+**In C++.** The same engine and model run as WebAssembly on this page (the
+JavaScript is the fallback; `?engine=js` in the address forces it) and as
+plugins (CLAP, VST3, AU and a standalone app), where CC64 is the damper
+pedal. The page builds each key's reed with the WebAssembly model and sends
+it with the note, as it does for the JavaScript; a plugin builds every key's
+reed on a worker thread as soon as *Solder mass*, *Strike point* or *Hammer
+felt hardness* settles, and a note whose reed isn't ready yet waits a few
+milliseconds for it. The C(y) table is the same numbers, converted
+(`tools/reeds-native-table.mjs`). Given the same reed, the WebAssembly plays
+what the JavaScript plays to within 5·10⁻⁸ of the peak (float32 output
+rounding); the reeds themselves come out of the eigensolver within about
+10⁻⁸ (the stiff beam's eigenproblem is that well conditioned and no better),
+so a whole phrase agrees to within 5·10⁻⁶ of its peak, and the same test
+suite passes on it. Ten voices take about 5 % of a core in C++.
+
 ## What to listen for
 
 `examples/reeds/`, regenerated with `node tools/render-reeds.mjs`:
@@ -257,9 +272,12 @@ reeds/src/reeds-engine.js             real-time engine (AudioWorklet and Node), 
 reeds/src/reeds-params.js             parameters and presets
 reeds/src/reeds-main.js               page wiring, info and mode table
 reeds/src/reeds-views.js              slow-motion reed and slot, C(y) view
-test/reeds-tests.mjs                  node test/reeds-tests.mjs (28 tests, ~4 s)
+reeds/src/reeds-wasm.js               the C++ engine and model as WebAssembly (reeds/wasm/reeds.wasm)
+native/instruments/reeds/             the C++ port: FEM, model, engine, generated tables, reference (plugins and WebAssembly)
+test/reeds-tests.mjs                  node test/reeds-tests.mjs (29 tests, ~7 s; FORTE_ENGINE=wasm: on the WebAssembly)
 tools/render-reeds.mjs                node tools/render-reeds.mjs → examples/reeds/
-tools/reeds-slot-table.mjs            node tools/reeds-slot-table.mjs → reeds/src/slot-table.js
+tools/reeds-slot-table.mjs            node tools/reeds-slot-table.mjs → reeds/src/slot-table.js and its C++ copy
+tools/reeds-native-table.mjs          node tools/reeds-native-table.mjs → native/instruments/reeds/slot-table.h (only the copy)
 ```
 
 ## Simplifications

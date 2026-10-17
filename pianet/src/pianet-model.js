@@ -227,7 +227,8 @@ export class Pluck {
     let F = (this.Bk * (this.h - yf) - this.Ck * this.e) * this.den;
     const bonded = this.a > PAD.aMin * PAD.a0;
     if (!bonded) {
-      const eFree = this.e * this.relax; // the face springs back towards the holder
+      let eFree = this.e * this.relax; // the face springs back towards the holder
+      if (Math.abs(eFree) < 1e-30) eFree = 0; // (back: no denormals, which cost the audio thread tenfold)
       if (yf <= this.h - eFree || F >= 0) { this.e = eFree; F = 0; }
     }
     if (F !== 0) {

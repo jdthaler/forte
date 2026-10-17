@@ -31,7 +31,11 @@ export const INSTRUMENT = {
   range: [KEY_LO, KEY_HI],              // MIDI keys: A1–C7, 33–96
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   engine: { name: 'ReedEngine', module: new URL('./reeds-engine.js', import.meta.url).href },
-  // each key's modal model is computed off the audio thread and sent with the noteOn
+  // the same physics in C++ (native/instruments/reeds), built as WebAssembly: the page runs it
+  // when it can, the JavaScript engine otherwise
+  wasm: { name: 'ReedWasmEngine', module: new URL('./reeds-wasm.js', import.meta.url).href, binary: new URL('../wasm/reeds.wasm', import.meta.url).href },
+  // each key's modal model is computed off the audio thread and sent with the noteOn (the
+  // JavaScript engine's; the page sends the WebAssembly engine its own model's, packed)
   noteData: (key, vel, P, fs) => ({ ...reedModel(key, P, fs).voice, version: reedKey(P) }),
   chain: { volume: 'volume', room: 'room' },
 };
