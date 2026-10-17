@@ -148,6 +148,18 @@ TEST("chain: tone, body, room and volume as the pages' chain gives them (no limi
   CHECK_NEAR(10 * std::log10(eR / js::kChainEnergy[1]), 0, 0.001);
 }
 
+TEST("chain: a tone at or above Nyquist passes the sound unchanged, as Web Audio's (a low sample rate)") {
+  WebAudioLowpass f;
+  f.set(14000, 8000);
+  for (int i = 0; i < 1000; i++) { const double x = std::sin(i * 2.9); CHECK(f.run(x) == x); }
+  f.set(0, 8000);
+  CHECK(f.run(1) == 0);
+  f.set(3000, 8000); // below: an ordinary, stable low-pass
+  double y = 0;
+  for (int i = 0; i < 8000; i++) y = f.run(1);
+  CHECK_NEAR(y, 1, 1e-9);
+}
+
 TEST("guard: a NaN zeroes the block") {
   float L[4] = {1, 2, NAN, 4}, R[4] = {1, 2, 3, 4};
   CHECK(!guardBlock(L, R, 4));

@@ -107,6 +107,11 @@ class Voice {
       const m = Math.abs(hp) + Math.abs(hx);
       if (m > peak) peak = m;
     }
+    if (this.ring) {
+      // a mode that has died away goes to zero rather than into denormals, which cost the
+      // audio thread tenfold (the fast overtones get there while the fundamental rings)
+      for (let i = 0; i < this.n; i++) if (Math.abs(this.zr[i]) + Math.abs(this.zi[i]) < 1e-100) { this.zr[i] = 0; this.zi[i] = 0; }
+    }
     if (this.ring && (!this.chirp || this.chirp.stage === 3)) {
       let env = 0;
       for (let i = 0; i < this.n; i++) env += Math.hypot(this.zr[i], this.zi[i]) * (Math.hypot(this.cpr[i], this.cpi[i]) + Math.hypot(this.cxr[i], this.cxi[i]));

@@ -382,6 +382,19 @@ rather than a physical one.
 - **Cost.** Ten stars across the keyboard, held and driven (2585 modes),
   take about 17 % of one core at 48 kHz in Node on the shared machine this
   was built on; ten red giants (3386 modes) about 22 %.
+- **In C++**: the same engine and model run as WebAssembly on this page (the
+  JavaScript is the fallback; `?engine=js` in the address forces it) and as
+  plugins (CLAP, VST3, AU and a standalone app), where CC64 is the sustain
+  pedal, the mod wheel spins the stars up and aftertouch drives them
+  harder. The page builds each key's star with its WebAssembly model and
+  sends it with the note; a plugin builds every key's star on a worker
+  thread as soon as the kind, mass or speed-up changes, and a note whose
+  star isn't ready waits the few milliseconds for it. With V8's own
+  `exp`, `log`, `tan`… (fdlibm) and the JavaScript's seeded generators, the
+  WebAssembly plays what the JavaScript plays bit for bit, its random
+  convection, flares and stars included, and the same test suite passes
+  on it. Ten stars take about 12 % of a core in C++, ten red giants
+  about 15 %.
 
 ## What to listen for
 
@@ -434,7 +447,9 @@ stars/src/stars-model.js             scaling relations, ZAMS and the track, the 
 stars/src/stars-engine.js            real-time engine (AudioWorklet and Node)
 stars/src/stars-params.js            parameters and presets
 stars/src/stars-main.js              page wiring, building the stars for each note, and views
-test/stars-tests.mjs                 node test/stars-tests.mjs (21 tests, about 16 s)
+stars/src/stars-wasm.js              the C++ engine and model as WebAssembly (stars/wasm/stars.wasm)
+native/instruments/stars/            the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
+test/stars-tests.mjs                 node test/stars-tests.mjs (21 tests, about 16 s; FORTE_ENGINE=wasm: on the WebAssembly)
 tools/render-stars.mjs               node tools/render-stars.mjs → examples/stars/
 ```
 

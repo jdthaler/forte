@@ -51,23 +51,26 @@ function sample(f, y0, h, ys) {
 // The display window, the potential, and every state's φₙ at `rows` points.
 //   ys: positions (natural units); V(y); phi[i] for pk.ns[i]; Erange for the plot;
 //   turning(E): classical turning points; label/unit for the axis.
-export function waveGrid(pk, P, rows) {
+// solve(pk, P, rows), if given, computes the φₙ instead (the WebAssembly model's, the same
+// numbers: quantum-wasm.js), and returns them as phi does, or null.
+export function waveGrid(pk, P, rows, solve = null) {
   const id = pk.id, ns = pk.ns, nHi = ns[ns.length - 1], nLo = ns[0], Ehi = pk.E[pk.E.length - 1];
-  const phi = [], ys = new Float64Array(rows);
+  const pre = solve ? solve(pk, P, rows) : null;
+  const phi = pre ? [...pre] : [], ys = new Float64Array(rows);
   const span = (a, b) => { for (let r = 0; r < rows; r++) ys[r] = a + ((b - a) * (r + 0.5)) / rows; };
   const norm = (f, h, w = null) => { let s = 0; for (let i = 0; i < f.length; i++) s += f[i] * f[i] * (w ? w(i) : 1) * h; const k = 1 / Math.sqrt(s || 1); for (let i = 0; i < f.length; i++) f[i] *= k; return f; };
   const firstLobePositive = (f) => { let m = 0; for (const v of f) m = Math.max(m, Math.abs(v)); for (const v of f) if (Math.abs(v) > 0.05 * m) { if (v < 0) for (let i = 0; i < f.length; i++) f[i] = -f[i]; break; } return f; };
 
   if (id === 'box') {
     span(0, 1);
-    for (const n of ns) phi.push(ys.map((y) => Math.SQRT2 * Math.sin(n * PI * y)));
+    if (!pre) for (const n of ns) phi.push(ys.map((y) => Math.SQRT2 * Math.sin(n * PI * y)));
     return { id, ys, phi, V: () => 0, Vmin: 0, Erange: [0, Ehi * 1.08], turning: () => [0, 1], walls: [0, 1], label: 'x / L' };
   }
   if (id === 'harmonic') {
     const X = 1.15 * Math.sqrt(2 * nHi + 1);
     span(-X, X);
-    const rowsPhi = ns.map(() => new Float64Array(rows));
-    for (let r = 0; r < rows; r++) { // normalised Hermite functions, log-scaled recurrence, times (−1)ⁿ
+    const rowsPhi = pre ? phi : ns.map(() => new Float64Array(rows));
+    for (let r = 0; r < rows && !pre; r++) { // normalised Hermite functions, log-scaled recurrence, times (−1)ⁿ
       const x = ys[r];
       let a = 0, b = 1, lg = -0.5 * x * x - 0.25 * Math.log(PI); // ψ₀ = e^(lg)·b
       for (let n = 0; n <= nHi; n++) {
@@ -88,7 +91,7 @@ export function waveGrid(pk, P, rows) {
     const kmax = Math.sqrt(2 * mu * Ehi), h = (2 * PI) / kmax / 20;
     const y0 = a - pad - 12 / Math.sqrt(2 * mu * D), y1 = b + pad + 12 / Math.sqrt(2 * mu * Math.max(D - Ehi, 1e-3)) ;
     const N = Math.min(400000, Math.ceil((Math.min(y1, b + 40) - y0) / h));
-    for (let i = 0; i < ns.length; i++) {
+    for (let i = 0; i < ns.length && !pre; i++) {
       const E = pk.E[i], f = numerov((x) => 2 * mu * (V(x) - E), y0, h, N, Math.round(-y0 / h));
       phi.push(sample(firstLobePositive(norm(f, h)), y0, h, ys));
     }
@@ -98,7 +101,7 @@ export function waveGrid(pk, P, rows) {
     const zt = Ehi, zmax = zt + 12 / Math.sqrt(1) + 4 * zt ** (-1 / 3);
     span(0, 1.12 * zt);
     const h = (2 * PI) / Math.sqrt(zt) / 24, N = Math.ceil(zmax / h) + 2;
-    for (let i = 0; i < ns.length; i++) {
+    for (let i = 0; i < ns.length && !pre; i++) {
       const E = pk.E[i], f = numerov((z) => z - E, 0, h, N, Math.round((0.5 * E) / h));
       phi.push(sample(firstLobePositive(norm(f, h)), 0, h, ys));
     }
@@ -108,7 +111,7 @@ export function waveGrid(pk, P, rows) {
     const l = HYDROGEN_L, c2 = (2 * l + 1) ** 2 - 0.25, rOut = (n) => n * n * (1 + Math.sqrt(1 - ((l + 0.5) / n) ** 2));
     span(0, 1.08 * rOut(nHi));
     const sMax = Math.sqrt(rOut(nHi)) + 14, h = 0.11, N = Math.ceil(sMax / h) + 2;
-    for (let i = 0; i < ns.length; i++) {
+    for (let i = 0; i < ns.length && !pre; i++) {
       const n = ns[i], E = pk.E[i];
       const Q = (s) => (s < 1e-9 ? 1e18 : c2 / (s * s) - 8 - 8 * E * s * s);
       const w = numerov(Q, 0, h, N, Math.round((0.6 * n) / h), [0, h ** (2 * l + 1.5)]);

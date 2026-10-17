@@ -31,6 +31,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'hand',                     // CC1: a hand on the springs
   engine: { name: 'SpringEngine', module: new URL('./springs-engine.js', import.meta.url).href },
+  wasm: { name: 'SpringWasmEngine', module: new URL('./springs-wasm.js', import.meta.url).href, binary: new URL('../wasm/springs.wasm', import.meta.url).href },
   noteData: (key, vel, P, fs) => springsFor(key, P, fs),
   chain: { volume: 'volume', room: 'room' },
 };

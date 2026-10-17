@@ -1,34 +1,49 @@
 // springs-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName } from '../../shared/shell.js';
+import { createShell, noteName, useWasm } from '../../shared/shell.js';
 import { fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT, springsFor as cached } from './springs-instrument.js';
-import { KEY_LO, KEY_HI, TAU, tuneSpring, scaleSpring, dispersionCurve, modeSigma, pulseLength, pulseSpectrum, cents } from './springs-model.js';
+import * as jsModel from './springs-model.js';
+import { KEY_LO, KEY_HI, TAU, scaleSpring, cents } from './springs-model.js';
+import { wasmModel } from './springs-wasm.js';
+
+// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
+// physics as the engine, in C++), the JavaScript one until then or if it can't load.
+let model = jsModel, wasm = null;
+if (useWasm()) wasmModel().then((m) => { model = wasm = { ...jsModel, ...m }; update(); prewarm(); }, (err) => console.warn(`springs: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
 
 const $ = (s) => document.querySelector(s);
 let focus = 60, echo = null, analyser = null, strikeAt = -1, strikeVel = 0.7;
 const rate = () => shell?.audio?.ctx.sampleRate || 48000;
 
 // ---- the springs and their modes, sent with each note ----------------------------------------------
-// (a few hundred 6 × 6 eigenproblems for a bass key: too slow for the audio thread, so the descriptor
-// keeps them, and the page works through the keyboard in spare moments after a change)
-const springsFor = (key, P = shell.P, fs = rate()) => cached(key, P, fs);
+// (a few hundred 6 × 6 eigenproblems for a bass key: too slow for the audio thread, so the page
+// builds them and works through the keyboard in spare moments after a change): the JavaScript
+// model's (the descriptor keeps them) for the JavaScript engine, the WebAssembly model's, packed,
+// for the WebAssembly engine. The views draw the model's.
+const wasmEngine = () => wasm && shell.engineKind !== 'js'; // until the worklet says, expect the WebAssembly
+const springsFor = (key, P = shell.P, fs = rate()) => (wasm ? wasm.keySprings(key, P, fs) : cached(key, P, fs));
+const noteData = (key, vel, P, fs) => (wasmEngine() ? wasm.keySprings(key, P, fs).packed : cached(key, P, fs));
 let warmTimer = 0;
 function prewarm() {
   clearTimeout(warmTimer);
   const keys = [];
   for (let d = 0; d <= KEY_HI - KEY_LO; d++) for (const k of [focus - d, focus + d]) if (k >= KEY_LO && k <= KEY_HI && !keys.includes(k)) keys.push(k);
-  const step = () => { const k = keys.shift(); if (k !== undefined) { springsFor(k); warmTimer = setTimeout(step, 4); } };
+  const step = () => { const k = keys.shift(); if (k !== undefined) { noteData(k, 0.7, shell.P, rate()); warmTimer = setTimeout(step, 4); } };
   warmTimer = setTimeout(step, 300);
 }
 
 const shell = createShell({
   ...INSTRUMENT,
+  noteData,
   arrows: { param: 'velocity', step: 0.05 },
   onAudio: (a) => { analyser = a.analyser; prewarm(); },
   onNoteOn: (key, vel) => { focus = key; strikeAt = performance.now() / 1000; strikeVel = vel; shell.keys.focus?.(key); update(); },
   onParam: (id, v, P, p, dragging) => { if (!dragging || !['coil', 'wire', 'helix'].includes(id)) update(); else updateSoon(); prewarm(); },
-  onMessage: (m) => { if (m.type === 'echo') { echo = m; echoImage = null; } },
+  onMessage: (m) => {
+    if (m.type === 'engine') prewarm(); // the worklet says which engine plays
+    else if (m.type === 'echo') { echo = m; echoImage = null; }
+  },
 });
 
 // ---- the focus key's spring --------------------------------------------------------------------------------
@@ -39,16 +54,16 @@ let soon = 0;
 function updateSoon() { clearTimeout(soon); soon = setTimeout(update, 60); }
 function update() {
   // the first spring as played: tuned, then scaled so its virtual pitch is on the note
-  const P = shell.P, data = springsFor(focus, P), sp = scaleSpring(tuneSpring(focus, P), data.rho);
+  const P = shell.P, data = springsFor(focus, P), sp = scaleSpring(model.tuneSpring(focus, P), data.rho);
   const fTop = sp.fMax < 10000 ? sp.fMax : Math.min(0.45 * rate(), 20000, 2.2 * sp.Fc);
-  const curve = dispersionCurve(sp, { fTop, n: 420 });
+  const curve = model.dispersionCurve(sp, { fTop, n: 420 });
   // the first spring's modes, for the dots and the slowed-down spring
   const s0 = data.springs[0], N = s0.f.length, A = new Float64Array(N), SIG = new Float64Array(N), K = new Float64Array(N);
-  const tau = pulseLength(P, P.velocity), fb = s0.f0 / (Math.PI * Math.max(1e-4, P.bead / 100));
+  const tau = model.pulseLength(P, P.velocity), fb = s0.f0 / (Math.PI * Math.max(1e-4, P.bead / 100));
   for (let i = 0; i < N; i++) {
     const x = s0.f[i] / fb;
-    A[i] = Math.abs(s0.rel[i]) * pulseSpectrum(s0.f[i], tau) / (1 + x * x);
-    SIG[i] = modeSigma(s0.f[i], s0.cg[i], s0.L, P) + 60 * P.hand * P.hand;
+    A[i] = Math.abs(s0.rel[i]) * model.pulseSpectrum(s0.f[i], tau) / (1 + x * x);
+    SIG[i] = model.modeSigma(s0.f[i], s0.cg[i], s0.L, P) + 60 * P.hand * P.hand;
     K[i] = (s0.n[i] * Math.PI) / s0.L;
   }
   FX = { sp, data, curve, fTop, s0, A, SIG, K, cos: null };
@@ -83,7 +98,7 @@ function heat(t) { // 0..1 → dark → steel blue → accent → white
   return seg[0].map((v, i) => Math.round(v + (seg[1][i] - v) * seg[2]));
 }
 function buildEcho(m, fTop) {
-  const x = m.data.subarray(0, m.n), fs = m.fs, sp = scaleSpring(tuneSpring(m.key, shell.P), springsFor(m.key).rho);
+  const x = m.data.subarray(0, m.n), fs = m.fs, sp = scaleSpring(model.tuneSpring(m.key, shell.P), springsFor(m.key).rho);
   let w = 32;
   while (w < Math.min(2048, (sp.TD * fs) / 3)) w <<= 1;
   const hop = Math.max(1, w >> 3), nfft = Math.max(256, w), frames = Math.max(1, Math.floor((x.length - w) / hop));
@@ -122,7 +137,7 @@ animate(() => {
   // the image's frame f is centred at t0 + f·hop
   ctx.drawImage(E.cv, 0, 0, E.cv.width, E.cv.height, X(E.t0), Y(E.fTopImg), (W * E.cv.width * E.hopT) / dur, H * (E.fTopImg / fTop));
   // the model: arrivals after 1, 3, 5 … lengths, each frequency at its own group delay (plus half the mallet's pulse)
-  const L = FX.s0.L, half = pulseLength(shell.P, echo.vel ?? strikeVel) / 2, col = [css('--accent-2'), css('--axial')];
+  const L = FX.s0.L, half = model.pulseLength(shell.P, echo.vel ?? strikeVel) / 2, col = [css('--accent-2'), css('--axial')];
   for (let j = 0; j < 2; j++) {
     ctx.fillStyle = col[j];
     for (const p of FX.curve[j]) {

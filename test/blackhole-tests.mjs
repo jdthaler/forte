@@ -6,6 +6,7 @@ import { QNMBank, keyVoice, swsh, uFromSpin, keyFreq, excitation, strainCurve, c
 import { INSTRUMENT } from '../blackhole/src/blackhole-instrument.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS } from '../blackhole/src/ringdown-params.js';
+import { header as tableHeader, headerFile } from '../tools/blackhole-native-table.mjs';
 
 const RingdownEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
@@ -113,6 +114,10 @@ test('spin-weighted spherical harmonics: closed forms and unit norm', () => {
     for (let i = 0; i < 2000; i++) { const t = (Math.PI * (i + 0.5)) / 2000; s += swsh(-2, l, m, t) ** 2 * Math.sin(t) * (Math.PI / 2000) * 2 * Math.PI; }
     assert.ok(Math.abs(s - 1) < 1e-5, `(${l},${m}) norm ${s}`);
   }
+});
+
+test('the native port\'s copy of the table (native/instruments/blackhole/qnm-table.h) is this one, converted number for number', () => {
+  assert.ok(readFileSync(headerFile, 'utf8') === tableHeader(), 'stale: run node tools/blackhole-native-table.mjs');
 });
 
 console.log('merger excitation and sound');
@@ -245,6 +250,43 @@ test('GW150914’s remnant (62 M☉, a ≈ 0.67) rings near middle C: ≈ 271 Hz
   assert.ok(Math.abs(f(62) - 271) < 1.5 && Math.abs(f(62 * 1.09) - 249) < 1.5, `${f(62)}, ${f(62 * 1.09)}`);
   const c4 = keyVoice(60, DEFAULTS, bank, 48000).info;
   assert.ok(Math.abs(c4.a - 0.69) < 1e-3 && Math.abs(c4.Msun - 65.2) < 0.1 && Math.abs(c4.rPlusKm - 166) < 1);
+});
+
+console.log('the WebAssembly (native/instruments/blackhole)');
+async function testAsync(name, fn) { try { await fn(); console.log('  ok  ', name); } catch (e) { failures++; console.log('  FAIL', name, '\n       ', e.message); } }
+await testAsync('the views\' WebAssembly model (blackhole-wasm.js) gives the JavaScript\'s table, modes, voices and strain exactly', async () => {
+  const { wasmModel } = await import('../blackhole/src/blackhole-wasm.js');
+  const m = await wasmModel();
+  assert.deepEqual(Array.from(m.bank.u), bank.u);
+  assert.equal(m.bank.modes.length, bank.modes.length);
+  bank.modes.forEach((md, i) => { const w = m.bank.modes[i]; assert.ok(w.l === md.l && w.m === md.m && w.n === md.n); assert.deepEqual(w.re, md.re); assert.deepEqual(w.lim, md.lim); });
+  for (const a of [0, 0.3, 0.69, 0.9, 0.99, 0.9999, 1 - 1e-6, 1 - 1e-7]) for (const md of bank.modes) assert.deepEqual(m.bank.omega(md.l, md.m, md.n, a), bank.omega(md.l, md.m, md.n, a));
+  assert.equal(m.bank.omega(5, 0, 0, 0.5), null);
+  for (const th of [0, 0.3, 1.2, Math.PI]) for (const [l, mm] of [[2, 2], [2, -1], [3, 0], [4, -4]]) assert.equal(m.swsh(-2, l, mm, th), swsh(-2, l, mm, th));
+  const settings = [{ ...DEFAULTS }, { ...DEFAULTS, spinU: 6, retrograde: 1, massRatio: 3, overtones: 2 }, { ...DEFAULTS, inspiral: true, inclination: 70, massRatio: 5 },
+    { ...DEFAULTS, spinU: 0, t0: 0, inspiral: true, inspiralOct: 3 }];
+  for (const P of settings) for (const fs of [44100, 48000, 96000]) for (let key = 36; key <= 96; key += 5) {
+    const js = keyVoice(key, P, bank, fs), w = m.keyVoice(key, P, fs);
+    assert.deepEqual(w, { key: js.key, modes: js.modes, chirp: js.chirp, info: js.info }, `key ${key} at ${fs} Hz`);
+    if (key % 15 === 6) { const a = strainCurve(js, 500), b = m.strainCurve(js, 500); assert.deepEqual(b, a); }
+  }
+});
+await testAsync('the WebAssembly engine plays what the JavaScript engine plays, bit for bit, on the page\'s note data', async () => {
+  const { RingdownEngine: JsEngine } = await import('../blackhole/src/ringdown-engine.js');
+  const { BlackholeWasmEngine } = await import('../blackhole/src/blackhole-wasm.js');
+  await BlackholeWasmEngine.ready();
+  const P = { ...DEFAULTS, spinU: 4, inspiral: true, massRatio: 2, retrograde: 0.3 };
+  const out = (E) => {
+    const e = new E(44100), L = new Float32Array(64), R = new Float32Array(64), got = [];
+    e.setParams({ stereo: 0, releaseMute: 1, maxVoices: 4 });
+    for (let b = 0; b < 400; b++) {
+      if (b % 40 === 0) { const key = 40 + (b / 40) * 5; e.noteOn(key, 0.3 + b / 800, keyVoice(key, P, bank, 44100)); }
+      if (b % 40 === 20) e.noteOff(40 + ((b - 20) / 40) * 5);
+      e.process(L, R, 64); got.push(...L, ...R);
+    }
+    return got;
+  };
+  assert.deepEqual(out(BlackholeWasmEngine), out(JsEngine));
 });
 
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');
