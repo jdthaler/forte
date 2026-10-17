@@ -360,7 +360,11 @@ Done (Forte 0.13.0; per instrument and automatic in 0.17.0):
    instrument's together (`Forte-plugins-macos.zip`, `-windows.zip`, `-linux.tar.gz`) and each
    one's alone (`Forte-<slug>-macos.zip`…), all but the template's, with
    [native/INSTALL.md](../native/INSTALL.md): the `release-<preset>` artifacts. The macOS bundles
-   are ad-hoc signed; INSTALL.md gives the `xattr` command.
+   are ad-hoc signed; INSTALL.md gives the `xattr` command. The macOS and Linux archives also
+   hold [native/install.sh](../native/install.sh) and, as their `Makefile`,
+   [native/install.mk](../native/install.mk): `make install`, `make verify` (auval on macOS,
+   missing libraries on Linux, clap-validator if present) and `make uninstall`, which the
+   workflow runs on every instrument's archive before keeping it.
 2. The `release-plugins` workflow runs after every green `native` run on main and attaches its
    archives to a GitHub Release when what they're built from changed since the latest release
    (`tools/plugin-release.mjs --manifest`: each instrument's version and the `native/` tree). It

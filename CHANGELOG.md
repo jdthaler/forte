@@ -88,6 +88,22 @@ tagged; this changelog and the commit titles record them.
 - **`plugin.ready`** for the four, so they are on the front page's Plugins section and in the next
   release, each with the plugin window (controls and keyboard) in its page's colour; the
   template's generated files and WebAssembly carry Forte 0.23.0.
+## 2026-10-17 — make install and make verify in the plugin downloads
+
+### Forte 0.22.0
+- **A Makefile in each macOS and Linux download**, one instrument's or all of them:
+  `make install` copies the plugins to the plugin folders (the standalones to `~/Applications`
+  or `~/.local/bin`) and, on a Mac, clears the download quarantine and makes Logic, MainStage
+  and GarageBand look again; `make verify` checks each one is installed, unquarantined and
+  correctly signed, and loads (auval for the Audio Units, missing libraries on Linux,
+  clap-validator for the CLAPs when it is installed); `make uninstall` removes them. The work
+  is in `install.sh` next to it (`native/install.sh`, `native/install.mk`), so macOS's old make
+  3.81 runs it, and it works without make. Nothing needs sudo.
+- The `native` workflow runs `make install`, `make verify` and `make uninstall` on the
+  all-instruments archive on macOS and Linux before keeping it, and a site test runs
+  `install.sh` on a stand-in download. Windows has no make, so its archives keep INSTALL.md's
+  steps.
+
 ## 2026-10-17 — 6 ms less between a key and its sound
 
 ### Forte 0.21.1
