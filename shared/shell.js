@@ -159,7 +159,7 @@ export function createShell(cfg) {
           wasm = { name: cfg.wasm.name, bytes };
         } catch (err) { console.warn(`${cfg.id}: the WebAssembly engine did not load (${err.message}); the JavaScript one plays`); }
       }
-      if (!w.processor) await ctx.audioWorklet.addModule(new URL('./worklet.js', import.meta.url));
+      await ctx.audioWorklet.addModule(new URL('./worklet.js', import.meta.url)); // forte-processor, and the chain's limiter
       const node = new AudioWorkletNode(ctx, w.processor || 'forte-processor', {
         numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [w.outputs || 2],
         processorOptions: { engine: w.engine, wasm },
@@ -197,7 +197,17 @@ export function createShell(cfg) {
       shell.audio = { ctx, node, tone: chain.tone, master: chain.master, roomGain: chain.roomGain, analyser, chain };
       shell.applyMix();
       cfg.onAudio?.(shell.audio);
-      if ($('#start')) { $('#start').textContent = `Audio on · ${(ctx.sampleRate / 1000).toFixed(1)} kHz`; $('#start').classList.add('running'); }
+      if ($('#start')) {
+        const btn = $('#start');
+        btn.textContent = `Audio on · ${(ctx.sampleRate / 1000).toFixed(1)} kHz`; btn.classList.add('running');
+        // the browser's and the audio device's share of a key's delay (outputLatency settles once
+        // sound flows; Safari doesn't report it)
+        const latency = () => {
+          const ms = Math.round(1000 * ((ctx.baseLatency || 0) + (ctx.outputLatency || 0)));
+          if (ms) btn.title = `Output latency ≈ ${ms} ms (the browser's audio buffer and the audio device${ctx.outputLatency ? '' : ', not counting the device'}). Bluetooth headphones and speakers add 100–200 ms; wired ones far less.`;
+        };
+        latency(); setTimeout(latency, 1000);
+      }
       return shell.audio;
     })();
     starting.catch((err) => { toast(`Audio failed to start: ${err.message}`); ctx?.close?.().catch(() => {}); starting = null; });

@@ -14,7 +14,7 @@
 // `plugin.ready` marks an instrument whose native port is built and released as plugins (it has
 // a native/instruments/<id>/ folder); the landing page lists those under Plugins.
 
-export const FORTE_VERSION = '0.20.0';
+export const FORTE_VERSION = '0.21.1';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
@@ -157,7 +157,7 @@ export const INSTRUMENTS = [
     accent: '#ffe36b',
   },
   {
-    id: 'huygens', name: 'Huygens Keyboard', section: 'phenomena', ready: true, version: '0.3.3', trim: 9.5,
+    id: 'huygens', name: 'Huygens Keyboard', section: 'phenomena', ready: true, version: '0.3.4', trim: 9.5,
     plugin: { code: 'Huyg' },
     tagline: 'Relaxation oscillators that pull each other into just intonation — Arnold tongues you can play.',
     physics: 'Pulse-coupled oscillators · mode locking',
@@ -217,7 +217,7 @@ export const INSTRUMENTS = [
 // The template (docs/template/), the starting point for new instruments: not listed, but it
 // is built as a plugin too, so it has a code.
 export const TEMPLATE = {
-  id: 'template', name: 'Template Bars', plugin: { code: 'Tmpl' },
+  id: 'template', name: 'Template Bars', accent: '#e6c15a', plugin: { code: 'Tmpl' },
   tagline: 'The starting point for a new instrument: struck free–free bars.',
 };
 

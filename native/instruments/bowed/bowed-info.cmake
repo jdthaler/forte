@@ -2,3 +2,4 @@
 set(FORTE_NAME "Viola Organista")
 set(FORTE_VERSION "0.4.1")
 set(FORTE_AU_SUBTYPE "Viol")
+set(FORTE_ACCENT "#d79a62")

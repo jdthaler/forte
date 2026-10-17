@@ -2,3 +2,4 @@
 set(FORTE_NAME "Reed Piano")
 set(FORTE_VERSION "0.4.0")
 set(FORTE_AU_SUBTYPE "Reed")
+set(FORTE_ACCENT "#e8a0c8")
