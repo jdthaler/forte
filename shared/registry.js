@@ -158,7 +158,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'huygens', name: 'Huygens Keyboard', section: 'phenomena', ready: true, version: '0.3.3', trim: 9.5,
-    plugin: { code: 'Huyg' },
+    plugin: { code: 'Huyg', ready: true },
     tagline: 'Relaxation oscillators that pull each other into just intonation — Arnold tongues you can play.',
     physics: 'Pulse-coupled oscillators · mode locking',
     accent: '#ff8a3d',

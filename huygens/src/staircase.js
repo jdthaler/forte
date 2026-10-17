@@ -6,6 +6,9 @@
 // give the lock p:q. Rail sag adds a continuous coupling with no closed form,
 // so with it on the point is simulated instead (from a shared firing, so the
 // map is reproducible).
+//
+// The theory and the engine are the JavaScript's, or another implementation of them with the same
+// functions ({ Engine, deltaOf, lockRatio }: the WebAssembly model, huygens-wasm.js).
 
 import { NeonEngine } from './neon-engine.js';
 import { nearestRatio } from './tuning.js';
@@ -16,28 +19,30 @@ const F0 = 261.6256;
 export const QMAX = 24;            // tongues are drawn for locks with q ≤ QMAX
 
 export const exactMap = (P) => !(P.rSrc > 0);
+const JS = { Engine: NeonEngine, deltaOf, lockRatio };
 
-function simulate(P, cents, kick) {
-  const e = new NeonEngine(FS);
+function simulate(P, cents, kick, { Engine }) {
+  const e = new Engine(FS);
   e.setParams({ ...P, kick, pitchHold: 0, drift: 0 });
   e.noteOn(60, 1, { f: F0, phase: 0, settled: true });
   e.noteOn(61, 1, { f: F0 * 2 ** (cents / 1200), phase: 0, settled: true });
   const L = new Float32Array(256), R = new Float32Array(256);
   for (let s = 0; s < 0.6 * FS; s += 256) e.process(L, R, 256);
   const [a, b] = e.report(0.4);
+  e.destroy?.(); // a WebAssembly engine's memory
   if (!a.f || !b.f) return null;
   return 1200 * Math.log2(b.f / a.f);
 }
 
 // [interval actually played (cents), lock code p·100 + q, or 0 if none drawn]
-export function stairPoint(P, cents, kick) {
+export function stairPoint(P, cents, kick, model = JS) {
   if (exactMap(P)) {
     if (!(kick > 0)) return [cents, 0];
-    const lr = lockRatio(2 ** (cents / 1200), deltaOf(kick, P.vNom, P.vStrike, P.vExt));
+    const lr = model.lockRatio(2 ** (cents / 1200), model.deltaOf(kick, P.vNom, P.vStrike, P.vExt));
     if (!lr) return [cents, 0];
     return [1200 * Math.log2(lr.p / lr.q), lr.q <= QMAX ? lr.p * 100 + lr.q : 0];
   }
-  const m = simulate(P, cents, kick);
+  const m = simulate(P, cents, kick, model);
   if (m === null) return [NaN, 0];
   const nr = nearestRatio(2 ** (m / 1200), QMAX);
   return [m, Math.abs(nr.cents) < 0.3 ? nr.p * 100 + nr.q : 0];
