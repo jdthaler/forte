@@ -31,6 +31,9 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'spin',                     // CC1: the star's rotation
   engine: { name: 'StarEngine', module: new URL('./stars-engine.js', import.meta.url).href },
+  // the same physics in C++ (native/instruments/stars), built as WebAssembly: the page runs it
+  // when it can, the JavaScript engine otherwise
+  wasm: { name: 'StarWasmEngine', module: new URL('./stars-wasm.js', import.meta.url).href, binary: new URL('../wasm/stars.wasm', import.meta.url).href },
   noteData: (key, vel, P) => { const d = starFor(key, P); return { id: d.id, key: d.key, K: d.K, family: d.family, N: d.N, modes: d.modes }; }, // what the engine needs
   chain: { volume: 'volume', room: 'room' },
 };

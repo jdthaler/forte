@@ -200,7 +200,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'stars', name: 'Star Keyboard', section: 'phenomena', ready: true, version: '0.1.1', trim: 7,
-    plugin: { code: 'Star' },
+    plugin: { code: 'Star', ready: true },
     tagline: 'Every key a Sun-like star whose oscillations are rung continuously by convection: combs of modes that breathe rather than strike.',
     physics: 'Asteroseismology · stochastically driven modes',
     accent: '#ff6f91',
