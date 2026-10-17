@@ -12,11 +12,11 @@
 //   const e = new XWasmEngine(sampleRate);                // then as any engine
 
 // Parameters in the order the native tables have them (tools/gen-native-params.mjs): the
-// descriptor's, less those only a page uses (the computer keys' velocity).
+// descriptor's, less those only a page uses (the computer keys' velocity), then its console's.
 export const PAGE_ONLY = ['velocity'];
 export function nativeParams(I) {
   const skip = I.pageOnly ?? PAGE_ONLY;
-  return I.groups.flatMap((g) => g.params).filter((p) => !skip.includes(p.id));
+  return [...I.groups, ...(I.console?.groups ?? [])].flatMap((g) => g.params).filter((p) => !skip.includes(p.id));
 }
 // A parameter's number for the native code: a choice's index, a toggle's 0 or 1.
 export function nativeValue(p, v) {
@@ -57,8 +57,9 @@ function stubs(module) {
 // an ASCII C string (an AudioWorklet may have no TextDecoder)
 const cString = (x, p) => { const b = new Uint8Array(x.memory.buffer); let s = ''; while (b[p]) s += String.fromCharCode(b[p++]); return s; };
 
-// The engine class for an instrument: { id, name, groups, pageOnly?, binary: () => URL of its
-// .wasm }. `messages(m, engine)`, if given, turns an engine's posted Message ({ type, key,
+// The engine class for an instrument: { id, name, groups, console?, pageOnly?, binary: () => URL
+// of its .wasm }. A console (the descriptor's: state the page keeps in P beside the groups, such as
+// the organ's drawbars) gives its parameters from every P set so far, from its defaults on. `messages(m, engine)`, if given, turns an engine's posted Message ({ type, key,
 // values }) into what its page expects, or into nothing (null) while it gathers several.
 export function wasmEngine(I, { messages } = {}) {
   const params = nativeParams(I);
@@ -84,6 +85,7 @@ export function wasmEngine(I, { messages } = {}) {
       this.h = x.forte_create(fs);
     }
     setParams(P) {
+      if (I.console) P = { ...P, ...I.console.get(Object.assign(this.consoleState ??= JSON.parse(JSON.stringify(I.console.defaults)), P)) };
       const a = new Float64Array(x.memory.buffer, x.forte_params(this.h), params.length);
       params.forEach((p, i) => { if (p.id in P) a[i] = nativeValue(p, P[p.id]); });
       x.forte_set_params(this.h);

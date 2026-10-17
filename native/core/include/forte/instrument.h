@@ -26,10 +26,15 @@ struct Chain {
 };
 
 // Another MIDI controller that moves a parameter (the descriptor's controllers): a toggle is on
-// at 64 and above; any other parameter moves across its range.
+// at 64 and above; any other parameter moves across its range. Or it switches a choice between
+// two of its values (indices a and b): `values` puts it on a below 64 and on b at 64 and above,
+// `toggle` flips it from one to the other each time the controller goes to 64 or above (a
+// pedal's press). A choice on another value is left alone (the organ's Leslie, bypassed).
 struct Controller {
   uint8_t cc;
   int16_t param;
+  enum Mode : uint8_t { range, values, toggle } mode = range;
+  int16_t a = -1, b = -1;
 };
 
 struct InstrumentInfo {

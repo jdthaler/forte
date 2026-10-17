@@ -118,6 +118,19 @@ speeds with separate time constants: the light horn takes ~0.7 s, the heavy
 drum ~4.5 s. That lag is why the speed change sounds like two things
 happening.
 
+**In C++.** The same engine and tone generator run as WebAssembly on this
+page (the JavaScript is the fallback; `?engine=js` in the address forces
+it) and as plugins (CLAP, VST3, AU and a standalone app). The WebAssembly
+plays what the JavaScript plays bit for bit, the contacts' seeded timing and
+bounce included, and the same test suite passes on it. In the plugins the
+console is parameters of its own: the nine drawbars (0–8), the percussion
+switches, vibrato and chorus, the Leslie (bypass, slow, fast, or stopped)
+and the motor; the presets set all of it. The mod wheel puts the Leslie on
+fast from halfway up, each press of a sustain pedal (CC64) or of the plugin
+window's Space bar flips it, and CC11 is the expression pedal. Ten keys with
+every drawbar out, chorus, drive and the Leslie take about 2.5 % of a core
+in C++.
+
 ## Files
 
 ```
@@ -127,8 +140,10 @@ organ/src/organ-instrument.js    the instrument without its page: parameters, pr
 organ/src/organ-engine.js        DSP: generator, contacts, busbars, percussion, LC scanner, drive, Leslie
 organ/src/organ-main.js          console, drawbars, keyboard / MIDI, views
 organ/src/organ-viz.js           generator map, Leslie top view, spectrum + scope, scanner
-organ/src/organ-params.js        parameters and registrations
-test/organ-tests.mjs             node test/organ-tests.mjs
+organ/src/organ-params.js        parameters, registrations, and the console as plugin parameters
+organ/src/organ-wasm.js          the C++ engine and model as WebAssembly (organ/wasm/organ.wasm)
+native/instruments/organ/        the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
+test/organ-tests.mjs             node test/organ-tests.mjs (FORTE_ENGINE=wasm: on the WebAssembly)
 tools/render-organ.mjs           node tools/render-organ.mjs → examples/organ/
 ```
 

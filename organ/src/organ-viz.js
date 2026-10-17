@@ -1,7 +1,12 @@
 // organ-viz.js — generator map, Leslie top view, output spectrum/scope, scanner.
 
-import { NUM_WHEELS, wheelSpec, PC_NAMES } from './tonewheels.js';
-import { leslieGeometry } from './organ-engine.js';
+import { NUM_WHEELS, wheelSpec as jsWheelSpec, PC_NAMES } from './tonewheels.js';
+import { leslieGeometry as jsLeslieGeometry } from './organ-engine.js';
+
+// The model the views draw from: the JavaScript's, or the WebAssembly's once the page has it
+// (useModel; organ-wasm.js wasmModel).
+let wheelSpec = jsWheelSpec, leslieGeometry = jsLeslieGeometry;
+export function useModel(m) { ({ wheelSpec, leslieGeometry } = m); }
 
 function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 
