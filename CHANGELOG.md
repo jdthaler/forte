@@ -86,6 +86,14 @@ tagged; this changelog and the commit titles record them.
 - **`plugin.ready`** for the vibraphone, carillon, glass armonica and gongs, so the front page's
   Plugins section lists them. The template's generated files and WebAssembly carry Forte 0.14.0.
 
+## 2026-10-17 — the Windows plugin download, flattened
+
+### Forte 0.13.1
+- **`Forte-plugins-windows.zip` holds just the instrument's plugins**, like the other two: the
+  `native` workflow's packaging now finds the bundles wherever the build put them. Visual
+  Studio nests them (`CLAP/Release/`, `VST3/`, `Standalone-…/Release/`), so the first release
+  (`plugins-v0.13.0`) had those folders in its Windows zip, with the template's plugins inside.
+
 ## 2026-10-17 — plugin downloads
 
 ### Forte 0.13.0

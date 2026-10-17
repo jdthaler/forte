@@ -112,7 +112,11 @@ jobs:
           plugins=native/build/${{ matrix.preset }}/plugins
           root=native/build/pkg; pkg="$root/Forte plugins"
           rm -rf "$root"; mkdir -p "$pkg" dist
-          find "$plugins" -mindepth 1 -maxdepth 1 ! -name 'Template Bars*' ! -name '*.pdb' -exec cp -R {} "$pkg"/ \;
+          # The bundles wherever the generator put them (Visual Studio nests them in CLAP/Release/,
+          # VST3/, Standalone-*/Release/), and Linux's standalone, which has no extension.
+          { find "$plugins" \( -name '*.clap' -o -name '*.vst3' -o -name '*.component' -o -name '*.app' -o -name '*.exe' \) -prune -print
+            [ "${{ matrix.preset }}" != linux ] || find "$plugins" -mindepth 1 -maxdepth 1 -type f ! -name '*.*' -perm -u+x
+          } | grep -v '/Template Bars[^/]*$' | while IFS= read -r p; do cp -R "$p" "$pkg"/; done
           cp native/INSTALL.md "$pkg"/
           ls -la "$pkg"
           case "${{ matrix.preset }}" in
