@@ -10,6 +10,82 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-17 — modal bars, bells and plates in C++ (step 4, first batch)
+
+### Vibraphone 0.3.0
+- **Ported to C++** (`native/instruments/vibraphone`): the bar's finite elements (Timoshenko
+  bending and torsion, the banded Sturm-bisection eigensolver, the undercut optimiser), the
+  losses, tubes, discs and mallet, and the engine, operation for operation. `bar-table.h` is the
+  C++ copy of the tuned bars (`node tools/vibraphone-bars.mjs --native`), and a test keeps it
+  fresh.
+  - **Plugins:** Vibraphone as CLAP, VST3, AU v2 and a standalone app: CC64 is the damper pedal,
+    the mod wheel the motor's speed, the eleven presets on the Preset parameter. Each bar's modes
+    are built on a worker thread for the undercut the knob is at; a note whose bar isn't ready
+    waits a few milliseconds for it. Ten bars take about 2 % of a core.
+  - **WebAssembly:** 85 KB in `vibraphone/wasm/`. The 24-test suite passes on it, and it plays
+    what the JavaScript plays to within 10⁻⁷ of the peak.
+  - **The page runs it** and its views call the WebAssembly model, both falling back to the
+    JavaScript (`?engine=js` forces it). The page builds each bar with the WebAssembly model and
+    sends it with the note, so the audio thread never solves a bar.
+
+### Carillon 0.2.0
+- **Ported to C++** (`native/instruments/carillon`): the model (ribs and bell sizes, bronze's and
+  radiation's losses, doublets, the historic bell's seeded casting, the clapper's Hertz contact,
+  air absorption, the strike-note estimator) and the engine (the clapper solved against every
+  mode, doublet resonators, pruning, voice stealing, gliding knobs). The finite-element ribs and
+  modes are converted number for number to `bell-table.h` (`tools/carillon-native-table.mjs`,
+  which `tools/carillon-profile.mjs` now also runs); the finite elements only design the bells,
+  so nothing solves an eigenproblem while they play.
+  - **Plugins:** Carillon as CLAP, VST3, AU v2 and a standalone app: velocity is the baton
+    stroke, CC64 the (dampless) pedal, the profile a dropdown, the ten presets on the Preset
+    parameter. Ten bells ringing take about 4 % of a core.
+  - **WebAssembly:** 175 KB in `carillon/wasm/` (the bell table is most of it). The 26-test
+    suite passes on it, and it plays what the JavaScript plays to within 4 × 10⁻⁸ of the peak.
+  - **The page runs it** and its views call the WebAssembly model, both falling back to the
+    JavaScript. The ribs' outline, which only the drawing uses, stays JavaScript.
+
+### Glass Armonica 0.4.0
+- **Ported to C++** (`native/instruments/glass`): the model (Rayleigh's shell modes, Bryan's
+  factor, water loading, radiation, the Stribeck friction, the speaking threshold and the
+  regulation) and the engine (the turning spindle, the doublets with their implicit Coriolis
+  step, the skin's stick–slip contact solved every sample, the two microphones).
+  - **Plugins:** Glass Armonica as CLAP, VST3, AU v2 and a standalone app: CC64 holds the keys,
+    the mod wheel the treadle's speed, aftertouch presses the finger harder, the nine presets on
+    the Preset parameter. Each bowl's modes are rebuilt on a worker thread when the split, loss or
+    water change. Ten bowls take about 5 % of a core.
+  - **WebAssembly:** 47 KB in `glass/wasm/`. The 24-test suite passes on it, and it plays what
+    the JavaScript plays to float32 rounding, the stick–slip included (the same seeded friction
+    noise).
+  - **The page runs it** and its views call the WebAssembly model, both falling back to the
+    JavaScript.
+
+### Gong Keyboard 0.4.0
+- **Ported to C++** (`native/instruments/gongs`): the von Kármán shell model and its eigenmodes
+  (Eigen), and the engine (the SAV integrator, projection, adaptive substeps, the passivity guard,
+  the linear tail, the polyphase buses). `gong-modes.h` is generated from
+  `gongs/data/gong-modes.js` (`tools/gongs-native-table.mjs`), and a test keeps it fresh.
+  - **Plugins:** Gong Keyboard as CLAP, VST3, AU v2 and a standalone app: CC64 is the damper
+    pedal, the mod wheel the strike point, the eight presets on the Preset parameter. The coupling
+    tables are built on a worker thread when Dome rise, Coupling terms or Rim change; a note waits
+    for its tables. Ten gongs take about 17 % of a core, 37 % when all ten crash.
+  - **WebAssembly:** 304 KB in `gongs/wasm/`. The test suite passes on it. Wherever the plate
+    doesn't crash it plays what the JavaScript plays to within 5 × 10⁻⁸ of the peak; hard strikes
+    are chaotic (the JavaScript drifts as far from itself when the velocity changes by 10⁻¹²), so
+    those reference scripts are compared within that spread.
+  - **The page runs it** and its views call the WebAssembly model, both falling back to the
+    JavaScript.
+
+### Forte 0.14.0
+- **Plugins' parameters read back as written:** a value already on its step stays as it is
+  (`native/core/src/params.cpp`; the vibraphone's disc size of 0.7, step 0.01, read back as
+  0.7000000000000001 and failed clap-validator's state reproducibility).
+- **`tools/render-reference.mjs`**: an instrument's `reference` tolerance may be a function of
+  the script (`toleranceFor`), for instruments that are chaotic in some scripts only (the gongs).
+- **Tools** that write the C++ copies of generated data: `tools/vibraphone-bars.mjs --native`,
+  `tools/carillon-native-table.mjs`, `tools/gongs-native-table.mjs`.
+- **`plugin.ready`** for the vibraphone, carillon, glass armonica and gongs, so the front page's
+  Plugins section lists them. The template's generated files and WebAssembly carry Forte 0.14.0.
+
 ## 2026-10-17 — the Windows plugin download, flattened
 
 ### Forte 0.13.1

@@ -1,13 +1,18 @@
 // carillon-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName } from '../../shared/shell.js';
+import { createShell, noteName, useWasm } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './carillon-instrument.js';
-import {
-  TAU, bellOf, bellModes, clapperOf, clapperSpeed, hertzTime, strikeNote, struckPartials, asymmetryOf, doubletSplit,
-  PARTIAL_NAMES, DESIGNATION, idealRatio, cents,
-} from './carillon-model.js';
+import * as jsModel from './carillon-model.js';
+import { TAU, PARTIAL_NAMES, DESIGNATION, idealRatio, cents } from './carillon-model.js';
 import { geomOf, innerAt, outerAt } from './bell-profile.js';
+import { wasmModel } from './carillon-wasm.js';
+
+// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
+// physics as the engine, in C++), the JavaScript one until then or if it can't load. (The rib's
+// outline, drawn from its stations, stays JavaScript: bell-profile.js.)
+let model = jsModel;
+if (useWasm()) wasmModel().then((m) => { model = m; update(); }, (err) => console.warn(`carillon: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
 
 const $ = (s) => document.querySelector(s);
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 40, fHi: 16000 });
@@ -49,14 +54,14 @@ function levelOf(i, amp = live?.amp) {
 function partialsFrom(amp) {
   const P = shell.P;
   return RES.map(([i, mem], r) => {
-    const md = MODES[i], as = asymmetryOf(md.m, P.asym / 100, B.hist);
-    return { f: md.f * (md.m > 0 ? doubletSplit(md.kappa, as.e)[mem] : 1), a: amp[r] || 0, i };
+    const md = MODES[i], as = model.asymmetryOf(md.m, P.asym / 100, B.hist);
+    return { f: md.f * (md.m > 0 ? model.doubletSplit(md.kappa, as.e)[mem] : 1), a: amp[r] || 0, i };
   });
 }
 function update() {
   const P = shell.P;
-  B = bellOf(focus, P.profile, P.historic);
-  MODES = bellModes(B, P);
+  B = model.bellOf(focus, P.profile, P.historic);
+  MODES = model.bellModes(B, P);
   RES = [];
   MODES.forEach((md, i) => { RES.push([i, 0]); if (md.m > 0) RES.push([i, 1]); });
   G = geomOf(B.rib.stations);
@@ -74,7 +79,7 @@ function drawTable() {
   if (liveNow) for (let i = 0; i < MODES.length; i++) amax = Math.max(amax, levelOf(i));
   const idx = MODES.map((m, i) => i), named = idx.filter((i) => MODES[i].name), others = idx.filter((i) => !MODES[i].name && MODES[i].f < 4.5 * B.fPrime);
   const row = (i) => {
-    const md = MODES[i], tm = B.rib.modes[md.j], as = asymmetryOf(md.m, P.asym / 100, B.hist), sp = doubletSplit(md.kappa, as.e);
+    const md = MODES[i], tm = B.rib.modes[md.j], as = model.asymmetryOf(md.m, P.asym / 100, B.hist), sp = model.doubletSplit(md.kappa, as.e);
     const split = md.m > 0 ? md.f * (sp[1] - sp[0]) : 0;
     const id = md.name, c = id ? cents(md.f, (fNom * idealRatio(id, P.profile)) / 2) : null;
     const lv = liveNow ? levelOf(i) / amax : 0, db = lv > 0 ? 20 * Math.log10(lv) : -Infinity;
@@ -84,7 +89,7 @@ function drawTable() {
       + `<td>${fmtHz(md.f)}</td><td>${(md.f / B.fPrime).toFixed(3)}</td><td>${id ? `${c >= 0 ? '+' : ''}${c.toFixed(1)}` : ''}</td>`
       + `<td>${md.m > 0 ? split.toFixed(split < 1 ? 3 : 2) : '—'}</td><td>${t60 < 10 ? t60.toFixed(1) : t60.toFixed(0)}</td><td class="bar">${bar}</td></tr>`;
   };
-  const c = clapperOf(B, P), v = clapperSpeed(B, P, P.velocity), tau = hertzTime(c.m, c.K, v);
+  const c = model.clapperOf(B, P), v = model.clapperSpeed(B, P, P.velocity), tau = model.hertzTime(c.m, c.K, v);
   $('#partials').innerHTML = '<tr><th>partial</th><th>(m,n)</th><th>f (Hz)</th><th>× prime</th><th>¢ off</th><th>split (Hz)</th><th>T₆₀ (s)</th><th>level</th></tr>'
     + named.map(row).join('') + others.map(row).join('')
     + `<tr><td colspan="8" class="note">Tuned by the nominal, ${fmtHz(fNom)} Hz, an octave above the key. ¢ off: from the ideal ${P.profile === 'major' ? '0.5 : 1 : 1.25 : 1.5 : 2 : 2.5 : 3 : 4' : '0.5 : 1 : 1.2 : 1.5 : 2 : 2.5 : 3 : 4'}, read against the nominal (the founder tunes the first five). (m,n): 2m nodal meridians, n nodal circles. Split: how far apart the doublet’s two modes are, the rate they beat at. T₆₀: bronze’s loss plus radiation. `
@@ -140,7 +145,7 @@ animate(() => {
   const tx = cx + sideW / 2 + 10, tw = w - tx - 6;
   if (tw > 60 && md.m > 0) {
     const R = Math.min(tw * 0.34, (bot - top) * 0.36), ox = tx + tw / 2, oy = top + (bot - top) / 2;
-    const as = asymmetryOf(md.m, P.asym / 100, B.hist), psi = as.psi, lip = view ? Math.abs(view[view.length - 1]) / wmax : 1;
+    const as = model.asymmetryOf(md.m, P.asym / 100, B.hist), psi = as.psi, lip = view ? Math.abs(view[view.length - 1]) / wmax : 1;
     ctx.strokeStyle = css('--grid'); ctx.beginPath(); ctx.arc(ox, oy, R, 0, TAU); ctx.stroke();
     ctx.strokeStyle = css('--accent'); ctx.lineWidth = 2; ctx.beginPath();
     for (let i = 0; i <= 180; i++) { const th = (i / 180) * TAU, rr = R * (1 + 0.12 * amp * lip * phase * Math.cos(md.m * (th - psi))); const px = ox + rr * Math.cos(th), py = oy - rr * Math.sin(th); if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); }
@@ -188,10 +193,10 @@ animate(() => {
   const P = shell.P, liveNow = isLive(), struck = atStrike && live && live.key === focus && live.id === bellId();
   // the estimate: from the partials just after the last strike (or, before any, the model's prediction)
   if (!ESTIMATE || ESTIMATE.src !== (struck ? atStrike : null)) {
-    const parts = struck ? partialsFrom(atStrike.amp) : struckPartials(B, P).map((p, k) => ({ ...p, i: k }));
-    ESTIMATE = { ...strikeNote(parts), src: struck ? atStrike : null };
+    const parts = struck ? partialsFrom(atStrike.amp) : model.struckPartials(B, P).map((p, k) => ({ ...p, i: k }));
+    ESTIMATE = { ...model.strikeNote(parts), src: struck ? atStrike : null };
   }
-  const parts = liveNow ? partialsFrom(live.amp) : struckPartials(B, P).map((p, k) => ({ ...p, i: k }));
+  const parts = liveNow ? partialsFrom(live.amp) : model.struckPartials(B, P).map((p, k) => ({ ...p, i: k }));
   const fLo = 40, fHi = 12000, X = (f) => 8 + ((w - 16) * Math.log(f / fLo)) / Math.log(fHi / fLo);
   const midY = h * 0.45, botY = h - 16;
   ctx.font = '10px system-ui, sans-serif'; ctx.fillStyle = css('--muted'); ctx.textAlign = 'center'; ctx.strokeStyle = css('--grid');

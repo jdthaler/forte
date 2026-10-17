@@ -14,7 +14,7 @@
 // `plugin.ready` marks an instrument whose native port is built and released as plugins (it has
 // a native/instruments/<id>/ folder); the landing page lists those under Plugins.
 
-export const FORTE_VERSION = '0.13.1';
+export const FORTE_VERSION = '0.14.0';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
@@ -61,16 +61,16 @@ export const INSTRUMENTS = [
     accent: '#ff9fb0',
   },
   {
-    id: 'vibraphone', name: 'Vibraphone', section: 'traditional', ready: true, version: '0.2.2', trim: 3,
-    plugin: { code: 'Vibe' },
+    id: 'vibraphone', name: 'Vibraphone', section: 'traditional', ready: true, version: '0.3.0', trim: 3,
+    plugin: { code: 'Vibe', ready: true },
     after: 'the Deagan vibraharp (1927)',
     tagline: 'Undercut aluminium bars over tuned tubes, with motor-driven discs that open and close the resonators.',
     physics: 'Tuned bars · coupled resonators · rotating valves',
     accent: '#5fd0c8',
   },
   {
-    id: 'carillon', name: 'Carillon', section: 'traditional', ready: true, version: '0.1.1', trim: 3.5,
-    plugin: { code: 'Carl' },
+    id: 'carillon', name: 'Carillon', section: 'traditional', ready: true, version: '0.2.0', trim: 3.5,
+    plugin: { code: 'Carl', ready: true },
     after: 'the Flemish carillon (Hemony bells, 1650s)',
     tagline: 'Bronze bells tuned partial by partial; the note you hear, the strike note, is a virtual pitch made by partials an octave and more above it.',
     physics: 'Bell modes by finite elements · Hertz clapper · virtual pitch',
@@ -133,8 +133,8 @@ export const INSTRUMENTS = [
     accent: '#d79a62',
   },
   {
-    id: 'glass', name: 'Glass Armonica', section: 'experimental', ready: true, version: '0.3.2', trim: 0.5,
-    plugin: { code: 'Glas' },
+    id: 'glass', name: 'Glass Armonica', section: 'experimental', ready: true, version: '0.4.0', trim: 0.5,
+    plugin: { code: 'Glas', ready: true },
     after: "Benjamin Franklin's armonica (1761)",
     tagline: 'Wet fingers on spinning glass bowls: stick–slip friction drives the shell modes, and rotation makes the doublets warble.',
     physics: 'Shell modes · friction · fluid loading',
@@ -164,8 +164,8 @@ export const INSTRUMENTS = [
     accent: '#ff8a3d',
   },
   {
-    id: 'gongs', name: 'Gong Keyboard', section: 'phenomena', ready: true, version: '0.3.1', trim: 7,
-    plugin: { code: 'Gong' },
+    id: 'gongs', name: 'Gong Keyboard', section: 'phenomena', ready: true, version: '0.4.0', trim: 7,
+    plugin: { code: 'Gong', ready: true },
     tagline: 'Thin plates whose stiffness grows with amplitude: strike softly for a bell, hard for a crash.',
     physics: 'Von Kármán plates · wave turbulence',
     accent: '#e6c15a',

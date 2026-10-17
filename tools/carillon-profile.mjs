@@ -3,10 +3,12 @@
 // its ten stations until hum, prime, tierce, quint and nominal sit at 0.5 : 1 : 1.2 : 1.5 : 2 (minor
 // third) or 0.5 : 1 : 1.25 : 1.5 : 2 (major third), moving the rib no further than it must. Each of
 // three registers has its own rib, heavier towards the treble. Then tabulate every mode below
-// 8–12 × the prime and write carillon/src/bell-table.js.
+// 8–12 × the prime and write carillon/src/bell-table.js, and its C++ for the native port
+// (native/instruments/carillon/bell-table.h, by tools/carillon-native-table.mjs).
 // Usage: node tools/carillon-profile.mjs [minor|major …]     (about 10 minutes for both)
 
 import { writeFileSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import {
   MINOR_START, MAJOR_START, tuneRib, ribStations, ribModes, solveRib, named, cents, foldMargin, geomOf,
   STRIKE_GRID, MESH, CLAMP_R, BRONZE,
@@ -99,3 +101,5 @@ ${ribs.map((r) => `  ${JSON.stringify(r)},`).join('\n')}
 `;
 writeFileSync(tablePath, src);
 console.log(`carillon/src/bell-table.js: ${ribs.length} ribs, ${(src.length / 1024).toFixed(0)} KB, ${((performance.now() - t0) / 1000).toFixed(0)} s`);
+// the native port's copy (in a fresh process: this one holds the old table)
+execFileSync(process.execPath, [new URL('./carillon-native-table.mjs', import.meta.url).pathname], { stdio: 'inherit' });

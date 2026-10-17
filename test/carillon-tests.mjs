@@ -15,6 +15,8 @@ import {
 } from '../carillon/src/carillon-model.js';
 import { INSTRUMENT } from '../carillon/src/carillon-instrument.js';
 import { loadEngine } from '../tools/engine.mjs';
+import { nativeTable, headerFile } from '../tools/carillon-native-table.mjs';
+import { readFileSync } from 'node:fs';
 import { DEFAULTS, GROUPS, PRESETS } from '../carillon/src/carillon-params.js';
 
 const CarillonEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
@@ -117,6 +119,9 @@ test('mesh convergence: a tuned rib\'s named partials move under 1 ¢ from the t
   const names = named(solveRib(st, { ms: [2, 3, 4, 5, 6], perM: 2 })).map((x) => x.id);
   console.log(`         worst change: ${d1.toFixed(2)} ¢ (20 × 1), ${d2.toFixed(3)} ¢ (40 × 2), against 64 × 3; at 40 × 2: ${b.map((x, i) => `${names[i]} ${cents(x, c[i]).toFixed(2)}`).join(', ')}`);
   assert.ok(d2 < 1 && d2 < d1 / 3, `${d1.toFixed(2)} ¢ → ${d2.toFixed(3)} ¢`);
+});
+test('the native port\'s table (native/instruments/carillon/bell-table.h) is this one, converted number for number (node tools/carillon-native-table.mjs)', () => {
+  assert.equal(readFileSync(headerFile, 'utf8'), nativeTable());
 });
 test('the generated table matches a fresh FEM run: every rib\'s named partials to 10⁻⁶, and sample modes of other families to 10⁻⁵', () => {
   for (const rib of BELL_TABLE.ribs) {

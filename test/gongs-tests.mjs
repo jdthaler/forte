@@ -14,6 +14,8 @@ import { INSTRUMENT } from '../gongs/src/gongs-instrument.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../gongs/src/gongs-params.js';
 import { keyFreq } from '../shared/dsp.js';
+import { readFileSync } from 'node:fs';
+import { header as tableHeader } from '../tools/gongs-native-table.mjs';
 
 const GongEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
 
@@ -95,6 +97,9 @@ test('clamped plate (= the in-plane Airy basis) matches the classical λ²', () 
   const md = plateModes('clamped', { lam2Max: 95 });
   ref.forEach((l2, i) => assert.ok(Math.abs(md[i].lam2 - l2) < 2e-4, `${md[i].lam2} vs ${l2}`));
   TABLE.free.inplane.slice(0, 4).forEach((p, i) => assert.ok(Math.abs(Math.sqrt(p.z4) - ref[i]) < 2e-4, 'Airy basis = clamped modes'));
+});
+test('the native port\'s copy of the tables (native/instruments/gongs/gong-modes.h) is this data file, converted', () => {
+  assert.ok(readFileSync(new URL('../native/instruments/gongs/gong-modes.h', import.meta.url), 'utf8') === tableHeader(), 'stale: run node tools/gongs-native-table.mjs');
 });
 test('tabulated mode shapes are orthonormal: ∫ Φ_p Φ_q dA = δ_pq', () => {
   const { x, w } = gaussLegendre(120), md = TABLE.free.modes;

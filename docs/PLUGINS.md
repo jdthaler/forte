@@ -13,7 +13,7 @@ native/core + native/instruments/<slug>   C++: engines and models
 Status: **steps 0–3 and 5 done** (the native setup, see [native/README.md](../native/README.md); every
 instrument headless in JavaScript; the shared native core; the template and the Bubble Organ
 ported, their pages running the WebAssembly; the plugins released from GitHub and linked from the
-front page). Next: step 4, the rest in batches. The decisions below were made by the owner on
+front page; step 4's first batch, the modal bars, bells and plates). Next: step 4's second batch, the strings. The decisions below were made by the owner on
 2026-10-16. Follow [CLAUDE.md](../CLAUDE.md) for the workflow (branch, test,
 version, pull request, merge only when asked) and update this file as steps
 land.
@@ -263,7 +263,25 @@ instruments natively. Update `docs/INSTRUMENT_GUIDE.md` to match.
 ### 4. Port the rest, in batches
 Port by shared machinery, simplest first, one pull request per instrument.
 Separate sessions can work in parallel once step 3 is done.
-1. Modal bars, bells and plates: vibraphone, carillon, glass, gongs.
+1. Modal bars, bells and plates: vibraphone, carillon, glass, gongs. **Done** (Vibraphone 0.3.0,
+   Carillon 0.2.0, Glass Armonica 0.4.0, Gong Keyboard 0.4.0, Forte 0.14.0), in one pull
+   request with a commit per instrument, the four ported in parallel. All four play what the
+   JavaScript plays to float32 rounding, but for the gongs' crashes, compared within the spread
+   the JavaScript shows against itself (`reference` may be a function of the script). In C++, ten
+   voices take 2 % of a core (vibraphone), 4 % (carillon), 5 % (glass) and 17 % (gongs; 37 % with
+   all ten crashing). Learned on the way:
+   - Per-note data that WebAssembly would build in place (no threads) costs the audio thread on a
+     key's first note. The vibraphone's page builds each bar with its main-thread WebAssembly
+     model and sends it packed with the note (`offer()`); the piano, tines and reeds can do the
+     same. A `KeyData` version made from the parameters' values, not a counter, keeps the
+     JavaScript's key-and-parameter identity.
+   - An instrument whose notes only look up tables (the carillon) needs no `KeyData`.
+   - Engines with per-key arrays reach 100 KB: native tests make them with `make_unique`, since
+     WebAssembly's stack is 64 KB.
+   - A native test that depends on the worker having built something waits for it (the glass's
+     `ready(key)`), rather than for a number of samples: under load the worker lags the render.
+   - A test hook can hand back `Float64Array` views into the engine's memory, so a test that
+     writes the engine's state works unchanged.
 2. Strings: piano, grand, harpsichord, clavier, bowed.
 3. Reeds and pickups: tines, reeds, pianet, harmonium, pipes.
 4. Self-oscillators: Huygens, arc, pyrophone, wind harp.

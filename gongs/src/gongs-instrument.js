@@ -22,5 +22,16 @@ export const INSTRUMENT = {
   modWheel: 'strike',                   // CC1: strike point, from its default (near the centre) out to 95 % of the radius
   engine: { name: 'GongEngine', module: new URL('./gongs-engine.js', import.meta.url).href },
   engineParams: (P) => ({ ...P, tables: couplingTables(P) }),
+  // the same physics in C++ (native/instruments/gongs), built as WebAssembly: the page runs it
+  // when it can, the JavaScript engine otherwise (the WebAssembly builds its own coupling tables)
+  wasm: { name: 'GongWasmEngine', module: new URL('./gongs-wasm.js', import.meta.url).href, binary: new URL('../wasm/gongs.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room' },
+  // The port against the JavaScript (tools/render-reference.mjs). A crash is chaotic: in the scripts
+  // that strike hard enough (velocity 1, the chord, the thin tam-tam, the steel sheet) a difference
+  // in the last bit (V8's and the C++'s exp, sin, eigenvectors) grows into another crash within
+  // ~50 ms, as nudging the JavaScript's own velocities by 1e-12 does. Those are compared within that
+  // spread (the JavaScript against itself with velocities × (1 ± 1e-12…1e-6): levels up to 7.6 dB
+  // apart on a 0.1 s frame, the centroid 14 %, the decay 6 dB/s, the strongest partial another
+  // mode); every other script to the default tolerance (they agree to float rounding).
+  reference: (script) => (/^(soft then loud|chord)$|Tam-tam|Steel sheet/.test(script.name) ? { level: 8, cents: Infinity, centroid: 0.15, decay: 7 } : {}),
 };

@@ -254,11 +254,24 @@ glass/src/glass-model.js             shell modes, Bryan factor, water loading, r
 glass/src/glass-engine.js            real-time engine (AudioWorklet and Node)
 glass/src/glass-params.js            parameters and presets
 glass/src/glass-main.js              page wiring and views
-test/glass-tests.mjs                 node test/glass-tests.mjs  (24 tests, ~9 s)
+glass/src/glass-wasm.js              the C++ engine and model as WebAssembly (glass/wasm/glass.wasm)
+native/instruments/glass/            the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
+test/glass-tests.mjs                 node test/glass-tests.mjs  (24 tests, ~9 s; FORTE_ENGINE=wasm: on the WebAssembly)
 tools/render-glass.mjs               node tools/render-glass.mjs → examples/glass/
 ```
 
 Ten bowls rubbed at once render at about 8 % of real time in Node.
+
+**In C++**: the same engine and model run as WebAssembly on this page (the
+JavaScript is the fallback; `?engine=js` in the address forces it) and as
+plugins (CLAP, VST3, AU and a standalone app), where the Space pedal is Hold
+on CC64, the mod wheel turns the treadle (0.5 to 1 rev/s) and aftertouch
+presses harder. Stick–slip friction could in principle make the two drift
+apart, but they don't: the WebAssembly plays what the JavaScript plays to
+float32 rounding (within 10⁻⁷ of the peak over ten seconds, squealing
+included), and the same test suite passes on it. In the plugins each bowl's
+modes are rebuilt off the audio thread when the split, loss or water change.
+Ten bowls take about 7 % of a core in C++.
 
 ## Simplifications
 

@@ -15,5 +15,8 @@ export const INSTRUMENT = {
   range: [KEY_LO, KEY_HI],              // MIDI keys: C3–C7, 48–96
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   engine: { name: 'CarillonEngine', module: new URL('./carillon-engine.js', import.meta.url).href },
+  // the same physics in C++ (native/instruments/carillon), built as WebAssembly: the page runs it
+  // when it can, the JavaScript engine otherwise
+  wasm: { name: 'CarillonWasmEngine', module: new URL('./carillon-wasm.js', import.meta.url).href, binary: new URL('../wasm/carillon.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room' },
 };

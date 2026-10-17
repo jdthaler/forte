@@ -1,9 +1,16 @@
 // gongs-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName } from '../../shared/shell.js';
+import { createShell, noteName, useWasm } from '../../shared/shell.js';
 import { fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './gongs-instrument.js';
-import { keyGong, interpR, backbone, contactTime, MICS, tablesId } from './gongs-model.js';
+import * as jsModel from './gongs-model.js';
+import { MICS, tablesId } from './gongs-model.js';
+import { wasmModel } from './gongs-wasm.js';
+
+// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
+// physics as the engine, in C++), the JavaScript one until then or if it can't load.
+let model = jsModel;
+if (useWasm()) wasmModel().then((m) => { model = m; update(); }, (err) => console.warn(`gongs: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
 
 const $ = (s) => document.querySelector(s);
 const BANDS = ['below the pitch', '1–2×', '2–4×', '4–8×', '8–16×', '>16×'];
@@ -12,8 +19,10 @@ let focus = 57, live = null, history = [], analyser = null, sentTables = null;
 const rate = () => shell?.audio?.ctx.sampleRate || 48000;
 // The coupling tables (a few ms to build) are built here, on the page, and travel with the
 // parameters (INSTRUMENT.engineParams) only when Dome rise, Coupling terms or Rim changes them:
-// the engine keeps them by id, so the rest of the time the parameters go alone.
+// the engine keeps them by id, so the rest of the time the parameters go alone. (The WebAssembly
+// engine builds its own and takes the full parameters: once it runs, none are built here.)
 const engineParams = (P) => {
+  if (shell?.engineKind === 'wasm') return P;
   const id = tablesId(P);
   if (id === sentTables) return P;
   sentTables = id;
@@ -40,23 +49,23 @@ const shell = createShell({
 let G = null;
 function update() {
   const P = shell.P;
-  G = keyGong(focus, P, rate());
+  G = model.keyGong(focus, P, rate());
   const { S, Nv, f0 } = G;
   $('#focus-name').textContent = noteName(focus);
   $('#plate-key').textContent = noteName(focus);
   $('#focus-size').textContent = `⌀ ${(200 * G.a).toFixed(1)} cm · h ${(1000 * G.h).toFixed(2)} mm · ${G.mass < 1 ? `${(1000 * G.mass).toFixed(0)} g` : `${G.mass.toFixed(2)} kg`}`;
   const rows = [];
-  const n = Math.min(Nv, 16), phiS = (i) => interpR(S.R[i], P.strike), ex = [];
+  const n = Math.min(Nv, 16), phiS = (i) => model.interpR(S.R[i], P.strike), ex = [];
   for (let i = 0; i < Nv; i++) ex.push(Math.abs(phiS(i)));
   const exMax = Math.max(...ex, 1e-12);
   for (let i = 0; i < n; i++) {
-    const f = (S.Om[i] * G.w0) / (2 * Math.PI), T60 = 6.91 / G.sigma[i], b = backbone(S, i, Nv);
+    const f = (S.Om[i] * G.w0) / (2 * Math.PI), T60 = 6.91 / G.sigma[i], b = model.backbone(S, i, Nv);
     const glide = 1200 * Math.log2(Math.sqrt(Math.max(1e-6, 1 + 2 * b * 0.09)));
     const exDb = 20 * Math.log10(ex[i] / exMax);
     rows.push(`<tr class="${i === S.tuned ? 'tuned' : ''}"><td>${S.label[i]}</td><td>${f.toFixed(f < 1000 ? 1 : 0)}</td><td>${(f / f0).toFixed(3)}</td><td>${T60.toFixed(T60 < 10 ? 2 : 1)}</td>`
       + `<td>${exDb > -60 ? exDb.toFixed(0) : '—'}</td><td class="${glide > 0.5 ? 'hard' : glide < -0.5 ? 'soft' : ''}">${glide > 0 ? '+' : ''}${glide.toFixed(1)}</td></tr>`);
   }
-  const tc = contactTime(G, P, P.velocity), top = (S.Om[Nv - 1] * G.w0) / (2 * Math.PI);
+  const tc = model.contactTime(G, P, P.velocity), top = (S.Om[Nv - 1] * G.w0) / (2 * Math.PI);
   $('#modes').innerHTML = '<tr><th>mode (m,s)</th><th>f (Hz)</th><th>× pitch</th><th>T₆₀ (s)</th><th>at strike point (dB)</th><th>¢ at 0.3 h</th></tr>' + rows.join('')
     + `<tr><td colspan="6" class="note">${Nv} modes up to ${(top / 1000).toFixed(1)} kHz, run at ${(G.fsi / 1000).toFixed(1)} kHz. The strike tone (gold) is the first axisymmetric mode, tuned to the key. Mallet contact ≈ ${(1000 * tc).toFixed(2)} ms at velocity ${P.velocity.toFixed(2)}. The last column is the normal-form pitch shift at an amplitude of 0.3 thickness: + hardens, − softens.</td></tr>`;
   plateCache = null;
@@ -75,7 +84,7 @@ function platePixels(S, Nv) { // per pixel: radius bin and cos(mθ); per mode: r
     for (let m = 0; m <= mMax; m++) cosm[p * (mMax + 1) + m] = Math.cos(m * th);
   }
   const Rk = [];
-  for (let i = 0; i < Nv; i++) { const a = new Float32Array(RB); for (let b = 0; b < RB; b++) a[b] = interpR(S.R[i], b / (RB - 1)); Rk.push(a); }
+  for (let i = 0; i < Nv; i++) { const a = new Float32Array(RB); for (let b = 0; b < RB; b++) a[b] = model.interpR(S.R[i], b / (RB - 1)); Rk.push(a); }
   const phase0 = Float32Array.from({ length: Nv }, (_, i) => (i * 2.399963) % (2 * Math.PI));
   const img = new ImageData(GRID, GRID), off = document.createElement('canvas');
   off.width = off.height = GRID;
@@ -92,7 +101,7 @@ animate(() => {
   // amplitudes: live from the engine for this key, else the pattern a soft strike would excite
   const amp = new Float32Array(Nv);
   const fresh = live && live.key === focus && live.n === Nv;
-  for (let i = 0; i < Nv; i++) amp[i] = fresh ? live.amp[i] : Math.abs(interpR(S.R[i], P.strike)) / S.Om[i];
+  for (let i = 0; i < Nv; i++) amp[i] = fresh ? live.amp[i] : Math.abs(model.interpR(S.R[i], P.strike)) / S.Om[i];
   pc.Wm.fill(0);
   for (let i = 0; i < Nv; i++) {
     const c = amp[i] * Math.cos(pc.phase0[i] + 2 * Math.PI * 0.4 * Math.sqrt(S.Om[i] / S.Om[S.tuned]) * now), base = S.m[i] * pc.RB, R = pc.Rk[i];
@@ -126,7 +135,7 @@ animate(() => {
   ctx.beginPath(); ctx.arc(cx + P.strike * R, cy, Math.max(1, R * 0.035), 0, 2 * Math.PI); ctx.fill();
   for (const [r, th] of MICS) { const s = Math.max(2, R * 0.05); ctx.fillRect(cx + r * R * Math.cos(th) - s / 2, cy - r * R * Math.sin(th) - s / 2, s, s); }
   if (fresh) {
-    let peak = 0; for (let i = 0; i < Nv; i++) peak = Math.max(peak, amp[i] * Math.abs(interpR(S.R[i], 0)));
+    let peak = 0; for (let i = 0; i < Nv; i++) peak = Math.max(peak, amp[i] * Math.abs(model.interpR(S.R[i], 0)));
     $('#plate-read').textContent = `${live.nl ? 'nonlinear' : 'linear'} · modal amplitude up to ${Math.max(...amp).toFixed(2)} h${live.sub > 1 ? ` · ${live.sub} substeps` : ''}`;
   } else $('#plate-read').textContent = 'the modes a soft strike here excites';
 }, pcv);
