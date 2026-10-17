@@ -77,6 +77,13 @@ including velocity, the sustain pedal, aftertouch and, where it means
 something, the mod wheel. Once MIDI is on, every other instrument page
 turns it on by itself.
 
+**Latency:** play through wired headphones or speakers. Bluetooth ones
+delay every note by 100–200 ms, enough to make any instrument feel
+sluggish; a page warns you once when the browser reports that much (Safari
+doesn't report it). The browser's own audio buffer adds about 10–30 ms, and
+a computer keyboard a few more than a MIDI keyboard. For the least delay,
+play the plugins in a DAW with a small buffer.
+
 Each instrument page reads top to bottom. At the top, the instrument's
 name opens the menu of every instrument (and Forte's home page), next to
 **How it works** and the mode (and, on an instrument with a C++ build,

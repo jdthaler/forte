@@ -71,8 +71,9 @@ Split the model across more files when it grows (`<slug>/src/plate.js`,
 | file | what |
 |---|---|
 | `shell.js` | everything common to instrument pages: audio graph (room, volume, tone, limiter, analyser), computer keyboard and on-screen keys, MIDI (notes, velocity, CC64, CC1), parameter sidebar with presets and local storage, octave shift, toasts. See the header for the config. |
-| `worklet.js` | the generic AudioWorklet processor. It loads your engine by its `globalThis` name. |
+| `worklet.js` | the generic AudioWorklet processor. It loads your engine by its `globalThis` name. It also registers `forte-limiter`, the chain's limiter, so a page adds it before building the chain. |
 | `chain.js` | the output chain after the engine, built from the descriptor's `chain`: tone low-pass, body or soundboard, room, volume × trim, limiter. Every page uses it; the plugins rebuild it in C++. |
+| `limiter.js` | the limiter at the end of the chain: Web Audio's compressor curve and makeup gain without its 6 ms look-ahead, as the plugins' `limiter.cpp`, so a page adds no delay to a key |
 | `dsp.js` | `modeCoeffs` (exact two-pole modal resonator), `Biquad`, `OnePole`, `DCBlock`, `Delay` (fractional), `keyPan`, `keyFreq`, `sigmaFromT60` |
 | `linalg.js` | `symEig`, `genEig` (generalised symmetric), `cholesky` |
 | `views.js` | `fit`, `css`, `animate`, `SpectrumView` (live spectrum + model markers), `ScopeView` |
