@@ -126,7 +126,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'bowed', name: 'Viola Organista', section: 'experimental', ready: true, version: '0.3.1', trim: 3,
-    plugin: { code: 'Viol' },
+    plugin: { code: 'Viol', ready: true },
     after: "Leonardo da Vinci's design (1488)",
     tagline: 'Rosined wheels bow the strings while you hold the keys: stick–slip friction, from scratch.',
     physics: 'Friction · Helmholtz motion',

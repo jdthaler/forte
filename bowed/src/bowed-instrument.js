@@ -16,5 +16,8 @@ export const INSTRUMENT = {
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
   modWheel: 'speed',                    // CC1: the treadle, the instrument's swell (Helmholtz amplitude ∝ v_B)
   engine: { name: 'OrganistaEngine', module: new URL('./bowed-engine.js', import.meta.url).href },
+  // the same physics in C++ (native/instruments/bowed), built as WebAssembly: the page runs it
+  // when it can, the JavaScript engine otherwise
+  wasm: { name: 'OrganistaWasmEngine', module: new URL('./bowed-wasm.js', import.meta.url).href, binary: new URL('../wasm/bowed.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room' },
 };
