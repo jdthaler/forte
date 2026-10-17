@@ -204,7 +204,7 @@ export function createShell(cfg) {
         // sound flows; Safari doesn't report it)
         const latency = () => {
           const ms = Math.round(1000 * ((ctx.baseLatency || 0) + (ctx.outputLatency || 0)));
-          if (ms) btn.title = `Output latency ≈ ${ms} ms (the browser's audio buffer and the audio device${ctx.outputLatency ? '' : ', not counting the device'})`;
+          if (ms) btn.title = `Output latency ≈ ${ms} ms (the browser's audio buffer and the audio device${ctx.outputLatency ? '' : ', not counting the device'}). Bluetooth headphones and speakers add 100–200 ms; wired ones far less.`;
         };
         latency(); setTimeout(latency, 1000);
       }

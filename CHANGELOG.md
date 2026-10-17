@@ -23,6 +23,9 @@ tagged; this changelog and the commit titles record them.
 - **Output latency on the Audio on button:** its tooltip gives the browser's audio buffer plus
   the audio device's latency, as the browser reports them, to tell a slow setup (Bluetooth
   headphones, a large system buffer) from the page.
+- **A Bluetooth warning:** when the browser reports 80 ms or more between the page and the
+  speakers (Bluetooth headphones and speakers add 100–200 ms), a page says so once per visit
+  and suggests wired ones. The README's Playing section says the same.
 
 ### Huygens Keyboard 0.3.4
 - Its worklet test picks the instrument's processor by name now that `shared/worklet.js`

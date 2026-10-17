@@ -633,9 +633,26 @@ for (const name of ['AudioContext', 'webkitAudioContext']) {
     constructor(...a) {
       super(...a);
       contexts.add(this);
-      this.addEventListener('statechange', () => { if (this.state === 'closed') contexts.delete(this); });
+      this.addEventListener('statechange', () => {
+        if (this.state === 'closed') contexts.delete(this);
+        if (this.state === 'running') setTimeout(() => warnLatency(this), 1500); // outputLatency settles once sound flows
+      });
     }
   };
+}
+
+// Bluetooth headphones and speakers delay the sound 100–200 ms, more than everything else
+// together: say so once per visit when the browser reports that much (Safari reports only its
+// own buffer, so there the README's note has to do).
+const LATE_MS = 80;
+function warnLatency(ctx) {
+  const ms = Math.round(1000 * ((ctx.baseLatency || 0) + (ctx.outputLatency || 0)));
+  const t = document.getElementById('toast');
+  if (ms < LATE_MS || !t || ctx.state !== 'running') return;
+  try { if (sessionStorage.getItem('forte/latency-warned')) return; sessionStorage.setItem('forte/latency-warned', '1'); } catch { /* storage unavailable */ }
+  t.textContent = `The sound reaches you about ${ms} ms after each key. Bluetooth headphones and speakers add most of that: wired ones play much sooner.`;
+  t.hidden = false;
+  setTimeout(() => { t.hidden = true; }, 8000);
 }
 const unlock = () => { for (const c of contexts) if (c.state !== 'running' && c.state !== 'closed') c.resume().catch(() => {}); };
 for (const ev of ['pointerup', 'touchend', 'keydown']) document.addEventListener(ev, unlock, true);
