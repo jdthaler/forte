@@ -12,7 +12,7 @@ tagged; this changelog and the commit titles record them.
 
 ## 2026-10-17 — each instrument's plugins on its page, released by themselves
 
-### Forte 0.15.0
+### Forte 0.16.0
 - **Each instrument's plugins alone**: a release now holds `Forte-<slug>-macos.zip`,
   `-windows.zip` and `-linux.tar.gz` for each instrument with plugins, next to every instrument
   together (`Forte-plugins-…`). `tools/package-plugins.sh` makes them all in the `native`
@@ -26,6 +26,18 @@ tagged; this changelog and the commit titles record them.
   latest release (its `manifest.txt`), so a newly ported instrument is downloadable once it is
   merged. The batch 1 instruments were missing from the downloads because a release had to be
   started by hand. Tags are `plugins-v<Forte version>`, then `-2`, `-3`… within one version.
+
+## 2026-10-17 — an engine switch on the ported pages, the presets in Controls
+
+### Forte 0.15.0
+- **Engine switch:** every page with a C++ build (Bubble Organ, Vibraphone, Carillon, Glass
+  Armonica, Gong Keyboard, and each port to come) has a **C++ | JS** switch in its header,
+  beside Discover | Perform. Picking the other engine reloads the page with it, views included,
+  and every page remembers the choice. If the C++ fails to load, the switch shows JS in amber.
+  `?engine=js` or `?engine=wasm` in the address still overrides it. It is for the beta, and goes
+  when the JavaScript engines do.
+- **The presets move to the top of the Controls panel** (under More controls on a phone), with
+  "Default settings" as before, to make room for it in the header.
 
 ## 2026-10-17 — modal bars, bells and plates in C++ (step 4, first batch)
 

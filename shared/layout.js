@@ -1,15 +1,17 @@
 // layout.js — the layout of every instrument page, the same on a phone, a tablet
 // and a desktop. Three parts, top to bottom:
 //   header  the instrument's name, which is also the menu (shared/nav.js); How it
-//           works; Discover | Perform; the presets (with "Default settings", which
-//           stands in for the page's Reset button); audio, MIDI and Panic;
+//           works; Discover | Perform (and C++ | JS, shared/shell.js); audio, MIDI
+//           and Panic;
 //   views   the pictures only: the main ones (cards marked data-perform) large, the
 //           others in a tabbed panel below them that folds away;
 //   footer  the controls you play with, right above the keys: any control surface
 //           a page marks data-control (the organ's drawbars) and the parameters
 //           marked `perform: true` (which the page gives data-perform), then "More
 //           controls" for the rest (#controls: a column on wide screens, a panel
-//           that slides over the views on narrow ones). A handle folds them away.
+//           that slides over the views on narrow ones), the presets at its top (with
+//           "Default settings", which stands in for the page's Reset button). A handle
+//           folds them away.
 //           Then the keyboard bar (◀ an overview of the whole range ▶, key size,
 //           the pedal, and ⌨ for the page's computer-keyboard and MIDI hints) and
 //           the keys: as many as fit the width at the chosen key size.
@@ -308,7 +310,7 @@ function addDefaults() {
 }
 
 // ---------------------------------------------------------------------------
-// header: the mode, the presets, Full screen and MIDI
+// header: the mode, Full screen and MIDI (and the presets' "Default settings")
 
 const modeBtns = [];
 function setMode(m) {
@@ -333,10 +335,10 @@ if (header) {
     seg.appendChild(b); modeBtns.push(b);
   }
   play.appendChild(seg);
+  // the presets stay at the top of the Controls panel (the header has the engine switch)
   const presets = sidebar?.querySelector('.preset-row');
   if (presets) {
     presets.classList.add('forte-presets');
-    play.appendChild(presets);
     // "Default settings": stop the page seeing it as a preset, and reset instead
     presets.addEventListener('change', (e) => {
       if (e.target.value !== '__default') return;
