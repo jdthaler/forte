@@ -30,7 +30,7 @@ export const SECTIONS = [
 export const INSTRUMENTS = [
   {
     id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.3.3', trim: 3,
-    plugin: { code: 'Ribn' },
+    plugin: { code: 'Ribn', ready: true },
     after: 'the concert grand',
     tagline: 'Stiff strings, felt hammers and a shared bridge — then swap the strings for square bars, triangular bars or twisting ribbons.',
     physics: 'Modal strings · nonlinear hammers · torsion',
