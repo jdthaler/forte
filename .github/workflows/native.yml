@@ -157,9 +157,19 @@ jobs:
           if [ "$RUNNER_OS" = macOS ]; then
             for a in *.app; do xattr -w com.apple.quarantine '0083;00000000;Safari;' "$a"; done
             if make check-app; then echo '::error::make check-app passed a quarantined app'; exit 1; fi
-            for a in *.app; do xattr -dr com.apple.quarantine "$a"; done
+            make unquarantine-app
+            if xattr -r *.app | grep -q com.apple.quarantine; then echo '::error::make unquarantine-app left the quarantine'; exit 1; fi
           fi
           make check-app
+          # an installed standalone, quarantined, cleared where it is
+          make install-app
+          if [ "$RUNNER_OS" = macOS ]; then
+            for a in ~/Applications/*.app; do xattr -w com.apple.quarantine '0083;00000000;Safari;' "$a"; done
+            if make verify-app; then echo '::error::make verify-app passed a quarantined app'; exit 1; fi
+            make unquarantine-app APP_DIR="$HOME/Applications"
+          fi
+          make verify-app
+          make uninstall-app
       - uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.preset }}
