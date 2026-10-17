@@ -26,6 +26,7 @@ export const INSTRUMENT = {
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
   modWheel: 'flame',                    // CC1: the flame power, from its default up to its maximum
   engine: { name: 'PyrophoneEngine', module: new URL('./pyrophone-engine.js', import.meta.url).href },
+  wasm: { name: 'PyrophoneWasmEngine', module: new URL('./pyrophone-wasm.js', import.meta.url).href, binary: new URL('../wasm/pyrophone.wasm', import.meta.url).href },
   engineParams: (P) => ({ ...P, tune: tubeTuning(P).tune }), // the tuning table rides with the parameters
   chain: { volume: 'volume', room: 'room' },
 };

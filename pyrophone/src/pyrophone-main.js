@@ -1,24 +1,37 @@
 // pyrophone-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName, keyFreq } from '../../shared/shell.js';
+import { createShell, noteName, keyFreq, useWasm } from '../../shared/shell.js';
 import { SpectrumView, animate } from '../../shared/views.js';
 import { INSTRUMENT, tubeTuning } from './pyrophone-instrument.js';
 import { tubeKey, root, betaOn, orbitAt, orbitSpectrum, steadyY, heat, N_MODES, C_HOT } from './pyrophone-model.js';
 import { drawBif, drawTube, drawPhase, orbitState } from './pyrophone-views.js';
+import { wasmModel } from './pyrophone-wasm.js';
+
+// The views and the tuning table draw on what the engine plays: the WebAssembly model once it has
+// loaded (the same physics as the engine, in C++), the JavaScript one until then or if it can't load.
+let model = { tubeTuning, root, orbitAt, orbitSpectrum, steadyY, heat, orbitState };
+if (useWasm()) wasmModel().then((m) => { model = m; modelKey = ''; recompute(shell.P); shell.sendParams(); }, (err) => console.warn(`pyrophone: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
 
 const $ = (s) => document.querySelector(s);
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 50 });
-let focus = 60, bif = null, tune = null, modelKey = '', lastCalc = 0, timer = 0;
+let shell = null;
+let focus = 60, bif = null, tune = null, modelKey = '', lastCalc = 0, timer = 0, sentTune = null;
 let live = { pts: [] }, foc = null, focAt = 0, trail = [], theta = 0, scale = null, pred = null, rootCache = [NaN, null];
 const eta = new Float64Array(N_MODES), vel = new Float64Array(N_MODES);
 
-// The bifurcation analysis (harmonic balance, ~50 ms; tubeTuning in the descriptor) runs
-// when a tube parameter changes, at most every 200 ms while a slider is dragged; the engine
-// gets the resulting tuning table with its parameters (the descriptor's engineParams, with
-// the last table until the next one is ready).
+// The bifurcation analysis (harmonic balance, ~50 ms in JavaScript, ~15 ms in WebAssembly;
+// tubeTuning) runs when a tube parameter changes, at most every 200 ms while a slider is dragged;
+// the engine gets the resulting tuning table with its parameters (the descriptor's engineParams,
+// with the last table until the next one is ready). The WebAssembly engine, which the worklet
+// gives the parameters without it, gets it in a message of its own just ahead of them.
 function recompute(P) {
-  ({ bif, tune } = tubeTuning(P)); modelKey = tubeKey(P); lastCalc = performance.now();
+  ({ bif, tune } = model.tubeTuning(P)); modelKey = tubeKey(P); lastCalc = performance.now();
   update();
+}
+function offerTune(t) {
+  if (t === sentTune || !shell?.audio || shell.engineKind !== 'wasm') return;
+  sentTune = t;
+  shell.post({ type: 'tune', tune: { key: t.key, P: t.P, betaH: t.betaH, betaMax: t.betaMax, mode: t.mode, fold: t.fold, b0: t.b0, db: t.db, Ws: t.Ws } });
 }
 function currentTune(P) {
   if (tubeKey(P) !== modelKey) {
@@ -28,13 +41,13 @@ function currentTune(P) {
   return tune;
 }
 
-const shell = createShell({
+shell = createShell({
   ...INSTRUMENT,
   base: 48,
   arrows: { param: 'velocity', step: 0.05 },
   holdHint: { ms: 350, text: 'Hold the key: the flame takes a moment to set the tube singing.' },
-  engineParams: (P) => ({ ...P, tune: currentTune(P) }), // INSTRUMENT.engineParams, throttled while dragging
-  onAudio: (a) => spectrum.setAnalyser(a.analyser),
+  engineParams: (P) => { const t = currentTune(P); offerTune(t); return { ...P, tune: t }; }, // INSTRUMENT.engineParams, throttled while dragging
+  onAudio: (a) => { spectrum.setAnalyser(a.analyser); sentTune = null; offerTune(tune); },
   onMessage: (m) => {
     if (m.type !== 'tubes') return;
     live = m;
@@ -62,11 +75,11 @@ function update() {
     ? 'no mode is driven: Rayleigh\'s criterion fails for all of them'
     : `silence breaks at <b>β = ${tune.betaH.toFixed(3)}</b> (mode ${tune.mode})${tune.fold ? ` · fold <b>${tune.fold.toFixed(3)}</b>` : ''} · key at ${P.velocity.toFixed(2)} → <b>${(b / tune.betaH).toFixed(2)} ×</b>${tune.betaMax / tune.betaH < P.flame * 1.25 ? ` (held below the scream, ${(tune.betaMax / tune.betaH).toFixed(1)} ×)` : ''}`;
   // spectrum markers: the hot tube's modes, and the predicted harmonics of the steady note
-  pred = f1 ? orbitAt(bif.sys, f1, b) : null;
+  pred = f1 ? model.orbitAt(bif.sys, f1, b) : null;
   const markers = [];
   for (let j = 1; j <= N_MODES; j++) markers.push({ f: (j * Math.PI * f0) / W, color: '#7cb8ff', alpha: 0.45 });
   if (pred) {
-    const lv = orbitSpectrum(bif.sys, pred, P.listen), top = Math.max(...lv);
+    const lv = model.orbitSpectrum(bif.sys, pred, P.listen), top = Math.max(...lv);
     lv.forEach((a, k) => { const db = 20 * Math.log10(a / top + 1e-9); if (db > -60) markers.push({ f: (k + 1) * f0, alpha: 0.2 + 0.7 * (1 + db / 60) }); });
   }
   spectrum.set(f0, markers);
@@ -86,18 +99,18 @@ function thresholdY(b) {
 }
 // Linear growth rate (1/s) of silence at gain b for the focused key, in the mode that breaks first.
 function growth(b) {
-  if (!(Math.abs(rootCache[0] - b) <= 1e-4)) rootCache = [b, root(bif.sys, Math.max(0, tune.mode - 1), b)];
+  if (!(Math.abs(rootCache[0] - b) <= 1e-4)) rootCache = [b, model.root(bif.sys, Math.max(0, tune.mode - 1), b)];
   return (rootCache[1][0] * 2 * Math.PI * keyFreq(focus)) / Wof(b);
 }
 
 // Drawing scale for the tube: the largest steady cycle the keys can reach.
 function tubeScale() {
-  const f1 = bif.fam[0], pt = f1 && (orbitAt(bif.sys, f1, betaOn(shell.P, 1, tune.betaH, tune.betaMax)) || pred);
+  const f1 = bif.fam[0], pt = f1 && (model.orbitAt(bif.sys, f1, betaOn(shell.P, 1, tune.betaH, tune.betaMax)) || pred);
   const s = { p: 1, u: 1, xi: 0.05, y: 1 };
   if (!pt) return s;
   s.p = s.u = s.xi = 1e-9;
   for (let k = 0; k < 24; k++) {
-    orbitState(bif.sys, pt, (2 * Math.PI * k) / 24, eta, vel);
+    model.orbitState(bif.sys, pt, (2 * Math.PI * k) / 24, eta, vel);
     for (let i = 0; i <= 40; i++) {
       const x = i / 40;
       let uu = 0, pp = 0, dd = 0;
@@ -136,12 +149,12 @@ animate(() => {
     label = `${noteName(focus)} · live, strobed · gas ${foc.T.toFixed(0)} K · ${foc.cents >= 0 ? '+' : ''}${foc.cents.toFixed(1)} ¢`;
   } else if (!fresh) {
     theta = (theta + (2 * Math.PI) / 96) % (2 * Math.PI);
-    if (pred) orbitState(bif.sys, pred, theta, eta, vel); else { eta.fill(0); vel.fill(0); }
+    if (pred) model.orbitState(bif.sys, pred, theta, eta, vel); else { eta.fill(0); vel.fill(0); }
     label = pred ? `${noteName(focus)} · predicted steady cycle (play a key)` : `${noteName(focus)} · silent at this power`;
   }
   let uf = 0;
   for (let j = 0; j < N_MODES; j++) uf += bif.sys.cf[j] * eta[j];
-  const q = (bNow / betaOn(P, 1, tune.betaH, tune.betaMax)) * (0.4 + heat(uf) + 0.58);
+  const q = (bNow / betaOn(P, 1, tune.betaH, tune.betaMax)) * (0.4 + model.heat(uf) + 0.58);
   drawTube(cvTube, { eta, vel, xf: P.xf, q, scale, label });
 }, cvTube);
 
@@ -151,7 +164,7 @@ animate(() => {
   if (!shown(cvPhase)) return;
   const { fresh, bNow } = now();
   if (!scale) scale = tubeScale();
-  const c1 = Math.abs(bif.sys.cf[0]) || 1, rings = [], ys = steadyY(bif, bNow), yu = thresholdY(bNow);
+  const c1 = Math.abs(bif.sys.cf[0]) || 1, rings = [], ys = model.steadyY(bif, bNow), yu = thresholdY(bNow);
   if (ys) rings.push({ r: ys / c1, stable: true });
   if (yu) rings.push({ r: yu / c1, stable: false });
   const rate = growth(bNow), lines = [`${noteName(focus)} · β = ${bNow.toFixed(3)} (${(bNow / tune.betaH).toFixed(2)} × threshold)`];

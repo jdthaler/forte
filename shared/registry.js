@@ -142,7 +142,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'pyrophone', name: 'Pyrophone', section: 'experimental', ready: true, version: '0.3.2', trim: -3.5,
-    plugin: { code: 'Pyro' },
+    plugin: { code: 'Pyro', ready: true },
     after: "Frédéric Kastner's flame organ (1873)",
     tagline: 'Flames in glass tubes sing by themselves once they cross a threshold — and remember having sung.',
     physics: 'Thermoacoustics · Hopf bifurcation',
