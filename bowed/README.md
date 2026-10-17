@@ -350,6 +350,18 @@ On the page, the views show the same physics live:
 * **Attack map**: the Guettler diagram, computed in the page.
 * **Spectrum**.
 
+**In C++**: the same engine and model run as WebAssembly on this page (the
+JavaScript is the fallback; `?engine=js` in the address forces it) and as
+plugins (CLAP, VST3, AU and a standalone app), where the Space pedal is Hold
+on CC64, the mod wheel drives the treadle (25 cm/s at rest, up to 1 m/s) and
+aftertouch presses the keys harder. Bowed friction is chaotic: a difference
+in the last bit of one number can grow into another attack. So the C++ takes
+its sines, exponentials, logarithms and powers from fdlibm, as V8 computes
+them, and draws the rosin's grain from the same seeded generator: the
+WebAssembly plays what the JavaScript plays to the last bit, raucous notes
+included, and the same test suite passes on it. Ten strings take about 6 %
+of a core in C++.
+
 ## Files
 
 ```
@@ -360,8 +372,10 @@ bowed/src/bowed-engine.js             real-time engine: wheel, shared bridge, ke
 bowed/src/bowed-params.js             parameters and presets
 bowed/src/bowed-tuning.js             tuning table (generated)
 bowed/src/bowed-main.js               page wiring and views
-test/bowed-tests.mjs                  node test/bowed-tests.mjs
-tools/bowed-tuning.mjs                node tools/bowed-tuning.mjs → bowed/src/bowed-tuning.js
+bowed/src/bowed-wasm.js               the C++ engine and model as WebAssembly (bowed/wasm/bowed.wasm)
+native/instruments/bowed/             the C++ port: model, string, engine, V8's math (fdlibm), generated tables, reference
+test/bowed-tests.mjs                  node test/bowed-tests.mjs  (FORTE_ENGINE=wasm: on the WebAssembly)
+tools/bowed-tuning.mjs                node tools/bowed-tuning.mjs → bowed/src/bowed-tuning.js and its C++ copy
 tools/render-bowed.mjs                node tools/render-bowed.mjs → examples/bowed/
 ```
 

@@ -14,5 +14,8 @@ export const INSTRUMENT = {
   range: [28, 100],                                // MIDI keys: E1–E7, 73 keys
   space: 'sustain',                                // Space and CC64: a damper pedal, sent to the engine
   engine: { name: 'GrandEngine', module: new URL('./grand-engine.js', import.meta.url).href },
+  // the same physics in C++ (native/instruments/grand), built as WebAssembly: the page runs it
+  // when it can, the JavaScript engine otherwise
+  wasm: { name: 'GrandWasmEngine', module: new URL('./grand-wasm.js', import.meta.url).href, binary: new URL('../wasm/grand.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room' },
 };

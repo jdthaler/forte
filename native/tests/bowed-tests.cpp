@@ -1,0 +1,211 @@
+// bowed-tests.cpp — the viola organista's model and engine in C++: V8's math (fdlibm), the scale
+// and the loop filters, a held note in Helmholtz motion at its pitch at every sample rate, the key
+// action and aftertouch, the dampers, a string gone non-finite stopped alone, the views' messages,
+// and ten strings in the CPU budget. The physics tests are the JavaScript suite's, run on the
+// WebAssembly (FORTE_ENGINE=wasm).
+
+#include <chrono>
+#include <cmath>
+#include <cstdlib>
+#include <limits>
+#include <memory>
+#include <vector>
+
+#include "bowed-engine.h"
+#include "check.h"
+#include "fdlibm.h"
+
+using namespace forte;
+using namespace forte::bowed;
+
+static std::vector<double> defaultParams() {
+  std::vector<double> P(p::count);
+  for (int i = 0; i < p::count; i++) P[i] = kParams[i].def;
+  return P;
+}
+static std::vector<float> render(OrganistaEngine &e, int n, std::vector<float> *right = nullptr) {
+  std::vector<float> L(n), R(n);
+  for (int i = 0; i < n; i += 128) e.process(L.data() + i, R.data() + i, std::min(128, n - i));
+  if (right) *right = R;
+  return L;
+}
+// frequency from the autocorrelation peak near one period (parabolic interpolation), over [a, b)
+static double pitch(const std::vector<float> &x, int a, int b, double f0, double fs) {
+  const double N0 = fs / f0;
+  auto ac = [&](int lag) { double s = 0; for (int i = a; i < b - lag; i++) s += (double)x[i] * x[i + lag]; return s; };
+  int best = (int)N0;
+  double bv = -1e300;
+  for (int lag = (int)(0.8 * N0); lag <= (int)(1.2 * N0); lag++) { const double v = ac(lag); if (v > bv) { bv = v; best = lag; } }
+  const double y0 = ac(best - 1), y1 = ac(best), y2 = ac(best + 1);
+  return fs / (best + (0.5 * (y0 - y2)) / (y0 - 2 * y1 + y2));
+}
+static double rms(const std::vector<float> &x, int a, int b) {
+  double s = 0;
+  for (int i = a; i < b; i++) s += (double)x[i] * x[i];
+  return std::sqrt(s / (b - a));
+}
+static double cents(double f, double g) { return 1200 * std::log2(f / g); }
+
+TEST("bowed: V8's sin, cos, exp, log, atan2 and pow (fdlibm) on exact cases and against the C library") {
+  CHECK(fdlibm::sin(0) == 0 && fdlibm::cos(0) == 1 && fdlibm::exp(0) == 1 && fdlibm::log(1) == 0);
+  CHECK(fdlibm::pow(2, 10) == 1024 && fdlibm::pow(3, 2) == 9 && fdlibm::pow(16, 0.5) == 4 && fdlibm::atan2(1, 1) == std::atan2(1.0, 1.0));
+  double worst = 0;
+  for (int i = 1; i < 2000; i++) {
+    const double x = i * 0.0031415, y = (i % 37) * 0.17 - 3;
+    const double e[6] = {fdlibm::sin(x) - std::sin(x), fdlibm::cos(x) - std::cos(x), fdlibm::exp(-x) / std::exp(-x) - 1,
+                         fdlibm::log(x) - std::log(x), fdlibm::atan2(y, x) - std::atan2(y, x), fdlibm::pow(x, y) / std::pow(x, y) - 1};
+    for (double d : e) worst = std::max(worst, std::fabs(d));
+  }
+  CHECK(worst < 1e-15); // the same functions, to the last bit or two
+}
+
+TEST("bowed: the scale is Mersenne's, the loop filters passive on every key at 44.1, 48 and 96 kHz, the touch voiced") {
+  for (int k = KEY_LO; k <= KEY_HI; k++) {
+    const StringDesign s = stringDesign(k);
+    CHECK_NEAR(s.c / (2 * s.L), s.f0, 1e-9 * s.f0);
+    CHECK(s.f0 > s.fKey && cents(s.f0, s.fKey) < 20); // tuned a few cents sharp
+    for (double fs : {44100.0, 48000.0, 96000.0}) {
+      const Loop L = loopDesign(k, defaults(), fs * oversample(k, fs));
+      CHECK(L.gb > 0 && L.gb <= 1 && L.pb >= 0 && L.pb < 1 && L.Db >= 1);
+      CHECK(L.gn > 0 && L.gn <= 1 && L.pn >= 0 && L.pn < 1 && L.Dn >= 1);
+    }
+    CHECK(voiced(k) > 0 && std::fabs(voiced(k) - 0.5 * schelleng(loopDesign(k, defaults(), 48000), defaults()).Fmax) < 1e-12);
+  }
+  CHECK(oversample(36, 48000) == 1 && oversample(84, 48000) == 4 && oversample(84, 96000) == 2 && oversample(84, 192000) == 1);
+  CHECK(boardModes(2400, 0.03).size() == 77);
+}
+
+TEST("bowed: a held C4 sounds in Helmholtz motion at its pitch at 44.1, 48, 96 and 192 kHz, and leaves the loop after release") {
+  for (double fs : {44100.0, 48000.0, 96000.0, 192000.0}) {
+    auto P = defaultParams();
+    P[p::treadle] = 0;
+    auto engine = std::make_unique<OrganistaEngine>(fs); // big for a WebAssembly stack
+    OrganistaEngine &e = *engine;
+    e.setParams(P.data());
+    e.noteOn(60, 0.7);
+    CHECK(e.voiceCount() == 1);
+    auto L = render(e, (int)(1.3 * fs));
+    CHECK(e.string(60)->motion(16).kind == Kind::helmholtz);
+    const double f = pitch(L, (int)(0.8 * fs), (int)(1.3 * fs), bowed::keyFreq(60), fs);
+    CHECK(std::fabs(cents(f, bowed::keyFreq(60))) < (fs > 50000 ? 6 : 2)); // TUNE is the 48 kHz plan's (44.1 shares it)
+    CHECK(rms(L, (int)(0.8 * fs), (int)(1.3 * fs)) > 0.01);
+    e.noteOff(60, -1);
+    render(e, (int)(1.5 * fs));
+    CHECK(e.voiceCount() == 0 && e.nAct == 0);
+  }
+}
+
+TEST("bowed: the key action ramps the force in its travel time; aftertouch presses one key (poly) or all (channel)") {
+  const double fs = 48000;
+  auto P = defaultParams();
+  auto engine = std::make_unique<OrganistaEngine>(fs);
+  OrganistaEngine &e = *engine;
+  e.setParams(P.data());
+  e.noteOn(48, 0.7); e.noteOn(55, 0.7);
+  const double FT = keyForce(48, 0.7, 1), rise = riseTime(0.7, P[p::attack]);
+  render(e, (int)(0.5 * rise * fs) / 128 * 128);
+  CHECK(e.string(48)->FN > 0.3 * FT && e.string(48)->FN < 0.7 * FT);
+  render(e, (int)(0.3 * fs));
+  CHECK(e.string(48)->FN == FT);
+  const double g0 = e.string(55)->FN;
+  e.pressure(1, 48);
+  render(e, (int)(0.2 * fs));
+  CHECK_NEAR(e.string(48)->FN / FT, 2.5, 1e-9);
+  CHECK(e.string(55)->FN == g0);
+  e.pressure(0.5, -1);
+  render(e, (int)(0.2 * fs));
+  CHECK_NEAR(e.string(48)->FN / FT, 1.75, 1e-9);
+  CHECK_NEAR(e.string(55)->FN / g0, 1.75, 1e-9);
+}
+
+TEST("bowed: with the dampers lifted every string is in the loop and a released note rings on; Panic stops it") {
+  const double fs = 48000;
+  auto P = defaultParams();
+  P[p::lifted] = 1;
+  auto engine = std::make_unique<OrganistaEngine>(fs);
+  OrganistaEngine &e = *engine;
+  e.setParams(P.data());
+  CHECK(e.nAct == NK);
+  e.noteOn(60, 0.8);
+  render(e, (int)(0.8 * fs));
+  e.noteOff(60, -1);
+  auto L = render(e, (int)(1.0 * fs));
+  CHECK(e.voiceCount() == 0 && e.nAct == NK);
+  CHECK(rms(L, (int)(0.8 * fs), (int)(1.0 * fs)) > 0.1 * rms(L, 0, (int)(0.1 * fs)));
+  P[p::lifted] = 0;
+  e.setParams(P.data());
+  e.allNotesOff();
+  CHECK(e.nAct == 0);
+  auto Z = render(e, 1280);
+  CHECK(rms(Z, 0, 1280) == 0);
+}
+
+TEST("bowed: a string gone non-finite is stopped alone, and the page is told; the other note plays on") {
+  const double fs = 48000;
+  auto P = defaultParams();
+  SpscQueue<Message> q(4096);
+  auto engine = std::make_unique<OrganistaEngine>(fs);
+  OrganistaEngine &e = *engine;
+  e.messages = &q;
+  e.setParams(P.data());
+  e.noteOn(48, 0.7); e.noteOn(60, 0.7);
+  render(e, (int)(0.6 * fs));
+  for (double &x : e.string(60)->fb) x = std::numeric_limits<double>::quiet_NaN();
+  auto L = render(e, (int)(0.6 * fs));
+  bool finite = true;
+  for (float x : L) finite = finite && std::isfinite(x);
+  CHECK(finite);
+  CHECK(!e.string(60)->down && e.string(48)->down && e.string(48)->motion(16).kind == Kind::helmholtz);
+  Message m;
+  int errors = 0;
+  while (q.pop(m)) errors += m.type == msg::error;
+  CHECK(errors == 1);
+}
+
+TEST("bowed: the views' messages: the focused string's shape and bow-point trace, then its state") {
+  const double fs = 48000;
+  auto P = defaultParams();
+  SpscQueue<Message> q(8192);
+  auto engine = std::make_unique<OrganistaEngine>(fs);
+  OrganistaEngine &e = *engine;
+  e.messages = &q;
+  e.setParams(P.data());
+  e.noteOn(55, 0.7);
+  render(e, (int)(1.2 * fs));
+  Message m;
+  int states = 0, shape = 0, trace = 0, helm = 0;
+  float span = 0;
+  while (q.pop(m)) {
+    if (m.type == msg::shape) { CHECK(m.values[0] == shape % SHAPE_N); shape += m.count - 1; for (int i = 1; i < m.count; i++) span = std::max(span, std::fabs(m.values[i])); }
+    else if (m.type == msg::trace) { CHECK(m.values[0] == trace % TRACE); trace += m.count - 1; }
+    else if (m.type == msg::state) {
+      states++;
+      CHECK(m.key == 55 && shape == states * SHAPE_N && trace == states * TRACE);
+      CHECK(m.values[4] == 1 && m.values[5] == 1 && (states == 1 || std::fabs(m.values[0] - keyForce(55, 0.7, 1)) < 1e-5)); // the first while the key goes down
+      if (m.values[6] == (float)Kind::helmholtz) { helm++; CHECK(std::fabs(m.values[9] / bowed::keyFreq(55) - 1) < 0.01); }
+    }
+  }
+  CHECK(states >= 12 && states <= 30); // every POST_EVERY samples or so, on a stroboscopic snapshot
+  CHECK(helm >= states - 5); // after the attack
+  CHECK(span > 1e-5); // the string's displacement (m) is drawn
+}
+
+TEST("CPU: ten strings bowed at once at 48 kHz take a small part of a core") {
+  if (std::getenv("CI")) { std::printf("       (timing; skipped on CI)\n"); return; }
+  const double fs = 48000;
+  auto P = defaultParams();
+  auto engine = std::make_unique<OrganistaEngine>(fs);
+  OrganistaEngine &e = *engine;
+  e.setParams(P.data());
+  for (int k : {36, 43, 48, 55, 60, 64, 67, 72, 79, 84}) e.noteOn(k, 0.8);
+  std::vector<float> L(128), R(128);
+  for (int b = 0; b < (int)(0.5 * fs / 128); b++) e.process(L.data(), R.data(), 128);
+  const auto t0 = std::chrono::steady_clock::now();
+  const int blocks = (int)(4 * fs / 128);
+  for (int b = 0; b < blocks; b++) e.process(L.data(), R.data(), 128);
+  const double share = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() / 4;
+  std::printf("       %d strings: %.2f %% of a core\n", e.voiceCount(), 100 * share);
+  CHECK(share < 0.3);
+}
+
+int main() { return check::run(); }

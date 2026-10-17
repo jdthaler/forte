@@ -233,6 +233,17 @@ result. The pickups' nonlinearity is mild, so there is no oversampling. Ten
 bass voices (the most modes) run at 17 % of real time in Node on an Apple
 laptop; a spread chord at 9 %.
 
+**In C++.** The same engine and model run as WebAssembly on this page (the
+JavaScript is the fallback; `?engine=js` in the address forces it), where
+the views draw from the WebAssembly model and the slow motion replays the
+WebAssembly engine; and as plugins (CLAP, VST3, AU and a standalone app),
+with velocity as the tangent's speed, CC64 as the mute bar, and aftertouch
+and the pitch wheel (up) pressing held keys harder. A key's modes are
+closed-form, so the engine builds them when the key is struck, as here
+(ten keys at once in about 0.2 ms). The WebAssembly plays what the
+JavaScript plays to within 10⁻⁷ of the peak (float32 rounding), and the same
+test suite passes on it. Ten bass voices take about 14 % of a core in C++.
+
 ## What to listen for
 
 `examples/clavier/` (regenerate with `node tools/render-clavier.mjs`):
@@ -272,7 +283,9 @@ clavier/src/clavier-model.js           physics (no audio, no DOM): scale, modes,
 clavier/src/clavier-engine.js          real-time engine (AudioWorklet and Node)
 clavier/src/clavier-params.js          parameters and presets
 clavier/src/clavier-main.js            page wiring and views
-test/clavier-tests.mjs                 node test/clavier-tests.mjs  (23 tests, ~15 s)
+clavier/src/clavier-wasm.js            the C++ engine and model as WebAssembly (clavier/wasm/clavier.wasm)
+native/instruments/clavier/            the C++ port: model, engine, reference (plugins and WebAssembly)
+test/clavier-tests.mjs                 node test/clavier-tests.mjs  (23 tests, ~15 s; FORTE_ENGINE=wasm: on the WebAssembly)
 tools/render-clavier.mjs               node tools/render-clavier.mjs → examples/clavier/
 ```
 

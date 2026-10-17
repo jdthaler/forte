@@ -10,6 +10,85 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-17 — the strings in C++ (step 4, second batch)
+
+### Ribbon Piano 0.4.0
+- **Ported to C++** (`native/instruments/piano`): the string model (closed form, and Rayleigh–Ritz
+  for tapered members, on Eigen) and the modal engine with its felt hammers, shared bridge,
+  dampers and una corda, operation for operation.
+  - **Plugins:** Ribbon Piano as CLAP, VST3, AU v2 and a standalone app: velocity as the hammer's
+    speed, CC64 the damper pedal, CC67 una corda, the thirteen presets, the soundboard and room in
+    the output chain. Each key's modes are built on a worker thread. Ten notes take about 4 % of a
+    core.
+  - **WebAssembly:** 134 KB in `piano/wasm/`. The test suite and the reference pass on it, and it
+    plays what the JavaScript plays to within 2 × 10⁻⁹ of the peak.
+  - **The page runs it**: it builds each key's modes with its own WebAssembly model and sends them
+    with the note, and the info panel, cross-section, partials and slow motion use that model, all
+    falling back to the JavaScript (`?engine=js` forces it).
+
+### Harpsichord 0.3.0
+- **Ported to C++** (`native/instruments/harpsichord`): the strings (modal partials with implicit
+  contacts for the plectra, the damper felt and the buff), the plectra (the cantilever, friction,
+  the slip off the tip) and the soundboard, operation for operation.
+  - **Plugins:** Harpsichord as CLAP, VST3, AU v2 and a standalone app: CC64 holds the keys down
+    as Space does, a note-off's release velocity sets how fast the jacks fall, the thirteen
+    presets. Each key's strings are built on a worker thread when a physics knob changes. Ten keys
+    of 8′ 8′ 4′ take about 5 % of a core.
+  - **WebAssembly:** 92 KB in `harpsichord/wasm/`. The 21-test suite passes on it, and it plays
+    what the JavaScript plays to within 10⁻⁸ of the peak (most presets bit for bit).
+  - **The page runs it**, and its views (the slow-motion pluck, the scale, the comb) call the
+    WebAssembly model, falling back to the JavaScript.
+
+### Electric Grand 0.4.0
+- **Ported to C++** (`native/instruments/grand`): the stretch tuning, the soundboard's modes and
+  residual path, each key's partials, the implicit bridge and the felt hammer, the piezo's RC and
+  the preamp's EQ, operation for operation.
+  - **Plugins:** Electric Grand as CLAP, VST3, AU v2 and a standalone app: velocity, CC64 the
+    damper pedal, the ten presets, the scale, stringing and mount as dropdowns. Keys and the
+    soundboard are built on a worker thread. Ten voices take about 5 % of a core.
+  - **WebAssembly:** 103 KB in `grand/wasm/`. The 31-test suite passes on it, and it plays what the
+    JavaScript plays to within 4 × 10⁻⁹ of the peak.
+  - **The page runs it**; the slow motion and the mode table re-run the strike with the
+    WebAssembly engine and model, falling back to the JavaScript.
+
+### Tangent Clavier 0.4.0
+- **Ported to C++** (`native/instruments/clavier`): the model (the scale and the wound strings'
+  cores, the rubber tip and its wrap, the speaking and yarn modes, the pickups and the tone tabs,
+  the released string's modes) and the engine (the tangent, the anvil and the felt solved together
+  every sample, the tension following the stretch and the wrap, the amplifier).
+  - **Plugins:** Tangent Clavier as CLAP, VST3, AU v2 and a standalone app: velocity as the
+    tangent's speed, CC64 the mute bar, aftertouch and the pitch wheel pressing held keys harder,
+    the nine presets. Ten bass voices take about 14 % of a core.
+  - **WebAssembly:** 106 KB in `clavier/wasm/`. The 23-test suite passes on it, and it plays what
+    the JavaScript plays to float32 rounding (10⁻⁷ of the peak).
+  - **The page runs it**; its views, the slow motion included, draw from the WebAssembly model and
+    engine, falling back to the JavaScript.
+
+### Viola Organista 0.4.0
+- **Ported to C++** (`native/instruments/bowed`): the strings' waveguides with their friction,
+  rosin and torsion, the shared bridge, the soundboard and the treadle. `bowed-tuning.h` is the
+  C++ copy of the tuning table (`node tools/bowed-tuning.mjs --native`), and a test keeps it fresh.
+  - **Bit for bit:** the friction is chaotic, so the last bit matters: the port uses the same seeded
+    grain noise and V8's own fdlibm (`fdlibm.cpp`, from V8's `ieee754.cc`, Sun's and V8's notices
+    kept) for every sin, cos, exp, log and pow. The WebAssembly plays exactly what the JavaScript
+    plays on every reference script.
+  - **Plugins:** Viola Organista as CLAP, VST3, AU v2 and a standalone app: CC64 holds the keys,
+    the mod wheel is the treadle (the swell), aftertouch presses harder, the nine presets. Ten voices take about
+    6 % of a core, 18 % with the dampers lifted.
+  - **WebAssembly** in `bowed/wasm/`; the 29-test suite passes on it. **The page runs it**, and
+    the loop design, voicing and attack map use the same C++, falling back to the JavaScript.
+
+### Forte 0.16.0
+- **`forte/background.h`**: without threads (WebAssembly), per-key data an engine replaced is
+  freed once no voice holds it, instead of kept until the engine goes (memory grew each time a
+  physics knob moved). The vibraphone's and glass armonica's WebAssembly are rebuilt.
+- **Native tests** run as WebAssembly with the 256 KB stack the instruments' modules have:
+  Eigen keeps blocks of up to 128 KB on it.
+- **The engine switch** (C++ | JS) on the Ribbon Piano's page too, which has its own page code:
+  `shared/shell.js` exports `engineSwitch()`.
+- **`plugin.ready`** for the five, so the front page's Plugins section lists them; the template's
+  generated files and WebAssembly carry Forte 0.16.0.
+
 ## 2026-10-17 — an engine switch on the ported pages, the presets in Controls
 
 ### Forte 0.15.0
