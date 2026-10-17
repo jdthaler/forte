@@ -107,6 +107,20 @@ phone the page scrolls above the keys, which stay put; turn it sideways
 for wider keys, with the controls beside the keyboard's tools. Use
 *Share → Add to Home Screen* to run Forte as a full-screen app.
 
+## Plugins
+
+The instruments ported to C++ so far (the Bubble Organ) also come as plugins for a DAW: AU,
+VST3 and CLAP, and a standalone app, for macOS, Windows and Linux. Download them from the
+**Plugins** section of the front page or from the
+[latest release](https://github.com/jdthaler/forte/releases/latest), and follow
+[native/INSTALL.md](native/INSTALL.md). They are unsigned, so a Mac needs one Terminal command
+(`xattr`) before it loads them. The rest follow as they are ported
+([docs/PLUGINS.md](docs/PLUGINS.md)).
+
+To publish a release, run the **release-plugins** workflow from the Actions tab on `main`
+once the `native` workflow is green on main's latest commit. It releases the plugins that run
+built, tagged `plugins-v<Forte version>`; bump Forte's version before the next one.
+
 ## Running locally
 
 There is no build step. Serve the folder over HTTP, since AudioWorklets

@@ -10,9 +10,10 @@ native/core + native/instruments/<slug>   C++: engines and models
         └── WebAssembly   loaded by the site's AudioWorklet, and called by its views
 ```
 
-Status: **steps 0–3 done** (the native setup, see [native/README.md](../native/README.md); every
+Status: **steps 0–3 and 5 done** (the native setup, see [native/README.md](../native/README.md); every
 instrument headless in JavaScript; the shared native core; the template and the Bubble Organ
-ported, their pages running the WebAssembly). Next: step 4, the rest in batches. The decisions below were made by the owner on
+ported, their pages running the WebAssembly; the plugins released from GitHub and linked from the
+front page). Next: step 4, the rest in batches. The decisions below were made by the owner on
 2026-10-16. Follow [CLAUDE.md](../CLAUDE.md) for the workflow (branch, test,
 version, pull request, merge only when asked) and update this file as steps
 land.
@@ -253,7 +254,8 @@ done:
    Check it in Chrome, Firefox and Safari, including on iPad.
 7. Bump the instrument's MINOR version and Forte's for `native/core` and
    `tools/`, log both in the changelog, and update the instrument's README and
-   the guide. In the pull request, ask the owner to listen in a DAW.
+   the guide. Set `plugin.ready` in the registry (step 5). In the pull request, ask the owner
+   to listen in a DAW.
 
 The template went first, so that `tools/new-instrument.mjs` can create new
 instruments natively. Update `docs/INSTRUMENT_GUIDE.md` to match.
@@ -277,18 +279,32 @@ regressions, remove its JavaScript engine and model in a separate pull
 request.
 
 ### 5. Distribution
-1. Add a `release-plugins` workflow, which the owner starts from GitHub's
-   Actions tab. It builds every plugin on all three platforms and attaches
-   them to a GitHub Release, creating the tag itself, since sessions don't
-   push tags.
-   - macOS: ad-hoc signed, with install instructions and the `xattr` command.
-   - Windows and Linux: VST3 and CLAP.
-2. Give each plugin's version its instrument's version.
-3. Add a "Plugins" section to the front page and the README.
+Done (Forte 0.13.0):
+1. The `native` workflow packages each system's plugins (all but the template's, with
+   [native/INSTALL.md](../native/INSTALL.md)) as `Forte-plugins-macos.zip`,
+   `Forte-plugins-windows.zip` and `Forte-plugins-linux.tar.gz`: the `release-<preset>`
+   artifacts. The macOS bundles are ad-hoc signed; INSTALL.md gives the `xattr` command.
+2. The `release-plugins` workflow, which the owner starts from GitHub's Actions tab on main,
+   attaches the archives of main's latest green `native` run to a GitHub Release tagged
+   `plugins-v<Forte version>` (it creates the tag itself, since sessions don't push tags),
+   with notes from `tools/plugin-release.mjs`.
+3. Each plugin's version is its instrument's (`<slug>-info.cmake`, generated).
+4. The front page's Plugins section lists the instruments with `plugin.ready` in the registry
+   and links `releases/latest/download/<archive>`; so does the README.
+
+A port sets `plugin: { code, ready: true }` in `shared/registry.js` (`test/site-tests.mjs`
+checks it against `native/instruments/`), and its plugins ship with the next release.
+
+**Notarised macOS builds** would remove the `xattr` step. They need the owner's Apple
+Developer Program membership (99 USD a year), a *Developer ID Application* certificate and an
+app-specific password or App Store Connect API key, stored as repository secrets; the release
+would then sign with `codesign --options runtime --timestamp` and submit with
+`xcrun notarytool submit --wait` and `xcrun stapler staple`. Windows code signing likewise
+needs a certificate the owner buys.
 
 ### 6. Later
 - A custom plugin editor: a web view reusing the site's controls and views,
   fed from the engine.
 - MIDI Polyphonic Expression (the engines already take per-key pressure).
 - iPad AUv3 inside a container app (needs the Apple Developer Program to
-  share), and notarised macOS builds.
+  share), and notarised macOS builds (step 5 says what they need).

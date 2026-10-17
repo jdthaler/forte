@@ -10,6 +10,28 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-17 — plugin downloads
+
+### Forte 0.13.0
+- **Plugins on the front page** (step 5 of docs/PLUGINS.md): a Plugins section, under the
+  instruments whatever the tab (and at `#plugins`, from a button at the top and a *Plugin*
+  link on each ported instrument's card), names the instruments that have plugins and links
+  the macOS, Windows and Linux downloads of the latest GitHub Release, with how to install
+  them (`native/INSTALL.md`, which also gives the `xattr` command the unnotarised Mac builds
+  need).
+- **`release-plugins` workflow**, started by hand from GitHub's Actions tab on main: it takes
+  the archives that the `native` run of main's latest commit built and validated, and
+  publishes them as a release tagged `plugins-v<Forte version>`, with notes from
+  `tools/plugin-release.mjs` (the instruments and their versions, then the install steps) and
+  their SHA-256 sums.
+- **The `native` workflow packages each system's plugins** as `Forte-plugins-macos.zip`,
+  `Forte-plugins-windows.zip` and `Forte-plugins-linux.tar.gz` (without the template, with
+  `INSTALL.md`), kept 30 days as `release-<preset>` artifacts. Unlike the plain artifacts they
+  keep the executable bits and the Mac bundles' ad-hoc signatures.
+- **`plugin.ready`** in `shared/registry.js` marks an instrument whose port is built as plugins;
+  `test/site-tests.mjs` checks it against `native/instruments/` and checks that the archive
+  names agree across CI, the release and the page.
+
 ## 2026-10-17 — the Bubble Organ in C++, as plugins and on its page
 
 ### Bubble Organ 0.3.0

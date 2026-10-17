@@ -107,6 +107,14 @@ main { max-width: 1180px; margin: 0 auto; padding: 4px max(24px, env(safe-area-i
 }
 .workshop .soon::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--c); margin-right: 6px; vertical-align: 1px; opacity: 0.7; }
 
+/* plugins: the downloads, under the instruments whatever the tab */
+.plugins { max-width: 1180px; margin: 22px auto 0; padding: 0 max(24px, env(safe-area-inset-right)) 0 max(24px, env(safe-area-inset-left)); scroll-margin-top: 64px; }
+.plugins .section-head a, .plugins p a { color: var(--accent); }
+.plugins > p { font-size: 13.5px; margin: 10px 0 0; }
+.downloads { display: flex; gap: 8px; flex-wrap: wrap; }
+.downloads .button { display: inline-flex; flex-direction: column; gap: 1px; padding: 9px 16px; }
+.downloads .button span { color: var(--muted); font: 500 12px ui-monospace, Menlo, monospace; }
+
 .foot { max-width: 1180px; margin: 34px auto 0; padding: 18px max(24px, env(safe-area-inset-right)) max(40px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); display: flex; flex-direction: column; gap: 4px; font-size: 13px; border-top: 1px solid var(--line); }
 .foot a { color: var(--accent); text-decoration: none; }
 
@@ -119,7 +127,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 4px max(24px, env(safe-area-i
   .top-links .button { padding: 6px 12px; font-size: 13.5px; }
   .cats-inner { padding: 8px max(16px, env(safe-area-inset-right)) 8px max(16px, env(safe-area-inset-left)); gap: 5px; }
   .cats a { padding: 5px 11px; font-size: 14px; gap: 6px; }
-  main, .foot { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  main, .foot, .plugins { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
   .section-head { margin-top: 20px; }
   .section-head h2 { font-size: 23px; }
   .grid { grid-template-columns: 1fr; gap: 10px; }
