@@ -117,8 +117,9 @@ VST3 and CLAP, and a standalone app, for macOS, Windows and Linux. Download them
 **Plugins** section of the front page or from the
 [latest release](https://github.com/jdthaler/forte/releases/latest): every instrument together, or
 one at a time (also under **↓ Plugin** next to **How it works** on its page). Then follow
-[native/INSTALL.md](native/INSTALL.md). They are unsigned, so a Mac needs one Terminal command
-(`xattr`) before it loads them. The rest follow as they are ported
+[native/INSTALL.md](native/INSTALL.md): on macOS and Linux, `make install` and `make verify` in
+the unpacked folder do it all. They are unsigned, so a Mac needs one Terminal command (`xattr`,
+which `make install` runs) before it loads them. The rest follow as they are ported
 ([docs/PLUGINS.md](docs/PLUGINS.md)).
 
 Releases publish themselves: after each green `native` run on `main`, the **release-plugins**

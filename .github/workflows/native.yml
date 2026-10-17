@@ -113,6 +113,16 @@ jobs:
           node-version: 22
       - name: Package the plugins for a release
         run: tools/package-plugins.sh ${{ matrix.preset }}
+      - name: The download's Makefile installs and verifies every plugin
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p "$RUNNER_TEMP/try"
+          if [ "$RUNNER_OS" = macOS ]; then ditto -x -k dist/Forte-plugins-macos.zip "$RUNNER_TEMP/try"
+          else tar -xzf dist/Forte-plugins-linux.tar.gz -C "$RUNNER_TEMP/try"; fi
+          cd "$RUNNER_TEMP/try/Forte plugins"
+          make install
+          make verify
+          make uninstall
       - uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.preset }}

@@ -10,6 +10,22 @@ Download every instrument together or one at a time, from <https://forte.jthaler
 or from an instrument's page (↓ Plugin). They are free and unsigned: macOS and Windows will
 warn about them until you allow them, as below.
 
+## The quick way (macOS and Linux)
+
+Unzip or unpack the download, then in Terminal, in the folder it made (type `cd `, drag the
+folder onto the window and press Return):
+
+```bash
+make install    # copy the plugins to your plugin folders; on a Mac, also clear the quarantine
+make verify     # check each one is installed and loads (on a Mac, auval tests the Audio Units)
+```
+
+`make uninstall` removes them again, and `make` alone explains the rest. On a Mac, `make` comes
+with Apple's command line tools: if macOS offers to install them, accept (or run
+`xcode-select --install`). Without make, `bash install.sh install` does the same. The
+standalone apps go in `~/Applications` on a Mac and `~/.local/bin` on Linux. Nothing needs
+`sudo`. The sections below do the same by hand, and say what Windows needs.
+
 ## macOS
 
 Unzip the download, then copy each bundle to its folder. `~/Library` is hidden in Finder:
