@@ -212,7 +212,9 @@ starts new instruments with this port. Learned on the way:
   does), so `<slug>-wasm.js` takes the parameter groups, not the descriptor.
 - A WebAssembly engine takes all the parameters (`fullParams`), not the page's
   `engineParams(P)`, and computes its per-note data itself; the shell sends both.
-- `?engine=js` in a page's address forces the JavaScript engine, for comparing by ear.
+- The engine switch at the top of a ported page's Controls panel picks C++ or JavaScript, for
+  comparing by ear (remembered for every page; `?engine=js` or `?engine=wasm` in the address
+  overrides it). It goes when the JavaScript engines do.
 - The smoke-test plugin is retired; its instrument stays as the plugin tests' test instrument.
 
 **The Bubble Organ: done (Bubble Organ 0.3.0, Forte 0.12.0).** `native/instruments/bubbles` has

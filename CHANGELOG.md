@@ -10,6 +10,17 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-17 — an engine switch on the ported pages
+
+### Forte 0.15.0
+- **Engine switch:** every page with a C++ build (Bubble Organ, Vibraphone, Carillon, Glass
+  Armonica, Gong Keyboard, and each port to come) has an **Engine: C++ | JavaScript** switch at
+  the top of its Controls panel (under More controls on a phone). Picking the other engine
+  reloads the page with it, views included, and every page remembers the choice. If the C++
+  fails to load, the switch shows JavaScript with a note saying so. `?engine=js` or
+  `?engine=wasm` in the address still overrides it. It is for the beta, and goes when the
+  JavaScript engines do.
+
 ## 2026-10-17 — modal bars, bells and plates in C++ (step 4, first batch)
 
 ### Vibraphone 0.3.0

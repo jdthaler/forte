@@ -323,8 +323,9 @@ native/instruments/<slug>/reference.json                     the JavaScript's so
 ```
 
 The descriptor's `wasm` field names the build; the shell sends it to the worklet, which runs it
-and falls back to the JavaScript engine if it cannot (`?engine=js` in the page's address forces
-the JavaScript). A WebAssembly engine takes all the parameters and computes its own per-note
+and falls back to the JavaScript engine if it cannot. While the JavaScript engines remain, the
+page also gets an engine switch (C++ or JavaScript) at the top of its Controls panel, remembered
+for every page; `?engine=js` or `?engine=wasm` in the address overrides it. A WebAssembly engine takes all the parameters and computes its own per-note
 data (`forte/background.h`), so `engineParams` and `noteData` stay the JavaScript engine's.
 WebAssembly has no threads, so that data is built in place on a key's first note; where that
 takes milliseconds, the page builds it with its own WebAssembly model and sends it with the note,
