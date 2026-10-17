@@ -19,5 +19,8 @@ export const INSTRUMENT = {
   // big bowls can no longer speak.
   modWheel: { param: 'speed', max: 2 * DEFAULTS.speed },
   engine: { name: 'ArmonicaEngine', module: new URL('./glass-engine.js', import.meta.url).href },
+  // the same physics in C++ (native/instruments/glass), built as WebAssembly: the page runs it
+  // when it can, the JavaScript engine otherwise
+  wasm: { name: 'ArmonicaWasmEngine', module: new URL('./glass-wasm.js', import.meta.url).href, binary: new URL('../wasm/glass.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room' },
 };

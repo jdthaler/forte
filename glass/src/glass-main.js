@@ -1,10 +1,16 @@
 // glass-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName } from '../../shared/shell.js';
+import { createShell, noteName, useWasm } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './glass-instrument.js';
-import { bowl, freeLines, ringRatio, speakingThreshold, regulation, rimSpeed, transport } from './glass-model.js';
+import * as jsModel from './glass-model.js';
 import { MIC, TRACE } from './glass-engine.js';
+import { wasmModel } from './glass-wasm.js';
+
+// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
+// physics as the engine, in C++), the JavaScript one until then or if it can't load.
+let phys = jsModel;
+if (useWasm()) wasmModel().then((m) => { phys = m; update(); }, (err) => console.warn(`glass: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
 
 const $ = (s) => document.querySelector(s);
 const TAU = 2 * Math.PI;
@@ -31,14 +37,14 @@ const shell = createShell({
 // ---- model-side numbers for the focused bowl ----------------------------------
 function update() {
   const P = shell.P;
-  model = bowl(focus, P);
+  model = phys.bowl(focus, P);
   const m2 = model.modes[0];
   spectrum.set(0, model.modes.flatMap((m) => [m.f1, m.f2].map((f) => ({ f, color: famColor(m.n), alpha: 0.35 + 0.6 * Math.min(1, m.rad / m2.rad / 30) }))));
   $('#focus-name').textContent = noteName(focus);
   $('#focus-name-2').textContent = noteName(focus);
   $('#modes').innerHTML = '<tr><th>family</th><th>f (Hz)</th><th>ratio</th><th>ring</th><th>split (Hz)</th><th>Bryan B</th><th>T60 (s)</th><th>radiation</th><th>water</th></tr>'
     + model.modes.map((m) => `<tr><td><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${famColor(m.n)};margin-right:6px"></i>(${m.n},0)</td>`
-      + `<td>${m.f.toFixed(1)}</td><td>${(m.f / m2.f).toFixed(3)}</td><td>${ringRatio(m.n).toFixed(3)}</td><td>${(m.f2 - m.f1).toFixed(2)}</td>`
+      + `<td>${m.f.toFixed(1)}</td><td>${(m.f / m2.f).toFixed(3)}</td><td>${phys.ringRatio(m.n).toFixed(3)}</td><td>${(m.f2 - m.f1).toFixed(2)}</td>`
       + `<td>${m.bryan.toFixed(3)}</td><td>${(6.91 / m.sigma).toFixed(1)}</td><td>${(20 * Math.log10(m.rad / m2.rad)).toFixed(0)} dB</td>`
       + `<td>${m.load > 1e-6 ? `${(1200 * Math.log2(m.f / m.fEmpty)).toFixed(0)} ¢` : '–'}</td></tr>`).join('');
   info();
@@ -46,16 +52,16 @@ function update() {
 
 function info() {
   const P = shell.P, b = model, m2 = b.modes[0];
-  const Nc = speakingThreshold(focus, P, b), V = rimSpeed(focus, P.speed);
+  const Nc = phys.speakingThreshold(focus, P, b), V = phys.rimSpeed(focus, P.speed);
   const Nnow = state && state.key === focus && state.touch ? state.N : null;
   const rows = [
     ['bowl', `${(200 * b.a / 2.54).toFixed(2)} in across · wall ${(b.h * 1e3).toFixed(2)} mm · ${(b.mass * 1e3).toFixed(0)} g`],
     ['rim speed', `${(V * 100).toFixed(1)} cm/s at ${P.speed.toFixed(2)} rev/s`],
     ['speaks above', Number.isFinite(Nc) ? `${Nc.toFixed(2)} N of finger force` : 'never (friction does not weaken)'],
-    ['finger now', Nnow !== null ? `${Nnow.toFixed(2)} N · ${(Nnow / Nc).toFixed(1)} × threshold` : `${(regulation(focus) * P.press * (0.6 + 0.8 * P.velocity)).toFixed(2)} N for the computer keys`],
+    ['finger now', Nnow !== null ? `${Nnow.toFixed(2)} N · ${(Nnow / Nc).toFixed(1)} × threshold` : `${(phys.regulation(focus) * P.press * (0.6 + 0.8 * P.velocity)).toFixed(2)} N for the computer keys`],
     ['pattern drift', `(1 − B)Ω: the free (2,0) pattern turns at ${((1 - m2.bryan) * P.speed).toFixed(2)} rev/s`],
     ['warble', `${(4 * P.speed).toFixed(1)} Hz, ±${((m2.f2 - m2.f1) / 2).toFixed(2)} Hz (the doublet passing under the finger)`],
-    ['lab coupling', `γ = n(1 − B)Ω = ${transport(m2, P.speed).toFixed(1)} s⁻¹`],
+    ['lab coupling', `γ = n(1 − B)Ω = ${phys.transport(m2, P.speed).toFixed(1)} s⁻¹`],
   ];
   $('#info').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
 }
@@ -135,7 +141,7 @@ function drawContact() {
   ctx.clearRect(0, 0, w, h);
   const st = state && state.key === focus ? state : null;
   const padL = 34, padB = 16, y0 = h - padB - 4, top = 8;
-  const V = rimSpeed(focus, shell.P.speed);
+  const V = phys.rimSpeed(focus, shell.P.speed);
   let vmax = 1.6 * V;
   if (st) for (let i = 0; i < TRACE; i++) vmax = Math.max(vmax, Math.abs(st.trS[i]) * 1.05);
   const X = (i) => padL + ((w - padL - 6) * i) / (TRACE - 1), Y = (v) => y0 - ((y0 - top) * v) / vmax;
@@ -157,7 +163,7 @@ function drawZoom() {
   const { ctx, w, h } = fit($('#zoom'));
   ctx.clearRect(0, 0, w, h);
   if (!model) return;
-  const m2 = model.modes[0], rot = shell.P.speed, lines = freeLines(m2, rot);
+  const m2 = model.modes[0], rot = shell.P.speed, lines = phys.freeLines(m2, rot);
   const span = Math.max(4, 1.6 * Math.max(...lines.map((l) => Math.abs(l.f - m2.f))), 1.2 * (m2.f2 - m2.f1));
   const fLo = m2.f - span, fHi = m2.f + span, padL = 30, padB = 16, top = 6;
   const X = (f) => padL + ((w - padL - 6) * (f - fLo)) / (fHi - fLo), Y = (d) => top + ((h - padB - top) * (-20 - d)) / 80;
