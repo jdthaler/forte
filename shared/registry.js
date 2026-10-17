@@ -179,7 +179,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'quantum', name: 'Quantum Keyboard', section: 'phenomena', ready: true, version: '0.3.1', trim: 9.5,
-    plugin: { code: 'Qntm' },
+    plugin: { code: 'Qntm', ready: true },
     tagline: 'Each key a wavepacket in a potential well: notes that collapse, return an octave up as the packet splits, and revive on the beat.',
     physics: 'Schrödinger equation · quantum revivals',
     accent: '#73e2b8',
