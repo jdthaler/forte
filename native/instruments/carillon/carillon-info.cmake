@@ -2,3 +2,4 @@
 set(FORTE_NAME "Carillon")
 set(FORTE_VERSION "0.2.0")
 set(FORTE_AU_SUBTYPE "Carl")
+set(FORTE_ACCENT "#d9b45f")

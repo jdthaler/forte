@@ -2,3 +2,4 @@
 set(FORTE_NAME "Vibraphone")
 set(FORTE_VERSION "0.3.0")
 set(FORTE_AU_SUBTYPE "Vibe")
+set(FORTE_ACCENT "#5fd0c8")

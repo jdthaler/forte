@@ -2,3 +2,4 @@
 set(FORTE_NAME "Harpsichord")
 set(FORTE_VERSION "0.3.0")
 set(FORTE_AU_SUBTYPE "Hrps")
+set(FORTE_ACCENT "#f4d39b")

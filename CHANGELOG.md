@@ -12,7 +12,7 @@ tagged; this changelog and the commit titles record them.
 
 ## 2026-10-17 — make install and make verify in the plugin downloads
 
-### Forte 0.21.0
+### Forte 0.22.0
 - **A Makefile in each macOS and Linux download**, one instrument's or all of them:
   `make install` copies the plugins to the plugin folders (the standalones to `~/Applications`
   or `~/.local/bin`) and, on a Mac, clears the download quarantine and makes Logic, MainStage
@@ -26,6 +26,20 @@ tagged; this changelog and the commit titles record them.
   `install.sh` on a stand-in download. Windows has no make, so its archives keep INSTALL.md's
   steps.
 
+## 2026-10-17 — a window for the plugins: controls and a keyboard
+
+### Forte 0.21.0
+- **The plugins have a window**: every format (CLAP, VST3, AU and the standalone app) shows the
+  instrument's controls in their groups, the presets, the controls a player reaches for above
+  the keys, and a keyboard to play with the mouse, a finger or the computer's keys (Z…/ and
+  Q…], ◀ ▶ or ← → for the octave, Space for the pedal), as on the instrument's page and in its
+  colour. Keys played by MIDI light up, and the host's automation moves the sliders. The
+  standalone apps no longer need a MIDI keyboard. Moving a slider records automation in a DAW
+  (gesture begin and end); double-clicking one sets its default.
+- It is a web view (choc, ISC): WKWebView on macOS, WebView2 on Windows, WebKitGTK on Linux
+  (the Linux plugins now need WebKitGTK 4.1, `native/INSTALL.md`). The page is
+  `native/plugin/editor.html`, built into each plugin; `tests/plugin-tests.cpp` drives its calls.
+- `<slug>-info.cmake` carries the page's colour (`FORTE_ACCENT`) for the window.
 ## 2026-10-17 — the front page's overlays, and each plugin in its own dialog
 
 ### Forte 0.20.0
