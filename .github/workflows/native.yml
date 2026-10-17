@@ -104,26 +104,15 @@ jobs:
             !native/build/${{ matrix.preset }}/plugins/**/*.pdb
           retention-days: 14
 
-      # What a release ships (the release-plugins workflow attaches these): the instruments'
-      # plugins without the template's, with native/INSTALL.md, in one archive that keeps the
-      # bundles' executable bits and the macOS signatures (the artifact above loses both).
+      # What a release ships (the release-plugins workflow attaches these): every instrument's
+      # plugins together and each one's alone, without the template's, with native/INSTALL.md,
+      # in archives that keep the bundles' executable bits and the macOS signatures (the
+      # artifact above loses both).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Package the plugins for a release
-        run: |
-          plugins=native/build/${{ matrix.preset }}/plugins
-          root=native/build/pkg; pkg="$root/Forte plugins"
-          rm -rf "$root"; mkdir -p "$pkg" dist
-          # The bundles wherever the generator put them (Visual Studio nests them in CLAP/Release/,
-          # VST3/, Standalone-*/Release/), and Linux's standalone, which has no extension.
-          { find "$plugins" \( -name '*.clap' -o -name '*.vst3' -o -name '*.component' -o -name '*.app' -o -name '*.exe' \) -prune -print
-            [ "${{ matrix.preset }}" != linux ] || find "$plugins" -mindepth 1 -maxdepth 1 -type f ! -name '*.*' -perm -u+x
-          } | grep -v '/Template Bars[^/]*$' | while IFS= read -r p; do cp -R "$p" "$pkg"/; done
-          cp native/INSTALL.md "$pkg"/
-          ls -la "$pkg"
-          case "${{ matrix.preset }}" in
-            macos) ditto -c -k --sequesterRsrc --keepParent "$pkg" dist/Forte-plugins-macos.zip ;;
-            windows) (cd "$root" && 7z a -tzip ../../../dist/Forte-plugins-windows.zip "Forte plugins") ;;
-            linux) tar -czf dist/Forte-plugins-linux.tar.gz -C "$root" "Forte plugins" ;;
-          esac
+        run: tools/package-plugins.sh ${{ matrix.preset }}
       - uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.preset }}
