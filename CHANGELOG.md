@@ -78,12 +78,25 @@ tagged; this changelog and the commit titles record them.
 ### Tonewheel Organ 0.4.4
 - Its "real-time budget" timing test is skipped on CI, as the Ribbon Piano's is.
 
-### Forte 0.20.0
+### Forte 0.21.0
 - **Native parameters:** a default that sits off its parameter's step (the pyrophone's flame at ⅓
   on a 0.001 step) reads back as itself, so a saved state reloads exactly (clap-validator's state
   reproducibility test).
 - **`plugin.ready`** for the four, so they are on the front page's Plugins section and in the next
-  release; the template's generated files and WebAssembly carry Forte 0.20.0.
+  release; the template's generated files and WebAssembly carry Forte 0.21.0.
+## 2026-10-17 — the front page's overlays, and each plugin in its own dialog
+
+### Forte 0.20.0
+- **Plugin and How it works are separate**: an instrument's ↓ Plugin button (and `…/#plugin`)
+  opens a dialog of its own with the downloads, and How it works holds just the notes. On
+  phones, where the ↓ Plugin button doesn't fit, a line at the top of How it works opens it.
+- **The front page offers every instrument's plugins together only**: the per-instrument rows
+  are gone (each instrument's download is on its page), and the downloads move from the bottom
+  of the page into an **All Plugins** overlay (also at `#plugins`).
+- **Credits is an overlay** on the front page too (also at `#credits`), rendering
+  `docs/PRIOR_ART.md` as `credits/` does; `credits/` stays for links from elsewhere.
+- **About Forte shows the app's icon**, and the cards' **Play** buttons light up, lift and nudge
+  their arrow forward under the pointer.
 
 ## 2026-10-17 — the reeds and pickups in C++ (step 4, third batch)
 

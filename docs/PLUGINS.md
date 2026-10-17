@@ -325,7 +325,7 @@ Separate sessions can work in parallel once step 3 is done.
      waits for the worklet's engine message before the first note (Forte 0.19.0).
    - Native tests run as WebAssembly see `CI` through `native/tests/node-env.js`.
 4. Self-oscillators: Huygens, arc, pyrophone, wind harp. **Done** (Huygens Keyboard 0.4.0,
-   Singing Arc 0.2.0, Pyrophone 0.4.0, Wind Harp 0.2.0, Forte 0.20.0), in one pull request with a
+   Singing Arc 0.2.0, Pyrophone 0.4.0, Wind Harp 0.2.0, Forte 0.21.0), in one pull request with a
    commit per instrument. All four play what the JavaScript plays bit for bit, their seeded noise,
    turbulence and gusts included, so no reference needed statistics. In C++, ten voices take 2 %
    of a core (Huygens), 2–3 % (pyrophone) and 10 % (wind harp); the arc's six lamps 20 %.
@@ -342,7 +342,7 @@ Separate sessions can work in parallel once step 3 is done.
      passed whole: `shared/wasm.js` splits blocks into 128s.
    - Test hooks that hold a voice across `process()` need live getters over a stable pointer, and
      engines the Node tests drop can be freed with a `FinalizationRegistry`.
-   - A parameter whose default sits off its step must read back as itself (Forte 0.20.0).
+   - A parameter whose default sits off its step must read back as itself (Forte 0.21.0).
 5. Table-driven: black hole, quantum, stars, springs.
 6. The organ.
 
@@ -367,9 +367,9 @@ Done (Forte 0.13.0; per instrument and automatic in 0.17.0):
    creates the tag itself (`plugins-v<Forte version>`, then `-2`, `-3`…), since sessions don't
    push tags, and writes the notes. It can also be started from the Actions tab.
 3. Each plugin's version is its instrument's (`<slug>-info.cmake`, generated).
-4. `shared/plugins.js` names the archives. The front page's Plugins section links every
-   instrument's together and each one's alone; an instrument's page has them under ↓ Plugin,
-   at the top of How it works (`…/#plugin`).
+4. `shared/plugins.js` names the archives. The front page's All Plugins overlay links every
+   instrument's together; an instrument's page has its own under ↓ Plugin, in a dialog of its
+   own (`…/#plugin`; on phones, a line at the top of How it works opens it).
 
 A port sets `plugin: { code, ready: true }` in `shared/registry.js` (`test/site-tests.mjs`
 checks it against `native/instruments/`), and its plugins are released when it is merged.
