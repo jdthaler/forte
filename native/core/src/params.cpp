@@ -139,35 +139,50 @@ bool parseValue(const ParamInfo &p, const char *text, double &v) {
   const int count = p.formatCount ? p.formatCount : 1;
   const FormatSegment *segs = p.formatCount ? p.format : &kPlain;
   auto clamp = [&](double x) { return x < p.min ? p.min : x > p.max ? p.max : x; }; // not snapped: the text's own precision
-  // First a segment whose prefix and suffix the text has and whose range holds the value read;
-  // then, any reading of the number.
+  // First a segment that writes the text as it is (prefix, suffix, decimals) and whose range holds the value
+  // read; then such a segment whose edge the text rounds to (a value written as "10.0 /s" just
+  // below where "10 /s" starts reads back into its own segment); then one with the prefix and
+  // suffix alone (typed text: "2 m"); then, any reading of the number.
   double fallback = NAN;
-  for (int pass = 0; pass < 2; pass++) for (int i = 0; i < count; i++) {
+  for (int pass = 0; pass < 4; pass++) for (int i = 0; i < count; i++) {
     const FormatSegment &s = segs[i];
     double lo = i ? segs[i - 1].upTo : p.min, hi = s.upTo < p.max ? s.upTo : p.max;
     size_t np = std::strlen(s.prefix);
     const char *t = text;
     if (np && !std::strncmp(t, s.prefix, np)) t += np;
-    else if (np && pass == 0) continue;
+    else if (np && pass < 3) continue;
     if (s.decimals < 0) {
-      if (pass == 0 && !*t) { v = clamp(s.offset); return true; }
+      if ((pass == 0 || pass == 2) && !*t) { v = clamp(s.offset); return true; }
       continue;
     }
     double n;
     const char *rest = readNumber(t, n);
     if (!rest) continue;
+    const char *dot = (const char *)std::memchr(t, '.', (size_t)(rest - t));
+    const int decimals = dot ? (int)(rest - dot - 1) : 0;
     while (*rest == ' ') rest++;
     const char *suffix = s.suffix;
     while (*suffix == ' ') suffix++;
-    if (pass == 0 && *suffix && std::strncmp(rest, suffix, std::strlen(suffix))) continue;
+    const bool hasSuffix = !(*suffix && std::strncmp(rest, suffix, std::strlen(suffix)));
+    const bool plus = *t == '+';
+    if (pass < 2 && (std::strcmp(rest, suffix) || !(s.exp || decimals == s.decimals) || (plus && !s.plus) || (!plus && s.plus && n >= 0))) continue; // as formatValue writes it
+    if (pass == 2 && !hasSuffix) continue;
     if (s.scale == 0) { // a number that stays put over the segment: if it is this one, the middle of the segment
-      if (pass == 0 && std::fabs(n - s.offset) <= 0.5 * std::pow(10.0, -s.decimals)) { v = clamp(std::isfinite(hi) ? (lo + hi) / 2 : lo); return true; }
+      if ((pass == 0 || pass == 2) && std::fabs(n - s.offset) <= 0.5 * std::pow(10.0, -s.decimals)) { v = clamp(std::isfinite(hi) ? (lo + hi) / 2 : lo); return true; }
       continue;
     }
     double x = s.log10 ? std::pow(10.0, (n - s.offset) / s.scale) : (n - s.offset) / s.scale;
     if (!std::isfinite(x)) continue;
-    if (pass == 0 && x >= lo - 1e-9 * std::fabs(lo) && x <= hi + 1e-9 * std::fabs(hi)) { v = clamp(x); return true; }
-    if (std::isnan(fallback)) fallback = x;
+    const double first = i ? std::nextafter(lo, INFINITY) : lo; // a segment holds (lo, hi]
+    if ((pass == 0 || pass == 2) && x >= lo - 1e-9 * std::fabs(lo) && x <= hi + 1e-9 * std::fabs(hi)) { v = clamp(std::min(std::max(x, first), hi)); return true; }
+    if (pass == 1 && !s.exp) { // within rounding of one of the segment's edges: that edge
+      for (double edge : {first, hi}) {
+        if (!std::isfinite(edge) || (s.log10 && !(edge > 0))) continue;
+        const double ne = s.log10 ? s.scale * std::log10(edge) + s.offset : s.scale * edge + s.offset;
+        if (std::fabs(n - ne) <= 0.5000001 * std::pow(10.0, -s.decimals)) { v = clamp(edge); return true; }
+      }
+    }
+    if (pass == 3 && std::isnan(fallback)) fallback = x;
   }
   if (std::isnan(fallback)) return false;
   v = clamp(fallback);

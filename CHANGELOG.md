@@ -10,6 +10,39 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-17 — the Bubble Organ in C++, as plugins and on its page
+
+### Bubble Organ 0.3.0
+- **Ported to C++** (`native/instruments/bubbles`, step 3 of docs/PLUGINS.md): the model (heat
+  flow, losses, the surface's image, rise and glide) and the engine (nozzles, seeded brooks, the
+  bubble pool), operation for operation.
+  - **Plugins:** Bubble Organ as CLAP, VST3, AU v2 and a standalone app: CC64 holds the keys,
+    the mod wheel raises the rate, aftertouch releases more bubbles, the gas and the liquid are
+    dropdowns, and the twelve presets are on the Preset parameter. Ten keys at 40 bubbles/s take
+    about 5 % of a core.
+  - **WebAssembly:** 51 KB, committed in `bubbles/wasm/`. The test suite passes on it
+    (`FORTE_ENGINE=wasm`), and it plays what the JavaScript plays to within 10⁻¹⁰: the same
+    seeded random numbers, so the same brooks.
+  - **The page runs it**: its worklet plays the WebAssembly engine and its views call the
+    WebAssembly model, both falling back to the JavaScript (`?engine=js` forces it). The tank
+    and the latest bubble's waveform look the same with either (the tank now compares a
+    bubble's depth with the knob's to a tolerance, since the WebAssembly's messages are float32).
+
+### Forte 0.12.0
+- **`shared/wasm.js`**: an instrument's `messages(m, engine)` may gather several of its C++
+  engine's messages into one for its page (returning null until it has one).
+- **`native/web/engine-api.cpp`**: `forte_engine(handle)`, so an instrument's own exports can
+  reach its engine (the bubble organ's test hooks). The template's WebAssembly is rebuilt.
+- **Plugins' parameter text reads back as it was written** (clap-validator's round trip failed
+  on the bubble organ's rate: "10.0 /s" just below 10 read back as 10, "10 /s"):
+  `tools/gen-native-params.mjs` finds where each text format ends by bisection, to the last
+  double, rather than halfway between samples; `parseValue` first looks for the segment that
+  writes the text exactly (suffix, decimals, a "+"), then for one whose edge it rounds to, then
+  reads typed text as before. A new native test checks the round trip on either side of every
+  boundary of every instrument's parameters.
+- The native tests build `<slug>-tests.cpp` for each ported instrument; native/README says how
+  to build where gitlab.com can't be reached.
+
 ## 2026-10-16 — the template in C++, as plugins and on its page
 
 ### Forte 0.11.0

@@ -1,12 +1,16 @@
 // bubbles-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName } from '../../shared/shell.js';
+import { createShell, noteName, useWasm } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './bubbles-instrument.js';
-import {
-  KEY_LO, KEY_HI, ROW, HYDRO, P_ATM, G, keyFreq, nozzleX, nozzleEnv, keyRadius, acoustics, riseDistance,
-  ambient, liquidOf, gasOf, peakPressure, snapGain,
-} from './bubbles-model.js';
+import * as jsModel from './bubbles-model.js';
+import { KEY_LO, KEY_HI, ROW, HYDRO, P_ATM, G, keyFreq, nozzleX, liquidOf, gasOf } from './bubbles-model.js';
+import { wasmModel } from './bubbles-wasm.js';
+
+// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
+// physics as the engine, in C++), the JavaScript one until then or if it can't load.
+let model = jsModel;
+if (useWasm()) wasmModel().then((m) => { model = m; update(); }, (err) => console.warn(`bubbles: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
 
 const $ = (s) => document.querySelector(s);
 const TAU = 2 * Math.PI;
@@ -45,13 +49,13 @@ const shell = createShell({
 
 // ---- what the keyboard sounds like now: each key's bubble, its ring and its damping -------------------
 function update() {
-  const P = shell.P, env = nozzleEnv(P);
+  const P = shell.P, env = model.nozzleEnv(P);
   rows = [];
   for (let k = KEY_LO; k <= KEY_HI; k++) {
-    const R = keyRadius(k, P, env), a = acoustics(R, env, {});
+    const R = model.keyRadius(k, P, env), a = model.acoustics(R, env, {});
     rows.push({ key: k, R, ...a });
   }
-  const r = rows[focus - KEY_LO] || rows[0], p0 = ambient(P);
+  const r = rows[focus - KEY_LO] || rows[0], p0 = model.ambient(P);
   const shift = cents(r.fd, keyFreq(r.key));
   $('#tank-read').textContent = `p₀ ${(p0 / P_ATM).toFixed(2)} atm · ${noteName(r.key)} ${Math.abs(shift) < 0.5 ? 'in tune' : `${shift > 0 ? '+' : '−'}${Math.abs(shift) < 100 ? Math.abs(shift).toFixed(0) + ' ¢' : (Math.abs(shift) / 100).toFixed(1) + ' semitones'}`} · R ${(1000 * r.R).toFixed(2)} mm`;
   $('#tank-read').title = 'The liquid pressure at the nozzles, how far the last key played sounds from its note, and its bubble’s radius';
@@ -109,9 +113,9 @@ animate(() => {
   for (let i = bubbles.length - 1; i >= 0; i--) {
     const B = bubbles[i], age = t - B.t0;
     if (age < 0) continue;
-    const z = riseDistance(age, B.U), d = B.d0 - z;
+    const z = model.riseDistance(age, B.U), d = B.d0 - z;
     if (d <= B.R) { pops.push({ x: nozzleX(B.key), t, f: B.f }); bubbles.splice(i, 1); continue; }
-    if (B.d0 !== depth) { if (age > 3) bubbles.splice(i, 1); continue; } // the nozzles moved: these are elsewhere
+    if (Math.abs(B.d0 - depth) > 1e-6 * depth) { if (age > 3) bubbles.splice(i, 1); continue; } // the nozzles moved: these are elsewhere (the WebAssembly's messages carry float32)
     const yy = Y(d);
     if (yy < ys - 2) { bubbles.splice(i, 1); continue; }
     const r = Math.max(1.2, 2 * B.R * s);
@@ -161,7 +165,7 @@ animate(() => {
   ctx.strokeStyle = css('--grid'); ctx.beginPath(); ctx.moveTo(padL, padT + phh / 2); ctx.lineTo(w - padR, padT + phh / 2); ctx.stroke();
   if (!wave || !wave.count) return;
   const P = shell.P, x = wave.buf, N = 1024, T = N * wave.dt;
-  const A = peakPressure(liquidOf(P), wave.vel) * snapGain(wave.fd, P.snap / 1000) / (wave.m || 1);
+  const A = model.peakPressure(liquidOf(P), wave.vel) * model.snapGain(wave.fd, P.snap / 1000) / (wave.m || 1);
   let pk = 1e-9; for (const v of x) pk = Math.max(pk, Math.abs(v));
   const top = Math.max(pk, A) * 1.08, Xt = (tt) => padL + (pw * tt) / T, Yp = (p) => padT + phh / 2 - (phh / 2) * (p / top);
   // axes

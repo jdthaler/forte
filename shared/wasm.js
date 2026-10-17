@@ -58,8 +58,8 @@ function stubs(module) {
 const cString = (x, p) => { const b = new Uint8Array(x.memory.buffer); let s = ''; while (b[p]) s += String.fromCharCode(b[p++]); return s; };
 
 // The engine class for an instrument: { id, name, groups, pageOnly?, binary: () => URL of its
-// .wasm }. `messages`, if given, turns an engine's posted Message ({ type, key, values }) into
-// what its page expects.
+// .wasm }. `messages(m, engine)`, if given, turns an engine's posted Message ({ type, key,
+// values }) into what its page expects, or into nothing (null) while it gathers several.
 export function wasmEngine(I, { messages } = {}) {
   const params = nativeParams(I);
   let x = null;
@@ -108,7 +108,8 @@ export function wasmEngine(I, { messages } = {}) {
         for (let p; (p = x.forte_message(this.h));) {
           const v = new DataView(x.memory.buffer, p, 128);
           const count = v.getUint16(4, true), values = new Float32Array(x.memory.buffer, p + 8, count).slice();
-          this.post(messages({ type: v.getUint16(0, true), key: v.getInt16(2, true), values }));
+          const m = messages({ type: v.getUint16(0, true), key: v.getInt16(2, true), values }, this);
+          if (m) this.post(m);
         }
       }
     }

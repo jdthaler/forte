@@ -18,7 +18,8 @@ core/                               the engine contract (engine.h), parameters (
 plugin/                             the CLAP plugin every instrument shares
 web/engine-api.cpp                  the engine contract as C functions, for the WebAssembly
 instruments/<slug>/                 a ported instrument: engine, model, generated tables (the
-                                    template so far; docs/INSTRUMENT_GUIDE.md, "The native port")
+                                    template and the bubble organ so far; docs/INSTRUMENT_GUIDE.md,
+                                    "The native port")
 tests/                              native unit tests (CTest); tests/smoke, a test instrument
 ```
 
@@ -33,6 +34,10 @@ cmake --preset linux        # or macos, windows
 cmake --build --preset linux
 ctest --preset linux
 ```
+
+If git can't reach gitlab.com (some sandboxes), fetch Eigen's archive at the pinned commit
+(`https://gitlab.com/libeigen/eigen/-/archive/<commit>/eigen.tar.gz`), unpack it and configure
+with `-DFETCHCONTENT_SOURCE_DIR_EIGEN=<that folder>`.
 
 The plugins land in `build/<preset>/plugins/`. On Linux, the standalone needs ALSA and JACK
 headers (`libasound2-dev libjack-jackd2-dev`) and X11 (`libx11-dev`).

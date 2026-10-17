@@ -7,15 +7,18 @@ if (EMSCRIPTEN) # run in Node; the repository's package.json makes .js an ES mod
 endif()
 add_test(NAME core COMMAND forte_tests)
 
-if (TARGET forte_template)
-  add_executable(forte_template_tests template-tests.cpp)
-  target_link_libraries(forte_template_tests PRIVATE forte_template)
-  if (EMSCRIPTEN)
-    set_target_properties(forte_template_tests PROPERTIES SUFFIX ".cjs")
-    target_link_options(forte_template_tests PRIVATE -sALLOW_MEMORY_GROWTH=1 -sENVIRONMENT=node)
+# each ported instrument's own native tests: <slug>-tests.cpp
+foreach(slug template bubbles)
+  if (TARGET forte_${slug})
+    add_executable(forte_${slug}_tests ${slug}-tests.cpp)
+    target_link_libraries(forte_${slug}_tests PRIVATE forte_${slug})
+    if (EMSCRIPTEN)
+      set_target_properties(forte_${slug}_tests PROPERTIES SUFFIX ".cjs")
+      target_link_options(forte_${slug}_tests PRIVATE -sALLOW_MEMORY_GROWTH=1 -sENVIRONMENT=node)
+    endif()
+    add_test(NAME ${slug} COMMAND forte_${slug}_tests)
   endif()
-  add_test(NAME template COMMAND forte_template_tests)
-endif()
+endforeach()
 
 if (FORTE_PLUGINS)
   # the shared plugin driven as a host drives it, on a test instrument (tests/smoke) with a mod

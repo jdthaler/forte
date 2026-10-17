@@ -12,7 +12,7 @@
 // manufacturer is Frte), for its native plugin (docs/PLUGINS.md). Never change it: hosts
 // find saved projects' plugins by it. The VST3 class ids are in native/ids.json.
 
-export const FORTE_VERSION = '0.11.0';
+export const FORTE_VERSION = '0.12.0';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
@@ -183,7 +183,7 @@ export const INSTRUMENTS = [
     accent: '#73e2b8',
   },
   {
-    id: 'bubbles', name: 'Bubble Organ', section: 'phenomena', ready: true, version: '0.2.1', trim: 1.5,
+    id: 'bubbles', name: 'Bubble Organ', section: 'phenomena', ready: true, version: '0.3.0', trim: 1.5,
     plugin: { code: 'Bubl' },
     tagline: 'Every note a bubble ringing at its Minnaert frequency; depth, gas and pressure retune it.',
     physics: 'Bubble acoustics · Minnaert resonance',
