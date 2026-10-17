@@ -34,7 +34,7 @@ land.
 | Repository | **This repo, under `native/`** | The C++ sits next to the site it feeds; one CI, one changelog, one pull request per port. Dependencies pinned. |
 | Built WebAssembly | **Committed**, like the demo `.m4a` files | The site keeps needing no build step to serve or to run locally. CI rebuilds with a pinned Emscripten and fails if the committed files are stale. |
 | Pilot | **The template, then the Bubble Organ** | The template proves the pipeline on trivial physics and becomes the native starting point for new instruments; the bubble organ exercises dropdowns, presets, the hold pedal and the mod wheel. |
-| Plugin UI | **The DAW's generic panel** in phase 1, then **a web view** (Forte 0.20.0) | No custom window to build or maintain while the physics is ported. Since Forte 0.20.0 every format has a window: the instrument's controls and a playable keyboard in a web view (`native/plugin/editor.html`), so the standalone apps can be played without a MIDI keyboard. The site's views can join it later. |
+| Plugin UI | **The DAW's generic panel** in phase 1, then **a web view** (Forte 0.21.0) | No custom window to build or maintain while the physics is ported. Since Forte 0.21.0 every format has a window: the instrument's controls and a playable keyboard in a web view (`native/plugin/editor.html`), so the standalone apps can be played without a MIDI keyboard. The site's views can join it later. |
 
 **The framework, changed.** The plan first chose iPlug2. Checked at the start (iPlug2 master,
 August 2026), it has no Linux support at all: its README lists macOS, iOS, Windows and the web,
@@ -348,9 +348,9 @@ Done (Forte 0.13.0; per instrument and automatic in 0.17.0):
    creates the tag itself (`plugins-v<Forte version>`, then `-2`, `-3`…), since sessions don't
    push tags, and writes the notes. It can also be started from the Actions tab.
 3. Each plugin's version is its instrument's (`<slug>-info.cmake`, generated).
-4. `shared/plugins.js` names the archives. The front page's Plugins section links every
-   instrument's together and each one's alone; an instrument's page has them under ↓ Plugin,
-   at the top of How it works (`…/#plugin`).
+4. `shared/plugins.js` names the archives. The front page's All Plugins overlay links every
+   instrument's together; an instrument's page has its own under ↓ Plugin, in a dialog of its
+   own (`…/#plugin`; on phones, a line at the top of How it works opens it).
 
 A port sets `plugin: { code, ready: true }` in `shared/registry.js` (`test/site-tests.mjs`
 checks it against `native/instruments/`), and its plugins are released when it is merged.
@@ -363,7 +363,7 @@ would then sign with `codesign --options runtime --timestamp` and submit with
 needs a certificate the owner buys.
 
 ### 6. Later
-- The plugin window (Forte 0.20.0: `native/plugin/editor.h`, `editor.html`) shows the controls
+- The plugin window (Forte 0.21.0: `native/plugin/editor.h`, `editor.html`) shows the controls
   and a keyboard. Still to come: the site's views (the modes, the waveforms), fed from the
   engine's messages, and each page's own layout of its controls (`showIf`, hints).
 - MIDI Polyphonic Expression (the engines already take per-key pressure).

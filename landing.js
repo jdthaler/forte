@@ -1,10 +1,12 @@
 // landing.js — the front page: tabs for the four kinds of instrument (from the
 // registry's SECTIONS; the URL's #hash remembers the choice), instrument cards
-// with demo playback, the About dialog, and a background of standing waves
-// (a string's normal modes, slowly beating).
+// with demo playback, three overlays (About, All Plugins and Credits, also at
+// #about, #plugins and #credits), and a background of standing waves (a
+// string's normal modes, slowly beating).
 
 import { INSTRUMENTS, SECTIONS, FORTE_VERSION } from './shared/registry.js';
-import { withPlugins, downloads } from './shared/plugins.js';
+import { withPlugins } from './shared/plugins.js';
+import { renderMarkdown } from './shared/markdown.js';
 
 const $ = (s) => document.querySelector(s);
 const attr = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -13,10 +15,11 @@ let examples = {};
 let playing = null;
 
 const ALL = 'all';
-let shown = ALL; // the tab, kept while the hash is #about or #plugins
+const SHEETS = ['about', 'plugins', 'credits']; // the overlays, by id and hash
+let shown = ALL; // the tab, kept while the hash names an overlay
 const current = () => {
   const h = location.hash.slice(1);
-  if (h === 'about' || h === 'plugins') return shown;
+  if (SHEETS.includes(h)) return shown;
   return (shown = SECTIONS.some((s) => s.id === h) ? h : ALL);
 };
 const ready = (sec) => INSTRUMENTS.filter((i) => i.section === sec && i.ready);
@@ -39,7 +42,7 @@ function card(inst) {
       <p>${inst.tagline}</p>
       <div class="tags">${inst.physics}</div>
       <div class="actions">
-        <span class="play" aria-hidden="true">Play →</span>
+        <a class="play" href="${inst.id}/" tabindex="-1" aria-hidden="true">Play <span>→</span></a>
         ${demo ? `<button type="button" data-src="examples/${inst.id}/${demo.file}" title="${attr(demo.title)}">▶ Listen</button>` : ''}
         <a href="${inst.id}/#about" title="The physics of the ${inst.name}">How it works</a>
         ${inst.plugin?.ready ? `<a href="${inst.id}/#plugin" title="Download the ${inst.name} as a plugin for your DAW">Plugin</a>` : ''}
@@ -56,7 +59,7 @@ function render() {
     const soon = list.filter((i) => !i.ready);
     return `
       <section class="section" id="sec-${sec.id}" aria-labelledby="h-${sec.id}">
-        <div class="section-head"><h2 id="h-${sec.id}">${sec.title}</h2><p>${sec.blurb.replace('prior art and credits', '<a href="credits/">prior art and credits</a>')}</p></div>
+        <div class="section-head"><h2 id="h-${sec.id}">${sec.title}</h2><p>${sec.blurb.replace('prior art and credits', '<a href="credits/" data-sheet="credits">prior art and credits</a>')}</p></div>
         <div class="grid">${list.filter((i) => i.ready).map(card).join('')}</div>
         ${soon.length ? `<p class="workshop"><span class="muted">In the workshop:</span> ${soon.map((i) => `<span class="soon" style="--c: ${i.accent}" title="${attr(i.tagline)}">${i.name}</span>`).join(' ')}</p>` : ''}
       </section>`;
@@ -91,38 +94,70 @@ cats.addEventListener('click', (e) => {
 });
 window.addEventListener('popstate', render);
 window.addEventListener('hashchange', () => {
-  if (location.hash === '#about') openAbout();
-  else if (location.hash === '#plugins') toPlugins();
-  else render();
+  const h = location.hash.slice(1);
+  if (SHEETS.includes(h)) openSheet(h); else render();
 });
 
-// Plugins (also at …/#plugins): the instruments ported to C++, downloaded from the latest
-// GitHub Release (the release-plugins workflow). The hash leaves the tabs as they are.
+// The overlays: dialogs over the page, each with its hash while it is open.
+function openSheet(id) {
+  const d = $(`#${id}`);
+  if (id === 'credits') loadCredits();
+  for (const o of SHEETS) if (o !== id) $(`#${o}`).close();
+  if (!d.open) {
+    if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+    d.querySelector('.forte-notes-body').focus({ preventScroll: true });
+  }
+  if (location.hash !== `#${id}`) history.replaceState(null, '', `#${id}`);
+}
+for (const id of SHEETS) {
+  const d = $(`#${id}`);
+  d.querySelector('.forte-notes-close').addEventListener('click', () => d.close());
+  d.addEventListener('click', (e) => { if (e.target === d) d.close(); }); // the backdrop
+  d.addEventListener('close', () => { if (location.hash === `#${id}`) history.replaceState(null, '', location.pathname + location.search); });
+}
+// anything marked data-sheet opens its overlay (a link still works in a new tab)
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('[data-sheet]');
+  if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+  e.preventDefault();
+  openSheet(a.dataset.sheet);
+});
+
+// All Plugins: every instrument ported to C++ in one download from the latest GitHub Release
+// (the release-plugins workflow); each instrument's own download is on its page.
 const plugins = withPlugins();
 const names = plugins.map((i) => `the <a href="${i.id}/">${i.name}</a>`);
 $('#plugin-list').innerHTML = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0] ?? '';
-$('#plugin-rows').innerHTML = plugins.map((i) => `
-  <li style="--c: ${i.accent}"><a class="name" href="${i.id}/">${i.name}</a><span class="ver">v${i.version}</span>
-    <span class="get">${downloads(i.id).map((d) => `<a href="${d.url}" title="${attr(`${i.name}: ${d.formats} for ${d.name}`)}">${d.name}</a>`).join('')}</span></li>`).join('');
-function toPlugins() { $('#plugins').scrollIntoView(); }
 
-// About (also at …/#about)
-const about = $('#about');
-function openAbout() {
-  if (about.open) return;
-  if (about.showModal) about.showModal(); else about.setAttribute('open', '');
-  about.querySelector('.forte-notes-body').focus({ preventScroll: true });
+// Credits: docs/PRIOR_ART.md, rendered as on credits/ (credits/credits.js), on first opening
+const REPO = 'https://github.com/jdthaler/forte/blob/main/';
+const credits = $('#credits'), cbody = credits.querySelector('.forte-notes-body');
+let creditsLoaded = null;
+function loadCredits() {
+  creditsLoaded ??= fetch('docs/PRIOR_ART.md')
+    .then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))))
+    .then((md) => {
+      const { html, sections } = renderMarkdown(md, { base: `${REPO}docs/`, idPrefix: 'c-', skip: ['Contents'] });
+      cbody.querySelector('.forte-notes-text').innerHTML = html;
+      cbody.querySelector('.forte-notes-toc').innerHTML = sections.map((s) => `<a href="#${s.id}">${attr(s.text)}</a>`).join('');
+    })
+    .catch(() => {
+      creditsLoaded = null; // try again next time
+      cbody.querySelector('.forte-notes-text').innerHTML = `<p class="forte-notes-status">The credits didn't load. Read them on <a href="${REPO}docs/PRIOR_ART.md">GitHub</a>.</p>`;
+    });
 }
-$('#about-open').addEventListener('click', openAbout);
-$('#about-close').addEventListener('click', () => about.close());
-about.addEventListener('click', (e) => { if (e.target === about) about.close(); }); // the backdrop
-about.addEventListener('close', () => { if (location.hash === '#about') history.replaceState(null, '', location.pathname + location.search); });
-if (location.hash === '#about') openAbout();
+// the contents' own links (#c-…) scroll within the credits
+cbody.addEventListener('click', (e) => {
+  const a = e.target.closest('a[href^="#c-"]');
+  if (!a) return;
+  e.preventDefault();
+  cbody.querySelector(a.getAttribute('href'))?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+});
 
 $('#forte-version').textContent = FORTE_VERSION;
 $('#about-version').textContent = FORTE_VERSION;
 render();
-if (location.hash === '#plugins') toPlugins();
+if (SHEETS.includes(location.hash.slice(1))) openSheet(location.hash.slice(1));
 fetch('examples/index.json').then((r) => (r.ok ? r.json() : {})).then((j) => { examples = j; render(); }).catch(() => {});
 
 // --- background: the first few modes of a plucked string, drifting ---------
