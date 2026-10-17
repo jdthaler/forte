@@ -2,3 +2,4 @@
 set(FORTE_NAME "Singing Arc")
 set(FORTE_VERSION "0.2.0")
 set(FORTE_AU_SUBTYPE "SArc")
+set(FORTE_ACCENT "#ffe36b")

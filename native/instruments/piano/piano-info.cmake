@@ -2,3 +2,4 @@
 set(FORTE_NAME "Ribbon Piano")
 set(FORTE_VERSION "0.4.1")
 set(FORTE_AU_SUBTYPE "Ribn")
+set(FORTE_ACCENT "#5aa9ff")

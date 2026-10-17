@@ -2,3 +2,4 @@
 set(FORTE_NAME "Pyrophone")
 set(FORTE_VERSION "0.4.0")
 set(FORTE_AU_SUBTYPE "Pyro")
+set(FORTE_ACCENT "#ff7a45")

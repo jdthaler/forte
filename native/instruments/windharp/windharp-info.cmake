@@ -2,3 +2,4 @@
 set(FORTE_NAME "Wind Harp")
 set(FORTE_VERSION "0.2.0")
 set(FORTE_AU_SUBTYPE "WHrp")
+set(FORTE_ACCENT "#a8e6a1")

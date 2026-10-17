@@ -2,3 +2,4 @@
 set(FORTE_NAME "Tine Piano")
 set(FORTE_VERSION "0.4.0")
 set(FORTE_AU_SUBTYPE "Tine")
+set(FORTE_ACCENT "#ef5a4a")

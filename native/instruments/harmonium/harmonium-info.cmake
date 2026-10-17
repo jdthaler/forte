@@ -2,3 +2,4 @@
 set(FORTE_NAME "Free-Reed Organ")
 set(FORTE_VERSION "0.3.0")
 set(FORTE_AU_SUBTYPE "Harm")
+set(FORTE_ACCENT "#ff9fb0")

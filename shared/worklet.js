@@ -1,4 +1,5 @@
-// worklet.js — the one AudioWorklet processor every Forte instrument can use.
+// worklet.js — the one AudioWorklet processor every Forte instrument can use (and, at the end,
+// 'forte-limiter', the output chain's limiter).
 // The page adds its engine module first (which sets globalThis[EngineName]),
 // then this file, and creates
 //   new AudioWorkletNode(ctx, 'forte-processor', { processorOptions: { engine: 'EngineName' }, … })
@@ -19,6 +20,7 @@
 //   engine.post(msg)              set by this wrapper: send a message to the page
 
 import { runGuarded } from './guard.js';
+import { Limiter } from './limiter.js';
 
 const fine = !!globalThis.performance?.now; // some browsers' audio threads only have Date.now (1 ms ticks)
 const now = () => (fine ? globalThis.performance.now() : Date.now());
@@ -84,3 +86,24 @@ class ForteProcessor extends AudioWorkletProcessor {
 }
 
 registerProcessor('forte-processor', ForteProcessor);
+
+// The output chain's limiter (shared/limiter.js; shared/chain.js makes the node): stereo in,
+// stereo out, processorOptions = the chain's limiter settings.
+class LimiterProcessor extends AudioWorkletProcessor {
+  constructor(options) {
+    super();
+    this.limiter = new Limiter(options.processorOptions || {}, sampleRate);
+  }
+
+  process(inputs, outputs) {
+    const inp = inputs[0], out = outputs[0];
+    if (!out?.length) return true;
+    const L = out[0], R = out[1] ?? this.spare ?? (this.spare = new Float32Array(L.length));
+    if (!inp?.length) { L.fill(0); R.fill(0); } // nothing playing into it: silence
+    else { L.set(inp[0]); R.set(inp[1] ?? inp[0]); }
+    this.limiter.process(L, R, L.length);
+    return true;
+  }
+}
+
+registerProcessor('forte-limiter', LimiterProcessor);

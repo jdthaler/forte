@@ -35,7 +35,7 @@ land.
 | Repository | **This repo, under `native/`** | The C++ sits next to the site it feeds; one CI, one changelog, one pull request per port. Dependencies pinned. |
 | Built WebAssembly | **Committed**, like the demo `.m4a` files | The site keeps needing no build step to serve or to run locally. CI rebuilds with a pinned Emscripten and fails if the committed files are stale. |
 | Pilot | **The template, then the Bubble Organ** | The template proves the pipeline on trivial physics and becomes the native starting point for new instruments; the bubble organ exercises dropdowns, presets, the hold pedal and the mod wheel. |
-| Plugin UI | **The DAW's generic panel** in phase 1 | No custom window to build or maintain while the physics is ported. A web-based editor reusing the site's views can come later. |
+| Plugin UI | **The DAW's generic panel** in phase 1, then **a web view** (Forte 0.21.0) | No custom window to build or maintain while the physics is ported. Since Forte 0.21.0 every format has a window: the instrument's controls and a playable keyboard in a web view (`native/plugin/editor.html`), so the standalone apps can be played without a MIDI keyboard. The site's views can join it later. |
 
 **The framework, changed.** The plan first chose iPlug2. Checked at the start (iPlug2 master,
 August 2026), it has no Linux support at all: its README lists macOS, iOS, Windows and the web,
@@ -325,7 +325,7 @@ Separate sessions can work in parallel once step 3 is done.
      waits for the worklet's engine message before the first note (Forte 0.19.0).
    - Native tests run as WebAssembly see `CI` through `native/tests/node-env.js`.
 4. Self-oscillators: Huygens, arc, pyrophone, wind harp. **Done** (Huygens Keyboard 0.4.0,
-   Singing Arc 0.2.0, Pyrophone 0.4.0, Wind Harp 0.2.0, Forte 0.21.0), in one pull request with a
+   Singing Arc 0.2.0, Pyrophone 0.4.0, Wind Harp 0.2.0, Forte 0.23.0), in one pull request with a
    commit per instrument. All four play what the JavaScript plays bit for bit, their seeded noise,
    turbulence and gusts included, so no reference needed statistics. In C++, ten voices take 2 %
    of a core (Huygens), 2–3 % (pyrophone) and 10 % (wind harp); the arc's six lamps 20 %.
@@ -342,7 +342,7 @@ Separate sessions can work in parallel once step 3 is done.
      passed whole: `shared/wasm.js` splits blocks into 128s.
    - Test hooks that hold a voice across `process()` need live getters over a stable pointer, and
      engines the Node tests drop can be freed with a `FinalizationRegistry`.
-   - A parameter whose default sits off its step must read back as itself (Forte 0.21.0).
+   - A parameter whose default sits off its step must read back as itself (Forte 0.23.0).
 5. Table-driven: black hole, quantum, stars, springs.
 6. The organ.
 
@@ -382,8 +382,9 @@ would then sign with `codesign --options runtime --timestamp` and submit with
 needs a certificate the owner buys.
 
 ### 6. Later
-- A custom plugin editor: a web view reusing the site's controls and views,
-  fed from the engine.
+- The plugin window (Forte 0.21.0: `native/plugin/editor.h`, `editor.html`) shows the controls
+  and a keyboard. Still to come: the site's views (the modes, the waveforms), fed from the
+  engine's messages, and each page's own layout of its controls (`showIf`, hints).
 - MIDI Polyphonic Expression (the engines already take per-key pressure).
 - iPad AUv3 inside a container app (needs the Apple Developer Program to
   share), and notarised macOS builds (step 5 says what they need).

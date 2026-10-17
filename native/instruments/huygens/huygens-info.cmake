@@ -2,3 +2,4 @@
 set(FORTE_NAME "Huygens Keyboard")
 set(FORTE_VERSION "0.4.0")
 set(FORTE_AU_SUBTYPE "Huyg")
+set(FORTE_ACCENT "#ff8a3d")

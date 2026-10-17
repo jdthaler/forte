@@ -3,17 +3,22 @@
 set(FORTE_PLUGIN_DIR ${CMAKE_CURRENT_LIST_DIR}/../plugin)
 set(FORTE_WEB_DIR ${CMAKE_CURRENT_LIST_DIR}/../web)
 
-# forte_add_plugin(<slug> NAME <name> VERSION <x.y.z> AU_SUBTYPE <code> INSTRUMENT <library>)
+# forte_add_plugin(<slug> NAME <name> VERSION <x.y.z> AU_SUBTYPE <code> INSTRUMENT <library> [ACCENT <#rrggbb>])
 #
 # <library> holds the instrument's engine and its InstrumentInfo (it defines
-# forte_instrument()). Makes forte_<slug>_clap, _vst3, _auv2 (macOS) and _standalone into
+# forte_instrument()). ACCENT, the window's colour, defaults to FORTE_ACCENT (<slug>-info.cmake). Makes forte_<slug>_clap, _vst3, _auv2 (macOS) and _standalone into
 # ${CMAKE_BINARY_DIR}/plugins, and forte_<slug>_all to build them all. Plugin ids:
 # net.jthaler.forte.<slug> (CLAP, bundles), AU manufacturer Frte (docs/PLUGINS.md).
 function(forte_add_plugin slug)
-  cmake_parse_arguments(A "" "NAME;VERSION;AU_SUBTYPE;INSTRUMENT" "" ${ARGN})
+  cmake_parse_arguments(A "" "NAME;VERSION;AU_SUBTYPE;INSTRUMENT;ACCENT" "" ${ARGN})
+  if (NOT A_ACCENT)
+    set(A_ACCENT "${FORTE_ACCENT}")
+  endif()
   set(impl forte_${slug}_impl)
   add_library(${impl} STATIC ${FORTE_PLUGIN_DIR}/entry-impl.cpp)
   target_link_libraries(${impl} PUBLIC forte_plugin ${A_INSTRUMENT})
+  string(REPLACE "#" "" rgb "${A_ACCENT}") # (a # can't go through a compiler's command line)
+  target_compile_definitions(${impl} PRIVATE "FORTE_ACCENT_RGB=\"${rgb}\"")
   make_clapfirst_plugins(
     TARGET_NAME forte_${slug}
     IMPL_TARGET ${impl}
