@@ -10,6 +10,29 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-17 — 6 ms less between a key and its sound
+
+### Forte 0.21.1
+- **The pages' limiter no longer delays the sound:** Web Audio's DynamicsCompressorNode looks
+  6 ms ahead, so every note on every page came out 6 ms late, whatever played it (computer
+  keys, on-screen keys or MIDI). The pages now limit with `shared/limiter.js`, the plugins'
+  limiter (`native/core/src/limiter.cpp`) in JavaScript, run as the `forte-limiter` processor
+  in `shared/worklet.js`: the same curve and makeup gain, so levels below the threshold are
+  unchanged, and no look-ahead, so a loud chord's first 2 ms may overshoot the threshold as in
+  the plugins. A browser that can't make the processor falls back to the old node.
+- **Output latency on the Audio on button:** its tooltip gives the browser's audio buffer plus
+  the audio device's latency, as the browser reports them, to tell a slow setup (Bluetooth
+  headphones, a large system buffer) from the page.
+- **A Bluetooth warning:** when the browser reports 80 ms or more between the page and the
+  speakers (Bluetooth headphones and speakers add 100–200 ms), a page says so once per visit
+  and suggests wired ones. The front page's About Forte and the README's Playing section say
+  the same.
+
+### Huygens Keyboard 0.3.4
+- Its worklet test picks the instrument's processor by name now that `shared/worklet.js`
+  registers two.
+
+
 ## 2026-10-17 — a window for the plugins: controls and a keyboard
 
 ### Forte 0.21.0

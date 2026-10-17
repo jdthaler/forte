@@ -29,6 +29,24 @@ export function chainGains(chain, P, trim = 1) {
   return g;
 }
 
+// The limiter: shared/limiter.js in the 'forte-limiter' processor that shared/worklet.js
+// registers (the page adds that module before building the chain). Web Audio's
+// DynamicsCompressorNode, the fallback, delays everything 6 ms to look ahead.
+function createLimiter(ctx, L) {
+  try {
+    return new AudioWorkletNode(ctx, 'forte-limiter', {
+      numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2],
+      channelCount: 2, channelCountMode: 'explicit', channelInterpretation: 'speakers',
+      processorOptions: L,
+    });
+  } catch {
+    const c = ctx.createDynamicsCompressor();
+    c.threshold.value = L.threshold; c.knee.value = L.knee; c.ratio.value = L.ratio;
+    c.attack.value = L.attack; c.release.value = L.release;
+    return c;
+  }
+}
+
 // Build the chain on `ctx` after `node`. Returns the nodes, `tap` (the signal before the
 // body and room, for an analyser) and apply(P, trim), which ramps the gains (20 ms).
 export function createChain(ctx, node, chain, destination = ctx.destination) {
@@ -42,10 +60,7 @@ export function createChain(ctx, node, chain, destination = ctx.destination) {
     tap.connect(dry).connect(bus);
     tap.connect(body).connect(bodyGain).connect(bus);
   }
-  const master = ctx.createGain(), limiter = ctx.createDynamicsCompressor();
-  const L = { ...LIMITER, ...chain.limiter };
-  limiter.threshold.value = L.threshold; limiter.knee.value = L.knee; limiter.ratio.value = L.ratio;
-  limiter.attack.value = L.attack; limiter.release.value = L.release;
+  const master = ctx.createGain(), limiter = createLimiter(ctx, { ...LIMITER, ...chain.limiter });
   bus.connect(master);
   let roomGain = null;
   if (chain.room) {
