@@ -305,6 +305,20 @@ talking arc howls on its own.
   quick table for the starting note serves, and while a knob moves the old
   bank stays, as a real one would.
 - **Randomness** (flicker, hiss, the singer's breath) is seeded.
+- **In C++**: the same engine and model run as WebAssembly on this page (the
+  JavaScript is the fallback; `?engine=js` in the address forces it) and as
+  plugins (CLAP, VST3, AU and a standalone app), where CC64 latches the keys
+  (Hold) and the mod wheel raises the arc current. The page cuts the bank
+  with the WebAssembly model and sends it with each note, so the audio
+  thread never cuts a capacitor (about 6 ms a key in WebAssembly too); a
+  plugin cuts every key's on a worker thread as soon as a knob it depends on
+  settles, and until a key's is ready it plays that key's last one, or
+  Kelvin's if it never had one. The WebAssembly plays what the JavaScript
+  plays bit for bit (the same seeded noise, V8's own `exp`, `sin`, `cos` and
+  `pow`), cuts the same capacitors to the last bit, and the same test suite
+  passes on it. Six singing lamps take about 20 % of a core in C++, as in the
+  JavaScript: the circuit's Newton steps at four times the sample rate cost
+  the same in either.
 
 ## What to listen for
 
@@ -359,7 +373,9 @@ arc/src/arc-voice.js                the talking arc's singer (glottal pulse and 
 arc/src/arc-engine.js               real-time engine (AudioWorklet and Node)
 arc/src/arc-params.js               parameters and presets
 arc/src/arc-main.js                 page wiring and views
-test/arc-tests.mjs                  node test/arc-tests.mjs (30 tests, about 6 s)
+arc/src/arc-wasm.js                 the C++ engine and model as WebAssembly (arc/wasm/arc.wasm)
+native/instruments/arc/             the C++ port: model, singer, engine, generated tables, reference (plugins and WebAssembly)
+test/arc-tests.mjs                  node test/arc-tests.mjs (30 tests, about 6 s; FORTE_ENGINE=wasm: on the WebAssembly)
 tools/render-arc.mjs                node tools/render-arc.mjs → examples/arc/
 ```
 

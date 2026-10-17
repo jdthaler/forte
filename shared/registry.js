@@ -150,7 +150,7 @@ export const INSTRUMENTS = [
   },
   {
     id: 'arc', name: 'Singing Arc', section: 'experimental', ready: true, version: '0.1.1', trim: 7,
-    plugin: { code: 'SArc' },
+    plugin: { code: 'SArc', ready: true },
     after: "William Duddell's singing arc (1900)",
     tagline: 'An electric arc lamp that sings: its negative resistance drives an LC circuit, and the arc itself is the loudspeaker.',
     physics: 'Negative resistance · LC oscillator · plasma heating',
