@@ -56,9 +56,9 @@ Every other idea only adds, and can come before or after 1.0.
 
 | Idea | Size | Notes |
 |------|------|-------|
-| Velocity curve (soft, normal, hard) | S | In progress. |
-| Sostenuto (CC66) and soft pedal (CC67) | S–M | In progress. |
-| Pitch bend on more instruments | S each | In progress. Only the clavier bends today. **Before 1.0** for each mapping. |
+| Velocity curve (soft, normal, hard) | S | Done, for the next release. |
+| Sostenuto (CC66) and soft pedal (CC67) | S–M | Done, for the next release. |
+| Pitch bend on more instruments | S each | The clavier, organ, Singing Arc and Pyrophone bend (the last three in the next release). Others to come. **Before 1.0** for each mapping. |
 | MPE (per-note pitch bend and slide) | M | The engines already take per-key pressure. |
 | Alternative tunings and temperaments | M | Equal, well-tempered, meantone, just intonation; Scala files; A4 other than 440 Hz. |
 | Transpose and octave controls on every page and plugin | S | |
