@@ -74,8 +74,9 @@ instrument's equivalent (hold, mute bar, Leslie speed), on every
 instrument except the black hole, where there is nothing to hold.
 **Enable MIDI** connects a MIDI keyboard (Chrome, Edge and Firefox; no
 browser on iPhone or iPad has Web MIDI, so the button is hidden there),
-including velocity, the sustain pedal, aftertouch and, where it means
-something, the mod wheel. Once MIDI is on, every other instrument page
+including velocity (with a Soft, Normal or Hard curve), the sustain,
+sostenuto and soft pedals, aftertouch and, where it means something, the
+mod wheel and pitch bend. Once MIDI is on, every other instrument page
 turns it on by itself.
 
 **Latency:** play through wired headphones or speakers. Bluetooth ones

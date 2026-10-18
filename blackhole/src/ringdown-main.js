@@ -8,7 +8,7 @@ import { wasmModel } from './blackhole-wasm.js';
 import { createChain } from '../../shared/chain.js';
 import { drawPlane, drawKerr, WaveView, Lazy } from './ringdown-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, wheelValue } from '../../shared/midi.js';
+import { startMIDI, resumeMIDI, wheelValue, touched, SOFT_PEDAL, createSostenuto } from '../../shared/midi.js';
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 
@@ -70,12 +70,16 @@ function applyMix() { if (audio) audio.chain.apply(P, trimGain('blackhole')); } 
 
 async function noteOn(key, vel = INSTRUMENT.keyVelocity) { // computer keys: keyVelocity (1)
   if (key < KEY_LO || key > KEY_HI) return;
+  down.add(key); sost.strike(key);
   keyboardView.set(key, true);
   const a = await startAudio();
   a.node.port.postMessage({ type: 'noteOn', key, velocity: vel }); // the engine builds the voice the views show
   setFocus(key, vel);
 }
-function noteOff(key) { keyboardView.set(key, false); post({ type: 'noteOff', key }); }
+function noteOff(key) { down.delete(key); if (!sost.holds(key)) release(key); }
+function release(key) { keyboardView.set(key, false); post({ type: 'noteOff', key }); }
+const down = new Set(), sost = createSostenuto(); // the keys down; CC66
+let soft = false;                                 // CC67
 
 const LOW = ['KeyZ', 'KeyS', 'KeyX', 'KeyD', 'KeyC', 'KeyV', 'KeyG', 'KeyB', 'KeyH', 'KeyN', 'KeyJ', 'KeyM', 'Comma', 'KeyL', 'Period', 'Semicolon', 'Slash'];
 const LOW_LBL = ['z', 's', 'x', 'd', 'c', 'v', 'g', 'b', 'h', 'n', 'j', 'm', ',', 'l', '.', ';', '/'];
@@ -116,10 +120,12 @@ function initMIDI() {
 }
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data, cmd = st & 0xf0;
-  if (cmd === 0x90 && d2 > 0) noteOn(d1, INSTRUMENT.midiVelocity(d2 / 127));
+  if (cmd === 0x90 && d2 > 0) noteOn(d1, INSTRUMENT.midiVelocity(touched(d2 / 127) * (soft ? SOFT_PEDAL : 1)));
   else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) noteOff(d1);
   else if (cmd === 0xb0 && d1 === 1) setParam(INSTRUMENT.modWheel, wheelValue(ALL_PARAMS.find((q) => q.id === INSTRUMENT.modWheel), d2)); // at rest: the default spin
-  else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) post({ type: 'panic' });
+  else if (cmd === 0xb0 && d1 === 66) { for (const k of sost.set(d2 >= 64, down)) if (!down.has(k)) release(k); }
+  else if (cmd === 0xb0 && d1 === 67) soft = d2 >= 64;
+  else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) { down.clear(); sost.clear(); soft = false; post({ type: 'panic' }); }
 }
 
 const keyboardView = createKeyboard($('#keyboard'), { lo: KEY_LO, hi: KEY_HI, onDown: (k, f) => noteOn(k, 0.3 + 0.7 * f), onUp: noteOff });
@@ -259,7 +265,7 @@ function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = fal
 $('#start').addEventListener('click', (e) => { startAudio(); e.currentTarget.blur(); });
 $('#midi-btn').addEventListener('click', (e) => { initMIDI(); e.currentTarget.blur(); });
 resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
-$('#panic').addEventListener('click', (e) => { post({ type: 'panic' }); e.currentTarget.blur(); });
+$('#panic').addEventListener('click', (e) => { down.clear(); sost.clear(); soft = false; post({ type: 'panic' }); e.currentTarget.blur(); });
 for (const b of document.querySelectorAll('.tab')) b.addEventListener('click', () => {
   document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x === b));
   wave.mode = b.dataset.mode; wave.touch(); b.blur();

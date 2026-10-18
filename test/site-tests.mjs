@@ -10,6 +10,7 @@ import { INSTRUMENTS, SECTIONS, FORTE_VERSION, TEMPLATE } from '../shared/regist
 import { ASSETS, notes } from '../tools/plugin-release.mjs';
 import { readNotes, parseNote, plan, bump } from '../tools/release.mjs';
 import { compare, stateOf, contractPath, STATES } from '../tools/contract.mjs';
+import { TOUCH, SOFT_PEDAL, touch, touched, createSostenuto, wheelValue } from '../shared/midi.js';
 import { LATEST, SYSTEMS, archive, downloads, withPlugins } from '../shared/plugins.js';
 
 let failures = 0;
@@ -91,6 +92,33 @@ test('every ported instrument has a contract, and a saved state at its version f
     const file = `${STATES}${i.id}-${i.version}.state`;
     assert.ok(existsSync(new URL(file, R)), `${file} (node tools/contract.mjs --save-states)`);
   }
+});
+
+console.log('MIDI (shared/midi.js)');
+test('the velocity curve and the soft pedal match the plugins\' (plugin.cpp kTouchGamma, kSoftPedal)', () => {
+  const cpp = read('native/plugin/plugin.cpp');
+  assert.ok(cpp.includes(`kTouchGamma[] = {${TOUCH.map((t) => t.gamma).join(', ')}}`), 'the same γ');
+  assert.ok(cpp.includes(`kTouchChoices[] = {${TOUCH.map((t) => `"${t.name}"`).join(', ')}}`), 'the same names');
+  assert.ok(cpp.includes(`kSoftPedal = ${SOFT_PEDAL};`), 'the same soft pedal');
+  assert.equal(touch(), 1); // Normal, until the player picks another
+  assert.equal(touched(0.5), 0.5);
+});
+test('the sostenuto pedal holds the keys sounding as it goes down, and only those', () => {
+  const s = createSostenuto();
+  assert.equal(s.holds(60), false);         // not down: a key let go ends
+  assert.deepEqual(s.set(true, [60, 64]), []);
+  assert.equal(s.holds(60), true);          // caught: held
+  assert.equal(s.holds(72), false);         // struck after: not caught
+  s.strike(64); assert.equal(s.holds(64), true);
+  s.strike(64);                             // struck again while held: a hand has it
+  assert.deepEqual([...s.keys()], [60]);
+  assert.deepEqual(s.set(false, []), [60]); // coming up lets go of what it held
+  assert.equal(s.holds(60), false);
+});
+test('the mod wheel at rest is the parameter\'s default, fully up its maximum', () => {
+  const p = { min: 0, max: 10, def: 2 };
+  assert.equal(wheelValue(p, 0), 2);
+  assert.equal(wheelValue(p, 127), 10);
 });
 
 console.log('registry');

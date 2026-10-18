@@ -99,6 +99,22 @@ TEST("arc: the plugin's engine cuts each key's capacitor off the audio thread, a
   }
 }
 
+TEST("arc: pitch bend slides the coil's core: the note follows, two semitones at the wheel's ends") {
+  const double fs = 48000;
+  auto P = defaults();
+  const int key = 67;
+  for (double v : {1.0, -1.0}) {
+    auto e = std::make_unique<ArcEngine>(fs);
+    e->setParams(P.data());
+    waitFor(*e, key);
+    e->noteOn(key, 0.8);
+    e->bend(v);
+    const auto L = render(*e, (int)(0.75 * fs));
+    const double want = keyFreq(key) * std::pow(2.0, 2 * v / 12), f = freqAt(L, want, 14400, 36000, fs);
+    CHECK(std::fabs(1200 * std::log2(f / want)) < 10);
+  }
+}
+
 TEST("arc: a key not cut yet still sounds (Kelvin's capacitor), and the bank follows the parameters") {
   const double fs = 48000;
   auto P = defaults();

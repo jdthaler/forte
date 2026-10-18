@@ -51,7 +51,7 @@ double Singer::next() {
   t += 1 / fs;
   if (std::fmod(t * fs, 64) < 1) { double F[3]; formantsAt(t, F); setFormants(F); } // every 64 samples
   vib += (TWO_PI * 5.5) / fs;
-  const double f = f0 * (1 + 0.006 * fdlibm::sin(vib));
+  const double f = f0 * bend * (1 + 0.006 * fdlibm::sin(vib));
   const double dp = f / fs;
   ph += dp;
   if (ph >= 1) ph -= 1;

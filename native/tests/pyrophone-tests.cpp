@@ -81,6 +81,24 @@ TEST("pyrophone: a note played before its tube's tuning is built waits for it, t
   CHECK(pk > 0.05 && pk < 0.5);
 }
 
+TEST("pyrophone: pitch bend heats the gas: every tube follows, two semitones at the wheel's ends") {
+  const double fs = 48000;
+  auto P = defaults();
+  P[p::drift] = 0;
+  auto engine = std::make_unique<PyrophoneEngine>(fs);
+  PyrophoneEngine &e = *engine;
+  e.setParams(P.data());
+  waitFor(e);
+  e.noteOn(69, 0.7);
+  render(e, (int)(1.1 * fs));
+  for (double v : {1.0, -1.0}) {
+    e.bend(v);
+    const auto L = render(e, (int)(0.8 * fs));
+    const double f = zeroCrossFreq(L, (int)(0.3 * fs), (int)(0.8 * fs), fs);
+    CHECK(std::fabs(1200 * std::log2(f / 440) - 200 * v) < 5);
+  }
+}
+
 TEST("pyrophone: a new tube keeps playing from the last table until its own is in") {
   const double fs = 48000;
   auto P = defaults();

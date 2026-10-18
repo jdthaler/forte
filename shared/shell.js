@@ -46,7 +46,7 @@ import { createChain } from './chain.js';
 import { createKeyboard } from './keyboard.js';
 import { trimGain } from './registry.js';
 import { controlOwns, focusedByPointer } from './focus.js';
-import { startMIDI, resumeMIDI, wheelValue } from './midi.js';
+import { startMIDI, resumeMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto } from './midi.js';
 // after a change, a control picked with the pointer lets go of the focus (the keys go back to the
 // instrument); one reached with Tab keeps it, so the next Space or arrow works it again
 const release = (el) => { if (focusedByPointer(el)) el.blur(); };
@@ -90,6 +90,8 @@ export function createShell(cfg) {
 
   const shell = { P: load(), DEFAULTS, ALL, audio: null, base: cfg.base ?? 48, sustain: false };
   const held = new Map(), sounding = new Map(), latched = new Set();
+  const sost = createSostenuto(); // CC66
+  let soft = false;               // CC67
 
   // ---- audio ---------------------------------------------------------------
   let starting = null;
@@ -161,7 +163,7 @@ export function createShell(cfg) {
   async function down(key, vel) {
     if (key < LO || key > HI) return;
     if (cfg.holdHint) pressedAt.set(key, performance.now());
-    latched.delete(key);
+    latched.delete(key); sost.strike(key);
     sounding.set(key, (sounding.get(key) || 0) + 1);
     shell.keys.set(key, true);
     if (shell.audio) shell.startAudio(); // resumes a suspended context; no await, so order is kept
@@ -176,13 +178,19 @@ export function createShell(cfg) {
     if (cfg.holdHint && !holdHinted && !shell.sustain && performance.now() - (pressedAt.get(key) ?? -Infinity) < (cfg.holdHint.ms ?? 300)) {
       holdHinted = true; toast(cfg.holdHint.text);
     }
+    if (sost.holds(key)) return;
+    release(key, velocity);
+  }
+  // a key no hand or sostenuto holds: Hold latches it, else its note ends
+  function release(key, velocity) {
     if (cfg.space === 'hold' && shell.sustain) { latched.add(key); return; }
     shell.keys.set(key, false);
     const off = () => { shell.post({ type: 'noteOff', key, velocity }); cfg.onNoteOff?.(key); };
     if (shell.audio) off(); else if (starting) starting.then(off, () => {});
   }
+  const setSostenuto = (on) => { for (const k of sost.set(on, [...sounding.keys(), ...latched])) if (!sounding.has(k)) release(k); };
   shell.noteOn = down; shell.noteOff = up;
-  shell.activeKeys = () => [...new Set([...sounding.keys(), ...latched])].sort((a, b) => a - b);
+  shell.activeKeys = () => [...new Set([...sounding.keys(), ...latched, ...sost.keys()])].sort((a, b) => a - b);
   function setSustain(on) {
     shell.sustain = on;
     const el = $('#hold');
@@ -193,7 +201,7 @@ export function createShell(cfg) {
     document.dispatchEvent(new CustomEvent('forte-sustain', { detail: on })); // the on-screen pedal and Latch follow
   }
   // Panic lets go of everything, the pedal (and Latch) included
-  shell.panic = () => { sounding.clear(); latched.clear(); held.clear(); shell.keys.clearAll(); if (shell.sustain) setSustain(false); shell.post({ type: 'panic' }); cfg.onPanic?.(); };
+  shell.panic = () => { sounding.clear(); latched.clear(); held.clear(); sost.clear(); soft = false; shell.keys.clearAll(); if (shell.sustain) setSustain(false); shell.post({ type: 'panic' }); cfg.onPanic?.(); };
 
   // ---- computer keyboard -----------------------------------------------------
   const codeToKey = (code) => { let i = LOW.indexOf(code); if (i >= 0) return shell.base + i; i = HIGH.indexOf(code); return i >= 0 ? shell.base + 12 + i : null; };
@@ -263,10 +271,12 @@ export function createShell(cfg) {
   }
   function onMIDI(ev) {
     const [st, d1, d2] = ev.data, cmd = st & 0xf0;
-    if (cmd === 0x90 && d2 > 0) down(d1, d2 / 127);
+    if (cmd === 0x90 && d2 > 0) down(d1, touched(d2 / 127) * (soft ? SOFT_PEDAL : 1)); // the velocity curve, the soft pedal
     else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) up(d1, cmd === 0x80 ? d2 / 127 : undefined);
     else if (cmd === 0xb0) {
       if (d1 === 64 && cfg.space) setSustain(d2 >= 64);
+      else if (d1 === 66) setSostenuto(d2 >= 64);
+      else if (d1 === 67) soft = d2 >= 64;
       else if (d1 === 1 && cfg.modWheel) {
         // The wheel rests at 0, so rest = the parameter's default and full = its maximum
         // (a resting wheel must not drag the instrument to the bottom of its range).

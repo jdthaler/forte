@@ -36,6 +36,14 @@ namespace {
 
 constexpr int kBlock = 128; // the engines run in blocks of at most 128 samples, as in the browser
 constexpr uint32_t kPresetId = 0x7ffffffe;
+// The velocity curve (touch): MIDI velocity v (0..1) becomes v^γ before the instrument's own
+// mapping. Soft makes a light touch louder, Hard asks for a firmer one. Every plugin has it.
+constexpr uint32_t kTouchId = 0x7ffffffd;
+const char *const kTouchChoices[] = {"Soft", "Normal", "Hard"};
+constexpr double kTouchGamma[] = {0.6, 1, 1.6};
+// The soft pedal (CC67): a key struck while it is down is struck this much slower, so it sounds
+// softer and, where the instrument's hammer or mallet is nonlinear, darker too.
+constexpr double kSoftPedal = 0.6;
 constexpr uint32_t kEditorWidth = 920, kEditorHeight = 640, kEditorMinWidth = 600, kEditorMinHeight = 420; // points
 
 // what the editor asks of the audio thread
@@ -70,8 +78,9 @@ Instance *instance(const clap_plugin_t *p) { return (Instance *)p->plugin_data; 
 struct Plugin : Instance {
   const InstrumentInfo &I;
   const std::string accent;  // the window's colour
-  const int nParams;        // the instrument's parameters, then Preset if it has presets
   const bool hasPresets;
+  const int nParams;        // the instrument's parameters, then Preset if it has presets, then the velocity curve
+  const int presetAt, touchAt; // their indices (presetAt −1 without presets)
   std::vector<uint32_t> ids; // hashed parameter ids, by index
 
   std::unique_ptr<Engine> engine;
@@ -88,6 +97,9 @@ struct Plugin : Instance {
   uint8_t sounding[128]{};
   bool latched[128]{};
   bool sustain = false;
+  bool sostenuto = false, soft = false;
+  bool caught[128]{};   // the keys sounding when the sostenuto pedal went down: they keep sounding
+  bool sostHeld[128]{}; // let go while caught: the sostenuto holds them
   uint8_t ccLast[128]{}; // each controller's last value (a toggle flips on a press)
 
   // the editor: its events for the audio thread, what it shows, the keys sounding for it
@@ -98,14 +110,17 @@ struct Plugin : Instance {
   std::atomic<bool> pedalDown{false};
 
   Plugin(const clap_host_t *h, const InstrumentInfo &info, const clap_plugin_descriptor_t *desc, const std::string &colour)
-      : Instance(h, desc), I(info), accent(colour.size() < 2 ? "#f0b35a" : colour), nParams(info.paramCount + (info.presetCount > 0 ? 1 : 0)), hasPresets(info.presetCount > 0) {
+      : Instance(h, desc), I(info), accent(colour.size() < 2 ? "#f0b35a" : colour), hasPresets(info.presetCount > 0),
+        nParams(info.paramCount + (hasPresets ? 2 : 1)), presetAt(hasPresets ? info.paramCount : -1), touchAt(nParams - 1) {
     for (int i = 0; i < I.paramCount; i++) ids.push_back(paramHash(I.params[i].id));
     if (hasPresets) ids.push_back(kPresetId);
+    ids.push_back(kTouchId);
     P.resize(nParams);
     pending.resize(nParams);
     shown.reset(new std::atomic<double>[nParams]);
     for (int i = 0; i < I.paramCount; i++) P[i] = I.params[i].def;
-    if (hasPresets) P[I.paramCount] = 0;
+    if (hasPresets) P[presetAt] = 0;
+    P[touchAt] = 1;
     for (int i = 0; i < nParams; i++) shown[i] = P[i];
     sent.assign(nParams, NAN);
   }
@@ -119,7 +134,8 @@ struct Plugin : Instance {
   // Set parameter i (audio thread, or main thread while not processing). A change of Preset
   // applies it: the defaults, then the kept parameters, then the preset's values (shell.js).
   void set(int i, double v, const clap_output_events_t *out) {
-    if (hasPresets && i == I.paramCount) {
+    if (i == touchAt) { P[i] = constrain(touchParam(), v); shown[i] = P[i]; return; }
+    if (i == presetAt) {
       int k = (int)std::lround(v);
       k = k < 0 ? 0 : k > I.presetCount ? I.presetCount : k;
       std::vector<double> next(I.paramCount);
@@ -149,18 +165,37 @@ struct Plugin : Instance {
   }
 
   // ---- notes -----------------------------------------------------------------------------------
-  void noteOn(int ch, int key, double vel) {
+  // vel: MIDI velocity / 127; fromMidi: through the velocity curve and the soft pedal (the
+  // window's keys are not, as the pages' computer and screen keys are not)
+  void noteOn(int ch, int key, double vel, bool fromMidi = true) {
     if (key < I.keyLo || key > I.keyHi || ch < 0 || ch > 15) return;
+    if (fromMidi) vel = std::pow(vel, kTouchGamma[(int)P[touchAt]]) * (soft ? kSoftPedal : 1);
     if (held[ch][key]) noteOff(ch, key, -1); // struck again before its note-off: let it go first
-    held[ch][key] = 1; sounding[key]++; latched[key] = false;
+    held[ch][key] = 1; sounding[key]++; latched[key] = false; sostHeld[key] = false;
     if (engine) engine->noteOn(key, I.midiVelocity ? I.midiVelocity(vel) : vel);
   }
   void noteOff(int ch, int key, double vel) {
     if (key < 0 || key > 127 || ch < 0 || ch > 15 || !held[ch][key]) return; // not down on this channel
     held[ch][key] = 0;
     if (--sounding[key] > 0) return;
+    if (sostenuto && caught[key]) { sostHeld[key] = true; return; }
+    release(key, vel);
+  }
+  // a key no hand or sostenuto holds: Hold latches it, else its note ends
+  void release(int key, double vel) {
     if (I.space == Space::hold && sustain) { latched[key] = true; return; }
     if (engine) engine->noteOff(key, vel);
+  }
+  // The sostenuto pedal (CC66) holds the keys sounding as it goes down, and only those, until it
+  // comes up: a piano's middle pedal. On an instrument whose Space latches keys, the same.
+  void sostenutoPedal(bool on) {
+    if (on == sostenuto) return;
+    sostenuto = on;
+    if (on) { for (int k = 0; k < 128; k++) caught[k] = sounding[k] > 0 || latched[k]; return; }
+    for (int k = 0; k < 128; k++) {
+      caught[k] = false;
+      if (sostHeld[k]) { sostHeld[k] = false; if (!sounding[k]) release(k, -1); }
+    }
   }
   void pedal(bool on) {
     if (on == sustain) return;
@@ -171,6 +206,8 @@ struct Plugin : Instance {
   }
   void panic() {
     std::memset(held, 0, sizeof held); std::memset(sounding, 0, sizeof sounding); std::memset(latched, 0, sizeof latched);
+    std::memset(caught, 0, sizeof caught); std::memset(sostHeld, 0, sizeof sostHeld);
+    sostenuto = false; soft = false;
     if (sustain) pedal(false);
     if (engine) engine->allNotesOff();
   }
@@ -208,6 +245,12 @@ struct Plugin : Instance {
       if (P[k] != before) tell(k, out);
     }
   }
+  // whether the descriptor gives controller cc a parameter (the piano's CC67 is its una corda,
+  // in place of the shared soft pedal)
+  bool mapped(int cc) const {
+    for (int i = 0; i < I.controllerCount; i++) if (I.controllers[i].cc == cc) return true;
+    return false;
+  }
   // the controller on 64 that switches a choice, when Space and CC64 are not a pedal (the
   // organ's Leslie): the window's Space bar plays it
   const Controller *spaceSwitch() const {
@@ -221,6 +264,8 @@ struct Plugin : Instance {
     else if (cmd == 0x80 || cmd == 0x90) noteOff(ch, d[1], cmd == 0x80 ? d[2] / 127.0 : -1);
     else if (cmd == 0xb0) {
       if (d[1] == 64 && I.space != Space::none) pedal(d[2] >= 64);
+      else if (d[1] == 66 && !mapped(66)) sostenutoPedal(d[2] >= 64);
+      else if (d[1] == 67 && !mapped(67)) soft = d[2] >= 64;
       else if (d[1] == 1 && I.modWheel >= 0) modWheel(d[2], out);
       else if (d[1] == 120 || d[1] == 123) panic();
       else controller(d[1], d[2], out);
@@ -304,7 +349,7 @@ struct Plugin : Instance {
     for (UiEvent e; fromUi.pop(e);) switch (e.type) {
       case UiEvent::param: set(e.i, e.v, out); tell(e.i, out); break;
       case UiEvent::begin: case UiEvent::end: gesture(e.i, e.type == UiEvent::begin, out); break;
-      case UiEvent::on: noteOn(0, e.i, e.v); break;
+      case UiEvent::on: noteOn(0, e.i, e.v, false); break;
       case UiEvent::off: noteOff(0, e.i, -1); break;
       case UiEvent::pedal:
         if (I.space != Space::none) pedal(e.v > 0);
@@ -323,7 +368,7 @@ struct Plugin : Instance {
   }
   void publishKeys() {
     uint64_t k[2] = {0, 0};
-    for (int key = 0; key < 128; key++) if (sounding[key] || latched[key]) k[key >> 6] |= 1ull << (key & 63);
+    for (int key = 0; key < 128; key++) if (sounding[key] || latched[key] || sostHeld[key]) k[key >> 6] |= 1ull << (key & 63);
     keysDown[0].store(k[0], std::memory_order_relaxed);
     keysDown[1].store(k[1], std::memory_order_relaxed);
     pedalDown.store(sustain, std::memory_order_relaxed);
@@ -342,12 +387,12 @@ struct Plugin : Instance {
   //   note(key, vel)      a key: vel 0..1 as MIDI velocity / 127, 0 to let go
   //   pressure(key, v)  pedal(on)  panic()
   //                       (pedal: Space; with space "switch", CC64's switch, as describe's switch says)
-  ParamInfo infoOf(int i) const { return i < I.paramCount ? I.params[i] : presetParam(); }
+  ParamInfo infoOf(int i) const { return i < I.paramCount ? I.params[i] : i == presetAt ? presetParam() : touchParam(); }
   double along(int i, double v) const { const ParamInfo p = infoOf(i); return p.kind == ParamKind::continuous ? toNormalized(p, v) : v; }
   std::string text(int i, double v) const {
-    if (i == I.paramCount) { int k = (int)std::lround(v); return k <= 0 ? "Default settings" : k <= I.presetCount ? I.presets[k - 1].name : "?"; }
+    if (i == presetAt) { int k = (int)std::lround(v); return k <= 0 ? "Default settings" : k <= I.presetCount ? I.presets[k - 1].name : "?"; }
     char buf[96];
-    formatValue(I.params[i], v, buf, sizeof buf);
+    formatValue(infoOf(i), v, buf, sizeof buf);
     return buf;
   }
   choc::value::Value describe() {
@@ -363,7 +408,7 @@ struct Plugin : Instance {
       q.addMember("perform", p.perform);
       q.addMember("def", along(i, constrain(p, p.def)));
       Value choices = createEmptyArray();
-      if (i == I.paramCount) {
+      if (i == presetAt) {
         choices.addArrayElement(std::string("Default settings"));
         for (int k = 0; k < I.presetCount; k++) choices.addArrayElement(std::string(I.presets[k].name));
       } else for (int k = 0; k < p.choiceCount; k++) choices.addArrayElement(std::string(p.choices[k]));
@@ -387,7 +432,7 @@ struct Plugin : Instance {
       s.addArrayElement(std::string(p.choices[sw->b]));
       d.addMember("switch", s);
     }
-    d.addMember("presets", hasPresets ? I.paramCount : -1); // the Preset parameter's index
+    d.addMember("presets", presetAt); // the Preset parameter's index
     d.addMember("params", params);
     sent.assign(nParams, NAN); // the next poll sends every value
     return d;
@@ -450,7 +495,7 @@ struct Plugin : Instance {
     char buf[64];
     for (int i = 0; i < nParams; i++) {
       std::snprintf(buf, sizeof buf, " %.17g\n", shown[i].load());
-      t += (i < I.paramCount ? I.params[i].id : "preset") + std::string(buf);
+      t += (i < I.paramCount ? I.params[i].id : i == presetAt ? "preset" : "touch") + std::string(buf);
     }
     const char *p = t.data();
     size_t left = t.size();
@@ -468,7 +513,8 @@ struct Plugin : Instance {
     if (t.compare(0, 6, "forte ") != 0) return false;
     std::vector<double> v(nParams);
     for (int i = 0; i < I.paramCount; i++) v[i] = I.params[i].def; // missing parameters (an older version): defaults
-    if (hasPresets) v[I.paramCount] = 0;
+    if (hasPresets) v[presetAt] = 0;
+    v[touchAt] = 1;
     size_t at = t.find('\n');
     while (at != std::string::npos && at + 1 < t.size()) {
       size_t eol = t.find('\n', at + 1);
@@ -477,7 +523,8 @@ struct Plugin : Instance {
       if (sp != std::string::npos) {
         std::string id = line.substr(0, sp);
         double x = std::strtod(line.c_str() + sp + 1, nullptr);
-        if (id == "preset" && hasPresets) v[I.paramCount] = constrain(presetParam(), x);
+        if (id == "preset" && hasPresets) v[presetAt] = constrain(presetParam(), x);
+        else if (id == "touch") v[touchAt] = constrain(touchParam(), x);
         else for (int i = 0; i < I.paramCount; i++) if (id == I.params[i].id) { v[i] = constrain(I.params[i], x); break; }
       }
       at = eol;
@@ -500,6 +547,9 @@ struct Plugin : Instance {
   void rescan() {
     auto hp = (const clap_host_params_t *)host->get_extension(host, CLAP_EXT_PARAMS);
     if (hp) hp->rescan(host, CLAP_PARAM_RESCAN_VALUES);
+  }
+  ParamInfo touchParam() const {
+    return ParamInfo{"touch", "Velocity curve", "MIDI", ParamKind::choice, 0, 2, 1, 1, false, false, kTouchChoices, 3, {}};
   }
   ParamInfo presetParam() const {
     return ParamInfo{"preset", "Preset", "", ParamKind::choice, 0, (double)I.presetCount, 0, 1, false, false, nullptr, I.presetCount + 1, {}};
@@ -534,7 +584,7 @@ bool notePortsGet(const clap_plugin_t *, uint32_t index, bool isInput, clap_note
 }
 const clap_plugin_note_ports_t notePorts{notePortsCount, notePortsGet};
 
-ParamInfo infoAt(const Plugin *s, int i) { return i < s->I.paramCount ? s->I.params[i] : s->presetParam(); }
+ParamInfo infoAt(const Plugin *s, int i) { return s->infoOf(i); }
 
 uint32_t paramsCount(const clap_plugin_t *p) { return (uint32_t)self(p)->nParams; }
 bool paramsGetInfo(const clap_plugin_t *p, uint32_t index, clap_param_info_t *info) {
@@ -563,24 +613,24 @@ bool paramsValueToText(const clap_plugin_t *p, clap_id id, double v, char *out, 
   Plugin *s = self(p);
   int i = s->indexOf(id);
   if (i < 0) return false;
-  if (i == s->I.paramCount) { // Preset
+  if (i == s->presetAt) {
     int k = (int)std::lround(v);
     std::snprintf(out, size, "%s", k <= 0 ? "Default settings" : k <= s->I.presetCount ? s->I.presets[k - 1].name : "?");
     return true;
   }
-  formatValue(s->I.params[i], v, out, size);
+  formatValue(infoAt(s, i), v, out, size);
   return true;
 }
 bool paramsTextToValue(const clap_plugin_t *p, clap_id id, const char *text, double *v) {
   Plugin *s = self(p);
   int i = s->indexOf(id);
   if (i < 0) return false;
-  if (i == s->I.paramCount) {
+  if (i == s->presetAt) {
     if (!std::strcmp(text, "Default settings")) { *v = 0; return true; }
     for (int k = 0; k < s->I.presetCount; k++) if (!std::strcmp(text, s->I.presets[k].name)) { *v = k + 1; return true; }
     return false;
   }
-  return parseValue(s->I.params[i], text, *v);
+  return parseValue(infoAt(s, i), text, *v);
 }
 void paramsFlush(const clap_plugin_t *p, const clap_input_events_t *in, const clap_output_events_t *out) {
   Plugin *s = self(p);

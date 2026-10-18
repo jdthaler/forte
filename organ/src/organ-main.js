@@ -9,7 +9,7 @@ import { wasmModel } from './organ-wasm.js';
 import { createChain } from '../../shared/chain.js';
 import { GeneratorView, LeslieView, OutputView, drawScanner, BAR_COLORS, useModel } from './organ-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI } from '../../shared/midi.js';
+import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto } from '../../shared/midi.js';
 import { controlOwns, focusedByPointer } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 
@@ -106,6 +106,7 @@ async function keyDown(key, velocity = 100 / 127) { // velocity 0..1: the comput
   while (key < KEY_LO) key += 12;
   while (key > KEY_HI) key -= 12;
   sounding.set(key, (sounding.get(key) || 0) + 1);
+  sost.strike(key);
   keyboardView.set(key, true);
   if (sounding.get(key) === 1) {
     await startAudio();
@@ -121,13 +122,12 @@ function keyUp(key) {
   const n = (sounding.get(key) || 0) - 1;
   if (n > 0) { sounding.set(key, n); return; }
   sounding.delete(key);
-  keyboardView.set(key, false);
-  post({ type: 'noteOff', key });
-  refreshActivity();
+  if (!sost.holds(key)) release(key);
 }
+function release(key) { keyboardView.set(key, false); post({ type: 'noteOff', key }); refreshActivity(); }
 function panic() {
   post({ type: 'panic' });
-  sounding.clear(); held.clear(); keyboardView.clearAll(); refreshActivity();
+  sounding.clear(); held.clear(); sost.clear(); soft = false; keyboardView.clearAll(); refreshActivity();
 }
 
 const LOW = ['KeyZ', 'KeyS', 'KeyX', 'KeyD', 'KeyC', 'KeyV', 'KeyG', 'KeyB', 'KeyH', 'KeyN', 'KeyJ', 'KeyM', 'Comma', 'KeyL', 'Period', 'Semicolon', 'Slash'];
@@ -199,16 +199,20 @@ function initMIDI() {
   startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn') });
 }
 let lastSustain = false;
+const sost = createSostenuto(); // CC66
+let soft = false;               // CC67
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data, cmd = st & 0xf0;
-  if (cmd === 0x90 && d2 > 0) keyDown(d1, d2 / 127);
+  if (cmd === 0x90 && d2 > 0) keyDown(d1, touched(d2 / 127) * (soft ? SOFT_PEDAL : 1));
   else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) keyUp(d1);
   else if (cmd === 0xb0) {
     if (d1 === 1) setP({ leslie: d2 >= 64 ? 'fast' : 'slow' });
     else if (d1 === 64) { const on = d2 >= 64; if (on && !lastSustain) setP({ leslie: P.leslie === 'fast' ? 'slow' : 'fast' }); lastSustain = on; }
     else if (d1 === 11) setP({ expression: d2 / 127 });
+    else if (d1 === 66) { for (const k of sost.set(d2 >= 64, sounding.keys())) if (!sounding.has(k)) release(k); }
+    else if (d1 === 67) soft = d2 >= 64;
     else if (d1 === 120 || d1 === 123) panic();
-  }
+  } else if (cmd === 0xe0) post({ type: 'bend', value: Math.max(-1, ((d2 << 7) + d1 - 8192) / 8191) }); // the generator's supply frequency
 }
 
 // ---------------------------------------------------------------------------

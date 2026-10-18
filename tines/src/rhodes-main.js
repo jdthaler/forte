@@ -10,7 +10,7 @@ import { TinesWasmEngine, wasmModel } from './tines-wasm.js'; // the slow-motion
 import { createChain } from '../../shared/chain.js';
 import { MotionView, PickupView, SpectrumView, MODE_COLORS, modeKind } from './rhodes-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI } from '../../shared/midi.js';
+import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto } from '../../shared/midi.js';
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 
@@ -88,6 +88,7 @@ function onWorklet(m) {
 async function noteOn(key, velocity) {
   if (key < KEY_LO || key > KEY_HI) return;
   sounding.set(key, (sounding.get(key) || 0) + 1);
+  sost.strike(key);
   keyboardView.set(key, true);
   const a = await startAudio();
   const data = noteData(key);
@@ -100,9 +101,9 @@ function noteOff(key) {
   const n = (sounding.get(key) || 0) - 1;
   if (n > 0) { sounding.set(key, n); return; }
   sounding.delete(key);
-  keyboardView.set(key, false);
-  post({ type: 'noteOff', key });
+  if (!sost.holds(key)) release(key);
 }
+function release(key) { keyboardView.set(key, false); post({ type: 'noteOff', key }); }
 function setSustain(on) {
   sustain = on;
   $('#sus').textContent = on ? 'on' : 'off';
@@ -110,7 +111,7 @@ function setSustain(on) {
   post({ type: 'sustain', on });
   document.dispatchEvent(new CustomEvent('forte-sustain', { detail: on })); // the on-screen pedal and Latch follow
 }
-function panic() { post({ type: 'panic' }); sounding.clear(); held.clear(); keyboardView.clearAll(); if (sustain) setSustain(false); }
+function panic() { post({ type: 'panic' }); sounding.clear(); held.clear(); sost.clear(); soft = false; keyboardView.clearAll(); if (sustain) setSustain(false); }
 
 const LOW = ['KeyZ', 'KeyS', 'KeyX', 'KeyD', 'KeyC', 'KeyV', 'KeyG', 'KeyB', 'KeyH', 'KeyN', 'KeyJ', 'KeyM', 'Comma', 'KeyL', 'Period', 'Semicolon', 'Slash'];
 const LOW_LBL = ['z', 's', 'x', 'd', 'c', 'v', 'g', 'b', 'h', 'n', 'j', 'm', ',', 'l', '.', ';', '/'];
@@ -174,14 +175,18 @@ function updateHelp() {
   $('#vel').textContent = `${P.velocity.toFixed(2)} m/s`;
 }
 
+const sost = createSostenuto(); // CC66
+let soft = false;               // CC67
 function initMIDI() {
   startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn') });
 }
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data, cmd = st & 0xf0;
-  if (cmd === 0x90 && d2 > 0) noteOn(d1, INSTRUMENT.midiVelocity(d2 / 127)); // hammer speed, m/s
+  if (cmd === 0x90 && d2 > 0) noteOn(d1, INSTRUMENT.midiVelocity(touched(d2 / 127) * (soft ? SOFT_PEDAL : 1))); // hammer speed, m/s
   else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) noteOff(d1);
   else if (cmd === 0xb0 && d1 === 64) setSustain(d2 >= 64);
+  else if (cmd === 0xb0 && d1 === 66) { for (const k of sost.set(d2 >= 64, sounding.keys())) if (!sounding.has(k)) release(k); }
+  else if (cmd === 0xb0 && d1 === 67) soft = d2 >= 64;
   else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) panic();
 }
 

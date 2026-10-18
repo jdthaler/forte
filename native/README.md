@@ -109,9 +109,11 @@ Every instrument is the same CLAP plugin (`plugin/plugin.cpp`) around its own en
 description (`InstrumentInfo`, from the JavaScript descriptor by `tools/gen-native-params.mjs`).
 clap-wrapper builds the VST3, AU v2 and standalone from the CLAP. Each plugin:
 
-- takes notes and MIDI as the pages do: velocity, the sustain pedal or Hold (CC64), the mod
-  wheel (CC1), aftertouch (channel, polyphonic, and CLAP's pressure expression), pitch bend,
-  and All Notes Off (CC120, CC123);
+- takes notes and MIDI as the pages do: velocity through a *Velocity curve* parameter (Soft,
+  Normal, Hard), the sustain pedal or Hold (CC64), sostenuto (CC66) and the soft pedal (CC67)
+  where the instrument maps neither, the mod wheel (CC1), aftertouch (channel, polyphonic, and
+  CLAP's pressure expression), pitch bend (±2 semitones where the instrument bends), and All
+  Notes Off (CC120, CC123);
 - has the instrument's parameters, with stable ids hashed from the JavaScript ids, and a
   Preset parameter that applies a factory preset (the defaults, then the kept parameters,
   then the preset's values, as the pages do);

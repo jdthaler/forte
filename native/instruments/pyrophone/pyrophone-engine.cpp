@@ -20,6 +20,7 @@ constexpr double POST_EVERY = 0.016; // s, view updates
 constexpr double PRESS = 0.25;       // aftertouch: full pressure parts the flames 25 % further
 constexpr double PUFF = 3;           // extra turbulence just after the flames part (× velocity)
 constexpr double SINGING = 0.1;      // rms flow at the flame above which a tube counts as singing
+constexpr double BEND_TAU = 0.02;    // s, the pitch wheel's glide (the gas's sound speed follows per block)
 constexpr double SQRT2 = std::numbers::sqrt2;
 
 double jsRound(double x) { return std::floor(x + 0.5); } // Math.round
@@ -57,7 +58,7 @@ void PyrophoneEngine::Voice::coeffs(const PyrophoneEngine &eng) {
     }
   }
   // gas temperature → sound speed → this tube's time step
-  const double T = T_HOT - P[p::drift] * (1 - theta), hNew = hHot * std::sqrt(T / T_HOT);
+  const double T = T_HOT - P[p::drift] * (1 - theta), hNew = hHot * std::sqrt(T / T_HOT) * eng.bendNow;
   if (hNew != h || dBore != eng.tp.bore || dDamp != eng.tp.damp) {
     h = hNew; dBore = eng.tp.bore; dDamp = eng.tp.damp;
     for (int j = 0; j < N; j++) {
@@ -276,6 +277,10 @@ void PyrophoneEngine::steal() {
 
 void PyrophoneEngine::store(const Voice &v) { warm[v.key] = v.theta; warmAt[v.key] = time; }
 
+void PyrophoneEngine::bend(double value) {
+  bendTo = fd::pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12);
+}
+
 void PyrophoneEngine::allNotesOff() {
   for (int i = 0; i < nVoices; i++) store(*voices[i]);
   nVoices = 0; nPending = 0;
@@ -302,6 +307,8 @@ void PyrophoneEngine::process(float *L, float *R, int n) {
   }
 #endif
   const double dt = n / fs, kw = 1 - fd::exp(-dt / P[p::warm]);
+  bendNow += (bendTo - bendNow) * (1 - fd::exp(-dt / BEND_TAU));
+  if (std::fabs(bendNow - bendTo) < 1e-9) bendNow = bendTo;
   for (int i = 0; i < nVoices; i++) {
     Voice &v = *voices[i];
     // warm-up: the gas heats while the flames are apart or the tube sings (a tube that remembers
