@@ -5,7 +5,7 @@
 // string's normal modes, slowly beating).
 
 import { INSTRUMENTS, SECTIONS, FORTE_VERSION } from './shared/registry.js';
-import { withPlugins } from './shared/plugins.js';
+import { downloadLinks, withPlugins } from './shared/plugins.js';
 import { renderMarkdown } from './shared/markdown.js';
 
 const $ = (s) => document.querySelector(s);
@@ -128,6 +128,7 @@ document.addEventListener('click', (e) => {
 const plugins = withPlugins();
 const names = plugins.map((i) => `the <a href="${i.id}/">${i.name}</a>`);
 $('#plugin-list').innerHTML = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0] ?? '';
+$('#plugins .forte-plugin-get').innerHTML = downloadLinks(); // with each format alone too
 
 // Credits: docs/PRIOR_ART.md, rendered as on credits/ (credits/credits.js), on first opening
 const REPO = 'https://github.com/jdthaler/forte/blob/main/';

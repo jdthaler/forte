@@ -108,6 +108,15 @@ test('the release\'s archives are the ones CI packages and the pages link to', (
   assert.ok(sh.includes('pack "Forte-$id"') && sh.includes('pack Forte-plugins'), 'package-plugins.sh archive names');
   for (const [, suffix] of SYSTEMS) assert.ok(sh.includes(`dist/$out-${suffix}"`), `package-plugins.sh writes *-${suffix}`);
   assert.deepEqual(downloads('gongs').map((d) => d.file), ['Forte-gongs-macos.zip', 'Forte-gongs-windows.zip', 'Forte-gongs-linux.tar.gz']);
+  // and each format alone, which the script packs as Forte-<id>-<format>-<system>
+  assert.deepEqual(downloads('gongs').map((d) => d.each.map((e) => e.file)), [
+    ['Forte-gongs-au-macos.zip', 'Forte-gongs-vst3-macos.zip', 'Forte-gongs-clap-macos.zip', 'Forte-gongs-app-macos.zip'],
+    ['Forte-gongs-vst3-windows.zip', 'Forte-gongs-clap-windows.zip', 'Forte-gongs-app-windows.zip'],
+    ['Forte-gongs-vst3-linux.tar.gz', 'Forte-gongs-clap-linux.tar.gz', 'Forte-gongs-app-linux.tar.gz'],
+  ]);
+  assert.ok(sh.includes('pack "Forte-$id-$f"') && sh.includes('pack "Forte-plugins-$f"'), 'package-plugins.sh packs each format alone');
+  for (const [, , formats] of SYSTEMS) for (const f of formats) assert.ok(new RegExp(`\\) formats=\\([^)]*\\b${f}\\b`).test(sh), `package-plugins.sh packs ${f}`);
+  assert.ok(read('landing.js').includes("downloadLinks()"), 'All Plugins offers each format alone');
   const md = notes();
   for (const i of withPlugins()) assert.ok(md.includes(`| ${i.version} |`) && md.includes(i.name) && md.includes(archive(i.id, 'macos.zip')), `notes list ${i.name}`);
   assert.ok(md.includes('xattr -dr com.apple.quarantine'), 'notes give the xattr command');
@@ -149,7 +158,7 @@ test('the macOS and Linux downloads install and verify themselves (make install,
 });
 test('each instrument with plugins offers them on its page (its Plugin dialog, shared/notes.js)', () => {
   const js = read('shared/notes.js');
-  assert.ok(js.includes('downloads(inst.id)') && js.includes("'#plugin'"), 'notes.js lists the downloads and opens at #plugin');
+  assert.ok(js.includes('downloadLinks(inst.id)') && js.includes("'#plugin'"), 'notes.js lists the downloads and opens at #plugin');
   for (const i of withPlugins()) assert.ok(read(`${i.id}/index.html`).includes('../shared/nav.js'), `${i.id} loads nav.js (and notes.js)`);
 });
 

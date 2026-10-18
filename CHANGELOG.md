@@ -10,6 +10,17 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-18 — download one plugin format at a time
+
+### Forte 0.29.0
+- **One format at a time**: in each instrument's Plugin dialog and the front page's All
+  Plugins, each system's box reads `All | AU · VST3 · CLAP · app`: All downloads every format,
+  and each format's link just that one (`Forte-<id>-<format>-<system>`, e.g. `Forte-gongs-au-macos.zip`,
+  and `Forte-plugins-<format>-<system>` for every instrument). Each holds INSTALL.md and, on
+  macOS and Linux, the Makefile, which works on whatever formats are in its folder.
+- `tools/package-plugins.sh` packs them, the release checks they are all there, and the
+  `native` workflow checks that a one-format archive holds only that format.
+
 ## 2026-10-17 — the tonewheel organ in C++ (step 4, last batch)
 
 ### Tonewheel Organ 0.5.0

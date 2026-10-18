@@ -57,6 +57,8 @@ export function notes() {
     '|---|---|---|',
     ...Object.entries(ASSETS).map(([sys, f]) => `| ${sys} | \`${f}\` | ${FORMATS[sys]} |`),
     '',
+    `Each archive also comes one format at a time: \`${archive('<instrument>', '<system>', '<format>')}\` and \`${archive(null, '<system>', '<format>')}\`, where the format is au (macOS only), vst3, clap or app (the standalone), for example \`${archive('gongs', 'macos.zip', 'au')}\`.`,
+    '',
     unwrap(install).replace(/^## /gm, '### '),
   ].join('\n');
 }
@@ -66,6 +68,6 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) { // (a plain file:
   console.log(arg === '--tag' ? `plugins-v${FORTE_VERSION}`
     : arg === '--plugins' ? released().map((i) => `${i.id}\t${i.name}`).join('\n')
     : arg === '--manifest' ? manifest()
-    : arg === '--files' ? [null, ...released().map((i) => i.id)].flatMap((id) => SYSTEMS.map(([, suffix]) => archive(id, suffix))).join('\n')
+    : arg === '--files' ? [null, ...released().map((i) => i.id)].flatMap((id) => SYSTEMS.flatMap(([, suffix, formats]) => [archive(id, suffix), ...formats.map((f) => archive(id, suffix, f))])).join('\n')
     : notes());
 }
