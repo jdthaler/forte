@@ -94,6 +94,12 @@ jobs:
             echo "::error::No successful native run for $SHA on live yet. Wait for it to finish green, then start this again."
             exit 1
           fi
+          # a run on live that found its tree already built by the release pull request's run
+          # (native.yml, reuse) names that run instead of building the archives again
+          if gh run download "$run" --name reused-from --dir reused 2>/dev/null; then
+            echo "native run $run reused run $(cat reused/reused-from.txt)"
+            run=$(cat reused/reused-from.txt)
+          fi
           echo "native run $run"
           gh run download "$run" --pattern 'release-*' --dir dl
           mkdir dist && find dl -type f -exec mv {} dist/ \;

@@ -7,6 +7,9 @@ a keyboard you can play with the mouse or the computer's keys (Z…/ and Q…], 
 so the standalone apps play without a MIDI keyboard. The plugins are built from the same C++ as the instruments on
 <https://forte.jthaler.net>, and sound the same.
 
+The download with every instrument also has the Forte app: one standalone with all of them,
+picked from the Instrument menu at the top of its window. It reopens on the last one played.
+
 Download every instrument together from <https://forte.jthaler.net/#plugins> (All Plugins),
 or one at a time from an instrument's page (↓ Plugin): in each system's box, All has every format,
 and the AU, VST3, CLAP and app links just that one. They are free and unsigned: macOS and Windows will
@@ -63,7 +66,20 @@ and choose **Reset & Rescan Selection**.
 
 ## Windows
 
-Unzip the download, then:
+Unzip the download (right-click it, **Extract All…**), open the folder it made and double-click
+**install.cmd**. It copies the VST3s and CLAPs to the folders every DAW looks in (Windows asks
+once for administrator rights for them) and the standalone apps to your own
+`%LOCALAPPDATA%\Programs\Forte`, with a Start menu shortcut each, and clears the "downloaded from
+the internet" mark so SmartScreen doesn't stop them. Then rescan the plugins in your DAW.
+
+From a terminal in that folder, `install.cmd verify` checks each one is installed and is this
+download, `install.cmd uninstall` removes them, `install.cmd check` checks the plugins in the
+folder without installing anything and `install.cmd unblock` clears the mark where they are. Add
+a format to do just that one: `install.cmd install vst3`, `install.cmd verify clap`,
+`install.cmd uninstall app`. The folders can be changed through the `VST3_DIR`, `CLAP_DIR` and
+`APP_DIR` environment variables. The work is in `install.ps1`, which install.cmd runs.
+
+By hand instead:
 
 - VST3: copy each `.vst3` (it is a folder) into `C:\Program Files\Common Files\VST3`.
 - CLAP: copy each `.clap` into `C:\Program Files\Common Files\CLAP`. Create the folder if it

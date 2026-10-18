@@ -119,6 +119,43 @@ TEST("plugin: MIDI notes, the pedal, All Notes Off") {
   CHECK(peak(L, 9600, 12000) > 0.01);  // still sounding under the pedal
   CHECK(peak(L, 24200, 48000) == 0);   // silenced
 }
+TEST("plugin: the velocity curve bends MIDI velocity; the soft pedal strikes softer") {
+  auto level = [](int curve, bool softPedal) {
+    Instance in(48000);
+    Events ev;
+    ev.param(0, in.id("Velocity curve"), curve);
+    if (softPedal) ev.midi(1, 0xb0, 67, 127);
+    ev.midi(10, 0x90, 60, 64);
+    return peak(in.run(4800, 128, ev));
+  };
+  const double normal = level(1, false), v = 64 / 127.0;
+  CHECK(normal > 0.001);
+  CHECK_NEAR(level(0, false) / normal, std::pow(v, 0.6) / v, 0.02);
+  CHECK_NEAR(level(2, false) / normal, std::pow(v, 1.6) / v, 0.02);
+  CHECK_NEAR(level(1, true) / normal, 0.6, 0.02);
+  Instance in(48000);
+  CHECK(std::fabs(in.value("Velocity curve") - 1) < 1e-12); // Normal by default
+  char text[64];
+  in.params->value_to_text(in.p, in.id("Velocity curve"), 2, text, sizeof text);
+  CHECK(!std::strcmp(text, "Hard"));
+}
+TEST("plugin: the sostenuto pedal holds the keys down as it goes down, and only those") {
+  Instance in(48000);
+  Events ev;
+  ev.midi(0, 0x90, 60, 100);
+  ev.midi(100, 0xb0, 66, 127);         // sostenuto down: 60 is caught
+  ev.midi(200, 0x80, 60, 0);           // let go, but held
+  ev.midi(300, 0x90, 72, 100);         // struck after: not caught
+  ev.midi(4800, 0x80, 72, 0);
+  ev.midi(24000, 0xb0, 66, 0);         // sostenuto up: 60 ends
+  auto L = in.run(48000, 128, ev);
+  // only 60 is left after 72's damping: its pitch alone from 0.15 s
+  int crossings = 0;
+  for (int i = 14400; i < 19200; i++) crossings += (L[i - 1] < 0) != (L[i] < 0);
+  CHECK(std::abs(crossings / 2 / 0.1 - 261.6) < 15);
+  CHECK(peak(L, 14400, 19200) > 0.001);
+  CHECK(peak(L, 40000, 48000) < 1e-4);
+}
 TEST("plugin: the Preset parameter applies a preset, keeping the kept parameters, and tells the host") {
   Instance in(48000);
   Events ev;

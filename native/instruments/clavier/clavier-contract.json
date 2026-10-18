@@ -1,0 +1,41 @@
+{
+  "slug": "clavier",
+  "params": [
+    {"id":"press","kind":"continuous","min":0.5,"max":20,"def":4,"step":0.1,"log":false},
+    {"id":"gap","kind":"continuous","min":0.2,"max":2,"def":0.5,"step":0.05,"log":false},
+    {"id":"tip","kind":"continuous","min":0.05,"max":1,"def":0.25,"step":0,"log":true},
+    {"id":"wrap","kind":"continuous","min":1,"max":10,"def":3,"step":0.1,"log":false},
+    {"id":"tipLoss","kind":"continuous","min":0,"max":3,"def":0.8,"step":0.01,"log":false},
+    {"id":"keyMass","kind":"continuous","min":2,"max":40,"def":8,"step":0,"log":true},
+    {"id":"t60","kind":"continuous","min":1,"max":40,"def":14,"step":0,"log":true},
+    {"id":"hf","kind":"continuous","min":0,"max":8,"def":0.5,"step":0.05,"log":false},
+    {"id":"stiff","kind":"continuous","min":0,"max":4,"def":1,"step":0.01,"log":false},
+    {"id":"kc","kind":"toggle","def":true},
+    {"id":"yarn","kind":"continuous","min":20,"max":8000,"def":2000,"step":0,"log":true},
+    {"id":"pickup","kind":"choice","def":"sum","options":["lower","upper","sum","diff"]},
+    {"id":"xLower","kind":"continuous","min":1,"max":30,"def":10.3,"step":0.1,"log":false},
+    {"id":"xUpper","kind":"continuous","min":0.5,"max":15,"def":2.7,"step":0.1,"log":false},
+    {"id":"field","kind":"continuous","min":0.5,"max":10,"def":2,"step":0,"log":true},
+    {"id":"gain","kind":"continuous","min":-12,"max":18,"def":0,"step":0.5,"log":false},
+    {"id":"soft","kind":"toggle","def":false},
+    {"id":"medium","kind":"toggle","def":true},
+    {"id":"treble","kind":"toggle","def":true},
+    {"id":"brilliant","kind":"toggle","def":false},
+    {"id":"muteOn","kind":"toggle","def":false},
+    {"id":"mute","kind":"continuous","min":0.05,"max":1,"def":0.6,"step":0.01,"log":false},
+    {"id":"muteX","kind":"continuous","min":3,"max":60,"def":14,"step":0.5,"log":false},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.2,"step":0.01,"log":false},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"D6 · both pickups, medium + treble","values":{}},
+    {"name":"Mellow · lower pickup, soft","values":{"pickup":"lower","soft":true,"medium":false,"treble":false,"gain":11}},
+    {"name":"Bright · upper pickup, treble + brilliant","values":{"pickup":"upper","medium":false,"brilliant":true}},
+    {"name":"Thin · pickups out of phase","values":{"pickup":"diff","medium":false,"brilliant":true,"gain":-4}},
+    {"name":"Muted staccato","values":{"muteOn":true,"mute":0.7}},
+    {"name":"Worn tips · bouncing, buzzing","values":{"tipLoss":0.1,"tip":0.45,"press":2.2,"keyMass":14}},
+    {"name":"Soft tips · wide vibrato","values":{"tip":0.6,"wrap":1.5}},
+    {"name":"No yarn · release rings a minor third down","values":{"yarn":30}},
+    {"name":"Ideal string · no stiffness, no glide","values":{"stiff":0,"kc":false}}
+  ]
+}

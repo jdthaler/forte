@@ -1,0 +1,30 @@
+{
+  "slug": "stars",
+  "params": [
+    {"id":"family","kind":"choice","def":"track","options":["track","dscuti"]},
+    {"id":"mass","kind":"continuous","min":0.9,"max":1.8,"def":1,"step":0.05,"log":false},
+    {"id":"speedup","kind":"continuous","min":350000,"max":1000000,"def":510800,"step":0,"log":true},
+    {"id":"spin","kind":"continuous","min":0,"max":30,"def":1,"step":0.1,"log":false},
+    {"id":"coreRatio","kind":"continuous","min":1,"max":30,"def":5,"step":0.5,"log":false},
+    {"id":"incl","kind":"continuous","min":0,"max":90,"def":60,"step":1,"log":false},
+    {"id":"driving","kind":"continuous","min":0,"max":2,"def":1,"step":0.01,"log":false},
+    {"id":"damping","kind":"continuous","min":0.1,"max":10,"def":1,"step":0,"log":true},
+    {"id":"flare","kind":"continuous","min":0,"max":3,"def":0.7,"step":0.01,"log":false},
+    {"id":"growth","kind":"continuous","min":0.05,"max":2,"def":0.25,"step":0,"log":true},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.25,"step":0.01,"log":false},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"The Sun’s track (1 M☉)","values":{}},
+    {"name":"A heavier track (1.5 M☉): hot dwarfs, broad modes","values":{"mass":1.5}},
+    {"name":"Pole-on: only m = 0","values":{"incl":0,"spin":8}},
+    {"name":"Equator-on, spinning fast: split multiplets","values":{"incl":90,"spin":15}},
+    {"name":"No rotation: single lines","values":{"spin":0}},
+    {"name":"Narrow modes: long lifetimes","values":{"damping":0.2}},
+    {"name":"Broad modes: quick breathing","values":{"damping":4}},
+    {"name":"Struck, not driven: the flare alone","values":{"driving":0,"flare":2}},
+    {"name":"Red giants with fast cores","values":{"coreRatio":25,"spin":2}},
+    {"name":"A smaller speed-up: younger stars on every key","values":{"speedup":350000}},
+    {"name":"δ Scuti: self-excited modes","values":{"family":"dscuti","spin":20,"flare":1}}
+  ]
+}

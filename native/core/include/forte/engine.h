@@ -8,6 +8,10 @@
 
 namespace forte {
 
+// Pitch bend's range: the wheel's ends bend an instrument that bends by this much, as most
+// keyboards and hosts expect.
+constexpr double kBendSemitones = 2;
+
 // What an engine tells its page or editor while it plays (the page reads it through
 // shared/wasm.js's `messages`):
 // a type its own wrapper names, a key, and up to 30 numbers. Posting never waits: when nobody
@@ -34,7 +38,7 @@ class Engine {
   virtual void setSustain(bool) {}
   virtual void allNotesOff() {}
   virtual void pressure(double /*value*/, int /*key*/) {} // aftertouch 0..1; key −1 for the channel
-  virtual void bend(double /*value*/) {}                  // pitch bend −1..1
+  virtual void bend(double /*value*/) {}                  // pitch bend −1..1 (±kBendSemitones, where it bends pitch)
   virtual int voiceCount() const { return 0; }
   // Fill n samples (any n ≥ 1; the hosts call it with at most 128). Never allocates.
   virtual void process(float *L, float *R, int n) = 0;

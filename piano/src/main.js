@@ -11,7 +11,7 @@ import { PianoWasmEngine, wasmModel } from './piano-wasm.js'; // (the slow-motio
 import { createChain } from '../../shared/chain.js';
 import { MotionView, SpectrumView, drawSection, FAMILY } from './viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI } from '../../shared/midi.js';
+import { startMIDI, resumeMIDI, touched, createSostenuto } from '../../shared/midi.js';
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 
@@ -115,6 +115,7 @@ function onWorklet(m) {
 async function noteOn(key, velocity) {
   if (key < KEY_LO || key > KEY_HI) return;
   sounding.set(key, (sounding.get(key) || 0) + 1);
+  sost.strike(key);
   keyboardView.set(key, true);
   const a = await startAudio();
   const data = noteData(key);
@@ -128,6 +129,9 @@ function noteOff(key) {
   const n = (sounding.get(key) || 0) - 1;
   if (n > 0) { sounding.set(key, n); return; }
   sounding.delete(key);
+  if (!sost.holds(key)) release(key);
+}
+function release(key) {
   keyboardView.set(key, false);
   if (live) audio.node.port.postMessage({ type: 'noteOff', key });
   else if (audioStarting) audioStarting.then((a) => a.node.port.postMessage({ type: 'noteOff', key }), () => {});
@@ -147,6 +151,7 @@ function panic() {
   if (audio) audio.node.port.postMessage({ type: 'panic' });
   sounding.clear();
   held.clear();
+  sost.clear();
   keyboardView.clearAll();
   if (sustain) setSustain(false); // Panic lets go of the pedal too
 }
@@ -242,6 +247,7 @@ function updateHelp() {
 // ---------------------------------------------------------------------------
 // MIDI
 
+const sost = createSostenuto(); // CC66
 function initMIDI() {
   startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn') });
 }
@@ -249,9 +255,10 @@ function initMIDI() {
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data;
   const cmd = st & 0xf0;
-  if (cmd === 0x90 && d2 > 0) noteOn(d1, INSTRUMENT.midiVelocity(d2 / 127)); // 0.25 … 6 m/s hammer speed
+  if (cmd === 0x90 && d2 > 0) noteOn(d1, INSTRUMENT.midiVelocity(touched(d2 / 127))); // 0.25 … 6 m/s hammer speed
   else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) noteOff(d1);
   else if (cmd === 0xb0 && d1 === 64) setSustain(d2 >= 64);
+  else if (cmd === 0xb0 && d1 === 66) { for (const k of sost.set(d2 >= 64, sounding.keys())) if (!sounding.has(k)) release(k); } // sostenuto
   else if (cmd === 0xb0 && d1 === 67) setParam('unaCorda', d2 >= 64); // soft pedal
   else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) panic();
 }

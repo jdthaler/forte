@@ -86,6 +86,7 @@ class ArcEngine : public Engine {
   void noteOn(int key, double velocity) override;
   void noteOff(int key, double velocity) override;
   void allNotesOff() override;
+  void bend(double value) override; // the coil's iron core slides: L by 1/r², the note by r (talk: the voice's pitch)
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -116,7 +117,7 @@ class ArcEngine : public Engine {
   int trailDec(const Arc &arc) const;
   void report();
 
-  double seed = 1;
+  double seed = 1, bendRatio = 1;
   bool hasParams = false;
   Op op{};
   double kS = 0, sincePost = 0;

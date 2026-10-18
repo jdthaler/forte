@@ -98,6 +98,25 @@ TEST("organ: one key, 8' only, plays its wheel; the keys retire when let go") {
   CHECK(e->voiceCount() == 0 && e->keyCount() == 0);
 }
 
+TEST("organ: pitch bend moves the supply frequency: the whole organ, two semitones at the wheel's ends") {
+  auto e = std::make_unique<OrganEngine>(48000);
+  auto P = defaults();
+  P[p::vib] = vib_::off; P[p::leslie] = leslie_::bypass; P[p::drive] = 0; P[p::leakage] = -90; P[p::crosstalk] = -80;
+  P[p::wheelHarm] = 0; P[p::spread] = 0; P[p::bounce] = 0;
+  for (int d = 0; d < 9; d++) P[p::drawbar1 + d] = d == 2 ? 8 : 0;
+  e->setParams(P.data());
+  e->noteOn(69, 100 / 127.0);
+  std::vector<double> L(24000), R(24000);
+  for (double v : {1.0, -1.0, 0.0}) {
+    e->bend(v);
+    for (int s = 0; s < 24000; s += 128) e->processDouble(L.data() + s, R.data() + s, std::min(128, 24000 - s));
+    std::vector<double> t;
+    for (int i = 9601; i < 24000; i++) if (L[i - 1] < 0 && L[i] >= 0) t.push_back(i - 1 + L[i - 1] / (L[i - 1] - L[i]));
+    const double f = (t.size() - 1) * 48000 / (t.back() - t.front());
+    CHECK(std::fabs(1200 * std::log2(f / 440) - 200 * v) < 0.5);
+  }
+}
+
 TEST("organ: the console's parameters: drawbars, percussion, vibrato, the Leslie switch and the motor") {
   auto e = std::make_unique<OrganEngine>(48000);
   auto P = defaults();

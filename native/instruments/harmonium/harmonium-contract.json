@@ -1,0 +1,40 @@
+{
+  "slug": "harmonium",
+  "params": [
+    {"id":"principal","kind":"toggle","def":true},
+    {"id":"musette","kind":"choice","def":"off","options":["off","two","three"]},
+    {"id":"detune","kind":"continuous","min":0,"max":40,"def":12,"step":0.5,"log":false},
+    {"id":"bourdon","kind":"toggle","def":false},
+    {"id":"piccolo","kind":"toggle","def":false},
+    {"id":"percussion","kind":"toggle","def":false},
+    {"id":"pressure","kind":"continuous","min":100,"max":2500,"def":800,"step":0,"log":true},
+    {"id":"expression","kind":"toggle","def":false},
+    {"id":"pump","kind":"continuous","min":0,"max":3,"def":0,"step":0.05,"log":false},
+    {"id":"set","kind":"continuous","min":0.3,"max":2.5,"def":0.9,"step":0.05,"log":false},
+    {"id":"clearance","kind":"continuous","min":10,"max":200,"def":40,"step":1,"log":false},
+    {"id":"q","kind":"continuous","min":50,"max":800,"def":500,"step":0,"log":true},
+    {"id":"throat","kind":"continuous","min":0.2,"max":3,"def":1,"step":0,"log":true},
+    {"id":"cell","kind":"continuous","min":0.2,"max":4,"def":1,"step":0,"log":true},
+    {"id":"cassotto","kind":"toggle","def":false},
+    {"id":"cassF","kind":"continuous","min":300,"max":3000,"def":1500,"step":0,"log":true},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.3,"step":0.01,"log":false},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"Harmonium 8′: one brass reed a key","values":{}},
+    {"name":"Musette: three reeds 12 ¢ apart (accordion)","values":{"musette":"three"}},
+    {"name":"Voix céleste: two reeds, a slow 4 ¢ shimmer","values":{"musette":"two","detune":4}},
+    {"name":"Wet musette: three reeds 30 ¢ apart","values":{"musette":"three","detune":30}},
+    {"name":"Full organ: 16′, 8′ and 4′","values":{"bourdon":true,"piccolo":true}},
+    {"name":"Accordion: musette in the cassotto, bellows direct","values":{"musette":"two","cassotto":true,"expression":true}},
+    {"name":"Percussion: a hammer starts each reed","values":{"percussion":true}},
+    {"name":"Pumped through the expression stop","values":{"expression":true,"pump":1.2}},
+    {"name":"Gentle wind: near threshold, slow to speak","values":{"pressure":250}},
+    {"name":"Strong wind: loud, bright, a little flat","values":{"pressure":1800}},
+    {"name":"Little set: prompt, soft and bright","values":{"set":0.4}},
+    {"name":"Much set: slow to speak, loud and round","values":{"set":2.2}},
+    {"name":"Loose slot: a leaky, duller reed","values":{"clearance":150}},
+    {"name":"Big reed cells: darker and a little flatter","values":{"cell":4}},
+    {"name":"Little air mass: slow, dark speech","values":{"throat":0.3}}
+  ]
+}

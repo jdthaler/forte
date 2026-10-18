@@ -13,6 +13,15 @@ namespace forte {
 bool entryInit(const InstrumentInfo &info, const char *accent = "");
 const void *entryFactory(const char *id);
 
+// The Forte app: every instrument in one plugin (net.jthaler.forte.suite), switched from the
+// Instrument menu in its window. forte_add_suite() (cmake/forte.cmake) lists them; version is
+// Forte's.
+struct SuiteEntry {
+  const InstrumentInfo &(*info)();
+  const char *accent;
+};
+bool entrySuite(const SuiteEntry *instruments, int count, const char *version);
+
 // The editor's calls (plugin.cpp), as JSON, without a window: an extension of the plugin's for
 // the tests. call(plugin, "[\"set\", 0, 0.5]") returns the reply as JSON.
 constexpr const char *kEditorBridge = "net.jthaler.forte.editor-bridge";

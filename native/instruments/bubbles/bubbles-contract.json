@@ -1,0 +1,30 @@
+{
+  "slug": "bubbles",
+  "params": [
+    {"id":"depth","kind":"continuous","min":0.1,"max":100,"def":0.3,"step":0,"log":true},
+    {"id":"pressure","kind":"continuous","min":0.25,"max":4,"def":1,"step":0,"log":true},
+    {"id":"keepInTune","kind":"toggle","def":false},
+    {"id":"gas","kind":"choice","def":"air","options":["air","helium","argon","sf6"]},
+    {"id":"liquid","kind":"choice","def":"water","options":["water","gly90","glycerol"]},
+    {"id":"rate","kind":"continuous","min":0.5,"max":40,"def":5,"step":0,"log":true},
+    {"id":"irregular","kind":"continuous","min":0,"max":1,"def":0.4,"step":0.01,"log":false},
+    {"id":"spread","kind":"continuous","min":0,"max":15,"def":1.5,"step":0.1,"log":false},
+    {"id":"snap","kind":"continuous","min":0.01,"max":2,"def":0.05,"step":0,"log":true},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.25,"step":0.01,"log":false},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"Brook: air bubbles 30 cm down in water","values":{}},
+    {"name":"Nozzles 20 m down: everything a major sixth up","values":{"depth":20}},
+    {"name":"Partial vacuum (¼ atm): about an octave down","values":{"pressure":0.25}},
+    {"name":"Helium: up less than √γ, and duller","values":{"gas":"helium"}},
+    {"name":"Argon: helium’s γ, but it stays adiabatic","values":{"gas":"argon"}},
+    {"name":"SF₆ (γ = 1.10): two semitones down","values":{"gas":"sf6"}},
+    {"name":"Glycerol: viscosity kills the treble","values":{"liquid":"glycerol"}},
+    {"name":"Shallow tank (10 cm): big bubbles rise in pitch as they surface","values":{"depth":0.1,"rate":2}},
+    {"name":"20 m down, kept in tune: bigger bubbles, same notes","values":{"depth":20,"keepInTune":true}},
+    {"name":"Torrent: 30 bubbles a second, 6 % spread","values":{"rate":30,"irregular":1,"spread":6}},
+    {"name":"Slow pinch-off (1 ms): the treble hardly rings","values":{"snap":1}},
+    {"name":"Metronome: even bubbles, all the same size","values":{"rate":2.5,"irregular":0,"spread":0}}
+  ]
+}

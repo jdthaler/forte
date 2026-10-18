@@ -1,0 +1,30 @@
+{
+  "slug": "blackhole",
+  "params": [
+    {"id":"spinU","kind":"continuous","min":0,"max":6,"def":0.5086383061657272,"step":0.005,"log":false},
+    {"id":"massRatio","kind":"continuous","min":1,"max":20,"def":1.2,"step":0,"log":true},
+    {"id":"inclination","kind":"continuous","min":0,"max":180,"def":30,"step":1,"log":false},
+    {"id":"t0","kind":"continuous","min":0,"max":30,"def":5,"step":0.5,"log":false},
+    {"id":"overtones","kind":"continuous","min":0,"max":2,"def":1,"step":0.01,"log":false},
+    {"id":"retrograde","kind":"continuous","min":0,"max":1,"def":0,"step":0.01,"log":false},
+    {"id":"inspiral","kind":"toggle","def":false},
+    {"id":"inspiralOct","kind":"continuous","min":0.25,"max":3,"def":1.5,"step":0.05,"log":false},
+    {"id":"stereo","kind":"toggle","def":true},
+    {"id":"releaseMute","kind":"toggle","def":false},
+    {"id":"tone","kind":"continuous","min":500,"max":20000,"def":14000,"step":0,"log":true},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.25,"step":0.01,"log":false},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"GW150914-like remnant (a = 0.69, q = 1.2)","values":{}},
+    {"name":"Schwarzschild (a = 0): two cycles and gone","values":{"spinU":0}},
+    {"name":"Rapid spin (a = 0.99)","values":{"spinU":2}},
+    {"name":"Near-extremal (a = 1 − 10⁻⁴): a harmonic bell","values":{"spinU":4,"t0":10,"overtones":0.4}},
+    {"name":"Extremal edge (a = 1 − 10⁻⁶): rings for a second","values":{"spinU":6,"t0":10,"overtones":0.4,"releaseMute":true}},
+    {"name":"Lopsided merger (q = 8): odd modes appear","values":{"massRatio":8}},
+    {"name":"Seen edge-on (ι = 90°): linear polarisation","values":{"inclination":90}},
+    {"name":"Early ringdown (t₀ = 0): overtone burst","values":{"t0":0,"overtones":1.5}},
+    {"name":"Inspiral + merger + ringdown (LIGO chirp)","values":{"inspiral":true,"inspiralOct":1.5}},
+    {"name":"Counter-rotating modes too","values":{"retrograde":0.7,"massRatio":3}}
+  ]
+}

@@ -72,7 +72,7 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 
 | file | what |
 |---|---|
-| `shell.js` | everything common to instrument pages: audio graph (room, volume, tone, limiter, analyser), computer keyboard and on-screen keys, MIDI (notes, velocity, CC64, CC1), parameter sidebar with presets and local storage, octave shift, toasts. See the header for the config. |
+| `shell.js` | everything common to instrument pages: audio graph (room, volume, tone, limiter, analyser), computer keyboard and on-screen keys, MIDI (notes, velocity through the touch curve, CC64, CC66 sostenuto, CC67 soft pedal, CC1, pitch bend), parameter sidebar with presets and local storage, octave shift, toasts. See the header for the config. |
 | `worklet.js` | the generic AudioWorklet processor. It runs your engine's WebAssembly from the bytes the page sends, through its class's `globalThis` name. It also registers `forte-limiter`, the chain's limiter, so a page adds it before building the chain. |
 | `wasm.js` | loads an instrument's WebAssembly in a page, the worklet or Node, and wraps it in a class with the engine contract (`wasmEngine`) |
 | `chain.js` | the output chain after the engine, built from the descriptor's `chain`: tone low-pass, body or soundboard, room, volume × trim, limiter. Every page uses it; the plugins rebuild it in C++. |
@@ -82,7 +82,7 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `views.js` | `fit`, `css`, `animate`, `SpectrumView` (live spectrum + model markers), `ScopeView` |
 | `impulses.js` | `roomIR` (the synthetic room the shell uses) |
 | `registry.js` | the instrument list behind the landing page and the menus |
-| `midi.js` | Web MIDI for every page (the shell and the five older pages): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default. |
+| `midi.js` | Web MIDI for every page (the shell and the five older pages): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen next to Enable MIDI, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling. |
 | `focus.js` | who gets a key press: a control reached with Tab keeps the keys it uses (Space ticks a stop, arrows move a slider); one last touched with the mouse or a finger hands them back to the instrument. Every page's key handler asks `controlOwns(e)` first. |
 | `notes.js`, `markdown.js` | **How it works**: the page's README in a dialog (button by the title, or a link to `…/#about`) |
 | `instrument.css`, `forte.css` | page layout; Forte nav and notes |
@@ -308,6 +308,11 @@ the whole file under ~30 s. Aim for 10–25 tests that cover:
 `npm test` runs every suite in parallel (`tools/test-all.mjs`) and
 reports all failures; `node tools/test-all.mjs <name>` runs a subset.
 
+The page itself is checked by `node tools/check-pages.mjs <slug>`: in
+headless Chromium at phone, tablet and desktop sizes, no console errors, no
+sideways scrolling, and the perform controls, ⓘ buttons, "Default settings"
+and keys in place (CI's `pages` job runs it on every page).
+
 ### Demos
 
 `tools/render-<slug>.mjs` renders 4–8 short demos (3–10 s each) to
@@ -332,10 +337,21 @@ native/instruments/<slug>/<slug>-model.*, <slug>-engine.*   the model and the en
 native/instruments/<slug>/<slug>-instrument.cpp              its InstrumentInfo: the tables with its engine
 native/instruments/<slug>/<slug>-web.cpp                     the model functions the views and tests call
 native/instruments/<slug>/<slug>-params.h, -info.cmake       generated from the descriptor (tools/gen-native-params.mjs)
+native/instruments/<slug>/<slug>-contract.json               generated too: what saved songs rely on (tools/contract.mjs)
+native/tests/states/<slug>-<version>.state                   what each release's plugin saved; never rewritten
 native/instruments/<slug>/reference.json                     its sound, summarised (tools/render-reference.mjs)
 <slug>/wasm/<slug>.wasm                                      built by the wasm preset; committed
 <slug>/src/<slug>-wasm.js                                    the WebAssembly as an engine class, and the model for the views
 ```
+
+The contract lists each parameter's id, kind, range, step, scaling and default, the options of
+a choice and the presets, in order: what a song saved in a DAW and its automation rely on.
+Removing, renaming or changing any of those, or a preset's values, breaks such songs; adding
+parameters, options at the end and presets at the end does not. `node tools/contract.mjs` lists
+what a branch breaks and adds since `main`; the `tests` workflow warns about breaks while an
+instrument is below 1.0 and, from 1.0 on, asks for a `major` release note. The plugin tests load
+every state in `native/tests/states/` into today's plugins; one that no longer loads is a break
+(before 1.0, delete it and say so in the note).
 
 The descriptor's `wasm` field names the build; the shell fetches it and sends its bytes to the
 worklet, which runs it. The engine takes all the parameters and computes its own per-note data

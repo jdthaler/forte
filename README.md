@@ -74,8 +74,9 @@ instrument's equivalent (hold, mute bar, Leslie speed), on every
 instrument except the black hole, where there is nothing to hold.
 **Enable MIDI** connects a MIDI keyboard (Chrome, Edge and Firefox; no
 browser on iPhone or iPad has Web MIDI, so the button is hidden there),
-including velocity, the sustain pedal, aftertouch and, where it means
-something, the mod wheel. Once MIDI is on, every other instrument page
+including velocity (with a Soft, Normal or Hard curve), the sustain,
+sostenuto and soft pedals, aftertouch and, where it means something, the
+mod wheel and pitch bend. Once MIDI is on, every other instrument page
 turns it on by itself.
 
 **Latency:** play through wired headphones or speakers. Bluetooth ones
@@ -175,6 +176,7 @@ native/                      the instruments' physics in C++: plugins and WebAss
 examples/<instrument>/       rendered demos (.m4a)
 docs/INSTRUMENT_GUIDE.md     how to build a new instrument
 docs/WORKSHOP.md             briefs for the instruments in the workshop
+docs/ROADMAP.md              the road to 1.0, and the feature wishlist
 docs/template/               the starting point (struck bars)
 ```
 
@@ -188,7 +190,8 @@ Forte and each instrument carry their own
 [semantic version](https://semver.org), shown on each page and on the
 landing page. They are listed in `shared/registry.js` (and in
 `package.json` for Forte) and logged in [CHANGELOG.md](CHANGELOG.md);
-releases are not tagged. Everything is pre-release (0.x) for now:
+releases are not tagged. Everything is pre-release (0.x) for now
+([docs/ROADMAP.md](docs/ROADMAP.md) says what 1.0 will take):
 
 * **MINOR** (0.**x**.0) for new features, or for changes to an
   instrument's sound or parameters.

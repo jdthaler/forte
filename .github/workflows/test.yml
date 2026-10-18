@@ -25,3 +25,26 @@ jobs:
         if: github.event_name == 'pull_request'
         run: node tools/release.mjs --check-pr "origin/${{ github.base_ref }}" "${{ github.event.pull_request.head.sha }}"
       - run: npm test
+
+  # Every page at the phone, tablet and desktop sizes in headless Chromium (tools/check-pages.mjs):
+  # no errors, nothing scrolling sideways, the controls in their places. On a pull request, also
+  # every count that differs from its base, in the job's summary.
+  pages:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the base branch, for the comparison
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Playwright and Chromium
+        run: npm install --no-save playwright@1.56.1 && npx playwright install --with-deps chromium
+      - name: Check every page
+        run: |
+          set -o pipefail
+          node tools/check-pages.mjs ${{ github.event_name == 'pull_request' && format('--base origin/{0}', github.base_ref) || '' }} | tee "$RUNNER_TEMP/pages.txt"
+      - name: Summary
+        if: always()
+        run: |
+          { echo '### Pages'; echo '```'; grep -E '^(FAIL|DIFF|  )|passed|differ|counts the same' "$RUNNER_TEMP/pages.txt" | head -200; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

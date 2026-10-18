@@ -109,9 +109,11 @@ Every instrument is the same CLAP plugin (`plugin/plugin.cpp`) around its own en
 description (`InstrumentInfo`, from the JavaScript descriptor by `tools/gen-native-params.mjs`).
 clap-wrapper builds the VST3, AU v2 and standalone from the CLAP. Each plugin:
 
-- takes notes and MIDI as the pages do: velocity, the sustain pedal or Hold (CC64), the mod
-  wheel (CC1), aftertouch (channel, polyphonic, and CLAP's pressure expression), pitch bend,
-  and All Notes Off (CC120, CC123);
+- takes notes and MIDI as the pages do: velocity through a *Velocity curve* parameter (Soft,
+  Normal, Hard), the sustain pedal or Hold (CC64), sostenuto (CC66) and the soft pedal (CC67)
+  where the instrument maps neither, the mod wheel (CC1), aftertouch (channel, polyphonic, and
+  CLAP's pressure expression), pitch bend (±2 semitones where the instrument bends), and All
+  Notes Off (CC120, CC123);
 - has the instrument's parameters, with stable ids hashed from the JavaScript ids, and a
   Preset parameter that applies a factory preset (the defaults, then the kept parameters,
   then the preset's values, as the pages do);
@@ -132,3 +134,19 @@ clap-wrapper builds the VST3, AU v2 and standalone from the CLAP. Each plugin:
 
 Identifiers: CLAP `net.jthaler.forte.<slug>`, vendor Forte, AU manufacturer `Frte` with the
 instrument's subtype from the registry (`plugin.code`), VST3 class id from `ids.json`.
+
+### The Forte app
+
+`Forte` (target `forte_suite_standalone`) is one standalone with every ported instrument but
+the template, picked from the Instrument menu at the top of its window (`editor.html?suite`
+shows the menu in a browser). `forte_add_suite()` (`cmake/forte.cmake`) builds it after the
+instruments from what `forte_add_plugin()` recorded, so a new port joins it with no change: each
+instrument's `<slug>-instrument.cpp` is compiled again with `forte_instrument` renamed
+`forte_instrument_<slug>`, and a generated table lists them. In `plugin.cpp` a `Suite` holds one
+instrument's `Plugin` at a time and passes the host's calls to it: a new one is made and
+activated on the main thread and handed to the audio thread, which takes it at its next block,
+and the one before is deleted once it has. Its id is `net.jthaler.forte.suite`, its version
+Forte's, and its state `forte-suite <slug>` then the instrument's own, so the app reopens on
+the last instrument. It is only a standalone: a DAW keeps a plugin's parameters while it is
+active, and these change with the instrument. The release ships it in the archives with every
+instrument (`Forte-plugins-<system>` and `Forte-plugins-app-<system>`).

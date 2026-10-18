@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # package-plugins.sh — the archives a plugin release ships (docs/PLUGINS.md, step 5), from the
 # plugins one system built: Forte-plugins-<system> with every instrument that has plugins
-# (`plugin.ready` in shared/registry.js), and Forte-<id>-<system> with each one alone, and each
-# of those also one format at a time (Forte-<id>-<format>-<system>: au, vst3, clap or app), each
+# (`plugin.ready` in shared/registry.js) and the Forte app (all of them in one standalone), and
+# Forte-<id>-<system> with each one alone, and each of those also one format at a time (Forte-<id>-<format>-<system>: au, vst3, clap or app), each
 # with native/INSTALL.md, and on macOS and Linux native/install.sh with its Makefile (make install,
-# make verify). The template's plugins are left out. The archives keep the bundles'
+# make verify), on Windows native/install.cmd with install.ps1 (install.cmd install, verify…). The template's plugins are left out. The archives keep the bundles'
 # executable bits and macOS's signatures. Run from the repository's root after building:
 #
 #   tools/package-plugins.sh <linux|macos|windows>     writes dist/
@@ -43,7 +43,8 @@ pack() {
     [ "$n" -gt 0 ] || { echo "no $format plugins built for $name in $plugins" >&2; exit 1; }
   done
   cp native/INSTALL.md "$dir"/
-  [ "$preset" = windows ] || { cp native/install.mk "$dir/Makefile"; cp native/install.sh "$dir/"; }
+  if [ "$preset" = windows ]; then cp native/install.cmd native/install.ps1 "$dir"/
+  else cp native/install.mk "$dir/Makefile"; cp native/install.sh "$dir/"; fi
   case "$preset" in
     macos) ditto -c -k --sequesterRsrc --keepParent "$dir" "dist/$out-macos.zip" ;;
     windows) (cd "$root/$out" && 7z a -tzip -bso0 "../../../../dist/$out-windows.zip" "$folder") ;;
@@ -59,6 +60,10 @@ while IFS=$'\t' read -r id name; do
   for f in "${formats[@]}"; do pack "Forte-$id-$f" "$name" "$f" "$name"; done
 done < <(node tools/plugin-release.mjs --plugins)
 [ "${#names[@]}" -gt 0 ] || { echo "tools/plugin-release.mjs --plugins listed no instruments" >&2; exit 1; }
-pack Forte-plugins "Forte plugins" all "${names[@]}"
-for f in "${formats[@]}"; do pack "Forte-plugins-$f" "Forte plugins" "$f" "${names[@]}"; done
+# with the Forte app, every instrument in one standalone (forte_add_suite), among the apps
+pack Forte-plugins "Forte plugins" all "${names[@]}" Forte
+for f in "${formats[@]}"; do
+  if [ "$f" = app ]; then pack "Forte-plugins-$f" "Forte plugins" "$f" "${names[@]}" Forte
+  else pack "Forte-plugins-$f" "Forte plugins" "$f" "${names[@]}"; fi
+done
 ls -l dist

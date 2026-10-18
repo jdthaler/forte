@@ -406,7 +406,8 @@ Done (Forte 0.13.0; per instrument and automatic in 0.17.0):
 2. The `release-plugins` workflow runs after every green `native` run on `live` (pull requests
    into `main` build and validate on Linux only; `live`, a pull request into it, and a run
    started by hand add macOS, Windows, auval and these archives) and attaches its
-   archives to a GitHub Release when what they're built from changed since the latest release
+   archives (or, when the release pull request's green run built the same tree, that run's: the
+   push to `live` then builds nothing again) to a GitHub Release when what they're built from changed since the latest release
    (`tools/plugin-release.mjs --manifest`: each instrument's version and the `native/` tree). It
    creates the tag itself (`plugins-v<Forte version>`, then `-2`, `-3`…), since sessions don't
    push tags, and writes the notes. It can also be started from the Actions tab.
@@ -436,6 +437,15 @@ data and design tools that write C++ tables (the bells' FEM, the bars' and reeds
 solver, the tuning tables). Where a test needs more of the C++ than the engine plays (the bowed
 string alone, the bubbles' glide, a linear analysis, a board's modes), the instrument's
 `<slug>-web.cpp` exports it, and the tuning tools (bowed, harmonium, pipes) measure the build.
+
+### Towards 1.0
+From 1.0 an instrument's major version changes only when songs saved with its plugins or its
+presets' sound break (README). The parts that hold it: each instrument's `<slug>-contract.json`
+(generated with its parameter tables) and `tools/contract.mjs`, which the `tests` workflow uses to
+warn about a break below 1.0 and to ask for a `major` note from 1.0; the saved states of every
+release in `native/tests/states/`, which `native/tests/suite-plugin-tests.cpp` loads into today's
+plugins; and `reference.json`, which keeps the presets' sound. The Windows downloads install
+themselves too (`native/install.cmd`, `install.ps1`).
 
 ### 6. Later
 - The plugin window (Forte 0.21.0: `native/plugin/editor.h`, `editor.html`) shows the controls

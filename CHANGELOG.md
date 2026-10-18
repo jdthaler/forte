@@ -16,6 +16,64 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-18 — every page checked in a browser on every pull request; one Forte app with every instrument; ready for 1.0: saved songs kept, and Windows downloads that install themselves; a velocity curve, sostenuto and soft pedals, and pitch bend on three more instruments
+
+### Forte 0.32.0
+- **`tools/check-pages.mjs` opens every page in headless Chromium** at the phone, tablet and desktop sizes, with the menus, Controls and views open and audio started, and fails on console errors, sideways scrolling, or perform controls, ⓘ buttons, "Default settings" or keys gone missing; `--base main` lists every count that differs from main. CI's new `pages` job runs it on every push and pull request.
+- **The Forte app:** one standalone app with every instrument, picked from an Instrument menu at
+  the top of its window; it reopens on the last one played. It comes in the plugin downloads with
+  every instrument (`Forte-plugins-<system>` and `Forte-plugins-app-<system>`), beside the
+  instruments' own apps, which are unchanged. New instruments join it as they are ported.
+- **Saved songs are watched:** each instrument's parameters and presets, as songs saved with its
+  plugins rely on them, are listed in `native/instruments/<slug>/<slug>-contract.json`. A pull
+  request that removes, renames or rescales a parameter, or moves, renames or changes a preset, is
+  warned about now and will need a major version from 1.0 on (`tools/contract.mjs`). Release notes
+  take a `major` kind, which takes 0.x to 1.0.0.
+- Every release keeps the state its plugins save (`native/tests/states/`), and the plugin tests
+  load every one into today's plugins with its values.
+- **The Windows downloads install themselves:** double-click `install.cmd` to put the VST3s and
+  CLAPs where every DAW looks (Windows asks once for administrator rights) and the apps in your
+  own Programs folder with Start menu shortcuts, and to clear the download mark SmartScreen warns
+  about. `install.cmd verify`, `uninstall`, `check` and `unblock` work as the Makefile's do on
+  macOS and Linux, one format at a time too.
+- **A velocity curve for your keyboard:** next to Enable MIDI, a menu picks Soft, Normal or Hard
+  touch for the velocities a MIDI keyboard sends. Soft makes a light touch louder, Hard asks for a
+  firmer one. Every page remembers the choice. The plugins and the Forte app have it as a
+  *Velocity curve* parameter (in its own MIDI group), saved with the song. The computer keys and
+  the on-screen keys are not affected.
+- **Sostenuto (CC66):** pressing the middle pedal holds the keys down at that moment until it is
+  lifted, and keys played after it are not held, as on a grand piano. This works on every page
+  and in every plugin.
+- **Soft pedal (CC67):** keys struck while it is down play softer. On the Ribbon Piano, CC67 is
+  still the una corda.
+- Pitch bend's range is ±2 semitones on every instrument that bends (`kBendSemitones`).
+
+### Ribbon Piano 0.6.0
+- Velocity curve and sostenuto on the page's MIDI.
+
+### Tonewheel Organ 0.7.0
+- **Pitch bend:** the wheel moves the generator's supply frequency, as a variac on a real organ
+  would. The whole organ, the vibrato scanner and the tonewheels bend together, ±2 semitones,
+  while the motor runs.
+- Velocity curve, sostenuto and soft pedal on the page's MIDI.
+
+### Tine Piano 0.6.0
+- Velocity curve, sostenuto and soft pedal on the page's MIDI.
+
+### Pyrophone 0.6.0
+- **Pitch bend:** the wheel turns the burner's gas up or down. The hotter gas carries sound
+  faster, so every tube's note follows, ±2 semitones.
+
+### Singing Arc 0.4.0
+- **Pitch bend:** the wheel slides the tank coil's iron core, so the arc's note follows, ±2
+  semitones. In the talking mode it bends the voice.
+
+### Huygens Keyboard 0.6.0
+- Sostenuto on the page's MIDI.
+
+### Black-Hole Keyboard 0.6.0
+- Velocity curve, sostenuto and soft pedal on the page's MIDI.
+
 ## 2026-10-18 — a live branch, and versions bumped only when it is released; the controls above the keys are back; the JavaScript engines are retired; storage ring
 
 ### Forte 0.31.0
