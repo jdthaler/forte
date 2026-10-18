@@ -35,4 +35,9 @@ jobs:
             echo "::error::live and main conflict. Merge live into main by hand, in a pull request into main."
             exit 1
           fi
-          git push origin HEAD:main
+          # main's ruleset requires checks that a push from here can't have passed yet; then a
+          # pull request brings live into main instead (CLAUDE.md, "Releasing main to live").
+          if ! git push origin HEAD:main; then
+            echo "::error::main's rules refused the push. Open a pull request from a branch at live into main and merge it once green."
+            exit 1
+          fi
