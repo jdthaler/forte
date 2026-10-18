@@ -212,6 +212,13 @@ export const INSTRUMENTS = [
     physics: 'Vortex shedding · lock-in · wake oscillators',
     accent: '#a8e6a1',
   },
+  {
+    id: 'ring', name: 'Storage Ring', section: 'phenomena', ready: true, version: '0.1.0', trim: -0.5,
+    plugin: { code: 'Stor', ready: true },
+    tagline: 'Every key a particle accelerator\'s storage ring, heard through a beam pickup: kicked bunches whose oscillation fades and recoheres.',
+    physics: 'Accelerator physics · betatron decoherence · synchrotron motion',
+    accent: '#6ec6ff',
+  },
 ];
 
 // The template (docs/template/), the starting point for new instruments: not listed, but it

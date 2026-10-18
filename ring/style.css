@@ -1,0 +1,8 @@
+/* The page's own palette and any layout beyond shared/instrument.css: the blue of
+   Cherenkov light and the copper of an RF cavity. */
+:root {
+  --accent: #6ec6ff;
+  --accent-2: #e8945a;
+  --accent-ink: #04121c;
+}
+#phase, #bpm { height: 300px; }
