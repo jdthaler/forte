@@ -39,6 +39,7 @@ class ReedEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override;
   void allNotesOff() override;
+  void bend(double value) override; // every reed's bending stiffness ×r², its notes ×r
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // A reed its page's model built already (packVoiceData; the page's noteData), for the next
@@ -51,7 +52,8 @@ class ReedEngine : public Engine {
     uint64_t version = 0;
     bool inUse = false;
     double k = 0;
-    std::array<double, MAX_MODES> q{}, q1{}, a1{}, a2{}, a1d{}, a2d{}, w{}, bw{}, pk{}, bp{}, om{}, sig{}, dw{};
+    std::array<double, MAX_MODES> q{}, q1{}, a1{}, a2{}, a1d{}, a2d{}, w{}, bw{}, pk{}, bp{}, om{}, sig{}, dw{}, om0{};
+    double bend = 1; // om0: the modes unbent; bend: the ratio om is tuned to
     double comp = 0, cStop = 0, stopDen = 1;
     int hits = 0;
     Hammer hammer{};
@@ -63,6 +65,7 @@ class ReedEngine : public Engine {
 
     void start(const ReedEngine &eng, int key, const VoiceData &d);
     void setDamper(double sd);
+    void tune(double r); // the modes at r × om0: a1, a2, bw, bp, comp, the stop (then setDamper)
     void updateDamping(const ReedEngine &eng) { damped = killing || (!keyDown && !eng.sustain); }
     void kill(const ReedEngine &eng);
     void strike(double v);
@@ -79,6 +82,7 @@ class ReedEngine : public Engine {
   const double fs2;
   const int hammerMax;
   double damperSigma = LOSS.damper;
+  double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
   double kF = 0, nodeA = 0, nodeB = 0;
   double *capA, *capB; // C(y) for the current gap and, while it glides, the next block's
   double y0 = 0, y0N = 0, cRest = 0, cRestN = 0, dRest = 0, dRestN = 0;

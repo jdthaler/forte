@@ -14,6 +14,7 @@ constexpr double OUT = 6.2;            // output units per pascal at 1 m
 constexpr double FADE = 0.03;          // s: a stolen key fades out over this
 constexpr double YOUNG = 0.05;         // s: a key this young is never stolen
 constexpr double GLIDE = 0.06;         // s: the wind slider glides
+constexpr double BEND_T = 0.02;        // s: the pitch wheel's glide
 constexpr double AFTER = 0.5;          // full aftertouch raises the wind by this fraction
 constexpr int POST_BLOCKS = 4;         // post the views' data every 4 blocks
 constexpr double LINE_LO = 0.002, LINE_HI = 0.015; // the free wake's relative line width (FWHM) for Re ≤ 180 and Re ≥ 1000
@@ -110,6 +111,20 @@ void WindHarpEngine::initString(Str &s, int key, const StringDesign &S) {
   s.Dmax = 1;
   while (s.Dmax < 4 && wTop * h * s.Dmax * 2 <= WH_MAX) s.Dmax *= 2;
   s.D = s.Dmax; s.hs = h * s.D;
+  if (bendNow != 1) tension(s, bendNow);
+}
+
+// Pitch bend: the string's tension × r², its stiff modes f_n = n f₀ √(r² + B n²) and the pull at the
+// bridge (tension × slope) with it. The wind and its wake do not change: a string bent out of its
+// lock-in band moves to the harmonic the wake picks, as a real one would.
+void WindHarpEngine::tension(Str &s, double r) {
+  const StringDesign &S = s.S;
+  for (int n = 0; n < s.N; n++) {
+    const double Bn = S.B * (n + 1) * (n + 1);
+    s.w[n] = TAU * S.f[n] * std::sqrt((r * r + Bn) / (1 + Bn)); s.w2[n] = pow(s.w[n], 2);
+    s.kb[n] = (S.T * r * r * (n + 1) * PI) / S.L;
+  }
+  s.bent = r; s.zetaAt = -1; // the modes' coefficients again at the next block
 }
 
 // the wind-dependent numbers at wind U (end of this block), the shutter moving from x0 to x1, and the modes' coefficients
@@ -343,10 +358,19 @@ double WindHarpEngine::wind(int n) {
   return U;
 }
 
+void WindHarpEngine::bend(double value) {
+  bendTo = fdlibm::pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12);
+}
+
 void WindHarpEngine::process(float *L, float *R, int n) {
   for (; n > BLOCK; n -= BLOCK, L += BLOCK, R += BLOCK) process(L, R, BLOCK);
   std::fill(L, L + n, 0.0f); std::fill(R, R + n, 0.0f);
   if (!hasParams) return;
+  if (bendNow != bendTo) { // pitch bend glides; the strings are retuned each block
+    bendNow += (bendTo - bendNow) * (1 - fdlibm::exp(-n * h / BEND_T));
+    if (std::fabs(bendNow - bendTo) < 1e-9) bendNow = bendTo;
+    for (int vi = 0; vi < nv; vi++) for (int i = 0; i < voices[vi]->ns; i++) tension(voices[vi]->strings[i], bendNow);
+  }
   const double Unow = wind(n);
   std::fill(flatL, flatL + n, 0.0); std::fill(flatR, flatR + n, 0.0); std::fill(mono, mono + n, 0.0);
   std::fill(dipL, dipL + n, 0.0); std::fill(dipR, dipR + n, 0.0);

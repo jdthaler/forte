@@ -48,6 +48,7 @@ class BubbleEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void allNotesOff() override;
   void pressure(double value, int key) override; // aftertouch: more gas through the nozzle
+  void bend(double value) override;              // the pump: the pressure at the nozzles ×r², the notes ×r
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -97,7 +98,8 @@ class BubbleEngine : public Engine {
   int ver = 0;
   Env env;       // conditions at the nozzles (targets)
   Acoustics ac{}; // scratch: a rising bubble's acoustics
-  double pT = P_ATM, pTarget = P_ATM;
+  double pT = P_ATM, pTarget = P_ATM, pB = P_ATM; // pB: the air above the water with pitch bend's push
+  double bendTo = 1, bendNow = 1;                 // pitch bend: the ratio, and where the glide is
   int64_t frame = 0;
   int blocks = 0, nev = 0;
   // the latest bubble's waveform, for the page

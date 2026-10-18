@@ -65,6 +65,7 @@ class WindHarpEngine : public Engine {
   void setSustain(bool on) override;
   void allNotesOff() override;
   void pressure(double value, int key) override; // aftertouch: the wind blows harder
+  void bend(double value) override;              // every string's tension ×r²
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -84,6 +85,7 @@ class WindHarpEngine : public Engine {
     double x = 0, target = 0;                // its shutter's position and target (the voice's, copied each block)
     int Dmax = 1, D = 1;                     // its step, in samples
     double hs = 0, fbLast = 0, dipLast = 0;
+    double bent = 1;                         // the tension's ratio (squared) its modes are tuned to
   };
   // One key: a course of strings behind one shutter.
   struct Voice {
@@ -105,10 +107,12 @@ class WindHarpEngine : public Engine {
   Voice pool[POOL];
   Voice *byKey[128] = {};
   double Uw = U_REF, U = U_REF;
+  double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
   Options opts;
 
  private:
   void initString(Str &s, int key, const StringDesign &S);
+  void tension(Str &s, double r);
   void prepare(Str &s, double U, int n, double x0, double x1, double target);
   static bool quiet(const Str &s);
   void ring(Str &s, int n);

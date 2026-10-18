@@ -59,6 +59,23 @@ TEST("bubbles: a ping rings at its bubble's frequency, starting at the kick's pr
   }
 }
 
+TEST("bubbles: pitch bend pumps the air above the water: a bubble released after it sounds two semitones off at the wheel's ends") {
+  const double fs = 48000;
+  auto P = defaults();
+  P[p::snap] = 0.01;
+  for (int key : {60, 72, 90}) for (double v : {1.0, -1.0}) {
+    BubbleEngine e(fs);
+    e.setParams(P.data());
+    e.bend(v);
+    render(e, (int)(0.3 * fs)); // the pump reaches its pressure
+    e.noteOn(key, 0.8);
+    e.noteOff(key, -1);
+    auto L = render(e, (int)(0.05 * fs));
+    const double want = keyFreq(key) * std::pow(2.0, 2 * v / 12), f = zeroCrossFreq(L, 48, 48 + (int)(0.02 * fs), fs);
+    CHECK(std::fabs(1200 * std::log2(f / want)) < 5); // surface tension stiffens the smallest a little beyond Minnaert
+  }
+}
+
 TEST("bubbles: the views' messages: each release, the brook's summary and the latest bubble's waveform") {
   const double fs = 48000;
   auto P = defaults();

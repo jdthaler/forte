@@ -90,6 +90,25 @@ TEST("glass: a rubbed A4 speaks at 440 Hz, its bowl built on the worker thread, 
   CHECK(e.voiceCount() == 0);
 }
 
+TEST("glass: pitch bend moves every bowl's modes: a rubbed note follows, two semitones at the wheel's ends") {
+  const double fs = 48000;
+  for (double v : {1.0, -1.0}) {
+    auto P = defaults();
+    P[p::split] = 0; P[p::treadle] = 0;
+    auto engine = std::make_unique<ArmonicaEngine>(fs);
+    ArmonicaEngine &e = *engine;
+    e.setParams(P.data());
+    waitFor(e, 69);
+    e.noteOn(69, 0.6);
+    render(e, (int)(0.8 * fs));
+    e.bend(v);
+    auto L = render(e, (int)(1.0 * fs));
+    const double want = 440 * std::pow(2.0, 2 * v / 12), f = zeroCrossFreq(L, (int)(0.4 * fs), (int)(1.0 * fs), fs);
+    CHECK(std::fabs(1200 * std::log2(f / want)) < 3);
+    CHECK(rms(L, (int)(0.4 * fs), (int)(1.0 * fs)) > 0.01);
+  }
+}
+
 TEST("glass: water poured into a ringing bowl lowers it (the voices pick up the rebuilt bowl)") {
   const double fs = 48000;
   auto P = defaults();

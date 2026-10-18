@@ -72,6 +72,7 @@ class PipeEngine : public Engine {
   void noteOn(int key, double velocity) override;
   void noteOff(int key, double velocity) override;
   void allNotesOff() override;
+  void bend(double value) override; // the organ's air warms or cools: every pipe's sound and jets ×r
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -91,7 +92,7 @@ class PipeEngine : public Engine {
     const PipeModel *R = nullptr;
     int rank = 0, os = 1, n = 0;
     bool stopped = false;
-    double fsI = 0, h = 0;
+    double fsI = 0, h = 0, fsS = 0, rt = 1; // fsS: steps per second of its own time (fsI/rt); rt: pitch bend's ratio
     std::array<double, 6 * MODES_OPEN> c{};
     std::array<double, MODES_OPEN> x{}, v{}, om{};
     double cv = 0, W = 0, b = 0, H = 0, y0 = 0, ib = 0, bH = 0, hA = 0, Ks = 0, Kl = 0, iSm = 0, tauK = 0, kxc = 0, flue = 0;
@@ -108,6 +109,7 @@ class PipeEngine : public Engine {
 
     static int lineLength(double tauK); // the delay line's length for a jet transit of tauK/U_j
     void init(PipeEngine &eng, const PipeModel *R, int rank, double *buf);
+    void retime(double r);
     double freq() const { return per > 0 ? fsI / per : 0; }
     void reset();
     double energy() const;
@@ -170,6 +172,7 @@ class PipeEngine : public Engine {
   // the wind
   WindSystem wsys;
   double stiff = -1, trem = 0, tremPh = 0, nz = 0;
+  double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
   // the decimator
   std::array<double, FIR_N> fir{};
   std::array<double, 2 * FIR_N> histL{}, histR{};

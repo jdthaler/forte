@@ -6,6 +6,8 @@
 #include <cmath>
 #include <memory>
 
+#include "forte/fdlibm.h"
+
 namespace forte::pianet {
 
 // Pickup → output units (a forte note peaks ≈ 0.3). The T's e = −N dΦ/dt is the flux step per
@@ -19,6 +21,7 @@ constexpr double XFADE = 0.02;     // s: switching the valve combo in or out cro
 constexpr double DUCK = 0.01;      // s: a pickup switch fades out over this, then back in
 constexpr double RETACK = 0.95;    // a re-pressed key fires once its dropped pad has re-tacked this much of its disc …
 constexpr double RETACK_MAX = 0.15; // s … or after this long at most
+constexpr double BEND_T = 0.02;    // s: the pitch wheel's glide
 
 // ---- a voice: one key's mechanism and its pickup -------------------------------------------
 
@@ -27,7 +30,7 @@ void PianetEngine::Voice::start(PianetEngine &eng, int k, Data::Ref r) {
   inUse = true;
   key = k; version = eng.version; ref = r;
   eng.data.acquire(r);
-  p = Pluck(*r.data, eng.pad(), eng.fs2);
+  p = Pluck(*r.data, eng.pad(), eng.fs2, eng.bendNow);
   pol = key % 2 ? -1 : 1;
   setPickup(eng, true);
   phiPrev = emFlux(p.y, g);
@@ -183,8 +186,21 @@ void PianetEngine::glide(Voice &v, int n2, bool es) {
   v.phiPrev = es ? emFlux(p.y, g) : phiPrev; v.fade = fade; v.dC = dC;
 }
 
+void PianetEngine::bend(double value) {
+  bendTo = forte::fdlibm::pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12);
+}
+
 void PianetEngine::process(float *L, float *R, int n) {
-  for (int at = 0; at < n; at += BLOCK_MAX) processBlock(L + at, R + at, std::min(BLOCK_MAX, n - at));
+  for (int at = 0, m; at < n; at += m) {
+    // pitch bend glides in steps of at most 128 samples, the reeds retuned at each
+    m = std::min(bendNow != bendTo ? 128 : BLOCK_MAX, n - at);
+    if (bendNow != bendTo) {
+      bendNow += (bendTo - bendNow) * (1 - forte::fdlibm::exp(-m / (BEND_T * fs)));
+      if (std::fabs(bendNow - bendTo) < 1e-9) bendNow = bendTo;
+    }
+    for (int i = 0; i < nVoices; i++) if (voices[i]->p.bend != bendNow) voices[i]->p.retune(bendNow, voices[i]->sleep);
+    processBlock(L + at, R + at, m);
+  }
   data.audioCycle();
 }
 

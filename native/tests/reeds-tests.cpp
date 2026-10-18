@@ -117,6 +117,21 @@ TEST("engine: a note waits for its reed, then sounds on pitch; the dampers stop 
   CHECK(e->voiceCount() == 0);
 }
 
+TEST("engine: pitch bend stiffens or softens the reed: a sounding note follows, two semitones at the wheel's ends") {
+  const double fs = 48000;
+  for (double v : {1.0, -1.0}) {
+    auto e = std::make_unique<ReedEngine>(fs);
+    e->setParams(dry().data());
+    e->noteOn(57, 0.5);
+    CHECK(until(*e, 1));
+    render(*e, (int)(0.05 * fs));
+    e->bend(v);
+    const std::vector<float> L = render(*e, (int)(0.8 * fs));
+    const double f = keyFreq(57) * std::pow(2.0, 2 * v / 12), fm = freqNear(L, f, (int)(0.15 * fs), (int)(0.25 * fs), (int)(0.3 * fs), fs);
+    CHECK(std::fabs(cents(fm, f)) < 3);
+  }
+}
+
 TEST("engine: the bark: a harder strike raises the 2nd harmonic") {
   const double fs = 48000, f = keyFreq(57);
   auto h2 = [&](double vel) {

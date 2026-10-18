@@ -127,6 +127,22 @@ TEST("engine: A4 plays 440 Hz once its key is built off the audio thread, and st
   CHECK(finite);
 }
 
+TEST("engine: pitch bend slides the tuning springs: a ringing note follows, two semitones at the wheel's ends") {
+  for (double v : {1.0, -1.0}) {
+    auto ep = engine(dry(defaults()));
+    TinesEngine &e = *ep;
+    e.noteOn(69, 1.8);
+    CHECK(until(e, 1));
+    render(e, (int)(0.1 * FS));
+    e.bend(v);
+    const auto L = render(e, (int)(1.2 * FS));
+    const double want = 440 * std::pow(2.0, 2 * v / 12);
+    double best = 0, bf = 0;
+    for (double c = -10; c <= 10; c += 0.25) { const double f = want * std::pow(2.0, c / 1200), g = tone(L, f, (int)(0.2 * FS), (int)(1.2 * FS)); if (g > best) { best = g; bf = f; } }
+    CHECK(std::fabs(cents(bf, want)) < 2);
+  }
+}
+
 TEST("engine: harder strikes swing further into the pickup's nonlinearity; a centred tine outputs the octave") {
   auto h2 = [&](double vel, double offset) {
     auto P = dry(defaults());

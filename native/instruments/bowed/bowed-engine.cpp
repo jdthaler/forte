@@ -16,6 +16,7 @@ constexpr double F_BODY = 2400;     // plate modes are modelled up to here
 constexpr int POST_EVERY = 2048;    // samples between view updates (≈ 23 per second)
 constexpr double STROBE = 1.0 / 48; // the shape is sampled stroboscopically: the corner advances 1/48 period per frame
 constexpr double FLYWHEEL = 0.5;    // s: the crank's flywheel smooths changes of treadle speed
+constexpr double BEND_T = 0.02;     // s: the pitch wheel's glide
 
 static Params paramsOf(const double *P) {
   Params x;
@@ -50,6 +51,7 @@ void OrganistaEngine::setParams(const double *P) {
   vBt = Pm.speed; if (first) vB = Pm.speed; // the wheel follows the treadle through the flywheel
   for (auto &s : S) {
     s->design(loopDesign(s->key, Pm, s->fs));
+    if (bendNow != 1) s->bend(bendNow);
     s->setDamper(damped(*s), 6.91 / Pm.damper);
   }
   const Loop &L0 = S[0]->L;
@@ -123,8 +125,20 @@ void OrganistaEngine::pressure(double value, int key) { // MIDI aftertouch: one 
 
 int OrganistaEngine::voiceCount() const { int n = 0; for (int i = 0; i < nAct; i++) if (act[i]->down) n++; return n; }
 
+void OrganistaEngine::bend(double value) {
+  bendTo = fdlibm::pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12);
+}
+
 void OrganistaEngine::process(float *L, float *R, int n) {
-  for (int at = 0; at < n; at += 128) run(L + at, R + at, std::min(128, n - at));
+  for (int at = 0; at < n; at += 128) {
+    const int m = std::min(128, n - at);
+    if (bendNow != bendTo) { // the pitch wheel glides; every string is retuned each block
+      bendNow += (bendTo - bendNow) * (1 - fdlibm::exp(-m / (BEND_T * fs)));
+      if (std::fabs(bendNow - bendTo) < 1e-9) bendNow = bendTo;
+      if (hasParams) for (auto &s : S) s->bend(bendNow);
+    }
+    run(L + at, R + at, m);
+  }
 }
 
 void OrganistaEngine::run(float *Lo, float *Ro, int n) {
@@ -227,7 +241,7 @@ void OrganistaEngine::report() {
   motion = s.active ? s.motion(16) : Motion{};
   if (!s.active) shapeBuf.fill(0);
   for (int i = 0; i < TRACE; i++) traceOut[i] = trace[(tw + i) % TRACE];
-  const double P0 = fs / s.L.f0, Pact = motion.kind == Kind::helmholtz ? P0 / motion.spp : P0;
+  const double P0 = fs / (s.L.f0 * bendNow), Pact = motion.kind == Kind::helmholtz ? P0 / motion.spp : P0;
   Message m;
   m.key = (int16_t)focus;
   for (int which = 0; which < 2; which++) {
