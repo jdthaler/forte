@@ -1,6 +1,6 @@
 {
   "name": "forte",
-  "version": "0.32.0",
+  "version": "0.33.0",
   "private": true,
   "description": "Keyboard instruments built from physics",
   "license": "MIT",
