@@ -45,8 +45,9 @@ Read first:
    - `node tools/check-pages.mjs --base origin/main` passes when the change
      touches a page or `shared/`. It opens every page at the sizes below
      (with the menus, Controls and the views open, and audio started) and
-     fails on console errors, sideways scrolling, or perform controls, ⓘ
-     buttons, "Default settings" or keys gone missing; it lists every
+     fails on console errors, sideways scrolling, perform controls, ⓘ
+     buttons, "Default settings" or keys gone missing, or front-page Listen
+     buttons that are missing or don't play; it lists every
      count that differs from `main`, and each one should be one the change
      meant. The `pages` job in CI runs the same against the pull request's
      base. A filter checks fewer pages: `node tools/check-pages.mjs gongs`.

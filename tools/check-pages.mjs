@@ -1,8 +1,9 @@
 // check-pages.mjs — open every page in headless Chromium at the sizes CLAUDE.md names and check
 // what a layout regression breaks: errors in the console, a page that scrolls sideways (as
-// loaded, with the menus, Controls and the views' tabs open, and with audio started), and the
+// loaded, with the menus, Controls and the views' tabs open, and with audio started), the
 // controls each page should place (the perform controls above the keys, the ⓘ buttons, "Default
-// settings" among the presets, the keys).
+// settings" among the presets, the keys), and the front page's Listen buttons (one for each
+// instrument with a demo, and two in turn play).
 //
 // Usage: node tools/check-pages.mjs [--base <git ref>] [--json <file>] [filter]
 //   filter       only the pages whose path contains it (gongs, index, credits, template)
@@ -25,6 +26,8 @@ const base = opt('--base');
 const jsonOut = opt('--json');
 const filter = args[0] || '';
 const ROOT = resolve(new URL('..', import.meta.url).pathname);
+const DEMOS = JSON.parse(await readFile(join(ROOT, 'examples/index.json'), 'utf8'));
+const LISTEN = INSTRUMENTS.filter((i) => i.ready && DEMOS[i.id]?.length).length; // the front page's Listen buttons
 
 async function playwright() {
   try { return await import('playwright'); } catch { /* not local: try the global install */ }
@@ -79,16 +82,46 @@ const COUNT = () => {
     defaultSettings: opts.includes('Default settings'),
     keys: n('.wk'),
     viewTabs: n('.forte-dock-tabs [role="tab"], .forte-dock-tabs button:not(.forte-dock-fold)'),
+    listen: n('button[data-src]'),
   };
 };
 const WIDE = () => document.documentElement.scrollWidth - window.innerWidth;
+
+// Chromium as Playwright ships it decodes no AAC, so each demo that is served plays as a second
+// of quiet WAV instead: what's checked is the page, not the codec.
+const WAV = (() => {
+  const rate = 8000, n = rate, b = Buffer.alloc(44 + 2 * n);
+  b.write('RIFF', 0); b.writeUInt32LE(36 + 2 * n, 4); b.write('WAVEfmt ', 8); b.writeUInt32LE(16, 16);
+  b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22); b.writeUInt32LE(rate, 24); b.writeUInt32LE(2 * rate, 28);
+  b.writeUInt16LE(2, 32); b.writeUInt16LE(16, 34); b.write('data', 36); b.writeUInt32LE(2 * n, 40);
+  return b;
+})();
+// Listen on two cards in turn: each should say ■ Stop and play its own demo.
+async function listen(tab) {
+  const out = [], buttons = tab.locator('button[data-src]');
+  for (const i of [0, 1]) {
+    const b = buttons.nth(i);
+    if (!(await b.count())) break;
+    await b.scrollIntoViewIfNeeded();
+    await b.click({ timeout: 2000 });
+    await tab.waitForTimeout(400);
+    const s = await tab.evaluate(() => { const a = document.querySelector('#player'); return { src: a.src, paused: a.paused, t: a.currentTime }; });
+    const src = await b.getAttribute('data-src'), text = await b.textContent();
+    if (!text.includes('Stop') || s.paused || !(s.t > 0) || !s.src.endsWith(src)) out.push(`Listen doesn't play ${src} (reads "${text.trim()}", ${s.paused ? 'paused' : `at ${s.t.toFixed(2)} s`})`);
+  }
+  return out;
+}
 
 async function checkPage(browser, url, page, size) {
   const { name, ios, ...device } = size;
   const ctx = await browser.newContext({ ...device, deviceScaleFactor: 1 });
   if (ios) await ctx.addInitScript(() => { delete Navigator.prototype.requestMIDIAccess; });
   const tab = await ctx.newPage();
-  const errors = [], wide = [];
+  await tab.route('**/*.m4a', async (route) => {
+    const res = await route.fetch();
+    await route.fulfill(res.ok() ? { status: 200, contentType: 'audio/wav', body: WAV } : { response: res });
+  });
+  const errors = [], wide = [], broken = [];
   tab.on('pageerror', (e) => errors.push(e.message));
   tab.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   tab.on('response', (r) => { if (r.status() >= 400) errors.push(`${r.status()} ${r.url().replace(url, '')}`); });
@@ -103,20 +136,22 @@ async function checkPage(browser, url, page, size) {
     await tab.waitForTimeout(500);
     await sideways('loaded');
     const counts = await tab.evaluate(COUNT);
+    if (!page) broken.push(...await listen(tab));
     if (await click('details.forte-switch > summary')) { await sideways('menu open'); await click('details.forte-switch > summary'); }
     if (await click('.forte-more')) { await sideways('Controls open'); await tab.keyboard.press('Escape'); await click('.forte-more'); }
     if (await click('.forte-dock-tabs button:not(.forte-dock-fold)')) await sideways('views open');
     if (await click('#start')) { await tab.waitForTimeout(500); await sideways('audio started'); }
-    return { page: page || 'index', size: name, counts, errors, wide };
+    return { page: page || 'index', size: name, counts, errors, wide, broken };
   } catch (e) {
-    return { page: page || 'index', size: name, counts: null, errors: [...errors, e.message], wide };
+    return { page: page || 'index', size: name, counts: null, errors: [...errors, e.message], wide, broken };
   } finally { await ctx.close(); }
 }
 
 // The checks: what every instrument page must have, whatever else a change does to it.
 function failures(r, instrument) {
-  const f = [...r.errors.map((e) => `error: ${e}`), ...r.wide.map((w) => `scrolls sideways: ${w}`)];
+  const f = [...r.errors.map((e) => `error: ${e}`), ...r.wide.map((w) => `scrolls sideways: ${w}`), ...r.broken];
   const c = r.counts;
+  if (c && r.page === 'index' && c.listen !== LISTEN) f.push(`${c.listen} Listen buttons, not ${LISTEN} (one for each instrument with a demo)`);
   if (!c || !instrument) return f;
   if (!c.keys) f.push('no keys');
   if (!c.info) f.push('no ⓘ buttons');
