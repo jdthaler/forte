@@ -5,14 +5,14 @@
 import { GROUPS, DEFAULTS, PRESETS } from './stars-params.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
-export const KEY_LO = 36, KEY_HI = 96; // C2–C7
+export const KEY_LO = 21, KEY_HI = 108; // A0–C8
 
 export const INSTRUMENT = {
   id: 'stars',
   groups: GROUPS,
   presets: PRESETS,
   keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
-  range: [KEY_LO, KEY_HI],              // MIDI keys: C2–C7
+  range: [KEY_LO, KEY_HI],              // MIDI keys: A0–C8
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'spin',                     // CC1: the star's rotation
   // the engine: the physics in C++ (native/instruments/stars), built as WebAssembly. The page

@@ -50,7 +50,7 @@ void StarEngine::Voice::start(StarEngine &eng, int key_, const Star &d, uint64_t
     W[i] = C[i] = S[i] = RHO[i] = A1[i] = A2[i] = Y1[i] = Y2[i] = G[i] = GT[i] = AMP[i] = ETA[i] = 0;
     act[i] = 1;
   }
-  const double pp = 0.6 * (2.0 * (key - KEY_LO) / (KEY_HI - KEY_LO) - 1), a = ((pp + 1) * pi) / 4;
+  const double pp = 0.6 * std::max(-1.0, std::min(1.0, 2.0 * (key - PAN_LO) / (PAN_HI - PAN_LO) - 1)), a = ((pp + 1) * pi) / 4;
   gl = fd::cos(a); gr = fd::sin(a);
   vel = 0.7; pressure = 1; held = false; age = 0; fade = 1; fading = false; dead = false;
   peak = 1e-12; level = 0; seed = Rng(key * 104729 + (int)(eng.presses++ & 0xffff));
