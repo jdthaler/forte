@@ -1,6 +1,7 @@
 // Star Keyboard checks. Run: node test/stars-tests.mjs
 //
-// The scaling relations against the solar reference values and the mean density; the asymptotic
+// The C++ (native/instruments/stars), built as WebAssembly: the model's stars through stars-wasm.js,
+// the engine through loadEngine. The scaling relations against the solar reference values and the mean density; the asymptotic
 // pattern, its small separations and the échelle ridges; the mixed-mode condition against its own
 // period spacings; E_lm(i); rotation; the evolutionary track and the tuning of every key; then the
 // engine against the model: Lorentzian lines of the set width and power from the stochastic driving,
@@ -8,17 +9,22 @@
 // amplitude equation, voices, levels, stability and cost.
 
 import assert from 'node:assert/strict';
-import {
-  KEY_LO, KEY_HI, SUN, K0, SUN_KEY, VIS, keyFreq, cents, deltaNu, nuMax, envWidth, zams, starAt, seismic, pModes, mixedModes, thetaPOf,
-  multiplets, heardPitch, Elm, splitWeights, keyStar, starId, DS,
-} from '../stars/src/stars-model.js';
-import { INSTRUMENT } from '../stars/src/stars-instrument.js';
+import { INSTRUMENT, KEY_LO, KEY_HI, DEFAULTS, GROUPS, PRESETS } from '../stars/src/stars-instrument.js';
+import { K0 } from '../stars/src/stars-params.js';
+import { wasmModel, starId } from '../stars/src/stars-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
-import { OUT, voicing } from '../stars/src/stars-engine.js';
-import { DEFAULTS, GROUPS, PRESETS } from '../stars/src/stars-params.js';
+import { keyFreq } from '../shared/dsp.js';
 import { fft } from '../tools/audio-util.mjs';
 
-const StarEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const StarEngine = await loadEngine(INSTRUMENT);
+const { keyStar, zams, starAt, Elm } = await wasmModel();
+
+// What the tests hold the model and the engine to: the Sun (Huber et al. 2011, and 25.4 d at the
+// equator), the key the Sun sits on (G6), δ Scuti's Ledoux constant, and the engine's output scale
+// (a star's rms is OUT·√½·drive) and voicing (+3 dB an octave down the keyboard).
+const SUN = { numax: 3090, dnu: 135.1, teff: 5777, rot: 1e6 / (25.4 * 86400) }, SUN_KEY = 91, DS_C = 0.05;
+const OUT = 0.088, voicing = (key) => 2 ** ((60 - key) / 48);
+const cents = (a, b) => 1200 * Math.log2(a / b);
 
 const FS = 48000;
 let failures = 0;
@@ -87,42 +93,56 @@ const msOf = (x, a = 0, b = x.length) => { let s = 0; for (let i = a; i < b; i++
 const slope = (t, y) => { const n = t.length, mt = t.reduce((a, b) => a + b) / n, my = y.reduce((a, b) => a + b) / n; let sxy = 0, sxx = 0; for (let i = 0; i < n; i++) { sxy += (t[i] - mt) * (y[i] - my); sxx += (t[i] - mt) ** 2; } return sxy / sxx; };
 
 console.log('scaling relations and the pattern');
-test('the scaling relations give the solar reference values (Huber et al. 2011: Δν = 135.1 μHz, ν_max = 3090 μHz at 5777 K); Δν ∝ √(mean density) as M and R vary (stars of equal density share Δν); ν_max ∝ g/√T_eff', () => {
-  assert.equal(deltaNu(1, 1), 135.1);
-  assert.equal(nuMax(1, 1, 5777), 3090);
-  for (const [M, R] of [[0.8, 0.75], [1.3, 1.9], [1.6, 4], [1, 11], [2, 2.5]]) {
-    const rho = M / R ** 3;
-    assert.ok(rel(deltaNu(M, R), 135.1 * Math.sqrt(rho)) < 1e-12, `${M}, ${R}`);
-    const R2 = R * 1.7, M2 = rho * R2 ** 3; // same density, larger star
-    assert.ok(rel(deltaNu(M2, R2), deltaNu(M, R)) < 1e-12, 'equal densities, equal Δν');
-    assert.ok(rel(nuMax(M, R, 4800) / nuMax(M, 2 * R, 4800), 4) < 1e-12 && rel(nuMax(M, R, 4800) / nuMax(M, R, 4800 * 4), 2) < 1e-12);
+test('the scaling relations give the solar reference values (Huber et al. 2011: Δν = 135.1 μHz, ν_max = 3090 μHz at 5777 K): every key\'s star has Δν = 135.1·√(M/R³) (∝ √(mean density)), ν_max = 3090·(M/R²)/√(T_eff/5777) (∝ g/√T_eff) and an envelope 0.66·ν_max^0.88 wide, to 10⁻¹²', () => {
+  for (const o of [{}, { mass: 0.9 }, { mass: 1.8 }]) for (let k = KEY_LO; k <= KEY_HI; k += 5) {
+    const { star: st, sz } = keyStar(k, P(o));
+    assert.ok(rel(sz.dnu, SUN.dnu * Math.sqrt(st.M / st.R ** 3)) < 1e-12, `Δν on ${k}`);
+    assert.ok(rel(sz.numax, (SUN.numax * st.M) / st.R ** 2 / Math.sqrt(st.T / SUN.teff)) < 1e-12, `ν_max on ${k}`);
+    assert.ok(rel(sz.fwhm, 0.66 * sz.numax ** 0.88) < 1e-12, `envelope on ${k}`);
   }
-  assert.ok(rel(envWidth(3090), 0.66 * 3090 ** 0.88) < 1e-12);
 });
-test('the asymptotic relation: to first order with small separations (no curvature), every degree lies on a vertical ridge of the échelle diagram (ν mod Δν constant to 10⁻⁹ Δν), ordered l = 2, 0, 3, 1 with δν₀₂ = 6DΔν, δν₀₁ = 2DΔν, δν₀₃ = 12DΔν (Tassoul\'s l(l+1) law); with curvature the ridges bend as (α/2)(n − n_max)²', () => {
-  for (const dnu of [135.1, 40, 11]) {
-    const sz = { dnu, numax: dnu ** (1 / 0.77) * 5.6, eps: 1.3, d02: 0.1, alpha: 0, fwhm: 0.3 * dnu ** (1 / 0.77) * 5.6 };
-    const pm = pModes(sz, 3), D = sz.d02 / 6;
-    for (let l = 0; l <= 3; l++) {
-      const r = pm.filter((m) => m.l === l).map((m) => ((m.nu / dnu) % 1 + 1) % 1);
-      assert.ok(r.length >= 3, `l = ${l}: ${r.length} modes`);
-      for (const x of r) assert.ok(Math.abs(x - r[0]) < 1e-9, `l = ${l} ridge not vertical: ${x} vs ${r[0]}`);
+// The nominal p modes of a star's pattern, every degree, orders within ±span·σ of ν_max: the asymptotic
+// relation ν_nl = Δν [n + l/2 + ε − l(l+1)D + (α/2)(n − n_max)²], n_max = ν_max/Δν − ε, D = δν₀₂/6Δν.
+function pModes(sz, span) {
+  const sig = sz.fwhm / (2 * Math.sqrt(2 * Math.log(2))), nmax = sz.numax / sz.dnu - sz.eps, D = sz.d02 / 6, out = [];
+  const n0 = Math.max(1, Math.floor((sz.numax - span * sig) / sz.dnu - sz.eps - 2)), n1 = Math.ceil((sz.numax + span * sig) / sz.dnu - sz.eps + 1);
+  for (let n = n0; n <= n1; n++) for (let l = 0; l <= 3; l++) {
+    const nu = sz.dnu * (n + l / 2 + sz.eps - l * (l + 1) * D + (sz.alpha / 2) * (n - nmax) ** 2);
+    if (Math.abs(nu - sz.numax) <= span * sig) out.push({ n, l, nu });
+  }
+  return out;
+}
+test('the asymptotic relation: every p mode of the stars on the keys (dwarfs, a subgiant, a red giant\'s l = 0, 2, 3) is at Δν[n + l/2 + ε − l(l+1)D + (α/2)(n − n_max)²] (to 10⁻⁹ Δν); the curvature taken out, every degree lies on a vertical ridge of the échelle diagram (ν mod Δν constant to 10⁻⁹ Δν), ordered l = 2, 0, 3, 1 with δν₀₂ = 6DΔν, δν₀₁ = 2DΔν, δν₀₃ = 12DΔν (Tassoul\'s l(l+1) law)', () => {
+  for (const key of [96, 88, 76, 64, 40]) {
+    const { sz, all } = keyStar(key, P()), dnu = sz.dnu, D = sz.d02 / 6, nmax = sz.numax / dnu - sz.eps;
+    const pm = all.filter((m) => m.zeta === 0 && (m.l !== 1 || !(sz.q > 0)));
+    for (const m of pm) assert.ok(Math.abs(m.nu - dnu * (m.n + m.l / 2 + sz.eps - m.l * (m.l + 1) * D + (sz.alpha / 2) * (m.n - nmax) ** 2)) < 1e-9 * dnu, `key ${key}: n ${m.n}, l ${m.l}`);
+    const flat = pm.map((m) => ({ ...m, nu: m.nu - dnu * (sz.alpha / 2) * (m.n - nmax) ** 2 }));
+    for (const l of [...new Set(flat.map((m) => m.l))]) {
+      const r = flat.filter((m) => m.l === l).map((m) => ((m.nu / dnu) % 1 + 1) % 1);
+      assert.ok(r.length >= 3, `key ${key}, l = ${l}: ${r.length} modes`);
+      for (const x of r) assert.ok(Math.abs(x - r[0]) < 1e-9, `key ${key}, l = ${l} ridge not vertical: ${x} vs ${r[0]}`);
     }
-    const at = (n, l) => pm.find((m) => m.n === n && m.l === l)?.nu;
-    const n = Math.round(sz.numax / dnu - sz.eps);
-    assert.ok(Math.abs(at(n, 0) - at(n - 1, 2) - 6 * D * dnu) < 1e-9 * dnu, 'δν02');
-    assert.ok(Math.abs((at(n, 0) + at(n + 1, 0)) / 2 - at(n, 1) - 2 * D * dnu) < 1e-9 * dnu, 'δν01');
-    assert.ok(Math.abs(at(n, 0) + dnu * 1.5 - at(n, 3) - 12 * D * dnu) < 1e-9 * dnu, 'δν03');
-    const bent = pModes({ ...sz, alpha: 0.01 }, 3).filter((m) => m.l === 0), nmax = sz.numax / dnu - sz.eps;
-    for (const m of bent) assert.ok(Math.abs(m.nu / dnu - (m.n + sz.eps) - 0.005 * (m.n - nmax) ** 2) < 1e-9, 'curvature');
+    const at = (n, l) => flat.find((m) => m.n === n && m.l === l)?.nu;
+    const n = Math.round(nmax);
+    assert.ok(Math.abs(at(n, 0) - at(n - 1, 2) - 6 * D * dnu) < 1e-9 * dnu, `key ${key}: δν02`);
+    if (!(sz.q > 0)) assert.ok(Math.abs((at(n, 0) + at(n + 1, 0)) / 2 - at(n, 1) - 2 * D * dnu) < 1e-9 * dnu, `key ${key}: δν01`);
+    assert.ok(Math.abs(at(n, 0) + dnu * 1.5 - at(n, 3) - 12 * D * dnu) < 1e-9 * dnu, `key ${key}: δν03`);
   }
 });
-test('mixed modes (tan θ_p = q tan θ_g): every root satisfies the condition to 10⁻⁸; midway between p modes the dipole period spacing is ΔΠ₁/(1 + q/N) ≈ ΔΠ₁ (within 0.5 %; within 3 % of ΔΠ₁), near each p mode the modes bunch: the smallest spacing falls below ¾ΔΠ₁, never below ζ_min·ΔΠ₁, ζ_min = [1 + 1/(qN)]⁻¹ ≈ 0.5; everywhere the spacing between neighbours is ΔΠ₁/⟨1/ζ⟩ over the period between them (dP/dJ = ζΔΠ₁; within 0.5 %); and the p mode\'s power is shared, Σ(1 − ζ) = 1 per order (within 3 %)', () => {
-  const sz = { dnu: 12, numax: 130, eps: 1.1, d02: 0.12, alpha: 0, fwhm: 50, dPi: 75, q: 0.12 };
-  const p1 = pModes(sz, 6).filter((m) => m.l === 1), th = thetaPOf(p1), lo = 80, hi = 180;
-  const mm = mixedModes(sz, p1, lo, hi).sort((a, b) => a.nu - b.nu);
+test('mixed modes (tan θ_p = q tan θ_g), the dipole modes of the red giant on C2: every root satisfies the condition to 10⁻⁸; midway between p modes the dipole period spacing is ΔΠ₁/(1 + q/N) ≈ ΔΠ₁ (within 0.5 %; within 3 % of ΔΠ₁), near each p mode the modes bunch: the smallest spacing falls below ¾ΔΠ₁, never below ζ_min·ΔΠ₁, ζ_min = [1 + 1/(qN)]⁻¹ ≈ 0.5; everywhere the spacing between neighbours is ΔΠ₁/⟨1/ζ⟩ over the period between them (dP/dJ = ζΔΠ₁; within 0.5 %); and the p mode\'s power is shared, Σ(1 − ζ) = 1 per order (within 3 %)', () => {
+  // θ_p = π(ν − ν_p)/Δν: π times the (fractional) number of nominal dipole p modes below ν, piecewise
+  // linear between them; θ_g = π/(ν ΔΠ₁)
+  // (its modes span 49–211 μHz; looked at over 80–180 μHz, about ν_max = 130 μHz, where N = Δν/(ν²ΔΠ₁) > 5)
+  const { sz, all } = keyStar(KEY_LO, P()), lo = 80, hi = 180;
+  const p1 = pModes(sz, 5).filter((m) => m.l === 1), PN = p1.map((m) => m.nu).sort((a, b) => a - b);
+  const seg = (nu) => { let j = 0; if (nu >= PN[PN.length - 1]) j = PN.length - 2; else while (j < PN.length - 2 && nu >= PN[j + 1]) j++; return j; };
+  const th = (nu) => { const j = seg(nu); return Math.PI * (j + (nu - PN[j]) / (PN[j + 1] - PN[j])); };
+  const mm = all.filter((m) => m.l === 1 && m.nu > lo && m.nu < hi).sort((a, b) => a.nu - b.nu);
+  assert.ok(sz.q > 0.1 && Math.abs(sz.numax - 130) < 1&& mm.length > 80, `q ${sz.q}, ν_max ${sz.numax}, ${mm.length} dipole modes`);
   for (const m of mm) { const tg = Math.PI / (m.nu * 1e-6 * sz.dPi), tp = th(m.nu); assert.ok(Math.abs(Math.sin(tp) * Math.cos(tg) - sz.q * Math.cos(tp) * Math.sin(tg)) < 1e-8, `${m.nu}`); }
-  const N = (nu) => (sz.dnu * 1e-6) / ((nu * 1e-6) ** 2 * sz.dPi);
+  // N = Δν/(ν²ΔΠ₁), with the p modes' local spacing (the curvature α spreads them out from ν_max)
+  const N = (nu) => { const j = seg(nu); return ((PN[j + 1] - PN[j]) * 1e-6) / ((nu * 1e-6) ** 2 * sz.dPi); };
   const zetaAt = (nu) => { const c = Math.cos(th(nu)), s = Math.sin(th(nu)); return 1 / (1 + (sz.q / N(nu)) / (sz.q * sz.q * c * c + s * s)); };
   let far = 0, near = 0;
   for (let k = 0; k + 1 < mm.length; k++) {
@@ -146,6 +166,7 @@ test('mixed modes (tan θ_p = q tan θ_g): every root satisfies the condition to
     near++;
   }
   assert.ok(far >= 8 && near >= 4, `${far} spacings far from p modes, ${near} p modes`);
+  console.log(`         ${mm.length} dipole modes (Δν ${sz.dnu.toFixed(2)} μHz, ΔΠ₁ ${sz.dPi.toFixed(1)} s, q ${sz.q.toFixed(3)}): ${far} spacings far from p modes, ${near} p modes`);
 });
 test('inclination (Gizon & Solanki 2003): E_lm(i) sums to 1 over m for l = 0–3 at every i; pole-on only m = 0 is seen; equator-on E₁,±₁ = ½, E₂₀ = ¼, E₂,±₁ = 0, E₂,±₂ = ⅜, and l = 3 shows only odd m', () => {
   for (let l = 0; l <= 3; l++) for (let d = 0; d <= 90; d += 7.5) {
@@ -164,10 +185,9 @@ test('the keyboard is an evolutionary track (1 M☉): ZAMS from Tout et al. (199
   assert.ok(Math.abs(z.L - 0.698) < 0.002 && Math.abs(z.R - 0.888) < 0.002, `ZAMS ${z.L}, ${z.R}`);
   const sun = starAt(Math.log(1 / z.R), 1);
   assert.ok(Math.abs(sun.R - 1) < 1e-12 && Math.abs(sun.T - 5777) < 1e-6 && Math.abs(sun.L - 1) < 1e-9, 'the track passes through the Sun');
-  const sunPitch = heardPitch(multiplets(seismic(sun))) * K0 * 1e-6;
-  assert.ok(Math.abs(cents(sunPitch, keyFreq(SUN_KEY))) < 0.1, `the Sun sounds ${cents(sunPitch, keyFreq(SUN_KEY)).toFixed(2)} ¢ from G6`);
+  // the star tuned to G6 is the Sun: its pitch × K moves by about 0.1 ¢ for 3·10⁻⁵ in R
   const g6 = keyStar(SUN_KEY, P());
-  assert.ok(Math.abs(g6.star.R - 1) < 2e-3 && Math.abs(g6.star.T - 5777) < 2, `G6: R ${g6.star.R}, T ${g6.star.T}`);
+  assert.ok(Math.abs(g6.star.R - 1) < 3e-5 && Math.abs(g6.star.T - 5777) < 0.05 && Math.abs(g6.star.s - sun.s) < 3e-5, `G6: R ${g6.star.R}, T ${g6.star.T}`);
   let last = Infinity, rank = 3;
   const order = { giant: 1, subgiant: 2, dwarf: 3 };
   for (let k = KEY_HI; k >= KEY_LO; k -= 3) {
@@ -197,14 +217,15 @@ test('every key in tune: the star\'s heard pitch (the power-weighted mean log fr
   console.log(`         ν_max ${Math.min(...noff).toFixed(1)} to ${Math.max(...noff).toFixed(1)} ¢ above the note; nearest radial mode ${Math.min(...roff).toFixed(0)} to +${Math.max(...roff).toFixed(0)} ¢`);
 });
 test('rotation: a p mode splits by mΩ/2π (C_nl ≈ 0), a g-dominated dipole mode by ζ·½·mΩ_core/2π + (1 − ζ)·mΩ_env/2π (C_g = ½), so the splitting ∝ Ω(1 − C_nl); δ Scuti\'s low-order modes by (1 − 0.05)mΩ/2π', () => {
-  assert.deepEqual(splitWeights(0, 0), [0, 0]);
-  for (const l of [1, 2, 3]) assert.deepEqual(splitWeights(l, 0), [1, 0]);
-  const [we, wc] = splitWeights(1, 0.9);
-  assert.ok(Math.abs(we - 0.1) < 1e-12 && Math.abs(wc - 0.45) < 1e-12);
-  const d = keyStar(40, P()), md = d.modes;
-  for (let i = 0; i < d.N; i++) if (md.l[i] === 1) assert.ok(Math.abs(md.wCore[i] - 0.5 * md.zeta[i]) < 1e-12 && Math.abs(md.wEnv[i] - (1 - md.zeta[i])) < 1e-12);
+  for (const key of [40, 84]) {
+    const d = keyStar(key, P()), md = d.modes;
+    for (let i = 0; i < d.N; i++) {
+      const l = md.l[i], [we, wc] = l === 0 ? [0, 0] : l === 1 ? [1 - md.zeta[i], 0.5 * md.zeta[i]] : [1, 0];
+      assert.ok(Math.abs(md.wEnv[i] - we) < 1e-12 && Math.abs(md.wCore[i] - wc) < 1e-12, `key ${key}, l = ${l}, ζ = ${md.zeta[i]}`);
+    }
+  }
   const ds = keyStar(48, P({ family: 'dscuti' }));
-  for (let i = 0; i < ds.N; i++) assert.ok(Math.abs(ds.modes.wEnv[i] - (ds.modes.l[i] ? 1 - DS.C : 0)) < 1e-12);
+  for (let i = 0; i < ds.N; i++) assert.ok(Math.abs(ds.modes.wEnv[i] - (ds.modes.l[i] ? 1 - DS_C : 0)) < 1e-12);
 });
 
 console.log('the engine');
@@ -294,7 +315,7 @@ test('rotation and inclination in the output: a dipole p multiplet splits into l
   const line = (S, df, f) => { const i = Math.round(f / df); return Math.max(S[i - 1], S[i], S[i + 1]); };
   for (const [zeta, inc] of [[0, 60], [0.9, 60], [0, 0], [0, 90]]) {
     const p = inc === 60 ? P({ spin, coreRatio: ratio, incl: inc, driving: 0, flare: 2 }) : P({ spin, coreRatio: ratio, incl: inc, flare: 0 });
-    const [we, wc] = splitWeights(1, zeta), split = om * (we + wc * ratio);
+    const [we, wc] = [1 - zeta, 0.5 * zeta], split = om * (we + wc * ratio);
     const data = custom(key, p, [-1, 0, 1].map((m) => ({ f: f0, l: 1, m, gamma: 0.05, p: 1, zeta, wEnv: we, wCore: wc })));
     const x = run(p, [[0, 'on', key, 1, data]], 24), { S, df } = psd(x, 2 * FS, x.length, 1 << 20);
     if (inc === 60) {

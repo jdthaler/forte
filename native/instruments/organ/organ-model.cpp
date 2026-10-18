@@ -1,4 +1,4 @@
-// organ-model.cpp — tonewheels.js in C++ (organ-model.h).
+// organ-model.cpp — the tone generator as numbers (organ-model.h).
 
 #include "organ-model.h"
 

@@ -1,10 +1,10 @@
-// carillon-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// carillon-wasm.js — the engine and model, built as WebAssembly from the physics in C++
 // (native/instruments/carillon): CarillonWasmEngine, with the engine contract, and the model's
-// functions for the views. The page runs it when it can and falls back to the JavaScript
-// (carillon-engine.js).
+// functions for the views and the tests.
 
 import { GROUPS } from './carillon-params.js';
-import { BELL_TABLE, IDEAL } from './carillon-model.js';
+import { BELL_TABLE } from './bell-table.js';
+import { IDEAL } from './partials.js';
 import { wasmEngine, nativeParams, nativeValue, scratch } from '../../shared/wasm.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
@@ -12,8 +12,8 @@ const BUILD = { id: 'carillon', name: 'CarillonWasmEngine', groups: GROUPS, bina
 const PROFILES = GROUPS.flatMap((g) => g.params).find((p) => p.id === 'profile').options.map(([v]) => v);
 const PARTIALS = Object.keys(IDEAL); // the C++ Partial enum's order (bell-table.h)
 
-// The C++ engine's messages (carillon-engine.h, msg) back into the JavaScript engine's 'bell'
-// message: the struck bell, its resonators' amplitudes in pieces, then done.
+// The C++ engine's messages (carillon-engine.h, msg) into the views' 'bell' message: the struck
+// bell, its resonators' amplitudes in pieces, then done.
 function views(m, e) {
   const s = (e.views ??= { type: 'bell', key: 0, amp: new Float32Array(512), n: 0, contactMs: 0, fwhm: 0, Fmax: 0, v: 0, age: 0, id: '' });
   const v = m.values;
@@ -35,7 +35,7 @@ function views(m, e) {
 
 const Base = wasmEngine(BUILD, { messages: views });
 
-// The engine, with the JavaScript engine's test hooks: e.voices (in the order they were struck:
+// The engine, with the tests' hooks: e.voices (in the order they were struck:
 // key, fading, released, and the clapper's cl: on, ms, fwhm, Fmax, v) and e.byKey (key → voice).
 export class CarillonWasmEngine extends Base {
   constructor(fs) {
@@ -63,10 +63,10 @@ export class CarillonWasmEngine extends Base {
 }
 export const ready = () => CarillonWasmEngine.ready();
 
-// The model's functions the views call (carillon-model.js's bellOf, bellModes, clapperOf,
-// clapperSpeed, hertzTime, asymmetryOf, doubletSplit, struckPartials, strikeNote), computed by the
-// WebAssembly. A bell keeps its rib from the JavaScript table (the same numbers: bell-table.h is
-// converted from it) for the drawings' nodal circles and mode shapes.
+// The model's functions (carillon-model.h: bellOf, bellModes, clapperOf, clapperSpeed, hertzTime,
+// asymmetryOf, doubletSplit, struckPartials, strikeNote, airAbsorption, radiationEfficiency),
+// computed by the WebAssembly. A bell keeps its rib from the JavaScript table (the same numbers:
+// bell-table.h is converted from it) for the drawings' nodal circles and mode shapes.
 export async function wasmModel() {
   const x = await ready(), s = scratch(x), params = nativeParams(BUILD), OUT = 256;
   const setP = (P) => { s.f64(params.length).set(params.map((p) => nativeValue(p, P[p.id]))); return s.at; };
@@ -105,6 +105,10 @@ export async function wasmModel() {
     },
     clapperSpeed: (b, P, velocity) => x.carillon_clapper_speed(...b.args, setP(P), velocity),
     hertzTime: (m, K, v) => x.carillon_hertz_time(m, K, v),
+    // dB/m at f (Hz), temperature T (°C) and relative humidity hr (%), at sea level (ISO 9613-1)
+    airAbsorption: (f, T = 15, hr = 70) => x.carillon_air_absorption(f, T, hr),
+    // a sphere vibrating in its ℓ-th harmonic: the real part of its specific impedance over ρc
+    radiationEfficiency: (l, ka) => x.carillon_radiation_efficiency(l, ka),
     // a bell's hist (from bellOf) carries the bell; without one, the knob's asymmetry alone
     asymmetryOf(m, eps, hist) {
       const id = `${m}|${eps}`, memo = hist?.memo;

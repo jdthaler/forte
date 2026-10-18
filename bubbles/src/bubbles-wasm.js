@@ -1,16 +1,15 @@
-// bubbles-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// bubbles-wasm.js — the engine and model, built as WebAssembly from the physics in C++
 // (native/instruments/bubbles): BubbleWasmEngine, with the engine contract, and the model's
-// functions for the views. The page runs it when it can and falls back to the JavaScript
-// (bubbles-engine.js).
+// functions for the views and the tests.
 
 import { GROUPS } from './bubbles-params.js';
-import { GASES, LIQUIDS, KEY_LO, KEY_HI, gasOf, liquidOf } from './bubbles-model.js';
+import { GASES, LIQUIDS, KEY_LO, KEY_HI, gasOf, liquidOf } from './bubbles-tank.js';
 import { wasmEngine, nativeParams, nativeValue, scratch } from '../../shared/wasm.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'bubbles', name: 'BubbleWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/bubbles.wasm', import.meta.url).href };
 
-// The C++ engine's messages (bubbles-engine.h, msg) back into the JavaScript engine's: 'bubbles'
+// The C++ engine's messages (bubbles-engine.h, msg) into the page's: 'bubbles'
 // (the releases since the last one, and how many bubbles ring) and 'wave' (the latest bubble's
 // waveform, as it fills).
 const EVF = 8, EV_MAX = 48, WAVE_N = 1024, HI = 16777216;
@@ -51,7 +50,7 @@ function views(m, e) {
 
 const Base = wasmEngine(BUILD, { messages: views });
 
-// The engine, with the JavaScript engine's test hooks: new BubbleWasmEngine(fs, seed, { pool, soft }),
+// The engine, with the tests' hooks: new BubbleWasmEngine(fs, seed, { pool, soft }),
 // e.log (set it to [] to record each release), e.pool and e.nozzles (their state, read back).
 export class BubbleWasmEngine extends Base {
   constructor(fs, seed, { pool, soft } = {}) {
@@ -85,12 +84,17 @@ export class BubbleWasmEngine extends Base {
 }
 export const ready = () => BubbleWasmEngine.ready();
 
-// The model's functions the views call (bubbles-model.js's nozzleEnv, keyRadius, acoustics,
-// ambient, riseDistance, peakPressure, snapGain), computed by the WebAssembly.
+// The model (bubbles-model.cpp), computed by the WebAssembly: ambient(P), the liquid pressure at the
+// nozzles (Pa); nozzleEnv(P, env), the conditions there { liq, gas, d, p0 }; acoustics(R, env, out),
+// one bubble's ring (the fields of ACOUSTICS; liq and gas entries of GASES and LIQUIDS, or of the
+// tests' own); glide(R, env, t, pTank), its ring as it rises; keyRadius(key, P), the radius a key's
+// nozzle releases; riseSpeed(R, liq) and riseDistance(t, U);
+// peakPressure(liq, velocity), the kick's pressure at the reference distance; snapGain(f, tau).
 const ACOUSTICS = ['omega0', 'b', 'omegaD', 'f0', 'fd', 'delta', 'dvis', 'dth', 'drad', 'kappa', 'phiRe', 'phiIm', 'chi', 'D', 'pb', 'm', 'radFactor', 'R'];
 export async function wasmModel() {
   const x = await ready(), s = scratch(x), params = nativeParams(BUILD), at = 8 * params.length;
-  const gas = (g) => Math.max(0, Object.values(GASES).indexOf(g)), liquid = (l) => Math.max(0, Object.values(LIQUIDS).indexOf(l));
+  const gasAt = (g) => Object.values(GASES).indexOf(g), liquidAt = (l) => Object.values(LIQUIDS).indexOf(l);
+  const gas = (g) => Math.max(0, gasAt(g)), liquid = (l) => Math.max(0, liquidAt(l));
   const setP = (P) => { s.f64(params.length).set(params.map((p) => nativeValue(p, P[p.id]))); return s.at; };
   let radiiFor = '', radii = null; // every key's radius, for the conditions they were computed for
   const model = {
@@ -100,7 +104,12 @@ export async function wasmModel() {
       return env;
     },
     acoustics(R, env, out = {}) {
-      x.bubbles_acoustics(R, env.p0, env.d, liquid(env.liq), gas(env.gas), s.at);
+      if (liquidAt(env.liq) >= 0 && gasAt(env.gas) >= 0) x.bubbles_acoustics(R, env.p0, env.d, liquid(env.liq), gas(env.gas), s.at);
+      else { // a liquid or a gas of the caller's own (the tests')
+        const { rho, mu, sigma, c } = env.liq, { gamma, M, K, cp } = env.gas;
+        s.f64(8, 8 * ACOUSTICS.length).set([rho, mu, sigma, c, gamma, M, K, cp]);
+        x.bubbles_acoustics_custom(R, env.p0, env.d, s.at + 8 * ACOUSTICS.length, s.at);
+      }
       const a = s.f64(ACOUSTICS.length);
       ACOUSTICS.forEach((k, i) => { out[k] = a[i]; });
       return out;
@@ -113,6 +122,17 @@ export async function wasmModel() {
       }
       return radii[Math.min(KEY_HI, Math.max(KEY_LO, key)) - KEY_LO];
     },
+    // the glide, as the engine rings it: a bubble of radius R released under env (liq and gas
+    // entries of GASES and LIQUIDS), at each of the times t (s) with the air above the liquid at
+    // pTank (Pa; a number, or one per time); fd (Hz) and b (s⁻¹) at each
+    glide(R, env, t, pTank) {
+      const n = t.length, pT = typeof pTank === 'number' ? t.map(() => pTank) : pTank;
+      s.f64(n).set(t); s.f64(n, 8 * n).set(pT);
+      x.bubbles_glide(R, env.p0, env.d, liquid(env.liq), gas(env.gas), n, s.at, s.at + 8 * n, s.at + 16 * n);
+      const o = s.f64(2 * n, 16 * n);
+      return { fd: o.slice(0, n), b: o.slice(n) };
+    },
+    riseSpeed: (R, liq) => x.bubbles_rise_speed(R, liquid(liq)),
     riseDistance: (t, U) => x.bubbles_rise_distance(t, U),
     peakPressure: (liq, velocity) => x.bubbles_peak_pressure(liquid(liq), velocity),
     snapGain: (f, tau) => x.bubbles_snap_gain(f, tau),

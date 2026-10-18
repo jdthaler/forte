@@ -3,13 +3,15 @@
 //
 // Name demos NN-what-you-hear; the landing page plays the first one.
 
-import { PianetEngine } from '../pianet/src/pianet-engine.js';
+import { INSTRUMENT } from '../pianet/src/pianet-instrument.js';
+import { loadEngine } from './engine.mjs';
 import { DEFAULTS, PRESETS } from '../pianet/src/pianet-params.js';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
 
 const FS = 48000, SLUG = 'pianet';
+const PianetEngine = await loadEngine(INSTRUMENT);
 const preset = (i, o = {}) => ({ ...DEFAULTS, ...PRESETS[i].p, ...o });
-const play = (P, seconds, events) => { const e = new PianetEngine(FS); e.setParams(P); return renderEngine(e, seconds, events, FS); };
+const play = (P, seconds, events) => { const e = new PianetEngine(FS); e.setParams(P); const out = renderEngine(e, seconds, events, FS); e.destroy(); return out; };
 const notes = (t0, dt, keys, vel, len = dt) => keys.flatMap((k, i) => [[t0 + i * dt, 'on', k, vel], [t0 + i * dt + len, 'off', k]]);
 const chord = (t, keys, vel, len) => keys.flatMap((k) => [[t, 'on', k, vel], [t + len, 'off', k]]);
 const cat = (...parts) => [0, 1].map((c) => Float64Array.from(parts.flatMap((p) => [...p[c]])));

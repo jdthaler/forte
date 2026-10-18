@@ -1,7 +1,6 @@
-// tines-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// tines-wasm.js — the engine and model, built as WebAssembly from the physics in C++
 // (native/instruments/tines): TinesWasmEngine, with the engine contract, and the model's functions
-// for the views. The page runs it when it can and falls back to the JavaScript (rhodes-engine.js,
-// tine.js).
+// for the views and the tests.
 
 import { GROUPS, ALL_PARAMS } from './rhodes-params.js';
 import { noteName } from './tine.js';
@@ -10,7 +9,7 @@ import { wasmEngine, nativeParams, nativeValue, scratch } from '../../shared/was
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'tines', name: 'TinesWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/tines.wasm', import.meta.url).href };
 
-// The C++ engine's messages (tines-engine.h, msg) back into the JavaScript engine's.
+// The C++ engine's messages (tines-engine.h, msg), as the page reads them.
 function messages(m) {
   if (m.type === 1) return { type: 'hammer', key: m.key, contactMs: m.values[0], Fmax: m.values[1] };
   if (m.type === 2) return { type: 'error', key: m.key, message: 'numerical instability' };
@@ -21,17 +20,9 @@ const Base = wasmEngine(BUILD, { messages });
 
 // Voice data as the C++ takes it (tines-model.h, packVoiceData): version, key, n, the hammer's
 // mass, K, p, alpha, the pickup's gap, wid, yoff, gain, hasDamper, 0, then freq, sigma, dampW, w,
-// pk. A JavaScript voice data's version (tines-instrument.js, modelVersion) becomes a number.
-const HEAD = 13, ARRAYS = ['freq', 'sigma', 'dampW', 'w', 'pk'];
-const versions = new Map();
-const versionId = (v) => { if (!versions.has(v)) versions.set(v, versions.size + 1); return versions.get(v); };
-export function packVoiceData(d) {
-  const n = d.n, out = new Float64Array(HEAD + ARRAYS.length * n), pu = d.pickup;
-  out.set([versionId(d.version), d.key, n, d.hammer.mass, d.hammer.K, d.hammer.p, d.hammer.alpha, pu.gap ?? 0, pu.wid, pu.yoff, pu.gain, d.hasDamper ? 1 : 0, 0]);
-  ARRAYS.forEach((k, i) => out.set(d[k], HEAD + i * n));
-  return out;
-}
-export function unpackVoiceData(a) {
+// pk; unpacked for the views.
+const HEAD = 13;
+function unpackVoiceData(a) {
   const n = a[2], at = (i) => a.subarray(HEAD + i * n, HEAD + (i + 1) * n).slice();
   return {
     version: a[0], key: a[1], n, freq: at(0), sigma: at(1), dampW: at(2), w: at(3), pk: at(4),
@@ -39,8 +30,7 @@ export function unpackVoiceData(a) {
   };
 }
 
-// A voice of the C++ engine, read back as the JavaScript engine's Voice: what the tests and the
-// slow-motion view read (q is a view into the engine's memory, valid until it next runs).
+// A voice of the C++ engine, read back: what the tests and the slow-motion view read (q is a view into the engine's memory, valid until it next runs).
 const VOICE = ['key', 'N', 'hammerOn', 'contactSamples', 'Fmax', 'killing', 'dead', 'eta', 'etaPrev', 'keyDown', 'damped', 'peak', 'age', 'own',
   'wid', 'yoff', 'gain', 'yMin', 'yMax'];
 const FLAGS = new Set(['hammerOn', 'killing', 'dead', 'keyDown', 'damped', 'own']);
@@ -57,9 +47,9 @@ class WasmVoice {
 }
 for (const k of VOICE) Object.defineProperty(WasmVoice.prototype, k, { get() { return this.state[k]; } });
 
-// The engine, with the JavaScript engine's hooks: noteOn returns the voice it struck; voices,
-// byKey, p.maxVoices. A note may bring its key's voice data (the page's noteData): packed by the
-// page's WebAssembly model, or a JavaScript voice data object (the tests), which is packed here.
+// The engine, with hooks for the tests and the views: noteOn returns the voice it struck; voices,
+// byKey, p.maxVoices. A note may bring its key's voice data, packed by the page's WebAssembly
+// model (keyModel(…).packed); without it the engine builds the key itself.
 export class TinesWasmEngine extends Base {
   constructor(fs) {
     super(fs);
@@ -69,9 +59,9 @@ export class TinesWasmEngine extends Base {
   }
   noteOn(key, velocity, data) {
     if (data) {
-      const packed = data instanceof Float64Array ? data : packVoiceData(data), x = Base.exports;
-      new Float64Array(x.memory.buffer, x.tines_offer_buffer(this.e), packed.length).set(packed);
-      x.tines_offer(this.e, packed.length);
+      const x = Base.exports;
+      new Float64Array(x.memory.buffer, x.tines_offer_buffer(this.e), data.length).set(data);
+      x.tines_offer(this.e, data.length);
     }
     super.noteOn(key, velocity);
     const v = Base.exports.tines_last(this.e);
@@ -85,11 +75,13 @@ export class TinesWasmEngine extends Base {
 }
 export const ready = () => TinesWasmEngine.ready();
 
-// The model's functions the views call, computed by the WebAssembly: keyModel(key, P, fs) gives
-// the key's model as tine.js's computeKey has it (info, the tine with its shape(j, x), the kept
-// modes, the voice data, the coupled shapes), its pickup set from P as tines-instrument.js sets
-// it, plus `packed`, the voice data for the WebAssembly engine. Cached per key for the latest
-// version asked for, as tines-instrument.js caches the JavaScript's.
+// The model's functions the views and the tests call, computed by the WebAssembly
+// (tines-model.cpp): keyModel(key, P, fs) gives the key's model (info, the tine with its
+// shape(j, x) and participation factors Γ, the kept modes, the voice data, the coupled shapes), its pickup set from P,
+// plus `packed`, the voice data for the engine. Cached per key for the latest version asked
+// for: a key's modes depend on the 'model' parameters and the rate only, and the pickups
+// ('pickup') move live, so they are patched in, not recomputed. flux(Y, w) is the pickup's
+// normalised flux, (1 + (Y/w)²)^(−3/2).
 const MODEL = ALL_PARAMS.filter((p) => p.kind === 'model').map((p) => p.id);
 const MODE = ['col', 'f', 'sigma', 'w', 'pk', 'dampW', 'tineFrac', 'barFrac', 'blockFrac'];
 export async function wasmModel() {
@@ -111,10 +103,11 @@ export async function wasmModel() {
       for (let j = 0; j < nk; j++, at += MODE.length) modes.push(Object.fromEntries(MODE.map((m, i) => [m, h[at + i]])));
       const X = h.slice(at, at + n * n);
       const packed = new Float64Array(x.memory.buffer, x.tines_packed(key), x.tines_packed_count(key)).slice();
+      const Gamma = Array.from(s.f64(x.tines_gamma(key, s.at + OUT), OUT));
       const model = {
         key: k, nq, modes, xh,
         info: { key: k, name: noteName(k), f0, L, d, mt, ms, s: sAt, xh, tineRatios, f1tine, Mb, M0, fBar, gap: 0, wid: 0 },
-        tine: { L, d, mt, ms, s: sAt, nModes: nq, shape: (j, xx) => x.tines_shape(k, j, xx) },
+        tine: { L, d, mt, ms, s: sAt, nModes: nq, Gamma, shape: (j, xx) => x.tines_shape(k, j, xx) },
         voice: unpackVoiceData(packed),
         shapes: { X, n, nq, iu, ip },
         packed,

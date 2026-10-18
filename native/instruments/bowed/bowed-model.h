@@ -1,5 +1,4 @@
-// bowed-model.h — the physics of the viola organista (bowed/src/bowed-model.js in C++, operation
-// for operation).
+// bowed-model.h — the physics of the viola organista.
 //
 // A steel string per key, pressed by its key onto a rosined wheel that turns at surface speed v_B,
 // at a fraction β of the string's length from the bridge. The string is a lossy waveguide of wave
@@ -92,7 +91,7 @@ inline double mu(double u, const Friction &F) { return F.mud + ((F.mus - F.mud) 
 // The bow (wheel) junction's state: s = 0 sticking, ±1 slipping that way; u the lagged slip speed.
 struct FrictionState { int s = -1; double u = 0; };
 // The friction force given the string's velocity at the bow without it (vh), the bow speed, the
-// normal force and the admittance the bow point sees (bowed-model.js, frictionForce).
+// normal force and the admittance the bow point sees.
 double frictionForce(double vh, double vB, double FN, double Y, const Friction &F, FrictionState &state);
 // With rosin's thermal lag: a = 1 − e^(−Δt/τ) (frictionForceMem).
 double frictionForceMem(double vh, double vB, double FN, double Y, const Friction &F, FrictionState &state, double a);

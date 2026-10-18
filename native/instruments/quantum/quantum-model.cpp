@@ -1,5 +1,4 @@
-// quantum-model.cpp — the Quantum Keyboard's physics, as quantum-model.js and quantum-waves.js
-// compute it.
+// quantum-model.cpp — the Quantum Keyboard's physics (quantum-model.h).
 
 #include "quantum-model.h"
 
@@ -21,8 +20,8 @@ static double sq(double x) { return x * x; } // x ** 2 (V8's pow gives x·x)
 static double jsMax(double a, double b) { return std::isnan(a) || std::isnan(b) ? NAN : a > b ? a : b; }
 static double jsMin(double a, double b) { return std::isnan(a) || std::isnan(b) ? NAN : a < b ? a : b; }
 
-// |aₙ|, zeros of Ai: Abramowitz & Stegun Table 10.13 for n ≤ 10 (quantum-model.js's AIRY, as
-// written there), asymptotic series 10.4.94/10.4.105 above (error < 1e-10 there).
+// |aₙ|, zeros of Ai: Abramowitz & Stegun Table 10.13 for n ≤ 10, asymptotic series
+// 10.4.94/10.4.105 above (error < 1e-10 there).
 static const double AIRY[] = {2.338107410459767, 4.087949444130970, 5.520559828095551, 6.786708090071759, 7.944133587120853,
                               9.022650853340980, 10.04017434155809, 11.00852430373326, 11.93601556323626, 12.82877675286576};
 double airyZeroC(double nu) {
@@ -271,7 +270,7 @@ double signalAt(const Packet &pk, double t, double T1, double Tphi, double dcFad
   return y;
 }
 
-// ---- the views' eigenfunctions (quantum-waves.js) ------------------------------------------------
+// ---- the views' eigenfunctions (waveGrid) --------------------------------------------------------
 
 // Numerov for φ″ = Q(y)φ on y = y0 + i·h, i = 0…N−1, from both ends, matched near iMatch.
 template <class F>

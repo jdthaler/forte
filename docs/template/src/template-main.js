@@ -1,15 +1,12 @@
 // template-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName, useWasm } from '../../../shared/shell.js';
+import { createShell, noteName } from '../../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../../shared/views.js';
 import { INSTRUMENT } from './template-instrument.js';
-import * as jsModel from './template-model.js';
 import { wasmModel } from './template-wasm.js';
 
-// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
-// physics as the engine, in C++), the JavaScript one until then or if it can't load.
-let model = jsModel;
-if (useWasm()) wasmModel().then((m) => { model = m; update(); }, (err) => console.warn(`template: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+// The views draw what the engine plays: its model, from the same C++, built as WebAssembly.
+const model = await wasmModel();
 
 const $ = (s) => document.querySelector(s);
 const spectrum = new SpectrumView($('#spectrum'));

@@ -1,7 +1,6 @@
-// harmonium-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// harmonium-wasm.js — the engine and model, built as WebAssembly from the physics in C++
 // (native/instruments/harmonium): HarmoniumWasmEngine, with the engine contract, and the model's
-// functions for the views. The page runs it when it can and falls back to the JavaScript
-// (harmonium-engine.js).
+// functions for the views and the tests.
 
 import { GROUPS } from './harmonium-params.js';
 import { wasmEngine, nativeParams, nativeValue, scratch } from '../../shared/wasm.js';
@@ -9,8 +8,8 @@ import { wasmEngine, nativeParams, nativeValue, scratch } from '../../shared/was
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'harmonium', name: 'HarmoniumWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/harmonium.wasm', import.meta.url).href };
 
-// The C++ engine's messages (harmonium-engine.h, msg) back into the JavaScript engine's 'reed'
-// message: the focused reed's traces and envelope, then its header.
+// The C++ engine's messages (harmonium-engine.h, msg), gathered into the page's 'reed' message:
+// the focused reed's traces and envelope, then its header.
 const TRACE = 256, ENV = 64, NR = 5;
 function views(m, e) {
   const s = (e.view ??= {
@@ -39,7 +38,8 @@ function views(m, e) {
 
 const Base = wasmEngine(BUILD, { messages: views });
 
-// A reed's model from the numbers harmonium-web.cpp writes (flatten): the JavaScript model's fields.
+// A reed's model from the numbers harmonium-web.cpp writes (flatten), as an object; flat keeps them
+// as they came, for threshold.
 const HEAD = ['fNat', 'fSound', 'tune', 'L', 'b', 'h', 'e', 'delta', 'lam1', 'lam2', 'mu', 'y0',
   'perim', 'Ma', 'C', 'V', 'Ain', 'K', 'lj', 'drag', 'fCell', 'm0', 'M', 'sag', 'Anom', 'Rj', 'eps', 'uOpt', 'throatLA'];
 const MODE = ['n', 'lam', 'f', 'om', 'm', 'k', 'S', 'I1', 'I2', 'I3', 'zeta'];
@@ -55,7 +55,7 @@ function reedOf(a) {
   return R;
 }
 
-// The test hooks on a reed: its state in place (the JavaScript Reed's getters and setters), its
+// The test hooks on a reed: its state in place (getters and setters into the engine's memory), its
 // model, its pitch, and setting it at a steady state.
 const S = { q1: 0, v1: 1, q2: 2, v2: 3, Uin: 4, pc: 6, x: 8, dp: 10, Ug: 11, W: 12, A: 13, ym: 15, lastX: 18, nx: 20, ampEnv: 21 };
 class ReedHook {
@@ -94,7 +94,7 @@ class VoiceHook {
   get env() { return this.state()[7]; }
 }
 
-// The engine, with the JavaScript engine's test hooks: new HarmoniumWasmEngine(fs, seed, { fOS, track }),
+// The engine, with the tests' hooks: new HarmoniumWasmEngine(fs, seed, { fOS, track }),
 // e.voices (each with its reeds), e.noise (the turbulence table, writable in place), e.Pres and e.Utot.
 export class HarmoniumWasmEngine extends Base {
   constructor(fs, seed, opts = {}) {
@@ -121,9 +121,14 @@ export class HarmoniumWasmEngine extends Base {
 }
 export const ready = () => HarmoniumWasmEngine.ready();
 
-// The model's functions the views call (harmonium-model.js's reedModel, threshold, rankFreq and
-// modeShape), computed by the WebAssembly. A reed comes back with the JavaScript model's fields,
-// its slot's area table among them (areaAt reads it as it reads the JavaScript's).
+// The model's functions the views and the tests call, computed by the WebAssembly
+// (harmonium-model.cpp): reedModel(fSound, P, tuned), one reed made for a sounding frequency (its
+// geometry, modes, air, and its slot's area table, which harmonium-data.js's areaAt reads);
+// threshold(R), the blowing pressure it starts at, from the linear analysis; equilibrium(R, Pw), its
+// steady state; linearRoot(R, Pw, s0), the root of the linear analysis near s0 (e^{st}: Re s the
+// growth rate, Im s the angular frequency); cassotto(f), the tone chamber's Helmholtz resonator;
+// gapWidth(w, e, h, δ), the slot's gap at a deflection w; rankFreq(m, r, P), the
+// frequency a rank's reed is made for; modeShape(λ, u), the tongue's mode shape, tip normalised.
 export async function wasmModel() {
   const x = await ready(), s = scratch(x), params = nativeParams(BUILD), flat = x.harmonium_flat_size(), out = 8 * flat;
   const setP = (P) => { s.f64(params.length, out).set(params.map((p) => nativeValue(p, P[p.id]))); return s.at + out; };
@@ -137,6 +142,18 @@ export async function wasmModel() {
       s.f64(flat).set(R.flat);
       return x.harmonium_threshold(s.at, pMax, cass ? cass.f : 0, s.at + out) ? (([P, f]) => ({ P, f }))(s.f64(2, out)) : null;
     },
+    equilibrium(R, Pw, pd = 0) {
+      s.f64(flat).set(R.flat);
+      x.harmonium_equilibrium(s.at, Pw, pd, s.at + out);
+      const [y, X, U, dp, pc, A, dA] = s.f64(7, out);
+      return { y, x: X, U, dp, pc, A, dA };
+    },
+    linearRoot(R, Pw, s0 = null, cass = null) {
+      s.f64(flat).set(R.flat);
+      return x.harmonium_linear_root(s.at, Pw, s0 ? 1 : 0, s0 ? s0.re : 0, s0 ? s0.im : 0, cass ? cass.f : 0, s.at + out) ? (([re, im]) => ({ re, im }))(s.f64(2, out)) : null;
+    },
+    cassotto(f) { x.harmonium_cassotto(f, s.at); const [M, C, R, V, f0] = s.f64(5); return { M, C, R, V, f: f0 }; },
+    gapWidth: (w, e, h, delta) => x.harmonium_gap_width(w, e, h, delta),
     rankFreq: (m, r, P) => x.harmonium_rank_freq(m, r, setP(P)),
     modeShape: (lam, u) => x.harmonium_mode_shape(lam, u),
   };

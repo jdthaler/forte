@@ -1,16 +1,12 @@
 // glass-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName, useWasm } from '../../shared/shell.js';
+import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './glass-instrument.js';
-import * as jsModel from './glass-model.js';
-import { MIC, TRACE } from './glass-engine.js';
-import { wasmModel } from './glass-wasm.js';
+import { wasmModel, MIC, TRACE } from './glass-wasm.js';
 
-// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
-// physics as the engine, in C++), the JavaScript one until then or if it can't load.
-let phys = jsModel;
-if (useWasm()) wasmModel().then((m) => { phys = m; update(); }, (err) => console.warn(`glass: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+// The views draw what the engine plays: its model, from the same C++, built as WebAssembly.
+const phys = await wasmModel();
 
 const $ = (s) => document.querySelector(s);
 const TAU = 2 * Math.PI;

@@ -1,5 +1,5 @@
 // glass-web.cpp — the model's functions the page's views call (glass/src/glass-wasm.js), and the
-// engine's test hooks (the JavaScript engine's voices and contact trace).
+// engine's test hooks (its voices and contact trace).
 
 #include "glass-engine.h"
 #include "forte/web.h"
@@ -19,7 +19,7 @@ static void putBowl(const Bowl &b, double *out) {
 }
 
 extern "C" {
-// glass-model.js's bowl(key, P), flat (putBowl), in out.
+// A key's bowl(key, P), flat (putBowl), in out.
 FORTE_EXPORT void glass_bowl(int key, double split, double loss, double water, double *out) {
   BowlParams bp;
   bp.split = split; bp.loss = loss; bp.water = water;

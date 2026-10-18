@@ -1,7 +1,7 @@
 // vibraphone-tests.cpp — the vibraphone in C++: the bar's finite elements against beam theory and
 // the tuned table, the engine on pitch, a note that waits for its bar to be built (forte/background.h)
 // and holds it while the depth changes, the views' messages, and ten bars within the CPU budget.
-// The physics tests are the JavaScript suite's, run on the WebAssembly (FORTE_ENGINE=wasm).
+// The physics tests are the JavaScript suite's, run on the WebAssembly (node test/vibraphone-tests.mjs).
 
 #include <chrono>
 #include <cmath>

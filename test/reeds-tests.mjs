@@ -2,25 +2,48 @@
 //
 // The physics against independent results (beam theory, the exact
 // tip-mass frequency equation, Laplace's equation, circuit theory, energy
-// conservation), then the engine against the model, then each advertised
-// effect, then level, stability, clicks and CPU.
+// conservation), then the
+// engine against the model, then each advertised effect, then level,
+// stability, clicks and CPU. The model and the engine are the C++
+// (native/instruments/reeds), built as WebAssembly: the model's functions
+// through reeds-wasm.js, the engine through loadEngine.
 
 import assert from 'node:assert/strict';
-import {
-  reedFEM, tipMassRoots, tuneReed, keyModel, capCurve, capAt, pickupNode, electrostaticShift, hammerSpeed,
-  STEEL, REED, PICKUP, STOP, KEY_LO, KEY_HI, keyFreq, EPS0, SLOT_GEOM,
-} from '../reeds/src/reeds-model.js';
-import { makeSlot, placeReed, solve, reedCharge, slotProfile } from '../reeds/src/slot-field.js';
+import { capAt, STEEL, REED, PICKUP, STOP, KEY_LO, KEY_HI, SLOT_GEOM } from '../reeds/src/reeds-data.js';
+import { makeSlot, placeReed, solve, reedCharge, slotProfile, EPS0 } from '../reeds/src/slot-field.js';
 import { SLOT_GAPS, SLOT_Y } from '../reeds/src/slot-table.js';
-import { Voice, traceStrike } from '../reeds/src/reeds-engine.js';
 import { INSTRUMENT } from '../reeds/src/reeds-instrument.js';
+import { wasmModel } from '../reeds/src/reeds-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
+import { keyFreq } from '../shared/dsp.js';
 import { DEFAULTS, GROUPS, PRESETS } from '../reeds/src/reeds-params.js';
 import { renderEngine } from '../tools/audio-util.mjs';
 import { readFileSync } from 'node:fs';
 import { nativeTable, headerFile } from '../tools/reeds-native-table.mjs';
 
-const ReedEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const ReedEngine = await loadEngine(INSTRUMENT);
+const { keyModel: modelAt, capCurve, pickupNode, electrostaticShift, traceStrike, losslessStrike, reedFEM } = await wasmModel();
+const keyModel = (m, P, fs = FS) => modelAt(m, P, fs);
+
+// The exact frequency equation of a uniform cantilever with a tip mass M and rotary inertia J
+// (Euler–Bernoulli; μ = M/(ρAL), j = J/(ρAL³)):
+//   1 + cos λ cosh λ + μλ (cos λ sinh λ − sin λ cosh λ) − jλ³ (cosh λ sin λ + sinh λ cos λ)
+//     + μjλ⁴ (1 − cos λ cosh λ) = 0,
+// ω = λ² √(EI/ρA) / L². Its first n roots λ, by bisection on a scan: an independent check on the
+// C++'s finite elements.
+function tipMassRoots(mu, j, n = 4) {
+  const F = (x) => (1 + Math.cos(x) * Math.cosh(x) + mu * x * (Math.cos(x) * Math.sinh(x) - Math.sin(x) * Math.cosh(x))
+    - j * x ** 3 * (Math.cosh(x) * Math.sin(x) + Math.sinh(x) * Math.cos(x)) + mu * j * x ** 4 * (1 - Math.cos(x) * Math.cosh(x))) / Math.cosh(x); // ÷ cosh keeps the scan well scaled
+  const roots = [];
+  for (let x = 0.05; roots.length < n && x < 60; x += 0.001) {
+    if (F(x) * F(x + 0.001) <= 0) {
+      let a = x, c = x + 0.001;
+      for (let i = 0; i < 60; i++) { const m = 0.5 * (a + c); if (F(a) * F(m) <= 0) c = m; else a = m; }
+      roots.push(0.5 * (a + c));
+    }
+  }
+  return roots;
+}
 
 const FS = 48000, TAU = 2 * Math.PI;
 let failures = 0;
@@ -64,29 +87,32 @@ const peakOf = (x) => { let p = 0; for (const v of x) p = Math.max(p, Math.abs(v
 
 console.log('reed mechanics');
 test('FEM reed, no solder: f₁ = (1.8751²/2π)·√(EI/ρA)/L² and overtones at 6.267, 17.55, 34.39 × f₁', () => {
-  const L = 0.04, r = reedFEM({ L, nModes: 4 }), c = Math.sqrt(r.EI / r.mu);
+  // a rectangular tongue h × b: √(EI/ρA) = h √(E/12ρ), whatever its width
+  const r = keyModel(60, P({ solder: 0 })).reed, L = r.L, c = REED.h * Math.sqrt(STEEL.E / (12 * STEEL.rho));
   const f1 = ((1.875104 ** 2) / TAU) * c / L ** 2;
-  assert.ok(Math.abs(r.omega[0] / TAU / f1 - 1) < 1e-5, `f₁ ${r.omega[0] / TAU} vs ${f1}`);
+  assert.ok(r.M === 0 && Math.abs(r.omega[0] / TAU / f1 - 1) < 1e-5, `f₁ ${r.omega[0] / TAU} vs ${f1}`);
   [6.2669, 17.5475, 34.3861].forEach((x, i) => assert.ok(Math.abs(r.omega[i + 1] / r.omega[0] / x - 1) < 1e-3, `mode ${i + 2}`));
-  // a rectangular tongue: f₁ depends on the thickness h, not on the width
-  const wide = reedFEM({ L, b: 2 * REED.b, nModes: 1 });
-  assert.ok(Math.abs(wide.omega[0] / r.omega[0] - 1) < 1e-9);
+  // f₁ depends on the thickness h, not on the width: the C++'s finite elements for a tongue twice as wide
+  const narrow = reedFEM({ L, h: REED.h, b: REED.b, nModes: 1 }), wide = reedFEM({ L, h: REED.h, b: 2 * REED.b, nModes: 1 });
+  assert.ok(Math.abs(narrow.omega[0] / r.omega[0] - 1) < 1e-9 && Math.abs(wide.omega[0] / narrow.omega[0] - 1) < 1e-9, `${wide.omega[0]} vs ${narrow.omega[0]}`);
   // mode 1 carries 61.3 % of the tongue's mass (modal effective mass, Γ₁²/m)
   assert.ok(Math.abs(r.Gamma[0] ** 2 / r.m - 0.6131) < 2e-3, `${r.Gamma[0] ** 2 / r.m}`);
 });
-test('FEM reed with a tip mass solves the exact frequency equation 1 + cos λ cosh λ + μλ(cos λ sinh λ − sin λ cosh λ) = 0', () => {
-  for (const mu of [0.1, 0.5, 2, 8]) {
-    const L = 0.03, m = STEEL.rho * REED.h * REED.b * L, r = reedFEM({ L, M: mu * m, nModes: 3 });
-    const lam = tipMassRoots(mu, 3), c = Math.sqrt(r.EI / r.mu);
-    lam.forEach((l, i) => assert.ok(Math.abs(r.omega[i] / ((l * l * c) / (L * L)) - 1) < 2e-4, `μ=${mu} mode ${i + 1}: ${r.omega[i] / ((l * l * c) / (L * L))}`));
+test('FEM reed with a solder blob solves the exact frequency equation of a cantilever with a tip mass and rotary inertia', () => {
+  for (const [m, solder] of [[33, 1], [45, 0.05], [45, 5], [57, 1], [96, 1]]) {
+    const r = keyModel(m, P({ solder })).reed, mu = r.M / r.m, j = r.J / (r.m * r.L ** 2), c = Math.sqrt(r.EI / r.mu);
+    tipMassRoots(mu, j, 3).forEach((l, i) => {
+      const x = r.omega[i] / ((l * l * c) / (r.L * r.L));
+      assert.ok(Math.abs(x - 1) < 2e-4, `key ${m}, μ=${mu.toFixed(3)} mode ${i + 1}: ${x}`);
+    });
   }
-  const r2 = tipMassRoots(2, 2);
+  const r2 = tipMassRoots(2, 0, 2);
   note(`solder 2× the tongue's mass: λ₁ = ${r2[0].toFixed(4)}, mode 2 at ${((r2[1] / r2[0]) ** 2).toFixed(2)} × f₁ (bare reed: 6.27)`);
 });
 test('every key is cut to length so that its first mode is the note (model, < 0.01 ¢)', () => {
   let worst = 0, Lmin = 1, Lmax = 0;
   for (let m = KEY_LO; m <= KEY_HI; m++) {
-    const r = tuneReed(m, 1, 1);
+    const r = keyModel(m, P({ solder: 1 })).reed;
     worst = Math.max(worst, Math.abs(cents(r.omega[0] / TAU, keyFreq(m))));
     Lmin = Math.min(Lmin, r.L); Lmax = Math.max(Lmax, r.L);
   }
@@ -103,25 +129,17 @@ test('solder knob: the reed is re-cut, so the pitch stays; overtones move up and
   note(`A3 mode 2: ${light.modes[1].ratio.toFixed(2)} → ${def.modes[1].ratio.toFixed(2)} → ${heavy.modes[1].ratio.toFixed(2)} × f₁; T60 ${t60(light).toFixed(1)} → ${t60(def).toFixed(1)} → ${t60(heavy).toFixed(1)} s`);
 });
 test('hammer: a lossless strike conserves energy (reed + rebounding hammer = hammer before)', () => {
-  const d = { ...keyModel(57, P({ hardness: 1 })).voice };
-  d.sigma = new Float64Array(d.n); d.hammer = { ...d.hammer, alpha: 0 };
-  const e = new ReedEngine(FS); e.setParams(P());
-  e.kF = 0; // switch off the field's pull: no other forces
-  const v = new Voice(e, 57, d), v0 = hammerSpeed(0.7), k = 1 / e.fs2, buf = new Float64Array(1);
-  v.strike(v0);
-  let vh = 0;
-  for (let s = 0; s < 0.02 * e.fs2; s++) {
-    const was = v.hammerOn; buf[0] = 0; v.render(buf, 1, e);
-    if (was) vh = (v.eta - v.etaPrev) / k;
-  }
+  // the C++ voice with no damping, a felt with no hysteresis and the field's pull off: no other forces
+  const t = losslessStrike(57, P({ hardness: 1 }), 0.7, FS, 0.02), k = 1 / t.fs2;
   let Er = 0;
-  for (let i = 0; i < v.N; i++) { // energy of each mode from two successive samples (unit modal mass)
-    const c = Math.cos(v.om[i] * k), a = v.q[i], b = v.q1[i], A2 = (a * a - 2 * c * a * b + b * b) / Math.sin(v.om[i] * k) ** 2;
-    Er += 0.5 * v.om[i] ** 2 * A2;
+  for (let i = 0; i < t.N; i++) { // energy of each mode from two successive samples (unit modal mass)
+    const c = Math.cos(t.om[i] * k), a = t.q[i], b = t.q1[i], A2 = (a * a - 2 * c * a * b + b * b) / Math.sin(t.om[i] * k) ** 2;
+    Er += 0.5 * t.om[i] ** 2 * A2;
   }
-  const E0 = 0.5 * d.hammer.mass * v0 * v0, Eh = 0.5 * d.hammer.mass * vh * vh;
+  const E0 = 0.5 * t.mass * t.v0 * t.v0, Eh = 0.5 * t.mass * t.vh * t.vh;
+  assert.ok(t.contactSamples > 0 && t.vh < 0, `contact ${t.contactSamples} samples, hammer leaves at ${t.vh} m/s`);
   assert.ok(Math.abs((Er + Eh) / E0 - 1) < 1e-3, `reed ${Er.toExponential(3)} + hammer ${Eh.toExponential(3)} vs ${E0.toExponential(3)} J`);
-  note(`A3 at ${v0.toFixed(1)} m/s: ${(100 * Er / E0).toFixed(0)} % of the hammer's energy goes into the reed, contact ${(v.contactSamples / e.fs2 * 1000).toFixed(2)} ms`);
+  note(`A3 at ${t.v0.toFixed(1)} m/s: ${(100 * Er / E0).toFixed(0)} % of the hammer's energy goes into the reed, contact ${(t.contactSamples / t.fs2 * 1000).toFixed(2)} ms`);
 });
 
 console.log('pickup electrostatics');
@@ -147,14 +165,14 @@ test('the table covers the reed\'s whole travel: out to the frame, where the tip
   let worst = 0, hits = 0;
   for (const o of [{ solder: 0.05, strike: 0.9 }, { solder: 0.05, strike: 0.9, offset: 2 }, { solder: 0.05, strike: 0.9, offset: -2, hardness: 10 }]) {
     for (const m of [KEY_LO, 45]) {
-      const p = P(o), t = traceStrike(keyModel(m, p, 2 * FS).voice, p, 1, FS, 0.15);
+      const p = P(o), t = traceStrike(m, p, 1, FS, 0.15);
       for (const y of t.y) worst = Math.max(worst, Math.abs(p.offset * 1e-3 + y));
     }
     const { e } = render(KEY_LO, P(o), 1, 0.15); hits += e.voices[0].hits;
   }
   assert.ok(worst < STOP.y + 0.05e-3 && hits > 0, `tip reaches ${(worst * 1e3).toFixed(3)} mm (frame contact at ${(STOP.y * 1e3).toFixed(2)} mm), ${hits} samples in contact`);
   // as voiced, even a forte A1 stays well clear of it
-  const t = traceStrike(keyModel(KEY_LO, P(), 2 * FS).voice, P(), 1, FS, 0.15);
+  const t = traceStrike(KEY_LO, P(), 1, FS, 0.15);
   let far = 0; for (const y of t.y) far = Math.max(far, Math.abs(DEFAULTS.offset * 1e-3 + y));
   assert.ok(far < 0.5 * STOP.y, `A1 ff swings to ${(far * 1e3).toFixed(2)} mm`);
   note(`frame contact at ±${(STOP.y * 1e3).toFixed(2)} mm; extreme reeds reach ${(worst * 1e3).toFixed(2)} mm; A1 ff as voiced ${(far * 1e3).toFixed(2)} mm`);
@@ -254,7 +272,7 @@ test('striking on mode 2\'s node leaves mode 2 out', () => {
   const m = 45, k = keyModel(m, P()), L = k.info.L;
   let xn = 0; // node of mode 2: where its shape crosses zero
   for (let x = 0.2 * L; x < L; x += L / 2000) if (k.reed.shape(1, x) * k.reed.shape(1, x + L / 2000) <= 0) { xn = x; break; }
-  const a2 = (strike) => { const t = traceStrike({ ...keyModel(m, P({ strike })).voice }, P({ strike }), 0.5, FS, 0.05); return t.amps[1] / t.amps[0]; };
+  const a2 = (strike) => { const t = traceStrike(m, P({ strike }), 0.5, FS, 0.05); return t.amps[1] / t.amps[0]; };
   const on = a2(xn / L), off = a2(DEFAULTS.strike);
   assert.ok(on < 0.03 * off, `${on} vs ${off}`);
   note(`A2 mode 2 node at ${(100 * xn / L).toFixed(1)} % of the length; mode 2 at the slot ${dB(on, off).toFixed(0)} dB re default strike`);
@@ -285,14 +303,14 @@ test('speakers: the A1 fundamental drops out, the cone break-up near 2.6 kHz is 
 });
 test('a key struck again after a reed knob moved does not double: the old reed fades out', () => {
   // the page sends a new model (a new version) after solder, strike or hardness change
-  const d0 = { ...keyModel(57, P(), 2 * FS).voice, version: 1 }, d1 = { ...keyModel(57, P({ hardness: 1.02 }), 2 * FS).voice, version: 2 };
+  const d0 = keyModel(57, P(), 2 * FS).packed, d1 = keyModel(57, P({ hardness: 1.02 }), 2 * FS).packed; // version first
   for (const sus of [true, false]) {
     const e = new ReedEngine(FS); e.setParams(P());
     const ev = [[0, 'sus', sus], [0, 'on', 57, 0.7, d0], [0.5, 'params', P({ hardness: 1.02 })], [0.5, 'on', 57, 0.7, d1]];
     renderEngine(e, 0.8, ev, FS);
     const left = e.voices.filter((v) => v.key === 57);
     assert.equal(left.length, 1, `${sus ? 'pedal' : 'no pedal'}: ${left.length} voices for the key`);
-    assert.equal(left[0].data, d1);
+    assert.ok(d0[0] !== d1[0] && left[0].version === d1[0], 'the new reed plays');
   }
 });
 test('dampers stop the note on release; the pedal keeps it; released notes free their voice', () => {

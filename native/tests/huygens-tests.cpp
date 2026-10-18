@@ -1,7 +1,7 @@
 // huygens-tests.cpp — the Huygens keyboard's engine in C++: a lamp plays its design pitch, two
 // lamps lock where the exact map says, the log2 of V8, the tuning, the page's state, a flood of
 // notes, and ten keys fit the CPU budget. The physics tests are the JavaScript suite's, run on the
-// WebAssembly (FORTE_ENGINE=wasm).
+// WebAssembly (node test/huygens-tests.mjs).
 
 #include <chrono>
 #include <cmath>

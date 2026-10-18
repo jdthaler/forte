@@ -118,11 +118,11 @@ speeds with separate time constants: the light horn takes ~0.7 s, the heavy
 drum ~4.5 s. That lag is why the speed change sounds like two things
 happening.
 
-**In C++.** The same engine and tone generator run as WebAssembly on this
-page (the JavaScript is the fallback; `?engine=js` in the address forces
-it) and as plugins (CLAP, VST3, AU and a standalone app). The WebAssembly
-plays what the JavaScript plays bit for bit, the contacts' seeded timing and
-bounce included, and the same test suite passes on it. In the plugins the
+**In C++.** The engine and tone generator (`native/instruments/organ`) run
+as WebAssembly on this page, in the tests and in the render tool, and as
+plugins (CLAP, VST3, AU and a standalone app). (They began as JavaScript,
+which the C++ matched bit for bit, the contacts' seeded timing and bounce
+included, before it was retired.) In the plugins the
 console is parameters of its own: the nine drawbars (0–8), the percussion
 switches, vibrato and chorus, the Leslie (bypass, slow, fast, or stopped)
 and the motor; the presets set all of it. The mod wheel puts the Leslie on
@@ -135,15 +135,14 @@ in C++.
 
 ```
 organ/index.html, style.css      UI
-organ/src/tonewheels.js          gears, wheels, drawbar → wheel map, foldback, analysis
+organ/src/tonewheels.js          the manual's keys, the wheels and the drawbars, for the page
 organ/src/organ-instrument.js    the instrument without its page: parameters, presets, engine, output chain
-organ/src/organ-engine.js        DSP: generator, contacts, busbars, percussion, LC scanner, drive, Leslie
 organ/src/organ-main.js          console, drawbars, keyboard / MIDI, views
 organ/src/organ-viz.js           generator map, Leslie top view, spectrum + scope, scanner
 organ/src/organ-params.js        parameters, registrations, and the console as plugin parameters
-organ/src/organ-wasm.js          the C++ engine and model as WebAssembly (organ/wasm/organ.wasm)
-native/instruments/organ/        the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
-test/organ-tests.mjs             node test/organ-tests.mjs (FORTE_ENGINE=wasm: on the WebAssembly)
+organ/src/organ-wasm.js          the engine and model as WebAssembly (organ/wasm/organ.wasm), for the page and the tests
+native/instruments/organ/        the C++: tone generator (gears, wheels, drawbar → wheel map, foldback, analysis), the engine (generator, contacts, busbars, percussion, LC scanner, drive, Leslie), reference (plugins and WebAssembly)
+test/organ-tests.mjs             node test/organ-tests.mjs
 tools/render-organ.mjs           node tools/render-organ.mjs → examples/organ/
 ```
 

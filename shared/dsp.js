@@ -1,5 +1,6 @@
-// dsp.js — small building blocks shared by the engines. Importable from an
-// AudioWorklet module and from Node.
+// dsp.js — small building blocks: once the JavaScript engines', now the reference the C++ core's
+// (native/core) are checked against (tools/gen-native-vectors.mjs), and helpers for the tests and
+// pages. Importable from an AudioWorklet module and from Node.
 
 export const TAU = 2 * Math.PI;
 export const keyFreq = (m) => 440 * 2 ** ((m - 69) / 12);

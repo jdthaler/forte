@@ -1,6 +1,6 @@
-// template-model.h — the physics (docs/template/src/template-model.js in C++): a free–free bar
-// (Euler–Bernoulli beam) struck by a mallet. Each key is a bar tuned so that its first bending
-// mode is the note; the mallet is a half-sine force pulse whose length sets which modes it reaches.
+// template-model.h — the physics: a free–free bar (Euler–Bernoulli beam) struck by a mallet. Each
+// key is a bar tuned so that its first bending mode is the note; the mallet is a half-sine force
+// pulse whose length sets which modes it reaches.
 #pragma once
 
 #include <array>

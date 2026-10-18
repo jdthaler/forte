@@ -1,4 +1,4 @@
-// vibraphone-model.cpp — the vibraphone's physics, as vibraphone-model.js computes it.
+// vibraphone-model.cpp — the vibraphone's physics (vibraphone-model.h).
 
 #include "vibraphone-model.h"
 
@@ -66,7 +66,7 @@ double zener(double h, double f) {
   return (ZENER_DELTA * wt) / (1 + wt * wt);
 }
 
-// A thin strip moving normal to itself radiates as a line of dipoles (vibraphone-model.js):
+// A thin strip moving normal to itself radiates as a line of dipoles:
 // J = ∫(1 − μ²)|I(μ)|² dμ, with a density per unit length that is constant along the bar.
 static double radiationJ(const std::vector<double> &xs, const std::vector<double> &shape, double density, double k, double L) {
   const int nx = (int)xs.size(), NM = 24;

@@ -3,9 +3,11 @@
 //
 // Name demos NN-what-you-hear; the landing page plays the first one.
 
-import { TemplateEngine } from '../docs/template/src/template-engine.js';
-import { DEFAULTS, PRESETS } from '../docs/template/src/template-params.js';
+import { INSTRUMENT, DEFAULTS, PRESETS } from '../docs/template/src/template-instrument.js';
+import { loadEngine } from './engine.mjs';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
+
+const TemplateEngine = await loadEngine(INSTRUMENT);
 
 const FS = 48000, SLUG = 'template';
 const preset = (i, o = {}) => ({ ...DEFAULTS, ...PRESETS[i].p, ...o });

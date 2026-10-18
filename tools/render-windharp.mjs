@@ -3,9 +3,11 @@
 //
 // Name demos NN-what-you-hear; the landing page plays the first one.
 
-import { WindHarpEngine } from '../windharp/src/windharp-engine.js';
-import { DEFAULTS } from '../windharp/src/windharp-params.js';
+import { INSTRUMENT, DEFAULTS } from '../windharp/src/windharp-instrument.js';
+import { loadEngine } from './engine.mjs';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
+
+const WindHarpEngine = await loadEngine(INSTRUMENT);
 
 const FS = 48000, SLUG = 'windharp';
 const P = (o = {}) => ({ ...DEFAULTS, ...o });

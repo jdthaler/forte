@@ -15,8 +15,8 @@ instrument headless in JavaScript; the shared native core; the template and the 
 ported, their pages running the WebAssembly; the plugins released from GitHub and linked from the
 front page; step 4, every instrument in six batches: the modal bars, bells and plates, the
 strings, the reeds and pickups, the self-oscillators, the table-driven instruments and the
-tonewheel organ). Next: let the WebAssembly engines run for a while, then remove the JavaScript
-ones; step 6 is unscheduled. The decisions below were made by the owner on
+tonewheel organ). The JavaScript engines are retired (pull request 46): the pages, tests and tools
+play only the C++; step 6 is unscheduled. The decisions below were made by the owner on
 2026-10-16. Follow [CLAUDE.md](../CLAUDE.md) for the workflow (branch, test,
 version, pull request, merge only when asked) and update this file as steps
 land.
@@ -387,7 +387,7 @@ the reference comparison uses statistics too.
 
 After an instrument has run from WebAssembly for a while without
 regressions, remove its JavaScript engine and model in a separate pull
-request.
+request. (Done for all of them at once: see "Retiring the JavaScript", below.)
 
 ### 5. Distribution
 Done (Forte 0.13.0; per instrument and automatic in 0.17.0):
@@ -425,6 +425,17 @@ app-specific password or App Store Connect API key, stored as repository secrets
 would then sign with `codesign --options runtime --timestamp` and submit with
 `xcrun notarytool submit --wait` and `xcrun stapler staple`. Windows code signing likewise
 needs a certificate the owner buys.
+
+### Retiring the JavaScript — done
+Every instrument's JavaScript engine, and the JavaScript model code the C++ duplicated, is gone,
+with the engine switch and the worklet's and views' fallbacks. The pages run the WebAssembly and
+await its model before drawing; the tests check the C++ (`loadEngine`, `wasmModel()`) against
+independent physics written in the tests; `tools/render-reference.mjs` now saves the C++'s
+sound when a change to it is meant. JavaScript that stays: page constants and labels; the source
+data and design tools that write C++ tables (the bells' FEM, the bars' and reeds' tables, the QNM
+solver, the tuning tables). Where a test needs more of the C++ than the engine plays (the bowed
+string alone, the bubbles' glide, a linear analysis, a board's modes), the instrument's
+`<slug>-web.cpp` exports it, and the tuning tools (bowed, harmonium, pipes) measure the build.
 
 ### 6. Later
 - The plugin window (Forte 0.21.0: `native/plugin/editor.h`, `editor.html`) shows the controls

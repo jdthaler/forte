@@ -1,4 +1,4 @@
-// arc-engine.cpp — the singing arc's engine (arc/src/arc-engine.js), operation for operation.
+// arc-engine.cpp — the singing arc's engine (arc-engine.h).
 
 #include "arc-engine.h"
 

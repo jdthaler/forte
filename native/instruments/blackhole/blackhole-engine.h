@@ -1,5 +1,5 @@
-// blackhole-engine.h — plays black-hole ringdowns, and optional inspirals
-// (blackhole/src/ringdown-engine.js in C++), on the engine contract (forte/engine.h).
+// blackhole-engine.h — plays black-hole ringdowns, and optional inspirals, on the engine
+// contract (forte/engine.h).
 //
 //   each mode a decaying phasor ζ(t) = e^{−γt} e^{−2πift}; h₊ = Re(C₊ζ) and h× = −Im(C×ζ),
 //   summed over modes; left = h₊, right = h× (or mono)
@@ -8,7 +8,7 @@
 //   amplitude
 //   voices over the limit: the quietest fades out in ~10 ms
 //
-// Operation for operation as the JavaScript, with V8's fdlibm, so it plays the same samples. A
+// With V8's fdlibm, so it plays the same samples in the WebAssembly and the plugins. A
 // key's voice (blackhole-model.h) is cheap to build from the table (no solving), so it is built in
 // noteOn, as the page's noteData builds it, and kept per key while the model's parameters stay
 // the same. Voices live in a fixed pool; nothing is allocated after construction.
@@ -54,7 +54,7 @@ struct Voice {
 
 class RingdownEngine : public Engine {
  public:
-  static constexpr int kPool = 2 * MAX_VOICES + 1; // the JavaScript's hard limit, and the newest
+  static constexpr int kPool = 2 * MAX_VOICES + 1; // the hard limit, and the newest
   explicit RingdownEngine(double fs);
 
   void setParams(const double *P) override;
@@ -89,7 +89,7 @@ class RingdownEngine : public Engine {
   int nfree = 0;
   int maxVoices = MAX_VOICES;
   ModelParams model;
-  // each key's voice at the current model parameters (voiceFor in the JavaScript)
+  // each key's voice at the current model parameters
   KeyVoice cache[KEY_HI - KEY_LO + 1];
   bool cached[KEY_HI - KEY_LO + 1] = {};
   KeyVoice other;               // a key outside the range

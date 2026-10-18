@@ -1,8 +1,8 @@
-// carillon-model.h — the physics of a carillon (carillon/src/carillon-model.js in C++): which rib
-// each key gets and how big its bell is; each mode's frequency, damping (bronze's internal loss +
-// radiation), excitation at the strike point and radiation towards the listener; the doublets; the
-// historic, untuned bell; the clapper's Hertz contact; air absorption over the listening distance;
-// and the virtual-pitch estimator that finds the strike note.
+// carillon-model.h — the physics of a carillon: which rib each key gets and how big its bell is;
+// each mode's frequency, damping (bronze's internal loss + radiation), excitation at the strike
+// point and radiation towards the listener; the doublets; the historic, untuned bell; the clapper's
+// Hertz contact; air absorption over the listening distance; and the virtual-pitch estimator that
+// finds the strike note.
 //
 // The ribs and their modes come from the axisymmetric FEM (carillon/src/bell-fem.js, run once by
 // tools/carillon-profile.mjs), as a generated table (bell-table.h): nothing here solves an
@@ -21,7 +21,7 @@ constexpr double TAU = 2 * std::numbers::pi;
 constexpr int KEY_LO = 48, KEY_HI = 96; // C3–C7 at sounding pitch: a four-octave concert carillon
 inline double keyFreq(double k) { return 440 * std::pow(2.0, (k - 69) / 12); }
 
-// bronze.js: bell bronze, about 78 % copper and 22 % tin; the air at 20 °C at sea level
+// Bell bronze, about 78 % copper and 22 % tin; the air at 20 °C at sea level
 struct Bronze { double E, rho, nu; };
 inline constexpr Bronze BRONZE = {105e9, 8700, 0.33};
 extern const double cBronze; // m/s: f = √λ/(2π) · cBronze / D for the FEM's λ

@@ -106,3 +106,10 @@ Now an instrument: see [bubbles/README.md](../bubbles/README.md), whose
 
 Now an instrument: see [springs/README.md](../springs/README.md), whose
 *Prior art and references* carry this brief's research.
+
+---
+
+## Storage Ring (`ring`): built
+
+Now an instrument: see [ring/README.md](../ring/README.md), whose
+*Prior art and references* carry this brief's research.

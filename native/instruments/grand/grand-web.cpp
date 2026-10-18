@@ -1,6 +1,6 @@
 // grand-web.cpp — the model's functions the page's views call (grand/src/grand-wasm.js), and the
-// engine's hooks: its voices (as the JavaScript engine's voices and noteOn's return show them, for
-// the tests and the page's slow-motion view) and the page's oscillator budget.
+// engine's hooks: its voices (for the tests and the page's slow-motion view) and the page's
+// oscillator budget.
 
 #include <algorithm>
 #include <memory>
@@ -13,12 +13,20 @@ using namespace forte::grand;
 using Voice = GrandEngine::Voice;
 
 // The views ask for the same board again and again (its admittance, then its response per
-// partial): keep the last one.
-static const BoardModel &cachedBoard(double boardH) {
+// partial): keep the last one. fmax and maxModes (the tests': 0 for the model's own) widen its
+// modal band.
+static const BoardModel &cachedBoard(double boardH, double fmax = 0, int maxModes = 0) {
   static std::unique_ptr<BoardModel> board;
-  if (!board || board->boardH != boardH) board = std::make_unique<BoardModel>(boardModel(boardH));
+  static int builtModes = 0;
+  if (!(fmax > 0)) fmax = BOARD.fmax;
+  if (maxModes <= 0) maxModes = BOARD.maxModes;
+  if (!board || board->boardH != boardH || board->fmax != fmax || builtModes != maxModes) {
+    board = std::make_unique<BoardModel>(boardModel(boardH, fmax, maxModes));
+    builtModes = maxModes;
+  }
   return *board;
 }
+static std::vector<double> modes; // grand_board_modes's
 
 // A key's model, packed (grand-wasm.js unpacks it): key, ns, det[3], seg, beta, xh, wH, xd, the
 // hammer (mass, K, p, alpha), hasDamper, n, nV, the number of partials; the string (key, f0, cents,
@@ -49,17 +57,40 @@ FORTE_EXPORT double *grand_key_model(const double *P, int key, double fs) {
   return pack(keyModel(key, M, M.mount == mount_::board ? &cachedBoard(M.boardH) : nullptr, fs));
 }
 FORTE_EXPORT int grand_packed() { return (int)packed.size(); }
-// boardModel(P)'s numbers: K, D, rhoh, fRes, Ginf, mb, fBridge, f11, density, fc, micGain.
-FORTE_EXPORT int grand_board(double boardH, double *out) {
-  const BoardModel &B = cachedBoard(boardH);
-  const double v[11] = {(double)B.K, B.D, B.rhoh, B.fRes, B.Ginf, B.mb, B.fBridge, B.f11, B.density, B.fc, B.micGain};
-  for (int i = 0; i < 11; i++) out[i] = v[i];
-  return 11;
+// boardModel(P)'s numbers: K, D, rhoh, fRes, Ginf, mb, fBridge, f11, density, fc, micGain, fmax.
+FORTE_EXPORT int grand_board(double boardH, double fmax, int maxModes, double *out) {
+  const BoardModel &B = cachedBoard(boardH, fmax, maxModes);
+  const double v[12] = {(double)B.K, B.D, B.rhoh, B.fRes, B.Ginf, B.mb, B.fBridge, B.f11, B.density, B.fc, B.micGain, B.fmax};
+  for (int i = 0; i < 12; i++) out[i] = v[i];
+  return 12;
 }
-FORTE_EXPORT double grand_board_response(double boardH, int seg, double f, int mic) { return boardResponse(cachedBoard(boardH), seg, f, mic); }
+// The board's modes: per mode m, n, omega, sigma, RL, RR, then phi at the SEGMENTS bridge points
+// (9 numbers each, K of them). It may be bigger than the scratch area: it goes in its own buffer.
+FORTE_EXPORT double *grand_board_modes(double boardH, double fmax, int maxModes) {
+  const BoardModel &B = cachedBoard(boardH, fmax, maxModes);
+  modes.clear();
+  for (int k = 0; k < B.K; k++) {
+    for (double v : {(double)B.m[k], (double)B.n[k], B.omega[k], B.sigma[k], B.RL[k], B.RR[k]}) modes.push_back(v);
+    for (int i = 0; i < SEGMENTS; i++) modes.push_back(B.phi[k * SEGMENTS + i]);
+  }
+  return modes.data();
+}
+// boardResponse; without the residual path above the modal band if residual is 0
+FORTE_EXPORT double grand_board_response(double boardH, double fmax, int maxModes, int residual, int seg, double f, int mic) {
+  const BoardModel &B = cachedBoard(boardH, fmax, maxModes);
+  if (residual) return boardResponse(B, seg, f, mic);
+  BoardModel X = B;
+  X.res.fill(0);
+  return boardResponse(X, seg, f, mic);
+}
 FORTE_EXPORT void grand_board_mobility(double boardH, int seg, double f, double *out) {
   const auto y = boardMobility(cachedBoard(boardH), seg, f);
   out[0] = y[0]; out[1] = y[1];
+}
+// sinFT(q, κ, a): ∫₀ᵃ sin(qx) e^{iκx} dx, re and im
+FORTE_EXPORT void grand_sin_ft(double q, double kap, double a, double *out) {
+  const auto r = sinFT(q, kap, a);
+  out[0] = r[0]; out[1] = r[1];
 }
 FORTE_EXPORT double grand_hammer_speed(double vel) { return hammerSpeed(vel); }
 // decayRates(p, ns): prompt, after

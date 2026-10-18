@@ -3,9 +3,11 @@
 //
 // Name demos NN-what-you-hear; the landing page plays the first one.
 
-import { VibraphoneEngine } from '../vibraphone/src/vibraphone-engine.js';
-import { DEFAULTS, PRESETS } from '../vibraphone/src/vibraphone-params.js';
+import { INSTRUMENT, DEFAULTS, PRESETS } from '../vibraphone/src/vibraphone-instrument.js';
+import { loadEngine } from './engine.mjs';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
+
+const VibraphoneEngine = await loadEngine(INSTRUMENT);
 
 const FS = 48000, SLUG = 'vibraphone';
 const P = (o = {}) => ({ ...DEFAULTS, ...o });

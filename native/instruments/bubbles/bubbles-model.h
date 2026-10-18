@@ -1,6 +1,6 @@
-// bubbles-model.h — the physics (bubbles/src/bubbles-model.js in C++): a gas bubble ringing in
-// a liquid. Linearised (Rayleigh–Plesset, with heat flow in the gas and sound radiated into the
-// liquid), the wall displacement x = R(t) − R₀ obeys ẍ + 2bẋ + ω₀²x = 0, with
+// bubbles-model.h — the physics: a gas bubble ringing in a liquid. Linearised (Rayleigh–Plesset,
+// with heat flow in the gas and sound radiated into the liquid), the wall displacement
+// x = R(t) − R₀ obeys ẍ + 2bẋ + ω₀²x = 0, with
 //   ω₀² = [p_b Re Φ − 2σ/R] / (ρ R² m),     p_b = p₀ + 2σ/R
 //   b   = [2μ/(ρR²) + p_b Im Φ / (2ρωR²) + (ω²R/2c)(1 − sin ks/ks)] / m
 // Φ the complex polytropic index of the gas, m = 1 − (R/s) cos ks the free surface's image
@@ -67,7 +67,7 @@ struct Env {
   bool phiFixed = false;
   Complex phiKept{0, 0};
 };
-// One bubble's acoustics (bubbles-model.js, acoustics).
+// One bubble's acoustics.
 struct Acoustics {
   double omega0, b, omegaD, f0, fd, delta, dvis, dth, drad, kappa, phiRe, phiIm, chi, D, pb, m, radFactor, R;
 };
@@ -94,5 +94,9 @@ double snapGain(double f, double tau);
 // The glide while it rises: the swelling's polytropic exponent at the slow rate OMEGA_SLOW.
 constexpr double OMEGA_SLOW = 2 * std::numbers::pi * 3;
 double slowExponent(double R, const Gas &gas, double pb);
+// A bubble released with radius R0, inner pressure pb0, Φ then (phiKept) and that exponent nSlow,
+// now at depth d under the air pressure pT above the liquid: it has swollen as p_b^(−1/3n) (its
+// radius into R) and rings with Φ kept as it was at release.
+Acoustics glideRing(double R0, double pb0, double nSlow, Complex phiKept, const Liquid &liq, const Gas &gas, double d, double pT, double &R);
 
 } // namespace forte::bubbles

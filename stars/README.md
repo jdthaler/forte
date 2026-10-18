@@ -362,8 +362,8 @@ rather than a physical one.
 - **Stars built on the page.** A red giant's few hundred mixed modes, found
   by bisection, and the tuning take up to 50 ms; the page builds each key's
   star when needed, keeps them, works through the keyboard in spare
-  moments, and sends each star with its note. The engine builds its own in
-  Node.
+  moments, and sends each star with its note. Without one (in Node, or a
+  plugin) the engine builds its own.
 - **Voices.** One per key: pressing a sounding key drives the same star
   again (and adds a flare). Beyond 14 stars the quietest older one (a
   released one first, never one younger than 50 ms) fades out over 50 ms.
@@ -380,21 +380,18 @@ rather than a physical one.
 - **Level.** A forte note peaks at 0.11–0.42 (the flare included), chords of
   six stars at 0.52.
 - **Cost.** Ten stars across the keyboard, held and driven (2585 modes),
-  take about 17 % of one core at 48 kHz in Node on the shared machine this
-  was built on; ten red giants (3386 modes) about 22 %.
-- **In C++**: the same engine and model run as WebAssembly on this page (the
-  JavaScript is the fallback; `?engine=js` in the address forces it) and as
-  plugins (CLAP, VST3, AU and a standalone app), where CC64 is the sustain
-  pedal, the mod wheel spins the stars up and aftertouch drives them
-  harder. The page builds each key's star with its WebAssembly model and
-  sends it with the note; a plugin builds every key's star on a worker
-  thread as soon as the kind, mass or speed-up changes, and a note whose
-  star isn't ready waits the few milliseconds for it. With V8's own
-  `exp`, `log`, `tan`… (fdlibm) and the JavaScript's seeded generators, the
-  WebAssembly plays what the JavaScript plays bit for bit, its random
-  convection, flares and stars included, and the same test suite passes
-  on it. Ten stars take about 12 % of a core in C++, ten red giants
-  about 15 %.
+  take about 12–15 % of one core at 48 kHz; ten red giants (3386 modes)
+  about 15–20 %.
+- **In C++** (`native/instruments/stars`): the engine and the model, run as
+  WebAssembly on this page and as plugins (CLAP, VST3, AU and a standalone
+  app), where CC64 is the sustain pedal, the mod wheel spins the stars up
+  and aftertouch drives them harder. The page builds each key's star with
+  its WebAssembly model and sends it with the note; a plugin builds every
+  key's star on a worker thread as soon as the kind, mass or speed-up
+  changes, and a note whose star isn't ready waits the few milliseconds for
+  it. The C++ was ported from the JavaScript this page first ran, with V8's
+  own `exp`, `log`, `tan`… (fdlibm) and the same seeded generators, and
+  played it bit for bit, its random convection, flares and stars included.
 
 ## What to listen for
 
@@ -442,14 +439,13 @@ against the model's Gaussian envelope, with the live output's spectrum.
 
 ```
 stars/index.html, style.css          page
-stars/src/stars-model.js             scaling relations, ZAMS and the track, the asymptotic pattern, mixed modes,
-                                     linewidths, visibilities, rotation, tuning, δ Scuti (no audio, no DOM)
-stars/src/stars-engine.js            real-time engine (AudioWorklet and Node)
+stars/src/stars-instrument.js        the descriptor: parameters, presets, key range, the engine
 stars/src/stars-params.js            parameters and presets
 stars/src/stars-main.js              page wiring, building the stars for each note, and views
 stars/src/stars-wasm.js              the C++ engine and model as WebAssembly (stars/wasm/stars.wasm)
-native/instruments/stars/            the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
-test/stars-tests.mjs                 node test/stars-tests.mjs (21 tests, about 16 s; FORTE_ENGINE=wasm: on the WebAssembly)
+native/instruments/stars/            the C++: scaling relations, ZAMS and the track, the asymptotic pattern, mixed modes,
+                                     linewidths, visibilities, rotation, tuning, δ Scuti, and the engine (plugins and WebAssembly)
+test/stars-tests.mjs                 node test/stars-tests.mjs (21 tests, about 16 s)
 tools/render-stars.mjs               node tools/render-stars.mjs → examples/stars/
 ```
 

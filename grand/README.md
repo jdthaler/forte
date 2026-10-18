@@ -97,7 +97,7 @@ C7: M = 4.9 / 2.97 / 2.2 g per string, p = 2.3 / 2.5 / 3.0), α = 50 µs, and a
 contact patch from 18 mm in the bass to 3 mm in the treble (a Hann window
 that filters the partials whose wavelength it spans). The contact is solved
 implicitly every sample, with a scalar Newton iteration against all modes,
-as in `piano/src/engine.js`. Key velocity maps to 0.25–6 m/s (Askenfelt &
+as in the [Ribbon Piano](../piano/README.md). Key velocity maps to 0.25–6 m/s (Askenfelt &
 Jansson 1991). At C4 mf (2.3 m/s) the felt is in contact for 2.0 ms and
 peaks at 19 N. Harder felt and faster blows shorten the contact.
 *Strike position* (default 0.12 L, about L/8.3) weakens the partials with a
@@ -240,16 +240,14 @@ average, or 90 % in the worst block, it shrinks by a quarter, and under
 30 % it grows back by a tenth. Touch devices, usually slower, start from a
 ceiling of 2400.
 
-**In C++.** The same engine and model run as WebAssembly on this page (the
-JavaScript is the fallback; `?engine=js` in the address forces it), and the
-slow-motion view and the mode table re-run the strike with them; and as
-plugins (CLAP, VST3, AU and a standalone app), where CC64 is the damper
-pedal. The WebAssembly plays what the JavaScript plays to float32 rounding
-(within 4·10⁻⁹ on the reference scripts), and the same test suite passes on
-it. In the plugins, a key's partials (and the soundboard, a few
-milliseconds) are built on a worker thread for the parameters they depend
-on; the WebAssembly builds them when they are first needed, as the
-JavaScript does. Ten bass-heavy voices take about 6 % of a core in C++.
+**In C++.** The engine and model are C++ (`native/instruments/grand`). They
+run as WebAssembly on this page, where the slow-motion view and the mode
+table re-run the strike with them, and as plugins (CLAP, VST3, AU and a
+standalone app), where CC64 is the damper pedal. In the plugins, a key's
+partials (and the soundboard, a few milliseconds) are built on a worker
+thread for the parameters they depend on; the WebAssembly builds them when
+they are first needed. Ten bass-heavy voices take about 6 % of a core in
+C++.
 
 ## What to listen for
 
@@ -301,18 +299,13 @@ Regenerate the demos with `node tools/render-grand.mjs`. Run the tests with
 
 ```
 grand/index.html, style.css          page
-grand/src/grand-model.js             physics: scale, strings, hammer data, bridge, soundboard (no audio, no DOM)
-grand/src/grand-engine.js            real-time engine: modes, implicit hammer, bridge channels, board, piezo, EQ
 grand/src/grand-params.js            parameters and presets
 grand/src/grand-main.js              page wiring; slow-motion string, modes table, spectrum, partial weights; load-following oscillator budget
-grand/src/grand-wasm.js              the C++ engine and model as WebAssembly (grand/wasm/grand.wasm)
-native/instruments/grand/            the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
-test/grand-tests.mjs                 node test/grand-tests.mjs (FORTE_ENGINE=wasm: on the WebAssembly)
+grand/src/grand-wasm.js              the engine and model as WebAssembly (grand/wasm/grand.wasm), for the page and the tests
+native/instruments/grand/            the physics in C++: model (scale, strings, hammer, bridge, soundboard), engine (modes, implicit hammer, bridge channels, board, piezo, EQ), generated tables, reference
+test/grand-tests.mjs                 node test/grand-tests.mjs
 tools/render-grand.mjs               node tools/render-grand.mjs → examples/grand/
 ```
-
-The engine imports the felt-hammer grading and the concert scale from
-`piano/src/physics.js` (the C++ model has its own copy of those four functions).
 
 ## Simplifications
 

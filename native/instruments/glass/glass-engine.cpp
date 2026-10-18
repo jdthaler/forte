@@ -1,4 +1,4 @@
-// glass-engine.cpp — the armonica's engine, as glass-engine.js runs it.
+// glass-engine.cpp — the armonica's engine (glass-engine.h).
 
 #include "glass-engine.h"
 
@@ -42,7 +42,7 @@ void ArmonicaEngine::setParams(const double *p) {
   }
 }
 
-// A new voice on its key's slot (glass-engine.js, new Voice).
+// A new voice on its key's slot.
 void ArmonicaEngine::start(Voice &v, int key) {
   v = Voice{};
   v.key = key;

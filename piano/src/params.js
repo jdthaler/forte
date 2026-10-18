@@ -5,7 +5,7 @@
 //       'mix'    → Web Audio graph (soundboard, room, volume)
 //       'play'   → how the computer keyboard plays
 
-import { MATERIALS, SHAPES } from './physics.js';
+import { MATERIALS, SHAPES } from './materials.js';
 
 const x = (v) => `×${v < 1 ? v.toFixed(2) : v.toFixed(v < 10 ? 2 : 1)}`;
 

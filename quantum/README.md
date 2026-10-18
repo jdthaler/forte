@@ -145,8 +145,9 @@ unless noted):
   Percival & Richards 1970; Naccache 1972): the Fourier
   series of a Kepler orbit, r/a = 1 + e²/2 − Σ(2e/k)J′ₖ(ke) cos kM, with
   a = n_c², n_c = (n+n′)/2 and the Langer (1937) eccentricity e = √(1 − (l+½)²/n_c²).
-  Checked against exact integrals of Laguerre radial functions: 0.14 % at
-  n = 20, k = 1; 2.5 % at k = 5; errors fall like (k/n)². The cubic term
+  Against exact integrals of Laguerre radial functions: 0.14 % at n = 20,
+  k = 1; 2.5 % at k = 5; errors fall like (k/n)² (the tests compare each
+  against the n → n+1 element, as the detector's gain leaves them). The cubic term
   degrades the revivals. At t = T_sr/6, j³ ≡ j (mod 6) turns the cubic phases
   into a time shift. If n̄ is a multiple of 4, T_sr/6 = (n̄/8)T_rev is also a
   full or half revival, and the packet comes back nearly whole: a **super-revival**
@@ -158,8 +159,9 @@ unless noted):
   gravity: Gibbs 1975; Gea-Banacloche 1999; neutron states seen by Nesvizhevsky et al.
   2002; atoms bounced by Aminoff et al. 1993). Eₙ = mgℓ|aₙ|, with the Airy
   zeros from A&S Table 10.13 for n ≤ 10 and the asymptotic series 10.4.94
-  above (agreeing to 10⁻⁸ on the table). The matrix elements −2ℓ/(zₘ−zₙ)²
-  and the virial theorem ⟨z⟩ₙ = 2Eₙ/3 are checked against a diagonalisation.
+  above (agreeing to 10⁻⁸ on the table). The levels, the matrix elements
+  −2ℓ/(zₘ−zₙ)² and the virial theorem ⟨z⟩ₙ = 2Eₙ/3 are checked against a
+  diagonalisation.
   The bouncer is launched from rest at the top: dropped.
 * **Harmonic oscillator**, the control. The levels are equally spaced, the
   dipole connects only neighbours, and every Bohr line is at exactly ω. One
@@ -204,24 +206,23 @@ weaker than −60 dB of the strongest, above 20 kHz, or beyond the 300
 strongest are dropped. The pump builds the coherences as g(t)²,
 g = ½(1 + erf(t/√2τ)), with the τ that gives σₙ (at least 0.1 ms). The packet
 is computed on the page and sent with the note (about 1 ms). Ten voices take
-9 % of real time at the defaults and 28 % in the worst case (hydrogen,
-σₙ = 4, antenna: 300 pairs each), on an M2 Max in Node. All voices together
+about 4 % of a core at the defaults and 12 % in the worst case (hydrogen,
+σₙ = 4, antenna: 300 pairs each). All voices together
 sum at most 3000 pairs: when a new note would take the total past that, the
 weakest pairs of all, by their amplitude at that moment (velocity, T₁ decay and
 dephasing included), are dropped for good, so faded notes give theirs up
-first. 24 such voices struck together then take 31 % of a core instead of
-67 %, each keeping its 125 strongest lines (91 % of its power).
+first. 24 such voices struck together each keep their 125 strongest lines
+(91 % of their power).
 
-**In C++.** The same engine and model run as WebAssembly on this page (the
-JavaScript is the fallback; `?engine=js` in the address forces it) and as
-plugins (CLAP, VST3, AU and a standalone app), where the Space pedal is the
-damper on CC64 and the mod wheel is the dephasing rate. The WebAssembly plays
-what the JavaScript plays bit for bit, packets, revivals and the pair budget
-included (V8's own `sin`, `cos`, `exp` and `pow`), and the page's packets and
-the views' eigenfunctions come from the same C++. Each key's packet is built
-on a worker thread in the plugins, for the knobs as they are, and on the page
-by its WebAssembly model, which sends it with the note. Ten voices take about
-4 % of a core in C++ at the defaults and 12 % in the worst case above.
+**In C++** (`native/instruments/quantum`): the engine and the model, run as
+WebAssembly on this page and as plugins (CLAP, VST3, AU and a standalone
+app), where the Space pedal is the damper on CC64 and the mod wheel is the
+dephasing rate. The page's packets and the views' eigenfunctions come from
+the same C++. Each key's packet is built on a worker thread in the plugins,
+for the knobs as they are, and on the page by its WebAssembly model, which
+sends it with the note. The C++ was ported from the JavaScript this page
+first ran, with V8's own `sin`, `cos`, `exp` and `pow`, and played it bit for
+bit, packets, revivals and the pair budget included.
 
 ## What to listen for
 
@@ -267,14 +268,14 @@ neighbouring Δn = 1 lines *is* the (half) revival.
 
 ```
 quantum/index.html, style.css          page
-quantum/src/quantum-model.js           spectra, matrix elements, packets, time scales (no audio, no DOM)
-quantum/src/quantum-waves.js           eigenfunctions on a grid (Numerov / closed forms) for the views
-quantum/src/quantum-engine.js          real-time engine (AudioWorklet and Node)
+quantum/src/quantum-instrument.js      the descriptor: parameters, presets, the engine
 quantum/src/quantum-params.js          parameters and presets
 quantum/src/quantum-main.js            page wiring and views
+quantum/src/quantum-waves.js           the views' grid for each well around the eigenfunctions, and |ψ|²
 quantum/src/quantum-wasm.js            the C++ engine and model as WebAssembly (quantum/wasm/quantum.wasm)
-native/instruments/quantum/            the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
-test/quantum-tests.mjs                 node test/quantum-tests.mjs (26 tests, ~15 s; FORTE_ENGINE=wasm: on the WebAssembly)
+native/instruments/quantum/            the C++: spectra, matrix elements, packets, time scales, eigenfunctions
+                                       (Numerov / closed forms) and the engine (plugins and WebAssembly)
+test/quantum-tests.mjs                 node test/quantum-tests.mjs (26 tests, ~15 s)
 tools/render-quantum.mjs               node tools/render-quantum.mjs → examples/quantum/
 ```
 

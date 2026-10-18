@@ -1,4 +1,4 @@
-// pipes-engine.cpp — pipes/src/pipes-engine.js in C++, operation for operation.
+// pipes-engine.cpp — the pipe organ's engine (pipes-engine.h).
 
 #include "pipes-engine.h"
 
@@ -503,7 +503,7 @@ void PipeEngine::processBlock(float *L, float *R, int n) {
 }
 
 // 2× → 1×: the half-band FIR, whose every other tap (but the centre) is zero. L and R hold the
-// result in float until the 1× pipes are added (in double, as the JavaScript adds them).
+// result in float until the 1× pipes are added (in double).
 void PipeEngine::decimate(float *L, float *R, int n) {
   constexpr int M = FIR_N, c = (M - 1) / 2;
   int p = hpos;

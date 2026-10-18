@@ -1,7 +1,10 @@
-// bar.js — a vibraphone bar by finite elements: Timoshenko bending and
-// Saint-Venant torsion of a bar whose thickness varies along its length (the
-// undercut), and the optimiser that shapes the undercut so that the first three
-// bending modes sit at 1 : 4 : 10. Pure functions: no audio, no DOM.
+// bar.js — the vibraphone's bars as they are cut: the blanks, Timoshenko bending
+// of a bar whose thickness varies along its length (the undercut) by finite
+// elements, and the optimiser that shapes the undercut so that the first three
+// bending modes sit at 1 : 4 : 10. tools/vibraphone-bars.mjs tunes the bars with
+// it and writes the table (bar-table.js) that the C++ plays from; the C++
+// (native/instruments/vibraphone/bar.cpp) has the same elements, with torsion and
+// the mode shapes, for the instrument itself. Pure functions: no audio, no DOM.
 //
 //        ┌──────────────────────────────────────────────┐  ← top (struck)
 //        │  full thickness h₀         full thickness h₀ │
@@ -13,9 +16,10 @@
 // meshed: bending modes 1, 3, 5 are symmetric (slope zero at the centre) and
 // 2, 4 antisymmetric (no displacement at the centre). The stiffness and mass
 // matrices are banded (half-bandwidth 3), so each eigenvalue comes from a
-// Sturm-sequence bisection (count the negative pivots of K − λM) and each
-// eigenvector from inverse iteration, all in O(n) per factorisation.
+// Sturm-sequence bisection (count the negative pivots of K − λM), in O(n) per
+// factorisation.
 
+export const KEY_LO = 53, KEY_HI = 89; // F3–F6, the standard three-octave vibraphone
 export const AL = { E: 69e9, rho: 2700, nu: 0.33 };   // aluminium alloy (6061-like)
 export const G_AL = AL.E / (2 * (1 + AL.nu));
 export const KAPPA = (10 * (1 + AL.nu)) / (12 + 11 * AL.nu); // Cowper's shear coefficient, rectangle
@@ -23,6 +27,13 @@ export const KAPPA = (10 * (1 + AL.nu)) / (12 + 11 * AL.nu); // Cowper's shear c
 // Free–free Euler–Bernoulli beam: cos βL cosh βL = 1 (the ratios 1 : 2.756 : 5.404 : 8.933 : 13.34).
 export const BETA_L = [4.730040745, 7.853204624, 10.99560784, 14.13716549, 17.27875966];
 export const EB_RATIOS = BETA_L.map((b) => (b / BETA_L[0]) ** 2);
+
+// What every bar starts as: aluminium 12.7 mm (½") thick, its width graded from
+// 57 mm (F3) to 38 mm (F6); cf = c/a, the flat share of the cut (below).
+export function barBlank(k) {
+  const t = Math.min(1, Math.max(0, (k - KEY_LO) / (KEY_HI - KEY_LO)));
+  return { b: 0.057 - 0.019 * t, h0: 0.0127, cf: 0.22 + 0.63 * t };
+}
 
 // 5-point Gauss–Legendre on [0, 1]
 const GX = [0.04691007703066802, 0.2307653449471585, 0.5, 0.7692346550528415, 0.9530899229693319];
@@ -36,12 +47,6 @@ export function thickness(cut, X) {
   if (d <= 0 || X >= a) return h0;
   if (X <= c) return h0 - d;
   return h0 - d * 0.5 * (1 + Math.cos((Math.PI * (X - c)) / (a - c)));
-}
-
-// Torsion constant of a b × h rectangle (b ≥ h), Roark's approximation.
-export function torsionJ(b, h) {
-  const t = Math.min(b, h), w = Math.max(b, h), r = t / w;
-  return w * t ** 3 * (1 / 3 - 0.21 * r * (1 - r ** 4 / 12));
 }
 
 // Half-bar node positions (0 = centre … L/2 = end), with nodes on the cut's corners.
@@ -83,13 +88,12 @@ function shapes(xi, l, phi, out) {
 }
 const SH = { Nw: new Float64Array(4), Nt: new Float64Array(4), dNw: new Float64Array(4), dNt: new Float64Array(4) };
 
-// Bending: banded K, M (n × 4, row i holds A[i][i..i+3]) of the half bar, and the
-// per-element bending stiffness blocks (for strain-energy bookkeeping).
+// Bending: banded K, M (n × 4, row i holds A[i][i..i+3]) of the half bar.
 // opts.shear = false gives Euler–Bernoulli (φ = 0, no rotary inertia).
 export function assembleBending(nodes, cut, b, opts = {}) {
   const shear = opts.shear !== false, { E, rho } = AL;
   const nn = nodes.length, n = 2 * nn;
-  const K = new Float64Array(n * 4), M = new Float64Array(n * 4), Kb = [];
+  const K = new Float64Array(n * 4), M = new Float64Array(n * 4);
   for (let e = 0; e < nn - 1; e++) {
     const x0 = nodes[e], l = nodes[e + 1] - x0, hm = thickness(cut, x0 + l / 2);
     const phi = shear ? (12 * E * (b * hm ** 3 / 12)) / (KAPPA * G_AL * b * hm * l * l) : 0;
@@ -107,27 +111,8 @@ export function assembleBending(nodes, cut, b, opts = {}) {
       K[(2 * e + i) * 4 + j - i] += kb[i * 4 + j] + ks[i * 4 + j];
       M[(2 * e + i) * 4 + j - i] += me[i * 4 + j];
     }
-    Kb.push({ kb, phi, l, h: hm });
   }
-  return { K, M, n, Kb };
-}
-
-// Torsion (Saint-Venant, linear elements): GJ θ″ and the polar inertia ρ(bh³ + hb³)/12.
-export function assembleTorsion(nodes, cut, b) {
-  const nn = nodes.length, K = new Float64Array(nn * 4), M = new Float64Array(nn * 4), { rho } = AL;
-  for (let e = 0; e < nn - 1; e++) {
-    const x0 = nodes[e], l = nodes[e + 1] - x0;
-    let k = 0, m11 = 0, m12 = 0, m22 = 0;
-    for (let g = 0; g < 5; g++) {
-      const xi = GX[g], h = thickness(cut, x0 + xi * l), w = GW[g] * l;
-      k += (w * G_AL * torsionJ(b, h)) / (l * l);
-      const ip = (rho * (b * h ** 3 + h * b ** 3)) / 12;
-      m11 += w * ip * (1 - xi) ** 2; m12 += w * ip * (1 - xi) * xi; m22 += w * ip * xi * xi;
-    }
-    K[e * 4] += k; K[e * 4 + 1] -= k; K[(e + 1) * 4] += k;
-    M[e * 4] += m11; M[e * 4 + 1] += m12; M[(e + 1) * 4] += m22;
-  }
-  return { K, M, n: nn };
+  return { K, M, n };
 }
 
 // Drop one degree of freedom (a symmetry condition at the centre) from a band matrix.
@@ -161,17 +146,8 @@ function ldl(k, m, N, lam, d, Lb) {
   return neg;
 }
 
-// Band matrix × vector.
-function bandMul(B, N, x, y) {
-  y.fill(0);
-  for (let i = 0; i < N; i++) {
-    y[i] += B[i * 4] * x[i];
-    for (let j = 1; j <= 3 && i + j < N; j++) { const v = B[i * 4 + j]; y[i] += v * x[i + j]; y[i + j] += v * x[i]; }
-  }
-}
-
-// The idx-th (1-based) eigenvalue and its M-normalised eigenvector of K x = λ M x.
-export function bandEig(k, m, N, idx, { vector = true, tol = 1e-13, guess = 1e4 } = {}) {
+// The idx-th (1-based) eigenvalue of K x = λ M x, by bisection on the Sturm count.
+export function bandEig(k, m, N, idx, { tol = 1e-13, guess = 1e4 } = {}) {
   const d = new Float64Array(N), Lb = new Float64Array(N * 4);
   let lo = 0, hi = guess;
   while (ldl(k, m, N, hi, d, Lb) < idx) hi *= 4;
@@ -179,103 +155,15 @@ export function bandEig(k, m, N, idx, { vector = true, tol = 1e-13, guess = 1e4 
     const mid = 0.5 * (lo + hi);
     if (ldl(k, m, N, mid, d, Lb) >= idx) hi = mid; else lo = mid;
   }
-  const lambda = 0.5 * (lo + hi);
-  if (!vector) return { lambda };
-  // inverse iteration at a shift just off the eigenvalue
-  const shift = lambda * (1 - 1e-9) - 1e-9, x = new Float64Array(N), y = new Float64Array(N);
-  for (let i = 0; i < N; i++) x[i] = 1 + 0.37 * Math.sin(1.7 * i);
-  for (let it = 0; it < 3; it++) {
-    ldl(k, m, N, shift, d, Lb);
-    bandMul(m, N, x, y);
-    for (let i = 0; i < N; i++) { let v = y[i]; for (let t = 1; t <= 3 && i - t >= 0; t++) v -= Lb[(i - t) * 4 + t] * y[i - t]; y[i] = v; } // L z = y
-    for (let i = 0; i < N; i++) y[i] /= d[i];
-    for (let i = N - 1; i >= 0; i--) { let v = y[i]; for (let t = 1; t <= 3 && i + t < N; t++) v -= Lb[i * 4 + t] * y[i + t]; y[i] = v; } // Lᵀ x = z
-    bandMul(m, N, y, x);
-    let s = 0; for (let i = 0; i < N; i++) s += y[i] * x[i];
-    s = 1 / Math.sqrt(s);
-    for (let i = 0; i < N; i++) x[i] = y[i] * s;
-  }
-  return { lambda, x };
+  return { lambda: 0.5 * (lo + hi) };
 }
 
 // Frequencies (Hz) of bending modes 1, 2, 3 only: what the optimiser needs.
 export function bendingFreqs3(cut, L, b, fine = 3) {
   const nodes = halfMesh(cut, L, fine), { K, M, n } = assembleBending(nodes, cut, b);
   const ks = dropDof(K, n, 1), ms = dropDof(M, n, 1), ka = dropDof(K, n, 0), ma = dropDof(M, n, 0), N = n - 1;
-  const f = (k, m, i) => Math.sqrt(bandEig(k, m, N, i, { vector: false }).lambda) / (2 * Math.PI);
+  const f = (k, m, i) => Math.sqrt(bandEig(k, m, N, i).lambda) / (2 * Math.PI);
   return [f(ks, ms, 2), f(ka, ma, 2), f(ks, ms, 3)];
-}
-
-// Interpolate a half-bar bending eigenvector (dofs w, θ per node, one dropped)
-// to positions xs (from the centre) and expand by symmetry.
-function bendingShape(nodes, Kb, x, drop, sym, xs) {
-  const full = new Float64Array(2 * nodes.length);
-  for (let i = 0, j = 0; i < full.length; i++) full[i] = i === drop ? 0 : x[j++];
-  return xs.map((X) => {
-    const ax = Math.abs(X);
-    let e = 0;
-    while (e < nodes.length - 2 && ax > nodes[e + 1]) e++;
-    const l = nodes[e + 1] - nodes[e], xi = Math.min(1, Math.max(0, (ax - nodes[e]) / l));
-    shapes(xi, l, Kb[e].phi, SH);
-    let w = 0;
-    for (let i = 0; i < 4; i++) w += SH.Nw[i] * full[2 * e + i];
-    return X < 0 && !sym ? -w : w;
-  });
-}
-
-// Everything about one bar: bending modes 1–5 and torsion modes 1–2, with
-// shapes sampled at nx points along the whole bar (x from 0 at one end to L),
-// unit modal mass over the whole bar (∫ρA w² + ρI θ² = 1; ∫ρI_p ψ² = 1 for torsion),
-// and the share of each mode's strain energy stored as bending in each element.
-export function barModes(cut, L, b, { nx = 97, fine = 3, nBend = 5, nTors = 2 } = {}) {
-  const nodes = halfMesh(cut, L, fine), B = assembleBending(nodes, cut, b), n = B.n, N = n - 1;
-  const xs = Array.from({ length: nx }, (_, i) => (i / (nx - 1)) * L - L / 2);
-  const sets = [{ drop: 1, sym: true }, { drop: 0, sym: false }].map((s) => ({ ...s, k: dropDof(B.K, n, s.drop), m: dropDof(B.M, n, s.drop) }));
-  const bend = [];
-  // mode order: 1 sym, 2 anti, 3 sym, 4 anti, 5 sym (index 1 of each set is a rigid-body mode)
-  for (let i = 0; i < nBend; i++) {
-    const s = sets[i % 2], idx = 2 + Math.floor(i / 2);
-    const { lambda, x } = bandEig(s.k, s.m, N, idx);
-    const half = Float64Array.from(x, (v) => v * Math.SQRT1_2); // half-bar normalised to ½ → whole bar to 1
-    const full = new Float64Array(n);
-    for (let r = 0, j = 0; r < n; r++) full[r] = r === s.drop ? 0 : half[j++];
-    // bending share of strain energy per element (for thermoelastic loss)
-    let Ub = 0, Ut = 0;
-    const uel = [];
-    for (let e = 0; e < nodes.length - 1; e++) {
-      const xe = [full[2 * e], full[2 * e + 1], full[2 * e + 2], full[2 * e + 3]], kb = B.Kb[e].kb;
-      let u = 0;
-      for (let p = 0; p < 4; p++) for (let q = 0; q < 4; q++) u += 0.5 * xe[p] * kb[p * 4 + q] * xe[q];
-      uel.push({ h: B.Kb[e].h, u }); Ub += u;
-    }
-    Ut = 0.5 * lambda * 0.5; // ½ ω² (xᵀMx = ½ on the half bar)
-    let w = bendingShape(nodes, B.Kb, half, s.drop, s.sym, xs);
-    if (w[0] < 0) w = w.map((v) => -v); // sign: the end at x = 0 moves +
-    bend.push({ f: Math.sqrt(lambda) / (2 * Math.PI), omega: Math.sqrt(lambda), sym: s.sym, w: Float64Array.from(w), elems: uel.map((e) => ({ h: e.h, share: e.u / Ut })), bendShare: Ub / Ut });
-  }
-  // torsion
-  const T = assembleTorsion(nodes, cut, b), tors = [];
-  const tsets = [{ drop: 0, sym: false, idx: 1 }, { drop: -1, sym: true, idx: 2 }];
-  for (let i = 0; i < nTors; i++) {
-    const s = tsets[i % 2];
-    const k = s.drop >= 0 ? dropDof(T.K, T.n, s.drop) : T.K, m = s.drop >= 0 ? dropDof(T.M, T.n, s.drop) : T.M, Nt = s.drop >= 0 ? T.n - 1 : T.n;
-    const { lambda, x } = bandEig(k, m, Nt, s.idx + Math.floor(i / 2));
-    const full = new Float64Array(T.n);
-    for (let r = 0, j = 0; r < T.n; r++) full[r] = r === s.drop ? 0 : x[j++] * Math.SQRT1_2;
-    let psi = xs.map((X) => {
-      const ax = Math.abs(X);
-      let e = 0;
-      while (e < nodes.length - 2 && ax > nodes[e + 1]) e++;
-      const u = Math.min(1, Math.max(0, (ax - nodes[e]) / (nodes[e + 1] - nodes[e])));
-      const v = (1 - u) * full[e] + u * full[e + 1];
-      return X < 0 && !s.sym ? -v : v;
-    });
-    if (psi[0] < 0) psi = psi.map((v) => -v);
-    tors.push({ f: Math.sqrt(lambda) / (2 * Math.PI), omega: Math.sqrt(lambda), sym: s.sym, psi: Float64Array.from(psi) });
-  }
-  let mass = 0;
-  for (let e = 0; e < nodes.length - 1; e++) { const l = nodes[e + 1] - nodes[e]; for (let g = 0; g < 5; g++) mass += 2 * GW[g] * l * AL.rho * b * thickness(cut, nodes[e] + GX[g] * l); }
-  return { L, b, cut, nx, xs: Float64Array.from(xs, (X) => X + L / 2), bend, tors, mass };
 }
 
 // Shape the undercut of a bar of thickness h0 and width b so that bending modes

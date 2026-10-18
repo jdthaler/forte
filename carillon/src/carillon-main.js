@@ -1,20 +1,19 @@
 // carillon-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName, useWasm } from '../../shared/shell.js';
+import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './carillon-instrument.js';
-import * as jsModel from './carillon-model.js';
-import { TAU, PARTIAL_NAMES, DESIGNATION, idealRatio, cents } from './carillon-model.js';
+import { PARTIAL_NAMES, DESIGNATION, idealRatio } from './partials.js';
 import { geomOf, innerAt, outerAt } from './bell-profile.js';
 import { wasmModel } from './carillon-wasm.js';
 
-// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
-// physics as the engine, in C++), the JavaScript one until then or if it can't load. (The rib's
-// outline, drawn from its stations, stays JavaScript: bell-profile.js.)
-let model = jsModel;
-if (useWasm()) wasmModel().then((m) => { model = m; update(); }, (err) => console.warn(`carillon: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+// The views draw what the engine plays: its model, from the same C++, built as WebAssembly. (The
+// rib's outline, drawn from its stations, is the FEM's JavaScript: bell-profile.js.)
+const model = await wasmModel();
 
 const $ = (s) => document.querySelector(s);
+const TAU = 2 * Math.PI;
+const cents = (a, b) => 1200 * Math.log2(a / b);
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 40, fHi: 16000 });
 let focus = 60, sel = null, live = null, levelHist = [], atStrike = null;
 

@@ -3,38 +3,48 @@
 // force (the flattening effect; McIntyre & Woodhouse 1979). So each string's
 // free frequency is set a few cents sharp, until the *bowed* note at the
 // voiced touch (velocity 0.7, key pressure ×1, default wheels) is on 12-TET.
-// The table belongs to the 48 kHz oversampling plan (bowed-model.js:
-// oversample), which 44.1 kHz shares.
+// The table belongs to the 48 kHz oversampling plan (bowed-model.cpp:
+// oversample), which 44.1 kHz shares. Each string is bowed alone in the C++
+// (built as WebAssembly: bowed_string_*), which compiles in the table it was
+// built with: each run measures that build once and writes the corrected
+// table, so rebuild (native/README.md) and run again until every key is
+// within 1 ¢ (the engine's tuning test allows as much). The measure counts
+// slips to the string's sample, which leaves about half a cent of scatter, so
+// a table in tune is not a fixed point to the last 0.01 ¢: leave it be once
+// --check passes.
 // Writes bowed/src/bowed-tuning.js (cents, C2 … C6) and its C++ copy,
 // native/instruments/bowed/bowed-tuning.h.
 // Usage: node tools/bowed-tuning.mjs
+//        node tools/bowed-tuning.mjs --check    (only measures: exit 1 if a key is 1 ¢ off or more)
 //        node tools/bowed-tuning.mjs --native   (only the C++ copy, from the JavaScript table as it is)
 
 import { writeFileSync } from 'node:fs';
-import { RANGE, TUNE_TABLE, loopDesign, schelleng, friction, keyForce } from '../bowed/src/bowed-model.js';
-import { BowedString } from '../bowed/src/string.js';
-import { DEFAULTS } from '../bowed/src/bowed-params.js';
+import { DEFAULTS, RANGE } from '../bowed/src/bowed-params.js';
 import { TUNE } from '../bowed/src/bowed-tuning.js';
+import { wasmModel } from '../bowed/src/bowed-wasm.js';
 
-const FS = 48000, P = DEFAULTS;
+const FS = 48000, P = DEFAULTS, TOL = 1;
+const { loopDesign, schelleng, keyForce, bowedString } = await wasmModel();
 
 // Repetition rate of the bowed string (slips per second) in steady Helmholtz
 // motion at force FN: start firmly (0.6 F_max) so that it is Helmholtz
 // motion, settle at FN, and average the regular slip intervals.
 export function bowedFreq(key, P, FN, fs = FS) {
-  const s = new BowedString(key, fs), L = loopDesign(key, P, s.fs), Fr = friction(P);
-  s.design(L);
+  const s = bowedString(key, P, fs), L = s.L, T0 = s.T0;
   s.initHelmholtz(L.vB);
-  const F0 = 0.6 * schelleng(L, P).Fmax;
+  const F0 = 0.6 * schelleng(L, P).Fmax, t0 = s.t;
+  const { slips } = s.bow(1.2, (t, i) => (i < 0.3 * fs ? F0 : i < 0.5 * fs ? F0 + ((FN - F0) * (i - 0.3 * fs)) / (0.2 * fs) : FN), L.vB);
   let n0 = 0, last = -1, sum = 0, n = 0;
-  for (let i = 0; i < 1.2 * fs; i++) {
-    s.tick(0, L.vB, i < 0.3 * fs ? F0 : i < 0.5 * fs ? F0 + ((FN - F0) * (i - 0.3 * fs)) / (0.2 * fs) : FN, Fr);
-    if (s.nSlip === n0) continue;
-    n0 = s.nSlip;
-    if (i > 0.75 * fs && last >= 0 && Math.abs(s.t - last - s.T0) < 0.05 * s.T0) { sum += s.t - last; n++; }
-    last = s.t;
+  for (let i = 0; i < slips.length; i++) {
+    if (slips[i] === n0) continue;
+    n0 = slips[i];
+    const t = t0 + (i + 1) * s.os; // the string's own samples after this output sample
+    if (i > 0.75 * fs && last >= 0 && Math.abs(t - last - T0) < 0.05 * T0) { sum += t - last; n++; }
+    last = t;
   }
-  return { f: (n * s.fs) / sum, kind: s.motion(20).kind };
+  const kind = s.motion(20).kind;
+  s.free();
+  return { f: (n * fs * s.os) / sum, kind };
 }
 
 // The C++ port's copy of the table (the same numbers, so the same doubles).
@@ -55,20 +65,21 @@ if (import.meta.url === `file://${process.argv[1]}` && process.argv.includes('--
   writeFileSync(HEADER, tuneHeader(TUNE));
   console.log('native/instruments/bowed/bowed-tuning.h');
 } else if (import.meta.url === `file://${process.argv[1]}`) {
-  for (let it = 0; it < 4; it++) {
-    let worst = 0, wk = 0;
-    for (let k = RANGE[0]; k <= RANGE[1]; k++) {
-      const L = loopDesign(k, P, FS), { f, kind } = bowedFreq(k, P, keyForce(k, 0.7, 1));
-      const err = 1200 * Math.log2(f / L.fKey);
-      if (kind !== 'helmholtz') console.log(`  key ${k}: ${kind}`);
-      TUNE_TABLE[k - RANGE[0]] = (TUNE_TABLE[k - RANGE[0]] || 0) - err;
-      if (Math.abs(err) > Math.abs(worst)) { worst = err; wk = k; }
-    }
-    console.log(`pass ${it + 1}: worst error before correction ${worst.toFixed(2)} ¢ (key ${wk})`);
+  let worst = 0, wk = 0;
+  const next = [...TUNE];
+  for (let k = RANGE[0]; k <= RANGE[1]; k++) {
+    const L = loopDesign(k, P, FS), { f, kind } = bowedFreq(k, P, keyForce(k, 0.7, 1));
+    const err = 1200 * Math.log2(f / L.fKey);
+    if (kind !== 'helmholtz') console.log(`  key ${k}: ${kind}`);
+    next[k - RANGE[0]] = TUNE[k - RANGE[0]] - err;
+    if (Math.abs(err) > Math.abs(worst)) { worst = err; wk = k; }
   }
-  const vals = TUNE_TABLE.map((c) => +c.toFixed(2));
+  console.log(`worst ${worst.toFixed(3)} ¢ (key ${wk}; the build as it is)`);
+  if (process.argv.includes('--check')) process.exit(Math.abs(worst) < TOL ? 0 : 1);
+  const vals = next.map((c) => +c.toFixed(2));
   writeFileSync(new URL('../bowed/src/bowed-tuning.js', import.meta.url),
     `// bowed-tuning.js — generated by tools/bowed-tuning.mjs; do not edit.\n// Free-string tuning of C2 … C6 in cents above 12-TET, so that the bowed\n// note at the voiced touch is in tune (it runs flat of the free string).\nexport const TUNE = [${vals.join(', ')}];\n`);
   writeFileSync(HEADER, tuneHeader(vals));
   console.log(vals.join(' '));
+  console.log(`rebuild the C++ and run again${Math.abs(worst) < TOL ? ' (it was already in tune)' : ''}`);
 }

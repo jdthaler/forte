@@ -3,13 +3,15 @@
 //
 // Name demos NN-what-you-hear; the landing page plays the first one.
 
-import { HarmoniumEngine } from '../harmonium/src/harmonium-engine.js';
+import { INSTRUMENT } from '../harmonium/src/harmonium-instrument.js';
+import { loadEngine } from './engine.mjs';
 import { DEFAULTS } from '../harmonium/src/harmonium-params.js';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
 
 const FS = 48000, SLUG = 'harmonium';
 const P = (o = {}) => ({ ...DEFAULTS, ...o });
-const play = (p, seconds, events, seed = 1) => { const e = new HarmoniumEngine(FS, seed); e.setParams(p); return renderEngine(e, seconds, events, FS); };
+const HarmoniumEngine = await loadEngine(INSTRUMENT);
+const play = (p, seconds, events, seed = 1) => { const e = new HarmoniumEngine(FS, seed); e.setParams(p); const out = renderEngine(e, seconds, events, FS); e.destroy(); return out; };
 const note = (t, k, vel, len) => [[t, 'on', k, vel], [t + len, 'off', k]];
 const chord = (t, keys, len, vel = 0.7) => keys.flatMap((k) => note(t, k, vel, len));
 const cat = (...parts) => [0, 1].map((c) => Float64Array.from(parts.flatMap((p) => [...p[c]])));

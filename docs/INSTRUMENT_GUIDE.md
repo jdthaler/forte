@@ -53,25 +53,28 @@ replace the bar physics with yours.
 ```
 <slug>/index.html             page (DOM ids the shell expects; see docs/template/index.html)
 <slug>/style.css              palette: --accent, --accent-2, --accent-ink (+ any extra layout)
-<slug>/src/<slug>-model.js    the physics: pure functions, no DOM, no audio
-<slug>/src/<slug>-engine.js   real-time engine class (AudioWorklet and Node)
 <slug>/src/<slug>-params.js   GROUPS, DEFAULTS, PRESETS
 <slug>/src/<slug>-instrument.js  the descriptor: everything but the page (below)
+<slug>/src/<slug>-wasm.js     the engine and model, built from the C++ as WebAssembly (below)
 <slug>/src/<slug>-main.js     createShell({ ...INSTRUMENT, … }) + views
+<slug>/wasm/<slug>.wasm       the C++ built as WebAssembly (committed)
+native/instruments/<slug>/    the physics, in C++: the model and the real-time engine
 <slug>/README.md
 test/<slug>-tests.mjs         run by CI (any test/*-tests.mjs)
 tools/render-<slug>.mjs       demos → examples/<slug>/NN-name.wav
 ```
 
-Split the model across more files when it grows (`<slug>/src/plate.js`,
-`<slug>/src/flame.js`, …).
+The physics is C++, in `native/instruments/<slug>/` (see The native port, below): the plugins
+and the page play the same engine. JavaScript beside the page is for the page (constants, labels,
+what a view draws) and for tools that make the C++'s data tables (`tools/*-native-table.mjs`).
 
 ### Shared code (`shared/`)
 
 | file | what |
 |---|---|
 | `shell.js` | everything common to instrument pages: audio graph (room, volume, tone, limiter, analyser), computer keyboard and on-screen keys, MIDI (notes, velocity, CC64, CC1), parameter sidebar with presets and local storage, octave shift, toasts. See the header for the config. |
-| `worklet.js` | the generic AudioWorklet processor. It loads your engine by its `globalThis` name. It also registers `forte-limiter`, the chain's limiter, so a page adds it before building the chain. |
+| `worklet.js` | the generic AudioWorklet processor. It runs your engine's WebAssembly from the bytes the page sends, through its class's `globalThis` name. It also registers `forte-limiter`, the chain's limiter, so a page adds it before building the chain. |
+| `wasm.js` | loads an instrument's WebAssembly in a page, the worklet or Node, and wraps it in a class with the engine contract (`wasmEngine`) |
 | `chain.js` | the output chain after the engine, built from the descriptor's `chain`: tone low-pass, body or soundboard, room, volume × trim, limiter. Every page uses it; the plugins rebuild it in C++. |
 | `limiter.js` | the limiter at the end of the chain: Web Audio's compressor curve and makeup gain without its 6 ms look-ahead, as the plugins' `limiter.cpp`, so a page adds no delay to a key |
 | `dsp.js` | `modeCoeffs` (exact two-pole modal resonator), `Biquad`, `OnePole`, `DCBlock`, `Delay` (fractional), `keyPan`, `keyFreq`, `sigmaFromT60` |
@@ -107,9 +110,8 @@ export const INSTRUMENT = {
   controllers: { 67: 'unaCorda' },      // other MIDI controllers → parameters (a toggle is on at 64);
                                         // { param, values: [a, b] } picks b from 64 up, { param, toggle: [a, b] } flips on each press
   console: { groups, defaults, get },   // state the page keeps beside its groups (the organ's drawbars): plugin parameters too
-  engine: { name: 'GongEngine', module: new URL('./gongs-engine.js', import.meta.url).href },
-  engineParams: (P) => ({ ...P, tables: couplingTables(P) }), // what setParams receives (default: P)
-  noteData: (key, vel, P, fs) => …,     // data sent with each note (default: none)
+  wasm: { name: 'GongWasmEngine', module: new URL('./gongs-wasm.js', import.meta.url).href,
+          binary: new URL('../wasm/gongs.wasm', import.meta.url).href }, // the engine (below)
   midiVelocity: (v) => …,               // MIDI velocity / 127 → the engine's (default: the same)
   keyVelocity: 1,                       // what the computer keys play when there is no `velocity` parameter
   chain: { volume: 'volume', room: 'room' }, // shared/chain.js: also roomSeconds, roomGain, tone, body, limiter
@@ -123,20 +125,20 @@ parameters back to that state (the organ's nine drawbars to one array). The plug
 after the groups' parameters and every preset sets all of them. A CC64 `toggle` controller on
 an instrument with no Space mode is played by the plugin window's Space bar.
 
-`engineParams` and `noteData` are pure: functions of their arguments (with caches keyed on
-what they depend on). A page that precomputes in idle time or builds a table progressively may
-pass its own, as long as the engine ends up with the same values. Page-only settings (`base`,
-`arrows`, `holdHint` and the `on…` hooks) stay in the page.
+Page-only settings (`base`, `arrows`, `holdHint`, `noteData` and the `on…` hooks) stay in the
+page.
 
 ### Engine contract
 
-The class runs unchanged in the AudioWorklet and in Node:
+The engine is the C++ (`forte::Engine`, native/README.md), built as WebAssembly and wrapped by
+`<slug>-wasm.js` in a class (`shared/wasm.js`) that runs unchanged in the AudioWorklet and in
+Node:
 
 ```js
-export class GongEngine {
+export class GongWasmEngine {
   constructor(fs) { … }
-  setParams(P) { … }               // the whole parameter object (or the descriptor's engineParams(P))
-  noteOn(key, velocity, data) { … } // velocity 0..1; data from the descriptor's noteData(key, vel, P, fs), if any
+  setParams(P) { … }               // the whole parameter object
+  noteOn(key, velocity, data) { … } // velocity 0..1; data: what the page offers with the note (its noteData), if anything
   noteOff(key, velocity) { … }      // velocity: MIDI release velocity 0..1, or undefined
   setSustain(on) { … }             // optional
   allNotesOff() { … }              // optional (Panic)
@@ -145,12 +147,12 @@ export class GongEngine {
   stats() { … }                    // optional: more fields for the page's stats message
   process(L, R, n) { … }           // fill n samples (n = 128 in the browser)
 }
-globalThis.GongEngine = GongEngine;
+globalThis.GongWasmEngine = GongWasmEngine;
 ```
 
 `this.post(msg)` (set by the worklet wrapper) sends data back to the page,
-for example to drive a live view. Check `if (this.post)` first, because it
-is absent in Node.
+for example to drive a live view: the C++ engine posts `Message`s, which the wrapper turns
+into the page's (see The native port).
 
 Rules of thumb:
 
@@ -158,8 +160,8 @@ Rules of thumb:
   the CPU pill.
 * **No allocation in `process`.** Allocate per voice, at note-on.
 * **Expensive setup** (eigen-solves, tables) belongs in the model. Cache it
-  per key and parameter version. If it is slow (> 5 ms), compute it on the
-  page and send it with `noteData`.
+  per key and parameter version. If it is slow (> 5 ms), build it on the
+  page with the WebAssembly model and send it with the page's `noteData`.
 * **Numerical stability.** Prefer exact discretisations (`modeCoeffs`) or
   implicit/symplectic schemes. Solve nonlinear contacts implicitly
   (Newton), and oversample nonlinear stages when they alias.
@@ -218,9 +220,8 @@ and say which in the footer help.
 (loaded last in `<head>`) give every page the same layout, top to bottom:
 - **The header.** The instrument's name is also the menu (Forte's home
   page and every instrument, from `shared/nav.js`; the page's `<h1>`
-  moves into it). Then How it works, **Discover | Perform**, **C++ | JS**
-  on a page with a `wasm` build (`shared/shell.js`), audio, MIDI and
-  Panic.
+  moves into it). Then How it works, **Discover | Perform**, audio, MIDI
+  and Panic.
 - **The views: pictures only.** The cards marked `data-perform` (one or
   two: `test/site-tests.mjs` checks) are the main views, large, side by
   side (stacked on a tall screen). The others sit in a tabbed panel below
@@ -285,9 +286,11 @@ To fit in:
 
 Copy the pattern in `test/template-tests.mjs`. Each file is a plain Node
 script that prints `ok`/`FAIL` lines and exits non-zero on failure. Get the
-engine class with `await loadEngine(INSTRUMENT)` (`tools/engine.mjs`), not by
-importing it: with `FORTE_ENGINE=wasm` the same tests run on the instrument's
-WebAssembly build once it is ported. Keep
+engine class with `await loadEngine(INSTRUMENT)` (`tools/engine.mjs`) and the
+model with the `wasmModel()` of `<slug>-wasm.js`: both are the C++, built as
+WebAssembly. Check them against independent physics, written in the test
+(a textbook formula, a first-principles solution), never against a JavaScript
+copy of the same computation. Keep
 the whole file under ~30 s. Aim for 10–25 tests that cover:
 
 1. the model against independent physics;
@@ -320,48 +323,45 @@ WAVs are git-ignored. Commit the `.m4a` files.
 
 ### The native port
 
-Each instrument is also C++ (docs/PLUGINS.md): the same physics, built as plugins (CLAP, VST3,
-AU, standalone) and as WebAssembly, which the page runs when it can. `tools/new-instrument.mjs`
-starts one with the template's port, already working:
+Each instrument's physics is C++ (docs/PLUGINS.md), built as plugins (CLAP, VST3, AU,
+standalone) and as WebAssembly, which the page, the tests and the tools play.
+`tools/new-instrument.mjs` starts one from the template's:
 
 ```
-native/instruments/<slug>/<slug>-model.*, <slug>-engine.*   the model and engine in C++, operation for operation
+native/instruments/<slug>/<slug>-model.*, <slug>-engine.*   the model and the engine
 native/instruments/<slug>/<slug>-instrument.cpp              its InstrumentInfo: the tables with its engine
-native/instruments/<slug>/<slug>-web.cpp                     the model functions the views call
+native/instruments/<slug>/<slug>-web.cpp                     the model functions the views and tests call
 native/instruments/<slug>/<slug>-params.h, -info.cmake       generated from the descriptor (tools/gen-native-params.mjs)
-native/instruments/<slug>/reference.json                     the JavaScript's sound, summarised (tools/render-reference.mjs)
+native/instruments/<slug>/reference.json                     its sound, summarised (tools/render-reference.mjs)
 <slug>/wasm/<slug>.wasm                                      built by the wasm preset; committed
 <slug>/src/<slug>-wasm.js                                    the WebAssembly as an engine class, and the model for the views
 ```
 
-The descriptor's `wasm` field names the build; the shell sends it to the worklet, which runs it
-and falls back to the JavaScript engine if it cannot. While the JavaScript engines remain, the
-page also gets an engine switch (C++ | JS) in its header, beside Discover | Perform, remembered
-for every page; `?engine=js` or `?engine=wasm` in the address overrides it. A WebAssembly engine takes all the parameters and computes its own per-note
-data (`forte/background.h`), so `engineParams` and `noteData` stay the JavaScript engine's.
-WebAssembly has no threads, so that data is built in place on a key's first note; where that
-takes milliseconds, the page builds it with its own WebAssembly model and sends it with the note,
-as the vibraphone's bars and the piano's strings (`vibraphone/src/vibraphone-wasm.js`). The views call the WebAssembly
-model once it has loaded.
+The descriptor's `wasm` field names the build; the shell fetches it and sends its bytes to the
+worklet, which runs it. The engine takes all the parameters and computes its own per-note data
+(`forte/background.h`). WebAssembly has no threads, so that data is built in place on a key's
+first note; where that takes milliseconds, the page builds it with its own WebAssembly model and
+sends it with the note (its `noteData`), as the vibraphone's bars and the piano's strings
+(`vibraphone/src/vibraphone-wasm.js`). The views call the WebAssembly model, which the page awaits
+before drawing (`const model = await wasmModel()`).
 
-An engine that posts to its page (`this.post`) posts `Message`s in C++ (`Engine::post`: a type, a
-key and up to 30 float32 values); its `<slug>-wasm.js` turns them back into the page's messages,
-gathering several into one where a message is bigger (`wasmEngine(I, { messages(m, engine) })`,
-which returns null until it has one). A test suite that reaches into its engine (the bubble
-organ's log, pool and constructor options) gets the same from the WebAssembly class, through
-exports that take `forte_engine(handle)`: see `bubbles/src/bubbles-wasm.js`. Messages carry
-float32, so a page that compares a value from one with its own parameter maps it back (the
-carillon's wrapper does). An instrument chaotic in some scripts only (the gongs' crashes) gives
-its descriptor a `reference` that is a function of the script, with looser tolerances there.
+An engine that posts to its page posts `Message`s in C++ (`Engine::post`: a type, a key and up
+to 30 float32 values); its `<slug>-wasm.js` turns them back into the page's messages, gathering
+several into one where a message is bigger (`wasmEngine(I, { messages(m, engine) })`, which
+returns null until it has one). A test suite that reaches into its engine (the bubble organ's
+log, pool and constructor options) gets that through exports that take
+`forte_engine(handle)`: see `bubbles/src/bubbles-wasm.js`. Messages carry float32, so a page
+that compares a value from one with its own parameter maps it back (the carillon's wrapper
+does). An instrument chaotic in some scripts only (the gongs' crashes) gives its descriptor a
+`reference` that is a function of the script, with looser tolerances there.
 
-When you change the physics, change both and check they agree:
+When you change the physics:
 
 ```bash
 node tools/gen-native-params.mjs <slug>        # after changing parameters or presets
-node tools/render-reference.mjs <slug>         # after changing the JavaScript's sound
-cd native && cmake --build --preset wasm       # needs Emscripten (native/README.md)
-FORTE_ENGINE=wasm node test/<slug>-tests.mjs   # the same tests, on the WebAssembly
-FORTE_ENGINE=wasm node test/native-tests.mjs   # and the reference
+cd native && cmake --build --preset wasm       # after changing the C++ (needs Emscripten, native/README.md)
+node test/<slug>-tests.mjs                     # the tests, on the new build
+node tools/render-reference.mjs <slug>         # when the sound is meant to change: save the new reference
 ```
 
 `test/native-tests.mjs` (in `npm test`) fails if the generated files are stale; CI also fails

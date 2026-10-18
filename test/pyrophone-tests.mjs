@@ -4,17 +4,28 @@
 // Rayleigh's criterion, Kirchhoff's wall loss), then the engine against the
 // model (pitch, growth, decay, limit-cycle amplitude, both thresholds of the
 // hysteresis loop, the spectrum), then the advertised effects, level,
-// stability and CPU.
+// stability and CPU. The model and the engine are the C++ (native/instruments/pyrophone), built
+// as WebAssembly: the model's functions through pyrophone-wasm.js.
 
 import assert from 'node:assert/strict';
-import { tube, root, hopf, weakRoot, describing, bifurcation, tuning, steadyY, orbitAt, orbitSpectrum, betaOn, damping, silenceLimit, T_HOT, B_MAX } from '../pyrophone/src/pyrophone-model.js';
+import { weakRoot, betaOn, T_HOT, GAIN } from '../pyrophone/src/pyrophone-model.js';
 import { INSTRUMENT } from '../pyrophone/src/pyrophone-instrument.js';
+import { wasmModel } from '../pyrophone/src/pyrophone-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS } from '../pyrophone/src/pyrophone-params.js';
 import { keyFreq } from '../shared/dsp.js';
 import { renderEngine } from '../tools/audio-util.mjs';
 
-const PyrophoneEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const PyrophoneEngine = await loadEngine(INSTRUMENT);
+const model = await wasmModel(), { root, steadyY, orbitAt, orbitSpectrum, heat } = model;
+const tube = (P) => model.tube({ damp: 1, ...P }), bifurcation = (P) => model.tubeTuning(P).bif, tuning = (P) => model.tubeTuning(P).tune;
+// King's law's describing function: the first harmonic of the C++'s heat release for u_f = U cos θ,
+// relative to the linear one, D(U) = (1/πU) ∫ heat(U cos θ) cos θ dθ / (√3/2) (midpoint rule)
+function describing(U, M = 2048) {
+  let s = 0;
+  for (let i = 0; i < M; i++) { const th = ((i + 0.5) * 2 * Math.PI) / M; s += heat(U * Math.cos(th)) * Math.cos(th); }
+  return (2 * s) / (M * U * GAIN);
+}
 
 const FS = 48000;
 let failures = 0;
@@ -75,17 +86,20 @@ const slopeFit = (pts) => { // least-squares slope of ln(amp) against t
 
 console.log('physics');
 test('linear stability reproduces Magri & Juniper (2013): σ = −0.0056 + 3.1848i at β = 0.1, 0.00023 + 3.3570i at β = 0.5', () => {
-  const sys = tube({ c1: 0.01, c2: 0.004, xf: 0.25, lag: 0.01 });
+  // their damping, c₁ = 0.01 and c₂ = 0.004: the bore and damping that give it (c₁ ∝ damp·a², c₂ ∝ damp/a)
+  const t0 = tube({ bore: 0.05, xf: 0.25, lag: 0.01 }), r = Math.cbrt(0.01 / t0.c1 / (0.004 / t0.c2));
+  const sys = tube({ bore: 0.05 * r, damp: 0.01 / (t0.c1 * r * r), xf: 0.25, lag: 0.01 });
+  assert.ok(Math.abs(sys.c1 - 0.01) < 1e-12 && Math.abs(sys.c2 - 0.004) < 1e-12, `c₁ ${sys.c1}, c₂ ${sys.c2}`);
   const a = root(sys, 0, 0.1, 'taylor'), b = root(sys, 0, 0.5, 'taylor');
   assert.ok(Math.abs(a[0] + 0.0056) < 5e-5 && Math.abs(a[1] - 3.1848) < 5e-5, `${a}`);
   assert.ok(Math.abs(b[0] - 0.00023) < 5e-6 && Math.abs(b[1] - 3.3570) < 5e-5, `${b}`);
   const c = root(sys, 0, 0.5); // the exact delay e^{−sτ} instead of their 1 − sτ: τ is small, so nearly the same
-  assert.ok(Math.abs(c[0] - b[0]) < 1e-4 && Math.abs(c[1] - b[1]) < 1e-3);
+  assert.ok(Math.abs(c[0] - b[0]) < 1e-4 && Math.abs(c[1] - b[1]) < 1e-3, `${c}`);
 });
 test('weak coupling: the exact eigenvalue matches the one-mode Rayleigh formula to O(ζ₁) as β → 0', () => {
-  const Pm = P(), sys = tube(Pm), s0 = root(sys, 0, 0), w0 = weakRoot(Pm, 1, 0);
+  const sys = tube(P()), s0 = root(sys, 0, 0), w0 = weakRoot(sys, 1, 0);
   for (const b of [0.002, 0.01]) { // compare the shifts caused by the flame
-    const s = root(sys, 0, b), w = weakRoot(Pm, 1, b);
+    const s = root(sys, 0, b), w = weakRoot(sys, 1, b);
     const err = Math.hypot(s[0] - s0[0] - (w[0] - w0[0]), s[1] - s0[1] - (w[1] - w0[1])) / Math.hypot(w[0] - w0[0], w[1] - w0[1]);
     assert.ok(err < 2 * sys.zeta[0], `β = ${b}: relative error ${err.toFixed(3)}`);
   }
@@ -110,10 +124,10 @@ test('harmonic balance: the fold sits at the flow reversal, below the Hopf point
   const r = F1.fold.beta / F1.hopf.beta;
   assert.ok(Math.abs(r - 1 / Dmax) < 0.05, `multi-mode ${r.toFixed(3)} vs one-mode ${(1 / Dmax).toFixed(3)}`);
   assert.ok(Math.abs(F1.fold.y - 1 / 3) < 0.03, `fold amplitude ${F1.fold.y}`);
-  assert.ok(Math.abs(F1.hopf.beta - hopf(tube(DEFAULTS), 0).beta) < 1e-9 && F1.pts[0].beta > F1.fold.beta);
+  assert.ok(Math.abs(root(BIF.sys, 0, F1.hopf.beta)[0]) < 1e-9 && F1.pts[0].beta > F1.fold.beta, 'mode 1\'s growth rate is zero at the Hopf point');
 });
 test("losses: radiation ∝ (πa/L)²j², wall ∝ √j/bore, matching Kirchhoff's boundary-layer formula", () => {
-  const a = damping({ bore: 0.02 }), b = damping({ bore: 0.04 });
+  const damping = (o) => tube(P(o)), a = damping({ bore: 0.02 }), b = damping({ bore: 0.04 });
   assert.ok(Math.abs(b.c1 / a.c1 - 4) < 1e-12 && Math.abs(a.c2 / b.c2 - 2) < 1e-12);
   // a 0.6 m tube of radius 2 cm at 400 K: σ = (1/a)√(ων/2)(1 + (γ−1)/√Pr), Pr = 0.69 (air at 400 K)
   const c = Math.sqrt(1.4 * 287 * T_HOT), w = (Math.PI * c) / 0.6, sigma = ((1 + 0.4 / Math.sqrt(0.69)) / 0.02) * Math.sqrt((w * 2.6e-5) / 2);
@@ -171,7 +185,7 @@ test('noise-induced triggering: in the bistable band, strong turbulence kicks a 
 });
 test("flame position (Rayleigh): ⅓ sings the note, ⅔ the octave, ⅞ nothing (one flame, β = 0.3, moved along the tube)", () => {
   const f0 = keyFreq(60), dom = (xf) => { // the flame power is in units of each position's own threshold: hold β fixed instead
-    const bH = silenceLimit(tube(P({ xf }))).beta, r = run(P({ xf, flame: 0.3 / bH }), 2, [note(0, 60, 1)]);
+    const bH = tuning(P({ xf })).betaH, r = run(P({ xf, flame: 0.3 / bH }), 2, [note(0, 60, 1)]);
     return [peakFreq(r.out, FS, 2 * FS, 200, 600) / f0, peak(r)];
   };
   const [a, pa] = dom(1 / 3), [b] = dom(2 / 3), [, c] = dom(0.875);
@@ -204,7 +218,7 @@ test('warm-up: a cold tube starts flat by 600·log₂(T/(T−ΔT)) ¢ and settle
   for (const t of [0.4, 1, 2, 3]) assert.ok(Math.abs(at(t) - theory(t)) < 1, `t = ${t}: ${at(t).toFixed(2)} ¢ vs ${theory(t).toFixed(2)} ¢`);
 });
 test('without auto-tune, playing harder pulls the pitch as the limit cycle predicts', () => {
-  const Pm = P({ autotune: false, noise: 0.002 }), tn = tuning(Pm, BIF), f0 = keyFreq(69);
+  const Pm = P({ autotune: false, noise: 0.002 }), tn = tuning(Pm), f0 = keyFreq(69);
   const c = (v) => { const { out } = run(Pm, 1.2, [note(0, 69, v)]); return cents(freq(out, f0, 0.8 * FS, 1.2 * FS) / f0); };
   const W = (v) => { const x = betaOn(Pm, v, BH) / tn.db, i = Math.floor(x); return tn.Ws[i] + (x - i) * (tn.Ws[i + 1] - tn.Ws[i]); };
   const meas = c(1) - c(0.2), pred = cents(W(1) / W(0.2));
@@ -277,7 +291,7 @@ test('regression: a tube that remembers its note after release stays hot, and in
   // was: warm-up followed the key, so a released tube still singing drifted flat (−14 ¢; −69 ¢ with cold glass)
   // After release it sings on at the key-up gain, whose limit cycle is a little lower (the
   // flame's reactance raises W less): that step is the model's, W(β_up)/W(β_down). Then no drift.
-  const tn = tuning(DEFAULTS, BIF), Wt = (b) => { const x = b / tn.db, i = Math.floor(x); return tn.Ws[i] + (x - i) * (tn.Ws[i + 1] - tn.Ws[i]); };
+  const tn = tuning(DEFAULTS), Wt = (b) => { const x = b / tn.db, i = Math.floor(x); return tn.Ws[i] + (x - i) * (tn.Ws[i + 1] - tn.Ws[i]); };
   const step = cents(Wt(0.93 * BH) / Wt(betaOn(DEFAULTS, 0.8, BH, tn.betaMax)));
   for (const [dT, tw] of [[4, 1], [30, 3]]) { // the default, and cold glass (still warming when released)
     const k = 64, f0 = keyFreq(k), { out, e } = run(P({ keyup: 0.93, drift: dT, warm: tw }), 11, [note(0, k, 0.8), off(5, k)]);

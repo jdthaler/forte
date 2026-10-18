@@ -1,6 +1,6 @@
 // rhodes-viz.js — slow-motion mechanism, pickup transfer, spectrum.
 
-import { barShape, flux } from './tine.js';
+import { barShape } from './tine.js';
 
 function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 function fit(cv) {
@@ -152,7 +152,7 @@ export class PickupView {
     const loop = () => { requestAnimationFrame(loop); if (this.cv.offsetParent) this.draw(); }; // skip while hidden
     requestAnimationFrame(loop);
   }
-  set(d) { this.D = d; }
+  set(d) { this.D = d; } // d.flux(Y, w): the model's flux curve
   draw() {
     const { ctx, w, h } = fit(this.cv);
     ctx.clearRect(0, 0, w, h);
@@ -171,7 +171,7 @@ export class PickupView {
     ctx.beginPath(); ctx.moveTo(X(0), top); ctx.lineTo(X(0), mid - 8); ctx.stroke();
     // flux curve and its slope
     ctx.strokeStyle = accent; ctx.lineWidth = 2; ctx.beginPath();
-    for (let i = 0; i <= 200; i++) { const Y = -span + (2 * span * i) / 200; const px = X(Y), py = Yc(flux(Y, wid)); if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); }
+    for (let i = 0; i <= 200; i++) { const Y = -span + (2 * span * i) / 200; const px = X(Y), py = Yc(D.flux(Y, wid)); if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); }
     ctx.stroke(); ctx.lineWidth = 1;
     ctx.strokeStyle = 'rgba(239,90,74,0.4)'; ctx.setLineDash([3, 3]); ctx.beginPath();
     const dmax = 0.86 / wid;

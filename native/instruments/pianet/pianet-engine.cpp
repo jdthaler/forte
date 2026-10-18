@@ -1,4 +1,4 @@
-// pianet-engine.cpp — the sticky-pad piano's engine, as pianet-engine.js runs it.
+// pianet-engine.cpp — the sticky-pad piano's engine (pianet-engine.h).
 
 #include "pianet-engine.h"
 

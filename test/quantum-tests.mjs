@@ -1,20 +1,19 @@
 // Quantum Keyboard checks. Run: node test/quantum-tests.mjs
 //
-// First the physics against independent results (finite-difference
-// diagonalisation, exact radial integrals, tabulated Airy zeros, the
+// The C++ (native/instruments/quantum), built as WebAssembly: the model's packets through
+// quantum-wasm.js, the engine through loadEngine. First the physics against independent results
+// (finite-difference diagonalisation, exact radial integrals, tabulated Airy zeros, the
 // Averbukh–Perelman fractional revivals), then the engine against the model.
 
 import assert from 'node:assert/strict';
-import {
-  well, morseX, morseKappa, airyZero, airyZeroC, besselJp, hydrogenR, makePacket, autocorr, signalAt, derivs,
-} from '../quantum/src/quantum-model.js';
-import { INSTRUMENT } from '../quantum/src/quantum-instrument.js';
+import { INSTRUMENT, DEFAULTS, GROUPS } from '../quantum/src/quantum-instrument.js';
+import { wasmModel } from '../quantum/src/quantum-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
-import { DEFAULTS, GROUPS } from '../quantum/src/quantum-params.js';
 import { symEig } from '../shared/linalg.js';
 import { keyFreq } from '../shared/dsp.js';
 
-const QuantumEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const QuantumEngine = await loadEngine(INSTRUMENT);
+const { makePacket } = await wasmModel();
 
 const FS = 48000, PI = Math.PI;
 let failures = 0;
@@ -85,31 +84,99 @@ function fdPair(V, x0, x1, mu, count, N = 280) {
   return { E: (n) => ex(a.E[n], b.E[n]), x: (m, n) => ex(a.xmn(m, n), b.xmn(m, n)) };
 }
 
-console.log('physics');
-test('square well: x_mn = −8mn/π²(m²−n²)² (quadrature), → −2/π²k² (triangle-wave Fourier series)', () => {
-  const W = well('box'), N = 20000;
-  for (const [m, n] of [[1, 2], [3, 8], [10, 13], [50, 51], [4, 6]]) {
-    let s = 0;
-    for (let i = 0; i < N; i++) { const x = (i + 0.5) / N; s += 2 * x * Math.sin(m * PI * x) * Math.sin(n * PI * x); }
-    assert.ok(Math.abs(s / N - W.x(m, n)) < 1e-7, `${m},${n}: ${s / N} vs ${W.x(m, n)}`);
+// The packet's observables in closed form, from its states (n, cₙ, Eₙ) and Bohr pairs.
+// Autocorrelation |⟨ψ(0)|ψ(t)⟩|² = |Σ|cₙ|² e^(−iEₙt)|², and with pure dephasing (ρ_mn decays at
+// (m−n)²/T_φ) the overlap Tr ρ(0)ρ(t). t in seconds.
+function autocorr(pk, t, Tphi = Infinity) {
+  const w = 2 * PI * pk.scale, N = pk.ns.length;
+  if (!(Tphi < 1e6)) {
+    let re = 0, im = 0;
+    for (let i = 0; i < N; i++) { const p = pk.c[i] * pk.c[i], ph = w * (pk.E[i] - pk.E[0]) * t; re += p * Math.cos(ph); im -= p * Math.sin(ph); }
+    return re * re + im * im;
   }
-  for (const k of [1, 3, 5]) assert.ok(rel(W.x(2000, 2000 + k), -2 / (PI * PI * k * k)) < 1e-3, `k = ${k}`);
+  let s = 0;
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    const k = pk.ns[j] - pk.ns[i];
+    s += pk.c[i] ** 2 * pk.c[j] ** 2 * Math.cos(w * (pk.E[j] - pk.E[i]) * t) * Math.exp((-k * k * t) / Tphi);
+  }
+  return s;
+}
+// The detector signal: Σ_pairs w·cos(2πft) (or −sin for the coil), times the decoherence of each
+// Δn, minus the electrode's Franck–Condon reference, faded out over 60 ms (its AC coupling).
+const DC_FADE = 0.06;
+function signalAt(pk, t, { T1 = Infinity, Tphi = Infinity } = {}) {
+  let y = t <= 0 ? -pk.dc : t < DC_FADE ? -0.5 * pk.dc * (1 + Math.cos((PI * t) / DC_FADE)) * Math.exp(-t / T1) : 0;
+  for (const p of pk.pairs) {
+    const ph = 2 * PI * p.f * t, dec = Math.exp(-t / T1 - (p.k * p.k * t) / Tphi);
+    y += p.w * dec * (pk.d === 1 ? -Math.sin(ph) : Math.cos(ph));
+  }
+  return y;
+}
+// A packet's dipole matrix elements x_mn, read back from its pairs: on the electrode a pair's weight
+// is 2c_m cₙ x_mn over the detector's gain, which the packet doesn't give, so they come out in units
+// of it. Every pair the packet holds, keyed 'm,n'.
+const allPairs = { maxPairs: 5000, rel: 0 };
+function dipoles(pk) {
+  const x = new Map();
+  for (const p of pk.pairs) x.set(`${pk.ns[p.i]},${pk.ns[p.j]}`, p.w / (2 * pk.c[p.i] * pk.c[p.j]));
+  return x;
+}
+// The gain that best fits a packet's x_mn to reference values (least squares), and the worst
+// difference left: [[m, n, reference], …].
+function fitDipoles(pk, refs) {
+  const x = dipoles(pk), got = refs.map(([m, n, r]) => { const v = x.get(`${m},${n}`); assert.ok(v !== undefined, `pair ${m},${n} not in the packet`); return [m, n, r, v]; });
+  let a = 0, b = 0;
+  for (const [, , r, v] of got) { a += r * v; b += v * v; }
+  const g = a / b;
+  let worst = 0, at = '';
+  for (const [m, n, r, v] of got) if (Math.abs(g * v - r) > worst) { worst = Math.abs(g * v - r); at = `x_${m},${n}: ${g * v} vs ${r}`; }
+  return { worst, at, x: (m, n) => g * x.get(`${m},${n}`) };
+}
+const morseKappa = (nbar, eta) => (2 * (nbar + 0.5)) / (1 - Math.sqrt(1 - eta)); // κ from the packet's height in the well
+
+console.log('physics');
+test('square well: x_mn = −8mn/π²(m²−n²)² (quadrature), zero for m + n even, → −2/π²k² (triangle-wave Fourier series)', () => {
+  const quad = (m, n) => { const N = 20000; let s = 0; for (let i = 0; i < N; i++) { const x = (i + 0.5) / N; s += 2 * x * Math.sin(m * PI * x) * Math.sin(n * PI * x); } return s / N; };
+  for (const [nbar, sigma] of [[10, 2], [50, 1]]) {
+    const pk = makePacket(36, P({ lock: false, nbar, sigma, detector: 'x' }), allPairs), refs = [];
+    for (const p of pk.pairs) { const m = pk.ns[p.i], n = pk.ns[p.j]; assert.ok((m + n) % 2, `x_${m},${n} should vanish`); refs.push([m, n, quad(m, n)]); }
+    const f = fitDipoles(pk, refs);
+    assert.ok(refs.length > 40 && f.worst < 1e-7, `${refs.length} pairs, worst ${f.at}`);
+    console.log(`        n̄ = ${nbar}: ${refs.length} pairs, worst ${f.worst.toExponential(1)}`);
+  }
+  const pk = makePacket(36, P({ lock: false, nbar: 2000, sigma: 1, detector: 'x' }), allPairs), refs = [];
+  for (const k of [1, 3, 5]) refs.push([2000, 2000 + k, -2 / (PI * PI * k * k)]);
+  const f = fitDipoles(pk, refs);
+  for (const [m, n, r] of refs) assert.ok(rel(f.x(m, n), r) < 1e-3, `k = ${n - m}: ${f.x(m, n)} vs ${r}`);
 });
 test('Morse: E_v and x_mn (Vasan & Cross) match a finite-difference diagonalisation', () => {
+  // a packet in the κ = 24 well: n̄ = 3 at η = ½
   const kap = 24, D = kap / 4, fd = fdPair((x) => D * (1 - Math.exp(-x)) ** 2, -1.5, 14, 2 * D, 9);
-  for (let v = 0; v < 9; v++) assert.ok(Math.abs(fd.E(v) - ((v + 0.5) - (v + 0.5) ** 2 / kap)) < 5e-4, `E_${v}: ${fd.E(v)} vs ${(v + 0.5) - (v + 0.5) ** 2 / kap}`);
-  for (const [m, n] of [[0, 1], [3, 4], [7, 8], [0, 2], [2, 5], [1, 4]]) assert.ok(Math.abs(fd.x(m, n) - morseX(m, n, kap)) < 2e-4, `x_${m}${n}: ${fd.x(m, n)} vs ${morseX(m, n, kap)}`);
+  const pk = makePacket(36, P({ potential: 'morse', lock: false, eta: 0.5, nbar: (kap * (1 - Math.sqrt(0.5))) / 2 - 0.5, sigma: 2, detector: 'x' }), allPairs);
+  assert.ok(rel(pk.kap, kap) < 1e-12 && pk.ns[0] === 0, `κ ${pk.kap}, from v = ${pk.ns[0]}`);
+  for (let v = 0; v < 9; v++) assert.ok(Math.abs(fd.E(v) - pk.E[v]) < 5e-4, `E_${v}: ${fd.E(v)} vs ${pk.E[v]}`);
+  const refs = [];
+  for (let m = 0; m < 9; m++) for (let n = m + 1; n < 9; n++) refs.push([m, n, fd.x(m, n)]);
+  const f = fitDipoles(pk, refs);
+  assert.ok(f.worst < 2e-4, f.at);
+  console.log(`        ${refs.length} pairs, worst ${f.worst.toExponential(1)}`);
 });
-test('bouncer: Airy zeros (A&S 10.4.94 vs table), z_mn = −2/(z_m−zₙ)², ⟨z⟩ₙ = 2Eₙ/3 (virial)', () => {
-  for (let n = 3; n <= 10; n++) assert.ok(Math.abs(airyZeroC(n) - airyZero(n)) < 1e-8, `a_${n}`);
-  const fd = fdPair((z) => z, 0, 28, 0.5, 8);
-  for (let n = 0; n < 8; n++) assert.ok(Math.abs(fd.E(n) - airyZero(n + 1)) < 2e-4, `E_${n + 1}: ${fd.E(n)}`);
-  const W = well('bouncer');
-  for (const [m, n] of [[0, 1], [1, 2], [0, 2], [2, 5], [4, 7]]) assert.ok(Math.abs(fd.x(m, n) - W.x(m + 1, n + 1)) < 2e-4, `z_${m + 1}${n + 1}`);
-  for (const n of [0, 3, 6]) assert.ok(Math.abs(fd.x(n, n) - (2 * airyZero(n + 1)) / 3) < 2e-4, `virial n=${n + 1}`);
+test('bouncer: Eₙ = |aₙ| (A&S Table 10.13, and the asymptotic series above it, against a finite-difference diagonalisation), z_mn = −2/(z_m−zₙ)², ⟨z⟩ₙ = 2Eₙ/3 (virial)', () => {
+  const AIRY = [2.338107410459767, 4.087949444130970, 5.520559828095551, 6.786708090071759, 7.944133587120853,
+    9.022650853340980, 10.04017434155809, 11.00852430373326, 11.93601556323626, 12.82877675286576];
+  const pk = makePacket(36, P({ potential: 'bouncer', lock: false, nbar: 7, sigma: 1.5, detector: 'x' }), allPairs);
+  assert.ok(pk.ns[0] === 1 && pk.ns.length >= 14, `states ${pk.ns[0]}–${pk.ns[pk.ns.length - 1]}`);
+  for (let n = 0; n < 10; n++) assert.ok(Math.abs(pk.E[n] - AIRY[n]) < 1e-12, `a_${n + 1}: ${pk.E[n]}`);
+  const fd = fdPair((z) => z, 0, 36, 0.5, 14, 400);
+  for (let n = 0; n < 14; n++) assert.ok(Math.abs(fd.E(n) - pk.E[n]) < 2e-4, `E_${n + 1}: ${fd.E(n)} vs ${pk.E[n]}`);
+  const refs = [];
+  for (let m = 0; m < 8; m++) for (let n = m + 1; n < 8; n++) refs.push([m + 1, n + 1, fd.x(m, n)]);
+  const f = fitDipoles(pk, refs);
+  assert.ok(f.worst < 2e-4, f.at);
+  console.log(`        ${refs.length} pairs, worst ${f.worst.toExponential(1)}`);
+  for (const n of [0, 3, 6]) assert.ok(Math.abs(fd.x(n, n) - (2 * pk.E[n]) / 3) < 2e-4, `virial n=${n + 1}`);
 });
-test('hydrogen: Kepler-orbit ⟨n|r|n+k⟩ vs exact radial integrals (l = 1)', () => {
-  assert.ok(Math.abs(besselJp(1, 0) - 0.5) < 1e-12 && Math.abs(besselJp(1, 1) - (0.7651976866 - 0.4400505857)) < 1e-9);
+test('hydrogen: Kepler-orbit ⟨n|r|n+k⟩ vs exact radial integrals (l = 1), against ⟨n|r|n+1⟩ and from n to n + 5', () => {
   const lag = (deg, al, x) => { let a = 1, b = 1 + al - x; if (!deg) return 1; for (let j = 1; j < deg; j++) { const c = ((2 * j + 1 + al - x) * b - (j + al) * a) / (j + 1); a = b; b = c; } return b; };
   const u = (n, r) => { const rho = (2 * r) / n; return r * rho * Math.exp(-rho / 2) * lag(n - 2, 3, rho); }; // l = 1
   const exact = (n1, n2) => {
@@ -118,22 +185,36 @@ test('hydrogen: Kepler-orbit ⟨n|r|n+k⟩ vs exact radial integrals (l = 1)', (
     for (let i = 1; i < M; i++) { const r = i * h, p = u(n1, r), q = u(n2, r); a += p * p; b += q * q; c += p * q * r; }
     return c / Math.sqrt(a * b);
   };
+  // (the packet's matrix elements are in units of its gain: each is checked against the n → n + 1 line,
+  // whose own error, 0.3 %, adds to its tolerance)
   const tol = { 1: 0.003, 2: 0.006, 5: 0.03 };
-  for (const n of [20, 40]) for (const k of [1, 2, 5]) {
-    const ex = exact(n, n + k), sc = hydrogenR(n, n + k);
-    assert.ok(rel(sc, ex) < tol[k], `n=${n} k=${k}: ${sc.toFixed(3)} vs ${ex.toFixed(3)}`);
+  for (const n of [20, 40]) {
+    const pk = makePacket(36, P({ potential: 'hydrogen', lock: false, nbar: n + 2.5, sigma: 1.2, detector: 'x' }), allPairs), x = dipoles(pk), x1 = x.get(`${n},${n + 1}`), e1 = exact(n, n + 1);
+    for (const [m, k] of [[n + 5, 1], [n, 2], [n, 5]]) {
+      const ex = exact(m, m + k) / e1, sc = x.get(`${m},${m + k}`) / x1;
+      assert.ok(rel(sc, ex) < tol[k] + tol[1], `⟨${m}|r|${m + k}⟩ / ⟨${n}|r|${n + 1}⟩: ${sc.toFixed(4)} vs ${ex.toFixed(4)}`);
+      console.log(`        ⟨${m}|r|${m + k}⟩ / ⟨${n}|r|${n + 1}⟩ ${sc.toFixed(4)}, exact ${ex.toFixed(4)}`);
+    }
   }
 });
-test('time scales from E′, E″, E‴: T_rev/T_cl = 2n̄ (box), κ−2n̄−1 (Morse), 2n̄/3 and T_sr/T_rev = 3n̄/4 (hydrogen), 6(n̄−¼) (bouncer)', () => {
-  const ratios = (id, nbar, o = {}) => { const d = derivs(well(id, P(o), nbar), nbar); return [2 * d.d1 / Math.abs(d.d2), Math.abs(3 * d.d2 / d.d3)]; };
-  assert.ok(rel(ratios('box', 50)[0], 100) < 1e-12);
-  assert.ok(rel(ratios('morse', 30, { eta: 0.5 })[0], morseKappa(30, 0.5) - 61) < 1e-12);
-  const [h1, h2] = ratios('hydrogen', 60);
-  assert.ok(rel(h1, 40) < 1e-12 && rel(h2, 45) < 1e-12, `H ${h1}, ${h2}`);
-  assert.ok(rel(ratios('bouncer', 200)[0], 6 * 199.75) < 1e-4, `bouncer ${ratios('bouncer', 200)[0]}`);
+test('time scales from E″ and E‴: T_rev = 2πħ/(|E″|/2), T_sr = 2πħ/(|E‴|/6): |E″| = 2 (box), 2/κ (Morse), 3/n̄⁴ (hydrogen), (2/9)E/(n̄−¼)² (bouncer, from Eₙ ∝ (n−¼)^⅔); T_sr/T_rev = 3n̄/4 (hydrogen); the spectra n², (v+½) − (v+½)²/κ, −1/2n², n + ½', () => {
+  // (the packet's scale s turns energy into Hz: T_rev·s = 2/|E″|, T_sr·s = 6/|E‴|)
+  const pk = (o) => makePacket(57, P({ lock: false, ...o }));
+  const box = pk({ nbar: 50 });
+  assert.ok(rel(box.Trev * box.scale, 1) < 1e-12 && box.ns.every((n, i) => box.E[i] === n * n), `box ${box.Trev * box.scale}`);
+  const mo = pk({ potential: 'morse', nbar: 30, eta: 0.5 }), kap = morseKappa(30, 0.5);
+  assert.ok(rel(mo.kap, kap) < 1e-12 && rel(mo.Trev * mo.scale, kap) < 1e-12, `Morse κ ${mo.kap}, T_rev·s ${mo.Trev * mo.scale}`);
+  assert.ok(mo.ns.every((v, i) => Math.abs(mo.E[i] - ((v + 0.5) - (v + 0.5) ** 2 / kap)) < 1e-12), 'Morse levels');
+  const h = pk({ potential: 'hydrogen', nbar: 60 });
+  assert.ok(rel(h.Trev * h.scale, (2 * 60 ** 4) / 3) < 1e-12 && rel(h.Tsr / h.Trev, 45) < 1e-12, `H ${h.Trev * h.scale}, ${h.Tsr / h.Trev}`);
+  assert.ok(h.ns.every((n, i) => rel(h.E[i], -0.5 / (n * n)) < 1e-15), 'hydrogen levels');
+  const b = pk({ potential: 'bouncer', nbar: 200 }), E200 = b.E[b.ns.indexOf(200)], d2 = 2 / (b.Trev * b.scale);
+  assert.ok(rel(d2, (2 / 9) * E200 / 199.75 ** 2) < 1e-4, `bouncer |E″| ${d2}`);
+  const ho = pk({ potential: 'harmonic', nbar: 30 });
+  assert.ok(ho.ns.every((n, i) => ho.E[i] === n + 0.5) && ho.Trev === Infinity, 'harmonic levels');
   // the packet's own clock agrees to O(σ²/n̄) (its pitch is the mean Bohr frequency)
-  const pk = makePacket(57, P({ lock: false, nbar: 200, detector: 'x' }));
-  assert.ok(rel(pk.Trev / pk.Tcl, 400) < 1e-3, `box packet ${pk.Trev / pk.Tcl}`);
+  const clock = makePacket(57, P({ lock: false, nbar: 200, detector: 'x' }));
+  assert.ok(rel(clock.Trev / clock.Tcl, 400) < 1e-3, `box packet ${clock.Trev / clock.Tcl}`);
 });
 test('autocorrelation: exact revival in the box; Averbukh–Perelman fractions in Morse (½ at T/4, ⅓ at T/3 and T/6, 1 at T/2)', () => {
   const near = (pk, t) => { let b = 0; for (let u = t - pk.Tcl; u <= t + pk.Tcl; u += pk.Tcl / 64) b = Math.max(b, autocorr(pk, u)); return b; };

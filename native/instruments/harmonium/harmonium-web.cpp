@@ -1,6 +1,6 @@
-// harmonium-web.cpp — the model's functions the page's views call (harmonium/src/harmonium-wasm.js),
-// and the engine's test hooks (the JavaScript engine's constructor options, its voices and reeds,
-// the turbulence table, the reservoir).
+// harmonium-web.cpp — the model's functions the page's views and the tests call
+// (harmonium/src/harmonium-wasm.js), and the engine's test hooks (its seed and options, its voices and reeds, the turbulence table,
+// the reservoir).
 
 #include "harmonium-engine.h"
 #include "forte/web.h"
@@ -61,6 +61,31 @@ FORTE_EXPORT int harmonium_threshold(const double *flat, double pMax, double cas
   out[0] = t->P; out[1] = t->f;
   return 1;
 }
+// The steady state of a reed (flattened) at wind Pw, less pd: y, x, U, dp, pc, A, dA in out.
+FORTE_EXPORT void harmonium_equilibrium(const double *flat, double Pw, double pd, double *out) {
+  unflatten(flat, scratchModel);
+  const Equilibrium q = equilibrium(scratchModel, Pw, pd);
+  const double v[7] = {q.y, q.x, q.U, q.dp, q.pc, q.A, q.dA};
+  for (int i = 0; i < 7; i++) out[i] = v[i];
+}
+// The linear analysis's root of a reed (flattened) at wind Pw, from s0 = s0re + i s0im if start,
+// with a cassotto at cassF if cassF > 0: Re s and Im s in out; 0 if Newton failed.
+FORTE_EXPORT int harmonium_linear_root(const double *flat, double Pw, int start, double s0re, double s0im, double cassF, double *out) {
+  unflatten(flat, scratchModel);
+  const Cassotto cs = cassotto(cassF > 0 ? cassF : 1500);
+  const Cx s0{s0re, s0im};
+  const auto s = linearRoot(scratchModel, Pw, start ? &s0 : nullptr, cassF > 0 ? &cs : nullptr);
+  if (!s) return 0;
+  out[0] = s->re; out[1] = s->im;
+  return 1;
+}
+// The cassotto tuned to f: M, C, R, V, f in out.
+FORTE_EXPORT void harmonium_cassotto(double f, double *out) {
+  const Cassotto c = cassotto(f);
+  const double v[5] = {c.M, c.C, c.R, c.V, c.f};
+  for (int i = 0; i < 5; i++) out[i] = v[i];
+}
+FORTE_EXPORT double harmonium_gap_width(double w, double e, double h, double delta) { return gapWidth(w, e, h, delta); }
 
 // The tests' hooks, on the engine of a handle (forte_engine).
 FORTE_EXPORT void harmonium_configure(HarmoniumEngine *e, unsigned seed, double fOS, int track) { e->configure(seed, fOS, track != 0); }
@@ -76,7 +101,7 @@ FORTE_EXPORT void harmonium_voice_state(const HarmoniumEngine::Voice *v, double 
 }
 FORTE_EXPORT void harmonium_voice_set_a(HarmoniumEngine::Voice *v, double a, double aTarget) { v->s[HarmoniumEngine::V_A] = a; v->s[HarmoniumEngine::V_AT] = aTarget; }
 FORTE_EXPORT HarmoniumEngine::Reed *harmonium_reed(HarmoniumEngine::Voice *v, int r) { return &v->reeds[r]; }
-// the reed's state (S_…, laid out as the JavaScript's), to read and write in place
+// the reed's state (S_…), to read and write in place
 FORTE_EXPORT double *harmonium_reed_state(HarmoniumEngine::Reed *rd) { return rd->st; }
 // h, os, two, asleep, m1, m2, k1, k2, track, ni
 FORTE_EXPORT void harmonium_reed_info(const HarmoniumEngine::Reed *rd, double *out) {

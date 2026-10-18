@@ -1,22 +1,14 @@
 // clavier-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName, useWasm } from '../../shared/shell.js';
+import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
-import { strikeSpeed } from './clavier-params.js';
+import { strikeSpeed, STRENGTH, REST_GAP, PRESS_MAX } from './clavier-params.js';
 import { INSTRUMENT } from './clavier-instrument.js';
-import * as jsModel from './clavier-model.js';
-import { STEEL, REST_GAP, PRESS_MAX } from './clavier-model.js';
-import { ClavierEngine } from './clavier-engine.js';
 import { wasmModel } from './clavier-wasm.js';
 
-// The views draw what the engine plays: the WebAssembly model once it has loaded (the same physics
-// as the engine, in C++), and the slow motion runs the WebAssembly engine; the JavaScript ones
-// until then or if it can't load.
-let model = { ...jsModel, Engine: ClavierEngine };
-if (useWasm()) {
-  wasmModel().then((m) => { model = m; releasedCache.clear(); update(); simulate(); },
-    (err) => console.warn(`clavier: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
-}
+// The views draw what the engine plays: its model, from the same C++, built as WebAssembly; the
+// slow motion runs the engine itself.
+const model = await wasmModel();
 
 const $ = (s) => document.querySelector(s);
 const FS = 48000;
@@ -72,7 +64,7 @@ function update() {
   const rows = [
     ['Speaking', `${(S.L * 100).toFixed(1)} cm`], ['Yarn length', `${(S.Ln * 100).toFixed(1)} cm`],
     ['String', S.wound ? `wound, ${(S.D * 1e3).toFixed(2)} mm on a ${(S.d * 1e3).toFixed(2)} mm core` : `plain, ${(S.d * 1e3).toFixed(3)} mm`],
-    ['Tension', `${S.T.toFixed(1)} N, ${(S.stress / 1e6).toFixed(0)} MPa (${((100 * S.stress) / STEEL.strength).toFixed(0)} % of breaking)`],
+    ['Tension', `${S.T.toFixed(1)} N, ${(S.stress / 1e6).toFixed(0)} MPa (${((100 * S.stress) / STRENGTH).toFixed(0)} % of breaking)`],
     ['Stiffness', `B = ${S.B.toExponential(1)}`], ['Pull off anvil', `${S.pull.toFixed(2)} N`],
     ['Carry time', `${(tau * 1e3).toFixed(2)} ms → first null ${(v / (P.gap * 1e-3) / 1000).toFixed(1)} kHz`],
     ['Full pressure', `+${model.pressureCents(focus, P.press + PRESS_MAX, P).toFixed(0)} ¢`],
@@ -157,7 +149,7 @@ function runSim() {
   for (let i = 0; i < nx; i++) for (let j = 0; j < N; j++) sinT[i * N + j] = Math.sin((v.mdl.modes[j].n * Math.PI * i) / (nx - 1));
   for (let i = 0; i < ny; i++) for (let j = 0; j < Mm; j++) cosT[i * Mm + j] = Math.cos(((j + 0.5) * Math.PI * i) / (ny - 1));
   sim = { frames, S, P: { ...P }, key, vel, nx, ny, N, Mm, sinT, cosT, tRel: n1 / FS, X: model.pickupX(key, P), muted };
-  e.destroy?.(); // (a WebAssembly engine's memory)
+  e.destroy(); // (the engine's WebAssembly memory)
   $('#sim-name').textContent = `${noteName(key)} · ${strikeSpeed(vel).toFixed(1)} m/s`;
   simT0 = performance.now();
 }

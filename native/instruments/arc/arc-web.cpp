@@ -1,5 +1,5 @@
 // arc-web.cpp — the model's functions the page's views call (arc/src/arc-wasm.js), and the
-// engine's test hooks (the JavaScript engine's constructor options, kick, its arcs and P.table).
+// engine's test hooks (the seed, noise and oversampling, kick, the arcs and the capacitor bank).
 // Parameters P are indexed as in arc-params.h.
 
 #include "arc-engine.h"
@@ -8,7 +8,7 @@
 using namespace forte::arc;
 
 extern "C" {
-// The operating point (arc-model.js, arcOp): I0, l, A, B, tau, V0, Ur, Xm, delta, G0, u0, R0, w,
+// The operating point (arcOp): I0, l, A, B, tau, V0, Ur, Xm, delta, G0, u0, R0, w,
 // K, Rd, kappa, Larc, Rb in out.
 FORTE_EXPORT void arc_op(const double *P, double *out) {
   const Op o = arcOp(arcParams(P));
@@ -21,19 +21,24 @@ FORTE_EXPORT double arc_static_v(double I, double A, double B, double Xm, double
   o.A = A; o.B = B; o.Xm = Xm; o.delta = delta;
   return staticV(I, o);
 }
-// The circuit's linear analysis with capacitance C: sigma, f, fLC, and the musical root's re, im.
+// The circuit's linear analysis with capacitance C: sigma, f, fLC, the musical root's re, im, then
+// all four roots' re, im (rad/s).
 FORTE_EXPORT void arc_linear(const double *P, double C, double *out) {
   const Linear la = linearAnalysis(circuit(arcParams(P), C));
   out[0] = la.sigma; out[1] = la.f; out[2] = la.fLC; out[3] = la.s.re; out[4] = la.s.im;
+  for (int k = 0; k < 4; k++) { out[5 + 2 * k] = la.roots[k].re; out[6 + 2 * k] = la.roots[k].im; }
 }
 FORTE_EXPORT double arc_threshold_r(const double *P, double C) { return thresholdR(arcParams(P), C); }
 FORTE_EXPORT double arc_threshold_current(const double *P, double C) { return thresholdCurrent(arcParams(P), C); }
 FORTE_EXPORT double arc_upper_limit(const double *P) { return upperLimit(arcParams(P)); }
 FORTE_EXPORT double arc_start_cap(int key, const double *P) { const ArcParams a = arcParams(P); return startCap(key, a, arcOp(a)); }
 FORTE_EXPORT double arc_cap_for(int key, const double *P) { return capFor(key, arcParams(P)); }
-// The steady note of capacitance C: f, iaMin, iaMax, uMax, Iac.
-FORTE_EXPORT void arc_steady(const double *P, double C, double *out) {
-  const Steady s = steadyNote(arcParams(P), C);
+// The steady note of capacitance C, started from a kick of that many amps in the coil (< 0: the
+// engine's, 0.7 × the current): f, iaMin, iaMax, uMax, Iac.
+FORTE_EXPORT void arc_steady(const double *P, double C, double kick, double *out) {
+  SteadyOptions o;
+  o.kick = kick;
+  const Steady s = steadyNote(arcParams(P), C, o);
   out[0] = s.f; out[1] = s.iaMin; out[2] = s.iaMax; out[3] = s.uMax; out[4] = s.Iac;
 }
 FORTE_EXPORT double arc_hiss_current(double l) { return hissCurrent(l); }

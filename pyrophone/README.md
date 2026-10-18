@@ -76,7 +76,9 @@ normalisation; the linear gain is (√3/2)β. Small perturbations ∝ e^{st} obe
 equation, 1 = (√3/2) β e^{−sτ} Σⱼ cos(jπx_f)·(−2jπ sin(jπx_f)) / (s² + ζⱼs + (jπ)²),
 which the model solves by Newton continuation from β = 0. The tests reproduce
 Magri & Juniper's published eigenvalues (−0.0056 + 3.1848i at β = 0.1 and
-+0.00023 + 3.3570i at β = 0.5) to all quoted digits. For one mode and weak
++0.00023 + 3.3570i at β = 0.5) to all quoted digits, with the delay
+Taylor-expanded as theirs is (e^{−sτ} → 1 − sτ); the exact delay moves them
+by less than 10⁻³. For one mode and weak
 coupling,
 
   s ≈ −ζⱼ/2 + (√3/4) β sin(2jπx_f) [sin(jπτ) + i cos(jπτ)] + ijπ,
@@ -187,18 +189,14 @@ render at 2 % of real time in Node. The tests hold the engine to the model:
 growth rate and ring-down within 3 %, limit-cycle amplitude within 2 %, both
 thresholds of the hysteresis loop within 3 %, harmonic levels within 1.5 dB.
 
-**In C++.** The same engine and model run as WebAssembly on this page (the
-JavaScript is the fallback; `?engine=js` in the address forces it) and as
-plugins (CLAP, VST3, AU and a standalone app), where the Space pedal is Hold
-on CC64, the mod wheel is the flame power and aftertouch parts the flames.
-The WebAssembly plays what the JavaScript plays bit for bit, turbulence
-included (the same seeded generator, and V8's own `sin`, `exp` and `hypot`),
-and the views' bifurcation diagram, orbits and tuning come from the same C++.
-The tuning table (harmonic balance, about 15 ms in C++) is built on a worker
-thread in the plugins, and on the page by its WebAssembly model, which hands
-it to the engine with the parameters; while a tube slider moves, the tubes are
-cut from the last table until the new one is in. Ten tubes take about 2 % of a
-core in C++.
+**In C++.** The engine and the model are C++, built as WebAssembly for this
+page and as plugins (CLAP, VST3, AU and a standalone app), where the Space
+pedal is Hold on CC64, the mod wheel is the flame power and aftertouch parts
+the flames. The views' bifurcation diagram, orbits and tuning come from the
+same C++. The tuning table (harmonic balance, about 15 ms) is built on a
+worker thread in the plugins, and on the page by its WebAssembly model, which
+hands it to the engine; while a tube slider moves, the tubes are cut from the
+last table until the new one is in. Ten tubes take about 2 % of a core.
 
 **The views.** The bifurcation diagram (from harmonic balance) shows the
 stable and unstable branches, the Hopf point, the fold and the bistable band,
@@ -245,15 +243,14 @@ notes do not speak at all.
 
 ```
 pyrophone/index.html, style.css             page
-pyrophone/src/pyrophone-model.js            physics: modes, losses, King's law, linear stability,
-                                            describing function, harmonic balance, tuning (no audio, no DOM)
-pyrophone/src/pyrophone-engine.js           real-time engine (AudioWorklet and Node)
+pyrophone/src/pyrophone-model.js            constants, the keys' heater gain, the one-mode Rayleigh formula the tests check against
 pyrophone/src/pyrophone-params.js           parameters and presets
 pyrophone/src/pyrophone-main.js             page wiring
 pyrophone/src/pyrophone-views.js            bifurcation diagram, tube, phase portrait
-pyrophone/src/pyrophone-wasm.js             the C++ engine and model as WebAssembly (pyrophone/wasm/pyrophone.wasm)
-native/instruments/pyrophone/               the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
-test/pyrophone-tests.mjs                    node test/pyrophone-tests.mjs (25 tests, ~15 s; FORTE_ENGINE=wasm: on the WebAssembly)
+pyrophone/src/pyrophone-wasm.js             the engine and model as WebAssembly (pyrophone/wasm/pyrophone.wasm)
+native/instruments/pyrophone/               the physics in C++: model (modes, losses, King's law, linear stability, harmonic
+                                            balance, tuning), engine, generated tables, reference (plugins and WebAssembly)
+test/pyrophone-tests.mjs                    node test/pyrophone-tests.mjs (25 tests, ~15 s)
 tools/render-pyrophone.mjs                  node tools/render-pyrophone.mjs → examples/pyrophone/
 ```
 

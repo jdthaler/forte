@@ -1,5 +1,4 @@
-// vibraphone-engine.h — the real-time vibraphone (vibraphone/src/vibraphone-engine.js in C++), on
-// the engine contract (forte/engine.h).
+// vibraphone-engine.h — the real-time vibraphone, on the engine contract (forte/engine.h).
 //
 //   mallet (Hertz contact, implicit) ─▶ bar modes 2–5 and torsion 1–2 (exact two-pole recursions)
 //                                    └▶ bar mode 1 ⇄ tube mode 1 (implicit midpoint, coupled through the gap's air)
@@ -25,8 +24,8 @@
 
 namespace forte::vibraphone {
 
-// What the engine posts for the page (vibraphone/src/vibraphone-wasm.js turns them back into the
-// JavaScript engine's 'vibe' and 'error' messages).
+// What the engine posts for the page (vibraphone/src/vibraphone-wasm.js turns them into its
+// 'vibe' and 'error' messages).
 namespace msg {
 enum : uint16_t {
   vibe = 1,  // the focus key (0: none); amp[8], Eb, Et, theta, open, kappa, ft, contactMs, Fmax, shaft, motor, X
@@ -48,7 +47,7 @@ class VibraphoneEngine : public Engine {
   void allNotesOff() override;
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
-  // A bar its page's model built already (packVoiceData; the JavaScript's noteData), for the next
+  // A bar its page's model built already (packVoiceData; the page's noteData), for the next
   // note on that key, so the audio thread needn't build it. Only without threads (WebAssembly):
   // with them, the worker builds every bar ahead.
   bool offer(const double *packed, int n);
@@ -92,7 +91,7 @@ class VibraphoneEngine : public Engine {
     void render(float *L, float *R, int n, VibraphoneEngine &eng);
   };
 
-  // read by the tests (through the WebAssembly's hooks), in the JavaScript engine's order
+  // read by the tests (through the WebAssembly's hooks), in the order they started
   std::array<Voice *, POOL> voices{};
   int nVoices = 0;
   std::array<Voice *, 128> byKey{};
@@ -125,7 +124,7 @@ class VibraphoneEngine : public Engine {
   std::array<double, BLOCK_MAX> sinT{}, cosT{};
   double theta = 0, omega = 0, parkTarget = 0;
   int parkMode = -1;
-  Message vibe; // kept between posts, as the JavaScript keeps its message object
+  Message vibe; // kept between posts
 };
 
 } // namespace forte::vibraphone

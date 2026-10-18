@@ -1,7 +1,6 @@
-// harmonium-model.h — the physics of a free-reed organ (harmonium/src/harmonium-model.js in C++,
-// operation for operation): the brass tongue with its tip weight, the slot it chokes, the
-// voicer's design of each reed, the steady state and the linear analysis (its threshold), the
-// wind and the cassotto.
+// harmonium-model.h — the physics of a free-reed organ: the brass tongue with its tip weight, the
+// slot it chokes, the voicer's design of each reed, the steady state and the linear analysis (its
+// threshold), the wind and the cassotto.
 //
 //   bellows ─▶ reservoir P ─▶ pallet ─▶ throat (air mass M_a) ─▶ cell (volume, pressure p_c)
 //                                                                  │
@@ -59,7 +58,7 @@ struct Area { double A, dA; };
 Area areaAt(const AreaTable &T, double y);
 
 struct Mode { int n; double lam, f, om, m, k, S, I1, I2, I3, zeta; };
-// One reed, voiced, with its slot's area tabulated (reedModel in the JavaScript).
+// One reed, voiced, with its slot's area tabulated.
 struct ReedModel {
   double fNat = 0, fSound = 0, tune = 1;
   Geo geo{};

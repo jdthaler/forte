@@ -1,19 +1,16 @@
 // quantum-main.js — the page: wires the shell to the engine and draws the views.
-// The packet of each note is computed here (the descriptor's noteData: makePacket, ~1 ms)
-// and sent with the noteOn, so the worklet never does setup work.
+// The packet of each note is computed here (noteData: makePacket, ~1 ms) and sent with the
+// noteOn, so the worklet never does setup work.
 
-import { createShell, noteName, toast, useWasm } from '../../shared/shell.js';
+import { createShell, noteName, toast } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT, fMax as fMaxAt } from './quantum-instrument.js';
-import { makePacket, WELLS } from './quantum-model.js';
-import { waveGrid, density } from './quantum-waves.js';
+import { WELLS, density } from './quantum-waves.js';
 import { wasmModel } from './quantum-wasm.js';
 
 // The packets (for the engine and the views) and the views' eigenfunctions come from the
-// WebAssembly model once it has loaded (the same physics as the engine, in C++, to the last bit),
-// from the JavaScript one until then or if it can't load. Either engine plays either's packets.
-let model = { makePacket, waveGrid };
-if (useWasm()) wasmModel().then((m) => { model = m; dirty = true; }, (err) => console.warn(`quantum: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+// engine's model: the same C++, built as WebAssembly.
+const model = await wasmModel();
 
 const $ = (s) => document.querySelector(s);
 const spectrum = new SpectrumView($('#spectrum'));

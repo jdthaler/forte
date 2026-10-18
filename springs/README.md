@@ -77,10 +77,10 @@ the audio band; the other four (the wire's own stretch, twist and shears)
 start at 210 kHz on the C4 spring, and above 50 kHz on the largest. In units of R and √(E/ρ) the sheets depend only on
 the shape, r/R, α and ν: ω = (√(E/ρ)/R)·Ω(kR).
 
-`springs-model.js` solves the 6 × 6 problem by Jacobi rotations (about 4 µs
-a wavenumber) and gets each sheet's group velocity dω/dk exactly from the
-eigenvector (Hellmann–Feynman, dω²/dk = yᵀ(dK/dk)y). The tests check it
-against:
+The model (`native/instruments/springs/springs-model.cpp`) solves the 6 × 6
+problem by Jacobi rotations and gets each sheet's group velocity dω/dk
+exactly from the eigenvector (Hellmann–Feynman, dω²/dk = yᵀ(dK/dk)y). The
+tests check it against:
 
 - **the ring.** At α = 0 and k = n/R it is a closed ring with n waves round
   it. The in-plane sheet gives Hoppe's (1871) ω² = (EI/ρAR⁴)·n²(n²−1)²/(n²+1),
@@ -90,6 +90,10 @@ against:
   and sliding along the axis) and at k = cos α/R, where a wave moves every
   turn of the coil alike: sideways translations and tilts.
 - **the slinky line** (section 4).
+- **the thin spring** (section 3).
+
+The WebAssembly offers the rod at any shape and wavenumber for these
+(`springs_rod`, the model's `rodSolve`).
 
 ### 3. The thin spring
 
@@ -142,8 +146,9 @@ energy then gives the open-coiled spring's compliance per length of wire,
 
 and the line's two wave speeds follow from it and from the line's mass and
 moment of inertia. They are Wittrick's two low-frequency slopes, within
-10⁻⁵ for α = 0–20°. For a close-coiled spring they reduce to the classical
-c_rotation = √(EI/ρA)/R (the reduced model's κε) and c_axial = √(GJ/ρA)/R.
+10⁻⁵ over the helix angle's range, 1–20°. For a close-coiled spring they
+reduce to the classical c_rotation = √(EI/ρA)/R (the reduced model's κε)
+and c_axial = √(GJ/ρA)/R.
 Turning the spring bends its wire; stretching it twists the wire. Their
 ratio, √(EI/GJ) = √(1+ν) = 1.136, is why an axially driven spring must be
 cut about 1.14 times shorter for the same note.
@@ -388,7 +393,8 @@ relation of this form, ω ∝ k² times the coil radius. Modes stop at 3 kHz
 - **The page builds the springs.** The few hundred 6 × 6 eigenproblems a
   bass key needs (a few ms) are solved on the page. It keeps them per key
   and geometry and works through the keyboard in spare moments, then sends
-  them with each note. The engine builds its own in Node.
+  them with each note. Without them (in Node, or a plugin) the engine builds
+  its own.
 - **Pruning.** A mode 90 dB below the voice's loudest moment (in power,
   over all its modes) is let go entirely. A voice is done when all its
   modes are.
@@ -406,28 +412,19 @@ relation of this form, ω ∝ k² times the coil radius. Modes stop at 3 kHz
 - **The page's views.** The engine keeps the first moments of the latest
   strike, up to ten round trips (0.65 s at most), and posts them for the
   Echoes view.
-- **A warm-up.** Before the first note the engine plays a small made-up
-  spring through every path it has (16–40 ms, once), so the first real
-  strikes run compiled rather than in the interpreter, which took several
-  blocks' worth of time.
 - **Cost.** Ten keys across the compass, two springs each, struck in turn
-  and left ringing take about 10 % of one core at 48 kHz in Node, on the
-  shared machine this was built on, the slowest block about half its time. Ten
-  bass keys at once take about 16–19 %, ten keys of three springs about
-  20 %, ten Slinkys about 22 %.
-- **In C++**: the same engine and model run as WebAssembly on this page (the
-  JavaScript is the fallback; `?engine=js` in the address forces it) and as
-  plugins (CLAP, VST3, AU and a standalone app), where CC64 is the damper
-  pedal and the mod wheel the hand on the springs. The page builds each
-  key's springs with the WebAssembly model and sends them with the note, as
-  it does for the JavaScript; a plugin builds every key on a worker thread
-  as soon as the geometry settles, and a note whose springs aren't ready yet
-  waits a few milliseconds for them. The C++ solves the same Jacobi
-  rotations with V8's own `sin`, `cos`, `exp`, `pow` and `log2`, so its
-  springs, their tuning and the sound are the JavaScript's bit for bit, and
-  the same test suite passes on it. Ten keys struck in turn take about 8–10 %
-  of a core in C++, all ten at once about 10 %; a key's springs take about
-  3 ms to build.
+  and left ringing take about 8–10 % of one core at 48 kHz, all ten at once
+  about 10 %; a key's springs take about 3 ms to build.
+- **In C++** (`native/instruments/springs`): the engine and the model, run
+  as WebAssembly on this page and as plugins (CLAP, VST3, AU and a
+  standalone app), where CC64 is the damper pedal and the mod wheel the
+  hand on the springs. The page builds each key's springs with the
+  WebAssembly model and sends them with the note; a plugin builds every key
+  on a worker thread as soon as the geometry settles, and a note whose
+  springs aren't ready yet waits a few milliseconds for them. The C++ was
+  ported from the JavaScript this page first ran, operation for operation,
+  with V8's own `sin`, `cos`, `exp`, `pow` and `log2`, and played it bit
+  for bit.
 
 ## What to listen for
 
@@ -471,14 +468,13 @@ axis.
 
 ```
 springs/index.html, style.css            page
-springs/src/springs-model.js             Wittrick's helical rod (6 × 6 per wavenumber), the thin-spring model, the slinky line,
-                                         F_C, group delay, tuning, modes, bead coupling, losses, mallet (no audio, no DOM)
-springs/src/springs-engine.js            real-time engine (AudioWorklet and Node)
+springs/src/springs-instrument.js        the descriptor: parameters, presets, key range, the engine
 springs/src/springs-params.js            parameters and presets
 springs/src/springs-main.js              page wiring, building the springs for each note, and views
 springs/src/springs-wasm.js              the C++ engine and model as WebAssembly (springs/wasm/springs.wasm)
-native/instruments/springs/              the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
-test/springs-tests.mjs                   node test/springs-tests.mjs (23 tests, about 12 s; FORTE_ENGINE=wasm: on the WebAssembly)
+native/instruments/springs/              the C++: Wittrick's helical rod (6 × 6 per wavenumber), F_C, group delay, tuning,
+                                         modes, bead coupling, losses, mallet, and the engine (plugins and WebAssembly)
+test/springs-tests.mjs                   node test/springs-tests.mjs (23 tests, about 10 s)
 tools/render-springs.mjs                 node tools/render-springs.mjs → examples/springs/
 ```
 

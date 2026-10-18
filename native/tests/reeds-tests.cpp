@@ -2,7 +2,7 @@
 // exact tip-mass equation, every key cut to pitch, the slot's C(y), the engine on pitch and its
 // dampers, a note that waits for its reed to be built (forte/background.h), a reed knob that makes
 // a new reed, and ten voices within the CPU budget. The physics tests are the JavaScript suite's,
-// run on the WebAssembly (FORTE_ENGINE=wasm).
+// run on the WebAssembly (node test/reeds-tests.mjs).
 
 #include <chrono>
 #include <cmath>

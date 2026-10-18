@@ -1,13 +1,13 @@
-// springs-model.h — the physics of a struck helical spring (springs/src/springs-model.js in C++),
-// operation for operation: Wittrick's helical rod (a 6 × 6 symmetric eigenproblem per wavenumber,
+// springs-model.h — the physics of a struck helical spring: Wittrick's helical rod (a 6 × 6
+// symmetric eigenproblem per wavenumber,
 // by the same cyclic Jacobi), the drive's sheet and its transition F_C, the tuning (the lowest mode
 // on the note, then the virtual pitch of what is heard), a spring's modes, the losses and the
 // mallet. sin, cos, exp, log and pow are V8's (forte/fdlibm.h) and log2 is computed as V8 computes
-// it, so a key's springs come out as the JavaScript's to the last bit.
+// it, so a key's springs come out the same to the last bit everywhere.
 //
-// The JavaScript keeps its rod solvers in a cache keyed by the shape printed to nine decimals,
-// so that neighbouring keys (whose r/R differs in the last bit) share the first one's solver; so
-// does this (per thread), in the same order, so that the same calls give the same numbers.
+// The rod solvers are kept in a cache (per thread) keyed by the shape printed to nine decimals,
+// so that neighbouring keys (whose r/R differs in the last bit) share the first one's solver, and
+// the same calls give the same numbers.
 #pragma once
 
 #include <cstdint>

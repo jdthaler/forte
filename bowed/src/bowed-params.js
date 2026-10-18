@@ -1,6 +1,8 @@
 // bowed-params.js — the knobs. Every parameter has a physical meaning and
 // a unit; the hint says what it does to the sound.
 
+export const RANGE = [36, 84]; // the keys: C2–C6
+
 const pct = (v) => `${(v * 100).toFixed(0)} %`;
 const ms = (v) => `${v < 10 ? v.toFixed(1) : v.toFixed(0)} ms`;
 

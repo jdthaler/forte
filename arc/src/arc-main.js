@@ -1,28 +1,23 @@
 // arc-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName, useWasm } from '../../shared/shell.js';
+import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT, bankParams } from './arc-instrument.js';
-import * as jsModel from './arc-model.js';
 import { KEY_LO, KEY_HI, TAU, SUPPLY, TALK, keyFreq, ayrtonV, kelvinC, tuneKey } from './arc-model.js';
 import { wasmModel } from './arc-wasm.js';
 
-// The views and the capacitor bank use the WebAssembly model once it has loaded (the same physics
-// as the engine, in C++: it gives the JavaScript's numbers), the JavaScript one until then or if it
-// can't load.
-let model = jsModel;
-if (useWasm()) wasmModel().then((m) => { model = m; update(); }, (err) => console.warn(`arc: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+// The views and the capacitor bank use the engine's model: the same C++, built as WebAssembly.
+const model = await wasmModel();
 
 const $ = (s) => document.querySelector(s);
 let focus = 60, msg = null, op = null, table = null, job = null;
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 50, fHi: 16000 });
 
-// The WebAssembly engine takes all the parameters, not engineParams: the bank cut so far goes with
-// each note instead ([1 if it is cut for the parameters now, else 0, then a capacitor per key]), so
-// its audio thread never cuts a capacitor (a few ms each).
+// The bank cut so far goes with each note ([1 if it is cut for the parameters now, else 0, then a
+// capacitor per key]), so the audio thread never cuts a capacitor (a few ms each).
 let packed = null;
 function noteData() {
-  if (shell.engineKind !== 'wasm' || !table) return undefined;
+  if (!table) return undefined;
   const current = table.key === tuneKey(bankParams(shell.P)) ? 1 : 0;
   if (packed?.table !== table || packed.current !== current) {
     const data = new Float64Array(table.caps.length + 1);
@@ -37,7 +32,6 @@ const shell = createShell({
   base: 48,
   arrows: { param: 'current' },
   noteData,
-  engineParams: (P) => ({ ...P, table }), // the bank cut so far (retune): in the end, the descriptor's capBank(P)
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key) => { focus = key; update(); },
   onParam: () => { retune(); update(); },
@@ -45,27 +39,26 @@ const shell = createShell({
 });
 
 // ---- the capacitors: each key's cut for the sounding note (the steady cycle, integrated), a few
-// keys per tick so the page stays responsive; meanwhile the quick start-frequency table serves.
-// The finished table is the descriptor's capBank(P), cut a key at a time ----
+// keys per tick so the page stays responsive; meanwhile the quick start-frequency table serves ----
 function retune() {
   const P = bankParams(shell.P), key = tuneKey(P);
   if ((table && table.key === key) || (job && job.key === key)) return;
-  const o = model.arcOp(P), quick = new Float64Array(KEY_HI - KEY_LO + 1);
-  for (let k = KEY_LO; k <= KEY_HI; k++) quick[k - KEY_LO] = P.tune === 'kelvin' ? kelvinC(keyFreq(k), P.coil * 1e-3) : model.startCap(k, P, o);
-  if (!table || P.tune === 'kelvin') { table = { key: P.tune === 'kelvin' ? key : `start|${key}`, lo: KEY_LO, caps: quick }; shell.sendParams(); }
+  const quick = new Float64Array(KEY_HI - KEY_LO + 1);
+  for (let k = KEY_LO; k <= KEY_HI; k++) quick[k - KEY_LO] = P.tune === 'kelvin' ? kelvinC(keyFreq(k), P.coil * 1e-3) : model.startCap(k, P);
+  if (!table || P.tune === 'kelvin') table = { key: P.tune === 'kelvin' ? key : `start|${key}`, lo: KEY_LO, caps: quick };
   if (P.tune === 'kelvin') { job = null; return; }
-  job = { key, P: { ...P }, op: o, caps: new Float64Array(KEY_HI - KEY_LO + 1), k: KEY_LO };
+  job = { key, P: { ...P }, caps: new Float64Array(KEY_HI - KEY_LO + 1), k: KEY_LO };
   setTimeout(step, 30);
 }
 function step() {
   const j = job;
   if (!j) return;
   const t0 = performance.now();
-  while (j.k <= KEY_HI && performance.now() - t0 < 12) { j.caps[j.k - KEY_LO] = model.capFor(j.k, j.P, j.op); j.k++; }
+  while (j.k <= KEY_HI && performance.now() - t0 < 12) { j.caps[j.k - KEY_LO] = model.capFor(j.k, j.P); j.k++; }
   if (j !== job) return;
   if (j.k <= KEY_HI) { setTimeout(step, 0); return; }
   table = { key: j.key, lo: KEY_LO, caps: j.caps }; job = null;
-  shell.sendParams(); update();
+  update();
 }
 
 // ---- readouts for the last key ----------------------------------------------------------------
@@ -82,7 +75,7 @@ function update() {
 const capOf = (key) => (shell.P.mode === 'talk' ? TALK.C : table?.caps[key - KEY_LO] ?? kelvinC(keyFreq(key), shell.P.coil * 1e-3));
 function readouts() {
   const P = shell.P, o = op, talk = P.mode === 'talk', C = capOf(focus), L = talk ? TALK.L : P.coil * 1e-3;
-  const la = model.linearAnalysis(model.circuit(P, C, o)), fK = 1 / (TAU * Math.sqrt(L * C));
+  const la = model.linearAnalysis(model.circuit(P, C)), fK = 1 / (TAU * Math.sqrt(L * C));
   const row = (k, v) => `<dt>${k}</dt><dd>${v}</dd>`;
   const rows = [
     row('arc', `${o.I0.toFixed(2)} A at ${o.u0.toFixed(1)} V, slope ${o.Rd.toFixed(2)} Ω`),

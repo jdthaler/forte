@@ -1,7 +1,6 @@
-// template-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// template-wasm.js — the engine and model, built as WebAssembly from the physics in C++
 // (native/instruments/template): TemplateWasmEngine, with the engine contract, and the model's
-// functions for the views. The page runs it when it can and falls back to the JavaScript
-// (template-engine.js).
+// functions for the views and the tests.
 
 import { GROUPS } from './template-params.js';
 import { wasmEngine, nativeParams, scratch } from '../../../shared/wasm.js';
@@ -11,7 +10,8 @@ const BUILD = { id: 'template', name: 'TemplateWasmEngine', groups: GROUPS, bina
 export const TemplateWasmEngine = wasmEngine(BUILD);
 export const ready = () => TemplateWasmEngine.ready();
 
-// The model (template-model.js's keyModes, modeShape, BETA_L), computed by the WebAssembly.
+// The model, computed by the WebAssembly (template-model.cpp): BETA_L, the free–free beam's βL;
+// modeShape(n, x), mode n's shape at x in [0, 1]; keyModes(key, P), a key's modes [{ f, sigma, amp }].
 export async function wasmModel() {
   const x = await ready(), s = scratch(x);
   const params = nativeParams(BUILD);

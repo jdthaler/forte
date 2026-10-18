@@ -1,16 +1,15 @@
-// piano-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// piano-wasm.js — the engine and model, built as WebAssembly from the physics in C++
 // (native/instruments/piano): PianoWasmEngine, with the engine contract, and the model's
-// functions for the views. The page runs it when it can and falls back to the JavaScript
-// (engine.js, physics.js).
+// functions for the views and the tests.
 
 import { GROUPS, ALL_PARAMS } from './params.js';
-import { MATERIALS, SHAPES, noteName } from './physics.js';
+import { MATERIALS, SHAPES, noteName } from './materials.js';
 import { wasmEngine, nativeParams, nativeValue, scratch } from '../../shared/wasm.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'piano', name: 'PianoWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/piano.wasm', import.meta.url).href };
 
-// The C++ engine's messages (piano-engine.h, msg) back into the JavaScript engine's.
+// The C++ engine's messages (piano-engine.h, msg), as the page's.
 function messages(m) {
   if (m.type === 1) return { type: 'hammer', key: m.key, contactMs: m.values[0], Fmax: m.values[1] };
   if (m.type === 2) return { type: 'error', key: m.key, message: 'numerical instability' };
@@ -21,7 +20,7 @@ const Base = wasmEngine(BUILD, { messages });
 
 // Voice data as the C++ takes it (piano-model.h, packVoiceData): version, key, n, unisons, the
 // hammer's mass, K, p, alpha, outV, outH, hasDamper, then freq, sigma, w, cv, ch, ct, famId,
-// uni, idx. A JavaScript voice data's version (physics.js, buildVoiceData) becomes a number.
+// uni, idx. A voice data object's version (a string, or a number) becomes a number.
 const HEAD = 11, ARRAYS = ['freq', 'sigma', 'w', 'cv', 'ch', 'ct', 'famId', 'uni', 'idx'];
 const versions = new Map();
 const versionId = (v) => { if (!versions.has(v)) versions.set(v, versions.size + 1); return versions.get(v); };
@@ -42,8 +41,7 @@ export function unpackVoiceData(a) {
   };
 }
 
-// A voice of the C++ engine, read back as the JavaScript engine's Voice: what the tests and the
-// slow-motion view read (q and perm are views into the engine's memory, valid until it next runs).
+// A voice of the engine, read back: what the tests and the slow-motion view read (q and perm are views into the engine's memory, valid until it next runs).
 const VOICE = ['key', 'N', 'hammerOn', 'contactSamples', 'Fmax', 'killing', 'dead', 'eta', 'etaPrev', 'keyDown', 'damped', 'peak', 'age', 'own'];
 const FLAGS = new Set(['hammerOn', 'killing', 'dead', 'keyDown', 'damped', 'own']);
 class WasmVoice {
@@ -69,10 +67,10 @@ class WasmVoice {
 }
 for (const k of VOICE) Object.defineProperty(WasmVoice.prototype, k, { get() { return this.state[k]; } });
 
-// The engine, with the JavaScript engine's hooks: noteOn returns the voice it struck; voices,
+// The engine, with the page's and the tests' hooks: noteOn returns the voice it struck; voices,
 // byKey, modeCount(), stats(); setParams takes maxModes (the CPU budget, not a parameter). A note
-// may bring its key's voice data (the page's noteData): packed by the page's WebAssembly model, or
-// a JavaScript voice data object (the tests), which is packed here.
+// may bring its key's voice data: packed by the model (wasmModel's keyModel(…).packed), or a voice
+// data object (its .data, perhaps altered), which is packed here.
 export class PianoWasmEngine extends Base {
   constructor(fs) {
     super(fs);
@@ -103,10 +101,11 @@ export class PianoWasmEngine extends Base {
 }
 export const ready = () => PianoWasmEngine.ready();
 
-// The model's functions the views call, computed by the WebAssembly: keyModel(key, P, fs) gives
-// { model, data, packed }: the string model (physics.js, computeKeyModel, with its secAt), the
-// voice data (buildVoiceData) and that data packed for the WebAssembly engine. Cached per key for
-// the latest version asked for, as piano-instrument.js caches the JavaScript's.
+// The model's functions the views and the tests call, computed by the WebAssembly:
+// keyModel(key, P, fs) gives { model, data, packed }: the string model (piano-model.cpp,
+// computeKeyModel, with its secAt), the voice data (buildVoiceData) and that data packed for the
+// engine. Cached per key for the latest version asked for (the 'model' parameters and fs).
+// sectionProps(shape, A, aspect, scale) gives a cross-section's properties.
 const MODEL = ALL_PARAMS.filter((p) => p.kind === 'model').map((p) => p.id);
 const FAMILY = ['bend1', 'bend2', 'torsion'];
 const SEC = ['A', 'I1', 'I2', 'J', 'Ip', 'half', 'lever', 'w', 't'];

@@ -1,6 +1,6 @@
 // gongs-web.cpp — the model's functions the page's views call (gongs/src/gongs-wasm.js), and the
 // engine's test hooks: its voices, their state and methods, and a voice placed in a given state
-// (the JavaScript suite reaches into its engine's voices; these give it the same from the C++).
+// (the test suite reaches into the engine's voices through these).
 
 #include <cstdint>
 #include <memory>
@@ -65,7 +65,7 @@ FORTE_EXPORT int gongs_shell_e_count(const Shell *S) { return (int)S->E.size(); 
 FORTE_EXPORT void gongs_shell_e(const Shell *S, int from, int count, double *out) {
   for (int e = 0; e < count; e++) { const ETerm &t = S->E[from + e]; out[3 * e] = t.n; out[3 * e + 1] = t.i; out[3 * e + 2] = t.v; }
 }
-// The backbone of mode p (gongs-model.js, backbone) for the tables of a spec.
+// The backbone of mode p for the tables of a spec.
 FORTE_EXPORT double gongs_backbone(int bc, double rise, int terms, int p, int Nv) { return backbone(*viewShell({bc, rise, terms}), p, Nv); }
 FORTE_EXPORT double gongs_contact_time(const double *P, int key, double fs, double vel) {
   Gong g;
@@ -82,7 +82,7 @@ FORTE_EXPORT int gongs_voices(GongEngine *e, int *out) {
   for (int i = 0; i < n; i++) { out[2 * i] = (int)(intptr_t)v[i]; out[2 * i + 1] = (int)v[i]->serial; }
   return n;
 }
-// A voice at rest in the displacement x0 (n values), as the JavaScript engine's place().
+// A voice at rest in the displacement x0 (n values): the tests' free vibration of chosen modes.
 FORTE_EXPORT Voice *gongs_place(GongEngine *e, int key, const double *x0, int n) { return e->place(key, x0, n); }
 FORTE_EXPORT double gongs_voice_get(const Voice *v, int f) {
   switch (f) {

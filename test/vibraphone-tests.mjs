@@ -4,23 +4,25 @@
 // optimiser against 1 : 4 : 10; the coupled bar and tube against the
 // two-oscillator formula; then the engine against the model: pitch, the split,
 // the tremolo's rate, the tube's effect, mallet, damper, levels and stability.
+// The model and the engine are the C++ (native/instruments/vibraphone), built as
+// WebAssembly: the model's functions through vibraphone-wasm.js. bar.js is the
+// JavaScript that tunes the bars (tools/vibraphone-bars.mjs): its FEM and
+// optimiser are checked too, since the C++ plays from the table they make.
 
 import assert from 'node:assert/strict';
 import { genEig } from '../shared/linalg.js';
 import { keyFreq } from '../shared/dsp.js';
-import { AL, G_AL, BETA_L, EB_RATIOS, barModes, bendingFreqs3, halfMesh, assembleBending, torsionJ, tuneUndercut, thickness } from '../vibraphone/src/bar.js';
-import {
-  KEY_LO, KEY_HI, barModel, barGeometry, barBlank, tubeGeometry, tubeState, coupling, twoOscillator, coupledModes,
-  zener, ZENER_DELTA, openFraction, air, voiceData,
-} from '../vibraphone/src/vibraphone-model.js';
+import { AL, G_AL, BETA_L, EB_RATIOS, KEY_LO, KEY_HI, barBlank, bendingFreqs3, halfMesh, assembleBending, tuneUndercut } from '../vibraphone/src/bar.js';
 import { BAR_TABLE } from '../vibraphone/src/bar-table.js';
 import { INSTRUMENT } from '../vibraphone/src/vibraphone-instrument.js';
+import { wasmModel } from '../vibraphone/src/vibraphone-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../vibraphone/src/vibraphone-params.js';
 import { readFileSync } from 'node:fs';
 import { barTableHeader } from '../tools/vibraphone-bars.mjs';
 
-const VibraphoneEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const VibraphoneEngine = await loadEngine(INSTRUMENT);
+const { barModel, tubeGeometry, tubeState, coupling, voiceData } = await wasmModel();
 
 const FS = 48000;
 let failures = 0;
@@ -78,47 +80,96 @@ function envelope(x, f, a, b, hop = 240) {
   }
   return out;
 }
+// What the tests check the C++ against, from first principles rather than from its code:
+// air as an ideal gas at sea level;
+const air = (T) => ({ c: 331.3 * Math.sqrt((T + 273.15) / 273.15) });
+// Saint-Venant torsion of a b × h rectangle, Roark's approximation;
+function torsionJ(b, h) {
+  const t = Math.min(b, h), w = Math.max(b, h), r = t / w;
+  return w * t ** 3 * (1 / 3 - 0.21 * r * (1 - r ** 4 / 12));
+}
+// Zener's thermoelastic loss η = Δ ωτ/(1 + ω²τ²), Δ = Eα²T/(ρc_p), τ = h²/(π² D_th), for the
+// C++'s aluminium (vibraphone-model.h, THERMO);
+const THERMO = { alpha: 23e-6, cp: 900, k: 167, T: 293.15 }, ZENER_DELTA = (AL.E * THERMO.alpha ** 2 * THERMO.T) / (AL.rho * THERMO.cp);
+const zener = (h, f) => { const wt = (2 * Math.PI * f * h * h * AL.rho * THERMO.cp) / (Math.PI * Math.PI * THERMO.k); return (ZENER_DELTA * wt) / (1 + wt * wt); };
+// two oscillators coupled through their masses, M = [[1, −κ], [−κ, 1]] in normalised coordinates:
+// (1 − κ²)ω⁴ − (ω_b² + ω_t²)ω² + ω_b²ω_t² = 0; when tuned, ω± = ω₀/√(1 ∓ κ);
+function twoOscillator(fb, ft, kappa) {
+  const wb = 2 * Math.PI * fb, wt = 2 * Math.PI * ft, s = wb * wb + wt * wt, dsc = Math.sqrt(s * s - 4 * (1 - kappa * kappa) * wb * wb * wt * wt);
+  return [Math.sqrt((s - dsc) / (2 * (1 - kappa * kappa))) / (2 * Math.PI), Math.sqrt((s + dsc) / (2 * (1 - kappa * kappa))) / (2 * Math.PI)];
+}
+// and the damped pair exactly: the roots s of det(s²M + sC + K) = 0 (a quartic, by Durand–Kerner), [{ f, sigma }].
+function coupledModes(M11, M12, M22, C11, C22, K11, K22) {
+  const a4 = M11 * M22 - M12 * M12, a3 = M11 * C22 + M22 * C11, a2 = M11 * K22 + M22 * K11 + C11 * C22, a1 = C11 * K22 + C22 * K11, a0 = K11 * K22;
+  const c = [a3 / a4, a2 / a4, a1 / a4, a0 / a4];
+  const P = (re, im) => { // z⁴ + c0 z³ + c1 z² + c2 z + c3
+    let pr = 1, pi = 0;
+    for (const ck of c) { const r = pr * re - pi * im + ck, i = pr * im + pi * re; pr = r; pi = i; }
+    return [pr, pi];
+  };
+  const scale = Math.sqrt(Math.sqrt(c[3]));
+  let z = [0, 1, 2, 3].map((j) => [scale * Math.cos(0.4 + (j * Math.PI) / 2), scale * Math.sin(0.4 + (j * Math.PI) / 2)]);
+  for (let it = 0; it < 500; it++) {
+    let move = 0;
+    z = z.map(([re, im], j) => {
+      let [nr, ni] = P(re, im), dr = 1, di = 0;
+      for (let q = 0; q < 4; q++) if (q !== j) { const xr = re - z[q][0], xi = im - z[q][1], t = dr * xr - di * xi; di = dr * xi + di * xr; dr = t; }
+      const den = dr * dr + di * di, qr = (nr * dr + ni * di) / den, qi = (ni * dr - nr * di) / den;
+      move = Math.max(move, Math.hypot(qr, qi));
+      return [re - qr, im - qi];
+    });
+    if (move < 1e-12 * scale) break;
+  }
+  return z.filter(([, im]) => im > 0).map(([re, im]) => ({ f: im / (2 * Math.PI), sigma: -re })).sort((x, y) => x.f - y.f);
+}
+const bends = (bar) => bar.modes.filter((m) => m.kind === 'bend');
 const sigma1 = (k, p = DEFAULTS) => { const m = barModel(k, p.depth).modes[0]; return m.sigTE + m.sigSup + m.sigRad + Math.PI * m.f * p.eta; };
 
 console.log('the bar');
-test('plain bar: the FEM reproduces the free–free beam, cos βL cosh βL = 1 (1 : 2.756 : 5.404 : 8.933 : 13.34)', () => {
+test('plain bar: the tuning FEM reproduces the free–free beam, cos βL cosh βL = 1 (1 : 2.756 : 5.404 : 8.933 : 13.34)', () => {
   for (const b of BETA_L) assert.ok(Math.abs(Math.cos(b) * Math.cosh(b) - 1) < 1e-6 * Math.cosh(b));
-  const thin = barModes({ h0: 0.002, a: 0, c: 0, d: 0 }, 1, 0.05);
+  const thin = bendingFreqs3({ h0: 0.002, a: 0, c: 0, d: 0 }, 1, 0.05);
   const f1 = (BETA_L[0] ** 2 / (2 * Math.PI)) * 0.002 * Math.sqrt(AL.E / (12 * AL.rho));
-  assert.ok(Math.abs(thin.bend[0].f / f1 - 1) < 1e-4, `f₁ ${thin.bend[0].f} vs ${f1}`);
-  thin.bend.forEach((m, n) => assert.ok(Math.abs(m.f / thin.bend[0].f / EB_RATIOS[n] - 1) < 2e-4, `mode ${n + 1}: ${(m.f / thin.bend[0].f).toFixed(5)} vs ${EB_RATIOS[n].toFixed(5)}`));
+  assert.ok(Math.abs(thin[0] / f1 - 1) < 1e-4, `f₁ ${thin[0]} vs ${f1}`);
+  thin.forEach((f, n) => assert.ok(Math.abs(f / thin[0] / EB_RATIOS[n] - 1) < 2e-4, `mode ${n + 1}: ${(f / thin[0]).toFixed(5)} vs ${EB_RATIOS[n].toFixed(5)}`));
   // a thick plain bar (h/L = 0.06) falls below Euler–Bernoulli: shear and rotary inertia (Timoshenko)
   const thick = bendingFreqs3({ h0: 0.0127, a: 0, c: 0, d: 0 }, 0.21, 0.05);
   assert.ok(thick[1] / thick[0] < EB_RATIOS[1] - 0.01 && thick[2] / thick[0] < EB_RATIOS[2] - 0.05, `thick: ${(thick[1] / thick[0]).toFixed(3)}, ${(thick[2] / thick[0]).toFixed(3)}`);
 });
-test('torsion: a uniform bar twists at f_n = n·c_T/2L, c_T = √(GJ/ρI_p)', () => {
-  const b = 0.05, h = 0.0127, J = torsionJ(b, h), Ip = (b * h ** 3 + h * b ** 3) / 12, cT = Math.sqrt((G_AL * J) / (AL.rho * Ip));
-  const m = barModes({ h0: h, a: 0, c: 0, d: 0 }, 0.3, b);
-  m.tors.forEach((t, i) => assert.ok(Math.abs(t.f / (((i + 1) * cT) / 0.6) - 1) < 1e-3, `torsion ${i + 1}: ${t.f.toFixed(2)} vs ${(((i + 1) * cT) / 0.6).toFixed(2)}`));
+test('torsion: a uniform (plain) bar twists at f_n = n·c_T/2L, c_T = √(GJ/ρI_p)', () => {
+  for (const k of [KEY_LO, KEY_HI]) {
+    const bar = barModel(k, 0), { b, h0: h, L } = bar.geom, J = torsionJ(b, h), Ip = (b * h ** 3 + h * b ** 3) / 12, cT = Math.sqrt((G_AL * J) / (AL.rho * Ip));
+    const tors = bar.modes.filter((m) => m.kind === 'tors');
+    assert.equal(tors.length, 2);
+    tors.forEach((t, i) => assert.ok(Math.abs(t.f / (((i + 1) * cT) / (2 * L)) - 1) < 1e-3, `key ${k}, torsion ${i + 1}: ${t.f.toFixed(2)} vs ${(((i + 1) * cT) / (2 * L)).toFixed(2)}`));
+  }
 });
-test('the banded Sturm-bisection solver agrees with the dense generalised eigensolver (shared/linalg.js genEig)', () => {
-  const g = barGeometry(60), nodes = halfMesh(g.cut, g.L), { K, M, n } = assembleBending(nodes, g.cut, g.b);
+test('the banded Sturm-bisection solvers (bar.js and the C++) agree with the dense generalised eigensolver (shared/linalg.js genEig)', () => {
+  const g = barModel(60).geom, nodes = halfMesh(g.cut, g.L), { K, M, n } = assembleBending(nodes, g.cut, g.b);
   // symmetric half (drop θ at the centre): dense K, M, then genEig
   const keep = [...Array(n).keys()].filter((i) => i !== 1), N = keep.length, Kd = new Float64Array(N * N), Md = new Float64Array(N * N);
   const band = (B, i, j) => { const a = Math.min(i, j), c = Math.max(i, j); return c - a > 3 ? 0 : B[a * 4 + c - a]; };
   keep.forEach((i, r) => keep.forEach((j, c) => { Kd[r * N + c] = band(K, i, j); Md[r * N + c] = band(M, i, j); }));
-  const { lambda } = genEig(Kd, Md, N, 1);
-  const m = barModes(g.cut, g.L, g.b);
-  for (const [n1, idx] of [[0, 1], [2, 2], [4, 3]]) assert.ok(Math.abs(Math.sqrt(lambda[idx]) / (2 * Math.PI) / m.bend[n1].f - 1) < 1e-9, `mode ${n1 + 1}`);
+  const { lambda } = genEig(Kd, Md, N, 1), dense = (idx) => Math.sqrt(lambda[idx]) / (2 * Math.PI);
+  const m = bends(barModel(60)), js = bendingFreqs3(g.cut, g.L, g.b);
+  for (const [n1, idx] of [[0, 1], [2, 2], [4, 3]]) assert.ok(Math.abs(dense(idx) / m[n1].f - 1) < 1e-9, `C++ mode ${n1 + 1}`);
+  for (const [n1, idx] of [[0, 1], [2, 2]]) assert.ok(Math.abs(dense(idx) / js[n1] - 1) < 1e-9, `bar.js mode ${n1 + 1}`);
 });
 test('undercut optimiser: every bar F3–F6 sits at 1 : 4 : 10 within 1 ¢ (and its fundamental within 0.1 ¢ of 12-TET)', () => {
   assert.equal(BAR_TABLE.length, KEY_HI - KEY_LO + 1);
   let worst = 0;
-  for (let k = KEY_LO; k <= KEY_HI; k++) {
-    const g = barGeometry(k), f = bendingFreqs3(g.cut, g.L, g.b);
-    const e = [cents(f[1] / f[0], 4), cents(f[2] / f[0], 10)];
-    assert.ok(Math.abs(cents(f[0], keyFreq(k))) < 0.1, `key ${k}: f₁ off by ${cents(f[0], keyFreq(k)).toFixed(3)} ¢`);
-    worst = Math.max(worst, ...e.map(Math.abs));
+  for (let k = KEY_LO; k <= KEY_HI; k++) { // the bars the C++ builds, by both FEMs
+    const bar = barModel(k), g = bar.geom, m = bends(bar);
+    for (const f of [bendingFreqs3(g.cut, g.L, g.b), m.map((x) => x.f)]) {
+      const e = [cents(f[1] / f[0], 4), cents(f[2] / f[0], 10)];
+      assert.ok(Math.abs(cents(f[0], keyFreq(k))) < 0.1, `key ${k}: f₁ off by ${cents(f[0], keyFreq(k)).toFixed(3)} ¢`);
+      worst = Math.max(worst, ...e.map(Math.abs));
+    }
   }
   assert.ok(worst < 1, `worst ${worst.toFixed(4)} ¢`);
   // and on a mesh twice as fine the tuning holds to a quarter of a cent (the mesh is converged)
   for (const k of [KEY_LO, 71, KEY_HI]) {
-    const g = barGeometry(k), f = bendingFreqs3(g.cut, g.L, g.b, 6);
+    const g = barModel(k).geom, f = bendingFreqs3(g.cut, g.L, g.b, 6);
     assert.ok(Math.abs(cents(f[1] / f[0], 4)) < 0.25 && Math.abs(cents(f[2] / f[0], 10)) < 0.25, `key ${k} fine mesh: ${cents(f[1] / f[0], 4).toFixed(3)}, ${cents(f[2] / f[0], 10).toFixed(3)} ¢`);
   }
 });
@@ -143,10 +194,12 @@ test('a plain bar (no undercut) must be half as long again to sound the same not
     assert.ok(r2 > 2.6 && r2 < EB_RATIOS[1] && r3 > 4.9 && r3 < EB_RATIOS[2], `key ${k}: ${r2.toFixed(3)} ${r3.toFixed(3)}`);
   }
 });
-test('losses: Zener peak η = Δ/2 at ωτ = 1 (Δ = 4.4×10⁻³ for aluminium); the cords barely touch mode 1', () => {
+test('losses: Zener\'s thermoelastic loss (Δ = 4.4×10⁻³ for aluminium) on a plain bar\'s bending modes; the cords barely touch mode 1', () => {
   assert.ok(Math.abs(ZENER_DELTA - 4.4e-3) < 1e-4, `Δ = ${ZENER_DELTA}`);
-  const h = 0.005, fPeak = (Math.PI * Math.PI * (167 / (AL.rho * 900))) / (2 * Math.PI * h * h);
-  assert.ok(Math.abs(zener(h, fPeak) / (ZENER_DELTA / 2) - 1) < 1e-9);
+  for (const k of [KEY_LO, 69, KEY_HI]) { // a uniform bar's strain energy is all bending but for its shear, which grows up the modes
+    const bar = barModel(k, 0), r = bends(bar).map((m) => m.sigTE / (Math.PI * m.f * zener(bar.geom.h0, m.f)));
+    assert.ok(r[0] > 0.98 && r.every((x, i) => x < 1 + 1e-9 && x > 0.8 && (!i || x < r[i - 1])), `key ${k}: σ_TE ${r.map((x) => x.toFixed(4)).join(', ')} × Zener's`);
+  }
   for (const k of [KEY_LO, 69, KEY_HI]) {
     const m = barModel(k).modes;
     assert.ok(m[0].sigSup < 0.01 * m[1].sigSup, `key ${k}: cords on mode 1 ${m[0].sigSup} vs mode 2 ${m[1].sigSup}`);
@@ -172,8 +225,8 @@ test('coupled modes: the damped quartic reduces to the two-oscillator formula ω
 });
 test('the disc opens its tube twice per turn; closing it adds end correction: less coupling, a flatter tube', () => {
   const bar = barModel(64), tg = tubeGeometry(64, bar), f = bar.modes[0].f, ts = tubeState(tg, f, { gap: 0.03, cd: 0.8 });
-  assert.equal(openFraction(0, 0.8), 1); assert.ok(Math.abs(openFraction(Math.PI, 0.8) - 1) < 1e-12);
-  assert.ok(Math.abs(openFraction(Math.PI / 2, 0.8) - 0.2) < 1e-12);
+  const open = coupling(ts, 0, f), again = coupling(ts, Math.PI, f); // edge-on again after half a turn
+  assert.ok(Math.abs(again.kappa / open.kappa - 1) < 1e-12 && Math.abs(again.ft / open.ft - 1) < 1e-12);
   let prevK = Infinity, prevF = Infinity;
   for (let th = 0; th <= Math.PI / 2 + 1e-9; th += Math.PI / 16) {
     const c = coupling(ts, th, f);

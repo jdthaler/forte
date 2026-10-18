@@ -3,7 +3,6 @@
 // plugins (tools/gen-native-params.mjs) all start here. No DOM, no Web Audio.
 
 import { GROUPS, DEFAULTS, PRESETS } from './glass-params.js';
-import { KEY_LO, KEY_HI } from './glass-model.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -12,15 +11,13 @@ export const INSTRUMENT = {
   groups: GROUPS,
   presets: PRESETS,
   keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
-  range: [KEY_LO, KEY_HI],              // MIDI keys: F3–A6, 53–93
+  range: [53, 93],                      // MIDI keys: F3–A6 (Franklin: 37 bowls, G3–G6)
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
   // CC1: treadle speed, from the default (wheel at rest) to twice it: louder (the rim moves
   // faster) and a faster warble. Not the slider's full 3 rev/s: faster than ~1.2 rev/s the
   // big bowls can no longer speak.
   modWheel: { param: 'speed', max: 2 * DEFAULTS.speed },
-  engine: { name: 'ArmonicaEngine', module: new URL('./glass-engine.js', import.meta.url).href },
-  // the same physics in C++ (native/instruments/glass), built as WebAssembly: the page runs it
-  // when it can, the JavaScript engine otherwise
+  // the engine: the physics in C++ (native/instruments/glass), built as WebAssembly
   wasm: { name: 'ArmonicaWasmEngine', module: new URL('./glass-wasm.js', import.meta.url).href, binary: new URL('../wasm/glass.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room' },
 };

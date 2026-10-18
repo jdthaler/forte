@@ -1,5 +1,4 @@
-// windharp-engine.h — the real-time Wind Harp (windharp/src/windharp-engine.js in C++), on the
-// engine contract (forte/engine.h).
+// windharp-engine.h — the real-time Wind Harp, on the engine contract (forte/engine.h).
 //
 //   wind U(t) = slider (smoothed) × (1 + gusts) × (1 + aftertouch)
 //        │
@@ -10,14 +9,14 @@
 //
 // Each sample the string's modal accelerations give each station's acceleration, each station's van
 // der Pol wake advances by leapfrog, and the lift is projected back onto the modes, each of which
-// steps exactly under a first-order hold (windharp-engine.js has the details). A low string steps at
-// a half or a quarter of the sample rate. The wind follows the slider, two seeded Ornstein–Uhlenbeck
-// gusts and aftertouch, worked out once a block and ramped across it.
+// steps exactly under a first-order hold (windharp/README.md, "The engine", has the details). A low
+// string steps at a half or a quarter of the sample rate. The wind follows the slider, two seeded
+// Ornstein–Uhlenbeck gusts and aftertouch, worked out once a block and ramped across it.
 //
 // One voice per key: a course of one or two strings behind one shutter. A string's design is a
 // closed form (a few fixed-point loops, microseconds), made in noteOn into a fixed pool of voices:
-// nothing is allocated after the constructor. Seeded as the JavaScript, the engine plays what it
-// plays to the last bit of a double.
+// nothing is allocated after the constructor. Seeded, the engine plays the same samples to the
+// last bit of a double everywhere.
 #pragma once
 
 #include <cstdint>
@@ -29,8 +28,8 @@
 
 namespace forte::windharp {
 
-// What the engine posts for the page (windharp/src/windharp-wasm.js gathers them into the JavaScript
-// engine's 'harp' message): the focused string's arrays and the sounding keys first, the summary last.
+// What the engine posts for the page (windharp/src/windharp-wasm.js gathers them into its 'harp'
+// message): the focused string's arrays and the sounding keys first, the summary last.
 namespace msg {
 enum : uint16_t {
   harp = 1,  // key (the focus, or −1); U, Uw, voices, N, J, Om, D, L, lock, amp, home, x, Uv, Re, course, nk
@@ -40,12 +39,11 @@ enum : uint16_t {
 }
 
 // The longest block process() takes in one piece (a longer one is split). The hosts call it with
-// at most 128 samples; the JavaScript engine takes a block of any length in one piece (its wind is
-// worked out once a block), and its tests play some in blocks of 256 and 512, which the
-// WebAssembly passes whole (windharp_process).
+// at most 128 samples; the tests play some in blocks of 256 and 512 (the wind is worked out once a
+// block), which the WebAssembly passes whole (windharp_process).
 constexpr int BLOCK = 512;
 
-// The JavaScript engine's options, for the tests.
+// The engine's options, for the tests.
 struct EngineOptions {
   double eps = WAKE.eps; // the wake's ε (tests may turn it down to see the linear coupled-mode growth)
   double noise = 1;      // scales the wake's turbulence (tests)
@@ -58,8 +56,7 @@ class WindHarpEngine : public Engine {
   static constexpr int POOL = 48;       // voices, with those fading out
   using Options = EngineOptions;
   explicit WindHarpEngine(double fs, double seed = 1, Options opts = {});
-  // the tests' hooks (windharp-engine.js's constructor arguments): the seed and the options. Call
-  // before playing.
+  // the tests' hooks: the seed and the options. Call before playing.
   void configure(double seed, Options opts);
 
   void setParams(const double *P) override;
@@ -103,7 +100,7 @@ class WindHarpEngine : public Engine {
 
   // read and written by the tests (through the WebAssembly's hooks)
   double wind(int n);       // the wind at the end of a block of n samples
-  Voice *voices[POOL] = {}; // the voices in the JavaScript engine's order
+  Voice *voices[POOL] = {}; // the voices in the order they started
   int nv = 0;
   Voice pool[POOL];
   Voice *byKey[128] = {};

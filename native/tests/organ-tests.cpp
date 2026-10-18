@@ -1,8 +1,8 @@
 // organ-tests.cpp — the tonewheel organ's engine in C++: the gears, the foldback and V8's tanh and
-// hypot; two renders the JavaScript engine's to the last bit (sums of its samples from
-// organ-engine.js, written here by hand); a key plays its wheel; the console's parameters; the
+// hypot; two renders the retired JavaScript engine's to the last bit (sums of its samples,
+// written here by hand); a key plays its wheel; the console's parameters; the
 // state for the page; and ten keys fit the CPU budget. The physics tests are the JavaScript
-// suite's, run on the WebAssembly (FORTE_ENGINE=wasm). The plugin's switches (CC1, CC64, Space)
+// suite's, run on the WebAssembly (node test/organ-tests.mjs). The plugin's switches (CC1, CC64, Space)
 // are in organ-plugin-tests.cpp.
 
 #include <chrono>
@@ -24,7 +24,7 @@ static std::vector<double> defaults() {
   return P;
 }
 struct Render { double sum = 0; float lastL = 0, lastR = 0; };
-// n samples in blocks of 128, as the JavaScript renders, with `changes` before each block
+// n samples in blocks of 128, as the worklet renders, with `changes` before each block
 template <class F> static Render render(OrganEngine &e, int n, F changes) {
   Render r;
   std::vector<float> L(128), R(128);

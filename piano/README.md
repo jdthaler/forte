@@ -101,16 +101,14 @@ The pieces that couple to the modes:
 * **Soundboard and room**: synthetic impulse responses (dense plate modes and
   a diffuse tail), applied with ConvolverNodes.
 
-In C++, the same model and engine run as WebAssembly on this page (the
-JavaScript is the fallback; `?engine=js` in the address forces it): the page
-builds each key's modes with its own WebAssembly model and sends them with the
-note, and the views (info panel, cross-section, slow motion, partials) call
-that model too. They also run as plugins (CLAP, VST3, AU and a standalone
-app), with MIDI velocity as hammer speed, CC64 the damper pedal, CC67 the soft
-pedal, and the soundboard and room in the plugin's own output chain; there
-each key's modes are built on a background thread. The WebAssembly plays what
-the JavaScript plays to within 2·10⁻⁹ (float rounding), and the same test
-suite passes on it. Ten notes take about 4 % of a core in C++.
+The model and engine are written in C++ and run as WebAssembly on this page:
+the page builds each key's modes with its own WebAssembly model and sends them
+with the note, and the views (info panel, cross-section, slow motion,
+partials) call that model too. They also run as plugins (CLAP, VST3, AU and a
+standalone app), with MIDI velocity as hammer speed, CC64 the damper pedal,
+CC67 the soft pedal, and the soundboard and room in the plugin's own output
+chain; there each key's modes are built on a background thread. Ten notes
+take about 4 % of a core.
 
 The tension of each key is not set by hand. As a piano tuner would, the model
 retunes it so the fundamental of whichever bending axis faces the hammer
@@ -172,17 +170,15 @@ numbers below are for C4 and come from the model:
 
 ```
 index.html, style.css     UI (this folder)
-src/physics.js            sections, scale design, closed-form + Ritz modes, tuning, voice data
-src/piano-instrument.js   the instrument without its page: parameters, engine, voice data (cached), output chain
-src/engine.js             real-time modal engine: hammer, bridge coupling, dampers (also runs in Node;
-                          in the browser through ../shared/worklet.js)
+src/materials.js          materials, cross-section shapes, note names (the C++ model's inputs, for the controls and views)
+src/piano-instrument.js   the instrument without its page: parameters, the WebAssembly engine, output chain
 src/main.js               UI, keyboard / MIDI, focus-key analysis
 src/viz.js                slow-motion 3D view, partial spectrum / inharmonicity, cross-section
-src/piano-wasm.js         the C++ engine and model as WebAssembly (wasm/piano.wasm)
+src/piano-wasm.js         the engine and model as WebAssembly (wasm/piano.wasm; in the browser through ../shared/worklet.js)
 ../native/instruments/piano/  the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
 ../shared/impulses.js     synthetic soundboard and room impulse responses
 src/params.js             every parameter, with ranges, hints and presets
-../test/piano-tests.mjs   physics + engine checks:  node test/piano-tests.mjs (FORTE_ENGINE=wasm: on the WebAssembly)
+../test/piano-tests.mjs   physics + engine checks:  node test/piano-tests.mjs
 ../tools/render-piano.mjs offline renders of the presets
 ```
 

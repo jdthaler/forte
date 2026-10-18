@@ -1,4 +1,4 @@
-// plucked-string.cpp — one string, its contacts and its plectra, as string.js runs them.
+// plucked-string.cpp — one string, its contacts and its plectra (plucked-string.h).
 
 #include "plucked-string.h"
 

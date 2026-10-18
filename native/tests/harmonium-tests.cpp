@@ -3,7 +3,7 @@
 // an A4 speaking in tune (its reeds designed on the worker thread), a note struck before its
 // reeds are ready, the musette's beats, release and retirement, extreme settings, the views'
 // messages, and ten keys in the CPU budget. The physics tests are the JavaScript suite's, run on
-// the WebAssembly (FORTE_ENGINE=wasm).
+// the WebAssembly (node test/harmonium-tests.mjs).
 
 #include <chrono>
 #include <cmath>

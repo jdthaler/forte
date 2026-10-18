@@ -1,11 +1,22 @@
 // Physics + engine checks. Run: node test/piano-tests.mjs
+// Both are the C++ (native/instruments/piano), built as WebAssembly: the model through piano-wasm.js.
 import assert from 'node:assert/strict';
-import { genEig, computeKeyModel, buildVoiceData, keyFreq, BRIDGE_G, sectionProps, MATERIALS, pianoHammer } from '../piano/src/physics.js';
+import { genEig } from '../shared/linalg.js';
+import { keyFreq } from '../shared/dsp.js';
+import { MATERIALS } from '../piano/src/materials.js';
 import { DEFAULTS } from '../piano/src/params.js';
 import { INSTRUMENT } from '../piano/src/piano-instrument.js';
+import { wasmModel } from '../piano/src/piano-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 
-const PianoEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const PianoEngine = await loadEngine(INSTRUMENT);
+const { keyModel, sectionProps } = await wasmModel();
+// A key's string model and voice data (keyModel caches only the latest version of a key, so
+// these return what was asked for when it was asked).
+const computeKeyModel = (key, P, fs) => keyModel(key, P, fs).model;
+const voiceData = (key, P, fs = FS) => keyModel(key, P, fs).data;
+// The bridge's admittance at the default setting (piano-model.h), for the closed-form decay.
+const BRIDGE_G = 6e-4;
 
 const FS = 48000;
 let failures = 0;
@@ -106,7 +117,7 @@ test('tapered ("triangular") ribbon stays in tune, partials go inharmonic', () =
 test('tapered ribbon: the hammer’s lever is the half-width where it strikes', () => {
   for (const taper of [-0.9, 0.9]) {
     const p = P({ shape: 'ribbon', aspect: 12, taper, offset: 1, unisons: 1 });
-    const m = computeKeyModel(60, p, FS), vd = buildVoiceData(m, p);
+    const m = computeKeyModel(60, p, FS), vd = voiceData(60, p);
     const local = m.secAt(m.xh).lever, famT = m.families[2];
     assert.ok(Math.abs(local / m.sec.lever - 1) > 0.3, 'taper should change the width under the hammer');
     const i = vd.famId.indexOf(2);
@@ -116,7 +127,7 @@ test('tapered ribbon: the hammer’s lever is the half-width where it strikes', 
 
 test('edge-on ribbon: no oscillators for the family the hammer cannot reach', () => {
   const p = P({ shape: 'ribbon', aspect: 12, roll: 90 });
-  const vd = buildVoiceData(computeKeyModel(60, p, FS), p);
+  const vd = voiceData(60, p);
   assert.ok(!vd.famId.includes(0), 'easy-axis family should be dropped');
   let wmax = 0;
   for (let i = 0; i < vd.n; i++) wmax = Math.max(wmax, Math.abs(vd.w[i]));
@@ -125,12 +136,11 @@ test('edge-on ribbon: no oscillators for the family the hammer cannot reach', ()
 
 console.log('engine');
 function render(key, params, seconds, vel = 2.5) {
-  const m = computeKeyModel(key, params, FS);
-  const vd = buildVoiceData(m, params, 1);
+  const { model: m, data: vd, packed } = keyModel(key, params, FS);
   const eng = new PianoEngine(FS);
   const n = Math.round(seconds * FS), L = new Float32Array(n), R = new Float32Array(n);
   const bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
-  const v = eng.noteOn(key, vel, vd);
+  const v = eng.noteOn(key, vel, packed);
   let contactMs = null;
   for (let s = 0; s < n; s += bl) {
     eng.process(bL, bR, bl);
@@ -215,9 +225,9 @@ test('bridge coupling gives double decay with detuned unisons', () => {
 });
 
 test('off-centre strike on a ribbon excites torsion; centred does not', () => {
-  const centred = buildVoiceData(computeKeyModel(60, P({ shape: 'ribbon' }), FS), P({ shape: 'ribbon' }));
+  const centred = voiceData(60, P({ shape: 'ribbon' }));
   const off = P({ shape: 'ribbon', offset: 0.7 });
-  const offd = buildVoiceData(computeKeyModel(60, off, FS), off);
+  const offd = voiceData(60, off);
   assert.ok(!centred.famId.includes(2));
   assert.ok(offd.famId.includes(2));
   const r = render(60, off, 0.3);
@@ -228,7 +238,7 @@ test('voice stealing never takes a chord that has just been struck', () => {
   const eng = new PianoEngine(FS);
   eng.setParams({ maxModes: 1500 });
   eng.setSustain(true);
-  const vd = (k) => buildVoiceData(computeKeyModel(k, P(), FS), P(), 1);
+  const vd = (k) => keyModel(k, P(), FS).packed;
   const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
   for (let k = 60; k <= 100 && eng.modeCount() + 60 < 1500; k++) { eng.noteOn(k, 2.5, vd(k)); for (let i = 0; i < 10; i++) eng.process(L, R, bl); }
   const chord = [48, 52, 55, 59].map((k) => eng.noteOn(k, 2.5, vd(k))); // one block, unheard yet
@@ -241,7 +251,7 @@ test('voice stealing never takes a chord that has just been struck', () => {
 test('live gains and stereo spread glide: no zipper click', () => {
   // ratio of the strongest 3rd-difference spike near the change to its RMS before it
   const click = (change) => {
-    const p = P(), eng = new PianoEngine(FS), vdat = buildVoiceData(computeKeyModel(48, p, FS), p, 1);
+    const p = P(), eng = new PianoEngine(FS), vdat = keyModel(48, p, FS).packed;
     eng.noteOn(48, 2.5, vdat);
     const n = FS, x = new Float64Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
     for (let s = 0; s < n; s += bl) { if (s === 24064) change(eng); eng.process(bL, bR, bl); for (let i = 0; i < bl; i++) x[s + i] = bL[i]; }
@@ -271,7 +281,7 @@ test('treble balance: C6–C8 within 8 dB of C4 at a medium blow, contact under 
   assert.ok(worst > -8, `key ${wk}: ${worst.toFixed(1)} dB`);
   const c7 = level(96).ms, c8 = level(108).ms;
   assert.ok(c7 < 1 && c8 < 0.6 && c8 < c7, `contact C7 ${c7.toFixed(2)} ms, C8 ${c8.toFixed(2)} ms`);
-  const hd = pianoHammer(108), h7 = pianoHammer(96);
+  const hd = computeKeyModel(108, P(), FS).info.hammer, h7 = computeKeyModel(96, P(), FS).info.hammer;
   assert.ok(hd.p === h7.p && hd.mass <= h7.mass, 'no extrapolation of the felt beyond C7');
   console.log(`        quietest key above C6: ${worst.toFixed(1)} dB re C4 (key ${wk}); contact C7 ${c7.toFixed(2)} ms, C8 ${c8.toFixed(2)} ms`);
 });
@@ -280,10 +290,10 @@ test('una corda: the missed string is driven through the bridge, and the afterso
   const db = (x, a, b) => { let e = 0; for (let i = a; i < b; i++) e += x[i] * x[i]; return 10 * Math.log10(e / (b - a)); };
   const run = (una) => {
     const p = P({ unisons: 3, unisonDetune: 1, maxFreq: 1500 });
-    const vdat = buildVoiceData(computeKeyModel(48, p, FS), p, 1);
+    const { data: vdat, packed } = keyModel(48, p, FS);
     const eng = new PianoEngine(FS);
-    eng.setParams({ unaCorda: una });
-    const v = eng.noteOn(48, 2.5, vdat);
+    eng.setParams({ ...p, unaCorda: una });
+    const v = eng.noteOn(48, 2.5, packed);
     const n = 4 * FS, x = new Float64Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
     let missed = 0, hit = 0;
     for (let s = 0; s < n; s += bl) {
@@ -327,9 +337,9 @@ test('real-time budget', () => {
   const params = P({ unisons: 2 });
   let modes = 0;
   for (const key of [36, 43, 48, 52, 55, 60, 64, 67, 72, 76]) {
-    const vd = buildVoiceData(computeKeyModel(key, params, FS), params, 1);
-    eng.noteOn(key, 2.5, vd);
-    modes += vd.n;
+    const vd = keyModel(key, params, FS);
+    eng.noteOn(key, 2.5, vd.packed);
+    modes += vd.data.n;
   }
   const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
   for (let i = 0; i < 200; i++) eng.process(L, R, bl); // warm up + hammers done

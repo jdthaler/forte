@@ -1,4 +1,4 @@
-// clavier-model.cpp — the tangent clavier's physics, as clavier-model.js computes it.
+// clavier-model.cpp — the tangent clavier's physics (clavier-model.h).
 
 #include "clavier-model.h"
 

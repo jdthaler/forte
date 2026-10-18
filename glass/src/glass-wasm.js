@@ -1,7 +1,6 @@
-// glass-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// glass-wasm.js — the engine and model, built as WebAssembly from the physics in C++
 // (native/instruments/glass): ArmonicaWasmEngine, with the engine contract, and the model's
-// functions for the views. The page runs it when it can and falls back to the JavaScript
-// (glass-engine.js).
+// functions for the views and the tests.
 
 import { GROUPS } from './glass-params.js';
 import { wasmEngine, scratch } from '../../shared/wasm.js';
@@ -9,10 +8,12 @@ import { wasmEngine, scratch } from '../../shared/wasm.js';
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'glass', name: 'ArmonicaWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/glass.wasm', import.meta.url).href };
 
-const N_MAX = 6, MODES = N_MAX - 1, TRACE = 1024;
+const N_MAX = 6, MODES = N_MAX - 1;
+export const TRACE = 1024;                                    // samples of contact history for the view (glass-engine.h)
+export const MIC = [35, 55].map((d) => (d * Math.PI) / 180); // microphone azimuths, from the finger (glass-engine.cpp)
 
-// The C++ engine's messages (glass-engine.h, msg) back into the JavaScript engine's 'state': the
-// focused bowl's modes and its contact trace come first, the state last.
+// The C++ engine's messages (glass-engine.h, msg) into the views' 'state': the focused bowl's
+// modes and its contact trace come first, the state last.
 function views(m, e) {
   const s = (e.views ??= { type: 'state', key: -1, theta: 0, rot: 0, N: 0, V: 0, touch: false, nm: 0,
     q: new Float64Array(4 * N_MAX), trS: new Float32Array(TRACE), trF: new Float32Array(TRACE) });
@@ -30,7 +31,7 @@ function views(m, e) {
 
 const Base = wasmEngine(BUILD, { messages: views });
 
-// a bowl from its flat form (glass-web.cpp, putBowl), as glass-model.js's bowl() has it
+// a bowl from its flat form (glass-web.cpp, putBowl): { key, a, h, f0, modes, mass }
 const MODE = ['n', 'f', 'fEmpty', 'load', 'f1', 'f2', 'sigma', 'M', 'bryan', 'rad', 'psi'];
 function bowlOf(key, a) {
   const modes = [];
@@ -39,7 +40,7 @@ function bowlOf(key, a) {
 }
 const BOWL_SIZE = 5 + MODE.length * MODES;
 
-// The engine, with the JavaScript engine's test hooks: e.voices (each voice's normal force,
+// The engine, with the tests' hooks: e.voices (each voice's normal force,
 // regulation, modal state and bowl; Nn and the modal state can be written) and the focused
 // bowl's contact trace (e.trS, e.trF, e.tw).
 export class ArmonicaWasmEngine extends Base {
@@ -68,8 +69,8 @@ export class ArmonicaWasmEngine extends Base {
 }
 export const ready = () => ArmonicaWasmEngine.ready();
 
-// The model's functions the views call (glass-model.js's bowl, freeLines, ringRatio,
-// speakingThreshold, regulation, rimSpeed, transport), computed by the WebAssembly.
+// The model's functions (glass-model.h: bowl, freeLines, ringRatio, speakingThreshold, regulation,
+// rimSpeed, transport), computed by the WebAssembly.
 export async function wasmModel() {
   const x = await ready(), s = scratch(x);
   return {

@@ -1,7 +1,12 @@
 // clavier-params.js — the knobs. Every parameter has a physical meaning and
 // a unit; the hint says what it does to the sound.
 
-import { MUTE_K, MUTE_R } from './clavier-model.js';
+// The model's constants that the page and the knobs' readouts need (as clavier-model.h has them).
+export const LO = 29, HI = 88;                 // F1 … E6, 60 keys
+export const STRENGTH = 2.6e9;                 // Pa: the music wire's breaking stress
+export const PRESS_MAX = 12;                   // N: extra key force at full aftertouch (or pitch wheel)
+export const MUTE_K = 400, MUTE_R = 1.2;       // N/m, N·s/m: the mute felt at full pressure
+export const REST_GAP = 1.5e-3;                // m: tangent tip above the string at rest
 
 const mm = (v) => `${v < 1 ? v.toFixed(2) : v.toFixed(1)} mm`;
 const cm = (v) => `${v.toFixed(1)} cm`;

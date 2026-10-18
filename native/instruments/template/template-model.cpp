@@ -1,4 +1,4 @@
-// template-model.cpp — the template's physics, as template-model.js computes it.
+// template-model.cpp — the template's physics (template-model.h).
 
 #include "template-model.h"
 

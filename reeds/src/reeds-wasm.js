@@ -1,7 +1,6 @@
-// reeds-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// reeds-wasm.js — the engine and model, built as WebAssembly from the physics in C++
 // (native/instruments/reeds): ReedWasmEngine, with the engine contract, and the model's functions
-// for the views. The page runs it when it can and falls back to the JavaScript (reeds-engine.js,
-// reeds-model.js).
+// for the views and the tests.
 
 import { GROUPS } from './reeds-params.js';
 import { wasmEngine, nativeParams, nativeValue, scratch } from '../../shared/wasm.js';
@@ -12,28 +11,18 @@ const BUILD = { id: 'reeds', name: 'ReedWasmEngine', groups: GROUPS, binary: () 
 const Base = wasmEngine(BUILD);
 
 // Voice data as the C++ takes it (reeds-model.h, packVoiceData): version, key, n, the hammer's
-// mass, K, p, alpha, then freq, sigma, w, pk, dampW. A JavaScript voice data's version (the
-// descriptor's reedKey) becomes a number.
-const HEAD = 7, ARRAYS = ['freq', 'sigma', 'w', 'pk', 'dampW'];
-const versions = new Map();
-const versionId = (v) => { if (!versions.has(v)) versions.set(v, versions.size + 1); return versions.get(v); };
-export function packVoiceData(d) {
-  const n = d.n, out = new Float64Array(HEAD + ARRAYS.length * n);
-  out.set([versionId(d.version), d.key, n, d.hammer.mass, d.hammer.K, d.hammer.p, d.hammer.alpha]);
-  ARRAYS.forEach((k, i) => out.set(d[k].subarray(0, n), HEAD + i * n));
-  return out;
-}
-export function unpackVoiceData(a) {
+// mass, K, p, alpha, then freq, sigma, w, pk, dampW; unpacked for the views.
+const HEAD = 7;
+function unpackVoiceData(a) {
   const n = a[2], at = (i) => a.slice(HEAD + i * n, HEAD + (i + 1) * n);
   return { version: a[0], key: a[1], n, freq: at(0), sigma: at(1), w: at(2), pk: at(3), dampW: at(4), hammer: { mass: a[3], K: a[4], p: a[5], alpha: a[6] } };
 }
 
-// The engine, with the JavaScript engine's test hooks: its voices (key, dead, killing, frame hits,
-// peak, …, and the data object a note brought, where it was a JavaScript one) and byKey; its slot
-// and comb node (fs2, kF, nodeA, nodeB, y0, cRest, the C(y) tables…, read back from its memory);
-// and a voice the suite pushes (an object with render(buf, n)), whose δC goes into the comb node.
-// A note may bring its reed's data: packed by the page's WebAssembly model (wasmModel().voiceData),
-// or a JavaScript voice data object (the tests), packed here.
+// The engine, with the tests' hooks: its voices (key, dead, killing, frame hits, peak, …, and the
+// version of the reed it plays) and byKey; its slot and comb node (fs2, kF, nodeA, nodeB, y0,
+// cRest, the C(y) tables…, read back from its memory); and a voice the suite pushes (an object
+// with render(buf, n)), whose δC goes into the comb node. A note may bring its reed's data, packed
+// by the page's WebAssembly model (wasmModel().voiceData); without it the engine builds the reed.
 const VOICE = ['key', 'dead', 'killing', 'hits', 'peak', 'hammerOn', 'keyDown', 'damped', 'own', 'contactSamples', 'Fmax', 'N', 'yMin', 'yMax', 'version'];
 const FLAGS = new Set(['dead', 'killing', 'hammerOn', 'keyDown', 'damped', 'own']);
 const STATE = ['fs2', 'damperSigma', 'hammerMax', 'kF', 'nodeA', 'nodeB', 'y0', 'cRest', 'dRest', 'y0N', 'cRestN', 'dRestN', 'blend', 'twoTables'];
@@ -43,15 +32,13 @@ export class ReedWasmEngine extends Base {
     super(fs);
     const x = Base.exports;
     this.e = x.forte_engine(this.h);
-    this.sent = new Map(); // the JavaScript data objects notes brought, by version
     this.pushed = [];      // voices the tests push
     if (!slotN) { const s = scratch(x); x.reeds_slot_grid(s.at); slotN = s.f64(3)[2]; }
   }
   noteOn(key, velocity, data) {
     if (data) {
-      const packed = data instanceof Float64Array ? data : packVoiceData(data), x = Base.exports, s = scratch(x);
-      if (!(data instanceof Float64Array)) this.sent.set(packed[0], data);
-      if (packed.length * 8 <= s.size) { s.f64(packed.length).set(packed); x.reeds_offer(this.e, s.at, packed.length); }
+      const x = Base.exports, s = scratch(x);
+      if (data.length * 8 <= s.size) { s.f64(data.length).set(data); x.reeds_offer(this.e, s.at, data.length); }
     }
     super.noteOn(key, velocity);
   }
@@ -59,9 +46,7 @@ export class ReedWasmEngine extends Base {
     const x = Base.exports, s = scratch(x), out = s.f64(VOICE.length);
     const list = Array.from({ length: x.reeds_voices(this.e) }, (_, i) => {
       x.reeds_voice(this.e, i, s.at);
-      const v = Object.fromEntries(VOICE.map((k, j) => [k, FLAGS.has(k) ? out[j] > 0 : out[j]]));
-      v.data = this.sent.get(v.version);
-      return v;
+      return Object.fromEntries(VOICE.map((k, j) => [k, FLAGS.has(k) ? out[j] > 0 : out[j]]));
     });
     list.push(...this.pushed);
     Object.defineProperty(list, 'push', { value: (...v) => this.pushed.push(...v) });
@@ -93,10 +78,14 @@ export class ReedWasmEngine extends Base {
 for (const k of STATE) if (k !== 'kF') Object.defineProperty(ReedWasmEngine.prototype, k, { get() { return this.state[k]; } });
 export const ready = () => ReedWasmEngine.ready();
 
-// The model's functions the views call (reeds-model.js's keyModel, capCurve, pickupNode,
-// electrostaticShift, hammerSpeed; reeds-engine.js's traceStrike), computed by the WebAssembly,
-// and voiceData: a key's reed packed for the WebAssembly engine (the page's noteData). reedModel
-// keeps each key's model until the reed parameters change, as reeds-instrument.js does.
+// The model's functions the views and the tests call, computed by the WebAssembly (reeds-model.cpp,
+// reeds-web.cpp): keyModel(m, P, fs), a key's reed at rate fs (info, the FEM reed with its mode
+// shapes, the kept modes, the voice data, packed); capCurve(gap), the slot's C(y); pickupNode(P),
+// the comb node; electrostaticShift(model, P), the field's pull; hammerSpeed(vel); traceStrike,
+// one strike sample by sample; voiceData: a key's reed packed for the engine (the page's
+// noteData); and, for the tests, losslessStrike and reedFEM, the bare reed. reedModel keeps each
+// key's model (at the engine's rate, twice fs) until the reed parameters change: a reed struck
+// again after they change is a different reed.
 const INFO = ['key', 'f0', 'L', 'h', 'b', 'mReed', 'M', 'J', 'blobSide', 'ratio', 'xh', 'xd', 'xp'];
 const MODE = ['n', 'f', 'ratio', 'bare', 'sigma', 'sigSteel', 'sigClamp', 'w', 'pk', 'dampW', 'Gamma', 'Theta'];
 export async function wasmModel() {
@@ -104,7 +93,7 @@ export async function wasmModel() {
   x.reeds_slot_grid(s.at);
   const [y0, dy, nY] = s.f64(3);
 
-  // key m's reed at the engine's rate fs (twice the audio rate), as reeds-model.js's keyModel
+  // key m's reed at rate fs (the engine's: twice the audio rate)
   function keyModel(m, P, fs) {
     const n = x.reeds_key_model(m, P.solder, P.strike, P.hardness, fs, s.at), a = s.f64(n).slice();
     const info = Object.fromEntries(INFO.map((k, i) => [k, a[i]]));
@@ -115,8 +104,8 @@ export async function wasmModel() {
     const take = (k) => { const v = a.subarray(i, i + k); i += k; return v; };
     const modes = Array.from({ length: kept }, () => { const v = take(MODE.length); return Object.fromEntries(MODE.map((k, j) => [k, v[j]])); });
     const omega = Array.from(take(nv)), Gamma = Array.from(take(nv)), Theta = Array.from(take(nv)), X = take(N * nv).slice();
-    // the FEM's mode shape (unit modal mass) at x ∈ [0, L], from its nodes' degrees of freedom, as
-    // reedFEM's shape interpolates them (Hermite cubics)
+    // the FEM's mode shape (unit modal mass) at x ∈ [0, L], from its nodes' degrees of freedom,
+    // interpolated by its elements' Hermite cubics
     const L = info.L, l = L / nel;
     const shape = (j, xx) => {
       const xc = Math.min(L, Math.max(0, xx)), e = Math.min(nel - 1, Math.floor(xc / l)), xi = xc / l - e;
@@ -155,7 +144,8 @@ export async function wasmModel() {
       return { kE, cents };
     },
     hammerSpeed: (vel) => x.reeds_hammer_speed(vel),
-    // one strike of key's reed (built at 2 fs, as the page's noteData), as reeds-engine.js's traceStrike
+    // one strike of key's reed (built at 2 fs, as the page's noteData), sample by sample at the
+    // engine's rate: the tip y, δC, the node's volts, the modes q and hammer eta for nFrames samples
     traceStrike(key, P, velocity, fs, seconds, nFrames = 0) {
       const a = s.f64(params.length);
       params.forEach((p, i) => { a[i] = nativeValue(p, P[p.id]); });
@@ -167,6 +157,20 @@ export async function wasmModel() {
         fs2: h[0], n, N, y: arr(0, n), dC: arr(1, n), volt: arr(2, n), q: arr(3, nFrames * N), eta: arr(4, nFrames), nFrames,
         release: h[4], amps: h.slice(7, 7 + N), contactMs: h[5], Fmax: h[6],
       };
+    },
+    // a lossless strike (no damping, no felt hysteresis, no pull from the field), for the tests'
+    // energy balance: the hammer's mass, launch speed v0 and last speed in flight vh, the samples
+    // in contact, and each mode's ω and coordinate on the last two samples (q, q1; unit modal mass)
+    losslessStrike(key, P, velocity, fs, seconds) {
+      const a = s.f64(params.length);
+      params.forEach((p, i) => { a[i] = nativeValue(p, P[p.id]); });
+      const n = x.reeds_lossless_strike(key, velocity, fs, seconds, s.at), r = s.f64(n).slice(), N = r[5];
+      return { mass: r[0], v0: r[1], vh: r[2], contactSamples: r[3], fs2: r[4], N, om: r.slice(6, 6 + N), q: r.slice(6 + N, 6 + 2 * N), q1: r.slice(6 + 2 * N, 6 + 3 * N) };
+    },
+    // the bare finite-element reed: a tongue L × h × b (m) with a tip mass M and rotary inertia J
+    reedFEM({ L, h, b, M = 0, J = 0, nModes = 6 }) {
+      const n = x.reeds_fem(L, h, b, M, J, nModes, s.at), r = s.f64(n).slice(), nv = r[3];
+      return { L, h, b, M, J, EI: r[0], mu: r[1], m: r[2], omega: Array.from(r.subarray(4, 4 + nv)), Gamma: Array.from(r.subarray(4 + nv, 4 + 2 * nv)), Theta: Array.from(r.subarray(4 + 2 * nv, 4 + 3 * nv)) };
     },
   };
 }

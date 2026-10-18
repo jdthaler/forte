@@ -1,6 +1,6 @@
 // engine-api.cpp — an instrument's engine for JavaScript, as C functions on a handle: the engine
 // contract (forte/engine.h) for the WebAssembly build. shared/wasm.js wraps them in a class with
-// the JavaScript engines' methods, so shared/worklet.js and the Node tests use it unchanged.
+// the contract's methods, which shared/worklet.js and the Node tests call.
 
 #include <cstring>
 #include <memory>

@@ -1,46 +1,41 @@
 // vibraphone-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName, useWasm } from '../../shared/shell.js';
+import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
-import { INSTRUMENT, dataFor, isBuilt } from './vibraphone-instrument.js';
-import * as jsModel from './vibraphone-model.js';
-import { KEY_LO, KEY_HI, DAMPER_X } from './vibraphone-model.js';
-import { thickness, EB_RATIOS } from './bar.js';
+import { INSTRUMENT } from './vibraphone-instrument.js';
+import { EB_RATIOS } from './bar.js';
 import { wasmModel } from './vibraphone-wasm.js';
 
-// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
-// physics as the engine, in C++), the JavaScript one until then or if it can't load.
-let model = { ...jsModel, thickness }, wasm = null;
-if (useWasm()) wasmModel().then((m) => { model = wasm = m; update(); warmUp(); }, (err) => console.warn(`vibraphone: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+// The views draw what the engine plays: its model, from the same C++, built as WebAssembly.
+const model = await wasmModel();
 
 const $ = (s) => document.querySelector(s);
 const TAU = 2 * Math.PI;
+const [KEY_LO, KEY_HI] = INSTRUMENT.range;
+const DAMPER_X = 0.05; // the felt damper bar presses on each bar this far (× L) from its inner end (vibraphone-model.h)
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 80, fHi: 20000 });
 let focus = 60, live = null, history = [], etPeak = 0;
 
-// The bars' modal data (a few ms each) is sent with each note, so the audio thread never
-// solves a bar: the JavaScript's (the descriptor keeps it) for the JavaScript engine, the
-// WebAssembly model's, packed, for the WebAssembly engine. Built ahead, a key at a time, when the
-// page is idle.
+// The bars' modal data (a few ms each) is sent with each note, packed by the model, so the audio
+// thread never solves a bar. Built ahead, a key at a time, when the page is idle.
 const packed = new Map();
-const wasmEngine = () => wasm && shell.engineKind !== 'js'; // until the worklet says, expect the WebAssembly
-function wasmData(key, depth) {
+function dataFor(key, depth) {
   const id = `${key}|${depth}`;
   let d = packed.get(id);
-  if (!d) { d = wasm.voiceData(key, depth); if (packed.size > 256) packed.clear(); packed.set(id, d); }
+  if (!d) { d = model.voiceData(key, depth); if (packed.size > 256) packed.clear(); packed.set(id, d); }
   return d;
 }
-const noteData = (key, vel, P) => (wasmEngine() ? wasmData(key, P.depth) : dataFor(key, P.depth));
+const noteData = (key, vel, P) => dataFor(key, P.depth);
 let warm = null;
 function warmUp() {
   clearTimeout(warm);
-  const depth = shell.P.depth, keys = [], w = wasmEngine();
-  for (let k = KEY_LO; k <= KEY_HI; k++) if (w ? !packed.has(`${k}|${depth}`) : !isBuilt(k, depth)) keys.push(k);
+  const depth = shell.P.depth, keys = [];
+  for (let k = KEY_LO; k <= KEY_HI; k++) if (!packed.has(`${k}|${depth}`)) keys.push(k);
   keys.sort((a, b) => Math.abs(a - focus) - Math.abs(b - focus));
   const step = () => {
     const k = keys.shift();
-    if (k === undefined || depth !== shell.P.depth || w !== wasmEngine()) return;
-    if (w) wasmData(k, depth); else dataFor(k, depth);
+    if (k === undefined || depth !== shell.P.depth) return;
+    dataFor(k, depth);
     warm = setTimeout(step, 15);
   };
   warm = setTimeout(step, 200);
@@ -55,7 +50,6 @@ const shell = createShell({
   onNoteOn: (key) => { if (key !== focus) history = []; focus = key; shell.keys.focus(key); update(); },
   onParam: (id) => { if (id === 'depth' || id === '*') warmUp(); update(); },
   onMessage: (m) => {
-    if (m.type === 'engine') { warmUp(); return; } // the worklet says which engine plays
     if (m.type !== 'vibe') return;
     live = { ...m, amp: Float64Array.from(m.amp), t: performance.now() / 1000 };
     etPeak = Math.max(m.Et, etPeak * 0.995);

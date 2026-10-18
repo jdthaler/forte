@@ -1,4 +1,4 @@
-// pyrophone-model.cpp — pyrophone/src/pyrophone-model.js in C++, operation for operation.
+// pyrophone-model.cpp — the singing tube's physics (pyrophone-model.h).
 
 #include "pyrophone-model.h"
 
@@ -136,7 +136,7 @@ Hopf hopf(const Tube &sys, int m, double bMax) {
 }
 
 // ---- limit cycles by harmonic balance ---------------------------------------------------------
-// Gaussian elimination with partial pivoting (solveDense in the JavaScript)
+// Gaussian elimination with partial pivoting
 using Mat = std::array<std::array<double, HB_X>, HB_X>;
 static void solveDense(Mat &A, HbX &b, HbX &x) {
   const int n = HB_X;

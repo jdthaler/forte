@@ -3,6 +3,18 @@
 
 const mm = (v) => `${v < 10 ? v.toFixed(1) : v.toFixed(0)} mm`;
 
+// The model's constants that the page needs (as harpsichord-model.h has them).
+export const KEY_LO = 29, KEY_HI = 89;        // FF – f³, 61 keys
+// Registers: which jacks pluck which strings, from which manual.
+export const ROWS = {
+  front: { string: 'front', manual: 'upper', name: 'front 8′' },
+  back: { string: 'back', manual: 'lower', name: 'back 8′' },
+  four: { string: 'four', manual: 'lower', name: '4′' },
+  lute: { string: 'back', manual: 'upper', name: 'lute' },
+};
+// Velocity 0..1 → jack speed: 8 cm/s (pp) … 80 cm/s (ff).
+export const jackSpeed = (vel) => 0.08 * 10 ** Math.min(1, Math.max(0, vel));
+
 export const GROUPS = [
   {
     title: 'Registration',

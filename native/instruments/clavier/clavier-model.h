@@ -1,5 +1,5 @@
 // clavier-model.h — the physics of a tangent-struck, magnetically sensed string, after the Hohner
-// Clavinet D6 (clavier/src/clavier-model.js in C++, operation for operation).
+// Clavinet D6.
 //
 // Each key has one steel string running from the tailpiece (x = 0) to its tuning pin. The key's
 // rubber tangent pins the string onto a metal anvil at x = L: the speaking length [0, L] rings
@@ -16,8 +16,8 @@
 // the engine solves both contacts implicitly.
 //
 // A key's model is closed-form (no eigen-solve): a bisection for the wound strings' cores and a
-// few hundred exponentials and sines, so the engine builds it when a key is struck, as the
-// JavaScript does. Only releasedFreqs, for the views and the tests, solves an eigenproblem.
+// few hundred exponentials and sines, so the engine builds it when a key is struck. Only
+// releasedFreqs, for the views and the tests, solves an eigenproblem.
 // P is indexed as in clavier-params.h. Units: SI unless a name says otherwise.
 #pragma once
 

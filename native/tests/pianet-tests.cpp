@@ -2,7 +2,7 @@
 // cantilever, every key cut to pitch, Kendall's pull-off, the engine on pitch with a note that
 // waits for its reed (forte/background.h), the release message, a re-cut reed while a note
 // sounds, voice stealing and Panic, every sample rate, and ten voices within the CPU budget.
-// The physics tests are the JavaScript suite's, run on the WebAssembly (FORTE_ENGINE=wasm).
+// The physics tests are the JavaScript suite's, run on the WebAssembly (node test/pianet-tests.mjs).
 
 #include <chrono>
 #include <cmath>

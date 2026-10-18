@@ -356,19 +356,16 @@ panned by key: thin, without the board's resonances.
   partial) give the next press new strings and fade the old.
 - **Allocation.** No allocation in `process()`: the strings are made when a
   key is first pressed.
-- **In C++**: the same engine and model run as WebAssembly on this page (the
-  JavaScript is the fallback; `?engine=js` in the address forces it), and its
-  views draw the WebAssembly model's strings and slow-motion pluck; and as
-  plugins (CLAP, VST3, AU and a standalone app), where CC64 holds the keys
-  down as Space does and the release velocity of a MIDI note-off sets how
-  fast the jacks fall. A plugin builds every key's strings (their partials
-  and the soundboard's admittance at each) on a worker thread whenever a
-  physics knob changes, and a note whose strings aren't ready yet waits a
-  few milliseconds for them; voices come from a fixed pool. The
-  WebAssembly plays what the JavaScript plays to within 10⁻⁸ of the peak
-  (float32 output rounding; most presets bit for bit), its model agrees to
-  10⁻¹³, and the same test suite passes on it. Ten keys of 8′ 8′ 4′ (30
-  strings) take about 5 % of a core in C++.
+- **In C++**: the engine and model are C++ (`native/instruments/harpsichord`).
+  They run as WebAssembly on this page, whose views draw the model's strings
+  and slow-motion pluck, and as plugins (CLAP, VST3, AU and a standalone
+  app), where CC64 holds the keys down as Space does and the release
+  velocity of a MIDI note-off sets how fast the jacks fall. A plugin builds
+  every key's strings (their partials and the soundboard's admittance at
+  each) on a worker thread whenever a physics knob changes, and a note
+  whose strings aren't ready yet waits a few milliseconds for them; voices
+  come from a fixed pool. Ten keys of 8′ 8′ 4′ (30 strings) take about 5 %
+  of a core in C++.
 
 ## What to listen for
 
@@ -410,15 +407,11 @@ for the last key over the live spectrum.
 
 ```
 harpsichord/index.html, style.css          page
-harpsichord/src/harpsichord-model.js       scale, tuning, losses, registers, voicing, soundboard (no audio, no DOM)
-harpsichord/src/plectrum.js                the plectrum as a cantilever; the quasi-static release
-harpsichord/src/string.js                  a string in modal form with implicit point contacts
-harpsichord/src/harpsichord-engine.js      real-time engine (AudioWorklet and Node)
-harpsichord/src/harpsichord-params.js      parameters and presets
+harpsichord/src/harpsichord-params.js      parameters and presets (and the model's constants the page needs)
 harpsichord/src/harpsichord-main.js        page wiring and views
-harpsichord/src/harpsichord-wasm.js        the C++ engine and model as WebAssembly (harpsichord/wasm/harpsichord.wasm)
-native/instruments/harpsichord/            the C++ port: model, plectrum, string, engine, generated tables, reference (plugins and WebAssembly)
-test/harpsichord-tests.mjs                 node test/harpsichord-tests.mjs (21 tests, ~25 s; FORTE_ENGINE=wasm: on the WebAssembly)
+harpsichord/src/harpsichord-wasm.js        the engine and model as WebAssembly (harpsichord/wasm/harpsichord.wasm), for the page and the tests
+native/instruments/harpsichord/            the physics in C++: model (scale, tuning, losses, registers, voicing, soundboard), plectrum (a cantilever; the quasi-static release), string (modal, with implicit point contacts), engine, generated tables, reference
+test/harpsichord-tests.mjs                 node test/harpsichord-tests.mjs (21 tests, ~25 s)
 tools/render-harpsichord.mjs               node tools/render-harpsichord.mjs → examples/harpsichord/
 ```
 

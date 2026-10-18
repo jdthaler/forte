@@ -3,9 +3,11 @@
 //
 // Name demos NN-what-you-hear; the landing page plays the first one.
 
-import { BubbleEngine } from '../bubbles/src/bubbles-engine.js';
-import { DEFAULTS } from '../bubbles/src/bubbles-params.js';
+import { INSTRUMENT, DEFAULTS } from '../bubbles/src/bubbles-instrument.js';
+import { loadEngine } from './engine.mjs';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
+
+const BubbleEngine = await loadEngine(INSTRUMENT);
 
 const FS = 48000, SLUG = 'bubbles';
 const P = (o = {}) => ({ ...DEFAULTS, ...o });

@@ -3,13 +3,15 @@
 //
 // Name demos NN-what-you-hear; the landing page plays the first one.
 
-import { OrganistaEngine } from '../bowed/src/bowed-engine.js';
-import { DEFAULTS } from '../bowed/src/bowed-params.js';
+import { INSTRUMENT, DEFAULTS } from '../bowed/src/bowed-instrument.js';
+import { loadEngine } from './engine.mjs';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
+
+const OrganistaEngine = await loadEngine(INSTRUMENT);
 
 const FS = 48000, SLUG = 'bowed';
 const P = (o = {}) => ({ ...DEFAULTS, ...o });
-const play = (params, seconds, events) => { const e = new OrganistaEngine(FS); e.setParams(params); return renderEngine(e, seconds, events, FS); };
+const play = (params, seconds, events) => { const e = new OrganistaEngine(FS); e.setParams(params); const out = renderEngine(e, seconds, events, FS); e.destroy(); return out; };
 // join A/B parts, fading the end of each (the soundboard is still ringing) over 60 ms
 const cat = (...parts) => [0, 1].map((c) => Float64Array.from(parts.flatMap((p) => {
   const x = Array.from(p[c]), n = Math.round(0.06 * FS);

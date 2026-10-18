@@ -246,9 +246,11 @@ for (const { id, dir } of described) {
     for (const k of ['volume', 'room', 'tone']) if (I.chain[k]) assert.ok(params.has(I.chain[k]), `chain.${k} ${I.chain[k]}`);
     if (I.chain.body) assert.ok(params.has(I.chain.body.param), `chain.body ${I.chain.body.param}`);
     assert.ok(params.has(I.chain.volume), 'chain.volume');
-    const E = (await import(I.engine.module))[I.engine.name];
-    assert.equal(typeof E, 'function', `${I.engine.module} exports ${I.engine.name}`);
-    for (const m of ['setParams', 'noteOn', 'noteOff', 'process']) assert.equal(typeof E.prototype[m], 'function', `${I.engine.name}.${m}`);
+    assert.ok(!I.engine && !I.engineParams, 'the engine is the C++ (wasm), not JavaScript');
+    assert.ok(I.wasm?.binary && has(new URL(I.wasm.binary).pathname.slice(R.pathname.length)), `wasm.binary ${I.wasm?.binary}`);
+    const E = (await import(I.wasm.module))[I.wasm.name];
+    assert.equal(typeof E, 'function', `${I.wasm.module} exports ${I.wasm.name}`);
+    for (const m of ['setParams', 'noteOn', 'noteOff', 'process']) assert.equal(typeof E.prototype[m], 'function', `${I.wasm.name}.${m}`);
     const pages = readdirSync(new URL(`${dir}/src/`, R)).filter((f) => /main\.js$/.test(f));
     assert.ok(pages.some((f) => read(`${dir}/src/${f}`).includes(`${id}-instrument.js`)), 'the page imports it');
   });

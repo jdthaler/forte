@@ -1,7 +1,7 @@
 // reeds-web.cpp — the model's functions the page's views call (reeds/src/reeds-wasm.js): a key's
 // reed and its voice data, packed for the engine; the slot's C(y), the comb node, the field's pull
-// and one strike traced sample by sample (traceStrike); and the engine's hooks for the tests (its
-// voices and slot, as the JavaScript engine shows them).
+// and one strike traced sample by sample (traceStrike); and, for the tests, a lossless strike, the
+// bare finite-element reed and the engine's hooks (its voices and slot).
 
 #include <algorithm>
 #include <cmath>
@@ -120,6 +120,46 @@ FORTE_EXPORT int reeds_trace(int key, double velocity, double fs, double seconds
   t.contactMs = (v->contactSamples / e->fs2) * 1000; t.Fmax = v->Fmax;
   return n;
 }
+// A lossless strike, for the tests' energy balance: key's reed (built at 2 fs) with no damping,
+// a felt with no hysteresis (alpha = 0) and no pull from the field (kF = 0), struck at `velocity`
+// and run for `seconds` at the engine's rate. Into out: the hammer's mass, its speed at launch, its
+// speed (signed, positive toward the reed) on its last step in flight, the samples in contact, fs2 and N;
+// then each mode's angular frequency, its coordinate (unit modal mass) on the last two samples (q,
+// then q1). Returns how many numbers it wrote.
+FORTE_EXPORT int reeds_lossless_strike(int key, double velocity, double fs, double seconds, double *out) {
+  double P[p::count];
+  std::copy_n((const double *)forte_scratch(), p::count, P);
+  VoiceData d = cachedModel(key, P[p::solder], P[p::strike], P[p::hardness], 2 * fs).voice;
+  d.sigma.fill(0); d.hammer.alpha = 0;
+  auto e = std::make_unique<ReedEngine>(fs);
+  e->setParams(P);
+  e->kF = 0;
+  auto v = std::make_unique<ReedEngine::Voice>();
+  v->start(*e, d.key, d);
+  const double v0 = hammerSpeed(velocity), k = 1 / e->fs2;
+  v->strike(v0);
+  double vh = 0;
+  const int n = (int)std::floor(seconds * e->fs2 + 0.5);
+  for (int s = 0; s < n; s++) {
+    double one = 0;
+    const bool was = v->hammerOn;
+    v->render(&one, 1, *e);
+    if (was) vh = (v->eta - v->etaPrev) / k;
+  }
+  int m = 0;
+  for (double x : {d.hammer.mass, v0, vh, (double)v->contactSamples, e->fs2, (double)v->N}) out[m++] = x;
+  for (const auto *a : {&v->om, &v->q, &v->q1}) for (int i = 0; i < v->N; i++) out[m++] = (*a)[i];
+  return m;
+}
+// The bare finite-element reed (reedFEM) for a tongue L × h × b with a tip mass M and rotary
+// inertia J, nModes modes: EI, mu, m, the number of modes, then omega, Gamma and Theta.
+FORTE_EXPORT int reeds_fem(double L, double h, double b, double M, double J, int nModes, double *out) {
+  const ReedFEM r = reedFEM(L, h, b, M, J, 20, std::max(1, std::min(MAX_MODES, nModes)));
+  int m = 0;
+  for (double x : {r.EI, r.mu, r.m, (double)r.omega.size()}) out[m++] = x;
+  for (const auto *a : {&r.omega, &r.Gamma, &r.Theta}) for (double x : *a) out[m++] = x;
+  return m;
+}
 // fs2, n, N, nFrames, release, contactMs, Fmax, then amps (N)
 FORTE_EXPORT void reeds_trace_info(double *out) {
   const Trace &t = trace;
@@ -144,7 +184,7 @@ FORTE_EXPORT void reeds_voice(ReedEngine *e, int i, double *out) {
                         (double)v.version};
   for (int k = 0; k < 15; k++) out[k] = x[k];
 }
-// The slot and comb node as the JavaScript engine shows them: fs2, damperSigma, hammerMax, kF,
+// The slot and comb node: fs2, damperSigma, hammerMax, kF,
 // nodeA, nodeB, y0, cRest, dRest, y0N, cRestN, dRestN, blend, twoTables.
 FORTE_EXPORT void reeds_state(ReedEngine *e, double *out) {
   const double x[14] = {e->fs2, e->damperSigma, (double)e->hammerMax, e->kF, e->nodeA, e->nodeB, e->y0, e->cRest, e->dRest, e->y0N, e->cRestN,

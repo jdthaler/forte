@@ -2,17 +2,20 @@
 // Usage: node tools/render-huygens.mjs
 
 import { mkdirSync } from 'node:fs';
-import { NeonEngine } from '../huygens/src/neon-engine.js';
-import { tunedFreq } from '../huygens/src/tuning.js';
-import { DEFAULTS } from '../huygens/src/sync-params.js';
+import { INSTRUMENT, DEFAULTS } from '../huygens/src/huygens-instrument.js';
+import { wasmModel } from '../huygens/src/huygens-wasm.js';
+import { loadEngine } from './engine.mjs';
 import { soundboardIR, roomIR } from '../shared/impulses.js';
 import { convolve, writeWav, FS_SHIM, webAudioIR } from './audio-util.mjs';
+
+const HuygensEngine = await loadEngine(INSTRUMENT);
+const { tunedFreq } = await wasmModel();
 
 const FS = 48000;
 
 // events: [t, 'on'|'off', key] ; ramp: (t) => engine params to apply each block
 function render(P, seconds, events, ramp) {
-  const e = new NeonEngine(FS);
+  const e = new HuygensEngine(FS);
   e.setParams({ ...P, pitchHold: P.pitchHold ? 1 : 0 });
   const n = Math.round(seconds * FS), L = new Float64Array(n), R = new Float64Array(n);
   const bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);

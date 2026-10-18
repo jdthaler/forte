@@ -1,4 +1,4 @@
-// piano-model.cpp — the struck string's mechanics, as piano/src/physics.js computes them.
+// piano-model.cpp — the struck string's mechanics (piano-model.h).
 
 #include "piano-model.h"
 

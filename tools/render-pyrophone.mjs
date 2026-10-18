@@ -5,15 +5,18 @@
 // is checked numerically: peak, clicks (sample jumps far above the local slope),
 // and the pitch/level facts the demo is meant to show.
 
-import { PyrophoneEngine } from '../pyrophone/src/pyrophone-engine.js';
-import { DEFAULTS } from '../pyrophone/src/pyrophone-params.js';
-import { bifurcation, tube, silenceLimit } from '../pyrophone/src/pyrophone-model.js';
+import { INSTRUMENT, DEFAULTS } from '../pyrophone/src/pyrophone-instrument.js';
+import { wasmModel } from '../pyrophone/src/pyrophone-wasm.js';
+import { loadEngine } from './engine.mjs';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
+
+const PyrophoneEngine = await loadEngine(INSTRUMENT);
+const { tubeTuning } = await wasmModel();
 
 const FS = 48000, SLUG = 'pyrophone';
 const D = { ...DEFAULTS };
 // The flame power is in units of the tube's threshold β_H; these demos set a heater gain β itself.
-const K = (P, beta) => beta / silenceLimit(tube(P)).beta;
+const K = (P, beta) => beta / tubeTuning(P).tune.betaH;
 const play = (P, seconds, events) => { const e = new PyrophoneEngine(FS); e.setParams(P); return renderEngine(e, seconds, events, FS); };
 const hold = (t0, t1, keys, vel) => keys.flatMap((k) => [[t0, 'on', k, vel], [t1, 'off', k]]);
 const ramp = (P, t0, t1, f, dt = 0.01) => { const ev = []; for (let t = t0; t <= t1 + 1e-9; t += dt) ev.push([t, 'params', { ...P, ...f((t - t0) / (t1 - t0)) }]); return ev; };
@@ -113,7 +116,7 @@ function check([L, R]) {
 }
 
 const only = process.argv.slice(2);
-const bif = bifurcation(D), f1 = bif.fam[0];
+const { bif } = tubeTuning(D), f1 = bif.fam[0];
 console.log(`defaults: Hopf β = ${f1.hopf.beta.toFixed(4)}, fold β = ${f1.fold.beta.toFixed(4)}`);
 for (const [name, fn] of demos) {
   if (only.length && !only.some((o) => name.startsWith(o))) continue;

@@ -1,4 +1,4 @@
-// bowed-engine.cpp — the viola organista's engine, as bowed-engine.js runs it.
+// bowed-engine.cpp — the viola organista's engine (bowed-engine.h).
 
 #include "bowed-engine.h"
 

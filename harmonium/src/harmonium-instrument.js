@@ -3,7 +3,7 @@
 // plugins (tools/gen-native-params.mjs) all start here. No DOM, no Web Audio.
 
 import { GROUPS, DEFAULTS, PRESETS } from './harmonium-params.js';
-import { KEY_LO, KEY_HI } from './harmonium-model.js';
+import { KEY_LO, KEY_HI } from './harmonium-data.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -15,7 +15,7 @@ export const INSTRUMENT = {
   range: [KEY_LO, KEY_HI],              // MIDI keys: C2–C7, 36–96
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
   modWheel: 'pressure',                 // CC1: wind pressure, from its default up to its maximum
-  engine: { name: 'HarmoniumEngine', module: new URL('./harmonium-engine.js', import.meta.url).href },
+  // the engine: the physics in C++ (native/instruments/harmonium), built as WebAssembly
   wasm: { name: 'HarmoniumWasmEngine', module: new URL('./harmonium-wasm.js', import.meta.url).href, binary: new URL('../wasm/harmonium.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room' },
 };

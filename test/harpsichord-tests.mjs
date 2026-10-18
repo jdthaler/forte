@@ -4,21 +4,63 @@
 // cantilever against beam theory; the pluck against an ideal pluck, energy
 // conservation and an independent quasi-static solution; then the engine
 // against the model: tuning, the comb, the registers, touch, dampers, voices,
-// levels and stability.
+// levels and stability. Both are the C++ (native/instruments/harpsichord),
+// built as WebAssembly: the model through harpsichord-wasm.js.
 
 import assert from 'node:assert/strict';
-import {
-  KEY_LO, KEY_HI, C2, stringDesign, stringLength, partialFreq, keyPitch, temperamentCents, temperamentOffsets, PYTH_COMMA,
-  isBrass, simulatePluck, plectrumFor, pluckPoint, registration, stringPartials, boardAdmittance, bridgePoint, buildString,
-  jackSpeed, fallSpeed, ROWS,
-} from '../harpsichord/src/harpsichord-model.js';
-import { makePlectrum, beamC, beamG, beamPhi, quasiStaticRelease, releaseForceClosed } from '../harpsichord/src/plectrum.js';
-import { PT } from '../harpsichord/src/string.js';
 import { INSTRUMENT } from '../harpsichord/src/harpsichord-instrument.js';
+import { wasmModel } from '../harpsichord/src/harpsichord-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
-import { DEFAULTS, GROUPS, PRESETS } from '../harpsichord/src/harpsichord-params.js';
+import { DEFAULTS, GROUPS, PRESETS, KEY_LO, KEY_HI, ROWS } from '../harpsichord/src/harpsichord-params.js';
 
-const HarpsichordEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const HarpsichordEngine = await loadEngine(INSTRUMENT);
+const {
+  stringDesign, stringLength, stringPartials, isBrass, simulatePluck, pluckPoint, registration, beamC, beamG, beamPhi, bridgePoint, boardAdmittance,
+} = await wasmModel();
+
+// What the checks compare against, stated here rather than read from the model: the wires'
+// elastic constants and densities (iron as soft steel; brass), c² = C5 (the scale's reference),
+// the Pythagorean comma, and the jacks' fall for a release velocity (harpsichord-model.h).
+const WIRE = { iron: { E: 2.0e11, rho: 7850 }, brass: { E: 1.0e11, rho: 8500 } };
+const C2 = 72, PYTH_COMMA = 1200 * Math.log2(3 ** 12 / 2 ** 19);
+const fallSpeed = (r) => 0.035 * 10 ** r;
+// The 8′ target pitch of key m: the back 8′ string's fundamental without the tuner's spread.
+const keyPitch = (m, p) => stringDesign(m, 'back', { ...p, detune: 0 }).f0;
+// Partial n of a stiff string, fₙ = n f₁ √((1 + Bn²)/(1 + B)) (checked against the model below).
+const partialFreq = (S, n) => n * S.f0 * Math.sqrt((1 + S.B * n * n) / (1 + S.B));
+
+// The quasi-static pluck, to check the engine's release against: raise the jack slowly; at each
+// height y find the equilibrium of string (static compliance Cs, lateral stiffness Kz) and
+// plectrum (the model's cantilever: beamC, beamG, beamPhi), with stick–slip friction; stop where
+// the string passes the tip. A string at material point s under force F sits at z = s − F²Φ(s);
+// the plectrum's sideways push lies within the friction cone F tan(θ ± φ), tan θ = F g(s), tan φ = μ.
+function quasiStaticRelease(pl, Cs, Kz, { yMax = 0.02, dy = 2e-7 } = {}) {
+  const lateralZ = (ss, F) => ss - F * F * beamPhi(pl, ss);
+  const coneLo = (ss, F) => { const tt = F * beamG(pl, ss); return (tt - pl.mu) / (1 + pl.mu * tt); };
+  const forceAt = (y, ss) => y / (beamC(pl, ss) + Cs);
+  let s = pl.s0;
+  for (let y = dy; y < yMax; y += dy) {
+    let F = forceAt(y, s);
+    if (Kz * (lateralZ(s, F) - pl.s0) < F * coneLo(s, F)) {
+      // slides towards the tip: K_z(z(s) − z₀) = F(s) tan(θ(s) − φ)
+      const gfun = (ss) => { const Fs = forceAt(y, ss); return Kz * (lateralZ(ss, Fs) - pl.s0) - Fs * coneLo(ss, Fs); };
+      if (gfun(pl.len) < 0) return { F, y, u: Cs * F, w: F * beamC(pl, s), s };
+      let a = s, b = pl.len;
+      for (let it = 0; it < 60; it++) { const m = 0.5 * (a + b); if (gfun(m) < 0) a = m; else b = m; }
+      s = 0.5 * (a + b); F = forceAt(y, s);
+    }
+  }
+  return null;
+}
+// Closed form, for a uniform plectrum without foreshortening, when the string stays put until it
+// reaches the tip: K_z o = F (F g_ℓ − μ)/(1 + μ F g_ℓ), g_ℓ = ℓ²/2EI, so
+// g F² − μ(1 + K_z o g) F − K_z o = 0;  μ = 0: F = √(2 EI K_z o)/ℓ.
+function releaseForceClosed(EI, len, Kz, o, mu = 0) {
+  const g = (len * len) / (2 * EI), bq = mu * (1 + Kz * o * g);
+  return (bq + Math.sqrt(bq * bq + 4 * g * Kz * o)) / (2 * g);
+}
+// A uniform plectrum (taper 0) of tip stiffness kTip, by beam theory: EI = kTip ℓ³/3.
+const uniform = (kTip, overlap, mu = 0, fore = 1, len = 3.5e-3) => ({ len, overlap, s0: len - overlap, kTip, EI0: (kTip * len ** 3) / 3, tau: 0, mu, fore });
 
 const FS = 48000;
 let failures = 0;
@@ -83,15 +125,16 @@ const lossless = { loss: 1e-9, bridgeScale: 0 };
 console.log('the strings');
 test('stiff string: fₙ = n f₁ √((1 + Bn²)/(1 + B)), B = π²EI/TL² = π³Ed⁴/64TL² (Fletcher 1964); at a fixed pitch and length B ∝ d², and ∝ 1/T at a fixed wire', () => {
   for (const [m, ch] of [[29, 'back'], [60, 'back'], [89, 'four']]) {
-    const S = stringDesign(m, ch, P());
-    near(S.B, (Math.PI ** 3 * S.mat.E * S.d ** 4) / (64 * S.T * S.L * S.L), 1e-12, 'B');
-    near(partialFreq(S, 1), S.f0, 1e-12, 'f₁ on target');
-    for (const n of [2, 5, 13]) near(partialFreq(S, n), n * S.f0 * Math.sqrt((1 + S.B * n * n) / (1 + S.B)), 1e-12, `f${n}`);
+    const p = P({ fmax: 16 }), S = stringDesign(m, ch, p), parts = stringPartials(S, p).partials;
+    near(S.B, (Math.PI ** 3 * WIRE[S.mat.name].E * S.d ** 4) / (64 * S.T * S.L * S.L), 1e-12, 'B');
+    near(parts[0].f, S.f0, 1e-12, 'f₁ on target');
+    for (const { n, f } of parts.slice(1)) near(f, partialFreq(S, n), 1e-12, `f${n}`);
   }
   // the same string, twice as thick: T ∝ d² at a fixed pitch, so B ∝ d⁴/T ∝ d²
-  const S = stringDesign(60, 'back', P()), E = S.mat.E, f = S.f0, L = S.L;
-  const B = (d) => { const mu = (S.mat.rho * Math.PI * d * d) / 4, EI = (E * Math.PI * d ** 4) / 64, T = 4 * L * L * f * f * mu - (EI * Math.PI ** 2) / (L * L); return (Math.PI ** 2 * EI) / (T * L * L); };
+  const S = stringDesign(60, 'back', P()), { E, rho } = WIRE[S.mat.name], f = S.f0, L = S.L;
+  const B = (d) => { const mu = (rho * Math.PI * d * d) / 4, EI = (E * Math.PI * d ** 4) / 64, T = 4 * L * L * f * f * mu - (EI * Math.PI ** 2) / (L * L); return (Math.PI ** 2 * EI) / (T * L * L); };
   near(B(2 * S.d) / B(S.d), 4, 2e-3, 'B(2d)/B(d)');
+  near(B(S.d), S.B, 1e-9, 'B from the wire');
   // and at a fixed wire, a 415 Hz tuning (T × 0.89) raises B by 1/0.89
   const S4 = stringDesign(60, 'back', P({ pitch: 415 }));
   near(S4.B / S.B, S.T / S4.T, 1e-9, 'B ∝ 1/T');
@@ -100,7 +143,7 @@ test('stiff string: fₙ = n f₁ √((1 + Bn²)/(1 + B)), B = π²EI/TL² = π�
 });
 test('the scale: c² is 355 mm and the treble Pythagorean (L·f constant, iron at σ = 4ρ(Lf)² = 1.08 GPa); the bass foreshortened (FF 1.65 m) and brass up to A; tensions 20–63 N', () => {
   near(stringLength(C2, 'back'), 0.355, 1e-12, 'c²'); near(stringLength(C2, 'four'), 0.1775, 1e-12, '4′ c²');
-  for (const m of [72, 77, 84, 89]) { const S = stringDesign(m, 'back', P({ detune: 0 })); near(S.L * S.f0, 0.355 * keyPitch(72, P()), 0.015, `L·f at ${m}`); near(S.stress, 4 * S.mat.rho * (S.L * S.f0) ** 2, 0.01, 'σ'); }
+  for (const m of [72, 77, 84, 89]) { const S = stringDesign(m, 'back', P({ detune: 0 })); near(S.L * S.f0, 0.355 * keyPitch(72, P()), 0.015, `L·f at ${m}`); near(S.stress, 4 * WIRE[S.mat.name].rho * (S.L * S.f0) ** 2, 0.01, 'σ'); }
   near(stringDesign(C2, 'back', P({ detune: 0 })).stress, 1.08e9, 0.01, 'iron stress at c²');
   assert.ok(stringLength(KEY_LO, 'back') < 1.7 && stringLength(KEY_LO, 'back') > 1.5, `FF ${stringLength(KEY_LO, 'back')}`);
   assert.ok(isBrass(45, 'back') && !isBrass(46, 'back') && isBrass(40, 'four') && !isBrass(41, 'four'));
@@ -111,36 +154,41 @@ test('the scale: c² is 355 mm and the treble Pythagorean (L·f constant, iron a
   }
 });
 test('temperaments: ¼-comma meantone has pure major thirds (386.31 ¢) and 696.58 ¢ fifths, with the wolf G♯–E♭; Werckmeister III and equal close the circle', () => {
-  const c = temperamentCents('meantone'), iv = (a, b) => (((c[b] - c[a]) % 1200) + 1200) % 1200;
+  // each pitch class's cents above C, from the keys' target pitches
+  const cents12 = (temperament) => Array.from({ length: 12 }, (_, pc) => cents(keyPitch(60 + pc, P({ temperament })), keyPitch(60, P({ temperament }))));
+  const c = cents12('meantone'), iv = (a, b) => (((c[b] - c[a]) % 1200) + 1200) % 1200;
   for (const [a, b] of [[0, 4], [5, 9], [7, 11], [2, 6], [9, 1], [3, 7], [10, 2]]) near(iv(a, b), 1200 * Math.log2(5 / 4), 1e-9, `third ${a}–${b}`);
   for (const [a, b] of [[0, 7], [7, 2], [3, 10]]) near(iv(a, b), 696.578, 1e-5, `fifth ${a}–${b}`);
   assert.ok(Math.abs(iv(8, 3) - 737.64) < 0.01, `wolf ${iv(8, 3)}`);
-  const w = temperamentCents('werckmeister'), iw = (a, b) => (((w[b] - w[a]) % 1200) + 1200) % 1200;
+  const w = cents12('werckmeister'), iw = (a, b) => (((w[b] - w[a]) % 1200) + 1200) % 1200;
   near(iw(0, 7), 701.955 - PYTH_COMMA / 4, 1e-6, 'C–G'); near(iw(11, 6), 701.955 - PYTH_COMMA / 4, 1e-6, 'B–F♯'); near(iw(5, 0), 701.955, 1e-6, 'F–C pure');
-  assert.ok(temperamentOffsets('equal').every((x) => Math.abs(x) < 1e-9));
-  assert.equal(temperamentOffsets('meantone')[9], 0);
+  for (let m = KEY_LO; m <= KEY_HI; m++) assert.ok(Math.abs(cents(keyPitch(m, P({ temperament: 'equal' })), 440 * 2 ** ((m - 69) / 12))) < 1e-9, `equal ${m}`);
+  near(keyPitch(69, P({ temperament: 'meantone' })), 440, 1e-12, 'meantone keeps A');
   near(keyPitch(69, P({ pitch: 415, temperament: 'meantone' })), 415, 1e-12, 'A stays the pitch standard');
 });
 
 console.log('the plectrum and the pluck');
 test('cantilever: a uniform plectrum has c(s) = s³/3EI, slope g(s) = s²/2EI and foreshortening 0.6 w²/s (beam theory), within 0.5 %; a tapered one bends more near its tip', () => {
-  const u = makePlectrum({ kTip: 2500, overlap: 0.6e-3, taper: 0 }), EI = u.EI0, L = u.len;
+  const u = uniform(2500, 0.6e-3), EI = u.EI0, L = u.len;
   for (const s of [0.5 * L, 0.8 * L, L]) {
     near(beamC(u, s), s ** 3 / (3 * EI), 5e-3, `c(${s})`);
     near(beamG(u, s), s ** 2 / (2 * EI), 5e-3, `g(${s})`);
     const F = 2, w = F * beamC(u, s);
     near(F * F * beamPhi(u, s), (0.6 * w * w) / s, 5e-3, 'foreshortening');
   }
-  near(1 / beamC(u, L), 2500, 1e-9, 'tip stiffness');
-  const q = makePlectrum({ kTip: 2500, overlap: 0.6e-3, material: 'quill' });
-  near(1 / beamC(q, q.len), 2500, 1e-9, 'quill tip stiffness');
-  assert.ok(beamC(q, 0.6 * q.len) / beamC(q, q.len) < beamC(u, 0.6 * u.len) / beamC(u, u.len), 'the quill’s compliance is concentrated towards its tip');
+  near(1 / beamC(u, L), 2500, 5e-3, 'tip stiffness');
+  // the plectra the model cuts: their tip stiffness is the voicing
+  for (const material of ['delrin', 'quill']) {
+    const { pl } = simulatePluck(72, 'back', solo('back', { material, stiff: 2500 }), { V: 0.08, sec: 0.01 });
+    near(1 / beamC(pl, pl.len), pl.kTip, 1e-9, `${material} tip stiffness`);
+    if (material === 'quill') assert.ok(pl.tau > 0 && beamC(pl, 0.6 * pl.len) / beamC(pl, pl.len) < beamC(u, 0.6 * u.len) / beamC(u, u.len), 'the quill’s compliance is concentrated towards its tip');
+  }
 });
 test('ideal pluck: slow and frictionless, the string is let go from its static shape — partial amplitudes ∝ sin(nπx_p/L)/(n²(1 + Bn²)) within 1.5 % (within 0.3 % of the fundamental for every partial)', () => {
   for (const [m, row] of [[72, 'back'], [60, 'front'], [48, 'back'], [36, 'back']]) {
-    const r = simulatePluck(m, row, solo(row, { mu: 0, stiff: 4000, ...lossless }), { V: 0.01, sec: 1.0, until: 0.002 });
+    const p = solo(row, { mu: 0, stiff: 4000, ...lossless }), r = simulatePluck(m, row, p, { V: 0.01, sec: 1.0, until: 0.002 });
     assert.ok(r.released !== null, 'released');
-    const st = r.st, S = st.S, x = r.x, A1 = amp(st, 0), pred = (n) => Math.abs(Math.sin((n * Math.PI * x) / S.L)) / (n * n * (1 + S.B * n * n));
+    const st = r.st, S = stringDesign(m, ROWS[row].string, p), x = r.x, A1 = amp(st, 0), pred = (n) => Math.abs(Math.sin((n * Math.PI * x) / S.L)) / (n * n * (1 + S.B * n * n));
     for (let i = 1; i < Math.min(20, st.N); i++) {
       const want = pred(i + 1) / pred(1), got = amp(st, i) / A1;
       assert.ok(Math.abs(got - want) < 3e-3, `${m} ${row} partial ${i + 1}: ${got.toFixed(5)} vs ${want.toFixed(5)}`);
@@ -153,7 +201,7 @@ test('energy: the string carries the work the plectrum did on it, ∫F du, to 2 
     const r = simulatePluck(m, row, solo(row, { mu, ...lossless }), { V: 0.02, sec: 0.8, until: 0.003 });
     const E = r.st.energy(), W = r.st.work;
     near(E, W, 0.02, `${m} ${row}: E vs W`);
-    near(E, 0.5 * r.rel.F ** 2 * r.st.staticCompliance(PT.MAIN), 0.03, `${m} ${row}: ½F²C`);
+    near(E, 0.5 * r.rel.F ** 2 * r.st.staticCompliance, 0.03, `${m} ${row}: ½F²C`);
   }
   const err = (fs) => { const r = simulatePluck(72, 'back', solo('back', { mu: 0, ...lossless }), { V: 0.02, sec: 0.8, until: 0.003, fs }); return Math.abs(r.st.energy() / r.st.work - 1); };
   const e48 = err(48000), e96 = err(96000), e192 = err(192000);
@@ -163,18 +211,19 @@ test('the release: the engine lets go where the quasi-static equilibrium does (f
   for (const [m, row, mat, mu] of [[72, 'back', 'delrin', 0], [72, 'front', 'quill', null], [48, 'back', 'delrin', null], [84, 'four', 'quill', 0.5]]) {
     const p = solo(row, { material: mat, mu, ...lossless });
     const r = simulatePluck(m, row, p, { V: 0.01, sec: 1.5, until: 0.001 });
-    const qs = quasiStaticRelease(r.pl, r.st.staticCompliance(PT.MAIN), r.st.Kz[PT.MAIN]);
+    const qs = quasiStaticRelease(r.pl, r.st.staticCompliance, r.st.Kz);
     near(r.rel.F, qs.F, 0.02, `${m} ${row} ${mat}: release force`);
     near(r.rel.s, r.pl.len, 0.01, 'at the tip');
   }
 });
 test('release force grows as √(EI): frictionless F = √(2EI K_z o)/ℓ, with friction the root of gF² − μ(1 + K_z o g)F − K_z o = 0 (g = ℓ²/2EI); stiffer plectra let go later, after (u + w)/V', () => {
-  const S = stringDesign(72, 'back', P()), x = pluckPoint(72, 'back', P()), Kz = (S.T * S.L) / (x * (S.L - x));
-  const st = buildString(72, 'back', P(), FS); st.setPoint(PT.MAIN, x); const Cs = st.staticCompliance(PT.MAIN);
+  const S = stringDesign(72, 'back', solo('back')), x = pluckPoint(72, 'back', solo('back')), Kz = (S.T * S.L) / (x * (S.L - x));
+  const { st, pl: cut } = simulatePluck(72, 'back', solo('back'), { V: 0.08, sec: 0.01 }), Cs = st.staticCompliance;
+  near(st.Kz, Kz, 1e-9, 'the string’s lateral stiffness T L/(x(L − x))');
   let prevF = 0, prevT = 0;
   for (const k of [1000, 2000, 3500, 5000]) {
     for (const mu of [0, 0.25]) {
-      const pl = makePlectrum({ kTip: k, overlap: 0.3e-3, taper: 0, mu, foreshortening: false });
+      const pl = uniform(k, 0.3e-3, mu, 0, cut.len);
       const qs = quasiStaticRelease(pl, Cs, Kz);
       near(qs.F, releaseForceClosed(pl.EI0, pl.len, Kz, pl.overlap, mu), 0.01, `k = ${k}, μ = ${mu}`);
       if (mu === 0) near(releaseForceClosed(pl.EI0, pl.len, Kz, pl.overlap), Math.sqrt(2 * pl.EI0 * Kz * pl.overlap) / pl.len, 1e-9, 'μ = 0 form');

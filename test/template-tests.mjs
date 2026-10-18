@@ -3,15 +3,17 @@
 //
 // Test the physics against something independent (a textbook result, a
 // published measurement, a conservation law), then test that the engine
-// produces what the model says.
+// produces what the model says. Both are the C++ (native/instruments/template),
+// built as WebAssembly: the model's functions through template-wasm.js.
 
 import assert from 'node:assert/strict';
-import { BETA_L, modeShape, pulseSpectrum, keyModes } from '../docs/template/src/template-model.js';
 import { INSTRUMENT, DEFAULTS } from '../docs/template/src/template-instrument.js';
+import { wasmModel } from '../docs/template/src/template-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { keyFreq } from '../shared/dsp.js';
 
-const TemplateEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const TemplateEngine = await loadEngine(INSTRUMENT);
+const { BETA_L, modeShape, keyModes } = await wasmModel();
 
 const FS = 48000;
 let failures = 0;
@@ -54,8 +56,10 @@ test('mode 1 has its nodes at 22.4 % and 77.6 % of the length', () => {
   assert.ok(Math.abs(modeShape(0, 0.7758)) < 2e-3);
 });
 test('half-sine pulse: flat at low f, first zero at f = 1.5/τ', () => {
-  assert.ok(Math.abs(pulseSpectrum(1, 1e-3) - 1) < 1e-4);
-  assert.ok(pulseSpectrum(1500, 1e-3) < 1e-9);
+  const strike = 0.1, short = keyModes(60, P({ strike, mallet: 0.05 }))[0];
+  assert.ok(Math.abs(short.amp / modeShape(0, strike) - 1) < 1e-3, 'a short pulse reaches mode 1 fully');
+  const f2 = keyModes(60, P())[1].f, tuned = keyModes(60, P({ strike, mallet: (1000 * 1.5) / f2 }))[1];
+  assert.ok(Math.abs(tuned.amp) < 1e-6 * Math.abs(modeShape(1, strike)), `mode 2 at the pulse's first zero: ${tuned.amp}`);
 });
 
 console.log('engine');

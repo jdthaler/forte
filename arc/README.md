@@ -301,24 +301,19 @@ talking arc howls on its own.
   allocated in `process()`: each arc's switch and bank arrays are made
   once.
 - **The capacitors.** The page cuts every key's capacitor in the background
-  (about 7 ms a key) and sends the table to the engine. Until it arrives, a
-  quick table for the starting note serves, and while a knob moves the old
-  bank stays, as a real one would.
+  (about 6 ms a key) and sends the table to the engine with each note, so the
+  audio thread never cuts one. Until it is cut, a quick table for the
+  starting note serves, and while a knob moves the old bank stays, as a real
+  one would.
 - **Randomness** (flicker, hiss, the singer's breath) is seeded.
-- **In C++**: the same engine and model run as WebAssembly on this page (the
-  JavaScript is the fallback; `?engine=js` in the address forces it) and as
-  plugins (CLAP, VST3, AU and a standalone app), where CC64 latches the keys
-  (Hold) and the mod wheel raises the arc current. The page cuts the bank
-  with the WebAssembly model and sends it with each note, so the audio
-  thread never cuts a capacitor (about 6 ms a key in WebAssembly too); a
-  plugin cuts every key's on a worker thread as soon as a knob it depends on
+- **In C++**: the engine and the model are C++, built as WebAssembly for
+  this page (the views and the page's capacitor bank use the same model) and
+  as plugins (CLAP, VST3, AU and a standalone app), where CC64 latches the
+  keys (Hold) and the mod wheel raises the arc current. A plugin cuts every
+  key's capacitor on a worker thread as soon as a knob it depends on
   settles, and until a key's is ready it plays that key's last one, or
-  Kelvin's if it never had one. The WebAssembly plays what the JavaScript
-  plays bit for bit (the same seeded noise, V8's own `exp`, `sin`, `cos` and
-  `pow`), cuts the same capacitors to the last bit, and the same test suite
-  passes on it. Six singing lamps take about 20 % of a core in C++, as in the
-  JavaScript: the circuit's Newton steps at four times the sample rate cost
-  the same in either.
+  Kelvin's if it never had one. Six singing lamps take about 20 % of a core:
+  the circuit's Newton steps at four times the sample rate.
 
 ## What to listen for
 
@@ -366,16 +361,14 @@ for the key's capacitor and the note.
 
 ```
 arc/index.html, style.css           page
-arc/src/arc-model.js                physics: Ayrton's curve, the Mayr-type column and its floor, Z(jω), the
-                                    circuit's linear analysis, the describing function, the steady cycle and
-                                    the capacitors, hiss, the thermophone (no audio, no DOM)
-arc/src/arc-voice.js                the talking arc's singer (glottal pulse and formants)
-arc/src/arc-engine.js               real-time engine (AudioWorklet and Node)
+arc/src/arc-model.js                constants, Ayrton's and Kelvin's formulas, the thermophone, and the checks the
+                                    tests hold the C++ to: Z(jω) in closed form, Mayr's law linearised, integrated
+                                    over a cycle (the describing function) and as the circuit's state matrix
 arc/src/arc-params.js               parameters and presets
-arc/src/arc-main.js                 page wiring and views
-arc/src/arc-wasm.js                 the C++ engine and model as WebAssembly (arc/wasm/arc.wasm)
-native/instruments/arc/             the C++ port: model, singer, engine, generated tables, reference (plugins and WebAssembly)
-test/arc-tests.mjs                  node test/arc-tests.mjs (30 tests, about 6 s; FORTE_ENGINE=wasm: on the WebAssembly)
+arc/src/arc-main.js                 page wiring, the capacitor bank and the views
+arc/src/arc-wasm.js                 the engine and model as WebAssembly (arc/wasm/arc.wasm)
+native/instruments/arc/             the physics in C++: model, singer, engine, generated tables, reference (plugins and WebAssembly)
+test/arc-tests.mjs                  node test/arc-tests.mjs (30 tests, about 6 s)
 tools/render-arc.mjs                node tools/render-arc.mjs → examples/arc/
 ```
 

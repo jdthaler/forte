@@ -1,7 +1,7 @@
 # The Huygens Keyboard (huygens/): its engine and model in C++, its plugins and its WebAssembly.
 include(huygens-info.cmake) # generated: FORTE_NAME, FORTE_VERSION, FORTE_AU_SUBTYPE
 
-# with V8's fdlibm (forte/fdlibm.h), so the firing times and the kicks are the JavaScript's
+# with V8's fdlibm (forte/fdlibm.h), so the firing times and the kicks are the same everywhere
 add_library(forte_huygens STATIC huygens-model.cpp huygens-engine.cpp huygens-instrument.cpp)
 target_include_directories(forte_huygens PUBLIC .)
 target_link_libraries(forte_huygens PUBLIC forte_core)

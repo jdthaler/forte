@@ -1,8 +1,7 @@
-// windharp-model.h — the physics of the Wind Harp (windharp/src/windharp-model.js in C++): the wake
-// and its shedding, each key's string, the linear analysis of lock-in (de Langre 2006) and the
-// harmonic balance of the locked state, the shutters and the soundbox. The functions the engine
-// uses give the JavaScript's numbers to the last bit (V8's fdlibm for powers and trigonometry);
-// the views' analysis (lockBand, lockedRange…) follows the JavaScript operation for operation.
+// windharp-model.h — the physics of the Wind Harp: the wake and its shedding, each key's string,
+// the linear analysis of lock-in (de Langre 2006) and the harmonic balance of the locked state,
+// the shutters and the soundbox. The functions the engine uses give the same numbers to the last
+// bit everywhere (V8's fdlibm for powers and trigonometry).
 #pragma once
 
 #include <numbers>

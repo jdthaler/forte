@@ -108,7 +108,7 @@ thicknesses). This is the imperfect-plate treatment of Camier, Touzé & Thomas
 
 * **Membrane stiffness.** The part of V that is quadratic in x,
   K_c = 4ΣC_n E^n E^nᵀ κ², stiffens the plate. It is diagonalised per angular
-  block into "shell modes" (`shell()` in `gongs-model.js`; K_c is summed over about
+  block into "shell modes" (`buildShell()` in `gongs-model.cpp`; K_c is summed over about
   200 in-plane modes, ζ² ≤ 3000, which converges it to 10⁻⁵). For the free plate's
   axisymmetric modes the result is **exactly Reissner's (1955b)** shallow-shell
   formula ω² = ω_plate² + E/(ρR²), that is ω̄² = λ⁴ + 12(1−ν²)κ². These modes have
@@ -286,33 +286,23 @@ used to drop to 0, up to 600 ¢ at once). Only a gong whose free vibration has
 been timed for about 2.5 periods is handed over: at the cap, the two next in
 line keep timing theirs (so the cap may be exceeded for those periods). A gong
 whose coupling dies away by itself (r below 2×10⁻⁴, a 0.3 ¢ shift) simply goes
-on as exact linear modes. The engine also
-runs every code path once, on a silent gong, when it is created (about 35 ms,
-before the audio starts), so that the JIT has compiled them and no block pays
-for that later. The coupling tables for a setting of Dome rise, Coupling terms
-and Rim (3–5 ms to build) are built on the page and sent with the parameters,
-so moving those sliders never stalls the audio thread.
+on as exact linear modes. The coupling tables for a setting of Dome rise,
+Coupling terms and Rim take 3–5 ms to build: the plugins build them on a worker
+thread, and a note struck before they are ready waits for them (a few
+milliseconds); on this page, where the engine runs without threads, it builds
+them itself when the setting changes.
 
-On this machine (Apple M2 Max, Node), four gongs struck fff at once, all on the
-full coupling, take **25 % of real time**. Ten take 25 % under the default cap
-(55 % if all ten run nonlinear). A 16-note fff melody, one note every 0.25 s
-with the pedal held, averages 19 %, and its worst 128-sample block takes about
-half its budget (41–56 % over three runs; 33 % keeping each block's fastest of
-three runs, which removes the machine's own hiccups) (`node tools/bench-gongs.mjs`).
-
-**In C++**: the same engine and model run as WebAssembly on this page (the
-JavaScript is the fallback; `?engine=js` in the address forces it) and as
-plugins (CLAP, VST3, AU and a standalone app), where CC64 is the sustain pedal,
-the mod wheel moves the strike point out towards the rim, and aftertouch presses
-a hand on the gong. Wherever the motion is not chaotic the WebAssembly plays what
-the JavaScript plays to float rounding (5×10⁻⁸ of the peak); in a crash, the last
-bit (V8's and the C++'s `exp`, `sin` and eigenvectors) grows into a different crash
-within about 50 ms, exactly as nudging the JavaScript's own velocities by 10⁻¹²
-does, and the same statistical test suite passes on it. There the coupling tables
-are built on a worker thread, and a note struck before they are ready waits for
-them (a few milliseconds). Ten gongs struck fff take about 20 % of a core in C++
-(40 % with all ten nonlinear), on a shared Linux machine where the JavaScript
-needs about three times as long.
+**In C++**: the engine and model are C++ (`native/instruments/gongs`), run as
+WebAssembly on this page and as plugins (CLAP, VST3, AU and a standalone app),
+where CC64 is the sustain pedal, the mod wheel moves the strike point out
+towards the rim, and aftertouch presses a hand on the gong. It was ported from
+the first, JavaScript version: wherever the motion is not chaotic the two played
+the same to float rounding (5×10⁻⁸ of the peak); in a crash, the last bit (V8's
+and the C++'s `exp`, `sin` and eigenvectors) grows into a different crash within
+about 50 ms, exactly as nudging the velocities by 10⁻¹² does. Ten gongs struck
+fff take about 20 % of a core (40 % with all ten nonlinear), on a shared Linux
+machine where the JavaScript needed about three times as long. `node
+tools/bench-gongs.mjs` times a 16-note fff melody block by block.
 
 ### 7. Damping
 
@@ -394,15 +384,15 @@ its normal-form pitch shift.
 ```
 gongs/index.html, style.css          page
 gongs/src/plate.js                   circular plate: Bessel functions, modes, von Kármán couplings
-gongs/src/gongs-model.js             shell modes, coupling selection, scaling per key, damping, normal form
-gongs/src/gongs-engine.js            real-time engine: SAV scheme, mallet, substeps, rates (AudioWorklet and Node)
+gongs/src/gongs-instrument.js        the descriptor: parameters, keys, pedal, wheel, engine
 gongs/src/gongs-params.js            parameters and presets
 gongs/src/gongs-main.js              page wiring and views
 gongs/src/gongs-wasm.js              the C++ engine and model as WebAssembly (gongs/wasm/gongs.wasm)
 gongs/data/gong-modes.js             generated tables (node tools/gongs-modes.mjs, ~1 s)
-native/instruments/gongs/            the C++ port: model, engine, the tables as a header
-                                     (node tools/gongs-native-table.mjs), reference (plugins and WebAssembly)
-test/gongs-tests.mjs                 node test/gongs-tests.mjs (27 tests, ~22 s; FORTE_ENGINE=wasm: on the WebAssembly)
+native/instruments/gongs/            the physics in C++: shell modes, coupling selection, scaling per key, damping,
+                                     normal form (gongs-model), the engine (SAV scheme, mallet, substeps, rates),
+                                     the tables as a header (node tools/gongs-native-table.mjs), reference
+test/gongs-tests.mjs                 node test/gongs-tests.mjs (26 tests, ~22 s, on the WebAssembly)
 tools/render-gongs.mjs               node tools/render-gongs.mjs → examples/gongs/
 tools/bench-gongs.mjs                node tools/bench-gongs.mjs: real-time load, block by block
 ```

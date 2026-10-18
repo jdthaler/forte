@@ -1,11 +1,10 @@
-// quantum-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// quantum-wasm.js — the engine and model, built as WebAssembly from the physics in C++
 // (native/instruments/quantum): QuantumWasmEngine, with the engine contract, and the model's
-// functions for the page and its views. The page runs it when it can and falls back to the
-// JavaScript (quantum-engine.js).
+// functions for the page, its views and the tests.
 
 import { GROUPS } from './quantum-params.js';
 import { wasmEngine, scratch, nativeValue } from '../../shared/wasm.js';
-import { waveGrid as jsWaveGrid } from './quantum-waves.js';
+import { waveGrid as gridOf } from './quantum-waves.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'quantum', name: 'QuantumWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/quantum.wasm', import.meta.url).href };
@@ -14,7 +13,7 @@ const MAX_STATES = 64, MAX_W = (MAX_STATES * (MAX_STATES - 1)) / 2; // quantum-m
 
 const Base = wasmEngine(BUILD);
 
-// A packet (makePacket's, the JavaScript's or the WebAssembly model's) packed for the engine
+// A packet (the WebAssembly model's makePacket) packed for the engine
 // (unpackPacket in quantum-engine.cpp): key, d, dc, sigma, pitch, scale, the number of states and of
 // pairs, E, then i, j, k, f and w per pair.
 function packPacket(pk) {
@@ -25,11 +24,11 @@ function packPacket(pk) {
   return a;
 }
 
-// The engine, with the JavaScript engine's test hooks: e.voices, each voice's state read live from
-// the engine (as a test holding a JavaScript voice sees it change), its weights and groups as views
-// into the engine's memory, and its packet. A note may bring its packet (the page's noteData, from
-// the page's WebAssembly model), so the audio thread needn't build it. Rendered into Float64Arrays
-// (the tests'), it renders in double precision, as the JavaScript engine does.
+// The engine, with the tests' hooks: e.voices, each voice's state read live from the engine (a test
+// holding a voice sees it change), its weights and groups as views into the engine's memory, and
+// its packet. A note may bring its packet (the page's noteData, from the page's WebAssembly model),
+// so the audio thread needn't build it. Rendered into Float64Arrays (the tests'), it renders in
+// double precision.
 const VOICE = ['key', 'count', 'gl', 'gr', 'active', 'G', 'S', 's0', 's1', 'released', 'quench', 'stolen', 'dead', 'env', 'useIm', 'dc'];
 const FLAGS = new Set(['released', 'quench', 'stolen', 'dead', 'useIm']);
 const ARRAYS = [['w', Float64Array, MAX_W], ['gD', Float64Array, MAX_STATES], ['gR', Float64Array, MAX_STATES],
@@ -81,8 +80,10 @@ export class QuantumWasmEngine extends Base {
 }
 export const ready = () => QuantumWasmEngine.ready();
 
-// The model's functions the page and its views call (quantum-model.js's makePacket and solveNbar,
-// and quantum-waves.js's waveGrid with its eigenfunctions computed here), by the WebAssembly.
+// The model's functions the page, its views and the tests call, computed by the WebAssembly
+// (quantum-model.cpp): makePacket(key, P, { fMax, maxPairs, rel }), a key's packet (its states n,
+// cₙ, Eₙ, its Bohr pairs, pitch and time scales); solveNbar(key, P, info); and waveGrid(pk, P,
+// rows), quantum-waves.js's grid around the eigenfunctions computed here.
 const PARAMS = GROUPS.flatMap((g) => g.params);
 const KNOBS = ['potential', 'eta', 'lock', 'bpm', 'beats', 'nbar', 'sigma', 'detector'].map((id) => PARAMS.find((p) => p.id === id));
 export async function wasmModel() {
@@ -110,7 +111,7 @@ export async function wasmModel() {
       info.locked = s.f64(1, at)[0] > 0;
       return nb;
     },
-    waveGrid: (pk, P, rows) => jsWaveGrid(pk, P, rows, solve),
+    waveGrid: (pk, P, rows) => gridOf(pk, P, rows, solve),
   };
 }
 

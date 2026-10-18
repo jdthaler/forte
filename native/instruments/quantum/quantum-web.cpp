@@ -1,7 +1,7 @@
 // quantum-web.cpp — the model's functions the page and its views call (quantum/src/quantum-wasm.js):
 // each key's packet and the eigenfunctions on the views' grid; the page's packets for the engine;
-// and the engine's test hooks (its voices, as the JavaScript engine's show them, and a render in
-// double precision, as the JavaScript engine fills a Float64Array).
+// and the engine's test hooks (its voices, and a render in double precision into a
+// Float64Array).
 
 #include <vector>
 

@@ -2,7 +2,7 @@
 // plate's own), tuning, energy conserved through a fortissimo strike, the tables built off the audio
 // thread while notes wait for them, any block size, the views' messages, and ten gongs within the
 // CPU budget. The physics tests are the JavaScript suite's, run on the WebAssembly
-// (FORTE_ENGINE=wasm).
+// (node test/gongs-tests.mjs).
 
 #include <chrono>
 #include <cmath>

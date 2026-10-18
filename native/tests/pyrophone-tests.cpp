@@ -3,7 +3,7 @@
 // sings in tune, a tube change that keeps the old table until the new one is in, the key-up power
 // deciding whether a tube remembers its note, aftertouch, the views' messages, and ten tubes in the
 // CPU budget. The physics tests are the JavaScript suite's, run on the WebAssembly
-// (FORTE_ENGINE=wasm).
+// (node test/pyrophone-tests.mjs).
 
 #include <chrono>
 #include <cmath>

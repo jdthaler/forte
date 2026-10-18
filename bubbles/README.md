@@ -315,18 +315,17 @@ side than on the other. Low notes are on the left because the row runs low to hi
   it plays. A bubble is freed 80 dB below its peak, or 2 ms after it
   reaches the surface. Beyond 160 ringing, each new release fades the
   quietest bubble over 6 ms, never one younger than 12 ms.
-* **Cost**: ten held keys at 48 kHz take 1–2 % of a core at the default 5
-  bubbles/s (about 15 ringing) and 7–11 % at 40 /s each (130 ringing), in
-  Node on the shared cloud machine this was built on.
+* **Cost**: ten held keys at 48 kHz take under 1 % of a core at the default
+  5 bubbles/s (about 15 ringing) and about 5 % at 40 /s each (130 ringing),
+  as WebAssembly in Node on the shared cloud machine this was built on.
 * A single forte bubble peaks at 0.16–0.21 (velocity 1) wherever it is on
   the keyboard; a four-key forte chord stays under 1 even though the first
   bubbles of a chord all kick together.
-* **In C++**: the same engine and model run as WebAssembly on this page (the
-  JavaScript is the fallback; `?engine=js` in the address forces it) and as
+* **In C++** (`native/instruments/bubbles`): the engine and model run as
+  WebAssembly on this page, in the tests and in the render tool, and as
   plugins (CLAP, VST3, AU and a standalone app), where the Space pedal is
-  Hold on CC64 and the mod wheel raises the rate. The WebAssembly plays what
-  the JavaScript plays to within 10⁻¹⁰, and the same test suite passes on it.
-  Ten keys at 40 bubbles/s take about 5 % of a core in C++.
+  Hold on CC64 and the mod wheel raises the rate. (They began as
+  JavaScript, which the C++ matched to within 10⁻¹⁰ before it was retired.)
 
 ## What to listen for
 
@@ -370,13 +369,13 @@ The **spectrum** marks each held key's predicted ring.
 
 ```
 bubbles/index.html, style.css          page
-bubbles/src/bubbles-model.js           bubble acoustics: Minnaert, heat flow (Φ), losses, the surface's image, rise, glide, kick (no audio, no DOM)
-bubbles/src/bubbles-engine.js          real-time engine: nozzles, seeded brooks, bubble pool (AudioWorklet and Node)
+bubbles/src/bubbles-instrument.js      the descriptor: parameters, presets, key range, the engine
 bubbles/src/bubbles-params.js          parameters and presets
+bubbles/src/bubbles-tank.js            the keyboard, the tank's layout, the gases and liquids (for the page)
 bubbles/src/bubbles-main.js            page wiring and views
-bubbles/src/bubbles-wasm.js            the C++ engine and model as WebAssembly (bubbles/wasm/bubbles.wasm)
-native/instruments/bubbles/            the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
-test/bubbles-tests.mjs                 node test/bubbles-tests.mjs (24 tests, ~6 s; FORTE_ENGINE=wasm: on the WebAssembly)
+bubbles/src/bubbles-wasm.js            the engine and model as WebAssembly (bubbles/wasm/bubbles.wasm), for the page and the tests
+native/instruments/bubbles/            the C++: bubble acoustics (Minnaert, heat flow Φ, losses, the surface's image, rise, glide, kick), the engine (nozzles, seeded brooks, bubble pool), reference (plugins and WebAssembly)
+test/bubbles-tests.mjs                 node test/bubbles-tests.mjs (24 tests, ~5 s)
 tools/render-bubbles.mjs               node tools/render-bubbles.mjs → examples/bubbles/
 ```
 

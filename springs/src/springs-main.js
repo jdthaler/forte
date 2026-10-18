@@ -1,16 +1,21 @@
 // springs-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName, useWasm } from '../../shared/shell.js';
+import { createShell, noteName } from '../../shared/shell.js';
 import { fit, css, animate } from '../../shared/views.js';
-import { INSTRUMENT, springsFor as cached } from './springs-instrument.js';
-import * as jsModel from './springs-model.js';
-import { KEY_LO, KEY_HI, TAU, scaleSpring, cents } from './springs-model.js';
+import { INSTRUMENT, KEY_LO, KEY_HI } from './springs-instrument.js';
 import { wasmModel } from './springs-wasm.js';
 
-// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
-// physics as the engine, in C++), the JavaScript one until then or if it can't load.
-let model = jsModel, wasm = null;
-if (useWasm()) wasmModel().then((m) => { model = wasm = { ...jsModel, ...m }; update(); prewarm(); }, (err) => console.warn(`springs: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+// The views draw what the engine plays: its model, from the same C++, built as WebAssembly.
+const model = await wasmModel();
+
+const TAU = 2 * Math.PI;
+const cents = (f, g) => 1200 * Math.log2(f / g);
+// A spring scaled in every dimension by 1/ρ: every mode, F_C and echo × ρ (the shape is unchanged),
+// as the tuning plays it.
+const scaleSpring = (sp, rho) => ({
+  ...sp, R: sp.R / rho, r: sp.r / rho, L: sp.L / rho, TD: sp.TD / rho, Fc: sp.Fc * rho, kc: sp.kc * rho,
+  height: sp.height / rho, mass: sp.mass / rho ** 3, scale: rho,
+});
 
 const $ = (s) => document.querySelector(s);
 let focus = 60, echo = null, analyser = null, strikeAt = -1, strikeVel = 0.7;
@@ -18,12 +23,10 @@ const rate = () => shell?.audio?.ctx.sampleRate || 48000;
 
 // ---- the springs and their modes, sent with each note ----------------------------------------------
 // (a few hundred 6 × 6 eigenproblems for a bass key: too slow for the audio thread, so the page
-// builds them and works through the keyboard in spare moments after a change): the JavaScript
-// model's (the descriptor keeps them) for the JavaScript engine, the WebAssembly model's, packed,
-// for the WebAssembly engine. The views draw the model's.
-const wasmEngine = () => wasm && shell.engineKind !== 'js'; // until the worklet says, expect the WebAssembly
-const springsFor = (key, P = shell.P, fs = rate()) => (wasm ? wasm.keySprings(key, P, fs) : cached(key, P, fs));
-const noteData = (key, vel, P, fs) => (wasmEngine() ? wasm.keySprings(key, P, fs).packed : cached(key, P, fs));
+// builds them with its model, which keeps them, and works through the keyboard in spare moments
+// after a change). The engine takes them packed; the views draw them.
+const springsFor = (key, P = shell.P, fs = rate()) => model.keySprings(key, P, fs);
+const noteData = (key, vel, P, fs) => model.keySprings(key, P, fs).packed;
 let warmTimer = 0;
 function prewarm() {
   clearTimeout(warmTimer);
@@ -40,10 +43,7 @@ const shell = createShell({
   onAudio: (a) => { analyser = a.analyser; prewarm(); },
   onNoteOn: (key, vel) => { focus = key; strikeAt = performance.now() / 1000; strikeVel = vel; shell.keys.focus?.(key); update(); },
   onParam: (id, v, P, p, dragging) => { if (!dragging || !['coil', 'wire', 'helix'].includes(id)) update(); else updateSoon(); prewarm(); },
-  onMessage: (m) => {
-    if (m.type === 'engine') prewarm(); // the worklet says which engine plays
-    else if (m.type === 'echo') { echo = m; echoImage = null; }
-  },
+  onMessage: (m) => { if (m.type === 'echo') { echo = m; echoImage = null; } },
 });
 
 // ---- the focus key's spring --------------------------------------------------------------------------------

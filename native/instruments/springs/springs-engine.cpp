@@ -1,5 +1,4 @@
-// springs-engine.cpp — springs/src/springs-engine.js in C++ (springs-engine.h), operation for
-// operation, so that it plays what the JavaScript plays.
+// springs-engine.cpp — the spring keyboard's engine (springs-engine.h).
 
 #include "springs-engine.h"
 

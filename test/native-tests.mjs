@@ -1,6 +1,6 @@
 // The bridge to the native ports (docs/PLUGINS.md): every descriptor converts to C++ tables,
 // the generated files are fresh, and the ported instruments' engines match their references.
-// Run: node test/native-tests.mjs        (FORTE_ENGINE=wasm: the WebAssembly engines)
+// Run: node test/native-tests.mjs
 
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -11,7 +11,7 @@ import { GROUPS as BLACKHOLE_GROUPS } from '../blackhole/src/ringdown-params.js'
 import { loadInstrument } from '../tools/headless.mjs';
 import { Limiter } from '../shared/limiter.js';
 import { LIMITER } from '../shared/chain.js';
-import { loadEngine, ENGINE } from '../tools/engine.mjs';
+import { loadEngine } from '../tools/engine.mjs';
 import { scripts, play, summarise, compare, referenceFile, toleranceFor } from '../tools/render-reference.mjs';
 
 let failures = 0;
@@ -78,13 +78,13 @@ await test("the worklet's 'forte-limiter' processor limits both channels, and up
   assert.equal(out[0][5], 0);
 });
 
-console.log(`ported instruments: ${ported.length ? ported.join(', ') : 'none yet'} (${ENGINE} engine)`);
+console.log(`ported instruments: ${ported.length ? ported.join(', ') : 'none yet'}`);
 for (const slug of ported) {
   await test(`${slug}: its WebAssembly build is committed, loads, and has the descriptor's parameters`, async () => {
     const I = await loadInstrument(slug);
     assert.ok(I.wasm, `${slug}: the descriptor has no wasm`);
     assert.ok(existsSync(new URL(I.wasm.binary)), I.wasm.binary);
-    const W = await loadEngine(I, 'wasm');
+    const W = await loadEngine(I);
     assert.equal(W.name, I.wasm.name);
     const e = new W(48000), L = new Float32Array(128), R = new Float32Array(128);
     e.setParams(Object.fromEntries(I.groups.flatMap((g) => g.params).map((p) => [p.id, p.def])));
@@ -93,7 +93,7 @@ for (const slug of ported) {
     for (let b = 0; b < 40; b++) { e.process(L, R, 128); for (const v of L) pk = Math.max(pk, Math.abs(v)); }
     assert.ok(pk > 1e-4 && Number.isFinite(pk), `peak ${pk}`);
   });
-  await test(`${slug}: plays as its JavaScript reference (tools/render-reference.mjs)`, async () => {
+  await test(`${slug}: plays as its reference (tools/render-reference.mjs)`, async () => {
     assert.ok(existsSync(referenceFile(slug)), `no native/instruments/${slug}/reference.json`);
     const ref = JSON.parse(readFileSync(referenceFile(slug), 'utf8'));
     const I = await loadInstrument(slug), Engine = await loadEngine(I);

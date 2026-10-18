@@ -3,9 +3,11 @@
 //
 // Name demos NN-what-you-hear; the landing page plays the first one.
 
-import { SpringEngine } from '../springs/src/springs-engine.js';
-import { DEFAULTS, PRESETS } from '../springs/src/springs-params.js';
+import { INSTRUMENT, DEFAULTS, PRESETS } from '../springs/src/springs-instrument.js';
+import { loadEngine } from './engine.mjs';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
+
+const SpringEngine = await loadEngine(INSTRUMENT);
 
 const FS = 48000, SLUG = 'springs';
 const P = (o = {}) => ({ ...DEFAULTS, ...o });

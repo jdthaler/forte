@@ -3,11 +3,12 @@
 // Usage: node tools/render-piano.mjs [presetIndex ...]
 
 import { mkdirSync } from 'node:fs';
-import { computeKeyModel, buildVoiceData } from '../piano/src/physics.js';
-import { PianoEngine } from '../piano/src/engine.js';
-import { DEFAULTS, PRESETS } from '../piano/src/params.js';
+import { INSTRUMENT, DEFAULTS, PRESETS } from '../piano/src/piano-instrument.js';
+import { loadEngine } from './engine.mjs';
 import { soundboardIR, roomIR } from '../shared/impulses.js';
 import { convolve, writeWav, FS_SHIM, webAudioIR } from './audio-util.mjs';
+
+const PianoEngine = await loadEngine(INSTRUMENT);
 
 const FS = 48000;
 const SECONDS = 8;
@@ -21,12 +22,7 @@ const PHRASE = [
 
 function renderDry(P) {
   const eng = new PianoEngine(FS);
-  eng.setParams({ gainV: P.gainV, gainH: P.gainH, gainT: P.gainT, damper: P.damper, width: P.width });
-  const data = new Map();
-  const vd = (key) => {
-    if (!data.has(key)) data.set(key, buildVoiceData(computeKeyModel(key, P, FS), P, 1));
-    return data.get(key);
-  };
+  eng.setParams({ ...P }); // the engine builds each key's model from P itself
   const n = SECONDS * FS, L = new Float32Array(n), R = new Float32Array(n);
   const events = [];
   for (const [t, key, v, d] of PHRASE) {
@@ -39,12 +35,13 @@ function renderDry(P) {
   for (let s = 0; s < n; s += bl) {
     while (e < events.length && events[e].s <= s) {
       const ev = events[e++];
-      if (ev.on) eng.noteOn(ev.key, ev.v, vd(ev.key)); else eng.noteOff(ev.key);
+      if (ev.on) eng.noteOn(ev.key, ev.v); else eng.noteOff(ev.key);
     }
     eng.process(bL, bR, bl);
     L.set(bL.subarray(0, Math.min(bl, n - s)), s);
     R.set(bR.subarray(0, Math.min(bl, n - s)), s);
   }
+  eng.destroy();
   return [L, R];
 }
 

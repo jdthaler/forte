@@ -1,4 +1,4 @@
-// reeds-engine.cpp — the reed piano's engine, as reeds/src/reeds-engine.js runs it.
+// reeds-engine.cpp — the reed piano's engine (reeds-engine.h).
 
 #include "reeds-engine.h"
 
@@ -279,7 +279,7 @@ void ReedEngine::noteOn(int key, double velocity) {
   if (!hasParams || key < 0 || key > 127) return;
   focus = key;
 #if !FORTE_THREADS
-  // the reed the page sent with this note (the JavaScript engine's data), whatever its version
+  // the reed the page sent with this note, whatever its version
   if (offered && offered->key == key) {
     const std::unique_ptr<VoiceData> d = std::move(offered);
     strikeKey(key, velocity, *d);

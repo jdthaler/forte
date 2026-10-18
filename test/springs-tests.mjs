@@ -1,24 +1,21 @@
 // Spring Keyboard checks. Run: node test/springs-tests.mjs
 //
-// Wittrick's helical rod against the ring's textbook modes, rigid-body motion and the slinky line;
-// the reduced thin-spring model against Wittrick's; F_C against Parker & Bilbao's formula; the
-// direction of the chirps; then the engine against the model: tuning, arrival times and echo spacing
-// measured from its impulse response, springs in parallel, damping, the damper, voices, levels,
-// stability and cost.
+// The C++ (native/instruments/springs), built as WebAssembly: the model's functions through
+// springs-wasm.js, the engine through loadEngine. Wittrick's helical rod against the ring's
+// textbook modes, rigid-body motion and the slinky line; the thin-spring model against
+// Wittrick's; F_C against Parker & Bilbao's formula; the direction of the chirps; then the engine
+// against the model: tuning, arrival times and echo spacing measured from its impulse response,
+// springs in parallel, damping, the damper, voices, levels, stability and cost.
 
 import assert from 'node:assert/strict';
-import {
-  KEY_LO, KEY_HI, TAU, STEEL, keyFreq, cents, rodSolver, rodConstants, reducedOmega, reducedFc, fcParkerBilbao, slinkyLine,
-  tuneSpring, springModes, keySprings, lowBranchDelay, dispersionCurve, transition, beadShare, modeSigma, pulseLength,
-  virtualPitch, heardPartials, playedSpring, HEAR, MF,
-} from '../springs/src/springs-model.js';
 import { fft } from '../tools/audio-util.mjs';
-import { INSTRUMENT } from '../springs/src/springs-instrument.js';
+import { INSTRUMENT, KEY_LO, KEY_HI, DEFAULTS, GROUPS, PRESETS } from '../springs/src/springs-instrument.js';
+import { wasmModel } from '../springs/src/springs-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
-import { DEFAULTS, GROUPS, PRESETS } from '../springs/src/springs-params.js';
-import { Biquad } from '../shared/dsp.js';
+import { keyFreq } from '../shared/dsp.js';
 
-const SpringEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const SpringEngine = await loadEngine(INSTRUMENT);
+const { tuneSpring, keySprings, dispersionCurve, modeSigma, pulseLength, pulseSpectrum, rodSolve } = await wasmModel();
 
 const FS = 48000;
 let failures = 0;
@@ -88,55 +85,177 @@ function arrivals({ env, dt }, frac = 0.3) {
 const peakAbs = (x) => { let p = 0; for (const v of x) p = Math.max(p, Math.abs(v)); return p; };
 const rmsDb = (x, a, b) => { let s = 0; for (let i = a; i < b; i++) s += x[i] * x[i]; return 10 * Math.log10(s / (b - a) + 1e-30); };
 const deg = (d) => (d * Math.PI) / 180;
+const TAU = 2 * Math.PI, NU = 0.29, cE = Math.sqrt(200e9 / 7850); // spring steel's ν and √(E/ρ), as the model takes them
+const cents = (f, g) => 1200 * Math.log2(f / g);
+const HEAR = 0.4, MF = 0.7; // what the tuning listens to: the first 0.4 s after an mf strike
+
+// ---- references independent of the C++ ------------------------------------------------------------------
+// Closed forms the model does not use: the slinky line (the spring as a uniform line, from the
+// open-coiled spring formulas), the reduced zero-helix-angle curved-rod ("thin spring") model and
+// Parker & Bilbao's F_C. Nondimensional: R = 1, E = ρ = 1; shape = { rr: r/R, alpha, nu }.
+const shearK = (nu) => (6 * (1 + nu)) / (7 + 6 * nu); // Timoshenko's coefficient, solid circle (Cowper 1966)
+function sectionOf({ rr, nu }) {
+  const A = Math.PI * rr * rr, I = (Math.PI * rr ** 4) / 4;
+  return { A, I, J: 2 * I, G: 1 / (2 * (1 + nu)) };
+}
+// At low frequency an axial force P and a torque M about the axis load each section of wire with a
+// twisting moment M sin α + PR cos α, a bending moment M cos α − PR sin α, tension P sin α and shear
+// P cos α; the strain energy gives the 2 × 2 compliance per unit wire length, the kinetic energy the
+// mass and moment of inertia, and the two wave speeds along the wire are √ of the eigenvalues of
+// (C M)⁻¹. Classical close-coiled limits (α = 0): c_axial = √(GJ/ρA)/R, c_rotation = √(EI/ρA)/R.
+function slinkyLine(shape) {
+  const { alpha } = shape, rc = sectionOf(shape), ks = shearK(shape.nu);
+  const s = Math.sin(alpha), c = Math.cos(alpha), GJ = rc.G * rc.J, EI = rc.I, EA = rc.A, kGA = ks * rc.G * rc.A;
+  const Cpp = (c * c) / GJ + (s * s) / EI + (s * s) / EA + (c * c) / kGA, Cmm = (s * s) / GJ + (c * c) / EI, Cpm = s * c * (1 / GJ - 1 / EI);
+  const m = rc.A, Irot = rc.A + rc.J * s * s + rc.I * c * c;
+  const det = Cpp * Cmm - Cpm * Cpm;
+  const a = Cmm / det / m, b = -Cpm / det / m, cc = -Cpm / det / Irot, d = Cpp / det / Irot;
+  const tr = a + d, dd = a * d - b * cc, disc = Math.sqrt(Math.max(0, tr * tr / 4 - dd));
+  const v1 = Math.sqrt(tr / 2 - disc), v2 = Math.sqrt(tr / 2 + disc);
+  const rotShare = (v2sq) => { const x = b, y = v2sq - a; return Math.abs(y / (Math.hypot(x, y) || 1)); }; // the wind-up share
+  return rotShare(v2 * v2) >= rotShare(v1 * v1) ? { axial: v1, rotation: v2 } : { axial: v2, rotation: v1 };
+}
+// The zero-helix-angle curved rod, in-plane: (ω² − κ²(k² − ε²)² − γ²ε²)(ω² − γ²k²) = γ⁴ε²k², κ² = EI/ρA,
+// γ² = E/ρ, ε = 1/R; the lower root is the flexural sheet that carries the chirps.
+function reducedOmega(k, rr) {
+  const kap = rr / 2, a = kap * kap * (k * k - 1) ** 2 + 1, d = k * k;
+  const S = a + d, P = a * d - d, q = Math.sqrt(Math.max(0, S * S - 4 * P));
+  return [Math.sqrt(Math.max(0, (2 * P) / (S + q))), Math.sqrt((S + q) / 2)];
+}
+// Its low branch peaks (dω/dk = 0) at the transition.
+function reducedFc(rr) {
+  let lo = 0.3, hi = 0.8;
+  const f = (k) => reducedOmega(k, rr)[0];
+  for (let i = 0; i < 80; i++) { const m1 = lo + (hi - lo) / 3, m2 = hi - (hi - lo) / 3; if (f(m1) < f(m2)) lo = m1; else hi = m2; }
+  const k = 0.5 * (lo + hi);
+  return { k, w: f(k) };
+}
+// Parker & Bilbao (2009): F_C ≈ 3r√(E/ρ) / (16√5 π R²), the low branch at k = ε/2.
+const fcParkerBilbao = (g) => (3 * g.r * Math.sqrt(g.E / g.rho)) / (16 * Math.sqrt(5) * Math.PI * g.R * g.R);
+
+// ---- the ear: subharmonic summation (Hermes 1988), to hear the pitch of the engine's own sound -----------------
+// Partials laid as power on a log-frequency axis (96 points an octave, each a triangle ±50 ¢ wide),
+// weighted by W(f) = [1 + (f/2500)²]^(−½)·[1 + (300/f)²]^(−½), compressed (amplitude^0.6, from 50 dB
+// below the loudest); a candidate's strength is the sum at f, 2f, … 15f, the k-th weighted 0.75^(k−1);
+// the strongest candidate within halfCents of center, refined by a parabola.
+const SHS = { ppo: 96, harmonics: 15, compression: 0.75, fLo: 25, fHi: 5000, floorDb: -50, width: 4 };
+const pitchWeight = (f) => 1 / Math.sqrt((1 + (f / 2500) ** 2) * (1 + (300 / f) ** 2));
+function virtualPitch(partials, center, halfCents = 600) {
+  const o = SHS, lo = Math.log2(o.fLo), n = Math.round((Math.log2(o.fHi * o.harmonics * 2) - lo) * o.ppo);
+  const Pw = new Float64Array(n), E = new Float64Array(n);
+  for (const p of partials) {
+    if (!(p.f > o.fLo) || !(p.a > 0)) continue;
+    const x = (Math.log2(p.f) - lo) * o.ppo, i0 = Math.floor(x);
+    for (let i = i0 - o.width; i <= i0 + o.width + 1; i++) {
+      if (i < 0 || i >= n) continue;
+      const w = 1 - Math.abs(i - x) / (o.width + 1);
+      if (w > 0) Pw[i] += p.a * p.a * w;
+    }
+  }
+  let pm = 0;
+  for (let i = 0; i < n; i++) if (Pw[i] > pm) pm = Pw[i];
+  if (!(pm > 0)) return { f: NaN, strength: 0 };
+  const floor = pm * 10 ** (o.floorDb / 10);
+  for (let i = 0; i < n; i++) if (Pw[i] > floor) E[i] = pitchWeight(2 ** (lo + i / o.ppo)) * (Pw[i] / pm) ** 0.3;
+  const m = Math.round((Math.log2(o.fHi) - lo) * o.ppo), curve = new Float64Array(m + 1);
+  for (let i = 0; i <= m; i++) {
+    let sum = 0, w = 1;
+    for (let k = 1; k <= o.harmonics; k++) {
+      const x = i + Math.log2(k) * o.ppo, j = Math.floor(x), fr = x - j;
+      if (j + 1 < n) sum += w * (E[j] * (1 - fr) + E[j + 1] * fr);
+      w *= o.compression;
+    }
+    curve[i] = sum;
+  }
+  const c = Math.round((Math.log2(center) - lo) * o.ppo), hw = Math.round((halfCents / 1200) * o.ppo);
+  const a = Math.max(0, c - hw), b = Math.min(m, c + hw);
+  let bi = a;
+  for (let i = a; i <= b; i++) if (curve[i] > curve[bi]) bi = i;
+  let x = bi;
+  if (bi > 0 && bi < m) { const A = curve[bi - 1], B = curve[bi], C = curve[bi + 1], d = A - 2 * B + C; if (d < 0) x = bi + (0.5 * (A - C)) / d; }
+  return { f: 2 ** (lo + x / o.ppo), strength: curve[bi] };
+}
+
+// ---- the model's springs, as the tests read them -----------------------------------------------------------------
+// A spring scaled in every dimension by 1/ρ (every mode, F_C and echo × ρ), as the tuning plays it.
+const scaleSpring = (sp, rho) => ({ ...sp, R: sp.R / rho, r: sp.r / rho, L: sp.L / rho, TD: sp.TD / rho, Fc: sp.Fc * rho, kc: sp.kc * rho });
+// A key's first spring as the instrument plays it: tuned, scaled by its virtual-pitch ρ; s0 its modes.
+function playedSpring(key, p, fs = FS) {
+  const d = keySprings(key, p, fs);
+  return Object.assign(scaleSpring(tuneSpring(key, p), d.rho), { data: d, s0: d.springs[0] });
+}
+// A spring's modes (from keySprings) as a list: n, k = nπ/L, f, c_g and the coupling rel (against a
+// pure wave's) of each.
+const modesOf = (s) => Array.from(s.f, (f, i) => ({ n: s.n[i], k: (s.n[i] * Math.PI) / s.L, f, cg: s.cg[i], rel: Math.abs(s.rel[i]) }));
+// The drive's sheet: for each n, the mode the beads couple to most.
+function sheetModes(ms) {
+  const best = new Map();
+  for (const m of ms) if (!best.has(m.n) || m.rel > best.get(m.n).rel) best.set(m.n, m);
+  return [...best.values()].sort((a, b) => a.n - b.n);
+}
+// The group delay of the low branch (below F_C) at f over one length of wire, L/c_g, from the drive
+// sheet's dispersion curve (dense, interpolated in k).
+const curves = new WeakMap();
+function lowBranchDelay(sp, f) {
+  let c = curves.get(sp);
+  if (!c) { c = dispersionCurve(sp, { fTop: sp.Fc, n: 1000 })[sp.sheet].filter((p) => p.k < sp.kc); curves.set(sp, c); }
+  const i = c.findIndex((p) => p.f >= f), a = c[i - 1], b = c[i], t = (f - a.f) / (b.f - a.f), cg = a.cg + t * (b.cg - a.cg);
+  return { k: a.k + t * (b.k - a.k), cg, tau: sp.L / cg };
+}
 
 console.log("Wittrick's helical rod");
 test('a closed ring (α = 0, kR = n waves round it): the in-plane sheet gives Hoppe\'s ω² = (EI/ρAR⁴)·n²(n²−1)²/(n²+1) and the out-of-plane sheet Michell\'s n²(n²−1)²/(n² + EI/GJ), n = 2–6, within 0.2 % for a thin wire (r/R = 0.01)', () => {
-  const shape = { rr: 0.01, alpha: 0, nu: STEEL.nu }, s = rodSolver(shape), rc = rodConstants(shape), EIr = rc.I / rc.A, EIGJ = rc.I / (rc.G * rc.J);
+  const shape = { rr: 0.01, alpha: 0, nu: NU }, rc = sectionOf(shape), EIr = rc.I / rc.A, EIGJ = rc.I / (rc.G * rc.J);
   for (let n = 2; n <= 6; n++) {
-    const { w, Y } = s.solve(n), base = EIr * n * n * (n * n - 1) ** 2;
+    const { w, share } = rodSolve(shape, n), base = EIr * n * n * (n * n - 1) ** 2;
     const inPlane = Math.sqrt(base / (n * n + 1)), outPlane = Math.sqrt(base / (n * n + EIGJ));
     // which sheet is which: the in-plane one turns the section about the axis (θ_z), the out-of-plane one moves along it
-    const j = Math.abs(beadShare(Y, 0, 0, 'rotation')) > Math.abs(beadShare(Y, 1, 0, 'rotation')) ? 0 : 1;
+    const j = Math.abs(share.rotation[0]) > Math.abs(share.rotation[1]) ? 0 : 1;
     assert.ok(Math.abs(w[j] / inPlane - 1) < 2e-3, `n = ${n}: in-plane ${w[j]} vs ${inPlane}`);
     assert.ok(Math.abs(w[1 - j] / outPlane - 1) < 2e-3, `n = ${n}: out-of-plane ${w[1 - j]} vs ${outPlane}`);
   }
 });
 test('rigid-body motion costs nothing: both acoustic sheets go to ω = 0 as k → 0 (rotation about and translation along the axis) and at k = cos α/R (sideways translations and tilts), for α = 0°, 3° and 15°', () => {
   for (const a of [0, 3, 15]) {
-    const s = rodSolver({ rr: 0.0833, alpha: deg(a), nu: STEEL.nu }), ref = s.solve(0.5).w[1];
-    const at0 = Array.from(s.solve(1e-6).w), atK0 = Array.from(s.solve(Math.cos(deg(a))).w); // (solve reuses its arrays)
+    const shape = { rr: 0.0833, alpha: deg(a), nu: NU }, ref = rodSolve(shape, 0.5).w[1];
+    const at0 = rodSolve(shape, 1e-6).w, atK0 = rodSolve(shape, Math.cos(deg(a))).w;
     assert.ok(at0[0] < 1e-5 * ref && at0[1] < 1e-5 * ref, `α = ${a}°, k → 0: ${at0[0]}, ${at0[1]}`);
     assert.ok(atK0[0] < 1e-6 * ref, `α = ${a}°, k = cos α/R: ${atK0[0]}`);
   }
 });
-test('the low-frequency limit is the slinky line: the spring as a uniform line, with the open-coiled spring\'s compliance (twisting, bending, stretch and shear of the wire under an axial load and a torque); both wave speeds within 10⁻⁵ for α = 0–20°; at α = 0 within 0.3 % of the classical close-coiled c_axial = √(GJ/ρA)/R and c_rotation = √(EI/ρA)/R (which leave out the wire\'s shear and rotary inertia, O(r²/R²))', () => {
-  for (const a of [0, 3, 10, 20]) {
-    const shape = { rr: 0.0833, alpha: deg(a), nu: STEEL.nu }, s = rodSolver(shape), sl = slinkyLine(shape), k = 1e-4, w = s.solve(k).w;
-    assert.ok(Math.abs(w[0] / k / sl.axial - 1) < 1e-5, `α = ${a}°: axial ${w[0] / k} vs ${sl.axial}`);
-    assert.ok(Math.abs(w[1] / k / sl.rotation - 1) < 1e-5, `α = ${a}°: rotation ${w[1] / k} vs ${sl.rotation}`);
-    if (a === 0) {
-      const rc = rodConstants(shape);
-      assert.ok(Math.abs(sl.axial / Math.sqrt((rc.G * rc.J) / rc.A) - 1) < 3e-3 && Math.abs(sl.rotation / Math.sqrt(rc.I / rc.A) - 1) < 3e-3, `${sl.axial / Math.sqrt((rc.G * rc.J) / rc.A)}, ${sl.rotation / Math.sqrt(rc.I / rc.A)}`);
-    }
+test('the low-frequency limit is the slinky line: the spring as a uniform line, with the open-coiled spring\'s compliance (twisting, bending, stretch and shear of the wire under an axial load and a torque); the low-frequency speed of the sheet the beads drive, in rotation or along the axis, within 10⁻⁵ of the line\'s for α = 1–20°; at α = 0 the line is within 0.3 % of the classical close-coiled c_axial = √(GJ/ρA)/R and c_rotation = √(EI/ρA)/R (which leave out the wire\'s shear and rotary inertia, O(r²/R²))', () => {
+  for (const a of [1, 3, 10, 20]) for (const drive of ['rotation', 'axial']) {
+    const sp = tuneSpring(60, P({ helix: a, drive })), sl = slinkyLine({ rr: sp.r / sp.R, alpha: sp.alpha, nu: NU }), c0 = sp.c0 / cE;
+    assert.ok(Math.abs(c0 / sl[drive] - 1) < 1e-5, `α = ${a}°, ${drive}: ${c0} vs ${sl[drive]}`);
   }
-  const c = slinkyLine({ rr: 0.0833, alpha: 0, nu: STEEL.nu });
-  console.log(`         c_rotation / c_axial = ${(c.rotation / c.axial).toFixed(4)} (√(1+ν) = ${Math.sqrt(1 + STEEL.nu).toFixed(4)}); c_rotation = ${(c.rotation * Math.sqrt(STEEL.E / STEEL.rho)).toFixed(1)} m/s along the wire at r/R = 1/12`);
+  const shape = { rr: 0.0833, alpha: 0, nu: NU }, rc = sectionOf(shape), sl = slinkyLine(shape);
+  assert.ok(Math.abs(sl.axial / Math.sqrt((rc.G * rc.J) / rc.A) - 1) < 3e-3 && Math.abs(sl.rotation / Math.sqrt(rc.I / rc.A) - 1) < 3e-3, `${sl.axial / Math.sqrt((rc.G * rc.J) / rc.A)}, ${sl.rotation / Math.sqrt(rc.I / rc.A)}`);
+  console.log(`         c_rotation / c_axial = ${(sl.rotation / sl.axial).toFixed(4)} (√(1+ν) = ${Math.sqrt(1 + NU).toFixed(4)}); c_rotation = ${(sl.rotation * cE).toFixed(1)} m/s along the wire at r/R = 1/12`);
 });
 
 console.log('the thin spring and F_C');
 // k on the low branch (below F_C) for a given ω, by bisection, for any monotone ω(k) on [0, kc]
 const lowK = (wf, w, kc) => { let lo = 0, hi = kc; for (let i = 0; i < 60; i++) { const m = 0.5 * (lo + hi); if (wf(m) < w) lo = m; else hi = m; } return 0.5 * (lo + hi); };
 test('the reduced (zero-helix-angle, thin) model agrees with Wittrick\'s at α = 1° where the chirps live: the low branch\'s wavenumber within 0.5 % and its group delay within 3 % up to 0.95 F_C; the upper branch within 2 % from 1.45/R to 2.2/R (3–10 F_C; nearer 1/R the helix mixes in the axial family); F_C within 0.3 %', () => {
-  const rr = 0.0833, s = rodSolver({ rr, alpha: deg(1), nu: STEEL.nu }), tr = transition(s, 'rotation'), red = reducedFc(rr);
-  assert.ok(Math.abs(tr.w / red.w - 1) < 3e-3, `F_C: Wittrick ${tr.w}, reduced ${red.w}`);
+  // the model's C4 spring at α = 1° (r/R = 0.0833) and its dispersion, nondimensional (R = 1, E = ρ = 1)
+  const sp = tuneSpring(60, P({ helix: 1 })), rr = sp.r / sp.R, red = reducedFc(rr), nd = (f) => (TAU * f * sp.R) / cE;
+  assert.ok(Math.abs(rr - 0.0833) < 1e-3, `r/R ${rr}`);
+  assert.ok(Math.abs(nd(sp.Fc) / red.w - 1) < 3e-3, `F_C: Wittrick ${nd(sp.Fc)}, reduced ${red.w}`);
+  const curve = dispersionCurve(sp, { fTop: (reducedOmega(2.4, rr)[0] * cE) / (TAU * sp.R), n: 1000 });
+  const pts = (j) => curve[j].map((p) => ({ k: p.k * sp.R, w: nd(p.f), cg: p.cg / cE }));
+  const low = pts(sp.sheet).filter((p) => p.k < sp.kc * sp.R);
   let worstK = 0, worstG = 0, worstU = 0;
   for (let fr = 0.05; fr <= 0.951; fr += 0.05) {
-    const w = fr * red.w, kW = lowK((k) => s.solve(k).w[tr.j], w, tr.k), kR = lowK((k) => reducedOmega(k, rr)[0], w, red.k);
+    // Wittrick's: k at ω on the curve, and c_g there (interpolated in k)
+    const w = fr * red.w, i = low.findIndex((p) => p.w >= w), a = low[i - 1], b = low[i], t = (w - a.w) / (b.w - a.w);
+    const kW = a.k + t * (b.k - a.k), kR = lowK((k) => reducedOmega(k, rr)[0], w, red.k);
     worstK = Math.max(worstK, Math.abs(kW / kR - 1));
-    const gW = 1 / s.solve(kW).dw[tr.j], h = 1e-6, gR = (2 * h) / (reducedOmega(kR + h, rr)[0] - reducedOmega(kR - h, rr)[0]);
+    const gW = 1 / (a.cg + t * (b.cg - a.cg)), h = 1e-6, gR = (2 * h) / (reducedOmega(kR + h, rr)[0] - reducedOmega(kR - h, rr)[0]);
     worstG = Math.max(worstG, Math.abs(gW / gR - 1));
   }
-  for (let k = 1.45; k <= 2.2; k += 0.05) worstU = Math.max(worstU, Math.abs(s.solve(k).w[1] / reducedOmega(k, rr)[0] - 1));
+  const up = pts(1).filter((p) => p.k >= 1.45 && p.k <= 2.2);
+  assert.ok(up.length > 100, `${up.length} points on the upper branch`);
+  for (const p of up) worstU = Math.max(worstU, Math.abs(p.w / reducedOmega(p.k, rr)[0] - 1));
   console.log(`         worst: low-branch k ${(100 * worstK).toFixed(2)} %, group delay ${(100 * worstG).toFixed(2)} %, upper branch ω ${(100 * worstU).toFixed(2)} %`);
   assert.ok(worstK < 5e-3 && worstG < 0.03 && worstU < 0.02);
 });
@@ -152,7 +271,7 @@ test('F_C: the reduced model\'s low branch peaks at 0.3367 κε² (κ = r√(E/�
   console.log(`         C4 spring: F_C ${sp.Fc.toFixed(0)} Hz (Wittrick, α = 3°); Parker & Bilbao's formula ${fcParkerBilbao(sp).toFixed(0)} Hz`);
 });
 test('the chirps\' direction: below F_C the group delay climbs from L/c₀ to infinity at F_C (each echo a rising chirp: the main series, whose group delay peaks at F_C, as Parker (2011) describes); above F_C it falls with frequency (falling chirps, high frequencies first, as on the Slinky)', () => {
-  const sp = tuneSpring(48, P()), curve = dispersionCurve(sp, { n: 800 }), j = sp.sheet, kc = sp.kc;
+  const sp = tuneSpring(48, P()), rr = sp.r / sp.R, curve = dispersionCurve(sp, { fTop: (reducedOmega(2, rr)[0] * cE) / (TAU * sp.R), n: 800 }), j = sp.sheet, kc = sp.kc;
   const low = curve[j].filter((p) => p.k < kc && p.f > 0.02 * sp.Fc), up = curve[j].filter((p) => p.k > 1.25 / sp.R);
   for (let i = 1; i < low.length; i++) assert.ok(low[i].f > low[i - 1].f && 1 / low[i].cg > 1 / low[i - 1].cg, `low branch at ${low[i].f.toFixed(0)} Hz`);
   assert.ok(Math.abs((sp.L / low[0].cg) / (sp.TD / 2) - 1) < 0.01, 'starts at T_D/2 one way');
@@ -161,22 +280,14 @@ test('the chirps\' direction: below F_C the group delay climbs from L/c₀ to in
 });
 
 console.log('tuning');
-// The virtual pitch of a set of springs, as the tuning reads it: the mean (in cents) of each spring's
-// own, then the whole set's peak within 40 ¢ of that mean (or the mean, if there is none).
-const setPitch = (springs, p, f0) => {
-  const mean = f0 * 2 ** (springs.reduce((c, sp) => c + Math.log2(virtualPitch(heardPartials([sp], p), f0).f / f0), 0) / springs.length);
-  if (springs.length === 1) return mean;
-  const all = virtualPitch(heardPartials(springs, p), mean, 40);
-  return all.edge ? mean : all.f;
-};
 const SETTINGS = [{ springs: 1 }, { springs: 3, spread: 3 }, { coil: 1.6, wire: 1.3 }, { helix: 12, endLoss: 0.3, bead: 5 }, { mallet: 2 }];
 const REG = [[36, 'C2'], [48, 'C3'], [60, 'C4'], [72, 'C5'], [84, 'C6']];
-test('tuned by ear: the virtual pitch (subharmonic summation, Hermes 1988, on what the pickup hears in the first 0.4 s after an mf strike) is on the note within 1 ¢ on all 49 keys at the defaults, and within 10 ¢ on every key with one spring, three springs 3 % apart, wide coils of thick wire, a steep helix on lossy heavy mounts, and a soft mallet; before the correction it was flat, most in the bass', () => {
+test('tuned by ear: the virtual pitch the tuning reads (subharmonic summation, Hermes 1988, on what the pickup hears in the first 0.4 s after an mf strike; for springs in parallel the whole set\'s peak within 40 ¢ of the mean of each one\'s) is on the note within 1 ¢ on all 49 keys at the defaults, and within 10 ¢ on every key with one spring, three springs 3 % apart, wide coils of thick wire, a steep helix on lossy heavy mounts, and a soft mallet; before the correction it was flat, most in the bass', () => {
   const rows = [];
   for (const [i, o] of [{}, ...SETTINGS].entries()) {
     let worst = 0;
     for (let key = KEY_LO; key <= KEY_HI; key++) {
-      const p = P(o), d = keySprings(key, p, FS), f0 = keyFreq(key), c = cents(setPitch(d.springs, p, f0), f0);
+      const p = P(o), d = keySprings(key, p, FS), f0 = keyFreq(key), c = cents(d.pitch, f0);
       worst = Math.max(worst, Math.abs(c));
       assert.ok(Math.abs(c) < (i ? 10 : 1), `key ${key} ${JSON.stringify(o)}: ${c.toFixed(2)} ¢`);
       if (!i && REG.some(([k]) => k === key)) rows.push(`${REG.find(([k]) => k === key)[1]} ${cents(d.pitchBefore, f0).toFixed(1)} → ${c.toFixed(1)} ¢ (lowest mode ${cents(d.rho, 1) >= 0 ? '+' : ''}${cents(d.rho, 1).toFixed(1)} ¢)`);
@@ -189,11 +300,12 @@ test('the lowest mode and the echo time follow the model: before the correction 
   for (const o of [{}, { helix: 15 }, { drive: 'axial' }, { coil: 0.6, wire: 1.7 }, { springs: 3, spread: 3 }]) {
     const ref = tuneSpring(60, P(o));
     for (let key = KEY_LO; key <= KEY_HI; key += o.springs ? 6 : 1) {
-      const raw = tuneSpring(key, P(o)), m1 = springModes(raw, { wMin: 0.1 }).find((m) => m.n === 1 && m.j === raw.sheet), f0 = keyFreq(key);
+      // mode 1 before the correction: a lone spring's (cut to the tuned length), unscaled by its ρ
+      const raw = tuneSpring(key, P(o)), d = keySprings(key, P(o), FS), f0 = keyFreq(key), offs = [[0], [0.5, -0.5], [0, 1, -1]][d.springs.length - 1];
+      const one = keySprings(key, P({ ...o, springs: 1 }), FS), m1 = { f: sheetModes(modesOf(one.springs[0]))[0].f / one.rho };
       assert.ok(Math.abs(cents(m1.f, f0)) < 0.05, `key ${key} ${JSON.stringify(o)}: mode 1 before ${cents(m1.f, f0).toFixed(3)} ¢`);
       assert.ok(Math.abs(cents(1 / raw.TD, m1.f)) < 3, `key ${key}: 1/T_D ${cents(1 / raw.TD, m1.f).toFixed(2)} ¢ from mode 1`);
       assert.ok(Math.abs(raw.turns / ref.turns - 1) < 1e-9 && Math.abs(raw.Fc / m1.f / (ref.Fc / keyFreq(60)) - 1) < 1e-6, `key ${key}: not a scaled copy`);
-      const d = keySprings(key, P(o), FS), offs = [[0], [0.5, -0.5], [0, 1, -1]][d.springs.length - 1];
       d.springs.forEach((sp, i) => {
         let j = -1;
         for (let q = 0; q < sp.n.length; q++) if (sp.n[q] === 1 && (j < 0 || Math.abs(sp.rel[q]) > Math.abs(sp.rel[j]))) j = q;
@@ -230,7 +342,8 @@ test('the engine sounds every key on its note by ear: subharmonic summation on i
     worst = Math.max(worst, Math.abs(c));
     assert.ok(Math.abs(c) < 10, `key ${key} ${JSON.stringify(o)} at ${fs}: ${c.toFixed(1)} ¢`);
   }
-  const key = 48, sp = playedSpring(key, P({ springs: 1 }), FS), modes = springModes(sp, { wMin: 0.5 }).filter((m) => m.j === sp.sheet && m.n <= 4);
+  const key = 48, sp = playedSpring(key, P({ springs: 1 }), FS), modes = sheetModes(modesOf(sp.s0)).filter((m) => m.rel > 0.5 && m.n <= 4);
+  assert.equal(modes.length, 4);
   const x = run(P({ springs: 1 }), [[0, 'on', key, 0.8]], 0.6), ratios = [];
   for (const m of modes) {
     const fm = peak(x, m.f * 0.995, m.f * 1.005, 960, x.length, m.f * 3e-4);
@@ -269,7 +382,7 @@ test('echo spacing equals the round-trip group delay 2L/c_g(f): the second and t
 });
 test('the Slinky\'s whistles fall: on its upper branch the high frequencies arrive first, at the model\'s L/c_g (within 5 %) from 2.5 kHz down to 300 Hz', () => {
   const S = P({ family: 'slinky', springs: 1, ...DRY, mallet: 0.1, helix: 6 }), sp = playedSpring(60, S, FS), x = run(S, [[0, 'on', 60, 1]], 0.12);
-  const curve = dispersionCurve(sp, { fTop: 3000, n: 1200 })[1 - sp.sheet].concat(dispersionCurve(sp, { fTop: 3000, n: 1200 })[sp.sheet]).filter((p) => p.k > 1.4 / sp.R);
+  const curve = dispersionCurve(sp, { fTop: 3000, n: 1000 })[1 - sp.sheet].concat(dispersionCurve(sp, { fTop: 3000, n: 1000 })[sp.sheet]).filter((p) => p.k > 1.4 / sp.R);
   let prev = Infinity;
   const rows = [];
   for (const f of [2500, 1500, 800, 500, 300]) {
@@ -306,8 +419,8 @@ test('springs in parallel: three springs cut a spread apart ring at ρf₀/(1 + 
 test('damping: each mode decays at the model\'s σ = σ_oil + πfη + (loss per reflection)·|c_g|/L (within 4 %); per reflection the low modes lose more than those near F_C, where the waves crawl: the band below F_C rings longest', () => {
   const key = 48, o = { springs: 1, endLoss: 0.2, eta: 3e-4, oil: 2 }, sp = playedSpring(key, P(o), FS), x = run(P(o), [[0, 'on', key, 0.9]], 1.2);
   // three modes of the low branch with no other mode within 25 Hz (a neighbour would beat with them)
-  const all = springModes(sp, { wMin: 0.004 }), lonely = (m) => all.every((q) => q === m || Math.abs(q.f - m.f) > 25);
-  const modes = all.filter((m) => m.j === sp.sheet && m.k < sp.kc && m.rel > 0.2 && lonely(m));
+  const all = modesOf(sp.s0).filter((m) => m.rel > 0.004), lonely = (m) => all.every((q) => q === m || Math.abs(q.f - m.f) > 25);
+  const modes = sheetModes(all).filter((m) => m.k < sp.kc && m.rel > 0.2 && lonely(m));
   const pick = [modes[0], modes[Math.floor(modes.length * 0.5)], modes[modes.length - 1]], W = 9600;
   const rows = [];
   for (const m of pick) {
@@ -317,7 +430,7 @@ test('damping: each mode decays at the model\'s σ = σ_oil + πfη + (loss per 
     rows.push(`mode ${m.n} ${m.f.toFixed(0)} Hz T₆₀ ${(6.91 / model).toFixed(2)} s`);
   }
   // per reflection: endLoss alone, low mode vs near F_C
-  const D = { endLoss: 0.2, eta: 0, oil: 0 }, low = all.filter((m) => m.j === sp.sheet && m.k < sp.kc), top = low[low.length - 1];
+  const D = { endLoss: 0.2, eta: 0, oil: 0 }, low = sheetModes(all).filter((m) => m.k < sp.kc), top = low[low.length - 1];
   assert.ok(modeSigma(top.f, top.cg, sp.L, D) < 0.2 * modeSigma(low[0].f, low[0].cg, sp.L, D), `${top.f.toFixed(0)} Hz against ${low[0].f.toFixed(0)} Hz`);
   console.log(`         ${rows.join('; ')}`);
 });
@@ -335,18 +448,24 @@ test('the damper falls when the key comes up (T₆₀ as set, within 10 %, soone
 });
 test('the beads: a heavier bead passes less of the high modes, ∝ 1/(1 + (f/f_b)²) with f_b = f₀/πμ (within 3 %); a steeper helix couples the axial family to the rotating beads (more than 5 % of the low modes\' coupling at 15°, under 1 % at 1°); axially driven springs are cut √(1+ν)-ish shorter for the same note', () => {
   // (the bead also moves the tuning a little: each run's mode 9 is found on its own spring)
-  const key = 48, mode9 = (bead) => { const sp = playedSpring(key, P({ springs: 1, ...DRY, bead }), FS); return { sp, m: springModes(sp, { wMin: 0.3 }).filter((q) => q.j === sp.sheet && q.k < sp.kc)[8] }; };
+  const key = 48, mode9 = (bead) => { const sp = playedSpring(key, P({ springs: 1, ...DRY, bead }), FS); return { sp, m: sheetModes(modesOf(sp.s0)).filter((q) => q.rel > 0.3 && q.k < sp.kc)[8] }; };
   const amp = (bead) => { const { m } = mode9(bead), x = run(P({ springs: 1, ...DRY, bead }), [[0, 'on', key, 0.8]], 0.3); return tone(x, m.f, 2400, x.length); };
   const H = (bead) => { const { sp, m } = mode9(bead); return 1 / (1 + (m.f / (sp.f0 / (Math.PI * bead / 100))) ** 2); };
   const light = amp(0.3), heavy = amp(10);
   assert.ok(Math.abs(heavy / light / (H(10) / H(0.3)) - 1) < 0.03, `${heavy / light} vs ${H(10) / H(0.3)}`);
-  const axialShare = (helix) => { const s = tuneSpring(60, P({ helix })), ms = springModes(s, { wMin: 1e-4 }); let a = 0, t = 0; for (const q of ms) { t += q.rel; if (q.j !== s.sheet && q.k < 0.9 / s.R) a += q.rel; } return a / t; };
+  // (the modes the model keeps for the engine: coupled more than 3·10⁻³ of a pure wave's)
+  const axialShare = (helix) => {
+    const s = playedSpring(60, P({ helix, springs: 1 })), ms = modesOf(s.s0), sheet = new Set(sheetModes(ms));
+    let a = 0, t = 0;
+    for (const q of ms) { t += q.rel; if (!sheet.has(q) && q.k < 0.9 / s.R) a += q.rel; }
+    return a / t;
+  };
   assert.ok(axialShare(15) > 0.05 && axialShare(1) < 0.01, `${axialShare(1)}, ${axialShare(15)}`);
   const rot = tuneSpring(60, P()), ax = tuneSpring(60, P({ drive: 'axial' }));
-  assert.ok(Math.abs(rot.L / ax.L - Math.sqrt(1 + STEEL.nu)) < 0.01, `${rot.L / ax.L}`);
+  assert.ok(Math.abs(rot.L / ax.L - Math.sqrt(1 + NU)) < 0.01, `${rot.L / ax.L}`);
 });
 test('the mallet: a shorter contact reaches higher, bringing up the chirps near F_C against the low echoes; a strike adds to a ringing spring as it moves (the springs are linear: two strikes sound as the sum of each alone, to −70 dB, what skipping the modes below −90 dB leaves); re-striking a sounding key reuses its voice', () => {
-  const key = 55, band = (x, sp, lo, hi) => { let s = 0; for (const m of springModes(sp, { wMin: 0.2 })) if (m.f > lo && m.f < hi) s += tone(x, m.f, 240, 9840) ** 2; return s; };
+  const key = 55, band = (x, sp, lo, hi) => { let s = 0; for (const m of modesOf(sp.s0)) if (m.rel > 0.2 && m.f > lo && m.f < hi) s += tone(x, m.f, 240, 9840) ** 2; return s; };
   const ratio = (mallet) => { const sp = playedSpring(key, P({ springs: 1, mallet }), FS), x = run(P({ springs: 1, mallet }), [[0, 'on', key, 0.8]], 0.25); return band(x, sp, 0.6 * sp.Fc, sp.Fc) / band(x, sp, 0, 0.25 * sp.Fc); };
   assert.ok(ratio(0.1) > 4 * ratio(1.5), `${ratio(0.1)}, ${ratio(1.5)}`);
   const o = P({ springs: 2 }), both = run(o, [[0, 'on', key, 0.6], [0.2, 'on', key, 0.9]], 0.5), a = run(o, [[0, 'on', key, 0.6]], 0.5);
@@ -369,10 +488,10 @@ test('voice stealing fades the quietest older voice, never one just struck; no c
   assert.equal(short.engine.voiceCount(), 0, 'a damped treble note is gone within 1.5 s');
 });
 test('the page builds the springs and sends them with the note: the engine plays the page\'s data exactly as its own', () => {
-  const p = P({ springs: 3 }), data = keySprings(43, p, FS);
+  const p = P({ springs: 3 }), data = keySprings(43, p, FS).packed;
   const own = run(p, [[0, 'on', 43, 0.7]], 0.2), sent = run(p, [[0, 'on', 43, 0.7, data]], 0.2);
   for (let i = 0; i < own.length; i++) assert.equal(own[i], sent[i]);
-  const stale = keySprings(43, P({ springs: 1 }), FS), other = run(p, [[0, 'on', 43, 0.7, stale]], 0.2);
+  const stale = keySprings(43, P({ springs: 1 }), FS).packed, other = run(p, [[0, 'on', 43, 0.7, stale]], 0.2);
   for (let i = 0; i < own.length; i++) assert.equal(own[i], other[i], 'data for another geometry is ignored');
 });
 
@@ -415,7 +534,7 @@ test('knobs glide: mount loss, steel friction, oil, the hand and the bead moved 
   }
 });
 test('CPU: 10 keys across the compass, two springs each, struck in turn and ringing, at 48 kHz in under 30 % of one core (the modes sent with the notes, as the page does)', () => {
-  const keys = [36, 41, 46, 51, 56, 61, 66, 71, 76, 81], p = P(), data = keys.map((k) => keySprings(k, p, FS));
+  const keys = [36, 41, 46, 51, 56, 61, 66, 71, 76, 81], p = P(), data = keys.map((k) => keySprings(k, p, FS).packed);
   const e = new SpringEngine(FS); e.setParams(p);
   const bL = new Float32Array(128), bR = new Float32Array(128);
   for (let i = 0; i < 200; i++) { if (i === 0) e.noteOn(60, 0.7); e.process(bL, bR, 128); } // warm up

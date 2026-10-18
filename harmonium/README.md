@@ -204,7 +204,8 @@ grows: a scoop of about 25 ¢ at C4 and 50 ¢ at C2 while the note swells.
 The reeds are tuned as a voicer tunes them, at the playing wind:
 `tools/harmonium-tuning.mjs` blows every reed from C1 to C8 alone in the
 engine, measures how far below its natural frequency it sounds (0.25–1.15 %),
-and recuts it until it sounds its note within 0.05 ¢. Every key C2–C7 then
+and recuts it; with the engine rebuilt on the new table, until it sounds its
+note within 0.05 ¢ (`--check` measures the build as it is). Every key C2–C7 then
 sounds within ±3 ¢ at 48 and 44.1 kHz (measured worst 0.6 ¢), and so do the
 16′ and 4′ ranks. Change the voicing (set, clearance, Q, air mass, cell) or
 the wind and the pitch moves, as it would on the instrument.
@@ -354,32 +355,28 @@ reservoir's pressure, the air drawn and the last key's threshold.
 
 ```
 harmonium/index.html, style.css           page
-harmonium/src/harmonium-model.js          reeds (tip-mass cantilever), slot area, voicing, linear analysis and
-                                          threshold, wind, cassotto (no audio, no DOM)
-harmonium/src/tuning-table.js             each reed's sounding/natural frequency at the default wind
-harmonium/src/harmonium-engine.js         real-time engine (AudioWorklet and Node)
+harmonium/src/harmonium-instrument.js     the descriptor: parameters, presets, range, engine, output chain
 harmonium/src/harmonium-params.js         parameters and presets
+harmonium/src/harmonium-wasm.js           the engine and the model: the C++ as WebAssembly (harmonium/wasm/harmonium.wasm)
+harmonium/src/harmonium-data.js           key range, ranks and stops, and areaAt (reading a slot-area table) for the views
+harmonium/src/tuning-table.js             each reed's sounding/natural frequency at the default wind (the C++ copy's source)
 harmonium/src/harmonium-main.js           page wiring and views
-harmonium/src/harmonium-wasm.js           the C++ engine and model as WebAssembly (harmonium/wasm/harmonium.wasm)
 native/instruments/harmonium/             the C++ port: model, engine, generated tables (the tuning table among
                                           them), reference (plugins and WebAssembly)
-test/harmonium-tests.mjs                  node test/harmonium-tests.mjs (23 tests, ~15 s; FORTE_ENGINE=wasm: on the WebAssembly)
+test/harmonium-tests.mjs                  node test/harmonium-tests.mjs (24 tests, ~15 s)
 tools/harmonium-tuning.mjs                node tools/harmonium-tuning.mjs → harmonium/src/tuning-table.js and its C++ copy
 tools/render-harmonium.mjs                node tools/render-harmonium.mjs → examples/harmonium/
 ```
 
-**In C++**: the same engine and model run as WebAssembly on this page (the
-JavaScript is the fallback; `?engine=js` in the address forces it) and as
-plugins (CLAP, VST3, AU and a standalone app), where the Space pedal is Hold
+**In C++**: the engine and the model are C++, run as WebAssembly on this
+page and as plugins (CLAP, VST3, AU and a standalone app), where the Space pedal is Hold
 on CC64, the mod wheel raises the bellows pressure from its setting to
 2500 Pa and aftertouch blows harder (up to double), as on the page. The
-reeds are self-oscillators, but nothing in them is chaotic: the WebAssembly
-plays what the JavaScript plays to float32 rounding (within 10⁻⁸ of the peak,
-the turbulence's seeded noise included), and the same test suite passes on
-it; the views' reeds and thresholds come from the WebAssembly model too. In
-the plugins each key's reeds are designed off the audio thread when the
-voicing knobs change; on the page, as in the JavaScript, on a key's first
-note (about 1 ms). Ten keys on the 8′ take about 7 % of a core in C++; with
+reeds are self-oscillators, but nothing in them is chaotic: a render is the
+same every time, the turbulence's seeded noise included. The views' reeds and
+thresholds come from the WebAssembly model. In the plugins each key's reeds
+are designed off the audio thread when the voicing knobs change; on the page,
+on a key's first note (about 1 ms). Ten keys on the 8′ take about 7 % of a core; with
 the three-reed musette (30 reeds), about 20 %.
 
 ## Simplifications

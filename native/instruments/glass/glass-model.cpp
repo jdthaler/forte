@@ -1,4 +1,4 @@
-// glass-model.cpp — the armonica's physics, as glass-model.js computes it.
+// glass-model.cpp — the armonica's physics (glass-model.h).
 
 #include "glass-model.h"
 
@@ -170,7 +170,7 @@ double speakingThreshold(int key, const TouchParams &T, const Bowl &b) {
   return 0.5 * (lo + hi);
 }
 
-// The reference a technician regulates to (glass-model.js, REF).
+// The reference a technician regulates to.
 static constexpr BowlParams REF_BOWL = {0, 4e-4, 0};
 static constexpr TouchParams REF_TOUCH = {0.85, 0.5, 0, 0.5};
 

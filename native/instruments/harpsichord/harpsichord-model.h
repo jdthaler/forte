@@ -1,5 +1,4 @@
-// harpsichord-model.h — the physics of a Flemish double-manual harpsichord
-// (harpsichord/src/harpsichord-model.js in C++, operation for operation). SI units throughout.
+// harpsichord-model.h — the physics of a Flemish double-manual harpsichord. SI units throughout.
 //
 //   key ─▶ jacks rise ─▶ each engaged plectrum catches its string, bends, slides and slips off
 //          (plectrum.h, string.h)
@@ -27,8 +26,8 @@ constexpr int KEY_LO = 29, KEY_HI = 89; // FF – f³, 61 keys
 constexpr int C2 = 72;                  // c² (Helmholtz) = C5, the scaling reference
 constexpr double TAU = 6.283185307179586;
 
-// The model's parameters, in the JavaScript's units (the page's P). The last few are not knobs:
-// the JavaScript tests and the views' simulations may set them (NaN or −1: the default).
+// The model's parameters, in the page's units (its P). The last few are not knobs: the tests and
+// the views' simulations may set them (NaN or −1: the default).
 struct Params {
   bool upper = false, coupler = true, front8 = true, back8 = true, four = false, lute = false, buff = false;
   int material = 0;

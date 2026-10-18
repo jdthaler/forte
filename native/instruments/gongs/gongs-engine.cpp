@@ -1,5 +1,5 @@
-// gongs-engine.cpp — the gong keyboard's engine, as gongs-engine.js runs it (the comments there
-// explain the scheme; these follow it operation for operation).
+// gongs-engine.cpp — the gong keyboard's engine (gongs-engine.h; gongs/README.md, "Time stepping
+// that cannot blow up", explains the scheme).
 
 #include "gongs-engine.h"
 
@@ -227,7 +227,12 @@ void Voice::resetFit() {
   n1 = 0; n2 = 0; tf = 0; armed = false;
 }
 
-// Change the number of substeps, moving the previous state to the new spacing (see gongs-engine.js).
+// Change the number of substeps. The previous state is moved to the new spacing exactly for modal
+// motion about a fixed offset u (the static response φF/Ω² to a constant contact force F while the
+// mallet touches, else each mode's running mean):
+//   u(−h') = e^{σh'} [u(0) sin ω(h−h') + u(−h) e^{−σh} sin ωh'] / sin ωh,
+// and for the mallet under its constant deceleration. What the modal picture misses is removed
+// (or restored) by rescaling the velocity, so the change is energy-neutral.
 void Voice::setSub(int mNew) {
   const double E0 = energyD(), hh = h, h2 = k / mNew, F = hit.on ? lastF : 0;
   const double *Om = S->Om.data();
@@ -468,7 +473,10 @@ void Voice::step() {
   if (trace) trace->insert(trace->end(), x.begin(), x.begin() + N);
 }
 
-// Running statistics for the linear tail (see gongs-engine.js), sampled every other step.
+// Running statistics for the linear tail (see resetFit), sampled every other step: each mode's
+// mean, and its upward crossings of it. Every mode has Ωh ≤ 2.07, so at two steps none aliases
+// onto the mean. The strike tone's crossings are counted with hysteresis, so that the harmonics
+// it carries in a crash cannot add crossings.
 void Voice::fit() {
   const double l = lam, t0 = tf, dt = 2 * h;
   const int t = S->tuned;
@@ -729,8 +737,7 @@ Voice *GongEngine::place(int key, const double *x0, int n) {
 }
 bool GongEngine::ready() { return hasP && shells.find(specOf(P.data())); }
 
-// Polyphony of the expensive part: at most P.nlvoices gongs run their nonlinear coupling at once
-// (gongs-engine.js, limitNonlinear).
+// Polyphony of the expensive part: at most P.nlvoices gongs run their nonlinear coupling at once.
 void GongEngine::limitNonlinear() {
   const double cap = std::max(1.0, hasP ? P[p::nlvoices] : 4.0);
   int count = 0;
@@ -803,8 +810,8 @@ void GongEngine::process(float *L, float *R, int n) {
   if (messages && (sinceView += n) >= POST_SAMPLES) { sinceView = 0; postViews(); }
 }
 
-// The focus gong's modes and energy cascade for the views: the JavaScript engine's 'gong' message,
-// in three pieces.
+// The focus gong's modes and energy cascade for the views: the page's 'gong' message, in three
+// pieces.
 void GongEngine::postViews() {
   Voice *f = focus;
   bool alive = false;

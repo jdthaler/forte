@@ -2,21 +2,24 @@
 // Usage: node tools/render-tines.mjs
 
 import { mkdirSync } from 'node:fs';
-import { computeKey } from '../tines/src/tine.js';
-import { RhodesEngine } from '../tines/src/rhodes-engine.js';
 import { DEFAULTS, PRESETS } from '../tines/src/rhodes-params.js';
+import { INSTRUMENT } from '../tines/src/tines-instrument.js';
+import { wasmModel } from '../tines/src/tines-wasm.js';
+import { loadEngine } from './engine.mjs';
 import { roomIR } from '../shared/impulses.js';
 import { convolve, writeWav, FS_SHIM, webAudioIR } from './audio-util.mjs';
 
 const FS = 48000;
+const TinesEngine = await loadEngine(INSTRUMENT);
+const { keyModel } = await wasmModel();
 const preset = (i) => ({ ...DEFAULTS, ...PRESETS[i].p });
 
 // events: [t, 'on', key, vel] | [t, 'off', key] | [t, 'sus', bool]
 function render(P, seconds, events) {
-  const e = new RhodesEngine(FS);
+  const e = new TinesEngine(FS);
   e.setParams(P);
   const data = new Map();
-  const vd = (k) => { if (!data.has(k)) data.set(k, { ...computeKey(k, P, FS).voice, version: 1 }); return data.get(k); };
+  const vd = (k) => { if (!data.has(k)) data.set(k, keyModel(k, P, FS).packed); return data.get(k); };
   const n = Math.round(seconds * FS), L = new Float64Array(n), R = new Float64Array(n);
   const bl = 64, bL = new Float32Array(bl), bR = new Float32Array(bl);
   const ev = events.map(([t, type, a, b]) => ({ s: Math.round(t * FS), type, a, b })).sort((x, y) => x.s - y.s);
@@ -29,6 +32,7 @@ function render(P, seconds, events) {
     e.process(bL, bR, bl);
     for (let i = 0; i < bl && s + i < n; i++) { L[s + i] = bL[i]; R[s + i] = bR[i]; }
   }
+  e.destroy();
   return [L, R];
 }
 const chord = (t0, t1, keys, vel) => keys.flatMap((k) => [[t0, 'on', k, vel], [t1, 'off', k]]);
