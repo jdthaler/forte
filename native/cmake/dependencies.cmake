@@ -23,12 +23,19 @@ if (FORTE_PLUGINS)
   # VST3, AU v2 and standalone from it, with the SDKs below (versions as clap-wrapper tests them).
   forte_fetch(clap https://github.com/free-audio/clap 195b42a004144fab0b3cf95e9c067187d15365b7)               # 1.2.10
   # Our changes to clap-wrapper, kept here (cmake/patches/): the macOS standalone's Audio/MIDI
-  # Settings pick its MIDI inputs. They touch only macOS's code, so Windows (whose checkout may
-  # have other line endings) leaves them out.
+  # Settings pick its MIDI inputs, and its Info.plist names its icon. They touch only macOS's
+  # code, so Windows (whose checkout may have other line endings) leaves them out.
   set(clapwrapper_patches "")
   if (NOT WIN32)
-    set(clapwrapper_patches PATCH_COMMAND ${CMAKE_COMMAND} -DPATCH=${CMAKE_CURRENT_LIST_DIR}/patches/clap-wrapper-mac-midi-inputs.patch
-                            -P ${CMAKE_CURRENT_LIST_DIR}/apply-patch.cmake)
+    set(clapwrapper_patches PATCH_COMMAND)
+    foreach(patch clap-wrapper-mac-midi-inputs clap-wrapper-mac-app-icon)
+      if (clapwrapper_patches STREQUAL "PATCH_COMMAND")
+        list(APPEND clapwrapper_patches ${CMAKE_COMMAND})
+      else()
+        list(APPEND clapwrapper_patches COMMAND ${CMAKE_COMMAND})
+      endif()
+      list(APPEND clapwrapper_patches -DPATCH=${CMAKE_CURRENT_LIST_DIR}/patches/${patch}.patch -P ${CMAKE_CURRENT_LIST_DIR}/apply-patch.cmake)
+    endforeach()
   endif()
   forte_fetch(clapwrapper https://github.com/free-audio/clap-wrapper 1cca996e96f29ab2be7ae9f8cfe532bbc92e1dd6 # 0.16.0
     ${clapwrapper_patches})
