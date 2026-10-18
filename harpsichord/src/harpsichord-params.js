@@ -4,7 +4,8 @@
 const mm = (v) => `${v < 10 ? v.toFixed(1) : v.toFixed(0)} mm`;
 
 // The model's constants that the page needs (as harpsichord-model.h has them).
-export const KEY_LO = 29, KEY_HI = 89;        // FF – f³, 61 keys
+export const KEY_LO = 29, KEY_HI = 89;        // FF – f³, 61 keys: the compass
+export const KEY_MIN = 21, KEY_MAX = 108;     // with the full range open
 // Registers: which jacks pluck which strings, from which manual.
 export const ROWS = {
   front: { string: 'front', manual: 'upper', name: 'front 8′' },
@@ -78,6 +79,8 @@ export const GROUPS = [
         hint: 'How lossy the damper cloth is, relative to the string’s wave impedance: at × 1 it soaks up what reaches it. Applies to new notes.' },
       { id: 'fmax', label: 'Highest partial', min: 4, max: 16, def: 10, step: 0.5, fmt: (v) => `${v.toFixed(1)} kHz`,
         hint: 'Partials above this are left out (and at most 90 per string). Lower it if the CPU pill runs hot. Applies to new notes.' },
+      { id: 'fullRange', label: 'Full range (A0–C8)', type: 'checkbox', def: false,
+        hint: 'Opens the keys beyond the five-octave FF–f³ compass: the same scale of strings, carried on down to A0 and up to C8.' },
     ],
   },
   {

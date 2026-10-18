@@ -197,7 +197,9 @@ function control(i, compact) {
 }
 function register(i, c) { if (!controls.has(i)) controls.set(i, []); controls.get(i).push(c); }
 function show(i, x, text) {
+  const was = values[i];
   values[i] = x;
+  if (D.compass && i === D.compass[2] && (was > 0.5) !== (x > 0.5)) rebound();
   for (const c of controls.get(i) || []) {
     if (c.el.type === 'checkbox') c.el.checked = x > 0.5;
     else if (c.el.tagName === 'SELECT') c.el.value = String(Math.round(x));
@@ -342,6 +344,13 @@ function layoutKeys() {
   wLo = Math.max(LO, lo); wHi = Math.min(HI, hi);
   buildKeys();
 }
+// the keys that play: a historical compass (D.compass: lo, hi and its toggle) or every key
+function bounds() { [LO, HI] = D.compass && !(values[D.compass[2]] > 0.5) ? D.compass : [D.keyLo, D.keyHi]; }
+function rebound() {
+  bounds();
+  if (base + 11 < LO || base > HI - 12) base = Math.min(Math.ceil(LO / 12) * 12, Math.max(LO, HI - 12));
+  layoutKeys();
+}
 function shift(d) {
   const nb = base + d;
   if (nb + 11 < LO || nb > HI - 12) return; // never a whole row of computer keys out of range
@@ -434,10 +443,10 @@ async function poll() {
 
 (async () => {
   D = await forte('describe');
-  LO = D.keyLo; HI = D.keyHi;
+  values = D.params.map((p) => p.def);
+  bounds();
   // the computer's lower row starts on C3, or the first C the instrument has
   base = 48 >= LO && 48 <= HI - 12 ? 48 : Math.min(Math.ceil(LO / 12) * 12, Math.max(LO, HI - 12));
-  values = D.params.map((p) => p.def);
   build();
   layoutKeys();
   poll();

@@ -317,7 +317,8 @@ export async function generate(slug) {
   w(`    .params = kParams, .paramCount = p::count,`);
   w(`    .presets = kPresets, .presetCount = ${I.presets.length},`);
   w(`    .keep = kKeep, .keepCount = ${keep.length},`);
-  w(`    .keyLo = ${lo}, .keyHi = ${hi}, .space = Space::${I.space ?? 'none'},`);
+  const compass = I.compass ? ` .compassLo = ${I.compass.keys[0]}, .compassHi = ${I.compass.keys[1]}, .compass = p::${ident(I.compass.param)},` : '';
+  w(`    .keyLo = ${lo}, .keyHi = ${hi},${compass} .space = Space::${I.space ?? 'none'},`);
   w(`    .modWheel = ${mw ? at(mw.param) : -1}, .modWheelMax = ${mwParam ? num(valueOf(mwParam, mw.max ?? mwParam.max)) : 0},`);
   w(`    .controllers = kControllers, .controllerCount = ${ccs.length},`);
   const body = ch.body ? ` .body = ${at(ch.body.param)}, .bodySeconds = ${num(ch.body.seconds)}, .bodyDry = ${num(ch.body.dry)}, .bodyWet = ${num(ch.body.wet)},` : '';

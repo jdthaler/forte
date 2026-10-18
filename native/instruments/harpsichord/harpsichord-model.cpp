@@ -86,6 +86,7 @@ static double logInterp(double m, double m0, double d0, double m1, double d1) { 
 bool isBrass(int m, int choir) { return m <= (choir == FOUR ? SCALE::brass4 : SCALE::brass8); }
 double wireDiameter(int m, int choir) {
   if (choir == FOUR) return isBrass(m, choir) ? logInterp(m, 40, 0.26e-3, 29, 0.36e-3) : logInterp(m, 41, 0.24e-3, 89, 0.18e-3);
+  if (m < KEY_LO) return 0.56e-3 * std::pow(0.56 / 0.34, (KEY_LO - m) / 16.0); // below FF, the brass gauge goes on thickening
   return isBrass(m, choir) ? logInterp(m, 45, 0.34e-3, 29, 0.56e-3) : logInterp(m, 46, 0.30e-3, 89, 0.20e-3);
 }
 

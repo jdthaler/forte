@@ -253,13 +253,13 @@ void HarpsichordEngine::setParams(const double *p) {
     Snapshot &s = snapshots[version % snapshots.size()];
     s.pitch.store(mp.pitch, std::memory_order_relaxed); s.temperament.store(mp.temperament, std::memory_order_relaxed);
     s.detune.store(mp.detune, std::memory_order_relaxed); s.loss.store(mp.loss, std::memory_order_relaxed); s.fmax.store(mp.fmax, std::memory_order_relaxed);
-    data.prepare(version, KEY_LO, KEY_HI, focus);
+    data.prepare(version, KEY_MIN, KEY_MAX, focus);
   }
   if (first) { buff = mp.buff ? 1 : 0; mix = mp.soundboard ? 1 : 0; }
 }
 
 void HarpsichordEngine::noteOn(int key, double velocity) {
-  if (!hasParams || key < KEY_LO || key > KEY_HI) return;
+  if (!hasParams || key < KEY_MIN || key > KEY_MAX) return;
   velocity = std::min(1.0, std::max(0.0, velocity));
   focus = key;
   Voice *v = byKey[key];

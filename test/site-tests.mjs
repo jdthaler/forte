@@ -292,6 +292,9 @@ test('the landing page has the category tabs, the instrument list and the About,
 });
 
 console.log('descriptors');
+// instruments whose physics stops short of A0–C8 (each README says why)
+const RANGE_LIMITS = {
+};
 const described = [...ready.map((i) => ({ id: i.id, dir: i.id })), { id: 'template', dir: 'docs/template' }];
 for (const { id, dir } of described) {
   const file = `${dir}/src/${id}-instrument.js`;
@@ -303,6 +306,15 @@ for (const { id, dir } of described) {
     assert.ok(params.size && Array.isArray(I.presets), 'groups and presets');
     const [lo, hi] = I.range;
     assert.ok(Number.isInteger(lo) && Number.isInteger(hi) && lo >= 0 && hi <= 127 && lo < hi, `range ${I.range}`);
+    // an 88-key keyboard plays every key, unless the physics stops short (said in RANGE_LIMITS)
+    const limit = RANGE_LIMITS[id];
+    if (limit) assert.deepEqual([lo, hi], limit, `range ${I.range}, RANGE_LIMITS says ${limit}`);
+    else assert.ok(lo <= 21 && hi >= 108, `range ${I.range} covers A0–C8 (21–108)`);
+    if (I.compass) { // a historical compass: the keys that play until a checkbox opens the range
+      const [a, b] = I.compass.keys, p = params.get(I.compass.param);
+      assert.ok(lo <= a && a < b && b <= hi && (a > lo || b < hi), `compass ${I.compass.keys} inside ${I.range}`);
+      assert.ok(p?.type === 'checkbox' && p.def === false, `compass.param ${I.compass.param}: a checkbox, off`);
+    }
     assert.ok(['sustain', 'hold', null].includes(I.space), `space ${I.space}`);
     const mw = typeof I.modWheel === 'string' ? I.modWheel : I.modWheel?.param;
     if (mw) assert.ok(params.has(mw), `modWheel ${mw}`);

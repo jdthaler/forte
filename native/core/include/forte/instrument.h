@@ -53,6 +53,8 @@ struct InstrumentInfo {
   int keepCount;
 
   int keyLo, keyHi;        // the keys it plays
+  int compassLo = 0, compassHi = 127; // a historical compass inside them: the keys that play until
+  int compass = -1;        // this toggle opens the whole range (-1: no compass, every key plays)
   Space space;
   int modWheel = -1;       // CC1 drives this parameter: at rest its default, fully up modWheelMax
   double modWheelMax = 0;
