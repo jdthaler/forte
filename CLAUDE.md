@@ -88,10 +88,10 @@ Read first:
    (two threads changing `shared/` can each pass alone and break
    together).
 8. **Merge** with a merge commit (not squash or rebase) once CI is green
-   on the pull request's latest commit and nothing conflicts. A pull
-   request that changes only `tools/`, CI, tests or docs merges then
-   without asking; any other waits until the owner has asked for its
-   merge. Merging into `main` publishes nothing.
+   on the pull request's latest commit and nothing conflicts, without
+   waiting to be asked: merging into `main` publishes nothing, and the
+   owner hears and sees `main` before each release. A release into
+   `live` waits for the owner (below).
 
 ## Releasing `main` to `live`
 
