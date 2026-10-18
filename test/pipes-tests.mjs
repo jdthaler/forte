@@ -11,7 +11,7 @@
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { KEY_LO, KEY_HI, RANKS, organName } from '../pipes/src/pipes-data.js';
+import { KEY_LO, KEY_HI, KEY_MIN, KEY_MAX, RANKS, organName } from '../pipes/src/pipes-data.js';
 import { INSTRUMENT } from '../pipes/src/pipes-instrument.js';
 import { wasmModel } from '../pipes/src/pipes-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
@@ -89,8 +89,8 @@ function onset(x, fs = FS) {
   return i < 0 ? Infinity : (i * W) / fs;
 }
 // sounding frequency of x near f over [a, b): phase advance of the demodulated signal
-function freqAt(x, f, a, b, fs = FS) { // over 64 samples (unambiguous within ±fs/128), then 512, then the whole span
-  const m = 2048, ph = (s, fr) => { const w = (TAU * fr) / fs; let re = 0, im = 0; for (let i = s; i < s + m; i++) { const h = 0.5 - 0.5 * Math.cos((TAU * (i - s)) / m); re += h * x[i] * Math.cos(w * i); im -= h * x[i] * Math.sin(w * i); } return Math.atan2(im, re); };
+function freqAt(x, f, a, b, fs = FS, m = 2048) { // over 64 samples (unambiguous within ±fs/128), then 512, then the whole span
+  const ph = (s, fr) => { const w = (TAU * fr) / fs; let re = 0, im = 0; for (let i = s; i < s + m; i++) { const h = 0.5 - 0.5 * Math.cos((TAU * (i - s)) / m); re += h * x[i] * Math.cos(w * i); im -= h * x[i] * Math.sin(w * i); } return Math.atan2(im, re); };
   const wrap = (d) => d - TAU * Math.round(d / TAU);
   let fr = f;
   for (const lag of [64, 512, b - m - a]) fr += (wrap(ph(a + lag, fr) - ph(a, fr)) * fs) / (TAU * lag);
@@ -477,8 +477,86 @@ test('tremulant: its valve pulses the chest’s pressure at its rate (within 2 %
     assert.ok(depth > 0.01 && depth < 0.2, `±${(depth * 100).toFixed(1)} %`);
   }
 });
-test('stereo from the chest: keys of the C side (C, D, E …) sound left and of the C♯ side right, the biggest pipes outermost', () => {
-  for (let k = KEY_LO; k <= KEY_HI; k++) assert.equal(Math.sign(chestPan(k)), (k - KEY_LO) % 2 === 0 ? -1 : 1, organName(k));
+// One pipe alone on the Principal's slot of a key, voiced and cut as the organ has it: its sound.
+function onePipe(k, r, sec, { fs = FS, p = {} } = {}) {
+  const f = pipeFreq(k, r), st = RANKS[r].stopped, R = pipeModel(f, st, P(p), { tune: tuning(f, st) });
+  const e = new PipeEngine(fs); e.setParams(P({ ...ONLY.principal, noise: 0, ...p })); e.modelsFor = () => [R, R, R, R, R, R]; e.noteOn(k, 0.7);
+  const n = Math.round(sec * fs), L = new Float64Array(n), bL = new Float32Array(128), bR = new Float32Array(128);
+  for (let s2 = 0; s2 < n; s2 += 128) { e.process(bL, bR, 128); for (let i = 0; i < 128 && s2 + i < n; i++) L[s2 + i] = bL[i]; }
+  e.destroy?.();
+  return L;
+}
+const PAST = [];
+for (let k = KEY_MIN; k <= KEY_MAX; k++) if (k < KEY_LO || k > KEY_HI) PAST.push(k);
+console.log('the full range (A₂–c⁵)');
+test('past the manual (A₂–B₁ and f♯³–c⁵), every key on every rank speaks on its fundamental at the default wind (3 dB over the next partial of its mouth flow), in tune within 2 ¢ at 48 kHz (the pipes under 60 Hz, slow to speak as big pipes are, heard later)', () => {
+  let worst = 0, at = '';
+  for (const k of PAST) for (let r = 0; r < RANKS.length; r++) {
+    const f0 = pipeFreq(k, r), sec = f0 < 60 ? 1.6 + 3 * (60 / f0 - 1) : f0 < 200 ? 1.6 : 0.8, x = onePipe(k, r, sec);
+    const a = x.length - Math.round(0.6 * FS), q = flow(x, a), fa = freqAt(x, f0, a, x.length, FS, Math.max(2048, Math.ceil((4 * FS) / f0)));
+    const hs = [];
+    for (let h = 1; h <= 10 && h * fa < 0.45 * FS; h++) hs.push(level(q, h * fa, a, x.length));
+    if (hs.length > 1) { const margin = 20 * Math.log10(hs[0] / Math.max(...hs.slice(1))); assert.ok(margin > 3, `${organName(k)} ${RANKS[r].id}: fundamental ${margin.toFixed(1)} dB above the next partial`); }
+    assert.ok(Math.abs(cents(fa, f0)) < 2, `${organName(k)} ${RANKS[r].id}: ${cents(fa, f0).toFixed(2)} ¢`);
+    if (Math.abs(cents(fa, f0)) > Math.abs(worst)) { worst = cents(fa, f0); at = `${organName(k)} ${RANKS[r].id}`; }
+  }
+  console.log(`        worst ${worst.toFixed(2)} ¢ (${at})`);
+});
+test('past the manual the voicing carries on: Töpfer’s scale and the open and stopped cut-ups, the loop gain 6 from c¹ up and ∝ f^−0.4 below, but no more than at C (65 Hz); every pipe unstable (speaks) at the default wind', () => {
+  for (const k of PAST) for (let r = 0; r < RANKS.length; r++) {
+    const f = pipeFreq(k, r), st = RANKS[r].stopped, R = pipeModel(f, st, P());
+    const g = GAIN * Math.max(1, (Math.max(f, keyFreq(36)) / keyFreq(60)) ** -GAIN_BASS);
+    assert.ok(rel(R.gain, g) < 1e-12, `${organName(k)} ${RANKS[r].id}: gain ${R.gain} vs ${g}`);
+    assert.ok(rel(R.geo.D, 0.1555 * (f / keyFreq(36)) ** -0.75 * (st ? 0.85 : 1)) < 1e-12, `${organName(k)} ${RANKS[r].id}: D`);
+    const s = linearRoot(R, P_NOM, 0);
+    assert.ok(s && s.re > 0, `${organName(k)} ${RANKS[r].id}: ${s && s.re}`);
+  }
+  assert.ok(rel(pipeModel(27.5, false, P()).gain, pipeModel(keyFreq(36), false, P()).gain) < 1e-12);
+});
+test('the Mixture over the full range: octaves and pure fifths (×1, 1½, 2, 3, 4, 6, 8, 12 the 8′), breaking back at c, c¹, c², f♯³ and c⁴, never above c⁵’s 4′ (8.4 kHz)', () => {
+  const breaks = [];
+  for (let k = KEY_MIN; k <= KEY_MAX; k++) {
+    const h = [3, 4, 5].map((r) => harm(k, r));
+    assert.ok(h.every((x) => [1, 1.5, 2, 3, 4, 6, 8, 12].some((n) => rel(x, n) < 1e-12)), `${organName(k)}: ${h}`);
+    if (k > KEY_MIN && Math.round(harm(k, 5)) < Math.round(harm(k - 1, 5))) breaks.push(k);
+    assert.ok(keyFreq(k) * Math.max(...h) < 8400, organName(k));
+  }
+  assert.deepEqual(breaks, [48, 60, 72, 90, 96]);
+});
+test('pipes of 6 kHz and more (only past the manual) run at 4× the sample rate: c⁵’s Octave 4′ (8.4 kHz) sounds within 2 ¢ of its 48 kHz pitch at 44.1 kHz, and its partials above the output’s Nyquist do not fold back (60 dB down)', () => {
+  const f0 = pipeFreq(108, 1), at = {};
+  for (const fs of [44100, 48000]) {
+    const x = onePipe(108, 1, 0.6, { fs }), a = x.length - Math.round(0.3 * fs);
+    at[fs] = freqAt(x, f0, a, x.length, fs);
+    if (fs === 44100) { // the third partial (25.1 kHz) would land at 19.0 kHz, the fourth (33.5 kHz) at 10.7 kHz
+      const h1 = level(x, at[fs], a, x.length, fs);
+      for (const n of [3, 4]) { const al = Math.abs(fs - n * at[fs]), l = 20 * Math.log10(level(x, al, a, x.length, fs) / h1); assert.ok(l < -60, `partial ${n} folded to ${al.toFixed(0)} Hz: ${l.toFixed(1)} dB`); }
+    }
+  }
+  assert.ok(Math.abs(cents(at[44100], at[48000])) < 2, `${cents(at[44100], at[48000]).toFixed(2)} ¢`);
+});
+test('the keys past the manual are stable: A₂, C₁, f♯³ and c⁵ with every stop, under seeded extremes at 44.1 and 48 kHz: no NaN, bounded and not growing (a full-organ A₂ under 2 at the default wind)', () => {
+  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'fullRange'].includes(q.id));
+  let seed = 977, worst = 0;
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  const all = { octave: true, gedackt: true, mixture: true };
+  assert.ok(peakAbs(run(P(all), [[0, 'on', 21, 1]], 2.5)) < 2);
+  for (const fs of [44100, 48000]) for (let c = 0; c < 3; c++) {
+    const p = P(all);
+    for (const q of sliders) { if (q.type === 'checkbox' || rnd() < 0.5) continue; p[q.id] = rnd() < 0.5 ? q.min : q.max; }
+    const r = run(p, [21, 24, 90, 108].map((k) => [0, 'on', k, rnd()]), 1.5, { fs });
+    let pk = 0;
+    for (let i = 0; i < r.L.length; i++) { assert.ok(Number.isFinite(r.L[i] + r.R[i]), `${fs}: NaN with ${JSON.stringify(p)}`); pk = Math.max(pk, Math.abs(r.L[i]), Math.abs(r.R[i])); }
+    worst = Math.max(worst, pk);
+    const mid = rms(r.L, Math.round(0.75 * fs), fs), end = rms(r.L, r.L.length - Math.round(0.25 * fs), r.L.length);
+    assert.ok(pk < 20 && end < 2 * mid + 1e-3, `${fs}: peak ${pk.toFixed(2)}, rms ${mid.toFixed(3)} then ${end.toFixed(3)}, with ${JSON.stringify(p)}`);
+  }
+  console.log(`        loudest of 6: ${worst.toFixed(2)}`);
+});
+
+test('stereo from the chest: keys of the C side (C, D, E …) sound left and of the C♯ side right, the biggest pipes outermost (past the manual, at its ends’ places)', () => {
+  for (let k = KEY_MIN; k <= KEY_MAX; k++) assert.equal(Math.sign(chestPan(k)), (k - KEY_LO) % 2 === 0 ? -1 : 1, organName(k));
+  for (const k of PAST) assert.equal(Math.abs(chestPan(k)), Math.abs(chestPan(k < KEY_LO ? KEY_LO : KEY_HI)), organName(k));
   assert.ok(Math.abs(chestPan(36)) > Math.abs(chestPan(60)) && Math.abs(chestPan(60)) > Math.abs(chestPan(88)));
   for (const [k, side] of [[36, -1], [37, 1], [60, -1], [61, 1]]) {
     const r = run(P(), [[0, 'on', k, 0.7]], 0.6), l = rms(r.L, 14400, 28800), rr = rms(r.R, 14400, 28800);
@@ -532,7 +610,7 @@ test('level: a single Principal note peaks at 0.03–0.5 from C to f³ (0.1–0.
   console.log(`        full-organ chord peaks at ${peakAbs(chord).toFixed(2)}`);
 });
 test('stability: seeded random combinations of extreme settings at 44.1 and 48 kHz, changed mid-note: no NaN, bounded, silent after release', () => {
-  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room'].includes(q.id));
+  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'fullRange'].includes(q.id));
   let seed = 4242, worst = 0;
   const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
   const pick = () => {

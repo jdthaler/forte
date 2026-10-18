@@ -81,8 +81,8 @@ FORTE_EXPORT void carillon_voice(CarillonEngine *e, int i, double *out) {
 }
 // the index (in carillon_voice's order) of the voice at a key, or −1
 FORTE_EXPORT int carillon_by_key(CarillonEngine *e, int key) {
-  if (key < KEY_LO || key > KEY_HI) return -1;
-  const int slot = e->byKey[key - KEY_LO];
+  if (key < KEY_MIN || key > KEY_MAX) return -1;
+  const int slot = e->byKey[key - KEY_MIN];
   for (int i = 0; i < e->nVoices; i++) if (e->order[i] == slot) return i;
   return -1;
 }

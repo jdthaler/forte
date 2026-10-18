@@ -17,12 +17,12 @@ inline Cx cdiv(Cx a, Cx b) {
 }
 } // namespace
 
-const int *mixtureRanks(int key) {
+const double *mixtureRanks(int key) {
   const MixtureRow *m = &MIXTURE[0];
   for (const MixtureRow &x : MIXTURE) if (key >= x.from) m = &x;
   return m->h;
 }
-int rankHarm(int key, int r) {
+double rankHarm(int key, int r) {
   if (r == 0 || r == 2) return 1;
   if (r == 1) return 2;
   return mixtureRanks(key)[r - 3];
@@ -95,6 +95,7 @@ void setLength(PipeModel &pipe, double Le) {
   modesFor(pipe, Le, pipe.geo.a, pipe.stopped);
 }
 void setGain(PipeModel &pipe, double g) { // A for a loop gain g on the fundamental's resonance at the default wind
+  if (pipe.nModes == 0) { pipe.A = 0; return; } // (no mode below F_MAX: a pipe that cannot speak)
   const Mode &m1 = pipe.modes[0];
   const double tau = pipe.geo.W / (CP * U_NOM), lp = 1 / jsHypot(1, (m1.om * tau) / PHI_C);
   pipe.A = (2 * m1.sigma * pipe.M * g) / (m1.om * pipe.Kj * lp);
@@ -253,7 +254,7 @@ WindSystem windSystem(double stiff) {
 
 double chestPan(int key) {
   const double side = (key - KEY_LO) % 2 == 0 ? -1 : 1;
-  const double u = (double)(key - KEY_LO) / (KEY_HI - KEY_LO);
+  const double u = std::min(1.0, std::max(0.0, (double)(key - KEY_LO) / (KEY_HI - KEY_LO))); // past the compass: its ends
   return side * (0.2 + 0.75 * (1 - u));
 }
 

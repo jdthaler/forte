@@ -19,7 +19,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/pipes/>
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | play (54 keys, C–f³) |
+| `Z…/` and `Q…]` rows | play (54 keys, C–f³; A₂–c⁵ with **Full range**) |
 | `←` `→` | octave |
 | `↑` `↓` | velocity: how fast the key opens its pallet |
 | `Space` | hold: keys stay down while it is held (an organ has no damper pedal) |
@@ -48,6 +48,21 @@ fills with wind, and on it stand six pipes, one for each rank:
 | c–b | 2′ 1⅓′ 1′ | 4, 6, 8 |
 | c¹–b¹ | 2⅔′ 2′ 1⅓′ | 3, 4, 6 |
 | c²–f³ | 4′ 2⅔′ 2′ | 2, 3, 4 |
+| f♯³–b³ | 5⅓′ 4′ 2⅔′ | 1.5, 2, 3 |
+| c⁴–c⁵ | 8′ 5⅓′ 4′ | 1, 1.5, 2 |
+
+The last two rows are for **Full range** (Voicing), which opens the keys
+past the manual, A₂–c⁵ (A0–C8, the 88 keys of a piano): the same scales,
+voicing and wind carried on. A₂'s Principal is an open pipe 5.7 m long
+(27.5 Hz, of the 16′ octave) and its Gedackt a stopped one of 2.8 m; c⁵'s
+Octave and top Mixture rank are pipes 10 mm long sounding 8.4 kHz, and the
+Mixture's two more breaks keep it from going higher. Below C the pipes speak
+slowly, as big pipes do: the fundamental's growth rate falls with its
+losses (∝ σ₁, 0.5 s⁻¹ at A₂), and an open pipe's sixth mode, which the jet
+drives too, sounds first. The Principal alone settles on its note in 0.5 s
+at C, 1.1 s at E₁ and about 2 s at A₂.
+The voicer's extra loop gain for the bass (∝ f^−0.4) stops at C: carried
+further it makes A₂ whistle on that sixth mode for seconds.
 
 The Mixture's fifths are pure (3 : 2, 701.96 ¢), as mixtures are tuned
 against their unison. Drawing a stop moves its slider, which opens the
@@ -275,7 +290,10 @@ flat of the linear prediction and the stopped ones 15–27 ¢ sharp. So
 corrects it, as a voicer trims a pipe (the engine is then rebuilt on the new
 table; `--check` measures the build). Every key on every rank then sounds
 within 0.4 ¢ of its note at 48 kHz (and the keys the tests check at
-44.1 kHz within 0.5 ¢).
+44.1 kHz within 0.5 ¢). The keys past the manual were tuned after it
+(`--extend`, which leaves every row a pipe of C–f³ reads as it was): they
+sound within 2 ¢, the worst a pipe at 4.98 kHz that sits between two rows
+the manual's pipes need, just under a mode's step at 5 kHz.
 
 ### 9. The wind
 
@@ -349,7 +367,10 @@ and the treble near the middle.
   up.
 - **Oversampling.** Pipes sounding 2 kHz or more (the Octave's top notes and
   the Mixture's upper pipes) run at twice the sample rate, brought down by a 63-tap
-  half-band FIR. Below that, at the sample rate, aliased lines stay about
+  half-band FIR. Past the manual, pipes of 6 kHz or more run at four times
+  it, through the same half-band twice: their jet crosses the mouth in as
+  little as 21 µs (c⁵'s 4′), and the delay line's interpolation needs more
+  than two steps of it. Below that, at the sample rate, aliased lines stay about
   60 dB under the strongest harmonic.
 - **Voices.** One voice per key holds its six pipes; pressing it again
   reopens the same pallet. Beyond 20 keys the quietest released key fades

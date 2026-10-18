@@ -72,14 +72,14 @@ bool unpackKeyModels(const double *in, int n, KeyModels &k) {
     double stopped = 0, modes = 0;
     for (double *v : {&R.f, &stopped, &R.M, &R.A, &g.W, &g.b, &g.H, &g.y0, &g.h, &g.dd, &g.Sm, &g.D, &modes}) if (!take(*v)) return false;
     R.stopped = g.stopped = stopped != 0;
-    if (!(modes >= 1 && modes <= MODES_OPEN)) return false;
+    if (!(modes >= 0 && modes <= MODES_OPEN)) return false; // (0: a pipe with no mode below F_MAX, silent)
     R.nModes = (int)modes;
     for (int m = 0; m < R.nModes; m++) {
       Mode &md = R.modes[m];
       if (!take(md.om) || !take(md.sigma)) return false;
       md.n = m + 1; md.f = md.om / TAU; md.Q = md.om / (2 * md.sigma); md.harm = R.stopped ? 2 * m + 1 : m + 1;
     }
-    R.fRes = R.modes[0].f; R.Q1 = R.modes[0].Q;
+    if (R.nModes) { R.fRes = R.modes[0].f; R.Q1 = R.modes[0].Q; }
   }
   return i == n;
 }
@@ -96,7 +96,7 @@ int PipeEngine::Pipe::lineLength(double tauK) {
 // x'' + 2σx' + ω²x = F/M, F held) and 2 states (volume displacement x, volume flow v).
 void PipeEngine::Pipe::init(PipeEngine &eng, const PipeModel *model, int r, double *line) {
   R = model; rank = r; stopped = model->stopped;
-  os = model->f >= eng.fOS ? 2 : 1;
+  os = eng.osFor(model->f);
   fsI = eng.fs * os; h = 1 / fsI; n = model->nModes;
   const Geometry &g = model->geo;
   retime(1);
@@ -228,11 +228,11 @@ PipeEngine::PipeEngine(double fs, double fOS)
   halfband(fir);
   // each voice's delay lines: enough for the longest key at the widest cut-up
   const double cutMax = kParams[p::cutup].max;
-  for (int k = KEY_LO; k <= KEY_HI; k++) {
+  for (int k = KEY_MIN; k <= KEY_MAX; k++) {
     size_t need = 0;
     for (int r = 0; r < RANKS; r++) {
       const double f = pipeFreq(k, r), W = (U_NOM / ((RANK[r].stopped ? THETA_STOPPED : THETA_OPEN) * f)) * cutMax;
-      need += Pipe::lineLength((W / CP) * fs * (f >= fOS ? 2 : 1));
+      need += Pipe::lineLength((W / CP) * fs * osFor(f));
     }
     lineMax = std::max(lineMax, need);
   }
@@ -280,7 +280,7 @@ void PipeEngine::setParams(const double *p) {
     design = dk; version++;
     Design &d = designs[version & 15];
     d.cutup.store(dk.cutup, std::memory_order_relaxed); d.gain.store(dk.gain, std::memory_order_relaxed); d.offset.store(dk.offset, std::memory_order_relaxed);
-    data.prepare(version, KEY_LO, KEY_HI, focus ? focus->key : 60);
+    data.prepare(version, KEY_MIN, KEY_MAX, focus ? focus->key : 60);
   }
   if (!started) { Pset = Pr = Pc = P[p::pressure]; nz = NOISE * P[p::noise]; started = true; }
   if (P[p::wind] != stiff) { stiff = P[p::wind]; wsys = windSystem(P[p::wind]); }
@@ -317,7 +317,7 @@ bool PipeEngine::startKey(int key, double velocity, const KeyModels *models, Dat
   if (v && (v->dead || v->fading || v->version != version)) { if (!v->dead) { v->fading = true; v->down = false; v->aTarget = 0; } v = nullptr; }
   if (!v) {
     size_t need = 0;
-    for (int r = 0; r < RANKS; r++) need += Pipe::lineLength((models->pipes[r].geo.W / CP) * fs * (models->pipes[r].f >= fOS ? 2 : 1));
+    for (int r = 0; r < RANKS; r++) need += Pipe::lineLength((models->pipes[r].geo.W / CP) * fs * osFor(models->pipes[r].f));
     v = freeVoice(need);
     if (!v) return false;
     v->inUse = true; v->key = key; v->version = version; v->models = models; v->ref = ref;
@@ -438,6 +438,8 @@ void PipeEngine::processBlock(float *L, float *R, int n) {
     }
   }
   double pset = Pset, pr = Pr, qt = Qt, pc = Pc, tr = trem, ph = tremPh, nzs = nz;
+  bool any4 = false; // a 4× pipe sounded in this block, last at sample last4
+  int last4 = 0;
   const double Ptarget = P[p::pressure];
   Voice *f = focus && !focus->dead ? focus : nullptr;
   const int shown = f ? shownRank(*f) : -1;
@@ -452,7 +454,7 @@ void PipeEngine::processBlock(float *L, float *R, int n) {
     pc += kc * (qt + ws.Gs * (pset - pc) - qdraw - Qtr);
     if (pc < 0) pc = 0;
     Qtrem = Qtr;
-    double draw = 0, l1 = 0, r1 = 0, l2a = 0, l2b = 0, r2a = 0, r2b = 0;
+    double draw = 0, l1 = 0, r1 = 0, l2a = 0, l2b = 0, r2a = 0, r2b = 0, l4[4] = {0, 0, 0, 0}, r4[4] = {0, 0, 0, 0};
     for (int k = 0; k < nVoices; k++) {
       Voice *v = voices[k];
       if (v->dead) continue;
@@ -472,7 +474,8 @@ void PipeEngine::processBlock(float *L, float *R, int n) {
       kk *= v->kPal;
       const double pg = a > 0 ? (pc * a * a) / (a * a + kk * kk) : 0;
       v->pg = pg;
-      double s1 = 0, s2a = 0, s2b = 0;
+      double s1 = 0, s2a = 0, s2b = 0, s4[4] = {0, 0, 0, 0};
+      bool q4 = false;
       const double Ug = pg > 0 ? std::sqrt((2 * pg) / rho) : 0, iUg = Ug > 0 ? 1 / Ug : 0; // the jet speed with the slider open
       for (int r = 0; r < nl; r++) {
         Pipe &q = *v->list[r];
@@ -482,6 +485,7 @@ void PipeEngine::processBlock(float *L, float *R, int n) {
         q.foot = pg * o; q.Uj = Uj;
         draw += q.flue * Uj;
         if (q.os == 2) { q.step(Uj, iU, nzs); s2a += q.out; q.step(Uj, iU, nzs); s2b += q.out; }
+        else if (q.os == 4) { for (int j = 0; j < 4; j++) { q.step(Uj, iU, nzs); s4[j] += q.out; } q4 = true; }
         else { q.step(Uj, iU, nzs); s1 += q.out; }
       }
       const double fade = v->fade;
@@ -490,16 +494,25 @@ void PipeEngine::processBlock(float *L, float *R, int n) {
       s1 *= gF; s2a *= gF; s2b *= gF;
       l1 += v->gl * s1; r1 += v->gr * s1;
       l2a += v->gl * s2a; l2b += v->gl * s2b; r2a += v->gr * s2a; r2b += v->gr * s2b;
-      const double as = std::fabs(s1 + s2a);
+      double as = s1 + s2a;
+      if (q4) {
+        for (int j = 0; j < 4; j++) { s4[j] *= gF; l4[j] += v->gl * s4[j]; r4[j] += v->gr * s4[j]; }
+        as += s4[0]; any4 = true; last4 = i;
+      }
+      as = std::fabs(as);
       v->env = as > v->env ? as : v->env * 0.9998;
     }
     qdraw = draw;
     loL[i] = l1; loR[i] = r1;
     hiL[2 * i] = l2a; hiL[2 * i + 1] = l2b; hiR[2 * i] = r2a; hiR[2 * i + 1] = r2b;
+    for (int j = 0; j < 4; j++) { hi4L[4 * i + j] = l4[j]; hi4R[4 * i + j] = r4[j]; }
     Qsum += draw; Qcnt++;
     if (f && shown >= 0) record(f->pipes[shown]);
   }
   Pset = pset; Pr = pr; Qt = qt; Pc = pc; Qdraw = qdraw; trem = tr; tremPh = ph; nz = nzs;
+  // the 4× pipes into the 2× stream, while they sound and until the half-band has emptied
+  if (any4 || quiet4 < FIR_N) decimate4(n);
+  quiet4 = any4 ? std::min(FIR_N, 4 * (n - 1 - last4)) : std::min(FIR_N, quiet4 + 4 * n);
   decimate(L, R, n);
   for (int i = 0; i < n; i++) { L[i] = (float)(L[i] + loL[i]); R[i] = (float)(R[i] + loR[i]); }
   // retire: pallet shut, every pipe quiet
@@ -540,6 +553,19 @@ void PipeEngine::decimate(float *L, float *R, int n) {
     L[i] = (float)sl; R[i] = (float)sr;
   }
   hpos = p;
+}
+
+// 4× → 2×, the same half-band at twice the rate, added into the 2× stream.
+void PipeEngine::decimate4(int n) {
+  constexpr int M = FIR_N, c = (M - 1) / 2;
+  int p = h4pos;
+  for (int i = 0; i < 2 * n; i++) {
+    for (int k = 0; k < 2; k++) { const double xl = hi4L[2 * i + k], xr = hi4R[2 * i + k]; hist4L[p] = hist4L[p + M] = xl; hist4R[p] = hist4R[p + M] = xr; p = p + 1 == M ? 0 : p + 1; }
+    double sl = fir[c] * hist4L[p + M - 1 - c], sr = fir[c] * hist4R[p + M - 1 - c];
+    for (int t = 0; t < M; t += 2) { const int q = p + M - 1 - t; sl += fir[t] * hist4L[q]; sr += fir[t] * hist4R[q]; }
+    hiL[i] += sl; hiR[i] += sr;
+  }
+  h4pos = p;
 }
 
 int PipeEngine::shownRank(const Voice &v) const {

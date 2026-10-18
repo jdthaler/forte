@@ -79,7 +79,7 @@ Params paramsOf(const double *P) {
 OrganEngine::OrganEngine(double fs) : Engine(fs), dt(1 / fs), aSm(1 - fd::exp(-dt / SMOOTH_T)) {
   hornHz = p.hornSlow; drumHz = p.drumSlow;
   for (int w = 1; w < NW; w++) { const double ph = TAU * rand(); cr[w] = fd::cos(ph); ci[w] = fd::sin(ph); }
-  for (int k = 0; k < NUM_KEYS; k++) { keys[k].key = KEY_LO + k; keys[k].idx = k; }
+  for (int k = 0; k < NUM_KEYS; k++) { keys[k].key = KEY_MIN + k; keys[k].idx = k; }
   updateDerived();
   snapLive();
 }
@@ -221,7 +221,7 @@ void OrganEngine::schedule(Key &k, bool closing, double keySpeed) {
 
 // velocity 0..1 (MIDI velocity / 127; the computer keys play 100): it sets the key speed
 void OrganEngine::noteOn(int key, double velocity) {
-  const int idx = key - KEY_LO;
+  const int idx = key - KEY_MIN;
   if (idx < 0 || idx > NUM_KEYS - 1) return;
   Key &k = keys[idx];
   if (!k.live) {
@@ -241,7 +241,7 @@ void OrganEngine::noteOn(int key, double velocity) {
 }
 
 void OrganEngine::noteOff(int key, double) {
-  const int idx = key - KEY_LO;
+  const int idx = key - KEY_MIN;
   if (idx < 0 || idx > NUM_KEYS - 1) return;
   Key &k = keys[idx];
   if (!k.live || !k.down) return;

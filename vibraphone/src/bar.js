@@ -19,7 +19,8 @@
 // Sturm-sequence bisection (count the negative pivots of K − λM), in O(n) per
 // factorisation.
 
-export const KEY_LO = 53, KEY_HI = 89; // F3–F6, the standard three-octave vibraphone
+export const KEY_LO = 53, KEY_HI = 89; // F3–F6, the standard three-octave vibraphone: the compass
+export const KEY_MIN = 21, KEY_MAX = 108; // A0–C8, with the full range open: the same bars, cut on past it
 export const AL = { E: 69e9, rho: 2700, nu: 0.33 };   // aluminium alloy (6061-like)
 export const G_AL = AL.E / (2 * (1 + AL.nu));
 export const KAPPA = (10 * (1 + AL.nu)) / (12 + 11 * AL.nu); // Cowper's shear coefficient, rectangle

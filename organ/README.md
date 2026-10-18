@@ -11,7 +11,7 @@ Play it at <https://forte.jthaler.net/organ/> (or locally — see the
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | play (61-key manual, C2–C7) |
+| `Z…/` and `Q…]` rows | play (A0–C8: the 61-key manual C2–C7, and the keys either side of it) |
 | `←` `→` | octave |
 | `↑` `↓`, or the **Swell** pedal beside the drawbars | expression pedal (drag or scroll the pedal; it is there for tablets) |
 | `Space` | Leslie slow ↔ fast |
@@ -56,6 +56,12 @@ Two consequences you can hear in `examples/organ/04-tuning-real-gears-then-ideal
 
 The top drawbars fold back an octave once they run out of wheels (above F♯5
 for the 1′), shown in red in the table.
+
+The engine plays every key of an 88-key keyboard, A0–C8, not just the
+B-3's manual: the same 91 wheels serve them all. Below C2 the 16′ runs off
+wheel 1 (C1) and folds up an octave, and below C1 so does the 8′ (A0–B0
+sound A1–B1 at 8′, with only the upper drawbars above them); above C7 the
+foldback at the top simply goes further.
 
 **Contacts and busbars.** Each key closes nine spring contacts onto nine
 busbars, at slightly different points of its travel, with a little bounce.

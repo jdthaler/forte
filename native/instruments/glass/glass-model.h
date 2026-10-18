@@ -15,7 +15,8 @@
 
 namespace forte::glass {
 
-constexpr int KEY_LO = 53, KEY_HI = 93, NK = KEY_HI - KEY_LO + 1; // F3–A6 (Franklin: 37 bowls, G3–G6)
+constexpr int KEY_LO = 53, KEY_HI = 93;   // F3–A6, the compass (Franklin: 37 bowls, G3–G6)
+constexpr int KEY_MIN = 21, KEY_MAX = 108, NK = KEY_MAX - KEY_MIN + 1; // A0–C8, with the full range open
 struct Glass { double E, rho, nu; };
 constexpr Glass GLASS = {70e9, 2500, 0.22}; // soda-lime/potash glass
 constexpr double RHO_WATER = 1000, C_AIR = 343;

@@ -16,7 +16,7 @@
 namespace forte::pipes {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { principal, octave, gedackt, mixture, tremulant, tremRate, tremDepth, pressure, wind, rise, cutup, gain, offset, noise, room, volume, count };
+enum : int { principal, octave, gedackt, mixture, tremulant, tremRate, tremDepth, pressure, wind, rise, cutup, gain, offset, noise, fullRange, room, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -47,6 +47,7 @@ inline const ParamInfo kParams[p::count] = {
   {"gain", "Jet gain (flue and languid)", "Voicing", ParamKind::continuous, 0.4, 2.5, 1, 0, true, false, nullptr, 0, kFormat_gain, 1},
   {"offset", "Labium offset", "Voicing", ParamKind::continuous, 0, 1.5, 0.4, 0.01, false, false, nullptr, 0, kFormat_offset, 1},
   {"noise", "Jet turbulence", "Voicing", ParamKind::continuous, 0, 4, 1, 0.05, false, false, nullptr, 0, kFormat_noise, 2},
+  {"fullRange", "Full range (A0–C8)", "Voicing", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"room", "Room (church)", "Output", ParamKind::continuous, 0, 1, 0.55, 0.01, false, true, nullptr, 0, kFormat_room, 1},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
@@ -99,7 +100,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 17,
     .keep = kKeep, .keepCount = 2,
-    .keyLo = 36, .keyHi = 89, .space = Space::hold,
+    .keyLo = 21, .keyHi = 108, .compassLo = 36, .compassHi = 89, .compass = p::fullRange, .space = Space::hold,
     .modWheel = p::pressure, .modWheelMax = 3000,
     .controllers = kControllers, .controllerCount = 0,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .tone = -1, .trimDb = 2},

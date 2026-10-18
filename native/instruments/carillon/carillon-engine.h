@@ -78,7 +78,7 @@ class CarillonEngine : public Engine {
   // read by the tests (through the WebAssembly's hooks): the voices in the order they were struck
   int nVoices = 0;
   std::array<int, POOL> order{}; // pool indices
-  std::array<int, KEY_HI - KEY_LO + 1> byKey{}; // pool index, or −1
+  std::array<int, KEY_MAX - KEY_MIN + 1> byKey{}; // pool index, or −1
   const Voice &voice(int i) const { return pool[order[i]]; }
 
  private:

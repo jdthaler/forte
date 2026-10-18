@@ -16,6 +16,8 @@ export const GROUPS = [
         hint: 'An uneven wall, ε·cos 2mθ for every family m, splits each pair of modes by Δf/f ≈ εκ/2: the partials beat (warble). 0 = a perfectly round bell.' },
       { id: 'eta', label: 'Bronze loss factor η', min: 5e-5, max: 2e-3, def: 2.5e-4, log: true, fmt: sci,
         hint: 'Internal friction of the bronze, σ = πfη. Radiation adds its own loss, most to the upper partials of the bigger bells.' },
+      { id: 'fullRange', label: 'Full range (F2–C8)', type: 'checkbox', def: false,
+        hint: 'Opens the keys beyond the four-octave C3–C7 compass: the bass rib cast larger down to F2 (a 3.5 m, 19 t bell, about the largest ever hung in a carillon) and the treble rib smaller up to C8. Lower still, a bell would outweigh any ever cast.' },
     ],
   },
   {

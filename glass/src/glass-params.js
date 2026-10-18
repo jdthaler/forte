@@ -27,6 +27,8 @@ export const GROUPS = [
       { id: 'split', label: 'Doublet split (irregularity)', min: 0, max: 40, def: 12, step: 0.1, fmt: (v) => `${v.toFixed(1)} ¢`, hint: 'Uneven walls split each mode in two. Turning under the finger, the bowl offers it each in turn: a warble of ±half the split at 4× the rotation rate.' },
       { id: 'loss', label: 'Glass loss factor', min: 3e-5, max: 3e-3, def: 4e-4, log: true, fmt: (v) => `η = ${(v * 1e4).toFixed(1)}·10⁻⁴ (Q ${(1 / v).toFixed(0)})`, hint: 'Internal friction of the glass: how long a bowl rings after the finger lifts.' },
       { id: 'water', label: 'Water in the bowls', min: 0, max: 0.8, def: 0, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} % of the depth`, hint: 'Liquid moving with the wall lowers every bowl (French 1983), most when filled near the rim. Nothing retunes. Very full bowls jump to the (3,0) mode.' },
+      { id: 'fullRange', label: 'Full range (A0–C8)', type: 'checkbox', def: false,
+        hint: 'Opens the keys beyond the F3–A6 compass: Franklin’s scale of bowls carried on, down to a 15-inch bowl at A0 and up to a 1.7-inch one at C8, each walled to sound its note.' },
     ],
   },
   {

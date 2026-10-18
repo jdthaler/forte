@@ -14,7 +14,7 @@ static const BarModel &cachedBar(int key, double depth) {
   static std::unique_ptr<BarModel> bar;
   static int lastKey = -1;
   static double lastDepth = 0;
-  key = std::min(KEY_HI, std::max(KEY_LO, key));
+  key = std::min(KEY_MAX, std::max(KEY_MIN, key));
   if (!bar || key != lastKey || depth != lastDepth) {
     bar = std::make_unique<BarModel>(barModel(key, depth));
     lastKey = key; lastDepth = depth;
@@ -79,7 +79,7 @@ FORTE_EXPORT void vibraphone_mallet(double hardness, double mass, double *out) {
 // A bar's voice data, packed (packVoiceData) into out, returning how many numbers: what the page
 // sends with a note (noteData), and its engine takes (vibraphone_offer).
 FORTE_EXPORT int vibraphone_voice_data(int key, double depth, double *out) {
-  key = std::min(KEY_HI, std::max(KEY_LO, key));
+  key = std::min(KEY_MAX, std::max(KEY_MIN, key));
   return packVoiceData(voiceData(key, depth), out);
 }
 FORTE_EXPORT int vibraphone_offer(VibraphoneEngine *e, const double *packed, int n) { return e->offer(packed, n); }

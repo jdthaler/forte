@@ -11,7 +11,6 @@ const model = await wasmModel();
 
 const $ = (s) => document.querySelector(s);
 const TAU = 2 * Math.PI;
-const [KEY_LO, KEY_HI] = INSTRUMENT.range;
 const DAMPER_X = 0.05; // the felt damper bar presses on each bar this far (× L) from its inner end (vibraphone-model.h)
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 80, fHi: 20000 });
 let focus = 60, live = null, history = [], etPeak = 0;
@@ -30,7 +29,8 @@ let warm = null;
 function warmUp() {
   clearTimeout(warm);
   const depth = shell.P.depth, keys = [];
-  for (let k = KEY_LO; k <= KEY_HI; k++) if (!packed.has(`${k}|${depth}`)) keys.push(k);
+  const [lo, hi] = shell.P.fullRange ? INSTRUMENT.range : INSTRUMENT.compass.keys; // the keys that play
+  for (let k = lo; k <= hi; k++) if (!packed.has(`${k}|${depth}`)) keys.push(k);
   keys.sort((a, b) => Math.abs(a - focus) - Math.abs(b - focus));
   const step = () => {
     const k = keys.shift();
@@ -48,7 +48,7 @@ const shell = createShell({
   arrows: { param: 'velocity', step: 0.05 },
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key) => { if (key !== focus) history = []; focus = key; shell.keys.focus(key); update(); },
-  onParam: (id) => { if (id === 'depth' || id === '*') warmUp(); update(); },
+  onParam: (id) => { if (id === 'depth' || id === 'fullRange' || id === '*') warmUp(); update(); },
   onMessage: (m) => {
     if (m.type !== 'vibe') return;
     live = { ...m, amp: Float64Array.from(m.amp), t: performance.now() / 1000 };

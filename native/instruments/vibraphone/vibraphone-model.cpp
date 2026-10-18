@@ -26,10 +26,14 @@ Layout barLayout(int k) {
   int nat = 0, acc = 0;
   double x = 0;
   for (int m = KEY_LO; m < k; m++) if (IS_ACC[m % 12]) acc++; else nat++;
+  for (int m = k; m < KEY_LO; m++) if (IS_ACC[m % 12]) acc--; else nat--; // below F3: counted back from it
   const bool accidental = IS_ACC[k % 12];
   // naturals sit side by side (bar width + 8 mm); an accidental sits over the gap between two naturals
   if (accidental) x = barLayout(k - 1).x + (barBlank(k - 1).b + 0.008) / 2;
-  else for (int m = KEY_LO; m <= k; m++) if (!IS_ACC[m % 12]) x += m == k ? barBlank(m).b / 2 : barBlank(m).b + 0.008;
+  else if (k < KEY_LO) { // the frame carried on to the left of F3 (x = 0 is F3's outer edge)
+    x = -0.008 - barBlank(k).b / 2;
+    for (int m = k + 1; m < KEY_LO; m++) if (!IS_ACC[m % 12]) x -= barBlank(m).b + 0.008;
+  } else for (int m = KEY_LO; m <= k; m++) if (!IS_ACC[m % 12]) x += m == k ? barBlank(m).b / 2 : barBlank(m).b + 0.008;
   return {accidental, accidental ? acc : nat, x};
 }
 double frameLength() {
@@ -38,14 +42,15 @@ double frameLength() {
 }
 
 std::array<double, 2> barPan(int k, double width) {
-  const double p = width * ((2 * barLayout(k).x) / frameLength() - 1), a = ((p + 1) * pi) / 4;
+  // the pan spans the F3–F6 frame; the bars past it take its end bars' places
+  const double p = width * clamp((2 * barLayout(k).x) / frameLength() - 1, -1, 1), a = ((p + 1) * pi) / 4;
   return {std::cos(a), std::sin(a)};
 }
 
 Geometry barGeometry(int k, double depth) {
-  k = std::min(KEY_HI, std::max(KEY_LO, k));
+  k = std::min(KEY_MAX, std::max(KEY_MIN, k));
   const Blank bl = barBlank(k);
-  const BarRow &row = BAR_TABLE[k - KEY_LO];
+  const BarRow &row = BAR_TABLE[k - KEY_MIN];
   const double A = row.A, D = row.D * depth;
   auto cutFor = [&](double L) { return Cut{bl.h0, (A * L) / 2, (bl.cf * A * L) / 2, D * bl.h0}; };
   double L = row.L;

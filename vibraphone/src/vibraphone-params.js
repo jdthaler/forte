@@ -14,6 +14,8 @@ export const GROUPS = [
         hint: 'The aluminium’s loss factor. It sets how long the bar rings on its own; the cords, radiation and heat flow add their own losses.' },
       { id: 'temp', label: 'Air temperature', min: 0, max: 40, def: 20, step: 0.5, fmt: (v) => `${v.toFixed(1)} °C`,
         hint: 'Tuned at 20 °C. The tubes follow the speed of sound (about +3 ¢ per kelvin), the bars go slightly flat (−0.4 ¢ per kelvin): in a cold hall the resonators fall out of tune with their bars.' },
+      { id: 'fullRange', label: 'Full range (A0–C8)', type: 'checkbox', def: false,
+        hint: 'Opens the keys beyond the three-octave F3–F6 compass: bars cut from the end bars’ blanks and tuned to 1 : 4 : 10 like the rest, down to A0 (94 cm long) and up to C8 (7.5 cm), each over its own tube.' },
     ],
   },
   {

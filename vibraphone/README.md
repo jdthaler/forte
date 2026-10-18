@@ -17,7 +17,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/vibraphone/
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | play (37 bars, F3–F6) |
+| `Z…/` and `Q…]` rows | play (37 bars, F3–F6; all 88, A0–C8, with **Full range**) |
 | `←` `→` | octave |
 | `↑` `↓` | velocity (the mallet's speed, up to 3 m/s by default) |
 | `Space` | damper pedal: lifts the felt off every bar |
@@ -82,7 +82,7 @@ L, so that
 
 `tuneUndercut` does this by Newton's method with a finite-difference
 Jacobian, in 3–5 steps from the neighbouring key's answer.
-`tools/vibraphone-bars.mjs` tunes all 37 bars in about a second and writes
+`tools/vibraphone-bars.mjs` tunes all 88 bars (A0–C8) in under two seconds and writes
 `src/bar-table.js`. Every bar meets 1 : 4 : 10 to 0.01 ¢ in the model, and
 the test re-solves every key from the table and checks 1 ¢, then re-runs
 the optimiser cold on three keys and recovers the table.
@@ -107,6 +107,19 @@ middle only, this family of cuts cannot reach 1 : 4 : 10 while lowering f₁
 by less than about 2.1. So the top bar comes out at 14 cm, a little
 shorter than on most instruments, whose top octave is rarely tuned
 to the 10th partial (14 kHz at F6).
+
+**Full range** (under Bars) opens the keys past the three-octave compass,
+A0–E3 and F♯6–C8, for an 88-key keyboard. Their bars are cut the same
+way from the blanks of the end bars (57 mm wide below F3, 38 mm above F6,
+c/a held at its end value) and tuned to 1 : 4 : 10 like the rest: 94.5 cm
+and 1.4 kg at A0, 7.5 cm and 82 g at C8, each over its own tube and
+panned where its end of the frame is. The table runs over all 88 keys;
+the 37 bars of the compass are the same to the last digit. Modes above
+0.45 × the sample rate are left out rather than allowed to fold back: from
+C♯6 up, the fifth bending mode (above 21.6 kHz at 48 kHz); at C8, modes
+3–5. A bar radiates its fundamental feebly once it is far smaller
+than its wavelength (12 m at A0), so the lowest keys are quieter, with
+more of their sound in modes 2 and 3.
 
 ### 3. How long a bar rings on its own
 
