@@ -16,7 +16,7 @@
 namespace forte::organ {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { tuning, mains, inertia, spinUp, wheelHarm, crosstalk, leakage, loading, spread, bounce, contactTime, percFastTau, percSlowTau, percLevel, sections, sectionDelay, scanRate, hornSlow, hornFast, drumSlow, drumFast, hornAccel, hornDecel, drumAccel, drumDecel, hornRadius, micDist, micSpread, crossover, balance, reflections, drive, expression, room, volume, drawbar1, drawbar2, drawbar3, drawbar4, drawbar5, drawbar6, drawbar7, drawbar8, drawbar9, percOn, percSoft, percFast, percThird, vib, leslie, motor, count };
+enum : int { tuning, mains, inertia, spinUp, wheelHarm, crosstalk, leakage, loading, spread, bounce, contactTime, percFastTau, percSlowTau, percLevel, sections, sectionDelay, scanRate, hornSlow, hornFast, drumSlow, drumFast, hornAccel, hornDecel, drumAccel, drumDecel, hornRadius, micDist, micSpread, crossover, balance, reflections, drive, expression, room, venue, volume, drawbar1, drawbar2, drawbar3, drawbar4, drawbar5, drawbar6, drawbar7, drawbar8, drawbar9, percOn, percSoft, percFast, percThird, vib, leslie, motor, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -55,6 +55,8 @@ inline const FormatSegment kFormat_reflections[] = {{kNoLimit, "", "", 1, 0, 2, 
 inline const FormatSegment kFormat_drive[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_expression[] = {{0.9872162398137365, "", " dB", 40.02329644729183, -40.01164822364591, 0, false, false, false, false}, {0.99, "", " dB", 1, 0, 0, false, false, false, false}, {kNoLimit, "", " dB", 40.02329644729183, -40.01164822364591, 0, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
+inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_drawbar1[] = {{kNoLimit, "", "", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_drawbar2[] = {{kNoLimit, "", "", 1, 0, 0, false, false, false, false}};
@@ -105,6 +107,7 @@ inline const ParamInfo kParams[p::count] = {
   {"drive", "Tube drive", "Amp & output", ParamKind::continuous, 0, 1, 0.15, 0.01, false, true, nullptr, 0, kFormat_drive, 1},
   {"expression", "Expression pedal", "Amp & output", ParamKind::continuous, 0, 1, 0.85, 0.01, false, false, nullptr, 0, kFormat_expression, 3},
   {"room", "Room", "Amp & output", ParamKind::continuous, 0, 1, 0.2, 0.01, false, true, nullptr, 0, kFormat_room, 1},
+  {"venue", "Venue", "Amp & output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
   {"volume", "Volume", "Amp & output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 1},
   {"drawbar1", "16' drawbar", "Drawbars", ParamKind::continuous, 0, 8, 8, 1, false, false, nullptr, 0, kFormat_drawbar1, 1},
   {"drawbar2", "5 1/3' drawbar", "Drawbars", ParamKind::continuous, 0, 8, 8, 1, false, false, nullptr, 0, kFormat_drawbar2, 1},
@@ -144,7 +147,7 @@ inline const Preset kPresets[] = {
   {"2nd perc only — 00 8000 000, slow decay", kPreset7, 16},
   {"Full drawbars, dry — compare tunings", kPreset8, 18},
 };
-inline const uint16_t kKeep[] = {p::volume, p::room, p::expression};
+inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::expression};
 inline const Controller kControllers[] = {{1, p::leslie, Controller::values, 1, 2}, {11, p::expression}, {64, p::leslie, Controller::toggle, 1, 2}};
 
 // The plugin's description. The port supplies its engine, and midiVelocity when the
@@ -156,11 +159,11 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .vst3Id = {0x43, 0xe5, 0xc5, 0x1c, 0xb9, 0x9f, 0x6a, 0xa1, 0x90, 0xef, 0x05, 0x66, 0x9a, 0xde, 0xb6, 0xab},
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 9,
-    .keep = kKeep, .keepCount = 3,
+    .keep = kKeep, .keepCount = 4,
     .keyLo = 36, .keyHi = 96, .space = Space::none,
     .modWheel = -1, .modWheelMax = 0,
     .controllers = kControllers, .controllerCount = 3,
-    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 1.8, .roomGain = 0.6, .tone = -1, .trimDb = 2},
+    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 1.8, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 2},
     .midiVelocity = midiVelocity, .create = create,
   };
 }

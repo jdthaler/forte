@@ -1,6 +1,8 @@
 // carillon-params.js — the knobs. Every parameter has a physical meaning and a
 // unit; the hint says what it does to the sound.
 
+import { VENUE } from '../../shared/chain.js';
+
 const sci = (v) => { const e = Math.floor(Math.log10(v)), m = v / 10 ** e; return `${m.toFixed(1)}×10${String(e).replace('-', '⁻').replace(/\d/g, (d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d])}`; };
 const face = (v) => (v >= 150 ? 'iron' : v >= 70 ? 'bronze or brass' : v >= 15 ? 'hard insert' : v >= 4 ? 'hardwood or nylon insert' : 'soft insert');
 
@@ -47,6 +49,7 @@ export const GROUPS = [
     title: 'Output',
     params: [
       { id: 'room', label: 'Belfry and square', perform: true, min: 0, max: 1, def: 0.15, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },

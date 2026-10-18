@@ -16,7 +16,7 @@
 namespace forte::piano {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { material, shape, aspect, roll, taper, gauge, lengthScale, winding, unisons, unisonDetune, polDetune, strikePos, offset, hardness, feltExp, hammerMass, hammerWidth, hysteresis, unaCorda, bridge, bridgeH, lossLow, lossHigh, torsionLoss, damper, gainV, gainH, gainT, soundboard, room, width, voicing, volume, maxFreq, count };
+enum : int { material, shape, aspect, roll, taper, gauge, lengthScale, winding, unisons, unisonDetune, polDetune, strikePos, offset, hardness, feltExp, hammerMass, hammerWidth, hysteresis, unaCorda, bridge, bridgeH, lossLow, lossHigh, torsionLoss, damper, gainV, gainH, gainT, soundboard, room, venue, width, voicing, volume, maxFreq, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -50,6 +50,8 @@ inline const FormatSegment kFormat_gainH[] = {{kNoLimit, "", "", 1, 0, 2, false,
 inline const FormatSegment kFormat_gainT[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_soundboard[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
+inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_width[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_voicing[] = {{kNoLimit, "", " dB/oct", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_volume[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
@@ -86,6 +88,7 @@ inline const ParamInfo kParams[p::count] = {
   {"gainT", "Torsion pickup", "Output", ParamKind::continuous, 0, 2, 0.6, 0.01, false, false, nullptr, 0, kFormat_gainT, 1},
   {"soundboard", "Soundboard body", "Output", ParamKind::continuous, 0, 1, 0.6, 0.01, false, true, nullptr, 0, kFormat_soundboard, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
   {"width", "Stereo spread", "Output", ParamKind::continuous, 0, 1, 0.6, 0.01, false, false, nullptr, 0, kFormat_width, 1},
   {"voicing", "Treble voicing", "Output", ParamKind::continuous, 0, 6, 2.5, 0.1, false, false, nullptr, 0, kFormat_voicing, 1},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 1},
@@ -119,7 +122,7 @@ inline const Preset kPresets[] = {
   {"Hammer at the middle (odd partials only)", kPreset11, 1},
   {"Thick, stiff wire (very inharmonic)", kPreset12, 1},
 };
-inline const uint16_t kKeep[] = {p::volume, p::room, p::soundboard, p::maxFreq};
+inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::soundboard, p::maxFreq};
 inline const Controller kControllers[] = {{67, p::unaCorda}};
 
 // The plugin's description. The port supplies its engine, and midiVelocity when the
@@ -131,11 +134,11 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .vst3Id = {0x5f, 0x2a, 0x6d, 0x7c, 0xcf, 0xff, 0x4c, 0xce, 0x17, 0xf2, 0x4e, 0xad, 0x64, 0xed, 0x0b, 0x4c},
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 13,
-    .keep = kKeep, .keepCount = 4,
+    .keep = kKeep, .keepCount = 5,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = -1, .modWheelMax = 0,
     .controllers = kControllers, .controllerCount = 1,
-    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2.2, .roomGain = 0.55, .tone = -1, .body = p::soundboard, .bodySeconds = 0.4, .bodyDry = 0.75, .bodyWet = 1.1, .limiterThreshold = -4, .limiterKnee = 4, .limiterRelease = 0.2, .trimDb = 3},
+    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2.2, .roomGain = 0.55, .venue = p::venue, .tone = -1, .body = p::soundboard, .bodySeconds = 0.4, .bodyDry = 0.75, .bodyWet = 1.1, .limiterThreshold = -4, .limiterKnee = 4, .limiterRelease = 0.2, .trimDb = 3},
     .midiVelocity = midiVelocity, .create = create,
   };
 }

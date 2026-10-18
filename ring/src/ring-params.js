@@ -2,6 +2,8 @@
 // says what it does to the sound. The rings are scaled to sound: a key's revolution frequency
 // is its note, so a bunch passes the pickup a few hundred times a second instead of a million.
 
+import { VENUE } from '../../shared/chain.js';
+
 const pct = (d) => (v) => `${(v * 100).toFixed(d)} %`;
 const sec = (v) => (v < 1 ? `${(v * 1000).toFixed(0)} ms` : `${v.toFixed(v < 10 ? 2 : 1)} s`);
 
@@ -61,6 +63,7 @@ export const GROUPS = [
     title: 'Output',
     params: [
       { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.2, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },

@@ -6,7 +6,7 @@
 import { existsSync } from 'node:fs';
 import { loadEngine } from './engine.mjs';
 import { convolve, FS_SHIM, webAudioIR } from './audio-util.mjs';
-import { roomIR, soundboardIR } from '../shared/impulses.js';
+import { soundboardIR, venueIR, venueGain } from '../shared/impulses.js';
 import { chainGains, ROOM, TONE_Q } from '../shared/chain.js';
 import { wheelValue } from '../shared/midi.js';
 import { byId } from '../shared/registry.js';
@@ -136,8 +136,9 @@ export function applyChain(I, [L, Rr], P, fs, { room = true } = {}) {
     out = out.map((x, c) => { const w = convolve(x, ir[c]); return x.map((v, i) => g.dry * v + g.body * w[i]); });
   }
   if (ch.room && room) {
-    const ir = webAudioIR(roomIR(FS_SHIM(fs), ch.roomSeconds ?? ROOM.seconds), fs);
-    out = out.map((x, c) => { const w = convolve(x, ir[c]); return x.map((v, i) => v + g.room * w[i]); });
+    const venue = ch.venue ? P[ch.venue] : 'room', buf = venueIR(FS_SHIM(fs), venue, ch.roomSeconds ?? ROOM.seconds);
+    const ir = webAudioIR(buf, fs), k = venueGain(venue, buf.getChannelData(0).length, fs);
+    out = out.map((x, c) => { const w = convolve(x, ir[c]); return x.map((v, i) => v + g.room * k * w[i]); });
   }
   return out.map((x) => x.map((v) => g.master * v));
 }

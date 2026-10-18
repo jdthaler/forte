@@ -5,6 +5,7 @@
 //       'mix'    → Web Audio graph (room, volume)
 
 import { DRAWBARS } from './tonewheels.js';
+import { VENUE } from '../../shared/chain.js';
 
 const f1 = (u) => (v) => `${v.toFixed(1)} ${u}`;
 const f2 = (u) => (v) => `${v.toFixed(2)} ${u}`;
@@ -90,6 +91,7 @@ export const GROUPS = [
       { id: 'expression', label: 'Expression pedal', kind: 'engine', min: 0, max: 1, step: 0.01, def: 0.85, fmt: (v) => `${((v - 1) * 40).toFixed(0)} dB`,
         hint: 'Before the drive, so it changes the grit too. MIDI CC 11.' },
       { id: 'room', label: 'Room', perform: true, kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.2, fmt: (v) => v.toFixed(2) },
+      VENUE,
       { id: 'volume', label: 'Volume', perform: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => v.toFixed(2) },
     ],
   },

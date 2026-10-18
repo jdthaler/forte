@@ -16,7 +16,7 @@
 namespace forte::windharp {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { wind, gust, gustTime, tuning, n0, unison, q, mass, room, volume, count };
+enum : int { wind, gust, gustTime, tuning, n0, unison, q, mass, room, venue, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -30,6 +30,8 @@ inline const FormatSegment kFormat_unison[] = {{kNoLimit, "", "", 1, 0, 0, false
 inline const FormatSegment kFormat_q[] = {{kNoLimit, "", "", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_mass[] = {{kNoLimit, "× ", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
+inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
 inline const ParamInfo kParams[p::count] = {
@@ -42,6 +44,7 @@ inline const ParamInfo kParams[p::count] = {
   {"q", "String Q", "Strings", ParamKind::continuous, 100, 3000, 500, 0, true, false, nullptr, 0, kFormat_q, 1},
   {"mass", "String mass (winding)", "Strings", ParamKind::continuous, 1, 8, 1, 0, true, false, nullptr, 0, kFormat_mass, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 
@@ -60,7 +63,7 @@ inline const Preset kPresets[] = {
   {"Heavy wound strings: high mass ratio", kPreset5, 1},
   {"Lightly damped strings: loud, sticky lock-in", kPreset6, 1},
 };
-inline const uint16_t kKeep[] = {p::volume, p::room};
+inline const uint16_t kKeep[] = {p::volume, p::room, p::venue};
 inline const Controller kControllers[] = {{0, -1}};
 
 // The plugin's description. The port supplies its engine, and midiVelocity when the
@@ -72,11 +75,11 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .vst3Id = {0x7e, 0x1c, 0x2a, 0xe3, 0x7e, 0xf1, 0xfb, 0x28, 0x10, 0x3b, 0x42, 0xa4, 0x07, 0xff, 0x78, 0x87},
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 7,
-    .keep = kKeep, .keepCount = 2,
+    .keep = kKeep, .keepCount = 3,
     .keyLo = 55, .keyHi = 96, .space = Space::sustain,
     .modWheel = p::wind, .modWheelMax = 8,
     .controllers = kControllers, .controllerCount = 0,
-    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .tone = -1, .trimDb = -4},
+    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = -4},
     .midiVelocity = midiVelocity, .create = create,
   };
 }

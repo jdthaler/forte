@@ -1,6 +1,8 @@
 // pyrophone-params.js — the knobs. Every parameter has a physical meaning and
 // a unit; the hint says what it does to the sound.
 
+import { VENUE } from '../../shared/chain.js';
+
 const pct = (v) => `${(v * 100).toFixed(0)} %`;
 
 export const GROUPS = [
@@ -30,6 +32,7 @@ export const GROUPS = [
     params: [
       { id: 'listen', label: 'Listening point', min: 0, max: 1, def: 0.5, step: 0.01, fmt: (v) => (v < 0.02 ? 'at the top mouth' : v > 0.98 ? 'far, side-on' : `bottom mouth × ${v.toFixed(2)}`), hint: 'Side-on, the two open ends cancel the even modes (the octave), leaving a hollow tone; at the top mouth you hear them all.' },
       { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.3, step: 0.01, fmt: pct },
+      VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },

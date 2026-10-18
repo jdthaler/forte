@@ -24,6 +24,7 @@
     {"id":"treble","kind":"continuous","min":-15,"max":15,"def":0,"step":0.5,"log":false},
     {"id":"maxFreq","kind":"continuous","min":3000,"max":16000,"def":10000,"step":0,"log":true},
     {"id":"room","kind":"continuous","min":0,"max":1,"def":0.12,"step":0.01,"log":false},
+    {"id":"venue","kind":"choice","def":"room","options":["studio","room","recital","hall","cathedral"]},
     {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}
   ],
   "presets": [
