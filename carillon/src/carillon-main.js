@@ -1,7 +1,7 @@
 // carillon-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell, noteName } from '../../shared/shell.js';
-import { SpectrumView, fit, css, animate } from '../../shared/views.js';
+import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './carillon-instrument.js';
 import { PARTIAL_NAMES, DESIGNATION, idealRatio } from './partials.js';
 import { geomOf, innerAt, outerAt } from './bell-profile.js';
@@ -15,6 +15,7 @@ const $ = (s) => document.querySelector(s);
 const TAU = 2 * Math.PI;
 const cents = (a, b) => 1200 * Math.log2(a / b);
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 40, fHi: 16000 });
+new SpectrogramView($('#spectrogram'), { spectrum });
 let focus = 60, sel = null, live = null, levelHist = [], atStrike = null;
 
 const shell = createShell({

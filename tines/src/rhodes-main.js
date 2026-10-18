@@ -9,6 +9,7 @@ import { noteName } from './tine.js';
 import { TinesWasmEngine, wasmModel } from './tines-wasm.js'; // the slow-motion view runs its own engine
 import { createChain } from '../../shared/chain.js';
 import { MotionView, PickupView, SpectrumView, MODE_COLORS, modeKind } from './rhodes-viz.js';
+import { SpectrogramView } from '../../shared/views.js';
 import { createKeyboard } from '../../shared/keyboard.js';
 import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto } from '../../shared/midi.js';
 import { controlOwns } from '../../shared/focus.js';
@@ -62,7 +63,7 @@ function startAudio() {
     applyMix();
     node.port.postMessage(paramsMessage());
     node.port.postMessage({ type: 'sustain', on: sustain });
-    spectrum.setAnalyser(analyser);
+    spectrum.setAnalyser(analyser); spectro.setAnalyser(analyser);
     if (ctx.state !== 'running') await ctx.resume();
     live = true;
     $('#start').textContent = `Audio on · ${(fs / 1000).toFixed(1)} kHz`;
@@ -287,6 +288,7 @@ function precompute() {
 const motion = new MotionView($('#motion'));
 const pickupView = new PickupView($('#pickup'));
 const spectrum = new SpectrumView($('#spectrum'));
+const spectro = new SpectrogramView($('#spectrogram'), { fLo: 25, fHi: 16000 });
 let simTimer = 0;
 
 function setFocus(key, vel) {
@@ -295,6 +297,7 @@ function setFocus(key, vel) {
   const model = keyData(key);
   showInfo(model);
   spectrum.set(model.info.f0, model.modes);
+  spectro.set(model.info.f0, model.modes.map((md) => ({ f: md.f, color: MODE_COLORS[modeKind(md)] })));
   clearTimeout(simTimer);
   simTimer = setTimeout(() => runSim(key, vel), 30);
 }

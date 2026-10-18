@@ -72,6 +72,11 @@
           <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · faint lines: harmonics n·f₁ · markers: the stretched partials</span></div>
           <canvas id="spectrum"></canvas>
         </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">The upper partials fade first, so each note's stack of lines thins from the top down. The ticks are the stretched partials, a little sharp of the harmonics.</div>
+        </div>
         <div class="card">
           <div class="card-head"><h2>Why the piezo is bright</h2><span class="muted" id="weights-read"></span></div>
           <canvas id="weights"></canvas>

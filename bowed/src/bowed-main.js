@@ -1,7 +1,7 @@
 // bowed-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell, noteName } from '../../shared/shell.js';
-import { SpectrumView, fit, css, animate } from '../../shared/views.js';
+import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './bowed-instrument.js';
 import { wasmModel } from './bowed-wasm.js';
 
@@ -12,6 +12,7 @@ const FS = 48000;
 // bows the focused key's string alone (settleTime on it, at its oversampled rate).
 const phys = await wasmModel();
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 40, fHi: 16000, dbTop: -10, dbRange: 90 });
+new SpectrogramView($('#spectrogram'), { spectrum });
 const KIND = { helmholtz: 'Helmholtz motion', multiple: 'multiple slipping (surface sound)', raucous: 'raucous', none: '—' };
 let focus = 60, st = null, mean = null;
 const trail = [];

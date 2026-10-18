@@ -1,7 +1,7 @@
 // glass-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell, noteName } from '../../shared/shell.js';
-import { SpectrumView, fit, css, animate } from '../../shared/views.js';
+import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './glass-instrument.js';
 import { wasmModel, MIC, TRACE } from './glass-wasm.js';
 
@@ -11,6 +11,7 @@ const phys = await wasmModel();
 const $ = (s) => document.querySelector(s);
 const TAU = 2 * Math.PI;
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 80, fHi: 16000 });
+new SpectrogramView($('#spectrogram'), { spectrum });
 let focus = 69, model = null, state = null, zoomA = null, zoomBuf = null;
 const famColor = (n) => css(`--n${Math.min(n, 6)}`);
 

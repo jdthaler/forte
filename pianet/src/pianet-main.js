@@ -4,7 +4,7 @@
 // same C++, built as WebAssembly.
 
 import { createShell, noteName } from '../../shared/shell.js';
-import { SpectrumView, fit, css, animate } from '../../shared/views.js';
+import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './pianet-instrument.js';
 import { wasmModel } from './pianet-wasm.js';
 
@@ -12,6 +12,7 @@ const model = await wasmModel();
 
 const $ = (s) => document.querySelector(s);
 const spectrum = new SpectrumView($('#spectrum'));
+new SpectrogramView($('#spectrogram'), { spectrum });
 const VELS = [0, 0.15, 0.3, 0.45, 0.6, 0.75, 0.9, 1];
 const SHOW = 4.5, HOLD = 1.0; // seconds of slow motion, then a pause
 let focus = 60, focusVel = null, sim = null, curve = null, kr = null, shapes = null, t0 = 0, frame = 0, lastRelease = null, dirty = true;

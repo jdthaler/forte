@@ -1,7 +1,7 @@
 // bubbles-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell, noteName } from '../../shared/shell.js';
-import { SpectrumView, fit, css, animate } from '../../shared/views.js';
+import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './bubbles-instrument.js';
 import { KEY_LO, KEY_HI, ROW, HYDRO, P_ATM, G, keyFreq, nozzleX, liquidOf, gasOf } from './bubbles-tank.js';
 import { wasmModel } from './bubbles-wasm.js';
@@ -12,6 +12,7 @@ const model = await wasmModel();
 const $ = (s) => document.querySelector(s);
 const TAU = 2 * Math.PI;
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 100, fHi: 10000, dbTop: -10, dbRange: 100 });
+new SpectrogramView($('#spectrogram'), { spectrum });
 const now = () => performance.now() / 1000;
 const cents = (a, b) => 1200 * Math.log2(a / b);
 

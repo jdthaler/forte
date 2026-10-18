@@ -64,6 +64,11 @@
           <canvas id="spectrum"></canvas>
           <div class="caption">Markers: the reed's own bending modes, inharmonic (mode 2 at 6–11 × f₁) and faint after the felt. The harmonics on the faint grid come from the pickup's C(y), not from the reed.</div>
         </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">The reed's second bending mode (the tick above the note's) dies soon after the strike. The harmonics that remain come from the pickup, so they fade with the fundamental, and a soft note has fewer of them.</div>
+        </div>
         <div class="card" id="info-card" data-view="Reed and modes">
           <div class="card-head"><h2>Reed <span id="info-title">C4</span></h2><span class="muted" id="info-sub"></span></div>
           <dl id="info"></dl>
