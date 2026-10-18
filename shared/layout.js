@@ -384,8 +384,12 @@ if (header) {
     if (status) status.prepend(fs); else header.appendChild(fs);
   }
   // "MIDI off" says no more than "Enable MIDI" does: the status shows once MIDI is asked for
-  const midi = header.querySelector('#midi'), midiBtn = header.querySelector('#midi-btn');
-  if (midi && midiBtn) { midi.hidden = true; midiBtn.addEventListener('click', () => { midi.hidden = false; }); }
+  // (by the button, or by MIDI turning itself on again, which hides the button with no click)
+  const midi = header.querySelector('#midi');
+  if (midi && header.querySelector('#midi-btn')) {
+    midi.hidden = true;
+    new MutationObserver(() => { midi.hidden = false; }).observe(midi, { childList: true, characterData: true, subtree: true });
+  }
 }
 
 // ---------------------------------------------------------------------------
