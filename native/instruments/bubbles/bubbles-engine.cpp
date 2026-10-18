@@ -14,6 +14,7 @@ constexpr double OUT = 1;            // output units per pascal at the reference
 constexpr double MIN_AGE = 0.012;    // s: a bubble younger than this is never stolen
 constexpr double FADE = 0.006;       // s: a stolen bubble fades out over this
 constexpr double BURST = 0.002;      // s: a bubble that reaches the surface bursts: its ring stops over this
+constexpr double BEND_T = 0.02;      // s: the pitch wheel's glide
 constexpr double END = 1e-4;         // a bubble is freed 80 dB below its peak
 constexpr double P_GLIDE = 0.05;     // s: the tank's pressure follows its knob with this time constant
 constexpr double PRESS_GAIN = 2;     // aftertouch: full pressure releases (1 + 2) times as many bubbles
@@ -131,7 +132,7 @@ bool BubbleEngine::release(Nozzle &z, int offset) {
   if (logging) log.push_back({z.key, frame + offset, R, vel, first}); // tests only
   // the bubble at its nozzle, under the tank's pressure as it is now
   Env renv;
-  renv.liq = liq; renv.gas = gas; renv.d = P[p::depth]; renv.p0 = pT + liq->rho * G * P[p::depth];
+  renv.liq = liq; renv.gas = gas; renv.d = P[p::depth]; renv.p0 = pB + liq->rho * G * P[p::depth];
   const Acoustics a = acoustics(R, renv);
   Bubble &b = *slot;
   b.on = true; b.key = z.key; b.age = 0; b.start = offset; b.fade = 1; b.fadeStep = 0;
@@ -186,7 +187,7 @@ bool BubbleEngine::glide(Bubble &b, int n) {
   const double d = b.d0 - riseDistance(t, b.U);
   if (d <= b.R) { startFade(b, BURST); return false; }
   double R;
-  ac = glideRing(b.R0, b.pb0, b.nSlow, {b.phiRe, b.phiIm}, *b.liq, *b.gas, d, pT, R);
+  ac = glideRing(b.R0, b.pb0, b.nSlow, {b.phiRe, b.phiIm}, *b.liq, *b.gas, d, pB, R);
   b.R = R; b.d = d;
   return true;
 }
@@ -243,12 +244,24 @@ void BubbleEngine::render(Bubble &b, float *L, float *Rt, int n) {
   if (recording && (over || waveCount >= WAVE_N)) { waveDone = true; rec = nullptr; }
 }
 
+void BubbleEngine::bend(double value) {
+  bendTo = std::pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12);
+}
+
 void BubbleEngine::process(float *L, float *R, int n) {
   for (int i = 0; i < n; i++) L[i] = R[i] = 0;
   if (!hasParams) return;
   // the tank's pressure glides to its knob
   pT += (pTarget - pT) * (1 - std::exp(-n / (P_GLIDE * fs)));
   if (std::fabs(pTarget - pT) < 1e-6 * pTarget) pT = pTarget;
+  // pitch bend: the pump pushes the air above the water until the pressure at the nozzles is × r²
+  // (Minnaert: the bubbles' note × r); the bubbles already rising are squeezed or swell with it
+  if (bendNow != bendTo) {
+    bendNow += (bendTo - bendNow) * (1 - std::exp(-n / (BEND_T * fs)));
+    if (std::fabs(bendNow - bendTo) < 1e-9) bendNow = bendTo;
+  }
+  if (bendNow == 1) pB = pT;
+  else { const double col = env.liq->rho * G * P[p::depth]; pB = std::max(0.01 * P_ATM, bendNow * bendNow * (pT + col) - col); }
   // nozzles: release what is due in this block
   for (Nozzle &z : nozzles) {
     if (z.owed) { // the bubble a press owes, at the start of this block; the gaps run from it

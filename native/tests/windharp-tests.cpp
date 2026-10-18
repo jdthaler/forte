@@ -89,6 +89,37 @@ TEST("windharp: at the reference wind a key locks onto its 3rd harmonic with the
   }
 }
 
+static double tone(const std::vector<float> &x, double f, double fs) {
+  double re = 0, im = 0;
+  const int n = (int)x.size();
+  for (int i = 0; i < n; i++) { const double h = 0.5 - 0.5 * std::cos(2 * std::numbers::pi * i / n); re += h * x[i] * std::cos(2 * std::numbers::pi * f * i / fs); im += h * x[i] * std::sin(2 * std::numbers::pi * f * i / fs); }
+  return std::hypot(re, im);
+}
+// (A string bent out of its lock-in band moves to the harmonic the wake picks: C4 bent up 2 semitones
+// at the reference wind falls to its 2nd, as a real one would. These keys stay on their 3rd.)
+TEST("windharp: pitch bend tightens or slackens the strings: a sounding key follows on its harmonic, two semitones at the wheel's ends") {
+  const double fs = 48000;
+  for (int key : {55, 72, 84}) for (double v : {1.0, -1.0}) {
+    auto P = defaults();
+    auto e = std::make_unique<WindHarpEngine>(fs);
+    e->setParams(P.data());
+    e->noteOn(key, 1);
+    CHECK(render(*e, key < 72 ? 4 : 1.5));
+    const auto *vo = voiceOf(*e, key);
+    const double f0 = vo->strings[0].S.fNote;
+    e->bend(v);
+    CHECK(render(*e, 1.5));
+    std::vector<float> L(48000), R(48000);
+    for (int s = 0; s < 48000; s += 128) e->process(L.data() + s, R.data() + s, 128);
+    const double want = f0 * std::pow(2.0, 2 * v / 12);
+    double best = 0, bf = want;
+    for (double c = -60; c <= 60; c += 0.5) { const double f = want * std::pow(2.0, c / 1200), g = tone(L, f, fs); if (g > best) { best = g; bf = f; } }
+    const auto d = WindHarpEngine::dominant(vo->strings[0]);
+    CHECK(d.n == 3);
+    CHECK(std::fabs(1200 * std::log2(bf / want)) < 10); // the wake pulls the lock a few cents toward its own frequency
+  }
+}
+
 TEST("windharp: a shut key rings down and retires; the pedal holds the shutter open; aftertouch blows harder; Panic fades every key") {
   const double fs = 48000;
   auto P = defaults();

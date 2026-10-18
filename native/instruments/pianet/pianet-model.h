@@ -107,7 +107,8 @@ struct Release { double y = 0, F = 0, v = 0, t = 0, V = 0; };
 class Pluck {
  public:
   Pluck() = default;
-  Pluck(const KeyReed &kr, const PadParams &P, double fs);
+  Pluck(const KeyReed &kr, const PadParams &P, double fs, double bend = 1);
+  void retune(double bend, bool resting); // pitch bend: the modes × bend; resting: rescale the state too
   void setPad(const PadParams &P);
   double tip() const;
   void press(double vel);
@@ -122,11 +123,15 @@ class Pluck {
   double C = 0, cStatic = 0;
   double stop = INFINITY, Ks = 3e5, stopDen = 1, Ct = 0;
   int hits = 0;
+  double bend = 1; // the ratio the modes are tuned to
   double F0 = 0, n = 0, kp = 0, cp = 0, Bk = 0, Ck = 0, den = 0, relax = 0;
   double yc = 0, ycRest = 0, e = 0, hRest = 0, h = 0, hv = 0, hT = 0;
   double a = 0, F = 0, v = 0, yRest = 0, y = 0, V = 0, t = 0;
   bool down = false, released = false;
   Release rel; // at the last snap (valid when `released`)
+
+ private:
+  void coeffs(double bend);
 };
 
 // ---- offline runs for the views and the tests --------------------------------------------------

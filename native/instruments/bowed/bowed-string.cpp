@@ -2,6 +2,7 @@
 
 #include "bowed-string.h"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 
@@ -18,7 +19,7 @@ inline double tap(const double *buf, int m, int w, double d) {
   const double c1 = 0.5 * (x2 - x0), c2 = x0 - 2.5 * x1 + 2 * x2 - 0.5 * x3, c3 = 0.5 * (x3 - x0) + 1.5 * (x1 - x2);
   return ((c3 * f + c2) * f + c1) * f + x1;
 }
-int ringSize(double fs) { return 1 << (int)std::ceil(std::log2(fs / 60 + 16)); }
+int ringSize(double fs) { return 1 << (int)std::ceil(std::log2(fs / 50 + 16)); } // C2 bent down 2 semitones fits
 } // namespace
 
 BowedString::BowedString(int key, double fsBase)
@@ -37,8 +38,19 @@ void BowedString::design(const Loop &l) {
   Dfb = 2 * L.Db - 1; Dnl = 2 * L.Dn - 1;
   gb = L.gb * (1 - L.pb); pb = L.pb;
   gn = L.gn * (1 - L.pn); pn = L.pn;
-  T0 = L.N0;
+  T0 = L.N0; bent = 1;
   wheel = L.wheel; // this string's wheel turns this much faster than the treadle setting
+}
+
+// Pitch bend: the bridge slides, the sounding string ÷ r long, so its bending and its twisting
+// waves both take 1/r of the time to cross it (the twist's resonance keeps its place under the
+// note). The bow stays at the same fraction of the string, the loss filters keep their delays,
+// and the impedance (μc) is the same string's, so the touch stays where it was voiced.
+void BowedString::bend(double r) {
+  const double k = 1 - 1 / r;
+  Dfb = std::max(1.0, 2 * L.Db - 1 - L.beta * L.N0 * k); Dnl = std::max(1.0, 2 * L.Dn - 1 - (1 - L.beta) * L.N0 * k);
+  Dtb = std::max(1.0, L.Dtb / r - 1); Dtn = std::max(1.0, L.Dtn / r - 1);
+  T0 = L.N0 / r; bent = r;
 }
 
 void BowedString::setDamper(bool on, double sigma) { dampT = on ? fdlibm::exp(-sigma / L.f0) : 1; }

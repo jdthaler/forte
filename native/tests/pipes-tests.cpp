@@ -137,6 +137,26 @@ TEST("engine: a key sounds its note on the Principal, Octave and Gedackt (±3 ¢
   }
 }
 
+TEST("engine: pitch bend warms or cools the organ's air: a sounding pipe follows, two semitones at the wheel's ends") {
+  const double fs = 48000;
+  for (int r : {0, 2}) for (int key : {KEY_LO, 60, KEY_HI}) for (double v : {1.0, -1.0}) {
+    auto P = defaults();
+    P[p::noise] = 0;
+    P[p::principal] = r == 0; P[p::octave] = 0; P[p::gedackt] = r == 2;
+    auto ep = std::make_unique<PipeEngine>(fs);
+    PipeEngine &e = *ep;
+    e.setParams(P.data());
+    e.noteOn(key, 0.7);
+    CHECK(until(e, 1));
+    render(e, (int)(0.6 * fs));
+    e.bend(v);
+    const double sec = r == 2 || key < 48 ? 1.2 : 0.8;
+    const auto L = render(e, (int)(sec * fs));
+    const double f0 = pipeFreq(key, r) * std::pow(2.0, 2 * v / 12), f = peakNear(L, f0, (int)((sec - 0.4) * fs), (int)(sec * fs), fs);
+    CHECK(std::fabs(cents(f, f0)) < 3);
+  }
+}
+
 TEST("engine: a held key keeps its pipes while the voicing changes; pressed again it is re-voiced, the old pipes fading") {
   const double fs = 48000;
   auto P = defaults();

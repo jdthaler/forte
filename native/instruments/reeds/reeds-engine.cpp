@@ -23,20 +23,30 @@ void ReedEngine::Voice::start(const ReedEngine &eng, int key_, const VoiceData &
   *this = Voice{};
   inUse = true;
   key = key_; N = d.n; k = 1 / eng.fs2; version = d.version;
-  double cmp = 0, cpk = 0;
   for (int i = 0; i < N; i++) {
-    const double o = TAU * d.freq[i], s = d.sigma[i];
-    om[i] = o; sig[i] = s; dw[i] = d.dampW[i];
-    const double r = std::exp(-s * k), od = std::sqrt(std::max(o * o - s * s, 1e-6));
-    a1[i] = 2 * r * std::cos(od * k); a2[i] = r * r;
-    const double b = (k * r * std::sin(od * k)) / od; // response to a unit force impulse (unit modal mass)
-    w[i] = d.w[i]; bw[i] = b * d.w[i]; cmp += b * d.w[i] * d.w[i];
-    pk[i] = d.pk[i]; bp[i] = b * d.pk[i]; cpk += b * d.pk[i] * d.pk[i];
+    om0[i] = TAU * d.freq[i]; sig[i] = d.sigma[i]; dw[i] = d.dampW[i];
+    w[i] = d.w[i]; pk[i] = d.pk[i];
   }
-  comp = cmp; // strike-point compliance over one step: Σ b w²
-  cStop = cpk; stopDen = 1 / (1 + STOP.K * cpk); hits = 0; // the same at the slot, for the frame stop
+  tune(eng.bendNow);
+  hits = 0;
   hammer = d.hammer;
   setDamper(eng.damperSigma);
+}
+
+void ReedEngine::Voice::tune(double r) {
+  double cmp = 0, cpk = 0;
+  for (int i = 0; i < N; i++) {
+    const double o = om0[i] * r, s = sig[i];
+    om[i] = o;
+    const double rr = std::exp(-s * k), od = std::sqrt(std::max(o * o - s * s, 1e-6));
+    a1[i] = 2 * rr * std::cos(od * k); a2[i] = rr * rr;
+    const double b = (k * rr * std::sin(od * k)) / od; // response to a unit force impulse (unit modal mass)
+    bw[i] = b * w[i]; cmp += b * w[i] * w[i];
+    bp[i] = b * pk[i]; cpk += b * pk[i] * pk[i];
+  }
+  comp = cmp; // strike-point compliance over one step: Σ b w²
+  cStop = cpk; stopDen = 1 / (1 + STOP.K * cpk); // the same at the slot, for the frame stop
+  bend = r;
 }
 
 void ReedEngine::Voice::setDamper(double sd) {
@@ -353,6 +363,10 @@ void ReedEngine::allNotesOff() {
   for (int i = 0; i < nVoices; i++) voices[i]->kill(*this);
 }
 
+void ReedEngine::bend(double value) {
+  bendTo = std::pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12);
+}
+
 void ReedEngine::process(float *L, float *R, int n) {
   if (nPending) retryPending();
   for (int at = 0; at < n; at += BLOCK) processBlock(L + at, R + at, std::min(BLOCK, n - at));
@@ -374,6 +388,12 @@ void ReedEngine::processBlock(float *L, float *R, int n) {
     restAt(gl ? capB : capA, yN, cRestN, dRestN);
     gapN = gN; y0N = yN;
   } else { y0N = y0; cRestN = cRest; dRestN = dRest; }
+  // pitch bend glides as the slot does; the sounding reeds are retuned each block
+  if (bendNow != bendTo) {
+    bendNow += (1 - std::exp(-n / (GLIDE * fs))) * (bendTo - bendNow);
+    if (std::fabs(bendNow - bendTo) < 1e-9) bendNow = bendTo;
+  }
+  for (int i = 0; i < nVoices; i++) if (voices[i]->bend != bendNow) { voices[i]->tune(bendNow); voices[i]->setDamper(damperSigma); }
   if (hasParams) for (int i = 0; i < nVoices; i++) voices[i]->render(mono.data(), n2, *this);
   if (hasExtra) { for (int s = 0; s < n2; s++) mono[s] += extra[s]; hasExtra = false; }
   if (blend) {

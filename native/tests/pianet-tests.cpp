@@ -98,6 +98,28 @@ TEST("engine: a note waits for its reed, then sounds on pitch and posts where th
   CHECK(got);
 }
 
+TEST("engine: pitch bend stiffens or softens the reeds: a note struck before it and one after both follow") {
+  const double fs = 48000;
+  auto P = defaults();
+  P[p::tone] = 20000;
+  for (double v : {1.0, -1.0}) {
+    auto e = std::make_unique<PianetEngine>(fs);
+    e->setParams(P.data());
+    waitFor(*e, 60);
+    if (v < 0) e->bend(v); // the reed is bent at rest, under its pad
+    render(*e, 2048);
+    e->noteOn(60, 0.6);
+    render(*e, (int)(0.05 * fs));
+    if (v > 0) e->bend(v); // the reed rings
+    const auto x = render(*e, (int)(0.65 * fs));
+    const double f0 = pianet::keyFreq(60) * std::pow(2.0, 2 * v / 12);
+    double best = 0, bf = f0;
+    for (double c = -10; c <= 10; c += 0.25) { const double f = f0 * std::pow(2.0, c / 1200), g = tone(x, f, (int)(0.1 * fs), (int)x.size(), fs); if (g > best) { best = g; bf = f; } }
+    CHECK(std::fabs(cents(bf, f0)) < 3);
+    CHECK(peak(x) < 0.5);
+  }
+}
+
 TEST("engine: a new tip mass leaves the sounding reed alone; its key's next note waits for the new reed and the old one fades") {
   const double fs = 48000;
   auto P = defaults();
