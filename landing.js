@@ -125,9 +125,7 @@ document.addEventListener('click', (e) => {
 
 // All Plugins: every instrument ported to C++ in one download from the latest GitHub Release
 // (the release-plugins workflow); each instrument's own download is on its page.
-const plugins = withPlugins();
-const names = plugins.map((i) => `the <a href="${i.id}/">${i.name}</a>`);
-$('#plugin-list').innerHTML = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0] ?? '';
+$('#plugin-list').textContent = `all ${withPlugins().length} instruments`;
 $('#plugins .forte-plugin-get').innerHTML = downloadLinks(); // with each format alone too
 
 // Credits: docs/PRIOR_ART.md, rendered as on credits/ (credits/credits.js), on first opening
