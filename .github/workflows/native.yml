@@ -186,6 +186,30 @@ jobs:
           cd "$RUNNER_TEMP/one/Forte plugins"
           if ls -d *.vst3 2>/dev/null | grep -q .; then echo '::error::the CLAP archive holds VST3s'; exit 1; fi
           make check
+      - name: The download's install.cmd installs and verifies every plugin
+        if: env.FULL == 'true' && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $try = Join-Path $env:RUNNER_TEMP 'try'
+          Expand-Archive dist/Forte-plugins-windows.zip -DestinationPath $try
+          Set-Location (Join-Path $try 'Forte plugins')
+          function Run { .\install.cmd @args; if ($LASTEXITCODE -ne 0) { throw "install.cmd $args failed" } }
+          function Fails { .\install.cmd @args; if ($LASTEXITCODE -eq 0) { throw "install.cmd $args passed" } }
+          Run check
+          Run install
+          Run verify
+          Run uninstall
+          # one format alone, and the standalone marked as a browser's download would mark it
+          Run install clap
+          Run verify clap
+          Fails verify vst3
+          Run uninstall clap
+          foreach ($a in Get-ChildItem *.exe) { Set-Content -LiteralPath $a.FullName -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3" }
+          Run unblock app
+          if (Get-ChildItem *.exe | Where-Object { Get-Item -LiteralPath $_.FullName -Stream Zone.Identifier -ErrorAction SilentlyContinue }) { throw 'install.cmd unblock app left the mark' }
+          Run install app
+          Run verify app
+          Run uninstall app
       - uses: actions/upload-artifact@v4
         if: env.FULL == 'true'
         with:

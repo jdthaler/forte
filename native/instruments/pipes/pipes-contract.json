@@ -1,0 +1,40 @@
+{
+  "slug": "pipes",
+  "params": [
+    {"id":"principal","kind":"toggle","def":true},
+    {"id":"octave","kind":"toggle","def":false},
+    {"id":"gedackt","kind":"toggle","def":false},
+    {"id":"mixture","kind":"toggle","def":false},
+    {"id":"tremulant","kind":"toggle","def":false},
+    {"id":"tremRate","kind":"continuous","min":2,"max":10,"def":5.5,"step":0.1,"log":false},
+    {"id":"tremDepth","kind":"continuous","min":0.05,"max":1,"def":0.5,"step":0.01,"log":false},
+    {"id":"pressure","kind":"continuous","min":150,"max":6000,"def":700,"step":0,"log":true},
+    {"id":"wind","kind":"continuous","min":0,"max":1,"def":0.35,"step":0.01,"log":false},
+    {"id":"rise","kind":"continuous","min":1,"max":80,"def":12,"step":0,"log":true},
+    {"id":"cutup","kind":"continuous","min":0.5,"max":2,"def":1,"step":0,"log":true},
+    {"id":"gain","kind":"continuous","min":0.4,"max":2.5,"def":1,"step":0,"log":true},
+    {"id":"offset","kind":"continuous","min":0,"max":1.5,"def":0.4,"step":0.01,"log":false},
+    {"id":"noise","kind":"continuous","min":0,"max":4,"def":1,"step":0.05,"log":false},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.55,"step":0.01,"log":false},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"Principal 8′: the organ’s own voice","values":{}},
+    {"name":"Plenum: Principal 8′, Octave 4′ and Mixture","values":{"octave":true,"mixture":true}},
+    {"name":"Gedackt 8′: stopped pipes, odd harmonics","values":{"principal":false,"gedackt":true}},
+    {"name":"Gedackt 8′ with the tremulant","values":{"principal":false,"gedackt":true,"tremulant":true}},
+    {"name":"Principal 8′ and Octave 4′","values":{"octave":true}},
+    {"name":"Full organ: every stop","values":{"octave":true,"gedackt":true,"mixture":true}},
+    {"name":"Flexible wind: the plenum breathes","values":{"octave":true,"mixture":true,"wind":1}},
+    {"name":"Steady wind: a Schwimmer in the chest","values":{"octave":true,"mixture":true,"wind":0}},
+    {"name":"Fast pallet: the upper modes speak first (chiff)","values":{"rise":1.5}},
+    {"name":"Slow pallet: the pipes swell in","values":{"rise":60}},
+    {"name":"Low cut-up: bright, close to overblowing","values":{"cutup":0.85}},
+    {"name":"High cut-up: round, slow and flat","values":{"cutup":1.5}},
+    {"name":"Overblown: strong wind on a low cut-up","values":{"cutup":0.7,"pressure":2500}},
+    {"name":"Gentle wind: 300 Pa","values":{"pressure":300}},
+    {"name":"Centred labium: no even harmonics","values":{"offset":0}},
+    {"name":"Turbulent jet: breathy","values":{"noise":4}},
+    {"name":"Low jet gain: slow, gentle speech","values":{"gain":0.5}}
+  ]
+}

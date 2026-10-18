@@ -1,0 +1,30 @@
+{
+  "slug": "carillon",
+  "params": [
+    {"id":"profile","kind":"choice","def":"minor","options":["minor","major"]},
+    {"id":"historic","kind":"continuous","min":0,"max":1,"def":0,"step":0.01,"log":false},
+    {"id":"asym","kind":"continuous","min":0,"max":3,"def":0.2,"step":0.01,"log":false},
+    {"id":"eta","kind":"continuous","min":0.00005,"max":0.002,"def":0.00025,"step":0,"log":true},
+    {"id":"hardness","kind":"continuous","min":1,"max":210,"def":200,"step":0,"log":true},
+    {"id":"clapMass","kind":"continuous","min":0.5,"max":8,"def":2.5,"step":0.1,"log":false},
+    {"id":"strikeHeight","kind":"continuous","min":0.04,"max":0.45,"def":0.115,"step":0.005,"log":false},
+    {"id":"strikeAngle","kind":"continuous","min":0,"max":90,"def":20,"step":0.5,"log":false},
+    {"id":"speedMax","kind":"continuous","min":0.3,"max":4,"def":2,"step":0.05,"log":false},
+    {"id":"distance","kind":"continuous","min":10,"max":600,"def":30,"step":0,"log":true},
+    {"id":"around","kind":"continuous","min":0,"max":90,"def":0,"step":0.5,"log":false},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.15,"step":0.01,"log":false},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"Concert carillon: minor-third bells, iron clappers","values":{}},
+    {"name":"Major-third bells (Eijsbouts–Eindhoven)","values":{"profile":"major"}},
+    {"name":"Warbling bells: uneven walls, struck between the nominal’s axes","values":{"asym":0.6,"strikeAngle":11.25}},
+    {"name":"The same bells struck on an axis: no warble","values":{"asym":0.6,"strikeAngle":0}},
+    {"name":"Historic bells, never tuned","values":{"historic":1}},
+    {"name":"Soft clapper inserts","values":{"hardness":4}},
+    {"name":"Heavy clappers","values":{"clapMass":6}},
+    {"name":"Struck high on the waist","values":{"strikeHeight":0.33}},
+    {"name":"Across the town square (300 m)","values":{"distance":300,"room":0.3}},
+    {"name":"Under the tower (10 m)","values":{"distance":10,"room":0.08}}
+  ]
+}

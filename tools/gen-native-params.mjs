@@ -5,6 +5,10 @@
 //   native/instruments/<slug>/<slug>-params.h   ids, labels, ranges, log scaling, steps, choices,
 //                                               defaults, units, presets, keys, pedal, wheel, chain
 //   native/instruments/<slug>/<slug>-info.cmake the plugin's name, version, AU subtype and colour
+//   native/instruments/<slug>/<slug>-contract.json what saved songs and automation rely on: each
+//                                               parameter's id, kind, range, step, scaling and
+//                                               default, its choices, and the presets in order
+//                                               (tools/contract.mjs compares two of them)
 // from the descriptor, shared/registry.js and native/ids.json.
 //
 // Units: a parameter's JavaScript `fmt` is a function, so its text is inferred by sampling it:
@@ -333,7 +337,25 @@ export async function generate(slug) {
     `set(FORTE_ACCENT ${cstr(reg.accent ?? '#f0b35a')})`,
     '',
   ].join('\n');
-  return { header: `${out.join('\n')}\n`, cmake, report, skipped: [...skipped] };
+  // what a host keeps of the plugin: parameters by id (their range, for VST3's normalised values
+  // and automation), and the Preset choice by position (tools/contract.mjs)
+  const contract = {
+    slug,
+    params: params.map((p) => {
+      const kind = p.type === 'select' ? 'choice' : p.type === 'checkbox' ? 'toggle' : 'continuous';
+      if (kind === 'choice') return { id: p.id, kind, def: p.def, options: p.options.map(([v]) => v) };
+      if (kind === 'toggle') return { id: p.id, kind, def: !!p.def };
+      return { id: p.id, kind, min: p.min, max: p.max, def: p.def, step: p.step ?? 0, log: !!p.log };
+    }),
+    presets: I.presets.map((pr) => ({ name: pr.name, values: Object.fromEntries(presetValues(pr).map(([id, v]) => [id, v])) })),
+  };
+  return { header: `${out.join('\n')}\n`, cmake, contract: contractText(contract), report, skipped: [...skipped] };
+}
+
+// One parameter or preset a line, so a change reads as one line of the diff.
+function contractText(c) {
+  const line = (x) => `    ${JSON.stringify(x)}`;
+  return `{\n  "slug": ${JSON.stringify(c.slug)},\n  "params": [\n${c.params.map(line).join(',\n')}\n  ],\n  "presets": [\n${c.presets.map(line).join(',\n')}\n  ]\n}\n`;
 }
 
 // Test vectors for native/tests: every continuous parameter of every instrument, its segments,
@@ -378,7 +400,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     if (!check) slugs = slugs.filter(() => args.some((a) => !a.startsWith('--')));
   }
   for (const slug of slugs) {
-    const { header, cmake, report, skipped } = await generate(slug);
+    const { header, cmake, contract, report, skipped } = await generate(slug);
     if (reportOnly) {
       for (const r of report) if (r.match < 0.98 || r.plain) console.log(`${slug}.${r.id}: ${r.plain ? 'a plain number' : 'its text'} (${r.text}); fmt fits ${(100 * r.match).toFixed(1)} % of the travel`);
       if (skipped.length) console.log(`${slug}: presets set ${skipped.join(', ')}, which are not parameters`);
@@ -386,7 +408,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     }
     const dir = new URL(`native/instruments/${slug}/`, R);
     if (!existsSync(dir)) { console.error(`${slug}: no native/instruments/${slug}/ (not ported); use --report`); process.exitCode = 1; continue; }
-    for (const [file, text] of [[`${slug}-params.h`, header], [`${slug}-info.cmake`, cmake]]) {
+    for (const [file, text] of [[`${slug}-params.h`, header], [`${slug}-info.cmake`, cmake], [`${slug}-contract.json`, contract]]) {
       const url = new URL(file, dir), old = existsSync(url) ? readFileSync(url, 'utf8') : null;
       if (old === text) continue;
       if (check) { stale++; console.error(`stale: native/instruments/${slug}/${file} (run node tools/gen-native-params.mjs ${slug})`); }

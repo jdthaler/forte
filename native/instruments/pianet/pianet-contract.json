@@ -1,0 +1,32 @@
+{
+  "slug": "pianet",
+  "params": [
+    {"id":"tack","kind":"continuous","min":0.005,"max":0.5,"def":0.25,"step":0,"log":true},
+    {"id":"rate","kind":"continuous","min":0.1,"max":1,"def":0.6,"step":0.01,"log":false},
+    {"id":"padK","kind":"continuous","min":0.1,"max":5,"def":0.6,"step":0,"log":true},
+    {"id":"padC","kind":"continuous","min":0.01,"max":2,"def":0.25,"step":0,"log":true},
+    {"id":"tipMass","kind":"continuous","min":0.1,"max":4,"def":1,"step":0,"log":true},
+    {"id":"loss","kind":"continuous","min":0.0002,"max":0.02,"def":0.0012,"step":0,"log":true},
+    {"id":"pickup","kind":"choice","def":"em","options":["em","es"]},
+    {"id":"gap","kind":"continuous","min":0.2,"max":3,"def":1,"step":0,"log":true},
+    {"id":"plateGap","kind":"continuous","min":0.15,"max":2,"def":0.3,"step":0,"log":true},
+    {"id":"offset","kind":"continuous","min":-1,"max":1,"def":0.25,"step":0.01,"log":false},
+    {"id":"tone","kind":"continuous","min":500,"max":20000,"def":7000,"step":0,"log":true},
+    {"id":"amp","kind":"choice","def":"off","options":["off","combo"]},
+    {"id":"drive","kind":"continuous","min":0,"max":1,"def":0.35,"step":0.01,"log":false},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.2,"step":0.01,"log":false},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"Pianet T: silicone pads, magnetic pickups","values":{}},
+    {"name":"Pianet N: leather pads, electrostatic pickup","values":{"pickup":"es","tack":0.3,"rate":0.5,"padC":0.35,"tone":9000}},
+    {"name":"Aged pads: the tack has gone","values":{"tack":0.03}},
+    {"name":"Very tacky, rate-sensitive pads (poles set back)","values":{"tack":0.4,"rate":1,"gap":2}},
+    {"name":"Rate-blind pads: little touch response","values":{"rate":0.1}},
+    {"name":"Poles set close: louder, bass reeds clack","values":{"gap":0.4}},
+    {"name":"Plate edge level with the reed (odd harmonics)","values":{"pickup":"es","offset":0,"plateGap":0.36}},
+    {"name":"Heavy solder tips","values":{"tipMass":3}},
+    {"name":"Limp foam: notes ring after release","values":{"padC":0.02,"padK":0.2}},
+    {"name":"Through a valve combo","values":{"amp":"combo","drive":0.55}}
+  ]
+}

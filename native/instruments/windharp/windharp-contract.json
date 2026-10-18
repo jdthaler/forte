@@ -1,0 +1,24 @@
+{
+  "slug": "windharp",
+  "params": [
+    {"id":"wind","kind":"continuous","min":1,"max":8,"def":4,"step":0.02,"log":false},
+    {"id":"gust","kind":"continuous","min":0,"max":0.3,"def":0,"step":0.005,"log":false},
+    {"id":"gustTime","kind":"continuous","min":0.3,"max":6,"def":1.5,"step":0,"log":true},
+    {"id":"tuning","kind":"choice","def":"keys","options":["keys","unison"]},
+    {"id":"n0","kind":"continuous","min":2,"max":6,"def":3,"step":1,"log":false},
+    {"id":"unison","kind":"continuous","min":43,"max":67,"def":55,"step":1,"log":false},
+    {"id":"q","kind":"continuous","min":100,"max":3000,"def":500,"step":0,"log":true},
+    {"id":"mass","kind":"continuous","min":1,"max":8,"def":1,"step":0,"log":true},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.25,"step":0.01,"log":false},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"Each key on its 3rd harmonic, steady wind","values":{}},
+    {"name":"A gusty evening: strings flicker between harmonics","values":{"gust":0.06,"gustTime":1.2}},
+    {"name":"Kircher’s harp: unison strings, gauges differ","values":{"tuning":"unison","unison":55}},
+    {"name":"Close harmonics: tuned on the 6th","values":{"n0":6}},
+    {"name":"Low harmonics: tuned on the 2nd","values":{"n0":2}},
+    {"name":"Heavy wound strings: high mass ratio","values":{"mass":6}},
+    {"name":"Lightly damped strings: loud, sticky lock-in","values":{"q":2000}}
+  ]
+}

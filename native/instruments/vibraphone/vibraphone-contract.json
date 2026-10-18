@@ -1,0 +1,38 @@
+{
+  "slug": "vibraphone",
+  "params": [
+    {"id":"depth","kind":"continuous","min":0,"max":1.2,"def":1,"step":0.01,"log":false},
+    {"id":"eta","kind":"continuous","min":0.00001,"max":0.001,"def":0.0001,"step":0,"log":true},
+    {"id":"temp","kind":"continuous","min":0,"max":40,"def":20,"step":0.5,"log":false},
+    {"id":"tubes","kind":"toggle","def":true},
+    {"id":"gap","kind":"continuous","min":5,"max":80,"def":30,"step":0,"log":true},
+    {"id":"detune","kind":"continuous","min":-200,"max":200,"def":0,"step":1,"log":false},
+    {"id":"motor","kind":"choice","def":"run","options":["run","open","closed"]},
+    {"id":"speed","kind":"continuous","min":0.5,"max":6,"def":2.25,"step":0.05,"log":false},
+    {"id":"cd","kind":"continuous","min":0.3,"max":0.97,"def":0.7,"step":0.01,"log":false},
+    {"id":"twist","kind":"continuous","min":0,"max":90,"def":0,"step":1,"log":false},
+    {"id":"shaft2","kind":"continuous","min":0,"max":180,"def":0,"step":1,"log":false},
+    {"id":"hardness","kind":"continuous","min":30,"max":10000,"def":800,"step":0,"log":true},
+    {"id":"mass","kind":"continuous","min":5,"max":40,"def":12,"step":0.5,"log":false},
+    {"id":"strike","kind":"continuous","min":0.02,"max":0.5,"def":0.45,"step":0.005,"log":false},
+    {"id":"across","kind":"continuous","min":0,"max":0.9,"def":0.15,"step":0.01,"log":false},
+    {"id":"speedMax","kind":"continuous","min":0.5,"max":5,"def":3,"step":0.1,"log":false},
+    {"id":"damp","kind":"continuous","min":0.05,"max":3,"def":0.3,"step":0,"log":true},
+    {"id":"pedalLock","kind":"toggle","def":false},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.25,"step":0.01,"log":false},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"Vibraphone: motor on, medium yarn mallets","values":{}},
+    {"name":"Motor off, discs open: no tremolo","values":{"motor":"open"}},
+    {"name":"Fast motor: 6 rev/s, a 12 Hz tremolo","values":{"speed":6}},
+    {"name":"Discs twisted along the shaft: chords shimmer","values":{"twist":40,"shaft2":90}},
+    {"name":"No resonators: the bars alone","values":{"tubes":false,"motor":"open"}},
+    {"name":"Tubes pressed close: bar and tube trade energy","values":{"gap":7,"motor":"open"}},
+    {"name":"Tubes a semitone sharp","values":{"detune":100,"motor":"open"}},
+    {"name":"Plain bars, 1 : 2.76 : 5.40","values":{"depth":0,"motor":"open"}},
+    {"name":"Hard cord mallets, struck near the end","values":{"hardness":6000,"strike":0.06,"motor":"open"}},
+    {"name":"Cold hall (5 °C): tubes fall flat of their bars","values":{"temp":5,"motor":"open"}},
+    {"name":"Motor off, discs closed: dry","values":{"motor":"closed"}}
+  ]
+}

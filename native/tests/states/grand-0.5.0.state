@@ -1,0 +1,26 @@
+forte grand 0.5.0
+hardness 1
+strike 0.12
+damper 25
+scale 0
+stringing 0
+detune 1.2
+stiffness 1
+stretch 1
+loss 1
+mount 0
+gFrame 0.000050000000000000002
+boardH 9
+tilt 6
+hRatio 0.20000000000000001
+kH 10000000
+listen 1
+pickH 0.25
+rIn 470
+bass 4
+mid -5
+treble 7
+maxFreq 10000
+room 0.12
+volume 0.80000000000000004
+preset 10

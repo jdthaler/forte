@@ -1,10 +1,14 @@
 // suite-plugin-tests.cpp — the Forte app's plugin (net.jthaler.forte.suite, plugin.cpp's Suite),
 // with every instrument linked in as forte_add_suite() links them: its Instrument menu, a switch
-// while the audio runs, and state that remembers the instrument.
+// while the audio runs, and state that remembers the instrument. And every instrument's saved
+// states from earlier releases (states/, tools/contract.mjs), loaded into today's plugins.
 
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -141,6 +145,43 @@ TEST("suite: switches before the host activates it, and its state remembers the 
   CHECK(load(c, saved.substr(saved.find('\n') + 1)));
   CHECK(c.slug() == "carillon");
   CHECK(!load(c, "forte-suite nonsense\n"));
+}
+
+// A song saved with an earlier release opens as it was saved: the instrument, and every value
+// (tools/contract.mjs says which changes break this; from 1.0 on they need a major version).
+TEST("suite: every saved state in tests/states loads into today's plugin with its values") {
+  int files = 0;
+  for (const auto &entry : std::filesystem::directory_iterator(FORTE_STATES_DIR)) {
+    if (entry.path().extension() != ".state") continue;
+    files++;
+    std::ifstream in(entry.path(), std::ios::binary);
+    std::stringstream ss;
+    ss << in.rdbuf();
+    const std::string text = ss.str(), name = entry.path().filename().string();
+    std::istringstream lines(text);
+    std::string header, word, slug;
+    std::getline(lines, header);
+    std::istringstream(header) >> word >> slug;
+    App app(false);
+    struct Reader { std::string s; size_t at = 0; } r{text};
+    clap_istream_t is{&r, [](const clap_istream_t *s, void *b, uint64_t n) -> int64_t {
+                        auto r = (Reader *)s->ctx; size_t k = std::min((size_t)n, r->s.size() - r->at);
+                        std::memcpy(b, r->s.data() + r->at, k); r->at += k; return (int64_t)k; }};
+    const bool loaded = app.state->load(app.p, &is);
+    if (!loaded || app.slug() != slug) { std::printf("       %s: does not open %s\n", name.c_str(), slug.c_str()); CHECK(loaded && app.slug() == slug); continue; }
+    for (std::string line; std::getline(lines, line);) {
+      const size_t sp = line.find(' ');
+      if (sp == std::string::npos) continue;
+      const std::string id = line.substr(0, sp);
+      const double want = std::strtod(line.c_str() + sp + 1, nullptr);
+      const clap_id hash = id == "preset" ? 0x7ffffffe : forte::paramHash(id.c_str());
+      double got = NAN;
+      if (!app.params->get_value(app.p, hash, &got)) std::printf("       %s: no parameter %s any more\n", name.c_str(), id.c_str());
+      else if (got != want) std::printf("       %s: %s is %.17g, saved as %.17g\n", name.c_str(), id.c_str(), got, want);
+      CHECK(got == want);
+    }
+  }
+  CHECK(files >= 24);
 }
 
 int main() { return check::run(); }

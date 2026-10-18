@@ -1,0 +1,35 @@
+{
+  "slug": "huygens",
+  "params": [
+    {"id":"kick","kind":"continuous","min":0,"max":0.15,"def":0.055,"step":0.001,"log":false},
+    {"id":"rSrc","kind":"continuous","min":0,"max":200000,"def":0,"step":1000,"log":false},
+    {"id":"pitchHold","kind":"toggle","def":true},
+    {"id":"tuning","kind":"choice","def":"et","options":["et","just"]},
+    {"id":"tonic","kind":"choice","def":0,"options":[0,1,2,3,4,5,6,7,8,9,10,11]},
+    {"id":"mistune","kind":"continuous","min":0,"max":40,"def":0,"step":0.5,"log":false},
+    {"id":"drift","kind":"continuous","min":0,"max":20,"def":0,"step":0.5,"log":false},
+    {"id":"driftRate","kind":"continuous","min":0.05,"max":2,"def":0.25,"step":0,"log":true},
+    {"id":"vNom","kind":"continuous","min":100,"max":400,"def":150,"step":1,"log":false},
+    {"id":"vStrike","kind":"continuous","min":70,"max":110,"def":90,"step":0.5,"log":false},
+    {"id":"vExt","kind":"continuous","min":40,"max":85,"def":60,"step":0.5,"log":false},
+    {"id":"attack","kind":"continuous","min":0.001,"max":0.3,"def":0.004,"step":0,"log":true},
+    {"id":"release","kind":"continuous","min":0.005,"max":1,"def":0.03,"step":0,"log":true},
+    {"id":"tone","kind":"continuous","min":300,"max":16000,"def":2500,"step":0,"log":true},
+    {"id":"body","kind":"continuous","min":0,"max":1,"def":0.5,"step":0.01,"log":false},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.3,"step":0.01,"log":false},
+    {"id":"width","kind":"continuous","min":0,"max":1,"def":0.5,"step":0.01,"log":false},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.7,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"Default (5.5%): triads lock just in every voicing; bare semitones merge","values":{}},
+    {"name":"Uncoupled: plain equal temperament","values":{"kick":0}},
+    {"name":"Barely coupled (1%): octaves, fifths, fourths lock; thirds beat","values":{"kick":0.01}},
+    {"name":"Weaker (4.5%): semitones stay apart, minor sixths miss 8:5","values":{"kick":0.045}},
+    {"name":"Strong (7%): minor 7th → 7:4, semitones merge","values":{"kick":0.07}},
+    {"name":"Very strong (11%): minor 6ths collapse into fifths","values":{"kick":0.11}},
+    {"name":"Badly tuned, rescued by coupling","values":{"mistune":25,"kick":0.06}},
+    {"name":"Drifting resistors, held together","values":{"drift":12,"driftRate":0.4,"kick":0.05}},
+    {"name":"Just-tuned in C, no coupling (compare)","values":{"tuning":"just","tonic":0,"kick":0}},
+    {"name":"Rail sag only (slow, weak coupling)","values":{"kick":0,"rSrc":150000}}
+  ]
+}
