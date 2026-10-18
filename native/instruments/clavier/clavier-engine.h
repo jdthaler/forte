@@ -75,7 +75,7 @@ class ClavierEngine : public Engine {
   // they were made, and which one is each key's
   int nVoices = 0;
   std::array<Voice *, POOL> voices{};
-  std::array<Voice *, HI - LO + 1> byKey{};
+  std::array<Voice *, KEY_MAX - KEY_MIN + 1> byKey{};
   double muteLevel = 0; // the felt's engagement, 0 … the felt pressure (a page's slow motion sets it)
 
  private:
