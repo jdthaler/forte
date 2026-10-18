@@ -106,7 +106,7 @@ Ubuntu, `sudo apt install libwebkit2gtk-4.1-0`), and X11 or XWayland.
 | Ableton Live | VST3, AU | **Settings ▸ Plug-ins**: turn on VST3 (system folders) and AU, then **Rescan**. |
 | REAPER | VST3, CLAP, AU | **Preferences ▸ Plug-ins ▸ VST/CLAP**: **Re-scan**. |
 | Bitwig | CLAP, VST3 | Finds them by itself. |
-| No DAW | — | Open the standalone app, pick your audio output and MIDI keyboard in its settings, and play. |
+| No DAW | — | Open the standalone app, pick your audio output and MIDI keyboard in its settings (on a Mac, **Audio/MIDI Settings** ticks the MIDI inputs it listens to: every one at first, and it remembers those you untick), and play. |
 
 ## Playing
 
