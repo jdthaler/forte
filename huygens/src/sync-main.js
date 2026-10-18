@@ -7,6 +7,7 @@ import { ALL_PARAMS } from './sync-params.js';
 import { keyFreq, noteName, nearestRatio, intervalName, KEY_LO, KEY_HI } from './tuning.js';
 import { wasmModel } from './huygens-wasm.js';
 import { createChain } from '../../shared/chain.js';
+import { SpectrumView, SpectrogramView } from '../../shared/views.js';
 import { StairView, RasterView } from './sync-viz.js';
 import { FiringLog } from './lock-analysis.js';
 import { createKeyboard } from '../../shared/keyboard.js';
@@ -23,6 +24,9 @@ let P = load();
 let base = 48, holding = false;
 const log = new FiringLog(3); // the last 3 s of every sounding lamp's firings
 const held = new Map(), sounding = new Map(), latched = new Set();
+
+const spectrum = new SpectrumView($('#spectrum'), { fLo: 40, fHi: 16000 });
+new SpectrogramView($('#spectrogram'), { spectrum });
 
 const paramsMessage = () => ({ type: 'params', P: { ...P } });
 
@@ -49,6 +53,8 @@ function startAudio() {
     });
     const chain = createChain(ctx, node, INSTRUMENT.chain); // tone → dry + body → room → limiter
     node.port.onmessage = (e) => onWorklet(e.data);
+    const analyser = ctx.createAnalyser(); analyser.fftSize = 8192; analyser.smoothingTimeConstant = 0.55;
+    chain.tap.connect(analyser); spectrum.setAnalyser(analyser);
     audio = { ctx, node, chain };
     applyMix();
     node.port.postMessage(paramsMessage());
@@ -308,6 +314,8 @@ function refreshMarks() {
 // an: log.analyze(). Locks come from shared firings, so their ratios are exact.
 function updateTables(an, hold) {
   const live = an.notes;
+  // the spectrum's markers: what each oscillator plays (bright) and was designed to play (faint)
+  spectrum.set(live.length ? Math.min(...live.map((o) => o.f)) : 0, live.flatMap((o) => [{ f: o.fTarget, color: '#9393a0', alpha: 0.35 }, { f: o.f, alpha: 0.9 }]));
   $('#hold-read').textContent = hold ? `supply servo ${(1200 * -hold).toFixed(1)} ¢` : '';
   if (!live.length) {
     $('#notes').innerHTML = '<tr><td class="free">Play or hold a chord (Space latches notes)</td></tr>';

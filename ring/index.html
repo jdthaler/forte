@@ -60,6 +60,11 @@
           <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: harmonics n·f_rev and sidebands (n ± Q)·f_rev</span></div>
           <canvas id="spectrum"></canvas>
         </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">Each note is a comb of harmonics with betatron sidebands between them. Watch the sidebands fade as the bunch drifts out of step and come back at the synchrotron period.</div>
+        </div>
         <div class="card" data-view="The ring">
           <div class="card-head"><h2>The ring of <b id="focus-name2">C4</b></h2></div>
           <table class="modes" id="ringtab"></table>

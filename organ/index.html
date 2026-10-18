@@ -104,6 +104,11 @@
           <div class="card-head"><h2>Output</h2><span class="muted">live spectrum · markers: the nine tones of <b id="focus-name">C4</b></span></div>
           <canvas id="output"></canvas>
         </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the nine tones of the last key, in drawbar colours</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">Each drawbar is a steady line. Through the Leslie the lines wobble with the Doppler shift; switch from slow to fast and the treble (the horn, above 800 Hz) catches up in under a second while the bass (the drum) takes several.</div>
+        </div>
         <div class="card" id="table-card" data-view="What a key really plays">
           <div class="card-head"><h2>What <span id="focus-name2">C4</span> really plays</h2></div>
           <table id="analysis"></table>
