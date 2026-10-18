@@ -141,10 +141,11 @@ What landed:
 - `tools/headless.mjs` plays any instrument from its descriptor in Node, as its page does.
 - `tools/gen-native-params.mjs` writes `native/instruments/<slug>/<slug>-params.h` and
   `<slug>-info.cmake` for ported instruments (`--report` for any). Units come from sampling
-  each `fmt`: 430 of 440 parameters get a text matching the page's over 95–100 % of their
-  travel, 10 fall back to a plain number (`--report` lists them; a descriptor could carry an
-  explicit unit for them). `native/tests/format-vectors.h` checks the C++ formats as the
-  JavaScript does.
+  each `fmt`: 432 of 440 parameters get a text matching the page's over 95–100 % of their
+  travel (numbers linear, logarithmic or 1 − 10^(−v), as the black hole's spin is; exponents
+  written e5 or ×10⁵), 8 fall back to a plain number (`--report` lists them; a descriptor could
+  carry an explicit unit for them). `native/tests/format-vectors.h` checks the C++ formats as
+  the JavaScript does.
 - `tools/render-reference.mjs` writes `native/instruments/<slug>/reference.json`.
 - `tools/engine.mjs` (`loadEngine`) gives every test suite its engine.
 - The organ's console (drawbars, percussion, vibrato and Leslie switches, the motor) lives

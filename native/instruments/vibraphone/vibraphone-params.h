@@ -15,7 +15,7 @@ enum : int { depth, eta, temp, tubes, gap, detune, motor, speed, cd, twist, shaf
 
 constexpr double kNoLimit = INFINITY;
 inline const FormatSegment kFormat_depth[] = {{0, "none: a plain bar", "", 1, 0, -1, false, false, false, false}, {0.9999999999999999, "", " % of the tuned cut", 100, 0, 0, false, false, false, false}, {1, "tuned: ", " : 4 : 10", 1, 0, 0, false, false, false, false}, {kNoLimit, "", " % of the tuned cut", 100, 0, 0, false, false, false, false}};
-inline const FormatSegment kFormat_eta[] = {{kNoLimit, "", "", 1, 0, 2, false, true, false, true}};
+inline const FormatSegment kFormat_eta[] = {{kNoLimit, "", "", 1, 0, 1, false, true, false, false, false, true}};
 inline const FormatSegment kFormat_temp[] = {{kNoLimit, "", " °C", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_gap[] = {{kNoLimit, "", " mm", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_detune[] = {{-0.5, "", " ¢", 1, 0, 0, false, false, true, false}, {0, "", " ¢", 1, 0, 0, false, false, false, false}, {kNoLimit, "", " ¢", 1, 0, 0, false, false, true, false}};
@@ -87,7 +87,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "vibraphone", .name = "Vibraphone", .version = "0.3.0",
+    .slug = "vibraphone", .name = "Vibraphone", .version = "0.3.1",
     .description = "Undercut aluminium bars over tuned tubes, with motor-driven discs that open and close the resonators.", .auSubtype = "Vibe",
     .vst3Id = {0xaa, 0x90, 0xa9, 0x67, 0xe2, 0xd3, 0x91, 0x72, 0xd1, 0x73, 0x43, 0xa7, 0xda, 0xf3, 0xaf, 0xeb},
     .params = kParams, .paramCount = p::count,

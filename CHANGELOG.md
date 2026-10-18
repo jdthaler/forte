@@ -10,6 +10,26 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-18 — the black hole's spin reads as itself in the plugins
+
+### Forte 0.30.0
+- A plugin parameter's text can be scale·10^(−v) + offset, and an exponent can be written with
+  superscripts, ×10⁻⁴, as the pages write it (`forte::FormatSegment`'s `pow10neg` and
+  `superscript`, which default to off, so other generated tables are unchanged). Such a text reads
+  back as the value it shows. `tools/gen-native-params.mjs` finds them by sampling `fmt`, reading
+  a superscript exponent as an exponent only where that matches every text the old reading did,
+  and more.
+- Every instrument's committed WebAssembly is rebuilt, because the shared text code changed;
+  the sound and the parameters are unchanged.
+
+### Black-Hole Keyboard 0.4.1
+- **The plugins show the spin as the page does:** a = 0.690, a = 0.9900, and from a = 0.99 up
+  a = 1 − 1.0×10⁻⁴, instead of the slider's raw position (0.509), and a typed spin reads back.
+
+### Vibraphone 0.3.1
+- **The plugins show the internal friction as the page does** (2.2×10⁻⁵, not 2.15e-5), except
+  at the very top of each decade, where the page writes 10.0×10⁻⁵ and the plugins 1.0×10⁻⁴.
+
 ## 2026-10-18 — download one plugin format at a time
 
 ### Forte 0.29.0

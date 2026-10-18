@@ -83,6 +83,19 @@ void jsToExponential(double x, int digits, char *out, size_t size) {
 
 static const FormatSegment kPlain{INFINITY, "", "", 1, 0, 2, false, false, false, true};
 
+// The number a segment writes for v, and the v it stands for.
+static double numberOf(const FormatSegment &s, double v) {
+  return s.scale * (s.log10 ? std::log10(v > 1e-300 ? v : 1e-300) : s.pow10neg ? std::pow(10.0, -v) : v) + s.offset;
+}
+static double valueOf(const FormatSegment &s, double n) {
+  const double u = (n - s.offset) / s.scale;
+  return s.log10 ? std::pow(10.0, u) : s.pow10neg ? -std::log10(u) : u;
+}
+
+// Superscript digits, ⁰ … ⁹, and the superscript minus and plus.
+static const char *const kSuperscript[10] = {"\xe2\x81\xb0", "\xc2\xb9", "\xc2\xb2", "\xc2\xb3", "\xe2\x81\xb4", "\xe2\x81\xb5", "\xe2\x81\xb6", "\xe2\x81\xb7", "\xe2\x81\xb8", "\xe2\x81\xb9"};
+static const char kSuperMinus[] = "\xe2\x81\xbb", kSuperPlus[] = "\xe2\x81\xba", kTimesTen[] = "\xc3\x97" "10";
+
 static const FormatSegment &segmentFor(const ParamInfo &p, double v) {
   if (!p.formatCount) return kPlain;
   for (int i = 0; i < p.formatCount; i++) if (v <= p.format[i].upTo) return p.format[i];
@@ -99,12 +112,18 @@ void formatValue(const ParamInfo &p, double v, char *out, size_t size) {
   if (p.kind == ParamKind::toggle) { std::snprintf(out, size, "%s", v >= 0.5 ? "on" : "off"); return; }
   const FormatSegment &s = segmentFor(p, v);
   if (s.decimals < 0) { std::snprintf(out, size, "%s", s.prefix); return; }
-  double n = s.log10 ? s.scale * std::log10(v > 1e-300 ? v : 1e-300) + s.offset : s.scale * v + s.offset;
+  double n = numberOf(s, v);
   char body[64];
-  if (s.exp) { // JavaScript writes 1.0e+5; the pages write 1.0e5
+  if (s.exp) { // JavaScript writes 1.0e+5; the pages write 1.0e5, or 1.0×10⁵
     jsToExponential(std::fabs(n), s.decimals, body, sizeof body);
     char *e = std::strchr(body, 'e');
-    if (e && e[1] == '+') std::memmove(e + 1, e + 2, std::strlen(e + 2) + 1);
+    if (e && s.superscript) {
+      std::string t(body, e), digits = std::to_string(std::abs(std::atoi(e + 1)));
+      t += kTimesTen;
+      if (e[1] == '-') t += kSuperMinus;
+      for (char d : digits) t += kSuperscript[d - '0'];
+      std::snprintf(body, sizeof body, "%s", t.c_str());
+    } else if (e && e[1] == '+') std::memmove(e + 1, e + 2, std::strlen(e + 2) + 1);
   } else {
     jsToFixed(std::fabs(n), s.decimals, body, sizeof body);
     if (std::strtod(body, nullptr) == 0) n = 0;
@@ -113,8 +132,10 @@ void formatValue(const ParamInfo &p, double v, char *out, size_t size) {
   std::snprintf(out, size, "%s%s%s%s", s.prefix, sign, body, s.suffix);
 }
 
-// The number at the start of text (a sign +, -, −, digits, an exponent); null if there is none.
-static const char *readNumber(const char *text, double &n) {
+// The number at the start of text (a sign +, -, −, digits, an exponent: e-4, or with
+// `superscripts` ×10⁻⁴, which is otherwise left as a unit); null if there is none. decimals: the
+// digits after the point.
+static const char *readNumber(const char *text, bool superscripts, double &n, int &decimals) {
   std::string buf;
   const char *c = text;
   if (!std::strncmp(c, "\xe2\x88\x92", 3)) { buf += '-'; c += 3; }
@@ -126,7 +147,28 @@ static const char *readNumber(const char *text, double &n) {
   n = std::strtod(buf.c_str(), &end);
   if (end == buf.c_str()) return nullptr;
   size_t used = (size_t)(end - buf.c_str());
-  return text + used + (text[0] == '\xe2' ? 2 : 0);
+  const char *rest = text + used + (text[0] == '\xe2' ? 2 : 0);
+  const size_t dot = buf.find('.');
+  decimals = dot < used ? (int)std::strspn(buf.c_str() + dot + 1, "0123456789") : 0;
+  const size_t nt = std::strlen(kTimesTen);
+  if (superscripts && !std::strncmp(rest, kTimesTen, nt)) { // ×10, then a superscript exponent
+    const char *e = rest + nt;
+    int sign = 1, exponent = 0, digits = 0;
+    if (!std::strncmp(e, kSuperMinus, 3)) { sign = -1; e += 3; }
+    else if (!std::strncmp(e, kSuperPlus, 3)) e += 3;
+    for (bool more = true; more;) {
+      more = false;
+      for (int d = 0; d < 10; d++) {
+        const size_t len = std::strlen(kSuperscript[d]);
+        if (!std::strncmp(e, kSuperscript[d], len)) { exponent = 10 * exponent + d; e += len; digits++; more = true; break; }
+      }
+    }
+    if (digits) {
+      n = std::strtod((buf.substr(0, used) + "e" + std::to_string(sign * exponent)).c_str(), nullptr);
+      rest = e;
+    }
+  }
+  return rest;
 }
 
 bool parseValue(const ParamInfo &p, const char *text, double &v) {
@@ -162,10 +204,9 @@ bool parseValue(const ParamInfo &p, const char *text, double &v) {
       continue;
     }
     double n;
-    const char *rest = readNumber(t, n);
+    int decimals;
+    const char *rest = readNumber(t, s.superscript, n, decimals);
     if (!rest) continue;
-    const char *dot = (const char *)std::memchr(t, '.', (size_t)(rest - t));
-    const int decimals = dot ? (int)(rest - dot - 1) : 0;
     while (*rest == ' ') rest++;
     const char *suffix = s.suffix;
     while (*suffix == ' ') suffix++;
@@ -177,14 +218,14 @@ bool parseValue(const ParamInfo &p, const char *text, double &v) {
       if ((pass == 0 || pass == 2) && std::fabs(n - s.offset) <= 0.5 * std::pow(10.0, -s.decimals)) { v = clamp(std::isfinite(hi) ? (lo + hi) / 2 : lo); return true; }
       continue;
     }
-    double x = s.log10 ? std::pow(10.0, (n - s.offset) / s.scale) : (n - s.offset) / s.scale;
+    double x = valueOf(s, n);
     if (!std::isfinite(x)) continue;
     const double first = i ? std::nextafter(lo, INFINITY) : lo; // a segment holds (lo, hi]
     if ((pass == 0 || pass == 2) && x >= lo - 1e-9 * std::fabs(lo) && x <= hi + 1e-9 * std::fabs(hi)) { v = clamp(std::min(std::max(x, first), hi)); return true; }
     if (pass == 1 && !s.exp) { // within rounding of one of the segment's edges: that edge
       for (double edge : {first, hi}) {
         if (!std::isfinite(edge) || (s.log10 && !(edge > 0))) continue;
-        const double ne = s.log10 ? s.scale * std::log10(edge) + s.offset : s.scale * edge + s.offset;
+        const double ne = numberOf(s, edge);
         if (std::fabs(n - ne) <= 0.5000001 * std::pow(10.0, -s.decimals)) { v = clamp(edge); return true; }
       }
     }

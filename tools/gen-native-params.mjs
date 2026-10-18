@@ -9,8 +9,9 @@
 //
 // Units: a parameter's JavaScript `fmt` is a function, so its text is inferred by sampling it:
 // piecewise "prefix number suffix" segments (ms below a second, s above; a word such as "flat"
-// at one end), each number scale·v + offset or scale·log10(v) + offset. The report says how
-// often the C++ text equals fmt's over the parameter's whole travel.
+// at one end), each number scale·v + offset, scale·log10(v) + offset or scale·10^(−v) + offset,
+// written fixed or exponential (1.0e5, or 1.0×10⁵ with a superscript exponent). The report says
+// how often the C++ text equals fmt's over the parameter's whole travel.
 //
 // Usage: node tools/gen-native-params.mjs [slug…]   (no slug: every ported instrument)
 //        node tools/gen-native-params.mjs --vectors  (native/tests/format-vectors.h, for the C++ tests)
@@ -36,10 +37,18 @@ export const portedSlugs = () => (existsSync(new URL('native/instruments/', R))
 
 // Parse one fmt output: prefix, the first number (and how it is written), suffix. A second
 // figure after the first (" (3.1 beats/s at A4)", " · 30 rpm") is a gloss and is left out; `text`
-// is what remains, the text the plugin aims at.
+// is what remains, the text the plugin aims at. With `superscripts`, a number written with a
+// superscript exponent (1.0×10⁻⁴) is the one that carries the value, wherever it stands; without,
+// the exponent is a unit (10.0 in units of 10⁻⁵, as some pages write the top of a decade).
 const NUM = /([+\-−±]?)(\d+(?:\.\d+)?)(?:e([+-]?\d+))?/g;
-function parse(s, which = 0) { // which: the number that carries the value (the first, unless it never changes)
-  const m = [...s.matchAll(NUM)][which];
+const SUPERSCRIPT = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+const SUP = /([+\-−±]?)(\d+(?:\.\d+)?)×10([⁺⁻]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+)/;
+const superscript = (e) => String(e).replace('-', '⁻').replace(/\d/g, (d) => SUPERSCRIPT[d]);
+const unsuperscript = (t) => t.replace('⁻', '-').replace('⁺', '').replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g, (d) => SUPERSCRIPT.indexOf(d));
+function parse(s, which = 0, superscripts = false) { // which: the number that carries the value (the first, unless it never changes)
+  const sup = superscripts && s.match(SUP);
+  const m = sup ? [sup[0], sup[1], sup[2], unsuperscript(sup[3])] : [...s.matchAll(NUM)][which];
+  if (sup) m.index = sup.index;
   if (!m) return { prefix: s, suffix: '', none: true, text: s };
   let prefix = s.slice(0, m.index), sign = m[1];
   if (sign === '±') { prefix += '±'; sign = ''; }
@@ -48,18 +57,18 @@ function parse(s, which = 0) { // which: the number that carries the value (the 
   if (cut >= 0 && /\d/.test(suffix.slice(cut))) suffix = suffix.slice(0, cut).trimEnd();
   const digits = m[2], decimals = digits.includes('.') ? digits.length - digits.indexOf('.') - 1 : 0;
   const value = Number(digits) * (m[3] !== undefined ? 10 ** Number(m[3]) : 1) * (sign === '-' || sign === '−' ? -1 : 1);
-  return { prefix, suffix, value, decimals, exp: m[3] !== undefined, plus: sign === '+', minus: sign, text: `${s.slice(0, m.index)}${m[0]}${suffix}` };
+  return { prefix, suffix, value, decimals, exp: m[3] !== undefined, sup: !!sup, plus: sign === '+', minus: sign, text: `${s.slice(0, m.index)}${m[0]}${suffix}` };
 }
 
 // The C++ formatValue, in JavaScript (native/core/src/params.cpp): the text of v by its segments.
 export function formatBy(segs, v) {
   const s = segs.find((g) => v <= g.upTo) ?? segs[segs.length - 1];
   if (s.decimals < 0) return s.prefix;
-  let n = s.log10 ? s.scale * Math.log10(Math.max(v, 1e-300)) + s.offset : s.scale * v + s.offset;
+  let n = s.scale * (s.log10 ? Math.log10(Math.max(v, 1e-300)) : s.pow10neg ? 10 ** -v : v) + s.offset;
   let body;
   if (s.exp) {
     const [m, e] = Math.abs(n).toExponential(s.decimals).split('e');
-    body = `${m}e${Number(e)}`;
+    body = s.superscript ? `${m}×10${superscript(Number(e))}` : `${m}e${Number(e)}`;
   } else body = Math.abs(n).toFixed(s.decimals);
   if (!s.exp && Number(body) === 0) n = 0;
   const sign = n < 0 ? (s.unicodeMinus ? '−' : '-') : s.plus ? '+' : '';
@@ -80,47 +89,60 @@ function travel(p, N) {
 
 // Fit segments to fmt over the parameter's travel; `match` is the share of the travel where
 // the plugin's text is fmt's (without its gloss). Below 90 %, a plain number: never a wrong text.
+// Superscript exponents are read as exponents only where that writes every text the reading
+// as a unit does, and more.
 export function inferFormat(p) {
+  const a = fitFormat(p, false);
+  if (!a.superscripts) return a;
+  const b = fitFormat(p, true);
+  return b.match > a.match && a.hits.every((hit, i) => !hit || b.hits[i]) ? b : a;
+}
+function fitFormat(p, sup) {
   // plain: the step's decimals, or three significant figures at the small end (exponential if tiny)
   const small = Math.min(...[p.min, p.max].map(Math.abs).filter((x) => x > 0)), big = Math.max(Math.abs(p.min), Math.abs(p.max));
   const tiny = !p.step && (big < 0.01 || (p.log && small < 1e-3));
   const decimals = tiny ? 2 : p.step ? Math.max(0, Math.min(4, -Math.floor(Math.log10(p.step) + 1e-9)))
     : Math.max(0, Math.min(4, 2 - Math.floor(Math.log10(small || 1))));
-  const plain = [{ upTo: Infinity, prefix: '', suffix: '', scale: 1, offset: 0, decimals, log10: false, exp: tiny, plus: false, unicodeMinus: true }];
+  const plain = [{ upTo: Infinity, prefix: '', suffix: '', scale: 1, offset: 0, decimals, log10: false, exp: tiny, plus: false, unicodeMinus: true, pow10neg: false, superscript: false }];
   const fmt = p.fmt ?? ((v) => formatBy(plain, v));
   const vs = [...new Set([...travel(p, 400), p.def])].sort((a, b) => a - b), texts = vs.map((v) => String(fmt(v)));
   const firsts = new Set(texts.map((t) => parse(t).value));
   const which = firsts.size === 1 && new Set(texts).size > 1 && texts.every((t) => [...t.matchAll(NUM)].length > 1) ? 1 : 0;
-  const samples = vs.map((v, i) => ({ v, ...parse(texts[i], which) }));
-  const key = (x) => (x.none ? `none|${x.prefix}` : `${x.prefix}|${x.suffix}|${x.decimals}|${x.exp}`);
+  const samples = vs.map((v, i) => ({ v, ...parse(texts[i], which, sup) }));
+  const key = (x) => (x.none ? `none|${x.prefix}` : `${x.prefix}|${x.suffix}|${x.decimals}|${x.exp}|${x.sup}`);
   const runs = [];
   for (const x of samples) {
     const last = runs[runs.length - 1];
     if (last && last.key === key(x)) last.xs.push(x); else runs.push({ key: key(x), xs: [x] });
   }
   const segs = [];
-  const fitRun = (xs, depth) => {
+  const fitRun = (xs, depth) => split(xs, fitModel(xs), depth);
+  const okAt = (g, x) => formatBy([{ ...g, upTo: Infinity }], x.v) === x.text;
+  const fitModel = (xs) => {
     const x0 = xs[0];
     const base = { prefix: x0.prefix, suffix: x0.suffix, decimals: x0.none ? -1 : x0.decimals, exp: !!x0.exp,
-      plus: xs.some((x) => x.plus), unicodeMinus: xs.some((x) => x.minus === '−'), scale: 1, offset: 0, log10: false };
-    const ok = (g, x) => formatBy([{ ...g, upTo: Infinity }], x.v) === x.text;
-    if (x0.none) return [{ ...base, offset: x0.v, xs }]; // a word: offset holds the value it stands for
+      plus: xs.some((x) => x.plus), unicodeMinus: xs.some((x) => x.minus === '−'), scale: 1, offset: 0, log10: false,
+      pow10neg: false, superscript: !!x0.sup };
+    if (x0.none) return { ...base, offset: x0.v }; // a word: offset holds the value it stands for
     const cands = [];
     for (const k of [1, 100, 1000, 1e6, 0.001, 1e-6, -1]) cands.push({ ...base, scale: k });
     for (const k of [20, 10]) cands.push({ ...base, scale: k, log10: true });
+    for (const [k, c] of [[1, 0], [-1, 1]]) cands.push({ ...base, scale: k, offset: c, pow10neg: true }); // 10^(−v), 1 − 10^(−v)
     const pos = xs.filter((x) => x.v > 0);
-    for (const [f, lg, pts] of [[(v) => v, false, xs], [(v) => Math.log10(v), true, pos]]) {
+    for (const [f, lg, pts, p10] of [[(v) => v, false, xs], [(v) => Math.log10(v), true, pos], [(v) => 10 ** -v, false, xs, true]]) {
       if (pts.length < 2) continue;
       const u = pts.map((x) => f(x.v)), y = pts.map((x) => x.value), m = u.length;
       const su = u.reduce((a, b) => a + b, 0), sy = y.reduce((a, b) => a + b, 0);
       const suu = u.reduce((a, b) => a + b * b, 0), suy = u.reduce((a, b, k) => a + b * y[k], 0), d = m * suu - su * su;
-      if (Math.abs(d) > 1e-300) { const a = (m * suy - su * sy) / d; cands.push({ ...base, scale: tidy(a), offset: tidy((sy - a * su) / m), log10: lg }); }
+      if (Math.abs(d) > 1e-300) { const a = (m * suy - su * sy) / d; cands.push({ ...base, scale: tidy(a), offset: tidy((sy - a * su) / m), log10: lg, pow10neg: !!p10 }); }
     }
     if (xs.length === 1) cands.push({ ...base, scale: 0, offset: x0.value });
-    const best = cands.reduce((a, b) => (xs.filter((x) => ok(b, x)).length > xs.filter((x) => ok(a, x)).length ? b : a));
-    // where the best model stops fitting, split and fit the pieces apart
-    const good = xs.map((x) => ok(best, x));
-    if (good.every(Boolean) || depth > 3) return [{ ...best, xs }];
+    return cands.reduce((a, b) => (xs.filter((x) => okAt(b, x)).length > xs.filter((x) => okAt(a, x)).length ? b : a));
+  };
+  // where the best model stops fitting, split and fit the pieces apart
+  const split = (xs, best, depth) => {
+    const good = xs.map((x) => okAt(best, x));
+    if (best.decimals < 0 || good.every(Boolean) || depth > 3) return [{ ...best, xs }];
     const out = [];
     let i = 0;
     while (i < xs.length) {
@@ -135,7 +157,7 @@ export function inferFormat(p) {
   for (const r of runs) segs.push(...fitRun(r.xs, 0));
   // each segment ends where fmt stops writing it: found by bisection between the samples on either
   // side, to the last double (so a value written as the next segment's reads back into it)
-  const fits = (g, v) => formatBy([{ ...g, upTo: Infinity }], v) === parse(String(fmt(v)), which).text;
+  const fits = (g, v) => formatBy([{ ...g, upTo: Infinity }], v) === parse(String(fmt(v)), which, sup).text;
   const merged = segs.map((g, i) => {
     const { xs, ...seg } = g;
     if (i + 1 >= segs.length) return { ...seg, upTo: Infinity };
@@ -143,12 +165,12 @@ export function inferFormat(p) {
     for (let mid = (a + b) / 2; mid > a && mid < b; mid = a + (b - a) / 2) if (fits(seg, mid)) a = mid; else b = mid;
     return { ...seg, upTo: a };
   });
-  const match = (segments) => {
-    const vs = travel(p, 1000);
-    return vs.filter((v) => formatBy(segments, v) === parse(String(fmt(v)), which).text).length / vs.length;
-  };
-  const m = merged.length <= 12 ? match(merged) : 0;
-  return m >= 0.9 ? { segs: merged, match: m } : { segs: plain, match: m, plain: true };
+  // where on the travel the plugin's text is fmt's
+  const hits = (segments) => travel(p, 1000).map((v) => formatBy(segments, v) === parse(String(fmt(v)), which).text);
+  const share = (h) => h.filter(Boolean).length / h.length;
+  const h = merged.length <= 12 ? hits(merged) : null, m = h ? share(h) : 0;
+  const superscripts = texts.some((t) => SUP.test(t));
+  return m >= 0.9 ? { segs: merged, match: m, hits: h, superscripts } : { segs: plain, match: m, plain: true, hits: hits(plain), superscripts };
 }
 // round a fitted coefficient to the simple number it almost certainly is (100, 1000, 20, 1/60…)
 function tidy(x) {
@@ -164,6 +186,8 @@ function tidy(x) {
 const cstr = (s) => `"${String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 const num = (x) => (x === Infinity ? 'kNoLimit' : Number.isInteger(x) ? String(x) : String(x));
 const cppNamespace = (slug) => ident(slug.replace(/-/g, '_'));
+// a FormatSegment's initializer; the fields after unicodeMinus only when they are set
+const segment = (g) => `{${num(g.upTo)}, ${cstr(g.prefix)}, ${cstr(g.suffix)}, ${num(g.scale)}, ${num(g.offset)}, ${g.decimals}, ${g.log10}, ${g.exp}, ${g.plus}, ${g.unicodeMinus}${g.pow10neg || g.superscript ? `, ${!!g.pow10neg}, ${!!g.superscript}` : ''}}`;
 
 // The VST3 class id as Steinberg's validator prints it ("cid = …") → its 16 bytes (clap-wrapper's
 // COMPONENT_ID: the first two words byte-swapped as a COM GUID, the rest in order).
@@ -223,7 +247,7 @@ export async function generate(slug) {
       const { segs, match } = inferFormat(p);
       const { plain } = inferFormat(p);
       report.push({ id: p.id, match, plain, text: [p.min, p.def, p.max].map((v) => formatBy(segs, v)).join(' | ') });
-      w(`inline const FormatSegment kFormat_${p.id}[] = {${segs.map((g) => `{${num(g.upTo)}, ${cstr(g.prefix)}, ${cstr(g.suffix)}, ${num(g.scale)}, ${num(g.offset)}, ${g.decimals}, ${g.log10}, ${g.exp}, ${g.plus}, ${g.unicodeMinus}}`).join(', ')}};`);
+      w(`inline const FormatSegment kFormat_${p.id}[] = {${segs.map(segment).join(', ')}};`);
     }
   }
   w();
@@ -322,7 +346,7 @@ export async function vectors() {
     for (const g of I.groups) for (const p of g.params) {
       if (p.type) continue;
       const { segs } = inferFormat(p), vs = travel(p, 6);
-      out.push(`inline const forte::FormatSegment kF${k}[] = {${segs.map((x) => `{${num(x.upTo)}, ${cstr(x.prefix)}, ${cstr(x.suffix)}, ${num(x.scale)}, ${num(x.offset)}, ${x.decimals}, ${x.log10}, ${x.exp}, ${x.plus}, ${x.unicodeMinus}}`).join(', ')}};`);
+      out.push(`inline const forte::FormatSegment kF${k}[] = {${segs.map(segment).join(', ')}};`);
       out.push(`inline const Case kC${k}[] = {${[...new Set([...vs, p.def])].map((v) => `{${v}, ${cstr(formatBy(segs, v))}}`).join(', ')}};`);
       list.push(`  {${cstr(`${slug}.${p.id}`)}, {${cstr(p.id)}, "", "", forte::ParamKind::continuous, ${num(p.min)}, ${num(p.max)}, ${num(p.def)}, ${num(p.step ?? 0)}, ${!!p.log}, false, nullptr, 0, kF${k}, ${segs.length}}, kC${k}, ${[...new Set([...vs, p.def])].length}},`);
       k++;

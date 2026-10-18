@@ -20,6 +20,11 @@ static const ParamInfo kT60{"t60", "Ring time", "Bar", ParamKind::continuous, 0.
 static const ParamInfo kVolume{"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kDb, 2};
 static const ParamInfo kRise{"rise", "Dome rise", "Plate", ParamKind::continuous, 0, 4, 0.4, 0.05, false, true, nullptr, 0, kFlat, 2};
 static const ParamInfo kStiff{"kH", "Stiffness", "Bridge", ParamKind::continuous, 1e5, 1e8, 1e7, 0, true, false, nullptr, 0, kSci, 1};
+// the black hole's spin a = 1 − 10^(−u), as its page writes it (blackhole/src/ringdown-params.js)
+static const FormatSegment kSpinText[] = {{0.9999999999999999, "a = ", "", -1, 1, 3, false, false, false, false, true, false},
+                                          {1.9999999999999998, "a = ", "", -1, 1, 4, false, false, false, false, true, false},
+                                          {INFINITY, "a = 1 \xe2\x88\x92 ", "", 1, 0, 1, false, true, false, false, true, true}};
+static const ParamInfo kSpin{"spinU", "Spin", "Black hole", ParamKind::continuous, 0, 6, 0.5086383061657272, 0.005, false, true, nullptr, 0, kSpinText, 3};
 static const ParamInfo kMode{"mode", "Shape", "Plate", ParamKind::choice, 0, 1, 0, 1, false, false, kModes, 2};
 
 static std::string text(const ParamInfo &p, double v) { char b[64]; formatValue(p, v, b, sizeof b); return b; }
@@ -45,6 +50,25 @@ TEST("values read as the page shows them") {
   CHECK(text(kRise, 0.4) == "0.40 h");
   CHECK(text(kStiff, 1e7) == "1.0e7 N/m");
   CHECK(text(kMode, 1) == "domed");
+}
+TEST("the black hole's spin reads as 1 − 10^(−u), with a superscript exponent near extremal") {
+  CHECK(text(kSpin, 0) == "a = 0.000");
+  CHECK(text(kSpin, 0.5086383061657272) == "a = 0.690");
+  CHECK(text(kSpin, 1.5) == "a = 0.9684");
+  CHECK(text(kSpin, 2) == "a = 1 \xe2\x88\x92 1.0\xc3\x97" "10\xe2\x81\xbb\xc2\xb2");         // a = 1 − 1.0×10⁻²
+  CHECK(text(kSpin, 4.3) == "a = 1 \xe2\x88\x92 5.0\xc3\x97" "10\xe2\x81\xbb\xe2\x81\xb5"); // a = 1 − 5.0×10⁻⁵
+  CHECK(text(kSpin, 6) == "a = 1 \xe2\x88\x92 1.0\xc3\x97" "10\xe2\x81\xbb\xe2\x81\xb6");   // a = 1 − 1.0×10⁻⁶
+  double v = 0;
+  CHECK(parseValue(kSpin, "a = 1 \xe2\x88\x92 1.0\xc3\x97" "10\xe2\x81\xbb\xe2\x81\xb4", v)); CHECK_NEAR(v, 4, 1e-12);
+  CHECK(parseValue(kSpin, "a = 0.99", v)); CHECK_NEAR(v, 2, 1e-9);
+  int bad = 0; // every step of the travel reads back as itself (clap-validator's round trip)
+  for (int k = 0; k <= 1200; k++) {
+    const double u = k * 0.005;
+    const std::string t = text(kSpin, u);
+    double back;
+    if (!parseValue(kSpin, t.c_str(), back) || text(kSpin, back) != t) bad++;
+  }
+  CHECK(bad == 0);
 }
 TEST("numbers round as JavaScript's toFixed and toExponential do") {
   char b[64];
