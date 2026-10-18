@@ -106,13 +106,13 @@ FORTE_EXPORT double pyrophone_heat(double u) { return heat(u); }
 FORTE_EXPORT int pyrophone_offer(PyrophoneEngine *e, const double *packed, int n) { return e->offer(packed, n) ? 1 : 0; }
 
 // The hooks, on the engine of a handle (forte_engine): its tubes in order; each one's key, amp,
-// amp2, W, h, beta, betaT, theta, keyDown, song, fade, peak, since, age, rel; and its arrays (0 m11,
+// amp2, W, h, beta, betaT, theta, keyDown, song, fade, peak, since, age, rel, N (its modes); and its arrays (0 m11,
 // 1 m12, 2 m21, 3 m22, 4 b1, 5 eta, 6 vel). A tube stays where it is in the pool while it sounds.
 FORTE_EXPORT int pyrophone_voices(PyrophoneEngine *e) { return e->nVoices; }
 FORTE_EXPORT Voice *pyrophone_voice(PyrophoneEngine *e, int i) { return i >= 0 && i < e->nVoices ? e->voices[i] : nullptr; }
 FORTE_EXPORT void pyrophone_voice_state(const Voice *v, double *out) {
-  const double x[15] = {(double)v->key, v->amp, v->amp2, v->W, v->h, v->beta, v->betaT, v->theta, v->keyDown ? 1.0 : 0.0, v->song, (double)v->fade, v->peak, v->since, v->age, v->rel};
-  for (int k = 0; k < 15; k++) out[k] = x[k];
+  const double x[16] = {(double)v->key, v->amp, v->amp2, v->W, v->h, v->beta, v->betaT, v->theta, v->keyDown ? 1.0 : 0.0, v->song, (double)v->fade, v->peak, v->since, v->age, v->rel, (double)v->N};
+  for (int k = 0; k < 16; k++) out[k] = x[k];
 }
 FORTE_EXPORT double *pyrophone_voice_array(Voice *v, int which) {
   std::array<double, N_MODES> *a[7] = {&v->m11, &v->m12, &v->m21, &v->m22, &v->b1, &v->eta, &v->vel};

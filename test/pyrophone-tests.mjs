@@ -145,6 +145,24 @@ test('every key C3–C6 settles within ±3 ¢ of equal temperament (auto-tuned, 
   }
   assert.ok(worst < 3, `worst ${worst.toFixed(2)} ¢ (key ${wk})`);
 });
+test('the keys past C3–C6, A0 to C8 (the top keys keep only the modes below 0.45 fs): each settles within ±3 ¢, at 44.1 and 48 kHz; at the top of the flame power, pressed, they sing their note, not a scream', () => {
+  const out = [], top = GROUPS.flatMap((g) => g.params).find((p) => p.id === 'flame').max;
+  for (const [k, fs] of [[21, 48000], [24, 48000], [30, 48000], [40, 48000], [90, 48000], [96, 44100], [102, 48000], [108, 48000], [108, 44100]]) {
+    const f0 = keyFreq(k), sec = k < 36 ? 4 : 1.6, e = new PyrophoneEngine(fs), n = Math.round(sec * fs), x = new Float64Array(n), bL = new Float32Array(128), bR = new Float32Array(128);
+    e.setParams(P({ drift: 4, warm: 0.15 })); e.noteOn(k, 0.7);
+    for (let s = 0; s < n; s += 128) { e.process(bL, bR, 128); for (let i = 0; i < 128 && s + i < n; i++) x[s + i] = bL[i] + bR[i]; }
+    // (freq() reads at 48 kHz: rescale)
+    const c = cents((freq(x, (f0 * FS) / fs, n - Math.round(0.5 * fs), n) * fs) / FS / f0), N = e.voices[0].N;
+    assert.ok(Math.abs(c) < 3 && Number.isFinite(peak({ L: x, R: x })), `key ${k} at ${fs}: ${c.toFixed(2)} ¢ (${N} modes)`);
+    out.push(`${k}${fs === 44100 ? ' (44.1)' : ''}: ${c.toFixed(1)} ¢, ${N} modes`);
+  }
+  for (const k of [96, 102, 108]) {
+    const r = run(P({ flame: top }), 1.5, [note(0, k, 1), [0.3, (e) => e.handle({ type: 'pressure', value: 1, key: k })]]), f0 = keyFreq(k);
+    const f = peakFreq(r.out, FS, 1.5 * FS, 0.5 * f0, Math.min(20000, 5 * f0));
+    assert.ok(Math.abs(cents(f / f0)) < 50 && peak(r) < 0.6, `key ${k}: strongest ${f.toFixed(0)} Hz, peak ${peak(r).toFixed(3)}`);
+  }
+  console.log(`        ${out.join('; ')}`);
+});
 test('onset grows at the linear growth rate of the model', () => {
   const k = 72, Pm = P({ noise: 2e-4 }), amps = [];
   const { e } = run(Pm, 0.4, [note(0, k, 0.7)], (eng, t) => amps.push([t, eng.voices[0].amp]), 0.002);
@@ -227,7 +245,7 @@ test('without auto-tune, playing harder pulls the pitch as the limit cycle predi
 
 console.log('level, stability, cost');
 test('a forte note peaks 0.1–0.5; a six-note forte chord stays under 1', () => {
-  for (const k of [48, 60, 72, 84]) {
+  for (const k of [21, 33, 48, 60, 72, 84, 96, 108]) {
     const pk = peak(run(P(), 1.5, [note(0, k, 1)]));
     assert.ok(pk > 0.1 && pk < 0.5, `${k}: ${pk.toFixed(3)}`);
   }

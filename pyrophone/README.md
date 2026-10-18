@@ -14,7 +14,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/pyrophone/>
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | play (37 tubes, C3–C6) |
+| `Z…/` and `Q…]` rows | play (88 tubes, A0–C8) |
 | `←` `→` | octave |
 | `↑` `↓` | velocity (how far a key parts the flames) |
 | `Space` | hold: keys stay down (flames stay apart) while Space is held |
@@ -155,7 +155,8 @@ f = W c/(2πL), where W is the limit cycle's angular frequency in units of c/L.
 The flame's reactance raises W above π by 12.7 ¢ at the Hopf point and by
 37 ¢ at β = 0.55. The auto-tuner cuts each tube for its key and velocity: the
 acoustic length is L = W c_hot/(2πf), less the open-end corrections 0.61a per
-end. C4 is 74 cm long with a 5 cm bore, C3 149 cm, C6 19 cm. Where the flame
+end. C4 is 74 cm long with a 5 cm bore, C3 149 cm, C6 19 cm; A0 is a 7 m
+flue, C8 a 5 cm whistle. Where the flame
 position makes another mode j speak first, the tube is cut so that mode j
 sounds exactly j times the key's frequency. Turn the auto-tuner off and the tubes
 are cut for velocity 0.7, so playing from v = 0.2 to 1 raises the pitch by
@@ -168,8 +169,9 @@ bistable band) stays hot, so its pitch does not drift; it only steps down by
 the few cents its lower key-up gain gives the limit cycle (5.4 ¢ for a key
 played at 0.8). Every silent
 tube cools with the same τ_w and remembers its temperature, so a note replayed
-soon after starts warm, in tune. Every key is tested to settle within 3 ¢ of
-equal temperament (measured worst case 0.2 ¢).
+soon after starts warm, in tune. Every key from C3 to C6, and a sample from
+A0 to C8, is tested to settle within 3 ¢ of equal temperament (measured worst
+case 0.2 ¢ on C3–C6, 2.3 ¢ on A0, the slowest to settle).
 
 **Radiation.** Sound leaves through both open ends. The far-field pressure is
 ∝ d/dt of the outflow: u(1) at the top, −u(0) at the bottom. Odd modes push air
@@ -184,7 +186,11 @@ one sample with the flame's force held (zero-order hold), at the tube's own
 time step c(T)/(L f_s), so the linear acoustics is exact at every pitch and
 temperature; for an overdamped mode the solution is the same with cosh and
 sinh. The hold delays the force by half a sample, so the flame's delay
-line is read half a sample early. A tube costs about 0.2 % of a core; 10 tubes
+line is read half a sample early. A mode the sample rate cannot hold is
+left out: each tube keeps the modes below 0.45 f_s with the pitch wheel bent
+all the way up: every tube up to B♭6 keeps all ten at 48 kHz (up to A6 at
+44.1 kHz), C8 four (its fourth harmonic at 16.7 kHz). The scream ceiling is drawn from the
+full ten-mode tube, so a tube with fewer modes stays further below it. A tube costs about 0.2 % of a core; 10 tubes
 render at 2 % of real time in Node. The tests hold the engine to the model:
 growth rate and ring-down within 3 %, limit-cycle amplitude within 2 %, both
 thresholds of the hysteresis loop within 3 %, harmonic levels within 1.5 dB.
