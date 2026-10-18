@@ -132,3 +132,19 @@ clap-wrapper builds the VST3, AU v2 and standalone from the CLAP. Each plugin:
 
 Identifiers: CLAP `net.jthaler.forte.<slug>`, vendor Forte, AU manufacturer `Frte` with the
 instrument's subtype from the registry (`plugin.code`), VST3 class id from `ids.json`.
+
+### The Forte app
+
+`Forte` (target `forte_suite_standalone`) is one standalone with every ported instrument but
+the template, picked from the Instrument menu at the top of its window (`editor.html?suite`
+shows the menu in a browser). `forte_add_suite()` (`cmake/forte.cmake`) builds it after the
+instruments from what `forte_add_plugin()` recorded, so a new port joins it with no change: each
+instrument's `<slug>-instrument.cpp` is compiled again with `forte_instrument` renamed
+`forte_instrument_<slug>`, and a generated table lists them. In `plugin.cpp` a `Suite` holds one
+instrument's `Plugin` at a time and passes the host's calls to it: a new one is made and
+activated on the main thread and handed to the audio thread, which takes it at its next block,
+and the one before is deleted once it has. Its id is `net.jthaler.forte.suite`, its version
+Forte's, and its state `forte-suite <slug>` then the instrument's own, so the app reopens on
+the last instrument. It is only a standalone: a DAW keeps a plugin's parameters while it is
+active, and these change with the instrument. The release ships it in the archives with every
+instrument (`Forte-plugins-<system>` and `Forte-plugins-app-<system>`).
