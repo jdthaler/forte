@@ -1,7 +1,7 @@
 // vibraphone-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell, noteName } from '../../shared/shell.js';
-import { SpectrumView, fit, css, animate } from '../../shared/views.js';
+import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './vibraphone-instrument.js';
 import { EB_RATIOS } from './bar.js';
 import { wasmModel } from './vibraphone-wasm.js';
@@ -13,6 +13,7 @@ const $ = (s) => document.querySelector(s);
 const TAU = 2 * Math.PI;
 const DAMPER_X = 0.05; // the felt damper bar presses on each bar this far (× L) from its inner end (vibraphone-model.h)
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 80, fHi: 20000 });
+new SpectrogramView($('#spectrogram'), { spectrum });
 let focus = 60, live = null, history = [], etPeak = 0;
 
 // The bars' modal data (a few ms each) is sent with each note, packed by the model, so the audio

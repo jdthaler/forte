@@ -1,7 +1,7 @@
 // stars-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell, noteName } from '../../shared/shell.js';
-import { fit, css, animate } from '../../shared/views.js';
+import { SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT, KEY_LO, KEY_HI } from './stars-instrument.js';
 import { wasmModel, starId } from './stars-wasm.js';
 
@@ -9,6 +9,13 @@ const $ = (s) => document.querySelector(s);
 let focus = 60, amps = null, analyser = null, fbuf = null, selected = -1, shown = -1, shownAt = 0;
 const LCOL = () => [css('--l0'), css('--l1'), css('--l2'), css('--l3')];
 const TAU = 2 * Math.PI;
+// the spectrogram: linear in frequency across the focus star's band, labelled in the star's μHz
+const niceStep = (span) => [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000].find((s) => span / s <= 5) || 5000;
+const spectro = new SpectrogramView($('#spectrogram'), { log: false, auto: true, dbRange: 35, secs: 10, ticks: (lo, hi) => {
+  const K = (FX?.K ?? 1) * 1e-6, a = lo / K, b = hi / K, st = niceStep(b - a), out = [];
+  for (let nu = Math.ceil(a / st) * st; nu <= b; nu += st) out.push({ f: nu * K, text: `${nu}` });
+  return out;
+} });
 const SUN = { teff: 5777, rot: 1e6 / (25.4 * 86400) }; // the Sun's T_eff (K) and rotation (μHz), the model's reference
 
 // The views draw what the engine plays: its model, from the same C++, built as WebAssembly.
@@ -40,7 +47,7 @@ const shell = createShell({
   onAudio: (a) => {
     // a finer analyser of our own for the spectrum view (the comb of a red giant is a few Hz apart)
     analyser = a.ctx.createAnalyser(); analyser.fftSize = 32768; analyser.smoothingTimeConstant = 0.6;
-    a.node.connect(analyser);
+    a.node.connect(analyser); spectro.setAnalyser(analyser);
     prewarm();
   },
   onNoteOn: (key) => { focus = key; selected = -1; shell.keys.focus?.(key); update(); },
@@ -55,6 +62,18 @@ const fmtMu = (f) => `${f.toFixed(f < 100 ? 1 : 0)} μHz`;
 function update() {
   const P = shell.P, d = starFor(focus, P), st = d.star, sz = d.sz, K = d.K;
   FX = d; hrDirty = true;
+  { // the spectrogram's band and ticks: every mode, coloured by degree
+    const md = d.modes, cols = LCOL(), ticks = [];
+    let lo = Infinity, hi = -Infinity;
+    for (let i = 0; i < d.N; i++) { lo = Math.min(lo, md.f[i]); hi = Math.max(hi, md.f[i]); ticks.push({ f: md.f[i], color: cols[d.multiplets[md.mult[i]].l], alpha: 0.6 }); }
+    if (d.family !== 'dscuti' && d.sz?.fwhm > 0) { // the strong part of the comb: ν_max ± one FWHM
+      const K = d.K * 1e-6;
+      lo = Math.max(lo, (d.sz.numax - d.sz.fwhm) * K); hi = Math.min(hi, (d.sz.numax + d.sz.fwhm) * K);
+    }
+    const span = hi - lo || 1;
+    spectro.fLo = Math.max(1, lo - 0.08 * span); spectro.fHi = hi + 0.08 * span;
+    spectro.set(0, ticks);
+  }
   const name = noteName(focus);
   $('#ech-key').textContent = name;
   $('#ech-read').textContent = d.family === 'dscuti'

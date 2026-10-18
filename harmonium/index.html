@@ -64,6 +64,16 @@
           <div class="readout" id="beat-info"></div>
           <div class="caption">The sound of the last key over the last four seconds. With the musette on, its reeds are a few cents apart and the sound swells and fades at their frequency difference; ticks mark that predicted beat period.</div>
         </div>
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the last key on each rank that speaks</span></div>
+          <canvas id="spectrum"></canvas>
+          <div class="caption">The tongue chops the wind into pulses, so a free reed is rich in harmonics, with no gaps in the comb. The 16′ and 4′ ranks add an octave below and above; the musette's reeds sit a few cents either side of the 8′.</div>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">Each note grows out of the turbulence in about a tenth of a second, all its harmonics at once. With the musette on, its lines swell and fade at the beat; on a weak wind the treble is slow to speak, or does not speak at all.</div>
+        </div>
         <div class="card" data-view="The wind">
           <div class="card-head"><h2>The wind</h2><span class="muted" id="wind-read"></span></div>
           <canvas id="wind"></canvas>

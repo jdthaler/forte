@@ -7,6 +7,7 @@ import { INSTRUMENT } from './organ-instrument.js';
 import { DRAWBARS, NUM_WHEELS, KEY_MIN, KEY_MAX, PC_NAMES } from './tonewheels.js';
 import { wasmModel } from './organ-wasm.js';
 import { createChain } from '../../shared/chain.js';
+import { SpectrogramView } from '../../shared/views.js';
 import { GeneratorView, LeslieView, OutputView, drawScanner, BAR_COLORS, useModel } from './organ-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
 import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto } from '../../shared/midi.js';
@@ -68,7 +69,7 @@ function startAudio() {
     audio = { ctx, node, analyser, chain };
     node.port.postMessage(paramsMessage()); // the engine builds its generator from these
     applyMix();
-    output.setAnalyser(analyser);
+    output.setAnalyser(analyser); spectro.setAnalyser(analyser);
     if (ctx.state !== 'running') await ctx.resume();
     live = true;
     $('#start').textContent = `Audio on · ${(fs / 1000).toFixed(1)} kHz`;
@@ -424,6 +425,7 @@ const genView = new GeneratorView($('#generator'), (w) => {
 const defaultCaption = $('#gen-caption').textContent;
 const leslieView = new LeslieView($('#leslie-view'));
 const output = new OutputView($('#output'));
+const spectro = new SpectrogramView($('#spectrogram'), { fLo: 30, fHi: 12000 });
 
 function refreshGenerator() {
   for (let w = 1; w <= NUM_WHEELS; w++) genView.cents[w] = P.tuning === 'et' ? 0 : centsOff(w);
@@ -460,6 +462,7 @@ function refreshFocus() {
     actual: r.actual, ideal: r.ideal, color: BAR_COLORS[DRAWBARS[r.d].color],
     level: r.d === 8 && P.percOn ? 0 : P.drawbars[r.d] / 8,
   }));
+  spectro.set(0, output.focus.filter((m) => m.level > 0).map((m) => ({ f: m.actual, color: m.color, alpha: 0.3 + 0.6 * m.level })));
 }
 
 function frame() {

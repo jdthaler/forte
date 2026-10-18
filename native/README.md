@@ -150,4 +150,15 @@ and the one before is deleted once it has. Its id is `net.jthaler.forte.suite`, 
 Forte's, and its state `forte-suite <slug>` then the instrument's own, so the app reopens on
 the last instrument. It is only a standalone: a DAW keeps a plugin's parameters while it is
 active, and these change with the instrument. The release ships it in the archives with every
-instrument (`Forte-plugins-<system>` and `Forte-plugins-app-<system>`).
+instrument (`Forte-plugins-<system>` and `Forte-plugins-app-<system>`), and alone in
+`Forte-app-<system>`.
+
+### Icons
+
+`icons/` holds each standalone app's icon: `forte.icns`/`.ico` for the Forte app, in the site's
+colours, and `<slug>.icns`/`.ico` for each instrument, in its `FORTE_ACCENT`.
+`python3 tools/make-icons.py` (numpy and Pillow) draws them with the site's own icons; run it
+again after adding an instrument. `forte.cmake` hands them to clap-wrapper for the macOS and
+Windows standalones (`cmake/patches/clap-wrapper-mac-app-icon.patch` names the icon in the Mac
+app's `Info.plist`, which clap-wrapper leaves empty). Linux's standalones are bare executables,
+so they have none.

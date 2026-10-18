@@ -1,7 +1,7 @@
 // clavier-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell, noteName } from '../../shared/shell.js';
-import { SpectrumView, fit, css, animate } from '../../shared/views.js';
+import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { strikeSpeed, STRENGTH, REST_GAP, PRESS_MAX } from './clavier-params.js';
 import { INSTRUMENT } from './clavier-instrument.js';
 import { wasmModel } from './clavier-wasm.js';
@@ -13,6 +13,7 @@ const model = await wasmModel();
 const $ = (s) => document.querySelector(s);
 const FS = 48000;
 const spectrum = new SpectrumView($('#spectrum'));
+new SpectrogramView($('#spectrogram'), { spectrum });
 let focus = 60, focusVel = null, pressure = 0, bend = 0;
 
 const shell = createShell({

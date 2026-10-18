@@ -195,6 +195,13 @@ test('the release\'s archives are the ones CI packages and the pages link to', (
   assert.ok(sh.includes('pack "Forte-$id-$f"') && sh.includes('pack "Forte-plugins-$f"'), 'package-plugins.sh packs each format alone');
   for (const [, , formats] of SYSTEMS) for (const f of formats) assert.ok(new RegExp(`\\) formats=\\([^)]*\\b${f}\\b`).test(sh), `package-plugins.sh packs ${f}`);
   assert.ok(read('landing.js').includes("downloadLinks()"), 'All Plugins offers each format alone');
+  // and the Forte app alone, Forte-app-<system>, offered beside every instrument's (not on an instrument's page)
+  assert.deepEqual(downloads().map((d) => d.app.file), ['Forte-app-macos.zip', 'Forte-app-windows.zip', 'Forte-app-linux.tar.gz']);
+  assert.ok(downloads('gongs').every((d) => d.app === null), 'an instrument\'s page offers no Forte app');
+  assert.ok(sh.includes('pack Forte-app "Forte app" app Forte'), 'package-plugins.sh packs the Forte app alone');
+  // every standalone app has its icon, drawn by tools/make-icons.py (forte.cmake passes them on)
+  for (const id of ['forte', ...withPlugins().map((i) => i.id)]) for (const ext of ['icns', 'ico'])
+    assert.ok(existsSync(new URL(`../native/icons/${id}.${ext}`, import.meta.url)), `native/icons/${id}.${ext} exists (python3 tools/make-icons.py)`);
   const md = notes();
   for (const i of withPlugins()) assert.ok(md.includes(`| ${i.version} |`) && md.includes(i.name) && md.includes(archive(i.id, 'macos.zip')), `notes list ${i.name}`);
   assert.ok(md.includes('xattr -dr com.apple.quarantine'), 'notes give the xattr command');

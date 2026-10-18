@@ -79,7 +79,7 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `limiter.js` | the limiter at the end of the chain: Web Audio's compressor curve and makeup gain without its 6 ms look-ahead, as the plugins' `limiter.cpp`, so a page adds no delay to a key |
 | `dsp.js` | `modeCoeffs` (exact two-pole modal resonator), `Biquad`, `OnePole`, `DCBlock`, `Delay` (fractional), `keyPan`, `keyFreq`, `sigmaFromT60` |
 | `linalg.js` | `symEig`, `genEig` (generalised symmetric), `cholesky` |
-| `views.js` | `fit`, `css`, `animate`, `SpectrumView` (live spectrum + model markers), `ScopeView` |
+| `views.js` | `fit`, `css`, `animate`, `SpectrumView` (live spectrum + model markers), `SpectrogramView` (scrolling spectrogram, the markers as ticks), `ScopeView` |
 | `impulses.js` | `roomIR` (the synthetic room the shell uses) |
 | `registry.js` | the instrument list behind the landing page and the menus |
 | `midi.js` | Web MIDI for every page (the shell and the five older pages): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen next to Enable MIDI, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling. |
@@ -218,8 +218,13 @@ presets.
 Copy the template's DOM. The sidebar, header, keyboard and footer are
 standard. The views are yours: show the physics *while it plays* (mode
 shapes, a slow-motion mechanism, phase portraits, the field, the
-spectrum with the model's predicted lines). Use `SpectrumView` for the
-live spectrum. Every view gets a one-line caption that says what to look
+spectrum with the model's predicted lines). Every instrument has a
+spectrum and a spectrogram of its live output: `SpectrumView` and
+`SpectrogramView`, which follows a spectrum (`{ spectrum }`) for its
+analyser, range and markers, or takes its own (a narrow band can be
+linear, as the Star Keyboard's is). Mark them with what the model
+predicts, and say in their captions what to watch for in this
+instrument. Every view gets a one-line caption that says what to look
 at.
 
 Space is `sustain` (a damper pedal sent to the engine) or `hold` (the shell

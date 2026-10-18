@@ -1,7 +1,7 @@
 // pipes-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell } from '../../shared/shell.js';
-import { SpectrumView, fit, css, animate } from '../../shared/views.js';
+import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { keyFreq } from '../../shared/dsp.js';
 import { INSTRUMENT } from './pipes-instrument.js';
 import { RANKS, STOPS, CP, AIR, engaged, organName, footage } from './pipes-data.js';
@@ -17,6 +17,7 @@ const WIND_SEC = 8;
 const windHist = { t: new Float64Array(1024), P: new Float64Array(1024), S: new Float64Array(1024), Q: new Float64Array(1024), n: 0 };
 let clock = 0;
 const spectrum = new SpectrumView($('#spectrum'));
+new SpectrogramView($('#spectrogram'), { spectrum });
 
 // A key's six pipes (each voiced by a linear analysis, about a millisecond a key) go with its note
 // to the engine, built by the page's WebAssembly model, so the audio thread never voices them. Built

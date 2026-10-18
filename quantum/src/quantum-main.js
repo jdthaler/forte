@@ -3,7 +3,7 @@
 // noteOn, so the worklet never does setup work.
 
 import { createShell, noteName, toast } from '../../shared/shell.js';
-import { SpectrumView, fit, css, animate } from '../../shared/views.js';
+import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT, fMax as fMaxAt } from './quantum-instrument.js';
 import { WELLS, density } from './quantum-waves.js';
 import { wasmModel } from './quantum-wasm.js';
@@ -14,6 +14,7 @@ const model = await wasmModel();
 
 const $ = (s) => document.querySelector(s);
 const spectrum = new SpectrumView($('#spectrum'));
+new SpectrogramView($('#spectrogram'), { spectrum });
 const LIVE_ONLY = new Set(['volume', 'room', 'velocity', 'T1', 'release']); // these don't change the views
 
 let focus = 57, pk = null, onsetAt = null, dirty = true, dephDirty = true, warned = false;

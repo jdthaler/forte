@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { FORTE_VERSION } from '../shared/registry.js';
-import { SYSTEMS, archive, withPlugins } from '../shared/plugins.js';
+import { APP, SYSTEMS, archive, withPlugins } from '../shared/plugins.js';
 
 export const ASSETS = Object.fromEntries(SYSTEMS.map(([name, suffix]) => [name, archive(null, suffix)]));
 export const FORMATS = { macOS: 'AU, VST3, CLAP, standalone (Apple silicon and Intel, macOS 10.15 or later)', Windows: 'VST3, CLAP, standalone (64-bit)', Linux: 'VST3, CLAP, standalone (x86-64)' };
@@ -57,6 +57,8 @@ export function notes() {
     '|---|---|---|',
     ...Object.entries(ASSETS).map(([sys, f]) => `| ${sys} | \`${f}\` | ${FORMATS[sys]} |`),
     '',
+    `The Forte app alone, every instrument in one standalone app: ${SYSTEMS.map(([, suffix]) => `\`${archive(APP, suffix)}\``).join(', ')}.`,
+    '',
     `Each archive also comes one format at a time: \`${archive('<instrument>', '<system>', '<format>')}\` and \`${archive(null, '<system>', '<format>')}\`, where the format is au (macOS only), vst3, clap or app (the standalone), for example \`${archive('gongs', 'macos.zip', 'au')}\`.`,
     '',
     unwrap(install).replace(/^## /gm, '### '),
@@ -68,6 +70,7 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) { // (a plain file:
   console.log(arg === '--tag' ? `plugins-v${FORTE_VERSION}`
     : arg === '--plugins' ? released().map((i) => `${i.id}\t${i.name}`).join('\n')
     : arg === '--manifest' ? manifest()
-    : arg === '--files' ? [null, ...released().map((i) => i.id)].flatMap((id) => SYSTEMS.flatMap(([, suffix, formats]) => [archive(id, suffix), ...formats.map((f) => archive(id, suffix, f))])).join('\n')
+    : arg === '--files' ? [...[null, ...released().map((i) => i.id)].flatMap((id) => SYSTEMS.flatMap(([, suffix, formats]) => [archive(id, suffix), ...formats.map((f) => archive(id, suffix, f))])),
+      ...SYSTEMS.map(([, suffix]) => archive(APP, suffix))].join('\n')
     : notes());
 }
