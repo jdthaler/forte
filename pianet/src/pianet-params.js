@@ -19,6 +19,8 @@ export const GROUPS = [
     params: [
       { id: 'tipMass', label: 'Solder tip mass', min: 0.1, max: 4, def: 1, log: true, fmt: (v) => `× ${v.toFixed(2)}`, hint: 'Each reed is re-cut to stay in tune. More solder: a shorter, stiffer reed, overtones pushed higher, a smaller swing. Applies to new notes.' },
       { id: 'loss', label: 'Reed loss η', min: 2e-4, max: 2e-2, def: 1.2e-3, log: true, fmt: (v) => `${(v * 1e3).toFixed(2)} × 10⁻³`, hint: 'Clamp and internal friction (thermoelastic loss and air are added). Sets the sustain while the key is held. Applies to new notes.' },
+      { id: 'fullRange', label: 'Full range (A0–C8)', type: 'checkbox', def: false,
+        hint: 'Opens the keys beyond the Pianet\'s five-octave C2–C7: the same reeds, each cut to length for its pitch, with the solder and thickness of C2 below and of C7 above.' },
     ],
   },
   {
