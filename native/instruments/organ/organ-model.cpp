@@ -65,7 +65,7 @@ void buildGenerator(Generator &g, int tuning, double mainsHz, double wheelHarm, 
     g.leak[w] = lk * (0.3 + 0.7 * r());
   }
   for (int k = 0; k < NUM_KEYS; k++) {
-    const int key = KEY_LO + k;
+    const int key = KEY_MIN + k;
     for (int d = 0; d < 9; d++) g.keyMap[k * 9 + d] = (int16_t)keyWheel(key, d);
     g.perc2[k] = (int16_t)percWheel(key, false);
     g.perc3[k] = (int16_t)percWheel(key, true);
@@ -82,7 +82,8 @@ void keyAnalysis(int key, int tuning, double mainsHz, Analysis out[9]) {
     const int w = keyWheel(key, d);
     const double ideal = f8 * DRAWBARS[d].harmonic;
     const double actual = tuning == harmonic ? ideal : f(w);
-    out[d] = {w, actual, ideal, 1200 * fd::log2(actual / ideal), key - 23 + DRAWBARS[d].offset > NUM_WHEELS};
+    const int at = key - 23 + DRAWBARS[d].offset; // the wheel it would tap with no foldback
+    out[d] = {w, actual, ideal, 1200 * fd::log2(actual / ideal), at > NUM_WHEELS || at < 1};
   }
 }
 

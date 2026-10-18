@@ -12,8 +12,11 @@ namespace forte::organ {
 constexpr int NUM_WHEELS = 91;
 constexpr int NW = NUM_WHEELS + 1; // wheel arrays are 1-based
 constexpr double SHAFT_RPS = 20;   // main shaft, 60 Hz mains
-constexpr int KEY_LO = 36, KEY_HI = 96; // 61-key manual, C2–C7 at 8'
-constexpr int NUM_KEYS = KEY_HI - KEY_LO + 1;
+constexpr int KEY_LO = 36, KEY_HI = 96; // the B-3's 61-key manual, C2–C7 at 8'
+// What it plays: every key of an 88-key keyboard, A0–C8. The 91 wheels (C1–F♯8) reach them all,
+// folding back an octave where a drawbar runs off either end, as the B-3 folds its top.
+constexpr int KEY_MIN = 21, KEY_MAX = 108;
+constexpr int NUM_KEYS = KEY_MAX - KEY_MIN + 1;
 
 // [driving, driven] teeth for C, C♯, … B
 extern const int GEAR[12][2];
@@ -31,8 +34,8 @@ double etFreq(int w);   // 440 · 2^((w − 46)/12): wheel 46 = A4
 double gearFreq(int w); // 20 rev/s × driving/driven × teeth
 double centsOff(int w); // the gears against equal temperament
 
-// Wheel tapped by drawbar d of a key (MIDI note), with the B-3's foldback; and the percussion's
-// (the second or third harmonic).
+// Wheel tapped by drawbar d of a key (MIDI note), with the B-3's foldback (at the top, and below
+// C1 for the keys under the manual); and the percussion's (the second or third harmonic).
 int keyWheel(int key, int d);
 int percWheel(int key, bool third);
 double drawbarGain(int n); // ~3 dB per step

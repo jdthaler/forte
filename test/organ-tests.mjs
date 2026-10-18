@@ -65,6 +65,25 @@ test('keys tap wheels 1–91 with foldback at the top', () => {
   assert.equal(keyWheel(96, 8), 85);   // C7 at 1′ folds back two octaves
   for (let k = 36; k <= 96; k++) for (let d = 0; d < 9; d++) { const w = keyWheel(k, d); assert.ok(w >= 1 && w <= 91); }
 });
+test('every key A0–C8 plays: below the manual the drawbars fold back up an octave where they run off wheel 1, above it down from wheel 91, and the analysis says which', () => {
+  assert.deepEqual(INSTRUMENT.range, [21, 108]);
+  assert.equal(keyWheel(24, 2), 1);    // C1 at 8′: the bottom wheel
+  assert.equal(keyWheel(24, 0), 1);    // its 16′ folds up onto it
+  assert.equal(keyWheel(21, 2), 10);   // A0 at 8′: there is no wheel below C1, so A1
+  assert.equal(keyWheel(108, 2), 85);  // C8 at 8′: the first 192-tooth wheel
+  for (let k = 21; k <= 108; k++) for (let d = 0; d < 9; d++) {
+    const w = keyWheel(k, d), at = k - 23 + [-12, 7, 0, 12, 19, 24, 28, 31, 36][d];
+    assert.ok(w >= 1 && w <= 91 && (w - at) % 12 === 0, `key ${k}, drawbar ${d}: wheel ${w}`);
+    assert.equal(keyAnalysis(k, P())[d].folded, w !== at, `key ${k}, drawbar ${d}: folded`);
+  }
+  for (const k of [21, 24, 30, 100, 108]) { // and the engine sounds them, 8′ alone on its wheel
+    const e = engine(P({ ...DRY, drawbars: [0, 0, 8, 0, 0, 0, 0, 0, 0] }));
+    e.noteOn(k, 0.8);
+    const { L, R } = run(e, 0.6), want = gearFreq(keyWheel(k, 2)), f = zcFreq(L, 9600, 28800);
+    assert.ok(L.every(Number.isFinite) && R.every(Number.isFinite), `key ${k}: NaN`);
+    assert.ok(Math.abs(f / want - 1) < 2e-4 && rms(L, 9600, 28800) > 0.01, `key ${k}: ${f.toFixed(2)} Hz, wheel ${want.toFixed(2)} Hz`);
+  }
+});
 test('drawbar "harmonics" are tempered: 1⅗′ ≈ +13.7 ¢, 2⅔′ ≈ −2 ¢', () => {
   const a = keyAnalysis(60, P());
   assert.ok(Math.abs(a[6].cents - 13.7) < 1, `1 3/5: ${a[6].cents}`);
