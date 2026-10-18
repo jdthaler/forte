@@ -10,6 +10,19 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-18 — MIDI that turns itself on says so
+
+### Forte 0.30.1
+- **MIDI turned on again by itself shows its status.** A page turns MIDI on with no click when
+  the site had it on before and the browser still grants it, and hides "Enable MIDI"; the status
+  pill stayed hidden too, since it waited for a click on the button, so the button flashed and
+  vanished with nothing in its place. The pill now shows as soon as MIDI reports anything
+  ("MIDI: <device>", "MIDI: no devices", "MIDI: permission denied"), however it was turned on.
+- **A MIDI key before the first click asks for one.** A key on a MIDI keyboard is not a user
+  gesture, so until the page has had a click or a key press the browser won't let it start the
+  sound. Such notes are now dropped with a toast saying to click the page once, instead of
+  starting the audio in a state that only a reload could undo.
+
 ## 2026-10-18 — the black hole's spin reads as itself in the plugins
 
 ### Forte 0.30.0
