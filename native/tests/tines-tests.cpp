@@ -73,7 +73,7 @@ TEST("model: the finite-element cantilever's f₁ and overtone ratios are Euler�
 
 TEST("model: every key's sustaining fork mode sits on pitch; a matched tone bar sustains, no bar dies fast") {
   const auto P = defaults();
-  for (int m = KEY_LO; m <= KEY_HI; m++) {
+  for (int m = KEY_MIN; m <= KEY_MAX; m++) { // every key of the 88
     const KeyModel k = computeKey(m, P.data(), FS);
     CHECK(k.ok);
     const Mode *best = nullptr;
@@ -236,7 +236,7 @@ TEST("plugin: MIDI velocity is the hammer's speed, 0.25 … 5 m/s; CC64 the damp
   const InstrumentInfo &I = forte_instrument();
   CHECK(I.midiVelocity && std::fabs(I.midiVelocity(0) - 0.25) < 1e-12 && std::fabs(I.midiVelocity(1) - 5) < 1e-12);
   CHECK(I.space == Space::sustain && I.controllerCount == 0 && I.modWheel < 0);
-  CHECK(I.keyLo == KEY_LO && I.keyHi == KEY_HI && I.chain.tone < 0);
+  CHECK(I.keyLo == KEY_MIN && I.keyHi == KEY_MAX && I.chain.tone < 0);
 }
 
 TEST("CPU: ten notes at 48 kHz take a small part of a core") {

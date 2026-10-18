@@ -17,7 +17,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/clavier/>
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | play (60 keys, F1–E6) |
+| `Z…/` and `Q…]` rows | play (60 keys, F1–E6; 88, A0–C8, with *Full range*) |
 | `←` `→` | octave |
 | `↑` `↓` | velocity (tangent speed) |
 | `Space` | mute bar, while held (the D6 has no sustain pedal) |
@@ -51,10 +51,25 @@ so T = μ(2Lf₁)² − π²EI/L² exactly, with EA and EI from the steel core o
 | C4 | 261.6 | 49.8 | 9.4 | plain 0.229 mm | 21.8 | 532 MPa | 4.9·10⁻⁵ | 0.14 N | +36 ¢ |
 | A4 | 440.0 | 39.2 | 7.4 | plain 0.229 mm | 38.4 | 936 MPa | 4.5·10⁻⁵ | 0.31 N | +26 ¢ |
 | E6 | 1318.5 | 17.0 | 3.2 | plain 0.229 mm | 64.7 | 1.58 GPa | 1.4·10⁻⁴ | 1.20 N | +35 ¢ |
+| *A0* | 27.5 | 95.4 | 18.0 | wound 0.81 / 0.47 mm | 10.4 | 60 MPa | 5.0·10⁻⁴ | 0.03 N | +154 ¢ |
+| *C8* | 4186 | 5.4 | 1.0 | plain 0.203 mm | 51.1 | 1.58 GPa | 1.1·10⁻³ | 3.00 N | +107 ¢ |
 
 The bass strings are slack. Their EA/T reaches 2000 at F1 (core stress
 only 96 MPa), which is why the bass bends and glides most. The top octave
 runs at 60 % of the wire's breaking stress.
+
+**Past F1–E6.** *Full range* (under String, off by default) opens A0–C8,
+which no Clavinet had. The scale goes on: below F1 the length keeps
+growing by a key width per semitone, the strings wound as F1's, so A0 is
+slacker still (10 N) and glides furthest (8 ¢ sharp at mf, settling over
+seconds). Above E6 the length halves every octave instead, as it must to
+hold a plain wire's stress, 4ρ(Lf)², at E6's 61 % rather than run past
+breaking (the D6's straight line would reach zero length past F♯7). There the
+string's pull off the anvil, T·g(1/L + 1/Ln), climbs with 1/L. On the
+0.009″ wire it would reach 3.8 N at C8, nearly the key's 4 N, and the
+pinch would fail (above). So the wire there is one size lighter, 0.008″:
+T ∝ d², and C8 pulls 3.0 N. The top keys ring briefly (C8 has gone
+60 dB down within a second), as a short, tightly held string must.
 
 **Component modes.** The string is two pieces joined at the anvil, and the
 anvil contact decides how they join, so the string is reduced to modes with

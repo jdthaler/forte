@@ -337,7 +337,7 @@ test('the reed is heard through both pickups at the model\'s partials', () => {
   }
 });
 test('every parameter at its limits: finite, bounded, silent after release', () => {
-  const ps = GROUPS.flatMap((g) => g.params).filter((p) => p.type !== 'select' && !['room', 'volume', 'velocity'].includes(p.id));
+  const ps = GROUPS.flatMap((g) => g.params).filter((p) => p.type !== 'select' && !['room', 'volume', 'velocity', 'fullRange'].includes(p.id));
   const cases = [];
   for (const p of ps) for (const v of [p.min, p.max]) for (const pickup of ['em', 'es']) cases.push({ [p.id]: v, pickup });
   for (const pr of PRESETS) cases.push(pr.p);
@@ -360,6 +360,11 @@ test('level: a forte note peaks between 0.1 and 0.5 on every register, both pick
   for (const fs of [44100, 48000]) for (const pickup of ['em', 'es']) for (const m of [36, 48, 60, 72, 84, 96]) {
     const pk = peak(render(P({ pickup }), 0.4, [[0, 'on', m, 1]], [], fs).L);
     assert.ok(pk > 0.1 && pk < 0.5, `${fs} Hz ${pickup} ${m}: ${pk.toFixed(3)}`);
+  }
+  // past C2–C7 (Full range): A0's long reed and C8's short one speak too
+  for (const fs of [44100, 48000]) for (const pickup of ['em', 'es']) for (const m of [KEY_LO, KEY_HI]) {
+    const { L } = render(P({ pickup }), 0.4, [[0, 'on', m, 1]], [], fs), pk = peak(L);
+    assert.ok(pk > 0.05 && pk < 0.6 && L.every(Number.isFinite), `${fs} Hz ${pickup} ${m}: ${pk.toFixed(3)}`);
   }
 });
 test('level does not depend on the sample rate (44.1, 48, 96 kHz), either pickup, with or without the combo', () => {

@@ -17,7 +17,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/reeds/>
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | play (64 keys, A1–C7) |
+| `Z…/` and `Q…]` rows | play (64 keys, A1–C7; 88, A0–C8, with *Full range*) |
 | `←` `→` | octave |
 | `↑` `↓` | velocity (hammer speed, 0.1–2 m/s) |
 | `Space` | damper pedal |
@@ -48,6 +48,14 @@ note: start from the exact tip-mass root, then let the FEM, which includes J,
 correct L. Every key is within 0.01 ¢ in the model and 0.02 ¢ in the engine's
 output. The dimensions are plausible, not measured; the real instrument uses
 several reed blanks.
+
+*Full range* (under Reed and hammer, off by default) opens A0–C8, which
+no 200A had. The solder ratio carries on along the same geometric line,
+to 3.2 at A0 (a 62.5 mm reed) and 0.02 at C8 (9.7 mm), both inside what
+the *Solder mass* knob already reaches. The hammer stays A1's
+below A1 and C7's above C7. Through the amplifier's small speakers A0 is
+some 12 dB quieter than A1 (direct, 3 dB), and C8 rings for about a
+quarter of a second.
 
 | key | f₁ (Hz) | length (mm) | solder (mg) | M / tongue | modes 2, 3 (× f₁) | T60 modes 1, 2 (s) | hammer (g) | contact, ff (ms) | tip swing, ff (mm) |
 |---|---|---|---|---|---|---|---|---|---|

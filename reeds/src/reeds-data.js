@@ -9,7 +9,8 @@
 import { SLOT_GEOM } from './slot-field.js';
 
 export { SLOT_GEOM };
-export const KEY_LO = 33, KEY_HI = 96; // 64 keys, A1–C7
+export const KEY_LO = 33, KEY_HI = 96; // the 200A's 64 keys, A1–C7: the compass
+export const KEY_MIN = 21, KEY_MAX = 108; // with the full range open
 export const STEEL = { E: 2.0e11, rho: 7850 };          // spring steel
 export const REED = { h: SLOT_GEOM.h, b: SLOT_GEOM.b }; // tongue thickness and width (all keys)
 // Pickup: the reed reaches ell into its slot; C0 = everything on the comb's

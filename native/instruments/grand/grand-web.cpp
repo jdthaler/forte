@@ -53,7 +53,7 @@ extern "C" {
 // board, when P mounts the strings on one, is P's. Returns the packed model; grand_packed() its length.
 FORTE_EXPORT double *grand_key_model(const double *P, int key, double fs) {
   const ModelParams M = modelParams(P);
-  key = std::min(KEY_HI, std::max(KEY_LO, key));
+  key = std::min(KEY_MAX, std::max(KEY_MIN, key));
   return pack(keyModel(key, M, M.mount == mount_::board ? &cachedBoard(M.boardH) : nullptr, fs));
 }
 FORTE_EXPORT int grand_packed() { return (int)packed.size(); }

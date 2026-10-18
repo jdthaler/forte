@@ -20,7 +20,7 @@ namespace {
 struct Cached { int key = -1; uint64_t version = 0; KeyModel model; };
 const KeyModel &cachedModel(int key, double solder, double strike, double hardness, double fs) {
   static Cached c;
-  key = std::min(KEY_HI, std::max(KEY_LO, key));
+  key = std::min(KEY_MAX, std::max(KEY_MIN, key));
   const uint64_t v = reedVersion(solder, strike, hardness, fs);
   if (c.key != key || c.version != v) { c.model = keyModel(key, solder, strike, hardness, fs); c.key = key; c.version = v; }
   return c.model;

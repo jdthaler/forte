@@ -16,7 +16,7 @@
 namespace forte::reeds {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { solder, strike, hardness, offset, gap, bias, rbias, drive, tremDepth, tremRate, output, room, volume, count };
+enum : int { solder, strike, hardness, fullRange, offset, gap, bias, rbias, drive, tremDepth, tremRate, output, room, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -39,6 +39,7 @@ inline const ParamInfo kParams[p::count] = {
   {"solder", "Solder mass", "Reed and hammer", ParamKind::continuous, 0.05, 5, 1, 0, true, false, nullptr, 0, kFormat_solder, 1},
   {"strike", "Strike point", "Reed and hammer", ParamKind::continuous, 0.1, 0.9, 0.4, 0.005, false, false, nullptr, 0, kFormat_strike, 1},
   {"hardness", "Hammer felt hardness", "Reed and hammer", ParamKind::continuous, 0.1, 10, 1, 0, true, false, nullptr, 0, kFormat_hardness, 1},
+  {"fullRange", "Full range (A0–C8)", "Reed and hammer", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"offset", "Reed height in the slot", "Electrostatic pickup", ParamKind::continuous, -2, 2, 0.3, 0.01, false, false, nullptr, 0, kFormat_offset, 1},
   {"gap", "Gap to the comb", "Electrostatic pickup", ParamKind::continuous, 0.1, 1.5, 0.3, 0, true, false, nullptr, 0, kFormat_gap, 1},
   {"bias", "Comb voltage", "Electrostatic pickup", ParamKind::continuous, 10, 600, 150, 0, true, false, nullptr, 0, kFormat_bias, 1},
@@ -83,7 +84,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 9,
     .keep = kKeep, .keepCount = 2,
-    .keyLo = 33, .keyHi = 96, .space = Space::sustain,
+    .keyLo = 21, .keyHi = 108, .compassLo = 33, .compassHi = 96, .compass = p::fullRange, .space = Space::sustain,
     .modWheel = -1, .modWheelMax = 0,
     .controllers = kControllers, .controllerCount = 0,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .tone = -1, .trimDb = -1},

@@ -258,8 +258,8 @@ void ClavierEngine::pressure(double value, int key) {
 void ClavierEngine::bend(double value) { bendNow = std::max(0.0, std::min(1.0, value)); }
 
 void ClavierEngine::noteOn(int key, double velocity) {
-  if (!hasParams || key < LO || key > HI) return;
-  Voice *v = byKey[key - LO];
+  if (!hasParams || key < KEY_MIN || key > KEY_MAX) return;
+  Voice *v = byKey[key - KEY_MIN];
   if (!v || v->dead || v->killing || v->version != version) {
     if (v && !v->dead) { v->down = false; v->thrown = false; } // release()
     // a free slot of the pool; when every one holds a string (sixty-odd at once), the faintest of
@@ -279,7 +279,7 @@ void ClavierEngine::noteOn(int key, double velocity) {
           if (sc < score) { score = sc; pos = i; }
         }
       Voice *gone = voices[pos];
-      if (byKey[gone->key - LO] == gone) byKey[gone->key - LO] = nullptr;
+      if (byKey[gone->key - KEY_MIN] == gone) byKey[gone->key - KEY_MIN] = nullptr;
       std::copy(voices.begin() + pos + 1, voices.begin() + nVoices, voices.begin() + pos);
       nVoices--;
       slot = (int)(gone - pool.get());
@@ -287,7 +287,7 @@ void ClavierEngine::noteOn(int key, double velocity) {
     v = &pool[slot];
     init(*v, key);
     voices[nVoices++] = v;
-    byKey[key - LO] = v;
+    byKey[key - KEY_MIN] = v;
   }
   v->pressure = chanPressure;
   // strike: the tangent flies at the key's speed until it meets the string
@@ -305,8 +305,8 @@ void ClavierEngine::noteOn(int key, double velocity) {
 }
 
 void ClavierEngine::noteOff(int key, double) {
-  if (key < LO || key > HI) return;
-  if (Voice *v = byKey[key - LO]) { v->down = false; v->thrown = false; }
+  if (key < KEY_MIN || key > KEY_MAX) return;
+  if (Voice *v = byKey[key - KEY_MIN]) { v->down = false; v->thrown = false; }
 }
 
 void ClavierEngine::allNotesOff() { for (int i = 0; i < nVoices; i++) voices[i]->killing = true; }
@@ -326,7 +326,7 @@ void ClavierEngine::block(float *L, float *R, int n) {
   int j = 0;
   for (int i = 0; i < nVoices; i++) {
     Voice *v = voices[i];
-    if (v->dead) { if (byKey[v->key - LO] == v) byKey[v->key - LO] = nullptr; }
+    if (v->dead) { if (byKey[v->key - KEY_MIN] == v) byKey[v->key - KEY_MIN] = nullptr; }
     else voices[j++] = v;
   }
   nVoices = j;

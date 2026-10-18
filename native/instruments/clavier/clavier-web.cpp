@@ -69,7 +69,7 @@ FORTE_EXPORT int clavier_released_freqs(int key, const double *P, int count, dou
 // felt's engagement.
 FORTE_EXPORT int clavier_voices(ClavierEngine *e) { return e->nVoices; }
 FORTE_EXPORT Voice *clavier_voice(ClavierEngine *e, int i) { return i >= 0 && i < e->nVoices ? e->voices[i] : nullptr; }
-FORTE_EXPORT Voice *clavier_by_key(ClavierEngine *e, int key) { return key >= LO && key <= HI ? e->byKey[key - LO] : nullptr; }
+FORTE_EXPORT Voice *clavier_by_key(ClavierEngine *e, int key) { return key >= KEY_MIN && key <= KEY_MAX ? e->byKey[key - KEY_MIN] : nullptr; }
 FORTE_EXPORT double clavier_mute_level(ClavierEngine *e) { return e->muteLevel; }
 FORTE_EXPORT void clavier_set_mute_level(ClavierEngine *e, double x) { e->muteLevel = x; }
 FORTE_EXPORT double clavier_voice_get(Voice *v, int f) {
