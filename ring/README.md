@@ -55,7 +55,10 @@ passes closer to it: to first order its signal is the pulse train times
 (Shafer 1990). **Two buttons** put the left and right electrodes on the two
 channels; the betatron oscillation moves between them. **Difference** is
 left minus right, which is what an accelerator's position monitor reads: only
-the oscillation.
+the oscillation. Like a position monitor, its gain is set to the beam it
+watches: the difference is read in units of the injected oscillation (beam
+size times kick, at least one σ), so every note starts at the same height
+whatever the kick and the beam size, near the other pickups' loudness.
 
 ### 2. Betatron oscillation and its sidebands
 
@@ -152,7 +155,7 @@ ring/src/ring-params.js               parameters and presets
 ring/src/ring-main.js                 page wiring and views
 ring/src/ring-wasm.js                 the engine and model, the C++ as WebAssembly (ring/wasm/ring.wasm)
 native/instruments/ring/              the physics in C++: model, engine, generated tables, reference (plugins and WebAssembly)
-test/ring-tests.mjs                   node test/ring-tests.mjs (18 tests, about 2 s)
+test/ring-tests.mjs                   node test/ring-tests.mjs (19 tests, about 2 s)
 tools/render-ring.mjs                 node tools/render-ring.mjs → examples/ring/
 ```
 

@@ -2,6 +2,7 @@
 
 #include "ring-engine.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include "forte/dsp.h"
@@ -9,6 +10,11 @@
 namespace forte::ring {
 
 constexpr double OUT = 0.03;
+// The difference signal is read in units of the injected oscillation, as a position monitor's gain
+// is set to the beam it watches: 2x̄/b over the beam size times the kick (at least one σ). It then
+// starts every note at the same height, whatever the kick and the beam size, and this brings it to
+// the other pickups' loudness while its first, fully coherent turns stay under the limiter.
+constexpr double DELTA = 2.0;
 constexpr double AHEAD = 2;         // turns: a pulse is queued this long before it arrives
 constexpr double REACH = 6;         // a pulse is computed out to ±6 of its σ
 constexpr double PRESS_TIME = 0.02; // s: a key's pressure is followed with this time constant
@@ -87,6 +93,7 @@ void StorageRingEngine::process(float *L, float *R, int n) {
   const int mode = (int)P[p::pickup]; // 0: two buttons, 1: one button, 2: their difference
   const double a = std::exp((-TAU * P[p::cutoff]) / fs);
   for (Voice &v : voices) {
+    const double dg = mode == 2 ? DELTA / (P[p::size] * std::max(v.Z, 1.0)) : 1;
     for (int i = 0; i < n; i++) {
       const double t = v.t;
       while (t >= v.next - AHEAD * v.T) v.schedule(P.data(), fs);
@@ -96,7 +103,7 @@ void StorageRingEngine::process(float *L, float *R, int n) {
         const double u = t - v.pt[k];
         if (u > -v.pr[k] && u < v.pr[k]) { const double g = v.pw[k] * std::exp(-u * u * v.pk[k]); s += g; dsum += g * v.pd[k]; }
       }
-      const double xl = mode == 2 ? 2 * dsum : s + dsum, xr = mode == 0 ? s - dsum : xl;
+      const double xl = mode == 2 ? dg * dsum : s + dsum, xr = mode == 0 ? s - dsum : xl;
       v.hl1 = a * (v.hl1 + xl - v.hl0); v.hl0 = xl;
       v.hr1 = a * (v.hr1 + xr - v.hr0); v.hr0 = xr;
       L[i] = (float)(L[i] + OUT * v.hl1); // a Float32Array's +=
