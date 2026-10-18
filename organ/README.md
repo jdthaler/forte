@@ -55,7 +55,36 @@ Two consequences you can hear in `examples/organ/04-tuning-real-gears-then-ideal
   4th (1318.4 Hz) at 10.7 Hz, the way an acoustic instrument's would.
 
 The top drawbars fold back an octave once they run out of wheels (above F♯5
-for the 1′), shown in red in the table.
+for the 1′), shown in red in the table. So does the 16′ in the bottom octave:
+wheels 1–12 belong to the pedals, so C2–B2 take their 16′ from the 8′'s
+wheels, through a high-resistance wire that keeps it soft.
+
+**The wheels' levels, filters and waveform** (*Levels* B-3; *Flat* turns all
+of it off). Each wheel's magnet and coil are matched to its place, and the
+output falls about 18 dB from wheel 13 to wheel 91, following measured B-3
+and C-3 levels. Above wheel 43 each pickup feeds a filter as well: wheels 44–48
+a reactor (a gentle first-order low-pass at 1.5× the wheel's frequency) and
+wheels 49–91 a capacitor that tunes the coil to the wheel's own frequency
+(Q ≈ 3). The filter strips the wheel's harmonics and most of the crosstalk
+from its compartment partner four octaves up. *Filter capacitor drift*
+detunes these filters as the old wax capacitors' values creep up, so the
+treble wheels go quieter and duller.
+
+The waveform is computed from the tooth and the pickup. The flux through the
+pole piece goes as 1/(1 − ε cos φ), with ε set by how deep the teeth are cut
+(*Tooth relief*, as a share of the 0.25 mm air gap) and fading as
+e^(−2π·gap/λ) with the tooth pitch λ. So the voltage carries a 2nd harmonic
+of 2β and a 3rd of 3β², β = (1 − √(1 − ε²))/ε: about −25 dB on the coarse
+bass wheels and almost a pure sine on the fine treble ones, before the
+filters take what is left.
+
+**Key scaling.** Every contact feeds its busbar through a resistance wire
+of one of six gauges (10.5 Ω to 103.5 Ω), chosen per key and drawbar at the
+factory, from the measured wiring of a B-3. A wheel's share of the busbar goes
+as 1/R, so the upper drawbars are wired loud in the bass and taper off by
+10–20 dB in the treble, while the 8′ stays within a few dB across the
+keyboard. The table's *level* column shows each tone's level through its
+wire, relative to C4's 8′.
 
 **Contacts and busbars.** Each key closes nine spring contacts onto nine
 busbars, at slightly different points of its travel, with a little bounce.
@@ -63,9 +92,10 @@ Each contact connects a wheel that is already spinning, so the waveform
 steps from zero to its instantaneous value. That step is the key click. A
 faster key press (MIDI velocity) closes the contacts closer together.
 "Contact softness" ramps the connection, which acts like a click filter.
-The busbars are loaded. By Millman's theorem, n wheels of source resistance
-R_s on one busbar, loaded by R_L, give Σv·(1 + λ)/(1 + λn) with
-λ = R_L/R_s (the *Busbar loading* slider). The larger λ, the more the keys
+The busbars are loaded. By Millman's theorem, wheels feeding one busbar
+through wires of resistance R_s/t (t = 1 for the reference wire, 23.8 Ω),
+loaded by R_L, give Σt·v·(1 + λ)/(1 + λΣt) with λ = R_L/R_s (the *Busbar
+loading* slider). The larger λ, the more the keys
 average instead of adding, so each extra key on a busbar adds less than the
 last and full chords compress.
 
@@ -100,6 +130,13 @@ keeps its level, so more drive compresses the dynamics rather than making
 everything louder, and the output is bounded: ten keys with every drawbar
 out, at full drive, peak at 0.37. The expression pedal sits before it, so
 it changes the grit as well as the volume.
+
+**The swell pedal.** The AO-28 preamp's expression control is a vane
+between two capacitor plates: open, the signal passes whole; shut, only a
+low-passed share (about −25 dB, one pole at 250 Hz) gets through. So the
+pedal turns the treble down by up to 40 dB but the bass by only about 25,
+and a shut pedal sounds dark and bass-heavy, as on the real organ. The pedal
+moves in two smoothing stages, so it never clicks.
 
 Live controls (expression, drive, crossover, balance, reflections, busbar
 loading) glide to a new setting over about 15 ms, as a pot or pedal would,
@@ -148,11 +185,11 @@ tools/render-organ.mjs           node tools/render-organ.mjs → examples/organ/
 
 ## Not modelled (yet)
 
-The lower manual and pedals; the B-3's per-key resistance wires and wheel
-filter networks, which shape the level across the keyboard; motor "hunting";
-the preamp's frequency response; and cabinet resonances beyond one reflection.
-The tonewheel waveform is a sine plus adjustable 2nd and 3rd harmonics, not
-a computed tooth-and-pickup field.
+The lower manual and pedals; motor "hunting"; the preamp's response beyond
+the swell pedal (its tone-shaping stages and the tube's own bandwidth); the
+bottom octave's complex-tone wheels, which only the pedals use; and cabinet
+resonances beyond one reflection. The wheel levels and wire gauges are one
+organ's measurements, not an average of many.
 
 ## Prior art and references
 
@@ -202,6 +239,15 @@ patented the rotating-speaker cabinet.
   "Splitting the unit delay." *IEEE Signal Processing Magazine* 13(1),
   30–60. [doi:10.1109/79.482137](https://doi.org/10.1109/79.482137)
   (fractional delay lines, as used for the Doppler paths).
+* Zissis, K. Tonewheel generator output and key tapering measurements of
+  a B-3 and a C-3.
+  [hammond-leslie.info](https://hammond-leslie.info/KonsTGandTaperingData/)
+  (the wheel levels and resistance-wire gauges above).
+* Hammond Organ Company. *Service Manual, Models B-3, C-3, A-100*: the
+  generator's filter networks and the key contacts' tapering.
+  [B3World technical information](https://b3world.com/hammond-technical-information.html)
+* [AO-28 preamplifier](https://www.dairiki.org/HammondWiki/AO28) (HammondWiki):
+  the expression control's capacitive vane and its bass-heavy shut position.
 * Werner, K. J. & Abel, J. S. (2016). "Modal processor effects inspired by
   Hammond tonewheel organs." *Applied Sciences* 6(7), 185.
   [doi:10.3390/app6070185](https://doi.org/10.3390/app6070185)
@@ -245,7 +291,8 @@ Software and instruments:
 
 * [setBfree](https://setbfree.org/) (open source; Fredrik Kilander's
   Beatrix engine, packaged and extended by Robin Gareus and others): a DSP
-  tonewheel organ emulator with a Leslie simulation.
+  tonewheel organ emulator with a Leslie simulation, and a B-3 key-taper
+  model of its own (none of its code or tables are used here).
 * [VB3-II](https://www.genuinesoundware.com/?a=showproduct&b=44) (GSi,
   2023; first released as VB3 in 2006): a modelled 91-wheel tonewheel
   generator with virtual nine-contact keying and a rotary-speaker simulator.

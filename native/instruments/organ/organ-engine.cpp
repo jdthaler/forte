@@ -21,6 +21,13 @@ constexpr double SUPPLY_TAU = 0.03; // s: the synchronous motor following its su
 constexpr double SMOOTH_T = 0.015; // s: live gains, drive and crossover glide (no zipper noise)
 constexpr double VIB_DEPTH[7] = {0, 0.33, 0.62, 1, 0.33, 0.62, 1}; // off, V1–V3, C1–C3
 
+// The swell pedal (the AO-28's expression control): a vane moves between a plate fed by the first
+// stage and a plate fed through an RC divider, which passes the bass at SWELL_FLOOR and rolls off
+// above SWELL_CORNER. The vane picks up a mix of the two in proportion to its coupling: the
+// treble follows the pedal over 40 dB, the bass stays louder as the pedal closes (+15 dB shut,
+// none open), the loudness compensation organists describe. Both numbers are estimates.
+constexpr double SWELL_FLOOR = 0.056, SWELL_CORNER = 250;
+
 // Tube drive: a triode biased off-centre, y = n·(tanh(k·x + B0) − tanh B0). The bias B0 sits
 // outside the gain k = 15·drive², so the curve stays asymmetric (even harmonics) without turning
 // into a rectifier. n is set so a full chord (DRIVE_REF) comes out at its own level.
@@ -54,7 +61,8 @@ void Biquad::set(bool lowpass, double f, double Q, double fs) {
 Params paramsOf(const double *P) {
   Params q;
   q.tuning = (int)P[p::tuning];
-  q.mains = P[p::mains]; q.wheelHarm = P[p::wheelHarm]; q.crosstalk = P[p::crosstalk]; q.leakage = P[p::leakage];
+  q.levels = (int)P[p::levels];
+  q.mains = P[p::mains]; q.relief = P[p::relief]; q.drift = P[p::drift] / 100; q.crosstalk = P[p::crosstalk]; q.leakage = P[p::leakage];
   for (int d = 0; d < 9; d++) q.drawbars[d] = (int)P[p::drawbar1 + d];
   q.motor = P[p::motor] > 0;
   q.inertia = P[p::inertia]; q.spinUp = P[p::spinUp]; q.loading = P[p::loading];
@@ -76,7 +84,7 @@ Params paramsOf(const double *P) {
   return q;
 }
 
-OrganEngine::OrganEngine(double fs) : Engine(fs), dt(1 / fs), aSm(1 - fd::exp(-dt / SMOOTH_T)) {
+OrganEngine::OrganEngine(double fs) : Engine(fs), dt(1 / fs), swK(1 - fd::exp(-TAU * SWELL_CORNER / fs)), aSm(1 - fd::exp(-dt / SMOOTH_T)) {
   hornHz = p.hornSlow; drumHz = p.drumSlow;
   for (int w = 1; w < NW; w++) { const double ph = TAU * rand(); cr[w] = fd::cos(ph); ci[w] = fd::sin(ph); }
   for (int k = 0; k < NUM_KEYS; k++) { keys[k].key = KEY_LO + k; keys[k].idx = k; }
@@ -101,10 +109,13 @@ void OrganEngine::apply(const Params &next) {
   if (p.sections != prevSections) { std::fill(I, I + 64, 0.0); std::fill(V, V + 65, 0.0); }
   updateDerived();
   // the generator: built on the first call, rebuilt when a parameter it depends on changes
-  const double of[5] = {(double)p.tuning, p.mains, p.wheelHarm, p.crosstalk, p.leakage};
-  if (!haveGen || !std::equal(of, of + 5, genOf)) {
-    std::copy(of, of + 5, genOf);
-    buildGenerator(gen, p.tuning, p.mains, p.wheelHarm, p.crosstalk, p.leakage, fs);
+  const double of[7] = {(double)p.tuning, (double)p.levels, p.mains, p.relief, p.drift, p.crosstalk, p.leakage};
+  if (!haveGen || !std::equal(of, of + 7, genOf)) {
+    std::copy(of, of + 7, genOf);
+    GenParams q;
+    q.tuning = p.tuning; q.levels = p.levels; q.mains = p.mains; q.relief = p.relief; q.drift = p.drift;
+    q.crosstalk = p.crosstalk; q.leakage = p.leakage;
+    buildGenerator(gen, q, fs);
     haveGen = true;
     configure();
   }
@@ -114,7 +125,9 @@ void OrganEngine::apply(const Params &next) {
 
 // Targets of the parameters that glide while the organ plays.
 void OrganEngine::liveTargets() {
+  // the vane's share of the open plate (expGain, the treble's level) and of the shut one
   tPre = 0.11 * expGain;
+  tPreLo = 0.11 * (1 - expGain) * SWELL_FLOOR;
   tDrive = p.drive;
   tLam = p.loading;
   tMaster = p.master;
@@ -126,7 +139,7 @@ void OrganEngine::liveTargets() {
 
 void OrganEngine::snapLive() {
   liveTargets();
-  sPre = tPre; sDrive = tDrive; sLam = tLam; sMaster = tMaster;
+  sPre = sPre1 = tPre; sPreLo = sPreLo1 = tPreLo; sDrive = tDrive; sLam = tLam; sMaster = tMaster;
   sHornG = tHornG; sDrumG = tDrumG; sRefl = tRefl; sXo = tXo;
   driveK = 15 * sDrive * sDrive; driveN = driveNorm(driveK);
   setCrossover(sXo);
@@ -295,9 +308,10 @@ template <class T> void OrganEngine::render(T *L, T *R, int n) {
   hornHz += (tgtH - hornHz) * (1 - fd::exp(-dtb / (tgtH > hornHz ? p.hornAccel : p.hornDecel)));
   drumHz += (tgtD - drumHz) * (1 - fd::exp(-dtb / (tgtD > drumHz ? p.drumAccel : p.drumDecel)));
 
-  const double *lvl = g.level, *A2 = g.a2, *A3 = g.a3, *LK = g.leak, *XT = g.xtalk;
+  const double *lvl = g.level, *A2 = g.a2, *A3 = g.a3, *LK = g.leak, *XT = g.xtalk, *TP = g.taper;
   const int16_t *PT = g.partner, *KM = g.keyMap;
   const int16_t *percMap = p.percThird ? g.perc3 : g.perc2;
+  const double *percT = p.percThird ? g.perc3t : g.perc2t;
   const int percD = p.percThird ? 4 : 3;
   const bool harmonic = g.harmonic;
   const bool vibOn = p.vib > 0, chorus = p.vib >= 4;
@@ -312,13 +326,16 @@ template <class T> void OrganEngine::render(T *L, T *R, int n) {
   // live parameters: glide sample by sample towards their targets while gliding
   const bool glide = gliding;
   const double aS = aSm;
-  double pre = sPre, lam = sLam, master = sMaster, hornG = sHornG, drumG = sDrumG, refl = sRefl;
+  double pre = sPre, preLo = sPreLo, pre1 = sPre1, preLo1 = sPreLo1, lam = sLam, master = sMaster, hornG = sHornG, drumG = sDrumG, refl = sRefl;
   double dK = driveK, dN = driveN;
   double pk = 0;
 
   for (int s = 0; s < n; s++) {
     if (glide) {
-      pre += (tPre - pre) * aS; lam += (tLam - lam) * aS; master += (tMaster - master) * aS;
+      // the swell pedal in two stages, so its gain has no kink (a kink in a gain is a click on a
+      // bass-heavy sound)
+      pre1 += (tPre - pre1) * aS; pre += (pre1 - pre) * aS; preLo1 += (tPreLo - preLo1) * aS; preLo += (preLo1 - preLo) * aS;
+      lam += (tLam - lam) * aS; master += (tMaster - master) * aS;
       hornG += (tHornG - hornG) * aS; drumG += (tDrumG - drumG) * aS; refl += (tRefl - refl) * aS;
       if (sDrive != tDrive) {
         sDrive += (tDrive - sDrive) * aS;
@@ -364,28 +381,31 @@ template <class T> void OrganEngine::render(T *L, T *R, int n) {
           k.g[d] = gg;
         }
         if (gg > 0) {
-          double x;
-          if (harmonic && k.osc) x = k.hv[d];
-          else { const int w = KM[k.idx * 9 + d]; x = v[w] + XT[w] * v[PT[w]]; }
-          num[d] += gg * x;
-          den[d] += gg;
+          // the contact's wire: conductance t (relative to WIRE_REF's) into the busbar
+          const int w = KM[k.idx * 9 + d];
+          const double x = harmonic && k.osc ? lvl[w] * k.hv[d] : v[w] + XT[w] * v[PT[w]];
+          const double gt = gg * TP[k.idx * 9 + d];
+          num[d] += gt * x;
+          den[d] += gt;
         }
       }
       if (k.g[8] > 0 && percGain > 0) {
-        double x;
-        if (harmonic && k.osc) x = k.hv[percD];
-        else { const int w = percMap[k.idx]; x = v[w] + XT[w] * v[PT[w]]; }
-        num[9] += k.g[8] * x;
-        den[9] += k.g[8];
+        const int w = percMap[k.idx];
+        const double x = harmonic && k.osc ? lvl[w] * k.hv[percD] : v[w] + XT[w] * v[PT[w]];
+        const double gt = k.g[8] * percT[k.idx];
+        num[9] += gt * x;
+        den[9] += gt;
       }
     }
-    // busbar loading, Millman's theorem: n wheels of source resistance R_s on a busbar loaded by
-    // R_L give Σv·(1+λ)/(1+λn), λ = R_L/R_s
+    // busbar loading, Millman's theorem: wheels feeding a busbar through wires of conductance
+    // t/R_s (R_s = WIRE_REF), loaded by R_L, give Σtv·(1+λ)/(1+λΣt), λ = R_L/R_s
     double x = 0;
     for (int d = 0; d < 9; d++) if (den[d] > 0) x += dbg[d] * num[d] * (1 + lam) / (1 + lam * den[d]);
     if (den[9] > 0) x += percGain * percEnv * num[9] * (1 + lam) / (1 + lam * den[9]);
     percEnv *= percDecay;
-    x = pre * (x + leakSum);
+    x += leakSum;
+    swLp += swK * (x - swLp);
+    x = pre * x + preLo * swLp;
 
     // --- scanner vibrato: LC ladder (2× oversampled, symplectic Euler)
     if (vibOn) {
@@ -454,12 +474,12 @@ template <class T> void OrganEngine::render(T *L, T *R, int n) {
 
   // the glide: write back, and stop once everything has arrived
   if (glide) {
-    if (near(pre, tPre) && near(lam, tLam) && near(master, tMaster) && near(hornG, tHornG) && near(drumG, tDrumG)
+    if (near(pre, tPre) && near(pre1, tPre) && near(preLo, tPreLo) && near(preLo1, tPreLo) && near(lam, tLam) && near(master, tMaster) && near(hornG, tHornG) && near(drumG, tDrumG)
         && near(refl, tRefl) && sDrive == tDrive && sXo == tXo) {
-      pre = tPre; lam = tLam; master = tMaster; hornG = tHornG; drumG = tDrumG; refl = tRefl;
+      pre = pre1 = tPre; preLo = preLo1 = tPreLo; lam = tLam; master = tMaster; hornG = tHornG; drumG = tDrumG; refl = tRefl;
       gliding = false;
     }
-    sPre = pre; sLam = lam; sMaster = master; sHornG = hornG; sDrumG = drumG; sRefl = refl;
+    sPre = pre; sPreLo = preLo; sPre1 = pre1; sPreLo1 = preLo1; sLam = lam; sMaster = master; sHornG = hornG; sDrumG = drumG; sRefl = refl;
     driveK = dK; driveN = dN;
   }
 

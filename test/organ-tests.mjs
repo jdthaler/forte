@@ -8,7 +8,8 @@ import { wasmModel } from '../organ/src/organ-wasm.js';
 import { DEFAULTS } from '../organ/src/organ-params.js';
 
 const OrganEngine = await loadEngine(INSTRUMENT);
-const { gearFreq, centsOff, keyWheel, keyAnalysis, wheelSpec } = await wasmModel();
+const M = await wasmModel();
+const { gearFreq, centsOff, keyWheel, keyAnalysis, wheelSpec } = M;
 
 const FS = 48000;
 let failures = 0;
@@ -47,7 +48,7 @@ function zcTimes(x) {
   return t;
 }
 const rms = (x, a = 0, b = x.length) => { let s = 0; for (let i = a; i < b; i++) s += x[i] * x[i]; return Math.sqrt(s / (b - a)); };
-const DRY = { vib: 'off', leslieOn: false, drive: 0, leakage: -90, crosstalk: -80, wheelHarm: 0, spread: 0, bounce: 0 };
+const DRY = { vib: 'off', leslieOn: false, drive: 0, leakage: -90, crosstalk: -80, relief: 0, spread: 0, bounce: 0 };
 
 console.log('tone generator');
 test('gear ratios: A4 = 440 Hz exactly, every wheel within 0.71 ¢ of ET (2.1 ¢ for the 192-tooth wheels)', () => {
@@ -61,7 +62,7 @@ test('gear ratios: A4 = 440 Hz exactly, every wheel within 0.71 ¢ of ET (2.1 ¢
 });
 test('keys tap wheels 1–91 with foldback at the top', () => {
   assert.equal(keyWheel(36, 2), 13);   // C2 at 8′
-  assert.equal(keyWheel(36, 0), 1);    // 16′ uses the bottom wheel
+  assert.equal(keyWheel(36, 0), 13);   // the 16′ folds back in the bottom octave, as on a B-3
   assert.equal(keyWheel(96, 8), 85);   // C7 at 1′ folds back two octaves
   for (let k = 36; k <= 96; k++) for (let d = 0; d < 9; d++) { const w = keyWheel(k, d); assert.ok(w >= 1 && w <= 91); }
 });
@@ -71,6 +72,34 @@ test('drawbar "harmonics" are tempered: 1⅗′ ≈ +13.7 ¢, 2⅔′ ≈ −2 �
   assert.ok(Math.abs(a[4].cents + 1.96) < 1, `2 2/3: ${a[4].cents}`);
   const h = keyAnalysis(60, P({ tuning: 'harmonic' }));
   for (const r of h) assert.ok(Math.abs(r.cents) < 1e-9);
+});
+
+test('B-3 levels: the 8′ stays even across the keys, the upper drawbars taper off in the treble', () => {
+  const db = (k, d, levels = 'b3') => keyAnalysis(k, P({ levels }))[d].db;
+  const eight = [];
+  for (let k = 36; k <= 96; k++) eight.push(db(k, 2));
+  assert.ok(Math.max(...eight) - Math.min(...eight) < 6, `8′ spans ${Math.min(...eight).toFixed(1)} to ${Math.max(...eight).toFixed(1)} dB`);
+  // in the bass the 2⅔′ and 2′ are wired louder than the 8′; at C6 the 1′ is far below it
+  assert.ok(db(36, 4) > db(36, 2) + 6 && db(36, 5) > db(36, 2) + 6, `C2: 8′ ${db(36, 2).toFixed(1)}, 2⅔′ ${db(36, 4).toFixed(1)}, 2′ ${db(36, 5).toFixed(1)} dB`);
+  assert.ok(db(84, 8) < db(84, 2) - 12, `C6: 8′ ${db(84, 2).toFixed(1)}, 1′ ${db(84, 8).toFixed(1)} dB`);
+  // through its wire a wheel's level goes as 1/R: C2's 16′ (folded back) and 8′ are the same wheel
+  assert.ok(Math.abs(db(36, 0) - db(36, 2) - 20 * Math.log10(M.wireOhms(36, 2) / M.wireOhms(36, 0))) < 1e-9);
+  for (let k = 36; k <= 96; k += 5) for (let d = 0; d < 9; d++) assert.equal(db(k, d, 'flat'), 0);
+});
+test('generator filters: wheels 44–48 lose their harmonics gently, 49 up are tuned (Q 3)', () => {
+  const { filterGain, pickupHarmonics, wireOhms } = M;
+  assert.equal(filterGain(43, 2), 1);
+  assert.ok(Math.abs(filterGain(46, 1) - 1) < 1e-12 && filterGain(46, 2) < 0.8 && filterGain(46, 2) > 0.6);
+  assert.ok(Math.abs(filterGain(60, 2) - 1 / Math.hypot(1, 3 * 1.5)) < 1e-12);
+  assert.ok(Math.abs(20 * Math.log10(filterGain(60, 16))) > 30, 'the partner four octaves up is filtered off');
+  assert.ok(filterGain(60, 1, 0.6) < 0.6, 'drifted capacitors detune the filter, so the wheel is quieter');
+  // the pickup: flux ∝ 1/(1 − ε cos φ), so h2 = 2β, h3 = 3β², β = (1 − √(1 − ε²))/ε
+  const { h2, h3 } = pickupHarmonics(13, 0.06);
+  const lam = (Math.PI * 0.0508) / wheelSpec(13).teeth, eps = 0.06 * Math.exp((-2 * Math.PI * 0.25e-3) / lam), beta = (1 - Math.sqrt(1 - eps * eps)) / eps;
+  assert.ok(Math.abs(h2 - 2 * beta) < 1e-12 && Math.abs(h3 - 3 * beta * beta) < 1e-12, `h2 ${h2}, h3 ${h3}`);
+  assert.ok(pickupHarmonics(91, 0.06).h2 < h2 / 4, 'fine teeth sit further off the pickup, so their tone is purer');
+  assert.equal(pickupHarmonics(13, 0).h2, 0);
+  assert.equal(wireOhms(36, 4), 10.5);
 });
 
 console.log('engine');
@@ -196,8 +225,10 @@ test('Leslie: the horn cannot sweep through the mics', () => {
   assert.ok(pk < 1 && crest < 20, `peak ${pk.toFixed(2)}, crest ${crest.toFixed(1)} dB`);
 });
 test('expression pedal glides: a 2 dB step makes no click', () => {
-  const e = engine(P({ ...DRY, drawbars: [8, 8, 8, 0, 0, 0, 0, 0, 0] }));
-  for (const k of [60, 64, 67]) e.noteOn(k);
+  // a treble chord: the pedal's 2 dB is the open plate's, and the shut plate's low-passed share
+  // (the bass the swell keeps) is too small up here to change it
+  const e = engine(P({ ...DRY, drawbars: [0, 0, 8, 8, 0, 0, 0, 0, 0] }));
+  for (const k of [79, 84, 88]) e.noteOn(k);
   const { L } = run(e, 0.6, (t) => { if (t >= 0.3 && e.p.expression !== 0.8) e.setParams({ expression: 0.8 }); });
   const d3 = (i) => L[i] - 3 * L[i - 1] + 3 * L[i - 2] - L[i - 3];
   const S = (t) => Math.round(t * FS);
@@ -207,6 +238,30 @@ test('expression pedal glides: a 2 dB step makes no click', () => {
   assert.ok(pk < 2 * pk0, `spike ${(pk / Math.sqrt(ref / c)).toFixed(1)}× RMS, background peaks ${(pk0 / Math.sqrt(ref / c)).toFixed(1)}×`);
   const lv = (a, b) => 20 * Math.log10(rms(L, S(a), S(b)));
   assert.ok(Math.abs(lv(0.5, 0.6) - lv(0.15, 0.25) + 2) < 0.2, 'the level still drops 2 dB');
+});
+test('swell pedal: shut, the bass stays about 14 dB louder than the treble (the AO-28’s shut plate)', () => {
+  const level = (key, expression) => {
+    const e = engine(P({ ...DRY, drawbars: [0, 0, 8, 0, 0, 0, 0, 0, 0], expression }));
+    e.noteOn(key);
+    const { L } = run(e, 0.4);
+    return 20 * Math.log10(rms(L, 9600));
+  };
+  const bass = level(36, 0) - level(36, 1), treble = level(96, 0) - level(96, 1);
+  console.log(`        shut re open: C2 ${bass.toFixed(1)} dB, C7 ${treble.toFixed(1)} dB`);
+  assert.ok(bass - treble > 11 && bass - treble < 17 && treble < -35, `C2 ${bass.toFixed(1)}, C7 ${treble.toFixed(1)} dB`);
+});
+test('the pickup’s waveform: the second harmonic is 2β of the fundamental', () => {
+  const h2 = (relief) => {
+    const e = engine(P({ ...DRY, drawbars: [0, 0, 8, 0, 0, 0, 0, 0, 0], relief, expression: 1 }));
+    e.noteOn(48); // C3 at 8′: wheel 25, a shunt-fed wheel with no filter
+    const { L } = run(e, 0.6);
+    const f = keyAnalysis(48, e.p)[2].actual;
+    const g = (fr) => { let re = 0, im = 0; for (let i = 9600; i < 28800; i++) { const w = 0.5 - 0.5 * Math.cos((2 * Math.PI * (i - 9600)) / 19199); re += w * L[i] * Math.cos((2 * Math.PI * fr * i) / FS); im += w * L[i] * Math.sin((2 * Math.PI * fr * i) / FS); } return Math.hypot(re, im); };
+    return g(2 * f) / g(f);
+  };
+  const want = M.pickupHarmonics(25, 0.2).h2, got = h2(0.2);
+  assert.ok(Math.abs(20 * Math.log10(got / want)) < 1, `H2 ${(20 * Math.log10(got)).toFixed(1)} dB, 2β ${(20 * Math.log10(want)).toFixed(1)} dB`);
+  assert.ok(h2(0) < want / 30, 'no relief, a sine');
 });
 test('process() builds no per-block key lists', () => {
   const e = engine(P());
@@ -225,7 +280,7 @@ test('process() builds no per-block key lists', () => {
 test('stable and finite across extreme settings', () => {
   const cases = [
     P({ drawbars: [8, 8, 8, 8, 8, 8, 8, 8, 8], vib: 'C3', leslie: 'fast', drive: 1, sections: 40, sectionDelay: 15 }),
-    P({ drawbars: [8, 8, 8, 8, 8, 8, 8, 8, 8], tuning: 'harmonic', vib: 'V1', loading: 2, percOn: true, crosstalk: -20, leakage: -40, wheelHarm: 3 }),
+    P({ drawbars: [8, 8, 8, 8, 8, 8, 8, 8, 8], tuning: 'harmonic', vib: 'V1', loading: 2, percOn: true, crosstalk: -20, leakage: -40, relief: 0.6, drift: 60 }),
     P({ mains: 45, sections: 4, sectionDelay: 150, hornRadius: 0.35, micDist: 0.3, reflections: 0.9, balance: 1 }),
   ];
   for (const c of cases) {

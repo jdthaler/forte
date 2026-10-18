@@ -41,9 +41,9 @@ TEST("organ: the gears put A4 at 440 Hz and every wheel within 0.71 ¢ (2.1 ¢ o
   CHECK(gearFreq(46) == 440);
   for (int w = 1; w <= 84; w++) CHECK(std::fabs(centsOff(w)) < 0.71);
   for (int w = 85; w <= NUM_WHEELS; w++) CHECK(wheelSpec(w).teeth == 192 && std::fabs(centsOff(w)) < 2.1);
-  CHECK(keyWheel(36, 2) == 13 && keyWheel(36, 0) == 1 && keyWheel(96, 8) == 85);
+  CHECK(keyWheel(36, 2) == 13 && keyWheel(36, 0) == 13 && keyWheel(96, 8) == 85);
   Analysis a[9];
-  keyAnalysis(60, gears, 60, a);
+  keyAnalysis(60, gears, b3, 60, a);
   CHECK(std::fabs(a[6].cents - 13.7) < 1 && std::fabs(a[4].cents + 1.96) < 1);
 }
 
@@ -61,7 +61,7 @@ TEST("organ: plays what the JavaScript plays, to the last bit (a chord; harmonic
     e->setParams(P.data());
     for (int k : {48, 55, 64}) e->noteOn(k, 0.8);
     const Render r = render(*e, 9600, [](int) {});
-    CHECK(r.sum == 91.403127946339694 && r.lastL == 0.00607270654f && r.lastR == 0.0798079371f && e->peak == 0.079807937622808425);
+    CHECK(r.sum == 106.22389612882775 && r.lastL == 0.0204630718f && r.lastR == 0.0989407226f && e->peak == 0.098940723281059198);
   }
   {
     auto e = std::make_unique<OrganEngine>(44100);
@@ -75,7 +75,7 @@ TEST("organ: plays what the JavaScript plays, to the last bit (a chord; harmonic
       if (s == 3200) { e->noteOff(60, -1); P[p::mains] = 50; P[p::expression] = 0.5; e->setParams(P.data()); }
       if (s == 6400) { P[p::motor] = 0; P[p::crossover] = 1200; e->setParams(P.data()); }
     });
-    CHECK(r.sum == 59.960468741371010 && r.lastL == 0.00854628813f && r.lastR == 0.0208018459f && e->peak == 0.020801846486066259);
+    CHECK(r.sum == 101.82780215602965 && r.lastL == 0.00478495425f && r.lastR == 0.0175445154f && e->peak == 0.017544516231162391);
   }
 }
 
@@ -83,7 +83,7 @@ TEST("organ: one key, 8' only, plays its wheel; the keys retire when let go") {
   auto e = std::make_unique<OrganEngine>(48000);
   auto P = defaults();
   P[p::vib] = vib_::off; P[p::leslie] = leslie_::bypass; P[p::drive] = 0; P[p::leakage] = -90; P[p::crosstalk] = -80;
-  P[p::wheelHarm] = 0; P[p::spread] = 0; P[p::bounce] = 0;
+  P[p::relief] = 0; P[p::spread] = 0; P[p::bounce] = 0;
   for (int d = 0; d < 9; d++) P[p::drawbar1 + d] = d == 2 ? 8 : 0;
   e->setParams(P.data());
   e->noteOn(69, 100 / 127.0);
@@ -102,7 +102,7 @@ TEST("organ: pitch bend moves the supply frequency: the whole organ, two semiton
   auto e = std::make_unique<OrganEngine>(48000);
   auto P = defaults();
   P[p::vib] = vib_::off; P[p::leslie] = leslie_::bypass; P[p::drive] = 0; P[p::leakage] = -90; P[p::crosstalk] = -80;
-  P[p::wheelHarm] = 0; P[p::spread] = 0; P[p::bounce] = 0;
+  P[p::relief] = 0; P[p::spread] = 0; P[p::bounce] = 0;
   for (int d = 0; d < 9; d++) P[p::drawbar1 + d] = d == 2 ? 8 : 0;
   e->setParams(P.data());
   e->noteOn(69, 100 / 127.0);
