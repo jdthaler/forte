@@ -452,13 +452,14 @@ function refreshFocus() {
   const rows = keyAnalysis(focusKey, P);
   $('#focus-name').textContent = noteName(focusKey);
   $('#focus-name2').textContent = noteName(focusKey);
+  const fmtDb = (x) => `${x > 0.05 ? '+' : x < -0.05 ? '−' : ''}${Math.abs(x).toFixed(1)} dB`;
   const fmtC = (c) => (Math.abs(c) < 0.005 ? '0.00' : `${c > 0 ? '+' : ''}${c.toFixed(2)}`);
-  $('#analysis').innerHTML = '<tr><th>drawbar</th><th>wheel</th><th>plays (Hz)</th><th>harmonic (Hz)</th><th>Δ cents</th></tr>'
+  $('#analysis').innerHTML = '<tr><th>drawbar</th><th>wheel</th><th>plays (Hz)</th><th>harmonic (Hz)</th><th>Δ cents</th><th title="the wheel’s level through the key’s taper wire, re C4 at 8′">level</th></tr>'
     + rows.map((r) => {
       const off = P.drawbars[r.d] === 0 || (r.d === 8 && P.percOn);
       const cls = r.folded ? 'fold' : r.cents > 0.005 ? 'pos' : r.cents < -0.005 ? 'neg' : '';
       const cents = r.folded ? `${fmtC(r.cents)} (folded)` : fmtC(r.cents);
-      return `<tr class="${off ? 'off' : ''}"><td>${r.name}</td><td>${P.tuning === 'harmonic' ? '—' : `#${r.w}`}</td><td>${r.actual.toFixed(2)}</td><td>${r.ideal.toFixed(2)}</td><td class="${cls}">${cents}</td></tr>`;
+      return `<tr class="${off ? 'off' : ''}"><td>${r.name}</td><td>${P.tuning === 'harmonic' ? '—' : `#${r.w}`}</td><td>${r.actual.toFixed(2)}</td><td>${r.ideal.toFixed(2)}</td><td class="${cls}">${cents}</td><td>${fmtDb(r.db)}</td></tr>`;
     }).join('');
   output.focus = rows.map((r) => ({
     actual: r.actual, ideal: r.ideal, color: BAR_COLORS[DRAWBARS[r.d].color],

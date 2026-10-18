@@ -3,7 +3,7 @@
 //
 //   motor ─▶ 91 tonewheels ─▶ key contacts ─▶ 9 busbars ─▶ drawbars ─┐
 //                        └─▶ percussion (1' contacts, single-trigger) ┤
-//     preamp (expression) ─▶ scanner vibrato (LC delay line) ─▶ tube drive + coupling capacitor
+//     preamp (swell pedal) ─▶ scanner vibrato (LC delay line) ─▶ tube drive + coupling capacitor
 //       ─▶ Leslie: crossover ─▶ rotating horn + drum (Doppler, directivity,
 //                                cabinet reflection) ─▶ two microphones
 //
@@ -34,7 +34,8 @@ constexpr int MAX_EVENTS = 9 * 17; // per key: each contact closes, and bounces 
 // The engine's parameters, p: the console's as the page's P has them
 struct Params {
   int tuning = gears;
-  double mains = 60, wheelHarm = 0.4, crosstalk = -48, leakage = -70;
+  int levels = b3;
+  double mains = 60, relief = 0.06, drift = 0, crosstalk = -48, leakage = -70;
   int drawbars[9] = {8, 8, 8, 0, 0, 0, 0, 0, 0};
   bool motor = true;
   double inertia = 6, spinUp = 1.2, loading = 0.25;
@@ -135,7 +136,7 @@ class OrganEngine : public Engine {
   // generator (built by the first setParams)
   Generator gen;
   bool haveGen = false;
-  double genOf[5] = {}; // the 'gen' parameters it was built from: tuning, mains, wheelHarm, crosstalk, leakage
+  double genOf[7] = {}; // the 'gen' parameters it was built from: tuning, levels, mains, relief, drift, crosstalk, leakage
   double cr[NW] = {}, ci[NW] = {}, rc[NW] = {}, rs[NW] = {}, v[NW] = {};
 
   // keys and busbars (keyArr: the sounding keys, in the order they came)
@@ -148,6 +149,9 @@ class OrganEngine : public Engine {
   // derived from the parameters
   double alphaC = 1, percDecay = 0, dbg[9] = {}, percGain = 0, expGain = 1;
   double lcTau = 0, lcK = 0;
+
+  // the swell pedal's shut side: a low-passed copy of the signal (swLp, one pole at SWELL_CORNER)
+  double swK = 0, swLp = 0;
 
   // scanner vibrato: LC ladder, normalised to Z0 = 1 (so L = C = τ per section)
   double I[64] = {}, V[65] = {};
@@ -164,8 +168,8 @@ class OrganEngine : public Engine {
   // live parameters that glide (targets t…, smoothed s…)
   double aSm;
   bool gliding = false;
-  double tPre = 0, tDrive = 0, tLam = 0, tMaster = 0, tHornG = 0, tDrumG = 0, tRefl = 0, tXo = 0;
-  double sPre = 0, sDrive = 0, sLam = 0, sMaster = 0, sHornG = 0, sDrumG = 0, sRefl = 0, sXo = 0;
+  double tPre = 0, tPreLo = 0, tDrive = 0, tLam = 0, tMaster = 0, tHornG = 0, tDrumG = 0, tRefl = 0, tXo = 0;
+  double sPre = 0, sPreLo = 0, sPre1 = 0, sPreLo1 = 0, sDrive = 0, sLam = 0, sMaster = 0, sHornG = 0, sDrumG = 0, sRefl = 0, sXo = 0;
   double driveK = 0, driveN = 0;
 };
 
