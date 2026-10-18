@@ -1,0 +1,20 @@
+forte huygens 0.6.0
+kick 0
+rSrc 150000
+pitchHold 1
+tuning 0
+tonic 0
+mistune 0
+drift 0
+driftRate 0.25
+vNom 150
+vStrike 90
+vExt 60
+attack 0.0040000000000000001
+release 0.029999999999999999
+tone 2500
+body 0.5
+room 0.29999999999999999
+width 0.5
+volume 0.69999999999999996
+preset 10

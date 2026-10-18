@@ -141,6 +141,10 @@ function versionsAt(ref) {
 export function checkPr(base, head = 'HEAD', warnings = []) {
   const target = base.replace(/^origin\//, '');
   const errors = [];
+  // A pull request that brings a release from live back into main (CLAUDE.md) carries live's
+  // versions and changelog: only what it adds beyond live is checked.
+  const isAncestor = (a, b) => { try { git('merge-base', '--is-ancestor', a, b); return true; } catch { return false; } };
+  if (target !== 'live' && isAncestor('origin/live', head) && !isAncestor('origin/live', base)) base = 'origin/live';
   const files = git('diff', '--name-only', `${base}...${head}`).split('\n').filter(Boolean);
   const notes = git('ls-tree', '--name-only', `${head}:changes`).split('\n').filter((f) => f.endsWith('.md') && f !== 'README.md');
   if (target === 'live') {
