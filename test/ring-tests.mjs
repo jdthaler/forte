@@ -203,6 +203,13 @@ test('output level is sane in every preset (peak 0.02 – 1.2, no NaN)', () => {
     assert.ok(pk > 0.02 && pk < 1.2, `${pr.name}: peak ${pk}`);
   }
 });
+test('the difference signal is in units of the kick: as loud whatever the kick and beam size, near the other pickups, and under the limiter', () => {
+  const peak = (o) => { let pk = 0; for (const x of note(60, P(o), 0.3, 1)) for (const v of x) pk = Math.max(pk, Math.abs(v)); return pk; };
+  const d = peak({ pickup: 'delta' }), pair = peak({});
+  for (const o of [{ kick: 1.5 }, { kick: 6 }, { size: 0.02 }, { size: 0.25 }]) assert.ok(Math.abs(db(peak({ pickup: 'delta', ...o }) / d)) < 1, `${JSON.stringify(o)}: ${db(peak({ pickup: 'delta', ...o }) / d).toFixed(1)} dB`);
+  assert.ok(db(d / pair) > 0 && db(d / pair) < 8, `difference ${db(d / pair).toFixed(1)} dB against two buttons`);
+  assert.ok(d * DEFAULTS.volume < 0.71, `peak ${d}: into the limiter (−3 dB)`);
+});
 test('CPU: ten rings render far faster than real time', () => {
   const e = new StorageRingEngine(FS); e.setParams(P({ bunch: 0.15 }));
   for (let k = 40; k < 90; k += 5) e.noteOn(k, 0.8);
