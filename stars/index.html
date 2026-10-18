@@ -62,6 +62,11 @@
           <canvas id="spectrum"></canvas>
           <div class="caption">Bars: each mode’s power now (the engine’s), coloured by degree l, under the model’s Gaussian envelope around ν_max (dashed); line: the live output. The bars rise and fall at random: convection drives every mode, and each forgets within its lifetime 1/(πΓ).</div>
         </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · the star’s band, in μHz · ticks: its modes, coloured by degree</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">Hold a key and every mode flickers on its own: convection kicks it at random and it swells and fades within its lifetime, so the lines come and go like a breathing comb. Let go and each one rings down at its own linewidth; a δ Scuti star holds its few lines steady.</div>
+        </div>
         <div class="card" data-view="The track">
           <div class="card-head"><h2>The track</h2><span class="muted" id="hr-read"></span></div>
           <canvas id="hr"></canvas>

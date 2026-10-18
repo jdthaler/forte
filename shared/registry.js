@@ -14,7 +14,7 @@
 // `plugin.ready` marks an instrument whose native port is built and released as plugins (it has
 // a native/instruments/<id>/ folder); the landing page lists those under Plugins.
 
-export const FORTE_VERSION = '0.32.0';
+export const FORTE_VERSION = '0.33.0';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
@@ -45,7 +45,7 @@ export const INSTRUMENTS = [
     accent: '#f4d39b',
   },
   {
-    id: 'pipes', name: 'Pipe Organ', section: 'traditional', ready: true, version: '0.4.0', trim: 2,
+    id: 'pipes', name: 'Pipe Organ', section: 'traditional', ready: true, version: '0.5.0', trim: 2,
     plugin: { code: 'Pipe', ready: true },
     after: 'the Baroque pipe organ',
     tagline: 'Air jets flutter against the pipe mouths: each note starts with a chiff, overblows when pushed, and sags when the wind runs short.',
@@ -53,7 +53,7 @@ export const INSTRUMENTS = [
     accent: '#9fb4ff',
   },
   {
-    id: 'harmonium', name: 'Free-Reed Organ', section: 'traditional', ready: true, version: '0.4.0', trim: -7,
+    id: 'harmonium', name: 'Free-Reed Organ', section: 'traditional', ready: true, version: '0.5.0', trim: -7,
     plugin: { code: 'Harm', ready: true },
     after: 'the harmonium and the accordion',
     tagline: 'Brass reeds driven by the airflow they choke; paired reeds tuned a little apart give the musette shimmer.',
@@ -93,7 +93,7 @@ export const INSTRUMENTS = [
     accent: '#f0b35a',
   },
   {
-    id: 'tines', name: 'Tine Piano', section: 'electric', ready: true, version: '0.6.0', trim: -3,
+    id: 'tines', name: 'Tine Piano', section: 'electric', ready: true, version: '0.7.0', trim: -3,
     plugin: { code: 'Tine', ready: true },
     after: 'the Fender Rhodes',
     tagline: 'Each key an asymmetric tuning fork of steel tine and brass bar, heard through a nonlinear magnetic pickup.',
@@ -101,7 +101,7 @@ export const INSTRUMENTS = [
     accent: '#ef5a4a',
   },
   {
-    id: 'reeds', name: 'Reed Piano', section: 'electric', ready: true, version: '0.5.0', trim: -1,
+    id: 'reeds', name: 'Reed Piano', section: 'electric', ready: true, version: '0.6.0', trim: -1,
     plugin: { code: 'Reed', ready: true },
     after: 'the Wurlitzer 200A',
     tagline: 'Struck steel reeds tuned with solder, sensed as one plate of a charged capacitor.',
@@ -117,7 +117,7 @@ export const INSTRUMENTS = [
     accent: '#c6e36a',
   },
   {
-    id: 'pianet', name: 'Sticky-Pad Piano', section: 'electric', ready: true, version: '0.5.0', trim: -4.5,
+    id: 'pianet', name: 'Sticky-Pad Piano', section: 'electric', ready: true, version: '0.6.0', trim: -4.5,
     plugin: { code: 'Pnet', ready: true },
     after: 'the Hohner Pianet',
     tagline: 'No hammers at all: tacky pads grab each reed and let it go.',
@@ -125,7 +125,7 @@ export const INSTRUMENTS = [
     accent: '#ffcf70',
   },
   {
-    id: 'bowed', name: 'Viola Organista', section: 'experimental', ready: true, version: '0.5.0', trim: 3,
+    id: 'bowed', name: 'Viola Organista', section: 'experimental', ready: true, version: '0.6.0', trim: 3,
     plugin: { code: 'Viol', ready: true },
     after: "Leonardo da Vinci's design (1488)",
     tagline: 'Rosined wheels bow the strings while you hold the keys: stick–slip friction, from scratch.',
@@ -133,7 +133,7 @@ export const INSTRUMENTS = [
     accent: '#d79a62',
   },
   {
-    id: 'glass', name: 'Glass Armonica', section: 'experimental', ready: true, version: '0.5.0', trim: 0.5,
+    id: 'glass', name: 'Glass Armonica', section: 'experimental', ready: true, version: '0.6.0', trim: 0.5,
     plugin: { code: 'Glas', ready: true },
     after: "Benjamin Franklin's armonica (1761)",
     tagline: 'Wet fingers on spinning glass bowls: stick–slip friction drives the shell modes, and rotation makes the doublets warble.',
@@ -185,7 +185,7 @@ export const INSTRUMENTS = [
     accent: '#73e2b8',
   },
   {
-    id: 'bubbles', name: 'Bubble Organ', section: 'phenomena', ready: true, version: '0.4.0', trim: 1.5,
+    id: 'bubbles', name: 'Bubble Organ', section: 'phenomena', ready: true, version: '0.5.0', trim: 1.5,
     plugin: { code: 'Bubl', ready: true },
     tagline: 'Every note a bubble ringing at its Minnaert frequency; depth, gas and pressure retune it.',
     physics: 'Bubble acoustics · Minnaert resonance',
@@ -206,7 +206,7 @@ export const INSTRUMENTS = [
     accent: '#ff6f91',
   },
   {
-    id: 'windharp', name: 'Wind Harp', section: 'phenomena', ready: true, version: '0.3.0', trim: -4,
+    id: 'windharp', name: 'Wind Harp', section: 'phenomena', ready: true, version: '0.4.0', trim: -4,
     plugin: { code: 'WHrp', ready: true },
     tagline: 'Strings sung by the wind: the vortices they shed lock onto one of their harmonics, and hop up the series as the wind rises.',
     physics: 'Vortex shedding · lock-in · wake oscillators',

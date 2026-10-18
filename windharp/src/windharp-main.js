@@ -1,7 +1,7 @@
 // windharp-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell, noteName } from '../../shared/shell.js';
-import { fit, css, animate } from '../../shared/views.js';
+import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './windharp-instrument.js';
 import { TAU, U_REF, U_MAX, AIR, RE_C } from './windharp-model.js';
 import { wasmModel } from './windharp-wasm.js';
@@ -12,13 +12,14 @@ const shedding = (U, D) => phys.shedding(U, D);
 
 const $ = (s) => document.querySelector(s);
 let focus = 60, harp = null, analyser = null, fbuf = null;
+const spectrum = new SpectrumView($('#spectrum'), { fLo: 60, fHi: 8000 });
 
 const shell = createShell({
   ...INSTRUMENT,
   base: 60,
   arrows: { param: 'wind', step: 0.05 },
   holdHint: { ms: 400, text: 'Hold the key: the shutter must stay open while the wind sets the string singing, up to a second in the bass.' },
-  onAudio: (a) => { analyser = a.ctx.createAnalyser(); analyser.fftSize = 8192; analyser.smoothingTimeConstant = 0; a.node.connect(analyser); },
+  onAudio: (a) => { analyser = a.ctx.createAnalyser(); analyser.fftSize = 8192; analyser.smoothingTimeConstant = 0; a.node.connect(analyser); spectrum.setAnalyser(analyser); },
   onNoteOn: (key) => { focus = key; shell.keys.focus?.(key); update(); },
   onParam: () => update(),
   onMessage: (m) => { if (m.type === 'harp') { harp = m; if (m.key >= 0 && m.key !== focus) { focus = m.key; update(); } } },
@@ -36,6 +37,9 @@ function update() {
   }
   const name = noteName(focus);
   $('#map-key').textContent = name; $('#tab-key').textContent = name;
+  // the spectrum's markers: the string's modes (the one it locks on at U₀ brighter), and where its wake sheds now
+  const fs = shedding(P.wind, S.D).fs;
+  spectrum.set(0, [...Array.from(S.f.slice(0, S.N), (f, i) => ({ f, color: css('--accent-2'), alpha: i + 1 === F.home ? 0.9 : 0.35 })), { f: fs, color: css('--accent') }]);
   table();
 }
 function refine() { // one harmonic's locked range per frame

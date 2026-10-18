@@ -1,7 +1,7 @@
 // springs-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell, noteName } from '../../shared/shell.js';
-import { fit, css, animate } from '../../shared/views.js';
+import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT, KEY_LO, KEY_HI } from './springs-instrument.js';
 import { wasmModel } from './springs-wasm.js';
 
@@ -18,7 +18,10 @@ const scaleSpring = (sp, rho) => ({
 });
 
 const $ = (s) => document.querySelector(s);
-let focus = 60, echo = null, analyser = null, strikeAt = -1, strikeVel = 0.7;
+let focus = 60, echo = null, strikeAt = -1, strikeVel = 0.7;
+// the live spectrum and spectrogram, marked with the focus key's note and its F_C
+const spectrum = new SpectrumView($('#spectrum'), { fLo: 40, fHi: 16000 });
+new SpectrogramView($('#spectro'), { spectrum });
 const rate = () => shell?.audio?.ctx.sampleRate || 48000;
 
 // ---- the springs and their modes, sent with each note ----------------------------------------------
@@ -40,7 +43,7 @@ const shell = createShell({
   ...INSTRUMENT,
   noteData,
   arrows: { param: 'velocity', step: 0.05 },
-  onAudio: (a) => { analyser = a.analyser; prewarm(); },
+  onAudio: (a) => { spectrum.setAnalyser(a.analyser); prewarm(); },
   onNoteOn: (key, vel) => { focus = key; strikeAt = performance.now() / 1000; strikeVel = vel; shell.keys.focus?.(key); update(); },
   onParam: (id, v, P, p, dragging) => { if (!dragging || !['coil', 'wire', 'helix'].includes(id)) update(); else updateSoon(); prewarm(); },
   onMessage: (m) => { if (m.type === 'echo') { echo = m; echoImage = null; } },
@@ -67,6 +70,7 @@ function update() {
     K[i] = (s0.n[i] * Math.PI) / s0.L;
   }
   FX = { sp, data, curve, fTop, s0, A, SIG, K, cos: null };
+  spectrum.set(0, [{ f: sp.f0, color: css('--accent') }, { f: sp.Fc, color: css('--accent-2') }]);
   const name = noteName(focus);
   $('#disp-key').textContent = name;
   $('#disp-read').textContent = `${sp.slinky ? 'Slinky · ' : ''}⌀ ${(2000 * sp.R).toFixed(sp.R < 5e-3 ? 2 : 1)} mm coil, ${(2000 * sp.r).toFixed(sp.r < 1e-4 ? 3 : 2)} mm wire · ${sp.turns.toFixed(1)} turns · ${s0.L < 1 ? `${(100 * s0.L).toFixed(1)} cm` : `${s0.L.toFixed(2)} m`}`;
@@ -284,39 +288,6 @@ animate(() => {
   ctx.fillText(struck ? `t = ${fmtT(t)} after the strike (${(t / sp.TD).toFixed(2)} round trips)` : 'strike a key', x0, h - 3);
   ctx.textAlign = 'right'; ctx.fillText('struck bead ← → pickup bead', x1, h - 3);
 }, scv2);
-
-// ---- spectrogram ------------------------------------------------------------------------------------------------------
-const pcv = $('#spectro');
-let spec = null, fbuf = null;
-const SF = [40, 16000];
-animate(() => {
-  const { ctx, w, h } = fit(pcv);
-  const padL = 34, padB = 16, W = Math.max(2, Math.round(w - padL)), H = Math.max(2, Math.round(h - padB));
-  if (!spec || spec.width !== W || spec.height !== H) { spec = document.createElement('canvas'); spec.width = W; spec.height = H; const c = spec.getContext('2d'); c.fillStyle = '#0c0c12'; c.fillRect(0, 0, W, H); }
-  const sc = spec.getContext('2d');
-  sc.drawImage(spec, -2, 0);
-  if (analyser) {
-    if (!fbuf || fbuf.length !== analyser.frequencyBinCount) fbuf = new Float32Array(analyser.frequencyBinCount);
-    analyser.getFloatFrequencyData(fbuf);
-    const fs = analyser.context.sampleRate, N = fbuf.length, col = sc.createImageData(2, H);
-    for (let y = 0; y < H; y++) {
-      const f = SF[0] * (SF[1] / SF[0]) ** (1 - y / (H - 1)), bin = Math.min(N - 1, Math.round((f * 2 * N) / fs));
-      const t = Math.max(0, Math.min(1, (fbuf[bin] + 115) / 90)), [r, g, b] = heat(t);
-      for (let x = 0; x < 2; x++) { const q = (y * 2 + x) * 4; col.data[q] = r; col.data[q + 1] = g; col.data[q + 2] = b; col.data[q + 3] = 255; }
-    }
-    sc.putImageData(col, W - 2, 0);
-  }
-  ctx.clearRect(0, 0, w, h);
-  ctx.drawImage(spec, padL, 0);
-  const Yf = (f) => (1 - Math.log(f / SF[0]) / Math.log(SF[1] / SF[0])) * (H - 1);
-  ctx.font = '10px system-ui, sans-serif'; ctx.fillStyle = css('--muted'); ctx.textAlign = 'right';
-  for (const f of [50, 100, 200, 500, 1000, 2000, 5000, 10000]) ctx.fillText(f >= 1000 ? `${f / 1000}k` : `${f}`, padL - 4, Yf(f) + 3);
-  if (FX) { // ticks: the focus key's note and its F_C
-    ctx.fillStyle = css('--accent-2');
-    for (const f of [FX.sp.f0, FX.sp.Fc]) if (f > SF[0] && f < SF[1]) ctx.fillRect(padL - 3, Yf(f) - 1, 6, 2);
-  }
-  ctx.fillStyle = css('--muted'); ctx.textAlign = 'center'; ctx.fillText('time →', padL + W / 2, h - 3);
-}, pcv);
 
 update();
 prewarm();

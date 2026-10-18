@@ -56,9 +56,14 @@
       </div>
       <div class="row">
         <div class="card" data-perform data-view="Spectrogram">
-          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · log frequency</span></div>
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
           <canvas id="spectro"></canvas>
           <div class="caption">A hard strike starts with a few lines; within a fraction of a second the space between them fills up to the top: the energy cascade.</div>
+        </div>
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the last gong's modes</span></div>
+          <canvas id="spectrum"></canvas>
+          <div class="caption">The markers are the plate's modes, brighter where the mallet excites them; gold is the strike tone. A soft strike sounds them alone, a hard one fills the gaps between them.</div>
         </div>
         <div class="card" data-view="Energy cascade">
           <div class="card-head"><h2>Energy cascade</h2><span class="muted" id="bands-read"></span></div>

@@ -6,6 +6,7 @@ import { INSTRUMENT, GROUPS, DEFAULTS, PRESETS } from './blackhole-instrument.js
 import { ALL_PARAMS, fmtSpin, noteName, KEY_LO, KEY_HI, spinFromU } from './ringdown-params.js';
 import { wasmModel } from './blackhole-wasm.js';
 import { createChain } from '../../shared/chain.js';
+import { SpectrogramView } from '../../shared/views.js';
 import { drawPlane, drawKerr, WaveView, Lazy } from './ringdown-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
 import { startMIDI, resumeMIDI, wheelValue, touched, SOFT_PEDAL, createSostenuto } from '../../shared/midi.js';
@@ -26,6 +27,8 @@ const paramsMessage = () => ({ type: 'params', P: { ...P } });
 // same C++ the engine plays.
 const model = await wasmModel();
 const voiceOf = (key) => model.voiceFor(key, P, fs);
+// a short window: a ringdown is over in a few dozen cycles
+const spectro = new SpectrogramView($('#spectrogram'), { fLo: 40, fHi: 12000, secs: 4 });
 
 // ---------------------------------------------------------------------------
 // audio
@@ -50,6 +53,8 @@ function startAudio() {
       else if (e.data.type === 'error') toast(e.data.message);
     };
     fs = ctx.sampleRate; // voices are cached per sample rate (voiceFor)
+    const analyser = ctx.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0;
+    chain.tap.connect(analyser); spectro.setAnalyser(analyser);
     audio = { ctx, node, chain };
     applyMix();
     node.port.postMessage(paramsMessage());
@@ -245,6 +250,7 @@ function showInfo(v) {
   const f0 = m220 ? m220.f : v.info.f0;
   const lvl = (m) => Math.hypot(m.cpr, m.cpi) + Math.hypot(m.cxr, m.cxi);
   const mx = Math.max(1e-12, ...v.modes.map(lvl));
+  spectro.set(f0, v.modes.map((m) => ({ f: m.f, alpha: 0.2 + 0.7 * Math.sqrt(lvl(m) / mx) })));
   $('#modes').innerHTML = '<tr><th>mode (l,m,n)</th><th>Hz</th><th>× f₂₂₀</th><th>τ (ms)</th><th>Q</th><th>level</th></tr>'
     + v.modes.slice().sort((a, b) => lvl(b) - lvl(a)).map((m) => `<tr><td>(${m.l}, ${m.m}, ${m.n})${m.m < 0 ? ' <span class="muted">counter-rot.</span>' : ''}</td><td>${m.f.toFixed(1)}</td><td>${(m.f / f0).toFixed(3)}</td><td>${(m.tau * 1000).toFixed(2)}</td><td>${m.Q.toFixed(1)}</td><td>${(20 * Math.log10(lvl(m) / mx)).toFixed(1)} dB</td></tr>`).join('');
 }

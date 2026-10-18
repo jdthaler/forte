@@ -16,6 +16,55 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-18 — the Mac apps pick their MIDI inputs; pitch bend on nine more instruments; releases reach main through a pull request
+
+### Forte 0.33.0
+- **The Mac standalone apps pick their MIDI inputs:** Audio/MIDI Settings lists every MIDI input
+  with a tick box where it said "Coming Soon". All are ticked at first, as before; an unticked one
+  is disconnected, and stays so the next time the app opens, while an input plugged in later is
+  connected. It is a change to clap-wrapper kept in `native/cmake/patches/` and applied when the
+  build fetches it. Windows already had a picker; Linux's apps still connect every input.
+- A pull request that brings a release from `live` back into `main` passes the release-note check:
+  only what it adds beyond `live` is checked (`tools/release.mjs --check-pr`).
+
+### Pipe Organ 0.5.0
+- **Pitch bend:** the organ's air warms or cools, so sound and the jets cross every pipe
+  faster or slower, ±2 semitones.
+
+### Free-Reed Organ 0.5.0
+- **Pitch bend:** the wheel stiffens or softens every tongue, ±2 semitones.
+
+### Tine Piano 0.7.0
+- **Pitch bend:** the wheel slides every fork's tuning spring, so a ringing note follows it,
+  ±2 semitones.
+
+### Reed Piano 0.6.0
+- **Pitch bend:** the wheel stiffens or softens every reed, so a sounding note follows it,
+  ±2 semitones.
+
+### Sticky-Pad Piano 0.6.0
+- **Pitch bend:** the wheel stiffens or softens every reed, ringing or resting under its pad,
+  ±2 semitones.
+
+### Viola Organista 0.6.0
+- **Pitch bend:** the wheel slides the strings' bridges, shortening or lengthening every
+  sounding string. A bowed note follows ±2 semitones and stays in Helmholtz motion, and the
+  twist's resonance moves with it.
+
+### Glass Armonica 0.6.0
+- **Pitch bend:** every bowl's modes move together, ±2 semitones. No real armonica can bend;
+  this one behaves as if its glass grew stiffer or softer.
+
+### Bubble Organ 0.5.0
+- **Pitch bend:** the pump pushes on the air above the water until the pressure at the nozzles
+  is ×r². New bubbles sound ±2 semitones off (Minnaert), and bubbles already rising are squeezed
+  or swell with it.
+
+### Wind Harp 0.4.0
+- **Pitch bend:** the wheel tightens or slackens every string, ±2 semitones, while the wind
+  stays the same. A string bent out of its lock-in band moves to the harmonic the wake picks,
+  as a real one would. At the reference wind, C4 bent fully up falls to its 2nd harmonic.
+
 ## 2026-10-18 — every page checked in a browser on every pull request; one Forte app with every instrument; ready for 1.0: saved songs kept, and Windows downloads that install themselves; a velocity curve, sostenuto and soft pedals, and pitch bend on three more instruments
 
 ### Forte 0.32.0
