@@ -308,6 +308,11 @@ the whole file under ~30 s. Aim for 10–25 tests that cover:
 `npm test` runs every suite in parallel (`tools/test-all.mjs`) and
 reports all failures; `node tools/test-all.mjs <name>` runs a subset.
 
+The page itself is checked by `node tools/check-pages.mjs <slug>`: in
+headless Chromium at phone, tablet and desktop sizes, no console errors, no
+sideways scrolling, and the perform controls, ⓘ buttons, "Default settings"
+and keys in place (CI's `pages` job runs it on every page).
+
 ### Demos
 
 `tools/render-<slug>.mjs` renders 4–8 short demos (3–10 s each) to

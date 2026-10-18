@@ -42,6 +42,14 @@ Read first:
    every page shares belongs in `shared/`.
 2. **Verify.**
    - `CI=1 npm test` passes.
+   - `node tools/check-pages.mjs --base origin/main` passes when the change
+     touches a page or `shared/`. It opens every page at the sizes below
+     (with the menus, Controls and the views open, and audio started) and
+     fails on console errors, sideways scrolling, or perform controls, ⓘ
+     buttons, "Default settings" or keys gone missing; it lists every
+     count that differs from `main`, and each one should be one the change
+     meant. The `pages` job in CI runs the same against the pull request's
+     base. A filter checks fewer pages: `node tools/check-pages.mjs gongs`.
    - Look at anything visible in a browser (headless Playwright and
      Chromium will do), on every page it touches:
      - phone, portrait 390×664 and landscape 750×340, emulating an iPhone
@@ -49,9 +57,6 @@ Read first:
        `delete Navigator.prototype.requestMIDIAccess` in an init script);
      - tablet (iPad, both orientations) and desktop (1440×900, and a
        narrow window around 900px).
-   - Check that nothing scrolls sideways
-     (`document.documentElement.scrollWidth` wider than the viewport),
-     with the menus, Controls and Views ▾ open and with audio started.
    - When a change should leave some sizes alone, compare screenshots with
      `main` (a `git worktree` of `main`, served on a second port). Only
      animations should differ.
@@ -76,14 +81,19 @@ Read first:
    is bumped. The body says why, what changed and how it was checked.
 5. **Pull request** into `main`, with *Why*, *What changed* and *Testing*
    sections.
-6. **CI.** `tests` (the JavaScript suites and the release-note rules) and
-   `native` (the WebAssembly, and the plugins on Linux) run on the push
+6. **CI.** `tests` (the JavaScript suites, the release-note rules and
+   `pages`, every page in Chromium) and `native` (the WebAssembly, and the plugins on Linux) run on the push
    and on the pull request. Fix a failure at its root; never skip or weaken
    a test to get green.
-7. **Merge** with a merge commit (not squash or rebase) once CI is green
-   on the pull request's latest commit and nothing conflicts, and only
-   when the owner has asked for the merge. Merging into `main` publishes
-   nothing.
+7. **Before the merge**, if `main` has moved since CI ran, merge it into
+   the branch and let CI run again, so what was checked is what lands
+   (two threads changing `shared/` can each pass alone and break
+   together).
+8. **Merge** with a merge commit (not squash or rebase) once CI is green
+   on the pull request's latest commit and nothing conflicts, without
+   waiting to be asked: merging into `main` publishes nothing, and the
+   owner hears and sees `main` before each release. A release into
+   `live` waits for the owner (below).
 
 ## Releasing `main` to `live`
 
