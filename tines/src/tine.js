@@ -3,7 +3,8 @@
 // and block, the pickup) are the C++ in native/instruments/tines, run here as WebAssembly
 // (tines-wasm.js).
 
-export const KEY_LO = 28, KEY_HI = 100; // 73 keys, E1–E7
+export const KEY_LO = 28, KEY_HI = 100; // the Mark I's 73 keys, E1–E7
+export const KEY_MIN = 21, KEY_MAX = 108; // what it plays: the 88-key Mark I and II's A0–C8
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
 export const noteName = (m) => NAMES[m % 12] + (Math.floor(m / 12) - 1);
 

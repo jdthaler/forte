@@ -14,7 +14,7 @@ namespace forte::blackhole {
 constexpr double MSUN_S = 4.925490947e-6; // G M☉ / c³ in seconds
 constexpr double MSUN_KM = 1.476625;      // G M☉ / c² in km
 constexpr double TC_MAX = 2;              // longest inspiral (s)
-constexpr int KEY_LO = 36, KEY_HI = 96;
+constexpr int KEY_LO = 21, KEY_HI = 108;  // A0–C8: the keys it plays (and caches)
 constexpr int MAX_MODES = 16;             // a voice's modes (keyVoice makes at most 12)
 
 // Math.log10 and Math.hypot (two arguments) as V8 computes them

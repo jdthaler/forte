@@ -9,7 +9,7 @@ export const uFromSpin = (a) => -Math.log10(1 - a);
 
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
 export const noteName = (m) => NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
-export const KEY_LO = 36, KEY_HI = 96;
+export const KEY_LO = 21, KEY_HI = 108; // A0–C8: every key of an 88-key keyboard
 
 export function fmtSpin(u) {
   const a = spinFromU(u);

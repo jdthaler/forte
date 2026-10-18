@@ -15,6 +15,7 @@
     {"id":"gain","kind":"continuous","min":0.4,"max":2.5,"def":1,"step":0,"log":true},
     {"id":"offset","kind":"continuous","min":0,"max":1.5,"def":0.4,"step":0.01,"log":false},
     {"id":"noise","kind":"continuous","min":0,"max":4,"def":1,"step":0.05,"log":false},
+    {"id":"fullRange","kind":"toggle","def":false},
     {"id":"room","kind":"continuous","min":0,"max":1,"def":0.55,"step":0.01,"log":false},
     {"id":"venue","kind":"choice","def":"room","options":["studio","room","recital","hall","cathedral"]},
     {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}

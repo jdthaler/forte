@@ -10,6 +10,7 @@
     {"id":"split","kind":"continuous","min":0,"max":40,"def":12,"step":0.1,"log":false},
     {"id":"loss","kind":"continuous","min":0.00003,"max":0.003,"def":0.0004,"step":0,"log":true},
     {"id":"water","kind":"continuous","min":0,"max":0.8,"def":0,"step":0.01,"log":false},
+    {"id":"fullRange","kind":"toggle","def":false},
     {"id":"room","kind":"continuous","min":0,"max":1,"def":0.3,"step":0.01,"log":false},
     {"id":"venue","kind":"choice","def":"room","options":["studio","room","recital","hall","cathedral"]},
     {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}

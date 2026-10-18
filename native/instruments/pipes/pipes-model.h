@@ -28,7 +28,8 @@ namespace forte::pipes {
 
 struct Air { double rho, c, nu, gamma, Pr; };
 constexpr Air AIR = {1.2, 343, 1.51e-5, 1.4, 0.71};
-constexpr int KEY_LO = 36, KEY_HI = 89;  // C–f³, 54 keys
+constexpr int KEY_LO = 36, KEY_HI = 89;  // C–f³, 54 keys: the Baroque manual's compass, which the chest is laid out on
+constexpr int KEY_MIN = 21, KEY_MAX = 108; // A0–C8, with the full range open: the same scales, carried on
 constexpr double P_NOM = 700;            // Pa (71 mm of water): the wind the pipes are voiced for
 inline const double U_NOM = std::sqrt((2 * P_NOM) / AIR.rho);
 constexpr double CP = 0.4;               // jet phase velocity over jet velocity
@@ -37,7 +38,7 @@ constexpr double ALPHA_VC = 0.6;         // vena contracta of the flow separatin
 constexpr double THETA_OPEN = 14;        // voicing: U_j/(fW) at the default wind, open pipes
 constexpr double THETA_STOPPED = 10;     // and stopped
 constexpr double GAIN = 6;               // voicing: the jet's small-signal loop gain on the fundamental's resonance (c¹ up)
-constexpr double GAIN_BASS = 0.4;        // below c¹ the voicer gives it more, ∝ f^−0.4
+constexpr double GAIN_BASS = 0.4;        // below c¹ the voicer gives it more, ∝ f^−0.4, down to C (65 Hz) and no more
 constexpr double F_MAX = 15000;          // Hz: modes above this are left out
 constexpr int MODES_OPEN = 10, MODES_STOPPED = 6; // and at most this many
 constexpr double LS_END = 0.6133;        // Levine & Schwinger (1948): unflanged open end, × radius
@@ -47,11 +48,14 @@ constexpr double LS_END = 0.6133;        // Levine & Schwinger (1948): unflanged
 constexpr int RANKS = 6, STOPS = 4;
 struct Rank { int stop; bool stopped; double scale; };
 constexpr Rank RANK[RANKS] = {{0, false, 1}, {1, false, 1}, {2, true, 0.85}, {3, false, 1}, {3, false, 1}, {3, false, 1}};
-// The Mixture: three ranks of octaves and fifths breaking back an octave at c, c¹ and c².
-struct MixtureRow { int from; int h[3]; };
-constexpr MixtureRow MIXTURE[4] = {{36, {6, 8, 12}}, {48, {4, 6, 8}}, {60, {3, 4, 6}}, {72, {2, 3, 4}}};
-const int *mixtureRanks(int key);
-int rankHarm(int key, int r);
+// The Mixture: three ranks of octaves and fifths, each break dropping its highest rank and taking
+// in the next below, at c, c¹ and c² (an octave over two breaks); past the compass at f♯³ and c⁴
+// (5⅓′, 4′, 2⅔′, then 8′, 5⅓′, 4′), so that its ranks stay where a Mixture's pipes are (below
+// about 6 kHz, and 8.4 kHz at C8, with the Octave 4′). Harmonics of the 8′; the fifths pure.
+struct MixtureRow { int from; double h[3]; };
+constexpr MixtureRow MIXTURE[6] = {{36, {6, 8, 12}}, {48, {4, 6, 8}}, {60, {3, 4, 6}}, {72, {2, 3, 4}}, {90, {1.5, 2, 3}}, {96, {1, 1.5, 2}}};
+const double *mixtureRanks(int key);
+double rankHarm(int key, int r);
 // Which ranks the drawn stops engage (principal, octave, gedackt, mixture).
 inline void engaged(const bool stops[STOPS], bool on[RANKS]) { for (int r = 0; r < RANKS; r++) on[r] = stops[RANK[r].stop]; }
 // Equal temperament at A = 440 Hz; the Mixture's fifths pure.
@@ -71,7 +75,7 @@ double mouthCorrection(double Sp, double H, double W);
 double wallAlpha(double f, double a);
 double modeSigma(double f, double a, double Le, int openings);
 inline double modeFreq(int n, double Le, bool stopped) { return stopped ? ((2 * n - 1) * AIR.c) / (4 * Le) : (n * AIR.c) / (2 * Le); }
-inline double voicedGain(double f) { return GAIN * std::max(1.0, std::pow(f / keyFreq(60), -GAIN_BASS)); }
+inline double voicedGain(double f) { return GAIN * std::max(1.0, std::pow(std::max(f, keyFreq(36)) / keyFreq(60), -GAIN_BASS)); }
 
 struct Mode { int n; double f, om, sigma, Q; int harm; };
 struct Geometry {

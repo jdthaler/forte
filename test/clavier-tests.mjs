@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { INSTRUMENT } from '../clavier/src/clavier-instrument.js';
 import { wasmModel } from '../clavier/src/clavier-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
-import { DEFAULTS, GROUPS, PRESETS, LO, HI, STRENGTH, MUTE_R } from '../clavier/src/clavier-params.js';
+import { DEFAULTS, GROUPS, PRESETS, LO, HI, KEY_MIN, KEY_MAX, STRENGTH, MUTE_R } from '../clavier/src/clavier-params.js';
 import { symEig } from '../shared/linalg.js';
 import { keyFreq } from '../shared/dsp.js';
 
@@ -165,6 +165,27 @@ test('tuning: every key settles within ±3 ¢ of equal temperament (A440), held 
   }
   assert.ok(Math.abs(worst) < 3, `worst key ${wk}: ${worst.toFixed(2)} ¢`);
   console.log(`        worst ${worst.toFixed(2)} ¢ (key ${wk})`);
+});
+
+test('past F1–E6 (Full range): the scale carried on, A0 to C8, below 65 % of breaking, pulling well under the key\'s 4 N, on pitch and sounding', () => {
+  for (let k = KEY_MIN; k <= KEY_MAX; k++) {
+    if (k >= LO && k <= HI) continue;
+    const S = stringDesign(k, DEFAULTS); // above E6 a lighter wire (0.008″) keeps the pull down: T ∝ d²
+    assert.ok(S.stress < 0.65 * STRENGTH && S.T > 0 && S.pull < 0.8 * 4, `key ${k}: ${(S.stress / 1e6).toFixed(0)} MPa, pull ${S.pull.toFixed(2)} N`);
+  }
+  // on pitch (the slack bass strings without their tension glide, which is A0's widest: 8 ¢ at mf), and a forte note still sounding at 0.05–0.25 s
+  for (const k of [KEY_MIN, 25, 92, 100, 104, KEY_MAX]) {
+    const x = note(k, P({ kc: k > HI }), 0.3, 1), f0 = keyFreq(k), c = cents(peakFreq(x, f0, sec(0.2), sec(1)), f0);
+    const y = note(k, P(), 1, 0.25);
+    let e = 0; for (let i = sec(0.05); i < sec(0.25); i++) e += y[i] ** 2;
+    const db = 10 * Math.log10(e / sec(0.2));
+    assert.ok(Math.abs(c) < 3 && db > -45, `key ${k}: ${c.toFixed(2)} ¢, ${db.toFixed(1)} dB at 0.05–0.25 s`);
+  }
+  for (const o of [{}, { gap: 2, press: 20 }, { press: 0.5 }]) for (const k of [KEY_MIN, KEY_MAX]) { // the widest swing, the hardest and lightest key
+    const x = note(k, P(o), 1, 0.5);
+    let pk = 0; for (const y of x) { assert.ok(Number.isFinite(y), `key ${k} ${JSON.stringify(o)}: NaN`); pk = Math.max(pk, Math.abs(y)); }
+    assert.ok(pk < 0.6, `key ${k} ${JSON.stringify(o)}: peak ${pk.toFixed(2)}`);
+  }
 });
 
 test('the strike leaves a sawtooth: n·|q_n| = 2g/π below the carry-time cutoff', () => {
@@ -351,7 +372,7 @@ test('stability: every parameter at its min and max, with aftertouch, wheel, mut
   const ev = [[0, 'on', 29, 1], [0.01, 'on', 60, 1], [0.02, 'on', 88, 1], [0.05, 'on', 45, 0.05],
     [0.2, 'msg', { type: 'pressure', value: 1, key: null }], [0.3, 'msg', { type: 'bend', value: 1 }], [0.35, 'sus', true],
     [0.45, 'off', 29], [0.45, 'off', 60], [0.45, 'off', 88], [0.45, 'off', 45], [0.5, 'on', 72, 0.6], [0.55, 'sus', false], [0.6, 'off', 72]];
-  for (const p of GROUPS.flatMap((g) => g.params)) {
+  for (const p of GROUPS.flatMap((g) => g.params).filter((p) => p.id !== 'fullRange')) {
     const vals = p.type === 'checkbox' ? [false, true] : p.type === 'select' ? p.options.map((o) => o[0]) : [p.min, p.max];
     for (const v of vals) {
       const Q = P({ [p.id]: v }), x = render(Q, 0.9, ev);

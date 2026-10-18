@@ -11,6 +11,7 @@
 //               few pixels, so an ordinary touch, which wobbles, sends 0). A slide along the key
 //               stays on it; a glissando is a slide across the keys.
 //   kb.set(key, on)  kb.focus(key)  kb.clearAll()  kb.labels(Map key → text)
+//   kb.setBounds(lo, hi)   a new range (an instrument's compass opened or closed)
 
 import { attachKeyboard } from './layout.js';
 
@@ -21,7 +22,7 @@ const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 
 export function createKeyboard(root, { lo, hi, onDown, onUp, onPressure }) {
   let wLo = lo, wHi = hi, focusKey = null, labelMap = new Map();
-  const isDown = new Set(), els = new Map(), listeners = [], keyListeners = [];
+  const isDown = new Set(), els = new Map(), listeners = [], keyListeners = [], boundListeners = [];
   const keysChanged = () => { for (const fn of keyListeners) fn(isDown); };
 
   function build() {
@@ -105,6 +106,14 @@ export function createKeyboard(root, { lo, hi, onDown, onUp, onPressure }) {
       wLo = a; wHi = b; build();
     },
     onWindow(fn) { listeners.push(fn); },
+    setBounds(a, b) {
+      if (a === lo && b === hi) return;
+      lo = a; hi = b;
+      wLo = clamp(wLo, lo, hi); wHi = clamp(wHi, wLo, hi);
+      build();
+      for (const fn of boundListeners) fn(lo, hi);
+    },
+    onBounds(fn) { boundListeners.push(fn); }, // fn(lo, hi), after setBounds
     onKeys(fn) { keyListeners.push(fn); }, // fn(set of keys down), on every change
   };
   build();

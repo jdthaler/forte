@@ -116,6 +116,7 @@ class ArcEngine : public Engine {
   void block(float *L, float *R, int s0, int n);
   int trailDec(const Arc &arc) const;
   void report();
+  double warped(double C) const; // a capacitor, scaled for the engine's step (the note on its key at any fs)
 
   double seed = 1, bendRatio = 1;
   bool hasParams = false;

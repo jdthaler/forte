@@ -28,10 +28,10 @@ static Params paramsOf(const double *P) {
 }
 
 OrganistaEngine::OrganistaEngine(double fs) : Engine(fs), fly(1 - fdlibm::exp(-1 / (FLYWHEEL * fs))) {
-  for (int k = KEY_LO; k <= KEY_HI; k++) {
+  for (int k = KEY_MIN; k <= KEY_MAX; k++) {
     auto s = std::make_unique<Key>(k, fs);
-    s->seg = (int)std::floor(((double)(k - KEY_LO) / (KEY_HI - KEY_LO)) * (NSEG - 1) + 0.5);
-    S[k - KEY_LO] = std::move(s);
+    s->seg = std::min(NSEG - 1, std::max(0, (int)std::floor(((double)(k - KEY_LO) / (KEY_HI - KEY_LO)) * (NSEG - 1) + 0.5))); // past C2–C6: the bridge's ends
+    S[k - KEY_MIN] = std::move(s);
   }
   // the board's modes: their frequencies, the strings' load and the radiation don't depend on the
   // loss factor (boardModes, once)
@@ -57,7 +57,7 @@ void OrganistaEngine::setParams(const double *P) {
   const Loop &L0 = S[0]->L;
   kB = (2 * L0.G) / (1 + L0.G * L0.Zall);
   if (Pm.boardEta != etaBody) buildBody(Pm.boardEta);
-  if (Pm.lifted && !(!first && old.lifted)) for (auto &s : S) activate(*s);
+  if (Pm.lifted && !(!first && old.lifted)) liftAll();
   if (!first && old.force != Pm.force) for (int i = 0; i < nAct; i++) { Key &s = *act[i]; if (s.down) s.FT = keyForce(s.key, s.vel, Pm.force, s.after); }
 }
 
@@ -81,6 +81,10 @@ void OrganistaEngine::buildBody(double eta) {
   }
   // above the modelled modes the board is dense: radiate the bridge force directly
   setFilter(hp[0], Biquad::hp, F_BODY, 0.5412, fs); setFilter(hp[1], Biquad::hp, F_BODY, 1.3066, fs);
+}
+
+void OrganistaEngine::liftAll() {
+  for (auto &s : S) if (sympathetic(s->key)) activate(*s);
 }
 
 void OrganistaEngine::activate(Key &s) {
@@ -113,7 +117,7 @@ void OrganistaEngine::allNotesOff() { // Panic: every string and the board to re
   nAct = 0;
   if (M) { q1.fill(0); q2.fill(0); bodyE = 0; }
   hp[0].reset(); hp[1].reset(); mass.y = 0; dl.fill(0);
-  if (hasParams && Pm.lifted) for (auto &s : S) activate(*s);
+  if (hasParams && Pm.lifted) liftAll();
 }
 
 void OrganistaEngine::pressure(double value, int key) { // MIDI aftertouch: one key (poly) or every held key (channel, −1)
@@ -153,7 +157,7 @@ void OrganistaEngine::run(float *Lo, float *Ro, int n) {
   for (int g = 0; g < NSEG; g++) for (int j = 0; j < nAct; j++) if (act[j]->seg == g) { segOn[nSeg++] = g; break; }
   const double dph = (TAU * Pm.treadleRate) / fs, swing = Pm.treadle;
   const double sDamp = 6.91 / Pm.damper;
-  Key &fo = *S[focus - KEY_LO];
+  Key &fo = *S[focus - KEY_MIN];
   double vBm = vB;
   for (int i = 0; i < n; i++) {
     vBm += (vBt - vBm) * fly;
@@ -219,13 +223,14 @@ void OrganistaEngine::fault(Key &s) {
   faults++;
 }
 
-// Strings that are damped and silent leave the loop (unless the dampers are lifted).
+// Strings that are damped and silent leave the loop (unless the dampers are lifted: then those past
+// C2–C6 still leave it once silent).
 void OrganistaEngine::retire() {
   int j = 0;
   for (int i = 0; i < nAct; i++) {
     Key &s = *act[i];
     if (!(s.e < 1e6 * s.os * 128)) fault(s); // |v| > 1 km/s, or NaN
-    const bool quiet = !s.down && s.FN == 0 && !Pm.lifted && s.e < 1e-14 * s.os * 128;
+    const bool quiet = !s.down && s.FN == 0 && !(Pm.lifted && sympathetic(s.key)) && s.e < 1e-14 * s.os * 128;
     s.e = 0;
     s.idle = quiet ? s.idle + 1 : 0;
     if (s.idle > 8) { s.active = false; s.clear(); } else act[j++] = &s;
@@ -237,7 +242,7 @@ void OrganistaEngine::retire() {
 // Post the focus string's state to the page, and schedule the next stroboscopic snapshot: a whole
 // number of (bowed) periods plus 1/48.
 void OrganistaEngine::report() {
-  Key &s = *S[focus - KEY_LO];
+  Key &s = *S[focus - KEY_MIN];
   motion = s.active ? s.motion(16) : Motion{};
   if (!s.active) shapeBuf.fill(0);
   for (int i = 0; i < TRACE; i++) traceOut[i] = trace[(tw + i) % TRACE];

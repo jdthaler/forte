@@ -16,7 +16,7 @@
 namespace forte::carillon {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { profile, historic, asym, eta, hardness, clapMass, strikeHeight, strikeAngle, speedMax, distance, around, room, venue, volume, count };
+enum : int { profile, historic, asym, eta, fullRange, hardness, clapMass, strikeHeight, strikeAngle, speedMax, distance, around, room, venue, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -42,6 +42,7 @@ inline const ParamInfo kParams[p::count] = {
   {"historic", "Historic, untuned bells", "Bells", ParamKind::continuous, 0, 1, 0, 0.01, false, false, nullptr, 0, kFormat_historic, 2},
   {"asym", "Asymmetry ε", "Bells", ParamKind::continuous, 0, 3, 0.2, 0.01, false, true, nullptr, 0, kFormat_asym, 1},
   {"eta", "Bronze loss factor η", "Bells", ParamKind::continuous, 0.00005, 0.002, 0.00025, 0, true, false, nullptr, 0, kFormat_eta, 11},
+  {"fullRange", "Full range (F2–C8)", "Bells", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"hardness", "Clapper face", "Clapper", ParamKind::continuous, 1, 210, 200, 0, true, true, nullptr, 0, kFormat_hardness, 6},
   {"clapMass", "Clapper mass", "Clapper", ParamKind::continuous, 0.5, 8, 2.5, 0.1, false, false, nullptr, 0, kFormat_clapMass, 1},
   {"strikeHeight", "Strike height", "Clapper", ParamKind::continuous, 0.04, 0.45, 0.115, 0.005, false, false, nullptr, 0, kFormat_strikeHeight, 1},
@@ -88,7 +89,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 10,
     .keep = kKeep, .keepCount = 3,
-    .keyLo = 48, .keyHi = 96, .space = Space::sustain,
+    .keyLo = 41, .keyHi = 108, .compassLo = 48, .compassHi = 96, .compass = p::fullRange, .space = Space::sustain,
     .modWheel = -1, .modWheelMax = 0,
     .controllers = kControllers, .controllerCount = 0,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 3.5},

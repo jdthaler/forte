@@ -9,7 +9,7 @@
 // through reeds-wasm.js, the engine through loadEngine.
 
 import assert from 'node:assert/strict';
-import { capAt, STEEL, REED, PICKUP, STOP, KEY_LO, KEY_HI, SLOT_GEOM } from '../reeds/src/reeds-data.js';
+import { capAt, STEEL, REED, PICKUP, STOP, KEY_LO, KEY_HI, KEY_MIN, KEY_MAX, SLOT_GEOM } from '../reeds/src/reeds-data.js';
 import { makeSlot, placeReed, solve, reedCharge, slotProfile, EPS0 } from '../reeds/src/slot-field.js';
 import { SLOT_GAPS, SLOT_Y } from '../reeds/src/slot-table.js';
 import { INSTRUMENT } from '../reeds/src/reeds-instrument.js';
@@ -221,6 +221,24 @@ test('every key is within ±3 ¢ of 12-TET A440 in the engine output', () => {
   }
   assert.ok(worst < 3, `key ${wk}: ${worst.toFixed(3)} ¢`);
   note(`worst key ${wk}: ${worst.toFixed(3)} ¢`);
+});
+test('past A1–C7 (Full range): the solder graded on (halving about every octave), every reed cut to its pitch, A0 and C8 on pitch in the output and finite at the solder knob\'s ends', () => {
+  for (let m = KEY_MIN; m <= KEY_MAX; m++) {
+    if (m >= KEY_LO && m <= KEY_HI) continue;
+    const r = keyModel(m, P()).reed, want = 1.6 * 0.025 ** ((m - KEY_LO) / (KEY_HI - KEY_LO));
+    assert.ok(Math.abs(cents(r.omega[0] / TAU, keyFreq(m))) < 0.01 && Math.abs(r.ratio / want - 1) < 1e-9, `${m}: ${cents(r.omega[0] / TAU, keyFreq(m))} ¢, solder ${r.ratio}`);
+  }
+  for (const m of [KEY_MIN, KEY_MAX]) {
+    const f = keyFreq(m), { L } = render(m, P(DRY), 0.5, 0.75);
+    const c = cents(freqNear(L, f, Math.round(0.08 * FS), Math.round(0.3 * FS), Math.round(0.3 * FS)), f);
+    assert.ok(Math.abs(c) < 3, `key ${m}: ${c.toFixed(2)} ¢`);
+    for (const solder of [0.05, 5]) {
+      const { L: x } = render(m, P({ solder }), 1, 0.25), pk = peakOf(x);
+      assert.ok(x.every(Number.isFinite) && pk > 0.01 && pk < 1, `key ${m}, solder × ${solder}: peak ${pk}`);
+    }
+  }
+  const a0 = keyModel(KEY_MIN, P()).reed, c8 = keyModel(KEY_MAX, P()).reed;
+  note(`A0 ${(a0.L * 1000).toFixed(1)} mm, solder ${a0.ratio.toFixed(2)}× the tongue · C8 ${(c8.L * 1000).toFixed(1)} mm, ${c8.ratio.toFixed(3)}×`);
 });
 test('overtones sit at the FEM modes (A2: mode 2 and 3 present at their frequencies, not at harmonics)', () => {
   const m = 45, k = keyModel(m, P()), { L } = render(m, P(DRY), 0.25, 0.4);

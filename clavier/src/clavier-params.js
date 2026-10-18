@@ -4,7 +4,8 @@
 import { VENUE } from '../../shared/chain.js';
 
 // The model's constants that the page and the knobs' readouts need (as clavier-model.h has them).
-export const LO = 29, HI = 88;                 // F1 … E6, 60 keys
+export const LO = 29, HI = 88;                 // F1 … E6, the D6's 60 keys: the compass
+export const KEY_MIN = 21, KEY_MAX = 108;      // with the full range open
 export const STRENGTH = 2.6e9;                 // Pa: the music wire's breaking stress
 export const PRESS_MAX = 12;                   // N: extra key force at full aftertouch (or pitch wheel)
 export const MUTE_K = 400, MUTE_R = 1.2;       // N/m, N·s/m: the mute felt at full pressure
@@ -35,6 +36,8 @@ export const GROUPS = [
       { id: 'stiff', label: 'Bending stiffness', min: 0, max: 4, def: 1, step: 0.01, fmt: (v) => `× ${v.toFixed(2)}`, hint: 'Scales EI. 0 = an ideal flexible string with exactly harmonic partials; the real D6 bass has B ≈ 5·10⁻⁴.' },
       { id: 'kc', label: 'Tension modulation (pitch glide)', type: 'checkbox', def: true, hint: 'Kirchhoff–Carrier: a large swing stretches the string, so the tension and pitch rise, then glide back as it decays. Strongest in the bass at full velocity.' },
       { id: 'yarn', label: 'Yarn damping', min: 20, max: 8000, def: 2000, log: true, fmt: (v) => `${v.toFixed(0)} s⁻¹`, hint: 'Drag of the wool on the nonspeaking length. After release it stops the whole string; turn it down and the released string rings on, three semitones lower.' },
+      { id: 'fullRange', label: 'Full range (A0–C8)', type: 'checkbox', def: false,
+        hint: 'Opens the keys beyond the D6\'s F1–E6: the scale carried on down to A0, and up to C8 halving the length each octave on a wire one size lighter (0.008″).' },
     ],
   },
   {

@@ -25,7 +25,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/ring/>
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | play (C2–C7): inject a bunch into that key's ring |
+| `Z…/` and `Q…]` rows | play (A0–C8): inject a bunch into that key's ring |
 | `←` `→` | octave |
 | `↑` `↓` | velocity: the bunch's charge |
 | `Space` | keep the beams stored after the keys come up (the scrapers stay open) |
@@ -45,7 +45,8 @@ factor:
 
 so a short bunch is bright and a long one soft. The pickup's cable and
 amplifier add their own Gaussian response of 20 µs, which keeps the top keys
-from aliasing.
+from aliasing: up to C7 nothing folds back, and at C8 what does (its sixth
+harmonic, 25 kHz) comes back above 18 kHz, more than 40 dB down.
 
 A button pickup is a small disc in the pipe wall, a capacitor into a
 resistor: it passes the harmonics above 1/(2πRC) and weakens the ones below

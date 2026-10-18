@@ -11,7 +11,7 @@ Play it at <https://forte.jthaler.net/organ/> (or locally — see the
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | play (61-key manual, C2–C7) |
+| `Z…/` and `Q…]` rows | play (A0–C8: the 61-key manual C2–C7, and the keys either side of it) |
 | `←` `→` | octave |
 | `↑` `↓`, or the **Swell** pedal beside the drawbars | expression pedal (drag or scroll the pedal; it is there for tablets) |
 | `Space` | Leslie slow ↔ fast |
@@ -85,6 +85,13 @@ as 1/R, so the upper drawbars are wired loud in the bass and taper off by
 10–20 dB in the treble, while the 8′ stays within a few dB across the
 keyboard. The table's *level* column shows each tone's level through its
 wire, relative to C4's 8′.
+
+The engine plays every key of an 88-key keyboard, A0–C8, not just the
+B-3's manual: the same 91 wheels serve them all. Below C2 the 16′ folds up
+an octave, as it does on the manual's bottom octave (wheels 1–12 belong to
+the pedals), and below C1 so does the 8′ (A0–B0 sound A1–B1 at 8′, with only
+the upper drawbars above them); above C7 the foldback at the top simply goes
+further. Keys past the manual are wired as its end keys.
 
 **Contacts and busbars.** Each key closes nine spring contacts onto nine
 busbars, at slightly different points of its travel, with a little bounce.

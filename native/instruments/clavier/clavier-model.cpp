@@ -24,8 +24,10 @@ static double windMu(double d, double D) {
   return (STEEL.rho * PI * d * d) / 4 + (WIND_RHO * PI * PI * w * (d + w)) / 4;
 }
 
+// Above E6 (Full range) the wire is one size lighter, 0.008″: its tension, and so its pull off the
+// anvil, falls as d², which keeps C8's pull (3 N) under the key's 4 N.
 Gauge gauge(int key) {
-  if (!isWound(key)) { const double d = key >= 56 ? 0.2286e-3 : 0.2794e-3; return {false, d, d, (STEEL.rho * PI * d * d) / 4}; }
+  if (!isWound(key)) { const double d = key > HI ? 0.2032e-3 : key >= 56 ? 0.2286e-3 : 0.2794e-3; return {false, d, d, (STEEL.rho * PI * d * d) / 4}; }
   const double D = key <= 38 ? 0.813e-3 : key <= 43 ? 0.711e-3 : 0.559e-3;
   static const double pts[3][2] = {{29, 5e-4}, {34, 2e-4}, {51, 9.5e-5}};
   const double L = speakingLength(key), f = keyFreq(key), Bt = interpLog(key, pts, 3);

@@ -67,6 +67,10 @@ class PipeEngine : public Engine {
   static constexpr int TRACE = 256;     // points in the live trace of the focused pipe
   static constexpr int FIR_N = 63;
   explicit PipeEngine(double fs, double fOS = 2000);
+  // Each pipe's rate over the output's: from fOS up 2×, and from 3·fOS (6 kHz: only pipes past the
+  // Baroque compass, whose highest is 5.6 kHz) 4×, so that the jet's transit across the mouth
+  // (21 µs at C8's 8.4 kHz) stays more than the two steps the delay line's interpolation needs.
+  int osFor(double f) const { return f >= 3 * fOS ? 4 : f >= fOS ? 2 : 1; }
 
   void setParams(const double *P) override;
   void noteOn(int key, double velocity) override;
@@ -147,6 +151,7 @@ class PipeEngine : public Engine {
   void retryPending();
   void processBlock(float *L, float *R, int n);
   void decimate(float *L, float *R, int n);
+  void decimate4(int n);
   int shownRank(const Voice &v) const;
   void record(const Pipe &p);
   void postView();
@@ -178,6 +183,9 @@ class PipeEngine : public Engine {
   std::array<double, 2 * FIR_N> histL{}, histR{};
   int hpos = 0;
   std::array<double, 2 * BLOCK_MAX> hiL{}, hiR{};
+  std::array<double, 2 * FIR_N> hist4L{}, hist4R{}; // and 4× → 2× before it, for the 4× pipes
+  int h4pos = 0, quiet4 = FIR_N;                   // quiet4: 4× samples since a 4× pipe last sounded (to FIR_N)
+  std::array<double, 4 * BLOCK_MAX> hi4L{}, hi4R{};
   std::array<double, BLOCK_MAX> loL{}, loR{};
   bool on[RANKS] = {};
   // the view's trace and state

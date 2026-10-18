@@ -87,8 +87,8 @@ TEST("pipe: the JavaScript model's numbers (pipeModel and linearRoot, c¹ Princi
   }
 }
 
-TEST("pipe: every pipe of every rank speaks (its fundamental's root has Re s > 0) at the default wind; the tuning table is the JavaScript's") {
-  for (int k = KEY_LO; k <= KEY_HI; k++) {
+TEST("pipe: every pipe of every rank speaks (its fundamental's root has Re s > 0) at the default wind, A0–C8; the tuning table is the JavaScript's") {
+  for (int k = KEY_MIN; k <= KEY_MAX; k++) {
     const KeyModels km = keyModels(k, VOICED);
     for (int r = 0; r < RANKS; r++) {
       PipeModel R = km.pipes[r];
@@ -96,7 +96,10 @@ TEST("pipe: every pipe of every rank speaks (its fundamental's root has Re s > 0
       CHECK(s && s->re > 0);
     }
   }
-  CHECK(TUNING_OPEN[0].x == 5.906891 && TUNING_OPEN[0].tune == 1.0035962 && TUNING_STOPPED[0].tune == 0.9841592);
+  // the rows from 60 Hz (where C's pipes are read) as they were tuned; the full range's below them
+  const auto row = [](const TuneRow *t, size_t n, double x) { for (size_t i = 0; i < n; i++) if (t[i].x == x) return t[i].tune; return 0.0; };
+  CHECK(row(TUNING_OPEN, std::size(TUNING_OPEN), 5.906891) == 1.0035962 && row(TUNING_STOPPED, std::size(TUNING_STOPPED), 5.906891) == 0.9841592);
+  CHECK(TUNING_OPEN[0].x < std::log2(27.5) && TUNING_STOPPED[0].x < std::log2(27.5));
   CHECK(tuning(10, false) == TUNING_OPEN[0].tune && tuning(1e5, true) == TUNING_STOPPED[std::size(TUNING_STOPPED) - 1].tune);
 }
 
@@ -134,6 +137,27 @@ TEST("engine: a key sounds its note on the Principal, Octave and Gedackt (±3 ¢
     double pk = 0;
     for (float v : L) pk = std::max(pk, (double)std::fabs(v));
     CHECK(pk > 0.01 && pk < 0.5);
+  }
+}
+
+TEST("engine: past the manual, A0's Principal (slow to speak) and C8's Octave (run at 4×) sound their notes (±3 ¢) at 44.1 and 48 kHz, bounded") {
+  for (double fs : {44100.0, 48000.0}) for (int key : {KEY_MIN, KEY_MAX}) {
+    const int r = key == KEY_MIN ? 0 : 1;
+    auto P = defaults();
+    P[p::noise] = 0;
+    P[p::principal] = r == 0; P[p::octave] = r == 1; P[p::gedackt] = 0;
+    auto ep = std::make_unique<PipeEngine>(fs);
+    PipeEngine &e = *ep;
+    e.setParams(P.data());
+    e.noteOn(key, 0.7);
+    CHECK(until(e, 1));
+    const double sec = key == KEY_MIN ? 4.5 : 0.8;
+    const auto L = render(e, (int)(sec * fs));
+    const double f0 = pipeFreq(key, r), f = peakNear(L, f0, (int)((sec - 0.6) * fs), (int)(sec * fs), fs);
+    CHECK(std::fabs(cents(f, f0)) < 3);
+    double pk = 0;
+    for (float v : L) { CHECK(std::isfinite(v)); pk = std::max(pk, (double)std::fabs(v)); }
+    CHECK(pk > 0.01 && pk < 2);
   }
 }
 

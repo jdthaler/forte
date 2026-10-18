@@ -354,6 +354,15 @@ double ArcEngine::capOf(int key) {
   if (lastVer[key]) return lastCap[key];
   return kelvinC(keyFreq(key), P[p::coil] * 1e-3);
 }
+// The engine's step flattens a note as the trapezoidal rule flattens an LC circuit, ω → (2/h)·atan(ωh/2),
+// and the steady-note integration the capacitors are cut with (256 steps a period) by its own, smaller,
+// amount. A capacitor is scaled by the difference, so the note lands on its key at any sample rate:
+// at 48 kHz, 2.6 ¢ at C8, under 0.1 ¢ from C3 to C6.
+double ArcEngine::warped(double C) const {
+  const auto a = [](double x) { return fdlibm::atan(x) / x; };
+  const double w = 1 / std::sqrt(P[p::coil] * 1e-3 * C), r = a(w * h / 2) / a(PI / SteadyOptions{}.M);
+  return C > 0 && std::isfinite(r) ? C * r * r : C;
+}
 bool ArcEngine::ready(int key) {
   if (const KeyData<double>::Ref r = data.get(key, version)) { lastCap[key] = *r.data; lastVer[key] = version; return true; }
   return false;
@@ -370,7 +379,7 @@ void ArcEngine::noteOn(int key, double) {
     singer.on = true;
     return;
   }
-  const double C = capOf(key);
+  const double C = warped(capOf(key));
   if (mode == mode_::mono) { Arc &a = arcs[0]; if (!a.held()) a.onset = time; a.engage(key, C); focus = 0; return; }
   // several arcs: the arc that already has this key (re-press), else a free one, else steal
   Arc *a = nullptr;

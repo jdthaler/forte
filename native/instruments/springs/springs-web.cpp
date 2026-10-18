@@ -13,7 +13,7 @@
 
 using namespace forte::springs;
 
-static int clampKey(int key) { return key < KEY_LO ? KEY_LO : key > KEY_HI ? KEY_HI : key; }
+static int clampKey(int key) { return key < KEY_MIN ? KEY_MIN : key > KEY_MAX ? KEY_MAX : key; }
 
 extern "C" {
 // A key's springs (keySprings), packed (packKeySprings): what the page sends with a note. Returns

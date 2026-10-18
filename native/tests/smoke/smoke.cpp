@@ -1,5 +1,5 @@
 // smoke.cpp — a test instrument for the shared plugin (tests/plugin-tests.cpp): struck sines,
-// a pedal, a mod wheel, two parameters and a preset. It proved the plugin pipeline in CI until
+// a pedal, a mod wheel, two parameters, a compass and a preset. It proved the plugin pipeline in CI until
 // the template was ported; it is not built as a plugin.
 
 #include <cmath>
@@ -12,12 +12,13 @@ namespace {
 
 using namespace forte;
 
-enum { kDecay, kVolume, kCount };
+enum { kDecay, kVolume, kFullRange, kCount };
 const FormatSegment kSeconds[] = {{INFINITY, "", " s", 1, 0, 2, false, false, false, false}};
 const FormatSegment kDb[] = {{0.0005, "", " dB", 0, -60, 1, false, false, false, false}, {INFINITY, "", " dB", 20, 0, 1, true, false, false, false}};
 const ParamInfo kParams[kCount] = {
   {"decay", "Ring time", "Tone", ParamKind::continuous, 0.1, 10, 1, 0, true, true, nullptr, 0, kSeconds, 1},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kDb, 2},
+  {"fullRange", "Full range", "Keys", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
 };
 const PresetValue kLong[] = {{kDecay, 6}};
 const Preset kPresets[] = {{"Long ring", kLong, 1}};
@@ -56,7 +57,7 @@ const InstrumentInfo kInfo = {
   .slug = "smoke", .name = "Forte Smoke Test", .version = "0.0.1", .description = "CI-only: proves the plugin pipeline.", .auSubtype = "Smok",
   .vst3Id = {0x46, 0x6f, 0x72, 0x74, 0x65, 0x53, 0x6d, 0x6f, 0x6b, 0x65, 0x54, 0x65, 0x73, 0x74, 0x00, 0x01},
   .params = kParams, .paramCount = kCount, .presets = kPresets, .presetCount = 1, .keep = kKeep, .keepCount = 1,
-  .keyLo = 21, .keyHi = 108, .space = Space::sustain, .modWheel = kDecay, .modWheelMax = 10,
+  .keyLo = 21, .keyHi = 108, .compassLo = 36, .compassHi = 96, .compass = kFullRange, .space = Space::sustain, .modWheel = kDecay, .modWheelMax = 10,
   .chain = {.volume = kVolume},
   .create = [](double fs) -> Engine * { return new SmokeEngine(fs); },
 };

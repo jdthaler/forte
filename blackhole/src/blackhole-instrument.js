@@ -11,7 +11,7 @@ export const INSTRUMENT = {
   groups: GROUPS,
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'tone', 'stereo'], // kept when a preset is chosen
-  range: [KEY_LO, KEY_HI],                    // MIDI keys: 36–96
+  range: [KEY_LO, KEY_HI],                    // MIDI keys: A0–C8, 21–108
   space: null,                                // a ringdown has no damper; nothing to hold
   modWheel: 'spinU',                          // CC1: the spin, from its default up to 1 − 10⁻⁶
   midiVelocity: (v) => v ** 1.5,              // MIDI velocity / 127 → the engine's

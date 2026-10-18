@@ -7,7 +7,11 @@ the sound. Play it at <https://forte.jthaler.net/tines/> (or locally — see the
 
 Keys: same rows as the piano (`Z…/`, `Q…]`); `←→` octave; `↑↓` velocity; hold
 `Space` for sustain; MIDI notes, velocity and CC64 work after **Enable MIDI**.
-73 keys, E1–E7.
+88 keys, A0–C8, as on the 88-key Mark I and Mark II (the Stage 73 has
+E1–E7). The keys past E1–E7 carry on the same design: each tine's length
+solved for its pitch, and the hammer, pickup gap and grommet graded as at
+E1 or E7. As on the real instrument the top is quiet and short: C8 starts
+about 7 dB below E7 and is gone in half a second.
 
 ## The model
 
@@ -17,7 +21,7 @@ are not harmonic. A bare cantilever's are at 6.27, 17.5, 34.4 × f₁; the
 spring lowers f₁ more than the overtones, so with the default spring the
 "bell" partial sits at 8.2 × f₁. The geometry is self-similar, so
 f₁ ∝ 1/L². Each key's tine length is *solved* to hit its pitch: 16 cm for
-E1, 2 cm for E7. The FEM matches the analytic cantilever to 1e-5.
+E1, 2 cm for E7 (19 cm for A0, 1.6 cm for C8). The FEM matches the analytic cantilever to 1e-5.
 
 **Tone bar: an asymmetric tuning fork.** Tine, tone bar and mounting block
 are coupled through the block's inertia, with participation factors

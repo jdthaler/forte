@@ -24,7 +24,8 @@
 
 namespace forte::pianet {
 
-constexpr int KEY_LO = 36, KEY_HI = 96;
+constexpr int KEY_LO = 36, KEY_HI = 96;   // the Pianet's 61 keys, C2–C7: the compass its reeds are graded on
+constexpr int KEY_MIN = 21, KEY_MAX = 108; // what it plays with the full range open: the same reeds, continued
 constexpr double PI = std::numbers::pi;
 
 // ---- the reed ----------------------------------------------------------------------------------

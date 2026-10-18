@@ -3,7 +3,8 @@
 // physics (the reeds, their slots, the air, the wind, the linear analysis) is the C++ in
 // native/instruments/harmonium, run here as WebAssembly (harmonium-wasm.js); these are its numbers.
 
-export const KEY_LO = 36, KEY_HI = 96;   // C2–C7, 61 keys (the 8′ rank)
+export const KEY_LO = 36, KEY_HI = 96;   // C2–C7, 61 keys (the 8′ rank): the compass
+export const KEY_MIN = 21, KEY_MAX = 108; // with the full range open
 export const AIR = { rho: 1.2, c: 343 };
 export const CD = 0.61;                  // vena contracta of a sharp-edged slot
 

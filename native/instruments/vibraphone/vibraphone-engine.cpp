@@ -21,6 +21,7 @@ constexpr double MOTOR_TAU = 0.35;  // s: the shaft spins up and down with this 
 constexpr double PARK_HZ = 1.2;     // the shaft parks with a critically damped servo of this natural frequency
 constexpr double DAMP_RAMP = 0.008; // s: the damper felt lands (and lifts) over this
 constexpr int POST_BLOCKS = 4;      // live view messages every few blocks
+constexpr double NYQUIST = 0.45;    // × fs: modes from here up are left out (they would alias)
 
 // ---- a voice: one bar and its tube ---------------------------------------------------------
 
@@ -42,6 +43,8 @@ void VibraphoneEngine::Voice::coefs(const VibraphoneEngine &eng) {
     const double f = d->f[i] * ts, om = TAU * f, s = d->sigFixed[i] + pi * f * eng.P[p::eta] + sd * d->dampW[i];
     sig[i] = s;
     if (i == 0) { K11 = om * om; sig1 = s; continue; }
+    cut[i] = f >= NYQUIST * eng.fs;
+    if (cut[i]) { a1[i] = a2[i] = bc[i] = accOut[i] = 0; continue; } // above what the sample rate holds: silent, never struck
     const double r = std::exp(-s * k), od = std::sqrt(std::max(om * om - s * s, 1e-6));
     a1[i] = 2 * r * std::cos(od * k); a2[i] = r * r; bc[i] = (k * r * std::sin(od * k)) / od;
     accOut[i] = om * om * d->out[i];
@@ -179,6 +182,7 @@ void VibraphoneEngine::Voice::render(float *L, float *Rt, int n, VibraphoneEngin
   const double k = 1 / eng.fs;
   double eb = 0.5 * (M11 * vb * vb + K11 * qb * qb);
   for (int i = 1; i < N; i++) {
+    if (cut[i]) continue;
     const double om = TAU * d->f[i], c = std::cos(om * k), sn = std::sin(om * k), a = q[i], b = q1[i];
     eb += (0.5 * om * om * std::max(0.0, a * a - 2 * c * a * b + b * b)) / (sn * sn);
   }
@@ -199,7 +203,7 @@ void VibraphoneEngine::Voice::render(float *L, float *Rt, int n, VibraphoneEngin
 
 VibraphoneEngine::VibraphoneEngine(double fs)
     : Engine(fs), data([this](int key, uint64_t version) -> std::unique_ptr<VoiceData> {
-        if (key < KEY_LO || key > KEY_HI) return nullptr;
+        if (key < KEY_MIN || key > KEY_MAX) return nullptr;
 #if !FORTE_THREADS
         if (offered && offered->key == key && versionOf(offered->depth) == version) return std::move(offered);
 #endif
@@ -216,7 +220,7 @@ bool VibraphoneEngine::offer(const double *packed, int n) {
   return false;
 #else
   auto d = std::make_unique<VoiceData>();
-  if (!unpackVoiceData(packed, n, *d) || d->key < KEY_LO || d->key > KEY_HI) return false;
+  if (!unpackVoiceData(packed, n, *d) || d->key < KEY_MIN || d->key > KEY_MAX) return false;
   offered = std::move(d);
   return true;
 #endif
@@ -230,13 +234,13 @@ void VibraphoneEngine::setParams(const double *p) {
   if (first) S = T;
   // the bars are built for the depth the knob is at, nearest the last key played first
   const uint64_t v = versionOf(P[p::depth]);
-  if (first || v != version) { version = v; data.prepare(version, KEY_LO, KEY_HI, focus ? focus->key : 60); }
+  if (first || v != version) { version = v; data.prepare(version, KEY_MIN, KEY_MAX, focus ? focus->key : 60); }
   // bar losses and the damper apply at once to every sounding bar
   for (int i = 0; i < nVoices; i++) voices[i]->coefs(*this);
 }
 
 void VibraphoneEngine::noteOn(int key, double velocity) {
-  if (!hasParams || !(key >= KEY_LO && key <= KEY_HI)) return; // F3–F6: there is no bar outside
+  if (!hasParams || !(key >= KEY_MIN && key <= KEY_MAX)) return; // A0–C8: there is no bar outside
   const Data::Ref r = data.get(key, version);
   if (r) { strikeKey(key, velocity, r); return; }
   // the bar is being built (a few ms): the note waits for it
@@ -379,6 +383,7 @@ void VibraphoneEngine::postFocus() {
   m.key = (int16_t)v->key; a[8] = (float)v->Eb; a[9] = (float)v->Et;
   a[0] = (float)std::sqrt(v->qb * v->qb + (v->vb * v->vb) / v->K11);
   for (int i = 1; i < N; i++) {
+    if (v->cut[i]) { a[i] = 0; continue; }
     const double om = TAU * v->d->f[i], c = std::cos(om * k), qa = v->q[i], qb = v->q1[i];
     a[i] = (float)(std::sqrt(std::max(0.0, qa * qa - 2 * c * qa * qb + qb * qb)) / std::sin(om * k));
   }

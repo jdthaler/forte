@@ -14,7 +14,7 @@ export const INSTRUMENT = {
   groups: GROUPS,
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
-  range: [36, 96],                      // MIDI keys
+  range: [21, 108],                     // MIDI keys: A0–C8
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'dephase',                  // CC1: dephasing, from its default up to its maximum
   // the engine: the physics in C++ (native/instruments/quantum), built as WebAssembly. Each note's

@@ -16,7 +16,7 @@
 namespace forte::clavier {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { press, gap, tip, wrap, tipLoss, keyMass, t60, hf, stiff, kc, yarn, pickup, xLower, xUpper, field, gain, soft, medium, treble, brilliant, muteOn, mute, muteX, room, venue, volume, count };
+enum : int { press, gap, tip, wrap, tipLoss, keyMass, t60, hf, stiff, kc, yarn, fullRange, pickup, xLower, xUpper, field, gain, soft, medium, treble, brilliant, muteOn, mute, muteX, room, venue, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -55,6 +55,7 @@ inline const ParamInfo kParams[p::count] = {
   {"stiff", "Bending stiffness", "String", ParamKind::continuous, 0, 4, 1, 0.01, false, false, nullptr, 0, kFormat_stiff, 1},
   {"kc", "Tension modulation (pitch glide)", "String", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"yarn", "Yarn damping", "String", ParamKind::continuous, 20, 8000, 2000, 0, true, false, nullptr, 0, kFormat_yarn, 1},
+  {"fullRange", "Full range (A0–C8)", "String", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"pickup", "Pickup selector", "Pickups and tone", ParamKind::choice, 0, 3, 2, 1, false, true, kChoices_pickup, 4, nullptr, 0},
   {"xLower", "Lower pickup, from tailpiece (at C4)", "Pickups and tone", ParamKind::continuous, 1, 30, 10.3, 0.1, false, false, nullptr, 0, kFormat_xLower, 1},
   {"xUpper", "Upper pickup, from tailpiece (at C4)", "Pickups and tone", ParamKind::continuous, 0.5, 15, 2.7, 0.1, false, false, nullptr, 0, kFormat_xUpper, 1},
@@ -104,7 +105,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 9,
     .keep = kKeep, .keepCount = 3,
-    .keyLo = 29, .keyHi = 88, .space = Space::sustain,
+    .keyLo = 21, .keyHi = 108, .compassLo = 29, .compassHi = 88, .compass = p::fullRange, .space = Space::sustain,
     .modWheel = -1, .modWheelMax = 0,
     .controllers = kControllers, .controllerCount = 0,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 4.5},

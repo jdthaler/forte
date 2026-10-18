@@ -16,7 +16,7 @@
 namespace forte::pianet {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { tack, rate, padK, padC, tipMass, loss, pickup, gap, plateGap, offset, tone, amp, drive, room, venue, volume, count };
+enum : int { tack, rate, padK, padC, tipMass, loss, fullRange, pickup, gap, plateGap, offset, tone, amp, drive, room, venue, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -47,6 +47,7 @@ inline const ParamInfo kParams[p::count] = {
   {"padC", "Pad damping c_p", "Pad and bond", ParamKind::continuous, 0.01, 2, 0.25, 0, true, false, nullptr, 0, kFormat_padC, 1},
   {"tipMass", "Solder tip mass", "Reed", ParamKind::continuous, 0.1, 4, 1, 0, true, false, nullptr, 0, kFormat_tipMass, 1},
   {"loss", "Reed loss η", "Reed", ParamKind::continuous, 0.0002, 0.02, 0.0012, 0, true, false, nullptr, 0, kFormat_loss, 1},
+  {"fullRange", "Full range (A0–C8)", "Reed", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"pickup", "Pickup", "Pickup", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_pickup, 2, nullptr, 0},
   {"gap", "Pole gap at C4", "Pickup", ParamKind::continuous, 0.2, 3, 1, 0, true, false, nullptr, 0, kFormat_gap, 1},
   {"plateGap", "Plate gap at C4", "Pickup", ParamKind::continuous, 0.15, 2, 0.3, 0, true, false, nullptr, 0, kFormat_plateGap, 1},
@@ -93,7 +94,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 10,
     .keep = kKeep, .keepCount = 3,
-    .keyLo = 36, .keyHi = 96, .space = Space::sustain,
+    .keyLo = 21, .keyHi = 108, .compassLo = 36, .compassHi = 96, .compass = p::fullRange, .space = Space::sustain,
     .modWheel = -1, .modWheelMax = 0,
     .controllers = kControllers, .controllerCount = 0,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = -4.5},

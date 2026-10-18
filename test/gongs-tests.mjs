@@ -297,6 +297,24 @@ test('tuning: every key (C2–C6) has its strike tone within ±3 ¢ of 12-TET (s
   console.log(`        worst ${worst.toFixed(2)} ¢ (key ${wk})`);
   assert.ok(Math.abs(worst) < 3, `worst ${worst.toFixed(2)} ¢ at key ${wk}`);
 });
+test('the keys past C2–C6 (A0–B1, C♯6–C8): in tune, a forte note peaks 0.05–0.5, and the top keys keep ≥ 5 modes', () => {
+  const out = [];
+  for (const key of [21, 27, 33, 90, 97, 103, 108]) {
+    const { L } = render(P({ strike: 0, speed: 0.5, eta: 1e-4 }), 0.75, [[0, 'on', key, 0.2]]);
+    const f = keyFreq(key), c = cents(peak(L, f, Math.round(0.05 * FS), L.length, 0.02) / f);
+    assert.ok(Math.abs(c) < 3, `key ${key}: ${c.toFixed(2)} ¢`);
+    const { L: l, R: r } = render(P(), 1, [[0, 'on', key, 0.8]]);
+    let pk = 0;
+    for (let i = 0; i < l.length; i++) pk = Math.max(pk, Math.abs(l[i]), Math.abs(r[i]));
+    assert.ok(pk > 0.05 && pk < 0.5, `key ${key}: peak ${pk}`);
+    out.push(`${key}:${c.toFixed(1)}¢ ${pk.toFixed(2)}`);
+  }
+  for (const fs of [44100, 48000, 96000]) {
+    for (let key = 36; key <= 84; key++) assert.ok(fs / keyGong(key, P(), fs).R <= 26000, `key ${key} at ${fs}: no faster than before`);
+    for (let key = 85; key <= 108; key++) { const g = keyGong(key, P(), fs); assert.ok(g.Nv >= 5 && g.fsi <= 52000, `key ${key} at ${fs}: ${g.Nv} modes at ${g.fsi} Hz`); }
+  }
+  console.log(`        ${out.join(', ')}`);
+});
 test('decay of the strike tone matches the loss model (internal + thermoelastic + radiation)', () => {
   const p = P({ strike: 0, speed: 0.5 }), key = 52, g = keyGong(key, p, FS), sig = g.sigma[g.S.tuned];
   const { L } = render(p, 2.4, [[0, 'on', key, 0.2]]), f = keyFreq(key), W = 16384, a = Math.round(0.2 * FS), b = Math.round(2.0 * FS);

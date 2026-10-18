@@ -2,7 +2,7 @@
 
 import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
-import { INSTRUMENT, KEY_LO, KEY_HI } from './springs-instrument.js';
+import { INSTRUMENT, KEY_MIN, KEY_MAX } from './springs-instrument.js';
 import { wasmModel } from './springs-wasm.js';
 
 // The views draw what the engine plays: its model, from the same C++, built as WebAssembly.
@@ -34,7 +34,7 @@ let warmTimer = 0;
 function prewarm() {
   clearTimeout(warmTimer);
   const keys = [];
-  for (let d = 0; d <= KEY_HI - KEY_LO; d++) for (const k of [focus - d, focus + d]) if (k >= KEY_LO && k <= KEY_HI && !keys.includes(k)) keys.push(k);
+  for (let d = 0; d <= KEY_MAX - KEY_MIN; d++) for (const k of [focus - d, focus + d]) if (k >= KEY_MIN && k <= KEY_MAX && !keys.includes(k)) keys.push(k);
   const step = () => { const k = keys.shift(); if (k !== undefined) { noteData(k, 0.7, shell.P, rate()); warmTimer = setTimeout(step, 4); } };
   warmTimer = setTimeout(step, 300);
 }

@@ -16,7 +16,7 @@
 namespace forte::harmonium {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { principal, musette, detune, bourdon, piccolo, percussion, pressure, expression, pump, set, clearance, q, throat, cell, cassotto, cassF, room, venue, volume, count };
+enum : int { principal, musette, detune, bourdon, piccolo, percussion, pressure, expression, pump, set, clearance, q, throat, cell, fullRange, cassotto, cassF, room, venue, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -51,6 +51,7 @@ inline const ParamInfo kParams[p::count] = {
   {"q", "Reed Q (mechanical)", "Reeds (voicing)", ParamKind::continuous, 50, 800, 500, 0, true, false, nullptr, 0, kFormat_q, 1},
   {"throat", "Air mass feeding the reed", "Reeds (voicing)", ParamKind::continuous, 0.2, 3, 1, 0, true, false, nullptr, 0, kFormat_throat, 2},
   {"cell", "Reed cell volume", "Reeds (voicing)", ParamKind::continuous, 0.2, 4, 1, 0, true, false, nullptr, 0, kFormat_cell, 2},
+  {"fullRange", "Full range (A0–C8)", "Reeds (voicing)", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"cassotto", "Cassotto (tone chamber)", "Cassotto and output", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"cassF", "Cassotto resonance", "Cassotto and output", ParamKind::continuous, 300, 3000, 1500, 0, true, false, nullptr, 0, kFormat_cassF, 1},
   {"room", "Room", "Cassotto and output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, true, nullptr, 0, kFormat_room, 1},
@@ -102,7 +103,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 15,
     .keep = kKeep, .keepCount = 3,
-    .keyLo = 36, .keyHi = 96, .space = Space::hold,
+    .keyLo = 21, .keyHi = 108, .compassLo = 36, .compassHi = 96, .compass = p::fullRange, .space = Space::hold,
     .modWheel = p::pressure, .modWheelMax = 2500,
     .controllers = kControllers, .controllerCount = 0,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = -7},

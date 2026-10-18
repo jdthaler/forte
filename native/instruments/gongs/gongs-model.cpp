@@ -257,9 +257,15 @@ void keyGong(Gong &g, int key, const double *P, double fs, const Shell &S) {
   while (fs / R > OS_MAX_HZ) R *= 2;
   const double fTop = (S.Om[S.N - 1] * w0) / TAU;
   while (R < 8 && CAP * (fs / (2 * R)) > fTop) R *= 2;
-  const double fsi = fs / R, k = w0 / fsi;
+  double fsi = fs / R, k = w0 / fsi;
   int Nv = 0;
   while (Nv < S.N && (S.Om[Nv] * w0) / TAU < CAP * fsi) Nv++;
+  // above C6 (the old top key), a gong that would keep fewer than FEW modes runs at twice that
+  // rate (up to 2·OS_MAX_HZ) and keeps the next ones, up to FEW, below CAP·fs/R there
+  if (key > C6 && Nv < FEW && R > 1 && fs / (R / 2) <= 2 * OS_MAX_HZ) {
+    R /= 2; fsi = fs / R; k = w0 / fsi;
+    while (Nv < FEW && Nv < S.N && (S.Om[Nv] * w0) / TAU < CAP * fsi) Nv++;
+  }
   const double fc = ((AIR.c * AIR.c) / TAU) * std::sqrt((12 * mat.rho * (1 - NU * NU)) / (mat.E * h * h)); // coincidence
   g.S = &S; g.key = key; g.f0 = f0; g.w0 = w0; g.a = a; g.h = h; g.mass = mat.rho * h * pi * a * a; g.cp = cp; g.mat = &mat;
   g.R = R; g.fsi = fsi; g.k = k; g.Nv = Nv; g.fc = fc;

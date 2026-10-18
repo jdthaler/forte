@@ -18,7 +18,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/harmonium/>
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | play (61 keys, C2–C7) |
+| `Z…/` and `Q…]` rows | play (61 keys, C2–C7; 88, A0–C8, with *Full range*) |
 | `←` `→` | octave |
 | `↑` `↓` | velocity: how fast the key opens its pallet |
 | `Space` | hold: keys stay down while it is held (an organ has no damper pedal) |
@@ -37,6 +37,16 @@ compass of many harmoniums. Each key can sound five reeds, one in each rank:
   tuned sharp and flat by the **Musette detune** (12 ¢ by default);
 - **16′**: an octave down, C1–C6 (33 Hz to 1.05 kHz);
 - **4′**: an octave up, C3–C8 (131 Hz to 4.19 kHz).
+
+*Full range* (under Reeds, off by default) opens A0–C8 for an 88-key
+keyboard: every rank's reeds are designed, voiced and tuned by the same
+rules on past C2 and C7, so the 16′ reaches down to 13.75 Hz (A0's, a
+157 mm tongue with a 23 g weight over a 2.9-litre cell, felt more than
+heard) and the 4′ up to C9, 8.4 kHz (a 3.1 mm tongue). Two things there are
+the physics, not faults: the 4′'s top reeds need more wind than the default
+800 Pa to start (from about A7 they speak later and later, and B7 and C8
+not at all; at 1600 Pa they all speak), and the 16′'s A0 settles about
+4 ¢ sharp, since it is tuned (below) while it is still growing.
 
 Pulling a stop opens its rank's mutes over 20 ms, even under held keys.
 **Percussion** adds Martin's percussion action to the 8′ (section 5).
@@ -202,12 +212,14 @@ grows: a scoop of about 25 ¢ at C4 and 50 ¢ at C2 while the note swells.
 ### 6. Tuning
 
 The reeds are tuned as a voicer tunes them, at the playing wind:
-`tools/harmonium-tuning.mjs` blows every reed from C1 to C8 alone in the
-engine, measures how far below its natural frequency it sounds (0.25–1.15 %),
+`tools/harmonium-tuning.mjs` blows every reed from A−1 to C9 (the 16′ at A0
+to the 4′ at C8) alone in the engine, measures how far below its natural
+frequency it sounds (0.15–1.4 %; 0.25–1.15 % from C1 to C8),
 and recuts it; with the engine rebuilt on the new table, until it sounds its
-note within 0.05 ¢ (`--check` measures the build as it is). Every key C2–C7 then
-sounds within ±3 ¢ at 48 and 44.1 kHz (measured worst 0.6 ¢), and so do the
-16′ and 4′ ranks. Change the voicing (set, clearance, Q, air mass, cell) or
+note within 0.05 ¢ (`--check` measures the build as it is; the 4′'s B7 and
+C8, which hardly speak at the default wind, come no closer than 0.3 ¢). Every
+key C2–C7 then sounds within ±3 ¢ at 48 and 44.1 kHz (measured worst 0.6 ¢),
+and so do the 16′ and 4′ ranks, and with the full range the 8′ from A0 to C8. Change the voicing (set, clearance, Q, air mass, cell) or
 the wind and the pitch moves, as it would on the instrument.
 
 ### 7. The musette: reeds that beat

@@ -104,7 +104,8 @@ export const INSTRUMENT = {
   id: 'gongs',
   groups: GROUPS, presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
-  range: [36, 84],                      // the MIDI keys it plays
+  range: [21, 108],                     // the MIDI keys it plays: all 88 (A0–C8), unless the physics stops short
+  compass: { keys: [36, 84], param: 'fullRange' }, // a historical compass: only these play until the checkbox opens the range
   space: 'sustain',                     // Space and CC64: 'sustain' (a damper, sent to the engine), 'hold' (keys latch) or null
   modWheel: 'strike',                   // CC1 (or { param, max })
   controllers: { 67: 'unaCorda' },      // other MIDI controllers → parameters (a toggle is on at 64);
@@ -118,6 +119,15 @@ export const INSTRUMENT = {
   load: async () => …,                  // data to load before the first note (default: none)
 };
 ```
+
+Every instrument plays the 88 keys of a piano keyboard, A0–C8, unless its physics stops short
+(`test/site-tests.mjs` lists those, and each README says why). Keys past the real instrument's
+compass are made by carrying its design on (the same scale of strings, bars or bowls); keep the
+formulas that design the keys drawn on the compass, so the keys inside it sound as they did. An
+instrument with a historical compass (the harpsichord's FF–f³) names it in `compass`, with a
+checkbox parameter (`fullRange`, off) that opens the whole range: the page's keys, the computer
+keys and MIDI follow it, and so do the plugins' note filter and window. The engine plays every
+key in `range` and never reads the checkbox.
 
 A `console` holds controls the page draws itself rather than as sliders: its `groups` are
 parameters as `GROUPS` are, `defaults` the page's state and `get(P)` maps the plugin's

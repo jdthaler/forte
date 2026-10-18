@@ -147,8 +147,9 @@ surface.
 
 Each nozzle releases bubbles of the radius that sounds its note at the
 defaults (30 cm down, air, water, 1 atm), solved from the full model: from
-15.3 mm at A3 to 0.78 mm at C8. Below A3 the bubbles would be over 3 cm
-across. They are not spheres any more: bubbles over about a millimetre are
+15.3 mm at A3 to 0.78 mm at C8. That is where the keyboard starts, and the
+keys of an 88-key keyboard below it stay silent: below A3 the bubbles would
+be over 3 cm across. They are not spheres any more: bubbles over about a millimetre are
 flattened and wobble as they rise, and above about a centimetre they are
 spherical caps. The breathing mode of a moderately distorted bubble rings
 close to that of the sphere of the same volume (Strasberg 1953), so the

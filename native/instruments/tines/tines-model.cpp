@@ -11,7 +11,7 @@
 namespace forte::tines {
 
 static double clamp(double x, double a, double b) { return std::min(b, std::max(a, x)); }
-static double tKey(int m) { return clamp((double)(m - KEY_LO) / (KEY_HI - KEY_LO), 0, 1); }
+static double tKey(int m) { return clamp((double)(m - KEY_LO) / (KEY_HI - KEY_LO), 0, 1); } // past E1–E7: its ends
 
 double keyFreq(int m) { return 440 * std::pow(2.0, (m - 69) / 12.0); }
 

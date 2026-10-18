@@ -61,7 +61,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 3,
     .keep = kKeep, .keepCount = 3,
-    .keyLo = 36, .keyHi = 96, .space = Space::sustain,
+    .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = -1, .modWheelMax = 0,
     .controllers = kControllers, .controllerCount = 0,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 0},

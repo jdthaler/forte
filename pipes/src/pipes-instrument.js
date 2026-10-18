@@ -3,7 +3,7 @@
 // plugins (tools/gen-native-params.mjs) all start here. No DOM, no Web Audio.
 
 import { GROUPS, DEFAULTS, PRESETS } from './pipes-params.js';
-import { KEY_LO, KEY_HI } from './pipes-data.js';
+import { KEY_LO, KEY_HI, KEY_MIN, KEY_MAX } from './pipes-data.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -12,7 +12,8 @@ export const INSTRUMENT = {
   groups: GROUPS,
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity'],    // kept when a preset is chosen
-  range: [KEY_LO, KEY_HI],                 // MIDI keys: C–f³, 36–89
+  range: [KEY_MIN, KEY_MAX],               // MIDI keys: A0–C8, 21–108
+  compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // C–f³, 36–89, until Full range opens the rest
   space: 'hold',                           // Space and CC64 latch the keys down; the host sends the noteOffs on release
   modWheel: { param: 'pressure', max: 3000 }, // CC1: wind pressure, from its default up to 3000 Pa
   // the physics in C++ (native/instruments/pipes), built as WebAssembly

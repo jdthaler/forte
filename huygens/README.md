@@ -12,7 +12,7 @@ Play it at <https://forte.jthaler.net/huygens/> (or locally — see the
 
 | Input | |
 |---|---|
-| `Z…/`, `Q…]` rows | play (61 keys, C2–C7) |
+| `Z…/`, `Q…]` rows | play (88 keys, A0–C8) |
 | hold `Space` | latch notes, to build chords on a computer keyboard |
 | `↑` `↓` | coupling strength |
 | `←` `→` | octave |

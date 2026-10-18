@@ -11,7 +11,7 @@
 //   its parameters (organ-model.h, buildGenerator), so setParams is all it needs.
 
 import { GROUPS, DEFAULTS, PRESETS, CONSOLE_DEFAULTS, CONSOLE } from './organ-params.js';
-import { KEY_LO, KEY_HI } from './tonewheels.js';
+import { KEY_MIN, KEY_MAX } from './tonewheels.js';
 
 export { GROUPS, DEFAULTS, PRESETS, CONSOLE_DEFAULTS, CONSOLE };
 
@@ -20,7 +20,7 @@ export const INSTRUMENT = {
   groups: GROUPS,
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'expression'], // kept when a preset is chosen; the console, motor on, comes from DEFAULTS
-  range: [KEY_LO, KEY_HI],                // the 61-key manual, 36–96 (the page folds other keys in by octaves)
+  range: [KEY_MIN, KEY_MAX],              // A0–C8: past the 61-key manual (36–96) the wheels fold back an octave where a drawbar runs out
   space: null,                            // Space and CC64 switch the Leslie fast/slow (the page), not a pedal
   controllers: {
     1: { param: 'leslie', values: ['slow', 'fast'] },  // the mod wheel: Leslie fast from halfway up

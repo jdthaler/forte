@@ -38,7 +38,9 @@ ModelParams modelParams(const double *P) {
 // ---- scale design ------------------------------------------------------------------------------
 
 // CP-70 short scale: piano-like L ∝ f^−0.9 in the treble, folded so the longest string is 0.68 m.
+// Above E7, L ∝ 1/f: a plain wire's stress is 4ρ(Lf)² whatever its gauge, so it stays at E7's.
 double cpLength(double m) {
+  if (m > KEY_HI) return cpLength(KEY_HI) * std::pow(2.0, -(m - KEY_HI) / 12);
   const double Lf = 0.55 * std::pow(2.0, (-0.9 * (m - 60)) / 12);
   return Lf / std::pow(1 + std::pow(Lf / 0.68, 6), 1.0 / 6);
 }
@@ -65,7 +67,14 @@ double windingMass(double m) {
   if (Tplain >= 0.85 * Ttarget) return 0;
   return mu * (Ttarget / Tplain - 1);
 }
+// Above E7, past the data, the felt hardens so the blow keeps to E7's number of periods: a
+// contact τ ∝ (M/K)^(1/(p+1)) that shrinks as 1/f (0.5 ms at C8; the Grand Piano's is 0.4 ms).
 HammerDefaults hammerDefaults(double m) {
+  if (m > KEY_HI) {
+    const HammerDefaults e7 = hammerDefaults(KEY_HI);
+    const double mass = clamp(e7.mass + (m - KEY_HI) * (2.2e-3 - 2.97e-3) / 36, 1.8e-3, 7e-3);
+    return {mass, e7.K * (mass / e7.mass) * std::pow(2.0, (e7.p + 1) * (m - KEY_HI) / 12), e7.p, clamp(0.010 + (60 - m) * 0.00025, 0.003, 0.022)};
+  }
   static const double M[][2] = {{36, 4.9e-3}, {60, 2.97e-3}, {96, 2.2e-3}};
   static const double K[][2] = {{36, std::log(4e8)}, {60, std::log(4.5e9)}, {96, std::log(1e11)}};
   static const double Pw[][2] = {{36, 2.3}, {60, 2.5}, {96, 3.0}};
@@ -105,28 +114,28 @@ Scale stringScale(int m, const ModelParams &P) { return scaleAt(m, P, keyFreq(m)
 
 // Stretch tuning: each octave beatless (partial 2 of the lower note on the fundamental of the
 // upper), outward from a temperament octave around A4; iterated, as B depends on the tension.
-constexpr int NKEYS = KEY_HI - KEY_LO + 1;
+constexpr int NKEYS = KEY_MAX - KEY_MIN + 1; // every key: the table outward from A4 leaves E1–E7's as they were
 static std::array<double, NKEYS> stretchTable(const ModelParams &P) {
   std::array<double, NKEYS> D{}, s{};
   const int T0 = 63, T1 = 74, A4 = 69;
-  auto S = [&](int m) { return s[std::min(NKEYS - 1, std::max(0, m - KEY_LO))]; };
+  auto S = [&](int m) { return s[std::min(NKEYS - 1, std::max(0, m - KEY_MIN))]; };
   for (int it = 0; it < 3; it++) {
-    for (int m = KEY_LO; m <= KEY_HI; m++) s[m - KEY_LO] = octaveStretch(scaleAt(m, P, keyFreq(m) * std::pow(2.0, D[m - KEY_LO] / 1200)).B);
-    D[A4 - KEY_LO] = 0;
-    for (int m = A4 + 1; m <= T1; m++) D[m - KEY_LO] = D[m - 1 - KEY_LO] + S(m - 7) / 12;
-    for (int m = A4 - 1; m >= T0; m--) D[m - KEY_LO] = D[m + 1 - KEY_LO] - S(m - 6) / 12;
-    for (int m = T1 + 1; m <= KEY_HI; m++) D[m - KEY_LO] = D[m - 12 - KEY_LO] + S(m - 12);
-    for (int m = T0 - 1; m >= KEY_LO; m--) D[m - KEY_LO] = D[m + 12 - KEY_LO] - S(m);
+    for (int m = KEY_MIN; m <= KEY_MAX; m++) s[m - KEY_MIN] = octaveStretch(scaleAt(m, P, keyFreq(m) * std::pow(2.0, D[m - KEY_MIN] / 1200)).B);
+    D[A4 - KEY_MIN] = 0;
+    for (int m = A4 + 1; m <= T1; m++) D[m - KEY_MIN] = D[m - 1 - KEY_MIN] + S(m - 7) / 12;
+    for (int m = A4 - 1; m >= T0; m--) D[m - KEY_MIN] = D[m + 1 - KEY_MIN] - S(m - 6) / 12;
+    for (int m = T1 + 1; m <= KEY_MAX; m++) D[m - KEY_MIN] = D[m - 12 - KEY_MIN] + S(m - 12);
+    for (int m = T0 - 1; m >= KEY_MIN; m--) D[m - KEY_MIN] = D[m + 12 - KEY_MIN] - S(m);
   }
   return D;
 }
 double stretchCents(int m, const ModelParams &P) {
-  if (!P.stretch || m < KEY_LO || m > KEY_HI) return 0;
+  if (!P.stretch || m < KEY_MIN || m > KEY_MAX) return 0;
   // the table for the last scale and stiffness, per thread (the engine's worker, or the views)
   struct Memo { int scale = -1; double stiffness = 0; std::array<double, NKEYS> D{}; };
   thread_local Memo memo;
   if (memo.scale != P.scale || memo.stiffness != P.stiffness) { memo.D = stretchTable(P); memo.scale = P.scale; memo.stiffness = P.stiffness; }
-  return memo.D[m - KEY_LO];
+  return memo.D[m - KEY_MIN];
 }
 
 double partialFreq(const Scale &S, int n) { const double k = (n * PI) / S.L; return std::sqrt((S.T * k * k + S.EI * std::pow(k, 4)) / S.mu) / TAU; }

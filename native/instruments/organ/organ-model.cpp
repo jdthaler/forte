@@ -71,10 +71,10 @@ double wheelLevelDb(int w) {
 // gauge of each drawbar's wire, 16' to 1'. From the key-tapering charts of Kon Zissis's 1965 C-3 and
 // Peter's 1966 C-3 (the same spreadsheet), which agree on every wire but key 43's 1⅓' (24 Ω on
 // Peter's, 35 here). Low keys keep their fundamentals down and their upper drawbars up, and the top
-// keys the other way round.
+// keys the other way round. Keys past the manual are wired as its end key.
 namespace {
 constexpr double GAUGE[6] = {10.5, 15.5, 23.8, 35.1, 51.0, 103.5};
-const char *const WIRES[NUM_KEYS] = {
+const char *const WIRES[KEY_HI - KEY_LO + 1] = {
   "534300122", "534300122", "534300122", "534300122", "534300122", "534300122",
   "534300122", "534300122", "534300122", "534300122", "534300122", "534301122",
   "434311122", "434211122", "424211122", "423211122", "323211122", "323211122",
@@ -139,7 +139,7 @@ void buildGenerator(Generator &g, const GenParams &q, double fs) {
     g.leak[w] = lk * (0.3 + 0.7 * r());
   }
   for (int k = 0; k < NUM_KEYS; k++) {
-    const int key = KEY_LO + k;
+    const int key = KEY_MIN + k;
     for (int d = 0; d < 9; d++) {
       g.keyMap[k * 9 + d] = (int16_t)keyWheel(key, d);
       g.taper[k * 9 + d] = b3 ? WIRE_REF / wireOhms(key, d) : 1;
@@ -161,8 +161,9 @@ void keyAnalysis(int key, int tuning, int levels, double mainsHz, Analysis out[9
     const int w = keyWheel(key, d);
     const double ideal = f8 * DRAWBARS[d].harmonic;
     const double actual = tuning == harmonic ? ideal : f(w);
+    const int at = key - 23 + DRAWBARS[d].offset; // the wheel it would tap with no foldback
     const double db = levels == Levels::b3 ? wheelLevelDb(w) + 20 * fd::log10(WIRE_REF / wireOhms(key, d)) : 0;
-    out[d] = {w, actual, ideal, 1200 * fd::log2(actual / ideal), key - 23 + DRAWBARS[d].offset > NUM_WHEELS, db};
+    out[d] = {w, actual, ideal, 1200 * fd::log2(actual / ideal), w != at, db};
   }
 }
 

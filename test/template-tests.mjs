@@ -83,7 +83,7 @@ test('striking on mode 1\'s node silences the fundamental', () => {
 });
 test('output level is sane (peak 0.02 – 1 at full velocity)', () => {
   let pk = 0;
-  for (const k of [36, 60, 84, 96]) for (const v of render(k, P(), 1, 0.3)) pk = Math.max(pk, Math.abs(v));
+  for (const k of [21, 36, 60, 84, 96, 108]) for (const v of render(k, P(), 1, 0.3)) pk = Math.max(pk, Math.abs(v));
   assert.ok(pk > 0.02 && pk < 1, `peak ${pk}`);
 });
 

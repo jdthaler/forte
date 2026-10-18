@@ -12,7 +12,7 @@ export const INSTRUMENT = {
   groups: GROUPS,
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'tone', 'body'], // kept when a preset is chosen
-  range: [KEY_LO, KEY_HI],                  // MIDI keys: 36–96
+  range: [KEY_LO, KEY_HI],                  // MIDI keys: A0–C8, 21–108
   space: 'hold',                            // Space and CC64 latch the keys
   modWheel: 'kick',                         // CC1: the pulse coupling, from its default up
   // the engine: the physics in C++ (native/instruments/huygens), built as WebAssembly. It tunes each

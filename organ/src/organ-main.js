@@ -4,7 +4,7 @@
 
 import { GROUPS, ALL_PARAMS, DEFAULTS, PRESETS } from './organ-params.js';
 import { INSTRUMENT } from './organ-instrument.js';
-import { DRAWBARS, NUM_WHEELS, KEY_LO, KEY_HI, PC_NAMES } from './tonewheels.js';
+import { DRAWBARS, NUM_WHEELS, KEY_MIN, KEY_MAX, PC_NAMES } from './tonewheels.js';
 import { wasmModel } from './organ-wasm.js';
 import { createChain } from '../../shared/chain.js';
 import { SpectrogramView } from '../../shared/views.js';
@@ -104,8 +104,7 @@ function onWorklet(m) {
 // keys
 
 async function keyDown(key, velocity = 100 / 127) { // velocity 0..1: the computer keys play MIDI 100
-  while (key < KEY_LO) key += 12;
-  while (key > KEY_HI) key -= 12;
+  if (key < KEY_MIN || key > KEY_MAX) return; // A0–C8: the engine plays every key, the wheels folding back where they run out
   sounding.set(key, (sounding.get(key) || 0) + 1);
   sost.strike(key);
   keyboardView.set(key, true);
@@ -118,8 +117,7 @@ async function keyDown(key, velocity = 100 / 127) { // velocity 0..1: the comput
   refreshActivity();
 }
 function keyUp(key) {
-  while (key < KEY_LO) key += 12;
-  while (key > KEY_HI) key -= 12;
+  if (key < KEY_MIN || key > KEY_MAX) return;
   const n = (sounding.get(key) || 0) - 1;
   if (n > 0) { sounding.set(key, n); return; }
   sounding.delete(key);
@@ -177,7 +175,7 @@ window.addEventListener('blur', () => { for (const k of held.values()) keyUp(k);
 
 function shiftOctave(d) {
   const nb = base + d;
-  if (nb + 11 < KEY_LO || nb > KEY_HI - 12) return; // never a whole row of computer keys out of range
+  if (nb + 11 < KEY_MIN || nb > KEY_MAX - 12) return; // never a whole row of computer keys out of range
   for (const k of held.values()) keyUp(k);
   held.clear();
   base = nb;
@@ -186,7 +184,7 @@ function shiftOctave(d) {
 }
 function updateHelp() {
   const db = `${((P.expression - 1) * 40).toFixed(0)} dB`;
-  $('#oct').textContent = `${noteName(Math.max(KEY_LO, base))}–${noteName(Math.min(KEY_HI, base + 31))}`;
+  $('#oct').textContent = `${noteName(Math.max(KEY_MIN, base))}–${noteName(Math.min(KEY_MAX, base + 31))}`;
   $('#expr').textContent = db;
   $('#swell-read').textContent = db;
   const sw = $('#swell');
@@ -217,9 +215,9 @@ function onMIDI(ev) {
 }
 
 // ---------------------------------------------------------------------------
-// on-screen keyboard (61 keys)
+// on-screen keyboard: a window onto A0–C8 (the 61-key manual is C2–C7)
 
-const keyboardView = createKeyboard($('#keyboard'), { lo: KEY_LO, hi: KEY_HI, onDown: (k) => keyDown(k), onUp: keyUp });
+const keyboardView = createKeyboard($('#keyboard'), { lo: KEY_MIN, hi: KEY_MAX, onDown: (k) => keyDown(k), onUp: keyUp });
 
 // ---------------------------------------------------------------------------
 // drawbars and console switches

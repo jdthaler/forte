@@ -100,13 +100,13 @@ test('RF voltage: fs ∝ √V, the bunch shortens as V^(−¼), and σt·σδ (t
 });
 test('the lattice scales with the ring: the dephasing D = Q′σδ/Qs is the same on every key', () => {
   const D = ringOf(REF_KEY, P()).D;
-  for (const k of [36, 48, 72, 96]) assert.ok(Math.abs(ringOf(k, P()).D / D - 1) < 1e-12, `${k}`);
+  for (const k of [21, 36, 48, 72, 96, 108]) assert.ok(Math.abs(ringOf(k, P()).D / D - 1) < 1e-12, `${k}`);
   assert.ok(Math.abs(ringOf(48, P()).chroma / P().chroma - 2) < 1e-12, 'an octave down, twice the cells and twice the chromaticity');
 });
 
 console.log('engine');
 test('every key is on pitch: the pulse train repeats at f_rev', () => {
-  for (const k of [36, 50, 60, 69, 84, 96]) {
+  for (const k of [21, 24, 36, 50, 60, 69, 84, 96, 108]) {
     const f = keyFreq(k), [L] = note(k, P({ kick: 0, phase: 0, pickup: 'single' }), 1.2), a = 4800, b = 4800 + 32768;
     let best = 0, bestC = 0;
     for (let c = -8; c <= 8; c += 0.25) { const v = tone(L, 2 * f * 2 ** (c / 1200), a, b); if (v > best) { best = v; bestC = c; } }
@@ -199,7 +199,7 @@ test('velocity is the bunch charge: twice the charge, twice the signal', () => {
 test('output level is sane in every preset (peak 0.02 – 1.2, no NaN)', () => {
   for (const pr of PRESETS) {
     let pk = 0;
-    for (const k of [36, 60, 96]) for (const x of note(k, P(pr.p), 0.4, 1)) for (const v of x) { assert.ok(Number.isFinite(v), `${pr.name}: NaN`); pk = Math.max(pk, Math.abs(v)); }
+    for (const k of [21, 36, 60, 96, 108]) for (const x of note(k, P(pr.p), 0.4, 1)) for (const v of x) { assert.ok(Number.isFinite(v), `${pr.name}: NaN`); pk = Math.max(pk, Math.abs(v)); }
     assert.ok(pk > 0.02 && pk < 1.2, `${pr.name}: peak ${pk}`);
   }
 });

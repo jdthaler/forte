@@ -12,7 +12,7 @@
 import assert from 'node:assert/strict';
 import { genEig } from '../shared/linalg.js';
 import { keyFreq } from '../shared/dsp.js';
-import { AL, G_AL, BETA_L, EB_RATIOS, KEY_LO, KEY_HI, barBlank, bendingFreqs3, halfMesh, assembleBending, tuneUndercut } from '../vibraphone/src/bar.js';
+import { AL, G_AL, BETA_L, EB_RATIOS, KEY_LO, KEY_HI, KEY_MIN, KEY_MAX, barBlank, bendingFreqs3, halfMesh, assembleBending, tuneUndercut } from '../vibraphone/src/bar.js';
 import { BAR_TABLE } from '../vibraphone/src/bar-table.js';
 import { INSTRUMENT } from '../vibraphone/src/vibraphone-instrument.js';
 import { wasmModel } from '../vibraphone/src/vibraphone-wasm.js';
@@ -155,10 +155,11 @@ test('the banded Sturm-bisection solvers (bar.js and the C++) agree with the den
   for (const [n1, idx] of [[0, 1], [2, 2], [4, 3]]) assert.ok(Math.abs(dense(idx) / m[n1].f - 1) < 1e-9, `C++ mode ${n1 + 1}`);
   for (const [n1, idx] of [[0, 1], [2, 2]]) assert.ok(Math.abs(dense(idx) / js[n1] - 1) < 1e-9, `bar.js mode ${n1 + 1}`);
 });
-test('undercut optimiser: every bar F3–F6 sits at 1 : 4 : 10 within 1 ¢ (and its fundamental within 0.1 ¢ of 12-TET)', () => {
-  assert.equal(BAR_TABLE.length, KEY_HI - KEY_LO + 1);
+test('undercut optimiser: every bar A0–C8 (F3–F6 and the keys past it) sits at 1 : 4 : 10 within 1 ¢ (and its fundamental within 0.1 ¢ of 12-TET)', () => {
+  assert.equal(BAR_TABLE.length, KEY_MAX - KEY_MIN + 1);
+  BAR_TABLE.forEach((row, i) => assert.equal(row[0], KEY_MIN + i));
   let worst = 0;
-  for (let k = KEY_LO; k <= KEY_HI; k++) { // the bars the C++ builds, by both FEMs
+  for (let k = KEY_MIN; k <= KEY_MAX; k++) { // the bars the C++ builds, by both FEMs
     const bar = barModel(k), g = bar.geom, m = bends(bar);
     for (const f of [bendingFreqs3(g.cut, g.L, g.b), m.map((x) => x.f)]) {
       const e = [cents(f[1] / f[0], 4), cents(f[2] / f[0], 10)];
@@ -168,14 +169,14 @@ test('undercut optimiser: every bar F3–F6 sits at 1 : 4 : 10 within 1 ¢ (and 
   }
   assert.ok(worst < 1, `worst ${worst.toFixed(4)} ¢`);
   // and on a mesh twice as fine the tuning holds to a quarter of a cent (the mesh is converged)
-  for (const k of [KEY_LO, 71, KEY_HI]) {
+  for (const k of [KEY_MIN, KEY_LO, 71, KEY_HI, KEY_MAX]) {
     const g = barModel(k).geom, f = bendingFreqs3(g.cut, g.L, g.b, 6);
     assert.ok(Math.abs(cents(f[1] / f[0], 4)) < 0.25 && Math.abs(cents(f[2] / f[0], 10)) < 0.25, `key ${k} fine mesh: ${cents(f[1] / f[0], 4).toFixed(3)}, ${cents(f[2] / f[0], 10).toFixed(3)} ¢`);
   }
 });
-test('the optimiser, started cold, reproduces the table (F3, A4, F6)', () => {
-  for (const k of [KEY_LO, 69, KEY_HI]) {
-    const { b, h0, cf } = barBlank(k), row = BAR_TABLE[k - KEY_LO];
+test('the optimiser, started cold, reproduces the table (A0, F3, A4, F6, C8)', () => {
+  for (const k of [KEY_MIN, KEY_LO, 69, KEY_HI, KEY_MAX]) {
+    const { b, h0, cf } = barBlank(k), row = BAR_TABLE[k - KEY_MIN];
     const r = tuneUndercut({ f1: keyFreq(k), b, h0, cf, start: { A: row[2] * 1.06, D: row[3] * 0.94, L: row[1] * 1.05 } });
     assert.ok(Math.abs(r.L / row[1] - 1) < 1e-5 && Math.abs(r.A - row[2]) < 1e-4 && Math.abs(r.D - row[3]) < 1e-4, `key ${k}: L ${r.L} vs ${row[1]}`);
     assert.ok(r.residualCents.every((c) => Math.abs(c) < 0.01));
@@ -252,6 +253,23 @@ test('tuning: every key F3–F6 sounds within ±3 ¢ of 12-TET (tubes on, motor 
     assert.ok(Math.abs(c) < 3, `key ${k} at ${fs}: ${c.toFixed(2)} ¢`);
   }
   console.log(`         worst ${worst.toFixed(2)} ¢`);
+});
+test('the keys past the compass (A0–E3, F♯6–C8) sound in tune within ±3 ¢, bounded, and no mode above 0.45 fs aliases back down', () => {
+  for (const fs of [44100, 48000]) for (const k of [KEY_MIN, 33, 45, 52, 90, 96, 102, KEY_MAX]) {
+    const x = run(P({ motor: 'open' }), [[0, 'on', k, 0.8]], 1.4, { fs }), f = keyFreq(k);
+    assert.ok(x.every(Number.isFinite) && peakAbs(x) < 0.6 && peakAbs(x) > 0.005, `key ${k} at ${fs}: peak ${peakAbs(x)}`);
+    const a = Math.round(0.4 * fs), b = Math.round(1.4 * fs), tw = (fr) => tone(x, fr, a, b, fs);
+    let best = f, bv = -1;
+    for (let c = -20; c <= 20; c += 0.5) { const fr = f * 2 ** (c / 1200), v = tw(fr); if (v > bv) { bv = v; best = fr; } }
+    let lo = best * 2 ** (-0.5 / 1200), hi = best * 2 ** (0.5 / 1200);
+    for (let it = 0; it < 30; it++) { const m1 = (2 * lo + hi) / 3, m2 = (lo + 2 * hi) / 3; if (tw(m1) > tw(m2)) hi = m2; else lo = m1; }
+    assert.ok(Math.abs(cents(0.5 * (lo + hi), f)) < 3, `key ${k} at ${fs}: ${cents(0.5 * (lo + hi), f).toFixed(2)} ¢`);
+    // where each mode above 0.45 fs would fold to: nothing there
+    for (const m of barModel(k).modes) if (m.f >= 0.45 * fs && m.f < fs) {
+      const alias = fs - m.f, a0 = Math.round(0.02 * fs), b0 = Math.round(0.42 * fs);
+      assert.ok(tone(x, alias, a0, b0, fs) < 1e-3 * tone(x, f, a0, b0, fs), `key ${k} at ${fs}: mode at ${m.f.toFixed(0)} Hz aliases to ${alias.toFixed(0)} Hz`);
+    }
+  }
 });
 test('the partials are the model\'s: 4 and 10 × f₁ for the tuned bar, 2.7 and 5.3 × f₁ for a plain one (struck near the end)', () => {
   for (const depth of [1, 0]) {

@@ -297,7 +297,7 @@ double shutterOpen(double v) { return 0.3 * pow(1.0 / 30, clamp(v, 0, 1)); }
 double shutterClose(double v) { return v < 0 || v != v ? 0.04 : 0.1 * pow(0.15, clamp(v, 0, 1)); }
 
 // ---- the soundbox --------------------------------------------------------------------------------
-double topMass(int key) { return BOX.mBass * pow(BOX.mTreble / BOX.mBass, std::max(0.0, std::min(1.0, (key - KEY_LO) / double(KEY_HI - KEY_LO)))); }
+double topMass(int key) { return BOX.mBass * pow(BOX.mTreble / BOX.mBass, std::min(1.0, (key - KEY_LO) / double(KEY_HI - KEY_LO))); } // heavier on below G3, for the ropes
 double boxGain(int key) { return AIR.rho / (TAU * topMass(key) * BOX.r); }
 
 } // namespace forte::windharp

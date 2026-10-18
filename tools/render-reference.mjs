@@ -21,7 +21,10 @@ const FRAME = 0.1; // s: the level envelope's frames
 export function scripts(I) {
   const [lo, hi] = I.range || [36, 96];
   const vel = (v) => (I.midiVelocity ? I.midiVelocity(v) : v); // a MIDI host's velocity, as the page maps it
-  const fold = (k) => { while (k < lo) k += 12; while (k > hi) k -= 12; return k; };
+  // the notes and chords fold into the keys that play by default (a historical compass); the
+  // lowest and highest are the whole range's
+  const [flo, fhi] = I.compass?.keys ?? [lo, hi];
+  const fold = (k) => { while (k < flo) k += 12; while (k > fhi) k -= 12; return k; };
   const c4 = fold(60), on = (t, k, v) => [t, 'on', fold(k), vel(v)], off = (t, k) => [t, 'off', fold(k)];
   const list = [
     { name: 'note', seconds: 2, events: [on(0, 60, 0.7), off(1, 60)] },

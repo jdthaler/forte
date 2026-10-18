@@ -94,12 +94,11 @@ const SZ = ['dnu', 'numax', 'eps', 'd02', 'alpha', 'fwhm', 'gamma', 'dPi', 'q'];
 const TYPES = { l: Int8Array, m: Int8Array, mult: Int32Array };
 const starOf = (a) => ({ M: a[0], R: a[1], T: a[2], L: a[3], s: a[4], stage: STAGES[a[5]], track: a[6] });
 export async function wasmModel() {
-  const x = await ready(), s = scratch(x), max = Math.floor(s.size / 8);
+  const x = await ready(), s = scratch(x);
   return {
     keyStar(key, P) {
-      const fam = P.family === 'dscuti' ? 1 : 0, n = x.stars_key_star(fam, P.mass, P.speedup, key, s.at, max);
-      if (n < 0) throw new Error(`stars: key ${key}'s star does not fit the scratch area`);
-      const a = s.f64(n).slice(), N = a[3], nAll = a[4];
+      const fam = P.family === 'dscuti' ? 1 : 0, n = x.stars_key_star(fam, P.mass, P.speedup, key);
+      const a = new Float64Array(x.memory.buffer, x.stars_key_star_data(), n).slice(), N = a[3], nAll = a[4];
       let i = 8;
       const star = starOf(a.subarray(i, i + 7)); i += 7;
       const sz = {}; SZ.forEach((k) => { sz[k] = a[i++]; });

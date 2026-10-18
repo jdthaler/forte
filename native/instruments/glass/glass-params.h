@@ -16,7 +16,7 @@
 namespace forte::glass {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { press, wet, v0, rough, speed, treadle, split, loss, water, room, venue, volume, count };
+enum : int { press, wet, v0, rough, speed, treadle, split, loss, water, fullRange, room, venue, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -44,6 +44,7 @@ inline const ParamInfo kParams[p::count] = {
   {"split", "Doublet split (irregularity)", "Glass", ParamKind::continuous, 0, 40, 12, 0.1, false, false, nullptr, 0, kFormat_split, 1},
   {"loss", "Glass loss factor", "Glass", ParamKind::continuous, 0.00003, 0.003, 0.0004, 0, true, false, nullptr, 0, kFormat_loss, 5},
   {"water", "Water in the bowls", "Glass", ParamKind::continuous, 0, 0.8, 0, 0.01, false, false, nullptr, 0, kFormat_water, 1},
+  {"fullRange", "Full range (A0–C8)", "Glass", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, true, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
@@ -81,7 +82,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 9,
     .keep = kKeep, .keepCount = 3,
-    .keyLo = 53, .keyHi = 93, .space = Space::hold,
+    .keyLo = 21, .keyHi = 108, .compassLo = 53, .compassHi = 93, .compass = p::fullRange, .space = Space::hold,
     .modWheel = p::speed, .modWheelMax = 1,
     .controllers = kControllers, .controllerCount = 0,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 0.5},

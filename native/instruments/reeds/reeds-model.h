@@ -24,7 +24,8 @@
 namespace forte::reeds {
 
 constexpr double PI = 3.141592653589793;
-constexpr int KEY_LO = 33, KEY_HI = 96; // 64 keys, A1–C7
+constexpr int KEY_LO = 33, KEY_HI = 96; // the 200A's 64 keys, A1–C7: the compass its reeds are graded on
+constexpr int KEY_MIN = 21, KEY_MAX = 108; // what it plays with the full range open: the same reeds, continued
 constexpr int MAX_MODES = 6;            // bending modes per reed
 constexpr double EPS0 = 8.8541878128e-12;
 // The slot every reed sits in (metres): reed tongue h × b, comb thickness t, comb teeth `tooth`

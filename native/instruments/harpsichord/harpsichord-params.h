@@ -16,7 +16,7 @@
 namespace forte::harpsichord {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { manual, coupler, front8, back8, four, lute, buff, material, stiff, overlap, stagger, xFront, xBack, xFour, xLute, pitch, temperament, detune, loss, damper, fmax, soundboard, room, venue, volume, count };
+enum : int { manual, coupler, front8, back8, four, lute, buff, material, stiff, overlap, stagger, xFront, xBack, xFour, xLute, pitch, temperament, detune, loss, damper, fmax, fullRange, soundboard, room, venue, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -65,6 +65,7 @@ inline const ParamInfo kParams[p::count] = {
   {"loss", "String losses (air and wire)", "Strings and tuning", ParamKind::continuous, 0.25, 4, 1, 0, true, false, nullptr, 0, kFormat_loss, 1},
   {"damper", "Damper felt", "Strings and tuning", ParamKind::continuous, 0.1, 4, 1, 0, true, false, nullptr, 0, kFormat_damper, 1},
   {"fmax", "Highest partial", "Strings and tuning", ParamKind::continuous, 4, 16, 10, 0.5, false, false, nullptr, 0, kFormat_fmax, 1},
+  {"fullRange", "Full range (A0–C8)", "Strings and tuning", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"soundboard", "Soundboard", "Body and output", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"room", "Room", "Body and output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Body and output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
@@ -111,7 +112,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 13,
     .keep = kKeep, .keepCount = 3,
-    .keyLo = 29, .keyHi = 89, .space = Space::hold,
+    .keyLo = 21, .keyHi = 108, .compassLo = 29, .compassHi = 89, .compass = p::fullRange, .space = Space::hold,
     .modWheel = -1, .modWheelMax = 0,
     .controllers = kControllers, .controllerCount = 0,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = -2},

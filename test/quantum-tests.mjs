@@ -234,7 +234,7 @@ test('hydrogen: revivals degrade (cubic term) and return at T_sr/6 (n̄ = 44, a 
 console.log('engine');
 test('every key is on pitch at the launch (±3 ¢): square well, tempo-locked', () => {
   let worst = 0, wk = 0;
-  for (let k = 36; k <= 96; k++) {
+  for (let k = INSTRUMENT.range[0]; k <= INSTRUMENT.range[1]; k++) {
     const pk = makePacket(k, P()), f0 = keyFreq(k), { L } = note(P(), k, 0.12);
     const f = launchPitch(L, f0, 2.5 / f0, 2.5 / f0 + 0.3 * pk.tColl);
     if (Math.abs(cents(f, f0)) > Math.abs(worst)) { worst = cents(f, f0); wk = k; }
@@ -326,27 +326,39 @@ test('the spectrum is the Bohr lines: a 3-level packet in the box has lines at (
     assert.ok(Math.abs((f * pk.Trev) - (2 * pk.ns[pr.i] + 1)) < 1e-6, `${f * pk.Trev} vs 2n+1`);
   }
 });
-test('level: a forte note peaks 0.1–0.5 for every well and detector', () => {
-  for (const potential of ['box', 'morse', 'hydrogen', 'bouncer', 'harmonic']) for (const detector of ['x', 'v', 'a']) for (const k of [36, 60, 96]) {
+test('level: a forte note peaks 0.1–0.5 for every well and detector (0.09 below C2)', () => {
+  for (const potential of ['box', 'morse', 'hydrogen', 'bouncer', 'harmonic']) for (const detector of ['x', 'v', 'a']) for (const k of [21, 36, 60, 96, 108]) {
     const { L, R } = note(P({ potential, detector }), k, 0.6);
     let pk = 0; for (let i = 0; i < L.length; i++) pk = Math.max(pk, Math.abs(L[i]), Math.abs(R[i]));
-    assert.ok(pk > 0.1 && pk < 0.5, `${potential}/${detector}/${k}: peak ${pk.toFixed(3)}`);
+    // below C2, hydrogen's antenna peaks a little under 0.1 (0.096 from A0 to E1, 0.13 at A1, 0.15 at C2)
+    const floor = k < 36 ? 0.09 : 0.1;
+    assert.ok(pk > floor && pk < 0.5, `${potential}/${detector}/${k}: peak ${pk.toFixed(3)}`);
   }
 });
 test('every knob at its extremes: finite, no blow-up, peak < 0.6', () => {
   const ranged = GROUPS.flatMap((g) => g.params).filter((q) => q.min !== undefined);
-  for (const potential of ['box', 'morse', 'hydrogen', 'bouncer', 'harmonic']) for (const detector of ['x', 'v', 'a']) for (const q of ranged) for (const v of [q.min, q.max]) for (const lock of [true, false]) {
-    const p = P({ potential, detector, lock, [q.id]: v }), { L } = render(p, [[0, 'on', 36, 1], [0, 'on', 96, 1], [0.15, 'off', 36], [0.15, 'off', 96]], 0.3);
-    let pk = 0; for (const x of L) { assert.ok(Number.isFinite(x), `${potential}/${detector} ${q.id}=${v}: NaN`); pk = Math.max(pk, Math.abs(x)); }
-    assert.ok(pk < 0.6, `${potential}/${detector} ${q.id}=${v}: peak ${pk}`);
+  for (const potential of ['box', 'morse', 'hydrogen', 'bouncer', 'harmonic']) for (const detector of ['x', 'v', 'a']) for (const q of ranged) for (const v of [q.min, q.max]) for (const lock of [true, false]) for (const [lo, hi] of [[36, 96], [21, 108]]) {
+    const p = P({ potential, detector, lock, [q.id]: v }), { L, e } = render(p, [[0, 'on', lo, 1], [0, 'on', hi, 1], [0.15, 'off', lo], [0.15, 'off', hi]], 0.3);
+    e.destroy(); // some 1400 engines: give each one's memory back
+    let pk = 0; for (const x of L) { assert.ok(Number.isFinite(x), `${potential}/${detector} ${q.id}=${v} keys ${lo}, ${hi}: NaN`); pk = Math.max(pk, Math.abs(x)); }
+    assert.ok(pk < 0.6, `${potential}/${detector} ${q.id}=${v} keys ${lo}, ${hi}: peak ${pk}`);
   }
 });
 test('no clicks: the launch is no steeper than the packet\'s own first bounces; release is smooth; silence after the quench', () => {
-  for (const potential of ['box', 'morse', 'hydrogen', 'bouncer', 'harmonic']) for (const detector of ['x', 'v', 'a']) for (const k of [36, 60, 84, 96]) {
+  for (const potential of ['box', 'morse', 'hydrogen', 'bouncer', 'harmonic']) for (const detector of ['x', 'v', 'a']) for (const k of [21, 36, 60, 84, 96, 108]) {
     const p = P({ potential, detector, release: 0.05 }), { M } = render(p, [[0, 'on', k, 1], [0.3, 'off', k]], 1.2), T = 1 / keyFreq(k);
     const slope = (a, b) => { let m = 0; for (let i = Math.max(1, Math.round(a * FS)); i < Math.round(b * FS); i++) m = Math.max(m, Math.abs(M[i] - M[i - 1])); return m; };
     const on = slope(0, 0.75 * T), own = slope(0.75 * T, 3 * T);
-    assert.ok(on < 1.6 * own, `${potential}/${detector}/${k}: onset slope ${(on / own).toFixed(2)}× the note's own`);
+    // Past C2–C7 the tempo lock gives the bass small packets (n̄ ≈ 6–55 at A0) that spread within their
+    // first period, so their later bounces are softer than the launch itself: there the onset is held to
+    // the packet's own launch-to-bounces ratio (the model's signal, without the pump ramp).
+    let own0 = 1;
+    if (k < 36 || k > 96) {
+      const pk = makePacket(k, p), y = (i) => signalAt(pk, i / FS);
+      const ms = (a, b) => { let m = 0; for (let i = Math.max(1, Math.round(a * FS)); i < Math.round(b * FS); i++) m = Math.max(m, Math.abs(y(i) - y(i - 1))); return m; };
+      own0 = Math.max(1, ms(0, 0.75 * T) / ms(0.75 * T, 3 * T));
+    }
+    assert.ok(on < 1.6 * own0 * own, `${potential}/${detector}/${k}: onset slope ${(on / own).toFixed(2)}× the note's own (the packet's own launch ${own0.toFixed(2)}×)`);
     const around = slope(0.3 - 0.001, 0.3 + 0.001), local = Math.max(slope(0.3 - 0.006, 0.3 - 0.001), slope(0.3 + 0.001, 0.3 + 0.006));
     assert.ok(around < 1.2 * local, `${potential}/${detector}/${k}: release ${(around / local).toFixed(2)}`);
     assert.ok(rms(M, Math.round(1.0 * FS), M.length) < 1e-4 * rms(M, 0, Math.round(0.3 * FS)), `${potential}/${detector}/${k}: not silent`);
@@ -355,7 +367,7 @@ test('no clicks: the launch is no steeper than the packet\'s own first bounces; 
 test('regression: tempo extremes keep every key on pitch; a revival the well cannot reach falls off the beat, flagged', () => {
   // was: n̄ clamped to its range with no fallback, so hydrogen at 40 BPM × 8 beats played C7 3181 ¢ flat
   let worst = 0, wk = '', off = 0;
-  for (const potential of ['box', 'morse', 'hydrogen', 'bouncer']) for (const [bpm, beats] of [[40, 8], [200, 0.5], [40, 0.5], [200, 8], [90, 2]]) for (const key of [36, 48, 60, 72, 84, 96]) {
+  for (const potential of ['box', 'morse', 'hydrogen', 'bouncer']) for (const [bpm, beats] of [[40, 8], [200, 0.5], [40, 0.5], [200, 8], [90, 2]]) for (const key of [21, 36, 48, 60, 72, 84, 96, 108]) {
     const p = P({ potential, bpm, beats }), pk = makePacket(key, p), c = cents(pk.pitch, keyFreq(key)), T = (beats * 60) / bpm;
     if (Math.abs(c) > Math.abs(worst)) { worst = c; wk = `${potential} ${bpm}×${beats} key ${key}`; }
     if (pk.offBeat) off++; else assert.ok(rel(pk.Trev, T) < 1e-6, `${potential} ${bpm}×${beats} key ${key}: locked, T_rev ${pk.Trev} vs ${T}`);
@@ -368,7 +380,7 @@ test('regression: tempo extremes keep every key on pitch; a revival the well can
     const p = P({ potential, bpm, beats, detector: 'x' }), f0 = keyFreq(key), { M } = note(p, key, 0.2), t1 = 0.03, f = launchPitch(M, f0, t1, t1 + 3 / f0);
     assert.ok(Math.abs(cents(f, f0)) < 3, `${potential} ${bpm}×${beats} key ${key}: ${cents(f, f0).toFixed(2)} ¢ from the output`);
   }
-  console.log(`        ${off} of 120 keys × tempos off the beat; pitch exact everywhere`);
+  console.log(`        ${off} of 160 keys × tempos off the beat; pitch exact everywhere`);
 });
 test('regression: the electrode\'s Franck–Condon reference is in its gain: notes peak ≤ 0.3, six-note chords ≈ 1', () => {
   // was: the fade of the reference was left out of the normalisation (notes 0.36, chords 1.24, the Rydberg preset 1.41)

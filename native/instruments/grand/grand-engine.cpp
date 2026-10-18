@@ -297,7 +297,7 @@ std::unique_ptr<Built> GrandEngine::build(int key, uint64_t version) {
     out->board = std::move(c);
     return out;
   }
-  if (key < KEY_LO || key > KEY_HI) return nullptr;
+  if (key < KEY_MIN || key > KEY_MAX) return nullptr;
   double Pv[p::count];
   const auto &snap = snapshots[version % snapshots.size()];
   for (int i = 0; i < p::count; i++) Pv[i] = snap[i].load(std::memory_order_relaxed);
@@ -336,7 +336,7 @@ void GrandEngine::setParams(const double *p) {
     version++;
     auto &snap = snapshots[version % snapshots.size()];
     for (int i = 0; i < p::count; i++) snap[i].store(P[i], std::memory_order_relaxed);
-    data.prepare(version, KEY_LO, KEY_HI, focus);
+    data.prepare(version, KEY_MIN, KEY_MAX, focus);
   }
   if ((int)P[p::mount] == mount_::board) {
     BoardSlot *b = boardFor(P[p::boardH]);
@@ -396,7 +396,7 @@ GrandEngine::Voice *GrandEngine::freeVoice() {
 }
 
 void GrandEngine::noteOn(int key, double velocity) {
-  if (!hasParams || key < KEY_LO || key > KEY_HI) return;
+  if (!hasParams || key < KEY_MIN || key > KEY_MAX) return;
   focus = key;
   Voice *v = byKey[key];
   // the action has not yet brought the hammer back for another blow

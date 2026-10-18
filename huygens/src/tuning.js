@@ -2,7 +2,7 @@
 // key is designed to play (equal or just, mistuned) is the C++'s (huygens-model.cpp tunedFreq),
 // which the page calls through huygens-wasm.js.
 
-export const KEY_LO = 36, KEY_HI = 96;
+export const KEY_LO = 21, KEY_HI = 108; // A0–C8: every key of an 88-key keyboard
 export const keyFreq = (m) => 440 * 2 ** ((m - 69) / 12);
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
 export const PC = NAMES;

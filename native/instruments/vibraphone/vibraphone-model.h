@@ -24,7 +24,8 @@
 
 namespace forte::vibraphone {
 
-constexpr int KEY_LO = 53, KEY_HI = 89; // F3–F6, the standard three-octave vibraphone
+constexpr int KEY_LO = 53, KEY_HI = 89;   // F3–F6, the standard three-octave vibraphone: the compass, which the bars are graded on
+constexpr int KEY_MIN = 21, KEY_MAX = 108; // A0–C8, with the full range open: the end bars' blanks, cut on (bar-table.h)
 constexpr double T_TUNE = 20;           // °C: bars and tubes are tuned at this temperature
 
 // Air: ideal gas at sea level.

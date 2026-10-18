@@ -16,7 +16,8 @@ import { keyFreq } from '../shared/dsp.js';
 
 const GrandEngine = await loadEngine(INSTRUMENT);
 const { keyModel, boardModel, boardMobility, boardResponse, sinFT } = await wasmModel();
-const [KEY_LO, KEY_HI] = INSTRUMENT.range;
+const [KEY_LO, KEY_HI] = INSTRUMENT.range; // A0–C8, the CP-80's 88 keys
+const CP70 = [28, 100]; // the CP-70's 73, E1–E7
 // What the checks compare against, stated here rather than read from the model: steel's Young's
 // modulus and breaking stress, the plate's size, the speed of sound and the baffle's size for the
 // short circuit (grand-model.h), and the circuit's piezo capacitance and EQ corners (grand-engine.h).
@@ -94,13 +95,13 @@ test('stiff string: fₙ = n f₀√(1+Bn²)/√(1+B), B = π³Ed⁴/(64TL²), f
     }
   }
 });
-test('CP-70 scale: 0.68 m bass (published: 26¾ in), 15 single-string keys, wire well below breaking', () => {
+test('CP-70 scale: 0.68 m bass (published: 26¾ in), 15 single-string keys, wire well below breaking up to C8', () => {
   const L28 = keyModel(28, P()).S.L;
   assert.ok(Math.abs(L28 - 0.679) < 0.005, `${L28}`);
   let mono = 0;
   for (let m = KEY_LO; m <= KEY_HI; m++) {
     const km = keyModel(m, P());
-    if (km.ns === 1) mono++;
+    if (km.ns === 1 && m >= CP70[0] && m <= CP70[1]) mono++;
     assert.ok(km.S.stress < 0.5 * STEEL.strength, `key ${m}: ${(km.S.stress / STEEL.strength).toFixed(2)} of breaking`);
   }
   assert.equal(mono, 15);
@@ -341,8 +342,23 @@ test('hammer: contact 0.5–5 ms, shorter when the felt is harder or the blow fa
   assert.ok(mf > 0.5 && mf < 5, `${mf} ms`);
   assert.ok(hard < mf && ff < mf && pp > mf, `hard ${hard.toFixed(2)}, ff ${ff.toFixed(2)}, mf ${mf.toFixed(2)}, pp ${pp.toFixed(2)} ms`);
 });
+test('the CP-80\'s keys past the CP-70\'s E1–E7: the wire\'s stress held at E7\'s, the blow at about two periods, so C8 speaks with E7', () => {
+  const e7 = keyModel(CP70[1], P()).S;
+  for (let m = CP70[1] + 1; m <= KEY_HI; m++) {
+    const S = keyModel(m, P()).S; // a plain wire's stress is 4ρ(Lf)², whatever its gauge
+    assert.ok(Math.abs(S.stress / e7.stress - 1) < 0.02, `key ${m}: ${(100 * S.stress / STEEL.strength).toFixed(1)} % of breaking, E7 ${(100 * e7.stress / STEEL.strength).toFixed(1)} %`);
+  }
+  const blow = (m) => { const { x, e } = render(P(), [[0, 'on', m, 0.8]], 0.06); let s = 0; for (const v of x) s += v * v; return { periods: (e.voices[0].contactSamples / FS) * keyModel(m, P()).S.f0, db: 10 * Math.log10(s) }; };
+  const top = blow(KEY_HI), mid = blow(CP70[1]);
+  assert.ok(top.periods < 2.5 && Math.abs(top.db - mid.db) < 6, `C8: contact ${top.periods.toFixed(2)} periods, ${(top.db - mid.db).toFixed(1)} dB re E7`);
+  for (const m of [KEY_LO, KEY_HI]) for (const fs of [44100, 48000]) {
+    const { x } = render(P(), [[0, 'on', m, 1]], 0.3, fs);
+    assert.ok(x.every(Number.isFinite), `key ${m} at ${fs} Hz: NaN`);
+  }
+  console.log(`        (C8: ${(100 * keyModel(KEY_HI, P()).S.stress / STEEL.strength).toFixed(1)} % of breaking, contact ${top.periods.toFixed(2)} periods, ${(top.db - mid.db).toFixed(1)} dB re E7)`);
+});
 test('level: a forte note peaks within 0.1–0.6 (either channel) across the keyboard, on either mount, at 44.1 and 48 kHz', () => {
-  for (const fs of [44100, 48000]) for (const mount of ['frame', 'board']) for (const m of [28, 34, 40, 46, 52, 58, 63, 70, 76, 82, 88, 94, 100]) {
+  for (const fs of [44100, 48000]) for (const mount of ['frame', 'board']) for (const m of [21, 28, 34, 40, 46, 52, 58, 63, 70, 76, 82, 88, 94, 100, 104, 108]) {
     const { pk } = render(P({ mount }), [[0, 'on', m, 1]], 0.25, fs);
     assert.ok(pk > 0.1 && pk < 0.6, `${fs} Hz ${mount} key ${m}: ${pk.toFixed(3)}`);
   }

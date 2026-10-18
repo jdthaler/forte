@@ -308,10 +308,10 @@ animate(() => {
   const { ctx, w, h } = fit(hcv);
   ctx.clearRect(0, 0, w, h);
   const P = shell.P, padL = 40, padB = 18, padT = 6, padR = 8, W = Math.max(10, w - padL - padR), H = Math.max(10, h - padT - padB);
-  let tMax = 5900, lMin = 0.6, lMax = 20;
-  for (let k = KEY_LO; k <= KEY_HI; k++) { const d = isBuilt(k); if (d) { tMax = Math.max(tMax, d.star.T); lMin = Math.min(lMin, d.star.L); lMax = Math.max(lMax, d.star.L); } }
+  let tMax = 5900, tMin = 4500, lMin = 0.6, lMax = 20;
+  for (let k = KEY_LO; k <= KEY_HI; k++) { const d = isBuilt(k); if (d) { tMax = Math.max(tMax, d.star.T); tMin = Math.min(tMin, d.star.T); lMin = Math.min(lMin, d.star.L); lMax = Math.max(lMax, d.star.L); } }
   if (P.family !== 'dscuti') for (let k = 0; k <= 40; k++) { const st = model.starAt((k / 40) * 0.6 - 0.05, P.mass); tMax = Math.max(tMax, st.T); }
-  const T0 = Math.min(10000, tMax * 1.04), T1 = 4300, L0 = Math.max(0.05, lMin / 1.6), L1 = Math.min(400, lMax * 1.8);
+  const T0 = Math.min(10000, tMax * 1.04), T1 = Math.min(4300, tMin / 1.04), L0 = Math.max(0.02, lMin / 1.6), L1 = Math.min(400, lMax * 1.8); // (the top keys' K dwarfs: 3830 K, 0.05 L☉ on C8)
   const X = (T) => padL + (W * Math.log(T0 / T)) / Math.log(T0 / T1), Y = (L) => padT + (H * Math.log(L1 / L)) / Math.log(L1 / L0);
   ctx.font = '10px system-ui, sans-serif'; ctx.strokeStyle = css('--grid'); ctx.fillStyle = css('--muted'); ctx.lineWidth = 1;
   ctx.textAlign = 'center';

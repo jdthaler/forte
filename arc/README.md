@@ -21,7 +21,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/arc/>
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | play (37 keys, C3–C6): each key closes a contact that switches its capacitor across the coil |
+| `Z…/` and `Q…]` rows | play (88 keys, A0–C8): each key closes a contact that switches its capacitor across the coil |
 | `←` `→` | octave |
 | `↑` `↓` | arc current |
 | `Space` | hold: keys stay down while Space is held |
@@ -145,16 +145,19 @@ musical pair, approximately
   σ ≈ (−Re Z − R)/(2(L + L_arc)),   f ≈ f_LC (1 − L_arc/(2L))
 
 so the note starts when the arc's negative resistance outweighs the coil's
-loss. At the defaults it grows at σ ≈ 110 s⁻¹ (×e every 9 ms) on every key,
-and starts 1.0 % below Kelvin's formula at C6, 1.2 % at C4 and 2.0 % at C3,
-where the choke in parallel adds a little more. A coil resistance above
+loss. At the defaults it grows at σ ≈ 110 s⁻¹ (×e every 9 ms) on every key
+from A0 to C6 (then more slowly towards the ceiling, below), and starts 1.0 %
+below Kelvin's formula at C6, 1.2 % at C4 and 2.0 % at C3, where the choke in
+parallel adds a little more. A coil resistance above
 R_th ≈ 4.5–4.8 Ω, or an arc current above about 12 A, and the silent arc stays
 silent. The tests hold the engine to the analysis: its growth rate within 3 %
 and its starting frequency within 2 cents (measured: within 0.11 % and
 0.07 cent), and the threshold within ±3 % in R.
 
-The ceiling of §4 is where the keyboard stops. With the default column every
-key sings (the analysis puts the limit at 4.7 kHz); with τ = 150 µs it falls
+The ceiling of §4 is where the keyboard falls silent. With the default column
+every key up to C8 sings (the analysis puts the limit at 4.7 kHz), but the
+negative resistance thins as the ceiling nears: σ is 84 s⁻¹ at C7 and 18 s⁻¹
+at C8, which takes half a second to speak. With τ = 150 µs the ceiling falls
 to 843 Hz, and the keys from A5 up stay silent.
 
 ### 7. Large signal: the first kind, and the second
@@ -194,15 +197,20 @@ stays silent. The tests check both sides at 1.12 × the threshold.
 
 Each key's capacitor is cut so that its *sounding* note lands on the key.
 The model integrates the circuit to its steady cycle with the engine's
-scheme, measures the frequency, corrects the capacitance and repeats until it
-is within 0.1 cent. At the defaults that is 66.4 µF for C3 (Kelvin's formula
-would give 74.0 µF), 17.7 µF for C4 (18.5), 4.51 µF for C5 (4.63) and
-1.13 µF for C6 (1.16): microfarads on a 20 mH coil. Cut by Kelvin's formula
-instead (a preset), the notes sound flat: 1.0 % at C6, 1.3 % at C5, 2.2 % at
-C4 and 5.7 % at C3. The bass is flatter because there the current is furthest
-from a sine. The tests find every key within 1 cent of its note (measured:
-0.08 cent at worst), and the steady-cycle integration agrees with a
-fourth-order Runge–Kutta solution to 0.1 cent.
+scheme, measures the frequency, corrects the capacitance (C ∝ 1/f², then,
+where the deep bass still rings round the note after five steps, a secant on
+ln C against ln f) and repeats until it is within 0.1 cent. At the defaults
+that is 860 µF for A0 (Kelvin's formula would give 1675 µF), 66.4 µF for C3
+(74.0), 17.7 µF for C4 (18.5), 4.51 µF for C5 (4.63), 1.13 µF for C6 (1.16)
+and 0.071 µF for C8 (0.072): microfarads on a 20 mH coil. Cut by Kelvin's
+formula instead (a preset), the notes sound flat: 1.0 % at C6, 1.3 % at C5,
+2.2 % at C4, 5.7 % at C3 and more than a third at A0. The bass is flatter
+because there the current is furthest from a sine. The engine's own time step
+flattens a note as the trapezoidal rule does (2.6 cents at C8 at 48 kHz), so
+it scales each capacitor by the difference between its step and the cutting
+integration's. The tests find every key within 1 cent of its note (measured:
+0.4 cent at worst, in the deep bass), and the steady-cycle integration agrees
+with a fourth-order Runge–Kutta solution to 0.1 cent.
 
 **One arc.** As on Duddell's keyboard, every key switches its capacitor across
 the same coil. Hold two and their capacitors are in parallel: C adds, and the
@@ -260,9 +268,9 @@ faults' pressure following the rate of change of arc power. The tests check
 that (γ − 1)/c² = 1/(c_p T) for air and that the engine's output is exactly
 this pressure of its own power. Only the changing part of the power sounds.
 The output is the pressure in pascals at the listening distance (default
-1 m), so 1.0 is 94 dB SPL. A default note peaks at 0.06 Pa (C3) to 0.26 Pa
-(C6), 69–82 dB SPL. The level rises up the keyboard because dP/dt grows with
-frequency at a given swing.
+1 m), so 1.0 is 94 dB SPL. A default note peaks at 0.05 Pa (A0) to 0.76 Pa
+(C8), 67–92 dB SPL (0.06 Pa at C3, 0.26 Pa at C6). The level rises up the
+keyboard because dP/dt grows with frequency at a given swing.
 
 ### 11. The talking arc
 

@@ -192,7 +192,7 @@ TinesEngine::TinesEngine(double fs)
     : Engine(fs), fs2(OS * fs), hammerMax((int)std::round(0.05 * fs2)), aSm(1 - std::exp(-1 / (SMOOTH_T * fs2))),
       aPick(1 - std::exp(-1 / (PICKUP_T * fs2))), mono((size_t)OS * MAXN, 0.0),
       data([this](int key, uint64_t v) -> std::unique_ptr<VoiceData> {
-        if (key < KEY_LO || key > KEY_HI) return nullptr;
+        if (key < KEY_MIN || key > KEY_MAX) return nullptr;
         // the parameters of that version (a snapshot the audio thread may be rewriting: check)
         for (Snapshot &s : snapshots) {
           if (s.version.load(std::memory_order_acquire) != v) continue;
@@ -260,7 +260,7 @@ void TinesEngine::setParams(const double *np) {
       for (int i = 0; i < p::count; i++) s.P[i].store(P[i], std::memory_order_relaxed);
       s.version.store(version, std::memory_order_release);
     }
-    data.prepare(version, KEY_LO, KEY_HI, focus);
+    data.prepare(version, KEY_MIN, KEY_MAX, focus);
   }
 }
 
@@ -286,7 +286,7 @@ void TinesEngine::noteOn(int key, double velocity) {
   if (hasSent[key]) { strikeKey(key, velocity, sent[key]); return; }
 #endif
   if (const Data::Ref r = data.get(key, version)) { strikeKey(key, velocity, *r.data); return; }
-  if (key < KEY_LO || key > KEY_HI) return;
+  if (key < KEY_MIN || key > KEY_MAX) return;
   // the key is being built (a few ms): the note waits for it
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) { pending[i] = {key, velocity, false}; return; }
   if (nPending < (int)pending.size()) pending[nPending++] = {key, velocity, false};

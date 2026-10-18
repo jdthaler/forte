@@ -2,13 +2,13 @@
 // (native/instruments/bowed): OrganistaWasmEngine, with the engine contract, and the model's
 // functions for the views and the tests.
 
-import { GROUPS } from './bowed-params.js';
+import { GROUPS, RANGE } from './bowed-params.js';
 import { wasmEngine, nativeParams, nativeValue, scratch } from '../../shared/wasm.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'bowed', name: 'OrganistaWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/bowed.wasm', import.meta.url).href };
 
-const RANGE = [36, 84], SHAPE_N = 96, TRACE = 2048, FS = 48000;
+const SHAPE_N = 96, TRACE = 2048, FS = 48000;
 const KIND = ['none', 'helmholtz', 'multiple', 'raucous'];
 
 // The C++ engine's messages (bowed-engine.h, msg) as the page's 'state' and 'error': the focused
