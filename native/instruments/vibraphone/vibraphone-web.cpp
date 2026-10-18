@@ -1,5 +1,5 @@
 // vibraphone-web.cpp — the model's functions the page's views call (vibraphone/src/vibraphone-wasm.js),
-// and the engine's test hooks (its voices, as the JavaScript engine's voices and byKey show them).
+// and the engine's test hooks (its voices, in order and by key).
 
 #include <algorithm>
 #include <memory>
@@ -30,7 +30,7 @@ static TubeState stateOf(const double *t) {
 }
 
 extern "C" {
-// One bar (vibraphone-model.js, barModel) into out, returning how many numbers it wrote: key, L, b,
+// One bar (barModel) into out, returning how many numbers it wrote: key, L, b,
 // h0, cf, A, D, depth, the cut (h0, a, c, d), mass, hmin, nx, the number of modes, the number of
 // cords; the cords' places; xs; then per mode: torsion?, n, f, ratio, sym, sigTE, sigSup, sigRad,
 // out, and its shape at xs.

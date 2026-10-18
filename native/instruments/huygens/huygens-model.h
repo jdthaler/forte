@@ -1,7 +1,8 @@
-// huygens-model.h — the Huygens keyboard's model in C++: what each key is designed to play
-// (huygens/src/tuning.js) and the exact results for its pulse coupling (sync-theory.js), operation
-// for operation. Exponentials, logarithms and powers go through V8's fdlibm (forte/fdlibm.h), so
-// a key's pitch and the moment a kick fires a lamp are the JavaScript's to the last bit.
+// huygens-model.h — the Huygens keyboard's model in C++: what each key is designed to play and
+// the exact results for its pulse coupling (huygens/src/sync-theory.js has the closed forms the
+// tests hold it to). Exponentials, logarithms and powers go through V8's fdlibm
+// (forte/fdlibm.h), so a key's pitch and the moment a kick fires a lamp are the same to the last
+// bit everywhere.
 #pragma once
 
 #include <cstdint>

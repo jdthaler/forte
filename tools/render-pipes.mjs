@@ -3,13 +3,15 @@
 //
 // Name demos NN-what-you-hear; the landing page plays the first one.
 
-import { PipeEngine } from '../pipes/src/pipes-engine.js';
+import { INSTRUMENT } from '../pipes/src/pipes-instrument.js';
+import { loadEngine } from './engine.mjs';
 import { DEFAULTS } from '../pipes/src/pipes-params.js';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
 
 const FS = 48000, SLUG = 'pipes';
+const PipeEngine = await loadEngine(INSTRUMENT);
 const P = (o = {}) => ({ ...DEFAULTS, ...o });
-const play = (p, seconds, events, seed = 1) => { const e = new PipeEngine(FS, seed); e.setParams(p); return renderEngine(e, seconds, events, FS); };
+const play = (p, seconds, events, seed = 1) => { const e = new PipeEngine(FS, seed); e.setParams(p); const out = renderEngine(e, seconds, events, FS); e.destroy(); return out; };
 const note = (t, k, vel, len) => [[t, 'on', k, vel], [t + len, 'off', k]];
 const chord = (t, keys, len, vel = 0.8) => keys.flatMap((k) => note(t, k, vel, len));
 const cat = (...parts) => [0, 1].map((c) => Float64Array.from(parts.flatMap((p) => [...p[c]])));

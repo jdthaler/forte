@@ -1,7 +1,6 @@
-// springs-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// springs-wasm.js — the engine and model, built as WebAssembly from the physics in C++
 // (native/instruments/springs): SpringWasmEngine, with the engine contract, and the model's
-// functions for the page and its views. The page runs it when it can and falls back to the
-// JavaScript (springs-engine.js).
+// functions for the page, its views and the tests.
 
 import { GROUPS } from './springs-params.js';
 import { wasmEngine, scratch, nativeParams, nativeValue } from '../../shared/wasm.js';
@@ -9,8 +8,8 @@ import { wasmEngine, scratch, nativeParams, nativeValue } from '../../shared/was
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'springs', name: 'SpringWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/springs.wasm', import.meta.url).href };
 
-// The C++ engine's messages (springs-engine.h, msg) back into the JavaScript engine's: 'echo' (the
-// strike's first moments, which the engine keeps in its capture) and 'error'.
+// The C++ engine's messages (springs-engine.h, msg) into the page's: 'echo' (the strike's first
+// moments, which the engine keeps in its capture) and 'error'.
 function views(m, e) {
   if (m.type === 2) return { type: 'error', message: `spring ${m.key}: numerical failure` };
   if (m.type !== 1) return null;
@@ -24,10 +23,9 @@ const Base = wasmEngine(BUILD, { messages: views });
 // Engines the tests make and drop give their memory back.
 const dropped = typeof FinalizationRegistry === 'function' ? new FinalizationRegistry((h) => Base.exports?.forte_destroy(h)) : null;
 
-// The engine, with the JavaScript engine's test hooks: e.voices (each one's key, fading, dead,
-// released, level, peak, age) and e.byKey, read back. A note may bring its key's springs, packed by
-// the page's WebAssembly model (wasmModel().keySprings(…).packed), so the audio thread needn't
-// build them; anything else it brings (the JavaScript model's springs) is not for this engine.
+// The engine, with the tests' hooks: e.voices (each one's key, fading, dead, released, level, peak,
+// age) and e.byKey, read back. A note may bring its key's springs, packed by the page's WebAssembly
+// model (wasmModel().keySprings(…).packed), so the audio thread needn't build them.
 const VOICE = ['key', 'fading', 'dead', 'released', 'level', 'peak', 'age', 'own'];
 const FLAGS = new Set(['fading', 'dead', 'released', 'own']);
 export class SpringWasmEngine extends Base {
@@ -56,10 +54,12 @@ export class SpringWasmEngine extends Base {
 }
 export const ready = () => SpringWasmEngine.ready();
 
-// The model's functions the page and its views call (springs-model.js's keySprings, tuneSpring,
-// dispersionCurve, modeSigma, pulseLength, pulseSpectrum; scaleSpring is plain arithmetic on what
-// tuneSpring gives), computed by the WebAssembly. keySprings(key, P, fs) also gives the springs
-// packed for the WebAssembly engine (.packed: the page's noteData), and keeps the last few hundred.
+// The model's functions the page, its views and the tests call, computed by the WebAssembly
+// (springs-model.cpp): keySprings(key, P, fs), a key's springs tuned, with their modes (f, c_g, rel,
+// n) and packed for the engine (.packed: the page's noteData), the last few hundred kept;
+// tuneSpring(key, P), the key's spring before the virtual-pitch correction; dispersionCurve(sp,
+// { fTop, n }), its two acoustic sheets (k, f, c_g, bead share); modeSigma, pulseLength and
+// pulseSpectrum; and, for the tests, rodSolve, Wittrick's rod at any shape and wavenumber.
 const TUNE = ['R', 'r', 'alpha', 'nu', 'E', 'rho', 'slinky', 'key', 'f0', 'L', 'turns', 'height', 'mass', 'c0', 'TD', 'Fc', 'kc', 'sheet', 'onBranch', 'axial', 'fMax', 'A'];
 const geometryId = (P) => `${P.family}|${P.coil}|${P.wire}|${P.helix}|${P.drive}|${P.springs}|${P.spread}|${P.mallet}|${P.bead}|${P.endLoss}|${P.eta}|${P.oil}`;
 export async function wasmModel() {
@@ -93,12 +93,21 @@ export async function wasmModel() {
       sp.of = { key, P: { ...P } }; // what dispersionCurve recomputes it from (kept by scaleSpring's copy)
       return sp;
     },
-    // (sp from tuneSpring, perhaps scaled: its R is what the curve is drawn for)
+    // (sp from tuneSpring, perhaps scaled: its R is what the curve is drawn for; n up to the scratch
+    // area's room, about a thousand)
     dispersionCurve(sp, { fTop, n = 600 }) {
+      if (OUT + 64 * n > s.size) throw new RangeError(`dispersionCurve: ${n} points do not fit (at most ${Math.floor((s.size - OUT) / 64)})`);
       const of = sp.of ?? { key: sp.key, P: {} };
       const m = x.springs_dispersion(of.key, writeP(of.P), sp.R, fTop, n, s.at + OUT), a = s.f64(m, OUT), pts = [[], []];
       for (let j = 0, i = 0; j < 2; j++) for (let q = 0; q < n; q++, i += 4) pts[j].push({ k: a[i], f: a[i + 1], cg: a[i + 2], share: a[i + 3] });
       return pts;
+    },
+    // Wittrick's rod at any shape { rr: r/R, alpha, nu } and wavenumber k (1/R; R = 1, E = ρ = 1):
+    // its six ω ascending, dω/dk and each one's bead share in rotation and along the axis (share).
+    rodSolve({ rr, alpha, nu }, k) {
+      x.springs_rod(rr, alpha, nu, k, s.at + OUT);
+      const a = s.f64(24, OUT).slice();
+      return { w: a.subarray(0, 6), dw: a.subarray(6, 12), share: { rotation: a.subarray(12, 18), axial: a.subarray(18, 24) } };
     },
     modeSigma: (f, cg, L, D) => x.springs_mode_sigma(f, cg, L, D.endLoss, D.eta, D.oil) + (D.extra || 0),
     pulseLength: (P, velocity) => x.springs_pulse_length(P.mallet, velocity),

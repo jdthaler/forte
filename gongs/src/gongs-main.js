@@ -1,38 +1,22 @@
 // gongs-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName, useWasm } from '../../shared/shell.js';
+import { createShell, noteName } from '../../shared/shell.js';
 import { fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './gongs-instrument.js';
-import * as jsModel from './gongs-model.js';
-import { MICS, tablesId } from './gongs-model.js';
-import { wasmModel } from './gongs-wasm.js';
+import { wasmModel, MICS } from './gongs-wasm.js';
 
-// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
-// physics as the engine, in C++), the JavaScript one until then or if it can't load.
-let model = jsModel;
-if (useWasm()) wasmModel().then((m) => { model = m; update(); }, (err) => console.warn(`gongs: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+// The views draw what the engine plays: its model, from the same C++, built as WebAssembly.
+const model = await wasmModel();
 
 const $ = (s) => document.querySelector(s);
 const BANDS = ['below the pitch', '1–2×', '2–4×', '4–8×', '8–16×', '>16×'];
 const BAND_COL = ['#8a8aa0', '#e6c15a', '#f0a050', '#ef7a5a', '#d860a0', '#9a7cff'];
-let focus = 57, live = null, history = [], analyser = null, sentTables = null;
+let focus = 57, live = null, history = [], analyser = null;
 const rate = () => shell?.audio?.ctx.sampleRate || 48000;
-// The coupling tables (a few ms to build) are built here, on the page, and travel with the
-// parameters (INSTRUMENT.engineParams) only when Dome rise, Coupling terms or Rim changes them:
-// the engine keeps them by id, so the rest of the time the parameters go alone. (The WebAssembly
-// engine builds its own and takes the full parameters: once it runs, none are built here.)
-const engineParams = (P) => {
-  if (shell?.engineKind === 'wasm') return P;
-  const id = tablesId(P);
-  if (id === sentTables) return P;
-  sentTables = id;
-  return INSTRUMENT.engineParams(P);
-};
 
 const shell = createShell({
   ...INSTRUMENT,
   arrows: { param: 'velocity', step: 0.05 },
-  engineParams, // the descriptor's, sending the tables only when they change
   onAudio: (a) => { analyser = a.analyser; update(); },
   onNoteOn: (key) => { focus = key; shell.keys.focus(key); update(); },
   onParam: () => update(),

@@ -1,5 +1,4 @@
-// pianet-model.cpp — the reed, the bond, the pickups and the mechanism of one key, as reed.js and
-// pianet-model.js compute them.
+// pianet-model.cpp — the reed, the bond, the pickups and the mechanism of one key (pianet-model.h).
 
 #include "pianet-model.h"
 
@@ -11,7 +10,7 @@
 namespace forte::pianet {
 
 using fdlibm::pow;
-constexpr double TWO_PI = 2 * PI; // JavaScript's TAU
+constexpr double TWO_PI = 2 * PI;
 
 // ---- the reed ----------------------------------------------------------------------------------
 
@@ -28,7 +27,7 @@ double UnitReed::shape(int n, double x) const {
   const int e = std::min(NEL - 1, (int)std::floor(xx / l));
   const double xi = xx / l - e;
   const auto Nv = hermite(xi, l);
-  const auto d = [&](int g) { return dof[g * MAX_MODES + n]; };
+  const auto d = [&](int g) { return dof[g * UNIT_MODES + n]; };
   return Nv[0] * d(2 * e) + Nv[1] * d(2 * e + 1) + Nv[2] * d(2 * e + 2) + Nv[3] * d(2 * e + 3);
 }
 
@@ -55,12 +54,12 @@ UnitReed unitReed(double r, double s, double j, int nModes) {
   UnitReed u;
   const auto eig = genEig(K, M);
   if (!eig) return u;
-  const int nv = std::min({nModes, N, MAX_MODES});
+  const int nv = std::min({nModes, N, UNIT_MODES});
   u.nModes = nv;
   for (int n = 0; n < nv; n++) {
     u.Lam[n] = std::sqrt(eig->lambda[n]);
     const double sg = eig->X(N - 2, n) < 0 ? -1 : 1;
-    for (int i = 0; i < N; i++) u.dof[(i + 2) * MAX_MODES + n] = sg * eig->X(i, n);
+    for (int i = 0; i < N; i++) u.dof[(i + 2) * UNIT_MODES + n] = sg * eig->X(i, n);
   }
   return u;
 }

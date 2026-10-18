@@ -13,9 +13,7 @@ export const INSTRUMENT = {
   keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
   range: [36, 96],                      // MIDI keys
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
-  engine: { name: 'TemplateEngine', module: new URL('./template-engine.js', import.meta.url).href },
-  // the same physics in C++ (native/instruments/template), built as WebAssembly: the page runs it
-  // when it can, the JavaScript engine otherwise
+  // the engine: the physics in C++ (native/instruments/template), built as WebAssembly
   wasm: { name: 'TemplateWasmEngine', module: new URL('./template-wasm.js', import.meta.url).href, binary: new URL('../wasm/template.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room' },
 };

@@ -3,10 +3,11 @@
 //   e.g. node tools/new-instrument.mjs gongs Gong "Gong Keyboard"
 // Creates <slug>/ (page, style, src/<slug>-*.js, README), test/<slug>-tests.mjs,
 // tools/render-<slug>.mjs and the native port, native/instruments/<slug>/ (its C++ engine and
-// model, generated tables and reference; a VST3 class id in native/ids.json and an AU code in
-// the descriptor), all working; then you replace the bar physics with yours, in both languages.
-// Build its WebAssembly with Emscripten (native/README.md). Add the instrument to
-// shared/registry.js, with its AU code, when it is ready to show.
+// model, generated tables; a VST3 class id in native/ids.json and an AU code in the
+// descriptor); then you replace the bar physics with yours, in C++. The page, tests and tools
+// play the C++ built as WebAssembly, so build it with Emscripten (native/README.md) before they
+// run, and after each change to the C++. Add the instrument to shared/registry.js, with its AU
+// code, when it is ready to show.
 
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -69,8 +70,6 @@ let code = letters[0].toUpperCase() + letters.slice(1, 4).toLowerCase();
 for (let i = 0; taken.has(code); i++) code = `${code.slice(0, 3)}${'0123456789'[i % 10]}`;
 const desc = new URL(`${slug}/src/${slug}-instrument.js`, R);
 writeFileSync(desc, readFileSync(desc, 'utf8').replace("  id: '", `  // until it is in shared/registry.js: its plugin's name and AU code (move the code there)\n  plugin: { name: ${JSON.stringify(name)}, code: '${code}' },\n  id: '`));
-for (const tool of [['tools/gen-native-params.mjs', slug], ['tools/render-reference.mjs', slug]]) {
-  execFileSync(process.execPath, [new URL(tool[0], R).pathname, tool[1]], { stdio: 'inherit' });
-}
-console.log(`\nnext: node test/${slug}-tests.mjs, then open http://localhost:8765/${slug}/ (it plays the JavaScript`);
-console.log(`engine until its WebAssembly is built: see native/README.md, then FORTE_ENGINE=wasm node test/${slug}-tests.mjs)`);
+execFileSync(process.execPath, [new URL('tools/gen-native-params.mjs', R).pathname, slug], { stdio: 'inherit' });
+console.log(`\nnext: build its WebAssembly (native/README.md: cmake --preset wasm, then cmake --build --preset wasm),`);
+console.log(`then node tools/render-reference.mjs ${slug}, node test/${slug}-tests.mjs, and open http://localhost:8765/${slug}/`);

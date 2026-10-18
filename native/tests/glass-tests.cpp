@@ -1,7 +1,7 @@
 // glass-tests.cpp — the armonica's model and engine in C++: Rayleigh's ratios and Bryan's factor,
 // the bowls on pitch, a rubbed bowl speaking at its note (its bowl built on the worker thread),
 // water poured into a ringing bowl, the views' messages, and ten bowls in the CPU budget. The
-// physics tests are the JavaScript suite's, run on the WebAssembly (FORTE_ENGINE=wasm).
+// physics tests are the JavaScript suite's, run on the WebAssembly (node test/glass-tests.mjs).
 
 #include <chrono>
 #include <cmath>

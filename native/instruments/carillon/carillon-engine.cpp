@@ -1,4 +1,4 @@
-// carillon-engine.cpp — the carillon's engine, as carillon-engine.js runs it.
+// carillon-engine.cpp — the carillon's engine (carillon-engine.h).
 
 #include "carillon-engine.h"
 
@@ -37,8 +37,8 @@ void CarillonEngine::setParams(const double *p) {
   for (int i = 0; i < nVoices; i++) { Voice &v = pool[order[i]]; coefs(v, false); gains(v, false); } // losses, listener: at once (gains glide)
 }
 
-// A fresh voice for a bell at `key`, as the JavaScript's new Voice(eng, key), from a free slot of
-// the pool (or, when every slot holds a bell, the faintest of those fading out, or else the faintest).
+// A fresh voice for a bell at `key`, from a free slot of the pool (or, when every slot holds a
+// bell, the faintest of those fading out, or else the faintest).
 int CarillonEngine::newVoice(int key) {
   bool used[POOL] = {};
   for (int i = 0; i < nVoices; i++) used[order[i]] = true;

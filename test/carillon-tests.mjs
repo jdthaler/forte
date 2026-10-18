@@ -4,22 +4,28 @@
 // its mesh convergence, and the generated table against a fresh run; the tuned bells' partials and
 // their identity; doublets against degenerate perturbation theory; the strike-note estimator; then
 // the engine against the model: tuning, partials, decay, the clapper, air, levels and stability.
+// The model and the engine are the C++ (native/instruments/carillon), built as WebAssembly: the
+// model's functions through carillon-wasm.js. The FEM (bell-fem.js, bell-profile.js) is the
+// JavaScript that tunes the ribs and writes the table the C++ plays from (tools/carillon-profile.mjs).
 
 import assert from 'node:assert/strict';
 import { genEig } from '../shared/linalg.js';
 import { meshWall, assemble, modesOf, ringGeom, ringRayleigh, ringBreathing, TAU } from '../carillon/src/bell-fem.js';
 import { solveRib, named, geomOf, BRONZE } from '../carillon/src/bell-profile.js';
-import {
-  BELL_TABLE, KEY_LO, KEY_HI, keyFreq, cents, bellOf, bellModes, clapperOf, hertzTime, clapperSpeed, strikeNote, struckPartials,
-  doubletSplit, airAbsorption, radiationEfficiency, historic, IDEAL,
-} from '../carillon/src/carillon-model.js';
+import { BELL_TABLE } from '../carillon/src/bell-table.js';
+import { IDEAL } from '../carillon/src/partials.js';
 import { INSTRUMENT } from '../carillon/src/carillon-instrument.js';
+import { wasmModel } from '../carillon/src/carillon-wasm.js';
+import { keyFreq } from '../shared/dsp.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { nativeTable, headerFile } from '../tools/carillon-native-table.mjs';
 import { readFileSync } from 'node:fs';
 import { DEFAULTS, GROUPS, PRESETS } from '../carillon/src/carillon-params.js';
 
-const CarillonEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const CarillonEngine = await loadEngine(INSTRUMENT);
+const { bellOf, bellModes, clapperOf, hertzTime, clapperSpeed, strikeNote, struckPartials, doubletSplit, airAbsorption, radiationEfficiency } = await wasmModel();
+const [KEY_LO, KEY_HI] = INSTRUMENT.range;
+const cents = (a, b) => 1200 * Math.log2(a / b);
 
 const FS = 48000;
 let failures = 0;
@@ -315,8 +321,7 @@ test('radiation and air: a sphere\'s efficiency is (ka)²/(1+(ka)²) for ℓ = 0
   assert.ok(ratio(far) < 0.85 * ratio(near), `octave nominal against hum: ${ratio(near).toFixed(3)} near, ${ratio(far).toFixed(3)} far`);
 });
 test('historic bells: seeded (the same bell twice), their partials tens of cents from the ideal against the nominal, the nominal still on its note', () => {
-  const rib = ribOf('minor', 'middle');
-  assert.deepEqual(historic(64, rib, 1).lnf, historic(64, rib, 1).lnf);
+  assert.deepEqual(bellOf(64, 'minor', 1).hist.lnf, bellOf(64, 'minor', 1).hist.lnf);
   let s2 = 0, n = 0;
   for (let key = 60; key <= 83; key++) {
     const b = bellOf(key, 'minor', 1), j = (id) => b.rib.modes.findIndex((m) => m.n === id), nom = b.f[j('nominal')];

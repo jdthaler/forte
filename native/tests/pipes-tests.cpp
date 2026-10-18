@@ -1,8 +1,8 @@
-// pipes-tests.cpp — the pipe organ in C++: the pipe against tube acoustics and the JavaScript
+// pipes-tests.cpp — the pipe organ in C++: the pipe against tube acoustics and the retired JavaScript
 // model's numbers, the packed form the page sends, the engine on pitch, a key that waits for its
 // pipes to be voiced (forte/background.h) and keeps them while the voicing changes, the views'
 // messages, and ten keys within the CPU budget. The physics tests are the JavaScript suite's, run
-// on the WebAssembly (FORTE_ENGINE=wasm).
+// on the WebAssembly (node test/pipes-tests.mjs).
 
 #include <chrono>
 #include <cmath>

@@ -1,16 +1,20 @@
 // The voicer's tuning for the Free-Reed Organ: how far below its natural frequency each reed
 // sounds at the default wind. Every reed from C1 (the 16′ rank's lowest) to C8 (the 4′'s
 // highest) is blown at the defaults, alone, in the real engine; its sounding frequency (from the
-// reed's own zero crossings, 0.6–1.0 s after the key goes down) gives the ratio, and the reed is
-// recut and measured again until it sounds within 0.05 ¢ of its note.
+// reed's own zero crossings, 0.6–1.0 s after the key goes down) gives the ratio. The engine is
+// the C++ (built as WebAssembly), which cuts its reeds from the table it was built with: each run
+// measures that build once and writes the recut table, so rebuild (native/README.md) and run
+// again until every reed sounds within 0.05 ¢ of its note.
 // Usage: node tools/harmonium-tuning.mjs            (writes harmonium/src/tuning-table.js and its C++
 //                                                    copy, native/instruments/harmonium/tuning-table.h)
+//        node tools/harmonium-tuning.mjs --check    (only measures: exit 1 if a reed is 0.05 ¢ off or more)
 //        node tools/harmonium-tuning.mjs --native   (only the C++ copy, from the JavaScript table as it is)
 
 import { writeFileSync } from 'node:fs';
-import { HarmoniumEngine } from '../harmonium/src/harmonium-engine.js';
-import { DEFAULTS } from '../harmonium/src/harmonium-params.js';
-import { TUNE, TUNE_LO, keyFreq } from '../harmonium/src/harmonium-model.js';
+import { INSTRUMENT, DEFAULTS } from '../harmonium/src/harmonium-instrument.js';
+import { TUNE, TUNE_LO } from '../harmonium/src/tuning-table.js';
+import { loadEngine } from './engine.mjs';
+import { keyFreq } from '../shared/dsp.js';
 
 const FS = 48000, LO = TUNE_LO, N = TUNE.length;
 
@@ -40,6 +44,7 @@ if (process.argv.includes('--native')) {
   console.log('native/instruments/harmonium/tuning-table.h');
   process.exit(0);
 }
+const HarmoniumEngine = await loadEngine(INSTRUMENT);
 const stops = { bourdon: false, principal: false, piccolo: false, musette: 'off' };
 
 // One reed sounding frequency fSound = keyFreq(m): the 16′ rank below C2, the 4′ above C7.
@@ -56,21 +61,20 @@ function measure(m) {
     e.process(L, R, 128);
     if (s < 0.6 * FS && s + 128 >= 0.6 * FS) { n0 = rd.nx; t0 = rd.lastX; }
   }
-  const n = rd.nx - n0, t1 = rd.lastX;
-  return { fNat: rd.R.fNat, f2: n > 2 ? n / ((t1 - t0) * rd.h) : 0 };
+  const n = rd.nx - n0, t1 = rd.lastX, fNat = rd.R.fNat;
+  e.destroy();
+  return { fNat, f2: n > 2 ? n / ((t1 - t0) * rd.h) : 0 };
 }
 
-for (let pass = 0; pass < 4; pass++) {
-  let worst = 0;
-  for (let j = 0; j < N; j++) {
-    const m = LO + j, { f2, fNat } = measure(m);
-    const err = 1200 * Math.log2(f2 / keyFreq(m));
-    worst = Math.max(worst, Math.abs(err));
-    TUNE[j] = f2 / fNat;
-  }
-  console.log(`pass ${pass + 1}: worst ${worst.toFixed(2)} ¢ before this pass's recut`);
-  if (worst < 0.05) break;
+let worst = 0;
+for (let j = 0; j < N; j++) {
+  const m = LO + j, { f2, fNat } = measure(m);
+  const err = 1200 * Math.log2(f2 / keyFreq(m));
+  worst = Math.max(worst, Math.abs(err));
+  TUNE[j] = f2 / fNat;
 }
+console.log(`worst ${worst.toFixed(3)} ¢ (the build as it is)`);
+if (process.argv.includes('--check')) process.exit(worst < 0.05 ? 0 : 1);
 const lines = [];
 for (let j = 0; j < N; j += 12) lines.push('  ' + Array.from(TUNE.slice(j, j + 12), (v) => v.toFixed(6)).join(', ') + ',');
 writeFileSync(new URL('../harmonium/src/tuning-table.js', import.meta.url),
@@ -83,4 +87,4 @@ ${lines.join('\n')}
 ];
 `);
 writeFileSync(HEADER, tuningHeader(LO, TUNE));
-console.log(`ratios ${Math.min(...TUNE).toFixed(4)}–${Math.max(...TUNE).toFixed(4)}`);
+console.log(`ratios ${Math.min(...TUNE).toFixed(4)}–${Math.max(...TUNE).toFixed(4)}; rebuild the C++ and run again${worst < 0.05 ? ' (it was already in tune)' : ''}`);

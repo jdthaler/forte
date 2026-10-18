@@ -1,6 +1,5 @@
-// engine.h — the engine contract, as in shared/worklet.js: the C++ engines have the same
-// methods as the JavaScript ones, so the plugins, the WebAssembly build and the Node tests
-// drive both alike.
+// engine.h — the engine contract, as in shared/worklet.js: the methods the worklet calls, so
+// the plugins, the WebAssembly build and the Node tests drive an engine alike.
 #pragma once
 
 #include <cstdint>
@@ -9,7 +8,8 @@
 
 namespace forte {
 
-// What an engine tells its page or editor while it plays (JavaScript: this.post({ type, … })):
+// What an engine tells its page or editor while it plays (the page reads it through
+// shared/wasm.js's `messages`):
 // a type its own wrapper names, a key, and up to 30 numbers. Posting never waits: when nobody
 // reads, messages are dropped.
 struct Message {

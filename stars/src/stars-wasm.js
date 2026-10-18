@@ -1,18 +1,19 @@
-// stars-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// stars-wasm.js — the engine and model, built as WebAssembly from the physics in C++
 // (native/instruments/stars): StarWasmEngine, with the engine contract, and the model's functions
-// for the views. The page runs it when it can and falls back to the JavaScript (stars-engine.js).
+// for the page, its views and the tests.
 
 import { GROUPS } from './stars-params.js';
-import { starId } from './stars-model.js';
 import { wasmEngine, scratch } from '../../shared/wasm.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'stars', name: 'StarWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/stars.wasm', import.meta.url).href };
 
-const MAX_MODES = 340;
+const MAX_MODES = 340; // m components per star at most (stars-model.h)
+// The parameters that build a star (the rest act live in the engine): a star's id is these and its key.
+export const starId = (P) => `${P.family}|${P.mass}|${P.speedup}`;
 
-// The C++ engine's messages (stars-engine.h, msg) back into the JavaScript engine's: 'amps' (the
-// focus star's observed mode amplitudes, which come in parts of 30, then the summary) and 'error'.
+// The C++ engine's messages (stars-engine.h, msg) into the page's: 'amps' (the focus star's
+// observed mode amplitudes, which come in parts of 30, then the summary) and 'error'.
 function views(m, e) {
   switch (m.type) {
     case 1: (e.ampParts ??= new Float32Array(MAX_MODES)).set(m.values, m.key); return null;
@@ -39,9 +40,9 @@ function pack(d, out) {
 // Engines the tests make and drop give their memory back.
 const dropped = typeof FinalizationRegistry === 'function' ? new FinalizationRegistry((h) => Base.exports?.forte_destroy(h)) : null;
 
-// The engine, with the JavaScript engine's test hooks: e.voices (each star's key, fading, held,
-// level) and e.byKey, read back. A note may bring its star (the page's noteData, or a test's
-// made-up one): played, as the JavaScript plays it, if it is the star the knobs make on that key.
+// The engine, with the tests' hooks: e.voices (each star's key, fading, held, level) and e.byKey,
+// read back. A note may bring its star (the page's noteData, or a test's made-up one): played if it
+// is the star the knobs make on that key.
 const VOICE = ['key', 'fading', 'dead', 'held', 'own', 'age', 'level', 'peak', 'vel', 'pressure', 'N', 'nAct'];
 const FLAGS = new Set(['fading', 'dead', 'held', 'own']);
 export class StarWasmEngine extends Base {
@@ -52,7 +53,7 @@ export class StarWasmEngine extends Base {
   }
   destroy() { dropped?.unregister(this); super.destroy(); }
   // the stars' ids by generation (stars-engine.h: the engine counts the changes of kind, mass and
-  // speed-up, and posts the focus star's), so that its messages name its star as the JavaScript's do
+  // speed-up, and posts the focus star's), so that its messages name its star by its id
   setParams(P) {
     const id = starId(P);
     if (!this.ids) { this.ids = new Map([[0, id]]); this.gen = 0; }
@@ -83,9 +84,11 @@ export class StarWasmEngine extends Base {
 }
 export const ready = () => StarWasmEngine.ready();
 
-// The model's functions the views call (stars-model.js's keyStar, starAt, zams, legendre, Elm),
-// computed by the WebAssembly. keyStar's star has the JavaScript's fields, so the page sends it with
-// the note to either engine.
+// The model's functions the page, its views and the tests call, computed by the WebAssembly
+// (stars-model.cpp): keyStar(key, P), the key's star (its place on the track, star; its seismic
+// parameters, sz; every multiplet of its pattern, all, and those it plays, multiplets; its modes as
+// the engine takes them, modes; its heard pitch); starAt(s, M), the track; zams(M); legendre and Elm,
+// the inclination's visibilities.
 const STAGES = ['dwarf', 'subgiant', 'giant', 'dscuti'];
 const SZ = ['dnu', 'numax', 'eps', 'd02', 'alpha', 'fwhm', 'gamma', 'dPi', 'q'];
 const TYPES = { l: Int8Array, m: Int8Array, mult: Int32Array };

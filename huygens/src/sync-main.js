@@ -1,13 +1,11 @@
 // sync-main.js — the page: UI, audio graph, keyboard / MIDI, lock analysis, views.
 // The instrument itself (parameters, engine, chain) is huygens-instrument.js.
-// The worklet runs the WebAssembly build (huygens-wasm.js) when it can, and the views call its
-// model once it has loaded; both fall back to the JavaScript (?engine=js forces it).
+// The worklet runs the WebAssembly build (huygens-wasm.js), and the views call its model.
 
 import { INSTRUMENT, GROUPS, DEFAULTS, PRESETS } from './huygens-instrument.js';
 import { ALL_PARAMS } from './sync-params.js';
-import { tunedFreq as jsTunedFreq, keyFreq, noteName, nearestRatio, intervalName, KEY_LO, KEY_HI } from './tuning.js';
+import { keyFreq, noteName, nearestRatio, intervalName, KEY_LO, KEY_HI } from './tuning.js';
 import { wasmModel } from './huygens-wasm.js';
-import { useWasm, engineSwitch } from '../../shared/shell.js';
 import { createChain } from '../../shared/chain.js';
 import { StairView, RasterView } from './sync-viz.js';
 import { FiringLog } from './lock-analysis.js';
@@ -26,18 +24,11 @@ let base = 48, holding = false;
 const log = new FiringLog(3); // the last 3 s of every sounding lamp's firings
 const held = new Map(), sounding = new Map(), latched = new Set();
 
-const engineParams = () => INSTRUMENT.engineParams(P);
-// (P as well: a WebAssembly engine takes all the parameters, and its tuning)
-const paramsMessage = () => ({ type: 'params', params: engineParams(), ...(INSTRUMENT.wasm && { P: { ...P } }) });
+const paramsMessage = () => ({ type: 'params', P: { ...P } });
 
-// The WebAssembly model (huygens-wasm.js) once it has loaded: each key's design frequency, and
-// the lock map's theory and engine (staircase.js, in its worker)
-let wasm = null;
-if (INSTRUMENT.wasm && useWasm()) {
-  wasmModel().then((m) => { wasm = m; refreshMarks(); recomputeStair(true); },
-    (err) => console.warn(`huygens: the WebAssembly model did not load (${err.message}); the JavaScript one runs`));
-}
-const tunedFreq = (key, Q) => (wasm ? wasm.tunedFreq(key, Q) : jsTunedFreq(key, Q));
+// The WebAssembly model (huygens-wasm.js): each key's design frequency (the lock map's theory and
+// engine are its too, staircase.js in its worker)
+const { tunedFreq } = await wasmModel();
 
 // ---------------------------------------------------------------------------
 // audio
@@ -49,28 +40,18 @@ function startAudio() {
   starting = (async () => {
     const ctx = new AudioContext({ latencyHint: 'interactive' });
     if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
-    await ctx.audioWorklet.addModule(INSTRUMENT.engine.module);
-    // the WebAssembly build: its bytes go to the worklet, which falls back to the JavaScript
-    // engine if it can't run them
-    let wasmBuild;
-    if (INSTRUMENT.wasm && useWasm()) {
-      try {
-        const bytes = await (await fetch(INSTRUMENT.wasm.binary)).arrayBuffer();
-        await ctx.audioWorklet.addModule(INSTRUMENT.wasm.module);
-        wasmBuild = { name: INSTRUMENT.wasm.name, bytes };
-      } catch (err) { console.warn(`huygens: the WebAssembly engine did not load (${err.message}); the JavaScript one plays`); }
-    }
+    // the engine, the WebAssembly build: its bytes go to the worklet, which compiles them
+    const bytes = await (await fetch(INSTRUMENT.wasm.binary)).arrayBuffer();
+    await ctx.audioWorklet.addModule(INSTRUMENT.wasm.module);
     await ctx.audioWorklet.addModule(new URL('../../shared/worklet.js', import.meta.url));
     const node = new AudioWorkletNode(ctx, 'forte-processor', {
-      numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { engine: INSTRUMENT.engine.name, wasm: wasmBuild },
+      numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { wasm: { name: INSTRUMENT.wasm.name, bytes } },
     });
-    const kind = new Promise((resolve) => { engineStarted = resolve; }); // notes wait to know which engine plays
     const chain = createChain(ctx, node, INSTRUMENT.chain); // tone → dry + body → room → limiter
     node.port.onmessage = (e) => onWorklet(e.data);
     audio = { ctx, node, chain };
     applyMix();
     node.port.postMessage(paramsMessage());
-    await kind;
     if (ctx.state !== 'running') await ctx.resume();
     live = true;
     $('#start').textContent = `Audio on · ${(ctx.sampleRate / 1000).toFixed(1)} kHz`;
@@ -83,8 +64,7 @@ function startAudio() {
 const post = (m) => { if (live) audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
 function applyMix() { if (audio) audio.chain.apply(P, trimGain('huygens')); } // trim: level-matched across instruments
 
-let lastTable = 0, engineStarted = null;
-const showEngine = INSTRUMENT.wasm ? engineSwitch() : () => {}; // C++ | JS in the header
+let lastTable = 0;
 function onWorklet(m) {
   if (m.type === 'state') {
     log.ingest(m);
@@ -94,13 +74,7 @@ function onWorklet(m) {
   } else if (m.type === 'stats') {
     const el = $('#cpu');
     el.textContent = `CPU ${(m.load * 100).toFixed(0)} %`;
-    el.title = `Engine: ${document.body.dataset.engine === 'wasm' ? 'WebAssembly (C++)' : 'JavaScript'}`;
     el.classList.toggle('hot', m.load > 0.7);
-  } else if (m.type === 'engine') {
-    document.body.dataset.engine = m.kind;
-    showEngine(m.kind);
-    if (m.reason) console.warn(`huygens: the WebAssembly engine failed (${m.reason}); the JavaScript one plays`);
-    engineStarted?.(m.kind);
   } else if (m.type === 'error') toast(m.message);
 }
 
@@ -113,7 +87,7 @@ async function noteOn(key) {
   sounding.set(key, (sounding.get(key) || 0) + 1);
   keyboardView.set(key, true);
   const a = await startAudio();
-  a.node.port.postMessage({ type: 'noteOn', key, velocity: 1, data: { f: tunedFreq(key, P) } }); // INSTRUMENT.noteData, from the model the views use
+  a.node.port.postMessage({ type: 'noteOn', key, velocity: 1, data: { f: tunedFreq(key, P) } }); // the design frequency the views mark
   refreshMarks();
 }
 function noteOff(key) {
@@ -284,7 +258,7 @@ function setParam(id, v, dragging = false) {
   refreshControl(id, dragging); refreshVisibility(); save(); updateHelp();
   $('#preset').value = '';
   if (p.kind === 'mix') applyMix();
-  else if (p.kind === 'tune') { if (INSTRUMENT.wasm) post(paramsMessage()); retuneSounding(); } // the WebAssembly engine tunes new notes itself
+  else if (p.kind === 'tune') { post(paramsMessage()); retuneSounding(); } // the engine tunes new notes itself
   else {
     post(paramsMessage());
     if (['kick'].includes(id)) recomputeStair(false);
@@ -314,7 +288,7 @@ function recomputeStair(full) {
       };
     }
     stair.reset(full);
-    worker.postMessage({ P: engineParams(), rows: 24, kmax: 0.15, full, wasm: !!wasm });
+    worker.postMessage({ P: { ...P }, rows: 24, kmax: 0.15, full });
   }, 250);
 }
 

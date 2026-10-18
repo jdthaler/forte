@@ -1,19 +1,16 @@
 // worklet.js — the one AudioWorklet processor every Forte instrument can use (and, at the end,
 // 'forte-limiter', the output chain's limiter).
-// The page adds its engine module first (which sets globalThis[EngineName]),
-// then this file, and creates
-//   new AudioWorkletNode(ctx, 'forte-processor', { processorOptions: { engine: 'EngineName' }, … })
-// With processorOptions.wasm = { name, bytes } (and that module added too), it runs the
-// instrument's WebAssembly build (shared/wasm.js) instead, and falls back to the JavaScript
-// engine if it fails; it tells the page which with { type: 'engine', kind: 'wasm' | 'js', reason? }.
+// The page adds its engine's module first (<slug>/src/<slug>-wasm.js, which sets
+// globalThis[XWasmEngine]), then this file, and creates
+//   new AudioWorkletNode(ctx, 'forte-processor', { processorOptions: { wasm: { name: 'XWasmEngine', bytes } }, … })
+// with the bytes of the instrument's WebAssembly build (shared/wasm.js), which it compiles here.
 //
 // Engine contract (the same class runs in Node for tests and renders):
 //   new Engine(sampleRate)
 //   process(L, R, n)              fill n samples (R may be a scratch buffer for mono pages)
 //   noteOn(key, velocity, data)   velocity 0..1; data = whatever the page attached
 //   noteOff(key, velocity)       velocity: a MIDI note-off's release velocity 0..1, or undefined
-//   setParams(P)                  full parameter object, or the page's engineParams(P) (a
-//                                 WebAssembly engine, with static fullParams, gets the whole P)
+//   setParams(P)                  the full parameter object
 //   setSustain?(on)   allNotesOff?()   handle?(msg)   (any other message type)
 //   voiceCount?()                 shown in the CPU pill
 //   stats?()                      more fields for the page's stats message (e.g. { modes })
@@ -29,17 +26,10 @@ class ForteProcessor extends AudioWorkletProcessor {
   constructor(options) {
     super();
     const o = options.processorOptions || {};
-    let kind = 'js', reason;
-    if (o.wasm) {
-      try { const W = globalThis[o.wasm.name]; W.load(o.wasm.bytes); this.engine = new W(sampleRate); kind = 'wasm'; }
-      catch (err) { reason = err.message; }
-    }
-    if (!this.engine) {
-      const Engine = globalThis[o.engine];
-      if (!Engine) throw new Error(`engine ${o.engine} not loaded`);
-      this.engine = new Engine(sampleRate);
-    }
-    this.port.postMessage({ type: 'engine', kind, reason });
+    const W = globalThis[o.wasm?.name];
+    if (!W) throw new Error(`engine ${o.wasm?.name} not loaded`);
+    W.load(o.wasm.bytes);
+    this.engine = new W(sampleRate);
     this.engine.post = (m) => this.port.postMessage(m);
     this.port.onmessage = (e) => this.handle(e.data);
     this.busy = 0;
@@ -54,7 +44,7 @@ class ForteProcessor extends AudioWorkletProcessor {
       switch (m.type) {
         case 'noteOn': e.noteOn(m.key, m.velocity, m.data); break;
         case 'noteOff': e.noteOff(m.key, m.velocity); break;
-        case 'params': e.setParams(e.constructor.fullParams && m.P ? m.P : m.params); break;
+        case 'params': e.setParams(m.P); break;
         case 'sustain': e.setSustain?.(m.on); break;
         case 'panic': e.allNotesOff?.(); break;
         default: e.handle?.(m);

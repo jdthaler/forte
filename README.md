@@ -86,8 +86,7 @@ play the plugins in a DAW with a small buffer.
 
 Each instrument page reads top to bottom. At the top, the instrument's
 name opens the menu of every instrument (and Forte's home page), next to
-**How it works** and the mode (and, on an instrument with a C++ build,
-**C++ | JS**, which picks the engine). In the middle are the views,
+**How it works** and the mode. In the middle are the views,
 pictures of the physics as it plays: the main ones large, the rest behind
 tabs underneath. At the bottom, right above the keys, are the controls a
 player reaches for (stops and registrations, tremolo, drive, the mallet,

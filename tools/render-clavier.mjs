@@ -3,9 +3,11 @@
 //
 // Name demos NN-what-you-hear; the landing page plays the first one.
 
-import { ClavierEngine } from '../clavier/src/clavier-engine.js';
-import { DEFAULTS, PRESETS } from '../clavier/src/clavier-params.js';
+import { INSTRUMENT, DEFAULTS, PRESETS } from '../clavier/src/clavier-instrument.js';
+import { loadEngine } from './engine.mjs';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
+
+const ClavierEngine = await loadEngine(INSTRUMENT);
 
 const FS = 48000, SLUG = 'clavier';
 const preset = (name, o = {}) => ({ ...DEFAULTS, ...PRESETS.find((p) => p.name.startsWith(name)).p, ...o });

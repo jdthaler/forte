@@ -3,7 +3,7 @@
 // built off the audio thread (forte/background.h), the pickup's octave trick and its live moves, a
 // new voice when the model changes, the dampers and the pedal, the voice limit, the hammer's
 // messages, and ten notes within the CPU budget. The physics tests are the JavaScript suite's, run
-// on the WebAssembly (FORTE_ENGINE=wasm).
+// on the WebAssembly (node test/tines-tests.mjs).
 
 #include <chrono>
 #include <cmath>

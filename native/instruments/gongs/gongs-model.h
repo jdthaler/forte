@@ -1,14 +1,14 @@
-// gongs-model.h — the gong as a nonlinear modal system (gongs/src/gongs-model.js in C++): the plate
-// tables (gong-modes.h, converted from gongs/data/gong-modes.js), the shell modes and the pruned
-// von Kármán coupling tensor for a dome rise, and each key's gong: its size, rate, losses and
-// mallet. Pure functions, operation for operation as the JavaScript, shared by the engine, the
-// views (gongs-web.cpp) and the tests.
+// gongs-model.h — the gong as a nonlinear modal system: the plate tables (gong-modes.h, converted
+// from gongs/data/gong-modes.js), the shell modes and the pruned von Kármán coupling tensor for a
+// dome rise, and each key's gong: its size, rate, losses and mallet. Pure functions, shared by the
+// engine, the views (gongs-web.cpp) and the tests.
 //
 // In units of the radius a, the thickness h and the time τ = √12 a²/(h c_p), every key is the
 // same plate (or shallow spherical cap); its modes x_k obey
 //   ẍ_k + ω_k² x_k = −∂V_nl/∂x_k + f_k,   V_nl = ½ Σ_n C_n (Q_n² + 4 Q_n ℓ_n),
 //   Q_n = xᵀ H̃^n x,   ℓ_n = Ẽ^n · x,
-// with the shell's membrane stiffness moved into the linear modes (see gongs-model.js).
+// with the shell's membrane stiffness (the part of V_nl quadratic in x) moved into the linear
+// modes, the "shell modes" (gongs/README.md, "Curvature: the shallow dome").
 #pragma once
 
 #include <array>
@@ -53,8 +53,8 @@ Spec specOf(const double *P);
 
 struct Term { int n, i, j; double v, w; }; // H̃^n_ij (i ≤ j) and its equipartition weight
 struct ETerm { int n, i; double v; };     // Ẽ^n_i
-// Coupling rows for the engine (gongs-model.js, pack): pass 1 by in-plane mode, sorted by the
-// larger mode index; pass 2 by transverse mode, sorted by partner; curvature terms both ways.
+// Coupling rows for the engine: pass 1 by in-plane mode, sorted by the larger mode index; pass 2
+// by transverse mode, sorted by partner; curvature terms both ways.
 struct Pack {
   std::vector<int> p1off, p1i, p1j, p1ij; std::vector<double> p1h;
   std::vector<int> p2off, p2n, p2q, p2nq; std::vector<double> p2h;
@@ -78,7 +78,7 @@ std::unique_ptr<Shell> buildShell(const Spec &spec);
 // End of each packed row when only modes < Nv are present (rows sorted by that index).
 void rowEnds(const std::vector<int> &off, const std::vector<int> &idx, int Nv, int *out);
 
-// Backbone of mode p to leading order: d(ω/Ω)/d(a²) (gongs-model.js, backbone).
+// Backbone of mode p to leading order: d(ω/Ω)/d(a²).
 double backbone(const Shell &S, int p, int Nv);
 
 // ---- one key ---------------------------------------------------------------------------------

@@ -1,7 +1,6 @@
-// stars-model.h — the Star Keyboard's physics (stars/src/stars-model.js in C++, operation for
-// operation, with V8's math, forte/fdlibm.h, so that every key's star is the JavaScript's to the
-// last bit): the scaling relations, the evolutionary track, the asymptotic p modes, the mixed
-// modes, the tuning of each key and the δ Scuti stars.
+// stars-model.h — the Star Keyboard's physics (with V8's math, forte/fdlibm.h, so that every key's
+// star is the same to the last bit everywhere): the scaling relations, the evolutionary track, the
+// asymptotic p modes, the mixed modes, the tuning of each key and the δ Scuti stars.
 //
 // Units: frequencies of the star in μHz, of the sound in Hz (= μHz × 10⁻⁶ × K); masses, radii and
 // luminosities in solar units; temperatures in K; period spacings in s.
@@ -45,14 +44,14 @@ StarState starForPitch(double nuTarget, double M);
 double legendre(int l, int m, double x);
 double Elm(int l, int m, double incl);
 
-// Deterministic random numbers (stars-model.js, rng): a seeded xorshift32.
+// Deterministic random numbers: a seeded xorshift32.
 struct Rng {
   uint32_t s;
   explicit Rng(double seed);
   double operator()() { s ^= s << 13; s ^= s >> 17; s ^= s << 5; return s / 4294967296.0; }
 };
 
-// What builds a star: the kind, the track's mass and the speed-up (stars-model.js, starId).
+// What builds a star: the kind, the track's mass and the speed-up.
 struct StarParams { int family = 0; double mass = 1, speedup = K0; };
 
 // A key's star: what the engine needs, per m component (keyStar's modes), and what the views draw.

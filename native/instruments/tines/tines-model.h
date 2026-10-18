@@ -1,5 +1,4 @@
-// tines-model.h — the mechanics of a Rhodes-style tine piano key, reduced to modes
-// (tines/src/tine.js in C++).
+// tines-model.h — the mechanics of a Rhodes-style tine piano key, reduced to modes.
 //
 // Each key is an asymmetric tuning fork: a steel cantilever (the tine, by finite elements, with
 // the tuning spring as a point mass) and a brass tone bar (one mode), both clamped to a block on a

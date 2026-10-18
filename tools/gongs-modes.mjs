@@ -12,7 +12,8 @@
 //   Kc      the shallow-shell membrane stiffness per κ²,
 //           12(1−ν²) Σ_n E_np E_nq / ζ_n⁴, summed over a much larger in-plane basis
 //           (ζ² ≤ ZETA2_KC) so that the shell's linear frequencies are converged.
-// It is written as an ES module so that the AudioWorklet can import it.
+// It is written as an ES module, for the tests; tools/gongs-native-table.mjs converts it to C++
+// (native/instruments/gongs/gong-modes.h), which the engine and model use.
 
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { plateModes, couplings, radial } from '../gongs/src/plate.js';

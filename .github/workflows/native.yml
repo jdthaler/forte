@@ -222,10 +222,3 @@ jobs:
         run: |
           git status --porcelain
           git diff --exit-code -- '*.wasm' || { echo "::error::Rebuild the WebAssembly (native/README.md) and commit it."; exit 1; }
-      - name: The ported instruments' test suites and references, on the WebAssembly
-        env:
-          FORTE_ENGINE: wasm
-          CI: 1
-        run: |
-          for d in native/instruments/*/; do s=$(basename "$d"); echo "== $s"; node tools/test-all.mjs "$s-tests"; done
-          node test/native-tests.mjs

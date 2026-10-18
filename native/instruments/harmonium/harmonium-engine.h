@@ -1,5 +1,4 @@
-// harmonium-engine.h — the real-time free-reed organ (harmonium/src/harmonium-engine.js in C++),
-// on the engine contract (forte/engine.h).
+// harmonium-engine.h — the real-time free-reed organ, on the engine contract (forte/engine.h).
 //
 //   bellows → reservoir P ─┬─▶ key's pallet ─▶ throat M_a ─▶ cell p_c ─▶ gap A(y) ─▶ jet ─▶ sound ∝ dU_out/dt
 //                          │                                   ▲            ▲
@@ -14,8 +13,8 @@
 // One voice per key, holding a reed for every rank (16′, 8′, the musette's two 8′s, 4′); the
 // stops open and close the ranks' mutes over 20 ms. Beyond 16 keys the quietest released key
 // fades out over 30 ms. A key's reeds depend on the voicing knobs: they are designed off the
-// audio thread (forte/background.h; in WebAssembly, at once on the key's first note, as the
-// JavaScript engine does). Voices come from a fixed pool; nothing is allocated in process().
+// audio thread (forte/background.h; in WebAssembly, at once on the key's first note). Voices come
+// from a fixed pool; nothing is allocated in process().
 #pragma once
 
 #include <array>
@@ -34,8 +33,8 @@ constexpr int ENV = 64;         // the focused key's rms per block, kept for the
 constexpr int NOISE_N = 8192;   // a seeded table of turbulence, read by each reed from its own offset
 constexpr int POOL = 64;        // voices: 16 keys sounding, and those fading out
 
-// What the engine posts for the page (harmonium/src/harmonium-wasm.js turns them back into the
-// JavaScript engine's 'reed' message). Every 6 blocks: the traces, the envelope, then the header.
+// What the engine posts for the page (harmonium/src/harmonium-wasm.js turns them into its 'reed'
+// message). Every 6 blocks: the traces, the envelope, then the header.
 namespace msg {
 enum : uint16_t {
   trace = 1,  // key: which trace (0 y, 1 U, 2 A, 3 dp); the first index, then up to 29 points
@@ -51,9 +50,8 @@ struct KeyReeds { std::array<ReedModel, NRANKS> r; };
 class HarmoniumEngine : public Engine {
  public:
   explicit HarmoniumEngine(double fs, uint32_t seed = 1);
-  // the tests' hooks (harmonium-engine.js's constructor options): the seed, the frequency from
-  // which reeds run at 2× (0: all; infinity: none) and whether every reed's pitch is followed.
-  // Call before playing.
+  // the tests' hooks: the seed, the frequency from which reeds run at 2× (0: all; infinity: none)
+  // and whether every reed's pitch is followed. Call before playing.
   void configure(uint32_t seed, double fOS, bool track);
 
   void setParams(const double *P) override;
@@ -66,7 +64,7 @@ class HarmoniumEngine : public Engine {
   // the tests: whether the key's reeds for the current knobs are designed (asks for them if not)
   bool ready(int key) { return bool(keys.get(key, version)); }
 
-  // A reed's constants (K_…) and state (S_…), laid out as the JavaScript's typed arrays.
+  // A reed's constants (K_…) and state (S_…), as flat arrays the tests can read and write.
   enum : int { K_A11, K_A12, K_A21, K_A22, K_B11, K_B12, K_B21, K_B22, K_GQ1, K_GV1, K_GQ2, K_GV2, K_S1, K_S2, K_R1, K_DVS,
                K_RLH, K_CH, K_HAK, K_ALK, K_TLO, K_TDY, K_TIDY, K_TN2, K_YMA, K_DQ, K_DV };
   enum : int { S_Q1, S_V1, S_Q2, S_V2, S_UIN, S_UINP, S_PC, S_PCP, S_X, S_XP, S_DP, S_UG, S_W, S_A, S_DW,
@@ -104,8 +102,8 @@ class HarmoniumEngine : public Engine {
     int nList = 0;
   };
 
-  // read by the tests (through the WebAssembly's hooks): the voices in the JavaScript engine's
-  // order, the turbulence table, the reservoir and the air drawn
+  // read by the tests (through the WebAssembly's hooks): the voices in the order they started,
+  // the turbulence table, the reservoir and the air drawn
   std::array<Voice *, POOL> voices{};
   int count = 0;
   std::array<double, NOISE_N> noise{};

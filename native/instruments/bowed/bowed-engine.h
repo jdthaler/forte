@@ -1,5 +1,4 @@
-// bowed-engine.h — the viola organista in real time (bowed/src/bowed-engine.js in C++), on the
-// engine contract (forte/engine.h).
+// bowed-engine.h — the viola organista in real time, on the engine contract (forte/engine.h).
 //
 // Every sample:
 //   1. the treadle sets the wheel speed v_B (with a ripple per stroke);
@@ -33,8 +32,8 @@ constexpr int SHAPE_N = 96;     // points along the string for the view
 constexpr int TRACE = 2048;     // bow-point velocity history for the view
 constexpr int MAX_MODES = 128;  // the board's modes below F_BODY (77)
 
-// What the engine posts for the page (bowed/src/bowed-wasm.js turns them back into the JavaScript
-// engine's 'state' and 'error' messages). The shape and the trace come first, the state last.
+// What the engine posts for the page (bowed/src/bowed-wasm.js turns them into its 'state' and
+// 'error' messages). The shape and the trace come first, the state last.
 namespace msg {
 enum : uint16_t {
   state = 1, // key; FN, FT, vB, beta, down, active, kind (0 none, 1 helmholtz, 2 multiple, 3 raucous), spp, period, f
@@ -56,7 +55,7 @@ class OrganistaEngine : public Engine {
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
-  // A key's string and its key action (the JavaScript engine's S[key]).
+  // A key's string and its key action.
   struct Key : BowedString {
     Key(int key, double fs) : BowedString(key, fs) {}
     bool down = false, active = false;

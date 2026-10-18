@@ -2,8 +2,8 @@
 // temperaments, the cantilever against beam theory, the pluck against an ideal pluck, energy and
 // the quasi-static release, then the engine: a key on pitch (its strings built on the worker
 // thread), the plectra back under their strings after the key comes up, the plucks it reports, and
-// ten keys in the CPU budget. The full physics suite is the JavaScript's, run on the WebAssembly
-// (FORTE_ENGINE=wasm node test/harpsichord-tests.mjs).
+// ten keys in the CPU budget. The full physics suite is the JavaScript one, run on the WebAssembly
+// (node test/harpsichord-tests.mjs).
 
 #include <chrono>
 #include <cmath>

@@ -11,7 +11,7 @@
 //   optional: #ctl-read (readout of the ↑/↓ parameter), #hold (Space indicator)
 //
 // Config: the instrument's descriptor (<slug>/src/<slug>-instrument.js: id, groups, presets, keep,
-// range, space, modWheel, engine, engineParams, noteData, chain), spread in, plus the page's own:
+// range, space, modWheel, wasm, noteData, chain), spread in, plus the page's own:
 //   id            instrument slug (localStorage key)
 //   groups        parameter groups: [{ title, open?, params: [{ id, label, min, max, def, step?, log?,
 //                 fmt?, hint?, type?: 'select' | 'checkbox', options?: [[value, name]…], showIf?(P),
@@ -20,17 +20,13 @@
 //   keep          param ids kept when switching presets (e.g. ['volume', 'room'])
 //   range         [lowest MIDI key, highest MIDI key]   (default [36, 96])
 //   base          MIDI note of the lower-row "Z" key    (default 48)
-//   engine        { name: 'XEngine', module: URL of src/x-engine.js }: run by shared/worklet.js (see
-//                 the engine contract there)
-//   wasm          { name: 'XWasmEngine', module, binary }: the engine's WebAssembly build, run instead
-//                 when it loads (shared/wasm.js). The header's engine switch picks C++ or JavaScript
-//                 for every page; ?engine=js or ?engine=wasm in the page's address overrides it
-//   worklet       instead of engine: { modules: ['src/x-engine.js'], engine: 'XEngine', outputs?: 2 },
-//                 or { modules: […, 'src/x-worklet.js'], processor: 'x-processor' } for a custom processor
+//   wasm          { name: 'XWasmEngine', module: URL of src/x-wasm.js, binary: URL of wasm/x.wasm }:
+//                 the engine, the C++ in native/instruments/<slug> built as WebAssembly
+//                 (shared/wasm.js), run by shared/worklet.js (the engine contract is there)
 //   chain         the output chain (shared/chain.js): { volume, room?, tone?, body?, … }
 //                 node → [tone low-pass] → [body] → master (+ room reverb) → limiter → speakers; analyser before the body
-//   engineParams(P)   what the engine's setParams receives (default: all of P); posted on start and on change
-//   noteData(key, vel, P, fs)  extra data attached to each noteOn message (e.g. a precomputed modal model)
+//   noteData(key, vel, P, fs)  extra data attached to each noteOn message: what the page offers the
+//                 engine so the audio thread needn't build it (e.g. a key's model, from its WebAssembly model)
 //   space         'sustain' (Space / CC64 = damper pedal, sent to the engine) | 'hold' (keys latch
 //                 while Space is down; shell sends the noteOffs on release) | null
 //   arrows        { param: id, step } — ↑/↓ nudge that parameter (by `step`; a log parameter by 1/24 of its range)
@@ -65,48 +61,6 @@ const LOW_LBL = ['z', 's', 'x', 'd', 'c', 'v', 'g', 'b', 'h', 'n', 'j', 'm', ','
 const HIGH = ['KeyQ', 'Digit2', 'KeyW', 'Digit3', 'KeyE', 'KeyR', 'Digit5', 'KeyT', 'Digit6', 'KeyY', 'Digit7', 'KeyU', 'KeyI', 'Digit9', 'KeyO', 'Digit0', 'KeyP', 'BracketLeft', 'Equal', 'BracketRight'];
 const HIGH_LBL = ['q', '2', 'w', '3', 'e', 'r', '5', 't', '6', 'y', '7', 'u', 'i', '9', 'o', '0', 'p', '[', '=', ']'];
 
-// Run an instrument's WebAssembly build, unless the address says ?engine=js or, without
-// ?engine=, the engine switch was last set to JavaScript (on any page).
-// The switch is for the beta: it goes with the JavaScript engines (docs/PLUGINS.md).
-const ENGINE = 'forte/engine/v1';
-export const useWasm = () => {
-  try { const q = new URLSearchParams(location.search).get('engine'); if (q) return q !== 'js'; } catch { /* no address */ }
-  try { return localStorage.getItem(ENGINE) !== 'js'; } catch { return true; }
-};
-// The engine switch, in the header beside Discover | Perform: C++ or JavaScript. Picking the
-// other one reloads the page with it (the views load their model with the page, so they switch
-// too), and every page remembers it. Amber when the C++ did not load and the JavaScript plays.
-// Returns show(kind), for the worklet's engine message. (Exported for pages without the shell.)
-export function engineSwitch() {
-  const play = $('.forte-play');
-  if (!play) return () => {};
-  const box = document.createElement('div');
-  box.className = 'forte-mode forte-engine';
-  box.setAttribute('role', 'group');
-  box.setAttribute('aria-label', 'Engine');
-  const btns = [['wasm', 'C++', 'The C++ engine, built to WebAssembly: the same code as the plugins'], ['js', 'JS', 'The JavaScript engine']].map(([kind, text, title]) => {
-    const b = document.createElement('button');
-    b.textContent = text; b.title = `${title}. Switching reloads the page.`; b.dataset.engine = kind;
-    b.addEventListener('click', () => {
-      if (b.getAttribute('aria-pressed') === 'true') { b.blur(); return; }
-      const url = new URL(location.href);
-      url.searchParams.delete('engine');
-      try { localStorage.setItem(ENGINE, kind); } catch { url.searchParams.set('engine', kind); } // no storage: the address says
-      location.replace(url);
-    });
-    return b;
-  });
-  box.append(...btns);
-  play.appendChild(box);
-  const show = (kind, fellBack) => {
-    for (const b of btns) b.setAttribute('aria-pressed', String(b.dataset.engine === kind));
-    box.classList.toggle('fallback', !!fellBack);
-    box.title = fellBack ? 'The C++ engine did not load, so the JavaScript one plays' : '';
-  };
-  show(useWasm() ? 'wasm' : 'js');
-  return (kind) => show(kind, kind === 'js' && useWasm());
-}
-
 let toastTimer = 0;
 export function toast(msg) {
   const t = $('#toast');
@@ -135,7 +89,6 @@ export function createShell(cfg) {
   const save = () => { try { localStorage.setItem(STORE, JSON.stringify(shell.P)); } catch { /* storage unavailable */ } };
 
   const shell = { P: load(), DEFAULTS, ALL, audio: null, base: cfg.base ?? 48, sustain: false };
-  const showEngine = cfg.wasm ? engineSwitch() : () => {};
   const held = new Map(), sounding = new Map(), latched = new Set();
 
   // ---- audio ---------------------------------------------------------------
@@ -146,45 +99,28 @@ export function createShell(cfg) {
     let ctx = null;
     starting = (async () => {
       ctx = new AudioContext({ latencyHint: 'interactive' });
-      const w = cfg.worklet || { modules: [cfg.engine.module], engine: cfg.engine.name };
       if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
-      for (const m of w.modules) await ctx.audioWorklet.addModule(m);
-      // the WebAssembly build, if there is one: its bytes go to the worklet, which falls back to
-      // the JavaScript engine if it can't run them
-      let wasm;
-      if (cfg.wasm && useWasm()) {
-        try {
-          const bytes = await (await fetch(cfg.wasm.binary)).arrayBuffer();
-          await ctx.audioWorklet.addModule(cfg.wasm.module);
-          wasm = { name: cfg.wasm.name, bytes };
-        } catch (err) { console.warn(`${cfg.id}: the WebAssembly engine did not load (${err.message}); the JavaScript one plays`); }
-      }
+      // the engine's WebAssembly: its bytes go to the worklet, which compiles them
+      const bytes = await (await fetch(cfg.wasm.binary)).arrayBuffer();
+      await ctx.audioWorklet.addModule(cfg.wasm.module);
       await ctx.audioWorklet.addModule(new URL('./worklet.js', import.meta.url)); // forte-processor, and the chain's limiter
-      const node = new AudioWorkletNode(ctx, w.processor || 'forte-processor', {
-        numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [w.outputs || 2],
-        processorOptions: { engine: w.engine, wasm },
+      const node = new AudioWorkletNode(ctx, 'forte-processor', {
+        numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
+        processorOptions: { wasm: { name: cfg.wasm.name, bytes } },
       });
       const chain = createChain(ctx, node, cfg.chain || {});
       const analyser = ctx.createAnalyser(); analyser.fftSize = 8192; analyser.smoothingTimeConstant = 0.55;
       chain.tap.connect(analyser);
-      // notes wait for the worklet to say which engine plays, so per-note data is built for it
-      let engineKnown;
-      const known = new Promise((r) => { engineKnown = r; });
       node.port.onmessage = (e) => {
         const m = e.data;
         if (m.type === 'stats' && $('#cpu')) {
           const el = $('#cpu');
           const pct = (x) => `${(x * 100).toFixed(0)} %`;
           el.textContent = `CPU ${pct(m.load)}${m.peak !== undefined ? ` (peak ${pct(m.peak)})` : ''}${m.voices !== undefined ? ` · ${m.voices} voices` : ''}`;
-          el.title = `Average and worst audio-block time, as a share of the time available. A peak over 100 % is an audible dropout.${shell.engineKind ? ` Engine: ${shell.engineKind === 'wasm' ? 'WebAssembly (C++)' : 'JavaScript'}.` : ''}`;
+          el.title = 'Average and worst audio-block time, as a share of the time available. A peak over 100 % is an audible dropout.';
           el.classList.toggle('hot', (m.peak ?? m.load) > 0.8);
         }
         else if (m.type === 'error') toast(m.message);
-        else if (m.type === 'engine') {
-          shell.engineKind = m.kind; document.body.dataset.engine = m.kind; showEngine(m.kind);
-          if (m.reason) console.warn(`${cfg.id}: the WebAssembly engine failed (${m.reason}); the JavaScript one plays`);
-          engineKnown();
-        }
         cfg.onMessage?.(m);
       };
       node.onprocessorerror = () => toast('The audio engine stopped. Reload the page to restart it.');
@@ -193,7 +129,6 @@ export function createShell(cfg) {
       node.port.postMessage(paramsMessage());
       if (cfg.space === 'sustain') node.port.postMessage({ type: 'sustain', on: shell.sustain });
       if (ctx.state !== 'running') await ctx.resume();
-      if (cfg.wasm) await Promise.race([known, new Promise((r) => setTimeout(r, 1000))]);
       shell.audio = { ctx, node, tone: chain.tone, master: chain.master, roomGain: chain.roomGain, analyser, chain };
       shell.applyMix();
       cfg.onAudio?.(shell.audio);
@@ -213,8 +148,7 @@ export function createShell(cfg) {
     starting.catch((err) => { toast(`Audio failed to start: ${err.message}`); ctx?.close?.().catch(() => {}); starting = null; });
     return starting;
   };
-  // (P as well: a WebAssembly engine takes all the parameters)
-  const paramsMessage = () => ({ type: 'params', params: cfg.engineParams ? cfg.engineParams(shell.P) : { ...shell.P }, ...(cfg.wasm && { P: { ...shell.P } }) });
+  const paramsMessage = () => ({ type: 'params', P: { ...shell.P } });
   const sendParams = () => shell.post(paramsMessage());
   shell.sendParams = sendParams;
   shell.post = (m) => { if (shell.audio) shell.audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };

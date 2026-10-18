@@ -1,4 +1,4 @@
-// reeds-model.h — the physics of a Wurlitzer-style reed piano (reeds/src/reeds-model.js in C++):
+// reeds-model.h — the physics of a Wurlitzer-style reed piano:
 //
 //   clamp ▐█▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀●═▓  ← reed tip in a slot of the comb
 //         ▐█        ▲ felt hammer       solder   pickup (+V through R)
@@ -78,7 +78,7 @@ Hammer hammerDefaults(int m);
 
 struct Mode { int n; double f, ratio, bare, sigma, sigSteel, sigClamp, w, pk, dampW, Gamma, Theta; };
 struct Info { int key; double f0, L, h, b, mReed, M, J, blobSide, ratio, xh, xd, xp; Hammer hammer; double kPick; };
-// What the engine's voice takes (the JavaScript's keyModel(…).voice; the page's noteData). Fixed
+// What the engine's voice takes (keyModel(…).voice; the page's noteData). Fixed
 // size: the audio thread copies it without allocating.
 struct VoiceData {
   uint64_t version = 0;
@@ -96,7 +96,7 @@ struct KeyModel {
 // Everything key m needs, for solder, strike and hardness as the knobs are, at the engine's rate fs.
 KeyModel keyModel(int m, double solder, double strike, double hardness, double fs = 48000);
 // The identity of the reeds for these knobs at that rate: their values, hashed below 2⁵² (so it
-// rides in a double), as the JavaScript's reedKey.
+// rides in a double).
 uint64_t reedVersion(double solder, double strike, double hardness, double fs);
 // voice data packed into doubles (version, key, n, the hammer's mass, K, p, alpha, then freq,
 // sigma, w, pk, dampW): what the page's WebAssembly model sends with a note

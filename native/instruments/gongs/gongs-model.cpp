@@ -1,4 +1,4 @@
-// gongs-model.cpp — the gong's model, as gongs-model.js computes it.
+// gongs-model.cpp — the gong's model (gongs-model.h).
 
 #include "gongs-model.h"
 
@@ -38,8 +38,8 @@ Spec specOf(const double *P) {
 
 // ---- shell modes and the pruned coupling tensor ----------------------------------------------
 // The table's couplings grouped by (in-plane mode, angular block pair), with each plate mode's
-// position inside its block (blocks list plate modes in table order), in the order the
-// JavaScript's Map meets them.
+// position inside its block (blocks list plate modes in table order), in the order the table
+// meets them.
 namespace {
 struct Group { int n, mp, mq; std::vector<int> a, b; std::vector<double> v; };
 std::vector<Group> makeGroups(int bc) {
@@ -163,7 +163,7 @@ std::unique_ptr<Shell> buildShell(const Spec &spec) {
   // Ublock(r, c) = U of shell mode cols[c] at plate row r
   auto U = [&](int block, int r, int c) { return modes[cols[block][c]].U[r]; };
   auto rowIn = [&](int block, int p) { const std::vector<int> &idx = blocks[block]; return (int)(std::find(idx.begin(), idx.end(), p) - idx.begin()); };
-  // curvature terms Ẽ^n_i = κ Σ_p U_pi E^n_p (in the order the JavaScript's Map meets them)
+  // curvature terms Ẽ^n_i = κ Σ_p U_pi E^n_p (in the order the table meets them)
   {
     std::vector<double> acc(NS * N, 0.0);
     std::vector<char> seen(NS * N, 0);

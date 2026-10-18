@@ -1,6 +1,6 @@
-// arc-voice.h — the "microphone" of Simon's talking arc (arc/src/arc-voice.js in C++): a singer
-// synthesised in place of an audio input, a glottal source (the Rosenberg pulse's flow derivative)
-// through a cascade of three formant resonators, gliding round the vowels a–e–i–o–u.
+// arc-voice.h — the "microphone" of Simon's talking arc: a singer synthesised in place of an
+// audio input, a glottal source (the Rosenberg pulse's flow derivative) through a cascade of
+// three formant resonators, gliding round the vowels a–e–i–o–u.
 #pragma once
 
 #include <array>

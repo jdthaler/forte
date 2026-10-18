@@ -31,7 +31,7 @@ method**:
 `node tools/qnm-table.mjs` precomputes all 63 modes with l = 2–4, every m and
 n = 0–2, from a = 0 to a = 1 − 10⁻⁶, in about three minutes. The radial
 fraction converges more slowly as a → 1, slowest for the counter-rotating
-overtones: (2,−2,2) at a = 1 − 10⁻⁶ needs about 10⁵ terms. The browser
+overtones: (2,−2,2) at a = 1 − 10⁻⁶ needs about 10⁵ terms. The C++
 interpolates the table with cubic Hermite polynomials in u = −log₁₀(1 − a), on
 Re Mω and log(−Im Mω), with slopes from the parabola through neighbouring
 nodes. Against fresh solves at a quarter, half and three quarters of every
@@ -145,23 +145,20 @@ check it against the engine's output.
 1 − 10⁻⁶; a phrase on GW150914-like holes and the same phrase near-extremal;
 equal vs lopsided mergers; face-on vs edge-on (listen in stereo); and full
 inspiral–merger–ringdown chirps. Regenerate with
-`node tools/render-blackhole.mjs`. Tests: `node test/blackhole-tests.mjs`
-(`FORTE_ENGINE=wasm`: on the WebAssembly).
+`node tools/render-blackhole.mjs`. Tests: `node test/blackhole-tests.mjs`.
 
 ## In C++
 
-The same engine and model run as WebAssembly on this page (the JavaScript is
-the fallback; `?engine=js` in the address forces it), where the views (the
-QNM plane, the strain plot, the black hole's numbers) call them too, and as
-plugins (CLAP, VST3, AU and a standalone app): MIDI velocity maps as on the
+The engine and model are C++, run as WebAssembly on this page, where the
+views (the QNM plane, the strain plot, the black hole's numbers) call them
+too, and as plugins (CLAP, VST3, AU and a standalone app): MIDI velocity maps as on the
 page, the mod wheel raises the spin from its default toward 1 − 10⁻⁶, and
 the ten presets are there. The Leaver table is the same one, converted
 number for number to a C++ header (`tools/blackhole-native-table.mjs`); a
 key's voice is cheap to build from it (a few microseconds, no solving), so
-the C++ builds it as a note starts, as the page does. With V8's own
-exponentials, logarithms, powers and sines, the WebAssembly plays what the
-JavaScript plays bit for bit, inspirals included, and the same test suite
-passes on it. Ten twelve-mode voices take about 1–2 % of a core in C++. The
+the engine builds it as a note starts, the same voice the views show. The
+Leaver solver (`src/qnm.js`, which makes the table) stays in JavaScript; the
+tests check the C++ against it and against the literature. Ten twelve-mode voices take about 1–2 % of a core in C++. The
 port is in `native/instruments/blackhole/`, its WebAssembly in
 `blackhole/wasm/` (wrapped by `blackhole/src/blackhole-wasm.js`).
 

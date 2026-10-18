@@ -3,17 +3,20 @@
 //
 // Name demos NN-what-you-hear; the landing page plays the first one.
 
-import { ReedEngine } from '../reeds/src/reeds-engine.js';
+import { INSTRUMENT } from '../reeds/src/reeds-instrument.js';
+import { loadEngine } from './engine.mjs';
 import { DEFAULTS, PRESETS } from '../reeds/src/reeds-params.js';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
 
 const FS = 48000, SLUG = 'reeds';
+const ReedEngine = await loadEngine(INSTRUMENT);
 const preset = (name, o = {}) => ({ ...DEFAULTS, ...PRESETS.find((p) => p.name === name).p, ...o });
 const P = (o = {}) => ({ ...DEFAULTS, ...o });
 // Render one take; the last 40 ms fade out so that takes can be joined A/B without a click.
 const play = (p, seconds, events) => {
   const e = new ReedEngine(FS); e.setParams(p);
   const out = renderEngine(e, seconds, events, FS), n = out[0].length, nf = Math.round(0.04 * FS);
+  e.destroy();
   for (const x of out) for (let i = 0; i < nf; i++) x[n - 1 - i] *= 0.5 - 0.5 * Math.cos((Math.PI * i) / nf);
   return out;
 };

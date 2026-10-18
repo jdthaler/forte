@@ -1,10 +1,11 @@
 // springs-web.cpp — the model's functions the page and its views call (springs/src/springs-wasm.js),
-// and the engine's test hooks (its voices, as the JavaScript engine's voices and byKey show them)
-// and its capture of the last strike (the echo view's samples).
+// and the engine's test hooks (its voices, in order and by key) and its capture of the last
+// strike (the echo view's samples).
 //
 // P is the parameter array in springs-params.h's order (the page writes it as shared/wasm.js
 // writes the engine's).
 
+#include <memory>
 #include <vector>
 
 #include "forte/web.h"
@@ -49,6 +50,22 @@ FORTE_EXPORT int springs_dispersion(int key, const double *P, double R, double f
   int i = 0;
   for (int j = 0; j < 2; j++) for (const CurvePoint &q : pts[j]) { out[i++] = q.k; out[i++] = q.f; out[i++] = q.cg; out[i++] = q.share; }
   return i;
+}
+// Wittrick's rod at any shape (r/R, helix angle α, Poisson's ν) and wavenumber k (1/R units, R = 1,
+// E = ρ = 1): its six ω ascending, dω/dk, and the bead share (beadShare) of each in rotation and
+// along the axis, 24 numbers. A solver of its own (solverFor's cache keys ν = 0.29), kept while
+// the shape stays the same.
+FORTE_EXPORT int springs_rod(double rr, double alpha, double nu, double k, double *out) {
+  static std::unique_ptr<RodSolver> rod;
+  if (!rod || rod->shape.rr != rr || rod->shape.alpha != alpha || rod->shape.nu != nu) rod = std::make_unique<RodSolver>(Shape{rr, alpha, nu});
+  rod->solve(k);
+  for (int j = 0; j < 6; j++) {
+    out[j] = rod->w[j];
+    out[6 + j] = rod->dw[j];
+    out[12 + j] = beadShare(rod->Y, j, alpha, false);
+    out[18 + j] = beadShare(rod->Y, j, alpha, true);
+  }
+  return 24;
 }
 FORTE_EXPORT double springs_mode_sigma(double f, double cg, double L, double endLoss, double eta, double oil) { return modeSigma(f, cg, L, endLoss, eta, oil); }
 FORTE_EXPORT double springs_pulse_length(double mallet, double velocity) { return pulseLength(mallet, velocity); }

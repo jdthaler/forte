@@ -1,5 +1,5 @@
-// linalg.js — dense symmetric (generalized) eigenproblems, shared by the
-// instruments that reduce a structure to modes (piano strings, tines, …).
+// linalg.js — dense symmetric (generalized) eigenproblems: for the tools that design structures
+// (the bells' FEM), the tests' independent checks, and the C++'s vectors (tools/gen-native-vectors.mjs).
 
 // Dense linear algebra (symmetric generalized eigenproblem K x = λ M x)
 

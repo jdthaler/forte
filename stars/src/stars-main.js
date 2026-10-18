@@ -1,32 +1,29 @@
 // stars-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName, useWasm } from '../../shared/shell.js';
+import { createShell, noteName } from '../../shared/shell.js';
 import { fit, css, animate } from '../../shared/views.js';
-import { INSTRUMENT, starFor as cached, isBuilt as cachedOnly } from './stars-instrument.js';
-import * as jsModel from './stars-model.js';
-import { KEY_LO, KEY_HI, TAU, SUN, starId } from './stars-model.js';
-import { wasmModel } from './stars-wasm.js';
+import { INSTRUMENT, KEY_LO, KEY_HI } from './stars-instrument.js';
+import { wasmModel, starId } from './stars-wasm.js';
 
 const $ = (s) => document.querySelector(s);
 let focus = 60, amps = null, analyser = null, fbuf = null, selected = -1, shown = -1, shownAt = 0;
 const LCOL = () => [css('--l0'), css('--l1'), css('--l2'), css('--l3')];
+const TAU = 2 * Math.PI;
+const SUN = { teff: 5777, rot: 1e6 / (25.4 * 86400) }; // the Sun's T_eff (K) and rotation (μHz), the model's reference
 
-// The views draw what the engine plays: the WebAssembly model once it has loaded (the same physics
-// as the engine, in C++), the JavaScript one until then or if it can't load.
-let model = jsModel, wasm = null;
-if (useWasm()) wasmModel().then((m) => { model = wasm = m; update(); prewarm(); }, (err) => console.warn(`stars: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+// The views draw what the engine plays: its model, from the same C++, built as WebAssembly.
+const model = await wasmModel();
 
-// ---- the stars, sent with each note (a red giant's mixed modes take a few ms) to either engine: kept
-// (the descriptor keeps the JavaScript's), and built ahead in spare moments ---------------------------
-const built = new Map(); // the WebAssembly model's
+// ---- the stars, sent with each note (a red giant's mixed modes take a few ms): kept, and built
+// ahead in spare moments ---------------------------------------------------------------------------
+const built = new Map();
 function starFor(key, P = shell.P) {
-  if (!wasm) return cached(key, P);
   const id = `${starId(P)}|${key}`;
   let d = built.get(id);
-  if (!d) { d = wasm.keyStar(key, P); if (built.size > 400) built.delete(built.keys().next().value); built.set(id, d); }
+  if (!d) { d = model.keyStar(key, P); if (built.size > 400) built.delete(built.keys().next().value); built.set(id, d); }
   return d;
 }
-const isBuilt = (key, P = shell.P) => (wasm ? built.get(`${starId(P)}|${key}`) : cachedOnly(key, P));
+const isBuilt = (key, P = shell.P) => built.get(`${starId(P)}|${key}`);
 let warmTimer = 0;
 function prewarm() {
   clearTimeout(warmTimer);
@@ -38,7 +35,7 @@ function prewarm() {
 
 const shell = createShell({
   ...INSTRUMENT,
-  noteData: (key, vel, P) => { const d = starFor(key, P); return { id: d.id, key: d.key, K: d.K, family: d.family, N: d.N, modes: d.modes }; }, // what the engines need
+  noteData: (key, vel, P) => { const d = starFor(key, P); return { id: d.id, key: d.key, K: d.K, family: d.family, N: d.N, modes: d.modes }; }, // what the engine needs
   arrows: { param: 'velocity', step: 0.05 },
   onAudio: (a) => {
     // a finer analyser of our own for the spectrum view (the comb of a red giant is a few Hz apart)

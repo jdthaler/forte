@@ -1,5 +1,4 @@
-// stars-engine.h — the real-time Star Keyboard (stars/src/stars-engine.js in C++), on the engine
-// contract (forte/engine.h).
+// stars-engine.h — the real-time Star Keyboard, on the engine contract (forte/engine.h).
 //
 //   key ─▶ a star (stars-model.h: its modes, sped up K times into the audio band)
 //       ─▶ every mode a damped oscillator (an exact two-pole recursion), kicked once per block by
@@ -26,8 +25,8 @@
 
 namespace forte::stars {
 
-// What the engine posts for the page (stars/src/stars-wasm.js turns them back into the JavaScript
-// engine's 'amps' and 'error' messages).
+// What the engine posts for the page (stars/src/stars-wasm.js turns them into its 'amps' and
+// 'error' messages).
 namespace msg {
 enum : uint16_t {
   ampsPart = 1, // key: the first mode's index; the focus star's observed mode amplitudes, up to 30
@@ -51,7 +50,7 @@ class StarEngine : public Engine {
   void pressure(double value, int key) override;
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
-  // A star its page built (the JavaScript's noteData, packed: key, K, δ Scuti?, N, then f, l, m,
+  // A star its page built (the page's noteData, packed: key, K, δ Scuti?, N, then f, l, m,
   // zeta, p, gamma, wEnv, wCore, asat, mult), for the next note on that key, played as the knobs'
   // own star. Only without threads (WebAssembly): with them, the worker builds every star ahead.
   bool offer(const double *packed, int n);
@@ -85,7 +84,7 @@ class StarEngine : public Engine {
     void landau(const StarEngine &eng, int n, bool driving);
   };
 
-  // read by the tests (through the WebAssembly's hooks), in the JavaScript engine's order
+  // read by the tests (through the WebAssembly's hooks), in the order they started
   std::array<Voice *, POOL> voices{};
   int nVoices = 0;
   std::array<Voice *, 128> byKey{};
@@ -103,7 +102,7 @@ class StarEngine : public Engine {
 
   std::array<double, p::count> P{};
   bool hasParams = false;
-  // the knobs that glide (the JavaScript's T and S, in its order)
+  // the knobs that glide (targets T and present values S)
   enum { kSpin, kCore, kIncl, kDamping, kDriving, kFlare, kGrowth, kCount };
   std::array<double, kCount> S{}, T{};
   bool sustain = false, freqMoved = false, dampMoved = false, inclMoved = false;

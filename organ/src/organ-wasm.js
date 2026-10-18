@@ -1,7 +1,6 @@
-// organ-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// organ-wasm.js — the engine and model, built as WebAssembly from the physics in C++
 // (native/instruments/organ): OrganWasmEngine, with the engine contract, and the model's functions
-// for the views. The page runs it when it can and falls back to the JavaScript (organ-engine.js,
-// tonewheels.js).
+// for the views and the tests.
 
 import { GROUPS, DEFAULTS, CONSOLE } from './organ-params.js';
 import { DRAWBARS } from './tonewheels.js';
@@ -10,8 +9,8 @@ import { wasmEngine, scratch } from '../../shared/wasm.js';
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'organ', name: 'OrganWasmEngine', groups: GROUPS, console: CONSOLE, binary: () => new URL('../wasm/organ.wasm', import.meta.url).href };
 
-// The C++ engine's messages (organ-engine.h, msg) as the JavaScript engine's: its state for the
-// views, every 768 samples, and the reset after a blow-up.
+// The C++ engine's messages (organ-engine.h, msg) for the page: its state for the views, every
+// 768 samples, and the reset after a blow-up.
 const STATE = ['shaft', 'hornAng', 'hornHz', 'drumAng', 'drumHz', 'scanPos', 'lcN', 'percEnv'];
 function messages(m) {
   if (m.type === 1) return { type: 'state', ...Object.fromEntries(STATE.map((k, i) => [k, m.values[i]])) };
@@ -21,8 +20,8 @@ function messages(m) {
 
 const Base = wasmEngine(BUILD, { messages });
 
-// The engine, with the JavaScript engine's fields the tests read: p (the parameters it was given,
-// over its defaults), hornHz and drumHz (which a test may set), percEnv, peak, keys and keyArr.
+// The engine, with the fields the tests read: p (the parameters it was given, over its
+// defaults), hornHz and drumHz (which a test may set), percEnv, peak, keys and keyArr.
 const HOOK = ['hornHz', 'drumHz', 'percEnv', 'peak', 'keyArr', 'keys', 'speed', 'hornAng', 'drumAng', 'scanPos'];
 export class OrganWasmEngine extends Base {
   constructor(fs) {
@@ -35,7 +34,7 @@ export class OrganWasmEngine extends Base {
     if (P.drawbars) this.p.drawbars = [...P.drawbars];
     super.setParams(P);
   }
-  // velocity 0..1 (the computer keys play 100), as the JavaScript engine's default
+  // velocity 0..1 (the computer keys play 100)
   noteOn(key, velocity = 100 / 127) { super.noteOn(key, velocity); }
   state() {
     const x = Base.exports, s = scratch(x);
@@ -51,20 +50,14 @@ export class OrganWasmEngine extends Base {
   get keyArr() { return { length: this.state()[4] }; }
   get keys() { return { size: this.state()[5] }; }
   get speed() { return this.state()[6]; }
-  // a render in double precision (the JavaScript engine's own numbers, before Float32Array)
-  process64(L, R, n) {
-    const x = Base.exports, s = scratch(x);
-    for (let at = 0; at < n; at += 128) {
-      const m = Math.min(128, n - at);
-      x.organ_process64(this.e, m, s.at);
-      L.set(s.f64(m), at); R.set(s.f64(m, 128 * 8), at);
-    }
-  }
 }
 export const ready = () => OrganWasmEngine.ready();
 
-// The model's functions the views call (tonewheels.js and organ-engine.js's leslieGeometry),
-// computed by the WebAssembly.
+// The model (organ-model.h), computed by the WebAssembly: gearFreq(w), etFreq(w) and centsOff(w), a
+// wheel's frequency on its gears, in equal temperament and between them; wheelSpec(w) { pc, octave,
+// teeth, gear }; keyWheel(key, d) and percWheel(key, third), the wheel a drawbar or the percussion
+// taps; drawbarGain(n); keyAnalysis(key, P), the nine tones a key sounds against the harmonic
+// series; leslieGeometry(p) { wall, micDist }, the cabinet's rear wall and the microphones' distance.
 export async function wasmModel() {
   const x = await ready(), s = scratch(x);
   const TUNING = { gears: 0, et: 1, harmonic: 2 };

@@ -1,4 +1,4 @@
-// harpsichord-model.cpp — the harpsichord's physics, as harpsichord-model.js computes it.
+// harpsichord-model.cpp — the harpsichord's physics (harpsichord-model.h).
 
 #include "harpsichord-model.h"
 

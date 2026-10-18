@@ -1,13 +1,11 @@
 // organ-main.js — console UI, audio graph, keyboard / MIDI, visualisations.
-// The worklet runs the WebAssembly build (organ-wasm.js) when it can, and the views call its
-// model once it has loaded; both fall back to the JavaScript (?engine=js forces it).
+// The worklet runs the engine, the C++ built as WebAssembly (organ-wasm.js), and the views call
+// its model.
 
 import { GROUPS, ALL_PARAMS, DEFAULTS, PRESETS } from './organ-params.js';
 import { INSTRUMENT } from './organ-instrument.js';
-import * as tonewheels from './tonewheels.js';
 import { DRAWBARS, NUM_WHEELS, KEY_LO, KEY_HI, PC_NAMES } from './tonewheels.js';
 import { wasmModel } from './organ-wasm.js';
-import { useWasm, engineSwitch } from '../../shared/shell.js';
 import { createChain } from '../../shared/chain.js';
 import { GeneratorView, LeslieView, OutputView, drawScanner, BAR_COLORS, useModel } from './organ-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
@@ -20,15 +18,11 @@ const STORE = 'tonewheel-organ/params/v1';
 const NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
 const noteName = (m) => NAMES[m % 12] + (Math.floor(m / 12) - 1);
 
-// The model the views call: tonewheels.js, or the WebAssembly's (organ-wasm.js) once it has loaded.
-let M = tonewheels;
-const keyAnalysis = (key, p) => M.keyAnalysis(key, p), keyWheel = (key, d) => M.keyWheel(key, d), percWheel = (key, third) => M.percWheel(key, third);
-const centsOff = (w) => M.centsOff(w), gearFreq = (w) => M.gearFreq(w), etFreq = (w) => M.etFreq(w), drawbarGain = (n) => M.drawbarGain(n);
-const wheelSpec = (w) => M.wheelSpec(w), wheelName = (w) => { const s = wheelSpec(w); return `${PC_NAMES[s.pc]}${s.octave}`; };
-if (useWasm()) {
-  wasmModel().then((m) => { M = { ...tonewheels, ...m }; useModel(m); refreshGenerator(); refreshFocus(); refreshActivity(); },
-    (err) => console.warn(`organ: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
-}
+// The model the views call: the engine's, from the same C++, built as WebAssembly.
+const M = await wasmModel();
+useModel(M);
+const { keyAnalysis, keyWheel, percWheel, centsOff, gearFreq, etFreq, drawbarGain, wheelSpec } = M;
+const wheelName = (w) => { const s = wheelSpec(w); return `${PC_NAMES[s.pc]}${s.octave}`; };
 
 function load() {
   try {
@@ -57,20 +51,12 @@ function startAudio() {
   starting = (async () => {
     const ctx = new AudioContext({ latencyHint: 'interactive' });
     if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
-    await ctx.audioWorklet.addModule(INSTRUMENT.engine.module);
-    // the WebAssembly build: its bytes go to the worklet, which falls back to the JavaScript
-    // engine if it can't run them
-    let wasmBuild;
-    if (INSTRUMENT.wasm && useWasm()) {
-      try {
-        const bytes = await (await fetch(INSTRUMENT.wasm.binary)).arrayBuffer();
-        await ctx.audioWorklet.addModule(INSTRUMENT.wasm.module);
-        wasmBuild = { name: INSTRUMENT.wasm.name, bytes };
-      } catch (err) { console.warn(`organ: the WebAssembly engine did not load (${err.message}); the JavaScript one plays`); }
-    }
+    // the engine's module, then the processor; the WebAssembly's bytes go to the worklet, which compiles them
+    const bytes = await (await fetch(INSTRUMENT.wasm.binary)).arrayBuffer();
+    await ctx.audioWorklet.addModule(INSTRUMENT.wasm.module);
     await ctx.audioWorklet.addModule(new URL('../../shared/worklet.js', import.meta.url));
     const node = new AudioWorkletNode(ctx, 'forte-processor', {
-      numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { engine: INSTRUMENT.engine.name, wasm: wasmBuild },
+      numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { wasm: { name: INSTRUMENT.wasm.name, bytes } },
     });
     const chain = createChain(ctx, node, INSTRUMENT.chain); // node → master (+ room) → limiter
     const analyser = ctx.createAnalyser();
@@ -94,20 +80,13 @@ function startAudio() {
 }
 
 const post = (m) => { if (live) audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
-// (P as well: a WebAssembly engine takes all the parameters, the console included)
-const paramsMessage = () => ({ type: 'params', params: INSTRUMENT.engineParams(P), P: { ...P, drawbars: [...P.drawbars] } });
+// all the parameters, the console included
+const paramsMessage = () => ({ type: 'params', P: { ...P, drawbars: [...P.drawbars] } });
 function sendParams() { post(paramsMessage()); }
 function applyMix() { if (audio) audio.chain.apply(P, trimGain(INSTRUMENT.id)); } // volume level-matched across instruments
 
-let engineKind = null; // what the worklet runs: 'wasm' or 'js' (it says so when it starts)
-const showEngine = INSTRUMENT.wasm ? engineSwitch() : () => {}; // C++ | JS in the header
 function onWorklet(m) {
-  if (m.type === 'engine') {
-    engineKind = m.kind;
-    document.body.dataset.engine = m.kind;
-    showEngine(m.kind);
-    if (m.reason) console.warn(`organ: the WebAssembly engine failed (${m.reason}); the JavaScript one plays`);
-  } else if (m.type === 'state') {
+  if (m.type === 'state') {
     lastState = m;
     leslieView.set(m);
     const rpm = 1200 * m.shaft * (P.mains / 60);
@@ -116,7 +95,6 @@ function onWorklet(m) {
   } else if (m.type === 'stats') {
     const el = $('#cpu');
     el.textContent = `CPU ${(m.load * 100).toFixed(0)} % · ${m.voices} keys`;
-    el.title = `Engine: ${engineKind === 'wasm' ? 'WebAssembly (C++)' : 'JavaScript'}`;
     el.classList.toggle('hot', m.load > 0.7);
   } else if (m.type === 'error') toast(m.message);
 }

@@ -1,6 +1,6 @@
 // template-tests.cpp — the template's engine in C++: on pitch, decaying as its T60 says, within
 // the CPU budget (docs/INSTRUMENT_GUIDE.md: 10 voices at 48 kHz well inside a core). The
-// physics tests are the JavaScript suite's, run on the WebAssembly (FORTE_ENGINE=wasm).
+// physics tests are the JavaScript suite's, run on the WebAssembly (node test/template-tests.mjs).
 
 #include <chrono>
 #include <cmath>

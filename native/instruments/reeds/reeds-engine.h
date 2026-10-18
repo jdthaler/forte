@@ -1,5 +1,4 @@
-// reeds-engine.h — the real-time reed piano (reeds/src/reeds-engine.js in C++), on the engine
-// contract (forte/engine.h):
+// reeds-engine.h — the real-time reed piano, on the engine contract (forte/engine.h):
 //
 //   reeds (modes + felt hammer) ─▶ C(y) of each reed in its slot ─▶ Σ δC
 //   ─▶ comb node (R·C0 high-pass) ─▶ preamp × tremolo (LED + photocell)
@@ -42,7 +41,7 @@ class ReedEngine : public Engine {
   void allNotesOff() override;
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
-  // A reed its page's model built already (packVoiceData; the JavaScript's noteData), for the next
+  // A reed its page's model built already (packVoiceData; the page's noteData), for the next
   // note on that key, so the audio thread needn't build it. Only without threads (WebAssembly):
   // with them, the worker builds every key ahead.
   bool offer(const double *packed, int n);
@@ -72,11 +71,11 @@ class ReedEngine : public Engine {
     void render(double *buf, int n, const ReedEngine &eng);
   };
 
-  // read by the tests and the views (through the WebAssembly's hooks), in the JavaScript engine's order
+  // read by the tests and the views (through the WebAssembly's hooks), in the order they started
   std::array<Voice *, POOL> voices{};
   int nVoices = 0;
   std::array<Voice *, 128> byKey{};
-  // the engine's state the JavaScript engine shows its tests (fs2, the slot, the comb node)
+  // the engine's state the tests read (fs2, the slot, the comb node)
   const double fs2;
   const int hammerMax;
   double damperSigma = LOSS.damper;
@@ -84,8 +83,7 @@ class ReedEngine : public Engine {
   double *capA, *capB; // C(y) for the current gap and, while it glides, the next block's
   double y0 = 0, y0N = 0, cRest = 0, cRestN = 0, dRest = 0, dRestN = 0;
   bool blend = false, twoTables = false, sustain = false;
-  // A test's own signal added to the comb's δC (2 × the block's samples), once, in the next block
-  // (the JavaScript suite pushes a fake voice for this).
+  // A test's own signal added to the comb's δC (2 × the block's samples), once, in the next block.
   std::array<double, BLOCK * OS> extra{};
   bool hasExtra = false;
 

@@ -1,21 +1,92 @@
 // Sticky-pad piano checks. Run: node test/pianet-tests.mjs
 //
 // First the physics against independent results (beam theory, Kendall's
-// pull-off, the closed-form limits of the crack law and of the pickups), then
-// the engine against the model: pitch, decay, release, the advertised effects,
-// level, stability and CPU.
+// pull-off, the closed-form limits of the crack law and of the pickups), then the engine against
+// the model: pitch, decay, release, the advertised effects, level, stability
+// and CPU. The model and the engine are the C++ (native/instruments/pianet),
+// built as WebAssembly: the model's functions through pianet-wasm.js, the
+// engine through loadEngine.
 
 import assert from 'node:assert/strict';
-import { unitReed, tipMassRoots } from '../pianet/src/reed.js';
-import {
-  keyReed, Pluck, PlateRail, pullOff, pullOffFast, workOfAdhesion, emFlux, emH2, esCap, releaseCurve, voicingT, PAD, ES, EM_ELL, KEY_LO, KEY_HI,
-} from '../pianet/src/pianet-model.js';
 import { INSTRUMENT } from '../pianet/src/pianet-instrument.js';
+import { wasmModel } from '../pianet/src/pianet-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { GROUPS, DEFAULTS, PRESETS } from '../pianet/src/pianet-params.js';
 import { keyFreq } from '../shared/dsp.js';
 
-const PianetEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const PianetEngine = await loadEngine(INSTRUMENT);
+const { keyReed, releaseCurve, workOfAdhesion, voicingT, PAD, unitReed, pluckStop, emFlux, emH2, esCap, ES, plateRail } = await wasmModel();
+const [KEY_LO, KEY_HI] = INSTRUMENT.range;
+// the C++'s design numbers (pianet-model.h): steel, the solder blob's length / the reed's, the
+// T pickup's equivalent air gap
+const STEEL = { E: 2.0e11, rho: 7850 }, BLOB = 0.12, EM_ELL = 1.5e-3;
+
+// The exact frequency equation of a clamped–free strip (L = EI = μ = 1) carrying a mass r at s
+// with rotary inertia j, as a two-span beam: each span w = A cos βx + B sin βx + C cosh βx + D sinh βx,
+// clamped at 0, free at 1, and at s: w, w' continuous, w'' jumps by −jΛ²w', w''' by rΛ²w (Λ = β²).
+// Its first n roots Λ, from the sign changes of the 6 × 6 determinant: an independent check on
+// the C++'s finite elements.
+function det(A) {
+  const n = A.length, a = A.map((r) => r.slice());
+  let d = 1;
+  for (let c = 0; c < n; c++) {
+    let p = c;
+    for (let r = c + 1; r < n; r++) if (Math.abs(a[r][c]) > Math.abs(a[p][c])) p = r;
+    if (a[p][c] === 0) return 0;
+    if (p !== c) { [a[p], a[c]] = [a[c], a[p]]; d = -d; }
+    d *= a[c][c];
+    for (let r = c + 1; r < n; r++) { const f = a[r][c] / a[c][c]; for (let k = c; k < n; k++) a[r][k] -= f * a[c][k]; }
+  }
+  return d;
+}
+function massRoots(r, s, j, n) {
+  const D = (b) => {
+    const L2 = b ** 4, C = Math.cos, S = Math.sin, Ch = Math.cosh, Sh = Math.sinh;
+    // span 1, clamped: a (cos − cosh) + c (sin − sinh) and its derivatives at s
+    const w1 = [[C(b * s) - Ch(b * s), S(b * s) - Sh(b * s)], [-b * (S(b * s) + Sh(b * s)), b * (C(b * s) - Ch(b * s))],
+      [-b * b * (C(b * s) + Ch(b * s)), -b * b * (S(b * s) + Sh(b * s))], [b ** 3 * (S(b * s) - Sh(b * s)), -(b ** 3) * (C(b * s) + Ch(b * s))]];
+    // span 2 in ξ = x − s: its four functions' derivatives
+    const w2 = (x) => [[C(b * x), S(b * x), Ch(b * x), Sh(b * x)], [-b * S(b * x), b * C(b * x), b * Sh(b * x), b * Ch(b * x)],
+      [-b * b * C(b * x), -b * b * S(b * x), b * b * Ch(b * x), b * b * Sh(b * x)], [b ** 3 * S(b * x), -(b ** 3) * C(b * x), b ** 3 * Sh(b * x), b ** 3 * Ch(b * x)]];
+    const at = w2(0), end = w2(1 - s);
+    return det([
+      [...w1[0].map((v) => -v), ...at[0]],
+      [...w1[1].map((v) => -v), ...at[1]],
+      [...w1[2].map((v, i) => -v + j * L2 * w1[1][i]), ...at[2]],
+      [...w1[3].map((v, i) => -v - r * L2 * w1[0][i]), ...at[3]],
+      [0, 0, ...end[2]], [0, 0, ...end[3]],
+    ]) / Math.cosh(b) ** 2; // (÷ cosh² keeps it well scaled)
+  };
+  const out = [], h = 0.002;
+  for (let b = 0.3; out.length < n && b < 12; b += h) {
+    if (D(b) * D(b + h) > 0) continue;
+    let lo = b, hi = b + h;
+    for (let i = 0; i < 60; i++) { const m = 0.5 * (lo + hi); if (D(lo) * D(m) <= 0) hi = m; else lo = m; }
+    out.push((0.5 * (lo + hi)) ** 2);
+  }
+  return out;
+}
+
+// The pad's crack law, G = G₀ [1 + (v/v₀)ⁿ] with G = F²/(8π a³ E*) (Kendall's flat punch), run
+// against a plain load ramp F = R t, with no reed: the pull-off force the engine's release should
+// follow, and its closed-form fast-loading limit. (The C++ runs the same law inside the reed's
+// mechanism; this is the textbook problem, on the C++'s pad constants.)
+const pullOffStatic = (a, F0) => F0 * (a / PAD.a0) ** 1.5;
+function crackSpeed(F, a, F0, n) {
+  const g = (F / pullOffStatic(a, F0)) ** 2; // G / G₀
+  return g > 1 ? PAD.v0 * (g - 1) ** (1 / n) : 0;
+}
+function pullOff(R, F0, n, dt = 1e-6) {
+  let a = PAD.a0, t = 0;
+  for (;;) {
+    t += dt;
+    a -= crackSpeed(R * t, a, F0, n) * dt;
+    if (a <= PAD.aMin * PAD.a0) return R * t;
+    if (t > 1e4) return Infinity;
+  }
+}
+// from da/dt ≈ −v₀ (G/G₀)^(1/n):  F*/F₀ = [ (2+n)/(3+n) · a₀ R / (v₀ F₀) ]^(n/(2+n))
+const pullOffFast = (R, F0, n) => F0 * (((2 + n) / (3 + n)) * PAD.a0 * R / (PAD.v0 * F0)) ** (n / (2 + n));
 
 const FS = 48000;
 let failures = 0;
@@ -63,17 +134,28 @@ function harmonics(fn, K = 4, N = 4096) {
 
 console.log('reed (Euler–Bernoulli strip + solder)');
 test('FEM matches the exact cantilever-with-tip-mass frequency equation (Blevins)', () => {
-  for (const R of [0, 0.5, 2]) {
-    const ex = tipMassRoots(R, 3).map((b) => b * b), u = unitReed({ r: R, s: 1, j: 0, nModes: 3 });
+  for (const R of [0, 0.5, 2]) { // the unit strip, a point mass R at the tip
+    const ex = massRoots(R, 1, 0, 3), u = unitReed({ r: R, s: 1, j: 0, nModes: 3 });
     ex.forEach((x, n) => assert.ok(Math.abs(u.Lam[n] / x - 1) < 1e-4, `R=${R} mode ${n + 1}: ${u.Lam[n]} vs ${x}`));
   }
-  const bare = unitReed({ nModes: 4 });
-  [6.2669, 17.5475, 34.3861].forEach((r, i) => assert.ok(Math.abs(bare.Lam[i + 1] / bare.Lam[0] - r) < 2e-3 * r));
 });
-test('modal static compliance at the pad equals x³/(3EI) (point-loaded cantilever)', () => {
-  const u = unitReed({ nModes: 30 }), x = 0.8;
+test('FEM matches the exact frequency equation of a cantilever with a solder mass (two-span beam)', () => {
+  // Λ_n = 2π f_n L² / √(EI/μ), √(EI/μ) = h √(E/12ρ)
+  const lam = (kr) => kr.modes.map((md) => (2 * Math.PI * md.f * kr.L ** 2) / (kr.h * Math.sqrt(STEEL.E / (12 * STEEL.rho))));
+  const bare = lam(keyReed(60, P({ tipMass: 0 }))); // no solder: the textbook cantilever, Λ₁ = 1.8751²
+  assert.ok(Math.abs(bare[0] / 1.875104 ** 2 - 1) < 1e-6, `Λ₁ ${bare[0]}`);
+  [6.2669, 17.5475, 34.3861].forEach((r, i) => assert.ok(Math.abs(bare[i + 1] / bare[0] / r - 1) < 2e-3, `mode ${i + 2}: ${bare[i + 1] / bare[0]}`));
+  // the solder: a mass r at 1 − blob/2 with the rotary inertia of a bar blob long
+  for (const [m, tipMass] of [[36, 1], [48, 0.3], [48, 3], [60, 1], [96, 1]]) {
+    const kr = keyReed(m, P({ tipMass })), L = lam(kr), ex = massRoots(kr.r, 1 - BLOB / 2, (kr.r * (BLOB * BLOB + (BLOB / 2) ** 2)) / 12, 3);
+    // 16 elements: mode 1 exact, the higher ones within their discretisation error
+    [1e-6, 5e-4, 5e-3].forEach((tol, n) => assert.ok(n >= L.length || Math.abs(L[n] / ex[n] - 1) < tol, `${m}, r = ${kr.r.toFixed(2)}, mode ${n + 1}: ${L[n]} vs ${ex[n]}`));
+  }
+});
+test('static stiffness at the pad: the kept modes carry the point-loaded cantilever\'s x³/(3EI)', () => {
+  const u = unitReed({ nModes: 30 }), x = 0.8; // the unit strip's modal sum, 30 modes
   let c = 0; for (let n = 0; n < u.nModes; n++) c += u.shape(n, x) ** 2 / u.Lam[n] ** 2;
-  assert.ok(Math.abs(c / (x ** 3 / 3) - 1) < 1e-4, `${c} vs ${x ** 3 / 3}`);
+  assert.ok(u.nModes === 30 && Math.abs(c / (x ** 3 / 3) - 1) < 1e-4, `${c} vs ${x ** 3 / 3}`);
   for (const m of [36, 60, 96]) { // the engine's kept modes carry almost all of it
     const kr = keyReed(m, P()), exact = kr.xc ** 3 / (3 * kr.EI);
     assert.ok(1 / kr.kc / exact > 0.99 && 1 / kr.kc / exact <= 1, `${m}: ${(1 / kr.kc / exact).toFixed(4)}`);
@@ -112,8 +194,9 @@ console.log('pickups');
 test('magnetic: dΦ/dt harmonics fall by the closed-form ratio 2ρ, ρ = (1 − √(1−ε²))/ε', () => {
   for (const [Y, g] of [[0.3e-3, 1e-3], [0.45e-3, 0.5e-3]]) {
     const dPhi = (th) => (emFlux(Y * Math.sin(th + 1e-6), g) - emFlux(Y * Math.sin(th - 1e-6), g)) / 2e-6;
-    const h = harmonics(dPhi, 3);
-    assert.ok(Math.abs(h[1] / h[0] / emH2(Y, g) - 1) < 1e-3, `${h[1] / h[0]} vs ${emH2(Y, g)}`);
+    const h = harmonics(dPhi, 3), e = Y / (EM_ELL + g), exact = (2 * (1 - Math.sqrt(1 - e * e))) / e;
+    assert.ok(Math.abs(h[1] / h[0] / exact - 1) < 1e-3, `${h[1] / h[0]} vs ${exact}`);
+    assert.ok(Math.abs(emH2(Y, g) / exact - 1) < 1e-12, `the C++'s emH2 ${emH2(Y, g)} vs ${exact}`);
   }
 });
 test('electrostatic: edge level with the reed gives no even harmonics; a raised edge gives a strong 2nd', () => {
@@ -125,7 +208,7 @@ test('electrostatic: edge level with the reed gives no even harmonics; a raised 
 test('electrostatic rail: first-order high-pass at 1/(2πRC) between constant voltage and constant charge', () => {
   const fs = 96000, tau = ES.R * ES.Cbus, c = 1e-15;
   for (const f of [20, 1 / (2 * Math.PI * tau), 2000]) {
-    const r = new PlateRail(fs), N = Math.round(fs * (0.2 + 40 / f)), w = 2 * Math.PI * f;
+    const r = plateRail(fs), N = Math.round(fs * (0.2 + 40 / f)), w = 2 * Math.PI * f;
     let re = 0, im = 0, cnt = 0;
     for (let i = 0; i < N; i++) { const o = r.step(c * Math.sin((w * i) / fs)); if (i > fs * 0.1) { re += o * Math.cos((w * i) / fs); im += o * Math.sin((w * i) / fs); cnt++; } }
     const amp = (2 * Math.hypot(re, im)) / cnt, wt = w * tau, exact = ((ES.Vb * c) / ES.Cbus) * (wt / Math.sqrt(1 + wt * wt));
@@ -200,16 +283,15 @@ test('key up: the pad lands and chokes the reed; sustain holds it off; limp foam
   console.log(`        C3, 0.2–0.3 s after key up: ${choke.toFixed(0)} dB (pad c_p 0.25), ${limp.toFixed(0)} dB (c_p 0.02), ${held.toFixed(1)} dB (sustain)`);
 });
 test('re-tacking: a pad that lands on a moving reed must wait for it to stop before it grips again', () => {
-  const F = (waitMs) => {
-    const p = new Pluck(keyReed(36, P(), 96000), P(), 96000);
-    p.press(0.7); while (!p.released) p.step();
-    for (let i = 0; i < 9600; i++) p.step();
-    p.lift(); while (p.hv !== 0) p.step();
-    for (let i = 0; i < waitMs * 96; i++) p.step();
-    p.press(0.7); while (!p.released && p.t < 0.3) p.step();
-    return p.released ? p.rel.F : 0;
+  // key up 0.2 s in, the pad lands 20 ms later (5 mm at 0.25 m/s) on the ringing reed; the key goes down again
+  const F = (wait) => {
+    const msgs = [];
+    render(P(), 0.8, [[0, 'on', 36, 0.7], [0.2, 'off', 36], [0.22 + wait, 'on', 36, 0.7]], msgs);
+    const rel = msgs.filter((m) => m.type === 'release');
+    assert.equal(rel.length, 2);
+    return rel[1].F;
   };
-  const soon = F(5), rested = F(200);
+  const soon = F(0.005), rested = F(0.2);
   assert.ok(soon < 0.75 * rested, `5 ms after landing ${soon.toFixed(2)} N, rested ${rested.toFixed(2)} N`);
 });
 test('sustain: re-pressing a latched key drops its pad, which re-tacks and plucks again (≈ the first note\'s level)', () => {
@@ -225,11 +307,8 @@ test('sustain: re-pressing a latched key drops its pad, which re-tacks and pluck
   }
 });
 test('the T\'s pole piece is an end stop: a reed swinging past the gap bounces off it', () => {
-  const p = new Pluck(keyReed(36, P(), 96000), P(), 96000), g = 0.5e-3;
-  p.stop = g; p.press(1);
-  let lo = 0;
-  for (let i = 0; i < 0.3 * 96000; i++) lo = Math.min(lo, p.step());
-  assert.ok(p.hits > 0 && lo > -g - 0.1e-3, `lowest tip ${(lo * 1e3).toFixed(3)} mm, pole at ${-g * 1e3} mm, ${p.hits} samples in contact`);
+  const g = 0.5e-3, { hits, lo } = pluckStop(36, P(), 1, g);
+  assert.ok(hits > 0 && lo > -g - 0.1e-3, `lowest tip ${(lo * 1e3).toFixed(3)} mm, pole at ${-g * 1e3} mm, ${hits} samples in contact`);
 });
 test('magnetic pickup, fixed magnet: at small swings the output goes as 1/(ℓ + g)² with the pole gap', () => {
   const m = 72, f = keyFreq(m), a = Math.round(0.1 * FS), b = Math.round(0.35 * FS);

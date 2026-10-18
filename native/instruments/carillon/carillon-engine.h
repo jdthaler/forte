@@ -1,5 +1,4 @@
-// carillon-engine.h — the real-time carillon (carillon/src/carillon-engine.js in C++), on the
-// engine contract (forte/engine.h).
+// carillon-engine.h — the real-time carillon, on the engine contract (forte/engine.h).
 //
 //   key ─▶ clapper (a mass on a pendulum, Hertz contact, solved implicitly every sample against
 //          every mode of the bell, where the bell is: a ringing bell is struck as it moves)
@@ -9,7 +8,7 @@
 // A carillon has no dampers: key-up does nothing, and the bells ring until they die away. One voice
 // per bell. A bell's modes come from the FEM's table (bell-table.h) scaled to its note: a few
 // hundred multiplications and some Bessel recurrences when it is struck, no eigen-solve, so the
-// engine builds a bell in noteOn as the JavaScript does. Voices live in a fixed pool: nothing is
+// engine builds a bell in noteOn. Voices live in a fixed pool: nothing is
 // allocated after construction.
 #pragma once
 
@@ -24,8 +23,8 @@
 
 namespace forte::carillon {
 
-// What the engine posts for the page (carillon/src/carillon-wasm.js gathers them back into the
-// JavaScript engine's 'bell' message).
+// What the engine posts for the page (carillon/src/carillon-wasm.js gathers them into its 'bell'
+// message).
 namespace msg {
 enum : uint16_t {
   bell = 1,  // the struck bell (key, 0 for none): n, age, contactMs, fwhm, Fmax, v, profile, historic

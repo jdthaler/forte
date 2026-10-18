@@ -1,9 +1,8 @@
-// organ-model.h — the Hammond B-3 tone generator as numbers (organ/src/tonewheels.js) in C++,
-// operation for operation: the gear ratios and wheels, which wheel each drawbar of a key taps
-// (with the foldback at the top), the tables the engine plays from (buildGenerator), the analysis
-// the page's table shows (keyAnalysis), and the Leslie cabinet's geometry (organ-engine.js).
-// Powers and logarithms go through V8's fdlibm (forte/fdlibm.h), so every table is the
-// JavaScript's to the last bit.
+// organ-model.h — the Hammond B-3 tone generator as numbers: the gear ratios and wheels, which
+// wheel each drawbar of a key taps (with the foldback at the top), the tables the engine plays
+// from (buildGenerator), the analysis the page's table shows (keyAnalysis), and the Leslie
+// cabinet's geometry. Powers and logarithms go through V8's fdlibm (forte/fdlibm.h), so every
+// table is the same to the last bit everywhere.
 #pragma once
 
 #include <cstdint>
@@ -39,7 +38,7 @@ int percWheel(int key, bool third);
 double drawbarGain(int n); // ~3 dB per step
 
 // Everything the engine needs to know about the generator, from the 'gen' parameters and the
-// sample rate (tonewheels.js buildGenerator). Fixed size: rebuilding it allocates nothing.
+// sample rate (buildGenerator). Fixed size: rebuilding it allocates nothing.
 struct Generator {
   double wheelHz[NW], level[NW], a2[NW], a3[NW], xtalk[NW], leak[NW];
   int16_t partner[NW];
@@ -60,7 +59,7 @@ constexpr double CABINET = 0.32, MIC_CLEAR = 0.08;
 struct Geometry { double wall, micDist; };
 Geometry leslieGeometry(double hornRadius, double micDist);
 
-// tonewheels.js's and organ-engine.js's seeded generator (Mulberry32)
+// The seeded generator (Mulberry32) for the wheels' phases and the contacts
 struct Rng {
   uint32_t a;
   explicit Rng(uint32_t seed) : a(seed) {}

@@ -1,5 +1,5 @@
-// bowed-string.h — one bowed string as a digital waveguide in velocity waves (bowed/src/string.js in
-// C++, operation for operation; McIntyre, Schumacher & Woodhouse 1983; Smith 1992).
+// bowed-string.h — one bowed string as a digital waveguide in velocity waves (McIntyre,
+// Schumacher & Woodhouse 1983; Smith 1992).
 //
 //   bridge ──(2·Db)── bow ──(2·Dn)── nut          x = 0 at the bridge
 //

@@ -1,4 +1,4 @@
-// blackhole-engine.cpp — ringdown-engine.js in C++ (blackhole-engine.h).
+// blackhole-engine.cpp — the ringdown engine (blackhole-engine.h).
 
 #include "blackhole-engine.h"
 

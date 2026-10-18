@@ -1,6 +1,6 @@
-// tines-engine.h — the real-time tine piano (tines/src/rhodes-engine.js in C++), on the engine
-// contract (forte/engine.h): coupled tine/tone-bar modes, a neoprene hammer, the nonlinear
-// electromagnetic pickup, the harp's wiring, the suitcase vibrato, the amp's drive and the speaker.
+// tines-engine.h — the real-time tine piano, on the engine contract (forte/engine.h): coupled
+// tine/tone-bar modes, a neoprene hammer, the nonlinear electromagnetic pickup, the harp's wiring,
+// the suitcase vibrato, the amp's drive and the speaker.
 //
 //   hammer (implicit, hysteretic) ─▶ coupled modes (exact two-pole recursions), 2× oversampled
 //   tip position ─▶ pickup Φ(Y) = (1 + ((Y + yoff)/w)²)^(-3/2), emf ∝ −dΦ/dt ─▶ Σ voices
@@ -9,8 +9,8 @@
 // Each key's modes (tines-model.h, the page's noteData) are built off the audio thread by
 // forte/background.h for the 'model' parameters as they stand; a note whose key is not built yet
 // waits for it (a few ms). The WebAssembly has no threads: the page builds the data with its own
-// WebAssembly model and offers it with the note (offer), as the JavaScript engine keeps the last
-// data sent per key. The pickups move live from the parameters. Voices come from a fixed pool:
+// WebAssembly model and offers it with the note (offer), and the engine keeps the last data sent
+// per key. The pickups move live from the parameters. Voices come from a fixed pool:
 // nothing is allocated in process().
 #pragma once
 
@@ -27,8 +27,8 @@
 
 namespace forte::tines {
 
-// What the engine posts for the page (tines/src/tines-wasm.js turns them back into the JavaScript
-// engine's 'hammer' and 'error' messages).
+// What the engine posts for the page (tines/src/tines-wasm.js turns them into its 'hammer' and
+// 'error' messages).
 namespace msg {
 enum : uint16_t {
   hammer = 1, // key: the hammer left the tine; contactMs, Fmax
@@ -52,8 +52,8 @@ class TinesEngine : public Engine {
   void allNotesOff() override;
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
-  // A key's voice data from the page (packVoiceData), kept for that key's notes, as the
-  // JavaScript engine keeps the last data sent. Only without threads (WebAssembly).
+  // A key's voice data from the page (packVoiceData), kept for that key's notes until the next
+  // is sent. Only without threads (WebAssembly).
   bool offer(const double *packed, int n);
   double *offerBuffer() { return offered.data(); } // where the page writes it (PACK_MAX numbers)
 
@@ -96,8 +96,8 @@ class TinesEngine : public Engine {
     void render(double *buf, int n, TinesEngine &eng);
   };
 
-  // read by the tests and the slow-motion view (through the WebAssembly's hooks), in the
-  // JavaScript engine's order
+  // read by the tests and the slow-motion view (through the WebAssembly's hooks), in the order
+  // they started
   std::array<Voice *, POOL> voices{};
   int nVoices = 0;
   std::array<Voice *, 128> byKey{};

@@ -1,5 +1,4 @@
-// quantum-engine.h — the real-time Quantum Keyboard (quantum/src/quantum-engine.js in C++), on the
-// engine contract (forte/engine.h).
+// quantum-engine.h — the real-time Quantum Keyboard, on the engine contract (forte/engine.h).
 //
 // Each voice is one wavepacket, |ψ(t)⟩ = Σ cₙ e^(−iEₙt/ħ)|n⟩, summed exactly:
 //   * one unit phasor aₙ = e^(−iθₙ·count) per state, its phase recomputed from the integer sample
@@ -36,7 +35,7 @@ class QuantumEngine : public Engine {
   static constexpr int POOL = 64;       // voices, sounding or being stolen
   static constexpr int BUDGET = 3000;   // pairs summed per sample, over all voices
   static constexpr int MAX_W = MAX_STATES * (MAX_STATES - 1) / 2; // a voice's grouped weights
-  static constexpr int BUF = (MAX_VOICES + 2) * MAX_PAIRS;        // the JavaScript's buffer of pair amplitudes
+  static constexpr int BUF = (MAX_VOICES + 2) * MAX_PAIRS;        // the buffer of pair amplitudes
   explicit QuantumEngine(double fs);
 
   void setParams(const double *P) override;
@@ -47,10 +46,10 @@ class QuantumEngine : public Engine {
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // the same in double precision (the WebAssembly's hook for the tests, which render into
-  // Float64Arrays as the JavaScript engine does)
+  // Float64Arrays)
   void process(double *L, double *R, int n);
-  // A packet the page built (packPacket), for the next note on its key, as the JavaScript engine
-  // takes noteOn's data. Only without threads (WebAssembly): with them, the worker builds them.
+  // A packet the page built (packPacket), for the next note on its key. Only without threads
+  // (WebAssembly): with them, the worker builds them.
   bool offer(const double *packed, int n);
   // the key's packet for the knobs as they are is built (the tests wait for it)
   bool ready(int key) { return (bool)data.get(key, version); }
@@ -80,7 +79,7 @@ class QuantumEngine : public Engine {
     template <class T> void render(T *L, T *R, int n);
   };
 
-  // read by the tests (through the WebAssembly's hooks), in the JavaScript engine's order
+  // read by the tests (through the WebAssembly's hooks), in the order they started
   std::array<Voice *, POOL> voices{};
   int nVoices = 0;
 

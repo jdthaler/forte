@@ -1,5 +1,4 @@
-// bubbles-engine.h — the real-time bubble organ (bubbles/src/bubbles-engine.js in C++), on the
-// engine contract (forte/engine.h).
+// bubbles-engine.h — the real-time bubble organ, on the engine contract (forte/engine.h).
 //
 //   key held ─▶ its nozzle releases bubbles (the first at once, then at the set rate, seeded random gaps)
 //   each bubble: the neck snaps (a pressure kick, ramped over the snap time) ─▶ a damped oscillator for
@@ -23,8 +22,8 @@
 
 namespace forte::bubbles {
 
-// What the engine posts for the page (bubbles/src/bubbles-wasm.js turns them back into the
-// JavaScript engine's 'bubbles' and 'wave' messages).
+// What the engine posts for the page (bubbles/src/bubbles-wasm.js turns them into its 'bubbles'
+// and 'wave' messages).
 namespace msg {
 enum : uint16_t {
   release = 1, // key; offset in the block, R, fd, b, U, d0, vel
@@ -40,8 +39,8 @@ class BubbleEngine : public Engine {
   static constexpr int kPool = 192, kSoft = 160;
   static constexpr int WAVE_N = 1024; // points of the latest bubble's recorded waveform
   explicit BubbleEngine(double fs, uint32_t seed = 0x5eed, int pool = kPool, int soft = kSoft);
-  // the tests' hooks (bubbles-engine.js's constructor options): the seed, the pool's size and
-  // the soft limit. Allocates; call before playing.
+  // the tests' hooks: the seed, the pool's size and the soft limit. Allocates; call before
+  // playing.
   void configure(uint32_t seed, int pool, int soft);
 
   void setParams(const double *P) override;

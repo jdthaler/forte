@@ -1,4 +1,4 @@
-// windharp-model.cpp — the Wind Harp's physics, as windharp-model.js computes it.
+// windharp-model.cpp — the Wind Harp's physics (windharp-model.h).
 
 #include "windharp-model.h"
 

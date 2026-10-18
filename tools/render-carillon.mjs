@@ -3,10 +3,14 @@
 //
 // Name demos NN-what-you-hear; the landing page plays the first one.
 
-import { CarillonEngine } from '../carillon/src/carillon-engine.js';
-import { DEFAULTS, PRESETS } from '../carillon/src/carillon-params.js';
-import { bellOf, struckPartials, strikeNote, keyFreq } from '../carillon/src/carillon-model.js';
+import { INSTRUMENT, DEFAULTS, PRESETS } from '../carillon/src/carillon-instrument.js';
+import { wasmModel } from '../carillon/src/carillon-wasm.js';
+import { keyFreq } from '../shared/dsp.js';
+import { loadEngine } from './engine.mjs';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
+
+const CarillonEngine = await loadEngine(INSTRUMENT);
+const { bellOf, struckPartials, strikeNote } = await wasmModel();
 
 const FS = 48000, SLUG = 'carillon', TAU = 2 * Math.PI;
 const P = (o = {}) => ({ ...DEFAULTS, ...o });

@@ -1,7 +1,6 @@
-// blackhole-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// blackhole-wasm.js — the engine and model built as WebAssembly from the physics in C++
 // (native/instruments/blackhole): BlackholeWasmEngine, with the engine contract, and the model's
-// functions for the views. The page runs it when it can and falls back to the JavaScript
-// (ringdown-engine.js, ringdown-model.js).
+// functions for the views.
 
 import { GROUPS } from './ringdown-params.js';
 import { wasmEngine, scratch } from '../../shared/wasm.js';
@@ -14,7 +13,7 @@ const messages = (m) => (m.type === 1 ? { type: 'voices', voices: Math.round(m.v
 
 const Base = wasmEngine(BUILD, { messages });
 
-// A key's voice (ringdown-model.js's keyVoice) goes to and from the WebAssembly packed as doubles
+// A key's voice (blackhole-model.h's keyVoice) goes to and from the WebAssembly packed as doubles
 // (blackhole-web.cpp): key, count, hasChirp, the chirp, the info, then 12 numbers per mode.
 const CHIRP = ['Mc', 'fStart', 'fIsco', 'f220', 'tc', 'cp', 'cx', 'amp', 'psi', 'fPk', 'tauB', 'fadeT'];
 const INFO = ['key', 'f0', 'a', 'M', 'Msun', 'nu', 'rPlusKm', 'OmegaH', 'hawkingK'];
@@ -38,7 +37,7 @@ function unpack(x, at) {
   return { key: a[0], modes, chirp, info };
 }
 
-// A voice of the C++ engine, read back as the JavaScript engine's Voice: what the tests read.
+// A voice of the C++ engine, read back field by field: what the tests read.
 const VOICE = ['key', 'vel', 'keyDown', 'ring', 'stolen', 'dead', 'fade', 'level', 'hasChirp', 'stage', 'f', 't', 'phi', 'A', 'xfade'];
 const FLAGS = new Set(['keyDown', 'ring', 'stolen', 'dead', 'hasChirp']);
 class WasmVoice {
@@ -53,9 +52,9 @@ class WasmVoice {
 }
 for (const k of ['key', 'vel', 'keyDown', 'ring', 'stolen', 'dead', 'fade', 'level']) Object.defineProperty(WasmVoice.prototype, k, { get() { return this.state[k]; } });
 
-// The engine, with the JavaScript engine's hooks: a note's data (a key's voice, which the C++
+// The engine, with three hooks for the tests: a note's data (a key's voice, which the C++
 // otherwise builds from the parameters), maxVoices, and voices (one array, kept up to date in
-// place, as the JavaScript engine's).
+// place).
 export class BlackholeWasmEngine extends Base {
   constructor(fs) {
     super(fs);
@@ -80,9 +79,10 @@ export class BlackholeWasmEngine extends Base {
 }
 export const ready = () => BlackholeWasmEngine.ready();
 
-// The model's functions the views call, computed by the WebAssembly: the QNM bank (its table and
-// omega(l, m, n, a), as QNMBank), a key's voice (keyVoice, and voiceFor's cache by the 'model'
-// parameters and the sample rate), and its strain (strainCurve).
+// The model's functions the views call, computed by the WebAssembly: the QNM bank (its table, with
+// log(−Im Mω) as lim, and omega(l, m, n, a), interpolated), a key's voice (keyVoice, and voiceFor,
+// cached by the 'model' parameters and the sample rate), its strain in closed form (strainCurve),
+// and the spin-weighted spherical harmonics (swsh).
 const MODEL = GROUPS.flatMap((g) => g.params).filter((p) => p.kind === 'model').map((p) => p.id);
 export async function wasmModel() {
   const x = await ready();

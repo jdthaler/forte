@@ -3,9 +3,11 @@
 //
 // Name demos NN-what-you-hear; the landing page plays the first one.
 
-import { ArmonicaEngine } from '../glass/src/glass-engine.js';
-import { DEFAULTS } from '../glass/src/glass-params.js';
+import { INSTRUMENT, DEFAULTS } from '../glass/src/glass-instrument.js';
+import { loadEngine } from './engine.mjs';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
+
+const ArmonicaEngine = await loadEngine(INSTRUMENT);
 
 const FS = 48000, SLUG = 'glass';
 const P = (o = {}) => ({ ...DEFAULTS, ...o });

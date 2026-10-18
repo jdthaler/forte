@@ -1,4 +1,4 @@
-// windharp-engine.cpp — the Wind Harp's engine, as windharp-engine.js runs it.
+// windharp-engine.cpp — the Wind Harp's engine (windharp-engine.h).
 
 #include "windharp-engine.h"
 
@@ -29,13 +29,13 @@ uint32_t toUint32(double x) {
   if (m < 0) m += 4294967296.0;
   return (uint32_t)m;
 }
-// xorshift32 as the JavaScript's rng(seed): uniform in [−0.5, 0.5)
+// xorshift32, seeded: uniform in [−0.5, 0.5)
 uint32_t rngSeed(double seed) { const uint32_t s = toUint32(seed); return s ? s : 1; }
 double rngNext(uint32_t &s) { s ^= s << 13; s ^= s >> 17; s ^= s << 5; return s / 4294967296.0 - 0.5; }
 double jmax(double a, double b) { return a != a || b != b ? NAN : a > b ? a : b; }
 
 // Exact response of ä + 2ζωȧ + ω²a = g(t) over one step h, with g running linearly from g0 to g1
-// (windharp-engine.js, foh): p11 p12 p21 p22, then the hold's a0 a1 b0 b1.
+// (a first-order hold): p11 p12 p21 p22, then the hold's a0 a1 b0 b1.
 void foh(double w, double z, double h, double *out) {
   const double wd = w * std::sqrt(1 - z * z), e = exp(-z * w * h), c = fdlibm::cos(wd * h), s = fdlibm::sin(wd * h), zw = z * w;
   const double p11 = e * (c + (zw / wd) * s), p12 = (e * s) / wd, p21 = (-e * w * w * s) / wd, p22 = e * (c - (zw / wd) * s);

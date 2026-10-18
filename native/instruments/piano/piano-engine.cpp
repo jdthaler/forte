@@ -1,4 +1,4 @@
-// piano-engine.cpp — the Ribbon Piano's engine, as piano/src/engine.js runs it.
+// piano-engine.cpp — the Ribbon Piano's engine (piano-engine.h).
 
 #include "piano-engine.h"
 
@@ -283,7 +283,7 @@ PianoEngine::PianoEngine(double fs)
         return nullptr;
       }),
       arena((size_t)ARENA * ARRAYS, 0.0) {
-  for (int i = 0; i < p::count; i++) P[i] = kParams[i].def; // the JavaScript engine plays its defaults until told otherwise
+  for (int i = 0; i < p::count; i++) P[i] = kParams[i].def; // the defaults until told otherwise
   snapGains();
   version = modelVersion(P.data(), fs);
   Snapshot &s = snapshots[snapAt];

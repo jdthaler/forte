@@ -1,4 +1,4 @@
-// tines-model.cpp — the tine piano key's mechanics, as tines/src/tine.js computes them.
+// tines-model.cpp — the tine piano key's mechanics (tines-model.h).
 
 #include "tines-model.h"
 

@@ -1,16 +1,13 @@
 // windharp-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName, useWasm } from '../../shared/shell.js';
+import { createShell, noteName } from '../../shared/shell.js';
 import { fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './windharp-instrument.js';
-import * as jsModel from './windharp-model.js';
+import { TAU, U_REF, U_MAX, AIR, RE_C } from './windharp-model.js';
 import { wasmModel } from './windharp-wasm.js';
 
-const { TAU, U_REF, U_MAX, AIR, RE_C } = jsModel;
-// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
-// physics as the engine, in C++), the JavaScript one until then or if it can't load.
-let phys = jsModel;
-if (useWasm()) wasmModel().then((m) => { phys = m; F = null; update(); }, (err) => console.warn(`windharp: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+// The views draw what the engine plays: its model, the same C++, built as WebAssembly.
+const phys = await wasmModel();
 const shedding = (U, D) => phys.shedding(U, D);
 
 const $ = (s) => document.querySelector(s);

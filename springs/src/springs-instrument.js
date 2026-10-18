@@ -3,24 +3,9 @@
 // plugins (tools/gen-native-params.mjs) all start here. No DOM, no Web Audio.
 
 import { GROUPS, DEFAULTS, PRESETS } from './springs-params.js';
-import { KEY_LO, KEY_HI, keySprings, geometryId } from './springs-model.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
-
-// A key's springs and their modes, sent with each note: a few hundred 6 × 6 eigenproblems for a
-// bass key, too slow for the audio thread. Kept (by everything they depend on), so the page can
-// build them ahead, working through the keyboard in spare moments after a change.
-const built = new Map();
-export function springsFor(key, P, fs) {
-  const id = `${geometryId(P)}|${key}|${fs}`;
-  let c = built.get(id);
-  if (!c) {
-    c = keySprings(key, P, fs);
-    if (built.size > 300) built.delete(built.keys().next().value);
-    built.set(id, c);
-  }
-  return c;
-}
+export const KEY_LO = 36, KEY_HI = 84; // C2–C6
 
 export const INSTRUMENT = {
   id: 'springs',
@@ -30,8 +15,8 @@ export const INSTRUMENT = {
   range: [KEY_LO, KEY_HI],              // MIDI keys: C2–C6
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'hand',                     // CC1: a hand on the springs
-  engine: { name: 'SpringEngine', module: new URL('./springs-engine.js', import.meta.url).href },
+  // the engine: the physics in C++ (native/instruments/springs), built as WebAssembly. The page
+  // builds each key's springs with its WebAssembly model and sends them with the note (noteData)
   wasm: { name: 'SpringWasmEngine', module: new URL('./springs-wasm.js', import.meta.url).href, binary: new URL('../wasm/springs.wasm', import.meta.url).href },
-  noteData: (key, vel, P, fs) => springsFor(key, P, fs),
   chain: { volume: 'volume', room: 'room' },
 };

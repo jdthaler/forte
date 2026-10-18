@@ -1,7 +1,13 @@
 // ringdown-params.js — knobs for the black-hole keyboard.
 // kind: 'model' → recompute every key's modes; 'engine' → audio thread; 'mix' → Web Audio.
 
-import { spinFromU, uFromSpin } from './ringdown-model.js';
+// spin slider: u = −log10(1 − a), from 0 (Schwarzschild) to 6 (a = 1 − 10⁻⁶)
+export const spinFromU = (u) => 1 - 10 ** -u;
+export const uFromSpin = (a) => -Math.log10(1 - a);
+
+const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+export const noteName = (m) => NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+export const KEY_LO = 36, KEY_HI = 96;
 
 export function fmtSpin(u) {
   const a = spinFromU(u);

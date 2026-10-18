@@ -1,4 +1,4 @@
-// tines-engine.cpp — the tine piano's engine, as tines/src/rhodes-engine.js runs it.
+// tines-engine.cpp — the tine piano's engine (tines-engine.h).
 
 #include "tines-engine.h"
 
@@ -199,7 +199,7 @@ TinesEngine::TinesEngine(double fs)
         }
         return nullptr;
       }) {
-  for (int i = 0; i < p::count; i++) P[i] = kParams[i].def; // the JavaScript engine plays its defaults until told otherwise
+  for (int i = 0; i < p::count; i++) P[i] = kParams[i].def; // the defaults until told otherwise
   version = modelVersion(P.data(), fs);
   Snapshot &s = snapshots[snapAt];
   for (int i = 0; i < p::count; i++) s.P[i].store(P[i], std::memory_order_relaxed);

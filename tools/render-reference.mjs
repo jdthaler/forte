@@ -1,17 +1,17 @@
 // render-reference.mjs — fixed note scripts played through an instrument in Node, as a MIDI host
 // would play it (notes and velocities, the pedal, the mod wheel, aftertouch, pitch bend, each
 // preset), and summarised: level over time, peak, the strongest partial, the spectral centroid
-// and the decay. The JavaScript engine's summary is the reference its C++ port must match
-// (docs/PLUGINS.md, steps 1 and 3).
+// and the decay. The reference is a summary saved once, which the engine must keep matching
+// (test/native-tests.mjs): the JavaScript engine's while the instruments were ported to C++
+// (docs/PLUGINS.md), and since then the C++ engine's, saved again when a change to the sound is meant.
 //
 // Usage: node tools/render-reference.mjs <slug>             writes native/instruments/<slug>/reference.json
 //        node tools/render-reference.mjs <slug> --print     prints the summary instead
-//        FORTE_ENGINE=wasm node tools/render-reference.mjs <slug> --compare
-//                                                           plays the WebAssembly engine against the file
+//        node tools/render-reference.mjs <slug> --compare   plays the engine against the file
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { Player, loadInstrument, withPreset, defaultsOf } from './headless.mjs';
-import { loadEngine, ENGINE } from './engine.mjs';
+import { loadEngine } from './engine.mjs';
 import { fft } from './audio-util.mjs';
 
 const FS = 48000, R = new URL('../', import.meta.url);
@@ -122,11 +122,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       console.log(`  ${errs.length ? 'FAIL' : 'ok  '} ${s.name}${errs.length ? `\n        ${errs.slice(0, 4).join('\n        ')}` : ''}`);
       if (errs.length) failed++;
     }
-    console.log(failed ? `\n${failed} FAILED (${ENGINE} engine against the JavaScript reference)` : `\nall match (${ENGINE} engine against the JavaScript reference)`);
+    console.log(failed ? `\n${failed} FAILED against the reference` : '\nall match the reference');
     process.exit(failed ? 1 : 0);
   }
-  if (ENGINE !== 'js') { console.error('the reference is the JavaScript engine\'s: unset FORTE_ENGINE'); process.exit(1); }
-  const out = { slug, engine: 'js', fs: FS, frame: FRAME, scripts: list.map((s) => ({ ...s, summary: summarise(play(I, Engine, s)) })) };
+  const out = { slug, engine: 'wasm', fs: FS, frame: FRAME, scripts: list.map((s) => ({ ...s, summary: summarise(play(I, Engine, s)) })) };
   if (flags.includes('--print')) { for (const s of out.scripts) console.log(s.name.padEnd(36), JSON.stringify({ ...s.summary, env: undefined })); process.exit(0); }
   if (!existsSync(new URL('./', file))) { console.error(`${slug} is not ported (no native/instruments/${slug}/): use --print`); process.exit(1); }
   writeFileSync(file, `${JSON.stringify(out, null, 1)}\n`);

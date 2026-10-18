@@ -3,9 +3,11 @@
 //
 // Name demos NN-what-you-hear; the landing page plays the first one.
 
-import { StarEngine } from '../stars/src/stars-engine.js';
-import { DEFAULTS } from '../stars/src/stars-params.js';
+import { INSTRUMENT, DEFAULTS } from '../stars/src/stars-instrument.js';
+import { loadEngine } from './engine.mjs';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
+
+const StarEngine = await loadEngine(INSTRUMENT);
 
 const FS = 48000, SLUG = 'stars';
 const P = (o = {}) => ({ ...DEFAULTS, ...o });

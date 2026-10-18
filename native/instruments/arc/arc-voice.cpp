@@ -1,4 +1,4 @@
-// arc-voice.cpp — the talking arc's singer (arc/src/arc-voice.js), operation for operation.
+// arc-voice.cpp — the talking arc's singer (arc-voice.h).
 
 #include "arc-voice.h"
 

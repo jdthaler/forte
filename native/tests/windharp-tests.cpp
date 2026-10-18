@@ -1,8 +1,8 @@
-// windharp-tests.cpp — the wind harp in C++: the model gives the JavaScript's strings and lock-in
+// windharp-tests.cpp — the wind harp in C++: the model gives the retired JavaScript's strings and lock-in
 // analysis, a key locks onto its harmonic at the balance's swing at every sample rate, the shutters
 // and the pedal, aftertouch, voice stealing and a flood of keys, blocks of any length, the views'
 // messages, and ten keys within the CPU budget. The physics tests are the JavaScript suite's, run
-// on the WebAssembly (FORTE_ENGINE=wasm).
+// on the WebAssembly (node test/windharp-tests.mjs).
 
 #include <chrono>
 #include <cmath>
@@ -41,8 +41,8 @@ static bool render(WindHarpEngine &e, double sec, int block = 128, double *peak 
 static const WindHarpEngine::Voice *voiceOf(const WindHarpEngine &e, int key) { return key >= 0 && key < 128 ? e.byKey[key] : nullptr; }
 static double rel(double a, double b) { return std::fabs(a / b - 1); }
 
-// What windharp-model.js gives (key, tuning, n0, mass, Q, the course's string; its D, L, T, f0, N,
-// home harmonic, band, growth, locked range and swing at the band's middle)
+// What the JavaScript model gave (key, tuning, n0, mass, Q, the course's string; its D, L, T, f0,
+// N, home harmonic, band, growth, locked range and swing at the band's middle)
 struct Vector { int key, tuning; double n0, mass, q; int idx; double D, L, T, f0; int N, n; double lo, hi, growth, upTo, downTo, Y; };
 static const Vector VECTORS[] = {
   {60, 0, 3, 1, 500, 0, 0.0036166325050421559, 0.85997184954317607, 259.72478653453146, 86.538926502383219, 8, 3, 3.8944495355332180, 4.0675377161037387, 17.905848817563474, 4.1386197754339200, 3.8323345554424648, 0.047215932098758004},

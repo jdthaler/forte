@@ -4,20 +4,25 @@
 // plate frequencies, Reissner's shallow-shell shift, the symmetry of the von
 // Kármán bracket), then the nonlinear dynamics against independent
 // integrations and the normal-form backbone, then the engine: tuning, decay,
-// energy, regimes, level, stability and CPU.
+// energy, regimes, level, stability and CPU. The model and the engine are the
+// C++ (native/instruments/gongs), built as WebAssembly: the model's functions
+// through gongs-wasm.js. plate.js is the JavaScript that computes the plate
+// tables (tools/gongs-modes.mjs) the C++ is converted from.
 
 import assert from 'node:assert/strict';
 import { besselJ, besselI, plateModes, tripleL, radial, gaussLegendre } from '../gongs/src/plate.js';
 import TABLE from '../gongs/data/gong-modes.js';
-import { shell, backbone, potential, keyGong, interpR, engineTables, NU } from '../gongs/src/gongs-model.js';
 import { INSTRUMENT } from '../gongs/src/gongs-instrument.js';
+import { wasmModel } from '../gongs/src/gongs-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../gongs/src/gongs-params.js';
 import { keyFreq } from '../shared/dsp.js';
 import { readFileSync } from 'node:fs';
 import { header as tableHeader } from '../tools/gongs-native-table.mjs';
 
-const GongEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const GongEngine = await loadEngine(INSTRUMENT);
+const { keyGong, interpR, backbone } = await wasmModel();
+const NU = TABLE.nu;
 
 const FS = 48000;
 let failures = 0;
@@ -29,6 +34,29 @@ function test(name, fn) {
 }
 const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const cents = (r) => 1200 * Math.log2(r);
+// The shell modes and couplings for an edge, a dome rise and a number of terms, as the C++ builds them.
+const shell = (bc = 'free', rise = 0, terms = 600) => keyGong(57, P({ bc, rise, terms }), FS).S;
+// The flat plate's frequency (λ², the table's) of the plate mode a shell mode grew from, by its label.
+function plateOm(S, i) {
+  const [, m, c] = S.label[i].match(/\((\d+),(\d+)\)/).map(Number), s = c - (S.bc === 'free' && m < 2 ? 1 : 0);
+  return TABLE[S.bc].modes.find((md) => md.m === m && md.s === s).lam2;
+}
+// The nonlinear potential V_nl = ½ Σ_n C_n (Q_n² + 4 Q_n ℓ_n) and its gradient for modes < Nv, summed
+// densely from the coupling tensors (the reference the scheme's steps are checked against).
+function potential(S, x, Nv = S.N) {
+  const Q = new Float64Array(S.NS), L = new Float64Array(S.NS), g = new Float64Array(S.N);
+  for (const h of S.H) if (h.i < Nv && h.j < Nv) Q[h.n] += (h.i === h.j ? 1 : 2) * h.v * x[h.i] * x[h.j];
+  const used = new Set(S.H.map((h) => h.n));
+  for (const e of S.E) if (e.i < Nv && used.has(e.n)) L[e.n] += e.v * x[e.i];
+  let V = 0;
+  for (let n = 0; n < S.NS; n++) V += 0.5 * S.C[n] * Q[n] * (Q[n] + 4 * L[n]);
+  for (const h of S.H) if (h.i < Nv && h.j < Nv) {
+    const y = 2 * S.C[h.n] * (Q[h.n] + 2 * L[h.n]);
+    g[h.i] += y * h.v * x[h.j]; if (h.i !== h.j) g[h.j] += y * h.v * x[h.i];
+  }
+  for (const e of S.E) if (e.i < Nv && used.has(e.n)) g[e.i] += 2 * S.C[e.n] * Q[e.n] * e.v;
+  return { V, g };
+}
 
 // Render through the engine in 128-sample blocks, like the AudioWorklet. events: [t, 'on'|'off', key, vel]
 function render(params, sec, events, post) {
@@ -149,13 +177,13 @@ test('shallow shell: free axisymmetric modes obey Reissner, ω² = ω_plate² + 
   for (const rise of [0.5, 1.5, 3]) {
     const S = shell('free', rise), kap = 2 * rise;
     for (let i = 0; i < 12; i++) if (S.m[i] === 0) {
-      const reiss = Math.sqrt(S.plateOm[i] ** 2 + 12 * (1 - NU * NU) * kap * kap);
+      const reiss = Math.sqrt(plateOm(S, i) ** 2 + 12 * (1 - NU * NU) * kap * kap);
       assert.ok(Math.abs(S.Om[i] / reiss - 1) < 1e-4, `rise ${rise}: ${S.label[i]} ${S.Om[i]} vs ${reiss}`);
     }
-    const memb = (S.Om[0] ** 2 - S.plateOm[0] ** 2) / (12 * (1 - NU * NU) * kap * kap); // fraction of the closed-shell stiffening
+    const memb = (S.Om[0] ** 2 - plateOm(S, 0) ** 2) / (12 * (1 - NU * NU) * kap * kap); // fraction of the closed-shell stiffening
     assert.ok(S.m[0] === 2 && memb < 0.005, `(2,0) takes ${(100 * memb).toFixed(2)} % of the membrane stiffening`);
     const C = shell('clamped', rise), t = C.tuned;
-    assert.ok(C.Om[t] > C.plateOm[t] && C.Om[t] < Math.sqrt(C.plateOm[t] ** 2 + 12 * (1 - NU * NU) * kap * kap), 'clamped: between plate and Reissner bound');
+    assert.ok(C.Om[t] > plateOm(C, t) && C.Om[t] < Math.sqrt(plateOm(C, t) ** 2 + 12 * (1 - NU * NU) * kap * kap), 'clamped: between plate and Reissner bound');
   }
 });
 
@@ -423,14 +451,6 @@ test('regression: a gong cut off from its coupling (nonlinear-voice cap) keeps i
     assert.ok(Math.abs(cut.after - ref.after) < 20, `${name}: ${cut.before.toFixed(0)} → ${cut.after.toFixed(0)} ¢ when cut off, ${ref.after.toFixed(0)} ¢ left nonlinear`);
     console.log(`        ${name}: ${cut.before.toFixed(0)} → ${cut.after.toFixed(0)} ¢ when cut off, ${ref.after.toFixed(0)} ¢ left nonlinear`);
   }
-});
-test('the page builds the coupling tables; the engine plays on what it is sent', () => {
-  const p = P({ rise: 1.37, terms: 450 }), sent = structuredClone(engineTables(shell(p.bc, p.rise, p.terms))); // as postMessage delivers them
-  const e = new GongEngine(FS); e.setParams({ ...p, tables: sent }); e.setParams({ ...p, volume: 0.5 }); // later messages carry no tables
-  e.noteOn(60, 0.8);
-  assert.ok(e.voices[0].S === sent, 'the voice runs on the tables it was sent');
-  const L1 = render({ ...p, tables: sent }, 0.3, [[0, 'on', 60, 0.8]]).L, L2 = render(p, 0.3, [[0, 'on', 60, 0.8]]).L;
-  assert.ok(L1.every((x, i) => x === L2[i]), 'and sounds exactly as with the tables built in place');
 });
 // Blocks of 128 samples, timed one by one, as the AudioWorklet runs them.
 function blockTimes(params, events, seconds, pedal = false) {

@@ -1,8 +1,8 @@
-// arc-tests.cpp — the singing arc in C++: the model gives the JavaScript's numbers, the plugin's
+// arc-tests.cpp — the singing arc in C++: the model gives the numbers the JavaScript model gave, the plugin's
 // engine cuts each key's capacitor off the audio thread and sings it in tune, a note on a key not
 // yet cut still sounds, the views' messages come through, the talking arc speaks, every sample
 // rate stays finite, and six lamps fit the CPU budget. The physics tests are the JavaScript
-// suite's, run on the WebAssembly (FORTE_ENGINE=wasm).
+// suite's, run on the WebAssembly (node test/arc-tests.mjs).
 
 #include <chrono>
 #include <cmath>
@@ -58,7 +58,7 @@ TEST("arc: the model gives the JavaScript's numbers (operating point, linear ana
   const ArcParams a = arcParams(P.data());
   const Op op = arcOp(a);
   const auto rel = [](double x, double y) { return std::fabs(x / y - 1); };
-  // arc/src/arc-model.js at the defaults
+  // what the JavaScript model gave at the defaults, before it was retired
   CHECK(rel(op.u0, 59.506631958630386) < 1e-14);
   CHECK(rel(op.Rd, -4.7842383887784443) < 1e-12);
   CHECK(rel(op.Larc, 0.00039762245793802310) < 1e-12);

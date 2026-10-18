@@ -1,5 +1,5 @@
-// template-engine.h — the real-time part (docs/template/src/template-engine.js in C++), on the
-// engine contract (forte/engine.h). Struck bars: each key's modes, impulse-invariant resonators.
+// template-engine.h — the real-time part, on the engine contract (forte/engine.h). Struck bars:
+// each key's modes, impulse-invariant resonators.
 #pragma once
 
 #include <array>

@@ -1,4 +1,4 @@
-// huygens-engine.cpp — neon-engine.js in C++ (huygens-engine.h).
+// huygens-engine.cpp — the neon-lamp engine (huygens-engine.h).
 
 #include "huygens-engine.h"
 

@@ -7,8 +7,11 @@
 import { stringModel } from '../huygens/experiments/bowed-string.js';
 import { SyncEngine } from '../huygens/experiments/bowed-engine.js';
 import { PipeEngine } from '../huygens/experiments/reed-pipe-engine.js';
-import { NeonEngine } from '../huygens/src/neon-engine.js';
+import { INSTRUMENT } from '../huygens/src/huygens-instrument.js';
 import { keyFreq } from '../huygens/src/tuning.js';
+import { loadEngine } from './engine.mjs';
+
+const HuygensEngine = await loadEngine(INSTRUMENT);
 
 const FS = 48000, c = (r) => 1200 * Math.log2(r);
 const pairs = [[67, 1.5, 'fifth'], [64, 1.25, 'major third']];
@@ -46,7 +49,7 @@ for (const kappa of [0, 300, 1000]) {
 console.log('\nNeon relaxation oscillators, pulse-coupled (no resonator)');
 for (const kick of [0, 0.01, 0.03]) {
   const row = pairs.map(([k, ratio, name]) => `${name} ${fmt(c(measure(() => {
-    const e = new NeonEngine(FS); e.setParams({ kick, pitchHold: 0 });
+    const e = new HuygensEngine(FS); e.setParams({ kick, pitchHold: 0 });
     for (const key of [60, k]) e.noteOn(key, 1, { f: keyFreq(key) });
     return { e, report: (x) => x.report(1.0) };
   }) / ratio))}`);

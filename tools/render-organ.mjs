@@ -2,10 +2,12 @@
 // Usage: node tools/render-organ.mjs
 
 import { mkdirSync } from 'node:fs';
-import { OrganEngine } from '../organ/src/organ-engine.js';
-import { DEFAULTS, PRESETS } from '../organ/src/organ-params.js';
+import { INSTRUMENT, DEFAULTS, PRESETS } from '../organ/src/organ-instrument.js';
+import { loadEngine } from './engine.mjs';
 import { roomIR } from '../shared/impulses.js';
 import { convolve, writeWav, FS_SHIM, webAudioIR } from './audio-util.mjs';
+
+const OrganEngine = await loadEngine(INSTRUMENT);
 
 const FS = 48000;
 const reg = (s) => s.replace(/\s/g, '').split('').map(Number);

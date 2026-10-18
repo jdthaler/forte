@@ -1,4 +1,4 @@
-// grand-engine.cpp — the electric grand's engine, as grand-engine.js runs it.
+// grand-engine.cpp — the electric grand's engine (grand-engine.h).
 
 #include "grand-engine.h"
 
@@ -31,8 +31,8 @@ RC1 &RC1::highShelf(double f, double g, double fs) { const double w = TAU * f; r
 
 // ---- a voice ----------------------------------------------------------------------------------
 
-// A new voice from its key's data (grand-engine.js, new Voice): what depends on the key alone was
-// derived on the worker (GrandEngine::build).
+// A new voice from its key's data: what depends on the key alone was derived on the worker
+// (GrandEngine::build).
 void GrandEngine::Voice::start(const GrandEngine &eng, Data::Ref r, uint64_t ver) {
   const Built &B = *r.data;
   const KeyModel &d = B.d;

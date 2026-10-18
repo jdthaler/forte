@@ -6,18 +6,52 @@
 // the reed: no blown-closed oscillation); then the engine against the model (threshold, growth
 // rate and frequency at onset), tuning, the advertised effects (pitch and onset against pressure,
 // musette beats, sag, pumping, cassotto, percussion), voices, levels, stability and CPU.
+// The model and the engine are the C++ (native/instruments/harmonium), built as WebAssembly: the
+// model's functions through harmonium-wasm.js, the engine through loadEngine.
 
 import assert from 'node:assert/strict';
-import {
-  KEY_LO, KEY_HI, BRASS, CD, RANKS, WIND, P_NOM, keyFreq, tipMassRoots, modeShape, reedScale, reedModel, reedDesign, slotArea, gapWidth, areaAt,
-  equilibrium, linearRoot, threshold, rankFreq, cassotto, noteName,
-} from '../harmonium/src/harmonium-model.js';
+import { KEY_LO, KEY_HI, RANKS, areaAt } from '../harmonium/src/harmonium-data.js';
 import { INSTRUMENT } from '../harmonium/src/harmonium-instrument.js';
+import { wasmModel } from '../harmonium/src/harmonium-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../harmonium/src/harmonium-params.js';
 import { fft } from '../tools/audio-util.mjs';
+import { keyFreq } from '../shared/dsp.js';
 
-const HarmoniumEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const HarmoniumEngine = await loadEngine(INSTRUMENT);
+const { reedModel, threshold, equilibrium, linearRoot, cassotto, gapWidth, rankFreq, modeShape } = await wasmModel();
+// the C++'s numbers (harmonium-model.h): brass; the wind (the feeders' conductance, the reservoir's
+// and the wind chest's time constants)
+const BRASS = { E: 1.0e11, rho: 8500 }, WIND = { G: 1.0e-4, tauRes: 0.6, tauExpr: 0.015 };
+const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+const noteName = (m) => NAMES[m % 12] + (Math.floor(m / 12) - 1);
+
+// The clamped–free beam with a point mass at its tip (μ = M/ρAL), from the moment-free tip and
+// the tip weight's inertia in the shear:
+//   1 + cos λ cosh λ + μλ (cos λ sinh λ − sin λ cosh λ) = 0,   ω = λ² √(EI/ρA) / L²
+// Its first n roots λ, by bisection on a scan: the textbook equation, to check the C++'s reeds.
+function tipMassRoots(mu, n = 2) {
+  const F = (x) => (1 + Math.cos(x) * Math.cosh(x) + mu * x * (Math.cos(x) * Math.sinh(x) - Math.sin(x) * Math.cosh(x))) / Math.cosh(x);
+  const roots = [];
+  for (let x = 0.05; roots.length < n && x < 40; x += 0.01) {
+    if (F(x) * F(x + 0.01) <= 0) {
+      let a = x, c = x + 0.01;
+      for (let i = 0; i < 60; i++) { const m = 0.5 * (a + c); if (F(a) * F(m) <= 0) c = m; else a = m; }
+      roots.push(0.5 * (a + c));
+    }
+  }
+  return roots;
+}
+
+// The reference the engine's time stepping is checked against: the small-signal analysis of a
+// reed (harmonium-model.cpp's equilibrium and linearRoot) in the frequency domain. The steady
+// state at wind Pw, then small oscillations about it ∝ e^{st}. Linearised: the gap's flow
+// δU_g = δΔp/R_j + G_A δy, the reed's own swept volume s S_n η_n, the cell (compliance C) fed
+// through the throat (s M_a + R_in). Eliminating the pressures leaves
+//   F(s) = 1 + Z_eff(s) Σₙ Sₙ (s Sₙ + G_A) / (mₙ (s² + 2ζₙωₙ s + ωₙ²)) = 0,
+// whose root near the reed's own is returned as { re, im }. The engine never runs it: it
+// integrates the nonlinear equations in time.
+const cx = (re, im) => ({ re, im });
 
 const FS = 48000;
 let failures = 0;
@@ -127,19 +161,20 @@ test('the mode shapes: tip normalised to 1, moment-free at the tip, and orthogon
 });
 test('every reed’s natural frequency: within 1.5 % of Rayleigh’s one-term estimate f = (1/2π)√(3EI/L³ / (M + 0.2357 m)), which knows nothing of the mode shapes', () => {
   for (let m = 24; m <= 108; m += 6) {
-    const f = keyFreq(m), d = reedDesign(f, P()), { L, b, h } = d.geo, EI = (BRASS.E * b * h ** 3) / 12;
+    const f = keyFreq(m), d = reedModel(f, P(), false), { L, b, h } = d.geo, EI = (BRASS.E * b * h ** 3) / 12; // (untuned: cut to f)
     const fr = Math.sqrt((3 * EI) / L ** 3 / (d.M + 0.2357 * d.m0)) / TAU;
     assert.ok(rel(fr, d.modes[0].f) < 0.015, `${m}: ${fr.toFixed(2)} vs ${d.modes[0].f.toFixed(2)} Hz`);
     assert.ok(rel(d.modes[0].f, f) < 1e-9, `${m}: cut to ${d.modes[0].f}`);
   }
 });
 test('the slot: clear of it the gap opens as the perimeter (2∫ψ + b)·|y|; inside it, only the clearance δ(2L + b + 2δ) is left; the overlap is the plate plus the tongue (e + h)', () => {
-  const g = reedModel(keyFreq(60), P()).geo, I1 = (() => { let s = 0; for (let i = 0; i < 4000; i++) s += modeShape(g.lam[0], (i + 0.5) / 4000); return s / 4000; })();
+  const R = reedModel(keyFreq(60), P()), g = R.geo, I1 = (() => { let s = 0; for (let i = 0; i < 4000; i++) s += modeShape(g.lam[0], (i + 0.5) / 4000); return s / 4000; })();
+  const slotArea = (y) => areaAt(R.table, y, {}).A; // the reed's area table, as the engine reads it
   const perim = 2 * g.L * I1 + g.b + 2 * g.delta;
-  for (const y of [-2e-3, -4e-3]) assert.ok(rel(slotArea(y, g), perim * Math.abs(y)) < 0.03, `y ${y}: ${slotArea(y, g)} vs ${perim * Math.abs(y)}`);
+  for (const y of [-2e-3, -4e-3]) assert.ok(rel(slotArea(y), perim * Math.abs(y)) < 0.03, `y ${y}: ${slotArea(y)} vs ${perim * Math.abs(y)}`);
   const clear = g.delta * (2 * g.L + g.b + 2 * g.delta);
-  for (const y of [0.3 * g.e, g.e, 0.9 * (g.e + g.h)]) assert.ok(rel(slotArea(y, g), clear) < 0.01 + 1e-9 * y, `y ${y}: ${slotArea(y, g)} vs ${clear}`);
-  assert.ok(slotArea(g.e + g.h + 1e-3, g) > 5 * clear, 'open again beyond the slot');
+  for (const y of [0.3 * g.e, g.e, 0.9 * (g.e + g.h)]) assert.ok(rel(slotArea(y), clear) < 0.01 + 1e-9 * y, `y ${y}: ${slotArea(y)} vs ${clear}`);
+  assert.ok(slotArea(g.e + g.h + 1e-3) > 5 * clear, 'open again beyond the slot');
   assert.equal(gapWidth(0.5 * g.e, g.e, g.h, g.delta), g.delta);
 });
 
@@ -162,6 +197,16 @@ test('the drive is the air’s mass: with almost none in the throat, or a cell s
   const big = threshold(Rbig, 2e4);
   assert.ok(!big || big.P > 10 * thr0, `cell × 20: ${big && big.P}`);
   console.log(`        threshold at C4 ${thr0.toFixed(0)} Pa; throat × 0.01 ${noMass ? noMass.P.toFixed(0) : 'never'}; cell below the reed ${big ? big.P.toFixed(0) : 'never'}`);
+});
+
+test('the threshold is where the linear analysis’s root crosses the imaginary axis, at the frequency the reed starts at, at C2, C4 and C7', () => {
+  for (const key of [36, 60, 96]) {
+    const R = reedModel(keyFreq(key), P()), thr = threshold(R, 2e4);
+    // the onset: the root crosses the imaginary axis there
+    const s = linearRoot(R, thr.P, cx(0, TAU * thr.f)), below = linearRoot(R, 0.999 * thr.P, s), above = linearRoot(R, 1.001 * thr.P, s);
+    assert.ok(below.re < 0 && above.re > 0, `${key} at ${thr.P.toFixed(1)} Pa: ${below.re} → ${above.re}`);
+    assert.ok(Math.abs(cents(s.im / TAU, thr.f)) < 0.01, `${key}: ${(s.im / TAU).toFixed(3)} vs ${thr.f.toFixed(3)} Hz`);
+  }
 });
 
 console.log('the engine against the model');
@@ -283,7 +328,7 @@ test('cassotto: the chamber softens the upper harmonics (the 12th to 24th fall �
   const fa = freqAt(a.L, f0, 24000, a.L.length), fb = freqAt(b.L, f0, 24000, b.L.length), c = cents(fb, fa);
   assert.ok(c < 0 && c > -5, `${c.toFixed(2)} ¢`);
   console.log(`        C4: harmonics 12–24 ${dB.toFixed(1)} dB, pitch ${c.toFixed(2)} ¢`);
-  const cs = cassotto(P());
+  const cs = cassotto(P().cassF);
   assert.ok(rel(1 / (TAU * Math.sqrt(cs.M * cs.C)), P().cassF) < 1e-9);
 });
 

@@ -1,6 +1,6 @@
 // huygens-web.cpp — the model's functions the page's views call (huygens/src/huygens-wasm.js),
-// and the engine's hooks: the note data the JavaScript engine takes with a note ({ f, phase,
-// settled }), 'retune', the oscillators, report(), and the page's state (firings, summary).
+// and the engine's hooks: the note data the page sends with a note ({ f, phase, settled }),
+// 'retune', the oscillators, report(), and the page's state (firings, summary).
 
 #include "huygens-engine.h"
 #include "forte/web.h"
@@ -8,7 +8,7 @@
 using namespace forte::huygens;
 
 extern "C" {
-// tuning.js and sync-theory.js
+// a key's design frequency, and δ
 FORTE_EXPORT double huygens_tuned_freq(int key, int tuning, int tonic, double mistune) { return tunedFreq(key, tuning, tonic, mistune); }
 FORTE_EXPORT double huygens_delta(double kick, double vNom, double vStrike, double vExt) { return deltaOf(kick, vNom, vStrike, vExt); }
 // p, q in out; 0 if no shared firing comes within maxFirings

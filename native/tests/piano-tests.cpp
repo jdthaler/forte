@@ -3,7 +3,7 @@
 // engine on pitch with its keys built off the audio thread (forte/background.h), a new voice when
 // the strings change and a re-strike when they come back, the dampers and the soft pedal, the
 // oscillator budget, the hammer's messages, and ten notes within the CPU budget. The physics tests
-// are the JavaScript suite's, run on the WebAssembly (FORTE_ENGINE=wasm).
+// are the JavaScript suite's, run on the WebAssembly (node test/piano-tests.mjs).
 
 #include <chrono>
 #include <cmath>

@@ -1,4 +1,4 @@
-// blackhole-model.cpp — ringdown-model.js in C++ (blackhole-model.h).
+// blackhole-model.cpp — the ringdown model (blackhole-model.h).
 
 #include "blackhole-model.h"
 

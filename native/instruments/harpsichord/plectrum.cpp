@@ -1,4 +1,4 @@
-// plectrum.cpp — the cantilever's tables and the friction cone, as plectrum.js computes them.
+// plectrum.cpp — the cantilever's tables and the friction cone (plectrum.h).
 
 #include "plectrum.h"
 

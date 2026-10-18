@@ -1,9 +1,9 @@
-// quantum-tests.cpp — the Quantum Keyboard's model and engine in C++: packets the JavaScript's to the
-// last bit (quantum-model.js, for every well), the tempo lock's revival on the beat, a note that
+// quantum-tests.cpp — the Quantum Keyboard's model and engine in C++: packets the retired JavaScript
+// model's to the last bit (for every well), the tempo lock's revival on the beat, a note that
 // waits for its packet (built on the worker) and then plays what the model says sample for sample,
 // sample-accurate revivals, the pedal, a knob change that rebuilds the packets while old notes ring
 // on, the pair budget, and ten voices in the CPU budget. The physics tests are the JavaScript
-// suite's, run on the WebAssembly (FORTE_ENGINE=wasm).
+// suite's, run on the WebAssembly (node test/quantum-tests.mjs).
 
 #include <chrono>
 #include <cmath>
@@ -40,8 +40,8 @@ static double peak(const std::vector<double> &x, int a, int b) {
   return m;
 }
 
-// What quantum-model.js gives (makePacket with fMax 21600, autocorr, signalAt, and waveGrid on 40
-// rows), printed to 17 digits by Node.
+// What the JavaScript model gave (makePacket with fMax 21600, autocorr, signalAt, and waveGrid on
+// 40 rows), printed to 17 digits by Node before it was retired.
 struct Ref {
   int key;
   PacketParams P;

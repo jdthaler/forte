@@ -1,7 +1,6 @@
-// vibraphone-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// vibraphone-wasm.js — the engine and model, built as WebAssembly from the physics in C++
 // (native/instruments/vibraphone): VibraphoneWasmEngine, with the engine contract, and the model's
-// functions for the views. The page runs it when it can and falls back to the JavaScript
-// (vibraphone-engine.js).
+// functions for the views and the tests.
 
 import { GROUPS } from './vibraphone-params.js';
 import { wasmEngine, scratch } from '../../shared/wasm.js';
@@ -9,9 +8,8 @@ import { wasmEngine, scratch } from '../../shared/wasm.js';
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'vibraphone', name: 'VibraphoneWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/vibraphone.wasm', import.meta.url).href };
 
-// The C++ engine's messages (vibraphone-engine.h, msg) back into the JavaScript engine's: 'vibe'
-// (the struck bar, its tube and disc, the shaft; one object, kept, as the JavaScript keeps it) and
-// 'error'.
+// The C++ engine's messages (vibraphone-engine.h, msg) into the views': 'vibe' (the struck bar,
+// its tube and disc, the shaft; one object, kept) and 'error'.
 const VIBE = ['Eb', 'Et', 'theta', 'open', 'kappa', 'ft', 'contactMs', 'Fmax', 'shaft', 'motor', 'X'];
 function views(m, e) {
   if (m.type === 2) return { type: 'error', message: `bar ${m.key}: numerical failure` };
@@ -25,7 +23,7 @@ function views(m, e) {
 
 const Base = wasmEngine(BUILD, { messages: views });
 
-// The engine, with the JavaScript engine's test hooks: e.voices (each bar's key, fading, released,
+// The engine, with the tests' hooks: e.voices (each bar's key, fading, released,
 // energies, mallet contact) and e.byKey, read back. A note may bring its bar's data, packed by the
 // page's WebAssembly model (wasmModel().voiceData), so the audio thread needn't build it.
 const VOICE = ['key', 'fading', 'dead', 'released', 'Eb', 'Et', 'E', 'lastContactMs', 'Fmax', 'age', 'own', 'malletOn'];
@@ -53,9 +51,9 @@ export class VibraphoneWasmEngine extends Base {
 }
 export const ready = () => VibraphoneWasmEngine.ready();
 
-// The model's functions the views call (vibraphone-model.js's barModel, tubeGeometry, tubeState,
-// coupling, barTempScale, malletOf; bar.js's thickness), computed by the WebAssembly, and
-// voiceData: a bar's data packed for the WebAssembly engine (the page's noteData).
+// The model's functions (vibraphone-model.h: barModel, tubeGeometry, tubeState, coupling,
+// barTempScale, malletOf; bar.h: thickness), computed by the WebAssembly, and voiceData: a bar's
+// data packed for the engine (the page's noteData).
 const TUBE = ['a', 'S', 'Sb', 'Rb', 'delta0', 'lv'];
 const STATE = ['length', 'le', 'ma', 'Ka', 'mg', 'Sb', 'Rrad', 'Rwall', 'R', 'lvS', 'cd', 'M11', 'M12', 'M22'];
 const T_TUNE = 20;

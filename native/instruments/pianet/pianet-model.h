@@ -1,5 +1,5 @@
-// pianet-model.h — the physics of a sticky-pad reed piano (pianet/src/pianet-model.js and reed.js
-// in C++, operation for operation): the reed of each key, the pad and its bond, the pickups.
+// pianet-model.h — the physics of a sticky-pad reed piano: the reed of each key, the pad and its
+// bond, the pickups.
 //
 //            key down ⇒ the holder rises at speed V
 //                ▲
@@ -12,7 +12,7 @@
 // A key's reed (keyReed: a finite-element solve, the length cut to pitch) is built once per key
 // and (tip mass, loss), off the audio thread in the plugins (forte/background.h); the rest is
 // plain arithmetic. Powers, exponentials and trigonometry go through V8's fdlibm (fdlibm.h), so
-// the reeds and the bond's peel give the JavaScript's numbers to the last bit.
+// the reeds and the bond's peel give the same numbers to the last bit everywhere.
 #pragma once
 
 #include <array>
@@ -27,25 +27,25 @@ namespace forte::pianet {
 constexpr int KEY_LO = 36, KEY_HI = 96;
 constexpr double PI = std::numbers::pi;
 
-// ---- the reed (reed.js) ------------------------------------------------------------------------
+// ---- the reed ----------------------------------------------------------------------------------
 struct Steel { double E, rho; };
 inline constexpr Steel STEEL = {2.0e11, 7850};
 
 // Unit clamped–free strip (L = EI = μ = 1) with a tip mass r at ŝ and rotary inertia ĵ, Hermite
 // finite elements. Λ_n = ω_n (L² √(μ/EI)) and φ̂_n(ξ), normalised to unit modal mass and positive
-// at the tip.
-constexpr int NEL = 16, NDOF = 2 * (NEL + 1), MAX_MODES = 8;
+// at the tip. It holds up to every mode of the mesh (UNIT_MODES; a key's reed keeps MAX_MODES).
+constexpr int NEL = 16, NDOF = 2 * (NEL + 1), MAX_MODES = 8, UNIT_MODES = NDOF - 2;
 struct UnitReed {
   int nModes = 0;
-  std::array<double, MAX_MODES> Lam{};
-  std::array<double, NDOF * MAX_MODES> dof{}; // dof[g · MAX_MODES + n], the clamped node's two zero
+  std::array<double, UNIT_MODES> Lam{};
+  std::array<double, NDOF * UNIT_MODES> dof{}; // dof[g · UNIT_MODES + n], the clamped node's two zero
   double shape(int n, double x) const;
 };
 UnitReed unitReed(double r = 0, double s = 1, double j = 0, int nModes = 6);
 // Cantilever with a tip point mass, exact: the roots β_n of the frequency equation (Blevins).
 std::vector<double> tipMassRoots(double R, int count = 4);
 
-// ---- the model (pianet-model.js) ---------------------------------------------------------------
+// ---- the model ---------------------------------------------------------------------------------
 // Reed family: graded thickness and solder ratio, width fixed. r = M_solder / (reed mass).
 struct ReedFamily { double b, hBass, hTreble, rBass, rTreble, blob, xPad; int nModes; };
 inline constexpr ReedFamily REED = {3.0e-3, 0.75e-3, 0.45e-3, 1.6, 0.3, 0.12, 0.8, 8};

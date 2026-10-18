@@ -3,7 +3,6 @@
 // plugins (tools/gen-native-params.mjs) all start here. No DOM, no Web Audio.
 
 import { GROUPS, DEFAULTS, PRESETS } from './carillon-params.js';
-import { KEY_LO, KEY_HI } from './carillon-model.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -12,11 +11,9 @@ export const INSTRUMENT = {
   groups: GROUPS,
   presets: PRESETS,
   keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
-  range: [KEY_LO, KEY_HI],              // MIDI keys: C3–C7, 48–96
+  range: [48, 96],                      // MIDI keys: C3–C7 at sounding pitch, a four-octave concert carillon
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
-  engine: { name: 'CarillonEngine', module: new URL('./carillon-engine.js', import.meta.url).href },
-  // the same physics in C++ (native/instruments/carillon), built as WebAssembly: the page runs it
-  // when it can, the JavaScript engine otherwise
+  // the engine: the physics in C++ (native/instruments/carillon), built as WebAssembly
   wasm: { name: 'CarillonWasmEngine', module: new URL('./carillon-wasm.js', import.meta.url).href, binary: new URL('../wasm/carillon.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room' },
 };

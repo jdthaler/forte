@@ -1,5 +1,5 @@
-// arc-engine.h — the real-time singing arc (arc/src/arc-engine.js in C++), on the engine contract
-// (forte/engine.h): Duddell's circuit integrated sample by sample, one circuit per arc lamp.
+// arc-engine.h — the real-time singing arc, on the engine contract (forte/engine.h): Duddell's
+// circuit integrated sample by sample, one circuit per arc lamp.
 //
 //   supply E ─ rheostat R_b ─ choke L_b ─┬─ arc (Mayr column on Ayrton's curve, seeded flicker)
 //                                         └─ coil L, R ─ the capacitors the keys switch in
@@ -11,9 +11,9 @@
 // Each key's capacitor is cut for its sounding note (arc-model.h, capFor), which takes a few
 // milliseconds: in the plugins it is built off the audio thread by forte/background.h for the
 // parameters it depends on, and a note whose key is not built yet takes that key's last
-// capacitor (the bank as it was cut, as the page's engine plays a stale table while a slider
-// moves), or Kelvin's if it never had one. The WebAssembly has no threads: the page cuts the bank
-// with its own WebAssembly model and offers it (setTable, the JavaScript engine's P.table).
+// capacitor (the bank as it was cut, as the page plays a stale table while a slider moves), or
+// Kelvin's if it never had one. The WebAssembly has no threads: the page cuts the bank with its
+// own WebAssembly model and offers it (setTable).
 // Arcs, contacts and the singer are fixed arrays: nothing is allocated in process().
 #pragma once
 
@@ -30,8 +30,8 @@
 
 namespace forte::arc {
 
-// What the engine posts for the page (arc/src/arc-wasm.js gathers them into the JavaScript
-// engine's 'arc' message).
+// What the engine posts for the page (arc/src/arc-wasm.js gathers them into its 'arc'
+// message).
 namespace msg {
 enum : uint16_t {
   arc = 1,   // key: the arc's index; P, Iac, out, umax, I, u, the number of keys, the keys
@@ -78,8 +78,8 @@ struct Arc {
 class ArcEngine : public Engine {
  public:
   explicit ArcEngine(double fs, double seed = 1, bool quiet = false, int os = 0);
-  // the tests' hooks (arc-engine.js's constructor options): the seed, no noise, the oversampling
-  // (0: by the sample rate). Allocates; call before playing.
+  // the tests' hooks: the seed, no noise, the oversampling (0: by the sample rate). Allocates;
+  // call before playing.
   void configure(double seed, bool quiet, int os);
 
   void setParams(const double *P) override;
@@ -89,8 +89,8 @@ class ArcEngine : public Engine {
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
-  // The page's capacitor bank (the JavaScript engine's P.table), one per key from KEY_LO: cut for
-  // the parameters as they stand (current) or for others (a slider moving; played until replaced).
+  // The page's capacitor bank, one per key from KEY_LO: cut for the parameters as they stand
+  // (current) or for others (a slider moving; played until replaced).
   void setTable(const double *caps, bool current);
   void kick(double amps, int k = 0) { arcs[k].ic += amps; } // tests: kick an arc's musical branch (A)
   bool ready(int key);                                      // the key's capacitor is built for the parameters now

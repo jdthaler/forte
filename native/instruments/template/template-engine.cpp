@@ -1,4 +1,4 @@
-// template-engine.cpp — the template's engine, as template-engine.js runs it.
+// template-engine.cpp — the template's engine (template-engine.h).
 
 #include "template-engine.h"
 

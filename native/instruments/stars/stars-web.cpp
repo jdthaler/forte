@@ -1,5 +1,5 @@
 // stars-web.cpp — the model's functions the page's views call (stars/src/stars-wasm.js), and the
-// engine's test hooks (its voices, as the JavaScript engine's voices and byKey show them).
+// engine's test hooks (its voices, in order and by key).
 
 #include "stars-engine.h"
 #include "forte/web.h"
@@ -13,7 +13,7 @@ static int putStar(const StarState &s, double *out) {
 }
 
 extern "C" {
-// A key's star (stars-model.js, keyStar) into out, returning how many numbers it wrote, or −1 if
+// A key's star (keyStar) into out, returning how many numbers it wrote, or −1 if
 // they don't fit in max: key, K, δ Scuti?, N, the number of multiplets, norm, pitch, target; the
 // star (M, R, T, L, s, stage, track); its seismic parameters (dnu, numax, eps, d02, alpha, fwhm,
 // gamma, dPi, q); the modes' f, l, m, zeta, p, gamma, wEnv, wCore, asat, mult (N each); then every

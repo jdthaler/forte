@@ -1,30 +1,16 @@
 // bowed-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName, useWasm } from '../../shared/shell.js';
+import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './bowed-instrument.js';
-import * as jsModel from './bowed-model.js';
-import { BowedString, settleTime } from './string.js';
 import { wasmModel } from './bowed-wasm.js';
 
 const $ = (s) => document.querySelector(s);
 const FS = 48000;
 
-// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
-// physics as the engine, in C++), the JavaScript one until then or if it can't load. The attack
-// map bows the focused key's string alone (settleTime on it, at its oversampled rate).
-let str = null;
-const jsPhys = {
-  ...jsModel,
-  attackLoop: (key, P) => jsModel.loopDesign(key, P, FS * jsModel.oversample(key, FS)),
-  settleTime(key, P, vB, FN, rise, sec) {
-    if (!str || str.key !== key) str = new BowedString(key, FS);
-    str.design(jsModel.loopDesign(key, P, str.fs));
-    return settleTime(str, jsModel.friction(P), vB, FN, rise, sec);
-  },
-};
-let phys = jsPhys;
-if (useWasm()) wasmModel().then((m) => { phys = m; update(); }, (err) => console.warn(`bowed: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+// The views draw what the engine plays: the model in C++, built as WebAssembly. The attack map
+// bows the focused key's string alone (settleTime on it, at its oversampled rate).
+const phys = await wasmModel();
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 40, fHi: 16000, dbTop: -10, dbRange: 90 });
 const KIND = { helmholtz: 'Helmholtz motion', multiple: 'multiple slipping (surface sound)', raucous: 'raucous', none: '—' };
 let focus = 60, st = null, mean = null;

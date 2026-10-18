@@ -1,7 +1,6 @@
 // piano-web.cpp — the model's functions the page's views call (piano/src/piano-wasm.js): a key's
 // string model and its voice data, packed for the engine; and the engine's hooks for the tests and
-// the slow-motion view (its voices, as the JavaScript engine's voices, byKey and noteOn's result
-// show them).
+// the slow-motion view (its voices, in order and by key, and what noteOn did).
 
 #include <algorithm>
 #include <memory>
@@ -29,7 +28,7 @@ Key &cached() { static Key k; return k; }
 extern "C" {
 // Key m's model and voice data for the parameters in the scratch area (p::count numbers, as
 // shared/wasm.js writes them) at sample rate fs; then piano_model, piano_family and
-// piano_packed read them. Returns 0 where the model failed (JavaScript throws).
+// piano_packed read them. Returns 0 where the model failed.
 FORTE_EXPORT int piano_key(int key, double fs) {
   double P[p::count];
   std::copy_n((const double *)forte_scratch(), p::count, P);

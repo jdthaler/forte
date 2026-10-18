@@ -1,4 +1,4 @@
-// vibraphone-engine.cpp — the vibraphone's engine, as vibraphone-engine.js runs it.
+// vibraphone-engine.cpp — the vibraphone's engine (vibraphone-engine.h).
 
 #include "vibraphone-engine.h"
 

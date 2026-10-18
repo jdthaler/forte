@@ -1,7 +1,7 @@
-// piano-model.h — the mechanics of a struck string, bar or ribbon, reduced to modes
-// (piano/src/physics.js in C++): the cross-sections, the scale design, the felt hammers, the
-// per-key model (closed form for a uniform member, Rayleigh–Ritz in a sine basis for a tapered
-// one) and the voice data the engine runs.
+// piano-model.h — the mechanics of a struck string, bar or ribbon, reduced to modes: the
+// cross-sections, the scale design, the felt hammers, the per-key model (closed form for a
+// uniform member, Rayleigh–Ritz in a sine basis for a tapered one) and the voice data the engine
+// runs.
 //
 //   bending along principal axis i:  m(x) u_tt = T u_xx − (E I_i(x) u_xx)_xx
 //   torsion:                         Θ(x) θ_tt = ((G J(x) + T I_p(x)/A(x)) θ_x)_x
@@ -79,7 +79,7 @@ struct KeyModel {
   Family families[3];
   Info info{};
   int material = 0;
-  bool ok = true; // false where an eigen-solve failed (JavaScript throws)
+  bool ok = true; // false where an eigen-solve failed
   double prof(double x) const { return uniform ? 1 : 1 + tau * (1 - (2 * x) / L); }
   Section secAt(double x) const { return sectionProps(shape, A0, aspect, prof(x)); }
 };

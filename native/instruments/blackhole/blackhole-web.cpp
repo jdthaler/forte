@@ -57,7 +57,7 @@ extern "C" {
 // the packed voice's size in doubles, at most
 FORTE_EXPORT int blackhole_voice_size() { return HEAD + PER_MODE * MAX_MODES; }
 
-// ringdown-model.js: the table and its interpolation
+// the table and its interpolation
 FORTE_EXPORT int blackhole_table_size() { return tableSize(); }
 FORTE_EXPORT int blackhole_table_modes() { return tableModes(); }
 FORTE_EXPORT const double *blackhole_table_u() { return tableU(); }

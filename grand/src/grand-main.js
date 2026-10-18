@@ -1,20 +1,17 @@
 // grand-main.js — the page: wires the shell to the engine and draws the views.
 // The slow-motion view re-runs the focused key's strike on the main thread
 // with the same engine, sample by sample, and records the string: the
-// WebAssembly engine and model once they have loaded (the same physics as the
-// worklet's, in C++), the JavaScript ones until then or if they can't load.
+// engine and model built as WebAssembly from the C++, as the worklet runs it.
 // It also keeps the engine's oscillator budget in step with the audio thread's
 // measured load.
 
-import { createShell, noteName, useWasm } from '../../shared/shell.js';
+import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './grand-instrument.js';
-import { boardModel, boardResponse, decayRates, hammerSpeed } from './grand-model.js';
-import { GrandEngine, MODE_BUDGET } from './grand-engine.js';
 import { wasmModel } from './grand-wasm.js';
 
-let model = { boardModel, boardResponse, decayRates, hammerSpeed, Engine: GrandEngine };
-if (useWasm()) wasmModel().then((m) => { model = m; boardKey = ''; schedule(); }, (err) => console.warn(`grand: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+const model = await wasmModel();
+const MODE_BUDGET = 4000; // the engine's default oscillator budget (grand-engine.h)
 
 const $ = (s) => document.querySelector(s);
 const FS = 48000, TAU = 2 * Math.PI;

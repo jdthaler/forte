@@ -33,7 +33,7 @@ function measure([L, Rr]) {
 }
 
 // Each instrument is played from its descriptor (<id>/src/<id>-instrument.js) as its page plays
-// it (tools/headless.mjs): its engineParams and noteData, then its dry chain (no room, no trim),
+// it (tools/headless.mjs): its engine, then its dry chain (no room, no trim),
 // at the velocity its computer keys play: P.velocity, or the descriptor's keyVelocity, or 0.75.
 
 export async function measureAll() {

@@ -1,5 +1,5 @@
 // organ-web.cpp — the model's functions the page's views call (organ/src/organ-wasm.js), and the
-// engine's test hooks (its rotors, percussion, keys and peak, as the JavaScript engine's fields).
+// engine's test hooks (its rotors, percussion, keys and peak).
 
 #include "forte/web.h"
 #include "organ-engine.h"
@@ -7,7 +7,7 @@
 using namespace forte::organ;
 
 extern "C" {
-// tonewheels.js: a wheel's frequency by the gears and in equal temperament, the difference in
+// A wheel's frequency by the gears and in equal temperament, the difference in
 // cents; a wheel's pitch class, octave, teeth and gear (pc, octave, teeth, driving, driven) in out
 FORTE_EXPORT double organ_gear_freq(int w) { return gearFreq(w); }
 FORTE_EXPORT double organ_et_freq(int w) { return etFreq(w); }
@@ -28,15 +28,14 @@ FORTE_EXPORT void organ_key_analysis(int key, int tuning, double mains, double *
     out[5 * d] = a[d].w; out[5 * d + 1] = a[d].actual; out[5 * d + 2] = a[d].ideal; out[5 * d + 3] = a[d].cents; out[5 * d + 4] = a[d].folded;
   }
 }
-// organ-engine.js's leslieGeometry: wall, micDist in out
+// The Leslie cabinet's geometry (leslieGeometry): wall, micDist in out
 FORTE_EXPORT void organ_leslie_geometry(double hornRadius, double micDist, double *out) {
   const Geometry g = leslieGeometry(hornRadius, micDist);
   out[0] = g.wall; out[1] = g.micDist;
 }
 
 // The tests' hooks, on the engine of a handle (forte_engine): hornHz, drumHz, percEnv, peak, the
-// keys in its list, the keys it holds (the JavaScript's keyArr and keys), speed, hornAng, drumAng,
-// scanPos in out
+// keys in its list, the keys it holds, speed, hornAng, drumAng, scanPos in out
 FORTE_EXPORT void organ_state(OrganEngine *e, double *out) {
   out[0] = e->hornHz; out[1] = e->drumHz; out[2] = e->percEnv; out[3] = e->peak;
   out[4] = e->keyCount(); out[5] = e->liveCount(); out[6] = e->speed; out[7] = e->hornAng; out[8] = e->drumAng; out[9] = e->scanPos;

@@ -1,4 +1,4 @@
-// quantum-engine.cpp — the Quantum Keyboard's engine, as quantum-engine.js runs it.
+// quantum-engine.cpp — the Quantum Keyboard's engine (quantum-engine.h).
 
 #include "quantum-engine.h"
 
@@ -74,7 +74,7 @@ bool QuantumEngine::Voice::start(const QuantumEngine &eng, int k, double vel, co
 }
 
 // The present amplitude of every pair still summed, appended to buf from index m (past the
-// JavaScript's buffer, counted but not kept, as a typed array drops the writes).
+// buffer's end, counted but not kept).
 int QuantumEngine::Voice::strengths(double *b, int m) const {
   for (int g = 0; g < G; g++) {
     if (gD[g] == 0) continue;
@@ -276,7 +276,7 @@ void QuantumEngine::budget() {
   int m = 0;
   for (int i = 0; i < nVoices; i++) m = voices[i]->strengths(buf.data(), m);
   if (m <= BUDGET) return;
-  // the (m − BUDGET)th smallest of what the buffer kept (as the JavaScript sorts it), or none
+  // the (m − BUDGET)th smallest of what the buffer kept, or none
   const int len = std::min(m, BUF), at = m - BUDGET;
   double tau = NAN;
   if (at < len) { std::nth_element(buf.begin(), buf.begin() + at, buf.begin() + len); tau = buf[at]; }

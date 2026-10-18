@@ -1,8 +1,8 @@
 // stars-tests.cpp — the Star Keyboard in C++: V8's tan, log1p, log2 and log10, every key's star
-// and the engine's sound against the JavaScript's to the last bit, a note that waits for its star
+// and the engine's sound against the retired JavaScript's to the last bit, a note that waits for its star
 // to be built (forte/background.h), the views' messages, a flood of notes, any block length, and
 // ten stars within the CPU budget. The physics tests are the JavaScript suite's, run on the
-// WebAssembly (FORTE_ENGINE=wasm).
+// WebAssembly (node test/stars-tests.mjs).
 
 #include <chrono>
 #include <cmath>
@@ -62,8 +62,8 @@ TEST("stars: V8's tan, log1p, log2 and log10 (fdlibm), to the last bit") {
   CHECK(fdlibm::log10(100) == 2 && fdlibm::log2(0.25) == -2 && fdlibm::log1p(0) == 0 && fdlibm::tan(0) == 0);
 }
 
-// What stars-model.js gives: family, mass, speed-up, key; N, f[0], f[N−1], Σ p·f, the heard pitch,
-// T_eff and R of the star
+// What the JavaScript model gave: family, mass, speed-up, key; N, f[0], f[N−1], Σ p·f, the heard
+// pitch, T_eff and R of the star
 struct StarVector { int family; double mass, speedup; int key, N; double f0, fN, pf, pitch, T, R; };
 static const StarVector STARS[] = {
   {0, 1, 510800, 36, 340, 37.154634828658999, 97.501219622811917, 334.26998915835344, 65.406394551810138, 4810.6640360663132, 5.1067894026182348},
@@ -82,7 +82,7 @@ TEST("stars: every key's star (the track's tuning, mixed modes, δ Scuti) is sta
   }
 }
 
-// What stars-engine.js plays (48 kHz, 128-sample blocks): C3 at 0.8 and G4 at 0.6; the pedal at block
+// What the JavaScript engine played (48 kHz, 128-sample blocks): C3 at 0.8 and G4 at 0.6; the pedal at block
 // 60, C3 up at 80; rotation × 12 and damping × 2 at 100; aftertouch 0.5 on G4 at 150; pedal and G4
 // up at 200. Every 997th sample of L and R, and Σ|L| + |R| over 375 blocks.
 static const double SUM = 2069.8530032111507;
@@ -93,7 +93,7 @@ TEST("stars: the engine plays what stars-engine.js plays, sample for sample (its
   auto e = std::make_unique<StarEngine>(48000);
   auto P = defaults();
   e->setParams(P.data());
-  CHECK(waitFor(*e, 48) && waitFor(*e, 67)); // the JavaScript builds a star at once; here the worker does
+  CHECK(waitFor(*e, 48) && waitFor(*e, 67)); // the JavaScript built a star at once; here the worker does
   std::vector<float> L(128), R(128);
   std::vector<double> got;
   double sum = 0;

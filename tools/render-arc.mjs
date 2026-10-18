@@ -3,12 +3,18 @@
 //
 // Name demos NN-what-you-hear; the landing page plays the first one.
 
-import { ArcEngine } from '../arc/src/arc-engine.js';
-import { DEFAULTS } from '../arc/src/arc-params.js';
-import { keyCaps } from '../arc/src/arc-model.js';
+import { INSTRUMENT, DEFAULTS } from '../arc/src/arc-instrument.js';
+import { KEY_LO, KEY_HI, tuneKey } from '../arc/src/arc-model.js';
+import { wasmModel } from '../arc/src/arc-wasm.js';
+import { loadEngine } from './engine.mjs';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
 
+const ArcEngine = await loadEngine(INSTRUMENT);
+const { capFor } = await wasmModel();
+
 const FS = 48000, SLUG = 'arc';
+// each demo's capacitor bank, cut for its parameters as the page cuts it (P.table)
+const keyCaps = (p) => ({ key: tuneKey(p), lo: KEY_LO, caps: Float64Array.from({ length: KEY_HI - KEY_LO + 1 }, (_, i) => capFor(KEY_LO + i, p)) });
 const P = (o = {}) => { const p = { ...DEFAULTS, ...o }; return { ...p, table: keyCaps(p) }; };
 const play = (p, seconds, events) => { const e = new ArcEngine(FS, 11); e.setParams(p); return renderEngine(e, seconds, events, FS); };
 const cat = (...parts) => [0, 1].map((c) => Float64Array.from(parts.flatMap((p) => [...p[c]])));

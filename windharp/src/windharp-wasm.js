@@ -1,7 +1,6 @@
-// windharp-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// windharp-wasm.js — the engine and model, built as WebAssembly from the physics in C++
 // (native/instruments/windharp): WindHarpWasmEngine, with the engine contract, and the model's
-// functions for the views. The page runs it when it can and falls back to the JavaScript
-// (windharp-engine.js).
+// functions for the views and the tests.
 
 import { GROUPS } from './windharp-params.js';
 import { wasmEngine, scratch } from '../../shared/wasm.js';
@@ -11,7 +10,7 @@ const BUILD = { id: 'windharp', name: 'WindHarpWasmEngine', groups: GROUPS, bina
 
 const N_MAX = 16, MAX_VOICES = 12, ARRAYS = ['a', 'v', 'w', 'q', 'qv', 'e'];
 
-// The C++ engine's messages (windharp-engine.h, msg) back into the JavaScript engine's 'harp': the
+// The C++ engine's messages (windharp-engine.h, msg) gathered into the page's 'harp' message: the
 // focused string's arrays and the sounding keys come first, the summary last.
 function views(m, e) {
   const s = (e.views ??= {
@@ -35,7 +34,7 @@ function views(m, e) {
 
 const Base = wasmEngine(BUILD, { messages: views });
 
-// a string's design from its flat form (windharp-web.cpp, putDesign), as windharp-model.js's
+// a string's design from its flat form (windharp-web.cpp, putDesign), as windharp-model.cpp's
 // stringDesign() has it
 const DESIGN = ['key', 'D', 'L', 'T', 'm', 'ms', 'mf', 'mu', 'B', 'f0', 'N', 'n0', 'zeta', 'Re0', 'stress', 'unison', 'St0', 'fNote', 'target', 'lc', 'cents', 'gauge', 'idx', 'course'];
 const DESIGN_SIZE = DESIGN.length + N_MAX;
@@ -52,7 +51,7 @@ const VOICE = { key: 0, x: 1, target: 2, fading: 3, dead: 4, held: 5, pedal: 6, 
 const FLAGS = ['fading', 'dead', 'held', 'pedal'];
 const STRING = { x: 2, target: 3, Om: 4, Re: 5, r: 6, Ucur: 7, home: 8 };
 
-// One string of a voice, its state in place in the engine's memory (written as the JavaScript's).
+// One string of a voice, its state in place in the engine's memory.
 function stringView(x, e, slot, si, owner) {
   const get = (f) => x.windharp_string_get(e, slot, si, f), N = get(0), J = get(1);
   const arr = (which, n) => new Float64Array(x.memory.buffer, x.windharp_string_array(e, slot, si, which), n);
@@ -79,9 +78,9 @@ function voiceView(x, e, slot, owner) {
 // Engines the tests make and drop give their memory back.
 const dropped = typeof FinalizationRegistry === 'function' ? new FinalizationRegistry((h) => Base.exports?.forte_destroy(h)) : null;
 
-// The engine, with the JavaScript engine's test hooks: new WindHarpWasmEngine(fs, seed, { eps, noise,
-// rigid }); e.voices and e.byKey (each voice's shutter and strings, their modes and wake stations in
-// place, written as the JavaScript's), e.dominant(v), e.P, e.Uw, e.U and e.wind(n).
+// The engine, with the tests' hooks: new WindHarpWasmEngine(fs, seed, { eps, noise, rigid });
+// e.voices and e.byKey (each voice's shutter and strings, their modes and wake stations in place),
+// e.dominant(v), e.P, e.Uw, e.U and e.wind(n).
 export class WindHarpWasmEngine extends Base {
   constructor(fs, seed, opts = {}) {
     super(fs);
@@ -95,8 +94,8 @@ export class WindHarpWasmEngine extends Base {
   }
   destroy() { dropped?.unregister(this); super.destroy(); }
   setParams(P) { this.params = P; super.setParams(P); }
-  // A block longer than 128 samples in one piece (up to 512), as the JavaScript engine plays it: its
-  // wind is worked out once a block, so a block's length is part of what it plays.
+  // A block longer than 128 samples in one piece (up to 512): the wind is worked out once a block,
+  // so a block's length is part of what it plays.
   process(L, R, n) {
     if (n <= 128) { super.process(L, R, n); return; }
     const x = Base.exports;
@@ -133,8 +132,9 @@ export class WindHarpWasmEngine extends Base {
 }
 export const ready = () => WindHarpWasmEngine.ready();
 
-// The model's functions the views call (windharp-model.js's stringDesign, courseOffsets, shedding,
-// homeHarmonic, lockBand, lockedRange, lockedAmplitude, massDamping), computed by the WebAssembly.
+// The model's functions (windharp-model.cpp's stringDesign, courseOffsets, shedding, homeHarmonic,
+// lockBand, lockedRange, lockedAmplitude, massDamping, balance, lockedState), computed by the WebAssembly, for the views
+// and the tests.
 export async function wasmModel() {
   const x = await ready(), s = scratch(x), IN = 8 * DESIGN_SIZE;
   const put = (S) => { s.f64(10, IN).set(S.in); return s.at + IN; };
@@ -174,6 +174,17 @@ export async function wasmModel() {
       return out;
     },
     lockedAmplitude: (S, n, U) => x.windharp_locked_amplitude(put(S), n, U),
+    // the single-mode harmonic balance at δ, λ, AM, M (ε and r as the wake has them by default):
+    // its solutions { w, Q, Y, P }, and the locked one (or null)
+    balance(delta, lam, AM, M, eps = 0.3, r = 1) {
+      const n = x.windharp_balance(delta, lam, AM, M, eps, r, s.at), a = s.f64(4 * n);
+      return Array.from({ length: n }, (_, i) => ({ w: a[4 * i], Q: a[4 * i + 1], Y: a[4 * i + 2], P: a[4 * i + 3] }));
+    },
+    lockedState(delta, lam, AM, M, eps = 0.3, r = 1) {
+      if (!x.windharp_locked_state(delta, lam, AM, M, eps, r, s.at)) return null;
+      const a = s.f64(4);
+      return { w: a[0], Q: a[1], Y: a[2], P: a[3] };
+    },
     massDamping: (S) => S.mu * S.zeta,
   };
 }

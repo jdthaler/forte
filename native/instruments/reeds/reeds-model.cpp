@@ -1,4 +1,4 @@
-// reeds-model.cpp — the reed piano's physics, as reeds/src/reeds-model.js computes it.
+// reeds-model.cpp — the reed piano's physics (reeds-model.h).
 
 #include "reeds-model.h"
 
@@ -19,7 +19,7 @@ std::array<double, 4> hermite(double xi, double l) {
           l * (-xi * xi + std::pow(xi, 3))};
 }
 
-// log C′ of every table row, as the JavaScript keeps it (LOG_C)
+// log C′ of every table row
 struct LogC { double v[SLOT_NGAPS][SLOT_Y.n]; };
 const LogC &logC() {
   static const LogC t = [] {

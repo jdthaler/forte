@@ -1,5 +1,5 @@
-// huygens-engine.h — a keyboard of relaxation oscillators on one supply rail
-// (huygens/src/neon-engine.js in C++), on the engine contract (forte/engine.h).
+// huygens-engine.h — a keyboard of relaxation oscillators on one supply rail, on the engine
+// contract (forte/engine.h).
 //
 //   each key: a capacitor charged through its resistor from the rail, a neon lamp across it that
 //   fires at V_s and dumps it to V_e; firing times solved exactly within each sample
@@ -9,8 +9,8 @@
 //   supply servo that holds the average pitch
 //   output: each sawtooth band-limited with polyBLEP, keyed, through a 15 Hz coupling capacitor
 //
-// Operation for operation as the JavaScript, with V8's fdlibm for exp, log, pow, sin and cos and
-// the same seeded generator for the random phases and drift, so it plays the same firings.
+// With V8's fdlibm for exp, log, pow, sin and cos and a seeded generator for the random phases
+// and drift, so it plays the same firings in the WebAssembly and the plugins.
 // Oscillators live in a fixed pool; nothing is allocated after construction.
 #pragma once
 
@@ -24,15 +24,15 @@
 
 namespace forte::huygens {
 
-// What the engine posts (huygens/src/huygens-wasm.js turns it into the JavaScript engine's
-// 'state'): only that one is due; the firings are read back from the engine, in double precision.
+// What the engine posts (huygens/src/huygens-wasm.js turns it into its 'state'): only that one is
+// due; the firings are read back from the engine, in double precision.
 namespace msg {
 enum : uint16_t { state = 1 };
 }
 
-constexpr uint32_t SEED = 0x48757967; // 'Huyg', as neon-engine.js
+constexpr uint32_t SEED = 0x48757967; // 'Huyg'
 
-// The JavaScript engine's p: the descriptor's engine parameters and the circuit's constants
+// The descriptor's engine parameters and the circuit's constants
 struct Neon {
   double vNom = 150, vStrike = 90, vExt = 60; // supply, lamp striking and extinction voltages
   double cap = 10e-9;                          // timing capacitor (F)
@@ -89,7 +89,7 @@ class NeonEngine : public Engine {
   int voiceCount() const override { return nos; }
   void process(float *L, float *R, int n) override;
 
-  // The JavaScript engine's note data for the next noteOn: its design frequency (NaN: the
+  // The page's note data for the next noteOn: its design frequency (NaN: the
   // engine's tuning), its starting phase (NaN: random) and whether it starts settled (keyed and
   // powered, for analysis). Without it a note takes its tuning from the parameters.
   void offer(double f, double phase, bool settled) { offered = true; offF = f; offPhase = phase; offSettled = settled; }

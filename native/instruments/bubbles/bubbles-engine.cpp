@@ -1,4 +1,4 @@
-// bubbles-engine.cpp — the bubble organ's engine, as bubbles-engine.js runs it.
+// bubbles-engine.cpp — the bubble organ's engine (bubbles-engine.h).
 
 #include "bubbles-engine.h"
 
@@ -183,14 +183,10 @@ void BubbleEngine::startRecording(Bubble &b, const Acoustics &a) {
 // reached the surface: it bursts, and its ring stops.
 bool BubbleEngine::glide(Bubble &b, int n) {
   const double t = (b.age + n) / fs;
-  const Liquid &liq = *b.liq;
   const double d = b.d0 - riseDistance(t, b.U);
   if (d <= b.R) { startFade(b, BURST); return false; }
-  Env genv;
-  genv.liq = b.liq; genv.gas = b.gas; genv.d = d; genv.p0 = pT + liq.rho * G * d;
-  const double R = b.R0 * std::pow(b.pb0 / (genv.p0 + (2 * liq.sigma) / b.R0), 1 / (3 * b.nSlow)); // it swells as the pressure falls
-  genv.phiFixed = true; genv.phiKept = {b.phiRe, b.phiIm};
-  ac = acoustics(R, genv);
+  double R;
+  ac = glideRing(b.R0, b.pb0, b.nSlow, {b.phiRe, b.phiIm}, *b.liq, *b.gas, d, pT, R);
   b.R = R; b.d = d;
   return true;
 }

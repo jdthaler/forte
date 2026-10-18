@@ -1,7 +1,8 @@
 // stars-params.js — the knobs. Every parameter has a physical meaning and a unit; the hint says
 // what it does to the sound.
 
-import { K0 } from './stars-model.js';
+// The speed-up K: chosen so that the Sun itself is a key, G6 (1568 Hz), on the 1 M☉ track.
+export const K0 = 510800;
 
 const dB = (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB`;
 const kfmt = (v) => `${(Math.round(v / 100) * 100).toLocaleString('en-US')}×`;
