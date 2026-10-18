@@ -11,6 +11,8 @@
   ring out.
 - Plugins build a venue chosen while playing on a worker thread; the cathedral's 6 s tail costs
   about 4.5 % of a core at 48 kHz.
+- Picking from a dropdown or ticking a box under Controls no longer sends a stray note-off (an
+  error in the console), and gives the keys their focus back.
 
 ### Ribbon Piano (minor)
 - **Venue:** a choice of room under Output, kept across presets: Studio, Room (as before), Recital
