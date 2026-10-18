@@ -459,6 +459,7 @@ function mockForte() {
     { id: 'hardness', label: 'Hardness', group: 'Hammer', kind: 'continuous', perform: false, def: 0.5, choices: [] },
     { id: 'material', label: 'Material', group: 'Bar', kind: 'choice', perform: false, def: 0, choices: ['Rosewood', 'Aluminium', 'Glass'] },
     { id: 'damp', label: 'Damping', group: 'Bar', kind: 'continuous', perform: false, def: 0.4, choices: [] },
+    { id: 'fullRange', label: 'Full range', group: 'Bar', kind: 'toggle', perform: false, def: 0, choices: [] },
     { id: 'motor', label: 'Motor', group: 'Resonators', kind: 'toggle', perform: true, def: 1, choices: [] },
     { id: 'rate', label: 'Motor rate', group: 'Resonators', kind: 'continuous', perform: true, def: 0.5, choices: [] },
     { id: 'room', label: 'Room', group: 'Output', kind: 'continuous', perform: false, def: 0.3, choices: [] },
@@ -471,7 +472,7 @@ function mockForte() {
   const sent = v.map(() => NaN);
   return async (m, ...a) => {
     if (m === 'describe') {
-      const d = { slug: 'mock', name: 'Practice Bars', version: '0.0.0', accent: '#5fd0c8', keyLo: 53, keyHi: 89, space: 'sustain', presets: 8, params };
+      const d = { slug: 'mock', name: 'Practice Bars', version: '0.0.0', accent: '#5fd0c8', keyLo: 21, keyHi: 108, compass: [53, 89, 4], space: 'sustain', presets: 9, params };
       // ?suite: as the Forte app shows it, with its Instrument menu
       if (location.search.includes('suite')) d.instruments = [{ slug: 'drums', name: 'Practice Drums' }, { slug: 'mock', name: 'Practice Bars' }];
       return d;
