@@ -294,6 +294,7 @@ test('the landing page has the category tabs, the instrument list and the About,
 console.log('descriptors');
 // instruments whose physics stops short of A0–C8 (each README says why)
 const RANGE_LIMITS = {
+  springs: [21, 96], // above C7 the spring's F_C is far above hearing: a few nearly harmonic modes, no chirp
 };
 const described = [...ready.map((i) => ({ id: i.id, dir: i.id })), { id: 'template', dir: 'docs/template' }];
 for (const { id, dir } of described) {
