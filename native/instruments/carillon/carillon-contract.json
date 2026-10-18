@@ -5,6 +5,7 @@
     {"id":"historic","kind":"continuous","min":0,"max":1,"def":0,"step":0.01,"log":false},
     {"id":"asym","kind":"continuous","min":0,"max":3,"def":0.2,"step":0.01,"log":false},
     {"id":"eta","kind":"continuous","min":0.00005,"max":0.002,"def":0.00025,"step":0,"log":true},
+    {"id":"fullRange","kind":"toggle","def":false},
     {"id":"hardness","kind":"continuous","min":1,"max":210,"def":200,"step":0,"log":true},
     {"id":"clapMass","kind":"continuous","min":0.5,"max":8,"def":2.5,"step":0.1,"log":false},
     {"id":"strikeHeight","kind":"continuous","min":0.04,"max":0.45,"def":0.115,"step":0.005,"log":false},

@@ -24,7 +24,7 @@ import { DEFAULTS, GROUPS, PRESETS } from '../carillon/src/carillon-params.js';
 
 const CarillonEngine = await loadEngine(INSTRUMENT);
 const { bellOf, bellModes, clapperOf, hertzTime, clapperSpeed, strikeNote, struckPartials, doubletSplit, airAbsorption, radiationEfficiency } = await wasmModel();
-const [KEY_LO, KEY_HI] = INSTRUMENT.range;
+const [KEY_LO, KEY_HI] = INSTRUMENT.compass.keys, [KEY_MIN, KEY_MAX] = INSTRUMENT.range; // C3–C7; F2–C8 with Full range
 const cents = (a, b) => 1200 * Math.log2(a / b);
 
 const FS = 48000;
@@ -182,6 +182,17 @@ test('every bell is its rib scaled to its note (f·D constant within a register)
   console.log(`         C3 ${c3.D.toFixed(2)} m, ${(c3.mass / 1000).toFixed(1)} t; C4 ${c4.D.toFixed(2)} m, ${(c4.mass / 1000).toFixed(2)} t; C7 ${(100 * c7.D).toFixed(0)} cm, ${c7.mass.toFixed(1)} kg`);
   assert.ok(c3.D > 1.5 && c3.D < 3.5 && c7.mass > 2 && c7.mass < 30, 'plausible extremes');
 });
+test('past the compass: the bass and treble ribs carry on to F2 and C8; F2 is about the heaviest carillon bourdon ever cast (~20 t), E2 would outweigh it', () => {
+  for (const profile of ['minor', 'major']) {
+    for (const [a, b] of [[KEY_MIN, 59], [84, KEY_MAX]]) {
+      const A = bellOf(a, profile), B = bellOf(b, profile);
+      assert.ok(A.rib === B.rib && Math.abs((A.fNom * A.D) / (B.fNom * B.D) - 1) < 1e-12, `${profile} ${a}–${b}`);
+    }
+  }
+  const f2 = bellOf(KEY_MIN, 'minor'), e2 = bellOf(KEY_MIN - 1, 'minor'), c8 = bellOf(KEY_MAX, 'minor');
+  console.log(`         F2 ${f2.D.toFixed(2)} m, ${(f2.mass / 1000).toFixed(1)} t; E2 ${(e2.mass / 1000).toFixed(1)} t; C8 ${(100 * c8.D).toFixed(0)} cm, ${c8.mass.toFixed(1)} kg`);
+  assert.ok(f2.mass > 15e3 && f2.mass < 20e3 && e2.mass > 20e3, 'F2: about the largest bourdon');
+});
 
 console.log('doublets');
 test('degenerate perturbation theory: the FEM\'s κ for a thin ring is (m²−1)/(m²+1) (to 10⁻³); a split Δf/f = εκ/2 ∝ ε; in the engine the nominal beats at that Δf (ε = 0.5 % and 1 %, within 3 %)', () => {
@@ -266,6 +277,17 @@ test('tuning: every bell C3–C7 sounds its nominal within 1 ¢ of an octave abo
     assert.ok(tone(x, f, a, b, fs) > 20 * tone(x, f * 1.012, a, b, fs), `key ${key}: the nominal stands out`);
   }
   console.log(`         worst ${worst.toFixed(3)} ¢`);
+});
+test('past the compass: F2–B2 and C♯7–C8 sound their nominals within 1 ¢ at 44.1 and 48 kHz, bounded, no NaN', () => {
+  for (const fs of [48000, 44100]) for (const key of [KEY_MIN, 44, 47, 97, 100, 104, KEY_MAX]) {
+    const [L, R] = run(P({ asym: 0 }), [[0, 'on', key, 0.7]], key < KEY_LO ? 2.5 : 0.9, { fs, stereo: true }), x = L.map((v, i) => v + R[i]); // (longer in the bass, to resolve 1.2 %)
+    assert.ok(x.every(Number.isFinite), `key ${key} at ${fs}: NaN`);
+    const pk = Math.max(peakAbs(L), peakAbs(R));
+    assert.ok(pk > 0.03 && pk < 0.5, `key ${key} at ${fs}: peak ${pk.toFixed(3)}`);
+    const f = 2 * keyFreq(key), a = Math.round(0.15 * fs), b = x.length, fm = peak(x, f * 0.995, f * 1.005, a, b, f * 0.0005, fs);
+    assert.ok(Math.abs(cents(fm, f)) < 1, `key ${key} at ${fs}: ${cents(fm, f).toFixed(2)} ¢`);
+    assert.ok(tone(x, f, a, b, fs) > 20 * tone(x, f * 1.012, a, b, fs), `key ${key}: the nominal stands out`);
+  }
 });
 test('the engine plays the model: hum, prime, tierce, quint and superquint where the model puts them (within 1 ¢), the nominal and hum decaying at the model\'s rates (within 5 %); bronze\'s loss and radiation make the hum ring longest and the upper partials die faster in every register', () => {
   const rows = [];

@@ -21,7 +21,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/carillon/>
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | play (49 bells, C3–C7 at sounding pitch) |
+| `Z…/` and `Q…]` rows | play (49 bells, C3–C7 at sounding pitch; 68, F2–C8, with **Full range**) |
 | `←` `→` | octave |
 | `↑` `↓` | velocity: how hard the baton is struck |
 | `Space` | nothing: a carillon has no dampers, and the bells ring on |
@@ -47,14 +47,25 @@ model's choice):
 
 | register | keys | wall thickness | soundbow | diameter × nominal |
 |---|---|---|---|---|
-| bass | C3–B3 | × 0.5 | D/22.5 | 603 m/s |
+| bass | C3–B3 (F2–B3) | × 0.5 | D/22.5 | 603 m/s |
 | middle | C4–B5 | × 0.72 | D/17 | 714 m/s |
-| treble | C6–C7 | × 1 | D/12.9 | 910 m/s |
+| treble | C6–C7 (C6–C8) | × 1 | D/12.9 | 910 m/s |
 
 So the bourdon, C3, is 2.30 m across and weighs 5.6 t; C4 is 1.36 m and
 1.5 t; C5 0.68 m and 190 kg; C7 22 cm and 8 kg (minor-third bells;
 the major-third ones are heavier, 15.8 t at C3). At the change of rib the
 bells jump in size: C6 is larger than B5.
+
+**Full range** (under Bells) opens the keys past the four-octave compass,
+the keys in brackets above: the bass rib cast larger down to F2 and the
+treble rib smaller up to C8, every bell tuned by its nominal as before. It
+stops at F2, not A0. The F2 bell is 3.45 m across and weighs 18.7 t,
+about as much as the largest carillon bourdons ever cast (Riverside Church,
+New York, and the University of Chicago's Rockefeller Chapel, around
+17–19 t); E2 would be 22 t, C2 45 t and A0 600 t. The C8 bell is 11 cm and
+1 kg; the upper partials of the top bells, above 0.45 × the sample rate,
+are left out as they always were. Past the compass the bells keep the pan
+of the compass's ends.
 
 Bell bronze, about 78 % copper and 22 % tin: E = 105 GPa, ρ = 8700 kg/m³,
 ν = 0.33 (the model's choice of typical values). Only ν enters the shapes

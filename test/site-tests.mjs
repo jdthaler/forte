@@ -294,6 +294,7 @@ test('the landing page has the category tabs, the instrument list and the About,
 console.log('descriptors');
 // instruments whose physics stops short of A0–C8 (each README says why)
 const RANGE_LIMITS = {
+  carillon: [41, 108], // below F2 a bell would outweigh the largest carillon bourdons ever cast (about 20 t)
 };
 const described = [...ready.map((i) => ({ id: i.id, dir: i.id })), { id: 'template', dir: 'docs/template' }];
 for (const { id, dir } of described) {
