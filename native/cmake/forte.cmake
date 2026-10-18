@@ -2,12 +2,13 @@
 
 set(FORTE_PLUGIN_DIR ${CMAKE_CURRENT_LIST_DIR}/../plugin)
 set(FORTE_WEB_DIR ${CMAKE_CURRENT_LIST_DIR}/../web)
+set(FORTE_ICON_DIR ${CMAKE_CURRENT_LIST_DIR}/../icons) # the standalones' icons (tools/make-icons.py)
 
 # forte_add_plugin(<slug> NAME <name> VERSION <x.y.z> AU_SUBTYPE <code> INSTRUMENT <library> [ACCENT <#rrggbb>])
 #
 # <library> holds the instrument's engine and its InstrumentInfo (it defines
-# forte_instrument()). ACCENT, the window's colour, defaults to FORTE_ACCENT (<slug>-info.cmake). Makes forte_<slug>_clap, _vst3, _auv2 (macOS) and _standalone into
-# ${CMAKE_BINARY_DIR}/plugins, and forte_<slug>_all to build them all. Plugin ids:
+# forte_instrument()). ACCENT, the window's colour, defaults to FORTE_ACCENT (<slug>-info.cmake). Makes forte_<slug>_clap, _vst3, _auv2 (macOS) and _standalone (with
+# native/icons/<slug>.icns and .ico as its icon on macOS and Windows) into ${CMAKE_BINARY_DIR}/plugins, and forte_<slug>_all to build them all. Plugin ids:
 # net.jthaler.forte.<slug> (CLAP, bundles), AU manufacturer Frte (docs/PLUGINS.md).
 function(forte_add_plugin slug)
   cmake_parse_arguments(A "" "NAME;VERSION;AU_SUBTYPE;INSTRUMENT;ACCENT" "" ${ARGN})
@@ -22,6 +23,11 @@ function(forte_add_plugin slug)
   target_link_libraries(${impl} PUBLIC forte_plugin ${A_INSTRUMENT})
   string(REPLACE "#" "" rgb "${A_ACCENT}") # (a # can't go through a compiler's command line)
   target_compile_definitions(${impl} PRIVATE "FORTE_ACCENT_RGB=\"${rgb}\"")
+  # the standalone's icon, its waves in the instrument's colour, where tools/make-icons.py drew one
+  set(icons "")
+  if (EXISTS ${FORTE_ICON_DIR}/${slug}.icns)
+    set(icons STANDALONE_MACOS_ICON ${FORTE_ICON_DIR}/${slug}.icns STANDALONE_WINDOWS_ICON ${FORTE_ICON_DIR}/${slug}.ico)
+  endif()
   make_clapfirst_plugins(
     TARGET_NAME forte_${slug}
     IMPL_TARGET ${impl}
@@ -38,6 +44,7 @@ function(forte_add_plugin slug)
     AUV2_SUBTYPE_CODE "${A_AU_SUBTYPE}"
     AUV2_INSTRUMENT_TYPE "aumu"
     STANDALONE_CONFIGURATIONS standalone "${A_NAME}" "net.jthaler.forte.${slug}"
+    ${icons}
   )
   # for the Forte app (forte_add_suite): the instrument's forte_instrument() again, under a name
   # of its own, forte_instrument_<slug>, so every instrument can be linked into one program
@@ -96,7 +103,9 @@ const void *forte_entry_get_factory(const char *id) { return forte::entryFactory
     OUTPUT_NAME "Forte"
     STATICALLY_LINKED_CLAP_ENTRY TRUE
     PLUGIN_ID "net.jthaler.forte.suite"
-    BUNDLE_VERSION "${version}")
+    BUNDLE_VERSION "${version}"
+    MACOS_ICON ${FORTE_ICON_DIR}/forte.icns
+    WINDOWS_ICON ${FORTE_ICON_DIR}/forte.ico)
   if (WIN32) # where clap-wrapper puts the instruments' own standalones
     set_target_properties(forte_suite_standalone PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/plugins/Standalone-forte_suite_standalone)
   else()

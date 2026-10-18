@@ -241,6 +241,14 @@ jobs:
           cd "$RUNNER_TEMP/one/Forte plugins"
           if ls -d *.vst3 2>/dev/null | grep -q .; then echo '::error::the CLAP archive holds VST3s'; exit 1; fi
           make check
+          # the Forte app's archive holds the Forte app alone, and checks out
+          mkdir -p "$RUNNER_TEMP/app"
+          if [ "$RUNNER_OS" = macOS ]; then ditto -x -k "$GITHUB_WORKSPACE/dist/Forte-app-macos.zip" "$RUNNER_TEMP/app"
+          else tar -xzf "$GITHUB_WORKSPACE/dist/Forte-app-linux.tar.gz" -C "$RUNNER_TEMP/app"; fi
+          cd "$RUNNER_TEMP/app/Forte app"
+          apps=$( (ls -d *.app 2>/dev/null; find . -maxdepth 1 -type f -perm -u+x ! -name '*.*') | wc -l | tr -d ' ')
+          [ "$apps" = 1 ] || { echo "::error::the Forte app's archive holds $apps apps"; exit 1; }
+          make check-app
       - name: The download's install.cmd installs and verifies every plugin
         if: env.FULL == 'true' && runner.os == 'Windows'
         shell: pwsh
