@@ -8,6 +8,7 @@ WebAssembly. The plan, its decisions and its progress are in
 ```
 CMakeLists.txt, CMakePresets.json   the build; one preset per platform, and wasm
 cmake/dependencies.cmake            every dependency, pinned to a commit
+cmake/patches/                      our changes to clap-wrapper (the Mac standalone's MIDI inputs)
 cmake/forte.cmake                   forte_add_plugin(): an instrument's plugins
 emscripten-version                  the Emscripten the WebAssembly is built with
 ids.json                            each instrument's VST3 class id: generated once, never changed

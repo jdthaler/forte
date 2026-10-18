@@ -22,7 +22,16 @@ if (FORTE_PLUGINS)
   # The plugin formats. CLAP 1.2.10 (MIT) is the plugin; clap-wrapper 0.16.0 (MIT) makes the
   # VST3, AU v2 and standalone from it, with the SDKs below (versions as clap-wrapper tests them).
   forte_fetch(clap https://github.com/free-audio/clap 195b42a004144fab0b3cf95e9c067187d15365b7)               # 1.2.10
-  forte_fetch(clapwrapper https://github.com/free-audio/clap-wrapper 1cca996e96f29ab2be7ae9f8cfe532bbc92e1dd6) # 0.16.0
+  # Our changes to clap-wrapper, kept here (cmake/patches/): the macOS standalone's Audio/MIDI
+  # Settings pick its MIDI inputs. They touch only macOS's code, so Windows (whose checkout may
+  # have other line endings) leaves them out.
+  set(clapwrapper_patches "")
+  if (NOT WIN32)
+    set(clapwrapper_patches PATCH_COMMAND ${CMAKE_COMMAND} -DPATCH=${CMAKE_CURRENT_LIST_DIR}/patches/clap-wrapper-mac-midi-inputs.patch
+                            -P ${CMAKE_CURRENT_LIST_DIR}/apply-patch.cmake)
+  endif()
+  forte_fetch(clapwrapper https://github.com/free-audio/clap-wrapper 1cca996e96f29ab2be7ae9f8cfe532bbc92e1dd6 # 0.16.0
+    ${clapwrapper_patches})
   forte_fetch(vst3sdk https://github.com/steinbergmedia/vst3sdk 9fad9770f2ae8542ab1a548a68c1ad1ac690abe0       # 3.8.0 build 66 (MIT)
     GIT_SUBMODULES base public.sdk pluginterfaces cmake)
   forte_fetch(rtaudio https://github.com/thestk/rtaudio b4f04903312e0e0efffbe77655172e0f060dc085)             # 6.0.1, standalone audio

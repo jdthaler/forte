@@ -1,0 +1,160 @@
+diff --git a/src/detail/standalone/macos/AppDelegate.mm b/src/detail/standalone/macos/AppDelegate.mm
+index 93ab1a9..846194e 100644
+--- a/src/detail/standalone/macos/AppDelegate.mm
++++ b/src/detail/standalone/macos/AppDelegate.mm
+@@ -2,7 +2,10 @@
+ 
+ #include <AVFoundation/AVFoundation.h>
+ 
++#include <algorithm>
+ #include <map>
++#include <set>
++#include <string>
+ 
+ #include "detail/standalone/entry.h"
+ #include "detail/standalone/standalone_details.h"
+@@ -18,6 +21,8 @@
+ {
+   NSPopUpButton *outputSelection, *inputSelection, *sampleRateSelection;
+   std::vector<RtAudio::DeviceInfo> outDevices, inDevices;
++  std::vector<std::string> midiNames;  // the MIDI inputs, as the checkboxes list them
++  std::vector<NSButton *> midiChecks;
+ }
+ 
+ - (void)setupContents;
+@@ -25,6 +30,61 @@
+ 
+ @end
+ 
++// The MIDI inputs: every one is connected but those the user turned off in Audio/MIDI
++// Settings, which are remembered by name (so a keyboard plugged in later is connected too).
++static NSString *const kMidiInputsOff = @"MIDIInputsOff";
++
++static std::set<std::string> midiInputsOff()
++{
++  std::set<std::string> off;
++  for (id name in [[NSUserDefaults standardUserDefaults] arrayForKey:kMidiInputsOff])
++    if ([name isKindOfClass:[NSString class]]) off.insert([name UTF8String]);
++  return off;
++}
++
++static std::vector<std::string> midiInputNames()
++{
++  std::vector<std::string> names;
++  try
++  {
++    RtMidiIn probe;
++    for (unsigned int i = 0; i < probe.getPortCount(); i++) names.push_back(probe.getPortName(i));
++  }
++  catch (RtMidiError &error)
++  {
++    error.printMessage();
++  }
++  return names;
++}
++
++// open every MIDI input but those turned off, in place of the ones open now
++static void connectMidiInputs()
++{
++  auto *standaloneHost = freeaudio::clap_wrapper::standalone::getStandaloneHost();
++  const auto off = midiInputsOff();
++  const auto names = midiInputNames();
++  for (auto &m : standaloneHost->midiIns) m.reset();
++  standaloneHost->midiIns.clear();
++  standaloneHost->currentMidiPorts.clear();
++  standaloneHost->numMidiPorts = (uint32_t)names.size();
++  for (unsigned int i = 0; i < names.size(); i++)
++  {
++    if (off.count(names[i])) continue;
++    try
++    {
++      auto midiIn = std::make_unique<RtMidiIn>();
++      midiIn->openPort(i);
++      midiIn->setCallback(standaloneHost->midiCallback, standaloneHost);
++      standaloneHost->midiIns.push_back(std::move(midiIn));
++      standaloneHost->currentMidiPorts.push_back(i);
++    }
++    catch (RtMidiError &error)
++    {
++      error.printMessage();
++    }
++  }
++}
++
+ @implementation ClapWrapperAppDelegate
+ 
+ - (void)timerCallback:(NSTimer *)instance
+@@ -117,6 +177,8 @@
+ 
+   auto plugin =
+       freeaudio::clap_wrapper::standalone::mainCreatePlugin(entry, pid, pindex, 1, (char **)argv);
++  // mainCreatePlugin connected every MIDI input: leave out the ones turned off before
++  if (!midiInputsOff().empty()) connectMidiInputs();
+ 
+   [[self window] orderFrontRegardless];
+   [[self window] setDelegate:self];
+@@ -449,8 +511,38 @@
+     [horizontalRule setBoxType:NSBoxSeparator];
+     [[self contentView] addSubview:horizontalRule];
+ 
+-    [[self contentView] addSubview:addLabel(@"MIDI", 10, 165)];
+-    [[self contentView] addSubview:addLabel(@"Coming Soon", 100, 165)];
++    [[self contentView] addSubview:addLabel(@"MIDI Inputs", 10, 165)];
++    // a checkbox for each MIDI input, ticked while it is connected
++    midiNames = midiInputNames();
++    midiChecks.clear();
++    if (midiNames.empty())
++    {
++      [[self contentView] addSubview:addLabel(@"None found", 100, 165)];
++    }
++    else
++    {
++      const auto off = midiInputsOff();
++      const CGFloat row = 22, width = 290, height = 155;
++      NSView *list = [[NSView alloc]
++          initWithFrame:NSMakeRect(0, 0, width - 20, std::max(height, row * (CGFloat)midiNames.size()))];
++      for (size_t i = 0; i < midiNames.size(); i++)
++      {
++        NSButton *check = [[NSButton alloc]
++            initWithFrame:NSMakeRect(4, list.frame.size.height - row * (CGFloat)(i + 1), width - 28, row)];
++        [check setButtonType:NSButtonTypeSwitch];
++        [check setTitle:[[NSString alloc] initWithUTF8String:midiNames[i].c_str()]];
++        [check setState:off.count(midiNames[i]) ? NSControlStateValueOff : NSControlStateValueOn];
++        [list addSubview:check];
++        midiChecks.push_back(check);
++      }
++      NSScrollView *scroll = [[NSScrollView alloc] initWithFrame:NSMakeRect(100, 40, width, height)];
++      [scroll setHasVerticalScroller:YES];
++      [scroll setAutohidesScrollers:YES];
++      [scroll setBorderType:NSBezelBorder];
++      [scroll setDocumentView:list];
++      [list scrollPoint:NSMakePoint(0, list.frame.size.height)];
++      [[self contentView] addSubview:scroll];
++    }
+ 
+     auto standaloneHost = freeaudio::clap_wrapper::standalone::getStandaloneHost();
+     outDevices = standaloneHost->getOutputAudioDevices();
+@@ -530,6 +622,23 @@
+     auto standaloneHost = freeaudio::clap_wrapper::standalone::getStandaloneHost();
+     standaloneHost->startAudioThreadOn(inId, 2, useIn, outId, 2, useOut, (int32_t)sr);
+ 
++    // the MIDI inputs unticked are remembered and left unconnected
++    if (!midiChecks.empty())
++    {
++      std::set<std::string> off = midiInputsOff();
++      for (size_t i = 0; i < midiChecks.size(); i++)
++      {
++        if ([midiChecks[i] state] == NSControlStateValueOn)
++          off.erase(midiNames[i]);
++        else
++          off.insert(midiNames[i]);
++      }
++      NSMutableArray *names = [NSMutableArray array];
++      for (const auto &n : off) [names addObject:[[NSString alloc] initWithUTF8String:n.c_str()]];
++      [[NSUserDefaults standardUserDefaults] setObject:names forKey:kMidiInputsOff];
++      connectMidiInputs();
++    }
++
+     [self close];
+   }
+ }
