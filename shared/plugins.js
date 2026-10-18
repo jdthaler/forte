@@ -9,15 +9,28 @@ export const LATEST = 'https://github.com/jdthaler/forte/releases/latest/downloa
 export const INSTALL = 'https://github.com/jdthaler/forte/blob/main/native/INSTALL.md';
 export const RELEASES = 'https://github.com/jdthaler/forte/releases';
 
+// the formats, by the names the archives (and the downloads' Makefile) use
+export const FORMATS = { au: 'AU', vst3: 'VST3', clap: 'CLAP', app: 'app' };
+
 // [system, archive suffix, formats]
 export const SYSTEMS = [
-  ['macOS', 'macos.zip', 'AU · VST3 · CLAP · app'],
-  ['Windows', 'windows.zip', 'VST3 · CLAP · app'],
-  ['Linux', 'linux.tar.gz', 'VST3 · CLAP · app'],
+  ['macOS', 'macos.zip', ['au', 'vst3', 'clap', 'app']],
+  ['Windows', 'windows.zip', ['vst3', 'clap', 'app']],
+  ['Linux', 'linux.tar.gz', ['vst3', 'clap', 'app']],
 ];
 
 export const withPlugins = () => INSTRUMENTS.filter((i) => i.ready && i.plugin?.ready);
 
-// The archive names: Forte-plugins-<system> holds every instrument, Forte-<id>-<system> one.
-export const archive = (id, suffix) => `Forte-${id ?? 'plugins'}-${suffix}`;
-export const downloads = (id) => SYSTEMS.map(([name, suffix, formats]) => ({ name, formats, file: archive(id, suffix), url: LATEST + archive(id, suffix) }));
+// The archive names: Forte-plugins-<system> holds every instrument, Forte-<id>-<system> one,
+// each in every format; Forte-<id>-<format>-<system> (and Forte-plugins-<format>-<system>) in one.
+export const archive = (id, suffix, format) => `Forte-${id ?? 'plugins'}-${format ? `${format}-` : ''}${suffix}`;
+export const downloads = (id) => SYSTEMS.map(([name, suffix, formats]) => ({
+  name, formats: formats.map((f) => FORMATS[f]).join(' · '), file: archive(id, suffix), url: LATEST + archive(id, suffix),
+  each: formats.map((f) => ({ format: f, name: FORMATS[f], file: archive(id, suffix, f), url: LATEST + archive(id, suffix, f) })),
+}));
+// The download buttons for an instrument (or, with no id, every instrument): each system's
+// archive with every format, and under it one link per format.
+export const downloadLinks = (id) => downloads(id).map((d) => `<div class="forte-plugin-sys">
+  <a class="button" href="${d.url}">${d.name}<span>${d.formats}</span></a>
+  <span class="forte-plugin-each">${d.each.map((e) => `<a href="${e.url}" title="${d.name}: just the ${e.format === 'app' ? 'standalone app' : `${e.name} plugin`}">${e.name}</a>`).join('')}</span>
+</div>`).join('');

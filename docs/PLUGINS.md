@@ -392,7 +392,8 @@ request.
 Done (Forte 0.13.0; per instrument and automatic in 0.17.0):
 1. The `native` workflow packages each system's plugins with `tools/package-plugins.sh`: every
    instrument's together (`Forte-plugins-macos.zip`, `-windows.zip`, `-linux.tar.gz`) and each
-   one's alone (`Forte-<slug>-macos.zip`…), all but the template's, with
+   one's alone (`Forte-<slug>-macos.zip`…), and each of those one format at a time too
+   (`Forte-<slug>-au-macos.zip`, `Forte-plugins-vst3-linux.tar.gz`…), all but the template's, with
    [native/INSTALL.md](../native/INSTALL.md): the `release-<preset>` artifacts. The macOS bundles
    are ad-hoc signed; INSTALL.md gives the `xattr` command. The macOS and Linux archives also
    hold [native/install.sh](../native/install.sh) and, as their `Makefile`,

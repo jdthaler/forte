@@ -121,7 +121,7 @@ for wider keys, with the controls beside the keyboard's tools. Use
 Every instrument (all 24) also comes as a plugin for a DAW: AU,
 VST3 and CLAP, and a standalone app, for macOS, Windows and Linux. Download every instrument
 together from **All Plugins** on the front page, or one instrument from **↓ Plugin** next to
-**How it works** on its page; both are also in the
+**How it works** on its page, in every format or one format alone (just the AU, say); both are also in the
 [latest release](https://github.com/jdthaler/forte/releases/latest). Then follow
 [native/INSTALL.md](native/INSTALL.md): on macOS and Linux, `make install` and `make verify` in
 the unpacked folder do it all. They are unsigned, so a Mac needs one Terminal command (`xattr`,

@@ -170,6 +170,13 @@ jobs:
           fi
           make verify-app
           make uninstall-app
+          # one format's archive holds just that format, and checks out
+          mkdir -p "$RUNNER_TEMP/one"
+          if [ "$RUNNER_OS" = macOS ]; then ditto -x -k "$GITHUB_WORKSPACE/dist/Forte-plugins-clap-macos.zip" "$RUNNER_TEMP/one"
+          else tar -xzf "$GITHUB_WORKSPACE/dist/Forte-plugins-clap-linux.tar.gz" -C "$RUNNER_TEMP/one"; fi
+          cd "$RUNNER_TEMP/one/Forte plugins"
+          if ls -d *.vst3 2>/dev/null | grep -q .; then echo '::error::the CLAP archive holds VST3s'; exit 1; fi
+          make check
       - uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.preset }}
