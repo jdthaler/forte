@@ -52,6 +52,7 @@ class OrganistaEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void allNotesOff() override;
   void pressure(double value, int key) override; // aftertouch: the finger presses harder
+  void bend(double value) override;              // the strings' bridges slide: every sounding length ÷r, the notes ×r
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -67,6 +68,7 @@ class OrganistaEngine : public Engine {
   // read by the tests (through the WebAssembly's hooks)
   int nAct = 0;
   double vB = 0;
+  double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
 
  private:
   void run(float *L, float *R, int n);

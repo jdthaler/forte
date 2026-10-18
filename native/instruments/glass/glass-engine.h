@@ -52,6 +52,7 @@ class ArmonicaEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void allNotesOff() override;
   void pressure(double value, int key) override; // aftertouch: the finger presses harder
+  void bend(double value) override;              // every bowl's modes ×r (no real armonica bends)
   int voiceCount() const override { return count; }
   // the tests: whether the key's bowl for the current parameters is built (asks for it if not)
   bool ready(int key) { return bool(bowls.get(key, version)); }
@@ -64,6 +65,7 @@ class ArmonicaEngine : public Engine {
     double vel = 0, Nn = 0, x = 0, u = 0, F = 0, slip = 0, s = 0, wdot = 0, peak = 0, nz = 0, Nlift = 0;
     int quiet = 0;
     double pl = 0, pr = 0;
+    double bent = 1; // the ratio its modes are tuned to
     uint64_t version = 0; // of the bowl it was built from
     Bowl b;
     int N = 0;
@@ -84,6 +86,7 @@ class ArmonicaEngine : public Engine {
  private:
   void start(Voice &v, int key);
   void build(Voice &v, const Bowl &b, uint64_t version);
+  void tune(Voice &v, double r);
   double force(const Voice &v) const;
   void run(float *L, float *R, int n);
   void report();
@@ -93,6 +96,7 @@ class ArmonicaEngine : public Engine {
   const double k;
   Friction fr{};
   double theta = 0, Wbar = 0, pressureAll = 0;
+  double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
   double C[N_MAX + 1][128] = {}, S[N_MAX + 1][128] = {};
   int32_t rng = 22222;
   int focus = -1, tick = 0;

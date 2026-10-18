@@ -27,6 +27,7 @@ class BowedString {
   BowedString(int key, double fsBase);
 
   void design(const Loop &L);                // L from loopDesign(key, P, fs)
+  void bend(double r);                       // pitch bend: the sounding length ÷ r, the delays ÷ r
   void setDamper(bool on, double sigma);     // felt damper: extra loss per round trip, exp(−σ_d / f₀)
   void clear();
   // One output sample with the other strings' bridge velocity Vo held: the force on the bridge.
@@ -63,7 +64,7 @@ class BowedString {
   double grain = 0;
   Loop L{};
   double ga = 0, gs = 0, Z = 0, Y = 0, Yt = 0, Dtb = 0, Dtn = 0, rtb = 0, rtn = 0, Dfb = 0, Dnl = 0;
-  double gb = 0, pb = 0, gn = 0, pn = 0, T0 = 0, wheel = 1;
+  double gb = 0, pb = 0, gn = 0, pn = 0, T0 = 0, wheel = 1, bent = 1;
 
  private:
   double bridge(double V) {

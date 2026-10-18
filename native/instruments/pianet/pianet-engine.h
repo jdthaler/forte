@@ -43,6 +43,7 @@ class PianetEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override;
   void allNotesOff() override;
+  void bend(double value) override; // every reed's stiffness ×r², its notes ×r
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // whether key's reed is built for the knobs as they are (the tests wait for it)
@@ -101,6 +102,7 @@ class PianetEngine : public Engine {
   std::array<double, OS * BLOCK_MAX> mono{}, dCs{};
   int pick = pickup_::em;
   double duck = 1;
+  double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
   PlateRail rail;
   double glideA, mix = 0, mixStep, duckStep;
   int waitMax;

@@ -141,11 +141,25 @@ PlateRail::PlateRail(double fs) : d(fdlibm::exp(-1 / (fs * ES.R * ES.Cbus))), Q(
 
 // ---- the mechanism of one key ------------------------------------------------------------------
 
-Pluck::Pluck(const KeyReed &r, const PadParams &P, double fs_) : kr(&r), N(r.N), k(1 / fs_), fs(fs_) {
+Pluck::Pluck(const KeyReed &r, const PadParams &P, double fs_, double bend_) : kr(&r), N(r.N), k(1 / fs_), fs(fs_) {
+  coeffs(bend_);
+  setPad(P);
+  // at rest: the pad presses the reed with the preload, bonded over the full disc
+  const double Fp = -PAD.preload;
+  for (int i = 0; i < N; i++) q[i] = q1[i] = S[i] * Fp;
+  yc = ycRest = cStatic * Fp; e = Fp / kp; hRest = yc + e;
+  h = hRest; hv = 0; hT = hRest;
+  a = PAD.a0; F = Fp; v = 0;
+  yRest = tip(); y = yRest;
+}
+
+// The modes at bend × their frequencies (the reed's stiffness × bend²): the recursions, the
+// compliances at the pad and the tip, and the end stop.
+void Pluck::coeffs(double r) {
   double Csum = 0, cs = 0, Ctip = 0;
   for (int i = 0; i < N; i++) {
-    const ReedMode &md = r.modes[i];
-    const double rr = fdlibm::exp(-md.sigma * k), wd = TWO_PI * md.f;
+    const ReedMode &md = kr->modes[i];
+    const double rr = fdlibm::exp(-md.sigma * k), wd = TWO_PI * md.f * r;
     A1[i] = 2 * rr * fdlibm::cos(wd * k); A2[i] = rr * rr;
     const double b = (k * rr * fdlibm::sin(wd * k)) / wd;
     PC[i] = md.phiC; PT[i] = md.phiT; B[i] = b * md.phiC; BT[i] = b * md.phiT;
@@ -155,14 +169,15 @@ Pluck::Pluck(const KeyReed &r, const PadParams &P, double fs_) : kr(&r), N(r.N),
   C = Csum; cStatic = cs;
   // optional end stop under the tip (the magnet pole of the T pickup), y = −stop
   stopDen = 1 / (1 + Ks * Ctip); Ct = Ctip;
-  setPad(P);
-  // at rest: the pad presses the reed with the preload, bonded over the full disc
-  const double Fp = -PAD.preload;
-  for (int i = 0; i < N; i++) q[i] = q1[i] = S[i] * Fp;
-  yc = ycRest = cs * Fp; e = Fp / kp; hRest = yc + e;
-  h = hRest; hv = 0; hT = hRest;
-  a = PAD.a0; F = Fp; v = 0;
-  yRest = tip(); y = yRest;
+  bend = r;
+}
+
+// Retune a sounding (or resting) reed: a reed at rest under a constant force keeps its balance.
+void Pluck::retune(double r, bool resting) {
+  std::array<double, MAX_MODES> S0 = S;
+  coeffs(r);
+  den = 1 / (1 + Bk * C);
+  if (resting) for (int i = 0; i < N; i++) if (S0[i] != 0) { q[i] *= S[i] / S0[i]; q1[i] *= S[i] / S0[i]; }
 }
 
 void Pluck::setPad(const PadParams &P) {
