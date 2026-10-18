@@ -100,9 +100,10 @@ Only when the owner asks for a release:
    checks that no notes are left. Whatever fails is fixed on `main` first,
    then the release branch merges `main` in.
 4. Merge it with a merge commit when the owner asks. GitHub Pages
-   publishes `live`, `release-plugins` publishes the plugins after the
-   green `native` run on `live` when they changed, and `sync-main` brings
-   `live` back into `main`.
+   publishes `live`, `release-plugins` publishes the plugins when they
+   changed, and `sync-main` brings `live` back into `main`. The push to
+   `live` builds nothing again when the pull request's green run built the
+   same tree: `native` finds that run and the release takes its archives.
 
 Releases are not tagged any more (Claude Code cloud sessions cannot push
 tags). The changelog and the commit titles record each version.

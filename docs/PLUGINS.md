@@ -406,7 +406,8 @@ Done (Forte 0.13.0; per instrument and automatic in 0.17.0):
 2. The `release-plugins` workflow runs after every green `native` run on `live` (pull requests
    into `main` build and validate on Linux only; `live`, a pull request into it, and a run
    started by hand add macOS, Windows, auval and these archives) and attaches its
-   archives to a GitHub Release when what they're built from changed since the latest release
+   archives (or, when the release pull request's green run built the same tree, that run's: the
+   push to `live` then builds nothing again) to a GitHub Release when what they're built from changed since the latest release
    (`tools/plugin-release.mjs --manifest`: each instrument's version and the `native/` tree). It
    creates the tag itself (`plugins-v<Forte version>`, then `-2`, `-3`…), since sessions don't
    push tags, and writes the notes. It can also be started from the Actions tab.
