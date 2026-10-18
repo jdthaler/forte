@@ -6,11 +6,18 @@
 //   - a note-on for a note already down on that channel first lets it go (a re-strike, never two
 //     presses that one note-off can't undo);
 //   - a note-off for a note that isn't down is dropped;
-//   - a device that goes away lets go of its notes and of its sustain pedal.
+//   - a device that goes away lets go of its notes and of its sustain pedal;
+//   - until the page has had a click or a key press, notes are dropped with a toast saying so:
+//     a MIDI key is not a user gesture, so the browser would not let it start the sound (and
+//     MIDI turned on by resumeMIDI comes before any click).
 //   wheelValue(p, cc, max?) maps the mod wheel onto a parameter: at rest (0) its default, fully up
 //   its maximum, so a wheel at rest never drags the instrument to the bottom of its range.
 
 const KEY = 'forte/midi/v1';
+// Without the User Activation API (older browsers), let the notes through as before.
+const mayPlay = () => !navigator.userActivation || navigator.userActivation.hasBeenActive;
+// (shell.js is imported here only when needed: the tools import this module in Node)
+const needClick = () => import('./shell.js').then(({ toast }) => toast('MIDI is on: click the page once to let the browser make sound'));
 
 export function startMIDI({ onMIDI, status = () => {}, button = null }) {
   if (!navigator.requestMIDIAccess) { status('No Web MIDI in this browser (try Chrome, Edge or Firefox)'); return; }
@@ -29,6 +36,7 @@ export function startMIDI({ onMIDI, status = () => {}, button = null }) {
       const [st, d1, d2] = data, cmd = st & 0xf0, ch = st & 0x0f, nk = `${ch}:${d1}`;
       let s = down.get(id);
       if (!s) down.set(id, (s = { notes: new Set(), pedals: new Set() }));
+      if (cmd === 0x90 && d2 > 0 && !mayPlay()) { needClick(); return; }
       if (cmd === 0x90 && d2 > 0) { if (s.notes.has(nk)) send([0x80 | ch, d1, 0]); s.notes.add(nk); }
       else if (cmd === 0x80 || cmd === 0x90) { if (!s.notes.delete(nk)) return; }
       else if (cmd === 0xb0 && d1 === 64) { if (d2 >= 64) s.pedals.add(ch); else s.pedals.delete(ch); }
