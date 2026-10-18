@@ -228,7 +228,7 @@ void HarmoniumEngine::setParams(const double *p) {
     version++;
     Snapshot &s = snapshots[version % snapshots.size()];
     for (int i = 0; i < 6; i++) s.v[i].store(dk[i], std::memory_order_relaxed);
-    keys.prepare(version, KEY_LO, KEY_HI, focus ? focus->key : 60);
+    keys.prepare(version, KEY_MIN, KEY_MAX, focus ? focus->key : 60);
   }
   Ptarget = P[p::pressure];
   if (!started) { Pres = Pt = P[p::pressure]; started = true; cOn = P[p::cassotto] ? 1 : 0; cassF = P[p::cassF]; cass = cassotto(P[p::cassF]); }

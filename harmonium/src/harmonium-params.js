@@ -49,6 +49,8 @@ export const GROUPS = [
         hint: 'The inertance of the throat that feeds the reed’s cell (its length over its area). This air’s inertia is what drives a free reed. More: quicker speech, a brighter and flatter tone, a higher threshold. Less: slow, dark speech, and the treble struggles to start. Applies to new notes.' },
       { id: 'cell', label: 'Reed cell volume', min: 0.2, max: 4, def: 1, log: true, fmt: times,
         hint: 'The pocket of air under the reed, sized so that its resonance with the throat sits 3× above the reed. A bigger cell brings that resonance down towards the reed: a lower pitch, a higher threshold and a darker tone. Applies to new notes.' },
+      { id: 'fullRange', label: 'Full range (A0–C8)', type: 'checkbox', def: false,
+        hint: 'Opens the keys beyond C2–C7: every rank\'s reeds designed and voiced the same way on down to A0 and up to C8 (the 16′ reaching 13.75 Hz, the 4′ 8.4 kHz).' },
     ],
   },
   {
