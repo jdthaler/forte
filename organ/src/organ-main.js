@@ -212,7 +212,7 @@ function onMIDI(ev) {
     else if (d1 === 66) { for (const k of sost.set(d2 >= 64, sounding.keys())) if (!sounding.has(k)) release(k); }
     else if (d1 === 67) soft = d2 >= 64;
     else if (d1 === 120 || d1 === 123) panic();
-  }
+  } else if (cmd === 0xe0) post({ type: 'bend', value: Math.max(-1, ((d2 << 7) + d1 - 8192) / 8191) }); // the generator's supply frequency
 }
 
 // ---------------------------------------------------------------------------

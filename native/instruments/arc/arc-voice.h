@@ -27,7 +27,7 @@ class Singer {
   static double source(double p);                  // glottal flow derivative (unit peak flow) at phase p
   double next();
 
-  double f0 = 130.81, f0t = 130.81, env = 0;
+  double f0 = 130.81, f0t = 130.81, env = 0, bend = 1; // bend: the pitch wheel's ratio
   bool on = false;
 
  private:

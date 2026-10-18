@@ -281,12 +281,18 @@ void ArcEngine::setup(double seed_, bool quiet_, int os) {
   lastVer.fill(0);
 }
 
+void ArcEngine::bend(double value) {
+  bendRatio = fdlibm::pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12);
+  target.L = P[p::coil] * 1e-3 / (bendRatio * bendRatio);
+  singer.bend = bendRatio;
+}
+
 void ArcEngine::setParams(const double *np) {
   const bool first = !hasParams;
   const int oldMode = mode;
   for (int i = 0; i < p::count; i++) P[i] = np[i];
   hasParams = true;
-  target = {P[p::current], P[p::gap], P[p::tau], P[p::restrike], P[p::coil] * 1e-3, P[p::coilR], P[p::dist], P[p::hiss], P[p::voice]};
+  target = {P[p::current], P[p::gap], P[p::tau], P[p::restrike], P[p::coil] * 1e-3 / (bendRatio * bendRatio), P[p::coilR], P[p::dist], P[p::hiss], P[p::voice]};
   const ArcParams a = arcParams(P.data());
   if (first) {
     sm = target;

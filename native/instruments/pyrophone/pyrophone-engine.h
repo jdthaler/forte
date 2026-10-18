@@ -50,6 +50,7 @@ class PyrophoneEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void allNotesOff() override;
   void pressure(double value, int key) override; // aftertouch: parts the flames further
+  void bend(double value) override;              // the burner's gas: a hotter flame, faster sound, every tube up
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
 
@@ -118,6 +119,7 @@ class PyrophoneEngine : public Engine {
   TubeParams tp;
   std::array<double, 128> warm{}, warmAt{};
   double time = 0, sincePost = 0, pressure_ = 0;
+  double bendTo = 1, bendNow = 1; // pitch bend: the sound speed's ratio, and where it is going
   uint32_t seed = 0x2545f491;
   int focus = -1;
   const double kSep, kTurb, turbNorm;

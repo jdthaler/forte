@@ -17,6 +17,7 @@ constexpr double PI = 3.141592653589793;
 constexpr double TAU = 2 * PI;
 constexpr double C_SOUND = 343;
 constexpr double HARM[9] = {0.5, 1.5, 1, 2, 3, 4, 5, 6, 8}; // drawbar footages as harmonics of 8'
+constexpr double SUPPLY_TAU = 0.03; // s: the synchronous motor following its supply's frequency
 constexpr double SMOOTH_T = 0.015; // s: live gains, drive and crossover glide (no zipper noise)
 constexpr double VIB_DEPTH[7] = {0, 0.33, 0.62, 1, 0.33, 0.62, 1}; // off, V1–V3, C1–C3
 
@@ -159,7 +160,7 @@ void OrganEngine::updateDerived() {
 void OrganEngine::updateRotations() {
   if (!haveGen) return;
   for (int w = 1; w < NW; w++) {
-    const double d = TAU * gen.wheelHz[w] * speed * dt;
+    const double d = TAU * gen.wheelHz[w] * shaft * dt;
     rc[w] = fd::cos(d); rs[w] = fd::sin(d);
     // renormalise the phasor to stop amplitude drift
     const double m = cr[w] * cr[w] + ci[w] * ci[w];
@@ -183,7 +184,7 @@ void OrganEngine::updateKeyRot(Key &k) {
   const double f0 = gen.keyHz[k.idx];
   for (int d = 0; d < 9; d++) {
     const double f = f0 * HARM[d];
-    const double dd = f < 0.45 * fs ? TAU * f * speed * dt : 0;
+    const double dd = f < 0.45 * fs ? TAU * f * shaft * dt : 0;
     k.hrc[d] = fd::cos(dd); k.hrs[d] = fd::sin(dd);
     k.hmute[d] = f < 0.45 * fs ? 0 : 1;
     const double m = k.hc[d] * k.hc[d] + k.hs[d] * k.hs[d], s = 1.5 - 0.5 * m;
@@ -249,6 +250,8 @@ void OrganEngine::noteOff(int key, double) {
   schedule(k, false, 1.2);
 }
 
+void OrganEngine::bend(double value) { bendTo = fd::pow(2.0, std::max(-1.0, std::min(1.0, value)) * kBendSemitones / 12); }
+
 void OrganEngine::allNotesOff() {
   for (int i = 0; i < nArr; i++) if (keyArr[i]->down) noteOff(keyArr[i]->key, -1);
 }
@@ -261,7 +264,7 @@ void OrganEngine::tick(int n) {
 void OrganEngine::postState() {
   Message m;
   m.type = msg::state;
-  const double s[8] = {speed, hornAng, hornHz, drumAng, drumHz, scanPos, (double)lcN, percEnv};
+  const double s[8] = {shaft, hornAng, hornHz, drumAng, drumHz, scanPos, (double)lcN, percEnv};
   m.count = 8;
   for (int i = 0; i < 8; i++) m.values[i] = (float)s[i];
   post(m);
@@ -279,6 +282,11 @@ template <class T> void OrganEngine::render(T *L, T *R, int n) {
   // motor: synchronous lock when powered, viscous + Coulomb coast-down when not
   if (p.motor) speed += (1 - speed) * (1 - fd::exp(-dtb / p.spinUp));
   else speed = std::max(0.0, speed - (speed / p.inertia + 0.012) * dtb);
+  // pitch bend: the supply's frequency, which the synchronous motor follows within ~30 ms (a
+  // variable-frequency drive; the coasting shaft has no supply to follow)
+  supply += ((p.motor ? bendTo : 1) - supply) * (1 - fd::exp(-dtb / SUPPLY_TAU));
+  if (std::fabs(supply - 1) < 1e-12) supply = 1;
+  shaft = speed * supply;
   updateRotations();
 
   // Leslie rotor speeds: first-order approach with separate up/down times
@@ -293,7 +301,7 @@ template <class T> void OrganEngine::render(T *L, T *R, int n) {
   const int percD = p.percThird ? 4 : 3;
   const bool harmonic = g.harmonic;
   const bool vibOn = p.vib > 0, chorus = p.vib >= 4;
-  const double scanInc = p.scanRate * speed * dt;
+  const double scanInc = p.scanRate * shaft * dt;
   const double depth = vibOn ? VIB_DEPTH[p.vib] * lcN : 0;
   // as leslieGeometry(p), without allocating
   const double wall = std::max(CABINET, p.hornRadius + 0.04), D = std::max(p.micDist, wall + MIC_CLEAR);
@@ -329,7 +337,7 @@ template <class T> void OrganEngine::render(T *L, T *R, int n) {
       const double c = cr[w], si = ci[w];
       const double nc = c * rc[w] - si * rs[w], ns = c * rs[w] + si * rc[w];
       cr[w] = nc; ci[w] = ns;
-      const double val = speed * lvl[w] * (ns + A2[w] * 2 * ns * nc + A3[w] * (3 * ns - 4 * ns * ns * ns));
+      const double val = shaft * lvl[w] * (ns + A2[w] * 2 * ns * nc + A3[w] * (3 * ns - 4 * ns * ns * ns));
       v[w] = val;
       leakSum += LK[w] * val;
     }
@@ -344,7 +352,7 @@ template <class T> void OrganEngine::render(T *L, T *R, int n) {
           const double c = k.hc[d], si = k.hs[d];
           const double nc = c * k.hrc[d] - si * k.hrs[d], ns = c * k.hrs[d] + si * k.hrc[d];
           k.hc[d] = nc; k.hs[d] = ns;
-          k.hv[d] = k.hmute[d] ? 0 : speed * ns;
+          k.hv[d] = k.hmute[d] ? 0 : shaft * ns;
         }
       }
       for (int d = 0; d < 9; d++) {

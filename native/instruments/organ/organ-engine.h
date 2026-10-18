@@ -93,6 +93,7 @@ class OrganEngine : public Engine {
   void noteOn(int key, double velocity) override;
   void noteOff(int key, double velocity) override;
   void allNotesOff() override;
+  void bend(double value) override; // the supply frequency: the whole organ, ±2 semitones
   int voiceCount() const override { return nLive; }
   void process(float *L, float *R, int n) override;
   // the same in double precision (the tests' render)
@@ -103,7 +104,9 @@ class OrganEngine : public Engine {
 
   // state the tests and the views read
   Params p;
-  double speed = 1; // shaft speed / synchronous speed
+  double speed = 1; // shaft speed / synchronous speed at the organ's own mains frequency
+  double supply = 1, bendTo = 1; // pitch bend: the supply frequency / the mains', and where it is going
+  double shaft = 1;  // speed · supply: what turns the wheels
   double hornAng = 0, drumAng = 1.3, hornHz, drumHz;
   double scanPos = 0, percEnv = 0, peak = 0;
   int lcN = 18;
