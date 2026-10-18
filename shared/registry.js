@@ -14,7 +14,7 @@
 // `plugin.ready` marks an instrument whose native port is built and released as plugins (it has
 // a native/instruments/<id>/ folder); the landing page lists those under Plugins.
 
-export const FORTE_VERSION = '0.31.0';
+export const FORTE_VERSION = '0.32.0';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
@@ -29,7 +29,7 @@ export const SECTIONS = [
 
 export const INSTRUMENTS = [
   {
-    id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.5.0', trim: 3,
+    id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.6.0', trim: 3,
     plugin: { code: 'Ribn', ready: true },
     after: 'the concert grand',
     tagline: 'Stiff strings, felt hammers and a shared bridge — then swap the strings for square bars, triangular bars or twisting ribbons.',
@@ -85,7 +85,7 @@ export const INSTRUMENTS = [
     accent: '#7fb2ff',
   },
   {
-    id: 'organ', name: 'Tonewheel Organ', section: 'electric', ready: true, version: '0.6.0', trim: 2,
+    id: 'organ', name: 'Tonewheel Organ', section: 'electric', ready: true, version: '0.7.0', trim: 2,
     plugin: { code: 'Tonw', ready: true },
     after: 'the Hammond B-3 and Leslie',
     tagline: '91 spinning gear-driven wheels, bouncing key contacts, a scanner on an LC delay line and a rotating Doppler horn.',
@@ -93,7 +93,7 @@ export const INSTRUMENTS = [
     accent: '#f0b35a',
   },
   {
-    id: 'tines', name: 'Tine Piano', section: 'electric', ready: true, version: '0.5.0', trim: -3,
+    id: 'tines', name: 'Tine Piano', section: 'electric', ready: true, version: '0.6.0', trim: -3,
     plugin: { code: 'Tine', ready: true },
     after: 'the Fender Rhodes',
     tagline: 'Each key an asymmetric tuning fork of steel tine and brass bar, heard through a nonlinear magnetic pickup.',
@@ -141,7 +141,7 @@ export const INSTRUMENTS = [
     accent: '#9fe7ff',
   },
   {
-    id: 'pyrophone', name: 'Pyrophone', section: 'experimental', ready: true, version: '0.5.0', trim: -3.5,
+    id: 'pyrophone', name: 'Pyrophone', section: 'experimental', ready: true, version: '0.6.0', trim: -3.5,
     plugin: { code: 'Pyro', ready: true },
     after: "Frédéric Kastner's flame organ (1873)",
     tagline: 'Flames in glass tubes sing by themselves once they cross a threshold — and remember having sung.',
@@ -149,7 +149,7 @@ export const INSTRUMENTS = [
     accent: '#ff7a45',
   },
   {
-    id: 'arc', name: 'Singing Arc', section: 'experimental', ready: true, version: '0.3.0', trim: 7,
+    id: 'arc', name: 'Singing Arc', section: 'experimental', ready: true, version: '0.4.0', trim: 7,
     plugin: { code: 'SArc', ready: true },
     after: "William Duddell's singing arc (1900)",
     tagline: 'An electric arc lamp that sings: its negative resistance drives an LC circuit, and the arc itself is the loudspeaker.',
@@ -157,7 +157,7 @@ export const INSTRUMENTS = [
     accent: '#ffe36b',
   },
   {
-    id: 'huygens', name: 'Huygens Keyboard', section: 'phenomena', ready: true, version: '0.5.0', trim: 9.5,
+    id: 'huygens', name: 'Huygens Keyboard', section: 'phenomena', ready: true, version: '0.6.0', trim: 9.5,
     plugin: { code: 'Huyg', ready: true },
     tagline: 'Relaxation oscillators that pull each other into just intonation — Arnold tongues you can play.',
     physics: 'Pulse-coupled oscillators · mode locking',
@@ -171,7 +171,7 @@ export const INSTRUMENTS = [
     accent: '#e6c15a',
   },
   {
-    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'phenomena', ready: true, version: '0.5.0', trim: 14,
+    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'phenomena', ready: true, version: '0.6.0', trim: 14,
     plugin: { code: 'BHol', ready: true },
     tagline: 'Every key a Kerr black hole, ringing in quasinormal modes computed from the Teukolsky equation.',
     physics: 'General relativity · quasinormal modes',
