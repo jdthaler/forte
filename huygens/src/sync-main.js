@@ -10,7 +10,7 @@ import { createChain } from '../../shared/chain.js';
 import { StairView, RasterView } from './sync-viz.js';
 import { FiringLog } from './lock-analysis.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, wheelValue } from '../../shared/midi.js';
+import { startMIDI, resumeMIDI, wheelValue, createSostenuto } from '../../shared/midi.js';
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 
@@ -83,7 +83,7 @@ function onWorklet(m) {
 
 async function noteOn(key) {
   if (key < KEY_LO || key > KEY_HI) return;
-  latched.delete(key);
+  latched.delete(key); sost.strike(key);
   sounding.set(key, (sounding.get(key) || 0) + 1);
   keyboardView.set(key, true);
   const a = await startAudio();
@@ -94,6 +94,9 @@ function noteOff(key) {
   const n = (sounding.get(key) || 0) - 1;
   if (n > 0) { sounding.set(key, n); return; }
   sounding.delete(key);
+  if (!sost.holds(key)) release(key);
+}
+function release(key) {
   if (holding) { latched.add(key); return; }
   keyboardView.set(key, false);
   post({ type: 'noteOff', key });
@@ -110,8 +113,8 @@ function setHold(on) {
   }
   document.dispatchEvent(new CustomEvent('forte-sustain', { detail: on })); // the on-screen pedal and Latch follow
 }
-function panic() { post({ type: 'panic' }); log.clear(); sounding.clear(); latched.clear(); held.clear(); keyboardView.clearAll(); if (holding) setHold(false); refreshMarks(); }
-const activeKeys = () => [...new Set([...sounding.keys(), ...latched])].sort((a, b) => a - b);
+function panic() { post({ type: 'panic' }); log.clear(); sounding.clear(); latched.clear(); sost.clear(); held.clear(); keyboardView.clearAll(); if (holding) setHold(false); refreshMarks(); }
+const activeKeys = () => [...new Set([...sounding.keys(), ...latched, ...sost.keys()])].sort((a, b) => a - b);
 
 const LOW = ['KeyZ', 'KeyS', 'KeyX', 'KeyD', 'KeyC', 'KeyV', 'KeyG', 'KeyB', 'KeyH', 'KeyN', 'KeyJ', 'KeyM', 'Comma', 'KeyL', 'Period', 'Semicolon', 'Slash'];
 const LOW_LBL = ['z', 's', 'x', 'd', 'c', 'v', 'g', 'b', 'h', 'n', 'j', 'm', ',', 'l', '.', ';', '/'];
@@ -161,6 +164,7 @@ function updateHelp() {
   $('#kick-read').textContent = P.kick ? `${(P.kick * 100).toFixed(1)} %` : 'off';
 }
 
+const sost = createSostenuto(); // CC66
 function initMIDI() {
   startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn') });
 }
@@ -170,6 +174,7 @@ function onMIDI(ev) {
   else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) noteOff(d1);
   else if (cmd === 0xb0 && d1 === 1) setParam(INSTRUMENT.modWheel, wheelValue(ALL_PARAMS.find((q) => q.id === INSTRUMENT.modWheel), d2)); // at rest: the default coupling
   else if (cmd === 0xb0 && d1 === 64) setHold(d2 >= 64);
+  else if (cmd === 0xb0 && d1 === 66) { for (const k of sost.set(d2 >= 64, [...sounding.keys(), ...latched])) if (!sounding.has(k)) release(k); }
   else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) panic();
 }
 

@@ -220,6 +220,7 @@ body.perform .brand .sub,
 body.perform .forte-about,
 body.perform .forte-info,
 body.perform #midi,
+body.perform #touch,
 body.perform #cpu:not(.hot),
 body.perform .forte-dock,
 body.perform #views .card:not([data-keep-text]) :is(.card-head, .caption, .legend, .readout, .tabs, dl, table) { display: none; }
@@ -267,7 +268,7 @@ body.perform #views .card:not([data-keep-text]) canvas { flex: 1 1 0; height: au
 }
 
 /* every browser on iPhone and iPad lacks Web MIDI: no MIDI button or status */
-body.no-midi #midi-btn, body.no-midi #midi { display: none; }
+body.no-midi #midi-btn, body.no-midi #midi, body.no-midi #touch { display: none; }
 
 /* toasts: announced, never in the way of the keys */
 body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h, calc(var(--kb-h, 115px) + 52px)) + 12px); max-width: min(90vw, 560px); }
@@ -278,6 +279,8 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
    the views; Controls replaces the views instead of sliding over a sliver of them;
    the menus open below the header, inside the screen. */
 @media (max-width: 600px), (max-width: 1050px) and (max-height: 500px) {
+  /* the velocity curve keeps its choice from a bigger screen: the phone's header has no room */
+  body[data-instrument] #touch { display: none; }
   html:has(> body[data-instrument]) { overscroll-behavior-y: none; } /* no pull-to-refresh mid-phrase */
   body[data-instrument] { height: auto; min-height: 100vh; min-height: 100svh; overflow: visible; }
   body[data-instrument], body.no-views > main { grid-template-columns: minmax(0, 1fr); } /* never wider than the screen */
