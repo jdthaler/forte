@@ -63,6 +63,11 @@
           <canvas id="comb"></canvas>
           <div class="caption">Stems: each partial’s force on the bridge when the string is let go from the shape the plectrum pulled it into, ∝ sin(nπβ)/n (β = plucking point / length), one colour per row plucking; dashed: the comb’s envelope, with its notches at multiples of f₁/β. Grey: the live output.</div>
         </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: each row's comb notches</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">Every pluck lights the whole stack at once, and the upper partials fade first. The dark gaps that stay put are the comb's notches (ticks, one colour per row): move a row's plucking point and they move with it.</div>
+        </div>
       </div>
     </section>
   </main>

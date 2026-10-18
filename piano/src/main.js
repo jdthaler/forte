@@ -10,6 +10,7 @@ import { noteName, MATERIALS, NMAX_MODES } from './materials.js';
 import { PianoWasmEngine, wasmModel } from './piano-wasm.js'; // (the slow-motion view runs its own engine)
 import { createChain } from '../../shared/chain.js';
 import { MotionView, SpectrumView, drawSection, FAMILY } from './viz.js';
+import { SpectrogramView } from '../../shared/views.js';
 import { createKeyboard } from '../../shared/keyboard.js';
 import { startMIDI, resumeMIDI, touched, createSostenuto } from '../../shared/midi.js';
 import { controlOwns } from '../../shared/focus.js';
@@ -84,7 +85,7 @@ function startAudio() {
     applyMix();
     node.port.postMessage(paramsMessage());
     node.port.postMessage({ type: 'sustain', on: sustain });
-    spectrum.setAnalyser(analyser);
+    spectrum.setAnalyser(analyser); spectro.setAnalyser(analyser);
     if (ctx.state !== 'running') await ctx.resume();
     live = true;
     $('#start').textContent = `Audio on · ${(ctx.sampleRate / 1000).toFixed(1)} kHz`;
@@ -428,6 +429,7 @@ function pqTick() {
 
 const motion = new MotionView($('#motion'));
 const spectrum = new SpectrumView($('#spectrum'));
+const spectro = new SpectrogramView($('#spectrogram'), { fLo: 25, fHi: 16000 });
 let lastVelocity = 2.5;
 let simTimer = 0;
 
@@ -486,6 +488,7 @@ function runSim(key, velocity) {
   const present = [...new Set(data.famId)].sort();
   const families = present.map((fam) => ({ fam, f: Array.from(model.families[fam].omega, (w) => w / (2 * Math.PI)) }));
   spectrum.set({ f0: model.info.f0, list, families });
+  spectro.set(model.info.f0, list.filter((p) => p.db > -50).map((p) => ({ f: p.f, color: FAMILY[p.fam].color, alpha: 0.25 + 0.6 * (1 + p.db / 50) })));
   $('#legend').innerHTML = present.map((f) => `<span><i style="background:${FAMILY[f].color}"></i>${legendName(f)}</span>`).join('')
     + `<span>hammer contact ${contactMs.toFixed(2)} ms · peak force ${Fmax.toFixed(1)} N</span>`;
 }
