@@ -1,7 +1,7 @@
 // reeds-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell, noteName } from '../../shared/shell.js';
-import { SpectrumView, css } from '../../shared/views.js';
+import { SpectrumView, SpectrogramView, css } from '../../shared/views.js';
 import { INSTRUMENT } from './reeds-instrument.js';
 import { MotionView, PickupView } from './reeds-views.js';
 import { wasmModel } from './reeds-wasm.js';
@@ -9,6 +9,7 @@ import { wasmModel } from './reeds-wasm.js';
 const $ = (s) => document.querySelector(s);
 const FS = 48000; // the views' rate
 const spectrum = new SpectrumView($('#spectrum'));
+new SpectrogramView($('#spectrogram'), { spectrum });
 const motion = new MotionView($('#motion'));
 const pickup = new PickupView($('#pickup'), motion);
 let focus = 60, lastVel = 0.6, traceTimer = 0;

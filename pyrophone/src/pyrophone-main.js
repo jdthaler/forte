@@ -1,7 +1,7 @@
 // pyrophone-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell, noteName, keyFreq } from '../../shared/shell.js';
-import { SpectrumView, animate } from '../../shared/views.js';
+import { SpectrumView, SpectrogramView, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './pyrophone-instrument.js';
 import { betaOn, N_MODES, C_HOT } from './pyrophone-model.js';
 import { drawBif, drawTube, drawPhase } from './pyrophone-views.js';
@@ -13,6 +13,7 @@ const model = await wasmModel();
 
 const $ = (s) => document.querySelector(s);
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 50 });
+new SpectrogramView($('#spectrogram'), { spectrum });
 let shell = null;
 let focus = 60, bif = null, tune = null, modelKey = '', lastCalc = 0, timer = 0, sentTune = null;
 let live = { pts: [] }, foc = null, focAt = 0, trail = [], theta = 0, scale = null, pred = null, rootCache = [NaN, null];

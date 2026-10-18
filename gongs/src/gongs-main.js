@@ -1,7 +1,7 @@
 // gongs-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell, noteName } from '../../shared/shell.js';
-import { fit, css, animate } from '../../shared/views.js';
+import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './gongs-instrument.js';
 import { wasmModel, MICS } from './gongs-wasm.js';
 
@@ -11,13 +11,16 @@ const model = await wasmModel();
 const $ = (s) => document.querySelector(s);
 const BANDS = ['below the pitch', '1–2×', '2–4×', '4–8×', '8–16×', '>16×'];
 const BAND_COL = ['#8a8aa0', '#e6c15a', '#f0a050', '#ef7a5a', '#d860a0', '#9a7cff'];
-let focus = 57, live = null, history = [], analyser = null;
+let focus = 57, live = null, history = [];
+// the live spectrum and spectrogram, marked with the focus gong's modes
+const spectrum = new SpectrumView($('#spectrum'), { fLo: 40, fHi: 16000 });
+new SpectrogramView($('#spectro'), { spectrum });
 const rate = () => shell?.audio?.ctx.sampleRate || 48000;
 
 const shell = createShell({
   ...INSTRUMENT,
   arrows: { param: 'velocity', step: 0.05 },
-  onAudio: (a) => { analyser = a.analyser; update(); },
+  onAudio: (a) => { spectrum.setAnalyser(a.analyser); update(); },
   onNoteOn: (key) => { focus = key; shell.keys.focus(key); update(); },
   onParam: () => update(),
   onMessage: (m) => {
@@ -49,6 +52,7 @@ function update() {
     rows.push(`<tr class="${i === S.tuned ? 'tuned' : ''}"><td>${S.label[i]}</td><td>${f.toFixed(f < 1000 ? 1 : 0)}</td><td>${(f / f0).toFixed(3)}</td><td>${T60.toFixed(T60 < 10 ? 2 : 1)}</td>`
       + `<td>${exDb > -60 ? exDb.toFixed(0) : '—'}</td><td class="${glide > 0.5 ? 'hard' : glide < -0.5 ? 'soft' : ''}">${glide > 0 ? '+' : ''}${glide.toFixed(1)}</td></tr>`);
   }
+  spectrum.set(f0, ex.slice(0, 40).map((e, i) => ({ f: (S.Om[i] * G.w0) / (2 * Math.PI), color: i === S.tuned ? css('--accent') : css('--accent-2'), alpha: 0.15 + 0.7 * Math.sqrt(e / exMax) })));
   const tc = model.contactTime(G, P, P.velocity), top = (S.Om[Nv - 1] * G.w0) / (2 * Math.PI);
   $('#modes').innerHTML = '<tr><th>mode (m,s)</th><th>f (Hz)</th><th>× pitch</th><th>T₆₀ (s)</th><th>at strike point (dB)</th><th>¢ at 0.3 h</th></tr>' + rows.join('')
     + `<tr><td colspan="6" class="note">${Nv} modes up to ${(top / 1000).toFixed(1)} kHz, run at ${(G.fsi / 1000).toFixed(1)} kHz. The strike tone (gold) is the first axisymmetric mode, tuned to the key. Mallet contact ≈ ${(1000 * tc).toFixed(2)} ms at velocity ${P.velocity.toFixed(2)}. The last column is the normal-form pitch shift at an amplitude of 0.3 thickness: + hardens, − softens.</td></tr>`;
@@ -123,43 +127,6 @@ animate(() => {
     $('#plate-read').textContent = `${live.nl ? 'nonlinear' : 'linear'} · modal amplitude up to ${Math.max(...amp).toFixed(2)} h${live.sub > 1 ? ` · ${live.sub} substeps` : ''}`;
   } else $('#plate-read').textContent = 'the modes a soft strike here excites';
 }, pcv);
-
-// ---- spectrogram ------------------------------------------------------------------------------
-const scv = $('#spectro');
-let spec = null, fbuf = null;
-const SF = [40, 16000];
-function heat(t) { // 0..1 → dark → accent → white
-  const a = [14, 14, 18], b = [120, 60, 20], c = [230, 193, 90], d = [255, 250, 235];
-  const seg = t < 0.4 ? [a, b, t / 0.4] : t < 0.8 ? [b, c, (t - 0.4) / 0.4] : [c, d, (t - 0.8) / 0.2];
-  return seg[0].map((v, i) => Math.round(v + (seg[1][i] - v) * seg[2]));
-}
-animate(() => {
-  if (scv.offsetParent === null) return;
-  const { ctx, w, h } = fit(scv);
-  const padL = 34, padB = 16, W = Math.max(2, Math.round(w - padL)), H = Math.max(2, Math.round(h - padB));
-  if (!spec || spec.width !== W || spec.height !== H) { spec = document.createElement('canvas'); spec.width = W; spec.height = H; spec.getContext('2d').fillStyle = '#0e0e12'; spec.getContext('2d').fillRect(0, 0, W, H); }
-  const sc = spec.getContext('2d');
-  sc.drawImage(spec, -2, 0);
-  if (analyser) {
-    if (!fbuf || fbuf.length !== analyser.frequencyBinCount) fbuf = new Float32Array(analyser.frequencyBinCount);
-    analyser.getFloatFrequencyData(fbuf);
-    const fs = analyser.context.sampleRate, N = fbuf.length, col = sc.createImageData(2, H);
-    for (let y = 0; y < H; y++) {
-      const f = SF[0] * (SF[1] / SF[0]) ** (1 - y / (H - 1)), bin = Math.min(N - 1, Math.round((f * 2 * N) / fs));
-      const t = Math.max(0, Math.min(1, (fbuf[bin] + 115) / 90)), [r, g, b] = heat(t);
-      for (let x = 0; x < 2; x++) { const q = (y * 2 + x) * 4; col.data[q] = r; col.data[q + 1] = g; col.data[q + 2] = b; col.data[q + 3] = 255; }
-    }
-    sc.putImageData(col, W - 2, 0);
-  }
-  ctx.clearRect(0, 0, w, h);
-  ctx.drawImage(spec, padL, 0);
-  ctx.font = '10px system-ui, sans-serif'; ctx.fillStyle = css('--muted'); ctx.textAlign = 'right';
-  for (const f of [50, 100, 200, 500, 1000, 2000, 5000, 10000]) {
-    const y = (1 - Math.log(f / SF[0]) / Math.log(SF[1] / SF[0])) * (H - 1);
-    ctx.fillText(f >= 1000 ? `${f / 1000}k` : `${f}`, padL - 4, y + 3);
-  }
-  ctx.textAlign = 'center'; ctx.fillText('time →', padL + W / 2, h - 3);
-}, scv);
 
 // ---- energy cascade and strike-tone pitch ---------------------------------------------------------
 const bcv = $('#bands');

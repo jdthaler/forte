@@ -1,7 +1,7 @@
 // arc-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell, noteName } from '../../shared/shell.js';
-import { SpectrumView, fit, css, animate } from '../../shared/views.js';
+import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT, bankParams } from './arc-instrument.js';
 import { KEY_LO, KEY_HI, TAU, SUPPLY, TALK, keyFreq, ayrtonV, kelvinC, tuneKey } from './arc-model.js';
 import { wasmModel } from './arc-wasm.js';
@@ -12,6 +12,7 @@ const model = await wasmModel();
 const $ = (s) => document.querySelector(s);
 let focus = 60, msg = null, op = null, table = null, job = null;
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 50, fHi: 16000 });
+new SpectrogramView($('#spectrogram'), { spectrum });
 
 // The bank cut so far goes with each note ([1 if it is cut for the parameters now, else 0, then a
 // capacitor per key]), so the audio thread never cuts a capacitor (a few ms each).

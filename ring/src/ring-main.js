@@ -1,7 +1,7 @@
 // ring-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell, noteName } from '../../shared/shell.js';
-import { SpectrumView, fit, css, animate } from '../../shared/views.js';
+import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './ring-instrument.js';
 import { PICKUP_SIGMA } from './ring-model.js';
 import { wasmModel } from './ring-wasm.js';
@@ -11,6 +11,7 @@ const model = await wasmModel();
 
 const $ = (s) => document.querySelector(s);
 const spectrum = new SpectrumView($('#spectrum'));
+new SpectrogramView($('#spectrogram'), { spectrum });
 let focus = 60, injected = -1e9, kick = 0; // the last key played, when (performance.now), and its kick
 
 const shell = createShell({

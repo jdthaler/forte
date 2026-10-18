@@ -1,7 +1,7 @@
 // harpsichord-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell, noteName } from '../../shared/shell.js';
-import { fit, css, animate } from '../../shared/views.js';
+import { SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './harpsichord-instrument.js';
 import { KEY_LO, KEY_HI, ROWS, jackSpeed } from './harpsichord-params.js';
 import { wasmModel } from './harpsichord-wasm.js';
@@ -14,13 +14,14 @@ const t60 = (sigma) => Math.log(1000) / sigma;
 const $ = (s) => document.querySelector(s);
 const ROW_COL = { front: '#f4d39b', back: '#c98b5a', four: '#7cc8ff', lute: '#ff8fa3' };
 const ROW_NAME = { front: 'front 8′', back: 'back 8′', four: '4′', lute: 'lute' };
+const spectro = new SpectrogramView($('#spectrogram'), { fLo: 30, fHi: 14000, dbTop: -30 });
 let focus = 60, vel = 0.7, analyser = null, fft = null, sim = null, simT0 = 0, engineInfo = null, simTimer = 0, combState = null;
 
 const shell = createShell({
   ...INSTRUMENT,
   base: 48,
   arrows: { param: 'velocity', step: 0.05 },
-  onAudio: (a) => { analyser = a.analyser; fft = new Float32Array(analyser.frequencyBinCount); },
+  onAudio: (a) => { analyser = a.analyser; spectro.setAnalyser(analyser); fft = new Float32Array(analyser.frequencyBinCount); },
   onNoteOn: (key, v) => { focus = key; vel = v; shell.keys.focus(key); engineInfo = null; update(); runSim(); },
   onParam: () => { update(); clearTimeout(simTimer); simTimer = setTimeout(runSim, 120); },
   onMessage: (m) => {
@@ -144,6 +145,13 @@ function update() {
   $('#scale-read').textContent = `${noteName(focus)} 8′: ${(S.L * 1000).toFixed(0)} mm ${S.mat.name} ⌀${(S.d * 1000).toFixed(2)} · ${S.T.toFixed(0)} N · B ${S.B.toExponential(1)} · T₆₀ ${t60(parts[0].sigma).toFixed(1)} s`;
   $('#scale-read').title = `${noteName(focus)}, back 8′ string: length, wire, tension (stress ${(S.stress / 1e9).toFixed(2)} GPa), inharmonicity, and its fundamental's decay time`;
   combState = { reg, P };
+  // the spectrogram's ticks: each plucking row's comb notches, at k·f₁/β
+  const notches = [];
+  for (const row of reg.rows) {
+    const R = model.stringDesign(focus, ROWS[row].string, P), beta = model.pluckPoint(focus, row, P) / R.L, f1 = R.f0 / Math.sqrt(1 + R.B);
+    for (let k = 1; (k * f1) / beta < 14000; k++) notches.push({ f: (k * f1) / beta, color: ROW_COL[row] });
+  }
+  spectro.set(S.f0, notches);
 }
 animate(() => {
   const { ctx, w, h } = fit(scv);
