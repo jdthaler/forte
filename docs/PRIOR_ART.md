@@ -627,6 +627,14 @@ data):
   E. R. Miranda (ed.), *Quantum Computer Music: Foundations, Methods and
   Advanced Concepts* (Springer, 2022),
   [doi:10.1007/978-3-031-13909-3](https://doi.org/10.1007/978-3-031-13909-3).
+* **Particle physics.** *Quantizer* (MIT Media Lab with ATLAS, first
+  performed at the Montreux Jazz Festival in 2016) turns live collision data
+  from the ATLAS detector into music: J. Cherston, E. Hill, S. Goldfarb and
+  J. A. Paradiso, "Musician and Mega-Machine: Compositions Driven by
+  Real-Time Particle Collision Data from the ATLAS Detector", NIME 2016,
+  <https://nime.org/proc/cherston2016>. The Storage Ring plays the
+  accelerator rather than the collisions: a kicked bunch heard through its
+  beam pickup.
 * **Synchronisation and mode locking in musical oscillators.**
   B. van der Pol and J. van der Mark, "Frequency demultiplication",
   *Nature* **120**, 363–364 (1927),

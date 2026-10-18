@@ -605,6 +605,36 @@
    "title": "Feed resistor 22 megohm then 1 megohm constant charge vs voltage"
   }
  ],
+ "ring": [
+  {
+   "file": "01-kicked-chords-recohering.m4a",
+   "title": "Kicked chords recohering"
+  },
+  {
+   "file": "02-clean-then-kicked.m4a",
+   "title": "Clean then kicked"
+  },
+  {
+   "file": "03-difference-signal-recoherence.m4a",
+   "title": "Difference signal recoherence"
+  },
+  {
+   "file": "04-octupoles-filament-for-good.m4a",
+   "title": "Octupoles filament for good"
+  },
+  {
+   "file": "05-pressure-raises-the-rf.m4a",
+   "title": "Pressure raises the rf"
+  },
+  {
+   "file": "06-long-bunch-slow-rf.m4a",
+   "title": "Long bunch slow rf"
+  },
+  {
+   "file": "07-short-lifetime-plucked.m4a",
+   "title": "Short lifetime plucked"
+  }
+ ],
  "springs": [
   {
    "file": "01-a-tune-on-the-springs.m4a",
