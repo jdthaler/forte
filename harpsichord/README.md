@@ -33,7 +33,10 @@ Ruckers doubles had two manuals a fourth apart, for transposing. Rebuilt in
 eighteenth-century France (*ravalement*), their manuals were aligned, a
 second 8′ choir was often added and the compass widened, in the grandest
 rebuilds to five octaves, FF–f³. This model is such an instrument, with the
-French disposition:
+French disposition. **Full range** (under Strings and tuning) opens the keys
+past the compass, A0 to C8, for an 88-key keyboard: no harpsichord had them,
+so they carry the same scale on (iron strings at the same stress up to 4.5 cm
+at C8, brass ones a little thicker per key below FF):
 
 - the **upper manual** lifts the **front 8′** jacks, which pluck nearest the
   nut: bright and a little nasal;
