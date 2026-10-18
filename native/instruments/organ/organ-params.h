@@ -16,7 +16,7 @@
 namespace forte::organ {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { tuning, mains, inertia, spinUp, wheelHarm, crosstalk, leakage, loading, spread, bounce, contactTime, percFastTau, percSlowTau, percLevel, sections, sectionDelay, scanRate, hornSlow, hornFast, drumSlow, drumFast, hornAccel, hornDecel, drumAccel, drumDecel, hornRadius, micDist, micSpread, crossover, balance, reflections, drive, expression, room, venue, volume, drawbar1, drawbar2, drawbar3, drawbar4, drawbar5, drawbar6, drawbar7, drawbar8, drawbar9, percOn, percSoft, percFast, percThird, vib, leslie, motor, count };
+enum : int { tuning, mains, inertia, spinUp, levels, relief, drift, crosstalk, leakage, loading, spread, bounce, contactTime, percFastTau, percSlowTau, percLevel, sections, sectionDelay, scanRate, hornSlow, hornFast, drumSlow, drumFast, hornAccel, hornDecel, drumAccel, drumDecel, hornRadius, micDist, micSpread, crossover, balance, reflections, drive, expression, room, venue, volume, drawbar1, drawbar2, drawbar3, drawbar4, drawbar5, drawbar6, drawbar7, drawbar8, drawbar9, percOn, percSoft, percFast, percThird, vib, leslie, motor, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -25,7 +25,10 @@ namespace tuning_ { enum : int { gears, et, harmonic }; }
 inline const FormatSegment kFormat_mains[] = {{kNoLimit, "", " Hz", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_inertia[] = {{kNoLimit, "", " s", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_spinUp[] = {{kNoLimit, "", " s", 1, 0, 1, false, false, false, false}};
-inline const FormatSegment kFormat_wheelHarm[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
+inline const char *const kChoices_levels[] = {"B-3: measured levels, filters, tapering", "Flat: every wheel and key alike"};
+namespace levels_ { enum : int { b3, flat }; }
+inline const FormatSegment kFormat_relief[] = {{kNoLimit, "", " % of the gap", 100, 0, 1, false, false, false, false}};
+inline const FormatSegment kFormat_drift[] = {{kNoLimit, "", " %", 1, 0, 0, false, false, true, false}};
 inline const FormatSegment kFormat_crosstalk[] = {{-79, "off", "", 1, -80, -1, false, false, false, false}, {kNoLimit, "", " dB", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_leakage[] = {{-89, "off", "", 1, -90, -1, false, false, false, false}, {kNoLimit, "", " dB", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_loading[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
@@ -77,7 +80,9 @@ inline const ParamInfo kParams[p::count] = {
   {"mains", "Mains frequency", "Tone generator", ParamKind::continuous, 45, 65, 60, 0.1, false, false, nullptr, 0, kFormat_mains, 1},
   {"inertia", "Coast-down time", "Tone generator", ParamKind::continuous, 1, 20, 6, 0, true, false, nullptr, 0, kFormat_inertia, 1},
   {"spinUp", "Spin-up time", "Tone generator", ParamKind::continuous, 0.2, 5, 1.2, 0, true, false, nullptr, 0, kFormat_spinUp, 1},
-  {"wheelHarm", "Wheel waveform impurity", "Tone generator", ParamKind::continuous, 0, 3, 0.4, 0.01, false, false, nullptr, 0, kFormat_wheelHarm, 1},
+  {"levels", "Generator and wiring", "Tone generator", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_levels, 2, nullptr, 0},
+  {"relief", "Tooth relief", "Tone generator", ParamKind::continuous, 0, 0.6, 0.06, 0.005, false, false, nullptr, 0, kFormat_relief, 1},
+  {"drift", "Filter capacitor drift", "Tone generator", ParamKind::continuous, 0, 60, 0, 1, false, false, nullptr, 0, kFormat_drift, 1},
   {"crosstalk", "Compartment crosstalk", "Tone generator", ParamKind::continuous, -80, -20, -48, 1, false, false, nullptr, 0, kFormat_crosstalk, 2},
   {"leakage", "Background leakage", "Tone generator", ParamKind::continuous, -90, -40, -70, 1, false, false, nullptr, 0, kFormat_leakage, 2},
   {"loading", "Busbar loading", "Tone generator", ParamKind::continuous, 0, 2, 0.25, 0.01, false, false, nullptr, 0, kFormat_loading, 1},

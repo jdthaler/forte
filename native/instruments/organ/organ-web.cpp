@@ -19,15 +19,22 @@ FORTE_EXPORT void organ_wheel_spec(int w, double *out) {
 FORTE_EXPORT int organ_key_wheel(int key, int d) { return keyWheel(key, d); }
 FORTE_EXPORT int organ_perc_wheel(int key, int third) { return percWheel(key, third != 0); }
 FORTE_EXPORT double organ_drawbar_gain(int n) { return drawbarGain(n); }
-// keyAnalysis(key, P) for tuning (0 gears, 1 et, 2 harmonic) and mains (Hz): per drawbar w,
-// actual, ideal, cents, folded in out (45 numbers)
-FORTE_EXPORT void organ_key_analysis(int key, int tuning, double mains, double *out) {
+// keyAnalysis(key, P) for tuning (0 gears, 1 et, 2 harmonic), levels (0 B-3, 1 flat) and mains
+// (Hz): per drawbar w, actual, ideal, cents, folded, db in out (54 numbers)
+FORTE_EXPORT void organ_key_analysis(int key, int tuning, int levels, double mains, double *out) {
   Analysis a[9];
-  keyAnalysis(key, tuning, mains, a);
+  keyAnalysis(key, tuning, levels, mains, a);
   for (int d = 0; d < 9; d++) {
-    out[5 * d] = a[d].w; out[5 * d + 1] = a[d].actual; out[5 * d + 2] = a[d].ideal; out[5 * d + 3] = a[d].cents; out[5 * d + 4] = a[d].folded;
+    double *o = out + 6 * d;
+    o[0] = a[d].w; o[1] = a[d].actual; o[2] = a[d].ideal; o[3] = a[d].cents; o[4] = a[d].folded; o[5] = a[d].db;
   }
 }
+// The generator and wiring: a wheel's level (dB re wheel 37), a contact's wire (ohms), a filter's
+// gain at ratio × its wheel's frequency, and the pickup's h2 and h3 (in out)
+FORTE_EXPORT double organ_wheel_level_db(int w) { return wheelLevelDb(w); }
+FORTE_EXPORT double organ_wire_ohms(int key, int d) { return wireOhms(key, d); }
+FORTE_EXPORT double organ_filter_gain(int w, double ratio, double drift) { return filterGain(w, ratio, drift); }
+FORTE_EXPORT void organ_pickup_harmonics(int w, double relief, double *out) { pickupHarmonics(w, relief, out[0], out[1]); }
 // The Leslie cabinet's geometry (leslieGeometry): wall, micDist in out
 FORTE_EXPORT void organ_leslie_geometry(double hornRadius, double micDist, double *out) {
   const Geometry g = leslieGeometry(hornRadius, micDist);
