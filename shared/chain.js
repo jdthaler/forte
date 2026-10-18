@@ -22,9 +22,10 @@ export const LIMITER = { threshold: -3, knee: 3, ratio: 12, attack: 0.002, relea
 export const ROOM = { seconds: 2.0, gain: 0.6 };
 export const TONE_Q = 0.6;
 
-// The venue parameter, for an instrument's Output group beside `room` (and in its `keep`)
+// The venue parameter, for an instrument's Output group beside `room` (and in its `keep`). kind
+// 'mix': the older pages apply the chain, not the engine, when it changes.
 export const VENUE = {
-  id: 'venue', label: 'Venue', type: 'select', def: 'room', options: VENUES.map((v) => [v.id, v.name]),
+  id: 'venue', label: 'Venue', type: 'select', kind: 'mix', def: 'room', options: VENUES.map((v) => [v.id, v.name]),
   hint: 'The space the room reverb is. Room is Forte\'s original room; the studio and the halls are built from their physics: image sources for the early reflections, then a tail that dies away in each octave in the time the room\'s size, walls and air give it (Eyring).',
 };
 
