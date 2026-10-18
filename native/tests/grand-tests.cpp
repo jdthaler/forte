@@ -64,8 +64,8 @@ TEST("grand: the CP-70 scale, its stretch tuning and C4's modes, as the JavaScri
   const ModelParams P;
   CHECK(std::fabs(cpLength(28) - 0.679) < 0.005);
   int mono = 0;
-  for (int m = KEY_LO; m <= KEY_HI; m++) {
-    mono += stringCount(m, P.stringing) == 1;
+  for (int m = KEY_MIN; m <= KEY_MAX; m++) { // every key the CP-80 has; the CP-70's 15 single strings
+    mono += m >= KEY_LO && m <= KEY_HI && stringCount(m, P.stringing) == 1;
     const Scale S = stringScale(m, P);
     CHECK(S.stress < 0.5 * STEEL.strength);
     CHECK(std::fabs(1200 * std::log2(partialFreq(S, 1) / S.f0)) < 1e-6); // the fundamental on its target

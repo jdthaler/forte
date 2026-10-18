@@ -22,7 +22,8 @@
 
 namespace forte::grand {
 
-constexpr int KEY_LO = 28, KEY_HI = 100; // 73 keys, E1–E7
+constexpr int KEY_LO = 28, KEY_HI = 100; // the CP-70's 73 keys, E1–E7, which its scale and pan are drawn on
+constexpr int KEY_MIN = 21, KEY_MAX = 108; // what it plays: the CP-80's 88, A0–C8, the scale carried on
 struct Steel { double E, rho, strength; };
 constexpr Steel STEEL = {2.0e11, 7850, 2.2e9};
 
