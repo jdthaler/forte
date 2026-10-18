@@ -1,0 +1,13 @@
+diff --git a/src/detail/standalone/macos/Info.plist.in b/src/detail/standalone/macos/Info.plist.in
+index 9bfdc5f..2f21ea7 100644
+--- a/src/detail/standalone/macos/Info.plist.in
++++ b/src/detail/standalone/macos/Info.plist.in
+@@ -11,7 +11,7 @@
+ 	<key>CFBundleExecutable</key>
+ 	<string>${MACOSX_BUNDLE_EXECUTABLE_NAME}</string>
+ 	<key>CFBundleIconFile</key>
+-	<string></string>
++	<string>Icon</string>
+ 	<key>CFBundleIdentifier</key>
+ 	<string>${MACOSX_BUNDLE_BUNDLE_NAME}.standalone</string>
+ 	<key>CFBundleInfoDictionaryVersion</key>

@@ -9,6 +9,10 @@ so the standalone apps play without a MIDI keyboard. The plugins are built from 
 
 The download with every instrument also has the Forte app: one standalone with all of them,
 picked from the Instrument menu at the top of its window. It reopens on the last one played.
+For the Forte app alone, take **Forte app** in a system's box on All Plugins
+(`Forte-app-<system>`); `make install-app` in it puts just that app in place. On a Mac and on
+Windows each standalone app has its own icon, in its instrument's colour; Linux's are plain
+executables, with none.
 
 Download every instrument together from <https://forte.jthaler.net/#plugins> (All Plugins),
 or one at a time from an instrument's page (↓ Plugin): in each system's box, All has every format,
