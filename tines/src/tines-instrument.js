@@ -3,7 +3,7 @@
 // plugins (tools/gen-native-params.mjs) all start here. No DOM, no Web Audio.
 
 import { GROUPS, DEFAULTS, PRESETS } from './rhodes-params.js';
-import { KEY_LO, KEY_HI } from './tine.js';
+import { KEY_MIN, KEY_MAX } from './tine.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -12,7 +12,7 @@ export const INSTRUMENT = {
   groups: GROUPS,
   presets: PRESETS,
   keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
-  range: [KEY_LO, KEY_HI],              // MIDI keys: 73, E1–E7
+  range: [KEY_MIN, KEY_MAX],            // MIDI keys: 88, A0–C8 (the 73-key models: E1–E7)
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine
   midiVelocity: (v) => 0.25 * 20 ** v,  // MIDI velocity / 127 → hammer speed, 0.25 … 5 m/s
   // the engine: the physics in C++ (native/instruments/tines), built as WebAssembly

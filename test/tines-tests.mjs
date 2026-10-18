@@ -2,7 +2,7 @@
 // The model and the engine are the C++ (native/instruments/tines), built as WebAssembly: the
 // model's functions through tines-wasm.js, the engine through loadEngine.
 import assert from 'node:assert/strict';
-import { KEY_LO, KEY_HI } from '../tines/src/tine.js';
+import { KEY_LO, KEY_HI, KEY_MIN, KEY_MAX } from '../tines/src/tine.js';
 import { DEFAULTS } from '../tines/src/rhodes-params.js';
 import { INSTRUMENT } from '../tines/src/tines-instrument.js';
 import { wasmModel } from '../tines/src/tines-wasm.js';
@@ -49,8 +49,8 @@ test('FEM cantilever: f₁ and overtone ratios match Euler–Bernoulli', () => {
   // mode 1 carries 61.3 % of the tine's mass (modal effective mass, Γ₁²/mt)
   assert.ok(i.ms === 0 && Math.abs(tine.Gamma[0] ** 2 / i.mt - 0.6131) < 1e-3, `Γ₁²/mt = ${tine.Gamma[0] ** 2 / i.mt}`);
 });
-test('every key: the sustaining fork mode sits on pitch', () => {
-  for (let m = KEY_LO; m <= KEY_HI; m++) {
+test('every key, A0–C8: the sustaining fork mode sits on pitch', () => {
+  for (let m = KEY_MIN; m <= KEY_MAX; m++) {
     const k = keyModel(m, P(), FS), f0 = keyFreq(m);
     // among modes within a semitone, the longest-ringing one is the note
     const near = k.modes.filter((x) => Math.abs(cents(x.f, f0)) < 100);
@@ -76,6 +76,17 @@ test('A4 plays 440 Hz and is finite', () => {
   for (let f = 437; f <= 443; f += 0.05) { const g = goertzel(L, f, 0.2 * FS, 1.2 * FS); if (g > best) { best = g; bf = f; } }
   assert.ok(Math.abs(cents(bf, 440)) < 2, `f=${bf}`);
   for (const s of L) assert.ok(Number.isFinite(s));
+});
+test('the 88-key range\'s ends: A0 and C8 play on pitch (A0 heard through its pickup harmonics), finite, C8 within 12 dB of E7', () => {
+  const level = (L) => { let s = 0; for (let i = 0; i < 0.2 * FS; i++) s += L[i] ** 2; return 10 * Math.log10(s / (0.2 * FS)); };
+  const e7 = level(render(KEY_HI, P(), 2.5, 0.2).L);
+  for (const [key, h] of [[KEY_MIN, 2], [KEY_MAX, 1]]) {
+    const { L } = render(key, P(), 2.5, 1.2), f = h * keyFreq(key);
+    let best = 0, bf = 0;
+    for (let c = -20; c <= 20; c += 0.5) { const g = goertzel(L, f * 2 ** (c / 1200), 0.1 * FS, 1.1 * FS); if (g > best) { best = g; bf = c; } }
+    const db = level(L);
+    assert.ok(Math.abs(bf) < 3 && db > e7 - 12 && L.every(Number.isFinite), `key ${key}: ${bf} ¢, ${db.toFixed(1)} dB (E7 ${e7.toFixed(1)} dB)`);
+  }
 });
 test('pickup: harder strikes swing further into the nonlinearity (more 2nd harmonic)', () => {
   const h2 = (vel) => { const { L } = render(57, P(), vel, 0.8, DRY); return 20 * Math.log10(goertzel(L, 440, 0.2 * FS, 0.7 * FS) / goertzel(L, 220, 0.2 * FS, 0.7 * FS)); };
@@ -163,7 +174,7 @@ test('pickup voicing is live: centring a ringing tine trades its fundamental for
 test('stable across extremes', () => {
   const cases = [P({ gap: 0.4, poleRadius: 0.3, offset: 1.2, drive: 1, hardness: 10, tipExp: 1 }), P({ barMass: 0.01, blockMass: 5, mountDamp: 2, mountRatio: 3 }),
     P({ tineDiameter: 2.8, springMass: 1.5, springPos: 1, strike: 40, hysteresis: 1e-3, hardness: 0.1 }), P({ barMass: 60, barTune: -100, mountDamp: 0.02, tremDepth: 1 })];
-  for (const c of cases) for (const key of [KEY_LO, 60, KEY_HI]) {
+  for (const c of cases) for (const key of [KEY_MIN, KEY_LO, 60, KEY_HI, KEY_MAX]) {
     const { L } = render(key, c, 5, 0.4);
     for (const s of L) assert.ok(Number.isFinite(s) && Math.abs(s) < 20);
   }

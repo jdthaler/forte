@@ -25,7 +25,8 @@
 namespace forte::tines {
 
 constexpr double PI = std::numbers::pi;
-constexpr int KEY_LO = 28, KEY_HI = 100; // 73 keys, E1–E7
+constexpr int KEY_LO = 28, KEY_HI = 100; // the Mark I's 73 keys, E1–E7, which the register grading is drawn on
+constexpr int KEY_MIN = 21, KEY_MAX = 108; // what it plays: the 88-key Mark I and II's A0–C8
 constexpr int MAX_TINE_MODES = 6;
 constexpr int MAX_MODES = MAX_TINE_MODES + 2; // a voice's modes: the tine's, the block and the bar
 struct Steel { double E, rho; };
