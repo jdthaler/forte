@@ -27,7 +27,7 @@ static double jsHypot(double a, double b) {
 }
 
 const Rib &ribFor(int profile, int key) {
-  const int k = std::min(KEY_HI, std::max(KEY_LO, key));
+  const int k = std::min(KEY_MAX, std::max(KEY_MIN, key));
   for (const Rib &r : RIBS) if (r.profile == profile && k >= r.lo && k <= r.hi) return r;
   for (const Rib &r : RIBS) if (r.profile == profile) return r;
   return RIBS[0];

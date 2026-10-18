@@ -83,6 +83,7 @@ double backbone(const Shell &S, int p, int Nv);
 
 // ---- one key ---------------------------------------------------------------------------------
 constexpr double OS_MAX_HZ = 26000, CAP = 0.33;
+constexpr int C6 = 84, FEW = 8; // the top keys' floor of modes (keyGong)
 struct Loss { double f, th, rad, srad, eta, sigma; };
 struct Gong {
   const Shell *S = nullptr;

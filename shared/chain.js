@@ -6,7 +6,9 @@
 //
 // chain = {
 //   volume: id,            master gain = P[volume] × the registry's trim
-//   room?: id,             room reverb (shared/impulses.js roomIR, roomSeconds long) at roomGain × P[room]
+//   room?: id,             room reverb at roomGain × P[room]
+//   venue?: id,            the space the room is: P[venue] one of shared/impulses.js VENUES (VENUE, the
+//                          parameter); without it, or at 'room', roomIR roomSeconds long
 //   roomSeconds?: 2.0, roomGain?: 0.6,
 //   tone?: id,             low-pass at P[tone] Hz, Q 0.6 (dB, as Web Audio reads it)
 //   body?: { param, seconds, dry, wet },   a soundboard or body (shared/impulses.js soundboardIR):
@@ -14,11 +16,18 @@
 //   limiter?: { threshold?, knee?, ratio?, attack?, release? },   overrides of LIMITER
 // }
 
-import { roomIR, soundboardIR } from './impulses.js';
+import { soundboardIR, venueIR, venueGain, venueOf, VENUES } from './impulses.js';
 
 export const LIMITER = { threshold: -3, knee: 3, ratio: 12, attack: 0.002, release: 0.15 };
 export const ROOM = { seconds: 2.0, gain: 0.6 };
 export const TONE_Q = 0.6;
+
+// The venue parameter, for an instrument's Output group beside `room` (and in its `keep`). kind
+// 'mix': the older pages apply the chain, not the engine, when it changes.
+export const VENUE = {
+  id: 'venue', label: 'Venue', type: 'select', kind: 'mix', def: 'room', options: VENUES.map((v) => [v.id, v.name]),
+  hint: 'The space the room reverb is. Room is Forte\'s original room; the studio and the halls are built from their physics: image sources for the early reflections, then a tail that dies away in each octave in the time the room\'s size, walls and air give it (Eyring).',
+};
 
 // The gains the chain sets from the parameters (what `apply` ramps to).
 export function chainGains(chain, P, trim = 1) {
@@ -62,13 +71,34 @@ export function createChain(ctx, node, chain, destination = ctx.destination) {
   }
   const master = ctx.createGain(), limiter = createLimiter(ctx, { ...LIMITER, ...chain.limiter });
   bus.connect(master);
-  let roomGain = null;
+  let roomGain = null, useVenue = () => {};
   if (chain.room) {
-    const room = ctx.createConvolver(); room.buffer = roomIR(ctx, chain.roomSeconds ?? ROOM.seconds);
-    roomGain = ctx.createGain(); bus.connect(room).connect(roomGain).connect(master);
+    // Each venue's response is built once, the first time it is chosen. A new choice gets its own
+    // convolver; the one it replaces stops hearing the bus and rings out its tail, then goes.
+    roomGain = ctx.createGain(); roomGain.connect(master);
+    const buffers = new Map();
+    let playing = null, current = null;
+    useVenue = (id) => {
+      id = venueOf(id).id;
+      if (id === current) return;
+      current = id;
+      if (!buffers.has(id)) buffers.set(id, venueIR(ctx, id, chain.roomSeconds ?? ROOM.seconds));
+      const buffer = buffers.get(id), conv = ctx.createConvolver(), gain = ctx.createGain();
+      conv.buffer = buffer;
+      gain.gain.value = venueGain(id, buffer.length, ctx.sampleRate);
+      bus.connect(conv).connect(gain).connect(roomGain);
+      if (playing) {
+        const was = playing;
+        bus.disconnect(was.conv);
+        setTimeout(() => was.gain.disconnect(), 1000 * was.conv.buffer.duration + 500);
+      }
+      playing = { conv, gain };
+    };
+    if (!chain.venue) useVenue(null); // else the first apply picks it
   }
   master.connect(limiter).connect(destination);
   const apply = (P, trim = 1) => {
+    if (chain.venue) useVenue(P[chain.venue]);
     const t = ctx.currentTime, g = chainGains(chain, P, trim);
     if (tone) tone.frequency.setTargetAtTime(g.tone, t, 0.02);
     if (dry) { dry.gain.setTargetAtTime(g.dry, t, 0.02); bodyGain.gain.setTargetAtTime(g.body, t, 0.02); }

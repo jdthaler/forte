@@ -30,7 +30,8 @@
 namespace forte::clavier {
 
 constexpr double PI = std::numbers::pi;
-constexpr int LO = 29, HI = 88;                // F1 … E6, 60 keys
+constexpr int LO = 29, HI = 88;                // F1 … E6, the D6's 60 keys: the compass its scale is drawn on
+constexpr int KEY_MIN = 21, KEY_MAX = 108;     // what it plays with the full range open: the scale, continued
 struct Steel { double E, rho, strength; };
 inline constexpr Steel STEEL = {2.0e11, 7850, 2.6e9};
 constexpr double WIND_RHO = 8900;              // copper-alloy winding
@@ -52,8 +53,9 @@ constexpr double GAP_REF = 0.5e-3;             // m: the gap at which levels are
 inline double keyFreq(double k) { return 440 * std::pow(2.0, (k - 69) / 12); }
 
 // The scale: the speaking length falls by about one key width per semitone, 86 cm for F1 to
-// 17 cm for E6. The first 23 strings (F1–D♯3) are wound.
-inline double speakingLength(int key) { return 0.17 + (88 - key) * 0.0117; }
+// 17 cm for E6 (95 cm for A0 below). Above E6 it halves every octave, as a plain wire must to keep
+// its stress (4ρ(Lf)²) at E6's. The first 23 strings (F1–D♯3) are wound, and those below F1.
+inline double speakingLength(int key) { return key <= HI ? 0.17 + (88 - key) * 0.0117 : 0.17 * std::pow(2.0, (88 - key) / 12.0); }
 inline bool isWound(int key) { return key <= 51; }
 
 struct Gauge { bool wound; double d, D, mu; };

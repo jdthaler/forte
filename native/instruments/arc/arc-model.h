@@ -18,7 +18,7 @@
 namespace forte::arc {
 
 constexpr double TAU = 2 * std::numbers::pi;
-constexpr int KEY_LO = 48, KEY_HI = 84, NK = KEY_HI - KEY_LO + 1; // C3–C6
+constexpr int KEY_LO = 21, KEY_HI = 108, NK = KEY_HI - KEY_LO + 1; // A0–C8
 double keyFreq(double m); // 440·2^((m − 69)/12), with V8's pow
 
 // Ayrton's constants for solid carbons, V = a + b·l + (c + d·l)/I.

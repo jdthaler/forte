@@ -240,12 +240,27 @@ double capFor(int key, const ArcParams &P, const Op &op) {
   if (P.tune == tune_::kelvin) return kelvinC(f, L);
   double C = startCap(key, P, op);
   const double lin = C;
+  double cPrev = 0, fPrev = 0;
   for (int it = 0; it < 5; it++) {
     const Steady r = steadyNote(P, C, {}, op);
     if (!(r.f > 0)) return lin;
     const double c = 1200 * std::log2(r.f / f), x = r.f / f;
+    cPrev = C; fPrev = r.f;
     C *= x * x;
-    if (std::fabs(c) < 0.1) break;
+    if (std::fabs(c) < 0.1) return C;
+  }
+  // Not there yet: in the bass the note follows C more weakly than 1/√C (the current is furthest
+  // from a sine), so the step above overshoots and rings round the note (A0 is still 3 ¢ off after
+  // five, in the second kind 110 ¢). A secant on (ln C, ln f) through the last two finishes it.
+  for (int it = 0; it < 8; it++) {
+    const Steady r = steadyNote(P, C, {}, op);
+    if (!(r.f > 0)) return cPrev; // the last capacitor that sang
+    const double y0 = fdlibm::log(fPrev / f), y1 = fdlibm::log(r.f / f), x0 = fdlibm::log(cPrev), x1 = fdlibm::log(C);
+    if (y1 == y0) return C;
+    const double step = jmin(1.4, jmax(-1.4, (-y1 * (x1 - x0)) / (y1 - y0))); // at most ×4 in C
+    cPrev = C; fPrev = r.f;
+    C = fdlibm::exp(x1 + step);
+    if (std::fabs(1200 * y1 / std::numbers::ln2) < 0.1) break;
   }
   return C;
 }

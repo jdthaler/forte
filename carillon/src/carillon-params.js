@@ -1,6 +1,8 @@
 // carillon-params.js — the knobs. Every parameter has a physical meaning and a
 // unit; the hint says what it does to the sound.
 
+import { VENUE } from '../../shared/chain.js';
+
 const sci = (v) => { const e = Math.floor(Math.log10(v)), m = v / 10 ** e; return `${m.toFixed(1)}×10${String(e).replace('-', '⁻').replace(/\d/g, (d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d])}`; };
 const face = (v) => (v >= 150 ? 'iron' : v >= 70 ? 'bronze or brass' : v >= 15 ? 'hard insert' : v >= 4 ? 'hardwood or nylon insert' : 'soft insert');
 
@@ -16,6 +18,8 @@ export const GROUPS = [
         hint: 'An uneven wall, ε·cos 2mθ for every family m, splits each pair of modes by Δf/f ≈ εκ/2: the partials beat (warble). 0 = a perfectly round bell.' },
       { id: 'eta', label: 'Bronze loss factor η', min: 5e-5, max: 2e-3, def: 2.5e-4, log: true, fmt: sci,
         hint: 'Internal friction of the bronze, σ = πfη. Radiation adds its own loss, most to the upper partials of the bigger bells.' },
+      { id: 'fullRange', label: 'Full range (F2–C8)', type: 'checkbox', def: false,
+        hint: 'Opens the keys beyond the four-octave C3–C7 compass: the bass rib cast larger down to F2 (a 3.5 m, 19 t bell, about the largest ever hung in a carillon) and the treble rib smaller up to C8. Lower still, a bell would outweigh any ever cast.' },
     ],
   },
   {
@@ -47,6 +51,7 @@ export const GROUPS = [
     title: 'Output',
     params: [
       { id: 'room', label: 'Belfry and square', perform: true, min: 0, max: 1, def: 0.15, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },

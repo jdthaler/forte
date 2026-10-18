@@ -23,7 +23,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/windharp/>
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | play (42 keys, G3–C7, 67 strings): open a key's shutter |
+| `Z…/` and `Q…]` rows | play (80 keys, A0–E7, 113 strings): open a key's shutter |
 | `←` `→` | octave |
 | `↑` `↓` | wind speed |
 | `Space` | sustain: the shutters stay open after the keys come up |
@@ -116,19 +116,29 @@ T = m(2Lf₀)²:
 
 | key | D (mm) | L (cm) | T (N) | stress (MPa) | f₀ (Hz) | B | Re at U₀ |
 |---|---|---|---|---|---|---|---|
+| A0 | 37.7 | 338.5 | 1826 | 1.6 | 5.6 | 0.19 | 9960 |
+| C2 | 15.5 | 182.5 | 1062 | 5.6 | 19.2 | 0.032 | 4095 |
 | G3 | 4.92 | 99.7 | 358 | 19 | 64.4 | 3.2×10⁻³ | 1299 |
 | C4 | 3.62 | 86.0 | 260 | 25 | 86.5 | 1.7×10⁻³ | 954 |
 | C5 | 1.69 | 60.6 | 114 | 51 | 174.1 | 3.8×10⁻⁴ | 446 |
 | C6 | 0.75 | 42.8 | 45 | 102 | 348.7 | 7.5×10⁻⁵ | 199 |
 | C7 | 0.29 | 30.3 | 14 | 204 | 697.6 | 1.1×10⁻⁵ | 77 |
+| E7 | 0.19 | 27.0 | 7 | 257 | 879.0 | 4.7×10⁻⁶ | 50 |
 
-These are buildable: fishing line at the top, a 5 mm nylon cord (as thick as
-a telephone wire, which sings at the same pitch in the same wind) at the
-bottom, under tensions of 14–360 N and stresses well within nylon's. The
-Strouhal frequency falls as 1/D, so the bass needs thick strings; a wider
-compass would need ropes. Re stays between 77 and 1300 across the keys,
-above 47 everywhere: the top string keeps shedding down to 61 % of U₀ (at
-full strength down to 78 %). Stiffness stretches each string's harmonics a
+From G3 to C7 these are buildable: fishing line at the top, a 5 mm nylon
+cord (as thick as a telephone wire, which sings at the same pitch in the
+same wind) at the bottom, under tensions of 14–360 N and stresses well
+within nylon's. Re stays between 77 and 1300 there, above 47 everywhere: the
+C7 string keeps shedding down to 61 % of U₀ (at full strength down to 78 %).
+The Strouhal frequency falls as 1/D, so the bass needs thick strings, and
+below G3 they become ropes, cut by the same rule: 15.5 mm and 1.8 m at C2,
+37.7 mm and 3.4 m at A0 (as a solid rod, stiff enough to stretch its
+harmonics: B = 0.19). They are slow to move: A0 takes 5 s to speak, C1
+3.7 s, G2 1.4 s. At the top the rule runs out. A thinner string sheds at a
+higher frequency only while its Reynolds number stays above 47, and St
+falls towards 0.12 as Re does: no diameter makes St(U₀D/ν)·U₀/D more than
+about 2.7 kHz. E7 (2637 Hz) sheds at Re 50, from 94 % of U₀ up; F7 would
+need Re 45, so the keys stop at E7. Stiffness stretches each string's harmonics a
 little, most in the bass (G3's 4th harmonic, a fourth above its note, comes
 19 ¢ wide).
 
@@ -137,8 +147,8 @@ little, most in the bass (G3's 4th harmonic, a fourth above its note, comes
 The Strouhal frequency puts thin strings in the treble, and a thin string
 carries little force to the bridge: alone, the C7 string would sound 24 dB
 under the bass. As on many instruments whose top strings are fine, the
-treble keys have more strings: one to a key from G3 to B4, two from C5 to
-C7 (67 strings in all), behind one shutter. The two strings of a course are
+treble keys have more strings: one to a key up to B4, two from C5 to C7 and
+three from C♯7 to E7 (113 strings in all), behind one shutter. The two strings of a course are
 cut alike but not identically: they are tuned 1.2 ¢ apart (−0.6 and
 +0.6 ¢) and their gauges differ by 0.5 %, each offset jittered by a seeded
 quarter of that. Each string has its own wake and locks on its own, on the
@@ -185,11 +195,11 @@ The engine reproduces this exactly when its wake's own growth is turned down
 root's rate (C4: 253/s, model 248/s), saturates within a few cycles and
 then drives the string at resonance while the string pulls the wake's phase
 into step. The string then rises at about half the coupled-mode rate (C4
-0.54, C6 0.47 of it, from 3 % to 30 % of its final swing). Every key speaks
-within a second at the reference wind: its string reaches half its final
+0.54, C6 0.47 of it, from 3 % to 30 % of its final swing). Every key from G3 to
+C7 speaks within a second at the reference wind: its string reaches half its final
 swing after 0.6–0.8 s at G3 (it varies with the turbulence that seeds it),
-about 0.5 s at C4, 0.23 s at C5 and 0.07 s at C7. The bass, heavy and slow
-to move, swells in; the treble starts almost at once.
+about 0.5 s at C4, 0.23 s at C5 and 0.07 s at C7 (and 5 s on the A0 rope).
+The bass, heavy and slow to move, swells in; the treble starts almost at once.
 
 The tests check the band in the engine. Opening a shutter at a steady wind
 inside the band locks the string; a string whose wind rises slowly locks
@@ -302,8 +312,9 @@ plate, and the model takes the pressure it radiates at r = 1 m as
   p = ρ F_b / (2π m'' r) · H(f),   |H| = √(1 + (f/500 Hz)²) / √(1 + (f/4 kHz)²)
 
 with m'' the top's mass per area under the string. As on a harp's
-soundboard the top tapers, 4 kg/m² under the bass strings (with its bars) to
-0.5 kg/m² under the treble, which evens the registers by 18 dB. H is the
+soundboard the top tapers, 4 kg/m² under the G3 string (with its bars) to
+0.5 kg/m² under C7, which evens the registers by 18 dB; below G3 it goes on
+thickening at the same rate, to 22 kg/m² under the A0 rope. H is the
 top's radiation efficiency: below its coincidence frequency (around 4 kHz
 for a 3 mm spruce top) a finite plate radiates from its edges and corners,
 and more efficiently the higher the frequency. The model takes it as one

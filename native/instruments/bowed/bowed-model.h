@@ -36,7 +36,8 @@ inline void setFilter(Biquad &b, Biquad::Type type, double f, double Q, double f
 }
 inline void setFilter(OnePole &o, double f, double fs) { o.g = 1 - fdlibm::exp((-TAU * f) / fs); }
 
-constexpr int KEY_LO = 36, KEY_HI = 84, NK = KEY_HI - KEY_LO + 1; // C2–C6
+constexpr int KEY_LO = 36, KEY_HI = 84;                         // C2–C6: the 49 strings the bridge and board are drawn on
+constexpr int KEY_MIN = 21, KEY_MAX = 98, NK = KEY_MAX - KEY_MIN + 1; // A0–D7: the strings it has
 struct Steel { double rho, E, G, uts; };
 constexpr Steel STEEL = {7850, 2.0e11, 7.93e10, 2.4e9};
 double cTorsion(); // √(G/ρ): 3180 m/s, independent of tension
@@ -51,8 +52,9 @@ struct Params {
 const Params &defaults(); // the descriptor's DEFAULTS
 
 // ---- scale design -----------------------------------------------------------------------------
-// Harpsichord-like scale: C5 = 36 cm, lengths double every 1/0.8 octaves going down; tension from
-// 95 N in the treble to 130 N in the bass; μ from Mersenne's law. f0 is the free string's
+// Harpsichord-like scale: C5 = 36 cm, lengths double every 1/0.8 octaves going down (to at most
+// 2 m, below C♯2) and halve every octave above C6 (so the wire's stress stays at C6's); tension
+// from 95 N in the treble to 130 N in the bass; μ from Mersenne's law. f0 is the free string's
 // frequency, tuned a few cents sharp (TUNE, bowed-tuning.h) so that the bowed note is in tune.
 inline double wound(int key) { return std::min(1.0, std::max(0.0, (60 - key) / 24.0)); } // 1 at C2 … 0 from C4
 struct StringDesign { int key; double fKey, f0, L, T, c, mu, Z0, d, B, stress; bool wound; };
@@ -72,7 +74,7 @@ double plateFreq(int m, int n, const Board &B = BOARD);
 inline double plateShape(int m, int n, double x, double y, const Board &B = BOARD) {
   return fdlibm::sin((m * std::numbers::pi * x) / B.a) * fdlibm::sin((n * std::numbers::pi * y) / B.b);
 }
-// Where key k presses on the diagonal bridge (any real key, for the bridge's drive points).
+// Where key k presses on the diagonal bridge (any real key, for the bridge's drive points; past C2–C6 its ends).
 void bridgePoint(double key, double out[2], const Board &B = BOARD);
 // Far-field pressure of plate mode (m, n) in an infinite baffle, per unit modal velocity, towards
 // (θ, φ) (Wallace 1972): [re, im], the common factor ρ₀ c₀ / (2π R) dropped.
@@ -105,7 +107,8 @@ double zAll(); // Σ Z₀ over the 49 strings
 struct LossFilter { double g, p, tau; };
 LossFilter lossFilter(double f0, double s0, double fh, double sh, double fs, double dur);
 
-// Each string's waveguide runs at os × the output rate (1, 2 or 4 at 48 kHz).
+// Each string's waveguide runs at os × the output rate (1, 2 or 4 at 48 kHz; 8 above C6, where 4
+// would leave the treble's pitch differing by up to 2 ¢ between 44.1 and 48 kHz).
 int oversample(int key, double fs);
 
 // ---- the four wheels ------------------------------------------------------------------------------

@@ -1,10 +1,10 @@
 // pipes-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell } from '../../shared/shell.js';
-import { SpectrumView, fit, css, animate } from '../../shared/views.js';
+import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { keyFreq } from '../../shared/dsp.js';
 import { INSTRUMENT } from './pipes-instrument.js';
-import { RANKS, STOPS, CP, AIR, KEY_LO, KEY_HI, engaged, organName, footage } from './pipes-data.js';
+import { RANKS, STOPS, CP, AIR, engaged, organName, footage } from './pipes-data.js';
 import { wasmModel } from './pipes-wasm.js';
 
 // The views draw what the engine plays: the WebAssembly model (the same physics as the engine, in C++).
@@ -17,6 +17,7 @@ const WIND_SEC = 8;
 const windHist = { t: new Float64Array(1024), P: new Float64Array(1024), S: new Float64Array(1024), Q: new Float64Array(1024), n: 0 };
 let clock = 0;
 const spectrum = new SpectrumView($('#spectrum'));
+new SpectrogramView($('#spectrogram'), { spectrum });
 
 // A key's six pipes (each voiced by a linear analysis, about a millisecond a key) go with its note
 // to the engine, built by the page's WebAssembly model, so the audio thread never voices them. Built
@@ -34,7 +35,8 @@ let warm = null;
 function warmUp() {
   clearTimeout(warm);
   const v = voicing(shell.P), keys = [];
-  for (let k = KEY_LO; k <= KEY_HI; k++) if (!packed.has(`${k}|${v}`)) keys.push(k);
+  const [lo, hi] = shell.P.fullRange ? INSTRUMENT.range : INSTRUMENT.compass.keys; // the keys that play
+  for (let k = lo; k <= hi; k++) if (!packed.has(`${k}|${v}`)) keys.push(k);
   keys.sort((a, b) => Math.abs(a - focus) - Math.abs(b - focus));
   const step = () => {
     const k = keys.shift();
@@ -52,7 +54,7 @@ const shell = createShell({
   arrows: { param: 'velocity', step: 0.05 },
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key) => { focus = key; shell.keys.focus?.(key); updateModel(); },
-  onParam: (id) => { if (['cutup', 'gain', 'offset', '*'].includes(id)) warmUp(); updateModel(); },
+  onParam: (id) => { if (['cutup', 'gain', 'offset', 'fullRange', '*'].includes(id)) warmUp(); updateModel(); },
   onMessage: (m) => {
     if (m.type !== 'pipe') return;
     msg = m;

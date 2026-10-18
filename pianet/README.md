@@ -15,14 +15,18 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/pianet/>
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | play (61 keys, C2–C7) |
+| `Z…/` and `Q…]` rows | play (61 keys, C2–C7; 88, A0–C8, with *Full range*) |
 | `←` `→` | octave |
 | `↑` `↓` | velocity (key speed at the pad, 3–40 cm/s) |
 | `Space` | sustain: a catch keeps lifted pads up |
 | MIDI | notes, velocity, sustain pedal (CC64) |
 
 The real Pianet spans F1–F6. Here it spans C2–C7 like the other Forte
-keyboards. The Pianet itself had no sustain pedal, and lifting every pad at
+keyboards. No Pianet had more than 61 keys; *Full range* (under Reed) opens
+A0–C8 anyway, with the same reeds carried on: each cut to length for its
+pitch (93 mm at A0, 7.8 mm at C8), with C2's thickness and solder below C2
+and C7's above C7. The long bass reeds bend further before the pad lets
+go: A0 is loudest at f and falls back at ff, more than C2 does (below). The Pianet itself had no sustain pedal, and lifting every pad at
 once would pluck every reed. So `Space` does not lift pads: it latches the
 pads of keys you have played until you let go. Pressing a latched key again
 drops its pad onto the ringing reed; once the pad has landed, choked the

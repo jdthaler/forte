@@ -15,11 +15,13 @@ import {
 } from '../carillon/src/bell-profile.js';
 
 // The registers' ribs, heavier towards the treble; each keeps its modes up to rMax × the prime
-// (bass C3: 1.6 kHz; middle C4: 2.6 kHz, B5: 9.9 kHz; treble C6: 8.4 kHz, C7: Nyquist).
+// (bass C3: 1.6 kHz; middle C4: 2.6 kHz, B5: 9.9 kHz; treble C6: 8.4 kHz, C7: Nyquist). The bass and
+// treble ribs also hang the bells past the C3–C7 compass, F2–B2 and C♯7–C8 (the engine leaves out
+// what lies above 0.45 × the sample rate).
 export const REGISTERS = [
-  { id: 'bass', lo: 48, hi: 59, heavy: 0.5, rMax: 12 },
+  { id: 'bass', lo: 41, hi: 59, heavy: 0.5, rMax: 12 },
   { id: 'middle', lo: 60, hi: 83, heavy: 0.72, rMax: 10 },
-  { id: 'treble', lo: 84, hi: 96, heavy: 1, rMax: 8 },
+  { id: 'treble', lo: 84, hi: 108, heavy: 1, rMax: 8 },
 ];
 // Soft targets, then the five exact: the major-third bell also aims its superquint and octave nominal at
 // 3 and 4 × the prime and its deciem (4,1#) at 2.5 (weights 3 and 2 against the five tuned partials'

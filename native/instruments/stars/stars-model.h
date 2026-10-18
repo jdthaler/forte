@@ -11,7 +11,8 @@
 
 namespace forte::stars {
 
-constexpr int KEY_LO = 36, KEY_HI = 96; // C2–C7
+constexpr int KEY_LO = 21, KEY_HI = 108; // A0–C8: the keys it plays
+constexpr int PAN_LO = 36, PAN_HI = 96;  // C2–C7: the keyboard the pan is drawn across (the keys beyond sit at its ends)
 constexpr double K0 = 510800;           // the speed-up that puts the Sun on G6
 constexpr int MAX_MODES = 340;          // m components per star, at most
 constexpr double VIS[4] = {1, 1.5, 0.6, 0.05};

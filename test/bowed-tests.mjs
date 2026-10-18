@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs';
 import { INSTRUMENT } from '../bowed/src/bowed-instrument.js';
 import { wasmModel } from '../bowed/src/bowed-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
-import { DEFAULTS, GROUPS, RANGE } from '../bowed/src/bowed-params.js';
+import { DEFAULTS, GROUPS, RANGE, KEY_LO, KEY_HI } from '../bowed/src/bowed-params.js';
 import { TUNE } from '../bowed/src/bowed-tuning.js';
 import { renderEngine } from '../tools/audio-util.mjs';
 import { keyFreq } from '../shared/dsp.js';
@@ -112,13 +112,28 @@ function measuredBound(key, params, dir) {
 }
 
 console.log('physics');
-test('scale: Mersenne pitch, wire stress < 65 % of music wire, inharmonicity small enough to neglect', () => {
+test('scale: Mersenne pitch, wire stress < 65 % of music wire, inharmonicity small enough to neglect (C2–C6; past them, see below)', () => {
   for (let k = RANGE[0]; k <= RANGE[1]; k++) {
     const s = loopDesign(k, P(), FS);
     assert.ok(Math.abs(s.c / (2 * s.L) - s.f0) < 1e-9 * s.f0);
     assert.ok(s.stress < 0.65 * UTS, `key ${k}: ${(s.stress / 1e9).toFixed(2)} GPa`);
-    assert.ok(Math.sqrt(1 + s.B * 100) - 1 < 0.008, `key ${k}: 10th partial ${(1200 * Math.log2(Math.sqrt(1 + s.B * 100))).toFixed(1)} ¢ sharp`);
+    if (k <= KEY_HI) assert.ok(Math.sqrt(1 + s.B * 100) - 1 < 0.008, `key ${k}: 10th partial ${(1200 * Math.log2(Math.sqrt(1 + s.B * 100))).toFixed(1)} ¢ sharp`);
   }
+});
+test('past C2–C6: the bass strings stop at 2 m and are wound on C2\'s core; the treble halves each octave at C6\'s stress, so B grows 4× an octave', () => {
+  const c2 = loopDesign(KEY_LO, P(), FS), c6 = loopDesign(KEY_HI, P(), FS);
+  for (let k = RANGE[0]; k < KEY_LO; k++) {
+    const s = loopDesign(k, P(), FS);
+    assert.ok(s.L <= 2 && s.L >= c2.L && s.T === c2.T, `key ${k}: ${(100 * s.L).toFixed(1)} cm, ${s.T.toFixed(0)} N`);
+    assert.ok(Math.abs(s.B * s.L ** 2 - c2.B * c2.L ** 2) < 1e-9 * c2.B * c2.L ** 2, `key ${k}: B ${s.B.toExponential(2)} (C2's core)`);
+  }
+  for (let k = KEY_HI + 1; k <= RANGE[1]; k++) {
+    const s = loopDesign(k, P(), FS), r = 2 ** ((k - KEY_HI) / 12);
+    assert.ok(Math.abs(s.L * r - c6.L) < 1e-9 && Math.abs(s.stress / c6.stress - 1) < 0.01, `key ${k}: ${(100 * s.L).toFixed(1)} cm, ${(s.stress / 1e9).toFixed(2)} GPa`);
+    assert.ok(Math.abs(s.B / (c6.B * r * r) - 1) < 0.03, `key ${k}: B ${s.B.toExponential(2)}`); // (its few cents of tuning apart)
+  }
+  const top = loopDesign(RANGE[1], P(), FS);
+  console.log(`        A0 ${(100 * loopDesign(RANGE[0], P(), FS).L).toFixed(0)} cm; D7 ${(100 * top.L).toFixed(1)} cm, its 10th partial would be ${(1200 * Math.log2(Math.sqrt(1 + top.B * 100))).toFixed(0)} ¢ sharp (the bow locks the partials; the loop neglects it)`);
 });
 test('soundboard: Weyl mode count and mean point conductance = infinite-plate admittance (Cremer & Heckl)', () => {
   const fM = 3000, n = boardModes(fM, 0.03).length, weyl = plateDensity() * fM;
@@ -158,7 +173,7 @@ test('friction junction: the implicit solution lies on the friction curve, stick
   }
 });
 
-test('loop filters: finite and passive on all 49 keys at the sliders\' extremes and their combinations (44.1, 48, 96 kHz)', () => {
+test('loop filters: finite and passive on every key at the sliders\' extremes and their combinations (44.1, 48, 96 kHz)', () => {
   const ext = (id) => { const p = GROUPS.flatMap((g) => g.params).find((q) => q.id === id); return [p.min, p.def, p.max]; };
   for (const fs of [44100, 48000, 96000]) for (const beta of ext('beta')) for (const losses of ext('losses')) for (const mobility of ext('mobility')) for (const torsionQ of [5, 300]) {
     const pp = P({ beta, losses, mobility, torsionQ });
@@ -174,11 +189,11 @@ test('loop filters: finite and passive on all 49 keys at the sliders\' extremes 
   const short = lossFilter(554, 1, 4000, 30, 192000, 1e-5);
   assert.ok(short.p === 0 && short.g === Math.exp(-1e-5), `p ${short.p}, g ${short.g}`);
 });
-test('the strings load the board: each plate mode loses Σ Z₀φ²/2M to them, 2–6 × the wood\'s own loss for (1,1)', () => {
-  const modes = boardModes(2400, 0.03), M = (BOARD.rhoH * BOARD.a * BOARD.b) / 4, u = (k) => (k - RANGE[0]) / (RANGE[1] - RANGE[0]);
+test('the strings load the board: each plate mode loses Σ Z₀φ²/2M to the 49 of C2–C6 (the board is drawn on them), 2–6 × the wood\'s own loss for (1,1)', () => {
+  const modes = boardModes(2400, 0.03), M = (BOARD.rhoH * BOARD.a * BOARD.b) / 4, u = (k) => (k - KEY_LO) / (KEY_HI - KEY_LO);
   for (const m of modes.slice(0, 6)) {
     let s = 0;
-    for (let k = RANGE[0]; k <= RANGE[1]; k++) s += loopDesign(k, P(), FS).Z0 * plateShape(m.m, m.n, BOARD.a * (0.18 + 0.6 * u(k)), BOARD.b * (0.78 - 0.5 * u(k))) ** 2;
+    for (let k = KEY_LO; k <= KEY_HI; k++) s += loopDesign(k, P(), FS).Z0 * plateShape(m.m, m.n, BOARD.a * (0.18 + 0.6 * u(k)), BOARD.b * (0.78 - 0.5 * u(k))) ** 2;
     assert.ok(Math.abs(m.sigma - Math.PI * m.f * 0.03 - s / (2 * M)) < 1e-9 * m.sigma, `(${m.m},${m.n})`);
   }
   const wood = Math.PI * modes[0].f * 0.03, ratio = stringLoad(1, 1) / wood;
@@ -364,14 +379,16 @@ test('the flywheel: the wheels follow a change of treadle speed with a 0.5 s tim
   const frac = (e.vB - 0.25) / 0.25;
   assert.ok(Math.abs(frac - (1 - Math.exp(-1))) < 0.01, `after 0.5 s: ${(frac * 100).toFixed(1)} % of the way`);
 });
-test('voicing: the four wheels even out the registers (medians within 3 dB); every key within 13 dB (one wheel: 7 and 19 dB)', () => {
+test('voicing: the four wheels even out the registers (medians within 3 dB); C2–C6 within 13 dB (one wheel: 7 and 19 dB), every key within 15', () => {
   const lv = []; for (let k = RANGE[0]; k <= RANGE[1]; k++) lv.push(steadyLevel(k));
   const med = (a) => [...a].sort((x, y) => x - y)[a.length >> 1];
   const reg = [0, 1, 2, 3].map((w) => med(lv.filter((_, i) => wheelOf(RANGE[0] + i) === w)));
-  const spread = Math.max(...reg) - Math.min(...reg), span = Math.max(...lv) - Math.min(...lv);
+  const old = lv.slice(KEY_LO - RANGE[0], KEY_HI - RANGE[0] + 1);
+  const spread = Math.max(...reg) - Math.min(...reg), span = Math.max(...old) - Math.min(...old), all = Math.max(...lv) - Math.min(...lv);
   assert.ok(spread < 3, `register medians ${reg.map((x) => x.toFixed(1)).join(', ')} dB`);
-  assert.ok(span < 13, `keys ${Math.min(...lv).toFixed(1)} … ${Math.max(...lv).toFixed(1)} dB`);
-  console.log(`        register medians ${reg.map((x) => x.toFixed(1)).join(', ')} dB; keys within ${span.toFixed(1)} dB`);
+  assert.ok(span < 13, `C2–C6 ${Math.min(...old).toFixed(1)} … ${Math.max(...old).toFixed(1)} dB`);
+  assert.ok(all < 15, `keys ${Math.min(...lv).toFixed(1)} … ${Math.max(...lv).toFixed(1)} dB`); // past C6 the bridge's end drives the board for all of them
+  console.log(`        register medians ${reg.map((x) => x.toFixed(1)).join(', ')} dB; C2–C6 within ${span.toFixed(1)} dB, every key within ${all.toFixed(1)} dB`);
 });
 test('a string that goes non-finite is stopped alone: the bridge stays clean and the other note plays on', () => {
   const e = new OrganistaEngine(FS), msgs = []; e.setParams(P()); e.post = (m) => msgs.push(m.type);
@@ -399,7 +416,7 @@ test('no DC, no sub-audio thump: below 20 Hz the output stays within 12 % of the
   }
 });
 test('level: single forte notes peak 0.03–0.5 (0.07–0.19 from C2 to C6); a 10-note chord stays under 1', () => {
-  for (const k of [36, 48, 60, 72, 84]) {
+  for (const k of [RANGE[0], 36, 48, 60, 72, 84, RANGE[1]]) {
     const { out } = play([[0, 'on', k, 1]], 1);
     let pk = 0; for (const v of out[0]) pk = Math.max(pk, Math.abs(v));
     assert.ok(pk > 0.03 && pk < 0.5, `key ${k}: peak ${pk.toFixed(3)}`);
@@ -410,7 +427,7 @@ test('level: single forte notes peak 0.03–0.5 (0.07–0.19 from C2 to C6); a 1
   assert.ok(pk < 1, `chord peak ${pk.toFixed(2)}`);
 });
 test('every parameter at its min and max: finite output, no blow-up', () => {
-  const ev = [[0, 'on', 36, 1], [0, 'on', 60, 1], [0, 'on', 84, 1], [0.35, 'off', 60]];
+  const ev = [[0, 'on', RANGE[0], 1], [0, 'on', 36, 1], [0, 'on', 60, 1], [0, 'on', 84, 1], [0, 'on', RANGE[1], 1], [0.35, 'off', 60]];
   for (const p of GROUPS.flatMap((g) => g.params)) {
     for (const v of p.type === 'checkbox' ? [false, true] : [p.min, p.max]) {
       const { out } = play(ev, 0.5, P({ [p.id]: v }));

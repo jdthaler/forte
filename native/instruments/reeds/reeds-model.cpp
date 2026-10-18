@@ -101,7 +101,9 @@ std::vector<double> tipMassRoots(double muRatio, int n) {
 
 // ---- per-key design ----------------------------------------------------------------------------
 
-double solderRatio(int m, double scale) { return geo(1.6, 0.04, tKey(m)) * scale; }
+// The solder's share of the tongue's mass, graded geometrically from A1 to C7 and carried on past them
+// (3.2 at A0, 0.02 at C8: inside what the Solder mass knob already reaches, 0.002–8).
+double solderRatio(int m, double scale) { return geo(1.6, 0.04, (double)(m - KEY_LO) / (KEY_HI - KEY_LO)) * scale; }
 
 Blob blob(double M, double h) {
   const double a = std::cbrt(M / SOLDER_RHO);

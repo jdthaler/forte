@@ -28,7 +28,7 @@
 // thermophone, p(r, t) = (γ − 1)/(4π c² r) · dP/dt, with P = u·i.
 
 export const TAU = 2 * Math.PI;
-export const KEY_LO = 48, KEY_HI = 84; // C3–C6
+export const KEY_LO = 21, KEY_HI = 108; // A0–C8
 export const keyFreq = (m) => 440 * 2 ** ((m - 69) / 12);
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
 export const noteName = (m) => NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);

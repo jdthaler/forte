@@ -24,7 +24,7 @@ static void panOf(double p, double &l, double &r) {
   const double a = ((std::max(-1.0, std::min(1.0, p)) + 1) * PI) / 4;
   l = fd::cos(a); r = fd::sin(a);
 }
-static double keyPos(int key) { return 0.6 * ((2.0 * (key - KEY_LO)) / (KEY_HI - KEY_LO) - 1); }
+static double keyPos(int key) { return 0.6 * std::max(-1.0, std::min(1.0, (2.0 * (key - KEY_LO)) / (KEY_HI - KEY_LO) - 1)); } // past C2–C6: its ends
 // The pickups' voicing: +3 dB an octave up the keyboard
 static double voicing(int key) { return fd::pow(2, (key - 60) / 24.0); }
 
@@ -258,7 +258,7 @@ double SpringEngine::Voice::prune(Bank &b, bool pushing) {
 
 SpringEngine::SpringEngine(double fs)
     : Engine(fs), data([this](int key, uint64_t version) -> std::unique_ptr<KeySprings> {
-        if (key < KEY_LO || key > KEY_HI) return nullptr;
+        if (key < KEY_MIN || key > KEY_MAX) return nullptr;
 #if !FORTE_THREADS
         if (offered && offered->key == key && offered->id == version && offered->fs == this->fs) return std::move(offered);
 #endif
@@ -278,7 +278,7 @@ bool SpringEngine::offer(const double *packed, int n) {
   return false;
 #else
   auto d = std::make_unique<KeySprings>();
-  if (!unpackKeySprings(packed, n, *d) || d->key < KEY_LO || d->key > KEY_HI) return false;
+  if (!unpackKeySprings(packed, n, *d) || d->key < KEY_MIN || d->key > KEY_MAX) return false;
   offered = std::move(d);
   return true;
 #endif
@@ -298,7 +298,7 @@ void SpringEngine::setParams(const double *p) {
   if (first || v != version) {
     version = v;
     publish(g, v);
-    data.prepare(version, KEY_LO, KEY_HI, lastKey);
+    data.prepare(version, KEY_MIN, KEY_MAX, lastKey);
   }
 }
 
@@ -337,7 +337,7 @@ bool SpringEngine::snapshot(uint64_t v, Params &g) const {
 }
 
 void SpringEngine::noteOn(int key, double velocity) {
-  if (!hasParams || !(key >= KEY_LO && key <= KEY_HI) || !(velocity > 0)) return;
+  if (!hasParams || !(key >= KEY_MIN && key <= KEY_MAX) || !(velocity > 0)) return;
   lastKey = key;
   const Voice *v = byKey[key];
   if (v && !v->dead && !v->fading && v->id == version) { strikeKey(key, velocity, {}); return; } // the springs ringing there: struck again

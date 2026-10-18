@@ -22,7 +22,8 @@
 
 export const PC_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
 export const NUM_WHEELS = 91;
-export const KEY_LO = 36, KEY_HI = 96; // 61-key manual, C2–C7 at 8'
+export const KEY_LO = 36, KEY_HI = 96; // the B-3's 61-key manual, C2–C7 at 8'
+export const KEY_MIN = 21, KEY_MAX = 108; // what it plays: A0–C8, the wheels folding back an octave where a drawbar runs out
 
 export const DRAWBARS = [
   { name: '16′', label: "16'", offset: -12, harmonic: 0.5, color: 'brown' },

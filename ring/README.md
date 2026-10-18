@@ -25,7 +25,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/ring/>
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | play (C2–C7): inject a bunch into that key's ring |
+| `Z…/` and `Q…]` rows | play (A0–C8): inject a bunch into that key's ring |
 | `←` `→` | octave |
 | `↑` `↓` | velocity: the bunch's charge |
 | `Space` | keep the beams stored after the keys come up (the scrapers stay open) |
@@ -45,7 +45,8 @@ factor:
 
 so a short bunch is bright and a long one soft. The pickup's cable and
 amplifier add their own Gaussian response of 20 µs, which keeps the top keys
-from aliasing.
+from aliasing: up to C7 nothing folds back, and at C8 what does (its sixth
+harmonic, 25 kHz) comes back above 18 kHz, more than 40 dB down.
 
 A button pickup is a small disc in the pipe wall, a capacitor into a
 resistor: it passes the harmonics above 1/(2πRC) and weakens the ones below
@@ -55,7 +56,10 @@ passes closer to it: to first order its signal is the pulse train times
 (Shafer 1990). **Two buttons** put the left and right electrodes on the two
 channels; the betatron oscillation moves between them. **Difference** is
 left minus right, which is what an accelerator's position monitor reads: only
-the oscillation.
+the oscillation. Like a position monitor, its gain is set to the beam it
+watches: the difference is read in units of the injected oscillation (beam
+size times kick, at least one σ), so every note starts at the same height
+whatever the kick and the beam size, near the other pickups' loudness.
 
 ### 2. Betatron oscillation and its sidebands
 
@@ -152,7 +156,7 @@ ring/src/ring-params.js               parameters and presets
 ring/src/ring-main.js                 page wiring and views
 ring/src/ring-wasm.js                 the engine and model, the C++ as WebAssembly (ring/wasm/ring.wasm)
 native/instruments/ring/              the physics in C++: model, engine, generated tables, reference (plugins and WebAssembly)
-test/ring-tests.mjs                   node test/ring-tests.mjs (18 tests, about 2 s)
+test/ring-tests.mjs                   node test/ring-tests.mjs (19 tests, about 2 s)
 tools/render-ring.mjs                 node tools/render-ring.mjs → examples/ring/
 ```
 

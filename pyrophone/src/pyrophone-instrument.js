@@ -10,12 +10,12 @@ export const INSTRUMENT = {
   id: 'pyrophone',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
-  range: [48, 84],                      // MIDI keys
+  keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
+  range: [21, 108],                     // MIDI keys: A0–C8
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
   modWheel: 'flame',                    // CC1: the flame power, from its default up to its maximum
   // the engine: the physics in C++ (native/instruments/pyrophone), built as WebAssembly. It builds
   // each tube's tuning table itself, or takes the one the page offers ({ type: 'tune' }, pyrophone-wasm.js)
   wasm: { name: 'PyrophoneWasmEngine', module: new URL('./pyrophone-wasm.js', import.meta.url).href, binary: new URL('../wasm/pyrophone.wasm', import.meta.url).href },
-  chain: { volume: 'volume', room: 'room' },
+  chain: { volume: 'volume', room: 'room', venue: 'venue' },
 };

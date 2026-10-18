@@ -1,6 +1,8 @@
 // pianet-params.js — the knobs. Every parameter has a physical meaning and
 // a unit; the hint says what it does to the sound.
 
+import { VENUE } from '../../shared/chain.js';
+
 const mm = (v) => `${v.toFixed(2)} mm`;
 
 export const GROUPS = [
@@ -19,6 +21,8 @@ export const GROUPS = [
     params: [
       { id: 'tipMass', label: 'Solder tip mass', min: 0.1, max: 4, def: 1, log: true, fmt: (v) => `× ${v.toFixed(2)}`, hint: 'Each reed is re-cut to stay in tune. More solder: a shorter, stiffer reed, overtones pushed higher, a smaller swing. Applies to new notes.' },
       { id: 'loss', label: 'Reed loss η', min: 2e-4, max: 2e-2, def: 1.2e-3, log: true, fmt: (v) => `${(v * 1e3).toFixed(2)} × 10⁻³`, hint: 'Clamp and internal friction (thermoelastic loss and air are added). Sets the sustain while the key is held. Applies to new notes.' },
+      { id: 'fullRange', label: 'Full range (A0–C8)', type: 'checkbox', def: false,
+        hint: 'Opens the keys beyond the Pianet\'s five-octave C2–C7: the same reeds, each cut to length for its pitch, with the solder and thickness of C2 below and of C7 above.' },
     ],
   },
   {
@@ -37,6 +41,7 @@ export const GROUPS = [
       { id: 'amp', label: 'Amplifier', perform: true, type: 'select', def: 'off', options: [['off', 'Direct (DI)'], ['combo', 'Valve combo, 10″ speaker']], hint: 'The Pianet had no speaker: it went into whatever amp was at hand.' },
       { id: 'drive', label: 'Amp drive', perform: true, min: 0, max: 1, def: 0.35, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %`, showIf: (P) => P.amp === 'combo', hint: 'Asymmetric valve clipping, then the speaker\'s band-pass.' },
       { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.2, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },

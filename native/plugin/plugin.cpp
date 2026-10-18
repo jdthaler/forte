@@ -169,6 +169,7 @@ struct Plugin : Instance {
   // window's keys are not, as the pages' computer and screen keys are not)
   void noteOn(int ch, int key, double vel, bool fromMidi = true) {
     if (key < I.keyLo || key > I.keyHi || ch < 0 || ch > 15) return;
+    if (I.compass >= 0 && P[I.compass] < 0.5 && (key < I.compassLo || key > I.compassHi)) return; // outside the compass
     if (fromMidi) vel = std::pow(vel, kTouchGamma[(int)P[touchAt]]) * (soft ? kSoftPedal : 1);
     if (held[ch][key]) noteOff(ch, key, -1); // struck again before its note-off: let it go first
     held[ch][key] = 1; sounding[key]++; latched[key] = false; sostHeld[key] = false;
@@ -422,6 +423,11 @@ struct Plugin : Instance {
     d.addMember("accent", accent);
     d.addMember("keyLo", I.keyLo);
     d.addMember("keyHi", I.keyHi);
+    if (I.compass >= 0) { // the keys that play until the toggle opens keyLo…keyHi
+      Value c = createEmptyArray();
+      c.addArrayElement(I.compassLo); c.addArrayElement(I.compassHi); c.addArrayElement(I.compass);
+      d.addMember("compass", c);
+    }
     const Controller *sw = spaceSwitch();
     d.addMember("space", std::string(I.space == Space::sustain ? "sustain" : I.space == Space::hold ? "hold" : sw ? "switch" : ""));
     if (sw) { // what Space switches: "Leslie", "Slow", "Fast"
@@ -747,7 +753,7 @@ bool pluginActivate(const clap_plugin_t *p, double fs, uint32_t, uint32_t) {
   Plugin *s = self(p);
   // a new engine at the host's rate (any, 44.1–192 kHz), and the chain's impulse responses for it
   s->engine.reset(s->I.create(fs));
-  s->chain.configure(s->I.chain, fs);
+  s->chain.configure(s->I.chain, fs, s->P.data());
   s->panic();
   if (s->I.space == Space::sustain) s->engine->setSustain(false);
   s->dirty = true;

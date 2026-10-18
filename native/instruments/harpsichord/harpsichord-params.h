@@ -16,7 +16,7 @@
 namespace forte::harpsichord {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { manual, coupler, front8, back8, four, lute, buff, material, stiff, overlap, stagger, xFront, xBack, xFour, xLute, pitch, temperament, detune, loss, damper, fmax, soundboard, room, volume, count };
+enum : int { manual, coupler, front8, back8, four, lute, buff, material, stiff, overlap, stagger, xFront, xBack, xFour, xLute, pitch, temperament, detune, loss, damper, fmax, fullRange, soundboard, room, venue, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -39,6 +39,8 @@ inline const FormatSegment kFormat_loss[] = {{kNoLimit, "× ", "", 1, 0, 2, fals
 inline const FormatSegment kFormat_damper[] = {{kNoLimit, "× ", " √(Tμ)", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_fmax[] = {{kNoLimit, "", " kHz", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
+inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
 inline const ParamInfo kParams[p::count] = {
@@ -63,8 +65,10 @@ inline const ParamInfo kParams[p::count] = {
   {"loss", "String losses (air and wire)", "Strings and tuning", ParamKind::continuous, 0.25, 4, 1, 0, true, false, nullptr, 0, kFormat_loss, 1},
   {"damper", "Damper felt", "Strings and tuning", ParamKind::continuous, 0.1, 4, 1, 0, true, false, nullptr, 0, kFormat_damper, 1},
   {"fmax", "Highest partial", "Strings and tuning", ParamKind::continuous, 4, 16, 10, 0.5, false, false, nullptr, 0, kFormat_fmax, 1},
+  {"fullRange", "Full range (A0–C8)", "Strings and tuning", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"soundboard", "Soundboard", "Body and output", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"room", "Room", "Body and output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},
+  {"venue", "Venue", "Body and output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
   {"volume", "Volume", "Body and output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 
@@ -95,7 +99,7 @@ inline const Preset kPresets[] = {
   {"Baroque pitch, ¼-comma meantone", kPreset11, 2},
   {"Without the soundboard (bridge force)", kPreset12, 1},
 };
-inline const uint16_t kKeep[] = {p::volume, p::room};
+inline const uint16_t kKeep[] = {p::volume, p::room, p::venue};
 inline const Controller kControllers[] = {{0, -1}};
 
 // The plugin's description. The port supplies its engine, and midiVelocity when the
@@ -107,11 +111,11 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .vst3Id = {0x18, 0x59, 0x2d, 0x3a, 0x06, 0xd1, 0x15, 0xaa, 0xe2, 0x04, 0xb7, 0x13, 0x16, 0x1e, 0x91, 0xb3},
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 13,
-    .keep = kKeep, .keepCount = 2,
-    .keyLo = 29, .keyHi = 89, .space = Space::hold,
+    .keep = kKeep, .keepCount = 3,
+    .keyLo = 21, .keyHi = 108, .compassLo = 29, .compassHi = 89, .compass = p::fullRange, .space = Space::hold,
     .modWheel = -1, .modWheelMax = 0,
     .controllers = kControllers, .controllerCount = 0,
-    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .tone = -1, .trimDb = -2},
+    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = -2},
     .midiVelocity = midiVelocity, .create = create,
   };
 }

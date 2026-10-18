@@ -5,6 +5,7 @@
 //       'mix'    → Web Audio graph (room, volume)
 
 import { DRAWBARS } from './tonewheels.js';
+import { VENUE } from '../../shared/chain.js';
 
 const f1 = (u) => (v) => `${v.toFixed(1)} ${u}`;
 const f2 = (u) => (v) => `${v.toFixed(2)} ${u}`;
@@ -22,8 +23,13 @@ export const GROUPS = [
       { id: 'inertia', label: 'Coast-down time', kind: 'engine', min: 1, max: 20, def: 6, log: true, fmt: f1('s'),
         hint: 'Flywheel inertia ÷ bearing drag. Switch the motor off to hear it.' },
       { id: 'spinUp', label: 'Spin-up time', kind: 'engine', min: 0.2, max: 5, def: 1.2, log: true, fmt: f1('s') },
-      { id: 'wheelHarm', label: 'Wheel waveform impurity', kind: 'gen', min: 0, max: 3, step: 0.01, def: 0.4, fmt: (v) => v.toFixed(2),
-        hint: 'Tooth profile → 2nd/3rd harmonics at the pickup (strongest on the low wheels).' },
+      { id: 'levels', label: 'Generator and wiring', kind: 'gen', type: 'select', def: 'b3',
+        options: [['b3', 'B-3: measured levels, filters, tapering'], ['flat', 'Flat: every wheel and key alike']],
+        hint: 'Measured: each wheel’s level, the filters on wheels 44–91, and each key’s nine resistance wires. Flat: what the drawbars pretend.' },
+      { id: 'relief', label: 'Tooth relief', kind: 'gen', min: 0, max: 0.6, step: 0.005, def: 0.06, fmt: (v) => `${(v * 100).toFixed(1)} % of the gap`,
+        hint: 'How far the rim rises and falls per tooth, against the pickup gap. The flux goes as 1/gap: a 2nd harmonic, then a 3rd, strongest on the low wheels.' },
+      { id: 'drift', label: 'Filter capacitor drift', kind: 'gen', min: 0, max: 60, step: 1, def: 0, fmt: (v) => `+${v.toFixed(0)} %`,
+        hint: 'Old wax capacitors creep up in value: the filters on wheels 49–91 tune flat, and the treble loses level and purity.' },
       { id: 'crosstalk', label: 'Compartment crosstalk', kind: 'gen', min: -80, max: -20, step: 1, def: -48, fmt: (v) => db(v),
         hint: 'Magnetic pickup of the wheel four octaves away in the same compartment.' },
       { id: 'leakage', label: 'Background leakage', kind: 'gen', min: -90, max: -40, step: 1, def: -70, fmt: (v) => db(v, -90),
@@ -88,8 +94,9 @@ export const GROUPS = [
       { id: 'drive', label: 'Tube drive', perform: true, kind: 'engine', min: 0, max: 1, step: 0.01, def: 0.15, fmt: (v) => v.toFixed(2),
         hint: 'Gain into an off-centre-biased tube: even harmonics, then compression. A full chord keeps its level.' },
       { id: 'expression', label: 'Expression pedal', kind: 'engine', min: 0, max: 1, step: 0.01, def: 0.85, fmt: (v) => `${((v - 1) * 40).toFixed(0)} dB`,
-        hint: 'Before the drive, so it changes the grit too. MIDI CC 11.' },
+        hint: 'The treble’s level. The bass falls less as the pedal closes (+15 dB shut), as on the B-3. Before the drive, so it changes the grit too. MIDI CC 11.' },
       { id: 'room', label: 'Room', perform: true, kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.2, fmt: (v) => v.toFixed(2) },
+      VENUE,
       { id: 'volume', label: 'Volume', perform: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => v.toFixed(2) },
     ],
   },

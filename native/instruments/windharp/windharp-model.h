@@ -9,7 +9,11 @@
 namespace forte::windharp {
 
 constexpr double TAU = 2 * std::numbers::pi;
-constexpr int KEY_LO = 55, KEY_HI = 96; // G3–C7, 42 keys
+constexpr int KEY_LO = 55, KEY_HI = 96; // G3–C7, the 42 keys the soundbox's taper is drawn on
+// What it plays, A0–E7. Below G3 the strings are ropes (A0: 38 mm thick, 3.4 m long). Above E7 a
+// string thin enough to shed at its note (St·U₀/D) has Re = U₀D/ν below RE_C at the reference wind:
+// E7 sheds at Re 50, F7 would need 45, and no diameter reaches a note above ~2.7 kHz.
+constexpr int KEY_MIN = 21, KEY_MAX = 100;
 double keyFreq(double m);               // 440 · 2^((m − 69)/12), as V8 computes it
 
 // ---- air and the wake ----------------------------------------------------------------------------

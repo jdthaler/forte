@@ -1,9 +1,11 @@
-forte organ 0.6.0
+forte organ 0.8.0
 tuning 0
 mains 60
 inertia 6
 spinUp 1.2
-wheelHarm 0.40000000000000002
+levels 0
+relief 0.059999999999999998
+drift 0
 crosstalk -48
 leakage -70
 loading 0.25
@@ -33,6 +35,7 @@ reflections 0.34999999999999998
 drive 0
 expression 0.84999999999999998
 room 0.10000000000000001
+venue 1
 volume 0.80000000000000004
 drawbar1 8
 drawbar2 8

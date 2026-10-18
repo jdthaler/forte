@@ -16,7 +16,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/gongs/>
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | play (49 keys, C2–C6) |
+| `Z…/` and `Q…]` rows | play (88 keys, A0–C8) |
 | `←` `→` | octave |
 | `↑` `↓` | velocity (the mallet's speed goes as velocity²) |
 | `Space` | sustain: keeps your hand off the gongs after key-up |
@@ -149,18 +149,22 @@ scaled with it (mass a fixed fraction of the gong's, head radius 0.08 a). Then
 the Hertz contact constant K̄ = K h^½ a²/D is the same at every key too, and the
 motion in thicknesses is identical: only the clock runs faster. All keys share
 one table. Each key keeps the modes below a third of its sample rate (below), so
-only the top keys lose some.
+only the top keys lose some. Above C6 a gong that would keep fewer than eight
+runs twice as fast (at most 52 kHz: 48 kHz at a 48 kHz output) and keeps up to
+eight there: C8, a 7.6 mm foil, keeps 7 at 48 kHz (5 at 44.1 kHz) and pings.
 
 The key's frequency fixes its size, a = (h/a) c_p Ω_tuned/(√12 · 2πf). With the
 default h/a = 1 % in bronze and the default 0.4 h dome:
 
 | key | strike tone | diameter | thickness | mass | modes kept | strike tone T₆₀ |
 |---|---|---|---|---|---|---|
+| A0 | 27.5 Hz | 116 cm | 5.8 mm | 53 kg | 41, to 0.7 kHz | 240 s |
 | C2 | 65 Hz | 49 cm | 2.4 mm | 4.0 kg | 41, to 1.7 kHz | 68 s |
 | C3 | 131 Hz | 24 cm | 1.2 mm | 500 g | 41, to 3.5 kHz | 22 s |
 | A3 | 220 Hz | 15 cm | 0.73 mm | 100 g | 41, to 5.8 kHz | 8.7 s |
 | A4 | 440 Hz | 7 cm | 0.36 mm | 13 g | 27, to 7.3 kHz | 2.5 s |
 | C6 | 1047 Hz | 3 cm | 0.15 mm | 1 g | 12, to 7.0 kHz | 0.7 s |
+| C8 | 4186 Hz | 7.6 mm | 0.04 mm | 15 mg | 7, to 15.7 kHz | 0.3 s |
 
 What sets the regime is the impact speed in these units,
 v̄ = vτ/h = √12 v/(c_p (h/a)²). The deflection in thicknesses grows with v̄, and
@@ -340,9 +344,9 @@ upper modes, and the crash, more strongly. The default is 0.6.
 Each key's **strike tone** is tuned to 12-TET at small amplitude. This is the
 first axisymmetric mode, the one a centre strike excites and the gong's
 pitch. Its frequency is exact in the scheme, so tuning only sets the time
-scale. The test measures it from the output of a soft centre strike at all
-49 keys: every one is within ±3 ¢. Louder notes start sharp (flat plate) or flat
-(dome) and glide into tune. That is the physics, and the bottom trace of the
+scale. The test measures it from the output of a soft centre strike at the
+49 keys C2–C6 and at seven more from A0 to C8: every one is within ±3 ¢.
+Louder notes start sharp (flat plate) or flat (dome) and glide into tune. That is the physics, and the bottom trace of the
 *Energy cascade* view shows it in cents.
 
 ## What to listen for
@@ -443,7 +447,7 @@ tools/bench-gongs.mjs                node tools/bench-gongs.mjs: real-time load,
   plus a room-power weighting, not a radiation calculation. Thermoelastic loss
   has a single relaxation time.
 * **Scaling.** h/a is the same at every key, so the top keys are centimetre-wide
-  foils with few modes and short rings (C6: T₆₀ 0.7 s), while real small gongs
+  foils with few modes and short rings (C6: T₆₀ 0.7 s; C8: 0.3 s), while real small gongs
   are thicker and domed. The Thickness, Dome and Thermoelastic loss knobs show
   why.
 

@@ -9,7 +9,7 @@
 
 import assert from 'node:assert/strict';
 import { fft } from '../tools/audio-util.mjs';
-import { INSTRUMENT, KEY_LO, KEY_HI, DEFAULTS, GROUPS, PRESETS } from '../springs/src/springs-instrument.js';
+import { INSTRUMENT, KEY_LO, KEY_HI, KEY_MIN, KEY_MAX, DEFAULTS, GROUPS, PRESETS } from '../springs/src/springs-instrument.js';
 import { wasmModel } from '../springs/src/springs-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { keyFreq } from '../shared/dsp.js';
@@ -282,11 +282,11 @@ test('the chirps\' direction: below F_C the group delay climbs from L/c₀ to in
 console.log('tuning');
 const SETTINGS = [{ springs: 1 }, { springs: 3, spread: 3 }, { coil: 1.6, wire: 1.3 }, { helix: 12, endLoss: 0.3, bead: 5 }, { mallet: 2 }];
 const REG = [[36, 'C2'], [48, 'C3'], [60, 'C4'], [72, 'C5'], [84, 'C6']];
-test('tuned by ear: the virtual pitch the tuning reads (subharmonic summation, Hermes 1988, on what the pickup hears in the first 0.4 s after an mf strike; for springs in parallel the whole set\'s peak within 40 ¢ of the mean of each one\'s) is on the note within 1 ¢ on all 49 keys at the defaults, and within 10 ¢ on every key with one spring, three springs 3 % apart, wide coils of thick wire, a steep helix on lossy heavy mounts, and a soft mallet; before the correction it was flat, most in the bass', () => {
+test('tuned by ear: the virtual pitch the tuning reads (subharmonic summation, Hermes 1988, on what the pickup hears in the first 0.4 s after an mf strike; for springs in parallel the whole set\'s peak within 40 ¢ of the mean of each one\'s) is on the note within 1 ¢ on all 76 keys (A0–C7) at the defaults, and within 10 ¢ on every key with one spring, three springs 3 % apart, wide coils of thick wire, a steep helix on lossy heavy mounts, and a soft mallet; before the correction it was flat, most in the bass', () => {
   const rows = [];
   for (const [i, o] of [{}, ...SETTINGS].entries()) {
     let worst = 0;
-    for (let key = KEY_LO; key <= KEY_HI; key++) {
+    for (let key = KEY_MIN; key <= KEY_MAX; key++) {
       const p = P(o), d = keySprings(key, p, FS), f0 = keyFreq(key), c = cents(d.pitch, f0);
       worst = Math.max(worst, Math.abs(c));
       assert.ok(Math.abs(c) < (i ? 10 : 1), `key ${key} ${JSON.stringify(o)}: ${c.toFixed(2)} ¢`);
@@ -495,6 +495,21 @@ test('the page builds the springs and sends them with the note: the engine plays
   for (let i = 0; i < own.length; i++) assert.equal(own[i], other[i], 'data for another geometry is ignored');
 });
 
+test('the keys past C2–C6 (A0–B1, C♯6–C7): tuned by ear within 1 ¢, the engine\'s own sound within 10 ¢ (15 ¢ below E1), a forte note peaks 0.03–0.5 with no NaN; past C7 nothing plays', () => {
+  const out = [];
+  for (const key of [21, 24, 28, 33, 88, 92, 96]) {
+    const f0 = keyFreq(key), c = cents(keySprings(key, P(), FS).pitch, f0);
+    assert.ok(Math.abs(c) < 1, `key ${key}: the model's pitch ${c.toFixed(2)} ¢`);
+    const x = run(P(), [[0, 'on', key, MF]], HEAR + 0.01), h = cents(heardPitch(x, f0), f0);
+    assert.ok(Math.abs(h) < (key < 28 ? 15 : 10), `key ${key}: the engine's ${h.toFixed(1)} ¢`); // (0.4 s is 11 periods of A0: 15 ¢ below E1)
+    const [L, R] = run(P(), [[0, 'on', key, 1]], 0.25, { stereo: true }), pk = Math.max(peakAbs(L), peakAbs(R));
+    assert.ok(Number.isFinite(pk) && pk > 0.03 && pk < 0.5, `key ${key}: peak ${pk}`);
+    out.push(`${key}: ${c.toFixed(1)}/${h.toFixed(1)} ¢ ${pk.toFixed(2)}`);
+  }
+  assert.equal(peakAbs(run(P(), [[0, 'on', 97, 1]], 0.1)), 0, 'C♯7 is past the range');
+  console.log(`         ${out.join(', ')}`);
+});
+
 console.log('levels and stability');
 test('level: a forte note peaks at 0.1–0.5 across the compass at 44.1 and 48 kHz; forte chords of 4 and 6 notes stay under 1; every preset within 10 dB of the default', () => {
   const stereoPeak = (p, ev, sec, o) => { const [L, R] = run(p, ev, sec, { ...o, stereo: true }); return Math.max(peakAbs(L), peakAbs(R)); };
@@ -517,7 +532,7 @@ test('stability: seeded random combinations of parameter extremes at 44.1 and 48
   const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
   for (let trial = 0; trial < 10; trial++) {
     const fs = trial % 2 ? 44100 : 48000, p = P();
-    for (const q of sliders) if (!['volume', 'room'].includes(q.id)) { const r = rnd(); p[q.id] = r < 0.4 ? q.min : r < 0.8 ? q.max : q.def; }
+    for (const q of sliders) if (!['volume', 'room', 'venue'].includes(q.id)) { const r = rnd(); p[q.id] = r < 0.4 ? q.min : r < 0.8 ? q.max : q.def; }
     p.family = trial % 4 === 3 ? 'slinky' : 'tuned'; p.drive = trial % 3 ? 'rotation' : 'axial';
     const q = { ...p, endLoss: p.endLoss > 0.1 ? 0.005 : 1, eta: p.eta > 1e-3 ? 1e-5 : 3e-3, oil: 30 - p.oil, hand: 1 - p.hand, bead: p.bead > 1 ? 0.3 : 30 };
     const x = run(p, [[0, 'on', KEY_LO, 1], [0, 'on', 61, 1], [0, 'on', KEY_HI, 1], [0.1, 'params', q], [0.12, 'on', 61, 1], [0.15, 'off', KEY_LO, 1], [0.16, 'on', KEY_LO, 0.05]], 0.3, { fs });

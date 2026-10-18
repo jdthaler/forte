@@ -26,7 +26,8 @@
 // state gives how far lock-in persists beyond that band (the hysteresis) and its amplitude.
 
 export const TAU = 2 * Math.PI;
-export const KEY_LO = 55, KEY_HI = 96;          // G3–C7, 42 keys
+export const KEY_LO = 55, KEY_HI = 96;          // G3–C7, the 42 keys the soundbox is drawn on
+export const KEY_MIN = 21, KEY_MAX = 100;       // A0–E7: what it plays (windharp-model.h says why it stops at E7)
 export const keyFreq = (m) => 440 * 2 ** ((m - 69) / 12);
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
 export const noteName = (m) => NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);

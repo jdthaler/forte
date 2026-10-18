@@ -119,6 +119,23 @@ TEST("plugin: MIDI notes, the pedal, All Notes Off") {
   CHECK(peak(L, 9600, 12000) > 0.01);  // still sounding under the pedal
   CHECK(peak(L, 24200, 48000) == 0);   // silenced
 }
+TEST("plugin: keys past a historical compass play once Full range opens it, in the window too") {
+  auto level = [](int key, bool open) {
+    Instance in(48000);
+    Events ev;
+    if (open) ev.param(0, in.id("Full range"), 1);
+    ev.note(10, true, key, 0.8);
+    return peak(in.run(4800, 128, ev));
+  };
+  CHECK(level(60, false) > 0.01 && level(36, false) > 0.01 && level(96, false) > 0.01); // the compass, 36–96
+  CHECK(level(35, false) == 0 && level(21, false) == 0 && level(108, false) == 0);    // past it: silent
+  CHECK(level(21, true) > 0.01 && level(108, true) > 0.01);                           // opened: every key
+  Instance in(48000);
+  auto bridge = (const forte::EditorBridge *)in.p->get_extension(in.p, forte::kEditorBridge);
+  const std::string d = bridge->call(in.p, "[\"describe\"]");
+  CHECK(d.find("\"keyLo\": 21") != std::string::npos && d.find("\"keyHi\": 108") != std::string::npos);
+  CHECK(d.find("\"compass\": [36, 96, 2]") != std::string::npos); // the window's keys follow the toggle
+}
 TEST("plugin: the velocity curve bends MIDI velocity; the soft pedal strikes softer") {
   auto level = [](int curve, bool softPedal) {
     Instance in(48000);
@@ -218,7 +235,7 @@ TEST("plugin: the editor's calls set parameters, play notes and show what the ho
   auto call = [&](const char *json) { return bridge->call(in.p, json); };
   const std::string d = call("[\"describe\"]");
   CHECK(d.find("\"name\": \"Forte Smoke Test\"") != std::string::npos);
-  CHECK(d.find("\"Long ring\"") != std::string::npos && d.find("\"presets\": 2") != std::string::npos);
+  CHECK(d.find("\"Long ring\"") != std::string::npos && d.find("\"presets\": 3") != std::string::npos);
   CHECK(d.find("\"space\": \"sustain\"") != std::string::npos);
   CHECK(call("[\"poll\"]").find("[1, 0.4, \"-1.9 dB\"]") != std::string::npos); // every value once
   CHECK(call("[\"poll\"]").find("\"p\": []") != std::string::npos);            // then only changes
@@ -245,7 +262,7 @@ TEST("plugin: the editor's calls set parameters, play notes and show what the ho
   CHECK(peak(L) > 0.01);
   const std::string polled = call("[\"poll\"]");
   CHECK(polled.find("\"keys\": [69]") != std::string::npos);
-  CHECK(polled.find("[2, 1, \"Long ring\"]") != std::string::npos && polled.find("\"6.00 s\"") != std::string::npos);
+  CHECK(polled.find("[3, 1, \"Long ring\"]") != std::string::npos && polled.find("\"6.00 s\"") != std::string::npos);
   call("[\"note\", 69, 0]");
   call("[\"panic\"]");
   Events none;

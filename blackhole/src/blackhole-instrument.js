@@ -10,8 +10,8 @@ export const INSTRUMENT = {
   id: 'blackhole',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'tone', 'stereo'], // kept when a preset is chosen
-  range: [KEY_LO, KEY_HI],                    // MIDI keys: 36–96
+  keep: ['volume', 'room', 'venue', 'tone', 'stereo'], // kept when a preset is chosen
+  range: [KEY_LO, KEY_HI],                    // MIDI keys: A0–C8, 21–108
   space: null,                                // a ringdown has no damper; nothing to hold
   modWheel: 'spinU',                          // CC1: the spin, from its default up to 1 − 10⁻⁶
   midiVelocity: (v) => v ** 1.5,              // MIDI velocity / 127 → the engine's
@@ -19,5 +19,5 @@ export const INSTRUMENT = {
   // the engine, in C++ (native/instruments/blackhole), built as WebAssembly: it builds each key's
   // voice (its modes, and chirp) from the QNM table and the parameters as the note starts
   wasm: { name: 'BlackholeWasmEngine', module: new URL('./blackhole-wasm.js', import.meta.url).href, binary: new URL('../wasm/blackhole.wasm', import.meta.url).href },
-  chain: { volume: 'volume', room: 'room', roomSeconds: 2.2, tone: 'tone' },
+  chain: { volume: 'volume', room: 'room', venue: 'venue', roomSeconds: 2.2, tone: 'tone' },
 };

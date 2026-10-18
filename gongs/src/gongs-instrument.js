@@ -10,14 +10,14 @@ export const INSTRUMENT = {
   id: 'gongs',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
-  range: [36, 84],                      // MIDI keys: C2–C6
+  keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
+  range: [21, 108],                     // MIDI keys: A0–C8
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'strike',                   // CC1: strike point, from its default (near the centre) out to 95 % of the radius
   // the engine: the physics in C++ (native/instruments/gongs), built as WebAssembly (it builds its
   // own coupling tables)
   wasm: { name: 'GongWasmEngine', module: new URL('./gongs-wasm.js', import.meta.url).href, binary: new URL('../wasm/gongs.wasm', import.meta.url).href },
-  chain: { volume: 'volume', room: 'room' },
+  chain: { volume: 'volume', room: 'room', venue: 'venue' },
   // The engine against its reference (tools/render-reference.mjs), saved from the JavaScript it was
   // ported from. A crash is chaotic: in the scripts that strike hard enough (velocity 1, the chord,
   // the thin tam-tam, the steel sheet) a difference in the last bit (V8's and the C++'s exp, sin,

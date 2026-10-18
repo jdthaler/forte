@@ -1,6 +1,8 @@
 // harmonium-params.js — the knobs. Every parameter has a physical meaning and
 // a unit; the hint says what it does to the sound.
 
+import { VENUE } from '../../shared/chain.js';
+
 const pa = (v) => `${v.toFixed(0)} Pa (${(v / 9.81).toFixed(0)} mm of water)`;
 const times = (v) => `× ${v < 1 ? v.toFixed(2) : v.toFixed(1)}`;
 
@@ -49,6 +51,8 @@ export const GROUPS = [
         hint: 'The inertance of the throat that feeds the reed’s cell (its length over its area). This air’s inertia is what drives a free reed. More: quicker speech, a brighter and flatter tone, a higher threshold. Less: slow, dark speech, and the treble struggles to start. Applies to new notes.' },
       { id: 'cell', label: 'Reed cell volume', min: 0.2, max: 4, def: 1, log: true, fmt: times,
         hint: 'The pocket of air under the reed, sized so that its resonance with the throat sits 3× above the reed. A bigger cell brings that resonance down towards the reed: a lower pitch, a higher threshold and a darker tone. Applies to new notes.' },
+      { id: 'fullRange', label: 'Full range (A0–C8)', type: 'checkbox', def: false,
+        hint: 'Opens the keys beyond C2–C7: every rank\'s reeds designed and voiced the same way on down to A0 and up to C8 (the 16′ reaching 13.75 Hz, the 4′ 8.4 kHz).' },
     ],
   },
   {
@@ -59,6 +63,7 @@ export const GROUPS = [
       { id: 'cassF', label: 'Cassotto resonance', min: 300, max: 3000, def: 1500, log: true, fmt: (v) => `${v.toFixed(0)} Hz`, showIf: (P) => P.cassotto,
         hint: 'The chamber’s Helmholtz frequency (volume and mouth): above it the sound falls 12 dB per octave.' },
       { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.3, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },

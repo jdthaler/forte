@@ -18,6 +18,7 @@ struct Chain {
   int volume = -1;         // master gain = P[volume] × the trim
   int room = -1;           // room reverb at roomGain × P[room]
   double roomSeconds = 2.0, roomGain = 0.6;
+  int venue = -1;          // a choice of kVenues (impulses.h) the room is; none: the room ('room')
   int tone = -1;           // low-pass at P[tone] Hz, Q 0.6 dB
   int body = -1;           // soundboard or body: dry × (1 − bodyDry·x) + convolved × bodyWet·x
   double bodySeconds = 0.4, bodyDry = 0, bodyWet = 0;
@@ -53,6 +54,8 @@ struct InstrumentInfo {
   int keepCount;
 
   int keyLo, keyHi;        // the keys it plays
+  int compassLo = 0, compassHi = 127; // a historical compass inside them: the keys that play until
+  int compass = -1;        // this toggle opens the whole range (-1: no compass, every key plays)
   Space space;
   int modWheel = -1;       // CC1 drives this parameter: at rest its default, fully up modWheelMax
   double modWheelMax = 0;

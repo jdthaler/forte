@@ -16,7 +16,7 @@
 namespace forte::carillon {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { profile, historic, asym, eta, hardness, clapMass, strikeHeight, strikeAngle, speedMax, distance, around, room, volume, count };
+enum : int { profile, historic, asym, eta, fullRange, hardness, clapMass, strikeHeight, strikeAngle, speedMax, distance, around, room, venue, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -33,6 +33,8 @@ inline const FormatSegment kFormat_speedMax[] = {{kNoLimit, "", " m/s", 1, 0, 2,
 inline const FormatSegment kFormat_distance[] = {{kNoLimit, "", " m", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_around[] = {{kNoLimit, "", "° from the strike point", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
+inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
 inline const ParamInfo kParams[p::count] = {
@@ -40,6 +42,7 @@ inline const ParamInfo kParams[p::count] = {
   {"historic", "Historic, untuned bells", "Bells", ParamKind::continuous, 0, 1, 0, 0.01, false, false, nullptr, 0, kFormat_historic, 2},
   {"asym", "Asymmetry ε", "Bells", ParamKind::continuous, 0, 3, 0.2, 0.01, false, true, nullptr, 0, kFormat_asym, 1},
   {"eta", "Bronze loss factor η", "Bells", ParamKind::continuous, 0.00005, 0.002, 0.00025, 0, true, false, nullptr, 0, kFormat_eta, 11},
+  {"fullRange", "Full range (F2–C8)", "Bells", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"hardness", "Clapper face", "Clapper", ParamKind::continuous, 1, 210, 200, 0, true, true, nullptr, 0, kFormat_hardness, 6},
   {"clapMass", "Clapper mass", "Clapper", ParamKind::continuous, 0.5, 8, 2.5, 0.1, false, false, nullptr, 0, kFormat_clapMass, 1},
   {"strikeHeight", "Strike height", "Clapper", ParamKind::continuous, 0.04, 0.45, 0.115, 0.005, false, false, nullptr, 0, kFormat_strikeHeight, 1},
@@ -48,6 +51,7 @@ inline const ParamInfo kParams[p::count] = {
   {"distance", "Distance from the tower", "Listening", ParamKind::continuous, 10, 600, 30, 0, true, true, nullptr, 0, kFormat_distance, 1},
   {"around", "Listener round the bell", "Listening", ParamKind::continuous, 0, 90, 0, 0.5, false, false, nullptr, 0, kFormat_around, 1},
   {"room", "Belfry and square", "Output", ParamKind::continuous, 0, 1, 0.15, 0.01, false, true, nullptr, 0, kFormat_room, 1},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 
@@ -72,7 +76,7 @@ inline const Preset kPresets[] = {
   {"Across the town square (300 m)", kPreset8, 2},
   {"Under the tower (10 m)", kPreset9, 2},
 };
-inline const uint16_t kKeep[] = {p::volume, p::room};
+inline const uint16_t kKeep[] = {p::volume, p::room, p::venue};
 inline const Controller kControllers[] = {{0, -1}};
 
 // The plugin's description. The port supplies its engine, and midiVelocity when the
@@ -84,11 +88,11 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .vst3Id = {0x97, 0xf5, 0x65, 0xa1, 0xf0, 0xb1, 0x1e, 0x35, 0x6c, 0x30, 0x27, 0xfa, 0xa9, 0x44, 0xda, 0xc1},
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 10,
-    .keep = kKeep, .keepCount = 2,
-    .keyLo = 48, .keyHi = 96, .space = Space::sustain,
+    .keep = kKeep, .keepCount = 3,
+    .keyLo = 41, .keyHi = 108, .compassLo = 48, .compassHi = 96, .compass = p::fullRange, .space = Space::sustain,
     .modWheel = -1, .modWheelMax = 0,
     .controllers = kControllers, .controllerCount = 0,
-    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .tone = -1, .trimDb = 3.5},
+    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 3.5},
     .midiVelocity = midiVelocity, .create = create,
   };
 }

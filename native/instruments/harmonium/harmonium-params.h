@@ -16,7 +16,7 @@
 namespace forte::harmonium {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { principal, musette, detune, bourdon, piccolo, percussion, pressure, expression, pump, set, clearance, q, throat, cell, cassotto, cassF, room, volume, count };
+enum : int { principal, musette, detune, bourdon, piccolo, percussion, pressure, expression, pump, set, clearance, q, throat, cell, fullRange, cassotto, cassF, room, venue, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -32,6 +32,8 @@ inline const FormatSegment kFormat_throat[] = {{0.9999999999999999, "× ", "", 1
 inline const FormatSegment kFormat_cell[] = {{0.9999999999999999, "× ", "", 1, 0, 2, false, false, false, false}, {kNoLimit, "× ", "", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_cassF[] = {{kNoLimit, "", " Hz", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
+inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
 inline const ParamInfo kParams[p::count] = {
@@ -49,9 +51,11 @@ inline const ParamInfo kParams[p::count] = {
   {"q", "Reed Q (mechanical)", "Reeds (voicing)", ParamKind::continuous, 50, 800, 500, 0, true, false, nullptr, 0, kFormat_q, 1},
   {"throat", "Air mass feeding the reed", "Reeds (voicing)", ParamKind::continuous, 0.2, 3, 1, 0, true, false, nullptr, 0, kFormat_throat, 2},
   {"cell", "Reed cell volume", "Reeds (voicing)", ParamKind::continuous, 0.2, 4, 1, 0, true, false, nullptr, 0, kFormat_cell, 2},
+  {"fullRange", "Full range (A0–C8)", "Reeds (voicing)", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"cassotto", "Cassotto (tone chamber)", "Cassotto and output", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"cassF", "Cassotto resonance", "Cassotto and output", ParamKind::continuous, 300, 3000, 1500, 0, true, false, nullptr, 0, kFormat_cassF, 1},
   {"room", "Room", "Cassotto and output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, true, nullptr, 0, kFormat_room, 1},
+  {"venue", "Venue", "Cassotto and output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
   {"volume", "Volume", "Cassotto and output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 
@@ -86,7 +90,7 @@ inline const Preset kPresets[] = {
   {"Big reed cells: darker and a little flatter", kPreset13, 1},
   {"Little air mass: slow, dark speech", kPreset14, 1},
 };
-inline const uint16_t kKeep[] = {p::volume, p::room};
+inline const uint16_t kKeep[] = {p::volume, p::room, p::venue};
 inline const Controller kControllers[] = {{0, -1}};
 
 // The plugin's description. The port supplies its engine, and midiVelocity when the
@@ -98,11 +102,11 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .vst3Id = {0x65, 0xea, 0x91, 0x2c, 0xfa, 0x91, 0xc7, 0x5d, 0xe1, 0x93, 0xa5, 0xce, 0x34, 0x0e, 0x50, 0xdc},
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 15,
-    .keep = kKeep, .keepCount = 2,
-    .keyLo = 36, .keyHi = 96, .space = Space::hold,
+    .keep = kKeep, .keepCount = 3,
+    .keyLo = 21, .keyHi = 108, .compassLo = 36, .compassHi = 96, .compass = p::fullRange, .space = Space::hold,
     .modWheel = p::pressure, .modWheelMax = 2500,
     .controllers = kControllers, .controllerCount = 0,
-    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .tone = -1, .trimDb = -7},
+    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = -7},
     .midiVelocity = midiVelocity, .create = create,
   };
 }

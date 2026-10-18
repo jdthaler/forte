@@ -6,7 +6,7 @@
 // measured load.
 
 import { createShell, noteName } from '../../shared/shell.js';
-import { SpectrumView, fit, css, animate } from '../../shared/views.js';
+import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './grand-instrument.js';
 import { wasmModel } from './grand-wasm.js';
 
@@ -16,6 +16,7 @@ const MODE_BUDGET = 4000; // the engine's default oscillator budget (grand-engin
 const $ = (s) => document.querySelector(s);
 const FS = 48000, TAU = 2 * Math.PI;
 const spectrum = new SpectrumView($('#spectrum'));
+new SpectrogramView($('#spectrogram'), { spectrum });
 let focus = 60, focusVel = 0.7, sim = null, board = null, boardKey = '', timer = 0, t0 = performance.now();
 
 // CPU: the worklet reports the share of each render quantum spent in the engine

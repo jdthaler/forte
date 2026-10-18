@@ -41,7 +41,7 @@ class PyrophoneEngine : public Engine {
  public:
   static constexpr int MAXV = 24;    // tubes before the quietest is stolen
   static constexpr int POOL = 64;    // tubes, sounding or fading out
-  static constexpr int HIST = 2048;  // flame delay line (samples): τ ≤ 1.5 L/c down to 60 Hz
+  static constexpr int HIST = 8192;  // flame delay line (samples): τ ≤ 1.5 L/c down to A0, cold and bent down, at up to 192 kHz
   static constexpr int TRAIL = 512;  // the focused tube's mode-1 trail: 256 pairs
   explicit PyrophoneEngine(double fs);
 

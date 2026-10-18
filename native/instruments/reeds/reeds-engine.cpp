@@ -186,7 +186,7 @@ ReedEngine::ReedEngine(double fs)
     : Engine(fs), fs2(OS * fs), hammerMax(jsRound(HAMMER_MAX * (OS * fs))), capA(capTables[0].data()), capB(capTables[1].data()),
       dc(12, fs), mixStep(1 / (XFADE * fs)),
       data([this](int key, uint64_t v) -> std::unique_ptr<VoiceData> {
-        if (key < KEY_LO || key > KEY_HI) return nullptr;
+        if (key < KEY_MIN || key > KEY_MAX) return nullptr;
         // the knobs of that version (a snapshot the audio thread may be rewriting: check)
         for (Snapshot &s : snapshots) {
           if (s.version.load(std::memory_order_acquire) != v) continue;
@@ -263,7 +263,7 @@ void ReedEngine::setParams(const double *np) {
       s.version.store(version, std::memory_order_release);
     }
 #if FORTE_THREADS
-    data.prepare(version, KEY_LO, KEY_HI, focus);
+    data.prepare(version, KEY_MIN, KEY_MAX, focus);
 #endif
   }
 }
@@ -296,7 +296,7 @@ void ReedEngine::noteOn(int key, double velocity) {
     return;
   }
 #endif
-  if (key < KEY_LO || key > KEY_HI) return;
+  if (key < KEY_MIN || key > KEY_MAX) return;
   if (const Data::Ref r = data.get(key, version)) { strikeKey(key, velocity, *r.data); return; }
   // the reed is being built (a few ms): the note waits for it
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) { pending[i] = {key, velocity, false}; return; }

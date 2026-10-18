@@ -16,7 +16,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/glass/>
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | touch a bowl (it sounds while the key is held); 41 keys, F3–A6 |
+| `Z…/` and `Q…]` rows | touch a bowl (it sounds while the key is held); 41 keys, F3–A6 (all 88, A0–C8, with **Full range**) |
 | `←` `→` | octave |
 | `↑` `↓` | finger pressure |
 | `Space` | hold the notes that are down (latch) |
@@ -40,6 +40,16 @@ each key's diameter is linear in key number from 9 in (G3) to 3 in (G6), extrapo
 F3–A6. The wall thickness is solved so that the (2,0) mode is on pitch. It
 comes out at 1.75–2.8 mm, mean 2.49 mm, which matches Franklin's tenth of an
 inch (2.54 mm) without being fitted to it (tested).
+
+**Full range** (under Glass) opens the keys past the compass for an 88-key
+keyboard. Below F3 the same straight line carries on, to a 14.7-inch bowl at
+A0 with a 0.83 mm wall: its (2,0) mode at 27.5 Hz radiates feebly (ε₂ ≈ 10⁻⁴),
+so the bottom octaves are soft, and the finger's grip on such a big, thin
+bowl pulls it a few cents sharp (6 ¢ at A0 at the default touch). Above A6
+the line would reach zero at key 109, so there the bowls shrink as Franklin's
+do over his three octaves as a whole, a third of the size for an eighth of
+the pitch (D ∝ f^−0.528): 1.69 in across at C8, with a 1.67 mm wall. The
+bowls past the compass take the pan of its end bowls.
 
 | bowl | Ø | wall | glass | rim speed at 0.5 rev/s | speaks above | free T60 | ε₂ |
 |---|---|---|---|---|---|---|---|

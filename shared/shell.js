@@ -19,6 +19,8 @@
 //   presets       [{ name, p: { …overrides } }]
 //   keep          param ids kept when switching presets (e.g. ['volume', 'room'])
 //   range         [lowest MIDI key, highest MIDI key]   (default [36, 96])
+//   compass       { keys: [lo, hi], param }: a historical compass inside `range`, the keys that play
+//                 until the checkbox `param` opens the whole range
 //   base          MIDI note of the lower-row "Z" key    (default 48)
 //   wasm          { name: 'XWasmEngine', module: URL of src/x-wasm.js, binary: URL of wasm/x.wasm }:
 //                 the engine, the C++ in native/instruments/<slug> built as WebAssembly
@@ -49,7 +51,7 @@ import { controlOwns, focusedByPointer } from './focus.js';
 import { startMIDI, resumeMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto } from './midi.js';
 // after a change, a control picked with the pointer lets go of the focus (the keys go back to the
 // instrument); one reached with Tab keeps it, so the next Space or arrow works it again
-const release = (el) => { if (focusedByPointer(el)) el.blur(); };
+const unfocus = (el) => { if (focusedByPointer(el)) el.blur(); };
 
 const $ = (s) => document.querySelector(s);
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -71,7 +73,8 @@ export function toast(msg) {
 }
 
 export function createShell(cfg) {
-  const [LO, HI] = cfg.range || [36, 96];
+  const RANGE = cfg.range || [36, 96];
+  let LO, HI; // the keys that play now: the compass, or the whole range once it is opened
   const ALL = cfg.groups.flatMap((g) => g.params);
   const DEFAULTS = Object.fromEntries(ALL.map((p) => [p.id, p.def]));
   const STORE = `forte/${cfg.id}/params/v1`;
@@ -89,6 +92,8 @@ export function createShell(cfg) {
   const save = () => { try { localStorage.setItem(STORE, JSON.stringify(shell.P)); } catch { /* storage unavailable */ } };
 
   const shell = { P: load(), DEFAULTS, ALL, audio: null, base: cfg.base ?? 48, sustain: false };
+  const bounds = () => (cfg.compass && !shell.P[cfg.compass.param] ? cfg.compass.keys : RANGE);
+  [LO, HI] = bounds();
   const held = new Map(), sounding = new Map(), latched = new Set();
   const sost = createSostenuto(); // CC66
   let soft = false;               // CC67
@@ -317,12 +322,12 @@ export function createShell(cfg) {
         wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;
         input = document.createElement('select'); input.id = `p-${p.id}`;
         for (const [k, name] of p.options) input.add(new Option(name, k));
-        input.addEventListener('change', () => { shell.setParam(p.id, typeof p.def === 'number' ? +input.value : input.value); release(input); });
+        input.addEventListener('change', () => { shell.setParam(p.id, typeof p.def === 'number' ? +input.value : input.value); unfocus(input); });
         wrap.appendChild(input);
       } else if (p.type === 'checkbox') {
         wrap.classList.add('check');
         input = document.createElement('input'); input.type = 'checkbox'; input.id = `p-${p.id}`;
-        input.addEventListener('change', () => { shell.setParam(p.id, input.checked); release(input); });
+        input.addEventListener('change', () => { shell.setParam(p.id, input.checked); unfocus(input); });
         const lab = document.createElement('label'); lab.htmlFor = input.id; lab.textContent = p.label;
         wrap.append(input, lab);
       } else {
@@ -352,10 +357,22 @@ export function createShell(cfg) {
       c.input.setAttribute('aria-valuetext', c.val.textContent);
     }
   }
+  // the compass opened or closed: the keyboard follows, and keys now outside it let go
+  const rebound = () => {
+    [LO, HI] = bounds();
+    shell.keys.setBounds(LO, HI);
+    for (const k of shell.activeKeys()) {
+      if (k >= LO && k <= HI) continue;
+      sounding.delete(k); latched.delete(k); sost.strike(k); shell.keys.set(k, false);
+      shell.post({ type: 'noteOff', key: k }); cfg.onNoteOff?.(k);
+    }
+    if (shell.base + 11 < LO || shell.base > HI - 12) shiftOctave(Math.min(Math.ceil(LO / 12) * 12, Math.max(LO, HI - 12)) - shell.base);
+  };
   const refreshVisibility = () => { for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(shell.P) : false; };
   shell.setParam = (id, v, dragging = false) => {
     if (shell.P[id] === v) return;
     shell.P[id] = v;
+    if (id === cfg.compass?.param) rebound();
     refresh(id, dragging); refreshVisibility(); save(); updateHelp();
     if ($('#preset')) $('#preset').value = '';
     shell.applyMix(); sendParams();
@@ -364,6 +381,7 @@ export function createShell(cfg) {
   shell.setAll = (np) => {
     shell.P = { ...DEFAULTS, ...np };
     for (const id of controls.keys()) refresh(id);
+    if (cfg.compass) rebound();
     refreshVisibility(); save(); updateHelp(); shell.applyMix(); sendParams();
     cfg.onParam?.('*', null, shell.P, null, false);
   };
@@ -375,7 +393,7 @@ export function createShell(cfg) {
       if (ps.value === '') return;
       const keep = Object.fromEntries((cfg.keep || []).map((k) => [k, shell.P[k]]));
       shell.setAll({ ...DEFAULTS, ...keep, ...cfg.presets[+ps.value].p });
-      release(ps);
+      unfocus(ps);
     });
   }
   $('#reset')?.addEventListener('click', () => { shell.setAll({ ...DEFAULTS }); if ($('#preset')) $('#preset').value = ''; });

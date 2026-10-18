@@ -86,8 +86,8 @@ JavaScript computes (`tests/js-vectors.h`) and `tests/shared-tests.cpp` compares
 
 - `dsp.h`: `modeCoeffs`, `Biquad`, `OnePole`, `DCBlock`, `Delay`, `keyPan`, … operation for
   operation, in double precision, as `shared/dsp.js`.
-- `impulses.h`: the soundboard and room responses from the same seeded Mulberry32 as
-  `shared/impulses.js`: the random sequence is bit for bit the same, the responses equal to the
+- `impulses.h`: the soundboard, the room and the venues' responses from the same seeded
+  Mulberry32 as `shared/impulses.js`: the random sequence is bit for bit the same, the responses equal to the
   last bit of float32 but where `exp`, `sin` or `cos` round differently from V8's.
 - `linalg.h`: `symEig`, `genEig` and `cholesky` on Eigen. Eigenvalues ascending as in
   `shared/linalg.js`; an eigenvector's sign is arbitrary in both, so a model must not depend on
@@ -97,7 +97,9 @@ JavaScript computes (`tests/js-vectors.h`) and `tests/shared-tests.cpp` compares
   curve and makeup gain of Web Audio's DynamicsCompressorNode without its 6 ms look-ahead (the
   pages run the same limiter, `shared/limiter.js`).
   The convolutions have no latency (direct taps, then partitioned FFT stages that spread
-  their work): about 3 % of a core for the room at 48 kHz, 5 % with a soundboard.
+  their work): about 3 % of a core for the room at 48 kHz, 4.5 % for the cathedral's 6 s, 5 %
+  with a soundboard. A venue first chosen while playing is built on a worker thread (up to
+  0.1 s for the cathedral); until it is ready the old room plays on, and then it rings out.
 - Real-time plumbing: `queue.h` (lock-free single-producer, single-consumer), `Message` and
   `Engine::post` for what an engine tells a page, `denormals.h` (flush to zero while
   processing), `guard.h` (shared/guard.js), and `background.h`: per-key data built on a worker
@@ -150,4 +152,15 @@ and the one before is deleted once it has. Its id is `net.jthaler.forte.suite`, 
 Forte's, and its state `forte-suite <slug>` then the instrument's own, so the app reopens on
 the last instrument. It is only a standalone: a DAW keeps a plugin's parameters while it is
 active, and these change with the instrument. The release ships it in the archives with every
-instrument (`Forte-plugins-<system>` and `Forte-plugins-app-<system>`).
+instrument (`Forte-plugins-<system>` and `Forte-plugins-app-<system>`), and alone in
+`Forte-app-<system>`.
+
+### Icons
+
+`icons/` holds each standalone app's icon: `forte.icns`/`.ico` for the Forte app, in the site's
+colours, and `<slug>.icns`/`.ico` for each instrument, in its `FORTE_ACCENT`.
+`python3 tools/make-icons.py` (numpy and Pillow) draws them with the site's own icons; run it
+again after adding an instrument. `forte.cmake` hands them to clap-wrapper for the macOS and
+Windows standalones (`cmake/patches/clap-wrapper-mac-app-icon.patch` names the icon in the Mac
+app's `Info.plist`, which clap-wrapper leaves empty). Linux's standalones are bare executables,
+so they have none.

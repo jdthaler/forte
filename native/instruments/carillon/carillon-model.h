@@ -18,7 +18,10 @@
 namespace forte::carillon {
 
 constexpr double TAU = 2 * std::numbers::pi;
-constexpr int KEY_LO = 48, KEY_HI = 96; // C3–C7 at sounding pitch: a four-octave concert carillon
+constexpr int KEY_LO = 48, KEY_HI = 96; // C3–C7 at sounding pitch: a four-octave concert carillon, the compass
+// with the full range open: F2–C8. Below F2 the (minor-third) bell would outweigh the largest
+// carillon bourdons ever cast, about 20 t (18.7 t at F2, 45 t at C2, 600 t at A0).
+constexpr int KEY_MIN = 41, KEY_MAX = 108;
 inline double keyFreq(double k) { return 440 * std::pow(2.0, (k - 69) / 12); }
 
 // Bell bronze, about 78 % copper and 22 % tin; the air at 20 °C at sea level

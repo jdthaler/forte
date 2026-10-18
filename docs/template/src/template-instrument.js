@@ -10,10 +10,10 @@ export const INSTRUMENT = {
   id: 'template',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
-  range: [36, 96],                      // MIDI keys
+  keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
+  range: [21, 108],                     // MIDI keys: all 88, A0–C8
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   // the engine: the physics in C++ (native/instruments/template), built as WebAssembly
   wasm: { name: 'TemplateWasmEngine', module: new URL('./template-wasm.js', import.meta.url).href, binary: new URL('../wasm/template.wasm', import.meta.url).href },
-  chain: { volume: 'volume', room: 'room' },
+  chain: { volume: 'volume', room: 'room', venue: 'venue' },
 };

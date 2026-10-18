@@ -16,7 +16,7 @@
 namespace forte::stars {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { family, mass, speedup, spin, coreRatio, incl, driving, damping, flare, growth, room, volume, count };
+enum : int { family, mass, speedup, spin, coreRatio, incl, driving, damping, flare, growth, room, venue, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -32,6 +32,8 @@ inline const FormatSegment kFormat_damping[] = {{0.9999999999999999, "× ", "", 
 inline const FormatSegment kFormat_flare[] = {{0, "none", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "× ", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_growth[] = {{kNoLimit, "", " s", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
+inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
 inline const ParamInfo kParams[p::count] = {
@@ -46,6 +48,7 @@ inline const ParamInfo kParams[p::count] = {
   {"flare", "Flare kick (× the modes’ rms)", "Convection", ParamKind::continuous, 0, 3, 0.7, 0.01, false, true, nullptr, 0, kFormat_flare, 2},
   {"growth", "δ Scuti growth time", "Convection", ParamKind::continuous, 0.05, 2, 0.25, 0, true, false, nullptr, 0, kFormat_growth, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 
@@ -72,7 +75,7 @@ inline const Preset kPresets[] = {
   {"A smaller speed-up: younger stars on every key", kPreset9, 1},
   {"δ Scuti: self-excited modes", kPreset10, 3},
 };
-inline const uint16_t kKeep[] = {p::volume, p::room};
+inline const uint16_t kKeep[] = {p::volume, p::room, p::venue};
 inline const Controller kControllers[] = {{0, -1}};
 
 // The plugin's description. The port supplies its engine, and midiVelocity when the
@@ -84,11 +87,11 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .vst3Id = {0xa6, 0x1a, 0x0b, 0x1f, 0xcc, 0xe5, 0x83, 0xb4, 0x0f, 0xb9, 0x13, 0xe4, 0x1d, 0xf9, 0x68, 0x3b},
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 11,
-    .keep = kKeep, .keepCount = 2,
-    .keyLo = 36, .keyHi = 96, .space = Space::sustain,
+    .keep = kKeep, .keepCount = 3,
+    .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::spin, .modWheelMax = 30,
     .controllers = kControllers, .controllerCount = 0,
-    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .tone = -1, .trimDb = 7},
+    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 7},
     .midiVelocity = midiVelocity, .create = create,
   };
 }

@@ -24,7 +24,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/springs/>
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | play (49 springs, C2–C6) |
+| `Z…/` and `Q…]` rows | play (76 springs, A0–C7) |
 | `←` `→` | octave |
 | `↑` `↓` | velocity: how hard the mallet taps the bead |
 | `Space` | sustain: holds the felt dampers off the springs |
@@ -224,8 +224,17 @@ with d_n the M-normalised eigenvector's share along the bead's motion; 2/L
 is the reciprocal of the modal mass. The sign (−1)ⁿ sends the first
 arrival after one length, the echoes after three, five, … A mode coupled
 less than 0.003 times as strongly as a pure rotation wave is left out, as
-is anything above 18 kHz. That leaves about 240 modes per spring on C2,
+is anything above 18 kHz. That leaves about 365 modes per spring on A0, 240 on C2,
 140 on C4 and 100 on C6, 25 of them on the low branch below F_C.
+
+**Why the keyboard stops at C7.** Every key's spring is the C4 one scaled,
+so F_C rises an octave with every octave: 450 Hz on A0, 4.3 kHz on C4,
+17 kHz on C6. Just past C6 it leaves the 18 kHz ceiling, and the band
+holds only the lower part of the chirp: on C7 (F_C 34 kHz) 31 modes per
+spring, the highest at half F_C, where the echoes still come 16 % late.
+Above C7 there would be fewer still, all far below F_C and nearly
+harmonic (five on C8, at group delays within 17 % of each other): a short
+plucked wire, not a spring. So the keys stop at C7.
 
 A sideways sway of the coil moves the end of the wire without turning it,
 so the sway modes near k = 1/R are neither driven nor heard. Strictly the
@@ -288,11 +297,13 @@ At the defaults (two springs a key, 1.5 % apart):
 
 | key | heard before | heard after | lowest mode | coil ⌀ | wire ⌀ | wire L | F_C | T_D | modes / spring |
 |---|---|---|---|---|---|---|---|---|---|
+| A0 | −24.2 ¢ | +0.2 ¢ | +24.2 ¢ | 50.7 mm | 4.22 mm | 3.765 m | 451 Hz | 35.84 ms | 366 |
 | C2 | −20.8 ¢ | +0.3 ¢ | +20.8 ¢ | 21.3 mm | 1.78 mm | 1.586 m | 1070 Hz | 15.10 ms | 244 |
 | C3 | −17.0 ¢ | −0.1 ¢ | +17.4 ¢ | 10.7 mm | 0.89 mm | 0.795 m | 2136 Hz | 7.56 ms | 183 |
 | C4 | −13.8 ¢ | 0.0 ¢ | +14.1 ¢ | 5.36 mm | 0.45 mm | 0.398 m | 4265 Hz | 3.79 ms | 143 |
 | C5 | −10.3 ¢ | +0.2 ¢ | +9.6 ¢ | 2.69 mm | 0.22 mm | 0.200 m | 8507 Hz | 1.90 ms | 117 |
 | C6 | −8.8 ¢ | +0.3 ¢ | +4.9 ¢ | 1.35 mm | 0.11 mm | 0.100 m | 16968 Hz | 0.952 ms | 102 |
+| C7 | −6.9 ¢ | +0.2 ¢ | +4.1 ¢ | 0.67 mm | 0.06 mm | 0.050 m | 33920 Hz | 0.476 ms | 31 |
 
 "Heard" is the estimate against the note, before and after the correction.
 "Lowest mode" is where the pair's lowest modes are centred: the two

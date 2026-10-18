@@ -1,7 +1,7 @@
 // harmonium-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell, noteName } from '../../shared/shell.js';
-import { fit, css, animate } from '../../shared/views.js';
+import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './harmonium-instrument.js';
 import { RANKS, AIR, CD, areaAt, engaged } from './harmonium-data.js';
 import { wasmModel } from './harmonium-wasm.js';
@@ -14,6 +14,8 @@ const $ = (s) => document.querySelector(s);
 const RANK_COL = ['#c98bff', '#ff9fb0', '#ffd27a', '#7cc8ff', '#9fe39f'];
 let focus = 60, msg = null, shown = 1, model = null, thr = null, thrTimer = 0;
 const BEAT_SEC = 4, WIND_SEC = 8;
+const spectrum = new SpectrumView($('#spectrum'), { fLo: 30, fHi: 16000 });
+new SpectrogramView($('#spectrogram'), { spectrum });
 const envHist = { t: new Float64Array(4096), v: new Float64Array(4096), n: 0 };
 const windHist = { t: new Float64Array(1024), P: new Float64Array(1024), E: new Float64Array(1024), U: new Float64Array(1024), n: 0 };
 let clock = 0, envKey = 0; // seconds of audio seen, from the engine's posts; the key the envelope belongs to
@@ -22,6 +24,7 @@ const shell = createShell({
   ...INSTRUMENT,
   base: 48,
   arrows: { param: 'velocity', step: 0.05 },
+  onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key) => { focus = key; shell.keys.focus?.(key); updateModel(); },
   onParam: () => { updateModel(); },
   onMessage: (m) => {
@@ -48,6 +51,8 @@ function updateModel() {
   const P = shell.P, on = engaged(P);
   if (!on[shown]) shown = [1, 2, 3, 0, 4].find((r) => on[r]) ?? 1;
   model = phys.reedModel(phys.rankFreq(focus, shown, P), P);
+  // the spectrum's markers: the key's pitch on every rank that speaks, in the ranks' colours
+  spectrum.set(phys.rankFreq(focus, shown, P), RANKS.flatMap((r, i) => (on[i] ? [{ f: phys.rankFreq(focus, i, P), color: RANK_COL[i] }] : [])));
   const g = model.geo, md = model.modes;
   $('#slot-key').textContent = noteName(focus);
   $('#slot-read').textContent = `${RANKS[shown].name} reed: ${(g.L * 1e3).toFixed(1)} × ${(g.b * 1e3).toFixed(1)} × ${(g.h * 1e3).toFixed(2)} mm brass${g.mu > 0 ? `, tip weight ${(model.M * 1e3).toFixed(2)} g` : ''}`;

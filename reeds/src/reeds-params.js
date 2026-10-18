@@ -2,6 +2,7 @@
 // unit; the hint says what it does to the sound.
 
 import { HAMMER_VMAX } from './reeds-data.js';
+import { VENUE } from '../../shared/chain.js';
 
 const mm = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2)} mm`;
 const pct = (v) => `${(v * 100).toFixed(0)} %`;
@@ -13,6 +14,8 @@ export const GROUPS = [
       { id: 'solder', label: 'Solder mass', min: 0.05, max: 5, def: 1, log: true, fmt: (v) => `× ${v.toFixed(2)}`, hint: 'The tuning blob at the tip. The reed is re-cut to stay in pitch: a heavier blob makes a shorter, stiffer reed that the hammer swings less (quieter, less bark), pushes the overtones up and hides them from the pickup, and shortens the sustain. Applies to new notes.' },
       { id: 'strike', label: 'Strike point', min: 0.1, max: 0.9, def: 0.4, step: 0.005, fmt: (v) => `${(v * 100).toFixed(1)} % of length`, hint: 'Measured from the clamp. Nearer the tip: a bigger swing, more bark. Near the clamp: a small swing with relatively more overtone. On an overtone\'s node: that overtone is left out. Applies to new notes.' },
       { id: 'hardness', label: 'Hammer felt hardness', min: 0.1, max: 10, def: 1, log: true, fmt: (v) => `× ${v.toFixed(2)}`, hint: 'Harder felt: shorter contact, brighter attack, more overtone. Applies to new notes.' },
+      { id: 'fullRange', label: 'Full range (A0–C8)', type: 'checkbox', def: false,
+        hint: 'Opens the keys beyond the 200A\'s A1–C7: the same reeds, the solder graded on past them (heavier below, almost none at C8) and each cut to pitch, struck by A1\'s or C7\'s hammer.' },
       { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.6, step: 0.01, fmt: (v) => `${v.toFixed(2)}  (${(HAMMER_VMAX * v).toFixed(1)} m/s)` },
     ],
   },
@@ -38,6 +41,7 @@ export const GROUPS = [
     title: 'Output',
     params: [
       { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.2, step: 0.01, fmt: pct },
+      VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },

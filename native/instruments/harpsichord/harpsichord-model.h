@@ -12,6 +12,7 @@
 // the back 8′ strings by the nut from the upper manual; the buff presses leather on them.
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <vector>
@@ -22,7 +23,8 @@
 
 namespace forte::harpsichord {
 
-constexpr int KEY_LO = 29, KEY_HI = 89; // FF – f³, 61 keys
+constexpr int KEY_LO = 29, KEY_HI = 89; // FF – f³, 61 keys: the compass, which the scale is drawn on
+constexpr int KEY_MIN = 21, KEY_MAX = 108; // what it plays with the full range open: the same scale, continued
 constexpr int C2 = 72;                  // c² (Helmholtz) = C5, the scaling reference
 constexpr double TAU = 6.283185307179586;
 
@@ -97,7 +99,7 @@ constexpr int NSEG = 5;
 struct Seg { bool four; double t; };
 inline constexpr Seg SEGS[NSEG] = {{false, 0}, {false, 0.5}, {false, 1}, {true, 0}, {true, 1}};
 inline constexpr double MICS[2][2] = {{0.85, 0.35}, {0.15, 0.65}}; // (x/a, y/b): tail (bass) end, front (treble) end
-inline double keyT(double m) { return (m - KEY_LO) / (KEY_HI - KEY_LO); }
+inline double keyT(double m) { return std::min(1.0, std::max(0.0, (m - KEY_LO) / (KEY_HI - KEY_LO))); } // past the compass: its ends
 std::array<double, 2> bridgePoint(double m, int choir);
 std::array<double, NSEG> segmentWeights(int m, int choir);
 

@@ -69,7 +69,7 @@ Every other idea only adds, and can come before or after 1.0.
 | Idea | Size | Notes |
 |------|------|-------|
 | Save your own presets | M | In the browser, as a file, and in the plugins beside the factory presets. |
-| A choice of rooms (reverb) | M | A few named spaces, the same on the site and in the plugins. **Before 1.0** if the default room changes. |
+| A choice of rooms (reverb) | M | Done, for the next release: a Venue choice on every page and plugin (Studio, Room, Recital hall, Concert hall, Cathedral), Room, the original, the default. |
 | Morph between two presets | S–M | |
 | Quality or CPU setting | S–M | Fewer modes or voices, for phones and old laptops. |
 
@@ -95,6 +95,26 @@ Every other idea only adds, and can come before or after 1.0.
 | Windows installer (.msi or Inno Setup) | M | |
 | Linux packages (Flatpak or .deb) | M | |
 | iPad AUv3 | L | Needs the Apple Developer Program. |
+
+### Physics
+
+From each instrument's *How it works* notes (their *Simplifications*). Almost any physics can be
+added after 1.0 behind a switch that starts off; **Before 1.0** marks what would belong on by
+default in the existing presets, or would change what an existing knob means.
+
+| Idea | Size | Notes |
+|------|------|-------|
+| Tension modulation on the Ribbon Piano, Electric Grand and Harpsichord | M | **Before 1.0.** Pitch glide on hard blows; on the piano, longitudinal modes and phantom partials in the bass. The Clavier already has it. |
+| Sympathetic resonance on the Ribbon Piano, Electric Grand and Harpsichord | M | **Before 1.0.** Undamped strings ring along through the bridge. Costs CPU. |
+| The Tonewheel Organ's key scaling, preamp response and computed tonewheel waveform | S–M | Done, for the next release: the B-3's resistance wires, wheel levels and filters, the swell pedal's shut plate, and a waveform from the tooth and pickup (*Tooth relief* replaces *Wheel harmonics*). |
+| Companion modes on the Gong Keyboard | M | **Before 1.0.** Beating, drifting nodal lines and travelling waves. Doubles the modes. |
+| Resonator tube losses on the Vibraphone | S | **Before 1.0.** The bass's pitch wobble is probably too large without them. |
+| Spheroidal harmonics on the Black-Hole Keyboard | S–M | **Before 1.0.** Mode mixing at high spin. |
+| The Harpsichord's second polarisation after release | S–M | **Before 1.0** if wanted: the two-stage decay of a plucked string. |
+| An immovable clamped rim on the Gong Keyboard | L | **Before 1.0** if wanted: the clamped plate's nonlinearity is about 3× too weak. Needs a new Airy basis. |
+| The Tonewheel Organ's lower manual and pedals | M | A MIDI channel or a split each. |
+| A pedal division on the Pipe Organ | M | |
+| The Electric Grand's tremolo | S | |
 
 ### New instruments
 

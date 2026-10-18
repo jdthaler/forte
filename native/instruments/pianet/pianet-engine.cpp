@@ -77,7 +77,7 @@ void PianetEngine::setParams(const double *in) {
     version++;
     Snapshot &s = snapshots[version % snapshots.size()];
     s.tipMass.store(P[p::tipMass], std::memory_order_relaxed); s.loss.store(P[p::loss], std::memory_order_relaxed);
-    data.prepare(version, KEY_LO, KEY_HI, lastKey);
+    data.prepare(version, KEY_MIN, KEY_MAX, lastKey);
   }
   const PadParams pd = pad();
   for (int i = 0; i < nVoices; i++) { voices[i]->p.setPad(pd); voices[i]->setPickup(*this); }

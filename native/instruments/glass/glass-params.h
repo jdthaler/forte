@@ -16,7 +16,7 @@
 namespace forte::glass {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { press, wet, v0, rough, speed, treadle, split, loss, water, room, volume, count };
+enum : int { press, wet, v0, rough, speed, treadle, split, loss, water, fullRange, room, venue, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -30,6 +30,8 @@ inline const FormatSegment kFormat_split[] = {{kNoLimit, "", " ¢", 1, 0, 1, fal
 inline const FormatSegment kFormat_loss[] = {{0.0007449371276160179, "η = ", "·10⁻⁴", 10001.022436929794, -0.0001329273898283365, 1, false, false, false, false}, {0.0007449999999999999, "η = ", "·10⁻⁴", 0, 7.4, 1, false, false, false, false}, {0.002864720393146634, "η = ", "·10⁻⁴", 10001.022436929794, -0.0001329273898283365, 1, false, false, false, false}, {0.002865, "η = ", "·10⁻⁴", 0, 28.6, 1, false, false, false, false}, {kNoLimit, "η = ", "·10⁻⁴", 10001.022436929794, -0.0001329273898283365, 1, false, false, false, false}};
 inline const FormatSegment kFormat_water[] = {{kNoLimit, "", " % of the depth", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
+inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
 inline const ParamInfo kParams[p::count] = {
@@ -42,7 +44,9 @@ inline const ParamInfo kParams[p::count] = {
   {"split", "Doublet split (irregularity)", "Glass", ParamKind::continuous, 0, 40, 12, 0.1, false, false, nullptr, 0, kFormat_split, 1},
   {"loss", "Glass loss factor", "Glass", ParamKind::continuous, 0.00003, 0.003, 0.0004, 0, true, false, nullptr, 0, kFormat_loss, 5},
   {"water", "Water in the bowls", "Glass", ParamKind::continuous, 0, 0.8, 0, 0.01, false, false, nullptr, 0, kFormat_water, 1},
+  {"fullRange", "Full range (A0–C8)", "Glass", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, true, nullptr, 0, kFormat_room, 1},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 
@@ -65,7 +69,7 @@ inline const Preset kPresets[] = {
   {"Bowls half full of water", kPreset7, 1},
   {"Lead crystal (rings for ages)", kPreset8, 1},
 };
-inline const uint16_t kKeep[] = {p::volume, p::room};
+inline const uint16_t kKeep[] = {p::volume, p::room, p::venue};
 inline const Controller kControllers[] = {{0, -1}};
 
 // The plugin's description. The port supplies its engine, and midiVelocity when the
@@ -77,11 +81,11 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .vst3Id = {0xe8, 0x61, 0xf8, 0x2c, 0xa6, 0x06, 0xc8, 0xca, 0x74, 0xcb, 0x17, 0x39, 0xf8, 0xa3, 0xcb, 0xee},
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 9,
-    .keep = kKeep, .keepCount = 2,
-    .keyLo = 53, .keyHi = 93, .space = Space::hold,
+    .keep = kKeep, .keepCount = 3,
+    .keyLo = 21, .keyHi = 108, .compassLo = 53, .compassHi = 93, .compass = p::fullRange, .space = Space::hold,
     .modWheel = p::speed, .modWheelMax = 1,
     .controllers = kControllers, .controllerCount = 0,
-    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .tone = -1, .trimDb = 0.5},
+    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 0.5},
     .midiVelocity = midiVelocity, .create = create,
   };
 }

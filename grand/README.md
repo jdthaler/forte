@@ -13,7 +13,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/grand/>
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | play (73 keys, E1–E7) |
+| `Z…/` and `Q…]` rows | play (88 keys, A0–C8) |
 | `←` `→` | octave |
 | `↑` `↓` | velocity (hammer speed 0.25–6 m/s) |
 | `Space` | sustain pedal (lifts the dampers) |
@@ -27,7 +27,8 @@ keyboard. It has no soundboard. Each string has its own piezoelectric
 pickup on the harp casting, feeding a preamp with a three-band EQ. The
 bass strings are 67.9 cm (26¾ in), about a third of a concert grand's. The
 lowest 15 keys have one string each and the rest have two, where a piano
-has three. (Sources: Wikipedia's [*Yamaha CP-70*](https://en.wikipedia.org/wiki/Yamaha_CP-70)
+has three. The model plays the 88 keys of the CP-80, A0–C8: its scale
+carried on below E1 and above E7 (below). (Sources: Wikipedia's [*Yamaha CP-70*](https://en.wikipedia.org/wiki/Yamaha_CP-70)
 page; the SMEM museum and Hollowsun descriptions. More under *Prior art
 and references* below.) The model follows this. *Strings per note*
 also offers a 1/2/3 acoustic-grand stringing.
@@ -43,7 +44,10 @@ steel wire runs from ⌀1.06 mm at C4 to ⌀0.81 mm at E7. From E1 to F3
 12-TET pitch, because a short string needs a lot of mass to reach a low
 pitch. Each key's tension is *solved* so the stiff string's fundamental
 lands exactly on its tuning target f₀: T = 4L²f₀²μ − EI k₁². The target is a
-stretched scale (below). The concert scale (*Scale design*) reuses the
+stretched scale (below). Past the CP-70's keys the CP-80's go on: below E1
+the strings stay 0.68 m and wound to 500 N; above E7 the length falls as
+1/f, since a plain wire's stress is 4ρ(Lf)² whatever its gauge, so C8
+(4.3 cm) stays at E7's 48 % of breaking. The concert scale (*Scale design*) reuses the
 Ribbon Piano's smoothed concert-grand layout. Both use the same steel
 (E = 200 GPa).
 
@@ -62,7 +66,7 @@ inharmonic than a concert grand's. Its 10th partial is 1.6 semitones
 sharp of 10f₁ and its 20th is 5 semitones sharp. That stretched, clangy
 series is the electric grand's bass "zing". Measurements on real pianos show
 the same trend: the smaller the piano, the larger B (Young 1952; Fletcher &
-Rossing, ch. 12). The tensions sit at 13–47 % of breaking stress. *Wire bending
+Rossing, ch. 12). The tensions sit at 11–48 % of breaking stress. *Wire bending
 stiffness* scales EI, and 0 makes the strings ideal and harmonic.
 
 **Stretch tuning.** A stiff string's partial 2 sits above twice its
@@ -73,7 +77,7 @@ the fundamental of the upper. *Stretch tuning* (on by default) does the same,
 outward from a temperament octave around A4 (E♭4–D5, A4 at 440 Hz, the
 stretch spread evenly across it), with each key's own B: a Railsback curve.
 On the CP-70 scale it runs from −12 ¢ at E1 through −1.5 ¢ at C4 to +17 ¢ at
-C7 and +25 ¢ at E7. The concert scale, five times less inharmonic in the
+C7 and +25 ¢ at E7 (−16 ¢ at A0, +48 ¢ at C8). The concert scale, five times less inharmonic in the
 bass, needs −1.5 to +14 ¢. The tests check that every 2:1 octave coincides
 (to 10⁻³ Hz in the model, and within 0.5 Hz in the output at C6–C7 and
 A5–A6), and that with it off every key is within 3 ¢ of 12-TET.
@@ -99,7 +103,10 @@ that filters the partials whose wavelength it spans). The contact is solved
 implicitly every sample, with a scalar Newton iteration against all modes,
 as in the [Ribbon Piano](../piano/README.md). Key velocity maps to 0.25–6 m/s (Askenfelt &
 Jansson 1991). At C4 mf (2.3 m/s) the felt is in contact for 2.0 ms and
-peaks at 19 N. Harder felt and faster blows shorten the contact.
+peaks at 19 N. Harder felt and faster blows shorten the contact. Above E7,
+where the data stop, the felt hardens so the contact keeps to E7's two
+periods (τ ∝ (M/K)^(1/(p+1)), 0.5 ms at C8): carried on as it was, it
+would last three periods at C8 and leave it 15 dB quieter than E7.
 *Strike position* (default 0.12 L, about L/8.3) weakens the partials with a
 node near the hammer, the 8th most. The action needs about 60 ms to bring
 the hammer back for another blow, so a key repeated faster than that (16

@@ -10,7 +10,7 @@
 // model's functions through harmonium-wasm.js, the engine through loadEngine.
 
 import assert from 'node:assert/strict';
-import { KEY_LO, KEY_HI, RANKS, areaAt } from '../harmonium/src/harmonium-data.js';
+import { KEY_LO, KEY_HI, KEY_MIN, KEY_MAX, RANKS, areaAt } from '../harmonium/src/harmonium-data.js';
 import { INSTRUMENT } from '../harmonium/src/harmonium-instrument.js';
 import { wasmModel } from '../harmonium/src/harmonium-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
@@ -246,6 +246,28 @@ test('tuning: every key C2–C7 sounds within ±3 ¢ of equal temperament at the
   for (const k of [85, 90, 96]) check(k, P({ principal: false, piccolo: true }), 4, 48000);
   console.log(`        worst ${worst.toFixed(2)} ¢`);
 });
+test('past C2–C7 (Full range): the 8′ from A0 to C8 in tune within ±3 ¢ and speaking within 0.5 s, the 4′ up to G♯7 in tune, the 16′ down to A0 (13.75 Hz) within 5 ¢', () => {
+  const check = (key, p, rank) => {
+    const long = key < 30, r = hold(key, p, long ? 2.4 : 1.0, { opts: { track: true } }), f0 = rankFreq(key, rank, p);
+    const h = Math.ceil(40 / f0); // a deep reed through its harmonic h: the analysis window spans too few of its periods
+    const f = freqAt(r.L, h * f0, Math.round((long ? 1.0 : 0.5) * FS), r.L.length, FS) / h, c = cents(f, f0);
+    assert.ok(Math.abs(c) < 3 && r.L.every(Number.isFinite), `${key} rank ${RANKS[rank].name}: ${c.toFixed(2)} ¢`);
+    return r;
+  };
+  for (const k of [KEY_MIN, 26, 31, 100, 104, KEY_MAX]) {
+    const o = onset(check(k, P(), 1).L);
+    assert.ok(o < 0.5, `${k}: speaks after ${o} s`);
+  }
+  for (const k of [100, 104]) check(k, P({ principal: false, piccolo: true }), 4);
+  // the 16′ an octave below A0 (13.75 Hz), counted at its own tip (the output's window spans too few periods):
+  // it is tuned 0.6–1.0 s after the key goes down, while still growing, and settles 3.6 ¢ sharp at full swing
+  for (const [k, tol] of [[KEY_MIN, 5], [28, 3]]) {
+    let n0 = 0, t0 = 0, rd = null;
+    run(P({ principal: false, bourdon: true }), [[0, 'on', k, 0.7]], 3, { tap: (e, t) => { rd = e.voices[0].reeds[0]; if (!n0 && t >= 1.5) { n0 = rd.nx; t0 = rd.lastX; } } });
+    const c = cents((rd.nx - n0) / ((rd.lastX - t0) * rd.h), rankFreq(k, 0, P()));
+    assert.ok(Math.abs(c) < tol, `${k} rank 16′: ${c.toFixed(2)} ¢`);
+  }
+});
 test('every key speaks at the default wind: half its full level within 300 ms of the key going down (C2–C7)', () => {
   const t = [];
   for (let k = KEY_LO; k <= KEY_HI; k++) {
@@ -384,7 +406,7 @@ test('aliasing: a 2×-integrated C7 and a 1×-integrated G4 keep every inharmoni
   }
 });
 test('stability: seeded random combinations of extreme settings at 44.1 and 48 kHz, changed mid-note, with full aftertouch: no NaN, bounded, dying away after release', () => {
-  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room'].includes(q.id));
+  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'venue', 'fullRange'].includes(q.id));
   let seed = 4242, worst = { pk: 0 };
   const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
   const pick = () => {

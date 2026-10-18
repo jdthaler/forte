@@ -57,10 +57,11 @@ export const ready = () => OrganWasmEngine.ready();
 // wheel's frequency on its gears, in equal temperament and between them; wheelSpec(w) { pc, octave,
 // teeth, gear }; keyWheel(key, d) and percWheel(key, third), the wheel a drawbar or the percussion
 // taps; drawbarGain(n); keyAnalysis(key, P), the nine tones a key sounds against the harmonic
-// series; leslieGeometry(p) { wall, micDist }, the cabinet's rear wall and the microphones' distance.
+// series, with their levels; wheelLevelDb(w), wireOhms(key, d), filterGain(w, ratio, drift) and
+// pickupHarmonics(w, relief) { h2, h3 }, the generator and its wiring; leslieGeometry(p) { wall, micDist }, the cabinet's rear wall and the microphones' distance.
 export async function wasmModel() {
   const x = await ready(), s = scratch(x);
-  const TUNING = { gears: 0, et: 1, harmonic: 2 };
+  const TUNING = { gears: 0, et: 1, harmonic: 2 }, LEVELS = { b3: 0, flat: 1 };
   return {
     gearFreq: (w) => x.organ_gear_freq(w),
     etFreq: (w) => x.organ_et_freq(w),
@@ -74,9 +75,17 @@ export async function wasmModel() {
       return { w, pc, octave, teeth, gear: [driving, driven] };
     },
     keyAnalysis(key, P) {
-      x.organ_key_analysis(key, TUNING[P.tuning] ?? 0, P.mains, s.at);
-      const a = s.f64(45);
-      return DRAWBARS.map(({ name }, d) => ({ d, name, w: a[5 * d], actual: a[5 * d + 1], ideal: a[5 * d + 2], cents: a[5 * d + 3], folded: a[5 * d + 4] > 0 }));
+      x.organ_key_analysis(key, TUNING[P.tuning] ?? 0, LEVELS[P.levels] ?? 0, P.mains, s.at);
+      const a = s.f64(54);
+      return DRAWBARS.map(({ name }, d) => ({ d, name, w: a[6 * d], actual: a[6 * d + 1], ideal: a[6 * d + 2], cents: a[6 * d + 3], folded: a[6 * d + 4] > 0, db: a[6 * d + 5] }));
+    },
+    wheelLevelDb: (w) => x.organ_wheel_level_db(w),
+    wireOhms: (key, d) => x.organ_wire_ohms(key, d),
+    filterGain: (w, ratio, drift = 0) => x.organ_filter_gain(w, ratio, drift),
+    pickupHarmonics(w, relief) {
+      x.organ_pickup_harmonics(w, relief, s.at);
+      const [h2, h3] = s.f64(2);
+      return { h2, h3 };
     },
     leslieGeometry(p) {
       x.organ_leslie_geometry(p.hornRadius, p.micDist, s.at);

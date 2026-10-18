@@ -71,7 +71,8 @@ so the factory presets are a Preset parameter in every format.
   (`shared/shell.js`). It has:
   - an optional tone low-pass (Q 0.6);
   - volume × the registry's `trim`;
-  - an optional room convolution (`roomIR`, 2 s, gain 0.6 × room);
+  - an optional room convolution (gain 0.6 × room): `roomIR` 2 s long, or the venue the
+    `venue` parameter picks (`VENUES`, scaled to the room's energy);
   - a limiter: Web Audio's DynamicsCompressor at −3 dB threshold, 3 dB knee,
     ratio 12, 2 ms attack, 150 ms release.
 

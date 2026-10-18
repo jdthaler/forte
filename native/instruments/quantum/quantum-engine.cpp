@@ -15,7 +15,7 @@ using std::numbers::pi;
 
 constexpr double OUT = 0.3;      // launch peak at full velocity
 constexpr double TAU_MIN = 1e-4; // shortest pump ramp, s (keeps the onset below Nyquist)
-constexpr int KEY_LO = 36, KEY_HI = 96; // the descriptor's range: the packets built ahead
+constexpr int KEY_LO = 21, KEY_HI = 108; // the descriptor's range, A0–C8: the packets built ahead
 
 static double erf(double x) { // Abramowitz & Stegun 7.1.26, |error| < 1.5e-7
   const double s = x < 0 ? -1 : 1, a = std::fabs(x), t = 1 / (1 + 0.3275911 * a);
@@ -65,6 +65,7 @@ bool QuantumEngine::Voice::start(const QuantumEngine &eng, int k, double vel, co
   count = -(int64_t)std::ceil(4 * tau * fs);
   rampEnd = -count;
   env = OUT * vel;
+  // across C2–C7, the keyboard it was first drawn on; the keys beyond sit at its ends
   const double pan = std::max(-1.0, std::min(1.0, (2.0 * (k - 36)) / (96 - 36) - 1)) * 0.6, a = ((pan + 1) * pi) / 4;
   gl = fd::cos(a); gr = fd::sin(a); // keyPan(key)
   released = quench = stolen = dead = false;

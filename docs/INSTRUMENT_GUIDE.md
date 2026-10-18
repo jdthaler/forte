@@ -79,8 +79,8 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `limiter.js` | the limiter at the end of the chain: Web Audio's compressor curve and makeup gain without its 6 ms look-ahead, as the plugins' `limiter.cpp`, so a page adds no delay to a key |
 | `dsp.js` | `modeCoeffs` (exact two-pole modal resonator), `Biquad`, `OnePole`, `DCBlock`, `Delay` (fractional), `keyPan`, `keyFreq`, `sigmaFromT60` |
 | `linalg.js` | `symEig`, `genEig` (generalised symmetric), `cholesky` |
-| `views.js` | `fit`, `css`, `animate`, `SpectrumView` (live spectrum + model markers), `ScopeView` |
-| `impulses.js` | `roomIR` (the synthetic room the shell uses) |
+| `views.js` | `fit`, `css`, `animate`, `SpectrumView` (live spectrum + model markers), `SpectrogramView` (scrolling spectrogram, the markers as ticks), `ScopeView` |
+| `impulses.js` | the rooms: `roomIR` (the pages' original synthetic room) and the venues (`VENUES`: a studio and three halls built from their size, walls and air: image sources, then a tail decaying in each octave in Eyring's time) |
 | `registry.js` | the instrument list behind the landing page and the menus |
 | `midi.js` | Web MIDI for every page (the shell and the five older pages): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen next to Enable MIDI, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling. |
 | `focus.js` | who gets a key press: a control reached with Tab keeps the keys it uses (Space ticks a stop, arrows move a slider); one last touched with the mouse or a finger hands them back to the instrument. Every page's key handler asks `controlOwns(e)` first. |
@@ -103,8 +103,9 @@ browser globals when it is imported.
 export const INSTRUMENT = {
   id: 'gongs',
   groups: GROUPS, presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
-  range: [36, 84],                      // the MIDI keys it plays
+  keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
+  range: [21, 108],                     // the MIDI keys it plays: all 88 (A0–C8), unless the physics stops short
+  compass: { keys: [36, 84], param: 'fullRange' }, // a historical compass: only these play until the checkbox opens the range
   space: 'sustain',                     // Space and CC64: 'sustain' (a damper, sent to the engine), 'hold' (keys latch) or null
   modWheel: 'strike',                   // CC1 (or { param, max })
   controllers: { 67: 'unaCorda' },      // other MIDI controllers → parameters (a toggle is on at 64);
@@ -114,10 +115,19 @@ export const INSTRUMENT = {
           binary: new URL('../wasm/gongs.wasm', import.meta.url).href }, // the engine (below)
   midiVelocity: (v) => …,               // MIDI velocity / 127 → the engine's (default: the same)
   keyVelocity: 1,                       // what the computer keys play when there is no `velocity` parameter
-  chain: { volume: 'volume', room: 'room' }, // shared/chain.js: also roomSeconds, roomGain, tone, body, limiter
+  chain: { volume: 'volume', room: 'room', venue: 'venue' }, // shared/chain.js: also roomSeconds, roomGain, tone, body, limiter
   load: async () => …,                  // data to load before the first note (default: none)
 };
 ```
+
+Every instrument plays the 88 keys of a piano keyboard, A0–C8, unless its physics stops short
+(`test/site-tests.mjs` lists those, and each README says why). Keys past the real instrument's
+compass are made by carrying its design on (the same scale of strings, bars or bowls); keep the
+formulas that design the keys drawn on the compass, so the keys inside it sound as they did. An
+instrument with a historical compass (the harpsichord's FF–f³) names it in `compass`, with a
+checkbox parameter (`fullRange`, off) that opens the whole range: the page's keys, the computer
+keys and MIDI follow it, and so do the plugins' note filter and window. The engine plays every
+key in `range` and never reads the checkbox.
 
 A `console` holds controls the page draws itself rather than as sliders: its `groups` are
 parameters as `GROUPS` are, `defaults` the page's state and `get(P)` maps the plugin's
@@ -181,7 +191,9 @@ Rules of thumb:
 
 `type: 'select'` with `options: [[value, label], …]`, or `type: 'checkbox'`.
 `showIf: (P) => …` hides a control when it is irrelevant. Keep `volume`
-(0–2, def ≈ 0.8) and `room` (0–1) in an *Output* group. Keep `velocity`
+(0–2, def ≈ 0.8) and `room` (0–1) in an *Output* group, with `VENUE`
+(`shared/chain.js`, the room's space) right after `room`, in `keep` and
+as the chain's `venue`. Keep `velocity`
 (the computer keyboard's strike velocity) if the instrument is
 velocity-sensitive. Presets override defaults. Make each preset show one
 physical idea and give it a descriptive name.
@@ -208,8 +220,13 @@ presets.
 Copy the template's DOM. The sidebar, header, keyboard and footer are
 standard. The views are yours: show the physics *while it plays* (mode
 shapes, a slow-motion mechanism, phase portraits, the field, the
-spectrum with the model's predicted lines). Use `SpectrumView` for the
-live spectrum. Every view gets a one-line caption that says what to look
+spectrum with the model's predicted lines). Every instrument has a
+spectrum and a spectrogram of its live output: `SpectrumView` and
+`SpectrogramView`, which follows a spectrum (`{ spectrum }`) for its
+analyser, range and markers, or takes its own (a narrow band can be
+linear, as the Star Keyboard's is). Mark them with what the model
+predicts, and say in their captions what to watch for in this
+instrument. Every view gets a one-line caption that says what to look
 at.
 
 Space is `sustain` (a damper pedal sent to the engine) or `hold` (the shell

@@ -15,7 +15,7 @@ import { keyFreq } from '../shared/dsp.js';
 
 const ArmonicaEngine = await loadEngine(INSTRUMENT);
 const { bowl, ringRatio, freeLines, speakingThreshold, regulation, transport } = await wasmModel();
-const [KEY_LO, KEY_HI] = INSTRUMENT.range;
+const [KEY_LO, KEY_HI] = INSTRUMENT.compass.keys, [KEY_MIN, KEY_MAX] = INSTRUMENT.range; // F3–A6; A0–C8 with Full range
 
 const FS = 48000, PI = Math.PI;
 let failures = 0;
@@ -187,6 +187,19 @@ test("Franklin's bowls, 9 in to 3 in across, come out with his 'tenth of an inch
   near(mean, 0.1 * 0.0254, 0.1 * 0.00254, 'mean wall vs 2.54 mm');
   console.log(`        walls ${(bowl(KEY_LO, REF).h * 1e3).toFixed(2)}–${(bowl(79, REF).h * 1e3).toFixed(2)}–${(bowl(KEY_HI, REF).h * 1e3).toFixed(2)} mm, mean ${(mean * 1e3).toFixed(2)} mm (Franklin: ~2.5 mm at the brim)`);
 });
+test('past the compass: the bowls carry on, linear in key below F3, a third of the size per three octaves above A6 (to 1.69 in at C8), tuned, and they speak', () => {
+  const D = (k) => (2 * bowl(k, REF).a) / 0.0254;
+  near(D(KEY_MIN), 9 + (6 * 34) / 36, 1e-9, 'A0');
+  near(D(KEY_HI + 12) / D(KEY_HI), 2 ** -(Math.log(3) / Math.log(8)), 1e-12, 'an octave above A6');
+  near(D(KEY_MAX), 1.69, 0.01, 'C8');
+  for (let k = KEY_MIN + 1; k <= KEY_MAX; k++) assert.ok(D(k) < D(k - 1) && D(k) > 0.93 * D(k - 1), `${k}: ${D(k)} in after ${D(k - 1)}`); // each a little smaller
+  for (let k = KEY_MIN; k <= KEY_MAX; k++) {
+    const b = bowl(k, REF), r = regulation(k);
+    near(b.modes[0].f, keyFreq(k), 1e-9 * keyFreq(k), `${k} pitch`);
+    assert.ok(b.h > 0.8e-3 && b.h < 2.9e-3 && b.modes.length >= 2, `${k}: h = ${(b.h * 1e3).toFixed(2)} mm, ${b.modes.length} families`);
+    assert.ok(Number.isFinite(r) && r > 0.1 && r < 2, `${k}: speaks above ${r} N`);
+  }
+});
 
 console.log('water, radiation, friction');
 test('water: shallow water is felt as d^(n+3) (the mode lives at the rim); a full bowl drops ~an octave, like Jundt et al.\'s wine glass', () => {
@@ -235,6 +248,17 @@ test('tuning: every bowl F3–A6 speaks within ±3 ¢ of 12-TET (perfect bowls)'
   }
   assert.ok(Math.abs(worst) < 3, `worst ${worst.toFixed(2)} ¢ at ${wk}`);
   console.log(`        worst ${worst.toFixed(2)} ¢ (key ${wk})`);
+});
+test('tuning past the compass: A2–E3 and A♯6–C8 speak within ±3 ¢, the big bowls below A2 a few cents sharp (the finger), bounded', () => {
+  for (const k of [KEY_MIN, 28, 36, 45, 52, 94, 100, 104, KEY_MAX]) {
+    const sec = k < 40 ? 3 : 1.6, { L, R } = hold(k, 0.6, sec, P(QUIET)), x = k > 73 ? R : L;
+    let pk = 0;
+    for (let i = 0; i < L.length; i++) { assert.ok(Number.isFinite(L[i]) && Number.isFinite(R[i]), `${k}: NaN`); pk = Math.max(pk, Math.abs(L[i]), Math.abs(R[i])); }
+    assert.ok(pk > 1e-3 && pk < 0.6, `${k}: peak ${pk}`);
+    const c = cents(peakFreq(x, (sec - 0.7 - (k < 40 ? 1 : 0)) * FS, sec * FS, keyFreq(k)), keyFreq(k));
+    // below A2 the bowls are big and their walls thin: the finger's grip pulls them sharp, the more the harder it presses
+    assert.ok(k >= 45 ? Math.abs(c) < 3 : c > -3 && c < 10, `${k}: ${c.toFixed(2)} ¢`);
+  }
 });
 test('the bowl speaks after a physical delay (0.15–0.8 s), later still when touched lightly', () => {
   const onset = (key, vel) => { // time to come within 6 dB of the final level

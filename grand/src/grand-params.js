@@ -1,6 +1,8 @@
 // grand-params.js — the knobs. Every parameter has a physical meaning and a
 // unit; the hint says what it does to the sound.
 
+import { VENUE } from '../../shared/chain.js';
+
 // Key velocity 0..1 → hammer speed, 0.25 … 6 m/s, as the engine maps it (grand-model.h), for the readout.
 const hammerSpeed = (vel) => 0.25 * 24 ** Math.min(1, Math.max(0, vel));
 
@@ -63,6 +65,7 @@ export const GROUPS = [
     params: [
       { id: 'maxFreq', label: 'Highest partial', min: 3000, max: 16000, def: 10000, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz`, hint: 'Partials above this are left out (new notes). Lower it if the CPU meter runs hot; the engine also sheds the quietest voices when the audio thread is overloaded.' },
       { id: 'room', label: 'Room', perform: true, min: 0, max: 1, step: 0.01, def: 0.12, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },

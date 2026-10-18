@@ -72,7 +72,7 @@ struct BoardCoefs {
 };
 
 // What the worker builds: a key's model and what a voice derives from it alone (the slots of keys
-// KEY_LO…KEY_HI), or the soundboard (slot 0).
+// KEY_MIN…KEY_MAX), or the soundboard (slot 0).
 struct Built {
   KeyModel d;
   std::vector<double> om, sig, h, bh, u, beta, a1, a2;

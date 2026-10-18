@@ -22,7 +22,7 @@ struct Key {
   int count = 0;
 };
 std::array<std::unique_ptr<Key>, 128> keys;
-int clampKey(int key) { return std::min(KEY_HI, std::max(KEY_LO, key)); }
+int clampKey(int key) { return std::min(KEY_MAX, std::max(KEY_MIN, key)); }
 const double *params() { return (const double *)forte_scratch(); }
 } // namespace
 

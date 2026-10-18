@@ -18,6 +18,7 @@ constexpr int BLOCK_MAX = 1024;
 static constexpr double PI = std::numbers::pi;
 
 static void keyPan(int key, double &l, double &r) {
+  key = std::min(KEY_HI, std::max(KEY_LO, key)); // across the compass's frame; the bells past it at its ends
   const double p = 0.5 * ((2.0 * (key - KEY_LO)) / (KEY_HI - KEY_LO) - 1), a = ((p + 1) * PI) / 4;
   l = std::cos(a); r = std::sin(a);
 }
@@ -55,7 +56,7 @@ int CarillonEngine::newVoice(int key) {
         if (s < score) { score = s; pos = i; }
       }
     slot = order[pos];
-    if (byKey[pool[slot].key - KEY_LO] == slot) byKey[pool[slot].key - KEY_LO] = -1;
+    if (byKey[pool[slot].key - KEY_MIN] == slot) byKey[pool[slot].key - KEY_MIN] = -1;
     if (focus == slot) focus = -1;
     std::copy(order.begin() + pos + 1, order.begin() + nVoices, order.begin() + pos);
     nVoices--;
@@ -304,14 +305,14 @@ void CarillonEngine::compact(Voice &v) {
 }
 
 void CarillonEngine::noteOn(int key, double velocity) {
-  if (!hasParams || !(key >= KEY_LO && key <= KEY_HI)) return;
+  if (!hasParams || !(key >= KEY_MIN && key <= KEY_MAX)) return;
   const int profile = (int)P[p::profile];
   const double hist = P[p::historic];
-  int slot = byKey[key - KEY_LO];
+  int slot = byKey[key - KEY_MIN];
   if (slot < 0 || pool[slot].dead || pool[slot].fading || pool[slot].profile != profile || pool[slot].historicAmount != hist) {
     if (slot >= 0 && !pool[slot].dead) pool[slot].fading = true; // a different bell now hangs there: the old one fades out
     slot = newVoice(key);
-    byKey[key - KEY_LO] = slot;
+    byKey[key - KEY_MIN] = slot;
   }
   Voice &v = pool[slot];
   strike(v, velocity);
@@ -331,7 +332,7 @@ void CarillonEngine::noteOn(int key, double velocity) {
 }
 
 void CarillonEngine::noteOff(int key, double) { // the clapper falls back; the bell rings on
-  if (key >= KEY_LO && key <= KEY_HI && byKey[key - KEY_LO] >= 0) pool[byKey[key - KEY_LO]].released = true;
+  if (key >= KEY_MIN && key <= KEY_MAX && byKey[key - KEY_MIN] >= 0) pool[byKey[key - KEY_MIN]].released = true;
 }
 
 void CarillonEngine::allNotesOff() { for (int i = 0; i < nVoices; i++) pool[order[i]].fading = true; }
@@ -359,7 +360,7 @@ void CarillonEngine::block(float *L, float *R, int n) {
   int j = 0;
   for (int i = 0; i < nVoices; i++) {
     const int slot = order[i];
-    if (pool[slot].dead) { if (byKey[pool[slot].key - KEY_LO] == slot) byKey[pool[slot].key - KEY_LO] = -1; }
+    if (pool[slot].dead) { if (byKey[pool[slot].key - KEY_MIN] == slot) byKey[pool[slot].key - KEY_MIN] = -1; }
     else order[j++] = slot;
   }
   nVoices = j;

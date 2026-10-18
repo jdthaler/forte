@@ -469,8 +469,7 @@ export function attachKeyboard(kb) {
 
   // The window onto the range: as many white keys as fit at the chosen width, moved
   // an octave at a time with ◀ ▶ or anywhere by dragging the overview.
-  const [lo, hi] = kb.bounds();
-  const whites = [];
+  let [lo, hi] = kb.bounds(), whites = [];
   for (let m = lo; m <= hi; m++) if (!kb.isBlack(m)) whites.push(m);
   let first = 0, count = whites.length;
   const prev = button('◀', 'Lower keys (an octave)'), next = button('▶', 'Higher keys (an octave)');
@@ -596,6 +595,15 @@ export function attachKeyboard(kb) {
     }
   }
   row.appendChild(bar);
+  // the range can change (a historical compass opened to every key): the window keeps its first key
+  kb.onBounds(() => {
+    const start = whites[first];
+    [lo, hi] = kb.bounds(); whites = [];
+    for (let m = lo; m <= hi; m++) if (!kb.isBlack(m)) whites.push(m);
+    first = Math.max(0, whites.findIndex((m) => m >= start));
+    count = Math.min(count, whites.length);
+    fit(true);
+  });
   if (window.ResizeObserver) new ResizeObserver(() => fit()).observe(kbEl);
   else window.addEventListener('resize', () => fit());
   fit();

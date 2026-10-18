@@ -136,20 +136,27 @@ TEST("bowed: the key action ramps the force in its travel time; aftertouch press
   CHECK_NEAR(e.string(55)->FN / g0, 1.75, 1e-9);
 }
 
-TEST("bowed: with the dampers lifted every string is in the loop and a released note rings on; Panic stops it") {
+TEST("bowed: with the dampers lifted the 49 strings of C2–C6 are in the loop and a released note rings on; one past them joins when played; Panic stops it") {
   const double fs = 48000;
+  const int N49 = KEY_HI - KEY_LO + 1;
   auto P = defaultParams();
   P[p::lifted] = 1;
   auto engine = std::make_unique<OrganistaEngine>(fs);
   OrganistaEngine &e = *engine;
   e.setParams(P.data());
-  CHECK(e.nAct == NK);
+  CHECK(e.nAct == N49);
   e.noteOn(60, 0.8);
   render(e, (int)(0.8 * fs));
   e.noteOff(60, -1);
   auto L = render(e, (int)(1.0 * fs));
-  CHECK(e.voiceCount() == 0 && e.nAct == NK);
+  CHECK(e.voiceCount() == 0 && e.nAct == N49);
   CHECK(rms(L, (int)(0.8 * fs), (int)(1.0 * fs)) > 0.1 * rms(L, 0, (int)(0.1 * fs)));
+  e.noteOn(KEY_MAX, 0.8);
+  CHECK(e.nAct == N49 + 1);
+  render(e, (int)(0.5 * fs));
+  e.noteOff(KEY_MAX, -1);
+  render(e, (int)(0.2 * fs));
+  CHECK(e.nAct == N49 + 1); // it rings on, undamped
   P[p::lifted] = 0;
   e.setParams(P.data());
   e.allNotesOff();

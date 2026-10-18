@@ -25,7 +25,8 @@ struct Brass { double E, rho; };
 constexpr Brass BRASS{1.0e11, 8500};      // yellow brass: Young's modulus (Pa), density (kg/m³)
 constexpr double CD = 0.61;               // vena contracta of a sharp-edged slot
 constexpr double EPS_V = AIR.rho * 0.3;   // Pa per m/s: a whisper of viscous resistance
-constexpr int KEY_LO = 36, KEY_HI = 96;   // C2–C7, 61 keys (the 8′ rank)
+constexpr int KEY_LO = 36, KEY_HI = 96;   // C2–C7, 61 keys (the 8′ rank): the compass
+constexpr int KEY_MIN = 21, KEY_MAX = 108; // what it plays with the full range open: the same reeds, voiced on
 inline const double F_REF = keyFreq(60);
 constexpr double P_NOM = 800;             // Pa: the wind the reeds are voiced for
 

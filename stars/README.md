@@ -21,7 +21,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/stars/>
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | play (61 stars, C2–C7) |
+| `Z…/` and `Q…]` rows | play (88 stars, A0–C8) |
 | `←` `→` | octave |
 | `↑` `↓` | velocity: how hard the convection drives the star, and the size of the flare |
 | `Space` | sustain: the convection stays on after the keys come up |
@@ -111,7 +111,8 @@ The branches join smoothly. R then follows from the key: each key's star
 is the one on the path whose pitch lands on the note (section 9), and Δν
 follows from M/R³. Above the track's own zero-age main sequence the path
 continues down the zero-age main sequence to lighter dwarfs, so the top
-keys play younger, cooler K-type stars rather than nothing. Linewidths
+keys play younger, cooler K-type stars rather than nothing (0.54 M☉ and
+3830 K on C8, whose lines are at the linewidths' floor). Linewidths
 follow T_eff: a power law over a lower bound, the form Appourchaux et al.
 (2012) fitted to Kepler dwarfs and subgiants (they found an index of about
 13 for the linewidth at maximum mode height), with the model's numbers,
@@ -125,6 +126,7 @@ way. Along the 1 M☉ track:
 
 | key | star | M (M☉) | R (R☉) | T_eff (K) | L (L☉) | ν_max (μHz) | Δν (μHz) | Δν·K (Hz) | Γ (μHz) | lifetime | modes |
 |---|---|---|---|---|---|---|---|---|---|---|---|
+| A0 | red giant | 1.00 | 7.85 | 4853 | 30.7 | 55 | 6.1 | 3.1 | 0.15 | 4.2 s | 340 |
 | C2 | red giant | 1.00 | 5.11 | 4811 | 12.5 | 130 | 11.7 | 6.0 | 0.14 | 4.5 s | 340 |
 | C3 | red giant | 1.00 | 3.62 | 4777 | 6.1 | 259 | 19.6 | 10.0 | 0.13 | 4.8 s | 316 |
 | C4 | subgiant | 1.00 | 2.54 | 4955 | 3.5 | 517 | 33.4 | 17.1 | 0.18 | 3.5 s | 230 |
@@ -132,6 +134,7 @@ way. Along the 1 M☉ track:
 | C6 | dwarf | 1.00 | 1.22 | 5834 | 1.6 | 2064 | 100.2 | 51.2 | 1.13 | 0.55 s | 215 |
 | G6 | the Sun | 1.00 | 1.00 | 5777 | 1.0 | 3090 | 135.1 | 69.0 | 1.00 | 0.62 s | 225 |
 | C7 | dwarf | 0.98 | 0.87 | 5515 | 0.6 | 4123 | 165.8 | 84.7 | 0.57 | 1.1 s | 248 |
+| C8 | dwarf | 0.54 | 0.50 | 3829 | 0.05 | 8238 | 281.4 | 143.7 | 0.05 | 11 s | 257 |
 
 "Lifetime" is 1/(πΓK), the radial modes' in the sound; "modes" counts the
 m components played. A **heavier track** (Mass, 0.9–1.8 M☉) puts a slightly
@@ -310,8 +313,9 @@ star is the one on the track whose f_heard is the note, solved for s by
 regula falsi to 10⁻⁷. Rotation and inclination split the multiplets
 symmetrically and leave f_heard alone. Because a log-centroid falls below a
 Gaussian's peak, ν_max ends up 10–24 ¢ above the note along the default
-track (8–32 ¢ over all masses and K), and the radial mode nearest ν_max
-anywhere within ±Δν/2 of it (between −45 and +91 ¢ from the note). Choosing the stars by
+track from C2 to C7 and 9–30 ¢ from A0 to C8 (8–35 ¢ over all masses and
+K, the most on the biggest giants), and the radial mode nearest ν_max
+anywhere within ±Δν/2 of it (between −63 and +112 ¢ from the note). Choosing the stars by
 their radial mode instead would put that mode on the note but move the
 centre of the band by up to half a large separation: 38 ¢ for the Sun, 76 ¢
 for the giant on C2.

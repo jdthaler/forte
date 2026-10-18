@@ -195,6 +195,13 @@ test('the release\'s archives are the ones CI packages and the pages link to', (
   assert.ok(sh.includes('pack "Forte-$id-$f"') && sh.includes('pack "Forte-plugins-$f"'), 'package-plugins.sh packs each format alone');
   for (const [, , formats] of SYSTEMS) for (const f of formats) assert.ok(new RegExp(`\\) formats=\\([^)]*\\b${f}\\b`).test(sh), `package-plugins.sh packs ${f}`);
   assert.ok(read('landing.js').includes("downloadLinks()"), 'All Plugins offers each format alone');
+  // and the Forte app alone, Forte-app-<system>, offered beside every instrument's (not on an instrument's page)
+  assert.deepEqual(downloads().map((d) => d.app.file), ['Forte-app-macos.zip', 'Forte-app-windows.zip', 'Forte-app-linux.tar.gz']);
+  assert.ok(downloads('gongs').every((d) => d.app === null), 'an instrument\'s page offers no Forte app');
+  assert.ok(sh.includes('pack Forte-app "Forte app" app Forte'), 'package-plugins.sh packs the Forte app alone');
+  // every standalone app has its icon, drawn by tools/make-icons.py (forte.cmake passes them on)
+  for (const id of ['forte', ...withPlugins().map((i) => i.id)]) for (const ext of ['icns', 'ico'])
+    assert.ok(existsSync(new URL(`../native/icons/${id}.${ext}`, import.meta.url)), `native/icons/${id}.${ext} exists (python3 tools/make-icons.py)`);
   const md = notes();
   for (const i of withPlugins()) assert.ok(md.includes(`| ${i.version} |`) && md.includes(i.name) && md.includes(archive(i.id, 'macos.zip')), `notes list ${i.name}`);
   assert.ok(md.includes('xattr -dr com.apple.quarantine'), 'notes give the xattr command');
@@ -292,6 +299,14 @@ test('the landing page has the category tabs, the instrument list and the About,
 });
 
 console.log('descriptors');
+// instruments whose physics stops short of A0–C8 (each README says why)
+const RANGE_LIMITS = {
+  bubbles: [57, 108], // below A3 a bubble would be over 3 cm across: a spherical cap, not the breathing sphere the model rings
+  carillon: [41, 108], // below F2 a bell would outweigh the largest carillon bourdons ever cast (about 20 t)
+  windharp: [21, 100], // above E7 no string sheds at its note in the reference wind (Re below 47)
+  springs: [21, 96], // above C7 the spring's F_C is far above hearing: a few nearly harmonic modes, no chirp
+  bowed: [21, 98], // above D7 the string, at C6's stress, no longer settles into Helmholtz motion at the voiced touch
+};
 const described = [...ready.map((i) => ({ id: i.id, dir: i.id })), { id: 'template', dir: 'docs/template' }];
 for (const { id, dir } of described) {
   const file = `${dir}/src/${id}-instrument.js`;
@@ -303,6 +318,15 @@ for (const { id, dir } of described) {
     assert.ok(params.size && Array.isArray(I.presets), 'groups and presets');
     const [lo, hi] = I.range;
     assert.ok(Number.isInteger(lo) && Number.isInteger(hi) && lo >= 0 && hi <= 127 && lo < hi, `range ${I.range}`);
+    // an 88-key keyboard plays every key, unless the physics stops short (said in RANGE_LIMITS)
+    const limit = RANGE_LIMITS[id];
+    if (limit) assert.deepEqual([lo, hi], limit, `range ${I.range}, RANGE_LIMITS says ${limit}`);
+    else assert.ok(lo <= 21 && hi >= 108, `range ${I.range} covers A0–C8 (21–108)`);
+    if (I.compass) { // a historical compass: the keys that play until a checkbox opens the range
+      const [a, b] = I.compass.keys, p = params.get(I.compass.param);
+      assert.ok(lo <= a && a < b && b <= hi && (a > lo || b < hi), `compass ${I.compass.keys} inside ${I.range}`);
+      assert.ok(p?.type === 'checkbox' && p.def === false, `compass.param ${I.compass.param}: a checkbox, off`);
+    }
     assert.ok(['sustain', 'hold', null].includes(I.space), `space ${I.space}`);
     const mw = typeof I.modWheel === 'string' ? I.modWheel : I.modWheel?.param;
     if (mw) assert.ok(params.has(mw), `modWheel ${mw}`);

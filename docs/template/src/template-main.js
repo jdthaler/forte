@@ -1,7 +1,7 @@
 // template-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell, noteName } from '../../../shared/shell.js';
-import { SpectrumView, fit, css, animate } from '../../../shared/views.js';
+import { SpectrumView, SpectrogramView, fit, css, animate } from '../../../shared/views.js';
 import { INSTRUMENT } from './template-instrument.js';
 import { wasmModel } from './template-wasm.js';
 
@@ -10,6 +10,7 @@ const model = await wasmModel();
 
 const $ = (s) => document.querySelector(s);
 const spectrum = new SpectrumView($('#spectrum'));
+new SpectrogramView($('#spectrogram'), { spectrum }); // its analyser, range and markers
 let focus = 60;
 
 const shell = createShell({

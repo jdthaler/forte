@@ -478,6 +478,21 @@ test('gusts make a string near a switch flicker: a C6 held between its 3rd harmo
   console.log(`        ${g} changes of harmonic or lock in 10 s`);
 });
 
+test('the keys past G3–C7: ropes down to A0 (Re up to 10⁴) and threads up to E7 (Re 50) lock onto their 3rd harmonic within 3 ¢, speak within 6 s (A0 in 5), and a forte note peaks 0.1–0.5; F7 would shed only below Re 47', () => {
+  const out = [];
+  for (const k of [21, 24, 31, 43, 50, 97, 100]) {
+    const S = stringDesign(k, P());
+    assert.ok(S.Re0 > RE_C, `${noteName(k)}: Re ${S.Re0}`);
+    const { f, locks } = stringFreqs(P(), k, 3, k < 55 ? 8 : 2.0), c = f.map((x) => cents(x, keyFreq(k)));
+    assert.ok(locks.every((n) => n === 3) && c.every((x) => Math.abs(x) < 3), `${noteName(k)}: harmonics ${locks}, ${c.map((x) => x.toFixed(2))} ¢`);
+    const o = onsetOf(P(), k, 0.7, k < 55 ? 8 : 1.5), pk = peakAbs(hold(k, P(), k < 55 ? 6 : 2, { vel: 1 }));
+    assert.ok(o < 6 && pk > 0.1 && pk < 0.5, `${noteName(k)}: onset ${o} s, peak ${pk}`);
+    out.push(`${noteName(k)} ${(S.D * 1e3).toFixed(2)} mm ${o.toFixed(2)} s ${pk.toFixed(2)}`);
+  }
+  assert.ok(stringDesign(101, P()).Re0 < RE_C, 'F7');
+  console.log(`        ${out.join(', ')}`);
+});
+
 console.log('levels and stability');
 test('level: at the reference wind a single forte note peaks at 0.1–0.5 on every key from G3 to C7, at 44.1 and 48 kHz; a ten-key chord stays under 1.5; every preset within 12 dB of the default', () => {
   const pks = {};
@@ -497,7 +512,7 @@ test('level: at the reference wind a single forte note peaks at 0.1–0.5 on eve
   }
 });
 test('stability: seeded random combinations of extreme settings at 44.1 and 48 kHz, changed mid-note, with full aftertouch: no NaN, bounded, and falling away after release', () => {
-  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room'].includes(q.id));
+  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'venue'].includes(q.id));
   let seed = 4242, worst = { pk: 0 };
   const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
   const pick = () => {
