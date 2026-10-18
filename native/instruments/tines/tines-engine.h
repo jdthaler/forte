@@ -50,6 +50,7 @@ class TinesEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override;
   void allNotesOff() override;
+  void bend(double value) override; // the tuning springs slide: every fork's stiffness ×r², its notes ×r
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // A key's voice data from the page (packVoiceData), kept for that key's notes until the next
@@ -73,8 +74,8 @@ class TinesEngine : public Engine {
     uint64_t version = 0;
     bool inUse = false;
     double k = 0;
-    std::array<double, MAX_MODES> q{}, q1{}, a1{}, a2{}, a1d{}, a2d{}, w{}, bw{}, pk{}, om{}, sig{}, dw{};
-    double comp = 0;
+    std::array<double, MAX_MODES> q{}, q1{}, a1{}, a2{}, a1d{}, a2d{}, w{}, bw{}, pk{}, om{}, sig{}, dw{}, om0{};
+    double comp = 0, bend = 1; // om0: the modes unbent; bend: the ratio om is tuned to
     Hammer hammer{};
     double wid = 0, wid1 = 0, tWid = 0, yoff = 0, yoff1 = 0, tYoff = 0, gain = 0, gain1 = 0, tGain = 0;
     bool pickupMoving = false;
@@ -89,6 +90,7 @@ class TinesEngine : public Engine {
     double flux(double Y) const { const double z = 1 + std::pow(Y / wid, 2); return 1 / (z * std::sqrt(z)); }
     void retargetPickup(const Pickup &pu);
     void setDamper(double sd);
+    void tune(double r); // the modes at r × om0: a1, a2, bw, comp (then setDamper for a1d, a2d)
     void updateDamping(const TinesEngine &eng) { damped = killing || (!keyDown && !eng.sustain && hasDamper); }
     void kill() { killing = true; setDamper(damperSigma); damped = true; }
     void strike(double v);
@@ -124,6 +126,7 @@ class TinesEngine : public Engine {
   int hi = 0;
   Biquad harp, hpL, hpR, lpL, lpR;
   double tremPhase = 0;
+  double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
   double sCable = 0, sResQ = 0, sTone = 0, sDrive = 0, sDepth = 0, sMaster = 1;
   bool gliding = false;
   std::vector<double> mono;

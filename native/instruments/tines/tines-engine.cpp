@@ -13,6 +13,7 @@ constexpr double SMOOTH_T = 0.01; // s: glide of the output-stage controls
 // A pickup being moved glides through two one-poles of this time constant, so it starts and stops
 // moving smoothly: the flux change through the coil is heard as a soft thump, not a click.
 constexpr double PICKUP_T = 0.01;
+constexpr double BEND_T = 0.02; // s: the pitch wheel's glide
 
 void TinesEngine::Biquad::set(bool lowpass, double f, double Q, double fs) {
   const double w = (TAU * std::min(f, 0.45 * fs)) / fs, c = std::cos(w), al = std::sin(w) / (2 * Q), a0 = 1 + al;
@@ -31,17 +32,11 @@ void TinesEngine::Voice::start(TinesEngine &eng, int key_, const VoiceData &d) {
   inUse = true;
   N = std::min(d.n, MAX_MODES);
   k = 1 / eng.fs2; key = key_; version = d.version;
-  double cmp = 0;
   for (int i = 0; i < N; i++) {
-    const double o = TAU * d.freq[i], s = d.sigma[i];
-    om[i] = o; sig[i] = s; dw[i] = d.dampW[i];
-    const double r = std::exp(-s * k), od = std::sqrt(std::max(o * o - s * s, 1e-6));
-    a1[i] = 2 * r * std::cos(od * k); a2[i] = r * r;
-    const double b = (k * r * std::sin(od * k)) / od;
-    w[i] = d.w[i]; bw[i] = b * d.w[i]; cmp += b * d.w[i] * d.w[i];
-    pk[i] = d.pk[i];
+    om0[i] = TAU * d.freq[i]; sig[i] = d.sigma[i]; dw[i] = d.dampW[i];
+    w[i] = d.w[i]; pk[i] = d.pk[i];
   }
-  comp = cmp;
+  tune(eng.bendNow);
   hammer = d.hammer;
   // the engine's own pickup settings win over the (possibly cached) voice data
   const Pickup pu = pickupFor(key, eng.P.data());
@@ -53,6 +48,19 @@ void TinesEngine::Voice::start(TinesEngine &eng, int key_, const VoiceData &d) {
   hammerOn = false; contactSamples = 0; Fmax = 0; peak = 0; quiet = 0; age = 0;
   yMin = 0; yMax = 0;
   setDamper(eng.P[p::damper]);
+}
+
+void TinesEngine::Voice::tune(double r) {
+  double cmp = 0;
+  for (int i = 0; i < N; i++) {
+    const double o = om0[i] * r, s = sig[i];
+    om[i] = o;
+    const double rr = std::exp(-s * k), od = std::sqrt(std::max(o * o - s * s, 1e-6));
+    a1[i] = 2 * rr * std::cos(od * k); a2[i] = rr * rr;
+    const double b = (k * rr * std::sin(od * k)) / od;
+    bw[i] = b * w[i]; cmp += b * w[i] * w[i];
+  }
+  comp = cmp; bend = r;
 }
 
 // move the pickup (gap / voicing / pole) under a sounding note: glide there
@@ -342,6 +350,10 @@ void TinesEngine::setSustain(bool on) {
   for (int i = 0; i < nVoices; i++) voices[i]->updateDamping(*this);
 }
 
+void TinesEngine::bend(double value) {
+  bendTo = std::pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12);
+}
+
 void TinesEngine::allNotesOff() {
   nPending = 0;
   for (int i = 0; i < nVoices; i++) voices[i]->kill();
@@ -349,7 +361,16 @@ void TinesEngine::allNotesOff() {
 
 void TinesEngine::process(float *L, float *R, int n) {
   if (nPending) retryPending();
-  for (int off = 0; off < n; off += MAXN) block(L, R, off, std::min(MAXN, n - off));
+  for (int off = 0, m; off < n; off += m) {
+    // pitch bend glides in steps of at most 128 samples, the voices retuned at each
+    m = std::min(bendNow != bendTo ? 128 : MAXN, n - off);
+    if (bendNow != bendTo) {
+      bendNow += (bendTo - bendNow) * (1 - std::exp(-m / (BEND_T * fs)));
+      if (std::fabs(bendNow - bendTo) < 1e-9) bendNow = bendTo;
+    }
+    for (int i = 0; i < nVoices; i++) if (voices[i]->bend != bendNow) { voices[i]->tune(bendNow); voices[i]->setDamper(voices[i]->damperSigma); }
+    block(L, R, off, m);
+  }
   data.audioCycle();
 }
 

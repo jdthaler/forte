@@ -14,6 +14,7 @@ namespace forte::harmonium {
 constexpr double OUT = 0.02;      // output units per m³/s² of volume acceleration
 constexpr int MAX_KEYS = 16;      // keys sounding at once
 constexpr double FADE = 0.03;     // s: a stolen key fades out over this
+constexpr double BEND_T = 0.02;   // s: the pitch wheel's glide
 constexpr double YOUNG = 0.05;    // s: a key this young is never stolen
 constexpr double MUTE = 0.02;     // s: a stop's mutes open or close over this
 constexpr double GLIDE = 0.02;    // s: live knobs (pressure target, aftertouch, cassotto) glide
@@ -48,28 +49,10 @@ void HarmoniumEngine::Reed::init(HarmoniumEngine &eng, const ReedModel &model) {
   h = 1 / (eng.fs * os); fsr = 1 / h; T = model.table.A.data();
   io = eng.io; noise = eng.noise.data();
   ni = (int)std::floor(NOISE_N * (0.5 + eng.rand())) % NOISE_N;
-  const auto &m = model.modes;
-  // modes: exact transition over one step for x'' + 2ζωx' + ω²x = 0, plus the response to a held force
-  struct Co { double p11, p12, p21, p22, gq, gv; };
-  const auto co = [this](const Mode &md) {
-    const double w = md.om, z = md.zeta, wd = w * std::sqrt(1 - z * z), e = std::exp(-z * w * h), c = std::cos(wd * h), s = std::sin(wd * h);
-    const double p11 = e * (c + ((z * w) / wd) * s), p12 = (e * s) / wd, p21 = (-e * w * w * s) / wd, p22 = e * (c - ((z * w) / wd) * s);
-    return Co{p11, p12, p21, p22, (1 - p11) / md.k, -p21 / md.k};
-  };
-  const Co c1 = co(m[0]);
-  k[K_A11] = c1.p11; k[K_A12] = c1.p12; k[K_A21] = c1.p21; k[K_A22] = c1.p22; k[K_S1] = m[0].S;
-  k[K_GQ1] = c1.gq * m[0].S; k[K_GV1] = c1.gv * m[0].S;
-  k[K_DQ] = c1.gq * model.drag; k[K_DV] = c1.gv * model.drag; // the tongue's drag, held over the step
-  m1 = m[0].m; k1 = m[0].k;
   // mode 2 only while it is well below the internal Nyquist frequency
-  two = m[1].om * h < 2.5;
-  if (two) {
-    const Co c2 = co(m[1]);
-    k[K_B11] = c2.p11; k[K_B12] = c2.p12; k[K_B21] = c2.p21; k[K_B22] = c2.p22; k[K_S2] = m[1].S;
-    k[K_GQ2] = c2.gq * m[1].S; k[K_GV2] = c2.gv * m[1].S; m2 = m[1].m; k2 = m[1].k;
-  } else { k[K_B11] = 1; k[K_B22] = 1; m2 = 1; k2 = 1; }
+  two = model.modes[1].om * h < 2.5;
+  stiffen(1);
   k[K_R1] = -model.geo.y0; // the set: the tip rests y0 above the plate (mode 1 carries it)
-  k[K_DVS] = 0.5 * (k[K_S1] * k[K_GV1] + k[K_S2] * k[K_GV2]);
   k[K_RLH] = (1.5 * AIR.rho * model.lj) / h; // the jet's air mass per area, for BDF2
   k[K_CH] = (1.5 * model.C) / h; k[K_HAK] = h / (1.5 * model.Ma); k[K_ALK] = (model.K * h) / (1.5 * model.Ma);
   k[K_TLO] = model.table.lo; k[K_TDY] = model.table.dy; k[K_TIDY] = 1 / model.table.dy; k[K_TN2] = model.table.n - 2;
@@ -78,6 +61,33 @@ void HarmoniumEngine::Reed::init(HarmoniumEngine &eng, const ReedModel &model) {
   track = eng.trackAll || keepTrack;
   reset();
   st[S_LASTX] = -1;
+  if (eng.bendNow != 1) stiffen(eng.bendNow);
+}
+
+// The tongue's modes with its stiffness × r² (pitch bend: the mass and the set unchanged, so each
+// mode's frequency × r); the air's parts keep their tuning.
+void HarmoniumEngine::Reed::stiffen(double r) {
+  const auto &m = R->modes;
+  const double r2 = r * r;
+  // modes: exact transition over one step for x'' + 2ζωx' + ω²x = 0, plus the response to a held force
+  struct Co { double p11, p12, p21, p22, gq, gv; };
+  const auto co = [this, r, r2](const Mode &md) {
+    const double w = md.om * r, kk = md.k * r2, z = md.zeta, wd = w * std::sqrt(1 - z * z), e = std::exp(-z * w * h), c = std::cos(wd * h), s = std::sin(wd * h);
+    const double p11 = e * (c + ((z * w) / wd) * s), p12 = (e * s) / wd, p21 = (-e * w * w * s) / wd, p22 = e * (c - ((z * w) / wd) * s);
+    return Co{p11, p12, p21, p22, (1 - p11) / kk, -p21 / kk};
+  };
+  const Co c1 = co(m[0]);
+  k[K_A11] = c1.p11; k[K_A12] = c1.p12; k[K_A21] = c1.p21; k[K_A22] = c1.p22; k[K_S1] = m[0].S;
+  k[K_GQ1] = c1.gq * m[0].S; k[K_GV1] = c1.gv * m[0].S;
+  k[K_DQ] = c1.gq * R->drag; k[K_DV] = c1.gv * R->drag; // the tongue's drag, held over the step
+  m1 = m[0].m; k1 = m[0].k * r2;
+  if (two) {
+    const Co c2 = co(m[1]);
+    k[K_B11] = c2.p11; k[K_B12] = c2.p12; k[K_B21] = c2.p21; k[K_B22] = c2.p22; k[K_S2] = m[1].S;
+    k[K_GQ2] = c2.gq * m[1].S; k[K_GV2] = c2.gv * m[1].S; m2 = m[1].m; k2 = m[1].k * r2;
+  } else { k[K_B11] = 1; k[K_B22] = 1; m2 = 1; k2 = 1; }
+  k[K_DVS] = 0.5 * (k[K_S1] * k[K_GV1] + k[K_S2] * k[K_GV2]);
+  kr = r;
 }
 
 void HarmoniumEngine::Reed::reset() {
@@ -325,8 +335,20 @@ void HarmoniumEngine::pressure(double value, int key) {
 }
 void HarmoniumEngine::updateAfter() { double a = 0; for (int k = 0; k < 128; k++) if (press[k] > a) a = press[k]; after = a; }
 
+void HarmoniumEngine::bend(double value) {
+  bendTo = std::pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12);
+}
+
 void HarmoniumEngine::process(float *L, float *R, int n) {
-  for (int at = 0; at < n; at += 128) run(L + at, R + at, std::min(128, n - at));
+  for (int at = 0; at < n; at += 128) {
+    const int m = std::min(128, n - at);
+    if (bendNow != bendTo) { // the pitch wheel glides; every reed is retuned each block
+      bendNow += (bendTo - bendNow) * (1 - std::exp(-m / (BEND_T * fs)));
+      if (std::fabs(bendNow - bendTo) < 1e-9) bendNow = bendTo;
+      for (int i = 0; i < count; i++) for (Reed &r : voices[i]->reeds) if (r.R) r.stiffen(bendNow);
+    }
+    run(L + at, R + at, m);
+  }
   keys.audioCycle();
 }
 

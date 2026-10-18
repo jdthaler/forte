@@ -95,6 +95,24 @@ TEST("bowed: a held C4 sounds in Helmholtz motion at its pitch at 44.1, 48, 96 a
   }
 }
 
+TEST("bowed: pitch bend slides the bridges: a bowed note follows, two semitones at the wheel's ends, still in Helmholtz motion") {
+  const double fs = 48000;
+  for (int key : {36, 48, 60, 72, 84}) for (double v : {1.0, -1.0}) {
+    auto P = defaultParams();
+    P[p::treadle] = 0;
+    auto engine = std::make_unique<OrganistaEngine>(fs);
+    OrganistaEngine &e = *engine;
+    e.setParams(P.data());
+    e.noteOn(key, 0.7);
+    render(e, (int)(0.4 * fs));
+    e.bend(v);
+    auto L = render(e, (int)(1.0 * fs));
+    const double want = bowed::keyFreq(key) * std::pow(2.0, 2 * v / 12), f = pitch(L, (int)(0.5 * fs), (int)(1.0 * fs), want, fs);
+    CHECK(e.string(key)->motion(16).kind == Kind::helmholtz);
+    CHECK(std::fabs(cents(f, want)) < 3);
+  }
+}
+
 TEST("bowed: the key action ramps the force in its travel time; aftertouch presses one key (poly) or all (channel)") {
   const double fs = 48000;
   auto P = defaultParams();

@@ -10,6 +10,7 @@ namespace forte::pipes {
 namespace {
 constexpr double OUT = 0.08;     // output per m³/s² of the mouths' volume acceleration: ρ/4πr at 1.2 m
 constexpr double FADE = 0.03;    // s: a stolen key fades out over this
+constexpr double BEND_T = 0.02;  // s: the pitch wheel's glide
 constexpr double YOUNG = 0.05;   // s: a key this young is never stolen
 constexpr double SLIDER = 0.04;  // s: a stop's slider travels over this
 constexpr double GLIDE = 0.02;   // s: live knobs (pressure, tremulant) glide
@@ -97,19 +98,8 @@ void PipeEngine::Pipe::init(PipeEngine &eng, const PipeModel *model, int r, doub
   R = model; rank = r; stopped = model->stopped;
   os = model->f >= eng.fOS ? 2 : 1;
   fsI = eng.fs * os; h = 1 / fsI; n = model->nModes;
-  for (int k = 0; k < n; k++) {
-    const double w = model->modes[k].om, sg = model->modes[k].sigma, z = sg / w;
-    const double wd = w * std::sqrt(std::max(1e-12, 1 - z * z)), e = std::exp(-sg * h);
-    const double co = std::cos(wd * h), si = std::sin(wd * h);
-    const double p11 = e * (co + ((z * w) / wd) * si), p12 = (e * si) / wd, p21 = (-e * w * w * si) / wd, p22 = e * (co - ((z * w) / wd) * si);
-    const double kk = model->M * w * w;
-    c[6 * k] = p11; c[6 * k + 1] = p12; c[6 * k + 2] = p21; c[6 * k + 3] = p22; c[6 * k + 4] = (1 - p11) / kk; c[6 * k + 5] = -p21 / kk;
-    om[k] = w;
-  }
   const Geometry &g = model->geo;
-  double cvs = 0;
-  for (int k = 0; k < n; k++) cvs += c[6 * k + 5];
-  cv = cvs / g.Sm;                            // the mouth speed one step of a held pressure adds, per pascal
+  retime(1);
   // the jet
   W = g.W; b = g.b; H = g.H; y0 = g.y0; ib = 1 / g.b;
   bH = g.b * g.H;                             // jet flow into the pipe = bHU_j(1 + tanh)
@@ -117,10 +107,8 @@ void PipeEngine::Pipe::init(PipeEngine &eng, const PipeModel *model, int r, doub
   Ks = (AIR.rho * g.dd) / g.Sm;               // Δp_src = Ks dQ_in/dt
   Kl = AIR.rho / (2 * ALPHA_VC * ALPHA_VC);   // Δp_los = −Kl v|v|
   iSm = 1 / g.Sm;
-  tauK = (g.W / CP) * fsI;                    // τ in samples = tauK / U_j
-  kxc = PHI_C / tauK;                         // the jet low-pass's ω_c·h = φ_c/τ = kxc·U_j
   flue = g.h * g.H;                           // the flue's area: the wind it draws is hH·U_j
-  N = lineLength(tauK);
+  N = lineLength((g.W / CP) * fsI);
   buf = line; mask = N - 1; maxD = N - 4; w = 0;
   std::fill(buf, buf + N, 0.0);
   noise = eng.noise.data(); ni = (int)std::floor(NOISE_N * (0.5 + eng.rand())) % NOISE_N;
@@ -128,6 +116,31 @@ void PipeEngine::Pipe::init(PipeEngine &eng, const PipeModel *model, int r, doub
   lp = qin = vm = Q = dp = eta = out = 0; asleep = true; foot = Uj = 0;
   track = eng.track; dsp = mean = prev = t = 0; last = -1; per = 0; nx = 0;
   kMean = 1 - std::exp(-h * 2 * PI * std::min(20.0, model->f / 8));
+  if (eng.bendNow != 1) retime(eng.bendNow);
+}
+
+// The constants of one step of this pipe's own time, r/fsI: pitch bend, the organ's air warmer
+// (r > 1) or colder, so that sound and the jet both cross the pipe r× faster. The radiated
+// derivative stays in real time.
+void PipeEngine::Pipe::retime(double r) {
+  const double hs = r == 1 ? h : r / fsI;
+  for (int k = 0; k < n; k++) {
+    const double w = R->modes[k].om, sg = R->modes[k].sigma, z = sg / w;
+    const double wd = w * std::sqrt(std::max(1e-12, 1 - z * z)), e = std::exp(-sg * hs);
+    const double co = std::cos(wd * hs), si = std::sin(wd * hs);
+    const double p11 = e * (co + ((z * w) / wd) * si), p12 = (e * si) / wd, p21 = (-e * w * w * si) / wd, p22 = e * (co - ((z * w) / wd) * si);
+    const double kk = R->M * w * w;
+    c[6 * k] = p11; c[6 * k + 1] = p12; c[6 * k + 2] = p21; c[6 * k + 3] = p22; c[6 * k + 4] = (1 - p11) / kk; c[6 * k + 5] = -p21 / kk;
+    om[k] = w;
+  }
+  const Geometry &g = R->geo;
+  double cvs = 0;
+  for (int k = 0; k < n; k++) cvs += c[6 * k + 5];
+  cv = cvs / g.Sm;                            // the mouth speed one step of a held pressure adds, per pascal
+  fsS = r == 1 ? fsI : fsI / r;               // steps per second of the pipe's own time
+  tauK = (g.W / CP) * fsS;                    // τ in samples = tauK / U_j
+  kxc = PHI_C / tauK;                         // the jet low-pass's ω_c·h = φ_c/τ = kxc·U_j
+  rt = r;
 }
 
 void PipeEngine::Pipe::reset() {
@@ -174,7 +187,7 @@ void PipeEngine::Pipe::step(double uj, double iU, double nz) {
     const double nv = c[j + 2] * xk + c[j + 3] * vk;
     v[k] = nv; vf += nv;
   }
-  const double Fs = Ks * (qn - qin) * fsI, r = (vf * iSm) + cv * Fs, ar = r < 0 ? -r : r;
+  const double Fs = Ks * (qn - qin) * fsS, r = (vf * iSm) + cv * Fs, ar = r < 0 ? -r : r;
   const double kc = cv * Kl, vn = ar > 0 ? (2 * ar) / (1 + std::sqrt(1 + 4 * kc * ar)) : 0, v2 = r < 0 ? -vn : vn;
   const double F = Fs - Kl * v2 * vn;
   qin = qn; dp = F;
@@ -385,8 +398,21 @@ int PipeEngine::voiceCountNow() const {
 }
 int PipeEngine::voiceCount() const { return voiceCountNow(); }
 
+void PipeEngine::bend(double value) {
+  bendTo = std::pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12);
+}
+
 void PipeEngine::process(float *L, float *R, int n) {
-  for (int at = 0; at < n; at += BLOCK_MAX) processBlock(L + at, R + at, std::min(BLOCK_MAX, n - at));
+  for (int at = 0, m; at < n; at += m) {
+    // pitch bend glides in steps of at most 128 samples, every pipe retimed at each
+    m = std::min(bendNow != bendTo ? 128 : BLOCK_MAX, n - at);
+    if (bendNow != bendTo) {
+      bendNow += (bendTo - bendNow) * (1 - std::exp(-m / (BEND_T * fs)));
+      if (std::fabs(bendNow - bendTo) < 1e-9) bendNow = bendTo;
+    }
+    for (int i = 0; i < nVoices; i++) for (Pipe &q : voices[i]->pipes) if (q.R && q.rt != bendNow) q.retime(bendNow);
+    processBlock(L + at, R + at, m);
+  }
   data.audioCycle();
 }
 

@@ -58,6 +58,7 @@ class HarmoniumEngine : public Engine {
   void noteOn(int key, double velocity) override;
   void noteOff(int key, double velocity) override;
   void allNotesOff() override;
+  void bend(double value) override; // every tongue's stiffness ×r², its note ×r
   void pressure(double value, int key) override; // aftertouch: more wind (up to double)
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
@@ -72,13 +73,14 @@ class HarmoniumEngine : public Engine {
   struct Reed {
     const ReedModel *R = nullptr;
     int os = 1;
-    double h = 0, fsr = 0, m1 = 1, k1 = 1, m2 = 1, k2 = 1, ampK = 0;
+    double h = 0, fsr = 0, m1 = 1, k1 = 1, m2 = 1, k2 = 1, ampK = 0, kr = 1; // kr: pitch bend's ratio its modes are tuned to
     const double *T = nullptr;
     const double *io = nullptr, *noise = nullptr;
     int ni = 0;
     bool two = false, track = false, asleep = true;
     double k[32] = {}, st[24] = {};
     void init(HarmoniumEngine &eng, const ReedModel &model);
+    void stiffen(double r);
     void reset();
     void setSteady(const Equilibrium &e);
     double energy() const;
@@ -123,6 +125,7 @@ class HarmoniumEngine : public Engine {
   std::array<double, p::count> P{};
   bool hasParams = false;
   double fOS = 440;
+  double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
   bool trackAll = false;
   uint32_t rng = 1;
   const double h;

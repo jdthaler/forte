@@ -92,6 +92,24 @@ TEST("harmonium: an A4 speaks at 440 Hz (its reeds designed on the worker thread
   CHECK(e.voiceCount() == 0 && e.count == 0);
 }
 
+TEST("harmonium: pitch bend stiffens or softens the tongues: a sounding note follows, two semitones at the wheel's ends") {
+  const double fs = 48000;
+  for (int key : {36, 57, 69, 84}) for (double v : {1.0, -1.0}) {
+    auto P = defaults();
+    auto engine = std::make_unique<HarmoniumEngine>(fs);
+    HarmoniumEngine &e = *engine;
+    e.configure(1, 440, true);
+    e.setParams(P.data());
+    waitFor(e, key);
+    e.noteOn(key, 0.7);
+    render(e, (int)(0.5 * fs));
+    e.bend(v);
+    render(e, (int)(0.6 * fs));
+    const double want = 440 * std::pow(2.0, (key - 69 + 2 * v) / 12), f = e.voices[0]->reeds[1].freq();
+    CHECK(std::fabs(cents(f, want)) < 3);
+  }
+}
+
 TEST("harmonium: a key struck before its reeds are designed waits for them, then speaks") {
   const double fs = 48000;
   auto P = defaults();

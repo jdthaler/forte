@@ -58,7 +58,7 @@ Every other idea only adds, and can come before or after 1.0.
 |------|------|-------|
 | Velocity curve (soft, normal, hard) | S | Done, for the next release. |
 | Sostenuto (CC66) and soft pedal (CC67) | S–M | Done, for the next release. |
-| Pitch bend on more instruments | S each | The clavier, organ, Singing Arc and Pyrophone bend (the last three in the next release). Others to come. **Before 1.0** for each mapping. |
+| Pitch bend on more instruments | S each | Done: thirteen instruments bend by something physical (the clavier, the two organs, the free reeds, the tines, both reed pianos, the Viola Organista, the Glass Armonica, the Wind Harp, the bubbles, the arc and the pyrophone). The struck strings, bars, bells, plates and the phenomena keep their pitch, as the real ones do. Adding a bend to one of them after 1.0 would change songs that send pitch bend. |
 | MPE (per-note pitch bend and slide) | M | The engines already take per-key pressure. |
 | Alternative tunings and temperaments | M | Equal, well-tempered, meantone, just intonation; Scala files; A4 other than 440 Hz. |
 | Transpose and octave controls on every page and plugin | S | |
