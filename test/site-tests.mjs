@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { INSTRUMENTS, SECTIONS, FORTE_VERSION, TEMPLATE } from '../shared/registry.js';
 import { ASSETS, notes } from '../tools/plugin-release.mjs';
+import { readNotes, parseNote, plan, bump } from '../tools/release.mjs';
 import { LATEST, SYSTEMS, archive, downloads, withPlugins } from '../shared/plugins.js';
 
 let failures = 0;
@@ -40,7 +41,26 @@ test('every ready instrument has a semver version; unbuilt ones have none', () =
 });
 test('CHANGELOG.md has an entry for Forte and every instrument at its current version', () => {
   assert.ok(changelog.includes(`### Forte ${FORTE_VERSION}\n`), `### Forte ${FORTE_VERSION}`);
-  for (const i of ready) assert.ok(changelog.includes(`### ${i.name} ${i.version}\n`), `### ${i.name} ${i.version}`);
+  // an instrument not released yet has its entry waiting in a note in changes/, marked (new)
+  const first = new Set(readNotes().flatMap((n) => n.sections.filter((s) => s.kind === 'new').map((s) => s.name)));
+  for (const i of ready) assert.ok(first.has(i.name) || changelog.includes(`### ${i.name} ${i.version}\n`), `### ${i.name} ${i.version}`);
+});
+test('the notes in changes/ are well formed (tools/release.mjs)', () => {
+  const notes = readNotes();
+  if (notes.length) plan(notes); // and would make a release
+});
+test('a note names Forte or an instrument, and patch, minor or new; a release bumps by the largest', () => {
+  const n = parseNote('x.md', '# a topic\n\n### Forte (minor)\n- one\n\n### Gong Keyboard (patch)\n- two\n');
+  assert.deepEqual(n.sections.map((s) => [s.name, s.kind, s.body]), [['Forte', 'minor', '- one'], ['Gong Keyboard', 'patch', '- two']]);
+  assert.throws(() => parseNote('x.md', '### Forte (minor)\n- no topic\n'), /first line/);
+  assert.throws(() => parseNote('x.md', '# t\n### Fortissimo (minor)\n- who\n'), /neither Forte/);
+  assert.throws(() => parseNote('x.md', '# t\n### Forte (major)\n- what\n'), /patch, minor or new/);
+  assert.throws(() => parseNote('x.md', '# t\n### Forte (patch)\n'), /says nothing/);
+  assert.equal(bump('0.30.9', 'minor'), '0.31.0');
+  assert.equal(bump('0.30.9', 'patch'), '0.30.10');
+  const p = plan([n, parseNote('y.md', '# another\n### Forte (patch)\n- three\n')], '2026-01-02');
+  assert.equal(p.changes[0].to, bump(FORTE_VERSION, 'minor'));
+  assert.ok(p.entry.startsWith(`## 2026-01-02 — a topic; another\n\n### Forte ${bump(FORTE_VERSION, 'minor')}\n- one\n- three\n`), p.entry);
 });
 
 console.log('registry');

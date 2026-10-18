@@ -7,6 +7,12 @@
 
 #include "forte/instrument.h"
 
+// The plugins' build gives the version (forte_add_plugin, from <slug>-info.cmake); the
+// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.
+#ifndef FORTE_INSTRUMENT_VERSION
+#define FORTE_INSTRUMENT_VERSION ""
+#endif
+
 namespace forte::harmonium {
 
 namespace p { // parameter indices, in the descriptor's order
@@ -87,7 +93,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "harmonium", .name = "Free-Reed Organ", .version = "0.3.0",
+    .slug = "harmonium", .name = "Free-Reed Organ", .version = FORTE_INSTRUMENT_VERSION,
     .description = "Brass reeds driven by the airflow they choke; paired reeds tuned a little apart give the musette shimmer.", .auSubtype = "Harm",
     .vst3Id = {0x65, 0xea, 0x91, 0x2c, 0xfa, 0x91, 0xc7, 0x5d, 0xe1, 0x93, 0xa5, 0xce, 0x34, 0x0e, 0x50, 0xdc},
     .params = kParams, .paramCount = p::count,

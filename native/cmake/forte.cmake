@@ -14,6 +14,9 @@ function(forte_add_plugin slug)
   if (NOT A_ACCENT)
     set(A_ACCENT "${FORTE_ACCENT}")
   endif()
+  # the version in the instrument's InstrumentInfo (<slug>-params.h); the WebAssembly is built
+  # without it, so bumping a version changes only <slug>-info.cmake and the plugins
+  target_compile_definitions(${A_INSTRUMENT} PRIVATE "FORTE_INSTRUMENT_VERSION=\"${A_VERSION}\"")
   set(impl forte_${slug}_impl)
   add_library(${impl} STATIC ${FORTE_PLUGIN_DIR}/entry-impl.cpp)
   target_link_libraries(${impl} PUBLIC forte_plugin ${A_INSTRUMENT})

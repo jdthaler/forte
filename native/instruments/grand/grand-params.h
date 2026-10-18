@@ -7,6 +7,12 @@
 
 #include "forte/instrument.h"
 
+// The plugins' build gives the version (forte_add_plugin, from <slug>-info.cmake); the
+// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.
+#ifndef FORTE_INSTRUMENT_VERSION
+#define FORTE_INSTRUMENT_VERSION ""
+#endif
+
 namespace forte::grand {
 
 namespace p { // parameter indices, in the descriptor's order
@@ -96,7 +102,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "grand", .name = "Electric Grand", .version = "0.4.0",
+    .slug = "grand", .name = "Electric Grand", .version = FORTE_INSTRUMENT_VERSION,
     .description = "A real piano action with no soundboard: piezo pickups under the bridge hear the strings directly.", .auSubtype = "EGrd",
     .vst3Id = {0x05, 0xb4, 0x87, 0xca, 0x60, 0x04, 0x56, 0x72, 0x51, 0x4d, 0x75, 0xd6, 0x99, 0xc4, 0x8d, 0x16},
     .params = kParams, .paramCount = p::count,

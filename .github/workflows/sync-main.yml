@@ -1,0 +1,38 @@
+name: sync-main
+
+# A release (CLAUDE.md) is a pull request into live from a branch off main that ran
+# tools/release.mjs. Once it is merged, this brings live back into main, so the release's version
+# bumps and changelog entry are where the next pull requests start from: a fast-forward when main
+# hasn't moved, a merge commit when it has. If they conflict, it fails and says so; merge live into
+# main by hand then (a pull request into main).
+
+on:
+  push:
+    branches: [live]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-main
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Bring live into main
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin live
+          if git merge-base --is-ancestor origin/live HEAD; then echo "main already has live"; exit 0; fi
+          if ! git merge --no-edit -m "Merge live into main (the release's versions and changelog)" origin/live; then
+            echo "::error::live and main conflict. Merge live into main by hand, in a pull request into main."
+            exit 1
+          fi
+          git push origin HEAD:main

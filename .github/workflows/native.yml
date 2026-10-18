@@ -1,11 +1,17 @@
 name: native
 
-# The C++ side (native/, docs/PLUGINS.md): the plugins built and validated on macOS, Windows and
-# Linux, and the WebAssembly rebuilt with the pinned Emscripten.
+# The C++ side (native/, docs/PLUGINS.md): the plugins built and validated, and the WebAssembly
+# rebuilt with the pinned Emscripten.
+#
+# Two depths. On main and on pull requests into it, the plugins are built, unit-tested and
+# validated on Linux alone (main's runs keep the compiler cache warm for the pull requests). On
+# live, on a pull request into live (a release, CLAUDE.md) and when started by hand from the
+# Actions tab, they are also built on macOS and Windows, auval checks the Audio Units, and the
+# release archives are packed and tried; the release-plugins workflow publishes live's.
 
 on:
   push:
-    branches: [main]
+    branches: [main, live]
   pull_request:
   workflow_dispatch:
 
@@ -20,13 +26,14 @@ jobs:
   plugins:
     name: plugins (${{ matrix.preset }})
     runs-on: ${{ matrix.os }}
+    env:
+      FULL: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/live' || github.base_ref == 'live' }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { os: ubuntu-24.04, preset: linux }
-          - { os: macos-15, preset: macos }
-          - { os: windows-2022, preset: windows }
+        include: ${{ fromJSON((github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/live' || github.base_ref == 'live')
+          && '[{"os":"ubuntu-24.04","preset":"linux"},{"os":"macos-15","preset":"macos"},{"os":"windows-2022","preset":"windows"}]'
+          || '[{"os":"ubuntu-24.04","preset":"linux"}]') }}
     defaults:
       run:
         shell: bash
@@ -131,14 +138,16 @@ jobs:
       # What a release ships (the release-plugins workflow attaches these): every instrument's
       # plugins together and each one's alone, without the template's, with native/INSTALL.md,
       # in archives that keep the bundles' executable bits and the macOS signatures (the
-      # artifact above loses both).
+      # artifact above loses both). On the full runs only.
       - uses: actions/setup-node@v4
+        if: env.FULL == 'true'
         with:
           node-version: 22
       - name: Package the plugins for a release
+        if: env.FULL == 'true'
         run: tools/package-plugins.sh ${{ matrix.preset }}
       - name: The download's Makefile installs and verifies every plugin
-        if: runner.os != 'Windows'
+        if: env.FULL == 'true' && runner.os != 'Windows'
         run: |
           mkdir -p "$RUNNER_TEMP/try"
           if [ "$RUNNER_OS" = macOS ]; then ditto -x -k dist/Forte-plugins-macos.zip "$RUNNER_TEMP/try"
@@ -178,6 +187,7 @@ jobs:
           if ls -d *.vst3 2>/dev/null | grep -q .; then echo '::error::the CLAP archive holds VST3s'; exit 1; fi
           make check
       - uses: actions/upload-artifact@v4
+        if: env.FULL == 'true'
         with:
           name: release-${{ matrix.preset }}
           path: dist/*

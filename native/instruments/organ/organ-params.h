@@ -7,6 +7,12 @@
 
 #include "forte/instrument.h"
 
+// The plugins' build gives the version (forte_add_plugin, from <slug>-info.cmake); the
+// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.
+#ifndef FORTE_INSTRUMENT_VERSION
+#define FORTE_INSTRUMENT_VERSION ""
+#endif
+
 namespace forte::organ {
 
 namespace p { // parameter indices, in the descriptor's order
@@ -145,7 +151,7 @@ inline const Controller kControllers[] = {{1, p::leslie, Controller::values, 1, 
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "organ", .name = "Tonewheel Organ", .version = "0.5.0",
+    .slug = "organ", .name = "Tonewheel Organ", .version = FORTE_INSTRUMENT_VERSION,
     .description = "91 spinning gear-driven wheels, bouncing key contacts, a scanner on an LC delay line and a rotating Doppler horn.", .auSubtype = "Tonw",
     .vst3Id = {0x43, 0xe5, 0xc5, 0x1c, 0xb9, 0x9f, 0x6a, 0xa1, 0x90, 0xef, 0x05, 0x66, 0x9a, 0xde, 0xb6, 0xab},
     .params = kParams, .paramCount = p::count,

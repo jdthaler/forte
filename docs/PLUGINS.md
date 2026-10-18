@@ -258,8 +258,8 @@ done:
 6. Switch the website: the worklet loads the WebAssembly, falling back to the
    JavaScript engine if it fails, and the views call the WebAssembly models.
    Check it in Chrome, Firefox and Safari, including on iPad.
-7. Bump the instrument's MINOR version and Forte's for `native/core` and
-   `tools/`, log both in the changelog, and update the instrument's README and
+7. Add a note to `changes/` (`changes/README.md`) with a `minor` section for the instrument and,
+   for `native/core` and `tools/`, one for Forte, and update the instrument's README and
    the guide. Set `plugin.ready` in the registry (step 5). In the pull request, ask the owner
    to listen in a DAW.
 
@@ -403,7 +403,9 @@ Done (Forte 0.13.0; per instrument and automatic in 0.17.0):
    (the download in place, nothing installed) and `make unquarantine` (clears the Mac's
    quarantine where the plugins are, or in a folder named with `APP_DIR=`…), each also for one
    format (`make install-au`, `make check-app`, `make unquarantine-app`…), which the workflow runs on every instrument's archive before keeping it.
-2. The `release-plugins` workflow runs after every green `native` run on main and attaches its
+2. The `release-plugins` workflow runs after every green `native` run on `live` (pull requests
+   into `main` build and validate on Linux only; `live`, a pull request into it, and a run
+   started by hand add macOS, Windows, auval and these archives) and attaches its
    archives to a GitHub Release when what they're built from changed since the latest release
    (`tools/plugin-release.mjs --manifest`: each instrument's version and the `native/` tree). It
    creates the tag itself (`plugins-v<Forte version>`, then `-2`, `-3`…), since sessions don't
@@ -414,7 +416,8 @@ Done (Forte 0.13.0; per instrument and automatic in 0.17.0):
    own (`…/#plugin`; on phones, a line at the top of How it works opens it).
 
 A port sets `plugin: { code, ready: true }` in `shared/registry.js` (`test/site-tests.mjs`
-checks it against `native/instruments/`), and its plugins are released when it is merged.
+checks it against `native/instruments/`), and its plugins are released when `main` is next
+released to `live`.
 
 **Notarised macOS builds** would remove the `xattr` step. They need the owner's Apple
 Developer Program membership (99 USD a year), a *Developer ID Application* certificate and an

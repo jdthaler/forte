@@ -7,6 +7,12 @@
 
 #include "forte/instrument.h"
 
+// The plugins' build gives the version (forte_add_plugin, from <slug>-info.cmake); the
+// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.
+#ifndef FORTE_INSTRUMENT_VERSION
+#define FORTE_INSTRUMENT_VERSION ""
+#endif
+
 namespace forte::carillon {
 
 namespace p { // parameter indices, in the descriptor's order
@@ -73,7 +79,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "carillon", .name = "Carillon", .version = "0.2.0",
+    .slug = "carillon", .name = "Carillon", .version = FORTE_INSTRUMENT_VERSION,
     .description = "Bronze bells tuned partial by partial; the note you hear, the strike note, is a virtual pitch made by partials an octave and more above it.", .auSubtype = "Carl",
     .vst3Id = {0x97, 0xf5, 0x65, 0xa1, 0xf0, 0xb1, 0x1e, 0x35, 0x6c, 0x30, 0x27, 0xfa, 0xa9, 0x44, 0xda, 0xc1},
     .params = kParams, .paramCount = p::count,
