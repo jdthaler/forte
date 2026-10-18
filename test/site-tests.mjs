@@ -9,6 +9,7 @@ import { join } from 'node:path';
 import { INSTRUMENTS, SECTIONS, FORTE_VERSION, TEMPLATE } from '../shared/registry.js';
 import { ASSETS, notes } from '../tools/plugin-release.mjs';
 import { readNotes, parseNote, plan, bump } from '../tools/release.mjs';
+import { compare, stateOf, contractPath, STATES } from '../tools/contract.mjs';
 import { LATEST, SYSTEMS, archive, downloads, withPlugins } from '../shared/plugins.js';
 
 let failures = 0;
@@ -49,18 +50,47 @@ test('the notes in changes/ are well formed (tools/release.mjs)', () => {
   const notes = readNotes();
   if (notes.length) plan(notes); // and would make a release
 });
-test('a note names Forte or an instrument, and patch, minor or new; a release bumps by the largest', () => {
+test('a note names Forte or an instrument, and patch, minor, major or new; a release bumps by the largest', () => {
   const n = parseNote('x.md', '# a topic\n\n### Forte (minor)\n- one\n\n### Gong Keyboard (patch)\n- two\n');
   assert.deepEqual(n.sections.map((s) => [s.name, s.kind, s.body]), [['Forte', 'minor', '- one'], ['Gong Keyboard', 'patch', '- two']]);
   assert.throws(() => parseNote('x.md', '### Forte (minor)\n- no topic\n'), /first line/);
   assert.throws(() => parseNote('x.md', '# t\n### Fortissimo (minor)\n- who\n'), /neither Forte/);
-  assert.throws(() => parseNote('x.md', '# t\n### Forte (major)\n- what\n'), /patch, minor or new/);
+  assert.throws(() => parseNote('x.md', '# t\n### Forte (huge)\n- what\n'), /patch, minor, major or new/);
   assert.throws(() => parseNote('x.md', '# t\n### Forte (patch)\n'), /says nothing/);
   assert.equal(bump('0.30.9', 'minor'), '0.31.0');
   assert.equal(bump('0.30.9', 'patch'), '0.30.10');
+  assert.equal(bump('0.30.9', 'major'), '1.0.0');
+  assert.equal(bump('1.4.2', 'major'), '2.0.0');
+  const m = plan([n, parseNote('z.md', '# v1\n### Gong Keyboard (major)\n- stable\n')], '2026-01-02');
+  assert.equal(m.changes.find((c) => c.name === 'Gong Keyboard').kind, 'major');
   const p = plan([n, parseNote('y.md', '# another\n### Forte (patch)\n- three\n')], '2026-01-02');
   assert.equal(p.changes[0].to, bump(FORTE_VERSION, 'minor'));
   assert.ok(p.entry.startsWith(`## 2026-01-02 — a topic; another\n\n### Forte ${bump(FORTE_VERSION, 'minor')}\n- one\n- three\n`), p.entry);
+});
+
+console.log('saved songs (tools/contract.mjs)');
+test('a contract breaks when a parameter, an option or a preset is removed, moved or changed, not when one is added', () => {
+  const c = { slug: 'x', params: [{ id: 'a', kind: 'continuous', min: 0, max: 1, def: 0.5, step: 0, log: false }, { id: 'b', kind: 'choice', def: 'p', options: ['p', 'q'] }],
+    presets: [{ name: 'One', values: { a: 0.2 } }] };
+  const with_ = (f) => { const d = structuredClone(c); f(d); return compare(c, d); };
+  assert.deepEqual(compare(c, c), { breaks: [], added: [] });
+  assert.equal(with_((d) => { d.params.push({ id: 'z', kind: 'toggle', def: false }); d.params[1].options.push('r'); d.presets.push({ name: 'Two', values: {} }); }).breaks.length, 0);
+  assert.equal(with_((d) => { d.params.push({ id: 'z', kind: 'toggle', def: false }); d.params[1].options.push('r'); d.presets.push({ name: 'Two', values: {} }); }).added.length, 3);
+  for (const [why, f] of [['removed', (d) => d.params.shift()], ['range', (d) => { d.params[0].max = 2; }], ['default', (d) => { d.params[0].def = 0.4; }],
+    ['scaling', (d) => { d.params[0].log = true; }], ['kind', (d) => { d.params[0] = { id: 'a', kind: 'toggle', def: false }; }],
+    ['options moved', (d) => d.params[1].options.reverse()], ['preset renamed', (d) => { d.presets[0].name = 'Uno'; }],
+    ['preset values', (d) => { d.presets[0].values.a = 0.3; }], ['preset removed', (d) => d.presets.pop()]]) {
+    assert.ok(with_(f).breaks.length, why);
+  }
+  assert.equal(stateOf(c, '0.1.0'), 'forte x 0.1.0\na 0.20000000000000001\nb 0\npreset 1\n');
+});
+test('every ported instrument has a contract, and a saved state at its version for the plugin tests to load', () => {
+  for (const i of ready.filter((x) => existsSync(new URL(`native/instruments/${x.id}/`, R)))) {
+    const c = JSON.parse(read(contractPath(i.id)));
+    assert.equal(c.slug, i.id);
+    const file = `${STATES}${i.id}-${i.version}.state`;
+    assert.ok(existsSync(new URL(file, R)), `${file} (node tools/contract.mjs --save-states)`);
+  }
 });
 
 console.log('registry');
@@ -141,13 +171,18 @@ test('the release\'s archives are the ones CI packages and the pages link to', (
   for (const i of withPlugins()) assert.ok(md.includes(`| ${i.version} |`) && md.includes(i.name) && md.includes(archive(i.id, 'macos.zip')), `notes list ${i.name}`);
   assert.ok(md.includes('xattr -dr com.apple.quarantine'), 'notes give the xattr command');
 });
-test('the macOS and Linux downloads install and verify themselves (make install, make verify, make check-app, make unquarantine-app…)', () => {
+test('the downloads install and verify themselves (make install, make verify, make check-app, make unquarantine-app…; install.cmd on Windows)', () => {
   const sh = read('tools/package-plugins.sh'), mk = read('native/install.mk');
   assert.ok(sh.includes('cp native/install.mk "$dir/Makefile"') && sh.includes('cp native/install.sh "$dir/"'), 'package-plugins.sh adds the Makefile and install.sh');
   assert.ok(mk.includes('install verify uninstall check unquarantine:') && mk.includes('bash ./install.sh $@'), 'the Makefile runs install.sh install, verify, uninstall, check and unquarantine');
   for (const t of ['install', 'verify', 'uninstall', 'check', 'unquarantine']) assert.ok(mk.includes(`${t}-%:\n\t@bash ./install.sh ${t} $*`), `make ${t}-<format> runs install.sh ${t} <format>`);
   const ci = read('.github/workflows/native.yml');
   assert.ok(ci.includes('make install') && ci.includes('make verify'), 'native.yml runs the Makefile on the archive');
+  assert.ok(sh.includes('cp native/install.cmd native/install.ps1 "$dir"/'), 'package-plugins.sh adds install.cmd and install.ps1 to the Windows downloads');
+  const ps = read('native/install.ps1'), cmd = read('native/install.cmd');
+  assert.ok(cmd.includes('install.ps1" %*') && cmd.includes('\r\n'), 'install.cmd runs install.ps1, with Windows line endings');
+  for (const t of ['install', 'verify', 'uninstall', 'check', 'unblock']) assert.ok(ps.includes(`'${t}' { Do-`), `install.ps1 does ${t}`);
+  assert.ok(ci.includes('Run install') && ci.includes('Run verify'), 'native.yml runs install.cmd on the Windows archive');
   if (process.platform !== 'linux') return;
   // a folder like a download, with a stand-in CLAP and standalone, installed into a scratch home
   const t = mkdtempSync(join(tmpdir(), 'forte-install-')), dl = join(t, 'Gong Keyboard');

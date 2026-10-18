@@ -437,6 +437,15 @@ solver, the tuning tables). Where a test needs more of the C++ than the engine p
 string alone, the bubbles' glide, a linear analysis, a board's modes), the instrument's
 `<slug>-web.cpp` exports it, and the tuning tools (bowed, harmonium, pipes) measure the build.
 
+### Towards 1.0
+From 1.0 an instrument's major version changes only when songs saved with its plugins or its
+presets' sound break (README). The parts that hold it: each instrument's `<slug>-contract.json`
+(generated with its parameter tables) and `tools/contract.mjs`, which the `tests` workflow uses to
+warn about a break below 1.0 and to ask for a `major` note from 1.0; the saved states of every
+release in `native/tests/states/`, which `native/tests/suite-plugin-tests.cpp` loads into today's
+plugins; and `reference.json`, which keeps the presets' sound. The Windows downloads install
+themselves too (`native/install.cmd`, `install.ps1`).
+
 ### 6. Later
 - The plugin window (Forte 0.21.0: `native/plugin/editor.h`, `editor.html`) shows the controls
   and a keyboard. Still to come: the site's views (the modes, the waveforms), fed from the

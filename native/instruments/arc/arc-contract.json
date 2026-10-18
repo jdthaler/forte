@@ -1,0 +1,32 @@
+{
+  "slug": "arc",
+  "params": [
+    {"id":"current","kind":"continuous","min":1.5,"max":20,"def":3,"step":0,"log":true},
+    {"id":"gap","kind":"continuous","min":0.5,"max":8,"def":3,"step":0.05,"log":false},
+    {"id":"tau","kind":"continuous","min":5,"max":300,"def":26,"step":0,"log":true},
+    {"id":"restrike","kind":"continuous","min":1.1,"max":2.5,"def":1.25,"step":0.01,"log":false},
+    {"id":"hiss","kind":"continuous","min":0,"max":2,"def":1,"step":0.01,"log":false},
+    {"id":"mode","kind":"choice","def":"mono","options":["mono","poly","talk"]},
+    {"id":"arcs","kind":"continuous","min":2,"max":6,"def":4,"step":1,"log":false},
+    {"id":"coil","kind":"continuous","min":3,"max":100,"def":20,"step":0,"log":true},
+    {"id":"coilR","kind":"continuous","min":0.02,"max":4,"def":0.3,"step":0,"log":true},
+    {"id":"tune","kind":"choice","def":"arc","options":["arc","kelvin"]},
+    {"id":"voice","kind":"continuous","min":0,"max":6,"def":2,"step":0.05,"log":false},
+    {"id":"dist","kind":"continuous","min":0.3,"max":5,"def":1,"step":0,"log":true},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.3,"step":0.01,"log":false},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"Duddell's singing arc","values":{}},
+    {"name":"Singing and hissing (9 A)","values":{"current":9}},
+    {"name":"Second kind: out and re-struck every cycle","values":{"restrike":2.2}},
+    {"name":"Slow column (τ 150 µs): the top keys fall silent","values":{"tau":150}},
+    {"name":"Quick column (τ 6 µs): the arc follows its curve","values":{"tau":6}},
+    {"name":"Capacitors cut by Kelvin's formula: 1 % flat","values":{"tune":"kelvin"}},
+    {"name":"Small coil, big capacitors (4 mH)","values":{"coil":4}},
+    {"name":"Big coil, small capacitors (80 mH)","values":{"coil":80}},
+    {"name":"A long arc (6 mm)","values":{"gap":6}},
+    {"name":"Several arcs (6 lamps)","values":{"mode":"poly","arcs":6}},
+    {"name":"Simon's talking arc","values":{"mode":"talk"}}
+  ]
+}

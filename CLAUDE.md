@@ -59,8 +59,10 @@ Read first:
 3. **Release note, not a version.** A pull request into `main` bumps no
    version (semver, all 0.x). It adds one note to `changes/`
    (`changes/README.md`): a `# <topic>` line, then a
-   `### Forte (minor|patch)` or `### <Instrument name> (minor|patch|new)`
+   `### Forte (minor|patch)` or `### <Instrument name> (major|minor|patch|new)`
    section for each part it changes, with the lines for the changelog.
+   An instrument at 1.0 or later whose contract breaks (parameters or presets
+   that saved songs rely on, `tools/contract.mjs`) needs `major`.
    - Forte covers `shared/`, the landing page and `tools/`; an instrument
      covers its folder, its tests, its demos and its port.
    - Changes to docs alone (README, guides, this file) and to CI need no

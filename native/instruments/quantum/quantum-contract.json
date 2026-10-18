@@ -1,0 +1,29 @@
+{
+  "slug": "quantum",
+  "params": [
+    {"id":"potential","kind":"choice","def":"box","options":["box","morse","hydrogen","bouncer","harmonic"]},
+    {"id":"eta","kind":"continuous","min":0.05,"max":0.95,"def":0.5,"step":0.01,"log":false},
+    {"id":"lock","kind":"toggle","def":true},
+    {"id":"bpm","kind":"continuous","min":40,"max":200,"def":90,"step":1,"log":false},
+    {"id":"beats","kind":"continuous","min":0.5,"max":8,"def":2,"step":0.25,"log":false},
+    {"id":"nbar","kind":"continuous","min":3,"max":1000,"def":40,"step":0,"log":true},
+    {"id":"sigma","kind":"continuous","min":0.4,"max":4,"def":2,"step":0.01,"log":true},
+    {"id":"detector","kind":"choice","def":"a","options":["x","v","a"]},
+    {"id":"T1","kind":"continuous","min":0.2,"max":30,"def":4,"step":0,"log":true},
+    {"id":"dephase","kind":"continuous","min":0,"max":10,"def":0,"step":0.01,"log":false},
+    {"id":"release","kind":"continuous","min":0.02,"max":2,"def":0.3,"step":0,"log":true},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.3,"step":0.01,"log":false},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"Square well, revivals on the beat","values":{}},
+    {"name":"Morse molecule: octave echoes at T_rev/4","values":{"potential":"morse"}},
+    {"name":"Rydberg atom: revivals and a super-revival (C3)","values":{"potential":"hydrogen","lock":false,"nbar":44,"sigma":1.3,"detector":"x","T1":20}},
+    {"name":"Bouncing atom on a mirror","values":{"potential":"bouncer"}},
+    {"name":"Harmonic oscillator: never dephases","values":{"potential":"harmonic"}},
+    {"name":"Dephasing: no way back","values":{"dephase":3}},
+    {"name":"Fixed n̄: chords revive in polyrhythm","values":{"lock":false,"nbar":60}},
+    {"name":"Three levels: a chord of Bohr lines","values":{"sigma":0.6,"detector":"x"}},
+    {"name":"Tight packet: bright, brief, many echoes","values":{"sigma":4}}
+  ]
+}

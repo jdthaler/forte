@@ -1,0 +1,29 @@
+{
+  "slug": "reeds",
+  "params": [
+    {"id":"solder","kind":"continuous","min":0.05,"max":5,"def":1,"step":0,"log":true},
+    {"id":"strike","kind":"continuous","min":0.1,"max":0.9,"def":0.4,"step":0.005,"log":false},
+    {"id":"hardness","kind":"continuous","min":0.1,"max":10,"def":1,"step":0,"log":true},
+    {"id":"offset","kind":"continuous","min":-2,"max":2,"def":0.3,"step":0.01,"log":false},
+    {"id":"gap","kind":"continuous","min":0.1,"max":1.5,"def":0.3,"step":0,"log":true},
+    {"id":"bias","kind":"continuous","min":10,"max":600,"def":150,"step":0,"log":true},
+    {"id":"rbias","kind":"continuous","min":0.2,"max":200,"def":22,"step":0,"log":true},
+    {"id":"drive","kind":"continuous","min":0,"max":1,"def":0.35,"step":0.01,"log":false},
+    {"id":"tremDepth","kind":"continuous","min":0,"max":1,"def":0,"step":0.01,"log":false},
+    {"id":"tremRate","kind":"continuous","min":2,"max":10,"def":5.6,"step":0.05,"log":false},
+    {"id":"output","kind":"choice","def":"speaker","options":["speaker","direct"]},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.2,"step":0.01,"log":false},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"200A as voiced","values":{}},
+    {"name":"Tremolo through the speakers","values":{"tremDepth":0.65}},
+    {"name":"Direct out, clean","values":{"output":"direct","drive":0.1}},
+    {"name":"Reed centred in the slot (octave)","values":{"offset":0}},
+    {"name":"Reed riding high (thin, clean)","values":{"offset":1.2}},
+    {"name":"Heavy solder (short reeds, sweet, short sustain)","values":{"solder":3}},
+    {"name":"Light solder (long reeds, more bark)","values":{"solder":0.15}},
+    {"name":"Constant-voltage pickup (1 MΩ feed)","values":{"rbias":1}},
+    {"name":"Barking: tight gap, pushed preamp","values":{"gap":0.18,"offset":0.25,"drive":0.8,"hardness":2}}
+  ]
+}

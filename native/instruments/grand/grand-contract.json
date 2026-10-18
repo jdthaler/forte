@@ -1,0 +1,41 @@
+{
+  "slug": "grand",
+  "params": [
+    {"id":"hardness","kind":"continuous","min":0.2,"max":5,"def":1,"step":0,"log":true},
+    {"id":"strike","kind":"continuous","min":0.03,"max":0.5,"def":0.12,"step":0.001,"log":false},
+    {"id":"damper","kind":"continuous","min":3,"max":80,"def":25,"step":0,"log":true},
+    {"id":"scale","kind":"choice","def":"cp70","options":["cp70","concert"]},
+    {"id":"stringing","kind":"choice","def":"cp70","options":["cp70","grand","single"]},
+    {"id":"detune","kind":"continuous","min":0,"max":12,"def":1.2,"step":0.1,"log":false},
+    {"id":"stiffness","kind":"continuous","min":0,"max":4,"def":1,"step":0.01,"log":false},
+    {"id":"stretch","kind":"toggle","def":true},
+    {"id":"loss","kind":"continuous","min":0.25,"max":4,"def":1,"step":0,"log":true},
+    {"id":"mount","kind":"choice","def":"frame","options":["frame","board"]},
+    {"id":"gFrame","kind":"continuous","min":0.000001,"max":0.003,"def":0.00005,"step":0,"log":true},
+    {"id":"boardH","kind":"continuous","min":5,"max":16,"def":9,"step":0.1,"log":false},
+    {"id":"tilt","kind":"continuous","min":0,"max":45,"def":6,"step":0.5,"log":false},
+    {"id":"hRatio","kind":"continuous","min":0.01,"max":1,"def":0.2,"step":0,"log":true},
+    {"id":"kH","kind":"continuous","min":100000,"max":100000000,"def":10000000,"step":0,"log":true},
+    {"id":"listen","kind":"continuous","min":0,"max":1,"def":1,"step":0.01,"log":false},
+    {"id":"pickH","kind":"continuous","min":0,"max":1,"def":0.25,"step":0.01,"log":false},
+    {"id":"rIn","kind":"continuous","min":10,"max":10000,"def":470,"step":0,"log":true},
+    {"id":"bass","kind":"continuous","min":-15,"max":15,"def":0,"step":0.5,"log":false},
+    {"id":"mid","kind":"continuous","min":-15,"max":15,"def":0,"step":0.5,"log":false},
+    {"id":"treble","kind":"continuous","min":-15,"max":15,"def":0,"step":0.5,"log":false},
+    {"id":"maxFreq","kind":"continuous","min":3000,"max":16000,"def":10000,"step":0,"log":true},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.12,"step":0.01,"log":false},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"CP-70","values":{}},
+    {"name":"Same strings on a soundboard, heard by microphones","values":{"mount":"board","listen":1}},
+    {"name":"Same strings on a soundboard, through the piezo","values":{"mount":"board","listen":0}},
+    {"name":"Concert-grand scale (long bass strings)","values":{"scale":"concert","stringing":"grand"}},
+    {"name":"Ideal flexible strings (harmonic)","values":{"stiffness":0}},
+    {"name":"Honky-tonk unisons (10 ¢)","values":{"detune":10}},
+    {"name":"Weinreich: one string, tilted bridge, soundboard","values":{"stringing":"single","mount":"board","listen":0,"tilt":20,"pickH":0.6}},
+    {"name":"Struck at the middle (odd partials)","values":{"strike":0.5}},
+    {"name":"Low-impedance preamp (thin bass)","values":{"rIn":22}},
+    {"name":"Stage EQ: bright and scooped","values":{"bass":4,"mid":-5,"treble":7}}
+  ]
+}
