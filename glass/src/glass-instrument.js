@@ -11,7 +11,8 @@ export const INSTRUMENT = {
   groups: GROUPS,
   presets: PRESETS,
   keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
-  range: [53, 93],                      // MIDI keys: F3–A6 (Franklin: 37 bowls, G3–G6)
+  range: [21, 108],                     // MIDI keys: A0–C8
+  compass: { keys: [53, 93], param: 'fullRange' }, // F3–A6 (Franklin: 37 bowls, G3–G6), until Full range opens the rest
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
   // CC1: treadle speed, from the default (wheel at rest) to twice it: louder (the rim moves
   // faster) and a faster warble. Not the slider's full 3 rev/s: faster than ~1.2 rev/s the

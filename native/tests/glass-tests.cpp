@@ -64,8 +64,13 @@ TEST("glass: Rayleigh's hemisphere ratios 1 : 2.810 : 5.432 : 8.839, Bryan's fac
     CHECK(b.count >= 4 && b.count <= 5);
     sum += b.h;
   }
-  CHECK_NEAR(sum / NK, 2.54e-3, 2.54e-4); // Franklin's "tenth of an inch"
+  CHECK_NEAR(sum / (KEY_HI - KEY_LO + 1), 2.54e-3, 2.54e-4); // Franklin's "tenth of an inch"
   CHECK(regulation(55) > regulation(69) && regulation(69) > regulation(91) && regulation(91) > 0.2);
+  for (int k = KEY_MIN; k <= KEY_MAX; k++) { // and the bowls past the compass, with the full range open
+    const Bowl b = bowl(k, BowlParams{});
+    CHECK_NEAR(b.modes[0].f, keyFreq(k), 1e-9 * keyFreq(k));
+    CHECK(b.h > 0.8e-3 && b.h < 2.9e-3 && std::isfinite(regulation(k)));
+  }
 }
 
 TEST("glass: a rubbed A4 speaks at 440 Hz, its bowl built on the worker thread, and retires after release") {

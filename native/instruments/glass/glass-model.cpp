@@ -61,8 +61,15 @@ double liquidJ(int n, double thetaD) {
   return simpson([n](double t) { return (64 * std::pow(t, 2 * n + 5)) / std::pow(1 + t * t, 6); }, 0, std::tan(std::min(thetaD, PI / 2) / 2), 64);
 }
 
-// Bowl size (Franklin to Beccaria, 1762): 9 in across for G3 to 3 in for G6, linear in key.
-double bowlRadius(double key) { return 0.5 * INCH * (9 - (6 * (key - 55)) / 36); }
+// Bowl size (Franklin to Beccaria, 1762): 9 in across for G3 to 3 in for G6, linear in key, and
+// so on down past F3. Above A6 the line would reach zero at key 109: there the bowls shrink as
+// Franklin's do over his three octaves overall, a third of the size for an eighth of the pitch
+// (D ∝ f^−0.528), from A6's 2.67 in to 1.69 in at C8.
+double bowlRadius(double key) {
+  if (key <= KEY_HI) return 0.5 * INCH * (9 - (6 * (key - 55)) / 36);
+  static const double top = 0.5 * INCH * (9 - (6 * (KEY_HI - 55)) / 36.0), slope = std::log(3.0) / std::log(8.0);
+  return top * std::pow(2.0, (-slope * (key - KEY_HI)) / 12);
+}
 
 // Wall thickness that puts the (empty, perfect) n = 2 mode on the key's pitch.
 double bowlThickness(double key) {
@@ -177,10 +184,10 @@ static constexpr TouchParams REF_TOUCH = {0.85, 0.5, 0, 0.5};
 double regulation(int key) {
   static const std::array<double, NK> table = [] {
     std::array<double, NK> t{};
-    for (int k = KEY_LO; k <= KEY_HI; k++) t[k - KEY_LO] = speakingThreshold(k, REF_TOUCH, bowl(k, REF_BOWL));
+    for (int k = KEY_MIN; k <= KEY_MAX; k++) t[k - KEY_MIN] = speakingThreshold(k, REF_TOUCH, bowl(k, REF_BOWL));
     return t;
   }();
-  if (key >= KEY_LO && key <= KEY_HI) return table[key - KEY_LO];
+  if (key >= KEY_MIN && key <= KEY_MAX) return table[key - KEY_MIN];
   return speakingThreshold(key, REF_TOUCH, bowl(key, REF_BOWL));
 }
 

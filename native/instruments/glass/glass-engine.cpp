@@ -39,7 +39,7 @@ void ArmonicaEngine::setParams(const double *p) {
     version++;
     Snapshot &s = snapshots[version % snapshots.size()];
     s.split.store(P[p::split], std::memory_order_relaxed); s.loss.store(P[p::loss], std::memory_order_relaxed); s.water.store(P[p::water], std::memory_order_relaxed);
-    bowls.prepare(version, KEY_LO, KEY_HI, focus >= KEY_LO ? focus : 69);
+    bowls.prepare(version, KEY_MIN, KEY_MAX, focus >= KEY_MIN ? focus : 69);
   }
 }
 
@@ -49,7 +49,7 @@ void ArmonicaEngine::start(Voice &v, int key) {
   v.key = key;
   v.Nreg = regulation(key);
   v.after = pressureAll;
-  const auto [pl, pr] = keyPan(key, 0.7, KEY_LO, KEY_HI);
+  const auto [pl, pr] = keyPan(key, 0.7, KEY_LO, KEY_HI); // across the compass; the bowls past it at its ends
   v.pl = pl; v.pr = pr;
   if (auto d = bowls.get(key, version)) build(v, *d.data, version); // otherwise once its bowl is ready (a few ms; at once in WebAssembly)
 }
@@ -89,11 +89,11 @@ void ArmonicaEngine::pressure(double value, int key) { // MIDI aftertouch: chann
 }
 
 void ArmonicaEngine::noteOn(int key, double velocity) {
-  if (!hasParams || key < KEY_LO || key > KEY_HI) return; // no bowl outside F3–A6
+  if (!hasParams || key < KEY_MIN || key > KEY_MAX) return; // no bowl outside A0–C8
   Voice *v = nullptr;
   for (int i = 0; i < count && !v; i++) if (voices[i]->key == key) v = voices[i];
   if (!v) {
-    v = &slots[key - KEY_LO];
+    v = &slots[key - KEY_MIN];
     start(*v, key);
     voices[count++] = v;
     if (count > MAX_VOICES) { // let go of the quietest bowl nobody is touching
