@@ -38,7 +38,7 @@ class SpringEngine : public Engine {
  public:
   static constexpr int MAX_VOICES = 16;  // sounding keys at once
   static constexpr int POOL = 40;        // voices, sounding or fading
-  static constexpr int MAX_MODES = 1200; // modes per spring reserved in the plugin (the widest coil, the bass Slinky: under 1000)
+  static constexpr int MAX_MODES = 1500; // modes per spring reserved in the plugin (the most, the narrowest Slinky at A0: 1369)
   static constexpr int BLOCK_MAX = 1024;
   static constexpr int CAPTURE = 1 << 15;
   explicit SpringEngine(double fs);

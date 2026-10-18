@@ -11,7 +11,7 @@ export const INSTRUMENT = {
   groups: GROUPS,
   presets: PRESETS,
   keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
-  range: [48, 84],                      // MIDI keys
+  range: [21, 108],                     // MIDI keys: A0–C8
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
   modWheel: 'flame',                    // CC1: the flame power, from its default up to its maximum
   // the engine: the physics in C++ (native/instruments/pyrophone), built as WebAssembly. It builds

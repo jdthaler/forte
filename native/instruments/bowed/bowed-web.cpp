@@ -59,7 +59,7 @@ FORTE_EXPORT int bowed_oversample(int key, double fs) { return oversample(key, f
 FORTE_EXPORT double bowed_settle_time(int key, double fs, double speed, double beta, double losses, double mobility, double torsionQ,
                                       double mus, double mud, double v0, double memory, double grain, double vB, double FN, double rise, double sec) {
   static std::unique_ptr<BowedString> s;
-  if (key < KEY_LO || key > KEY_HI) return 0;
+  if (key < KEY_MIN || key > KEY_MAX) return 0;
   if (!s || s->key != key || s->fsBase != fs) s = std::make_unique<BowedString>(key, fs);
   Params P = paramsOf(speed, beta, losses, mobility, torsionQ);
   P.mus = mus; P.mud = mud; P.v0 = v0; P.memory = memory; P.grain = grain;
@@ -97,7 +97,7 @@ FORTE_EXPORT double *bowed_key_ring(OrganistaEngine *e, int key, int which) {
 // bowed_string_new(key, fs, P): P the descriptor's parameters in the native order (p::count of
 // them); the string runs at fs × oversample(key, fs), designed by loopDesign at that rate.
 FORTE_EXPORT Alone *bowed_string_new(int key, double fs, const double *P) {
-  if (key < KEY_LO || key > KEY_HI) return nullptr;
+  if (key < KEY_MIN || key > KEY_MAX) return nullptr;
   return new Alone(key, fs, paramsOf(P));
 }
 FORTE_EXPORT void bowed_string_free(Alone *a) { delete a; }

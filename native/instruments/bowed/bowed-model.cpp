@@ -31,7 +31,7 @@ double cTorsion() {
 double zAll() {
   static const double z = [] {
     double s = 0;
-    for (int k = KEY_LO; k <= KEY_HI; k++) s += stringDesign(k).Z0;
+    for (int k = KEY_LO; k <= KEY_HI; k++) s += stringDesign(k).Z0; // (the 49 the bridge was drawn for)
     return s;
   }();
   return z;
@@ -43,12 +43,15 @@ const Params &defaults() {
 }
 
 StringDesign stringDesign(int key) {
-  const double fKey = keyFreq(key), f0 = fKey * fdlibm::pow(2.0, TUNE[key - KEY_LO] / 1200);
-  const double L = 0.36 * fdlibm::pow(2.0, (-0.8 * (key - 72)) / 12);
+  const double fKey = keyFreq(key), f0 = fKey * fdlibm::pow(2.0, TUNE[key - KEY_MIN] / 1200);
+  const double L = key > KEY_HI ? 0.36 * fdlibm::pow(2.0, (-0.8 * (KEY_HI - 72)) / 12) * fdlibm::pow(2.0, -(key - KEY_HI) / 12.0)
+                                : std::min(2.0, 0.36 * fdlibm::pow(2.0, (-0.8 * (key - 72)) / 12));
   const double T = 95 + 35 * std::min(1.0, std::max(0.0, (84 - key) / 48.0));
   const double c = 2 * L * f0, mu = T / (c * c), Z0 = T / c;
-  const double d = std::sqrt((4 * mu) / (PI * STEEL.rho));                                // as plain steel wire
-  const double B = (fdlibm::pow(PI, 3) * STEEL.E * fdlibm::pow(d, 4)) / (64 * T * L * L); // inharmonicity (neglected)
+  const double d = std::sqrt((4 * mu) / (PI * STEEL.rho)); // as plain steel wire
+  // inharmonicity (neglected): below C2 the strings are wound on C2's wire, which alone bends
+  const double dc = key < KEY_LO ? stringDesign(KEY_LO).d : d;
+  const double B = (fdlibm::pow(PI, 3) * STEEL.E * fdlibm::pow(dc, 4)) / (64 * T * L * L);
   return {key, fKey, f0, L, T, c, mu, Z0, d, B, STEEL.rho * c * c, wound(key) > 0};
 }
 
@@ -60,7 +63,7 @@ double plateFreq(int m, int n, const Board &B) {
 }
 
 void bridgePoint(double key, double out[2], const Board &B) {
-  const double u = (key - KEY_LO) / (KEY_HI - KEY_LO);
+  const double u = std::min(1.0, std::max(0.0, (key - KEY_LO) / (KEY_HI - KEY_LO))); // past C2–C6: the bridge's ends, as the engine's segments
   out[0] = B.a * (0.18 + 0.6 * u); out[1] = B.b * (0.78 - 0.5 * u);
 }
 
@@ -157,7 +160,7 @@ LossFilter lossFilter(double f0, double s0, double fh, double sh, double fs, dou
   return {g, p, tau};
 }
 
-static int os48(int key) { return (int)std::min(4.0, fdlibm::pow(2.0, std::max(0.0, std::ceil(std::log2((180 * keyFreq(key)) / 48000))))); }
+static int os48(int key) { return (int)std::min(8.0, fdlibm::pow(2.0, std::max(0.0, std::ceil(std::log2((180 * keyFreq(key)) / 48000))))); }
 int oversample(int key, double fs) { return std::max(1, (int)std::floor((os48(key) * 48000) / fs + 0.5)); }
 
 double torsionEcho(int key) { const double c = stringDesign(key).c; return c / (c + cTorsion()); }
@@ -220,10 +223,10 @@ Motion classifyMotion(const double *iv, int n) {
 double voiced(int key) {
   static const std::array<double, NK> table = [] {
     std::array<double, NK> t{};
-    for (int k = KEY_LO; k <= KEY_HI; k++) t[k - KEY_LO] = 0.5 * schelleng(loopDesign(k, defaults(), 48000), defaults()).Fmax;
+    for (int k = KEY_MIN; k <= KEY_MAX; k++) t[k - KEY_MIN] = 0.5 * schelleng(loopDesign(k, defaults(), 48000), defaults()).Fmax;
     return t;
   }();
-  return key >= KEY_LO && key <= KEY_HI ? table[key - KEY_LO] : 0;
+  return key >= KEY_MIN && key <= KEY_MAX ? table[key - KEY_MIN] : 0;
 }
 
 } // namespace forte::bowed

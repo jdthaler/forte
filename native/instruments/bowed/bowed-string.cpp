@@ -19,11 +19,14 @@ inline double tap(const double *buf, int m, int w, double d) {
   const double c1 = 0.5 * (x2 - x0), c2 = x0 - 2.5 * x1 + 2 * x2 - 0.5 * x3, c3 = 0.5 * (x3 - x0) + 1.5 * (x1 - x2);
   return ((c3 * f + c2) * f + c1) * f + x1;
 }
-int ringSize(double fs) { return 1 << (int)std::ceil(std::log2(fs / 50 + 16)); } // C2 bent down 2 semitones fits
+// C2 bent down 2 semitones fits (C2–C6 keep that); the keys past them hold their own string bent down so far
+int ringSize(double fs, int key) {
+  return 1 << (int)std::ceil(std::log2((key >= KEY_LO && key <= KEY_HI ? fs / 50 : fs / (0.89 * keyFreq(key))) + 16));
+}
 } // namespace
 
 BowedString::BowedString(int key, double fsBase)
-    : key(key), os(oversample(key, fsBase)), fs(fsBase * os), fsBase(fsBase), mask(ringSize(fsBase * os) - 1),
+    : key(key), os(oversample(key, fsBase)), fs(fsBase * os), fsBase(fsBase), mask(ringSize(fsBase * os, key) - 1),
       fb(mask + 1), nl(mask + 1), hb(mask + 1), tb(mask + 1), tn(mask + 1), rng((uint32_t)((uint64_t)key * 2654435761u)) {
   setFilter(aa[0], Biquad::lp, 0.38 * fsBase, 0.5412, fs);
   setFilter(aa[1], Biquad::lp, 0.38 * fsBase, 1.3066, fs);

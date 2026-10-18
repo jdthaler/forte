@@ -43,6 +43,14 @@ void PyrophoneEngine::Voice::tune(const PyrophoneEngine &eng, double b) {
   const double *P = eng.P.data();
   W = eng.tune->W(P[p::autotune] != 0 ? b : betaOn(P[p::flame], 0.7, eng.tune->betaH, eng.tune->betaMax));
   hHot = (TAU * keyFreqJS(key)) / (W * eng.fs); // L/c_hot units per sample
+  // the modes a sample can hold: below 0.45 fs with the wheel bent all the way up (every mode of
+  // the keys up to C6; at C8 four or five)
+  int n = 1;
+  while (n < N_MODES && eng.sys.w[n] * hHot * fd::pow(2.0, kBendSemitones / 12) < 0.9 * std::numbers::pi) n++;
+  if (n != N) { // a re-cut tube that gains or loses a mode: those start at rest, every coefficient anew
+    for (int j = std::min(n, N); j < N_MODES; j++) { eta[j] = 0; vel[j] = 0; }
+    N = n; xf = -1; dBore = NAN;
+  }
 }
 
 void PyrophoneEngine::Voice::coeffs(const PyrophoneEngine &eng) {

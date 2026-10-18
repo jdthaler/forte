@@ -44,7 +44,7 @@ const Base = wasmEngine(BUILD, { messages: views });
 // The engine, with the tests' hooks: e.voices, each tube's state read live from the engine, its
 // one-step matrices and modes as views. It takes the page's tuning table ({ type: 'tune' }),
 // computed by the page's WebAssembly model, so that the audio thread needn't.
-const VOICE = ['key', 'amp', 'amp2', 'W', 'h', 'beta', 'betaT', 'theta', 'keyDown', 'song', 'fade', 'peak', 'since', 'age', 'rel'];
+const VOICE = ['key', 'amp', 'amp2', 'W', 'h', 'beta', 'betaT', 'theta', 'keyDown', 'song', 'fade', 'peak', 'since', 'age', 'rel', 'N'];
 const ARRAYS = ['m11', 'm12', 'm21', 'm22', 'b1', 'eta', 'vel'];
 function tubeView(x, p) {
   const v = {}, read = (j) => { const s = scratch(x); x.pyrophone_voice_state(p, s.at); return s.f64(VOICE.length)[j]; };

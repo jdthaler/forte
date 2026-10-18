@@ -63,7 +63,7 @@ class OrganistaEngine : public Engine {
     double vel = 0, after = 0, FN = 0, FT = 0, up = 0, dn = 0;
     int idle = 0, seg = 0;
   };
-  Key *string(int key) { return key >= KEY_LO && key <= KEY_HI ? S[key - KEY_LO].get() : nullptr; }
+  Key *string(int key) { return key >= KEY_MIN && key <= KEY_MAX ? S[key - KEY_MIN].get() : nullptr; }
 
   // read by the tests (through the WebAssembly's hooks)
   int nAct = 0;
@@ -74,6 +74,10 @@ class OrganistaEngine : public Engine {
   void run(float *L, float *R, int n);
   void buildBody(double eta);
   bool damped(const Key &s) const { return !s.down && !Pm.lifted; }
+  // With the dampers lifted, the 49 strings of C2–C6 (the board is drawn on them) ring in sympathy;
+  // the strings past them join only when played, and leave the loop once they are silent.
+  static bool sympathetic(int key) { return key >= KEY_LO && key <= KEY_HI; }
+  void liftAll();
   void activate(Key &s);
   void fault(Key &s);
   void retire();

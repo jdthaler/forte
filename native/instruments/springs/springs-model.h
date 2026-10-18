@@ -19,7 +19,11 @@ namespace forte::springs {
 
 inline constexpr double PI = 3.14159265358979323846;
 inline constexpr double TAU = 2 * PI;
-inline constexpr int KEY_LO = 36, KEY_HI = 84; // C2–C6
+inline constexpr int KEY_LO = 36, KEY_HI = 84;  // C2–C6, the keys the pan is drawn on
+// What it plays, A0–C7: every key's spring is the C4 one scaled, so F_C rises an octave with each
+// octave (4.2 kHz at C4) and leaves the modes' 18 kHz ceiling past C6; above C7 the band holds
+// fewer than 31 modes, all well below F_C, and the chirp is gone (5 modes at C8, nearly harmonic).
+inline constexpr int KEY_MIN = 21, KEY_MAX = 96;
 
 // Math.log2 and Math.round as V8 computes them
 double log2(double x);

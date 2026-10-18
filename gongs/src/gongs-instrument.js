@@ -11,7 +11,7 @@ export const INSTRUMENT = {
   groups: GROUPS,
   presets: PRESETS,
   keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
-  range: [36, 84],                      // MIDI keys: C2–C6
+  range: [21, 108],                     // MIDI keys: A0–C8
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'strike',                   // CC1: strike point, from its default (near the centre) out to 95 % of the radius
   // the engine: the physics in C++ (native/instruments/gongs), built as WebAssembly (it builds its
