@@ -7,6 +7,12 @@
 
 #include "forte/instrument.h"
 
+// The plugins' build gives the version (forte_add_plugin, from <slug>-info.cmake); the
+// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.
+#ifndef FORTE_INSTRUMENT_VERSION
+#define FORTE_INSTRUMENT_VERSION ""
+#endif
+
 namespace forte::template_ {
 
 namespace p { // parameter indices, in the descriptor's order
@@ -46,7 +52,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "template", .name = "Template Bars", .version = "0.30.0",
+    .slug = "template", .name = "Template Bars", .version = FORTE_INSTRUMENT_VERSION,
     .description = "The starting point for a new instrument: struck free–free bars.", .auSubtype = "Tmpl",
     .vst3Id = {0x9b, 0xd4, 0xc6, 0x8d, 0x71, 0xb3, 0xf7, 0x69, 0x72, 0x7d, 0x41, 0xf6, 0x33, 0x57, 0x13, 0x55},
     .params = kParams, .paramCount = p::count,

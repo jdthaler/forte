@@ -7,6 +7,12 @@
 
 #include "forte/instrument.h"
 
+// The plugins' build gives the version (forte_add_plugin, from <slug>-info.cmake); the
+// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.
+#ifndef FORTE_INSTRUMENT_VERSION
+#define FORTE_INSTRUMENT_VERSION ""
+#endif
+
 namespace forte::arc {
 
 namespace p { // parameter indices, in the descriptor's order
@@ -78,7 +84,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "arc", .name = "Singing Arc", .version = "0.2.0",
+    .slug = "arc", .name = "Singing Arc", .version = FORTE_INSTRUMENT_VERSION,
     .description = "An electric arc lamp that sings: its negative resistance drives an LC circuit, and the arc itself is the loudspeaker.", .auSubtype = "SArc",
     .vst3Id = {0x88, 0xb1, 0x3a, 0xef, 0xe9, 0x19, 0x01, 0x40, 0xd6, 0xa7, 0x77, 0x03, 0x7d, 0xba, 0x14, 0x87},
     .params = kParams, .paramCount = p::count,

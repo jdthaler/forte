@@ -72,7 +72,8 @@ cd ../forte/native && cmake --preset wasm && cmake --build --preset wasm && ctes
 
 Each ported instrument's build lands next to its page (`<slug>/wasm/<slug>.wasm`, the template's
 in `docs/template/wasm/`) and is committed, so the site still needs no build step; CI rebuilds
-it and fails if the committed file is stale. It is a standalone module with no JavaScript glue:
+it and fails if the committed file is stale. The versions are not in it (the plugins' build
+passes them from `<slug>-info.cmake`), so a release's version bumps leave it alone. It is a standalone module with no JavaScript glue:
 `shared/wasm.js` loads it in the page, the AudioWorklet and Node, and wraps the C functions of
 `web/engine-api.cpp` in a class with the engine contract. `FORTE_ENGINE=wasm` runs the Node
 tests on it.

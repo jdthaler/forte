@@ -7,6 +7,12 @@
 
 #include "forte/instrument.h"
 
+// The plugins' build gives the version (forte_add_plugin, from <slug>-info.cmake); the
+// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.
+#ifndef FORTE_INSTRUMENT_VERSION
+#define FORTE_INSTRUMENT_VERSION ""
+#endif
+
 namespace forte::blackhole {
 
 namespace p { // parameter indices, in the descriptor's order
@@ -69,7 +75,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "blackhole", .name = "Black-Hole Keyboard", .version = "0.4.1",
+    .slug = "blackhole", .name = "Black-Hole Keyboard", .version = FORTE_INSTRUMENT_VERSION,
     .description = "Every key a Kerr black hole, ringing in quasinormal modes computed from the Teukolsky equation.", .auSubtype = "BHol",
     .vst3Id = {0x5f, 0xef, 0x66, 0x73, 0x53, 0x79, 0xc9, 0x85, 0x2f, 0x95, 0xda, 0x33, 0x4a, 0xc9, 0x74, 0x92},
     .params = kParams, .paramCount = p::count,

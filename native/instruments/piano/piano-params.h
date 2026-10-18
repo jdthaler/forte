@@ -7,6 +7,12 @@
 
 #include "forte/instrument.h"
 
+// The plugins' build gives the version (forte_add_plugin, from <slug>-info.cmake); the
+// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.
+#ifndef FORTE_INSTRUMENT_VERSION
+#define FORTE_INSTRUMENT_VERSION ""
+#endif
+
 namespace forte::piano {
 
 namespace p { // parameter indices, in the descriptor's order
@@ -120,7 +126,7 @@ inline const Controller kControllers[] = {{67, p::unaCorda}};
 // descriptor maps MIDI velocity itself (this one does).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "piano", .name = "Ribbon Piano", .version = "0.4.1",
+    .slug = "piano", .name = "Ribbon Piano", .version = FORTE_INSTRUMENT_VERSION,
     .description = "Stiff strings, felt hammers and a shared bridge — then swap the strings for square bars, triangular bars or twisting ribbons.", .auSubtype = "Ribn",
     .vst3Id = {0x5f, 0x2a, 0x6d, 0x7c, 0xcf, 0xff, 0x4c, 0xce, 0x17, 0xf2, 0x4e, 0xad, 0x64, 0xed, 0x0b, 0x4c},
     .params = kParams, .paramCount = p::count,

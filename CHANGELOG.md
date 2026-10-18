@@ -6,6 +6,12 @@ landing page and the tools). An instrument's version covers its folder,
 its tests and its demos. Everything is pre-release (0.x) for now, so any
 release may change the sound or the parameters.
 
+Versions change only when `main` is released to `live`, the branch the site
+is published from: each pull request into `main` leaves a note in `changes/`
+(`changes/README.md`), and `node tools/release.mjs` gathers them into one
+entry here, bumping each version once. Until Forte 0.30.0 every change
+bumped its versions itself.
+
 Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.

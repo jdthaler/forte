@@ -128,9 +128,9 @@ the unpacked folder do it all. They are unsigned, so a Mac needs one Terminal co
 which `make install` runs) before it loads them. The rest follow as they are ported
 ([docs/PLUGINS.md](docs/PLUGINS.md)).
 
-Releases publish themselves: after each green `native` run on `main`, the **release-plugins**
-workflow releases that run's plugins if an instrument's version or anything under `native/`
-changed since the latest release (tagged `plugins-v<Forte version>`, with `-2`, `-3`… when
+Releases publish themselves: after each green `native` run on `live` (the branch the site is
+published from), the **release-plugins** workflow releases that run's plugins if an instrument's
+version or anything under `native/` changed since the latest release (tagged `plugins-v<Forte version>`, with `-2`, `-3`… when
 Forte's version didn't change). It can also be started by hand from the Actions tab.
 
 ## Running locally

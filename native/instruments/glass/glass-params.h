@@ -7,6 +7,12 @@
 
 #include "forte/instrument.h"
 
+// The plugins' build gives the version (forte_add_plugin, from <slug>-info.cmake); the
+// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.
+#ifndef FORTE_INSTRUMENT_VERSION
+#define FORTE_INSTRUMENT_VERSION ""
+#endif
+
 namespace forte::glass {
 
 namespace p { // parameter indices, in the descriptor's order
@@ -66,7 +72,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "glass", .name = "Glass Armonica", .version = "0.4.0",
+    .slug = "glass", .name = "Glass Armonica", .version = FORTE_INSTRUMENT_VERSION,
     .description = "Wet fingers on spinning glass bowls: stick–slip friction drives the shell modes, and rotation makes the doublets warble.", .auSubtype = "Glas",
     .vst3Id = {0xe8, 0x61, 0xf8, 0x2c, 0xa6, 0x06, 0xc8, 0xca, 0x74, 0xcb, 0x17, 0x39, 0xf8, 0xa3, 0xcb, 0xee},
     .params = kParams, .paramCount = p::count,

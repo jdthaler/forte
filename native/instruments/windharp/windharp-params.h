@@ -7,6 +7,12 @@
 
 #include "forte/instrument.h"
 
+// The plugins' build gives the version (forte_add_plugin, from <slug>-info.cmake); the
+// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.
+#ifndef FORTE_INSTRUMENT_VERSION
+#define FORTE_INSTRUMENT_VERSION ""
+#endif
+
 namespace forte::windharp {
 
 namespace p { // parameter indices, in the descriptor's order
@@ -61,7 +67,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "windharp", .name = "Wind Harp", .version = "0.2.0",
+    .slug = "windharp", .name = "Wind Harp", .version = FORTE_INSTRUMENT_VERSION,
     .description = "Strings sung by the wind: the vortices they shed lock onto one of their harmonics, and hop up the series as the wind rises.", .auSubtype = "WHrp",
     .vst3Id = {0x7e, 0x1c, 0x2a, 0xe3, 0x7e, 0xf1, 0xfb, 0x28, 0x10, 0x3b, 0x42, 0xa4, 0x07, 0xff, 0x78, 0x87},
     .params = kParams, .paramCount = p::count,

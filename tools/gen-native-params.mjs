@@ -232,6 +232,12 @@ export async function generate(slug) {
   w();
   w('#include "forte/instrument.h"');
   w();
+  w('// The plugins\' build gives the version (forte_add_plugin, from <slug>-info.cmake); the');
+  w('// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.');
+  w('#ifndef FORTE_INSTRUMENT_VERSION');
+  w('#define FORTE_INSTRUMENT_VERSION ""');
+  w('#endif');
+  w();
   w(`namespace forte::${ns} {`);
   w();
   w('namespace p { // parameter indices, in the descriptor\'s order');
@@ -301,7 +307,7 @@ export async function generate(slug) {
   w(`// descriptor maps MIDI velocity itself (${I.midiVelocity ? 'this one does' : 'this one does not'}).`);
   w('inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {');
   w('  return InstrumentInfo{');
-  w(`    .slug = ${cstr(slug)}, .name = ${cstr(reg.name)}, .version = ${cstr(version)},`);
+  w(`    .slug = ${cstr(slug)}, .name = ${cstr(reg.name)}, .version = FORTE_INSTRUMENT_VERSION,`);
   w(`    .description = ${cstr(reg.tagline ?? '')}, .auSubtype = ${cstr(reg.plugin.code)},`);
   w(`    .vst3Id = {${vst3Bytes(ids[slug].vst3).map((b) => `0x${b.toString(16).padStart(2, '0')}`).join(', ')}},`);
   w(`    .params = kParams, .paramCount = p::count,`);

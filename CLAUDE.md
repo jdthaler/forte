@@ -2,14 +2,17 @@
 
 Keyboard instruments synthesised in the browser from their physics: plain
 JavaScript, no build step, no dependencies. The site is
-<https://forte.jthaler.net>, served by GitHub Pages from `main`.
+<https://forte.jthaler.net>, served by GitHub Pages from the `live` branch.
+`main` is where work lands; `live` moves only when `main` is released
+(below).
 
 Read first:
 - `README.md`: what the project is and how to play it.
 - `docs/INSTRUMENT_GUIDE.md`: the anatomy of an instrument, the shared code
   in `shared/`, the engine contract, parameters and tests. Read it before
   changing an instrument or `shared/`.
-- `CHANGELOG.md`: the versioning rules are at the top.
+- `CHANGELOG.md` and `changes/README.md`: versions, and the notes that
+  become them.
 - `docs/PLUGINS.md`: the plan (and its decisions) for native plugins and
   the move of the physics to C++ and WebAssembly. Read it before working on
   `native/` or an instrument's port.
@@ -23,6 +26,8 @@ Read first:
 - `cd native && cmake --preset linux && cmake --build --preset linux &&
   ctest --preset linux` builds the plugins and the native tests
   (`native/README.md`; the `wasm` preset needs Emscripten).
+- `node tools/release.mjs --dry-run` shows what the next release would
+  bump and the changelog entry it would write.
 - `CI=1 npm test` is what GitHub Actions runs: it skips the CPU-timing
   tests. They are calibrated on a desktop machine and fail on slow or
   shared ones, so when one fails, run the same test on `main` before
@@ -30,7 +35,8 @@ Read first:
 
 ## Making a change
 
-1. **Branch.** Work on a branch, never directly on `main`. Behaviour that
+1. **Branch.** Work on a branch off `main`, never directly on `main` or
+   `live`. Behaviour that
    every page shares belongs in `shared/`.
 2. **Verify.**
    - `CI=1 npm test` passes.
@@ -50,29 +56,53 @@ Read first:
    - Emulation is not Safari. Say in the pull request what still needs a
      real iPhone or iPad (text inflation, zoom on focus, safe areas,
      Safari's toolbars).
-3. **Version and changelog.** Every change to the site bumps a version
-   (semver, all 0.x):
-   - Forte covers `shared/`, the landing page and `tools/`: bump `version`
-     in `package.json` and `FORTE_VERSION` in `shared/registry.js`
-     together.
-   - An instrument covers its folder, its tests and its demos: bump its
-     `version` in `shared/registry.js`.
-   - Add `### Forte X.Y.Z` or `### <Instrument name> X.Y.Z` under a new
-     `## YYYY-MM-DD — <topic>` heading at the top of `CHANGELOG.md`.
-     `test/site-tests.mjs` checks that versions agree and have entries.
+3. **Release note, not a version.** A pull request into `main` bumps no
+   version (semver, all 0.x). It adds one note to `changes/`
+   (`changes/README.md`): a `# <topic>` line, then a
+   `### Forte (minor|patch)` or `### <Instrument name> (minor|patch|new)`
+   section for each part it changes, with the lines for the changelog.
+   - Forte covers `shared/`, the landing page and `tools/`; an instrument
+     covers its folder, its tests, its demos and its port.
+   - Changes to docs alone (README, guides, this file) and to CI need no
+     note. The `tests` workflow checks a pull request for both rules.
    - Update `README.md` and `docs/INSTRUMENT_GUIDE.md` when what they
-     describe changes. Changes to docs alone (README, guides, this file)
-     need no version.
-4. **Commit.** Name every version bumped in the title, e.g.
-   `Forte 0.3.1: lay out instrument pages properly on phones`. The body
-   says why, what changed and how it was checked.
+     describe changes.
+4. **Commit.** The title says what changed, e.g.
+   `Lay out instrument pages properly on phones`; no version, since none
+   is bumped. The body says why, what changed and how it was checked.
 5. **Pull request** into `main`, with *Why*, *What changed* and *Testing*
    sections.
-6. **CI.** The `physics` workflow runs on the push and on the pull request.
-   Fix a failure at its root; never skip or weaken a test to get green.
-7. **Merge** with a merge commit (not squash or rebase) once `physics` is
-   green on the pull request's latest commit and nothing conflicts, and
-   only when the owner has asked for the merge.
+6. **CI.** `tests` (the JavaScript suites and the release-note rules) and
+   `native` (the WebAssembly, and the plugins on Linux) run on the push
+   and on the pull request. Fix a failure at its root; never skip or weaken
+   a test to get green.
+7. **Merge** with a merge commit (not squash or rebase) once CI is green
+   on the pull request's latest commit and nothing conflicts, and only
+   when the owner has asked for the merge. Merging into `main` publishes
+   nothing.
+
+## Releasing `main` to `live`
+
+Only when the owner asks for a release:
+
+1. On a branch off the latest `main`, run `node tools/release.mjs`. It
+   gathers the notes in `changes/` into one `## YYYY-MM-DD — <topics>`
+   entry at the top of `CHANGELOG.md`, bumps each version named once by
+   the largest kind its notes give (Forte in `package.json` and
+   `FORTE_VERSION` together), regenerates the plugins'
+   `<slug>-info.cmake`, and deletes the notes. Nothing else needs
+   rebuilding: the `.wasm` files carry no version.
+2. Commit with every version bumped in the title, e.g.
+   `Release Forte 0.31.0, Gong Keyboard 0.4.1`, and open a pull request
+   into `live` whose body is the new changelog entry.
+3. CI runs in full on it: `native` adds macOS, Windows, auval and the
+   release archives (the downloads' Makefile tried on each), and `tests`
+   checks that no notes are left. Whatever fails is fixed on `main` first,
+   then the release branch merges `main` in.
+4. Merge it with a merge commit when the owner asks. GitHub Pages
+   publishes `live`, `release-plugins` publishes the plugins after the
+   green `native` run on `live` when they changed, and `sync-main` brings
+   `live` back into `main`.
 
 Releases are not tagged any more (Claude Code cloud sessions cannot push
 tags). The changelog and the commit titles record each version.

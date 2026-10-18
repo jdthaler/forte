@@ -4,17 +4,24 @@ on:
   push:
   pull_request:
 
-# A newer push to a branch or pull request replaces its run still going; every run on main finishes.
+# A newer push to a branch or pull request replaces its run still going; every run on main and live finishes.
 concurrency:
   group: tests-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/live' }}
 
 jobs:
   physics:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the base branch, for the pull-request rules
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      # Into main: no version changes, and a note in changes/ when the site or the plugins change.
+      # Into live: the release has been made (no notes left). changes/README.md, CLAUDE.md.
+      - name: Versions and release notes
+        if: github.event_name == 'pull_request'
+        run: node tools/release.mjs --check-pr "origin/${{ github.base_ref }}" "${{ github.event.pull_request.head.sha }}"
       - run: npm test

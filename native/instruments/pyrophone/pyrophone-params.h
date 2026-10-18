@@ -7,6 +7,12 @@
 
 #include "forte/instrument.h"
 
+// The plugins' build gives the version (forte_add_plugin, from <slug>-info.cmake); the
+// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.
+#ifndef FORTE_INSTRUMENT_VERSION
+#define FORTE_INSTRUMENT_VERSION ""
+#endif
+
 namespace forte::pyrophone {
 
 namespace p { // parameter indices, in the descriptor's order
@@ -67,7 +73,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "pyrophone", .name = "Pyrophone", .version = "0.4.0",
+    .slug = "pyrophone", .name = "Pyrophone", .version = FORTE_INSTRUMENT_VERSION,
     .description = "Flames in glass tubes sing by themselves once they cross a threshold — and remember having sung.", .auSubtype = "Pyro",
     .vst3Id = {0x9e, 0xa6, 0xc7, 0x5b, 0xa8, 0x75, 0x1a, 0x16, 0x7c, 0x9b, 0x9d, 0xb6, 0x40, 0xb5, 0xf9, 0x7b},
     .params = kParams, .paramCount = p::count,

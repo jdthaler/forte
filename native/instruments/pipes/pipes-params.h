@@ -7,6 +7,12 @@
 
 #include "forte/instrument.h"
 
+// The plugins' build gives the version (forte_add_plugin, from <slug>-info.cmake); the
+// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.
+#ifndef FORTE_INSTRUMENT_VERSION
+#define FORTE_INSTRUMENT_VERSION ""
+#endif
+
 namespace forte::pipes {
 
 namespace p { // parameter indices, in the descriptor's order
@@ -87,7 +93,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "pipes", .name = "Pipe Organ", .version = "0.3.0",
+    .slug = "pipes", .name = "Pipe Organ", .version = FORTE_INSTRUMENT_VERSION,
     .description = "Air jets flutter against the pipe mouths: each note starts with a chiff, overblows when pushed, and sags when the wind runs short.", .auSubtype = "Pipe",
     .vst3Id = {0x49, 0xc2, 0xd7, 0x5e, 0x94, 0xa4, 0xa8, 0x86, 0x5b, 0x88, 0x22, 0xe7, 0x5b, 0x5a, 0x0f, 0xfb},
     .params = kParams, .paramCount = p::count,

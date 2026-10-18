@@ -7,6 +7,12 @@
 
 #include "forte/instrument.h"
 
+// The plugins' build gives the version (forte_add_plugin, from <slug>-info.cmake); the
+// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.
+#ifndef FORTE_INSTRUMENT_VERSION
+#define FORTE_INSTRUMENT_VERSION ""
+#endif
+
 namespace forte::quantum {
 
 namespace p { // parameter indices, in the descriptor's order
@@ -71,7 +77,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "quantum", .name = "Quantum Keyboard", .version = "0.4.0",
+    .slug = "quantum", .name = "Quantum Keyboard", .version = FORTE_INSTRUMENT_VERSION,
     .description = "Each key a wavepacket in a potential well: notes that collapse, return an octave up as the packet splits, and revive on the beat.", .auSubtype = "Qntm",
     .vst3Id = {0xa2, 0xcc, 0xbe, 0xc0, 0xeb, 0x9e, 0xf6, 0x0e, 0xdb, 0xa8, 0xac, 0x90, 0x66, 0xba, 0x73, 0xf5},
     .params = kParams, .paramCount = p::count,

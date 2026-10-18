@@ -7,6 +7,12 @@
 
 #include "forte/instrument.h"
 
+// The plugins' build gives the version (forte_add_plugin, from <slug>-info.cmake); the
+// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.
+#ifndef FORTE_INSTRUMENT_VERSION
+#define FORTE_INSTRUMENT_VERSION ""
+#endif
+
 namespace forte::tines {
 
 namespace p { // parameter indices, in the descriptor's order
@@ -104,7 +110,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "tines", .name = "Tine Piano", .version = "0.4.0",
+    .slug = "tines", .name = "Tine Piano", .version = FORTE_INSTRUMENT_VERSION,
     .description = "Each key an asymmetric tuning fork of steel tine and brass bar, heard through a nonlinear magnetic pickup.", .auSubtype = "Tine",
     .vst3Id = {0x1d, 0x97, 0xd5, 0xc7, 0xfa, 0xb5, 0x30, 0xc2, 0x4a, 0x63, 0xd6, 0x69, 0x60, 0x78, 0x21, 0xdc},
     .params = kParams, .paramCount = p::count,

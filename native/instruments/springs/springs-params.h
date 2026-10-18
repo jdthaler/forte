@@ -7,6 +7,12 @@
 
 #include "forte/instrument.h"
 
+// The plugins' build gives the version (forte_add_plugin, from <slug>-info.cmake); the
+// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.
+#ifndef FORTE_INSTRUMENT_VERSION
+#define FORTE_INSTRUMENT_VERSION ""
+#endif
+
 namespace forte::springs {
 
 namespace p { // parameter indices, in the descriptor's order
@@ -82,7 +88,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "springs", .name = "Spring Keyboard", .version = "0.2.0",
+    .slug = "springs", .name = "Spring Keyboard", .version = FORTE_INSTRUMENT_VERSION,
     .description = "Struck steel coils, each cut to sound its note; their waves travel at different speeds by pitch, so every echo arrives as a chirp.", .auSubtype = "Sprg",
     .vst3Id = {0x9d, 0xa0, 0x46, 0x59, 0x67, 0xd6, 0x89, 0x83, 0xcd, 0x17, 0x25, 0xdb, 0x81, 0xa6, 0x7e, 0xc2},
     .params = kParams, .paramCount = p::count,

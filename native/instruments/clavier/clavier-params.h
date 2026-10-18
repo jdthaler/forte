@@ -7,6 +7,12 @@
 
 #include "forte/instrument.h"
 
+// The plugins' build gives the version (forte_add_plugin, from <slug>-info.cmake); the
+// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.
+#ifndef FORTE_INSTRUMENT_VERSION
+#define FORTE_INSTRUMENT_VERSION ""
+#endif
+
 namespace forte::clavier {
 
 namespace p { // parameter indices, in the descriptor's order
@@ -89,7 +95,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "clavier", .name = "Tangent Clavier", .version = "0.4.0",
+    .slug = "clavier", .name = "Tangent Clavier", .version = FORTE_INSTRUMENT_VERSION,
     .description = "A rubber tangent pins the string to an anvil; two magnetic pickups comb-filter the twang.", .auSubtype = "Clav",
     .vst3Id = {0x4f, 0x9a, 0x44, 0xf9, 0xc0, 0x11, 0x48, 0xe1, 0x35, 0xbf, 0xc4, 0xc8, 0x5a, 0xbc, 0xc7, 0xf5},
     .params = kParams, .paramCount = p::count,

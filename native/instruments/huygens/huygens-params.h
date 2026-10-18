@@ -7,6 +7,12 @@
 
 #include "forte/instrument.h"
 
+// The plugins' build gives the version (forte_add_plugin, from <slug>-info.cmake); the
+// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.
+#ifndef FORTE_INSTRUMENT_VERSION
+#define FORTE_INSTRUMENT_VERSION ""
+#endif
+
 namespace forte::huygens {
 
 namespace p { // parameter indices, in the descriptor's order
@@ -82,7 +88,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "huygens", .name = "Huygens Keyboard", .version = "0.4.0",
+    .slug = "huygens", .name = "Huygens Keyboard", .version = FORTE_INSTRUMENT_VERSION,
     .description = "Relaxation oscillators that pull each other into just intonation — Arnold tongues you can play.", .auSubtype = "Huyg",
     .vst3Id = {0xdd, 0x73, 0xc0, 0xe3, 0xf6, 0x2e, 0xde, 0xa6, 0x13, 0x1b, 0xe3, 0xc4, 0xe8, 0x15, 0x0a, 0x9c},
     .params = kParams, .paramCount = p::count,

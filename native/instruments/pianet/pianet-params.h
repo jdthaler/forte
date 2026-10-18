@@ -7,6 +7,12 @@
 
 #include "forte/instrument.h"
 
+// The plugins' build gives the version (forte_add_plugin, from <slug>-info.cmake); the
+// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.
+#ifndef FORTE_INSTRUMENT_VERSION
+#define FORTE_INSTRUMENT_VERSION ""
+#endif
+
 namespace forte::pianet {
 
 namespace p { // parameter indices, in the descriptor's order
@@ -78,7 +84,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "pianet", .name = "Sticky-Pad Piano", .version = "0.4.0",
+    .slug = "pianet", .name = "Sticky-Pad Piano", .version = FORTE_INSTRUMENT_VERSION,
     .description = "No hammers at all: tacky pads grab each reed and let it go.", .auSubtype = "Pnet",
     .vst3Id = {0x6d, 0x47, 0xa1, 0x16, 0x3a, 0x5b, 0x06, 0x9a, 0xb8, 0x7c, 0x33, 0xf6, 0x6a, 0x4a, 0xa3, 0x80},
     .params = kParams, .paramCount = p::count,

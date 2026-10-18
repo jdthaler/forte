@@ -375,17 +375,20 @@ Add the instrument to `shared/registry.js` with `ready: true, version: '0.1.0'` 
 AU code from its descriptor (`plugin: { code }`, which then leaves the descriptor)
 in one of the four sections (`traditional`, `electric`, `experimental`,
 or `phenomena` for instruments only physics can build), after the other
-ready ones in it, and add a `### <Name> 0.1.0` entry to `CHANGELOG.md`. The landing page and
+ready ones in it, with `version: '0.1.0'`, and add a note to `changes/` with a
+`### <Name> (new)` section, which becomes its `CHANGELOG.md` entry when it is released. The landing page and
 every menu pick it up, and `test/site-tests.mjs` checks that all of this
 agrees.
 
 ### Versions
 
-Each instrument has its own semantic version, kept in the registry.
-While it is 0.x, bump MINOR for new features or changes to the sound or
-parameters, and PATCH for fixes that leave the intended sound alone. Bump
-Forte's version (`FORTE_VERSION` and `package.json`) for changes to
-`shared/`, the landing page or the tools. Log every bump in `CHANGELOG.md`
-under the date (releases are not tagged). Run every test file, check the
-page in a browser (audio, MIDI, presets, views, narrow-screen layout), and
-push.
+Each instrument has its own semantic version, kept in the registry, and
+Forte has one (`FORTE_VERSION` and `package.json`) for `shared/`, the
+landing page and the tools. Versions change only when `main` is released
+to `live`, the branch the site is published from (`CLAUDE.md`). A change
+adds a note to `changes/` instead (`changes/README.md`): MINOR for new
+features or changes to the sound or parameters, PATCH for fixes that leave
+the intended sound alone. `tools/release.mjs` turns the notes into
+`CHANGELOG.md` entries and bumps the versions. Run every test file, check
+the page in a browser (audio, MIDI, presets, views, narrow-screen layout),
+and push.

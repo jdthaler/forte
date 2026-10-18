@@ -7,6 +7,12 @@
 
 #include "forte/instrument.h"
 
+// The plugins' build gives the version (forte_add_plugin, from <slug>-info.cmake); the
+// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.
+#ifndef FORTE_INSTRUMENT_VERSION
+#define FORTE_INSTRUMENT_VERSION ""
+#endif
+
 namespace forte::vibraphone {
 
 namespace p { // parameter indices, in the descriptor's order
@@ -87,7 +93,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does not).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "vibraphone", .name = "Vibraphone", .version = "0.3.1",
+    .slug = "vibraphone", .name = "Vibraphone", .version = FORTE_INSTRUMENT_VERSION,
     .description = "Undercut aluminium bars over tuned tubes, with motor-driven discs that open and close the resonators.", .auSubtype = "Vibe",
     .vst3Id = {0xaa, 0x90, 0xa9, 0x67, 0xe2, 0xd3, 0x91, 0x72, 0xd1, 0x73, 0x43, 0xa7, 0xda, 0xf3, 0xaf, 0xeb},
     .params = kParams, .paramCount = p::count,
