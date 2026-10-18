@@ -11,12 +11,12 @@ export const INSTRUMENT = {
   id: 'stars',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
   range: [KEY_LO, KEY_HI],              // MIDI keys: A0–C8
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'spin',                     // CC1: the star's rotation
   // the engine: the physics in C++ (native/instruments/stars), built as WebAssembly. The page
   // builds each key's star with its WebAssembly model and sends it with the note (noteData)
   wasm: { name: 'StarWasmEngine', module: new URL('./stars-wasm.js', import.meta.url).href, binary: new URL('../wasm/stars.wasm', import.meta.url).href },
-  chain: { volume: 'volume', room: 'room' },
+  chain: { volume: 'volume', room: 'room', venue: 'venue' },
 };

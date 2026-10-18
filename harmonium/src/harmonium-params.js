@@ -1,6 +1,8 @@
 // harmonium-params.js — the knobs. Every parameter has a physical meaning and
 // a unit; the hint says what it does to the sound.
 
+import { VENUE } from '../../shared/chain.js';
+
 const pa = (v) => `${v.toFixed(0)} Pa (${(v / 9.81).toFixed(0)} mm of water)`;
 const times = (v) => `× ${v < 1 ? v.toFixed(2) : v.toFixed(1)}`;
 
@@ -61,6 +63,7 @@ export const GROUPS = [
       { id: 'cassF', label: 'Cassotto resonance', min: 300, max: 3000, def: 1500, log: true, fmt: (v) => `${v.toFixed(0)} Hz`, showIf: (P) => P.cassotto,
         hint: 'The chamber’s Helmholtz frequency (volume and mouth): above it the sound falls 12 dB per octave.' },
       { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.3, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },

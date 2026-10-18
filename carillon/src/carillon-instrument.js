@@ -10,7 +10,7 @@ export const INSTRUMENT = {
   id: 'carillon',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
   // MIDI keys: F2–C8 at sounding pitch. Below F2 a bell would outweigh the largest carillon bourdons
   // ever cast (about 20 t), so the range stops there.
   range: [41, 108],
@@ -18,5 +18,5 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   // the engine: the physics in C++ (native/instruments/carillon), built as WebAssembly
   wasm: { name: 'CarillonWasmEngine', module: new URL('./carillon-wasm.js', import.meta.url).href, binary: new URL('../wasm/carillon.wasm', import.meta.url).href },
-  chain: { volume: 'volume', room: 'room' },
+  chain: { volume: 'volume', room: 'room', venue: 'venue' },
 };

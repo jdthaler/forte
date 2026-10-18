@@ -1,6 +1,8 @@
 // pianet-params.js — the knobs. Every parameter has a physical meaning and
 // a unit; the hint says what it does to the sound.
 
+import { VENUE } from '../../shared/chain.js';
+
 const mm = (v) => `${v.toFixed(2)} mm`;
 
 export const GROUPS = [
@@ -39,6 +41,7 @@ export const GROUPS = [
       { id: 'amp', label: 'Amplifier', perform: true, type: 'select', def: 'off', options: [['off', 'Direct (DI)'], ['combo', 'Valve combo, 10″ speaker']], hint: 'The Pianet had no speaker: it went into whatever amp was at hand.' },
       { id: 'drive', label: 'Amp drive', perform: true, min: 0, max: 1, def: 0.35, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %`, showIf: (P) => P.amp === 'combo', hint: 'Asymmetric valve clipping, then the speaker\'s band-pass.' },
       { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.2, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },

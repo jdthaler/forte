@@ -11,11 +11,11 @@ export const INSTRUMENT = {
   id: 'windharp',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys
   space: 'sustain',                     // Space and CC64: a pedal that keeps the shutters open, sent to the engine
   modWheel: { param: 'wind', max: U_MAX }, // CC1: the wind, up to its top speed
   // the engine: the physics in C++ (native/instruments/windharp), built as WebAssembly
   wasm: { name: 'WindHarpWasmEngine', module: new URL('./windharp-wasm.js', import.meta.url).href, binary: new URL('../wasm/windharp.wasm', import.meta.url).href },
-  chain: { volume: 'volume', room: 'room' },
+  chain: { volume: 'volume', room: 'room', venue: 'venue' },
 };

@@ -11,7 +11,7 @@ export const INSTRUMENT = {
   id: 'vibraphone',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C8, 21–108
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // F3–F6, 53–89, until Full range opens the rest
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine
@@ -20,5 +20,5 @@ export const INSTRUMENT = {
   // sends each note its bar's data, packed by the WebAssembly model (vibraphone-main.js), so the
   // audio thread needn't solve the bar; without it (in Node) the engine solves the bar itself.
   wasm: { name: 'VibraphoneWasmEngine', module: new URL('./vibraphone-wasm.js', import.meta.url).href, binary: new URL('../wasm/vibraphone.wasm', import.meta.url).href },
-  chain: { volume: 'volume', room: 'room' },
+  chain: { volume: 'volume', room: 'room', venue: 'venue' },
 };

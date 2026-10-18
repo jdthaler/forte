@@ -25,6 +25,7 @@
     {"id":"fullRange","kind":"toggle","def":false},
     {"id":"soundboard","kind":"toggle","def":true},
     {"id":"room","kind":"continuous","min":0,"max":1,"def":0.25,"step":0.01,"log":false},
+    {"id":"venue","kind":"choice","def":"room","options":["studio","room","recital","hall","cathedral"]},
     {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}
   ],
   "presets": [

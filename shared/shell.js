@@ -51,7 +51,7 @@ import { controlOwns, focusedByPointer } from './focus.js';
 import { startMIDI, resumeMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto } from './midi.js';
 // after a change, a control picked with the pointer lets go of the focus (the keys go back to the
 // instrument); one reached with Tab keeps it, so the next Space or arrow works it again
-const release = (el) => { if (focusedByPointer(el)) el.blur(); };
+const unfocus = (el) => { if (focusedByPointer(el)) el.blur(); };
 
 const $ = (s) => document.querySelector(s);
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -322,12 +322,12 @@ export function createShell(cfg) {
         wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;
         input = document.createElement('select'); input.id = `p-${p.id}`;
         for (const [k, name] of p.options) input.add(new Option(name, k));
-        input.addEventListener('change', () => { shell.setParam(p.id, typeof p.def === 'number' ? +input.value : input.value); release(input); });
+        input.addEventListener('change', () => { shell.setParam(p.id, typeof p.def === 'number' ? +input.value : input.value); unfocus(input); });
         wrap.appendChild(input);
       } else if (p.type === 'checkbox') {
         wrap.classList.add('check');
         input = document.createElement('input'); input.type = 'checkbox'; input.id = `p-${p.id}`;
-        input.addEventListener('change', () => { shell.setParam(p.id, input.checked); release(input); });
+        input.addEventListener('change', () => { shell.setParam(p.id, input.checked); unfocus(input); });
         const lab = document.createElement('label'); lab.htmlFor = input.id; lab.textContent = p.label;
         wrap.append(input, lab);
       } else {
@@ -393,7 +393,7 @@ export function createShell(cfg) {
       if (ps.value === '') return;
       const keep = Object.fromEntries((cfg.keep || []).map((k) => [k, shell.P[k]]));
       shell.setAll({ ...DEFAULTS, ...keep, ...cfg.presets[+ps.value].p });
-      release(ps);
+      unfocus(ps);
     });
   }
   $('#reset')?.addEventListener('click', () => { shell.setAll({ ...DEFAULTS }); if ($('#preset')) $('#preset').value = ''; });

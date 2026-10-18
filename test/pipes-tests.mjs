@@ -610,7 +610,7 @@ test('level: a single Principal note peaks at 0.03–0.5 from C to f³ (0.1–0.
   console.log(`        full-organ chord peaks at ${peakAbs(chord).toFixed(2)}`);
 });
 test('stability: seeded random combinations of extreme settings at 44.1 and 48 kHz, changed mid-note: no NaN, bounded, silent after release', () => {
-  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'fullRange'].includes(q.id));
+  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'venue', 'fullRange'].includes(q.id));
   let seed = 4242, worst = 0;
   const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
   const pick = () => {

@@ -324,7 +324,7 @@ export async function generate(slug) {
   const body = ch.body ? ` .body = ${at(ch.body.param)}, .bodySeconds = ${num(ch.body.seconds)}, .bodyDry = ${num(ch.body.dry)}, .bodyWet = ${num(ch.body.wet)},` : '';
   const L = ch.limiter || {};
   const lim = ['threshold', 'knee', 'ratio', 'attack', 'release'].filter((k) => k in L).map((k) => ` .limiter${k[0].toUpperCase()}${k.slice(1)} = ${num(L[k])},`).join('');
-  w(`    .chain = {.volume = ${at(ch.volume)}, .room = ${at(ch.room)}, .roomSeconds = ${num(ch.roomSeconds ?? 2)}, .roomGain = ${num(ch.roomGain ?? 0.6)}, .tone = ${at(ch.tone)},${body}${lim} .trimDb = ${num(reg.trim ?? 0)}},`);
+  w(`    .chain = {.volume = ${at(ch.volume)}, .room = ${at(ch.room)}, .roomSeconds = ${num(ch.roomSeconds ?? 2)}, .roomGain = ${num(ch.roomGain ?? 0.6)}, .venue = ${at(ch.venue)}, .tone = ${at(ch.tone)},${body}${lim} .trimDb = ${num(reg.trim ?? 0)}},`);
   w('    .midiVelocity = midiVelocity, .create = create,');
   w('  };');
   w('}');
