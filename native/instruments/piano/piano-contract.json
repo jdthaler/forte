@@ -31,6 +31,7 @@
     {"id":"gainT","kind":"continuous","min":0,"max":2,"def":0.6,"step":0.01,"log":false},
     {"id":"soundboard","kind":"continuous","min":0,"max":1,"def":0.6,"step":0.01,"log":false},
     {"id":"room","kind":"continuous","min":0,"max":1,"def":0.25,"step":0.01,"log":false},
+    {"id":"venue","kind":"choice","def":"room","options":["studio","room","recital","hall","cathedral"]},
     {"id":"width","kind":"continuous","min":0,"max":1,"def":0.6,"step":0.01,"log":false},
     {"id":"voicing","kind":"continuous","min":0,"max":6,"def":2.5,"step":0.1,"log":false},
     {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false},

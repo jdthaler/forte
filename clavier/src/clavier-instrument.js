@@ -10,10 +10,10 @@ export const INSTRUMENT = {
   id: 'clavier',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
   range: [LO, HI],                      // MIDI keys: F1–E6, 29–88
   space: 'sustain',                     // Space and CC64: sent to the engine, which reads it as the mute bar
   // the engine: the physics in C++ (native/instruments/clavier), built as WebAssembly
   wasm: { name: 'ClavierWasmEngine', module: new URL('./clavier-wasm.js', import.meta.url).href, binary: new URL('../wasm/clavier.wasm', import.meta.url).href },
-  chain: { volume: 'volume', room: 'room' },
+  chain: { volume: 'volume', room: 'room', venue: 'venue' },
 };

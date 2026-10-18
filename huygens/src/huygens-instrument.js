@@ -11,7 +11,7 @@ export const INSTRUMENT = {
   id: 'huygens',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'tone', 'body'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'tone', 'body'], // kept when a preset is chosen
   range: [KEY_LO, KEY_HI],                  // MIDI keys: 36–96
   space: 'hold',                            // Space and CC64 latch the keys
   modWheel: 'kick',                         // CC1: the pulse coupling, from its default up
@@ -20,7 +20,7 @@ export const INSTRUMENT = {
   wasm: { name: 'HuygensWasmEngine', module: new URL('./huygens-wasm.js', import.meta.url).href, binary: new URL('../wasm/huygens.wasm', import.meta.url).href },
   // tone low-pass → dry + a small resonant body → room; a slightly lower limiter
   chain: {
-    volume: 'volume', room: 'room', tone: 'tone',
+    volume: 'volume', room: 'room', venue: 'venue', tone: 'tone',
     body: { param: 'body', seconds: 0.3, dry: 0.7, wet: 1.2 },
     limiter: { threshold: -4, knee: 4 },
   },

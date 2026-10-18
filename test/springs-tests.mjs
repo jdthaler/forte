@@ -517,7 +517,7 @@ test('stability: seeded random combinations of parameter extremes at 44.1 and 48
   const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
   for (let trial = 0; trial < 10; trial++) {
     const fs = trial % 2 ? 44100 : 48000, p = P();
-    for (const q of sliders) if (!['volume', 'room'].includes(q.id)) { const r = rnd(); p[q.id] = r < 0.4 ? q.min : r < 0.8 ? q.max : q.def; }
+    for (const q of sliders) if (!['volume', 'room', 'venue'].includes(q.id)) { const r = rnd(); p[q.id] = r < 0.4 ? q.min : r < 0.8 ? q.max : q.def; }
     p.family = trial % 4 === 3 ? 'slinky' : 'tuned'; p.drive = trial % 3 ? 'rotation' : 'axial';
     const q = { ...p, endLoss: p.endLoss > 0.1 ? 0.005 : 1, eta: p.eta > 1e-3 ? 1e-5 : 3e-3, oil: 30 - p.oil, hand: 1 - p.hand, bead: p.bead > 1 ? 0.3 : 30 };
     const x = run(p, [[0, 'on', KEY_LO, 1], [0, 'on', 61, 1], [0, 'on', KEY_HI, 1], [0.1, 'params', q], [0.12, 'on', 61, 1], [0.15, 'off', KEY_LO, 1], [0.16, 'on', KEY_LO, 0.05]], 0.3, { fs });

@@ -393,7 +393,7 @@ test('stability: seeded random combinations of parameter extremes at 44.1 and 48
   const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
   for (let trial = 0; trial < 14; trial++) {
     const fs = trial % 2 ? 44100 : 48000, p = P();
-    for (const q of sliders) if (!['volume', 'room'].includes(q.id)) { const r = rnd(); p[q.id] = r < 0.4 ? q.min : r < 0.8 ? q.max : q.def; }
+    for (const q of sliders) if (!['volume', 'room', 'venue'].includes(q.id)) { const r = rnd(); p[q.id] = r < 0.4 ? q.min : r < 0.8 ? q.max : q.def; }
     p.motor = ['run', 'open', 'closed'][trial % 3]; p.tubes = trial % 4 !== 3; p.pedalLock = trial % 5 === 0;
     const q = { ...p, gap: p.gap === 5 ? 80 : 5, cd: p.cd > 0.5 ? 0.3 : 0.97, detune: -p.detune || 200, temp: 40 - p.temp };
     const x = run(p, [[0, 'on', KEY_LO, 1], [0, 'on', 70, 1], [0, 'on', KEY_HI, 1], [0.25, 'params', q], [0.3, 'on', 70, 1], [0.6, 'off', 70], [0.6, 'off', KEY_LO], [0.6, 'off', KEY_HI]], 0.9, { fs });

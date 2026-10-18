@@ -19,7 +19,7 @@ export const INSTRUMENT = {
   id: 'organ',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'expression'], // kept when a preset is chosen; the console, motor on, comes from DEFAULTS
+  keep: ['volume', 'room', 'venue', 'expression'], // kept when a preset is chosen; the console, motor on, comes from DEFAULTS
   range: [KEY_LO, KEY_HI],                // the 61-key manual, 36–96 (the page folds other keys in by octaves)
   space: null,                            // Space and CC64 switch the Leslie fast/slow (the page), not a pedal
   controllers: {
@@ -31,5 +31,5 @@ export const INSTRUMENT = {
   // the engine: the physics in C++ (native/instruments/organ), built as WebAssembly; it takes all
   // of P, the console included
   wasm: { name: 'OrganWasmEngine', module: new URL('./organ-wasm.js', import.meta.url).href, binary: new URL('../wasm/organ.wasm', import.meta.url).href },
-  chain: { volume: 'volume', room: 'room', roomSeconds: 1.8 }, // room gain 0.6 × room; the shared limiter
+  chain: { volume: 'volume', room: 'room', venue: 'venue', roomSeconds: 1.8 }, // room gain 0.6 × room; the shared limiter
 };
