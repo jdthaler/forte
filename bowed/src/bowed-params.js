@@ -1,7 +1,8 @@
 // bowed-params.js — the knobs. Every parameter has a physical meaning and
 // a unit; the hint says what it does to the sound.
 
-export const RANGE = [36, 84]; // the keys: C2–C6
+export const RANGE = [21, 98]; // the keys: A0–D7
+export const KEY_LO = 36, KEY_HI = 84; // C2–C6: the 49 strings the bridge and board are drawn on
 
 const pct = (v) => `${(v * 100).toFixed(0)} %`;
 const ms = (v) => `${v < 10 ? v.toFixed(1) : v.toFixed(0)} ms`;

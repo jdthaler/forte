@@ -11,7 +11,7 @@ export const INSTRUMENT = {
   groups: GROUPS,
   presets: PRESETS,
   keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
-  range: RANGE,                         // MIDI keys: C2–C6, 36–84
+  range: RANGE,                         // MIDI keys: A0–D7, 21–98
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
   modWheel: 'speed',                    // CC1: the treadle, the instrument's swell (Helmholtz amplitude ∝ v_B)
   // the engine: the physics in C++ (native/instruments/bowed), built as WebAssembly

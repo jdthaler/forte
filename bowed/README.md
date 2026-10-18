@@ -18,7 +18,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/bowed/>
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | play (49 keys, C2–C6); a held key keeps bowing |
+| `Z…/` and `Q…]` rows | play (78 keys, A0–D7); a held key keeps bowing |
 | `←` `→` | octave |
 | `↑` `↓` | key pressure (bow force) |
 | hold `Space` | hold: keys stay down (the string stays on the wheel) |
@@ -42,31 +42,49 @@ ring is a separate switch (*Dampers lifted*).
 **The instrument.** Zubrzycki's instrument has 61 steel strings over a spruce
 soundboard in a case shaped like a baby grand. Four wheels wrapped in horsehair
 turn on a crankshaft that the player pumps with a pedal, and each key presses
-its string against a wheel. This model has 49 keys (C2–C6) and four wheels,
-one per register (C2–B2, C3–B3, C4–D5, E♭5–C6). Each wheel touches its strings
+its string against a wheel. This model was drawn on 49 keys (C2–C6), and has
+78 (A0–D7): the bass below C2 and the treble above C6 continue its strings
+(below). Four wheels, one per register (A0–B2, C3–B3, C4–D5, E♭5–D7), touch
+their strings
 at one fraction β of their length from the bridge, and the voicing of the
 registers (below) gives the upper wheels more surface speed and the treble
 wheel a smaller β.
 
 **Strings** (`bowed-model.cpp: stringDesign`). The scale is harpsichord-like:
 C5 is 36 cm, and lengths double every 1.25 octaves going down (foreshortened to
-1.9 m at C2). Tension runs from 130 N in the bass to 95 N in the treble.
-Mersenne's law, f₀ = c/2L with c = √(T/μ), then gives the mass per length.
-Strings below C4 are wound.
+1.9 m at C2, and no string is longer than 2 m, so from C♯2 down they stay
+at 2 m). Above C6 the lengths halve every octave, which keeps the wire at C6's
+stress. Tension runs from 130 N in the bass to 95 N in the treble. Mersenne's
+law, f₀ = c/2L with c = √(T/μ), then gives the mass per length. Strings below
+C4 are wound; below C2 the winding grows on C2's core.
 
 | key | length | tension | Z₀ = √(Tμ) | wave speed | stress | inharmonicity B | free-string T60 |
 |---|---|---|---|---|---|---|---|
+| A0 | 2.00 m | 130 N | 1.18 kg/s | 110 m/s | 0.09 GPa | 2.1·10⁻⁵ | 8.2 s |
 | C2 | 1.90 m | 130 N | 0.52 kg/s | 249 m/s | 0.49 GPa | 2.4·10⁻⁵ | 7.7 s |
 | C3 | 1.09 m | 121 N | 0.42 kg/s | 287 m/s | 0.65 GPa | 3.8·10⁻⁵ | 5.4 s |
 | C4 | 0.63 m | 113 N | 0.34 kg/s | 330 m/s | 0.85 GPa | 6.2·10⁻⁵ | 3.9 s |
 | C5 | 0.36 m | 104 N | 0.27 kg/s | 379 m/s | 1.13 GPa | 9.9·10⁻⁵ | 2.4 s |
 | C6 | 0.21 m | 95 N | 0.22 kg/s | 441 m/s | 1.53 GPa | 1.5·10⁻⁴ | 1.3 s |
+| D7 | 9.2 cm | 95 N | 0.22 kg/s | 437 m/s | 1.50 GPa | 7.9·10⁻⁴ | 0.4 s |
 
 Stress in a wire depends only on its wave speed (σ = ρc²), so the treble runs
 at 64 % of music wire's strength whatever its gauge. The heavy treble keeps
 Z₀, and with it the treble's loudness, up. Stiffness is left out: B ≤ 1.5·10⁻⁴
-puts the 10th partial of the *free* string at most 13 ¢ sharp, and Helmholtz
-motion locks the partials into exact harmonics anyway.
+puts the 10th partial of the *free* string at most 13 ¢ sharp from C2 to C6,
+and Helmholtz motion locks the partials into exact harmonics anyway. Above C6
+the short wire is stiffer for its length (B grows 4× an octave, to 7.9·10⁻⁴ at
+D7, a free 10th partial 65 ¢ sharp): the bowed note is still harmonic, but a
+released treble string above C6 rings more harmonic here than it would.
+
+**The keys past C2–C6.** The bridge, the board's string load and the voicing
+were drawn on the 49 strings of C2–C6, and those are unchanged. The strings
+below C2 press on the bridge's bass end and the strings above C6 on its
+treble end (the engine's bridge segments end there). Above D7 the keyboard
+stops: there a fresh note on the string, at C6's stress and its wheel's speed
+and β, no longer settles into Helmholtz motion at the voiced touch (it
+whistles in multiple slips, and C8 is raucous), and a longer string would need
+more than C6's stress.
 
 **The string as a waveguide** (`bowed-string.cpp`). Velocity waves travel in delay
 lines: bridge → wheel → bridge (2·D_b samples) and wheel → nut → wheel (2·D_n).
@@ -235,7 +253,9 @@ does not work: at the voiced force, a string bowed further from the bridge
 starts in a two-slip whistle far more often (8 % of all touches at 1.15 β,
 against 1 %). With the voicing, and with the strings loading the board (below),
 the register medians agree within 1.8 dB and the 49 keys span 12.4 dB, 6.2 dB
-from the 10th to the 90th percentile (steady RMS, tested). What is left are
+from the 10th to the 90th percentile (steady RMS, tested). Past C2–C6, with
+the same voicing rule, the 78 keys span 14 dB (D6 is the quietest) and the
+register medians agree within 2.4 dB (tested). What is left are
 the board's strong notes, whose fundamental sits on a plate mode: F2–F♯2
 (mode (2,1), 90 Hz), C3, E♭4 ((1,3), 312 Hz) and F♯5–A♭5, 5–8 dB above their
 neighbours, as strong notes are on any soundboard.
@@ -248,8 +268,9 @@ lag adds to it, most at the top, where a slip lasts only about four lags. A
 tuner tunes by ear while the instrument plays, so each free string is set that
 much sharp (`tools/bowed-tuning.mjs`, which bows each string of the C++ build
 alone and corrects its table; rebuild and run `--check`). The bowed notes are then within ±1 ¢ of
-equal temperament at both 48 and 44.1 kHz (tested on all 49 keys from the
-audio). The table belongs to the oversampling plan, which is fixed at 48 kHz
+equal temperament at both 48 and 44.1 kHz (tested on all 78 keys from the
+audio; the keys past C2–C6 were tuned from the audio at both rates, their bass
+needing a few tenths of a cent more than the string alone gives). The table belongs to the oversampling plan, which is fixed at 48 kHz
 and kept at 44.1 kHz (choosing it from the rate put B3, C4, B4 and C5 2–3 ¢
 sharp there). Consequences
 you can hear: pressing harder lowers the pitch (tested), and a released string
@@ -287,8 +308,10 @@ Wallace's monopole limit.
 
 **Dampers and sympathetic strings.** A released key lifts its string off the
 wheel in 15 ms. Then a felt damper adds loss (T60 = 0.25 s), and the string
-leaves the simulation once it is silent. With the dampers lifted, all 49
-strings stay on the bridge and ring freely. Bow C3 and its octave C4 picks up
+leaves the simulation once it is silent. With the dampers lifted, the 49
+strings of C2–C6 stay on the bridge and ring freely. The strings past them
+join when played, ring freely too, and leave once they are silent (so lifting
+the dampers sounds and costs as it did before the keyboard grew). Bow C3 and its octave C4 picks up
 about 10× the energy it does when C♯3 is bowed. It would be more if the free
 strings were not tuned sharp, which puts C4's resonance about 1 Hz off C3's
 second harmonic.
@@ -298,8 +321,10 @@ and it must be resolved. Without torsion and rosin lag, C6's measured minimum
 force (at β = 0.12) is 0.2×, 0.8× and 1.3× Schelleng's value at 48, 96 and
 192 kHz: it has not converged at the output rate. The bridge side of the
 waveguide also needs a couple of samples, which limits how close to the bridge
-the wheel can sit. So each string runs at 1×, 2× or 4× 48 kHz (C4 and below,
-to C5, to C6), keeping at least ~180 samples per period. The plan is that of
+the wheel can sit. So each string runs at 1×, 2×, 4× or 8× 48 kHz (C4 and below,
+to C5, to C6, to D7), keeping at least ~180 samples per period up to C6 and
+~160 above it (at 4× the keys above C6 played up to 2 ¢ apart at 44.1 and
+48 kHz). The plan is that of
 48 kHz at every rate: at 44.1 kHz each string keeps its factor, at 96 kHz it
 halves. Within one output sample the
 other strings' pull on the bridge is held. Each string's own bridge reflection
@@ -307,8 +332,8 @@ stays exact, and its bridge force is low-passed (4th-order at 18 kHz) and
 decimated.
 
 **Cost.** Ten held notes take about 10 % of one core (measured in Node on an
-Apple M2 Max). With the dampers lifted all 49 strings run, and it takes about
-25 %. Damped, silent strings leave the loop, and a silent instrument costs
+Apple M2 Max), twice that for ten notes above C6, which run at 8×. With the
+dampers lifted the 49 strings of C2–C6 run, and it takes about 25 %. Damped, silent strings leave the loop, and a silent instrument costs
 nothing.
 
 ## What to listen for
