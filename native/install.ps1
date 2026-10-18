@@ -85,7 +85,11 @@ function Fingerprint([string]$path) {
 }
 function Loads($p, [string]$path) {
   if ($p.kind -eq 'clap' -and (Get-Command clap-validator -ErrorAction SilentlyContinue)) {
+    # Windows PowerShell 5.1 turns a native command's stderr into an error when it is redirected,
+    # which 'Stop' would make fatal; the exit code is what says whether it passed.
+    $ErrorActionPreference = 'Continue'
     & clap-validator validate $path *> $null
+    $ErrorActionPreference = 'Stop'
     if ($LASTEXITCODE -ne 0) { Fail "${path}: clap-validator validate failed"; return $false }
   }
   return $true
