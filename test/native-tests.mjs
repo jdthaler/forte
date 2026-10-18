@@ -6,7 +6,8 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { INSTRUMENTS } from '../shared/registry.js';
-import { generate, portedSlugs } from '../tools/gen-native-params.mjs';
+import { generate, portedSlugs, inferFormat, formatBy } from '../tools/gen-native-params.mjs';
+import { GROUPS as BLACKHOLE_GROUPS } from '../blackhole/src/ringdown-params.js';
 import { loadInstrument } from '../tools/headless.mjs';
 import { Limiter } from '../shared/limiter.js';
 import { LIMITER } from '../shared/chain.js';
@@ -32,6 +33,11 @@ await test('every instrument converts: parameters, presets, keys, pedal, wheel a
 });
 await test('the plugins\' text matches the pages\' for most of every parameter\'s travel', async () => {
   for (const slug of slugs) for (const r of (await generate(slug)).report) if (!r.plain) assert.ok(r.match >= 0.95, `${slug}.${r.id}: ${(100 * r.match).toFixed(1)} %`);
+});
+await test("the black hole's spin reads as the page writes it at every step: a = 0.690, a = 0.9900, a = 1 − 1.0×10⁻⁴", () => {
+  const p = BLACKHOLE_GROUPS.flatMap((g) => g.params).find((q) => q.id === 'spinU'), { segs, plain } = inferFormat(p);
+  assert.ok(!plain);
+  for (let k = 0; k * p.step <= p.max + 1e-9; k++) { const u = Math.min(p.max, k * p.step); assert.equal(formatBy(segs, u), p.fmt(u), `u = ${u}`); }
 });
 await test('generated files are fresh (node tools/gen-native-params.mjs --check)', () => {
   execFileSync(process.execPath, [new URL('tools/gen-native-params.mjs', R).pathname, '--check'], { stdio: 'pipe' });

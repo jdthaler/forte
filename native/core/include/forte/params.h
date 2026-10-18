@@ -12,8 +12,9 @@ enum class ParamKind : uint8_t { continuous, choice, toggle };
 
 // How a value reads, as the JavaScript `fmt` shows it, inferred by tools/gen-native-params.mjs:
 // for values up to `upTo`, prefix + number + suffix, where the number is scale·v + offset (or
-// scale·log10(v) + offset), written as JavaScript's toFixed(decimals) or toExponential(decimals)
-// would. decimals < 0: no number, the prefix alone (a word such as "flat"; offset holds its value).
+// scale·log10(v) + offset, or scale·10^(−v) + offset), written as JavaScript's toFixed(decimals)
+// or toExponential(decimals) would (1.0e5, or 1.0×10⁵ with `superscript`). decimals < 0: no
+// number, the prefix alone (a word such as "flat"; offset holds its value).
 struct FormatSegment {
   double upTo;
   const char *prefix, *suffix;
@@ -22,6 +23,8 @@ struct FormatSegment {
   bool log10, exp;
   bool plus;          // "+" before numbers ≥ 0
   bool unicodeMinus;  // "−" rather than "-"
+  bool pow10neg = false;    // the number is scale·10^(−v) + offset (the black hole's spin, 1 − 10^(−u))
+  bool superscript = false; // an exponent written ×10⁻⁴, not e-4
 };
 
 struct ParamInfo {

@@ -14,7 +14,7 @@ enum : int { spinU, massRatio, inclination, t0, overtones, retrograde, inspiral,
 }
 
 constexpr double kNoLimit = INFINITY;
-inline const FormatSegment kFormat_spinU[] = {{kNoLimit, "", "", 1, 0, 3, false, false, false, true}};
+inline const FormatSegment kFormat_spinU[] = {{0.9999999999999999, "a = ", "", -1, 1, 3, false, false, false, false, true, false}, {1.9999999999999998, "a = ", "", -1, 1, 4, false, false, false, false, true, false}, {kNoLimit, "a = 1 − ", "", 1, 0, 1, false, true, false, false, true, true}};
 inline const FormatSegment kFormat_massRatio[] = {{kNoLimit, "", " : 1", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_inclination[] = {{kNoLimit, "", "°", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_t0[] = {{kNoLimit, "", " M after peak", 1, 0, 1, false, false, false, false}};
@@ -26,7 +26,7 @@ inline const FormatSegment kFormat_room[] = {{kNoLimit, "", "", 1, 0, 2, false, 
 inline const FormatSegment kFormat_volume[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 
 inline const ParamInfo kParams[p::count] = {
-  {"spinU", "Spin", "Black hole", ParamKind::continuous, 0, 6, 0.5086383061657272, 0.005, false, true, nullptr, 0, kFormat_spinU, 1},
+  {"spinU", "Spin", "Black hole", ParamKind::continuous, 0, 6, 0.5086383061657272, 0.005, false, true, nullptr, 0, kFormat_spinU, 3},
   {"massRatio", "Mass ratio q", "How it was struck (a binary merger)", ParamKind::continuous, 1, 20, 1.2, 0, true, true, nullptr, 0, kFormat_massRatio, 1},
   {"inclination", "Viewing inclination ι", "How it was struck (a binary merger)", ParamKind::continuous, 0, 180, 30, 1, false, true, nullptr, 0, kFormat_inclination, 1},
   {"t0", "Ringdown start", "How it was struck (a binary merger)", ParamKind::continuous, 0, 30, 5, 0.5, false, false, nullptr, 0, kFormat_t0, 1},
@@ -69,7 +69,7 @@ inline const Controller kControllers[] = {{0, -1}};
 // descriptor maps MIDI velocity itself (this one does).
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
-    .slug = "blackhole", .name = "Black-Hole Keyboard", .version = "0.4.0",
+    .slug = "blackhole", .name = "Black-Hole Keyboard", .version = "0.4.1",
     .description = "Every key a Kerr black hole, ringing in quasinormal modes computed from the Teukolsky equation.", .auSubtype = "BHol",
     .vst3Id = {0x5f, 0xef, 0x66, 0x73, 0x53, 0x79, 0xc9, 0x85, 0x2f, 0x95, 0xda, 0x33, 0x4a, 0xc9, 0x74, 0x92},
     .params = kParams, .paramCount = p::count,
