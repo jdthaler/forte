@@ -119,7 +119,11 @@ the 37 bars of the compass are the same to the last digit. Modes above
 C♯6 up, the fifth bending mode (above 21.6 kHz at 48 kHz); at C8, modes
 3–5. A bar radiates its fundamental feebly once it is far smaller
 than its wavelength (12 m at A0), so the lowest keys are quieter, with
-more of their sound in modes 2 and 3.
+more of their sound in modes 2 and 3. At the top, the mallet matters: the
+default yarn head stays on a bar for about 0.7 ms, three periods of C8, and
+hardly rings its fundamental (C8's ring is about 35 dB below F6's, a click
+and little tone). Hard mallets, as a player would use up there, ring it
+within 7 dB of F6.
 
 ### 3. How long a bar rings on its own
 

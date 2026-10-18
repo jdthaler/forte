@@ -96,6 +96,9 @@ TEST("engine: a note sounds its key (motor off, tubes on), at 44.1 and 48 kHz") 
   for (double fs : {44100.0, 48000.0}) for (int key : {36, KEY_LO, 69, KEY_HI, KEY_MAX}) { // and past the compass
     auto P = defaults();
     P[p::motor] = motor_::open;
+    // past the compass, hard mallets (as a player would use): a soft one stays on a top bar for
+    // several of its periods and hardly rings its fundamental (vibraphone/README.md)
+    if (key < KEY_LO || key > KEY_HI) P[p::hardness] = kParams[p::hardness].max;
     auto ep = std::make_unique<VibraphoneEngine>(fs); // on the heap: it is too big for a WebAssembly stack
     VibraphoneEngine &e = *ep;
     e.setParams(P.data());
