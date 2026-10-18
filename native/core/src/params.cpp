@@ -93,8 +93,8 @@ static double valueOf(const FormatSegment &s, double n) {
 }
 
 // Superscript digits, ⁰ … ⁹, and the superscript minus and plus.
-static const char *const kSuperscript[10] = {"\u2070", "\u00b9", "\u00b2", "\u00b3", "\u2074", "\u2075", "\u2076", "\u2077", "\u2078", "\u2079"};
-static const char kSuperMinus[] = "\u207b", kSuperPlus[] = "\u207a", kTimesTen[] = "\u00d710";
+static const char *const kSuperscript[10] = {"\xe2\x81\xb0", "\xc2\xb9", "\xc2\xb2", "\xc2\xb3", "\xe2\x81\xb4", "\xe2\x81\xb5", "\xe2\x81\xb6", "\xe2\x81\xb7", "\xe2\x81\xb8", "\xe2\x81\xb9"};
+static const char kSuperMinus[] = "\xe2\x81\xbb", kSuperPlus[] = "\xe2\x81\xba", kTimesTen[] = "\xc3\x97" "10";
 
 static const FormatSegment &segmentFor(const ParamInfo &p, double v) {
   if (!p.formatCount) return kPlain;
