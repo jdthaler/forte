@@ -7,6 +7,9 @@ a keyboard you can play with the mouse or the computer's keys (Z…/ and Q…], 
 so the standalone apps play without a MIDI keyboard. The plugins are built from the same C++ as the instruments on
 <https://forte.jthaler.net>, and sound the same.
 
+The download with every instrument also has the Forte app: one standalone with all of them,
+picked from the Instrument menu at the top of its window. It reopens on the last one played.
+
 Download every instrument together from <https://forte.jthaler.net/#plugins> (All Plugins),
 or one at a time from an instrument's page (↓ Plugin): in each system's box, All has every format,
 and the AU, VST3, CLAP and app links just that one. They are free and unsigned: macOS and Windows will

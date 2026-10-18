@@ -6,6 +6,7 @@
 
 #include "plugin.h"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -44,9 +45,29 @@ struct UiEvent {
   double v;
 };
 
-struct Plugin {
+// What the window works with: an instrument's Plugin, or the Forte app's Suite of them. Its
+// sizes are in points, times the host's scale where the host works in pixels.
+struct Instance {
   clap_plugin_t clap{};
   const clap_host_t *host;
+  const clap_host_timer_support_t *hostTimer = nullptr;
+#ifdef FORTE_EDITOR
+  std::unique_ptr<Editor> editor;
+#endif
+  uint32_t width = kEditorWidth, height = kEditorHeight; // points
+  double scale = 1;                  // pixels per point, where the host works in pixels
+  clap_id timer = CLAP_INVALID_ID;
+
+  Instance(const clap_host_t *h, const clap_plugin_descriptor_t *desc) : host(h) { clap.desc = desc; clap.plugin_data = this; }
+  virtual ~Instance() = default;
+  // the editor's calls, window.forte(method, …args) (Plugin::call says what they are)
+  virtual choc::value::Value call(const choc::value::ValueView &args) = 0;
+  virtual void idle() {} // on the main thread, every 16 ms while the window is open
+};
+
+Instance *instance(const clap_plugin_t *p) { return (Instance *)p->plugin_data; }
+
+struct Plugin : Instance {
   const InstrumentInfo &I;
   const std::string accent;  // the window's colour
   const int nParams;        // the instrument's parameters, then Preset if it has presets
@@ -71,22 +92,13 @@ struct Plugin {
 
   // the editor: its events for the audio thread, what it shows, the keys sounding for it
   const clap_host_params_t *hostParams = nullptr;
-  const clap_host_timer_support_t *hostTimer = nullptr;
   SpscQueue<UiEvent> fromUi{1024};
   std::vector<double> sent;          // each value as the editor last saw it (NaN: never)
   std::atomic<uint64_t> keysDown[2]{};
   std::atomic<bool> pedalDown{false};
-#ifdef FORTE_EDITOR
-  std::unique_ptr<Editor> editor;
-#endif
-  uint32_t width = kEditorWidth, height = kEditorHeight; // points
-  double scale = 1;                  // pixels per point, where the host works in pixels
-  clap_id timer = CLAP_INVALID_ID;
 
   Plugin(const clap_host_t *h, const InstrumentInfo &info, const clap_plugin_descriptor_t *desc, const std::string &colour)
-      : host(h), I(info), accent(colour.empty() ? "#f0b35a" : colour), nParams(info.paramCount + (info.presetCount > 0 ? 1 : 0)), hasPresets(info.presetCount > 0) {
-    clap.desc = desc;
-    clap.plugin_data = this;
+      : Instance(h, desc), I(info), accent(colour.size() < 2 ? "#f0b35a" : colour), nParams(info.paramCount + (info.presetCount > 0 ? 1 : 0)), hasPresets(info.presetCount > 0) {
     for (int i = 0; i < I.paramCount; i++) ids.push_back(paramHash(I.params[i].id));
     if (hasPresets) ids.push_back(kPresetId);
     P.resize(nParams);
@@ -399,7 +411,7 @@ struct Plugin {
     r.addMember("pedal", pedalDown.load(std::memory_order_relaxed));
     return r;
   }
-  choc::value::Value call(const choc::value::ValueView &args) {
+  choc::value::Value call(const choc::value::ValueView &args) override {
     using namespace choc::value;
     if (!args.isArray() || args.size() == 0 || !args[0].isString()) return {};
     const std::string m(args[0].getString());
@@ -494,7 +506,7 @@ struct Plugin {
   }
 };
 
-Plugin *self(const clap_plugin_t *p) { return (Plugin *)p->plugin_data; }
+Plugin *self(const clap_plugin_t *p) { return static_cast<Plugin *>(instance(p)); }
 
 // ---- the CLAP vtables --------------------------------------------------------------------------
 
@@ -602,7 +614,7 @@ const clap_plugin_auv2_param_ordering_t auOrdering{auParamOrder};
 bool guiIsApiSupported(const clap_plugin_t *, const char *api, bool floating) { return !floating && !std::strcmp(api, Editor::api()); }
 bool guiGetPreferredApi(const clap_plugin_t *, const char **api, bool *floating) { *api = Editor::api(); *floating = false; return true; }
 bool guiCreate(const clap_plugin_t *p, const char *api, bool floating) {
-  Plugin *s = self(p);
+  Instance *s = instance(p);
   if (floating || std::strcmp(api, Editor::api()) || s->editor) return false;
   s->editor = Editor::create([s](const choc::value::ValueView &args) { return s->call(args); });
   if (!s->editor) return false;
@@ -610,7 +622,7 @@ bool guiCreate(const clap_plugin_t *p, const char *api, bool floating) {
   return true;
 }
 void guiDestroy(const clap_plugin_t *p) {
-  Plugin *s = self(p);
+  Instance *s = instance(p);
   if (s->hostTimer && s->timer != CLAP_INVALID_ID) s->hostTimer->unregister_timer(s->host, s->timer);
   s->timer = CLAP_INVALID_ID;
   s->editor.reset();
@@ -620,12 +632,12 @@ bool guiSetScale(const clap_plugin_t *p, double scale) {
   (void)p; (void)scale;
   return false; // macOS works in points
 #else
-  self(p)->scale = scale > 0 ? scale : 1;
+  instance(p)->scale = scale > 0 ? scale : 1;
   return true;
 #endif
 }
-uint32_t px(const Plugin *s, uint32_t points) { return (uint32_t)std::lround(points * s->scale); }
-bool guiGetSize(const clap_plugin_t *p, uint32_t *w, uint32_t *h) { Plugin *s = self(p); *w = px(s, s->width); *h = px(s, s->height); return true; }
+uint32_t px(const Instance *s, uint32_t points) { return (uint32_t)std::lround(points * s->scale); }
+bool guiGetSize(const clap_plugin_t *p, uint32_t *w, uint32_t *h) { Instance *s = instance(p); *w = px(s, s->width); *h = px(s, s->height); return true; }
 bool guiCanResize(const clap_plugin_t *) { return true; }
 bool guiGetResizeHints(const clap_plugin_t *, clap_gui_resize_hints_t *hints) {
   hints->can_resize_horizontally = hints->can_resize_vertically = true;
@@ -634,38 +646,38 @@ bool guiGetResizeHints(const clap_plugin_t *, clap_gui_resize_hints_t *hints) {
   return true;
 }
 bool guiAdjustSize(const clap_plugin_t *p, uint32_t *w, uint32_t *h) {
-  Plugin *s = self(p);
+  Instance *s = instance(p);
   if (*w < px(s, kEditorMinWidth)) *w = px(s, kEditorMinWidth);
   if (*h < px(s, kEditorMinHeight)) *h = px(s, kEditorMinHeight);
   return true;
 }
 bool guiSetSize(const clap_plugin_t *p, uint32_t w, uint32_t h) {
-  Plugin *s = self(p);
+  Instance *s = instance(p);
   guiAdjustSize(p, &w, &h);
   s->width = (uint32_t)std::lround(w / s->scale); s->height = (uint32_t)std::lround(h / s->scale);
   if (s->editor) s->editor->setSize(w, h);
   return true;
 }
 bool guiSetParent(const clap_plugin_t *p, const clap_window_t *window) {
-  Plugin *s = self(p);
+  Instance *s = instance(p);
   if (!s->editor) return false;
   s->editor->setSize(px(s, s->width), px(s, s->height));
   return s->editor->setParent(window);
 }
 bool guiSetTransient(const clap_plugin_t *, const clap_window_t *) { return false; }
 void guiSuggestTitle(const clap_plugin_t *, const char *) {}
-bool guiShow(const clap_plugin_t *p) { Plugin *s = self(p); if (s->editor) s->editor->show(true); return s->editor != nullptr; }
-bool guiHide(const clap_plugin_t *p) { Plugin *s = self(p); if (s->editor) s->editor->show(false); return s->editor != nullptr; }
+bool guiShow(const clap_plugin_t *p) { Instance *s = instance(p); if (s->editor) s->editor->show(true); return s->editor != nullptr; }
+bool guiHide(const clap_plugin_t *p) { Instance *s = instance(p); if (s->editor) s->editor->show(false); return s->editor != nullptr; }
 const clap_plugin_gui_t gui{guiIsApiSupported, guiGetPreferredApi, guiCreate, guiDestroy, guiSetScale, guiGetSize, guiCanResize,
                             guiGetResizeHints, guiAdjustSize, guiSetSize, guiSetParent, guiSetTransient, guiSuggestTitle, guiShow, guiHide};
 
-void onTimer(const clap_plugin_t *p, clap_id) { Plugin *s = self(p); if (s->editor) s->editor->idle(); }
+void onTimer(const clap_plugin_t *p, clap_id) { Instance *s = instance(p); if (s->editor) s->editor->idle(); }
 const clap_plugin_timer_support_t timerSupport{onTimer};
 #endif
 
 // the editor's calls without a window (plugin.h, tests/plugin-tests.cpp)
 std::string bridgeCall(const clap_plugin_t *p, const char *json) {
-  try { return choc::json::toString(self(p)->call(choc::json::parse(json))); } catch (...) { return "error"; }
+  try { return choc::json::toString(instance(p)->call(choc::json::parse(json))); } catch (...) { return "error"; }
 }
 const EditorBridge editorBridge{bridgeCall};
 
@@ -679,7 +691,7 @@ void pluginDestroy(const clap_plugin_t *p) {
 #ifdef FORTE_EDITOR
   guiDestroy(p);
 #endif
-  delete self(p);
+  delete instance(p);
 }
 bool pluginActivate(const clap_plugin_t *p, double fs, uint32_t, uint32_t) {
   Plugin *s = self(p);
@@ -712,10 +724,176 @@ const void *pluginGetExtension(const clap_plugin_t *, const char *id) {
 }
 void pluginOnMainThread(const clap_plugin_t *) {}
 
+// ---- the Forte app: every instrument in one plugin -----------------------------------------------
+//
+// A Suite holds one instrument's Plugin at a time and passes the host's calls to it; its window
+// is the Suite's, with an Instrument menu (describe's "instruments", and choose(slug)). A new
+// instrument is made and activated on the main thread, then handed to the audio thread, which
+// takes it at the start of its next block and lets the one before go; the main thread deletes
+// that one once it has.
+
+struct Suite : Instance {
+  const SuiteEntry *list;
+  const int count;
+  std::vector<int> order;           // the instruments by name, as the menu lists them
+  std::unique_ptr<Plugin> cur;      // the one the window and the host's main thread see
+  Plugin *live = nullptr;           // the one the audio thread plays (cur, once it has taken it)
+  std::atomic<Plugin *> next{nullptr}; // cur, until the audio thread takes it
+  std::unique_ptr<Plugin> old;      // the one before cur, until the audio thread has let go of it
+  bool active = false;
+  double fs = 48000;
+  uint32_t minFrames = 1, maxFrames = 4096;
+  std::atomic<bool> processing{false};
+
+  Suite(const clap_host_t *h, const clap_plugin_descriptor_t *desc, const SuiteEntry *entries, int n) : Instance(h, desc), list(entries), count(n) {
+    for (int k = 0; k < count; k++) order.push_back(k);
+    std::sort(order.begin(), order.end(), [&](int a, int b) { return std::strcmp(list[a].info().name, list[b].info().name) < 0; });
+  }
+  int find(const std::string &slug) const {
+    for (int k = 0; k < count; k++) if (slug == list[k].info().slug) return k;
+    return -1;
+  }
+  // main thread: switch to instrument k (false while the last switch is still in flight)
+  bool choose(int k) {
+    collect();
+    if (k < 0 || k >= count || old) return false;
+    if (cur && &cur->I == &list[k].info()) return true;
+    std::unique_ptr<Plugin> p(new Plugin(host, list[k].info(), clap.desc, list[k].accent));
+    p->hostParams = (const clap_host_params_t *)host->get_extension(host, CLAP_EXT_PARAMS);
+    if (!active) { cur = std::move(p); live = cur.get(); }
+    else {
+      pluginActivate(&p->clap, fs, minFrames, maxFrames);
+      p->processing = processing.load();
+      old = std::move(cur);
+      cur = std::move(p);
+      next.store(cur.get(), std::memory_order_release);
+    }
+    // every parameter is another: a host may reread them all only while not active
+    if (auto hp = (const clap_host_params_t *)host->get_extension(host, CLAP_EXT_PARAMS))
+      hp->rescan(host, active ? CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT | CLAP_PARAM_RESCAN_INFO : CLAP_PARAM_RESCAN_ALL);
+    return true;
+  }
+  // audio thread (or the main thread while not processing): the instrument to play
+  Plugin *audio() {
+    if (Plugin *n = next.exchange(nullptr, std::memory_order_acq_rel)) {
+      live = n;
+      live->processing = processing.load();
+      host->request_callback(host); // to delete the one before (collect)
+    }
+    return live;
+  }
+  // main thread: the one before, once the audio thread has let go of it
+  void collect() { if (old && !next.load(std::memory_order_acquire)) old.reset(); }
+  void idle() override { collect(); }
+
+  // the instrument's calls, and the menu: describe() also lists the instruments ({slug, name}
+  // by name), choose(slug) switches to one (the window then reloads)
+  choc::value::Value call(const choc::value::ValueView &args) override {
+    using namespace choc::value;
+    collect();
+    if (!args.isArray() || args.size() == 0 || !args[0].isString()) return {};
+    const std::string m(args[0].getString());
+    if (m == "choose") return createBool(args.size() > 1 && args[1].isString() && choose(find(std::string(args[1].getString()))));
+    Value r = cur->call(args);
+    if (m == "describe") {
+      Value all = createEmptyArray();
+      for (int k : order) {
+        Value e = createObject("");
+        e.addMember("slug", std::string(list[k].info().slug));
+        e.addMember("name", std::string(list[k].info().name));
+        all.addArrayElement(e);
+      }
+      r.addMember("instruments", all);
+    }
+    return r;
+  }
+
+  // ---- state: "forte-suite <slug>" then the instrument's own ------------------------------------
+  bool save(const clap_ostream_t *s) {
+    const std::string t = std::string("forte-suite ") + cur->I.slug + "\n";
+    for (const char *p = t.data(), *end = p + t.size(); p < end;) {
+      int64_t w = s->write(s, p, (uint64_t)(end - p));
+      if (w <= 0) return false;
+      p += w;
+    }
+    return cur->save(s);
+  }
+  bool load(const clap_istream_t *s) {
+    std::string t;
+    char buf[4096];
+    for (int64_t r; (r = s->read(s, buf, sizeof buf)) > 0;) t.append(buf, (size_t)r);
+    if (t.compare(0, 12, "forte-suite ") == 0) {
+      const size_t eol = t.find('\n');
+      if (eol == std::string::npos || !choose(find(t.substr(12, eol - 12)))) return false;
+      t.erase(0, eol + 1);
+    } else if (t.compare(0, 6, "forte ") == 0) { // an instrument's own plugin's state
+      const size_t sp = t.find_first_of(" \n", 6);
+      if (!choose(find(t.substr(6, sp == std::string::npos ? std::string::npos : sp - 6)))) return false;
+    } else return false;
+    struct Reader { clap_istream_t s; const std::string *t; size_t at; } r{{}, &t, 0};
+    r.s.ctx = &r;
+    r.s.read = [](const clap_istream_t *is, void *out, uint64_t n) -> int64_t {
+      auto rd = (Reader *)is->ctx;
+      const size_t k = std::min((size_t)n, rd->t->size() - rd->at);
+      std::memcpy(out, rd->t->data() + rd->at, k);
+      rd->at += k;
+      return (int64_t)k;
+    };
+    return cur->load(&r.s);
+  }
+};
+
+Suite *suite(const clap_plugin_t *p) { return static_cast<Suite *>(instance(p)); }
+const clap_plugin_t *inner(const clap_plugin_t *p) { return &suite(p)->cur->clap; }
+
+bool suiteInit(const clap_plugin_t *p) {
+  Suite *s = suite(p);
+  s->hostTimer = (const clap_host_timer_support_t *)s->host->get_extension(s->host, CLAP_EXT_TIMER_SUPPORT);
+  return s->choose(0 < s->count ? s->order[0] : -1);
+}
+bool suiteActivate(const clap_plugin_t *p, double fs, uint32_t minFrames, uint32_t maxFrames) {
+  Suite *s = suite(p);
+  s->fs = fs; s->minFrames = minFrames; s->maxFrames = maxFrames;
+  s->active = pluginActivate(inner(p), fs, minFrames, maxFrames);
+  return s->active;
+}
+void suiteDeactivate(const clap_plugin_t *p) {
+  Suite *s = suite(p);
+  s->audio();
+  s->old.reset();
+  pluginDeactivate(inner(p));
+  s->active = false;
+}
+bool suiteStartProcessing(const clap_plugin_t *p) { Suite *s = suite(p); s->processing = true; s->audio()->processing = true; return true; }
+void suiteStopProcessing(const clap_plugin_t *p) { Suite *s = suite(p); s->processing = false; s->audio()->processing = false; }
+void suiteReset(const clap_plugin_t *p) { pluginReset(&suite(p)->audio()->clap); }
+clap_process_status suiteProcess(const clap_plugin_t *p, const clap_process_t *proc) { return suite(p)->audio()->process(proc); }
+void suiteOnMainThread(const clap_plugin_t *p) { suite(p)->collect(); }
+
+const clap_plugin_params_t suiteParams{
+    [](const clap_plugin_t *p) { return paramsCount(inner(p)); },
+    [](const clap_plugin_t *p, uint32_t i, clap_param_info_t *info) { return paramsGetInfo(inner(p), i, info); },
+    [](const clap_plugin_t *p, clap_id id, double *v) { return paramsGetValue(inner(p), id, v); },
+    [](const clap_plugin_t *p, clap_id id, double v, char *out, uint32_t size) { return paramsValueToText(inner(p), id, v, out, size); },
+    [](const clap_plugin_t *p, clap_id id, const char *text, double *v) { return paramsTextToValue(inner(p), id, text, v); },
+    [](const clap_plugin_t *p, const clap_input_events_t *in, const clap_output_events_t *out) { paramsFlush(&suite(p)->audio()->clap, in, out); }};
+const clap_plugin_state_t suiteState{
+    [](const clap_plugin_t *p, const clap_ostream_t *s) { return suite(p)->save(s); },
+    [](const clap_plugin_t *p, const clap_istream_t *s) { return suite(p)->load(s); }};
+
+const void *suiteGetExtension(const clap_plugin_t *p, const char *id) {
+  if (!std::strcmp(id, CLAP_EXT_PARAMS)) return &suiteParams;
+  if (!std::strcmp(id, CLAP_EXT_STATE)) return &suiteState;
+  if (!std::strcmp(id, CLAP_PLUGIN_AUV2_PARAM_ORDERING)) return nullptr;
+  return pluginGetExtension(p, id);
+}
+
 // ---- the factory: one plugin per binary ----------------------------------------------------------
 
 struct Factory {
   const InstrumentInfo *I = nullptr;
+  const SuiteEntry *suite = nullptr; // the Forte app's instruments, instead of I
+  int suiteCount = 0;
   std::string id, version, accent;
   const char *features[4] = {CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_SYNTHESIZER, CLAP_PLUGIN_FEATURE_STEREO, nullptr};
   clap_plugin_descriptor_t desc{};
@@ -729,12 +907,29 @@ struct Factory {
             "https://forte.jthaler.net", "https://github.com/jdthaler/forte", version.c_str(), info.description, features};
     vst3 = {"Forte", &info.vst3Id, nullptr};
   }
+  void initSuite(const SuiteEntry *instruments, int n, const char *v) {
+    suite = instruments; suiteCount = n;
+    id = "net.jthaler.forte.suite";
+    version = v ? v : "";
+    desc = {CLAP_VERSION, id.c_str(), "Forte", "Forte", "https://forte.jthaler.net", "https://forte.jthaler.net",
+            "https://github.com/jdthaler/forte", version.c_str(), "Every Forte instrument in one window", features};
+  }
 } factory;
 
 uint32_t factoryCount(const clap_plugin_factory_t *) { return 1; }
 const clap_plugin_descriptor_t *factoryDescriptor(const clap_plugin_factory_t *, uint32_t i) { return i == 0 ? &factory.desc : nullptr; }
 const clap_plugin_t *factoryCreate(const clap_plugin_factory_t *, const clap_host_t *host, const char *id) {
-  if (!factory.I || std::strcmp(id, factory.desc.id)) return nullptr;
+  if (!factory.desc.id || std::strcmp(id, factory.desc.id)) return nullptr;
+  if (factory.suite) {
+    Suite *s = new Suite(host, &factory.desc, factory.suite, factory.suiteCount);
+    s->clap.init = suiteInit; s->clap.destroy = pluginDestroy;
+    s->clap.activate = suiteActivate; s->clap.deactivate = suiteDeactivate;
+    s->clap.start_processing = suiteStartProcessing; s->clap.stop_processing = suiteStopProcessing;
+    s->clap.reset = suiteReset; s->clap.process = suiteProcess;
+    s->clap.get_extension = suiteGetExtension; s->clap.on_main_thread = suiteOnMainThread;
+    return &s->clap;
+  }
+  if (!factory.I) return nullptr;
   Plugin *s = new Plugin(host, *factory.I, &factory.desc, factory.accent);
   s->clap.init = pluginInit; s->clap.destroy = pluginDestroy;
   s->clap.activate = pluginActivate; s->clap.deactivate = pluginDeactivate;
@@ -745,12 +940,13 @@ const clap_plugin_t *factoryCreate(const clap_plugin_factory_t *, const clap_hos
 }
 const clap_plugin_factory_t pluginFactory{factoryCount, factoryDescriptor, factoryCreate};
 
-const clap_plugin_info_as_vst3_t *vst3Info(const clap_plugin_factory_as_vst3 *, uint32_t i) { return i == 0 ? &factory.vst3 : nullptr; }
+const clap_plugin_info_as_vst3_t *vst3Info(const clap_plugin_factory_as_vst3 *, uint32_t i) { return i == 0 && factory.I ? &factory.vst3 : nullptr; }
 const clap_plugin_factory_as_vst3_t vst3Factory{"Forte", "https://forte.jthaler.net", "", vst3Info, nullptr};
 
 } // namespace
 
 bool entryInit(const InstrumentInfo &info, const char *accent) { factory.init(info, accent); return true; }
+bool entrySuite(const SuiteEntry *instruments, int count, const char *version) { factory.initSuite(instruments, count, version); return count > 0; }
 
 const void *entryFactory(const char *id) {
   if (!std::strcmp(id, CLAP_PLUGIN_FACTORY_ID)) return &pluginFactory;
