@@ -104,7 +104,8 @@ async function listen(tab) {
     if (!(await b.count())) break;
     await b.scrollIntoViewIfNeeded();
     await b.click({ timeout: 2000 });
-    await tab.waitForTimeout(400);
+    // the first demo can take a moment to start on a busy machine
+    await tab.waitForFunction(() => document.querySelector('#player').currentTime > 0, null, { timeout: 5000 }).catch(() => {});
     const s = await tab.evaluate(() => { const a = document.querySelector('#player'); return { src: a.src, paused: a.paused, t: a.currentTime }; });
     const src = await b.getAttribute('data-src'), text = await b.textContent();
     if (!text.includes('Stop') || s.paused || !(s.t > 0) || !s.src.endsWith(src)) out.push(`Listen doesn't play ${src} (reads "${text.trim()}", ${s.paused ? 'paused' : `at ${s.t.toFixed(2)} s`})`);
