@@ -48,6 +48,8 @@ export const GROUPS = [
         hint: 'How far the labium’s edge sits off the jet’s centre line. Centred, the jet splits symmetrically and the even harmonics vanish; set off, it splits unevenly and they grow. Applies to new notes.' },
       { id: 'noise', label: 'Jet turbulence', min: 0, max: 4, def: 1, step: 0.05, fmt: times,
         hint: 'The random flutter of the jet: wind noise in the tone, and the seed the oscillation grows from.' },
+      { id: 'fullRange', label: 'Full range (A0–C8)', type: 'checkbox', def: false,
+        hint: 'Opens the keys past the C–f³ manual, A₂–c⁵: the same scales and voicing carried on, down to a Principal pipe 5.7 m long (27.5 Hz), slow to speak as big pipes are, and up to c⁵ (4.2 kHz), the Mixture breaking back twice more.' },
     ],
   },
   {
