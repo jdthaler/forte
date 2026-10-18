@@ -28,9 +28,8 @@ export const downloads = (id) => SYSTEMS.map(([name, suffix, formats]) => ({
   name, formats: formats.map((f) => FORMATS[f]).join(' · '), file: archive(id, suffix), url: LATEST + archive(id, suffix),
   each: formats.map((f) => ({ format: f, name: FORMATS[f], file: archive(id, suffix, f), url: LATEST + archive(id, suffix, f) })),
 }));
-// The download buttons for an instrument (or, with no id, every instrument): each system's
-// archive with every format, and under it one link per format.
-export const downloadLinks = (id) => downloads(id).map((d) => `<div class="forte-plugin-sys">
-  <a class="button" href="${d.url}">${d.name}<span>${d.formats}</span></a>
-  <span class="forte-plugin-each">${d.each.map((e) => `<a href="${e.url}" title="${d.name}: just the ${e.format === 'app' ? 'standalone app' : `${e.name} plugin`}">${e.name}</a>`).join('')}</span>
-</div>`).join('');
+// The downloads for an instrument (or, with no id, every instrument): a box per system with
+// "All | AU · VST3 · CLAP · app", All being the archive with every format.
+export const downloadLinks = (id) => downloads(id).map((d) => `<div class="button forte-plugin-sys">${d.name}<span>
+  <a href="${d.url}" title="${d.name}: every format">All</a><i>|</i>${d.each.map((e) => `<a href="${e.url}" title="${d.name}: just the ${e.format === 'app' ? 'standalone app' : `${e.name} plugin`}">${e.name}</a>`).join('<i>·</i>')}
+</span></div>`).join('');

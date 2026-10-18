@@ -63,7 +63,7 @@ export function openPlugin() {
   if (!plugDialog) {
     plugDialog = sheet('Plugin', 'forte-plugin-title', '#plugin', 'forte-sheet');
     plugDialog.querySelector('.forte-notes-body').innerHTML = `<section class="forte-plugin">
-      <p><b>Play the ${esc(inst.name)} in your DAW:</b> the same physics in C++, as AU, VST3 and CLAP plugins and a standalone app: every format in one download, or one alone from the links under it.</p>
+      <p><b>Play the ${esc(inst.name)} in your DAW:</b> the same physics in C++, as AU, VST3 and CLAP plugins and a standalone app: every format in one download (All), or one alone.</p>
       <div class="forte-plugin-get">${downloadLinks(inst.id)}</div>
       <p class="forte-plugin-more">Free and unsigned: on a Mac, one Terminal command lets them load. <a href="${INSTALL}" target="_blank" rel="noopener">How to install</a> · <a href="${root.href}#plugins">All Plugins</a></p>
     </section>`;

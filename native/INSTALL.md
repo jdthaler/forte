@@ -8,8 +8,8 @@ so the standalone apps play without a MIDI keyboard. The plugins are built from 
 <https://forte.jthaler.net>, and sound the same.
 
 Download every instrument together from <https://forte.jthaler.net/#plugins> (All Plugins),
-or one at a time from an instrument's page (↓ Plugin): each system's button has every format,
-and the AU, VST3, CLAP and app links under it just that one. They are free and unsigned: macOS and Windows will
+or one at a time from an instrument's page (↓ Plugin): in each system's box, All has every format,
+and the AU, VST3, CLAP and app links just that one. They are free and unsigned: macOS and Windows will
 warn about them until you allow them, as below.
 
 ## The quick way (macOS and Linux)
