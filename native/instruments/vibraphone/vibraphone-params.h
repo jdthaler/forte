@@ -16,7 +16,7 @@
 namespace forte::vibraphone {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { depth, eta, temp, tubes, gap, detune, motor, speed, cd, twist, shaft2, hardness, mass, strike, across, speedMax, damp, pedalLock, room, volume, count };
+enum : int { depth, eta, temp, fullRange, tubes, gap, detune, motor, speed, cd, twist, shaft2, hardness, mass, strike, across, speedMax, damp, pedalLock, room, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -44,6 +44,7 @@ inline const ParamInfo kParams[p::count] = {
   {"depth", "Undercut depth", "Bars", ParamKind::continuous, 0, 1.2, 1, 0.01, false, false, nullptr, 0, kFormat_depth, 4},
   {"eta", "Internal friction η", "Bars", ParamKind::continuous, 0.00001, 0.001, 0.0001, 0, true, false, nullptr, 0, kFormat_eta, 1},
   {"temp", "Air temperature", "Bars", ParamKind::continuous, 0, 40, 20, 0.5, false, false, nullptr, 0, kFormat_temp, 1},
+  {"fullRange", "Full range (A0–C8)", "Bars", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"tubes", "Resonator tubes", "Resonators", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"gap", "Bar–tube gap", "Resonators", ParamKind::continuous, 5, 80, 30, 0, true, false, nullptr, 0, kFormat_gap, 1},
   {"detune", "Tube tuning", "Resonators", ParamKind::continuous, -200, 200, 0, 1, false, false, nullptr, 0, kFormat_detune, 3},
@@ -99,7 +100,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 11,
     .keep = kKeep, .keepCount = 2,
-    .keyLo = 53, .keyHi = 89, .space = Space::sustain,
+    .keyLo = 21, .keyHi = 108, .compassLo = 53, .compassHi = 89, .compass = p::fullRange, .space = Space::sustain,
     .modWheel = p::speed, .modWheelMax = 6,
     .controllers = kControllers, .controllerCount = 0,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .tone = -1, .trimDb = 3},

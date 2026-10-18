@@ -60,6 +60,7 @@ class VibraphoneEngine : public Engine {
     uint64_t version = 0;
     bool inUse = false;
     std::array<double, MAX_MODES> q{}, q1{}, a1{}, a2{}, bc{}, ws{}, bws{}, accOut{}, sig{};
+    std::array<bool, MAX_MODES> cut{}; // modes at or above 0.45 fs: left out, so they cannot alias
     double qb = 0, vb = 0, X = 0, vx = 0;
     // block parameters at the start (…) and end (…n) of the audio block
     double M11 = 1, M12 = 0, M22 = 1, Ka = 1, R = 0, lvS = 0, cdisc = 0, tubeGain = 0;

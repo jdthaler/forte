@@ -61,9 +61,9 @@ TEST("bar: a thin plain bar is the free–free beam (1 : 2.756 : 5.404 : 8.933 :
   for (int i = 0; i < 2; i++) CHECK(std::fabs(u.tors[i].f / (((i + 1) * cT) / 0.6) - 1) < 1e-3);
 }
 
-TEST("bar: every tuned bar F3–F6 sits at 1 : 4 : 10 within 1 ¢, its fundamental within 0.1 ¢ of its key") {
+TEST("bar: every tuned bar A0–C8 sits at 1 : 4 : 10 within 1 ¢, its fundamental within 0.1 ¢ of its key") {
   double worst = 0;
-  for (int k = KEY_LO; k <= KEY_HI; k++) {
+  for (int k = KEY_MIN; k <= KEY_MAX; k++) {
     const Geometry g = barGeometry(k);
     const auto f = bendingFreqs3(g.cut, g.L, g.b);
     CHECK(std::fabs(cents(f[0], keyFreq(k))) < 0.1);
@@ -78,7 +78,7 @@ TEST("bar: every tuned bar F3–F6 sits at 1 : 4 : 10 within 1 ¢, its fundament
 TEST("bar: the optimiser, started off the table, finds its row again (A4)") {
   const int k = 69;
   const Blank bl = barBlank(k);
-  const BarRow &row = BAR_TABLE[k - KEY_LO];
+  const BarRow &row = BAR_TABLE[k - KEY_MIN];
   const Tuned r = tuneUndercut(keyFreq(k), bl.b, bl.h0, bl.cf, {row.A * 1.06, row.D * 0.94, row.L * 1.05});
   CHECK(std::fabs(r.L / row.L - 1) < 1e-5 && std::fabs(r.A - row.A) < 1e-4 && std::fabs(r.D - row.D) < 1e-4);
   for (double c : r.residualCents) CHECK(std::fabs(c) < 0.01);
@@ -93,7 +93,7 @@ TEST("resonator: the damped pair reduces to the two-oscillator formula when tune
 }
 
 TEST("engine: a note sounds its key (motor off, tubes on), at 44.1 and 48 kHz") {
-  for (double fs : {44100.0, 48000.0}) for (int key : {KEY_LO, 69, KEY_HI}) {
+  for (double fs : {44100.0, 48000.0}) for (int key : {36, KEY_LO, 69, KEY_HI, KEY_MAX}) { // and past the compass
     auto P = defaults();
     P[p::motor] = motor_::open;
     auto ep = std::make_unique<VibraphoneEngine>(fs); // on the heap: it is too big for a WebAssembly stack
@@ -107,7 +107,7 @@ TEST("engine: a note sounds its key (motor off, tubes on), at 44.1 and 48 kHz") 
     CHECK(std::fabs(cents(f, keyFreq(key))) < 3);
     double pk = 0;
     for (float v : L) pk = std::max(pk, (double)std::fabs(v));
-    CHECK(pk > 0.02 && pk < 0.5);
+    CHECK(pk > (key < KEY_LO || key > KEY_HI ? 0.005 : 0.02) && pk < 0.5); // (the left channel: C8 sits to the right)
   }
 }
 

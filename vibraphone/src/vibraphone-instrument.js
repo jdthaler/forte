@@ -3,7 +3,7 @@
 // plugins (tools/gen-native-params.mjs) all start here. No DOM, no Web Audio.
 
 import { GROUPS, DEFAULTS, PRESETS } from './vibraphone-params.js';
-import { KEY_LO, KEY_HI } from './bar.js';
+import { KEY_LO, KEY_HI, KEY_MIN, KEY_MAX } from './bar.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -12,7 +12,8 @@ export const INSTRUMENT = {
   groups: GROUPS,
   presets: PRESETS,
   keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
-  range: [KEY_LO, KEY_HI],              // MIDI keys: F3–F6
+  range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C8, 21–108
+  compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // F3–F6, 53–89, until Full range opens the rest
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine
   modWheel: 'speed',                    // CC1: the motor's speed
   // the engine: the physics in C++ (native/instruments/vibraphone), built as WebAssembly. The page
