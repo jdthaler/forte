@@ -1,11 +1,16 @@
 // Tine piano checks. Run: node test/tines-tests.mjs
+// The model and the engine are the C++ (native/instruments/tines), built as WebAssembly: the
+// model's functions through tines-wasm.js, the engine through loadEngine.
 import assert from 'node:assert/strict';
-import { cantilever, computeKey, keyFreq, KEY_LO, KEY_HI } from '../tines/src/tine.js';
+import { KEY_LO, KEY_HI } from '../tines/src/tine.js';
 import { DEFAULTS } from '../tines/src/rhodes-params.js';
 import { INSTRUMENT } from '../tines/src/tines-instrument.js';
+import { wasmModel } from '../tines/src/tines-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
+import { keyFreq } from '../shared/dsp.js';
 
-const RhodesEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const TinesEngine = await loadEngine(INSTRUMENT);
+const { keyModel } = await wasmModel(); // a key's model; .packed is its voice data for the engine
 
 const FS = 48000;
 let failures = 0;
@@ -17,10 +22,10 @@ const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const cents = (a, b) => 1200 * Math.log2(a / b);
 
 function render(key, params, vel, sec, eng = {}) {
-  const k = computeKey(key, params, FS);
-  const e = new RhodesEngine(FS);
+  const k = keyModel(key, params, FS);
+  const e = new TinesEngine(FS);
   e.setParams({ ...params, ...eng });
-  const v = e.noteOn(key, vel, { ...k.voice, version: 1 });
+  const v = e.noteOn(key, vel, k.packed);
   const n = Math.round(sec * FS), L = new Float32Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
   for (let s = 0; s < n; s += bl) { e.process(bL, bR, bl); L.set(bL.subarray(0, Math.min(bl, n - s)), s); }
   return { L, k, v, e };
@@ -34,15 +39,19 @@ const DRY = { drive: 0, cable: 100, tone: 20000, tremDepth: 0 };
 
 console.log('mechanics');
 test('FEM cantilever: f₁ and overtone ratios match Euler–Bernoulli', () => {
-  const c = cantilever({ L: 0.05, d: 1.9e-3, ms: 0, s: 0, nModes: 4 });
-  const exact = ((1.8751 ** 2) / (2 * Math.PI)) * Math.sqrt(c.EI / c.mu) / 0.05 ** 2;
-  assert.ok(Math.abs(c.omega[0] / (2 * Math.PI) / exact - 1) < 1e-4);
-  [6.2669, 17.5475, 34.3861].forEach((r, i) => assert.ok(Math.abs(c.omega[i + 1] / c.omega[0] - r) < 2e-3 * r, `mode ${i + 2}`));
-  assert.ok(Math.abs(c.Gamma[0] ** 2 / c.mt - 0.6131) < 1e-3);
+  // without the spring the tine is a bare steel cantilever (E = 200 GPa, ρ = 7850 kg/m³)
+  const { info: i, tine } = keyModel(40, P({ springMass: 0 }), FS);
+  const exact = ((1.8751 ** 2) / (2 * Math.PI)) * Math.sqrt((2.0e11 * i.d * i.d) / (16 * 7850)) / i.L ** 2;
+  assert.ok(Math.abs(i.f1tine / exact - 1) < 1e-4, `f₁ ${i.f1tine} Hz, Euler–Bernoulli ${exact} Hz`);
+  assert.ok(Math.abs(i.f1tine / keyFreq(40) - 1) < 1e-4, 'the length is solved to tune the key');
+  [6.2669, 17.5475, 34.3861].forEach((r, n) => assert.ok(Math.abs(i.tineRatios[n + 1] - r) < 2e-3 * r, `mode ${n + 2}: ${i.tineRatios[n + 1]}`));
+  assert.ok(Math.abs(i.mt / ((7850 * Math.PI * i.d * i.d * i.L) / 4) - 1) < 1e-9, 'the rigid mass is the tine’s');
+  // mode 1 carries 61.3 % of the tine's mass (modal effective mass, Γ₁²/mt)
+  assert.ok(i.ms === 0 && Math.abs(tine.Gamma[0] ** 2 / i.mt - 0.6131) < 1e-3, `Γ₁²/mt = ${tine.Gamma[0] ** 2 / i.mt}`);
 });
 test('every key: the sustaining fork mode sits on pitch', () => {
   for (let m = KEY_LO; m <= KEY_HI; m++) {
-    const k = computeKey(m, P(), FS), f0 = keyFreq(m);
+    const k = keyModel(m, P(), FS), f0 = keyFreq(m);
     // among modes within a semitone, the longest-ringing one is the note
     const near = k.modes.filter((x) => Math.abs(cents(x.f, f0)) < 100);
     const best = near.reduce((a, b) => (b.sigma < a.sigma ? b : a));
@@ -51,7 +60,7 @@ test('every key: the sustaining fork mode sits on pitch', () => {
 });
 test('tone bar: matched bar keeps the block still → long sustain; no bar → short', () => {
   const t60 = (o) => {
-    const k = computeKey(69, P(o), FS), f0 = keyFreq(69);
+    const k = keyModel(69, P(o), FS), f0 = keyFreq(69);
     const md = k.modes.filter((x) => Math.abs(cents(x.f, f0)) < 30).sort((a, b) => b.tineFrac - a.tineFrac)[0];
     return 6.91 / md.sigma;
   };
@@ -81,10 +90,10 @@ test('pickup: a centred tine outputs the octave, not the fundamental', () => {
 });
 test('dampers stop the note on release; sustain pedal keeps it', () => {
   const level = (sustain) => {
-    const k = computeKey(60, P(), FS), e = new RhodesEngine(FS);
+    const k = keyModel(60, P(), FS), e = new TinesEngine(FS);
     e.setParams(P());
     e.setSustain(sustain);
-    e.noteOn(60, 2, { ...k.voice, version: 1 });
+    e.noteOn(60, 2, k.packed);
     const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
     for (let i = 0; i < 0.3 * FS / bl; i++) e.process(L, R, bl);
     e.noteOff(60);
@@ -96,8 +105,8 @@ test('dampers stop the note on release; sustain pedal keeps it', () => {
   assert.ok(level(true) > 30 * level(false));
 });
 test('voice stealing never takes a chord that has just been struck', () => {
-  const e = new RhodesEngine(FS); e.setParams(P()); e.setSustain(true);
-  const vd = (k) => ({ ...computeKey(k, P(), FS).voice, version: 1 });
+  const e = new TinesEngine(FS); e.setParams(P()); e.setSustain(true);
+  const vd = (k) => keyModel(k, P(), FS).packed;
   const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
   for (let k = KEY_LO; k < KEY_LO + 40; k++) { e.noteOn(k, 1.8, vd(k)); for (let i = 0; i < 4; i++) e.process(L, R, bl); }
   const chord = [72, 76, 79, 84].map((k) => e.noteOn(k, 1.8, vd(k)));
@@ -107,9 +116,9 @@ test('voice stealing never takes a chord that has just been struck', () => {
 });
 test('long blocks (the page’s pickup-waveform view asks for up to 3500 samples) stay finite', () => {
   for (const key of [KEY_LO, 33, 45]) {
-    const k = computeKey(key, P(), FS), e = new RhodesEngine(FS);
+    const k = keyModel(key, P(), FS), e = new TinesEngine(FS);
     e.setParams({ ...P(), ...DRY });
-    e.noteOn(key, 1.8, { ...k.voice, version: 1 });
+    e.noteOn(key, 1.8, k.packed);
     const n = Math.round((3 / k.info.f0) * FS), L = new Float32Array(n), R = new Float32Array(n);
     e.process(L, R, Math.round(0.02 * FS));
     e.process(L, R, n);
@@ -120,8 +129,8 @@ test('long blocks (the page’s pickup-waveform view asks for up to 3500 samples
 });
 // strongest 3rd-difference spike just after a change, re that signal's RMS before it
 function clickAfter(change, keys = [52, 55]) {
-  const e = new RhodesEngine(FS); e.setParams(P());
-  for (const key of keys) e.noteOn(key, 1.8, { ...computeKey(key, P(), FS).voice, version: 1 });
+  const e = new TinesEngine(FS); e.setParams(P());
+  for (const key of keys) e.noteOn(key, 1.8, keyModel(key, P(), FS).packed);
   const n = FS, x = new Float64Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl), at = 24064;
   for (let s = 0; s < n; s += bl) { if (s === at) change(e); e.process(bL, bR, bl); for (let i = 0; i < bl; i++) x[s + i] = bL[i]; }
   const d3 = (i) => x[i] - 3 * x[i - 1] + 3 * x[i - 2] - x[i - 3];
@@ -144,12 +153,12 @@ test('pickup voicing is live: centring a ringing tine trades its fundamental for
   const after = g(x, 220, 0.6 * FS, 0.9 * FS) / g(x, 440, 0.6 * FS, 0.9 * FS);
   assert.ok(before > 1 && after < 0.1, `fundamental / octave: ${before.toFixed(2)} before, ${after.toFixed(3)} after`);
   // and a gap change reaches every sounding voice
-  const e = new RhodesEngine(FS); e.setParams(P());
-  const v = e.noteOn(60, 1.8, { ...computeKey(60, P(), FS).voice, version: 1 });
+  const e = new TinesEngine(FS); e.setParams(P());
+  const v = e.noteOn(60, 1.8, keyModel(60, P(), FS).packed);
   e.setParams({ gap: 0.6 });
   const L = new Float32Array(128), R = new Float32Array(128);
   for (let i = 0; i < 100; i++) e.process(L, R, 128);
-  assert.ok(Math.abs(v.wid / computeKey(60, P({ gap: 0.6 }), FS).voice.pickup.wid - 1) < 1e-6);
+  assert.ok(Math.abs(v.wid / keyModel(60, P({ gap: 0.6 }), FS).voice.pickup.wid - 1) < 1e-6);
 });
 test('stable across extremes', () => {
   const cases = [P({ gap: 0.4, poleRadius: 0.3, offset: 1.2, drive: 1, hardness: 10, tipExp: 1 }), P({ barMass: 0.01, blockMass: 5, mountDamp: 2, mountRatio: 3 }),
@@ -162,8 +171,8 @@ test('stable across extremes', () => {
 
 console.log('performance');
 test('CPU: 20 sounding keys render in under 40 % of one core', () => {
-  const e = new RhodesEngine(FS); e.setParams(P());
-  for (let i = 0; i < 20; i++) { const key = 36 + 3 * i; e.noteOn(key, 2, { ...computeKey(key, P(), FS).voice, version: 1 }); }
+  const e = new TinesEngine(FS); e.setParams(P());
+  for (let i = 0; i < 20; i++) { const key = 36 + 3 * i; e.noteOn(key, 2, keyModel(key, P(), FS).packed); }
   const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
   for (let i = 0; i < 50; i++) e.process(L, R, bl);
   const blocks = 2000, t0 = performance.now();

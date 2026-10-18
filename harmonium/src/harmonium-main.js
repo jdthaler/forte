@@ -1,17 +1,14 @@
 // harmonium-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName, useWasm } from '../../shared/shell.js';
+import { createShell, noteName } from '../../shared/shell.js';
 import { fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './harmonium-instrument.js';
-import * as jsModel from './harmonium-model.js';
-import { RANKS, AIR, CD, areaAt, engaged } from './harmonium-model.js';
+import { RANKS, AIR, CD, areaAt, engaged } from './harmonium-data.js';
 import { wasmModel } from './harmonium-wasm.js';
 
-// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
-// physics as the engine, in C++), the JavaScript one until then or if it can't load. (areaAt
-// only reads the reed's area table, which the model built.)
-let phys = jsModel;
-if (useWasm()) wasmModel().then((m) => { phys = m; updateModel(); }, (err) => console.warn(`harmonium: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+// The views draw what the engine plays: its model, from the same C++, built as WebAssembly.
+// (areaAt only reads the reed's area table, which the model built.)
+const phys = await wasmModel();
 
 const $ = (s) => document.querySelector(s);
 const RANK_COL = ['#c98bff', '#ff9fb0', '#ffd27a', '#7cc8ff', '#9fe39f'];

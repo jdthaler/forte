@@ -250,28 +250,25 @@ the doublet and the lines of the free, spinning bowl.
 
 ```
 glass/index.html, style.css          page
-glass/src/glass-model.js             shell modes, Bryan factor, water loading, radiation, friction, threshold (no audio, no DOM)
-glass/src/glass-engine.js            real-time engine (AudioWorklet and Node)
+glass/src/glass-instrument.js        the descriptor: parameters, keys, pedal, wheel, engine
 glass/src/glass-params.js            parameters and presets
 glass/src/glass-main.js              page wiring and views
 glass/src/glass-wasm.js              the C++ engine and model as WebAssembly (glass/wasm/glass.wasm)
-native/instruments/glass/            the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
-test/glass-tests.mjs                 node test/glass-tests.mjs  (24 tests, ~9 s; FORTE_ENGINE=wasm: on the WebAssembly)
+native/instruments/glass/            the physics in C++: shell modes, Bryan factor, water loading, radiation,
+                                     friction, threshold (glass-model), the engine, generated tables, reference
+test/glass-tests.mjs                 node test/glass-tests.mjs  (24 tests, ~9 s, on the WebAssembly)
 tools/render-glass.mjs               node tools/render-glass.mjs → examples/glass/
 ```
 
-Ten bowls rubbed at once render at about 8 % of real time in Node.
-
-**In C++**: the same engine and model run as WebAssembly on this page (the
-JavaScript is the fallback; `?engine=js` in the address forces it) and as
-plugins (CLAP, VST3, AU and a standalone app), where the Space pedal is Hold
-on CC64, the mod wheel turns the treadle (0.5 to 1 rev/s) and aftertouch
-presses harder. Stick–slip friction could in principle make the two drift
-apart, but they don't: the WebAssembly plays what the JavaScript plays to
-float32 rounding (within 10⁻⁷ of the peak over ten seconds, squealing
-included), and the same test suite passes on it. In the plugins each bowl's
-modes are rebuilt off the audio thread when the split, loss or water change.
-Ten bowls take about 7 % of a core in C++.
+**In C++**: the engine and model are C++ (`native/instruments/glass`), run as
+WebAssembly on this page and as plugins (CLAP, VST3, AU and a standalone
+app), where the Space pedal is Hold on CC64, the mod wheel turns the treadle
+(0.5 to 1 rev/s) and aftertouch presses harder. It was ported from the
+first, JavaScript version; stick–slip friction could in principle have made
+the two drift apart, but the C++ played what the JavaScript played to float32
+rounding (within 10⁻⁷ of the peak over ten seconds, squealing included). In
+the plugins each bowl's modes are rebuilt off the audio thread when the
+split, loss or water change. Ten bowls take about 7 % of a core in C++.
 
 ## Simplifications
 

@@ -19,8 +19,7 @@
 
 import { meshWall, modesOf, TAU } from './bell-fem.js';
 
-import { BRONZE, cBronze } from './bronze.js';
-export { BRONZE, cBronze };
+export const BRONZE = { E: 105e9, rho: 8700, nu: 0.33 }; // bell bronze, about 78 % copper and 22 % tin
 
 // ---- the rib ----------------------------------------------------------------------------------------
 // The starting point: a mid-surface and thicknesses at ten stations, proportioned after

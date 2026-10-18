@@ -3,9 +3,11 @@
 //
 // Name demos NN-what-you-hear; the landing page plays the first one.
 
-import { QuantumEngine } from '../quantum/src/quantum-engine.js';
-import { DEFAULTS } from '../quantum/src/quantum-params.js';
+import { INSTRUMENT, DEFAULTS } from '../quantum/src/quantum-instrument.js';
+import { loadEngine } from './engine.mjs';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
+
+const QuantumEngine = await loadEngine(INSTRUMENT);
 
 const FS = 48000, SLUG = 'quantum';
 const P = (o = {}) => ({ ...DEFAULTS, ...o });

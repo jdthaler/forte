@@ -1,7 +1,6 @@
 // tines-web.cpp — the model's functions the page's views call (tines/src/tines-wasm.js): a key's
-// modes, its tine's shapes and its voice data, packed for the engine; and the engine's hooks for
-// the tests and the slow-motion view (its voices, as the JavaScript engine's voices, byKey and
-// noteOn's result show them).
+// modes, its tine's shapes and participation factors and its voice data, packed for the engine; and the engine's hooks for
+// the tests and the slow-motion view (its voices, in order and by key, and what noteOn did).
 
 #include <algorithm>
 #include <array>
@@ -30,7 +29,7 @@ const double *params() { return (const double *)forte_scratch(); }
 extern "C" {
 // Key m's model and voice data for the parameters in the scratch area (p::count numbers, as
 // shared/wasm.js writes them) at sample rate fs; tines_model, tines_shape and tines_packed then
-// read them. Returns 0 where the model failed (JavaScript throws).
+// read them. Returns 0 where the model failed.
 FORTE_EXPORT int tines_key(int key, double fs) {
   key = clampKey(key);
   const uint64_t v = modelVersion(params(), fs);
@@ -66,6 +65,15 @@ FORTE_EXPORT int tines_model(int key, double *out) {
 FORTE_EXPORT double tines_shape(int key, int j, double x) {
   const Key *c = keys[clampKey(key)].get();
   return c && c->model.ok ? c->model.tine.shape(j, x) : 0;
+}
+// The tine's participation factors Γ = ∫ m φ dx (one per tine mode, unit modal mass), for key m's
+// latest model, into out; returns how many.
+FORTE_EXPORT int tines_gamma(int key, double *out) {
+  const Key *c = keys[clampKey(key)].get();
+  if (!c || !c->model.ok) return 0;
+  const std::vector<double> &g = c->model.tine.Gamma;
+  std::copy(g.begin(), g.end(), out);
+  return (int)g.size();
 }
 // The key's voice data, packed (packVoiceData): what the page sends with a note.
 FORTE_EXPORT const double *tines_packed(int key) { const Key *c = keys[clampKey(key)].get(); return c ? c->packed.data() : nullptr; }

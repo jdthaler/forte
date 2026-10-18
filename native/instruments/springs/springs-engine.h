@@ -1,5 +1,4 @@
-// springs-engine.h — the real-time spring keyboard (springs/src/springs-engine.js in C++), on the
-// engine contract (forte/engine.h).
+// springs-engine.h — the real-time spring keyboard, on the engine contract (forte/engine.h).
 //
 //   key ─▶ mallet (a half-sine force pulse on the driving bead, shorter when harder)
 //       ─▶ 1–3 springs in parallel, each a bank of modes of Wittrick's helical rod
@@ -26,8 +25,8 @@
 
 namespace forte::springs {
 
-// What the engine posts for the page (springs/src/springs-wasm.js turns them back into the
-// JavaScript engine's 'echo' and 'error' messages).
+// What the engine posts for the page (springs/src/springs-wasm.js turns them into its 'echo' and
+// 'error' messages).
 namespace msg {
 enum : uint16_t {
   echo = 1,  // key; n, the velocity: the strike's first n samples are in capture (springs_capture)
@@ -89,7 +88,7 @@ class SpringEngine : public Engine {
     bool anyActive() const;
   };
 
-  // read by the tests (through the WebAssembly's hooks), in the JavaScript engine's order
+  // read by the tests (through the WebAssembly's hooks), in the order they started
   std::array<Voice *, POOL> voices{};
   int nVoices = 0;
   std::array<Voice *, 128> byKey{};

@@ -1,5 +1,5 @@
 // harpsichord-web.cpp — the model's functions the page's views call (harpsichord/src/harpsichord-wasm.js),
-// and the engine's test hooks (its voices, as the JavaScript engine's voices and byKey show them).
+// and the engine's test hooks (its voices, in order and by key).
 // Model functions take the native parameters (P, indexed as in harpsichord-params.h).
 
 #include <memory>
@@ -11,8 +11,9 @@
 using namespace forte::harpsichord;
 
 namespace {
-// the last slow-motion pluck: its trace (t, y, u, F, s, z, w, fb; each `count` long)
-std::vector<double> trace;
+// the last slow-motion pluck: its trace (t, y, u, F, s, z, w, fb; each `count` long), and its
+// string's modal state at the end (N, h, then each partial's ω, q and q1)
+std::vector<double> trace, modal;
 } // namespace
 
 extern "C" {
@@ -43,12 +44,16 @@ FORTE_EXPORT int harpsichord_partials(const double *P, int m, int choir, double 
   return parts->N;
 }
 // The slow-motion pluck (simulatePluck): returns how many points it traced (harpsichord_trace has
-// them); out = released (s, or −1), the release's F, y, u, w, s, theta, the plectrum's len,
-// overlap, s0, kTip, EI0, tau, mu, fore, material, the string's d and brass?, x, gap, the string's
-// energy at the end, and the plectrum's work on it.
-FORTE_EXPORT int harpsichord_simulate(const double *P, int m, int row, double V, double fs, double sec, int every, double until, double *out) {
+// them, harpsichord_modal the string's modes at the end); out = released (s, or −1), the
+// release's F, y, u, w, s, theta, the plectrum's len, overlap, s0, kTip, EI0, tau, mu, fore,
+// material, the string's d and brass?, x, gap, the string's energy at the end, and the plectrum's
+// work on it. mu (≥ 0: the plectrum's friction instead of its material's) and bridgeScale (× the
+// string's drain into the board) are the tests' knobs: −1 and 1 leave the model as it is.
+FORTE_EXPORT int harpsichord_simulate(const double *P, double mu, double bridgeScale, int m, int row, double V, double fs, double sec, int every, double until, double *out) {
   auto sim = std::make_unique<Simulated>();
-  simulatePluck(*sim, m, row, paramsOf(P), V, fs, sec, every < 1 ? 1 : every, until);
+  Params q = paramsOf(P);
+  q.mu = mu; q.bridgeScale = bridgeScale;
+  simulatePluck(*sim, m, row, q, V, fs, sec, every < 1 ? 1 : every, until);
   const PluckTrace &t = sim->trace;
   const Plectrum &pl = t.pl;
   const double v[24] = {t.released, t.rel.F, t.rel.y, t.rel.u, t.rel.w, t.rel.s, t.rel.theta, pl.len, pl.overlap, pl.s0, pl.kTip, pl.EI0, pl.tau, pl.mu, pl.fore,
@@ -58,9 +63,23 @@ FORTE_EXPORT int harpsichord_simulate(const double *P, int m, int row, double V,
   trace.assign(8 * n, 0);
   const std::vector<double> *cols[8] = {&t.t, &t.y, &t.u, &t.F, &t.s, &t.z, &t.w, &t.fb};
   for (int c = 0; c < 8; c++) std::copy(cols[c]->begin(), cols[c]->end(), trace.begin() + c * n);
+  const PluckedString &st = sim->st;
+  modal.assign({(double)st.N, st.h});
+  for (int i = 0; i < st.N; i++) { modal.push_back(st.W[i]); modal.push_back(st.q()[i]); modal.push_back(st.q1()[i]); }
   return (int)n;
 }
 FORTE_EXPORT const double *harpsichord_trace() { return trace.data(); }
+FORTE_EXPORT const double *harpsichord_modal() { return modal.data(); }
+// bridgePoint(m, choir): x, y on the board
+FORTE_EXPORT void harpsichord_bridge_point(int m, int choir, double *out) {
+  const auto b = bridgePoint(m, choir);
+  out[0] = b[0]; out[1] = b[1];
+}
+// boardAdmittance(x, y, f): re, im (s/kg)
+FORTE_EXPORT void harpsichord_board_admittance(double x, double y, double f, double *out) {
+  const auto Y = boardAdmittance(x, y, f);
+  out[0] = Y[0]; out[1] = Y[1];
+}
 // The plectrum's bending (beamC, beamG, beamPhi) at s, for a plectrum of taper tau, EI0, len and foreshortening
 FORTE_EXPORT void harpsichord_beam(double tau, double EI0, double len, double fore, double s, double *out) {
   Plectrum pl;

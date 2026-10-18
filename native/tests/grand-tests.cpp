@@ -1,8 +1,8 @@
 // grand-tests.cpp — the electric grand's model and engine in C++: the scale, the stretch tuning and a
-// key's modes as the JavaScript computes them, the soundboard's modes and residual path, a struck C4
+// key's modes as the JavaScript computed them, the soundboard's modes and residual path, a struck C4
 // on its stretched pitch (its key built on the worker thread), the dampers and the pedal, the
 // soundboard's microphones, the page's oscillator budget, and ten voices in the CPU budget. The
-// physics tests are the JavaScript suite's, run on the WebAssembly (FORTE_ENGINE=wasm).
+// physics tests are the JavaScript suite's, run on the WebAssembly (node test/grand-tests.mjs).
 
 #include <chrono>
 #include <cmath>
@@ -71,7 +71,7 @@ TEST("grand: the CP-70 scale, its stretch tuning and C4's modes, as the JavaScri
     CHECK(std::fabs(1200 * std::log2(partialFreq(S, 1) / S.f0)) < 1e-6); // the fundamental on its target
   }
   CHECK(mono == 15);
-  // grand-model.js's numbers (to the last few bits: exp, sin and pow may round differently)
+  // the retired JavaScript model's numbers (to the last few bits: exp, sin and pow may round differently)
   CHECK(rel(stretchCents(28, P), -11.651176652997698) < 1e-10);
   CHECK(rel(stretchCents(100, P), 24.559949050142599) < 1e-10);
   ModelParams C; C.scale = scale_::concert;

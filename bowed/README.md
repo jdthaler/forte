@@ -48,7 +48,7 @@ at one fraction β of their length from the bridge, and the voicing of the
 registers (below) gives the upper wheels more surface speed and the treble
 wheel a smaller β.
 
-**Strings** (`bowed-model.js: stringDesign`). The scale is harpsichord-like:
+**Strings** (`bowed-model.cpp: stringDesign`). The scale is harpsichord-like:
 C5 is 36 cm, and lengths double every 1.25 octaves going down (foreshortened to
 1.9 m at C2). Tension runs from 130 N in the bass to 95 N in the treble.
 Mersenne's law, f₀ = c/2L with c = √(T/μ), then gives the mass per length.
@@ -68,7 +68,7 @@ Z₀, and with it the treble's loudness, up. Stiffness is left out: B ≤ 1.5·1
 puts the 10th partial of the *free* string at most 13 ¢ sharp, and Helmholtz
 motion locks the partials into exact harmonics anyway.
 
-**The string as a waveguide** (`string.js`). Velocity waves travel in delay
+**The string as a waveguide** (`bowed-string.cpp`). Velocity waves travel in delay
 lines: bridge → wheel → bridge (2·D_b samples) and wheel → nut → wheel (2·D_n).
 The string's own losses (air and internal friction) are distributed, so each
 round trip gets a one-pole low-pass for its share of the travel time. The
@@ -134,7 +134,7 @@ the wheel the string sticks, moving at v_B for 1 − β of the period, and slips
 back at −v_B(1 − β)/β for the rest (Helmholtz 1863; Raman 1918). The force on
 the bridge is a sawtooth of peak-to-peak 2Z₀v_B/β with harmonics falling as 1/n.
 So the loudness is set by the wheel speed and position, not by the key. The
-tests check all of this against the engine: stick fraction and slip speed
+tests check all of this on a string bowed alone: stick fraction and slip speed
 within 4 % and 15 %, harmonics 2–6 within 2.5 dB of 1/n, and amplitude ∝ v_B/β.
 
 **Schelleng's bounds.** Helmholtz motion survives only for
@@ -246,7 +246,8 @@ slip comes late and the corner is rounded. Here, at the voiced touch, the flat
 runs from 4.5 ¢ (C2) through 9 ¢ (C4) and 12 ¢ (C5) to 19 ¢ (C6). The rosin
 lag adds to it, most at the top, where a slip lasts only about four lags. A
 tuner tunes by ear while the instrument plays, so each free string is set that
-much sharp (`tools/bowed-tuning.mjs`). The bowed notes are then within ±1 ¢ of
+much sharp (`tools/bowed-tuning.mjs`, which bows each string of the C++ build
+alone and corrects its table; rebuild and run `--check`). The bowed notes are then within ±1 ¢ of
 equal temperament at both 48 and 44.1 kHz (tested on all 49 keys from the
 audio). The table belongs to the oversampling plan, which is fixed at 48 kHz
 and kept at 44.1 kHz (choosing it from the rate put B3, C4, B4 and C5 2–3 ¢
@@ -350,32 +351,28 @@ On the page, the views show the same physics live:
 * **Attack map**: the Guettler diagram, computed in the page.
 * **Spectrum**.
 
-**In C++**: the same engine and model run as WebAssembly on this page (the
-JavaScript is the fallback; `?engine=js` in the address forces it) and as
+**In C++**: the engine and model are C++, run as WebAssembly on this page and as
 plugins (CLAP, VST3, AU and a standalone app), where the Space pedal is Hold
 on CC64, the mod wheel drives the treadle (25 cm/s at rest, up to 1 m/s) and
 aftertouch presses the keys harder. Bowed friction is chaotic: a difference
 in the last bit of one number can grow into another attack. So the C++ takes
 its sines, exponentials, logarithms and powers from fdlibm, as V8 computes
 them, and draws the rosin's grain from the same seeded generator: the
-WebAssembly plays what the JavaScript plays to the last bit, raucous notes
-included, and the same test suite passes on it. Ten strings take about 6 %
-of a core in C++.
+WebAssembly plays what the JavaScript engine played to the last bit. The
+string-alone tests and the tuning tool bow one string of the C++ by itself
+(`bowed_string_*` in `bowed-web.cpp`). Ten strings take about 6 % of a core.
 
 ## Files
 
 ```
 bowed/index.html, style.css           page
-bowed/src/bowed-model.js              physics: scale, losses, friction, Schelleng, plate, voicing (no audio, no DOM)
-bowed/src/string.js                   one string: waveguide, friction junction, torsion, oversampling, Helmholtz start, attack timing
-bowed/src/bowed-engine.js             real-time engine: wheel, shared bridge, keys, dampers, soundboard (AudioWorklet and Node)
-bowed/src/bowed-params.js             parameters and presets
+bowed/src/bowed-params.js             parameters, presets and the key range
 bowed/src/bowed-tuning.js             tuning table (generated)
 bowed/src/bowed-main.js               page wiring and views
-bowed/src/bowed-wasm.js               the C++ engine and model as WebAssembly (bowed/wasm/bowed.wasm)
+bowed/src/bowed-wasm.js               the engine and model as WebAssembly (bowed/wasm/bowed.wasm; AudioWorklet and Node)
 native/instruments/bowed/             the C++ port: model, string, engine, generated tables, reference (V8's math, fdlibm, is in native/core)
-test/bowed-tests.mjs                  node test/bowed-tests.mjs  (FORTE_ENGINE=wasm: on the WebAssembly)
-tools/bowed-tuning.mjs                node tools/bowed-tuning.mjs → bowed/src/bowed-tuning.js and its C++ copy
+test/bowed-tests.mjs                  node test/bowed-tests.mjs
+tools/bowed-tuning.mjs                node tools/bowed-tuning.mjs → bowed/src/bowed-tuning.js and its C++ copy (bows the WebAssembly; --check)
 tools/render-bowed.mjs                node tools/render-bowed.mjs → examples/bowed/
 ```
 

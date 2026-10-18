@@ -35,14 +35,15 @@ plucks again, within a dB of a fresh note.
 
 Each key's reed is a flat spring-steel strip (E = 200 GPa, ρ = 7850 kg/m³,
 3 mm wide), clamped at one end, with a lump of solder at the free end that
-tunes it. `src/reed.js` solves the Euler–Bernoulli beam with 16 Hermite
+tunes it. The model solves the Euler–Bernoulli beam with 16 Hermite
 elements. The solder is a point mass plus rotary inertia, at the centre of a
-lump 12 % of the reed's length. The FEM matches the exact frequency equation
-of a cantilever with a tip mass R = M/(μL),
-
-  1 + cos β cosh β + R β (cos β sinh β − sin β cosh β) = 0   (Blevins, table 8-1),
-
-to 10⁻⁵, and the bare cantilever's 6.267, 17.55 and 34.39 × f₁. If the
+lump 12 % of the reed's length. Without solder the FEM gives the bare
+cantilever's Λ₁ = 1.8751² and 6.267, 17.55 and 34.39 × f₁. With it, it
+matches the exact frequency equation of a cantilever carrying a mass and its
+rotary inertia part-way along (a two-span beam: the 6 × 6 determinant of the
+spans' joining and end conditions, after the tip-mass equation of Blevins,
+table 8-1): mode 1 to 10⁻⁶, modes 2 and 3 to their discretisation error
+(< 5·10⁻⁴ and 5·10⁻³ for the heaviest solder). If the
 solder is given as a fraction of the reed's own mass, every key is the same
 dimensionless problem, f₁ = Λ₁ h √(E/12ρ) / (2π L²). So each reed's length
 is *solved* for its pitch (exact to 0.01 ¢). The thickness is graded from
@@ -244,17 +245,13 @@ the flux's rate of change, cannot step. Moving a magnet pole does induce a
 little voltage, a soft thump, as it would on the real thing. Switching
 pickups ducks the output to zero over 10 ms and back.
 
-**In C++.** The same engine and model run as WebAssembly on this page (the
-JavaScript is the fallback; `?engine=js` in the address forces it), and the
-slow-motion view, the mode table and the release plot re-run the pluck with
-the WebAssembly model; and as plugins (CLAP, VST3, AU and a standalone
-app), where CC64 is the sustain pedal. The WebAssembly plays what the
-JavaScript plays to float32 rounding (within 6·10⁻⁸ on the reference
-scripts), and the same test suite passes on it. In the plugins, each key's
+**In C++.** The engine and the model are C++, run as WebAssembly on this
+page, where the slow-motion view, the mode table and the release plot re-run
+the pluck with the WebAssembly model, and as plugins (CLAP, VST3, AU and a
+standalone app), where CC64 is the sustain pedal. In the plugins, each key's
 reed is built on a worker thread for the tip mass and loss the knobs are
-at; the WebAssembly builds it when it is first needed, as the JavaScript
-does (well under a millisecond). Ten voices take about 1 % of a core in
-C++.
+at; the WebAssembly builds it when it is first needed (well under a
+millisecond). Ten voices take about 1 % of a core.
 
 ## What to listen for
 
@@ -291,14 +288,12 @@ edge to 0 for odd harmonics only.
 
 ```
 pianet/index.html, style.css          page
-pianet/src/reed.js                    FEM reed with solder (and the exact tip-mass frequency equation)
-pianet/src/pianet-model.js            reeds per key, pad, adhesion law, pickups, the Pluck mechanism
-pianet/src/pianet-engine.js           real-time engine (AudioWorklet and Node)
+pianet/src/pianet-instrument.js       the descriptor: parameters, presets, range, engine, output chain
 pianet/src/pianet-params.js           parameters and presets
+pianet/src/pianet-wasm.js             the engine and the model: the C++ as WebAssembly (pianet/wasm/pianet.wasm)
 pianet/src/pianet-main.js             page wiring and views
-pianet/src/pianet-wasm.js             the C++ engine and model as WebAssembly (pianet/wasm/pianet.wasm)
 native/instruments/pianet/            the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
-test/pianet-tests.mjs                 node test/pianet-tests.mjs (FORTE_ENGINE=wasm: on the WebAssembly)
+test/pianet-tests.mjs                 node test/pianet-tests.mjs
 tools/render-pianet.mjs               node tools/render-pianet.mjs → examples/pianet/
 ```
 

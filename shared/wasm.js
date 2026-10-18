@@ -1,7 +1,6 @@
 // wasm.js — an instrument's WebAssembly build (native/, docs/PLUGINS.md) in JavaScript: loading it
 // in a page, an AudioWorklet or Node, and a class with the engine contract (shared/worklet.js)
-// over the C functions of native/web/engine-api.cpp. The class has the JavaScript engine's
-// methods, so the worklet, the tests and the tools use either alike.
+// over the C functions of native/web/engine-api.cpp, which the worklet, the tests and the tools play.
 //
 //   export const XWasmEngine = wasmEngine({ id, name: 'XWasmEngine', groups: GROUPS,
 //     binary: () => new URL('../wasm/x.wasm', import.meta.url).href });  // in <slug>/src/<slug>-wasm.js
@@ -76,7 +75,7 @@ export function wasmEngine(I, { messages } = {}) {
     // An AudioWorklet: from the bytes the page fetched.
     static load(bytes) { x ??= check(instantiate(bytes)); return x; }
     static get exports() { return x; }
-    // It takes all the parameters, not the page's engineParams(P), and computes per-note data itself.
+    // It takes all the parameters and computes per-note data itself.
     static fullParams = true;
 
     constructor(fs) {

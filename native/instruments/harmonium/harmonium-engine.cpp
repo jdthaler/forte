@@ -1,4 +1,4 @@
-// harmonium-engine.cpp — the free-reed organ's engine, as harmonium-engine.js runs it.
+// harmonium-engine.cpp — the free-reed organ's engine (harmonium-engine.h).
 
 #include "harmonium-engine.h"
 

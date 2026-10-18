@@ -1,7 +1,7 @@
 // reeds-views.js — the slow-motion reed and slot, and the pickup's C(y).
 
 import { fit, css, animate } from '../../shared/views.js';
-import { capAt, SLOT_GEOM, PICKUP } from './reeds-model.js';
+import { capAt, SLOT_GEOM, PICKUP } from './reeds-data.js';
 import { makeSlot, placeReed, relax } from './slot-field.js';
 
 const mmFmt = (v) => `${v.toFixed(2)} mm`;

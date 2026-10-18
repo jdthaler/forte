@@ -75,8 +75,8 @@ in `docs/template/wasm/`) and is committed, so the site still needs no build ste
 it and fails if the committed file is stale. The versions are not in it (the plugins' build
 passes them from `<slug>-info.cmake`), so a release's version bumps leave it alone. It is a standalone module with no JavaScript glue:
 `shared/wasm.js` loads it in the page, the AudioWorklet and Node, and wraps the C functions of
-`web/engine-api.cpp` in a class with the engine contract. `FORTE_ENGINE=wasm` runs the Node
-tests on it.
+`web/engine-api.cpp` in a class with the engine contract. The pages, the Node tests and the
+tools all play it.
 
 ## The shared core
 
@@ -89,7 +89,7 @@ JavaScript computes (`tests/js-vectors.h`) and `tests/shared-tests.cpp` compares
   `shared/impulses.js`: the random sequence is bit for bit the same, the responses equal to the
   last bit of float32 but where `exp`, `sin` or `cos` round differently from V8's.
 - `linalg.h`: `symEig`, `genEig` and `cholesky` on Eigen. Eigenvalues ascending as in
-  `shared/linalg.js`; an eigenvector's sign is arbitrary in both, so a port must not depend on
+  `shared/linalg.js`; an eigenvector's sign is arbitrary in both, so a model must not depend on
   it. Where JavaScript throws, these return nothing (the engines have no exceptions).
 - `chain.h`: the output chain the pages build with `shared/chain.js` (Web Audio's low-pass and
   its convolver's normalisation, the room and soundboard), plus `limiter.h`, the compressor

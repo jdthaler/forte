@@ -1,7 +1,7 @@
-// glass-engine.h — the real-time armonica (glass/src/glass-engine.js in C++), on the engine
-// contract (forte/engine.h): rotating glass bowls (shell modes in the bowl's frame, with their
-// Coriolis coupling), rubbed by wet fingers (a skin pad with stick–slip friction, solved
-// implicitly every sample), heard by two microphones fixed in the room.
+// glass-engine.h — the real-time armonica, on the engine contract (forte/engine.h): rotating glass
+// bowls (shell modes in the bowl's frame, with their Coriolis coupling), rubbed by wet fingers (a
+// skin pad with stick–slip friction, solved implicitly every sample), heard by two microphones
+// fixed in the room.
 //
 // Per sample and bowl:
 //   1. the spindle has turned by θ; the finger (fixed in the room at φ = 0) sits at φ_b = −θ on
@@ -32,8 +32,8 @@ namespace forte::glass {
 
 constexpr int TRACE = 1024; // samples of contact history for the view
 
-// What the engine posts for the page (glass/src/glass-wasm.js turns them back into the
-// JavaScript engine's 'state' message). Posted every 12 blocks, the state last.
+// What the engine posts for the page (glass/src/glass-wasm.js turns them into its 'state'
+// message). Posted every 12 blocks, the state last.
 namespace msg {
 enum : uint16_t {
   state = 1,  // key (the focused bowl); theta, rot, N, V, touch, nm
@@ -74,8 +74,8 @@ class ArmonicaEngine : public Engine {
     std::array<int, MODES> n{};
   };
 
-  // read by the tests (through the WebAssembly's hooks): the voices in the JavaScript engine's
-  // order, and the focused bowl's contact trace
+  // read by the tests (through the WebAssembly's hooks): the voices in the order they started,
+  // and the focused bowl's contact trace
   std::array<Voice *, NK> voices{};
   int count = 0;
   std::array<float, TRACE> trS{}, trF{};

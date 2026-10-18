@@ -3,25 +3,9 @@
 // plugins (tools/gen-native-params.mjs) all start here. No DOM, no Web Audio.
 
 import { GROUPS, DEFAULTS, PRESETS } from './reeds-params.js';
-import { keyModel, KEY_LO, KEY_HI } from './reeds-model.js';
+import { KEY_LO, KEY_HI } from './reeds-data.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
-
-// The parameters that change the reeds themselves; a voice struck again after they
-// change is a different reed (the engine fades the old one out), so noteData carries them
-// as its version.
-export const reedKey = (P) => `${P.solder}|${P.strike}|${P.hardness}`;
-
-// A key's modal model (keyModel, a few ms) at the engine's rate (2× oversampled, as the
-// engine builds its own), kept until the reed parameters change.
-let models = new Map(), modelsFor = '';
-export function reedModel(key, P, fs) {
-  const r = reedKey(P);
-  if (r !== modelsFor) { models = new Map(); modelsFor = r; }
-  let m = models.get(`${key}|${fs}`);
-  if (!m) { m = keyModel(key, P, 2 * fs); models.set(`${key}|${fs}`, m); }
-  return m;
-}
 
 export const INSTRUMENT = {
   id: 'reeds',
@@ -30,12 +14,7 @@ export const INSTRUMENT = {
   keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
   range: [KEY_LO, KEY_HI],              // MIDI keys: A1–C7, 33–96
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
-  engine: { name: 'ReedEngine', module: new URL('./reeds-engine.js', import.meta.url).href },
-  // the same physics in C++ (native/instruments/reeds), built as WebAssembly: the page runs it
-  // when it can, the JavaScript engine otherwise
+  // the engine: the physics in C++ (native/instruments/reeds), built as WebAssembly
   wasm: { name: 'ReedWasmEngine', module: new URL('./reeds-wasm.js', import.meta.url).href, binary: new URL('../wasm/reeds.wasm', import.meta.url).href },
-  // each key's modal model is computed off the audio thread and sent with the noteOn (the
-  // JavaScript engine's; the page sends the WebAssembly engine its own model's, packed)
-  noteData: (key, vel, P, fs) => ({ ...reedModel(key, P, fs).voice, version: reedKey(P) }),
   chain: { volume: 'volume', room: 'room' },
 };

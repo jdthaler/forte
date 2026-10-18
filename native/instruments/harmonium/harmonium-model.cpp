@@ -1,4 +1,4 @@
-// harmonium-model.cpp — the free-reed organ's model, as harmonium-model.js computes it.
+// harmonium-model.cpp — the free-reed organ's model (harmonium-model.h).
 
 #include "harmonium-model.h"
 
@@ -136,7 +136,17 @@ static Tongue tongue(double fNat, double q) {
 }
 static const Tongue &ref() { static const Tongue t = tongue(F_REF, 500); return t; } // the C4 reed: the knobs are set at C4
 
-// One reed, voiced (the voicer's rules are in harmonium-model.js).
+// One reed, voiced. The voicer's rules (all scaled from C4, where the knobs are set):
+//  - the set y0 grows with the reed's length and a little with how far the wind bends it,
+//    ∝ L^0.8 (deflection at P_NOM)^0.2, so the soft bass reeds stand well clear of their slots
+//    and the stiff treble ones close to them;
+//  - the clearance δ ∝ length; the plate is e = 0.6 mm + 0.03 L thick;
+//  - the throat's air mass is sized against the jet's resistance at the working point:
+//    ω M_a = 0.4 u* R_j, where u* is the inertance that drives a blown-closed reed hardest well
+//    above threshold (the voicer gives up some of that drive for a lower threshold); the Air
+//    mass knob multiplies it;
+//  - the cell's volume puts its Helmholtz resonance with the throat 3× above the reed (× the
+//    Cell knob's 1/√ ratio), and the pallet opens 6× the reed's working gap.
 void reedDesign(double fNat, const Voicing &P, ReedModel &d) {
   const Tongue t = tongue(fNat, P.q), &REF = ref();
   const double h = t.h, b = t.b, L = t.L;
@@ -195,7 +205,7 @@ Equilibrium equilibrium(const ReedModel &R, double Pw, double pd) {
 }
 
 // ---------------------------------------------------------------------------
-// Small oscillations about the steady state ∝ e^{st} (harmonium-model.js, linearOperator):
+// Small oscillations about the steady state ∝ e^{st}:
 //   F(s) = 1 + Z_eff(s) Σₙ Sₙ (s Sₙ + G_A) / (mₙ (s² + 2ζₙωₙ s + ωₙ²)) = 0   (solved times Πₙ Dₙ/ωₙ²)
 static Cx cadd(Cx a, Cx b) { return {a.re + b.re, a.im + b.im}; }
 static Cx cmul(Cx a, Cx b) { return {a.re * b.re - a.im * b.im, a.re * b.im + a.im * b.re}; }

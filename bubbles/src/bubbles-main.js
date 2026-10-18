@@ -1,16 +1,13 @@
 // bubbles-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName, useWasm } from '../../shared/shell.js';
+import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './bubbles-instrument.js';
-import * as jsModel from './bubbles-model.js';
-import { KEY_LO, KEY_HI, ROW, HYDRO, P_ATM, G, keyFreq, nozzleX, liquidOf, gasOf } from './bubbles-model.js';
+import { KEY_LO, KEY_HI, ROW, HYDRO, P_ATM, G, keyFreq, nozzleX, liquidOf, gasOf } from './bubbles-tank.js';
 import { wasmModel } from './bubbles-wasm.js';
 
-// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
-// physics as the engine, in C++), the JavaScript one until then or if it can't load.
-let model = jsModel;
-if (useWasm()) wasmModel().then((m) => { model = m; update(); }, (err) => console.warn(`bubbles: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+// The views draw what the engine plays: its model, from the same C++, built as WebAssembly.
+const model = await wasmModel();
 
 const $ = (s) => document.querySelector(s);
 const TAU = 2 * Math.PI;
@@ -52,7 +49,7 @@ function update() {
   const P = shell.P, env = model.nozzleEnv(P);
   rows = [];
   for (let k = KEY_LO; k <= KEY_HI; k++) {
-    const R = model.keyRadius(k, P, env), a = model.acoustics(R, env, {});
+    const R = model.keyRadius(k, P), a = model.acoustics(R, env, {});
     rows.push({ key: k, R, ...a });
   }
   const r = rows[focus - KEY_LO] || rows[0], p0 = model.ambient(P);

@@ -1,5 +1,5 @@
-// glass-model.h — the physics (glass/src/glass-model.js in C++): Franklin's armonica, thin
-// hemispherical glass bowls on a turning spindle, rubbed by wet fingers.
+// glass-model.h — the physics: Franklin's armonica, thin hemispherical glass bowls on a turning
+// spindle, rubbed by wet fingers.
 //
 // Each bowl's sound is the inextensional modes of the shell, n = 2, 3, 4, … nodal meridians, with
 // Rayleigh's energy ratio
@@ -42,7 +42,7 @@ double waterLoad(int n, double a, double h, double fill);
 
 // The parameters a bowl depends on (P.split, P.loss, P.water).
 struct BowlParams { double split = 0, loss = 4e-4, water = 0; };
-// One family of a bowl (glass-model.js, bowl: modes[]).
+// One family of a bowl (bowl: modes[]).
 struct Mode {
   int n;
   double f, fEmpty, load, f1, f2, sigma, M, bryan, rad, psi;

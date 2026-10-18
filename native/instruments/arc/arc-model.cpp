@@ -1,4 +1,4 @@
-// arc-model.cpp — the physics of the singing arc (arc/src/arc-model.js), operation for operation.
+// arc-model.cpp — the physics of the singing arc (arc-model.h).
 
 #include "arc-model.h"
 

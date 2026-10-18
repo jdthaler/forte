@@ -1,17 +1,17 @@
 // Render black-hole keyboard demos to examples/blackhole/*.wav
 // Usage: node tools/render-blackhole.mjs
 
-import { mkdirSync, readFileSync } from 'node:fs';
-import { QNMBank, keyVoice, uFromSpin } from '../blackhole/src/ringdown-model.js';
-import { RingdownEngine } from '../blackhole/src/ringdown-engine.js';
-import { DEFAULTS } from '../blackhole/src/ringdown-params.js';
+import { mkdirSync } from 'node:fs';
+import { INSTRUMENT } from '../blackhole/src/blackhole-instrument.js';
+import { DEFAULTS, uFromSpin } from '../blackhole/src/ringdown-params.js';
+import { loadEngine } from './engine.mjs';
 import { roomIR } from '../shared/impulses.js';
 import { convolve, writeWav, FS_SHIM, webAudioIR } from './audio-util.mjs';
 
 const FS = 48000;
-const bank = new QNMBank(JSON.parse(readFileSync(new URL('../blackhole/data/qnm-table.json', import.meta.url))));
+const RingdownEngine = await loadEngine(INSTRUMENT);
 
-// events: [t, key, vel, params?]
+// events: [t, key, vel, params?]: each note's voice is built from its parameters as it starts
 function render(P0, seconds, events) {
   const e = new RingdownEngine(FS);
   e.setParams({ stereo: 1 });
@@ -20,7 +20,7 @@ function render(P0, seconds, events) {
   const ev = events.map(([t, key, vel, p]) => ({ s: Math.round(t * FS), key, vel, P: { ...P0, ...(p || {}) } })).sort((a, b) => a.s - b.s);
   let j = 0;
   for (let s = 0; s < n; s += bl) {
-    while (j < ev.length && ev[j].s <= s) { const x = ev[j++]; e.noteOn(x.key, x.vel, keyVoice(x.key, x.P, bank, FS)); }
+    while (j < ev.length && ev[j].s <= s) { const x = ev[j++]; e.setParams({ ...x.P, stereo: 1 }); e.noteOn(x.key, x.vel); }
     e.process(bL, bR, bl);
     for (let i = 0; i < bl && s + i < n; i++) { L[s + i] = bL[i]; R[s + i] = bR[i]; }
   }

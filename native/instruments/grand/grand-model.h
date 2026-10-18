@@ -1,6 +1,6 @@
-// grand-model.h — the physics (grand/src/grand-model.js in C++): an electric grand after the
-// Yamaha CP-70, real piano strings and hammers on a cast frame, no soundboard, and a piezo under
-// the bridge that senses the force the strings exert on it. SI units throughout.
+// grand-model.h — the physics: an electric grand after the Yamaha CP-70, real piano strings and
+// hammers on a cast frame, no soundboard, and a piezo under the bridge that senses the force the
+// strings exert on it. SI units throughout.
 //
 // Each key is 1 to 3 stiff strings pinned at the agraffe and the bridge, each with two transverse
 // polarisations, V (along the piezo's axis) and H. Partial n of a stiff string:
@@ -11,7 +11,7 @@
 // bridge its admittance Y(ω) and radiate to two far-field microphones (Rayleigh integral).
 //
 // The models allocate (vectors): they are built off the audio thread (forte/background.h), or in
-// place without threads (WebAssembly), as the JavaScript builds them in its engine.
+// place without threads (WebAssembly).
 #pragma once
 
 #include <array>
@@ -50,7 +50,7 @@ constexpr double CP_WOUND_T = 500;
 int stringCount(int m, int stringing);
 double jitter(double m, double s = 0);
 
-// The Grand Piano's scale and hammers (piano/src/physics.js), which the concert scale borrows.
+// The Grand Piano's scale and hammers (piano-model.cpp's), which the concert scale borrows.
 double scaleLength(double m);
 double scaleDiameter(double m);
 double windingMass(double m);
@@ -84,7 +84,7 @@ double bandPass(double f, double fc);
 double highPass4(double f, double fc);
 
 struct BoardModel {
-  double boardH = 9, D = 0, rhoh = 0;
+  double boardH = 9, D = 0, rhoh = 0, fmax = BOARD.fmax;
   int K = 0;
   std::vector<double> omega, sigma, phi, RL, RR; // phi: K × SEGMENTS
   std::vector<int> m, n;
@@ -93,7 +93,9 @@ struct BoardModel {
   std::array<double, RES_BANDS * 2 * SEGMENTS> res{};
   double Ginf = 0, mb = 0, fBridge = 0, f11 = 0, density = 0, fc = 0, micGain = 0;
 };
-BoardModel boardModel(double boardH);
+// fmax and maxModes bound the modal band (the tests widen it to check the residual path against
+// every mode).
+BoardModel boardModel(double boardH, double fmax = BOARD.fmax, int maxModes = BOARD.maxModes);
 std::array<double, 2> boardMobility(const BoardModel &B, int seg, double f);
 double boardResponse(const BoardModel &B, int seg, double f, int mic);
 

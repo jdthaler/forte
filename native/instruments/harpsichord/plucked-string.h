@@ -1,7 +1,6 @@
 // plucked-string.h — one harpsichord string in modal form and everything that touches it: its plectra,
-// its damper felt and the buff's leather pad (harpsichord/src/string.js in C++, operation for
-// operation). No audio, no allocation: the engine runs it, and so do the views' slow-motion pluck
-// and the tests.
+// its damper felt and the buff's leather pad. No audio, no allocation: the engine runs it, and so
+// do the views' slow-motion pluck and the tests.
 //
 // Partial n is a damped oscillator stepped exactly between samples,
 //   qₙ[t+1] = a₁ qₙ[t] − a₂ qₙ[t−1] + bₙ fₙ[t],  bₙ = (1 − a₁ + a₂)/ωₙ²,
@@ -44,7 +43,7 @@ struct Partials {
 
 class PluckedString {
  public:
-  // S, its partials, the sample rate (string.js: new PluckedString(S, parts, fs))
+  // S, its partials, the sample rate
   void init(const StringDesign &S, const Partials &parts, double fs);
   // the string's own decay plus, per partial, an optional extra rate
   void setDamping(const double *extra);
@@ -57,8 +56,8 @@ class PluckedString {
   void armPlectrum(int p, const Plectrum *pl, double x, double gap, bool engaged, bool jackUp);
   double energy() const;
   bool needsContacts(double liftMax, bool keyDown, bool buffOn) const;
-  // Run n samples (string.js, render): adds the bridge force × gain × wts[w] into
-  // seg[w·stride + t] (w = w0, w1); returns its half-range over the block.
+  // Run n samples: adds the bridge force × gain × wts[w] into seg[w·stride + t] (w = w0, w1);
+  // returns its half-range over the block.
   double render(int n, const double *lift, bool keyDown, const double *buffG, double *seg, int stride, const double *wts, int w0, int w1, double gain);
   void dropTop(double thr);
   void wake();
@@ -74,7 +73,7 @@ class PluckedString {
   double h = 0, fs = 0, nrm = 0;
   std::array<double, N_MAX> sigBase{}; // the partials' own rates
   std::array<double, N_MAX> qa{}, qb{}, A1{}, A2{}, Bin{}, BF{}, W{}, K{}, sig{}, extra{};
-  // q (this step) and q1 (the last) swap roles each sample, as string.js swaps its arrays
+  // q (this step) and q1 (the last) swap roles each sample
   bool flip = false;
   double *q() { return flip ? qb.data() : qa.data(); }
   double *q1() { return flip ? qa.data() : qb.data(); }

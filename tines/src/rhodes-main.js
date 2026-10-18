@@ -1,14 +1,12 @@
 // rhodes-main.js — the page: UI, audio graph, keyboard / MIDI, views. The instrument
 // (engine, parameters, key models, output chain) is tines-instrument.js.
-// The worklet runs the WebAssembly build (tines-wasm.js) when it can, and the views call its
-// model once it has loaded; both fall back to the JavaScript (?engine=js forces it).
+// The worklet runs the engine, the C++ built as WebAssembly (tines-wasm.js); the page builds each
+// key's modes with the same build's model, sends them with the note, and draws them.
 
 import { ALL_PARAMS } from './rhodes-params.js';
-import { INSTRUMENT, GROUPS, DEFAULTS, PRESETS, keyModel } from './tines-instrument.js';
+import { INSTRUMENT, GROUPS, DEFAULTS, PRESETS } from './tines-instrument.js';
 import { noteName } from './tine.js';
-import { RhodesEngine } from './rhodes-engine.js'; // the slow-motion view runs its own copy
-import { TinesWasmEngine, wasmModel } from './tines-wasm.js';
-import { useWasm, engineSwitch } from '../../shared/shell.js';
+import { TinesWasmEngine, wasmModel } from './tines-wasm.js'; // the slow-motion view runs its own engine
 import { createChain } from '../../shared/chain.js';
 import { MotionView, PickupView, SpectrumView, MODE_COLORS, modeKind } from './rhodes-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
@@ -29,25 +27,13 @@ let P = load();
 let fs = 48000, base = 48, focusKey = 60, lastVel = 1.8, sustain = false;
 // sent: key → the version of the voice data the engine holds (it keeps the last sent; resent when it changes)
 const sent = new Map(), held = new Map(), sounding = new Map();
-const engineParams = () => INSTRUMENT.engineParams(P);
-// (P as well: a WebAssembly engine takes all the parameters)
-const paramsMessage = () => ({ type: 'params', params: engineParams(), P: { ...P } });
+const paramsMessage = () => ({ type: 'params', P: { ...P } });
 
-// The WebAssembly model (tines-wasm.js) once it has loaded: a key's model as tine.js's
-// computeKey gives it, plus its voice data packed for the WebAssembly engine; both cache the
-// latest version of each key.
-let wasm = null;
-if (useWasm()) {
-  wasmModel().then((m) => { wasm = m; modelChanged(); },
-    (err) => console.warn(`tines: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
-}
-const keyData = (key) => (wasm ? wasm.keyModel(key, P, fs) : keyModel(key, P, fs));
-let engineKind = null; // what the worklet runs: 'wasm' or 'js' (it says so when it starts)
-// What a note sends the engine: the JavaScript engine takes the key's voice data object; the
-// WebAssembly one that data packed by the page's WebAssembly model, or, without that model,
-// nothing (it then builds the key itself).
-const noteData = (key, velocity) => (engineKind === 'wasm' ? wasm?.keyModel(key, P, fs).packed : INSTRUMENT.noteData(key, velocity, P, fs));
-const versionOf = (data) => (data instanceof Float64Array ? data[0] : data.version);
+// The model (tines-wasm.js): a key's model, plus its voice data packed for the engine (its
+// version first); it caches the latest version of each key.
+const wasm = await wasmModel();
+const keyData = (key) => wasm.keyModel(key, P, fs);
+const noteData = (key) => keyData(key).packed;
 
 // ---------------------------------------------------------------------------
 // audio
@@ -59,22 +45,13 @@ function startAudio() {
   starting = (async () => {
     const ctx = new AudioContext({ latencyHint: 'interactive' });
     if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
-    await ctx.audioWorklet.addModule(INSTRUMENT.engine.module);
-    // the WebAssembly build: its bytes go to the worklet, which falls back to the JavaScript
-    // engine if it can't run them
-    let wasmBuild;
-    if (INSTRUMENT.wasm && useWasm()) {
-      try {
-        const bytes = await (await fetch(INSTRUMENT.wasm.binary)).arrayBuffer();
-        await ctx.audioWorklet.addModule(INSTRUMENT.wasm.module);
-        wasmBuild = { name: INSTRUMENT.wasm.name, bytes };
-      } catch (err) { console.warn(`tines: the WebAssembly engine did not load (${err.message}); the JavaScript one plays`); }
-    }
+    // the engine's WebAssembly: its bytes go to the worklet, which compiles them
+    const bytes = await (await fetch(INSTRUMENT.wasm.binary)).arrayBuffer();
+    await ctx.audioWorklet.addModule(INSTRUMENT.wasm.module);
     await ctx.audioWorklet.addModule(new URL('../../shared/worklet.js', import.meta.url));
     const node = new AudioWorkletNode(ctx, 'forte-processor', {
-      numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { engine: INSTRUMENT.engine.name, wasm: wasmBuild },
+      numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { wasm: { name: INSTRUMENT.wasm.name, bytes } },
     });
-    const kind = new Promise((resolve) => { engineStarted = resolve; }); // notes wait to know which engine plays
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 8192; analyser.smoothingTimeConstant = 0.55;
     const chain = createChain(ctx, node, INSTRUMENT.chain); // room and master, limiter (shared/chain.js)
@@ -86,7 +63,6 @@ function startAudio() {
     node.port.postMessage(paramsMessage());
     node.port.postMessage({ type: 'sustain', on: sustain });
     spectrum.setAnalyser(analyser);
-    await kind;
     if (ctx.state !== 'running') await ctx.resume();
     live = true;
     $('#start').textContent = `Audio on · ${(fs / 1000).toFixed(1)} kHz`;
@@ -98,20 +74,11 @@ function startAudio() {
 }
 const post = (m) => { if (live) audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
 function applyMix() { if (audio) audio.chain.apply(P, trimGain(INSTRUMENT.id)); } // trim: level-matched across instruments
-let engineStarted = null;
-const showEngine = INSTRUMENT.wasm ? engineSwitch() : () => {}; // C++ | JS in the header
 function onWorklet(m) {
   if (m.type === 'stats') {
     const el = $('#cpu');
     el.textContent = `CPU ${(m.load * 100).toFixed(0)} % · ${m.voices} voices`;
-    el.title = `Engine: ${engineKind === 'wasm' ? 'WebAssembly (C++)' : 'JavaScript'}`;
     el.classList.toggle('hot', m.load > 0.7);
-  } else if (m.type === 'engine') {
-    engineKind = m.kind;
-    document.body.dataset.engine = m.kind;
-    showEngine(m.kind);
-    if (m.reason) console.warn(`tines: the WebAssembly engine failed (${m.reason}); the JavaScript one plays`);
-    engineStarted?.(m.kind);
   } else if (m.type === 'error') toast(m.key !== undefined ? `${noteName(m.key)}: ${m.message}` : m.message);
 }
 
@@ -123,9 +90,9 @@ async function noteOn(key, velocity) {
   sounding.set(key, (sounding.get(key) || 0) + 1);
   keyboardView.set(key, true);
   const a = await startAudio();
-  const data = noteData(key, velocity);
+  const data = noteData(key);
   const msg = { type: 'noteOn', key, velocity };
-  if (data && sent.get(key) !== versionOf(data)) { msg.data = data; sent.set(key, versionOf(data)); }
+  if (sent.get(key) !== data[0]) { msg.data = data; sent.set(key, data[0]); }
   a.node.port.postMessage(msg);
   setFocus(key, velocity);
 }
@@ -288,9 +255,9 @@ function setParam(id, v, dragging = false) {
   $('#preset').value = '';
   if (p.kind === 'play') { updateHelp(); return; }
   if (p.kind === 'mix') { applyMix(); return; }
-  // 'model': the key models (and their version) follow P, so the next note sends new data
-  if (p.kind === 'engine' || p.kind === 'pickup') post(paramsMessage());
-  else if (p.kind === 'model' && engineKind === 'wasm') post(paramsMessage()); // it builds keys itself without the page's model
+  // 'model': the key models (and their version) follow P, so the next note sends new data (and
+  // the engine has P too, for a key it builds itself)
+  post(paramsMessage());
   clearTimeout(mcTimer);
   mcTimer = setTimeout(modelChanged, 120);
 }
@@ -327,13 +294,12 @@ function setFocus(key, vel) {
   simTimer = setTimeout(() => runSim(key, vel), 30);
 }
 
-// The first moments after the strike, on this thread: the WebAssembly engine on the WebAssembly
-// model's data once it has loaded, the JavaScript engine otherwise.
+// The first moments after the strike, on this thread: an engine of its own on the model's data.
 function runSim(key, vel) {
-  const model = keyData(key), data = wasm ? model.voice : INSTRUMENT.noteData(key, vel, P, fs);
-  const eng = wasm ? new TinesWasmEngine(fs) : new RhodesEngine(fs);
-  eng.setParams({ ...(wasm ? P : engineParams()), cable: 100, tone: 20000, drive: 0, tremDepth: 0 });
-  const v = eng.noteOn(key, vel, wasm ? model.packed : data);
+  const model = keyData(key), data = model.voice;
+  const eng = new TinesWasmEngine(fs);
+  eng.setParams({ ...P, cable: 100, tone: 20000, drive: 0, tremDepth: 0 });
+  const v = eng.noteOn(key, vel, model.packed);
   const f0 = model.info.f0;
   const total = Math.round(Math.min(0.06, Math.max(0.006, 5 / f0)) * fs);
   const stride = Math.max(1, Math.ceil(total / 600));
@@ -352,9 +318,9 @@ function runSim(key, vel) {
   eng.process(L, R, Math.min(4096, Math.round(0.02 * fs))); // skip past the attack
   eng.process(L, R, nw);
   const { yMin, yMax, contactSamples } = v, contactMs = (contactSamples / eng.fs2) * 1000;
-  eng.destroy?.(); // (the WebAssembly engine's memory)
+  eng.destroy(); // (its memory in the WebAssembly)
   motion.set({ frames, eta: Float64Array.from(eta), dt: stride / fs, model, P: { ...P }, title: `${noteName(key)} · ${vel.toFixed(2)} m/s` });
-  pickupView.set({ wid: data.pickup.wid, yoff: data.pickup.yoff, yMin, yMax, wave: Float32Array.from(L.subarray(0, nw)) });
+  pickupView.set({ flux: wasm.flux, wid: data.pickup.wid, yoff: data.pickup.yoff, yMin, yMax, wave: Float32Array.from(L.subarray(0, nw)) });
   $('#pickup-read').textContent = `swing ${(yMin * 1000).toFixed(2)}…+${(yMax * 1000).toFixed(2)} mm across a ${(data.pickup.wid * 1000).toFixed(2)} mm bump · contact ${contactMs.toFixed(2)} ms`;
 }
 

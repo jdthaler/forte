@@ -1,13 +1,12 @@
-// blackhole-model.h — from a key press to the gravitational waves of a ringing black hole
-// (blackhole/src/ringdown-model.js in C++).
+// blackhole-model.h — from a key press to the gravitational waves of a ringing black hole.
 //
 // Each key is a Kerr black hole whose (2,2,0) quasinormal mode sounds the key's pitch; its other
 // modes fall where general relativity puts them, read from the Leaver table (qnm-table.h,
 // converted from blackhole/data/qnm-table.json) by the same cubic Hermite interpolation. A binary
 // merger of mass ratio q excites them (Kamaretsos et al.'s fits), seen at an inclination ι
 // through the spin-weighted spherical harmonics; an optional inspiral chirps into the merger.
-// Operation for operation as the JavaScript, with V8's fdlibm for exp, log, pow, sin, cos and
-// atan2, and V8's log10 and Math.hypot, so a key's voice is the JavaScript's to the last bit.
+// With V8's fdlibm for exp, log, pow, sin, cos and atan2, and V8's log10 and Math.hypot, so a
+// key's voice is the same to the last bit in the WebAssembly and the plugins.
 #pragma once
 
 namespace forte::blackhole {

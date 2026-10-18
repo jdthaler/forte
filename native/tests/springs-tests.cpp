@@ -2,7 +2,7 @@
 // motion, the tuning on the note, the packed springs a page sends, the engine on pitch, a note that
 // waits for its springs to be built (forte/background.h) and a re-cut spring fading out, the
 // damper and the pedal, the echo view's capture, and ten keys within the CPU budget.
-// The physics tests are the JavaScript suite's, run on the WebAssembly (FORTE_ENGINE=wasm).
+// The physics tests are the JavaScript suite's, run on the WebAssembly (node test/springs-tests.mjs).
 
 #include <chrono>
 #include <cmath>

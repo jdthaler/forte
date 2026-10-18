@@ -2,7 +2,7 @@
 // and the loop filters, a held note in Helmholtz motion at its pitch at every sample rate, the key
 // action and aftertouch, the dampers, a string gone non-finite stopped alone, the views' messages,
 // and ten strings in the CPU budget. The physics tests are the JavaScript suite's, run on the
-// WebAssembly (FORTE_ENGINE=wasm).
+// WebAssembly (node test/bowed-tests.mjs).
 
 #include <chrono>
 #include <cmath>

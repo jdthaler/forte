@@ -1,7 +1,7 @@
 // headless.mjs — play an instrument in Node from its descriptor
-// (<slug>/src/<slug>-instrument.js), as its page does: the parameters, engineParams,
-// noteData, the Space mode and the mod wheel, through its engine (tools/engine.mjs:
-// JavaScript, or WebAssembly with FORTE_ENGINE=wasm), and then its output chain.
+// (<slug>/src/<slug>-instrument.js), as its page does: the parameters, the Space mode and the
+// mod wheel, through its engine (tools/engine.mjs: the C++ built as WebAssembly), and then its
+// output chain.
 
 import { existsSync } from 'node:fs';
 import { loadEngine } from './engine.mjs';
@@ -43,15 +43,14 @@ export class Player {
     this.setParams(P);
     if (I.space === 'sustain') this.engine.setSustain?.(false);
   }
-  // a WebAssembly engine takes all the parameters (fullParams) and computes its own per-note data
-  setParams(P) { this.P = { ...P }; this.engine.setParams(this.I.engineParams && !this.full ? this.I.engineParams(this.P) : { ...this.P }); }
-  get full() { return !!this.engine.constructor.fullParams; }
+  // the engine takes all the parameters and computes its own per-note data
+  setParams(P) { this.P = { ...P }; this.engine.setParams({ ...this.P }); }
   set(id, v) { this.setParams({ ...this.P, [id]: v }); }
   noteOn(key, vel) {
     const [lo, hi] = this.I.range || [36, 96];
     if (key < lo || key > hi) return;
     this.latched.delete(key);
-    this.engine.noteOn(key, vel, this.full ? undefined : this.I.noteData?.(key, vel, this.P, this.fs));
+    this.engine.noteOn(key, vel);
   }
   noteOff(key, vel) {
     if (this.I.space === 'hold' && this.sustained) { this.latched.add(key); return; }

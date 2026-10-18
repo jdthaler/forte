@@ -6,8 +6,10 @@
 // percentile single 128-sample block as a fraction of its budget (2.67 ms at
 // 48 kHz). Also the cost of constructing the engine and of the first noteOn.
 
-import { GongEngine } from '../gongs/src/gongs-engine.js';
-import { DEFAULTS } from '../gongs/src/gongs-params.js';
+import { INSTRUMENT, DEFAULTS } from '../gongs/src/gongs-instrument.js';
+import { loadEngine } from './engine.mjs';
+
+const GongEngine = await loadEngine(INSTRUMENT);
 
 const FS = +process.argv[2] || 48000, N = 128, budget = (1000 * N) / FS;
 const MID = [60, 62, 64, 65, 67, 69, 71, 72, 74, 72, 71, 69, 67, 65, 64, 62];

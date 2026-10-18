@@ -272,7 +272,8 @@ pulls the pitch off the resonance: c³'s Principal sounds 11 ¢ above it). The
 full, saturated jet then moves the pitch again: the open pipes sound 6–17 ¢
 flat of the linear prediction and the stopped ones 15–27 ¢ sharp. So
 `tools/pipes-tuning.mjs` blows every pitch the organ has in the engine and
-corrects it, as a voicer trims a pipe. Every key on every rank then sounds
+corrects it, as a voicer trims a pipe (the engine is then rebuilt on the new
+table; `--check` measures the build). Every key on every rank then sounds
 within 0.4 ¢ of its note at 48 kHz (and the keys the tests check at
 44.1 kHz within 0.5 ¢).
 
@@ -350,9 +351,6 @@ and the treble near the middle.
   the Mixture's upper pipes) run at twice the sample rate, brought down by a 63-tap
   half-band FIR. Below that, at the sample rate, aliased lines stay about
   60 dB under the strongest harmonic.
-- **Cost.** Ten held keys of Principal, Octave and Gedackt (30 pipes) take
-  about 20–27 % of real time at 48 kHz in Node on the shared machine this
-  was built on; with the Mixture (60 pipes), 40–50 %.
 - **Voices.** One voice per key holds its six pipes; pressing it again
   reopens the same pallet. Beyond 20 keys the quietest released key fades
   out over 30 ms, never one under 50 ms old. Voicing knobs give the next
@@ -360,19 +358,19 @@ and the treble near the middle.
 - **Release.** The pallet shuts in 8 ms (3–20 ms with MIDI release
   velocity) and the pipe rings down at its own losses: c¹ falls 40 dB within
   0.4 s, while 8′ C, with its Q of 127, takes more than a second.
-- **Allocation.** None in `process()`: pipes are built when a key is first
-  pressed, from models cached per pitch and voicing.
-- **In C++**: the same engine and model run as WebAssembly on this page (the
-  JavaScript is the fallback; `?engine=js` in the address forces it) and as
-  plugins (CLAP, VST3, AU and a standalone app), where the Space pedal is
-  Hold on CC64 and the mod wheel raises the wind from 700 to 3000 Pa. A key's
-  six pipes are voiced off the audio thread (the plugins' worker; on the
-  page, its own WebAssembly model, which sends them with the note), and the
-  voices and their delay lines are set aside in advance. The WebAssembly
-  plays what the JavaScript plays to within 2 × 10⁻⁸ of full scale (most
-  scripts bit for bit), and the same test suite passes on it. Ten keys of
-  Principal, Octave and Gedackt (30 pipes) take about 13–16 % of a core in
-  C++ on the same loaded machine, ten Principal pipes about 7–8 %.
+- **Allocation.** None in `process()`: the voices and their delay lines are
+  set aside in advance, and a key's pipes are voiced off the audio thread
+  (below).
+- **In C++**: the engine and the model are C++, run as WebAssembly on this
+  page and as plugins (CLAP, VST3, AU and a standalone app), where the Space
+  pedal is Hold on CC64 and the mod wheel raises the wind from 700 to
+  3000 Pa. A key's six pipes are voiced off the audio thread (the plugins'
+  worker; on the page, its own WebAssembly model, which sends them with the
+  note), and the voices and their delay lines are set aside in advance. The
+  views' pipes come from the WebAssembly model too.
+- **Cost.** Ten held keys of Principal, Octave and Gedackt (30 pipes) take
+  about 13–16 % of a core at 48 kHz on the shared machine this was built
+  on, ten Principal pipes about 7–8 %.
 
 ## What to listen for
 
@@ -411,16 +409,15 @@ chord's sag; and the **Spectrum** marks the pipe's modes.
 
 ```
 pipes/index.html, style.css           page
-pipes/src/pipes-model.js              pipes (modes, end corrections, losses, scale), voicing, the jet's linear
-                                      analysis, pallet and groove, wind system, chest layout (no audio, no DOM)
-pipes/src/tuning-table.js             each pipe's correction from the linear analysis to its sounding pitch
-pipes/src/pipes-engine.js             real-time engine (AudioWorklet and Node)
+pipes/src/pipes-instrument.js         the descriptor: parameters, presets, range, engine, output chain
+pipes/src/pipes-wasm.js               the engine and the model: the C++ as WebAssembly (pipes/wasm/pipes.wasm)
+pipes/src/pipes-data.js               compass, stops and ranks, organ names, for the page
+pipes/src/tuning-table.js             each pipe's correction from the linear analysis to its sounding pitch (the C++ copy's source)
 pipes/src/pipes-params.js             parameters and presets
 pipes/src/pipes-main.js               page wiring and views
-pipes/src/pipes-wasm.js               the C++ engine and model as WebAssembly (pipes/wasm/pipes.wasm)
 native/instruments/pipes/             the C++ port: model, engine, generated tables, reference (plugins and WebAssembly)
-test/pipes-tests.mjs                  node test/pipes-tests.mjs (26 tests, ~20 s; FORTE_ENGINE=wasm: on the WebAssembly)
-tools/pipes-tuning.mjs                node tools/pipes-tuning.mjs → pipes/src/tuning-table.js and native/instruments/pipes/tuning-table.h
+test/pipes-tests.mjs                  node test/pipes-tests.mjs (27 tests, ~15 s)
+tools/pipes-tuning.mjs                node tools/pipes-tuning.mjs → pipes/src/tuning-table.js and native/instruments/pipes/tuning-table.h (--check: the build)
 tools/render-pipes.mjs                node tools/render-pipes.mjs → examples/pipes/
 ```
 

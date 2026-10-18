@@ -2,8 +2,7 @@
 // to play it. The page (harpsichord-main.js), the Node tools and tests, and the native
 // plugins (tools/gen-native-params.mjs) all start here. No DOM, no Web Audio.
 
-import { GROUPS, DEFAULTS, PRESETS } from './harpsichord-params.js';
-import { KEY_LO, KEY_HI } from './harpsichord-model.js';
+import { GROUPS, DEFAULTS, PRESETS, KEY_LO, KEY_HI } from './harpsichord-params.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -14,9 +13,7 @@ export const INSTRUMENT = {
   keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
   range: [KEY_LO, KEY_HI],              // MIDI keys: FF–f³, 29–89
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
-  engine: { name: 'HarpsichordEngine', module: new URL('./harpsichord-engine.js', import.meta.url).href },
-  // the same physics in C++ (native/instruments/harpsichord), built as WebAssembly: the page runs it
-  // when it can, the JavaScript engine otherwise
+  // the engine: the physics in C++ (native/instruments/harpsichord), built as WebAssembly
   wasm: { name: 'HarpsichordWasmEngine', module: new URL('./harpsichord-wasm.js', import.meta.url).href, binary: new URL('../wasm/harpsichord.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room' },
 };

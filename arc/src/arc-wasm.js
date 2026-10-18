@@ -1,6 +1,6 @@
-// arc-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// arc-wasm.js — the engine and model, built as WebAssembly from the physics in C++
 // (native/instruments/arc): ArcWasmEngine, with the engine contract, and the model's functions for
-// the views. The page runs it when it can and falls back to the JavaScript (arc-engine.js).
+// the views and the tests.
 
 import { GROUPS } from './arc-params.js';
 import { KEY_LO, KEY_HI, tuneKey } from './arc-model.js';
@@ -11,8 +11,7 @@ const BUILD = { id: 'arc', name: 'ArcWasmEngine', groups: GROUPS, binary: () => 
 const NK = KEY_HI - KEY_LO + 1, MAXA = 6, TRAIL = 256;
 const MODES = ['mono', 'poly', 'talk'], VOWELS = 'aeiou';
 
-// The C++ engine's messages (arc-engine.h, msg) gathered back into the JavaScript engine's 'arc'
-// message: each arc's summary, the focused arc's state, its (i, u) trail in pieces, then the whole.
+// The C++ engine's messages (arc-engine.h, msg) gathered into the page's 'arc' message: each arc's summary, the focused arc's state, its (i, u) trail in pieces, then the whole.
 function views(m, e) {
   const s = (e.views ??= {
     arcs: Array.from({ length: MAXA }, () => ({ P: 0, Iac: 0, out: 0, umax: 0, I: 0, u: 0, keys: [] })),
@@ -42,7 +41,7 @@ function views(m, e) {
 
 const Base = wasmEngine(BUILD, { messages: views });
 
-// One arc lamp's state, read back (the JavaScript engine's e.arcs[k]: P, stUmax, nM, nT, has, holds).
+// One arc lamp's state, read back for the tests (e.arcs[k]: P, stUmax, nM, nT, has, holds).
 const STATE = ['P', 'stUmax', 'nM', 'nT', 'active', 'X', 'u', 'ia', 'is', 'ic', 'Imean', 'uDC', 'CB'];
 class ArcView {
   constructor(e, k) { this.e = e; this.k = k; }
@@ -52,8 +51,8 @@ class ArcView {
 }
 STATE.forEach((name, i) => Object.defineProperty(ArcView.prototype, name, { get() { return this.state()[i]; } }));
 
-// The engine, with the JavaScript engine's hooks: new ArcWasmEngine(fs, seed, { quiet, os }),
-// kick(amps, k), e.arcs, and P.table (the page's capacitor bank, in setParams). A note may bring
+// The engine, with the tests' hooks: new ArcWasmEngine(fs, seed, { quiet, os }), kick(amps, k),
+// e.arcs, and P.table (a capacitor bank { key: tuneKey(P), caps }, in setParams). A note may bring
 // the bank (the page's noteData: [1 if it is cut for the parameters now, else 0, then a
 // capacitor per key from C3]), cut by the page's WebAssembly model, so the audio thread needn't.
 export class ArcWasmEngine extends Base {
@@ -84,9 +83,9 @@ export class ArcWasmEngine extends Base {
 }
 export const ready = () => ArcWasmEngine.ready();
 
-// The model's functions the views call (arc-model.js's arcOp, staticV, circuit, linearAnalysis,
-// thresholdR, thresholdCurrent, upperLimit, startCap, capFor, steadyNote, hissCurrent), computed by
-// the WebAssembly.
+// The model's functions (arc-model.cpp's arcOp, staticV, circuit, linearAnalysis, thresholdR,
+// thresholdCurrent, upperLimit, startCap, capFor, steadyNote, hissCurrent), computed by the
+// WebAssembly, for the views and the tests.
 const OP = ['I0', 'l', 'A', 'B', 'tau', 'V0', 'Ur', 'Xm', 'delta', 'G0', 'u0', 'R0', 'w', 'K', 'Rd', 'kappa', 'Larc', 'Rb'];
 export async function wasmModel() {
   const x = await ready(), s = scratch(x), params = nativeParams(BUILD), at = 8 * params.length;
@@ -101,16 +100,17 @@ export async function wasmModel() {
     circuit: (P, C) => ({ P, C }),
     linearAnalysis({ P, C }) {
       x.arc_linear(setP(P), C, s.at + at);
-      const a = s.f64(5, at);
-      return { sigma: a[0], f: a[1], fLC: a[2], s: [a[3], a[4]] };
+      const a = s.f64(13, at);
+      return { sigma: a[0], f: a[1], fLC: a[2], s: [a[3], a[4]], roots: [0, 1, 2, 3].map((k) => [a[5 + 2 * k], a[6 + 2 * k]]) };
     },
     thresholdR: (P, C) => x.arc_threshold_r(setP(P), C),
     thresholdCurrent: (P, C) => x.arc_threshold_current(setP(P), C),
     upperLimit: (P) => x.arc_upper_limit(setP(P)),
     startCap: (key, P) => x.arc_start_cap(key, setP(P)),
     capFor: (key, P) => x.arc_cap_for(key, setP(P)),
-    steadyNote(P, C) {
-      x.arc_steady(setP(P), C, s.at + at);
+    // (kick: the amps in the coil it starts from; the engine's 0.7 × the current by default)
+    steadyNote(P, C, { kick = -1 } = {}) {
+      x.arc_steady(setP(P), C, kick, s.at + at);
       const a = s.f64(5, at);
       return { f: a[0], iaMin: a[1], iaMax: a[2], uMax: a[3], Iac: a[4] };
     },

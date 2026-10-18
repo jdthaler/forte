@@ -1,5 +1,4 @@
-// pipes-engine.h — the real-time pipe organ (pipes/src/pipes-engine.js in C++), on the engine
-// contract (forte/engine.h).
+// pipes-engine.h — the real-time pipe organ, on the engine contract (forte/engine.h).
 //
 //   reservoir ─▶ trunk ─▶ chest P_c ─▶ pallet ─▶ groove ─▶ slider ─▶ foot p ─▶ jet U_j = √(2p/ρ)
 //                                                                              │
@@ -34,8 +33,8 @@
 
 namespace forte::pipes {
 
-// What the engine posts for the page (pipes/src/pipes-wasm.js turns them back into the JavaScript
-// engine's 'pipe' message): the focused pipe's traces in pieces, then the state.
+// What the engine posts for the page (pipes/src/pipes-wasm.js turns them into its 'pipe'
+// message): the focused pipe's traces in pieces, then the state.
 namespace msg {
 enum : uint16_t {
   state = 1, // key (0: none); Pc, Pr, Pset, Q, pipes, trem, rank, f, W, b, h, H, D, A, y0, Uj, foot, theta, tau, n, dt
@@ -76,14 +75,14 @@ class PipeEngine : public Engine {
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
-  // The JavaScript engine's constructor options: the turbulence's seed (its table is drawn again)
-  // and following every pipe's pitch (tests, tools).
+  // The tests' and tools' options: the turbulence's seed (its table is drawn again) and
+  // following every pipe's pitch.
   void configure(uint32_t seed, bool track);
   // A key's pipes its page's model built already (packKeyModels), for the next note on that key,
   // so the audio thread needn't build them. Only without threads (WebAssembly): with them, the
   // worker builds every key ahead.
   bool offer(const double *packed, int n);
-  // The models every following note plays, whatever its key (the JavaScript tests' modelsFor);
+  // The models every following note plays, whatever its key (the tests' modelsFor);
   // kept until the engine goes. Not for the audio thread.
   bool useModels(const double *packed, int n);
 
@@ -129,8 +128,8 @@ class PipeEngine : public Engine {
     std::vector<double> lines; // the delay lines' memory
   };
 
-  // read (and some written) by the tests, through the WebAssembly's hooks, in the JavaScript
-  // engine's order
+  // read (and some written) by the tests, through the WebAssembly's hooks, in the order they
+  // started
   std::array<Voice *, POOL> voices{};
   int nVoices = 0;
   std::array<Voice *, 128> byKey{};

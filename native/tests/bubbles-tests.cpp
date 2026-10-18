@@ -1,7 +1,7 @@
 // bubbles-tests.cpp — the bubble organ's engine in C++: a ping rings at its bubble's frequency
 // and starts at the kick's pressure, the views' messages come through, and ten brooks fit the
 // CPU budget. The physics tests are the JavaScript suite's, run on the WebAssembly
-// (FORTE_ENGINE=wasm).
+// (node test/bubbles-tests.mjs).
 
 #include <chrono>
 #include <cmath>

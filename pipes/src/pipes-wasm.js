@@ -1,6 +1,6 @@
-// pipes-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// pipes-wasm.js — the engine and model built as WebAssembly from the physics in C++
 // (native/instruments/pipes): PipeWasmEngine, with the engine contract, and the model's functions
-// for the views. The page runs it when it can and falls back to the JavaScript (pipes-engine.js).
+// for the views and the tests.
 
 import { GROUPS } from './pipes-params.js';
 import { wasmEngine, scratch } from '../../shared/wasm.js';
@@ -13,9 +13,8 @@ const TRACES = ['v', 'dp', 'eta', 'qin'];
 const HEAD = ['Pc', 'Pr', 'Pset', 'Q', 'pipes', 'trem'];
 const FOCUS = ['rank', 'f', 'W', 'b', 'h', 'H', 'D', 'A', 'y0', 'Uj', 'foot', 'theta', 'tau', 'n', 'dt'];
 
-// The C++ engine's messages (pipes-engine.h, msg) back into the JavaScript engine's 'pipe': the
-// focused pipe's traces come in pieces first, the state last. One object, kept, as the JavaScript
-// keeps it.
+// The C++ engine's messages (pipes-engine.h, msg) into the page's 'pipe': the focused pipe's
+// traces come in pieces first, the state last. One object, kept.
 function views(m, e) {
   const s = (e.view ??= { type: 'pipe', key: 0, rank: 0, fs: e.fs, n: 0, dt: 0, ...Object.fromEntries(TRACES.map((k) => [k, new Float64Array(TRACE)])) });
   const v = m.values;
@@ -30,8 +29,8 @@ function views(m, e) {
 
 const Base = wasmEngine(BUILD, { messages: views });
 
-// A key's six pipes as the JavaScript model builds them (pipeModel), packed as pipes-engine.h's
-// packKeyModels has them.
+// A key's six pipes as the model builds them (wasmModel().pipeModel, perhaps altered by a test or a
+// tool), packed as pipes-engine.h's packKeyModels has them.
 export function packModels(key, models, P = {}) {
   const out = [key, P.cutup ?? 1, P.gain ?? 1, P.offset ?? 0.4];
   for (const R of models) {
@@ -42,8 +41,7 @@ export function packModels(key, models, P = {}) {
   return Float64Array.from(out);
 }
 
-// The engine's state as the JavaScript engine's fields (the tests read and write some of them),
-// over the C++ engine's memory.
+// The engine's state as fields (the tests read and write some of them), over the C++ engine's memory.
 const VOICE = { key: 0, fading: 1, dead: 2, down: 3, a: 4, aTarget: 5, kPal: 6, age: 7, env: 8, fade: 9, pg: 10 };
 const FLAGS = new Set(['fading', 'dead', 'down']);
 const PIPE = { foot: 1, vm: 2, qin: 3, bH: 4, y0: 5, ib: 6, asleep: 7, Uj: 8, eta: 9, dp: 10, nx: 11, os: 12, rank: 13, lp: 14, Q: 15 };
@@ -78,10 +76,10 @@ function hook() { // once loaded: the fields go through the exports
 // The tests make many engines and drop them: free each one's memory when it is collected.
 const freed = typeof FinalizationRegistry === 'function' ? new FinalizationRegistry((h) => Base.exports.forte_destroy(h)) : null;
 
-// The engine, with the JavaScript engine's constructor (fs, seed, { track }) and test hooks:
-// e.Pset, e.Pr, e.Pc (read and written), e.noise (the turbulence table, in place), e.voices and
-// e.byKey (each voice's pallet and pipes, some fields writable) and e.modelsFor (set it to play
-// the JavaScript model's pipes instead). A note may bring its key's pipes, packed by the page's
+// The engine, with the constructor (fs, seed, { track }) and test hooks: e.Pset, e.Pr, e.Pc (read
+// and written), e.noise (the turbulence table, in place), e.voices and e.byKey (each voice's pallet
+// and pipes, some fields writable) and e.modelsFor (set it to a key → six pipeModel objects to play
+// those pipes instead). A note may bring its key's pipes, packed by the page's
 // WebAssembly model (wasmModel().keyModels), so the audio thread needn't voice them.
 export class PipeWasmEngine extends Base {
   constructor(fs, seed, { track } = {}) {
@@ -115,14 +113,22 @@ export class PipeWasmEngine extends Base {
 }
 export const ready = () => PipeWasmEngine.ready();
 
-// The model's functions the views call (pipes-model.js's pipeModel and pipeFreq, tuning-table.js's
-// lookup), computed by the WebAssembly, and keyModels: a key's six pipes packed for the
-// WebAssembly engine (the page sends them with the note).
+// The model's functions (pipes-model.h's pipeModel, pipeFreq, tuning, modeFreq, chestPan,
+// windSystem, and the linear analysis: linearRoot, loopGain, thetaAt, pressureAt and
+// speakingWindow, on a pipeModel object a test may have altered), computed by the WebAssembly, and
+// keyModels: a key's six pipes packed for the WebAssembly engine (the page sends them with the note).
 const PIPE_MODEL = ['f', 'stopped', 'theta', 'D', 'a', 'Sp', 'H', 'h', 'dLt', 'W', 'b', 'y0', 'dd', 'Sm', 'Kj', 'dLm', 'A', 'M', 'Le', 'L', 'fRes', 'Q1', 'gain', 'nModes'];
 const GEO = new Set(['D', 'a', 'Sp', 'H', 'h', 'dLt', 'W', 'b', 'y0', 'dd', 'Sm', 'Kj', 'dLm']);
 const MODE = ['n', 'f', 'om', 'sigma', 'Q', 'harm'];
+// A pipe (perhaps altered: its jet's area, fewer modes) as pipes_pipe_model writes it, for the
+// linear analysis.
+function flatOf(R) {
+  const head = PIPE_MODEL.map((k) => (k === 'nModes' ? R.modes.length : k === 'stopped' ? (R.stopped ? 1 : 0) : k === 'Kj' ? R.Kj : GEO.has(k) ? R.geo[k] : R[k]));
+  return Float64Array.from([...head, ...R.modes.flatMap((m) => MODE.map((k) => m[k]))]);
+}
 export async function wasmModel() {
-  const x = await ready(), s = scratch(x);
+  const x = await ready(), s = scratch(x), OUT = 8 * 256; // a result's place, after a pipe
+  const put = (R) => { const a = flatOf(R); s.f64(a.length).set(a); return s.at; };
   return {
     pipeModel(f, stopped, P = {}, opts = {}) {
       const n = x.pipes_pipe_model(f, stopped ? 1 : 0, P.cutup ?? 1, P.gain ?? 1, P.offset ?? 0.4, opts.tune ?? 0, s.at), a = s.f64(n);
@@ -135,6 +141,23 @@ export async function wasmModel() {
     },
     pipeFreq: (key, r) => x.pipes_pipe_freq(key, r),
     tuning: (f, stopped) => x.pipes_tuning(f, stopped ? 1 : 0),
+    modeFreq: (n, Le, stopped) => x.pipes_mode_freq(n, Le, stopped ? 1 : 0),
+    chestPan: (key) => x.pipes_chest_pan(key),
+    windSystem(stiff) {
+      x.pipes_wind_system(stiff, s.at);
+      const [Cc, Mt, Gs, Gr, Cr, Rt, fw] = s.f64(7);
+      return { Cc, Mt, Gs, Gr, Cr, Rt, fw };
+    },
+    linearRoot(R, p, n = 0, steps = 8) {
+      return x.pipes_linear_root(put(R), p, n, steps, s.at + OUT) ? (([re, im]) => ({ re, im }))(s.f64(2, OUT)) : null;
+    },
+    loopGain(R, sv, p) { x.pipes_loop_gain(put(R), sv[0], sv[1], p, s.at + OUT); return Array.from(s.f64(2, OUT)); },
+    thetaAt: (R, p) => x.pipes_theta_at(put(R), p),
+    pressureAt: (R, theta) => x.pipes_pressure_at(put(R), theta),
+    speakingWindow(R, n = 0, thetaLo = 2, thetaHi = 80) {
+      const k = x.pipes_speaking_window(put(R), n, thetaLo, thetaHi, s.at + OUT), a = s.f64(k, OUT), ne = a[0], ng = a[1];
+      return { edges: Array.from(a.subarray(2, 2 + ne)), grid: Array.from({ length: ng }, (_, i) => [a[2 + ne + 2 * i], a[3 + ne + 2 * i]]) };
+    },
     keyModels(key, P) {
       const n = x.pipes_key_models(key, P.cutup, P.gain, P.offset, s.at);
       return s.f64(n).slice();

@@ -1,7 +1,6 @@
-// pyrophone-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// pyrophone-wasm.js — the engine and model, built as WebAssembly from the physics in C++
 // (native/instruments/pyrophone): PyrophoneWasmEngine, with the engine contract, and the model's
-// functions for the page and its views. The page runs it when it can and falls back to the
-// JavaScript (pyrophone-engine.js).
+// functions for the page, its views and the tests.
 
 import { GROUPS } from './pyrophone-params.js';
 import { wasmEngine, scratch } from '../../shared/wasm.js';
@@ -11,7 +10,7 @@ const BUILD = { id: 'pyrophone', name: 'PyrophoneWasmEngine', groups: GROUPS, bi
 
 const N = 10, H = 12, NX = 2 * H + 1, TRAIL = 512;
 
-// The C++ engine's messages (pyrophone-engine.h, msg) back into the JavaScript engine's 'tubes':
+// The C++ engine's messages (pyrophone-engine.h, msg) gathered into the page's 'tubes' message:
 // every tube's operating point, and the focused tube's strobed snapshot and mode-1 trail (a ring
 // kept here, which the engine sends as it fills).
 function views(m, e) {
@@ -42,10 +41,9 @@ function views(m, e) {
 
 const Base = wasmEngine(BUILD, { messages: views });
 
-// The engine, with the JavaScript engine's test hooks: e.voices, each tube's state read live from
-// the engine (as a test holding a JavaScript voice sees it change), its one-step matrices and modes
-// as views. It takes the page's tuning table with the parameters (P.tune, as the JavaScript engine
-// does) or ahead of them, computed by the page's WebAssembly model, so that the audio thread needn't.
+// The engine, with the tests' hooks: e.voices, each tube's state read live from the engine, its
+// one-step matrices and modes as views. It takes the page's tuning table ({ type: 'tune' }),
+// computed by the page's WebAssembly model, so that the audio thread needn't.
 const VOICE = ['key', 'amp', 'amp2', 'W', 'h', 'beta', 'betaT', 'theta', 'keyDown', 'song', 'fade', 'peak', 'since', 'age', 'rel'];
 const ARRAYS = ['m11', 'm12', 'm21', 'm22', 'b1', 'eta', 'vel'];
 function tubeView(x, p) {
@@ -59,12 +57,8 @@ export class PyrophoneWasmEngine extends Base {
     super(fs);
     this.e = Base.exports.forte_engine(this.h);
   }
-  setParams(P) {
-    if (P.tune) this.offer(P.tune);
-    super.setParams(P);
-  }
-  // { type: 'tune', tune }: the page's table, sent ahead of the parameters it is for (the worklet
-  // gives a WebAssembly engine the parameters without it)
+  // { type: 'tune', tune }: the page's table for a tube; until it comes, a changed tube plays the
+  // last one (pyrophone-engine.h, offer)
   handle(m) { if (m.type === 'tune') this.offer(m.tune); else super.handle(m); }
   offer(t) {
     if (t === this.offered) return;
@@ -88,10 +82,9 @@ function packTune(t) {
   return [t.P.bore, t.P.damp, t.P.xf, t.P.lag, t.betaH, t.betaMax, t.mode, t.fold ?? NaN, t.b0, t.db, ...t.Ws];
 }
 
-// The model's functions the page and its views call (pyrophone-model.js's tube, bifurcation,
-// tuning, root, orbitAt, orbitSpectrum, steadyY, heat, and the views' orbitState), computed by the
-// WebAssembly. tubeTuning(P) is the descriptor's: { bif, tune } for the tube's parameters, kept
-// for the last tube.
+// The model's functions (pyrophone-model.cpp's tube, bifurcation and tuning, root, orbitAt,
+// orbitSpectrum, steadyY, heat, and the views' orbitState), computed by the WebAssembly.
+// tubeTuning(P): { bif, tune } for the tube's parameters (tubeKey), kept for the last tube.
 export async function wasmModel() {
   const x = await ready(), s = scratch(x);
   const tubeArgs = (P) => [P.bore, P.damp ?? 1, P.xf, P.lag];
@@ -131,7 +124,8 @@ export async function wasmModel() {
       last = { key: k, bif: { sys, key: k, fam }, tune };
       return last;
     },
-    root(sys, m, beta) { x.pyrophone_root(...tubeArgs(sys.P), m, beta, s.at); return Array.from(s.f64(2)); },
+    // (taylor: 'taylor' for the delay Taylor-expanded, e^{−sτ} → 1 − sτ, as Magri & Juniper have it)
+    root(sys, m, beta, taylor) { x.pyrophone_root(...tubeArgs(sys.P), m, beta, taylor ? 1 : 0, s.at); return Array.from(s.f64(2)); },
     orbitAt(sys, fam, beta) {
       const n = x.pyrophone_orbit_at(...tubeArgs(sys.P), fam.mode - 1, beta, s.at), a = s.f64(n).slice();
       return a[0] ? { ...point(a, 1), stable: true } : null;

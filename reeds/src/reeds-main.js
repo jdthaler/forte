@@ -1,10 +1,8 @@
 // reeds-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName, useWasm } from '../../shared/shell.js';
+import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, css } from '../../shared/views.js';
-import { INSTRUMENT, reedModel } from './reeds-instrument.js';
-import * as jsModel from './reeds-model.js';
-import { traceStrike } from './reeds-engine.js';
+import { INSTRUMENT } from './reeds-instrument.js';
 import { MotionView, PickupView } from './reeds-views.js';
 import { wasmModel } from './reeds-wasm.js';
 
@@ -15,23 +13,13 @@ const motion = new MotionView($('#motion'));
 const pickup = new PickupView($('#pickup'), motion);
 let focus = 60, lastVel = 0.6, traceTimer = 0;
 
-// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
-// physics as the engine, in C++), the JavaScript one until then or if it can't load.
-const js = {
-  ...jsModel,
-  reedModel,
-  traceStrike: (key, P, vel, fs, seconds, nFrames) => traceStrike(INSTRUMENT.noteData(key, vel, P, fs), P, vel, fs, seconds, nFrames),
-};
-let model = js, wasm = null;
-if (useWasm()) wasmModel().then((m) => { model = wasm = m; update(true); }, (err) => console.warn(`reeds: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+// The views draw what the engine plays: its model, from the same C++, built as WebAssembly.
+const model = await wasmModel();
 
 // The modal model of a key.
 const modelFor = (key) => model.reedModel(key, shell.P, FS);
-// Each key's reed (a few ms) is sent with its note, so the audio thread never builds one: the
-// JavaScript's (the descriptor's) for the JavaScript engine, the WebAssembly model's, packed, for
-// the WebAssembly engine.
-const wasmEngine = () => wasm && shell.engineKind !== 'js'; // until the worklet says, expect the WebAssembly
-const noteData = (key, vel, P, fs) => (wasmEngine() ? wasm.voiceData(key, P, fs) : INSTRUMENT.noteData(key, vel, P, fs));
+// Each key's reed (a few ms) is sent with its note, packed, so the audio thread never builds one.
+const noteData = (key, vel, P, fs) => model.voiceData(key, P, fs);
 
 const shell = createShell({
   ...INSTRUMENT,

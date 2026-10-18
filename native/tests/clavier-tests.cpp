@@ -2,7 +2,7 @@
 // released string falls a minor third, a held key sounds its note, the mute bar kills the twang,
 // the yarn stops a released string, the voice pool holds whatever is played at any sample rate,
 // and ten bass voices fit the CPU budget. The physics tests are the JavaScript suite's, run on the
-// WebAssembly (FORTE_ENGINE=wasm).
+// WebAssembly (node test/clavier-tests.mjs).
 
 #include <chrono>
 #include <cmath>

@@ -1,6 +1,6 @@
-// vibraphone-model.h — the physics of a vibraphone (vibraphone/src/vibraphone-model.js in C++):
-// the undercut bars (bar.h) with their losses, the stopped tube under each bar coupled to its
-// mode 1 through the air in the gap, the motor's butterfly discs, and the mallet.
+// vibraphone-model.h — the physics of a vibraphone: the undercut bars (bar.h) with their losses,
+// the stopped tube under each bar coupled to its mode 1 through the air in the gap, the motor's
+// butterfly discs, and the mallet.
 //
 //      mallet ●
 //   ┌──────────╲_______________________╱──────────┐  aluminium bar (undercut, bar.h)
@@ -131,9 +131,9 @@ struct VoiceData {
   std::array<double, 2> pan;
 };
 VoiceData voiceData(int k, double depth = 1);
-// A bar's voice data as plain numbers, to hand from a page's model to its engine (as the
-// JavaScript's noteData): packVoiceData writes it (returning how many) and unpackVoiceData reads it
-// back (false if it doesn't fit). PACK_MAX bounds it.
+// A bar's voice data as plain numbers, to hand from a page's model to its engine (the page's
+// noteData): packVoiceData writes it (returning how many) and unpackVoiceData reads it back
+// (false if it doesn't fit). PACK_MAX bounds it.
 constexpr int PACK_MAX = 17 + 5 * 8 + 8 * 128;
 int packVoiceData(const VoiceData &d, double *out);
 bool unpackVoiceData(const double *in, int n, VoiceData &d);

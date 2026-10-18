@@ -1,6 +1,5 @@
 // windharp-web.cpp — the model's functions the page's views call (windharp/src/windharp-wasm.js),
-// and the engine's test hooks (the JavaScript engine's constructor arguments, its voices and their
-// strings, the wind).
+// and the engine's test hooks (its seed and options, its voices and their strings, the wind).
 
 #include "windharp-engine.h"
 #include "forte/web.h"
@@ -63,6 +62,20 @@ FORTE_EXPORT int windharp_locked_range(const double *in, int n, double *out) {
   out[7] = r.upTo; out[8] = r.downTo; out[9] = r.Ymid; out[10] = r.Yup; out[11] = r.Ydown;
   return 1;
 }
+// The single-mode harmonic balance at δ, λ, AM, M, ε, r: each solution's w, Q, Y, P; returns how
+// many (balance). windharp_locked_state: the locked one (lockedState), 1 if there is one.
+FORTE_EXPORT int windharp_balance(double delta, double lam, double AM, double M, double eps, double r, double *out) {
+  BalanceState s[BALANCE_MAX];
+  const int n = balance(delta, lam, AM, M, eps, r, s);
+  for (int i = 0; i < n; i++) { out[4 * i] = s[i].w; out[4 * i + 1] = s[i].Q; out[4 * i + 2] = s[i].Y; out[4 * i + 3] = s[i].P; }
+  return n;
+}
+FORTE_EXPORT int windharp_locked_state(double delta, double lam, double AM, double M, double eps, double r, double *out) {
+  BalanceState s;
+  if (!lockedState(delta, lam, AM, M, eps, r, s)) return 0;
+  out[0] = s.w; out[1] = s.Q; out[2] = s.Y; out[3] = s.P;
+  return 1;
+}
 FORTE_EXPORT double windharp_locked_amplitude(const double *in, int n, double U) { return lockedAmplitude(designOf(in), n, U); }
 
 // ---- the tests' hooks, on the engine of a handle (forte_engine) ----------------------------------
@@ -72,7 +85,7 @@ FORTE_EXPORT void windharp_configure(WindHarpEngine *e, double seed, double eps,
   e->configure(seed, o);
 }
 FORTE_EXPORT int windharp_voices(WindHarpEngine *e) { return e->nv; }
-// the pool slot of the i-th voice, in the JavaScript engine's order
+// the pool slot of the i-th voice, in the order they started
 FORTE_EXPORT int windharp_voice_slot(WindHarpEngine *e, int i) { return int(e->voices[i] - e->pool); }
 FORTE_EXPORT int windharp_by_key(WindHarpEngine *e, int key) { return key >= 0 && key < 128 && e->byKey[key] ? int(e->byKey[key] - e->pool) : -1; }
 // a voice's key, x, target, fading, dead, held, pedal, age, env, strings, fade, press
@@ -114,8 +127,8 @@ FORTE_EXPORT void windharp_string_design_of(WindHarpEngine *e, int slot, int si,
   const WindHarpEngine::Voice *v = voiceAt(e, slot);
   if (v && si >= 0 && si < v->ns) putDesign(v->strings[si].S, out);
 }
-// A block of up to BLOCK samples in one piece, as the JavaScript engine takes a longer block than
-// the 128 of forte_process; the output in windharp_left, windharp_right.
+// A block of up to BLOCK samples in one piece, longer than the 128 of forte_process (the tests
+// play some); the output in windharp_left, windharp_right.
 FORTE_EXPORT void windharp_process(WindHarpEngine *e, int n) { e->process(bigL, bigR, n < BLOCK ? n : BLOCK); }
 FORTE_EXPORT float *windharp_left() { return bigL; }
 FORTE_EXPORT float *windharp_right() { return bigR; }

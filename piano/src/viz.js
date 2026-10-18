@@ -1,6 +1,6 @@
 // viz.js — canvases: slow-motion string, partial spectrum, cross-section.
 
-import { shapeMatrix } from './physics.js';
+import { shapeMatrix } from './materials.js';
 
 export const FAMILY = [
   { name: 'bending, axis 1', short: 'axis 1', color: '#5aa9ff' },

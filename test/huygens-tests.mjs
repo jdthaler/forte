@@ -1,14 +1,19 @@
 // Huygens keyboard checks. Run: node test/huygens-tests.mjs
+// The engine and the model (tunedFreq, deltaOf, lockRatio) are the C++ (native/instruments/huygens),
+// built as WebAssembly; sync-theory.js has the closed forms they are held to.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { INSTRUMENT } from '../huygens/src/huygens-instrument.js';
+import { wasmModel } from '../huygens/src/huygens-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
-import { tunedFreq, keyFreq, nearestRatio } from '../huygens/src/tuning.js';
+import { keyFreq, nearestRatio } from '../huygens/src/tuning.js';
 import { DEFAULTS } from '../huygens/src/sync-params.js';
-import { deltaOf, kickFor, tongue, lockRatio, captureBound } from '../huygens/src/sync-theory.js';
+import { kickFor, tongue, captureBound } from '../huygens/src/sync-theory.js';
 import { stairPoint, QMAX } from '../huygens/src/staircase.js';
 import { FiringLog, pairLock } from '../huygens/src/lock-analysis.js';
 
-const NeonEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const HuygensEngine = await loadEngine(INSTRUMENT);
+const model = await wasmModel(), { tunedFreq, deltaOf, lockRatio } = model;
 
 const FS = 48000;
 let failures = 0;
@@ -20,7 +25,7 @@ const delta = (kick, circ = CIRCUIT) => deltaOf(kick, ...circ);
 function rng(seed) { let s = seed >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; }
 
 function run(keys, eng, sec = 2.5, P = DEFAULTS) {
-  const e = new NeonEngine(FS);
+  const e = new HuygensEngine(FS);
   e.setParams({ pitchHold: 0, ...eng });
   for (const k of keys) e.noteOn(k, 1, { f: tunedFreq(k, P) });
   const L = new Float32Array(128), R = new Float32Array(128);
@@ -36,7 +41,7 @@ function run(keys, eng, sec = 2.5, P = DEFAULTS) {
 // the interval they play (cents) after `sec`, exact if they lock (from the
 // firing counts between shared firings), else a least-squares estimate.
 function syncPair(f0, cents, kick, { fs = 24000, sec = 0.8, circuit = CIRCUIT } = {}) {
-  const e = new NeonEngine(fs);
+  const e = new HuygensEngine(fs);
   e.setParams({ kick, pitchHold: 0, vNom: circuit[0], vStrike: circuit[1], vExt: circuit[2] });
   const os = [e.noteOn(60, 1, { f: f0, phase: 0, settled: true }), e.noteOn(61, 1, { f: f0 * 2 ** (cents / 1200), phase: 0, settled: true })];
   const L = new Float32Array(64), R = new Float32Array(64), T = [[], []], seen = [0, 0];
@@ -102,7 +107,7 @@ await test('supply and lamp voltages only rescale the coupling axis (same δ →
   }
 });
 await test('the map is deterministic and finds the fifth and fourth from 0.28 %, and 16:9, 16:15 and 17:9', () => {
-  const P = { ...DEFAULTS, rSrc: 0 }, at = (cents, kick) => stairPoint(P, cents, kick)[1];
+  const P = { ...DEFAULTS, rSrc: 0 }, at = (cents, kick) => stairPoint(P, cents, kick, model)[1];
   for (const kick of [0.003, 0.0075, 0.02]) { assert.equal(at(700, kick), 302); assert.equal(at(500, kick), 403); }
   const k5 = kickFor(3 - 2 * 2 ** (7 / 12), ...CIRCUIT);
   assert.ok(k5 > 0.0027 && k5 < 0.0028, `the ET fifth locks from ${(100 * k5).toFixed(3)} %`);
@@ -173,7 +178,7 @@ await test('at the default every voicing of the major and minor triads goes just
   const V = [[0, 4, 7], [0, 4, 7, 12], [4, 7, 12], [7, 12, 16], [0, 7, 16], [0, 3, 7], [0, 3, 7, 12], [0, 7, 12], [0, 5, 7]];
   const r = rng(3), fs = 24000;
   const just = (keys, iv, kick) => {
-    const e = new NeonEngine(fs); e.setParams({ kick, pitchHold: 1 });
+    const e = new HuygensEngine(fs); e.setParams({ kick, pitchHold: 1 });
     for (const k of keys) e.noteOn(k, 1, { f: keyFreq(k), phase: r() });
     const L = new Float32Array(256), R = new Float32Array(256);
     for (let s = 0; s < 6 * fs; s += 256) e.process(L, R, 256);
@@ -192,7 +197,7 @@ await test('at the default every voicing of the major and minor triads goes just
 
 await test('chords: a dominant seventh settles into a long 67:85:100:120 pattern at the default, 4:5:6:7 at 7 %', () => {
   const chord = (kick, root, phases) => {
-    const fs = 24000, e = new NeonEngine(fs); e.setParams({ kick, pitchHold: 1 });
+    const fs = 24000, e = new HuygensEngine(fs); e.setParams({ kick, pitchHold: 1 });
     const keys = [root, root + 4, root + 7, root + 10], log = new FiringLog(3);
     keys.forEach((k, i) => e.noteOn(k, 1, { f: keyFreq(k), phase: phases[i] }));
     const L = new Float32Array(256), R = new Float32Array(256), fb = new Float64Array(32 * 258), ob = new Float64Array(96);
@@ -212,7 +217,7 @@ console.log('capture');
 await test('a pair locks within one beat of its ratio: t ≤ (1 − δ(p+q))/|p f_lo − q f_hi| + (q+1)/f_lo', () => {
   const d = delta(DEFAULTS.kick), fs = 24000;
   const capture = (k1, k2, ph1, ph2) => {
-    const e = new NeonEngine(fs); e.setParams({ kick: DEFAULTS.kick, pitchHold: 1 });
+    const e = new HuygensEngine(fs); e.setParams({ kick: DEFAULTS.kick, pitchHold: 1 });
     const a = e.noteOn(k1, 1, { f: keyFreq(k1), phase: ph1, settled: true }), b = e.noteOn(k2, 1, { f: keyFreq(k2), phase: ph2, settled: true });
     const L = new Float32Array(64), R = new Float32Array(64);
     let sa = 0, sb = 0;
@@ -236,7 +241,7 @@ await test('a pair locks within one beat of its ratio: t ≤ (1 − δ(p+q))/|p 
 console.log('sound');
 await test('key release: no low thump (output keyed, then a coupling capacitor)', () => {
   for (const key of [36, 60, 84]) {
-    const e = new NeonEngine(FS); e.setParams({ kick: 0, pitchHold: 1 });
+    const e = new HuygensEngine(FS); e.setParams({ kick: 0, pitchHold: 1 });
     e.noteOn(key, 1, { f: keyFreq(key) });
     const n = FS * 1.5, off = FS - (FS % 128), out = new Float64Array(n), L = new Float32Array(128), R = new Float32Array(128);
     for (let s = 0; s < n; s += 128) { if (s === off) e.noteOff(key); e.process(L, R, 128); out.set(L.subarray(0, Math.min(128, n - s)), s); }
@@ -252,7 +257,7 @@ await test('key release: no low thump (output keyed, then a coupling capacitor)'
   }
 });
 await test('stereo spread follows the knob for notes already sounding', () => {
-  const e = new NeonEngine(FS);
+  const e = new HuygensEngine(FS);
   const o = e.noteOn(84, 1, { f: keyFreq(84) });
   const before = o.panR / o.panL;
   e.setParams({ width: 0 });
@@ -263,12 +268,11 @@ console.log('page');
 await test('the worklet posts at most 30 states a second, each with only the new firings', async () => {
   const sent = [];
   globalThis.sampleRate = FS;
-  globalThis.NeonEngine = NeonEngine;
   globalThis.AudioWorkletProcessor = class { constructor() { this.port = { postMessage: (m) => sent.push(m) }; } };
   let Proc = null;
   globalThis.registerProcessor = (name, cls) => { if (name === 'forte-processor') Proc = cls; };
   await import('../shared/worklet.js');
-  const p = new Proc({ processorOptions: { engine: 'NeonEngine' } });
+  const p = new Proc({ processorOptions: { wasm: { name: INSTRUMENT.wasm.name, bytes: readFileSync(new URL(INSTRUMENT.wasm.binary)) } } });
   for (const k of [48, 52, 55, 60, 64, 67, 70, 72, 76, 79, 84, 88]) p.handle({ type: 'noteOn', key: k, velocity: 1, data: { f: keyFreq(k) } });
   const out = [[new Float32Array(128), new Float32Array(128)]];
   const blocks = 2 * FS / 128;
@@ -283,7 +287,7 @@ await test('the worklet posts at most 30 states a second, each with only the new
 });
 await test('lock display: a locked bass triad reads locked in every update; an unlocked chord never', () => {
   const view = (keys, kick, phases, sec = 8, from = 4) => {
-    const e = new NeonEngine(FS); e.setParams({ kick, pitchHold: 1 });
+    const e = new HuygensEngine(FS); e.setParams({ kick, pitchHold: 1 });
     keys.forEach((k, i) => e.noteOn(k, 1, { f: keyFreq(k), phase: phases[i] }));
     const L = new Float32Array(128), R = new Float32Array(128), fb = new Float64Array(32 * 258), ob = new Float64Array(96);
     const log = new FiringLog(3), every = Math.ceil(FS / 128 / 30), seen = [];
@@ -314,22 +318,27 @@ await test('lock display: a locked bass triad reads locked in every update; an u
   }
 });
 
-await test('the views\' WebAssembly model (huygens-wasm.js) gives the JavaScript\'s tunings, δ and lock map exactly', async () => {
-  const { wasmModel } = await import('../huygens/src/huygens-wasm.js');
-  const m = await wasmModel();
-  for (const P of [DEFAULTS, { ...DEFAULTS, tuning: 'just', tonic: 5, mistune: 33.5 }, { ...DEFAULTS, mistune: 40 }])
-    for (let k = 36; k <= 96; k++) assert.equal(m.tunedFreq(k, P), tunedFreq(k, P), `key ${k}`);
-  const r = rng(5);
-  for (let i = 0; i < 300; i++) {
-    const kick = 0.15 * r(), circ = [100 + 300 * r(), 70 + 30 * r(), 40 + 25 * r()];
-    assert.equal(m.deltaOf(kick, ...circ), deltaOf(kick, ...circ));
-    const ratio = 1 + r(), d = deltaOf(kick, ...circ);
-    assert.deepEqual(m.lockRatio(ratio, d), lockRatio(ratio, d));
+await test('the design tuning: equal temperament; 5-limit just above the tonic; a mistuning fixed for each key, within the setting', () => {
+  const JUST = [1, 16 / 15, 9 / 8, 6 / 5, 5 / 4, 4 / 3, 45 / 32, 3 / 2, 8 / 5, 5 / 3, 9 / 5, 15 / 8];
+  for (let k = 36; k <= 96; k++) {
+    assert.ok(Math.abs(c(tunedFreq(k, DEFAULTS) / keyFreq(k))) < 1e-9, `key ${k}`);
+    for (const tonic of [0, 5, 11]) {
+      const deg = (((k - tonic) % 12) + 12) % 12, f = tunedFreq(k, { ...DEFAULTS, tuning: 'just', tonic });
+      assert.ok(Math.abs(c(f / (keyFreq(k - deg) * JUST[deg]))) < 1e-9, `key ${k}, tonic ${tonic}`);
+    }
   }
-  const P = INSTRUMENT.engineParams(DEFAULTS);
-  for (let c = 0; c <= 1200; c += 37) assert.deepEqual(stairPoint(P, c, 0.04, m), stairPoint(P, c, 0.04));
-  const sag = { ...P, rSrc: 150e3 };                           // simulated points: the WebAssembly engine
-  for (const c of [386, 700, 1000]) assert.deepEqual(stairPoint(sag, c, 0.05, m), stairPoint(sag, c, 0.05));
+  const P = { ...DEFAULTS, mistune: 33.5 }, dev = [];
+  for (let k = 36; k <= 96; k++) { const d = c(tunedFreq(k, P) / keyFreq(k)); assert.ok(Math.abs(d) <= 33.5 && tunedFreq(k, P) === tunedFreq(k, { ...P }), `key ${k}: ${d}`); dev.push(Math.abs(d)); }
+  assert.ok(Math.max(...dev) > 25 && new Set(dev.map((d) => d.toFixed(3))).size > 50, 'every key its own');
+});
+await test('the lock map: with the supply\'s sag vanishing, the simulated points (the engine) find the exact map\'s locks; with sag, they are reproducible', () => {
+  const P = { ...DEFAULTS, rSrc: 0 };
+  for (let cents = 0; cents <= 1200; cents += 37) {
+    const exact = stairPoint(P, cents, 0.04, model), sim = stairPoint({ ...P, rSrc: 1e-6 }, cents, 0.04, model);
+    assert.ok(sim[1] === exact[1] && Math.abs(sim[0] - exact[0]) < 0.05, `${cents} ¢: ${sim} vs ${exact}`);
+  }
+  const sag = { ...P, rSrc: 150e3 };
+  for (const cents of [386, 700, 1000]) assert.deepEqual(stairPoint(sag, cents, 0.05, model), stairPoint(sag, cents, 0.05, model));
 });
 
 console.log('robustness');
@@ -340,7 +349,7 @@ await test('finite output and sane level across settings', () => {
   }
 });
 await test('performance: 24 oscillators', () => {
-  const e = new NeonEngine(FS); e.setParams({ kick: 0.08 });
+  const e = new HuygensEngine(FS); e.setParams({ kick: 0.08 });
   for (let i = 0; i < 24; i++) e.noteOn(36 + 2 * i, 1, { f: keyFreq(36 + 2 * i) });
   const L = new Float32Array(128), R = new Float32Array(128);
   for (let i = 0; i < 50; i++) e.process(L, R, 128);

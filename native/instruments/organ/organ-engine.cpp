@@ -1,4 +1,4 @@
-// organ-engine.cpp — organ-engine.js in C++ (organ-engine.h).
+// organ-engine.cpp — the tonewheel organ's engine (organ-engine.h).
 
 #include "organ-engine.h"
 
@@ -207,7 +207,7 @@ void OrganEngine::schedule(Key &k, bool closing, double keySpeed) {
       k.ev[n++] = {t, (uint8_t)d, (uint8_t)(closing ? 1 : 0)};
     }
   }
-  // by time, keeping the order of equal times (the JavaScript's sort is stable)
+  // by time, keeping the order of equal times (an insertion sort, which is stable)
   for (int i = 1; i < n; i++) {
     const ContactEvent e = k.ev[i];
     int j = i;

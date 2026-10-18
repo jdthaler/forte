@@ -1,8 +1,8 @@
 // blackhole-tests.cpp — the Black-Hole Keyboard in C++: V8's log10, the table read as the
-// JavaScript reads it, each key tuned on its (2,2,0) mode, a key's voice and the samples to the
-// last bit of the JavaScript's, the inspiral handing over to the ringdown, the voice cache, voice
+// JavaScript read it, each key tuned on its (2,2,0) mode, a key's voice and the samples to the
+// last bit of the retired JavaScript engine's, the inspiral handing over to the ringdown, the voice cache, voice
 // stealing, a flood of notes, and ten voices within the CPU budget. The physics tests are the
-// JavaScript suite's, run on the WebAssembly (FORTE_ENGINE=wasm).
+// JavaScript suite's, run on the WebAssembly (node test/blackhole-tests.mjs).
 
 #include <chrono>
 #include <cmath>
@@ -50,7 +50,7 @@ TEST("blackhole: the table, interpolated, gives the published modes and the Java
   CHECK_NEAR(w.re, 0.671613, 2e-6); // Berti, Cardoso & Will (2006)
   CHECK_NEAR(w.im, -0.064869, 2e-6);
   CHECK(omega(3, -2, 1, 0.97, w));
-  CHECK(w.re == 0.49431300658944560 && w.im == -0.27227568105778899); // ringdown-model.js
+  CHECK(w.re == 0.49431300658944560 && w.im == -0.27227568105778899); // the JavaScript model's
   CHECK(!omega(5, 2, 0, 0.5, w) && !omega(2, 3, 0, 0.5, w));
   // near extremality the l = m modes become a harmonic series 2 : 3 : 4
   Omega w2, w3, w4;
@@ -75,7 +75,7 @@ TEST("blackhole: each key is tuned on its (2,2,0) mode; equal masses switch off 
 
 TEST("blackhole: a key's voice is the JavaScript's to the last bit") {
   KeyVoice v;
-  keyVoice(60, model(defaults()), 48000, v); // ringdown-model.js, keyVoice(60, DEFAULTS, bank, 48000)
+  keyVoice(60, model(defaults()), 48000, v); // the JavaScript model's keyVoice(60, DEFAULTS, bank, 48000)
   CHECK(v.count == 6);
   const Mode *m = find(v, 2, 2, 0);
   CHECK(m && m->f == 261.62556530059862 && m->gamma == 252.57988761231820 && m->cpr == 0.86776859504132209 && m->cxi == 0);
@@ -98,7 +98,7 @@ TEST("blackhole: the engine plays the JavaScript's samples, inspiral included") 
   auto e = std::make_unique<RingdownEngine>(48000);
   e->setParams(P.data());
   e->noteOn(57, 0.8);
-  // ringdown-engine.js: L[17] and R[99] of blocks 0, 50, 100 and 150
+  // the JavaScript engine's L[17] and R[99] of blocks 0, 50, 100 and 150
   const float want[8] = {0.000023236070774146356f, 0.00012161751510575414f, -0.025927901268005371f, -0.042760584503412247f,
                          -0.067498341202735901f, -0.028430422767996788f, -0.020221082493662834f, -0.048638440668582916f};
   float L[128], R[128];

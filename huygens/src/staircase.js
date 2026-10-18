@@ -7,19 +7,21 @@
 // so with it on the point is simulated instead (from a shared firing, so the
 // map is reproducible).
 //
-// The theory and the engine are the JavaScript's, or another implementation of them with the same
-// functions ({ Engine, deltaOf, lockRatio }: the WebAssembly model, huygens-wasm.js).
+// The theory and the engine are the C++'s: model = { Engine, deltaOf, lockRatio }, the
+// WebAssembly model (huygens-wasm.js wasmModel).
 
-import { NeonEngine } from './neon-engine.js';
 import { nearestRatio } from './tuning.js';
-import { deltaOf, lockRatio } from './sync-theory.js';
 
 const FS = 24000;                  // plenty for locking; 2× faster
 const F0 = 261.6256;
 export const QMAX = 24;            // tongues are drawn for locks with q ≤ QMAX
 
 export const exactMap = (P) => !(P.rSrc > 0);
-const JS = { Engine: NeonEngine, deltaOf, lockRatio };
+// the circuit as the engine plays it: the lamp voltages kept in order, 5 V apart (V_ext < V_s < supply)
+export const circuit = (P) => {
+  const vStrike = Math.min(P.vStrike, P.vNom - 5);
+  return { ...P, vStrike, vExt: Math.min(P.vExt, vStrike - 5) };
+};
 
 function simulate(P, cents, kick, { Engine }) {
   const e = new Engine(FS);
@@ -35,7 +37,7 @@ function simulate(P, cents, kick, { Engine }) {
 }
 
 // [interval actually played (cents), lock code p·100 + q, or 0 if none drawn]
-export function stairPoint(P, cents, kick, model = JS) {
+export function stairPoint(P, cents, kick, model) {
   if (exactMap(P)) {
     if (!(kick > 0)) return [cents, 0];
     const lr = model.lockRatio(2 ** (cents / 1200), model.deltaOf(kick, P.vNom, P.vStrike, P.vExt));

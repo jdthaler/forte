@@ -1,6 +1,6 @@
 // clavier-web.cpp — the model's functions the page's views call (clavier/src/clavier-wasm.js), and
-// the engine's hooks: its voices, as the test suite and the page's slow motion read (and the tests
-// write) the JavaScript engine's. P is indexed as in clavier-params.h.
+// the engine's hooks: its voices, which the test suite and the page's slow motion read (and the
+// tests write). P is indexed as in clavier-params.h.
 
 #include "clavier-engine.h"
 #include "forte/web.h"

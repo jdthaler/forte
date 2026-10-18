@@ -6,21 +6,29 @@
 // window); then every key on every stop speaking and in tune, the Gedackt's odd harmonics, the
 // Mixture's pure ranks, overblowing and its hysteresis, wind sag, chiff, the wind system and
 // tremulant, stereo, voices, levels, stability and CPU.
+// The model and the engine are the C++ (native/instruments/pipes), built as WebAssembly: the
+// model's functions through pipes-wasm.js, the engine through loadEngine.
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import {
-  AIR, KEY_LO, KEY_HI, RANKS, CP, PHI_C, P_NOM, LS_END, MIXTURE, SCALE, keyFreq, pipeFreq, pipeModel, rankHarm, mixtureRanks,
-  toepferD, ellipseConductivity, agm, mouthCorrection, wallAlpha, modeSigma, modeFreq, linearRoot, speakingWindow, thetaAt, loopGain,
-  pressureAt, windSystem, chestPan, organName,
-} from '../pipes/src/pipes-model.js';
+import { KEY_LO, KEY_HI, RANKS, organName } from '../pipes/src/pipes-data.js';
 import { INSTRUMENT } from '../pipes/src/pipes-instrument.js';
+import { wasmModel } from '../pipes/src/pipes-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../pipes/src/pipes-params.js';
 import { TUNING } from '../pipes/src/tuning-table.js';
 import { tuningHeader } from '../tools/pipes-tuning.mjs';
+import { keyFreq } from '../shared/dsp.js';
 
-const PipeEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const PipeEngine = await loadEngine(INSTRUMENT);
+const { pipeModel, pipeFreq, tuning, modeFreq, chestPan, windSystem, linearRoot, loopGain, thetaAt, pressureAt, speakingWindow } = await wasmModel();
+// the C++'s numbers (pipes-model.h): air; the wind the pipes are voiced for; the jet's phase
+// velocity and roll-off; the voicing's loop gain; the wind system's trunk and chest
+const AIR = { rho: 1.2, c: 343, nu: 1.51e-5, gamma: 1.4, Pr: 0.71 }, P_NOM = 700, U_NOM = Math.sqrt((2 * P_NOM) / AIR.rho);
+const CP = 0.4, PHI_C = 3, GAIN = 6, GAIN_BASS = 0.4;
+const WIND = { Vc: 0.8, Mt: [5, 150] };
+// the key's pitch multiple a pipe sounds (the Mixture's ranks are octaves and pure fifths)
+const harm = (k, r) => pipeFreq(k, r) / keyFreq(k);
 
 const FS = 48000, TAU = 2 * Math.PI;
 let failures = 0;
@@ -34,6 +42,23 @@ const ONLY = { principal: { principal: true }, octave: { principal: false, octav
 const RANK_STOP = [ONLY.principal, ONLY.octave, ONLY.gedackt, ONLY.mixture, ONLY.mixture, ONLY.mixture];
 const cents = (a, b) => 1200 * Math.log2(a / b);
 const rel = (a, b) => Math.abs(a / b - 1);
+
+// Rayleigh's conductivity of an elliptic hole (semi-axes a ≥ b) in a thin wall: K = 2a·AGM(1, b/a)
+// (= πa/K(e), K the complete elliptic integral; 2r for a circle), and the mouth's end correction
+// from it: the pipe's area over the conductivity of an ellipse of the mouth's area and aspect (H × W).
+// Kirchhoff's wall loss per metre. Textbook formulas, to check the C++'s pipes.
+function agm(x, y) { for (let i = 0; i < 30 && Math.abs(x - y) > 1e-15 * x; i++) [x, y] = [(x + y) / 2, Math.sqrt(x * y)]; return x; }
+function ellipseConductivity(a, b) { if (b > a) [a, b] = [b, a]; return 2 * a * agm(1, b / a); }
+function mouthCorrection(Sp, H, W) { const k = 2 / Math.sqrt(Math.PI); return Sp / ellipseConductivity((k * H) / 2, (k * W) / 2); }
+function wallAlpha(f, a) { const { c, nu, gamma, Pr } = AIR; return (Math.sqrt((TAU * f * nu) / 2) * (1 + (gamma - 1) / Math.sqrt(Pr))) / (a * c); }
+
+// The reference the engine's time stepping is checked against: the linear analysis of a pipe
+// (pipes-model.cpp's linearRoot, loopGain and speakingWindow, on a pipeModel object a test may
+// alter). With the jet small-signal and no oscillation, a disturbance ∝ e^(st) obeys
+//   1 = Y(s) · s Kj A H(s) e^(−sτ),   Y(s) = Σ (1/M) s / (s² + 2σₙs + ωₙ²),   H(s) = 1/(1 + sτ/φ_c),
+// τ = W/(c_p U_j), U_j = √(2p/ρ). A root with Re s > 0 means the pipe speaks there; the speaking
+// window is the range of θ = U_j/(f₁W) over which it does. The engine never runs it: it integrates
+// the nonlinear equations in time.
 
 // Run the engine through events ([t, 'on', key, vel] | [t, 'off', key] | [t, 'params', P]) in
 // 128-sample blocks like the AudioWorklet; tap(engine, t) after every block.
@@ -133,18 +158,18 @@ console.log('the pipe');
 test('modes: an open pipe resonates at 1 : 2 : 3 … of c/2(L + ΔL_mouth + 0.6133a), a stopped one at 1 : 3 : 5 … of c/4(L + ΔL_mouth)', () => {
   for (const f of [65.41, 261.6, 1046.5]) {
     const o = pipeModel(f, false, P()), s = pipeModel(f, true, P());
-    o.modes.forEach((m, i) => assert.ok(rel(m.f / o.modes[0].f, i + 1) < 1e-12, `open mode ${i + 1}`));
-    s.modes.forEach((m, i) => assert.ok(rel(m.f / s.modes[0].f, 2 * i + 1) < 1e-12, `stopped mode ${i + 1}`));
-    assert.ok(rel(o.modes[0].f, AIR.c / (2 * (o.L + o.geo.dLm + LS_END * o.geo.a))) < 1e-12);
+    o.modes.forEach((m, i) => assert.ok(rel(m.f / o.modes[0].f, i + 1) < 1e-12 && rel(m.f, ((i + 1) * AIR.c) / (2 * o.Le)) < 1e-12, `open mode ${i + 1}`));
+    s.modes.forEach((m, i) => assert.ok(rel(m.f / s.modes[0].f, 2 * i + 1) < 1e-12 && rel(m.f, ((2 * i + 1) * AIR.c) / (4 * s.Le)) < 1e-12, `stopped mode ${i + 1}`));
+    // Levine & Schwinger (1948), unflanged, ka → 0
+    assert.ok(rel(o.modes[0].f, AIR.c / (2 * (o.L + o.geo.dLm + 0.6133 * o.geo.a))) < 1e-12);
     assert.ok(rel(s.modes[0].f, AIR.c / (4 * (s.L + s.geo.dLm))) < 1e-12);
     // the stopped pipe is about half as long for the same pitch
     assert.ok(s.L / o.L > 0.4 && s.L / o.L < 0.6, `${f}: ${(s.L / o.L).toFixed(2)}`);
   }
-  assert.equal(LS_END, 0.6133); // Levine & Schwinger (1948), unflanged, ka → 0
   assert.equal(modeFreq(3, 1, false) / modeFreq(1, 1, false), 3);
   assert.equal(modeFreq(3, 1, true) / modeFreq(1, 1, true), 5);
 });
-test('the mouth: Rayleigh’s conductivity of an elliptic hole is 2a·AGM(1, b/a) = πa/K(e) (checked by quadrature), 2r for a circle; a diapason mouth (a quarter of the circumference, cut up a quarter of its width) corrects the length by 1.5 D (Ingerslev & Frobenius)', () => {
+test('the mouth: Rayleigh’s conductivity of an elliptic hole is 2a·AGM(1, b/a) = πa/K(e) (checked by quadrature), 2r for a circle; a diapason mouth (a quarter of the circumference, cut up a quarter of its width) corrects the length by 1.5 D (Ingerslev & Frobenius); the C++’s pipes correct theirs by it, at every cut-up', () => {
   assert.ok(rel(ellipseConductivity(0.01, 0.01), 0.02) < 1e-12);
   for (const k of [0.2, 0.5, 0.9]) { // K(e) = ∫₀^{π/2} dφ/√(1 − e² sin²φ), e² = 1 − k²
     let s = 0; const N = 20000;
@@ -154,28 +179,50 @@ test('the mouth: Rayleigh’s conductivity of an elliptic hole is 2a·AGM(1, b/a
   }
   const D = 0.1, H = (Math.PI * D) / 4, W = H / 4, dL = mouthCorrection((Math.PI * D * D) / 4, H, W);
   assert.ok(Math.abs(dL / D - 1.5) < 0.15, `${(dL / D).toFixed(2)} D`);
+  for (const f of [65.41, 523.3, 2093]) for (const stopped of [false, true]) for (const cutup of [0.5, 1, 1.5]) {
+    const g = pipeModel(f, stopped, P({ cutup })).geo;
+    assert.ok(rel(g.dLm, mouthCorrection(g.Sp, g.H, g.W)) < 1e-12, `${f} ${stopped} ×${cutup}: ${g.dLm} vs ${mouthCorrection(g.Sp, g.H, g.W)}`);
+  }
   console.log(`        diapason mouth: ΔL = ${(dL / D).toFixed(2)} D; open top 0.6133a = 0.31 D`);
-  void agm;
 });
-test('Töpfer’s normal scale: 155.5 mm at 8′ C, halving on the 17th note (16 semitones), a cross-section ratio of 1 : √8 per octave', () => {
-  assert.ok(rel(toepferD(keyFreq(36)), 0.1555) < 1e-12);
-  assert.ok(rel(toepferD(keyFreq(52)), 0.1555 / 2) < 1e-12);
-  assert.ok(rel((toepferD(keyFreq(36)) / toepferD(keyFreq(48))) ** 2, Math.sqrt(8)) < 1e-12);
-  assert.equal(SCALE.mouth, 0.25);
+test('Töpfer’s normal scale: 155.5 mm at 8′ C, halving on the 17th note (16 semitones), a cross-section ratio of 1 : √8 per octave; the Gedackt 0.85 × as wide; the mouth a quarter of the circumference', () => {
+  const D = (k, stopped = false) => pipeModel(keyFreq(k), stopped, P()).geo.D;
+  assert.ok(rel(D(36), 0.1555) < 1e-12);
+  assert.ok(rel(D(52), 0.1555 / 2) < 1e-12);
+  assert.ok(rel((D(36) / D(48)) ** 2, Math.sqrt(8)) < 1e-12);
+  for (const k of [36, 60, 84]) {
+    assert.ok(rel(D(k, true), 0.85 * D(k)) < 1e-12, `Gedackt ${organName(k)}`);
+    const g = pipeModel(keyFreq(k), false, P()).geo;
+    assert.ok(rel(g.H, (Math.PI * g.D) / 4) < 1e-12 && rel(g.a, g.D / 2) < 1e-12 && rel(g.Sp, Math.PI * g.a * g.a) < 1e-12, organName(k));
+  }
 });
-test('losses: Kirchhoff’s boundary layer, α = 2.96×10⁻⁵ √f / a per metre in air; radiation σ = (ka)²c/2L_e from two open ends (|R| = 1 − (ka)²/2 each), half that stopped; Q₁ from 127 (8′ C) to 42 (f³)', () => {
+test('losses: Kirchhoff’s boundary layer, α = 2.96×10⁻⁵ √f / a per metre in air; radiation σ = (ka)²c/2L_e from two open ends (|R| = 1 − (ka)²/2 each), half that stopped: every mode of the C++’s pipes; Q₁ from 127 (8′ C) to 42 (f³)', () => {
   assert.ok(rel(wallAlpha(100, 0.01), (2.96e-5 * 10) / 0.01) < 0.01, `${wallAlpha(100, 0.01)}`);
-  const a = 0.02, L = 0.5, f = 500, k = (TAU * f) / AIR.c, wall = AIR.c * wallAlpha(f, a);
-  assert.ok(rel(modeSigma(f, a, L, 2) - wall, ((k * a) ** 2 * AIR.c) / (2 * L)) < 1e-12);
-  assert.ok(rel(modeSigma(f, a, L, 1) - wall, ((k * a) ** 2 * AIR.c) / (4 * L)) < 1e-12);
-  // reflection: e^(−2σL/c) per round trip = |R|² per end for two ends
-  const R = 1 - (k * a) ** 2 / 2;
-  assert.ok(rel(Math.exp(-((modeSigma(f, a, L, 2) - wall) * 2 * L) / AIR.c), R * R) < 1e-3);
+  for (const f of [65.41, 261.6, 1046.5, 3136]) for (const stopped of [false, true]) {
+    const R = pipeModel(f, stopped, P()), a = R.geo.a, openings = stopped ? 1 : 2;
+    for (const m of R.modes) {
+      const k = (TAU * m.f) / AIR.c, wall = AIR.c * wallAlpha(m.f, a), rad = (openings * (k * a) ** 2 * AIR.c) / (4 * R.Le);
+      assert.ok(rel(m.sigma, wall + rad) < 1e-9, `${f} ${stopped ? 'stopped' : 'open'} mode ${m.n}: σ ${m.sigma} vs ${wall + rad}`);
+      assert.ok(rel(m.om, TAU * m.f) < 1e-12 && rel(m.Q, m.om / (2 * m.sigma)) < 1e-12);
+      // reflection: e^(−2σL/c) per round trip = |R|² per end for two ends
+      if (!stopped && m.n === 1) { const Rf = 1 - (k * a) ** 2 / 2; assert.ok(rel(Math.exp(-((m.sigma - wall) * 2 * R.Le) / AIR.c), Rf * Rf) < 1e-3); }
+    }
+  }
   const qC = pipeModel(keyFreq(36), false, P()).Q1, qTop = pipeModel(keyFreq(89), false, P()).Q1;
   assert.ok(qC > 100 && qC < 150 && qTop > 30 && qTop < 60, `${qC} ${qTop}`);
 });
 
 console.log('the jet and the linear analysis');
+test('the voicing: each pipe, cut with no correction, sounds f by the linear analysis at 700 Pa (within 10⁻⁷), and its jet’s loop gain on the fundamental’s resonance is the voicing’s, 6 from c¹ up and ∝ f^−0.4 below', () => {
+  for (let k = KEY_LO; k <= KEY_HI; k += 5) for (const stopped of [false, true]) for (const cutup of [1, 0.6]) {
+    const f = keyFreq(k), R = pipeModel(f, stopped, P({ cutup })), s = linearRoot(R, P_NOM, 0);
+    if (cutup === 1) assert.ok(s && rel(s.im / TAU, f) < 1e-7, `${organName(k)} ${stopped ? 'stopped' : 'open'}: ${s && s.im / TAU} vs ${f}`);
+    const g = GAIN * Math.max(1, (f / keyFreq(60)) ** -GAIN_BASS), m = R.modes[0], tau = R.geo.W / (CP * U_NOM);
+    assert.ok(rel(R.gain, g) < 1e-12, `${organName(k)}: gain ${R.gain} vs ${g}`);
+    // on resonance, s = jω₁: Y ≈ 1/2σ₁M, so |L| = ω₁ Kj A |H| / 2σ₁M
+    assert.ok(rel((m.om * R.Kj * R.A) / Math.hypot(1, (m.om * tau) / PHI_C) / (2 * m.sigma * R.M), g) < 1e-9, `${organName(k)} ×${cutup}: A`);
+  }
+});
 test('with no jet the roots are the bare modes; with it, the loop gain on the fundamental’s resonance is the voicing’s, and every pipe of every rank is unstable (speaks) at the default wind', () => {
   const R = pipeModel(261.6, false, P()), A = R.A;
   R.A = 0;
@@ -252,7 +299,7 @@ test('every key on every stop speaks on its fundamental at the default wind (the
     const p = P({ ...RANK_STOP[r] }), f0 = pipeFreq(k, r);
     let res;
     if (r >= 3) { // one Mixture rank alone: its pipe on the Principal's slot
-      const R = pipeModel(f0, false, p, { tune: TUNING.lookup(f0, false) });
+      const R = pipeModel(f0, false, p, { tune: tuning(f0, false) });
       const e = new PipeEngine(FS); e.setParams(P(ONLY.principal)); e.modelsFor = () => [R, R, R, R, R, R]; e.noteOn(k, 0.7);
       const n = Math.round(0.6 * FS), L = new Float64Array(n), bL = new Float32Array(128), bR = new Float32Array(128);
       for (let s = 0; s < n; s += 128) { e.process(bL, bR, 128); for (let i = 0; i < 128 && s + i < n; i++) L[s + i] = bL[i]; }
@@ -292,28 +339,30 @@ test('the Gedackt is stopped: its even harmonics are at least 25 dB under its od
   }
 });
 test('the Mixture: three ranks of octaves and pure fifths (×2, 3, 4, 6, 8, 12 the key’s 8′), breaking back an octave at c, c¹ and c²; each pipe sounds its pure ratio within 3 ¢', () => {
-  assert.deepEqual(MIXTURE.map((m) => m.from), [36, 48, 60, 72]);
+  const breaks = [];
   for (let k = KEY_LO; k <= KEY_HI; k++) {
-    const h = mixtureRanks(k);
-    assert.ok(h.every((x) => [2, 3, 4, 6, 8, 12].includes(x)));
-    if (k > KEY_LO && MIXTURE.some((m) => m.from === k)) assert.ok(rankHarm(k, 3) < rankHarm(k - 1, 3), `break at ${organName(k)}`);
+    const h = [3, 4, 5].map((r) => harm(k, r));
+    assert.ok(h.every((x) => [2, 3, 4, 6, 8, 12].some((n) => rel(x, n) < 1e-12)), `${organName(k)}: ${h}`);
+    if (k > KEY_LO && Math.round(harm(k, 3)) < Math.round(harm(k - 1, 3))) breaks.push(k);
     const top = keyFreq(k) * Math.max(...h);
     assert.ok(top < 6000 && keyFreq(k) * Math.min(...h) > 380, `${organName(k)}: ${top}`);
   }
+  assert.deepEqual(breaks, [48, 60, 72]);
   // each rank alone (its pipe on the Principal's slot): pure fifths (702 ¢), not tempered ones
   for (const k of [40, 55, 62, 77, 89]) for (let r = 3; r < 6; r++) {
-    const want = keyFreq(k) * rankHarm(k, r), R = pipeModel(want, false, P(), { tune: TUNING.lookup(want, false) });
+    const want = pipeFreq(k, r), R = pipeModel(want, false, P(), { tune: tuning(want, false) });
     const e = new PipeEngine(FS); e.setParams(P({ ...ONLY.principal, noise: 0 })); e.modelsFor = () => [R, R, R, R, R, R]; e.noteOn(k, 0.7);
     const n = Math.round(0.5 * FS), L = new Float64Array(n), bL = new Float32Array(128), bR = new Float32Array(128);
     for (let s2 = 0; s2 < n; s2 += 128) { e.process(bL, bR, 128); for (let i = 0; i < 128 && s2 + i < n; i++) L[s2 + i] = bL[i]; }
     const fr = freqAt(L, want, Math.round(0.25 * FS), n);
     assert.ok(Math.abs(cents(fr, want)) < 3, `${organName(k)} rank ${r - 2}: ${fr.toFixed(2)} vs ${want.toFixed(2)} Hz`);
   }
-  assert.ok(Math.abs(cents(rankHarm(60, 3), 2) - 701.955) < 1e-3); // 2⅔′ over 4′: a pure fifth
+  assert.ok(Math.abs(cents(harm(60, 3), 2) - 701.955) < 1e-3); // 2⅔′ over 4′: a pure fifth
 });
 
-test('the C++ port tunes from the same table (native/instruments/pipes/tuning-table.h is fresh: node tools/pipes-tuning.mjs --native)', () => {
+test('the C++ port tunes from the table the tuning tool measured (native/instruments/pipes/tuning-table.h is fresh: node tools/pipes-tuning.mjs --native; and the WebAssembly was built from it)', () => {
   assert.equal(readFileSync(new URL('../native/instruments/pipes/tuning-table.h', import.meta.url), 'utf8'), tuningHeader(TUNING.table));
+  for (let x = 5.5; x < 13.5; x += 0.01) for (const stopped of [false, true]) assert.ok(Math.abs(tuning(2 ** x, stopped) - TUNING.lookup(2 ** x, stopped)) < 1e-12, `${(2 ** x).toFixed(1)} Hz`);
 });
 
 console.log('effects');
@@ -407,7 +456,9 @@ test('the wind system: after a chord a flexible wind rings at f_w = 1/2π√(M_t
     if (wind === 1) { // the ringing about where it settles, from the chord's first dip
       const ring = Pc.slice(Math.round((0.15 * FS) / 128), Math.round((1.6 * FS) / 128)), fin = Pc[Pc.length - 1], ups = [];
       for (let i = 1; i < ring.length; i++) if (ring[i - 1] < fin && ring[i] >= fin) ups.push(i - 1 + (fin - ring[i - 1]) / (ring[i] - ring[i - 1]));
-      const f = ((ups.length - 1) * FS) / 128 / (ups[ups.length - 1] - ups[0]), fw = windSystem(1).fw;
+      const f = ((ups.length - 1) * FS) / 128 / (ups[ups.length - 1] - ups[0]), ws = windSystem(1), fw = ws.fw;
+      // the C++'s wind: the long trunk's air mass, and the chest's compliance V_c/ρc²
+      assert.ok(ws.Mt === WIND.Mt[1] && rel(ws.Cc, WIND.Vc / (AIR.rho * AIR.c ** 2)) < 1e-12 && rel(fw, 1 / (TAU * Math.sqrt(ws.Mt * ws.Cc))) < 1e-12, `${ws.Mt} ${ws.Cc} ${fw}`);
       assert.ok(ups.length > 4 && rel(f, fw) < 0.1, `${f.toFixed(2)} Hz vs ${fw.toFixed(2)} Hz`);
     } else {
       const sag = 1 - mean / 700, min = Math.min(...Pc);

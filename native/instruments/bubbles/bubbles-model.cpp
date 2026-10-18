@@ -1,4 +1,4 @@
-// bubbles-model.cpp — the bubble's physics, as bubbles-model.js computes it.
+// bubbles-model.cpp — the bubble's physics (bubbles-model.h).
 
 #include "bubbles-model.h"
 
@@ -114,5 +114,13 @@ double snapGain(double f, double tau) {
 }
 
 double slowExponent(double R, const Gas &gas, double pb) { return phi(diffusivity(gas, pb) / (OMEGA_SLOW * R * R), gas.gamma).re / 3; }
+
+Acoustics glideRing(double R0, double pb0, double nSlow, Complex phiKept, const Liquid &liq, const Gas &gas, double d, double pT, double &R) {
+  Env env;
+  env.liq = &liq; env.gas = &gas; env.d = d; env.p0 = pT + liq.rho * G * d;
+  R = R0 * std::pow(pb0 / (env.p0 + (2 * liq.sigma) / R0), 1 / (3 * nSlow)); // it swells as the pressure falls
+  env.phiFixed = true; env.phiKept = phiKept;
+  return acoustics(R, env);
+}
 
 } // namespace forte::bubbles

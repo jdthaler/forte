@@ -1,4 +1,4 @@
-// harpsichord-engine.cpp — the harpsichord's engine, as harpsichord-engine.js runs it.
+// harpsichord-engine.cpp — the harpsichord's engine (harpsichord-engine.h).
 
 #include "harpsichord-engine.h"
 

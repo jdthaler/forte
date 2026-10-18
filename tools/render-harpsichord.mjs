@@ -3,9 +3,11 @@
 //
 // Name demos NN-what-you-hear; the landing page plays the first one.
 
-import { HarpsichordEngine } from '../harpsichord/src/harpsichord-engine.js';
-import { DEFAULTS } from '../harpsichord/src/harpsichord-params.js';
+import { INSTRUMENT, DEFAULTS } from '../harpsichord/src/harpsichord-instrument.js';
+import { loadEngine } from './engine.mjs';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
+
+const HarpsichordEngine = await loadEngine(INSTRUMENT);
 
 const FS = 48000, SLUG = 'harpsichord';
 const P = (o = {}) => ({ ...DEFAULTS, ...o });

@@ -1,7 +1,7 @@
 // reeds-params.js — the knobs. Every parameter has a physical meaning and a
 // unit; the hint says what it does to the sound.
 
-import { HAMMER_VMAX } from './reeds-model.js';
+import { HAMMER_VMAX } from './reeds-data.js';
 
 const mm = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2)} mm`;
 const pct = (v) => `${(v * 100).toFixed(0)} %`;

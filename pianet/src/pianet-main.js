@@ -1,17 +1,14 @@
 // pianet-main.js — the page: wires the shell to the engine and draws the views.
 // The slow-motion view and the release plot rerun the key's mechanism
-// offline (the same Pluck the engine plays): with the WebAssembly model once
-// it has loaded (the worklet's physics, in C++), the JavaScript one
-// (pianet-model.js) until then or if it can't load.
+// offline (the same Pluck the engine plays), with the engine's model: the
+// same C++, built as WebAssembly.
 
-import { createShell, noteName, useWasm } from '../../shared/shell.js';
+import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './pianet-instrument.js';
-import { keyReed, simulatePluck, releaseCurve, keySpeed, workOfAdhesion, voicing, voicingT, PAD } from './pianet-model.js';
 import { wasmModel } from './pianet-wasm.js';
 
-let model = { keyReed, simulatePluck, releaseCurve, keySpeed, workOfAdhesion, voicing, voicingT, PAD };
-if (useWasm()) wasmModel().then((m) => { model = m; dirty = true; }, (err) => console.warn(`pianet: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+const model = await wasmModel();
 
 const $ = (s) => document.querySelector(s);
 const spectrum = new SpectrumView($('#spectrum'));

@@ -1,13 +1,10 @@
 // ringdown-main.js — the page: UI, audio graph, keyboard / MIDI, views. The instrument
-// itself (parameters, QNM table, voices, engine, chain) is blackhole-instrument.js.
-// The worklet runs the WebAssembly build (blackhole-wasm.js) when it can, and the views call its
-// model once it has loaded; both fall back to the JavaScript (?engine=js forces it).
+// itself (parameters, engine, chain) is blackhole-instrument.js. The worklet runs the
+// WebAssembly build (blackhole-wasm.js), and the views call its model.
 
-import { INSTRUMENT, GROUPS, DEFAULTS, PRESETS, voiceFor } from './blackhole-instrument.js';
-import { ALL_PARAMS, fmtSpin } from './ringdown-params.js';
-import { noteName, KEY_LO, KEY_HI, spinFromU, strainCurve as jsStrainCurve } from './ringdown-model.js';
+import { INSTRUMENT, GROUPS, DEFAULTS, PRESETS } from './blackhole-instrument.js';
+import { ALL_PARAMS, fmtSpin, noteName, KEY_LO, KEY_HI, spinFromU } from './ringdown-params.js';
 import { wasmModel } from './blackhole-wasm.js';
-import { useWasm, engineSwitch } from '../../shared/shell.js';
 import { createChain } from '../../shared/chain.js';
 import { drawPlane, drawKerr, WaveView, Lazy } from './ringdown-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
@@ -20,24 +17,15 @@ const STORE = 'blackhole-keyboard/params/v1';
 function load() { try { const s = JSON.parse(localStorage.getItem(STORE) || 'null'); return s ? { ...DEFAULTS, ...s } : { ...DEFAULTS }; } catch { return { ...DEFAULTS }; } }
 function save() { try { localStorage.setItem(STORE, JSON.stringify(P)); } catch { /* unavailable */ } }
 
-let P = load(), bank = null, fs = 48000, base = 48, focusKey = 60, lastVel = 1;
+let P = load(), fs = 48000, base = 48, focusKey = 60, lastVel = 1;
 const held = new Map();
-const engineParams = () => INSTRUMENT.engineParams(P);
-// (P as well: a WebAssembly engine takes all the parameters, and builds a key's voice itself
-// when a note comes without one)
-const paramsMessage = () => ({ type: 'params', params: engineParams(), ...(INSTRUMENT.wasm && { P: { ...P } }) });
+// all the parameters: the engine builds each key's voice from them as the note starts
+const paramsMessage = () => ({ type: 'params', P: { ...P } });
 
-// The WebAssembly model (blackhole-wasm.js) once it has loaded: the QNM bank, each key's voice
-// and its strain. Until then, or without it, the JavaScript's (the table loaded by INSTRUMENT.load).
-let wasm = null;
-if (INSTRUMENT.wasm && useWasm()) {
-  wasmModel().then((m) => { wasm = m; setFocus(focusKey, lastVel); },
-    (err) => console.warn(`blackhole: the WebAssembly model did not load (${err.message}); the JavaScript one runs`));
-}
-const loaded = () => !!(wasm || bank);
-const qnm = () => (wasm ? wasm.bank : bank);
-const voiceOf = (key) => (wasm ? wasm.voiceFor(key, P, fs) : voiceFor(key, P, fs));
-const strainCurve = (v, n) => (wasm ? wasm.strainCurve(v, n) : jsStrainCurve(v, n));
+// The WebAssembly model (blackhole-wasm.js): the QNM bank, each key's voice and its strain, the
+// same C++ the engine plays.
+const model = await wasmModel();
+const voiceOf = (key) => model.voiceFor(key, P, fs);
 
 // ---------------------------------------------------------------------------
 // audio
@@ -49,38 +37,22 @@ function startAudio() {
   starting = (async () => {
     const ctx = new AudioContext({ latencyHint: 'interactive' });
     if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
-    await ctx.audioWorklet.addModule(INSTRUMENT.engine.module);
-    // the WebAssembly build: its bytes go to the worklet, which falls back to the JavaScript
-    // engine if it can't run them
-    let wasmBuild;
-    if (INSTRUMENT.wasm && useWasm()) {
-      try {
-        const bytes = await (await fetch(INSTRUMENT.wasm.binary)).arrayBuffer();
-        await ctx.audioWorklet.addModule(INSTRUMENT.wasm.module);
-        wasmBuild = { name: INSTRUMENT.wasm.name, bytes };
-      } catch (err) { console.warn(`blackhole: the WebAssembly engine did not load (${err.message}); the JavaScript one plays`); }
-    }
+    // the WebAssembly build: its bytes go to the worklet, which compiles them
+    const bytes = await (await fetch(INSTRUMENT.wasm.binary)).arrayBuffer();
+    await ctx.audioWorklet.addModule(INSTRUMENT.wasm.module);
     await ctx.audioWorklet.addModule(new URL('../../shared/worklet.js', import.meta.url));
     const node = new AudioWorkletNode(ctx, 'forte-processor', {
-      numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { engine: INSTRUMENT.engine.name, wasm: wasmBuild },
+      numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { wasm: { name: INSTRUMENT.wasm.name, bytes } },
     });
-    const kind = new Promise((resolve) => { engineStarted = resolve; }); // notes wait to know which engine plays
     const chain = createChain(ctx, node, INSTRUMENT.chain); // tone → master (+ room) → limiter
     node.port.onmessage = (e) => {
       if (e.data.type === 'voices') $('#voices').textContent = `${e.data.voices} ringing`; // the engine's, every 48 blocks
-      else if (e.data.type === 'engine') {
-        document.body.dataset.engine = e.data.kind;
-        $('#voices').title = `Engine: ${e.data.kind === 'wasm' ? 'WebAssembly (C++)' : 'JavaScript'}`;
-        showEngine(e.data.kind);
-        if (e.data.reason) console.warn(`blackhole: the WebAssembly engine failed (${e.data.reason}); the JavaScript one plays`);
-        engineStarted?.(e.data.kind);
-      } else if (e.data.type === 'error') toast(e.data.message);
+      else if (e.data.type === 'error') toast(e.data.message);
     };
     fs = ctx.sampleRate; // voices are cached per sample rate (voiceFor)
     audio = { ctx, node, chain };
     applyMix();
     node.port.postMessage(paramsMessage());
-    await kind;
     if (ctx.state !== 'running') await ctx.resume();
     live = true;
     $('#start').textContent = `Audio on · ${(fs / 1000).toFixed(1)} kHz`;
@@ -90,8 +62,6 @@ function startAudio() {
   starting.catch((err) => { toast(`Audio failed to start: ${err.message}`); starting = null; });
   return starting;
 }
-let engineStarted = null;
-const showEngine = INSTRUMENT.wasm ? engineSwitch() : () => {}; // C++ | JS in the header
 const post = (m) => { if (live) audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
 function applyMix() { if (audio) audio.chain.apply(P, trimGain('blackhole')); } // trim: level-matched across instruments
 
@@ -99,11 +69,10 @@ function applyMix() { if (audio) audio.chain.apply(P, trimGain('blackhole')); } 
 // keys
 
 async function noteOn(key, vel = INSTRUMENT.keyVelocity) { // computer keys: keyVelocity (1)
-  if (key < KEY_LO || key > KEY_HI || !loaded()) return;
+  if (key < KEY_LO || key > KEY_HI) return;
   keyboardView.set(key, true);
   const a = await startAudio();
-  // INSTRUMENT.noteData, from the model the views use: the engine plays the voice they show
-  a.node.port.postMessage({ type: 'noteOn', key, velocity: vel, data: voiceOf(key) });
+  a.node.port.postMessage({ type: 'noteOn', key, velocity: vel }); // the engine builds the voice the views show
   setFocus(key, vel);
 }
 function noteOff(key) { keyboardView.set(key, false); post({ type: 'noteOff', key }); }
@@ -227,11 +196,8 @@ function setParam(id, v, dragging = false) {
   refreshControl(id, dragging); refreshVisibility(); save(); updateHelp();
   $('#preset').value = '';
   if (p.kind === 'mix') applyMix();
-  else if (p.kind === 'engine') post(paramsMessage());
-  else { // voiceFor recomputes (and a WebAssembly engine builds its own voices from P)
-    if (INSTRUMENT.wasm) post(paramsMessage());
-    clearTimeout(focusTimer); focusTimer = setTimeout(() => setFocus(focusKey, lastVel), 60);
-  }
+  else post(paramsMessage());
+  if (p.kind === 'model') { clearTimeout(focusTimer); focusTimer = setTimeout(() => setFocus(focusKey, lastVel), 60); } // voiceFor recomputes
 }
 
 // ---------------------------------------------------------------------------
@@ -243,7 +209,6 @@ let focusVoice = null, focusDue = false;
 // Views follow the last key played. A chord's keys arrive together, so the
 // work is done once, on the next animation frame.
 function setFocus(key, vel) {
-  if (!loaded()) return;
   focusKey = key; lastVel = vel; focusDue = true;
 }
 function renderFocus() {
@@ -252,7 +217,7 @@ function renderFocus() {
   focusVoice = v;
   // the strain in closed form, at about two points per pixel
   const n = Math.max(400, Math.min(4000, 2 * Math.round(wave.cv.clientWidth || 600)));
-  wave.set({ ...strainCurve(v, n), fs, modes: v.modes });
+  wave.set({ ...model.strainCurve(v, n), fs, modes: v.modes });
   showInfo(v);
   plane.touch(); kerr.touch();
 }
@@ -280,12 +245,12 @@ function showInfo(v) {
 
 // Views redraw only when something changed, and only while visible.
 const lvl = (m) => Math.hypot(m.cpr, m.cpi) + Math.hypot(m.cxr, m.cxi);
-plane.draw = () => drawPlane(plane.cv, qnm(), spinFromU(P.spinU), focusVoice.modes.map((m) => ({ l: m.l, m: m.m, n: m.n, level: lvl(m) })));
+plane.draw = () => drawPlane(plane.cv, model.bank, spinFromU(P.spinU), focusVoice.modes.map((m) => ({ l: m.l, m: m.m, n: m.n, level: lvl(m) })));
 kerr.draw = () => drawKerr(kerr.cv, spinFromU(P.spinU), P.inclination);
 function frame() {
   requestAnimationFrame(frame);
-  if (loaded() && focusDue) renderFocus();
-  if (loaded() && focusVoice) { plane.frame(); kerr.frame(); }
+  if (focusDue) renderFocus();
+  if (focusVoice) { plane.frame(); kerr.frame(); }
   wave.frame();
 }
 
@@ -305,5 +270,5 @@ for (const id of controls.keys()) refreshControl(id);
 refreshVisibility();
 keyboardView.labels(keyLabels());
 updateHelp();
-INSTRUMENT.load().then((b) => { bank = b; setFocus(60, 1); });
+setFocus(60, 1);
 requestAnimationFrame(frame);

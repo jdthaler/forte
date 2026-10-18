@@ -1,16 +1,15 @@
 // pyrophone-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName, keyFreq, useWasm } from '../../shared/shell.js';
+import { createShell, noteName, keyFreq } from '../../shared/shell.js';
 import { SpectrumView, animate } from '../../shared/views.js';
-import { INSTRUMENT, tubeTuning } from './pyrophone-instrument.js';
-import { tubeKey, root, betaOn, orbitAt, orbitSpectrum, steadyY, heat, N_MODES, C_HOT } from './pyrophone-model.js';
-import { drawBif, drawTube, drawPhase, orbitState } from './pyrophone-views.js';
+import { INSTRUMENT } from './pyrophone-instrument.js';
+import { betaOn, N_MODES, C_HOT } from './pyrophone-model.js';
+import { drawBif, drawTube, drawPhase } from './pyrophone-views.js';
 import { wasmModel } from './pyrophone-wasm.js';
 
-// The views and the tuning table draw on what the engine plays: the WebAssembly model once it has
-// loaded (the same physics as the engine, in C++), the JavaScript one until then or if it can't load.
-let model = { tubeTuning, root, orbitAt, orbitSpectrum, steadyY, heat, orbitState };
-if (useWasm()) wasmModel().then((m) => { model = m; modelKey = ''; recompute(shell.P); shell.sendParams(); }, (err) => console.warn(`pyrophone: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+// The views and the tuning table draw on what the engine plays: its model, the same C++, built as
+// WebAssembly.
+const model = await wasmModel();
 
 const $ = (s) => document.querySelector(s);
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 50 });
@@ -19,26 +18,23 @@ let focus = 60, bif = null, tune = null, modelKey = '', lastCalc = 0, timer = 0,
 let live = { pts: [] }, foc = null, focAt = 0, trail = [], theta = 0, scale = null, pred = null, rootCache = [NaN, null];
 const eta = new Float64Array(N_MODES), vel = new Float64Array(N_MODES);
 
-// The bifurcation analysis (harmonic balance, ~50 ms in JavaScript, ~15 ms in WebAssembly;
-// tubeTuning) runs when a tube parameter changes, at most every 200 ms while a slider is dragged;
-// the engine gets the resulting tuning table with its parameters (the descriptor's engineParams,
-// with the last table until the next one is ready). The WebAssembly engine, which the worklet
-// gives the parameters without it, gets it in a message of its own just ahead of them.
+// The bifurcation analysis (harmonic balance, ~15 ms; tubeTuning) runs when a tube parameter
+// changes, at most every 200 ms while a slider is dragged; the engine gets the resulting tuning
+// table in a message of its own, and plays the last one until it comes.
 function recompute(P) {
-  ({ bif, tune } = model.tubeTuning(P)); modelKey = tubeKey(P); lastCalc = performance.now();
-  update();
+  ({ bif, tune } = model.tubeTuning(P)); modelKey = model.tubeKey(P); lastCalc = performance.now();
+  offerTune(tune); update();
 }
 function offerTune(t) {
-  if (t === sentTune || !shell?.audio || shell.engineKind !== 'wasm') return;
+  if (t === sentTune || !shell?.audio) return;
   sentTune = t;
   shell.post({ type: 'tune', tune: { key: t.key, P: t.P, betaH: t.betaH, betaMax: t.betaMax, mode: t.mode, fold: t.fold, b0: t.b0, db: t.db, Ws: t.Ws } });
 }
 function currentTune(P) {
-  if (tubeKey(P) !== modelKey) {
+  if (model.tubeKey(P) !== modelKey) {
     if (performance.now() - lastCalc > 200) recompute(P);
-    else if (!timer) timer = setTimeout(() => { timer = 0; recompute(shell.P); shell.sendParams(); }, 200);
+    else if (!timer) timer = setTimeout(() => { timer = 0; recompute(shell.P); }, 200);
   }
-  return tune;
 }
 
 shell = createShell({
@@ -46,7 +42,6 @@ shell = createShell({
   base: 48,
   arrows: { param: 'velocity', step: 0.05 },
   holdHint: { ms: 350, text: 'Hold the key: the flame takes a moment to set the tube singing.' },
-  engineParams: (P) => { const t = currentTune(P); offerTune(t); return { ...P, tune: t }; }, // INSTRUMENT.engineParams, throttled while dragging
   onAudio: (a) => { spectrum.setAnalyser(a.analyser); sentTune = null; offerTune(tune); },
   onMessage: (m) => {
     if (m.type !== 'tubes') return;

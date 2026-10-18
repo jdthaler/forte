@@ -1,4 +1,4 @@
-// huygens-model.cpp — tuning.js and sync-theory.js in C++ (huygens-model.h).
+// huygens-model.cpp — the keys' tuning and the pulse coupling's exact results (huygens-model.h).
 
 #include "huygens-model.h"
 

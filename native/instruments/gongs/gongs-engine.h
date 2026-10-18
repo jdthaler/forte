@@ -1,5 +1,4 @@
-// gongs-engine.h — the real-time gong keyboard (gongs/src/gongs-engine.js in C++), on the engine
-// contract (forte/engine.h).
+// gongs-engine.h — the real-time gong keyboard, on the engine contract (forte/engine.h).
 //
 // Each voice integrates one gong's shell modes x_k (in thicknesses) with the nonlinear coupling
 // V_nl of gongs-model.h and a Hertzian mallet: the exact damped modal recursion for the linear
@@ -7,7 +6,7 @@
 // conserved (or decays) however hard the gong is hit, a consistency projection each step whose
 // size is the error estimate for halving the step, and a linear tail once the coupling no longer
 // matters. Voices run at fs/R (R = 1, 2, 4 or 8); each rate has a bus and a polyphase
-// interpolator back to fs. See gongs-engine.js for the scheme.
+// interpolator back to fs. gongs/README.md ("Time stepping that cannot blow up") has the scheme.
 //
 // The coupling tables (gongs-model.h, buildShell: a few milliseconds per change of Dome rise,
 // Coupling terms or Rim) are built on a worker thread and handed over without locks (Shells); a
@@ -31,8 +30,8 @@
 
 namespace forte::gongs {
 
-// What the engine posts for the page (gongs/src/gongs-wasm.js gathers them back into the
-// JavaScript engine's 'gong' message, and turns 'error' into its text).
+// What the engine posts for the page (gongs/src/gongs-wasm.js gathers them into its 'gong'
+// message, and turns 'error' into its text).
 namespace msg {
 enum : uint16_t {
   amp1 = 1,  // key; the focus gong's mode amplitudes 0–29 (in thicknesses)
@@ -96,7 +95,7 @@ struct Hit {
 class Voice {
  public:
   using Modes = std::array<double, NMAX>;
-  // A new voice for key (gongs-engine.js's constructor), in a pool slot: nothing is allocated.
+  // A new voice for key, in a pool slot: nothing is allocated.
   void init(GongEngine &eng, int key, const double *P, const Shell &S);
 
   void setOutput(const double *P);

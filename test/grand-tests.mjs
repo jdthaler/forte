@@ -2,20 +2,28 @@
 //
 // First the physics against independent results (stiff-string dispersion,
 // transmission-line end conditions, the infinite-plate admittance, Weyl's
-// mode count, the Rayleigh integral), then the engine against the model.
+// mode count, the Rayleigh integral), then the engine against the model. Both are the C++
+// (native/instruments/grand), built as WebAssembly: the model through
+// grand-wasm.js.
 
 import assert from 'node:assert/strict';
-import {
-  stringScale, partialFreq, cpLength, stringCount, keyModel, boardModel, boardMobility, boardResponse, sinFT, keyFreq, stretchCents, octaveStretch,
-  STEEL, BOARD, KEY_LO, KEY_HI,
-} from '../grand/src/grand-model.js';
-import { C_PIEZO, EQ } from '../grand/src/grand-engine.js';
 import { INSTRUMENT } from '../grand/src/grand-instrument.js';
+import { wasmModel } from '../grand/src/grand-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
-import { DEFAULTS, GROUPS, PRESETS } from '../grand/src/grand-params.js';
+import { DEFAULTS, GROUPS } from '../grand/src/grand-params.js';
 import { renderEngine } from '../tools/audio-util.mjs';
+import { keyFreq } from '../shared/dsp.js';
 
-const GrandEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const GrandEngine = await loadEngine(INSTRUMENT);
+const { keyModel, boardModel, boardMobility, boardResponse, sinFT } = await wasmModel();
+const [KEY_LO, KEY_HI] = INSTRUMENT.range;
+// What the checks compare against, stated here rather than read from the model: steel's Young's
+// modulus and breaking stress, the plate's size, the speed of sound and the baffle's size for the
+// short circuit (grand-model.h), and the circuit's piezo capacitance and EQ corners (grand-engine.h).
+const STEEL = { E: 2.0e11, strength: 2.2e9 }, PLATE = { a: 1.3, b: 0.77, c: 343, ell: 0.5 };
+const C_PIEZO = 10e-9, EQ = { bass: 120, mid: 1000, midQ: 0.8, treble: 3500 };
+// A stiff string's partial 2 sits above twice its fundamental by this many cents.
+const octaveStretch = (B) => 1200 * Math.log2(Math.sqrt(1 + 4 * B) / Math.sqrt(1 + B));
 
 const FS = 48000, TAU = 2 * Math.PI;
 const t00 = performance.now();
@@ -75,30 +83,31 @@ const peak = (x) => x.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
 console.log('physics');
 test('stiff string: fₙ = n f₀√(1+Bn²)/√(1+B), B = π³Ed⁴/(64TL²), f₁ on its target (Fletcher 1964)', () => {
   for (const stretch of [true, false]) for (const scale of ['cp70', 'concert']) for (const m of [28, 45, 60, 84, 100]) {
-    const S = stringScale(m, P({ scale, stretch }));
+    const km = keyModel(m, P({ scale, stretch, maxFreq: 16000 })), S = km.S;
     const B = (Math.PI ** 3 * STEEL.E * S.d ** 4) / (64 * S.T * S.L ** 2);
     assert.ok(Math.abs(S.B / B - 1) < 1e-9, `B ${S.B} vs ${B}`);
-    assert.ok(Math.abs(cents(partialFreq(S, 1), S.f0)) < 1e-6, 'f₁ on target');
-    assert.ok(Math.abs(cents(S.f0, keyFreq(m)) - (stretch ? stretchCents(m, P({ scale })) : 0)) < 1e-9, 'target: 12-TET, or stretched');
-    for (const n of [2, 5, 13]) {
+    assert.ok(Math.abs(cents(km.partials[0].f, S.f0)) < 1e-6, 'f₁ on target');
+    if (!stretch) assert.ok(Math.abs(cents(S.f0, keyFreq(m))) < 1e-9, 'target: 12-TET');
+    for (const { n, f } of km.partials.slice(1)) {
       const want = (n * S.f0 * Math.sqrt(1 + B * n * n)) / Math.sqrt(1 + B);
-      assert.ok(Math.abs(cents(partialFreq(S, n), want)) < 1e-6, `${m} n=${n}`);
+      assert.ok(Math.abs(cents(f, want)) < 1e-6, `${m} n=${n}`);
     }
   }
 });
 test('CP-70 scale: 0.68 m bass (published: 26¾ in), 15 single-string keys, wire well below breaking', () => {
-  assert.ok(Math.abs(cpLength(28) - 0.679) < 0.005, `${cpLength(28)}`);
+  const L28 = keyModel(28, P()).S.L;
+  assert.ok(Math.abs(L28 - 0.679) < 0.005, `${L28}`);
   let mono = 0;
   for (let m = KEY_LO; m <= KEY_HI; m++) {
-    if (stringCount(m, 'cp70') === 1) mono++;
-    const S = stringScale(m, P());
-    assert.ok(S.stress < 0.5 * STEEL.strength, `key ${m}: ${(S.stress / STEEL.strength).toFixed(2)} of breaking`);
+    const km = keyModel(m, P());
+    if (km.ns === 1) mono++;
+    assert.ok(km.S.stress < 0.5 * STEEL.strength, `key ${m}: ${(km.S.stress / STEEL.strength).toFixed(2)} of breaking`);
   }
   assert.equal(mono, 15);
-  assert.ok(stringScale(28, P()).wound && !stringScale(60, P()).wound);
+  assert.ok(keyModel(28, P()).S.wound && !keyModel(60, P()).S.wound);
 });
 test('short bass strings are ~40× more inharmonic than a concert grand\'s: B ∝ d⁴/(T L²)', () => {
-  const cp = stringScale(28, P()), cg = stringScale(28, P({ scale: 'concert' }));
+  const cp = keyModel(28, P()).S, cg = keyModel(28, P({ scale: 'concert' })).S;
   assert.ok(cp.B / cg.B > 20, `${cp.B} vs ${cg.B}`);
   const p10 = (sc) => keyModel(28, P({ scale: sc })).partials[9].stretch;
   assert.ok(p10('cp70') > 100 && p10('concert') < 10, `${p10('cp70')} vs ${p10('concert')} ¢`);
@@ -131,18 +140,20 @@ test('spring-supported end: H sits flat by T/(K L), the root of T k cos kL + K s
 });
 test('soundboard: mean bridge conductance → 1/(8√(Dρh)), the infinite plate (Cremer & Heckl)', () => {
   for (const h of [6, 9, 14]) {
-    const B = boardModel(P({ boardH: h })), mb = B.mb;
-    B.mb = 1e-12; // without the bridge's mass
+    const B = boardModel(P({ boardH: h })), Ginf = 1 / (8 * Math.sqrt(B.D * B.rhoh));
     for (let seg = 0; seg < 3; seg++) {
       let s = 0, n = 0;
-      for (let f = 300; f < 1500; f += 0.5) { s += boardMobility(B, seg, f)[0]; n++; }
-      assert.ok(Math.abs(s / n / B.Ginf - 1) < 0.08, `h=${h} seg ${seg}: ${(s / n).toExponential(2)} vs ${B.Ginf.toExponential(2)}`);
+      for (let f = 300; f < 1500; f += 0.5) {
+        // without the bridge's mass, which sits in series: 1/Y = 1/Y_tot − iω m_b
+        const [re, im] = boardMobility(B, seg, f), yy = re * re + im * im, zr = re / yy, zi = -im / yy - TAU * f * B.mb;
+        s += zr / (zr * zr + zi * zi); n++;
+      }
+      assert.ok(Math.abs(s / n / Ginf - 1) < 0.08, `h=${h} seg ${seg}: ${(s / n).toExponential(2)} vs ${Ginf.toExponential(2)}`);
     }
-    B.mb = mb;
   }
 });
 test('soundboard modes: f₁₁ = (π/2)√(D/ρh)(a⁻² + b⁻²); count N(f) ≈ (S/2)√(ρh/D)·f (Weyl)', () => {
-  const B = boardModel(P()), { a, b } = BOARD;
+  const B = boardModel(P()), { a, b } = PLATE;
   const f11 = (Math.PI / 2) * Math.sqrt(B.D / B.rhoh) * (a ** -2 + b ** -2);
   assert.ok(Math.abs(B.f11 / f11 - 1) < 1e-9 && B.f11 > 35 && B.f11 < 60, `${B.f11}`);
   const n3k = Array.from(B.omega).filter((w) => w < TAU * 3000).length, weyl = ((a * b) / 2) * Math.sqrt(B.rhoh / B.D) * 3000;
@@ -158,7 +169,7 @@ test('Rayleigh integral: closed-form ∫sin(qx)e^{iκx}dx; even modes radiate we
   const B = boardModel(P());
   let odd = 0, no = 0, even = 0, ne = 0;
   for (let k = 0; k < B.K && B.omega[k] < TAU * 300; k++) {
-    const kl = (B.omega[k] / BOARD.c) * BOARD.ell, R = Math.abs(B.RL[k]) / (kl / Math.hypot(1, kl)); // baffled value
+    const kl = (B.omega[k] / PLATE.c) * PLATE.ell, R = Math.abs(B.RL[k]) / (kl / Math.hypot(1, kl)); // baffled value
     if (B.m[k] % 2 && B.n[k] % 2) { odd += R; no++; } else { even += R; ne++; }
   }
   assert.ok(even / ne < 0.3 * (odd / no), `even ${even / ne} vs odd–odd ${odd / no}`);
@@ -185,11 +196,11 @@ test('stretch tuning: every octave\'s 2:1 partials coincide, so the octaves stop
       const lo0 = keyModel(m, P({ scale, stretch: false })), hi0 = keyModel(m + 12, P({ scale, stretch: false }));
       beat12 = Math.max(beat12, Math.abs(lo0.partials[1].f - hi0.partials[0].f));
       // the stretch of each octave is exactly that of its lower note's partial 2
-      assert.ok(Math.abs(stretchCents(m + 12, P({ scale })) - stretchCents(m, P({ scale })) - octaveStretch(lo.S.B)) < 1e-4);
+      assert.ok(Math.abs(hi.S.cents - lo.S.cents - octaveStretch(lo.S.B)) < 1e-4);
     }
     assert.ok(worst < 1e-3 && beat12 > 10, `${scale}: worst 2:1 beat ${worst.toExponential(1)} Hz (12-TET ${beat12.toFixed(1)} Hz)`);
   }
-  assert.equal(stretchCents(69, P()), 0); // A4 stays at 440 Hz
+  assert.ok(Math.abs(keyModel(69, P()).S.cents) < 1e-9); // A4 stays at 440 Hz
   // in the output: partial 2 of the lower note on the upper note's fundamental
   for (const [m, was] of [[84, 14.7], [81, 9.8]]) {
     const lo = keyModel(m, P()), hi = keyModel(m + 12, P());
@@ -199,11 +210,12 @@ test('stretch tuning: every octave\'s 2:1 partials coincide, so the octaves stop
   }
   let worst = 0; // and each key on its stretched target
   for (let m = KEY_LO; m <= KEY_HI; m += 6) {
-    const want = stringScale(m, P()).f0, x = note(P(), m, 0.6, 1.3);
+    const want = keyModel(m, P()).S.f0, x = note(P(), m, 0.6, 1.3);
     worst = Math.max(worst, Math.abs(cents(peakFreq(x, want, Math.round(0.1 * FS), x.length), want)));
   }
   assert.ok(worst < 3, `worst ${worst.toFixed(2)} ¢ off its stretched target`);
-  console.log(`        (CP-70 stretch: E1 ${stretchCents(28, P()).toFixed(1)} ¢, C4 ${stretchCents(60, P()).toFixed(1)} ¢, C7 ${stretchCents(96, P()).toFixed(1)} ¢, E7 ${stretchCents(100, P()).toFixed(1)} ¢)`);
+  const sc = (m) => keyModel(m, P()).S.cents.toFixed(1);
+  console.log(`        (CP-70 stretch: E1 ${sc(28)} ¢, C4 ${sc(60)} ¢, C7 ${sc(96)} ¢, E7 ${sc(100)} ¢)`);
 });
 test('the zing is in the output: E1\'s 10th partial at the model\'s +159 ¢ (concert scale: +5 ¢)', () => {
   for (const scale of ['cp70', 'concert']) {
@@ -268,7 +280,7 @@ test('the frame keeps the energy in the strings: longer sustain than on a soundb
 test('H polarisation in the output sits T/(K_H L) flat of V', () => {
   const kH = 2e5, p = (tilt) => P({ stringing: 'single', tilt, pickH: 1, kH });
   const fV = peakFreq(note(p(0), 60, 0.7, 1.5), keyFreq(60), 4800, 72000, 30), fH = peakFreq(note(p(90), 60, 0.7, 1.5), keyFreq(60), 4800, 72000, 30);
-  const S = stringScale(60, P()), want = cents(1 - S.T / (kH * S.L), 1);
+  const S = keyModel(60, P()).S, want = cents(1 - S.T / (kH * S.L), 1);
   assert.ok(Math.abs(cents(fH, fV) - want) < 0.3, `${cents(fH, fV).toFixed(2)} vs ${want.toFixed(2)} ¢`);
 });
 test('striking at the middle leaves out the even partials', () => {
@@ -353,13 +365,10 @@ test('the soundboard microphones: about as loud as the piezo on a phrase (mono o
 });
 test('soundboard above its modal band: the residual path matches the plate\'s full modal sum (9–16 mm boards, 6–16 kHz)', () => {
   const band = (B, f1, f2) => { let e = 0, n = 0; for (let f = f1; f < f2; f += 7) for (let seg = 0; seg < 3; seg++) for (let mic = 0; mic < 2; mic++) { e += boardResponse(B, seg, f, mic) ** 2; n++; } return 10 * Math.log10(e / n); };
-  const saved = { fmax: BOARD.fmax, maxModes: BOARD.maxModes };
   for (const h of [9, 14]) {
     const B = boardModel(P({ boardH: h }));
-    Object.assign(BOARD, { fmax: 25000, maxModes: 9000 }); // the same plate, every mode to 25 kHz
-    const X = boardModel(P({ boardH: h + 1e-9 }));
-    Object.assign(BOARD, saved);
-    const nores = { ...B, res: new Float64Array(B.res.length) };
+    const X = boardModel(P({ boardH: h }), { fmax: 25000, maxModes: 9000 }); // the same plate, every mode to 25 kHz
+    const nores = { ...B, residual: false };
     for (const [f1, f2] of [[6000, 7500], [7500, 9000], [9000, 12000], [12000, 16000]]) {
       const d = band(B, f1, f2) - band(X, f1, f2);
       assert.ok(Math.abs(d) < 1.5, `${h} mm, ${f1 / 1000}–${f2 / 1000} kHz: ${d.toFixed(1)} dB (without the residual ${(band(nores, f1, f2) - band(X, f1, f2)).toFixed(1)} dB)`);

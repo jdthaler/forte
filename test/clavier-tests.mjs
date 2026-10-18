@@ -3,21 +3,30 @@
 // First the model against independent physics (a finite-difference string,
 // the full-length string, circuit algebra, measured values from a D6), then
 // the engine against the model (pitch, sawtooth, pressure, tension
-// modulation, mute, release, pickups), then level, stability and CPU.
+// modulation, mute, release, pickups, tone filter), then level, stability and
+// CPU. Both are the C++ (native/instruments/clavier), built as WebAssembly: the
+// model through clavier-wasm.js.
 
 import assert from 'node:assert/strict';
-import {
-  stringDesign, speakingFreq, gauge, releasedFreqs, pickupWeight, pickupX, pickupMix,
-  toneAnalog, toneResponse, toneBiquad, TONE_NET, PICKUP_R, MEASURED_B, STEEL, NONSPEAK, duffingShift,
-  pressureCents, sigma1, tensionCents, LO, HI, MUTE_R,
-} from '../clavier/src/clavier-model.js';
 import { INSTRUMENT } from '../clavier/src/clavier-instrument.js';
+import { wasmModel } from '../clavier/src/clavier-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
-import { DEFAULTS, GROUPS, PRESETS } from '../clavier/src/clavier-params.js';
+import { DEFAULTS, GROUPS, PRESETS, LO, HI, STRENGTH, MUTE_R } from '../clavier/src/clavier-params.js';
 import { symEig } from '../shared/linalg.js';
 import { keyFreq } from '../shared/dsp.js';
 
-const ClavierEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const ClavierEngine = await loadEngine(INSTRUMENT);
+const { stringDesign, keyModel, releasedFreqs, pickupWeight, pickupX, pickupMix, pressureCents, toneResponse } = await wasmModel();
+
+// What the checks compare against, stated here rather than read from the model:
+// the inharmonicity measured on a D6, and its tone networks and pickup source resistance
+// (Gabrielli et al. 2013, Table 1 and Table 3).
+const MEASURED_B = [[29, 5e-4], [34, 2e-4], [50, 9e-5], [51, 1e-4], [78, 9e-5], [88, 8e-5]];
+const TABS = ['soft', 'medium', 'treble', 'brilliant'], PICKUP_R = 1e4;
+// A pinned stiff string's pitch for a tension change dT: f ∝ √(T + π²EI/L²).
+const tensionCents = (S, dT) => 600 * Math.log2((S.T + dT + (Math.PI ** 2 * S.EI) / (S.L * S.L)) / (S.T + (Math.PI ** 2 * S.EI) / (S.L * S.L)));
+// Kirchhoff–Carrier for one mode of amplitude A: a Duffing oscillator, Δω/ω = 3 EA k² A² / 32 T.
+const duffingShift = (S, n, A) => { const k = (n * Math.PI) / S.L; return (3 * S.EA * k * k * A * A) / (32 * S.T); };
 
 const FS = 48000;
 let failures = 0;
@@ -75,8 +84,8 @@ test('scale: inharmonicity within ×2 of a measured D6, and no string above 65 %
   }
   for (let k = LO; k <= HI; k++) {
     const S = stringDesign(k, DEFAULTS);
-    assert.ok(S.stress < 0.65 * STEEL.strength && S.T > 0, `key ${k}: ${(S.stress / 1e6).toFixed(0)} MPa`);
-    assert.equal(gauge(k).wound, k <= 51); // first 23 strings wound (F1–D♯3)
+    assert.ok(S.stress < 0.65 * STRENGTH && S.T > 0, `key ${k}: ${(S.stress / 1e6).toFixed(0)} MPa`);
+    assert.equal(S.wound, k <= 51); // first 23 strings wound (F1–D♯3)
   }
 });
 
@@ -92,10 +101,10 @@ test('stiff string: the partials match a finite-difference solve of μü = T u�
     return Array.from(symEig(V, n)).sort((x, y) => x - y).map((l) => Math.sqrt(l / S.mu) / (2 * Math.PI));
   };
   for (const key of [29, 45, 69]) {
-    const S = stringDesign(key, DEFAULTS), f1 = fd(S, 99), f2 = fd(S, 199);
+    const { S, modes } = keyModel(key, DEFAULTS, FS), f1 = fd(S, 99), f2 = fd(S, 199);
     for (const m of [1, 2, 5, 10]) {
-      const f = (4 * f2[m - 1] - f1[m - 1]) / 3;
-      assert.ok(Math.abs(cents(f, speakingFreq(m, S))) < 0.2, `key ${key} mode ${m}: FD ${f.toFixed(3)} vs ${speakingFreq(m, S).toFixed(3)} Hz`);
+      const f = (4 * f2[m - 1] - f1[m - 1]) / 3, fm = modes[m - 1].f;
+      assert.ok(Math.abs(cents(f, fm)) < 0.2, `key ${key} mode ${m}: FD ${f.toFixed(3)} vs ${fm.toFixed(3)} Hz`);
     }
   }
 });
@@ -107,14 +116,13 @@ test('released string: the coupled component modes give the full-length pitch, 3
     const Lt = S.L + S.Ln, k = Math.PI / Lt, ideal = Math.sqrt((S.T0 * k * k + S.EI * k ** 4) / S.mu) / (2 * Math.PI);
     assert.ok(Math.abs(cents(f[0], ideal)) < 8, `key ${key}: ${f[0].toFixed(2)} Hz vs full string ${ideal.toFixed(2)} Hz`);
     assert.ok(Math.abs(cents(ideal, S.f0) + 300 + cents(S.T, S.T0) / 2) < 6, `key ${key}: ${cents(ideal, S.f0).toFixed(1)} ¢`);
+    assert.ok(Math.abs(S.Ln / S.L - (2 ** 0.25 - 1)) < 1e-12); // the nonspeaking length: 3 semitones
   }
-  assert.ok(Math.abs(NONSPEAK - (2 ** 0.25 - 1)) < 1e-12);
 });
 
 test('tone tabs: the one-biquad formula equals the parallel networks, for all 15 combinations', () => {
-  const tabs = Object.keys(TONE_NET);
   for (let mask = 1; mask < 16; mask++) {
-    const Q = {}; tabs.forEach((t, i) => { Q[t] = !!(mask & (1 << i)); });
+    const Q = P(); TABS.forEach((t, i) => { Q[t] = !!(mask & (1 << i)); });
     for (const f of [50, 300, 1000, 1641, 4000, 12000]) {
       const w = 2 * Math.PI * f;
       // complex admittance of the selected networks, H = 1/(1 + R_p Y)
@@ -128,18 +136,10 @@ test('tone tabs: the one-biquad formula equals the parallel networks, for all 15
     }
   }
   // treble alone: unit-gain band-pass at 1/2π√(LC) = 1.64 kHz; brilliant alone: high-pass, −3 dB at R_p/2πL
-  const tre = { treble: true }, bri = { brilliant: true };
-  assert.ok(Math.abs(toneResponse(1 / (2 * Math.PI * Math.sqrt(2 * 4.7e-9)), tre) - 1) < 1e-9);
-  assert.ok(Math.abs(toneResponse(PICKUP_R / (2 * Math.PI * 0.6), bri) - Math.SQRT1_2) < 1e-9);
-  assert.equal(toneAnalog({}).any, false);
-  // the digital filter follows the analogue one below 6 kHz
-  const q = toneBiquad({ medium: true, treble: true }, FS);
-  for (const f of [100, 500, 1000, 3000, 6000]) {
-    const w = (2 * Math.PI * f) / FS, zr = Math.cos(w), zi = -Math.sin(w), z2r = Math.cos(2 * w), z2i = -Math.sin(2 * w);
-    const nr = q.b0 + q.b1 * zr + q.b2 * z2r, ni = q.b1 * zi + q.b2 * z2i, dr = 1 + q.a1 * zr + q.a2 * z2r, di = q.a1 * zi + q.a2 * z2i;
-    const Hd = Math.hypot(nr, ni) / Math.hypot(dr, di), Ha = toneResponse(f, { medium: true, treble: true });
-    assert.ok(Math.abs(20 * Math.log10(Hd / Ha)) < 0.6, `${f} Hz: ${(20 * Math.log10(Hd / Ha)).toFixed(2)} dB`);
-  }
+  const only = (t) => P(Object.fromEntries(TABS.map((u) => [u, u === t])));
+  assert.ok(Math.abs(toneResponse(1 / (2 * Math.PI * Math.sqrt(2 * 4.7e-9)), only('treble')) - 1) < 1e-9);
+  assert.ok(Math.abs(toneResponse(PICKUP_R / (2 * Math.PI * 0.6), only('brilliant')) - Math.SQRT1_2) < 1e-9);
+  assert.equal(toneResponse(1000, only(null)), 0);
 });
 
 test('pickup: a mode with a node over the pole is silent; the pole width averages the high ones', () => {
@@ -184,9 +184,10 @@ test('velocity: the carry time g/v low-passes the strike, so harder is brighter'
 });
 
 test('partials follow the stiff-string series f_n = n f₁ √((1+Bn²)/(1+B)) (F1, B ≈ 5·10⁻⁴)', () => {
-  const S = stringDesign(29, DEFAULTS), x = note(29, P({ kc: false }), 0.6, 1.2);
+  const { S, modes } = keyModel(29, DEFAULTS, FS), x = note(29, P({ kc: false }), 0.6, 1.2);
   for (const n of [2, 4, 8, 12]) {
-    const fm = speakingFreq(n, S), f = peakFreq(x, fm, sec(0.3), sec(1.2), 20);
+    const fm = modes[n - 1].f, want = n * S.f0 * Math.sqrt((1 + S.B * n * n) / (1 + S.B)), f = peakFreq(x, fm, sec(0.3), sec(1.2), 20);
+    assert.ok(Math.abs(cents(fm, want)) < 1e-6, `model partial ${n}: ${fm} vs ${want} Hz`);
     assert.ok(Math.abs(cents(f, fm)) < 1, `partial ${n}: ${cents(f, fm).toFixed(2)} ¢ off; harmonic would be ${cents(n * S.f0, fm).toFixed(1)} ¢`);
   }
 });
@@ -194,7 +195,7 @@ test('partials follow the stiff-string series f_n = n f₁ √((1+Bn²)/(1+B)) (
 test('held fundamental decays at the model rate (T60 from the sustain setting)', () => {
   const Q = P({ t60: 6 }), k = 45, f0 = keyFreq(k), x = note(k, Q, 0.5, 2.2), W = sec(0.4);
   const db = 20 * Math.log10(tone(x, f0, sec(1.8), sec(1.8) + W) / tone(x, f0, sec(0.4), sec(0.4) + W));
-  const want = -20 * Math.log10(Math.E) * sigma1(f0, Q) * 1.4;
+  const want = -20 * Math.log10(Math.E) * keyModel(k, Q, FS).modes[0].sigma * 1.4;
   assert.ok(Math.abs(db - want) < 0.6, `${db.toFixed(2)} dB in 1.4 s; model ${want.toFixed(2)} dB`);
 });
 
@@ -235,21 +236,21 @@ test('tension modulation: one mode of amplitude A shifts by the Duffing value 3E
     return peakFreq(x, S.f0, sec(0.1), sec(0.6), 15);
   };
   // the mode decays a little over the window: use its mean square amplitude there
-  const A = 2e-3, sg = sigma1(S.f0, Q), t0 = (sec(0.05) - (sec(0.05) % 128)) / FS;
+  const A = 2e-3, sg = keyModel(key, Q, FS).modes[0].sigma, t0 = (sec(0.05) - (sec(0.05) % 128)) / FS;
   let ms = 0; for (let t = 0.1; t < 0.6; t += 0.001) ms += Math.exp(-2 * sg * (t - t0)) * (0.5 - 0.5 * Math.cos((2 * Math.PI * (t - 0.1)) / 0.5)) / 250;
   const dc = cents(run(A), run(1e-5)), want = 1200 * Math.log2(1 + duffingShift(S, 1, A * Math.sqrt(ms)));
   assert.ok(Math.abs(dc - want) < 0.15 * want, `${dc.toFixed(2)} ¢ vs Duffing ${want.toFixed(2)} ¢`);
 });
 
 test('mute felt: weak felt adds the first-order damping R sin²(kx)/μL to the fundamental', () => {
-  const key = 57, S = stringDesign(key, DEFAULTS), f0 = keyFreq(key), W = sec(0.25);
+  const key = 57, { S, modes } = keyModel(key, DEFAULTS, FS), f0 = keyFreq(key), W = sec(0.25);
   const dec = (o) => { const x = note(key, P({ t60: 30, ...o }), 0.4, 1.0); return Math.log(tone(x, f0, sec(0.2), sec(0.2) + W) / tone(x, f0, sec(0.7), sec(0.7) + W)) / 0.5; };
   const m = 0.1, xm = 15, R = MUTE_R * m, phi = Math.sin((Math.PI * xm * 1e-3) / S.L);
   const want = (R * phi * phi) / (S.mu * S.L), got = dec({ muteOn: true, mute: m, muteX: xm }) - dec({});
   assert.ok(Math.abs(got - want) < 0.12 * want, `Δσ = ${got.toFixed(2)} s⁻¹ vs ${want.toFixed(2)} s⁻¹`);
   // a full mute kills the twang: the 5th partial falls 30 dB below the open string's within 0.3 s
   const open = note(key, P(), 0.7, 0.4), muted = note(key, P({ muteOn: true, mute: 1 }), 0.7, 0.4);
-  const p5 = (x) => tone(x, speakingFreq(5, S), sec(0.25), sec(0.4)) / tone(x, f0, sec(0.25), sec(0.4));
+  const p5 = (x) => tone(x, modes[4].f, sec(0.25), sec(0.4)) / tone(x, f0, sec(0.25), sec(0.4));
   assert.ok(20 * Math.log10(p5(muted) / p5(open)) < -30);
 });
 
@@ -304,15 +305,31 @@ test('the amplifier gain glides: a jump of the knob mid-note leaves no step in t
 });
 
 test('pickup switches: out of phase, the fundamental drops by the model\'s |W_A − W_B| / |W_A + W_B|', () => {
-  const key = 40, S = stringDesign(key, DEFAULTS), X = pickupX(key, DEFAULTS);
+  const key = 40, { S, modes } = keyModel(key, DEFAULTS, FS), X = pickupX(key, DEFAULTS);
   const wl = pickupWeight(1, X.lower, S.L), wu = pickupWeight(1, X.upper, S.L);
   const f1 = (sel) => tone(note(key, P({ pickup: sel, field: 10 }), 0.5, 0.5), S.f0, sec(0.1), sec(0.5));
   const got = 20 * Math.log10(f1('diff') / f1('sum')), want = 20 * Math.log10(Math.abs(wl - wu) / Math.abs(wl + wu));
   assert.ok(Math.abs(got - want) < 1, `${got.toFixed(2)} dB vs ${want.toFixed(2)} dB`);
   // lower pickup on the 5th partial's node: that partial vanishes
   const xl = S.L / 5, x = note(key, P({ pickup: 'lower', xLower: xl * 100 - (60 - key) * 0.1525, field: 10 }), 0.6, 0.5);
-  const a = (n) => tone(x, speakingFreq(n, S), sec(0.1), sec(0.5));
+  const a = (n) => tone(x, modes[n - 1].f, sec(0.1), sec(0.5));
   assert.ok(20 * Math.log10(a(5) / Math.min(a(4), a(6))) < -25, `5th ${a(5).toExponential(2)} vs ${a(4).toExponential(2)}, ${a(6).toExponential(2)}`);
+});
+
+test('tone tabs in the output: one biquad, the analogue networks bilinear-transformed (prewarped at 1 kHz)', () => {
+  // the networks act after the strings, so two settings differ in the output by their two responses alone
+  const key = 41, { modes } = keyModel(key, DEFAULTS, FS), Q = P({ kc: false, field: 10 });
+  const A = { ...Q, soft: false, medium: true, treble: true, brilliant: false }, B = { ...Q, soft: false, medium: true, treble: false, brilliant: false };
+  const xa = note(key, A, 0.7, 0.6), xb = note(key, B, 0.7, 0.6);
+  // the bilinear transform maps the digital frequency f to the analogue K·tan(πf/fs)/2π
+  const K = (2 * Math.PI * 1000) / Math.tan((Math.PI * 1000) / FS), warp = (f) => (K * Math.tan((Math.PI * f) / FS)) / (2 * Math.PI);
+  for (const m of modes.filter((x) => [1, 3, 8, 15, 30, 60].includes(x.n) && x.f < 8000)) {
+    const got = 20 * Math.log10(tone(xa, m.f, sec(0.1), sec(0.6)) / tone(xb, m.f, sec(0.1), sec(0.6)));
+    const want = 20 * Math.log10(toneResponse(warp(m.f), A) / toneResponse(warp(m.f), B));
+    assert.ok(Math.abs(got - want) < 0.1, `partial ${m.n} (${m.f.toFixed(0)} Hz): ${got.toFixed(2)} vs ${want.toFixed(2)} dB`);
+    // and the digital filter follows the analogue one below 6 kHz
+    if (m.f < 6000) assert.ok(Math.abs(20 * Math.log10(toneResponse(warp(m.f), A) / toneResponse(m.f, A))) < 0.6, `${m.f.toFixed(0)} Hz`);
+  }
 });
 
 test('level: a forte note peaks at 0.1–0.5 with the default voicing; presets stay below 1', () => {

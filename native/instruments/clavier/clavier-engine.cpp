@@ -1,4 +1,4 @@
-// clavier-engine.cpp — the tangent clavier's engine, as clavier-engine.js runs it.
+// clavier-engine.cpp — the tangent clavier's engine (clavier-engine.h).
 
 #include "clavier-engine.h"
 
@@ -11,8 +11,7 @@ constexpr double OUT = 0.1;   // pickup signal (m/s) → output
 constexpr double BUSHING = 2; // N·s/m: friction of a released key
 static double strikeSpeed(double vel) { return 0.3 + 3.7 * vel; } // m/s at the tangent (clavier-params.js)
 
-// The parameters a held note follows at once; any other change makes the next note a new string
-// (the JavaScript's LIVE set, less the page's velocity).
+// The parameters a held note follows at once; any other change makes the next note a new string.
 static bool live(int i) {
   switch (i) {
     case p::gap: case p::tip: case p::wrap: case p::t60: case p::hf: case p::stiff: case p::yarn: return false;
@@ -67,7 +66,7 @@ void ClavierEngine::setParams(const double *p) {
   }
 }
 
-// A fresh string for `key`, as the JavaScript's new Voice(eng, key, model(key)).
+// A fresh string for `key`, from its model.
 void ClavierEngine::init(Voice &v, int key) {
   keyModel(key, P.data(), fs, v.mdl);
   const KeyModel &mdl = v.mdl;

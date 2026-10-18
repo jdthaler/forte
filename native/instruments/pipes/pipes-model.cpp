@@ -1,4 +1,4 @@
-// pipes-model.cpp — pipes/src/pipes-model.js in C++, operation for operation.
+// pipes-model.cpp — the flue pipes' physics (pipes-model.h).
 
 #include "pipes-model.h"
 

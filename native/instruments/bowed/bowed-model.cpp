@@ -1,4 +1,4 @@
-// bowed-model.cpp — the viola organista's physics, as bowed-model.js computes it.
+// bowed-model.cpp — the viola organista's physics (bowed-model.h).
 
 #include "bowed-model.h"
 

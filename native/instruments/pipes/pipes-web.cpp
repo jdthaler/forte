@@ -1,6 +1,7 @@
-// pipes-web.cpp — the model's functions the page's views call (pipes/src/pipes-wasm.js), a key's
-// packed pipes for the engine, and the engine's test hooks (its wind, voices and pipes, as the
-// JavaScript engine's fields show them).
+// pipes-web.cpp — the model's functions the page's views and the tests call (pipes/src/pipes-wasm.js),
+// a key's packed pipes for the engine, and the engine's test hooks (its wind, voices and pipes).
+
+#include <algorithm>
 
 #include "pipes-engine.h"
 #include "forte/web.h"
@@ -10,7 +11,7 @@ using Voice = PipeEngine::Voice;
 using Pipe = PipeEngine::Pipe;
 
 extern "C" {
-// One pipe (pipes-model.js, pipeModel(f, stopped, P, { tune })) into out, returning how many
+// One pipe (pipeModel(f, stopped, P, { tune })) into out, returning how many
 // numbers: f, stopped, theta, the geometry (D, a, Sp, H, h, dLt, W, b, y0, dd, Sm, Kj, dLm), A, M,
 // Le, L, fRes, Q1, gain, the number of modes, then per mode n, f, om, sigma, Q, harm.
 FORTE_EXPORT int pipes_pipe_model(double f, int stopped, double cutup, double gain, double offset, double tune, double *out) {
@@ -29,6 +30,63 @@ FORTE_EXPORT int pipes_pipe_model(double f, int stopped, double cutup, double ga
 }
 FORTE_EXPORT double pipes_tuning(double f, int stopped) { return tuning(f, stopped != 0); }
 FORTE_EXPORT double pipes_pipe_freq(int key, int r) { return pipeFreq(key, r); }
+FORTE_EXPORT double pipes_mode_freq(int n, double Le, int stopped) { return modeFreq(n, Le, stopped != 0); }
+FORTE_EXPORT double pipes_chest_pan(int key) { return chestPan(key); }
+// The wind system at stiffness stiff into out: Cc, Mt, Gs, Gr, Cr, Rt, fw.
+FORTE_EXPORT void pipes_wind_system(double stiff, double *out) {
+  const WindSystem w = windSystem(stiff);
+  int n = 0;
+  for (double v : {w.Cc, w.Mt, w.Gs, w.Gr, w.Cr, w.Rt, w.fw}) out[n++] = v;
+}
+}
+
+// A pipe as pipes_pipe_model writes it (perhaps altered by a test: its jet's area, fewer modes)
+// back into a model, for the linear analysis.
+static PipeModel unflatten(const double *a) {
+  PipeModel R;
+  Geometry &g = R.geo;
+  R.f = a[0]; R.stopped = a[1] != 0; R.theta = a[2];
+  double *geo[] = {&g.D, &g.a, &g.Sp, &g.H, &g.h, &g.dLt, &g.W, &g.b, &g.y0, &g.dd, &g.Sm, &g.Kj, &g.dLm};
+  for (int i = 0; i < 13; i++) *geo[i] = a[3 + i];
+  g.stopped = R.stopped; R.Kj = g.Kj;
+  R.A = a[16]; R.M = a[17]; R.Le = a[18]; R.L = a[19]; R.fRes = a[20]; R.Q1 = a[21]; R.gain = a[22];
+  R.nModes = std::max(0, std::min(MODES_OPEN, (int)a[23]));
+  for (int k = 0; k < R.nModes; k++) {
+    const double *m = a + 24 + 6 * k;
+    R.modes[k] = Mode{(int)m[0], m[1], m[2], m[3], m[4], (int)m[5]};
+  }
+  return R;
+}
+
+extern "C" {
+// The linear analysis of a pipe (flattened): the root of mode n at foot pressure p (Re s, Im s in
+// out; 0 if lost), the jet's loop gain L(s) (re, im in out), θ = U_j/(fW) at foot pressure p and
+// back, and the speaking window of mode n
+// between thetaLo and thetaHi (out: the number of edges, the grid's length, the edges, then the
+// grid's θ, Re s pairs).
+FORTE_EXPORT int pipes_linear_root(const double *flat, double p, int n, int steps, double *out) {
+  PipeModel R = unflatten(flat);
+  const std::optional<Cx> s = linearRoot(R, p, n, steps);
+  if (!s) return 0;
+  out[0] = s->re; out[1] = s->im;
+  return 1;
+}
+FORTE_EXPORT void pipes_loop_gain(const double *flat, double re, double im, double p, double *out) {
+  const PipeModel R = unflatten(flat);
+  const Cx L = loopGain(R, {re, im}, p);
+  out[0] = L.re; out[1] = L.im;
+}
+FORTE_EXPORT double pipes_theta_at(const double *flat, double p) { return thetaAt(unflatten(flat), p); }
+FORTE_EXPORT double pipes_pressure_at(const double *flat, double theta) { return pressureAt(unflatten(flat), theta); }
+FORTE_EXPORT int pipes_speaking_window(const double *flat, int n, double thetaLo, double thetaHi, double *out) {
+  PipeModel R = unflatten(flat);
+  const Window w = speakingWindow(R, n, thetaLo, thetaHi);
+  int k = 0;
+  out[k++] = (double)w.edges.size(); out[k++] = (double)w.grid.size();
+  for (double e : w.edges) out[k++] = e;
+  for (const auto &g : w.grid) { out[k++] = g[0]; out[k++] = g[1]; }
+  return k;
+}
 
 // A key's six pipes, packed (packKeyModels) into out, returning how many numbers: what the page
 // sends with a note, and its engine takes (pipes_offer).

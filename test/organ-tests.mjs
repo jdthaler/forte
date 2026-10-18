@@ -1,11 +1,14 @@
 // Tonewheel organ checks. Run: node test/organ-tests.mjs
+// The tone generator's numbers (the C++ model, through the WebAssembly), then the engine.
 import assert from 'node:assert/strict';
-import { gearFreq, etFreq, centsOff, keyWheel, keyAnalysis, NUM_WHEELS, wheelSpec } from '../organ/src/tonewheels.js';
+import { NUM_WHEELS } from '../organ/src/tonewheels.js';
 import { INSTRUMENT } from '../organ/src/organ-instrument.js';
 import { loadEngine } from '../tools/engine.mjs';
+import { wasmModel } from '../organ/src/organ-wasm.js';
 import { DEFAULTS } from '../organ/src/organ-params.js';
 
-const OrganEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const OrganEngine = await loadEngine(INSTRUMENT);
+const { gearFreq, centsOff, keyWheel, keyAnalysis, wheelSpec } = await wasmModel();
 
 const FS = 48000;
 let failures = 0;

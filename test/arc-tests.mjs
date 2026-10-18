@@ -8,18 +8,25 @@
 // from the linear analysis, the threshold, the ceiling τ sets, the steady notes the
 // capacitors are cut for, capacitors in parallel, the first and second kinds, the hiss, the
 // radiated pressure; and keys, arcs, the talking arc, levels, stability and CPU.
+//
+// The model and the engine are the C++ (native/instruments/arc), built as WebAssembly: the model's
+// functions through arc-wasm.js. What they are checked against (Ayrton's formula, Z(jω) in closed
+// form, Mayr's law linearised, integrated and as a state matrix, the thermophone) is arc-model.js.
 
 import assert from 'node:assert/strict';
 import {
-  TAU, KEY_LO, KEY_HI, AYRTON, keyFreq, noteName, ayrtonV, arcOp, staticV, zArc, zArcNumeric, negLimit, arcCycle, describing, loopArea,
-  linearAnalysis, stateMatrix, circuit, kelvinC, thresholdR, thresholdCurrent, upperLimit, steadyNote, keyCaps, hissCurrent, pressureGain,
-  pressureGainFirstPrinciples, polyRoots, AIR,
+  TAU, KEY_LO, KEY_HI, keyFreq, noteName, ayrtonV, zArc, zArcNumeric, negLimit, arcCycle, describing, loopArea,
+  stateMatrix, kelvinC, tuneKey, pressureGain, pressureGainFirstPrinciples, polyRoots, AIR,
 } from '../arc/src/arc-model.js';
 import { INSTRUMENT } from '../arc/src/arc-instrument.js';
+import { wasmModel } from '../arc/src/arc-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../arc/src/arc-params.js';
 
-const ArcEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const ArcEngine = await loadEngine(INSTRUMENT);
+const { arcOp, staticV, circuit, linearAnalysis, thresholdR, thresholdCurrent, upperLimit, steadyNote, capFor, hissCurrent } = await wasmModel();
+// the keyboard's capacitor bank, as the page cuts it and offers it to the engine (P.table)
+const keyCaps = (p) => ({ key: tuneKey(p), lo: KEY_LO, caps: Float64Array.from({ length: KEY_HI - KEY_LO + 1 }, (_, i) => capFor(KEY_LO + i, p)) });
 
 const FS = 48000;
 let failures = 0;
@@ -149,18 +156,20 @@ test('linear analysis: the quartic\'s roots are the eigenvalues of the circuit\'
     return c;
   };
   for (const [o, key] of [[{}, 48], [{}, 72], [{ current: 6, tau: 120, coil: 5 }, 60], [{ current: 2, gap: 6 }, 84]]) {
-    const p = P(o), ck = circuit(p, kelvinC(keyFreq(key), p.coil * 1e-3)), la = linearAnalysis(ck);
-    const ev = polyRoots(charPoly(stateMatrix(ck)));
-    for (const r of la.roots) {
-      const near = Math.min(...ev.map((e) => Math.hypot(e[0] - r[0], e[1] - r[1])));
-      assert.ok(near < 1e-6 * Math.hypot(...r) + 1e-6, `root ${r} (nearest eigenvalue ${near})`);
+    const p = P(o), C = kelvinC(keyFreq(key), p.coil * 1e-3), la = linearAnalysis(circuit(p, C)), r = la.s;
+    const ev = polyRoots(charPoly(stateMatrix(p, C, arcOp(p))));
+    for (const q of la.roots) {
+      const near = Math.min(...ev.map((e) => Math.hypot(e[0] - q[0], e[1] - q[1])));
+      assert.ok(near < 1e-6 * Math.hypot(...q) + 1e-6, `root ${q} (nearest eigenvalue ${near})`);
     }
+    assert.ok(la.roots.some((q) => q[0] === r[0] && q[1] === r[1]), 'the musical root is one of them');
+    assert.ok(la.sigma === r[0] && rel(la.f, r[1] / TAU) < 1e-12, 'σ and f are the root\'s');
   }
 });
 test('the arc\'s thermal lag acts as an inductance: notes start about 1 % below Kelvin\'s formula', () => {
   const p = P(), op = arcOp(p), L = p.coil * 1e-3, want = op.Larc / (2 * L);
   for (const key of [60, 67, 72, 79, 84]) {
-    const f = keyFreq(key), la = linearAnalysis(circuit(p, kelvinC(f, L), op)), shift = 1 - la.f / f;
+    const f = keyFreq(key), la = linearAnalysis(circuit(p, kelvinC(f, L))), shift = 1 - la.f / f;
     assert.ok(shift > 0.008 && shift < 0.013, `${noteName(key)}: ${(shift * 100).toFixed(2)} %`);
     assert.ok(Math.abs(shift - want) < 0.003, `${noteName(key)}: ${(shift * 100).toFixed(2)} % vs L_arc/2L = ${(want * 100).toFixed(2)} %`);
   }

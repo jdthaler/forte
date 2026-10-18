@@ -1,18 +1,18 @@
-// pyrophone-engine.h — the real-time pyrophone (pyrophone/src/pyrophone-engine.js in C++), on the
-// engine contract (forte/engine.h): one Rijke-tube Galerkin model per sounding key.
+// pyrophone-engine.h — the real-time pyrophone, on the engine contract (forte/engine.h): one
+// Rijke-tube Galerkin model per sounding key.
 //
 // Each tube integrates N acoustic modes in its own time (units of L/c). A mode is advanced by the
 // exact solution of η̈ + ζη̇ + ω²η = F over one sample with F held (zero-order hold), so the linear
 // acoustics is exact at any pitch and temperature; the flame couples the modes through the
-// delayed, nonlinear heat release, felt with seeded turbulence (the JavaScript's xorshift, the
-// same seed, so the same breath).
+// delayed, nonlinear heat release, felt with seeded turbulence (an xorshift with a fixed seed, so
+// the same breath every time).
 //
 // The tubes are cut from the tuning table (pyrophone-model.h: harmonic balance, tens of ms), which
 // depends only on the tube's parameters (bore, damping, flame position, lag). It is built off the
 // audio thread (forte/background.h, slot 0), and kept until the next one is in, as the page keeps
 // its last table while a slider moves; a note before the first table waits for it. Without
-// threads (WebAssembly) it is built in place, where the JavaScript engine builds it, unless the
-// page offers its own (offer()). Voices come from a fixed pool: nothing is allocated in process().
+// threads (WebAssembly) it is built in place, unless the page offers its own (offer()). Voices
+// come from a fixed pool: nothing is allocated in process().
 #pragma once
 
 #include <array>
@@ -27,7 +27,7 @@
 namespace forte::pyrophone {
 
 // What the engine posts for the page every 16 ms (pyrophone/src/pyrophone-wasm.js gathers them
-// into the JavaScript engine's 'tubes' message).
+// into its 'tubes' message).
 namespace msg {
 enum : uint16_t {
   tube = 1,  // key; β, amplitude of mode 1, of mode 2, key down, warmth θ
@@ -56,7 +56,7 @@ class PyrophoneEngine : public Engine {
   // The page's tuning table (WebAssembly only: without threads the engine would build it on the
   // audio thread): bore, damping, x_f, lag, β_H, β_max, mode, fold (NaN for none), b0, db, then
   // the table's TUNE_N values. Once a page offers tables, a tube change keeps the old table until
-  // the page's new one arrives, as the JavaScript engine does.
+  // the page's new one arrives.
   bool offer(const double *packed, int n);
   // the tests: whether the tuning for the current parameters is in (asks for it if not)
   bool ready() { return current() && tuneVersion == version; }
@@ -92,7 +92,7 @@ class PyrophoneEngine : public Engine {
     void observe(double e1, double v1);
   };
 
-  // read by the tests (through the WebAssembly's hooks), in the JavaScript engine's order
+  // read by the tests (through the WebAssembly's hooks), in the order they started
   std::array<Voice *, POOL> voices{};
   int nVoices = 0;
   const Tuning *tune = nullptr; // the table the tubes are cut from (the last one in)

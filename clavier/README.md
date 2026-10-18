@@ -203,7 +203,8 @@ Soft alone is a low-pass at 210 Hz, medium a low-pass at 2.1 kHz, treble a
 unit-gain band-pass at 1/2π√(LC) = 1.64 kHz, and brilliant a high-pass at
 R_p/2πL = 2.65 kHz. With no tab down there is no path and the D6 is silent,
 and so is this. The tests check the formula against the parallel networks
-for all 15 combinations. It is bilinear-transformed (prewarped at 1 kHz).
+for all 15 combinations. It is bilinear-transformed (prewarped at 1 kHz),
+and they check the output against that too.
 The amplifier's mild shelves (−3 dB at 130 Hz, +3 dB at 4 kHz; Gabrielli et
 al.) follow, then *Amplifier gain*.
 
@@ -233,16 +234,14 @@ result. The pickups' nonlinearity is mild, so there is no oversampling. Ten
 bass voices (the most modes) run at 17 % of real time in Node on an Apple
 laptop; a spread chord at 9 %.
 
-**In C++.** The same engine and model run as WebAssembly on this page (the
-JavaScript is the fallback; `?engine=js` in the address forces it), where
-the views draw from the WebAssembly model and the slow motion replays the
-WebAssembly engine; and as plugins (CLAP, VST3, AU and a standalone app),
-with velocity as the tangent's speed, CC64 as the mute bar, and aftertouch
-and the pitch wheel (up) pressing held keys harder. A key's modes are
-closed-form, so the engine builds them when the key is struck, as here
-(ten keys at once in about 0.2 ms). The WebAssembly plays what the
-JavaScript plays to within 10⁻⁷ of the peak (float32 rounding), and the same
-test suite passes on it. Ten bass voices take about 14 % of a core in C++.
+**In C++.** The engine and model are C++ (`native/instruments/clavier`).
+They run as WebAssembly on this page, where the views draw from the model
+and the slow motion replays the engine, and as plugins (CLAP, VST3, AU and
+a standalone app), with velocity as the tangent's speed, CC64 as the mute
+bar, and aftertouch and the pitch wheel (up) pressing held keys harder. A
+key's modes are closed-form, so the engine builds them when the key is
+struck (ten keys at once in about 0.2 ms). Ten bass voices take about 14 %
+of a core in C++.
 
 ## What to listen for
 
@@ -279,13 +278,11 @@ held partials, their stiffness sharpening and T60.
 
 ```
 clavier/index.html, style.css          page
-clavier/src/clavier-model.js           physics (no audio, no DOM): scale, modes, contacts, pickups, tone tabs
-clavier/src/clavier-engine.js          real-time engine (AudioWorklet and Node)
-clavier/src/clavier-params.js          parameters and presets
+clavier/src/clavier-params.js          parameters and presets (and the model's constants the page needs)
 clavier/src/clavier-main.js            page wiring and views
-clavier/src/clavier-wasm.js            the C++ engine and model as WebAssembly (clavier/wasm/clavier.wasm)
-native/instruments/clavier/            the C++ port: model, engine, reference (plugins and WebAssembly)
-test/clavier-tests.mjs                 node test/clavier-tests.mjs  (23 tests, ~15 s; FORTE_ENGINE=wasm: on the WebAssembly)
+clavier/src/clavier-wasm.js            the engine and model as WebAssembly (clavier/wasm/clavier.wasm), for the page and the tests
+native/instruments/clavier/            the physics in C++: model (scale, modes, contacts, pickups, tone tabs), engine, reference
+test/clavier-tests.mjs                 node test/clavier-tests.mjs  (24 tests, ~15 s)
 tools/render-clavier.mjs               node tools/render-clavier.mjs → examples/clavier/
 ```
 

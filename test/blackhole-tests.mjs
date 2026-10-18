@@ -2,13 +2,18 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { solveQNM, trackQNM, separationConstant, SCHWARZSCHILD, C } from '../blackhole/src/qnm.js';
-import { QNMBank, keyVoice, swsh, uFromSpin, keyFreq, excitation, strainCurve, chirpSchedule, MSUN_S } from '../blackhole/src/ringdown-model.js';
 import { INSTRUMENT } from '../blackhole/src/blackhole-instrument.js';
+import { wasmModel } from '../blackhole/src/blackhole-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
-import { DEFAULTS } from '../blackhole/src/ringdown-params.js';
+import { DEFAULTS, uFromSpin } from '../blackhole/src/ringdown-params.js';
 import { header as tableHeader, headerFile } from '../tools/blackhole-native-table.mjs';
 
-const RingdownEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const RingdownEngine = await loadEngine(INSTRUMENT);
+// the model the views call, in the same C++: the QNM bank (the table, interpolated), a key's voice
+// and its strain in closed form
+const { bank, swsh, strainCurve, keyVoice } = await wasmModel();
+const MSUN_S = 4.925490947e-6;                            // G M☉ / c³ in seconds
+const keyFreq = (m) => 440 * 2 ** ((m - 69) / 12);
 
 let failures = 0;
 function test(name, fn) {
@@ -16,7 +21,7 @@ function test(name, fn) {
   if (process.env.CI && /^CPU|real time|costlier/.test(name)) { console.log('  skip', name, '(timing; skipped on CI)'); return; }
   try { fn(); console.log('  ok  ', name); } catch (e) { failures++; console.log('  FAIL', name, '\n       ', e.message); } }
 const close = (z, re, im, tol) => Math.abs(z.re - re) < tol && Math.abs(z.im - im) < tol;
-const bank = new QNMBank(JSON.parse(readFileSync(new URL('../blackhole/data/qnm-table.json', import.meta.url))));
+const table = JSON.parse(readFileSync(new URL('../blackhole/data/qnm-table.json', import.meta.url)));
 
 console.log('Leaver continued fractions');
 test('Schwarzschild modes l = 2–4, n = 0–2 match the literature to 1e-6', () => {
@@ -121,20 +126,29 @@ test('the native port\'s copy of the table (native/instruments/blackhole/qnm-tab
 });
 
 console.log('merger excitation and sound');
-test('equal masses switch off odd-m modes; lopsided mergers switch them on', () => {
-  const eq = excitation({ massRatio: 1 }).base, lop = excitation({ massRatio: 8 }).base;
-  assert.equal(eq['2,1'], 0); assert.equal(eq['3,3'], 0);
-  assert.ok(lop['3,3'] > 0.2 * lop['2,2']);
+test('mode amplitudes follow the NR fits (Gossan et al. 2012, Eqs. 5–8): equal masses switch off odd-m modes, lopsided mergers switch them on', () => {
+  for (const q of [1, 1.2, 3, 8, 20]) {
+    const nu = q / (1 + q) ** 2, d = Math.max(0, 1 - 4 * nu), A22 = 0.864 * nu;
+    const fit = { '2,2': A22, '2,1': 0.52 * d ** 0.71 * A22, '3,3': 0.44 * d ** 0.45 * A22, '4,4': (5.4 * (nu - 0.22) ** 2 + 0.04) * A22 };
+    const modes = keyVoice(60, { ...DEFAULTS, massRatio: q }, 48000).modes.filter((m) => m.n === 0);
+    for (const [lm, A] of Object.entries(fit)) {
+      const md = modes.find((m) => `${m.l},${m.m}` === lm);
+      if (A === 0) assert.ok(!md, `q = ${q}: (${lm},0) should be silent`);
+      else assert.ok(md && Math.abs(md.amp / A - 1) < 1e-12, `q = ${q}: (${lm},0) amplitude ${md?.amp} vs ${A}`);
+    }
+    assert.equal(modes.length, Object.values(fit).filter((A) => A > 0).length, `q = ${q}: no other fundamentals (no counter-rotating ones by default)`);
+    if (q === 8) assert.ok(fit['3,3'] > 0.2 * fit['2,2']);
+  }
 });
 test('face-on: circular polarisation (C₊ = C×); edge-on: h× vanishes for (2,2)', () => {
-  const v0 = keyVoice(60, { ...DEFAULTS, inclination: 0 }, bank, 48000).modes.find((m) => m.l === 2 && m.m === 2 && m.n === 0);
+  const v0 = keyVoice(60, { ...DEFAULTS, inclination: 0 }, 48000).modes.find((m) => m.l === 2 && m.m === 2 && m.n === 0);
   assert.ok(Math.abs(v0.cpr - v0.cxr) < 1e-12 && Math.abs(v0.cpi - v0.cxi) < 1e-12);
-  const v90 = keyVoice(60, { ...DEFAULTS, inclination: 90, massRatio: 1 }, bank, 48000).modes.find((m) => m.l === 2 && m.m === 2 && m.n === 0);
+  const v90 = keyVoice(60, { ...DEFAULTS, inclination: 90, massRatio: 1 }, 48000).modes.find((m) => m.l === 2 && m.m === 2 && m.n === 0);
   assert.ok(Math.hypot(v90.cxr, v90.cxi) < 1e-12 * Math.hypot(v90.cpr, v90.cpi) + 1e-15);
 });
 test('each key is tuned on its (2,2,0) mode; rendered pitch and decay match', () => {
   const P = { ...DEFAULTS, spinU: uFromSpin(0.999), massRatio: 1, overtones: 0, inclination: 0 };
-  const v = keyVoice(57, P, bank, 48000);
+  const v = keyVoice(57, P, 48000);
   const m220 = v.modes.find((m) => m.l === 2 && m.m === 2 && m.n === 0);
   assert.ok(Math.abs(m220.f / keyFreq(57) - 1) < 1e-9);
   v.modes = [m220];
@@ -149,7 +163,7 @@ test('each key is tuned on its (2,2,0) mode; rendered pitch and decay match', ()
   assert.ok(Math.abs(gamma / m220.gamma - 1) < 0.02, `γ ${gamma} vs ${m220.gamma}`);
 });
 test('inspiral chirps up and hands over to the ringdown', () => {
-  const v = keyVoice(57, { ...DEFAULTS, inspiral: true, inspiralOct: 2 }, bank, 48000);
+  const v = keyVoice(57, { ...DEFAULTS, inspiral: true, inspiralOct: 2 }, 48000);
   const e = new RingdownEngine(48000); e.noteOn(v.key, 1, v);
   const L = new Float32Array(128), R = new Float32Array(128);
   let fPrev = 0, mono = true, ringAt = null;
@@ -164,7 +178,7 @@ test('inspiral chirps up and hands over to the ringdown', () => {
 test('the strain is continuous through the handover: no notch at the merger', () => {
   // face-on, |h| = √(h₊² + h×²) is the envelope; it must follow the ringdown's, |Σ C ζ(t)|
   for (const [key, spinU, overtones] of [[45, DEFAULTS.spinU, 1], [69, DEFAULTS.spinU, 0], [57, 3, 1], [81, 3, 0]]) {
-    const v = keyVoice(key, { ...DEFAULTS, inspiral: true, inspiralOct: 1.5, inclination: 0, spinU, overtones }, bank, 48000);
+    const v = keyVoice(key, { ...DEFAULTS, inspiral: true, inspiralOct: 1.5, inclination: 0, spinU, overtones }, 48000);
     const e = new RingdownEngine(48000); e.noteOn(v.key, 1, v);
     const L = new Float32Array(1), R = new Float32Array(1), h = [];
     let at = -1;
@@ -182,7 +196,7 @@ test('the strain is continuous through the handover: no notch at the merger', ()
 });
 test('the plotted strain (closed form) is what the engine plays', () => {
   for (const P of [{ ...DEFAULTS }, { ...DEFAULTS, spinU: 4, massRatio: 4, inclination: 70, retrograde: 0.5 }, { ...DEFAULTS, inspiral: true, inspiralOct: 1 }]) {
-    const v = keyVoice(60, P, bank, 48000), n = 1200, cv = strainCurve(v, n);
+    const v = keyVoice(60, P, 48000), n = 1200, cv = strainCurve(v, n);
     const total = Math.round(cv.dur * 48000) + 1, e = new RingdownEngine(48000); e.noteOn(v.key, 1, v);
     const hp = new Float32Array(total + 128), hx = new Float32Array(total + 128), L = new Float32Array(128), R = new Float32Array(128);
     for (let s = 0; s < total; s += 128) { e.process(L, R, 128); hp.set(L, s); hx.set(R, s); }
@@ -197,26 +211,29 @@ test('the plotted strain (closed form) is what the engine plays', () => {
     if (P.inspiral) assert.ok(corr > 0.98, `chirp: correlation ${corr}`);
     else assert.ok(err < 2e-3 * mx, `ringdown: worst ${(err / mx).toExponential(2)} of peak`);
   }
-  const v = keyVoice(36, { ...DEFAULTS, spinU: 6, retrograde: 1, massRatio: 3, overtones: 2 }, bank, 48000), t0 = performance.now();
+  const v = keyVoice(36, { ...DEFAULTS, spinU: 6, retrograde: 1, massRatio: 3, overtones: 2 }, 48000), t0 = performance.now();
   for (let i = 0; i < 10; i++) strainCurve(v, 2000);
   const ms = (performance.now() - t0) / 10;
   assert.ok(ms < 10, `${ms.toFixed(1)} ms per plot`);
   console.log(`        strain plot: ${ms.toFixed(2)} ms for 2000 points, ${v.modes.length} modes (was an offline render of up to 2.5 s)`);
 });
 test('the inspiral starts a set number of octaves below ISCO, and lasts at most 2 s', () => {
-  const at = (key, oct) => keyVoice(key, { ...DEFAULTS, inspiral: true, inspiralOct: oct }, bank, 48000).chirp;
+  const at = (key, oct) => keyVoice(key, { ...DEFAULTS, inspiral: true, inspiralOct: oct }, 48000).chirp;
   for (const key of [48, 60, 84]) {
     const c1 = at(key, 0.5), c2 = at(key, 1);
     assert.ok(Math.abs(c1.fStart / c1.fIsco - 2 ** -0.5) < 1e-12 && Math.abs(c2.fStart / c2.fIsco - 0.5) < 1e-12, `${key}`);
   }
   for (let key = 36; key <= 96; key += 6) for (const oct of [1.5, 3]) {
-    const c = at(key, oct), { t2 } = chirpSchedule(c);
-    assert.ok(c.tc <= 2 + 1e-9 && t2 < 2.1, `${key}, ${oct} octaves: τ_c ${c.tc.toFixed(2)} s`);
+    const c = at(key, oct), e = new RingdownEngine(48000), L = new Float32Array(128), R = new Float32Array(128);
+    e.setParams({ ...DEFAULTS, inspiral: true, inspiralOct: oct }); e.noteOn(key, 1);
+    let s = 0;
+    while (!e.voices[0].ring && s < 48000 * 3) { e.process(L, R, 128); s += 128; }
+    assert.ok(c.tc <= 2 + 1e-9 && s / 48000 < 2.1, `${key}, ${oct} octaves: τ_c ${c.tc.toFixed(2)} s, ringdown from ${(s / 48000).toFixed(2)} s`);
   }
 });
 test('voice stealing fades the quietest voice instead of cutting the oldest', () => {
   const P = { ...DEFAULTS, spinU: 6, t0: 10, overtones: 0.4, massRatio: 1, inclination: 0 };
-  const loud = keyVoice(36, P, bank, 48000), quiet = keyVoice(36, P, bank, 48000);
+  const loud = keyVoice(36, P, 48000), quiet = keyVoice(36, P, 48000);
   const play = (max) => {
     const e = new RingdownEngine(48000); e.setParams({ maxVoices: max });
     const arr = e.voices, L = new Float32Array(128), R = new Float32Array(128), out = [];
@@ -248,45 +265,41 @@ test('near extremality the l = m modes, and some l ≠ m overtones, ring at mΩ_
 test('GW150914’s remnant (62 M☉, a ≈ 0.67) rings near middle C: ≈ 271 Hz in its own frame, ≈ 249 Hz as observed', () => {
   const w = bank.omega(2, 2, 0, 0.67), f = (M) => w.re / (2 * Math.PI * M * MSUN_S);
   assert.ok(Math.abs(f(62) - 271) < 1.5 && Math.abs(f(62 * 1.09) - 249) < 1.5, `${f(62)}, ${f(62 * 1.09)}`);
-  const c4 = keyVoice(60, DEFAULTS, bank, 48000).info;
+  const c4 = keyVoice(60, DEFAULTS, 48000).info;
   assert.ok(Math.abs(c4.a - 0.69) < 1e-3 && Math.abs(c4.Msun - 65.2) < 0.1 && Math.abs(c4.rPlusKm - 166) < 1);
 });
 
 console.log('the WebAssembly (native/instruments/blackhole)');
-async function testAsync(name, fn) { try { await fn(); console.log('  ok  ', name); } catch (e) { failures++; console.log('  FAIL', name, '\n       ', e.message); } }
-await testAsync('the views\' WebAssembly model (blackhole-wasm.js) gives the JavaScript\'s table, modes, voices and strain exactly', async () => {
-  const { wasmModel } = await import('../blackhole/src/blackhole-wasm.js');
-  const m = await wasmModel();
-  assert.deepEqual(Array.from(m.bank.u), bank.u);
-  assert.equal(m.bank.modes.length, bank.modes.length);
-  bank.modes.forEach((md, i) => { const w = m.bank.modes[i]; assert.ok(w.l === md.l && w.m === md.m && w.n === md.n); assert.deepEqual(w.re, md.re); assert.deepEqual(w.lim, md.lim); });
-  for (const a of [0, 0.3, 0.69, 0.9, 0.99, 0.9999, 1 - 1e-6, 1 - 1e-7]) for (const md of bank.modes) assert.deepEqual(m.bank.omega(md.l, md.m, md.n, a), bank.omega(md.l, md.m, md.n, a));
-  assert.equal(m.bank.omega(5, 0, 0, 0.5), null);
-  for (const th of [0, 0.3, 1.2, Math.PI]) for (const [l, mm] of [[2, 2], [2, -1], [3, 0], [4, -4]]) assert.equal(m.swsh(-2, l, mm, th), swsh(-2, l, mm, th));
-  const settings = [{ ...DEFAULTS }, { ...DEFAULTS, spinU: 6, retrograde: 1, massRatio: 3, overtones: 2 }, { ...DEFAULTS, inspiral: true, inclination: 70, massRatio: 5 },
-    { ...DEFAULTS, spinU: 0, t0: 0, inspiral: true, inspiralOct: 3 }];
-  for (const P of settings) for (const fs of [44100, 48000, 96000]) for (let key = 36; key <= 96; key += 5) {
-    const js = keyVoice(key, P, bank, fs), w = m.keyVoice(key, P, fs);
-    assert.deepEqual(w, { key: js.key, modes: js.modes, chirp: js.chirp, info: js.info }, `key ${key} at ${fs} Hz`);
-    if (key % 15 === 6) { const a = strainCurve(js, 500), b = m.strainCurve(js, 500); assert.deepEqual(b, a); }
-  }
+test('its QNM table is data/qnm-table.json (tools/qnm-table.mjs), number for number', () => {
+  assert.deepEqual(Array.from(bank.u), table.u);
+  assert.equal(bank.modes.length, table.modes.length);
+  table.modes.forEach((md, i) => {
+    const w = bank.modes[i];
+    assert.ok(w.l === md.l && w.m === md.m && w.n === md.n, `mode ${i}`);
+    assert.deepEqual(Array.from(w.re), md.re);
+    assert.deepEqual(Array.from(w.lim), md.im.map((v) => Math.log(-v)), `(${md.l},${md.m},${md.n}) log damping`);
+    for (const k of [0, 17, table.u.length - 1]) {             // on a node, the interpolation is the node (to the rounding of a = 1 − 10⁻ᵘ)
+      const z = bank.omega(md.l, md.m, md.n, 1 - 10 ** -table.u[k]);
+      assert.ok(Math.abs(z.re / md.re[k] - 1) < 1e-9 && Math.abs(z.im / md.im[k] - 1) < 1e-9, `(${md.l},${md.m},${md.n}) at u = ${table.u[k]}`);
+    }
+  });
+  assert.equal(bank.omega(5, 0, 0, 0.5), null);
 });
-await testAsync('the WebAssembly engine plays what the JavaScript engine plays, bit for bit, on the page\'s note data', async () => {
-  const { RingdownEngine: JsEngine } = await import('../blackhole/src/ringdown-engine.js');
-  const { BlackholeWasmEngine } = await import('../blackhole/src/blackhole-wasm.js');
-  await BlackholeWasmEngine.ready();
+test('the engine plays the voice the views show: a note without data is a note with the model\'s keyVoice, bit for bit', () => {
   const P = { ...DEFAULTS, spinU: 4, inspiral: true, massRatio: 2, retrograde: 0.3 };
-  const out = (E) => {
-    const e = new E(44100), L = new Float32Array(64), R = new Float32Array(64), got = [];
-    e.setParams({ stereo: 0, releaseMute: 1, maxVoices: 4 });
+  const out = (offer) => {
+    const e = new RingdownEngine(44100), L = new Float32Array(64), R = new Float32Array(64), got = [];
+    e.setParams({ ...P, stereo: 0, releaseMute: 1, maxVoices: 4 });
     for (let b = 0; b < 400; b++) {
-      if (b % 40 === 0) { const key = 40 + (b / 40) * 5; e.noteOn(key, 0.3 + b / 800, keyVoice(key, P, bank, 44100)); }
+      if (b % 40 === 0) { const key = 40 + (b / 40) * 5; e.noteOn(key, 0.3 + b / 800, offer ? keyVoice(key, P, 44100) : undefined); }
       if (b % 40 === 20) e.noteOff(40 + ((b - 20) / 40) * 5);
       e.process(L, R, 64); got.push(...L, ...R);
     }
     return got;
   };
-  assert.deepEqual(out(BlackholeWasmEngine), out(JsEngine));
+  const a = out(false);
+  assert.ok(a.some((x) => x !== 0));
+  assert.deepEqual(a, out(true));
 });
 
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');

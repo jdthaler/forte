@@ -1,6 +1,6 @@
-// pianet-engine.h — the real-time sticky-pad piano (pianet/src/pianet-engine.js in C++), on the
-// engine contract (forte/engine.h): one sticky-pad mechanism per key (pianet-model.h), the pickup,
-// the output network and an optional valve combo.
+// pianet-engine.h — the real-time sticky-pad piano, on the engine contract (forte/engine.h): one
+// sticky-pad mechanism per key (pianet-model.h), the pickup, the output network and an optional
+// valve combo.
 //
 //   key ─▶ holder ─▶ foam + tacky bond ─▶ reed modes (2× oversampled) ─▶ pickup: Σ dΦ/dt through the
 //   coils (T) or the plate rail's ΔC (N) ─▶ valve drive ─▶ decimating FIR ─▶ tone RC ─▶ speaker
@@ -22,8 +22,8 @@
 
 namespace forte::pianet {
 
-// What the engine posts for the page (pianet/src/pianet-wasm.js turns them back into the
-// JavaScript engine's 'release' and 'error' messages).
+// What the engine posts for the page (pianet/src/pianet-wasm.js turns them into its 'release'
+// and 'error' messages).
 namespace msg {
 enum : uint16_t {
   release = 1, // key; y, F, v, t, V at the moment the pad let go
@@ -35,7 +35,7 @@ class PianetEngine : public Engine {
  public:
   static constexpr int OS = 2;
   static constexpr int POOL = 96;        // voices, sounding or fading (40 sound at most, then the quietest goes)
-  static constexpr int BLOCK_MAX = 4096; // the JavaScript's buffers: blocks longer than this are split
+  static constexpr int BLOCK_MAX = 4096; // the buffers' length: blocks longer than this are split
   explicit PianetEngine(double fs);
 
   void setParams(const double *P) override;

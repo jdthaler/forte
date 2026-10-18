@@ -180,22 +180,20 @@ no resonator, so they lock over musical intervals.
 `examples/huygens/` has five renders: uncoupled vs coupled C major; a coupling
 sweep under a held seventh chord; a badly tuned keyboard rescued; a minor
 second merging into a unison; drifting resistors held together. Regenerate
-with `node tools/render-huygens.mjs`. Tests: `node test/huygens-tests.mjs`
-(`FORTE_ENGINE=wasm`: on the WebAssembly).
+with `node tools/render-huygens.mjs`. Tests: `node test/huygens-tests.mjs`.
 
 ## In C++
 
-The same engine and model run as WebAssembly on this page (the JavaScript is
-the fallback; `?engine=js` in the address forces it), where the lock map's
-worker uses them too, and as plugins (CLAP, VST3, AU and a standalone app):
-the Space pedal is Hold on CC64 and the mod wheel raises the pulse coupling
-from its default. Each key's starting phase and the resistors' drift come
-from a seeded generator, and the C++ takes its exponentials, logarithms and
-powers from V8's own fdlibm, so the WebAssembly plays what the JavaScript
-plays bit for bit, chords, drift and rail sag included, and the same test
-suite passes on it. Ten coupled keys take about 1.6 % of a core in C++.
-The port is in `native/instruments/huygens/`, its WebAssembly in
-`huygens/wasm/` (wrapped by `huygens/src/huygens-wasm.js`).
+The engine and the model (each key's design tuning, δ and the lock ratio)
+are C++, built as WebAssembly for this page, where the lock map's worker
+uses them too, and as plugins (CLAP, VST3, AU and a standalone app): the
+Space pedal is Hold on CC64 and the mod wheel raises the pulse coupling from
+its default. Each key's starting phase and the resistors' drift come from a
+seeded generator. Ten coupled keys take about 1.6 % of a core. The C++ is in
+`native/instruments/huygens/`, its WebAssembly in `huygens/wasm/` (wrapped by
+`huygens/src/huygens-wasm.js`); `huygens/src/sync-theory.js` keeps the closed
+forms (the kick for a window δ, the tongue edges, the capture time) that the
+tests hold it to.
 
 ## Prior art and references
 

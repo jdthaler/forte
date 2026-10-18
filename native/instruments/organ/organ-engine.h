@@ -1,5 +1,5 @@
-// organ-engine.h — the real-time tonewheel organ, signal path of a B-3 + Leslie 122
-// (organ/src/organ-engine.js in C++), on the engine contract (forte/engine.h).
+// organ-engine.h — the real-time tonewheel organ, signal path of a B-3 + Leslie 122, on the
+// engine contract (forte/engine.h).
 //
 //   motor ─▶ 91 tonewheels ─▶ key contacts ─▶ 9 busbars ─▶ drawbars ─┐
 //                        └─▶ percussion (1' contacts, single-trigger) ┤
@@ -7,13 +7,12 @@
 //       ─▶ Leslie: crossover ─▶ rotating horn + drum (Doppler, directivity,
 //                                cabinet reflection) ─▶ two microphones
 //
-// Operation for operation as the JavaScript, with V8's fdlibm for every transcendental (tanh and
-// hypot too) and the same seeded generators for the wheels' phases and the contacts' timing and
-// bounce, so it plays the same samples. The console (drawbars, percussion, vibrato, Leslie and
-// motor) comes as parameters after the groups' (organ-params.h). The generator's tables are
-// rebuilt in place, with nothing allocated, when the sample rate's or a 'gen' parameter's change
-// asks for them; the keys live in a fixed array. Every 768 samples it posts its state for the
-// page's views.
+// With V8's fdlibm for every transcendental (tanh and hypot too) and seeded generators for the
+// wheels' phases and the contacts' timing and bounce, so it plays the same samples in the
+// WebAssembly and the plugins. The console (drawbars, percussion, vibrato, Leslie and motor) comes
+// as parameters after the groups' (organ-params.h). The generator's tables are rebuilt in place,
+// with nothing allocated, when the sample rate's or a 'gen' parameter's change asks for them; the
+// keys live in a fixed array. Every 768 samples it posts its state for the page's views.
 #pragma once
 
 #include <cstdint>
@@ -24,7 +23,7 @@
 
 namespace forte::organ {
 
-// What the engine posts (organ/src/organ-wasm.js turns them into the JavaScript engine's):
+// What the engine posts (organ/src/organ-wasm.js turns them into the page's messages):
 // state: shaft, hornAng, hornHz, drumAng, drumHz, scanPos, lcN, percEnv; error: none
 namespace msg {
 enum : uint16_t { state = 1, error = 2 };
@@ -32,7 +31,7 @@ enum : uint16_t { state = 1, error = 2 };
 
 constexpr int MAX_EVENTS = 9 * 17; // per key: each contact closes, and bounces at most 8 times
 
-// The JavaScript engine's p: its parameters, the console's as the page's P has them
+// The engine's parameters, p: the console's as the page's P has them
 struct Params {
   int tuning = gears;
   double mains = 60, wheelHarm = 0.4, crosstalk = -48, leakage = -70;
@@ -74,14 +73,14 @@ struct ContactEvent {
 // "harmonic" tuning its own nine oscillators.
 struct Key {
   int key = 0, idx = 0;
-  bool live = false; // in the engine's list (the JavaScript's Map)
+  bool live = false; // in the engine's list
   double g[9] = {};
   uint8_t tgt[9] = {};
   double order[9] = {};
   bool down = false;
   ContactEvent ev[MAX_EVENTS];
   int nev = 0, evi = 0;
-  bool osc = false; // its oscillators made (the JavaScript's k.hc)
+  bool osc = false; // its oscillators made
   double hc[9] = {}, hs[9] = {}, hrc[9] = {}, hrs[9] = {}, hv[9] = {};
   uint8_t hmute[9] = {};
 };
@@ -99,7 +98,7 @@ class OrganEngine : public Engine {
   // the same in double precision (the tests' render)
   void processDouble(double *L, double *R, int n);
 
-  // The JavaScript engine's own setParams: p with the parameters set.
+  // What setParams does once it has the parameters: p set to them.
   void apply(const Params &next);
 
   // state the tests and the views read
@@ -167,7 +166,7 @@ class OrganEngine : public Engine {
   double driveK = 0, driveN = 0;
 };
 
-// The parameters (indexed as in organ-params.h) as the JavaScript engine's p.
+// The parameters (indexed as in organ-params.h) as the engine's p.
 Params paramsOf(const double *P);
 
 } // namespace forte::organ

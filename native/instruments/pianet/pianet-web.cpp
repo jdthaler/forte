@@ -1,7 +1,10 @@
 // pianet-web.cpp — the model's functions the page's views call (pianet/src/pianet-wasm.js): a key's
 // reed and its mode shapes, the slow-motion re-run of a pluck, the release curve, and the small
-// formulas the readouts use.
+// formulas the readouts use; and, for the tests, the unit reed, a pluck against the T's end stop
+// and the pickups' formulas and plate rail.
 
+#include <algorithm>
+#include <cmath>
 #include <memory>
 #include <vector>
 
@@ -65,6 +68,38 @@ FORTE_EXPORT void pianet_release_curve(int m, const double *in, const double *ve
     for (int k = 0; k < 7; k++) out[7 * i + k] = v[k];
   }
 }
+
+// The tests' hooks. The unit strip (unitReed) with a mass r at s and rotary inertia j, up to every
+// mode of the mesh: its Λ_n into out, returning how many; pianet_unit_shape then reads its modes.
+static UnitReed unit;
+FORTE_EXPORT int pianet_unit_reed(double r, double s, double j, int nModes, double *out) {
+  unit = unitReed(r, s, j, nModes);
+  for (int n = 0; n < unit.nModes; n++) out[n] = unit.Lam[n];
+  return unit.nModes;
+}
+FORTE_EXPORT double pianet_unit_shape(int n, double x) { return n >= 0 && n < unit.nModes ? unit.shape(n, x) : 0; }
+// A press of key m (in as pianet_simulate's) at rate fs with the T's pole an end stop at
+// y = −stop under the tip, run for `seconds`: into out, the samples the tip was on the stop and
+// its lowest point (m).
+FORTE_EXPORT void pianet_pluck_stop(int m, const double *in, double vel, double fs, double stop, double seconds, double *out) {
+  const KeyReed &kr = cachedReed(m, in[4], in[5], fs);
+  auto p = std::make_unique<Pluck>(kr, PadParams{in[0], in[1], in[2], in[3]}, fs);
+  p->stop = stop;
+  p->press(vel);
+  double lo = 0;
+  for (int i = 0, n = (int)std::floor(seconds * fs + 0.5); i < n; i++) lo = std::min(lo, p->step());
+  out[0] = p->hits; out[1] = lo;
+}
+// The pickups: the T's flux emFlux(y, g) and its closed-form 2nd/1st harmonic ratio emH2(Y, g),
+// the N's plate capacitance esCap(y, g, ye), ES (C1, Cbus, R, Vb) and one plate rail, reset at
+// rate fs and stepped with a ΔC.
+FORTE_EXPORT double pianet_em_flux(double y, double g) { return emFlux(y, g); }
+FORTE_EXPORT double pianet_em_h2(double Y, double g) { return emH2(Y, g); }
+FORTE_EXPORT double pianet_es_cap(double y, double g, double ye) { return esCap(y, g, ye); }
+FORTE_EXPORT void pianet_es(double *out) { out[0] = ES.C1; out[1] = ES.Cbus; out[2] = ES.R; out[3] = ES.Vb; }
+static PlateRail rail(96000);
+FORTE_EXPORT void pianet_rail_reset(double fs) { rail = PlateRail(fs); }
+FORTE_EXPORT double pianet_rail_step(double dC) { return rail.step(dC); }
 
 FORTE_EXPORT double pianet_key_speed(double vel) { return keySpeed(vel); }
 FORTE_EXPORT double pianet_work_of_adhesion(double F0) { return workOfAdhesion(F0); }

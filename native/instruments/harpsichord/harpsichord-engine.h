@@ -1,5 +1,4 @@
-// harpsichord-engine.h — the real-time harpsichord (harpsichord/src/harpsichord-engine.js in C++),
-// on the engine contract (forte/engine.h).
+// harpsichord-engine.h — the real-time harpsichord, on the engine contract (forte/engine.h).
 //
 //   key ─▶ its jacks rise at the key's speed ─▶ each engaged plectrum catches its string, slides
 //          along and slips off (plucked-string.h: implicit contacts, every sample)
@@ -28,8 +27,8 @@
 
 namespace forte::harpsichord {
 
-// What the engine posts for the page (harpsichord/src/harpsichord-wasm.js turns them back into the
-// JavaScript engine's 'pluck' and 'error' messages).
+// What the engine posts for the page (harpsichord/src/harpsichord-wasm.js turns them into its
+// 'pluck' and 'error' messages).
 namespace msg {
 enum : uint16_t {
   pluck = 1, // a plectrum let go: key; choir (0 front, 1 back, 2 the 4′), lute, F, u, w, s, theta, x
@@ -45,7 +44,7 @@ struct KeyStrings {
 
 class HarpsichordEngine : public Engine {
  public:
-  static constexpr int BLOCK = 128;  // the block the JavaScript runs in (the worklet's)
+  static constexpr int BLOCK = 128;  // the worklet's block
   static constexpr int POOL = 48;    // voices, sounding or fading
   explicit HarpsichordEngine(double fs);
 
@@ -87,7 +86,7 @@ class HarpsichordEngine : public Engine {
     void knock(double J);
   };
 
-  // read by the tests (through the WebAssembly's hooks), in the JavaScript engine's order
+  // read by the tests (through the WebAssembly's hooks), in the order they started
   std::array<Voice *, POOL> voices{};
   int nVoices = 0;
   std::array<Voice *, 128> byKey{};

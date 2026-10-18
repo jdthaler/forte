@@ -1,5 +1,5 @@
-// dsp.h — the building blocks the engines share: shared/dsp.js in C++, operation for operation,
-// so a port gives the same numbers as its JavaScript (in double precision).
+// dsp.h — the building blocks the engines share: shared/dsp.js in C++, operation for operation
+// (in double precision).
 #pragma once
 
 #include <algorithm>

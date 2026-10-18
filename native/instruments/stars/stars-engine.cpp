@@ -1,6 +1,6 @@
-// stars-engine.cpp — the Star Keyboard's engine, as stars-engine.js runs it (the comments there
-// give the physics; here only what differs in form). With V8's math (forte/fdlibm.h) and the
-// JavaScript's seeded generators, it plays what the JavaScript plays to the last bit.
+// stars-engine.cpp — the Star Keyboard's engine (stars-engine.h; stars/README.md, "Driving,
+// damping and the sound" and "The engine", gives the physics). With V8's math (forte/fdlibm.h)
+// and seeded generators, it plays the same samples to the last bit everywhere.
 
 #include "stars-engine.h"
 
@@ -29,7 +29,7 @@ static const double DEAD = fd::pow(10, -6.5); // and the voice when its whole po
 
 static double voicing(int key) { return fd::pow(2, (60 - key) / 48.0); }
 
-// the stars' version: the kind, mass and speed-up that build them (stars-model.js, starId)
+// the stars' version: the kind, mass and speed-up that build them
 static uint64_t versionOf(const double *P) {
   uint64_t h = 1469598103934665603ull;
   for (double v : {P[p::family], P[p::mass], P[p::speedup]}) {
@@ -326,8 +326,8 @@ void StarEngine::table() {
 }
 
 // Before the first note: a small made-up star through every path (driving, the flare, release, the
-// pedal, gliding knobs, pruning, fading), as the JavaScript warms its JIT, so that the random
-// numbers the stars then draw are the JavaScript's.
+// pedal, gliding knobs, pruning, fading). The JavaScript engine did this to warm its JIT; it is
+// kept because it advances the seeded generators, and so fixes the random numbers the stars draw.
 void StarEngine::warmUp() {
   float bL[128], bR[128];
   SpscQueue<Message> *q = messages;

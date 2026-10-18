@@ -3,18 +3,19 @@
 // First the shell, friction and radiation physics against independent results
 // (Rayleigh's inextensional field, the ring limit, the hemispherical-resonator
 // gyro's Bryan factor, closed-form limits), then the engine against the model.
+// Both are the C++ (native/instruments/glass), built as WebAssembly: the model's
+// functions through glass-wasm.js.
 
 import assert from 'node:assert/strict';
-import {
-  rayleigh, rayleighField, ringRatio, ringBryan, bowl, bowlRadius, freeLines, waterLoad, radiationEff, liquidJ,
-  speakingThreshold, regulation, transport, pulpDamping, KEY_LO, KEY_HI, REF,
-} from '../glass/src/glass-model.js';
 import { INSTRUMENT } from '../glass/src/glass-instrument.js';
+import { wasmModel } from '../glass/src/glass-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../glass/src/glass-params.js';
 import { keyFreq } from '../shared/dsp.js';
 
-const ArmonicaEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const ArmonicaEngine = await loadEngine(INSTRUMENT);
+const { bowl, ringRatio, freeLines, speakingThreshold, regulation, transport } = await wasmModel();
+const [KEY_LO, KEY_HI] = INSTRUMENT.range;
 
 const FS = 48000, PI = Math.PI;
 let failures = 0;
@@ -82,6 +83,42 @@ function modFreq(y, rate, lo, hi) {
 const peak = (...xs) => xs.reduce((p, x) => x.reduce((q, v) => Math.max(q, Math.abs(v)), p), 0);
 const rms = (x, a, b) => { let s = 0; for (let i = a; i < b; i++) s += x[i] * x[i]; return Math.sqrt(s / (b - a)); };
 const QUIET = { split: 0, treadle: 0 }; // a perfect bowl on an even spindle
+const REF = { ...DEFAULTS, wet: 0.85, v0: 0.5, rough: 0, speed: 0.5, loss: 4e-4, split: 0, water: 0 }; // the keys' regulation (glass-model.cpp)
+// What the tests check the C++ against, from first principles rather than from its code:
+const GLASS = { E: 70e9, rho: 2500, nu: 0.22 }, C_AIR = 343;   // the C++'s glass and air (glass-model.h)
+const pulpDamping = (N) => (6 * N) / (N + 0.1);                // its pressed pulp (glass-model.h, SKIN.cr, SKIN.nHalf)
+const ringBryan = (n) => 2 / (n * n + 1);                      // a thin ring's Bryan factor (Bryan 1890)
+// Rayleigh's inextensional field of a spherical shell (unit sphere; Theory of Sound, vol. 1, §§ 234–235).
+const rayleighField = (n, th, ph) => {
+  const t = Math.tan(th / 2) ** n;
+  return { u: Math.sin(th) * t * Math.cos(n * ph), v: Math.sin(th) * t * Math.sin(n * ph), w: -(n + Math.cos(th)) * t * Math.cos(n * ph) };
+};
+// Family n of a perfect, empty bowl (the A4 bowl unless key is given), and the integrals the C++
+// used for it, read back from what it returns: I₂ from the modal mass M = πρha²I₂, I₁ from
+// Rayleigh's energy ratio ω² = Eh²n²(n²−1)²I₁/(3ρ(1+ν)a⁴I₂).
+function family(n, key = 69) {
+  const b = bowl(key, REF), m = b.modes.find((x) => x.n === n);
+  const I2 = m.M / (PI * GLASS.rho * b.h * b.a * b.a), w = 2 * PI * m.fEmpty;
+  const I1 = (w * w * 3 * GLASS.rho * (1 + GLASS.nu) * b.a ** 4 * I2) / (GLASS.E * b.h * b.h * n * n * (n * n - 1) ** 2);
+  return { b, m, I1, I2 };
+}
+// A sphere's order-n radiation efficiency 1/(ka |h_n′(ka)|), from the closed form of the
+// spherical Hankel function h_n(x) = (−i)ⁿ⁺¹ (e^{ix}/x) Σ_k i^k (n+k)!/(k!(n−k)!(2x)^k)
+// and h_n′ = h_{n−1} − (n+1)/x h_n (the C++ uses Bessel recurrences instead).
+function radiationEff(n, x) {
+  const mul = ([a, b], [c, d]) => [a * c - b * d, a * d + b * c], fact = (k) => (k < 2 ? 1 : k * fact(k - 1));
+  const h = (l) => {
+    let s = [0, 0];
+    for (let k = 0; k <= l; k++) {
+      const c = fact(l + k) / (fact(k) * fact(l - k) * (2 * x) ** k), ik = [[1, 0], [0, 1], [-1, 0], [0, -1]][k % 4];
+      s = [s[0] + c * ik[0], s[1] + c * ik[1]];
+    }
+    const pre = [[1, 0], [0, -1], [-1, 0], [0, 1]][(l + 1) % 4]; // (−i)^(l+1)
+    return mul(mul(pre, [Math.cos(x) / x, Math.sin(x) / x]), s);
+  };
+  const a = h(n - 1), b = h(n), d = [a[0] - ((n + 1) / x) * b[0], a[1] - ((n + 1) / x) * b[1]];
+  return 1 / (x * Math.hypot(d[0], d[1]));
+}
 
 console.log('shell');
 test("Rayleigh's field stretches nothing, and its bending is a pure twist (κθ + κφ = 0)", () => {
@@ -104,7 +141,7 @@ test("Rayleigh's field stretches nothing, and its bending is a pure twist (κθ 
     assert.ok(Math.abs(kT - exact) < 1e-4 * Math.abs(exact) + 1e-6, `n=${n}: κθ ${kT} vs ${exact}`);
   }
 });
-test('mass integral I₂ = ∫(u² + v² + w²) over the hemisphere, and I₁ in closed form', () => {
+test('mass integral I₂ = ∫(u² + v² + w²) over the hemisphere, and I₁ = ∫t²ⁿ/sin³θ in its frequency', () => {
   for (const n of [2, 3, 4]) {
     let s = 0, s1 = 0; const N = 4000;
     for (let i = 0; i < N; i++) {
@@ -112,13 +149,14 @@ test('mass integral I₂ = ∫(u² + v² + w²) over the hemisphere, and I₁ in
       s += t * t * (2 * Math.sin(th) ** 2 + (n + Math.cos(th)) ** 2) * Math.sin(th) * (PI / 2 / N);
       s1 += (t * t) / Math.sin(th) ** 3 * (PI / 2 / N);
     }
-    near(rayleigh(n).I2, s, 1e-5 * s, `I₂(${n})`);
-    near(rayleigh(n).I1, s1, 2e-4 * s1, `I₁(${n})`);
+    const { I1, I2 } = family(n);
+    near(I2, s, 1e-5 * s, `I₂(${n})`);
+    near(I1, s1, 2e-4 * s1, `I₁(${n})`);
   }
 });
 test('hemisphere mode ratios 1 : 2.81 : 5.43 : 8.84 sit within 1 % of the thin ring (Rayleigh) 1 : 2.83 : 5.42 : 8.77', () => {
   near(ringRatio(3), 2 * Math.SQRT2, 1e-12, 'ring n=3 is 2√2');
-  const r = (n) => rayleigh(n).lambda / rayleigh(2).lambda;
+  const r = (n) => family(n).m.fEmpty / family(2).m.fEmpty; // one bowl: f ∝ λ
   [[3, 2.8102], [4, 5.4316], [5, 8.8387]].forEach(([n, x]) => { near(r(n), x, 5e-4, `hemisphere n=${n}`); assert.ok(Math.abs(r(n) / ringRatio(n) - 1) < 0.01, `n=${n} vs ring`); });
   console.log(`        hemisphere ${[2, 3, 4, 5, 6].map((n) => r(n).toFixed(3)).join(' : ')} · ring ${[2, 3, 4, 5, 6].map((n) => ringRatio(n).toFixed(3)).join(' : ')}`);
 });
@@ -132,11 +170,12 @@ test("Bryan's factor: 2/(n²+1) = 0.4 for a ring (Bryan 1890), 0.277 for the hem
     }
     near(num / den / n, ringBryan(n), 1e-9, `ring n=${n}`);
   }
-  near(rayleigh(2).bryan, 0.277, 5e-4, 'hemisphere n=2');
-  assert.ok(rayleigh(3).bryan < ringBryan(3) && rayleigh(3).bryan > 0.15, `n=3: ${rayleigh(3).bryan}`);
+  near(family(2).m.bryan, 0.277, 5e-4, 'hemisphere n=2');
+  const b3 = family(3).m.bryan;
+  assert.ok(b3 < ringBryan(3) && b3 > 0.15, `n=3: ${b3}`);
 });
 test("Franklin's bowls, 9 in to 3 in across, come out with his 'tenth of an inch' walls when tuned", () => {
-  near(2 * bowlRadius(55) / 0.0254, 9, 1e-9, 'G3'); near(2 * bowlRadius(91) / 0.0254, 3, 1e-9, 'G6');
+  near(2 * bowl(55, REF).a / 0.0254, 9, 1e-9, 'G3'); near(2 * bowl(91, REF).a / 0.0254, 3, 1e-9, 'G6');
   let sum = 0;
   for (let k = KEY_LO; k <= KEY_HI; k++) {
     const b = bowl(k, REF);
@@ -151,16 +190,21 @@ test("Franklin's bowls, 9 in to 3 in across, come out with his 'tenth of an inch
 
 console.log('water, radiation, friction');
 test('water: shallow water is felt as d^(n+3) (the mode lives at the rim); a full bowl drops ~an octave, like Jundt et al.\'s wine glass', () => {
-  const s = Math.log(liquidJ(2, 0.2) / liquidJ(2, 0.1)) / Math.log(2);
-  near(s, 2 * 2 + 6, 0.05, 'J ∝ θ^(2n+6)'); // d ∝ θ² for small θ ⇒ Λ ∝ d^(n+3)
-  const b = bowl(69, REF), drop = cents(b.modes[0].f / Math.sqrt(1 + waterLoad(2, b.a, b.h, 1)), b.modes[0].f);
+  const load = (thetaD) => bowl(69, { ...REF, water: 1 - Math.cos(thetaD) }).modes[0].load; // filled to polar angle θ_d
+  const s = Math.log(load(0.2) / load(0.1)) / Math.log(2);
+  near(s, 2 * 2 + 6, 0.05, 'Λ ∝ θ^(2n+6)'); // d ∝ θ² for small θ ⇒ Λ ∝ d^(n+3)
+  const b = bowl(69, REF), drop = cents(bowl(69, { ...REF, water: 1 }).modes[0].f, b.modes[0].f);
   assert.ok(drop < -1000 && drop > -1600, `full bowl: ${drop.toFixed(0)} ¢ (Jundt et al.: 890 → 410 Hz = −1340 ¢)`);
   console.log(`        A4 bowl: ¼ full ${cents(bowl(69, P({ water: 0.25 })).modes[0].f, 440).toFixed(0)} ¢, ½ ${cents(bowl(69, P({ water: 0.5 })).modes[0].f, 440).toFixed(0)} ¢, ¾ ${cents(bowl(69, P({ water: 0.75 })).modes[0].f, 440).toFixed(0)} ¢, full ${drop.toFixed(0)} ¢`);
 });
-test('radiation efficiency: (ka)ⁿ⁺¹/((n+1)(2n−1)!!) for a small bowl, 1 for a large one', () => {
+test('radiation efficiency: the closed form, (ka)ⁿ⁺¹/((n+1)(2n−1)!!) for a small bowl, 1 for a large one; every bowl\'s families on it', () => {
   for (const [n, df] of [[2, 3], [3, 15], [4, 105]]) {
     near(radiationEff(n, 0.05) / (0.05 ** (n + 1) / ((n + 1) * df)), 1, 2e-3, `n=${n} small`);
     near(radiationEff(n, 200), 1, 0.01, `n=${n} large`);
+  }
+  for (let k = KEY_LO; k <= KEY_HI; k++) for (const water of [0, 0.6]) {
+    const b = bowl(k, { ...REF, water });
+    for (const m of b.modes) { const want = radiationEff(m.n, (2 * PI * m.f * b.a) / C_AIR); near(m.rad, want, 1e-9 * want, `key ${k}, water ${water}, n=${m.n}`); }
   }
 });
 test('speaking threshold: linear stability (glass loss + Bryan drain) predicts where the engine starts to grow', () => {
@@ -333,6 +377,5 @@ test('CPU: 10 bowls rubbed at once render well under real time', () => {
   console.log(`        10 voices: ${(frac * 100).toFixed(1)} % of real time`);
 });
 
-void transport;
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');
 process.exit(failures ? 1 : 0);

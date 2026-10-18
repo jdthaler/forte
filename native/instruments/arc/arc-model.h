@@ -1,6 +1,5 @@
-// arc-model.h — the physics of Duddell's singing arc (arc/src/arc-model.js in C++), operation for
-// operation, with V8's exp, sin, cos and pow (forte/fdlibm.h) so that it gives the JavaScript's
-// numbers.
+// arc-model.h — the physics of Duddell's singing arc, with V8's exp, sin, cos and pow
+// (forte/fdlibm.h) so that it gives the same numbers in the WebAssembly and the plugins.
 //
 // The arc: Ayrton's falling characteristic V(I) = A + B/I (A = a + b·l, B = c + d·l) as the static
 // limit of a Mayr column, written in the "thermal current" X (g = X²/(A·X + B)):
@@ -91,7 +90,7 @@ inline Steady steadyNote(const ArcParams &P, double C, const SteadyOptions &o = 
 double startCap(int key, const ArcParams &P, const Op &op); // the capacitance whose note starts on the key
 double capFor(int key, const ArcParams &P, const Op &op);   // the one whose steady note sounds it
 inline double capFor(int key, const ArcParams &P) { return capFor(key, P, arcOp(P)); }
-// The bank's identity (the JavaScript's tuneKey): the parameters it depends on, hashed; never 0.
+// The bank's identity (arc-model.js's tuneKey): the parameters it depends on, hashed; never 0.
 uint64_t tuneVersion(const ArcParams &P);
 
 // ---- hiss and sound -----------------------------------------------------------------------------

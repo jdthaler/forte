@@ -1,4 +1,4 @@
-// grand-model.cpp — the electric grand's physics, operation for operation as grand-model.js.
+// grand-model.cpp — the electric grand's physics (grand-model.h).
 
 #include "grand-model.h"
 
@@ -16,7 +16,7 @@ double sq(double x) { return x * x; }
 // Math.sign(x || 1): ±1, and 1 for 0 or NaN
 double signOr1(double x) { return x == 0 || std::isnan(x) ? 1 : x > 0 ? 1 : -1; }
 
-// Piecewise-linear through the points, extrapolated beyond the ends (piano/src/physics.js).
+// Piecewise-linear through the points, extrapolated beyond the ends (as the piano's).
 template <size_t N>
 double interp(double m, const double (&pts)[N][2]) {
   if (m <= pts[0][0]) return pts[0][1] + ((pts[1][1] - pts[0][1]) * (m - pts[0][0])) / (pts[1][0] - pts[0][0]);
@@ -163,10 +163,10 @@ static double meanResponse(const BoardModel &B);
 
 // The plate's modes, their shapes at the bridge points and radiation to the two mics, and the
 // residual path of the modes above the modal band (without the microphones' gain).
-static BoardModel buildBoard(double boardH) {
+static BoardModel buildBoard(double boardH, double fmax = BOARD.fmax, int maxModes = BOARD.maxModes) {
   const double s = boardH / 9;
   const double D = BOARD.D * std::pow(s, 3), rhoh = BOARD.rhoh * s, a = BOARD.a, b = BOARD.b;
-  const double cB = PI * PI * std::sqrt(D / rhoh), wMax = TAU * BOARD.fmax, wTop = std::pow(RES_STEP, RES_BANDS) * wMax;
+  const double cB = PI * PI * std::sqrt(D / rhoh), wMax = TAU * fmax, wTop = std::pow(RES_STEP, RES_BANDS) * wMax;
   struct M { int m, n; double w; };
   std::vector<M> all;
   for (int m = 1; cB * sq(m / a) < wTop; m++) {
@@ -178,11 +178,11 @@ static BoardModel buildBoard(double boardH) {
   }
   std::stable_sort(all.begin(), all.end(), [](const M &x, const M &y) { return x.w < y.w; });
   int K = 0;
-  while (K < (int)all.size() && K < BOARD.maxModes && all[K].w < wMax) K++;
-  const double fRes = K < (int)all.size() ? std::min(BOARD.fmax, all[K].w / TAU) : BOARD.fmax;
+  while (K < (int)all.size() && K < maxModes && all[K].w < wMax) K++;
+  const double fRes = K < (int)all.size() ? std::min(fmax, all[K].w / TAU) : fmax;
   const double N = 2 / std::sqrt(rhoh * a * b);
   BoardModel B;
-  B.boardH = boardH; B.D = D; B.rhoh = rhoh; B.K = K; B.fRes = fRes;
+  B.boardH = boardH; B.D = D; B.rhoh = rhoh; B.fmax = fmax; B.K = K; B.fRes = fRes;
   B.omega.resize(K); B.sigma.resize(K); B.phi.resize(K * SEGMENTS); B.RL.resize(K); B.RR.resize(K); B.m.resize(K); B.n.resize(K);
   std::array<double, 2> pts[SEGMENTS];
   for (int i = 0; i < SEGMENTS; i++) pts[i] = bridgePoint(i);
@@ -247,9 +247,9 @@ static BoardModel buildBoard(double boardH) {
 }
 
 // The microphones' gain, a recording engineer's trim set once on the 9 mm board.
-BoardModel boardModel(double boardH) {
+BoardModel boardModel(double boardH, double fmax, int maxModes) {
   static const double ref = meanResponse(buildBoard(9));
-  BoardModel B = buildBoard(boardH);
+  BoardModel B = buildBoard(boardH, fmax, maxModes);
   B.micGain = MIC_TRIM / ref;
   return B;
 }
@@ -265,7 +265,7 @@ static double meanResponse(const BoardModel &B) {
 std::array<double, 2> boardMobility(const BoardModel &B, int seg, double f) {
   const double w = TAU * f;
   double re = 0, im = 0;
-  if (f > BOARD.fmax) re = B.Ginf;
+  if (f > B.fmax) re = B.Ginf;
   else {
     for (int k = 0; k < B.K; k++) {
       const double p2 = sq(B.phi[k * SEGMENTS + seg]), d = sq(B.omega[k]) - w * w, s2 = 2 * B.sigma[k] * w;

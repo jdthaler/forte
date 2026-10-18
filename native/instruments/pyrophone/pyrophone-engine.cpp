@@ -1,4 +1,4 @@
-// pyrophone-engine.cpp — pyrophone/src/pyrophone-engine.js in C++, operation for operation.
+// pyrophone-engine.cpp — the pyrophone's engine (pyrophone-engine.h).
 
 #include "pyrophone-engine.h"
 

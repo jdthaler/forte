@@ -2,7 +2,7 @@
 // with its standing wave, and the phase portrait of mode 1.
 
 import { fit, css } from '../../shared/views.js';
-import { modeAmp, betaOn } from './pyrophone-model.js';
+import { betaOn } from './pyrophone-model.js';
 
 const FONT = '10px system-ui, sans-serif';
 const line = (ctx, pts) => { ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke(); };
@@ -161,18 +161,6 @@ export function drawTube(cv, s) {
   ctx.fillStyle = text; ctx.textAlign = 'left';
   if (s.label) ctx.fillText(s.label, 6, h - 4);
   return { pm, um, xm: Math.max(...xi.map(Math.abs)) };
-}
-
-// The model's predicted limit cycle at gain beta, as mode amplitudes η_j, η̇_j at phase θ.
-export function orbitState(sys, pt, theta, eta, vel) {
-  eta.fill(0); vel.fill(0);
-  for (let j = 0; j < sys.N; j++) {
-    for (let k = 1; k < pt.Hq.length; k++) {
-      const a = modeAmp(sys, j, k, pt.W, pt.beta, pt.Hq[k]), c = Math.cos(k * theta), sn = Math.sin(k * theta);
-      eta[j] += 2 * (a[0] * c - a[1] * sn);
-      vel[j] += -2 * k * pt.W * (a[0] * sn + a[1] * c);
-    }
-  }
 }
 
 // ---- phase portrait of mode 1 ----------------------------------------------------

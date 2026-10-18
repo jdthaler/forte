@@ -1,17 +1,15 @@
 // harpsichord-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName, useWasm } from '../../shared/shell.js';
+import { createShell, noteName } from '../../shared/shell.js';
 import { fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './harpsichord-instrument.js';
-import * as jsModel from './harpsichord-model.js';
-import { KEY_LO, KEY_HI, ROWS, jackSpeed, t60, ACTION } from './harpsichord-model.js';
-import { beamC, beamG } from './plectrum.js';
+import { KEY_LO, KEY_HI, ROWS, jackSpeed } from './harpsichord-params.js';
 import { wasmModel } from './harpsichord-wasm.js';
 
-// The views draw what the engine plays: the WebAssembly model once it has loaded (the same
-// physics as the engine, in C++), the JavaScript one until then or if it can't load.
-let model = { ...jsModel, beamC, beamG };
-if (useWasm()) wasmModel().then((m) => { model = m; update(); runSim(); }, (err) => console.warn(`harpsichord: the WebAssembly model did not load (${err.message}); the views use the JavaScript one`));
+// The views draw what the engine plays: its model, from the same C++, built as WebAssembly.
+const model = await wasmModel();
+const THICK = 0.45e-3; // m: the plectrum's thickness (as harpsichord-model.h has it), for the drawing
+const t60 = (sigma) => Math.log(1000) / sigma;
 
 const $ = (s) => document.querySelector(s);
 const ROW_COL = { front: '#f4d39b', back: '#c98b5a', four: '#7cc8ff', lute: '#ff8fa3' };
@@ -81,7 +79,7 @@ animate(() => {
   ctx.strokeRect(X(zMin) + 0.5, Y(yj + 3e-3) + 0.5, X(0) - X(zMin) - 1, Y(yj - 6e-3) - Y(yj + 3e-3) - 1);
   ctx.fillStyle = css('--muted'); ctx.save(); ctx.translate(X(zMin) + 11, Y(yj - 1e-3)); ctx.rotate(-Math.PI / 2); ctx.fillText('jack', 0, 0); ctx.restore();
   // the plectrum, bent by F at s: a cubic up to s (deflection F c(s), slope F g(s)), straight beyond
-  const ws = F * model.beamC(pl, sC), th = F * model.beamG(pl, sC), th2 = ACTION.thick;
+  const ws = F * model.beamC(pl, sC), th = F * model.beamG(pl, sC), th2 = THICK;
   const defl = (z) => {
     if (F <= 0) return 0;
     if (z >= sC) return ws + th * (z - sC);

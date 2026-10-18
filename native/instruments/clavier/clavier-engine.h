@@ -1,5 +1,4 @@
-// clavier-engine.h — the real-time tangent clavier (clavier/src/clavier-engine.js in C++), on the
-// engine contract (forte/engine.h).
+// clavier-engine.h — the real-time tangent clavier, on the engine contract (forte/engine.h).
 //
 // Per key (clavier-model.h): speaking modes q_n coupled through their mass to the string's height
 // s at the anvil, quarter-wave yarn modes r_m with s = Σ r_m, a tangent of mass M on a Hertzian
@@ -16,8 +15,8 @@
 // tone networks make one biquad on the sum, then the amplifier's shelves.
 //
 // Space and CC64 engage the mute bar; aftertouch and the pitch wheel (up only) press held keys
-// harder. A key's model is built in noteOn, as the JavaScript builds it (clavier-model.h says why
-// that is cheap). Voices live in a fixed pool: nothing is allocated after construction.
+// harder. A key's model is built in noteOn (clavier-model.h says why that is cheap). Voices live
+// in a fixed pool: nothing is allocated after construction.
 #pragma once
 
 #include <array>
@@ -30,7 +29,7 @@
 
 namespace forte::clavier {
 
-// What the engine posts (clavier/src/clavier-wasm.js turns it into the JavaScript engine's message).
+// What the engine posts (clavier/src/clavier-wasm.js turns it into the page's message).
 namespace msg {
 enum : uint16_t {
   error = 1, // key: the string failed numerically
@@ -58,7 +57,7 @@ class ClavierEngine : public Engine {
     int key = 0, version = 0;
     KeyModel mdl;
     int N = 0, M = 0;
-    // q holds q[n], q1 q[n−1]: two arrays whose roles swap every sample, as in the JavaScript
+    // q holds q[n], q1 q[n−1]: two arrays whose roles swap every sample
     double qa[N_MAX], qb[N_MAX], *q = qa, *q1 = qb;
     double A1[N_MAX], A2[N_MAX], eps[N_MAX], beta[N_MAX], c[N_MAX], w[N_MAX], phi[N_MAX], gam[N_MAX], Wl[N_MAX], Wu[N_MAX];
     double ra[M_MAX], rb[M_MAX], *r = ra, *r1 = rb;

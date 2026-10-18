@@ -1,4 +1,4 @@
-// springs-model.cpp — springs/src/springs-model.js in C++ (springs-model.h).
+// springs-model.cpp — the struck spring's physics (springs-model.h).
 
 #include "springs-model.h"
 
@@ -201,7 +201,7 @@ void jacobi6(double *A, double *V, double *d) {
   for (int i = 0; i < n; i++) d[i] = A[i * n + i];
 }
 
-// What a bead at the end moves (springs-model.js, beadShare): its rotation about the axis, or its
+// What a bead at the end moves: its rotation about the axis, or its
 // slide along it.
 double beadShare(const double *Y, int j, double alpha, bool axial) {
   const double sa = fd::sin(alpha), ca = fd::cos(alpha);
@@ -239,8 +239,8 @@ Transition transition(RodSolver &solver, bool axial) {
   return {j, k, solver.w[j], 0};
 }
 
-// Solvers are cached per shape, by its numbers printed to nine decimals, as the JavaScript keeps
-// them: at most 17, the oldest dropped first.
+// Solvers are cached per shape, by its numbers printed to nine decimals: at most 17, the oldest
+// dropped first.
 std::shared_ptr<RodSolver> solverFor(const Shape &shape) {
   thread_local std::vector<std::shared_ptr<RodSolver>> solvers;
   char buf[96];

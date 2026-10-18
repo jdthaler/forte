@@ -1,21 +1,21 @@
 // Bubble Organ checks. Run: node test/bubbles-tests.mjs
 //
-// The bubble model against Minnaert's formula, the limits of the heat-flow theory
-// (adiabatic, isothermal), Devin's real-variable form, viscous and radiation damping
-// in closed form, the free surface's image and the rise; then the engine against
-// the model: pitch, decay, the kick, the brook's rate and spread, re-strikes, voice
-// stealing, levels, stability and CPU.
+// The bubble model (the C++, through the WebAssembly) against Minnaert's formula, the
+// limits of the heat-flow theory (adiabatic, isothermal), Devin's real-variable form,
+// viscous and radiation damping in closed form, the free surface's image and the rise;
+// then the engine against the model: pitch, decay, the kick, the brook's rate and spread,
+// re-strikes, voice stealing, levels, stability and CPU.
 
 import assert from 'node:assert/strict';
-import {
-  GASES, LIQUIDS, P_ATM, G, KEY_LO, KEY_HI, R_REF, keyFreq, phi, devin, acoustics, nozzleEnv, tuneRadius, nominalRadius,
-  riseSpeed, riseDistance, glideAt, bubbleModel, hydrophoneGains, peakPressure, snapGain, ambient,
-} from '../bubbles/src/bubbles-model.js';
+import { GASES, LIQUIDS, P_ATM, G, KEY_LO, KEY_HI, ROW, HYDRO, keyFreq, nozzleX } from '../bubbles/src/bubbles-tank.js';
 import { INSTRUMENT } from '../bubbles/src/bubbles-instrument.js';
 import { loadEngine } from '../tools/engine.mjs';
+import { wasmModel } from '../bubbles/src/bubbles-wasm.js';
 import { DEFAULTS, GROUPS, PRESETS } from '../bubbles/src/bubbles-params.js';
 
-const BubbleEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const BubbleEngine = await loadEngine(INSTRUMENT);
+const { ambient, nozzleEnv, keyRadius, riseSpeed, riseDistance, peakPressure, snapGain, ...model } = await wasmModel();
+const acoustics = (R, env) => model.acoustics(R, env, {});
 
 const FS = 48000;
 let failures = 0;
@@ -27,8 +27,39 @@ function test(name, fn) {
 const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const cents = (a, b) => 1200 * Math.log2(a / b);
 const rel = (a, b) => Math.abs(a / b - 1);
-// an unbounded liquid (no surface), and a liquid/gas with chosen properties
+// an unbounded liquid (no surface), air in water unless o says otherwise (entries of GASES and LIQUIDS, or
+// a liquid or gas of the test's own)
 const open = (o = {}) => ({ p0: P_ATM, d: 1e9, liq: LIQUIDS.water, gas: GASES.air, ...o });
+
+// Devin's (1959) real form of the heat-flow theory, an independent route to the C++'s complex Φ
+// (Prosperetti 1977): the polytropic exponent κ = Re Φ/3 and the thermal damping constant
+// d_th = Im Φ/Re Φ, with X = R√(2ω/D) = √(2/χ). (Written over cosh X, so that it holds for any X.)
+function devin(X, gamma) {
+  const ch = Math.cosh(X), t = Math.tanh(X), s = Math.sin(X) / ch, c = 1 - Math.cos(X) / ch, A = (t + s) / c, B = (t - s) / c, g = 3 * (gamma - 1);
+  const d = (g * (X * A - 2)) / (X * X + g * X * B);
+  const kappa = gamma / ((1 + d * d) * (1 + (g / X) * B));
+  return { kappa, d };
+}
+// Every key's nozzle at the defaults (as cut), and tuned to its note under P(o) ("keep in tune").
+const nominalRadius = (k) => keyRadius(k, P());
+const tunedRadius = (k, o) => keyRadius(k, P({ ...o, keepInTune: true }));
+// Everything about a bubble of radius R released at a nozzle under p.
+function bubbleModel(R, p) {
+  const env = nozzleEnv(p), a = acoustics(R, env);
+  return { ...a, U: riseSpeed(R, env.liq), d0: p.depth, p0: env.p0, liq: env.liq, gas: env.gas, env, R0: R, pb0: a.pb, T60: Math.log(1000) / a.b, Q: 1 / a.delta };
+}
+// The glide while it rises, as the C++ engine rings it (glideRing, bubbles-model.cpp): t seconds
+// after release from d0 the bubble has risen, the liquid pressure has fallen by ρgz, the bubble has
+// swollen as p_b^(−1/3n), and it rings with Φ kept as it was at release. pTank: the air pressure
+// above the water then (Pa). Returns the ring's frequency (Hz); out gets b.
+function glideAt(t, rel, pTank, out = {}) {
+  const g = model.glide(rel.R0, rel.env, [t], pTank);
+  out.b = g.b[0];
+  return g.fd[0];
+}
+// The hydrophones' gains (1/r spreading from the nozzle), relative to a centre nozzle's distance R_REF.
+const rHydro = (x, i) => Math.hypot(x - HYDRO.x[i], HYDRO.back), R_REF = rHydro(ROW / 2, 0);
+const hydrophoneGains = (key) => [R_REF / rHydro(nozzleX(key), 0), R_REF / rHydro(nozzleX(key), 1)];
 
 // Run the engine through events ([t, 'on', key, vel] | [t, 'off', key] | [t, 'params', P] | [t, 'press', key, v]),
 // in 128-sample blocks like the AudioWorklet; tap(engine) after every block.
@@ -76,42 +107,80 @@ const ping = (k, p, vel = 0.8, sec = 0.6, o) => run(p, [[0, 'on', k, vel], [0.02
 const firstSample = (x) => { for (let i = 0; i < x.length; i++) if (x[i] !== 0) return i; return 0; };
 // The model's mean ring frequency over [t0, t1] after release, as the bubble rises (what zero crossings measure).
 // pTank: the air pressure above the water (Pa), or a function of t.
-const meanGlide = (m, t0, t1, pTank = m.p0 - m.liq.rho * G * m.d0) => { let s = 0; for (let i = 0; i < 400; i++) { const t = t0 + ((i + 0.5) / 400) * (t1 - t0); s += glideAt(t, m, typeof pTank === 'function' ? pTank(t) : pTank); } return s / 400; };
-const meanB = (m, t0, t1, pTank = m.p0 - m.liq.rho * G * m.d0) => { let s = 0; const o = {}; for (let i = 0; i < 400; i++) { glideAt(t0 + ((i + 0.5) / 400) * (t1 - t0), m, pTank, o); s += o.b; } return s / 400; };
+// the glide's mean frequency and b over [t0, t1] (400 points), the tank at pTank (Pa, or a function of t)
+const glideOver = (m, t0, t1, pTank) => {
+  const t = Array.from({ length: 400 }, (_, i) => t0 + ((i + 0.5) / 400) * (t1 - t0));
+  return model.glide(m.R0, m.env, t, typeof pTank === 'function' ? t.map(pTank) : pTank);
+};
+const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+const meanGlide = (m, t0, t1, pTank = m.p0 - m.liq.rho * G * m.d0) => mean(glideOver(m, t0, t1, pTank).fd);
+const meanB = (m, t0, t1, pTank = m.p0 - m.liq.rho * G * m.d0) => mean(glideOver(m, t0, t1, pTank).b);
 
 console.log('the bubble');
-test('Minnaert: f₀R = √(3γp₀/ρ)/2π = 3.26 kHz·mm for air in water (1 bar, 1000 kg/m³, adiabatic); the model reproduces it with no heat flow, surface tension, losses or surface', () => {
+test('Minnaert: f₀R = √(3γp₀/ρ)/2π = 3.26 kHz·mm for air in water (1 bar, 1000 kg/m³, adiabatic); the model reproduces it with no heat flow, surface tension, losses or surface, and approaches it as real bubbles grow, short of it by exactly √(κ/γ) and the tension 2σ/R', () => {
   const fr = Math.sqrt((3 * 1.4 * 1e5) / 1000) / (2 * Math.PI);
   assert.ok(Math.abs(fr - 3.2617) < 1e-4, `${fr}`);
+  // the model reproduces it with no heat flow, surface tension, losses or surface (a liquid and gas of the test's own)
   const liq = { rho: 1000, mu: 0, sigma: 0, c: 1e12 }, gas = { ...GASES.air, K: 1e-30 };
   for (const R of [0.5e-3, 1e-3, 1e-2]) {
     const a = acoustics(R, open({ p0: 1e5, liq, gas }));
     assert.ok(rel(a.fd * R, fr) < 1e-6, `R ${R}: f·R = ${a.fd * R}`);
   }
   // at 1 atm in water at 20 °C (998.2 kg/m³) the adiabatic product is 3.29 kHz·mm
-  assert.ok(Math.abs(Math.sqrt((3 * 1.4 * P_ATM) / 998.2) / (2 * Math.PI) - 3.286) < 1e-3);
-});
-test('heat flow: Φ → 3γ (adiabatic) as χ → 0 and → 3 (isothermal) as χ → ∞, with the boundary-layer and the slow-diffusion asymptotes', () => {
-  for (const gamma of [1.4, 5 / 3, 1.1]) {
-    for (const chi of [1e-6, 1e-5]) { // Im Φ/Re Φ → 3(γ−1)√(χ/2): a thermal layer √(2D/ω) thin against R
-      const p = phi(chi, gamma);
-      assert.ok(rel(p.re, 3 * gamma) < 4 * (gamma - 1) * Math.sqrt(chi / 2) + 1e-9, `γ ${gamma}, χ ${chi}: Re Φ ${p.re}`);
-      assert.ok(rel(p.im / p.re, 3 * (gamma - 1) * Math.sqrt(chi / 2)) < 0.02, `γ ${gamma}, χ ${chi}: ${p.im / p.re}`);
-    }
-    for (const chi of [1e2, 1e3]) { // Re Φ → 3, Im Φ → (γ−1)/(5γχ)
-      const p = phi(chi, gamma);
-      assert.ok(Math.abs(p.re - 3) < 1e-3, `γ ${gamma}, χ ${chi}: Re Φ ${p.re}`);
-      assert.ok(rel(p.im, (gamma - 1) / (5 * gamma * chi)) < 0.01, `γ ${gamma}, χ ${chi}: Im Φ ${p.im}`);
-    }
-    // κ = Re Φ/3 climbs monotonically from 1 to γ as the bubble grows
-    let prev = 0;
-    for (let lc = 3; lc >= -7; lc -= 0.25) { const k = phi(10 ** lc, gamma).re / 3; assert.ok(k >= prev - 1e-12 && k >= 1 - 1e-9 && k <= gamma + 1e-9); prev = k; }
+  const fw = Math.sqrt((3 * 1.4 * P_ATM) / 998.2) / (2 * Math.PI);
+  assert.ok(Math.abs(fw - 3.286) < 1e-3);
+  // centimetre bubbles in deep water: heat flow leaves κ just short of γ, and tension adds
+  // 2(3κ−1)σ/R to 3κp₀; within 0.5 % of Minnaert, closer as they grow
+  let prev = 1;
+  for (const R of [1e-2, 2e-2, 5e-2, 0.1]) {
+    const a = acoustics(R, open()), k = a.kappa, gap = Math.abs((a.f0 * R) / fw - 1);
+    assert.ok(rel((a.f0 * R) / fw, Math.sqrt((k / 1.4) * (1 + (2 * (3 * k - 1) * 0.0728) / (3 * k * P_ATM * R)))) < 1e-9, `R ${R}: f₀R ${a.f0 * R}, κ ${k}`);
+    assert.ok(gap < 0.005 && gap < prev, `R ${R}: ${gap}`);
+    prev = gap;
   }
 });
-test('Devin (1959): his real-variable κ and d_th agree with Prosperetti\'s complex Φ (two routes to the same theory) to 10⁻¹²', () => {
-  for (const gamma of [1.4, 5 / 3, 1.1]) for (const X of [0.2, 0.7, 2, 5, 13, 37]) {
-    const p = phi(2 / (X * X), gamma), d = devin(X, gamma);
-    assert.ok(Math.abs(p.re / 3 - d.kappa) < 1e-12 && Math.abs(p.im / p.re - d.d) < 1e-12, `γ ${gamma}, X ${X}`);
+// Φ as the C++ computes it for bubbles from 1 µm to 30 cm under 10⁻⁶ to 100 atm, for air, helium
+// and SF₆ (γ 1.4, 5/3, 1.1): χ = D/ωR² from 10⁻⁹ to 10³.
+const PHI = Object.fromEntries(['air', 'helium', 'sf6'].map((g) => {
+  const out = [];
+  for (let lp = -6; lp <= 2; lp += 0.25) for (let lr = -6; lr <= -0.5; lr += 0.125) {
+    const a = acoustics(10 ** lr, open({ p0: P_ATM * 10 ** lp, gas: GASES[g] }));
+    out.push({ chi: a.chi, re: a.phiRe, im: a.phiIm, D: a.D, pb: a.pb });
+  }
+  return [g, out.sort((a, b) => b.chi - a.chi)];
+}));
+test('heat flow: Φ → 3γ (adiabatic) as χ → 0 and → 3 (isothermal) as χ → ∞, with the boundary-layer and the slow-diffusion asymptotes', () => {
+  for (const [g, list] of Object.entries(PHI)) {
+    const gamma = GASES[g].gamma;
+    let nA = 0, nI = 0;
+    for (const { chi, re, im } of list) {
+      if (chi <= 1e-5) { // Im Φ/Re Φ → 3(γ−1)√(χ/2): a thermal layer √(2D/ω) thin against R
+        nA++;
+        assert.ok(rel(re, 3 * gamma) < 4 * (gamma - 1) * Math.sqrt(chi / 2) + 1e-9, `γ ${gamma}, χ ${chi}: Re Φ ${re}`);
+        assert.ok(rel(im / re, 3 * (gamma - 1) * Math.sqrt(chi / 2)) < 0.02, `γ ${gamma}, χ ${chi}: ${im / re}`);
+      }
+      if (chi >= 40) { // Re Φ → 3, Im Φ → (γ−1)/(5γχ)
+        nI++;
+        assert.ok(Math.abs(re - 3) < 1e-3, `γ ${gamma}, χ ${chi}: Re Φ ${re}`);
+        assert.ok(rel(im, (gamma - 1) / (5 * gamma * chi)) < 0.01, `γ ${gamma}, χ ${chi}: Im Φ ${im}`);
+      }
+    }
+    assert.ok(nA > 10 && nI > 3, `${g}: ${nA} adiabatic, ${nI} isothermal`);
+    // κ = Re Φ/3 climbs monotonically from 1 to γ as the bubble grows (χ falls)
+    let prev = 0;
+    for (const { re } of list) { const k = re / 3; assert.ok(k >= prev - 1e-12 && k >= 1 - 1e-9 && k <= gamma + 1e-9, `${g}: κ ${k} after ${prev}`); prev = k; }
+  }
+});
+test('Devin (1959): his real-variable κ and d_th agree with the C++\'s complex Φ (Prosperetti: two routes to the same theory) to 10⁻⁹ from X = 0.2 up; D is the ideal gas\'s K/ρ_g c_p', () => {
+  for (const [g, list] of Object.entries(PHI)) {
+    const gas = GASES[g];
+    for (const { chi, re, im, D, pb } of list) {
+      const X = Math.sqrt(2 / chi), d = devin(X, gas.gamma);
+      // (the solver's Φ is from its ω one step before χ's, which moves the last digits; below X = 0.2
+      // both forms lose them to cancellation)
+      if (X >= 0.2) assert.ok(Math.abs(re / 3 - d.kappa) < 1e-9 && Math.abs(im / re - d.d) < 1e-9, `${g}, χ ${chi}: κ ${re / 3} vs ${d.kappa}, d ${im / re} vs ${d.d}`);
+      assert.ok(rel(D, gas.K / (((pb * gas.M) / (8.314462618 * 293.15)) * gas.cp)) < 1e-12, `${g}: D ${D}`);
+    }
   }
 });
 test('damping constants for air in water at 1 atm: δ_rad = ωR/c ≈ 0.0137, δ_vis = 4μ/ρωR², δ_th peaks near R ≈ 10–20 µm', () => {
@@ -135,16 +204,17 @@ test('surface tension: ω₀² = [3κp₀ + 2(3κ−1)σ/R]/ρR², worth about +
     const a = acoustics(R, open()), k = a.kappa, s = 0.0728;
     assert.ok(rel(a.omega0 ** 2, (3 * k * P_ATM + 2 * (3 * k - 1) * s / R) / (998.2 * R * R)) < 1e-9);
   }
-  const noSigma = acoustics(0.78e-3, open({ liq: { ...LIQUIDS.water, sigma: 0 } })), withSigma = acoustics(0.78e-3, open());
-  const c = cents(withSigma.f0, noSigma.f0);
+  // against the same bubble without the tension term, √(3κp₀/ρR²)
+  const R = 0.78e-3, a = acoustics(R, open()), c = cents(a.f0, Math.sqrt((3 * a.kappa * P_ATM) / (998.2 * R * R)) / (2 * Math.PI));
   assert.ok(c > 0.5 && c < 2, `${c.toFixed(2)} ¢`);
 });
 test('pitch ∝ √p₀: with depth (p₀ = p_air + ρgh) and with the tank\'s pressure, to within the small change in κ', () => {
+  assert.ok(rel(ambient(P({ depth: 10, pressure: 2 })), 2 * P_ATM + 998.2 * G * 10) < 1e-12);
   const liq = { ...LIQUIDS.water, sigma: 0 }, gas = { ...GASES.air, K: 1e-30 }; // adiabatic, tensionless: exact
   const f = (p0) => acoustics(5e-3, open({ p0, liq, gas })).f0;
-  for (const p0 of [0.25 * P_ATM, 4 * P_ATM, 11 * P_ATM]) assert.ok(rel(f(p0) / f(P_ATM), Math.sqrt(p0 / P_ATM)) < 1e-9);
-  // the full model (heat flow, tension, surface): √(p₀ ratio) times √(κ ratio), κ moving a little because the
-  // gas's thermal diffusivity ∝ 1/p (thin gas is more isothermal), to 0.3 %
+  for (const p0 of [0.25 * P_ATM, 4 * P_ATM, 11 * P_ATM]) assert.ok(rel(f(p0) / f(P_ATM), Math.sqrt(p0 / P_ATM)) < 1e-9, `p₀ ${p0}: ${f(p0) / f(P_ATM)}`);
+  // the full model (heat flow, tension, surface): √(p₀ ratio) times √(κ ratio), κ moving a little because
+  // the gas's thermal diffusivity ∝ 1/p (thin gas is more isothermal), to 0.3 %
   for (const o of [{ depth: 10 }, { depth: 50 }, { pressure: 0.25 }, { pressure: 4 }]) for (const k of [60, 84, 105]) {
     const R = nominalRadius(k), a = bubbleModel(R, P(o)), b = bubbleModel(R, P());
     const ratio = Math.sqrt((ambient(P(o)) / ambient(P())) * (a.kappa / b.kappa) * (b.m / a.m)); // m: the surface's image
@@ -153,10 +223,15 @@ test('pitch ∝ √p₀: with depth (p₀ = p_air + ρgh) and with the tank\'s p
   }
 });
 test('gas: helium vs air is exactly √(γ ratio) = 1.0911 when both are adiabatic and 1 when both are isothermal; on the keyboard helium falls short, argon does not', () => {
+  // exactly, with no tension and the gas's conductivity taken to 0 or to ∞
   const liq = { ...LIQUIDS.water, sigma: 0 };
-  const ad = (g) => acoustics(5e-3, open({ liq, gas: { ...GASES[g], K: 1e-30 } })).f0, iso = (g) => acoustics(5e-3, open({ liq, gas: { ...GASES[g], K: 1e6 } })).f0;
-  assert.ok(Math.abs(ad('helium') / ad('air') - Math.sqrt(5 / 3 / 1.4)) < 1e-9, `${ad('helium') / ad('air')}`);
-  assert.ok(Math.abs(iso('helium') / iso('air') - 1) < 1e-4, `${iso('helium') / iso('air')}`);
+  const adK = (g) => acoustics(5e-3, open({ liq, gas: { ...GASES[g], K: 1e-30 } })).f0, isoK = (g) => acoustics(5e-3, open({ liq, gas: { ...GASES[g], K: 1e6 } })).f0;
+  assert.ok(Math.abs(adK('helium') / adK('air') - Math.sqrt(5 / 3 / 1.4)) < 1e-9, `${adK('helium') / adK('air')}`);
+  assert.ok(Math.abs(isoK('helium') / isoK('air') - 1) < 1e-4, `${isoK('helium') / isoK('air')}`);
+  // and on real gases: a 10 cm bubble under 100 atm (χ ~ 10⁻⁸: adiabatic) and under 10⁻⁴ atm (χ ~ 10–100: isothermal)
+  const f = (g, p0) => acoustics(0.1, open({ p0, gas: GASES[g] })).f0, ad = f('helium', 100 * P_ATM) / f('air', 100 * P_ATM), iso = f('helium', 1e-4 * P_ATM) / f('air', 1e-4 * P_ATM);
+  assert.ok(rel(ad, Math.sqrt(5 / 3 / 1.4)) < 3e-4, `${ad}`);
+  assert.ok(Math.abs(iso - 1) < 1e-4, `${iso}`);
   const full = cents(Math.sqrt(5 / 3 / 1.4), 1); // 151 ¢
   let prev = Infinity;
   for (let k = KEY_LO; k <= KEY_HI; k += 6) {
@@ -230,7 +305,7 @@ test('every key A3–C8 sounds on pitch at the defaults (its first bubble, withi
 test('keep in tune: under 20 m of water, helium, glycerol or a quarter atmosphere every key stays within 2 ¢; off, it moves as the model says', () => {
   for (const o of [{ depth: 20 }, { gas: 'helium' }, { liquid: 'glycerol' }, { pressure: 0.25 }, { gas: 'sf6', depth: 5 }]) {
     for (let k = KEY_LO + 2; k <= KEY_HI; k += 7) {
-      const R = tuneRadius(keyFreq(k), nozzleEnv(P(o)));
+      const R = tunedRadius(k, o);
       assert.ok(Math.abs(cents(bubbleModel(R, P(o)).fd, keyFreq(k))) < 0.01);
     }
     for (const k of [62, 83]) {
@@ -257,6 +332,7 @@ test('a single ping is the model\'s ring: frequency within 0.5 ¢ and decay rate
 });
 test('the kick: every bubble starts at the same pressure, 2εσ/r (bigger bubbles move more volume, more slowly), linear in velocity', () => {
   const p0 = peakPressure(LIQUIDS.water, 0.8);
+  assert.ok(rel(p0, (2 * 0.5 * 0.8 * LIQUIDS.water.sigma) / R_REF) < 1e-12, `${p0} Pa`); // ε = 0.5 × velocity
   for (const k of [KEY_LO, 66, 77, 90, 101]) {
     const { L, R } = ping(k, P({ snap: 0.01 }), 0.8, 0.1), g = hydrophoneGains(k);
     const pk = Math.max(peakAbs(L) / g[0], peakAbs(R) / g[1]); // OUT = 1 per pascal

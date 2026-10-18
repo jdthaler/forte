@@ -8,7 +8,7 @@
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { BELL_TABLE, STRIKE_GRID, SENS_GROUPS } from '../carillon/src/bell-table.js';
-import { IDEAL } from '../carillon/src/carillon-model.js';
+import { IDEAL } from '../carillon/src/partials.js';
 
 export const headerFile = new URL('../native/instruments/carillon/bell-table.h', import.meta.url);
 const PARTIALS = Object.keys(IDEAL); // hum, prime, tierce, quint, nominal, deciem, superquint, octnom

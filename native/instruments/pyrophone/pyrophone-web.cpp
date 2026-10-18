@@ -1,6 +1,5 @@
 // pyrophone-web.cpp — the model's functions the page's views call (pyrophone/src/pyrophone-wasm.js),
-// the page's tuning table for the engine, and the engine's test hooks (its tubes, as the
-// JavaScript engine's voices show them).
+// the page's tuning table for the engine, and the engine's test hooks (its tubes).
 
 #include <memory>
 
@@ -95,9 +94,10 @@ FORTE_EXPORT void pyrophone_orbit_state(double bore, double damp, double xf, dou
     }
   }
 }
-// root(sys, m, beta): growth rate and angular frequency.
-FORTE_EXPORT void pyrophone_root(double bore, double damp, double xf, double lag, int m, double beta, double *out) {
-  const Cx s = root(tube({bore, damp, xf, lag}), m, beta);
+// root(sys, m, beta, taylor): growth rate and angular frequency (taylor ≠ 0: the delay
+// Taylor-expanded, e^{−sτ} → 1 − sτ, as Magri & Juniper have it).
+FORTE_EXPORT void pyrophone_root(double bore, double damp, double xf, double lag, int m, double beta, int taylor, double *out) {
+  const Cx s = root(tube({bore, damp, xf, lag}), m, beta, taylor != 0);
   out[0] = s.re; out[1] = s.im;
 }
 FORTE_EXPORT double pyrophone_heat(double u) { return heat(u); }

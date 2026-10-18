@@ -31,15 +31,16 @@ cantilever. `reedFEM` builds it from 20 Hermite beam elements, with the
 solder as a point mass M at the tip and the blob's rotary inertia
 J = M(a²/6 + ((a+h)/2)²): a lump of side a = (M/ρ_solder)^⅓ sitting on top of
 the tongue. For a rectangular section, f₁ = (1.8751²/2π)·h·√(E/12ρ)/L², which
-depends on the thickness h and the length but not on the width. Without
-solder the overtones sit at the textbook 6.267, 17.55 and 34.39 × f₁.
+depends on the thickness h and the length but not on the width (tested).
+Without solder the overtones sit at the textbook 6.267, 17.55 and 34.39 × f₁.
 A tip mass of μ times the tongue's own mass lowers f₁ much more than the
 overtones, because it sits where mode 1 moves most and near where the higher
 modes have their last node. The FEM roots match the exact frequency equation
-for a cantilever with a tip mass,
-1 + cos λ cosh λ + μλ(cos λ sinh λ − sin λ cosh λ) = 0
+for a cantilever with a tip mass M and rotary inertia J,
+1 + cos λ cosh λ + μλ(cos λ sinh λ − sin λ cosh λ) − jλ³(cosh λ sin λ + sinh λ cos λ)
++ μjλ⁴(1 − cos λ cosh λ) = 0, with j = J/(mL²)
 (e.g. Laura, Pombo & Susemihl, *J. Sound Vib.* 37, 1974), to 2·10⁻⁴ for
-μ = 0.1 to 8 (tested).
+μ = 0.04 to 4 (tested, on the modes of five keys).
 
 **Tuning by solder.** The solder ratio M/m runs geometrically from 1.6 at A1
 to 0.04 at C7, and each key's free length is *solved* so that mode 1 is the
@@ -218,20 +219,14 @@ from one block to the next), so the knobs do not click. *Solder mass*,
 notes. A key struck again after one of them moved gets a new reed, and its
 old one fades out in about 20 ms.
 
-**In C++.** The same engine and model run as WebAssembly on this page (the
-JavaScript is the fallback; `?engine=js` in the address forces it) and as
-plugins (CLAP, VST3, AU and a standalone app), where CC64 is the damper
-pedal. The page builds each key's reed with the WebAssembly model and sends
-it with the note, as it does for the JavaScript; a plugin builds every key's
+**In C++.** The engine and the model are C++, run as WebAssembly on this
+page and as plugins (CLAP, VST3, AU and a standalone app), where CC64 is the
+damper pedal. The page builds each key's reed with the WebAssembly model,
+which also draws the views, and sends it with the note; a plugin builds every key's
 reed on a worker thread as soon as *Solder mass*, *Strike point* or *Hammer
 felt hardness* settles, and a note whose reed isn't ready yet waits a few
 milliseconds for it. The C(y) table is the same numbers, converted
-(`tools/reeds-native-table.mjs`). Given the same reed, the WebAssembly plays
-what the JavaScript plays to within 5·10⁻⁸ of the peak (float32 output
-rounding); the reeds themselves come out of the eigensolver within about
-10⁻⁸ (the stiff beam's eigenproblem is that well conditioned and no better),
-so a whole phrase agrees to within 5·10⁻⁶ of its peak, and the same test
-suite passes on it. Ten voices take about 5 % of a core in C++.
+(`tools/reeds-native-table.mjs`). Ten voices take about 5 % of a core.
 
 ## What to listen for
 
@@ -265,16 +260,16 @@ swings and the comb voltage it makes. Try the *Reed centred* preset there.
 
 ```
 reeds/index.html, style.css           page
-reeds/src/reeds-model.js              reed FEM, tuning, losses, hammer, pickup C(y), comb node (no audio, no DOM)
+reeds/src/reeds-instrument.js         the descriptor: parameters, presets, range, engine, output chain
+reeds/src/reeds-wasm.js               the engine and the model: the C++ as WebAssembly (reeds/wasm/reeds.wasm)
+reeds/src/reeds-data.js               design numbers for the views, and capAt (reading a C(y) curve)
 reeds/src/slot-field.js               Laplace solver for the slot cross-section
 reeds/src/slot-table.js               C(y) for eight gaps (generated)
-reeds/src/reeds-engine.js             real-time engine (AudioWorklet and Node), traceStrike for the views
 reeds/src/reeds-params.js             parameters and presets
 reeds/src/reeds-main.js               page wiring, info and mode table
 reeds/src/reeds-views.js              slow-motion reed and slot, C(y) view
-reeds/src/reeds-wasm.js               the C++ engine and model as WebAssembly (reeds/wasm/reeds.wasm)
 native/instruments/reeds/             the C++ port: FEM, model, engine, generated tables, reference (plugins and WebAssembly)
-test/reeds-tests.mjs                  node test/reeds-tests.mjs (29 tests, ~7 s; FORTE_ENGINE=wasm: on the WebAssembly)
+test/reeds-tests.mjs                  node test/reeds-tests.mjs (29 tests, ~6 s)
 tools/render-reeds.mjs                node tools/render-reeds.mjs → examples/reeds/
 tools/reeds-slot-table.mjs            node tools/reeds-slot-table.mjs → reeds/src/slot-table.js and its C++ copy
 tools/reeds-native-table.mjs          node tools/reeds-native-table.mjs → native/instruments/reeds/slot-table.h (only the copy)

@@ -1,7 +1,7 @@
 // carillon-tests.cpp — the carillon's engine in C++: the table is the FEM's, a struck bell sounds
 // its nominal an octave above its key, the clapper stays on the bell about a millisecond, the views'
 // messages come through, the voice pool holds whatever is played, and ten bells fit the CPU budget.
-// The physics tests are the JavaScript suite's, run on the WebAssembly (FORTE_ENGINE=wasm).
+// The physics tests are the JavaScript suite's, run on the WebAssembly (node test/carillon-tests.mjs).
 
 #include <chrono>
 #include <cmath>

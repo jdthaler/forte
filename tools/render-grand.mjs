@@ -3,9 +3,11 @@
 //
 // Name demos NN-what-you-hear; the landing page plays the first one.
 
-import { GrandEngine } from '../grand/src/grand-engine.js';
-import { DEFAULTS } from '../grand/src/grand-params.js';
+import { INSTRUMENT, DEFAULTS } from '../grand/src/grand-instrument.js';
+import { loadEngine } from './engine.mjs';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
+
+const GrandEngine = await loadEngine(INSTRUMENT);
 
 const FS = 48000, SLUG = 'grand';
 const P = (o = {}) => ({ ...DEFAULTS, ...o });

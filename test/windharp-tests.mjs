@@ -7,19 +7,24 @@
 // predicted band and not outside it, the harmonic jumps at the predicted winds, the hysteresis at the
 // balance's folds, the locked amplitude and its mass–damping collapse; tuning and speech on every key;
 // shutters, ring-down, voices, gusts, Kircher's unison, the aeolian tone, levels, stability and CPU.
+// The model and the engine are the C++ (native/instruments/windharp), built as WebAssembly: the
+// model's functions through windharp-wasm.js; the linear analysis they are held to is written out in
+// windharp-model.js.
 
 import assert from 'node:assert/strict';
 import {
-  TAU, KEY_LO, KEY_HI, AIR, WAKE, U_REF, RE_C, keyFreq, noteName, strouhal, onset, vdpKappa, shedding, diameterFor, stringDesign,
-  harmonicParams, coupledRoots, flutterGrowth, lockBand, balance, lockedState, lockedDist, modeShapeAt, lockedAmplitude, lockedRange,
-  homeHarmonic, massDamping, gustSpectrum, gustModel, GUST, courseDesign, courseSize, COURSE, shelfGain,
+  TAU, KEY_LO, KEY_HI, AIR, WAKE, U_REF, RE_C, keyFreq, noteName, strouhal, harmonicParams as linearParams, coupledRoots, flutterGrowth, gustSpectrum,
 } from '../windharp/src/windharp-model.js';
 import { INSTRUMENT } from '../windharp/src/windharp-instrument.js';
+import { wasmModel } from '../windharp/src/windharp-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../windharp/src/windharp-params.js';
 import { fft } from '../tools/audio-util.mjs';
 
-const WindHarpEngine = await loadEngine(INSTRUMENT); // JavaScript, or WebAssembly with FORTE_ENGINE=wasm
+const WindHarpEngine = await loadEngine(INSTRUMENT);
+const { shedding, stringDesign, courseOffsets, lockBand, lockedAmplitude, lockedRange, homeHarmonic, massDamping, balance, lockedState } = await wasmModel();
+// harmonic n of the C++'s string S in the wind U, for the linear analysis
+const harmonicParams = (S, n, U) => linearParams(S, n, U, shedding(U, S.D));
 
 const FS = 48000;
 let failures = 0;
@@ -82,7 +87,7 @@ function freqAt(x, f, a, b, fs = FS) {
 // a voice's (first string's) locked harmonic and its swing Ŷ/D (0 if it is not locked)
 const lockOf = (e, v = e.voices[0]) => { if (!v) return { n: 0, amp: 0 }; const d = e.dominant(v); return { n: d.n, amp: d.amp / v.S.D }; };
 // the design of a key's first string (the treble keys have courses of two or three, a little apart)
-const design = (key, p = P()) => courseDesign(key, p)[0];
+const design = (key, p = P()) => stringDesign(key, p, courseOffsets(key)[0]);
 // open a key's shutter at once (tests of the linear dynamics); returns its first string
 function openNow(e, key) { e.noteOn(key, 1); const v = e.byKey.get(key); v.x = 1; v.target = 1; for (const st of v.strings) { st.e.fill(1); st.x = 1; st.target = 1; } return v.strings[0]; }
 // the pitch of x near f over [a, b): its power-weighted mean frequency (demodulated at f, in Hann-weighted
@@ -131,14 +136,15 @@ test('the Strouhal relation: Williamson & Brown’s St = 0.2698 − 1.0271/√Re
   for (let Re = 50; Re < 5000; Re *= 1.3) assert.ok(strouhal(Re * 1.3) > strouhal(Re) && strouhal(Re) < 0.2698);
   let lo = Infinity, hi = 0;
   for (let k = KEY_LO; k <= KEY_HI; k++) {
-    const D = diameterFor(keyFreq(k)), Re = (U_REF * D) / AIR.nu, sh = shedding(U_REF, D);
+    const D = stringDesign(k, P()).D, Re = (U_REF * D) / AIR.nu, sh = shedding(U_REF, D);
     assert.ok(rel(sh.fs, keyFreq(k)) < 1e-9 && rel((strouhal(Re) * U_REF) / D, keyFreq(k)) < 1e-9, `${k}`);
     lo = Math.min(lo, Re); hi = Math.max(hi, Re);
   }
   assert.ok(lo > 60 && hi < 1500, `Re ${lo.toFixed(0)}–${hi.toFixed(0)}`);
-  console.log(`        Re at U₀: ${lo.toFixed(0)} (C7) to ${hi.toFixed(0)} (G3); D ${(diameterFor(keyFreq(KEY_HI)) * 1e3).toFixed(3)}–${(diameterFor(keyFreq(KEY_LO)) * 1e3).toFixed(2)} mm`);
+  console.log(`        Re at U₀: ${lo.toFixed(0)} (C7) to ${hi.toFixed(0)} (G3); D ${(stringDesign(KEY_HI, P()).D * 1e3).toFixed(3)}–${(stringDesign(KEY_LO, P()).D * 1e3).toFixed(2)} mm`);
 });
 test('no shedding below Re = 47: the wake’s growth εΩr/2 changes sign there (r ∝ Re − 47, the Landau onset) and is full from Re = 60; in the engine a C7 string in a wind with Re = 40 keeps a still wake and no sound, while at Re = 70 it sheds', () => {
+  const onset = (Re) => shedding((Re * AIR.nu) / 1e-3, 1e-3).r;
   assert.ok(onset(RE_C - 1) < 0 && onset(RE_C + 1) > 0 && onset(60) === 1 && onset(30) === -1);
   assert.ok(!shedding(1, 0.4e-3).sheds && shedding(3, 0.4e-3).sheds);
   const S = design(96), U40 = (40 * AIR.nu) / S.D, U70 = (70 * AIR.nu) / S.D, qOf = (r) => Math.max(...r.e.voices[0].strings.flatMap((st) => Array.from(st.q, Math.abs)));
@@ -161,7 +167,9 @@ test('a fixed cylinder’s wake: the engine’s station sheds at the Strouhal fr
   let re = 0, im = 0; const a0 = Math.ceil(ups[0]), b0 = Math.floor(ups[ups.length - 1]);
   for (let i = a0; i < b0; i++) { re += xs[i] * Math.cos(wRef * i * h); im += xs[i] * Math.sin(wRef * i * h); }
   const aRef = (2 * Math.hypot(re, im)) / (b0 - a0);
-  assert.ok(Math.abs(wRef - vdpKappa(eps)) < 1e-4, `RK4 ${wRef} vs κ ${vdpKappa(eps)}`);
+  // the wake's own Ω is set so that its limit cycle runs at f_s: f_s/Ω is the van der Pol κ(ε)
+  const sh = shedding(U_REF, design(60).D), kappa = (TAU * sh.fs) / sh.Om, series = 1 - (eps * eps) / 16 + (17 * eps ** 4) / 3072;
+  assert.ok(sh.r === 1 && Math.abs(wRef - kappa) < 1e-4 && Math.abs(series - kappa) < 1e-12, `RK4 ${wRef} vs κ ${kappa} (series ${series})`);
   for (const fs of [44100, 48000]) for (const key of [60, 84]) {
     const p = P(), S = design(key, p), e = new WindHarpEngine(fs, 1, { rigid: true, noise: 0 });
     e.setParams(p); e.Uw = p.wind; const vc = openNow(e, key), bL = new Float32Array(1), bR = new Float32Array(1), rec = [];
@@ -174,7 +182,7 @@ test('a fixed cylinder’s wake: the engine’s station sheds at the Strouhal fr
     assert.ok(rel(f, shedding(p.wind, S.D).fs) < 5e-4, `${key} at ${fs}: ${f.toFixed(3)} vs f_s ${shedding(p.wind, S.D).fs.toFixed(3)}`);
     assert.ok(rel(amp, aRef) < 0.01, `${key} at ${fs}: amplitude ${amp.toFixed(4)} vs ${aRef.toFixed(4)}`);
   }
-  console.log(`        limit cycle: ω = ${wRef.toFixed(5)} (κ = ${vdpKappa(eps).toFixed(5)}), fundamental ${aRef.toFixed(4)}`);
+  console.log(`        limit cycle: ω = ${wRef.toFixed(5)} (κ = ${kappa.toFixed(5)}), fundamental ${aRef.toFixed(4)}`);
 });
 
 console.log('the linear analysis');
@@ -365,9 +373,10 @@ test('tuning: at the reference wind every key G3–C7 locks onto its 3rd harmoni
   console.log(`        worst ${worst.toFixed(2)} ¢`);
 });
 test('unison courses: one string a key to B4, two from C5 to C7; at the reference wind every string of every course locks onto the 3rd harmonic on its own, within 3 ¢ of the note, its strings 0.5–4 ¢ apart (they beat slowly: the course shimmers)', () => {
+  const courseSize = (k) => courseOffsets(k).length;
   assert.ok(courseSize(55) === 1 && courseSize(71) === 1 && courseSize(72) === 2 && courseSize(96) === 2);
   let lo = Infinity, hi = 0;
-  for (let k = COURSE.two; k <= KEY_HI; k += 2) {
+  for (let k = 72; k <= KEY_HI; k += 2) {
     const { f, locks } = stringFreqs(P(), k, 3, 2.0), c = f.map((x) => cents(x, keyFreq(k)));
     assert.ok(locks.length === courseSize(k) && locks.every((n) => n === 3), `${noteName(k)}: ${locks}`);
     assert.ok(c.every((x) => Math.abs(x) < 3), `${noteName(k)}: ${c.map((x) => x.toFixed(2))} ¢`);
@@ -443,13 +452,23 @@ test('gusts: seeded (the same seed repeats exactly, another differs); the wind�
   let same = true, diff = 0;
   for (let i = 0; i < a.L.length; i++) { if (a.L[i] !== b.L[i]) same = false; diff = Math.max(diff, Math.abs(a.L[i] - c.L[i])); }
   assert.ok(same && diff > 1e-3, `${same} ${diff}`);
+  // the engine's wind, a block at a time: 160 half-overlapping Hann-windowed spans of 2¹⁶ blocks (175 s each)
   const e = new WindHarpEngine(FS, 3); e.setParams(p); e.Uw = p.wind;
-  const us = []; for (let i = 0; i < 60000; i++) us.push(e.wind(128) / p.wind - 1);
-  const m = us.reduce((s, x) => s + x, 0) / us.length, sd = Math.sqrt(us.reduce((s, x) => s + (x - m) ** 2, 0) / us.length);
+  const M = 1 << 16, N = 81 * M, dt = 128 / FS, us = new Float64Array(N);
+  for (let i = 0; i < N; i++) us[i] = e.wind(128) / p.wind - 1;
+  const m = us.reduce((s, x) => s + x, 0) / N, sd = Math.sqrt(us.reduce((s, x) => s + (x - m) ** 2, 0) / N);
   assert.ok(rel(sd, 0.08) < 0.1, `rms ${sd}`);
-  const fc = 1 / TAU;
-  for (let f = fc / 3; f <= 6 * fc; f *= 1.2) assert.ok(Math.abs(10 * Math.log10(gustModel(f, 1) / gustSpectrum(f, 1))) < 2, `${f.toFixed(3)} Hz: ${(10 * Math.log10(gustModel(f, 1) / gustSpectrum(f, 1))).toFixed(2)} dB`);
-  void GUST;
+  const pow = new Float64Array(M / 2), re = new Float64Array(M), im = new Float64Array(M);
+  for (let a = 0; a + M <= N; a += M / 2) {
+    for (let i = 0; i < M; i++) { re[i] = (0.5 - 0.5 * Math.cos((TAU * i) / M)) * us[a + i]; im[i] = 0; }
+    fft(re, im);
+    for (let k = 0; k < M / 2; k++) pow[k] += re[k] * re[k] + im[k] * im[k];
+  }
+  // its spectrum against the target's shape, in bands ±10 % wide, relative to the band below f_c/4
+  const fc = 1 / TAU, df = 1 / (M * dt);
+  const band = (f0, f1) => { let s = 0, n = 0; for (let k = 2; k < M / 2 && k * df < f1; k++) if (k * df >= f0) { s += pow[k] / gustSpectrum(k * df, 1); n++; } return s / n; };
+  const ref = band(0, fc / 4);
+  for (let f = fc / 3; f <= 6 * fc; f *= 1.2) { const dB = 10 * Math.log10(band(f / 1.1, f * 1.1) / ref); assert.ok(Math.abs(dB) < 2, `${f.toFixed(3)} Hz: ${dB.toFixed(2)} dB`); }
 });
 test('gusts make a string near a switch flicker: a C6 held between its 3rd harmonic’s fold and its 4th harmonic’s band changes harmonic or drops in and out of lock many times in 10 s with 5 % gusts, and holds steady in a steady wind', () => {
   const key = 84, S = design(key), R = lockedRange(S, 3), U = R.hi;

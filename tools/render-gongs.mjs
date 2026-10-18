@@ -3,9 +3,11 @@
 //
 // Name demos NN-what-you-hear; the landing page plays the first one.
 
-import { GongEngine } from '../gongs/src/gongs-engine.js';
-import { DEFAULTS, PRESETS } from '../gongs/src/gongs-params.js';
+import { INSTRUMENT, DEFAULTS, PRESETS } from '../gongs/src/gongs-instrument.js';
+import { loadEngine } from './engine.mjs';
 import { renderEngine, withRoom, saveExample } from './audio-util.mjs';
+
+const GongEngine = await loadEngine(INSTRUMENT);
 
 const FS = 48000, SLUG = 'gongs';
 const preset = (name, o = {}) => ({ ...DEFAULTS, ...PRESETS.find((p) => p.name.startsWith(name)).p, ...o });

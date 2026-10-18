@@ -1,5 +1,4 @@
-// grand-engine.h — the real-time electric grand (grand/src/grand-engine.js in C++), on the engine
-// contract (forte/engine.h).
+// grand-engine.h — the real-time electric grand, on the engine contract (forte/engine.h).
 //
 // Each sounding key is a Voice: every partial of every unison string in both polarisations, as
 // exactly discretised damped oscillators, coupled through the bridge. Within one polarisation the
@@ -11,11 +10,11 @@
 // the residual path of the modes above the modal band. Then the piezo's RC high-pass and the
 // preamp's EQ, and the blend with the microphones.
 //
-// A key's model (its partials, a few hundred µs; more with a soundboard) and the soundboard's
-// (a few ms) are built off the audio thread (forte/background.h), for the parameters they depend
-// on; a note whose key is not built yet waits for it, a new board's microphones for theirs. Without
-// threads (WebAssembly) both are built in place, as the JavaScript engine builds them. Voices come
-// from a fixed pool: nothing is allocated in process().
+// A key's model (its partials, a few hundred µs; more with a soundboard) and the soundboard's (a
+// few ms) are built off the audio thread (forte/background.h), for the parameters they depend on; a
+// note whose key is not built yet waits for it, a new board's microphones for theirs. Without
+// threads (WebAssembly) both are built in place. Voices come from a fixed pool: nothing is
+// allocated in process().
 #pragma once
 
 #include <array>
@@ -34,8 +33,7 @@
 
 namespace forte::grand {
 
-// What the engine posts for the page (grand/src/grand-wasm.js turns it back into the JavaScript
-// engine's message).
+// What the engine posts for the page (grand/src/grand-wasm.js turns it into the page's message).
 namespace msg {
 enum : uint16_t {
   error = 1, // key: a voice's numerical instability
@@ -61,7 +59,7 @@ class RC1 {
   double B0 = 1, B1 = 0, A1 = 0, x1 = 0, y1 = 0;
 };
 
-// The soundboard's filter coefficients (grand-engine.js, Board), built with its model.
+// The soundboard's filter coefficients, built with its model.
 struct BoardCoefs {
   double boardH = 9;
   int K = 0;
@@ -138,13 +136,12 @@ class GrandEngine : public Engine {
   };
 
   // read by the tests and the page's slow-motion view (through the WebAssembly's hooks), in the
-  // JavaScript engine's order
+  // order they started
   std::array<Voice *, POOL> voices{};
   int nVoices = 0;
   std::array<Voice *, 128> byKey{};
 
-  // The soundboard: its coefficients and its state, kept for the last few thicknesses (the
-  // JavaScript keeps up to five).
+  // The soundboard: its coefficients and its state, kept for the last few thicknesses.
   struct BoardSlot {
     bool used = false;
     BoardCoefs c;

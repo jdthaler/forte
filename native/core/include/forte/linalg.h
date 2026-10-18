@@ -1,8 +1,8 @@
 // linalg.h — shared/linalg.js on Eigen: dense symmetric and generalized symmetric
 // eigenproblems, for the models that reduce a structure to modes.
 //
-// Eigenvalues come out ascending, as in JavaScript. An eigenvector's sign is arbitrary (Eigen's
-// and linalg.js's tql2 may differ): a port must not depend on it.
+// Eigenvalues come out ascending, as in shared/linalg.js. An eigenvector's sign is arbitrary
+// (Eigen's and linalg.js's tql2 may differ): a model must not depend on it.
 #pragma once
 
 #include <optional>

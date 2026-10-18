@@ -1,5 +1,5 @@
-// plectrum.h — the plectrum as a cantilever, and where it lets go of the string
-// (harpsichord/src/plectrum.js in C++, operation for operation). Pure functions and small tables.
+// plectrum.h — the plectrum as a cantilever, and where it lets go of the string. Pure functions
+// and small tables.
 //
 // The plectrum sticks out of the jack's tongue under the string, free length ℓ, and catches the
 // string at s₀ = ℓ − o from its root (o, the overlap). Loaded by F at s it bends (Euler–Bernoulli,
@@ -26,8 +26,8 @@ struct UnitTables {
   double tau = 0;
   std::array<double, PLECTRUM_TABLE> c{}, g{}, F{};
 };
-// The tables for τ (memoised as plectrum.js does, by τ to four decimals). The materials' own are
-// built once, before any engine plays, so the audio thread only looks them up.
+// The tables for τ (memoised by τ to four decimals). The materials' own are built once, before any
+// engine plays, so the audio thread only looks them up.
 const UnitTables &unitTables(double tau);
 
 struct Plectrum {
@@ -55,9 +55,8 @@ inline double lateralZ(const Plectrum &pl, double s, double F) { return s - F * 
 double coneLo(const Plectrum &pl, double s, double F);
 double coneHi(const Plectrum &pl, double s, double F);
 
-// The quasi-static pluck (plectrum.js, quasiStaticRelease): the jack raised slowly against a string
-// of static compliance Cs and lateral stiffness Kz, with stick–slip friction; ok is false if it
-// never lets go below yMax.
+// The quasi-static pluck: the jack raised slowly against a string of static compliance Cs and
+// lateral stiffness Kz, with stick–slip friction; ok is false if it never lets go below yMax.
 struct QuasiStatic { bool ok = false; double F = 0, y = 0, u = 0, w = 0, s = 0, theta = 0; };
 QuasiStatic quasiStaticRelease(const Plectrum &pl, double Cs, double Kz, double yMax = 0.02, double dy = 2e-7);
 // Closed form for a uniform plectrum without foreshortening: root of gF² − μ(1 + K_z o g)F − K_z o = 0.

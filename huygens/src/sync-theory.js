@@ -1,4 +1,6 @@
-// sync-theory.js — exact results for the Huygens keyboard's pulse coupling.
+// sync-theory.js — exact results for the Huygens keyboard's pulse coupling, in closed form: the
+// tests hold the C++ to them. δ and the lock ratio themselves (deltaOf, lockRatio) are the C++'s
+// (huygens-model.cpp), which the page and the tests call through huygens-wasm.js.
 //
 // Each lamp's capacitor charges as V(t) = S − (S − V_e) e^{−t/τ}, fires at V_s
 // and drops to V_e: period T = τ g, g = ln[(S − V_e)/(S − V_s)]. When one lamp
@@ -22,13 +24,6 @@
 // something: by Dirichlet's theorem some q ≤ 1/δ brings a firing within the
 // window, so the staircase is complete, with no unlocked gaps between steps.
 
-// δ for a kick given as a fraction of the lamp's swing V_s − V_e
-export function deltaOf(kick, vNom, vStrike, vExt) {
-  if (!(kick > 0)) return 0;
-  const a = vNom - vStrike, K = kick * (vStrike - vExt);
-  return Math.log((a + K) / a) / Math.log((vNom - vExt) / a);
-}
-
 // the kick (fraction of swing) that gives window δ
 export function kickFor(delta, vNom, vStrike, vExt) {
   const a = vNom - vStrike, g = Math.log((vNom - vExt) / a);
@@ -37,26 +32,6 @@ export function kickFor(delta, vNom, vStrike, vExt) {
 
 // edges of the p:q tongue in r = f_hi/f_lo
 export const tongue = (p, q, delta) => [(p - delta) / q, p / (q - delta)];
-
-// Two lamps that have just fired together: the low one with period 1, the high
-// one with period 1/r (r > 0). Returns { p, q } (high : low firings until they
-// next fire together), or null if no shared firing comes within maxFirings.
-export function lockRatio(r, delta, maxFirings = 100000) {
-  const TB = 1 / r;
-  let tA = 1, tB = TB, nA = 0, nB = 0;
-  for (let i = 0; i < maxFirings; i++) {
-    if (tA <= tB) {                              // low lamp fires
-      nA++;
-      if (tB - tA <= delta * TB) return { p: nB + 1, q: nA };
-      tA = nA + 1;
-    } else {                                     // high lamp fires
-      nB++;
-      if (tA - tB <= delta) return { p: nB, q: nA + 1 };
-      tB = (nB + 1) * TB;
-    }
-  }
-  return null;
-}
 
 // Worst-case time for a pair starting from arbitrary phases to lock onto p:q
 // (to first order in the detuning). Until they first fire together, the

@@ -1,5 +1,5 @@
-// quantum-model.h — the physics of the Quantum Keyboard (quantum/src/quantum-model.js in C++),
-// operation for operation, free of audio: energy spectra and exact dipole matrix elements of five
+// quantum-model.h — the physics of the Quantum Keyboard, free of audio: energy spectra and exact
+// dipole matrix elements of five
 // potential wells, the wavepacket each key launches, its revival times, and the observable the
 // engine sums. The engine, the plugins' worker thread and the page (through the WebAssembly) share
 // it.
@@ -15,8 +15,8 @@
 //   hydrogen  Eₙ = −1/2n² (l = 1)       bouncer   Eₙ = |aₙ| (zeros of Ai)
 //   harmonic  Eₙ = n + ½
 //
-// sin, cos, exp, log and pow are V8's (forte/fdlibm.h), so a packet is the JavaScript's to the
-// last bit.
+// sin, cos, exp, log and pow are V8's (forte/fdlibm.h), so a packet is the same to the last bit
+// everywhere.
 #pragma once
 
 #include <cmath>
@@ -95,7 +95,7 @@ double autocorr(const Packet &pk, double t, double Tphi = INFINITY);
 // The detector signal straight from the model (tests and views).
 double signalAt(const Packet &pk, double t, double T1 = INFINITY, double Tphi = INFINITY, double dcFade = DC_FADE);
 
-// The views' eigenfunctions (quantum/src/quantum-waves.js, waveGrid): every state's φₙ at `rows`
+// The views' eigenfunctions (on quantum/src/quantum-waves.js's grid): every state's φₙ at `rows`
 // display points, phi[i * rows + r] for ns[i]; ys the points. A packet's id, ns, E, kap and nbar,
 // and the knob eta (for a Morse packet without its κ).
 struct WaveGrid { std::vector<double> ys, phi; };

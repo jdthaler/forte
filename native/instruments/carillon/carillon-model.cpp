@@ -1,5 +1,4 @@
-// carillon-model.cpp — the carillon's physics, as carillon-model.js computes it, operation for
-// operation (the order of every sum and product kept, so the numbers are the JavaScript's).
+// carillon-model.cpp — the carillon's physics (carillon-model.h).
 
 #include "carillon-model.h"
 
@@ -13,7 +12,7 @@ const double cBronze = std::sqrt(BRONZE.E / BRONZE.rho);
 static constexpr double PI = std::numbers::pi;
 
 // Math.hypot as V8 computes it (scaled by the largest, Kahan-compensated sum), so that a historic
-// bell's orientations are the JavaScript's to the last bit.
+// bell's orientations are the same to the last bit everywhere.
 static double jsHypot(double a, double b) {
   const double x = std::fabs(a), y = std::fabs(b), mx = std::max(x, y);
   if (mx == 0) return 0;

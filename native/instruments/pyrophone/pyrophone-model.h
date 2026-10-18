@@ -1,6 +1,5 @@
-// pyrophone-model.h — the physics of one singing tube (pyrophone/src/pyrophone-model.js in C++),
-// operation for operation, free of audio: the engine, the plugins' worker thread and the page's
-// views (through the WebAssembly) share it.
+// pyrophone-model.h — the physics of one singing tube, free of audio: the engine, the plugins'
+// worker thread and the page's views (through the WebAssembly) share it.
 //
 // Each key is a glass tube, open at both ends, with a flame at x_f. The Galerkin model of a Rijke
 // tube (Heckl 1990; Balasubramanian & Sujith 2008; Juniper 2011), in units of L and L/c:
@@ -10,7 +9,7 @@
 // limit cycles by harmonic balance, and the tuning table the engine cuts its tubes from.
 //
 // sin, cos, exp, log and pow are V8's (forte/fdlibm.h) and hypot is computed as V8 computes it, so
-// the tables are the JavaScript's to the last bit or nearly.
+// the tables are the same to the last bit everywhere.
 #pragma once
 
 #include <algorithm>
@@ -37,7 +36,7 @@ double hypot2(double a, double b);
 
 struct Cx { double re = 0, im = 0; };
 
-// The tube's parameters that the physics depends on (tubeKey in the JavaScript).
+// The tube's parameters that the physics depends on.
 struct TubeParams {
   double bore = 1.0 / 30, damp = 1, xf = 1.0 / 3, lag = 0.25;
   bool operator==(const TubeParams &) const = default;

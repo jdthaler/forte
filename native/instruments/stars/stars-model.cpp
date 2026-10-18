@@ -1,5 +1,5 @@
-// stars-model.cpp — the Star Keyboard's physics, as stars-model.js computes it (the comments there
-// give the sources and the model's choices; here only what differs in form).
+// stars-model.cpp — the Star Keyboard's physics (stars-model.h; stars/README.md, "The physics",
+// gives the sources and the model's choices).
 
 #include "stars-model.h"
 
@@ -23,7 +23,7 @@ static double clamp(double x, double a, double b) { return jsMin(b, jsMax(a, x))
 static double smooth(double x) { const double t = clamp(x, 0, 1); return t * t * (3 - 2 * t); }
 
 Rng::Rng(double seed) {
-  // (seed * 2654435761) >>> 0 || 1, the product in double precision as JavaScript has it
+  // (seed * 2654435761) >>> 0 || 1, the product in double precision
   double t = std::trunc(seed * 2654435761.0);
   t = std::fmod(t, 4294967296.0);
   if (t < 0) t += 4294967296.0;

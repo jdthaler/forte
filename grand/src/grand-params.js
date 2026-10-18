@@ -1,7 +1,8 @@
 // grand-params.js — the knobs. Every parameter has a physical meaning and a
 // unit; the hint says what it does to the sound.
 
-import { hammerSpeed } from './grand-model.js';
+// Key velocity 0..1 → hammer speed, 0.25 … 6 m/s, as the engine maps it (grand-model.h), for the readout.
+const hammerSpeed = (vel) => 0.25 * 24 ** Math.min(1, Math.max(0, vel));
 
 const x = (v) => `×${v < 1 ? v.toFixed(2) : v.toFixed(v < 10 ? 2 : 1)}`;
 const db = (v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} dB`;

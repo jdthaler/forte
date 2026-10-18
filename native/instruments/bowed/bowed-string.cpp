@@ -1,4 +1,4 @@
-// bowed-string.cpp — the bowed string, as string.js runs it.
+// bowed-string.cpp — the bowed string (bowed-string.h).
 
 #include "bowed-string.h"
 

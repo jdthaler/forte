@@ -1,5 +1,4 @@
-// pipes-model.h — the physics of a Baroque organ's flue pipes and their wind (pipes/src/pipes-model.js
-// in C++, operation for operation).
+// pipes-model.h — the physics of a Baroque organ's flue pipes and their wind.
 //
 //   reservoir ─▶ trunk ─▶ wind chest P_c ─▶ key's pallet ─▶ groove ─▶ slider ─▶ pipe foot p
 //                                                                                 │
@@ -64,7 +63,7 @@ inline const Scale SCALE = {0.1555, keyFreq(36), 0.75, 0.25, 1.2e-3, 0.75};
 inline double toepferD(double f) { return SCALE.D0 * std::pow(f / SCALE.f0, -SCALE.exp); }
 
 // Math.hypot as V8 computes it (Kahan-compensated, scaled by the larger), so the voicing is the
-// JavaScript's to the last bit.
+// same to the last bit everywhere.
 double jsHypot(double x, double y);
 double agm(double x, double y);
 double ellipseConductivity(double a, double b);
@@ -80,7 +79,7 @@ struct Geometry {
   double W = 0, b = 0, y0 = 0, dd = 0, Sm = 0, Kj = 0, dLm = 0;
   bool stopped = false;
 };
-// One pipe, voiced (pipeModel in the JavaScript).
+// One pipe, voiced.
 struct PipeModel {
   double f = 0;
   bool stopped = false;
@@ -103,7 +102,7 @@ struct ModelOptions {
 };
 PipeModel pipeModel(double f, bool stopped, const Voicing &P, const ModelOptions &opts = {});
 
-// The linear analysis: complex numbers as the JavaScript's pairs, with its operations.
+// The linear analysis: complex numbers as pairs, with their operations.
 struct Cx { double re, im; };
 Cx admittance(const PipeModel &pipe, Cx s);
 double jetDelay(const PipeModel &pipe, double p);

@@ -1,7 +1,6 @@
-// gongs-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// gongs-wasm.js — the engine and model, built as WebAssembly from the physics in C++
 // (native/instruments/gongs): GongWasmEngine, with the engine contract, and the model's functions
-// for the views. The page runs it when it can and falls back to the JavaScript (gongs-engine.js).
-// (It imports nothing from gongs-model.js: the worklet then loads no plate tables in JavaScript.)
+// for the views and the tests. (It imports no plate tables: the C++ has its own, gong-modes.h.)
 
 import { GROUPS } from './gongs-params.js';
 import { wasmEngine, nativeParams, nativeValue, scratch } from '../../shared/wasm.js';
@@ -10,10 +9,13 @@ import { wasmEngine, nativeParams, nativeValue, scratch } from '../../shared/was
 const BUILD = { id: 'gongs', name: 'GongWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/gongs.wasm', import.meta.url).href };
 const BC = ['free', 'clamped'], NR = 65;
 const tablesId = (bc, rise, terms) => `${bc}|${rise}|${terms}`;
-const modeLabel = (bc, m, s) => `(${m},${s + (bc === 'free' && m < 2 ? 1 : 0)})`; // as gongs-model.js
+// a mode's (m, nodal circles) from its plate mode: free plates' m = 0, 1 modes have one more circle than s
+const modeLabel = (bc, m, s) => `(${m},${s + (bc === 'free' && m < 2 ? 1 : 0)})`;
+// the two close microphones (r/a, θ) that make the stereo pair, left and right (gongs-model.h)
+export const MICS = [[0.9, 0.35], [0.75, 2.8]];
 
-// The C++ engine's messages (gongs-engine.h, msg) back into the JavaScript engine's: 'gong' (the
-// focus gong's modes, bands and pitch, sent in three pieces) and 'error'.
+// The C++ engine's messages (gongs-engine.h, msg) into the views': 'gong' (the focus gong's modes,
+// bands and pitch, sent in three pieces) and 'error'.
 function views(m, e) {
   const s = (e.views ??= { amp: new Float32Array(64), band: new Float32Array(6) });
   const v = m.values;
@@ -31,8 +33,8 @@ function views(m, e) {
 
 const Base = wasmEngine(BUILD, { messages: views });
 
-// A set of tables as the JavaScript model's shell() has them (what the tests and views read):
-// N, NS, tuned, Om, m, label, C, R; H and E (the couplings) when asked for.
+// A set of tables (gongs-model.h, Shell), as the tests and views read them: N, NS, tuned, Om, m,
+// label, C, R; H and E (the couplings) when asked for.
 function shellObject(x, ptr) {
   const s = scratch(x);
   x.gongs_shell_spec(ptr, s.at);
@@ -77,22 +79,8 @@ function shellObject(x, ptr) {
   return S;
 }
 
-// Tables a page built (gongs-model.js, engineTables) are the C++ ones S if they hold the same modes
-// and couplings, to rounding.
-const verdicts = new WeakMap();
-function same(T, S) {
-  if (verdicts.get(T)?.S === S) return verdicts.get(T).ok;
-  const close = (a, b) => a.length === b.length && Array.prototype.every.call(a, (v, i) => Math.abs(v - b[i]) <= 1e-9 * (1 + Math.abs(v)));
-  const sum = (h) => h.reduce((t, v) => t + Math.abs(v), 0);
-  const H = S.H.map((t) => (t.i === t.j ? 1 : 2) * t.v), h = Array.from(T.full.p1.h);
-  const ok = T.N === S.N && T.tuned === S.tuned && close(T.Om, S.Om) && close(T.m, S.m) && close(T.C, S.C)
-    && h.length === H.length && Math.abs(sum(h) / sum(H) - 1) < 1e-9;
-  verdicts.set(T, { S, ok });
-  return ok;
-}
-
-// One of the engine's voices, as the test suite reaches into the JavaScript engine's (its state,
-// its tables, its mallet, its methods). Fields are read from, and a few written to, the C++.
+// One of the engine's voices, as the test suite reaches into it (its state, its tables, its
+// mallet, its methods). Fields are read from, and a few written to, the C++.
 const F = {
   key: 0, N: 1, R: 2, k: 3, h: 4, m: 5, nl: 6, hit: 7, psi: 8, eps0: 9, V: 10, Einj: 11, guards: 12, peak: 13, nlr: 14, adapt: 15,
   w0: 16, cs: 17, full: 18, lite: 19, hitK: 20, hitMi: 21, hitXm: 22, hitXm1: 23, hitD0: 24, hitDm1: 25, hitSteps: 26, hitFmax: 27,
@@ -129,9 +117,7 @@ class WasmVoice {
     x.gongs_shell_spec(ptr, s.at);
     const [b, rise, terms] = s.f64(3), id = tablesId(BC[b], rise, terms), e = this.eng;
     if (!e.shells.has(id)) e.shells.set(id, shellObject(x, ptr));
-    // tables a page sent for these parameters, if they are the C++ ones (then the voice plays on them)
-    const S = e.shells.get(id), sent = e.sent.get(id);
-    return sent && same(sent, S) ? sent : S;
+    return e.shells.get(id);
   }
   get hit() { return this.get('hit') > 0 ? this.hitView : null; }
   get adapt() { return this.get('adapt') > 0; }
@@ -158,21 +144,13 @@ for (const f of ['key', 'N', 'R', 'k', 'h', 'm', 'psi', 'eps0', 'V', 'V3', 'V4',
   Object.defineProperty(WasmVoice.prototype, f, { get() { const v = this.get(f); return BOOL.includes(f) ? v > 0 : v; } });
 }
 
-// The engine, with the JavaScript engine's test hooks: e.voices (each a WasmVoice), e.place(key, x0).
+// The engine, with the tests' hooks: e.voices (each a WasmVoice), e.place(key, x0).
 export class GongWasmEngine extends Base {
   constructor(fs) {
     super(fs);
     this.e = Base.exports.forte_engine(this.h);
     this.proxies = new Map(); // serial → WasmVoice
     this.shells = new Map();  // tables read back, by id
-    this.sent = new Map();    // tables a page sent (the JavaScript engine's; this one builds its own)
-  }
-  setParams(P) {
-    if (P.tables) {
-      this.sent.set(P.tables.id, P.tables);
-      if (this.sent.size > 24) this.sent.delete(this.sent.keys().next().value);
-    }
-    super.setParams(P);
   }
   get voices() {
     const x = Base.exports, s = scratch(x), n = x.gongs_voices(this.e, s.at), a = new Int32Array(x.memory.buffer, s.at, 2 * n).slice(), live = new Set();
@@ -201,8 +179,8 @@ export class GongWasmEngine extends Base {
 }
 export const ready = () => GongWasmEngine.ready();
 
-// The model's functions the views call (gongs-model.js's keyGong, interpR, backbone and
-// contactTime), computed by the WebAssembly. keyGong's gong has the fields the views read.
+// The model's functions (gongs-model.h: keyGong, interpR, backbone and contactTime), computed by
+// the WebAssembly. keyGong's gong has the fields the views and the tests read.
 export async function wasmModel() {
   const x = await ready(), s = scratch(x), params = nativeParams(BUILD), at = 8 * params.length;
   const setP = (P) => { s.f64(params.length).set(params.map((p) => nativeValue(p, P[p.id]))); return s.at; };

@@ -1,7 +1,6 @@
-// huygens-wasm.js — the engine and model built as WebAssembly from the same physics in C++
+// huygens-wasm.js — the engine and model, built as WebAssembly from the physics in C++
 // (native/instruments/huygens): HuygensWasmEngine, with the engine contract, and the model's
-// functions for the views. The page runs it when it can and falls back to the JavaScript
-// (neon-engine.js, tuning.js, sync-theory.js).
+// functions for the page, its views and the tests.
 
 import { GROUPS } from './sync-params.js';
 import { wasmEngine, scratch } from '../../shared/wasm.js';
@@ -10,8 +9,8 @@ import { wasmEngine, scratch } from '../../shared/wasm.js';
 const BUILD = { id: 'huygens', name: 'HuygensWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/huygens.wasm', import.meta.url).href };
 
 // The C++ engine's one message (huygens-engine.h, msg::state) says the page's state is due: the
-// firings, which need double precision, are read back from the engine, as the JavaScript engine's
-// 'state' ({ t, fs, hold, osc, fires }).
+// firings, which need double precision, are read back from the engine into the page's 'state'
+// message ({ t, fs, hold, osc, fires }).
 function messages(m, e) {
   if (m.type !== 1) return null;
   const x = Base.exports, s = scratch(x);
@@ -26,8 +25,8 @@ function messages(m, e) {
 
 const Base = wasmEngine(BUILD, { messages });
 
-// An oscillator of the C++ engine, read back as the JavaScript engine's Osc: what the tests read
-// (fires is a view into the engine's memory, valid until it next runs).
+// An oscillator of the C++ engine, read back: what the tests read (fires is a view into the
+// engine's memory, valid until it next runs).
 const OSC = ['key', 'nf', 'fTarget', 'panL', 'panR', 'keyDown', 'dead', 'gate', 'power', 'driftCents', 'V', 'sent'];
 const FLAGS = new Set(['keyDown', 'dead']);
 class WasmOsc {
@@ -42,10 +41,10 @@ class WasmOsc {
 }
 for (const k of OSC) Object.defineProperty(WasmOsc.prototype, k, { get() { return this.state[k]; } });
 
-// The engine, with the JavaScript engine's hooks: a note's data ({ f, phase, settled }, which the
+// The engine, with the page's and the tests' hooks: a note's data ({ f, phase, settled }, which the
 // C++ otherwise computes from the parameters), noteOn returning the oscillator it plays,
 // 'retune', osc, t, hold, report(), drainFirings() and summary(). The page's state is drained
-// only while a page listens (post set), as the JavaScript engine's.
+// only while a page listens (post set).
 export class HuygensWasmEngine extends Base {
   constructor(fs) {
     super(fs);
@@ -88,8 +87,8 @@ export class HuygensWasmEngine extends Base {
 }
 export const ready = () => HuygensWasmEngine.ready();
 
-// The model's functions the views call (tuning.js's tunedFreq, sync-theory.js's deltaOf and
-// lockRatio), computed by the WebAssembly, and its engine for the lock map's simulated points.
+// The model's functions (huygens-model.cpp's tunedFreq, deltaOf and lockRatio), computed by the
+// WebAssembly, and its engine for the lock map's simulated points.
 export async function wasmModel() {
   const x = await ready(), s = scratch(x);
   return {
