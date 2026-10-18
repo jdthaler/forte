@@ -16,7 +16,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/quantum/>
 
 | Input | |
 |---|---|
-| `Z…/` and `Q…]` rows | play (61 keys, C2–C7) |
+| `Z…/` and `Q…]` rows | play (88 keys, A0–C8) |
 | `←` `→` | octave |
 | `↑` `↓` | velocity |
 | `Space` | sustain pedal (released notes keep their lifetime T₁) |
@@ -72,7 +72,7 @@ still add their first swings: such a chord peaks at about 1–1.2.
 the Δn = 1 lines, Σ|wₙ|ωₙ/Σ|wₙ|, with the detector's weights. One free time
 scale per key (a "slow-motion factor") puts that pitch on the 12-TET key.
 Measured from the engine output in the tests, the square well is within
-0.25 ¢ on all 61 keys, and every well and detector is within 2.2 ¢. The
+0.25 ¢ on all 88 keys, and every well and detector is within 2.2 ¢. The
 remaining 2 ¢ is the bouncer's lopsided spectrum, whose
 instantaneous frequency drifts as it collapses. Two modes set n̄:
 
