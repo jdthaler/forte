@@ -16,7 +16,7 @@
 namespace forte::huygens {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { kick, rSrc, pitchHold, tuning, tonic, mistune, drift, driftRate, vNom, vStrike, vExt, attack, release, tone, body, room, width, volume, count };
+enum : int { kick, rSrc, pitchHold, tuning, tonic, mistune, drift, driftRate, vNom, vStrike, vExt, attack, release, tone, body, room, venue, width, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -36,6 +36,8 @@ inline const FormatSegment kFormat_release[] = {{kNoLimit, "", " ms", 1000, 0, 0
 inline const FormatSegment kFormat_tone[] = {{kNoLimit, "", " kHz", 0.001, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_body[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
+inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_width[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_volume[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 
@@ -56,6 +58,7 @@ inline const ParamInfo kParams[p::count] = {
   {"tone", "Tone (low-pass)", "Sound", ParamKind::continuous, 300, 16000, 2500, 0, true, true, nullptr, 0, kFormat_tone, 1},
   {"body", "Resonant body", "Sound", ParamKind::continuous, 0, 1, 0.5, 0.01, false, false, nullptr, 0, kFormat_body, 1},
   {"room", "Room", "Sound", ParamKind::continuous, 0, 1, 0.3, 0.01, false, true, nullptr, 0, kFormat_room, 1},
+  {"venue", "Venue", "Sound", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
   {"width", "Stereo spread", "Sound", ParamKind::continuous, 0, 1, 0.5, 0.01, false, false, nullptr, 0, kFormat_width, 1},
   {"volume", "Volume", "Sound", ParamKind::continuous, 0, 2, 0.7, 0.01, false, true, nullptr, 0, kFormat_volume, 1},
 };
@@ -81,7 +84,7 @@ inline const Preset kPresets[] = {
   {"Just-tuned in C, no coupling (compare)", kPreset8, 3},
   {"Rail sag only (slow, weak coupling)", kPreset9, 2},
 };
-inline const uint16_t kKeep[] = {p::volume, p::room, p::tone, p::body};
+inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::tone, p::body};
 inline const Controller kControllers[] = {{0, -1}};
 
 // The plugin's description. The port supplies its engine, and midiVelocity when the
@@ -93,11 +96,11 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .vst3Id = {0xdd, 0x73, 0xc0, 0xe3, 0xf6, 0x2e, 0xde, 0xa6, 0x13, 0x1b, 0xe3, 0xc4, 0xe8, 0x15, 0x0a, 0x9c},
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 10,
-    .keep = kKeep, .keepCount = 4,
+    .keep = kKeep, .keepCount = 5,
     .keyLo = 36, .keyHi = 96, .space = Space::hold,
     .modWheel = p::kick, .modWheelMax = 0.15,
     .controllers = kControllers, .controllerCount = 0,
-    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .tone = p::tone, .body = p::body, .bodySeconds = 0.3, .bodyDry = 0.7, .bodyWet = 1.2, .limiterThreshold = -4, .limiterKnee = 4, .trimDb = 9.5},
+    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = p::tone, .body = p::body, .bodySeconds = 0.3, .bodyDry = 0.7, .bodyWet = 1.2, .limiterThreshold = -4, .limiterKnee = 4, .trimDb = 9.5},
     .midiVelocity = midiVelocity, .create = create,
   };
 }

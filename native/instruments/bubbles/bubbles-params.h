@@ -16,7 +16,7 @@
 namespace forte::bubbles {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { depth, pressure, keepInTune, gas, liquid, rate, irregular, spread, snap, room, volume, count };
+enum : int { depth, pressure, keepInTune, gas, liquid, rate, irregular, spread, snap, room, venue, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -31,6 +31,8 @@ inline const FormatSegment kFormat_irregular[] = {{0, "a metronome", "", 1, 0, -
 inline const FormatSegment kFormat_spread[] = {{kNoLimit, "±", " %", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_snap[] = {{0.09999999999999999, "", " µs", 1000, 0, 0, false, false, false, false}, {kNoLimit, "", " ms", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
+inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
 inline const ParamInfo kParams[p::count] = {
@@ -44,6 +46,7 @@ inline const ParamInfo kParams[p::count] = {
   {"spread", "Size spread", "Nozzles", ParamKind::continuous, 0, 15, 1.5, 0.1, false, false, nullptr, 0, kFormat_spread, 1},
   {"snap", "Neck snap time", "Nozzles", ParamKind::continuous, 0.01, 2, 0.05, 0, true, false, nullptr, 0, kFormat_snap, 2},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 
@@ -72,7 +75,7 @@ inline const Preset kPresets[] = {
   {"Slow pinch-off (1 ms): the treble hardly rings", kPreset10, 1},
   {"Metronome: even bubbles, all the same size", kPreset11, 3},
 };
-inline const uint16_t kKeep[] = {p::volume, p::room};
+inline const uint16_t kKeep[] = {p::volume, p::room, p::venue};
 inline const Controller kControllers[] = {{0, -1}};
 
 // The plugin's description. The port supplies its engine, and midiVelocity when the
@@ -84,11 +87,11 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .vst3Id = {0xa1, 0x7f, 0x90, 0x48, 0xe8, 0xde, 0x36, 0x79, 0xa0, 0x70, 0x8f, 0x25, 0xb7, 0x5b, 0xca, 0x19},
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 12,
-    .keep = kKeep, .keepCount = 2,
+    .keep = kKeep, .keepCount = 3,
     .keyLo = 57, .keyHi = 108, .space = Space::hold,
     .modWheel = p::rate, .modWheelMax = 40,
     .controllers = kControllers, .controllerCount = 0,
-    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .tone = -1, .trimDb = 1.5},
+    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 1.5},
     .midiVelocity = midiVelocity, .create = create,
   };
 }

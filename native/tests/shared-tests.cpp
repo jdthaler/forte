@@ -77,6 +77,31 @@ TEST("impulses: the soundboard and the room as shared/impulses.js builds them") 
   checkIR(roomIR, 48000, 2.0, js::kRoom48At, LEN(js::kRoom48At), js::kRoom48, js::kRoom48Sum, js::kRoom48Length[0], js::kRoom48Scale[0]);
   checkIR(roomIR, 44100, 1.8, js::kRoom44At, LEN(js::kRoom44At), js::kRoom44, js::kRoom44Sum, js::kRoom44Length[0], js::kRoom44Scale[0]);
 }
+TEST("impulses: each venue as shared/impulses.js builds it, and its gain") {
+  using Make = void (*)(double, double, std::vector<float> (&)[2]);
+  auto venue = [](int k) -> Make {
+    switch (k) {
+      case 0: return [](double fs, double, std::vector<float> (&o)[2]) { venueIR(fs, 0, 2.0, o); };
+      case 2: return [](double fs, double, std::vector<float> (&o)[2]) { venueIR(fs, 2, 2.0, o); };
+      case 3: return [](double fs, double, std::vector<float> (&o)[2]) { venueIR(fs, 3, 2.0, o); };
+      default: return [](double fs, double, std::vector<float> (&o)[2]) { venueIR(fs, 4, 2.0, o); };
+    }
+  };
+  CHECK(kVenueCount == 5 && std::string(kVenues[kDefaultVenue].id) == "room");
+#define VENUE(index, Name, fs) \
+  checkIR(venue(index), fs, 0, js::k##Name##At, LEN(js::k##Name##At), js::k##Name, js::k##Name##Sum, js::k##Name##Length[0], js::k##Name##Scale[0]); \
+  CHECK_NEAR(venueGain(index, js::k##Name##Length[0], fs), js::k##Name##Gain[0], 1e-12);
+  VENUE(0, VenueStudio48, 48000)
+  VENUE(2, VenueRecital48, 48000)
+  VENUE(3, VenueHall48, 48000)
+  VENUE(4, VenueCathedral48, 48000)
+  VENUE(3, VenueHall44, 44100)
+#undef VENUE
+  std::vector<float> a[2], b[2];
+  venueIR(48000, kDefaultVenue, 1.8, a);
+  roomIR(48000, 1.8, b);
+  CHECK(a[0] == b[0] && a[1] == b[1] && venueGain(kDefaultVenue, a[0].size(), 48000) == 1); // 'room' is the room
+}
 TEST("linalg: Eigen's eigenvalues are shared/linalg.js's, and genEig's vectors are M-orthonormal") {
   const int n = 6;
   Matrix K(n, n), M(n, n);
@@ -146,6 +171,76 @@ TEST("chain: tone, body, room and volume as the pages' chain gives them (no limi
   for (int i = 0; i < n; i++) { eL += (double)L[i] * L[i]; eR += (double)R[i] * R[i]; }
   CHECK_NEAR(10 * std::log10(eL / js::kChainEnergy[0]), 0, 0.001);
   CHECK_NEAR(10 * std::log10(eR / js::kChainEnergy[1]), 0, 0.001);
+}
+
+TEST("chain: in the concert hall as the pages' chain gives it") {
+  Chain c;
+  c.volume = 0; c.room = 1; c.roomSeconds = 1.2; c.tone = 2; c.body = 3; c.bodySeconds = 0.3; c.bodyDry = 0.7; c.bodyWet = 1.2;
+  c.venue = 4;
+  c.limiterThreshold = 100;
+  const double P[] = {0.8, 0.4, 3000, 0.5, 3}; // venue 3: the concert hall
+  OutputChain ch;
+  ch.configure(c, 48000, P);
+  ch.setParams(P);
+  const int n = 24000;
+  std::vector<float> L(n), R(n);
+  for (int s = 0; s < 2; s++) {
+    Mulberry32 r(7 + s);
+    for (int i = 0; i < n; i++) (s ? R : L)[i] = (float)((r() * 2 - 1) * std::exp(-i / 4800.0) * 0.3);
+  }
+  ch.process(L.data(), R.data(), n);
+  for (int i = 0; i < LEN(js::kChainAt); i++) {
+    CHECK_NEAR(L[js::kChainAt[i]], js::kChainHallOut[i], 2e-5);
+    CHECK_NEAR(R[js::kChainAt[i]], js::kChainHallOut[LEN(js::kChainAt) + i], 2e-5);
+  }
+  double eL = 0, eR = 0;
+  for (int i = 0; i < n; i++) { eL += (double)L[i] * L[i]; eR += (double)R[i] * R[i]; }
+  CHECK_NEAR(10 * std::log10(eL / js::kChainHallEnergy[0]), 0, 0.001);
+  CHECK_NEAR(10 * std::log10(eR / js::kChainHallEnergy[1]), 0, 0.001);
+}
+
+// Wet only: an impulse through the room, the samples after `from` that are heard
+static double tailEnergy(OutputChain &ch, double fs, double from, double to, bool impulse) {
+  const int n = (int)(to * fs);
+  double e = 0;
+  float L[128], R[128];
+  for (int s = 0; s < n; s += 128) {
+    for (int i = 0; i < 128; i++) L[i] = R[i] = (impulse && s + i == 0) ? 1.0f : 0.0f;
+    ch.process(L, R, 128);
+    if (s >= from * fs) for (int i = 0; i < 128; i++) e += (double)L[i] * L[i];
+  }
+  return e;
+}
+
+TEST("chain: a new venue is built on the side, and the room it replaces rings out") {
+  Chain c;
+  c.room = 0; c.venue = 1; c.roomSeconds = 2.0; c.roomGain = 1;
+  c.limiterThreshold = 100;
+  double P[] = {1, 1}; // venue 1: room
+  OutputChain ch;
+  ch.configure(c, 48000, P);
+  ch.setParams(P);
+  // the cathedral: until it is built the room plays on; then an impulse rings for seconds
+  P[1] = 4;
+  ch.setParams(P);
+  for (int tries = 0; tries < 150; tries++) {
+    tailEnergy(ch, 48000, 1, 0.01, false);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+  tailEnergy(ch, 48000, 1, 7, false); // anything left rings away
+  CHECK(tailEnergy(ch, 48000, 3, 5, true) > 0);
+  // back to the room (built): a burst, then the studio (built on the side first), whose own tail is
+  // 0.7 s: the room's 2 s tail still rings after it
+  P[1] = 0; ch.setParams(P);
+  for (int tries = 0; tries < 100; tries++) { tailEnergy(ch, 48000, 1, 0.01, false); std::this_thread::sleep_for(std::chrono::milliseconds(10)); }
+  P[1] = 1; ch.setParams(P);
+  tailEnergy(ch, 48000, 1, 7, false);
+  float L[128], R[128];
+  for (int i = 0; i < 128; i++) L[i] = R[i] = i == 0 ? 1.0f : 0.0f;
+  ch.process(L, R, 128);
+  P[1] = 0; ch.setParams(P);
+  CHECK(tailEnergy(ch, 48000, 1.0, 1.5, false) > 0);  // the room's tail, after the studio's ended
+  CHECK(tailEnergy(ch, 48000, 0.6, 0.8, false) == 0); // and then nothing: the room's 2 s are over
 }
 
 TEST("chain: a tone at or above Nyquist passes the sound unchanged, as Web Audio's (a low sample rate)") {

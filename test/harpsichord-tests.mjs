@@ -366,7 +366,7 @@ test('level: a forte note peaks at 0.1–0.5 across the keyboard at 44.1 and 48 
 test('stability: seeded random combinations of extreme settings at 44.1 and 48 kHz, changed mid-note: no NaN, bounded, silent after Panic', () => {
   let seed = 12345;
   const rnd = () => { seed = (seed * 1103515245 + 12345) >>> 0; return seed / 4294967296; };
-  const all = GROUPS.flatMap((g) => g.params).filter((p) => !['volume', 'room'].includes(p.id));
+  const all = GROUPS.flatMap((g) => g.params).filter((p) => !['volume', 'room', 'venue'].includes(p.id));
   const pick = (p) => (p.type === 'select' ? p.options[Math.floor(rnd() * p.options.length)][0] : p.type === 'checkbox' ? rnd() < 0.5 : rnd() < 0.5 ? p.min : p.max);
   for (let trial = 0; trial < 10; trial++) {
     const fs = trial % 2 ? 44100 : 48000, a = P(Object.fromEntries(all.map((p) => [p.id, pick(p)]))), b = P(Object.fromEntries(all.map((p) => [p.id, pick(p)])));

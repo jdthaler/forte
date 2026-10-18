@@ -2,6 +2,8 @@
 // says what it does to the sound. Velocity has no meaning on Duddell's keyboard (a key only
 // closes a contact), so there is none.
 
+import { VENUE } from '../../shared/chain.js';
+
 const f1 = (v) => v.toFixed(1), f2 = (v) => v.toFixed(2);
 
 export const GROUPS = [
@@ -50,6 +52,7 @@ export const GROUPS = [
       { id: 'dist', label: 'Listening distance', min: 0.3, max: 5, def: 1, log: true, fmt: (v) => `${f2(v)} m`,
         hint: 'The arc is a small source: its pressure falls as 1/r.' },
       { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.3, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },

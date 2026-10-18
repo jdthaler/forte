@@ -10,7 +10,7 @@ export const INSTRUMENT = {
   id: 'piano',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'soundboard', 'velocity', 'maxFreq'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'soundboard', 'velocity', 'maxFreq'], // kept when a preset is chosen
   range: [21, 108],      // MIDI keys: A0–C8
   space: 'sustain',      // Space and CC64: the damper pedal, sent to the engine
   controllers: { 67: 'unaCorda' }, // MIDI CC67, the soft pedal: on at 64 and above
@@ -21,7 +21,7 @@ export const INSTRUMENT = {
   // it, the engine builds the key itself
   wasm: { name: 'PianoWasmEngine', module: new URL('./piano-wasm.js', import.meta.url).href, binary: new URL('../wasm/piano.wasm', import.meta.url).href },
   chain: {
-    volume: 'volume', room: 'room', roomSeconds: 2.2, roomGain: 0.55,
+    volume: 'volume', room: 'room', venue: 'venue', roomSeconds: 2.2, roomGain: 0.55,
     body: { param: 'soundboard', seconds: 0.4, dry: 0.75, wet: 1.1 }, // the soundboard
     limiter: { threshold: -4, knee: 4, release: 0.2 },
   },

@@ -6,6 +6,7 @@
 //       'play'   → how the computer keyboard plays
 
 import { MATERIALS, SHAPES } from './materials.js';
+import { VENUE } from '../../shared/chain.js';
 
 const x = (v) => `×${v < 1 ? v.toFixed(2) : v.toFixed(v < 10 ? 2 : 1)}`;
 
@@ -77,6 +78,7 @@ export const GROUPS = [
       { id: 'gainT', label: 'Torsion pickup', kind: 'engine', min: 0, max: 2, step: 0.01, def: 0.6, fmt: (v) => v.toFixed(2) },
       { id: 'soundboard', label: 'Soundboard body', perform: true, kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.6, fmt: (v) => v.toFixed(2) },
       { id: 'room', label: 'Room', perform: true, kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.25, fmt: (v) => v.toFixed(2) },
+      VENUE,
       { id: 'width', label: 'Stereo spread', kind: 'engine', min: 0, max: 1, step: 0.01, def: 0.6, fmt: (v) => v.toFixed(2) },
       { id: 'voicing', label: 'Treble voicing', kind: 'model', min: 0, max: 6, step: 0.1, def: 2.5, fmt: (v) => `${v.toFixed(1)} dB/oct`,
         hint: 'Loudness tilt across the keyboard (what a piano technician does to the felt). (Next note.)' },

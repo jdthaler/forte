@@ -16,7 +16,7 @@
 namespace forte::springs {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { springs, spread, family, coil, wire, helix, drive, endLoss, eta, oil, hand, damper, mallet, bead, room, volume, count };
+enum : int { springs, spread, family, coil, wire, helix, drive, endLoss, eta, oil, hand, damper, mallet, bead, room, venue, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -37,6 +37,8 @@ inline const FormatSegment kFormat_damper[] = {{kNoLimit, "T₆₀ ", " s", 1, 0
 inline const FormatSegment kFormat_mallet[] = {{0.9999999999999999, "", " ms", 1, 0, 2, false, false, false, false}, {kNoLimit, "", " ms", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_bead[] = {{0.9999999999999999, "", " % of the spring’s", 1, 0, 2, false, false, false, false}, {kNoLimit, "", " % of the spring’s", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
+inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
 inline const ParamInfo kParams[p::count] = {
@@ -55,6 +57,7 @@ inline const ParamInfo kParams[p::count] = {
   {"mallet", "Mallet contact", "Mallet and beads", ParamKind::continuous, 0.05, 5, 0.35, 0, true, true, nullptr, 0, kFormat_mallet, 2},
   {"bead", "Bead inertia", "Mallet and beads", ParamKind::continuous, 0.3, 30, 1, 0, true, false, nullptr, 0, kFormat_bead, 2},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.15, 0.01, false, true, nullptr, 0, kFormat_room, 1},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 
@@ -81,7 +84,7 @@ inline const Preset kPresets[] = {
   {"Soft mallet: only the low echoes", kPreset9, 1},
   {"Slinky: falling whistles", kPreset10, 7},
 };
-inline const uint16_t kKeep[] = {p::volume, p::room};
+inline const uint16_t kKeep[] = {p::volume, p::room, p::venue};
 inline const Controller kControllers[] = {{0, -1}};
 
 // The plugin's description. The port supplies its engine, and midiVelocity when the
@@ -93,11 +96,11 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .vst3Id = {0x9d, 0xa0, 0x46, 0x59, 0x67, 0xd6, 0x89, 0x83, 0xcd, 0x17, 0x25, 0xdb, 0x81, 0xa6, 0x7e, 0xc2},
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 11,
-    .keep = kKeep, .keepCount = 2,
+    .keep = kKeep, .keepCount = 3,
     .keyLo = 36, .keyHi = 84, .space = Space::sustain,
     .modWheel = p::hand, .modWheelMax = 1,
     .controllers = kControllers, .controllerCount = 0,
-    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .tone = -1, .trimDb = 11.5},
+    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 11.5},
     .midiVelocity = midiVelocity, .create = create,
   };
 }

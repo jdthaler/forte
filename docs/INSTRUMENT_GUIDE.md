@@ -80,7 +80,7 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `dsp.js` | `modeCoeffs` (exact two-pole modal resonator), `Biquad`, `OnePole`, `DCBlock`, `Delay` (fractional), `keyPan`, `keyFreq`, `sigmaFromT60` |
 | `linalg.js` | `symEig`, `genEig` (generalised symmetric), `cholesky` |
 | `views.js` | `fit`, `css`, `animate`, `SpectrumView` (live spectrum + model markers), `SpectrogramView` (scrolling spectrogram, the markers as ticks), `ScopeView` |
-| `impulses.js` | `roomIR` (the synthetic room the shell uses) |
+| `impulses.js` | the rooms: `roomIR` (the pages' original synthetic room) and the venues (`VENUES`: a studio and three halls built from their size, walls and air: image sources, then a tail decaying in each octave in Eyring's time) |
 | `registry.js` | the instrument list behind the landing page and the menus |
 | `midi.js` | Web MIDI for every page (the shell and the five older pages): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen next to Enable MIDI, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling. |
 | `focus.js` | who gets a key press: a control reached with Tab keeps the keys it uses (Space ticks a stop, arrows move a slider); one last touched with the mouse or a finger hands them back to the instrument. Every page's key handler asks `controlOwns(e)` first. |
@@ -103,7 +103,7 @@ browser globals when it is imported.
 export const INSTRUMENT = {
   id: 'gongs',
   groups: GROUPS, presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
   range: [36, 84],                      // the MIDI keys it plays
   space: 'sustain',                     // Space and CC64: 'sustain' (a damper, sent to the engine), 'hold' (keys latch) or null
   modWheel: 'strike',                   // CC1 (or { param, max })
@@ -114,7 +114,7 @@ export const INSTRUMENT = {
           binary: new URL('../wasm/gongs.wasm', import.meta.url).href }, // the engine (below)
   midiVelocity: (v) => …,               // MIDI velocity / 127 → the engine's (default: the same)
   keyVelocity: 1,                       // what the computer keys play when there is no `velocity` parameter
-  chain: { volume: 'volume', room: 'room' }, // shared/chain.js: also roomSeconds, roomGain, tone, body, limiter
+  chain: { volume: 'volume', room: 'room', venue: 'venue' }, // shared/chain.js: also roomSeconds, roomGain, tone, body, limiter
   load: async () => …,                  // data to load before the first note (default: none)
 };
 ```
@@ -181,7 +181,9 @@ Rules of thumb:
 
 `type: 'select'` with `options: [[value, label], …]`, or `type: 'checkbox'`.
 `showIf: (P) => …` hides a control when it is irrelevant. Keep `volume`
-(0–2, def ≈ 0.8) and `room` (0–1) in an *Output* group. Keep `velocity`
+(0–2, def ≈ 0.8) and `room` (0–1) in an *Output* group, with `VENUE`
+(`shared/chain.js`, the room's space) right after `room`, in `keep` and
+as the chain's `venue`. Keep `velocity`
 (the computer keyboard's strike velocity) if the instrument is
 velocity-sensitive. Presets override defaults. Make each preset show one
 physical idea and give it a descriptive name.

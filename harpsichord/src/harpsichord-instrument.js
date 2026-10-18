@@ -10,10 +10,10 @@ export const INSTRUMENT = {
   id: 'harpsichord',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
   range: [KEY_LO, KEY_HI],              // MIDI keys: FF–f³, 29–89
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
   // the engine: the physics in C++ (native/instruments/harpsichord), built as WebAssembly
   wasm: { name: 'HarpsichordWasmEngine', module: new URL('./harpsichord-wasm.js', import.meta.url).href, binary: new URL('../wasm/harpsichord.wasm', import.meta.url).href },
-  chain: { volume: 'volume', room: 'room' },
+  chain: { volume: 'volume', room: 'room', venue: 'venue' },
 };

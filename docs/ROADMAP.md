@@ -69,7 +69,7 @@ Every other idea only adds, and can come before or after 1.0.
 | Idea | Size | Notes |
 |------|------|-------|
 | Save your own presets | M | In the browser, as a file, and in the plugins beside the factory presets. |
-| A choice of rooms (reverb) | M | A few named spaces, the same on the site and in the plugins. **Before 1.0** if the default room changes. |
+| A choice of rooms (reverb) | M | Done, for the next release: a Venue choice on every page and plugin (Studio, Room, Recital hall, Concert hall, Cathedral), Room, the original, the default. |
 | Morph between two presets | S–M | |
 | Quality or CPU setting | S–M | Fewer modes or voices, for phones and old laptops. |
 

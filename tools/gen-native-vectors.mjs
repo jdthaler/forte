@@ -8,7 +8,7 @@
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { modeCoeffs, Biquad, OnePole, DCBlock, Delay, keyPan } from '../shared/dsp.js';
-import { soundboardIR, roomIR } from '../shared/impulses.js';
+import { soundboardIR, roomIR, venueIR, venueGain, VENUES } from '../shared/impulses.js';
 import { symEig, genEig } from '../shared/linalg.js';
 import { FS_SHIM, webAudioIR } from './audio-util.mjs';
 import { applyChain } from './headless.mjs';
@@ -66,9 +66,15 @@ arr('kKeyPan', [21, 36, 60, 72, 96, 108].flatMap((k) => keyPan(k)));
 w();
 w('// shared/impulses.js: sums and samples of the soundboard (0.4 s, and 0.3 s) and the room (2 s), at 48 and 44.1 kHz');
 const irs = [['Soundboard48', soundboardIR, 48000, 0.4], ['Soundboard44', soundboardIR, 44100, 0.3], ['Room48', roomIR, 48000, 2.0], ['Room44', roomIR, 44100, 1.8]];
-for (const [name, f, fs, sec] of irs) {
+w('// and of each venue built from its physics (VENUES), at 48 kHz and the concert hall at 44.1 kHz, with its gain;');
+w('// a venue is also sampled closely over its first 6000 samples, the early reflections');
+const venues = VENUES.filter((v) => v.size).map((v) => [`Venue${v.id[0].toUpperCase()}${v.id.slice(1)}48`, (ctx) => venueIR(ctx, v.id), 48000, 0, v.id]);
+venues.push(['VenueHall44', (ctx) => venueIR(ctx, 'hall'), 44100, 0, 'hall']);
+for (const [name, f, fs, sec, venue] of [...irs, ...venues]) {
   const buf = f(FS_SHIM(fs), sec), ch = [0, 1].map((c) => buf.getChannelData(c));
-  const at = Array.from({ length: 101 }, (_, i) => Math.floor((i * (ch[0].length - 1)) / 100));
+  const even = Array.from({ length: 101 }, (_, i) => Math.floor((i * (ch[0].length - 1)) / 100));
+  const at = venue ? [...new Set([...Array.from({ length: 60 }, (_, i) => 100 * i), ...even])].sort((a, b) => a - b) : even;
+  if (venue) arr(`k${name}Gain`, [venueGain(venue, ch[0].length, fs)]);
   arr(`k${name}At`, at, 'int');
   arr(`k${name}`, ch.flatMap((x) => at.map((i) => x[i])), 'float');
   arr(`k${name}Sum`, ch.map((x) => x.reduce((a, b) => a + b, 0)));
@@ -96,6 +102,10 @@ const pick = Array.from({ length: 200 }, (_, i) => i * 120);
 arr('kChainAt', pick, 'int');
 arr('kChainOut', [0, 1].flatMap((c) => pick.map((i) => y[c][i])));
 arr('kChainEnergy', [0, 1].map((c) => y[c].reduce((a, v) => a + v * v, 0)));
+const venueP = { ...P, venue: 'hall' }, yHall = applyChain({ id: '', chain: { ...chain, venue: 'venue' } }, x, venueP, 48000);
+w('// the same in the concert hall (venue: hall)');
+arr('kChainHallOut', [0, 1].flatMap((c) => pick.map((i) => yHall[c][i])));
+arr('kChainHallEnergy', [0, 1].map((c) => yHall[c].reduce((a, v) => a + v * v, 0)));
 w();
 w('} // namespace js');
 const text = `${out.join('\n')}\n`;

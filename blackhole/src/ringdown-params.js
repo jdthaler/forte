@@ -1,6 +1,8 @@
 // ringdown-params.js — knobs for the black-hole keyboard.
 // kind: 'model' → recompute every key's modes; 'engine' → audio thread; 'mix' → Web Audio.
 
+import { VENUE } from '../../shared/chain.js';
+
 // spin slider: u = −log10(1 − a), from 0 (Schwarzschild) to 6 (a = 1 − 10⁻⁶)
 export const spinFromU = (u) => 1 - 10 ** -u;
 export const uFromSpin = (a) => -Math.log10(1 - a);
@@ -48,6 +50,7 @@ export const GROUPS = [
       { id: 'releaseMute', label: 'Key release mutes', kind: 'engine', type: 'checkbox', def: false, hint: 'Unphysical, but handy for long near-extremal rings.' },
       { id: 'tone', label: 'Tone (low-pass)', perform: true, kind: 'mix', min: 500, max: 20000, def: 14000, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz` },
       { id: 'room', label: 'Room', perform: true, kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.25, fmt: (v) => v.toFixed(2) },
+      VENUE,
       { id: 'volume', label: 'Volume', perform: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => v.toFixed(2) },
     ],
   },

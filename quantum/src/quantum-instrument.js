@@ -13,7 +13,7 @@ export const INSTRUMENT = {
   id: 'quantum',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'velocity'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
   range: [36, 96],                      // MIDI keys
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'dephase',                  // CC1: dephasing, from its default up to its maximum
@@ -21,5 +21,5 @@ export const INSTRUMENT = {
   // packet (~1 ms) is computed off the audio thread, by the page's WebAssembly model, and sent with
   // the noteOn (the page's noteData)
   wasm: { name: 'QuantumWasmEngine', module: new URL('./quantum-wasm.js', import.meta.url).href, binary: new URL('../wasm/quantum.wasm', import.meta.url).href },
-  chain: { volume: 'volume', room: 'room' },
+  chain: { volume: 'volume', room: 'room', venue: 'venue' },
 };
