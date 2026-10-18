@@ -13,6 +13,8 @@ Read first:
   changing an instrument or `shared/`.
 - `CHANGELOG.md` and `changes/README.md`: versions, and the notes that
   become them.
+- `docs/ROADMAP.md`: what 1.0 means, what is left before it, and the
+  feature wishlist. Update it when a wishlist item lands or is decided.
 - `docs/PLUGINS.md`: the plan (and its decisions) for native plugins and
   the move of the physics to C++ and WebAssembly. Read it before working on
   `native/` or an instrument's port.
