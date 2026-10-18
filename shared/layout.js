@@ -423,10 +423,16 @@ function apply() {
   for (const s of SIZES) body.classList.toggle(`kb-${s}`, prefs.kb === s);
   window.dispatchEvent(new Event('resize')); // let pages that size on resize refit
 }
-// The page's script builds its controls after this module runs (module scripts run in
-// order, then DOMContentLoaded fires): place them once it has. apply() can run twice.
+// The page's script builds its controls after this module runs: place them once it has.
+// DOMContentLoaded and load are not enough, as a page that awaits its model (top-level
+// await) builds them after both, so new parameters and presets also apply when they land.
+// apply() can run more than once.
 document.addEventListener('DOMContentLoaded', apply);
 window.addEventListener('load', apply);
+const unplaced = () => sidebar?.querySelector('.param:not([data-placed])')
+  || (document.querySelector('#reset') && document.querySelector('#preset option[value=""]') && !document.querySelector('#preset option[value="__default"]'));
+const lateControls = new MutationObserver(() => { if (unplaced()) apply(); });
+for (const t of [sidebar, document.querySelector('#preset')]) if (t) lateControls.observe(t, { childList: true, subtree: true });
 narrow.addEventListener('change', apply);
 apply();
 document.querySelector('#toast')?.setAttribute('role', 'status');
