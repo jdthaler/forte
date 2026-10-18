@@ -10,7 +10,7 @@ Play it at <https://forte.jthaler.net/blackhole/> (or locally — see the
 
 | Input | |
 |---|---|
-| `Z…/`, `Q…]` rows | play (61 keys, C2–C7) |
+| `Z…/`, `Q…]` rows | play (88 keys, A0–C8) |
 | `↑` `↓` | spin |
 | `←` `→` | octave |
 | MIDI | notes and velocity; **mod wheel = spin** |
@@ -58,7 +58,7 @@ pitch: M = Re(Mω₂₂₀)/(2πf). At a = 0.69, middle C is a **65 M☉** hole 
 166 km horizon. That is close to the remnant of GW150914, LIGO's first
 detection: 62 M☉ with a ≈ 0.67, which rang at about 271 Hz in its own frame
 and 249 Hz as observed (redshifted by 1 + z ≈ 1.09), either side of middle C
-(262 Hz). The keyboard spans 261 M☉ (C2) to 8 M☉ (C7).
+(262 Hz). The keyboard spans 621 M☉ (A0) to 4 M☉ (C8).
 
 **What spin does to the sound** (middle C):
 

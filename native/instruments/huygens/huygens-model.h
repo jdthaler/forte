@@ -9,7 +9,7 @@
 
 namespace forte::huygens {
 
-constexpr int KEY_LO = 36, KEY_HI = 96;
+constexpr int KEY_LO = 21, KEY_HI = 108; // A0–C8
 
 // Math.log2 as V8 computes it (src/base/ieee754.cc: FreeBSD's e_log2.c), which forte/fdlibm.h
 // doesn't have: the pitch servo takes it of every sounding key, every block.

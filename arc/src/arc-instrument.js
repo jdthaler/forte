@@ -17,7 +17,7 @@ export const INSTRUMENT = {
   groups: GROUPS,
   presets: PRESETS,
   keep: ['volume', 'room', 'dist'],  // kept when a preset is chosen
-  range: [KEY_LO, KEY_HI],           // MIDI keys: C3–C6, 48–84
+  range: [KEY_LO, KEY_HI],           // MIDI keys: A0–C8, 21–108
   space: 'hold',                     // Space and CC64 latch the keys down; the host sends the noteOffs on release
   modWheel: 'current',               // CC1: the arc current, from its default up to its maximum
   // the engine: the physics in C++ (native/instruments/arc), built as WebAssembly. It cuts its own

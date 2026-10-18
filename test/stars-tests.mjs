@@ -25,6 +25,9 @@ const { keyStar, zams, starAt, Elm } = await wasmModel();
 const SUN = { numax: 3090, dnu: 135.1, teff: 5777, rot: 1e6 / (25.4 * 86400) }, SUN_KEY = 91, DS_C = 0.05;
 const OUT = 0.088, voicing = (key) => 2 ** ((60 - key) / 48);
 const cents = (a, b) => 1200 * Math.log2(a / b);
+// C2–C7: the keyboard the stars were first laid on, and the pan is drawn across (keys beyond sit at its ends)
+const C2 = 36, C7 = 96;
+const panOf = (key) => { const a = ((0.6 * Math.max(-1, Math.min(1, (2 * (key - C2)) / (C7 - C2) - 1)) + 1) * Math.PI) / 4; return [Math.cos(a), Math.sin(a)]; };
 
 const FS = 48000;
 let failures = 0;
@@ -134,7 +137,7 @@ test('mixed modes (tan θ_p = q tan θ_g), the dipole modes of the red giant on 
   // θ_p = π(ν − ν_p)/Δν: π times the (fractional) number of nominal dipole p modes below ν, piecewise
   // linear between them; θ_g = π/(ν ΔΠ₁)
   // (its modes span 49–211 μHz; looked at over 80–180 μHz, about ν_max = 130 μHz, where N = Δν/(ν²ΔΠ₁) > 5)
-  const { sz, all } = keyStar(KEY_LO, P()), lo = 80, hi = 180;
+  const { sz, all } = keyStar(C2, P()), lo = 80, hi = 180;
   const p1 = pModes(sz, 5).filter((m) => m.l === 1), PN = p1.map((m) => m.nu).sort((a, b) => a - b);
   const seg = (nu) => { let j = 0; if (nu >= PN[PN.length - 1]) j = PN.length - 2; else while (j < PN.length - 2 && nu >= PN[j + 1]) j++; return j; };
   const th = (nu) => { const j = seg(nu); return Math.PI * (j + (nu - PN[j]) / (PN[j + 1] - PN[j])); };
@@ -196,17 +199,17 @@ test('the keyboard is an evolutionary track (1 M☉): ZAMS from Tout et al. (199
     assert.ok(order[d.star.stage] <= rank, `stage order at ${k}: ${d.star.stage}`); rank = order[d.star.stage];
     assert.equal(d.sz.q > 0, d.star.stage !== 'dwarf' || d.star.s > Math.log(1.52), `mixed modes on ${k}`);
   }
-  const c2 = keyStar(KEY_LO, P());
+  const c2 = keyStar(C2, P());
   assert.ok(c2.star.stage === 'giant' && c2.sz.numax > 125 && c2.sz.numax < 135, `C2: ${c2.sz.numax}`);
 });
-test('every key in tune: the star\'s heard pitch (the power-weighted mean log frequency of its modes) × K on the note within 0.02 ¢ on all 61 keys at the defaults, and on every fourth key for tracks of 0.9, 1.3 and 1.8 M☉ and K = 350,000 and 1,000,000; ν_max sits 8–32 ¢ above the note, the nearest radial mode within ±Δν/2', () => {
+test('every key in tune: the star\'s heard pitch (the power-weighted mean log frequency of its modes) × K on the note within 0.02 ¢ on all 88 keys at the defaults, and on every fourth key for tracks of 0.9, 1.3 and 1.8 M☉ and K = 350,000 and 1,000,000; ν_max sits 8–32 ¢ above the note on C2–C7 (up to 36 ¢ on the giants below), the nearest radial mode within ±Δν/2', () => {
   const noff = [], roff = [];
   const check = (p, step) => {
     for (let k = KEY_LO; k <= KEY_HI; k += step) {
       const d = keyStar(k, p), c = cents(d.pitch, keyFreq(k));
       assert.ok(Math.abs(c) < 0.02, `key ${k} (M ${p.mass}, K ${p.speedup}): ${c.toFixed(3)} ¢`);
       const nm = cents(d.sz.numax * d.K * 1e-6, keyFreq(k)); noff.push(nm);
-      assert.ok(nm > 8 && nm < 32, `ν_max offset ${nm.toFixed(1)} ¢ on ${k}`);
+      assert.ok(nm > 8 && nm < (k < C2 ? 36 : 32), `ν_max offset ${nm.toFixed(1)} ¢ on ${k}`);
       const rad = d.all.filter((m) => m.l === 0).reduce((b, m) => (Math.abs(m.nu - d.sz.numax) < Math.abs(b.nu - d.sz.numax) ? m : b));
       roff.push(cents(rad.nu * d.K * 1e-6, keyFreq(k)));
       assert.ok(Math.abs(rad.nu - d.sz.numax) <= 0.5 * d.sz.dnu * 1.05, `radial mode on ${k}`);
@@ -246,7 +249,7 @@ test('stochastic driving: one mode, rendered 240 s, has a Lorentzian power spect
   assert.ok(Math.abs(best.g / G - 1) < 0.06, `fitted Γ ${best.g.toFixed(3)} Hz`);
   assert.ok(Math.abs(best.c - f0) < 0.1, `fitted f₀ ${best.c.toFixed(3)} Hz`);
   const want = (OUT * voicing(key)) ** 2 * p.driving ** 2 * 0.5 * Math.SQRT2 ** 0; // L + R: both pans (equal power) add in amplitude
-  const [gl, gr] = [Math.cos(((0.6 * (2 * (key - KEY_LO) / (KEY_HI - KEY_LO) - 1) + 1) * Math.PI) / 4), Math.sin(((0.6 * (2 * (key - KEY_LO) / (KEY_HI - KEY_LO) - 1) + 1) * Math.PI) / 4)];
+  const [gl, gr] = panOf(key);
   const ms = msOf(x, a), expect = want * (gl + gr) ** 2;
   assert.ok(Math.abs(ms / expect - 1) < 0.08, `mean power ${ms.toExponential(3)} vs ${expect.toExponential(3)}`);
   console.log(`         Γ ${best.g.toFixed(3)} Hz (set 4), f₀ ${best.c.toFixed(3)} Hz, power ${(ms / expect).toFixed(3)} × the set value`);
@@ -287,9 +290,9 @@ test('the engine plays the model\'s modes: a Sun-like star rendered 24 s (narrow
     assert.ok(Math.max(S[i - 1], S[i], S[i + 1]) > 10 * bg, `radial mode at ${(m.nu * d.K * 1e-6).toFixed(1)} Hz`);
   }
 });
-test('every key sounds at its pitch: the log-power centroid of the engine\'s own output (40 s, linewidths × 10 so the modes average out) within 10 ¢ of the note on C2, C3, C4, C5, C6 and C7', () => {
+test('every key sounds at its pitch: the log-power centroid of the engine\'s own output (40 s, linewidths × 10 so the modes average out) within 10 ¢ of the note on A0, C2, C3, C4, C5, C6, C7 and C8', () => {
   const p = P({ damping: 10 }), res = [];
-  for (const key of [36, 48, 60, 72, 84, 96]) {
+  for (const key of [21, 36, 48, 60, 72, 84, 96, 108]) {
     const x = run(p, [[0, 'on', key, 1]], 40), { S, df } = psd(x, FS, x.length, 1 << 16), f = keyFreq(key);
     let w = 0, s = 0;
     for (let i = Math.floor((0.55 * f) / df); i < (1.6 * f) / df; i++) { w += S[i]; s += S[i] * Math.log(i * df); }
@@ -336,7 +339,7 @@ test('δ Scuti: each mode obeys dA/dt = (γ − βA²)A: it grows at γ = 1/(gro
   const p = P({ family: 'dscuti', flare: 0, spin: 0, growth: 0.2 }), key = 57, as = 0.7;
   const data = custom(key, p, [{ f: 300, asat: as, p: as * as }], { family: 'dscuti' });
   const x = run(p, [[0, 'on', key, 1, data]], 4);
-  const env = envelope(x, 300, 0.008, 0, 4 * FS, 96), g = OUT * voicing(key) * (Math.cos(((0.6 * (2 * (key - KEY_LO) / (KEY_HI - KEY_LO) - 1) + 1) * Math.PI) / 4) + Math.sin(((0.6 * (2 * (key - KEY_LO) / (KEY_HI - KEY_LO) - 1) + 1) * Math.PI) / 4));
+  const env = envelope(x, 300, 0.008, 0, 4 * FS, 96), g = OUT * voicing(key) * (panOf(key)[0] + panOf(key)[1]);
   // the envelope's demodulation gain: Σ window = σ√(2π)·fs, half of the amplitude in each sideband
   const k = (0.008 * FS * Math.sqrt(2 * Math.PI)) / 2, A = env.map((v) => v / k / g), t = env.map((_, i) => (i * 96) / FS);
   const early = [], te = [];
@@ -346,7 +349,7 @@ test('δ Scuti: each mode obeys dA/dt = (γ − βA²)A: it grows at γ = 1/(gro
   const fin = A.filter((_, i) => t[i] > 3 && t[i] < 3.8), mean = fin.reduce((a, b) => a + b) / fin.length;
   assert.ok(Math.abs(mean / as - 1) < 0.01, `saturates at ${mean.toFixed(4)}, A_sat ${as}`);
   for (const v of fin) assert.ok(Math.abs(v / mean - 1) < 0.002, 'steady: no noise');
-  for (const kk of [36, 50, 60, 77, 96]) {
+  for (const kk of [21, 36, 50, 60, 77, 96, 108]) {
     const d = keyStar(kk, P({ family: 'dscuti' })), f = Array.from(d.modes.f).filter((_, i) => d.modes.l[i] === 0).sort((a, b) => a - b);
     assert.ok(Math.abs(cents(f[0], keyFreq(kk))) < 1e-6 && Math.abs(f[0] / f[1] - 0.773) < 1e-9 && Math.abs(f[1] / f[2] - 0.802) < 1e-9, `${kk}`);
     const y = run(P({ family: 'dscuti' }), [[0, 'on', kk, 0.7]], 1.2), w = Math.round(0.02 * FS), lv = [];
@@ -359,10 +362,10 @@ test('voices: pressing a sounding key drives the same star again (one voice); vo
   const x = run(P(), [[0, 'on', 60, 0.8], [0.5, 'off', 60], [0.7, 'on', 60, 0.8]], 1);
   assert.equal(x.engine.voiceCount(), 1);
   const ev = [];
-  for (let i = 0; i < 20; i++) ev.push([0.04 * i, 'on', KEY_LO + 3 * i, 0.6]);
+  for (let i = 0; i < 20; i++) ev.push([0.04 * i, 'on', C2 + 3 * i, 0.6]);
   const y = run(P(), ev, 1.2), e = y.engine;
   assert.ok(e.voices.filter((v) => !v.fading).length <= 14, `${e.voices.length} voices`);
-  assert.ok(e.byKey.has(KEY_LO + 57) && !e.byKey.get(KEY_LO + 57).fading, 'the newest star sounds');
+  assert.ok(e.byKey.has(C2 + 57) && !e.byKey.get(C2 + 57).fading, 'the newest star sounds');
   let worst = 0;
   for (let i = 2; i < y.length; i++) worst = Math.max(worst, Math.abs(y[i] - 2 * y[i - 1] + y[i - 2]));
   assert.ok(worst < 0.5 * peakAbs(y), `second difference ${worst.toExponential(2)} vs peak ${peakAbs(y).toFixed(3)}`);

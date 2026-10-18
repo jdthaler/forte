@@ -4,6 +4,8 @@
 #include "stars-engine.h"
 #include "forte/web.h"
 
+#include <vector>
+
 using namespace forte::stars;
 
 static int putStar(const StarState &s, double *out) {
@@ -13,15 +15,19 @@ static int putStar(const StarState &s, double *out) {
 }
 
 extern "C" {
-// A key's star (keyStar) into out, returning how many numbers it wrote, or −1 if
-// they don't fit in max: key, K, δ Scuti?, N, the number of multiplets, norm, pitch, target; the
-// star (M, R, T, L, s, stage, track); its seismic parameters (dnu, numax, eps, d02, alpha, fwhm,
-// gamma, dPi, q); the modes' f, l, m, zeta, p, gamma, wEnv, wCore, asat, mult (N each); then every
-// multiplet the model has: l, n, nu, zeta, power, gamma and whether it is played.
-FORTE_EXPORT int stars_key_star(int family, double mass, double speedup, int key, double *out, int max) {
+// A key's star (keyStar), returning how many numbers it wrote to stars_key_star_data(): key, K,
+// δ Scuti?, N, the number of multiplets, norm, pitch, target; the star (M, R, T, L, s, stage,
+// track); its seismic parameters (dnu, numax, eps, d02, alpha, fwhm, gamma, dPi, q); the modes' f,
+// l, m, zeta, p, gamma, wEnv, wCore, asat, mult (N each); then every multiplet the model has: l, n,
+// nu, zeta, power, gamma and whether it is played. Its own buffer, not the scratch area: the giant on
+// A0 has nearly 800 multiplets (7 numbers each), more than the scratch area holds.
+static std::vector<double> starOut;
+FORTE_EXPORT const double *stars_key_star_data() { return starOut.data(); }
+FORTE_EXPORT int stars_key_star(int family, double mass, double speedup, int key) {
   const Star d = keyStar(key, {family, mass, speedup});
   const int nAll = (int)d.all.size();
-  if (8 + 7 + 9 + 10 * d.N + 7 * nAll > max) return -1;
+  starOut.resize(8 + 7 + 9 + 10 * d.N + 7 * nAll);
+  double *out = starOut.data();
   int n = 0;
   for (double v : {(double)d.key, d.K, d.dscuti ? 1.0 : 0.0, (double)d.N, (double)nAll, d.norm, d.pitch, d.target}) out[n++] = v;
   n += putStar(d.star, out + n);

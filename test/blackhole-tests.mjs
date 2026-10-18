@@ -217,13 +217,35 @@ test('the plotted strain (closed form) is what the engine plays', () => {
   assert.ok(ms < 10, `${ms.toFixed(1)} ms per plot`);
   console.log(`        strain plot: ${ms.toFixed(2)} ms for 2000 points, ${v.modes.length} modes (was an offline render of up to 2.5 s)`);
 });
+test('every key of A0–C8 is tuned on its (2,2,0) mode, and keeps its modes between 20 Hz and 0.45 fs', () => {
+  for (const fs of [44100, 48000]) for (let key = INSTRUMENT.range[0]; key <= INSTRUMENT.range[1]; key++) {
+    const v = keyVoice(key, { ...DEFAULTS, spinU: 6, retrograde: 1, overtones: 2, massRatio: 4 }, fs);
+    const m220 = v.modes.find((m) => m.l === 2 && m.m === 2 && m.n === 0);
+    assert.ok(m220 && Math.abs(m220.f / keyFreq(key) - 1) < 1e-9, `${key}: (2,2,0) at ${m220?.f}`);
+    assert.ok(v.modes.every((m) => m.f > 20 && m.f < 0.45 * fs), `${key} at ${fs}: ${v.modes.map((m) => m.f.toFixed(0))}`);
+  }
+});
+test('the outer keys, A0 and C8, ring audibly in tune, with no NaN, with and without the inspiral', () => {
+  for (const key of [21, 108]) for (const inspiral of [false, true]) {
+    const e = new RingdownEngine(48000), n = 48000 * 2.5, L = new Float32Array(n), bL = new Float32Array(128), bR = new Float32Array(128);
+    e.setParams({ ...DEFAULTS, spinU: uFromSpin(0.999), inspiral, overtones: 0, massRatio: 1, inclination: 0 }); e.noteOn(key, 1);
+    let pk = 0;
+    for (let s = 0; s < n; s += 128) { e.process(bL, bR, 128); L.set(bL.subarray(0, Math.min(128, n - s)), s); for (const x of bL) pk = Math.max(pk, Math.abs(x)); }
+    assert.ok(Number.isFinite(pk) && pk > 0.01 && pk < 1, `${key}${inspiral ? ' with the inspiral' : ''}: peak ${pk}`);
+    if (inspiral) continue;
+    let end = n - 1; while (end > 0 && Math.abs(L[end]) < 1e-3 * pk) end--; // the ringdown, while it is well above the float noise
+    const zc = []; for (let i = 1; i < end; i++) if (L[i - 1] < 0 && L[i] >= 0) zc.push(i - 1 + L[i - 1] / (L[i - 1] - L[i]));
+    const f = (48000 * (zc.length - 1)) / (zc.at(-1) - zc[0]);
+    assert.ok(Math.abs(1200 * Math.log2(f / keyFreq(key))) < 1, `${key}: ${f.toFixed(3)} Hz`);
+  }
+});
 test('the inspiral starts a set number of octaves below ISCO, and lasts at most 2 s', () => {
   const at = (key, oct) => keyVoice(key, { ...DEFAULTS, inspiral: true, inspiralOct: oct }, 48000).chirp;
   for (const key of [48, 60, 84]) {
     const c1 = at(key, 0.5), c2 = at(key, 1);
     assert.ok(Math.abs(c1.fStart / c1.fIsco - 2 ** -0.5) < 1e-12 && Math.abs(c2.fStart / c2.fIsco - 0.5) < 1e-12, `${key}`);
   }
-  for (let key = 36; key <= 96; key += 6) for (const oct of [1.5, 3]) {
+  for (const key of [21, 27, 36, 48, 60, 72, 84, 96, 102, 108]) for (const oct of [1.5, 3]) {
     const c = at(key, oct), e = new RingdownEngine(48000), L = new Float32Array(128), R = new Float32Array(128);
     e.setParams({ ...DEFAULTS, inspiral: true, inspiralOct: oct }); e.noteOn(key, 1);
     let s = 0;

@@ -164,6 +164,18 @@ await test('pitch-hold servo keeps a locked chord at pitch; intervals stay locke
   assert.ok(Math.abs(c(held.f[1] / held.f[0] / 1.25)) < 0.4);
   console.log(`        4:5:6:7 chord: ${mean(free.f).toFixed(1)} ¢ sharp without the servo, ${mean(held.f).toFixed(1)} ¢ with it`);
 });
+await test('the outer keys play their design pitch; the servo hears A0 (four firings in its 120 ms window) and holds a bass chord on it', () => {
+  for (const k of [21, 22, 108]) {
+    const r = run([k], { kick: 0 }, 1.5);
+    assert.ok(r.finite && r.pk > 0.01 && Math.abs(c(r.f[0] / keyFreq(k))) < 0.5, `key ${k}: ${r.f[0]} Hz, peak ${r.pk}`);
+    const f = r.e.report(0.12)[0].f; // what the servo measures
+    assert.ok(Math.abs(c(f / keyFreq(k))) < 1, `key ${k}: the servo's 120 ms reads ${f} Hz`);
+  }
+  const keys = [21, 25, 28, 31]; // 4:5:6:7 on A0
+  const free = run(keys, { kick: 0.09, pitchHold: 0 }, 4), held = run(keys, { kick: 0.09, pitchHold: 1 }, 4);
+  const mean = (f) => keys.reduce((s, k, i) => s + c(f[i] / keyFreq(k)), 0) / 4;
+  assert.ok(mean(free.f) > 10 && Math.abs(mean(held.f)) < 2, `free ${mean(free.f).toFixed(1)} ¢, held ${mean(held.f).toFixed(1)} ¢`);
+});
 
 console.log('the default coupling');
 await test('no coupling locks 8:5 and keeps semitones apart; the default locks 8:5 (a bare semitone merges)', () => {
@@ -320,7 +332,7 @@ await test('lock display: a locked bass triad reads locked in every update; an u
 
 await test('the design tuning: equal temperament; 5-limit just above the tonic; a mistuning fixed for each key, within the setting', () => {
   const JUST = [1, 16 / 15, 9 / 8, 6 / 5, 5 / 4, 4 / 3, 45 / 32, 3 / 2, 8 / 5, 5 / 3, 9 / 5, 15 / 8];
-  for (let k = 36; k <= 96; k++) {
+  for (let k = INSTRUMENT.range[0]; k <= INSTRUMENT.range[1]; k++) {
     assert.ok(Math.abs(c(tunedFreq(k, DEFAULTS) / keyFreq(k))) < 1e-9, `key ${k}`);
     for (const tonic of [0, 5, 11]) {
       const deg = (((k - tonic) % 12) + 12) % 12, f = tunedFreq(k, { ...DEFAULTS, tuning: 'just', tonic });
@@ -328,7 +340,7 @@ await test('the design tuning: equal temperament; 5-limit just above the tonic; 
     }
   }
   const P = { ...DEFAULTS, mistune: 33.5 }, dev = [];
-  for (let k = 36; k <= 96; k++) { const d = c(tunedFreq(k, P) / keyFreq(k)); assert.ok(Math.abs(d) <= 33.5 && tunedFreq(k, P) === tunedFreq(k, { ...P }), `key ${k}: ${d}`); dev.push(Math.abs(d)); }
+  for (let k = INSTRUMENT.range[0]; k <= INSTRUMENT.range[1]; k++) { const d = c(tunedFreq(k, P) / keyFreq(k)); assert.ok(Math.abs(d) <= 33.5 && tunedFreq(k, P) === tunedFreq(k, { ...P }), `key ${k}: ${d}`); dev.push(Math.abs(d)); }
   assert.ok(Math.max(...dev) > 25 && new Set(dev.map((d) => d.toFixed(3))).size > 50, 'every key its own');
 });
 await test('the lock map: with the supply\'s sag vanishing, the simulated points (the engine) find the exact map\'s locks; with sag, they are reproducible', () => {
@@ -344,7 +356,7 @@ await test('the lock map: with the supply\'s sag vanishing, the simulated points
 console.log('robustness');
 await test('finite output and sane level across settings', () => {
   for (const eng of [{ kick: 0.15, rSrc: 200e3 }, { kick: 0, vNom: 400 }, { kick: 0.1, vNom: 100, vStrike: 95, vExt: 85, drift: 20, driftRate: 2 }]) {
-    const r = run([36, 48, 55, 60, 64, 67, 70, 72, 84, 96], eng, 0.8);
+    const r = run([21, 36, 48, 55, 60, 64, 67, 70, 72, 84, 96, 108], eng, 0.8);
     assert.ok(r.finite && r.pk < 5, JSON.stringify(eng));
   }
 });
