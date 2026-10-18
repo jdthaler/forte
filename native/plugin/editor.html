@@ -391,17 +391,20 @@ kbRoot.addEventListener('contextmenu', (e) => e.preventDefault());
 // the computer's keys
 const held = new Map(); // code → key
 const codeToKey = (code) => { let i = LOW.indexOf(code); if (i >= 0) return base + i; i = HIGH.indexOf(code); return i >= 0 ? base + 12 + i : null; };
+const PASSED = new Set(['Tab', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End']);
 const velocity = () => { const i = D.params.findIndex((p) => p.id === 'velocity'); return i >= 0 && D.params[i].kind === 'continuous' ? 0.2 + 0.8 * values[i] : 0.75; };
 window.addEventListener('keydown', (e) => {
   if (!D || e.metaKey || e.ctrlKey || e.altKey) return;
   const t = e.target;
   // a slider reached with Tab keeps its arrows; anything else hands the keys to the instrument
   if (t?.type === 'range' && e.code.startsWith('Arrow')) return;
-  if (t?.tagName === 'SELECT' || t?.tagName === 'INPUT' || t?.tagName === 'BUTTON') { if (e.code === 'Space' || e.code.startsWith('Arrow') || codeToKey(e.code) !== null) t.blur(); else return; }
+  if (t?.tagName === 'SELECT' || t?.tagName === 'INPUT' || t?.tagName === 'BUTTON') { if (e.code === 'Space' || e.code.startsWith('Arrow') || codeToKey(e.code) !== null) t.blur(); else if (t.tagName === 'SELECT' || e.key === 'Enter') return; }
   if (e.code === 'Space' && D.space) { e.preventDefault(); if (!e.repeat) setPedal(true); return; }
   if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') { e.preventDefault(); shift(e.code === 'ArrowLeft' ? -12 : 12); return; }
   const key = codeToKey(e.code);
-  if (key === null) return;
+  // a key nothing takes makes the Mac's web view beep, so the window takes it, silently; Tab and
+  // the keys that scroll the controls still do their own thing
+  if (key === null) { if (!PASSED.has(e.code)) e.preventDefault(); return; }
   e.preventDefault();
   if (e.repeat || held.has(e.code)) return;
   held.set(e.code, key);
