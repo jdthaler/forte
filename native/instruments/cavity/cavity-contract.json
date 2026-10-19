@@ -1,0 +1,36 @@
+{
+  "slug": "cavity",
+  "params": [
+    {"id":"bunch","kind":"continuous","min":0.005,"max":0.3,"def":0.06,"step":0,"log":true},
+    {"id":"offset","kind":"continuous","min":0,"max":0.6,"def":0.15,"step":0.005,"log":false},
+    {"id":"beta","kind":"continuous","min":0.3,"max":1,"def":1,"step":0.005,"log":false},
+    {"id":"current","kind":"continuous","min":0,"max":1,"def":0,"step":0.01,"log":false},
+    {"id":"spacing","kind":"continuous","min":1,"max":16,"def":4,"step":1,"log":false},
+    {"id":"cells","kind":"continuous","min":1,"max":12,"def":9,"step":1,"log":false},
+    {"id":"coupling","kind":"continuous","min":0.002,"max":0.06,"def":0.0187,"step":0,"log":true},
+    {"id":"betag","kind":"continuous","min":0.3,"max":1,"def":1,"step":0.005,"log":false},
+    {"id":"lorentz","kind":"continuous","min":0,"max":60,"def":2,"step":0.1,"log":false},
+    {"id":"mech","kind":"continuous","min":1,"max":80,"def":12,"step":0,"log":true},
+    {"id":"qext","kind":"continuous","min":10000000,"max":100000000000,"def":1000000000,"step":0,"log":true},
+    {"id":"qhom","kind":"continuous","min":1000000,"max":100000000000,"def":200000000,"step":0,"log":true},
+    {"id":"release","kind":"continuous","min":1000000,"max":1000000000,"def":30000000,"step":0,"log":true},
+    {"id":"temp","kind":"continuous","min":1.6,"max":12,"def":2,"step":0.05,"log":false},
+    {"id":"quench","kind":"continuous","min":0.5,"max":6,"def":3,"step":0.01,"log":false},
+    {"id":"recovery","kind":"continuous","min":0.05,"max":5,"def":0.8,"step":0,"log":true},
+    {"id":"probe","kind":"choice","def":"ends","options":["ends","far"]},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.3,"step":0.01,"log":false},
+    {"id":"venue","kind":"choice","def":"room","options":["studio","room","recital","hall","cathedral"]},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"TESLA nine-cell at 2 K","values":{}},
+    {"name":"A single pillbox cell","values":{"cells":1}},
+    {"name":"Wide passband: strong coupling","values":{"coupling":0.05,"cells":7}},
+    {"name":"Out of step: the passband beats","values":{"beta":0.8,"offset":0.05}},
+    {"name":"Slow protons (β = 0.61)","values":{"beta":0.61,"betag":0.61,"cells":6}},
+    {"name":"No HOM couplers: a bright bell","values":{"qhom":100000000000,"offset":0.35,"bunch":0.02}},
+    {"name":"Warm: liquid helium at 4.2 K","values":{"temp":4.2}},
+    {"name":"Beam loading to a quench","values":{"current":1,"quench":1.2,"lorentz":0.5,"recovery":0.6}},
+    {"name":"Lorentz detuning, ringing walls","values":{"lorentz":30,"mech":5}}
+  ]
+}

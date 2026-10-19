@@ -22,7 +22,7 @@ instruments/<slug>/                 a ported instrument: engine, model, generate
                                     template, bubbles, vibraphone, carillon, glass, gongs, piano,
                                     harpsichord, grand, clavier, bowed, tines, reeds,
                                     pianet, harmonium, pipes, huygens, arc, pyrophone,
-                                    windharp, blackhole, quantum, stars, springs, organ and celesta;
+                                    windharp, blackhole, quantum, stars, springs, organ, ring, celesta and cavity;
                                     docs/INSTRUMENT_GUIDE.md,
                                     "The native port")
 tests/                              native unit tests (CTest); tests/smoke, a test instrument
