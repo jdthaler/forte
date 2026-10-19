@@ -11,7 +11,7 @@ import { renderMarkdown } from './markdown.js';
 import { byId, FORTE_VERSION } from './registry.js';
 import { downloadLinks, INSTALL } from './plugins.js';
 
-const REPO = 'https://github.com/jdthaler/forte/blob/main/';
+const REPO = 'https://github.com/jdthaler/forte/blob/live/';
 const HASH = '#about';
 const root = new URL(document.body.dataset.root ?? '../', location.href);
 const here = new URL('.', location.href);

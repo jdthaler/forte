@@ -297,6 +297,13 @@ test('the landing page has the category tabs, the instrument list and the About,
   }
   assert.ok(html.includes('src="icons/icon-192.png"'), 'About shows the app icon');
 });
+test('the site links to the repository\'s files on live, the branch it is published from', () => {
+  const files = ['index.html', 'landing.js', 'credits/index.html', 'credits/credits.js',
+    ...readdirSync(new URL('shared/', R)).filter((f) => f.endsWith('.js')).map((f) => `shared/${f}`),
+    ...ready.map((i) => `${i.id}/index.html`)];
+  for (const f of files) assert.ok(!/jdthaler\/forte\/(blob|tree|raw)\/(?!live\/)/.test(read(f)), `${f} links to a branch other than live`);
+  assert.ok(read('index.html').includes('https://github.com/jdthaler/forte/blob/live/CHANGELOG.md'), 'the changelog link');
+});
 
 console.log('descriptors');
 // instruments whose physics stops short of A0–C8 (each README says why)

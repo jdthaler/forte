@@ -129,7 +129,7 @@ $('#plugin-list').textContent = `all ${withPlugins().length} instruments`;
 $('#plugins .forte-plugin-get').innerHTML = downloadLinks(); // with each format alone too
 
 // Credits: docs/PRIOR_ART.md, rendered as on credits/ (credits/credits.js), on first opening
-const REPO = 'https://github.com/jdthaler/forte/blob/main/';
+const REPO = 'https://github.com/jdthaler/forte/blob/live/';
 const credits = $('#credits'), cbody = credits.querySelector('.forte-notes-body');
 let creditsLoaded = null;
 function loadCredits() {
