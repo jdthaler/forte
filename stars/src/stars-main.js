@@ -7,6 +7,7 @@ import { wasmModel, starId } from './stars-wasm.js';
 
 const $ = (s) => document.querySelector(s);
 let focus = 60, amps = null, analyser = null, fbuf = null, selected = -1, shown = -1, shownAt = 0;
+let FX = null, hrDirty = true; // the focus key's star (below), declared before the views draw (they can, while the model loads)
 const LCOL = () => [css('--l0'), css('--l1'), css('--l2'), css('--l3')];
 const TAU = 2 * Math.PI;
 // the spectrogram: linear in frequency across the focus star's band, labelled in the star's μHz
@@ -56,7 +57,6 @@ const shell = createShell({
 });
 
 // ---- the focus key's star ---------------------------------------------------------------------------------
-let FX = null, hrDirty = true;
 const fmtHz = (f) => (f >= 1000 ? `${(f / 1000).toFixed(2)} kHz` : `${f.toFixed(f < 100 ? 1 : 0)} Hz`);
 const fmtMu = (f) => `${f.toFixed(f < 100 ? 1 : 0)} μHz`;
 function update() {
