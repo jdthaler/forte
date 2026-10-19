@@ -49,6 +49,7 @@ FORTE_EXPORT void forte_set_sustain(Handle *h, int on) { h->engine->setSustain(o
 FORTE_EXPORT void forte_all_notes_off(Handle *h) { h->engine->allNotesOff(); }
 FORTE_EXPORT void forte_pressure(Handle *h, double value, int key) { h->engine->pressure(value, key); }
 FORTE_EXPORT void forte_bend(Handle *h, double value) { h->engine->bend(value); }
+FORTE_EXPORT void forte_set_quality(Handle *h, int q) { h->engine->setQuality((forte::Quality)(q < 0 ? 0 : q > 2 ? 2 : q)); }
 FORTE_EXPORT int forte_voice_count(Handle *h) { return h->engine->voiceCount(); }
 FORTE_EXPORT float *forte_left(Handle *h) { return h->L; }
 FORTE_EXPORT float *forte_right(Handle *h) { return h->R; }

@@ -15,6 +15,7 @@ import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto } from '../
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
+import { connectQuality, qualityControl } from '../../shared/quality.js';
 
 const $ = (s) => document.querySelector(s);
 const [KEY_LO, KEY_HI] = INSTRUMENT.range;
@@ -63,6 +64,7 @@ function startAudio() {
     audio = { ctx, node, analyser, chain };
     applyMix();
     node.port.postMessage(paramsMessage());
+    connectQuality(node, { toast }); // the device's Quality (shared/quality.js)
     node.port.postMessage({ type: 'sustain', on: sustain });
     spectrum.setAnalyser(analyser); spectro.setAnalyser(analyser);
     if (ctx.state !== 'running') await ctx.resume();
@@ -395,3 +397,4 @@ keyboardView.labels(keyLabels());
 setFocus(60, P.velocity);
 precompute();
 attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v) => setAll({ ...P, ...v }), toast }); // your own presets and links
+qualityControl(); // the device's Quality, after the controls
