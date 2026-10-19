@@ -79,6 +79,7 @@ function startAudio() {
     analyser.smoothingTimeConstant = 0.55;
     chain.tap.connect(analyser);
     node.port.onmessage = (e) => onWorklet(e.data);
+    node.port.postMessage({ type: 'offering' }); // every key's data follows (precompute)
 
     fs = ctx.sampleRate; // the voice data's version includes it: keys are rebuilt if it is not 48 kHz
     audio = { ctx, node, analyser, chain };
@@ -88,6 +89,7 @@ function startAudio() {
     spectrum.setAnalyser(analyser); spectro.setAnalyser(analyser);
     if (ctx.state !== 'running') await ctx.resume();
     live = true;
+    precompute(); // every key's data to the engine
     $('#start').textContent = `Audio on · ${(ctx.sampleRate / 1000).toFixed(1)} kHz`;
     $('#start').classList.add('running');
     return audio;
@@ -408,7 +410,8 @@ function modelChanged() {
 }
 
 // Compute nearby keys in the background so playing stays snappy (tapered
-// members need a Rayleigh–Ritz eigen-solve per key).
+// members need a Rayleigh–Ritz eigen-solve per key), and offer each to the
+// engine: its sympathetic string rings along when its damper is up.
 let pq = [], pqTimer = 0;
 function precompute() {
   const center = base + 15;
@@ -418,9 +421,15 @@ function precompute() {
   clearTimeout(pqTimer);
   pqTimer = setTimeout(pqTick, 60);
 }
+function offerKey(key) {
+  const data = noteData(key);
+  if (!live || !data || sent.get(key) === data) return;
+  sent.set(key, data); // the engine keeps the last one
+  audio.node.port.postMessage({ type: 'offer', data });
+}
 function pqTick() {
   const t0 = performance.now();
-  while (pq.length && performance.now() - t0 < 10) keyData(pq.shift());
+  while (pq.length && performance.now() - t0 < 10) offerKey(pq.shift());
   if (pq.length) pqTimer = setTimeout(pqTick, 4);
 }
 

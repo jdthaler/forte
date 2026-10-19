@@ -85,8 +85,16 @@ FORTE_EXPORT void piano_section(int shape, double A, double aspect, double s, do
 // piano_offer_buffer, for that key's notes.
 FORTE_EXPORT double *piano_offer_buffer(PianoEngine *e, int n) { return e->offerBuffer(n); }
 FORTE_EXPORT int piano_offer(PianoEngine *e, int n) { return e->offer(e->offerBuffer(n), n); }
+// The page will offer every key's data: the sympathetic strings wait for it.
+FORTE_EXPORT void piano_offering(PianoEngine *e) { e->offers(); }
 FORTE_EXPORT void piano_set_max_modes(PianoEngine *e, double n) { e->maxModes = n; }
 FORTE_EXPORT int piano_mode_count(PianoEngine *e) { return e->modeCount(); }
+// The sympathetic strings: key's group (its partials, 0 until its data came; its energy per unit
+// mass; whether its damper is down), and the partials that ran in the last process call.
+FORTE_EXPORT int piano_sym_size(PianoEngine *e, int key) { return e->sym.size(key); }
+FORTE_EXPORT double piano_sym_energy(PianoEngine *e, int key) { return e->sym.energy(key); }
+FORTE_EXPORT int piano_sym_damped(PianoEngine *e, int key) { return e->sym.damped(key); }
+FORTE_EXPORT int piano_sym_running(PianoEngine *e) { return e->sym.running; }
 
 // Its voices: the one the latest noteOn struck (null if none), and each in order.
 FORTE_EXPORT PianoEngine::Voice *piano_last(PianoEngine *e) { return e->last; }

@@ -95,6 +95,25 @@ The pieces that couple to the modes:
   5.7 kHz, 35 % at 12 kHz), so each mode's own, exactly discretized decay
   makes up the shortfall. The measured decay of the partials matches
   G(T + EIk²)/L to 0.3 % up to 12 kHz (tested).
+* **Sympathetic strings**: every other key meets the same bridge, and while its
+  damper is up (the pedal down, the key held, or the top keys, which have no
+  dampers) it rings along. Each string's motion splits, by superposition, into
+  what its own hammer started (its voice, as above) and what the others drive:
+  a *group* per key, its unison's in-phase motion (couplings √ν c, draining
+  at ν c²/2 as the voice's bridge drains it), its lowest 16 partials below
+  4 kHz. A group feels the bridge velocity S = Σ c q̇ of every voice and every
+  other group, times κ (*Sympathetic resonance*: the share of the bridge's
+  motion one string feels from another's, 1 if they all met it at one point),
+  and never its own key's voice. Its own bridge loss is in its decay rate, so
+  the strings also take back what they give, and for κ ≤ 1 they only lose
+  energy (a native test checks it). Hold C4 and strike C3: C4's partials sit
+  on C3's even ones and it rings along about a thousand times as strongly as
+  C♯4 would (in energy), about 30 dB under the attack. With the pedal down,
+  848 partials run, about one and a half times what four sustained notes cost;
+  with it up, only the undamped treble's. The pedal also takes a little level
+  from a note (under 1 dB at 25 %): what it shares with strings in antiphase
+  stays there. The page offers every key's data to the engine in the
+  background, so the groups are ready before the pedal goes down.
 * **Torsion pickup**: torsion does not move the bridge's vertical channel. It
   is heard as the edge force of its torque at the bridge, the torque divided
   by the half-width there (*Torsion pickup* sets its level).
@@ -206,9 +225,11 @@ src/params.js             every parameter, with ranges, hints and presets
   "phantom partials" at sums of transverse frequencies, matter for the real
   piano bass and would be the next physics to add (they also couple to
   torsion in a ribbon).
-* **Bridge coupling stays inside a key.** Unisons and polarizations of the same
-  note interact, but there is no sympathetic resonance between different keys
-  yet (the engine design allows it; it costs CPU).
+* **Sympathetic strings are simpler than sounding ones.** A key that rings
+  along is its unison's in-phase motion only, its lowest 16 partials below
+  4 kHz, without torsion or tension modulation. Every key meets the bridge at
+  one point, scaled by *Sympathetic resonance*, so the bass and treble ends of
+  a long bridge couple as strongly as neighbours.
 * **Symmetric sections only.** For non-equilateral triangles the shear centre
   moves off the centroid, which would couple bending to torsion. Euler–Bernoulli
   bending (no shear or rotary inertia) is fine for these slender members.

@@ -27,7 +27,7 @@ const Base = wasmEngine(BUILD);
 
 // The engine, with the tests' hooks: e.listeners (functions called with each
 // message), e.voices (each key's voice: key, killing, dead, sounded, keyDown, pending, vDown, lift,
-// peak and its strings' plectra) and e.byKey, read back.
+// peak and its strings' plectra), e.byKey and e.sympathetic(key, choir), read back.
 const VOICE = ['key', 'killing', 'dead', 'sounded', 'keyDown', 'pending', 'vDown', 'lift', 'peak', 'own'];
 const FLAGS = new Set(['killing', 'dead', 'sounded', 'keyDown', 'pending', 'own']);
 export class HarpsichordWasmEngine extends Base {
@@ -62,6 +62,13 @@ export class HarpsichordWasmEngine extends Base {
     });
   }
   get byKey() { return new Map(this.voices.filter((v) => v.own).map((v) => [v.key, v])); }
+  // the sympathetic strings: key's string of a choir ('front', 'back', 'four') ({ size, energy,
+  // damped }), and the partials that last ran
+  sympathetic(key, choir) {
+    const x = Base.exports, g = 3 * key + CHOIRS.indexOf(choir);
+    return { size: x.harpsichord_sym_size(this.e, g), energy: x.harpsichord_sym_energy(this.e, g), damped: x.harpsichord_sym_damped(this.e, g) > 0 };
+  }
+  sympatheticRunning() { return Base.exports.harpsichord_sym_running(this.e); }
 }
 export const ready = () => HarpsichordWasmEngine.ready();
 

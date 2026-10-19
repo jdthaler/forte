@@ -161,6 +161,26 @@ bridge's principal axes. A springy sideways support of stiffness K_H
 lengthens the string by T/K_H. That puts H flat by T/(K_H L), about 0.2 ¢
 at C4 for K_H = 10⁷ N/m, and H beats against V.
 
+**Sympathetic strings.** Every other key's strings meet the same bridge, and
+while their dampers are up (the pedal down, the key held, or the keys above
+E6, which have none) they ring along with whatever sounds. Each string's
+motion splits, by superposition, into what its own hammer started (its
+voice, unchanged) and what the others drive: a *group* per key, its unison's
+in-phase motion (couplings √ν c, draining at ν c²/2 as the voice's bridge
+drains it), its lowest 16 partials below 4 kHz in V (in H too when H drains
+at least a quarter as fast; at the default 0.2 it does not). A group feels
+the bridge velocity S = Σ c q̇ of every voice and every other group, times κ
+(*Sympathetic resonance*: the share of the bridge's motion one string feels
+from another's, 1 if they all met it at one point), and never its own key's
+voice. Its own bridge loss is in its decay rate, so the strings also take
+back what they give, and for κ ≤ 1 they only lose energy. The piezo and the
+soundboard hear a group's force on the bridge as they hear a voice's. Hold C4
+and strike C3, and C4 rings along about 90 times as strongly as C♯4 would
+(in energy). On the iron frame that is faint, more than 30 dB under the
+note, as on a real CP-70; a soundboard's bridge moves about 20 times more,
+and the strings ring along about 14 times as strongly. With the pedal down
+841 partials run, about twice what four sustained notes cost.
+
 **No soundboard: the frame.** The CP-70's bridge sits on the cast harp. We
 take its admittance to be G = 5·10⁻⁵ s/kg (*Frame admittance*), 30× below a
 soundboard's mean. That figure is an estimate; we found no measurement. At
@@ -346,8 +366,10 @@ tools/render-grand.mjs               node tools/render-grand.mjs → examples/gr
   appears only as the sideways spring's frequency shift. On the soundboard,
   the strings drain into the plate (Re Y), but the plate does not pull their
   frequencies, and the board is driven one way: the plate's vibration does
-  not act back on the strings. There is no coupling between different keys,
-  so no sympathetic resonance with the pedal down.
+  not act back on the strings. Different keys couple only through the
+  bridge's signal, scaled by *Sympathetic resonance* (below), not through the
+  plate's modes, and a sympathetic string is its unison's in-phase motion,
+  its lowest 16 partials below 4 kHz, without tension modulation.
 * **The soundboard is a stand-in.** It is a flat, isotropic, simply
   supported rectangle. A real board is crowned, ribbed, orthotropic and
   irregular, and its modes above ~1 kHz localise between ribs. The

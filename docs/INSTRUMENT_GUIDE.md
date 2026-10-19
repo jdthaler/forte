@@ -383,8 +383,14 @@ worklet, which runs it. The engine takes all the parameters and computes its own
 (`forte/background.h`). WebAssembly has no threads, so that data is built in place on a key's
 first note; where that takes milliseconds, the page builds it with its own WebAssembly model and
 sends it with the note (its `noteData`), as the vibraphone's bars and the piano's strings
-(`vibraphone/src/vibraphone-wasm.js`). The views call the WebAssembly model, which the page awaits
-before drawing (`const model = await wasmModel()`).
+(`vibraphone/src/vibraphone-wasm.js`; the piano also offers every key's ahead of its notes, for its
+sympathetic strings). The views call the WebAssembly model, which the page awaits before drawing
+(`const model = await wasmModel()`).
+
+Strings that share a bridge can ring along with one another through `forte/sympathetic.h`: each
+key's (or string's) lowest partials as a group, driven by the bridge signal of every voice and
+group but its own, with its damper on or off. The piano, the electric grand and the harpsichord
+use it; their engines say where their voices' bridge signals come from.
 
 An engine that posts to its page posts `Message`s in C++ (`Engine::post`: a type, a key and up
 to 30 float32 values); its `<slug>-wasm.js` turns them back into the page's messages, gathering

@@ -4,6 +4,7 @@
     {"id":"hardness","kind":"continuous","min":0.2,"max":5,"def":1,"step":0,"log":true},
     {"id":"strike","kind":"continuous","min":0.03,"max":0.5,"def":0.12,"step":0.001,"log":false},
     {"id":"damper","kind":"continuous","min":3,"max":80,"def":25,"step":0,"log":true},
+    {"id":"sympathy","kind":"continuous","min":0,"max":1,"def":0.25,"step":0.01,"log":false},
     {"id":"scale","kind":"choice","def":"cp70","options":["cp70","concert"]},
     {"id":"stringing","kind":"choice","def":"cp70","options":["cp70","grand","single"]},
     {"id":"detune","kind":"continuous","min":0,"max":12,"def":1.2,"step":0.1,"log":false},

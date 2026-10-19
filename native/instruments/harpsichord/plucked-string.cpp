@@ -13,7 +13,10 @@ using std::numbers::pi;
 
 void PluckedString::init(const StringDesign &S_, const Partials &parts, double fs_) {
   S = S_; N = parts.N; Na = N; fs = fs_; h = 1 / fs_;
-  for (int i = 0; i < N; i++) { W[i] = 2 * pi * parts.f[i]; K[i] = parts.k[i]; BF[i] = parts.b[i]; sigBase[i] = parts.sigma[i]; G[i] = (K[i] * K[i]) / S.mu; }
+  for (int i = 0; i < N; i++) {
+    W[i] = 2 * pi * parts.f[i]; K[i] = parts.k[i]; BF[i] = parts.b[i]; sigBase[i] = parts.sigma[i]; G[i] = (K[i] * K[i]) / S.mu;
+    SC[i] = (parts.b[i] < 0 ? -1 : 1) * std::sqrt(2 * parts.sigB[i]) * fs_;
+  }
   kc = (S.mat->E * S.A) / (2 * S.L); dT = 0; stretched = false; kcOn = false;
   for (int i = 0; i < N_MAX; i++) { qa[i] = qb[i] = 0; extra[i] = 0; }
   flip = false;
@@ -103,11 +106,12 @@ bool PluckedString::needsContacts(double liftMax, bool keyDown, bool buffOn) con
   return buffOn && x[PT::BUFF] >= 0;
 }
 
-double PluckedString::render(int n, const double *lift, bool keyDown, const double *buffG, double *seg, int stride, const double *wts, int w0, int w1, double gain) {
+double PluckedString::render(int n, const double *lift, bool keyDown, const double *buffG, double *seg, int stride, const double *wts, int w0, int w1, double gain,
+                             double *sym) {
   const bool buffOn = buffG[0] > 1e-6 || buffG[n - 1] > 1e-6;
   double lmax = 0;
   for (int t = 0; t < n; t++) if (lift[t] > lmax) lmax = lift[t];
-  if (!needsContacts(lmax, keyDown, buffOn)) return free(n, seg, stride, w0, w1, wts, gain);
+  if (!needsContacts(lmax, keyDown, buffOn)) return sym ? free<true>(n, seg, stride, w0, w1, wts, gain, sym) : free<false>(n, seg, stride, w0, w1, wts, gain, sym);
   if (cDirty) updateC();
   const int Nn = Na;
   const double *a1 = A1.data(), *a2 = A2.data(), *bf = BF.data(), *ep = EP.data(), *g = G.data();
@@ -199,6 +203,11 @@ double PluckedString::render(int n, const double *lift, bool keyDown, const doub
       for (int i = 0; i < Nn; i++) y += bf[i] * qq1[i];
       Fp[0] = Fp[1] = 0; Fd = 0;
     }
+    if (sym) {
+      double z = 0;
+      for (int i = 0; i < Nn; i++) z += SC[i] * (qq1[i] - qq[i]);
+      sym[t] += z;
+    }
     if (kcs) {
       double Q = 0;
       for (int i = 0; i < Nn; i++) Q += g[i] * qq1[i] * qq1[i];
@@ -223,7 +232,8 @@ double PluckedString::cross(int p) const {
 }
 
 // The free string: partials only, the fast path.
-double PluckedString::free(int n, double *seg, int stride, int w0, int w1, const double *wts, double gain) {
+template <bool SY>
+double PluckedString::free(int n, double *seg, int stride, int w0, int w1, const double *wts, double gain, double *sym) {
   const int Nn = Na;
   const double *a1 = A1.data(), *a2 = A2.data(), *bf = BF.data();
   const int s0 = w0 * stride, s1 = w1 * stride;
@@ -232,19 +242,28 @@ double PluckedString::free(int n, double *seg, int stride, int w0, int w1, const
   double ymin = std::numeric_limits<double>::infinity(), ymax = -ymin;
   const bool kcs = kcOn && stretched;
   // δT is held below T/10: the first-order a₁ (slope θ sin θ, θ = ωk) then stays stable up to 0.45 fs
-  const double *ep = EP.data(), *g = G.data(), dTmax = 0.1 * S.T;
+  const double *ep = EP.data(), *g = G.data(), *sc = SC.data(), dTmax = 0.1 * S.T;
   double most = 0;
   for (int t = 0; t < n; t++) {
-    double y = 0;
+    double y = 0, z = 0;
     if (kcs) {
       const double d = dT;
       double Q = 0;
-      for (int i = 0; i < Nn; i++) { const double v = (a1[i] - ep[i] * d) * qq[i] - a2[i] * qq1[i]; qq1[i] = v; y += bf[i] * v; Q += g[i] * v * v; }
+      for (int i = 0; i < Nn; i++) {
+        const double v = (a1[i] - ep[i] * d) * qq[i] - a2[i] * qq1[i];
+        if (SY) z += sc[i] * (v - qq[i]);
+        qq1[i] = v; y += bf[i] * v; Q += g[i] * v * v;
+      }
       dT = std::min(kc * Q, dTmax);
       if (dT > most) most = dT;
     } else {
-      for (int i = 0; i < Nn; i++) { const double v = a1[i] * qq[i] - a2[i] * qq1[i]; qq1[i] = v; y += bf[i] * v; }
+      for (int i = 0; i < Nn; i++) {
+        const double v = a1[i] * qq[i] - a2[i] * qq1[i];
+        if (SY) z += sc[i] * (v - qq[i]);
+        qq1[i] = v; y += bf[i] * v;
+      }
     }
+    if (SY) sym[t] += z;
     std::swap(qq, qq1);
     seg[s0 + t] += k0 * y;
     if (s1 != s0) seg[s1 + t] += k1 * y;

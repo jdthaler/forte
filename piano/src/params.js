@@ -70,6 +70,8 @@ export const GROUPS = [
       { id: 'lossHigh', label: 'High-frequency loss', kind: 'model', min: 0.1, max: 10, def: 1, log: true, fmt: x, hint: '(Next note.)' },
       { id: 'torsionLoss', label: 'Torsional loss', kind: 'model', min: 0.2, max: 10, def: 3, log: true, fmt: x, hint: '(Next note.)' },
       { id: 'damper', label: 'Damper strength', kind: 'engine', min: 2, max: 80, def: 25, log: true, fmt: (v) => `${v.toFixed(0)} s⁻¹` },
+      { id: 'sympathy', label: 'Sympathetic resonance', kind: 'engine', min: 0, max: 1, step: 0.01, def: 0.25, fmt: (v) => (v === 0 ? 'off' : `${(v * 100).toFixed(0)} %`),
+        hint: 'Every string whose damper is up (the pedal, a held key, the undamped treble) rings along through the bridge. The share of the bridge\'s motion one string feels from another: 100 % if they all met it at one point.' },
     ],
   },
   {

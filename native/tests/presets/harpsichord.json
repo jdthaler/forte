@@ -27,6 +27,7 @@
         "detune": 1.5,
         "loss": 1,
         "damper": 1,
+        "sympathy": 0.25,
         "fmax": 10,
         "kc": true,
         "fullRange": false,

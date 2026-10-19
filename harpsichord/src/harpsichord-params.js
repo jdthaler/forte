@@ -79,6 +79,8 @@ export const GROUPS = [
         hint: 'Scales the air’s drag on the wire and its internal friction. Applies to new notes.' },
       { id: 'damper', label: 'Damper felt', min: 0.1, max: 4, def: 1, log: true, fmt: (v) => `× ${v.toFixed(2)} √(Tμ)`,
         hint: 'How lossy the damper cloth is, relative to the string’s wave impedance: at × 1 it soaks up what reaches it. Applies to new notes.' },
+      { id: 'sympathy', label: 'Sympathetic resonance', min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => (v === 0 ? 'off' : `${(v * 100).toFixed(0)} %`),
+        hint: 'While a key is held, its strings are free of their dampers (the 4′ too, plucked or not) and ring along through the bridge with the strings that sound. The share of the bridge\'s motion one string feels from another: 100 % if they all met it at one point.' },
       { id: 'fmax', label: 'Highest partial', min: 4, max: 16, def: 10, step: 0.5, fmt: (v) => `${v.toFixed(1)} kHz`,
         hint: 'Partials above this are left out (and at most 90 per string). Lower it if the CPU pill runs hot. Applies to new notes.' },
       { id: 'kc', label: 'Tension modulation (pitch glide)', type: 'checkbox', def: true,

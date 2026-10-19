@@ -80,13 +80,21 @@ export class PianoWasmEngine extends Base {
     if (P.maxModes !== undefined) Base.exports.piano_set_max_modes(this.e, P.maxModes);
     super.setParams(P);
   }
+  // A key's voice data ahead of its notes: its sympathetic string's partials come from it.
+  offer(data) {
+    const packed = data instanceof Float64Array ? data : packVoiceData(data), x = Base.exports;
+    const at = x.piano_offer_buffer(this.e, packed.length); // (may grow the memory: then take its buffer)
+    new Float64Array(x.memory.buffer, at, packed.length).set(packed);
+    x.piano_offer(this.e, packed.length);
+  }
+  // the page's { type: 'offering' } (it will offer every key: the engine builds none for the
+  // sympathetic strings) and { type: 'offer', data }
+  handle(m) {
+    if (m.type === 'offer') this.offer(m.data);
+    else if (m.type === 'offering') Base.exports.piano_offering(this.e);
+  }
   noteOn(key, velocity, data) {
-    if (data) {
-      const packed = data instanceof Float64Array ? data : packVoiceData(data), x = Base.exports;
-      const at = x.piano_offer_buffer(this.e, packed.length); // (may grow the memory: then take its buffer)
-      new Float64Array(x.memory.buffer, at, packed.length).set(packed);
-      x.piano_offer(this.e, packed.length);
-    }
+    if (data) this.offer(data);
     super.noteOn(key, velocity);
     const v = Base.exports.piano_last(this.e);
     return v ? new WasmVoice(this, v) : undefined;
@@ -97,6 +105,9 @@ export class PianoWasmEngine extends Base {
   }
   get byKey() { return new Map(this.voices.filter((v) => v.own).map((v) => [v.key, v])); }
   modeCount() { return Base.exports.piano_mode_count(this.e); }
+  // the sympathetic strings: key's group ({ size, energy, damped }), and the partials that last ran
+  sympathetic(key) { const x = Base.exports; return { size: x.piano_sym_size(this.e, key), energy: x.piano_sym_energy(this.e, key), damped: x.piano_sym_damped(this.e, key) > 0 }; }
+  sympatheticRunning() { return Base.exports.piano_sym_running(this.e); }
   stats() { return { modes: this.modeCount() }; } // the CPU pill shows the oscillators too
 }
 export const ready = () => PianoWasmEngine.ready();

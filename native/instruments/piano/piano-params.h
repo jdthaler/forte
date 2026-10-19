@@ -16,7 +16,7 @@
 namespace forte::piano {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { material, shape, aspect, roll, taper, gauge, lengthScale, winding, unisons, unisonDetune, polDetune, kc, strikePos, offset, hardness, feltExp, hammerMass, hammerWidth, hysteresis, unaCorda, bridge, bridgeH, lossLow, lossHigh, torsionLoss, damper, gainV, gainH, gainT, soundboard, room, venue, width, voicing, volume, maxFreq, count };
+enum : int { material, shape, aspect, roll, taper, gauge, lengthScale, winding, unisons, unisonDetune, polDetune, kc, strikePos, offset, hardness, feltExp, hammerMass, hammerWidth, hysteresis, unaCorda, bridge, bridgeH, lossLow, lossHigh, torsionLoss, damper, sympathy, gainV, gainH, gainT, soundboard, room, venue, width, voicing, volume, maxFreq, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -47,6 +47,7 @@ inline const FormatSegment kFormat_lossLow[] = {{9.999999999999998, "×", "", 1,
 inline const FormatSegment kFormat_lossHigh[] = {{9.999999999999998, "×", "", 1, 0, 2, false, false, false, false}, {kNoLimit, "×", "", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_torsionLoss[] = {{9.999999999999998, "×", "", 1, 0, 2, false, false, false, false}, {kNoLimit, "×", "", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_damper[] = {{kNoLimit, "", " s⁻¹", 1, 0, 0, false, false, false, false}};
+inline const FormatSegment kFormat_sympathy[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_gainV[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_gainH[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_gainT[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
@@ -87,6 +88,7 @@ inline const ParamInfo kParams[p::count] = {
   {"lossHigh", "High-frequency loss", "Damping & bridge", ParamKind::continuous, 0.1, 10, 1, 0, true, false, nullptr, 0, kFormat_lossHigh, 2},
   {"torsionLoss", "Torsional loss", "Damping & bridge", ParamKind::continuous, 0.2, 10, 3, 0, true, false, nullptr, 0, kFormat_torsionLoss, 2},
   {"damper", "Damper strength", "Damping & bridge", ParamKind::continuous, 2, 80, 25, 0, true, false, nullptr, 0, kFormat_damper, 1},
+  {"sympathy", "Sympathetic resonance", "Damping & bridge", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_sympathy, 2},
   {"gainV", "Vertical bridge force", "Output", ParamKind::continuous, 0, 1.5, 1, 0.01, false, false, nullptr, 0, kFormat_gainV, 1},
   {"gainH", "Horizontal bridge force", "Output", ParamKind::continuous, 0, 1.5, 0.35, 0.01, false, false, nullptr, 0, kFormat_gainH, 1},
   {"gainT", "Torsion pickup", "Output", ParamKind::continuous, 0, 2, 0.6, 0.01, false, false, nullptr, 0, kFormat_gainT, 1},
