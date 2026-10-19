@@ -63,8 +63,8 @@ class VibraphoneEngine : public Engine {
     std::array<bool, MAX_MODES> cut{}; // modes at or above 0.45 fs: left out, so they cannot alias
     double qb = 0, vb = 0, X = 0, vx = 0;
     // block parameters at the start (…) and end (…n) of the audio block
-    double M11 = 1, M12 = 0, M22 = 1, Ka = 1, R = 0, lvS = 0, cdisc = 0, tubeGain = 0;
-    double M11n = 1, M12n = 0, M22n = 1, Kan = 1, Rn = 0, lvSn = 0, cdiscn = 0, tubeGainn = 0;
+    double M11 = 1, M12 = 0, M22 = 1, Ka = 1, R = 0, lvS = 0, cdisc = 0, tubeGain = 0, Rd = 0;
+    double M11n = 1, M12n = 0, M22n = 1, Kan = 1, Rn = 0, lvSn = 0, cdiscn = 0, tubeGainn = 0, Rdn = 0;
     bool fresh = true;
     double K11 = 1, sig1 = 0, ws0 = 0, out0 = 0, compModes = 0;
     double cph = 1, sph = 0;

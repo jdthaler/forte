@@ -55,7 +55,7 @@ export const ready = () => VibraphoneWasmEngine.ready();
 // barTempScale, malletOf; bar.h: thickness), computed by the WebAssembly, and voiceData: a bar's
 // data packed for the engine (the page's noteData).
 const TUBE = ['a', 'S', 'Sb', 'Rb', 'delta0', 'lv'];
-const STATE = ['length', 'le', 'ma', 'Ka', 'mg', 'Sb', 'Rrad', 'Rwall', 'R', 'lvS', 'cd', 'M11', 'M12', 'M22'];
+const STATE = ['length', 'le', 'ma', 'Ka', 'mg', 'Sb', 'Rrad', 'Rwall', 'R', 'lvS', 'cd', 'M11', 'M12', 'M22', 'Rdisc'];
 const T_TUNE = 20;
 export async function wasmModel() {
   const x = await ready(), s = scratch(x);
