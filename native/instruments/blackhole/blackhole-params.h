@@ -30,6 +30,7 @@ inline const FormatSegment kFormat_inspiralOct[] = {{kNoLimit, "", " octaves bel
 inline const FormatSegment kFormat_tone[] = {{kNoLimit, "", " kHz", 0.001, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 
@@ -46,7 +47,7 @@ inline const ParamInfo kParams[p::count] = {
   {"releaseMute", "Key release mutes", "Listening", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"tone", "Tone (low-pass)", "Listening", ParamKind::continuous, 500, 20000, 14000, 0, true, true, nullptr, 0, kFormat_tone, 1},
   {"room", "Room", "Listening", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Listening", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Listening", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Listening", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 1},
 };
 

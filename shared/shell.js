@@ -16,7 +16,7 @@
 //   groups        parameter groups: [{ title, open?, params: [{ id, label, min, max, def, step?, log?,
 //                 fmt?, hint?, type?: 'select' | 'checkbox', options?: [[value, name]…], showIf?(P),
 //                 perform? }] }]   perform: true puts the control in Perform's strip above the keys
-//   presets       [{ name, p: { …overrides } }]
+//   presets       [{ name, p: { …overrides } }]   (and your own, and links: shared/user-presets.js)
 //   keep          param ids kept when switching presets (e.g. ['volume', 'room'])
 //   range         [lowest MIDI key, highest MIDI key]   (default [36, 96])
 //   compass       { keys: [lo, hi], param }: a historical compass inside `range`, the keys that play
@@ -49,6 +49,7 @@ import { createKeyboard } from './keyboard.js';
 import { trimGain } from './registry.js';
 import { controlOwns, focusedByPointer } from './focus.js';
 import { startMIDI, resumeMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto } from './midi.js';
+import { attachPresets } from './user-presets.js';
 // after a change, a control picked with the pointer lets go of the focus (the keys go back to the
 // instrument); one reached with Tab keeps it, so the next Space or arrow works it again
 const unfocus = (el) => { if (focusedByPointer(el)) el.blur(); };
@@ -397,6 +398,8 @@ export function createShell(cfg) {
     });
   }
   $('#reset')?.addEventListener('click', () => { shell.setAll({ ...DEFAULTS }); if ($('#preset')) $('#preset').value = ''; });
+  // your own presets and shared links, in the same menu (shared/user-presets.js)
+  shell.presets = attachPresets({ instrument: cfg, get: () => shell.P, set: (v) => shell.setAll({ ...shell.P, ...v }), toast });
   $('#start')?.addEventListener('click', (e) => { shell.startAudio(); e.currentTarget.blur(); });
   $('#midi-btn')?.addEventListener('click', (e) => { initMIDI(); e.currentTarget.blur(); });
   resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click

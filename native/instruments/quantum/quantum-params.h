@@ -21,6 +21,7 @@ enum : int { potential, eta, lock, bpm, beats, nbar, sigma, detector, T1, dephas
 
 constexpr double kNoLimit = INFINITY;
 inline const char *const kChoices_potential[] = {"Infinite square well (Eₙ ∝ n²)", "Morse molecule (anharmonic)", "Hydrogen Rydberg atom (Eₙ ∝ −1/n²)", "Quantum bouncer (gravity + mirror)", "Harmonic oscillator (control)"};
+inline const char *const kKeys_potential[] = {"box", "morse", "hydrogen", "bouncer", "harmonic"};
 namespace potential_ { enum : int { box, morse, hydrogen, bouncer, harmonic }; }
 inline const FormatSegment kFormat_eta[] = {{kNoLimit, "E = ", " % of D", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_bpm[] = {{kNoLimit, "", " BPM", 1, 0, 0, false, false, false, false}};
@@ -28,29 +29,31 @@ inline const FormatSegment kFormat_beats[] = {{kNoLimit, "", "", 1, 0, 1, false,
 inline const FormatSegment kFormat_nbar[] = {{9.999999999999998, "", "", 1, 0, 1, false, false, false, false}, {kNoLimit, "", "", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_sigma[] = {{kNoLimit, "", " levels", 1, 0, 2, false, false, false, false}};
 inline const char *const kChoices_detector[] = {"Electrode: dipole ⟨x⟩ (mellow)", "Coil: current ⟨ẋ⟩", "Antenna: radiated field ⟨ẍ⟩ (bright)"};
+inline const char *const kKeys_detector[] = {"x", "v", "a"};
 namespace detector_ { enum : int { x, v, a }; }
 inline const FormatSegment kFormat_T1[] = {{0.9999999999999999, "", " ms", 1000, 0, 0, false, false, false, false}, {9.999999999999998, "", " s", 1, 0, 2, false, false, false, false}, {kNoLimit, "", " s", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_dephase[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " s⁻¹", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_release[] = {{0.9999999999999999, "", " ms", 1000, 0, 0, false, false, false, false}, {kNoLimit, "", " s", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
 inline const ParamInfo kParams[p::count] = {
-  {"potential", "Potential", "Well", ParamKind::choice, 0, 4, 0, 1, false, true, kChoices_potential, 5, nullptr, 0},
+  {"potential", "Potential", "Well", ParamKind::choice, 0, 4, 0, 1, false, true, kChoices_potential, 5, nullptr, 0, kKeys_potential},
   {"eta", "Height in the Morse well", "Well", ParamKind::continuous, 0.05, 0.95, 0.5, 0.01, false, false, nullptr, 0, kFormat_eta, 1},
   {"lock", "Lock the revival time to a tempo", "Wavepacket", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"bpm", "Tempo", "Wavepacket", ParamKind::continuous, 40, 200, 90, 1, false, true, nullptr, 0, kFormat_bpm, 1},
   {"beats", "Revival time T_rev", "Wavepacket", ParamKind::continuous, 0.5, 8, 2, 0.25, false, true, nullptr, 0, kFormat_beats, 1},
   {"nbar", "Mean level n̄", "Wavepacket", ParamKind::continuous, 3, 1000, 40, 0, true, false, nullptr, 0, kFormat_nbar, 2},
   {"sigma", "Level spread σₙ", "Wavepacket", ParamKind::continuous, 0.4, 4, 2, 0.01, true, false, nullptr, 0, kFormat_sigma, 1},
-  {"detector", "Detector", "Wavepacket", ParamKind::choice, 0, 2, 2, 1, false, false, kChoices_detector, 3, nullptr, 0},
+  {"detector", "Detector", "Wavepacket", ParamKind::choice, 0, 2, 2, 1, false, false, kChoices_detector, 3, nullptr, 0, kKeys_detector},
   {"T1", "Lifetime T₁", "Decoherence", ParamKind::continuous, 0.2, 30, 4, 0, true, false, nullptr, 0, kFormat_T1, 3},
   {"dephase", "Pure dephasing rate Γ_φ = 1/T_φ", "Decoherence", ParamKind::continuous, 0, 10, 0, 0.01, false, true, nullptr, 0, kFormat_dephase, 2},
   {"release", "Release quench", "Decoherence", ParamKind::continuous, 0.02, 2, 0.3, 0, true, false, nullptr, 0, kFormat_release, 2},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 

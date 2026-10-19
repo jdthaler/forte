@@ -31,6 +31,7 @@ inline const FormatSegment kFormat_hf[] = {{kNoLimit, "", " s⁻¹·(f/kHz)²", 
 inline const FormatSegment kFormat_stiff[] = {{kNoLimit, "× ", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_yarn[] = {{kNoLimit, "", " s⁻¹", 1, 0, 0, false, false, false, false}};
 inline const char *const kChoices_pickup[] = {"A · lower (centre) pickup", "B · upper (bridge) pickup", "A + B in phase", "A − B out of phase"};
+inline const char *const kKeys_pickup[] = {"lower", "upper", "sum", "diff"};
 namespace pickup_ { enum : int { lower, upper, sum, diff }; }
 inline const FormatSegment kFormat_xLower[] = {{kNoLimit, "", " cm", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_xUpper[] = {{kNoLimit, "", " cm", 1, 0, 1, false, false, false, false}};
@@ -40,6 +41,7 @@ inline const FormatSegment kFormat_mute[] = {{kNoLimit, "", " N/m", 400, 0, 0, f
 inline const FormatSegment kFormat_muteX[] = {{kNoLimit, "", " mm", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
@@ -56,7 +58,7 @@ inline const ParamInfo kParams[p::count] = {
   {"kc", "Tension modulation (pitch glide)", "String", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"yarn", "Yarn damping", "String", ParamKind::continuous, 20, 8000, 2000, 0, true, false, nullptr, 0, kFormat_yarn, 1},
   {"fullRange", "Full range (A0–C8)", "String", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
-  {"pickup", "Pickup selector", "Pickups and tone", ParamKind::choice, 0, 3, 2, 1, false, true, kChoices_pickup, 4, nullptr, 0},
+  {"pickup", "Pickup selector", "Pickups and tone", ParamKind::choice, 0, 3, 2, 1, false, true, kChoices_pickup, 4, nullptr, 0, kKeys_pickup},
   {"xLower", "Lower pickup, from tailpiece (at C4)", "Pickups and tone", ParamKind::continuous, 1, 30, 10.3, 0.1, false, false, nullptr, 0, kFormat_xLower, 1},
   {"xUpper", "Upper pickup, from tailpiece (at C4)", "Pickups and tone", ParamKind::continuous, 0.5, 15, 2.7, 0.1, false, false, nullptr, 0, kFormat_xUpper, 1},
   {"field", "Pickup field depth", "Pickups and tone", ParamKind::continuous, 0.5, 10, 2, 0, true, false, nullptr, 0, kFormat_field, 2},
@@ -69,7 +71,7 @@ inline const ParamInfo kParams[p::count] = {
   {"mute", "Felt pressure", "Mute bar", ParamKind::continuous, 0.05, 1, 0.6, 0.01, false, false, nullptr, 0, kFormat_mute, 1},
   {"muteX", "Felt position", "Mute bar", ParamKind::continuous, 3, 60, 14, 0.5, false, false, nullptr, 0, kFormat_muteX, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.2, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 
