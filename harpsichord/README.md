@@ -173,6 +173,23 @@ The release force grows as √EI. So a stiffer plectrum lets go later, at a
 larger force and lift, and the time from touch to release is (u + w)/V for a
 jack speed V. The tests check all three.
 
+**Tension modulation.** At release the string is lifted 2–4 mm at its
+plucking point, near the nut, and that stretches it: its tension rises by
+ΔT = (EA/2L)·∫u_x² dx (Kirchhoff 1883; Carrier 1945), and every partial
+goes sharp by about ΔT/2T, then settles as the note decays. In modal form
+∫u_x² = Σ (kₙ²/μ) qₙ², and kₙ²/μ is also how much ωₙ² rises per newton, so
+ΔT moves every partial each sample through its recursion coefficient (to
+first order, held below T/10 so the step stays stable). A short string
+plucked a few centimetres from its nut stretches the most: on the back 8′,
+c¹ starts about 5 ¢ sharp and c³ about 25 ¢, each within a fraction of a
+cent after a second, and FF about 9 ¢, which its long decay carries for
+seconds. The start agrees with the stretch the slow-motion pluck leaves in
+the string to within the test's 50 % (tested). Since the plectrum lets go
+where it lets go, the glide hardly depends on touch. Once ΔT has fallen
+below 10⁻⁵ T (a hundredth of a cent) the string runs linear again until it
+is plucked; while it glides it costs about 30 % more. *Tension modulation*
+under *Strings and tuning* switches it off.
+
 ### 5. Voicing
 
 The **Voicing** knob sets the plectrum's tip stiffness 1/c(ℓ) (2500 N/m by
@@ -414,7 +431,7 @@ harpsichord/src/harpsichord-params.js      parameters and presets (and the model
 harpsichord/src/harpsichord-main.js        page wiring and views
 harpsichord/src/harpsichord-wasm.js        the engine and model as WebAssembly (harpsichord/wasm/harpsichord.wasm), for the page and the tests
 native/instruments/harpsichord/            the physics in C++: model (scale, tuning, losses, registers, voicing, soundboard), plectrum (a cantilever; the quasi-static release), string (modal, with implicit point contacts), engine, generated tables, reference
-test/harpsichord-tests.mjs                 node test/harpsichord-tests.mjs (21 tests, ~25 s)
+test/harpsichord-tests.mjs                 node test/harpsichord-tests.mjs (22 tests, ~30 s)
 tools/render-harpsichord.mjs               node tools/render-harpsichord.mjs → examples/harpsichord/
 ```
 
@@ -437,8 +454,11 @@ tools/render-harpsichord.mjs               node tools/render-harpsichord.mjs →
   overstate the deflection by about 10 % against the elastica (Bisshopp
   and Drucker 1945); Perng et al. (2010, 2011) model the large deflection
   and the tip's shape. The friction coefficients and tapers are estimates.
-* **No tension modulation.** At ff the string's stretch raises its pitch by
-  a few cents at the attack; that glide is left out.
+* **No longitudinal modes.** Tension modulation gives the pitch glide, but
+  its stretch only retunes the transverse partials: the longitudinal modes
+  it drives, and the phantom partials at sums of transverse frequencies,
+  are left out. The release lift that sets the glide's size is the plectrum
+  model's, not measured on an instrument.
 * **No sympathetic resonance.** Strings do not drive one another through
   the bridge, so the unplucked choir of a held key stays silent.
 * **The soundboard is an equivalent plate.** It is a rectangle with
@@ -479,6 +499,11 @@ tools/render-harpsichord.mjs               node tools/render-harpsichord.mjs →
   [doi:10.1017/9781316659359.003](https://doi.org/10.1017/9781316659359.003).
 
 **The physics.**
+- G. F. Carrier (1945). "On the non-linear vibration problem of the
+  elastic string." *Q. Appl. Math.* 3(2), 157–165.
+  [doi:10.1090/qam/12351](https://doi.org/10.1090/qam/12351). Tension
+  modulation, after G. Kirchhoff (1883), *Vorlesungen über Mechanik*,
+  Teubner, Leipzig.
 - H. Fletcher (1964). "Normal vibration frequencies of a stiff piano
   string." *J. Acoust. Soc. Am.* 36(1), 203–209.
   [doi:10.1121/1.1918933](https://doi.org/10.1121/1.1918933).

@@ -19,14 +19,14 @@ function messages(m) {
 const Base = wasmEngine(BUILD, { messages });
 
 // Voice data as the C++ takes it (piano-model.h, packVoiceData): version, key, n, unisons, the
-// hammer's mass, K, p, alpha, outV, outH, hasDamper, then freq, sigma, w, cv, ch, ct, famId,
-// uni, idx. A voice data object's version (a string, or a number) becomes a number.
-const HEAD = 11, ARRAYS = ['freq', 'sigma', 'w', 'cv', 'ch', 'ct', 'famId', 'uni', 'idx'];
+// hammer's mass, K, p, alpha, outV, outH, hasDamper, T, kc, then freq, sigma, w, cv, ch, ct, g,
+// famId, uni, idx. A voice data object's version (a string, or a number) becomes a number.
+const HEAD = 13, ARRAYS = ['freq', 'sigma', 'w', 'cv', 'ch', 'ct', 'g', 'famId', 'uni', 'idx'];
 const versions = new Map();
 const versionId = (v) => { if (!versions.has(v)) versions.set(v, versions.size + 1); return versions.get(v); };
 export function packVoiceData(d) {
   const n = d.n, out = new Float64Array(HEAD + ARRAYS.length * n);
-  out.set([versionId(d.version), d.key, n, d.unisons, d.hammer.mass, d.hammer.K, d.hammer.p, d.hammer.alpha, d.outV, d.outH, d.hasDamper ? 1 : 0]);
+  out.set([versionId(d.version), d.key, n, d.unisons, d.hammer.mass, d.hammer.K, d.hammer.p, d.hammer.alpha, d.outV, d.outH, d.hasDamper ? 1 : 0, d.T, d.kc]);
   ARRAYS.forEach((k, i) => out.set(d[k], HEAD + i * n));
   return out;
 }
@@ -34,10 +34,10 @@ export function unpackVoiceData(a) {
   const n = a[2], at = (i) => a.subarray(HEAD + i * n, HEAD + (i + 1) * n);
   return {
     version: a[0], key: a[1], n, unisons: a[3],
-    freq: at(0).slice(), sigma: at(1).slice(), w: at(2).slice(), cv: at(3).slice(), ch: at(4).slice(), ct: at(5).slice(),
-    famId: Uint8Array.from(at(6)), uni: Uint8Array.from(at(7)), idx: Uint16Array.from(at(8)),
+    freq: at(0).slice(), sigma: at(1).slice(), w: at(2).slice(), cv: at(3).slice(), ch: at(4).slice(), ct: at(5).slice(), g: at(6).slice(),
+    famId: Uint8Array.from(at(7)), uni: Uint8Array.from(at(8)), idx: Uint16Array.from(at(9)),
     hammer: { mass: a[4], K: a[5], p: a[6], alpha: a[7] },
-    outV: a[8], outH: a[9], hasDamper: a[10] > 0,
+    outV: a[8], outH: a[9], hasDamper: a[10] > 0, T: a[11], kc: a[12],
   };
 }
 

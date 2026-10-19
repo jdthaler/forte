@@ -222,6 +222,15 @@ static Family ritzFamily(int type, const Eigen_ &e, int nb, int nKeep, double L,
   return f;
 }
 
+// ∫φ_n′² dx of a mass-normalised bending mode: its share of the stretch per unit q², and
+// ∂ω²/∂T (the tension's term in its stiffness, T·∫φ′²)
+static double stretchWeight(const Family &f, int n, double L) {
+  double g = 0;
+  if (f.ritz) for (int j = 0; j < f.nb; j++) { const double kk = ((j + 1) * PI) / L, c = f.coef[(size_t)n * f.nb + j]; g += c * c * kk * kk; }
+  else { const double kk = ((n + 1) * PI) / L; g = f.norm[n] * f.norm[n] * kk * kk; }
+  return (g * L) / 2;
+}
+
 // ---- per-key model ---------------------------------------------------------------------------
 
 KeyModel computeKeyModel(int m, const double *P, double fs) {
@@ -388,7 +397,7 @@ VoiceData buildVoiceData(const KeyModel &model, const double *P, uint64_t versio
   for (int u = 0; u < nUse; u++) N += use[u].fam->n;
   N *= nu;
   d.version = version; d.key = model.key; d.n = N; d.unisons = nu;
-  d.freq.resize(N); d.sigma.resize(N); d.w.resize(N); d.cv.resize(N); d.ch.resize(N); d.ct.resize(N);
+  d.freq.resize(N); d.sigma.resize(N); d.w.resize(N); d.cv.resize(N); d.ch.resize(N); d.ct.resize(N); d.g.resize(N);
   d.famId.resize(N); d.uni.resize(N); d.idx.resize(N);
   int i = 0;
   for (int s = 0; s < nu; s++) {
@@ -405,6 +414,7 @@ VoiceData buildVoiceData(const KeyModel &model, const double *P, uint64_t versio
         d.cv[i] = u.v * sGv * br;
         d.ch[i] = u.h * sGh * br;
         d.ct[i] = u.t * sGv * br;
+        d.g[i] = u.id == 2 ? 0 : stretchWeight(f, n, model.L);
         d.famId[i] = (uint8_t)u.id; d.uni[i] = (uint8_t)s; d.idx[i] = (uint16_t)n;
       }
     }
@@ -419,33 +429,42 @@ VoiceData buildVoiceData(const KeyModel &model, const double *P, uint64_t versio
   d.hammer = {hd.mass * P[p::hammerMass] * nu, K, pe, P[p::hysteresis]};
   d.outV = sGv * voice; d.outH = sGh * voice;
   d.hasDamper = model.key <= 88;
+  // the core stretches as one spring (the winding carries no load): ΔT = ½∫u_x² / ∫dx/EA
+  const double E = MATERIALS[model.material].E;
+  double compliance = 0;
+  if (model.uniform) compliance = model.L / (E * model.sec.A);
+  else {
+    const int Q = 64;
+    for (int j = 0; j < Q; j++) compliance += model.L / Q / (E * model.secAt((j + 0.5) * model.L / Q).A);
+  }
+  d.T = model.T; d.kc = 0.5 / compliance;
   return d;
 }
 
 int packVoiceData(const VoiceData &d, double *out) {
   const double head[PACK_HEAD] = {(double)d.version, (double)d.key, (double)d.n, (double)d.unisons, d.hammer.mass, d.hammer.K, d.hammer.p, d.hammer.alpha,
-                                  d.outV, d.outH, d.hasDamper ? 1.0 : 0.0};
+                                  d.outV, d.outH, d.hasDamper ? 1.0 : 0.0, d.T, d.kc};
   std::memcpy(out, head, sizeof head);
   double *o = out + PACK_HEAD;
   const int n = d.n;
-  for (const std::vector<double> *a : {&d.freq, &d.sigma, &d.w, &d.cv, &d.ch, &d.ct}) { std::copy(a->begin(), a->end(), o); o += n; }
+  for (const std::vector<double> *a : {&d.freq, &d.sigma, &d.w, &d.cv, &d.ch, &d.ct, &d.g}) { std::copy(a->begin(), a->end(), o); o += n; }
   for (int i = 0; i < n; i++) o[i] = d.famId[i];
   o += n;
   for (int i = 0; i < n; i++) o[i] = d.uni[i];
   o += n;
   for (int i = 0; i < n; i++) o[i] = d.idx[i];
-  return PACK_HEAD + 9 * n;
+  return PACK_HEAD + PACK_ARRAYS * n;
 }
 
 bool unpackVoiceData(const double *in, int count, VoiceData &d) {
   if (count < PACK_HEAD) return false;
   const int n = (int)in[2];
-  if (n < 0 || n > MAX_N || count < PACK_HEAD + 9 * n) return false;
+  if (n < 0 || n > MAX_N || count < PACK_HEAD + PACK_ARRAYS * n) return false;
   d.version = (uint64_t)in[0]; d.key = (int)in[1]; d.n = n; d.unisons = std::min(3, std::max(1, (int)in[3]));
   d.hammer = {in[4], in[5], in[6], in[7]};
-  d.outV = in[8]; d.outH = in[9]; d.hasDamper = in[10] != 0;
+  d.outV = in[8]; d.outH = in[9]; d.hasDamper = in[10] != 0; d.T = in[11]; d.kc = in[12];
   const double *o = in + PACK_HEAD;
-  for (std::vector<double> *a : {&d.freq, &d.sigma, &d.w, &d.cv, &d.ch, &d.ct}) { a->assign(o, o + n); o += n; }
+  for (std::vector<double> *a : {&d.freq, &d.sigma, &d.w, &d.cv, &d.ch, &d.ct, &d.g}) { a->assign(o, o + n); o += n; }
   d.famId.resize(n); d.uni.resize(n); d.idx.resize(n);
   for (int i = 0; i < n; i++) d.famId[i] = (uint8_t)o[i];
   o += n;
@@ -457,7 +476,7 @@ bool unpackVoiceData(const double *in, int count, VoiceData &d) {
 
 bool isModelParam(int i) {
   switch (i) {
-    case p::unaCorda: case p::damper: case p::gainV: case p::gainH: case p::gainT:
+    case p::unaCorda: case p::damper: case p::kc: case p::gainV: case p::gainH: case p::gainT:
     case p::soundboard: case p::room: case p::width: case p::volume: return false;
     default: return i >= 0 && i < p::count;
   }

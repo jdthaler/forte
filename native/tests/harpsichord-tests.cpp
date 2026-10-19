@@ -160,6 +160,7 @@ TEST("harpsichord: a key sounds on pitch (its strings built on the worker thread
   const double fs = 48000;
   auto P = solo(ROW_BACK);
   P[p::soundboard] = 0;
+  P[p::kc] = 0; // the linear string's tuning (tension modulation starts a pluck sharp)
   SpscQueue<Message> q(1024);
   auto engine = std::make_unique<HarpsichordEngine>(fs); // big for a WebAssembly stack
   HarpsichordEngine &e = *engine;

@@ -112,6 +112,22 @@ node near the hammer, the 8th most. The action needs about 60 ms to bring
 the hammer back for another blow, so a key repeated faster than that (16
 times a second) gets no new blow.
 
+**Tension modulation.** A hard blow stretches the string, so its tension
+rises by ΔT = (E A_core/2L)·∫y_x² dx (Kirchhoff 1883; Carrier 1945) and
+every partial goes sharp, then glides back as the note decays. In modal
+form ∫y_x² = Σ (kₙ²/μ) qₙ² over both polarisations, and kₙ²/μ is also how
+much ωₙ² rises per newton, so each unison string's ΔT moves all of its
+partials, each sample, through its recursion coefficient (to first order,
+with ΔT held below T/10 so the step stays stable). Only the steel core
+stretches; the copper winding adds mass, not stiffness. These short, stiff
+strings stretch a lot. On one string at full velocity (6 m/s), E1 starts
+45 ¢ sharp, is 25 ¢ sharp after half a second and 6 ¢ after 1.8 s; E2
+starts 35 ¢ sharp; C4 18 ¢. It goes with the square of the blow: at
+velocity 0.6, E2 starts 3 ¢ sharp and C4 1 ¢, and at 0.2 E2 moves 0.2 ¢
+(tested). Once ΔT has fallen below 10⁻⁵ T (a hundredth of a cent) the voice
+runs linear again until the next blow; while it glides it costs about 40 %
+more. *Tension modulation* under *Strings* switches it off.
+
 **The bridge, two polarisations, Weinreich.** The string pushes on the
 bridge with
 
@@ -300,7 +316,7 @@ displacement and at the transducer. *Why the piezo is bright* plots those
 two (and the microphone's) side by side.
 
 Regenerate the demos with `node tools/render-grand.mjs`. Run the tests with
-`node test/grand-tests.mjs` (31 tests, ~21 s).
+`node test/grand-tests.mjs` (33 tests, ~30 s).
 
 ## Files
 
@@ -316,10 +332,11 @@ tools/render-grand.mjs               node tools/render-grand.mjs → examples/gr
 
 ## Simplifications
 
-* **Linear strings.** There is no tension modulation, so no pitch glide on
-  hard blows, no phantom partials and no longitudinal modes. With short,
-  stiff, heavily wound strings these would matter more than on a concert
-  grand.
+* **No longitudinal modes.** Tension modulation gives the pitch glide, but
+  its stretch only retunes the transverse modes: the longitudinal modes it
+  drives, and the phantom partials at sums of transverse frequencies, are
+  left out. With short, stiff, heavily wound strings these would matter
+  more than on a concert grand.
 * **The frame's admittance is a guess** (5·10⁻⁵ s/kg, frequency-independent,
   real). We have found no measurement of the CP-70's bridge mobility. The
   piezo's capacitance (10 nF) and the preamp's EQ corners are typical
@@ -389,6 +406,11 @@ The string, hammer and coupled-string literature is listed under the
 [Ribbon Piano](../piano/README.md#prior-art-and-references). The papers
 this page draws on directly:
 
+* Kirchhoff, G. (1883). *Vorlesungen über Mechanik*. Teubner, Leipzig, and
+  Carrier, G. F. (1945). "On the non-linear vibration problem of the
+  elastic string." *Q. Appl. Math.* 3(2), 157–165.
+  [doi:10.1090/qam/12351](https://doi.org/10.1090/qam/12351). Tension
+  modulation.
 * Railsback, O. L. (1938). "Scale temperament as applied to piano tuning."
   *J. Acoust. Soc. Am.* 9, 274 (abstract).
   [doi:10.1121/1.1902056](https://doi.org/10.1121/1.1902056). The

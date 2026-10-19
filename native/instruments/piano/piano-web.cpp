@@ -41,7 +41,7 @@ FORTE_EXPORT int piano_key(int key, double fs) {
   c.count = 0;
   if (!c.model.ok) return 0;
   const VoiceData d = buildVoiceData(c.model, P, v);
-  c.packed.resize(PACK_HEAD + 9 * (size_t)d.n);
+  c.packed.resize(PACK_HEAD + PACK_ARRAYS * (size_t)d.n);
   c.count = packVoiceData(d, c.packed.data());
   return 1;
 }

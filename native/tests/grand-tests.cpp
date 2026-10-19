@@ -110,6 +110,7 @@ TEST("grand: a struck C4 sounds on its stretched pitch, its key built on the wor
   const double fs = 48000;
   auto e = std::make_unique<GrandEngine>(fs);
   auto P = defaults();
+  P[p::kc] = 0; // the linear string's tuning (tension modulation starts a blow sharp)
   e->setParams(P.data());
   waitFor(*e, 60);
   e->noteOn(60, 0.7);

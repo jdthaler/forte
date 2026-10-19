@@ -138,6 +138,7 @@ console.log('engine');
 function render(key, params, seconds, vel = 2.5) {
   const { model: m, data: vd, packed } = keyModel(key, params, FS);
   const eng = new PianoEngine(FS);
+  eng.setParams(params);
   const n = Math.round(seconds * FS), L = new Float32Array(n), R = new Float32Array(n);
   const bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
   const v = eng.noteOn(key, vel, packed);
@@ -181,7 +182,8 @@ function peakFreqNear(x, f) {
 const cents = (a, b) => 1200 * Math.log2(a / b);
 
 test('C4 strike: finite, plausible contact time, in tune', () => {
-  const r = render(60, P(), 1.5);
+  // tuning is checked on the linear string (tension modulation starts a hard note sharp: below)
+  const r = render(60, P({ kc: false }), 1.5);
   let pk = 0;
   for (const s of r.L) { assert.ok(Number.isFinite(s)); pk = Math.max(pk, Math.abs(s)); }
   assert.ok(pk > 1e-3 && pk < 5, `peak ${pk}`);
@@ -190,15 +192,15 @@ test('C4 strike: finite, plausible contact time, in tune', () => {
   const c2 = cents(peakFreqNear(r.L.subarray(4800, 4800 + 32768), keyFreq(60)), keyFreq(60));
   assert.ok(Math.abs(c2) < 0.4, `${c2} ¢`);
   // one string: the engine reproduces the model's tuning to a few hundredths of a cent
-  const one = render(60, P({ unisons: 1 }), 1.5);
+  const one = render(60, P({ unisons: 1, kc: false }), 1.5);
   const c1 = cents(peakFreqNear(one.L.subarray(4800, 4800 + 32768), keyFreq(60)), keyFreq(60));
   assert.ok(Math.abs(c1) < 0.05, `${c1} ¢`);
   console.log(`        peak ${pk.toFixed(3)}, contact ${r.contactMs.toFixed(2)} ms, Fmax ${r.v.Fmax.toFixed(1)} N, modes ${r.vd.n}; pitch ${c2.toFixed(3)} ¢ (one string ${c1.toFixed(3)} ¢)`);
 });
 
 test('bridge losses: measured decay of partials n = 1…30 is G(T + EIk²)/L', () => {
-  // one string, internal losses off: every partial decays only into the bridge
-  const p = P({ unisons: 1, lossLow: 1e-6, lossHigh: 1e-6, bridge: 2 });
+  // one string, internal losses off, linear: every partial decays only into the bridge
+  const p = P({ unisons: 1, lossLow: 1e-6, lossHigh: 1e-6, bridge: 2, kc: false });
   const r = render(60, p, 2.6);
   const E = MATERIALS.steel.E, I = r.m.sec.I1, W = Math.round(0.2 * FS), t1 = Math.round(0.3 * FS), t2 = Math.round(2.3 * FS);
   const rows = [];
@@ -210,6 +212,24 @@ test('bridge losses: measured decay of partials n = 1…30 is G(T + EIk²)/L', (
     rows.push(`n=${n} ${(100 * (sigma / expect - 1)).toFixed(2)} %`);
   }
   console.log(`        σ measured vs closed form: ${rows.join(', ')}`);
+});
+
+test('tension modulation: a hard blow starts sharp and glides down; a soft one barely moves', () => {
+  // the stretch weights are ∂ω²/∂T: k²/μ for a uniform string's sine modes; ΔT = (EA/2L)∫u_x²
+  const vd = voiceData(48, P()), m = computeKeyModel(48, P(), FS);
+  const mu = m.info.mu;
+  for (const n of [1, 7, 30]) { const kk = (n * Math.PI) / m.L; assert.ok(rel(vd.g[n - 1], (kk * kk) / mu) < 1e-9, `g${n}`); }
+  assert.ok(rel(vd.kc, (MATERIALS.steel.E * m.sec.A) / (2 * m.L)) < 1e-9, `kc ${vd.kc}`);
+  // C3, one string: the second partial's pitch with the stretch, re without
+  const shift = (vel, t) => {
+    const at = (kc) => { const r = render(48, P({ unisons: 1, kc }), 2.2, vel); return peakFreqNear(r.L.subarray(Math.round(t * FS), Math.round(t * FS) + 8192), 2 * keyFreq(48)); };
+    return cents(at(true), at(false));
+  };
+  const hard = shift(5, 0.02), late = shift(5, 1.8), soft = shift(0.5, 0.02);
+  console.log(`        C3 partial 2 at 5 m/s: +${hard.toFixed(2)} ¢ at the start, +${late.toFixed(2)} ¢ after 1.8 s; at 0.5 m/s +${soft.toFixed(2)} ¢`);
+  assert.ok(hard > 2 && hard < 15, `hard ${hard}`);
+  assert.ok(late < hard / 4, `late ${late}`);
+  assert.ok(Math.abs(soft) < 0.3, `soft ${soft}`);
 });
 
 test('bridge coupling gives double decay with detuned unisons', () => {

@@ -104,7 +104,7 @@ default in the existing presets, or would change what an existing knob means.
 
 | Idea | Size | Notes |
 |------|------|-------|
-| Tension modulation on the Ribbon Piano, Electric Grand and Harpsichord | M | **Before 1.0.** Pitch glide on hard blows; on the piano, longitudinal modes and phantom partials in the bass. The Clavier already has it. |
+| Tension modulation on the Ribbon Piano, Electric Grand and Harpsichord | M | Done, for the next release: the pitch glide (Kirchhoff–Carrier) on all three, with a *Tension modulation* switch. Still open: the longitudinal modes and phantom partials it would drive in the piano bass. |
 | Sympathetic resonance on the Ribbon Piano, Electric Grand and Harpsichord | M | **Before 1.0.** Undamped strings ring along through the bridge. Costs CPU. |
 | The Tonewheel Organ's key scaling, preamp response and computed tonewheel waveform | S–M | Done, for the next release: the B-3's resistance wires, wheel levels and filters, the swell pedal's shut plate, and a waveform from the tooth and pickup (*Tooth relief* replaces *Wheel harmonics*). |
 | Companion modes on the Gong Keyboard | M | **Before 1.0.** Beating, drifting nodal lines and travelling waves. Doubles the modes. |

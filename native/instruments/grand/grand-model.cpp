@@ -346,7 +346,7 @@ KeyModel keyModel(int m, const ModelParams &P, const BoardModel *board, double f
   }
 
   const int np = (int)d.partials.size(), N = 2 * ns * np;
-  d.freq.resize(N); d.sigma.resize(N); d.w.resize(N); d.c.resize(N); d.bf.resize(N); d.damp.resize(N); d.str.resize(N); d.idx.resize(N);
+  d.freq.resize(N); d.sigma.resize(N); d.w.resize(N); d.c.resize(N); d.bf.resize(N); d.damp.resize(N); d.g.resize(N); d.str.resize(N); d.idx.resize(N);
   int i = 0;
   for (int pol = 0; pol < 2; pol++) {
     for (const Partial &p : d.partials) {
@@ -355,7 +355,7 @@ KeyModel keyModel(int m, const ModelParams &P, const BoardModel *board, double f
         d.freq[i] = f; d.sigma[i] = p.sigInt;
         d.w[i] = ((pol ? sa : ca) * p.phiH) / ns;
         d.c[i] = (std::sqrt(pol ? p.GH : p.GV) * p.b) / w;
-        d.bf[i] = p.b; d.damp[i] = p.damp; d.str[i] = (uint8_t)s; d.idx[i] = (uint16_t)p.n;
+        d.bf[i] = p.b; d.damp[i] = p.damp; d.g[i] = (p.k * p.k) / S.mu; d.str[i] = (uint8_t)s; d.idx[i] = (uint16_t)p.n;
         i++;
       }
     }
@@ -363,6 +363,7 @@ KeyModel keyModel(int m, const ModelParams &P, const BoardModel *board, double f
   d.key = m; d.S = S; d.ns = ns; d.det = det; d.seg = seg; d.beta = beta; d.xh = xh; d.wH = wH; d.xd = xd;
   d.hammer = {hd.mass * P.hammerMass * ns, hd.K * P.hardness * ns, hd.p, 5e-5};
   d.hasDamper = m <= 88;
+  d.kc = (STEEL.E * (S.muCore / STEEL.rho)) / (2 * S.L); // the core carries the stretch; the winding only adds mass
   d.n = N; d.nV = ns * np;
   return d;
 }

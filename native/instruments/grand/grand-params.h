@@ -16,7 +16,7 @@
 namespace forte::grand {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { hardness, strike, damper, scale, stringing, detune, stiffness, stretch, loss, mount, gFrame, boardH, tilt, hRatio, kH, listen, pickH, rIn, bass, mid, treble, maxFreq, room, venue, volume, count };
+enum : int { hardness, strike, damper, scale, stringing, detune, stiffness, stretch, loss, kc, mount, gFrame, boardH, tilt, hRatio, kH, listen, pickH, rIn, bass, mid, treble, maxFreq, room, venue, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -59,6 +59,7 @@ inline const ParamInfo kParams[p::count] = {
   {"stiffness", "Wire bending stiffness", "Strings", ParamKind::continuous, 0, 4, 1, 0.01, false, false, nullptr, 0, kFormat_stiffness, 2},
   {"stretch", "Stretch tuning", "Strings", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"loss", "String losses", "Strings", ParamKind::continuous, 0.25, 4, 1, 0, true, false, nullptr, 0, kFormat_loss, 1},
+  {"kc", "Tension modulation (pitch glide)", "Strings", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"mount", "Bridge mounted on", "Bridge", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_mount, 2, nullptr, 0},
   {"gFrame", "Frame admittance", "Bridge", ParamKind::continuous, 0.000001, 0.003, 0.00005, 0, true, false, nullptr, 0, kFormat_gFrame, 7},
   {"boardH", "Soundboard thickness", "Bridge", ParamKind::continuous, 5, 16, 9, 0.1, false, false, nullptr, 0, kFormat_boardH, 1},

@@ -239,7 +239,8 @@ test('release force grows as √(EI): frictionless F = √(2EI K_z o)/ℓ, with 
 
 console.log('the engine');
 test('tuning: every key FF–f³ sounds within ±2 ¢ of its target (back 8′, 48 kHz; every fourth key at 44.1 kHz), the 4′ an octave above, in meantone at A = 415 too', () => {
-  const p = solo('back', { soundboard: false });
+  // the linear string's tuning: tension modulation starts a pluck sharp (its own test)
+  const p = solo('back', { soundboard: false, kc: false });
   for (let m = KEY_LO; m <= KEY_HI; m++) {
     const x = run(p, [[0, 'on', m, 0.7]], 0.75), f = keyPitch(m, p), a = Math.round(0.15 * FS), b = x.length;
     const got = peak(x, f * 2 ** (-12 / 1200), f * 2 ** (12 / 1200), a, b);
@@ -251,19 +252,20 @@ test('tuning: every key FF–f³ sounds within ±2 ¢ of its target (back 8′, 
     assert.ok(Math.abs(cents(got, f)) < 2, `${m} at 44.1 kHz: ${cents(got, f).toFixed(2)} ¢`);
   }
   for (const m of [41, 60, 76]) {
-    const p4 = solo('four', { soundboard: false }), x = run(p4, [[0, 'on', m, 0.7]], 0.6), f = 2 * keyPitch(m, p4);
+    const p4 = solo('four', { soundboard: false, kc: false }), x = run(p4, [[0, 'on', m, 0.7]], 0.6), f = 2 * keyPitch(m, p4);
     const got = peak(x, f * 0.99, f * 1.01, Math.round(0.1 * FS), x.length);
     assert.ok(Math.abs(cents(got, f)) < 2, `4′ ${m}: ${cents(got, f).toFixed(2)} ¢ from the octave`);
     assert.ok(tone(x, f / 2, 4800, x.length) < 0.05 * tone(x, f, 4800, x.length), 'nothing at the 8′ pitch');
   }
-  const pm = solo('back', { soundboard: false, pitch: 415, temperament: 'meantone' });
+  const pm = solo('back', { soundboard: false, pitch: 415, temperament: 'meantone', kc: false });
   for (const m of [60, 64, 68, 63]) {
     const x = run(pm, [[0, 'on', m, 0.7]], 0.6), f = keyPitch(m, pm), got = peak(x, f * 0.993, f * 1.007, 4800, x.length);
     assert.ok(Math.abs(cents(got, f)) < 2, `meantone ${m}: ${cents(got, f).toFixed(2)} ¢`);
   }
 });
 test('the comb: plucked at 1/5 of its length (and its multiples), c²’s 5th and 10th partials are missing from the sound; the model’s comb predicts every partial within 2 dB', () => {
-  const L = stringLength(72, 'back'), p = solo('back', { soundboard: false, xBack: (L / 5) * 1000 });
+  // read at the linear string's partials, which tension modulation would move off while the pluck rings
+  const L = stringLength(72, 'back'), p = solo('back', { soundboard: false, xBack: (L / 5) * 1000, kc: false });
   const x = run(p, [[0, 'on', 72, 0.7]], 0.5), S = stringDesign(72, 'back', p), a = 2400, b = x.length;
   const lev = (n) => tone(x, partialFreq(S, n), a, b);
   assert.ok(lev(5) < 0.03 * Math.min(lev(4), lev(6)), `5th: ${(20 * Math.log10(lev(5) / lev(4))).toFixed(1)} dB re 4th`);
@@ -278,7 +280,8 @@ test('the comb: plucked at 1/5 of its length (and its multiples), c²’s 5th an
 });
 test('registers: the front 8′ is brighter than the back, the lute brighter still with a weak fundamental; the buff kills the upper partials (×5 faster) but hardly the fundamental; manuals and coupler pick the right jacks', () => {
   const m = 60, f = keyPitch(m, P()), a = 2400, b = Math.round(0.4 * FS), S = stringDesign(m, 'back', solo('back'));
-  const go = (row, o = {}) => run(solo(row, { soundboard: false, ...o }), [[0, 'on', m, 0.7]], 0.4);
+  // read at the linear string's partials (kc: false), which tension modulation would move off while the pluck rings
+  const go = (row, o = {}) => run(solo(row, { soundboard: false, kc: false, ...o }), [[0, 'on', m, 0.7]], 0.4);
   const cB = centroid(go('back'), S, a, b), cF = centroid(go('front'), stringDesign(m, 'front', solo('front')), a, b), xl = go('lute'), cL = centroid(xl, S, a, b);
   assert.ok(cF > 1.15 * cB && cL > 1.3 * cF, `centroids back ${cB.toFixed(0)}, front ${cF.toFixed(0)}, lute ${cL.toFixed(0)} Hz`);
   const xb = go('back');
@@ -286,7 +289,7 @@ test('registers: the front 8′ is brighter than the back, the lute brighter sti
   assert.ok(fund(xl) < 0.7 * fund(xb), `the lute’s fundamental is weak: ${fund(xl).toFixed(2)} vs ${fund(xb).toFixed(2)} of the rms`);
   // the buff: decay of partials 1 and 8 with and without it
   const dec = (x, k) => 20 * Math.log10(tone(x, k * f, Math.round(0.6 * FS), Math.round(1.0 * FS)) / tone(x, k * f, Math.round(0.1 * FS), Math.round(0.5 * FS)));
-  const plain = run(solo('back', { soundboard: false }), [[0, 'on', m, 0.7]], 1.0), buff = run(solo('back', { soundboard: false, buff: true }), [[0, 'on', m, 0.7]], 1.0);
+  const plain = run(solo('back', { soundboard: false, kc: false }), [[0, 'on', m, 0.7]], 1.0), buff = run(solo('back', { soundboard: false, buff: true, kc: false }), [[0, 'on', m, 0.7]], 1.0);
   assert.ok(dec(buff, 8) < 5 * dec(plain, 8) || dec(buff, 8) < -40, `8th partial: ${dec(plain, 8).toFixed(1)} → ${dec(buff, 8).toFixed(1)} dB per 0.5 s`);
   assert.ok(dec(buff, 1) > dec(plain, 1) - 3, `fundamental: ${dec(plain, 1).toFixed(1)} → ${dec(buff, 1).toFixed(1)} dB per 0.5 s`);
   // registration
@@ -366,10 +369,13 @@ test('level: a forte note peaks at 0.1–0.5 across the keyboard at 44.1 and 48 
 test('stability: seeded random combinations of extreme settings at 44.1 and 48 kHz, changed mid-note: no NaN, bounded, silent after Panic', () => {
   let seed = 12345;
   const rnd = () => { seed = (seed * 1103515245 + 12345) >>> 0; return seed / 4294967296; };
-  const all = GROUPS.flatMap((g) => g.params).filter((p) => !['volume', 'room', 'venue', 'fullRange'].includes(p.id));
+  // tension modulation draws from a stream of its own, so the other settings stay the ones tried before it came
+  let seed2 = 777;
+  const coin = () => { seed2 = (seed2 * 1103515245 + 12345) >>> 0; return seed2 / 4294967296 < 0.5; };
+  const all = GROUPS.flatMap((g) => g.params).filter((p) => !['volume', 'room', 'venue', 'fullRange', 'kc'].includes(p.id));
   const pick = (p) => (p.type === 'select' ? p.options[Math.floor(rnd() * p.options.length)][0] : p.type === 'checkbox' ? rnd() < 0.5 : rnd() < 0.5 ? p.min : p.max);
   for (let trial = 0; trial < 10; trial++) {
-    const fs = trial % 2 ? 44100 : 48000, a = P(Object.fromEntries(all.map((p) => [p.id, pick(p)]))), b = P(Object.fromEntries(all.map((p) => [p.id, pick(p)])));
+    const fs = trial % 2 ? 44100 : 48000, a = P({ ...Object.fromEntries(all.map((p) => [p.id, pick(p)])), kc: coin() }), b = P({ ...Object.fromEntries(all.map((p) => [p.id, pick(p)])), kc: coin() });
     const keys = [KEY_LO, 45, 60, 73, KEY_HI];
     const ev = keys.flatMap((k, i) => [[0.01 * i, 'on', k, rnd()], [0.6, 'off', k, rnd()]]);
     ev.push([0.3, 'params', b], [0.35, 'on', 60, 1], [1.3, 'panic']);
@@ -380,6 +386,25 @@ test('stability: seeded random combinations of extreme settings at 44.1 and 48 k
     assert.ok(peakAbs(x) < 2.5 && peakAbs(x.R) < 2.5, `trial ${trial}: peak ${peakAbs(x).toFixed(2)}`);
     assert.ok(peakAbs(x, x.length - Math.round(0.1 * fs)) < 1e-3, `trial ${trial}: tail ${peakAbs(x, x.length - Math.round(0.1 * fs)).toFixed(4)}`);
   }
+});
+test('tension modulation: a pluck starts sharp by what its release stretches the wire, and settles as it decays; the short treble strings stretch the most', () => {
+  const glide = (m) => {
+    const p = solo('back', { soundboard: false }), S = stringDesign(m, 'back', p), f = keyPitch(m, p);
+    // the stretch at release, from the slow-motion pluck's modes: δT = (EA/2L) Σ (kₙ²/μ) qₙ²
+    const r = simulatePluck(m, 'back', p, { sec: 0.03 }), E = WIRE[isBrass(m, 'back') ? 'brass' : 'iron'].E;
+    let Q = 0;
+    for (let i = 0; i < r.st.N; i++) { const k = ((i + 1) * Math.PI) / S.L; Q += ((k * k) / S.mu) * r.st.q[i] ** 2; }
+    const want = 1200 * Math.log2(Math.sqrt(1 + ((E * S.A) / (2 * S.L)) * Q / S.T));
+    const at = (kc, t) => { const x = run({ ...p, kc }, [[0, 'on', m, 0.7]], t + 0.1); return peak(x, f * 2 ** (-40 / 1200), f * 2 ** (40 / 1200), Math.round(t * FS), x.length); };
+    return { want, start: cents(at(true, 0.03), at(false, 0.03)), late: cents(at(true, 1.2), at(false, 1.2)) };
+  };
+  const mid = glide(60), top = glide(84);
+  console.log(`        (c¹: +${mid.start.toFixed(1)} ¢ at the start (release stretch: +${mid.want.toFixed(1)} ¢), +${mid.late.toFixed(1)} ¢ after 1.2 s; c³: +${top.start.toFixed(1)} ¢ (+${top.want.toFixed(1)} ¢), +${top.late.toFixed(1)} ¢)`);
+  for (const [name, g] of [['c¹', mid], ['c³', top]]) {
+    assert.ok(g.start > 0.5 * g.want && g.start < 1.5 * g.want, `${name}: +${g.start.toFixed(2)} ¢ at the start, the release's stretch +${g.want.toFixed(2)} ¢`);
+    assert.ok(g.late < g.start / 3, `${name}: +${g.late.toFixed(2)} ¢ after 1.2 s`);
+  }
+  assert.ok(top.want > 2 * mid.want, 'the treble stretches more');
 });
 test('decay: a held note’s partials die at the model’s rate, σ = air + wire + Re Y(f)·bₙ²/2ωₙ² into the board (= Re Y·T/L for a flexible string), within 10 %', () => {
   for (const m of [48, 60, 72]) {

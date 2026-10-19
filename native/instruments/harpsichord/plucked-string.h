@@ -10,6 +10,11 @@
 // would pull is dropped and the rest solved again): the plectra rising and returning, the damper
 // felt, the buff. Then each loaded plectrum's contact point slides by the friction law
 // (plectrum.h), and when the string would pass the tip, the plectrum lets go.
+//
+// Tension modulation (Kirchhoff–Carrier), when kcOn: the wire's stretch raises its tension by
+// δT = (EA/2L)∫u_x² = kc Σ gₙqₙ², gₙ = kₙ²/μ, and every partial's ω² by gₙδT, so a₁ falls by
+// epₙδT (to first order). After a pluck the string runs so until δT has fallen below 1e-5 T (a
+// hundredth of a cent), then linear again.
 #pragma once
 
 #include <array>
@@ -73,6 +78,10 @@ class PluckedString {
   double h = 0, fs = 0, nrm = 0;
   std::array<double, N_MAX> sigBase{}; // the partials' own rates
   std::array<double, N_MAX> qa{}, qb{}, A1{}, A2{}, Bin{}, BF{}, W{}, K{}, sig{}, extra{};
+  std::array<double, N_MAX> G{}, EP{}; // stretch weights gₙ = kₙ²/μ; a₁'s fall per newton, epₙ
+  bool kcOn = false;                   // tension modulation (the engine's switch)
+  bool stretched = false;              // plucked, and not yet back to linear
+  double kc = 0, dT = 0;               // stretch stiffness EA/2L; the tension's rise
   // q (this step) and q1 (the last) swap roles each sample
   bool flip = false;
   double *q() { return flip ? qb.data() : qa.data(); }

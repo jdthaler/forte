@@ -34,6 +34,8 @@ export const GROUPS = [
       { id: 'unisonDetune', label: 'Unison detune', kind: 'model', min: 0, max: 8, step: 0.1, def: 0.8, fmt: (v) => `${v.toFixed(1)} ¢` },
       { id: 'polDetune', label: 'Polarization detune', kind: 'model', min: -5, max: 5, step: 0.1, def: 0.3, fmt: (v) => `${v.toFixed(1)} ¢`,
         hint: 'Extra detune of the 2nd bending axis (bridge anisotropy).' },
+      { id: 'kc', label: 'Tension modulation (pitch glide)', kind: 'engine', type: 'checkbox', def: true,
+        hint: 'A hard blow stretches the string, so its tension and pitch rise, then glide back as it decays.' },
     ],
   },
   {
