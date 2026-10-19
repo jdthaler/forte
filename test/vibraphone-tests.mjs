@@ -224,6 +224,23 @@ test('coupled modes: the damped quartic reduces to the two-oscillator formula ω
   const d = twoOscillator(200, 230, 0.03); // detuned: the pair repel
   assert.ok(d[0] < 200 && d[1] > 230);
 });
+test('the tube\'s fittings add boundary-layer loss: the shaft and disc at the mouth (viscous), the plug at the bottom (thermal); a closing disc squeezes the flow, ∝ 1/s²', () => {
+  for (const k of [53, 72, 89]) {
+    const bar = barModel(k), tg = tubeGeometry(k, bar), f = bar.modes[0].f, cd = 0.7, ts = tubeState(tg, f, { gap: 0.03, cd });
+    // per unit of slip velocity² (or pressure²) and area, as the walls lose: 0.68 viscous, 0.32 thermal of
+    // Rwall over the wall's mean πa·le; the shaft (⌀6 mm) 4πa·d in cross-flow, the open disc's faces
+    // 2cd·πa², the plug πa²
+    const per = ts.Rwall / (Math.PI * tg.a * ts.le);
+    const want = 0.68 * per * (4 * Math.PI * tg.a * 6e-3 + 2 * cd * Math.PI * tg.a ** 2) + 0.32 * per * Math.PI * tg.a ** 2;
+    const rel = (a, b) => Math.abs(a / b - 1);
+    assert.ok(rel(ts.R - ts.Rrad - ts.Rwall, want) < 1e-9, `key ${k}: fittings`);
+    assert.ok(rel(ts.Rdisc, 0.68 * per * 2 * cd * Math.PI * tg.a ** 2) < 1e-9, `key ${k}: disc`);
+  }
+  const bar = barModel(53), tg = tubeGeometry(53, bar), ts = tubeState(tg, bar.modes[0].f, { gap: 0.03, cd: 0.7 });
+  const extra = (ts.R - ts.Rrad - ts.Rwall) / ts.Rwall;
+  assert.ok(extra > 0.05 && extra < 0.3, `F3: the fittings add ${(100 * extra).toFixed(0)} % to the walls' loss`);
+  console.log(`         (F3: the fittings add ${(100 * extra).toFixed(0)} % to the walls' loss with the disc open, ${(100 * (extra + ts.Rdisc * (1 / 0.3 ** 2 - 1) / ts.Rwall)).toFixed(0)} % closed)`);
+});
 test('the disc opens its tube twice per turn; closing it adds end correction: less coupling, a flatter tube', () => {
   const bar = barModel(64), tg = tubeGeometry(64, bar), f = bar.modes[0].f, ts = tubeState(tg, f, { gap: 0.03, cd: 0.8 });
   const open = coupling(ts, 0, f), again = coupling(ts, Math.PI, f); // edge-on again after half a turn

@@ -159,7 +159,16 @@ TubeState tubeState(const TubeGeometry &tg, double f1, double gap, double detune
   const double k = (TAU * f1) / A.c, Rrad = (A.rho * A.c * k * k) / (4 * pi), sw = 2.95e-5 * std::sqrt(f1) / tg.a * A.c;
   TubeState ts;
   ts.length = le - tg.delta0; ts.le = le; ts.ma = ma; ts.Ka = Ka; ts.mg = mg; ts.Sb = tg.Sb; ts.Rrad = Rrad;
-  ts.Rwall = 2 * sw * ma; ts.R = Rrad + 2 * sw * ma;
+  ts.Rwall = 2 * sw * ma;
+  // the fittings' boundary layers, scaled from the walls': per unit area a wall loses in proportion
+  // to the slip velocity² (viscous, 0.68 of α) and the pressure² (thermal, 0.32). Along the
+  // quarter wave the wall averages half of each, over 2πa·le. The shaft spans the mouth, a velocity
+  // antinode, in cross-flow (slip 2v sin φ: a mean 2v² over πd·2a); the open disc's two faces
+  // (2cd·πa²) take the flow edge-on; the plug's face (πa²) sits at the pressure antinode
+  const double vis = 0.68 * sw * 2 * ma / (pi * tg.a * le), th = 0.32 * sw * 2 * ma / (pi * tg.a * le);
+  const double Rshaft = vis * 4 * pi * tg.a * SHAFT_D, Rplug = th * pi * tg.a * tg.a;
+  ts.Rdisc = vis * 2 * cd * pi * tg.a * tg.a;
+  ts.R = Rrad + ts.Rwall + Rshaft + Rplug + ts.Rdisc;
   ts.lvS = (A.rho * tg.lv) / tg.S; ts.cd = cd;
   ts.M11 = 1 + mg * tg.Sb * tg.Sb; ts.M12 = -mg * tg.Sb; ts.M22 = ma + mg; // + m_c(θ) on M22
   return ts;

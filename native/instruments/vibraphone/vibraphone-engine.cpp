@@ -58,10 +58,10 @@ void VibraphoneEngine::Voice::tube(const VibraphoneEngine &eng) {
   const TubeState ts = tubeState(d->tube, d->f[0], S[gGap], S[gDetune], S[gTemp], S[gCd]);
   const double u = S[gTubes];
   M11n = 1 + u * (ts.M11 - 1); M12n = u * ts.M12; M22n = ts.ma + u * ts.mg; Kan = ts.Ka; Rn = ts.R;
-  lvSn = ts.lvS; cdiscn = ts.cd; tubeGainn = u;
+  lvSn = ts.lvS; cdiscn = ts.cd; tubeGainn = u; Rdn = ts.Rdisc;
   if (fresh) {
     M11 = M11n; M12 = M12n; M22 = M22n; Ka = Kan; R = Rn;
-    lvS = lvSn; cdisc = cdiscn; tubeGain = tubeGainn; fresh = false;
+    lvS = lvSn; cdisc = cdiscn; tubeGain = tubeGainn; Rd = Rdn; fresh = false;
   }
   const double ph = ((d->accidental ? S[gShaft2] : 0) + S[gTwist] * d->shaftIndex) * (pi / 180);
   cph = std::cos(ph); sph = std::sin(ph);
@@ -127,18 +127,19 @@ void VibraphoneEngine::Voice::render(float *L, float *Rt, int n, VibraphoneEngin
   const double h = 1 / eng.fs, h2 = 0.5 * h * h, hq = 0.25 * h * h, inv = 1.0 / n;
   const double *sinT = eng.sinT.data(), *cosT = eng.cosT.data();
   const double M11a = M11, dM11 = M11n - M11a, M12a = M12, dM12 = M12n - M12a, M22a = M22, dM22 = M22n - M22a;
-  const double Kaa = Ka, dKa = Kan - Kaa, Ra = R, dR = Rn - Ra, lvSa = lvS, dlvS = lvSn - lvSa;
+  const double Kaa = Ka, dKa = Kan - Kaa, Ra = R, dR = Rn - Ra, lvSa = lvS, dlvS = lvSn - lvSa, Rda = Rd, dRd = Rdn - Rda;
   const double cda = cdisc, dcd = cdiscn - cda, tga = tubeGain, dtg = tubeGainn - tga;
   const double c1 = 2 * sig1;
   const double fadeStep = fading ? 1 / (FADE * eng.fs) : 0;
   double qb_ = qb, vb_ = vb, X_ = X, vx_ = vx, fade_ = fade;
   for (int s = 0; s < n; s++) {
     const double t = (s + 1) * inv;
-    // the disc in this bar's mouth: open area, and the end correction of the flow squeezing past it
+    // the disc in this bar's mouth: open area, and the end correction and boundary-layer loss of the
+    // flow squeezing past it
     double sn = sinT[s] * cph + cosT[s] * sph;
     if (sn < 0) sn = -sn;
     const double open = 1 - (cda + dcd * t) * sn, mc = (lvSa + dlvS * t) * (1 / open - 1);
-    const double m11 = M11a + dM11 * t, m12 = M12a + dM12 * t, m22 = M22a + dM22 * t + mc, ka = Kaa + dKa * t, r22 = Ra + dR * t;
+    const double m11 = M11a + dM11 * t, m12 = M12a + dM12 * t, m22 = M22a + dM22 * t + mc, ka = Kaa + dKa * t, r22 = Ra + dR * t + (Rda + dRd * t) * (1 / (open * open) - 1);
     // pre-warped stiffnesses, so the implicit midpoint rule keeps each oscillator's own frequency
     const double xb = (hq * K11) / m11, xt = (hq * ka) / m22;
     const double wb = 1 + xb * (1.0 / 3 + xb * (2.0 / 15)), wt = 1 + xt * (1.0 / 3 + xt * (2.0 / 15));
@@ -176,7 +177,7 @@ void VibraphoneEngine::Voice::render(float *L, float *Rt, int n, VibraphoneEngin
   }
   qb = qb_; vb = vb_; X = X_; vx = vx_; fade = fade_;
   M11 = M11n; M12 = M12n; M22 = M22n; Ka = Kan; R = Rn;
-  lvS = lvSn; cdisc = cdiscn; tubeGain = tubeGainn;
+  lvS = lvSn; cdisc = cdiscn; tubeGain = tubeGainn; Rd = Rdn;
   age += n / eng.fs;
   // energy: bar mode 1 and tube (block), the other modes from two successive samples
   const double k = 1 / eng.fs;
