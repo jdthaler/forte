@@ -119,11 +119,11 @@ Only when the owner asks for a release:
    then the release branch merges `main` in.
 4. Merge it with a merge commit when the owner asks. GitHub Pages
    publishes `live`, `release-plugins` publishes the plugins when they
-   changed, and `sync-main` tries to bring `live` back into `main`. `main`'s
-   ruleset requires checks a push from a workflow hasn't passed, so when
-   `sync-main` fails, bring `live` in with a pull request instead: a branch
+   changed. Then bring `live` back into `main` with a pull request: a branch
    at `live` into `main`, merged with a merge commit once green (the
-   release-note check looks only at what it adds beyond `live`). The push to
+   release-note check looks only at what it adds beyond `live`). No workflow
+   does this: `main`'s ruleset refuses a push that hasn't passed its required
+   checks, and a pull request opened by a workflow runs none. The push to
    `live` builds nothing again when the pull request's green run built the
    same tree: `native` finds that run and the release takes its archives.
 
