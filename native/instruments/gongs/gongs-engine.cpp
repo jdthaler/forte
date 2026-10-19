@@ -155,7 +155,6 @@ void Shells::adopt(Shell *s) {
 void View::set(const Pack &pack, int N, int NS) {
   c = &pack;
   rowEnds(pack.p1off, pack.p1j, N, end1.data());
-  rowEnds(pack.p2off, pack.p2q, N, end2.data());
   rowEnds(pack.e1off, pack.e1i, N, endE.data());
   nrows = 0;
   for (int n = 0; n < NS; n++) if (end1[n] > pack.p1off[n]) rows[nrows++] = n;
@@ -168,8 +167,10 @@ void Voice::init(GongEngine &e, int key_, const double *P_, const Shell &S_) {
   std::copy(P_, P_ + p::count, P.begin());
   for (Modes *a : {&x, &x1, &xs, &gv, &a0, &a1, &phi, &mL, &mR, &wd, &sg, &m1, &m2, &zt, &zT, &zn, &yp, &tm, &tdw, &toff, &te0, &tw}) a->fill(0);
   for (Coef &c : cf) { c.A.fill(0); c.B.fill(0); c.iD.fill(0); c.WD.fill(0); c.iW.fill(0); }
-  Q.fill(0); L.fill(0); y.fill(0); z.fill(0);
-  views[0].set(S->full, N, S->NS); views[1].set(S->lite, N, S->NS);
+  zr.fill(0); zi.fill(0); gr.fill(0); gi.fill(0);
+  Nb = 0;
+  while (Nb < S->N0 && S->cosOf[Nb] < N) Nb++;
+  views[0].set(S->full, Nb, S->NS0); views[1].set(S->lite, Nb, S->NS0);
   full = &views[0]; lite = &views[1]; cs = full;
   vScale = g.h * g.w0; // m/s per unit of dx̄/dt̄
   setOutput(P_);
@@ -184,14 +185,15 @@ void Voice::init(GongEngine &e, int key_, const double *P_, const Shell &S_) {
 }
 
 // What reaches the listener: each mode's surface velocity, weighted by (σ_rad)^(far/2) relative to
-// the strike tone, at two points near the rim.
+// the strike tone, at two points near the rim (placed from the strike line, which is at the
+// Strike angle from the heavy axis).
 void Voice::setOutput(const double *P_) {
   const auto [gl, gr] = keyPan(key, 0.5);
-  const double ref = g.loss[S->tuned].srad, far = P_[p::listen];
+  const double ref = g.loss[S->tuned].srad, far = P_[p::listen], al = P_[p::strikeAngle] * (pi / 180);
   for (int i = 0; i < N; i++) {
     const double w = (OUT * vScale * std::pow(g.loss[i].srad / ref, far / 2)) / k;
-    mL[i] = gl * w * interpR(S->R[i].data(), MICS[0][0]) * std::cos(S->m[i] * MICS[0][1]);
-    mR[i] = gr * w * interpR(S->R[i].data(), MICS[1][0]) * std::cos(S->m[i] * MICS[1][1]);
+    mL[i] = gl * w * interpR(S->R[i].data(), MICS[0][0]) * angular(*S, i, al + MICS[0][1]);
+    mR[i] = gr * w * interpR(S->R[i].data(), MICS[1][0]) * angular(*S, i, al + MICS[1][1]);
   }
 }
 
@@ -315,7 +317,8 @@ void Voice::strike(double vel, const double *P_) {
   int mm = 1;
   while (mm < MAX_SUB && (6 * k) / mm > tc) mm *= 2;
   if (mm > m) setSub(mm);
-  for (int i = 0; i < N; i++) phi[i] = interpR(S->R[i].data(), rs); // on the line θ = 0
+  const double al = P_[p::strikeAngle] * (pi / 180); // the strike line, from the heavy axis
+  for (int i = 0; i < N; i++) phi[i] = interpR(S->R[i].data(), rs) * angular(*S, i, al);
   double w = 0, w1 = 0;
   for (int i = 0; i < N; i++) { w += phi[i] * x[i]; w1 += phi[i] * x1[i]; }
   const double vb = ml.vbar, hh = h;
@@ -343,42 +346,43 @@ void Voice::setState(const double *x0, int n) {
   nl = true; hit.on = false; phInit = false; Einj = energyD();
 }
 
-// V_nl(x) and g = ∇V_nl (into gv), over this key's modes.
+// V_nl(x) and g = ∇V_nl (into gv), over this key's modes. The couplings are the cos family's, run
+// on each twin pair's complex amplitude z = x_cos − i x_sin (gongs-model.cpp, twinTerms). Row by
+// row of in-plane modes: Q̂ = Q^cos − i Q^sin = Σ H z z (or z z̄), then, with ŷ = y^cos + i y^sin,
+// each term's share of the gradient to both its modes. Imaginary parts are kept as is and negated
+// (zi; see pack), and so are the gradient's (gi, subtracted at the end), so nothing branches.
 double Voice::gradient() {
   const Pack &c = *cs->c;
   const int *o1 = c.p1off.data(), *IJ = c.p1ij.data(), *e1o = c.e1off.data(), *EI = c.e1i.data();
-  const double *H1 = c.p1h.data(), *EV = c.e1v.data(), *C = S->C.data();
+  const double *H1 = c.p1h.data(), *EV = c.e1v.data(), *C = S->C0.data();
+  const int *co = S->cosOf.data(), *so = S->sinOf.data();
+  for (int b = 0; b < Nb; b++) { zr[b] = x[co[b]]; zi[b] = so[b] >= 0 ? -x[so[b]] : 0; zi[NMAX + b] = -zi[b]; gr[b] = gi[b] = gi[NMAX + b] = 0; }
   double s3 = 0, s4 = 0;
   for (int r = 0; r < cs->nrows; r++) {
-    const int n = cs->rows[r];
-    double q0 = 0, q1 = 0;
-    int e = o1[n];
-    const int e1 = cs->end1[n];
-    for (; e + 1 < e1; e += 2) { // (i, j) packed as i·256 + j
-      const int a = IJ[e], b = IJ[e + 1];
-      q0 += H1[e] * x[a >> 8] * x[a & 255]; q1 += H1[e + 1] * x[b >> 8] * x[b & 255];
+    const int n = cs->rows[r], e0 = o1[n], e1 = cs->end1[n], f0 = e1o[n], f1 = cs->endE[n];
+    double qr = 0, qi = 0;
+    for (int e = e0; e < e1; e++) { // (i, j, the imaginary parts' i, j) packed in bytes
+      const int k = IJ[e];
+      const double ar = zr[k & 255], br = zr[(k >> 8) & 255], ai = zi[(k >> 16) & 255], bi = zi[(unsigned)k >> 24], h = H1[e];
+      qr += h * (ar * br - ai * bi); qi += h * (ar * bi + ai * br);
     }
-    if (e < e1) { const int a = IJ[e]; q0 += H1[e] * x[a >> 8] * x[a & 255]; }
-    double l = 0;
-    for (int f = e1o[n], f1 = cs->endE[n]; f < f1; f++) l += EV[f] * x[EI[f]];
-    const double q = q0 + q1, cn = C[n];
-    Q[n] = q; L[n] = l; s4 += 0.5 * cn * q * q; s3 += 2 * cn * q * l;
-    y[n] = 2 * cn * (q + 2 * l); z[n] = 2 * cn * q;
-  }
-  const int *o2 = c.p2off.data(), *NQ = c.p2nq.data(), *e2o = c.e2off.data(), *EN = c.e2n.data();
-  const double *H2 = c.p2h.data(), *EV2 = c.e2v.data();
-  for (int i = 0; i < N; i++) {
-    double g0 = 0, g1 = 0;
-    int e = o2[i];
-    const int e1 = cs->end2[i];
-    for (; e + 1 < e1; e += 2) { // (n, q) packed as n·256 + q
-      const int a = NQ[e], b = NQ[e + 1];
-      g0 += y[a >> 8] * H2[e] * x[a & 255]; g1 += y[b >> 8] * H2[e + 1] * x[b & 255];
+    double lr = 0, li = 0;
+    for (int f = f0; f < f1; f++) { lr += EV[f] * zr[EI[f]]; li += EV[f] * zi[EI[f]]; }
+    if (!S->sinIp[n]) qi = li = 0;
+    // the real in-plane pair: Q^cos = Re Q̂, Q^sin = −Im Q̂ (likewise ℓ); both have the same C
+    const double cn = C[n];
+    s4 += 0.5 * cn * (qr * qr + qi * qi); s3 += 2 * cn * (qr * lr + qi * li);
+    const double yr = cn * (qr + 2 * lr), yim = -cn * (qi + 2 * li); // ŷ/2: each term's H is 2v (v for i = j)
+    for (int e = e0; e < e1; e++) {
+      const int k = IJ[e], i = k & 255, j = (k >> 8) & 255, ii = (k >> 16) & 255, jj = (unsigned)k >> 24;
+      const double h = H1[e], tr = h * yr, ti = h * yim, ar = zr[i], ai = zi[ii], br = zr[j], bi = zi[jj];
+      gr[i] += tr * br - ti * bi; gi[ii] += tr * bi + ti * br;
+      gr[j] += tr * ar - ti * ai; gi[jj] += tr * ai + ti * ar;
     }
-    if (e < e1) { const int a = NQ[e]; g0 += y[a >> 8] * H2[e] * x[a & 255]; }
-    for (int f = e2o[i], f1 = e2o[i + 1]; f < f1; f++) g0 += z[EN[f]] * EV2[f];
-    gv[i] = g0 + g1;
+    const double zc = 2 * cn * qr, zs = -2 * cn * qi;
+    for (int f = f0; f < f1; f++) { const int i = EI[f]; gr[i] += zc * EV[f]; gi[i] += zs * EV[f]; }
   }
+  for (int b = 0; b < Nb; b++) { gv[co[b]] = gr[b]; if (so[b] >= 0) gv[so[b]] = gi[b] - gi[NMAX + b]; }
   V3 = s3; V4 = s4; V = s3 + s4;
   return V;
 }
@@ -643,7 +647,7 @@ void GongEngine::setParams(const double *p_) {
       v.extra = 6.91 / P[p::release]; v.setDamping();
     }
   }
-  if (had && old[p::listen] != P[p::listen]) for (int i = 0; i < nv; i++) order[i]->setOutput(P.data());
+  if (had && old[p::listen] != P[p::listen]) for (int i = 0; i < nv; i++) { Voice &v = *order[i]; v.P[p::listen] = P[p::listen]; v.setOutput(v.P.data()); }
 }
 
 void GongEngine::setSustain(bool on) {
@@ -693,7 +697,7 @@ void GongEngine::start(int key, double velocity) {
   if (!S) return;
   Voice *v = nullptr;
   for (int i = 0; i < nv && !v; i++) if (order[i]->key == key && !order[i]->killing && !order[i]->dead) v = order[i];
-  if (v) for (int id : {p::bc, p::rise, p::terms, p::thick, p::material}) if (v->P[id] != P[id]) { v->killing = true; v->setDamping(); v = nullptr; break; }
+  if (v) for (int id : {p::bc, p::rise, p::terms, p::asym, p::thick, p::material}) if (v->P[id] != P[id]) { v->killing = true; v->setDamping(); v = nullptr; break; }
   if (!v) v = add(key, *S);
   v->P = P; v->extra = 6.91 / P[p::release]; v->setOutput(P.data());
   v->strike(std::max(0.01, std::min(1.0, velocity)), P.data());
@@ -810,27 +814,26 @@ void GongEngine::process(float *L, float *R, int n) {
   if (messages && (sinceView += n) >= POST_SAMPLES) { sinceView = 0; postViews(); }
 }
 
-// The focus gong's modes and energy cascade for the views: the page's 'gong' message, in three
+// The focus gong's modes and energy cascade for the views: the page's 'gong' message, in four
 // pieces.
 void GongEngine::postViews() {
   Voice *f = focus;
   bool alive = false;
   for (int i = 0; i < nv; i++) alive = alive || order[i] == f;
   if (!f || !alive || f->dead) return;
-  const double E = f->snapshot(amp, 64, band, 6);
+  const double E = f->snapshot(amp, 90, band, 6);
   Message m;
   m.key = (int16_t)f->key;
-  m.type = msg::amp1; m.count = 30;
-  for (int i = 0; i < 30; i++) m.values[i] = amp[i];
-  post(m);
-  m.type = msg::amp2;
-  for (int i = 0; i < 30; i++) m.values[i] = amp[30 + i];
-  post(m);
-  m.type = msg::gong; m.count = 18;
-  for (int i = 0; i < 4; i++) m.values[i] = amp[60 + i];
-  for (int i = 0; i < 6; i++) m.values[4 + i] = band[i];
+  m.count = 30;
+  for (int piece = 0; piece < 3; piece++) {
+    m.type = piece == 0 ? msg::amp1 : piece == 1 ? msg::amp2 : msg::amp3;
+    for (int i = 0; i < 30; i++) m.values[i] = amp[30 * piece + i];
+    post(m);
+  }
+  m.type = msg::gong; m.count = 14;
+  for (int i = 0; i < 6; i++) m.values[i] = band[i];
   const double v[8] = {E, E > 0 ? f->V / E : 0, f->cents, f->nl ? 1.0 : 0.0, (double)f->m, f->contactMs, f->age / (fs / f->R), (double)f->N};
-  for (int i = 0; i < 8; i++) m.values[10 + i] = (float)v[i];
+  for (int i = 0; i < 8; i++) m.values[6 + i] = (float)v[i];
   post(m);
 }
 

@@ -36,8 +36,9 @@ namespace msg {
 enum : uint16_t {
   amp1 = 1,  // key; the focus gong's mode amplitudes 0–29 (in thicknesses)
   amp2 = 2,  // key; amplitudes 30–59
-  gong = 3,  // key; amplitudes 60–63, the six bands' energies, E, enl, cents, nl, sub, contact (ms), t (s), n
+  gong = 3,  // key; the six bands' energies, E, enl, cents, nl, sub, contact (ms), t (s), n
   error = 4, // key: a numerical failure
+  amp3 = 5,  // key; amplitudes 60–89
 };
 }
 
@@ -80,7 +81,6 @@ class GongEngine;
 struct View {
   const Pack *c = nullptr;
   std::array<int, NSMAX> end1{}, endE{}, rows{};
-  std::array<int, NMAX> end2{};
   int nrows = 0;
   void set(const Pack &pack, int N, int NS);
 };
@@ -131,7 +131,9 @@ class Voice {
   Modes x{}, x1{}, xs{}, gv{}, a0{}, a1{}, phi{}, mL{}, mR{}, wd{}, sg{};
   struct Coef { Modes A, B, iD, WD, iW; };
   std::array<Coef, 4> cf{}; // steps k, k/2, k/4, k/8
-  std::array<double, NSMAX> Q{}, L{}, y{}, z{};
+  Modes zr{}, gr{};                 // each twin pair's complex amplitude and gradient (gradient()): the real parts,
+  std::array<double, 2 * NMAX> zi{}, gi{}; // the imaginary parts, as is and (at + NMAX) negated
+  int Nb = 0;                       // the cos family's modes among the N
   Modes m1{}, m2{}, zt{}, zT{}, zn{}, yp{}, tm{}, tdw{}, toff{}, te0{}, tw{};
   View views[2];                    // the full and the lite coupling sets
   View *full = &views[0], *lite = &views[1], *cs = &views[0];
@@ -214,7 +216,7 @@ class GongEngine : public Engine {
   Voice *focus = nullptr;
   int64_t frame = 0, sinceView = 0;
   uint32_t serials = 0;
-  float amp[64] = {}, band[6] = {};
+  float amp[90] = {}, band[6] = {};
   // notes struck while their tables were being built (with threads): played when they are ready
   struct Pending { int key; double vel; bool released; };
   std::array<Pending, 32> pending{};

@@ -42,7 +42,10 @@ function update() {
   $('#plate-key').textContent = noteName(focus);
   $('#focus-size').textContent = `⌀ ${(200 * G.a).toFixed(1)} cm · h ${(1000 * G.h).toFixed(2)} mm · ${G.mass < 1 ? `${(1000 * G.mass).toFixed(0)} g` : `${G.mass.toFixed(2)} kg`}`;
   const rows = [];
-  const n = Math.min(Nv, 16), phiS = (i) => model.interpR(S.R[i], P.strike), ex = [];
+  // the strike's weight on each mode: its radial shape at the strike point, and its twin's angular
+  // shape at the Strike angle from the heavy axis
+  const al = (P.strikeAngle * Math.PI) / 180, n = Math.min(Nv, 16), ex = [];
+  const phiS = (i) => model.interpR(S.R[i], P.strike) * (S.fam[i] ? Math.sin(S.m[i] * al) : Math.cos(S.m[i] * al));
   for (let i = 0; i < Nv; i++) ex.push(Math.abs(phiS(i)));
   const exMax = Math.max(...ex, 1e-12);
   for (let i = 0; i < n; i++) {
@@ -52,31 +55,33 @@ function update() {
     rows.push(`<tr class="${i === S.tuned ? 'tuned' : ''}"><td>${S.label[i]}</td><td>${f.toFixed(f < 1000 ? 1 : 0)}</td><td>${(f / f0).toFixed(3)}</td><td>${T60.toFixed(T60 < 10 ? 2 : 1)}</td>`
       + `<td>${exDb > -60 ? exDb.toFixed(0) : '—'}</td><td class="${glide > 0.5 ? 'hard' : glide < -0.5 ? 'soft' : ''}">${glide > 0 ? '+' : ''}${glide.toFixed(1)}</td></tr>`);
   }
-  spectrum.set(f0, ex.slice(0, 40).map((e, i) => ({ f: (S.Om[i] * G.w0) / (2 * Math.PI), color: i === S.tuned ? css('--accent') : css('--accent-2'), alpha: 0.15 + 0.7 * Math.sqrt(e / exMax) })));
+  spectrum.set(f0, ex.map((e, i) => ({ f: (S.Om[i] * G.w0) / (2 * Math.PI), color: i === S.tuned ? css('--accent') : css('--accent-2'), alpha: 0.15 + 0.7 * Math.sqrt(e / exMax) })));
   const tc = model.contactTime(G, P, P.velocity), top = (S.Om[Nv - 1] * G.w0) / (2 * Math.PI);
   $('#modes').innerHTML = '<tr><th>mode (m,s)</th><th>f (Hz)</th><th>× pitch</th><th>T₆₀ (s)</th><th>at strike point (dB)</th><th>¢ at 0.3 h</th></tr>' + rows.join('')
-    + `<tr><td colspan="6" class="note">${Nv} modes up to ${(top / 1000).toFixed(1)} kHz, run at ${(G.fsi / 1000).toFixed(1)} kHz. The strike tone (gold) is the first axisymmetric mode, tuned to the key. Mallet contact ≈ ${(1000 * tc).toFixed(2)} ms at velocity ${P.velocity.toFixed(2)}. The last column is the normal-form pitch shift at an amplitude of 0.3 thickness: + hardens, − softens.</td></tr>`;
+    + `<tr><td colspan="6" class="note">${Nv} modes up to ${(top / 1000).toFixed(1)} kHz, run at ${(G.fsi / 1000).toFixed(1)} kHz. The strike tone (gold) is the first axisymmetric mode, tuned to the key. A primed mode is the twin of the one above it, ${(P.asym / 2).toFixed(2)} % higher (half the asymmetry). Mallet contact ≈ ${(1000 * tc).toFixed(2)} ms at velocity ${P.velocity.toFixed(2)}. The last column is the normal-form pitch shift at an amplitude of 0.3 thickness: + hardens, − softens.</td></tr>`;
   plateCache = null;
 }
 
 // ---- the gong's surface ---------------------------------------------------------------------
 const GRID = 112;
 let plateCache = null;
-function platePixels(S, Nv) { // per pixel: radius bin and cos(mθ); per mode: radial samples on the bins
-  const RB = 64, rad = new Int32Array(GRID * GRID).fill(-1), mMax = Math.max(...S.m.slice(0, Nv)), cosm = new Float32Array(GRID * GRID * (mMax + 1));
+// per pixel: radius bin, and cos mθ and sin mθ from the heavy axis (the mallet's line, drawn
+// along +x, is at the Strike angle al from it); per mode: radial samples on the bins
+function platePixels(S, Nv, al) {
+  const RB = 64, rad = new Int32Array(GRID * GRID).fill(-1), mMax = Math.max(...S.m.slice(0, Nv)), cosm = new Float32Array(GRID * GRID * 2 * (mMax + 1));
   for (let y = 0; y < GRID; y++) for (let x = 0; x < GRID; x++) {
     const u = ((x + 0.5) / GRID) * 2 - 1, v = 1 - ((y + 0.5) / GRID) * 2, r = Math.hypot(u, v), p = y * GRID + x;
     if (r > 1) continue;
     rad[p] = Math.min(RB - 1, Math.round(r * (RB - 1)));
-    const th = Math.atan2(v, u);
-    for (let m = 0; m <= mMax; m++) cosm[p * (mMax + 1) + m] = Math.cos(m * th);
+    const th = Math.atan2(v, u) + al;
+    for (let m = 0; m <= mMax; m++) { cosm[2 * (p * (mMax + 1) + m)] = Math.cos(m * th); cosm[2 * (p * (mMax + 1) + m) + 1] = Math.sin(m * th); }
   }
   const Rk = [];
   for (let i = 0; i < Nv; i++) { const a = new Float32Array(RB); for (let b = 0; b < RB; b++) a[b] = model.interpR(S.R[i], b / (RB - 1)); Rk.push(a); }
   const phase0 = Float32Array.from({ length: Nv }, (_, i) => (i * 2.399963) % (2 * Math.PI));
   const img = new ImageData(GRID, GRID), off = document.createElement('canvas');
   off.width = off.height = GRID;
-  return { RB, rad, cosm, mMax, Rk, phase0, img, off, w: new Float32Array(GRID * GRID), Wm: new Float32Array((mMax + 1) * RB), scale: 0 };
+  return { RB, rad, cosm, mMax, Rk, phase0, img, off, w: new Float32Array(GRID * GRID), Wm: new Float32Array(2 * (mMax + 1) * RB), scale: 0 };
 }
 const pcv = $('#plate');
 animate(() => {
@@ -84,24 +89,25 @@ animate(() => {
   const { ctx, w, h } = fit(pcv);
   ctx.clearRect(0, 0, w, h);
   const { S, Nv } = G, P = shell.P;
-  if (!plateCache) plateCache = platePixels(S, Nv);
+  const al = (P.strikeAngle * Math.PI) / 180;
+  if (!plateCache) plateCache = platePixels(S, Nv, al);
   const pc = plateCache, now = performance.now() / 1000;
   // amplitudes: live from the engine for this key, else the pattern a soft strike would excite
   const amp = new Float32Array(Nv);
   const fresh = live && live.key === focus && live.n === Nv;
-  for (let i = 0; i < Nv; i++) amp[i] = fresh ? live.amp[i] : Math.abs(model.interpR(S.R[i], P.strike)) / S.Om[i];
+  for (let i = 0; i < Nv; i++) amp[i] = fresh ? live.amp[i] : Math.abs(model.interpR(S.R[i], P.strike) * (S.fam[i] ? Math.sin(S.m[i] * al) : Math.cos(S.m[i] * al))) / S.Om[i];
   pc.Wm.fill(0);
   for (let i = 0; i < Nv; i++) {
-    const c = amp[i] * Math.cos(pc.phase0[i] + 2 * Math.PI * 0.4 * Math.sqrt(S.Om[i] / S.Om[S.tuned]) * now), base = S.m[i] * pc.RB, R = pc.Rk[i];
+    const c = amp[i] * Math.cos(pc.phase0[i] + 2 * Math.PI * 0.4 * Math.sqrt(S.Om[i] / S.Om[S.tuned]) * now), base = (2 * S.m[i] + S.fam[i]) * pc.RB, R = pc.Rk[i];
     for (let b = 0; b < pc.RB; b++) pc.Wm[base + b] += c * R[b];
   }
   let mx = 1e-12;
-  const M1 = pc.mMax + 1;
+  const M2 = 2 * (pc.mMax + 1);
   for (let p = 0; p < GRID * GRID; p++) {
     const rb = pc.rad[p];
     if (rb < 0) { pc.w[p] = 0; continue; }
     let s = 0;
-    for (let m = 0; m < M1; m++) s += pc.Wm[m * pc.RB + rb] * pc.cosm[p * M1 + m];
+    for (let m = 0; m < M2; m++) s += pc.Wm[m * pc.RB + rb] * pc.cosm[p * M2 + m];
     pc.w[p] = s; if (Math.abs(s) > mx) mx = Math.abs(s);
   }
   pc.scale = pc.scale ? Math.max(mx, 0.92 * pc.scale) : mx; // smoothed exaggeration
@@ -118,6 +124,10 @@ animate(() => {
   ctx.drawImage(pc.off, cx - R, cy - R, 2 * R, 2 * R);
   ctx.strokeStyle = css('--line'); ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2 * Math.PI); ctx.stroke(); ctx.lineWidth = 1;
+  if (P.asym > 0) { // the asymmetry's heavy axis
+    const ux = Math.cos(al), uy = Math.sin(al);
+    ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(cx - R * ux, cy - R * uy); ctx.lineTo(cx + R * ux, cy + R * uy); ctx.stroke(); ctx.setLineDash([]);
+  }
   // mallet and microphones
   ctx.fillStyle = css('--text');
   ctx.beginPath(); ctx.arc(cx + P.strike * R, cy, Math.max(1, R * 0.035), 0, 2 * Math.PI); ctx.fill();

@@ -33,6 +33,7 @@ Spec specOf(const double *P) {
   s.bc = P[p::bc] >= 0.5 ? 1 : 0;
   s.rise = P[p::rise];
   s.terms = std::max(1, (int)std::lround(P[p::terms])); // (the page's are whole: a step of 50)
+  s.asym = P[p::asym] / 100;
   return s;
 }
 
@@ -73,26 +74,63 @@ std::vector<int> rows(std::vector<T> &list, int nRows, Row row, Order order) {
   return off;
 }
 
-Pack pack(const std::vector<Term> &H, const std::vector<ETerm> &Et, int N, int NS) {
+// conj(h): how term h pairs its modes' complex amplitudes (see twinTerms): 0 z_i z_j, 1 z_i z̄_j,
+// 2 z̄_i z_j. The engine keeps each imaginary part twice, as is and at + N negated, so an entry's
+// indices say what it conjugates, and it never branches.
+template <class Conj>
+Pack pack(const std::vector<Term> &H, const std::vector<ETerm> &Et, int NS, Conj conj) {
   Pack P;
   std::vector<Term> s1 = H;
   P.p1off = rows(s1, NS, [](const Term &h) { return h.n; }, [](const Term &h) { return h.j; });
-  for (const Term &h : s1) { P.p1i.push_back(h.i); P.p1j.push_back(h.j); P.p1ij.push_back((h.i << 8) | h.j); P.p1h.push_back((h.i == h.j ? 1 : 2) * h.v); }
-  struct F { int k, n, q; double v; };
-  std::vector<F> full;
-  for (const Term &h : H) { full.push_back({h.i, h.n, h.j, h.v}); if (h.i != h.j) full.push_back({h.j, h.n, h.i, h.v}); }
-  P.p2off = rows(full, N, [](const F &h) { return h.k; }, [](const F &h) { return h.q; });
-  for (const F &h : full) { P.p2n.push_back(h.n); P.p2q.push_back(h.q); P.p2nq.push_back((h.n << 8) | h.q); P.p2h.push_back(h.v); }
+  for (const Term &h : s1) {
+    const int t = conj(h), ii = h.i + (t == 2 ? NMAX : 0), jj = h.j + (t == 1 ? NMAX : 0);
+    P.p1j.push_back(h.j); P.p1ij.push_back(h.i | (h.j << 8) | (ii << 16) | (jj << 24)); P.p1h.push_back((h.i == h.j ? 1 : 2) * h.v);
+  }
   std::vector<char> used(NS, 0);
   for (const Term &h : H) used[h.n] = 1;
-  std::vector<ETerm> Eu;
-  for (const ETerm &e : Et) if (used[e.n]) Eu.push_back(e);
-  std::vector<ETerm> e1 = Eu, e2 = Eu;
+  std::vector<ETerm> e1;
+  for (const ETerm &e : Et) if (used[e.n]) e1.push_back(e);
   P.e1off = rows(e1, NS, [](const ETerm &e) { return e.n; }, [](const ETerm &e) { return e.i; });
   for (const ETerm &e : e1) { P.e1i.push_back(e.i); P.e1v.push_back(e.v); }
-  P.e2off = rows(e2, N, [](const ETerm &e) { return e.i; }, [](const ETerm &e) { return e.n; });
-  for (const ETerm &e : e2) { P.e2n.push_back(e.n); P.e2v.push_back(e.v); }
   return P;
+}
+
+// ---- twins ------------------------------------------------------------------------------------
+// Each mode of the round gong with m > 0 is a pair, cos mθ and sin mθ, and so is each in-plane mode
+// with j > 0; the tables hold the cos family. Where the twins sit in the full list: right after
+// their cos mode, so that the list stays (nearly) in order of frequency.
+struct Twins { std::vector<int> c, s, cn, sn; }; // each mode's and in-plane mode's cos and sin index (−1: none)
+// cos((d)·π/2), for a phase in quarter turns
+int quarter(int d) { d &= 3; return d == 0 ? 1 : d == 2 ? -1 : 0; }
+// The couplings among the twins, from the cos family's. With each mode's phase α (0 for cos,
+// −π/2 for sin), L(Φ_p, Φ_q) has the angular orders m_p + m_q at phase α_p + α_q and |m_p − m_q|
+// at α_p − α_q (the larger m's phase first), so H^{n,γ}_{p,α q,β} = H^n_pq cos(γ − phase) for
+// the order j_n: each term of the cos family brings 1, 2 or 4 (all ±H).
+// In complex amplitudes z = x_cos − i x_sin (the engine's form), the sum order is z_i z_j and the
+// difference z_i z̄_j (or z̄_i z_j, the larger m unconjugated); Q^cos − i Q^sin = Σ H (that), and
+// the same for the curvature terms, Σ Ẽ z.
+int conjOf(const Term &h, const std::vector<int> &m, const table::Table &T) {
+  const int mi = m[h.i], mj = m[h.j];
+  return T.inplane[h.n].j == mi + mj ? 0 : mi >= mj ? 1 : 2;
+}
+std::vector<Term> twinTerms(const std::vector<Term> &H, const std::vector<int> &m, const table::Table &T, const Twins &tw) {
+  std::vector<Term> out;
+  for (const Term &h : H) {
+    const int mi = m[h.i], mj = m[h.j], jn = T.inplane[h.n].j;
+    const bool sum = jn == mi + mj;
+    if (!sum && jn != std::abs(mi - mj)) continue; // (the selection rule: never)
+    for (int a = 0; a < (mi ? 2 : 1); a++) for (int b = 0; b < (mj ? 2 : 1); b++) {
+      if (h.i == h.j && b < a) continue; // (a mode with its own twin: once)
+      const int ph = sum ? a + b : mi >= mj ? a - b : b - a;
+      for (int g = 0; g < (jn ? 2 : 1); g++) {
+        const int f = quarter(ph - g);
+        if (!f) continue;
+        const int I = a ? tw.s[h.i] : tw.c[h.i], J = b ? tw.s[h.j] : tw.c[h.j];
+        out.push_back({g ? tw.sn[h.n] : tw.cn[h.n], std::min(I, J), std::max(I, J), f * h.v, h.w});
+      }
+    }
+  }
+  return out;
 }
 } // namespace
 
@@ -202,13 +240,47 @@ std::unique_ptr<Shell> buildShell(const Spec &spec) {
     std::sort(wt.begin(), wt.end());
     cut = wt[nH - spec.terms];
   }
-  for (const Term &h : Ht) if (h.w >= cut && (int)S->H.size() < spec.terms) S->H.push_back(h);
-  // packed for the engine: the full set, and the lite set of the strongest LITE terms
-  S->full = pack(S->H, S->E, N, NS);
-  std::vector<Term> strongest = S->H;
+  std::vector<Term> H;
+  for (const Term &h : Ht) if (h.w >= cut && (int)H.size() < spec.terms) H.push_back(h);
+  std::vector<Term> strongest = H; // the lite set: the strongest LITE terms
   std::stable_sort(strongest.begin(), strongest.end(), [](const Term &a, const Term &b) { return a.w > b.w; });
   if ((int)strongest.size() > LITE) strongest.resize(LITE);
-  S->lite = pack(strongest, S->E, N, NS);
+  // the twins: each pair split by the asymmetry, δ(ω²)/ω² = ∓ε/2 (the cos twin, heavy on the axis,
+  // lower); in-plane modes are quasi-static and do not split
+  Twins tw;
+  std::vector<int> m0 = S->m, plate0 = S->plate;
+  std::vector<double> Om0 = S->Om, plateOm0 = S->plateOm, C0 = S->C;
+  std::vector<std::array<double, NR>> R0 = S->R;
+  S->m.clear(); S->plate.clear(); S->fam.clear(); S->base.clear(); S->Om.clear(); S->plateOm.clear(); S->R.clear(); S->C.clear();
+  const double lo = 1 / std::sqrt(1 + spec.asym / 2), hi = 1 / std::sqrt(std::max(1e-3, 1 - spec.asym / 2));
+  tw.c.assign(N, -1); tw.s.assign(N, -1);
+  for (int i = 0; i < N; i++) for (int f = 0; f < (m0[i] ? 2 : 1); f++) {
+    (f ? tw.s : tw.c)[i] = (int)S->m.size();
+    S->m.push_back(m0[i]); S->plate.push_back(plate0[i]); S->fam.push_back(f); S->base.push_back(i);
+    S->Om.push_back(Om0[i] * (m0[i] ? (f ? hi : lo) : 1)); S->plateOm.push_back(plateOm0[i]); S->R.push_back(R0[i]);
+  }
+  tw.cn.assign(NS, -1); tw.sn.assign(NS, -1);
+  for (int n = 0; n < NS; n++) for (int f = 0; f < (T.inplane[n].j ? 2 : 1); f++) {
+    (f ? tw.sn : tw.cn)[n] = (int)S->C.size();
+    S->C.push_back(C0[n]);
+  }
+  S->N0 = N; S->NS0 = NS; S->N = (int)S->m.size(); S->NS = (int)S->C.size();
+  S->tuned = tw.c[S->tuned];
+  S->cosOf = tw.c; S->sinOf = tw.s; S->sinIp.resize(NS); S->C0 = C0;
+  for (int n = 0; n < NS; n++) S->sinIp[n] = T.inplane[n].j > 0;
+  // packed for the engine, which runs the cos family's couplings on the twins' complex amplitudes:
+  // the full set, and the lite set
+  const std::vector<int> &mm = m0;
+  auto conj = [&](const Term &h) { return conjOf(h, mm, T); };
+  S->full = pack(H, S->E, NS, conj);
+  S->lite = pack(strongest, S->E, NS, conj);
+  std::vector<ETerm> E;
+  for (const ETerm &e : S->E) for (int f = 0; f < (m0[e.i] ? 2 : 1); f++) {
+    if (f && !T.inplane[e.n].j) continue;
+    E.push_back({f ? tw.sn[e.n] : tw.cn[e.n], f ? tw.s[e.i] : tw.c[e.i], e.v});
+  }
+  S->E = std::move(E);
+  S->H = twinTerms(H, m0, T, tw);
   return S;
 }
 
@@ -255,16 +327,20 @@ void keyGong(Gong &g, int key, const double *P, double fs, const Shell &S) {
   // but no faster than ~24 kHz
   int R = 1;
   while (fs / R > OS_MAX_HZ) R *= 2;
-  const double fTop = (S.Om[S.N - 1] * w0) / TAU;
+  const double fTop = (*std::max_element(S.Om.begin(), S.Om.end()) * w0) / TAU;
   while (R < 8 && CAP * (fs / (2 * R)) > fTop) R *= 2;
   double fsi = fs / R, k = w0 / fsi;
   int Nv = 0;
   while (Nv < S.N && (S.Om[Nv] * w0) / TAU < CAP * fsi) Nv++;
-  // above C6 (the old top key), a gong that would keep fewer than FEW modes runs at twice that
-  // rate (up to 2·OS_MAX_HZ) and keeps the next ones, up to FEW, below CAP·fs/R there
-  if (key > C6 && Nv < FEW && R > 1 && fs / (R / 2) <= 2 * OS_MAX_HZ) {
+  if (Nv < S.N && S.fam[Nv]) Nv++; // (twins together)
+  // above C6 (the old top key), a gong that would keep fewer than FEW modes (a twin pair counted
+  // once) runs at twice that rate (up to 2·OS_MAX_HZ) and keeps the next ones, up to FEW, below
+  // CAP·fs/R there
+  auto kept = [&] { int n = 0; for (int i = 0; i < Nv; i++) n += !S.fam[i]; return n; };
+  if (key > C6 && kept() < FEW && R > 1 && fs / (R / 2) <= 2 * OS_MAX_HZ) {
     R /= 2; fsi = fs / R; k = w0 / fsi;
-    while (Nv < FEW && Nv < S.N && (S.Om[Nv] * w0) / TAU < CAP * fsi) Nv++;
+    while (kept() < FEW && Nv < S.N && (S.Om[Nv] * w0) / TAU < CAP * fsi) Nv++;
+    if (Nv < S.N && S.fam[Nv]) Nv++;
   }
   const double fc = ((AIR.c * AIR.c) / TAU) * std::sqrt((12 * mat.rho * (1 - NU * NU)) / (mat.E * h * h)); // coincidence
   g.S = &S; g.key = key; g.f0 = f0; g.w0 = w0; g.a = a; g.h = h; g.mass = mat.rho * h * pi * a * a; g.cp = cp; g.mat = &mat;

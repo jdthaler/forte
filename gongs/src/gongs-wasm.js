@@ -8,23 +8,25 @@ import { wasmEngine, nativeParams, nativeValue, scratch } from '../../shared/was
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'gongs', name: 'GongWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/gongs.wasm', import.meta.url).href };
 const BC = ['free', 'clamped'], NR = 65;
-const tablesId = (bc, rise, terms) => `${bc}|${rise}|${terms}`;
-// a mode's (m, nodal circles) from its plate mode: free plates' m = 0, 1 modes have one more circle than s
-const modeLabel = (bc, m, s) => `(${m},${s + (bc === 'free' && m < 2 ? 1 : 0)})`;
+const tablesId = (bc, rise, terms, asym) => `${bc}|${rise}|${terms}|${asym}`;
+// a mode's (m, nodal circles) from its plate mode: free plates' m = 0, 1 modes have one more circle
+// than s; a sin twin is primed
+const modeLabel = (bc, m, s, f) => `(${m},${s + (bc === 'free' && m < 2 ? 1 : 0)})${f ? '′' : ''}`;
 // the two close microphones (r/a, θ) that make the stereo pair, left and right (gongs-model.h)
 export const MICS = [[0.9, 0.35], [0.75, 2.8]];
 
 // The C++ engine's messages (gongs-engine.h, msg) into the views': 'gong' (the focus gong's modes,
 // bands and pitch, sent in three pieces) and 'error'.
 function views(m, e) {
-  const s = (e.views ??= { amp: new Float32Array(64), band: new Float32Array(6) });
+  const s = (e.views ??= { amp: new Float32Array(90), band: new Float32Array(6) });
   const v = m.values;
   switch (m.type) {
     case 1: s.amp.set(v.subarray(0, 30), 0); return null;
     case 2: s.amp.set(v.subarray(0, 30), 30); return null;
+    case 5: s.amp.set(v.subarray(0, 30), 60); return null;
     case 3: {
-      s.amp.set(v.subarray(0, 4), 60); s.band.set(v.subarray(4, 10));
-      return { type: 'gong', key: m.key, n: v[17], amp: s.amp, band: s.band, E: v[10], enl: v[11], cents: v[12], nl: v[13] > 0, sub: v[14], contact: v[15], t: v[16] };
+      s.band.set(v.subarray(0, 6));
+      return { type: 'gong', key: m.key, n: v[13], amp: s.amp, band: s.band, E: v[6], enl: v[7], cents: v[8], nl: v[9] > 0, sub: v[10], contact: v[11], t: v[12] };
     }
     case 4: return { type: 'error', message: `gong ${m.key}: numerical failure` };
     default: return null;
@@ -34,19 +36,21 @@ function views(m, e) {
 const Base = wasmEngine(BUILD, { messages: views });
 
 // A set of tables (gongs-model.h, Shell), as the tests and views read them: N, NS, tuned, Om, m,
-// label, C, R; H and E (the couplings) when asked for.
+// fam (0 cos, 1 the sin twin), base (the round gong's mode), label, C, R; H and E (the couplings)
+// when asked for.
 function shellObject(x, ptr) {
   const s = scratch(x);
   x.gongs_shell_spec(ptr, s.at);
-  const [b, rise, terms] = s.f64(3), bc = BC[b];
+  const [b, rise, terms, asym] = s.f64(4), bc = BC[b];
   x.gongs_shell(ptr, s.at);
-  const head = s.f64(3), N = head[0], NS = head[1], a = s.f64(3 + 4 * N + NS + N * NR).slice();
+  const head = s.f64(3), N = head[0], NS = head[1], a = s.f64(3 + 6 * N + NS + N * NR).slice();
   let at = 3;
   const take = (n) => a.subarray(at, (at += n));
-  const Om = take(N).slice(), m = Int32Array.from(take(N)), pm = take(N), ps = take(N), C = take(NS).slice(), Rall = take(N * NR);
+  const Om = take(N).slice(), m = Int32Array.from(take(N)), pm = take(N), ps = take(N), fam = Int32Array.from(take(N)), base = Int32Array.from(take(N));
+  const C = take(NS).slice(), Rall = take(N * NR);
   const S = {
-    id: tablesId(bc, rise, terms), bc, bcIndex: b, rise, terms, kappa: 2 * rise, N, NS, tuned: head[2], Om, m, C,
-    label: Array.from(m, (_, i) => modeLabel(bc, pm[i], ps[i])),
+    id: tablesId(bc, rise, terms, asym), bc, bcIndex: b, rise, terms, asym, kappa: 2 * rise, N, NS, tuned: head[2], Om, m, fam, base, C,
+    label: Array.from(m, (_, i) => modeLabel(bc, pm[i], ps[i], fam[i])),
     R: Array.from({ length: N }, (_, i) => Rall.slice(i * NR, (i + 1) * NR)),
   };
   let H = null, E = null;
@@ -115,7 +119,7 @@ class WasmVoice {
   get S() {
     const x = Base.exports, s = scratch(x), ptr = x.gongs_voice_shell(this.p);
     x.gongs_shell_spec(ptr, s.at);
-    const [b, rise, terms] = s.f64(3), id = tablesId(BC[b], rise, terms), e = this.eng;
+    const [b, rise, terms, asym] = s.f64(4), id = tablesId(BC[b], rise, terms, asym), e = this.eng;
     if (!e.shells.has(id)) e.shells.set(id, shellObject(x, ptr));
     return e.shells.get(id);
   }
@@ -166,7 +170,7 @@ export class GongWasmEngine extends Base {
   }
   // a voice in a given state, at rest (tests: free vibration of chosen modes)
   place(key, x0) {
-    const x = Base.exports, s = scratch(x), n = Math.min(x0.length, 64);
+    const x = Base.exports, s = scratch(x), n = Math.min(x0.length, 80);
     s.f64(n).set(Array.from(x0).slice(0, n).map((v) => v || 0));
     const p = x.gongs_place(this.e, key, s.at, n);
     if (!p) return null;
@@ -185,12 +189,12 @@ export async function wasmModel() {
   const x = await ready(), s = scratch(x), params = nativeParams(BUILD), at = 8 * params.length;
   const setP = (P) => { s.f64(params.length).set(params.map((p) => nativeValue(p, P[p.id]))); return s.at; };
   const shells = new Map(); // by id
-  const rArg = at + 8 * 80; // (after keyGong's results)
+  const rArg = at + 8 * 96; // (after keyGong's results)
   return {
     keyGong(key, P, fs) {
-      const ptr = x.gongs_key(setP(P), key, fs, s.at + at), o = s.f64(11 + 64, at);
+      const ptr = x.gongs_key(setP(P), key, fs, s.at + at), o = s.f64(11 + 80, at);
       const Nv = o[8], g = { key, fs, f0: o[0], w0: o[1], a: o[2], h: o[3], mass: o[4], fsi: o[5], R: o[6], k: o[7], Nv, fc: o[9], cp: o[10], sigma: o.slice(11, 11 + Nv) };
-      const id = tablesId(P.bc, P.rise, P.terms);
+      const id = tablesId(P.bc, P.rise, P.terms, P.asym / 100);
       if (!shells.has(id)) {
         shells.set(id, shellObject(x, ptr));
         if (shells.size > 8) shells.delete(shells.keys().next().value);
@@ -199,7 +203,7 @@ export async function wasmModel() {
       return g;
     },
     interpR(R, r) { s.f64(NR, rArg).set(R); return x.gongs_interp_r(s.at + rArg, r); },
-    backbone: (S, p, Nv = S.N) => x.gongs_backbone(S.bcIndex, S.rise, S.terms, p, Nv),
+    backbone: (S, p, Nv = S.N) => x.gongs_backbone(S.bcIndex, S.rise, S.terms, S.asym, p, Nv),
     contactTime: (G, P, vel) => x.gongs_contact_time(setP(P), G.key, G.fs, vel),
   };
 }
