@@ -145,6 +145,44 @@
    "title": "Under the tower then across the town square"
   }
  ],
+ "cavity": [
+  {
+   "file": "01-bells-at-two-kelvin.m4a",
+   "title": "Bells at two kelvin"
+  },
+  {
+   "file": "02-in-step-then-out-of-step.m4a",
+   "title": "In step then out of step"
+  },
+  {
+   "file": "03-long-bunch-then-short-and-offset.m4a",
+   "title": "Long bunch then short and offset"
+  },
+  {
+   "file": "04-beam-loading-held-notes.m4a",
+   "title": "Beam loading held notes"
+  },
+  {
+   "file": "05-quench-and-recover.m4a",
+   "title": "Quench and recover"
+  },
+  {
+   "file": "06-warming-the-helium.m4a",
+   "title": "Warming the helium"
+  },
+  {
+   "file": "07-lorentz-detuning-hard-strikes.m4a",
+   "title": "Lorentz detuning hard strikes"
+  },
+  {
+   "file": "08-one-cell-then-nine.m4a",
+   "title": "One cell then nine"
+  },
+  {
+   "file": "09-pressure-is-beam-current.m4a",
+   "title": "Pressure is beam current"
+  }
+ ],
  "celesta": [
   {
    "file": "01-waltz-pedal-each-bar.m4a",
