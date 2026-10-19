@@ -8,14 +8,16 @@
     {"id":"eta","kind":"continuous","min":0.00001,"max":0.01,"def":0.00015,"step":0,"log":true},
     {"id":"thermal","kind":"continuous","min":0,"max":2,"def":1,"step":0.05,"log":false},
     {"id":"radiation","kind":"continuous","min":0,"max":3,"def":1,"step":0.05,"log":false},
+    {"id":"asym","kind":"continuous","min":0,"max":3,"def":0.5,"step":0.01,"log":false},
     {"id":"hardness","kind":"continuous","min":0.1,"max":3000,"def":4,"step":0,"log":true},
     {"id":"mass","kind":"continuous","min":0.01,"max":0.3,"def":0.06,"step":0,"log":true},
     {"id":"strike","kind":"continuous","min":0,"max":0.95,"def":0.1,"step":0.01,"log":false},
+    {"id":"strikeAngle","kind":"continuous","min":0,"max":90,"def":20,"step":0.5,"log":false},
     {"id":"speed","kind":"continuous","min":0.5,"max":12,"def":9,"step":0,"log":true},
     {"id":"listen","kind":"continuous","min":0,"max":1,"def":0.6,"step":0.01,"log":false},
     {"id":"release","kind":"continuous","min":0.1,"max":30,"def":2.5,"step":0,"log":true},
     {"id":"nlvoices","kind":"continuous","min":1,"max":16,"def":4,"step":1,"log":false},
-    {"id":"terms","kind":"continuous","min":200,"max":2000,"def":600,"step":50,"log":true},
+    {"id":"terms","kind":"continuous","min":200,"max":2000,"def":300,"step":50,"log":true},
     {"id":"room","kind":"continuous","min":0,"max":1,"def":0.3,"step":0.01,"log":false},
     {"id":"venue","kind":"choice","def":"room","options":["studio","room","recital","hall","cathedral"]},
     {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}
@@ -28,6 +30,7 @@
     {"name":"Thick bronze: stays linear (a bell plate)","values":{"thick":0.03}},
     {"name":"Steel sheet struck near the rim","values":{"material":"steel","thick":0.005,"strike":0.75,"hardness":300}},
     {"name":"Clamped rim (held, free to slide in its plane)","values":{"bc":"clamped","strike":0.2}},
-    {"name":"Struck dead centre (no asymmetric modes)","values":{"strike":0}}
+    {"name":"Struck dead centre (no asymmetric modes)","values":{"strike":0}},
+    {"name":"Perfectly round: the twins in tune, no shimmer","values":{"asym":0}}
   ]
 }
