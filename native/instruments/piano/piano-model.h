@@ -88,24 +88,28 @@ struct KeyModel {
 KeyModel computeKeyModel(int m, const double *P, double fs = 48000);
 
 // The arrays the engine runs: per mode its frequency, decay, hammer weight, bridge couplings
-// (vertical, horizontal, torsion → sound), family, unison string and index in its family.
+// (vertical, horizontal, torsion → sound), stretch weight g = ∫φ′² dx (a bending mode's share of
+// the string's stretch, ∫u_x² = Σ g q², and its ω²'s rise per newton of tension; 0 for torsion),
+// family, unison string and index in its family. And the string's tension T and stretch
+// stiffness kc: tension modulation, ΔT = kc·∫u_x² (kc = EA/2L for a uniform core).
 struct VoiceData {
   uint64_t version = 0;
   int key = 0, n = 0, unisons = 1;
-  std::vector<double> freq, sigma, w, cv, ch, ct;
+  std::vector<double> freq, sigma, w, cv, ch, ct, g;
   std::vector<uint8_t> famId, uni;
   std::vector<uint16_t> idx;
   struct { double mass, K, p, alpha; } hammer{};
   double outV = 0, outH = 0;
   bool hasDamper = true;
+  double T = 0, kc = 0;
 };
 VoiceData buildVoiceData(const KeyModel &model, const double *P, uint64_t version = 0);
 
 // A key's voice data as numbers (what the page sends with a note to the WebAssembly engine):
-// version, key, n, unisons, hammer mass, K, p, alpha, outV, outH, hasDamper, then freq, sigma,
-// w, cv, ch, ct, famId, uni, idx (n each).
-constexpr int PACK_HEAD = 11;
-int packVoiceData(const VoiceData &d, double *out);  // returns PACK_HEAD + 9 n
+// version, key, n, unisons, hammer mass, K, p, alpha, outV, outH, hasDamper, T, kc, then freq,
+// sigma, w, cv, ch, ct, g, famId, uni, idx (n each).
+constexpr int PACK_HEAD = 13, PACK_ARRAYS = 10;
+int packVoiceData(const VoiceData &d, double *out);  // returns PACK_HEAD + PACK_ARRAYS n
 bool unpackVoiceData(const double *in, int count, VoiceData &d);
 
 // The voice data's version: the sample rate and the 'model' parameters (piano-instrument.js,

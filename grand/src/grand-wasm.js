@@ -26,11 +26,11 @@ function unpackKey(x, at) {
   S.wound = S.wound > 0; i += SCALE.length;
   const partials = [];
   for (let j = 0; j < np; j++) { const v = take(PARTIAL.length); partials.push(Object.fromEntries(PARTIAL.map((k, l) => [k, v[l]]))); }
-  const freq = take(n), sigma = take(n), w = take(n), c = take(n), bf = take(n), damp = take(n);
-  const str = Uint8Array.from(take(n)), idx = Uint16Array.from(take(n));
+  const freq = take(n), sigma = take(n), w = take(n), c = take(n), bf = take(n), damp = take(n), g = take(n);
+  const str = Uint8Array.from(take(n)), idx = Uint16Array.from(take(n)), kc = a[i];
   return {
     key, S, ns, det: [d0, d1, d2].slice(0, ns), partials, seg, beta, xh, wH, xd,
-    hammer: { mass, K, p, alpha }, hasDamper: hasDamper > 0, n, nV, freq, sigma, w, c, bf, damp, str, idx,
+    hammer: { mass, K, p, alpha }, hasDamper: hasDamper > 0, n, nV, freq, sigma, w, c, bf, damp, g, str, idx, kc,
   };
 }
 

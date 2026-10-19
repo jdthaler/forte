@@ -81,6 +81,8 @@ export const GROUPS = [
         hint: 'How lossy the damper cloth is, relative to the string’s wave impedance: at × 1 it soaks up what reaches it. Applies to new notes.' },
       { id: 'fmax', label: 'Highest partial', min: 4, max: 16, def: 10, step: 0.5, fmt: (v) => `${v.toFixed(1)} kHz`,
         hint: 'Partials above this are left out (and at most 90 per string). Lower it if the CPU pill runs hot. Applies to new notes.' },
+      { id: 'kc', label: 'Tension modulation (pitch glide)', type: 'checkbox', def: true,
+        hint: 'A firm pluck stretches the wire, so its tension and pitch rise a little, then settle as the note decays. Short treble strings stretch the most.' },
       { id: 'fullRange', label: 'Full range (A0–C8)', type: 'checkbox', def: false,
         hint: 'Opens the keys beyond the five-octave FF–f³ compass: the same scale of strings, carried on down to A0 and up to C8.' },
     ],

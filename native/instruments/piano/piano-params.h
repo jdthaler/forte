@@ -16,7 +16,7 @@
 namespace forte::piano {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { material, shape, aspect, roll, taper, gauge, lengthScale, winding, unisons, unisonDetune, polDetune, strikePos, offset, hardness, feltExp, hammerMass, hammerWidth, hysteresis, unaCorda, bridge, bridgeH, lossLow, lossHigh, torsionLoss, damper, gainV, gainH, gainT, soundboard, room, venue, width, voicing, volume, maxFreq, count };
+enum : int { material, shape, aspect, roll, taper, gauge, lengthScale, winding, unisons, unisonDetune, polDetune, kc, strikePos, offset, hardness, feltExp, hammerMass, hammerWidth, hysteresis, unaCorda, bridge, bridgeH, lossLow, lossHigh, torsionLoss, damper, gainV, gainH, gainT, soundboard, room, venue, width, voicing, volume, maxFreq, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -69,6 +69,7 @@ inline const ParamInfo kParams[p::count] = {
   {"unisons", "Strings per note", "String / ribbon", ParamKind::continuous, 1, 3, 2, 1, false, false, nullptr, 0, kFormat_unisons, 1},
   {"unisonDetune", "Unison detune", "String / ribbon", ParamKind::continuous, 0, 8, 0.8, 0.1, false, false, nullptr, 0, kFormat_unisonDetune, 1},
   {"polDetune", "Polarization detune", "String / ribbon", ParamKind::continuous, -5, 5, 0.3, 0.1, false, false, nullptr, 0, kFormat_polDetune, 1},
+  {"kc", "Tension modulation (pitch glide)", "String / ribbon", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"strikePos", "Strike position", "Hammer", ParamKind::continuous, 0.02, 0.5, 0.12, 0.001, false, false, nullptr, 0, kFormat_strikePos, 1},
   {"offset", "Strike offset across width", "Hammer", ParamKind::continuous, -1, 1, 0, 0.01, false, false, nullptr, 0, kFormat_offset, 1},
   {"hardness", "Felt hardness", "Hammer", ParamKind::continuous, 0.1, 10, 1, 0, true, true, nullptr, 0, kFormat_hardness, 2},

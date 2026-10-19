@@ -75,7 +75,7 @@ struct BoardCoefs {
 // KEY_MIN…KEY_MAX), or the soundboard (slot 0).
 struct Built {
   KeyModel d;
-  std::vector<double> om, sig, h, bh, u, beta, a1, a2;
+  std::vector<double> om, sig, h, bh, u, beta, a1, a2, ep; // ep: a1's change per newton of tension
   double comp0 = 0;
   std::unique_ptr<BoardCoefs> board;
 };
@@ -110,6 +110,12 @@ class GrandEngine : public Engine {
     const Built *b = nullptr;
     double *q = nullptr, *q1 = nullptr, *a1d = nullptr, *a2d = nullptr; // the voice's own (the pool's)
     const double *a1 = nullptr, *a2 = nullptr, *h = nullptr, *bh = nullptr, *u = nullptr, *beta = nullptr, *bf = nullptr, *om = nullptr, *sig = nullptr, *dmp = nullptr;
+    // tension modulation: stretch weights, a1's change per newton, each mode's string; each
+    // string's δT, its tension and stretch stiffness; still stretched enough to matter
+    const double *gw = nullptr, *ep = nullptr;
+    const uint8_t *str = nullptr;
+    double dT[3] = {0, 0, 0}, Tt = 0, kcGain = 0;
+    bool stretched = false;
     double comp0 = 0, comp = 0, invV = 1, invH = 1, kapV = 0, kapH = 0, swV = 0, swH = 0, rhoV = 0, rhoH = 0;
     Hammer hammer;
     bool hasDamper = false;
@@ -131,7 +137,7 @@ class GrandEngine : public Engine {
     void kill() { if (killing) return; killing = true; setDamper(damperSigma); damped = true; }
     void strike(double v);
     double contactForce(double dFree);
-    void hammerStep(const double *A1, const double *A2, const GrandEngine &eng);
+    void hammerStep(const double *A1, const double *A2, const GrandEngine &eng, bool kc);
     void render(double *PL, double *PR, double *SEG, int n, GrandEngine &eng);
   };
 

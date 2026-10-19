@@ -10,6 +10,7 @@
     {"id":"stiffness","kind":"continuous","min":0,"max":4,"def":1,"step":0.01,"log":false},
     {"id":"stretch","kind":"toggle","def":true},
     {"id":"loss","kind":"continuous","min":0.25,"max":4,"def":1,"step":0,"log":true},
+    {"id":"kc","kind":"toggle","def":true},
     {"id":"mount","kind":"choice","def":"frame","options":["frame","board"]},
     {"id":"gFrame","kind":"continuous","min":0.000001,"max":0.003,"def":0.00005,"step":0,"log":true},
     {"id":"boardH","kind":"continuous","min":5,"max":16,"def":9,"step":0.1,"log":false},

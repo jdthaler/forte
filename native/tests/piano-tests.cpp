@@ -105,7 +105,7 @@ TEST("voice data: an edge-on ribbon drops the family the hammer cannot reach; pa
   bool easy = false;
   for (int i = 0; i < d.n; i++) easy |= d.famId[i] == 0;
   CHECK(!easy && d.n > 0 && d.unisons == 3);
-  std::vector<double> buf(PACK_HEAD + 9 * (size_t)d.n);
+  std::vector<double> buf(PACK_HEAD + PACK_ARRAYS * (size_t)d.n);
   CHECK(packVoiceData(d, buf.data()) == (int)buf.size());
   VoiceData u;
   CHECK(unpackVoiceData(buf.data(), (int)buf.size(), u));
@@ -126,6 +126,7 @@ TEST("engine: C4 waits for its strings, then sounds in tune with a plausible ham
   const double fs = 48000;
   auto P = defaults();
   P[p::unisons] = 1;
+  P[p::kc] = 0; // the linear string's tuning (tension modulation starts a blow sharp)
   auto ep = std::make_unique<PianoEngine>(fs);
   PianoEngine &e = *ep;
   e.setParams(P.data());
