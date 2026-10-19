@@ -1,0 +1,8 @@
+/* The page's own palette and any layout beyond shared/instrument.css: the warm brown of a
+   kalimba's wooden box and the blue-grey of its spring-steel tines. */
+:root {
+  --accent: #d9a066;
+  --accent-2: #9fc3d9;
+  --accent-ink: #1c1004;
+}
+#tine, #box { height: 280px; }
