@@ -91,8 +91,9 @@ play the plugins in a DAW with a small buffer.
 Each instrument page reads top to bottom. At the top, the instrument's
 name opens the menu of every instrument (and Forte's home page), next to
 **How it works** and the mode. In the middle are the views,
-pictures of the physics as it plays: the main ones large, the rest behind
-tabs underneath. At the bottom, right above the keys, are the controls a
+pictures of the physics as it plays, with a row of toggles above them
+that turns each one on or off (the main ones are on at first, and the
+page remembers your choice). At the bottom, right above the keys, are the controls a
 player reaches for (stops and registrations, tremolo, drive, the mallet,
 the spin, the room and the volume, or the organ's drawbars), with **More
 controls** for everything else, and the presets just above the keys (the
@@ -106,7 +107,8 @@ to someone. *Your presets and files…* lists yours, and saves them to a
 file or opens one: the plugins read and write the same files.
 
 There are two modes. **Discover** shows it all. **Perform** shows just
-the main views, filling the screen, with no text in them: for playing,
+the views you turned on, filling the screen, with no toggles and no text
+in them: for playing,
 or for a projector (**Full screen** fills it). The controls stay where
 they are.
 
