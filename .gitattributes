@@ -1,1 +1,3 @@
 native/install.cmd text eol=crlf
+# the site writes preset files with \n line endings, and the plugin tests compare them byte for byte
+native/tests/presets/*.json text eol=lf

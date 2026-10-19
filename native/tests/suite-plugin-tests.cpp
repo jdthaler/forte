@@ -190,6 +190,8 @@ TEST("suite: every saved state in tests/states loads into today's plugin with it
 
 // ---- your own presets (plugin/presets.h) --------------------------------------------------------
 namespace {
+// a path from UTF-8, as the plugin makes them: a narrow string is the ANSI code page on Windows
+std::filesystem::path u8(const std::string &s) { return std::filesystem::path(std::u8string(s.begin(), s.end())); }
 std::string readFile(const std::filesystem::path &f) { std::ifstream in(f, std::ios::binary); std::stringstream ss; ss << in.rdbuf(); return ss.str(); }
 // a folder of their own for the tests' presets (FORTE_PRESETS_DIR), empty
 std::filesystem::path presetsHome() {
@@ -281,9 +283,9 @@ TEST("your presets: the window saves the same file the site writes, lists it by 
     CHECK(r["ok"].getBool());
     const std::string file(r["file"].getString());
     CHECK(file == name + ".json" || name.find_first_of("/:?") != std::string::npos);
-    if (!std::filesystem::exists(home / slug / file)) { CHECK(std::filesystem::exists(home / slug / file)); continue; }
+    if (!std::filesystem::exists(home / slug / u8(file))) { CHECK(std::filesystem::exists(home / slug / u8(file))); continue; }
     // byte for byte the site's, but for the version that saved it
-    std::string mine = readFile(home / slug / file), theirs = site;
+    std::string mine = readFile(home / slug / u8(file)), theirs = site;
     auto unversion = [](std::string &t) { const size_t a = t.find("\"instrumentVersion\": \""), b = t.find('"', a + 22); t.erase(a + 22, b - a - 22); };
     unversion(mine); unversion(theirs);
     if (mine != theirs) std::printf("       %s: the window wrote\n%s\n       the site writes\n%s\n", slug.c_str(), mine.c_str(), theirs.c_str());
