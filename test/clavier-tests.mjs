@@ -167,6 +167,16 @@ test('tuning: every key settles within ±3 ¢ of equal temperament (A440), held 
   console.log(`        worst ${worst.toFixed(2)} ¢ (key ${wk})`);
 });
 
+test('the keyboard\'s tuning: at A = 415 Hz in ¼-comma meantone (root C), C4, E4 and A4 settle within ±3 ¢ of 440·2^((m−69)/12)·415/440, C4 +10.26 ¢ and E4 −3.42 ¢ from equal temperament, A4 on the standard; a key struck again after the tuning changes is restrung to it', () => {
+  const T = { pitch: 415, temperament: 'meantone', tuningRoot: 0 }, target = (k, off) => keyFreq(k) * (415 / 440) * 2 ** (off / 1200);
+  for (const [k, off] of [[60, 10.26], [64, -3.42], [69, 0]]) {
+    const x = note(k, P(T), 0.3, 2.2), f = target(k, off), c = cents(peakFreq(x, f, sec(1.4), sec(2.2)), f);
+    assert.ok(Math.abs(c) < 3, `key ${k}: ${c.toFixed(2)} ¢ from its target`);
+  }
+  const x = render(P(), 2.4, [[0, 'on', 64, 0.3], [0.1, 'params', P(T)], [0.2, 'on', 64, 0.3]]), f = target(64, -3.42), c = cents(peakFreq(x, f, sec(1.6), sec(2.4)), f);
+  assert.ok(Math.abs(c) < 3, `struck again: ${c.toFixed(2)} ¢ from its target`);
+});
+
 test('past F1–E6 (Full range): the scale carried on, A0 to C8, below 65 % of breaking, pulling well under the key\'s 4 N, on pitch and sounding', () => {
   for (let k = KEY_MIN; k <= KEY_MAX; k++) {
     if (k >= LO && k <= HI) continue;

@@ -16,13 +16,15 @@ using namespace forte::reeds;
 extern "C" void *forte_scratch();
 
 namespace {
+// the keyboard's tuning the page's model is in (reeds_tuning sets it)
+forte::Tuning tuning;
 // the latest key asked for, kept: the views ask for it again and again
 struct Cached { int key = -1; uint64_t version = 0; KeyModel model; };
 const KeyModel &cachedModel(int key, double solder, double strike, double hardness, double fs) {
   static Cached c;
   key = std::min(KEY_MAX, std::max(KEY_MIN, key));
-  const uint64_t v = reedVersion(solder, strike, hardness, fs);
-  if (c.key != key || c.version != v) { c.model = keyModel(key, solder, strike, hardness, fs); c.key = key; c.version = v; }
+  const uint64_t v = reedVersion(solder, strike, hardness, fs, tuning);
+  if (c.key != key || c.version != v) { c.model = keyModel(key, solder, strike, hardness, fs, tuning); c.key = key; c.version = v; }
   return c.model;
 }
 
@@ -37,6 +39,8 @@ Trace trace;
 } // namespace
 
 extern "C" {
+// The keyboard's tuning for the model's functions below, from the parameters (indexed as p::).
+FORTE_EXPORT void reeds_tuning(const double *P) { tuning = tuningOf(P); }
 // Key m's reed (keyModel) at rate fs (the engine's: twice the audio rate) into out, returning how
 // many numbers it wrote: key, f0, L, h, b, mReed, M, J, blobSide, ratio, xh, xd, xp, the hammer's
 // mass, K, p, alpha, kPick, then the FEM's nel, EI, mu, m, its number of modes and of free degrees
@@ -86,6 +90,7 @@ FORTE_EXPORT double reeds_hammer_speed(double vel) { return hammerSpeed(vel); }
 FORTE_EXPORT int reeds_trace(int key, double velocity, double fs, double seconds, int nFrames) {
   double P[p::count];
   std::copy_n((const double *)forte_scratch(), p::count, P);
+  tuning = tuningOf(P);
   const VoiceData d = cachedModel(key, P[p::solder], P[p::strike], P[p::hardness], 2 * fs).voice;
   auto e = std::make_unique<ReedEngine>(fs);
   e->setParams(P);
@@ -129,6 +134,7 @@ FORTE_EXPORT int reeds_trace(int key, double velocity, double fs, double seconds
 FORTE_EXPORT int reeds_lossless_strike(int key, double velocity, double fs, double seconds, double *out) {
   double P[p::count];
   std::copy_n((const double *)forte_scratch(), p::count, P);
+  tuning = tuningOf(P);
   VoiceData d = cachedModel(key, P[p::solder], P[p::strike], P[p::hardness], 2 * fs).voice;
   d.sigma.fill(0); d.hammer.alpha = 0;
   auto e = std::make_unique<ReedEngine>(fs);

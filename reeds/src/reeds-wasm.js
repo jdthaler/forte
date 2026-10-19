@@ -4,6 +4,7 @@
 
 import { GROUPS } from './reeds-params.js';
 import { wasmEngine, nativeParams, nativeValue, scratch } from '../../shared/wasm.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'reeds', name: 'ReedWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/reeds.wasm', import.meta.url).href };
@@ -84,7 +85,7 @@ export const ready = () => ReedWasmEngine.ready();
 // the comb node; electrostaticShift(model, P), the field's pull; hammerSpeed(vel); traceStrike,
 // one strike sample by sample; voiceData: a key's reed packed for the engine (the page's
 // noteData); and, for the tests, losslessStrike and reedFEM, the bare reed. reedModel keeps each
-// key's model (at the engine's rate, twice fs) until the reed parameters change: a reed struck
+// key's model (at the engine's rate, twice fs) until the reed parameters or the tuning change: a reed struck
 // again after they change is a different reed.
 const INFO = ['key', 'f0', 'L', 'h', 'b', 'mReed', 'M', 'J', 'blobSide', 'ratio', 'xh', 'xd', 'xp'];
 const MODE = ['n', 'f', 'ratio', 'bare', 'sigma', 'sigSteel', 'sigClamp', 'w', 'pk', 'dampW', 'Gamma', 'Theta'];
@@ -93,8 +94,11 @@ export async function wasmModel() {
   x.reeds_slot_grid(s.at);
   const [y0, dy, nY] = s.f64(3);
 
-  // key m's reed at rate fs (the engine's: twice the audio rate)
+  // the keyboard's tuning for the model (its parameters, read as the engine reads them)
+  const setTuning = (P) => { const a = s.f64(params.length); params.forEach((p, i) => { a[i] = nativeValue(p, P[p.id]); }); x.reeds_tuning(s.at); };
+  // key m's reed at rate fs (the engine's: twice the audio rate), in the keyboard's tuning
   function keyModel(m, P, fs) {
+    setTuning(P);
     const n = x.reeds_key_model(m, P.solder, P.strike, P.hardness, fs, s.at), a = s.f64(n).slice();
     const info = Object.fromEntries(INFO.map((k, i) => [k, a[i]]));
     info.hammer = { mass: a[13], K: a[14], p: a[15], alpha: a[16] };
@@ -119,7 +123,7 @@ export async function wasmModel() {
   }
   let models = new Map(), modelsFor = '';
   function reedModel(key, P, fs) {
-    const r = `${P.solder}|${P.strike}|${P.hardness}`;
+    const r = JSON.stringify([P.solder, P.strike, P.hardness, ...TUNING_KEEP.map((id) => P[id])]);
     if (r !== modelsFor) { models = new Map(); modelsFor = r; }
     let md = models.get(`${key}|${fs}`);
     if (!md) { md = keyModel(key, P, 2 * fs); models.set(`${key}|${fs}`, md); }

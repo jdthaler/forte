@@ -58,6 +58,8 @@ void ClavierEngine::setParams(const double *p) {
     P[i] = p[i];
   }
   hasParams = true;
+  const Tuning t = tuningOf(P.data()); // the keyboard's tuning: a change of it retunes the next note's string
+  if (!(t == tuning)) { tuning = t; remodel = true; }
   if (remodel) version++;
   tone = toneBiquad(P.data(), fs);
   if (!first) for (int i = 0; i < nVoices; i++) {

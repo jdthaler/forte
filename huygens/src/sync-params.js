@@ -5,6 +5,7 @@
 
 import { PC } from './tuning.js';
 import { VENUE } from '../../shared/chain.js';
+import { TUNING_GROUP } from '../../shared/tuning.js';
 
 const cents = (v) => `${v.toFixed(1)} ¢`;
 
@@ -57,6 +58,7 @@ export const GROUPS = [
       { id: 'volume', label: 'Volume', perform: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.7, fmt: (v) => v.toFixed(2) },
     ],
   },
+  TUNING_GROUP,
 ];
 
 export const ALL_PARAMS = GROUPS.flatMap((g) => g.params);

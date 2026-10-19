@@ -302,6 +302,13 @@ test('every key A3–C8 sounds on pitch at the defaults (its first bubble, withi
   }
   console.log(`         worst ${worst.toFixed(2)} ¢`);
 });
+test('the keyboard\'s tuning cuts the nozzles: at A = 415 Hz E4 sounds 440·2^(−5/12)·415/440; in ¼-comma meantone E4 −3.42 ¢, C4 +10.26 ¢, A4 440 Hz; a custom E +35 ¢ (±1.5 ¢); kept in tune under 20 m of water too (±2 ¢)', () => {
+  for (const [o, k, f0] of [[{ pitch: 415 }, 64, 440 * 2 ** (-5 / 12) * 415 / 440], [{ temperament: 'meantone' }, 64, keyFreq(64) * 2 ** (-3.42 / 1200)], [{ temperament: 'meantone' }, 60, keyFreq(60) * 2 ** (10.26 / 1200)], [{ temperament: 'meantone' }, 69, 440], [{ temperament: 'custom', cents4: 35 }, 64, keyFreq(64) * 2 ** (35 / 1200)], [{ pitch: 415, depth: 20, keepInTune: true }, 64, 440 * 2 ** (-5 / 12) * 415 / 440]]) {
+    const { L } = ping(k, P(o), 0.8, 0.25), i0 = firstSample(L) + Math.round(0.0005 * FS);
+    const c = cents(zeroCrossFreq(L, i0, Math.round(i0 + Math.min(Math.max(12, 0.02 * f0), 60) * (FS / f0))), f0);
+    assert.ok(Math.abs(c) < (o.keepInTune ? 2 : 1.5), `${JSON.stringify(o)} key ${k}: ${c.toFixed(2)} ¢ from ${f0.toFixed(2)} Hz`);
+  }
+});
 test('keep in tune: under 20 m of water, helium, glycerol or a quarter atmosphere every key stays within 2 ¢; off, it moves as the model says', () => {
   for (const o of [{ depth: 20 }, { gas: 'helium' }, { liquid: 'glycerol' }, { pressure: 0.25 }, { gas: 'sf6', depth: 5 }]) {
     for (let k = KEY_LO + 2; k <= KEY_HI; k += 7) {

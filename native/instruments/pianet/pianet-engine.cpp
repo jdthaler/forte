@@ -53,7 +53,8 @@ PianetEngine::PianetEngine(double fs)
     : Engine(fs), fs2(OS * fs),
       data([this](int key, uint64_t v) {
         const Snapshot &s = snapshots[v % snapshots.size()];
-        return std::make_unique<KeyReed>(keyReed(key, s.tipMass.load(std::memory_order_relaxed), s.loss.load(std::memory_order_relaxed), fs2));
+        const double ratio = s.ratio[((key % 12) + 12) % 12].load(std::memory_order_relaxed); // the tuning's, as Tuning::ratio
+        return std::make_unique<KeyReed>(keyReed(key, s.tipMass.load(std::memory_order_relaxed), s.loss.load(std::memory_order_relaxed), fs2, ratio));
       }),
       rail(fs2), glideA(1 - std::exp(-1 / (GLIDE * fs2))), mixStep(1 / (XFADE * fs)), duckStep(1 / (DUCK * fs)),
       waitMax((int)std::round(RETACK_MAX * fs2)), toneLP(6000, fs) {
@@ -70,13 +71,16 @@ PianetEngine::PianetEngine(double fs)
 }
 
 void PianetEngine::setParams(const double *in) {
-  const bool first = !hasParams, rebuild = first || in[p::tipMass] != P[p::tipMass] || in[p::loss] != P[p::loss];
+  const Tuning tuning = tuningOf(in); // the keyboard's: every reed is cut to its key's pitch
+  const bool first = !hasParams, rebuild = first || in[p::tipMass] != P[p::tipMass] || in[p::loss] != P[p::loss] || !(tuning == physTuning);
   for (int i = 0; i < p::count; i++) P[i] = in[i];
   hasParams = true;
   if (rebuild) { // a new version of every reed: sounding notes keep theirs, new ones get it
     version++;
+    physTuning = tuning;
     Snapshot &s = snapshots[version % snapshots.size()];
     s.tipMass.store(P[p::tipMass], std::memory_order_relaxed); s.loss.store(P[p::loss], std::memory_order_relaxed);
+    for (int i = 0; i < 12; i++) s.ratio[i].store(tuning.r[i], std::memory_order_relaxed);
     data.prepare(version, KEY_MIN, KEY_MAX, lastKey);
   }
   const PadParams pd = pad();

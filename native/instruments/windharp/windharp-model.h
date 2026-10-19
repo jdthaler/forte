@@ -6,6 +6,8 @@
 
 #include <numbers>
 
+#include "forte/tuning.h"
+
 namespace forte::windharp {
 
 constexpr double TAU = 2 * std::numbers::pi;
@@ -43,8 +45,10 @@ constexpr int N_MAX = 16;     // modes (and wake stations) per string at most
 double diameterFor(double f, double U = U_REF);
 
 // The parameters a string's design reads (windharp-params.js): n0, tuning (0 keys, 1 unison),
-// unison (MIDI key), mass (winding ×), q (Q).
-struct DesignParams { double n0 = 3; int tuning = 0; double unison = 55, mass = 1, q = 500; };
+// unison (MIDI key), mass (winding ×), q (Q), and the keyboard's tuning (forte/tuning.h): on top
+// of the harp's own, it moves each string's target by its key's ratio (by the unison key's, tuned
+// in unison), and the key's pitch fNote with it, which the gauge is cut to shed at.
+struct DesignParams { double n0 = 3; int tuning = 0; double unison = 55, mass = 1, q = 500; forte::Tuning keyboard; };
 struct CourseOffset { int idx = 0, course = 1; double cents = 0, gauge = 1; };
 
 struct StringDesign {

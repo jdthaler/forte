@@ -94,8 +94,10 @@ class BubbleEngine : public Engine {
   double spare;
   int soft;
   std::array<double, NK> Rnom{}, Rtune{}, gainL{}, gainR{};
-  std::array<int, NK> tuneVer{};
-  int ver = 0;
+  std::array<int, NK> tuneVer{}, nomVer{};
+  int ver = 0, nomV = 0; // the conditions' version (Rtune), and the keyboard tuning's (Rnom)
+  forte::Tuning tuning;  // the keyboard's (forte/tuning.h): each nozzle is cut for its key's tuned note
+  Env def;               // the default conditions, which the nozzles are cut for without "keep in tune"
   Env env;       // conditions at the nozzles (targets)
   Acoustics ac{}; // scratch: a rising bubble's acoustics
   double pT = P_ATM, pTarget = P_ATM, pB = P_ATM; // pB: the air above the water with pitch bend's push

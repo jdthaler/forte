@@ -9,6 +9,8 @@
 // key's voice is the same to the last bit in the WebAssembly and the plugins.
 #pragma once
 
+#include "forte/tuning.h"
+
 namespace forte::blackhole {
 
 constexpr double MSUN_S = 4.925490947e-6; // G M☉ / c³ in seconds
@@ -44,6 +46,7 @@ struct ModelParams {
   double spinU = 0, massRatio = 1.2, inclination = 30, t0 = 5, overtones = 1, retrograde = 0;
   bool inspiral = false;
   double inspiralOct = 1.5;
+  forte::Tuning tuning; // the keyboard's (forte/tuning.h): the (2,2,0) mode sounds keyFreq × its ratio
   bool operator==(const ModelParams &) const = default;
 };
 

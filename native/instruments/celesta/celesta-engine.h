@@ -7,7 +7,8 @@
 //   by the key's place across the case
 //
 // One voice per bar: striking a ringing bar hits it where it is. Each key's bar (celesta-model.h)
-// is built where it is first played, and again when the bar thickness changes; a voice keeps
+// is built where it is first played, and again when the bar thickness or the keyboard's tuning
+// changes (the bar is cut to its tuned pitch); a voice keeps
 // its own copy. Voices come from a fixed pool: nothing is allocated in process().
 #pragma once
 
@@ -47,7 +48,7 @@ class CelestaEngine : public Engine {
   struct Voice {
     int key = 0, N = 0;
     Bar bar;
-    double thick = 0;
+    double thick = 0, ratio = 1; // the bar's thickness and tuning (its key's ratio)
     bool inUse = false;
     std::array<double, N_MODES> q{}, q1{}, a1{}, a2{}, bc{}, ws{}, bws{}, accOut{}, sig{};
     std::array<bool, N_MODES> cut{}; // modes at or above 0.45 fs: left out, so they cannot alias
@@ -71,7 +72,7 @@ class CelestaEngine : public Engine {
     double kOverM = 0, halfAlpha = 0;
     double fd0 = 0, fV0 = 0, fP0 = 0; // the contact's step: compression, potential and δ^p two steps back
 
-    void start(CelestaEngine &eng, const Bar &b, double thickness);
+    void start(CelestaEngine &eng, const Bar &b, double thickness, double tuned);
     void coefs(const CelestaEngine &eng);
     void box(const CelestaEngine &eng);
     void strike(const CelestaEngine &eng, double velocity);
@@ -88,6 +89,7 @@ class CelestaEngine : public Engine {
 
  private:
   const Bar &barFor(int key);
+  bool stale(int key) const; // the key's bar is not cut for the thickness and tuning as they stand
   void processBlock(float *L, float *R, int n);
   void postFocus();
 
@@ -97,9 +99,10 @@ class CelestaEngine : public Engine {
   enum { gGap, gDetune, gBoxes, gCount };
   std::array<double, gCount> S{}, T{};
   bool sustain = false;
-  // each key's bar, built for the thickness in built[] (0: not yet)
+  forte::Tuning tuning; // the keyboard's (forte/tuning.h)
+  // each key's bar, built for the thickness in built[] (0: not yet) and the ratio in builtRatio[]
   std::unique_ptr<std::array<Bar, KEY_MAX - KEY_MIN + 1>> bars;
-  std::array<double, KEY_MAX - KEY_MIN + 1> built{};
+  std::array<double, KEY_MAX - KEY_MIN + 1> built{}, builtRatio{};
   int warm = 0; // the next bar to build ahead, a few per block
   std::array<Voice, POOL> pool{};
   int blocks = 0;

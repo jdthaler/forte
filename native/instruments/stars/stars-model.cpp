@@ -221,7 +221,7 @@ void Star::resize(int n) {
   l.assign(n, 0); m.assign(n, 0); mult.assign(n, 0);
 }
 
-static Star dScutiStar(int key, double K, double target) {
+static Star dScutiStar(int key, double K, double target, double pitch) {
   Rng r(key * 7919 + 17);
   struct Entry { int l; double nu, a; };
   std::vector<Entry> list;
@@ -257,13 +257,13 @@ static Star dScutiStar(int key, double K, double target) {
   for (int k = 0; k < N; k++) { d.asat[k] *= s; d.p[k] = d.asat[k] * d.asat[k]; }
   for (const Entry &x : list) { d.keptAt.push_back((int)d.kept.size()); d.kept.push_back({x.l, 0, x.nu, 0, VIS[x.l] * x.a * x.a, 0}); }
   d.all = d.kept;
-  d.pitch = keyFreq(key); d.target = keyFreq(key);
+  d.pitch = pitch; d.target = pitch;
   return d;
 }
 
 Star keyStar(int key, const StarParams &P) {
-  const double K = P.speedup, target = keyFreq(key) / K * 1e6;
-  if (P.family == 1) return dScutiStar(key, K, target);
+  const double K = P.speedup, pitch = keyFreq(key) * P.tuning.ratio(key), target = pitch / K * 1e6; // (the tuned target, Hz and μHz)
+  if (P.family == 1) return dScutiStar(key, K, target, pitch);
   Star d;
   d.key = key; d.K = K;
   d.star = starForPitch(target, P.mass); d.sz = seismic(d.star); d.all = multiplets(d.sz);
@@ -304,7 +304,7 @@ Star keyStar(int key, const StarParams &P) {
   d.kept = std::move(keep);
   d.keptAt = std::move(at);
   d.norm = norm;
-  d.pitch = heardPitch(d.all) * 1e-6 * K; d.target = keyFreq(key);
+  d.pitch = heardPitch(d.all) * 1e-6 * K; d.target = pitch;
   return d;
 }
 

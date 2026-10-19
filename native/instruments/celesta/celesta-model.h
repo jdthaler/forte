@@ -59,9 +59,11 @@ double eulerFreq(double L, double b, double h, int n);
 double torsionJ(double b, double h);
 double torsionFreq(double L, double b, double h, int n);
 
-// The bar for key k: cut to the length that puts its first bending mode on the key's pitch.
+// The bar for key k: cut to the length that puts its first bending mode on the key's pitch, its
+// equal-tempered pitch × ratio (the keyboard's tuning, forte/tuning.h: 1 in equal temperament at
+// A = 440 Hz). The blank stays the key's; only the cut follows the tuning.
 struct Geometry { int key; double L, b, h, mass; };
-Geometry barGeometry(int k, double thick);
+Geometry barGeometry(int k, double thick, double ratio = 1);
 
 // Everything about one bar that does not change while it rings: its modes (bending 1–5, then
 // torsion 1–2), each with its frequency, shape along the bar (unit modal mass: displacement per
@@ -84,7 +86,7 @@ struct Bar {
   Box box;
   std::array<double, 2> pan;
 };
-void buildBar(int k, double thick, Bar &out);
+void buildBar(int k, double thick, Bar &out, double ratio = 1);
 // A shape at a fraction u of the length (linear between the points).
 double shapeAt(const Bar &bar, int mode, double u);
 

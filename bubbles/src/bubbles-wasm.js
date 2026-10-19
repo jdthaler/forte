@@ -5,6 +5,7 @@
 import { GROUPS } from './bubbles-params.js';
 import { GASES, LIQUIDS, KEY_LO, KEY_HI, gasOf, liquidOf } from './bubbles-tank.js';
 import { wasmEngine, nativeParams, nativeValue, scratch } from '../../shared/wasm.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'bubbles', name: 'BubbleWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/bubbles.wasm', import.meta.url).href };
@@ -115,7 +116,7 @@ export async function wasmModel() {
       return out;
     },
     keyRadius(key, P) {
-      const id = [P.depth, P.pressure, P.gas, P.liquid, !!P.keepInTune].join();
+      const id = [P.depth, P.pressure, P.gas, P.liquid, !!P.keepInTune, ...TUNING_KEEP.map((k) => P[k])].join(); // (each nozzle is cut for its key's tuned note)
       if (id !== radiiFor) {
         x.bubbles_key_radii(setP(P), s.at + at);
         radii = s.f64(KEY_HI - KEY_LO + 1, at).slice(); radiiFor = id;

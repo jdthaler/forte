@@ -71,9 +71,9 @@ double bowlRadius(double key) {
   return top * std::pow(2.0, (-slope * (key - KEY_HI)) / 12);
 }
 
-// Wall thickness that puts the (empty, perfect) n = 2 mode on the key's pitch.
-double bowlThickness(double key) {
-  const double a = bowlRadius(key), f = keyFreq(key);
+// Wall thickness that puts the (empty, perfect) n = 2 mode on the key's pitch (× its tuning ratio).
+double bowlThickness(double key, double ratio) {
+  const double a = bowlRadius(key), f = keyFreq(key) * ratio;
   return (2 * PI * f * a * a) / (rayleigh(2).lambda * std::sqrt(GLASS.E / GLASS.rho));
 }
 
@@ -109,7 +109,7 @@ double waterLoad(int n, double a, double h, double fill) {
 
 Bowl bowl(int key, const BowlParams &P) {
   Bowl b;
-  const double a = bowlRadius(key), h = bowlThickness(key), f0 = keyFreq(key);
+  const double a = bowlRadius(key), h = bowlThickness(key, P.ratio), f0 = keyFreq(key) * P.ratio;
   const double cE = std::sqrt(GLASS.E / GLASS.rho);
   b.key = key; b.a = a; b.h = h; b.f0 = f0; b.mass = 2 * PI * a * a * h * GLASS.rho;
   for (int n = 2; n <= N_MAX; n++) {

@@ -71,8 +71,10 @@ double WindHarpEngine::gauss() { double s = 0; for (int k = 0; k < 4; k++) s += 
 void WindHarpEngine::setParams(const double *p) {
   for (int i = 0; i < p::count; i++) P[i] = p[i];
   const double dk[4] = {P[p::n0], P[p::tuning], P[p::unison], P[p::mass]};
-  if (!hasParams || dk[0] != designKey[0] || dk[1] != designKey[1] || dk[2] != designKey[2] || dk[3] != designKey[3]) {
+  const forte::Tuning kb = tuningOf(P);
+  if (!hasParams || dk[0] != designKey[0] || dk[1] != designKey[1] || dk[2] != designKey[2] || dk[3] != designKey[3] || !(kb == designKeyboard)) {
     for (int i = 0; i < 4; i++) designKey[i] = dk[i];
+    designKeyboard = kb;
     version++;
   }
   hasParams = true;
@@ -290,6 +292,7 @@ void WindHarpEngine::noteOn(int key, double velocity) {
     v->used = true; v->key = key; v->version = version;
     DesignParams dp;
     dp.n0 = P[p::n0]; dp.tuning = (int)P[p::tuning]; dp.unison = P[p::unison]; dp.mass = P[p::mass]; dp.q = P[p::q];
+    dp.keyboard = designKeyboard;
     CourseOffset o[COURSE_MAX];
     v->ns = courseOffsets(key, o);
     for (int i = 0; i < v->ns; i++) initString(v->strings[i], key, stringDesign(key, dp, o[i]));

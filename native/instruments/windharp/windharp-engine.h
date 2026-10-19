@@ -127,6 +127,7 @@ class WindHarpEngine : public Engine {
   bool hasParams = false, started = false, sustain = false;
   double seed, h;
   double designKey[4] = {};
+  forte::Tuning designKeyboard; // and the keyboard's tuning the designs were made in
   int version = 0;
   uint32_t randState = 1;
   double g1 = 0, g2 = 0, Ug = 0, chanPress = 0, chanS = 0;

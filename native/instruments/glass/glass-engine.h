@@ -103,8 +103,9 @@ class ArmonicaEngine : public Engine {
   double lastV = 0;
   std::array<Voice, NK> slots{};
 
-  // the bowls, built off the audio thread for each version of (split, loss, water)
-  struct Snapshot { std::atomic<double> split{0}, loss{0}, water{0}; };
+  // the bowls, built off the audio thread for each version of (split, loss, water) and the tuning
+  struct Snapshot { std::atomic<double> split{0}, loss{0}, water{0}, ratio[12] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; };
+  forte::Tuning tuning;
   std::array<Snapshot, 8> snapshots;
   uint64_t version = 0;
   KeyData<Bowl> bowls;

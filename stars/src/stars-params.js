@@ -2,6 +2,7 @@
 // what it does to the sound.
 
 import { VENUE } from '../../shared/chain.js';
+import { TUNING_GROUP } from '../../shared/tuning.js';
 
 // The speed-up K: chosen so that the Sun itself is a key, G6 (1568 Hz), on the 1 M☉ track.
 export const K0 = 510800;
@@ -55,6 +56,7 @@ export const GROUPS = [
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: dB },
     ],
   },
+  TUNING_GROUP,
 ];
 
 export const DEFAULTS = Object.fromEntries(GROUPS.flatMap((g) => g.params).map((p) => [p.id, p.def]));

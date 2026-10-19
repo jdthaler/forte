@@ -60,7 +60,7 @@ Every other idea only adds, and can come before or after 1.0.
 | Sostenuto (CC66) and soft pedal (CC67) | S–M | Done, for the next release. |
 | Pitch bend on more instruments | S each | Done: thirteen instruments bend by something physical (the clavier, the two organs, the free reeds, the tines, both reed pianos, the Viola Organista, the Glass Armonica, the Wind Harp, the bubbles, the arc and the pyrophone). The struck strings, bars, bells, plates and the phenomena keep their pitch, as the real ones do. Adding a bend to one of them after 1.0 would change songs that send pitch bend. |
 | MPE (per-note pitch bend and slide) | M | The engines already take per-key pressure. |
-| Alternative tunings and temperaments | M | Equal, well-tempered, meantone, just intonation; Scala files; A4 other than 440 Hz. |
+| Alternative tunings and temperaments | M | Done, for the next release: a Tuning group on every page and plugin: nine pitch standards (A = 392 to 466 Hz), equal, meantone (¼ and ⅙ comma), Werckmeister III, Kirnberger III, Vallotti, Young, Pythagorean and just on any root, and a custom temperament a Scala file can fill. Equal at 440 Hz, the default, sounds as before. |
 | Transpose and octave controls on every page and plugin | S | |
 | Split and layer two instruments | M | Most useful in the Forte app and on the site. |
 
@@ -77,7 +77,7 @@ Every other idea only adds, and can come before or after 1.0.
 
 | Idea | Size | Notes |
 |------|------|-------|
-| Record and download what you play (WAV) | S–M | |
+| Record and download what you play (WAV) | S–M | Decided against (2026-10-19): not wanted. |
 | Share a link with your settings | S | Done, for the next release: *Copy a link to these settings* in the Presets menu; the link carries the parameters that differ from the defaults. |
 | Works offline, installable on phones | S–M | A service worker; the manifest already exists. |
 | Demo songs played from MIDI files | M | A listen button per instrument, and drag and drop a `.mid` to play it. |

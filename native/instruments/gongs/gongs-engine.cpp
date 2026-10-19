@@ -698,6 +698,7 @@ void GongEngine::start(int key, double velocity) {
   Voice *v = nullptr;
   for (int i = 0; i < nv && !v; i++) if (order[i]->key == key && !order[i]->killing && !order[i]->dead) v = order[i];
   if (v) for (int id : {p::bc, p::rise, p::terms, p::asym, p::thick, p::material}) if (v->P[id] != P[id]) { v->killing = true; v->setDamping(); v = nullptr; break; }
+  if (v && v->g.f0 != gongPitch(key, P.data())) { v->killing = true; v->setDamping(); v = nullptr; } // retuned: another gong, cut for the new pitch
   if (!v) v = add(key, *S);
   v->P = P; v->extra = 6.91 / P[p::release]; v->setOutput(P.data());
   v->strike(std::max(0.01, std::min(1.0, velocity)), P.data());

@@ -2,6 +2,7 @@
 // kind: 'model' → recompute every key's modes; 'engine' → audio thread; 'mix' → Web Audio.
 
 import { VENUE } from '../../shared/chain.js';
+import { TUNING_GROUP } from '../../shared/tuning.js';
 
 // spin slider: u = −log10(1 − a), from 0 (Schwarzschild) to 6 (a = 1 − 10⁻⁶)
 export const spinFromU = (u) => 1 - 10 ** -u;
@@ -54,6 +55,7 @@ export const GROUPS = [
       { id: 'volume', label: 'Volume', perform: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => v.toFixed(2) },
     ],
   },
+  TUNING_GROUP,
 ];
 
 export const ALL_PARAMS = GROUPS.flatMap((g) => g.params);

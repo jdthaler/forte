@@ -19,16 +19,16 @@ static void putBowl(const Bowl &b, double *out) {
 }
 
 extern "C" {
-// A key's bowl(key, P), flat (putBowl), in out.
-FORTE_EXPORT void glass_bowl(int key, double split, double loss, double water, double *out) {
+// A key's bowl(key, P), flat (putBowl), in out; ratio: the key's tuning (forte/tuning.h).
+FORTE_EXPORT void glass_bowl(int key, double split, double loss, double water, double ratio, double *out) {
   BowlParams bp;
-  bp.split = split; bp.loss = loss; bp.water = water;
+  bp.split = split; bp.loss = loss; bp.water = water; bp.ratio = ratio;
   putBowl(bowl(key, bp), out);
 }
 // speakingThreshold(key, P): the normal force (N) at which the bowl starts to speak.
-FORTE_EXPORT double glass_speaking_threshold(int key, double wet, double v0, double rough, double speed, double split, double loss, double water) {
+FORTE_EXPORT double glass_speaking_threshold(int key, double wet, double v0, double rough, double speed, double split, double loss, double water, double ratio) {
   BowlParams bp;
-  bp.split = split; bp.loss = loss; bp.water = water;
+  bp.split = split; bp.loss = loss; bp.water = water; bp.ratio = ratio;
   TouchParams tp;
   tp.wet = wet; tp.v0 = v0; tp.rough = rough; tp.speed = speed;
   return speakingThreshold(key, tp, bowl(key, bp));

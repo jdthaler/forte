@@ -121,6 +121,7 @@ class ArcEngine : public Engine {
   double seed = 1, bendRatio = 1;
   bool hasParams = false;
   Op op{};
+  forte::Tuning tuning; // the keyboard's: each key's note (the singer's, Kelvin's capacitor)
   double kS = 0, sincePost = 0;
   int firN = 1;
   std::vector<double> fir, histL, histR;
@@ -134,7 +135,8 @@ class ArcEngine : public Engine {
   std::array<double, 128> lastCap{};
   std::array<uint64_t, 128> lastVer{};
   int poll = 0;
-  struct Snapshot { std::atomic<uint64_t> version{0}; std::array<std::atomic<double>, 7> v{}; };
+  static constexpr int NS = 7 + 12; // a bank's parameters (bankParams): the circuit's, then the tuning's ratios
+  struct Snapshot { std::atomic<uint64_t> version{0}; std::array<std::atomic<double>, NS> v{}; };
   std::array<Snapshot, 4> snapshots;
   int snapAt = 0;
   KeyData<double> data;

@@ -11,6 +11,7 @@ import { INSTRUMENT, DEFAULTS } from '../docs/template/src/template-instrument.j
 import { wasmModel } from '../docs/template/src/template-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { keyFreq } from '../shared/dsp.js';
+import { tunedFreq } from '../shared/tuning.js';
 
 const TemplateEngine = await loadEngine(INSTRUMENT);
 const { BETA_L, modeShape, keyModes } = await wasmModel();
@@ -38,6 +39,13 @@ function tone(x, f, a, b) {
   for (let i = a; i < b; i++) { const h = 0.5 - 0.5 * Math.cos((2 * Math.PI * (i - a)) / (b - a)); re += h * x[i] * Math.cos(w * i); im += h * x[i] * Math.sin(w * i); }
   return Math.hypot(re, im);
 }
+// The strongest frequency within ±20 ¢ of f0 in x[a, b) (golden-section search on tone).
+function peak(x, f0, a, b) {
+  let lo = f0 * 2 ** (-20 / 1200), hi = f0 * 2 ** (20 / 1200);
+  for (let i = 0; i < 40; i++) { const m1 = hi - 0.618 * (hi - lo), m2 = lo + 0.618 * (hi - lo); if (tone(x, m1, a, b) > tone(x, m2, a, b)) hi = m2; else lo = m1; }
+  return (lo + hi) / 2;
+}
+const cents = (a, b) => 1200 * Math.log2(a / b);
 
 console.log('physics');
 test('free–free beam: βL solves cos βL cosh βL = 1', () => {
@@ -70,6 +78,15 @@ test('the sound is at the model\'s mode frequencies, on pitch', () => {
   const m2 = keyModes(69, P())[1].f;
   assert.ok(Math.abs(m2 / f1 - 2.7565) < 1e-3);
   assert.ok(tone(x, m2, a, b) > 10 * tone(x, m2 * 1.03, a, b), 'mode 2 present');
+});
+test('the keyboard\'s tuning: at A = 415 Hz, and in ¼-comma meantone (E4 −3.42 ¢, C4 +10.26 ¢), the bar is tuned to the note and sounds there (within 0.5 ¢)', () => {
+  for (const [k, o, c] of [[69, { pitch: 415 }, cents(415, 440)], [64, { temperament: 'meantone' }, -3.42], [60, { temperament: 'meantone' }, 10.26]]) {
+    const f = keyFreq(k) * 2 ** (c / 1200);
+    assert.ok(Math.abs(cents(keyModes(k, P(o))[0].f, f)) < 0.01, `${k}: the model's fundamental`);
+    assert.ok(Math.abs(cents(tunedFreq(P(o), k), f)) < 0.01, `${k}: shared/tuning.js agrees`);
+    const x = render(k, P(o), 0.7, 1), a = 4800, b = 4800 + 16384;
+    assert.ok(Math.abs(cents(peak(x, f, a, b), f)) < 0.5, `${k}: sounds ${cents(peak(x, f, a, b), f).toFixed(2)} ¢ from its note`);
+  }
 });
 test('decay matches the T60 parameter', () => {
   const x = render(57, P({ t60: 2, damping: 1 }), 0.7, 2.2), f = keyFreq(57), W = 8192;

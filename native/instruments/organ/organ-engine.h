@@ -36,6 +36,7 @@ struct Params {
   int tuning = gears;
   int levels = b3;
   double mains = 60, relief = 0.06, drift = 0, crosstalk = -48, leakage = -70;
+  forte::Tuning keyboard; // the keyboard's tuning (forte/tuning.h), composed with the generator's
   int drawbars[9] = {8, 8, 8, 0, 0, 0, 0, 0, 0};
   bool motor = true;
   double inertia = 6, spinUp = 1.2, loading = 0.25;
@@ -137,6 +138,7 @@ class OrganEngine : public Engine {
   Generator gen;
   bool haveGen = false;
   double genOf[7] = {}; // the 'gen' parameters it was built from: tuning, levels, mains, relief, drift, crosstalk, leakage
+  forte::Tuning genKeyboard; // and the keyboard's tuning
   double cr[NW] = {}, ci[NW] = {}, rc[NW] = {}, rs[NW] = {}, v[NW] = {};
 
   // keys and busbars (keyArr: the sounding keys, in the order they came)

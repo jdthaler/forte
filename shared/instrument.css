@@ -126,6 +126,7 @@ input[type=checkbox] { accent-color: var(--accent); }
 .param.check .hint { flex-basis: 100%; }
 .param select { width: 100%; margin-top: 3px; }
 .param > label { display: block; }
+.param.scala button { width: 100%; }
 
 @media (max-width: 1050px) {
   main { grid-template-columns: 1fr; min-height: auto; }

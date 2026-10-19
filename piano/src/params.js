@@ -7,6 +7,7 @@
 
 import { MATERIALS, SHAPES } from './materials.js';
 import { VENUE } from '../../shared/chain.js';
+import { TUNING_GROUP } from '../../shared/tuning.js';
 
 const x = (v) => `×${v < 1 ? v.toFixed(2) : v.toFixed(v < 10 ? 2 : 1)}`;
 
@@ -91,6 +92,7 @@ export const GROUPS = [
         fmt: (v) => `${(v / 1000).toFixed(1)} kHz`, hint: 'Lower this if the CPU meter runs hot.' },
     ],
   },
+  TUNING_GROUP,
 ];
 
 export const ALL_PARAMS = GROUPS.flatMap((g) => g.params);

@@ -151,7 +151,7 @@ void keyVoice(int key, const ModelParams &P, double fs, KeyVoice &v) {
   const double a = spinFromU(P.spinU);
   Omega w220;
   omega(2, 2, 0, a, w220);
-  const double f0 = keyFreq(key);
+  const double f0 = keyFreq(key) * P.tuning.ratio(key);
   const double M = w220.re / (TAU * f0); // seconds (G M / c³)
   const double iota = (P.inclination * PI) / 180;
   // excitation(P): Kamaretsos et al.'s fits in the symmetric mass ratio ν

@@ -58,6 +58,16 @@ test('every key, A0–C8: the sustaining fork mode sits on pitch', () => {
     assert.ok(Math.abs(cents(best.f, f0)) < 0.5, `${m}: ${cents(best.f, f0)} ¢`);
   }
 });
+test('the keyboard’s tuning: at A = 415 Hz the fork mode sits at 415/440 of the key’s pitch; in ¼-comma meantone E4 −3.42 ¢, C4 +10.26 ¢', () => {
+  // ¼-comma meantone on C, A kept: E a fifth's narrowing (q − 700) from equal temperament, C 2100 − 3q
+  const q = 1200 * Math.log2(3 / 2) - 300 * Math.log2(81 / 80);
+  for (const [o, m, want] of [[{ pitch: 415 }, 64, cents(415, 440)], [{ pitch: 415 }, 69, cents(415, 440)], [{ temperament: 'meantone' }, 64, q - 700], [{ temperament: 'meantone' }, 60, 2100 - 3 * q]]) {
+    const k = keyModel(m, P(o), FS), f0 = keyFreq(m) * 2 ** (want / 1200);
+    assert.ok(Math.abs(cents(k.info.f0, f0)) < 1e-9, `${JSON.stringify(o)} ${m}: target ${k.info.f0} Hz`);
+    const best = k.modes.filter((x) => Math.abs(cents(x.f, f0)) < 100).reduce((a, b) => (b.sigma < a.sigma ? b : a));
+    assert.ok(Math.abs(cents(best.f, f0)) < 0.5, `${JSON.stringify(o)} ${m}: ${cents(best.f, f0)} ¢`);
+  }
+});
 test('tone bar: matched bar keeps the block still → long sustain; no bar → short', () => {
   const t60 = (o) => {
     const k = keyModel(69, P(o), FS), f0 = keyFreq(69);
@@ -70,12 +80,14 @@ test('tone bar: matched bar keeps the block still → long sustain; no bar → s
 });
 
 console.log('engine');
-test('A4 plays 440 Hz and is finite', () => {
-  const { L } = render(69, P(), 1.8, 1.2, DRY);
-  let best = 0, bf = 0;
-  for (let f = 437; f <= 443; f += 0.05) { const g = goertzel(L, f, 0.2 * FS, 1.2 * FS); if (g > best) { best = g; bf = f; } }
-  assert.ok(Math.abs(cents(bf, 440)) < 2, `f=${bf}`);
-  for (const s of L) assert.ok(Number.isFinite(s));
+test('A4 plays 440 Hz and is finite; at A = 415 Hz, 415 Hz', () => {
+  for (const a4 of [440, 415]) {
+    const { L } = render(69, P({ pitch: a4 }), 1.8, 1.2, DRY);
+    let best = 0, bf = 0;
+    for (let f = a4 - 3; f <= a4 + 3; f += 0.05) { const g = goertzel(L, f, 0.2 * FS, 1.2 * FS); if (g > best) { best = g; bf = f; } }
+    assert.ok(Math.abs(cents(bf, a4)) < 2, `f=${bf}`);
+    for (const s of L) assert.ok(Number.isFinite(s));
+  }
 });
 test('the 88-key range\'s ends: A0 and C8 play on pitch (A0 heard through its pickup harmonics), finite, C8 within 12 dB of E7', () => {
   const level = (L) => { let s = 0; for (let i = 0; i < 0.2 * FS; i++) s += L[i] ** 2; return 10 * Math.log10(s / (0.2 * FS)); };

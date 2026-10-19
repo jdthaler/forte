@@ -4,6 +4,7 @@
 
 import { GROUPS } from './celesta-params.js';
 import { wasmEngine, scratch } from '../../shared/wasm.js';
+import { tuningRatio } from '../../shared/tuning.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'celesta', name: 'CelestaWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/celesta.wasm', import.meta.url).href };
@@ -43,8 +44,9 @@ export class CelestaWasmEngine extends Base {
 }
 export const ready = () => CelestaWasmEngine.ready();
 
-// The model's functions (celesta-model.h), computed by the WebAssembly: bar(k, thick), a key's
-// bar and box; boxState(k, P), its box for the knobs; the Timoshenko beam (det, freqs) and Euler's
+// The model's functions (celesta-model.h), computed by the WebAssembly: bar(k, thick, ratio), a
+// key's bar and box, cut for its tuning ratio (shared/tuning.js tuningRatio; 1 in equal temperament
+// at A = 440 Hz); boxState(k, P), its box for the knobs and the tuning; the Timoshenko beam (det, freqs) and Euler's
 // for comparison; torsion; Zener's loss; the coupled pair; the hammer; the steel's constants.
 const BOX = ['depth', 'le', 'ma', 'Ka', 'mg', 'Rrad', 'Rwall', 'R', 'M11', 'M12', 'M22'];
 export async function wasmModel() {
@@ -56,10 +58,10 @@ export async function wasmModel() {
   return {
     STEEL,
     BETA_L: Array.from({ length: 5 }, (_, n) => x.celesta_beta_l(n)),
-    bar(k, thick = 2.5) {
-      const id = `${k}|${thick}`;
+    bar(k, thick = 2.5, ratio = 1) {
+      const id = `${k}|${thick}|${ratio}`;
       if (bars.has(id)) return bars.get(id);
-      const n = x.celesta_bar(k, thick, s.at), a = s.f64(n).slice();
+      const n = x.celesta_bar(k, thick, ratio, s.at), a = s.f64(n).slice();
       const N = a[5], NX = a[6];
       let i = 18;
       const take = (m) => { const v = a.slice(i, i + m); i += m; return v; };
@@ -79,7 +81,7 @@ export async function wasmModel() {
       return bar;
     },
     boxState(k, P) {
-      x.celesta_box_state(k, P.thick, P.gap / 1000, P.detune, s.at);
+      x.celesta_box_state(k, P.thick, tuningRatio(P, k), P.gap / 1000, P.detune, s.at);
       const a = s.f64(BOX.length);
       return Object.fromEntries(BOX.map((key, i) => [key, a[i]]));
     },

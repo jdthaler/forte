@@ -32,6 +32,7 @@ ModelParams modelParams(const double *P) {
   M.scale = (int)P[p::scale]; M.stringing = (int)P[p::stringing]; M.stretch = P[p::stretch] != 0; M.mount = (int)P[p::mount];
   M.stiffness = P[p::stiffness]; M.detune = P[p::detune]; M.loss = P[p::loss]; M.gFrame = P[p::gFrame]; M.boardH = P[p::boardH];
   M.tilt = P[p::tilt]; M.hRatio = P[p::hRatio]; M.kH = P[p::kH]; M.hardness = P[p::hardness]; M.strike = P[p::strike]; M.maxFreq = P[p::maxFreq];
+  M.tuning = tuningOf(P);
   return M;
 }
 
@@ -82,7 +83,8 @@ HammerDefaults hammerDefaults(double m) {
 }
 
 // Geometry, tension and inharmonicity of key m, its tension solved so the stiff string's
-// fundamental lands on the target f0.
+// fundamental lands on the target f0. The scale (lengths, gauges, windings) is the key's; its
+// cents are the target's from 12-TET at A = 440 Hz (the tuning's and the stretch's).
 static Scale scaleAt(int m, const ModelParams &P, double f0) {
   const double fd = keyFreq(m);
   double L, d, mu, muCore;
@@ -110,17 +112,20 @@ static Scale scaleAt(int m, const ModelParams &P, double f0) {
   return S;
 }
 
-Scale stringScale(int m, const ModelParams &P) { return scaleAt(m, P, keyFreq(m) * std::pow(2.0, stretchCents(m, P) / 1200)); }
+// The key's pitch in the keyboard's tuning (exactly keyFreq at the defaults), then stretched.
+static double tunedFreq(int m, const ModelParams &P) { return keyFreq(m) * P.tuning.ratio(m); }
+Scale stringScale(int m, const ModelParams &P) { return scaleAt(m, P, tunedFreq(m, P) * std::pow(2.0, stretchCents(m, P) / 1200)); }
 
 // Stretch tuning: each octave beatless (partial 2 of the lower note on the fundamental of the
 // upper), outward from a temperament octave around A4; iterated, as B depends on the tension.
+// On the keyboard's tuning: its octaves are 2 : 1, so the stretch keeps them beatless in any.
 constexpr int NKEYS = KEY_MAX - KEY_MIN + 1; // every key: the table outward from A4 leaves E1–E7's as they were
 static std::array<double, NKEYS> stretchTable(const ModelParams &P) {
   std::array<double, NKEYS> D{}, s{};
   const int T0 = 63, T1 = 74, A4 = 69;
   auto S = [&](int m) { return s[std::min(NKEYS - 1, std::max(0, m - KEY_MIN))]; };
   for (int it = 0; it < 3; it++) {
-    for (int m = KEY_MIN; m <= KEY_MAX; m++) s[m - KEY_MIN] = octaveStretch(scaleAt(m, P, keyFreq(m) * std::pow(2.0, D[m - KEY_MIN] / 1200)).B);
+    for (int m = KEY_MIN; m <= KEY_MAX; m++) s[m - KEY_MIN] = octaveStretch(scaleAt(m, P, tunedFreq(m, P) * std::pow(2.0, D[m - KEY_MIN] / 1200)).B);
     D[A4 - KEY_MIN] = 0;
     for (int m = A4 + 1; m <= T1; m++) D[m - KEY_MIN] = D[m - 1 - KEY_MIN] + S(m - 7) / 12;
     for (int m = A4 - 1; m >= T0; m--) D[m - KEY_MIN] = D[m + 1 - KEY_MIN] - S(m - 6) / 12;
@@ -131,10 +136,12 @@ static std::array<double, NKEYS> stretchTable(const ModelParams &P) {
 }
 double stretchCents(int m, const ModelParams &P) {
   if (!P.stretch || m < KEY_MIN || m > KEY_MAX) return 0;
-  // the table for the last scale and stiffness, per thread (the engine's worker, or the views)
-  struct Memo { int scale = -1; double stiffness = 0; std::array<double, NKEYS> D{}; };
+  // the table for the last scale, stiffness and tuning, per thread (the engine's worker, or the views)
+  struct Memo { int scale = -1; double stiffness = 0; Tuning tuning; std::array<double, NKEYS> D{}; };
   thread_local Memo memo;
-  if (memo.scale != P.scale || memo.stiffness != P.stiffness) { memo.D = stretchTable(P); memo.scale = P.scale; memo.stiffness = P.stiffness; }
+  if (memo.scale != P.scale || memo.stiffness != P.stiffness || !(memo.tuning == P.tuning)) {
+    memo.D = stretchTable(P); memo.scale = P.scale; memo.stiffness = P.stiffness; memo.tuning = P.tuning;
+  }
   return memo.D[m - KEY_MIN];
 }
 

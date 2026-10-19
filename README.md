@@ -108,6 +108,18 @@ these settings* makes a link that opens the page playing them, to send
 to someone. *Your presets and files…* lists yours, and saves them to a
 file or opens one: the plugins read and write the same files.
 
+**Tuning**, under More controls, is the same on every instrument: the
+**pitch** standard (A = 440 Hz, or 415 for baroque pitch, 392, 422.5, 430,
+435, 442, 443 or 466), the **temperament** (equal, ¼- and ⅙-comma
+meantone, Werckmeister III, Kirnberger III, Vallotti, Young, Pythagorean
+or just intonation) and the **root** it is built on (meantone on D is
+purest in D). **Custom** sets each note's cents from equal temperament
+by hand, or from a **Scala file** (`.scl`, twelve notes to the octave):
+*Load a Scala file* opens one. The instrument is retuned, not
+resampled: at 415 Hz the strings are slacker, the bars and bells cut for
+their new notes. Presets keep your tuning; your own presets and links
+carry it.
+
 There are two modes. **Discover** shows it all. **Perform** shows just
 the views you turned on, filling the screen, with no toggles and no text
 in them: for playing,
@@ -145,6 +157,9 @@ In a plugin's window the Presets menu has your own presets too: *Save these sett
 one as a file in a presets folder for that instrument (`~/Library/Audio/Presets/Forte/<id>` on a
 Mac, `%APPDATA%\Forte\Presets\<id>` on Windows, `~/.local/share/forte/presets/<id>` on
 Linux), and *Open the presets folder* shows it, so a file saved on the site can go there too.
+Scala files for the custom temperament go in the `Tunings` folder beside the instruments' (on a
+Mac, `~/Library/Audio/Presets/Forte/Tunings`): the menu under Temperament lists them and opens the
+folder.
 
 Releases publish themselves: after each green `native` run on `live` (the branch the site is
 published from), the **release-plugins** workflow releases that run's plugins if an instrument's

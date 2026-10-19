@@ -5,6 +5,7 @@ import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/v
 import { INSTRUMENT } from './bubbles-instrument.js';
 import { KEY_LO, KEY_HI, ROW, HYDRO, P_ATM, G, keyFreq, nozzleX, liquidOf, gasOf } from './bubbles-tank.js';
 import { wasmModel } from './bubbles-wasm.js';
+import { tunedFreq } from '../../shared/tuning.js';
 
 // The views draw what the engine plays: its model, from the same C++, built as WebAssembly.
 const model = await wasmModel();
@@ -54,7 +55,7 @@ function update() {
     rows.push({ key: k, R, ...a });
   }
   const r = rows[focus - KEY_LO] || rows[0], p0 = model.ambient(P);
-  const shift = cents(r.fd, keyFreq(r.key));
+  const shift = cents(r.fd, tunedFreq(P, r.key)); // from its note in the keyboard's tuning
   $('#tank-read').textContent = `p₀ ${(p0 / P_ATM).toFixed(2)} atm · ${noteName(r.key)} ${Math.abs(shift) < 0.5 ? 'in tune' : `${shift > 0 ? '+' : '−'}${Math.abs(shift) < 100 ? Math.abs(shift).toFixed(0) + ' ¢' : (Math.abs(shift) / 100).toFixed(1) + ' semitones'}`} · R ${(1000 * r.R).toFixed(2)} mm`;
   $('#tank-read').title = 'The liquid pressure at the nozzles, how far the last key played sounds from its note, and its bubble’s radius';
   $('#devin-read').textContent = `${gasOf(P).name} in ${liquidOf(P).name}, ${(p0 / P_ATM).toFixed(2)} atm`;

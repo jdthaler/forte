@@ -10,6 +10,7 @@ import { INSTRUMENT, DEFAULTS, KEY_LO, KEY_HI, KEY_MIN, KEY_MAX } from '../celes
 import { wasmModel } from '../celesta/src/celesta-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { keyFreq } from '../shared/dsp.js';
+import { tuningRatio } from '../shared/tuning.js';
 
 const CelestaEngine = await loadEngine(INSTRUMENT);
 const M = await wasmModel();
@@ -150,6 +151,13 @@ test('without boxes, the bar sounds on pitch (within 0.5 ¢) with its overtones 
     assert.ok(Math.abs(cents(peak(x, keyFreq(k), a, b), keyFreq(k))) < 0.5, `${k}: ${peak(x, keyFreq(k), a, b)}`);
     const f2 = bar.modes[1].f;
     if (f2 < 15000) assert.ok(Math.abs(cents(peak(x, f2, a, a + 16384, 20), f2)) < 2, `${k}: mode 2 at ${f2}`);
+  }
+});
+test('the keyboard\'s tuning: at A = 415 Hz, and in ¼-comma meantone (E4 −3.42 ¢, C4 +10.26 ¢), the bar is cut to its tuned pitch and sounds there (within 0.5 ¢)', () => {
+  for (const [k, o, c] of [[72, { pitch: 415 }, cents(415, 440)], [64, { temperament: 'meantone' }, -3.42], [60, { temperament: 'meantone' }, 10.26]]) {
+    const f = keyFreq(k) * 2 ** (c / 1200), Q = P({ boxes: false, pedalLock: true, ...o }), x = note(k, Q, 0.8, 1.2), a = 4800, b = a + 32768;
+    assert.ok(Math.abs(cents(M.bar(k, Q.thick, tuningRatio(Q, k)).modes[0].f, f)) < 0.01, `${k}: the model's bar`);
+    assert.ok(Math.abs(cents(peak(x, f, a, b), f)) < 0.5, `${k}: ${peak(x, f, a, b)} vs ${f}`);
   }
 });
 test('the box makes the note louder, and shorter', () => {

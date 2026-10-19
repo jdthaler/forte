@@ -14,6 +14,7 @@
 
 #include "choc/containers/choc_Value.h"
 #include "choc/text/choc_JSON.h"
+#include "forte/tuning.h"
 
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -251,6 +252,33 @@ std::string writePreset(const InstrumentInfo &I, const std::string &name, const 
     if (!out) { error = "The preset couldn't be saved in " + utf8Of(dir) + "."; return ""; }
   }
   return file;
+}
+
+std::string tuningsFolder() { const fs::path r = root(); return r.empty() ? std::string() : utf8Of(r / "Tunings"); }
+
+std::vector<std::string> listScalas() {
+  std::vector<std::string> out;
+  std::error_code ec;
+  const fs::path dir = pathOf(tuningsFolder());
+  if (dir.empty()) return out;
+  for (fs::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {
+    std::string ext = utf8Of(it->path().extension());
+    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+    std::error_code e2;
+    if (ext == ".scl" && it->is_regular_file(e2)) out.push_back(utf8Of(it->path().filename()));
+  }
+  std::sort(out.begin(), out.end(), [](const std::string &a, const std::string &b) { return lessName(a, b) || (!lessName(b, a) && a < b); });
+  return out;
+}
+
+bool readScalaFile(const std::string &file, double (&cents)[11], std::string &name, std::string &error) {
+  const fs::path dir = pathOf(tuningsFolder()), f = pathOf(file);
+  if (dir.empty() || file.empty() || f.has_parent_path() || f.filename() != f) { error = "There is no such Scala file."; return false; }
+  std::string text;
+  if (!readText(dir / f, text)) { error = "The Scala file can't be read."; return false; }
+  if (!readScala(text, cents, name, error)) return false;
+  if (name.empty()) name = utf8Of(f.stem());
+  return true;
 }
 
 bool showFolder(const std::string &folder) {

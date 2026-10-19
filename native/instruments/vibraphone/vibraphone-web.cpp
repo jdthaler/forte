@@ -10,14 +10,15 @@
 using namespace forte::vibraphone;
 
 // The views ask for the same bar again and again (its model, then its tube): keep the last one.
-static const BarModel &cachedBar(int key, double depth) {
+// ratio: the key's tuning (forte/tuning.h), 1 in equal temperament at A = 440 Hz.
+static const BarModel &cachedBar(int key, double depth, double ratio) {
   static std::unique_ptr<BarModel> bar;
   static int lastKey = -1;
-  static double lastDepth = 0;
+  static double lastDepth = 0, lastRatio = 0;
   key = std::min(KEY_MAX, std::max(KEY_MIN, key));
-  if (!bar || key != lastKey || depth != lastDepth) {
-    bar = std::make_unique<BarModel>(barModel(key, depth));
-    lastKey = key; lastDepth = depth;
+  if (!bar || key != lastKey || depth != lastDepth || ratio != lastRatio) {
+    bar = std::make_unique<BarModel>(barModel(key, depth, ratio));
+    lastKey = key; lastDepth = depth; lastRatio = ratio;
   }
   return *bar;
 }
@@ -30,12 +31,12 @@ static TubeState stateOf(const double *t) {
 }
 
 extern "C" {
-// One bar (barModel) into out, returning how many numbers it wrote: key, L, b,
+// One bar (barModel, cut for the key's tuning ratio) into out, returning how many numbers it wrote: key, L, b,
 // h0, cf, A, D, depth, the cut (h0, a, c, d), mass, hmin, nx, the number of modes, the number of
 // cords; the cords' places; xs; then per mode: torsion?, n, f, ratio, sym, sigTE, sigSup, sigRad,
 // out, and its shape at xs.
-FORTE_EXPORT int vibraphone_bar_model(int key, double depth, double *out) {
-  const BarModel &B = cachedBar(key, depth);
+FORTE_EXPORT int vibraphone_bar_model(int key, double depth, double ratio, double *out) {
+  const BarModel &B = cachedBar(key, depth, ratio);
   const Geometry &g = B.geom;
   int n = 0;
   for (double v : {(double)B.key, g.L, g.b, g.h0, g.cf, g.A, g.D, g.depth, g.cut.h0, g.cut.a, g.cut.c, g.cut.d, B.mass, B.hmin,
@@ -49,8 +50,8 @@ FORTE_EXPORT int vibraphone_bar_model(int key, double depth, double *out) {
   return n;
 }
 // The tube under that bar (tubeGeometry): a, S, Sb, Rb, delta0, lv.
-FORTE_EXPORT void vibraphone_tube_geometry(int key, double depth, double *out) {
-  const BarModel &B = cachedBar(key, depth);
+FORTE_EXPORT void vibraphone_tube_geometry(int key, double depth, double ratio, double *out) {
+  const BarModel &B = cachedBar(key, depth, ratio);
   const TubeGeometry t = tubeGeometry(B.key, B);
   const double v[6] = {t.a, t.S, t.Sb, t.Rb, t.delta0, t.lv};
   for (int i = 0; i < 6; i++) out[i] = v[i];
@@ -76,11 +77,12 @@ FORTE_EXPORT void vibraphone_mallet(double hardness, double mass, double *out) {
   out[0] = m.m; out[1] = m.K; out[2] = m.p; out[3] = m.alpha;
 }
 
-// A bar's voice data, packed (packVoiceData) into out, returning how many numbers: what the page
-// sends with a note (noteData), and its engine takes (vibraphone_offer).
-FORTE_EXPORT int vibraphone_voice_data(int key, double depth, double *out) {
+// A key's bar for the parameters P (its undercut depth and the tuning, as the engine reads them),
+// its voice data packed (packVoiceData) into out, returning how many numbers: what the page sends
+// with a note (noteData), and its engine takes (vibraphone_offer).
+FORTE_EXPORT int vibraphone_voice_data(int key, const double *P, double *out) {
   key = std::min(KEY_MAX, std::max(KEY_MIN, key));
-  return packVoiceData(voiceData(key, depth), out);
+  return packVoiceData(voiceData(key, P[p::depth], tuningOf(P).ratio(key)), out);
 }
 FORTE_EXPORT int vibraphone_offer(VibraphoneEngine *e, const double *packed, int n) { return e->offer(packed, n); }
 

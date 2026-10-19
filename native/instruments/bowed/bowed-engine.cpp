@@ -24,6 +24,7 @@ static Params paramsOf(const double *P) {
   x.force = P[p::force]; x.attack = P[p::attack]; x.mus = P[p::mus]; x.mud = P[p::mud]; x.v0 = P[p::v0];
   x.memory = P[p::memory]; x.grain = P[p::grain]; x.torsionQ = P[p::torsionQ]; x.losses = P[p::losses];
   x.mobility = P[p::mobility]; x.boardEta = P[p::boardEta]; x.damper = P[p::damper]; x.lifted = P[p::lifted] != 0;
+  x.tuning = tuningOf(P);
   return x;
 }
 

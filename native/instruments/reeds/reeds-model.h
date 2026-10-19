@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "forte/dsp.h"
+#include "forte/tuning.h"
 #include "slot-table.h"
 
 namespace forte::reeds {
@@ -70,7 +71,8 @@ double solderRatio(int m, double scale = 1);
 struct Blob { double a, J; };
 Blob blob(double M, double h);
 struct TunedReed : ReedFEM { double f0 = 0, ratio = 0; Blob blb{}; };
-TunedReed tuneReed(int m, double solderScale = 1, int nModes = 6);
+// pitch: the keyboard's tuning's ratio for the key (forte/tuning.h): the reed is cut to keyFreq(m)·pitch
+TunedReed tuneReed(int m, double solderScale = 1, int nModes = 6, double pitch = 1);
 
 struct Hammer { double mass, K, p, alpha; };
 Hammer hammerDefaults(int m);
@@ -94,11 +96,12 @@ struct KeyModel {
   std::vector<Mode> modes;
   VoiceData voice;
 };
-// Everything key m needs, for solder, strike and hardness as the knobs are, at the engine's rate fs.
-KeyModel keyModel(int m, double solder, double strike, double hardness, double fs = 48000);
-// The identity of the reeds for these knobs at that rate: their values, hashed below 2⁵² (so it
-// rides in a double).
-uint64_t reedVersion(double solder, double strike, double hardness, double fs);
+// Everything key m needs, for solder, strike and hardness as the knobs are, at the engine's rate fs,
+// in the keyboard's tuning.
+KeyModel keyModel(int m, double solder, double strike, double hardness, double fs = 48000, const Tuning &tuning = Tuning());
+// The identity of the reeds for these knobs at that rate in that tuning: their values (and the
+// tuning's ratios, unless all 1), hashed below 2⁵² (so it rides in a double).
+uint64_t reedVersion(double solder, double strike, double hardness, double fs, const Tuning &tuning = Tuning());
 // voice data packed into doubles (version, key, n, the hammer's mass, K, p, alpha, then freq,
 // sigma, w, pk, dampW): what the page's WebAssembly model sends with a note
 int packVoiceData(const VoiceData &d, double *out);

@@ -37,8 +37,9 @@ inline constexpr Rank RANKS[NRANKS] = {{"L", "16′", -1, 0}, {"M", "8′", 0, 0
 // Which ranks the stops engage (P indexed as in harmonium-params.h).
 void engaged(const double *P, bool on[NRANKS]);
 
-// The knobs a reed's design depends on (and the musette's detune, which sets its frequency).
-struct Voicing { double set = 0.9, clearance = 40, q = 500, throat = 1, cell = 1, detune = 12; };
+// The knobs a reed's design depends on (and the musette's detune and the keyboard's tuning,
+// forte/tuning.h, which set its frequency).
+struct Voicing { double set = 0.9, clearance = 40, q = 500, throat = 1, cell = 1, detune = 12; Tuning tuning; };
 Voicing voicingOf(const double *P);
 double rankFreq(int m, int r, const Voicing &v);
 

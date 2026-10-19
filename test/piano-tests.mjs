@@ -198,6 +198,21 @@ test('C4 strike: finite, plausible contact time, in tune', () => {
   console.log(`        peak ${pk.toFixed(3)}, contact ${r.contactMs.toFixed(2)} ms, Fmax ${r.v.Fmax.toFixed(1)} N, modes ${r.vd.n}; pitch ${c2.toFixed(3)} ¢ (one string ${c1.toFixed(3)} ¢)`);
 });
 
+test('the keyboard’s tuning: at A = 415 Hz C4 sounds 415/440 of its pitch; in ¼-comma meantone E4 lies −3.42 ¢ and C4 +10.26 ¢ from equal temperament', () => {
+  // one string, no tension modulation: the engine's pitch is the model's to a few hundredths of a cent
+  const one = { unisons: 1, kc: false };
+  const at = (key, o, f) => peakFreqNear(render(key, P({ ...one, ...o }), 1.5).L.subarray(4800, 4800 + 32768), f);
+  const c415 = cents(at(60, { pitch: 415 }, keyFreq(60) * 415 / 440), keyFreq(60) * 415 / 440);
+  assert.ok(Math.abs(c415) < 0.05, `A = 415 Hz: C4 ${c415} ¢ from 415/440 of its pitch`);
+  // ¼-comma meantone on C, A kept at 440: E is a fifth's narrowing above E.T. (q − 700), C 2100 − 3q
+  const q = 1200 * Math.log2(3 / 2) - 300 * Math.log2(81 / 80);
+  for (const [key, want] of [[64, q - 700], [60, 2100 - 3 * q]]) {
+    const c = cents(at(key, { temperament: 'meantone' }, keyFreq(key)), keyFreq(key)) - want;
+    assert.ok(Math.abs(c) < 0.05, `meantone: key ${key} ${c} ¢ from ${want.toFixed(2)} ¢`);
+  }
+  assert.ok(Math.abs(computeKeyModel(64, P({ temperament: 'meantone' }), FS).info.f0 / keyFreq(64) - 2 ** ((q - 700) / 1200)) < 1e-12, 'the model’s f0');
+});
+
 test('bridge losses: measured decay of partials n = 1…30 is G(T + EIk²)/L', () => {
   // one string, internal losses off, linear: every partial decays only into the bridge
   const p = P({ unisons: 1, lossLow: 1e-6, lossHigh: 1e-6, bridge: 2, kc: false });

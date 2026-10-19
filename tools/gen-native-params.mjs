@@ -26,6 +26,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { loadInstrument, paramsOf } from './headless.mjs';
 import { INSTRUMENTS, TEMPLATE, FORTE_VERSION, byId } from '../shared/registry.js';
 import { PAGE_ONLY } from '../shared/wasm.js'; // parameters only a page uses: the computer keys' velocity
+import { TUNING_KEEP as TUNING_IDS, CENTS } from '../shared/tuning.js';
 
 const R = new URL('../', import.meta.url);
 
@@ -235,6 +236,7 @@ export async function generate(slug) {
   w('#include <cmath>');
   w();
   w('#include "forte/instrument.h"');
+  if (TUNING_IDS.every((id) => index.has(id))) w('#include "forte/tuning.h"');
   w();
   w('// The plugins\' build gives the version (forte_add_plugin, from <slug>-info.cmake); the');
   w('// WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.');
@@ -305,6 +307,14 @@ export async function generate(slug) {
   };
   w(`inline const Controller kControllers[] = {${ccs.length ? ccs.map(controller).join(', ') : '{0, -1}'}};`);
   w();
+  if (TUNING_IDS.every((id) => index.has(id))) { // shared/tuning.js: the keyboard's tuning, as its parameters set it
+    w('// The keyboard\'s tuning (forte/tuning.h): each key\'s frequency over equal temperament at A = 440 Hz.');
+    w('inline forte::Tuning tuningOf(const double *P) {');
+    w(`  const double custom[forte::kCustomCents] = {${CENTS.map((c) => `P[p::${c.id}]`).join(', ')}};`);
+    w('  return forte::makeTuning(P[p::pitch], P[p::temperament], P[p::tuningRoot], custom);');
+    w('}');
+    w();
+  }
   const ch = I.chain || {}, at = (id) => (id && index.has(id) ? `p::${ident(id)}` : '-1');
   const mw = typeof I.modWheel === 'string' ? { param: I.modWheel } : I.modWheel;
   const mwParam = mw ? params[index.get(mw.param)] : null;

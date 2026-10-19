@@ -103,7 +103,8 @@ Env defaultEnv() {
 }
 
 double keyRadius(int key, const double *P, const Env &env) {
-  return P[p::keepInTune] ? tuneRadius(keyFreq(key), env) : tuneRadius(keyFreq(key), defaultEnv());
+  const double f = keyFreq(key) * tuningOf(P).ratio(key); // the key's note in the keyboard's tuning
+  return P[p::keepInTune] ? tuneRadius(f, env) : tuneRadius(f, defaultEnv());
 }
 
 double peakPressure(const Liquid &liq, double velocity) { return (2 * KICK * velocity * liq.sigma) / R_REF; }

@@ -15,6 +15,8 @@
 #include <string>
 #include <vector>
 
+#include "forte/tuning.h"
+
 namespace forte::springs {
 
 inline constexpr double PI = 3.14159265358979323846;
@@ -46,6 +48,7 @@ struct Params {
   bool slinky = false;
   bool axial = false; // drive: along the axis, or in rotation
   double coil = 1, wire = 1, helix = 3, springs = 2, spread = 1.5, mallet = 0.35, bead = 1, endLoss = 0.06, eta = 2e-4, oil = 0;
+  forte::Tuning tuning; // the keyboard's (forte/tuning.h): each key's spring is cut for its tuned note
 };
 // From the native parameter array (springs-params.h's order).
 Params paramsOf(const double *P);

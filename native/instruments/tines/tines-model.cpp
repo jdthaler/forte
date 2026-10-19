@@ -100,7 +100,9 @@ HammerTip hammerDefaults(int m) {
 
 KeyModel computeKey(int m, const double *P, double fs) {
   KeyModel km;
-  const double f0 = keyFreq(m), om0 = 2 * PI * f0;
+  // the key's pitch in the keyboard's tuning (exactly keyFreq at the defaults): the tine is cut,
+  // and its tone bar and grommet tuned, to it; the voicing and the pickup stay the key's
+  const double f0 = keyFreq(m) * tuningOf(P).ratio(m), om0 = 2 * PI * f0;
   const double d = P[p::tineDiameter] * 1e-3;
   const double mu = STEEL.rho * PI * d * d / 4;
   // geometry is self-similar in L (spring mass ∝ tine mass, position ∝ L), so f₁ ∝ 1/L²: solve
@@ -205,7 +207,10 @@ bool isModelParam(int i) {
     case p::tineDiameter: case p::springMass: case p::springPos: case p::strike:
     case p::barMass: case p::barTune: case p::blockMass: case p::mountRatio: case p::mountDamp:
     case p::hardness: case p::tipExp: case p::hammerMass: case p::hysteresis:
-    case p::tineLoss: case p::hfLoss: case p::barLoss: return true;
+    case p::tineLoss: case p::hfLoss: case p::barLoss:
+    // the keyboard's tuning: every key's pitch
+    case p::pitch: case p::temperament: case p::tuningRoot: case p::cents1: case p::cents2: case p::cents3: case p::cents4:
+    case p::cents5: case p::cents6: case p::cents7: case p::cents8: case p::cents9: case p::cents10: case p::cents11: return true;
     default: return false;
   }
 }

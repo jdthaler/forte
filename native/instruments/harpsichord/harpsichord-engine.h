@@ -133,10 +133,11 @@ class HarpsichordEngine : public Engine {
   std::array<double, p::count> P{};
   Params mp;
   bool hasParams = false;
-  std::array<double, 6> physSig{};
+  std::array<double, 4> physSig{};
+  Tuning physTuning;
   uint64_t version = 0;
   // the strings, built off the audio thread for each version of the physics knobs
-  struct Snapshot { std::atomic<double> pitch{440}, temperament{0}, detune{0}, loss{1}, fmax{10}; };
+  struct Snapshot { std::atomic<double> ratio[12] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, detune{0}, loss{1}, fmax{10}; };
   std::array<Snapshot, 8> snapshots;
   Data data;
   int focus = 60;

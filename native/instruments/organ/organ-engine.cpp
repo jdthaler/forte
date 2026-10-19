@@ -63,6 +63,7 @@ Params paramsOf(const double *P) {
   q.tuning = (int)P[p::tuning];
   q.levels = (int)P[p::levels];
   q.mains = P[p::mains]; q.relief = P[p::relief]; q.drift = P[p::drift] / 100; q.crosstalk = P[p::crosstalk]; q.leakage = P[p::leakage];
+  q.keyboard = tuningOf(P);
   for (int d = 0; d < 9; d++) q.drawbars[d] = (int)P[p::drawbar1 + d];
   q.motor = P[p::motor] > 0;
   q.inertia = P[p::inertia]; q.spinUp = P[p::spinUp]; q.loading = P[p::loading];
@@ -110,11 +111,12 @@ void OrganEngine::apply(const Params &next) {
   updateDerived();
   // the generator: built on the first call, rebuilt when a parameter it depends on changes
   const double of[7] = {(double)p.tuning, (double)p.levels, p.mains, p.relief, p.drift, p.crosstalk, p.leakage};
-  if (!haveGen || !std::equal(of, of + 7, genOf)) {
+  if (!haveGen || !std::equal(of, of + 7, genOf) || !(p.keyboard == genKeyboard)) {
     std::copy(of, of + 7, genOf);
+    genKeyboard = p.keyboard;
     GenParams q;
     q.tuning = p.tuning; q.levels = p.levels; q.mains = p.mains; q.relief = p.relief; q.drift = p.drift;
-    q.crosstalk = p.crosstalk; q.leakage = p.leakage;
+    q.crosstalk = p.crosstalk; q.leakage = p.leakage; q.keyboard = p.keyboard;
     buildGenerator(gen, q, fs);
     haveGen = true;
     configure();

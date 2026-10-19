@@ -249,6 +249,14 @@ test('tuning: every bowl F3–A6 speaks within ±3 ¢ of 12-TET (perfect bowls)'
   assert.ok(Math.abs(worst) < 3, `worst ${worst.toFixed(2)} ¢ at ${wk}`);
   console.log(`        worst ${worst.toFixed(2)} ¢ (key ${wk})`);
 });
+test('the keyboard\'s tuning: at A = 415 Hz, and in ¼-comma meantone (E4 −3.42 ¢, C4 +10.26 ¢), the bowl is ground to its tuned note and speaks within ±3 ¢ of it', () => {
+  for (const [k, o, c] of [[69, { pitch: 415 }, cents(415, 440)], [64, { temperament: 'meantone' }, -3.42], [60, { temperament: 'meantone' }, 10.26]]) {
+    const Q = P({ ...QUIET, ...o }), f = keyFreq(k) * 2 ** (c / 1200);
+    near(cents(bowl(k, Q).modes[0].f, f), 0, 0.01, `${k}: the model's bowl (¢)`);
+    const { L } = hold(k, 0.6, 1.6, Q);
+    near(cents(peakFreq(L, 0.9 * FS, 1.6 * FS, f), f), 0, 3, `${k}: it speaks at (¢)`);
+  }
+});
 test('tuning past the compass: A2–E3 and A♯6–C8 speak within ±3 ¢, the big bowls below A2 a few cents sharp (the finger), bounded', () => {
   for (const k of [KEY_MIN, 28, 36, 45, 52, 94, 100, 104, KEY_MAX]) {
     const sec = k < 40 ? 3 : 1.6, { L, R } = hold(k, 0.6, sec, P(QUIET)), x = k > 73 ? R : L;

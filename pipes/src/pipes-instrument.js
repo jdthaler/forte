@@ -4,6 +4,7 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './pipes-params.js';
 import { KEY_LO, KEY_HI, KEY_MIN, KEY_MAX } from './pipes-data.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -11,7 +12,7 @@ export const INSTRUMENT = {
   id: 'pipes',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'venue', 'velocity'],    // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP],    // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],               // MIDI keys: A0–C8, 21–108
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // C–f³, 36–89, until Full range opens the rest
   space: 'hold',                           // Space and CC64 latch the keys down; the host sends the noteOffs on release

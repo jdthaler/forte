@@ -16,6 +16,9 @@ PacketParams paramsOf(const double *a) {
   PacketParams q;
   q.potential = (int)a[0]; q.eta = a[1]; q.lock = a[2] != 0; q.bpm = a[3];
   q.beats = a[4]; q.nbar = a[5]; q.sigma = a[6]; q.detector = (int)a[7];
+  double custom[forte::kCustomCents]; // then the tuning: pitch, temperament, root, the custom cents
+  for (int i = 0; i < forte::kCustomCents; i++) custom[i] = a[11 + i];
+  q.tuning = forte::makeTuning(a[8], a[9], a[10], custom);
   return q;
 }
 double L64[128], R64[128];
@@ -24,7 +27,7 @@ std::vector<double> grid;
 
 extern "C" {
 // makePacket(key, P, { fMax, maxPairs, rel }) for P = potential, eta, lock, bpm, beats, nbar, sigma,
-// detector: key, id, d, f0, pitch, nbar, sigma, scale, offBeat, Tcl, Trev, Tsr, tColl, kap, dc, the
+// detector, then the tuning's 14 (pitch, temperament, tuningRoot, cents1 … cents11): key, id, d, f0, pitch, nbar, sigma, scale, offBeat, Tcl, Trev, Tsr, tColl, kap, dc, the
 // number of states N and of pairs NP, then ns, c and E (N each) and i, j, k, f, w per pair. Returns
 // the count, or 0 if out has not room for `max`.
 FORTE_EXPORT int quantum_make_packet(const double *P, int key, double fMax, int maxPairs, double rel, double *out, int max) {

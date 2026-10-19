@@ -61,7 +61,8 @@ struct Cavity {
   std::array<Mode, MAX_MODES> modes;
   std::array<double, MAX_CELLS * MAX_CELLS> x; // the accelerating passband's modes in each cell, x[mode·N + n]
 };
-// One key's cavity under the parameters P (indexed as in cavity-params.h).
+// One key's cavity under the parameters P (indexed as in cavity-params.h): its π mode at the key's
+// equal-tempered pitch times the keyboard's tuning (tuningOf(P).ratio(key)).
 Cavity cavityOf(int key, const double *P);
 // The single cell's band frequency over its TM010's, for the cell design speed βg and coupling k.
 double bandRatio(int band, double betag, double k);

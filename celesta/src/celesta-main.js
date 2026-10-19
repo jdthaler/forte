@@ -1,6 +1,7 @@
 // celesta-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell, noteName } from '../../shared/shell.js';
+import { tuningRatio } from '../../shared/tuning.js';
 import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './celesta-instrument.js';
 import { wasmModel } from './celesta-wasm.js';
@@ -38,7 +39,7 @@ let B = null, BS = null;
 const fmtHz = (f) => (f < 1000 ? f.toFixed(1) : f.toFixed(0));
 function update() {
   const P = shell.P;
-  B = model.bar(focus, P.thick);
+  B = model.bar(focus, P.thick, tuningRatio(P, focus)); // cut for the key's tuning, as the engine cuts it
   BS = model.boxState(focus, P);
   const name = noteName(focus), f1 = B.modes[0].f;
   $('#focus-name').textContent = name; $('#bar-key').textContent = name;

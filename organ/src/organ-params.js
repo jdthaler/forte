@@ -6,6 +6,7 @@
 
 import { DRAWBARS } from './tonewheels.js';
 import { VENUE } from '../../shared/chain.js';
+import { TUNING_GROUP } from '../../shared/tuning.js';
 
 const f1 = (u) => (v) => `${v.toFixed(1)} ${u}`;
 const f2 = (u) => (v) => `${v.toFixed(2)} ${u}`;
@@ -100,6 +101,7 @@ export const GROUPS = [
       { id: 'volume', label: 'Volume', perform: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => v.toFixed(2) },
     ],
   },
+  TUNING_GROUP,
 ];
 
 export const CONSOLE_DEFAULTS = {

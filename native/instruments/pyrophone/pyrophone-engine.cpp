@@ -38,11 +38,11 @@ void PyrophoneEngine::Voice::init(PyrophoneEngine &eng, int k) {
 }
 
 // Tube length from the tuning: the steady limit cycle (at this β) lands on the key's frequency
-// when the gas is fully warm, f = W c_hot / (2π L).
+// when the gas is fully warm, f = W c_hot / (2π L): the key's note in the keyboard's tuning.
 void PyrophoneEngine::Voice::tune(const PyrophoneEngine &eng, double b) {
   const double *P = eng.P.data();
   W = eng.tune->W(P[p::autotune] != 0 ? b : betaOn(P[p::flame], 0.7, eng.tune->betaH, eng.tune->betaMax));
-  hHot = (TAU * keyFreqJS(key)) / (W * eng.fs); // L/c_hot units per sample
+  hHot = (TAU * (keyFreqJS(key) * eng.keys.ratio(key))) / (W * eng.fs); // L/c_hot units per sample
   // the modes a sample can hold: below 0.45 fs with the wheel bent all the way up (every mode of
   // the keys up to C6; at C8 four or five)
   int n = 1;
@@ -221,6 +221,7 @@ void PyrophoneEngine::setParams(const double *p) {
   const double listen = P[p::listen];
   for (int i = 0; i < p::count; i++) P[i] = p[i];
   hasParams = true;
+  keys = tuningOf(P.data()); // (new tubes are cut to it; a singing tube keeps its length, as for its other parameters)
   const TubeParams t = tubeOf(P.data());
   if (first || !(t == tp)) {
     tp = t;

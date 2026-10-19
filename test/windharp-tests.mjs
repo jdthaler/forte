@@ -372,6 +372,15 @@ test('tuning: at the reference wind every key G3–C7 locks onto its 3rd harmoni
   for (const n0 of [2, 5]) for (const k of [57, 69, 81, 93]) check(k, P({ n0 }), 48000, n0);
   console.log(`        worst ${worst.toFixed(2)} ¢`);
 });
+test('the keyboard\'s tuning: at the reference wind E4 at A = 415 Hz sounds 101.27 ¢ low, in ¼-comma meantone E4 −3.42 ¢ and C4 +10.26 ¢ from equal temperament, A4 at 440 Hz (within 3 ¢, on its 3rd harmonic); in unison every string follows the unison key\'s', () => {
+  for (const [o, key, want] of [[{ pitch: 415 }, 64, keyFreq(64) * 415 / 440], [{ temperament: 'meantone' }, 64, keyFreq(64) * 2 ** (-3.42 / 1200)],
+    [{ temperament: 'meantone' }, 60, keyFreq(60) * 2 ** (10.26 / 1200)], [{ temperament: 'meantone' }, 69, 440]]) {
+    const T = 2.6, r = hold(key, P(o), T), l = lockOf(r.e), c = cents(pitchOf(r.L, want, Math.round((T - 1.5) * FS), r.L.length), want);
+    assert.ok(l.n === 3 && Math.abs(c) < 3, `${JSON.stringify(o)}, ${noteName(key)}: harmonic ${l.n}, ${c.toFixed(2)} ¢`);
+  }
+  const p = P({ tuning: 'unison', unison: 55, pitch: 415 });
+  assert.ok(Math.abs(cents(stringDesign(74, p).target, keyFreq(55) * 415 / 440)) < 1e-9, 'unison at 415 Hz');
+});
 test('unison courses: one string a key to B4, two from C5 to C7; at the reference wind every string of every course locks onto the 3rd harmonic on its own, within 3 ¢ of the note, its strings 0.5–4 ¢ apart (they beat slowly: the course shimmers)', () => {
   const courseSize = (k) => courseOffsets(k).length;
   assert.ok(courseSize(55) === 1 && courseSize(71) === 1 && courseSize(72) === 2 && courseSize(96) === 2);

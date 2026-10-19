@@ -4,6 +4,7 @@
 
 import { GROUPS } from './glass-params.js';
 import { wasmEngine, scratch } from '../../shared/wasm.js';
+import { tuningRatio } from '../../shared/tuning.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'glass', name: 'ArmonicaWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/glass.wasm', import.meta.url).href };
@@ -70,18 +71,19 @@ export class ArmonicaWasmEngine extends Base {
 export const ready = () => ArmonicaWasmEngine.ready();
 
 // The model's functions (glass-model.h: bowl, freeLines, ringRatio, speakingThreshold, regulation,
-// rimSpeed, transport), computed by the WebAssembly.
+// rimSpeed, transport), computed by the WebAssembly. A bowl is ground to its key's tuning
+// (shared/tuning.js tuningRatio, from P's pitch and temperament).
 export async function wasmModel() {
   const x = await ready(), s = scratch(x);
   return {
-    bowl(key, P) { x.glass_bowl(key, P.split, P.loss, P.water, s.at); return bowlOf(key, s.f64(BOWL_SIZE)); },
+    bowl(key, P) { x.glass_bowl(key, P.split, P.loss, P.water, tuningRatio(P, key), s.at); return bowlOf(key, s.f64(BOWL_SIZE)); },
     freeLines(m, rot) {
       x.glass_free_lines(m.n, m.bryan, m.f1, m.f2, rot, s.at);
       const a = s.f64(8);
       return [0, 1, 2, 3].map((i) => ({ f: a[2 * i], w: a[2 * i + 1] }));
     },
     ringRatio: (n) => x.glass_ring_ratio(n),
-    speakingThreshold: (key, P) => x.glass_speaking_threshold(key, P.wet, P.v0, P.rough ?? 0, P.speed, P.split, P.loss, P.water),
+    speakingThreshold: (key, P) => x.glass_speaking_threshold(key, P.wet, P.v0, P.rough ?? 0, P.speed, P.split, P.loss, P.water, tuningRatio(P, key)),
     regulation: (key) => x.glass_regulation(key),
     rimSpeed: (key, speed) => x.glass_rim_speed(key, speed),
     transport: (m, rot) => x.glass_transport(m.n, m.bryan, rot),

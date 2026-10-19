@@ -56,18 +56,20 @@ struct Historic {
 void historic(int key, const Rib &rib, double amount, Historic &out);
 
 // One bell: which rib, how big, how heavy; every mode's frequency (Hz). Tuned by its nominal, an
-// octave above the key.
+// octave above the key's pitch: equal temperament's times `ratio`, the keyboard's tuning for the key
+// (forte/tuning.h). The bell is cast for that pitch: its diameter, and so its mass, follow it.
 struct Bell {
   int key, profile;
   const Rib *rib;
+  double ratio; // the tuning it was cast for
   double D, H, mass, fNom, fPrime, strikeHeight;
   double f[MODES_MAX];
   bool hasHist;
   Historic hist;
 };
-void bellOf(int key, int profile, double historicAmount, Bell &out);
+void bellOf(int key, int profile, double historicAmount, Bell &out, double ratio = 1);
 // the diameter and mass alone (bellOf without its modes), as bellOf computes them
-void bellSize(int key, int profile, double &D, double &mass);
+void bellSize(int key, int profile, double &D, double &mass, double ratio = 1);
 
 // losses and radiation
 double radiationEfficiency(int l, double ka);

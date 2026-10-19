@@ -104,13 +104,13 @@ TEST("pipe: every pipe of every rank speaks (its fundamental's root has Re s > 0
 }
 
 TEST("packed: a key's pipes round-trip through the page's packed form (all the engine reads of them)") {
-  const KeyModels a = keyModels(53, {0.8, 1.4, 0.2});
+  const KeyModels a = keyModels(53, {0.8, 1.4, 0.2}, 1.03); // (cut for a tuning a little sharp)
   std::vector<double> buf(PACKED_MAX);
   const int n = packKeyModels(a, buf.data());
   CHECK(n <= PACKED_MAX);
   KeyModels b;
   CHECK(unpackKeyModels(buf.data(), n, b));
-  CHECK(b.key == 53 && b.design == a.design);
+  CHECK(b.key == 53 && b.design == a.design && b.ratio == a.ratio && a.pipes[0].f == pipeFreq(53, 0) * 1.03);
   for (int r = 0; r < RANKS; r++) {
     const PipeModel &x = a.pipes[r], &y = b.pipes[r];
     CHECK(x.f == y.f && x.stopped == y.stopped && x.M == y.M && x.A == y.A && x.nModes == y.nModes);

@@ -17,6 +17,7 @@
 
 #include "forte/fdlibm.h"
 #include "forte/dsp.h"
+#include "forte/tuning.h"
 
 namespace forte::bowed {
 
@@ -48,6 +49,7 @@ struct Params {
   double mus = 0.8, mud = 0.3, v0 = 0.1, memory = 0.02, grain = 0.005, torsionQ = 40, losses = 1;
   double mobility = 1, boardEta = 0.03, damper = 0.25;
   bool lifted = false;
+  forte::Tuning tuning; // the keyboard's (forte/tuning.h): each string tuned to its key's ratio
 };
 const Params &defaults(); // the descriptor's DEFAULTS
 
@@ -56,9 +58,11 @@ const Params &defaults(); // the descriptor's DEFAULTS
 // 2 m, below C♯2) and halve every octave above C6 (so the wire's stress stays at C6's); tension
 // from 95 N in the treble to 130 N in the bass; μ from Mersenne's law. f0 is the free string's
 // frequency, tuned a few cents sharp (TUNE, bowed-tuning.h) so that the bowed note is in tune.
+// ratio: the keyboard's tuning for the key (Tuning::ratio): fKey and f0 move by it, the string
+// retuned by its tension (T × ratio²), as a tuner would; the scale and the wire (L, μ) stay the key's.
 inline double wound(int key) { return std::min(1.0, std::max(0.0, (60 - key) / 24.0)); } // 1 at C2 … 0 from C4
 struct StringDesign { int key; double fKey, f0, L, T, c, mu, Z0, d, B, stress; bool wound; };
-StringDesign stringDesign(int key);
+StringDesign stringDesign(int key, double ratio = 1);
 
 // The string's own losses as a decay rate (s⁻¹) rising with frequency.
 inline double stringSigma(double f, const Params &P, int key = 60) {

@@ -110,8 +110,10 @@ Blob blob(double M, double h) {
   return {a, M * (a * a / 6 + std::pow((a + h) / 2, 2))};
 }
 
-TunedReed tuneReed(int m, double solderScale, int nModes) {
-  const double f0 = keyFreq(m), om0 = 2 * PI * f0, h = REED.h, b = REED.b, mu = STEEL.rho * h * b;
+TunedReed tuneReed(int m, double solderScale, int nModes, double pitch) {
+  // the key's pitch in the keyboard's tuning (exactly keyFreq at the defaults): the length is cut
+  // to it; the solder's grading, the hammer and the slot stay the key's
+  const double f0 = keyFreq(m) * pitch, om0 = 2 * PI * f0, h = REED.h, b = REED.b, mu = STEEL.rho * h * b;
   const double ratio = solderRatio(m, solderScale);
   // start from the exact tip-mass root, then let the FEM (which adds the blob's rotary inertia)
   // correct the length: f₁ ∝ 1/L² at fixed ratio
@@ -138,10 +140,10 @@ Hammer hammerDefaults(int m) {
   return {geo(0.7e-3, 0.25e-3, t), geo(6e8, 6e10, t), 2.5, 0};
 }
 
-KeyModel keyModel(int m, double solder, double strike, double hardness, double fs) {
+KeyModel keyModel(int m, double solder, double strike, double hardness, double fs, const Tuning &tuning) {
   KeyModel k;
   k.key = m;
-  k.reed = tuneReed(m, solder);
+  k.reed = tuneReed(m, solder, MAX_MODES, tuning.ratio(m));
   const TunedReed &reed = k.reed;
   const double L = reed.L, f0 = reed.f0;
   const double fmax = std::min(18000.0, 0.45 * 2 * fs);
@@ -161,7 +163,7 @@ KeyModel keyModel(int m, double solder, double strike, double hardness, double f
   k.info = {m, f0, L, reed.h, reed.b, reed.m, reed.M, reed.J, reed.blb.a, reed.ratio, xh, xd, xp, hammer,
             reed.ok ? std::pow(reed.omega[0] / reed.shape(0, xp), 2) : NAN};
   VoiceData &v = k.voice;
-  v.version = reedVersion(solder, strike, hardness, fs);
+  v.version = reedVersion(solder, strike, hardness, fs, tuning);
   v.key = m; v.n = (int)k.modes.size(); v.hammer = hammer;
   for (int i = 0; i < v.n; i++) {
     const Mode &md = k.modes[i];
@@ -170,14 +172,17 @@ KeyModel keyModel(int m, double solder, double strike, double hardness, double f
   return k;
 }
 
-uint64_t reedVersion(double solder, double strike, double hardness, double fs) {
+uint64_t reedVersion(double solder, double strike, double hardness, double fs, const Tuning &tuning) {
   uint64_t h = 1469598103934665603ull;
-  for (double v : {fs, solder, strike, hardness}) {
+  auto add = [&](double v) {
     v += 0.0; // −0 is 0
     uint64_t bits;
     std::memcpy(&bits, &v, 8);
     for (int k = 0; k < 8; k++) { h ^= (bits >> (8 * k)) & 0xff; h *= 1099511628211ull; }
-  }
+  };
+  for (double v : {fs, solder, strike, hardness}) add(v);
+  if (std::any_of(std::begin(tuning.r), std::end(tuning.r), [](double r) { return r != 1; }))
+    for (double r : tuning.r) add(r); // (equal temperament at A = 440 Hz leaves the version as it was)
   return (h & ((1ull << 52) - 1)) | 1; // never 0
 }
 

@@ -12,6 +12,7 @@
 import assert from 'node:assert/strict';
 import { genEig } from '../shared/linalg.js';
 import { keyFreq } from '../shared/dsp.js';
+import { tuningRatio } from '../shared/tuning.js';
 import { AL, G_AL, BETA_L, EB_RATIOS, KEY_LO, KEY_HI, KEY_MIN, KEY_MAX, barBlank, bendingFreqs3, halfMesh, assembleBending, tuneUndercut } from '../vibraphone/src/bar.js';
 import { BAR_TABLE } from '../vibraphone/src/bar-table.js';
 import { INSTRUMENT } from '../vibraphone/src/vibraphone-instrument.js';
@@ -271,6 +272,18 @@ test('tuning: every key F3–F6 sounds within ±3 ¢ of 12-TET (tubes on, motor 
   }
   console.log(`         worst ${worst.toFixed(2)} ¢`);
 });
+test('the keyboard\'s tuning: at A = 415 Hz, and in ¼-comma meantone (E4 −3.42 ¢, C4 +10.26 ¢), each bar is cut to its tuned pitch (within 0.1 ¢) and sounds there (±3 ¢), from the page\'s noteData too', () => {
+  for (const [k, o, c] of [[69, { pitch: 415 }, cents(415, 440)], [57, { pitch: 415 }, cents(415, 440)], [64, { temperament: 'meantone' }, -3.42], [60, { temperament: 'meantone' }, 10.26]]) {
+    const Q = P({ motor: 'open', ...o }), f = keyFreq(k) * 2 ** (c / 1200), data = voiceData(k, Q);
+    assert.ok(Math.abs(cents(barModel(k, Q.depth, tuningRatio(Q, k)).modes[0].f, f)) < 0.1, `key ${k}: the model's bar`);
+    const e = new VibraphoneEngine(FS);
+    e.setParams(Q); e.noteOn(k, 0.5, data);
+    const x = new Float64Array(Math.round(1.4 * FS)), bL = new Float32Array(128), bR = new Float32Array(128);
+    for (let s = 0; s < x.length; s += 128) { e.process(bL, bR, 128); for (let i = 0; i < 128 && s + i < x.length; i++) x[s + i] = bL[i]; }
+    const got = peak(x, f * 2 ** (-20 / 1200), f * 2 ** (20 / 1200), Math.round(0.4 * FS), x.length);
+    assert.ok(Math.abs(cents(got, f)) < 3, `key ${k}: ${cents(got, f).toFixed(2)} ¢ from its tuned pitch`);
+  }
+});
 test('the keys past the compass (A0–E3, F♯6–C8) sound in tune within ±3 ¢, bounded, and no mode above 0.45 fs aliases back down', () => {
   for (const fs of [44100, 48000]) for (const k of [KEY_MIN, 33, 45, 52, 90, 96, 102, KEY_MAX]) {
     const x = run(P({ motor: 'open' }), [[0, 'on', k, 0.8]], 1.4, { fs }), f = keyFreq(k);
@@ -447,7 +460,7 @@ test('knobs glide: the gap, tube tuning, disc size, shaft phase and temperature 
 });
 test('CPU: 10 sounding bars at 48 kHz, motor running, in well under 30 % of real time', () => {
   const e = new VibraphoneEngine(FS); e.setParams(P()); e.setSustain(true);
-  for (let i = 0; i < 10; i++) e.noteOn(KEY_LO + 3 * i, 0.8, voiceData(KEY_LO + 3 * i, 1));
+  for (let i = 0; i < 10; i++) e.noteOn(KEY_LO + 3 * i, 0.8, voiceData(KEY_LO + 3 * i, P()));
   const bL = new Float32Array(128), bR = new Float32Array(128);
   for (let i = 0; i < 100; i++) e.process(bL, bR, 128); // warm up
   const n = Math.round((4 * FS) / 128), t0 = performance.now();

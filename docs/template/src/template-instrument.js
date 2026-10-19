@@ -3,6 +3,7 @@
 // plugins (tools/gen-native-params.mjs) all start here. No DOM, no Web Audio.
 
 import { GROUPS, DEFAULTS, PRESETS } from './template-params.js';
+import { TUNING_KEEP } from '../../../shared/tuning.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -10,7 +11,7 @@ export const INSTRUMENT = {
   id: 'template',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                     // MIDI keys: all 88, A0–C8
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   // the engine: the physics in C++ (native/instruments/template), built as WebAssembly

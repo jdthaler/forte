@@ -64,7 +64,9 @@ details.group summary { cursor: pointer; font-weight: 600; padding: 4px 0; list-
 details.group summary::after { content: "▾"; color: var(--muted); }
 details.group:not([open]) summary::after { content: "▸"; }
 .param { margin: 7px 0 9px; }
+.param[hidden] { display: none; }
 .param .row { display: flex; justify-content: space-between; gap: 8px; }
+.param select { width: 100%; margin-top: 3px; }
 .param .val { color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .param .hint { color: var(--muted); font-size: 11px; margin-top: 2px; }
 input[type=range] { width: 100%; margin: 4px 0 0; accent-color: var(--accent); height: 16px; }

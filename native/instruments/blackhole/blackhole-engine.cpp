@@ -126,6 +126,7 @@ void RingdownEngine::setParams(const double *P) {
   ModelParams m;
   m.spinU = P[p::spinU]; m.massRatio = P[p::massRatio]; m.inclination = P[p::inclination]; m.t0 = P[p::t0];
   m.overtones = P[p::overtones]; m.retrograde = P[p::retrograde]; m.inspiral = P[p::inspiral] > 0.5; m.inspiralOct = P[p::inspiralOct];
+  m.tuning = tuningOf(P);
   if (!(m == model)) { model = m; std::fill(std::begin(cached), std::end(cached), false); }
 }
 

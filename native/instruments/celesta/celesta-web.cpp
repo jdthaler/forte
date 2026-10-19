@@ -9,21 +9,22 @@
 using namespace forte::celesta;
 
 // The views ask for the same bar again and again: keep the last one.
-static const Bar &cachedBar(int key, double thick) {
+// ratio: the key's tuning (forte/tuning.h), 1 in equal temperament at A = 440 Hz.
+static const Bar &cachedBar(int key, double thick, double ratio) {
   static Bar bar;
   static int lastKey = -1;
-  static double lastThick = 0;
+  static double lastThick = 0, lastRatio = 0;
   key = std::min(KEY_MAX, std::max(KEY_MIN, key));
-  if (key != lastKey || thick != lastThick) { buildBar(key, thick, bar); lastKey = key; lastThick = thick; }
+  if (key != lastKey || thick != lastThick || ratio != lastRatio) { buildBar(key, thick, bar, ratio); lastKey = key; lastThick = thick; lastRatio = ratio; }
   return bar;
 }
 
 extern "C" {
-// One bar (buildBar) into out, returning how many numbers it wrote: key, L, b, h, mass, the
+// One bar (buildBar, cut for the key's tuning ratio) into out, returning how many numbers it wrote: key, L, b, h, mass, the
 // number of modes, NX, the two nodes, the box (w, l, S, Sb, Rb, delta0, perim), the pan (2); then
 // per mode: torsion?, f, ratio, sigTE, sigSup, sigRad, out, dampW, and its shape at NX points.
-FORTE_EXPORT int celesta_bar(int key, double thick, double *out) {
-  const Bar &B = cachedBar(key, thick);
+FORTE_EXPORT int celesta_bar(int key, double thick, double ratio, double *out) {
+  const Bar &B = cachedBar(key, thick, ratio);
   const Geometry &g = B.geom;
   const Box &x = B.box;
   int n = 0;
@@ -36,8 +37,8 @@ FORTE_EXPORT int celesta_bar(int key, double thick, double *out) {
   return n;
 }
 // The box under a bar for the knobs (boxState): depth, le, ma, Ka, mg, Rrad, Rwall, R, M11, M12, M22.
-FORTE_EXPORT void celesta_box_state(int key, double thick, double gap, double detune, double *out) {
-  const Bar &B = cachedBar(key, thick);
+FORTE_EXPORT void celesta_box_state(int key, double thick, double ratio, double gap, double detune, double *out) {
+  const Bar &B = cachedBar(key, thick, ratio);
   const BoxState s = boxState(B.box, B.f[0], gap, detune);
   const double v[11] = {s.depth, s.le, s.ma, s.Ka, s.mg, s.Rrad, s.Rwall, s.R, s.M11, s.M12, s.M22};
   for (int i = 0; i < 11; i++) out[i] = v[i];

@@ -98,6 +98,9 @@ export function wasmEngine(I, { messages } = {}) {
       else if (m.type === 'bend') x.forte_bend(this.h, m.value);
     }
     voiceCount() { return x.forte_voice_count(this.h); }
+    // the keyboard's tuning the C++ makes of the parameters set (forte/tuning.h): each pitch
+    // class's cents from equal temperament at A = 440 Hz (the tests compare it with shared/tuning.js)
+    tuningCents() { const s = scratch(x); return x.forte_tuning_cents(this.h, s.at) ? Array.from(s.f64(12)) : null; }
     process(L, R, n) {
       for (let at = 0; at < n; at += 128) {
         const m = Math.min(128, n - at);

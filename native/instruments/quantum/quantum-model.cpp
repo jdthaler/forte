@@ -167,7 +167,7 @@ double solveNbar(int key, const PacketParams &P, bool *locked) {
   if (locked) *locked = false;
   auto clamp = [&](double v) { return jsMin(lim.hi, jsMax(lim.lo, v)); };
   if (!P.lock || id == harmonic) return clamp(P.nbar);
-  const double f0 = keyFreq(key), T = (P.beats * 60) / P.bpm, R = f0 * T;
+  const double f0 = keyFreq(key) * P.tuning.ratio(key), T = (P.beats * 60) / P.bpm, R = f0 * T;
   const bool outer = id == bouncer;
   // g(n̄) = pitch(n̄) − f0 with the time scale fixed by T_rev = T
   auto g = [&](double nb) {
@@ -189,7 +189,7 @@ Packet makePacket(int key, const PacketParams &P, double fMax, int maxPairs, dou
   const int id = P.potential, d = P.detector;
   const double sigma = P.sigma;
   bool locked = false;
-  const double f0 = keyFreq(key), nbar = solveNbar(key, P, &locked);
+  const double f0 = keyFreq(key) * P.tuning.ratio(key), nbar = solveNbar(key, P, &locked); // the key's (tuned) pitch
   const WellModel W = well(id, P, nbar);
   const States S = packetStates(W, id == bouncer, nbar, sigma);
   const int N = (int)S.ns.size();

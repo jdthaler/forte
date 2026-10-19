@@ -120,6 +120,7 @@ class PyrophoneEngine : public Engine {
   std::array<double, 128> warm{}, warmAt{};
   double time = 0, sincePost = 0, pressure_ = 0;
   double bendTo = 1, bendNow = 1; // pitch bend: the sound speed's ratio, and where it is going
+  forte::Tuning keys; // the keyboard's tuning (forte/tuning.h): each tube is cut for its key's tuned note
   uint32_t seed = 0x2545f491;
   int focus = -1;
   const double kSep, kTurb, turbNorm;

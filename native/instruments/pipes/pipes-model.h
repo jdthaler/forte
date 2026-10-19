@@ -58,8 +58,9 @@ const double *mixtureRanks(int key);
 double rankHarm(int key, int r);
 // Which ranks the drawn stops engage (principal, octave, gedackt, mixture).
 inline void engaged(const bool stops[STOPS], bool on[RANKS]) { for (int r = 0; r < RANKS; r++) on[r] = stops[RANK[r].stop]; }
-// Equal temperament at A = 440 Hz; the Mixture's fifths pure.
-inline double pipeFreq(int key, int r) { return keyFreq(key) * rankHarm(key, r); }
+// The key's pitch in the keyboard's tuning (equal temperament at A = 440 Hz times `ratio`, its
+// tuning's for the key: forte/tuning.h), and the rank's harmonic of it: the Mixture's fifths pure.
+inline double pipeFreq(int key, int r, double ratio = 1) { return keyFreq(key) * ratio * rankHarm(key, r); }
 
 // Töpfer's normal scale.
 struct Scale { double D0, f0, exp, mouth, h0, hExp; };

@@ -114,8 +114,9 @@ class StarEngine : public Engine {
   std::array<float, MAX_MODES> ampOut{};
   std::array<double, BLOCK_MAX> buf{}; // a voice's block, before its pan
 
-  // each key's star, built off the audio thread for the kind, mass and speed-up of a version
-  struct Snapshot { std::atomic<uint64_t> version{0}; std::atomic<double> family{0}, mass{1}, speedup{K0}; };
+  // each key's star, built off the audio thread for the kind, mass, speed-up and tuning (each pitch
+  // class's ratio) of a version
+  struct Snapshot { std::atomic<uint64_t> version{0}; std::atomic<double> family{0}, mass{1}, speedup{K0}, ratio[12] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; };
   std::array<Snapshot, 8> snapshots;
   int snapAt = 0;
   uint64_t version = 0;
