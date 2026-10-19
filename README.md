@@ -212,7 +212,10 @@ art and references.
 
 ## License
 
-[MIT](LICENSE) © 2026 Jesse Thaler. Instrument names such as Hammond,
+[MIT](LICENSE) © 2026 Jesse Thaler. The WebAssembly and the plugins compile in open-source
+libraries (Eigen, fdlibm, CLAP, clap-wrapper, the VST 3 and Audio Unit SDKs, RtAudio, RtMidi,
+CHOC and others), whose licences and notices are in
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md); the plugin downloads include it. Instrument names such as Hammond,
 Leslie, Rhodes, Wurlitzer, Clavinet, Pianet and Yamaha are trademarks of
 their owners. Forte's instruments are physical models inspired by them and
 are not affiliated with or endorsed by those companies.

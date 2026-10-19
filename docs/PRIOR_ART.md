@@ -306,6 +306,11 @@ requests.
 | `tools/reeds-slot-table.mjs` | Laplace's equation in the Reed Piano's pickup slot by successive over-relaxation, on nested grids | S. P. Frankel, "Convergence rates of iterative treatments of partial differential equations", *Math. Tables Aids Comput.* **4**(30), 65–75 (1950), [doi:10.1090/S0025-5718-1950-0046149-3](https://doi.org/10.1090/S0025-5718-1950-0046149-3); D. Young, "Iterative methods for solving partial difference equations of elliptic type", *Trans. Amer. Math. Soc.* **76**(1), 92–111 (1954), [doi:10.1090/S0002-9947-1954-0059635-7](https://doi.org/10.1090/S0002-9947-1954-0059635-7). |
 | `blackhole/src/qnm.js`, `tools/qnm-table.mjs` | Kerr quasinormal modes by continued fractions (with the n-th inversion for overtones), solved by complex secant iteration | S. A. Teukolsky, "Perturbations of a rotating black hole. I. Fundamental equations for gravitational, electromagnetic, and neutrino-field perturbations", *Astrophys. J.* **185**, 635 (1973), [doi:10.1086/152444](https://doi.org/10.1086/152444); E. W. Leaver, "An analytic representation for the quasi-normal modes of Kerr black holes", *Proc. R. Soc. Lond. A* **402**, 285–298 (1985), [doi:10.1098/rspa.1985.0119](https://doi.org/10.1098/rspa.1985.0119). Checked against E. Berti, V. Cardoso and C. M. Will, *Phys. Rev. D* **73**, 064030 (2006), [doi:10.1103/PhysRevD.73.064030](https://doi.org/10.1103/PhysRevD.73.064030), and E. Berti, V. Cardoso and A. O. Starinets, "Quasinormal modes of black holes and black branes", *Class. Quantum Grav.* **26**, 163001 (2009), [doi:10.1088/0264-9381/26/16/163001](https://doi.org/10.1088/0264-9381/26/16/163001). |
 
+The WebAssembly and the plugins also compile in open-source libraries: Eigen, fdlibm (as V8
+computes it), Emscripten's C library, and for the plugins CLAP, clap-wrapper, the VST 3 SDK,
+Apple's AudioUnitSDK, RtAudio, RtMidi and CHOC. Their licences and notices are in
+[THIRD-PARTY-NOTICES.md](https://github.com/jdthaler/forte/blob/live/THIRD-PARTY-NOTICES.md).
+
 Other tools (`tools/gongs-modes.mjs`, `tools/bowed-tuning.mjs`,
 `tools/lock-comparison.mjs`) compute tables from each instrument's own
 model; their physics and sources are in the instrument READMEs.
