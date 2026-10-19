@@ -83,7 +83,8 @@ export const ready = () => BlackholeWasmEngine.ready();
 // The model's functions the views call, computed by the WebAssembly: the QNM bank (its table, with
 // log(−Im Mω) as lim, and omega(l, m, n, a), interpolated), a key's voice (keyVoice, and voiceFor,
 // cached by the 'model' parameters and the sample rate), its strain in closed form (strainCurve),
-// and the spin-weighted spherical harmonics (swsh).
+// the spin-weighted spherical harmonics (swsh) and the spheroidal ones (spheroidal: ₛS_lm(θ; c) and
+// the separation constant A, for complex c = aω).
 const MODEL = [...GROUPS.flatMap((g) => g.params).filter((p) => p.kind === 'model').map((p) => p.id), ...TUNING_KEEP]; // and the keyboard's tuning
 export async function wasmModel() {
   const x = await ready();
@@ -124,7 +125,13 @@ export async function wasmModel() {
     const all = new Float32Array(x.memory.buffer, b, 2 * n);
     return { hp: all.slice(0, n), hx: all.slice(n), dur };
   };
-  return { Engine: BlackholeWasmEngine, bank, keyVoice, voiceFor, strainCurve, swsh: (s, l, m, theta) => x.blackhole_swsh(s, l, m, theta) };
+  const spheroidal = (s, l, m, c, theta) => {
+    const o = scratch(x);
+    x.blackhole_spheroidal(s, l, m, c.re, c.im, theta, o.at);
+    const [re, im, Are, Aim] = o.f64(4);
+    return { S: { re, im }, A: { re: Are, im: Aim } };
+  };
+  return { Engine: BlackholeWasmEngine, bank, keyVoice, voiceFor, strainCurve, spheroidal, swsh: (s, l, m, theta) => x.blackhole_swsh(s, l, m, theta) };
 }
 
 globalThis.BlackholeWasmEngine = BlackholeWasmEngine;

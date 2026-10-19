@@ -132,9 +132,9 @@ void RingdownEngine::setParams(const double *P) {
 
 // A key's voice at the current model parameters, built once per key until they change.
 const KeyVoice &RingdownEngine::voiceFor(int key) {
-  if (key < KEY_LO || key > KEY_HI) { keyVoice(key, model, fs, other); return other; }
+  if (key < KEY_LO || key > KEY_HI) { keyVoice(key, model, fs, other, &angular); return other; }
   const int i = key - KEY_LO;
-  if (!cached[i]) { keyVoice(key, model, fs, cache[i]); cached[i] = true; }
+  if (!cached[i]) { keyVoice(key, model, fs, cache[i], &angular); cached[i] = true; }
   return cache[i];
 }
 

@@ -4,7 +4,7 @@
 // modes fall where general relativity puts them, read from the Leaver table (qnm-table.h,
 // converted from blackhole/data/qnm-table.json) by the same cubic Hermite interpolation. A binary
 // merger of mass ratio q excites them (Kamaretsos et al.'s fits), seen at an inclination ι
-// through the spin-weighted spherical harmonics; an optional inspiral chirps into the merger.
+// through the spin-weighted spheroidal harmonics; an optional inspiral chirps into the merger.
 // With V8's fdlibm for exp, log, pow, sin, cos and atan2, and V8's log10 and Math.hypot, so a
 // key's voice is the same to the last bit in the WebAssembly and the plugins.
 #pragma once
@@ -40,6 +40,18 @@ void tableMode(int i, int &l, int &m, int &n, const double *&re, const double *&
 // ₛY_lm(θ, φ = 0), real
 double swsh(int s, int l, int m, double theta);
 
+// ₛS_lm(θ, φ = 0; c), the spin-weighted spheroidal harmonic for complex c = aω (M = 1): the
+// angular function of the mode, which mixes in the spherical harmonics of the same m and other l
+// as aω grows: unit norm on the sphere, its ₛY_lm part real and positive, so it is ₛY_lm at c = 0.
+struct Spheroidal {
+  static constexpr int N = 14; // ₛY_jm with j = max(|m|, |s|) … + N − 1
+  int s = 0, l = 0, m = 0, lmin = 0;
+  double bre[N] = {}, bim[N] = {}; // the coefficient of ₛY_{lmin+j, m}
+  double Are = 0, Aim = 0;         // the separation constant
+};
+void spheroidal(int s, int l, int m, double cre, double cim, Spheroidal &out);
+Omega spheroidalAt(const Spheroidal &S, double theta); // ₛS_lm(θ), as (re, im)
+
 // ---- a key's voice: everything the engine needs for one key at the current settings ----
 // The model's parameters (the descriptor's kind: 'model').
 struct ModelParams {
@@ -70,7 +82,14 @@ struct KeyVoice {
   Info info;
 };
 
-void keyVoice(int key, const ModelParams &P, double fs, KeyVoice &v);
+// The modes' angular functions depend on the spin and the inclination but not on the key, so a
+// caller that builds many keys' voices can keep them here (one per thread).
+struct Angular {
+  double a = -1, iota = -1;
+  bool have[5][9][3] = {};      // (l, m + 4, n)
+  Omega y[5][9][3], ym[5][9][3]; // ₋₂S_lm(ι; aω) and ₋₂S_lm(π − ι; aω)
+};
+void keyVoice(int key, const ModelParams &P, double fs, KeyVoice &v, Angular *angular = nullptr);
 
 // ---- the chirp's schedule in closed form (chirpSchedule, chirpAt, chirpAmp) ----
 struct Schedule { double f1, t1, t2; };
