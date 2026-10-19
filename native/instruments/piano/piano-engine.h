@@ -46,7 +46,7 @@ class PianoEngine : public Engine {
  public:
   static constexpr int POOL = 160;        // voices, sounding or dying
   static constexpr int ARENA = 16384;     // modes across every voice
-  static constexpr int ARRAYS = 18;       // per-mode arrays in a voice's block of the arena
+  static constexpr int ARRAYS = 21;       // per-mode arrays in a voice's block of the arena
   static constexpr int MAXB = 256;        // render in chunks of at most this many samples
   explicit PianoEngine(double fs);
 
@@ -73,6 +73,12 @@ class PianoEngine : public Engine {
     double *q = nullptr, *q1 = nullptr, *a1 = nullptr, *a2 = nullptr, *a1d = nullptr, *a2d = nullptr;
     double *wN = nullptr, *bwN = nullptr, *wU = nullptr, *bwU = nullptr, *fbv = nullptr, *fbh = nullptr;
     double *cvk = nullptr, *chk = nullptr, *ctk = nullptr, *om = nullptr, *sig = nullptr, *perm = nullptr;
+    // tension modulation: each mode's stretch weight g, its a1's change per newton (b·g), its
+    // string; the modes of a segment are in runs by string, run[seg][u] to run[seg][u + 1]
+    double *gw = nullptr, *eps = nullptr, *us = nullptr;
+    double kcGain = 0, Tt = 0, dT[3] = {0, 0, 0};
+    int nu = 1, run[4][4] = {};
+    bool stretched = false; // still stretched enough to matter (the strike sets it; the decay clears it)
     const double *w = nullptr, *bw = nullptr;
     double compN = 0, compU = 0, comp = 0, KU = 0, hK = 0;
     struct { double mass, K, p, alpha; } hammer{};

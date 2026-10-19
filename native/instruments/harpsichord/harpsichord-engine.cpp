@@ -123,6 +123,7 @@ void HarpsichordEngine::Voice::render(int n) {
     PluckedString &st = strings[ch];
     if (sleep[ch]) continue;
     const bool lifted = lifts[ch] && !killing;
+    st.kcOn = e.P[p::kc] != 0;
     const double pk = st.render(n, lifted ? lb : e.zeroBuf.data(), keyDown && lifted, ch == BACK ? e.buffBuf.data() : e.zeroBuf.data(), e.seg.data(), BLOCK, w[ch].data(), w0[ch], w1[ch], 1);
     if (pk > pk0) pk0 = pk;
     if (!(pk < 1e4) || !std::isfinite(st.q()[0])) {

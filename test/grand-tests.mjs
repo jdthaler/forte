@@ -21,7 +21,7 @@ const CP70 = [28, 100]; // the CP-70's 73, E1–E7
 // What the checks compare against, stated here rather than read from the model: steel's Young's
 // modulus and breaking stress, the plate's size, the speed of sound and the baffle's size for the
 // short circuit (grand-model.h), and the circuit's piezo capacitance and EQ corners (grand-engine.h).
-const STEEL = { E: 2.0e11, strength: 2.2e9 }, PLATE = { a: 1.3, b: 0.77, c: 343, ell: 0.5 };
+const STEEL = { E: 2.0e11, rho: 7850, strength: 2.2e9 }, PLATE = { a: 1.3, b: 0.77, c: 343, ell: 0.5 };
 const C_PIEZO = 10e-9, EQ = { bass: 120, mid: 1000, midQ: 0.8, treble: 3500 };
 // A stiff string's partial 2 sits above twice its fundamental by this many cents.
 const octaveStretch = (B) => 1200 * Math.log2(Math.sqrt(1 + 4 * B) / Math.sqrt(1 + B));
@@ -220,7 +220,8 @@ test('stretch tuning: every octave\'s 2:1 partials coincide, so the octaves stop
 });
 test('the zing is in the output: E1\'s 10th partial at the model\'s +159 ¢ (concert scale: +5 ¢)', () => {
   for (const scale of ['cp70', 'concert']) {
-    const p = P({ scale }), km = keyModel(28, p), want = km.partials[9].f;
+    // the linear model's partial: tension modulation would raise it while the blow rings (its own test)
+    const p = P({ scale, kc: false }), km = keyModel(28, p), want = km.partials[9].f;
     const x = note(p, 28, 0.8, 1.2), f = peakFreq(x, want, Math.round(0.1 * FS), x.length, 10);
     assert.ok(Math.abs(cents(f, want)) < 2, `${scale}: ${f.toFixed(2)} vs ${want.toFixed(2)} Hz`);
     assert.ok(scale === 'cp70' ? km.partials[9].stretch > 140 : km.partials[9].stretch < 10);
@@ -241,7 +242,8 @@ test('the piezo hears Σ bₙqₙ: partial n is n × its displacement (harmonic 
 test('the bridge drains every partial at its model rate, up to 15 kHz, at 44.1 and 48 kHz (implicit solve)', () => {
   let worst = 0, wf = 0;
   for (const fs of [44100, 48000]) for (const key of [84, 96]) {
-    const p = P({ stringing: 'single', tilt: 0, gFrame: 3e-3, maxFreq: 16000, hardness: 3 }), km = keyModel(key, p, null, fs);
+    // a full blow's pitch glide would move the partials off the frequencies the decay is read at
+    const p = P({ stringing: 'single', tilt: 0, gFrame: 3e-3, maxFreq: 16000, hardness: 3, kc: false }), km = keyModel(key, p, null, fs);
     const x = render(p, [[0, 'on', key, 1]], 1.2, fs).x;
     for (const pp of km.partials) {
       if (pp.f < 1500) continue;
@@ -259,6 +261,27 @@ test('one string on a stiff bridge decays at σ_int + G(T + EIk²)/L', () => {
     const pp = km.partials[j], want = pp.sigInt + pp.bridgeV, got = decay(x, pp.f, 0.3, 1.2);
     assert.ok(Math.abs(got / want - 1) < 0.05, `n=${j + 1}: ${got.toFixed(3)} vs ${want.toFixed(3)} s⁻¹`);
   }
+});
+test('tension modulation: a hard blow starts sharp and glides down; a soft one barely moves', () => {
+  // the stretch weights are ∂ω²/∂T, k²/μ for every mode (μ with the winding); the core alone
+  // stretches: ΔT = (E A_core/2L)∫u_x²
+  const km = keyModel(40, P()), rel = (a, b) => Math.abs(a / b - 1);
+  for (let i = 0; i < km.n; i += 5) {
+    const pp = km.partials.find((x) => x.n === km.idx[i]);
+    assert.ok(rel(km.g[i], (pp.k * pp.k) / km.S.mu) < 1e-12, `g of mode ${i}`);
+  }
+  assert.ok(rel(km.kc, (STEEL.E * (km.S.muCore / STEEL.rho)) / (2 * km.S.L)) < 1e-12, `kc ${km.kc}`);
+  // E2, one string: the fundamental's pitch with the stretch, re without
+  const f = keyModel(40, P({ stringing: 'single' })).partials[0].f;
+  const shift = (vel, t) => {
+    const at = (kc) => { const x = note(P({ stringing: 'single', kc }), 40, vel, t + 0.12); return peakFreq(x, f, Math.round(t * FS), Math.round((t + 0.1) * FS), 80); };
+    return cents(at(true), at(false));
+  };
+  const hard = shift(1, 0.02), late = shift(1, 1.8), soft = shift(0.2, 0.02);
+  console.log(`        (E2 at full velocity: +${hard.toFixed(1)} ¢ at the start, +${late.toFixed(1)} ¢ after 1.8 s; at 0.2 +${soft.toFixed(2)} ¢)`);
+  assert.ok(hard > 5 && hard < 60, `hard ${hard}`);
+  assert.ok(late < hard / 4, `late ${late}`);
+  assert.ok(Math.abs(soft) < hard / 10, `soft ${soft}`);
 });
 test('Weinreich: two strings in phase drain twice as fast; mistuning and tilt leave an aftersound', () => {
   const base = { gFrame: 1e-3, tilt: 0, detune: 0 }, f = keyFreq(60);
@@ -329,10 +352,12 @@ test('a key struck again after a physics knob moved does not double: the old voi
   }
 });
 test('repetition: the hammer needs ~60 ms to come back, so a blow every 11 ms does not pump the string', () => {
-  const single = render(P(), [[0, 'on', 28, 1]], 0.4).pk;
+  // the linear string: the peak depends on where in its cycle each blow lands, and tension
+  // modulation's glide moves those phases (within the same spread as other blow intervals)
+  const p = P({ kc: false }), single = render(p, [[0, 'on', 28, 1]], 0.4).pk;
   const ev = [[0, 'sus', true]];
   for (let i = 0; i < 30; i++) ev.push([i * 0.011, 'on', 28, 1]);
-  const fast = render(P(), ev, 0.65), struck = fast.e.voices[0].struck;
+  const fast = render(p, ev, 0.65), struck = fast.e.voices[0].struck;
   assert.ok(fast.pk < 1.6 * single, `peak ${fast.pk.toFixed(3)} vs one blow ${single.toFixed(3)}`);
   assert.ok(struck > 0.25 * FS, 'later blows still land once the hammer is back');
 });

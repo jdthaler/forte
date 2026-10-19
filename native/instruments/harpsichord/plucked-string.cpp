@@ -13,7 +13,8 @@ using std::numbers::pi;
 
 void PluckedString::init(const StringDesign &S_, const Partials &parts, double fs_) {
   S = S_; N = parts.N; Na = N; fs = fs_; h = 1 / fs_;
-  for (int i = 0; i < N; i++) { W[i] = 2 * pi * parts.f[i]; K[i] = parts.k[i]; BF[i] = parts.b[i]; sigBase[i] = parts.sigma[i]; }
+  for (int i = 0; i < N; i++) { W[i] = 2 * pi * parts.f[i]; K[i] = parts.k[i]; BF[i] = parts.b[i]; sigBase[i] = parts.sigma[i]; G[i] = (K[i] * K[i]) / S.mu; }
+  kc = (S.mat->E * S.A) / (2 * S.L); dT = 0; stretched = false; kcOn = false;
   for (int i = 0; i < N_MAX; i++) { qa[i] = qb[i] = 0; extra[i] = 0; }
   flip = false;
   nrm = std::sqrt(2 / (S.mu * S.L));
@@ -35,6 +36,7 @@ void PluckedString::setDamping(const double *ex) {
     const double wd = std::sqrt(std::max(w0 * w0 - sg * sg, 1e-6));
     A1[i] = 2 * r * std::cos(wd * h); A2[i] = r * r; sig[i] = sg;
     Bin[i] = (1 - A1[i] + A2[i]) / (w0 * w0);
+    EP[i] = ((r * h * std::sin(wd * h)) / wd) * G[i]; // −∂a₁/∂(ω²) · g
   }
   for (int p = 0; p < MAXP; p++) if (x[p] >= 0) fillPoint(p);
   cDirty = true;
@@ -108,13 +110,17 @@ double PluckedString::render(int n, const double *lift, bool keyDown, const doub
   if (!needsContacts(lmax, keyDown, buffOn)) return free(n, seg, stride, w0, w1, wts, gain);
   if (cDirty) updateC();
   const int Nn = Na;
-  const double *a1 = A1.data(), *a2 = A2.data(), *bf = BF.data();
+  const double *a1 = A1.data(), *a2 = A2.data(), *bf = BF.data(), *ep = EP.data(), *g = G.data();
+  double most = 0;
+  bool ran = false;
   const int s0 = w0 * stride, s1 = w1 * stride;
   const double k0 = wts[w0] * gain, k1 = wts[w1] * gain;
   double *qq = q(), *qq1 = q1();
   double ymin = std::numeric_limits<double>::infinity(), ymax = -ymin;
   for (int t = 0; t < n; t++) {
     const double L = lift[t], bg = buffG[t];
+    const bool kcs = kcOn && stretched;
+    const double d = kcs ? dT : 0; // a₁ − ep·δT: the stretched string's partials (δT = 0: linear)
     // 1. candidates and their laws F = α − βu
     int m = 0;
     for (int p = 0; p < MAXP; p++) {
@@ -137,16 +143,16 @@ double PluckedString::render(int n, const double *lift, bool keyDown, const doub
     }
     // 2. the free step, with the free displacement at the candidates
     if (m == 0) {
-      for (int i = 0; i < Nn; i++) qq1[i] = a1[i] * qq[i] - a2[i] * qq1[i];
+      for (int i = 0; i < Nn; i++) qq1[i] = (a1[i] - ep[i] * d) * qq[i] - a2[i] * qq1[i];
     } else if (m == 1) {
       const double *P0 = PHI[idx[0]].data();
       double u0 = 0;
-      for (int i = 0; i < Nn; i++) { const double v = a1[i] * qq[i] - a2[i] * qq1[i]; qq1[i] = v; u0 += P0[i] * v; }
+      for (int i = 0; i < Nn; i++) { const double v = (a1[i] - ep[i] * d) * qq[i] - a2[i] * qq1[i]; qq1[i] = v; u0 += P0[i] * v; }
       uf[idx[0]] = u0;
     } else {
       const double *P0 = PHI[idx[0]].data(), *P1 = PHI[idx[1]].data(), *P2 = PHI[idx[m > 2 ? 2 : 1]].data(), *P3 = PHI[idx[m > 3 ? 3 : 1]].data();
       double u0 = 0, u1 = 0, u2 = 0, u3 = 0;
-      for (int i = 0; i < Nn; i++) { const double v = a1[i] * qq[i] - a2[i] * qq1[i]; qq1[i] = v; u0 += P0[i] * v; u1 += P1[i] * v; u2 += P2[i] * v; u3 += P3[i] * v; }
+      for (int i = 0; i < Nn; i++) { const double v = (a1[i] - ep[i] * d) * qq[i] - a2[i] * qq1[i]; qq1[i] = v; u0 += P0[i] * v; u1 += P1[i] * v; u2 += P2[i] * v; u3 += P3[i] * v; }
       uf[idx[0]] = u0; uf[idx[1]] = u1;
       if (m > 2) uf[idx[2]] = u2;
       if (m > 3) uf[idx[3]] = u3;
@@ -185,13 +191,19 @@ double PluckedString::render(int n, const double *lift, bool keyDown, const doub
         const int p = idx[a];
         double u = uf[p];
         for (int b = 0; b < m; b++) { const int j = idx[b]; if (act[j]) u += C[p * MAXP + j] * Fc[j]; }
-        if (p < 2 && act[p]) { work += (Fc[p] * (u - uOld[p])) / 2; const double af = Fc[p] < 0 ? -Fc[p] : Fc[p]; if (af > peakF) peakF = af; }
+        if (p < 2 && act[p]) { work += (Fc[p] * (u - uOld[p])) / 2; const double af = Fc[p] < 0 ? -Fc[p] : Fc[p]; if (af > peakF) peakF = af; stretched = true; }
         uOld[p] = uNow[p]; uNow[p] = u;
       }
       Fp[0] = act[0] ? Fc[0] : 0; Fp[1] = act[1] ? Fc[1] : 0; Fd = act[PT::DAMPER] ? Fc[PT::DAMPER] : 0;
     } else {
       for (int i = 0; i < Nn; i++) y += bf[i] * qq1[i];
       Fp[0] = Fp[1] = 0; Fd = 0;
+    }
+    if (kcs) {
+      double Q = 0;
+      for (int i = 0; i < Nn; i++) Q += g[i] * qq1[i] * qq1[i];
+      dT = std::min(kc * Q, 0.1 * S.T); ran = true;
+      if (dT > most) most = dT;
     }
     std::swap(qq, qq1);
     seg[s0 + t] += k0 * y;
@@ -200,6 +212,7 @@ double PluckedString::render(int n, const double *lift, bool keyDown, const doub
     if (y > ymax) ymax = y;
   }
   flip = qq == qb.data();
+  if (ran && most < 1e-5 * S.T) { stretched = false; dT = 0; }
   return 0.5 * (ymax - ymin);
 }
 // Σ_{j≠p} C_pj F_j over the active points: what the other contacts add at point p.
@@ -217,9 +230,21 @@ double PluckedString::free(int n, double *seg, int stride, int w0, int w1, const
   const double k0 = wts[w0] * gain, k1 = wts[w1] * gain;
   double *qq = q(), *qq1 = q1();
   double ymin = std::numeric_limits<double>::infinity(), ymax = -ymin;
+  const bool kcs = kcOn && stretched;
+  // δT is held below T/10: the first-order a₁ (slope θ sin θ, θ = ωk) then stays stable up to 0.45 fs
+  const double *ep = EP.data(), *g = G.data(), dTmax = 0.1 * S.T;
+  double most = 0;
   for (int t = 0; t < n; t++) {
     double y = 0;
-    for (int i = 0; i < Nn; i++) { const double v = a1[i] * qq[i] - a2[i] * qq1[i]; qq1[i] = v; y += bf[i] * v; }
+    if (kcs) {
+      const double d = dT;
+      double Q = 0;
+      for (int i = 0; i < Nn; i++) { const double v = (a1[i] - ep[i] * d) * qq[i] - a2[i] * qq1[i]; qq1[i] = v; y += bf[i] * v; Q += g[i] * v * v; }
+      dT = std::min(kc * Q, dTmax);
+      if (dT > most) most = dT;
+    } else {
+      for (int i = 0; i < Nn; i++) { const double v = a1[i] * qq[i] - a2[i] * qq1[i]; qq1[i] = v; y += bf[i] * v; }
+    }
     std::swap(qq, qq1);
     seg[s0 + t] += k0 * y;
     if (s1 != s0) seg[s1 + t] += k1 * y;
@@ -227,6 +252,7 @@ double PluckedString::free(int n, double *seg, int stride, int w0, int w1, const
     if (y > ymax) ymax = y;
   }
   flip = qq == qb.data();
+  if (kcs && most < 1e-5 * S.T) { stretched = false; dT = 0; } // linear from the next block
   hv.fill(0); Fp[0] = Fp[1] = 0; Fd = 0;
   return 0.5 * (ymax - ymin);
 }
@@ -341,6 +367,6 @@ void PluckedString::dropTop(double thr) {
   if (n) { cDirty = true; hv.fill(0); }
 }
 void PluckedString::wake() { if (Na != N) { Na = N; cDirty = true; hv.fill(0); } }
-void PluckedString::silence() { qa.fill(0); qb.fill(0); hv.fill(0); }
+void PluckedString::silence() { qa.fill(0); qb.fill(0); hv.fill(0); stretched = false; dT = 0; }
 
 } // namespace forte::harpsichord

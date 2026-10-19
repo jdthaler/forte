@@ -98,6 +98,22 @@ The pieces that couple to the modes:
 * **Torsion pickup**: torsion does not move the bridge's vertical channel. It
   is heard as the edge force of its torque at the bridge, the torque divided
   by the half-width there (*Torsion pickup* sets its level).
+* **Tension modulation** (Kirchhoff–Carrier): a hard blow stretches the
+  string, so its tension rises by ΔT = (EA/2L)·∫u_x² dx and every partial goes
+  sharp, then glides back as the vibration decays. In modal form
+  ∫u_x² = Σ g_n q_n², where g_n = ∫φ_n′² dx is mode n's stretch weight; it is
+  also how much its ω² rises per newton of tension (k²/μ for a uniform
+  string's sine modes; for a tapered member the Ritz shape's sum, without the
+  small cross terms). Each unison string has its own ΔT, from both bending
+  families; torsion does not stretch the core and does not feel it. ΔT
+  enters each mode's recursion coefficient every sample, to first order, and
+  is held below T/10 so the step stays stable. The core carries the stretch
+  (A is the core's area; a winding adds mass, not stiffness). On one C3
+  string at 5 m/s the second partial starts 5 ¢ sharp and is within 0.5 ¢
+  after 1.8 s; at 0.5 m/s it does not move (tested). Once ΔT has fallen below
+  10⁻⁵ T (a hundredth of a cent) the voice runs linear again until the next
+  blow, so a held chord costs what it did; while it glides a voice costs
+  about a third more. *Tension modulation* under *String* switches it off.
 * **Soundboard and room**: synthetic impulse responses (dense plate modes and
   a diffuse tail), applied with ConvolverNodes.
 
@@ -184,10 +200,12 @@ src/params.js             every parameter, with ranges, hints and presets
 
 ## Known simplifications / natural next steps
 
-* **Linear strings.** No tension modulation, so no pitch glide on hard blows
-  and no "phantom partials". There are no longitudinal modes either; those
-  matter for the real piano bass and would be the next physics to add (they
-  also couple to torsion in a ribbon).
+* **No longitudinal modes.** Tension modulation gives the pitch glide, but
+  the stretch it computes only retunes the transverse modes; nothing carries
+  it to the bridge as sound. The longitudinal modes it drives, and the
+  "phantom partials" at sums of transverse frequencies, matter for the real
+  piano bass and would be the next physics to add (they also couple to
+  torsion in a ribbon).
 * **Bridge coupling stays inside a key.** Unisons and polarizations of the same
   note interact, but there is no sympathetic resonance between different keys
   yet (the engine design allows it; it costs CPU).
@@ -284,6 +302,14 @@ described its hammer action in the *Giornale de' letterati d'Italia* in
 * Conklin, H. A. (1996). "Design and tone in the mechanoacoustic piano.
   Part II. Piano structure." *J. Acoust. Soc. Am.* 100, 695–708.
   [doi:10.1121/1.416233](https://doi.org/10.1121/1.416233)
+
+**Tension modulation**
+
+* Kirchhoff, G. (1883). *Vorlesungen über Mechanik*. Teubner, Leipzig: the
+  string whose tension follows its mean stretch.
+* Carrier, G. F. (1945). "On the non-linear vibration problem of the
+  elastic string." *Q. Appl. Math.* 3(2), 157–165.
+  [doi:10.1090/qam/12351](https://doi.org/10.1090/qam/12351)
 
 **Torsional and longitudinal waves**
 

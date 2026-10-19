@@ -16,7 +16,7 @@
 namespace forte::harpsichord {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { manual, coupler, front8, back8, four, lute, buff, material, stiff, overlap, stagger, xFront, xBack, xFour, xLute, pitch, temperament, detune, loss, damper, fmax, fullRange, soundboard, room, venue, volume, count };
+enum : int { manual, coupler, front8, back8, four, lute, buff, material, stiff, overlap, stagger, xFront, xBack, xFour, xLute, pitch, temperament, detune, loss, damper, fmax, kc, fullRange, soundboard, room, venue, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -65,6 +65,7 @@ inline const ParamInfo kParams[p::count] = {
   {"loss", "String losses (air and wire)", "Strings and tuning", ParamKind::continuous, 0.25, 4, 1, 0, true, false, nullptr, 0, kFormat_loss, 1},
   {"damper", "Damper felt", "Strings and tuning", ParamKind::continuous, 0.1, 4, 1, 0, true, false, nullptr, 0, kFormat_damper, 1},
   {"fmax", "Highest partial", "Strings and tuning", ParamKind::continuous, 4, 16, 10, 0.5, false, false, nullptr, 0, kFormat_fmax, 1},
+  {"kc", "Tension modulation (pitch glide)", "Strings and tuning", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"fullRange", "Full range (A0–C8)", "Strings and tuning", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"soundboard", "Soundboard", "Body and output", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"room", "Room", "Body and output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},

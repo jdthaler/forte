@@ -22,14 +22,18 @@ void PianoEngine::Voice::start(PianoEngine &eng, int key_, const VoiceData &d, i
   const int nu = d.unisons > 0 ? d.unisons : 1;
   const double una = nu > 1 ? (double)nu / (nu - 1) : 1;
   double *base = eng.arena.data() + (size_t)at * ARRAYS;
-  double **arrays[ARRAYS] = {&q, &q1, &a1, &a2, &a1d, &a2d, &wN, &bwN, &wU, &bwU, &fbv, &fbh, &cvk, &chk, &ctk, &om, &sig, &perm};
+  double **arrays[ARRAYS] = {&q, &q1, &a1, &a2, &a1d, &a2d, &wN, &bwN, &wU, &bwU, &fbv, &fbh, &cvk, &chk, &ctk, &om, &sig, &perm, &gw, &eps, &us};
   for (int a = 0; a < ARRAYS; a++) { *arrays[a] = base + (size_t)a * N; std::fill(*arrays[a], *arrays[a] + N, 0.0); }
 
-  // order modes by segment; perm[i] = index in the incoming data
+  // order modes by segment, and within one by string; perm[i] = index in the incoming data
   auto seg = [&](int j) { return d.ct[j] != 0 ? 3 : d.cv[j] != 0 && d.ch[j] != 0 ? 2 : d.ch[j] != 0 ? 1 : 0; };
   int ends[4] = {0, 0, 0, 0}, at2 = 0;
   for (int s = 0; s < 4; s++) {
-    for (int j = 0; j < N; j++) if (seg(j) == s) perm[at2++] = j;
+    for (int u = 0; u < nu; u++) {
+      run[s][u] = at2;
+      for (int j = 0; j < N; j++) if (seg(j) == s && d.uni[j] == u) perm[at2++] = j;
+    }
+    run[s][nu] = at2;
     ends[s] = at2;
   }
   e0 = ends[0]; e1 = ends[1]; e2 = ends[2];
@@ -63,7 +67,10 @@ void PianoEngine::Voice::start(PianoEngine &eng, int key_, const VoiceData &d, i
     cvk[i] = d.cv[j] / k;
     chk[i] = d.ch[j] / k;
     ctk[i] = d.ct[j] / k;
+    // a tension change δT adds g·δT to ω²: to first order a1 falls by b·g·δT
+    gw[i] = d.g[j]; eps[i] = b * d.g[j]; us[i] = d.uni[j];
   }
+  kcGain = d.kc; Tt = d.T; this->nu = nu;
   compN = cmp; compU = cmpU;
   hammer = {d.hammer.mass, d.hammer.K, d.hammer.p, d.hammer.alpha};
   // the felt touches one string fewer, so its contact stiffness drops by (ν−1)/ν
@@ -123,6 +130,7 @@ void PianoEngine::Voice::strike(double v, bool unaCorda) {
   etaPrev = eta - v * k;
   dPrev = -1;
   hammerOn = true;
+  stretched = true;
   hammerSamples = 0;
   contact = false;
   contactSamples = 0;
@@ -166,9 +174,50 @@ void PianoEngine::Voice::render(float *L, float *R, int n, PianoEngine &eng) {
   const bool moving = panMoving;
   const double tl = tPanL, tr = tPanR, aS = eng.aSm;
   double svl = sv, shl = sh, pk = 0;
+  // once the stretch has decayed below a hundredth of a cent (δT/T < 1e-5) it only shrinks, so
+  // the voice runs linear until it is struck again
+  const bool kc = eng.P[p::kc] != 0 && kcGain > 0 && stretched;
+  const double *G = gw, *EPS = eps, *US = us;
+  // δT is held below T/10: the first-order a₁ (slope θ sin θ, θ = ωk) then stays stable up to 0.45 fs
+  const double kcG = kcGain, dTmax = 0.1 * Tt, dTmin = 1e-5 * Tt;
+  if (!kc) dT[0] = dT[1] = dT[2] = 0;
   for (int s = 0; s < n; s++) {
     double nsv = 0, nsh = 0, nst = 0;
-    if (!hammerOn) {
+    if (!hammerOn && kc) {
+      // tension modulation (Kirchhoff–Carrier): each string's tension follows its stretch,
+      // δT = kc·Σ g q² over its bending modes, and moves every one of their frequencies. Each run
+      // of one string's modes steps with that string's δT and sums its next stretch.
+      double Q[3] = {0, 0, 0};
+      for (int u = 0; u < nu; u++) {
+        const double t = dT[u];
+        double Qu = 0;
+        for (int i = run[0][u]; i < run[0][u + 1]; i++) {
+          const double q0 = qa[i], qn = (A1[i] - EPS[i] * t) * q0 - A2[i] * qb[i] - FBV[i] * svl;
+          qb[i] = qn;
+          nsv += CV[i] * (qn - q0); Qu += G[i] * qn * qn;
+        }
+        for (int i = run[1][u]; i < run[1][u + 1]; i++) {
+          const double q0 = qa[i], qn = (A1[i] - EPS[i] * t) * q0 - A2[i] * qb[i] - FBH[i] * shl;
+          qb[i] = qn;
+          nsh += CH[i] * (qn - q0); Qu += G[i] * qn * qn;
+        }
+        for (int i = run[2][u]; i < run[2][u + 1]; i++) {
+          const double q0 = qa[i], qn = (A1[i] - EPS[i] * t) * q0 - A2[i] * qb[i] - FBV[i] * svl - FBH[i] * shl;
+          qb[i] = qn;
+          const double dq = qn - q0;
+          nsv += CV[i] * dq; nsh += CH[i] * dq; Qu += G[i] * qn * qn;
+        }
+        Q[u] = Qu;
+      }
+      double most = 0;
+      for (int u = 0; u < nu; u++) { dT[u] = std::min(kcG * Q[u], dTmax); most = std::max(most, dT[u]); }
+      if (most < dTmin) stretched = false; // from the next block
+      for (int i = e2; i < N; i++) {
+        const double q0 = qa[i], qn = A1[i] * q0 - A2[i] * qb[i];
+        qb[i] = qn;
+        nst += CT[i] * (qn - q0);
+      }
+    } else if (!hammerOn) {
       for (int i = 0; i < e0; i++) {
         const double q0 = qa[i], qn = A1[i] * q0 - A2[i] * qb[i] - FBV[i] * svl;
         qb[i] = qn;
@@ -194,7 +243,8 @@ void PianoEngine::Voice::render(float *L, float *R, int n, PianoEngine &eng) {
       const double *W = w, *BW = bw;
       double uf = 0;
       for (int i = 0; i < N; i++) {
-        const double qn = A1[i] * qa[i] - A2[i] * qb[i] - FBV[i] * svl - FBH[i] * shl;
+        const double a1 = kc ? A1[i] - EPS[i] * dT[(int)US[i]] : A1[i];
+        const double qn = a1 * qa[i] - A2[i] * qb[i] - FBV[i] * svl - FBH[i] * shl;
         qb[i] = qn;
         uf += W[i] * qn;
       }
@@ -211,6 +261,11 @@ void PianoEngine::Voice::render(float *L, float *R, int n, PianoEngine &eng) {
       for (int i = 0; i < N; i++) {
         const double dq = qb[i] - qa[i];
         nsv += CV[i] * dq; nsh += CH[i] * dq; nst += CT[i] * dq;
+      }
+      if (kc) {
+        double Q[3] = {0, 0, 0};
+        for (int i = 0; i < e2; i++) Q[(int)US[i]] += G[i] * qb[i] * qb[i];
+        for (int u = 0; u < nu; u++) dT[u] = std::min(kcG * Q[u], dTmax);
       }
       hammerSamples++;
       if (hammerSamples > eng.hammerMaxSamples || (contact && F == 0 && dPrev < -2e-3)) {

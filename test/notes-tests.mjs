@@ -11,7 +11,7 @@ let failures = 0;
 function test(name, fn) {
   try { fn(); console.log('  ok  ', name); } catch (e) { failures++; console.log('  FAIL', name, '\n       ', e.message); } }
 const R = new URL('../', import.meta.url);
-const REPO = 'https://github.com/jdthaler/forte/blob/main/';
+const REPO = 'https://github.com/jdthaler/forte/blob/live/';
 const md = (src, o) => renderMarkdown(src, o).html;
 const text = (html) => html.replace(/<[^>]+>/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
 
