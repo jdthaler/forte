@@ -11,7 +11,7 @@ import { header as tableHeader, headerFile } from '../tools/blackhole-native-tab
 const RingdownEngine = await loadEngine(INSTRUMENT);
 // the model the views call, in the same C++: the QNM bank (the table, interpolated), a key's voice
 // and its strain in closed form
-const { bank, swsh, strainCurve, keyVoice } = await wasmModel();
+const { bank, swsh, spheroidal, strainCurve, keyVoice } = await wasmModel();
 const MSUN_S = 4.925490947e-6;                            // G M☉ / c³ in seconds
 const keyFreq = (m) => 440 * 2 ** ((m - 69) / 12);
 
@@ -121,6 +121,62 @@ test('spin-weighted spherical harmonics: closed forms and unit norm', () => {
   }
 });
 
+test('spin-weighted spheroidal harmonics: their separation constants are Leaver\'s (the angular continued fraction) for every mode in the table', () => {
+  for (const md of bank.modes) for (const a of [0.3, 0.9, 0.999, 1 - 1e-6]) {
+    const w = bank.omega(md.l, md.m, md.n, a), c = { re: a * w.re, im: a * w.im };
+    const { A } = spheroidal(-2, md.l, md.m, c, 1), L = separationConstant(C.cx(c.re, c.im), md.l, md.m, -2);
+    assert.ok(Math.hypot(A.re - L.re, A.im - L.im) < 1e-10 * Math.max(1, Math.hypot(L.re, L.im)), `(${md.l},${md.m},${md.n}) a=${a}: ${A.re} ${A.im} vs ${L.re} ${L.im}`);
+  }
+});
+test('spheroidal harmonics: the spherical ones at c = 0, unit norm, and a mirror mode\'s is the mode\'s turned over', () => {
+  for (const [l, m] of [[2, 2], [3, 1], [4, -4]]) for (const th of [0.3, 1.2, 2.8]) {
+    const z = spheroidal(-2, l, m, { re: 0, im: 0 }, th).S;
+    assert.ok(Math.abs(z.re - swsh(-2, l, m, th)) < 1e-13 && z.im === 0, `(${l},${m}) at c = 0`);
+  }
+  for (const [l, m, n] of [[2, 2, 0], [3, 3, 0], [4, 4, 0], [2, 1, 2], [3, -2, 1]]) {
+    const w = bank.omega(l, m, n, 1 - 1e-6), c = { re: (1 - 1e-6) * w.re, im: (1 - 1e-6) * w.im };
+    let norm = 0;
+    for (let i = 0; i < 2000; i++) { const t = (Math.PI * (i + 0.5)) / 2000, z = spheroidal(-2, l, m, c, t).S; norm += (z.re ** 2 + z.im ** 2) * Math.sin(t) * (Math.PI / 2000) * 2 * Math.PI; }
+    assert.ok(Math.abs(norm - 1) < 1e-5, `(${l},${m},${n}) norm ${norm}`);
+    // ₋₂S_l,−m(θ; −c*) = (−1)^l ₋₂S_lm(π − θ; c)*
+    for (const th of [0.4, 1.9]) {
+      const z = spheroidal(-2, l, -m, { re: -c.re, im: c.im }, th).S, y = spheroidal(-2, l, m, c, Math.PI - th).S, sg = l % 2 ? -1 : 1;
+      assert.ok(Math.abs(z.re - sg * y.re) < 1e-12 && Math.abs(z.im + sg * y.im) < 1e-12, `(${l},${m},${n}) mirror at ${th}`);
+    }
+  }
+});
+test('the modes are seen through their spheroidal harmonics, which mix in other l as aω grows: the higher l = m modes grow most', () => {
+  const norm = 1 / (0.864 * 0.25 * swsh(-2, 2, 2, 0));
+  const grow = {};
+  for (const spinU of [0, 0.5, 2, 6]) for (const inclination of [0, 30, 70, 90, 140]) {
+    const P = { ...DEFAULTS, spinU, inclination, massRatio: 3 }, v = keyVoice(60, P, 48000), a = v.info.a, iota = (inclination * Math.PI) / 180;
+    for (const md of v.modes.filter((x) => x.n === 0)) {
+      const w = bank.omega(md.l, md.m, 0, a), c = { re: a * w.re, im: a * w.im };
+      const y = spheroidal(-2, md.l, md.m, c, iota).S, r = spheroidal(-2, md.l, md.m, c, Math.PI - iota).S, k = md.amp * norm;
+      const want = [k * (y.re + r.re), k * (y.im + r.im), k * (y.re - r.re), k * (y.im - r.im)];
+      [md.cpr, md.cpi, md.cxr, md.cxi].forEach((got, i) => assert.ok(Math.abs(got - want[i]) < 1e-12, `(${md.l},${md.m}) a=${a} ι=${inclination}`));
+      if (spinU === 0) assert.ok(Math.abs(y.re - swsh(-2, md.l, md.m, iota)) < 1e-13 && y.im === 0, 'spherical at a = 0');
+      if (spinU === 6 && inclination === 30) grow[`${md.l},${md.m}`] = Math.hypot(y.re, y.im) / Math.abs(swsh(-2, md.l, md.m, iota));
+    }
+  }
+  // near extremality, seen at ι = 30°: (2,2) by about a tenth, (3,3) by a third, (4,4) by a half
+  const g = (k) => grow[k];
+  assert.ok(g('2,2') > 1.05 && g('2,2') < 1.2 && g('3,3') > 1.2 && g('3,3') < 1.45 && g('4,4') > 1.4 && g('4,4') < 1.7, JSON.stringify(grow));
+});
+test('a key\'s voice and samples are the plugins\' to the last bit (native/tests/blackhole-tests.cpp checks the same numbers)', () => {
+  const v = keyVoice(60, DEFAULTS, 48000), f = (l, m, n) => v.modes.find((x) => x.l === l && x.m === m && x.n === n);
+  assert.equal(v.modes.length, 6);
+  assert.ok(f(2, 2, 0).cpr === 0.90693882927838598 && f(2, 2, 0).cxi === -0.0068618432905640523);
+  assert.ok(f(2, 2, 1).cpr === -0.79666121488030150 && f(2, 2, 1).cxi === 0.018259029459329400);
+  assert.ok(f(3, 3, 0).cpr === -0.035546247599022869 && f(4, 4, 0).cpr === 0.019876843144860760);
+  const P = { ...DEFAULTS, inspiral: true, retrograde: 0.5, massRatio: 3, inclination: 70 }, c = keyVoice(57, P, 48000).chirp;
+  assert.ok(c.amp === 0.97542036346744299 && c.psi === 0.0010077670543947976);
+  const e = new RingdownEngine(48000), L = new Float32Array(128), R = new Float32Array(128), got = [];
+  e.setParams(P); e.noteOn(57, 0.8);
+  for (let b = 0; b < 200; b++) { e.process(L, R, 128); if (b % 50 === 0) got.push(L[17], R[99]); }
+  assert.deepEqual(got, [0.000022784630345995538, 0.00011925467697437853, -0.025424161925911903, -0.041929814964532852,
+    -0.066186957061290741, -0.027878062799572945, -0.019828218966722488, -0.047693472355604172].map(Math.fround));
+});
 test('the native port\'s copy of the table (native/instruments/blackhole/qnm-table.h) is this one, converted number for number', () => {
   assert.ok(readFileSync(headerFile, 'utf8') === tableHeader(), 'stale: run node tools/blackhole-native-table.mjs');
 });
