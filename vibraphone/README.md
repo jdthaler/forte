@@ -173,13 +173,29 @@ terms of the volume X pushed out of it,
   m_a = ρ₀ℓ_e/2S,   K_a = m_a (πc/2ℓ_e)²,   ℓ_e = L_t + 0.61 a_t
 
 with 0.61 a_t the end correction of an unflanged pipe (Levine & Schwinger).
-c = 343.2 m/s at 20 °C. Two losses: radiation from the mouth, the
-resistance R = ρ₀ck²/4π of a small monopole, and the viscous and thermal
+c = 343.2 m/s at 20 °C. The losses: radiation from the mouth, the
+resistance R = ρ₀ck²/4π of a small monopole; the viscous and thermal
 boundary layers on the walls, σ_w = αc with α = 2.95×10⁻⁵ √f / a_t per
-metre (Fletcher & Rossing). The bass tubes are sharp resonators and the
-treble ones broad: σ = 5.8 s⁻¹ at F3 (Q ≈ 95), 30 s⁻¹ at A4 (Q ≈ 46),
-400 s⁻¹ at F6 (Q ≈ 11), where (ka)² = 0.29 and the mouth radiates almost
-as well as it can.
+metre (Fletcher & Rossing); and the same boundary layers on the tube's
+fittings. Per unit area a surface loses in proportion to the slip
+velocity² beside it (the viscous part, 0.68 of α) and to the pressure²
+on it (the thermal part, 0.32), so each fitting is scaled from the walls,
+which see half of each on average over 2πa_t·ℓ_e:
+
+* the motor's shaft (⌀6 mm, an estimate) crosses the mouth, a velocity
+  antinode, in cross-flow: slip 2v sin φ round it, a mean 2v² over
+  πd·2a_t;
+* the disc's two faces, 2c_d·πa_t², take the flow edge-on when open. As
+  the disc turns, the same volume squeezes through the open share s of
+  the mouth, so its loss grows as 1/s² (with c_d = 0.7, ten times more
+  when face-on);
+* the bottom plug, πa_t², sits at the pressure antinode: thermal only.
+
+Open, the fittings add 14 % to the walls' loss at F3 and 91 % with the disc
+face-on (tested). The bass tubes are sharp resonators and the treble ones
+broad: σ = 6.2 s⁻¹ at F3 (Q ≈ 88), 32 s⁻¹ at A4 (Q ≈ 43), 410 s⁻¹ at F6
+(Q ≈ 11), where (ka)² = 0.29 and the mouth radiates almost as well as it
+can.
 
 The tube is cut so that, with the bar in place and the disc open, it is
 tuned to the bar at 20 °C (**Tube tuning** offsets it). At the default
@@ -228,8 +244,10 @@ share their energy and both die in about a second. Further, the tube can
 take energy only as fast as it radiates it, a slow leak of
 (κω₀)²/4σ_t: the bar rings for seconds and the tube sings along at its
 pitch. The default, 30 mm, sits just on the leaky side: κ = 0.0047 at F3,
-0.0037 at A4, 0.0030 at F6, and the bar's ring falls from 63 s to 4.1 s at
-F3, from 38 s to 6.3 s at A4 and from 13 s to 7.2 s at F6.
+0.0037 at A4, 0.0030 at F6, and the bar's ring falls from 63 s to 4.7 s at
+F3, from 38 s to 6.7 s at A4 and from 13 s to 7.3 s at F6. (On this side a
+lossier tube drains the bar more slowly: the fittings' losses lengthened
+F3's ring from 4.1 s.)
 
 The tube is what you hear of the fundamental. In the far field the bar,
 the escaping air and the tube's mouth add up to a monopole of volume
@@ -282,6 +300,9 @@ The motor also lengthens the notes. A tube drains its bar only while its
 disc is near open, so with the motor at 2.5 rev/s a C4 loses energy at
 2.8 dB/s, against 6.2 dB/s with the discs open, 1.3 dB/s with them closed
 and 1.2 dB/s with no tubes at all.
+The fittings' losses (section 4), heaviest as a disc closes, changed these
+figures and the tremolo's above by under 10 % (under 1 dB of pulse and
+2 ¢ of wobble).
 
 ### 7. The mallet
 
@@ -413,7 +434,7 @@ vibraphone/src/vibraphone-main.js         page wiring and views
 vibraphone/src/vibraphone-wasm.js         the C++ engine and model as WebAssembly (vibraphone/wasm/vibraphone.wasm)
 native/instruments/vibraphone/            the physics in C++: FEM (bar), bars, losses, radiation, tubes, coupling, discs,
                                           mallet (vibraphone-model), the engine, generated tables, reference
-test/vibraphone-tests.mjs                 node test/vibraphone-tests.mjs (24 tests, ~35 s, on the WebAssembly)
+test/vibraphone-tests.mjs                 node test/vibraphone-tests.mjs (26 tests, ~35 s, on the WebAssembly)
 tools/vibraphone-bars.mjs                 node tools/vibraphone-bars.mjs → vibraphone/src/bar-table.js and its C++ copy
 tools/render-vibraphone.mjs               node tools/render-vibraphone.mjs → examples/vibraphone/
 ```
@@ -434,10 +455,10 @@ tools/render-vibraphone.mjs               node tools/render-vibraphone.mjs → e
 * **The tube is one lumped mode**, and only bar mode 1 couples to it. Its
   next modes (3 and 5 × f₁) are far from the bar's 4 and 10. The gap's
   inertance is a radial-flow estimate that ignores the parts of the mouth
-  the bar does not cover. Losses at the disc, the shaft and the bottom plug
-  are left out, so the bass tubes may be sharper resonators than real ones,
-  which would make the bass's pitch wobble (section 6) larger than on an
-  instrument.
+  the bar does not cover. The fittings' losses (section 4) are linear
+  boundary layers scaled from the walls, with an estimated shaft; a plug
+  that leaks, a seam, or the tube's own wall vibrating would add more, so
+  the bass tubes may still be sharper resonators than real ones.
 * **The disc** only adds end correction; its flow losses, and any jet
   formed past its edges, are left out, and the value of ℓ_v is an estimate.
 * **The mallet** is a point contact with a power-law, slightly lossy
