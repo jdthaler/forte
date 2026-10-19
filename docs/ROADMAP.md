@@ -121,7 +121,7 @@ default in the existing presets, or would change what an existing knob means.
 | Idea | Size | Notes |
 |------|------|-------|
 | RF Cavity Bells, Collider Showers | M each | RF Cavity Bells: done, for the next release. Collider Showers is the accelerator idea still left over from the Storage Ring. |
-| Celesta | M | Close to the vibraphone's bars. |
+| Celesta | M | Done, for the next release: Timoshenko steel bars over tuned wooden boxes, felt hammers and dampers. |
 | Steel pan | M | Coupled notes on one shell. |
 | Hammered dulcimer or cimbalom | M | |
 | Theremin or ondes Martenot | M | Continuous pitch suits MPE. |

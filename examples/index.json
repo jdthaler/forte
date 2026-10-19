@@ -183,6 +183,32 @@
    "title": "Pressure is beam current"
   }
  ],
+ "celesta": [
+  {
+   "file": "01-waltz-pedal-each-bar.m4a",
+   "title": "Waltz pedal each bar"
+  },
+  {
+   "file": "02-with-boxes-then-without.m4a",
+   "title": "With boxes then without"
+  },
+  {
+   "file": "03-box-close-bar-and-box-beat.m4a",
+   "title": "Box close bar and box beat"
+  },
+  {
+   "file": "04-soft-felt-then-keyboard-glockenspiel.m4a",
+   "title": "Soft felt then keyboard glockenspiel"
+  },
+  {
+   "file": "05-dampers-then-pedal.m4a",
+   "title": "Dampers then pedal"
+  },
+  {
+   "file": "06-centre-end-and-node-strikes.m4a",
+   "title": "Centre end and node strikes"
+  }
+ ],
  "clavier": [
   {
    "file": "01-funky-riff-in-e-minor.m4a",
