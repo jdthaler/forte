@@ -83,9 +83,12 @@ Read first:
 5. **Pull request** into `main`, with *Why*, *What changed* and *Testing*
    sections.
 6. **CI.** `tests` (the JavaScript suites, the release-note rules and
-   `pages`, every page in Chromium) and `native` (the WebAssembly, and the plugins on Linux) run on the push
-   and on the pull request. Fix a failure at its root; never skip or weaken
-   a test to get green.
+   `pages`, every page in Chromium) and `native` (the WebAssembly, and the plugins on Linux) run on the
+   pull request, once per push to it, and again on `main` after the merge. `native` builds nothing when a green run on
+   the branch or on `main` already built the same sources (`native/`,
+   `package.json`, the committed `.wasm`), so a site or docs change passes
+   it at once. Fix a failure at its root; never skip or weaken a test to
+   get green.
 7. **Before the merge**, if `main` has moved since CI ran, merge it into
    the branch and let CI run again, so what was checked is what lands
    (two threads changing `shared/` can each pass alone and break
