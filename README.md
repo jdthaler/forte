@@ -25,6 +25,7 @@ The front page sorts them into four kinds, as here.
 | ✅ | [Free-Reed Organ](harmonium/) | harmonium and accordion | brass reeds driven through their slots by the inertia of the air that feeds them (implicit reed–air coupling, thresholds from a linear analysis); musette, 16′ and 4′ ranks, reservoir and expression stop, cassotto |
 | ✅ | [Vibraphone](vibraphone/) | Deagan vibraharp (1927) | undercut bars tuned 1 : 4 : 10 by finite elements, each coupled to a stopped tube; motor-driven discs open and close the tubes (tremolo) |
 | ✅ | [Carillon](carillon/) | Flemish carillon (Hemony) | bronze bells solved by axisymmetric finite elements and tuned by their profile (minor- or major-third), struck by a Hertzian clapper; doublets that warble with asymmetry and strike angle; air absorption over distance; the strike note found by subharmonic summation |
+| ✅ | [Celesta](celesta/) | Mustel celesta (1886) | plain steel bars solved as Timoshenko beams, each coupled through the air in the gap to a stopped wooden box tuned to it; felt hammers (Hertzian, implicit), felt dampers and a damper pedal |
 | ✅ | [Kalimba](kalimba/) | Hugh Tracey's kalimba and the mbira | spring-steel tines as clamped–supported–free beams (the length behind the bridge sets the overtones), plucked from their static deflection by a thumb that lets go slowly or fast; a box whose top and sound-hole air are two coupled oscillators (cover the hole for a wah); bottle caps that rattle once the top outruns gravity |
 
 ### Electric instruments
@@ -90,8 +91,9 @@ play the plugins in a DAW with a small buffer.
 Each instrument page reads top to bottom. At the top, the instrument's
 name opens the menu of every instrument (and Forte's home page), next to
 **How it works** and the mode. In the middle are the views,
-pictures of the physics as it plays: the main ones large, the rest behind
-tabs underneath. At the bottom, right above the keys, are the controls a
+pictures of the physics as it plays, with a row of toggles above them
+that turns each one on or off (the main ones are on at first, and the
+page remembers your choice). At the bottom, right above the keys, are the controls a
 player reaches for (stops and registrations, tremolo, drive, the mallet,
 the spin, the room and the volume, or the organ's drawbars), with **More
 controls** for everything else, and the presets just above the keys (the
@@ -105,7 +107,8 @@ to someone. *Your presets and files…* lists yours, and saves them to a
 file or opens one: the plugins read and write the same files.
 
 There are two modes. **Discover** shows it all. **Perform** shows just
-the main views, filling the screen, with no text in them: for playing,
+the views you turned on, filling the screen, with no toggles and no text
+in them: for playing,
 or for a projector (**Full screen** fills it). The controls stay where
 they are.
 

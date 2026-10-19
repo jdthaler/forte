@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Celesta · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="celesta">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Celesta</h1>
+      <span class="sub">felt hammers strike thin steel bars, each over a wooden box tuned to it</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Bar and box">
+          <div class="card-head"><h2>The bar <b id="bar-key">C4</b></h2><span class="muted" id="bar-read"></span></div>
+          <canvas id="bar"></canvas>
+          <div class="caption">The struck bar to scale (thickness ×4) on its two blocks, over its box, and its first three bending modes moving with their live amplitudes, slowed down. ▼ hammer, ▬ damper felt; the box fills with colour as it takes the bar’s energy.</div>
+        </div>
+        <div class="card" data-perform data-view="Bar and box energy">
+          <div class="card-head"><h2>Bar and box</h2><span class="muted" id="energy-read">strike a key</span></div>
+          <canvas id="energy"></canvas>
+          <div class="legend"><span><i style="background:#e6c15a"></i>bar</span><span><i style="background:var(--accent)"></i>box</span></div>
+          <div class="caption">The energy in the bar and in the air of its box over the last 3 s (60 dB tall). Close together they trade it back and forth, and the box radiates it: that is what makes a celesta note short and sweet.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" id="info-card" data-view="Mode table">
+          <div class="card-head"><h2>Modes of <b id="focus-name">C4</b></h2><span class="muted" id="focus-size"></span></div>
+          <table class="modes" id="modes"></table>
+        </div>
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: bending (gold), torsion (blue), box (teal)</span></div>
+          <canvas id="spectrum"></canvas>
+          <div class="caption">A plain bar’s overtones at 2.76 and 5.40 × the pitch are not harmonics: they give the attack its bell-like glint, then die long before the fundamental.</div>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">The upper modes vanish within a fraction of a second and leave the fundamental, held up by its box; letting a key go drops the damper and cuts every line at once.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>damper pedal (lifts the felts): hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>mod wheel: hammer felt</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/celesta-main.js"></script>
+</body>
+</html>
