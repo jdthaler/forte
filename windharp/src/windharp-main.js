@@ -1,7 +1,7 @@
 // windharp-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell, noteName } from '../../shared/shell.js';
-import { SpectrumView, fit, css, animate } from '../../shared/views.js';
+import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './windharp-instrument.js';
 import { TAU, U_REF, U_MAX, AIR, RE_C } from './windharp-model.js';
 import { wasmModel } from './windharp-wasm.js';
@@ -11,7 +11,7 @@ const phys = await wasmModel();
 const shedding = (U, D) => phys.shedding(U, D);
 
 const $ = (s) => document.querySelector(s);
-let focus = 60, harp = null, analyser = null, fbuf = null;
+let focus = 60, harp = null, analyser = null;
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 60, fHi: 8000 });
 
 const shell = createShell({
@@ -210,31 +210,7 @@ animate((t) => {
   } else $('#street-read').textContent = 'play a key';
 }, stCv);
 
-// ---- spectrogram -----------------------------------------------------------------------------------
-const spCv = $('#spec'), off = document.createElement('canvas');
-animate(() => {
-  const { ctx, w, h } = fit(spCv);
-  const dpr = spCv.width / w;
-  if (off.width !== spCv.width || off.height !== spCv.height) { off.width = spCv.width; off.height = spCv.height; }
-  const o = off.getContext('2d');
-  // scroll by one device pixel and draw the newest column
-  o.globalCompositeOperation = 'copy'; o.drawImage(off, -Math.max(1, Math.round(dpr)), 0); o.globalCompositeOperation = 'source-over';
-  const fLo = 120, fHi = 6000, Hh = off.height, col = off.width - Math.max(1, Math.round(dpr));
-  o.fillStyle = css('--air'); o.fillRect(col, 0, off.width - col, Hh);
-  if (analyser) {
-    if (!fbuf || fbuf.length !== analyser.frequencyBinCount) fbuf = new Float32Array(analyser.frequencyBinCount);
-    analyser.getFloatFrequencyData(fbuf);
-    const fs = analyser.context.sampleRate, nb = fbuf.length;
-    for (let y = 0; y < Hh; y += 1) {
-      const f = fLo * (fHi / fLo) ** (1 - y / Hh), bin = Math.min(nb - 1, Math.round((f * 2 * nb) / fs)), db = fbuf[bin];
-      const v = Math.max(0, Math.min(1, (db + 105) / 70));
-      if (v > 0.02) { o.fillStyle = `rgba(168,230,161,${v.toFixed(3)})`; o.fillRect(col, y, off.width - col, 1); }
-    }
-  }
-  ctx.clearRect(0, 0, w, h);
-  ctx.drawImage(off, 0, 0, w, h);
-  ctx.font = '10px system-ui, sans-serif'; ctx.fillStyle = css('--muted'); ctx.textAlign = 'left';
-  for (const f of [200, 500, 1000, 2000, 5000]) { const y = h * (1 - Math.log(f / fLo) / Math.log(fHi / fLo)); ctx.fillText(f >= 1000 ? `${f / 1000}k` : `${f}`, 3, y - 2); ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(0, y, w, 1); ctx.fillStyle = css('--muted'); }
-}, spCv);
+// ---- spectrogram: the shared one, over the strings' range, with the spectrum's markers as ticks ----
+new SpectrogramView($('#spec'), { spectrum, fLo: 120, fHi: 6000, dbTop: -35, dbRange: 70 });
 
 update();
