@@ -95,10 +95,16 @@ inline double openFraction(double theta, double cd) { return 1 - cd * std::fabs(
 
 // The two-oscillator model of bar mode 1 and the tube's first mode, for the knobs.
 struct TubeState {
-  double length, le, ma, Ka, mg, Sb, Rrad, Rwall, R, lvS, cd, M11, M12, M22;
+  double length, le, ma, Ka, mg, Sb, Rrad, Rwall, R, lvS, cd, M11, M12, M22, Rdisc;
 };
+// The resonator's fittings at its mouth: the motor's shaft (its diameter, an estimate) across the
+// bore, the disc on it; and the plug at the bottom.
+constexpr double SHAFT_D = 6e-3;
 TubeState tubeState(const TubeGeometry &tg, double f1, double gap, double detune, double temp, double cd);
 inline double discMass(const TubeState &ts, double theta) { return ts.lvS * (1 / openFraction(theta, ts.cd) - 1); }
+// The disc's boundary-layer loss grows as the flow squeezes past it (∝ 1/s²): its resistance above
+// the open disc's, which ts.R includes.
+inline double discLoss(const TubeState &ts, double theta) { const double s = openFraction(theta, ts.cd); return ts.Rdisc * (1 / (s * s) - 1); }
 // Coupling coefficient κ and the tube's own frequency (bar held still) at disc angle θ.
 struct Coupling { double kappa, ft, fb, m22; };
 Coupling coupling(const TubeState &ts, double theta, double fb);
