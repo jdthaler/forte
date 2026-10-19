@@ -24,8 +24,8 @@ static const BarModel &cachedBar(int key, double depth) {
 
 static TubeState stateOf(const double *t) {
   TubeState s;
-  double *f[] = {&s.length, &s.le, &s.ma, &s.Ka, &s.mg, &s.Sb, &s.Rrad, &s.Rwall, &s.R, &s.lvS, &s.cd, &s.M11, &s.M12, &s.M22};
-  for (int i = 0; i < 14; i++) *f[i] = t[i];
+  double *f[] = {&s.length, &s.le, &s.ma, &s.Ka, &s.mg, &s.Sb, &s.Rrad, &s.Rwall, &s.R, &s.lvS, &s.cd, &s.M11, &s.M12, &s.M22, &s.Rdisc};
+  for (int i = 0; i < 15; i++) *f[i] = t[i];
   return s;
 }
 
@@ -56,12 +56,12 @@ FORTE_EXPORT void vibraphone_tube_geometry(int key, double depth, double *out) {
   for (int i = 0; i < 6; i++) out[i] = v[i];
 }
 // tubeState: in = the tube's geometry (6), f1, gap (m), detune, temp, cd; out = length, le, ma, Ka,
-// mg, Sb, Rrad, Rwall, R, lvS, cd, M11, M12, M22.
+// mg, Sb, Rrad, Rwall, R, lvS, cd, M11, M12, M22, Rdisc.
 FORTE_EXPORT void vibraphone_tube_state(const double *in, double *out) {
   const TubeGeometry tg{in[0], in[1], in[2], in[3], in[4], in[5]};
   const TubeState s = tubeState(tg, in[6], in[7], in[8], in[9], in[10]);
-  const double v[14] = {s.length, s.le, s.ma, s.Ka, s.mg, s.Sb, s.Rrad, s.Rwall, s.R, s.lvS, s.cd, s.M11, s.M12, s.M22};
-  for (int i = 0; i < 14; i++) out[i] = v[i];
+  const double v[15] = {s.length, s.le, s.ma, s.Ka, s.mg, s.Sb, s.Rrad, s.Rwall, s.R, s.lvS, s.cd, s.M11, s.M12, s.M22, s.Rdisc};
+  for (int i = 0; i < 15; i++) out[i] = v[i];
 }
 // coupling: ts as tubeState writes it; out = kappa, ft, fb, m22.
 FORTE_EXPORT void vibraphone_coupling(const double *ts, double theta, double fb, double *out) {

@@ -1,0 +1,30 @@
+{
+  "slug": "kalimba",
+  "params": [
+    {"id":"back","kind":"continuous","min":0,"max":1.5,"def":1.12,"step":0.01,"log":false},
+    {"id":"thick","kind":"continuous","min":0.6,"max":2.5,"def":1.2,"step":0.05,"log":false},
+    {"id":"t60","kind":"continuous","min":0.5,"max":30,"def":6,"step":0,"log":true},
+    {"id":"damping","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false},
+    {"id":"fullRange","kind":"toggle","def":false},
+    {"id":"pluck","kind":"continuous","min":0.3,"max":1,"def":0.9,"step":0.005,"log":false},
+    {"id":"thumb","kind":"continuous","min":0.05,"max":5,"def":0.6,"step":0,"log":true},
+    {"id":"ring","kind":"toggle","def":true},
+    {"id":"box","kind":"continuous","min":0.2,"max":30,"def":0.88,"step":0,"log":true},
+    {"id":"hole","kind":"continuous","min":0,"max":100,"def":25,"step":1,"log":false},
+    {"id":"cover","kind":"continuous","min":0,"max":1,"def":0,"step":0.01,"log":false},
+    {"id":"buzz","kind":"continuous","min":0,"max":8,"def":0,"step":1,"log":false},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.25,"step":0.01,"log":false},
+    {"id":"venue","kind":"choice","def":"room","options":["studio","room","recital","hall","cathedral"]},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"Box kalimba","values":{}},
+    {"name":"Thumbnail ping","values":{"thumb":0.08}},
+    {"name":"Soft thumb, hole half covered","values":{"thumb":2.5,"cover":0.5}},
+    {"name":"Mbira with bottle caps","values":{"buzz":5,"box":6,"hole":90,"thick":1.4,"t60":8}},
+    {"name":"Marimbula (bass box)","values":{"box":25,"hole":90,"thick":2.5,"t60":10,"fullRange":true}},
+    {"name":"Clamped at the bridge (6.27)","values":{"back":0}},
+    {"name":"Back as long as the front (9th harmonic)","values":{"back":1}},
+    {"name":"Plucked on the first overtone’s node","values":{"pluck":0.71}}
+  ]
+}
