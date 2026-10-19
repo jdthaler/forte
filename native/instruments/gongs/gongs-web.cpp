@@ -41,10 +41,11 @@ FORTE_EXPORT const Shell *gongs_key(const double *P, int key, double fs, double 
   for (int i = 0; i < g.Nv; i++) out[11 + i] = g.sigma[i];
   return S;
 }
-// What a set of tables is for: the Rim's index, Dome rise, Coupling terms.
-FORTE_EXPORT void gongs_shell_spec(const Shell *S, double *out) { out[0] = S->spec.bc; out[1] = S->spec.rise; out[2] = S->spec.terms; }
-// A set of tables: N, NS, tuned, then Om, m, the dominant plate mode's m and s (for the labels) of
-// each of the N modes, C of each of the NS in-plane modes, the N radial shapes (NR each).
+// What a set of tables is for: the Rim's index, Dome rise, Coupling terms, Asymmetry (a fraction).
+FORTE_EXPORT void gongs_shell_spec(const Shell *S, double *out) { out[0] = S->spec.bc; out[1] = S->spec.rise; out[2] = S->spec.terms; out[3] = S->spec.asym; }
+// A set of tables: N, NS, tuned, then Om, m, the dominant plate mode's m and s (for the labels), the
+// twin (0 cos, 1 sin) and the round gong's mode of each of the N modes, C of each of the NS in-plane
+// modes, the N radial shapes (NR each).
 FORTE_EXPORT void gongs_shell(const Shell *S, double *out) {
   const forte::gongs::table::Table &T = *forte::gongs::table::kTables[S->spec.bc];
   int at = 0;
@@ -53,6 +54,8 @@ FORTE_EXPORT void gongs_shell(const Shell *S, double *out) {
   for (int i = 0; i < S->N; i++) out[at++] = S->m[i];
   for (int i = 0; i < S->N; i++) out[at++] = T.modes[S->plate[i]].m;
   for (int i = 0; i < S->N; i++) out[at++] = T.modes[S->plate[i]].s;
+  for (int i = 0; i < S->N; i++) out[at++] = S->fam[i];
+  for (int i = 0; i < S->N; i++) out[at++] = S->base[i];
   for (int n = 0; n < S->NS; n++) out[at++] = S->C[n];
   for (int i = 0; i < S->N; i++) for (int r = 0; r < NR; r++) out[at++] = S->R[i][r];
 }
@@ -66,7 +69,7 @@ FORTE_EXPORT void gongs_shell_e(const Shell *S, int from, int count, double *out
   for (int e = 0; e < count; e++) { const ETerm &t = S->E[from + e]; out[3 * e] = t.n; out[3 * e + 1] = t.i; out[3 * e + 2] = t.v; }
 }
 // The backbone of mode p for the tables of a spec.
-FORTE_EXPORT double gongs_backbone(int bc, double rise, int terms, int p, int Nv) { return backbone(*viewShell({bc, rise, terms}), p, Nv); }
+FORTE_EXPORT double gongs_backbone(int bc, double rise, int terms, double asym, int p, int Nv) { return backbone(*viewShell({bc, rise, terms, asym}), p, Nv); }
 FORTE_EXPORT double gongs_contact_time(const double *P, int key, double fs, double vel) {
   Gong g;
   keyGong(g, key, P, fs, *viewShell(specOf(P)));

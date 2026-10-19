@@ -48,15 +48,25 @@ static double peakNear(const std::vector<float> &x, double f, int a, int b, doub
 // wait (a few ms) for the worker to build the parameters' tables
 static void settle(GongEngine &e) { for (int i = 0; i < 2000 && !e.ready(); i++) std::this_thread::sleep_for(std::chrono::milliseconds(1)); }
 
-TEST("gongs: the tables — a flat plate's shell modes are its plate modes, a dome's are stiffer; the kept terms") {
+TEST("gongs: the tables — a flat plate's shell modes are its plate modes, a dome's are stiffer; the twins; the kept terms") {
   for (int bc : {0, 1}) {
-    auto flat = buildShell({bc, 0, 600}), dome = buildShell({bc, 1.5, 600});
+    auto flat = buildShell({bc, 0, 600}), dome = buildShell({bc, 1.5, 600}), split = buildShell({bc, 0, 600, 0.01});
     const table::Table &T = *table::kTables[bc];
-    CHECK(flat->N == T.N && flat->NS == T.NS && flat->m[flat->tuned] == 0);
-    for (int i = 0; i < flat->N; i++) CHECK(flat->Om[i] == flat->plateOm[i]);
-    CHECK((int)flat->H.size() == 600 && flat->E.empty() && (int)dome->H.size() == 600 && !dome->E.empty());
+    int twins = 0, inplane = 0;
+    for (int p = 0; p < T.N; p++) twins += T.modes[p].m > 0;
+    for (int n = 0; n < T.NS; n++) inplane += T.inplane[n].j > 0;
+    CHECK(flat->N == T.N + twins && flat->NS == T.NS + inplane && flat->m[flat->tuned] == 0 && flat->N <= NMAX && flat->NS <= NSMAX);
+    for (int i = 0; i < flat->N; i++) CHECK(flat->Om[i] == flat->plateOm[i] && (flat->fam[i] == 0 || flat->m[i] > 0));
+    // each sin twin follows its cos mode, (1 + ε/2)/(1 − ε/2) higher in ω²
+    for (int i = 1; i < split->N; i++) if (split->fam[i]) {
+      CHECK(split->base[i] == split->base[i - 1] && !split->fam[i - 1]);
+      CHECK(std::fabs(split->Om[i] * split->Om[i] / (split->Om[i - 1] * split->Om[i - 1]) - 1.005 / 0.995) < 1e-12);
+    }
+    CHECK(split->Om[split->tuned] == flat->Om[flat->tuned]);
+    // 600 terms of the cos family, each with its twins' (1, 2 or 4 in all)
+    CHECK((int)flat->H.size() > 600 && (int)flat->H.size() <= 4 * 600 && flat->E.empty() && !dome->E.empty());
+    CHECK((int)flat->full.p1j.size() == 600 && (int)flat->lite.p1j.size() == LITE && flat->N0 == T.N && flat->NS0 == T.NS); // (the engine's: the cos family)
     CHECK(dome->Om[dome->tuned] > flat->Om[flat->tuned]);
-    CHECK((int)flat->lite.p1i.size() == LITE && (int)flat->full.p1i.size() == 600);
   }
 }
 
@@ -145,7 +155,7 @@ TEST("gongs: any block size — split blocks play the same note, bounded, in tun
   }
 }
 
-TEST("gongs: the views' messages — the focus gong's modes, bands and pitch, in three pieces") {
+TEST("gongs: the views' messages — the focus gong's modes, bands and pitch, in four pieces") {
   const double fs = 48000;
   auto P = defaults();
   SpscQueue<Message> q(256);
@@ -157,12 +167,13 @@ TEST("gongs: the views' messages — the focus gong's modes, bands and pitch, in
   render(e, 12 * 128);
   Message m;
   int got = 0;
+  const int order[4] = {msg::amp1, msg::amp2, msg::amp3, msg::gong};
   while (q.pop(m)) {
-    CHECK(m.key == 57 && m.type == got + 1);
-    if (m.type == msg::gong) { CHECK(m.count == 18 && m.values[10] > 0 && m.values[13] == 1 && m.values[17] > 10); }
+    CHECK(m.key == 57 && got < 4 && m.type == order[got]);
+    if (m.type == msg::gong) { CHECK(m.count == 14 && m.values[6] > 0 && m.values[9] == 1 && m.values[13] > 10); }
     got++;
   }
-  CHECK(got == 3);
+  CHECK(got == 4);
 }
 
 TEST("CPU: gongs struck fff at 48 kHz take a small part of a core (as the JavaScript suite measures them)") {

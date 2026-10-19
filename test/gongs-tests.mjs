@@ -34,8 +34,8 @@ function test(name, fn) {
 }
 const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const cents = (r) => 1200 * Math.log2(r);
-// The shell modes and couplings for an edge, a dome rise and a number of terms, as the C++ builds them.
-const shell = (bc = 'free', rise = 0, terms = 600) => keyGong(57, P({ bc, rise, terms }), FS).S;
+// The shell modes and couplings for an edge, a dome rise, a number of terms and an asymmetry, as the C++ builds them.
+const shell = (bc = 'free', rise = 0, terms = 600, asym = DEFAULTS.asym) => keyGong(57, P({ bc, rise, terms, asym }), FS).S;
 // The flat plate's frequency (λ², the table's) of the plate mode a shell mode grew from, by its label.
 function plateOm(S, i) {
   const [, m, c] = S.label[i].match(/\((\d+),(\d+)\)/).map(Number), s = c - (S.bc === 'free' && m < 2 ? 1 : 0);
@@ -329,6 +329,79 @@ test('a centre strike rings only axisymmetric modes; off centre wakes the asymme
   const r = (x) => tone(x, f20, 4800, 4800 + 16384) / tone(x, f0, 4800, 4800 + 16384);
   assert.ok(r(o) > 0.05, `off centre: (2,0)/(0,1) = ${r(o).toFixed(3)}`);
 });
+console.log('twins');
+test('every asymmetric mode has a sin twin, ε/2 higher (ε in ω²); the axisymmetric modes and the strike tone are untouched', () => {
+  for (const bc of ['free', 'clamped']) {
+    const S = shell(bc, 0.4, 300, 1.2), R = shell(bc, 0.4, 300, 0), T = TABLE[bc];
+    assert.equal(S.N, T.modes.length + T.modes.filter((md) => md.m > 0).length, `${bc}: ${S.N} modes`);
+    for (let i = 0; i < S.N; i++) {
+      if (S.m[i] === 0) { assert.ok(S.fam[i] === 0 && S.Om[i] === R.Om[i], `${bc} ${S.label[i]}`); continue; }
+      if (!S.fam[i]) continue;
+      assert.ok(S.base[i] === S.base[i - 1] && !S.fam[i - 1] && S.label[i] === S.label[i - 1] + '′', `${bc}: ${S.label[i]} follows ${S.label[i - 1]}`);
+      assert.ok(Math.abs((S.Om[i] / S.Om[i - 1]) ** 2 - 1.006 / 0.994) < 1e-12 && Math.abs(S.Om[i - 1] ** 2 * 1.006 - R.Om[i] ** 2) < 1e-9 * R.Om[i] ** 2, `${bc} ${S.label[i]}: the split`);
+    }
+    assert.ok(S.Om[S.tuned] === R.Om[R.tuned] && S.m[S.tuned] === 0, 'the strike tone');
+  }
+});
+// Each twin pair (and each in-plane pair) turned by the same angle: x_c + i x_s → e^{imθ₀}(x_c + i x_s).
+function turn(S, x, th) {
+  const y = Float64Array.from(x);
+  for (let i = 0; i < S.N; i++) if (S.fam[i]) {
+    const c = Math.cos(S.m[i] * th), s = Math.sin(S.m[i] * th), a = x[i - 1], b = x[i];
+    y[i - 1] = c * a - s * b; y[i] = s * a + c * b;
+  }
+  return y;
+}
+test('the twins\' couplings, built from the cos family\'s: a round gong\'s V_nl is the same turned to any angle', () => {
+  // the coupling rule (cos family × the phases of the two angular orders) is right only if the
+  // potential of any motion is unchanged when the whole pattern turns, as for a round gong it must be
+  let rnd = 7;
+  const r = () => ((rnd = (rnd * 16807) % 2147483647) / 2147483647 - 0.5);
+  for (const [bc, rise] of [['free', 0], ['free', 1.5], ['clamped', 0.8]]) {
+    const S = shell(bc, rise, 600, 0), x = Float64Array.from({ length: S.N }, (_, i) => r() / (1 + i));
+    const V0 = potential(S, x).V;
+    let worst = 0;
+    for (const th of [0.3, 1.1, 2.5]) worst = Math.max(worst, Math.abs(potential(S, turn(S, x, th)).V / V0 - 1));
+    assert.ok(worst < 1e-12, `${bc}, rise ${rise}: V changes by ${worst.toExponential(1)} when turned`);
+  }
+});
+test('the engine\'s gradient (on complex twin amplitudes) is the dense ∇V_nl of the twins\' couplings', () => {
+  let rnd = 11;
+  const r = () => ((rnd = (rnd * 16807) % 2147483647) / 2147483647 - 0.5);
+  for (const [bc, rise, key] of [['free', 0.4, 57], ['free', 2.5, 45], ['clamped', 1, 69]]) {
+    const e = new GongEngine(FS); e.setParams(P({ bc, rise }));
+    const S0 = keyGong(key, P({ bc, rise }), FS), x0 = Array.from({ length: S0.Nv }, (_, i) => 0.3 * r() / (1 + 0.2 * i));
+    const v = e.place(key, x0), S = v.S, { V, g } = potential(S, v.x, v.N);
+    let worst = 0, gmax = 0;
+    for (let i = 0; i < v.N; i++) { worst = Math.max(worst, Math.abs(v.gv[i] - g[i])); gmax = Math.max(gmax, Math.abs(g[i])); }
+    assert.ok(Math.abs(v.V / V - 1) < 1e-12, `${bc} ${rise}: V ${v.V} vs ${V}`);
+    assert.ok(worst < 1e-12 * gmax, `${bc} ${rise}: gradient off by ${(worst / gmax).toExponential(1)} of its largest`);
+    assert.ok(v.N === S0.Nv && S.fam.slice(0, v.N).filter(Boolean).length > 10, `${v.N} modes`);
+  }
+});
+test('struck on the heavy axis only the cos twins ring (a mirror symmetry); between the axes both do', () => {
+  const key = 72, p = P({ strike: 0.4, asym: 3, speed: 0.5 }), G = keyGong(key, p, FS), S = G.S;
+  const on = render({ ...p, strikeAngle: 0 }, 0.3, [[0, 'on', key, 0.6]]).e.voices[0];
+  assert.ok(S.fam.some((f, i) => f && i < on.N) && [...on.x].every((q, i) => !S.fam[i] || q === 0), 'on the axis: every sin twin exactly zero, even at mf');
+  // the lowest pair, (2,0) and (2,0)′, 1.5 % apart (4 Hz): both peaks
+  const i = S.m.findIndex((m) => m > 0), fc = (S.Om[i] * G.w0) / (2 * Math.PI), fs = (S.Om[i + 1] * G.w0) / (2 * Math.PI);
+  const W = Math.round(1.2 * FS), a = Math.round(0.1 * FS);
+  const between = render({ ...p, strikeAngle: 20 }, 1.4, [[0, 'on', key, 0.3]]).L, axis = render({ ...p, strikeAngle: 0 }, 1.4, [[0, 'on', key, 0.3]]).L;
+  const pair = (x) => [tone(x, fc, a, a + W), tone(x, fs, a, a + W)];
+  const [b1, b2] = pair(between), [a1, a2] = pair(axis);
+  console.log(`        (2,0)′/(2,0): ${(b2 / b1).toFixed(2)} at 20°, ${(a2 / a1).toFixed(3)} on the axis (${fc.toFixed(1)} and ${fs.toFixed(1)} Hz)`);
+  assert.ok(b2 > 0.3 * b1 && a2 < 0.02 * a1);
+});
+test('a perfectly round gong (ε = 0) sounds the same struck at any angle (it only turns the pattern)', () => {
+  const key = 60, p = P({ asym: 0, strike: 0.35 });
+  for (const vel of [0.3, 1]) {
+    const a = render({ ...p, strikeAngle: 0 }, 0.05, [[0, 'on', key, vel]]).L, b = render({ ...p, strikeAngle: 37 }, 0.05, [[0, 'on', key, vel]]).L;
+    let d = 0, m = 0;
+    for (let i = 0; i < a.length; i++) { d = Math.max(d, Math.abs(a[i] - b[i])); m = Math.max(m, Math.abs(a[i])); }
+    assert.ok(d < 1e-5 * m, `velocity ${vel}: differs by ${(d / m).toExponential(1)} of the peak`);
+  }
+});
+
 // energy share above 4× the pitch, from the engine's view messages
 function cascade(params, vel, key = 57, t = 0.15) {
   const msgs = [];
