@@ -21,6 +21,7 @@ enum : int { tuning, accuracy, aspect, rise, t60, damping, fullRange, layout, co
 
 constexpr double kNoLimit = INFINITY;
 inline const char *const kChoices_tuning[] = {"Octave and twelfth (1 : 2 : 3)", "Octave and double octave (1 : 2 : 4)", "Untuned (as sunk)"};
+inline const char *const kKeys_tuning[] = {"twelfth", "double", "raw"};
 namespace tuning_ { enum : int { twelfth, double_, raw }; }
 inline const FormatSegment kFormat_accuracy[] = {{kNoLimit, "± ", " ¢", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_aspect[] = {{kNoLimit, "", " : 1", 1, 0, 2, false, false, false, false}};
@@ -28,6 +29,7 @@ inline const FormatSegment kFormat_rise[] = {{kNoLimit, "", " × thickness", 1, 
 inline const FormatSegment kFormat_t60[] = {{0.9999999999999999, "", " s", 1, 0, 2, false, false, false, false}, {kNoLimit, "", " s", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_damping[] = {{kNoLimit, "σ ∝ f^", "", 1, 0, 2, false, false, false, false}};
 inline const char *const kChoices_layout[] = {"Fourths and fifths", "Chromatic"};
+inline const char *const kKeys_layout[] = {"fifths", "chromatic"};
 namespace layout_ { enum : int { fifths, chromatic }; }
 inline const FormatSegment kFormat_coupling[] = {{kNoLimit, "", " %", 100, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_skirt[] = {{kNoLimit, "", " × the band’s", 1, 0, 2, false, false, false, false}};
@@ -39,18 +41,19 @@ inline const FormatSegment kFormat_rollRate[] = {{kNoLimit, "", " strokes/s", 1,
 inline const FormatSegment kFormat_mute[] = {{0.9999999999999999, "T₆₀ ", " s", 1, 0, 2, false, false, false, false}, {kNoLimit, "T₆₀ ", " s", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
 inline const ParamInfo kParams[p::count] = {
-  {"tuning", "Tuning", "Note areas", ParamKind::choice, 0, 2, 0, 1, false, false, kChoices_tuning, 3, nullptr, 0},
+  {"tuning", "Tuning", "Note areas", ParamKind::choice, 0, 2, 0, 1, false, false, kChoices_tuning, 3, nullptr, 0, kKeys_tuning},
   {"accuracy", "Tuner’s accuracy", "Note areas", ParamKind::continuous, 0, 30, 2, 0.5, false, false, nullptr, 0, kFormat_accuracy, 1},
   {"aspect", "Note shape (length / width)", "Note areas", ParamKind::continuous, 1, 2.5, 1.3, 0.01, false, false, nullptr, 0, kFormat_aspect, 1},
   {"rise", "Dome rise (curvature)", "Note areas", ParamKind::continuous, 0, 10, 3, 0.1, false, true, nullptr, 0, kFormat_rise, 1},
   {"t60", "Ring time at C4", "Note areas", ParamKind::continuous, 0.2, 8, 1.6, 0, true, false, nullptr, 0, kFormat_t60, 2},
   {"damping", "Damping vs frequency", "Note areas", ParamKind::continuous, 0, 2, 0.6, 0.01, false, false, nullptr, 0, kFormat_damping, 1},
   {"fullRange", "Full range (A0–C8)", "Note areas", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
-  {"layout", "Note layout", "Pan", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_layout, 2, nullptr, 0},
+  {"layout", "Note layout", "Pan", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_layout, 2, nullptr, 0, kKeys_layout},
   {"coupling", "Note coupling", "Pan", ParamKind::continuous, 0, 0.01, 0.0015, 0.0001, false, false, nullptr, 0, kFormat_coupling, 1},
   {"skirt", "Skirt length", "Pan", ParamKind::continuous, 0.25, 3, 1, 0.01, true, false, nullptr, 0, kFormat_skirt, 1},
   {"contact", "Stick contact (at C4)", "Sticks", ParamKind::continuous, 0.2, 3, 0.7, 0, true, true, nullptr, 0, kFormat_contact, 2},
@@ -61,7 +64,7 @@ inline const ParamInfo kParams[p::count] = {
   {"letRing", "Let notes ring", "Hands", ParamKind::toggle, 0, 1, 0, 1, false, true, nullptr, 0, nullptr, 0},
   {"mute", "Hand mute", "Hands", ParamKind::continuous, 0.05, 2, 0.3, 0, true, false, nullptr, 0, kFormat_mute, 2},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 
