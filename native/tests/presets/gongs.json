@@ -1,0 +1,31 @@
+{
+  "forte": "presets",
+  "format": 1,
+  "instrument": "gongs",
+  "instrumentVersion": "0.6.0",
+  "presets": [
+    {
+      "name": "Thick bronze: stays linear (a bell plate)",
+      "values": {
+        "material": "bronze",
+        "thick": 0.03,
+        "rise": 0.4,
+        "bc": "free",
+        "eta": 0.00015,
+        "thermal": 1,
+        "radiation": 1,
+        "hardness": 4,
+        "mass": 0.06,
+        "strike": 0.1,
+        "speed": 9,
+        "listen": 0.6,
+        "release": 2.5,
+        "nlvoices": 4,
+        "terms": 600,
+        "room": 0.3,
+        "venue": "room",
+        "volume": 0.8
+      }
+    }
+  ]
+}

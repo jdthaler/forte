@@ -2,8 +2,10 @@
 <!-- editor.html — the plugins' window (editor.h): the instrument's controls, from the plugin's
      own parameter list, and a keyboard to play it with the mouse, a finger or the computer's keys,
      in the site's style (shared/instrument.css, shared/keyboard.js, shared/shell.js). Every call
-     goes through window.forte(method, …args) (plugin.cpp, "The editor's calls"). Opened as a
-     file, it plays a made-up instrument, to work on it in a browser. -->
+     goes through window.forte(method, …args) (plugin.cpp, "The editor's calls"). The Presets menu
+     has the instrument's presets, then your own (files in the site's format, presets.h), saving
+     them and their folder. Opened as a file, it plays a made-up instrument, to work on it in a
+     browser. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -97,6 +99,26 @@
   .bk.down { background: var(--accent); color: #000; }
   .wk .c-label { position: absolute; bottom: 18px; color: #8a8a85; font-size: 9px; }
   .k-label { pointer-events: none; }
+
+  /* saving your own preset: a sheet over the window */
+  #save { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; background: rgba(4, 4, 8, 0.66); }
+  #save[hidden] { display: none; }
+  #save form { width: min(440px, calc(100vw - 32px)); padding: 16px 18px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6); }
+  #save label { display: block; margin-bottom: 6px; color: var(--muted); }
+  #save input {
+    width: 100%; font: 14px system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--text); background: #1f1f24;
+    border: 1px solid var(--line); border-radius: 7px; padding: 6px 9px; user-select: text; -webkit-user-select: text;
+  }
+  #save input:focus { outline: none; border-color: var(--accent); }
+  #save-note { min-height: 1.35em; margin: 6px 0 0; color: var(--accent); font-size: 12px; }
+  #save .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+  #save button[type=submit] { background: var(--accent); color: #111; border-color: transparent; font-weight: 600; }
+  #save-where { margin: 10px 0 0; color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+  #toast {
+    position: fixed; top: 52px; left: 50%; transform: translateX(-50%); z-index: 11; max-width: calc(100vw - 32px);
+    padding: 6px 12px; border-radius: 8px; background: #26262c; border: 1px solid var(--line); color: var(--text); pointer-events: none;
+  }
+  #toast[hidden] { display: none; }
 </style>
 </head>
 <body>
@@ -109,6 +131,16 @@
   </div>
 </header>
 <main><div id="groups"></div></main>
+<div id="save" hidden>
+  <form>
+    <label for="save-name">Save these settings as</label>
+    <input id="save-name" type="text" maxlength="80" autocomplete="off" spellcheck="false" placeholder="A name">
+    <p id="save-note"></p>
+    <div class="buttons"><button type="button" id="save-cancel">Cancel</button><button type="submit">Save</button></div>
+    <p id="save-where"></p>
+  </form>
+</div>
+<div id="toast" role="status" hidden></div>
 <footer>
   <div id="perform"></div>
   <div class="kb-bar">
@@ -251,13 +283,7 @@ function build() {
   }
   // the controls a player reaches for while playing, above the keys too
   D.params.forEach((p, i) => { if (p.perform && i !== D.presets) { const [box, c] = control(i); $('#perform').appendChild(box); register(i, c); } });
-  if (D.presets >= 0) {
-    const el = $('#preset');
-    D.params[D.presets].choices.forEach((c, k) => { const o = document.createElement('option'); o.value = k; o.textContent = c; el.appendChild(o); });
-    el.hidden = false;
-    el.addEventListener('change', () => { set(D.presets, +el.value); el.blur(); });
-    register(D.presets, { el });
-  }
+  buildPresets();
   if (D.space === 'switch') { // Space and CC64 switch a choice (the organ's Leslie): a press flips it
     const b = $('#pedal'), [what, a, z] = D.switch;
     b.hidden = false;
@@ -272,6 +298,90 @@ function build() {
     b.addEventListener('pointerdown', (e) => { e.preventDefault(); setPedal(!pedal); });
     $('#space-help').innerHTML = `, <kbd>Space</kbd> ${D.space === 'hold' ? 'holds' : 'sustains'}`;
   }
+}
+
+// ---- presets: the instrument's (its Preset parameter), then your own, then saving them -----------
+const menu = $('#preset');
+const mineGroup = document.createElement('optgroup'), saveGroup = document.createElement('optgroup');
+let mine = [], folder = '', before = '';
+const option = (text, value) => { const o = document.createElement('option'); o.value = value; o.textContent = text; return o; };
+const mineValue = (u) => `u${u[2]}:${u[1]}`; // a preset of yours: its place in its file, and the file
+function buildPresets() {
+  if (D.presets >= 0) {
+    D.params[D.presets].choices.forEach((c, k) => menu.appendChild(option(c, k)));
+    register(D.presets, { el: menu });
+  } else menu.appendChild(option('Presets…', ''));
+  mineGroup.label = 'Your presets';
+  saveGroup.label = 'Save';
+  saveGroup.append(option('Save these settings…', 'save'), option('Open the presets folder', 'folder'));
+  menu.appendChild(saveGroup);
+  menu.hidden = false;
+  // the menu's value before a pick, so saving or the folder leave it as it was
+  for (const ev of ['focus', 'pointerdown', 'keydown']) menu.addEventListener(ev, () => { if (menu.value !== 'save' && menu.value !== 'folder') before = menu.value; });
+  menu.addEventListener('pointerdown', refreshMine);
+  menu.addEventListener('change', async () => {
+    const v = menu.value;
+    menu.blur();
+    if (v === 'save' || v === 'folder') { menu.value = before; if (v === 'save') openSave(); else if (!(await forte('showPresets'))) toast(`Your presets are in ${folder}`); return; }
+    if (v.startsWith('u')) {
+      const u = mine.find((x) => mineValue(x) === v), r = u && await forte('loadPreset', u[1], u[2]);
+      if (r?.ok) { before = v; toast(`Playing “${u[0]}”`); } else { menu.value = before; toast(r?.error || 'That preset is gone.'); refreshMine(); }
+      return;
+    }
+    if (v !== '' && D.presets >= 0) { before = v; set(D.presets, +v); }
+  });
+  window.addEventListener('focus', refreshMine); // back from the folder, perhaps with a file put in it
+  refreshMine();
+}
+async function refreshMine() {
+  const r = await forte('presets');
+  if (!r) return;
+  folder = r.folder;
+  const was = menu.value;
+  mine = r.list;
+  mineGroup.replaceChildren(...mine.map((u) => option(u[0], mineValue(u))));
+  if (mine.length) menu.insertBefore(mineGroup, saveGroup); else mineGroup.remove();
+  if ([...menu.options].some((o) => o.value === was)) menu.value = was;
+  else if (D.presets >= 0) menu.value = String(Math.round(values[D.presets]));
+  if (menu.value !== 'save' && menu.value !== 'folder') before = menu.value;
+}
+
+// saving: a name, and the file it makes in the folder (one of that name is replaced)
+const saveBox = $('#save'), saveName = $('#save-name');
+function openSave() {
+  const u = mine.find((x) => mineValue(x) === before);
+  saveName.value = u ? u[0] : '';
+  $('#save-where').textContent = folder ? `In ${folder}` : '';
+  saveBox.hidden = false;
+  saveNote();
+  saveName.focus(); saveName.select();
+}
+const closeSave = () => { saveBox.hidden = true; };
+const saveNote = () => {
+  const n = saveName.value.trim().toLowerCase();
+  $('#save-note').textContent = n && mine.some((u) => u[0].toLowerCase() === n) ? 'Replaces your preset of that name.' : '';
+};
+saveName.addEventListener('input', saveNote);
+$('#save-cancel').addEventListener('click', closeSave);
+saveBox.addEventListener('pointerdown', (e) => { if (e.target === saveBox) closeSave(); });
+saveBox.querySelector('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = saveName.value.replace(/\s+/g, ' ').trim();
+  if (!name) { $('#save-note').textContent = 'Give the preset a name.'; return; }
+  const r = await forte('savePreset', name);
+  if (!r?.ok) { $('#save-note').textContent = r?.error || 'The preset couldn’t be saved.'; return; }
+  closeSave();
+  await refreshMine();
+  const u = mine.find((x) => x[1] === r.file && x[2] === 0);
+  if (u) { menu.value = before = mineValue(u); }
+  toast(`Saved “${name}”`);
+});
+let toastTimer = 0;
+function toast(text) {
+  const t = $('#toast');
+  t.textContent = text; t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 3000);
 }
 
 // ---- notes --------------------------------------------------------------------------------------
@@ -403,6 +513,7 @@ const codeToKey = (code) => { let i = LOW.indexOf(code); if (i >= 0) return base
 const PASSED = new Set(['Tab', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End']);
 const velocity = () => { const i = D.params.findIndex((p) => p.id === 'velocity'); return i >= 0 && D.params[i].kind === 'continuous' ? 0.2 + 0.8 * values[i] : 0.75; };
 window.addEventListener('keydown', (e) => {
+  if (!saveBox.hidden) { if (e.key === 'Escape') closeSave(); return; } // typing a preset's name
   if (!D || e.metaKey || e.ctrlKey || e.altKey) return;
   const t = e.target;
   // a slider reached with Tab keeps its arrows; anything else hands the keys to the instrument
@@ -420,6 +531,11 @@ window.addEventListener('keydown', (e) => {
   down(key, velocity());
 });
 window.addEventListener('keyup', (e) => {
+  if (!saveBox.hidden) { // only what was held before the sheet opened lets go
+    if (e.code === 'Space' && pedalHere && D.space !== 'switch') setPedal(false);
+    else if (held.has(e.code)) { up(held.get(e.code)); held.delete(e.code); }
+    return;
+  }
   if (e.code === 'Space' && D?.space) { setPedal(false); return; }
   const key = held.get(e.code);
   if (key !== undefined) { held.delete(e.code); up(key); }
@@ -471,18 +587,32 @@ function mockForte() {
     { id: 'preset', label: 'Preset', group: '', kind: 'choice', perform: false, def: 0, choices: ['Default settings', 'Bright', 'Dark'] },
   ];
   const v = params.map((p) => p.def), keys = new Set();
+  let mine = [{ name: 'Soft glass', file: 'Soft glass.json', v: params.map((p) => p.def) }];
   let pedal = false;
   const text = (i) => (params[i].kind === 'choice' ? params[i].choices[v[i]] : params[i].kind === 'toggle' ? (v[i] ? 'on' : 'off') : `${(100 * v[i]).toFixed(1)} %`);
   const sent = v.map(() => NaN);
   return async (m, ...a) => {
     if (m === 'describe') {
-      const d = { slug: 'mock', name: 'Practice Bars', version: '0.0.0', accent: '#5fd0c8', keyLo: 21, keyHi: 108, compass: [53, 89, 4], space: 'sustain', presets: 9, params };
+      const d = { slug: 'mock', name: 'Practice Bars', version: '0.0.0', accent: '#5fd0c8', keyLo: 21, keyHi: 108, compass: [53, 89, 4], space: 'sustain', presets: 10, params };
       // ?suite: as the Forte app shows it, with its Instrument menu
       if (location.search.includes('suite')) d.instruments = [{ slug: 'drums', name: 'Practice Drums' }, { slug: 'mock', name: 'Practice Bars' }];
       return d;
     }
     if (m === 'set') { v[a[0]] = a[1]; sent[a[0]] = a[1]; return { x: a[1], text: text(a[0]) }; }
     if (m === 'note') { if (a[1] > 0) keys.add(a[0]); else keys.delete(a[0]); }
+    // your own presets: in memory
+    if (m === 'presets') return { folder: '~/Library/Audio/Presets/Forte/mock', list: mine.map((u) => [u.name, u.file, 0]).sort((x, y) => x[0].localeCompare(y[0])) };
+    if (m === 'savePreset') {
+      const file = `${a[0].replace(/[\\/:*?"<>|]/g, '-')}.json`;
+      mine = mine.filter((u) => u.file !== file).concat({ name: a[0], file, v: [...v] });
+      return { ok: true, file, error: '' };
+    }
+    if (m === 'loadPreset') {
+      const u = mine.find((x) => x.file === a[0]);
+      if (u) u.v.forEach((x, i) => { if (i !== 10) v[i] = x; });
+      return { ok: !!u, error: u ? '' : 'There is no such preset.' };
+    }
+    if (m === 'showPresets') return false;
     if (m === 'pedal') pedal = !!a[0];
     if (m === 'poll') {
       const p = [];

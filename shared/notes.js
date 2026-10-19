@@ -26,8 +26,9 @@ const name = () => title?.textContent.trim() || 'Notes';
 
 // A dialog with the notes' look: a bar (kicker, title, Close) over a scrolling body. Keys
 // pressed in it scroll it instead of playing the instrument; keys already held when it opened
-// still let go normally. Closing it takes its hash off the URL.
-function sheet(kicker, id, hash, extra = '') {
+// still let go normally. Closing it takes its hash (if it has one) off the URL. Your presets
+// (shared/user-presets.js) use it too.
+export function sheet(kicker, id, hash, extra = '') {
   const d = document.createElement('dialog');
   d.className = `forte-notes ${extra}`;
   d.setAttribute('aria-labelledby', id);
@@ -45,17 +46,17 @@ function sheet(kicker, id, hash, extra = '') {
   d.addEventListener('keyup', (e) => { if (pressed.delete(e.code)) e.stopPropagation(); });
   d.addEventListener('close', () => {
     pressed.clear();
-    if (location.hash === hash) history.replaceState(null, '', location.pathname + location.search);
+    if (hash && location.hash === hash) history.replaceState(null, '', location.pathname + location.search);
   });
   document.body.appendChild(d);
   return d;
 }
-function show(d, hash) {
+export function show(d, hash) {
   if (!d.open) {
     if (d.showModal) d.showModal(); else d.setAttribute('open', '');
     d.querySelector('.forte-notes-body').focus({ preventScroll: true });
   }
-  if (location.hash !== hash) history.replaceState(null, '', hash);
+  if (hash && location.hash !== hash) history.replaceState(null, '', hash);
 }
 
 // Plugin: the instrument's plugins, from the latest release (shared/plugins.js)
