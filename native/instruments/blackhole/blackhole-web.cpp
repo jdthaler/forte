@@ -50,6 +50,7 @@ void unpack(const double *o, KeyVoice &v) {
 }
 
 KeyVoice scratchVoice;
+Angular scratchAngular; // the views' keys share their angular functions
 std::vector<float> strain;
 } // namespace
 
@@ -78,13 +79,20 @@ FORTE_EXPORT int blackhole_omega(int l, int m, int n, double a, double *out) {
   return 1;
 }
 FORTE_EXPORT double blackhole_swsh(int s, int l, int m, double theta) { return swsh(s, l, m, theta); }
+// ₛS_lm(θ; c) and the separation constant A in out: S re, im, A re, im
+FORTE_EXPORT void blackhole_spheroidal(int s, int l, int m, double cre, double cim, double theta, double *out) {
+  Spheroidal S;
+  spheroidal(s, l, m, cre, cim, S);
+  const Omega y = spheroidalAt(S, theta);
+  out[0] = y.re; out[1] = y.im; out[2] = S.Are; out[3] = S.Aim;
+}
 // a key's voice, packed into out
 FORTE_EXPORT void blackhole_key_voice(int key, double spinU, double massRatio, double inclination, double t0, double overtones,
                                       double retrograde, int inspiral, double inspiralOct, double fs, double *out) {
   ModelParams P;
   P.spinU = spinU; P.massRatio = massRatio; P.inclination = inclination; P.t0 = t0; P.overtones = overtones;
   P.retrograde = retrograde; P.inspiral = inspiral != 0; P.inspiralOct = inspiralOct;
-  keyVoice(key, P, fs, scratchVoice);
+  keyVoice(key, P, fs, scratchVoice, &scratchAngular);
   pack(scratchVoice, out);
 }
 // the strain of a packed voice at n points: h₊ then h× (float32) at blackhole_strain_buf();
