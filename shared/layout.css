@@ -150,6 +150,9 @@ body[data-instrument] .forte-more {
 }
 body[data-instrument] .forte-more:hover, body[data-instrument] .forte-more[aria-pressed="true"] { color: var(--text); border-color: var(--accent); border-style: solid; }
 
+/* the Scala file button under Temperament (shared/tuning-ui.js), as wide as the dropdown above it */
+body[data-instrument] .param.scala button { width: 100%; }
+
 /* ⓘ: a hint above the keys opens in a bubble; in the Controls panel it slides open */
 body[data-instrument] .forte-info {
   position: relative; flex: none; display: inline-grid; place-items: center;

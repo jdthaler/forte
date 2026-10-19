@@ -58,20 +58,14 @@ fs::path root() {
 }
 fs::path folderOf(const InstrumentInfo &I) { const fs::path r = root(); return r.empty() ? r : r / I.slug; }
 
-// a number as JavaScript's String() writes it, for a choice whose options are numbers (440, 415)
-std::string numberText(double x) {
-  char buf[40];
-  for (int digits = 1; digits <= 17; digits++) {
-    std::snprintf(buf, sizeof buf, "%.*g", digits, x);
-    if (std::strtod(buf, nullptr) == x) break;
-  }
-  return buf;
-}
+std::string jsNumber(double x);
+// a choice whose options are numbers (440, 415) keeps them as numbers: its key is one when JavaScript's
+// String() writes the number back the same
 bool isNumber(const std::string &s) {
   if (s.empty()) return false;
   char *end = nullptr;
   std::strtod(s.c_str(), &end);
-  return end && *end == 0 && numberText(std::strtod(s.c_str(), nullptr)) == s;
+  return end && *end == 0 && jsNumber(std::strtod(s.c_str(), nullptr)) == s;
 }
 const char *keyOf(const ParamInfo &p, int k) { return p.keys ? p.keys[k] : p.choices[k]; }
 
@@ -79,7 +73,7 @@ const char *keyOf(const ParamInfo &p, int k) { return p.keys ? p.keys[k] : p.cho
 double valueOf(const ParamInfo &p, const choc::value::ValueView &v) {
   const bool number = v.isFloat() || v.isInt();
   if (p.kind == ParamKind::choice) {
-    const std::string s = v.isString() ? std::string(v.getString()) : number ? numberText(v.get<double>()) : std::string();
+    const std::string s = v.isString() ? std::string(v.getString()) : number ? jsNumber(v.get<double>()) : std::string();
     for (int k = 0; k < p.choiceCount; k++) if (s == keyOf(p, k)) return k;
     return p.def;
   }

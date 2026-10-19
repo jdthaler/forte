@@ -196,7 +196,8 @@ for (const slug of slugs) {
     const custom = { ...D, temperament: 'custom', [`cents${pc}`]: 35 }; // this key's note, 35 ¢ sharp; A stays
     const low = spectrum(I, Engine, { ...D, pitch: 415 }, key), up = spectrum(I, Engine, custom, key);
     if (OWN[slug]) { // the sound changes; the instrument's own suite measures by how much
-      assert.ok(low.mag.some((x, k) => x !== base.mag[k]) && up.mag.some((x, k) => x !== base.mag[k]), 'the tuning changes the sound');
+      const out = (P) => new Player(I, Engine, FS, P).render(0.5, [[0, 'on', key, 0.7]])[0], a = out(D);
+      for (const P of [{ ...D, pitch: 415 }, custom]) { const b = out(P); assert.ok(b.some((x, i) => x !== a[i]), `${JSON.stringify(P)} changes the sound`); }
       return;
     }
     near(shift(base, low, cents(415 / 440)), cents(415 / 440), 3, 'at 415 Hz');
