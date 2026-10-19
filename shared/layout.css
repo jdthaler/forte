@@ -4,11 +4,10 @@
    the Controls panel beside them, each scrolling on its own. Phones are different
    (see the end): the page scrolls and the keyboard sticks to the bottom.
    Body classes from shared/layout.js:
-     perform         Perform mode: the main views fill the screen, with no text in them
+     perform         Perform mode: the views turned on fill the screen, with no text in them
      hide-controls   the Controls column hidden (wide screens)
      drawer-open     the Controls panel slid over the views (narrow screens; on phones it replaces them)
      deck-shut       the controls above the keys folded away
-     dock-shut       the tabbed views folded away
      no-views        a page with no views: the controls take the space
      no-midi         a touch device with no Web MIDI (iPhone, iPad): MIDI buttons and hints hidden
      kb-s … kb-xl    key size
@@ -62,28 +61,30 @@ body[data-instrument] #start:not(.running) ~ :is(#cpu, #voices) { display: none;
 .pill[hidden] { display: none; }
 body:not(.perform) .forte-fullscreen { display: none; }
 
-/* ---- views: the main ones on a stage, the others in a tabbed panel ------------- */
-body[data-instrument] #views {
-  display: grid; gap: 12px; align-content: stretch;
-  grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1.75fr) minmax(0, 1fr);
-}
-body.dock-shut #views, body.perform #views, #views:not(:has(> .forte-dock)) { grid-template-rows: minmax(0, 1fr) auto; }
-.forte-stage { display: grid; gap: 12px; min-height: 0; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
-.forte-stage > .card { min-height: 0; overflow: auto; }
-.forte-dock { display: flex; flex-direction: column; min-height: 0; }
-.forte-dock-tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-bottom: 6px; }
-body[data-instrument] .forte-dock-tabs button {
-  padding: 3px 11px; border-radius: 999px; font-size: 12px; color: var(--muted);
+/* ---- views: a row of toggles, then the views turned on, in rows (shared/layout.js
+   sets each card's span of the twelve columns, and --rows) --------------------- */
+body[data-instrument] #views { display: flex; flex-direction: column; gap: 10px; }
+.forte-view-toggles { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+body[data-instrument] .forte-view-toggles button {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 3px 12px 3px 10px; border-radius: 999px; font-size: 12px; color: var(--muted);
   background: transparent; border: 1px solid var(--line);
 }
-body[data-instrument] .forte-dock-tabs button:hover { color: var(--text); }
-body[data-instrument] .forte-dock-tabs button[aria-selected="true"] { color: var(--text); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
-body[data-instrument] .forte-dock-tabs .forte-dock-fold { margin-left: auto; width: 30px; padding: 3px 0; }
-.forte-dock-fold::before { content: "▾"; }
-.forte-dock-fold[aria-expanded="false"]::before { content: "▴"; }
-.forte-dock-body { flex: 1; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr); }
-.forte-dock-body > .card { min-height: 0; overflow: auto; }
-.forte-dock-body > .card:not(.dock-on), body.dock-shut .forte-dock-body { display: none; }
+.forte-view-toggles button::before {
+  content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%;
+  border: 1.5px solid currentColor; opacity: 0.7;
+}
+body[data-instrument] .forte-view-toggles button:hover { color: var(--text); }
+body[data-instrument] .forte-view-toggles button[aria-pressed="true"] { color: var(--text); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.forte-view-toggles button[aria-pressed="true"]::before { background: var(--accent); border-color: var(--accent); opacity: 1; }
+.forte-stage {
+  flex: 1 1 0; display: grid; gap: 12px; min-height: 0;
+  grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: repeat(var(--rows, 1), minmax(220px, 1fr));
+}
+body.perform .forte-stage { grid-template-rows: repeat(var(--rows, 1), minmax(0, 1fr)); }
+.forte-stage > .card { min-height: 0; overflow: auto; }
+#views .forte-stage > .card[hidden], .forte-no-view[hidden] { display: none; }
+.forte-no-view { grid-column: 1 / -1; align-self: start; margin: 4px 2px; color: var(--muted); font-size: 12.5px; }
 /* a view's caption waits behind ⓘ in its title */
 #views .card.has-notes:not(.notes-open) .caption { display: none; }
 #views .card.notes-open .caption { animation: forte-reveal 0.18s ease-out; }
@@ -213,23 +214,21 @@ body.kb-l { --kb-h: 165px; }
 body.kb-xl { --kb-h: 230px; }
 #keyboard .wk, #keyboard .bk { touch-action: none; }
 
-/* ---- Perform: the main views fill the space side by side (stacked when the screen
-   is taller than wide), with no text in them: no titles, readouts, tools, captions,
-   legends or tables (shared/layout.js also stops their canvases drawing text). */
+/* ---- Perform: the views turned on fill the space, with no toggles and no text in
+   them: no titles, readouts, tools, captions, legends or tables (shared/layout.js
+   also stops their canvases drawing text). */
 body.perform .brand .sub,
 body.perform .forte-about,
 body.perform .forte-info,
 body.perform #midi,
 body.perform #touch,
 body.perform #cpu:not(.hot),
-body.perform .forte-dock,
+body.perform .forte-view-toggles,
+body.perform .forte-no-view,
 body.perform #views .card:not([data-keep-text]) :is(.card-head, .caption, .legend, .readout, .tabs, dl, table) { display: none; }
 body.perform #views .card { background: transparent; border-color: transparent; padding: 4px; }
 :root.perform { --card: var(--bg); } /* views draw label backdrops in the card's colour: they vanish too */
 body.perform #views .card:not([data-keep-text]) canvas { flex: 1 1 0; height: auto; min-height: 0; }
-@media (orientation: portrait) {
-  .forte-stage { grid-auto-flow: row; grid-auto-columns: auto; grid-auto-rows: minmax(0, 1fr); }
-}
 
 /* ---- narrow screens (tablets, narrow windows) ----------------------------------- */
 @media (max-width: 1050px) {
@@ -248,10 +247,8 @@ body.perform #views .card:not([data-keep-text]) canvas { flex: 1 1 0; height: au
 /* tablets: in Discover the views scroll, each as tall as it needs (a page's canvases
    are 230px at least here) */
 @media (min-width: 601px) and (max-width: 1050px) and (min-height: 501px) {
-  body[data-instrument]:not(.perform) #views { grid-template-rows: none; grid-auto-rows: max-content; align-content: start; }
-  body[data-instrument]:not(.perform) .forte-stage { grid-auto-rows: max-content; }
-  body[data-instrument]:not(.perform) .forte-stage > .card { min-height: 300px; overflow: visible; }
-  body[data-instrument]:not(.perform) .forte-dock-body > .card { min-height: 300px; max-height: 70vh; }
+  body[data-instrument]:not(.perform) .forte-stage { flex: none; grid-template-rows: none; grid-auto-rows: max-content; }
+  body[data-instrument]:not(.perform) .forte-stage > .card { min-height: 300px; max-height: 70vh; }
 }
 
 /* touch screens: bigger targets, no computer-keyboard hints */
@@ -288,10 +285,11 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
   body[data-instrument] #views,
   body[data-instrument] #controls { overflow: visible; }
   body[data-instrument] > main { padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left); }
-  body[data-instrument] #views { padding: 10px; grid-template-rows: none; grid-auto-rows: max-content; }
-  body[data-instrument] .forte-stage { grid-auto-flow: row; grid-auto-rows: max-content; }
+  body[data-instrument] #views { padding: 10px; }
+  body[data-instrument] .forte-stage { flex: none; grid-template-rows: none; grid-auto-rows: max-content; }
   body[data-instrument] #views .card { overflow-x: auto; } /* wide tables scroll inside their card */
-  body[data-instrument] .forte-dock-body > .card { min-height: 260px; }
+  body[data-instrument] .forte-view-toggles { gap: 5px; }
+  body[data-instrument] .forte-view-toggles button { min-height: 30px; padding-block: 2px; }
 
   body[data-instrument] > header {
     position: relative; gap: 6px 10px;
@@ -350,7 +348,6 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
   body:not(.deck-shut) .forte-kbmap { flex: 0 0 72px; min-width: 0; } /* beside the controls: a thumbnail */
   body[data-instrument] #keyboard { height: min(var(--kb-h, 115px), 36svh); }
   body[data-instrument] .forte-play { order: 0; flex: 1 1 auto; }
-  body[data-instrument] .forte-stage { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
 }
 /* 16px text in dropdowns on phones, or iOS zooms the page in when one is tapped */
 @media (pointer: coarse) and (max-width: 600px), (pointer: coarse) and (max-width: 1050px) and (max-height: 500px) {
