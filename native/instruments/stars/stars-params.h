@@ -21,6 +21,7 @@ enum : int { family, mass, speedup, spin, coreRatio, incl, driving, damping, fla
 
 constexpr double kNoLimit = INFINITY;
 inline const char *const kChoices_family[] = {"Sun-like: an evolutionary track", "δ Scuti: self-excited (κ-mechanism)"};
+inline const char *const kKeys_family[] = {"track", "dscuti"};
 namespace family_ { enum : int { track, dscuti }; }
 inline const FormatSegment kFormat_mass[] = {{kNoLimit, "", " M☉", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_speedup[] = {{kNoLimit, "", "", 1, 0, 0, false, false, false, true}};
@@ -33,11 +34,12 @@ inline const FormatSegment kFormat_flare[] = {{0, "none", "", 1, 0, -1, false, f
 inline const FormatSegment kFormat_growth[] = {{kNoLimit, "", " s", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
 inline const ParamInfo kParams[p::count] = {
-  {"family", "Kind of star", "Stars", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_family, 2, nullptr, 0},
+  {"family", "Kind of star", "Stars", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_family, 2, nullptr, 0, kKeys_family},
   {"mass", "Mass of the track", "Stars", ParamKind::continuous, 0.9, 1.8, 1, 0.05, false, false, nullptr, 0, kFormat_mass, 1},
   {"speedup", "Speed-up K", "Stars", ParamKind::continuous, 350000, 1000000, 510800, 0, true, false, nullptr, 0, kFormat_speedup, 1},
   {"spin", "Rotation period", "Rotation and view", ParamKind::continuous, 0, 30, 1, 0.1, false, true, nullptr, 0, kFormat_spin, 1},
@@ -48,7 +50,7 @@ inline const ParamInfo kParams[p::count] = {
   {"flare", "Flare kick (× the modes’ rms)", "Convection", ParamKind::continuous, 0, 3, 0.7, 0.01, false, true, nullptr, 0, kFormat_flare, 2},
   {"growth", "δ Scuti growth time", "Convection", ParamKind::continuous, 0.05, 2, 0.25, 0, true, false, nullptr, 0, kFormat_growth, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 

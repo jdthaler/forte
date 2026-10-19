@@ -140,6 +140,12 @@ export const CONSOLE = {
     percOn: P.percOn, percSoft: P.percSoft, percFast: P.percFast, percThird: P.percThird,
     vib: P.vib, leslie: P.leslieOn ? P.leslie : 'bypass', motor: P.motor,
   }),
+  // and back: the console's state in P from those values (bypass keeps P's Leslie speed)
+  put: (v, P = CONSOLE_DEFAULTS) => ({
+    drawbars: P.drawbars.map((x, d) => v[`drawbar${d + 1}`] ?? x),
+    percOn: v.percOn, percSoft: v.percSoft, percFast: v.percFast, percThird: v.percThird,
+    vib: v.vib, leslieOn: v.leslie !== 'bypass', leslie: v.leslie === 'bypass' ? P.leslie : v.leslie, motor: v.motor,
+  }),
 };
 
 export const ALL_PARAMS = GROUPS.flatMap((g) => g.params);

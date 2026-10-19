@@ -37,9 +37,11 @@ inline const FormatSegment kFormat_temp[] = {{kNoLimit, "", " K", 1, 0, 2, false
 inline const FormatSegment kFormat_quench[] = {{kNoLimit, "", " × a bunch's", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_recovery[] = {{0.9999999999999999, "", " ms", 1000, 0, 0, false, false, false, false}, {kNoLimit, "", " s", 1, 0, 2, false, false, false, false}};
 inline const char *const kChoices_probe[] = {"Both ends", "Far end"};
+inline const char *const kKeys_probe[] = {"ends", "far"};
 namespace probe_ { enum : int { ends, far }; }
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
@@ -60,9 +62,9 @@ inline const ParamInfo kParams[p::count] = {
   {"temp", "Helium bath", "Couplers and cryostat", ParamKind::continuous, 1.6, 12, 2, 0.05, false, true, nullptr, 0, kFormat_temp, 1},
   {"quench", "Quench field", "Couplers and cryostat", ParamKind::continuous, 0.5, 6, 3, 0.01, false, false, nullptr, 0, kFormat_quench, 1},
   {"recovery", "Recovery after a quench", "Couplers and cryostat", ParamKind::continuous, 0.05, 5, 0.8, 0, true, false, nullptr, 0, kFormat_recovery, 2},
-  {"probe", "Probes", "Couplers and cryostat", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_probe, 2, nullptr, 0},
+  {"probe", "Probes", "Couplers and cryostat", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_probe, 2, nullptr, 0, kKeys_probe},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 

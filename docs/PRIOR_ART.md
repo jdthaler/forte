@@ -194,6 +194,14 @@ requests.
 * **J. O. Smith, S. Serafin, J. Abel and D. Berners**, "Doppler simulation
   and the Leslie", *Proc. DAFx-02*, Hamburg, pp. 13–20 (2002). The rotating
   horn and drum of the Tonewheel Organ's Leslie.
+* **D. M. F. Chapman**, "The tones of the kalimba (African thumb piano)",
+  *J. Acoust. Soc. Am.* **131**(1), 945–950 (2012),
+  [doi:10.1121/1.3651090](https://doi.org/10.1121/1.3651090). The tine as a
+  clamped–supported–free beam, the Kalimba's tines.
+* **O. Christensen and B. B. Vistisen**, "Simple model for low-frequency
+  guitar function", *J. Acoust. Soc. Am.* **68**(3), 758–766 (1980),
+  [doi:10.1121/1.384814](https://doi.org/10.1121/1.384814). The top and the
+  sound hole as two coupled oscillators, the Kalimba's box.
 
 ## 2. Techniques Forte uses, and where they come from
 

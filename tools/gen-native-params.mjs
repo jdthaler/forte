@@ -252,6 +252,7 @@ export async function generate(slug) {
   for (const p of params) {
     if (p.type === 'select') {
       w(`inline const char *const kChoices_${p.id}[] = {${p.options.map(([, l]) => cstr(l)).join(', ')}};`);
+      w(`inline const char *const kKeys_${p.id}[] = {${p.options.map(([v]) => cstr(String(v))).join(', ')}};`);
       if (p.options.every(([v]) => isIdent(v))) w(`namespace ${ident(p.id)}_ { enum : int { ${p.options.map(([v]) => ident(v)).join(', ')} }; }`);
     } else if (p.type !== 'checkbox') {
       const { segs, match } = inferFormat(p);
@@ -268,7 +269,8 @@ export async function generate(slug) {
       : p.type === 'checkbox' ? [0, 1, p.def ? 1 : 0, 1] : [p.min, p.max, p.def, p.step ?? 0];
     const choices = p.type === 'select' ? `kChoices_${p.id}, ${p.options.length}` : 'nullptr, 0';
     const format = p.type === 'select' || p.type === 'checkbox' ? 'nullptr, 0' : `kFormat_${p.id}, ${inferFormat(p).segs.length}`;
-    w(`  {${cstr(p.id)}, ${cstr(p.label)}, ${cstr(p.group)}, ParamKind::${kind}, ${num(min)}, ${num(max)}, ${num(def)}, ${num(step)}, ${!!p.log}, ${!!p.perform}, ${choices}, ${format}},`);
+    const keys = p.type === 'select' ? `, kKeys_${p.id}` : '';
+    w(`  {${cstr(p.id)}, ${cstr(p.label)}, ${cstr(p.group)}, ParamKind::${kind}, ${num(min)}, ${num(max)}, ${num(def)}, ${num(step)}, ${!!p.log}, ${!!p.perform}, ${choices}, ${format}${keys}},`);
   }
   w('};');
   w();

@@ -21,11 +21,13 @@ enum : int { tuning, mains, inertia, spinUp, levels, relief, drift, crosstalk, l
 
 constexpr double kNoLimit = INFINITY;
 inline const char *const kChoices_tuning[] = {"Hammond gear ratios (real)", "Exact equal temperament", "Ideal harmonics, one set per key"};
+inline const char *const kKeys_tuning[] = {"gears", "et", "harmonic"};
 namespace tuning_ { enum : int { gears, et, harmonic }; }
 inline const FormatSegment kFormat_mains[] = {{kNoLimit, "", " Hz", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_inertia[] = {{kNoLimit, "", " s", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_spinUp[] = {{kNoLimit, "", " s", 1, 0, 1, false, false, false, false}};
 inline const char *const kChoices_levels[] = {"B-3: measured levels, filters, tapering", "Flat: every wheel and key alike"};
+inline const char *const kKeys_levels[] = {"b3", "flat"};
 namespace levels_ { enum : int { b3, flat }; }
 inline const FormatSegment kFormat_relief[] = {{kNoLimit, "", " % of the gap", 100, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_drift[] = {{kNoLimit, "", " %", 1, 0, 0, false, false, true, false}};
@@ -59,6 +61,7 @@ inline const FormatSegment kFormat_drive[] = {{kNoLimit, "", "", 1, 0, 2, false,
 inline const FormatSegment kFormat_expression[] = {{0.9872162398137365, "", " dB", 40.02329644729183, -40.01164822364591, 0, false, false, false, false}, {0.99, "", " dB", 1, 0, 0, false, false, false, false}, {kNoLimit, "", " dB", 40.02329644729183, -40.01164822364591, 0, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_drawbar1[] = {{kNoLimit, "", "", 1, 0, 0, false, false, false, false}};
@@ -71,16 +74,18 @@ inline const FormatSegment kFormat_drawbar7[] = {{kNoLimit, "", "", 1, 0, 0, fal
 inline const FormatSegment kFormat_drawbar8[] = {{kNoLimit, "", "", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_drawbar9[] = {{kNoLimit, "", "", 1, 0, 0, false, false, false, false}};
 inline const char *const kChoices_vib[] = {"Off", "V1", "V2", "V3", "C1", "C2", "C3"};
+inline const char *const kKeys_vib[] = {"off", "V1", "V2", "V3", "C1", "C2", "C3"};
 namespace vib_ { enum : int { off, V1, V2, V3, C1, C2, C3 }; }
 inline const char *const kChoices_leslie[] = {"Bypass", "Slow", "Fast", "Stopped"};
+inline const char *const kKeys_leslie[] = {"bypass", "slow", "fast", "stop"};
 namespace leslie_ { enum : int { bypass, slow, fast, stop }; }
 
 inline const ParamInfo kParams[p::count] = {
-  {"tuning", "Tuning", "Tone generator", ParamKind::choice, 0, 2, 0, 1, false, false, kChoices_tuning, 3, nullptr, 0},
+  {"tuning", "Tuning", "Tone generator", ParamKind::choice, 0, 2, 0, 1, false, false, kChoices_tuning, 3, nullptr, 0, kKeys_tuning},
   {"mains", "Mains frequency", "Tone generator", ParamKind::continuous, 45, 65, 60, 0.1, false, false, nullptr, 0, kFormat_mains, 1},
   {"inertia", "Coast-down time", "Tone generator", ParamKind::continuous, 1, 20, 6, 0, true, false, nullptr, 0, kFormat_inertia, 1},
   {"spinUp", "Spin-up time", "Tone generator", ParamKind::continuous, 0.2, 5, 1.2, 0, true, false, nullptr, 0, kFormat_spinUp, 1},
-  {"levels", "Generator and wiring", "Tone generator", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_levels, 2, nullptr, 0},
+  {"levels", "Generator and wiring", "Tone generator", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_levels, 2, nullptr, 0, kKeys_levels},
   {"relief", "Tooth relief", "Tone generator", ParamKind::continuous, 0, 0.6, 0.06, 0.005, false, false, nullptr, 0, kFormat_relief, 1},
   {"drift", "Filter capacitor drift", "Tone generator", ParamKind::continuous, 0, 60, 0, 1, false, false, nullptr, 0, kFormat_drift, 1},
   {"crosstalk", "Compartment crosstalk", "Tone generator", ParamKind::continuous, -80, -20, -48, 1, false, false, nullptr, 0, kFormat_crosstalk, 2},
@@ -112,7 +117,7 @@ inline const ParamInfo kParams[p::count] = {
   {"drive", "Tube drive", "Amp & output", ParamKind::continuous, 0, 1, 0.15, 0.01, false, true, nullptr, 0, kFormat_drive, 1},
   {"expression", "Expression pedal", "Amp & output", ParamKind::continuous, 0, 1, 0.85, 0.01, false, false, nullptr, 0, kFormat_expression, 3},
   {"room", "Room", "Amp & output", ParamKind::continuous, 0, 1, 0.2, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Amp & output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Amp & output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Amp & output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 1},
   {"drawbar1", "16' drawbar", "Drawbars", ParamKind::continuous, 0, 8, 8, 1, false, false, nullptr, 0, kFormat_drawbar1, 1},
   {"drawbar2", "5 1/3' drawbar", "Drawbars", ParamKind::continuous, 0, 8, 8, 1, false, false, nullptr, 0, kFormat_drawbar2, 1},
@@ -127,8 +132,8 @@ inline const ParamInfo kParams[p::count] = {
   {"percSoft", "Percussion soft", "Console", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"percFast", "Percussion fast", "Console", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"percThird", "Percussion third", "Console", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
-  {"vib", "Vibrato / chorus", "Console", ParamKind::choice, 0, 6, 6, 1, false, true, kChoices_vib, 7, nullptr, 0},
-  {"leslie", "Leslie", "Console", ParamKind::choice, 0, 3, 1, 1, false, true, kChoices_leslie, 4, nullptr, 0},
+  {"vib", "Vibrato / chorus", "Console", ParamKind::choice, 0, 6, 6, 1, false, true, kChoices_vib, 7, nullptr, 0, kKeys_vib},
+  {"leslie", "Leslie", "Console", ParamKind::choice, 0, 3, 1, 1, false, true, kChoices_leslie, 4, nullptr, 0, kKeys_leslie},
   {"motor", "Motor", "Console", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 

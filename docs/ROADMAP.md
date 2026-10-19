@@ -68,7 +68,7 @@ Every other idea only adds, and can come before or after 1.0.
 
 | Idea | Size | Notes |
 |------|------|-------|
-| Save your own presets | M | In the browser, as a file, and in the plugins beside the factory presets. |
+| Save your own presets | M | Done, for the next release: in the Presets menu on every page (kept in the browser, saved to and opened from a file) and in the plugins' window (files in a presets folder per instrument, the same format). |
 | A choice of rooms (reverb) | M | Done, for the next release: a Venue choice on every page and plugin (Studio, Room, Recital hall, Concert hall, Cathedral), Room, the original, the default. |
 | Morph between two presets | S–M | |
 | Quality or CPU setting | S–M | Fewer modes or voices, for phones and old laptops. |
@@ -78,7 +78,7 @@ Every other idea only adds, and can come before or after 1.0.
 | Idea | Size | Notes |
 |------|------|-------|
 | Record and download what you play (WAV) | S–M | |
-| Share a link with your settings | S | The page's parameters in the URL. |
+| Share a link with your settings | S | Done, for the next release: *Copy a link to these settings* in the Presets menu; the link carries the parameters that differ from the defaults. |
 | Works offline, installable on phones | S–M | A service worker; the manifest already exists. |
 | Demo songs played from MIDI files | M | A listen button per instrument, and drag and drop a `.mid` to play it. |
 | A guided tour of each instrument's physics | M | Steps through the views while it plays. |
@@ -108,7 +108,7 @@ default in the existing presets, or would change what an existing knob means.
 | Sympathetic resonance on the Ribbon Piano, Electric Grand and Harpsichord | M | **Before 1.0.** Undamped strings ring along through the bridge. Costs CPU. |
 | The Tonewheel Organ's key scaling, preamp response and computed tonewheel waveform | S–M | Done, for the next release: the B-3's resistance wires, wheel levels and filters, the swell pedal's shut plate, and a waveform from the tooth and pickup (*Tooth relief* replaces *Wheel harmonics*). |
 | Companion modes on the Gong Keyboard | M | **Before 1.0.** Beating, drifting nodal lines and travelling waves. Doubles the modes. |
-| Resonator tube losses on the Vibraphone | S | **Before 1.0.** The bass's pitch wobble is probably too large without them. |
+| Resonator tube losses on the Vibraphone | S | Done, for the next release: boundary-layer losses on the shaft, the disc (growing as it closes) and the bottom plug, 14 % more than the walls alone at F3. The bass's pitch wobble moved by under 2 ¢, so a leaking plug or the tube's wall vibrating would have to be what makes real tubes broader, if they are. |
 | Spheroidal harmonics on the Black-Hole Keyboard | S–M | **Before 1.0.** Mode mixing at high spin. |
 | The Harpsichord's second polarisation after release | S–M | **Before 1.0** if wanted: the two-stage decay of a plucked string. |
 | An immovable clamped rim on the Gong Keyboard | L | **Before 1.0** if wanted: the clamped plate's nonlinearity is about 3× too weak. Needs a new Airy basis. |

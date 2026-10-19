@@ -40,6 +40,7 @@ struct ParamInfo {
   int choiceCount = 0;
   const FormatSegment *format = nullptr; // a continuous value's text; none: a plain number
   int formatCount = 0;
+  const char *const *keys = nullptr; // a choice's option keys, as presets and links name them (shared/presets.js)
 };
 
 struct PresetValue {
