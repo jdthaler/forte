@@ -239,11 +239,14 @@ and say which in the footer help.
   page and every instrument, from `shared/nav.js`; the page's `<h1>`
   moves into it). Then How it works, **Discover | Perform**, audio, MIDI
   and Panic.
-- **The views: pictures only.** The cards marked `data-perform` (one or
-  two: `test/site-tests.mjs` checks) are the main views, large, side by
-  side (stacked on a tall screen). The others sit in a tabbed panel below
-  them that folds away. A card's `.caption` waits behind an ⓘ in its
-  title.
+- **The views: pictures only.** Above them is a row of toggles, one for
+  each view, named by its `data-view` (or its `<h2>`): a tap turns that
+  view on or off, and the page remembers which are on. The views that are
+  on share the space in rows, side by side on a wide screen and stacked on
+  a tall one; a short last row stretches across. At first only the cards
+  marked `data-perform` (one or two: `test/site-tests.mjs` checks) are on,
+  and their toggles come first. A card's `.caption` waits behind an ⓘ in
+  its title.
 - **The controls, above the keys.** A card marked `data-control` is a
   control surface, not a view (the organ's drawbars and switches): it
   moves here, ahead of the `perform: true` parameters. A dropdown there
@@ -262,8 +265,8 @@ and say which in the footer help.
   page's `#reset`. On a phone, where the bar is full, they are the first
   control above the keys instead. The pedal button presses Space. The page's footer hints
   (`.kb-help`: computer keys, MIDI, readouts) go behind ⌨.
-- **Perform** is for playing and for a projector: only the main views,
-  filling the screen, with no text in them. The card's `.card-head`,
+- **Perform** is for playing and for a projector: the views that are on,
+  filling the screen, with no toggles and no text in them. The card's `.card-head`,
   `.caption`, `.legend`, `.readout`, `<dl>` and `<table>` are hidden, and
   `fillText` draws nothing on their canvases (a card with
   `data-keep-text` keeps its text). Full screen appears. The mode is the
@@ -279,7 +282,8 @@ To fit in:
 - Give a card whose `<h2>` changes at runtime a stable name with
   `data-view="…"`.
 - Mark the one or two views that best show the instrument playing with
-  `data-perform` on their `.card`. In Perform they lose their titles,
+  `data-perform` on their `.card`: they are the ones on at first. In
+  Perform the views lose their titles,
   captions and canvas text and grow to fill the screen, so draw them to
   read as pictures, and let their canvases stretch (Perform sizes them
   with flex, overriding a fixed height).
