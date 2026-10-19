@@ -219,6 +219,13 @@ export const INSTRUMENTS = [
     physics: 'Accelerator physics · betatron decoherence · synchrotron motion',
     accent: '#6ec6ff',
   },
+  {
+    id: 'cavity', name: 'RF Cavity Bells', section: 'phenomena', ready: true, version: '0.1.0', trim: 4,
+    plugin: { code: 'Rfca', ready: true },
+    tagline: 'Every key a superconducting accelerator cavity, rung by the bunch that crosses it: nine coupled cells that beat, higher-order modes for a bell\'s partials.',
+    physics: 'RF cavities · coupled-cell passbands · beam loading',
+    accent: '#9fb4ff',
+  },
 ];
 
 // The template (docs/template/), the starting point for new instruments: not listed, but it

@@ -639,7 +639,11 @@ data):
   Real-Time Particle Collision Data from the ATLAS Detector", NIME 2016,
   <https://nime.org/proc/cherston2016>. The Storage Ring plays the
   accelerator rather than the collisions: a kicked bunch heard through its
-  beam pickup.
+  beam pickup. RF Cavity Bells plays the accelerator's cavities: the modes
+  a bunch leaves ringing in a superconducting TESLA cavity (B. Aune et al.,
+  "Superconducting TESLA cavities", *Phys. Rev. ST Accel. Beams* **3**,
+  092001 (2000),
+  [doi:10.1103/PhysRevSTAB.3.092001](https://doi.org/10.1103/PhysRevSTAB.3.092001)).
 * **Synchronisation and mode locking in musical oscillators.**
   B. van der Pol and J. van der Mark, "Frequency demultiplication",
   *Nature* **120**, 363–364 (1927),
