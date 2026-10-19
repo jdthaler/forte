@@ -78,7 +78,8 @@ export class SpectrumView {
 // colour, from the instrument's accent. It scrolls at `secs` seconds across,
 // whatever the frame rate. Follow a SpectrumView with { spectrum }: its
 // analyser, range and markers. Otherwise setAnalyser(a) and set(f0, markers);
-// markers [{ f, color? }] are ticks on the frequency axis. For a narrow band,
+// markers [{ f, color? }] are ticks on the frequency axes, left and right (where the
+// newest sound comes in), and so are the frequency labels. For a narrow band,
 // log: false and ticks(fLo, fHi) → [{ f, text }] label a linear axis; auto: true
 // puts the loudest recent level at the top (for a sound with no fixed level).
 export class SpectrogramView {
@@ -113,8 +114,8 @@ export class SpectrogramView {
     const a = this.spectrum?.analyser ?? this.analyser;
     const markers = this.spectrum ? this.spectrum.markers : this.markers, f0 = this.spectrum ? this.spectrum.f0 : this.f0;
     const { fLo, fHi } = this;
-    const padL = 34, padB = 16;
-    const dpr = this.cv.width / w, W = Math.max(2, Math.round((w - padL) * dpr)), H = Math.max(2, Math.round((h - padB) * dpr));
+    const padL = 34, padR = w >= 240 ? 34 : 6, padB = 16;
+    const dpr = this.cv.width / w, W = Math.max(2, Math.round((w - padL - padR) * dpr)), H = Math.max(2, Math.round((h - padB) * dpr));
     const lut = this.palette();
     const gap = this.t ? now - this.t : 0;
     const band = `${fLo} ${fHi} ${this.log}`;
@@ -156,20 +157,28 @@ export class SpectrogramView {
       g.putImageData(col, W - n, 0);
     }
     ctx.clearRect(0, 0, w, h);
-    ctx.drawImage(this.img, padL, 0, w - padL, h - padB);
+    const x1 = w - padR; // the right edge of the picture: now
+    ctx.drawImage(this.img, padL, 0, x1 - padL, h - padB);
     const Hc = h - padB, Y = (f) => Hc * (1 - (this.log ? Math.log(f / fLo) / Math.log(fHi / fLo) : (f - fLo) / (fHi - fLo)));
     ctx.font = '10px system-ui, sans-serif'; ctx.fillStyle = css('--muted'); ctx.textAlign = 'right';
     const ticks = this.ticks ? this.ticks(fLo, fHi) : [50, 100, 200, 500, 1000, 2000, 5000, 10000].map((f) => ({ f, text: f >= 1000 ? `${f / 1000}k` : `${f}` }));
     let last = Infinity; // labels at least 11 px apart, so a short canvas keeps a few
-    for (const { f, text } of ticks) if (f > fLo && f < fHi && last - Y(f) >= 11) { ctx.fillText(text, padL - 6, Y(f) + 3); last = Y(f); }
+    const right = padR > 6;
+    for (const { f, text } of ticks) {
+      if (!(f > fLo && f < fHi && last - Y(f) >= 11)) continue;
+      ctx.textAlign = 'right'; ctx.fillText(text, padL - 6, Y(f) + 3);
+      if (right) { ctx.textAlign = 'left'; ctx.fillText(text, x1 + 6, Y(f) + 3); }
+      last = Y(f);
+    }
     ctx.textAlign = 'left'; ctx.fillText(`${this.secs} s ago`, padL, h - 3);
-    ctx.textAlign = 'right'; ctx.fillText('now', w - 2, h - 3);
-    // the model's lines, as ticks beside the axis
-    if (f0 > fLo && f0 < fHi) { ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(padL - 5, Y(f0) - 0.5, 5, 1); }
+    ctx.textAlign = 'right'; ctx.fillText('now', x1, h - 3);
+    // the model's lines, as ticks beside both axes
+    const tick = (f, t) => { ctx.fillRect(padL - 5, Y(f) - t / 2, 5, t); ctx.fillRect(x1, Y(f) - t / 2, 7, t); };
+    if (f0 > fLo && f0 < fHi) { ctx.fillStyle = 'rgba(255,255,255,0.35)'; tick(f0, 1); }
     for (const m of markers) {
       if (!(m.f > fLo && m.f < fHi)) continue;
       ctx.globalAlpha = m.alpha ?? 0.75; ctx.fillStyle = m.color || css('--accent');
-      ctx.fillRect(padL - 5, Y(m.f) - 1, 5, 2);
+      tick(m.f, 2);
     }
     ctx.globalAlpha = 1;
   }
