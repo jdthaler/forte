@@ -15,10 +15,15 @@
 //   touch() is the velocity curve the player chose (every page shares it, from the menu startMIDI
 //   puts beside the #midi status), touched(v) a MIDI velocity (0..1) through it; SOFT_PEDAL
 //   scales the velocity of keys struck under CC67; createSostenuto() keeps the keys CC66 holds.
-//   The plugins do the same (native/plugin/plugin.cpp: kTouchGamma, kSoftPedal, sostenutoPedal).
+//   mpeMode() is MPE's mode the player chose (shared/mpe.js: 'auto', 'on' or 'off'; every page
+//   shares it, from a menu beside the velocity curve's).
+//   The plugins do the same (native/plugin/plugin.cpp: kTouchGamma, kSoftPedal, sostenutoPedal, kMpeId).
+
+import { MODES } from './mpe.js';
 
 const KEY = 'forte/midi/v1';
 const TOUCH_KEY = 'forte/touch/v1';
+const MPE_KEY = 'forte/mpe/v1';
 
 // The velocity curve: v^γ. Soft makes a light touch louder, Hard asks for a firmer one.
 export const TOUCH = [{ name: 'Soft', gamma: 0.6 }, { name: 'Normal', gamma: 1 }, { name: 'Hard', gamma: 1.6 }];
@@ -32,6 +37,14 @@ export function setTouch(i) {
   try { localStorage.setItem(TOUCH_KEY, String(i)); } catch { /* storage blocked */ }
 }
 export const touched = (v) => v ** TOUCH[touchIndex].gamma;
+let mpe = 'auto';
+try { const m = localStorage.getItem(MPE_KEY); if (MODES.some(([id]) => id === m)) mpe = m; } catch { /* storage blocked, or Node */ }
+export const mpeMode = () => mpe;
+export function setMpeMode(m) {
+  if (!MODES.some(([id]) => id === m)) return;
+  mpe = m;
+  try { localStorage.setItem(MPE_KEY, m); } catch { /* storage blocked */ }
+}
 // Without the User Activation API (older browsers), let the notes through as before.
 const mayPlay = () => !navigator.userActivation || navigator.userActivation.hasBeenActive;
 // (shell.js is imported here only when needed: the tools import this module in Node)
@@ -75,6 +88,7 @@ export function startMIDI({ onMIDI, status = () => {}, button = null }) {
     acc.onstatechange = bind;
     if (button) button.hidden = true;
     touchMenu();
+    mpeMenu();
   }, () => status('MIDI: permission denied'));
 }
 
@@ -90,6 +104,20 @@ function touchMenu() {
   el.value = String(touchIndex);
   el.addEventListener('change', () => { setTouch(+el.value); el.blur(); });
   pill.after(el);
+}
+
+// MPE's menu, after the velocity curve's.
+function mpeMenu() {
+  const after = document.querySelector('#touch') ?? document.querySelector('#midi');
+  if (!after || document.querySelector('#mpe')) return;
+  const el = document.createElement('select');
+  el.id = 'mpe';
+  el.title = 'MPE: a controller that gives each note a MIDI channel of its own, so each finger bends, slides and presses its own note. Auto turns it on when the controller says it sends MPE.';
+  el.setAttribute('aria-label', 'MPE');
+  for (const [id, name] of MODES) el.add(new Option(`MPE: ${name.toLowerCase()}`, id));
+  el.value = mpe;
+  el.addEventListener('change', () => { setMpeMode(el.value); el.blur(); });
+  after.after(el);
 }
 
 /**
