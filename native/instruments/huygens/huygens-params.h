@@ -23,8 +23,10 @@ constexpr double kNoLimit = INFINITY;
 inline const FormatSegment kFormat_kick[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " % of swing", 100, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_rSrc[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " kΩ", 0.001, 0, 0, false, false, false, false}};
 inline const char *const kChoices_tuning[] = {"Equal temperament", "5-limit just (fixed tonic)"};
+inline const char *const kKeys_tuning[] = {"et", "just"};
 namespace tuning_ { enum : int { et, just }; }
 inline const char *const kChoices_tonic[] = {"C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"};
+inline const char *const kKeys_tonic[] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"};
 inline const FormatSegment kFormat_mistune[] = {{kNoLimit, "", " ¢", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_drift[] = {{kNoLimit, "", " ¢", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_driftRate[] = {{kNoLimit, "", " Hz", 1, 0, 2, false, false, false, false}};
@@ -37,6 +39,7 @@ inline const FormatSegment kFormat_tone[] = {{kNoLimit, "", " kHz", 0.001, 0, 1,
 inline const FormatSegment kFormat_body[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_width[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_volume[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
@@ -45,8 +48,8 @@ inline const ParamInfo kParams[p::count] = {
   {"kick", "Pulse coupling", "Coupling", ParamKind::continuous, 0, 0.15, 0.055, 0.001, false, true, nullptr, 0, kFormat_kick, 2},
   {"rSrc", "Rail-sag coupling", "Coupling", ParamKind::continuous, 0, 200000, 0, 1000, false, false, nullptr, 0, kFormat_rSrc, 2},
   {"pitchHold", "Pitch-hold supply servo", "Coupling", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
-  {"tuning", "Tuned to", "Design tuning", ParamKind::choice, 0, 1, 0, 1, false, true, kChoices_tuning, 2, nullptr, 0},
-  {"tonic", "Just tonic", "Design tuning", ParamKind::choice, 0, 11, 0, 1, false, true, kChoices_tonic, 12, nullptr, 0},
+  {"tuning", "Tuned to", "Design tuning", ParamKind::choice, 0, 1, 0, 1, false, true, kChoices_tuning, 2, nullptr, 0, kKeys_tuning},
+  {"tonic", "Just tonic", "Design tuning", ParamKind::choice, 0, 11, 0, 1, false, true, kChoices_tonic, 12, nullptr, 0, kKeys_tonic},
   {"mistune", "Random mistuning", "Design tuning", ParamKind::continuous, 0, 40, 0, 0.5, false, false, nullptr, 0, kFormat_mistune, 1},
   {"drift", "Resistor drift", "Design tuning", ParamKind::continuous, 0, 20, 0, 0.5, false, false, nullptr, 0, kFormat_drift, 1},
   {"driftRate", "Drift rate", "Design tuning", ParamKind::continuous, 0.05, 2, 0.25, 0, true, false, nullptr, 0, kFormat_driftRate, 1},
@@ -58,7 +61,7 @@ inline const ParamInfo kParams[p::count] = {
   {"tone", "Tone (low-pass)", "Sound", ParamKind::continuous, 300, 16000, 2500, 0, true, true, nullptr, 0, kFormat_tone, 1},
   {"body", "Resonant body", "Sound", ParamKind::continuous, 0, 1, 0.5, 0.01, false, false, nullptr, 0, kFormat_body, 1},
   {"room", "Room", "Sound", ParamKind::continuous, 0, 1, 0.3, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Sound", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Sound", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"width", "Stereo spread", "Sound", ParamKind::continuous, 0, 1, 0.5, 0.01, false, false, nullptr, 0, kFormat_width, 1},
   {"volume", "Volume", "Sound", ParamKind::continuous, 0, 2, 0.7, 0.01, false, true, nullptr, 0, kFormat_volume, 1},
 };

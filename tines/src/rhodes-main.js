@@ -14,6 +14,7 @@ import { createKeyboard } from '../../shared/keyboard.js';
 import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto } from '../../shared/midi.js';
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
+import { attachPresets } from '../../shared/user-presets.js';
 
 const $ = (s) => document.querySelector(s);
 const [KEY_LO, KEY_HI] = INSTRUMENT.range;
@@ -376,3 +377,4 @@ updateHelp();
 keyboardView.labels(keyLabels());
 setFocus(60, P.velocity);
 precompute();
+attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v) => setAll({ ...P, ...v }), toast }); // your own presets and links

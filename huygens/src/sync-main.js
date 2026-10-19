@@ -14,6 +14,7 @@ import { createKeyboard } from '../../shared/keyboard.js';
 import { startMIDI, resumeMIDI, wheelValue, createSostenuto } from '../../shared/midi.js';
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
+import { attachPresets } from '../../shared/user-presets.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'huygens-keyboard/params/v1';
@@ -362,3 +363,4 @@ updateHelp();
 updateTables({ notes: [], pairs: [] }, 0);
 recomputeStair(true);
 requestAnimationFrame(frame);
+attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v) => setAll({ ...P, ...v }), toast }); // your own presets and links

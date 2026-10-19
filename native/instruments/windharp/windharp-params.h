@@ -24,6 +24,7 @@ inline const FormatSegment kFormat_wind[] = {{kNoLimit, "", " m/s", 1, 0, 2, fal
 inline const FormatSegment kFormat_gust[] = {{0, "steady", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " % rms", 100, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_gustTime[] = {{kNoLimit, "", " s", 1, 0, 2, false, false, false, false}};
 inline const char *const kChoices_tuning[] = {"Each key’s string cut for its note", "Kircher: all strings in unison, gauges differ"};
+inline const char *const kKeys_tuning[] = {"keys", "unison"};
 namespace tuning_ { enum : int { keys, unison }; }
 inline const FormatSegment kFormat_n0[] = {{2, "", "nd harmonic", 1, 0, 0, false, false, false, false}, {3, "", "rd harmonic", 1, 0, 0, false, false, false, false}, {kNoLimit, "", "th harmonic", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_unison[] = {{kNoLimit, "", "", 1, 0, 0, false, false, false, true}};
@@ -31,6 +32,7 @@ inline const FormatSegment kFormat_q[] = {{kNoLimit, "", "", 1, 0, 0, false, fal
 inline const FormatSegment kFormat_mass[] = {{kNoLimit, "× ", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
@@ -38,13 +40,13 @@ inline const ParamInfo kParams[p::count] = {
   {"wind", "Wind speed", "Wind", ParamKind::continuous, 1, 8, 4, 0.02, false, true, nullptr, 0, kFormat_wind, 1},
   {"gust", "Gustiness", "Wind", ParamKind::continuous, 0, 0.3, 0, 0.005, false, true, nullptr, 0, kFormat_gust, 2},
   {"gustTime", "Gust time scale", "Wind", ParamKind::continuous, 0.3, 6, 1.5, 0, true, false, nullptr, 0, kFormat_gustTime, 1},
-  {"tuning", "Tuning", "Strings", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_tuning, 2, nullptr, 0},
+  {"tuning", "Tuning", "Strings", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_tuning, 2, nullptr, 0, kKeys_tuning},
   {"n0", "Sounding harmonic n₀", "Strings", ParamKind::continuous, 2, 6, 3, 1, false, false, nullptr, 0, kFormat_n0, 3},
   {"unison", "Unison note", "Strings", ParamKind::continuous, 43, 67, 55, 1, false, false, nullptr, 0, kFormat_unison, 1},
   {"q", "String Q", "Strings", ParamKind::continuous, 100, 3000, 500, 0, true, false, nullptr, 0, kFormat_q, 1},
   {"mass", "String mass (winding)", "Strings", ParamKind::continuous, 1, 8, 1, 0, true, false, nullptr, 0, kFormat_mass, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 
