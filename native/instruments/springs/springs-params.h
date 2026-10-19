@@ -23,11 +23,13 @@ constexpr double kNoLimit = INFINITY;
 inline const FormatSegment kFormat_springs[] = {{1, "one spring", "", 1, 1, -1, false, false, false, false}, {kNoLimit, "", " springs in parallel", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_spread[] = {{kNoLimit, "", " %", 1, 0, 1, false, false, false, false}};
 inline const char *const kChoices_family[] = {"Tuned: each spring cut to its note", "Slinky: a wide, slack coil (pitch approximate)"};
+inline const char *const kKeys_family[] = {"tuned", "slinky"};
 namespace family_ { enum : int { tuned, slinky }; }
 inline const FormatSegment kFormat_coil[] = {{kNoLimit, "× ", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_wire[] = {{kNoLimit, "× ", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_helix[] = {{kNoLimit, "", "°", 1, 0, 1, false, false, false, false}};
 inline const char *const kChoices_drive[] = {"in rotation (a reverb tank’s)", "along the axis"};
+inline const char *const kKeys_drive[] = {"rotation", "axial"};
 namespace drive_ { enum : int { rotation, axial }; }
 inline const FormatSegment kFormat_endLoss[] = {{0.09999999999999999, "", " dB", 1, 0, 3, false, false, false, false}, {kNoLimit, "", " dB", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_eta[] = {{0.00005943215125325929, "", "×10⁻⁵", 100143.39586817328, -0.001737450252295994, 1, false, false, false, false}, {0.00005949999999999999, "", "×10⁻⁵", 0, 5.9, 1, false, false, false, false}, {0.00009238489837543649, "", "×10⁻⁵", 100143.39586817328, -0.001737450252295994, 1, false, false, false, false}, {0.00009249999999999997, "", "×10⁻⁵", 0, 9.2, 1, false, false, false, false}, {0.00009999999999999988, "", "×10⁻⁵", 100143.39586817328, -0.001737450252295994, 1, false, false, false, false}, {0.00010499999999999998, "", "×10⁻⁴", 10005.126028385625, -0.003174552601490037, 1, false, false, false, false}, {0.00010666091885894322, "", "×10⁻⁴", 0, 1.1, 1, false, false, false, false}, {0.0009999999999999994, "", "×10⁻⁴", 10005.126028385625, -0.003174552601490037, 1, false, false, false, false}, {kNoLimit, "", "×10⁻³", 1000, 0, 1, false, false, false, false}};
@@ -38,17 +40,18 @@ inline const FormatSegment kFormat_mallet[] = {{0.9999999999999999, "", " ms", 1
 inline const FormatSegment kFormat_bead[] = {{0.9999999999999999, "", " % of the spring’s", 1, 0, 2, false, false, false, false}, {kNoLimit, "", " % of the spring’s", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
 inline const ParamInfo kParams[p::count] = {
   {"springs", "Springs per key", "Springs", ParamKind::continuous, 1, 3, 2, 1, false, true, nullptr, 0, kFormat_springs, 2},
   {"spread", "Length difference", "Springs", ParamKind::continuous, 0, 6, 1.5, 0.1, false, false, nullptr, 0, kFormat_spread, 1},
-  {"family", "Spring", "Springs", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_family, 2, nullptr, 0},
+  {"family", "Spring", "Springs", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_family, 2, nullptr, 0, kKeys_family},
   {"coil", "Coil radius", "Coil", ParamKind::continuous, 0.5, 2, 1, 0, true, false, nullptr, 0, kFormat_coil, 1},
   {"wire", "Wire diameter", "Coil", ParamKind::continuous, 0.5, 2, 1, 0, true, false, nullptr, 0, kFormat_wire, 1},
   {"helix", "Helix angle", "Coil", ParamKind::continuous, 1, 20, 3, 0.1, false, false, nullptr, 0, kFormat_helix, 1},
-  {"drive", "Beads driven", "Coil", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_drive, 2, nullptr, 0},
+  {"drive", "Beads driven", "Coil", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_drive, 2, nullptr, 0, kKeys_drive},
   {"endLoss", "Mounts: loss per reflection", "Damping", ParamKind::continuous, 0.005, 1, 0.06, 0, true, true, nullptr, 0, kFormat_endLoss, 2},
   {"eta", "Steel’s internal friction", "Damping", ParamKind::continuous, 0.00001, 0.003, 0.0002, 0, true, false, nullptr, 0, kFormat_eta, 9},
   {"oil", "Oil bath", "Damping", ParamKind::continuous, 0, 30, 0, 0.1, false, false, nullptr, 0, kFormat_oil, 2},
@@ -57,7 +60,7 @@ inline const ParamInfo kParams[p::count] = {
   {"mallet", "Mallet contact", "Mallet and beads", ParamKind::continuous, 0.05, 5, 0.35, 0, true, true, nullptr, 0, kFormat_mallet, 2},
   {"bead", "Bead inertia", "Mallet and beads", ParamKind::continuous, 0.3, 30, 1, 0, true, false, nullptr, 0, kFormat_bead, 2},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.15, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 

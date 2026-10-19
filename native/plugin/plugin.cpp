@@ -27,6 +27,7 @@
 #include "forte/denormals.h"
 #include "forte/guard.h"
 #include "forte/queue.h"
+#include "presets.h"
 #ifdef FORTE_EDITOR
 #include "editor.h"
 #endif
@@ -388,6 +389,10 @@ struct Plugin : Instance {
   //   note(key, vel)      a key: vel 0..1 as MIDI velocity / 127, 0 to let go
   //   pressure(key, v)  pedal(on)  panic()
   //                       (pedal: Space; with space "switch", CC64's switch, as describe's switch says)
+  //   presets()           your own presets (presets.h): { folder, list: [[name, file, index]…] }
+  //   loadPreset(file, index)   plays one: every parameter (not Preset); { ok, error }
+  //   savePreset(name)    saves the parameters as one: { ok, file, error }
+  //   showPresets()       opens their folder
   ParamInfo infoOf(int i) const { return i < I.paramCount ? I.params[i] : i == presetAt ? presetParam() : touchParam(); }
   double along(int i, double v) const { const ParamInfo p = infoOf(i); return p.kind == ParamKind::continuous ? toNormalized(p, v) : v; }
   std::string text(int i, double v) const {
@@ -492,6 +497,41 @@ struct Plugin : Instance {
     if (m == "pressure") { const int key = (int)num(1); if (key >= 0 && key < 128) toAudio({UiEvent::pressure, (int16_t)key, num(2)}); return {}; }
     if (m == "pedal") { toAudio({UiEvent::pedal, 0, num(1)}); return {}; }
     if (m == "panic") { toAudio({UiEvent::panic, 0, 0}); return {}; }
+    auto text = [&](uint32_t k) { return args.size() > k && args[k].isString() ? std::string(args[k].getString()) : std::string(); };
+    if (m == "presets") {
+      Value list = createEmptyArray();
+      for (const UserPreset &u : listPresets(I)) {
+        Value e = createEmptyArray();
+        e.addArrayElement(u.name); e.addArrayElement(u.file); e.addArrayElement(u.index);
+        list.addArrayElement(e);
+      }
+      Value r = createObject("");
+      r.addMember("folder", presetsFolder(I));
+      r.addMember("list", list);
+      return r;
+    }
+    if (m == "loadPreset") {
+      std::vector<double> v;
+      std::string error;
+      const bool ok = readPreset(I, text(1), (int)num(2), v, error);
+      if (ok) for (int i = 0; i < I.paramCount; i++) { shown[i] = v[i]; sent[i] = NAN; toAudio({UiEvent::param, (int16_t)i, v[i]}); }
+      Value r = createObject("");
+      r.addMember("ok", ok);
+      r.addMember("error", error);
+      return r;
+    }
+    if (m == "savePreset") {
+      std::vector<double> v(I.paramCount);
+      for (int i = 0; i < I.paramCount; i++) v[i] = shown[i].load();
+      std::string error;
+      const std::string file = writePreset(I, text(1), v.data(), error);
+      Value r = createObject("");
+      r.addMember("ok", !file.empty());
+      r.addMember("file", file);
+      r.addMember("error", error);
+      return r;
+    }
+    if (m == "showPresets") return createBool(showFolder(presetsFolder(I)));
     return {};
   }
 

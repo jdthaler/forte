@@ -21,8 +21,10 @@ enum : int { material, shape, aspect, roll, taper, gauge, lengthScale, winding, 
 
 constexpr double kNoLimit = INFINITY;
 inline const char *const kChoices_material[] = {"Steel music wire", "Brass", "Phosphor bronze", "Titanium alloy", "Nylon monofilament", "Carbon fibre (unidirect.)"};
+inline const char *const kKeys_material[] = {"steel", "brass", "bronze", "titanium", "nylon", "carbon"};
 namespace material_ { enum : int { steel, brass, bronze, titanium, nylon, carbon }; }
 inline const char *const kChoices_shape[] = {"Round wire", "Square bar", "Triangular bar (equilateral)", "Flat ribbon (rectangle)"};
+inline const char *const kKeys_shape[] = {"round", "square", "triangle", "ribbon"};
 namespace shape_ { enum : int { round, square, triangle, ribbon }; }
 inline const FormatSegment kFormat_aspect[] = {{9.999999999999998, "", " : 1", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " : 1", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_roll[] = {{kNoLimit, "", "°", 1, 0, 0, false, false, false, false}};
@@ -51,6 +53,7 @@ inline const FormatSegment kFormat_gainT[] = {{kNoLimit, "", "", 1, 0, 2, false,
 inline const FormatSegment kFormat_soundboard[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_width[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_voicing[] = {{kNoLimit, "", " dB/oct", 1, 0, 1, false, false, false, false}};
@@ -58,8 +61,8 @@ inline const FormatSegment kFormat_volume[] = {{kNoLimit, "", "", 1, 0, 2, false
 inline const FormatSegment kFormat_maxFreq[] = {{kNoLimit, "", " kHz", 0.001, 0, 1, false, false, false, false}};
 
 inline const ParamInfo kParams[p::count] = {
-  {"material", "Material", "String / ribbon", ParamKind::choice, 0, 5, 0, 1, false, false, kChoices_material, 6, nullptr, 0},
-  {"shape", "Cross-section", "String / ribbon", ParamKind::choice, 0, 3, 0, 1, false, false, kChoices_shape, 4, nullptr, 0},
+  {"material", "Material", "String / ribbon", ParamKind::choice, 0, 5, 0, 1, false, false, kChoices_material, 6, nullptr, 0, kKeys_material},
+  {"shape", "Cross-section", "String / ribbon", ParamKind::choice, 0, 3, 0, 1, false, false, kChoices_shape, 4, nullptr, 0, kKeys_shape},
   {"aspect", "Ribbon width : thickness", "String / ribbon", ParamKind::continuous, 1, 60, 12, 0, true, false, nullptr, 0, kFormat_aspect, 2},
   {"roll", "Roll angle ψ", "String / ribbon", ParamKind::continuous, 0, 90, 0, 1, false, false, nullptr, 0, kFormat_roll, 1},
   {"taper", "Planform taper", "String / ribbon", ParamKind::continuous, -0.95, 0.95, 0, 0.01, false, false, nullptr, 0, kFormat_taper, 1},
@@ -89,7 +92,7 @@ inline const ParamInfo kParams[p::count] = {
   {"gainT", "Torsion pickup", "Output", ParamKind::continuous, 0, 2, 0.6, 0.01, false, false, nullptr, 0, kFormat_gainT, 1},
   {"soundboard", "Soundboard body", "Output", ParamKind::continuous, 0, 1, 0.6, 0.01, false, true, nullptr, 0, kFormat_soundboard, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"width", "Stereo spread", "Output", ParamKind::continuous, 0, 1, 0.6, 0.01, false, false, nullptr, 0, kFormat_width, 1},
   {"voicing", "Treble voicing", "Output", ParamKind::continuous, 0, 6, 2.5, 0.1, false, false, nullptr, 0, kFormat_voicing, 1},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 1},

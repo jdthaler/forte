@@ -26,16 +26,19 @@ inline const FormatSegment kFormat_tau[] = {{9.999999999999998, "", " µs", 1, 0
 inline const FormatSegment kFormat_restrike[] = {{kNoLimit, "", " × burning", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_hiss[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_mode[] = {"One arc (Duddell)", "Several arcs", "Talking arc (Simon)"};
+inline const char *const kKeys_mode[] = {"mono", "poly", "talk"};
 namespace mode_ { enum : int { mono, poly, talk }; }
 inline const FormatSegment kFormat_arcs[] = {{kNoLimit, "", " lamps", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_coil[] = {{9.999999999999998, "", " mH", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " mH", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_coilR[] = {{0.9999999999999999, "", " Ω", 1, 0, 2, false, false, false, false}, {kNoLimit, "", " Ω", 1, 0, 1, false, false, false, false}};
 inline const char *const kChoices_tune[] = {"the sounding note", "Kelvin's formula"};
+inline const char *const kKeys_tune[] = {"arc", "kelvin"};
 namespace tune_ { enum : int { arc, kelvin }; }
 inline const FormatSegment kFormat_voice[] = {{kNoLimit, "", " V", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_dist[] = {{kNoLimit, "", " m", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
@@ -45,15 +48,15 @@ inline const ParamInfo kParams[p::count] = {
   {"tau", "Column time constant τ", "The arc", ParamKind::continuous, 5, 300, 26, 0, true, true, nullptr, 0, kFormat_tau, 2},
   {"restrike", "Re-strike voltage", "The arc", ParamKind::continuous, 1.1, 2.5, 1.25, 0.01, false, false, nullptr, 0, kFormat_restrike, 1},
   {"hiss", "Hissing", "The arc", ParamKind::continuous, 0, 2, 1, 0.01, false, false, nullptr, 0, kFormat_hiss, 1},
-  {"mode", "Arcs", "The circuit", ParamKind::choice, 0, 2, 0, 1, false, true, kChoices_mode, 3, nullptr, 0},
+  {"mode", "Arcs", "The circuit", ParamKind::choice, 0, 2, 0, 1, false, true, kChoices_mode, 3, nullptr, 0, kKeys_mode},
   {"arcs", "Number of arcs", "The circuit", ParamKind::continuous, 2, 6, 4, 1, false, false, nullptr, 0, kFormat_arcs, 1},
   {"coil", "Coil L", "The circuit", ParamKind::continuous, 3, 100, 20, 0, true, true, nullptr, 0, kFormat_coil, 2},
   {"coilR", "Coil resistance", "The circuit", ParamKind::continuous, 0.02, 4, 0.3, 0, true, false, nullptr, 0, kFormat_coilR, 2},
-  {"tune", "Capacitors cut by", "The circuit", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_tune, 2, nullptr, 0},
+  {"tune", "Capacitors cut by", "The circuit", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_tune, 2, nullptr, 0, kKeys_tune},
   {"voice", "Microphone level", "Talking arc", ParamKind::continuous, 0, 6, 2, 0.05, false, false, nullptr, 0, kFormat_voice, 1},
   {"dist", "Listening distance", "Output", ParamKind::continuous, 0.3, 5, 1, 0, true, false, nullptr, 0, kFormat_dist, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 

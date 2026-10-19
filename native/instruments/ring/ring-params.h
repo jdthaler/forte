@@ -33,10 +33,12 @@ inline const FormatSegment kFormat_synch[] = {{kNoLimit, "", " Hz", 1, 0, 2, fal
 inline const FormatSegment kFormat_bunch[] = {{kNoLimit, "", " %", 100, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_spread[] = {{kNoLimit, "", " %", 100, 0, 3, false, false, false, false}};
 inline const char *const kChoices_pickup[] = {"Two buttons", "One button", "Difference"};
+inline const char *const kKeys_pickup[] = {"pair", "single", "delta"};
 namespace pickup_ { enum : int { pair, single, delta }; }
 inline const FormatSegment kFormat_cutoff[] = {{kNoLimit, "", " Hz", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
@@ -53,10 +55,10 @@ inline const ParamInfo kParams[p::count] = {
   {"synch", "Synchrotron frequency", "RF", ParamKind::continuous, 0.5, 20, 4, 0, true, true, nullptr, 0, kFormat_synch, 1},
   {"bunch", "Bunch length", "RF", ParamKind::continuous, 0.005, 0.15, 0.025, 0, true, true, nullptr, 0, kFormat_bunch, 1},
   {"spread", "Momentum spread", "RF", ParamKind::continuous, 0.0001, 0.005, 0.001, 0, true, false, nullptr, 0, kFormat_spread, 1},
-  {"pickup", "Pickup", "Pickup", ParamKind::choice, 0, 2, 0, 1, false, true, kChoices_pickup, 3, nullptr, 0},
+  {"pickup", "Pickup", "Pickup", ParamKind::choice, 0, 2, 0, 1, false, true, kChoices_pickup, 3, nullptr, 0, kKeys_pickup},
   {"cutoff", "Pickup cutoff", "Pickup", ParamKind::continuous, 10, 3000, 120, 0, true, false, nullptr, 0, kFormat_cutoff, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.2, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 

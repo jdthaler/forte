@@ -23,8 +23,10 @@ constexpr double kNoLimit = INFINITY;
 inline const FormatSegment kFormat_depth[] = {{0.9999999999999999, "", " cm", 100, 0, 0, false, false, false, false}, {9.999999999999998, "", " m", 1, 0, 2, false, false, false, false}, {kNoLimit, "", " m", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_pressure[] = {{0.9949999999999999, "", " atm (partial vacuum)", 1, 0, 2, false, false, false, false}, {kNoLimit, "", " atm", 1, 0, 2, false, false, false, false}};
 inline const char *const kChoices_gas[] = {"Air (γ = 1.40)", "Helium (γ = 5/3, conducts heat fast)", "Argon (γ = 5/3, conducts heat slowly)", "SF₆ (γ = 1.10)"};
+inline const char *const kKeys_gas[] = {"air", "helium", "argon", "sf6"};
 namespace gas_ { enum : int { air, helium, argon, sf6 }; }
 inline const char *const kChoices_liquid[] = {"Water (1.0 mPa·s)", "90 % glycerol (0.22 Pa·s)", "Glycerol (1.41 Pa·s)"};
+inline const char *const kKeys_liquid[] = {"water", "gly90", "glycerol"};
 namespace liquid_ { enum : int { water, gly90, glycerol }; }
 inline const FormatSegment kFormat_rate[] = {{9.999999999999998, "", " /s", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " /s", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_irregular[] = {{0, "a metronome", "", 1, 0, -1, false, false, false, false}, {0.9999999999999999, "", " % random", 100, 0, 0, false, false, false, false}, {kNoLimit, "random (Poisson)", "", 1, 1, -1, false, false, false, false}};
@@ -32,6 +34,7 @@ inline const FormatSegment kFormat_spread[] = {{kNoLimit, "±", " %", 1, 0, 1, f
 inline const FormatSegment kFormat_snap[] = {{0.09999999999999999, "", " µs", 1000, 0, 0, false, false, false, false}, {kNoLimit, "", " ms", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
@@ -39,14 +42,14 @@ inline const ParamInfo kParams[p::count] = {
   {"depth", "Nozzle depth", "Tank", ParamKind::continuous, 0.1, 100, 0.3, 0, true, true, nullptr, 0, kFormat_depth, 3},
   {"pressure", "Air pressure above the water", "Tank", ParamKind::continuous, 0.25, 4, 1, 0, true, false, nullptr, 0, kFormat_pressure, 2},
   {"keepInTune", "Keep in tune (re-size the bubbles)", "Tank", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
-  {"gas", "Gas", "Gas and liquid", ParamKind::choice, 0, 3, 0, 1, false, true, kChoices_gas, 4, nullptr, 0},
-  {"liquid", "Liquid", "Gas and liquid", ParamKind::choice, 0, 2, 0, 1, false, false, kChoices_liquid, 3, nullptr, 0},
+  {"gas", "Gas", "Gas and liquid", ParamKind::choice, 0, 3, 0, 1, false, true, kChoices_gas, 4, nullptr, 0, kKeys_gas},
+  {"liquid", "Liquid", "Gas and liquid", ParamKind::choice, 0, 2, 0, 1, false, false, kChoices_liquid, 3, nullptr, 0, kKeys_liquid},
   {"rate", "Bubbles per second (held key)", "Nozzles", ParamKind::continuous, 0.5, 40, 5, 0, true, true, nullptr, 0, kFormat_rate, 2},
   {"irregular", "Irregularity", "Nozzles", ParamKind::continuous, 0, 1, 0.4, 0.01, false, true, nullptr, 0, kFormat_irregular, 3},
   {"spread", "Size spread", "Nozzles", ParamKind::continuous, 0, 15, 1.5, 0.1, false, false, nullptr, 0, kFormat_spread, 1},
   {"snap", "Neck snap time", "Nozzles", ParamKind::continuous, 0.01, 2, 0.05, 0, true, false, nullptr, 0, kFormat_snap, 2},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 
