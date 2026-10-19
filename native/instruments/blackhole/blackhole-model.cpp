@@ -143,11 +143,126 @@ double swsh(int s, int l, int m, double theta) {
   return pre * sum;
 }
 
+// ---- spin-weighted spheroidal harmonics ₛS_lm(θ; c) ----
+// The spectral method (Hughes 2000; Cook & Zalutskiy 2014): in the basis ₛY_jm, j ≥ max(|m|, |s|),
+// the angular Teukolsky equation is the eigenproblem A b = (D − c²C₂ + 2cs C₁) b, with
+// D = diag(j(j + 1) − s(s + 1)), C₁ the matrix of cos θ (tridiagonal) and C₂ = C₁² that of
+// cos²θ. The matrix is complex symmetric and banded, so the mode's eigenvector is followed from
+// c = 0 (b = the unit vector of j = l) in a few steps of Rayleigh-quotient inverse iteration.
+namespace {
+struct Cx { double re, im; };
+inline Cx cadd(Cx a, Cx b) { return {a.re + b.re, a.im + b.im}; }
+inline Cx csub(Cx a, Cx b) { return {a.re - b.re, a.im - b.im}; }
+inline Cx cmul(Cx a, Cx b) { return {a.re * b.re - a.im * b.im, a.re * b.im + a.im * b.re}; }
+inline Cx cdiv(Cx a, Cx b) {
+  const double d = b.re * b.re + b.im * b.im;
+  return {(a.re * b.re + a.im * b.im) / d, (a.im * b.re - a.re * b.im) / d};
+}
+inline double cabs2(Cx a) { return a.re * a.re + a.im * a.im; }
+} // namespace
+
+void spheroidal(int s, int l, int m, double cre, double cim, Spheroidal &out) {
+  constexpr int N = Spheroidal::N, BW = 2; // the matrix's half-bandwidth
+  const int lmin = std::max(std::abs(m), std::abs(s)), at = l - lmin;
+  out.s = s; out.l = l; out.m = m; out.lmin = lmin;
+  // cos θ: d1 on the diagonal, e1[j] between j and j + 1 (e1[N − 1] reaches past the basis, so that
+  // C₂ = C₁² is exact on it)
+  double D[N], d1[N], e1[N];
+  for (int j = 0; j < N; j++) {
+    const double J = lmin + j, J1 = J + 1;
+    D[j] = J * J1 - s * (s + 1);
+    d1[j] = -(m * s) / (J * J1);
+    e1[j] = std::sqrt(((J1 * J1 - m * m) * (J1 * J1 - s * s)) / ((2 * J + 1) * (2 * J + 3))) / J1;
+  }
+  double c2[N][BW + 1]; // C₂'s upper band: c2[j][k] = C₂[j][j + k]
+  for (int j = 0; j < N; j++) {
+    c2[j][0] = (j ? e1[j - 1] * e1[j - 1] : 0) + d1[j] * d1[j] + e1[j] * e1[j];
+    c2[j][1] = j + 1 < N ? e1[j] * (d1[j] + d1[j + 1]) : 0;
+    c2[j][2] = j + 2 < N ? e1[j] * e1[j + 1] : 0;
+  }
+  Cx b[N], A = {D[at], 0};
+  for (int j = 0; j < N; j++) b[j] = {j == at ? 1.0 : 0.0, 0};
+  const Cx c0 = {cre, cim};
+  const int steps = 1 + (int)std::ceil(2 * std::sqrt(cabs2(c0)));
+  Cx M[N][2 * BW + 1]; // the band: M[j][k] = (D − c²C₂ + 2cs C₁)[j][j + k − BW]
+  for (int step = 1; step <= steps; step++) {
+    const Cx c = {(cre * step) / steps, (cim * step) / steps}, cc = cmul(c, c), c2s = {2 * s * c.re, 2 * s * c.im};
+    for (int j = 0; j < N; j++) for (int k = 0; k <= 2 * BW; k++) {
+      const int i = j + k - BW, d = std::abs(i - j);
+      if (i < 0 || i >= N) { M[j][k] = {0, 0}; continue; }
+      const double q2 = c2[std::min(i, j)][d], q1 = d == 0 ? d1[j] : d == 1 ? e1[std::min(i, j)] : 0;
+      M[j][k] = {(d == 0 ? D[j] : 0) - cc.re * q2 + c2s.re * q1, -cc.im * q2 + c2s.im * q1};
+    }
+    for (int it = 0; it < (step == steps ? 3 : 2); it++) {
+      // solve (M − A) x = b: Gaussian elimination with partial pivoting, which keeps to the band
+      // (a row swapped up reaches at most 2·BW past the diagonal)
+      Cx T[N][N], x[N];
+      for (int j = 0; j < N; j++) {
+        for (int i = 0; i < N; i++) T[j][i] = {0, 0};
+        for (int k = 0; k <= 2 * BW; k++) { const int i = j + k - BW; if (i >= 0 && i < N) T[j][i] = M[j][k]; }
+        T[j][j] = csub(T[j][j], A);
+        x[j] = b[j];
+      }
+      for (int j = 0; j < N; j++) {
+        const int lo = std::min(N - 1, j + BW), hi = std::min(N - 1, j + 2 * BW);
+        int p = j;
+        for (int r = j + 1; r <= lo; r++) if (cabs2(T[r][j]) > cabs2(T[p][j])) p = r;
+        if (p != j) { for (int col = j; col <= hi; col++) std::swap(T[p][col], T[j][col]); std::swap(x[p], x[j]); }
+        if (cabs2(T[j][j]) < 1e-300) T[j][j] = {1e-150, 0}; // on the eigenvalue itself
+        for (int r = j + 1; r <= lo; r++) {
+          const Cx f = cdiv(T[r][j], T[j][j]);
+          for (int col = j; col <= hi; col++) T[r][col] = csub(T[r][col], cmul(f, T[j][col]));
+          x[r] = csub(x[r], cmul(f, x[j]));
+        }
+      }
+      for (int j = N - 1; j >= 0; j--) {
+        Cx t = x[j];
+        for (int col = j + 1; col <= std::min(N - 1, j + 2 * BW); col++) t = csub(t, cmul(T[j][col], x[col]));
+        x[j] = cdiv(t, T[j][j]);
+      }
+      double nn = 0;
+      for (int j = 0; j < N; j++) nn += cabs2(x[j]);
+      const double inv = 1 / std::sqrt(nn);
+      for (int j = 0; j < N; j++) b[j] = {x[j].re * inv, x[j].im * inv};
+      // Rayleigh quotient, bᵀMb / bᵀb (the matrix is symmetric, not Hermitian)
+      Cx num = {0, 0}, den = {0, 0};
+      for (int j = 0; j < N; j++) {
+        Cx Mb = {0, 0};
+        for (int k = 0; k <= 2 * BW; k++) { const int i = j + k - BW; if (i >= 0 && i < N) Mb = cadd(Mb, cmul(M[j][k], b[i])); }
+        num = cadd(num, cmul(b[j], Mb));
+        den = cadd(den, cmul(b[j], b[j]));
+      }
+      A = cdiv(num, den);
+    }
+  }
+  // unit norm, and the ₛY_lm coefficient real and positive
+  const double r = std::sqrt(cabs2(b[at]));
+  const Cx ph = {b[at].re / r, -b[at].im / r};
+  for (int j = 0; j < N; j++) { const Cx v = cmul(b[j], ph); out.bre[j] = v.re; out.bim[j] = v.im; }
+  out.Are = A.re; out.Aim = A.im;
+}
+
+// Σ b_j ₛY_jm(θ), the harmonics by the recurrence cos θ ₛY_j = e_{j−1} ₛY_{j−1} + d_j ₛY_j + e_j ₛY_{j+1}
+// (the rows of C₁), upward from ₛY_lmin
+Omega spheroidalAt(const Spheroidal &S, double theta) {
+  const int s = S.s, m = S.m;
+  const double x = fd::cos(theta);
+  double y0 = 0, y1 = swsh(s, S.lmin, m, theta), eprev = 0, re = 0, im = 0;
+  for (int j = 0; j < Spheroidal::N; j++) {
+    re += S.bre[j] * y1; im += S.bim[j] * y1;
+    const double J = S.lmin + j, J1 = J + 1;
+    const double d = -(m * s) / (J * J1), e = std::sqrt(((J1 * J1 - m * m) * (J1 * J1 - s * s)) / ((2 * J + 1) * (2 * J + 3))) / J1;
+    const double y2 = ((x - d) * y1 - eprev * y0) / e;
+    y0 = y1; y1 = y2; eprev = e;
+  }
+  return {re, im};
+}
+
 // ---- excitation ----
 // Overtone amplitudes at the strain peak, relative to the fundamental (illustrative).
 static const double OVERTONE[3][2] = {{1, 0}, {2.0, PI}, {2.5, 0}};
 
-void keyVoice(int key, const ModelParams &P, double fs, KeyVoice &v) {
+void keyVoice(int key, const ModelParams &P, double fs, KeyVoice &v, Angular *angular) {
   const double a = spinFromU(P.spinU);
   Omega w220;
   omega(2, 2, 0, a, w220);
@@ -173,12 +288,24 @@ void keyVoice(int key, const ModelParams &P, double fs, KeyVoice &v) {
     if (f <= 20 || f >= 0.45 * fs || amp == 0 || v.count >= MAX_MODES) return;
     // amplitude at the ringdown start time t0 (in units of M) after the peak
     const double Are = amp * fd::cos(phase), Aim = amp * fd::sin(phase);
-    const double Y = swsh(-2, l, m, iota), Ym = swsh(-2, l, -m, iota), sgn = l % 2 ? -1 : 1;
-    // P = A·Y_lm, Q = (−1)^l A*·Y_l,−m ; h₊ = Re((P + Q*)ζ), h× = −Im((P − Q*)ζ)
-    const double Pr = Are * Y, Pi = Aim * Y, Qr = sgn * Are * Ym, Qi = -sgn * Aim * Ym;
+    // The mode's angular function is the spheroidal ₋₂S_lm(θ; aω). Its mirror partner, at −ω* and
+    // −m, has (−1)^l A* and ₋₂S_l,−m(θ; −aω*) = (−1)^l ₋₂S_lm(π − θ; aω)*, so with P = A·S(ι) and
+    // R = A·S(π − ι), h₊ − ih× = Pζ + R*ζ*: h₊ = Re((P + R)ζ), h× = −Im((P − R)ζ).
+    Angular local, &ang = angular ? *angular : local;
+    if (ang.a != a || ang.iota != iota) { ang = Angular{}; ang.a = a; ang.iota = iota; }
+    if (!ang.have[l][m + 4][n]) {
+      Spheroidal S;
+      spheroidal(-2, l, m, a * w.re, a * w.im, S);
+      ang.y[l][m + 4][n] = spheroidalAt(S, iota);
+      ang.ym[l][m + 4][n] = spheroidalAt(S, PI - iota);
+      ang.have[l][m + 4][n] = true;
+    }
+    const Omega y = ang.y[l][m + 4][n], ym = ang.ym[l][m + 4][n];
+    const double Pr = Are * y.re - Aim * y.im, Pi = Are * y.im + Aim * y.re;
+    const double Rr = Are * ym.re - Aim * ym.im, Ri = Are * ym.im + Aim * ym.re;
     Mode &md = v.modes[v.count++];
     md.l = l; md.m = m; md.n = n; md.f = f; md.gamma = gamma; md.tau = 1 / gamma; md.Q = w.re / (2 * -w.im); md.amp = amp;
-    md.cpr = Pr + Qr; md.cpi = Pi - Qi; md.cxr = Pr - Qr; md.cxi = Pi + Qi;
+    md.cpr = Pr + Rr; md.cpi = Pi + Ri; md.cxr = Pr - Rr; md.cxi = Pi - Ri;
   };
   const double t0 = P.t0;
   for (const auto &b : base) {
