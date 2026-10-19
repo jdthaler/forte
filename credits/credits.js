@@ -3,7 +3,7 @@
 
 import { renderMarkdown } from '../shared/markdown.js';
 
-const REPO = 'https://github.com/jdthaler/forte/blob/main/';
+const REPO = 'https://github.com/jdthaler/forte/blob/live/';
 const text = document.querySelector('#text'), toc = document.querySelector('#toc');
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 

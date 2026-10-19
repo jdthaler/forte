@@ -6,7 +6,7 @@
 import { INSTRUMENTS } from './registry.js';
 
 export const LATEST = 'https://github.com/jdthaler/forte/releases/latest/download/';
-export const INSTALL = 'https://github.com/jdthaler/forte/blob/main/native/INSTALL.md';
+export const INSTALL = 'https://github.com/jdthaler/forte/blob/live/native/INSTALL.md';
 export const RELEASES = 'https://github.com/jdthaler/forte/releases';
 
 // the formats, by the names the archives (and the downloads' Makefile) use
