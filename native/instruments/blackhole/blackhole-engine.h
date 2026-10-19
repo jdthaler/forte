@@ -92,6 +92,7 @@ class RingdownEngine : public Engine {
   // each key's voice at the current model parameters
   KeyVoice cache[KEY_HI - KEY_LO + 1];
   bool cached[KEY_HI - KEY_LO + 1] = {};
+  Angular angular;              // the modes' angular functions, shared by every key
   KeyVoice other;               // a key outside the range
   KeyVoice offer_;
   bool hasOffer = false;
