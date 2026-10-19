@@ -1,0 +1,19 @@
+forte ring 0.2.0
+kick 2.5
+phase 1
+size 0.080000000000000002
+lifetime 1.5
+scrape 0.080000000000000002
+tune 0.31
+chroma 20
+octupole 2
+damping 0.59999999999999998
+synch 4
+bunch 0.012
+spread 0.001
+pickup 0
+cutoff 120
+room 0.20000000000000001
+venue 1
+volume 0.80000000000000004
+preset 7
