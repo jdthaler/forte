@@ -4,7 +4,8 @@
 # (`plugin.ready` in shared/registry.js) and the Forte app (all of them in one standalone),
 # Forte-app-<system> with the Forte app alone, and Forte-<id>-<system> with each instrument
 # alone, and each of those also one format at a time (Forte-<id>-<format>-<system>: au, vst3,
-# clap or app), each with native/INSTALL.md, and on macOS and Linux native/install.sh with its
+# clap or app), each with native/INSTALL.md, Forte's LICENSE (as LICENSE.txt) and the notices
+# of the code compiled into the plugins (THIRD-PARTY-NOTICES.md), and on macOS and Linux native/install.sh with its
 # Makefile (make install, make verify), on Windows native/install.cmd with install.ps1
 # (install.cmd install, verify…). The template's plugins are left out. The archives keep the
 # bundles' executable bits and macOS's signatures. Run from the repository's root after building:
@@ -44,7 +45,8 @@ pack() {
     done < <(bundles)
     [ "$n" -gt 0 ] || { echo "no $format plugins built for $name in $plugins" >&2; exit 1; }
   done
-  cp native/INSTALL.md "$dir"/
+  cp native/INSTALL.md THIRD-PARTY-NOTICES.md "$dir"/
+  cp LICENSE "$dir/LICENSE.txt"
   if [ "$preset" = windows ]; then cp native/install.cmd native/install.ps1 "$dir"/
   else cp native/install.mk "$dir/Makefile"; cp native/install.sh "$dir/"; fi
   case "$preset" in

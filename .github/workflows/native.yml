@@ -208,6 +208,7 @@ jobs:
           if [ "$RUNNER_OS" = macOS ]; then ditto -x -k dist/Forte-plugins-macos.zip "$RUNNER_TEMP/try"
           else tar -xzf dist/Forte-plugins-linux.tar.gz -C "$RUNNER_TEMP/try"; fi
           cd "$RUNNER_TEMP/try/Forte plugins"
+          for f in LICENSE.txt THIRD-PARTY-NOTICES.md; do [ -f "$f" ] || { echo "::error::the archive has no $f"; exit 1; }; done
           make check
           make install
           make verify
@@ -256,6 +257,7 @@ jobs:
           $try = Join-Path $env:RUNNER_TEMP 'try'
           Expand-Archive dist/Forte-plugins-windows.zip -DestinationPath $try
           Set-Location (Join-Path $try 'Forte plugins')
+          foreach ($f in 'LICENSE.txt', 'THIRD-PARTY-NOTICES.md') { if (-not (Test-Path $f)) { throw "the archive has no $f" } }
           function Run { .\install.cmd @args; if ($LASTEXITCODE -ne 0) { throw "install.cmd $args failed" } }
           function Fails { .\install.cmd @args; if ($LASTEXITCODE -eq 0) { throw "install.cmd $args passed" } }
           Run check

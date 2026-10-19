@@ -262,6 +262,13 @@ test('every ready instrument\'s README ends with its prior art and references', 
     assert.ok(/doi\.org|https?:\/\//.test(md.slice(at)), `${i.id}: prior art has no links`);
   }
 });
+test('the notices name every dependency, and the downloads carry them with the licence', () => {
+  const notices = read('THIRD-PARTY-NOTICES.md'), sh = read('tools/package-plugins.sh');
+  const fetched = [...read('native/cmake/dependencies.cmake').matchAll(/^\s*forte_fetch\((\w+) (\S+?)(?:\.git)? /gm)];
+  assert.ok(fetched.length >= 9, `${fetched.length} dependencies in dependencies.cmake`);
+  for (const [, name, url] of fetched) assert.ok(notices.includes(`(${url})`) || notices.includes(`<${url}>`), `THIRD-PARTY-NOTICES.md links ${name} (${url})`);
+  assert.ok(sh.includes('cp native/INSTALL.md THIRD-PARTY-NOTICES.md "$dir"/') && sh.includes('cp LICENSE "$dir/LICENSE.txt"'), 'package-plugins.sh adds the notices and LICENSE.txt');
+});
 test('the project-wide prior art exists and the site links to it', () => {
   assert.ok(has('docs/PRIOR_ART.md') && has('credits/index.html'));
   assert.ok(read('index.html').includes('href="credits/"'), 'landing page links to credits/');
