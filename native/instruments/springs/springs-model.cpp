@@ -87,12 +87,14 @@ Params paramsOf(const double *P) {
   q.coil = P[p::coil]; q.wire = P[p::wire]; q.helix = P[p::helix];
   q.springs = P[p::springs]; q.spread = P[p::spread]; q.mallet = P[p::mallet]; q.bead = P[p::bead];
   q.endLoss = P[p::endLoss]; q.eta = P[p::eta]; q.oil = P[p::oil];
+  q.tuning = tuningOf(P);
   return q;
 }
 uint64_t geometryId(const Params &P) {
   uint64_t h = 1469598103934665603ull;
   auto mix = [&](double v) { const uint64_t b = std::bit_cast<uint64_t>(v + 0.0); for (int i = 0; i < 8; i++) { h ^= (b >> (8 * i)) & 0xff; h *= 1099511628211ull; } };
   for (double v : {P.slinky ? 1.0 : 0.0, P.coil, P.wire, P.helix, P.axial ? 1.0 : 0.0, P.springs, P.spread, P.mallet, P.bead, P.endLoss, P.eta, P.oil}) mix(v);
+  if (!P.tuning.equal) for (double r : P.tuning.r) mix(r); // (equal temperament at 440 Hz: the id it always had)
   return h;
 }
 
@@ -261,7 +263,7 @@ Spring tuneSpring(int key, const Params &P) {
   const Shape shape = shapeOf(g);
   std::shared_ptr<RodSolver> solver = solverFor(shape);
   const bool axial = P.axial;
-  const double f0 = keyFreq(key);
+  const double f0 = keyFreq(key) * P.tuning.ratio(key); // the key's note in the keyboard's tuning
   RodSolver &S = *solver;
   if (!S.tuned[axial]) {
     Transition tr = transition(S, axial);

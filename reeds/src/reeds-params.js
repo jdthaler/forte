@@ -3,6 +3,7 @@
 
 import { HAMMER_VMAX } from './reeds-data.js';
 import { VENUE } from '../../shared/chain.js';
+import { TUNING_GROUP } from '../../shared/tuning.js';
 
 const mm = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2)} mm`;
 const pct = (v) => `${(v * 100).toFixed(0)} %`;
@@ -45,6 +46,7 @@ export const GROUPS = [
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
+  TUNING_GROUP,
 ];
 
 export const DEFAULTS = Object.fromEntries(GROUPS.flatMap((g) => g.params).map((p) => [p.id, p.def]));

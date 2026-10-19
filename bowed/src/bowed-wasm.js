@@ -4,6 +4,7 @@
 
 import { GROUPS, RANGE } from './bowed-params.js';
 import { wasmEngine, nativeParams, nativeValue, scratch } from '../../shared/wasm.js';
+import { tuningRatio } from '../../shared/tuning.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'bowed', name: 'OrganistaWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/bowed.wasm', import.meta.url).href };
@@ -80,7 +81,7 @@ export async function wasmModel() {
   const VOICED = new Float64Array(RANGE[1] + 1);
   for (let k = RANGE[0]; k <= RANGE[1]; k++) VOICED[k] = x.bowed_voiced(k);
   const loopDesign = (key, P, fs) => {
-    x.bowed_loop_design(key, fs, P.speed, P.beta, P.losses, P.mobility, P.torsionQ, s.at);
+    x.bowed_loop_design(key, fs, P.speed, P.beta, P.losses, P.mobility, P.torsionQ, tuningRatio(P, key), s.at); // in the keyboard's tuning
     const a = s.f64(LOOP.length), L = { key };
     LOOP.forEach((k, i) => { L[k] = a[i]; });
     L.wound = L.wound > 0;

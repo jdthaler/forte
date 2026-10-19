@@ -217,15 +217,24 @@ function buildControls() {
       const wrap = document.createElement('div');
       wrap.className = 'param';
       if (p.perform) wrap.dataset.perform = ''; // above the keys in Perform (shared/layout.js)
-      wrap.innerHTML = `<div class="row"><label for="p-${p.id}">${p.label}</label><span class="val"></span></div>`;
-      const input = document.createElement('input');
-      input.type = 'range'; input.min = 0; input.max = 1000; input.step = 1; input.id = `p-${p.id}`;
-      input.addEventListener('input', () => setParam(p.id, fromSlider(p, +input.value), true));
-      input.addEventListener('dblclick', () => setParam(p.id, p.def));
+      let input;
+      if (p.type === 'select') { // the venue and the tuning's choices: the option's own value (a number, for the pitch)
+        wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;
+        input = document.createElement('select');
+        input.id = `p-${p.id}`;
+        for (const [k, name] of p.options) input.add(new Option(name, k));
+        input.addEventListener('change', () => { setParam(p.id, p.options[input.selectedIndex][0]); input.blur(); });
+      } else {
+        wrap.innerHTML = `<div class="row"><label for="p-${p.id}">${p.label}</label><span class="val"></span></div>`;
+        input = document.createElement('input');
+        input.type = 'range'; input.min = 0; input.max = 1000; input.step = 1; input.id = `p-${p.id}`;
+        input.addEventListener('input', () => setParam(p.id, fromSlider(p, +input.value), true));
+        input.addEventListener('dblclick', () => setParam(p.id, p.def));
+      }
       wrap.appendChild(input);
       if (p.hint) { const h = document.createElement('div'); h.className = 'hint'; h.textContent = p.hint; wrap.appendChild(h); }
       det.appendChild(wrap);
-      controls.set(p.id, { p, input, val: wrap.querySelector('.val') });
+      controls.set(p.id, { p, input, val: wrap.querySelector('.val'), wrap });
     }
     $('#groups').appendChild(det);
   }
@@ -243,12 +252,18 @@ function buildControls() {
 function refreshControl(id, dragging = false) {
   const c = controls.get(id);
   if (!c) return;
+  if (c.p.type === 'select') { c.input.value = P[id]; return; }
   if (!dragging) c.input.value = toSlider(c.p, P[id]);
   c.val.textContent = c.p.fmt ? c.p.fmt(P[id]) : String(P[id]);
+}
+// the tuning's root and custom cents show only for a temperament that uses them
+function refreshVisibility() {
+  for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(P) : false;
 }
 function setAll(np) {
   P = np;
   for (const id of controls.keys()) refreshControl(id);
+  refreshVisibility();
   post(paramsMessage()); applyMix(); updateHelp(); save();
   modelChanged();
 }
@@ -262,8 +277,9 @@ function setParam(id, v, dragging = false) {
   $('#preset').value = '';
   if (p.kind === 'play') { updateHelp(); return; }
   if (p.kind === 'mix') { applyMix(); return; }
-  // 'model': the key models (and their version) follow P, so the next note sends new data (and
-  // the engine has P too, for a key it builds itself)
+  // 'model', and the tuning's (no kind): the key models (and their version) follow P, so the next
+  // note sends new data (and the engine has P too, for a key it builds itself)
+  refreshVisibility();
   post(paramsMessage());
   clearTimeout(mcTimer);
   mcTimer = setTimeout(modelChanged, 120);
@@ -373,6 +389,7 @@ $('#speed').addEventListener('change', (e) => { motion.speed = +e.target.value; 
 
 buildControls();
 for (const id of controls.keys()) refreshControl(id);
+refreshVisibility();
 updateHelp();
 keyboardView.labels(keyLabels());
 setFocus(60, P.velocity);

@@ -238,7 +238,9 @@ KeyModel computeKeyModel(int m, const double *P, double fs) {
   const int matIndex = std::min(5, std::max(0, (int)P[p::material]));
   const Material &mat = MATERIALS[matIndex];
   const double E = mat.E, G = mat.G, rho = mat.rho;
-  const double f0 = keyFreq(m), omega0 = 2 * PI * f0;
+  // the key's pitch: equal temperament's times the keyboard's tuning (exactly 1 at the defaults);
+  // the scale (length, gauge, winding, hammers, voicing) stays the key's
+  const double f0 = keyFreq(m) * tuningOf(P).ratio(m), omega0 = 2 * PI * f0;
   const double L = scaleLength(m) * P[p::lengthScale];
   const double d = scaleDiameter(m) * P[p::gauge];
   const double A0 = (PI * d * d) / 4;
@@ -421,7 +423,7 @@ VoiceData buildVoiceData(const KeyModel &model, const double *P, uint64_t versio
   }
   // "voicing": the per-key loudness balance a technician sets by needling the felt; here a
   // simple tilt in dB per octave about middle C
-  const double voice = std::pow(10.0, (P[p::voicing] * std::log2(model.info.f0 / 261.63)) / 20);
+  const double voice = std::pow(10.0, (P[p::voicing] * std::log2(keyFreq(model.key) / 261.63)) / 20);
   const Hammer &hd = model.info.hammer;
   const double dp = P[p::feltExp];
   const double pe = hd.p + dp;
@@ -474,6 +476,7 @@ bool unpackVoiceData(const double *in, int count, VoiceData &d) {
   return true;
 }
 
+// Every parameter but these: the tuning's among them (pitch … cents11 move every key's pitch).
 bool isModelParam(int i) {
   switch (i) {
     case p::unaCorda: case p::damper: case p::kc: case p::gainV: case p::gainH: case p::gainT:

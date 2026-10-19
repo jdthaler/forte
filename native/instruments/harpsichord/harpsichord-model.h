@@ -35,8 +35,7 @@ struct Params {
   int material = 0;
   double stiff = 2500, overlap = 0.6, stagger = 0.5;
   double xFront = 40, xBack = 62, xFour = 45, xLute = 12;
-  double pitch = 440;
-  int temperament = 0;
+  Tuning tuning;                // the keyboard's (forte/tuning.h): pitch standard and temperament
   double detune = 1.5, loss = 1, damper = 1, fmax = 10;
   bool soundboard = true;
   double mu = -1, taper = -1, lossScale = 1, bridgeScale = 1;
@@ -53,8 +52,6 @@ constexpr bool ROW_UPPER[4] = {true, false, false, true};  // its manual
 constexpr double ROW_ORDER[4] = {1, 0, 2, 1.5};            // its place in the stagger
 
 // ---- tuning
-double temperamentCents(int id, int pc);   // cents of pitch class pc above C
-double temperamentOffset(int id, int pc);  // departure from equal temperament, A unchanged
 double keyPitch(int m, const Params &P);   // the key's 8′ pitch (Hz)
 double jitter(double m, double s = 0);     // a tuner's small errors, in [0, 1)
 double detuneCents(int m, int choir, const Params &P);

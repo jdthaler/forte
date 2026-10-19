@@ -15,7 +15,10 @@ constexpr double REPEAT = 0.06;     // s: the action needs this long to return t
 constexpr double DROP = 1e-7;       // a top partial falling below this (output units, −140 dB) stops being integrated
 
 // Physics parameters: a change rebuilds the key models (new notes only).
-constexpr int PHYS[] = {p::scale, p::stringing, p::detune, p::stiffness, p::loss, p::mount, p::gFrame, p::boardH, p::tilt, p::hRatio, p::kH, p::hardness, p::strike, p::maxFreq, p::stretch};
+constexpr int PHYS[] = {p::scale, p::stringing, p::detune, p::stiffness, p::loss, p::mount, p::gFrame, p::boardH, p::tilt, p::hRatio, p::kH, p::hardness, p::strike, p::maxFreq, p::stretch,
+                      // the keyboard's tuning (forte/tuning.h): every key's pitch
+                      p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6,
+                      p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 
 // ---- the preamp's sections -----------------------------------------------------------------------
 

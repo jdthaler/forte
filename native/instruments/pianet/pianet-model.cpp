@@ -108,9 +108,11 @@ double reedSigma(double f, double h, double eta) {
   return AIR_SIGMA + PI * f * (eta + (tedDelta() * u) / (1 + u * u));
 }
 
-KeyReed keyReed(int m, double tipMass, double loss, double fs) {
+KeyReed keyReed(int m, double tipMass, double loss, double fs, double ratio) {
   const double E = STEEL.E, rho = STEEL.rho, t = std::min(1.0, std::max(0.0, (double)(m - KEY_LO) / (KEY_HI - KEY_LO)));
-  const double f0 = keyFreq(m), b = REED.b, h = REED.hBass * (1 - t) + REED.hTreble * t;
+  // the key's pitch in the keyboard's tuning (ratio exactly 1 at the defaults): the length is cut
+  // to it; the reed's section, solder and voicing stay the key's
+  const double f0 = keyFreq(m) * ratio, b = REED.b, h = REED.hBass * (1 - t) + REED.hTreble * t;
   const double r = tipMass * pow(REED.rBass, 1 - t) * pow(REED.rTreble, t), bl = REED.blob;
   KeyReed kr;
   kr.unit = unitReed(r, 1 - bl / 2, (r * (bl * bl + pow(bl / 2, 2))) / 12, REED.nModes);
@@ -241,8 +243,8 @@ double Pluck::energy() const { // vibration energy (J) about the static shape un
 
 // ---- offline runs ------------------------------------------------------------------------------
 
-Simulation simulatePluck(int m, double tipMass, double loss, const PadParams &P, double vel, double fs, double periods, int frames, double maxT) {
-  const KeyReed kr = keyReed(m, tipMass, loss, fs);
+Simulation simulatePluck(int m, double tipMass, double loss, const PadParams &P, double vel, double fs, double periods, int frames, double maxT, double ratio) {
+  const KeyReed kr = keyReed(m, tipMass, loss, fs, ratio);
   Simulation out;
   {
     Pluck p(kr, P, fs);

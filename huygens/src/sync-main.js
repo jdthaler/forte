@@ -5,6 +5,7 @@
 import { INSTRUMENT, GROUPS, DEFAULTS, PRESETS } from './huygens-instrument.js';
 import { ALL_PARAMS } from './sync-params.js';
 import { keyFreq, noteName, nearestRatio, intervalName, KEY_LO, KEY_HI } from './tuning.js';
+import { TUNING_KEEP, tuningRatio } from '../../shared/tuning.js';
 import { wasmModel } from './huygens-wasm.js';
 import { createChain } from '../../shared/chain.js';
 import { SpectrumView, SpectrogramView } from '../../shared/views.js';
@@ -270,7 +271,7 @@ function setParam(id, v, dragging = false) {
   refreshControl(id, dragging); refreshVisibility(); save(); updateHelp();
   $('#preset').value = '';
   if (p.kind === 'mix') applyMix();
-  else if (p.kind === 'tune') { post(paramsMessage()); retuneSounding(); } // the engine tunes new notes itself
+  else if (p.kind === 'tune' || TUNING_KEEP.includes(id)) { post(paramsMessage()); retuneSounding(); } // the engine tunes new notes itself (and the keyboard's tuning, which has no kind)
   else {
     post(paramsMessage());
     if (['kick'].includes(id)) recomputeStair(false);
@@ -329,7 +330,8 @@ function updateTables(an, hold) {
   };
   $('#notes').innerHTML = '<tr><th>note</th><th>designed</th><th>playing</th><th>vs equal temperament (±30 ¢)</th></tr>'
     + live.map((o) => {
-      const et = keyFreq(o.key), cd = 1200 * Math.log2(o.fTarget / et), cp = 1200 * Math.log2(o.f / et);
+      // equal temperament at the pitch standard (A4's ratio is the standard's), so a temperament shows
+      const et = keyFreq(o.key) * tuningRatio(P, 69), cd = 1200 * Math.log2(o.fTarget / et), cp = 1200 * Math.log2(o.f / et);
       return `<tr><td>${noteName(o.key)}</td><td>${cd >= 0 ? '+' : ''}${cd.toFixed(1)} ¢</td><td>${cp >= 0 ? '+' : ''}${cp.toFixed(1)} ¢</td><td>${meter(cp, cd)}</td></tr>`;
     }).join('');
   const rows = [];

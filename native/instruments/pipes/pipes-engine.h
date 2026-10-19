@@ -20,6 +20,7 @@
 // the longest key at the widest cut-up: nothing is allocated in process().
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstdint>
@@ -46,17 +47,24 @@ enum : uint16_t {
 }
 
 // A key's six pipes, voiced: what a note needs and the page's model can send (packKeyModels).
+// The pipes are cut for the key's pitch in the keyboard's tuning: ratio, its tuning's (forte/tuning.h).
 struct KeyModels {
   int key = 0;
   Voicing design;
+  double ratio = 1;
   std::array<PipeModel, RANKS> pipes{};
 };
-KeyModels keyModels(int key, const Voicing &design);
-// Packed as numbers: key, cutup, gain, offset, then per pipe f, stopped, M, A, W, b, H, y0, h, dd,
-// Sm, D, the number of modes and each mode's ω and σ (all the engine reads of a pipe).
+KeyModels keyModels(int key, const Voicing &design, double ratio = 1);
+// Packed as numbers: key, cutup, gain, offset, ratio, then per pipe f, stopped, M, A, W, b, H, y0,
+// h, dd, Sm, D, the number of modes and each mode's ω and σ (all the engine reads of a pipe).
 int packKeyModels(const KeyModels &k, double *out);
 bool unpackKeyModels(const double *in, int n, KeyModels &k);
-constexpr int PACKED_MAX = 4 + RANKS * (13 + 2 * MODES_OPEN);
+constexpr int PACKED_MAX = 5 + RANKS * (13 + 2 * MODES_OPEN);
+// The keyboard's tuning moves a key at most this far from equal temperament at A = 440 Hz (the
+// lowest and highest pitch standards, a custom temperament's ±100 ¢ less A's own): the delay lines
+// a voice keeps ready are sized for it.
+inline const double RATIO_MIN = *std::min_element(kPitches, kPitches + kPitchCount) / 440 * std::pow(2.0, -2 * kCentsRange / 1200);
+inline const double RATIO_MAX = *std::max_element(kPitches, kPitches + kPitchCount) / 440 * std::pow(2.0, 2 * kCentsRange / 1200);
 
 class PipeEngine : public Engine {
  public:
@@ -162,9 +170,10 @@ class PipeEngine : public Engine {
   const double fOS, h;
   uint32_t seed = 1;
   // the voicing each version was built for (a ring the worker reads)
-  struct Design { std::atomic<double> cutup{1}, gain{1}, offset{0.4}; };
+  struct Design { std::atomic<double> cutup{1}, gain{1}, offset{0.4}, ratio[12] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; };
   std::array<Design, 16> designs{};
   Voicing design;
+  Tuning tuning; // the keyboard's, as the current version's pipes are cut for it
   uint64_t version = 0;
   Data data;
   std::unique_ptr<KeyModels> offered;

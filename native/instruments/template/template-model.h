@@ -17,7 +17,8 @@ double pulseSpectrum(double f, double tau);
 
 struct Mode { double f, sigma, amp; };   // amp: modal velocity per unit strike
 struct KeyModes { std::array<Mode, BETA_L.size()> m; int count = 0; };
-// The modes of one key, from the parameters (indexed as in template-params.h).
+// The modes of one key, from the parameters (indexed as in template-params.h), the first on the
+// key's note in the keyboard's tuning.
 KeyModes keyModes(int key, const double *P);
 
 } // namespace forte::template_

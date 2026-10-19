@@ -22,6 +22,7 @@ static Params paramsOf(const double *a) { // the descriptor's parameters, in the
   P.force = a[p::force]; P.attack = a[p::attack]; P.mus = a[p::mus]; P.mud = a[p::mud]; P.v0 = a[p::v0];
   P.memory = a[p::memory]; P.grain = a[p::grain]; P.torsionQ = a[p::torsionQ]; P.losses = a[p::losses];
   P.mobility = a[p::mobility]; P.boardEta = a[p::boardEta]; P.damper = a[p::damper]; P.lifted = a[p::lifted] != 0;
+  P.tuning = tuningOf(a);
   return P;
 }
 
@@ -35,9 +36,12 @@ struct Alone {
 
 extern "C" {
 // loopDesign(key, P, fs), flat: fKey, f0, L, T, c, mu, Z0, d, B, stress, wound, G, Zall, N0, beta,
-// wheel, vB, Db, Dn, gb, pb, gn, pn, rB, sigma1, Zt, ft, Dtb, Dtn, rtb, rtn (31 values)
-FORTE_EXPORT void bowed_loop_design(int key, double fs, double speed, double beta, double losses, double mobility, double torsionQ, double *out) {
-  const Loop L = loopDesign(key, paramsOf(speed, beta, losses, mobility, torsionQ), fs);
+// wheel, vB, Db, Dn, gb, pb, gn, pn, rB, sigma1, Zt, ft, Dtb, Dtn, rtb, rtn (31 values); ratio the
+// keyboard's tuning for the key (shared/tuning.js tuningRatio)
+FORTE_EXPORT void bowed_loop_design(int key, double fs, double speed, double beta, double losses, double mobility, double torsionQ, double ratio, double *out) {
+  Params P = paramsOf(speed, beta, losses, mobility, torsionQ);
+  P.tuning.r[((key % 12) + 12) % 12] = ratio;
+  const Loop L = loopDesign(key, P, fs);
   const double v[31] = {L.fKey, L.f0, L.L, L.T, L.c, L.mu, L.Z0, L.d, L.B, L.stress, L.wound ? 1.0 : 0.0, L.G, L.Zall, L.N0, L.beta,
                         L.wheel, L.vB, L.Db, L.Dn, L.gb, L.pb, L.gn, L.pn, L.rB, L.sigma1, L.Zt, L.ft, L.Dtb, L.Dtn, L.rtb, L.rtn};
   for (int i = 0; i < 31; i++) out[i] = v[i];

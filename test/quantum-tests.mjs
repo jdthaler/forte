@@ -255,6 +255,18 @@ test('…and for every well and detector, tempo-locked or at fixed n̄', () => {
   assert.ok(Math.abs(worst) < 3, `worst ${worst.toFixed(2)} ¢ (${what})`);
   console.log(`        worst ${worst.toFixed(2)} ¢ (${what})`);
 });
+test('the keyboard\'s tuning: at A = 415 Hz a key launches at 440·2^((m−69)/12)·415/440 (±3 ¢), tempo-locked (its revival still on the beat) or at fixed n̄; in ¼-comma meantone on C the packet\'s pitch is E4 3.42 ¢ flat of equal temperament, C4 10.26 ¢ sharp, A4 on 440 Hz', () => {
+  for (const lock of [true, false]) for (const k of [48, 64]) {
+    const p = P({ lock, pitch: 415 }), pk = makePacket(k, p), f0 = (keyFreq(k) * 415) / 440, { L } = note(p, k, 0.12);
+    const c = cents(launchPitch(L, f0, 2.5 / f0, 2.5 / f0 + 0.3 * pk.tColl), f0);
+    assert.ok(Math.abs(c) < 3, `key ${k}${lock ? ', locked' : ''}: ${c.toFixed(2)} ¢`);
+    if (lock) assert.ok(rel(pk.Trev, makePacket(k, P()).Trev) < 1e-9 && !pk.offBeat, `key ${k}: the revival moved, T_rev ${pk.Trev}`);
+  }
+  for (const [k, want] of [[64, -3.42], [60, 10.26], [69, 0]]) {
+    const c = cents(makePacket(k, P({ temperament: 'meantone' })).pitch, keyFreq(k));
+    assert.ok(Math.abs(c - want) < 0.01, `key ${k} in meantone: ${c.toFixed(3)} ¢, not ${want}`);
+  }
+});
 test('engine = model: every well and detector, sample for sample, with T₁ and T_φ', () => {
   for (const potential of ['box', 'morse', 'hydrogen', 'bouncer', 'harmonic']) for (const detector of ['x', 'v', 'a']) {
     const p = P({ potential, detector, T1: 2, dephase: 1 / 0.7 }), e = new QuantumEngine(FS);

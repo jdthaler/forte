@@ -3,14 +3,18 @@
 // for the page, its views and the tests.
 
 import { GROUPS } from './stars-params.js';
-import { wasmEngine, scratch } from '../../shared/wasm.js';
+import { wasmEngine, scratch, nativeValue } from '../../shared/wasm.js';
+import { TUNING_PARAMS, CENTS } from '../../shared/tuning.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'stars', name: 'StarWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/stars.wasm', import.meta.url).href };
 
 const MAX_MODES = 340; // m components per star at most (stars-model.h)
 // The parameters that build a star (the rest act live in the engine): a star's id is these and its key.
-export const starId = (P) => `${P.family}|${P.mass}|${P.speedup}`;
+// The tuning sets its target pitch: its root counts only when tempered, its custom cents only in custom
+// (as the engine's version, stars-engine.cpp versionOf).
+const tuningId = (P) => [P.pitch, P.temperament, P.temperament === 'equal' ? 0 : P.tuningRoot, ...CENTS.map((c) => (P.temperament === 'custom' ? P[c.id] : 0))].join('|');
+export const starId = (P) => `${P.family}|${P.mass}|${P.speedup}|${tuningId(P)}`;
 
 // The C++ engine's messages (stars-engine.h, msg) into the page's: 'amps' (the focus star's
 // observed mode amplitudes, which come in parts of 30, then the summary) and 'error'.
@@ -97,7 +101,9 @@ export async function wasmModel() {
   const x = await ready(), s = scratch(x);
   return {
     keyStar(key, P) {
-      const fam = P.family === 'dscuti' ? 1 : 0, n = x.stars_key_star(fam, P.mass, P.speedup, key);
+      const t = s.f64(TUNING_PARAMS.length);
+      TUNING_PARAMS.forEach((p, i) => { t[i] = nativeValue(p, P[p.id] ?? p.def); });
+      const fam = P.family === 'dscuti' ? 1 : 0, n = x.stars_key_star(fam, P.mass, P.speedup, key, s.at);
       const a = new Float64Array(x.memory.buffer, x.stars_key_star_data(), n).slice(), N = a[3], nAll = a[4];
       let i = 8;
       const star = starOf(a.subarray(i, i + 7)); i += 7;

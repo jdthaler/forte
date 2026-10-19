@@ -4,6 +4,7 @@
 
 import { GROUPS } from './windharp-params.js';
 import { wasmEngine, scratch } from '../../shared/wasm.js';
+import { tuningRatio } from '../../shared/tuning.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'windharp', name: 'WindHarpWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/windharp.wasm', import.meta.url).href };
@@ -137,14 +138,15 @@ export const ready = () => WindHarpWasmEngine.ready();
 // and the tests.
 export async function wasmModel() {
   const x = await ready(), s = scratch(x), IN = 8 * DESIGN_SIZE;
-  const put = (S) => { s.f64(10, IN).set(S.in); return s.at + IN; };
+  const put = (S) => { s.f64(S.in.length, IN).set(S.in); return s.at + IN; };
   const BAND = ['n', 'lo', 'hi', 'mid', 'growth', 'AM', 'sheds'];
   const band = (a) => { const b = {}; BAND.forEach((k, i) => { b[k] = a[i]; }); b.sheds = b.sheds > 0; return b; };
   const ranges = new Map();
   return {
     stringDesign(key, P, { cents = 0, gauge = 1, idx = 0, course = 1 } = {}) {
       const tuning = P.tuning === 'unison' ? 1 : 0, inp = [key, P.n0, tuning, P.unison, P.mass ?? 1, P.q ?? 500, cents, gauge, idx, course];
-      s.f64(10, IN).set(inp);
+      for (let pc = 0; pc < 12; pc++) inp.push(tuningRatio(P, 60 + pc)); // the keyboard's tuning, C first
+      s.f64(inp.length, IN).set(inp);
       x.windharp_string_design(s.at + IN, s.at);
       const S = designOf(s.f64(DESIGN_SIZE));
       S.in = inp; // what it was made from, for the model's other functions

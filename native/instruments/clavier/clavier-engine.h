@@ -89,6 +89,7 @@ class ClavierEngine : public Engine {
   std::array<double, p::count> P{};
   bool hasParams = false, space = false;
   int version = 0;
+  Tuning tuning; // the keyboard's, as the strings were last tuned to it
   double bendNow = 0, chanPressure = 0;
   double k, lpF, lpFall, lpM, killDecay;
   ToneBiquad tone{};

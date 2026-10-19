@@ -5,6 +5,7 @@
 import { GROUPS, DEFAULTS, CONSOLE } from './organ-params.js';
 import { DRAWBARS } from './tonewheels.js';
 import { wasmEngine, scratch } from '../../shared/wasm.js';
+import { tuningRatio } from '../../shared/tuning.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'organ', name: 'OrganWasmEngine', groups: GROUPS, console: CONSOLE, binary: () => new URL('../wasm/organ.wasm', import.meta.url).href };
@@ -57,7 +58,7 @@ export const ready = () => OrganWasmEngine.ready();
 // wheel's frequency on its gears, in equal temperament and between them; wheelSpec(w) { pc, octave,
 // teeth, gear }; keyWheel(key, d) and percWheel(key, third), the wheel a drawbar or the percussion
 // taps; drawbarGain(n); keyAnalysis(key, P), the nine tones a key sounds against the harmonic
-// series, with their levels; wheelLevelDb(w), wireOhms(key, d), filterGain(w, ratio, drift) and
+// series, with their levels (in the keyboard's tuning, P's pitch and temperament); wheelLevelDb(w), wireOhms(key, d), filterGain(w, ratio, drift) and
 // pickupHarmonics(w, relief) { h2, h3 }, the generator and its wiring; leslieGeometry(p) { wall, micDist }, the cabinet's rear wall and the microphones' distance.
 export async function wasmModel() {
   const x = await ready(), s = scratch(x);
@@ -75,7 +76,8 @@ export async function wasmModel() {
       return { w, pc, octave, teeth, gear: [driving, driven] };
     },
     keyAnalysis(key, P) {
-      x.organ_key_analysis(key, TUNING[P.tuning] ?? 0, LEVELS[P.levels] ?? 0, P.mains, s.at);
+      s.f64(12, 54 * 8).set(Array.from({ length: 12 }, (_, pc) => tuningRatio(P, 60 + pc))); // the keyboard's tuning, C first
+      x.organ_key_analysis(key, TUNING[P.tuning] ?? 0, LEVELS[P.levels] ?? 0, P.mains, s.at + 54 * 8, s.at);
       const a = s.f64(54);
       return DRAWBARS.map(({ name }, d) => ({ d, name, w: a[6 * d], actual: a[6 * d + 1], ideal: a[6 * d + 2], cents: a[6 * d + 3], folded: a[6 * d + 4] > 0, db: a[6 * d + 5] }));
     },

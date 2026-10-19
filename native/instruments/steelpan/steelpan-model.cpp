@@ -49,7 +49,9 @@ double ringTime(int key, double t60C4) { return t60C4 * std::sqrt(C4 / keyFreq(k
 
 NoteModes noteModes(int key, const double *P, double fmax) {
   NoteModes out;
-  const double f1 = keyFreq(key), r = P[p::aspect];
+  // the note: equal temperament × the keyboard's tuning (forte/tuning.h); the pan's own tuning
+  // (below) sets its partials over that
+  const double f1 = keyFreq(key) * tuningOf(P).ratio(key), r = P[p::aspect];
   const int tuning = (int)P[p::tuning];
   double r2 = 2, r3 = tuning == tuning_::double_ ? 4 : 3;
   if (tuning == tuning_::raw) { r2 = plateRatio(2, 1, r); r3 = plateRatio(1, 2, r); }

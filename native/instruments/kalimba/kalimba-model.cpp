@@ -112,7 +112,7 @@ double bridgeX(int key) {
 Tine tineOf(int key, const double *P) {
   const TineShape &s = tineShape(P[p::back]);
   Tine t;
-  t.f1 = keyFreq(key);
+  t.f1 = keyFreq(key) * tuningOf(P).ratio(key); // the note: equal temperament × the keyboard's tuning (forte/tuning.h)
   t.t = P[p::thick] / 1000;
   t.mu = RHO_STEEL * TINE_WIDTH * t.t;
   t.EI = E_STEEL * TINE_WIDTH * t.t * t.t * t.t / 12;

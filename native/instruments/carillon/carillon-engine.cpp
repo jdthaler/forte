@@ -33,6 +33,7 @@ void CarillonEngine::setParams(const double *p) {
   const bool first = !hasParams;
   for (int i = 0; i < p::count; i++) P[i] = p[i];
   hasParams = true;
+  tuning = tuningOf(P.data());
   T_asym = P[p::asym] / 100; T_distance = P[p::distance];
   if (first) { S_asym = T_asym; S_distance = T_distance; }
   for (int i = 0; i < nVoices; i++) { Voice &v = pool[order[i]]; coefs(v, false); gains(v, false); } // losses, listener: at once (gains glide)
@@ -62,8 +63,8 @@ int CarillonEngine::newVoice(int key) {
     nVoices--;
   }
   Voice &v = pool[slot];
-  v.key = key; v.profile = (int)P[p::profile]; v.historicAmount = P[p::historic];
-  bellOf(key, v.profile, v.historicAmount, v.bell);
+  v.key = key; v.profile = (int)P[p::profile]; v.historicAmount = P[p::historic]; v.ratio = tuning.ratio(key);
+  bellOf(key, v.profile, v.historicAmount, v.bell, v.ratio);
   v.nModes = bellModes(v.bell, P.data(), v.modes);
   // resonators: one per m = 0 mode, two (the doublet) per m ≥ 1 mode
   int N = 0;
@@ -309,7 +310,7 @@ void CarillonEngine::noteOn(int key, double velocity) {
   const int profile = (int)P[p::profile];
   const double hist = P[p::historic];
   int slot = byKey[key - KEY_MIN];
-  if (slot < 0 || pool[slot].dead || pool[slot].fading || pool[slot].profile != profile || pool[slot].historicAmount != hist) {
+  if (slot < 0 || pool[slot].dead || pool[slot].fading || pool[slot].profile != profile || pool[slot].historicAmount != hist || pool[slot].ratio != tuning.ratio(key)) {
     if (slot >= 0 && !pool[slot].dead) pool[slot].fading = true; // a different bell now hangs there: the old one fades out
     slot = newVoice(key);
     byKey[key - KEY_MIN] = slot;

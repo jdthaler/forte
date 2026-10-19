@@ -29,10 +29,17 @@ static const double DEAD = fd::pow(10, -6.5); // and the voice when its whole po
 
 static double voicing(int key) { return fd::pow(2, (60 - key) / 48.0); }
 
-// the stars' version: the kind, mass and speed-up that build them
+// the stars' version: the kind, mass and speed-up that build them, and the keyboard's tuning (its
+// root only in a temperament other than equal, its custom cents only in custom: stars-wasm.js
+// starId names a star by the same values)
 static uint64_t versionOf(const double *P) {
   uint64_t h = 1469598103934665603ull;
-  for (double v : {P[p::family], P[p::mass], P[p::speedup]}) {
+  const int t = (int)P[p::temperament];
+  const bool tempered = t != forte::temperament::equal, custom = t == forte::temperament::custom;
+  const double c = custom ? 1 : 0;
+  for (double v : {P[p::family], P[p::mass], P[p::speedup], P[p::pitch], P[p::temperament], tempered ? P[p::tuningRoot] : 0,
+                   c * P[p::cents1], c * P[p::cents2], c * P[p::cents3], c * P[p::cents4], c * P[p::cents5], c * P[p::cents6],
+                   c * P[p::cents7], c * P[p::cents8], c * P[p::cents9], c * P[p::cents10], c * P[p::cents11]}) {
     v += 0.0;
     uint64_t b;
     std::memcpy(&b, &v, 8);
@@ -247,6 +254,7 @@ StarEngine::StarEngine(double fs)
           sp.family = (int)s.family.load(std::memory_order_relaxed);
           sp.mass = s.mass.load(std::memory_order_relaxed);
           sp.speedup = s.speedup.load(std::memory_order_relaxed);
+          for (int i = 0; i < 12; i++) sp.tuning.r[i] = s.ratio[i].load(std::memory_order_relaxed);
           std::atomic_thread_fence(std::memory_order_acquire);
           if (s.version.load(std::memory_order_relaxed) != v) return nullptr;
           return std::make_unique<Star>(keyStar(key, sp));
@@ -313,6 +321,8 @@ void StarEngine::setParams(const double *np) {
       s.family.store(P[p::family], std::memory_order_relaxed);
       s.mass.store(P[p::mass], std::memory_order_relaxed);
       s.speedup.store(P[p::speedup], std::memory_order_relaxed);
+      const forte::Tuning tu = tuningOf(P.data());
+      for (int i = 0; i < 12; i++) s.ratio[i].store(tu.r[i], std::memory_order_relaxed);
       s.version.store(version, std::memory_order_release);
     }
     data.prepare(version, KEY_LO, KEY_HI, focus ? focus->key : 60);

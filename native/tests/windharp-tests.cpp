@@ -191,6 +191,26 @@ TEST("windharp: a block of any length plays as the JavaScript takes it (up to 51
   }
 }
 
+TEST("windharp: the top strings in a strong wind step several times a sample: C7 and E7 at A = 466 Hz, 8 m/s with 30 % gusts and full aftertouch (E7 at 18 m/s: Ω h 3 at 44.1 kHz, 6 at 22.05 kHz, beyond even 8 steps a sample), stay finite and bounded, their wakes under 3 × the van der Pol swing") {
+  for (double fs : {22050.0, 44100.0, 48000.0}) for (int block : {7, 128}) {
+    auto P = defaults();
+    P[p::wind] = 8; P[p::gust] = 0.3; P[p::pitch] = 8; // A = 466 Hz
+    auto e = std::make_unique<WindHarpEngine>(fs);
+    e->setParams(P.data());
+    e->Uw = 8;
+    e->pressure(1, -1);
+    e->noteOn(96, 0.7);
+    e->noteOn(100, 0.7);
+    e->pressure(1, 100); // E7 blows harder still: 18 m/s
+    double pk = 0;
+    CHECK(render(*e, 2, block, &pk));
+    CHECK(pk < 4);
+    double q = 0;
+    for (int key : {96, 100}) if (const auto *v = voiceOf(*e, key)) for (int i = 0; i < v->ns; i++) for (int j = 0; j < v->strings[i].J; j++) q = std::max(q, std::fabs(v->strings[i].q[j]));
+    CHECK(q > 1 && q < 6);
+  }
+}
+
 TEST("windharp: the views' messages: the focused string's modes and wake, the sounding keys, the summary last") {
   const double fs = 48000;
   auto P = defaults();

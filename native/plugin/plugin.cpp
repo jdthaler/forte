@@ -27,6 +27,7 @@
 #include "forte/denormals.h"
 #include "forte/guard.h"
 #include "forte/queue.h"
+#include "forte/tuning.h"
 #include "presets.h"
 #ifdef FORTE_EDITOR
 #include "editor.h"
@@ -393,6 +394,10 @@ struct Plugin : Instance {
   //   loadPreset(file, index)   plays one: every parameter (not Preset); { ok, error }
   //   savePreset(name)    saves the parameters as one: { ok, file, error }
   //   showPresets()       opens their folder
+  //   scalas()            the Scala files in the Tunings folder (presets.h): { folder, list: [file…] }
+  //   loadScala(file)     one of them sets the custom temperament: { ok, name, error }
+  //   showScalas()        opens that folder
+  int paramIndex(const char *id) const { for (int i = 0; i < I.paramCount; i++) if (!std::strcmp(I.params[i].id, id)) return i; return -1; }
   ParamInfo infoOf(int i) const { return i < I.paramCount ? I.params[i] : i == presetAt ? presetParam() : touchParam(); }
   double along(int i, double v) const { const ParamInfo p = infoOf(i); return p.kind == ParamKind::continuous ? toNormalized(p, v) : v; }
   std::string text(int i, double v) const {
@@ -532,6 +537,41 @@ struct Plugin : Instance {
       return r;
     }
     if (m == "showPresets") return createBool(showFolder(presetsFolder(I)));
+    if (m == "scalas") { // the Scala files in the Tunings folder (presets.h)
+      Value list = createEmptyArray();
+      for (const std::string &f : listScalas()) list.addArrayElement(f);
+      Value r = createObject("");
+      r.addMember("folder", tuningsFolder());
+      r.addMember("list", list);
+      return r;
+    }
+    if (m == "loadScala") { // one of them: the custom temperament becomes its scale (forte/tuning.h)
+      double cents[kCustomCents];
+      std::string name, error;
+      const int temper = paramIndex("temperament");
+      bool ok = temper >= 0 && readScalaFile(text(1), cents, name, error);
+      if (temper < 0) error = "This instrument has no temperament.";
+      if (ok) {
+        const ParamInfo &t = I.params[temper];
+        int custom = -1;
+        for (int k = 0; k < t.choiceCount; k++) if (t.keys && std::string(t.keys[k]) == "custom") custom = k;
+        auto put = [&](int i, double v) { shown[i] = v; sent[i] = NAN; toAudio({UiEvent::param, (int16_t)i, v}); };
+        if (custom < 0) { ok = false; error = "This instrument has no custom temperament."; }
+        else {
+          put(temper, custom);
+          for (int k = 0; k < kCustomCents; k++) {
+            const int i = paramIndex(("cents" + std::to_string(k + 1)).c_str());
+            if (i >= 0) put(i, constrain(I.params[i], cents[k]));
+          }
+        }
+      }
+      Value r = createObject("");
+      r.addMember("ok", ok);
+      r.addMember("name", name);
+      r.addMember("error", error);
+      return r;
+    }
+    if (m == "showScalas") return createBool(showFolder(tuningsFolder()));
     return {};
   }
 

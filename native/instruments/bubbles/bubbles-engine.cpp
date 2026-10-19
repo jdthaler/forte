@@ -25,10 +25,12 @@ constexpr int EV_MAX = 48;           // release events posted per block at most
 BubbleEngine::BubbleEngine(double fs, uint32_t seed, int pool, int soft) : Engine(fs), rand(seed) {
   configure(seed, pool, soft);
   for (int i = 0; i < NK; i++) nozzles[i].key = KEY_LO + i;
-  // each nozzle's radius at the default conditions (with "keep in tune", cached per condition version)
-  const Env def = defaultEnv();
+  // each nozzle's radius at the default conditions, cut for its key's note in the keyboard's tuning
+  // (equal temperament until it changes: cached per tuning version), and with "keep in tune"
+  // re-sized for the conditions (cached per condition version)
+  def = defaultEnv();
   for (int i = 0; i < NK; i++) Rnom[i] = tuneRadius(keyFreq(KEY_LO + i), def);
-  tuneVer.fill(-1);
+  tuneVer.fill(-1); nomVer.fill(0);
   for (int i = 0; i < NK; i++) { double g[2]; hydrophoneGains(KEY_LO + i, g); gainL[i] = g[0]; gainR[i] = g[1]; }
   env = def;
 }
@@ -46,6 +48,8 @@ void BubbleEngine::setParams(const double *p) {
   const bool changed = !hasParams || P[p::depth] != p[p::depth] || P[p::pressure] != p[p::pressure] || P[p::gas] != p[p::gas]
                        || P[p::liquid] != p[p::liquid] || P[p::keepInTune] != p[p::keepInTune];
   for (int i = 0; i < p::count; i++) P[i] = p[i];
+  const forte::Tuning t = tuningOf(P.data());
+  if (!(t == tuning)) { tuning = t; nomV++; ver++; } // every nozzle re-cut for the new tuning
   env = nozzleEnv(P.data());
   pTarget = P[p::pressure] * P_ATM;
   if (!hasParams) pT = pTarget;
@@ -98,8 +102,12 @@ double BubbleEngine::interval(const Nozzle &z) {
 }
 
 double BubbleEngine::radius(int i) {
-  if (!P[p::keepInTune]) return Rnom[i];
-  if (tuneVer[i] != ver) { Rtune[i] = tuneRadius(keyFreq(KEY_LO + i), env); tuneVer[i] = ver; }
+  const int key = KEY_LO + i;
+  if (!P[p::keepInTune]) {
+    if (nomVer[i] != nomV) { Rnom[i] = tuneRadius(keyFreq(key) * tuning.ratio(key), def); nomVer[i] = nomV; }
+    return Rnom[i];
+  }
+  if (tuneVer[i] != ver) { Rtune[i] = tuneRadius(keyFreq(key) * tuning.ratio(key), env); tuneVer[i] = ver; }
   return Rtune[i];
 }
 

@@ -18,7 +18,7 @@ constexpr double BEND_T = 0.02;        // s: the pitch wheel's glide
 constexpr double AFTER = 0.5;          // full aftertouch raises the wind by this fraction
 constexpr int POST_BLOCKS = 4;         // post the views' data every 4 blocks
 constexpr double LINE_LO = 0.002, LINE_HI = 0.015; // the free wake's relative line width (FWHM) for Re ≤ 180 and Re ≥ 1000
-constexpr double WH_MAX = 0.4;         // a string steps at 1/2 or 1/4 of the sample rate while ω h stays under this
+constexpr double WH_MAX = 0.4;         // a string steps at 1/2 or 1/4 of the sample rate while ω h stays under this, and 2, 4 or 8 times a sample where its wake's Ω h would pass it
 constexpr double PI = std::numbers::pi;
 using fdlibm::exp;
 using fdlibm::pow;
@@ -71,8 +71,10 @@ double WindHarpEngine::gauss() { double s = 0; for (int k = 0; k < 4; k++) s += 
 void WindHarpEngine::setParams(const double *p) {
   for (int i = 0; i < p::count; i++) P[i] = p[i];
   const double dk[4] = {P[p::n0], P[p::tuning], P[p::unison], P[p::mass]};
-  if (!hasParams || dk[0] != designKey[0] || dk[1] != designKey[1] || dk[2] != designKey[2] || dk[3] != designKey[3]) {
+  const forte::Tuning kb = tuningOf(P);
+  if (!hasParams || dk[0] != designKey[0] || dk[1] != designKey[1] || dk[2] != designKey[2] || dk[3] != designKey[3] || !(kb == designKeyboard)) {
     for (int i = 0; i < 4; i++) designKey[i] = dk[i];
+    designKeyboard = kb;
     version++;
   }
   hasParams = true;
@@ -129,16 +131,32 @@ void WindHarpEngine::tension(Str &s, double r) {
 
 // the wind-dependent numbers at wind U (end of this block), the shutter moving from x0 to x1, and the modes' coefficients
 void WindHarpEngine::prepare(Str &s, double U, int n, double x0, double x1, double target) {
-  // the step: D samples (a block that D does not divide is stepped sample by sample)
-  const int D = n % s.Dmax == 0 ? s.Dmax : 1;
-  if (D != s.D) { s.D = D; s.hs = h * D; s.zetaAt = -1; }
   const StringDesign &S = s.S;
-  const double hh = s.hs;
   const int J = s.J;
-  n /= D;
   // the shedding at this wind (as shedding() in the model)
   const double Uu = std::max(U, 0.05), Re = (Uu * S.D) / AIR.nu, rOn = onset(Re);
   const double Om = (TAU * strouhal(Re) * Uu) / S.D / vdpKappa(WAKE.eps * jmax(rOn, 0));
+  // the step: D samples (a block that D does not divide is stepped sample by sample); at the full
+  // rate, 1/M of a sample, as few as keep the wake's Ω h (at either end of the block) under WH_MAX.
+  // The leapfrog's linear part is prewarped, but its limit cycle runs 0.021 (Ω h)² fast (0.34 % at
+  // 0.4, 5 % at 1.2), its swing strays from 2√r past Ω h ≈ 0.8, and its damping (the mean of the old
+  // and new velocity) reverses the wake instead of stopping it where εΩ(q² − r)h/2 passes 1, which
+  // from Ω h ≈ 1.2 the limit cycle itself reaches: a C7 string at 12 m/s, 44.1 kHz went to NaN.
+  // (A decimated string's shedding stays under 0.3 by its choice of Dmax, even with full aftertouch.)
+  const int D = n % s.Dmax == 0 ? s.Dmax : 1;
+  int M = 1;
+  if (D == 1) { const double wh = std::max(Om, s.Om) * h; while (M < SUB_MAX && wh > WH_MAX * M) M *= 2; }
+  if (D != s.D || M != s.M) {
+    const double h1 = (h * D) / M;
+    if (s.started) { // the ramps start from the last block's ends, taken at the new step
+      const double sw0 = fdlibm::sin(0.5 * s.Om * h1);
+      s.k0[0] = (4 / (h1 * h1)) * sw0 * sw0;
+      s.k0[4] *= std::sqrt(h1 / s.hs);
+    }
+    s.D = D; s.M = M; s.hs = h1; s.zetaAt = -1;
+  }
+  const double hh = s.hs;
+  n = (n / D) * M;
   const double open = x0, sw = fdlibm::sin(0.5 * Om * hh), line = LINE_LO + (LINE_HI - LINE_LO) * std::min(1.0, std::max(0.0, (Re - 180) / 820));
   double *k1 = s.k1;
   k1[0] = (4 / (hh * hh)) * sw * sw;
@@ -182,11 +200,13 @@ void WindHarpEngine::ring(Str &s, int n) {
   }
 }
 
-// run a block of n samples: n/D steps of its own, then back to the sample rate (linear interpolation)
+// run a block of n samples: n/D (or nM) steps of its own, then back to the sample rate (linear
+// interpolation, or each sample's last step)
 void WindHarpEngine::run(Str &s, int n) {
-  const int D = s.D, ns = n / D;
+  const int D = s.D, M = s.M, ns = (n / D) * M;
   if (quiet(s)) ring(s, ns); else step(s, ns);
-  if (D == 1) { for (int i = 0; i < n; i++) { fb[i] = fbs[i]; dip[i] = dips[i]; } }
+  if (D == 1 && M == 1) { for (int i = 0; i < n; i++) { fb[i] = fbs[i]; dip[i] = dips[i]; } }
+  else if (M > 1) { for (int i = 0, k = M - 1; i < n; i++, k += M) { fb[i] = fbs[k]; dip[i] = dips[k]; } }
   else {
     double f0 = s.fbLast, d0 = s.dipLast;
     int i = 0;
@@ -228,13 +248,14 @@ void WindHarpEngine::step(Str &s, int n) {
       ya[j] = so + se; ya[J - 1 - j] = so - se;
     }
     if (odd) { double so = 0; for (int k = 0; k < No; k++) so += phiMid[2 * k] * accO[k]; ya[Jh] = so; }
-    // 3. the wake at each station (leapfrog; damping by the mean of old and new velocity; turbulence)
+    // 3. the wake at each station (leapfrog; damping by the mean of old and new velocity, which
+    // where it would reverse the velocity within the step (c > 1) stops it instead; turbulence)
     double lift = 0;
     for (int j = 0; j < J; j++) {
       const double ej = e[j] + de[j]; e[j] = ej;
       rs ^= rs << 13; rs ^= rs >> 17; rs ^= rs << 5;
       const double qj = q[j], c = eO * (qj * qj - (ej * r - (1 - ej))) * hh;
-      const double vj = (qv[j] * (1 - c) + hs * (Ad * ej * ya[j] - Ow2 * qj) + nz * ej * (rs * U32 - 0.5)) / (1 + c);
+      const double vj = (qv[j] * (c > 1 ? 0 : 1 - c) + hs * (Ad * ej * ya[j] - Ow2 * qj) + nz * ej * (rs * U32 - 0.5)) / (1 + c);
       qv[j] = vj;
       const double qn = qj + hs * vj; q[j] = qn;
       ya[j] = ej * qn; lift += ya[j]; // ya now holds the lift's pattern f_j = e_j q_j
@@ -290,6 +311,7 @@ void WindHarpEngine::noteOn(int key, double velocity) {
     v->used = true; v->key = key; v->version = version;
     DesignParams dp;
     dp.n0 = P[p::n0]; dp.tuning = (int)P[p::tuning]; dp.unison = P[p::unison]; dp.mass = P[p::mass]; dp.q = P[p::q];
+    dp.keyboard = designKeyboard;
     CourseOffset o[COURSE_MAX];
     v->ns = courseOffsets(key, o);
     for (int i = 0; i < v->ns; i++) initString(v->strings[i], key, stringDesign(key, dp, o[i]));

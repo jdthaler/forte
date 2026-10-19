@@ -26,8 +26,8 @@ void StorageRingEngine::Voice::inject(double velocity, const double *P) {
 }
 
 // Queue the next turn's pulse, then go one turn on.
-void StorageRingEngine::Voice::schedule(const double *P, double fs) {
-  const Ring r = ringOf(key, P, press);
+void StorageRingEngine::Voice::schedule(const double *P, const forte::Tuning &tuning, double fs) {
+  const Ring r = ringOf(key, P, press, tuning);
   T = fs / r.frev;
   const Detuning d = detuning(theta, Z);
   const double x = Z * d.amp * chromatic(r.D, phiS) * std::exp(logX) * std::cos(phiB + d.phase);
@@ -55,6 +55,7 @@ StorageRingEngine::StorageRingEngine(double fs) : Engine(fs) { voices.reserve(kM
 
 void StorageRingEngine::setParams(const double *p) {
   for (int i = 0; i < p::count; i++) P[i] = p[i];
+  tuning = tuningOf(P.data());
   hasParams = true;
 }
 
@@ -70,7 +71,7 @@ void StorageRingEngine::noteOn(int key, double velocity) {
   if (!v) {
     Voice nv;
     nv.key = key;
-    nv.T = fs / keyFreq(key);
+    nv.T = fs / (keyFreq(key) * tuning.ratio(key));
     nv.next = 0.5 * nv.T; // the first arrival, half a turn in
     voices.push_back(nv);
     v = &voices.back();
@@ -96,7 +97,7 @@ void StorageRingEngine::process(float *L, float *R, int n) {
     const double dg = mode == 2 ? DELTA / (P[p::size] * std::max(v.Z, 1.0)) : 1;
     for (int i = 0; i < n; i++) {
       const double t = v.t;
-      while (t >= v.next - AHEAD * v.T) v.schedule(P.data(), fs);
+      while (t >= v.next - AHEAD * v.T) v.schedule(P.data(), tuning, fs);
       while (v.count && t > v.pt[v.head] + v.pr[v.head]) { v.head = (v.head + 1) % SLOTS; v.count--; } // pulses gone by
       double s = 0, dsum = 0;
       for (int j = 0, k = v.head; j < v.count; j++, k = (k + 1) % SLOTS) {

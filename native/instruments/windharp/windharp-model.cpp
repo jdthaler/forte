@@ -59,11 +59,11 @@ double diameterFor(double f, double U) {
 
 StringDesign stringDesign(int key, const DesignParams &P, const CourseOffset &o) {
   StringDesign S;
-  const double fNote = keyFreq(key), D = diameterFor(fNote, U_REF) * o.gauge;
+  const double fNote = keyFreq(key) * P.keyboard.ratio(key), D = diameterFor(fNote, U_REF) * o.gauge;
   const double area = (PI * D * D) / 4, ms = NYLON.rho * P.mass * area, mf = AIR.rho * area, m = ms + mf;
   const bool unison = P.tuning == 1;
   const double n0 = unison ? 1 : P.n0;
-  const double target = (unison ? keyFreq(P.unison) : fNote) * pow(2, o.cents / 1200);
+  const double target = (unison ? keyFreq(P.unison) * P.keyboard.ratio(P.unison) : fNote) * pow(2, o.cents / 1200);
   double f0 = target / n0, L = 0, T = 0, B = 0;
   for (int i = 0; i < 40; i++) {
     L = L_REF * pow(f0 / 100, -0.5);

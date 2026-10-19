@@ -1,6 +1,6 @@
 // carillon-web.cpp — the model's functions the page's views call (carillon/src/carillon-wasm.js),
 // and the engine's test hooks (its voices, as the test suite reads them). A bell is named by its
-// key, profile and historic amount (bellOf's arguments); P is indexed as in carillon-params.h.
+// key, profile, historic amount and tuning ratio (bellOf's arguments); P is indexed as in carillon-params.h.
 
 #include "carillon-engine.h"
 #include "forte/web.h"
@@ -8,16 +8,17 @@
 using namespace forte::carillon;
 
 static Bell bell; // the last bell asked for
-static const Bell &bellAt(int key, int profile, double historicAmount) {
-  bellOf(key, profile, historicAmount, bell);
+static const Bell &bellAt(int key, int profile, double historicAmount, double ratio) {
+  bellOf(key, profile, historicAmount, bell, ratio);
   return bell;
 }
 
 extern "C" {
-// bellOf: D, H, mass, fNom, fPrime, strikeHeight, the rib's mode count n, historic (0 or 1), then
-// every mode's frequency (n); a historic bell then has its lnf (n), d (5) and asym (e, psi × 33).
-FORTE_EXPORT void carillon_bell(int key, int profile, double historicAmount, double *out) {
-  const Bell &b = bellAt(key, profile, historicAmount);
+// bellOf (ratio: the keyboard's tuning for the key, 1 at the defaults): D, H, mass, fNom, fPrime,
+// strikeHeight, the rib's mode count n, historic (0 or 1), then every mode's frequency (n); a
+// historic bell then has its lnf (n), d (5) and asym (e, psi × 33).
+FORTE_EXPORT void carillon_bell(int key, int profile, double historicAmount, double ratio, double *out) {
+  const Bell &b = bellAt(key, profile, historicAmount, ratio);
   const int n = b.rib->modeCount;
   const double head[] = {b.D, b.H, b.mass, b.fNom, b.fPrime, b.strikeHeight, (double)n, b.hasHist ? 1.0 : 0.0};
   for (int i = 0; i < 8; i++) out[i] = head[i];
@@ -31,9 +32,9 @@ FORTE_EXPORT void carillon_bell(int key, int profile, double historicAmount, dou
 // The rib's index in the table (bell-table.h's RIBS, in bell-table.js's order).
 FORTE_EXPORT int carillon_rib(int key, int profile) { return (int)(&ribFor(profile, key) - RIBS); }
 // bellModes: how many; each j, m, k, name (−1 for none), f, sigma, sigRad, sigInt, eff, reach, rad, kappa.
-FORTE_EXPORT int carillon_bell_modes(int key, int profile, double historicAmount, const double *P, double *out) {
+FORTE_EXPORT int carillon_bell_modes(int key, int profile, double historicAmount, double ratio, const double *P, double *out) {
   static BellMode md[MODES_MAX];
-  const int n = bellModes(bellAt(key, profile, historicAmount), P, md);
+  const int n = bellModes(bellAt(key, profile, historicAmount, ratio), P, md);
   for (int i = 0; i < n; i++) {
     const BellMode &m = md[i];
     const double v[12] = {(double)m.j, (double)m.m, (double)m.k, (double)m.name, m.f, m.sigma, m.sigRad, m.sigInt, m.eff, m.reach, m.rad, m.kappa};
@@ -42,24 +43,24 @@ FORTE_EXPORT int carillon_bell_modes(int key, int profile, double historicAmount
   return n;
 }
 // clapperOf: m, R, K, Es.
-FORTE_EXPORT void carillon_clapper(int key, int profile, double historicAmount, const double *P, double *out) {
-  const Clapper c = clapperOf(bellAt(key, profile, historicAmount), P);
+FORTE_EXPORT void carillon_clapper(int key, int profile, double historicAmount, double ratio, const double *P, double *out) {
+  const Clapper c = clapperOf(bellAt(key, profile, historicAmount, ratio), P);
   out[0] = c.m; out[1] = c.R; out[2] = c.K; out[3] = c.Es;
 }
-FORTE_EXPORT double carillon_clapper_speed(int key, int profile, double historicAmount, const double *P, double velocity) {
-  return clapperSpeed(bellAt(key, profile, historicAmount), P, velocity);
+FORTE_EXPORT double carillon_clapper_speed(int key, int profile, double historicAmount, double ratio, const double *P, double velocity) {
+  return clapperSpeed(bellAt(key, profile, historicAmount, ratio), P, velocity);
 }
 FORTE_EXPORT double carillon_hertz_time(double m, double K, double v) { return hertzTime(m, K, v); }
 // asymmetryOf (with the bell's own, if historic): e, psi.
-FORTE_EXPORT void carillon_asymmetry(int key, int profile, double historicAmount, int m, double eps, double *out) {
-  const Bell &b = bellAt(key, profile, historicAmount);
+FORTE_EXPORT void carillon_asymmetry(int key, int profile, double historicAmount, double ratio, int m, double eps, double *out) {
+  const Bell &b = bellAt(key, profile, historicAmount, ratio);
   const Asymmetry a = asymmetryOf(m, eps, b.hasHist ? &b.hist : nullptr);
   out[0] = a.e; out[1] = a.psi;
 }
 FORTE_EXPORT void carillon_doublet_split(double kappa, double e, double *out) { doubletSplit(kappa, e, out); }
 // struckPartials at `velocity`: how many; each f, a.
-FORTE_EXPORT int carillon_struck_partials(int key, int profile, double historicAmount, const double *P, double velocity, double *out) {
-  return struckPartials(bellAt(key, profile, historicAmount), P, velocity, (Heard *)out);
+FORTE_EXPORT int carillon_struck_partials(int key, int profile, double historicAmount, double ratio, const double *P, double velocity, double *out) {
+  return struckPartials(bellAt(key, profile, historicAmount, ratio), P, velocity, (Heard *)out);
 }
 // strikeNote on n partials (f, a each, at in): f, strength, the curve's length, then the curve.
 FORTE_EXPORT void carillon_strike_note(const double *in, int n, double *out) {

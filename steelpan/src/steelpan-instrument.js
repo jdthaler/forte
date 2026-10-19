@@ -3,6 +3,7 @@
 // plugins (tools/gen-native-params.mjs) all start here. No DOM, no Web Audio.
 
 import { GROUPS, DEFAULTS, PRESETS } from './steelpan-params.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -13,7 +14,7 @@ export const INSTRUMENT = {
   id: 'steelpan',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                     // MIDI keys: all 88, A0–C8
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // A1–F♯6 until Full range opens the rest
   space: 'sustain',                     // Space and CC64: keeps the hands off the notes after key-up

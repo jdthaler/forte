@@ -14,7 +14,21 @@
     {"id":"release","kind":"continuous","min":0.02,"max":2,"def":0.3,"step":0,"log":true},
     {"id":"room","kind":"continuous","min":0,"max":1,"def":0.3,"step":0.01,"log":false},
     {"id":"venue","kind":"choice","def":"room","options":["studio","room","recital","hall","cathedral"]},
-    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false}
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false},
+    {"id":"pitch","kind":"choice","def":440,"options":[440,415,392,422.5,430,435,442,443,466]},
+    {"id":"temperament","kind":"choice","def":"equal","options":["equal","meantone","werckmeister","sixth","kirnberger","vallotti","young","pythagorean","just","custom"]},
+    {"id":"tuningRoot","kind":"choice","def":0,"options":[0,1,2,3,4,5,6,7,8,9,10,11]},
+    {"id":"cents1","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents2","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents3","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents4","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents5","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents6","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents7","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents8","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents9","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents10","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false}
   ],
   "presets": [
     {"name":"Square well, revivals on the beat","values":{}},

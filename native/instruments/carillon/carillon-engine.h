@@ -58,7 +58,7 @@ class CarillonEngine : public Engine {
   };
   struct Voice {
     int key = 0, profile = 0;
-    double historicAmount = 0; // with the profile, which bell hangs there
+    double historicAmount = 0, ratio = 1; // with the profile and the tuning (forte/tuning.h), which bell hangs there
     Bell bell;
     BellMode modes[MODES_MAX];
     int nModes = 0, N = 0;
@@ -98,6 +98,7 @@ class CarillonEngine : public Engine {
   std::unique_ptr<Voice[]> pool;
   std::array<double, p::count> P{};
   bool hasParams = false, sustain = false;
+  Tuning tuning; // the keyboard's: a bell hung at a key is cast for its pitch
   double S_asym = 0, S_distance = 0, T_asym = 0, T_distance = 0; // gliding values and their targets
   int focus = -1, blocks = 0;
   int forcesLen;

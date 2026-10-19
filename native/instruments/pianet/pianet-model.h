@@ -77,7 +77,8 @@ struct KeyReed {
   UnitReed unit;
   double shape(int n, double x) const { return nrm * unit.shape(n, x / L); } // dimensional, x in metres
 };
-KeyReed keyReed(int m, double tipMass, double loss, double fs = 96000);
+// ratio: the keyboard's tuning's for the key (forte/tuning.h), the reed cut to keyFreq(m)·ratio
+KeyReed keyReed(int m, double tipMass, double loss, double fs = 96000, double ratio = 1);
 
 // ---- pickups -----------------------------------------------------------------------------------
 inline double voicing(int m) { return std::sqrt(261.63 / keyFreq(m)); }
@@ -146,7 +147,7 @@ struct Simulation {
   std::vector<double> t, h, face, yc, y, F, a, q;
 };
 Simulation simulatePluck(int m, double tipMass, double loss, const PadParams &P, double vel, double fs = 96000, double periods = 6, int frames = 480,
-                         double maxT = 0.4);
+                         double maxT = 0.4, double ratio = 1);
 // Where the pad lets go for one key velocity (stuck: it didn't, and y, F, t are where it stands).
 struct ReleasePoint { double vel, V, y, F, v, t; bool stuck; };
 ReleasePoint releasePoint(const KeyReed &kr, const PadParams &P, double vel, double fs);

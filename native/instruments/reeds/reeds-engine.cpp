@@ -192,9 +192,11 @@ ReedEngine::ReedEngine(double fs)
           if (s.version.load(std::memory_order_acquire) != v) continue;
           const double solder = s.solder.load(std::memory_order_relaxed), strike = s.strike.load(std::memory_order_relaxed),
                        hardness = s.hardness.load(std::memory_order_relaxed);
+          Tuning tuning; // the keyboard's: its ratios are all keyModel and reedVersion read
+          for (int i = 0; i < 12; i++) tuning.r[i] = s.ratio[i].load(std::memory_order_relaxed);
           std::atomic_thread_fence(std::memory_order_acquire);
           if (s.version.load(std::memory_order_relaxed) != v) return nullptr;
-          KeyModel m = keyModel(key, solder, strike, hardness, fs2);
+          KeyModel m = keyModel(key, solder, strike, hardness, fs2, tuning);
           if (!m.reed.ok) return nullptr;
           return std::make_unique<VoiceData>(m.voice);
         }
@@ -249,7 +251,8 @@ void ReedEngine::setParams(const double *np) {
   spk[3].set(Biquad::peak, 900, 1.0, fs, -2.5);   // dip between the lid's baffle step and break-up
   hpA = std::exp((-TAU * 280) / fs);              // open back: front–rear cancellation below ~c/2d
   // a new version of every key's reed: built off the audio thread, nearest the last key first
-  const uint64_t v = reedVersion(P[p::solder], P[p::strike], P[p::hardness], fs2);
+  const Tuning tuning = tuningOf(P.data()); // the keyboard's: every reed is cut to its key's pitch
+  const uint64_t v = reedVersion(P[p::solder], P[p::strike], P[p::hardness], fs2, tuning);
   if (first || v != version) {
     if (v != version) {
       version = v;
@@ -260,6 +263,7 @@ void ReedEngine::setParams(const double *np) {
       s.solder.store(P[p::solder], std::memory_order_relaxed);
       s.strike.store(P[p::strike], std::memory_order_relaxed);
       s.hardness.store(P[p::hardness], std::memory_order_relaxed);
+      for (int i = 0; i < 12; i++) s.ratio[i].store(tuning.r[i], std::memory_order_relaxed);
       s.version.store(version, std::memory_order_release);
     }
 #if FORTE_THREADS

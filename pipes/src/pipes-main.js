@@ -6,6 +6,7 @@ import { keyFreq } from '../../shared/dsp.js';
 import { INSTRUMENT } from './pipes-instrument.js';
 import { RANKS, STOPS, CP, AIR, engaged, organName, footage } from './pipes-data.js';
 import { wasmModel } from './pipes-wasm.js';
+import { TUNING_KEEP, tuningCents, tuningRatio } from '../../shared/tuning.js';
 
 // The views draw what the engine plays: the WebAssembly model (the same physics as the engine, in C++).
 const M = await wasmModel();
@@ -23,7 +24,7 @@ new SpectrogramView($('#spectrogram'), { spectrum });
 // to the engine, built by the page's WebAssembly model, so the audio thread never voices them. Built
 // ahead, a key at a time, when the page is idle.
 const packed = new Map();
-const voicing = (P) => `${P.cutup}|${P.gain}|${P.offset}`;
+const voicing = (P) => `${P.cutup}|${P.gain}|${P.offset}|${tuningCents(P).join()}`; // (the pipes are cut for the keyboard's tuning too)
 function keyData(key, P) {
   const id = `${key}|${voicing(P)}`;
   let d = packed.get(id);
@@ -54,7 +55,7 @@ const shell = createShell({
   arrows: { param: 'velocity', step: 0.05 },
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key) => { focus = key; shell.keys.focus?.(key); updateModel(); },
-  onParam: (id) => { if (['cutup', 'gain', 'offset', 'fullRange', '*'].includes(id)) warmUp(); updateModel(); },
+  onParam: (id) => { if (['cutup', 'gain', 'offset', 'fullRange', '*', ...TUNING_KEEP].includes(id)) warmUp(); updateModel(); },
   onMessage: (m) => {
     if (m.type !== 'pipe') return;
     msg = m;
@@ -78,9 +79,9 @@ const mm = (x, d = 1) => `${(x * 1000).toFixed(d)} mm`;
 function updateModel() {
   const P = shell.P, on = engaged(P);
   if (!on[shown]) shown = RANK_ORDER.find((r) => on[r]) ?? 0;
-  const f = M.pipeFreq(focus, shown), stopped = RANKS[shown].stopped;
+  const f = M.pipeFreq(focus, shown, tuningRatio(P, focus)), stopped = RANKS[shown].stopped; // cut for the keyboard's tuning
   model = M.pipeModel(f, stopped, P, { tune: M.tuning(f, stopped) });
-  const name = shown >= 3 ? `Mixture rank ${footage(Math.round(f / keyFreq(focus)))}` : STOPS[RANKS[shown].stop].name;
+  const name = shown >= 3 ? `Mixture rank ${footage(Math.round(M.pipeFreq(focus, shown) / keyFreq(focus)))}` : STOPS[RANKS[shown].stop].name;
   $('#jet-key').textContent = organName(focus);
   $('#jet-read').textContent = `${name}, ${f.toFixed(1)} Hz`;
   const g = model.geo, mk = model.modes.map((m) => ({ f: m.f, alpha: 0.35 + 0.5 * Math.min(1, 40 / m.Q) }));

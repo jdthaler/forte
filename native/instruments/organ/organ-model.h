@@ -8,6 +8,8 @@
 
 #include <cstdint>
 
+#include "forte/tuning.h"
+
 namespace forte::organ {
 
 constexpr int NUM_WHEELS = 91;
@@ -85,14 +87,18 @@ struct Generator {
   double keyHz[NUM_KEYS];
   bool harmonic = false;
 };
-struct GenParams { int tuning = gears, levels = b3; double mains = 60, relief = 0.06, drift = 0, crosstalk = -48, leakage = -70; };
+// keyboard: the keyboard's tuning (forte/tuning.h), on top of the generator's own: wheel w stands
+// for key w + 23 (wheel 46 = A4), so it is retuned by that key's ratio, as if its gears were cut
+// for it, and the mains frequency still scales them all.
+struct GenParams { int tuning = gears, levels = b3; double mains = 60, relief = 0.06, drift = 0, crosstalk = -48, leakage = -70; forte::Tuning keyboard; };
 void buildGenerator(Generator &g, const GenParams &q, double fs);
 
 // For the analysis table: the nine tones a key actually sounds vs. the ideal harmonic series of
 // its 8' pitch, and each tone's level in dB (its wheel's, through its wire; 0 dB is wheel 37
 // through WIRE_REF).
 struct Analysis { int w; double actual, ideal, cents; bool folded; double db; };
-void keyAnalysis(int key, int tuning, int levels, double mains, Analysis out[9]);
+void keyAnalysis(int key, int tuning, int levels, double mains, const forte::Tuning &keyboard, Analysis out[9]);
+constexpr int WHEEL_KEY = 23; // wheel w sounds key w + 23's pitch class and octave (wheel 46 = A4)
 
 // The Leslie cabinet: rotor axis to rear wall; it grows if the horn is made longer, and the mics
 // stay at least MIC_CLEAR outside it.

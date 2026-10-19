@@ -17,6 +17,7 @@ import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../harmonium/src/harmonium-params.js';
 import { fft } from '../tools/audio-util.mjs';
 import { keyFreq } from '../shared/dsp.js';
+import { TUNING_PARAMS, TUNING_KEEP } from '../shared/tuning.js';
 
 const HarmoniumEngine = await loadEngine(INSTRUMENT);
 const { reedModel, threshold, equilibrium, linearRoot, cassotto, gapWidth, rankFreq, modeShape } = await wasmModel();
@@ -246,6 +247,14 @@ test('tuning: every key C2–C7 sounds within ±3 ¢ of equal temperament at the
   for (const k of [85, 90, 96]) check(k, P({ principal: false, piccolo: true }), 4, 48000);
   console.log(`        worst ${worst.toFixed(2)} ¢`);
 });
+test('the keyboard\'s tuning: at A = 415 Hz in ¼-comma meantone (root C), C4, E4 and A4 (8′) sound within ±3 ¢ of 440·2^((m−69)/12)·415/440, C4 +10.26 ¢ and E4 −3.42 ¢ from equal temperament, A4 on the standard (the reeds cut for it)', () => {
+  const p = P({ pitch: 415, temperament: 'meantone', tuningRoot: 0 });
+  for (const [key, off] of [[60, 10.26], [64, -3.42], [69, 0]]) {
+    const f0 = keyFreq(key) * (415 / 440) * 2 ** (off / 1200), r = hold(key, p, 1.0, { opts: { track: true } }), c = cents(freqAt(r.L, f0, Math.round(0.5 * 48000), r.L.length, 48000), f0);
+    assert.ok(Math.abs(cents(rankFreq(key, 1, p), f0)) < 0.01, `key ${key}: the reed's design frequency`);
+    assert.ok(Math.abs(c) < 3, `key ${key}: ${c.toFixed(2)} ¢ from its target`);
+  }
+});
 test('past C2–C7 (Full range): the 8′ from A0 to C8 in tune within ±3 ¢ and speaking within 0.5 s, the 4′ up to G♯7 in tune, the 16′ down to A0 (13.75 Hz) within 5 ¢', () => {
   const check = (key, p, rank) => {
     const long = key < 30, r = hold(key, p, long ? 2.4 : 1.0, { opts: { track: true } }), f0 = rankFreq(key, rank, p);
@@ -406,16 +415,20 @@ test('aliasing: a 2×-integrated C7 and a 1×-integrated G4 keep every inharmoni
   }
 });
 test('stability: seeded random combinations of extreme settings at 44.1 and 48 kHz, changed mid-note, with full aftertouch: no NaN, bounded, dying away after release', () => {
-  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'venue', 'fullRange'].includes(q.id));
+  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'venue', 'fullRange', ...TUNING_KEEP].includes(q.id));
   let seed = 4242, worst = { pk: 0 };
   const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  // the keyboard's tuning drawn apart, from its own sequence, so that the other parameters' combinations stay the ones they were
+  let tseed = 777;
+  const trnd = () => ((tseed = (tseed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  const tune = (p) => { for (const q of TUNING_PARAMS) { if (trnd() < 0.5) continue; p[q.id] = q.options ? q.options[Math.floor(trnd() * q.options.length)][0] : trnd() < 0.5 ? q.min : q.max; } return p; };
   const pick = () => {
     const p = P();
     for (const q of sliders) {
       if (rnd() < 0.5) continue;
       p[q.id] = q.type === 'checkbox' ? rnd() < 0.5 : q.type === 'select' ? q.options[Math.floor(rnd() * q.options.length)][0] : rnd() < 0.5 ? q.min : q.max;
     }
-    return p;
+    return tune(p);
   };
   for (const fs of [44100, 48000]) for (let c = 0; c < 6; c++) {
     const p1 = pick(), p2 = pick(), ev = [];

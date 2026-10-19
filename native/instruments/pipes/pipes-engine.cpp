@@ -36,11 +36,11 @@ void halfband(std::array<double, PipeEngine::FIR_N> &h, double beta = 8) {
 
 // ---- a key's pipes, and their packed form ---------------------------------------------------------
 
-KeyModels keyModels(int key, const Voicing &design) {
+KeyModels keyModels(int key, const Voicing &design, double ratio) {
   KeyModels k;
-  k.key = key; k.design = design;
+  k.key = key; k.design = design; k.ratio = ratio;
   for (int r = 0; r < RANKS; r++) {
-    const double f = pipeFreq(key, r);
+    const double f = pipeFreq(key, r, ratio);
     const bool stopped = RANK[r].stopped;
     ModelOptions o;
     o.tune = tuning(f, stopped);
@@ -51,7 +51,7 @@ KeyModels keyModels(int key, const Voicing &design) {
 
 int packKeyModels(const KeyModels &k, double *out) {
   int n = 0;
-  for (double v : {(double)k.key, k.design.cutup, k.design.gain, k.design.offset}) out[n++] = v;
+  for (double v : {(double)k.key, k.design.cutup, k.design.gain, k.design.offset, k.ratio}) out[n++] = v;
   for (const PipeModel &R : k.pipes) {
     const Geometry &g = R.geo;
     for (double v : {R.f, R.stopped ? 1.0 : 0.0, R.M, R.A, g.W, g.b, g.H, g.y0, g.h, g.dd, g.Sm, g.D, (double)R.nModes}) out[n++] = v;
@@ -64,7 +64,7 @@ bool unpackKeyModels(const double *in, int n, KeyModels &k) {
   int i = 0;
   const auto take = [&](double &v) { if (i >= n) return false; v = in[i++]; return true; };
   double key = 0;
-  if (!take(key) || !take(k.design.cutup) || !take(k.design.gain) || !take(k.design.offset)) return false;
+  if (!take(key) || !take(k.design.cutup) || !take(k.design.gain) || !take(k.design.offset) || !take(k.ratio)) return false;
   k.key = (int)key;
   for (PipeModel &R : k.pipes) {
     R = PipeModel{};
@@ -218,21 +218,29 @@ PipeEngine::PipeEngine(double fs, double fOS)
       data([this](int key, uint64_t ver) -> std::unique_ptr<KeyModels> {
         const Design &d = designs[ver & 15];
         const Voicing v{d.cutup.load(std::memory_order_relaxed), d.gain.load(std::memory_order_relaxed), d.offset.load(std::memory_order_relaxed)};
+        const double ratio = d.ratio[((key % 12) + 12) % 12].load(std::memory_order_relaxed);
 #if !FORTE_THREADS
-        if (offered && offered->key == key && offered->design == v) return std::move(offered);
+        if (offered && offered->key == key && offered->design == v && offered->ratio == ratio) return std::move(offered);
 #endif
-        return std::make_unique<KeyModels>(keyModels(key, v));
+        return std::make_unique<KeyModels>(keyModels(key, v, ratio));
       }),
       wsys(windSystem(0.3)) {
   configure(1, false);
   halfband(fir);
-  // each voice's delay lines: enough for the longest key at the widest cut-up
+  // each voice's delay lines: enough for the longest key at the widest cut-up, in any tuning (a
+  // pipe's line is longest at the lowest pitch of each oversampling band it can fall in)
   const double cutMax = kParams[p::cutup].max;
   for (int k = KEY_MIN; k <= KEY_MAX; k++) {
     size_t need = 0;
     for (int r = 0; r < RANKS; r++) {
-      const double f = pipeFreq(k, r), W = (U_NOM / ((RANK[r].stopped ? THETA_STOPPED : THETA_OPEN) * f)) * cutMax;
-      need += Pipe::lineLength((W / CP) * fs * osFor(f));
+      const double f0 = pipeFreq(k, r);
+      size_t most = 0;
+      for (double f : {f0 * RATIO_MIN, fOS, 3 * fOS}) {
+        if (f < f0 * RATIO_MIN || f > f0 * RATIO_MAX) continue;
+        const double W = (U_NOM / ((RANK[r].stopped ? THETA_STOPPED : THETA_OPEN) * f)) * cutMax;
+        most = std::max(most, (size_t)Pipe::lineLength((W / CP) * fs * osFor(f)));
+      }
+      need += most;
     }
     lineMax = std::max(lineMax, need);
   }
@@ -276,10 +284,12 @@ void PipeEngine::setParams(const double *p) {
   const bool first = !hasParams;
   hasParams = true;
   const Voicing dk{P[p::cutup], P[p::gain], P[p::offset]};
-  if (first || !(dk == design)) {
-    design = dk; version++;
+  const Tuning t = tuningOf(P.data()); // the keyboard's: a change of it cuts new pipes for the next notes
+  if (first || !(dk == design) || !(t == tuning)) {
+    design = dk; tuning = t; version++;
     Design &d = designs[version & 15];
     d.cutup.store(dk.cutup, std::memory_order_relaxed); d.gain.store(dk.gain, std::memory_order_relaxed); d.offset.store(dk.offset, std::memory_order_relaxed);
+    for (int i = 0; i < 12; i++) d.ratio[i].store(t.r[i], std::memory_order_relaxed);
     data.prepare(version, KEY_MIN, KEY_MAX, focus ? focus->key : 60);
   }
   if (!started) { Pset = Pr = Pc = P[p::pressure]; nz = NOISE * P[p::noise]; started = true; }

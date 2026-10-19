@@ -228,12 +228,13 @@ ArcEngine::ArcEngine(double fs, double seed_, bool quiet_, int os)
         // the parameters of that version (a snapshot the audio thread may be rewriting: check)
         for (Snapshot &s : snapshots) {
           if (s.version.load(std::memory_order_acquire) != v) continue;
-          double Q[7];
-          for (int i = 0; i < 7; i++) Q[i] = s.v[i].load(std::memory_order_relaxed);
+          double Q[NS];
+          for (int i = 0; i < NS; i++) Q[i] = s.v[i].load(std::memory_order_relaxed);
           std::atomic_thread_fence(std::memory_order_acquire);
           if (s.version.load(std::memory_order_relaxed) != v) return nullptr;
           ArcParams a;
           a.current = Q[0]; a.gap = Q[1]; a.tau = Q[2]; a.restrike = Q[3]; a.coil = Q[4]; a.coilR = Q[5]; a.tune = (int)Q[6];
+          for (int i = 0; i < 12; i++) { a.tuning.r[i] = Q[7 + i]; if (Q[7 + i] != 1) a.tuning.equal = false; }
           return std::make_unique<double>(capFor(key, a));
         }
         return nullptr;
@@ -300,6 +301,7 @@ void ArcEngine::setParams(const double *np) {
     for (Arc &arc : arcs) arc.rest(o);
   }
   op = arcOp(a);
+  tuning = a.tuning;
   // the capacitors: a new bank, built off the audio thread, nearest the last key first
   const uint64_t v = tuneVersion(bankParams(P.data()));
   if (v != version) {
@@ -309,8 +311,9 @@ void ArcEngine::setParams(const double *np) {
     s.version.store(0, std::memory_order_relaxed);
     std::atomic_thread_fence(std::memory_order_release);
     const ArcParams b = bankParams(P.data());
-    const double Q[7] = {b.current, b.gap, b.tau, b.restrike, b.coil, b.coilR, (double)b.tune};
-    for (int i = 0; i < 7; i++) s.v[i].store(Q[i], std::memory_order_relaxed);
+    double Q[NS] = {b.current, b.gap, b.tau, b.restrike, b.coil, b.coilR, (double)b.tune};
+    for (int i = 0; i < 12; i++) Q[7 + i] = b.tuning.r[i];
+    for (int i = 0; i < NS; i++) s.v[i].store(Q[i], std::memory_order_relaxed);
     s.version.store(version, std::memory_order_release);
 #if FORTE_THREADS
     data.prepare(version, KEY_LO, KEY_HI, focus >= 0 && arcs[focus].nM > 0 ? arcs[focus].mKey[0] : 60);
@@ -352,7 +355,7 @@ double ArcEngine::capOf(int key) {
   if (hasTable && in) return table[i];
   if (const KeyData<double>::Ref r = data.get(key, version)) { lastCap[key] = *r.data; lastVer[key] = version; return *r.data; }
   if (lastVer[key]) return lastCap[key];
-  return kelvinC(keyFreq(key), P[p::coil] * 1e-3);
+  return kelvinC(keyFreq(key) * tuning.ratio(key), P[p::coil] * 1e-3);
 }
 // The engine's step flattens a note as the trapezoidal rule flattens an LC circuit, ω → (2/h)·atan(ωh/2),
 // and the steady-note integration the capacitors are cut with (256 steps a period) by its own, smaller,
@@ -374,7 +377,7 @@ void ArcEngine::noteOn(int key, double) {
     int i = 0; while (i < nStack && stack[i] != key) i++;
     if (i < nStack) { for (int j = i; j + 1 < nStack; j++) stack[j] = stack[j + 1]; nStack--; }
     if (nStack < 128) stack[nStack++] = key;
-    singer.f0t = keyFreq(key);
+    singer.f0t = keyFreq(key) * tuning.ratio(key);
     if (!singer.on || singer.env < 0.01) singer.f0 = singer.f0t;
     singer.on = true;
     return;
@@ -412,7 +415,7 @@ void ArcEngine::noteOff(int key, double) {
   if (mode == mode_::talk) {
     int i = 0; while (i < nStack && stack[i] != key) i++;
     if (i < nStack) { for (int j = i; j + 1 < nStack; j++) stack[j] = stack[j + 1]; nStack--; }
-    if (nStack) singer.f0t = keyFreq(stack[nStack - 1]); else singer.on = false;
+    if (nStack) singer.f0t = keyFreq(stack[nStack - 1]) * tuning.ratio(stack[nStack - 1]); else singer.on = false;
     return;
   }
   for (int k = 0; k < nArcs; k++) { Arc &a = arcs[k]; if (a.holds(key)) { a.release(key); if (!a.held()) a.released = time; } }

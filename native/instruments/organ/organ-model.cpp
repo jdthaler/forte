@@ -121,7 +121,7 @@ void buildGenerator(Generator &g, const GenParams &q, double fs) {
   const double lk = q.leakage <= -89 ? 0 : fd::pow(10, q.leakage / 20);
   g.wheelHz[0] = g.level[0] = g.a2[0] = g.a3[0] = g.xtalk[0] = g.leak[0] = 0;
   g.partner[0] = 0;
-  for (int w = 1; w <= NUM_WHEELS; w++) g.wheelHz[w] = (q.tuning == et ? etFreq(w) : gearFreq(w)) * mains;
+  for (int w = 1; w <= NUM_WHEELS; w++) g.wheelHz[w] = (q.tuning == et ? etFreq(w) : gearFreq(w)) * mains * q.keyboard.ratio(w + WHEEL_KEY);
   for (int w = 1; w <= NUM_WHEELS; w++) {
     // calibrated with new capacitors: a drifted one detunes the filter, and the wheel loses level
     const double filter = b3 ? filterGain(w, 1, q.drift) : 1;
@@ -153,9 +153,9 @@ void buildGenerator(Generator &g, const GenParams &q, double fs) {
   g.harmonic = q.tuning == harmonic;
 }
 
-void keyAnalysis(int key, int tuning, int levels, double mainsHz, Analysis out[9]) {
+void keyAnalysis(int key, int tuning, int levels, double mainsHz, const forte::Tuning &keyboard, Analysis out[9]) {
   const double mains = mainsHz / 60;
-  auto f = [&](int w) { return (tuning == et ? etFreq(w) : gearFreq(w)) * mains; };
+  auto f = [&](int w) { return (tuning == et ? etFreq(w) : gearFreq(w)) * mains * keyboard.ratio(w + WHEEL_KEY); };
   const double f8 = f(keyWheel(key, 2));
   for (int d = 0; d < 9; d++) {
     const int w = keyWheel(key, d);

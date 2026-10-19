@@ -4,6 +4,7 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './rhodes-params.js';
 import { KEY_MIN, KEY_MAX } from './tine.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -11,7 +12,7 @@ export const INSTRUMENT = {
   id: 'tines',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: 88, A0–C8 (the 73-key models: E1–E7)
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine
   midiVelocity: (v) => 0.25 * 20 ** v,  // MIDI velocity / 127 → hammer speed, 0.25 … 5 m/s

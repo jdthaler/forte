@@ -343,6 +343,22 @@ await test('the design tuning: equal temperament; 5-limit just above the tonic; 
   for (let k = INSTRUMENT.range[0]; k <= INSTRUMENT.range[1]; k++) { const d = c(tunedFreq(k, P) / keyFreq(k)); assert.ok(Math.abs(d) <= 33.5 && tunedFreq(k, P) === tunedFreq(k, { ...P }), `key ${k}: ${d}`); dev.push(Math.abs(d)); }
   assert.ok(Math.max(...dev) > 25 && new Set(dev.map((d) => d.toFixed(3))).size > 50, 'every key its own');
 });
+await test('the keyboard\'s tuning, on top of the lamps\': uncoupled, the engine\'s own E4 at A = 415 Hz is 101.27 ¢ low; in ¼-comma meantone E4 −3.42 ¢, C4 +10.26 ¢, A4 at 440 Hz; with just intonation each key takes both, and the page\'s design frequency is the engine\'s', () => {
+  const play = (k, o) => {
+    const e = new HuygensEngine(FS), L = new Float32Array(128), R = new Float32Array(128);
+    e.setParams({ ...DEFAULTS, pitchHold: 0, kick: 0, ...o });
+    e.noteOn(k, 1); // no note data: the engine's own tuning
+    for (let s = 0; s < 1.5 * FS; s += 128) e.process(L, R, 128);
+    return e.report(1.0)[0].f;
+  };
+  const JUST = [1, 16 / 15, 9 / 8, 6 / 5, 5 / 4, 4 / 3, 45 / 32, 3 / 2, 8 / 5, 5 / 3, 9 / 5, 15 / 8];
+  for (const [o, k, want] of [[{ pitch: 415 }, 64, keyFreq(64) * 415 / 440], [{ temperament: 'meantone' }, 64, keyFreq(64) * 2 ** (-3.42 / 1200)],
+    [{ temperament: 'meantone' }, 60, keyFreq(60) * 2 ** (10.26 / 1200)], [{ temperament: 'meantone' }, 69, 440],
+    [{ tuning: 'just', pitch: 415 }, 64, keyFreq(60) * JUST[4] * 415 / 440]]) {
+    assert.ok(Math.abs(c(play(k, o) / want)) < 0.01, `${JSON.stringify(o)}, key ${k}: ${c(play(k, o) / want).toFixed(3)} ¢`);
+    assert.ok(Math.abs(c(tunedFreq(k, { ...DEFAULTS, ...o }) / want)) < 0.01, `${JSON.stringify(o)}, key ${k}: the page's design frequency`);
+  }
+});
 await test('the lock map: with the supply\'s sag vanishing, the simulated points (the engine) find the exact map\'s locks; with sag, they are reproducible', () => {
   const P = { ...DEFAULTS, rSrc: 0 };
   for (let cents = 0; cents <= 1200; cents += 37) {

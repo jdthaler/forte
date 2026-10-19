@@ -81,6 +81,7 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `linalg.js` | `symEig`, `genEig` (generalised symmetric), `cholesky` |
 | `views.js` | `fit`, `css`, `animate`, `SpectrumView` (live spectrum + model markers), `SpectrogramView` (scrolling spectrogram, the markers as ticks), `ScopeView` |
 | `impulses.js` | the rooms: `roomIR` (the pages' original synthetic room) and the venues (`VENUES`: a studio and three halls built from their size, walls and air: image sources, then a tail decaying in each octave in Eyring's time) |
+| `tuning.js`, `tuning-ui.js` | the keyboard's tuning, the same on every instrument and in the plugins (`native/core` `tuning.h`): the pitch standard (A4), the temperament (equal, meantone, the well temperaments, Pythagorean, just, custom) on a root key, and a custom temperament's cents; `readScala` reads a Scala file (`.scl`) into them. `tuning-ui.js` is the pages' *Load a Scala file* button, which `user-presets.js` adds under Temperament. |
 | `registry.js` | the instrument list behind the landing page and the menus |
 | `presets.js`, `user-presets.js` | your own presets and shared links. `presets.js` is the format, the same in the plugins (`native/plugin/presets.cpp`): every parameter of the contract by id, in a versioned file or in a link's fragment. `user-presets.js` adds them to the Presets menu (save, link, a sheet to play, link, save to a file, delete and open files); the shell attaches it, and a page with its own state calls `attachPresets` with how to get and set its parameters by contract id (the organ's console is `CONSOLE.get` and `CONSOLE.put`). |
 | `midi.js` | Web MIDI for every page (the shell and the five older pages): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen next to Enable MIDI, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling. |
@@ -191,7 +192,11 @@ Rules of thumb:
 ```
 
 `type: 'select'` with `options: [[value, label], …]`, or `type: 'checkbox'`.
-`showIf: (P) => …` hides a control when it is irrelevant. Keep `volume`
+`showIf: (P) => …` hides a control when it is irrelevant. End `GROUPS` with `TUNING_GROUP`
+(`shared/tuning.js`: pitch, temperament, its root and the custom cents) and keep its ids
+(`...TUNING_KEEP` in `keep`), and make the model's pitch target each key's equal-tempered
+frequency times `tuningOf(P).ratio(key)` (the generated `<slug>-params.h`; see The native port).
+Keep `volume`
 (0–2, def ≈ 0.8) and `room` (0–1) in an *Output* group, with `VENUE`
 (`shared/chain.js`, the room's space) right after `room`, in `keep` and
 as the chain's `venue`. Keep `velocity`
@@ -386,6 +391,14 @@ sends it with the note (its `noteData`), as the vibraphone's bars and the piano'
 (`vibraphone/src/vibraphone-wasm.js`; the piano also offers every key's ahead of its notes, for its
 sympathetic strings). The views call the WebAssembly model, which the page awaits before drawing
 (`const model = await wasmModel()`).
+
+Every instrument follows the keyboard's tuning (`forte/tuning.h`): its `<slug>-params.h` has
+`tuningOf(P)`, whose `ratio(key)` is the key's frequency over equal temperament's at A = 440 Hz,
+exactly 1 at the defaults. Multiply the key's pitch target by it (a string's tension, a bar's cut,
+a bell's profile then follow as they do for its note), leave what designs the instrument from the
+key number alone, and rebuild the per-key data when the tuning changes. `test/tuning-tests.mjs`
+plays every instrument retuned (A = 415 Hz, and a custom temperament) and checks it moves by the
+cents its tuning gives, and not at all at the defaults.
 
 Strings that share a bridge can ring along with one another through `forte/sympathetic.h`: each
 key's (or string's) lowest partials as a group, driven by the bridge signal of every voice and

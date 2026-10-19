@@ -4,6 +4,7 @@
 
 import { GROUPS } from './sync-params.js';
 import { wasmEngine, scratch } from '../../shared/wasm.js';
+import { tuningRatio } from '../../shared/tuning.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'huygens', name: 'HuygensWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/huygens.wasm', import.meta.url).href };
@@ -88,12 +89,12 @@ export class HuygensWasmEngine extends Base {
 export const ready = () => HuygensWasmEngine.ready();
 
 // The model's functions (huygens-model.cpp's tunedFreq, deltaOf and lockRatio), computed by the
-// WebAssembly, and its engine for the lock map's simulated points.
+// WebAssembly (tunedFreq in the keyboard's tuning too, as the engine composes it), and its engine for the lock map's simulated points.
 export async function wasmModel() {
   const x = await ready(), s = scratch(x);
   return {
     Engine: HuygensWasmEngine,
-    tunedFreq: (m, P) => x.huygens_tuned_freq(m, P.tuning === 'just' ? 1 : 0, +P.tonic || 0, P.mistune),
+    tunedFreq: (m, P) => x.huygens_tuned_freq(m, P.tuning === 'just' ? 1 : 0, +P.tonic || 0, P.mistune) * tuningRatio(P, m),
     deltaOf: (kick, vNom, vStrike, vExt) => x.huygens_delta(kick, vNom, vStrike, vExt),
     lockRatio(r, delta, maxFirings = 100000) {
       if (!x.huygens_lock_ratio(r, delta, maxFirings, s.at)) return null;

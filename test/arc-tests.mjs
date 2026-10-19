@@ -239,6 +239,16 @@ test('capacitors cut by Kelvin\'s formula: every note sounds flat, by 1 % at the
   assert.ok(sh[3] > 0.007 && sh[3] < 0.015, `C6 ${(sh[3] * 100).toFixed(2)} % flat`);
   for (let k = 1; k < sh.length; k++) assert.ok(sh[k] < sh[k - 1] + 1e-3, `${sh.map((v) => (v * 100).toFixed(2))} %`);
 });
+test('the keyboard\'s tuning: at A = 415 Hz (the page\'s bank) and in ¼-comma meantone (the engine\'s own) each capacitor is cut for its tuned note, within 1 cent', () => {
+  const want = { 415: [[64, 440 * 2 ** (-5 / 12) * 415 / 440], [60, 440 * 2 ** (-9 / 12) * 415 / 440]], meantone: [[64, keyFreq(64) * 2 ** (-3.42 / 1200)], [60, keyFreq(60) * 2 ** (10.26 / 1200)], [69, 440]] };
+  for (const [what, keys] of Object.entries(want)) {
+    const p = what === '415' ? P({ pitch: 415 }) : P({ temperament: 'meantone' });
+    for (const [key, f0] of keys) {
+      const { L } = run(what === '415' ? { ...p, table: table(p) } : p, [[0, 'on', key]], 0.75), f = freqAt(L, f0, 14400, 36000);
+      assert.ok(Math.abs(cents(f, f0)) < 1, `${what}, ${noteName(key)}: ${f.toFixed(3)} Hz, ${cents(f, f0).toFixed(2)} ¢ from ${f0.toFixed(3)}`);
+    }
+  }
+});
 test('a quick tune on one arc: every note of a detached melody speaks, in tune', () => {
   const p = P(), kc = table(p), notes = [67, 67, 69, 66, 67, 69, 71, 71, 72, 71, 69, 67], d = 0.32, gap = 0.04;
   const ev = notes.flatMap((k, i) => [[0.05 + i * d, 'on', k], [0.05 + (i + 1) * d - gap, 'off', k]]);

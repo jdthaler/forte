@@ -73,9 +73,10 @@ export async function wasmModel() {
   const prof = (p) => Math.max(0, PROFILES.indexOf(p));
   const out = (n) => s.f64(n, OUT);
   const model = {
-    bellOf(key, profile = 'minor', historicAmount = 0) {
+    // ratio: the keyboard's tuning for the key (shared/tuning.js tuningRatio), which the bell is cast for
+    bellOf(key, profile = 'minor', historicAmount = 0, ratio = 1) {
       const pi = prof(profile);
-      x.carillon_bell(key, pi, historicAmount, s.at + OUT);
+      x.carillon_bell(key, pi, historicAmount, ratio, s.at + OUT);
       const head = out(8), n = head[6], all = out(8 + n + (head[7] ? n + 5 + 66 : 0)).slice();
       let at = 8;
       const take = (k) => Array.from(all.subarray(at, (at += k)));
@@ -84,11 +85,11 @@ export async function wasmModel() {
       if (head[7]) {
         const lnf = take(n), d = take(5), a = take(66);
         // (bell: whose it is, for asymmetryOf)
-        hist = { lnf, d, asym: Array.from({ length: 33 }, (_, m) => ({ e: a[2 * m], psi: a[2 * m + 1] })), bell: [key, pi, historicAmount], memo: new Map() };
+        hist = { lnf, d, asym: Array.from({ length: 33 }, (_, m) => ({ e: a[2 * m], psi: a[2 * m + 1] })), bell: [key, pi, historicAmount, ratio], memo: new Map() };
       }
       return {
         key, profile, rib: BELL_TABLE.ribs[x.carillon_rib(key, pi)], D: head[0], H: head[1], mass: head[2], fNom: head[3], fPrime: head[4], f, hist,
-        strikeHeight: head[5], args: [key, pi, historicAmount],
+        strikeHeight: head[5], args: [key, pi, historicAmount, ratio],
       };
     },
     bellModes(b, P) {
@@ -113,7 +114,7 @@ export async function wasmModel() {
     asymmetryOf(m, eps, hist) {
       const id = `${m}|${eps}`, memo = hist?.memo;
       if (memo?.has(id)) return memo.get(id); // (the views ask for every resonator, every frame)
-      x.carillon_asymmetry(...(hist ? hist.bell : [60, 0, 0]), m, eps, s.at + OUT);
+      x.carillon_asymmetry(...(hist ? hist.bell : [60, 0, 0, 1]), m, eps, s.at + OUT);
       const [e, psi] = out(2), a = { e, psi };
       if (memo) { if (memo.size > 512) memo.clear(); memo.set(id, a); }
       return a;

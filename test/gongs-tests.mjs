@@ -17,6 +17,7 @@ import { wasmModel } from '../gongs/src/gongs-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../gongs/src/gongs-params.js';
 import { keyFreq } from '../shared/dsp.js';
+import { TUNING_PARAMS, TUNING_KEEP } from '../shared/tuning.js';
 import { readFileSync } from 'node:fs';
 import { header as tableHeader } from '../tools/gongs-native-table.mjs';
 
@@ -297,6 +298,16 @@ test('tuning: every key (C2–C6) has its strike tone within ±3 ¢ of 12-TET (s
   console.log(`        worst ${worst.toFixed(2)} ¢ (key ${wk})`);
   assert.ok(Math.abs(worst) < 3, `worst ${worst.toFixed(2)} ¢ at key ${wk}`);
 });
+test('the keyboard\'s tuning: at A = 415 Hz in ¼-comma meantone (root C), C4, E4 and A4 sound within ±3 ¢ of 440·2^((m−69)/12)·415/440, C4 +10.26 ¢ and E4 −3.42 ¢ from equal temperament, A4 on the standard; each gong cut for its pitch (a ∝ 1/f)', () => {
+  const T = { pitch: 415, temperament: 'meantone', tuningRoot: 0 };
+  for (const [key, off] of [[60, 10.26], [64, -3.42], [69, 0]]) {
+    const { L } = render(P({ strike: 0, speed: 0.5, eta: 1e-4, ...T }), 0.75, [[0, 'on', key, 0.2]]);
+    const f = keyFreq(key) * (415 / 440) * 2 ** (off / 1200), c = cents(peak(L, f, Math.round(0.05 * FS), L.length, 0.02) / f);
+    assert.ok(Math.abs(c) < 3, `key ${key}: ${c.toFixed(2)} ¢ from its target`);
+    const g = keyGong(key, P(T), FS), g0 = keyGong(key, P(), FS);
+    assert.ok(Math.abs(cents(g.f0 / f)) < 0.01 && Math.abs((g.a * g.f0) / (g0.a * keyFreq(key)) - 1) < 1e-9, `key ${key}: the model's pitch and radius`);
+  }
+});
 test('the keys past C2–C6 (A0–B1, C♯6–C8): in tune, a forte note peaks 0.05–0.5, and the top keys keep ≥ 5 modes', () => {
   const out = [];
   for (const key of [21, 27, 33, 90, 97, 103, 108]) {
@@ -500,9 +511,13 @@ test('regression: a 3 ‰ clamped bronze dome (4 h) at 12 m/s, six keys struck t
   console.log(`        energy ≤ ${worst.toFixed(3)}× the mallets'; output peak ${r.peak.toFixed(2)}`);
 });
 test('seeded random combinations of parameter extremes at 44.1 and 48 kHz: no NaN, bounded output', () => {
-  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'velocity'].includes(q.id));
+  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'velocity', ...TUNING_KEEP].includes(q.id));
   let seed = 12345, worst = { bus: 0 }, clipped = 0, n = 0;
   const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  // the keyboard's tuning drawn apart, from its own sequence, so that the other parameters' combinations stay the ones they were
+  let tseed = 777;
+  const trnd = () => ((tseed = (tseed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  const tune = (p) => { for (const q of TUNING_PARAMS) { if (trnd() < 0.5) continue; p[q.id] = q.options ? q.options[Math.floor(trnd() * q.options.length)][0] : trnd() < 0.5 ? q.min : q.max; } return p; };
   for (const fs of [44100, 48000]) for (let c = 0; c < 12; c++) {
     const p = { ...DEFAULTS };
     for (const q of sliders) {
@@ -510,6 +525,7 @@ test('seeded random combinations of parameter extremes at 44.1 and 48 kHz: no Na
       if (q.type === 'select') p[q.id] = q.options[Math.floor(rnd() * q.options.length)][0];
       else p[q.id] = rnd() < 0.5 ? q.min : q.max;
     }
+    tune(p);
     const r = sixTwice(p, fs, 1.6);
     assert.ok(!r.nan, `${fs} Hz, ${JSON.stringify(p)}: NaN`);
     if (r.bus > worst.bus) worst = { ...r, p, fs };

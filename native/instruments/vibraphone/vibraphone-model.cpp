@@ -47,17 +47,18 @@ std::array<double, 2> barPan(int k, double width) {
   return {std::cos(a), std::sin(a)};
 }
 
-Geometry barGeometry(int k, double depth) {
+Geometry barGeometry(int k, double depth, double ratio) {
   k = std::min(KEY_MAX, std::max(KEY_MIN, k));
   const Blank bl = barBlank(k);
   const BarRow &row = BAR_TABLE[k - KEY_MIN];
   const double A = row.A, D = row.D * depth;
   auto cutFor = [&](double L) { return Cut{bl.h0, (A * L) / 2, (bl.cf * A * L) / 2, D * bl.h0}; };
   double L = row.L;
-  if (depth != 1) {
+  if (depth != 1 || ratio != 1) {
     // at a fixed shape f₁ ∝ 1/L², nearly (shear and rotary inertia add a little)
+    L /= std::sqrt(ratio);
     for (int it = 0; it < 8; it++) {
-      const double f1 = bendingFreqs3(cutFor(L), L, bl.b)[0], r = f1 / keyFreq(k);
+      const double f1 = bendingFreqs3(cutFor(L), L, bl.b)[0], r = f1 / (keyFreq(k) * ratio);
       L *= std::sqrt(r);
       if (std::fabs(r - 1) < 1e-9) break;
     }
@@ -95,8 +96,8 @@ double interp(const std::vector<double> &xs, const std::vector<double> &ys, doub
   return ys[(int)i] * (1 - f) + ys[(int)i + 1] * f;
 }
 
-BarModel barModel(int k, double depth) {
-  const Geometry g = barGeometry(k, depth);
+BarModel barModel(int k, double depth, double ratio) {
+  const Geometry g = barGeometry(k, depth, ratio);
   const BarModes m = barModes(g.cut, g.L, g.b);
   const Air ar = air(T_TUNE);
   const double c = ar.c, rho = ar.rho;
@@ -216,13 +217,13 @@ std::vector<Damped> coupledModes(double M11, double M12, double M22, double C11,
 
 // ---------------------------------------------------------------------------
 
-VoiceData voiceData(int k, double depth) {
-  const BarModel bar = barModel(k, depth);
+VoiceData voiceData(int k, double depth, double ratio) {
+  const BarModel bar = barModel(k, depth, ratio);
   const TubeGeometry tg = tubeGeometry(k, bar);
   const Layout lay = barLayout(k);
   const int nx = (int)bar.xs.size(), N = (int)bar.modes.size();
   VoiceData d;
-  d.key = k; d.depth = depth; d.L = bar.geom.L; d.b = bar.geom.b; d.nx = nx; d.N = N; d.nb = 0;
+  d.key = k; d.depth = depth; d.ratio = ratio; d.L = bar.geom.L; d.b = bar.geom.b; d.nx = nx; d.N = N; d.nb = 0;
   d.w.resize(N * nx);
   const double xd = (1 - DAMPER_X) * d.L; // the inner end (x = L), where the views draw it
   const double d1 = interp(bar.xs, bar.modes[0].w, xd);
@@ -241,24 +242,25 @@ VoiceData voiceData(int k, double depth) {
   return d;
 }
 
-// key, depth, L, b, nx, N, nb, accidental, shaftIndex, pan (2), tube (6), then N × (f, tors,
-// sigFixed, out, dampW), then w (N × nx)
+// key, depth, L, b, nx, N, nb, accidental, shaftIndex, pan (2), tube (6), ratio, then N × (f,
+// tors, sigFixed, out, dampW), then w (N × nx)
 int packVoiceData(const VoiceData &d, double *out) {
   int n = 0;
   for (double v : {(double)d.key, d.depth, d.L, d.b, (double)d.nx, (double)d.N, (double)d.nb, d.accidental ? 1.0 : 0.0, (double)d.shaftIndex,
-                   d.pan[0], d.pan[1], d.tube.a, d.tube.S, d.tube.Sb, d.tube.Rb, d.tube.delta0, d.tube.lv}) out[n++] = v;
+                   d.pan[0], d.pan[1], d.tube.a, d.tube.S, d.tube.Sb, d.tube.Rb, d.tube.delta0, d.tube.lv, d.ratio}) out[n++] = v;
   for (int i = 0; i < d.N; i++) for (double v : {d.f[i], (double)d.tors[i], d.sigFixed[i], d.out[i], d.dampW[i]}) out[n++] = v;
   for (double v : d.w) out[n++] = v;
   return n;
 }
 bool unpackVoiceData(const double *in, int n, VoiceData &d) {
-  if (n < 17) return false;
+  if (n < 18) return false;
   const int nx = (int)in[4], N = (int)in[5];
-  if (!(nx >= 2 && nx <= 128 && N >= 1 && N <= 8 && n == 17 + 5 * N + N * nx)) return false;
+  if (!(nx >= 2 && nx <= 128 && N >= 1 && N <= 8 && n == 18 + 5 * N + N * nx)) return false;
   d.key = (int)in[0]; d.depth = in[1]; d.L = in[2]; d.b = in[3]; d.nx = nx; d.N = N; d.nb = (int)in[6];
   d.accidental = in[7] != 0; d.shaftIndex = (int)in[8]; d.pan = {in[9], in[10]};
   d.tube = {in[11], in[12], in[13], in[14], in[15], in[16]};
-  const double *m = in + 17;
+  d.ratio = in[17];
+  const double *m = in + 18;
   d.f.resize(N); d.tors.resize(N); d.sigFixed.resize(N); d.out.resize(N); d.dampW.resize(N);
   for (int i = 0; i < N; i++, m += 5) { d.f[i] = m[0]; d.tors[i] = m[1] != 0; d.sigFixed[i] = m[2]; d.out[i] = m[3]; d.dampW[i] = m[4]; }
   d.w.assign(m, m + N * nx);

@@ -131,6 +131,7 @@ class HarmoniumEngine : public Engine {
   const double h;
   uint64_t version = 0;
   double designKey[6] = {};
+  Tuning designTuning; // the keyboard's tuning the current version's reeds are cut for
   double io[2] = {};
   double Ptarget = 0, Pt = 0, after = 0, afterS = 0, tWind = 0;
   std::array<double, 128> press{};
@@ -153,7 +154,7 @@ class HarmoniumEngine : public Engine {
   int Ucnt = 0;
 
   // the reeds, designed off the audio thread for each version of the voicing knobs
-  struct Snapshot { std::atomic<double> v[6]; };
+  struct Snapshot { std::atomic<double> v[6], ratio[12]; };
   std::array<Snapshot, 8> snapshots;
   KeyData<KeyReeds> keys;
 };

@@ -222,6 +222,18 @@ test('every key is within ±3 ¢ of 12-TET A440 in the engine output', () => {
   assert.ok(worst < 3, `key ${wk}: ${worst.toFixed(3)} ¢`);
   note(`worst key ${wk}: ${worst.toFixed(3)} ¢`);
 });
+test('the keyboard’s tuning: at A = 415 Hz a reed is cut to 415/440 of its 12-TET pitch; in ¼-comma meantone E4 −3.42 ¢, C4 +10.26 ¢ (model and output)', () => {
+  // ¼-comma meantone on C, A kept: E a fifth's narrowing (q − 700) from 12-TET, C 2100 − 3q
+  const q = 1200 * Math.log2(3 / 2) - 300 * Math.log2(81 / 80);
+  for (const [o, m, want] of [[{ pitch: 415 }, 64, cents(415, 440)], [{ pitch: 415 }, 60, cents(415, 440)], [{ temperament: 'meantone' }, 64, q - 700], [{ temperament: 'meantone' }, 60, 2100 - 3 * q]]) {
+    const f = keyFreq(m) * 2 ** (want / 1200), k = keyModel(m, P(o), 2 * FS);
+    assert.ok(Math.abs(cents(k.reed.omega[0] / TAU, f)) < 0.01, `${JSON.stringify(o)} ${m}: cut to ${k.reed.omega[0] / TAU} Hz`);
+    assert.ok(k.packed[0] !== keyModel(m, P(), 2 * FS).packed[0], 'a new version of the reed');
+    const { L } = render(m, P({ ...DRY, ...o }), 0.5, 0.75);
+    const c = cents(freqNear(L, f, Math.round(0.08 * FS), Math.round(0.3 * FS), Math.round(0.3 * FS)), f);
+    assert.ok(Math.abs(c) < 3, `${JSON.stringify(o)} ${m}: ${c.toFixed(3)} ¢`);
+  }
+});
 test('past A1–C7 (Full range): the solder graded on (halving about every octave), every reed cut to its pitch, A0 and C8 on pitch in the output and finite at the solder knob\'s ends', () => {
   for (let m = KEY_MIN; m <= KEY_MAX; m++) {
     if (m >= KEY_LO && m <= KEY_HI) continue;

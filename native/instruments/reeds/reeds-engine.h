@@ -117,8 +117,8 @@ class ReedEngine : public Engine {
   double mix = 1, mixStep;
   double drive = 1, tremInc = 0, ldrOn = 0, ldrOff = 0;
 
-  // the reeds, built off the audio thread for each version of solder, strike and hardness
-  struct Snapshot { std::atomic<uint64_t> version{0}; std::atomic<double> solder{1}, strike{0.4}, hardness{1}; };
+  // the reeds, built off the audio thread for each version of solder, strike, hardness and the tuning
+  struct Snapshot { std::atomic<uint64_t> version{0}; std::atomic<double> solder{1}, strike{0.4}, hardness{1}, ratio[12] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; };
   std::array<Snapshot, 8> snapshots;
   int snapAt = 0;
   uint64_t version = 0;

@@ -23,6 +23,7 @@ ArmonicaEngine::ArmonicaEngine(double fs)
         const Snapshot &s = snapshots[v % snapshots.size()];
         BowlParams bp;
         bp.split = s.split.load(std::memory_order_relaxed); bp.loss = s.loss.load(std::memory_order_relaxed); bp.water = s.water.load(std::memory_order_relaxed);
+        bp.ratio = s.ratio[key % 12].load(std::memory_order_relaxed);
         return std::make_unique<Bowl>(bowl(key, bp));
       }) {
   regulation(KEY_LO); // the regulation table and Rayleigh's integrals, computed now rather than at the first note
@@ -30,8 +31,10 @@ ArmonicaEngine::ArmonicaEngine(double fs)
 
 void ArmonicaEngine::setParams(const double *p) {
   const bool first = !hasParams;
-  const bool rebuild = first || P[p::split] != p[p::split] || P[p::loss] != p[p::loss] || P[p::water] != p[p::water];
+  const forte::Tuning t = tuningOf(p);
+  const bool rebuild = first || P[p::split] != p[p::split] || P[p::loss] != p[p::loss] || P[p::water] != p[p::water] || !(t == tuning);
   for (int i = 0; i < p::count; i++) P[i] = p[i];
+  tuning = t;
   hasParams = true;
   fr = friction(P[p::wet], P[p::v0], P[p::rough]);
   if (first) Wbar = TAU * P[p::speed];
@@ -39,6 +42,7 @@ void ArmonicaEngine::setParams(const double *p) {
     version++;
     Snapshot &s = snapshots[version % snapshots.size()];
     s.split.store(P[p::split], std::memory_order_relaxed); s.loss.store(P[p::loss], std::memory_order_relaxed); s.water.store(P[p::water], std::memory_order_relaxed);
+    for (int i = 0; i < 12; i++) s.ratio[i].store(tuning.r[i], std::memory_order_relaxed);
     bowls.prepare(version, KEY_MIN, KEY_MAX, focus >= KEY_MIN ? focus : 69);
   }
 }

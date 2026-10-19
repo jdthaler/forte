@@ -3,7 +3,7 @@
 // for the views and the tests.
 
 import { GROUPS } from './pipes-params.js';
-import { wasmEngine, scratch } from '../../shared/wasm.js';
+import { wasmEngine, nativeParams, nativeValue, scratch } from '../../shared/wasm.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'pipes', name: 'PipeWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/pipes.wasm', import.meta.url).href };
@@ -31,8 +31,8 @@ const Base = wasmEngine(BUILD, { messages: views });
 
 // A key's six pipes as the model builds them (wasmModel().pipeModel, perhaps altered by a test or a
 // tool), packed as pipes-engine.h's packKeyModels has them.
-export function packModels(key, models, P = {}) {
-  const out = [key, P.cutup ?? 1, P.gain ?? 1, P.offset ?? 0.4];
+export function packModels(key, models, P = {}, ratio = 1) {
+  const out = [key, P.cutup ?? 1, P.gain ?? 1, P.offset ?? 0.4, ratio];
   for (const R of models) {
     const g = R.geo;
     out.push(R.f, R.stopped ? 1 : 0, R.M, R.A, g.W, g.b, g.H, g.y0, g.h, g.dd, g.Sm, g.D, R.modes.length);
@@ -127,7 +127,8 @@ function flatOf(R) {
   return Float64Array.from([...head, ...R.modes.flatMap((m) => MODE.map((k) => m[k]))]);
 }
 export async function wasmModel() {
-  const x = await ready(), s = scratch(x), OUT = 8 * 256; // a result's place, after a pipe
+  const x = await ready(), s = scratch(x), OUT = 8 * 256, params = nativeParams(BUILD); // OUT: a result's place, after a pipe
+  const setP = (P) => { s.f64(params.length, OUT).set(params.map((p) => nativeValue(p, P[p.id]))); return s.at + OUT; };
   const put = (R) => { const a = flatOf(R); s.f64(a.length).set(a); return s.at; };
   return {
     pipeModel(f, stopped, P = {}, opts = {}) {
@@ -139,7 +140,8 @@ export async function wasmModel() {
       delete R.nModes;
       return R;
     },
-    pipeFreq: (key, r) => x.pipes_pipe_freq(key, r),
+    // ratio: the keyboard's tuning for the key (shared/tuning.js tuningRatio)
+    pipeFreq: (key, r, ratio = 1) => x.pipes_pipe_freq(key, r, ratio),
     tuning: (f, stopped) => x.pipes_tuning(f, stopped ? 1 : 0),
     modeFreq: (n, Le, stopped) => x.pipes_mode_freq(n, Le, stopped ? 1 : 0),
     chestPan: (key) => x.pipes_chest_pan(key),
@@ -158,8 +160,8 @@ export async function wasmModel() {
       const k = x.pipes_speaking_window(put(R), n, thetaLo, thetaHi, s.at + OUT), a = s.f64(k, OUT), ne = a[0], ng = a[1];
       return { edges: Array.from(a.subarray(2, 2 + ne)), grid: Array.from({ length: ng }, (_, i) => [a[2 + ne + 2 * i], a[3 + ne + 2 * i]]) };
     },
-    keyModels(key, P) {
-      const n = x.pipes_key_models(key, P.cutup, P.gain, P.offset, s.at);
+    keyModels(key, P) { // (cut for the keyboard's tuning, P's)
+      const n = x.pipes_key_models(key, setP(P), s.at);
       return s.f64(n).slice();
     },
   };

@@ -55,7 +55,7 @@ TEST("pyrophone model: Magri & Juniper's eigenvalues, and the default tube's Hop
   const Cx a = root(sys, 0, 0.1, true), b = root(sys, 0, 0.5, true);
   CHECK(std::fabs(a.re + 0.0056) < 5e-5 && std::fabs(a.im - 3.1848) < 5e-5);
   CHECK(std::fabs(b.re - 0.00023) < 5e-6 && std::fabs(b.im - 3.3570) < 5e-5);
-  const Tuning t = tuning(TubeParams{});
+  const pyrophone::Tuning t = tuning(TubeParams{});
   CHECK(t.mode == 1);
   CHECK_NEAR(t.betaH, 0.0884, 5e-4);
   CHECK_NEAR(t.fold, 0.0768, 5e-4);
@@ -108,7 +108,7 @@ TEST("pyrophone: a new tube keeps playing from the last table until its own is i
   waitFor(e);
   e.noteOn(60, 0.7);
   render(e, 4800);
-  const Tuning *before = e.tune;
+  const pyrophone::Tuning *before = e.tune;
   P[p::bore] = 0.05;
   e.setParams(P.data());
   e.noteOn(64, 0.7); // no wait: the old table cuts it

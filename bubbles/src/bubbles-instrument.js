@@ -4,6 +4,7 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './bubbles-params.js';
 import { KEY_LO, KEY_HI } from './bubbles-tank.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -11,7 +12,7 @@ export const INSTRUMENT = {
   id: 'bubbles',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_LO, KEY_HI],              // MIDI keys: A3–C8, 57–108
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
   modWheel: 'rate',                     // CC1: the bubble rate, from its default up to its maximum

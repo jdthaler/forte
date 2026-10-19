@@ -2,6 +2,7 @@
 // a unit; the hint says what it does to the sound.
 
 import { VENUE } from '../../shared/chain.js';
+import { PITCH, TEMPERAMENT, TUNING_ROOT, CENTS } from '../../shared/tuning.js';
 
 const mm = (v) => `${v < 10 ? v.toFixed(1) : v.toFixed(0)} mm`;
 
@@ -68,11 +69,7 @@ export const GROUPS = [
   {
     title: 'Strings and tuning',
     params: [
-      { id: 'pitch', label: 'Pitch', type: 'select', def: 440, options: [[440, 'A = 440 Hz (modern)'], [415, 'A = 415 Hz (“baroque pitch”)']],
-        hint: 'The same strings, retuned: at A = 415 the tensions are 11 % lower. Applies to new notes.' },
-      { id: 'temperament', label: 'Temperament', type: 'select', def: 'equal',
-        options: [['equal', 'Equal'], ['meantone', '¼-comma meantone'], ['werckmeister', 'Werckmeister III']],
-        hint: 'Meantone makes eight major thirds pure (C–E, F–A, …) at the cost of a wolf fifth G♯–E♭. Applies to new notes.' },
+      PITCH, TEMPERAMENT, TUNING_ROOT, ...CENTS, // the keyboard's tuning (shared/tuning.js), here with the strings
       { id: 'detune', label: 'Unison spread (front vs back 8′)', min: 0, max: 8, def: 1.5, step: 0.1, fmt: (v) => `${v.toFixed(1)} ¢`,
         hint: 'No two choirs are ever exactly in tune: a cent or two apart, they beat slowly. Applies to new notes.' },
       { id: 'loss', label: 'String losses (air and wire)', min: 0.25, max: 4, def: 1, log: true, fmt: (v) => `× ${v.toFixed(2)}`,

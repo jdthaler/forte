@@ -194,11 +194,12 @@ HarmoniumEngine::HarmoniumEngine(double fs, uint32_t seed)
         Voicing v;
         v.set = s.v[0].load(std::memory_order_relaxed); v.clearance = s.v[1].load(std::memory_order_relaxed); v.q = s.v[2].load(std::memory_order_relaxed);
         v.throat = s.v[3].load(std::memory_order_relaxed); v.cell = s.v[4].load(std::memory_order_relaxed); v.detune = s.v[5].load(std::memory_order_relaxed);
+        for (int i = 0; i < 12; i++) v.tuning.r[i] = s.ratio[i].load(std::memory_order_relaxed);
         auto d = std::make_unique<KeyReeds>();
         for (int r = 0; r < NRANKS; r++) reedModel(rankFreq(key, r, v), v, d->r[r]);
         return d;
       }) {
-  for (auto &s : snapshots) for (auto &x : s.v) x.store(0);
+  for (auto &s : snapshots) { for (auto &x : s.v) x.store(0); for (auto &x : s.ratio) x.store(1); }
   fir = halfband();
   configure(seed, F_OS, false);
 }
@@ -223,11 +224,15 @@ void HarmoniumEngine::setParams(const double *p) {
   const double dk[6] = {P[p::set], P[p::clearance], P[p::q], P[p::throat], P[p::cell], P[p::detune]};
   bool changed = version == 0;
   for (int i = 0; i < 6; i++) if (dk[i] != designKey[i]) changed = true;
+  const Tuning tuning = tuningOf(P.data()); // the keyboard's: the reeds are cut for its pitches
+  if (!(tuning == designTuning)) changed = true;
   if (changed) { // a new version of every key's reeds: new notes get theirs
     for (int i = 0; i < 6; i++) designKey[i] = dk[i];
+    designTuning = tuning;
     version++;
     Snapshot &s = snapshots[version % snapshots.size()];
     for (int i = 0; i < 6; i++) s.v[i].store(dk[i], std::memory_order_relaxed);
+    for (int i = 0; i < 12; i++) s.ratio[i].store(tuning.r[i], std::memory_order_relaxed);
     keys.prepare(version, KEY_MIN, KEY_MAX, focus ? focus->key : 60);
   }
   Ptarget = P[p::pressure];

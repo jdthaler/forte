@@ -15,6 +15,8 @@ import { createKeyboard } from '../../shared/keyboard.js';
 import { startMIDI, resumeMIDI, touched, createSostenuto } from '../../shared/midi.js';
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
+import { attachScala } from '../../shared/tuning-ui.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'ribbon-piano/params/v1';
@@ -303,7 +305,8 @@ function buildControls() {
         input = document.createElement('select');
         input.id = `p-${p.id}`;
         for (const [k, name] of p.options) input.add(new Option(name, k));
-        input.addEventListener('change', () => { setParam(p.id, input.value); input.blur(); });
+        // the option's own value (the tuning's choices are numbers: A = 415 Hz, the root)
+        input.addEventListener('change', () => { setParam(p.id, p.options[input.selectedIndex][0]); input.blur(); });
         wrap.appendChild(input);
       } else if (p.type === 'checkbox') {
         wrap.classList.add('check');
@@ -387,11 +390,13 @@ function setParam(id, v, opts = {}) {
   }
   saveParams();
   if (id === 'velocity') { updateHelp(); refreshControl(id); return; }
-  if (p.kind === 'engine') {
+  // the tuning's parameters (shared/tuning.js, no kind) move every key's pitch: model parameters
+  const kind = p.kind ?? (TUNING_KEEP.includes(id) ? 'model' : undefined);
+  if (kind === 'engine') {
     if (audio) audio.node.port.postMessage(paramsMessage());
     modelChangedSoon(true);
-  } else if (p.kind === 'mix') applyMix();
-  else if (p.kind === 'model') { // new voice data: each note sends its key's, built here
+  } else if (kind === 'mix') applyMix();
+  else if (kind === 'model') { // new voice data: each note sends its key's, built here
     refreshVisibility();
     modelChangedSoon();
   }
@@ -572,6 +577,7 @@ window.addEventListener('resize', () => drawSection($('#section'), keyData(focus
 buildControls();
 for (const id of controls.keys()) refreshControl(id);
 refreshVisibility();
+attachScala({ set: (v) => setAll({ ...P, ...v }), toast }); // (this page has no user presets to attach it)
 updateHelp();
 keyboardView.labels(keyLabels());
 setFocus(60, P.velocity);

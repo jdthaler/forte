@@ -216,6 +216,15 @@ test('the π mode is the note, within a cent, across the keyboard', () => {
     assert.ok(Math.abs(cents(got, f)) < 1, `${key}: ${cents(got, f).toFixed(2)} ¢`);
   }
 });
+test('the keyboard\'s tuning: the π mode is 440·2^((m−69)/12)·415/440 at A = 415 Hz, and in ¼-comma meantone on C E4 lies 3.42 ¢ flat of equal temperament, C4 10.26 ¢ sharp, A4 on 440 Hz, in the model and (within a cent) in the sound; the cavity is the same one, scaled', () => {
+  const N = DEFAULTS.cells, mt = P({ ...QUIET, temperament: 'meantone' }), pi = (k, p) => piMode(Model.modes(k, p), N).f;
+  for (const k of [40, 64, 96]) assert.ok(Math.abs(pi(k, P({ pitch: 415 })) / pi(k, P()) - 415 / 440) < 1e-12, `${k} at 415 Hz`);
+  for (const [k, want] of [[64, -3.42], [60, 10.26], [69, 0]]) { const c = cents(pi(k, mt), pi(k, P())); assert.ok(Math.abs(c - want) < 0.01, `${k} in meantone: ${c.toFixed(3)} ¢`); }
+  for (const [key, p, f] of [[64, P({ ...QUIET, pitch: 415 }), (keyFreq(64) * 415) / 440], [64, mt, keyFreq(64) * 2 ** (-3.4216 / 1200)], [60, mt, keyFreq(60) * 2 ** (10.2647 / 1200)]]) {
+    const [L] = note(key, p, 1.2), a = 2400, b = a + 48000, got = peak(L, f, a, b, 0.004);
+    assert.ok(Math.abs(cents(got, f)) < 1, `${key}: ${cents(got, f).toFixed(2)} ¢ from the tuned pitch`);
+  }
+});
 test('the ring time is the loaded Q\'s: T60 = ln 1000 · Q_L / (π f)', () => {
   for (const [key, qext] of [[60, 1e9], [72, 3e8]]) {
     const params = P({ ...QUIET, qext }), m = piMode(Model.modes(key, params), 9), f = keyFreq(key), W = 16384;

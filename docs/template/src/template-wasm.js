@@ -3,7 +3,7 @@
 // functions for the views and the tests.
 
 import { GROUPS } from './template-params.js';
-import { wasmEngine, nativeParams, scratch } from '../../../shared/wasm.js';
+import { wasmEngine, nativeParams, nativeValue, scratch } from '../../../shared/wasm.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'template', name: 'TemplateWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/template.wasm', import.meta.url).href };
@@ -20,7 +20,7 @@ export async function wasmModel() {
     BETA_L,
     modeShape: (n, v) => x.template_mode_shape(n, v),
     keyModes(key, P) {
-      s.f64(params.length).set(params.map((p) => P[p.id]));
+      s.f64(params.length).set(params.map((p) => nativeValue(p, P[p.id]))); // a choice as its index, as the engine gets it
       const out = s.at + 8 * params.length, n = x.template_key_modes(key, s.at, out);
       const m = new Float64Array(x.memory.buffer, out, 3 * n);
       return Array.from({ length: n }, (_, i) => ({ f: m[3 * i], sigma: m[3 * i + 1], amp: m[3 * i + 2] }));

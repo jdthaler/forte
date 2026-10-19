@@ -47,9 +47,10 @@ double frameLength();
 std::array<double, 2> barPan(int k, double width = 0.55);
 
 // The bar for key k with its undercut at `depth` × the tuned depth, cut to the length that keeps
-// mode 1 on pitch.
+// mode 1 on pitch: the key's equal-tempered pitch × ratio (the keyboard's tuning, forte/tuning.h;
+// 1 in equal temperament at A = 440 Hz). The blank and the undercut's shape stay the key's.
 struct Geometry { int key; double L, b, h0, cf, A, D, depth; Cut cut; };
-Geometry barGeometry(int k, double depth = 1);
+Geometry barGeometry(int k, double depth = 1, double ratio = 1);
 
 // Thermoelastic damping (Zener).
 struct Thermo { double alpha, cp, k, T; };
@@ -79,7 +80,7 @@ struct BarModel {
   std::vector<double> nodes;
   double mass, hmin;
 };
-BarModel barModel(int k, double depth = 1);
+BarModel barModel(int k, double depth = 1, double ratio = 1);
 double interp(const std::vector<double> &xs, const std::vector<double> &ys, double x);
 
 // Tube radius, graded from 38 mm (F3) to 21 mm (F6).
@@ -127,7 +128,7 @@ inline double barTempScale(double temp) { return 1 + BAR_TEMPCO * (temp - T_TUNE
 // The voice data the engine plays (the page's noteData): modes, their shapes, losses, outputs.
 struct VoiceData {
   int key;
-  double depth, L, b;
+  double depth, ratio, L, b; // ratio: the key's tuning the bar is cut for
   int nx, N, nb;
   std::vector<double> w; // N × nx
   std::vector<double> f, sigFixed, out, dampW;
@@ -137,11 +138,11 @@ struct VoiceData {
   int shaftIndex;
   std::array<double, 2> pan;
 };
-VoiceData voiceData(int k, double depth = 1);
+VoiceData voiceData(int k, double depth = 1, double ratio = 1);
 // A bar's voice data as plain numbers, to hand from a page's model to its engine (the page's
 // noteData): packVoiceData writes it (returning how many) and unpackVoiceData reads it back
 // (false if it doesn't fit). PACK_MAX bounds it.
-constexpr int PACK_MAX = 17 + 5 * 8 + 8 * 128;
+constexpr int PACK_MAX = 18 + 5 * 8 + 8 * 128;
 int packVoiceData(const VoiceData &d, double *out);
 bool unpackVoiceData(const double *in, int n, VoiceData &d);
 

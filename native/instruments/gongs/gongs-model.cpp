@@ -318,10 +318,12 @@ double backbone(const Shell &S, int p, int Nv) {
 }
 
 // ---- one key ---------------------------------------------------------------------------------
+double gongPitch(int key, const double *P) { return keyFreq(key) * tuningOf(P).ratio(key); }
+
 void keyGong(Gong &g, int key, const double *P, double fs, const Shell &S) {
   const Material &mat = materialOf(P);
   const double cp = plateSpeed(mat), thick = P[p::thick];
-  const double f0 = keyFreq(key), w0 = (TAU * f0) / S.Om[S.tuned];
+  const double f0 = gongPitch(key, P), w0 = (TAU * f0) / S.Om[S.tuned];
   const double a = (thick * cp) / (std::sqrt(12.0) * w0), h = thick * a;
   // internal rate: the lowest fs/R (R a power of 2) that holds every mode below CAP·fs/R,
   // but no faster than ~24 kHz

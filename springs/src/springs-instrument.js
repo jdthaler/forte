@@ -3,6 +3,7 @@
 // plugins (tools/gen-native-params.mjs) all start here. No DOM, no Web Audio.
 
 import { GROUPS, DEFAULTS, PRESETS } from './springs-params.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 export const KEY_LO = 36, KEY_HI = 84; // C2–C6: the span the pan is drawn on
@@ -12,7 +13,7 @@ export const INSTRUMENT = {
   id: 'springs',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C7
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'hand',                     // CC1: a hand on the springs
