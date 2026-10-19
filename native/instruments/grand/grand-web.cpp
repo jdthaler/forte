@@ -104,6 +104,12 @@ FORTE_EXPORT void grand_decay_rates(double sigInt, double bridgeV, double bridge
 
 // The page's oscillator budget ({ type: 'budget', modes }).
 FORTE_EXPORT void grand_budget(GrandEngine *e, double modes) { e->budget(modes); }
+// The sympathetic strings: key's group (its partials, 0 until its model came; its energy per unit
+// mass; whether its damper is down), and the partials that ran in the last block.
+FORTE_EXPORT int grand_sym_size(GrandEngine *e, int key) { return e->sym.size(key); }
+FORTE_EXPORT double grand_sym_energy(GrandEngine *e, int key) { return e->sym.energy(key); }
+FORTE_EXPORT int grand_sym_damped(GrandEngine *e, int key) { return e->sym.damped(key); }
+FORTE_EXPORT int grand_sym_running(GrandEngine *e) { return e->sym.running; }
 
 // The hooks, on the engine of a handle (forte_engine): its voices in order, the key's (byKey), and
 // each one's state: key, active, killing, dead, struck, contactSamples, Fmax, eta, etaPrev, FV, F,

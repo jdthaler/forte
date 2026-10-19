@@ -27,6 +27,7 @@
     {"id":"lossHigh","kind":"continuous","min":0.1,"max":10,"def":1,"step":0,"log":true},
     {"id":"torsionLoss","kind":"continuous","min":0.2,"max":10,"def":3,"step":0,"log":true},
     {"id":"damper","kind":"continuous","min":2,"max":80,"def":25,"step":0,"log":true},
+    {"id":"sympathy","kind":"continuous","min":0,"max":1,"def":0.25,"step":0.01,"log":false},
     {"id":"gainV","kind":"continuous","min":0,"max":1.5,"def":1,"step":0.01,"log":false},
     {"id":"gainH","kind":"continuous","min":0,"max":1.5,"def":0.35,"step":0.01,"log":false},
     {"id":"gainT","kind":"continuous","min":0,"max":2,"def":0.6,"step":0.01,"log":false},

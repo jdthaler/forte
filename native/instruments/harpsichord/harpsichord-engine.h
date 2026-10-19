@@ -14,6 +14,11 @@
 // soundboard's admittance at every partial) are built off the audio thread by forte/background.h
 // for the physics knobs as they stand; a note whose key is not built yet waits for it (a few ms).
 // Voices come from a fixed pool: nothing is allocated in process().
+//
+// Sympathetic strings (forte/sympathetic.h): while a key is held, its strings whose jacks have risen
+// (their dampers off them) ring along through the bridge with every other string sounding, plucked
+// or not: a group of each such string's lowest partials, driven by the bridge signals of every
+// voice's strings and group but its own.
 #pragma once
 
 #include <array>
@@ -22,6 +27,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/sympathetic.h"
 #include "harpsichord-model.h"
 #include "harpsichord-params.h"
 
@@ -56,6 +62,10 @@ class HarpsichordEngine : public Engine {
   void process(float *L, float *R, int n) override;
   // the key's strings are built for the knobs as they stand (tests: in WebAssembly, always)
   bool ready(int key) { return bool(data.get(key, version)); }
+  // the sympathetic strings: a group per key and choir (key·3 + choir; the tests read it)
+  static constexpr int SYM_MODES = 16;     // partials per string
+  static constexpr double SYM_FMAX = 4000; // Hz: none above
+  Sympathetic sym;
 
   using Data = KeyData<KeyStrings>;
   struct Voice {
@@ -77,6 +87,9 @@ class HarpsichordEngine : public Engine {
     bool killing = false, dead = false, sounded = false;
     double peak = 0, age = 0;
     std::array<double, NSEG> kw{};
+    // each string's bridge signal Σ c Δq/h: [0] the last block's last step, [t + 1] step t's
+    std::array<std::array<double, BLOCK + 1>, 3> sb{};
+    int sbn = 0;
 
     void start(HarpsichordEngine &e, int k, Data::Ref r);
     void press(double vel);
@@ -113,6 +126,8 @@ class HarpsichordEngine : public Engine {
   void retryPending();
   void begin(int key, double velocity, Data::Ref r); // noteOn once the key's strings are there
   void pluckInfo(Voice &v, PluckedString &st, int p);
+  void symSet(int key, const KeyStrings &d, uint64_t ver); // a key's groups, from its strings
+  void symRun(int n);
   static void onRelease(void *ctx, PluckedString &st, int p);
 
   std::array<double, p::count> P{};
@@ -135,6 +150,16 @@ class HarpsichordEngine : public Engine {
   std::array<double, BLOCK> liftBuf{}, zeroBuf{}, buffBuf{}, bL{}, bR{};
   Board board;
   double buff = 0, mix = 1, glide = 0;
+  // the sympathetic strings: per key, held down and the version its groups were made from (0:
+  // none); per group, its voices' bridge signals this block (a key may have an old voice fading)
+  std::array<uint8_t, 128> down{};
+  std::array<uint64_t, 128> symVer{};
+  std::array<double, 4> symSig{}; // the knobs a group's damping depends on, as it was made
+  std::array<std::array<double, BLOCK>, 3 * 128> own{};
+  std::array<int, 3 * 128> ownAt{};
+  int symStamp = 0;
+  bool symHush = false; // Panic: the groups wait for the voices to fade
+  std::array<double, BLOCK> tS{};
   Message pluckMsg;
 };
 

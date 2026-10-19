@@ -18,6 +18,7 @@
 #include "forte/impulses.h"
 #include "forte/limiter.h"
 #include "forte/linalg.h"
+#include "forte/sympathetic.h"
 #include "js-vectors.h"
 
 using namespace forte;
@@ -255,6 +256,50 @@ TEST("chain: a tone at or above Nyquist passes the sound unchanged, as Web Audio
   CHECK_NEAR(y, 1, 1e-9);
 }
 
+TEST("sympathetic: strings tuned alike trade their energy through the bridge and make none; a group never feels its own voice") {
+  const double fs = 48000, w = 2 * std::numbers::pi * 220, c = 2; // each loses c²/2 = 2 s⁻¹ into the bridge
+  for (const double kappa : {0.25, 1.0}) {
+    Sympathetic sym(2, 1, 128, fs, true);
+    SympatheticMode m;
+    m.omega = w; m.cV = c; m.sigma = 0.5 * c * c; m.damped = m.sigma + 50; m.oV = 1; m.loud = 1e9; // (never still, here)
+    sym.set(0, &m, 1); sym.set(1, &m, 1);
+    sym.damp(0, false); sym.damp(1, false);
+    const Sympathetic::Tap t0{0, 1, 0}, t1{1, 1, 0};
+    sym.route(0, &t0, 1); sym.route(1, &t1, 1);
+    std::vector<double> v(128), z(128, 0.0), b0(128), b1(128);
+    double *bus[2] = {b0.data(), b1.data()};
+    // a tenth of a second of a voice on group 1's own string: it drives group 0 alone
+    int n = 0;
+    for (int b = 0; b < 38; b++) {
+      for (int i = 0; i < 128; i++, n++) v[i] = 0.01 * std::sin(w * n / fs);
+      sym.own(1, v.data(), nullptr);
+      sym.run(kappa, v.data(), z.data(), true, 128, bus);
+    }
+    CHECK(sym.energy(0) > 0);
+    // a string alone with its own voice feels nothing
+    Sympathetic one(1, 1, 128, fs, true);
+    one.set(0, &m, 1); one.damp(0, false); one.route(0, &t0, 1);
+    for (int b = 0; b < 38; b++) { one.own(0, v.data(), nullptr); one.run(kappa, v.data(), z.data(), true, 128, bus); }
+    CHECK(one.energy(0) == 0);
+    // then the two alone: the bridge drains each at c²/2 and the coupling moves energy between
+    // them, so group 1 takes a share of it from group 0 and their energy only falls. At κ = 1 they
+    // meet the bridge at one point: their antiphase motion leaves it still and keeps its energy,
+    // and the coupling's step behind lets the sum wobble by a little within a period.
+    double e = sym.energy(0) + sym.energy(1), grew = 0, most1 = 0;
+    const double e0 = e;
+    for (int b = 0; b < 750; b++) {
+      sym.run(kappa, z.data(), z.data(), false, 128, bus);
+      const double en = sym.energy(0) + sym.energy(1);
+      grew = std::max(grew, en / e - 1);
+      most1 = std::max(most1, sym.energy(1) / en);
+      e = en;
+    }
+    CHECK(grew < (kappa < 1 ? 1e-9 : 5e-3));
+    CHECK(e < (kappa < 1 ? 0.01 : 1) * e0); // 2 s at 2 s⁻¹ or more
+    CHECK(most1 > 0.2);
+    std::printf("       (κ = %.2f: the most the two gained in a block, %.1e of their energy; group 1's largest share %.2f)\n", kappa, grew, most1);
+  }
+}
 TEST("guard: a NaN zeroes the block") {
   float L[4] = {1, 2, NAN, 4}, R[4] = {1, 2, 3, 4};
   CHECK(!guardBlock(L, R, 4));

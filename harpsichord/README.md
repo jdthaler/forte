@@ -337,6 +337,23 @@ board at five points, three along the 8′ bridge and two along the 4′,
 interpolated by key. Above the modal band a residual path, flat in force,
 takes over, at the band's mean level.
 
+**Sympathetic strings.** Every string meets a bridge on the same board, and
+while its damper is off it rings along with whatever sounds. A harpsichord
+has no pedal: a string is free while its key is held and its jack has risen,
+whether or not that jack's row plucks. Hold a key on the lower manual with
+the 4′ off and its 4′ string still rings along, an octave up. Each string's
+motion splits, by superposition, into what its plectrum started (its voice,
+as above) and what the others drive: a *group* per string, its lowest 16
+partials below 4 kHz, meeting the bridge through cₙ = ±√(2σ_b), so that it
+drains at σ_b as the plucked string does. A group feels the bridge signal
+S = Σ c q̇ of every string and every other group, times κ (*Sympathetic
+resonance*: the share of the bridge's motion one string feels from another's,
+1 if they all met it at one point), and never its own string's voice: the
+front and back 8′ of one key drive each other. Under its damper a group
+decays faster by the felt's resistance at its point, R φₙ²/2 (at most ωₙ/2).
+Hold c¹ with no row plucking and strike c² on the back 8′: c¹'s 4′ string
+rings along about 200 times as strongly as c♯¹'s would (in energy).
+
 Two microphones listen close over the board, one over its tail (bass) end
 and one over its front (treble) end, each hearing the board's acceleration
 averaged over a Gaussian patch (σ = 0.3 m) under it. A first-order high-pass at 100 Hz stands
@@ -459,8 +476,10 @@ tools/render-harpsichord.mjs               node tools/render-harpsichord.mjs →
   it drives, and the phantom partials at sums of transverse frequencies,
   are left out. The release lift that sets the glide's size is the plectrum
   model's, not measured on an instrument.
-* **No sympathetic resonance.** Strings do not drive one another through
-  the bridge, so the unplucked choir of a held key stays silent.
+* **Sympathetic strings are simpler than plucked ones.** A string that rings
+  along is its lowest 16 partials below 4 kHz, with no plectrum, damper or
+  buff touching it (under its damper it decays at a rate), and every string
+  meets the bridge at one point, scaled by *Sympathetic resonance*.
 * **The soundboard is an equivalent plate.** It is a rectangle with
   smeared-in stiffness and its edges simply supported, not the
   wing-shaped, ribbed board of a real instrument. Its stiffness is set by an

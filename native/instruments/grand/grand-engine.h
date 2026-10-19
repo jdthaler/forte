@@ -15,6 +15,11 @@
 // note whose key is not built yet waits for it, a new board's microphones for theirs. Without
 // threads (WebAssembly) both are built in place. Voices come from a fixed pool: nothing is
 // allocated in process().
+//
+// Sympathetic strings (forte/sympathetic.h): every key whose damper is up (the pedal, a held key,
+// the keys above E6) rings along through the bridge, as a group of its unison's lowest partials
+// driven by the bridge velocities of every voice and group but its own key's. The piezo and the
+// soundboard hear their force on the bridge as they hear a voice's.
 #pragma once
 
 #include <array>
@@ -28,6 +33,7 @@
 #include "forte/background.h"
 #include "forte/dsp.h"
 #include "forte/engine.h"
+#include "forte/sympathetic.h"
 #include "grand-model.h"
 #include "grand-params.h"
 
@@ -99,6 +105,11 @@ class GrandEngine : public Engine {
   // the tests: whether the key's model for the current parameters is built (asks for it if not)
   bool ready(int key) { return bool(data.get(key, version)); }
   bool boardReady() const { return (int)P[p::mount] != mount_::board || (board && board->c.boardH == P[p::boardH]); }
+  // the sympathetic strings: a group per key (the tests read it)
+  static constexpr int SYM_MODES = 16;     // partials per key and polarisation
+  static constexpr double SYM_FMAX = 4000; // Hz: none above
+  Sympathetic sym;
+  bool symReady(int key) const { return symVer[key] != 0; }
 
   using Data = KeyData<Built>;
   struct Voice {
@@ -125,6 +136,10 @@ class GrandEngine : public Engine {
     int quiet = 0;
     double eta = 0, etaPrev = 0, dPrev = -1, F = 0, FV = 0, FH = 0, Fmax = 0, v0 = 0, kOverM = 0, alphaK = 0, damperSigma = 0;
     int contactSamples = 0, hammerSamples = 0;
+    // the bridge sums of each sample of the block (Σ u Δq, centred: the bridge velocity), and the
+    // hammer step's
+    std::array<double, BLOCK> sbV{}, sbH{};
+    double hsV = 0, hsH = 0;
 
     int active() const { return nVa + nHa; }
     void start(const GrandEngine &eng, Data::Ref r, uint64_t ver);
@@ -166,6 +181,10 @@ class GrandEngine : public Engine {
   BoardSlot *install(const BoardCoefs &c);
   std::unique_ptr<Built> build(int key, uint64_t version);
   const BoardModel &workerBoard(double boardH);
+  void symFetch();                                  // the groups' partials, from each key's model
+  void symSet(int key, const Built &b, uint64_t ver);
+  void symRoute(int key);
+  void symRun(double *PL, double *PR, double *SEG, int n);
   static uint64_t boardVersion(double h) { return std::bit_cast<uint64_t>(h + 0.0); } // the board's id: its thickness (−0 is 0)
 
   std::array<double, p::count> P{};
@@ -188,6 +207,17 @@ class GrandEngine : public Engine {
   std::array<BoardSlot, 5> boards{};
   BoardSlot *board = nullptr;
   double wantBoard = NAN; // a thickness whose board is being built (only with threads)
+  // per key: held down; whether it has a damper; the version its group was built from (0: none);
+  // its segment of the bridge; its voices' bridge velocities (a key may have an old voice still
+  // fading)
+  std::array<uint8_t, 128> down{}, symDamper{}, symSeg{};
+  std::array<uint64_t, 128> symVer{};
+  std::array<std::array<double, BLOCK>, 128> ownV{}, ownH{};
+  std::array<int, 128> ownAt{};
+  int symNext = 0, symStamp = 0;
+  double symDamperSigma = -1, symPickH = -1;
+  bool symHush = false; // Panic: the groups wait for the voices to fade
+  std::array<double, BLOCK> tV{}, tH{};
 
   // the parameters of each version, for the worker (a ring: it builds the latest)
   std::array<std::array<std::atomic<double>, p::count>, 8> snapshots{};

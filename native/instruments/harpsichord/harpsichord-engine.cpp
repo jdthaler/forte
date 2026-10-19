@@ -34,6 +34,8 @@ void HarpsichordEngine::Voice::start(HarpsichordEngine &e, int k, Data::Ref r) {
   knockT = -1; knockAmp = 0; knockN = std::max(2, (int)std::floor(ACTION::knock * e.fs + 0.5));
   killing = false; dead = false; sounded = false; peak = 0; age = 0;
   kw = segmentWeights(k, BACK);
+  for (auto &b : sb) b.fill(0);
+  sbn = 0;
 }
 
 // Key down at velocity vel: arm the engaged plectra and send the jacks up.
@@ -118,13 +120,17 @@ void HarpsichordEngine::Voice::render(int n) {
   // the strings
   double pk0 = 0;
   bool awake = false;
+  const bool sy = e.P[p::sympathy] > 0;
+  for (auto &b : sb) { b[0] = b[sbn]; std::fill(b.begin() + 1, b.begin() + 1 + n, 0.0); }
+  sbn = n;
   for (int i = 0; i < nList; i++) {
     const int ch = list[i];
     PluckedString &st = strings[ch];
     if (sleep[ch]) continue;
     const bool lifted = lifts[ch] && !killing;
     st.kcOn = e.P[p::kc] != 0;
-    const double pk = st.render(n, lifted ? lb : e.zeroBuf.data(), keyDown && lifted, ch == BACK ? e.buffBuf.data() : e.zeroBuf.data(), e.seg.data(), BLOCK, w[ch].data(), w0[ch], w1[ch], 1);
+    const double pk = st.render(n, lifted ? lb : e.zeroBuf.data(), keyDown && lifted, ch == BACK ? e.buffBuf.data() : e.zeroBuf.data(), e.seg.data(), BLOCK, w[ch].data(), w0[ch], w1[ch], 1,
+                               sy ? sb[ch].data() + 1 : nullptr);
     if (pk > pk0) pk0 = pk;
     if (!(pk < 1e4) || !std::isfinite(st.q()[0])) {
       dead = true;
@@ -222,6 +228,13 @@ void HarpsichordEngine::Board::run(const double *seg, double *Lo, double *Ro, in
     mrv += y;
     Lo[t] = mlv; Ro[t] = mrv;
   }
+  // what has died away to nothing goes to zero, before it decays on into subnormal numbers (slow): a
+  // bridge segment nothing drives any more (the 4′'s, once its strings have stopped)
+  constexpr double TINY = 1e-30;
+  auto flush = [](double &x) { if (std::fabs(x) < TINY) x = 0; };
+  for (double &x : lp) flush(x);
+  for (double &x : hz) flush(x);
+  for (int i = 0; i < K; i++) { flush(e0[i]); flush(e1[i]); }
 }
 
 // ---- the engine -----------------------------------------------------------------------------
@@ -236,7 +249,9 @@ HarpsichordEngine::HarpsichordEngine(double fs)
         auto d = std::make_unique<KeyStrings>();
         for (int c : CHOIRS) { d->S[c] = stringDesign(key, c, q); stringPartials(d->S[c], q, this->fs, d->parts[c]); }
         return d;
-      }) {
+      }),
+      sym(3 * 128, SYM_MODES, BLOCK, fs, false) {
+  sym.quiet = QUIET;
   unitTables(MATERIALS[0].taper); // the plectra's tables and the board, now rather than at the first note
   board.init(fs);
   glide = 1 - std::exp(-1 / (RAMP * fs));
@@ -263,9 +278,10 @@ void HarpsichordEngine::noteOn(int key, double velocity) {
   if (!hasParams || key < KEY_MIN || key > KEY_MAX) return;
   velocity = std::min(1.0, std::max(0.0, velocity));
   focus = key;
+  down[key] = 1;
   Voice *v = byKey[key];
   if (v && (v->killing || v->dead || v->version != version)) { if (!v->dead) v->kill(); v = nullptr; byKey[key] = nullptr; }
-  if (v) { v->press(velocity); return; }
+  if (v) { v->press(velocity); symSet(key, *v->ref.data, v->version); return; }
   const Data::Ref r = data.get(key, version);
   if (r) { begin(key, velocity, r); return; }
   // the key's strings are being built (a few ms): the note waits for them
@@ -293,6 +309,7 @@ void HarpsichordEngine::begin(int key, double velocity, Data::Ref r) {
     steal(v);
   }
   v->press(velocity);
+  symSet(key, *v->ref.data, v->version);
 }
 
 void HarpsichordEngine::retryPending() {
@@ -310,6 +327,7 @@ void HarpsichordEngine::retryPending() {
 // relVel: the MIDI note-off's release velocity (0..1), or −1 for none.
 void HarpsichordEngine::noteOff(int key, double relVel) {
   if (key < 0 || key > 127) return;
+  down[key] = 0;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) { pending[i].off = true; pending[i].relVel = relVel; }
   if (Voice *v = byKey[key]) v->release(relVel >= 0 && std::isfinite(relVel) ? std::min(1.0, relVel) : DEFAULT_RELEASE);
 }
@@ -318,6 +336,9 @@ void HarpsichordEngine::allNotesOff() {
   nPending = 0;
   for (int i = 0; i < nVoices; i++) voices[i]->kill();
   byKey.fill(nullptr);
+  down.fill(0);
+  for (int g = 0; g < sym.groups(); g++) sym.clear(g);
+  symHush = true;
 }
 
 // Too many keys sounding: fade the quietest released one; never one that has not sounded yet.
@@ -370,6 +391,7 @@ void HarpsichordEngine::processBlock(float *L, float *R, int n) {
   for (int t = 0; t < n; t++) { b += g * (bT - b); if (std::fabs(bT - b) < 1e-6) b = bT; buffBuf[t] = b; }
   buff = b;
   for (int i = 0; i < nVoices; i++) if (!voices[i]->dead) voices[i]->render(n);
+  symRun(n);
   int j = 0;
   for (int i = 0; i < nVoices; i++) {
     Voice *v = voices[i];
@@ -393,6 +415,84 @@ void HarpsichordEngine::processBlock(float *L, float *R, int n) {
     R[t] = (float)(OUT * mx * bR[t] + (1 - mx) * dr);
   }
   mix = std::fabs(mx - mT) < 1e-6 ? mT : mx;
+}
+
+// ---- sympathetic strings ---------------------------------------------------------------------
+
+// Key's groups, from the strings its voice plays (its choirs' lowest partials below SYM_FMAX): made
+// again when the strings or the damper's knobs have changed. Under the damper a partial decays
+// faster by the felt's resistance R at its point, R φ²/2, up to ω/2 (beyond that a partial is no
+// longer one: the felt soaks up the wave as it arrives).
+void HarpsichordEngine::symSet(int key, const KeyStrings &d, uint64_t ver) {
+  const std::array<double, 4> sig = {P[p::damper], P[p::xFront], P[p::xBack], P[p::xFour]};
+  if (symVer[key] == ver && sig == symSig) return;
+  if (sig != symSig) { symSig = sig; symVer.fill(0); }
+  const double fmax = std::min(SYM_FMAX, 0.45 * fs);
+  for (int ch : CHOIRS) {
+    const StringDesign &S = d.S[ch];
+    const Partials &pt = d.parts[ch];
+    const double R = ACTION::feltR * mp.damper * std::sqrt(S.T * S.mu), xd = std::min(0.5 * S.L, pluckPoint(key, ch, mp) + DAMPER_OFFSET);
+    const double nrm = std::sqrt(2 / (S.mu * S.L));
+    std::array<SympatheticMode, SYM_MODES> modes;
+    int m = 0;
+    for (int i = 0; i < pt.N && m < SYM_MODES && pt.f[i] < fmax; i++) {
+      SympatheticMode &md = modes[m++];
+      const double phi = nrm * std::sin(pt.k[i] * xd);
+      md.omega = 2 * pi * pt.f[i];
+      md.cV = (pt.b[i] < 0 ? -1 : 1) * std::sqrt(2 * pt.sigB[i]);
+      md.sigma = pt.sigma[i];
+      md.damped = md.sigma + std::min(0.5 * R * phi * phi, 0.5 * md.omega);
+      md.oV = pt.b[i]; md.loud = std::fabs(pt.b[i]); // its output: its bridge force, as a voice's
+    }
+    const int g = 3 * key + ch;
+    sym.set(g, modes.data(), m);
+    const std::array<double, NSEG> w = segmentWeights(key, ch);
+    Sympathetic::Tap taps[Sympathetic::TAPS];
+    int nt = 0;
+    for (int s = 0; s < NSEG && nt < Sympathetic::TAPS; s++) if (w[s] > 0) taps[nt++] = {s, w[s], 0};
+    sym.route(g, taps, nt);
+  }
+  symVer[key] = ver;
+}
+
+// After the voices' n samples, the groups': a string's damper is off it while its key is held and
+// its jack has risen; each group feels the strings' bridge signals at the steps' midpoints, as its
+// own run from step to step.
+void HarpsichordEngine::symRun(int n) {
+  const double kap = P[p::sympathy];
+  if (kap <= 0) return;
+  // after Panic the groups stay still until the voices have faded out
+  if (symHush) {
+    for (int i = 0; i < nVoices; i++) if (!voices[i]->dead) return;
+    symHush = false;
+  }
+  const Registration reg = registration(mp);
+  for (int key = KEY_MIN; key <= KEY_MAX; key++)
+    for (int ch : CHOIRS) sym.damp(3 * key + ch, !(down[key] && reg.lift[ch]));
+  bool any = false;
+  symStamp++;
+  std::fill(tS.begin(), tS.begin() + n, 0.0);
+  for (int i = 0; i < nVoices; i++) {
+    const Voice *v = voices[i];
+    if (v->dead) continue;
+    for (int j = 0; j < v->nList; j++) {
+      const int ch = v->list[j], g = 3 * v->key + ch;
+      if (v->sleep[ch]) continue;
+      any = true;
+      const double *b = v->sb[ch].data();
+      double *o = own[g].data();
+      const bool first = ownAt[g] != symStamp;
+      ownAt[g] = symStamp;
+      for (int t = 0; t < n; t++) {
+        const double x = 0.5 * (b[t] + b[t + 1]);
+        tS[t] += x;
+        o[t] = first ? x : o[t] + x;
+      }
+      sym.own(g, o, nullptr);
+    }
+  }
+  double *const buses[NSEG] = {seg.data(), seg.data() + BLOCK, seg.data() + 2 * BLOCK, seg.data() + 3 * BLOCK, seg.data() + 4 * BLOCK};
+  sym.run(kap, tS.data(), zeroBuf.data(), any, n, buses);
 }
 
 } // namespace forte::harpsichord

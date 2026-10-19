@@ -242,8 +242,9 @@ test('the piezo hears Σ bₙqₙ: partial n is n × its displacement (harmonic 
 test('the bridge drains every partial at its model rate, up to 15 kHz, at 44.1 and 48 kHz (implicit solve)', () => {
   let worst = 0, wf = 0;
   for (const fs of [44100, 48000]) for (const key of [84, 96]) {
-    // a full blow's pitch glide would move the partials off the frequencies the decay is read at
-    const p = P({ stringing: 'single', tilt: 0, gFrame: 3e-3, maxFreq: 16000, hardness: 3, kc: false }), km = keyModel(key, p, null, fs);
+    // a full blow's pitch glide would move the partials off the frequencies the decay is read at;
+    // the undamped treble's strings, ringing along, would add to them
+    const p = P({ stringing: 'single', tilt: 0, gFrame: 3e-3, maxFreq: 16000, hardness: 3, kc: false, sympathy: 0 }), km = keyModel(key, p, null, fs);
     const x = render(p, [[0, 'on', key, 1]], 1.2, fs).x;
     for (const pp of km.partials) {
       if (pp.f < 1500) continue;
@@ -415,6 +416,47 @@ test('soundboard above its modal band: the residual path matches the plate\'s fu
       assert.ok(Math.abs(d) < 1.5, `${h} mm, ${f1 / 1000}–${f2 / 1000} kHz: ${d.toFixed(1)} dB (without the residual ${(band(nores, f1, f2) - band(X, f1, f2)).toFixed(1)} dB)`);
     }
   }
+});
+test('sympathetic strings: an undamped key rings along where its partials meet the sounding ones, never with its own voice; a damped one, or after Panic, stays still', () => {
+  // keys held (struck softly) and staccato notes struck hard, the pedal up or down, after every
+  // key's group has been made (one a block); each key's group's energy after `sec` s
+  const run = ({ held = [], strike = [], pedal = false, sec = 1, panic = false, ...o } = {}) => {
+    const e = new GrandEngine(FS);
+    e.setParams(P({ sympathy: 0.25, ...o }));
+    const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
+    for (let b = 0; b < 100; b++) e.process(L, R, bl);
+    e.setSustain(pedal);
+    for (const k of held) e.noteOn(k, 0);
+    for (const k of strike) e.noteOn(k, 0.9);
+    let peak = 0;
+    for (let b = 0; b < Math.round((sec * FS) / bl); b++) {
+      if (b === Math.round((0.3 * FS) / bl)) for (const k of strike) e.noteOff(k);
+      if (panic && b === Math.round((0.6 * FS) / bl)) e.allNotesOff();
+      e.process(L, R, bl);
+      for (let i = 0; i < bl; i++) peak = Math.max(peak, Math.abs(L[i]), Math.abs(R[i]));
+    }
+    return { E: (k) => e.sympathetic(k).energy, size: (k) => e.sympathetic(k).size, damped: (k) => e.sympathetic(k).damped, running: e.sympatheticRunning(), peak };
+  };
+  const c4 = run({ held: [60], strike: [48] }), cs4 = run({ held: [61], strike: [48] });
+  for (const k of [KEY_LO, 60, 100]) assert.ok(c4.size(k) > 0, `key ${k} has no group`); // (C8's fundamental is above 4 kHz: none)
+  assert.ok(c4.E(60) > 30 * cs4.E(61), `C4 held, C3 struck: C4's group ${c4.E(60).toExponential(2)}; C♯4 held: ${cs4.E(61).toExponential(2)}`);
+  assert.ok(c4.E(61) === 0 && c4.damped(61), `C♯4, not held: ${c4.E(61).toExponential(2)}`);
+  const own = run({ held: [48] }), pair = run({ held: [48, 60] });
+  assert.ok(own.E(48) < 1e-2 * pair.E(60), `C3 held: its own group ${own.E(48).toExponential(2)}; C4's, held with it, ${pair.E(60).toExponential(2)}`);
+  assert.ok(!c4.damped(100) && c4.E(100) > 0, 'the keys above E6 have no dampers: they ring along');
+  const ped = run({ strike: [48], pedal: true });
+  assert.ok(ped.E(60) > 30 * cs4.E(61) && !ped.damped(30), `the pedal lifts every damper: C4's group ${ped.E(60).toExponential(2)}`);
+  const off = run({ held: [60], strike: [48], sympathy: 0 });
+  assert.ok(off.running === 0 && off.E(60) === 0, 'off: no group runs');
+  const hush = run({ strike: [36, 40, 43], pedal: true, panic: true });
+  for (const k of [48, 60, 100]) assert.ok(hush.E(k) === 0, `after Panic: key ${k}'s group ${hush.E(k)}`);
+  const board = run({ held: [60], strike: [48], mount: 'board' });
+  assert.ok(board.E(60) > 5 * c4.E(60), `a soundboard couples the strings more than the iron frame: ${board.E(60).toExponential(2)} vs ${c4.E(60).toExponential(2)}`);
+  for (const mount of ['frame', 'board']) {
+    const loud = run({ strike: [36, 40, 43, 48, 52, 55, 60], pedal: true, sympathy: 1, sec: 2, mount });
+    assert.ok(Number.isFinite(loud.peak) && loud.peak < 2, `a pedalled chord at 100 % (${mount}): peak ${loud.peak}`);
+  }
+  console.log(`        (C3 struck: held C4's group ${(c4.E(60) / cs4.E(61)).toFixed(0)} × held C♯4's, ${(board.E(60) / c4.E(60)).toFixed(0)} × more on a soundboard; ${ped.running} partials ring with the pedal down)`);
 });
 test('stability: every parameter at its min and max gives finite, bounded output', () => {
   const ps = GROUPS.flatMap((g) => g.params);

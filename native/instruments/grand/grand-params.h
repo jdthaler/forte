@@ -16,13 +16,14 @@
 namespace forte::grand {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { hardness, strike, damper, scale, stringing, detune, stiffness, stretch, loss, kc, mount, gFrame, boardH, tilt, hRatio, kH, listen, pickH, rIn, bass, mid, treble, maxFreq, room, venue, volume, count };
+enum : int { hardness, strike, damper, sympathy, scale, stringing, detune, stiffness, stretch, loss, kc, mount, gFrame, boardH, tilt, hRatio, kH, listen, pickH, rIn, bass, mid, treble, maxFreq, room, venue, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
 inline const FormatSegment kFormat_hardness[] = {{kNoLimit, "×", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_strike[] = {{kNoLimit, "", " L", 1, 0, 3, false, false, false, false}};
 inline const FormatSegment kFormat_damper[] = {{kNoLimit, "", " s⁻¹", 1, 0, 0, false, false, false, false}};
+inline const FormatSegment kFormat_sympathy[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_scale[] = {"CP-70 short scale (bass 0.68 m)", "Concert-grand scale (bass 2 m)"};
 inline const char *const kKeys_scale[] = {"cp70", "concert"};
 namespace scale_ { enum : int { cp70, concert }; }
@@ -57,6 +58,7 @@ inline const ParamInfo kParams[p::count] = {
   {"hardness", "Felt hardness", "Action", ParamKind::continuous, 0.2, 5, 1, 0, true, true, nullptr, 0, kFormat_hardness, 1},
   {"strike", "Strike position", "Action", ParamKind::continuous, 0.03, 0.5, 0.12, 0.001, false, false, nullptr, 0, kFormat_strike, 1},
   {"damper", "Damper", "Action", ParamKind::continuous, 3, 80, 25, 0, true, false, nullptr, 0, kFormat_damper, 1},
+  {"sympathy", "Sympathetic resonance", "Action", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_sympathy, 2},
   {"scale", "Scale design", "Strings", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_scale, 2, nullptr, 0, kKeys_scale},
   {"stringing", "Strings per note", "Strings", ParamKind::choice, 0, 2, 0, 1, false, false, kChoices_stringing, 3, nullptr, 0, kKeys_stringing},
   {"detune", "Unison mistuning", "Strings", ParamKind::continuous, 0, 12, 1.2, 0.1, false, false, nullptr, 0, kFormat_detune, 1},

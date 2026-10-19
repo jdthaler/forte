@@ -152,6 +152,7 @@ void GrandEngine::Voice::hammerStep(const double *A1, const double *A2, const Gr
   const double Fc = contactForce(etaF - (uf - swV * sV0 - swH * sH0));
   etaPrev = eta; eta = etaF - kOverM * Fc;
   const double sV = sV0 + Fc * rhoV * invV, sH = sH0 + Fc * rhoH * invH;
+  hsV = sV; hsH = sH;
   double fv = 0, fh = 0;
   for (int i = 0; i < nV; i++) { const double x = q[i] - u[i] * sV + bh[i] * Fc; q[i] = x; fv += bf[i] * x; }
   for (int i = nV; i < N; i++) { const double x = q[i] - u[i] * sH + bh[i] * Fc; q[i] = x; fh += bf[i] * x; }
@@ -212,6 +213,7 @@ void GrandEngine::Voice::render(double *PL, double *PR, double *SEG, int n, Gran
     if (hammerOn) {
       hammerStep(A1, A2, eng, kc);
       fv = FV; fh = FH;
+      sbV[s] = hsV; sbH[s] = hsH;
     } else if (kc) {
       double Q[3] = {0, 0, 0};
       double a = 0, y = 0;
@@ -224,6 +226,7 @@ void GrandEngine::Voice::render(double *PL, double *PR, double *SEG, int n, Gran
       double most = 0;
       for (int t = 0; t < S; t++) { dT[t] = std::min(kcGain * Q[t], dTmax); most = std::max(most, dT[t]); }
       if (most < 1e-5 * Tt) stretched = false; // from the next block
+      sbV[s] = sv; sbH[s] = sh;
     } else {
       double a = 0, y = 0;
       for (int i = 0; i < nva; i++) {
@@ -239,6 +242,7 @@ void GrandEngine::Voice::render(double *PL, double *PR, double *SEG, int n, Gran
         q1[i] = qa; q[i] = f;
       }
       sh = a * iH; fh = y - kH * sh;
+      sbV[s] = sv; sbH[s] = sh;
     }
     const double y = fv + gH * fh;
     PL[s] += pl * y; PR[s] += pr * y;
@@ -307,7 +311,7 @@ void GrandEngine::BoardSlot::run(const double *SEG, double *ML, double *MR, int 
 
 GrandEngine::GrandEngine(double fs)
     : Engine(fs), hammerMax((int)std::round(0.08 * fs)), repeat((int)std::round(REPEAT * fs)),
-      store(new double[(size_t)POOL * 4 * CAP]()),
+      sym(128, 2 * SYM_MODES, BLOCK, fs, false), store(new double[(size_t)POOL * 4 * CAP]()),
       data([this](int key, uint64_t version) { return build(key, version); }) {
   for (int i = 0; i < POOL; i++) {
     Voice &v = pool[i];
@@ -454,6 +458,7 @@ GrandEngine::Voice *GrandEngine::freeVoice() {
 void GrandEngine::noteOn(int key, double velocity) {
   if (!hasParams || key < KEY_MIN || key > KEY_MAX) return;
   focus = key;
+  down[key] = 1;
   Voice *v = byKey[key];
   // the action has not yet brought the hammer back for another blow
   if (v && !v->dead && !v->killing && v->age - v->struck < repeat) { v->keyDown = true; v->updateDamping(*this); return; }
@@ -493,6 +498,7 @@ void GrandEngine::retryPending() {
 
 void GrandEngine::noteOff(int key, double) {
   if (key < 0 || key > 127) return;
+  down[key] = 0;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
   if (Voice *v = byKey[key]) { v->keyDown = false; v->updateDamping(*this); }
 }
@@ -504,6 +510,9 @@ void GrandEngine::setSustain(bool on) {
 
 void GrandEngine::allNotesOff() {
   nPending = 0;
+  down.fill(0);
+  for (int key = 0; key < 128; key++) sym.clear(key);
+  symHush = true;
   for (int i = 0; i < nVoices; i++) voices[i]->kill();
 }
 
@@ -533,13 +542,17 @@ void GrandEngine::process(float *L, float *R, int n) {
 void GrandEngine::run(float *L, float *R, int n) {
   // notes and a board that were being built (only with threads)
   retryPending();
+  if (hasParams) symFetch();
   if (!std::isnan(wantBoard)) {
     if (BoardSlot *b = boardFor(wantBoard)) { board = b; wantBoard = NAN; }
   }
   double *PL = pL.data(), *PR = pR.data(), *SEG = seg.data();
   std::fill(PL, PL + n, 0.0); std::fill(PR, PR + n, 0.0);
   for (int s = 0; s < SEGMENTS; s++) std::fill(SEG + s * BLOCK, SEG + s * BLOCK + n, 0.0);
-  if (hasParams) for (int i = 0; i < nVoices; i++) voices[i]->render(PL, PR, SEG, n, *this);
+  if (hasParams) {
+    for (int i = 0; i < nVoices; i++) voices[i]->render(PL, PR, SEG, n, *this);
+    symRun(PL, PR, SEG, n);
+  }
   BoardSlot *b = board;
   if (b) b->run(SEG, mL.data(), mR.data(), n, nVoices > 0);
   const double gp = 1 - mix;
@@ -559,6 +572,109 @@ void GrandEngine::run(float *L, float *R, int n) {
     } else voices[j++] = v;
   }
   nVoices = j;
+}
+
+// ---- sympathetic strings ---------------------------------------------------------------------
+
+// Bring a few keys' groups up to date each block, from the models built for the current version
+// (without threads, one key built in place a block). A new damper strength marks every group stale.
+void GrandEngine::symFetch() {
+  constexpr uint64_t STALE = ~uint64_t(0);
+  if (P[p::damper] != symDamperSigma) {
+    symDamperSigma = P[p::damper];
+    for (int key = KEY_MIN; key <= KEY_MAX; key++) if (symVer[key]) symVer[key] = STALE;
+  }
+  if (P[p::pickH] != symPickH) {
+    symPickH = P[p::pickH];
+    for (int key = KEY_MIN; key <= KEY_MAX; key++) if (symVer[key]) symRoute(key);
+  }
+  if (P[p::sympathy] <= 0) return;
+  constexpr int KEYS = KEY_MAX - KEY_MIN + 1;
+  for (int n = 0, tries = 0; n < (FORTE_THREADS ? 8 : 1) && tries < KEYS; tries++) {
+    const int key = KEY_MIN + symNext;
+    symNext = (symNext + 1) % KEYS;
+    if (symVer[key] == version) continue;
+    n++;
+    if (const Data::Ref r = data.get(key, version)) symSet(key, *r.data, version);
+  }
+}
+
+// Key's group: its first string's lowest partials in each polarisation below SYM_FMAX, as the
+// unison's in-phase mode (c√ν, draining at ν c²/2 as the voice's bridge drains it); the sideways
+// ones only when they drain into the bridge at least a quarter as fast as the vertical (by default
+// a fifth as fast: left out).
+void GrandEngine::symSet(int key, const Built &b, uint64_t ver) {
+  const KeyModel &d = b.d;
+  const double fmax = std::min(SYM_FMAX, 0.45 * fs), sq = std::sqrt((double)d.ns);
+  std::array<SympatheticMode, 2 * SYM_MODES> modes;
+  int nv = 0, nh = 0;
+  double cv = 0, ch = 0;
+  auto take = [&](int i0, int i1, bool hor, int &m, double &c2) {
+    for (int i = i0; i < i1 && m < SYM_MODES; i++) {
+      if (d.str[i] != 0 || d.freq[i] >= fmax) continue;
+      SympatheticMode &md = modes[nv + nh];
+      md.omega = b.om[i];
+      const double c = sq * d.c[i];
+      md.cV = hor ? 0 : c; md.cH = hor ? c : 0;
+      md.sigma = d.sigma[i] + 0.5 * c * c;
+      md.damped = md.sigma + P[p::damper] * d.damp[i];
+      md.oV = hor ? 0 : sq * d.bf[i]; md.oH = hor ? sq * d.bf[i] : 0;
+      md.loud = OUT * pickupTrim(key) * sq * std::fabs(d.bf[i]);
+      m++; c2 += c * c;
+    }
+  };
+  take(0, d.nV, false, nv, cv);
+  take(d.nV, d.n, true, nh, ch);
+  if (nh && !(ch / nh >= 0.25 * cv / std::max(1, nv))) nh = 0;
+  sym.set(key, modes.data(), nv + nh);
+  symDamper[key] = d.hasDamper; symSeg[key] = (uint8_t)d.seg;
+  symVer[key] = ver;
+  symRoute(key);
+}
+
+// Its outputs: the piezo, panned as the key and trimmed as its voices, and its segment of the
+// bridge (the soundboard).
+void GrandEngine::symRoute(int key) {
+  const auto [l, r] = keyPan(key, 0.5, KEY_LO, KEY_HI);
+  const double t = pickupTrim(key) * OUT, gH = sym.horizontal(key) ? P[p::pickH] : 0;
+  const Sympathetic::Tap taps[3] = {{0, l * t, l * t * gH}, {1, r * t, r * t * gH}, {2 + symSeg[key], 1, 0}};
+  sym.route(key, taps, 3);
+}
+
+// After the voices' n samples, the groups': each key's damper is up while the pedal is down, while
+// it is held, or always (the treble's); each group feels the voices' bridge velocities at the
+// steps they are centred on.
+void GrandEngine::symRun(double *PL, double *PR, double *SEG, int n) {
+  const double kap = P[p::sympathy];
+  if (kap <= 0) return;
+  // after Panic the groups stay still until the voices have faded out
+  if (symHush) {
+    for (int i = 0; i < nVoices; i++) if (!voices[i]->dead) return;
+    symHush = false;
+  }
+  for (int key = KEY_MIN; key <= KEY_MAX; key++) sym.damp(key, !(sustain || down[key] || !symDamper[key]));
+  // Σ u Δq ≈ k√(2k) Σ c q̇ (u = ±√β, β ≈ c² k/2)
+  const double toS = 1 / ((1 / fs) * std::sqrt(2 / fs));
+  bool any = false;
+  symStamp++;
+  std::fill(tV.begin(), tV.begin() + n, 0.0); std::fill(tH.begin(), tH.begin() + n, 0.0);
+  for (int i = 0; i < nVoices; i++) {
+    const Voice *v = voices[i];
+    if (v->dead) continue;
+    any = true;
+    const int key = v->key;
+    double *ov = ownV[key].data(), *oh = ownH[key].data();
+    const bool first = ownAt[key] != symStamp;
+    ownAt[key] = symStamp;
+    for (int s = 0; s < n; s++) {
+      const double x = toS * v->sbV[s], y = toS * v->sbH[s];
+      tV[s] += x; tH[s] += y;
+      if (first) { ov[s] = x; oh[s] = y; } else { ov[s] += x; oh[s] += y; }
+    }
+    sym.own(key, ov, oh);
+  }
+  double *const buses[2 + SEGMENTS] = {PL, PR, SEG, SEG + BLOCK, SEG + 2 * BLOCK};
+  sym.run(kap, tV.data(), tH.data(), any, n, buses);
 }
 
 } // namespace forte::grand

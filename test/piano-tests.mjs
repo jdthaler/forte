@@ -336,6 +336,45 @@ test('una corda: the missed string is driven through the bridge, and the afterso
   console.log(`        level 3–4 s after the strike re the attack: ${(normal.late - normal.early).toFixed(1)} dB → ${(soft.late - soft.early).toFixed(1)} dB with una corda`);
 });
 
+test('sympathetic strings: an undamped key rings along where its partials meet the sounding ones, never with its own voice; a damped one, or after Panic, stays still', () => {
+  // keys held (struck softly) and staccato notes struck hard, the pedal up or down; each key's
+  // group's energy after `sec` s, the partials that ran then, and the peak output
+  const run = ({ held = [], strike = [], pedal = false, sympathy = 0.25, sec = 1, panic = false } = {}) => {
+    const p = P({ sympathy }), e = new PianoEngine(FS);
+    e.setParams(p);
+    for (let k = 21; k <= 108; k++) e.offer(keyModel(k, p, FS).packed);
+    e.setSustain(pedal);
+    const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
+    e.process(L, R, bl);
+    for (const k of held) e.noteOn(k, 0.3);
+    for (const k of strike) e.noteOn(k, 2.5);
+    let peak = 0;
+    for (let b = 0; b < Math.round((sec * FS) / bl); b++) {
+      if (b === Math.round((0.3 * FS) / bl)) for (const k of strike) e.noteOff(k);
+      if (panic && b === Math.round((0.6 * FS) / bl)) e.allNotesOff();
+      e.process(L, R, bl);
+      for (let i = 0; i < bl; i++) peak = Math.max(peak, Math.abs(L[i]), Math.abs(R[i]));
+    }
+    return { E: (k) => e.sympathetic(k).energy, damped: (k) => e.sympathetic(k).damped, running: e.sympatheticRunning(), peak };
+  };
+  const c4 = run({ held: [60], strike: [48] }), cs4 = run({ held: [61], strike: [48] });
+  assert.ok(c4.E(60) > 30 * cs4.E(61), `C4 held, C3 struck: C4's group ${c4.E(60).toExponential(2)}; C♯4 held: ${cs4.E(61).toExponential(2)}`);
+  assert.ok(c4.E(61) < 1e-3 * c4.E(60) && c4.damped(61), `C♯4, not held: ${c4.E(61).toExponential(2)}`);
+  // C3 held alone: its group feels every voice but its own (here only the undamped treble's groups
+  // feed it back); with C4 held too, C4's group rings with C3
+  const own = run({ held: [48] }), pair = run({ held: [48, 60] });
+  assert.ok(own.E(48) < 1e-2 * pair.E(60), `C3 held: its own group ${own.E(48).toExponential(2)}; C4's, held with it, ${pair.E(60).toExponential(2)}`);
+  const ped = run({ strike: [48], pedal: true });
+  assert.ok(ped.E(60) > 30 * c4.E(61) && !ped.damped(30) && c4.damped(30), `the pedal lifts every damper: C4's group ${ped.E(60).toExponential(2)}`);
+  const off = run({ held: [60], strike: [48], sympathy: 0 });
+  assert.ok(off.running === 0 && off.E(60) === 0, 'off: no group runs');
+  const hush = run({ strike: [36, 40, 43], pedal: true, panic: true });
+  for (const k of [48, 60, 72]) assert.ok(hush.E(k) === 0, `after Panic: key ${k}'s group ${hush.E(k)}`);
+  const loud = run({ strike: [36, 40, 43, 48, 52, 55, 60], pedal: true, sympathy: 1, sec: 2 });
+  assert.ok(Number.isFinite(loud.peak) && loud.peak < 2, `a pedalled chord at 100 %: peak ${loud.peak}`);
+  console.log(`        (C3 struck: held C4's group ${(c4.E(60) / cs4.E(61)).toFixed(0)} × held C♯4's; C3 held: its own group ${(own.E(48) / pair.E(60)).toExponential(1)} × C4's; ${ped.running} partials ring with the pedal down)`);
+});
+
 test('every preset-ish extreme stays stable', () => {
   const cases = [
     P({ shape: 'ribbon', aspect: 60, roll: 45, offset: 1, taper: 0.95, unisons: 3 }),

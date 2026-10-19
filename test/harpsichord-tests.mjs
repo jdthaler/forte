@@ -289,7 +289,8 @@ test('registers: the front 8′ is brighter than the back, the lute brighter sti
   assert.ok(fund(xl) < 0.7 * fund(xb), `the lute’s fundamental is weak: ${fund(xl).toFixed(2)} vs ${fund(xb).toFixed(2)} of the rms`);
   // the buff: decay of partials 1 and 8 with and without it
   const dec = (x, k) => 20 * Math.log10(tone(x, k * f, Math.round(0.6 * FS), Math.round(1.0 * FS)) / tone(x, k * f, Math.round(0.1 * FS), Math.round(0.5 * FS)));
-  const plain = run(solo('back', { soundboard: false, kc: false }), [[0, 'on', m, 0.7]], 1.0), buff = run(solo('back', { soundboard: false, buff: true, kc: false }), [[0, 'on', m, 0.7]], 1.0);
+  // (the held key's other strings, free of their dampers, would ring along unbuffed: left out)
+  const plain = run(solo('back', { soundboard: false, kc: false, sympathy: 0 }), [[0, 'on', m, 0.7]], 1.0), buff = run(solo('back', { soundboard: false, buff: true, kc: false, sympathy: 0 }), [[0, 'on', m, 0.7]], 1.0);
   assert.ok(dec(buff, 8) < 5 * dec(plain, 8) || dec(buff, 8) < -40, `8th partial: ${dec(plain, 8).toFixed(1)} → ${dec(buff, 8).toFixed(1)} dB per 0.5 s`);
   assert.ok(dec(buff, 1) > dec(plain, 1) - 3, `fundamental: ${dec(plain, 1).toFixed(1)} → ${dec(buff, 1).toFixed(1)} dB per 0.5 s`);
   // registration
@@ -366,16 +367,58 @@ test('level: a forte note peaks at 0.1–0.5 across the keyboard at 44.1 and 48 
   const ch = run(P({ four: true }), [41, 48, 53, 57, 60, 64, 67, 72].map((m) => [0, 'on', m, 1]), 1.0);
   assert.ok(Math.max(peakAbs(ch), peakAbs(ch.R)) < 1, `chord ${Math.max(peakAbs(ch), peakAbs(ch.R)).toFixed(3)}`);
 });
+test('sympathetic strings: a held key\'s strings ring along where their partials meet the sounding ones (the 4′ too, plucked or not), never with their own voice; damped ones, or after Panic, stay still', () => {
+  // keys held and staccato notes; each string's group's energy (key, choir) after `sec` s
+  // (play: the registration the struck notes are played with, after the keys are held)
+  const run = (p, { held = [], strike = [], sec = 1, panic = false, play } = {}) => {
+    const e = new HarpsichordEngine(FS);
+    e.setParams({ ...p, sympathy: p.sympathy ?? 0.25 });
+    const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
+    e.process(L, R, bl);
+    for (const k of held) e.noteOn(k, 0.5);
+    if (play) e.setParams({ ...play, sympathy: p.sympathy ?? 0.25 });
+    for (const k of strike) e.noteOn(k, 0.7);
+    let peak = 0;
+    for (let b = 0; b < Math.round((sec * FS) / bl); b++) {
+      if (b === Math.round((0.3 * FS) / bl)) for (const k of strike) e.noteOff(k, -1);
+      if (panic && b === Math.round((0.6 * FS) / bl)) e.allNotesOff();
+      e.process(L, R, bl);
+      for (let i = 0; i < bl; i++) peak = Math.max(peak, Math.abs(L[i]), Math.abs(R[i]));
+    }
+    return { E: (k, c) => e.sympathetic(k, c).energy, damped: (k, c) => e.sympathetic(k, c).damped, running: e.sympatheticRunning(), peak };
+  };
+  // keys held with every row off (they pluck nothing, but their jacks rise on the lower manual), then
+  // the back 8′ alone
+  const p = P({ front8: false, back8: false, four: false }), play = P({ front8: false, four: false });
+  const c4 = run(p, { held: [60], strike: [72], play }), cs4 = run(p, { held: [61], strike: [72], play });
+  assert.ok(c4.E(60, 'four') > 30 * cs4.E(61, 'four'), `C4 held, c5 struck: C4's 4′ (unplucked) ${c4.E(60, 'four').toExponential(2)}; C♯4's ${cs4.E(61, 'four').toExponential(2)}`);
+  const upper = run(P({ manual: 'upper' }), { held: [60], strike: [72] });
+  assert.ok(upper.damped(60, 'four') && upper.E(60, 'four') === 0, 'on the upper manual the 4′ jacks stay down: its dampers stay on');
+  assert.ok(c4.damped(61, 'back') && c4.E(61, 'back') === 0, 'a key not held: dampers on');
+  // the upper manual alone plucks the front 8′: a held string feels every voice but its own (here
+  // only its back 8′, free under the lute's raised jack, feeds it back)
+  const own = run(solo('front'), { held: [48] }), pair = run(solo('front'), { held: [48, 60] });
+  assert.ok(own.E(48, 'front') < 1e-2 * pair.E(60, 'front'), `C3 held: its own string's group ${own.E(48, 'front').toExponential(2)}; C4's, held with it, ${pair.E(60, 'front').toExponential(2)}`);
+  const off = run({ ...p, sympathy: 0 }, { held: [60], strike: [72], play });
+  assert.ok(off.running === 0 && off.E(60, 'four') === 0, 'off: no group runs');
+  const hush = run(p, { held: [48, 52, 55, 60], strike: [36], panic: true, play });
+  for (const k of [48, 60]) assert.ok(hush.E(k, 'four') === 0 && hush.E(k, 'back') === 0, `after Panic: key ${k}'s groups`);
+  const loud = run(P({ sympathy: 1 }), { held: [36, 40, 43, 48, 52, 55, 60, 64, 67, 72], strike: [24, 31], sec: 2 });
+  assert.ok(Number.isFinite(loud.peak) && loud.peak < 2.5, `ten keys held at 100 %: peak ${loud.peak}`);
+  console.log(`        (c5 struck: held C4's 4′ ${(c4.E(60, 'four') / cs4.E(61, 'four')).toFixed(0)} × held C♯4's; ${loud.running} partials ring with ten keys held)`);
+});
 test('stability: seeded random combinations of extreme settings at 44.1 and 48 kHz, changed mid-note: no NaN, bounded, silent after Panic', () => {
   let seed = 12345;
   const rnd = () => { seed = (seed * 1103515245 + 12345) >>> 0; return seed / 4294967296; };
-  // tension modulation draws from a stream of its own, so the other settings stay the ones tried before it came
-  let seed2 = 777;
+  // tension modulation and the sympathetic strings draw from streams of their own, so the other
+  // settings stay the ones tried before they came
+  let seed2 = 777, seed3 = 4242;
   const coin = () => { seed2 = (seed2 * 1103515245 + 12345) >>> 0; return seed2 / 4294967296 < 0.5; };
-  const all = GROUPS.flatMap((g) => g.params).filter((p) => !['volume', 'room', 'venue', 'fullRange', 'kc'].includes(p.id));
+  const kap = () => { seed3 = (seed3 * 1103515245 + 12345) >>> 0; return seed3 / 4294967296 < 0.5 ? 0 : 1; };
+  const all = GROUPS.flatMap((g) => g.params).filter((p) => !['volume', 'room', 'venue', 'fullRange', 'kc', 'sympathy'].includes(p.id));
   const pick = (p) => (p.type === 'select' ? p.options[Math.floor(rnd() * p.options.length)][0] : p.type === 'checkbox' ? rnd() < 0.5 : rnd() < 0.5 ? p.min : p.max);
   for (let trial = 0; trial < 10; trial++) {
-    const fs = trial % 2 ? 44100 : 48000, a = P({ ...Object.fromEntries(all.map((p) => [p.id, pick(p)])), kc: coin() }), b = P({ ...Object.fromEntries(all.map((p) => [p.id, pick(p)])), kc: coin() });
+    const fs = trial % 2 ? 44100 : 48000, a = P({ ...Object.fromEntries(all.map((p) => [p.id, pick(p)])), kc: coin(), sympathy: kap() }), b = P({ ...Object.fromEntries(all.map((p) => [p.id, pick(p)])), kc: coin(), sympathy: kap() });
     const keys = [KEY_LO, 45, 60, 73, KEY_HI];
     const ev = keys.flatMap((k, i) => [[0.01 * i, 'on', k, rnd()], [0.6, 'off', k, rnd()]]);
     ev.push([0.3, 'params', b], [0.35, 'on', 60, 1], [1.3, 'panic']);
