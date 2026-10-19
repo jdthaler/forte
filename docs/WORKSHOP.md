@@ -113,3 +113,10 @@ Now an instrument: see [springs/README.md](../springs/README.md), whose
 
 Now an instrument: see [ring/README.md](../ring/README.md), whose
 *Prior art and references* carry this brief's research.
+
+---
+
+## RF Cavity Bells (`cavity`): built
+
+Now an instrument: see [cavity/README.md](../cavity/README.md), whose
+*Prior art and references* carry its research.

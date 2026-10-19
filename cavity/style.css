@@ -1,0 +1,8 @@
+/* The page's own palette and any layout beyond shared/instrument.css: the silver of niobium,
+   the violet glow of a cavity's field and the amber of a quench's warmth. */
+:root {
+  --accent: #9fb4ff;
+  --accent-2: #ffb35c;
+  --accent-ink: #0a0f24;
+}
+#cells, #passband { height: 300px; }
