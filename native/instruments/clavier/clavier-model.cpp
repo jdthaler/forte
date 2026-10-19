@@ -44,7 +44,9 @@ double wrapLength(double F, const double *P) { return std::pow(tipDepth(F, P), 2
 
 StringDesign stringDesign(int key, const double *P) {
   StringDesign S{};
-  const double f0 = keyFreq(key), L = speakingLength(key), Ln = NONSPEAK * L;
+  // the key's pitch in the keyboard's tuning (forte/tuning.h); the string (length, gauge) is the
+  // key's, tuned to it by its tension
+  const double f0 = keyFreq(key) * tuningOf(P).ratio(key), L = speakingLength(key), Ln = NONSPEAK * L;
   const Gauge g = gauge(key);
   const double A = (PI * g.d * g.d) / 4, EA = STEEL.E * A, EI = P[p::stiff] * STEEL.E * (PI * std::pow(g.d, 4)) / 64;
   // tuned held down at TUNE_FORCE: f1 = (1/2L)·√(T/μ)·√(1 + π²EI/TL²) exactly for a pinned stiff string

@@ -95,10 +95,10 @@ double torsionFreq(double L, double b, double h, int n) {
   return ((n + 1) / (2 * L)) * std::sqrt((G_STEEL * torsionJ(b, h)) / (STEEL.rho * Ip));
 }
 
-Geometry barGeometry(int k, double thick) {
+Geometry barGeometry(int k, double thick, double ratio) {
   k = std::min(KEY_MAX, std::max(KEY_MIN, k));
   const Blank bl = barBlank(k, thick);
-  const double ft = keyFreq(k);
+  const double ft = keyFreq(k) * ratio;
   // Euler–Bernoulli first, then the Timoshenko bar: f₁ ∝ 1/L², nearly
   double L = std::sqrt((BETA_L[0] * BETA_L[0] * bl.h * std::sqrt(STEEL.E / (12 * STEEL.rho))) / (TAU * ft));
   for (int it = 0; it < 12; it++) {
@@ -145,8 +145,8 @@ static double simpson(const std::array<double, NX> &y, double L) {
   return (s * L) / (3 * (NX - 1));
 }
 
-void buildBar(int k, double thick, Bar &bar) {
-  const Geometry g = barGeometry(k, thick);
+void buildBar(int k, double thick, Bar &bar, double ratio) {
+  const Geometry g = barGeometry(k, thick, ratio);
   const double L = g.L, b = g.b, h = g.h, A = b * h, I = (b * h * h * h) / 12, dx = L / (NX - 1);
   bar = Bar{};
   bar.geom = g;

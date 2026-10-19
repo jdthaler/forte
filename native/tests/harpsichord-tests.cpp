@@ -83,10 +83,14 @@ TEST("harpsichord: stiff strings fₙ = n f₁ √((1 + Bn²)/(1 + B)) on pitch;
   }
   CHECK_NEAR(stringLength(C2, BACK), 0.355, 1e-12);
   CHECK(isBrass(45, BACK) && !isBrass(46, BACK) && isBrass(40, FOUR) && !isBrass(41, FOUR));
-  const auto iv = [](int a, int b) { return std::fmod(std::fmod(temperamentCents(1, b) - temperamentCents(1, a), 1200) + 1200, 1200); };
+  double mt[12];
+  forte::temperamentCents(forte::temperament::meantone, mt);
+  const auto iv = [&](int a, int b) { return std::fmod(std::fmod(mt[b] - mt[a], 1200) + 1200, 1200); };
   for (auto [a, b] : {std::pair{0, 4}, {5, 9}, {7, 11}, {2, 6}}) CHECK_NEAR(iv(a, b), 1200 * std::log2(5.0 / 4), 1e-9);
   CHECK_NEAR(iv(8, 3), 737.64, 0.01); // the wolf
-  CHECK(temperamentOffset(1, 9) == 0);
+  std::vector<double> mean = defaults();
+  mean[p::temperament] = forte::temperament::meantone;
+  CHECK(paramsOf(mean.data()).tuning.offset(69) == 0); // A stays at the pitch standard
 }
 
 TEST("harpsichord: the cantilever — a uniform plectrum has c(s) = s³/3EI and g(s) = s²/2EI within 0.5 %; the quill's compliance sits towards its tip") {

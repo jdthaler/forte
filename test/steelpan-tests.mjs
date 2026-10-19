@@ -98,6 +98,19 @@ test('every key\'s fundamental is on equal-tempered pitch (A0–C8), and its mod
     for (let i = 4; i < m.length; i++) assert.ok(m[i].f >= m[i - 1].f && m[i].f < 18000);
   }
 });
+test('the keyboard\'s tuning moves each note, and the pan\'s own tuning stays over it: at A = 415 Hz, and in ¼-comma meantone (E4 −3.42 ¢, C4 +10.26 ¢), 1 : 2 : 3 (or 1 : 2 : 4) on the tuned note, which sounds there (within 0.5 ¢)', () => {
+  for (const [key, o, c] of [[69, { pitch: 415 }, cents(415, 440)], [64, { temperament: 'meantone' }, -3.42], [60, { temperament: 'meantone' }, 10.26]]) {
+    const f1 = keyFreq(key) * 2 ** (c / 1200);
+    let m = M.noteModes(key, P({ accuracy: 0, ...o }));
+    assert.ok(Math.abs(cents(m[0].f, f1)) < 0.01 && Math.abs(m[1].f / m[0].f - 2) < 1e-12 && Math.abs(m[2].f / m[0].f - 3) < 1e-12, `${key}: 1 : 2 : 3`);
+    m = M.noteModes(key, P({ accuracy: 0, tuning: 'double', ...o }));
+    assert.ok(Math.abs(m[2].f / m[0].f - 4) < 1e-12, `${key}: 1 : 2 : 4`);
+    const x = render(key, P({ ...LIN, ...o }), 0.7, 0.6), a = 4800, b = 4800 + 16384;
+    let lo = f1 * 2 ** (-10 / 1200), hi = f1 * 2 ** (10 / 1200); // the strongest frequency within ±10 ¢ (golden section)
+    for (let it = 0; it < 40; it++) { const m1 = hi - 0.618 * (hi - lo), m2 = lo + 0.618 * (hi - lo); if (tone(x, m1, a, b) > tone(x, m2, a, b)) hi = m2; else lo = m1; }
+    assert.ok(Math.abs(cents((lo + hi) / 2, f1)) < 0.5, `${key}: sounds ${cents((lo + hi) / 2, f1).toFixed(2)} ¢ from its tuned note`);
+  }
+});
 test('Hertz contact: the stick\'s contact time goes as v^(−1/5); a half-sine pulse has its first zero at 1.5/τ', () => {
   const f1 = keyFreq(60), t1 = M.contact(0.7, f1, 1), t2 = M.contact(0.7, f1, 1 / 32);
   assert.ok(Math.abs(t1 - 0.7e-3) < 1e-12 && Math.abs(t2 / t1 - 2) < 1e-9, `${t1}, ${t2}`);

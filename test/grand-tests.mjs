@@ -188,6 +188,22 @@ test('stretch off: every key within ±3 ¢ of 12-TET A440 (measured from the out
   assert.ok(worst < 3, `worst ${worst.toFixed(2)} ¢ at key ${wk}`);
   console.log(`        (worst ${worst.toFixed(2)} ¢ at key ${wk})`);
 });
+test('the keyboard’s tuning: at A = 415 Hz every key 415/440 of 12-TET A440, in ¼-comma meantone E4 −3.42 ¢ and C4 +10.26 ¢; stretched, its octaves still beatless', () => {
+  // ¼-comma meantone on C, A kept: E sits a fifth's narrowing (q − 700) from 12-TET, C 2100 − 3q
+  const q = 1200 * Math.log2(3 / 2) - 300 * Math.log2(81 / 80);
+  const cases = [[{ pitch: 415 }, 64, cents(415, 440)], [{ pitch: 415 }, 60, cents(415, 440)], [{ temperament: 'meantone' }, 64, q - 700], [{ temperament: 'meantone' }, 60, 2100 - 3 * q]];
+  for (const [o, m, want] of cases) {
+    const S = keyModel(m, P({ stretch: false, ...o })).S;
+    assert.ok(Math.abs(cents(S.f0, keyFreq(m)) - want) < 1e-9, `${JSON.stringify(o)} key ${m}: target ${cents(S.f0, keyFreq(m))} ¢, not ${want} ¢`);
+    const f = keyFreq(m) * 2 ** (want / 1200), x = note(P({ stretch: false, ...o }), m, 0.6, 1.3);
+    const c = cents(peakFreq(x, f, Math.round(0.1 * FS), x.length), f);
+    assert.ok(Math.abs(c) < 3, `${JSON.stringify(o)} key ${m}: sounds ${c.toFixed(2)} ¢ off`);
+  }
+  for (let m = 40; m + 12 <= 90; m += 7) { // the stretch on top: each octave still that of its lower note's partial 2
+    const lo = keyModel(m, P({ temperament: 'meantone' })), hi = keyModel(m + 12, P({ temperament: 'meantone' }));
+    assert.ok(Math.abs(lo.partials[1].f - hi.partials[0].f) < 1e-3, `${m}–${m + 12}: beats`);
+  }
+});
 test('stretch tuning: every octave\'s 2:1 partials coincide, so the octaves stop beating (12-TET: up to 25 Hz)', () => {
   for (const scale of ['cp70', 'concert']) {
     let worst = 0, beat12 = 0;
@@ -466,7 +482,8 @@ test('stability: every parameter at its min and max gives finite, bounded output
     else if (p.type !== 'checkbox') cases.push({ [p.id]: p.min }, { [p.id]: p.max });
   }
   for (const c of cases) for (const mount of ['frame', 'board']) {
-    const x = render(P({ mount, ...c }), [[0, 'on', 28, 1], [0, 'on', 64, 1], [0, 'on', 100, 1], [0.15, 'off', 64]], 0.3).x;
+    const { x, e } = render(P({ mount, ...c }), [[0, 'on', 28, 1], [0, 'on', 64, 1], [0, 'on', 100, 1], [0.15, 'off', 64]], 0.3);
+    e.destroy(); // its WebAssembly memory: the cases (the tuning's among them) would exhaust it
     const pk = peak(x) / 2;
     assert.ok(Number.isFinite(pk) && pk < 1.5, `${JSON.stringify(c)} ${mount}: peak ${pk}`);
     if (c.volume === undefined) assert.ok(pk > 1e-3, `${JSON.stringify(c)} ${mount}: silent (${pk})`);

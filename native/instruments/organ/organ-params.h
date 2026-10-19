@@ -6,6 +6,7 @@
 #include <cmath>
 
 #include "forte/instrument.h"
+#include "forte/tuning.h"
 
 // The plugins' build gives the version (forte_add_plugin, from <slug>-info.cmake); the
 // WebAssembly has no use for it, so a release that bumps the version leaves the .wasm alone.
@@ -16,7 +17,7 @@
 namespace forte::organ {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { tuning, mains, inertia, spinUp, levels, relief, drift, crosstalk, leakage, loading, spread, bounce, contactTime, percFastTau, percSlowTau, percLevel, sections, sectionDelay, scanRate, hornSlow, hornFast, drumSlow, drumFast, hornAccel, hornDecel, drumAccel, drumDecel, hornRadius, micDist, micSpread, crossover, balance, reflections, drive, expression, room, venue, volume, drawbar1, drawbar2, drawbar3, drawbar4, drawbar5, drawbar6, drawbar7, drawbar8, drawbar9, percOn, percSoft, percFast, percThird, vib, leslie, motor, count };
+enum : int { tuning, mains, inertia, spinUp, levels, relief, drift, crosstalk, leakage, loading, spread, bounce, contactTime, percFastTau, percSlowTau, percLevel, sections, sectionDelay, scanRate, hornSlow, hornFast, drumSlow, drumFast, hornAccel, hornDecel, drumAccel, drumDecel, hornRadius, micDist, micSpread, crossover, balance, reflections, drive, expression, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, drawbar1, drawbar2, drawbar3, drawbar4, drawbar5, drawbar6, drawbar7, drawbar8, drawbar9, percOn, percSoft, percFast, percThird, vib, leslie, motor, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -64,6 +65,24 @@ inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "
 inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
+inline const char *const kChoices_pitch[] = {"A = 440 Hz (modern)", "A = 415 Hz (baroque pitch)", "A = 392 Hz (French baroque, ton de chambre)", "A = 422.5 Hz (Handel’s tuning fork, 1751)", "A = 430 Hz (classical)", "A = 435 Hz (diapason normal, 1859)", "A = 442 Hz (many orchestras today)", "A = 443 Hz (Berlin, Vienna)", "A = 466 Hz (Chorton, German organs)"};
+inline const char *const kKeys_pitch[] = {"440", "415", "392", "422.5", "430", "435", "442", "443", "466"};
+inline const char *const kChoices_temperament[] = {"Equal temperament", "¼-comma meantone", "Werckmeister III (1691)", "⅙-comma meantone (Silbermann)", "Kirnberger III (1779)", "Vallotti", "Young (1799)", "Pythagorean", "Just intonation (5-limit)", "Custom (or a Scala file)"};
+inline const char *const kKeys_temperament[] = {"equal", "meantone", "werckmeister", "sixth", "kirnberger", "vallotti", "young", "pythagorean", "just", "custom"};
+namespace temperament_ { enum : int { equal, meantone, werckmeister, sixth, kirnberger, vallotti, young, pythagorean, just, custom }; }
+inline const char *const kChoices_tuningRoot[] = {"C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"};
+inline const char *const kKeys_tuningRoot[] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"};
+inline const FormatSegment kFormat_cents1[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const FormatSegment kFormat_cents2[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const FormatSegment kFormat_cents3[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const FormatSegment kFormat_cents4[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const FormatSegment kFormat_cents5[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const FormatSegment kFormat_cents6[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const FormatSegment kFormat_cents7[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const FormatSegment kFormat_cents8[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const FormatSegment kFormat_cents9[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const FormatSegment kFormat_cents10[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const FormatSegment kFormat_cents11[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
 inline const FormatSegment kFormat_drawbar1[] = {{kNoLimit, "", "", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_drawbar2[] = {{kNoLimit, "", "", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_drawbar3[] = {{kNoLimit, "", "", 1, 0, 0, false, false, false, false}};
@@ -119,6 +138,20 @@ inline const ParamInfo kParams[p::count] = {
   {"room", "Room", "Amp & output", ParamKind::continuous, 0, 1, 0.2, 0.01, false, true, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Amp & output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Amp & output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 1},
+  {"pitch", "Pitch", "Tuning", ParamKind::choice, 0, 8, 0, 1, false, false, kChoices_pitch, 9, nullptr, 0, kKeys_pitch},
+  {"temperament", "Temperament", "Tuning", ParamKind::choice, 0, 9, 0, 1, false, false, kChoices_temperament, 10, nullptr, 0, kKeys_temperament},
+  {"tuningRoot", "Temperament root", "Tuning", ParamKind::choice, 0, 11, 0, 1, false, false, kChoices_tuningRoot, 12, nullptr, 0, kKeys_tuningRoot},
+  {"cents1", "Minor 2nd (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents1, 1},
+  {"cents2", "Major 2nd (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents2, 1},
+  {"cents3", "Minor 3rd (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents3, 1},
+  {"cents4", "Major 3rd (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents4, 1},
+  {"cents5", "Perfect 4th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents5, 1},
+  {"cents6", "Tritone (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents6, 1},
+  {"cents7", "Perfect 5th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents7, 1},
+  {"cents8", "Minor 6th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents8, 1},
+  {"cents9", "Major 6th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents9, 1},
+  {"cents10", "Minor 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents10, 1},
+  {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
   {"drawbar1", "16' drawbar", "Drawbars", ParamKind::continuous, 0, 8, 8, 1, false, false, nullptr, 0, kFormat_drawbar1, 1},
   {"drawbar2", "5 1/3' drawbar", "Drawbars", ParamKind::continuous, 0, 8, 8, 1, false, false, nullptr, 0, kFormat_drawbar2, 1},
   {"drawbar3", "8' drawbar", "Drawbars", ParamKind::continuous, 0, 8, 8, 1, false, false, nullptr, 0, kFormat_drawbar3, 1},
@@ -157,8 +190,14 @@ inline const Preset kPresets[] = {
   {"2nd perc only — 00 8000 000, slow decay", kPreset7, 16},
   {"Full drawbars, dry — compare tunings", kPreset8, 18},
 };
-inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::expression};
+inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::expression, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{1, p::leslie, Controller::values, 1, 2}, {11, p::expression}, {64, p::leslie, Controller::toggle, 1, 2}};
+
+// The keyboard's tuning (forte/tuning.h): each key's frequency over equal temperament at A = 440 Hz.
+inline forte::Tuning tuningOf(const double *P) {
+  const double custom[forte::kCustomCents] = {P[p::cents1], P[p::cents2], P[p::cents3], P[p::cents4], P[p::cents5], P[p::cents6], P[p::cents7], P[p::cents8], P[p::cents9], P[p::cents10], P[p::cents11]};
+  return forte::makeTuning(P[p::pitch], P[p::temperament], P[p::tuningRoot], custom);
+}
 
 // The plugin's description. The port supplies its engine, and midiVelocity when the
 // descriptor maps MIDI velocity itself (this one does not).
@@ -169,7 +208,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .vst3Id = {0x43, 0xe5, 0xc5, 0x1c, 0xb9, 0x9f, 0x6a, 0xa1, 0x90, 0xef, 0x05, 0x66, 0x9a, 0xde, 0xb6, 0xab},
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 9,
-    .keep = kKeep, .keepCount = 4,
+    .keep = kKeep, .keepCount = 18,
     .keyLo = 21, .keyHi = 108, .space = Space::none,
     .modWheel = -1, .modWheelMax = 0,
     .controllers = kControllers, .controllerCount = 3,

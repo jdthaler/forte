@@ -130,6 +130,9 @@ class NeonEngine : public Engine {
   double vr, Ilp = 0;
   int tuning = 0, tonic = 0;
   double mistune = 0;
+  forte::Tuning keyboard; // the keyboard's tuning (forte/tuning.h), on top of the lamps' own
+  // a key's design frequency: the lamps' tuning (equal or just, mistuned) times the keyboard's
+  double keyTarget(int key) const { return tunedFreq(key, tuning, tonic, mistune) * keyboard.ratio(key); }
   int stateEvery, sinceState = 0;
   bool offered = false, offSettled = false;
   double offF = 0, offPhase = 0;

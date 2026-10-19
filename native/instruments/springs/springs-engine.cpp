@@ -305,29 +305,31 @@ void SpringEngine::setParams(const double *p) {
 static void toArray(const Params &g, double *a) {
   const double v[12] = {g.slinky ? 1.0 : 0.0, g.axial ? 1.0 : 0.0, g.coil, g.wire, g.helix, g.springs, g.spread, g.mallet, g.bead, g.endLoss, g.eta, g.oil};
   for (int i = 0; i < 12; i++) a[i] = v[i];
+  for (int i = 0; i < 12; i++) a[12 + i] = g.tuning.r[i]; // the tuning's ratios
 }
 static Params fromArray(const double *a) {
   Params g;
   g.slinky = a[0] != 0; g.axial = a[1] != 0; g.coil = a[2]; g.wire = a[3]; g.helix = a[4]; g.springs = a[5]; g.spread = a[6];
   g.mallet = a[7]; g.bead = a[8]; g.endLoss = a[9]; g.eta = a[10]; g.oil = a[11];
+  for (int i = 0; i < 12; i++) { g.tuning.r[i] = a[12 + i]; if (a[12 + i] != 1) g.tuning.equal = false; }
   return g;
 }
 void SpringEngine::publish(const Params &g, uint64_t v) {
   Snapshot &s = snaps[snapAt];
   snapAt = (snapAt + 1) % (int)snaps.size();
-  double a[12];
+  double a[NSNAP];
   toArray(g, a);
   s.seq.fetch_add(1, std::memory_order_acq_rel); // odd: being written
   s.version.store(v, std::memory_order_relaxed);
-  for (int i = 0; i < 12; i++) s.v[i].store(a[i], std::memory_order_relaxed);
+  for (int i = 0; i < NSNAP; i++) s.v[i].store(a[i], std::memory_order_relaxed);
   s.seq.fetch_add(1, std::memory_order_release);
 }
 bool SpringEngine::snapshot(uint64_t v, Params &g) const {
   for (const Snapshot &s : snaps) {
     const uint32_t q = s.seq.load(std::memory_order_acquire);
     if (q & 1 || s.version.load(std::memory_order_relaxed) != v) continue;
-    double a[12];
-    for (int i = 0; i < 12; i++) a[i] = s.v[i].load(std::memory_order_relaxed);
+    double a[NSNAP];
+    for (int i = 0; i < NSNAP; i++) a[i] = s.v[i].load(std::memory_order_relaxed);
     std::atomic_thread_fence(std::memory_order_acquire);
     if (s.seq.load(std::memory_order_relaxed) != q) continue;
     g = fromArray(a);

@@ -205,10 +205,12 @@ void VibraphoneEngine::Voice::render(float *L, float *Rt, int n, VibraphoneEngin
 VibraphoneEngine::VibraphoneEngine(double fs)
     : Engine(fs), data([this](int key, uint64_t version) -> std::unique_ptr<VoiceData> {
         if (key < KEY_MIN || key > KEY_MAX) return nullptr;
+        const Snapshot &s = snapshots[version % snapshots.size()];
+        const double depth = s.depth.load(std::memory_order_relaxed), ratio = s.ratio[key % 12].load(std::memory_order_relaxed);
 #if !FORTE_THREADS
-        if (offered && offered->key == key && versionOf(offered->depth) == version) return std::move(offered);
+        if (offered && offered->key == key && offered->depth == depth && offered->ratio == ratio) return std::move(offered);
 #endif
-        return std::make_unique<VoiceData>(voiceData(key, std::bit_cast<double>(version)));
+        return std::make_unique<VoiceData>(voiceData(key, depth, ratio));
       }),
       malletMax((int)std::round(MALLET_MAX * fs)) {
   vibe.type = msg::vibe; vibe.key = 0; vibe.count = 19;
@@ -233,9 +235,15 @@ void VibraphoneEngine::setParams(const double *p) {
   hasParams = true;
   T = {P[p::gap] / 1000, P[p::detune], P[p::temp], P[p::cd], P[p::tubes] != 0 ? 1.0 : 0.0, P[p::twist], P[p::shaft2]};
   if (first) S = T;
-  // the bars are built for the depth the knob is at, nearest the last key played first
-  const uint64_t v = versionOf(P[p::depth]);
-  if (first || v != version) { version = v; data.prepare(version, KEY_MIN, KEY_MAX, focus ? focus->key : 60); }
+  // the bars are built for the depth the knob is at and the tuning, nearest the last key played first
+  const forte::Tuning tuning = tuningOf(P.data());
+  if (first || P[p::depth] != physDepth || !(tuning == physTuning)) {
+    physDepth = P[p::depth]; physTuning = tuning; version++;
+    Snapshot &s = snapshots[version % snapshots.size()];
+    s.depth.store(physDepth + 0.0, std::memory_order_relaxed); // (−0 is 0)
+    for (int i = 0; i < 12; i++) s.ratio[i].store(tuning.r[i], std::memory_order_relaxed);
+    data.prepare(version, KEY_MIN, KEY_MAX, focus ? focus->key : 60);
+  }
   // bar losses and the damper apply at once to every sounding bar
   for (int i = 0; i < nVoices; i++) voices[i]->coefs(*this);
 }

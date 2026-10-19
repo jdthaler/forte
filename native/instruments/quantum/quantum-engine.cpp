@@ -187,6 +187,7 @@ std::unique_ptr<Packet> QuantumEngine::build(int key, uint64_t v) {
   PacketParams q;
   q.potential = (int)s[0].load(); q.eta = s[1].load(); q.lock = s[2].load() != 0; q.bpm = s[3].load();
   q.beats = s[4].load(); q.nbar = s[5].load(); q.sigma = s[6].load(); q.detector = (int)s[7].load();
+  for (int i = 0; i < 12; i++) q.tuning.r[i] = s[8 + i].load();
   return std::make_unique<Packet>(makePacket(key, q, fMax));
 }
 
@@ -206,6 +207,7 @@ PacketParams QuantumEngine::packetParams() const {
   PacketParams q;
   q.potential = (int)P[p::potential]; q.eta = P[p::eta]; q.lock = P[p::lock] != 0; q.bpm = P[p::bpm];
   q.beats = P[p::beats]; q.nbar = P[p::nbar]; q.sigma = P[p::sigma]; q.detector = (int)P[p::detector];
+  q.tuning = tuningOf(P.data());
   return q;
 }
 
@@ -221,6 +223,7 @@ void QuantumEngine::setParams(const double *v) {
     auto &s = snapshots[version % snapshots.size()];
     s[0].store(q.potential); s[1].store(q.eta); s[2].store(q.lock ? 1 : 0); s[3].store(q.bpm);
     s[4].store(q.beats); s[5].store(q.nbar); s[6].store(q.sigma); s[7].store(q.detector);
+    for (int i = 0; i < 12; i++) s[8 + i].store(q.tuning.r[i]);
     data.prepare(version, KEY_LO, KEY_HI, nVoices ? voices[nVoices - 1]->key : 60);
   }
   for (int i = 0; i < nVoices; i++) voices[i]->rates(*this);

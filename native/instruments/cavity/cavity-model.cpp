@@ -91,7 +91,7 @@ Cavity cavityOf(int key, const double *P) {
   const int N = std::clamp((int)std::lround(P[p::cells]), 1, MAX_CELLS);
   const double k = P[p::coupling], betag = P[p::betag], beta = P[p::beta], r = P[p::offset];
   c.cells = N;
-  c.fpi = keyFreq(key);
+  c.fpi = keyFreq(key) * tuningOf(P).ratio(key); // the note, as the keyboard's tuning puts it: the cavity is cut for it
   const double fc = c.fpi * std::sqrt(1 - k), T = P[p::temp];
   for (int b = 0; b < BANDS; b++) {
     const Band &B = BAND[b];

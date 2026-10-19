@@ -37,9 +37,10 @@ class StorageRingEngine : public Engine {
     bool released = false, scraped = false;
     double hl0 = 0, hl1 = 0, hr0 = 0, hr1 = 0; // the buttons' high-pass states
     void inject(double velocity, const double *P);
-    void schedule(const double *P, double fs);
+    void schedule(const double *P, const forte::Tuning &tuning, double fs);
   };
   std::array<double, p::count> P{};
+  forte::Tuning tuning; // the keyboard's (tuningOf(P)): each ring's f_rev, followed live
   bool hasParams = false, sustain = false;
   std::vector<Voice> voices; // reserved: never reallocates
 };

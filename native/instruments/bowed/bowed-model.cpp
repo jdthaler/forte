@@ -42,11 +42,11 @@ const Params &defaults() {
   return P;
 }
 
-StringDesign stringDesign(int key) {
-  const double fKey = keyFreq(key), f0 = fKey * fdlibm::pow(2.0, TUNE[key - KEY_MIN] / 1200);
+StringDesign stringDesign(int key, double ratio) {
+  const double fKey = keyFreq(key) * ratio, f0 = fKey * fdlibm::pow(2.0, TUNE[key - KEY_MIN] / 1200);
   const double L = key > KEY_HI ? 0.36 * fdlibm::pow(2.0, (-0.8 * (KEY_HI - 72)) / 12) * fdlibm::pow(2.0, -(key - KEY_HI) / 12.0)
                                 : std::min(2.0, 0.36 * fdlibm::pow(2.0, (-0.8 * (key - 72)) / 12));
-  const double T = 95 + 35 * std::min(1.0, std::max(0.0, (84 - key) / 48.0));
+  const double T = (95 + 35 * std::min(1.0, std::max(0.0, (84 - key) / 48.0))) * ratio * ratio; // retuned by its tension, the wire kept
   const double c = 2 * L * f0, mu = T / (c * c), Z0 = T / c;
   const double d = std::sqrt((4 * mu) / (PI * STEEL.rho)); // as plain steel wire
   // inharmonicity (neglected): below C2 the strings are wound on C2's wire, which alone bends
@@ -166,7 +166,7 @@ int oversample(int key, double fs) { return std::max(1, (int)std::floor((os48(ke
 double torsionEcho(int key) { const double c = stringDesign(key).c; return c / (c + cTorsion()); }
 
 Loop loopDesign(int key, const Params &P, double fs) {
-  const StringDesign s = stringDesign(key);
+  const StringDesign s = stringDesign(key, P.tuning.ratio(key));
   const double G = bridgeG(P);
   const double N0 = fs / s.f0;
   const double beta = std::min(0.5, std::max(P.beta * wheelBeta(key), 2.6 / N0)); // the bridge side needs ≥ 1.3 samples each way

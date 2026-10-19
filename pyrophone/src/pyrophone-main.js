@@ -1,6 +1,7 @@
 // pyrophone-main.js — the page: wires the shell to the engine and draws the views.
 
-import { createShell, noteName, keyFreq } from '../../shared/shell.js';
+import { createShell, noteName } from '../../shared/shell.js';
+import { tunedFreq } from '../../shared/tuning.js';
 import { SpectrumView, SpectrogramView, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './pyrophone-instrument.js';
 import { betaOn, N_MODES, C_HOT } from './pyrophone-model.js';
@@ -62,7 +63,7 @@ const Wof = (b) => tune.Ws[Math.min(tune.Ws.length - 1, Math.max(0, Math.round(b
 // Text, markers and the predicted cycle: they change with the focused key or the parameters.
 function update() {
   if (!bif) return;
-  const P = shell.P, f0 = keyFreq(focus), b = betaOn(P, P.velocity, tune.betaH, tune.betaMax), W = Wof(b), f1 = bif.fam[0];
+  const P = shell.P, f0 = tunedFreq(P, focus), b = betaOn(P, P.velocity, tune.betaH, tune.betaMax), W = Wof(b), f1 = bif.fam[0];
   // the tube that plays this key: acoustic length from the tuning, less the open-end corrections 0.61 a
   const Leff = (C_HOT * W) / (2 * Math.PI * f0), Lg = Leff / (1 + 1.22 * P.bore);
   $('#focus-name').textContent = noteName(focus);
@@ -96,7 +97,7 @@ function thresholdY(b) {
 // Linear growth rate (1/s) of silence at gain b for the focused key, in the mode that breaks first.
 function growth(b) {
   if (!(Math.abs(rootCache[0] - b) <= 1e-4)) rootCache = [b, model.root(bif.sys, Math.max(0, tune.mode - 1), b)];
-  return (rootCache[1][0] * 2 * Math.PI * keyFreq(focus)) / Wof(b);
+  return (rootCache[1][0] * 2 * Math.PI * tunedFreq(shell.P, focus)) / Wof(b);
 }
 
 // Drawing scale for the tube: the largest steady cycle the keys can reach.

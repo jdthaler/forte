@@ -230,6 +230,21 @@ test('every key on pitch within ±3 ¢ of 12-TET A440 (measured from the output)
   }
   console.log(`        worst key ${worst.toFixed(2)} ¢`);
 });
+test('the keyboard’s tuning: at A = 415 Hz a key sounds 415/440 of its 12-TET pitch; in ¼-comma meantone E4 −3.42 ¢, C4 +10.26 ¢', () => {
+  // ¼-comma meantone on C, A kept: E a fifth's narrowing (q − 700) from 12-TET, C 2100 − 3q
+  const q = 1200 * Math.log2(3 / 2) - 300 * Math.log2(81 / 80);
+  for (const [o, m, want] of [[{ pitch: 415 }, 64, cents(415, 440)], [{ pitch: 415 }, 60, cents(415, 440)], [{ temperament: 'meantone' }, 64, q - 700], [{ temperament: 'meantone' }, 60, 2100 - 3 * q]]) {
+    const f0 = keyFreq(m) * 2 ** (want / 1200), kr = keyReed(m, P(o));
+    assert.ok(Math.abs(cents(kr.modes[0].f, f0)) < 0.01, `${JSON.stringify(o)} ${m}: the reed is cut to ${kr.modes[0].f} Hz`);
+    // measured from the output, as above
+    const x = note(m, P({ tone: 20000, ...o }), 0.6, 0.65), a = Math.round(0.12 * FS), b = x.length;
+    let bf = f0, best = 0;
+    for (let c = -8; c <= 8; c += 0.5) { const f = f0 * 2 ** (c / 1200), g = tone(x, f, a, b); if (g > best) { best = g; bf = f; } }
+    const gl = tone(x, bf * 2 ** (-0.5 / 1200), a, b), gr = tone(x, bf * 2 ** (0.5 / 1200), a, b);
+    const c = cents(bf, f0) + (0.5 * 0.5 * (gl - gr)) / (gl - 2 * best + gr);
+    assert.ok(Math.abs(c) < 3, `${JSON.stringify(o)} ${m}: ${c.toFixed(2)} ¢`);
+  }
+});
 test('held note decays at the model\'s σ₁ (reed loss + thermoelastic + air)', () => {
   for (const m of [60, 76]) {
     const kr = keyReed(m, P()), f = kr.f0, x = note(m, P({ tone: 20000 }), 0.6, 2.4), W = 8192, a = Math.round(0.2 * FS), b = a + FS;

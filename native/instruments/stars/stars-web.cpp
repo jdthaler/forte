@@ -15,7 +15,8 @@ static int putStar(const StarState &s, double *out) {
 }
 
 extern "C" {
-// A key's star (keyStar), returning how many numbers it wrote to stars_key_star_data(): key, K,
+// A key's star (keyStar) for the kind, mass, speed-up and the keyboard's tuning (tuning: its 14
+// parameters' values, pitch, temperament, root and the custom cents, as the engine takes them), returning how many numbers it wrote to stars_key_star_data(): key, K,
 // δ Scuti?, N, the number of multiplets, norm, pitch, target; the star (M, R, T, L, s, stage,
 // track); its seismic parameters (dnu, numax, eps, d02, alpha, fwhm, gamma, dPi, q); the modes' f,
 // l, m, zeta, p, gamma, wEnv, wCore, asat, mult (N each); then every multiplet the model has: l, n,
@@ -23,8 +24,10 @@ extern "C" {
 // A0 has nearly 800 multiplets (7 numbers each), more than the scratch area holds.
 static std::vector<double> starOut;
 FORTE_EXPORT const double *stars_key_star_data() { return starOut.data(); }
-FORTE_EXPORT int stars_key_star(int family, double mass, double speedup, int key) {
-  const Star d = keyStar(key, {family, mass, speedup});
+FORTE_EXPORT int stars_key_star(int family, double mass, double speedup, int key, const double *tuning) {
+  double custom[forte::kCustomCents];
+  for (int i = 0; i < forte::kCustomCents; i++) custom[i] = tuning[3 + i];
+  const Star d = keyStar(key, {family, mass, speedup, forte::makeTuning(tuning[0], tuning[1], tuning[2], custom)});
   const int nAll = (int)d.all.size();
   starOut.resize(8 + 7 + 9 + 10 * d.N + 7 * nAll);
   double *out = starOut.data();

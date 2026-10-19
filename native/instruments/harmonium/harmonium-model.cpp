@@ -19,12 +19,14 @@ void engaged(const double *P, bool on[NRANKS]) {
 Voicing voicingOf(const double *P) {
   Voicing v;
   v.set = P[p::set]; v.clearance = P[p::clearance]; v.q = P[p::q]; v.throat = P[p::throat]; v.cell = P[p::cell]; v.detune = P[p::detune];
+  v.tuning = tuningOf(P);
   return v;
 }
 
-// The sounding frequency a rank's reed is made for on key m.
+// The sounding frequency a rank's reed is made for on key m: the key's pitch in the keyboard's
+// tuning, the rank's octave and the musette's detune.
 double rankFreq(int m, int r, const Voicing &v) {
-  return keyFreq(m) * std::pow(2.0, RANKS[r].oct) * std::pow(2.0, (RANKS[r].cents * v.detune) / 1200);
+  return keyFreq(m) * v.tuning.ratio(m) * std::pow(2.0, RANKS[r].oct) * std::pow(2.0, (RANKS[r].cents * v.detune) / 1200);
 }
 
 // ---------------------------------------------------------------------------

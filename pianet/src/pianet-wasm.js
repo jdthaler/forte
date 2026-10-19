@@ -4,6 +4,7 @@
 
 import { GROUPS } from './pianet-params.js';
 import { wasmEngine, scratch } from '../../shared/wasm.js';
+import { tuningRatio } from '../../shared/tuning.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'pianet', name: 'PianetWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/pianet.wasm', import.meta.url).href };
@@ -20,7 +21,8 @@ export const PianetWasmEngine = wasmEngine(BUILD, { messages });
 export const ready = () => PianetWasmEngine.ready();
 
 // The model's functions the views and the tests call, computed by the WebAssembly
-// (pianet-model.cpp): keyReed(m, P), a key's reed (its modes, stiffness at the pad, mode shapes);
+// (pianet-model.cpp): keyReed(m, P), a key's reed (its modes, stiffness at the pad, mode shapes),
+// cut to the key's pitch in the keyboard's tuning (shared/tuning.js);
 // simulatePluck, one press of the key recorded frame by frame; releaseCurve, where the pad lets
 // go for a set of velocities; keySpeed(vel); workOfAdhesion(F0); voicing(m) and voicingT(m), the
 // pickups' gaps per key; PAD, the pad and bond's constants; and, for the tests, unitReed, the
@@ -30,20 +32,22 @@ const MODE = ['f', 'sigma', 'T60', 'ratio', 'phiC', 'phiT', 'release'];
 const PAD_KEYS = ['a0', 'Estar', 'v0', 'aMin', 'heal', 'preload', 'travel', 'vRet'];
 export async function wasmModel() {
   const x = await ready(), s = scratch(x);
-  const pad = (P) => [P.tack, P.rate, P.padK, P.padC, P.tipMass, P.loss];
+  // the pad's parameters, the reed's and the key's tuning ratio (pianet-web.cpp's `in`)
+  const pad = (P, m) => [P.tack, P.rate, P.padK, P.padC, P.tipMass, P.loss, tuningRatio(P, m)];
+  const IN = 8 * 7; // where the other inputs and the outputs go, after those
   x.pianet_pad(s.at);
   const PAD = Object.fromEntries(PAD_KEYS.map((k, i) => [k, s.f64(PAD_KEYS.length)[i]]));
   const keyReed = (m, P, fs = 96000) => {
-    const n = x.pianet_reed(m, P.tipMass, P.loss, fs, s.at), a = s.f64(n).slice();
+    const ratio = tuningRatio(P, m), n = x.pianet_reed(m, P.tipMass, P.loss, fs, ratio, s.at), a = s.f64(n).slice();
     const [key, f0, L, b, h, mu, EI, r, Msolder, xc, kc, tipGain, N] = a;
     const modes = Array.from({ length: N }, (_, j) => Object.fromEntries(MODE.map((k, i) => [k, a[13 + 7 * j + i]])));
     const { tipMass, loss } = P;
-    return { key, f0, L, b, h, mu, EI, r, Msolder, xc, kc, tipGain, modes, shape: (j, xm) => x.pianet_reed_shape(m, tipMass, loss, fs, j, xm) };
+    return { key, f0, L, b, h, mu, EI, r, Msolder, xc, kc, tipGain, modes, shape: (j, xm) => x.pianet_reed_shape(m, tipMass, loss, fs, ratio, j, xm) };
   };
   return {
     keyReed,
     simulatePluck(m, P, vel, { fs = 96000, periods = 6, frames = 480, maxT = 0.4 } = {}) {
-      s.f64(6).set(pad(P));
+      s.f64(7).set(pad(P, m));
       const p = x.pianet_simulate(m, s.at, vel, fs, periods, frames, maxT);
       const a = new Float64Array(x.memory.buffer, p, x.pianet_result_size()).slice(); // (the memory may have grown)
       const [released, y, F, v, t, V, tEnd, N, nf] = a;
@@ -55,10 +59,10 @@ export async function wasmModel() {
       return out;
     },
     releaseCurve(m, P, vels, fs = 96000) {
-      s.f64(6).set(pad(P));
-      s.f64(vels.length, 48).set(vels);
-      const at = 48 + 8 * vels.length;
-      x.pianet_release_curve(m, s.at, s.at + 48, vels.length, fs, s.at + at);
+      s.f64(7).set(pad(P, m));
+      s.f64(vels.length, IN).set(vels);
+      const at = IN + 8 * vels.length;
+      x.pianet_release_curve(m, s.at, s.at + IN, vels.length, fs, s.at + at);
       const o = s.f64(7 * vels.length, at);
       return vels.map((_, j) => {
         const [vel, V, y, F, v, t, stuck] = o.subarray(7 * j, 7 * j + 7);
@@ -74,9 +78,9 @@ export async function wasmModel() {
     // a press of key m against the T's pole as an end stop `stop` (m) under the tip: the samples
     // on the stop and the tip's lowest point
     pluckStop(m, P, vel, stop, { fs = 96000, seconds = 0.3 } = {}) {
-      s.f64(6).set(pad(P));
-      x.pianet_pluck_stop(m, s.at, vel, fs, stop, seconds, s.at + 48);
-      const [hits, lo] = s.f64(2, 48);
+      s.f64(7).set(pad(P, m));
+      x.pianet_pluck_stop(m, s.at, vel, fs, stop, seconds, s.at + IN);
+      const [hits, lo] = s.f64(2, IN);
       return { hits, lo };
     },
     emFlux: (y, g) => x.pianet_em_flux(y, g),

@@ -204,6 +204,16 @@ test('each key sounds its note: the fundamental stands out at keyFreq', () => {
     assert.ok(tone(x, f, a, b) > 20 * tone(x, f * 1.04, a, b) && tone(x, f, a, b) > 20 * tone(x, f / 1.04, a, b), `key ${k}`);
   }
 });
+test('the keyboard’s tuning: at A = 415 Hz, and in ¼-comma meantone (E4 −3.42 ¢, C4 +10.26 ¢), the tine is cut to its tuned note and sounds there (within 0.5 ¢)', () => {
+  const cents = (a, b) => 1200 * Math.log2(a / b);
+  for (const [k, o, c] of [[69, { pitch: 415 }, cents(415, 440)], [64, { temperament: 'meantone' }, -3.42], [60, { temperament: 'meantone' }, 10.26]]) {
+    const Q = P(o), f = keyFreq(k) * 2 ** (c / 1200), x = note(k, Q, 0.7, 1.2), a = 9600, b = a + 32768;
+    near(cents(model.keyModes(k, Q)[0].f, f), 0, 0.01, `key ${k}: the model's fundamental (¢)`);
+    let lo = f * 2 ** (-10 / 1200), hi = f * 2 ** (10 / 1200); // the strongest frequency within ±10 ¢ (golden section)
+    for (let it = 0; it < 40; it++) { const m1 = hi - 0.618 * (hi - lo), m2 = lo + 0.618 * (hi - lo); if (tone(x, m1, a, b) > tone(x, m2, a, b)) hi = m2; else lo = m1; }
+    near(cents((lo + hi) / 2, f), 0, 0.5, `key ${k}: its sound (¢)`);
+  }
+});
 test('the first overtone sounds at the model’s ratio, and fades much sooner than the fundamental', () => {
   const x = note(67, P(), 0.8, 1.5), m = model.keyModes(67, P()), W = 8192;
   assert.ok(tone(x, m[1].f, 0, W) > 10 * tone(x, m[1].f * 1.03, 0, W), 'overtone present');

@@ -86,10 +86,11 @@ FORTE_EXPORT void blackhole_spheroidal(int s, int l, int m, double cre, double c
   const Omega y = spheroidalAt(S, theta);
   out[0] = y.re; out[1] = y.im; out[2] = S.Are; out[3] = S.Aim;
 }
-// a key's voice, packed into out
+// a key's voice, packed into out; ratio the keyboard's tuning for the key (shared/tuning.js tuningRatio)
 FORTE_EXPORT void blackhole_key_voice(int key, double spinU, double massRatio, double inclination, double t0, double overtones,
-                                      double retrograde, int inspiral, double inspiralOct, double fs, double *out) {
+                                      double retrograde, int inspiral, double inspiralOct, double fs, double ratio, double *out) {
   ModelParams P;
+  P.tuning.r[((key % 12) + 12) % 12] = ratio;
   P.spinU = spinU; P.massRatio = massRatio; P.inclination = inclination; P.t0 = t0; P.overtones = overtones;
   P.retrograde = retrograde; P.inspiral = inspiral != 0; P.inspiralOct = inspiralOct;
   keyVoice(key, P, fs, scratchVoice, &scratchAngular);

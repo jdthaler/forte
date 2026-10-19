@@ -244,7 +244,7 @@ HarpsichordEngine::HarpsichordEngine(double fs)
       data([this](int key, uint64_t v) {
         const Snapshot &s = snapshots[v % snapshots.size()];
         Params q;
-        q.pitch = s.pitch.load(std::memory_order_relaxed); q.temperament = (int)s.temperament.load(std::memory_order_relaxed);
+        for (int i = 0; i < 12; i++) q.tuning.r[i] = s.ratio[i].load(std::memory_order_relaxed);
         q.detune = s.detune.load(std::memory_order_relaxed); q.loss = s.loss.load(std::memory_order_relaxed); q.fmax = s.fmax.load(std::memory_order_relaxed);
         auto d = std::make_unique<KeyStrings>();
         for (int c : CHOIRS) { d->S[c] = stringDesign(key, c, q); stringPartials(d->S[c], q, this->fs, d->parts[c]); }
@@ -263,11 +263,11 @@ void HarpsichordEngine::setParams(const double *p) {
   mp = paramsOf(P.data());
   hasParams = true;
   // physics knobs: a change makes new strings for the next press (a new version of every key's)
-  const std::array<double, 6> sig = {P[p::pitch], P[p::temperament], P[p::detune], P[p::loss], P[p::damper], P[p::fmax]};
-  if (first || sig != physSig) {
-    physSig = sig; version++;
+  const std::array<double, 4> sig = {P[p::detune], P[p::loss], P[p::damper], P[p::fmax]};
+  if (first || sig != physSig || !(mp.tuning == physTuning)) {
+    physSig = sig; physTuning = mp.tuning; version++;
     Snapshot &s = snapshots[version % snapshots.size()];
-    s.pitch.store(mp.pitch, std::memory_order_relaxed); s.temperament.store(mp.temperament, std::memory_order_relaxed);
+    for (int i = 0; i < 12; i++) s.ratio[i].store(mp.tuning.r[i], std::memory_order_relaxed);
     s.detune.store(mp.detune, std::memory_order_relaxed); s.loss.store(mp.loss, std::memory_order_relaxed); s.fmax.store(mp.fmax, std::memory_order_relaxed);
     data.prepare(version, KEY_MIN, KEY_MAX, focus);
   }

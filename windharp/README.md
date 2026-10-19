@@ -355,8 +355,9 @@ the whole instrument by −4 dB.
   each station's acceleration (a sine transform, split into odd and even
   modes, which are symmetric and antisymmetric about the middle); each
   station's wake advances by leapfrog, its velocity half a step ahead, with
-  its damping εΩ(q² − r)q̇ taken at the mean of the old and new velocity (so a
-  large swing cannot blow up) and its frequency prewarped,
+  its damping εΩ(q² − r)q̇ taken at the mean of the old and new velocity
+  (where that damping, c = εΩ(q² − r)h/2, would reverse the velocity within
+  one step, c > 1, it stops it instead) and its frequency prewarped,
   Ω_d = (2/h) sin(Ωh/2), so that its linear part rings at Ω exactly; the new
   lift is projected back onto the modes; and each mode advances exactly
   under a force running linearly from the old lift to the new (a first-order
@@ -371,6 +372,15 @@ the whole instrument by −4 dB.
   linear interpolation: at 48 kHz G3–B♭3 step at 12 kHz and B3–B♭4 at
   24 kHz; the rest at 48 kHz. The leapfrog is prewarped and the modes exact
   at any step, and the decimated strings lock and swing as at the full rate.
+  The other way, a string whose wake's Ωh would pass the same 0.4 at the
+  sample rate (the top strings in a strong wind: C7 at 12 m/s sheds at
+  8.3 kHz, Ωh 1.2 at 44.1 kHz) steps 2, 4 or 8 times a sample, as few as keep
+  it under, and is heard at each sample's last step. The prewarping holds
+  only the leapfrog's linear part: its limit cycle runs 0.021 (Ωh)² fast
+  (0.34 % at 0.4), its swing strays from 2√r past Ωh ≈ 0.8, and from about
+  1.2 the limit cycle itself reaches c > 1, where a step at the sample rate
+  went to NaN. At the reference wind and A = 440 Hz every string keeps to
+  one step a sample or fewer, at 44.1 kHz and above.
 - **Cost.** Ten sounding keys across the compass (15 strings in their
   courses) take about 20 % of one core at 48 kHz in Node on the shared
   machine this was built on (19–25 % from run to run); ten keys in the top

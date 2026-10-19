@@ -154,7 +154,8 @@ void NeonEngine::update() {
 }
 
 // The descriptor's engineParams: the lamp voltages kept in order, 5 V apart (V_ext < V_s <
-// supply). A change of tuning retunes the keys held down, as the page's 'retune' does.
+// supply). A change of tuning (the lamps' or the keyboard's) retunes the keys held down, as the
+// page's 'retune' does.
 void NeonEngine::setParams(const double *P) {
   const Neon old = p;
   p.kick = P[p::kick]; p.rSrc = P[p::rSrc]; p.pitchHold = P[p::pitchHold] != 0;
@@ -166,9 +167,10 @@ void NeonEngine::setParams(const double *P) {
   update();
   const int tu = (int)P[p::tuning], to = (int)P[p::tonic];
   const double mi = P[p::mistune];
-  if (tu != tuning || to != tonic || mi != mistune) {
-    tuning = tu; tonic = to; mistune = mi;
-    for (int i = 0; i < nos; i++) if (osc[i]->keyDown && !osc[i]->dead) osc[i]->retune(tunedFreq(osc[i]->key, tuning, tonic, mistune), p);
+  const forte::Tuning kb = tuningOf(P);
+  if (tu != tuning || to != tonic || mi != mistune || !(kb == keyboard)) {
+    tuning = tu; tonic = to; mistune = mi; keyboard = kb;
+    for (int i = 0; i < nos; i++) if (osc[i]->keyDown && !osc[i]->dead) osc[i]->retune(keyTarget(osc[i]->key), p);
   }
 }
 
@@ -196,7 +198,7 @@ void NeonEngine::noteOn(int key, double) {
   offered = false;
   last = nullptr;
   if (key < 0 || key > 127) return;
-  const double f = had && !std::isnan(offF) ? offF : tunedFreq(key, tuning, tonic, mistune);
+  const double f = had && !std::isnan(offF) ? offF : keyTarget(key);
   Osc *o = byKey[key];
   if (o && !o->dead) {
     o->keyDown = true;

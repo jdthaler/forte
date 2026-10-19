@@ -219,6 +219,19 @@ test('every key in tune: the star\'s heard pitch (the power-weighted mean log fr
   for (const o of [{ mass: 0.9 }, { mass: 1.3 }, { mass: 1.8 }, { speedup: 350000 }, { speedup: 1e6 }]) check(P(o), 4);
   console.log(`         ν_max ${Math.min(...noff).toFixed(1)} to ${Math.max(...noff).toFixed(1)} ¢ above the note; nearest radial mode ${Math.min(...roff).toFixed(0)} to +${Math.max(...roff).toFixed(0)} ¢`);
 });
+test('the keyboard\'s tuning: each key\'s star is found for its tuned pitch, its heard pitch × K within 0.02 ¢ of 440·2^((m−69)/12)·415/440 at A = 415 Hz (a giant, a subgiant, a dwarf, a δ Scuti star), and in ¼-comma meantone on C, E4 3.42 ¢ flat of equal temperament, C4 10.26 ¢ sharp, A4 on 440 Hz; the engine plays the page\'s tuned star as its own, and ignores one built for another tuning', () => {
+  for (const [k, o] of [[40, {}], [64, {}], [88, {}], [48, { family: 'dscuti' }]]) {
+    const c = cents(keyStar(k, P({ ...o, pitch: 415 })).pitch, (keyFreq(k) * 415) / 440);
+    assert.ok(Math.abs(c) < 0.02, `key ${k} ${o.family ?? ''} at 415 Hz: ${c.toFixed(3)} ¢`);
+  }
+  for (const [k, want] of [[64, -3.42], [60, 10.26], [69, 0]]) {
+    const c = cents(keyStar(k, P({ temperament: 'meantone' })).pitch, keyFreq(k));
+    assert.ok(Math.abs(c - want) < 0.02, `key ${k} in meantone: ${c.toFixed(3)} ¢, not ${want}`);
+  }
+  const p = P({ temperament: 'meantone', tuningRoot: 2 }), data = keyStar(52, p);
+  const own = run(p, [[0, 'on', 52, 0.7]], 0.2), sent = run(p, [[0, 'on', 52, 0.7, data]], 0.2), other = run(p, [[0, 'on', 52, 0.7, keyStar(52, P())]], 0.2);
+  for (let i = 0; i < own.length; i++) { assert.equal(own[i], sent[i]); assert.equal(own[i], other[i]); }
+});
 test('rotation: a p mode splits by mΩ/2π (C_nl ≈ 0), a g-dominated dipole mode by ζ·½·mΩ_core/2π + (1 − ζ)·mΩ_env/2π (C_g = ½), so the splitting ∝ Ω(1 − C_nl); δ Scuti\'s low-order modes by (1 − 0.05)mΩ/2π', () => {
   for (const key of [40, 84]) {
     const d = keyStar(key, P()), md = d.modes;

@@ -495,6 +495,12 @@ test('the page builds the springs and sends them with the note: the engine plays
   for (let i = 0; i < own.length; i++) assert.equal(own[i], other[i], 'data for another geometry is ignored');
 });
 
+test('the keyboard\'s tuning cuts the springs: at A = 415 Hz E4 is tuned by ear to 440·2^(−5/12)·415/440, in ¼-comma meantone E4 to −3.42 ¢, C4 to +10.26 ¢ and A4 to 440 Hz (within 1 ¢); the engine sounds them (within 10 ¢)', () => {
+  for (const [o, key, f0] of [[{ pitch: 415 }, 64, 440 * 2 ** (-5 / 12) * 415 / 440], [{ temperament: 'meantone' }, 64, keyFreq(64) * 2 ** (-3.42 / 1200)], [{ temperament: 'meantone' }, 60, keyFreq(60) * 2 ** (10.26 / 1200)], [{ temperament: 'meantone' }, 69, 440]]) {
+    const c = cents(keySprings(key, P(o), FS).pitch, f0), h = cents(heardPitch(run(P(o), [[0, 'on', key, MF]], HEAR + 0.01), f0), f0);
+    assert.ok(Math.abs(c) < 1 && Math.abs(h) < 10, `${JSON.stringify(o)} key ${key}: the model's pitch ${c.toFixed(2)} ¢, the engine's ${h.toFixed(1)} ¢ from ${f0.toFixed(2)} Hz`);
+  }
+});
 test('the keys past C2–C6 (A0–B1, C♯6–C7): tuned by ear within 1 ¢, the engine\'s own sound within 10 ¢ (15 ¢ below E1), a forte note peaks 0.03–0.5 with no NaN; past C7 nothing plays', () => {
   const out = [];
   for (const key of [21, 24, 28, 33, 88, 92, 96]) {

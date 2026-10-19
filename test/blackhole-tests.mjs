@@ -380,5 +380,22 @@ test('the engine plays the voice the views show: a note without data is a note w
   assert.deepEqual(a, out(true));
 });
 
+test('the keyboard\'s tuning moves each black hole\'s (2,2,0) mode (the engine\'s own note, and the views\' keyVoice): E4 at A = 415 Hz 101.27 ¢ low; in ¼-comma meantone E4 −3.42 ¢, C4 +10.26 ¢, A4 at 440 Hz', () => {
+  for (const [o, key, want] of [[{ pitch: 415 }, 64, keyFreq(64) * 415 / 440], [{ temperament: 'meantone' }, 64, keyFreq(64) * 2 ** (-3.42 / 1200)],
+    [{ temperament: 'meantone' }, 60, keyFreq(60) * 2 ** (10.26 / 1200)], [{ temperament: 'meantone' }, 69, 440]]) {
+    const P = { ...DEFAULTS, spinU: uFromSpin(0.999), overtones: 0, massRatio: 1, inclination: 0, ...o };
+    const m220 = keyVoice(key, P, 48000).modes.find((m) => m.l === 2 && m.m === 2 && m.n === 0);
+    assert.ok(Math.abs(1200 * Math.log2(m220.f / want)) < 0.01, `${JSON.stringify(o)}, key ${key}: keyVoice's (2,2,0) at ${m220.f}`);
+    const e = new RingdownEngine(48000), n = 48000, L = new Float32Array(n), bL = new Float32Array(128), bR = new Float32Array(128);
+    e.setParams(P); e.noteOn(key, 1);
+    let pk = 0;
+    for (let s = 0; s < n; s += 128) { e.process(bL, bR, 128); L.set(bL.subarray(0, Math.min(128, n - s)), s); for (const x of bL) pk = Math.max(pk, Math.abs(x)); }
+    let end = n - 1; while (end > 0 && Math.abs(L[end]) < 1e-3 * pk) end--; // the ringdown, while it is well above the float noise
+    const zc = []; for (let i = 1; i < end; i++) if (L[i - 1] < 0 && L[i] >= 0) zc.push(i - 1 + L[i - 1] / (L[i - 1] - L[i]));
+    const f = (48000 * (zc.length - 1)) / (zc.at(-1) - zc[0]);
+    assert.ok(Math.abs(1200 * Math.log2(f / want)) < 1, `${JSON.stringify(o)}, key ${key}: ${f.toFixed(3)} Hz, want ${want.toFixed(3)}`);
+  }
+});
+
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');
 process.exit(failures ? 1 : 0);

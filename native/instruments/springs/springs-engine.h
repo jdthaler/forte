@@ -109,10 +109,11 @@ class SpringEngine : public Engine {
   // What the keys' springs depend on, for each of the last few versions: the worker builds a
   // version from its snapshot (written by setParams, read without locks, checked by a sequence
   // number); a version that has scrolled out is not built, and a newer one is asked for instead.
+  static constexpr int NSNAP = 12 + 12; // Params: the knobs, then the tuning's ratios
   struct Snapshot {
     std::atomic<uint32_t> seq{0};
     std::atomic<uint64_t> version{0};
-    std::array<std::atomic<double>, 12> v{};
+    std::array<std::atomic<double>, NSNAP> v{};
   };
   std::array<Snapshot, 8> snaps{};
   int snapAt = 0;

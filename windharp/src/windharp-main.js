@@ -29,7 +29,7 @@ const shell = createShell({
 let F = null;
 const fmtHz = (f) => (f >= 1000 ? `${(f / 1000).toFixed(2)} kHz` : `${f.toFixed(f < 100 ? 1 : 0)} Hz`);
 function update() {
-  const P = shell.P, S = phys.stringDesign(focus, P), id = `${focus}|${P.n0}|${P.tuning}|${P.unison}|${P.mass}|${P.q}`;
+  const P = shell.P, S = phys.stringDesign(focus, P), id = S.in.join('|'); // the key, the design parameters and the keyboard's tuning
   if (!F || F.id !== id) {
     const bands = [];
     for (let n = 1; n <= S.N; n++) { const b = phys.lockBand(S, n); if (b) bands.push({ ...b, range: null, Y: null }); }

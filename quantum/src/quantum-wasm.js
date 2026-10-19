@@ -5,6 +5,7 @@
 import { GROUPS } from './quantum-params.js';
 import { wasmEngine, scratch, nativeValue } from '../../shared/wasm.js';
 import { waveGrid as gridOf } from './quantum-waves.js';
+import { TUNING_PARAMS } from '../../shared/tuning.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'quantum', name: 'QuantumWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/quantum.wasm', import.meta.url).href };
@@ -85,10 +86,11 @@ export const ready = () => QuantumWasmEngine.ready();
 // cₙ, Eₙ, its Bohr pairs, pitch and time scales); solveNbar(key, P, info); and waveGrid(pk, P,
 // rows), quantum-waves.js's grid around the eigenfunctions computed here.
 const PARAMS = GROUPS.flatMap((g) => g.params);
-const KNOBS = ['potential', 'eta', 'lock', 'bpm', 'beats', 'nbar', 'sigma', 'detector'].map((id) => PARAMS.find((p) => p.id === id));
+// (the tuning's last: a key's pitch is its equal-tempered one times the tuning's ratio)
+const KNOBS = ['potential', 'eta', 'lock', 'bpm', 'beats', 'nbar', 'sigma', 'detector', ...TUNING_PARAMS.map((p) => p.id)].map((id) => PARAMS.find((p) => p.id === id));
 export async function wasmModel() {
-  const x = await ready(), s = scratch(x), at = 8 * 8; // the knobs first, then the results
-  const knobs = (P) => { s.f64(8).set(KNOBS.map((p) => nativeValue(p, P[p.id] ?? p.def))); return s.at; };
+  const x = await ready(), s = scratch(x), at = 8 * KNOBS.length; // the knobs first, then the results
+  const knobs = (P) => { s.f64(KNOBS.length).set(KNOBS.map((p) => nativeValue(p, P[p.id] ?? p.def))); return s.at; };
   const solve = (pk, P, rows) => {
     const N = pk.ns.length;
     s.f64(2 * N).set([...pk.ns, ...pk.E]);

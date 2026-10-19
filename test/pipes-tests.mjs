@@ -17,11 +17,12 @@ import { wasmModel } from '../pipes/src/pipes-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../pipes/src/pipes-params.js';
 import { TUNING } from '../pipes/src/tuning-table.js';
+import { TUNING_PARAMS, TUNING_KEEP } from '../shared/tuning.js';
 import { tuningHeader } from '../tools/pipes-tuning.mjs';
 import { keyFreq } from '../shared/dsp.js';
 
 const PipeEngine = await loadEngine(INSTRUMENT);
-const { pipeModel, pipeFreq, tuning, modeFreq, chestPan, windSystem, linearRoot, loopGain, thetaAt, pressureAt, speakingWindow } = await wasmModel();
+const { pipeModel, pipeFreq, tuning, modeFreq, chestPan, windSystem, linearRoot, loopGain, thetaAt, pressureAt, speakingWindow, keyModels } = await wasmModel();
 // the C++'s numbers (pipes-model.h): air; the wind the pipes are voiced for; the jet's phase
 // velocity and roll-off; the voicing's loop gain; the wind system's trunk and chest
 const AIR = { rho: 1.2, c: 343, nu: 1.51e-5, gamma: 1.4, Pr: 0.71 }, P_NOM = 700, U_NOM = Math.sqrt((2 * P_NOM) / AIR.rho);
@@ -328,6 +329,16 @@ test('tuning at 44.1 kHz: every third key C–f³ on the Principal 8′, Octave 
   }
   console.log(`        worst ${worst.toFixed(2)} ¢`);
 });
+test('the keyboard\'s tuning: at A = 415 Hz in ¼-comma meantone (root C), the Principal 8′ c¹, e¹ and a¹ sound within ±3 ¢ of 440·2^((m−69)/12)·415/440, c¹ +10.26 ¢ and e¹ −3.42 ¢ from equal temperament, a¹ on the standard; the pipes the page sends with a note are cut for it', () => {
+  const T = { pitch: 415, temperament: 'meantone', tuningRoot: 0 };
+  for (const [k, off] of [[60, 10.26], [64, -3.42], [69, 0]]) {
+    const f0 = keyFreq(k) * (415 / 440) * 2 ** (off / 1200), res = run(P({ ...ONLY.principal, noise: 0, ...T }), [[0, 'on', k, 0.7]], 0.9);
+    const c = cents(freqAt(res.L, f0, res.L.length - Math.round(0.4 * FS), res.L.length, FS), f0);
+    assert.ok(Math.abs(c) < 3, `${organName(k)}: ${c.toFixed(2)} ¢ from its target`);
+    const packed = keyModels(k, P(T));
+    assert.ok(Math.abs(cents(packed[4] * keyFreq(k), f0)) < 0.01 && rel(packed[5], packed[4] * keyFreq(k)) < 1e-12, `${organName(k)}: the packed pipes' tuning`);
+  }
+});
 test('the Gedackt is stopped: its even harmonics are at least 25 dB under its odd ones; the open Principal has both (its octave within 20 dB of the fundamental)', () => {
   for (const k of [36, 48, 60, 72, 84]) {
     const g = run(P({ ...ONLY.gedackt, noise: 0 }), [[0, 'on', k, 0.7]], 1.4), o = run(P({ noise: 0 }), [[0, 'on', k, 0.7]], 1.2);
@@ -610,13 +621,17 @@ test('level: a single Principal note peaks at 0.03–0.5 from C to f³ (0.1–0.
   console.log(`        full-organ chord peaks at ${peakAbs(chord).toFixed(2)}`);
 });
 test('stability: seeded random combinations of extreme settings at 44.1 and 48 kHz, changed mid-note: no NaN, bounded, silent after release', () => {
-  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'venue', 'fullRange'].includes(q.id));
+  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'venue', 'fullRange', ...TUNING_KEEP].includes(q.id));
   let seed = 4242, worst = 0;
   const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  // the keyboard's tuning drawn apart, from its own sequence, so that the other parameters' combinations stay the ones they were
+  let tseed = 777;
+  const trnd = () => ((tseed = (tseed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  const tune = (p) => { for (const q of TUNING_PARAMS) { if (trnd() < 0.5) continue; p[q.id] = q.options ? q.options[Math.floor(trnd() * q.options.length)][0] : trnd() < 0.5 ? q.min : q.max; } return p; };
   const pick = () => {
     const p = P();
     for (const q of sliders) { if (rnd() < 0.5) continue; p[q.id] = q.type === 'checkbox' ? rnd() < 0.5 : rnd() < 0.5 ? q.min : q.max; }
-    return p;
+    return tune(p);
   };
   for (const fs of [44100, 48000]) for (let c = 0; c < 5; c++) {
     const p1 = pick(), p2 = pick(), ev = [];

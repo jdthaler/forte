@@ -13,6 +13,7 @@ import { startMIDI, resumeMIDI, wheelValue, touched, SOFT_PEDAL, createSostenuto
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'blackhole-keyboard/params/v1';
@@ -149,14 +150,20 @@ function fromSlider(p, t) {
 function buildControls() {
   for (const g of GROUPS) {
     const det = document.createElement('details');
-    det.className = 'group'; det.open = true;
+    det.className = 'group'; det.open = g.open ?? true; // (the tuning's starts closed)
     det.innerHTML = `<summary>${g.title}</summary>`;
     for (const p of g.params) {
       const wrap = document.createElement('div');
       wrap.className = 'param';
       if (p.perform) wrap.dataset.perform = ''; // above the keys in Perform (shared/layout.js)
       let input, val = null;
-      if (p.type === 'checkbox') {
+      if (p.type === 'select') { // the keyboard's tuning: its pitch, temperament and root
+        wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;
+        input = document.createElement('select'); input.id = `p-${p.id}`;
+        for (const [k, name] of p.options) input.add(new Option(name, k));
+        input.addEventListener('change', () => { setParam(p.id, typeof p.def === 'number' ? +input.value : input.value); input.blur(); });
+        wrap.appendChild(input);
+      } else if (p.type === 'checkbox') {
         wrap.classList.add('check');
         input = document.createElement('input'); input.type = 'checkbox'; input.id = `p-${p.id}`;
         input.addEventListener('change', () => setParam(p.id, input.checked));
@@ -190,7 +197,8 @@ function buildControls() {
 function refreshControl(id, dragging = false) {
   const c = controls.get(id);
   if (!c) return;
-  if (c.p.type === 'checkbox') c.input.checked = !!P[id];
+  if (c.p.type === 'select') c.input.value = P[id];
+  else if (c.p.type === 'checkbox') c.input.checked = !!P[id];
   else { if (!dragging) c.input.value = toSlider(c.p, P[id]); c.val.textContent = c.p.fmt ? c.p.fmt(P[id]) : String(P[id]); }
 }
 function refreshVisibility() { for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(P) : false; }
@@ -209,7 +217,7 @@ function setParam(id, v, dragging = false) {
   $('#preset').value = '';
   if (p.kind === 'mix') applyMix();
   else post(paramsMessage());
-  if (p.kind === 'model') { clearTimeout(focusTimer); focusTimer = setTimeout(() => setFocus(focusKey, lastVel), 60); } // voiceFor recomputes
+  if (p.kind === 'model' || TUNING_KEEP.includes(id)) { clearTimeout(focusTimer); focusTimer = setTimeout(() => setFocus(focusKey, lastVel), 60); } // voiceFor recomputes
 }
 
 // ---------------------------------------------------------------------------

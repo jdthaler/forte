@@ -113,6 +113,18 @@ test('every key is on pitch: the pulse train repeats at f_rev', () => {
     assert.ok(Math.abs(bestC) <= 0.5, `${k}: ${bestC} cents`);
   }
 });
+test('the keyboard\'s tuning: f_rev is 440·2^((m−69)/12)·415/440 at A = 415 Hz, and in ¼-comma meantone on C E4 lies 3.42 ¢ flat of equal temperament, C4 10.26 ¢ sharp, A4 on 440 Hz; the pulse train repeats there; the lattice stays the key\'s', () => {
+  const cents = (a, b) => 1200 * Math.log2(a / b), mt = P({ temperament: 'meantone' });
+  for (const k of [36, 64, 96]) assert.ok(Math.abs(ringOf(k, P({ pitch: 415 })).frev / ((keyFreq(k) * 415) / 440) - 1) < 1e-12, `${k} at 415 Hz`);
+  for (const [k, want] of [[64, -3.42], [60, 10.26], [69, 0]]) { const c = cents(ringOf(k, mt).frev, keyFreq(k)); assert.ok(Math.abs(c - want) < 0.01, `${k} in meantone: ${c.toFixed(3)} ¢`); }
+  assert.equal(ringOf(48, mt).chroma, ringOf(48, P()).chroma, 'the same cells');
+  for (const [k, p] of [[50, P({ pitch: 415 })], [64, mt], [60, mt]]) {
+    const f = ringOf(k, p).frev, [L] = note(k, { ...p, kick: 0, phase: 0, pickup: 'single' }, 1.2), a = 4800, b = 4800 + 32768;
+    let best = 0, bestC = 0;
+    for (let c = -8; c <= 8; c += 0.25) { const v = tone(L, 2 * f * 2 ** (c / 1200), a, b); if (v > best) { best = v; bestC = c; } }
+    assert.ok(Math.abs(bestC) <= 0.5, `${k}: ${bestC} cents from the tuned pitch`);
+  }
+});
 test('the harmonics roll off as the bunch\'s form factor through the button\'s high-pass', () => {
   const Pp = P({ kick: 0, phase: 0, pickup: 'single', bunch: 0.05, cutoff: 60 }), k = 57, f = keyFreq(k);
   const [L] = note(k, Pp, 1), a = 4800, b = 4800 + 32768;

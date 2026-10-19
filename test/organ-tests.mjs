@@ -131,6 +131,21 @@ test('one key, 8′ only: plays its wheel’s frequency', () => {
   assert.ok(Math.abs(f - 440) < 0.05, `f=${f}`);
   assert.ok(rms(L, 4800, 24000) > 0.01);
 });
+test('the keyboard\'s tuning retunes the wheels: at A = 415 Hz every key a semitone\'s 101.27 ¢ lower; in ¼-comma meantone E4 −3.42 ¢ and C4 +10.26 ¢ from equal temperament, A4 at 440 Hz; and the analysis follows', () => {
+  const et = (m) => 440 * 2 ** ((m - 69) / 12);
+  const cases = [[{ pitch: 415 }, 64, et(64) * 415 / 440], [{ pitch: 415 }, 69, 415],
+    [{ temperament: 'meantone' }, 64, et(64) * 2 ** (-3.42 / 1200)], [{ temperament: 'meantone' }, 60, et(60) * 2 ** (10.26 / 1200)], [{ temperament: 'meantone' }, 69, 440]];
+  for (const [o, k, want] of cases) {
+    const e = engine(P({ ...DRY, tuning: 'et', drawbars: [0, 0, 8, 0, 0, 0, 0, 0, 0], ...o }));
+    e.noteOn(k);
+    const f = zcFreq(run(e, 0.5).L, 4800, 24000);
+    assert.ok(Math.abs(1200 * Math.log2(f / want)) < 0.05, `${JSON.stringify(o)}, key ${k}: ${f.toFixed(3)} Hz, want ${want.toFixed(3)}`);
+    assert.ok(Math.abs(1200 * Math.log2(keyAnalysis(k, P({ tuning: 'et', ...o }))[2].actual / want)) < 0.01, `${JSON.stringify(o)}, key ${k}: the analysis`);
+  }
+  // composed with the gears: a wheel keeps its gear error on top of the temperament
+  const g = keyAnalysis(64, P({ temperament: 'meantone' }))[2].actual;
+  assert.ok(Math.abs(1200 * Math.log2(g / gearFreq(keyWheel(64, 2))) + 3.42) < 0.01, `gears in meantone: ${g}`);
+});
 test('motor off: pitch and level fall together as the generator coasts', () => {
   const params = P({ ...DRY, drawbars: [0, 0, 8, 0, 0, 0, 0, 0, 0], inertia: 4 });
   const e = engine(params);

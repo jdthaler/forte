@@ -287,6 +287,16 @@ test('tuning: every key within ±1 ¢ of 12-TET at the voiced touch, at 48 and a
     console.log(`        ${fs} Hz: worst ${worst.toFixed(2)} ¢ (key ${wk}); not yet in Helmholtz motion at 1.3 s: ${stray.join(', ') || 'none'}`);
   }
 });
+test('the keyboard\'s tuning (measured from the output, ±1 ¢): at A = 415 Hz E4 is 101.27 ¢ low; in ¼-comma meantone E4 −3.42 ¢, C4 +10.26 ¢, A4 at 440 Hz', () => {
+  for (const [o, k, want] of [[{ pitch: 415 }, 64, keyFreq(64) * 415 / 440], [{ temperament: 'meantone' }, 64, keyFreq(64) * 2 ** (-3.42 / 1200)],
+    [{ temperament: 'meantone' }, 60, keyFreq(60) * 2 ** (10.26 / 1200)], [{ temperament: 'meantone' }, 69, 440]]) {
+    const e = new OrganistaEngine(FS); e.setParams(P(o)); e.noteOn(k, 0.7);
+    const s = e.S[k]; s.FN = s.FT; s.initHelmholtz(s.L.vB); // in Helmholtz motion from the start
+    const out = renderEngine(e, 1.3, [], FS), c = cents(pitchOf(out[0], 0.75 * FS, 1.3 * FS, want), want);
+    assert.ok(Math.abs(c) < 1, `${JSON.stringify(o)}, key ${k}: ${c.toFixed(2)} ¢ off`);
+    assert.ok(Math.abs(cents(loopDesign(k, P(o), FS).fKey, want)) < 0.01, `${JSON.stringify(o)}, key ${k}: the design's target`);
+  }
+});
 test('flattening: the bowed pitch falls with force; the free string rings at the tuner\'s offset', () => {
   for (const key of [48, 72]) {
     const pp = P(), L = loopDesign(key, pp, FS), Fm = schelleng(L, pp).Fmax;

@@ -4,6 +4,7 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './sync-params.js';
 import { KEY_LO, KEY_HI } from './tuning.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -11,7 +12,7 @@ export const INSTRUMENT = {
   id: 'huygens',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'venue', 'tone', 'body'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'tone', 'body', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_LO, KEY_HI],                  // MIDI keys: A0–C8, 21–108
   space: 'hold',                            // Space and CC64 latch the keys
   modWheel: 'kick',                         // CC1: the pulse coupling, from its default up

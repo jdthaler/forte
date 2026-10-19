@@ -101,11 +101,11 @@ class QuantumEngine : public Engine {
   struct Pending { int key; double velocity; bool off; };
   std::array<Pending, 128> pending{};
   int nPending = 0;
-  // the packets' version (one per setting of the knobs they depend on), and those knobs for each
+  // the packets' version (one per setting of the knobs they depend on, the tuning among them), and those knobs for each
   // version, for the worker (a ring: it builds the latest)
   uint64_t version = 0;
   PacketParams pp{};
-  std::array<std::array<std::atomic<double>, 8>, 8> snapshots{};
+  std::array<std::array<std::atomic<double>, 20>, 8> snapshots{}; // the 8 knobs, then the tuning's 12 ratios
   Data data; // last: its worker uses the members above, and stops before they go
 };
 

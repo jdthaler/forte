@@ -19,54 +19,17 @@ Params paramsOf(const double *P) {
   q.material = (int)P[p::material] == material_::quill ? 1 : 0;
   q.stiff = P[p::stiff]; q.overlap = P[p::overlap]; q.stagger = P[p::stagger];
   q.xFront = P[p::xFront]; q.xBack = P[p::xBack]; q.xFour = P[p::xFour]; q.xLute = P[p::xLute];
-  q.pitch = (int)P[p::pitch] == 1 ? 415 : 440; // the choice's options: A = 440 Hz, A = 415 Hz
-  q.temperament = std::clamp((int)P[p::temperament], 0, 2);
+  q.tuning = tuningOf(P);
   q.detune = P[p::detune]; q.loss = P[p::loss]; q.damper = P[p::damper]; q.fmax = P[p::fmax];
   q.soundboard = P[p::soundboard] != 0;
   return q;
 }
 
-// ---- tuning: a pitch standard and a temperament, built from its circle of fifths
+// ---- tuning: the keyboard's pitch standard and temperament (forte/tuning.h), each key's 8′
+// pitch equal temperament's times its ratio
 
-static const double PURE_FIFTH = 1200 * std::log2(3.0 / 2);
-static const double PYTH_COMMA = 1200 * std::log2(531441.0 / 524288); // 3¹²/2¹⁹
-static const double SYNT_COMMA = 1200 * std::log2(81.0 / 80);
-static constexpr int CIRCLE[12] = {0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5}; // C G D A E B F♯ C♯ G♯ E♭ B♭ F
-// the twelve fifths in circle order, the one that closes the circle NaN (whatever is left over)
-static std::array<double, 12> fifthsOf(int id) {
-  const double N = NAN, n4 = PURE_FIFTH - SYNT_COMMA / 4, w4 = PURE_FIFTH - PYTH_COMMA / 4, P5 = PURE_FIFTH;
-  if (id == temperament_::meantone) return {n4, n4, n4, n4, n4, n4, n4, n4, N, n4, n4, n4};
-  if (id == temperament_::werckmeister) return {w4, w4, w4, P5, P5, w4, P5, P5, P5, P5, P5, N};
-  return {700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, N};
-}
-static double wrap1200(double x) { return std::fmod(std::fmod(x, 1200) + 1200, 1200); }
-static std::array<double, 12> centsOf(int id) {
-  const auto fifths = fifthsOf(id);
-  std::array<double, 12> c{};
-  int w = 0;
-  while (!std::isnan(fifths[w])) w++;
-  double x = 0;
-  for (int i = 0; i < w; i++) { x += fifths[i]; c[CIRCLE[i + 1]] = wrap1200(x); }
-  x = 0;
-  for (int i = 11; i > w; i--) { x -= fifths[i]; c[CIRCLE[i]] = wrap1200(x); }
-  return c;
-}
-double temperamentCents(int id, int pc) { return centsOf(id)[pc]; }
-static const std::array<std::array<double, 12>, 3> OFFSETS = [] {
-  std::array<std::array<double, 12>, 3> all{};
-  for (int id = 0; id < 3; id++) {
-    const auto c = centsOf(id);
-    auto &o = all[id];
-    for (int pc = 0; pc < 12; pc++) { double d = c[pc] - 100 * pc; if (d > 600) d -= 1200; if (d < -600) d += 1200; o[pc] = d; }
-    const double a = o[9];
-    for (int i = 0; i < 12; i++) o[i] -= a;
-  }
-  return all;
-}();
-double temperamentOffset(int id, int pc) { return OFFSETS[std::clamp(id, 0, 2)][pc]; }
 double keyPitch(int m, const Params &P) {
-  const double off = temperamentOffset(P.temperament, ((m % 12) + 12) % 12);
-  return (P.pitch ? P.pitch : 440) * std::pow(2.0, (m - 69) / 12.0 + off / 1200);
+  return 440 * std::pow(2.0, (m - 69) / 12.0) * P.tuning.ratio(m);
 }
 
 // ---- the scale: lengths, wires and tensions

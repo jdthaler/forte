@@ -82,8 +82,9 @@ class PianetEngine : public Engine {
   const double fs2;
   std::array<double, p::count> P{};
   bool hasParams = false;
-  // the reeds, built off the audio thread for each version of (tip mass, loss)
-  struct Snapshot { std::atomic<double> tipMass{1}, loss{1e-3}; };
+  // the reeds, built off the audio thread for each version of (tip mass, loss, the tuning)
+  struct Snapshot { std::atomic<double> tipMass{1}, loss{1e-3}, ratio[12] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; };
+  Tuning physTuning;
   std::array<Snapshot, 8> snapshots;
   uint64_t version = 0;
   Data data;
