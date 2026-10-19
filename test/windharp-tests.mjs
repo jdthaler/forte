@@ -20,6 +20,7 @@ import { wasmModel } from '../windharp/src/windharp-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../windharp/src/windharp-params.js';
 import { fft } from '../tools/audio-util.mjs';
+import { TUNING_PARAMS, TUNING_KEEP } from '../shared/tuning.js';
 
 const WindHarpEngine = await loadEngine(INSTRUMENT);
 const { shedding, stringDesign, courseOffsets, lockBand, lockedAmplitude, lockedRange, homeHarmonic, massDamping, balance, lockedState } = await wasmModel();
@@ -521,16 +522,20 @@ test('level: at the reference wind a single forte note peaks at 0.1–0.5 on eve
   }
 });
 test('stability: seeded random combinations of extreme settings at 44.1 and 48 kHz, changed mid-note, with full aftertouch: no NaN, bounded, and falling away after release', () => {
-  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'venue'].includes(q.id));
+  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'venue', ...TUNING_KEEP].includes(q.id));
   let seed = 4242, worst = { pk: 0 };
   const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  // the keyboard's tuning drawn apart, from its own sequence, so that the other parameters' combinations stay the ones they were
+  let tseed = 777;
+  const trnd = () => ((tseed = (tseed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  const tune = (p) => { for (const q of TUNING_PARAMS) { if (trnd() < 0.5) continue; p[q.id] = q.options ? q.options[Math.floor(trnd() * q.options.length)][0] : trnd() < 0.5 ? q.min : q.max; } return p; };
   const pick = () => {
     const p = P();
     for (const q of sliders) {
       if (rnd() < 0.5) continue;
       p[q.id] = q.type === 'checkbox' ? rnd() < 0.5 : q.type === 'select' ? q.options[Math.floor(rnd() * q.options.length)][0] : rnd() < 0.5 ? q.min : q.max;
     }
-    return p;
+    return tune(p);
   };
   for (const fs of [44100, 48000]) for (let c = 0; c < 5; c++) {
     const p1 = pick(), p2 = pick(), ev = [];
@@ -545,6 +550,29 @@ test('stability: seeded random combinations of extreme settings at 44.1 and 48 k
   }
   assert.ok(worst.pk < 4, `${worst.fs}: peak ${worst.pk.toFixed(2)} with ${JSON.stringify(worst.p1)} → ${JSON.stringify(worst.p2)}`);
   console.log(`        loudest of 10: ${worst.pk.toFixed(2)}`);
+});
+test('regression: the top strings in a 12 m/s wind, their shedding up to 0.29 of 44.1 kHz (Ω h 1.2–1.8; at the sample rate the wake’s leapfrog went to NaN): a fixed C7 and E7 (at A = 440 and 466 Hz) shed at f_s (within 0.5 %) with the van der Pol swing 2√r (within 1 %), and C7, C♯7, D7 and E7 alone in an 8 m/s wind with 30 % gusts stay finite, under a peak of 4, their wakes under 3 × that swing', () => {
+  for (const [key, pitch] of [[96, 440], [96, 466], [100, 466]]) {
+    const fs = 44100, p = P({ wind: 8, pitch }), S = design(key, p), e = new WindHarpEngine(fs, 1, { rigid: true, noise: 0 });
+    e.setParams(p); e.Uw = p.wind; e.handle({ type: 'pressure', value: 1, key: null }); // aftertouch: 12 m/s
+    const vc = openNow(e, key), bL = new Float32Array(1), bR = new Float32Array(1), rec = [];
+    for (let i = 0; i < 0.8 * fs; i++) { e.process(bL, bR, 1); if (i > 0.3 * fs) rec.push(vc.q[2]); }
+    const sh = shedding(e.U, S.D), zc = [];
+    for (let i = 1; i < rec.length; i++) if (rec[i - 1] < 0 && rec[i] >= 0) zc.push(i - 1 + rec[i - 1] / (rec[i - 1] - rec[i]));
+    const f = ((zc.length - 1) * fs) / (zc[zc.length - 1] - zc[0]), swing = Math.max(...rec.map(Math.abs));
+    assert.ok(Math.abs(e.U - 12) < 1e-3 && sh.Om / fs > 1.19, `${noteName(key)} at ${pitch}: U ${e.U}, Ω h ${(sh.Om / fs).toFixed(3)}`);
+    assert.ok(rel(f, sh.fs) < 5e-3 && rel(swing, 2) < 0.01, `${noteName(key)} at ${pitch}: ${f.toFixed(1)} Hz vs f_s ${sh.fs.toFixed(1)}, swing ${swing.toFixed(4)}`);
+  }
+  let worst = { pk: 0, q: 0 };
+  for (const pitch of [440, 466]) for (const key of [96, 97, 98, 100]) {
+    let q = 0;
+    const r = run(P({ wind: 8, gust: 0.3, pitch }), [[0, 'on', key, 0.7]], 2.5, { fs: 44100, wind: 8, tap: (e) => { for (const v of e.voices) for (const st of v.strings) for (const x of st.q) q = Math.max(q, Math.abs(x)); } });
+    let pk = 0;
+    for (let i = 0; i < r.L.length; i++) { assert.ok(Number.isFinite(r.L[i] + r.R[i]), `${noteName(key)} at ${pitch}: NaN at ${(i / 44100).toFixed(3)} s`); pk = Math.max(pk, Math.abs(r.L[i]), Math.abs(r.R[i])); }
+    assert.ok(pk < 4 && q < 6, `${noteName(key)} at ${pitch}: peak ${pk.toFixed(2)}, |q| ${q.toFixed(2)}`);
+    worst = { pk: Math.max(worst.pk, pk), q: Math.max(worst.q, q) };
+  }
+  console.log(`        loudest ${worst.pk.toFixed(2)}, wake |q| ≤ ${worst.q.toFixed(2)}`);
 });
 test('live knobs glide: wind, gustiness, Q and aftertouch moved mid-note change the sound without a click (no sample step over twice the steady largest)', () => {
   const steadyStep = (r, a, b) => { let m = 0; for (let i = a; i < b; i++) m = Math.max(m, Math.abs(r.L[i] - r.L[i - 1])); return m; };

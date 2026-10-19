@@ -184,6 +184,10 @@
   (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
   key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
   default, sounds as before.
+- **The top strings stay stable and in tune in strong winds.** A wake shedding close to the sample
+  rate (C7 at 12 m/s and 44.1 kHz) could blow up into silence; such a string now steps its wake
+  two to eight times a sample, so it sheds at its true frequency (E7 at 8 m/s sounds about twice
+  as loud as before). The reference wind sounds as before.
 
 ### Storage Ring (minor)
 - **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
