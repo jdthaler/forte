@@ -21,6 +21,7 @@ enum : int { principal, musette, detune, bourdon, piccolo, percussion, pressure,
 
 constexpr double kNoLimit = INFINITY;
 inline const char *const kChoices_musette[] = {"Off", "Two reeds: 8′ and one tuned sharp", "Three reeds: one flat, one true, one sharp"};
+inline const char *const kKeys_musette[] = {"off", "two", "three"};
 namespace musette_ { enum : int { off, two, three }; }
 inline const FormatSegment kFormat_detune[] = {{kNoLimit, "±", " ¢", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_pressure[] = {{kNoLimit, "", " Pa", 1, 0, 0, false, false, false, false}};
@@ -33,12 +34,13 @@ inline const FormatSegment kFormat_cell[] = {{0.9999999999999999, "× ", "", 1, 
 inline const FormatSegment kFormat_cassF[] = {{kNoLimit, "", " Hz", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
 inline const ParamInfo kParams[p::count] = {
   {"principal", "8′ (one reed a key)", "Stops", ParamKind::toggle, 0, 1, 1, 1, false, true, nullptr, 0, nullptr, 0},
-  {"musette", "Musette (voix céleste)", "Stops", ParamKind::choice, 0, 2, 0, 1, false, true, kChoices_musette, 3, nullptr, 0},
+  {"musette", "Musette (voix céleste)", "Stops", ParamKind::choice, 0, 2, 0, 1, false, true, kChoices_musette, 3, nullptr, 0, kKeys_musette},
   {"detune", "Musette detune", "Stops", ParamKind::continuous, 0, 40, 12, 0.5, false, false, nullptr, 0, kFormat_detune, 1},
   {"bourdon", "16′ (an octave down)", "Stops", ParamKind::toggle, 0, 1, 0, 1, false, true, nullptr, 0, nullptr, 0},
   {"piccolo", "4′ (an octave up)", "Stops", ParamKind::toggle, 0, 1, 0, 1, false, true, nullptr, 0, nullptr, 0},
@@ -55,7 +57,7 @@ inline const ParamInfo kParams[p::count] = {
   {"cassotto", "Cassotto (tone chamber)", "Cassotto and output", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"cassF", "Cassotto resonance", "Cassotto and output", ParamKind::continuous, 300, 3000, 1500, 0, true, false, nullptr, 0, kFormat_cassF, 1},
   {"room", "Room", "Cassotto and output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Cassotto and output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Cassotto and output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Cassotto and output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 

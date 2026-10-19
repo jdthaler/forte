@@ -25,6 +25,7 @@ The front page sorts them into four kinds, as here.
 | ✅ | [Free-Reed Organ](harmonium/) | harmonium and accordion | brass reeds driven through their slots by the inertia of the air that feeds them (implicit reed–air coupling, thresholds from a linear analysis); musette, 16′ and 4′ ranks, reservoir and expression stop, cassotto |
 | ✅ | [Vibraphone](vibraphone/) | Deagan vibraharp (1927) | undercut bars tuned 1 : 4 : 10 by finite elements, each coupled to a stopped tube; motor-driven discs open and close the tubes (tremolo) |
 | ✅ | [Carillon](carillon/) | Flemish carillon (Hemony) | bronze bells solved by axisymmetric finite elements and tuned by their profile (minor- or major-third), struck by a Hertzian clapper; doublets that warble with asymmetry and strike angle; air absorption over distance; the strike note found by subharmonic summation |
+| ✅ | [Kalimba](kalimba/) | Hugh Tracey's kalimba and the mbira | spring-steel tines as clamped–supported–free beams (the length behind the bridge sets the overtones), plucked from their static deflection by a thumb that lets go slowly or fast; a box whose top and sound-hole air are two coupled oscillators (cover the hole for a wah); bottle caps that rattle once the top outruns gravity |
 
 ### Electric instruments
 
@@ -97,6 +98,12 @@ controls** for everything else, and the presets just above the keys (the
 first control on a phone). Each shows its name, and its value while
 you move it. Explanations wait behind ⓘ buttons.
 
+**Your own presets** live in the same menu. *Save these settings…* keeps
+the page's settings under a name in your browser, and *Copy a link to
+these settings* makes a link that opens the page playing them, to send
+to someone. *Your presets and files…* lists yours, and saves them to a
+file or opens one: the plugins read and write the same files.
+
 There are two modes. **Discover** shows it all. **Perform** shows just
 the main views, filling the screen, with no text in them: for playing,
 or for a projector (**Full screen** fills it). The controls stay where
@@ -128,6 +135,11 @@ together from **All Plugins** on the front page, or one instrument from **↓ Pl
 the unpacked folder do it all. They are unsigned, so a Mac needs one Terminal command (`xattr`,
 which `make install` runs) before it loads them. The download with every instrument also has the
 Forte app, one standalone that plays any of them from its Instrument menu.
+
+In a plugin's window the Presets menu has your own presets too: *Save these settings…* writes
+one as a file in a presets folder for that instrument (`~/Library/Audio/Presets/Forte/<id>` on a
+Mac, `%APPDATA%\Forte\Presets\<id>` on Windows, `~/.local/share/forte/presets/<id>` on
+Linux), and *Open the presets folder* shows it, so a file saved on the site can go there too.
 
 Releases publish themselves: after each green `native` run on `live` (the branch the site is
 published from), the **release-plugins** workflow releases that run's plugins if an instrument's

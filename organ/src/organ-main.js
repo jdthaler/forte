@@ -2,7 +2,7 @@
 // The worklet runs the engine, the C++ built as WebAssembly (organ-wasm.js), and the views call
 // its model.
 
-import { GROUPS, ALL_PARAMS, DEFAULTS, PRESETS } from './organ-params.js';
+import { GROUPS, ALL_PARAMS, DEFAULTS, PRESETS, CONSOLE } from './organ-params.js';
 import { INSTRUMENT } from './organ-instrument.js';
 import { DRAWBARS, NUM_WHEELS, KEY_MIN, KEY_MAX, PC_NAMES } from './tonewheels.js';
 import { wasmModel } from './organ-wasm.js';
@@ -13,6 +13,7 @@ import { createKeyboard } from '../../shared/keyboard.js';
 import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto } from '../../shared/midi.js';
 import { controlOwns, focusedByPointer } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
+import { attachPresets } from '../../shared/user-presets.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'tonewheel-organ/params/v1';
@@ -498,3 +499,5 @@ refreshGenerator();
 refreshFocus();
 updateHelp();
 requestAnimationFrame(frame);
+// your own presets and links: the console's state goes in as its parameters (organ-params.js)
+attachPresets({ instrument: INSTRUMENT, get: () => P, values: (p) => ({ ...p, ...CONSOLE.get(p) }), set: (v) => replaceP({ ...P, ...Object.fromEntries(ALL_PARAMS.map((p) => [p.id, v[p.id]])), ...CONSOLE.put(v, P) }), toast });

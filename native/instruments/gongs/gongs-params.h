@@ -21,10 +21,12 @@ enum : int { material, thick, rise, bc, eta, thermal, radiation, asym, hardness,
 
 constexpr double kNoLimit = INFINITY;
 inline const char *const kChoices_material[] = {"Bell bronze", "Steel", "Aluminium"};
+inline const char *const kKeys_material[] = {"bronze", "steel", "aluminium"};
 namespace material_ { enum : int { bronze, steel, aluminium }; }
 inline const FormatSegment kFormat_thick[] = {{kNoLimit, "", " ‰", 1000, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_rise[] = {{0, "flat", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " h", 1, 0, 2, false, false, false, false}};
 inline const char *const kChoices_bc[] = {"Free (hanging gong)", "Clamped (held, free to slide in its plane)"};
+inline const char *const kKeys_bc[] = {"free", "clamped"};
 namespace bc_ { enum : int { free, clamped }; }
 inline const FormatSegment kFormat_eta[] = {{0.000040499999999999995, "", "×10⁻⁵", 99907.43179750937, 0.0027659086133265042, 1, false, false, false, false}, {0.000041209751909733015, "", "×10⁻⁵", 0, 4.1, 1, false, false, false, false}, {0.00004649999999999999, "", "×10⁻⁵", 99907.43179750937, 0.0027659086133265042, 1, false, false, false, false}, {0.00004731512589614804, "", "×10⁻⁵", 0, 4.7, 1, false, false, false, false}, {0.00009999999999999988, "", "×10⁻⁵", 99907.43179750937, 0.0027659086133265042, 1, false, false, false, false}, {0.00019476846045130567, "", "×10⁻⁴", 9995.150182251671, 0.0032599870232546445, 1, false, false, false, false}, {0.00019499999999999997, "", "×10⁻⁴", 0, 1.9, 1, false, false, false, false}, {0.0009999999999999994, "", "×10⁻⁴", 9995.150182251671, 0.0032599870232546445, 1, false, false, false, false}, {0.009999999999999993, "", "×10⁻³", 1000, 0, 1, false, false, false, false}, {kNoLimit, "", "×10⁻²", 100, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_thermal[] = {{kNoLimit, "", " ×", 1, 0, 2, false, false, false, false}};
@@ -41,14 +43,15 @@ inline const FormatSegment kFormat_nlvoices[] = {{kNoLimit, "", " at once", 1, 0
 inline const FormatSegment kFormat_terms[] = {{kNoLimit, "", "", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
 inline const ParamInfo kParams[p::count] = {
-  {"material", "Material", "Gong", ParamKind::choice, 0, 2, 0, 1, false, false, kChoices_material, 3, nullptr, 0},
+  {"material", "Material", "Gong", ParamKind::choice, 0, 2, 0, 1, false, false, kChoices_material, 3, nullptr, 0, kKeys_material},
   {"thick", "Thickness / radius h/a", "Gong", ParamKind::continuous, 0.003, 0.03, 0.01, 0, true, false, nullptr, 0, kFormat_thick, 1},
   {"rise", "Dome rise (curvature)", "Gong", ParamKind::continuous, 0, 4, 0.4, 0.05, false, true, nullptr, 0, kFormat_rise, 2},
-  {"bc", "Rim", "Gong", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_bc, 2, nullptr, 0},
+  {"bc", "Rim", "Gong", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_bc, 2, nullptr, 0, kKeys_bc},
   {"eta", "Internal friction η", "Gong", ParamKind::continuous, 0.00001, 0.01, 0.00015, 0, true, false, nullptr, 0, kFormat_eta, 10},
   {"thermal", "Thermoelastic loss", "Gong", ParamKind::continuous, 0, 2, 1, 0.05, false, false, nullptr, 0, kFormat_thermal, 1},
   {"radiation", "Radiation loss", "Gong", ParamKind::continuous, 0, 3, 1, 0.05, false, false, nullptr, 0, kFormat_radiation, 1},
@@ -63,7 +66,7 @@ inline const ParamInfo kParams[p::count] = {
   {"nlvoices", "Nonlinear voices", "Output", ParamKind::continuous, 1, 16, 4, 1, false, false, nullptr, 0, kFormat_nlvoices, 1},
   {"terms", "Coupling terms", "Output", ParamKind::continuous, 200, 2000, 300, 50, true, false, nullptr, 0, kFormat_terms, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 
