@@ -121,7 +121,7 @@ default in the existing presets, or would change what an existing knob means.
 | Idea | Size | Notes |
 |------|------|-------|
 | RF Cavity Bells, Collider Showers | M each | The accelerator ideas left over from the Storage Ring. |
-| Celesta | M | Close to the vibraphone's bars. |
+| Celesta | M | Done, for the next release: Timoshenko steel bars over tuned wooden boxes, felt hammers and dampers. |
 | Steel pan | M | Done, for the next release: the Steel Pan, note areas tuned to octave and twelfth whose domes couple their modes, ringing along with their neighbours in a fourths-and-fifths layout. |
 | Hammered dulcimer or cimbalom | M | |
 | Theremin or ondes Martenot | M | Continuous pitch suits MPE. |

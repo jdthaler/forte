@@ -77,6 +77,14 @@ export const INSTRUMENTS = [
     accent: '#d9b45f',
   },
   {
+    id: 'celesta', name: 'Celesta', section: 'traditional', ready: true, version: '0.1.0', trim: 0.5,
+    plugin: { code: 'Cele', ready: true },
+    after: 'the Mustel celesta (Paris, 1886)',
+    tagline: 'Felt hammers strike thin steel bars, each over a wooden box tuned to it: the bell-like sugar-plum sound.',
+    physics: 'Timoshenko bars · bar–box air coupling · felt hammers',
+    accent: '#b9a4ff',
+  },
+  {
     id: 'kalimba', name: 'Kalimba', section: 'traditional', ready: true, version: '0.1.0', trim: -4.5,
     plugin: { code: 'Kali', ready: true },
     after: 'the African mbira and Hugh Tracey’s kalimba (1950s)',
