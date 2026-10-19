@@ -138,6 +138,7 @@ console.log('engine');
 function render(key, params, seconds, vel = 2.5) {
   const { model: m, data: vd, packed } = keyModel(key, params, FS);
   const eng = new PianoEngine(FS);
+  eng.setParams(params);
   const n = Math.round(seconds * FS), L = new Float32Array(n), R = new Float32Array(n);
   const bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
   const v = eng.noteOn(key, vel, packed);
@@ -181,7 +182,8 @@ function peakFreqNear(x, f) {
 const cents = (a, b) => 1200 * Math.log2(a / b);
 
 test('C4 strike: finite, plausible contact time, in tune', () => {
-  const r = render(60, P(), 1.5);
+  // tuning is checked on the linear string (tension modulation starts a hard note sharp: below)
+  const r = render(60, P({ kc: false }), 1.5);
   let pk = 0;
   for (const s of r.L) { assert.ok(Number.isFinite(s)); pk = Math.max(pk, Math.abs(s)); }
   assert.ok(pk > 1e-3 && pk < 5, `peak ${pk}`);
@@ -190,15 +192,15 @@ test('C4 strike: finite, plausible contact time, in tune', () => {
   const c2 = cents(peakFreqNear(r.L.subarray(4800, 4800 + 32768), keyFreq(60)), keyFreq(60));
   assert.ok(Math.abs(c2) < 0.4, `${c2} ¢`);
   // one string: the engine reproduces the model's tuning to a few hundredths of a cent
-  const one = render(60, P({ unisons: 1 }), 1.5);
+  const one = render(60, P({ unisons: 1, kc: false }), 1.5);
   const c1 = cents(peakFreqNear(one.L.subarray(4800, 4800 + 32768), keyFreq(60)), keyFreq(60));
   assert.ok(Math.abs(c1) < 0.05, `${c1} ¢`);
   console.log(`        peak ${pk.toFixed(3)}, contact ${r.contactMs.toFixed(2)} ms, Fmax ${r.v.Fmax.toFixed(1)} N, modes ${r.vd.n}; pitch ${c2.toFixed(3)} ¢ (one string ${c1.toFixed(3)} ¢)`);
 });
 
 test('bridge losses: measured decay of partials n = 1…30 is G(T + EIk²)/L', () => {
-  // one string, internal losses off: every partial decays only into the bridge
-  const p = P({ unisons: 1, lossLow: 1e-6, lossHigh: 1e-6, bridge: 2 });
+  // one string, internal losses off, linear: every partial decays only into the bridge
+  const p = P({ unisons: 1, lossLow: 1e-6, lossHigh: 1e-6, bridge: 2, kc: false });
   const r = render(60, p, 2.6);
   const E = MATERIALS.steel.E, I = r.m.sec.I1, W = Math.round(0.2 * FS), t1 = Math.round(0.3 * FS), t2 = Math.round(2.3 * FS);
   const rows = [];
@@ -210,6 +212,24 @@ test('bridge losses: measured decay of partials n = 1…30 is G(T + EIk²)/L', (
     rows.push(`n=${n} ${(100 * (sigma / expect - 1)).toFixed(2)} %`);
   }
   console.log(`        σ measured vs closed form: ${rows.join(', ')}`);
+});
+
+test('tension modulation: a hard blow starts sharp and glides down; a soft one barely moves', () => {
+  // the stretch weights are ∂ω²/∂T: k²/μ for a uniform string's sine modes; ΔT = (EA/2L)∫u_x²
+  const vd = voiceData(48, P()), m = computeKeyModel(48, P(), FS);
+  const mu = m.info.mu;
+  for (const n of [1, 7, 30]) { const kk = (n * Math.PI) / m.L; assert.ok(rel(vd.g[n - 1], (kk * kk) / mu) < 1e-9, `g${n}`); }
+  assert.ok(rel(vd.kc, (MATERIALS.steel.E * m.sec.A) / (2 * m.L)) < 1e-9, `kc ${vd.kc}`);
+  // C3, one string: the second partial's pitch with the stretch, re without
+  const shift = (vel, t) => {
+    const at = (kc) => { const r = render(48, P({ unisons: 1, kc }), 2.2, vel); return peakFreqNear(r.L.subarray(Math.round(t * FS), Math.round(t * FS) + 8192), 2 * keyFreq(48)); };
+    return cents(at(true), at(false));
+  };
+  const hard = shift(5, 0.02), late = shift(5, 1.8), soft = shift(0.5, 0.02);
+  console.log(`        C3 partial 2 at 5 m/s: +${hard.toFixed(2)} ¢ at the start, +${late.toFixed(2)} ¢ after 1.8 s; at 0.5 m/s +${soft.toFixed(2)} ¢`);
+  assert.ok(hard > 2 && hard < 15, `hard ${hard}`);
+  assert.ok(late < hard / 4, `late ${late}`);
+  assert.ok(Math.abs(soft) < 0.3, `soft ${soft}`);
 });
 
 test('bridge coupling gives double decay with detuned unisons', () => {
@@ -314,6 +334,45 @@ test('una corda: the missed string is driven through the bridge, and the afterso
   assert.ok(soft.early < normal.early, 'una corda is softer');
   assert.ok(soft.late - soft.early > normal.late - normal.early + 2, `aftersound: normal ${(normal.late - normal.early).toFixed(1)} dB, una corda ${(soft.late - soft.early).toFixed(1)} dB`);
   console.log(`        level 3–4 s after the strike re the attack: ${(normal.late - normal.early).toFixed(1)} dB → ${(soft.late - soft.early).toFixed(1)} dB with una corda`);
+});
+
+test('sympathetic strings: an undamped key rings along where its partials meet the sounding ones, never with its own voice; a damped one, or after Panic, stays still', () => {
+  // keys held (struck softly) and staccato notes struck hard, the pedal up or down; each key's
+  // group's energy after `sec` s, the partials that ran then, and the peak output
+  const run = ({ held = [], strike = [], pedal = false, sympathy = 0.25, sec = 1, panic = false } = {}) => {
+    const p = P({ sympathy }), e = new PianoEngine(FS);
+    e.setParams(p);
+    for (let k = 21; k <= 108; k++) e.offer(keyModel(k, p, FS).packed);
+    e.setSustain(pedal);
+    const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
+    e.process(L, R, bl);
+    for (const k of held) e.noteOn(k, 0.3);
+    for (const k of strike) e.noteOn(k, 2.5);
+    let peak = 0;
+    for (let b = 0; b < Math.round((sec * FS) / bl); b++) {
+      if (b === Math.round((0.3 * FS) / bl)) for (const k of strike) e.noteOff(k);
+      if (panic && b === Math.round((0.6 * FS) / bl)) e.allNotesOff();
+      e.process(L, R, bl);
+      for (let i = 0; i < bl; i++) peak = Math.max(peak, Math.abs(L[i]), Math.abs(R[i]));
+    }
+    return { E: (k) => e.sympathetic(k).energy, damped: (k) => e.sympathetic(k).damped, running: e.sympatheticRunning(), peak };
+  };
+  const c4 = run({ held: [60], strike: [48] }), cs4 = run({ held: [61], strike: [48] });
+  assert.ok(c4.E(60) > 30 * cs4.E(61), `C4 held, C3 struck: C4's group ${c4.E(60).toExponential(2)}; C♯4 held: ${cs4.E(61).toExponential(2)}`);
+  assert.ok(c4.E(61) < 1e-3 * c4.E(60) && c4.damped(61), `C♯4, not held: ${c4.E(61).toExponential(2)}`);
+  // C3 held alone: its group feels every voice but its own (here only the undamped treble's groups
+  // feed it back); with C4 held too, C4's group rings with C3
+  const own = run({ held: [48] }), pair = run({ held: [48, 60] });
+  assert.ok(own.E(48) < 1e-2 * pair.E(60), `C3 held: its own group ${own.E(48).toExponential(2)}; C4's, held with it, ${pair.E(60).toExponential(2)}`);
+  const ped = run({ strike: [48], pedal: true });
+  assert.ok(ped.E(60) > 30 * c4.E(61) && !ped.damped(30) && c4.damped(30), `the pedal lifts every damper: C4's group ${ped.E(60).toExponential(2)}`);
+  const off = run({ held: [60], strike: [48], sympathy: 0 });
+  assert.ok(off.running === 0 && off.E(60) === 0, 'off: no group runs');
+  const hush = run({ strike: [36, 40, 43], pedal: true, panic: true });
+  for (const k of [48, 60, 72]) assert.ok(hush.E(k) === 0, `after Panic: key ${k}'s group ${hush.E(k)}`);
+  const loud = run({ strike: [36, 40, 43, 48, 52, 55, 60], pedal: true, sympathy: 1, sec: 2 });
+  assert.ok(Number.isFinite(loud.peak) && loud.peak < 2, `a pedalled chord at 100 %: peak ${loud.peak}`);
+  console.log(`        (C3 struck: held C4's group ${(c4.E(60) / cs4.E(61)).toFixed(0)} × held C♯4's; C3 held: its own group ${(own.E(48) / pair.E(60)).toExponential(1)} × C4's; ${ped.running} partials ring with the pedal down)`);
 });
 
 test('every preset-ish extreme stays stable', () => {

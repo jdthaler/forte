@@ -194,6 +194,14 @@ requests.
 * **J. O. Smith, S. Serafin, J. Abel and D. Berners**, "Doppler simulation
   and the Leslie", *Proc. DAFx-02*, Hamburg, pp. 13–20 (2002). The rotating
   horn and drum of the Tonewheel Organ's Leslie.
+* **D. M. F. Chapman**, "The tones of the kalimba (African thumb piano)",
+  *J. Acoust. Soc. Am.* **131**(1), 945–950 (2012),
+  [doi:10.1121/1.3651090](https://doi.org/10.1121/1.3651090). The tine as a
+  clamped–supported–free beam, the Kalimba's tines.
+* **O. Christensen and B. B. Vistisen**, "Simple model for low-frequency
+  guitar function", *J. Acoust. Soc. Am.* **68**(3), 758–766 (1980),
+  [doi:10.1121/1.384814](https://doi.org/10.1121/1.384814). The top and the
+  sound hole as two coupled oscillators, the Kalimba's box.
 
 ## 2. Techniques Forte uses, and where they come from
 
@@ -305,6 +313,11 @@ requests.
 | `tools/loudness.mjs` | K-weighting (high shelf, then high-pass) at 48 kHz, 400 ms blocks overlapping by 75 %, loudness = −0.691 + 10 log₁₀(power); target −23 LUFS | Recommendation **ITU-R BS.1770**, "Algorithms to measure audio programme loudness and true-peak audio level" (BS.1770-5, 11/2023), <https://www.itu.int/rec/R-REC-BS.1770>; the filter coefficients are the Recommendation's. The −23 LUFS target is that of **EBU R 128**, "Loudness normalisation and permitted maximum level of audio signals", <https://tech.ebu.ch/publications/r128>. |
 | `tools/reeds-slot-table.mjs` | Laplace's equation in the Reed Piano's pickup slot by successive over-relaxation, on nested grids | S. P. Frankel, "Convergence rates of iterative treatments of partial differential equations", *Math. Tables Aids Comput.* **4**(30), 65–75 (1950), [doi:10.1090/S0025-5718-1950-0046149-3](https://doi.org/10.1090/S0025-5718-1950-0046149-3); D. Young, "Iterative methods for solving partial difference equations of elliptic type", *Trans. Amer. Math. Soc.* **76**(1), 92–111 (1954), [doi:10.1090/S0002-9947-1954-0059635-7](https://doi.org/10.1090/S0002-9947-1954-0059635-7). |
 | `blackhole/src/qnm.js`, `tools/qnm-table.mjs` | Kerr quasinormal modes by continued fractions (with the n-th inversion for overtones), solved by complex secant iteration | S. A. Teukolsky, "Perturbations of a rotating black hole. I. Fundamental equations for gravitational, electromagnetic, and neutrino-field perturbations", *Astrophys. J.* **185**, 635 (1973), [doi:10.1086/152444](https://doi.org/10.1086/152444); E. W. Leaver, "An analytic representation for the quasi-normal modes of Kerr black holes", *Proc. R. Soc. Lond. A* **402**, 285–298 (1985), [doi:10.1098/rspa.1985.0119](https://doi.org/10.1098/rspa.1985.0119). Checked against E. Berti, V. Cardoso and C. M. Will, *Phys. Rev. D* **73**, 064030 (2006), [doi:10.1103/PhysRevD.73.064030](https://doi.org/10.1103/PhysRevD.73.064030), and E. Berti, V. Cardoso and A. O. Starinets, "Quasinormal modes of black holes and black branes", *Class. Quantum Grav.* **26**, 163001 (2009), [doi:10.1088/0264-9381/26/16/163001](https://doi.org/10.1088/0264-9381/26/16/163001). |
+
+The WebAssembly and the plugins also compile in open-source libraries: Eigen, fdlibm (as V8
+computes it), Emscripten's C library, and for the plugins CLAP, clap-wrapper, the VST 3 SDK,
+Apple's AudioUnitSDK, RtAudio, RtMidi and CHOC. Their licences and notices are in
+[THIRD-PARTY-NOTICES.md](https://github.com/jdthaler/forte/blob/live/THIRD-PARTY-NOTICES.md).
 
 Other tools (`tools/gongs-modes.mjs`, `tools/bowed-tuning.mjs`,
 `tools/lock-comparison.mjs`) compute tables from each instrument's own
@@ -634,7 +647,11 @@ data):
   Real-Time Particle Collision Data from the ATLAS Detector", NIME 2016,
   <https://nime.org/proc/cherston2016>. The Storage Ring plays the
   accelerator rather than the collisions: a kicked bunch heard through its
-  beam pickup.
+  beam pickup. RF Cavity Bells plays the accelerator's cavities: the modes
+  a bunch leaves ringing in a superconducting TESLA cavity (B. Aune et al.,
+  "Superconducting TESLA cavities", *Phys. Rev. ST Accel. Beams* **3**,
+  092001 (2000),
+  [doi:10.1103/PhysRevSTAB.3.092001](https://doi.org/10.1103/PhysRevSTAB.3.092001)).
 * **Synchronisation and mode locking in musical oscillators.**
   B. van der Pol and J. van der Mark, "Frequency demultiplication",
   *Nature* **120**, 363–364 (1927),

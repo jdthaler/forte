@@ -19,14 +19,14 @@ function messages(m) {
 const Base = wasmEngine(BUILD, { messages });
 
 // Voice data as the C++ takes it (piano-model.h, packVoiceData): version, key, n, unisons, the
-// hammer's mass, K, p, alpha, outV, outH, hasDamper, then freq, sigma, w, cv, ch, ct, famId,
-// uni, idx. A voice data object's version (a string, or a number) becomes a number.
-const HEAD = 11, ARRAYS = ['freq', 'sigma', 'w', 'cv', 'ch', 'ct', 'famId', 'uni', 'idx'];
+// hammer's mass, K, p, alpha, outV, outH, hasDamper, T, kc, then freq, sigma, w, cv, ch, ct, g,
+// famId, uni, idx. A voice data object's version (a string, or a number) becomes a number.
+const HEAD = 13, ARRAYS = ['freq', 'sigma', 'w', 'cv', 'ch', 'ct', 'g', 'famId', 'uni', 'idx'];
 const versions = new Map();
 const versionId = (v) => { if (!versions.has(v)) versions.set(v, versions.size + 1); return versions.get(v); };
 export function packVoiceData(d) {
   const n = d.n, out = new Float64Array(HEAD + ARRAYS.length * n);
-  out.set([versionId(d.version), d.key, n, d.unisons, d.hammer.mass, d.hammer.K, d.hammer.p, d.hammer.alpha, d.outV, d.outH, d.hasDamper ? 1 : 0]);
+  out.set([versionId(d.version), d.key, n, d.unisons, d.hammer.mass, d.hammer.K, d.hammer.p, d.hammer.alpha, d.outV, d.outH, d.hasDamper ? 1 : 0, d.T, d.kc]);
   ARRAYS.forEach((k, i) => out.set(d[k], HEAD + i * n));
   return out;
 }
@@ -34,10 +34,10 @@ export function unpackVoiceData(a) {
   const n = a[2], at = (i) => a.subarray(HEAD + i * n, HEAD + (i + 1) * n);
   return {
     version: a[0], key: a[1], n, unisons: a[3],
-    freq: at(0).slice(), sigma: at(1).slice(), w: at(2).slice(), cv: at(3).slice(), ch: at(4).slice(), ct: at(5).slice(),
-    famId: Uint8Array.from(at(6)), uni: Uint8Array.from(at(7)), idx: Uint16Array.from(at(8)),
+    freq: at(0).slice(), sigma: at(1).slice(), w: at(2).slice(), cv: at(3).slice(), ch: at(4).slice(), ct: at(5).slice(), g: at(6).slice(),
+    famId: Uint8Array.from(at(7)), uni: Uint8Array.from(at(8)), idx: Uint16Array.from(at(9)),
     hammer: { mass: a[4], K: a[5], p: a[6], alpha: a[7] },
-    outV: a[8], outH: a[9], hasDamper: a[10] > 0,
+    outV: a[8], outH: a[9], hasDamper: a[10] > 0, T: a[11], kc: a[12],
   };
 }
 
@@ -80,13 +80,21 @@ export class PianoWasmEngine extends Base {
     if (P.maxModes !== undefined) Base.exports.piano_set_max_modes(this.e, P.maxModes);
     super.setParams(P);
   }
+  // A key's voice data ahead of its notes: its sympathetic string's partials come from it.
+  offer(data) {
+    const packed = data instanceof Float64Array ? data : packVoiceData(data), x = Base.exports;
+    const at = x.piano_offer_buffer(this.e, packed.length); // (may grow the memory: then take its buffer)
+    new Float64Array(x.memory.buffer, at, packed.length).set(packed);
+    x.piano_offer(this.e, packed.length);
+  }
+  // the page's { type: 'offering' } (it will offer every key: the engine builds none for the
+  // sympathetic strings) and { type: 'offer', data }
+  handle(m) {
+    if (m.type === 'offer') this.offer(m.data);
+    else if (m.type === 'offering') Base.exports.piano_offering(this.e);
+  }
   noteOn(key, velocity, data) {
-    if (data) {
-      const packed = data instanceof Float64Array ? data : packVoiceData(data), x = Base.exports;
-      const at = x.piano_offer_buffer(this.e, packed.length); // (may grow the memory: then take its buffer)
-      new Float64Array(x.memory.buffer, at, packed.length).set(packed);
-      x.piano_offer(this.e, packed.length);
-    }
+    if (data) this.offer(data);
     super.noteOn(key, velocity);
     const v = Base.exports.piano_last(this.e);
     return v ? new WasmVoice(this, v) : undefined;
@@ -97,6 +105,9 @@ export class PianoWasmEngine extends Base {
   }
   get byKey() { return new Map(this.voices.filter((v) => v.own).map((v) => [v.key, v])); }
   modeCount() { return Base.exports.piano_mode_count(this.e); }
+  // the sympathetic strings: key's group ({ size, energy, damped }), and the partials that last ran
+  sympathetic(key) { const x = Base.exports; return { size: x.piano_sym_size(this.e, key), energy: x.piano_sym_energy(this.e, key), damped: x.piano_sym_damped(this.e, key) > 0 }; }
+  sympatheticRunning() { return Base.exports.piano_sym_running(this.e); }
   stats() { return { modes: this.modeCount() }; } // the CPU pill shows the oscillators too
 }
 export const ready = () => PianoWasmEngine.ready();

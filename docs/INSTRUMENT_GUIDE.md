@@ -82,6 +82,7 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `views.js` | `fit`, `css`, `animate`, `SpectrumView` (live spectrum + model markers), `SpectrogramView` (scrolling spectrogram, the markers as ticks), `ScopeView` |
 | `impulses.js` | the rooms: `roomIR` (the pages' original synthetic room) and the venues (`VENUES`: a studio and three halls built from their size, walls and air: image sources, then a tail decaying in each octave in Eyring's time) |
 | `registry.js` | the instrument list behind the landing page and the menus |
+| `presets.js`, `user-presets.js` | your own presets and shared links. `presets.js` is the format, the same in the plugins (`native/plugin/presets.cpp`): every parameter of the contract by id, in a versioned file or in a link's fragment. `user-presets.js` adds them to the Presets menu (save, link, a sheet to play, link, save to a file, delete and open files); the shell attaches it, and a page with its own state calls `attachPresets` with how to get and set its parameters by contract id (the organ's console is `CONSOLE.get` and `CONSOLE.put`). |
 | `midi.js` | Web MIDI for every page (the shell and the five older pages): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen next to Enable MIDI, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling. |
 | `focus.js` | who gets a key press: a control reached with Tab keeps the keys it uses (Space ticks a stop, arrows move a slider); one last touched with the mouse or a finger hands them back to the instrument. Every page's key handler asks `controlOwns(e)` first. |
 | `notes.js`, `markdown.js` | **How it works**: the page's README in a dialog (button by the title, or a link to `…/#about`) |
@@ -239,11 +240,14 @@ and say which in the footer help.
   page and every instrument, from `shared/nav.js`; the page's `<h1>`
   moves into it). Then How it works, **Discover | Perform**, audio, MIDI
   and Panic.
-- **The views: pictures only.** The cards marked `data-perform` (one or
-  two: `test/site-tests.mjs` checks) are the main views, large, side by
-  side (stacked on a tall screen). The others sit in a tabbed panel below
-  them that folds away. A card's `.caption` waits behind an ⓘ in its
-  title.
+- **The views: pictures only.** Above them is a row of toggles, one for
+  each view, named by its `data-view` (or its `<h2>`): a tap turns that
+  view on or off, and the page remembers which are on. The views that are
+  on share the space in rows, side by side on a wide screen and stacked on
+  a tall one; a short last row stretches across. At first only the cards
+  marked `data-perform` (one or two: `test/site-tests.mjs` checks) are on,
+  and their toggles come first. A card's `.caption` waits behind an ⓘ in
+  its title.
 - **The controls, above the keys.** A card marked `data-control` is a
   control surface, not a view (the organ's drawbars and switches): it
   moves here, ahead of the `perform: true` parameters. A dropdown there
@@ -262,8 +266,8 @@ and say which in the footer help.
   page's `#reset`. On a phone, where the bar is full, they are the first
   control above the keys instead. The pedal button presses Space. The page's footer hints
   (`.kb-help`: computer keys, MIDI, readouts) go behind ⌨.
-- **Perform** is for playing and for a projector: only the main views,
-  filling the screen, with no text in them. The card's `.card-head`,
+- **Perform** is for playing and for a projector: the views that are on,
+  filling the screen, with no toggles and no text in them. The card's `.card-head`,
   `.caption`, `.legend`, `.readout`, `<dl>` and `<table>` are hidden, and
   `fillText` draws nothing on their canvases (a card with
   `data-keep-text` keeps its text). Full screen appears. The mode is the
@@ -279,7 +283,8 @@ To fit in:
 - Give a card whose `<h2>` changes at runtime a stable name with
   `data-view="…"`.
 - Mark the one or two views that best show the instrument playing with
-  `data-perform` on their `.card`. In Perform they lose their titles,
+  `data-perform` on their `.card`: they are the ones on at first. In
+  Perform the views lose their titles,
   captions and canvas text and grow to fill the screen, so draw them to
   read as pictures, and let their canvases stretch (Perform sizes them
   with flex, overriding a fixed height).
@@ -366,7 +371,10 @@ a choice and the presets, in order: what a song saved in a DAW and its automatio
 Removing, renaming or changing any of those, or a preset's values, breaks such songs; adding
 parameters, options at the end and presets at the end does not. `node tools/contract.mjs` lists
 what a branch breaks and adds since `main`; the `tests` workflow warns about breaks while an
-instrument is below 1.0 and, from 1.0 on, asks for a `major` release note. The plugin tests load
+instrument is below 1.0 and, from 1.0 on, asks for a `major` release note. Your own presets and
+shared links (`shared/presets.js`) name the same parameters, ranges and options, so the contract
+keeps them working too; `native/tests/presets/` holds files as the site writes them, which the
+plugin tests open and write byte for byte. The plugin tests load
 every state in `native/tests/states/` into today's plugins; one that no longer loads is a break
 (before 1.0, delete it and say so in the note).
 
@@ -375,8 +383,14 @@ worklet, which runs it. The engine takes all the parameters and computes its own
 (`forte/background.h`). WebAssembly has no threads, so that data is built in place on a key's
 first note; where that takes milliseconds, the page builds it with its own WebAssembly model and
 sends it with the note (its `noteData`), as the vibraphone's bars and the piano's strings
-(`vibraphone/src/vibraphone-wasm.js`). The views call the WebAssembly model, which the page awaits
-before drawing (`const model = await wasmModel()`).
+(`vibraphone/src/vibraphone-wasm.js`; the piano also offers every key's ahead of its notes, for its
+sympathetic strings). The views call the WebAssembly model, which the page awaits before drawing
+(`const model = await wasmModel()`).
+
+Strings that share a bridge can ring along with one another through `forte/sympathetic.h`: each
+key's (or string's) lowest partials as a group, driven by the bridge signal of every voice and
+group but its own, with its damper on or off. The piano, the electric grand and the harpsichord
+use it; their engines say where their voices' bridge signals come from.
 
 An engine that posts to its page posts `Message`s in C++ (`Engine::post`: a type, a key and up
 to 30 float32 values); its `<slug>-wasm.js` turns them back into the page's messages, gathering

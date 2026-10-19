@@ -173,6 +173,23 @@ The release force grows as √EI. So a stiffer plectrum lets go later, at a
 larger force and lift, and the time from touch to release is (u + w)/V for a
 jack speed V. The tests check all three.
 
+**Tension modulation.** At release the string is lifted 2–4 mm at its
+plucking point, near the nut, and that stretches it: its tension rises by
+ΔT = (EA/2L)·∫u_x² dx (Kirchhoff 1883; Carrier 1945), and every partial
+goes sharp by about ΔT/2T, then settles as the note decays. In modal form
+∫u_x² = Σ (kₙ²/μ) qₙ², and kₙ²/μ is also how much ωₙ² rises per newton, so
+ΔT moves every partial each sample through its recursion coefficient (to
+first order, held below T/10 so the step stays stable). A short string
+plucked a few centimetres from its nut stretches the most: on the back 8′,
+c¹ starts about 5 ¢ sharp and c³ about 25 ¢, each within a fraction of a
+cent after a second, and FF about 9 ¢, which its long decay carries for
+seconds. The start agrees with the stretch the slow-motion pluck leaves in
+the string to within the test's 50 % (tested). Since the plectrum lets go
+where it lets go, the glide hardly depends on touch. Once ΔT has fallen
+below 10⁻⁵ T (a hundredth of a cent) the string runs linear again until it
+is plucked; while it glides it costs about 30 % more. *Tension modulation*
+under *Strings and tuning* switches it off.
+
 ### 5. Voicing
 
 The **Voicing** knob sets the plectrum's tip stiffness 1/c(ℓ) (2500 N/m by
@@ -320,6 +337,23 @@ board at five points, three along the 8′ bridge and two along the 4′,
 interpolated by key. Above the modal band a residual path, flat in force,
 takes over, at the band's mean level.
 
+**Sympathetic strings.** Every string meets a bridge on the same board, and
+while its damper is off it rings along with whatever sounds. A harpsichord
+has no pedal: a string is free while its key is held and its jack has risen,
+whether or not that jack's row plucks. Hold a key on the lower manual with
+the 4′ off and its 4′ string still rings along, an octave up. Each string's
+motion splits, by superposition, into what its plectrum started (its voice,
+as above) and what the others drive: a *group* per string, its lowest 16
+partials below 4 kHz, meeting the bridge through cₙ = ±√(2σ_b), so that it
+drains at σ_b as the plucked string does. A group feels the bridge signal
+S = Σ c q̇ of every string and every other group, times κ (*Sympathetic
+resonance*: the share of the bridge's motion one string feels from another's,
+1 if they all met it at one point), and never its own string's voice: the
+front and back 8′ of one key drive each other. Under its damper a group
+decays faster by the felt's resistance at its point, R φₙ²/2 (at most ωₙ/2).
+Hold c¹ with no row plucking and strike c² on the back 8′: c¹'s 4′ string
+rings along about 200 times as strongly as c♯¹'s would (in energy).
+
 Two microphones listen close over the board, one over its tail (bass) end
 and one over its front (treble) end, each hearing the board's acceleration
 averaged over a Gaussian patch (σ = 0.3 m) under it. A first-order high-pass at 100 Hz stands
@@ -414,7 +448,7 @@ harpsichord/src/harpsichord-params.js      parameters and presets (and the model
 harpsichord/src/harpsichord-main.js        page wiring and views
 harpsichord/src/harpsichord-wasm.js        the engine and model as WebAssembly (harpsichord/wasm/harpsichord.wasm), for the page and the tests
 native/instruments/harpsichord/            the physics in C++: model (scale, tuning, losses, registers, voicing, soundboard), plectrum (a cantilever; the quasi-static release), string (modal, with implicit point contacts), engine, generated tables, reference
-test/harpsichord-tests.mjs                 node test/harpsichord-tests.mjs (21 tests, ~25 s)
+test/harpsichord-tests.mjs                 node test/harpsichord-tests.mjs (22 tests, ~30 s)
 tools/render-harpsichord.mjs               node tools/render-harpsichord.mjs → examples/harpsichord/
 ```
 
@@ -437,10 +471,15 @@ tools/render-harpsichord.mjs               node tools/render-harpsichord.mjs →
   overstate the deflection by about 10 % against the elastica (Bisshopp
   and Drucker 1945); Perng et al. (2010, 2011) model the large deflection
   and the tip's shape. The friction coefficients and tapers are estimates.
-* **No tension modulation.** At ff the string's stretch raises its pitch by
-  a few cents at the attack; that glide is left out.
-* **No sympathetic resonance.** Strings do not drive one another through
-  the bridge, so the unplucked choir of a held key stays silent.
+* **No longitudinal modes.** Tension modulation gives the pitch glide, but
+  its stretch only retunes the transverse partials: the longitudinal modes
+  it drives, and the phantom partials at sums of transverse frequencies,
+  are left out. The release lift that sets the glide's size is the plectrum
+  model's, not measured on an instrument.
+* **Sympathetic strings are simpler than plucked ones.** A string that rings
+  along is its lowest 16 partials below 4 kHz, with no plectrum, damper or
+  buff touching it (under its damper it decays at a rate), and every string
+  meets the bridge at one point, scaled by *Sympathetic resonance*.
 * **The soundboard is an equivalent plate.** It is a rectangle with
   smeared-in stiffness and its edges simply supported, not the
   wing-shaped, ribbed board of a real instrument. Its stiffness is set by an
@@ -479,6 +518,11 @@ tools/render-harpsichord.mjs               node tools/render-harpsichord.mjs →
   [doi:10.1017/9781316659359.003](https://doi.org/10.1017/9781316659359.003).
 
 **The physics.**
+- G. F. Carrier (1945). "On the non-linear vibration problem of the
+  elastic string." *Q. Appl. Math.* 3(2), 157–165.
+  [doi:10.1090/qam/12351](https://doi.org/10.1090/qam/12351). Tension
+  modulation, after G. Kirchhoff (1883), *Vorlesungen über Mechanik*,
+  Teubner, Leipzig.
 - H. Fletcher (1964). "Normal vibration frequencies of a stiff piano
   string." *J. Acoust. Soc. Am.* 36(1), 203–209.
   [doi:10.1121/1.1918933](https://doi.org/10.1121/1.1918933).

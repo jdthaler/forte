@@ -103,4 +103,10 @@ FORTE_EXPORT void harpsichord_voice(forte::Engine *e, int i, double *out) {
   }
 }
 FORTE_EXPORT int harpsichord_ready(forte::Engine *e, int key) { return static_cast<HarpsichordEngine *>(e)->ready(key) ? 1 : 0; }
+// The sympathetic strings: group key·3 + choir (its partials, 0 until its key was first held; its
+// energy per unit mass; whether its damper is down), and the partials that ran in the last block.
+FORTE_EXPORT int harpsichord_sym_size(forte::Engine *e, int g) { return static_cast<HarpsichordEngine *>(e)->sym.size(g); }
+FORTE_EXPORT double harpsichord_sym_energy(forte::Engine *e, int g) { return static_cast<HarpsichordEngine *>(e)->sym.energy(g); }
+FORTE_EXPORT int harpsichord_sym_damped(forte::Engine *e, int g) { return static_cast<HarpsichordEngine *>(e)->sym.damped(g); }
+FORTE_EXPORT int harpsichord_sym_running(forte::Engine *e) { return static_cast<HarpsichordEngine *>(e)->sym.running; }
 }

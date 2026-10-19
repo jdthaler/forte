@@ -9,6 +9,11 @@ name: native
 # Actions tab, they are also built on macOS and Windows, auval checks the Audio Units, and the
 # release archives are packed and tried; the release-plugins workflow publishes live's.
 #
+# The Linux-only runs build only what changed: when a green run on the branch or on main has
+# already built and validated the same sources (native/ and the few files outside it the builds
+# read), the plugins and wasm jobs pass at once without building, so their required checks
+# still report. A change to the site or the docs alone builds nothing here.
+#
 # A push to live doesn't build again what its release pull request's run already built: live
 # moves only through those pull requests, and their runs build the merge with live, which is
 # the commit the merge makes. The reuse job finds a green pull-request run that built the same
@@ -83,24 +88,45 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # A pull request or a push to main whose plugins' sources (native/, package.json for the Forte
+      # app's version, this workflow) are those a green run on it or on main already built and
+      # validated doesn't build them again: the job passes at once, so the required check still
+      # reports. A docs or site change leaves them alone. The full runs always build.
+      - name: Were these sources built and validated already?
+        if: env.FULL != 'true'
+        run: echo "PASSED_KEY=passed-plugins-${{ matrix.preset }}-${{ hashFiles('native/**', 'package.json', '.github/workflows/native.yml') }}" >> "$GITHUB_ENV"
+      - name: Look for that run
+        id: passed
+        if: env.FULL != 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: passed
+          key: ${{ env.PASSED_KEY }}
+          lookup-only: true
+      - name: Skip the build
+        if: steps.passed.outputs.cache-hit == 'true'
+        run: |
+          echo SKIP=true >> "$GITHUB_ENV"
+          echo "::notice::A green run already built and validated these sources; not building them again."
+
       - name: Linux packages (the standalone's audio and MIDI, the window and its web view)
-        if: runner.os == 'Linux'
+        if: env.SKIP != 'true' && runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y ninja-build libasound2-dev libjack-jackd2-dev libx11-dev libgtk-3-dev libwebkit2gtk-4.1-dev
       - name: Ninja
-        if: runner.os == 'macOS'
+        if: env.SKIP != 'true' && runner.os == 'macOS'
         run: command -v ninja || brew install ninja
 
       # A compiler cache, so a change recompiles only what it touches instead of every
       # instrument's plugins and the SDKs from scratch. The Ninja presets only: the Visual Studio
       # generator (windows) takes no compiler launcher.
       - name: ccache
-        if: runner.os != 'Windows'
+        if: env.SKIP != 'true' && runner.os != 'Windows'
         run: |
           if [ "$RUNNER_OS" = Linux ]; then sudo apt-get install -y ccache; else command -v ccache || brew install ccache; fi
           for lang in C CXX OBJC OBJCXX; do echo "CMAKE_${lang}_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"; done
           { echo "CCACHE_DIR=$RUNNER_TEMP/ccache"; echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE"; echo "CCACHE_MAXSIZE=500M"; } >> "$GITHUB_ENV"
       - name: Cache the compiler's output
-        if: runner.os != 'Windows'
+        if: env.SKIP != 'true' && runner.os != 'Windows'
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/ccache
@@ -108,46 +134,53 @@ jobs:
           restore-keys: ccache-${{ matrix.preset }}-
 
       - name: Cache the fetched dependencies
+        if: env.SKIP != 'true'
         uses: actions/cache@v4
         with:
           path: native/build/${{ matrix.preset }}/_deps/*-src
           key: deps-${{ matrix.preset }}-${{ hashFiles('native/cmake/dependencies.cmake', 'native/cmake/patches/*') }}
 
       - name: Configure
+        if: env.SKIP != 'true'
         working-directory: native
         run: cmake --preset ${{ matrix.preset }}
       - name: Build
+        if: env.SKIP != 'true'
         working-directory: native
         run: |
           command -v ccache >/dev/null && ccache --zero-stats
           cmake --build --preset ${{ matrix.preset }} --parallel
       - name: ccache statistics
-        if: runner.os != 'Windows'
+        if: env.SKIP != 'true' && runner.os != 'Windows'
         run: |
           ccache --show-stats
           { echo '### ccache (${{ matrix.preset }})'; echo '```'; ccache --show-stats; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Unit tests
+        if: env.SKIP != 'true'
         working-directory: native
         run: ctest --preset ${{ matrix.preset }}
 
       - name: Ad-hoc signing (macOS)
-        if: runner.os == 'macOS'
+        if: env.SKIP != 'true' && runner.os == 'macOS'
         run: |
           find native/build/macos/plugins -maxdepth 1 \( -name '*.clap' -o -name '*.vst3' -o -name '*.component' -o -name '*.app' \) \
             -exec codesign --force --deep --sign - {} \;
 
       - name: Cache clap-validator
+        if: env.SKIP != 'true'
         uses: actions/cache@v4
         with:
           path: ~/.cargo/bin/clap-validator*
           key: clap-validator-${{ runner.os }}-${{ env.CLAP_VALIDATOR }}
       - name: clap-validator
+        if: env.SKIP != 'true'
         run: |
           command -v clap-validator || cargo install --locked --git https://github.com/free-audio/clap-validator --tag "$CLAP_VALIDATOR" clap-validator
           find native/build/${{ matrix.preset }}/plugins -name '*.clap' -prune -print0 |
             while IFS= read -r -d '' p; do echo "== $p"; clap-validator validate "$p" || exit 1; done
 
       - name: VST3 validator
+        if: env.SKIP != 'true'
         run: |
           cmake --build native/build/${{ matrix.preset }} --target vst3_validator --config Release
           v=$(find native/build/${{ matrix.preset }}/validator-build/bin -type f \( -name validator -o -name validator.exe \) | head -1)
@@ -155,7 +188,7 @@ jobs:
             while IFS= read -r -d '' p; do echo "== $p"; "$v" "$p" || exit 1; done
 
       - name: auval (macOS)
-        if: runner.os == 'macOS'
+        if: env.SKIP != 'true' && runner.os == 'macOS'
         run: |
           mkdir -p ~/Library/Audio/Plug-Ins/Components
           for p in native/build/macos/plugins/*.component; do
@@ -182,6 +215,7 @@ jobs:
           retention-days: 30
 
       - name: Keep the plugins (to try in a DAW)
+        if: env.SKIP != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: plugins-${{ matrix.preset }}
@@ -208,6 +242,7 @@ jobs:
           if [ "$RUNNER_OS" = macOS ]; then ditto -x -k dist/Forte-plugins-macos.zip "$RUNNER_TEMP/try"
           else tar -xzf dist/Forte-plugins-linux.tar.gz -C "$RUNNER_TEMP/try"; fi
           cd "$RUNNER_TEMP/try/Forte plugins"
+          for f in LICENSE.txt THIRD-PARTY-NOTICES.md; do [ -f "$f" ] || { echo "::error::the archive has no $f"; exit 1; }; done
           make check
           make install
           make verify
@@ -256,6 +291,7 @@ jobs:
           $try = Join-Path $env:RUNNER_TEMP 'try'
           Expand-Archive dist/Forte-plugins-windows.zip -DestinationPath $try
           Set-Location (Join-Path $try 'Forte plugins')
+          foreach ($f in 'LICENSE.txt', 'THIRD-PARTY-NOTICES.md') { if (-not (Test-Path $f)) { throw "the archive has no $f" } }
           function Run { .\install.cmd @args; if ($LASTEXITCODE -ne 0) { throw "install.cmd $args failed" } }
           function Fails { .\install.cmd @args; if ($LASTEXITCODE -eq 0) { throw "install.cmd $args passed" } }
           Run check
@@ -281,16 +317,48 @@ jobs:
           compression-level: 0
           retention-days: 30
 
+      # what the next run looks for (above); a run that skipped or failed saves nothing
+      - name: Remember that these sources passed
+        if: env.PASSED_KEY != '' && env.SKIP != 'true'
+        run: mkdir -p passed && echo "${{ github.sha }}" > passed/sha.txt
+      - name: Keep that
+        if: env.PASSED_KEY != '' && env.SKIP != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: passed
+          key: ${{ env.PASSED_KEY }}
+
   wasm:
     needs: reuse
     if: ${{ !cancelled() && needs.reuse.outputs.run == '' }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      # as the plugins' job does: sources a green run already built and checked (native/, the
+      # committed WebAssembly, package.json, which makes the tests' .js modules, and this workflow)
+      # aren't built again
+      - name: Were these sources built and checked already?
+        if: github.event_name != 'workflow_dispatch' && github.ref != 'refs/heads/live' && github.base_ref != 'live'
+        run: echo "PASSED_KEY=passed-wasm-${{ hashFiles('native/**', '**/wasm/*.wasm', 'package.json', '.github/workflows/native.yml') }}" >> "$GITHUB_ENV"
+      - name: Look for that run
+        id: passed
+        if: env.PASSED_KEY != ''
+        uses: actions/cache/restore@v4
+        with:
+          path: passed
+          key: ${{ env.PASSED_KEY }}
+          lookup-only: true
+      - name: Skip the build
+        if: steps.passed.outputs.cache-hit == 'true'
+        run: |
+          echo SKIP=true >> "$GITHUB_ENV"
+          echo "::notice::A green run already built and checked these sources; not building them again."
       - uses: actions/setup-node@v4
+        if: env.SKIP != 'true'
         with:
           node-version: 22
       - name: Emscripten (the version in native/emscripten-version)
+        if: env.SKIP != 'true'
         run: |
           v=$(cat native/emscripten-version)
           git clone --depth 1 --branch "$v" https://github.com/emscripten-core/emsdk "$RUNNER_TEMP/emsdk"
@@ -299,15 +367,29 @@ jobs:
           echo "EMSDK=$RUNNER_TEMP/emsdk" >> "$GITHUB_ENV"
           sudo apt-get install -y ninja-build
       - name: Build
+        if: env.SKIP != 'true'
         working-directory: native
         run: |
           source "$EMSDK/emsdk_env.sh"
           cmake --preset wasm
           cmake --build --preset wasm --parallel
       - name: Unit tests (in Node)
+        if: env.SKIP != 'true'
         working-directory: native
         run: ctest --preset wasm
       - name: The committed WebAssembly is what this source builds
+        if: env.SKIP != 'true'
         run: |
           git status --porcelain
           git diff --exit-code -- '*.wasm' || { echo "::error::Rebuild the WebAssembly (native/README.md) and commit it."; exit 1; }
+
+      # what the next run looks for (above); a run that skipped or failed saves nothing
+      - name: Remember that these sources passed
+        if: env.PASSED_KEY != '' && env.SKIP != 'true'
+        run: mkdir -p passed && echo "${{ github.sha }}" > passed/sha.txt
+      - name: Keep that
+        if: env.PASSED_KEY != '' && env.SKIP != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: passed
+          key: ${{ env.PASSED_KEY }}

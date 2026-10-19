@@ -21,6 +21,7 @@ enum : int { profile, historic, asym, eta, fullRange, hardness, clapMass, strike
 
 constexpr double kNoLimit = INFINITY;
 inline const char *const kChoices_profile[] = {"Minor-third bells (Hemony tradition)", "Major-third bells (Eijsbouts–TU Eindhoven)"};
+inline const char *const kKeys_profile[] = {"minor", "major"};
 namespace profile_ { enum : int { minor, major }; }
 inline const FormatSegment kFormat_historic[] = {{0, "tuned (Simpson)", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " % of a typical casting error", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_asym[] = {{kNoLimit, "", " % of the wall’s mass", 1, 0, 2, false, false, false, false}};
@@ -34,11 +35,12 @@ inline const FormatSegment kFormat_distance[] = {{kNoLimit, "", " m", 1, 0, 0, f
 inline const FormatSegment kFormat_around[] = {{kNoLimit, "", "° from the strike point", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
 inline const ParamInfo kParams[p::count] = {
-  {"profile", "Bell profile", "Bells", ParamKind::choice, 0, 1, 0, 1, false, true, kChoices_profile, 2, nullptr, 0},
+  {"profile", "Bell profile", "Bells", ParamKind::choice, 0, 1, 0, 1, false, true, kChoices_profile, 2, nullptr, 0, kKeys_profile},
   {"historic", "Historic, untuned bells", "Bells", ParamKind::continuous, 0, 1, 0, 0.01, false, false, nullptr, 0, kFormat_historic, 2},
   {"asym", "Asymmetry ε", "Bells", ParamKind::continuous, 0, 3, 0.2, 0.01, false, true, nullptr, 0, kFormat_asym, 1},
   {"eta", "Bronze loss factor η", "Bells", ParamKind::continuous, 0.00005, 0.002, 0.00025, 0, true, false, nullptr, 0, kFormat_eta, 11},
@@ -51,7 +53,7 @@ inline const ParamInfo kParams[p::count] = {
   {"distance", "Distance from the tower", "Listening", ParamKind::continuous, 10, 600, 30, 0, true, true, nullptr, 0, kFormat_distance, 1},
   {"around", "Listener round the bell", "Listening", ParamKind::continuous, 0, 90, 0, 0.5, false, false, nullptr, 0, kFormat_around, 1},
   {"room", "Belfry and square", "Output", ParamKind::continuous, 0, 1, 0.15, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 

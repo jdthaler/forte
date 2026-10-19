@@ -27,16 +27,19 @@ inline const FormatSegment kFormat_padC[] = {{kNoLimit, "", " N·s/m", 1, 0, 2, 
 inline const FormatSegment kFormat_tipMass[] = {{kNoLimit, "× ", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_loss[] = {{kNoLimit, "", " × 10⁻³", 1000, 0, 2, false, false, false, false}};
 inline const char *const kChoices_pickup[] = {"Electromagnetic (Pianet T)", "Electrostatic (Pianet N)"};
+inline const char *const kKeys_pickup[] = {"em", "es"};
 namespace pickup_ { enum : int { em, es }; }
 inline const FormatSegment kFormat_gap[] = {{kNoLimit, "", " mm", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_plateGap[] = {{kNoLimit, "", " mm", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_offset[] = {{kNoLimit, "", " mm", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_tone[] = {{999.9999999999999, "", " Hz", 1, 0, 0, false, false, false, false}, {kNoLimit, "", " kHz", 0.001, 0, 1, false, false, false, false}};
 inline const char *const kChoices_amp[] = {"Direct (DI)", "Valve combo, 10″ speaker"};
+inline const char *const kKeys_amp[] = {"off", "combo"};
 namespace amp_ { enum : int { off, combo }; }
 inline const FormatSegment kFormat_drive[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
@@ -48,15 +51,15 @@ inline const ParamInfo kParams[p::count] = {
   {"tipMass", "Solder tip mass", "Reed", ParamKind::continuous, 0.1, 4, 1, 0, true, false, nullptr, 0, kFormat_tipMass, 1},
   {"loss", "Reed loss η", "Reed", ParamKind::continuous, 0.0002, 0.02, 0.0012, 0, true, false, nullptr, 0, kFormat_loss, 1},
   {"fullRange", "Full range (A0–C8)", "Reed", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
-  {"pickup", "Pickup", "Pickup", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_pickup, 2, nullptr, 0},
+  {"pickup", "Pickup", "Pickup", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_pickup, 2, nullptr, 0, kKeys_pickup},
   {"gap", "Pole gap at C4", "Pickup", ParamKind::continuous, 0.2, 3, 1, 0, true, false, nullptr, 0, kFormat_gap, 1},
   {"plateGap", "Plate gap at C4", "Pickup", ParamKind::continuous, 0.15, 2, 0.3, 0, true, false, nullptr, 0, kFormat_plateGap, 1},
   {"offset", "Plate edge height at C4", "Pickup", ParamKind::continuous, -1, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_offset, 1},
   {"tone", "Tone (output RC)", "Output", ParamKind::continuous, 500, 20000, 7000, 0, true, true, nullptr, 0, kFormat_tone, 2},
-  {"amp", "Amplifier", "Output", ParamKind::choice, 0, 1, 0, 1, false, true, kChoices_amp, 2, nullptr, 0},
+  {"amp", "Amplifier", "Output", ParamKind::choice, 0, 1, 0, 1, false, true, kChoices_amp, 2, nullptr, 0, kKeys_amp},
   {"drive", "Amp drive", "Output", ParamKind::continuous, 0, 1, 0.35, 0.01, false, true, nullptr, 0, kFormat_drive, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.2, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 

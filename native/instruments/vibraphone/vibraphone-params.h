@@ -26,6 +26,7 @@ inline const FormatSegment kFormat_temp[] = {{kNoLimit, "", " °C", 1, 0, 1, fal
 inline const FormatSegment kFormat_gap[] = {{kNoLimit, "", " mm", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_detune[] = {{-0.5, "", " ¢", 1, 0, 0, false, false, true, false}, {0, "", " ¢", 1, 0, 0, false, false, false, false}, {kNoLimit, "", " ¢", 1, 0, 0, false, false, true, false}};
 inline const char *const kChoices_motor[] = {"Running", "Off, discs open", "Off, discs closed"};
+inline const char *const kKeys_motor[] = {"run", "open", "closed"};
 namespace motor_ { enum : int { run, open, closed }; }
 inline const FormatSegment kFormat_speed[] = {{kNoLimit, "", " rev/s", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_cd[] = {{kNoLimit, "", " % of the bore", 100, 0, 0, false, false, false, false}};
@@ -39,6 +40,7 @@ inline const FormatSegment kFormat_speedMax[] = {{kNoLimit, "", " m/s", 1, 0, 1,
 inline const FormatSegment kFormat_damp[] = {{0.9999999999999999, "T₆₀ ", " s", 1, 0, 2, false, false, false, false}, {kNoLimit, "T₆₀ ", " s", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
@@ -50,7 +52,7 @@ inline const ParamInfo kParams[p::count] = {
   {"tubes", "Resonator tubes", "Resonators", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"gap", "Bar–tube gap", "Resonators", ParamKind::continuous, 5, 80, 30, 0, true, false, nullptr, 0, kFormat_gap, 1},
   {"detune", "Tube tuning", "Resonators", ParamKind::continuous, -200, 200, 0, 1, false, false, nullptr, 0, kFormat_detune, 3},
-  {"motor", "Motor", "Motor", ParamKind::choice, 0, 2, 0, 1, false, true, kChoices_motor, 3, nullptr, 0},
+  {"motor", "Motor", "Motor", ParamKind::choice, 0, 2, 0, 1, false, true, kChoices_motor, 3, nullptr, 0, kKeys_motor},
   {"speed", "Shaft speed", "Motor", ParamKind::continuous, 0.5, 6, 2.25, 0.05, false, true, nullptr, 0, kFormat_speed, 1},
   {"cd", "Disc size", "Motor", ParamKind::continuous, 0.3, 0.97, 0.7, 0.01, false, false, nullptr, 0, kFormat_cd, 1},
   {"twist", "Disc phase step", "Motor", ParamKind::continuous, 0, 90, 0, 1, false, false, nullptr, 0, kFormat_twist, 1},
@@ -63,7 +65,7 @@ inline const ParamInfo kParams[p::count] = {
   {"damp", "Damper felt", "Damper", ParamKind::continuous, 0.05, 3, 0.3, 0, true, false, nullptr, 0, kFormat_damp, 2},
   {"pedalLock", "Pedal held down (nothing damped)", "Damper", ParamKind::toggle, 0, 1, 0, 1, false, true, nullptr, 0, nullptr, 0},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 

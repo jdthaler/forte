@@ -10,6 +10,15 @@
 // would pull is dropped and the rest solved again): the plectra rising and returning, the damper
 // felt, the buff. Then each loaded plectrum's contact point slides by the friction law
 // (plectrum.h), and when the string would pass the tip, the plectrum lets go.
+//
+// Tension modulation (Kirchhoff–Carrier), when kcOn: the wire's stretch raises its tension by
+// δT = (EA/2L)∫u_x² = kc Σ gₙqₙ², gₙ = kₙ²/μ, and every partial's ω² by gₙδT, so a₁ falls by
+// epₙδT (to first order). After a pluck the string runs so until δT has fallen below 1e-5 T (a
+// hundredth of a cent), then linear again.
+//
+// Sympathetic strings (forte/sympathetic.h): partial n meets the bridge through cₙ = ±√(2σ_B,ₙ), its
+// bridge loss σ_B = cₙ²/2; render adds the string's bridge signal Σ cₙ q̇ₙ (each step's change in q)
+// to sym, when given, for the engine's sympathetic strings.
 #pragma once
 
 #include <array>
@@ -58,7 +67,8 @@ class PluckedString {
   bool needsContacts(double liftMax, bool keyDown, bool buffOn) const;
   // Run n samples: adds the bridge force × gain × wts[w] into seg[w·stride + t] (w = w0, w1);
   // returns its half-range over the block.
-  double render(int n, const double *lift, bool keyDown, const double *buffG, double *seg, int stride, const double *wts, int w0, int w1, double gain);
+  double render(int n, const double *lift, bool keyDown, const double *buffG, double *seg, int stride, const double *wts, int w0, int w1, double gain,
+                double *sym = nullptr);
   void dropTop(double thr);
   void wake();
   void silence(); // q, q1 to zero, the contacts forgotten (asleep)
@@ -73,6 +83,11 @@ class PluckedString {
   double h = 0, fs = 0, nrm = 0;
   std::array<double, N_MAX> sigBase{}; // the partials' own rates
   std::array<double, N_MAX> qa{}, qb{}, A1{}, A2{}, Bin{}, BF{}, W{}, K{}, sig{}, extra{};
+  std::array<double, N_MAX> G{}, EP{}; // stretch weights gₙ = kₙ²/μ; a₁'s fall per newton, epₙ
+  std::array<double, N_MAX> SC{};      // cₙ/h: the bridge signal per step's change in qₙ
+  bool kcOn = false;                   // tension modulation (the engine's switch)
+  bool stretched = false;              // plucked, and not yet back to linear
+  double kc = 0, dT = 0;               // stretch stiffness EA/2L; the tension's rise
   // q (this step) and q1 (the last) swap roles each sample
   bool flip = false;
   double *q() { return flip ? qb.data() : qa.data(); }
@@ -101,7 +116,8 @@ class PluckedString {
   void fillPoint(int p);
   void updateC();
   double cross(int p) const;
-  double free(int n, double *seg, int stride, int w0, int w1, const double *wts, double gain);
+  template <bool SY>
+  double free(int n, double *seg, int stride, int w0, int w1, const double *wts, double gain, double *sym);
   void solve();
   bool slide(int p, double F, double y);
   double slideF(double s) const;

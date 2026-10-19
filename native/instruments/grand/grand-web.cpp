@@ -32,7 +32,7 @@ static std::vector<double> modes; // grand_board_modes's
 // hammer (mass, K, p, alpha), hasDamper, n, nV, the number of partials; the string (key, f0, cents,
 // L, d, dOut, mu, muCore, wound, T, EI, B, stress, cT); per partial n, k, f, w, b, sigInt, GV, GH,
 // bridgeV, bridgeH, fH, phiH, damp, stretch; then the flattened modes' freq, sigma, w, c, bf, damp,
-// str and idx. It is bigger than the scratch area: it goes in its own buffer.
+// g, str and idx; last the stretch stiffness kc. It is bigger than the scratch area: it goes in its own buffer.
 static std::vector<double> packed;
 static double *pack(const KeyModel &d) {
   packed.clear();
@@ -42,9 +42,10 @@ static double *pack(const KeyModel &d) {
   for (double v : {(double)S.key, S.f0, S.cents, S.L, S.d, S.dOut, S.mu, S.muCore, S.wound ? 1.0 : 0.0, S.T, S.EI, S.B, S.stress, S.cT}) packed.push_back(v);
   for (const Partial &p : d.partials)
     for (double v : {(double)p.n, p.k, p.f, p.w, p.b, p.sigInt, p.GV, p.GH, p.bridgeV, p.bridgeH, p.fH, p.phiH, p.damp, p.stretch}) packed.push_back(v);
-  for (const std::vector<double> *a : {&d.freq, &d.sigma, &d.w, &d.c, &d.bf, &d.damp}) packed.insert(packed.end(), a->begin(), a->end());
+  for (const std::vector<double> *a : {&d.freq, &d.sigma, &d.w, &d.c, &d.bf, &d.damp, &d.g}) packed.insert(packed.end(), a->begin(), a->end());
   for (uint8_t s : d.str) packed.push_back(s);
   for (uint16_t i : d.idx) packed.push_back(i);
+  packed.push_back(d.kc);
   return packed.data();
 }
 
@@ -103,6 +104,12 @@ FORTE_EXPORT void grand_decay_rates(double sigInt, double bridgeV, double bridge
 
 // The page's oscillator budget ({ type: 'budget', modes }).
 FORTE_EXPORT void grand_budget(GrandEngine *e, double modes) { e->budget(modes); }
+// The sympathetic strings: key's group (its partials, 0 until its model came; its energy per unit
+// mass; whether its damper is down), and the partials that ran in the last block.
+FORTE_EXPORT int grand_sym_size(GrandEngine *e, int key) { return e->sym.size(key); }
+FORTE_EXPORT double grand_sym_energy(GrandEngine *e, int key) { return e->sym.energy(key); }
+FORTE_EXPORT int grand_sym_damped(GrandEngine *e, int key) { return e->sym.damped(key); }
+FORTE_EXPORT int grand_sym_running(GrandEngine *e) { return e->sym.running; }
 
 // The hooks, on the engine of a handle (forte_engine): its voices in order, the key's (byKey), and
 // each one's state: key, active, killing, dead, struck, contactSamples, Fmax, eta, etaPrev, FV, F,

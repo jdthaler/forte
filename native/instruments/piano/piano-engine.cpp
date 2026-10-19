@@ -22,14 +22,18 @@ void PianoEngine::Voice::start(PianoEngine &eng, int key_, const VoiceData &d, i
   const int nu = d.unisons > 0 ? d.unisons : 1;
   const double una = nu > 1 ? (double)nu / (nu - 1) : 1;
   double *base = eng.arena.data() + (size_t)at * ARRAYS;
-  double **arrays[ARRAYS] = {&q, &q1, &a1, &a2, &a1d, &a2d, &wN, &bwN, &wU, &bwU, &fbv, &fbh, &cvk, &chk, &ctk, &om, &sig, &perm};
+  double **arrays[ARRAYS] = {&q, &q1, &a1, &a2, &a1d, &a2d, &wN, &bwN, &wU, &bwU, &fbv, &fbh, &cvk, &chk, &ctk, &om, &sig, &perm, &gw, &eps, &us};
   for (int a = 0; a < ARRAYS; a++) { *arrays[a] = base + (size_t)a * N; std::fill(*arrays[a], *arrays[a] + N, 0.0); }
 
-  // order modes by segment; perm[i] = index in the incoming data
+  // order modes by segment, and within one by string; perm[i] = index in the incoming data
   auto seg = [&](int j) { return d.ct[j] != 0 ? 3 : d.cv[j] != 0 && d.ch[j] != 0 ? 2 : d.ch[j] != 0 ? 1 : 0; };
   int ends[4] = {0, 0, 0, 0}, at2 = 0;
   for (int s = 0; s < 4; s++) {
-    for (int j = 0; j < N; j++) if (seg(j) == s) perm[at2++] = j;
+    for (int u = 0; u < nu; u++) {
+      run[s][u] = at2;
+      for (int j = 0; j < N; j++) if (seg(j) == s && d.uni[j] == u) perm[at2++] = j;
+    }
+    run[s][nu] = at2;
     ends[s] = at2;
   }
   e0 = ends[0]; e1 = ends[1]; e2 = ends[2];
@@ -63,7 +67,10 @@ void PianoEngine::Voice::start(PianoEngine &eng, int key_, const VoiceData &d, i
     cvk[i] = d.cv[j] / k;
     chk[i] = d.ch[j] / k;
     ctk[i] = d.ct[j] / k;
+    // a tension change δT adds g·δT to ω²: to first order a1 falls by b·g·δT
+    gw[i] = d.g[j]; eps[i] = b * d.g[j]; us[i] = d.uni[j];
   }
+  kcGain = d.kc; Tt = d.T; this->nu = nu;
   compN = cmp; compU = cmpU;
   hammer = {d.hammer.mass, d.hammer.K, d.hammer.p, d.hammer.alpha};
   // the felt touches one string fewer, so its contact stiffness drops by (ν−1)/ν
@@ -123,6 +130,7 @@ void PianoEngine::Voice::strike(double v, bool unaCorda) {
   etaPrev = eta - v * k;
   dPrev = -1;
   hammerOn = true;
+  stretched = true;
   hammerSamples = 0;
   contact = false;
   contactSamples = 0;
@@ -166,9 +174,51 @@ void PianoEngine::Voice::render(float *L, float *R, int n, PianoEngine &eng) {
   const bool moving = panMoving;
   const double tl = tPanL, tr = tPanR, aS = eng.aSm;
   double svl = sv, shl = sh, pk = 0;
+  bv[0] = bv[bn]; bh[0] = bh[bn]; bn = n;
+  // once the stretch has decayed below a hundredth of a cent (δT/T < 1e-5) it only shrinks, so
+  // the voice runs linear until it is struck again
+  const bool kc = eng.P[p::kc] != 0 && kcGain > 0 && stretched;
+  const double *G = gw, *EPS = eps, *US = us;
+  // δT is held below T/10: the first-order a₁ (slope θ sin θ, θ = ωk) then stays stable up to 0.45 fs
+  const double kcG = kcGain, dTmax = 0.1 * Tt, dTmin = 1e-5 * Tt;
+  if (!kc) dT[0] = dT[1] = dT[2] = 0;
   for (int s = 0; s < n; s++) {
     double nsv = 0, nsh = 0, nst = 0;
-    if (!hammerOn) {
+    if (!hammerOn && kc) {
+      // tension modulation (Kirchhoff–Carrier): each string's tension follows its stretch,
+      // δT = kc·Σ g q² over its bending modes, and moves every one of their frequencies. Each run
+      // of one string's modes steps with that string's δT and sums its next stretch.
+      double Q[3] = {0, 0, 0};
+      for (int u = 0; u < nu; u++) {
+        const double t = dT[u];
+        double Qu = 0;
+        for (int i = run[0][u]; i < run[0][u + 1]; i++) {
+          const double q0 = qa[i], qn = (A1[i] - EPS[i] * t) * q0 - A2[i] * qb[i] - FBV[i] * svl;
+          qb[i] = qn;
+          nsv += CV[i] * (qn - q0); Qu += G[i] * qn * qn;
+        }
+        for (int i = run[1][u]; i < run[1][u + 1]; i++) {
+          const double q0 = qa[i], qn = (A1[i] - EPS[i] * t) * q0 - A2[i] * qb[i] - FBH[i] * shl;
+          qb[i] = qn;
+          nsh += CH[i] * (qn - q0); Qu += G[i] * qn * qn;
+        }
+        for (int i = run[2][u]; i < run[2][u + 1]; i++) {
+          const double q0 = qa[i], qn = (A1[i] - EPS[i] * t) * q0 - A2[i] * qb[i] - FBV[i] * svl - FBH[i] * shl;
+          qb[i] = qn;
+          const double dq = qn - q0;
+          nsv += CV[i] * dq; nsh += CH[i] * dq; Qu += G[i] * qn * qn;
+        }
+        Q[u] = Qu;
+      }
+      double most = 0;
+      for (int u = 0; u < nu; u++) { dT[u] = std::min(kcG * Q[u], dTmax); most = std::max(most, dT[u]); }
+      if (most < dTmin) stretched = false; // from the next block
+      for (int i = e2; i < N; i++) {
+        const double q0 = qa[i], qn = A1[i] * q0 - A2[i] * qb[i];
+        qb[i] = qn;
+        nst += CT[i] * (qn - q0);
+      }
+    } else if (!hammerOn) {
       for (int i = 0; i < e0; i++) {
         const double q0 = qa[i], qn = A1[i] * q0 - A2[i] * qb[i] - FBV[i] * svl;
         qb[i] = qn;
@@ -194,7 +244,8 @@ void PianoEngine::Voice::render(float *L, float *R, int n, PianoEngine &eng) {
       const double *W = w, *BW = bw;
       double uf = 0;
       for (int i = 0; i < N; i++) {
-        const double qn = A1[i] * qa[i] - A2[i] * qb[i] - FBV[i] * svl - FBH[i] * shl;
+        const double a1 = kc ? A1[i] - EPS[i] * dT[(int)US[i]] : A1[i];
+        const double qn = a1 * qa[i] - A2[i] * qb[i] - FBV[i] * svl - FBH[i] * shl;
         qb[i] = qn;
         uf += W[i] * qn;
       }
@@ -212,6 +263,11 @@ void PianoEngine::Voice::render(float *L, float *R, int n, PianoEngine &eng) {
         const double dq = qb[i] - qa[i];
         nsv += CV[i] * dq; nsh += CH[i] * dq; nst += CT[i] * dq;
       }
+      if (kc) {
+        double Q[3] = {0, 0, 0};
+        for (int i = 0; i < e2; i++) Q[(int)US[i]] += G[i] * qb[i] * qb[i];
+        for (int u = 0; u < nu; u++) dT[u] = std::min(kcG * Q[u], dTmax);
+      }
       hammerSamples++;
       if (hammerSamples > eng.hammerMaxSamples || (contact && F == 0 && dPrev < -2e-3)) {
         hammerOn = false;
@@ -223,6 +279,7 @@ void PianoEngine::Voice::render(float *L, float *R, int n, PianoEngine &eng) {
     }
     double *t = qa; qa = qb; qb = t;
     svl = nsv; shl = nsh;
+    bv[s + 1] = nsv; bh[s + 1] = nsh;
     const double y = oV * (GV[s] * nsv + GT[s] * nst) + oH * GH[s] * nsh;
     if (moving) { pl += (tl - pl) * aS; pr += (tr - pr) * aS; }
     L[s] += pl * y;
@@ -282,7 +339,8 @@ PianoEngine::PianoEngine(double fs)
         }
         return nullptr;
       }),
-      arena((size_t)ARENA * ARRAYS, 0.0) {
+      sym(128, SYM_MODES, MAXB, fs, true), arena((size_t)ARENA * ARRAYS, 0.0) {
+  sym.quiet = 1e-6;
   for (int i = 0; i < p::count; i++) P[i] = kParams[i].def; // the defaults until told otherwise
   snapGains();
   version = modelVersion(P.data(), fs);
@@ -322,6 +380,7 @@ bool PianoEngine::offer(const double *packed, int n) {
   (void)packed; (void)n;
   return false;
 #else
+  offering = true;
   auto d = std::make_unique<VoiceData>();
   if (!unpackVoiceData(packed, n, *d) || d->key < 0 || d->key > 127) return false;
   const int key = d->key;
@@ -346,6 +405,7 @@ void PianoEngine::noteOn(int key, double velocity) {
   last = nullptr;
   if (key < 0 || key > 127) return;
   focus = key;
+  down[key] = 1;
 #if !FORTE_THREADS
   if (sent[key]) { strikeKey(key, velocity, *sent[key]); return; }
 #endif
@@ -405,6 +465,7 @@ void PianoEngine::strikeKey(int key, double velocity, const VoiceData &d) {
 
 void PianoEngine::noteOff(int key, double) {
   if (key < 0 || key > 127) return;
+  down[key] = 0;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
   if (Voice *v = byKey[key]) { v->keyDown = false; v->updateDamping(*this); }
 }
@@ -416,6 +477,9 @@ void PianoEngine::setSustain(bool on) {
 
 void PianoEngine::allNotesOff() {
   nPending = 0;
+  down.fill(0);
+  for (int key = 0; key < 128; key++) sym.clear(key);
+  symHush = true;
   for (int i = 0; i < nVoices; i++) voices[i]->kill();
 }
 
@@ -451,6 +515,8 @@ void PianoEngine::process(float *L, float *R, int n) {
   std::fill(L, L + n, 0.0f);
   std::fill(R, R + n, 0.0f);
   if (nPending) retryPending();
+  symFetch();
+  sym.running = 0;
   const double a = aSm;
   const double tV = P[p::gainV], tH = P[p::gainH], tT = P[p::gainT];
   for (int off = 0; off < n; off += MAXB) {
@@ -463,6 +529,7 @@ void PianoEngine::process(float *L, float *R, int n) {
     if (std::fabs(tV - gv) + std::fabs(tH - gh) + std::fabs(tT - gt) < 1e-9) { gv = tV; gh = tH; gt = tT; }
     sV = gv; sH = gh; sT = gt;
     for (int i = 0; i < nVoices; i++) if (!voices[i]->dead) voices[i]->render(L + off, R + off, m, *this);
+    symRun(L + off, R + off, m, gV.data(), gH.data());
   }
   if (overBudget) enforceBudget(nullptr);
   int j = 0;
@@ -476,6 +543,112 @@ void PianoEngine::process(float *L, float *R, int n) {
   }
   nVoices = j;
   data.audioCycle();
+}
+
+// ---- sympathetic strings ---------------------------------------------------------------------
+
+// Bring a few keys' groups up to date each block: from the data built for the current version
+// (threads), or (WebAssembly) the data the page offered; where nothing offers it (Node), one key
+// built in place a block. A new damper strength marks every group stale.
+void PianoEngine::symFetch() {
+  constexpr uint64_t STALE = ~uint64_t(0);
+  if (P[p::damper] != symDamperSigma) {
+    symDamperSigma = P[p::damper];
+    for (int key = KEY_LO; key <= KEY_HI; key++) if (symVer[key]) symVer[key] = STALE;
+  }
+  for (int n = 0, tries = 0; n < 8 && tries < KEY_HI - KEY_LO + 1; tries++) {
+    const int key = KEY_LO + symNext;
+    symNext = (symNext + 1) % (KEY_HI - KEY_LO + 1);
+#if FORTE_THREADS
+    if (symVer[key] == version) continue;
+    n++;
+    if (const Data::Ref r = data.get(key, version)) symSet(key, *r.data, version);
+#else
+    if (const VoiceData *d = sent[key].get()) {
+      if (symVer[key] != d->version) { n++; symSet(key, *d, d->version); }
+      continue;
+    }
+    if (offering || blocks < 16 || symVer[key] == version) continue; // (the page's offers come first)
+    n = 8;
+    if (const Data::Ref r = data.get(key, version)) symSet(key, *r.data, version);
+#endif
+  }
+#if !FORTE_THREADS
+  blocks++;
+#endif
+}
+
+// Key's group: its first string's lowest partials that meet the bridge (bending), below SYM_FMAX,
+// as the unison's in-phase mode (c√ν, draining at ν c²/2; the voice's bridge loss is c²/2 a string).
+void PianoEngine::symSet(int key, const VoiceData &d, uint64_t ver) {
+  std::array<int, MAX_N> pick;
+  int m = 0;
+  const double fmax = std::min(SYM_FMAX, 0.45 * fs);
+  for (int j = 0; j < d.n && m < MAX_N; j++) if (d.uni[j] == 0 && (d.cv[j] != 0 || d.ch[j] != 0) && d.freq[j] < fmax) pick[m++] = j;
+  const int n = std::min(m, SYM_MODES);
+  std::partial_sort(pick.begin(), pick.begin() + n, pick.begin() + m, [&](int a, int b) { return d.freq[a] < d.freq[b]; });
+  const double sq = std::sqrt((double)std::max(1, d.unisons)), oV = d.outV * OUT_SCALE, oH = d.outH * OUT_SCALE;
+  std::array<SympatheticMode, SYM_MODES> modes;
+  for (int i = 0; i < n; i++) {
+    const int j = pick[i];
+    SympatheticMode &md = modes[i];
+    md.omega = TWO_PI * d.freq[j];
+    md.cV = sq * d.cv[j]; md.cH = sq * d.ch[j];
+    md.sigma = d.sigma[j] + 0.5 * (md.cV * md.cV + md.cH * md.cH);
+    md.damped = md.sigma + P[p::damper];
+    md.loud = md.omega * (std::fabs(md.cV) * oV + std::fabs(md.cH) * oH); // its output: the bridge velocity, as a voice's
+  }
+  sym.set(key, modes.data(), n);
+  symOV[key] = oV; symOH[key] = oH; symDamper[key] = d.hasDamper;
+  symVer[key] = ver;
+  symWidth = -1; // (route it)
+}
+
+// After the voices' n samples, the groups': each key's damper is up while the pedal is down, while
+// it is held, or always (the treble's); each group feels the voices' bridge signals as they do
+// their own (the last step's), and gives its bridge velocity to the output, panned as its key.
+void PianoEngine::symRun(float *L, float *R, int n, const double *GV, const double *GH) {
+  const double kap = P[p::sympathy];
+  if (kap <= 0) return;
+  // after Panic the groups stay still until the voices have faded out
+  if (symHush) {
+    for (int i = 0; i < nVoices; i++) if (!voices[i]->dead) return;
+    symHush = false;
+  }
+  if (P[p::width] != symWidth) {
+    symWidth = P[p::width];
+    for (int key = KEY_LO; key <= KEY_HI; key++) {
+      const double x = std::max(-1.0, std::min(1.0, ((key - 64.5) / 43.5) * symWidth)), ang = ((x + 1) * PI) / 4;
+      const double pl = std::cos(ang) * std::numbers::sqrt2, pr = std::sin(ang) * std::numbers::sqrt2;
+      const Sympathetic::Tap t[4] = {{0, pl * symOV[key], 0}, {1, pr * symOV[key], 0}, {2, 0, pl * symOH[key]}, {3, 0, pr * symOH[key]}};
+      sym.route(key, t, sym.horizontal(key) ? 4 : 2);
+    }
+  }
+  for (int key = KEY_LO; key <= KEY_HI; key++) sym.damp(key, !(sustain || down[key] || !symDamper[key]));
+  bool any = false;
+  symStamp++;
+  std::fill(tV.begin(), tV.begin() + n, 0.0); std::fill(tH.begin(), tH.begin() + n, 0.0);
+  for (int i = 0; i < nVoices; i++) {
+    const Voice *v = voices[i];
+    if (v->dead) continue;
+    any = true;
+    const int key = v->key;
+    double *ov = ownV[key].data(), *oh = ownH[key].data();
+    const bool first = ownAt[key] != symStamp;
+    ownAt[key] = symStamp;
+    for (int s = 0; s < n; s++) {
+      tV[s] += v->bv[s]; tH[s] += v->bh[s];
+      if (first) { ov[s] = v->bv[s]; oh[s] = v->bh[s]; } else { ov[s] += v->bv[s]; oh[s] += v->bh[s]; }
+    }
+    sym.own(key, ov, oh);
+  }
+  for (auto &b : bus) std::fill(b.begin(), b.begin() + n, 0.0);
+  double *const buses[4] = {bus[0].data(), bus[1].data(), bus[2].data(), bus[3].data()};
+  sym.run(kap, tV.data(), tH.data(), any, n, buses);
+  for (int s = 0; s < n; s++) {
+    L[s] += (float)(GV[s] * bus[0][s] + GH[s] * bus[2][s]);
+    R[s] += (float)(GV[s] * bus[1][s] + GH[s] * bus[3][s]);
+  }
 }
 
 } // namespace forte::piano

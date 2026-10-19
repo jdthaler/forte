@@ -1,0 +1,41 @@
+{
+  "forte": "presets",
+  "format": 1,
+  "instrument": "harpsichord",
+  "instrumentVersion": "0.5.0",
+  "presets": [
+    {
+      "name": "Baroque pitch, ¼-comma meantone",
+      "values": {
+        "manual": "lower",
+        "coupler": true,
+        "front8": true,
+        "back8": true,
+        "four": false,
+        "lute": false,
+        "buff": false,
+        "material": "delrin",
+        "stiff": 2500,
+        "overlap": 0.6,
+        "stagger": 0.5,
+        "xFront": 40,
+        "xBack": 62,
+        "xFour": 45,
+        "xLute": 12,
+        "pitch": 415,
+        "temperament": "meantone",
+        "detune": 1.5,
+        "loss": 1,
+        "damper": 1,
+        "sympathy": 0.25,
+        "fmax": 10,
+        "kc": true,
+        "fullRange": false,
+        "soundboard": true,
+        "room": 0.25,
+        "venue": "room",
+        "volume": 0.8
+      }
+    }
+  ]
+}

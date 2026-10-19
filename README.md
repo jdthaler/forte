@@ -25,6 +25,9 @@ The front page sorts them into four kinds, as here.
 | ✅ | [Free-Reed Organ](harmonium/) | harmonium and accordion | brass reeds driven through their slots by the inertia of the air that feeds them (implicit reed–air coupling, thresholds from a linear analysis); musette, 16′ and 4′ ranks, reservoir and expression stop, cassotto |
 | ✅ | [Vibraphone](vibraphone/) | Deagan vibraharp (1927) | undercut bars tuned 1 : 4 : 10 by finite elements, each coupled to a stopped tube; motor-driven discs open and close the tubes (tremolo) |
 | ✅ | [Carillon](carillon/) | Flemish carillon (Hemony) | bronze bells solved by axisymmetric finite elements and tuned by their profile (minor- or major-third), struck by a Hertzian clapper; doublets that warble with asymmetry and strike angle; air absorption over distance; the strike note found by subharmonic summation |
+| ✅ | [Celesta](celesta/) | Mustel celesta (1886) | plain steel bars solved as Timoshenko beams, each coupled through the air in the gap to a stopped wooden box tuned to it; felt hammers (Hertzian, implicit), felt dampers and a damper pedal |
+| ✅ | [Kalimba](kalimba/) | Hugh Tracey's kalimba and the mbira | spring-steel tines as clamped–supported–free beams (the length behind the bridge sets the overtones), plucked from their static deflection by a thumb that lets go slowly or fast; a box whose top and sound-hole air are two coupled oscillators (cover the hole for a wah); bottle caps that rattle once the top outruns gravity |
+| ✅ | [Steel Pan](steelpan/) | Trinidad steelpan (1940s) | note areas as plates tuned by hammering to octave and twelfth, whose domes couple their modes (a 1 : 2 : 3 internal resonance: the octave blooms on hard strokes); neighbours coupled through the steel in a fourths-and-fifths layout; the skirt's radiation; rolls |
 
 ### Electric instruments
 
@@ -59,6 +62,7 @@ The front page sorts them into four kinds, as here.
 | ✅ | [Star Keyboard](stars/) | asteroseismology on an evolutionary track (dwarfs to red giants, sped up 510,800 times): p modes driven at random by convection, each a Lorentzian of its own linewidth, from the asymptotic relation and the scaling relations; mixed modes in red giants, rotational splitting, inclination, a flare kick, and self-excited δ Scuti stars |
 | ✅ | [Wind Harp](windharp/) | stiff nylon strings in a wind, each with van der Pol wake oscillators along it (Facchinetti, de Langre & Biolley): the wake locks onto a harmonic inside the band a linear analysis predicts (de Langre's coupled-mode flutter) and holds on past it (hysteresis, from a harmonic balance); every string cut to lock on its note at 4 m/s, so the wind hops each string up or down its own series; shutters that slide open, seeded gusts, mass–damping, Kircher's unison harp, the aeolian tone as a dipole |
 | ✅ | [Storage Ring](ring/) | a particle accelerator's storage ring heard through a beam pickup: a Gaussian bunch's pulse train at the revolution frequency, betatron sidebands at (n ± Q)·f_rev after an injection kick, decoherence by chromaticity that recoheres every synchrotron period and by octupole amplitude detuning that never does (Meller et al.'s closed forms, checked against tracked particles); RF voltage under key pressure, adiabatic bunch shortening, radiation damping, two-button or difference pickups |
+| ✅ | [RF Cavity Bells](cavity/) | superconducting accelerator cavities rung by a passing bunch: nine coupled pillbox cells whose passband beats (Nagle, Knapp & Knapp's circuit model), higher-order modes at Bessel-zero ratios for a bell's partials, kicks from the transit-time integral, offset and bunch-length form factors; input and HOM couplers, BCS surface resistance against the helium bath, beam loading from a bunch train, Lorentz-force detuning through the walls' mechanical mode, quench and recovery |
 
 ✅ playable · 🛠 in the workshop ([build briefs](docs/WORKSHOP.md)). Each instrument's README has its equations,
 numbers, sources, and a list of what is simplified. The same notes open on
@@ -89,16 +93,24 @@ play the plugins in a DAW with a small buffer.
 Each instrument page reads top to bottom. At the top, the instrument's
 name opens the menu of every instrument (and Forte's home page), next to
 **How it works** and the mode. In the middle are the views,
-pictures of the physics as it plays: the main ones large, the rest behind
-tabs underneath. At the bottom, right above the keys, are the controls a
+pictures of the physics as it plays, with a row of toggles above them
+that turns each one on or off (the main ones are on at first, and the
+page remembers your choice). At the bottom, right above the keys, are the controls a
 player reaches for (stops and registrations, tremolo, drive, the mallet,
 the spin, the room and the volume, or the organ's drawbars), with **More
 controls** for everything else, and the presets just above the keys (the
 first control on a phone). Each shows its name, and its value while
 you move it. Explanations wait behind ⓘ buttons.
 
+**Your own presets** live in the same menu. *Save these settings…* keeps
+the page's settings under a name in your browser, and *Copy a link to
+these settings* makes a link that opens the page playing them, to send
+to someone. *Your presets and files…* lists yours, and saves them to a
+file or opens one: the plugins read and write the same files.
+
 There are two modes. **Discover** shows it all. **Perform** shows just
-the main views, filling the screen, with no text in them: for playing,
+the views you turned on, filling the screen, with no toggles and no text
+in them: for playing,
 or for a projector (**Full screen** fills it). The controls stay where
 they are.
 
@@ -128,6 +140,11 @@ together from **All Plugins** on the front page, or one instrument from **↓ Pl
 the unpacked folder do it all. They are unsigned, so a Mac needs one Terminal command (`xattr`,
 which `make install` runs) before it loads them. The download with every instrument also has the
 Forte app, one standalone that plays any of them from its Instrument menu.
+
+In a plugin's window the Presets menu has your own presets too: *Save these settings…* writes
+one as a file in a presets folder for that instrument (`~/Library/Audio/Presets/Forte/<id>` on a
+Mac, `%APPDATA%\Forte\Presets\<id>` on Windows, `~/.local/share/forte/presets/<id>` on
+Linux), and *Open the presets folder* shows it, so a file saved on the site can go there too.
 
 Releases publish themselves: after each green `native` run on `live` (the branch the site is
 published from), the **release-plugins** workflow releases that run's plugins if an instrument's
@@ -212,7 +229,10 @@ art and references.
 
 ## License
 
-[MIT](LICENSE) © 2026 Jesse Thaler. Instrument names such as Hammond,
+[MIT](LICENSE) © 2026 Jesse Thaler. The WebAssembly and the plugins compile in open-source
+libraries (Eigen, fdlibm, CLAP, clap-wrapper, the VST 3 and Audio Unit SDKs, RtAudio, RtMidi,
+CHOC and others), whose licences and notices are in
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md); the plugin downloads include it. Instrument names such as Hammond,
 Leslie, Rhodes, Wurlitzer, Clavinet, Pianet and Yamaha are trademarks of
 their owners. Forte's instruments are physical models inspired by them and
 are not affiliated with or endorsed by those companies.

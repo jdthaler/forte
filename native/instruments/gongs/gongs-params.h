@@ -16,22 +16,26 @@
 namespace forte::gongs {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { material, thick, rise, bc, eta, thermal, radiation, hardness, mass, strike, speed, listen, release, nlvoices, terms, room, venue, volume, count };
+enum : int { material, thick, rise, bc, eta, thermal, radiation, asym, hardness, mass, strike, strikeAngle, speed, listen, release, nlvoices, terms, room, venue, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
 inline const char *const kChoices_material[] = {"Bell bronze", "Steel", "Aluminium"};
+inline const char *const kKeys_material[] = {"bronze", "steel", "aluminium"};
 namespace material_ { enum : int { bronze, steel, aluminium }; }
 inline const FormatSegment kFormat_thick[] = {{kNoLimit, "", " ‰", 1000, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_rise[] = {{0, "flat", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " h", 1, 0, 2, false, false, false, false}};
 inline const char *const kChoices_bc[] = {"Free (hanging gong)", "Clamped (held, free to slide in its plane)"};
+inline const char *const kKeys_bc[] = {"free", "clamped"};
 namespace bc_ { enum : int { free, clamped }; }
 inline const FormatSegment kFormat_eta[] = {{0.000040499999999999995, "", "×10⁻⁵", 99907.43179750937, 0.0027659086133265042, 1, false, false, false, false}, {0.000041209751909733015, "", "×10⁻⁵", 0, 4.1, 1, false, false, false, false}, {0.00004649999999999999, "", "×10⁻⁵", 99907.43179750937, 0.0027659086133265042, 1, false, false, false, false}, {0.00004731512589614804, "", "×10⁻⁵", 0, 4.7, 1, false, false, false, false}, {0.00009999999999999988, "", "×10⁻⁵", 99907.43179750937, 0.0027659086133265042, 1, false, false, false, false}, {0.00019476846045130567, "", "×10⁻⁴", 9995.150182251671, 0.0032599870232546445, 1, false, false, false, false}, {0.00019499999999999997, "", "×10⁻⁴", 0, 1.9, 1, false, false, false, false}, {0.0009999999999999994, "", "×10⁻⁴", 9995.150182251671, 0.0032599870232546445, 1, false, false, false, false}, {0.009999999999999993, "", "×10⁻³", 1000, 0, 1, false, false, false, false}, {kNoLimit, "", "×10⁻²", 100, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_thermal[] = {{kNoLimit, "", " ×", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_radiation[] = {{kNoLimit, "", " ×", 1, 0, 2, false, false, false, false}};
+inline const FormatSegment kFormat_asym[] = {{kNoLimit, "", " %", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_hardness[] = {{kNoLimit, "", "", 1, 0, 3, false, false, false, true}};
 inline const FormatSegment kFormat_mass[] = {{kNoLimit, "", " % of the gong", 100, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_strike[] = {{kNoLimit, "", " % of the radius", 100, 0, 0, false, false, false, false}};
+inline const FormatSegment kFormat_strikeAngle[] = {{kNoLimit, "", "°", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_speed[] = {{kNoLimit, "", " m/s", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_listen[] = {{0.09999999999999999, "touching (plate motion)", "", 1, 0, -1, false, false, false, false}, {0.9, "", " % of the way out", 100, 0, 0, false, false, false, false}, {kNoLimit, "room (radiated power)", "", 1, 0.91, -1, false, false, false, false}};
 inline const FormatSegment kFormat_release[] = {{kNoLimit, "T₆₀ ", " s", 1, 0, 1, false, false, false, false}};
@@ -39,27 +43,30 @@ inline const FormatSegment kFormat_nlvoices[] = {{kNoLimit, "", " at once", 1, 0
 inline const FormatSegment kFormat_terms[] = {{kNoLimit, "", "", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
 inline const ParamInfo kParams[p::count] = {
-  {"material", "Material", "Gong", ParamKind::choice, 0, 2, 0, 1, false, false, kChoices_material, 3, nullptr, 0},
+  {"material", "Material", "Gong", ParamKind::choice, 0, 2, 0, 1, false, false, kChoices_material, 3, nullptr, 0, kKeys_material},
   {"thick", "Thickness / radius h/a", "Gong", ParamKind::continuous, 0.003, 0.03, 0.01, 0, true, false, nullptr, 0, kFormat_thick, 1},
   {"rise", "Dome rise (curvature)", "Gong", ParamKind::continuous, 0, 4, 0.4, 0.05, false, true, nullptr, 0, kFormat_rise, 2},
-  {"bc", "Rim", "Gong", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_bc, 2, nullptr, 0},
+  {"bc", "Rim", "Gong", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_bc, 2, nullptr, 0, kKeys_bc},
   {"eta", "Internal friction η", "Gong", ParamKind::continuous, 0.00001, 0.01, 0.00015, 0, true, false, nullptr, 0, kFormat_eta, 10},
   {"thermal", "Thermoelastic loss", "Gong", ParamKind::continuous, 0, 2, 1, 0.05, false, false, nullptr, 0, kFormat_thermal, 1},
   {"radiation", "Radiation loss", "Gong", ParamKind::continuous, 0, 3, 1, 0.05, false, false, nullptr, 0, kFormat_radiation, 1},
+  {"asym", "Asymmetry ε", "Gong", ParamKind::continuous, 0, 3, 0.5, 0.01, false, true, nullptr, 0, kFormat_asym, 1},
   {"hardness", "Head stiffness", "Mallet", ParamKind::continuous, 0.1, 3000, 4, 0, true, true, nullptr, 0, kFormat_hardness, 1},
   {"mass", "Mallet mass", "Mallet", ParamKind::continuous, 0.01, 0.3, 0.06, 0, true, false, nullptr, 0, kFormat_mass, 1},
   {"strike", "Strike point", "Mallet", ParamKind::continuous, 0, 0.95, 0.1, 0.01, false, true, nullptr, 0, kFormat_strike, 1},
+  {"strikeAngle", "Strike angle", "Mallet", ParamKind::continuous, 0, 90, 20, 0.5, false, true, nullptr, 0, kFormat_strikeAngle, 1},
   {"speed", "Strike speed at full velocity", "Mallet", ParamKind::continuous, 0.5, 12, 9, 0, true, false, nullptr, 0, kFormat_speed, 1},
   {"listen", "Microphone distance", "Output", ParamKind::continuous, 0, 1, 0.6, 0.01, false, false, nullptr, 0, kFormat_listen, 3},
   {"release", "Hand damping on release", "Output", ParamKind::continuous, 0.1, 30, 2.5, 0, true, true, nullptr, 0, kFormat_release, 1},
   {"nlvoices", "Nonlinear voices", "Output", ParamKind::continuous, 1, 16, 4, 1, false, false, nullptr, 0, kFormat_nlvoices, 1},
-  {"terms", "Coupling terms", "Output", ParamKind::continuous, 200, 2000, 600, 50, true, false, nullptr, 0, kFormat_terms, 1},
+  {"terms", "Coupling terms", "Output", ParamKind::continuous, 200, 2000, 300, 50, true, false, nullptr, 0, kFormat_terms, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 
@@ -70,6 +77,7 @@ inline const PresetValue kPreset4[] = {{p::thick, 0.03}};
 inline const PresetValue kPreset5[] = {{p::material, 1}, {p::thick, 0.005}, {p::strike, 0.75}, {p::hardness, 300}};
 inline const PresetValue kPreset6[] = {{p::bc, 1}, {p::strike, 0.2}};
 inline const PresetValue kPreset7[] = {{p::strike, 0}};
+inline const PresetValue kPreset8[] = {{p::asym, 0}};
 inline const Preset kPresets[] = {
   {"Bronze gong: bell when soft, crash when hard", nullptr, 0},
   {"Tam-tam: thin, big soft beater, off centre", kPreset1, 5},
@@ -79,6 +87,7 @@ inline const Preset kPresets[] = {
   {"Steel sheet struck near the rim", kPreset5, 4},
   {"Clamped rim (held, free to slide in its plane)", kPreset6, 2},
   {"Struck dead centre (no asymmetric modes)", kPreset7, 1},
+  {"Perfectly round: the twins in tune, no shimmer", kPreset8, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue};
 inline const Controller kControllers[] = {{0, -1}};
@@ -91,7 +100,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Thin plates whose stiffness grows with amplitude: strike softly for a bell, hard for a crash.", .auSubtype = "Gong",
     .vst3Id = {0x19, 0x95, 0xa8, 0xd7, 0xba, 0xa4, 0x2d, 0x01, 0x17, 0x89, 0xce, 0x8b, 0xce, 0x9e, 0x0e, 0xf6},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 8,
+    .presets = kPresets, .presetCount = 9,
     .keep = kKeep, .keepCount = 3,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::strike, .modWheelMax = 0.95,

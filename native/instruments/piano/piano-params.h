@@ -16,13 +16,15 @@
 namespace forte::piano {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { material, shape, aspect, roll, taper, gauge, lengthScale, winding, unisons, unisonDetune, polDetune, strikePos, offset, hardness, feltExp, hammerMass, hammerWidth, hysteresis, unaCorda, bridge, bridgeH, lossLow, lossHigh, torsionLoss, damper, gainV, gainH, gainT, soundboard, room, venue, width, voicing, volume, maxFreq, count };
+enum : int { material, shape, aspect, roll, taper, gauge, lengthScale, winding, unisons, unisonDetune, polDetune, kc, strikePos, offset, hardness, feltExp, hammerMass, hammerWidth, hysteresis, unaCorda, bridge, bridgeH, lossLow, lossHigh, torsionLoss, damper, sympathy, gainV, gainH, gainT, soundboard, room, venue, width, voicing, volume, maxFreq, count };
 }
 
 constexpr double kNoLimit = INFINITY;
 inline const char *const kChoices_material[] = {"Steel music wire", "Brass", "Phosphor bronze", "Titanium alloy", "Nylon monofilament", "Carbon fibre (unidirect.)"};
+inline const char *const kKeys_material[] = {"steel", "brass", "bronze", "titanium", "nylon", "carbon"};
 namespace material_ { enum : int { steel, brass, bronze, titanium, nylon, carbon }; }
 inline const char *const kChoices_shape[] = {"Round wire", "Square bar", "Triangular bar (equilateral)", "Flat ribbon (rectangle)"};
+inline const char *const kKeys_shape[] = {"round", "square", "triangle", "ribbon"};
 namespace shape_ { enum : int { round, square, triangle, ribbon }; }
 inline const FormatSegment kFormat_aspect[] = {{9.999999999999998, "", " : 1", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " : 1", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_roll[] = {{kNoLimit, "", "°", 1, 0, 0, false, false, false, false}};
@@ -45,12 +47,14 @@ inline const FormatSegment kFormat_lossLow[] = {{9.999999999999998, "×", "", 1,
 inline const FormatSegment kFormat_lossHigh[] = {{9.999999999999998, "×", "", 1, 0, 2, false, false, false, false}, {kNoLimit, "×", "", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_torsionLoss[] = {{9.999999999999998, "×", "", 1, 0, 2, false, false, false, false}, {kNoLimit, "×", "", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_damper[] = {{kNoLimit, "", " s⁻¹", 1, 0, 0, false, false, false, false}};
+inline const FormatSegment kFormat_sympathy[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_gainV[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_gainH[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_gainT[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_soundboard[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_width[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_voicing[] = {{kNoLimit, "", " dB/oct", 1, 0, 1, false, false, false, false}};
@@ -58,8 +62,8 @@ inline const FormatSegment kFormat_volume[] = {{kNoLimit, "", "", 1, 0, 2, false
 inline const FormatSegment kFormat_maxFreq[] = {{kNoLimit, "", " kHz", 0.001, 0, 1, false, false, false, false}};
 
 inline const ParamInfo kParams[p::count] = {
-  {"material", "Material", "String / ribbon", ParamKind::choice, 0, 5, 0, 1, false, false, kChoices_material, 6, nullptr, 0},
-  {"shape", "Cross-section", "String / ribbon", ParamKind::choice, 0, 3, 0, 1, false, false, kChoices_shape, 4, nullptr, 0},
+  {"material", "Material", "String / ribbon", ParamKind::choice, 0, 5, 0, 1, false, false, kChoices_material, 6, nullptr, 0, kKeys_material},
+  {"shape", "Cross-section", "String / ribbon", ParamKind::choice, 0, 3, 0, 1, false, false, kChoices_shape, 4, nullptr, 0, kKeys_shape},
   {"aspect", "Ribbon width : thickness", "String / ribbon", ParamKind::continuous, 1, 60, 12, 0, true, false, nullptr, 0, kFormat_aspect, 2},
   {"roll", "Roll angle ψ", "String / ribbon", ParamKind::continuous, 0, 90, 0, 1, false, false, nullptr, 0, kFormat_roll, 1},
   {"taper", "Planform taper", "String / ribbon", ParamKind::continuous, -0.95, 0.95, 0, 0.01, false, false, nullptr, 0, kFormat_taper, 1},
@@ -69,6 +73,7 @@ inline const ParamInfo kParams[p::count] = {
   {"unisons", "Strings per note", "String / ribbon", ParamKind::continuous, 1, 3, 2, 1, false, false, nullptr, 0, kFormat_unisons, 1},
   {"unisonDetune", "Unison detune", "String / ribbon", ParamKind::continuous, 0, 8, 0.8, 0.1, false, false, nullptr, 0, kFormat_unisonDetune, 1},
   {"polDetune", "Polarization detune", "String / ribbon", ParamKind::continuous, -5, 5, 0.3, 0.1, false, false, nullptr, 0, kFormat_polDetune, 1},
+  {"kc", "Tension modulation (pitch glide)", "String / ribbon", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"strikePos", "Strike position", "Hammer", ParamKind::continuous, 0.02, 0.5, 0.12, 0.001, false, false, nullptr, 0, kFormat_strikePos, 1},
   {"offset", "Strike offset across width", "Hammer", ParamKind::continuous, -1, 1, 0, 0.01, false, false, nullptr, 0, kFormat_offset, 1},
   {"hardness", "Felt hardness", "Hammer", ParamKind::continuous, 0.1, 10, 1, 0, true, true, nullptr, 0, kFormat_hardness, 2},
@@ -83,12 +88,13 @@ inline const ParamInfo kParams[p::count] = {
   {"lossHigh", "High-frequency loss", "Damping & bridge", ParamKind::continuous, 0.1, 10, 1, 0, true, false, nullptr, 0, kFormat_lossHigh, 2},
   {"torsionLoss", "Torsional loss", "Damping & bridge", ParamKind::continuous, 0.2, 10, 3, 0, true, false, nullptr, 0, kFormat_torsionLoss, 2},
   {"damper", "Damper strength", "Damping & bridge", ParamKind::continuous, 2, 80, 25, 0, true, false, nullptr, 0, kFormat_damper, 1},
+  {"sympathy", "Sympathetic resonance", "Damping & bridge", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_sympathy, 2},
   {"gainV", "Vertical bridge force", "Output", ParamKind::continuous, 0, 1.5, 1, 0.01, false, false, nullptr, 0, kFormat_gainV, 1},
   {"gainH", "Horizontal bridge force", "Output", ParamKind::continuous, 0, 1.5, 0.35, 0.01, false, false, nullptr, 0, kFormat_gainH, 1},
   {"gainT", "Torsion pickup", "Output", ParamKind::continuous, 0, 2, 0.6, 0.01, false, false, nullptr, 0, kFormat_gainT, 1},
   {"soundboard", "Soundboard body", "Output", ParamKind::continuous, 0, 1, 0.6, 0.01, false, true, nullptr, 0, kFormat_soundboard, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"width", "Stereo spread", "Output", ParamKind::continuous, 0, 1, 0.6, 0.01, false, false, nullptr, 0, kFormat_width, 1},
   {"voicing", "Treble voicing", "Output", ParamKind::continuous, 0, 6, 2.5, 0.1, false, false, nullptr, 0, kFormat_voicing, 1},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 1},

@@ -112,6 +112,22 @@ node near the hammer, the 8th most. The action needs about 60 ms to bring
 the hammer back for another blow, so a key repeated faster than that (16
 times a second) gets no new blow.
 
+**Tension modulation.** A hard blow stretches the string, so its tension
+rises by ΔT = (E A_core/2L)·∫y_x² dx (Kirchhoff 1883; Carrier 1945) and
+every partial goes sharp, then glides back as the note decays. In modal
+form ∫y_x² = Σ (kₙ²/μ) qₙ² over both polarisations, and kₙ²/μ is also how
+much ωₙ² rises per newton, so each unison string's ΔT moves all of its
+partials, each sample, through its recursion coefficient (to first order,
+with ΔT held below T/10 so the step stays stable). Only the steel core
+stretches; the copper winding adds mass, not stiffness. These short, stiff
+strings stretch a lot. On one string at full velocity (6 m/s), E1 starts
+45 ¢ sharp, is 25 ¢ sharp after half a second and 6 ¢ after 1.8 s; E2
+starts 35 ¢ sharp; C4 18 ¢. It goes with the square of the blow: at
+velocity 0.6, E2 starts 3 ¢ sharp and C4 1 ¢, and at 0.2 E2 moves 0.2 ¢
+(tested). Once ΔT has fallen below 10⁻⁵ T (a hundredth of a cent) the voice
+runs linear again until the next blow; while it glides it costs about 40 %
+more. *Tension modulation* under *Strings* switches it off.
+
 **The bridge, two polarisations, Weinreich.** The string pushes on the
 bridge with
 
@@ -144,6 +160,26 @@ the same as Weinreich's off-diagonal bridge admittance, written in the
 bridge's principal axes. A springy sideways support of stiffness K_H
 lengthens the string by T/K_H. That puts H flat by T/(K_H L), about 0.2 ¢
 at C4 for K_H = 10⁷ N/m, and H beats against V.
+
+**Sympathetic strings.** Every other key's strings meet the same bridge, and
+while their dampers are up (the pedal down, the key held, or the keys above
+E6, which have none) they ring along with whatever sounds. Each string's
+motion splits, by superposition, into what its own hammer started (its
+voice, unchanged) and what the others drive: a *group* per key, its unison's
+in-phase motion (couplings √ν c, draining at ν c²/2 as the voice's bridge
+drains it), its lowest 16 partials below 4 kHz in V (in H too when H drains
+at least a quarter as fast; at the default 0.2 it does not). A group feels
+the bridge velocity S = Σ c q̇ of every voice and every other group, times κ
+(*Sympathetic resonance*: the share of the bridge's motion one string feels
+from another's, 1 if they all met it at one point), and never its own key's
+voice. Its own bridge loss is in its decay rate, so the strings also take
+back what they give, and for κ ≤ 1 they only lose energy. The piezo and the
+soundboard hear a group's force on the bridge as they hear a voice's. Hold C4
+and strike C3, and C4 rings along about 90 times as strongly as C♯4 would
+(in energy). On the iron frame that is faint, more than 30 dB under the
+note, as on a real CP-70; a soundboard's bridge moves about 20 times more,
+and the strings ring along about 14 times as strongly. With the pedal down
+841 partials run, about twice what four sustained notes cost.
 
 **No soundboard: the frame.** The CP-70's bridge sits on the cast harp. We
 take its admittance to be G = 5·10⁻⁵ s/kg (*Frame admittance*), 30× below a
@@ -300,7 +336,7 @@ displacement and at the transducer. *Why the piezo is bright* plots those
 two (and the microphone's) side by side.
 
 Regenerate the demos with `node tools/render-grand.mjs`. Run the tests with
-`node test/grand-tests.mjs` (31 tests, ~21 s).
+`node test/grand-tests.mjs` (33 tests, ~30 s).
 
 ## Files
 
@@ -316,10 +352,11 @@ tools/render-grand.mjs               node tools/render-grand.mjs → examples/gr
 
 ## Simplifications
 
-* **Linear strings.** There is no tension modulation, so no pitch glide on
-  hard blows, no phantom partials and no longitudinal modes. With short,
-  stiff, heavily wound strings these would matter more than on a concert
-  grand.
+* **No longitudinal modes.** Tension modulation gives the pitch glide, but
+  its stretch only retunes the transverse modes: the longitudinal modes it
+  drives, and the phantom partials at sums of transverse frequencies, are
+  left out. With short, stiff, heavily wound strings these would matter
+  more than on a concert grand.
 * **The frame's admittance is a guess** (5·10⁻⁵ s/kg, frequency-independent,
   real). We have found no measurement of the CP-70's bridge mobility. The
   piezo's capacitance (10 nF) and the preamp's EQ corners are typical
@@ -329,8 +366,10 @@ tools/render-grand.mjs               node tools/render-grand.mjs → examples/gr
   appears only as the sideways spring's frequency shift. On the soundboard,
   the strings drain into the plate (Re Y), but the plate does not pull their
   frequencies, and the board is driven one way: the plate's vibration does
-  not act back on the strings. There is no coupling between different keys,
-  so no sympathetic resonance with the pedal down.
+  not act back on the strings. Different keys couple only through the
+  bridge's signal, scaled by *Sympathetic resonance* (below), not through the
+  plate's modes, and a sympathetic string is its unison's in-phase motion,
+  its lowest 16 partials below 4 kHz, without tension modulation.
 * **The soundboard is a stand-in.** It is a flat, isotropic, simply
   supported rectangle. A real board is crowned, ribbed, orthotropic and
   irregular, and its modes above ~1 kHz localise between ribs. The
@@ -389,6 +428,11 @@ The string, hammer and coupled-string literature is listed under the
 [Ribbon Piano](../piano/README.md#prior-art-and-references). The papers
 this page draws on directly:
 
+* Kirchhoff, G. (1883). *Vorlesungen über Mechanik*. Teubner, Leipzig, and
+  Carrier, G. F. (1945). "On the non-linear vibration problem of the
+  elastic string." *Q. Appl. Math.* 3(2), 157–165.
+  [doi:10.1090/qam/12351](https://doi.org/10.1090/qam/12351). Tension
+  modulation.
 * Railsback, O. L. (1938). "Scale temperament as applied to piano tuning."
   *J. Acoust. Soc. Am.* 9, 274 (abstract).
   [doi:10.1121/1.1902056](https://doi.org/10.1121/1.1902056). The

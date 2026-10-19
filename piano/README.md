@@ -95,9 +95,44 @@ The pieces that couple to the modes:
   5.7 kHz, 35 % at 12 kHz), so each mode's own, exactly discretized decay
   makes up the shortfall. The measured decay of the partials matches
   G(T + EIk²)/L to 0.3 % up to 12 kHz (tested).
+* **Sympathetic strings**: every other key meets the same bridge, and while its
+  damper is up (the pedal down, the key held, or the top keys, which have no
+  dampers) it rings along. Each string's motion splits, by superposition, into
+  what its own hammer started (its voice, as above) and what the others drive:
+  a *group* per key, its unison's in-phase motion (couplings √ν c, draining
+  at ν c²/2 as the voice's bridge drains it), its lowest 16 partials below
+  4 kHz. A group feels the bridge velocity S = Σ c q̇ of every voice and every
+  other group, times κ (*Sympathetic resonance*: the share of the bridge's
+  motion one string feels from another's, 1 if they all met it at one point),
+  and never its own key's voice. Its own bridge loss is in its decay rate, so
+  the strings also take back what they give, and for κ ≤ 1 they only lose
+  energy (a native test checks it). Hold C4 and strike C3: C4's partials sit
+  on C3's even ones and it rings along about a thousand times as strongly as
+  C♯4 would (in energy), about 30 dB under the attack. With the pedal down,
+  848 partials run, about one and a half times what four sustained notes cost;
+  with it up, only the undamped treble's. The pedal also takes a little level
+  from a note (under 1 dB at 25 %): what it shares with strings in antiphase
+  stays there. The page offers every key's data to the engine in the
+  background, so the groups are ready before the pedal goes down.
 * **Torsion pickup**: torsion does not move the bridge's vertical channel. It
   is heard as the edge force of its torque at the bridge, the torque divided
   by the half-width there (*Torsion pickup* sets its level).
+* **Tension modulation** (Kirchhoff–Carrier): a hard blow stretches the
+  string, so its tension rises by ΔT = (EA/2L)·∫u_x² dx and every partial goes
+  sharp, then glides back as the vibration decays. In modal form
+  ∫u_x² = Σ g_n q_n², where g_n = ∫φ_n′² dx is mode n's stretch weight; it is
+  also how much its ω² rises per newton of tension (k²/μ for a uniform
+  string's sine modes; for a tapered member the Ritz shape's sum, without the
+  small cross terms). Each unison string has its own ΔT, from both bending
+  families; torsion does not stretch the core and does not feel it. ΔT
+  enters each mode's recursion coefficient every sample, to first order, and
+  is held below T/10 so the step stays stable. The core carries the stretch
+  (A is the core's area; a winding adds mass, not stiffness). On one C3
+  string at 5 m/s the second partial starts 5 ¢ sharp and is within 0.5 ¢
+  after 1.8 s; at 0.5 m/s it does not move (tested). Once ΔT has fallen below
+  10⁻⁵ T (a hundredth of a cent) the voice runs linear again until the next
+  blow, so a held chord costs what it did; while it glides a voice costs
+  about a third more. *Tension modulation* under *String* switches it off.
 * **Soundboard and room**: synthetic impulse responses (dense plate modes and
   a diffuse tail), applied with ConvolverNodes.
 
@@ -184,13 +219,17 @@ src/params.js             every parameter, with ranges, hints and presets
 
 ## Known simplifications / natural next steps
 
-* **Linear strings.** No tension modulation, so no pitch glide on hard blows
-  and no "phantom partials". There are no longitudinal modes either; those
-  matter for the real piano bass and would be the next physics to add (they
-  also couple to torsion in a ribbon).
-* **Bridge coupling stays inside a key.** Unisons and polarizations of the same
-  note interact, but there is no sympathetic resonance between different keys
-  yet (the engine design allows it; it costs CPU).
+* **No longitudinal modes.** Tension modulation gives the pitch glide, but
+  the stretch it computes only retunes the transverse modes; nothing carries
+  it to the bridge as sound. The longitudinal modes it drives, and the
+  "phantom partials" at sums of transverse frequencies, matter for the real
+  piano bass and would be the next physics to add (they also couple to
+  torsion in a ribbon).
+* **Sympathetic strings are simpler than sounding ones.** A key that rings
+  along is its unison's in-phase motion only, its lowest 16 partials below
+  4 kHz, without torsion or tension modulation. Every key meets the bridge at
+  one point, scaled by *Sympathetic resonance*, so the bass and treble ends of
+  a long bridge couple as strongly as neighbours.
 * **Symmetric sections only.** For non-equilateral triangles the shear centre
   moves off the centroid, which would couple bending to torsion. Euler–Bernoulli
   bending (no shear or rotary inertia) is fine for these slender members.
@@ -284,6 +323,14 @@ described its hammer action in the *Giornale de' letterati d'Italia* in
 * Conklin, H. A. (1996). "Design and tone in the mechanoacoustic piano.
   Part II. Piano structure." *J. Acoust. Soc. Am.* 100, 695–708.
   [doi:10.1121/1.416233](https://doi.org/10.1121/1.416233)
+
+**Tension modulation**
+
+* Kirchhoff, G. (1883). *Vorlesungen über Mechanik*. Teubner, Leipzig: the
+  string whose tension follows its mean stretch.
+* Carrier, G. F. (1945). "On the non-linear vibration problem of the
+  elastic string." *Q. Appl. Math.* 3(2), 157–165.
+  [doi:10.1090/qam/12351](https://doi.org/10.1090/qam/12351)
 
 **Torsional and longitudinal waves**
 

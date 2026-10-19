@@ -145,6 +145,70 @@
    "title": "Under the tower then across the town square"
   }
  ],
+ "cavity": [
+  {
+   "file": "01-bells-at-two-kelvin.m4a",
+   "title": "Bells at two kelvin"
+  },
+  {
+   "file": "02-in-step-then-out-of-step.m4a",
+   "title": "In step then out of step"
+  },
+  {
+   "file": "03-long-bunch-then-short-and-offset.m4a",
+   "title": "Long bunch then short and offset"
+  },
+  {
+   "file": "04-beam-loading-held-notes.m4a",
+   "title": "Beam loading held notes"
+  },
+  {
+   "file": "05-quench-and-recover.m4a",
+   "title": "Quench and recover"
+  },
+  {
+   "file": "06-warming-the-helium.m4a",
+   "title": "Warming the helium"
+  },
+  {
+   "file": "07-lorentz-detuning-hard-strikes.m4a",
+   "title": "Lorentz detuning hard strikes"
+  },
+  {
+   "file": "08-one-cell-then-nine.m4a",
+   "title": "One cell then nine"
+  },
+  {
+   "file": "09-pressure-is-beam-current.m4a",
+   "title": "Pressure is beam current"
+  }
+ ],
+ "celesta": [
+  {
+   "file": "01-waltz-pedal-each-bar.m4a",
+   "title": "Waltz pedal each bar"
+  },
+  {
+   "file": "02-with-boxes-then-without.m4a",
+   "title": "With boxes then without"
+  },
+  {
+   "file": "03-box-close-bar-and-box-beat.m4a",
+   "title": "Box close bar and box beat"
+  },
+  {
+   "file": "04-soft-felt-then-keyboard-glockenspiel.m4a",
+   "title": "Soft felt then keyboard glockenspiel"
+  },
+  {
+   "file": "05-dampers-then-pedal.m4a",
+   "title": "Dampers then pedal"
+  },
+  {
+   "file": "06-centre-end-and-node-strikes.m4a",
+   "title": "Centre end and node strikes"
+  }
+ ],
  "clavier": [
   {
    "file": "01-funky-riff-in-e-minor.m4a",
@@ -357,6 +421,32 @@
   {
    "file": "05-drifting-resistors-uncoupled-then-coupled.m4a",
    "title": "Drifting resistors uncoupled then coupled"
+  }
+ ],
+ "kalimba": [
+  {
+   "file": "01-two-thumbs.m4a",
+   "title": "Two thumbs"
+  },
+  {
+   "file": "02-nail-then-flesh.m4a",
+   "title": "Nail then flesh"
+  },
+  {
+   "file": "03-overtone-set-by-the-back-length.m4a",
+   "title": "Overtone set by the back length"
+  },
+  {
+   "file": "04-wah-over-the-sound-hole.m4a",
+   "title": "Wah over the sound hole"
+  },
+  {
+   "file": "05-bottle-caps-soft-then-loud.m4a",
+   "title": "Bottle caps soft then loud"
+  },
+  {
+   "file": "06-marimbula-bass.m4a",
+   "title": "Marimbula bass"
   }
  ],
  "organ": [
@@ -693,6 +783,36 @@
   {
    "file": "07-delta-scuti-against-a-solar-like-star.m4a",
    "title": "Delta scuti against a solar like star"
+  }
+ ],
+ "steelpan": [
+  {
+   "file": "01-calypso-tenor-and-double-second.m4a",
+   "title": "Calypso tenor and double second"
+  },
+  {
+   "file": "02-soft-to-hard-strokes-the-octave-blooms.m4a",
+   "title": "Soft to hard strokes the octave blooms"
+  },
+  {
+   "file": "03-flat-notes-then-high-domes.m4a",
+   "title": "Flat notes then high domes"
+  },
+  {
+   "file": "04-tuned-then-untuned-as-sunk.m4a",
+   "title": "Tuned then untuned as sunk"
+  },
+  {
+   "file": "05-neighbours-ring-along-fifths-then-chromatic.m4a",
+   "title": "Neighbours ring along fifths then chromatic"
+  },
+  {
+   "file": "06-rolled-chord.m4a",
+   "title": "Rolled chord"
+  },
+  {
+   "file": "07-bass-short-skirt-then-full-drum.m4a",
+   "title": "Bass short skirt then full drum"
   }
  ],
  "tines": [

@@ -54,10 +54,41 @@ The tests check the ν = 0.3 values against Leissa's *Vibration of Plates*
 (5.358, 9.003, 12.439, 20.475, 21.835, 33.495, 35.260, 38.443, all to 2×10⁻⁴),
 and the clamped values (10.2158, 21.2604, 34.8770, 39.7711, …).
 
-The mallet always lands on the line θ = 0, so by mirror symmetry it never
-excites the sin mθ companion of any mode, and the coupling cannot create them.
-Only the cos mθ family is simulated: 41 modes up to λ² = 260 (m ≤ 14) for the
-free plate, 35 for the clamped one.
+The tables hold the cos mθ family: 41 modes up to λ² = 260 (m ≤ 14) for the
+free plate, 35 for the clamped one. Every mode with m > 0 also has a sin mθ
+twin, so the gong has 77 modes (65 clamped).
+
+#### Twins: a gong that is not quite round
+
+In a round plate each pair, cos mθ and sin mθ, has one frequency, and a mallet
+landing on one line excites only the cos twins (by mirror symmetry the coupling
+cannot create the others). No hammered gong is round. A little extra mass along
+one axis ψ, of which family m feels the part δρ/ρ = ε cos 2m(θ − ψ), splits each
+pair: to first order the twin with its antinodes on the heavy axis drops and the
+other rises,
+
+  ω² = Ω²/(1 ± ε/2),
+
+so the twins are ε/2 apart in frequency (**Asymmetry ε**, default 0.5 %: A3's
+(2,0) pair, at 122 Hz, beats 0.3 times a second, its (5,0) pair, at 770 Hz,
+twice). The mallet lands at the
+**Strike angle** α from the heavy axis (default 20°), so it weighs the twins by
+R(r_s) cos mα and R(r_s) sin mα. Struck on the axis only the cos twins ring;
+between the axes both do: the sound beats at each pair's split, the nodal lines
+wander round the gong, and in a crash the coupling trades energy between the
+twins as travelling waves. The microphones are placed from the strike line and
+turn with it, so a perfectly round gong (ε = 0) sounds the same at any angle; the
+tests check that to 10⁻⁵ of the peak, fortissimo included.
+
+The asymmetry has one axis for every family. That keeps the coupling tensor the
+round gong's (§2), with the twins' terms following from the cos family's:
+L(Φ_p, Φ_q) holds the angular orders m_p + m_q, at the phase α_p + α_q, and
+|m_p − m_q|, at α_p − α_q (the larger m first), with α = 0 for a cos twin and
+−π/2 for a sin twin. So H^{n,γ}_{p,α q,β} = H^n_pq cos(γ − that phase), and each
+term of the cos family brings one, two or four terms of ±H. The tests check that
+V_nl does not change when every pair turns by the same angle. The 68 in-plane
+modes get their twins too (129 in all); they are quasi-static, so they do not
+split.
 
 ### 2. Von Kármán: bending that has to stretch
 
@@ -150,21 +181,21 @@ the Hertz contact constant K̄ = K h^½ a²/D is the same at every key too, and 
 motion in thicknesses is identical: only the clock runs faster. All keys share
 one table. Each key keeps the modes below a third of its sample rate (below), so
 only the top keys lose some. Above C6 a gong that would keep fewer than eight
-runs twice as fast (at most 52 kHz: 48 kHz at a 48 kHz output) and keeps up to
+(a twin pair counted once) runs twice as fast (at most 52 kHz: 48 kHz at a 48 kHz output) and keeps up to
 eight there: C8, a 7.6 mm foil, keeps 7 at 48 kHz (5 at 44.1 kHz) and pings.
 
 The key's frequency fixes its size, a = (h/a) c_p Ω_tuned/(√12 · 2πf). With the
 default h/a = 1 % in bronze and the default 0.4 h dome:
 
-| key | strike tone | diameter | thickness | mass | modes kept | strike tone T₆₀ |
+| key | strike tone | diameter | thickness | mass | modes kept (with twins) | strike tone T₆₀ |
 |---|---|---|---|---|---|---|
-| A0 | 27.5 Hz | 116 cm | 5.8 mm | 53 kg | 41, to 0.7 kHz | 240 s |
-| C2 | 65 Hz | 49 cm | 2.4 mm | 4.0 kg | 41, to 1.7 kHz | 68 s |
-| C3 | 131 Hz | 24 cm | 1.2 mm | 500 g | 41, to 3.5 kHz | 22 s |
-| A3 | 220 Hz | 15 cm | 0.73 mm | 100 g | 41, to 5.8 kHz | 8.7 s |
-| A4 | 440 Hz | 7 cm | 0.36 mm | 13 g | 27, to 7.3 kHz | 2.5 s |
-| C6 | 1047 Hz | 3 cm | 0.15 mm | 1 g | 12, to 7.0 kHz | 0.7 s |
-| C8 | 4186 Hz | 7.6 mm | 0.04 mm | 15 mg | 7, to 15.7 kHz | 0.3 s |
+| A0 | 27.5 Hz | 116 cm | 5.8 mm | 53 kg | 41 (77), to 0.7 kHz | 240 s |
+| C2 | 65 Hz | 49 cm | 2.4 mm | 4.0 kg | 41 (77), to 1.7 kHz | 68 s |
+| C3 | 131 Hz | 24 cm | 1.2 mm | 500 g | 41 (77), to 3.5 kHz | 22 s |
+| A3 | 220 Hz | 15 cm | 0.73 mm | 100 g | 41 (77), to 5.8 kHz | 8.7 s |
+| A4 | 440 Hz | 7 cm | 0.36 mm | 13 g | 27 (50), to 7.3 kHz | 2.5 s |
+| C6 | 1047 Hz | 3 cm | 0.15 mm | 1 g | 12 (22), to 7.0 kHz | 0.7 s |
+| C8 | 4186 Hz | 7.6 mm | 0.04 mm | 15 mg | 7 (13), to 15.7 kHz | 0.3 s |
 
 What sets the regime is the impact speed in these units,
 v̄ = vτ/h = √12 v/(c_p (h/a)²). The deflection in thicknesses grows with v̄, and
@@ -266,8 +297,9 @@ r = (|V₄| + V₃²/E)/E (the largest value over each audio block, held for abo
 two periods of the strike tone, since V_nl itself nearly vanishes as the tone
 crosses zero):
 
-* r > 10⁻²: the 600 strongest couplings, H̃ in shell coordinates ranked by
-  √C_n|H̃|/(Ω_iΩ_j), each term's share of V when the modes share energy equally;
+* r > 10⁻²: the 300 strongest couplings of the cos family (**Coupling terms**),
+  H̃ in shell coordinates ranked by √C_n|H̃|/(Ω_iΩ_j), each term's share of V when
+  the modes share energy equally, each with its twins' terms;
 * 2×10⁻⁴ < r < 10⁻²: the 200 strongest only. That is weakly nonlinear motion
   (pitch shift under ~1 %), and the lowest modes' normal-form pitch shifts
   are the same with 200 terms as with 600 (to 6 % for a dome, exactly for a
@@ -291,7 +323,7 @@ been timed for about 2.5 periods is handed over: at the cap, the two next in
 line keep timing theirs (so the cap may be exceeded for those periods). A gong
 whose coupling dies away by itself (r below 2×10⁻⁴, a 0.3 ¢ shift) simply goes
 on as exact linear modes. The coupling tables for a setting of Dome rise,
-Coupling terms and Rim take 3–5 ms to build: the plugins build them on a worker
+Coupling terms, Rim and Asymmetry take 3–5 ms to build: the plugins build them on a worker
 thread, and a note struck before they are ready waits for them (a few
 milliseconds); on this page, where the engine runs without threads, it builds
 them itself when the setting changes.
@@ -331,8 +363,8 @@ damping, T₆₀ = 2.5 s by default); Space or the pedal keeps it off.
 ### 8. What you hear
 
 The output is each mode's surface velocity, weighted by (σ_rad/σ_rad,tone)^(far/2),
-and by its shape at two points near the rim (r = 0.9a and 0.75a, off the strike
-line), which makes a decorrelated stereo pair. The **Microphone distance** knob
+and by its shape at two points near the rim (r = 0.9a and 0.75a, 20° and 160°
+from the strike line, turning with it), which makes a decorrelated stereo pair. The **Microphone distance** knob
 sets "far". A close microphone (far = 0) hears the plate's own motion, dominated by
 the strike tone. In the room (far = 1) each mode is heard by the power it
 radiates, ∝ σ_rad⟨v²⟩. These gongs are smaller than the wavelength of their
@@ -396,7 +428,7 @@ gongs/data/gong-modes.js             generated tables (node tools/gongs-modes.mj
 native/instruments/gongs/            the physics in C++: shell modes, coupling selection, scaling per key, damping,
                                      normal form (gongs-model), the engine (SAV scheme, mallet, substeps, rates),
                                      the tables as a header (node tools/gongs-native-table.mjs), reference
-test/gongs-tests.mjs                 node test/gongs-tests.mjs (26 tests, ~22 s, on the WebAssembly)
+test/gongs-tests.mjs                 node test/gongs-tests.mjs (31 tests, ~90 s, on the WebAssembly)
 tools/render-gongs.mjs               node tools/render-gongs.mjs → examples/gongs/
 tools/bench-gongs.mjs                node tools/bench-gongs.mjs: real-time load, block by block
 ```
@@ -404,16 +436,19 @@ tools/bench-gongs.mjs                node tools/bench-gongs.mjs: real-time load,
 ## Simplifications
 
 * **A few dozen modes.** A real tam-tam's crash spreads over thousands of
-  modes to 20 kHz. Here 41 modes reach 28× the strike tone, so the low gongs
-  are band-limited (C2 stops at 1.8 kHz), and the cascade is a caricature
-  of wave turbulence: it shows the transition and the broadening, not the
-  Kolmogorov–Zakharov spectrum. The 600 couplings kept are the strongest
-  (equipartition-weighted) of about 6000; the cascade's look barely changes
-  between 300 and 4000 of them, but the details are chaotic anyway.
-* **No companion modes.** Only the cos mθ family is simulated. A real gong's
-  imperfections couple each mode to its sin mθ twin: nodal lines then drift,
-  the sound beats, and travelling waves appear. A perfectly round model struck
-  on one line cannot do any of that.
+  modes to 20 kHz. Here 41 modes and their twins reach 28× the strike tone, so
+  the low gongs are band-limited (C2 stops at 1.8 kHz), and the cascade is a
+  caricature of wave turbulence: it shows the transition and the broadening,
+  not the Kolmogorov–Zakharov spectrum. The 300 couplings kept (with their
+  twins') are the strongest (equipartition-weighted) of about 6000; the
+  cascade's look barely changes between 300 and 4000 of them, but the details
+  are chaotic anyway. Before the twins there were 600; 300 keeps the page's CPU
+  where it was.
+* **One heavy axis, to first order.** The asymmetry is one smooth mass
+  imperfection with the same axis and size ε for every family: it splits the
+  twins but leaves their shapes and couplings the round gong's. A real gong's
+  hammering gives each family its own axis and size, and mixes the families a
+  little too.
 * **Truncations.** The in-plane basis (68 modes, ζ² ≤ 600) converges the
   low modes' couplings to 10⁻⁴ but not the highest ones'. In-plane inertia is
   neglected.

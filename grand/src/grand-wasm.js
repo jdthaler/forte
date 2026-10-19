@@ -26,11 +26,11 @@ function unpackKey(x, at) {
   S.wound = S.wound > 0; i += SCALE.length;
   const partials = [];
   for (let j = 0; j < np; j++) { const v = take(PARTIAL.length); partials.push(Object.fromEntries(PARTIAL.map((k, l) => [k, v[l]]))); }
-  const freq = take(n), sigma = take(n), w = take(n), c = take(n), bf = take(n), damp = take(n);
-  const str = Uint8Array.from(take(n)), idx = Uint16Array.from(take(n));
+  const freq = take(n), sigma = take(n), w = take(n), c = take(n), bf = take(n), damp = take(n), g = take(n);
+  const str = Uint8Array.from(take(n)), idx = Uint16Array.from(take(n)), kc = a[i];
   return {
     key, S, ns, det: [d0, d1, d2].slice(0, ns), partials, seg, beta, xh, wH, xd,
-    hammer: { mass, K, p, alpha }, hasDamper: hasDamper > 0, n, nV, freq, sigma, w, c, bf, damp, str, idx,
+    hammer: { mass, K, p, alpha }, hasDamper: hasDamper > 0, n, nV, freq, sigma, w, c, bf, damp, g, str, idx, kc,
   };
 }
 
@@ -57,7 +57,7 @@ class WasmVoice {
 STATE.forEach((k, i) => Object.defineProperty(WasmVoice.prototype, k, { get() { const v = this.state(i); return FLAGS.has(k) ? v > 0 : v; } }));
 
 // The engine, with the page's and the tests' hooks: noteOn returns the key's voice, e.voices lists
-// them, and handle() takes the page's oscillator budget.
+// them, sympathetic(key) its sympathetic string, and handle() takes the page's oscillator budget.
 export class GrandWasmEngine extends Base {
   constructor(fs) {
     super(fs);
@@ -76,6 +76,9 @@ export class GrandWasmEngine extends Base {
     const x = Base.exports;
     return Array.from({ length: x.grand_voices(this.e) }, (_, i) => new WasmVoice(x.grand_voice(this.e, i)));
   }
+  // the sympathetic strings: key's group ({ size, energy, damped }), and the partials that last ran
+  sympathetic(key) { const x = Base.exports; return { size: x.grand_sym_size(this.e, key), energy: x.grand_sym_energy(this.e, key), damped: x.grand_sym_damped(this.e, key) > 0 }; }
+  sympatheticRunning() { return Base.exports.grand_sym_running(this.e); }
 }
 export const ready = () => GrandWasmEngine.ready();
 

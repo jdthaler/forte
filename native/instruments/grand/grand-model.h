@@ -123,7 +123,10 @@ struct KeyModel {
   Hammer hammer;
   bool hasDamper = false;
   int n = 0, nV = 0;
-  std::vector<double> freq, sigma, w, c, bf, damp;
+  // tension modulation: the core's stretch stiffness, ΔT = kc·∫u_x² (kc = EA/2L), and each
+  // mode's stretch weight g = ∫φ′² = k²/μ (a mode's share of ∫u_x² per q², and ∂ω²/∂T)
+  double kc = 0;
+  std::vector<double> freq, sigma, w, c, bf, damp, g;
   std::vector<uint8_t> str;
   std::vector<uint16_t> idx;
 };

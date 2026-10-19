@@ -1,6 +1,6 @@
 // check-pages.mjs — open every page in headless Chromium at the sizes CLAUDE.md names and check
 // what a layout regression breaks: errors in the console, a page that scrolls sideways (as
-// loaded, with the menus, Controls and the views' tabs open, and with audio started), the
+// loaded, with the menus, Controls and every view turned on, and with audio started), the
 // controls each page should place (the perform controls above the keys, the ⓘ buttons, "Default
 // settings" among the presets, the keys), and the front page's Listen buttons (one for each
 // instrument with a demo, and two in turn play).
@@ -81,7 +81,8 @@ const COUNT = () => {
     presets: opts.length,
     defaultSettings: opts.includes('Default settings'),
     keys: n('.wk'),
-    viewTabs: n('.forte-dock-tabs [role="tab"], .forte-dock-tabs button:not(.forte-dock-fold)'),
+    views: n('.forte-view-toggles button'),
+    viewsOn: n('.forte-view-toggles button[aria-pressed="true"]'),
     listen: n('button[data-src]'),
   };
 };
@@ -140,7 +141,9 @@ async function checkPage(browser, url, page, size) {
     if (!page) broken.push(...await listen(tab));
     if (await click('details.forte-switch > summary')) { await sideways('menu open'); await click('details.forte-switch > summary'); }
     if (await click('.forte-more')) { await sideways('Controls open'); await tab.keyboard.press('Escape'); await click('.forte-more'); }
-    if (await click('.forte-dock-tabs button:not(.forte-dock-fold)')) await sideways('views open');
+    let more = 0; // every view on
+    for (const t of await tab.locator('.forte-view-toggles button[aria-pressed="false"]').all()) if (await t.isVisible()) { await t.click({ timeout: 2000 }).catch(() => {}); more++; }
+    if (more) { await tab.waitForTimeout(250); await sideways('every view on'); }
     if (await click('#start')) { await tab.waitForTimeout(500); await sideways('audio started'); }
     return { page: page || 'index', size: name, counts, errors, wide, broken };
   } catch (e) {
@@ -158,6 +161,7 @@ function failures(r, instrument) {
   if (!c.info) f.push('no ⓘ buttons');
   if (!c.defaultSettings) f.push('no "Default settings" among the presets');
   if (!c.performControls) f.push('no perform controls above the keys');
+  if (!c.views) f.push('no toggles for the views');
   return f;
 }
 

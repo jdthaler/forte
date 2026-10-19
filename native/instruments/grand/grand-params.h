@@ -16,21 +16,25 @@
 namespace forte::grand {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { hardness, strike, damper, scale, stringing, detune, stiffness, stretch, loss, mount, gFrame, boardH, tilt, hRatio, kH, listen, pickH, rIn, bass, mid, treble, maxFreq, room, venue, volume, count };
+enum : int { hardness, strike, damper, sympathy, scale, stringing, detune, stiffness, stretch, loss, kc, mount, gFrame, boardH, tilt, hRatio, kH, listen, pickH, rIn, bass, mid, treble, maxFreq, room, venue, volume, count };
 }
 
 constexpr double kNoLimit = INFINITY;
 inline const FormatSegment kFormat_hardness[] = {{kNoLimit, "×", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_strike[] = {{kNoLimit, "", " L", 1, 0, 3, false, false, false, false}};
 inline const FormatSegment kFormat_damper[] = {{kNoLimit, "", " s⁻¹", 1, 0, 0, false, false, false, false}};
+inline const FormatSegment kFormat_sympathy[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_scale[] = {"CP-70 short scale (bass 0.68 m)", "Concert-grand scale (bass 2 m)"};
+inline const char *const kKeys_scale[] = {"cp70", "concert"};
 namespace scale_ { enum : int { cp70, concert }; }
 inline const char *const kChoices_stringing[] = {"CP-70: 1 (E1–F♯2), then 2", "Acoustic grand: 1, 2, then 3", "One string everywhere"};
+inline const char *const kKeys_stringing[] = {"cp70", "grand", "single"};
 namespace stringing_ { enum : int { cp70, grand, single }; }
 inline const FormatSegment kFormat_detune[] = {{kNoLimit, "", " ¢", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_stiffness[] = {{0, "none (ideal string)", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "×", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_loss[] = {{kNoLimit, "×", "", 1, 0, 2, false, false, false, false}};
 inline const char *const kChoices_mount[] = {"Iron frame, no soundboard (CP-70)", "A spruce soundboard (acoustic grand)"};
+inline const char *const kKeys_mount[] = {"frame", "board"};
 namespace mount_ { enum : int { frame, board }; }
 inline const FormatSegment kFormat_gFrame[] = {{0.00000995, "", " s/kg", 1, 0, 1, false, true, false, false}, {0.000010194482011246459, "", " s/kg", 1, 0, 1, false, true, false, false}, {0.00009949999999999999, "", " s/kg", 1, 0, 1, false, true, false, false}, {0.00010186794018049839, "", " s/kg", 1, 0, 1, false, true, false, false}, {0.0009949999999999998, "", " s/kg", 1, 0, 1, false, true, false, false}, {0.0010179111822620998, "", " s/kg", 1, 0, 1, false, true, false, false}, {kNoLimit, "", " s/kg", 1, 0, 1, false, true, false, false}};
 inline const FormatSegment kFormat_boardH[] = {{kNoLimit, "", " mm", 1, 0, 1, false, false, false, false}};
@@ -46,6 +50,7 @@ inline const FormatSegment kFormat_treble[] = {{-0.05, "", " dB", 1, 0, 1, false
 inline const FormatSegment kFormat_maxFreq[] = {{kNoLimit, "", " kHz", 0.001, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
@@ -53,13 +58,15 @@ inline const ParamInfo kParams[p::count] = {
   {"hardness", "Felt hardness", "Action", ParamKind::continuous, 0.2, 5, 1, 0, true, true, nullptr, 0, kFormat_hardness, 1},
   {"strike", "Strike position", "Action", ParamKind::continuous, 0.03, 0.5, 0.12, 0.001, false, false, nullptr, 0, kFormat_strike, 1},
   {"damper", "Damper", "Action", ParamKind::continuous, 3, 80, 25, 0, true, false, nullptr, 0, kFormat_damper, 1},
-  {"scale", "Scale design", "Strings", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_scale, 2, nullptr, 0},
-  {"stringing", "Strings per note", "Strings", ParamKind::choice, 0, 2, 0, 1, false, false, kChoices_stringing, 3, nullptr, 0},
+  {"sympathy", "Sympathetic resonance", "Action", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_sympathy, 2},
+  {"scale", "Scale design", "Strings", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_scale, 2, nullptr, 0, kKeys_scale},
+  {"stringing", "Strings per note", "Strings", ParamKind::choice, 0, 2, 0, 1, false, false, kChoices_stringing, 3, nullptr, 0, kKeys_stringing},
   {"detune", "Unison mistuning", "Strings", ParamKind::continuous, 0, 12, 1.2, 0.1, false, false, nullptr, 0, kFormat_detune, 1},
   {"stiffness", "Wire bending stiffness", "Strings", ParamKind::continuous, 0, 4, 1, 0.01, false, false, nullptr, 0, kFormat_stiffness, 2},
   {"stretch", "Stretch tuning", "Strings", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"loss", "String losses", "Strings", ParamKind::continuous, 0.25, 4, 1, 0, true, false, nullptr, 0, kFormat_loss, 1},
-  {"mount", "Bridge mounted on", "Bridge", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_mount, 2, nullptr, 0},
+  {"kc", "Tension modulation (pitch glide)", "Strings", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"mount", "Bridge mounted on", "Bridge", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_mount, 2, nullptr, 0, kKeys_mount},
   {"gFrame", "Frame admittance", "Bridge", ParamKind::continuous, 0.000001, 0.003, 0.00005, 0, true, false, nullptr, 0, kFormat_gFrame, 7},
   {"boardH", "Soundboard thickness", "Bridge", ParamKind::continuous, 5, 16, 9, 0.1, false, false, nullptr, 0, kFormat_boardH, 1},
   {"tilt", "Polarisation mixing angle", "Bridge", ParamKind::continuous, 0, 45, 6, 0.5, false, false, nullptr, 0, kFormat_tilt, 1},
@@ -73,7 +80,7 @@ inline const ParamInfo kParams[p::count] = {
   {"treble", "Treble (shelf 3.5 kHz)", "EQ (preamp)", ParamKind::continuous, -15, 15, 0, 0.5, false, true, nullptr, 0, kFormat_treble, 3},
   {"maxFreq", "Highest partial", "Output", ParamKind::continuous, 3000, 16000, 10000, 0, true, false, nullptr, 0, kFormat_maxFreq, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.12, 0.01, false, true, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };
 

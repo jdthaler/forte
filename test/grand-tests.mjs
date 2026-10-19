@@ -21,7 +21,7 @@ const CP70 = [28, 100]; // the CP-70's 73, E1–E7
 // What the checks compare against, stated here rather than read from the model: steel's Young's
 // modulus and breaking stress, the plate's size, the speed of sound and the baffle's size for the
 // short circuit (grand-model.h), and the circuit's piezo capacitance and EQ corners (grand-engine.h).
-const STEEL = { E: 2.0e11, strength: 2.2e9 }, PLATE = { a: 1.3, b: 0.77, c: 343, ell: 0.5 };
+const STEEL = { E: 2.0e11, rho: 7850, strength: 2.2e9 }, PLATE = { a: 1.3, b: 0.77, c: 343, ell: 0.5 };
 const C_PIEZO = 10e-9, EQ = { bass: 120, mid: 1000, midQ: 0.8, treble: 3500 };
 // A stiff string's partial 2 sits above twice its fundamental by this many cents.
 const octaveStretch = (B) => 1200 * Math.log2(Math.sqrt(1 + 4 * B) / Math.sqrt(1 + B));
@@ -220,7 +220,8 @@ test('stretch tuning: every octave\'s 2:1 partials coincide, so the octaves stop
 });
 test('the zing is in the output: E1\'s 10th partial at the model\'s +159 ¢ (concert scale: +5 ¢)', () => {
   for (const scale of ['cp70', 'concert']) {
-    const p = P({ scale }), km = keyModel(28, p), want = km.partials[9].f;
+    // the linear model's partial: tension modulation would raise it while the blow rings (its own test)
+    const p = P({ scale, kc: false }), km = keyModel(28, p), want = km.partials[9].f;
     const x = note(p, 28, 0.8, 1.2), f = peakFreq(x, want, Math.round(0.1 * FS), x.length, 10);
     assert.ok(Math.abs(cents(f, want)) < 2, `${scale}: ${f.toFixed(2)} vs ${want.toFixed(2)} Hz`);
     assert.ok(scale === 'cp70' ? km.partials[9].stretch > 140 : km.partials[9].stretch < 10);
@@ -241,7 +242,9 @@ test('the piezo hears Σ bₙqₙ: partial n is n × its displacement (harmonic 
 test('the bridge drains every partial at its model rate, up to 15 kHz, at 44.1 and 48 kHz (implicit solve)', () => {
   let worst = 0, wf = 0;
   for (const fs of [44100, 48000]) for (const key of [84, 96]) {
-    const p = P({ stringing: 'single', tilt: 0, gFrame: 3e-3, maxFreq: 16000, hardness: 3 }), km = keyModel(key, p, null, fs);
+    // a full blow's pitch glide would move the partials off the frequencies the decay is read at;
+    // the undamped treble's strings, ringing along, would add to them
+    const p = P({ stringing: 'single', tilt: 0, gFrame: 3e-3, maxFreq: 16000, hardness: 3, kc: false, sympathy: 0 }), km = keyModel(key, p, null, fs);
     const x = render(p, [[0, 'on', key, 1]], 1.2, fs).x;
     for (const pp of km.partials) {
       if (pp.f < 1500) continue;
@@ -259,6 +262,27 @@ test('one string on a stiff bridge decays at σ_int + G(T + EIk²)/L', () => {
     const pp = km.partials[j], want = pp.sigInt + pp.bridgeV, got = decay(x, pp.f, 0.3, 1.2);
     assert.ok(Math.abs(got / want - 1) < 0.05, `n=${j + 1}: ${got.toFixed(3)} vs ${want.toFixed(3)} s⁻¹`);
   }
+});
+test('tension modulation: a hard blow starts sharp and glides down; a soft one barely moves', () => {
+  // the stretch weights are ∂ω²/∂T, k²/μ for every mode (μ with the winding); the core alone
+  // stretches: ΔT = (E A_core/2L)∫u_x²
+  const km = keyModel(40, P()), rel = (a, b) => Math.abs(a / b - 1);
+  for (let i = 0; i < km.n; i += 5) {
+    const pp = km.partials.find((x) => x.n === km.idx[i]);
+    assert.ok(rel(km.g[i], (pp.k * pp.k) / km.S.mu) < 1e-12, `g of mode ${i}`);
+  }
+  assert.ok(rel(km.kc, (STEEL.E * (km.S.muCore / STEEL.rho)) / (2 * km.S.L)) < 1e-12, `kc ${km.kc}`);
+  // E2, one string: the fundamental's pitch with the stretch, re without
+  const f = keyModel(40, P({ stringing: 'single' })).partials[0].f;
+  const shift = (vel, t) => {
+    const at = (kc) => { const x = note(P({ stringing: 'single', kc }), 40, vel, t + 0.12); return peakFreq(x, f, Math.round(t * FS), Math.round((t + 0.1) * FS), 80); };
+    return cents(at(true), at(false));
+  };
+  const hard = shift(1, 0.02), late = shift(1, 1.8), soft = shift(0.2, 0.02);
+  console.log(`        (E2 at full velocity: +${hard.toFixed(1)} ¢ at the start, +${late.toFixed(1)} ¢ after 1.8 s; at 0.2 +${soft.toFixed(2)} ¢)`);
+  assert.ok(hard > 5 && hard < 60, `hard ${hard}`);
+  assert.ok(late < hard / 4, `late ${late}`);
+  assert.ok(Math.abs(soft) < hard / 10, `soft ${soft}`);
 });
 test('Weinreich: two strings in phase drain twice as fast; mistuning and tilt leave an aftersound', () => {
   const base = { gFrame: 1e-3, tilt: 0, detune: 0 }, f = keyFreq(60);
@@ -329,10 +353,12 @@ test('a key struck again after a physics knob moved does not double: the old voi
   }
 });
 test('repetition: the hammer needs ~60 ms to come back, so a blow every 11 ms does not pump the string', () => {
-  const single = render(P(), [[0, 'on', 28, 1]], 0.4).pk;
+  // the linear string: the peak depends on where in its cycle each blow lands, and tension
+  // modulation's glide moves those phases (within the same spread as other blow intervals)
+  const p = P({ kc: false }), single = render(p, [[0, 'on', 28, 1]], 0.4).pk;
   const ev = [[0, 'sus', true]];
   for (let i = 0; i < 30; i++) ev.push([i * 0.011, 'on', 28, 1]);
-  const fast = render(P(), ev, 0.65), struck = fast.e.voices[0].struck;
+  const fast = render(p, ev, 0.65), struck = fast.e.voices[0].struck;
   assert.ok(fast.pk < 1.6 * single, `peak ${fast.pk.toFixed(3)} vs one blow ${single.toFixed(3)}`);
   assert.ok(struck > 0.25 * FS, 'later blows still land once the hammer is back');
 });
@@ -390,6 +416,47 @@ test('soundboard above its modal band: the residual path matches the plate\'s fu
       assert.ok(Math.abs(d) < 1.5, `${h} mm, ${f1 / 1000}–${f2 / 1000} kHz: ${d.toFixed(1)} dB (without the residual ${(band(nores, f1, f2) - band(X, f1, f2)).toFixed(1)} dB)`);
     }
   }
+});
+test('sympathetic strings: an undamped key rings along where its partials meet the sounding ones, never with its own voice; a damped one, or after Panic, stays still', () => {
+  // keys held (struck softly) and staccato notes struck hard, the pedal up or down, after every
+  // key's group has been made (one a block); each key's group's energy after `sec` s
+  const run = ({ held = [], strike = [], pedal = false, sec = 1, panic = false, ...o } = {}) => {
+    const e = new GrandEngine(FS);
+    e.setParams(P({ sympathy: 0.25, ...o }));
+    const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
+    for (let b = 0; b < 100; b++) e.process(L, R, bl);
+    e.setSustain(pedal);
+    for (const k of held) e.noteOn(k, 0);
+    for (const k of strike) e.noteOn(k, 0.9);
+    let peak = 0;
+    for (let b = 0; b < Math.round((sec * FS) / bl); b++) {
+      if (b === Math.round((0.3 * FS) / bl)) for (const k of strike) e.noteOff(k);
+      if (panic && b === Math.round((0.6 * FS) / bl)) e.allNotesOff();
+      e.process(L, R, bl);
+      for (let i = 0; i < bl; i++) peak = Math.max(peak, Math.abs(L[i]), Math.abs(R[i]));
+    }
+    return { E: (k) => e.sympathetic(k).energy, size: (k) => e.sympathetic(k).size, damped: (k) => e.sympathetic(k).damped, running: e.sympatheticRunning(), peak };
+  };
+  const c4 = run({ held: [60], strike: [48] }), cs4 = run({ held: [61], strike: [48] });
+  for (const k of [KEY_LO, 60, 100]) assert.ok(c4.size(k) > 0, `key ${k} has no group`); // (C8's fundamental is above 4 kHz: none)
+  assert.ok(c4.E(60) > 30 * cs4.E(61), `C4 held, C3 struck: C4's group ${c4.E(60).toExponential(2)}; C♯4 held: ${cs4.E(61).toExponential(2)}`);
+  assert.ok(c4.E(61) === 0 && c4.damped(61), `C♯4, not held: ${c4.E(61).toExponential(2)}`);
+  const own = run({ held: [48] }), pair = run({ held: [48, 60] });
+  assert.ok(own.E(48) < 1e-2 * pair.E(60), `C3 held: its own group ${own.E(48).toExponential(2)}; C4's, held with it, ${pair.E(60).toExponential(2)}`);
+  assert.ok(!c4.damped(100) && c4.E(100) > 0, 'the keys above E6 have no dampers: they ring along');
+  const ped = run({ strike: [48], pedal: true });
+  assert.ok(ped.E(60) > 30 * cs4.E(61) && !ped.damped(30), `the pedal lifts every damper: C4's group ${ped.E(60).toExponential(2)}`);
+  const off = run({ held: [60], strike: [48], sympathy: 0 });
+  assert.ok(off.running === 0 && off.E(60) === 0, 'off: no group runs');
+  const hush = run({ strike: [36, 40, 43], pedal: true, panic: true });
+  for (const k of [48, 60, 100]) assert.ok(hush.E(k) === 0, `after Panic: key ${k}'s group ${hush.E(k)}`);
+  const board = run({ held: [60], strike: [48], mount: 'board' });
+  assert.ok(board.E(60) > 5 * c4.E(60), `a soundboard couples the strings more than the iron frame: ${board.E(60).toExponential(2)} vs ${c4.E(60).toExponential(2)}`);
+  for (const mount of ['frame', 'board']) {
+    const loud = run({ strike: [36, 40, 43, 48, 52, 55, 60], pedal: true, sympathy: 1, sec: 2, mount });
+    assert.ok(Number.isFinite(loud.peak) && loud.peak < 2, `a pedalled chord at 100 % (${mount}): peak ${loud.peak}`);
+  }
+  console.log(`        (C3 struck: held C4's group ${(c4.E(60) / cs4.E(61)).toFixed(0)} × held C♯4's, ${(board.E(60) / c4.E(60)).toFixed(0)} × more on a soundboard; ${ped.running} partials ring with the pedal down)`);
 });
 test('stability: every parameter at its min and max gives finite, bounded output', () => {
   const ps = GROUPS.flatMap((g) => g.params);

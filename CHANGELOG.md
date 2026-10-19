@@ -16,6 +16,174 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-19 — a new instrument: the celesta; the site's links to the changelog and docs show what is published; Gong twins; a kalimba; RF Cavity Bells; spectrogram labels on the right, where the sound comes in; a new instrument: the Steel Pan; sympathetic strings: undamped strings ring along; tension modulation: hard notes start sharp and glide down; licence notices in the downloads; the vibraphone's resonator fittings lose energy; a toggle for every view; your own presets, and links that share settings
+
+### Forte 0.35.0
+- **Links show the published files:** the changelog, the install guide, the licence, the credits
+  and the links inside each instrument's How it works now open the files on `live`, the branch
+  the site is published from, instead of `main`, where unreleased work lands first.
+- **The spectrogram's frequency labels and the model's ticks are on the right too**, beside "now", where the newest sound comes in, as well as on the left. A canvas narrower than 240 px keeps only the left ones.
+- **The plugin downloads carry the licences:** every archive now holds Forte's `LICENSE.txt` and
+  `THIRD-PARTY-NOTICES.md`, the notices of the open-source code compiled into the plugins and the
+  site's WebAssembly (Eigen, fdlibm, CLAP, clap-wrapper, the VST 3 and Audio Unit SDKs, RtAudio,
+  RtMidi, CHOC, Microsoft's WebView2 loader on Windows), as their licences ask. The credits and
+  the README link to it.
+- **Every view has a toggle:** a row above the views on every instrument page turns each one on
+  or off, in place of the main views and the tabs underneath them. The views that are on share
+  the space in rows (side by side on a wide screen, stacked on a tall one); the main ones are on
+  at first, and each page remembers which are on.
+- **Perform shows the views you chose,** any number of them, without the toggles.
+- **Your own presets:** the Presets menu on every page saves the page's settings under a name in
+  your browser and lists them beside the factory presets. *Your presets and files…* plays, links,
+  saves to a file and deletes them, and opens a preset file.
+- **Share a link:** *Copy a link to these settings* makes a link that opens the page playing them
+  (the parameters that differ from the defaults, in the link's `#`).
+- **Presets in the plugins:** the window's Presets menu saves your own presets as files in a
+  presets folder per instrument, lists them, and opens the folder. The files are the site's, so a
+  preset moves between the site, the plugins and the Forte app.
+- A preset names the parameters as the instrument's contract does, with a format version, so
+  what you save keeps working as Forte changes.
+- The plugins' preset tests pass on Windows: they open a preset whose name is not plain ASCII
+  (¼-comma meantone, an em dash) by its UTF-8 path, as the plugin saves it, and the site's
+  preset files they compare against keep `\n` line endings in a Windows checkout.
+
+### Ribbon Piano 0.8.0
+- **Sympathetic resonance:** every key whose damper is up (the pedal down, the key held, the
+  undamped treble) rings along through the bridge with whatever sounds, and gives back what it
+  takes. Each key is its unison's lowest 16 partials below 4 kHz, driven by every other string's
+  bridge velocity and never by its own voice. Hold C4 and strike C3: C4 rings along about a
+  thousand times as strongly as C♯4 would, about 30 dB under the attack. With the pedal down it
+  costs about one and a half times what four sustained notes cost; with it up, almost nothing.
+- New slider *Sympathetic resonance* under *Damping & bridge*, 25 % by default (parameter
+  `sympathy`): the share of the bridge's motion one string feels from another. 0 turns it off.
+- The page hands every key's strings to the engine in the background, so they are ready before
+  the pedal goes down.
+- **Tension modulation (Kirchhoff–Carrier):** a hard blow stretches the string, so its tension
+  and every partial's pitch rise, then glide back as the note decays. Each unison string has its
+  own tension, from both bending families (torsion neither stretches nor feels it); tapered
+  members use their Ritz shapes. One C3 string at 5 m/s starts 5 ¢ sharp and is within 0.5 ¢
+  after 1.8 s; a soft blow does not move. A voice costs about a third more while it glides and
+  nothing more once the glide is under a hundredth of a cent.
+- New checkbox *Tension modulation (pitch glide)* under *String*, on by default (parameter `kc`).
+
+### Harpsichord 0.6.0
+- **Sympathetic resonance:** while a key is held, its strings whose jacks have risen ring along
+  with the strings that sound, whether their row plucks or not: on the lower manual with the 4′
+  off, a held key's 4′ string still sounds an octave up. A key's two 8′ strings drive each other
+  too, so a held note's fundamental decays a little faster (Weinreich's coupled unison).
+- New slider *Sympathetic resonance* under *Strings and tuning*, 25 % by default (parameter
+  `sympathy`).
+- Fixed: once a bridge segment fell silent (the 4′'s, after its strings stopped), the soundboard's
+  filters there decayed into subnormal numbers and the page's CPU climbed several times over.
+- **Tension modulation (Kirchhoff–Carrier):** the pluck's 2–4 mm lift stretches the wire, so each
+  note starts sharp and settles: c¹ about 5 ¢, c³ about 25 ¢ (short strings plucked near the nut
+  stretch most), FF about 9 ¢ held through its long decay. Touch hardly changes it, as the
+  plectrum lets go where it lets go. About 30 % more CPU while a string glides.
+- New checkbox *Tension modulation (pitch glide)* under *Strings and tuning*, on by default
+  (parameter `kc`).
+
+### Vibraphone 0.6.0
+- **The tube's fittings drain it:** the boundary layers on the motor's shaft and disc at the mouth
+  (viscous) and on the bottom plug (thermal) add to the walls' loss, scaled from it per unit area:
+  14 % more at F3 with the disc open, 91 % with it face-on, since the flow squeezing past a closing
+  disc loses as 1/s². F3's tube goes from Q ≈ 95 to 88, and on the default gap's leaky side its bar
+  rings a little longer (4.7 s against 4.1 s). The tremolo's pulse and pitch wobble move by under
+  1 dB and 2 ¢.
+
+### Celesta 0.1.0
+- **The celesta (Mustel, Paris, 1886):** felt hammers strike plain steel bars, each resting on two
+  blocks at its fundamental's nodes over a wooden box tuned to it. The bars are Timoshenko beams,
+  solved exactly (shear and rotary inertia put the overtones a little below a thin bar's 2.76 and
+  5.40), 2.5 mm thick at C4 and 2 mm at C8, cut to pitch (224 mm at C4, 50 mm at C8). Bar mode 1
+  and the box's air trade energy through the gap between them; the felt hammer is a Hertz contact
+  (F = Kδ^2.5), lighter and harder up the compass; a felt damper rests on every bar whose key is
+  up, and the pedal lifts them all.
+- The four-octave compass C4–C8 plays by default; *Full range* opens A0–C8. Mod wheel: the hammer
+  felt. Knobs for the bar thickness, the steel's internal friction, the boxes (on or off, the gap,
+  their tuning), the hammers (felt, mass, strike point, off the centre line, speed) and the dampers;
+  ten presets, among them a keyboard glockenspiel.
+- Its plugins (CLAP, VST3, AU, standalone, and in the Forte app), AU code `Cele`.
+
+### Kalimba 0.1.0
+- **A new instrument: the kalimba.** Every key is a spring-steel tine, clamped under a bar,
+  resting on a bridge and free at the tip, over a wooden box with a sound hole. The tine is a
+  clamped–supported–free beam (Chapman 2012): the part behind the bridge vibrates too, so its
+  overtones sit 5.6 times the fundamental, not a cantilever's 6.27. The thumb pushes the tine
+  down and lets go: where it pushes and how fast it lets go choose the modes. The box is the top's
+  first mode and the air in the sound hole, coupled through the cavity (Christensen and Vistisen's
+  two-oscillator model), with the top's higher modes above them. A finger over the hole (the mod
+  wheel) makes the kalimba player's wah. Optional bottle caps on the top leave it when it
+  accelerates down faster than gravity and rattle as they land, so loud notes buzz and soft ones
+  don't.
+- C4–E6, a 17-tine kalimba's span, with *Full range* opening A0–C8. Tines ring until they die
+  away; untick *Let the tines ring* and releasing a key lays a finger on its tine. Presets include
+  an mbira with bottle caps, a marimbula (bass box), and the tine clamped right at the bridge.
+- Plugins (AU code `Kali`) and a place in the Forte app.
+
+### Steel Pan 0.1.0
+- **A new instrument after the Trinidad steelpan:** every key a note area of thin steel, its
+  modes those of a plate, the lowest three hammered by the tuner to the fundamental, the octave and
+  the twelfth (or double octave, or left untuned as sunk). Struck by a rubber-tipped stick whose
+  contact shortens as a Hertz contact on harder strokes and higher notes.
+- **The dome couples the note's modes** (a 1 : 2 : 3 internal resonance, after Monteil, Touzé,
+  Thomas and Benacchio): a hard stroke pumps the octave and twelfth out of the fundamental, so the
+  tone blooms and brightens; *Dome rise* sets it, and flat notes stay linear.
+- **Neighbours ring along:** the steel between notes couples each note's tuned modes to its
+  neighbours', which the fourths-and-fifths layout (Anthony Williams, 1953) puts on shared
+  partials; a chromatic layout for comparison. The skirt decides how much of each partial
+  radiates, from a tenor's 14 cm to a bass's whole drum.
+- The steel band's A1–F♯6 by default, all 88 keys with *Full range*. Rolls on held notes from the
+  mod wheel or aftertouch; a hand mutes a note on key-up unless *Let notes ring* or the sustain
+  pedal. Views of the pan with every note glowing as it rings, the struck note's three tuned modes
+  trading energy, the note area's mode shapes, the spectrum and spectrogram. Plugins (CLAP, VST3,
+  AU, standalone) and a place in the Forte app.
+
+### Electric Grand 0.7.0
+- **Sympathetic resonance:** every key whose damper is up (the pedal down, the key held, the keys
+  above E6) rings along through the bridge, heard by the piezo and the soundboard alike. On the
+  iron frame it is faint, as on a real CP-70; on the soundboard it is about 14 times stronger.
+  Coincident partials ring along about 90 times as strongly as others. With the pedal down it
+  costs about twice what four sustained notes cost.
+- New slider *Sympathetic resonance* under *Action*, 25 % by default (parameter `sympathy`).
+- **Tension modulation (Kirchhoff–Carrier):** the CP-70's short, stiff strings stretch a lot under
+  a hard blow: at full velocity E1 starts 45 ¢ sharp and is 6 ¢ sharp after 1.8 s, C4 18 ¢. It
+  grows with the square of the blow, so at velocity 0.6 E2 starts 3 ¢ sharp. Only the steel core
+  stretches; the winding adds mass. About 40 % more CPU while a note glides.
+- New checkbox *Tension modulation (pitch glide)* under *Strings*, on by default (parameter `kc`).
+
+### Gong Keyboard 0.7.0
+- Every asymmetric mode now has its twin (sin mθ beside cos mθ), so a gong has 77 modes instead of 41. A small mass asymmetry splits each pair, and a strike off its heavy axis rings both: the gong beats, its nodal lines wander, and a crash trades energy between the twins.
+- New *Asymmetry ε* (0.5 % by default; 0 is a perfectly round gong) and *Strike angle* (20° from the heavy axis by default) parameters, and a preset *Perfectly round: the twins in tune, no shimmer*.
+- *Coupling terms* now counts the round gong's terms, each with its twins', and defaults to 300 instead of 600, so the page uses about the CPU it did before.
+- The gong view draws the twins and the heavy axis; the mode table lists each twin (primed).
+
+### Wind Harp 0.5.1
+- **The spectrogram is the shared one**: the same colours as the other instruments, with the string's modes and the shedding frequency as ticks on both sides.
+
+### RF Cavity Bells 0.1.0
+- New instrument: a superconducting accelerator cavity for every key, A0–C8, rung by the bunch
+  that crosses it. Nine coupled pillbox cells (TESLA's cavity) make a passband of nine modes,
+  ω = ω_c/√(1 + k cos φ) (Nagle, Knapp & Knapp 1967), whose accelerating π mode is the note; the
+  higher-order modes (TM011, TM110, TM111, TM012, TM020, TM120) stand at the pillbox's
+  Bessel-zero ratios, a bell's inharmonic partials. The tests check the Bessel zeros, the coupled
+  cells' eigenproblem solved as a matrix, the transit-time integral and the stored energy
+  integrated over the cell.
+- **The bunch:** velocity is its charge; its speed against the cells' design speed keeps it in
+  step with the π mode or rings the rest of the passband, which beats; its length weighs the
+  modes by the Gaussian form factor; off the axis (the mod wheel) it rings the dipole modes.
+- **Losses:** the input coupler on the first cell, HOM couplers at both ends notched at the
+  accelerating passband (trapped modes ring on), and the niobium's BCS surface resistance at the
+  helium bath's temperature, fitted to TESLA's 15 nΩ at 2 K and 800 nΩ at 4.2 K; above 9.25 K
+  the cavity is a normal metal and only clicks. Letting go pushes the coupler in; the pedal keeps
+  it back.
+- **Beam loading:** held keys send a bunch train (key pressure adds current) that builds the field
+  up to where the losses take what the beam gives; Lorentz-force detuning pulls hard strikes
+  flat through the walls' mechanical mode; past the quench field the cavity goes normal, the
+  field collapses, and it recovers. Pitch bend is the tuner (±2 semitones).
+- Views: the cells in section with their field, the bunch, the Lorentz squeeze and a quench; the
+  passband's dispersion curve with every mode's level; spectrum, spectrogram and a table of the
+  strongest modes. Nine demos. Plugins and WebAssembly from the start.
+
 ## 2026-10-18 — every key of an 88-key keyboard; All Plugins says every instrument is there; the page check plays the front page's demos; the tonewheel organ's B-3 levels, filters, waveform and swell; the Storage Ring's difference pickup at a fuller level; a choice of rooms; the apps' windows stay quiet at keys that play nothing; a spectrum and a spectrogram on every instrument; the Forte app on its own, and app icons
 
 ### Forte 0.34.0

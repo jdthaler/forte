@@ -119,4 +119,7 @@ do what they do on the instrument's page; each page's *How it works* says what. 
 instrument's presets are on its **Preset** parameter, and every other control on the page is
 a parameter the DAW can automate. The DAW saves the settings with the project.
 
+Forte is free under the MIT License (`LICENSE.txt`); the open-source code compiled into the
+plugins comes with its licences in `THIRD-PARTY-NOTICES.md`.
+
 Problems and questions: <https://github.com/jdthaler/forte/issues>.
