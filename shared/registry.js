@@ -85,6 +85,14 @@ export const INSTRUMENTS = [
     accent: '#b9a4ff',
   },
   {
+    id: 'kalimba', name: 'Kalimba', section: 'traditional', ready: true, version: '0.1.0', trim: -4.5,
+    plugin: { code: 'Kali', ready: true },
+    after: 'the African mbira and Hugh Tracey’s kalimba (1950s)',
+    tagline: 'Steel tines clamped behind a bridge and plucked by the thumbs, over a wooden box whose sound hole a finger can cover.',
+    physics: 'Clamped–supported–free beams · Helmholtz box · rattling caps',
+    accent: '#d9a066',
+  },
+  {
     id: 'grand', name: 'Electric Grand', section: 'electric', ready: true, version: '0.6.0', trim: 3.5,
     plugin: { code: 'EGrd', ready: true },
     after: 'the Yamaha CP-70',
