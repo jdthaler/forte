@@ -82,6 +82,7 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `views.js` | `fit`, `css`, `animate`, `SpectrumView` (live spectrum + model markers), `SpectrogramView` (scrolling spectrogram, the markers as ticks), `ScopeView` |
 | `impulses.js` | the rooms: `roomIR` (the pages' original synthetic room) and the venues (`VENUES`: a studio and three halls built from their size, walls and air: image sources, then a tail decaying in each octave in Eyring's time) |
 | `registry.js` | the instrument list behind the landing page and the menus |
+| `presets.js`, `user-presets.js` | your own presets and shared links. `presets.js` is the format, the same in the plugins (`native/plugin/presets.cpp`): every parameter of the contract by id, in a versioned file or in a link's fragment. `user-presets.js` adds them to the Presets menu (save, link, a sheet to play, link, save to a file, delete and open files); the shell attaches it, and a page with its own state calls `attachPresets` with how to get and set its parameters by contract id (the organ's console is `CONSOLE.get` and `CONSOLE.put`). |
 | `midi.js` | Web MIDI for every page (the shell and the five older pages): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen next to Enable MIDI, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling. |
 | `focus.js` | who gets a key press: a control reached with Tab keeps the keys it uses (Space ticks a stop, arrows move a slider); one last touched with the mouse or a finger hands them back to the instrument. Every page's key handler asks `controlOwns(e)` first. |
 | `notes.js`, `markdown.js` | **How it works**: the page's README in a dialog (button by the title, or a link to `…/#about`) |
@@ -370,7 +371,10 @@ a choice and the presets, in order: what a song saved in a DAW and its automatio
 Removing, renaming or changing any of those, or a preset's values, breaks such songs; adding
 parameters, options at the end and presets at the end does not. `node tools/contract.mjs` lists
 what a branch breaks and adds since `main`; the `tests` workflow warns about breaks while an
-instrument is below 1.0 and, from 1.0 on, asks for a `major` release note. The plugin tests load
+instrument is below 1.0 and, from 1.0 on, asks for a `major` release note. Your own presets and
+shared links (`shared/presets.js`) name the same parameters, ranges and options, so the contract
+keeps them working too; `native/tests/presets/` holds files as the site writes them, which the
+plugin tests open and write byte for byte. The plugin tests load
 every state in `native/tests/states/` into today's plugins; one that no longer loads is a break
 (before 1.0, delete it and say so in the note).
 
