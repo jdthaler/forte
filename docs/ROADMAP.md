@@ -122,7 +122,7 @@ default in the existing presets, or would change what an existing knob means.
 |------|------|-------|
 | RF Cavity Bells, Collider Showers | M each | The accelerator ideas left over from the Storage Ring. |
 | Celesta | M | Close to the vibraphone's bars. |
-| Steel pan | M | Coupled notes on one shell. |
+| Steel pan | M | Done, for the next release: the Steel Pan, note areas tuned to octave and twelfth whose domes couple their modes, ringing along with their neighbours in a fourths-and-fifths layout. |
 | Hammered dulcimer or cimbalom | M | |
 | Theremin or ondes Martenot | M | Continuous pitch suits MPE. |
 | Kalimba (mbira) | S–M | Close to the tine piano. |

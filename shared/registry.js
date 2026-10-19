@@ -77,6 +77,14 @@ export const INSTRUMENTS = [
     accent: '#d9b45f',
   },
   {
+    id: 'steelpan', name: 'Steel Pan', section: 'traditional', ready: true, version: '0.1.0', trim: 2.5,
+    plugin: { code: 'Stee', ready: true },
+    after: 'the Trinidad steelpan (1940s)',
+    tagline: 'Domed note areas sunk into an oil drum, hammered until octave and twelfth ring true; struck hard, the dome pumps the octave out of the fundamental.',
+    physics: 'Tuned shallow shells · 1 : 2 : 3 internal resonance · coupled notes',
+    accent: '#ffb347',
+  },
+  {
     id: 'grand', name: 'Electric Grand', section: 'electric', ready: true, version: '0.6.0', trim: 3.5,
     plugin: { code: 'EGrd', ready: true },
     after: 'the Yamaha CP-70',

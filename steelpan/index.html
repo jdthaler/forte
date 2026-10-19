@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Steel Pan · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="steelpan">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Steel Pan</h1>
+      <span class="sub">domed note areas hammered into an oil drum, tuned to octave and twelfth</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="The pan">
+          <div class="card-head"><h2>The pan around <b id="pan-key">C4</b></h2><span class="muted" id="pan-read"></span></div>
+          <canvas id="pan"></canvas>
+          <div class="caption">The playing surface seen from above: three rings of note areas, each an octave above the ring outside it, laid out round the rim in fourths and fifths (or chromatically). A note glows as it rings; the ones you did not strike are ringing along through the steel.</div>
+        </div>
+        <div class="card" data-perform data-view="Energy flow">
+          <div class="card-head"><h2>Inside the struck note</h2><span class="muted" id="flow-read">strike a key</span></div>
+          <canvas id="flow"></canvas>
+          <div class="legend"><span><i style="background:var(--accent)"></i>fundamental</span><span><i style="background:var(--accent-2)"></i>octave</span><span><i style="background:var(--third)"></i>third partial</span></div>
+          <div class="caption">The amplitudes of the note’s three tuned modes over the last two seconds. Struck hard, the dome pumps energy from the fundamental into the octave and twelfth and back again; struck softly, or with no dome, each mode simply decays.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Note area">
+          <div class="card-head"><h2>The note area</h2><span class="muted" id="area-read"></span></div>
+          <canvas id="area"></canvas>
+          <div class="caption">The tuned modes’ shapes over the note, seen from above (warm up, cool down, white lines the nodes), and where the stick lands (✕). A stroke on a mode’s node cannot excite it.</div>
+        </div>
+        <div class="card" data-view="Mode table">
+          <div class="card-head"><h2>Modes of <b id="focus-name">C4</b></h2><span class="muted" id="focus-size"></span></div>
+          <table class="modes" id="modes"></table>
+        </div>
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the struck note’s modes</span></div>
+          <canvas id="spectrum"></canvas>
+          <div class="caption">The tuned partials sit on the harmonic grid at 2 and 3 × f₁ (or 2 and 4); the plate’s upper modes fall between. Struck hard, the octave rises to meet the fundamental.</div>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum’s markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">After a hard stroke the octave line swells for a moment after the fundamental’s: the dome handing it energy. A roll shows as a comb of strokes.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>sustain (hands off the notes): hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>mod wheel or aftertouch: roll</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/steelpan-main.js"></script>
+</body>
+</html>
