@@ -77,6 +77,14 @@ export const INSTRUMENTS = [
     accent: '#d9b45f',
   },
   {
+    id: 'kalimba', name: 'Kalimba', section: 'traditional', ready: true, version: '0.1.0', trim: -4.5,
+    plugin: { code: 'Kali', ready: true },
+    after: 'the African mbira and Hugh Tracey’s kalimba (1950s)',
+    tagline: 'Steel tines clamped behind a bridge and plucked by the thumbs, over a wooden box whose sound hole a finger can cover.',
+    physics: 'Clamped–supported–free beams · Helmholtz box · rattling caps',
+    accent: '#d9a066',
+  },
+  {
     id: 'steelpan', name: 'Steel Pan', section: 'traditional', ready: true, version: '0.1.0', trim: 2.5,
     plugin: { code: 'Stee', ready: true },
     after: 'the Trinidad steelpan (1940s)',
