@@ -108,7 +108,7 @@ default in the existing presets, or would change what an existing knob means.
 | Sympathetic resonance on the Ribbon Piano, Electric Grand and Harpsichord | M | **Before 1.0.** Undamped strings ring along through the bridge. Costs CPU. |
 | The Tonewheel Organ's key scaling, preamp response and computed tonewheel waveform | S–M | Done, for the next release: the B-3's resistance wires, wheel levels and filters, the swell pedal's shut plate, and a waveform from the tooth and pickup (*Tooth relief* replaces *Wheel harmonics*). |
 | Companion modes on the Gong Keyboard | M | **Before 1.0.** Beating, drifting nodal lines and travelling waves. Doubles the modes. |
-| Resonator tube losses on the Vibraphone | S | **Before 1.0.** The bass's pitch wobble is probably too large without them. |
+| Resonator tube losses on the Vibraphone | S | Done, for the next release: boundary-layer losses on the shaft, the disc (growing as it closes) and the bottom plug, 14 % more than the walls alone at F3. The bass's pitch wobble moved by under 2 ¢, so a leaking plug or the tube's wall vibrating would have to be what makes real tubes broader, if they are. |
 | Spheroidal harmonics on the Black-Hole Keyboard | S–M | **Before 1.0.** Mode mixing at high spin. |
 | The Harpsichord's second polarisation after release | S–M | **Before 1.0** if wanted: the two-stage decay of a plucked string. |
 | An immovable clamped rim on the Gong Keyboard | L | **Before 1.0** if wanted: the clamped plate's nonlinearity is about 3× too weak. Needs a new Airy basis. |
