@@ -161,6 +161,16 @@ async function remembered(tab) {
     if (below !== (v === '1')) out.push(`the switch doesn't put the controls ${v === '1' ? 'below' : 'beside'} the views`);
     if (!(await tab.evaluate(SHOWN, ROWS[1][1])).every(Boolean)) out.push(`the controls are not all shown ${v === '1' ? 'below' : 'beside'} the views`);
     if (await tab.evaluate(WIDE) > 0) out.push(`scrolls sideways with the controls ${v === '1' ? 'below' : 'beside'} the views`);
+    // scrolled, the controls pass under their row of toggles, never above it
+    const gap = await tab.evaluate(() => {
+      const c = document.querySelector('#controls'), bar = c?.querySelector(':scope > .forte-toggles');
+      if (!bar) return 0;
+      c.scrollTop = c.scrollHeight;
+      const g = bar.getBoundingClientRect().top - c.getBoundingClientRect().top - c.clientTop;
+      c.scrollTop = 0;
+      return g;
+    });
+    if (gap > 1) out.push(`scrolled, the controls show above their toggles ${v === '1' ? 'below' : 'beside'} the views`);
   }
   await tab.locator('.forte-mode button[data-mode="perform"]').click({ timeout: 2000 }).catch(() => {});
   await tab.waitForTimeout(250);

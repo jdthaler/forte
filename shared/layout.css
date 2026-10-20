@@ -73,9 +73,12 @@ body.hide-controls > main { grid-template-columns: minmax(0, 1fr); grid-template
 body[data-instrument] #controls { grid-area: controls; }
 body[data-instrument] #views { grid-area: views; }
 .forte-toggles { display: flex; align-items: center; min-width: 0; }
-/* the controls' row stays at the top of the panel as it scrolls */
+/* the controls' row stays at the top of the panel as it scrolls: the panel gives up its top
+   padding to it, or the controls would scroll through that padding, above the row */
+#controls:has(> .forte-toggles) { padding-top: 0; }
+body.perform #controls { padding-top: 12px; }
 #controls > .forte-toggles {
-  position: sticky; top: 0; z-index: 3; margin: -12px -14px 4px; padding: 12px 14px 10px;
+  position: sticky; top: 0; z-index: 3; margin: 0 -14px 4px; padding: 12px 14px 10px;
   background: var(--panel); border-bottom: 1px solid var(--line);
 }
 #controls > .forte-no-view { margin: 10px 0; }
