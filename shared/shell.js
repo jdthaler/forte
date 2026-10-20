@@ -42,18 +42,15 @@
 //   onNoteOn(key, vel)  onNoteOff(key)  onSustain(on)  onPanic()  onCC(cc, value)
 //   onPressure(value, key|null)  onBend(value)   (MIDI aftertouch 0..1 and pitch bend −1..1; the
 //                   engine also receives { type: 'pressure', value, key } and { type: 'bend', value })
-//   onNoteBend(key, semitones)  onSlide(key, value)   one note's own bend and slide (0..1, NaN: none),
-//                   from MPE (shared/mpe.js); the engine receives { type: 'noteBend', key, value: the
-//                   frequency ratio along the tuning } and { type: 'slide', key, value: the note's own
-//                   value of the mod wheel's parameter, as the wheel would set it }
+//   (MPE, shared/mpe.js: a member channel's bend, slide and pressure go to its note's engine as
+//   { type: 'noteBend', key, value }, { type: 'slide', key, value } and pressure: midi.js pageMpe)
 //   onParam(id, value, P, param, dragging)   id = '*' after a preset or reset
 
 import { createChain } from './chain.js';
 import { createKeyboard } from './keyboard.js';
 import { trimGain } from './registry.js';
 import { controlOwns, focusedByPointer } from './focus.js';
-import { startMIDI, resumeMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto, mpeMode } from './midi.js';
-import { createMpe, bendRatio } from './mpe.js';
+import { startMIDI, resumeMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe } from './midi.js';
 import { attachPresets } from './user-presets.js';
 // after a change, a control picked with the pointer lets go of the focus (the keys go back to the
 // instrument); one reached with Tab keeps it, so the next Space or arrow works it again
@@ -168,6 +165,9 @@ export function createShell(cfg) {
   shell.applyMix = () => { if (shell.audio) shell.audio.chain.apply(shell.P, trimGain(cfg.id)); };
 
   // ---- notes ---------------------------------------------------------------
+  // MPE: a member channel's bend, slide and pressure are its note's (a note-on's go with it)
+  const notes = pageMpe({ post: (m) => shell.post(m), params: () => shell.P, modWheel: cfg.modWheel, groups: cfg.groups });
+  shell.mpe = notes.mpe;
   // an instrument that speaks only while held says so the first time a key is let go too soon
   const pressedAt = new Map();
   let holdHinted = false;
@@ -175,14 +175,13 @@ export function createShell(cfg) {
   // starts plain again
   async function down(key, vel, own) {
     if (key < LO || key > HI) return;
-    if (!own && expressed.has(key)) { expressed.delete(key); own = [{ type: 'noteBend', key, value: 1 }, { type: 'slide', key, value: NaN }]; }
     if (cfg.holdHint) pressedAt.set(key, performance.now());
     latched.delete(key); sost.strike(key);
     sounding.set(key, (sounding.get(key) || 0) + 1);
     shell.keys.set(key, true);
     if (shell.audio) shell.startAudio(); // resumes a suspended context; no await, so order is kept
     else try { await shell.startAudio(); } catch { return; }
-    for (const m of own ?? []) shell.post(m);
+    for (const m of notes.strike(key, own)) shell.post(m);
     shell.post({ type: 'noteOn', key, velocity: vel, data: cfg.noteData?.(key, vel, shell.P, shell.audio.ctx.sampleRate) });
     cfg.onNoteOn?.(key, vel);
   }
@@ -284,33 +283,9 @@ export function createShell(cfg) {
   function initMIDI() {
     startMIDI({ onMIDI, status: (t) => { if ($('#midi')) $('#midi').textContent = t; }, button: $('#midi-btn') });
   }
-  // MPE: a member channel's bend, slide and pressure are its note's. A note-on's own go with it (`own`).
-  const wheel = cfg.modWheel && (typeof cfg.modWheel === 'string' ? { param: cfg.modWheel } : cfg.modWheel);
-  const wheelParam = wheel && ALL.find((q) => q.id === wheel.param);
-  const expressed = new Set(); // keys the engine was given their own bend or slide
-  let gathering = null; // a note-on's own expression, gathered to go with it
-  const express = (m) => { expressed.add(m.key); if (gathering) gathering.push(m); else shell.post(m); };
-  const mpe = createMpe({
-    noteBend(key, semitones) { express({ type: 'noteBend', key, value: bendRatio(shell.P, key, semitones) }); cfg.onNoteBend?.(key, semitones); },
-    noteSlide(key, value) { // a mod wheel of its own
-      if (!wheelParam) return;
-      express({ type: 'slide', key, value: Number.isNaN(value) ? NaN : wheelValue(wheelParam, value * 127, wheel.max ?? wheelParam.max) });
-      cfg.onSlide?.(key, value);
-    },
-    notePressure(key, value) { shell.post({ type: 'pressure', value, key }); cfg.onPressure?.(value, key); },
-  });
-  let mpeOn = false;
-  shell.mpe = mpe;
   function onMIDI(ev) {
     const [st, d1, d2] = ev.data, cmd = st & 0xf0;
-    mpe.mode = mpeMode();
-    gathering = cmd === 0x90 && d2 > 0 ? [] : null;
-    const its = mpe.midi(ev.data), own = gathering?.length ? gathering : undefined;
-    gathering = null;
-    if (mpe.active() !== mpeOn) {
-      mpeOn = mpe.active();
-      if (mpe.mode === 'auto') toast(mpeOn ? `MPE on: each note has a channel of its own (${mpe.members(0) + mpe.members(1)} channels)` : 'MPE off');
-    }
+    const { own: its, with: own } = notes.midi(ev.data);
     if (its) return;
     if (cmd === 0x90 && d2 > 0) down(d1, touched(d2 / 127) * (soft ? SOFT_PEDAL : 1), own); // the velocity curve, the soft pedal
     else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) up(d1, cmd === 0x80 ? d2 / 127 : undefined);

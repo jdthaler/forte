@@ -12,7 +12,7 @@ import { createChain } from '../../shared/chain.js';
 import { MotionView, SpectrumView, drawSection, FAMILY } from './viz.js';
 import { SpectrogramView } from '../../shared/views.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, touched, createSostenuto } from '../../shared/midi.js';
+import { startMIDI, resumeMIDI, touched, createSostenuto, pageMpe } from '../../shared/midi.js';
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
@@ -257,9 +257,11 @@ function initMIDI() {
   startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn') });
 }
 
+const notes = pageMpe({ post: () => {}, params: () => P }); // MPE: no note bends alone, and a member's bend is no one else's
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data;
   const cmd = st & 0xf0;
+  if (notes.midi(ev.data).own) return;
   if (cmd === 0x90 && d2 > 0) noteOn(d1, INSTRUMENT.midiVelocity(touched(d2 / 127))); // 0.25 … 6 m/s hammer speed
   else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) noteOff(d1);
   else if (cmd === 0xb0 && d1 === 64) setSustain(d2 >= 64);

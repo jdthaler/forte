@@ -41,9 +41,9 @@ export function createMpe(sink) {
   // a zone of `count` members: the other gives up channels it would share; its members bend ±48 again
   const configure = (z, count) => {
     count = Math.max(0, Math.min(15, count));
+    const other = members(1 - z);
     zones[z] = count;
-    if (zones[1 - z] < 0) zones[1 - z] = 0;
-    if (zones[1 - z] > 14 - count) zones[1 - z] = Math.max(0, 14 - count);
+    zones[1 - z] = count > 0 && other > 14 - count ? Math.max(0, 14 - count) : other;
     range[z] = MEMBER_BEND;
   };
 

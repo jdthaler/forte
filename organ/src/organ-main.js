@@ -10,7 +10,7 @@ import { createChain } from '../../shared/chain.js';
 import { SpectrogramView } from '../../shared/views.js';
 import { GeneratorView, LeslieView, OutputView, drawScanner, BAR_COLORS, useModel } from './organ-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto } from '../../shared/midi.js';
+import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto, pageMpe } from '../../shared/midi.js';
 import { controlOwns, focusedByPointer } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
@@ -202,8 +202,10 @@ function initMIDI() {
 let lastSustain = false;
 const sost = createSostenuto(); // CC66
 let soft = false;               // CC67
+const notes = pageMpe({ post: () => {}, params: () => P }); // MPE: the generator turns every wheel, so no note bends alone, and a member's bend is no one else's
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data, cmd = st & 0xf0;
+  if (notes.midi(ev.data).own) return;
   if (cmd === 0x90 && d2 > 0) keyDown(d1, touched(d2 / 127) * (soft ? SOFT_PEDAL : 1));
   else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) keyUp(d1);
   else if (cmd === 0xb0) {

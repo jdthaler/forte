@@ -9,7 +9,7 @@ import { createChain } from '../../shared/chain.js';
 import { SpectrogramView } from '../../shared/views.js';
 import { drawPlane, drawKerr, WaveView, Lazy } from './ringdown-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, wheelValue, touched, SOFT_PEDAL, createSostenuto } from '../../shared/midi.js';
+import { startMIDI, resumeMIDI, wheelValue, pageMpe, touched, SOFT_PEDAL, createSostenuto } from '../../shared/midi.js';
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
@@ -75,11 +75,12 @@ function applyMix() { if (audio) audio.chain.apply(P, trimGain('blackhole')); } 
 // ---------------------------------------------------------------------------
 // keys
 
-async function noteOn(key, vel = INSTRUMENT.keyVelocity) { // computer keys: keyVelocity (1)
+async function noteOn(key, vel = INSTRUMENT.keyVelocity, own) { // computer keys: keyVelocity (1); own: an MPE note's own (midi.js pageMpe)
   if (key < KEY_LO || key > KEY_HI) return;
   down.add(key); sost.strike(key);
   keyboardView.set(key, true);
   const a = await startAudio();
+  for (const m of notes.strike(key, own)) a.node.port.postMessage(m);
   a.node.port.postMessage({ type: 'noteOn', key, velocity: vel }); // the engine builds the voice the views show
   setFocus(key, vel);
 }
@@ -125,9 +126,11 @@ function updateHelp() {
 function initMIDI() {
   startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn') });
 }
+const notes = pageMpe({ post, params: () => P, modWheel: INSTRUMENT.modWheel, groups: GROUPS }); // MPE: each note's own
 function onMIDI(ev) {
-  const [st, d1, d2] = ev.data, cmd = st & 0xf0;
-  if (cmd === 0x90 && d2 > 0) noteOn(d1, INSTRUMENT.midiVelocity(touched(d2 / 127) * (soft ? SOFT_PEDAL : 1)));
+  const [st, d1, d2] = ev.data, cmd = st & 0xf0, mpe = notes.midi(ev.data);
+  if (mpe.own) return;
+  if (cmd === 0x90 && d2 > 0) noteOn(d1, INSTRUMENT.midiVelocity(touched(d2 / 127) * (soft ? SOFT_PEDAL : 1)), mpe.with);
   else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) noteOff(d1);
   else if (cmd === 0xb0 && d1 === 1) setParam(INSTRUMENT.modWheel, wheelValue(ALL_PARAMS.find((q) => q.id === INSTRUMENT.modWheel), d2)); // at rest: the default spin
   else if (cmd === 0xb0 && d1 === 66) { for (const k of sost.set(d2 >= 64, down)) if (!down.has(k)) release(k); }

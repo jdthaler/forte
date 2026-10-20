@@ -1,7 +1,8 @@
 // gen-native-vectors.mjs — what the shared JavaScript computes, for native/tests to check the C++
 // ports against (native/tests/js-vectors.h): shared/dsp.js, shared/impulses.js (the random
-// sequence and the impulse responses), shared/linalg.js and the output chain (shared/chain.js,
-// offline as tools/headless.mjs applies it).
+// sequence and the impulse responses), shared/linalg.js, the output chain (shared/chain.js,
+// offline as tools/headless.mjs applies it) and MPE (shared/mpe.js: a stream decoded, and the
+// bends along tunings).
 //
 // Usage: node tools/gen-native-vectors.mjs           (writes native/tests/js-vectors.h)
 //        node tools/gen-native-vectors.mjs --check   (exit 1 if it is stale)
@@ -12,11 +13,13 @@ import { soundboardIR, roomIR, venueIR, venueGain, VENUES } from '../shared/impu
 import { symEig, genEig } from '../shared/linalg.js';
 import { FS_SHIM, webAudioIR } from './audio-util.mjs';
 import { applyChain } from './headless.mjs';
+import { createMpe, bendRatio, MODES } from '../shared/mpe.js';
+import { PITCHES, TEMPERAMENTS, CENTS } from '../shared/tuning.js';
 
 const R = new URL('../', import.meta.url), FILE = new URL('native/tests/js-vectors.h', R);
 const out = [];
 const w = (s = '') => out.push(s);
-const num = (x) => (Number.isFinite(x) ? (Object.is(x, -0) ? '-0.0' : String(x)) : x > 0 ? 'INFINITY' : '-INFINITY');
+const num = (x) => (Number.isFinite(x) ? (Object.is(x, -0) ? '-0.0' : String(x)) : Number.isNaN(x) ? 'NAN' : x > 0 ? 'INFINITY' : '-INFINITY');
 const arr = (name, xs, type = 'double') => w(`inline const ${type} ${name}[] = {${Array.from(xs, num).join(', ')}};`);
 
 // the generator of shared/impulses.js (not exported there), for its sequence
@@ -106,6 +109,74 @@ const venueP = { ...P, venue: 'hall' }, yHall = applyChain({ id: '', chain: { ..
 w('// the same in the concert hall (venue: hall)');
 arr('kChainHallOut', [0, 1].flatMap((c) => pick.map((i) => yHall[c][i])));
 arr('kChainHallEnergy', [0, 1].map((c) => yHall[c].reduce((a, v) => a + v * v, 0)));
+w();
+w('// shared/mpe.js: a stream decoded. Each step is a MIDI message (status, data 1, data 2), or with status 0');
+w('// a change of mode (data 1: 0 auto, 1 on, 2 off); whether the decoder took it as its own, and what it');
+w('// handed over from kMpeEventAt[step] on: (0 bend in semitones | 1 slide | 2 pressure, key, value)');
+{
+  const steps = [];
+  const cc = (ch, n, v) => steps.push([0xb0 | ch, n, v]);
+  const mcm = (master, n) => { cc(master, 101, 0); cc(master, 100, 6); cc(master, 6, n); };
+  const rpn0 = (ch, semis, cents) => { cc(ch, 101, 0); cc(ch, 100, 0); cc(ch, 6, semis); if (cents !== undefined) cc(ch, 38, cents); };
+  const bend = (ch, b) => steps.push([0xe0 | ch, b & 127, b >> 7]);
+  const on = (ch, k) => steps.push([0x90 | ch, k, 100]), off = (ch, k) => steps.push([0x80 | ch, k, 0]);
+  const mode = (m) => steps.push([0, m, 0]);
+  // plain MIDI on Auto, then a lower zone of 15, its members' bends, slides and pressure
+  on(1, 60); bend(1, 12000); cc(1, 74, 90); steps.push([0xd1, 50, 0]); off(1, 60);
+  mcm(0, 15);
+  bend(1, 10000); cc(1, 74, 30); on(1, 60); bend(1, 0); bend(1, 16383); cc(1, 74, 127); steps.push([0xd1, 127, 0]); off(1, 60); bend(1, 8192);
+  on(2, 64); on(0, 67); bend(0, 9000); steps.push([0xd0, 40, 0]); cc(0, 74, 10); steps.push([0xa2, 64, 20]);
+  rpn0(3, 12, 50); bend(3, 4096); on(3, 72); bend(3, 2048); rpn0(0, 7);
+  // an upper zone shrinks the lower; RPN 6 of 0 ends a zone; the modes
+  mcm(15, 4); on(14, 50); bend(14, 0); on(10, 52); bend(10, 9000); on(11, 53); bend(11, 7000);
+  mcm(0, 0); on(1, 40); bend(1, 3000); mcm(15, 0); bend(14, 100);
+  mode(1); on(5, 61); bend(5, 1000); cc(5, 74, 64); mode(2); bend(5, 2000); mcm(0, 3); on(2, 62); bend(2, 100);
+  mode(0); on(2, 63); bend(2, 200); mcm(0, 3); on(2, 63); bend(2, 300); cc(2, 101, 0); cc(2, 100, 0); cc(2, 38, 40); cc(2, 6, 2); bend(2, 400);
+  mode(1); mcm(0, 2); on(3, 70); bend(3, 500); on(2, 71); bend(2, 600);
+  // and a seeded stream of anything
+  const r = rng(77), pick = (n) => Math.floor(r() * n);
+  for (let i = 0; i < 400; i++) {
+    const ch = pick(16), t = pick(10);
+    if (t === 0) mcm(pick(2) ? 15 : 0, pick(16));
+    else if (t === 1) mode(pick(3));
+    else if (t === 2) on(ch, 40 + pick(40));
+    else if (t === 3) off(ch, 40 + pick(40));
+    else if (t === 4) cc(ch, 74, pick(128));
+    else if (t === 5) steps.push([0xd0 | ch, pick(128), 0]);
+    else if (t === 6) rpn0(ch, pick(97), pick(2) ? pick(100) : undefined);
+    else bend(ch, pick(16384));
+  }
+  let events = [];
+  const mpe = createMpe({
+    noteBend: (key, v) => events.push(0, key, v), noteSlide: (key, v) => events.push(1, key, v), notePressure: (key, v) => events.push(2, key, v),
+  });
+  const own = [], at = [], all = [];
+  for (const s of steps) {
+    at.push(all.length / 3);
+    events = [];
+    if (s[0] === 0) { mpe.mode = MODES[s[1]][0]; own.push(0); } else own.push(mpe.midi(s) ? 1 : 0);
+    all.push(...events);
+  }
+  arr('kMpeIn', steps.flat(), 'int');
+  arr('kMpeOwn', own, 'int');
+  arr('kMpeEventAt', [...at, all.length / 3], 'int');
+  arr('kMpeEvents', all);
+}
+w('// shared/mpe.js bendRatio: tunings (the Pitch and Temperament choices\' indices, the root, the custom cents),');
+w('// and for each the ratio of every kBendKey bent by every kBendSemitones');
+{
+  const tunings = [
+    { pitch: 440, temperament: 'equal', tuningRoot: 0 }, { pitch: 415, temperament: 'equal', tuningRoot: 0 },
+    { pitch: 440, temperament: 'meantone', tuningRoot: 0 }, { pitch: 442, temperament: 'werckmeister', tuningRoot: 2 },
+    { pitch: 440, temperament: 'just', tuningRoot: 9 },
+    { pitch: 466, temperament: 'custom', tuningRoot: 5, ...Object.fromEntries(CENTS.map((p, i) => [p.id, ((i * 37) % 23) - 11.5])) },
+  ].map((t) => ({ ...Object.fromEntries(CENTS.map((p) => [p.id, 0])), ...t }));
+  const keys = [21, 60, 61, 69, 108], semis = [-100, -48, -12.5, -1, -0.3, 0, 0.5, 1, 2, 7.25, 48, 100];
+  arr('kBendTunings', tunings.flatMap((t) => [PITCHES.findIndex(([hz]) => hz === t.pitch), TEMPERAMENTS.findIndex((x) => x.id === t.temperament), t.tuningRoot, ...CENTS.map((p) => t[p.id])]));
+  arr('kBendKey', keys, 'int');
+  arr('kBendSemitones', semis);
+  arr('kBendRatio', tunings.flatMap((t) => keys.flatMap((k) => semis.map((s) => bendRatio(t, k, s)))));
+}
 w();
 w('} // namespace js');
 const text = `${out.join('\n')}\n`;

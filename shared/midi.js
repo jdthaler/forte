@@ -16,10 +16,10 @@
 //   puts beside the #midi status), touched(v) a MIDI velocity (0..1) through it; SOFT_PEDAL
 //   scales the velocity of keys struck under CC67; createSostenuto() keeps the keys CC66 holds.
 //   mpeMode() is MPE's mode the player chose (shared/mpe.js: 'auto', 'on' or 'off'; every page
-//   shares it, from a menu beside the velocity curve's).
+//   shares it, from a menu beside the velocity curve's); pageMpe() decodes it for a page.
 //   The plugins do the same (native/plugin/plugin.cpp: kTouchGamma, kSoftPedal, sostenutoPedal, kMpeId).
 
-import { MODES } from './mpe.js';
+import { MODES, createMpe, bendRatio } from './mpe.js';
 
 const KEY = 'forte/midi/v1';
 const TOUCH_KEY = 'forte/touch/v1';
@@ -144,6 +144,52 @@ export function createSostenuto() {
     strike(key) { holding.delete(key); },
     keys: () => holding,
     clear() { on = false; caught.clear(); holding.clear(); },
+  };
+}
+
+/**
+ * A page's MPE (shared/mpe.js, in the mode the player chose): each note's own bend, slide and
+ * pressure as the engine's messages, which shared/shell.js and the pages with their own MIDI post.
+ *   const notes = pageMpe({ post, params: () => P, modWheel })   (modWheel: the descriptor's, or none)
+ *   const r = notes.midi(data)   r.own: MPE's own message (the page does nothing more with it);
+ *                                r.with: a note-on's own expression, to post just before its noteOn
+ *   notes.strike(key, own)       what to post before a key's noteOn: its own (r.with), or, for a note
+ *                                without, a reset if the key had some
+ * A bend becomes { type: 'noteBend', key, value: the frequency ratio along the tuning }, a slide
+ * { type: 'slide', key, value: the mod wheel's parameter as the wheel would set it (NaN: none) },
+ * pressure { type: 'pressure', value, key }.
+ */
+export function pageMpe({ post, params, modWheel, groups = [] }) {
+  const wheel = modWheel && (typeof modWheel === 'string' ? { param: modWheel } : modWheel);
+  const p = wheel && groups.flatMap((g) => g.params).find((q) => q.id === wheel.param);
+  const expressed = new Set(); // keys the engine was given their own bend or slide
+  let gathering = null;        // a note-on's own, gathered to go with it
+  const express = (m) => { expressed.add(m.key); if (gathering) gathering.push(m); else post(m); };
+  const mpe = createMpe({
+    noteBend: (key, semitones) => express({ type: 'noteBend', key, value: bendRatio(params(), key, semitones) }),
+    noteSlide: (key, u) => { if (p) express({ type: 'slide', key, value: Number.isNaN(u) ? NaN : wheelValue(p, u * 127, wheel.max ?? p.max) }); },
+    notePressure: (key, value) => post({ type: 'pressure', value, key }),
+  });
+  let on = false;
+  return {
+    mpe,
+    midi(data) {
+      mpe.mode = mpeMode();
+      gathering = (data[0] & 0xf0) === 0x90 && data[2] > 0 ? [] : null;
+      const own = mpe.midi(data), got = gathering;
+      gathering = null;
+      if (mpe.active() !== on) {
+        on = mpe.active();
+        if (mpe.mode === 'auto') import('./shell.js').then(({ toast }) => toast(on ? `MPE on: each note on a channel of its own (${mpe.members(0) + mpe.members(1)} channels)` : 'MPE off'));
+      }
+      return { own, with: got?.length ? got : undefined };
+    },
+    strike(key, own) {
+      if (own) return own;
+      if (!expressed.has(key)) return [];
+      expressed.delete(key);
+      return [{ type: 'noteBend', key, value: 1 }, { type: 'slide', key, value: NaN }];
+    },
   };
 }
 

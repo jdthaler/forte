@@ -39,9 +39,9 @@ bool MpeDecoder::isMember(int c) const { return zoneOf(c) >= 0; }
 // members bend ±48 again.
 void MpeDecoder::configure(int zone, int count) {
   count = count < 0 ? 0 : count > 15 ? 15 : count;
+  const int other = members(1 - zone);
   zone_[zone] = count;
-  if (zone_[1 - zone] < 0) zone_[1 - zone] = 0;
-  if (zone_[1 - zone] > 14 - count) zone_[1 - zone] = 14 - count < 0 ? 0 : 14 - count;
+  zone_[1 - zone] = count > 0 && other > 14 - count ? (14 - count < 0 ? 0 : 14 - count) : other;
   range_[zone] = mpe::kMemberBend;
 }
 
