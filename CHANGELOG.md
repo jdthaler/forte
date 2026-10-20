@@ -87,6 +87,7 @@ tagged; this changelog and the commit titles record them.
 - `tools/check-pages.mjs` turns every view's toggle off and on at every size, and on the desktop
   checks that the views turned on are still on after a reload and all show in Perform.
 - **The native tests include `<algorithm>` for `std::clamp`,** which MSVC needs spelled out (the MPE, Reed Piano and plugin tests).
+- **The plugin tests use `std::numbers::pi` in place of `M_PI`,** which MSVC leaves undefined.
 
 ### Ribbon Piano 0.9.0
 - **Above the keys, only controls for playing:** keyboard velocity, una corda and volume. Felt
