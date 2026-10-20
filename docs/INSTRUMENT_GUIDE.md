@@ -112,7 +112,8 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: 'sustain' (a damper, sent to the engine), 'hold' (keys latch) or null
   modWheel: 'strike',                   // CC1 (or { param, max })
   mpe: { bend: 48, slide: true },       // MPE: how far one note bends (semitones, up to 96; 0: none), and
-                                        // whether CC74 slides the mod wheel's parameter for that note alone
+                                        // whether CC74 slides the mod wheel's parameter for that note alone;
+                                        // press: true when a bend presses the key as the wheel does (the clavier)
   controllers: { 67: 'unaCorda' },      // other MIDI controllers → parameters (a toggle is on at 64);
                                         // { param, values: [a, b] } picks b from 64 up, { param, toggle: [a, b] } flips on each press
   console: { groups, defaults, get },   // state the page keeps beside its groups (the organ's drawbars): plugin parameters too

@@ -154,9 +154,9 @@ for (const slug of slugs) {
   const keys = [60, 64, 67].map((k) => Math.min(hi - 2, Math.max(lo + 2, k)));
   const play = (events, sec = 0.6, fs = FS) => new Player(I, Engine, fs, D).render(sec, [...keys.flatMap((k) => [[0.01, 'on', k, 0.7], [0.45, 'off', k]]), ...events]);
   const plain = play([]);
-  const { bend = 0, slide = false } = I.mpe ?? {};
+  const { bend = 0, slide = false, press = false } = I.mpe ?? {};
   await test(`${slug}: ${bend ? `one note bends up to ±${bend} semitones` : 'no note bends alone'}${slide ? `, and slides its own ${I.modWheel.param ?? I.modWheel}` : ''}; a bend and a slide of none, before and while a note sounds, change nothing at all`, () => {
-    if (I.mpe) assert.deepEqual(Object.keys(I.mpe).filter((k) => !['bend', 'slide'].includes(k)), [], 'mpe: { bend, slide }');
+    if (I.mpe) assert.deepEqual(Object.keys(I.mpe).filter((k) => !['bend', 'slide', 'press'].includes(k)), [], 'mpe: { bend, slide, press }');
     if (slide) assert.ok(I.modWheel, 'a slide is a mod wheel of its own');
     const none = play(keys.flatMap((k) => [[0, 'noteBend', k, 0], [0, 'slide', k, NaN], [0.2, 'noteBend', k, 0], [0.2, 'slide', k, NaN]]));
     assert.ok(!differs(none[0], plain[0]) && !differs(none[1], plain[1]), 'a bend of 0 and no slide change the sound');
@@ -164,7 +164,16 @@ for (const slug of slugs) {
     assert.equal(differs(bent[0], plain[0]), bend > 0, bend ? 'a note\'s bend changes the sound' : 'an instrument that cannot bend one note ignores its bend');
     if (!slide) assert.ok(!differs(slid[0], plain[0]), 'an instrument whose notes have no slide ignores it');
   });
-  if (bend && !OWN.includes(slug)) {
+  if (bend && press) {
+    // it bends a note as its wheel does, by pressing its key harder: up only, as far as a press goes
+    await test(`${slug}: a note struck bent fully up sounds as sharp as its wheel at full; one bent down sounds as it was`, () => {
+      const key = keys[1], one = (s, ev = []) => spectrum(new Player(I, Engine, FS, D).render(1.4, [[0, 'noteBend', key, s], ...ev, [0, 'on', key, 0.7]]), FS);
+      const base = one(0), up = shift(base, one(bend), 20), wheel = shift(base, one(0, [[0, 'bend', 1]]), 20);
+      assert.ok(up > 5, `+${bend} semitones: ${up.toFixed(1)} ¢`);
+      near(up, wheel, 1, 'as the wheel at full');
+      near(shift(base, one(-bend), 0), 0, 0.5, 'bent down');
+    });
+  } else if (bend && !OWN.includes(slug)) {
     await test(`${slug}: a note struck bent sounds its bend (+35 ¢ and −2 semitones) wherever its spectrum shows it`, () => {
       const key = keys[1], one = (s) => spectrum(new Player(I, Engine, FS, D).render(1.4, [[0, 'noteBend', key, s], [0, 'on', key, 0.7]]), FS);
       const base = one(0);
