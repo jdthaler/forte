@@ -3,22 +3,18 @@ name: native
 # The C++ side (native/, docs/PLUGINS.md): the plugins built and validated, and the WebAssembly
 # rebuilt with the pinned Emscripten.
 #
-# Two depths. On main and on pull requests into it, the plugins are built, unit-tested and
-# validated on Linux alone (main's runs keep the compiler cache warm for the pull requests). On
-# live, on a pull request into live (a release, CLAUDE.md) and when started by hand from the
-# Actions tab, they are also built on macOS and Windows, auval checks the Audio Units, and the
-# release archives are packed and tried; the release-plugins workflow publishes live's.
+# Two depths. On main and on pull requests (into main, and a release's into live), the plugins
+# are built, unit-tested and validated on Linux alone (main's runs keep the compiler cache warm
+# for the pull requests), so a release's pull request is as quick as any other and the site goes
+# live when it merges (CLAUDE.md). On live, and when started by hand from the Actions tab, they
+# are also built on macOS and Windows, auval checks the Audio Units, and the release archives
+# are packed and tried; the release-plugins workflow publishes live's when its run is green, so
+# the plugins follow the site by the length of this run.
 #
 # The Linux-only runs build only what changed: when a green run on the branch or on main has
 # already built and validated the same sources (native/ and the few files outside it the builds
 # read), the plugins and wasm jobs pass at once without building, so their required checks
 # still report. A change to the site or the docs alone builds nothing here.
-#
-# A push to live doesn't build again what its release pull request's run already built: live
-# moves only through those pull requests, and their runs build the merge with live, which is
-# the commit the merge makes. The reuse job finds a green pull-request run that built the same
-# source tree (its built-tree artifact) and, if there is one, the other jobs are skipped and
-# release-plugins takes that run's archives. Otherwise live builds in full, as before.
 
 on:
   push:
@@ -34,52 +30,15 @@ env:
   CLAP_VALIDATOR: '0.4.1'
 
 jobs:
-  reuse:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/live'
-    runs-on: ubuntu-24.04
-    permissions:
-      actions: read
-      contents: read
-    env:
-      GH_TOKEN: ${{ github.token }}
-    outputs:
-      run: ${{ steps.find.outputs.run }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Did a green release pull request build this tree already?
-        id: find
-        run: |
-          tree=$(git rev-parse 'HEAD^{tree}')
-          for run in $(gh run list --workflow native.yml --event pull_request --status success --limit 30 --json databaseId --jq '.[].databaseId'); do
-            rm -rf t
-            gh run download "$run" --name built-tree --dir t 2>/dev/null || continue
-            if [ "$(cat t/tree.txt)" = "$tree" ]; then
-              echo "run=$run" >> "$GITHUB_OUTPUT"
-              echo "$run" > reused-from.txt
-              echo "::notice::native run $run built this tree ($tree) and passed; not building it again."
-              exit 0
-            fi
-          done
-          echo "::notice::No green pull-request run built this tree ($tree); building it."
-      - name: Say which run's archives to release
-        if: steps.find.outputs.run != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: reused-from
-          path: reused-from.txt
-          retention-days: 30
-
   plugins:
-    needs: reuse
-    if: ${{ !cancelled() && needs.reuse.outputs.run == '' }}
     name: plugins (${{ matrix.preset }})
     runs-on: ${{ matrix.os }}
     env:
-      FULL: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/live' || github.base_ref == 'live' }}
+      FULL: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/live' }}
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON((github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/live' || github.base_ref == 'live')
+        include: ${{ fromJSON((github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/live')
           && '[{"os":"ubuntu-24.04","preset":"linux"},{"os":"macos-15","preset":"macos"},{"os":"windows-2022","preset":"windows"}]'
           || '[{"os":"ubuntu-24.04","preset":"linux"}]') }}
     defaults:
@@ -202,18 +161,6 @@ jobs:
             auval -strict -v "$type" "$sub" "$manu"
           done
 
-      # the merged source tree this run built and validated, which live's push looks for (reuse)
-      - name: Record the source tree
-        if: env.FULL == 'true' && matrix.preset == 'linux'
-        run: mkdir -p built-tree && git rev-parse 'HEAD^{tree}' > built-tree/tree.txt
-      - name: Keep the source tree's id
-        if: env.FULL == 'true' && matrix.preset == 'linux'
-        uses: actions/upload-artifact@v4
-        with:
-          name: built-tree
-          path: built-tree/tree.txt
-          retention-days: 30
-
       - name: Keep the plugins (to try in a DAW)
         if: env.SKIP != 'true'
         uses: actions/upload-artifact@v4
@@ -329,8 +276,6 @@ jobs:
           key: ${{ env.PASSED_KEY }}
 
   wasm:
-    needs: reuse
-    if: ${{ !cancelled() && needs.reuse.outputs.run == '' }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -338,7 +283,7 @@ jobs:
       # committed WebAssembly, package.json, which makes the tests' .js modules, and this workflow)
       # aren't built again
       - name: Were these sources built and checked already?
-        if: github.event_name != 'workflow_dispatch' && github.ref != 'refs/heads/live' && github.base_ref != 'live'
+        if: github.event_name != 'workflow_dispatch' && github.ref != 'refs/heads/live'
         run: echo "PASSED_KEY=passed-wasm-${{ hashFiles('native/**', '**/wasm/*.wasm', 'package.json', '.github/workflows/native.yml') }}" >> "$GITHUB_ENV"
       - name: Look for that run
         id: passed

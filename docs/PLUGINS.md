@@ -404,18 +404,21 @@ Done (Forte 0.13.0; per instrument and automatic in 0.17.0):
    (the download in place, nothing installed) and `make unquarantine` (clears the Mac's
    quarantine where the plugins are, or in a folder named with `APP_DIR=`…), each also for one
    format (`make install-au`, `make check-app`, `make unquarantine-app`…), which the workflow runs on every instrument's archive before keeping it.
-2. The `release-plugins` workflow runs after every green `native` run on `live` (pull requests
-   into `main` build and validate on Linux only; `live`, a pull request into it, and a run
-   started by hand add macOS, Windows, auval and these archives) and attaches its
-   archives (or, when the release pull request's green run built the same tree, that run's: the
-   push to `live` then builds nothing again) to a GitHub Release when what they're built from changed since the latest release
+2. The `release-plugins` workflow runs after every green `native` run on `live` (pull requests,
+   a release's into `live` too, build and validate on Linux only, so the site goes live as soon
+   as a release merges; `live` itself and a run started by hand add macOS, Windows, auval and
+   these archives, and the plugins follow the site by that run) and attaches its
+   archives to a GitHub Release when what they're built from changed since the latest release
    (`tools/plugin-release.mjs --manifest`: each instrument's version and the `native/` tree). It
    creates the tag itself (`plugins-v<Forte version>`, then `-2`, `-3`…), since sessions don't
    push tags, and writes the notes. It can also be started from the Actions tab.
 3. Each plugin's version is its instrument's (`<slug>-info.cmake`, generated).
 4. `shared/plugins.js` names the archives. The front page's All Plugins overlay links every
    instrument's together; an instrument's page has its own under ↓ Plugin, in a dialog of its
-   own (`…/#plugin`; on phones, a line at the top of How it works opens it).
+   own (`…/#plugin`; on phones, a line at the top of How it works opens it). Both ask GitHub
+   for the latest release and say under the downloads which it is, read from its notes: an
+   instrument whose version there is older than the page's says its plugin is still to come,
+   and one not in it yet has no downloads until it is.
 
 A port sets `plugin: { code, ready: true }` in `shared/registry.js` (`test/site-tests.mjs`
 checks it against `native/instruments/`), and its plugins are released when `main` is next

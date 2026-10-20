@@ -8,7 +8,8 @@ name: release-plugins
 # It runs by itself after every green `native` run on live, and publishes only when what the
 # plugins are built from changed since the latest release (tools/plugin-release.mjs --manifest:
 # each instrument's version and the native/ tree), so a new port reaches the downloads when
-# main is released to live (CLAUDE.md). It can also be started from the Actions tab on live,
+# main is released to live (CLAUDE.md). The site is live by then: its downloads say which
+# release they are until this one is out (shared/plugins.js). It can also be started from the Actions tab on live,
 # which always publishes.
 
 on:
@@ -94,8 +95,8 @@ jobs:
             echo "::error::No successful native run for $SHA on live yet. Wait for it to finish green, then start this again."
             exit 1
           fi
-          # a run on live that found its tree already built by the release pull request's run
-          # (native.yml, reuse) names that run instead of building the archives again
+          # a run on live from before releases' pull requests stopped building in full may name
+          # the pull request's run that built its tree (its reused-from artifact) instead
           if gh run download "$run" --name reused-from --dir reused 2>/dev/null; then
             echo "native run $run reused run $(cat reused/reused-from.txt)"
             run=$(cat reused/reused-from.txt)

@@ -5,7 +5,7 @@
 // string's normal modes, slowly beating).
 
 import { INSTRUMENTS, SECTIONS, FORTE_VERSION } from './shared/registry.js';
-import { downloadLinks, withPlugins } from './shared/plugins.js';
+import { downloadLinks, withPlugins, latestRelease, releaseLine } from './shared/plugins.js';
 import { renderMarkdown } from './shared/markdown.js';
 
 const $ = (s) => document.querySelector(s);
@@ -102,6 +102,7 @@ window.addEventListener('hashchange', () => {
 function openSheet(id) {
   const d = $(`#${id}`);
   if (id === 'credits') loadCredits();
+  if (id === 'plugins') showRelease();
   for (const o of SHEETS) if (o !== id) $(`#${o}`).close();
   if (!d.open) {
     if (d.showModal) d.showModal(); else d.setAttribute('open', '');
@@ -127,6 +128,18 @@ document.addEventListener('click', (e) => {
 // (the release-plugins workflow); each instrument's own download is on its page.
 $('#plugin-list').textContent = `all ${withPlugins().length} instruments`;
 $('#plugins .forte-plugin-get').innerHTML = downloadLinks(); // with each format alone too
+// and which release they are, on first opening (the site can be newer than its plugins)
+let releaseShown = false;
+function showRelease() {
+  if (releaseShown) return;
+  releaseShown = true;
+  latestRelease().then((rel) => {
+    if (!rel) { releaseShown = false; return; } // try again next time
+    const line = $('#plugins .forte-plugin-rel');
+    line.innerHTML = releaseLine(rel).html;
+    line.hidden = false;
+  });
+}
 
 // Credits: docs/PRIOR_ART.md, rendered as on credits/ (credits/credits.js), on first opening
 const REPO = 'https://github.com/jdthaler/forte/blob/live/';
