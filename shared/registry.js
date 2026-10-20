@@ -250,6 +250,13 @@ export const INSTRUMENTS = [
     physics: 'RF cavities · coupled-cell passbands · beam loading',
     accent: '#9fb4ff',
   },
+  {
+    id: 'showers', name: 'Collider Showers', section: 'phenomena', ready: true, version: '0.1.0', trim: 4,
+    plugin: { code: 'Shwr', ready: true },
+    tagline: 'Every key a crystal of a collider\'s calorimeter, rung by the heat of the particle shower inside it: deeper showers for higher energies, a darker note.',
+    physics: 'Calorimetry · electromagnetic and hadronic showers · the thermo-acoustic effect',
+    accent: '#8fd4ff',
+  },
 ];
 
 // The template (docs/template/), the starting point for new instruments: not listed, but it

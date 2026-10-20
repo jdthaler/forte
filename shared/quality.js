@@ -48,7 +48,7 @@ export function connectQuality(node, { toast = () => {} } = {}) {
     if (recent.filter(Boolean).length < 3) return;
     suggested = true;
     const next = level === 'high' ? 'Medium' : 'Low';
-    toast(`The audio is struggling on this device. Try Quality: ${next}, at the end of the controls (CPU).`);
+    toast(`The audio is struggling on this device. Try Quality: ${next}, in the CPU group of controls.`);
   });
   node.port.start?.();
   return () => nodes.delete(node);

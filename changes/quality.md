@@ -1,12 +1,12 @@
 # a Quality setting for phones and older computers
 
 ### Forte (minor)
-- **Quality** (High, Medium, Low) on every instrument page and in every plugin, for phones and
-  older computers: High plays all the physics, exactly as before; Medium and Low play less of
-  what costs the most and is heard the least (fewer voices at once, fewer partials or modes,
-  the sympathetic strings lighter or off). On the pages it is the CPU group at the end of the
-  controls: one choice for every instrument in the browser, which presets and links leave
-  alone. When the audio starts to drop out, the page suggests a lower setting.
+- **Quality** (High, Medium, Low) on every instrument page and in every plugin, for phones and older
+  computers: High plays all the physics, exactly as before; Medium and Low play less of what costs
+  the most and is heard the least (fewer voices at once, fewer partials or modes, the sympathetic
+  strings lighter or off). On the pages it is the last group of controls, CPU: one choice for every
+  instrument in the browser, which presets and links leave alone. When the audio starts to drop out,
+  the page suggests a lower setting.
 - In the plugins Quality is a parameter of its own after the velocity curve, kept with the
   project and in no preset; the Forte app keeps it when you change instrument. A VST3 or CLAP
   host that renders offline (a bounce, a freeze) gets High whatever it is set to.
@@ -136,3 +136,7 @@
 ### Storage Ring (minor)
 - **Quality:** past 24 (Medium) or 12 (Low) beams stored under the pedal, the oldest is scraped
   away; a single beam sounds the same at every quality.
+
+### Collider Showers (minor)
+- **Quality:** 20 crystals ring at once at Medium and 12 at Low (32 at High); a single crystal
+  sounds the same at every quality.

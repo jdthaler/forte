@@ -652,6 +652,12 @@ data):
   "Superconducting TESLA cavities", *Phys. Rev. ST Accel. Beams* **3**,
   092001 (2000),
   [doi:10.1103/PhysRevSTAB.3.092001](https://doi.org/10.1103/PhysRevSTAB.3.092001)).
+  Collider Showers plays the collisions' showers themselves, through the
+  sound they make: the heat a shower leaves in a calorimeter's crystal rings
+  it (the thermo-acoustic effect, measured in a resonant bar rung by an
+  electron beam by B. Buonomo et al., *Astropart. Phys.* **24**, 65 (2005),
+  [arXiv:gr-qc/0505009](https://arxiv.org/abs/gr-qc/0505009)). *LHCsound*
+  (L. Asquith and others, ATLAS, 2010) sonified ATLAS events as data.
 * **Synchronisation and mode locking in musical oscillators.**
   B. van der Pol and J. van der Mark, "Frequency demultiplication",
   *Nature* **120**, 363–364 (1927),

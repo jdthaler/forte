@@ -51,6 +51,11 @@ constexpr double C_PIEZO = 10e-9;  // F, capacitance of the piezo elements
 struct Eq { double bass, mid, midQ, treble; };
 constexpr Eq EQ = {120, 1000, 0.8, 3500}; // Hz
 constexpr int BOARD_MODES = BOARD.maxModes;
+// The preamp's stereo tremolo: an oscillator lights one LED per output, in antiphase, and the
+// photocell beside each shunts its output through the depth pot: gain 1 − depth·Kℓ/(1 + Kℓ) for
+// light ℓ. Photocells light fast and go dark slowly (a VTL5C3: 2.5 ms on, 35 ms off).
+struct Trem { double K, on, off, glide; };
+constexpr Trem TREM = {9, 0.004, 0.035, 0.01}; // full light and depth: −20 dB; time constants in s
 
 // First-order analog section (b1 s + b0)/(a1 s + a0), bilinear with prewarping at fw.
 class RC1 {
@@ -213,6 +218,10 @@ class GrandEngine : public Engine {
   std::array<RC1, 2> hp{}, lo{}, hi{};
   std::array<Biquad, 2> mid{};
   double mix = 0;
+  // the tremolo: its oscillator's phase (0…1) and step, each photocell's light and their time
+  // constants, the depth (gliding to the knob's)
+  double tremPhase = 0, tremInc = 0, ldrOn = 0, ldrOff = 0, tremDepth = 0, tremGlide = 0;
+  std::array<double, 2> ldr{};
   std::array<BoardSlot, 5> boards{};
   BoardSlot *board = nullptr;
   double wantBoard = NAN; // a thickness whose board is being built (only with threads)

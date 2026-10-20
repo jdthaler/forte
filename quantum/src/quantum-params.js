@@ -46,6 +46,17 @@ export const GROUPS = [
     ],
   },
   {
+    title: 'Restrike',
+    params: [
+      { id: 'ramsey', label: 'Coherent restrike (Ramsey fringes)', perform: true, type: 'checkbox', def: false,
+        hint: 'A restruck key sends a second, phase-locked pulse into the packet still ringing there: its amplitudes add to the old ones, so the note can come back twice as strong or vanish, depending on the delay. Off: every strike is a fresh atom.' },
+      { id: 'ramseyDetune', label: 'Pump detuning δ', min: -4, max: 4, def: 0, step: 0.01, fmt: (v) => `${v > 0 ? '+' : ''}${v.toFixed(2)} Hz`,
+        hint: 'The pump\'s carrier off the line of the packet\'s central level: the second pulse\'s phase turns by 2πδ per second of delay, so restrikes on the revival swing between louder and silent every 1/δ seconds.', showIf: (P) => P.ramsey },
+      { id: 'ramseyPhase', label: 'Second pulse\'s phase φ', min: 0, max: 360, def: 0, step: 1, fmt: (v) => `${v.toFixed(0)}°`,
+        hint: 'The pulse pair\'s locked phase: at 0° a restrike on a full revival doubles the packet, at 180° it takes it back.', showIf: (P) => P.ramsey },
+    ],
+  },
+  {
     title: 'Output',
     params: [
       { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.3, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
@@ -68,4 +79,5 @@ export const PRESETS = [
   { name: 'Fixed n̄: chords revive in polyrhythm', p: { lock: false, nbar: 60 } },
   { name: 'Three levels: a chord of Bohr lines', p: { sigma: 0.6, detector: 'x' } },
   { name: 'Tight packet: bright, brief, many echoes', p: { sigma: 4 } },
+  { name: 'Coherent restrike: Ramsey fringes', p: { ramsey: true } },
 ];
