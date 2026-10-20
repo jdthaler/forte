@@ -40,9 +40,9 @@ export const GROUPS = [
   {
     title: 'RF',
     params: [
-      { id: 'synch', label: 'Synchrotron frequency', perform: true, min: 0.5, max: 20, def: 4, log: true, fmt: (v) => `${v.toFixed(2)} Hz`,
+      { id: 'synch', label: 'Synchrotron frequency', min: 0.5, max: 20, def: 4, log: true, fmt: (v) => `${v.toFixed(2)} Hz`,
         hint: 'How fast particles swing in energy in the RF bucket: the rate of the vibrato and of the recoherence. Pressing harder on a key raises the RF voltage, which raises it as √V.' },
-      { id: 'bunch', label: 'Bunch length', perform: true, min: 0.005, max: 0.15, def: 0.025, log: true, fmt: pct(1),
+      { id: 'bunch', label: 'Bunch length', min: 0.005, max: 0.15, def: 0.025, log: true, fmt: pct(1),
         hint: 'The bunch\'s rms length as a share of the ring. A Gaussian bunch rolls the harmonics off as exp(−(2πnσ)²/2): short bunches are bright, long ones soft. More RF voltage (pressure) squeezes it as V^(−¼).' },
       { id: 'spread', label: 'Momentum spread', min: 0.0001, max: 0.005, def: 0.001, log: true, fmt: pct(3),
         hint: 'The rms momentum spread σδ. With the chromaticity it sets how far the betatron signal dephases before it recoheres: by the factor exp(−2(Q′σδ/Qs)²).' },
@@ -51,7 +51,7 @@ export const GROUPS = [
   {
     title: 'Pickup',
     params: [
-      { id: 'pickup', label: 'Pickup', perform: true, type: 'select', def: 'pair',
+      { id: 'pickup', label: 'Pickup', type: 'select', def: 'pair',
         options: [['pair', 'Two buttons'], ['single', 'One button'], ['delta', 'Difference']],
         hint: 'Two buttons, left and right of the beam, on the two channels: the betatron oscillation moves between them. One button on both channels. Difference: left minus right, which hears only the oscillation, fading and recohering.' },
       { id: 'cutoff', label: 'Pickup cutoff', min: 10, max: 3000, def: 120, log: true, fmt: (v) => `${v.toFixed(0)} Hz`,
@@ -63,7 +63,7 @@ export const GROUPS = [
   {
     title: 'Output',
     params: [
-      { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.2, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      { id: 'room', label: 'Room', min: 0, max: 1, def: 0.2, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],

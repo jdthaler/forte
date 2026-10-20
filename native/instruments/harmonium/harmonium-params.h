@@ -75,7 +75,7 @@ inline const ParamInfo kParams[p::count] = {
   {"fullRange", "Full range (A0–C8)", "Reeds (voicing)", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"cassotto", "Cassotto (tone chamber)", "Cassotto and output", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"cassF", "Cassotto resonance", "Cassotto and output", ParamKind::continuous, 300, 3000, 1500, 0, true, false, nullptr, 0, kFormat_cassF, 1},
-  {"room", "Room", "Cassotto and output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, true, nullptr, 0, kFormat_room, 1},
+  {"room", "Room", "Cassotto and output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, false, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Cassotto and output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Cassotto and output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
   {"pitch", "Pitch", "Tuning", ParamKind::choice, 0, 8, 0, 1, false, false, kChoices_pitch, 9, nullptr, 0, kKeys_pitch},

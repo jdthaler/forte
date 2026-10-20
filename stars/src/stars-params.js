@@ -26,11 +26,11 @@ export const GROUPS = [
   {
     title: 'Rotation and view',
     params: [
-      { id: 'spin', label: 'Rotation period', perform: true, min: 0, max: 30, def: 1, step: 0.1, fmt: spinFmt,
+      { id: 'spin', label: 'Rotation period', min: 0, max: 30, def: 1, step: 0.1, fmt: spinFmt,
         hint: 'Splits each mode into 2l + 1 components, m·Ω/2π apart: slow beats at the Sun’s 25.4-day rate (0.46 μHz), a chorus when fast. The mod wheel spins the star up.' },
       { id: 'coreRatio', label: 'Core spins faster by', min: 1, max: 30, def: 5, step: 0.5, fmt: (v) => `× ${v.toFixed(1)}`, showIf: (P) => P.family === 'track',
         hint: 'Red giants’ cores spin faster than their envelopes. The dipole modes trapped in the core split by half the core’s rate.' },
-      { id: 'incl', label: 'Inclination', perform: true, min: 0, max: 90, def: 60, step: 1, fmt: (v) => `${v.toFixed(0)}°${v === 0 ? ' (pole-on)' : v === 90 ? ' (equator-on)' : ''}`,
+      { id: 'incl', label: 'Inclination', min: 0, max: 90, def: 60, step: 1, fmt: (v) => `${v.toFixed(0)}°${v === 0 ? ' (pole-on)' : v === 90 ? ' (equator-on)' : ''}`,
         hint: 'The angle between the rotation axis and your line of sight. Pole-on you see only the m = 0 components; equator-on the outer ones, m = ±l.' },
     ],
   },
@@ -51,7 +51,7 @@ export const GROUPS = [
   {
     title: 'Output',
     params: [
-      { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      { id: 'room', label: 'Room', min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: dB },
     ],

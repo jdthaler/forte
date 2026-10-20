@@ -26,9 +26,9 @@ export const GROUPS = [
   {
     id: 'tuning', title: 'Design tuning',
     params: [
-      { id: 'tuning', label: 'Tuned to', perform: true, kind: 'tune', type: 'select', def: 'et',
+      { id: 'tuning', label: 'Tuned to', kind: 'tune', type: 'select', def: 'et',
         options: [['et', 'Equal temperament'], ['just', '5-limit just (fixed tonic)']] },
-      { id: 'tonic', label: 'Just tonic', perform: true, kind: 'tune', type: 'select', def: 0, options: PC.map((n, i) => [i, n]), showIf: (P) => P.tuning === 'just' },
+      { id: 'tonic', label: 'Just tonic', kind: 'tune', type: 'select', def: 0, options: PC.map((n, i) => [i, n]), showIf: (P) => P.tuning === 'just' },
       { id: 'mistune', label: 'Random mistuning', kind: 'tune', min: 0, max: 40, step: 0.5, def: 0, fmt: cents,
         hint: 'Each key off by a fixed random amount. Coupling captures them anyway.' },
       { id: 'drift', label: 'Resistor drift', kind: 'engine', min: 0, max: 20, step: 0.5, def: 0, fmt: cents,
@@ -43,8 +43,8 @@ export const GROUPS = [
         hint: 'Higher supply → straighter ramp (more sawtooth-like).' },
       { id: 'vStrike', label: 'Lamp striking voltage', kind: 'engine', min: 70, max: 110, step: 0.5, def: 90, fmt: (v) => `${v.toFixed(1)} V` },
       { id: 'vExt', label: 'Lamp extinction voltage', kind: 'engine', min: 40, max: 85, step: 0.5, def: 60, fmt: (v) => `${v.toFixed(1)} V` },
-      { id: 'attack', label: 'Key attack', perform: true, kind: 'engine', min: 0.001, max: 0.3, def: 0.004, log: true, fmt: (v) => `${(v * 1000).toFixed(0)} ms` },
-      { id: 'release', label: 'Key release', perform: true, kind: 'engine', min: 0.005, max: 1, def: 0.03, log: true, fmt: (v) => `${(v * 1000).toFixed(0)} ms` },
+      { id: 'attack', label: 'Key attack', kind: 'engine', min: 0.001, max: 0.3, def: 0.004, log: true, fmt: (v) => `${(v * 1000).toFixed(0)} ms` },
+      { id: 'release', label: 'Key release', kind: 'engine', min: 0.005, max: 1, def: 0.03, log: true, fmt: (v) => `${(v * 1000).toFixed(0)} ms` },
     ],
   },
   {
@@ -52,7 +52,7 @@ export const GROUPS = [
     params: [
       { id: 'tone', label: 'Tone (low-pass)', perform: true, kind: 'mix', min: 300, max: 16000, def: 2500, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz` },
       { id: 'body', label: 'Resonant body', kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.5, fmt: (v) => v.toFixed(2) },
-      { id: 'room', label: 'Room', perform: true, kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.3, fmt: (v) => v.toFixed(2) },
+      { id: 'room', label: 'Room', kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.3, fmt: (v) => v.toFixed(2) },
       VENUE,
       { id: 'width', label: 'Stereo spread', kind: 'engine', min: 0, max: 1, step: 0.01, def: 0.5, fmt: (v) => v.toFixed(2) },
       { id: 'volume', label: 'Volume', perform: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.7, fmt: (v) => v.toFixed(2) },

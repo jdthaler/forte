@@ -50,7 +50,7 @@ export const GROUPS = [
   {
     title: 'Mallet',
     params: [
-      { id: 'hardness', label: 'Mallet hardness', perform: true, min: 30, max: 10000, def: 800, log: true, fmt: (v) => `${v.toFixed(0)} N at 1 mm (${yarn(v)})`,
+      { id: 'hardness', label: 'Mallet hardness', min: 30, max: 10000, def: 800, log: true, fmt: (v) => `${v.toFixed(0)} N at 1 mm (${yarn(v)})`,
         hint: 'The head’s force when squashed by 1 mm (F = Kδ^2.3). Harder heads leave the bar sooner and reach the upper modes; softer ones give a round, dark tone.' },
       { id: 'mass', label: 'Mallet head mass', min: 5, max: 40, def: 12, step: 0.5, fmt: (v) => `${v.toFixed(1)} g`,
         hint: 'A heavier head stays on the bar longer: more fundamental, less shimmer.' },
@@ -75,7 +75,7 @@ export const GROUPS = [
   {
     title: 'Output',
     params: [
-      { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      { id: 'room', label: 'Room', min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],

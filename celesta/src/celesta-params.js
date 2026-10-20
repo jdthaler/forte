@@ -33,7 +33,7 @@ export const GROUPS = [
   {
     title: 'Hammers',
     params: [
-      { id: 'hardness', label: 'Hammer felt', perform: true, min: 10, max: 10000, def: 200, log: true, fmt: (v) => `${v.toFixed(0)} N at 1 mm (${felt(v)})`,
+      { id: 'hardness', label: 'Hammer felt', min: 10, max: 10000, def: 200, log: true, fmt: (v) => `${v.toFixed(0)} N at 1 mm (${felt(v)})`,
         hint: 'The felt’s force when squashed by 1 mm at C4 (F = Kδ^2.5; 40 times harder at C8, where the felt is thin and the hammer half as heavy). Harder felt leaves the bar sooner and reaches its upper modes: a brighter, more bell-like tone, towards a glockenspiel.' },
       { id: 'mass', label: 'Hammer mass', min: 1, max: 12, def: 4, step: 0.1, fmt: (v) => `${v.toFixed(1)} g at C4 → ${(v / 2).toFixed(1)} g at C8`,
         hint: 'A heavier hammer stays on the bar longer: more fundamental, less shimmer, and a louder note for the same speed.' },
@@ -58,7 +58,7 @@ export const GROUPS = [
   {
     title: 'Output',
     params: [
-      { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      { id: 'room', label: 'Room', min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],

@@ -233,10 +233,13 @@ as the chain's `venue`. Keep `velocity`
 velocity-sensitive. Presets override defaults. Make each preset show one
 physical idea and give it a descriptive name.
 
-Mark the controls a player reaches for *while playing* with
-`perform: true`: stops and registrations, tremolo and drive, the mallet
-or the bow, the main physical knob (the black hole's spin), `room` and
-`volume`. They sit in a strip above the keys in both modes, so they never
+Mark only the controls a player changes *while playing* with
+`perform: true`: stops and registrations, pedals and mutes, tremolo and
+vibrato, where the mallet strikes or the bow sits, the main physical knob
+(the black hole's spin), and `volume`. The instrument's build (sizes,
+materials, losses), its voicing (felt hardness) and `room` are set once,
+so they stay in the Controls panel. The same flag fills the row above the
+plugin window's keyboard. They sit in a strip above the keys in both modes, so they never
 move; a checkbox there becomes a stop that lights up, and in Discover a
 control with a `hint` gets an ⓘ button that opens it (a tap, not a
 tooltip, so it works on a tablet). A tile shows its label at rest, with
@@ -275,13 +278,14 @@ and say which in the footer help.
   moves into it). Then How it works, **Discover | Perform**, a switch
   that puts the Controls panel beside the views or below them (wide
   screens; a narrow one always puts it below), audio, MIDI and Panic.
-- **The toggles.** A row of them across the top: one for each view,
-  named by its `data-view` (or its `<h2>`), and one for each group of
-  controls in `#controls` (each `details.group`, named by its
+- **The toggles.** Two rows, each heading its side: at the top of the
+  views one for each view, named by its `data-view` (or its `<h2>`), and
+  at the top of `#controls` (staying there as the panel scrolls) one for
+  each group of controls (each `details.group`, named by its
   `<summary>`; a group whose parameters have all moved above the keys has
   none, and a group the page adds later gets one). A tap turns that view
   or group on or off, and the page remembers which are on. Every group is
-  on at first. With every group off, the views take the panel's room.
+  on at first. With every group off, the panel keeps its toggles.
 - **The views: pictures only.** The views that are
   on share the space in rows, side by side on a wide screen and stacked on
   a tall one; a short last row stretches across. At first only the cards

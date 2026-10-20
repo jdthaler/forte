@@ -62,20 +62,24 @@ body[data-instrument] #start:not(.running) ~ :is(#cpu, #voices) { display: none;
 .pill[hidden] { display: none; }
 body:not(.perform) .forte-fullscreen { display: none; }
 
-/* ---- the page: a row of toggles on top, then the Controls panel beside the views or below
-   them. The toggles turn each view and each group of controls on or off ------------------ */
+/* ---- the page: the Controls panel beside the views or below them, each headed by its row
+   of toggles, which turn each view and each group of controls on or off ------------------ */
 body[data-instrument] > main {
-  grid-template-columns: 320px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr);
-  grid-template-areas: "bar bar" "controls views";
+  grid-template-columns: 320px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "controls views";
 }
-body.controls-below > main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "bar" "views" "controls"; }
-body.hide-controls > main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "bar" "views"; }
+body.controls-below > main { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; grid-template-areas: "views" "controls"; }
+body.hide-controls > main { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); grid-template-areas: "views"; }
 body[data-instrument] #controls { grid-area: controls; }
 body[data-instrument] #views { grid-area: views; }
-.forte-toggles {
-  grid-area: bar; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 22px;
-  padding: 10px 14px 0; min-width: 0;
+.forte-toggles { display: flex; align-items: center; min-width: 0; }
+/* the controls' row stays at the top of the panel as it scrolls */
+#controls > .forte-toggles {
+  position: sticky; top: 0; z-index: 3; margin: -12px -14px 4px; padding: 12px 14px 10px;
+  background: var(--panel); border-bottom: 1px solid var(--line);
 }
+#controls > .forte-no-view { margin: 10px 0; }
+#controls > .forte-no-view[hidden] { display: none; }
 .forte-toggles > div { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
 .forte-toggles-label { font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
 body[data-instrument] .forte-toggles button {
@@ -95,7 +99,7 @@ body[data-instrument] .forte-toggles button[aria-pressed="true"] { color: var(--
 #controls details.group[data-key] > summary { cursor: default; }
 #controls details.group[data-key] > summary::after { content: none; }
 /* below the views, the groups side by side, scrolling within a part of the height */
-body.controls-below #controls { border-right: 0; border-top: 1px solid var(--line); max-height: 38vh; max-height: 38dvh; padding-top: 4px; }
+body.controls-below #controls { border-right: 0; border-top: 1px solid var(--line); max-height: 38vh; max-height: 38dvh; }
 body.controls-below #groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); column-gap: 26px; align-items: start; }
 /* the switch in the header: controls beside the views, or below them */
 .forte-arrange { display: inline-flex; flex: none; padding: 2px; gap: 2px; border: 1px solid var(--line); border-radius: 9px; background: rgba(0, 0, 0, 0.28); }
@@ -270,7 +274,7 @@ body.perform #views .card:not([data-keep-text]) canvas { flex: 1 1 0; height: au
 @media (max-width: 1050px) {
   /* the controls always go below the views here: no switch */
   body[data-instrument] .forte-arrange { display: none; }
-  body[data-instrument]:not(.no-views) > main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "bar" "views" "controls"; }
+  body[data-instrument]:not(.no-views) > main { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; grid-template-areas: "views" "controls"; }
   body.perform:not(.no-views) #controls { grid-area: auto; }
   /* in Perform, More controls slides the Controls panel over the views */
   body.perform:not(.no-views) #controls {
@@ -287,7 +291,8 @@ body.perform #views .card:not([data-keep-text]) canvas { flex: 1 1 0; height: au
    are 230px at least here) */
 @media (min-width: 601px) and (max-width: 1050px) and (min-height: 501px) {
   /* … and the controls below them: the two scroll together, as one column */
-  body[data-instrument]:not(.perform) > main { overflow-y: auto; overscroll-behavior: contain; grid-template-rows: auto max-content max-content; align-content: start; }
+  body[data-instrument]:not(.perform) > main { overflow-y: auto; overscroll-behavior: contain; grid-template-rows: max-content max-content; align-content: start; }
+  body[data-instrument]:not(.perform) #controls > .forte-toggles { position: static; }
   body[data-instrument]:not(.perform) #views, body.controls-below:not(.perform) #controls { overflow: visible; max-height: none; }
   body[data-instrument]:not(.perform) .forte-stage { flex: none; grid-template-rows: none; grid-auto-rows: max-content; }
   body[data-instrument]:not(.perform) .forte-stage > .card { min-height: 300px; max-height: 70vh; }
@@ -331,11 +336,13 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
   body[data-instrument] .forte-stage { flex: none; grid-template-rows: none; grid-auto-rows: max-content; }
   body[data-instrument] #views .card { overflow-x: auto; } /* wide tables scroll inside their card */
   /* a row of toggles each, sliding sideways when they don't fit */
-  body[data-instrument] .forte-toggles { padding: 10px 0 0; gap: 6px; }
+  body[data-instrument] #views > .forte-toggles { margin: 0 -10px; }
+  body[data-instrument] #controls > .forte-toggles { position: static; }
   body[data-instrument] .forte-toggles > div {
     flex: 1 1 100%; flex-wrap: nowrap; gap: 5px; overflow-x: auto; overscroll-behavior-x: contain;
     padding: 0 10px; scrollbar-width: none;
   }
+  body[data-instrument] #controls > .forte-toggles > div { padding: 0 14px; }
   .forte-toggles > div::-webkit-scrollbar { display: none; }
   body[data-instrument] .forte-toggles button { flex: none; }
   .forte-toggles-label { flex: none; }

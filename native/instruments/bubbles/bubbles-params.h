@@ -58,16 +58,16 @@ inline const FormatSegment kFormat_cents10[] = {{kNoLimit, "", " ¢", 1, 0, 2, f
 inline const FormatSegment kFormat_cents11[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
 
 inline const ParamInfo kParams[p::count] = {
-  {"depth", "Nozzle depth", "Tank", ParamKind::continuous, 0.1, 100, 0.3, 0, true, true, nullptr, 0, kFormat_depth, 3},
+  {"depth", "Nozzle depth", "Tank", ParamKind::continuous, 0.1, 100, 0.3, 0, true, false, nullptr, 0, kFormat_depth, 3},
   {"pressure", "Air pressure above the water", "Tank", ParamKind::continuous, 0.25, 4, 1, 0, true, false, nullptr, 0, kFormat_pressure, 2},
   {"keepInTune", "Keep in tune (re-size the bubbles)", "Tank", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
-  {"gas", "Gas", "Gas and liquid", ParamKind::choice, 0, 3, 0, 1, false, true, kChoices_gas, 4, nullptr, 0, kKeys_gas},
+  {"gas", "Gas", "Gas and liquid", ParamKind::choice, 0, 3, 0, 1, false, false, kChoices_gas, 4, nullptr, 0, kKeys_gas},
   {"liquid", "Liquid", "Gas and liquid", ParamKind::choice, 0, 2, 0, 1, false, false, kChoices_liquid, 3, nullptr, 0, kKeys_liquid},
   {"rate", "Bubbles per second (held key)", "Nozzles", ParamKind::continuous, 0.5, 40, 5, 0, true, true, nullptr, 0, kFormat_rate, 2},
   {"irregular", "Irregularity", "Nozzles", ParamKind::continuous, 0, 1, 0.4, 0.01, false, true, nullptr, 0, kFormat_irregular, 3},
   {"spread", "Size spread", "Nozzles", ParamKind::continuous, 0, 15, 1.5, 0.1, false, false, nullptr, 0, kFormat_spread, 1},
   {"snap", "Neck snap time", "Nozzles", ParamKind::continuous, 0.01, 2, 0.05, 0, true, false, nullptr, 0, kFormat_snap, 2},
-  {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},
+  {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
   {"pitch", "Pitch", "Tuning", ParamKind::choice, 0, 8, 0, 1, false, false, kChoices_pitch, 9, nullptr, 0, kKeys_pitch},

@@ -107,12 +107,12 @@ name opens the menu of every instrument (and Forte's home page), next to
 **How it works** and the mode. In the middle are the views,
 pictures of the physics as it plays, and the rest of the controls,
 grouped, beside them or below them (a switch at the top chooses, on a
-wide screen). A row of toggles above turns each view and each group of
-controls on or off: the main views and every group are on at first, and
-the page remembers your choice. At the bottom, right above the keys, are
-the controls a player reaches for (stops and registrations, tremolo,
-drive, the mallet, the spin, the room and the volume, or the organ's
-drawbars), and the presets just above the keys (the first control on a
+wide screen). Each side has its row of toggles on top: the views' turn
+each view on or off, the controls' each group of controls. The main views
+and every group are on at first, and the page remembers your choice. At
+the bottom, right above the keys, are only the controls you'd change
+while playing (stops and registrations, pedals, tremolo, where the mallet
+strikes, the volume, or the organ's drawbars), and the presets just above the keys (the first control on a
 phone). Each shows its name, and its value while
 you move it. Explanations wait behind ⓘ buttons.
 

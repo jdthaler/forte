@@ -135,7 +135,7 @@ inline const ParamInfo kParams[p::count] = {
   {"reflections", "Cabinet reflection", "Leslie speaker", ParamKind::continuous, 0, 0.9, 0.35, 0.01, false, false, nullptr, 0, kFormat_reflections, 1},
   {"drive", "Tube drive", "Amp & output", ParamKind::continuous, 0, 1, 0.15, 0.01, false, true, nullptr, 0, kFormat_drive, 1},
   {"expression", "Expression pedal", "Amp & output", ParamKind::continuous, 0, 1, 0.85, 0.01, false, false, nullptr, 0, kFormat_expression, 3},
-  {"room", "Room", "Amp & output", ParamKind::continuous, 0, 1, 0.2, 0.01, false, true, nullptr, 0, kFormat_room, 1},
+  {"room", "Room", "Amp & output", ParamKind::continuous, 0, 1, 0.2, 0.01, false, false, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Amp & output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Amp & output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 1},
   {"pitch", "Pitch", "Tuning", ParamKind::choice, 0, 8, 0, 1, false, false, kChoices_pitch, 9, nullptr, 0, kKeys_pitch},
