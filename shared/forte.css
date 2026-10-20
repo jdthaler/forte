@@ -180,6 +180,7 @@ a.forte-menu-item:hover { background: rgba(255, 255, 255, 0.06); }
 .forte-notes-plugin { display: none; margin: 12px 0 0; font-size: 14px; }
 .forte-notes-plugin a { color: var(--accent, #f0b35a); text-decoration: none; }
 .forte-plugin-get { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.forte-plugin-get[hidden] { display: none; }
 .forte-plugin-get .button { display: inline-flex; flex-direction: column; gap: 1px; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--line, #2b2833); background: rgba(255, 255, 255, 0.04); color: var(--text, #ece8e1); text-decoration: none; font-weight: 600; }
 .forte-plugin-get .button:hover { border-color: var(--accent, #f0b35a); }
 .forte-plugin-get .button span { color: var(--muted, #9a9284); font: 500 11.5px ui-monospace, Menlo, monospace; }
