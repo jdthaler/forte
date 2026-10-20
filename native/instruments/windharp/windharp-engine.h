@@ -116,7 +116,7 @@ class WindHarpEngine : public Engine {
   Voice *byKey[128] = {};
   double Uw = U_REF, U = U_REF;
   double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
-  NoteExpression expr{48};        // each key's own bend
+  NoteExpression expr{12};        // each key's own bend: an octave either way (tension ×4 up, past which the strings would get far louder and snap)
   Options opts;
 
  private:

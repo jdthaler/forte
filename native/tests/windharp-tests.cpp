@@ -208,7 +208,7 @@ TEST("windharp: bends of 1 sent every block leave every sample as it was, the wh
   CHECK(out[0] == out[1]);
 }
 
-TEST("windharp: ±48 semitones of each key's own bend, swept every block on a chord from A0 to E7 (strings stepping at a quarter of the sample rate to several times a sample), stay finite and bounded at 44.1, 48 and 96 kHz") {
+TEST("windharp: ±48 semitones of each key's own bend (held at ±12), swept every block on a chord from A0 to E7 (strings stepping at a quarter of the sample rate to several times a sample), stay finite and bounded at 44.1, 48 and 96 kHz") {
   for (double fs : {44100.0, 48000.0, 96000.0}) {
     auto P = defaults();
     P[p::gust] = 0.1;

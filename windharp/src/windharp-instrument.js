@@ -17,9 +17,10 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: a pedal that keeps the shutters open, sent to the engine
   modWheel: { param: 'wind', max: U_MAX }, // CC1: the wind, up to its top speed
   // MPE: each key's own bend tightens or slackens its strings alone, as the wheel does them all
-  // (±4 octaves; bent out of its band a string moves to the harmonic the wake picks). No slide:
+  // (an octave either way: further up the tension would make it far louder, and snap the strings;
+  // bent out of its band a string moves to the harmonic the wake picks). No slide:
   // one wind blows through every shutter.
-  mpe: { bend: 48 },
+  mpe: { bend: 12 },
   // the engine: the physics in C++ (native/instruments/windharp), built as WebAssembly
   wasm: { name: 'WindHarpWasmEngine', module: new URL('./windharp-wasm.js', import.meta.url).href, binary: new URL('../wasm/windharp.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },
