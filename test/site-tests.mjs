@@ -11,7 +11,7 @@ import { ASSETS, notes } from '../tools/plugin-release.mjs';
 import { readNotes, parseNote, plan, bump } from '../tools/release.mjs';
 import { compare, stateOf, contractPath, STATES } from '../tools/contract.mjs';
 import { TOUCH, SOFT_PEDAL, touch, touched, createSostenuto, wheelValue } from '../shared/midi.js';
-import { LATEST, SYSTEMS, archive, downloads, withPlugins } from '../shared/plugins.js';
+import { LATEST, SYSTEMS, archive, downloads, withPlugins, parseRelease, releaseLine } from '../shared/plugins.js';
 
 let failures = 0;
 function test(name, fn) { // returns a promise for an async test
@@ -250,6 +250,22 @@ test('each instrument with plugins offers them on its page (its Plugin dialog, s
   const js = read('shared/notes.js');
   assert.ok(js.includes('downloadLinks(inst.id)') && js.includes("'#plugin'"), 'notes.js lists the downloads and opens at #plugin');
   for (const i of withPlugins()) assert.ok(read(`${i.id}/index.html`).includes('../shared/nav.js'), `${i.id} loads nav.js (and notes.js)`);
+});
+test('the downloads say which plugin release they are, read back from its notes (the site goes live first)', () => {
+  const rel = parseRelease({ tag_name: 'plugins-v1.2.3', html_url: 'https://github.com/jdthaler/forte/releases/tag/plugins-v1.2.3', body: notes() });
+  assert.equal(rel.forte, FORTE_VERSION, 'the notes name the Forte version');
+  assert.deepEqual(rel.versions, Object.fromEntries(withPlugins().map((i) => [i.id, i.version])), 'the notes\' table gives each instrument\'s version');
+  const [a, b] = withPlugins();
+  assert.ok(releaseLine(rel, a).ok && releaseLine(rel, a).html.includes(`${a.name} ${a.version}, from <a`), 'the same version');
+  assert.ok(releaseLine(rel).html.startsWith(`Forte ${FORTE_VERSION}'s plugins, from`), 'every instrument: the same Forte');
+  // a release older than the site: this version, or this instrument, is still to come
+  const old = { ...rel, forte: '0.0.1', versions: { ...rel.versions, [a.id]: '0.0.1' } };
+  delete old.versions[b.id];
+  assert.ok(releaseLine(old, a).ok && releaseLine(old, a).html.includes(`This page is ${a.version}`), 'an older version');
+  assert.ok(!releaseLine(old, b).ok && releaseLine(old, b).html.includes('No plugin of'), 'not released yet: no downloads');
+  assert.ok(releaseLine(old).html.includes(`The site is Forte ${FORTE_VERSION}`), 'every instrument: an older Forte');
+  for (const f of ['shared/notes.js', 'landing.js']) assert.ok(read(f).includes('releaseLine('), `${f} shows the release`);
+  assert.ok(read('index.html').includes('forte-plugin-rel'), 'All Plugins has the release line');
 });
 
 console.log('credits');

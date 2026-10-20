@@ -188,10 +188,12 @@ folder.
 A VST3 or CLAP host that bounces or freezes a track offline gets High whatever it says; the AU
 isn't told, so set it back to High before a bounce in Logic.
 
-Releases publish themselves: after each green `native` run on `live` (the branch the site is
-published from), the **release-plugins** workflow releases that run's plugins if an instrument's
+Releases publish themselves: the site goes live first, and after the green `native` run on
+`live` (the branch the site is published from) that follows, the **release-plugins** workflow releases that run's plugins if an instrument's
 version or anything under `native/` changed since the latest release (tagged `plugins-v<Forte version>`, with `-2`, `-3`… when
-Forte's version didn't change). It can also be started by hand from the Actions tab.
+Forte's version didn't change). It can also be started by hand from the Actions tab. Until it
+has, the downloads are the latest release's, and they say which release that is and when an
+instrument's newer version is still to come.
 
 ## Running locally
 

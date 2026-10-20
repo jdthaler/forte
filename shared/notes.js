@@ -9,7 +9,7 @@
 
 import { renderMarkdown } from './markdown.js';
 import { byId, FORTE_VERSION } from './registry.js';
-import { downloadLinks, INSTALL } from './plugins.js';
+import { downloadLinks, INSTALL, latestRelease, releaseLine } from './plugins.js';
 
 const REPO = 'https://github.com/jdthaler/forte/blob/live/';
 const HASH = '#about';
@@ -59,15 +59,24 @@ export function show(d, hash) {
   if (hash && location.hash !== hash) history.replaceState(null, '', hash);
 }
 
-// Plugin: the instrument's plugins, from the latest release (shared/plugins.js)
+// Plugin: the instrument's plugins, from the latest release (shared/plugins.js), and which one
 export function openPlugin() {
   if (!plugDialog) {
     plugDialog = sheet('Plugin', 'forte-plugin-title', '#plugin', 'forte-sheet');
     plugDialog.querySelector('.forte-notes-body').innerHTML = `<section class="forte-plugin">
       <p><b>Play the ${esc(inst.name)} in your DAW:</b> the same physics in C++, as AU, VST3 and CLAP plugins and a standalone app: every format in one download (All), or one alone.</p>
       <div class="forte-plugin-get">${downloadLinks(inst.id)}</div>
+      <p class="forte-plugin-more forte-plugin-rel" hidden></p>
       <p class="forte-plugin-more">Free and unsigned: on a Mac, one Terminal command lets them load. <a href="${INSTALL}" target="_blank" rel="noopener">How to install</a> · <a href="${root.href}#plugins">All Plugins</a></p>
     </section>`;
+    // which release the downloads are, and whether this version's plugin is still to come
+    latestRelease().then((rel) => {
+      if (!rel) return;
+      const { ok, html } = releaseLine(rel, inst), line = plugDialog.querySelector('.forte-plugin-rel');
+      line.innerHTML = html;
+      line.hidden = false;
+      plugDialog.querySelector('.forte-plugin-get').hidden = !ok;
+    });
   }
   dialog?.close();
   show(plugDialog, '#plugin');
