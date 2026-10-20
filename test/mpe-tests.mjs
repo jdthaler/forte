@@ -146,6 +146,9 @@ function shift(a, b, guess) {
 // Instruments whose spectrum does not stretch with the pitch (test/tuning-tests.mjs OWN): their
 // own suites measure a note's bend
 const OWN = ['bubbles', 'stars', 'quantum', 'blackhole'];
+// Instruments whose physics pulls a bent note off its ratio, as it pulls the wheel's (their own
+// suites check a note's bend against the wheel's): cents allowed
+const LOOSE = { windharp: 8 }; // the wake pulls a string toward its own shedding frequency
 
 console.log('the instruments');
 for (const slug of slugs) {
@@ -177,8 +180,8 @@ for (const slug of slugs) {
     await test(`${slug}: a note struck bent sounds its bend (+35 ¢ and −2 semitones) wherever its spectrum shows it`, () => {
       const key = keys[1], one = (s) => spectrum(new Player(I, Engine, FS, D).render(1.4, [[0, 'noteBend', key, s], [0, 'on', key, 0.7]]), FS);
       const base = one(0);
-      near(shift(base, one(0.35), 35), 35, 3, '+35 ¢');
-      near(shift(base, one(-2), -200), -200, 3, '−2 semitones');
+      near(shift(base, one(0.35), 35), 35, LOOSE[slug] ?? 3, '+35 ¢');
+      near(shift(base, one(-2), -200), -200, LOOSE[slug] ?? 3, '−2 semitones');
     });
   }
   await test(`${slug}: bends of ±96 semitones and slides from 0 to 1, swept on a chord every block, stay finite and bounded at 44.1, 48 and 96 kHz`, () => {
