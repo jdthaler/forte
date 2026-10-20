@@ -134,7 +134,7 @@ resampled: at 415 Hz the strings are slacker, the bars and bells cut for
 their new notes. Presets keep your tuning; your own presets and links
 carry it.
 
-**Quality**, the last group of controls (CPU), is for phones and older
+**Quality**, beside the CPU readout at the top of the page, is for phones and older
 computers. **High** plays all the physics, as the instruments always have;
 **Medium** and **Low** play less of what costs the most and is heard the
 least (fewer voices sounding at once, fewer partials, the sympathetic
