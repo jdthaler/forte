@@ -148,7 +148,7 @@ function shift(a, b, guess) {
 const OWN = ['bubbles', 'stars', 'quantum', 'blackhole'];
 // Instruments whose physics pulls a bent note off its ratio, as it pulls the wheel's (their own
 // suites check a note's bend against the wheel's): cents allowed
-const LOOSE = { windharp: 8 }; // the wake pulls a string toward its own shedding frequency
+const LOOSE = { windharp: 8, arc: 12 }; // the wake pulls a string toward its shedding; the arc's lag pulls its coil
 
 console.log('the instruments');
 for (const slug of slugs) {
@@ -163,7 +163,7 @@ for (const slug of slugs) {
     if (slide) assert.ok(I.modWheel, 'a slide is a mod wheel of its own');
     const none = play(keys.flatMap((k) => [[0, 'noteBend', k, 0], [0, 'slide', k, NaN], [0.2, 'noteBend', k, 0], [0.2, 'slide', k, NaN]]));
     assert.ok(!differs(none[0], plain[0]) && !differs(none[1], plain[1]), 'a bend of 0 and no slide change the sound');
-    const bent = play([[0, 'noteBend', keys[0], 5], [0.2, 'noteBend', keys[1], -3]]), slid = play([[0, 'slide', keys[0], 1], [0.2, 'slide', keys[1], 0.5]]);
+    const bent = play([[0, 'noteBend', keys[0], 5], [0.2, 'noteBend', keys[1], -3], [0.25, 'noteBend', keys[2], 2]]) /* every key: one arc follows only its newest */, slid = play([[0, 'slide', keys[0], 1], [0.2, 'slide', keys[1], 0.5]]);
     assert.equal(differs(bent[0], plain[0]), bend > 0, bend ? 'a note\'s bend changes the sound' : 'an instrument that cannot bend one note ignores its bend');
     if (!slide) assert.ok(!differs(slid[0], plain[0]), 'an instrument whose notes have no slide ignores it');
   });
