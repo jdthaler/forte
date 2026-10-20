@@ -16,6 +16,7 @@ export const INSTRUMENT = {
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: 88, A0–C8 (the 73-key models: E1–E7)
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine
   midiVelocity: (v) => 0.25 * 20 ** v,  // MIDI velocity / 127 → hammer speed, 0.25 … 5 m/s
+  mpe: { bend: 48 },                    // MPE: a note's own bend slides its fork's tuning spring, ±48 semitones
   // the engine: the physics in C++ (native/instruments/tines), built as WebAssembly
   wasm: { name: 'TinesWasmEngine', module: new URL('./tines-wasm.js', import.meta.url).href, binary: new URL('../wasm/tines.wasm', import.meta.url).href },
   // 'tone' is the speaker inside the engine, not the chain's low-pass

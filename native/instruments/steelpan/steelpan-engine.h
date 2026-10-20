@@ -1,13 +1,15 @@
 // steelpan-engine.h — the real-time part, on the engine contract (forte/engine.h). Every key is
 // a note area of one pan, alive while it sounds: its modes are exact two-pole resonators, driven
 // each sample by the dome's quadratic forces among the three tuned modes and by the steel's
-// coupling to the neighbouring notes, which come alive with it (the pan's note layout).
+// coupling to the neighbouring notes, which come alive with it (the pan's note layout). A note's
+// own slide (MPE) is its own roll: how hard its sticks strike again while its key is down.
 #pragma once
 
 #include <array>
 #include <vector>
 
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "steelpan-model.h"
 #include "steelpan-params.h"
 
@@ -22,6 +24,7 @@ class SteelPanEngine : public Engine {
   void setSustain(bool on) override;
   void allNotesOff() override;
   void pressure(double value, int key) override;
+  void slide(double value, int key) override { expr.setSlide(value, key); } // the key's own roll
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -52,12 +55,14 @@ class SteelPanEngine : public Engine {
   void mute(Note &v);
   void rebuildCouplings();
   void postViews();
+  double rollOf(const Note &v) const; // how hard a held note is rolled (0: not)
 
   struct Coupling { int a, p, b, q; double k; };
   std::array<double, p::count> P{};
   bool hasParams = false, sustain = false;
   int version = 0, focus = -1, sincePost = 0;
   double channelPress = 0, g = 0;
+  NoteExpression expr{0}; // each key's own roll (no bend: a note area is hammered to its pitch)
   std::vector<Note> notes;      // one per key, A0–C8
   std::vector<int> live;        // indices of the active notes (reserved: never reallocates)
   std::vector<Coupling> couplings;

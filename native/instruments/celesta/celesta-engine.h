@@ -9,7 +9,8 @@
 // One voice per bar: striking a ringing bar hits it where it is. Each key's bar (celesta-model.h)
 // is built where it is first played, and again when the bar thickness or the keyboard's tuning
 // changes (the bar is cut to its tuned pitch); a voice keeps
-// its own copy. Voices come from a fixed pool: nothing is allocated in process().
+// its own copy. A note's own slide (MPE) is its hammer's felt, taken as the hammer is thrown.
+// Voices come from a fixed pool: nothing is allocated in process().
 #pragma once
 
 #include <array>
@@ -19,6 +20,7 @@
 #include "celesta-model.h"
 #include "celesta-params.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 
 namespace forte::celesta {
 
@@ -41,6 +43,7 @@ class CelestaEngine : public Engine {
   void noteOn(int key, double velocity) override;
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override { sustain = on; }
+  void slide(double value, int key) override { expr.setSlide(value, key); } // the key's hammer felt, at its next strike
   void allNotesOff() override;
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
@@ -100,6 +103,7 @@ class CelestaEngine : public Engine {
   enum { gGap, gDetune, gBoxes, gCount };
   std::array<double, gCount> S{}, T{};
   bool sustain = false;
+  NoteExpression expr{0}; // each key's own felt (no bend: a bar is cut to its pitch)
   forte::Tuning tuning; // the keyboard's (forte/tuning.h)
   // each key's bar, built for the thickness in built[] (0: not yet) and the ratio in builtRatio[]
   std::unique_ptr<std::array<Bar, KEY_MAX - KEY_MIN + 1>> bars;

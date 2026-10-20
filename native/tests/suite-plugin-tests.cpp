@@ -117,17 +117,20 @@ TEST("suite: switches instrument while the audio runs: its parameters, its keys,
   CHECK(app.run(24000, (app.number(v, "keyLo") + app.number(v, "keyHi")) / 2) > 0.001);
 }
 
-TEST("suite: Quality belongs to the computer: a new instrument keeps it") {
+TEST("suite: Quality belongs to the computer and MPE to the controller: a new instrument keeps them") {
   App app;
-  const uint32_t last = app.params->count(app.p) - 1; // Quality, after the velocity curve
-  clap_param_info_t info;
+  const uint32_t mpe = app.params->count(app.p) - 1, last = mpe - 1; // Quality, after the velocity curve, then MPE
+  clap_param_info_t info, mpeInfo;
   CHECK(app.params->get_info(app.p, last, &info) && !std::strcmp(info.name, "Quality"));
+  CHECK(app.params->get_info(app.p, mpe, &mpeInfo) && !std::strcmp(mpeInfo.name, "MPE"));
   app.call("[\"set\", " + std::to_string(last) + ", 2]"); // Low
+  app.call("[\"set\", " + std::to_string(mpe) + ", 1]");  // On
   app.run(512);
   CHECK(app.call("[\"choose\", \"celesta\"]") == "true");
   app.run(512);
-  double v = -1;
+  double v = -1, m = -1;
   CHECK(app.params->get_value(app.p, info.id, &v) && v == 2);
+  CHECK(app.params->get_value(app.p, mpeInfo.id, &m) && m == 1);
   CHECK(app.run(24000, 72) > 0.001);
 }
 

@@ -16,6 +16,7 @@ constexpr double RIDGE = 4.5e-4;   // fingerprint ridge spacing (m)
 constexpr int MAX_VOICES = 36;     // beyond this, the quietest bowl nobody is touching is let go
 constexpr int REPORT_BLOCKS = 12;  // the page's state every few blocks
 constexpr double BEND_T = 0.02;    // s: the pitch wheel's glide
+constexpr double F_TOP = 0.45;     // × fs: a family bent past this stays there (unheard, and its two-pole still a resonator)
 // The Quality: families played (n = 2 … 1 + this; n ≥ 4 ring 25–30 dB under the note), bowls
 // sounding at once before the quietest untouched one is let go (a touched bowl only past
 // MAX_VOICES, as at High), and the peak under which an untouched bowl stops (−90, −80, −70 dB)
@@ -62,6 +63,7 @@ void ArmonicaEngine::start(Voice &v, int key) {
   v.after = pressureAll;
   const auto [pl, pr] = keyPan(key, 0.7, KEY_LO, KEY_HI); // across the compass; the bowls past it at its ends
   v.pl = pl; v.pr = pr;
+  v.nb = expr.bendOf(key); // a bend sent before the key starts it there
   if (auto d = bowls.get(key, version)) build(v, *d.data, version); // otherwise once its bowl is ready (a few ms; at once in WebAssembly)
 }
 
@@ -80,15 +82,18 @@ void ArmonicaEngine::build(Voice &v, const Bowl &b, uint64_t ver) {
     v.cmR[i] = std::cos(m.n * MIC[1]); v.smR[i] = std::sin(m.n * MIC[1]);
     v.gcL[i] = v.gain[i] * v.cmL[i]; v.gsL[i] = v.gain[i] * v.smL[i]; v.gcR[i] = v.gain[i] * v.cmR[i]; v.gsR[i] = v.gain[i] * v.smR[i];
   }
-  tune(v, bendNow);
+  tune(v, bendNow * v.nb);
 }
 
 // The bowl's modes at r × their frequencies: pitch bend, as if the glass were r² stiffer (no real
-// armonica can; the wheel moves every family together, keeping the split and the decay).
+// armonica can; the wheel moves every family together, keeping the split and the decay). A note's
+// own bend does the same to its bowl alone. A family it lifts past F_TOP of the sample rate stops
+// there rather than fold back under Nyquist (unbent, or at the wheel's ends, none comes near it).
 void ArmonicaEngine::tune(Voice &v, double r) {
+  const double top = F_TOP * fs;
   for (int i = 0; i < v.N; i++) {
     const Mode &m = v.b.modes[i];
-    const ModeCoeffs c1 = modeCoeffs(m.f1 * r, m.sigma, fs), c2 = modeCoeffs(m.f2 * r, m.sigma, fs);
+    const ModeCoeffs c1 = modeCoeffs(std::min(m.f1 * r, top), m.sigma, fs), c2 = modeCoeffs(std::min(m.f2 * r, top), m.sigma, fs);
     v.a1c[i] = c1.a1; v.a2c[i] = c1.a2; v.buc[i] = c1.b; v.bc[i] = c1.b / m.M; // per unit mass; per newton
     v.a1s[i] = c2.a1; v.a2s[i] = c2.a2; v.bus[i] = c2.b; v.bs[i] = c2.b / m.M;
   }
@@ -136,6 +141,8 @@ void ArmonicaEngine::bend(double value) {
   bendTo = std::pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12);
 }
 
+void ArmonicaEngine::noteBend(double ratio, int key) { expr.setBend(ratio, key); }
+
 void ArmonicaEngine::process(float *L, float *R, int n) {
   for (int at = 0; at < n; at += 128) run(L + at, R + at, std::min(128, n - at));
   bowls.audioCycle();
@@ -150,12 +157,16 @@ void ArmonicaEngine::run(float *L, float *R, int n) {
     if (v.built && v.version == version) continue;
     if (auto d = bowls.get(v.key, version)) build(v, *d.data, version);
   }
-  // pitch bend glides; the sounding bowls are retuned each block
+  // pitch bend glides, and each note's own; the bowls whose bend moved are retuned each block
   if (bendNow != bendTo) {
     bendNow += (bendTo - bendNow) * (1 - std::exp((-n * k) / BEND_T));
     if (std::fabs(bendNow - bendTo) < 1e-9) bendNow = bendTo;
   }
-  for (int i = 0; i < count; i++) if (voices[i]->built && voices[i]->bent != bendNow) tune(*voices[i], bendNow);
+  for (int i = 0; i < count; i++) {
+    Voice &v = *voices[i];
+    v.nb = glideTo(v.nb, expr.bendOf(v.key), n * k, BEND_T);
+    if (v.built && v.bent != bendNow * v.nb) tune(v, bendNow * v.nb);
+  }
   // The spindle: speed follows the treadle through the flywheel (0.5 s), with the foot's push
   // once per turn; cos nθ, sin nθ for every family.
   Wbar += (TAU * P[p::speed] - Wbar) * (1 - std::exp((-n * k) / 0.5));

@@ -97,7 +97,7 @@ double BubbleEngine::gauss() {
 
 // samples to the nozzle's next release: mean 1/rate, regular blended with exponential (Poisson) gaps
 double BubbleEngine::interval(const Nozzle &z) {
-  const double mean = fs / (P[p::rate] * (1 + PRESS_GAIN * z.press)), j = P[p::irregular];
+  const double mean = fs / (expr.slideOr(z.key, P[p::rate]) * (1 + PRESS_GAIN * z.press)), j = P[p::irregular];
   return std::max(1.0, mean * (1 - j + j * -std::log(1 - rand())));
 }
 
@@ -131,7 +131,13 @@ bool BubbleEngine::release(Nozzle &z, int offset) {
   const int i = z.key - KEY_LO;
   const Liquid *liq = env.liq;
   const Gas *gas = env.gas;
+  // the bubble at its nozzle, under the tank's pressure as it is now
+  Env renv;
+  renv.liq = liq; renv.gas = gas; renv.d = P[p::depth]; renv.p0 = pB + liq->rho * G * P[p::depth];
   double R = radius(i), vel = z.vel;
+  // the key's own bend: its nozzle releases the bubble that rings r × the note its own would ring
+  // here and now (a bubble's note is set as it pinches off: those already rising keep theirs)
+  if (const double r = expr.bendOf(z.key); r != 1) R = tuneRadius(acoustics(R, renv).fd * r, renv);
   const bool first = z.first;
   if (!first) {
     R *= 1 + (P[p::spread] / 100) * gauss();
@@ -139,9 +145,6 @@ bool BubbleEngine::release(Nozzle &z, int offset) {
   }
   z.first = false; z.released++;
   if (logging) log.push_back({z.key, frame + offset, R, vel, first}); // tests only
-  // the bubble at its nozzle, under the tank's pressure as it is now
-  Env renv;
-  renv.liq = liq; renv.gas = gas; renv.d = P[p::depth]; renv.p0 = pB + liq->rho * G * P[p::depth];
   const Acoustics a = acoustics(R, renv);
   Bubble &b = *slot;
   b.on = true; b.key = z.key; b.age = 0; b.start = offset; b.fade = 1; b.fadeStep = 0;
@@ -256,6 +259,15 @@ void BubbleEngine::render(Bubble &b, float *L, float *Rt, int n) {
 
 void BubbleEngine::bend(double value) {
   bendTo = std::pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12);
+}
+
+void BubbleEngine::noteBend(double ratio, int key) { expr.setBend(ratio, key); }
+
+// Slide sets the key's own bubble rate, as the wheel sets every nozzle's: the next gap it draws is
+// at that rate.
+void BubbleEngine::slide(double value, int key) {
+  const ParamInfo &r = kParams[p::rate];
+  expr.setSlide(value == value ? std::clamp(value, r.min, r.max) : value, key);
 }
 
 void BubbleEngine::process(float *L, float *R, int n) {

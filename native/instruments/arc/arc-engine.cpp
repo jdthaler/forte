@@ -70,6 +70,8 @@ bool Arc::holds(int key) const {
 
 // A key closes its contact: the capacitor (resting at the arc's voltage through the leak) joins.
 void Arc::engage(int key, double C) {
+  // the arc sings this key now: its own bend (MPE) slides the core at once
+  if (key >= 0 && key < 128) { const double r = eng->ex.bendOf(key); bendKey = key; lb = 1 / (r * r); }
   for (int k = 0; k < nM; k++) if (mKey[k] == key) return;
   for (int k = 0; k < nT; k++) if (tKey[k] == key) { tDir[k] = 1; return; } // re-press while it was opening
   if (nT >= MAXE || nM + nT >= MAXE) return;
@@ -101,6 +103,11 @@ void Arc::releaseAll() {
   for (int guard = MAXE; nM > 0 && guard > 0; guard--) release(mKey[nM - 1]);
   for (int k = 0; k < nT; k++) if (tDir[k] > 0) { tDir[k] = -1; tR[k] = std::max(tR[k], (2 * eng->h) / tC[k]); }
 }
+int Arc::lead() const {
+  if (pendKey != NONE) return pendKey;
+  for (int k = nT - 1; k >= 0; k--) if (tDir[k] > 0) return tKey[k];
+  return nM > 0 ? mKey[nM - 1] : NONE;
+}
 void Arc::removeT(int k) {
   const int j = --nT;
   tKey[k] = tKey[j]; tC[k] = tC[j]; tV[k] = tV[j]; tI[k] = tI[j];
@@ -119,9 +126,13 @@ void Arc::run(int n, const double *emf) {
   uint32_t sd = seed;
   double stP_ = 0, stI2_ = 0, stOut_ = 0, stUmax_ = stUmax;
   const double kDC = e.kDC, iOut = 0.1 * e.sm.I0; // the arc counts as out while its current has all but stopped
+  // the core as the key it sings bends it (MPE), gliding as the wheel's; the talking arc's coil is fixed
+  const double nr = e.mode == mode_::talk || bendKey == NONE ? 1 : e.ex.bendOf(bendKey), lbT = 1 / (nr * nr), kS = e.kS;
+  double lb_ = lb;
   for (int s = 0; s < n; s++) {
     const double E = e.sE[s], Rb = e.sRb[s], A = e.sA[s], B = e.sB[s], Xm = e.sXm[s], del2 = e.sDel2[s], itau = e.sItau[s], th = e.sTh[s];
-    const double L = e.sL[s], R = e.sR[s], kout = e.sKout[s], sig = quiet ? 0 : e.sSig[s] * nNorm;
+    if (lb_ != lbT) { lb_ += kS * (lbT - lb_); if (std::fabs(lb_ - lbT) < 1e-12) lb_ = lbT; }
+    const double L = e.sL[s] * lb_, R = e.sR[s], kout = e.sKout[s], sig = quiet ? 0 : e.sSig[s] * nNorm;
     const double Lbh = SUPPLY.Lb / h, as = Lbh + 0.5 * Rb, bs = 0.5 / as, Lh = L / h, ac = Lh + 0.5 * R, bc = 0.5 / ac;
     const double em0 = emf ? emf[s] : 0, em1 = emf ? (s + 1 < n ? emf[s + 1] : emf[s]) : 0;
     for (int o = 0; o < OS; o++) {
@@ -214,7 +225,7 @@ void Arc::run(int n, const double *emf) {
     }
     uDC += kDC * (u_ - uDC); Imean += kDC * (is_ - Imean);
   }
-  is = is_; ic = ic_; vB = vB_; X = X_; u = u_; ia = ia_; P = Pw; seed = sd; nf = nf_;
+  is = is_; ic = ic_; vB = vB_; X = X_; u = u_; ia = ia_; P = Pw; seed = sd; nf = nf_; lb = lb_;
   stP += stP_; stI2 += stI2_; stOut += stOut_; stN += n * OS; stUmax = stUmax_;
   if (!std::isfinite(X + u + is + ic + vB)) rest(arcOp(arcParams(e.P.data()))); // never let a blow-up through
 }
@@ -378,7 +389,7 @@ void ArcEngine::noteOn(int key, double) {
     if (i < nStack) { for (int j = i; j + 1 < nStack; j++) stack[j] = stack[j + 1]; nStack--; }
     if (nStack < 128) stack[nStack++] = key;
     singer.f0t = keyFreq(key) * tuning.ratio(key);
-    if (!singer.on || singer.env < 0.01) singer.f0 = singer.f0t;
+    if (!singer.on || singer.env < 0.01) { singer.f0 = singer.f0t; talkBend = ex.bendOf(key); } // a new phrase: no glide
     singer.on = true;
     return;
   }
@@ -418,7 +429,13 @@ void ArcEngine::noteOff(int key, double) {
     if (nStack) singer.f0t = keyFreq(stack[nStack - 1]) * tuning.ratio(stack[nStack - 1]); else singer.on = false;
     return;
   }
-  for (int k = 0; k < nArcs; k++) { Arc &a = arcs[k]; if (a.holds(key)) { a.release(key); if (!a.held()) a.released = time; } }
+  for (int k = 0; k < nArcs; k++) {
+    Arc &a = arcs[k];
+    if (!a.holds(key)) continue;
+    a.release(key);
+    if (!a.held()) a.released = time;
+    else if (a.bendKey == key) a.bendKey = a.lead(); // the core glides to the bend of the key still held
+  }
 }
 void ArcEngine::allNotesOff() {
   if (mode == mode_::talk) { singer.on = false; nStack = 0; return; }
@@ -445,6 +462,8 @@ void ArcEngine::process(float *L, float *R, int n) {
 void ArcEngine::block(float *L, float *R, int s0, int n) {
   const double k = kS;
   const bool talk = mode == mode_::talk;
+  // the singer's own bend (MPE): its newest key's, gliding as the arcs' cores
+  const double tb = talk && nStack ? ex.bendOf(stack[nStack - 1]) : talkBend;
   // per-sample parameter glides and everything that follows from them
   for (int s = 0; s < n; s++) {
     sm.I0 += k * (target.I0 - sm.I0); sm.l += k * (target.l - sm.l); sm.tau += k * (target.tau - sm.tau); sm.rho += k * (target.rho - sm.rho);
@@ -458,6 +477,8 @@ void ArcEngine::block(float *L, float *R, int s0, int n) {
     sKout[s] = pressureGain(sm.dist) / h;
     const double hf = hissFactor(arcs[0].Imean, sm.l);
     sSig[s] = NOISE0 + HISS_RMS * sm.hiss * hf;
+    if (talk && talkBend != tb) { talkBend += k * (tb - talkBend); if (std::fabs(talkBend - tb) < 1e-12) talkBend = tb; }
+    singer.bend = bendRatio * talkBend;
     emf[s] = talk ? sm.voice * singer.next() : 0;
   }
   std::fill(osL.begin(), osL.begin() + n * OS, 0.0); std::fill(osR.begin(), osR.begin() + n * OS, 0.0);
@@ -493,7 +514,7 @@ void ArcEngine::block(float *L, float *R, int s0, int n) {
 int ArcEngine::trailDec(const Arc &arc) const {
   double C = arc.CB;
   for (int k = 0; k < arc.nT; k++) if (arc.tDir[k] > 0) C += arc.tC[k];
-  const double L = mode == mode_::talk ? TALK.L : sm.L;
+  const double L = mode == mode_::talk ? TALK.L : sm.L * arc.lb;
   if (!(C > 0)) return std::max(1, (int)jround((fs * OS * 0.01) / TRAIL));
   const double f = 1 / (2 * PI * std::sqrt(L * C));
   return std::max(1, (int)jround((2 * fs * OS) / (f * TRAIL)));

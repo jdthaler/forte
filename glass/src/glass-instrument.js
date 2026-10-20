@@ -19,6 +19,9 @@ export const INSTRUMENT = {
   // faster) and a faster warble. Not the slider's full 3 rev/s: faster than ~1.2 rev/s the
   // big bowls can no longer speak.
   modWheel: { param: 'speed', max: 2 * DEFAULTS.speed },
+  // MPE: each note's own bend retunes its bowl alone, as the wheel retunes them all (±4 octaves).
+  // No slide: the treadle turns one spindle for every bowl.
+  mpe: { bend: 48 },
   // the engine: the physics in C++ (native/instruments/glass), built as WebAssembly
   wasm: { name: 'ArmonicaWasmEngine', module: new URL('./glass-wasm.js', import.meta.url).href, binary: new URL('../wasm/glass.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

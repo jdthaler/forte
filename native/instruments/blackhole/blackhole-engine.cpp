@@ -143,7 +143,11 @@ void RingdownEngine::offer(const KeyVoice &v) { offer_ = v; hasOffer = true; }
 Voice *RingdownEngine::slot() { return nfree ? free_[--nfree] : nullptr; }
 
 void RingdownEngine::noteOn(int key, double velocity) {
-  const KeyVoice &d = hasOffer ? offer_ : voiceFor(key);
+  // a key with a slide of its own: its black hole at that spin, built here (the page's voice is
+  // the knob's)
+  const double u = expr.slideOr(key, NAN);
+  if (u == u) { ModelParams m = model; m.spinU = std::max(0.0, u); keyVoice(key, m, fs, spun, &spunAngular); }
+  const KeyVoice &d = u == u ? spun : hasOffer ? offer_ : voiceFor(key);
   hasOffer = false;
   // over the limit: fade out the quietest voice that is not already going
   int live = 0;

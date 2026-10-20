@@ -84,6 +84,17 @@ sostenuto and soft pedals, aftertouch and, where it means something, the
 mod wheel and pitch bend. Once MIDI is on, every other instrument page
 turns it on by itself.
 
+**MPE:** a controller that gives each note a channel of its own (a ROLI
+Seaboard, a LinnStrument, an Expressive E Osmose) bends, slides and presses
+each note alone, wherever the instrument can: a reed, a pipe, a string or a
+bow bends; a struck bar or bell keeps its pitch, but its slide (CC74) still
+moves what the mod wheel moves, for that note. The MPE menu beside Enable
+MIDI is on Auto, which turns MPE on when the controller announces it (its
+MPE Configuration Message) and leaves any other keyboard as it was; On
+reads channels 2–16 as MPE without the announcement, and Off never does.
+The plugins have the same choice as their MPE parameter, and also take
+CLAP's per-note expressions.
+
 **Latency:** play through wired headphones or speakers. Bluetooth ones
 delay every note by 100–200 ms, enough to make any instrument feel
 sluggish; a page warns you once when the browser reports that much (Safari

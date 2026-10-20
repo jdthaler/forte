@@ -19,6 +19,8 @@ constexpr double AFTER = 0.5;          // full aftertouch raises the wind by thi
 constexpr int POST_BLOCKS = 4;         // post the views' data every 4 blocks
 constexpr double LINE_LO = 0.002, LINE_HI = 0.015; // the free wake's relative line width (FWHM) for Re ≤ 180 and Re ≥ 1000
 constexpr double WH_MAX = 0.4;         // a string steps at 1/2 or 1/4 of the sample rate while ω h stays under this, and 2, 4 or 8 times a sample where its wake's Ω h would pass it
+constexpr double WH_BENT = 0.45;       // and, bent up, while its top mode's ω h stays under this (the wheel's two semitones keep within it)
+constexpr double F_TOP = 0.48;         // × fs: a mode bent up past this stays there, rather than fold back under Nyquist (the wheel lifts none past 0.472)
 constexpr double PI = std::numbers::pi;
 // The Quality: keys sounding at once past which a released (shut) key is let go, a held or
 // pedalled one only past MAX_VOICES as at High; and how quiet a shut string must be to retire,
@@ -87,7 +89,7 @@ void WindHarpEngine::setParams(const double *p) {
 }
 
 // ---- a string ------------------------------------------------------------------------------------
-void WindHarpEngine::initString(Str &s, int key, const StringDesign &S) {
+void WindHarpEngine::initString(Str &s, int key, const StringDesign &S, double r) {
   s = Str{};
   s.key = key; s.S = S;
   // modes kept: below 0.42 fs, at least one
@@ -114,23 +116,31 @@ void WindHarpEngine::initString(Str &s, int key, const StringDesign &S) {
   s.home = homeHarmonic(S);
   // its own step: the sample period × D (1, 2 or 4), as long as ω h stays under WH_MAX for its top mode
   // and its shedding at 1.5 × the top wind
-  const double wTop = std::max(s.w[N - 1], TAU * shedding(1.5 * U_MAX, S.D).fs);
+  s.wShed = TAU * shedding(1.5 * U_MAX, S.D).fs;
+  const double wTop = std::max(s.w[N - 1], s.wShed);
   s.Dmax = 1;
   while (s.Dmax < 4 && wTop * h * s.Dmax * 2 <= WH_MAX) s.Dmax *= 2;
+  s.Dtop = s.Dmax;
   s.D = s.Dmax; s.hs = h * s.D;
-  if (bendNow != 1) tension(s, bendNow);
+  if (r != 1) tension(s, r); // the wheel's bend and the key's own
 }
 
 // Pitch bend: the string's tension × r², its stiff modes f_n = n f₀ √(r² + B n²) and the pull at the
 // bridge (tension × slope) with it. The wind and its wake do not change: a string bent out of its
-// lock-in band moves to the harmonic the wake picks, as a real one would.
+// lock-in band moves to the harmonic the wake picks, as a real one would. A key's own bend (MPE)
+// does the same to its strings alone, up to four octaves: a string bent up steps finer (at the
+// sample rate once its top mode needs it), and a mode lifted past F_TOP of the sample rate stays there.
 void WindHarpEngine::tension(Str &s, double r) {
   const StringDesign &S = s.S;
+  const double top = TAU * F_TOP * fs;
   for (int n = 0; n < s.N; n++) {
     const double Bn = S.B * (n + 1) * (n + 1);
-    s.w[n] = TAU * S.f[n] * std::sqrt((r * r + Bn) / (1 + Bn)); s.w2[n] = pow(s.w[n], 2);
+    s.w[n] = std::min(TAU * S.f[n] * std::sqrt((r * r + Bn) / (1 + Bn)), top); s.w2[n] = pow(s.w[n], 2);
     s.kb[n] = (S.T * r * r * (n + 1) * PI) / S.L;
   }
+  const double wTop = std::max(s.w[s.N - 1], s.wShed);
+  s.Dmax = s.Dtop;
+  while (s.Dmax > 1 && wTop * h * s.Dmax > WH_BENT) s.Dmax /= 2;
   s.bent = r; s.zetaAt = -1; // the modes' coefficients again at the next block
 }
 
@@ -319,7 +329,8 @@ void WindHarpEngine::noteOn(int key, double velocity) {
     dp.keyboard = designKeyboard;
     CourseOffset o[COURSE_MAX];
     v->ns = courseOffsets(key, o);
-    for (int i = 0; i < v->ns; i++) initString(v->strings[i], key, stringDesign(key, dp, o[i]));
+    v->nb = expr.bendOf(key); // a bend sent before the key starts it there
+    for (int i = 0; i < v->ns; i++) initString(v->strings[i], key, stringDesign(key, dp, o[i]), bendNow * v->nb);
     v->x = 0; v->target = 0; v->rate = 0; v->held = false; v->pedal = false;
     v->fading = false; v->fade = 1; v->dead = false; v->age = 0; v->env = 0; v->press = 0; v->pressS = 0;
     v->pb = boxGain(key);
@@ -389,14 +400,23 @@ void WindHarpEngine::bend(double value) {
   bendTo = fdlibm::pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12);
 }
 
+void WindHarpEngine::noteBend(double ratio, int key) { expr.setBend(ratio, key); }
+
 void WindHarpEngine::process(float *L, float *R, int n) {
   for (; n > BLOCK; n -= BLOCK, L += BLOCK, R += BLOCK) process(L, R, BLOCK);
   std::fill(L, L + n, 0.0f); std::fill(R, R + n, 0.0f);
   if (!hasParams) return;
-  if (bendNow != bendTo) { // pitch bend glides; the strings are retuned each block
+  const bool wheel = bendNow != bendTo;
+  if (wheel) { // pitch bend glides, and each key's own; the strings whose bend moved are retuned each block
     bendNow += (bendTo - bendNow) * (1 - fdlibm::exp(-n * h / BEND_T));
     if (std::fabs(bendNow - bendTo) < 1e-9) bendNow = bendTo;
-    for (int vi = 0; vi < nv; vi++) for (int i = 0; i < voices[vi]->ns; i++) tension(voices[vi]->strings[i], bendNow);
+  }
+  for (int vi = 0; vi < nv; vi++) {
+    Voice &v = *voices[vi];
+    const double nb = glideTo(v.nb, expr.bendOf(v.key), n * h, BEND_T);
+    if (!wheel && nb == v.nb) continue;
+    v.nb = nb;
+    for (int i = 0; i < v.ns; i++) tension(v.strings[i], bendNow * nb);
   }
   const double Unow = wind(n);
   std::fill(flatL, flatL + n, 0.0); std::fill(flatR, flatR + n, 0.0); std::fill(mono, mono + n, 0.0);

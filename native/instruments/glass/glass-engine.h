@@ -25,6 +25,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "glass-model.h"
 #include "glass-params.h"
 
@@ -53,6 +54,7 @@ class ArmonicaEngine : public Engine {
   void allNotesOff() override;
   void pressure(double value, int key) override; // aftertouch: the finger presses harder
   void bend(double value) override;              // every bowl's modes ×r (no real armonica bends)
+  void noteBend(double ratio, int key) override; // one bowl's modes ×r, on top of the wheel's
   int voiceCount() const override { return count; }
   // the tests: whether the key's bowl for the current parameters is built (asks for it if not)
   bool ready(int key) { return bool(bowls.get(key, version)); }
@@ -66,6 +68,7 @@ class ArmonicaEngine : public Engine {
     int quiet = 0;
     double pl = 0, pr = 0;
     double bent = 1; // the ratio its modes are tuned to
+    double nb = 1;   // its own bend (MPE), where its glide is
     uint64_t version = 0; // of the bowl it was built from
     Bowl b;
     int N = 0;
@@ -98,6 +101,7 @@ class ArmonicaEngine : public Engine {
   Friction fr{};
   double theta = 0, Wbar = 0, pressureAll = 0;
   double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
+  NoteExpression expr{48};        // each key's own bend
   double C[N_MAX + 1][128] = {}, S[N_MAX + 1][128] = {};
   int32_t rng = 22222;
   int focus = -1, tick = 0;

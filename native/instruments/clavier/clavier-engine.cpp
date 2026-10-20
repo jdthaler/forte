@@ -147,7 +147,10 @@ void ClavierEngine::render(Voice &v, double *out, int n) {
   const double kcGain = v.kcGain, wrapK = v.wrapK, dTnom = S.dTnom, Tt = S.T;
   const double lev = S.mag * OUT * fs * (GAP_REF / S.gap), gl = v.gl * lev, gu = v.gu * lev; // levels matched across gaps
   const double lamP = v.lam, xl = v.xl, xu = v.xu;
-  const double target = v.down ? P[p::press] + PRESS_MAX * std::max(v.pressure, bendNow) : -RETURN_FORCE;
+  // the wheel's press, and the key's own bend pressing as far again as the wheel would for it (the
+  // key's force follows over 10 ms, as it follows the wheel)
+  const double nb = expr.bendOf(v.key), wheel = nb == 1 ? bendNow : std::max(0.0, std::min(1.0, bendNow + (12 * fdlibm::log2(nb)) / kBendSemitones));
+  const double target = v.down ? P[p::press] + PRESS_MAX * std::max(v.pressure, wheel) : -RETURN_FORCE;
   double *q = v.q, *q1 = v.q1, *r = v.r, *r1 = v.r1;
   double s = v.s, s1 = v.s1, eta = v.eta, eta1 = v.eta1, C1 = v.C1, C0 = v.C0, um = v.um, Qn = v.Q;
   double Fl = v.Flp, Pl = v.Pl, Pu = v.Pu, peak = 0, fade = v.fade, Frp = v.Fr, Fap = v.Fa;

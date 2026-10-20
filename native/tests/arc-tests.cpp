@@ -115,6 +115,126 @@ TEST("arc: pitch bend slides the coil's core: the note follows, two semitones at
   }
 }
 
+// MPE (forte/expression.h): a key's own bend slides the core of the arc that sings it
+static std::unique_ptr<ArcEngine> arcWith(double fs, const std::vector<double> &P, std::initializer_list<int> keys) {
+  auto e = std::make_unique<ArcEngine>(fs);
+  e->setParams(P.data());
+  for (int k : keys) waitFor(*e, k);
+  return e;
+}
+static double centsOf(double f, double g) { return 1200 * std::log2(f / g); }
+
+TEST("arc: MPE: a key's own bend slides its arc's core: the note follows (the arc's lag pulls it, as the wheel's), and is the wheel's bent as far") {
+  const double fs = 48000;
+  auto P = defaults();
+  const int key = 67;
+  for (double st : {-12.0, -7.0, -3.0, 3.0, 7.0, 12.0}) {
+    auto e = arcWith(fs, P, {key});
+    e->noteBend(std::pow(2.0, st / 12), key);
+    e->noteOn(key, 0.8);
+    const auto L = render(*e, (int)(0.75 * fs));
+    const double want = keyFreq(key) * std::pow(2.0, st / 12), f = freqAt(L, want, 14400, 36000, fs);
+    CHECK(std::fabs(centsOf(f, want)) < 10 * std::fabs(st)); // within a tenth of the bend
+    CHECK(rms(L, 14400, 36000) > 0.01);
+  }
+  for (double v : {1.0, -1.0}) {
+    auto w = arcWith(fs, P, {key}), k = arcWith(fs, P, {key});
+    k->noteBend(std::pow(2.0, 2 * v / 12), key);
+    w->noteOn(key, 0.8);
+    k->noteOn(key, 0.8);
+    w->bend(v);
+    const double want = keyFreq(key) * std::pow(2.0, 2 * v / 12);
+    const double fw = freqAt(render(*w, (int)(0.75 * fs)), want, 14400, 36000, fs), fk = freqAt(render(*k, (int)(0.75 * fs)), want, 14400, 36000, fs);
+    CHECK(std::fabs(centsOf(fk, want)) < 10);
+    CHECK(std::fabs(centsOf(fk, fw)) < 0.2);
+  }
+}
+
+TEST("arc: MPE: several arcs: one key bends its own lamp, its neighbour stays where it was") {
+  const double fs = 48000;
+  auto P = defaults();
+  P[p::mode] = mode_::poly;
+  const double r = std::pow(2.0, 2.0 / 12);
+  auto a = arcWith(fs, P, {60, 67}), b = arcWith(fs, P, {60, 67});
+  b->noteBend(r, 67);
+  for (auto *e : {a.get(), b.get()}) { e->noteOn(60, 0.8); e->noteOn(67, 0.8); }
+  const auto A = render(*a, (int)(0.75 * fs)), B = render(*b, (int)(0.75 * fs));
+  CHECK(std::fabs(centsOf(freqAt(B, keyFreq(60), 14400, 36000, fs), freqAt(A, keyFreq(60), 14400, 36000, fs))) < 0.2);
+  CHECK(std::fabs(centsOf(freqAt(B, keyFreq(67) * r, 14400, 36000, fs), keyFreq(67) * r)) < 10);
+}
+
+TEST("arc: MPE: one arc sings the newest key's bend; let go, it glides back to the key still held") {
+  const double fs = 48000;
+  auto P = defaults();
+  const double r = std::pow(2.0, 2.0 / 12);
+  auto bent = arcWith(fs, P, {60, 64}), plain = arcWith(fs, P, {60, 64}), lone = arcWith(fs, P, {60});
+  bent->noteBend(r, 60);
+  lone->noteBend(r, 60);
+  for (auto *e : {bent.get(), plain.get()}) { e->noteOn(60, 0.8); e->noteOn(64, 0.8); }
+  lone->noteOn(60, 0.8);
+  const auto A = render(*bent, (int)(0.75 * fs)), B = render(*plain, (int)(0.75 * fs));
+  const double both = freqAt(B, keyFreq(60) * keyFreq(64) / std::hypot(keyFreq(60), keyFreq(64)), 14400, 36000, fs);
+  CHECK(std::fabs(centsOf(freqAt(A, both, 14400, 36000, fs), both)) < 0.2); // E4's (unbent), the capacitors in parallel
+  bent->noteOff(64, -1);
+  const auto C = render(*bent, (int)(0.75 * fs)), D = render(*lone, (int)(1.5 * fs));
+  const double f = freqAt(D, keyFreq(60) * r, 50400, 72000, fs);
+  CHECK(std::fabs(centsOf(freqAt(C, f, 14400, 36000, fs), f)) < 0.5);         // C4's, bent
+}
+
+TEST("arc: MPE: the talking arc's singer takes its key's own bend, as the wheel's") {
+  const double fs = 48000;
+  auto P = defaults();
+  P[p::mode] = mode_::talk;
+  auto w = arcWith(fs, P, {}), k = arcWith(fs, P, {});
+  w->bend(1);
+  k->noteBend(fdlibm::pow(2.0, kBendSemitones / 12), 55);
+  w->noteOn(55, 0.8);
+  k->noteOn(55, 0.8);
+  CHECK(render(*w, (int)(0.5 * fs)) == render(*k, (int)(0.5 * fs)));
+}
+
+TEST("arc: MPE: noteBend(1), before and during the notes, leaves the sound bit-identical (one arc, several, talking)") {
+  const double fs = 48000;
+  for (int mode : {mode_::mono, mode_::poly, mode_::talk}) {
+    auto P = defaults();
+    P[p::mode] = mode;
+    auto a = arcWith(fs, P, {48, 60, 67}), b = arcWith(fs, P, {48, 60, 67});
+    const int keys[] = {48, 60, 67};
+    for (int k : keys) { b->noteBend(1, k); b->slide(NAN, k); }
+    for (auto *e : {a.get(), b.get()}) for (int k : keys) e->noteOn(k, 0.8);
+    std::vector<float> A, B;
+    for (int blk = 0; blk < (int)(0.6 * fs / 128); blk++) {
+      if (blk % 5 == 0) for (int k : keys) { b->noteBend(1, k); b->slide(NAN, k); }
+      if (blk == 120) for (auto *e : {a.get(), b.get()}) e->noteOff(60, -1);
+      const auto x = render(*a, 128), y = render(*b, 128);
+      A.insert(A.end(), x.begin(), x.end());
+      B.insert(B.end(), y.begin(), y.end());
+    }
+    CHECK(A == B);
+  }
+}
+
+TEST("arc: MPE: ±48 semitones (clamped to ±12) on chords, sent every block: finite and bounded at 44.1, 48 and 96 kHz") {
+  for (double fs : {44100.0, 48000.0, 96000.0}) for (int mode : {mode_::mono, mode_::poly, mode_::talk}) {
+    auto P = defaults();
+    P[p::mode] = mode;
+    P[p::arcs] = 4;
+    auto e = arcWith(fs, P, {48, 60, 67, 84});
+    const int keys[] = {48, 60, 67, 84};
+    for (int k : keys) e->noteOn(k, 0.8);
+    double pk = 0;
+    bool finite = true;
+    for (int blk = 0; blk < (int)(1.0 * fs / 128); blk++) {
+      for (int i = 0; i < 4; i++) e->noteBend(std::pow(2.0, 60 * std::sin(TAU * 1.3 * (blk * 128 / fs + 0.13 * i)) / 12), keys[i]);
+      if (blk == (int)(0.7 * fs / 128)) for (int k : keys) e->noteOff(k, -1);
+      const auto L = render(*e, 128);
+      for (float x : L) { finite = finite && std::isfinite(x); pk = std::max(pk, (double)std::fabs(x)); }
+    }
+    CHECK(finite);
+    CHECK(pk < 2);
+  }
+}
+
 TEST("arc: a key not cut yet still sounds (Kelvin's capacitor), and the bank follows the parameters") {
   const double fs = 48000;
   auto P = defaults();

@@ -10,7 +10,8 @@
 //
 // The coupling tables (gongs-model.h, buildShell: a few milliseconds per change of Dome rise,
 // Coupling terms or Rim) are built on a worker thread and handed over without locks (Shells); a
-// note struck before its tables are ready waits for them. Voices live in a fixed pool, and
+// note struck before its tables are ready waits for them. A note's own slide (MPE) is where its
+// mallet lands, taken as it strikes. Voices live in a fixed pool, and
 // nothing is allocated in process() (but for the tests' trace of a voice's steps).
 #pragma once
 
@@ -21,6 +22,7 @@
 
 #include "forte/background.h" // FORTE_THREADS
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "forte/queue.h"
 #include "gongs-model.h"
 
@@ -174,6 +176,7 @@ class GongEngine : public Engine {
   void setSustain(bool on) override;
   void allNotesOff() override;
   void pressure(double value, int key) override; // aftertouch: a hand pressed against the gong
+  void slide(double value, int key) override { expr.setSlide(value, key); } // the key's strike point, at its next strike
   int voiceCount() const override { return nv; }
   void process(float *L, float *R, int n) override;
 
@@ -213,6 +216,7 @@ class GongEngine : public Engine {
   int nv = 0;
   std::array<Upsampler, 4> buses;
   bool sustain = false;
+  NoteExpression expr{0}; // each key's own strike point (no bend: a plate is cut to its pitch)
   Voice *focus = nullptr;
   int64_t frame = 0, sinceView = 0;
   uint32_t serials = 0;

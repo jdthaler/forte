@@ -99,6 +99,8 @@ export function wasmEngine(I, { messages } = {}) {
     handle(m) {
       if (m.type === 'pressure') x.forte_pressure(this.h, m.value, m.key ?? -1);
       else if (m.type === 'bend') x.forte_bend(this.h, m.value);
+      else if (m.type === 'noteBend') x.forte_note_bend(this.h, m.value, m.key);
+      else if (m.type === 'slide') x.forte_slide(this.h, m.value ?? NaN, m.key);
     }
     voiceCount() { return x.forte_voice_count(this.h); }
     // Quality (shared/quality.js): 'high', 'medium' or 'low', or its index

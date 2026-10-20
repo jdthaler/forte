@@ -1,11 +1,13 @@
 // smoke.cpp — a test instrument for the shared plugin (tests/plugin-tests.cpp): struck sines,
-// a pedal, a mod wheel, two parameters, a compass, a preset, and one voice at Low quality. It
-// proved the plugin pipeline in CI until the template was ported; it is not built as a plugin.
+// a pedal, a mod wheel, two parameters, a compass, a preset, and one voice at Low quality; the pitch
+// wheel and each note's own bend and slide (its ring time) move a sounding sine at once. It proved
+// the plugin pipeline in CI until the template was ported; it is not built as a plugin.
 
 #include <cmath>
 #include <numbers>
 #include <vector>
 
+#include "forte/expression.h"
 #include "forte/instrument.h"
 
 namespace {
@@ -30,8 +32,11 @@ class SmokeEngine : public Engine {
   void setParams(const double *P) override { decay = P[kDecay]; } // the volume is the chain's
   void noteOn(int key, double velocity) override {
     double f = 440 * std::pow(2.0, (key - 69) / 12.0), w = 2 * std::numbers::pi * f / fs;
-    if ((int)voices.size() < pick(32, 8, 1)) voices.push_back({w, 0, 0.2 * velocity, std::exp(-6.9 / (decay * fs)), key}); // Quality: fewer voices
+    if ((int)voices.size() < pick(32, 8, 1)) { voices.push_back({w, 0, 0.2 * velocity, 0, key}); tune(voices.back()); } // Quality: fewer voices
   }
+  void bend(double v) override { wheel = std::pow(2.0, v * kBendSemitones / 12); for (auto &x : voices) tune(x); }
+  void noteBend(double r, int key) override { expr.setBend(r, key); for (auto &x : voices) if (x.key == key) tune(x); }
+  void slide(double v, int key) override { expr.setSlide(v, key); for (auto &x : voices) if (x.key == key && !x.off) tune(x); }
   void noteOff(int key, double) override { for (auto &v : voices) if (v.key == key) { v.off = true; if (!sustain) damp(v); } }
   void setSustain(bool on) override { sustain = on; if (!on) for (auto &v : voices) if (v.off) damp(v); }
   void allNotesOff() override { voices.clear(); }
@@ -46,9 +51,12 @@ class SmokeEngine : public Engine {
   }
 
  private:
-  struct Voice { double w, ph, a, r; int key; bool off = false; };
+  struct Voice { double w0, ph, a, r; int key; bool off = false; double w = 0; };
   void damp(Voice &v) { v.r = std::exp(-6.9 / (0.1 * fs)); }
+  void tune(Voice &v) { v.w = v.w0 * wheel * expr.bendOf(v.key); if (!v.off) v.r = std::exp(-6.9 / (expr.slideOr(v.key, decay) * fs)); }
   std::vector<Voice> voices;
+  NoteExpression expr{48};
+  double wheel = 1;
   bool sustain = false;
   double decay = 1;
 };

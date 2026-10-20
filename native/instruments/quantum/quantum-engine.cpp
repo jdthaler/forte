@@ -15,6 +15,7 @@ using std::numbers::pi;
 
 constexpr double OUT = 0.3;      // launch peak at full velocity
 constexpr double TAU_MIN = 1e-4; // shortest pump ramp, s (keeps the onset below Nyquist)
+constexpr double SLIDE_T = 0.02; // s: a note's slide (its dephasing rate) glides with this time constant
 constexpr int KEY_LO = 21, KEY_HI = 108; // the descriptor's range, A0–C8: the packets built ahead
 
 static double erf(double x) { // Abramowitz & Stegun 7.1.26, |error| < 1.5e-7
@@ -72,6 +73,8 @@ bool QuantumEngine::Voice::start(const QuantumEngine &eng, int k, double vel, co
   released = quench = stolen = dead = false;
   coh = folded = false; lam = 0; gain = 1; dcB = dcC = 0;
   s0 = 0; s1 = S; active = NP; // the states rotated, and the pairs summed (see trim)
+  const double x = eng.expr.slideOr(k, NAN); // a slide starts there
+  slid = x == x; deph = slid ? x : eng.P[p::dephase];
   // Quality: Medium and Low drop the pairs 50 and 40 dB under the voice's strongest (High keeps
   // what the packet keeps, down to 60 dB)
   if (eng.quality != Quality::high) {
@@ -115,7 +118,8 @@ void QuantumEngine::Voice::trim(double tau) {
 void QuantumEngine::Voice::rates(const QuantumEngine &eng) { // T₁ (or the release quench) and T_φ, applied live
   const double fs = eng.fs, T1 = stolen ? 0.005 : quench ? eng.P[p::release] : eng.P[p::T1];
   r1 = fd::exp(-1 / (fs * T1));
-  const double Gp = std::max(0.0, truthy(eng.P[p::dephase]) ? eng.P[p::dephase] : 0); // Γ_φ = 1/T_φ
+  if (!slid) deph = eng.P[p::dephase];
+  const double Gp = std::max(0.0, truthy(deph) ? deph : 0); // Γ_φ = 1/T_φ
   for (int g = 0; g < G; g++) gR[g] = fd::exp(-(gk[g] * gk[g] * Gp) / fs);
   gdt = Gp / fs;
 }
@@ -189,6 +193,19 @@ bool QuantumEngine::Voice::cohere(const QuantumEngine &eng, Voice &old) {
   }
   if (!left) dcC = (old.env * old.offset(old.count)) / env;
   return left;
+}
+
+// The key's slide: the dephasing rate glides toward it, block by block (and back to P's once it is
+// gone).
+void QuantumEngine::Voice::dephase(const QuantumEngine &eng, int n) {
+  const double x = eng.expr.slideOr(key, NAN);
+  const bool own = x == x;
+  if (!own && !slid) return;
+  slid = true;
+  const double to = own ? x : eng.P[p::dephase], was = deph;
+  deph = glideTo(deph, to, n / eng.fs, SLIDE_T);
+  if (!own && deph == to) slid = false;
+  if (deph != was) rates(eng);
 }
 
 // Exact phases from the sample counter: aₙ = e^(−iθₙ·count).
@@ -485,7 +502,7 @@ template <class T>
 void QuantumEngine::render(T *L, T *R, int n) {
   std::fill(L, L + n, T(0)); std::fill(R, R + n, T(0));
   if (hasParams && nPending) retryPending();
-  for (int i = 0; i < nVoices; i++) voices[i]->render(L, R, n);
+  for (int i = 0; i < nVoices; i++) { voices[i]->dephase(*this, n); voices[i]->render(L, R, n); }
   int j = 0; // drop finished voices in place (no allocation; an offered packet goes with its voice)
   for (int i = 0; i < nVoices; i++) {
     Voice *v = voices[i];

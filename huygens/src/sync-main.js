@@ -12,7 +12,7 @@ import { SpectrumView, SpectrogramView } from '../../shared/views.js';
 import { StairView, RasterView } from './sync-viz.js';
 import { FiringLog } from './lock-analysis.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, wheelValue, createSostenuto } from '../../shared/midi.js';
+import { startMIDI, resumeMIDI, wheelValue, pageMpe, createSostenuto } from '../../shared/midi.js';
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
@@ -91,12 +91,13 @@ function onWorklet(m) {
 // ---------------------------------------------------------------------------
 // notes, hold
 
-async function noteOn(key) {
+async function noteOn(key, own) { // own: an MPE note's own (midi.js pageMpe)
   if (key < KEY_LO || key > KEY_HI) return;
   latched.delete(key); sost.strike(key);
   sounding.set(key, (sounding.get(key) || 0) + 1);
   keyboardView.set(key, true);
   const a = await startAudio();
+  for (const m of notes.strike(key, own)) a.node.port.postMessage(m);
   a.node.port.postMessage({ type: 'noteOn', key, velocity: 1, data: { f: tunedFreq(key, P) } }); // the design frequency the views mark
   refreshMarks();
 }
@@ -178,9 +179,11 @@ const sost = createSostenuto(); // CC66
 function initMIDI() {
   startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn') });
 }
+const notes = pageMpe({ post, params: () => P, modWheel: INSTRUMENT.modWheel, groups: GROUPS }); // MPE: each note's own
 function onMIDI(ev) {
-  const [st, d1, d2] = ev.data, cmd = st & 0xf0;
-  if (cmd === 0x90 && d2 > 0) noteOn(d1);
+  const [st, d1, d2] = ev.data, cmd = st & 0xf0, mpe = notes.midi(ev.data);
+  if (mpe.own) return;
+  if (cmd === 0x90 && d2 > 0) noteOn(d1, mpe.with);
   else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) noteOff(d1);
   else if (cmd === 0xb0 && d1 === 1) setParam(INSTRUMENT.modWheel, wheelValue(ALL_PARAMS.find((q) => q.id === INSTRUMENT.modWheel), d2)); // at rest: the default coupling
   else if (cmd === 0xb0 && d1 === 64) setHold(d2 >= 64);

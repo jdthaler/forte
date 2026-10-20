@@ -39,7 +39,7 @@ function test(name, fn) {
 const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const rel = (a, b) => Math.abs(a / b - 1);
 
-// Run the engine through events ([t, 'on', key, vel, data?] | [t, 'off', key] | [t, 'sus', on] | [t, 'params', P])
+// Run the engine through events ([t, 'on', key, vel, data?] | [t, 'off', key] | [t, 'sus', on] | [t, 'params', P] | [t, 'msg', m])
 // in 128-sample blocks like the AudioWorklet. Returns L + R (or [L, R, engine]).
 function run(params, events, sec, { fs = FS, stereo = false, tap, quality } = {}) {
   const e = new StarEngine(fs);
@@ -51,7 +51,7 @@ function run(params, events, sec, { fs = FS, stereo = false, tap, quality } = {}
   for (let s = 0; s < n; s += bl) {
     while (j < ev.length && ev[j][0] <= s) {
       const [, type, a, b, c] = ev[j++];
-      if (type === 'on') e.noteOn(a, b, c); else if (type === 'off') e.noteOff(a); else if (type === 'sus') e.setSustain(a); else if (type === 'params') e.setParams(a);
+      if (type === 'on') e.noteOn(a, b, c); else if (type === 'off') e.noteOff(a); else if (type === 'sus') e.setSustain(a); else if (type === 'params') e.setParams(a); else if (type === 'msg') e.handle(a);
     }
     e.process(bL, bR, bl);
     for (let i = 0; i < bl && s + i < n; i++) { L[s + i] = bL[i]; R[s + i] = bR[i]; }
@@ -460,6 +460,45 @@ test('knobs glide: rotation, inclination and driving moved mid-note do not click
     const ref = id === 'damping' ? second(run(P({ flare: 0, damping: 10 }), [[0, 'on', 76, 0.7]], 0.75), 0.5 * FS, 0.75 * FS) : second(x, 0.25 * FS, 0.5 * FS);
     const after = second(x, 0.5 * FS, 0.75 * FS);
     assert.ok(after < 2 * ref + 1e-6, `${id}: second difference ${after.toExponential(2)} after, ${ref.toExponential(2)} for reference`);
+  }
+});
+console.log('MPE');
+// A note's slide is its own star's rotation (a star doesn't bend)
+const slide = (t, key, value) => [t, 'msg', { type: 'slide', key, value }];
+const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+test('a star with its own rotation (a slide before the note) sounds as the knob there, sample for sample, both families; a star held beside it keeps the knob\'s', () => {
+  for (const family of ['track', 'dscuti']) {
+    const p = P({ family });
+    const x = run(p, [slide(0, 76, 15), [0, 'on', 76, 0.8]], 1), k = run(P({ family, spin: 15 }), [[0, 'on', 76, 0.8]], 1);
+    assert.ok(same(x, k), `${family}: as the knob at 15× the Sun`);
+    assert.ok(!same(x, run(p, [[0, 'on', 76, 0.8]], 1)), `${family}: and not as the knob's own`);
+  }
+  // struck by the flare alone (the convection's draws are shared), 79 first, then 76: the chord less
+  // 79 alone is 76, whether 79 spins or not
+  const q = P({ driving: 0 });
+  const d = (ev) => { const c = run(q, [...ev, [0, 'on', 79, 0.8], [0, 'on', 76, 0.8]], 1), s = run(q, [...ev, [0, 'on', 79, 0.8]], 1); return c.map((v, i) => v - s[i]); };
+  const a = d([slide(0, 79, 25)]), b = d([]);
+  const err = peakAbs(a.map((v, i) => v - b[i])), pk = peakAbs(b);
+  assert.ok(err < 1e-6 * pk && pk > 0.01, `the other star moves by ${err.toExponential(2)} (peak ${pk.toFixed(3)})`);
+});
+test('a slide while the star sounds glides, as the knob does: no click, and the star spins up', () => {
+  const second = (x, a, b) => { let m = 0; for (let i = Math.max(2, a); i < b; i++) m = Math.max(m, Math.abs(x[i] - 2 * x[i - 1] + x[i - 2])); return m; };
+  const p = P({ flare: 0 }), x = run(p, [[0, 'on', 76, 0.7], slide(0.5, 76, 30)], 0.75);
+  const before = second(x, 0.25 * FS, 0.5 * FS), after = second(x, 0.5 * FS, 0.75 * FS);
+  assert.ok(after < 2 * before + 1e-6, `second difference ${after.toExponential(2)} after, ${before.toExponential(2)} before`);
+  assert.ok(!same(x, run(p, [[0, 'on', 76, 0.7]], 0.75)), 'it moved');
+});
+test('slide(NaN) leaves the sound bit for bit as it was, before the note and while it sounds', () => {
+  const x = run(P(), [slide(0, 60, NaN), [0, 'on', 60, 0.8], slide(0.2, 60, NaN), [0.3, 'msg', { type: 'noteBend', key: 60, value: 1 }]], 0.8);
+  assert.ok(same(x, run(P(), [[0, 'on', 60, 0.8]], 0.8)));
+});
+test('slide sweeps on chords, sent every block across the whole range, stay finite and bounded at 44.1, 48 and 96 kHz, both families', () => {
+  for (const fs of [44100, 48000, 96000]) for (const family of ['track', 'dscuti']) {
+    const keys = [KEY_LO, 48, 60, 64, 67, KEY_HI], ev = keys.map((k) => [0, 'on', k, 1]);
+    for (let b = 0; b < (0.8 * fs) / 128; b++) keys.forEach((k, i) => ev.push(slide((b * 128) / fs, k, 15 + 15 * Math.sin(b / (3 + i)))));
+    const x = run(P({ family }), ev, 0.8, { fs });
+    for (const v of x) assert.ok(Number.isFinite(v), `${fs} ${family}: NaN`);
+    assert.ok(peakAbs(x) < 3, `${fs} ${family}: peak ${peakAbs(x).toFixed(2)}`);
   }
 });
 function cpu(keys) {

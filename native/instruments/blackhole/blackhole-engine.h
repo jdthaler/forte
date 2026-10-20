@@ -19,6 +19,7 @@
 #include "blackhole-model.h"
 #include "blackhole-params.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 
 namespace forte::blackhole {
 
@@ -61,6 +62,8 @@ class RingdownEngine : public Engine {
   void noteOn(int key, double velocity) override;
   void noteOff(int key, double velocity) override;
   void allNotesOff() override;
+  // a note's slide: its own black hole's spin, set at the merger (a ringdown's spin is fixed)
+  void slide(double value, int key) override { expr.setSlide(value, key); }
   int voiceCount() const override { return nv; }
   void process(float *L, float *R, int n) override;
 
@@ -96,6 +99,9 @@ class RingdownEngine : public Engine {
   KeyVoice other;               // a key outside the range
   KeyVoice offer_;
   bool hasOffer = false;
+  forte::NoteExpression expr{0}; // each key's slide (a black hole doesn't bend)
+  KeyVoice spun;                 // a key's voice at its slide's spin
+  Angular spunAngular;           // and its angular functions (kept apart from the keys' own)
   int sinceVoices = 0;
 };
 

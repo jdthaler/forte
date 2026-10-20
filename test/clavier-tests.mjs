@@ -254,6 +254,57 @@ test('key pressure: the pitch rises as ΔT = EA·ΔL/L with the wrap ΔL = δ²/
   }
 });
 
+// A note's own bend (MPE): its key pressed as the wheel would press it, so up to the wheel's 2 semitones.
+const noteBend = (key, st) => ({ type: 'noteBend', key, value: 2 ** (st / 12) });
+const near = (x, y, tol) => { let d = 0, pk = 0; for (let i = 0; i < x.length; i++) { d = Math.max(d, Math.abs(x[i] - y[i])); pk = Math.max(pk, Math.abs(y[i])); } assert.ok(d < tol * pk, `differs by ${(d / pk).toExponential(2)} of the peak`); };
+const same = (x, y, what) => { for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) assert.fail(`${what}: sample ${i} differs`); };
+
+test('a note\'s own bend presses its key as the wheel would (a semitone: half its 12 N), and that key alone', () => {
+  for (const [key, other] of [[40, 52], [72, 65]]) {
+    const f0 = keyFreq(key), a = sec(0.5), b = sec(1.0);
+    for (const st of [1, 2]) { // before the note-on, and while it sounds
+      near(render(P(), 1, [[0, 'msg', noteBend(key, st)], [0, 'on', key, 0.3]]), render(P(), 1, [[0, 'msg', { type: 'bend', value: st / 2 }], [0, 'on', key, 0.3]]), 1e-6);
+      near(render(P(), 1, [[0, 'on', key, 0.3], [0.3, 'msg', noteBend(key, st)]]), render(P(), 1, [[0, 'on', key, 0.3], [0.3, 'msg', { type: 'bend', value: st / 2 }]]), 1e-6);
+    }
+    // all the way: the pitch of 16 N, as the key-pressure test measures it against ΔT = EA·ΔL/L
+    const base = peakFreq(note(key, P(), 0.3, 1.0), f0, a, b);
+    const bent = peakFreq(render(P(), 1, [[0, 'on', key, 0.3], [0.05, 'msg', noteBend(key, 48)]]), f0 * 1.02, a, b, 80);
+    const hard = peakFreq(note(key, P({ press: 16 }), 0.3, 1.0), f0 * 1.02, a, b, 80);
+    assert.ok(Math.abs(cents(bent, hard)) < 0.5 && cents(bent, base) > 15, `key ${key}: +${cents(bent, base).toFixed(1)} ¢ bent, +${cents(hard, base).toFixed(1)} ¢ at 16 N`);
+    // the other key held beside it keeps its pitch: the chord is the bent note and the other one, apart
+    const chord = render(P(), 1, [[0, 'on', key, 0.3], [0, 'on', other, 0.3], [0.05, 'msg', noteBend(key, 2)]]);
+    const apart = [render(P(), 1, [[0, 'on', key, 0.3], [0.05, 'msg', { type: 'bend', value: 1 }]]), note(other, P(), 0.3, 1)];
+    near(chord, chord.map((_, i) => apart[0][i] + apart[1][i]), 1e-5);
+  }
+});
+
+test('a note\'s own bend down, or back to 1, leaves the output bit-identical; down takes the wheel\'s press off that key', () => {
+  const key = 60, ev = [[0, 'on', key, 0.5], [0, 'on', 67, 0.5], [0.3, 'off', 67]];
+  same(render(P(), 0.6, [[0, 'msg', noteBend(key, 1.5)], [0, 'msg', noteBend(key, 0)], ...ev, [0.2, 'msg', noteBend(67, 1.5)], [0.2, 'msg', noteBend(67, 0)], [0.25, 'msg', noteBend(key, 0)], [0.1, 'msg', { type: 'bend', value: 0.3 }]]),
+    render(P(), 0.6, [...ev, [0.1, 'msg', { type: 'bend', value: 0.3 }]]), 'bent and back');
+  same(render(P(), 0.6, [...ev, [0.1, 'msg', noteBend(key, -48)], [0.2, 'msg', noteBend(67, -1)]]), render(P(), 0.6, ev), 'bent down');
+  // the wheel at half, the key two semitones down: as if the wheel had left it alone
+  const solo = [[0, 'on', key, 0.5]];
+  same(render(P(), 0.6, [...solo, [0, 'msg', noteBend(key, -2)], [0.1, 'msg', { type: 'bend', value: 0.5 }]]), render(P(), 0.6, solo), 'the wheel undone');
+});
+
+test('stability: ± 48 semitones of each note\'s own bend, swept every block on chords, with the wheel and releases, at 44.1, 48 and 96 kHz', () => {
+  for (const fs of [44100, 48000, 96000]) for (const o of [{}, { press: 20, tip: 1, keyMass: 40 }, { press: 0.5, tipLoss: 0.1, kc: true }]) {
+    const e = new ClavierEngine(fs);
+    e.setParams(P(o));
+    const keys = [29, 41, 60, 72, 88], L = new Float32Array(128), R = new Float32Array(128);
+    let pk = 0;
+    for (let b = 0, n = Math.round(0.6 * fs / 128); b < n; b++) {
+      if (b === 0) for (const k of keys) e.noteOn(k, 1);
+      if (b === Math.round(n / 2)) { e.noteOff(41); e.noteOn(41, 0.6); e.handle({ type: 'bend', value: 1 }); }
+      keys.forEach((k, i) => e.handle(noteBend(k, 48 * Math.sin(b / (3 + i)))));
+      e.process(L, R, 128);
+      for (const y of L) { assert.ok(Number.isFinite(y), `${fs} Hz ${JSON.stringify(o)}: NaN`); pk = Math.max(pk, Math.abs(y)); }
+    }
+    assert.ok(pk / 10 ** (P(o).gain / 20) < 1.5, `${fs} Hz ${JSON.stringify(o)}: peak ${pk.toFixed(2)}`);
+  }
+});
+
 test('tension modulation: one mode of amplitude A shifts by the Duffing value 3EAk²A²/32T', () => {
   const key = 57, S = stringDesign(key, DEFAULTS), Q = P({ t60: 40, hf: 0, kc: true });
   const run = (A) => {

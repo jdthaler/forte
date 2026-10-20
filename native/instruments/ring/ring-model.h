@@ -15,9 +15,11 @@ constexpr int REF_KEY = 60;            // the lattice parameters are given for t
 
 // One key's ring under the parameters P (indexed as in ring-params.h), with key pressure 0..1, and
 // the keyboard's tuning T (tuningOf(P), which the engine keeps rather than makes every turn): the
-// ring's f_rev is the key's equal-tempered pitch times T.ratio(key).
+// ring's f_rev is the key's equal-tempered pitch times T.ratio(key). The chromaticity is P's, or
+// the ring's own (a note's slide: its sextupoles, set apart from the others').
 struct Ring { double frev, fsyn, Qs, sigma, sigmaDelta, chroma, D, mu; };
 Ring ringOf(int key, const double *P, double pressure, const forte::Tuning &T);
+Ring ringOf(int key, const double *P, double pressure, const forte::Tuning &T, double chroma);
 Ring ringOf(int key, const double *P, double pressure = 0);
 
 // The amplitude-detuning factor after θ = 4πμN: the centroid's amplitude (relative to the kick)

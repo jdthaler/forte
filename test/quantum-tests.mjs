@@ -25,7 +25,8 @@ const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const cents = (a, b) => 1200 * Math.log2(a / b);
 const rel = (a, b) => Math.abs(a / b - 1);
 
-// Render through the engine in 128-sample blocks (Float64 buffers), left channel.
+// Render through the engine in 128-sample blocks (Float64 buffers), left channel; events [t, 'on', key, vel] |
+// [t, 'off', key] | [t, 'params', P] | [t, 'msg', m].
 function render(params, events, sec, quality) {
   const e = new QuantumEngine(FS);
   if (quality) e.setQuality(quality);
@@ -34,7 +35,7 @@ function render(params, events, sec, quality) {
   const ev = events.map(([t, ...r]) => [Math.round(t * FS), ...r]).sort((a, b) => a[0] - b[0]);
   let j = 0;
   for (let s = 0; s < n; s += bl) {
-    while (j < ev.length && ev[j][0] <= s) { const [, type, k, v] = ev[j++]; if (type === 'on') e.noteOn(k, v); else if (type === 'off') e.noteOff(k); }
+    while (j < ev.length && ev[j][0] <= s) { const [, type, k, v] = ev[j++]; if (type === 'on') e.noteOn(k, v); else if (type === 'off') e.noteOff(k); else if (type === 'params') e.setParams(k); else if (type === 'msg') e.handle(k); }
     e.process(bL, bR, bl);
     L.set(bL.subarray(0, Math.min(bl, n - s)), s); R.set(bR.subarray(0, Math.min(bl, n - s)), s);
   }
@@ -590,6 +591,47 @@ test('seeded random combinations of knob extremes at 44.1 and 48 kHz: no NaN, bo
   }
   assert.ok(worst.pk < 2, `${worst.fs} Hz: seven notes struck twice peak ${worst.pk.toFixed(2)} (half that if coherent) with ${JSON.stringify(worst.p)}`);
   console.log(`        loudest of 30 (seven notes struck twice): ${worst.pk.toFixed(2)}`);
+});
+console.log('MPE');
+// A note's slide is the noise on its own well: its own dephasing rate (the wells don't bend)
+const slide = (t, key, value) => [t, 'msg', { type: 'slide', key, value }];
+const same = (a, b) => a.every((v, i) => v === b[i]);
+test('a packet with its own dephasing (a slide before the note) sounds as the knob there, sample for sample; a packet beside it keeps the knob\'s', () => {
+  const base = P({ bpm: 120, beats: 2 }), x = render(base, [slide(0, 57, 2.5), [0, 'on', 57, 1]], 1.1), k = note({ ...base, dephase: 2.5 }, 57, 1.1);
+  assert.ok(same(x.L, k.L) && same(x.R, k.R), 'as the knob at Γ_φ = 2.5 s⁻¹');
+  assert.ok(!same(x.L, note(base, 57, 1.1).L), 'and not as the knob\'s own');
+  const c = render(base, [slide(0, 64, 5), [0, 'on', 64, 1], [0, 'on', 57, 1]], 1.1).L, s = render(base, [slide(0, 64, 5), [0, 'on', 64, 1]], 1.1).L, a = note(base, 57, 1.1).L;
+  const err = Math.max(...a.map((v, i) => Math.abs(c[i] - s[i] - v))), pk = Math.max(...a.map(Math.abs));
+  assert.ok(err < 1e-12 * pk && pk > 0.01, `the other packet moves by ${err.toExponential(2)} (peak ${pk.toFixed(3)})`);
+});
+test('a slide while the packet sounds glides there (20 ms): the revival keeps e^(−(T_rev − t − 20 ms)/T_φ) of its fundamental', () => {
+  const base = P({ bpm: 120, beats: 2, T1: 1e9 }), Tphi = 0.4, t = 0.2, f0 = keyFreq(57);
+  const { L: A } = note(base, 57, 1.1), { L: D } = render(base, [[0, 'on', 57, 1], slide(t, 57, 1 / Tphi)], 1.1);
+  const g = tone(D, f0, FS - 1200, FS + 1200) / tone(A, f0, FS - 1200, FS + 1200), want = Math.exp(-(1 - t - 0.02) / Tphi);
+  assert.ok(Math.abs(g / want - 1) < 0.01, `revival keeps ${g.toFixed(4)} vs ${want.toFixed(4)}`);
+  assert.ok(same(D.subarray(0, Math.round(t * FS)), A.subarray(0, Math.round(t * FS))), 'untouched before the slide');
+});
+test('slide(NaN) leaves the sound bit for bit as it was, before the note and while it sounds; a slide taken back glides home', () => {
+  const base = P({ dephase: 1 }), x = render(base, [slide(0, 57, NaN), [0, 'on', 57, 1], slide(0.2, 57, NaN), [0.3, 'msg', { type: 'noteBend', key: 57, value: 1 }]], 0.6);
+  assert.ok(same(x.L, note(base, 57, 0.6).L));
+  // a slide there and back again leaves a packet that dephased longer, at the knob's rate since
+  const y = render(base, [[0, 'on', 57, 1], slide(0.1, 57, 6), slide(0.3, 57, NaN)], 0.9).L, u = note(base, 57, 0.9).L;
+  const r1 = rms(y, 0.5 * FS, 0.6 * FS) / rms(u, 0.5 * FS, 0.6 * FS), r2 = rms(y, 0.8 * FS, 0.9 * FS) / rms(u, 0.8 * FS, 0.9 * FS);
+  assert.ok(r1 < 0.9 && Math.abs(r2 / r1 - 1) < 0.15, `${r1.toFixed(3)} then ${r2.toFixed(3)} of the plain note's`);
+});
+test('slide sweeps on chords, sent every block across the whole range, stay finite and bounded at 44.1, 48 and 96 kHz, every well', () => {
+  for (const fs of [44100, 48000, 96000]) for (const potential of ['box', 'morse', 'hydrogen']) {
+    const e = new QuantumEngine(fs); e.setParams(P({ potential }));
+    const keys = [36, 50, 57, 64, 71, 96], bl = new Float64Array(128), br = new Float64Array(128);
+    for (const k of keys) e.noteOn(k, 1);
+    let pk = 0;
+    for (let b = 0; b < Math.round((0.8 * fs) / 128); b++) {
+      keys.forEach((k, i) => e.handle({ type: 'slide', key: k, value: 5 + 5 * Math.sin(b / (3 + i)) }));
+      e.process(bl, br, 128);
+      for (let i = 0; i < 128; i++) { assert.ok(Number.isFinite(bl[i] + br[i]), `${fs} ${potential}: NaN`); pk = Math.max(pk, Math.abs(bl[i]), Math.abs(br[i])); }
+    }
+    assert.ok(pk > 0.01 && pk < 2, `${fs} ${potential}: peak ${pk.toFixed(2)}`);
+  }
 });
 test('CPU: 10 voices render well under real time', () => {
   const run = (p) => {

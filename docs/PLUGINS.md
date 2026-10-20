@@ -452,6 +452,11 @@ themselves too (`native/install.cmd`, `install.ps1`).
 - The plugin window (Forte 0.21.0: `native/plugin/editor.h`, `editor.html`) shows the controls
   and a keyboard. Still to come: the site's views (the modes, the waveforms), fed from the
   engine's messages, and each page's own layout of its controls (`showIf`, hints).
-- MIDI Polyphonic Expression (the engines already take per-key pressure).
+- MIDI Polyphonic Expression: done, for the next release. `forte/mpe.h` decodes MPE zones
+  (Auto, the default, waits for the MPE Configuration Message; On and Off in the plugin's MPE
+  parameter); CLAP note expressions (tuning, brightness, pressure) reach the same per-note
+  `noteBend` and `slide`, and the VST3 build asks clap-wrapper for 16 MIDI channels and those
+  note expressions. The AU's channel-wide pitch bend and pressure, which clap-wrapper sends
+  as note expressions on key −1, now reach the engine too.
 - iPad AUv3 inside a container app (needs the Apple Developer Program to
   share), and notarised macOS builds (step 5 says what they need).

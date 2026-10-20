@@ -1,8 +1,8 @@
 // harmonium-tests.cpp — the free-reed organ's model and engine in C++: the tongue's frequency
 // equation, every reed cut to its natural frequency, the voicer's tuning table, the threshold;
-// an A4 speaking in tune (its reeds designed on the worker thread), a note struck before its
-// reeds are ready, the musette's beats, release and retirement, extreme settings, the views'
-// messages, and ten keys in the CPU budget. The physics tests are the JavaScript suite's, run on
+// an A4 speaking in tune (its reeds designed on the worker thread), the pitch wheel and a key's own
+// bend (MPE), a note struck before its reeds are ready, the musette's beats, release and
+// retirement, extreme settings, the views' messages, and ten keys in the CPU budget. The physics tests are the JavaScript suite's, run on
 // the WebAssembly (node test/harmonium-tests.mjs).
 
 #include <chrono>
@@ -107,6 +107,100 @@ TEST("harmonium: pitch bend stiffens or softens the tongues: a sounding note fol
     render(e, (int)(0.6 * fs));
     const double want = 440 * std::pow(2.0, (key - 69 + 2 * v) / 12), f = e.voices[0]->reeds[1].freq();
     CHECK(std::fabs(cents(f, want)) < 3);
+  }
+}
+
+TEST("harmonium: a key's own bend (MPE) stiffens its tongues alone: a lone note follows an octave either way, sounds as the wheel bent as far, and a key held beside it stays") {
+  const double fs = 48000;
+  for (int key : {36, 57, 69, 84, 96}) for (double st : {12.0, -12.0}) {
+    double f = 0, g[2];
+    const int other = key < 90 ? key + 4 : key - 5;
+    for (int bent = 0; bent < 2; bent++) { // the key held beside it against the same without the bend
+      auto P = defaults();
+      auto engine = std::make_unique<HarmoniumEngine>(fs);
+      HarmoniumEngine &e = *engine;
+      e.configure(1, 440, true);
+      e.setParams(P.data());
+      waitFor(e, key); waitFor(e, other);
+      e.noteOn(key, 0.7); e.noteOn(other, 0.7);
+      render(e, (int)(0.5 * fs));
+      if (bent) e.noteBend(std::pow(2.0, st / 12), key);
+      render(e, (int)(0.7 * fs));
+      if (bent) f = e.voices[0]->reeds[1].freq();
+      g[bent] = e.voices[1]->reeds[1].freq();
+    }
+    const double want = 440 * std::pow(2.0, (key - 69 + st) / 12);
+    std::printf("       %d %+.0f: %.1f ¢ (the other key %.3f ¢)\n", key, st, cents(f, want), cents(g[1], g[0]));
+    CHECK(std::fabs(cents(f, want)) < 12); // the air's parts keep their tuning: a few cents short
+    CHECK(std::fabs(cents(g[1], g[0])) < 0.1);
+  }
+  for (int key : {48, 69}) for (double v : {1.0, -1.0}) { // the wheel's end and the key's own bend as far
+    double f[2], level[2];
+    for (int own = 0; own < 2; own++) {
+      auto P = defaults();
+      auto engine = std::make_unique<HarmoniumEngine>(fs);
+      HarmoniumEngine &e = *engine;
+      e.configure(1, 440, true);
+      e.setParams(P.data());
+      waitFor(e, key);
+      e.noteOn(key, 0.7);
+      render(e, (int)(0.5 * fs));
+      if (own) e.noteBend(std::pow(2.0, 2 * v / 12), key); else e.bend(v);
+      const auto L = render(e, (int)(0.7 * fs));
+      f[own] = e.voices[0]->reeds[1].freq(); level[own] = rms(L, (int)(0.4 * fs), (int)(0.7 * fs));
+    }
+    CHECK(std::fabs(cents(f[1], f[0])) < 0.2);
+    CHECK(std::fabs(level[1] / level[0] - 1) < 0.01);
+  }
+}
+
+TEST("harmonium: a key's bend of 1 (MPE's reset) and a slide leave the sound bit-identical, the wheel moving too") {
+  for (double fs : {44100.0, 48000.0}) {
+    std::vector<float> out[2][2];
+    for (int mpe = 0; mpe < 2; mpe++) {
+      auto P = defaults();
+      P[p::musette] = musette_::three;
+      auto engine = std::make_unique<HarmoniumEngine>(fs);
+      HarmoniumEngine &e = *engine;
+      e.setParams(P.data());
+      const int keys[3] = {48, 64, 79};
+      for (int k : keys) { waitFor(e, k); if (mpe) { e.noteBend(1, k); e.slide(NAN, k); } e.noteOn(k, 0.8); }
+      std::vector<float> R1, R2;
+      const auto L1 = render(e, (int)(0.3 * fs), &R1);
+      e.bend(0.7);
+      if (mpe) for (int k : keys) { e.noteBend(1, k); e.slide(NAN, k); }
+      const auto L2 = render(e, (int)(0.3 * fs), &R2);
+      out[mpe][0] = L1; out[mpe][0].insert(out[mpe][0].end(), L2.begin(), L2.end());
+      out[mpe][1] = R1; out[mpe][1].insert(out[mpe][1].end(), R2.begin(), R2.end());
+    }
+    CHECK(out[0][0] == out[1][0] && out[0][1] == out[1][1]);
+  }
+}
+
+TEST("harmonium: every key's own bend swept across its octave each way (and past it) every block, with the wheel, on a full chord at 44.1, 48 and 96 kHz, stays finite and bounded") {
+  for (double fs : {44100.0, 48000.0, 96000.0}) {
+    auto P = defaults();
+    P[p::bourdon] = 1; P[p::piccolo] = 1; P[p::musette] = musette_::three;
+    auto engine = std::make_unique<HarmoniumEngine>(fs);
+    HarmoniumEngine &e = *engine;
+    e.setParams(P.data());
+    const int keys[6] = {36, 48, 60, 67, 84, 96};
+    for (int k : keys) { waitFor(e, k); e.noteOn(k, 1); }
+    std::vector<float> L(128), R(128);
+    double pk = 0;
+    bool finite = true;
+    const int blocks = (int)(1.2 * fs / 128);
+    for (int b = 0; b < blocks; b++) {
+      const double t = b * 128 / fs;
+      for (int j = 0; j < 6; j++) e.noteBend(std::pow(2.0, 14 * std::sin(harmonium::TAU * (1.5 + 0.4 * j) * t + j) / 12), keys[j]);
+      if (b % 16 == 0) e.bend(std::sin(harmonium::TAU * 0.7 * t));
+      if (b == blocks / 2) for (int k : keys) e.noteOff(k, -1);
+      e.process(L.data(), R.data(), 128);
+      for (int i = 0; i < 128; i++) { finite = finite && std::isfinite(L[i]) && std::isfinite(R[i]); pk = std::max(pk, (double)std::fabs(L[i])); }
+    }
+    std::printf("       %.1f kHz: peak %.2f\n", fs / 1000, pk);
+    CHECK(finite);
+    CHECK(pk < 4);
   }
 }
 

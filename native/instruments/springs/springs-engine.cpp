@@ -17,6 +17,7 @@ static constexpr double YOUNG = 0.05;    // s: a voice this young is never stole
 static constexpr double GLIDE = 0.03;    // s: damping and output gains glide over this
 static constexpr double PRUNE = 3e-5;    // a mode below this × the voice's loudest is skipped (−90 dB)
 static constexpr double PULSE_MAX = 0.012; // s: the longest mallet pulse
+static double handSigma(double h) { return 60 * h * h; } // a hand h (0..1) on the coils: σ = 60h² s⁻¹
 static const double PANS[3][3] = {{0, 0, 0}, {-0.3, 0.3, 0}, {0, 0.35, -0.35}}; // each spring's pickup, left/right of the key's place
 
 // Equal-power pan of a position p ∈ [−1, 1].
@@ -169,7 +170,7 @@ void SpringEngine::Voice::start(SpringEngine &eng, int k, Data::Ref r, uint64_t 
   pulseN = 0; pulseAt = 0; tau = 0;
   age = 0; fade = 1; fading = false; dead = false; peak = 0; level = 0;
   released = false; dampGlide = GLIDE;
-  extra = eng.S[kHand];
+  extra = eng.handOf(key);
   for (int s = 0; s < nBanks; s++) banks[s].sigma(eng, extra); // a hand already on the spring
 }
 
@@ -209,7 +210,7 @@ void SpringEngine::Voice::render(float *L, float *R, int n, SpringEngine &eng) {
     if (pulseAt < pulseN) { force[s] = pulse[pulseAt++]; pushing = true; } else force[s] = 0;
   }
   // the hand and the damper (once the key is up, unless the pedal holds it off): extra damping, gliding in
-  const double target = eng.S[kHand] + (released && !eng.sustain ? eng.dampSigma : 0);
+  const double target = eng.handOf(key) + (released && !eng.sustain ? eng.dampSigma : 0);
   if (target != extra || eng.lossMoved) {
     const double tg = target > extra && released ? dampGlide : GLIDE;
     extra += (1 - fd::exp(-n / (tg * eng.fs))) * (target - extra);
@@ -272,6 +273,11 @@ double SpringEngine::Voice::prune(const SpringEngine &eng, Bank &b, bool pushing
 
 // ---- the engine ---------------------------------------------------------------------------------------
 
+double SpringEngine::handOf(int key) const {
+  const double h = expr.slideOr(key, NAN);
+  return h == h ? handSigma(h) : S[kHand];
+}
+
 SpringEngine::SpringEngine(double fs)
     : Engine(fs), data([this](int key, uint64_t version) -> std::unique_ptr<KeySprings> {
         if (key < KEY_MIN || key > KEY_MAX) return nullptr;
@@ -305,7 +311,7 @@ void SpringEngine::setParams(const double *p) {
   for (int i = 0; i < p::count; i++) P[i] = p[i];
   hasParams = true;
   // live: losses, hand, bead (they glide); the rest applies at the next strike
-  T = {P[p::endLoss], P[p::eta], P[p::oil], 60 * P[p::hand] * P[p::hand], P[p::bead]};
+  T = {P[p::endLoss], P[p::eta], P[p::oil], handSigma(P[p::hand]), P[p::bead]};
   if (first) S = T;
   dampSigma = fd::log(1000) / P[p::damper];
   // the keys' springs are built for the geometry the knobs are at, nearest the last key played first

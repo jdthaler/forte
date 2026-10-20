@@ -41,7 +41,7 @@ void PyrophoneEngine::Voice::init(PyrophoneEngine &eng, int k) {
 // when the gas is fully warm, f = W c_hot / (2π L): the key's note in the keyboard's tuning.
 void PyrophoneEngine::Voice::tune(const PyrophoneEngine &eng, double b) {
   const double *P = eng.P.data();
-  W = eng.tune->W(P[p::autotune] != 0 ? b : betaOn(P[p::flame], 0.7, eng.tune->betaH, eng.tune->betaMax));
+  W = eng.tune->W(P[p::autotune] != 0 ? b : betaOn(eng.flameOf(key), 0.7, eng.tune->betaH, eng.tune->betaMax));
   hHot = (TAU * (keyFreqJS(key) * eng.keys.ratio(key))) / (W * eng.fs); // L/c_hot units per sample
   // the modes a sample can hold: below 0.45 fs with the wheel bent all the way up (every mode of
   // the keys up to C6; at C8 four or five)
@@ -65,8 +65,18 @@ void PyrophoneEngine::Voice::coeffs(const PyrophoneEngine &eng) {
       wo[j] = ((j % 2 ? 1 : -1) - a) * norm;
     }
   }
-  // gas temperature → sound speed → this tube's time step
-  const double T = T_HOT - P[p::drift] * (1 - theta), hNew = hHot * std::sqrt(T / T_HOT) * eng.bendNow;
+  // gas temperature → sound speed → this tube's time step. The key's own bend (MPE) goes down
+  // only as far as the flame's lag fits its delay line
+  const double T = T_HOT - P[p::drift] * (1 - theta), hw = hHot * std::sqrt(T / T_HOT) * eng.bendNow;
+  double r = nb;
+  if (r < 1) r = std::min(1.0, std::max(r, P[p::lag] / ((HIST - 4) * hw)));
+  const double hNew = hw * r;
+  // and up, it keeps the modes a sample holds (the wheel's reach keeps them all); those it loses
+  // start again at rest when it comes back
+  int m = N;
+  if (r > 1) while (m > 0 && sys.w[m - 1] * hNew >= 0.9 * std::numbers::pi) m--;
+  for (int j = m; j < M; j++) { eta[j] = 0; vel[j] = 0; }
+  M = m;
   if (hNew != h || dBore != eng.tp.bore || dDamp != eng.tp.damp) {
     h = hNew; dBore = eng.tp.bore; dDamp = eng.tp.damp;
     for (int j = 0; j < N; j++) {
@@ -102,7 +112,7 @@ void PyrophoneEngine::Voice::render(PyrophoneEngine &eng, float *L, float *R, in
     b += kb * (betaT - b);
     // flame velocity now, and as the flame felt it τ ago
     double uf = 0;
-    for (int j = 0; j < N; j++) uf += cf[j] * eta[j];
+    for (int j = 0; j < M; j++) uf += cf[j] * eta[j];
     hist[w] = uf; w = (w + 1) & mask; uf2 += uf * uf;
     const double ha = hist[(w - 1 - di) & mask], hb = hist[(w - 2 - di) & mask];
     // turbulence at the flame: low-passed white noise, rms = noise (× mean draught)
@@ -110,7 +120,7 @@ void PyrophoneEngine::Voice::render(PyrophoneEngine &eng, float *L, float *R, in
     tb += kt * ((int32_t)s / 2147483648.0 - tb);
     const double q = b * heat(ha + fr * (hb - ha) + eps * tb);
     double y = 0;
-    for (int j = 0; j < N; j++) {
+    for (int j = 0; j < M; j++) {
       const double F = g[j] * q, e = eta[j], v = vel[j];
       eta[j] = m11[j] * e + m12[j] * v + b1[j] * F;
       const double vn = m21[j] * e + m22[j] * v + m12[j] * F;
@@ -203,13 +213,14 @@ const Tuning *PyrophoneEngine::current() {
 }
 // held keys follow the flame power (and the threshold); released ones the key-up power
 void PyrophoneEngine::retune() {
-  for (int i = 0; i < nVoices; i++) { Voice &v = *voices[i]; v.betaT = v.keyDown ? betaDown(v.vel0, v.press) : betaUp(); }
+  for (int i = 0; i < nVoices; i++) { Voice &v = *voices[i]; v.betaT = v.keyDown ? betaDown(v.key, v.vel0, v.press) : betaUp(); }
 }
 
-// flames apart: K β_H (0.4 + 0.6 v); aftertouch parts them up to 25 % further (below the scream)
-double PyrophoneEngine::betaDown(double vel, double press) {
+// flames apart: K β_H (0.4 + 0.6 v), K the key's; aftertouch parts them up to 25 % further (below
+// the scream)
+double PyrophoneEngine::betaDown(int key, double vel, double press) {
   const double b = bH();
-  return std::min(betaMax(), betaOn(P[p::flame], vel, b, betaMax()) * (1 + PRESS * press));
+  return std::min(betaMax(), betaOn(flameOf(key), vel, b, betaMax()) * (1 + PRESS * press));
 }
 
 double PyrophoneEngine::coolTheta(int key) const { // the tube's warmth, cooled since it last sounded
@@ -248,7 +259,7 @@ void PyrophoneEngine::noteOn(int key, double velocity) {
 void PyrophoneEngine::start(int key, double velocity) {
   Voice *v = nullptr;
   for (int i = 0; i < nVoices; i++) if (voices[i]->key == key && !voices[i]->fade) { v = voices[i]; break; }
-  const double b = betaOn(P[p::flame], velocity, bH(), betaMax());
+  const double b = betaOn(flameOf(key), velocity, bH(), betaMax());
   if (!v) {
     if (nVoices >= MAXV) steal();
     for (Voice &x : pool) {
@@ -263,7 +274,8 @@ void PyrophoneEngine::start(int key, double velocity) {
   } else if (v->amp < 0.02) v->tune(*this, b); // a silent tube may be re-cut; a singing one keeps its length
   v->vel0 = velocity; v->press = pressure_; v->since = 0;
   v->keyDown = true;
-  v->betaT = betaDown(velocity, v->press);
+  v->betaT = betaDown(key, velocity, v->press);
+  v->nb = ex.bendOf(key); // the key's own bend from the strike, without a glide
   focus = key;
 }
 
@@ -299,7 +311,15 @@ void PyrophoneEngine::pressure(double value, int key) { // aftertouch: lean on a
   if (key < 0) pressure_ = value;
   for (int i = 0; i < nVoices; i++) {
     Voice &v = *voices[i];
-    if (v.keyDown && (key < 0 || key == v.key)) { v.press = value; v.betaT = betaDown(v.vel0, value); }
+    if (v.keyDown && (key < 0 || key == v.key)) { v.press = value; v.betaT = betaDown(v.key, v.vel0, value); }
+  }
+}
+
+void PyrophoneEngine::slide(double value, int key) { // one tube's own flame power: its flames follow as they part
+  ex.setSlide(value, key);
+  for (int i = 0; i < nVoices; i++) {
+    Voice &v = *voices[i];
+    if (v.keyDown && v.key == key) v.betaT = betaDown(key, v.vel0, v.press);
   }
 }
 
@@ -324,6 +344,7 @@ void PyrophoneEngine::process(float *L, float *R, int n) {
     // its note after release stays hot, and in tune), and cools once it is silent
     v.theta += kw * ((v.keyDown || v.song > SINGING ? 1 : 0) - v.theta);
     v.watch = v.key == focus;
+    v.nb = glideTo(v.nb, ex.bendOf(v.key), dt, BEND_TAU);
     v.coeffs(*this);
     v.render(*this, L, R, n);
     v.age += dt; v.since += dt; v.rel += dt;

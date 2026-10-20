@@ -133,6 +133,9 @@ void SteelPanEngine::pressure(double value, int key) {
   else if (key >= KEY_MIN && key <= KEY_MAX && notes[key - KEY_MIN].held) notes[key - KEY_MIN].press = value;
 }
 
+// The roll: the wheel's (or the key's own slide), or leaning on the keys, whichever is more.
+double SteelPanEngine::rollOf(const Note &v) const { return std::max(std::max(expr.slideOr(v.key, P[p::roll]), channelPress), v.press); }
+
 int SteelPanEngine::voiceCount() const {
   int n = 0;
   for (int i : live) n += notes[i].struck;
@@ -172,7 +175,6 @@ double SteelPanEngine::amplitude(const Note &v, int p) const {
 void SteelPanEngine::process(float *L, float *R, int n) {
   for (int i = 0; i < n; i++) L[i] = R[i] = 0;
   if (couplingsDirty) rebuildCouplings();
-  const double rollAmt0 = std::max(P[p::roll], channelPress);
   for (int s = 0; s < n; s++) {
     for (const Coupling &c : couplings) {
       Note &a = notes[c.a], &b = notes[c.b];
@@ -193,7 +195,7 @@ void SteelPanEngine::process(float *L, float *R, int n) {
       }
       l += v.gl * out; r += v.gr * out;
       if (v.held) { // a roll: the sticks strike again while the key is down
-        const double amt = std::max(rollAmt0, v.press);
+        const double amt = rollOf(v);
         if (amt > 0.005 && --v.rollIn <= 0) {
           rng = rng * 1664525u + 1013904223u;
           strike(v, v.vel * amt * (v.hand ? 0.85 : 1));
@@ -213,7 +215,7 @@ void SteelPanEngine::process(float *L, float *R, int n) {
     v.age += n;
     double e = 0;
     for (int p = 0; p < v.run; p++) e = std::max(e, std::fabs(v.y1[p]) + std::fabs(v.y2[p]));
-    const bool rolling = v.held && std::max(rollAmt0, v.press) > 0.005;
+    const bool rolling = v.held && rollOf(v) > 0.005;
     if (!std::isfinite(e)) e = 0; // a numerical failure: let it go
     if (e < quiet && v.age > GRACE && !rolling) {
       v.active = false; v.struck = false;

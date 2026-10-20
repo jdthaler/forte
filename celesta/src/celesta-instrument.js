@@ -19,6 +19,7 @@ export const INSTRUMENT = {
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // C4–C8, 60–108, until Full range opens the rest
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine
   modWheel: 'hardness',                 // CC1: the hammers' felt, from its default up to wood or brass
+  mpe: { slide: true },                 // a note's own slide: its hammer's felt, at the strike (a bar cannot bend)
   // the engine: the physics in C++ (native/instruments/celesta), built as WebAssembly
   wasm: { name: 'CelestaWasmEngine', module: new URL('./celesta-wasm.js', import.meta.url).href, binary: new URL('../wasm/celesta.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

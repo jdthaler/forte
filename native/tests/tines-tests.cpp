@@ -143,6 +143,105 @@ TEST("engine: pitch bend slides the tuning springs: a ringing note follows, two 
   }
 }
 
+// wait for key's modes to be built (so a note struck now sounds in this block)
+static void waitFor(TinesEngine &e, int key) {
+  for (int i = 0; i < 5000 && !e.ready(key); i++) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  CHECK(e.ready(key));
+}
+// the strongest frequency within ±10 ¢ of want in x[a, b)
+static double near(const std::vector<float> &x, double want, int a, int b) {
+  double best = 0, bf = 0;
+  for (double c = -10; c <= 10; c += 0.25) { const double f = want * std::pow(2.0, c / 1200), g = tone(x, f, a, b); if (g > best) { best = g; bf = f; } }
+  return bf;
+}
+
+TEST("engine: one note's own bend (MPE) slides its fork's spring alone: it lands on the ratio, on top of the wheel's; a held note stays") {
+  for (double v : {0.0, 1.0}) {
+    auto ep = engine(dry(defaults()));
+    TinesEngine &e = *ep;
+    e.noteOn(57, 1.8); e.noteOn(69, 1.8);
+    CHECK(until(e, 2));
+    render(e, (int)(0.1 * FS));
+    e.noteBend(std::pow(2.0, 5.0 / 12), 69);
+    e.bend(v);
+    const auto L = render(e, (int)(1.2 * FS));
+    const double w = 2 * v, a = 220 * std::pow(2.0, w / 12), b = 440 * std::pow(2.0, (w + 5) / 12);
+    CHECK(std::fabs(cents(near(L, a, (int)(0.2 * FS), (int)(1.2 * FS)), a)) < 2);
+    CHECK(std::fabs(cents(near(L, b, (int)(0.2 * FS), (int)(1.2 * FS)), b)) < 2);
+  }
+  // to the ends: A2 four octaves up, A5 two down, each bent before it is struck
+  for (auto [key, semis] : {std::pair{45, 48.0}, std::pair{81, -24.0}}) {
+    auto ep = engine(dry(defaults()));
+    TinesEngine &e = *ep;
+    e.noteBend(std::pow(2.0, semis / 12), key);
+    e.noteOn(key, 1.8);
+    CHECK(until(e, 1));
+    const auto L = render(e, (int)(1.2 * FS));
+    const double want = keyFreq(key) * std::pow(2.0, semis / 12);
+    CHECK(std::fabs(cents(near(L, want, (int)(0.2 * FS), (int)(1.2 * FS)), want)) < 2);
+  }
+}
+
+TEST("engine: a lone note's own bend sounds as the wheel bent as far; a bend of 1 leaves the sound bit-identical") {
+  auto play = [&](int how) {
+    auto ep = engine(defaults());
+    TinesEngine &e = *ep;
+    for (int k : {57, 64, 69}) waitFor(e, k);
+    if (how == 2) { e.noteBend(1.3, 64); e.noteBend(1, 64); } // set and reset before the note
+    for (int k : {57, 64, 69}) e.noteOn(k, 1.8);
+    std::vector<float> out, L(128), R(128);
+    for (int b = 0; b < (int)(0.8 * FS / 128); b++) {
+      if (b == 40 && how == 0) e.bend(1);
+      if (b == 40 && how == 1) for (int k : {57, 64, 69}) e.noteBend(std::pow(2.0, 2.0 / 12), k);
+      if (how == 2) for (int k : {57, 64, 69}) e.noteBend(1, k);
+      e.process(L.data(), R.data(), 128);
+      out.insert(out.end(), L.begin(), L.end());
+    }
+    return out;
+  };
+  auto plain = [&]() {
+    auto ep = engine(defaults());
+    TinesEngine &e = *ep;
+    for (int k : {57, 64, 69}) waitFor(e, k);
+    for (int k : {57, 64, 69}) e.noteOn(k, 1.8);
+    return render(e, (int)(0.8 * FS) / 128 * 128);
+  };
+  const auto wheel = play(0), own = play(1), ones = play(2), none = plain();
+  double d = 0, pk = 0;
+  for (size_t i = 0; i < wheel.size(); i++) { d = std::max(d, (double)std::fabs(wheel[i] - own[i])); pk = std::max(pk, (double)std::fabs(wheel[i])); }
+  CHECK(d < 1e-5 * pk);
+  CHECK(ones == none);
+}
+
+TEST("engine: own bends swept over ±48 semitones on a chord, every block, stay finite and bounded at 44.1, 48 and 96 kHz") {
+  for (double fs : {44100.0, 48000.0, 96000.0}) {
+    auto ep = std::make_unique<TinesEngine>(fs);
+    TinesEngine &e = *ep;
+    e.setParams(defaults().data());
+    e.setSustain(true);
+    const int keys[] = {36, 48, 57, 69, 81, 96};
+    for (int k : keys) e.noteOn(k, 3);
+    until(e, 6);
+    std::vector<float> L(128), R(128);
+    bool finite = true;
+    double pk = 0;
+    for (int b = 0; b < (int)(2 * fs / 128); b++) {
+      const double t = b * 128 / fs;
+      for (int i = 0; i < 6; i++) {
+        // half the keys sweep smoothly, half jump between the ends
+        const double s = i % 2 ? 48 * std::sin(2 * PI * (0.7 + 0.3 * i) * t) : (std::fmod(t * (3 + i), 1) < 0.5 ? 48 : -48);
+        e.noteBend(std::pow(2.0, s / 12), keys[i]);
+      }
+      if (b == (int)(0.5 * fs / 128)) e.bend(1);
+      e.process(L.data(), R.data(), 128);
+      for (int j = 0; j < 128; j++) { finite &= std::isfinite(L[j]) && std::isfinite(R[j]); pk = std::max(pk, (double)std::fabs(L[j])); }
+    }
+    std::printf("       %.1f kHz: peak %.2f\n", fs / 1000, pk);
+    CHECK(finite && pk < 2);
+    CHECK(e.voiceCount() == 6); // none silenced as unstable
+  }
+}
+
 TEST("engine: harder strikes swing further into the pickup's nonlinearity; a centred tine outputs the octave") {
   auto h2 = [&](double vel, double offset) {
     auto P = dry(defaults());

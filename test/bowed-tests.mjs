@@ -436,11 +436,24 @@ test('level: single forte notes peak 0.03–0.5 (0.07–0.19 from C2 to C6); a 1
   let pk = 0; for (const ch of out) for (const v of ch) pk = Math.max(pk, Math.abs(v));
   assert.ok(pk < 1, `chord peak ${pk.toFixed(2)}`);
 });
+test(`MPE: a key's own bend reaches the WebAssembly as far as the descriptor's ±${INSTRUMENT.mpe.bend} semitones: C3 bent so far sounds there (within 10 ¢), a bend past it lands at it, a bend of 1 changes nothing, and there is no slide (one wheel bows every string)`, () => {
+  const max = INSTRUMENT.mpe.bend, p = P({ treadle: 0 });
+  const bent = (st) => play([[0, 'msg', { type: 'noteBend', key: 48, value: 2 ** (st / 12) }], [0, 'msg', { type: 'slide', key: 48, value: 1 }], [0, 'on', 48, 0.7]], 1, p).out;
+  const plain = play([[0, 'on', 48, 0.7]], 1, p).out;
+  assert.ok(INSTRUMENT.mpe.slide === undefined);
+  assert.deepEqual(bent(0)[0], plain[0]);
+  for (const s of [1, -1]) {
+    const r = bent(s * max), want = keyFreq(48) * 2 ** ((s * max) / 12), f = pitchOf(r[0], 0.5 * FS, FS, want);
+    assert.ok(Math.abs(cents(f, want)) < 10, `${s * max}: ${cents(f, want).toFixed(1)} ¢`);
+    assert.deepEqual(bent(2 * s * max)[0], r[0]);
+  }
+});
 test('every parameter at its min and max: finite output, no blow-up', () => {
   const ev = [[0, 'on', RANGE[0], 1], [0, 'on', 36, 1], [0, 'on', 60, 1], [0, 'on', 84, 1], [0, 'on', RANGE[1], 1], [0.35, 'off', 60]];
   for (const p of GROUPS.flatMap((g) => g.params)) {
     for (const v of p.type === 'checkbox' ? [false, true] : [p.min, p.max]) {
-      const { out } = play(ev, 0.5, P({ [p.id]: v }));
+      const { e, out } = play(ev, 0.5, P({ [p.id]: v }));
+      e.destroy(); // its WebAssembly memory: the suite's engines (each string's rings) would exhaust it
       let pk = 0; for (const ch of out) for (const x of ch) { assert.ok(Number.isFinite(x), `${p.id} = ${v}: NaN`); pk = Math.max(pk, Math.abs(x)); }
       assert.ok(pk < (p.id === 'volume' ? 2 : 1.5), `${p.id} = ${v}: peak ${pk.toFixed(2)}`);
     }
@@ -454,6 +467,7 @@ test('Quality: Medium and Low keep the sympathy of C2–B3 or none, run the boar
     const e = at(quality, P({ lifted: true }));
     renderEngine(e, 0.3, lifted, FS);
     assert.equal(e.nAct, n, `${quality}: ${e.nAct} strings in the loop`);
+    e.destroy(); // its WebAssembly memory (each string's rings), as the suite's other engines
   }
   // a released string leaves the loop sooner (at about −70 dB rather than −130)
   const gone = {};
@@ -463,6 +477,7 @@ test('Quality: Medium and Low keep the sympathy of C2–B3 or none, run the boar
     let t = 0.5;
     while (e.nAct && t < 6) { renderEngine(e, 0.05, [], FS); t += 0.05; }
     gone[quality] = t;
+    e.destroy();
   }
   assert.ok(gone.low < 0.7 * gone.high, `released C4 leaves the loop at ${gone.low.toFixed(2)} s (Low), ${gone.high.toFixed(2)} s (High)`);
   // a note's level (above 30 Hz, 0.5–1 s) and pitch at each Quality, against High
@@ -472,7 +487,9 @@ test('Quality: Medium and Low keep the sympathy of C2–B3 or none, run the boar
     const [x] = renderEngine(e, 1, [], FS), a = 1 - Math.exp((-2 * Math.PI * 30) / FS);
     let lp = 0, sum = 0;
     for (let i = 0; i < x.length; i++) { assert.ok(Number.isFinite(x[i]), `${quality}, key ${k}: not finite`); lp += a * (x[i] - lp); if (i >= FS / 2) sum += (x[i] - lp) ** 2; }
-    return { dB: 10 * Math.log10(sum / (FS / 2)), f: pitchOf(x, 0.5 * FS, FS, keyFreq(k)), kind: e.S[k].motion(16).kind };
+    const r = { dB: 10 * Math.log10(sum / (FS / 2)), f: pitchOf(x, 0.5 * FS, FS, keyFreq(k)), kind: e.S[k].motion(16).kind };
+    e.destroy();
+    return r;
   };
   for (const k of [36, 60, 72, 84, 96]) {
     const hi = note(k, 'high');

@@ -15,6 +15,7 @@ export const INSTRUMENT = {
   range: [21, 108],                     // MIDI keys: A0–C8
   space: 'sustain',                     // Space and CC64: keeps released beams stored (the scrapers stay open)
   modWheel: 'chroma',                   // CC1: the chromaticity, from its default up
+  mpe: { slide: true },                 // MPE: a note's slide is its own ring's chromaticity (a ring can't bend)
   // the engine: the physics in C++ (native/instruments/ring), built as WebAssembly
   wasm: { name: 'StorageRingWasmEngine', module: new URL('./ring-wasm.js', import.meta.url).href, binary: new URL('../wasm/ring.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

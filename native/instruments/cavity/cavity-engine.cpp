@@ -22,7 +22,7 @@ constexpr double STEAL_T = 0.004;   // s: a stolen voice's amplitudes fade with 
 // each mode takes the bunch's kick, turned on by the rest of that sample (to second order).
 void CavityBellsEngine::Voice::kick(double q, double frac) {
   for (int j = 0; j < cav.count; j++) {
-    if (!use[j]) continue;
+    if (!use[j] || w[j] > 0.45 * TAU) continue; // Quality's cut, or past Nyquist (a key bent far up): a sample cannot hold it
     const double psi = w[j] * frac, c = 1 - 0.5 * psi * psi, s = psi - (psi * psi * psi) / 6;
     const double kr = q * cav.modes[j].kick.real(), ki = q * cav.modes[j].kick.imag();
     ar[j] += kr * c - ki * s;
@@ -56,16 +56,28 @@ void CavityBellsEngine::setParams(const double *p) {
     const int count = v.cav.count, cells = v.cav.cells;
     v.cav = cavityOf(v.key, P.data());
     if (v.cav.cells != cells) { v.ar.fill(0); v.ai.fill(0); } // a new cavity: what rang has gone
-    choose(v);
+    if (std::isnan(ex.slideOr(v.key, NAN))) { v.off = P[p::offset]; choose(v); } // a key's own offset (MPE) stays its own
+    else aim(v, v.off);
     retune(v, count);
   }
 }
 
-// The modes' turn per sample at the current bend and detuning (their decay is set per block).
+// The modes' turn per sample at the current bend (the wheel's and the key's own) and detuning
+// (their decay is set per block).
 void CavityBellsEngine::retune(Voice &v, int count) {
   for (int j = count; j < v.cav.count; j++) v.ar[j] = v.ai[j] = 0;
-  const double r = bendNow * std::pow(2.0, v.det / 1200);
+  const double r = bendNow * v.nb * std::pow(2.0, v.det / 1200);
   for (int j = 0; j < v.cav.count; j++) v.w[j] = (TAU * v.cav.modes[j].f * r) / fs;
+}
+
+// The kicks of a beam that passes `offset` off the axis (a key's slide): each band's field where
+// the bunch crosses the cells, and the modes Quality rings for them; the rest of the cavity is P's.
+void CavityBellsEngine::aim(Voice &v, double offset) {
+  v.off = offset;
+  double radial[BANDS];
+  for (int b = 0; b < BANDS; b++) radial[b] = radialOf(b, offset);
+  for (int j = 0; j < v.cav.count; j++) { Mode &m = v.cav.modes[j]; m.kick = m.kick1 * radial[m.band]; }
+  choose(v); // off the axis other modes are the loud ones
 }
 
 void CavityBellsEngine::setSustain(bool on) {
@@ -86,6 +98,8 @@ void CavityBellsEngine::noteOn(int key, double velocity) {
     v = &voices.back();
     v->key = key;
     v->cav = cavityOf(key, P.data());
+    v->off = P[p::offset];
+    v->nb = ex.bendOf(key);
     // Quality: Medium and Low ring only the modes heard within 40 and 30 dB of the loudest, and let
     // a mode go 30 and 50 dB sooner than High, the key 5 and 20 dB sooner
     v->cut = pick(0.0, 1e-2, 3e-2);
@@ -94,11 +108,14 @@ void CavityBellsEngine::noteOn(int key, double velocity) {
     choose(*v);
     retune(*v, 0);
   }
+  // the key's own bend and beam offset (MPE) from this bunch on, without a glide
+  v->nb = ex.bendOf(key);
+  if (const double off = ex.slideOr(key, P[p::offset]); off != v->off) aim(*v, off);
   // a second bunch adds to what still rings, in or out of phase with it
   v->charge = velocity;
   v->held = true; v->released = false; v->damped = false; v->stolen = false;
   v->kick(velocity, 0);
-  v->toNext = (P[p::spacing] * fs) / (v->cav.fpi * bendNow);
+  v->toNext = (P[p::spacing] * fs) / (v->cav.fpi * (bendNow * v->nb));
   focus = key;
   // past kMaxVoices (Quality: 16 at Medium, 8 at Low), the quietest voice whose key is up (or else
   // the oldest) fades out
@@ -159,6 +176,9 @@ void CavityBellsEngine::process(float *L, float *R, int n) {
     const double drive = -P[p::lorentz] * e2;
     for (int i = 0; i < n; i++) { const double d = mc.a1 * v.det - mc.a2 * v.det1 + mg * drive; v.det1 = v.det; v.det = d; }
     v.press += (v.pressTarget - v.press) * (1 - std::exp(-dt / PRESS_T));
+    // the key's own bend and offset (MPE) glide as the wheel does; the offset re-cuts the kicks
+    v.nb = glideTo(v.nb, ex.bendOf(v.key), dt, BEND_T);
+    if (const double off = ex.slideOr(v.key, P[p::offset]); off != v.off) aim(v, glideTo(v.off, off, dt, BEND_T));
     retune(v, c.count);
     // each mode's turn and decay this block
     double energy = 0;
@@ -178,8 +198,9 @@ void CavityBellsEngine::process(float *L, float *R, int n) {
     const double current = std::clamp(P[p::current] + v.press * (1 - P[p::current]), 0.0, 1.0);
     const bool train = v.held && !v.stolen && current > 0;
     // (the train keeps time with the accelerator's master oscillator, which the pitch wheel moves
-    // with the cavity's tuner, but the Lorentz detuning moves the cavity alone)
-    const double q = TRAIN * v.charge * current, Tb = (P[p::spacing] * fs) / (c.fpi * bendNow);
+    // with the cavity's tuner, and a key's own bend with its own; the Lorentz detuning moves the
+    // cavity alone)
+    const double q = TRAIN * v.charge * current, Tb = (P[p::spacing] * fs) / (c.fpi * (bendNow * v.nb));
     if (!train) v.toNext = Tb;
     // the block in pieces between the bunches' arrivals
     int i0 = 0;

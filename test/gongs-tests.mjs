@@ -59,7 +59,8 @@ function potential(S, x, Nv = S.N) {
   return { V, g };
 }
 
-// Render through the engine in 128-sample blocks, like the AudioWorklet. events: [t, 'on'|'off', key, vel]
+// Render through the engine in 128-sample blocks, like the AudioWorklet. events: [t, 'on'|'off', key, vel],
+// [t, 'msg', message] or [t, 'params', P]
 function render(params, sec, events, post, quality) {
   const e = new GongEngine(FS);
   if (post) e.post = post;
@@ -69,7 +70,7 @@ function render(params, sec, events, post, quality) {
   const ev = events.map(([t, ty, k, v]) => ({ s: Math.round(t * FS), ty, k, v })).sort((a, b) => a.s - b.s);
   let j = 0;
   for (let s = 0; s < n; s += 128) {
-    while (j < ev.length && ev[j].s <= s) { const q = ev[j++]; if (q.ty === 'on') e.noteOn(q.k, q.v); else e.noteOff(q.k); }
+    while (j < ev.length && ev[j].s <= s) { const q = ev[j++]; if (q.ty === 'on') e.noteOn(q.k, q.v); else if (q.ty === 'msg') e.handle(q.k); else if (q.ty === 'params') e.setParams(q.k); else e.noteOff(q.k); }
     e.process(bl, br, 128);
     for (let i = 0; i < 128 && s + i < n; i++) { L[s + i] = bl[i]; R[s + i] = br[i]; }
   }
@@ -340,6 +341,47 @@ test('a centre strike rings only axisymmetric modes; off centre wakes the asymme
   assert.ok(asym.every((q) => q === 0) && sym.some((q) => q !== 0), 'centre, even at mf: every m ≠ 0 coordinate exactly zero (an invariant subspace)');
   const r = (x) => tone(x, f20, 4800, 4800 + 16384) / tone(x, f0, 4800, 4800 + 16384);
   assert.ok(r(o) > 0.05, `off centre: (2,0)/(0,1) = ${r(o).toFixed(3)}`);
+});
+// A note's own slide (MPE) is where its mallet lands, taken as it strikes.
+const slide = (key, value) => ({ type: 'slide', key, value });
+const same = (x, y, what) => { for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) assert.fail(`${what}: sample ${i} differs`); };
+test('a note\'s own slide is its strike point: a lone gong slid to x is the gong struck at x, bit for bit, from its next strike on', () => {
+  const key = 57;
+  for (const x of [0, 0.5, 0.9]) {
+    same(render(P(), 0.3, [[0, 'msg', slide(key, x)], [0, 'on', key, 0.6]]).L, render(P({ strike: x }), 0.3, [[0, 'on', key, 0.6]]).L, `struck at ${x}`);
+    // slid while it rings: it rings on as it was struck, and the next stroke lands at x
+    same(render(P(), 0.3, [[0, 'on', key, 0.6], [0.1, 'msg', slide(key, x)], [0.2, 'on', key, 0.8]]).L,
+      render(P(), 0.3, [[0, 'on', key, 0.6], [0.1, 'params', P({ strike: x })], [0.2, 'on', key, 0.8]]).L, `struck at ${x}, slid`);
+  }
+  // a gong beside it keeps the knob's strike point: the pair is its two gongs, apart
+  const pair = render(P(), 0.3, [[0, 'msg', slide(key, 0.7)], [0, 'on', key, 0.5], [0, 'on', 64, 0.5]]).L;
+  const a = render(P({ strike: 0.7 }), 0.3, [[0, 'on', key, 0.5]]).L, b = render(P(), 0.3, [[0, 'on', 64, 0.5]]).L;
+  let d = 0, pk = 0;
+  for (let i = 0; i < pair.length; i++) { d = Math.max(d, Math.abs(pair[i] - a[i] - b[i])); pk = Math.max(pk, Math.abs(pair[i])); }
+  assert.ok(d < 1e-5 * pk, `differs by ${(d / pk).toExponential(2)} of the peak`);
+  // and back to none (NaN): bit-identical
+  same(render(P(), 0.2, [[0, 'msg', slide(key, 0.7)], [0, 'msg', slide(key, NaN)], [0, 'on', key, 0.5], [0.05, 'msg', slide(64, 0.3)], [0.05, 'msg', slide(64, NaN)], [0.1, 'on', 64, 0.5]]).L,
+    render(P(), 0.2, [[0, 'on', key, 0.5], [0.1, 'on', 64, 0.5]]).L, 'slid and back');
+});
+test('stability: each note\'s own strike point swept centre to rim every block, on chords struck ff again and again, at 44.1, 48 and 96 kHz', () => {
+  // the chord's peak, against the same chord struck at the centre and at the rim by the knob
+  const chord = (fs, o, slid) => {
+    const e = new GongEngine(fs);
+    e.setParams(P(o));
+    const keys = [40, 57, 79], L = new Float32Array(128), R = new Float32Array(128);
+    let pk = 0;
+    for (let b = 0, n = Math.round((0.25 * fs) / 128); b < n; b++) {
+      if (slid) keys.forEach((k, i) => e.handle(slide(k, 0.475 + 0.475 * Math.sin(b / (2 + i)))));
+      if (b % 15 === 0) for (const k of keys) e.noteOn(k, 1);
+      e.process(L, R, 128);
+      for (let i = 0; i < 128; i++) { assert.ok(Number.isFinite(L[i]) && Number.isFinite(R[i]), `${fs} Hz ${JSON.stringify(o)}: NaN`); pk = Math.max(pk, Math.abs(L[i]), Math.abs(R[i])); }
+    }
+    return pk;
+  };
+  for (const fs of [44100, 48000, 96000]) for (const o of [{}, { rise: 4, thick: 0.003, speed: 12 }]) {
+    const pk = chord(fs, o, true), ends = Math.max(chord(fs, { ...o, strike: 0 }), chord(fs, { ...o, strike: 0.95 }));
+    assert.ok(pk < Math.max(1.5 * ends, 0.5), `${fs} Hz ${JSON.stringify(o)}: peak ${pk.toFixed(2)}, ${ends.toFixed(2)} with the knob`);
+  }
 });
 console.log('twins');
 test('every asymmetric mode has a sin twin, ε/2 higher (ε in ω²); the axisymmetric modes and the strike tone are untouched', () => {

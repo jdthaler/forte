@@ -15,8 +15,9 @@
 // tone networks make one biquad on the sum, then the amplifier's shelves.
 //
 // Space and CC64 engage the mute bar; aftertouch and the pitch wheel (up only) press held keys
-// harder. A key's model is built in noteOn (clavier-model.h says why that is cheap). Voices live
-// in a fixed pool: nothing is allocated after construction.
+// harder, and a note's own bend (MPE) presses its key as the wheel would, on top of the wheel. A
+// key's model is built in noteOn (clavier-model.h says why that is cheap). Voices live in a fixed
+// pool: nothing is allocated after construction.
 #pragma once
 
 #include <array>
@@ -26,6 +27,7 @@
 #include "clavier-model.h"
 #include "clavier-params.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 
 namespace forte::clavier {
 
@@ -53,6 +55,7 @@ class ClavierEngine : public Engine {
   void allNotesOff() override;
   void pressure(double value, int key) override;
   void bend(double value) override; // the wheel presses every held key harder (up only)
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // that key pressed harder
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
 
@@ -94,6 +97,7 @@ class ClavierEngine : public Engine {
   int version = 0;
   Tuning tuning; // the keyboard's, as the strings were last tuned to it
   double bendNow = 0, chanPressure = 0;
+  NoteExpression expr{kBendSemitones}; // each key's own bend: as far as the wheel presses
   double k, lpF, lpFall, lpM, killDecay;
   ToneBiquad tone{};
   double tz1 = 0, tz2 = 0;

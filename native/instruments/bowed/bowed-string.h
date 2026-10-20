@@ -21,6 +21,11 @@
 namespace forte::bowed {
 
 constexpr int SLIPS = 64;
+// A key's own bend (MPE) reaches an octave either way, and each string's rings hold it bent down so
+// far. Past it the bowed note strays from the bend: bent up, a slip is resolved by fewer steps than
+// the 180 a period its string is oversampled for; bent down, the low strings fall to slipping more
+// than once a period.
+constexpr double MPE_BEND = 12;
 
 class BowedString {
  public:

@@ -61,6 +61,7 @@ void StarEngine::Voice::start(StarEngine &eng, int key_, const Star &d, uint64_t
   const double pp = 0.6 * std::max(-1.0, std::min(1.0, 2.0 * (key - PAN_LO) / (PAN_HI - PAN_LO) - 1)), a = ((pp + 1) * pi) / 4;
   gl = fd::cos(a); gr = fd::sin(a);
   vel = 0.7; pressure = 1; held = false; age = 0; fade = 1; fading = false; dead = false;
+  spin = eng.expr.slideOr(key, eng.S[kSpin]); slid = false; // a slide starts there
   peak = 1e-12; level = 0; seed = Rng(key * 104729 + (int)(eng.presses++ & 0xffff));
   compact();
   freqs(eng); coeffs(eng); gains(eng, true);
@@ -98,9 +99,24 @@ void StarEngine::Voice::trim(StarEngine &eng) {
 
 void StarEngine::Voice::compact() { int k = 0; for (int r = 0; r < N; r++) if (act[r]) idx[k++] = r; nAct = k; }
 
+// The star's rotation this block: the knob's, or gliding toward its slide (and back to the knob's
+// once the slide is gone). Whether it moved.
+bool StarEngine::Voice::turn(const StarEngine &eng, int n) {
+  const double x = eng.expr.slideOr(key, NAN), was = spin;
+  const bool own = x == x;
+  if (own) slid = true;
+  if (!slid) spin = eng.S[kSpin];
+  else {
+    const double to = own ? x : eng.S[kSpin];
+    spin = glideTo(spin, to, n / eng.fs, GLIDE);
+    if (!own && spin == to) slid = false;
+  }
+  return spin != was;
+}
+
 // frequencies with rotational splitting: δν = m (w_env Ω_env + w_core Ω_core)/2π, sped up K times
 void StarEngine::Voice::freqs(const StarEngine &eng) {
-  const double Kc = K * 1e-6, env = eng.S[kSpin] * SUN.rot, core = env * (dscuti ? 1 : eng.S[kCore]), fs = eng.fs;
+  const double Kc = K * 1e-6, env = spin * SUN.rot, core = env * (dscuti ? 1 : eng.S[kCore]), fs = eng.fs;
   for (int i = 0; i < N; i++) {
     const double f = jsMin(0.45 * fs, jsMax(1, F0[i] + M[i] * Kc * (WE[i] * env + WC[i] * core)));
     const double w = (2 * pi * f) / fs;
@@ -189,7 +205,7 @@ void StarEngine::Voice::render(float *Lo, float *Ro, int n, StarEngine &eng) {
   double *buf = eng.buf.data();
   const double glide = 1 - fd::exp(-n / (GLIDE * eng.fs));
   const bool driving = held || eng.sustain;
-  if (eng.freqMoved) { freqs(eng); coeffs(eng); }
+  if (turn(eng, n) || eng.freqMoved) { freqs(eng); coeffs(eng); }
   else if (eng.dampMoved) coeffs(eng);
   if (eng.inclMoved) gains(eng, false);
   if (dscuti) landau(eng, n, driving);

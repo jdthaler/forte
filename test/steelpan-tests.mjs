@@ -24,7 +24,7 @@ const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const cents = (a, b) => 1200 * Math.log2(a / b);
 const dB = (x) => 20 * Math.log10(Math.max(x, 1e-12));
 
-// Play events [[t, 'on'|'off'|'pressure'|'sustain', key, value]] through an engine in 128-sample
+// Play events [[t, 'on'|'off'|'pressure'|'slide'|'sustain'|'params', key, value]] through an engine in 128-sample
 // blocks, at a Quality (High unless given); `watch(e, t)` is called after each block.
 function play(params, sec, events, { fs = FS, watch, quality } = {}) {
   const e = new SteelPanEngine(fs);
@@ -38,6 +38,7 @@ function play(params, sec, events, { fs = FS, watch, quality } = {}) {
       const [, what, key, v] = ev[k];
       if (what === 'on') e.noteOn(key, v); else if (what === 'off') e.noteOff(key);
       else if (what === 'sustain') e.setSustain(v); else if (what === 'pressure') e.handle({ type: 'pressure', key, value: v });
+      else if (what === 'slide') e.handle({ type: 'slide', key, value: v }); else if (what === 'params') e.setParams(v);
     }
     e.process(bL, bR, bl);
     L.set(bL.subarray(0, Math.min(bl, n - s)), s); R.set(bR.subarray(0, Math.min(bl, n - s)), s);
@@ -246,6 +247,36 @@ test('a roll: while the key is down the sticks keep striking; leaning on the key
   assert.ok(dB(late(pressed) / early(pressed)) > -12, `aftertouch: ${dB(late(pressed) / early(pressed)).toFixed(1)} dB`);
   const released = play(P({ letRing: true, roll: 0.6 }), 1.5, [...ev, [0.5, 'off', key]]).L;
   assert.ok(dB(late(released) / early(released)) < -20, 'and stops with the key');
+});
+// A note's own slide (MPE) is its own roll.
+const same = (x, y, what) => { for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) assert.fail(`${what}: sample ${i} differs`); };
+test('a note\'s own slide is its roll: a lone note slid to x is the note rolled at x, bit for bit, and the note beside it is not rolled', () => {
+  const key = 64, ev = [[0, 'on', key, 0.7]];
+  for (const x of [0.3, 1]) {
+    same(play(P({ letRing: true }), 1, [[0, 'slide', key, x], ...ev]).L, play(P({ letRing: true, roll: x }), 1, ev).L, `roll ${x}`);
+    // slid while it sounds, as the wheel moved then
+    same(play(P({ letRing: true }), 1, [...ev, [0.3, 'slide', key, x]]).L, play(P({ letRing: true }), 1, [...ev, [0.3, 'params', 0, P({ letRing: true, roll: x })]]).L, `roll ${x}, slid`);
+  }
+  // two notes far apart, uncoupled: the chord is the rolled note and the struck one, apart
+  const Q = P({ letRing: true, coupling: 0 }), chord = play(Q, 1, [[0, 'slide', key, 0.6], ...ev, [0, 'on', 48, 0.7]]).L;
+  const a = play({ ...Q, roll: 0.6 }, 1, ev).L, b = play(Q, 1, [[0, 'on', 48, 0.7]]).L;
+  let d = 0, pk = 0;
+  for (let i = 0; i < chord.length; i++) { d = Math.max(d, Math.abs(chord[i] - a[i] - b[i])); pk = Math.max(pk, Math.abs(chord[i])); }
+  assert.ok(d < 1e-5 * pk, `differs by ${(d / pk).toExponential(2)} of the peak`);
+  // and back to none (NaN), before the note and while it sounds: bit-identical, wheel up or not
+  for (const roll of [0, 0.5]) {
+    same(play(P({ roll }), 0.6, [[0, 'slide', key, 1], [0, 'slide', key, NaN], ...ev, [0.2, 'slide', 67, 0.4], [0.2, 'slide', 67, NaN], [0.3, 'on', 67, 0.5]]).L,
+      play(P({ roll }), 0.6, [...ev, [0.3, 'on', 67, 0.5]]).L, `slid and back, roll ${roll}`);
+  }
+});
+test('stability: each note\'s own roll swept every block, on chords at the corners, at 44.1, 48 and 96 kHz', () => {
+  for (const fs of [44100, 48000, 96000]) for (const o of [{}, { rise: 10, coupling: 0.01, contact: 0.2, rollRate: 24, letRing: true }]) {
+    const keys = [21, 60, 64, 67, 108], ev = keys.map((k) => [0, 'on', k, 1]);
+    const { L } = play(P(o), 0.5, ev, { fs, watch: (e, t) => keys.forEach((k, i) => e.handle({ type: 'slide', key: k, value: 0.5 + 0.5 * Math.sin(t * fs / 128 / (2 + i)) })) });
+    let pk = 0;
+    for (const v of L) { assert.ok(Number.isFinite(v), `${fs} Hz ${JSON.stringify(o)}: NaN`); pk = Math.max(pk, Math.abs(v)); }
+    assert.ok(pk < 4, `${fs} Hz ${JSON.stringify(o)}: peak ${pk.toFixed(2)}`);
+  }
 });
 test('the compass is the steel band\'s, six bass to high tenor (A1–F♯6), with Full range opening A0–C8', () => {
   assert.deepEqual(INSTRUMENT.compass.keys, [33, 90]);

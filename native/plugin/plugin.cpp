@@ -26,6 +26,7 @@
 #include "forte/chain.h"
 #include "forte/denormals.h"
 #include "forte/guard.h"
+#include "forte/mpe.h"
 #include "forte/queue.h"
 #include "forte/tuning.h"
 #include "presets.h"
@@ -48,6 +49,8 @@ constexpr double kTouchGamma[] = {0.6, 1, 1.6};
 // freeze) gets High whatever it is set to.
 constexpr uint32_t kQualityId = 0x7ffffffc;
 const char *const kQualityChoices[] = {"High", "Medium", "Low"};
+// MPE (forte/mpe.h): Auto (from the controller's configuration message), On or Off. Every plugin has it.
+constexpr uint32_t kMpeId = 0x7ffffffb;
 // The soft pedal (CC67): a key struck while it is down is struck this much slower, so it sounds
 // softer and, where the instrument's hammer or mallet is nonlinear, darker too.
 constexpr double kSoftPedal = 0.6;
@@ -82,12 +85,12 @@ struct Instance {
 
 Instance *instance(const clap_plugin_t *p) { return (Instance *)p->plugin_data; }
 
-struct Plugin : Instance {
+struct Plugin : Instance, MpeDecoder::Sink {
   const InstrumentInfo &I;
   const std::string accent;  // the window's colour
   const bool hasPresets;
-  const int nParams;        // the instrument's parameters, then Preset if it has presets, the velocity curve, Quality
-  const int presetAt, touchAt, qualityAt; // their indices (presetAt −1 without presets)
+  const int nParams;        // the instrument's parameters, then Preset if it has presets, the velocity curve, Quality and MPE
+  const int presetAt, touchAt, qualityAt, mpeAt; // their indices (presetAt −1 without presets)
   std::vector<uint32_t> ids; // hashed parameter ids, by index
 
   std::unique_ptr<Engine> engine;
@@ -109,6 +112,12 @@ struct Plugin : Instance {
   bool caught[128]{};   // the keys sounding when the sostenuto pedal went down: they keep sounding
   bool sostHeld[128]{}; // let go while caught: the sostenuto holds them
   uint8_t ccLast[128]{}; // each controller's last value (a toggle flips on a press)
+  // MPE, and the per-note expression a host sends: the keys the engine was given their own bend or
+  // slide, so a note struck there without them starts plain
+  MpeDecoder mpe;
+  Tuning tuning;         // the parameters' (a note's bend follows it)
+  int tuningAt[3 + kCustomCents];
+  bool expressed[128]{};
 
   // the editor: its events for the audio thread, what it shows, the keys sounding for it
   const clap_host_params_t *hostParams = nullptr;
@@ -119,11 +128,14 @@ struct Plugin : Instance {
 
   Plugin(const clap_host_t *h, const InstrumentInfo &info, const clap_plugin_descriptor_t *desc, const std::string &colour)
       : Instance(h, desc), I(info), accent(colour.size() < 2 ? "#f0b35a" : colour), hasPresets(info.presetCount > 0),
-        nParams(info.paramCount + (hasPresets ? 3 : 2)), presetAt(hasPresets ? info.paramCount : -1), touchAt(nParams - 2), qualityAt(nParams - 1) {
+        nParams(info.paramCount + (hasPresets ? 4 : 3)), presetAt(hasPresets ? info.paramCount : -1), touchAt(nParams - 3), qualityAt(nParams - 2), mpeAt(nParams - 1) {
     for (int i = 0; i < I.paramCount; i++) ids.push_back(paramHash(I.params[i].id));
     if (hasPresets) ids.push_back(kPresetId);
     ids.push_back(kTouchId);
     ids.push_back(kQualityId);
+    ids.push_back(kMpeId);
+    const char *tuningIds[3] = {"pitch", "temperament", "tuningRoot"};
+    for (int k = 0; k < 3 + kCustomCents; k++) tuningAt[k] = paramIndex(k < 3 ? tuningIds[k] : ("cents" + std::to_string(k - 2)).c_str());
     P.resize(nParams);
     pending.resize(nParams);
     shown.reset(new std::atomic<double>[nParams]);
@@ -131,6 +143,7 @@ struct Plugin : Instance {
     if (hasPresets) P[presetAt] = 0;
     P[touchAt] = 1;
     P[qualityAt] = 0;
+    P[mpeAt] = mpe::autoDetect;
     for (int i = 0; i < nParams; i++) shown[i] = P[i];
     sent.assign(nParams, NAN);
   }
@@ -145,6 +158,7 @@ struct Plugin : Instance {
   // applies it: the defaults, then the kept parameters, then the preset's values (shell.js).
   void set(int i, double v, const clap_output_events_t *out) {
     if (i == touchAt) { P[i] = constrain(touchParam(), v); shown[i] = P[i]; return; }
+    if (i == mpeAt) { P[i] = constrain(mpeParam(), v); shown[i] = P[i]; mpeMode(); return; }
     if (i == qualityAt) { P[i] = constrain(qualityParam(), v); shown[i] = P[i]; dirty = true; return; }
     if (i == presetAt) {
       int k = (int)std::lround(v);
@@ -184,6 +198,7 @@ struct Plugin : Instance {
     if (fromMidi) vel = std::pow(vel, kTouchGamma[(int)P[touchAt]]) * (soft ? kSoftPedal : 1);
     if (held[ch][key]) noteOff(ch, key, -1); // struck again before its note-off: let it go first
     held[ch][key] = 1; sounding[key]++; latched[key] = false; sostHeld[key] = false;
+    if (!mpe.isMember(ch)) plain(key); // an MPE member's note came with its own (MpeDecoder::midi)
     if (engine) engine->noteOn(key, I.midiVelocity ? I.midiVelocity(vel) : vel);
   }
   void noteOff(int ch, int key, double vel) {
@@ -223,16 +238,16 @@ struct Plugin : Instance {
     if (sustain) pedal(false);
     if (engine) engine->allNotesOff();
   }
-  // the mod wheel, 0..127: at rest the parameter's default, fully up its maximum (shared/midi.js)
+  // the mod wheel's parameter at u (0..1): at rest its default, fully up its maximum (shared/midi.js)
+  double wheelValue(double u) const {
+    const ParamInfo &p = I.params[I.modWheel];
+    const double top = I.modWheelMax;
+    if (u <= 0) return p.def;
+    return constrain(p, p.log ? p.def * std::pow(top / p.def, u) : p.def + (top - p.def) * u);
+  }
   void modWheel(int cc, const clap_output_events_t *out) {
     if (I.modWheel < 0) return;
-    const ParamInfo &p = I.params[I.modWheel];
-    double top = I.modWheelMax, v;
-    if (cc <= 0) v = p.def;
-    else {
-      double u = cc / 127.0;
-      v = p.log ? p.def * std::pow(top / p.def, u) : p.def + (top - p.def) * u;
-    }
+    const double v = wheelValue(cc / 127.0);
     int i = I.modWheel;
     double before = P[i];
     set(i, v, out);
@@ -270,7 +285,36 @@ struct Plugin : Instance {
     for (int i = 0; i < I.controllerCount; i++) if (I.controllers[i].cc == 64 && I.controllers[i].mode == Controller::toggle) return &I.controllers[i];
     return nullptr;
   }
+  // ---- one note's own expression: MPE (forte/mpe.h), or the host's per-note expressions ----------
+  // its bend in semitones, along the tuning
+  void noteBend(int key, double semitones) override {
+    if (key < 0 || key > 127 || !engine) return;
+    expressed[key] = true;
+    engine->noteBend(bendRatio(tuning, key, semitones), key);
+  }
+  // its slide 0..1 (NaN: none) is its own mod wheel
+  void noteSlide(int key, double value) override {
+    if (key < 0 || key > 127 || !engine || I.modWheel < 0) return;
+    expressed[key] = true;
+    engine->slide(value == value ? wheelValue(value) : NAN, key);
+  }
+  void notePressure(int key, double value) override { if (engine) engine->pressure(value, key); }
+  // a note struck without its own: the key starts plain again
+  void plain(int key) {
+    if (!expressed[key] || !engine) return;
+    expressed[key] = false;
+    engine->noteBend(1, key);
+    engine->slide(NAN, key);
+  }
+  void mpeMode() { mpe.setMode((int)P[mpeAt]); }
+  void retune() {
+    double custom[kCustomCents] = {};
+    for (int k = 0; k < kCustomCents; k++) if (tuningAt[3 + k] >= 0) custom[k] = P[tuningAt[3 + k]];
+    tuning = tuningAt[0] >= 0 && tuningAt[1] >= 0 && tuningAt[2] >= 0 ? makeTuning(P[tuningAt[0]], P[tuningAt[1]], P[tuningAt[2]], custom) : Tuning{};
+  }
+
   void midi(const uint8_t *d, const clap_output_events_t *out) {
+    if (mpe.midi(d, *this)) return; // a member channel's bend, pressure or slide: its note's
     int cmd = d[0] & 0xf0, ch = d[0] & 0x0f;
     if (cmd == 0x90 && d[2] > 0) noteOn(ch, d[1], d[2] / 127.0);
     else if (cmd == 0x80 || cmd == 0x90) noteOff(ch, d[1], cmd == 0x80 ? d[2] / 127.0 : -1);
@@ -291,12 +335,32 @@ struct Plugin : Instance {
   void event(const clap_event_header_t *h, const clap_output_events_t *out) {
     if (h->space_id != CLAP_CORE_EVENT_SPACE_ID) return;
     switch (h->type) {
-      case CLAP_EVENT_NOTE_ON: { auto e = (const clap_event_note_t *)h; noteOn(e->channel < 0 ? 0 : e->channel, e->key, e->velocity); break; }
+      case CLAP_EVENT_NOTE_ON: {
+        auto e = (const clap_event_note_t *)h;
+        const int ch = e->channel < 0 ? 0 : e->channel & 15;
+        if (e->key >= 0 && e->key < 128) { const uint8_t d[3] = {(uint8_t)(0x90 | ch), (uint8_t)e->key, 127}; mpe.midi(d, *this); } // an MPE member's: its bend and slide
+        noteOn(ch, e->key, e->velocity);
+        break;
+      }
       case CLAP_EVENT_NOTE_OFF: { auto e = (const clap_event_note_t *)h; noteOff(e->channel < 0 ? 0 : e->channel, e->key, e->velocity); break; }
       case CLAP_EVENT_NOTE_CHOKE: { auto e = (const clap_event_note_t *)h; noteOff(e->channel < 0 ? 0 : e->channel, e->key, -1); break; }
       case CLAP_EVENT_NOTE_EXPRESSION: {
+        // One note's (Bitwig, and VST3 hosts' note expressions), or a channel's (key −1: the AU
+        // wrapper's pitch bend, ±2 semitones, and channel pressure), which go on as that MIDI.
         auto e = (const clap_event_note_expression_t *)h;
-        if (e->expression_id == CLAP_NOTE_EXPRESSION_PRESSURE && engine) engine->pressure(e->value, e->key);
+        const int ch = e->channel < 0 ? 0 : e->channel & 15;
+        if (e->key < 0) {
+          if (e->expression_id == CLAP_NOTE_EXPRESSION_TUNING) {
+            const int b = std::clamp((int)std::lround(e->value / 2 * 8192) + 8192, 0, 16383);
+            const uint8_t d[3] = {(uint8_t)(0xe0 | ch), (uint8_t)(b & 127), (uint8_t)(b >> 7)};
+            midi(d, out);
+          } else if (e->expression_id == CLAP_NOTE_EXPRESSION_PRESSURE) {
+            const uint8_t d[3] = {(uint8_t)(0xd0 | ch), (uint8_t)std::clamp((int)std::lround(e->value * 127), 0, 127), 0};
+            midi(d, out);
+          }
+        } else if (e->expression_id == CLAP_NOTE_EXPRESSION_PRESSURE) notePressure(e->key, e->value);
+        else if (e->expression_id == CLAP_NOTE_EXPRESSION_TUNING) noteBend(e->key, e->value);
+        else if (e->expression_id == CLAP_NOTE_EXPRESSION_BRIGHTNESS) noteSlide(e->key, std::clamp(e->value, 0.0, 1.0));
         break;
       }
       case CLAP_EVENT_PARAM_VALUE: {
@@ -315,6 +379,7 @@ struct Plugin : Instance {
     if (!loadPending.load(std::memory_order_acquire)) return;
     for (int i = 0; i < nParams; i++) { P[i] = pending[i]; shown[i] = P[i]; }
     dirty = true;
+    mpeMode();
     loadPending.store(false, std::memory_order_release);
   }
   clap_process_status process(const clap_process_t *proc) {
@@ -339,7 +404,7 @@ struct Plugin : Instance {
       }
       uint32_t end = pos + kBlock < n ? pos + kBlock : n;
       if (next < count) { uint32_t t = in->get(in, next)->time; if (t < end) end = t; }
-      if (dirty && engine) { engine->setQuality(quality()); engine->setParams(P.data()); chain.setParams(P.data()); dirty = false; }
+      if (dirty && engine) { engine->setQuality(quality()); engine->setParams(P.data()); chain.setParams(P.data()); retune(); dirty = false; }
       if (L) render(L + pos, R ? R + pos : spare, end - pos);
       pos = end;
     }
@@ -407,7 +472,7 @@ struct Plugin : Instance {
   //   loadScala(file)     one of them sets the custom temperament: { ok, name, error }
   //   showScalas()        opens that folder
   int paramIndex(const char *id) const { for (int i = 0; i < I.paramCount; i++) if (!std::strcmp(I.params[i].id, id)) return i; return -1; }
-  ParamInfo infoOf(int i) const { return i < I.paramCount ? I.params[i] : i == presetAt ? presetParam() : i == touchAt ? touchParam() : qualityParam(); }
+  ParamInfo infoOf(int i) const { return i < I.paramCount ? I.params[i] : i == presetAt ? presetParam() : i == touchAt ? touchParam() : i == qualityAt ? qualityParam() : mpeParam(); }
   double along(int i, double v) const { const ParamInfo p = infoOf(i); return p.kind == ParamKind::continuous ? toNormalized(p, v) : v; }
   std::string text(int i, double v) const {
     if (i == presetAt) { int k = (int)std::lround(v); return k <= 0 ? "Default settings" : k <= I.presetCount ? I.presets[k - 1].name : "?"; }
@@ -590,7 +655,7 @@ struct Plugin : Instance {
     char buf[64];
     for (int i = 0; i < nParams; i++) {
       std::snprintf(buf, sizeof buf, " %.17g\n", shown[i].load());
-      t += (i < I.paramCount ? I.params[i].id : i == presetAt ? "preset" : i == touchAt ? "touch" : "quality") + std::string(buf);
+      t += (i < I.paramCount ? I.params[i].id : i == presetAt ? "preset" : i == touchAt ? "touch" : i == qualityAt ? "quality" : "mpe") + std::string(buf);
     }
     const char *p = t.data();
     size_t left = t.size();
@@ -611,6 +676,7 @@ struct Plugin : Instance {
     if (hasPresets) v[presetAt] = 0;
     v[touchAt] = 1;
     v[qualityAt] = 0;
+    v[mpeAt] = mpe::autoDetect;
     size_t at = t.find('\n');
     while (at != std::string::npos && at + 1 < t.size()) {
       size_t eol = t.find('\n', at + 1);
@@ -622,6 +688,7 @@ struct Plugin : Instance {
         if (id == "preset" && hasPresets) v[presetAt] = constrain(presetParam(), x);
         else if (id == "touch") v[touchAt] = constrain(touchParam(), x);
         else if (id == "quality") v[qualityAt] = constrain(qualityParam(), x);
+        else if (id == "mpe") v[mpeAt] = constrain(mpeParam(), x);
         else for (int i = 0; i < I.paramCount; i++) if (id == I.params[i].id) { v[i] = constrain(I.params[i], x); break; }
       }
       at = eol;
@@ -629,6 +696,7 @@ struct Plugin : Instance {
     if (!processing.load()) {
       for (int i = 0; i < nParams; i++) { P[i] = v[i]; shown[i] = v[i]; }
       dirty = true;
+      mpeMode();
       rescan();
       return true;
     }
@@ -647,6 +715,9 @@ struct Plugin : Instance {
   }
   ParamInfo touchParam() const {
     return ParamInfo{"touch", "Velocity curve", "MIDI", ParamKind::choice, 0, 2, 1, 1, false, false, kTouchChoices, 3, {}};
+  }
+  ParamInfo mpeParam() const {
+    return ParamInfo{"mpe", "MPE", "MIDI", ParamKind::choice, 0, mpe::kModes - 1, mpe::autoDetect, 1, false, false, mpe::kModeNames, mpe::kModes, {}};
   }
   ParamInfo qualityParam() const {
     return ParamInfo{"quality", "Quality", "CPU", ParamKind::choice, 0, 2, 0, 1, false, false, kQualityChoices, 3, {}};
@@ -679,7 +750,7 @@ uint32_t notePortsCount(const clap_plugin_t *, bool isInput) { return isInput ? 
 bool notePortsGet(const clap_plugin_t *, uint32_t index, bool isInput, clap_note_port_info_t *info) {
   if (!isInput || index != 0) return false;
   info->id = 0;
-  info->supported_dialects = CLAP_NOTE_DIALECT_CLAP | CLAP_NOTE_DIALECT_MIDI;
+  info->supported_dialects = CLAP_NOTE_DIALECT_CLAP | CLAP_NOTE_DIALECT_MIDI | CLAP_NOTE_DIALECT_MIDI_MPE;
   info->preferred_dialect = CLAP_NOTE_DIALECT_CLAP;
   std::snprintf(info->name, sizeof info->name, "%s", "Notes");
   return true;
@@ -769,6 +840,14 @@ bool auParamOrder(const clap_plugin_t *, size_t *order, size_t count) {
   return true;
 }
 const clap_plugin_auv2_param_ordering_t auOrdering{auParamOrder};
+
+// VST3: every MIDI channel (MPE's members), and the note expressions a note can have of its own:
+// its tuning (a bend), brightness (its slide) and pressure
+uint32_t vst3MidiChannels(const clap_plugin_t *, uint32_t) { return 16; }
+uint32_t vst3NoteExpressions(const clap_plugin_t *) {
+  return AS_VST3_NOTE_EXPRESSION_TUNING | AS_VST3_NOTE_EXPRESSION_BRIGHTNESS | AS_VST3_NOTE_EXPRESSION_PRESSURE;
+}
+const clap_plugin_as_vst3_t asVst3{vst3MidiChannels, vst3NoteExpressions};
 
 // ---- the window (editor.h): sizes in points, times the host's scale where it works in pixels ----
 
@@ -879,6 +958,7 @@ const void *pluginGetExtension(const clap_plugin_t *, const char *id) {
   if (!std::strcmp(id, CLAP_EXT_LATENCY)) return &latency;
   if (!std::strcmp(id, CLAP_EXT_RENDER)) return &render;
   if (!std::strcmp(id, CLAP_PLUGIN_AUV2_PARAM_ORDERING)) return &auOrdering;
+  if (!std::strcmp(id, CLAP_PLUGIN_AS_VST3)) return &asVst3;
 #ifdef FORTE_EDITOR
   if (!std::strcmp(id, CLAP_EXT_GUI)) return &gui;
   if (!std::strcmp(id, CLAP_EXT_TIMER_SUPPORT)) return &timerSupport;
@@ -924,6 +1004,10 @@ struct Suite : Instance {
     if (cur && &cur->I == &list[k].info()) return true;
     std::unique_ptr<Plugin> p(new Plugin(host, list[k].info(), clap.desc, list[k].accent));
     if (cur) { p->P[p->qualityAt] = cur->shown[cur->qualityAt].load(); p->shown[p->qualityAt] = p->P[p->qualityAt]; p->offline = cur->offline; } // the computer's, not the instrument's
+    if (cur) { // and the controller's: its MPE mode and the zones it announced
+      p->P[p->mpeAt] = cur->shown[cur->mpeAt].load(); p->shown[p->mpeAt] = p->P[p->mpeAt];
+      p->mpeMode(); p->mpe.adoptZones(cur->mpe);
+    }
     p->hostParams = (const clap_host_params_t *)host->get_extension(host, CLAP_EXT_PARAMS);
     if (!active) { cur = std::move(p); live = cur.get(); }
     else {

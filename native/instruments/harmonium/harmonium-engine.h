@@ -23,6 +23,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "harmonium-model.h"
 #include "harmonium-params.h"
 
@@ -32,6 +33,10 @@ constexpr int TRACE = 256;      // points in the live trace of the focused reed
 constexpr int ENV = 64;         // the focused key's rms per block, kept for the posts
 constexpr int NOISE_N = 8192;   // a seeded table of turbulence, read by each reed from its own offset
 constexpr int POOL = 64;        // voices: 16 keys sounding, and those fading out
+// A key's own bend (MPE) reaches an octave either way: past it the reed no longer speaks, its
+// throat and cell (voiced for the unbent tongue) no longer driving a tongue that much stiffer, and
+// a tongue that much softer blown out of its slot.
+constexpr double MPE_BEND = 12;
 
 // What the engine posts for the page (harmonium/src/harmonium-wasm.js turns them into its 'reed'
 // message). Every 6 blocks: the traces, the envelope, then the header.
@@ -59,6 +64,7 @@ class HarmoniumEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void allNotesOff() override;
   void bend(double value) override; // every tongue's stiffness ×r², its note ×r
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // one key's tongues, the same way
   void pressure(double value, int key) override; // aftertouch: more wind (up to double)
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
@@ -79,7 +85,7 @@ class HarmoniumEngine : public Engine {
     int ni = 0;
     bool two = false, track = false, asleep = true;
     double k[32] = {}, st[24] = {};
-    void init(HarmoniumEngine &eng, const ReedModel &model);
+    void init(HarmoniumEngine &eng, const ReedModel &model, double r); // r: the bend it starts at
     void stiffen(double r);
     void reset();
     void setSteady(const Equilibrium &e);
@@ -99,6 +105,7 @@ class HarmoniumEngine : public Engine {
     double s[8] = {};
     bool down = false, fading = false, dead = false;
     double age = 0, gl = 0, gr = 0;
+    double nb = 1;          // its key's own bend (MPE), where the glide is
     Reed *list[NRANKS] = {};
     double amul[NRANKS] = {};
     int nList = 0;
@@ -126,6 +133,7 @@ class HarmoniumEngine : public Engine {
   bool hasParams = false;
   double fOS = 440;
   double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
+  NoteExpression expr{MPE_BEND};  // each key's own bend
   bool trackAll = false;
   uint32_t rng = 1;
   const double h;

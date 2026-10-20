@@ -47,6 +47,12 @@ class Engine {
   virtual void allNotesOff() {}
   virtual void pressure(double /*value*/, int /*key*/) {} // aftertouch 0..1; key −1 for the channel
   virtual void bend(double /*value*/) {}                  // pitch bend −1..1 (±kBendSemitones, where it bends pitch)
+  // One note's own expression (MPE, or a host's per-note expressions: forte/mpe.h). Either may come
+  // before the key's noteOn: the engine keeps it per key, and the key's next note starts with it.
+  //   noteBend(r, key)  the note's pitch × r on top of its tuned pitch and the wheel's bend (1: none)
+  //   slide(x, key)     the note's own value of the mod wheel's parameter (NaN: the parameter's)
+  virtual void noteBend(double /*ratio*/, int /*key*/) {}
+  virtual void slide(double /*value*/, int /*key*/) {}
   virtual int voiceCount() const { return 0; }
   // The host's Quality (any thread the engine's other calls come from; never allocates). The
   // engine reads `quality` where it builds a voice, so a change applies to the notes that follow,
