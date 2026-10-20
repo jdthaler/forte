@@ -17,7 +17,7 @@
 namespace forte::quantum {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { potential, eta, lock, bpm, beats, nbar, sigma, detector, T1, dephase, release, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { potential, eta, lock, bpm, beats, nbar, sigma, detector, T1, dephase, release, ramsey, ramseyDetune, ramseyPhase, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -35,6 +35,8 @@ namespace detector_ { enum : int { x, v, a }; }
 inline const FormatSegment kFormat_T1[] = {{0.9999999999999999, "", " ms", 1000, 0, 0, false, false, false, false}, {9.999999999999998, "", " s", 1, 0, 2, false, false, false, false}, {kNoLimit, "", " s", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_dephase[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " s⁻¹", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_release[] = {{0.9999999999999999, "", " ms", 1000, 0, 0, false, false, false, false}, {kNoLimit, "", " s", 1, 0, 2, false, false, false, false}};
+inline const FormatSegment kFormat_ramseyDetune[] = {{-0.005, "", " Hz", 1, 0, 2, false, false, true, false}, {0, "", " Hz", 1, 0, 2, false, false, false, false}, {kNoLimit, "", " Hz", 1, 0, 2, false, false, true, false}};
+inline const FormatSegment kFormat_ramseyPhase[] = {{kNoLimit, "", "°", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
 inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
@@ -71,6 +73,9 @@ inline const ParamInfo kParams[p::count] = {
   {"T1", "Lifetime T₁", "Decoherence", ParamKind::continuous, 0.2, 30, 4, 0, true, false, nullptr, 0, kFormat_T1, 3},
   {"dephase", "Pure dephasing rate Γ_φ = 1/T_φ", "Decoherence", ParamKind::continuous, 0, 10, 0, 0.01, false, true, nullptr, 0, kFormat_dephase, 2},
   {"release", "Release quench", "Decoherence", ParamKind::continuous, 0.02, 2, 0.3, 0, true, false, nullptr, 0, kFormat_release, 2},
+  {"ramsey", "Coherent restrike (Ramsey fringes)", "Restrike", ParamKind::toggle, 0, 1, 0, 1, false, true, nullptr, 0, nullptr, 0},
+  {"ramseyDetune", "Pump detuning δ", "Restrike", ParamKind::continuous, -4, 4, 0, 0.01, false, false, nullptr, 0, kFormat_ramseyDetune, 3},
+  {"ramseyPhase", "Second pulse's phase φ", "Restrike", ParamKind::continuous, 0, 360, 0, 1, false, false, nullptr, 0, kFormat_ramseyPhase, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, true, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
@@ -98,6 +103,7 @@ inline const PresetValue kPreset5[] = {{p::dephase, 3}};
 inline const PresetValue kPreset6[] = {{p::lock, 0}, {p::nbar, 60}};
 inline const PresetValue kPreset7[] = {{p::sigma, 0.6}, {p::detector, 0}};
 inline const PresetValue kPreset8[] = {{p::sigma, 4}};
+inline const PresetValue kPreset9[] = {{p::ramsey, 1}};
 inline const Preset kPresets[] = {
   {"Square well, revivals on the beat", nullptr, 0},
   {"Morse molecule: octave echoes at T_rev/4", kPreset1, 1},
@@ -108,6 +114,7 @@ inline const Preset kPresets[] = {
   {"Fixed n̄: chords revive in polyrhythm", kPreset6, 2},
   {"Three levels: a chord of Bohr lines", kPreset7, 2},
   {"Tight packet: bright, brief, many echoes", kPreset8, 1},
+  {"Coherent restrike: Ramsey fringes", kPreset9, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{0, -1}};
@@ -126,7 +133,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Each key a wavepacket in a potential well: notes that collapse, return an octave up as the packet splits, and revive on the beat.", .auSubtype = "Qntm",
     .vst3Id = {0xa2, 0xcc, 0xbe, 0xc0, 0xeb, 0x9e, 0xf6, 0x0e, 0xdb, 0xa8, 0xac, 0x90, 0x66, 0xba, 0x73, 0xf5},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 9,
+    .presets = kPresets, .presetCount = 10,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::dephase, .modWheelMax = 10,
