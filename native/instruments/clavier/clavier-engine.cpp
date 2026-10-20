@@ -298,7 +298,7 @@ void ClavierEngine::noteOn(int key, double velocity) {
   // strike: the tangent flies at the key's speed until it meets the string
   v->eta1 = v->eta - strikeSpeed(std::min(1.0, std::max(0.0, velocity))) * k;
   v->down = true; v->thrown = true; v->Fpeak = 0;
-  if (nVoices > MAX_VOICES) {
+  if (nVoices > maxVoices()) {
     Voice *victim = nullptr;
     double score = INFINITY;
     for (int i = 0; i < nVoices; i++) {

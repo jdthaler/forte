@@ -178,6 +178,13 @@ tests check the C++ against it and against the literature. Ten twelve-mode voice
 port is in `native/instruments/blackhole/`, its WebAssembly in
 `blackhole/wasm/` (wrapped by `blackhole/src/blackhole-wasm.js`).
 
+## Quality
+
+A ringdown costs little, so the Quality setting (for phones and older computers) only lowers how
+many black holes ring at once: 24 at Medium and 12 at Low (High 48); past that the quietest fades
+out in about 10 ms. Each note sounds exactly as at High. The inspiral's chirp, the costliest part
+of a note, is left whole.
+
 ## Prior art and references
 
 ### The original source: black holes and their ringing

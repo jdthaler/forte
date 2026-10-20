@@ -14,6 +14,7 @@
 //   setSustain?(on)   allNotesOff?()   handle?(msg)   (any other message type: { type: 'pressure',
 //                                 value, key }, 'bend', and one note's own { type: 'noteBend', value
 //                                 (a frequency ratio), key } and { type: 'slide', value, key }, MPE's)
+//   setQuality?(level)            'high', 'medium' or 'low' (shared/quality.js)
 //   voiceCount?()                 shown in the CPU pill
 //   stats?()                      more fields for the page's stats message (e.g. { modes })
 //   engine.post(msg)              set by this wrapper: send a message to the page
@@ -49,6 +50,7 @@ class ForteProcessor extends AudioWorkletProcessor {
         case 'params': e.setParams(m.P); break;
         case 'sustain': e.setSustain?.(m.on); break;
         case 'panic': e.allNotesOff?.(); break;
+        case 'quality': e.setQuality?.(m.level); break;
         default: e.handle?.(m);
       }
     } catch (err) {

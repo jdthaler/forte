@@ -19,6 +19,9 @@ constexpr double NOISE = 2e-3;   // turbulence: velocity fluctuations at the flu
 constexpr int POST_BLOCKS = 6;
 constexpr int RANK_ORDER[RANKS] = {0, 2, 1, 3, 4, 5}; // the pipe the views show: the first drawn of P8, G8, O4, mixture
 constexpr double PI = std::numbers::pi;
+// Quality: the modes a pipe keeps at Medium and Low (at most this many, up to this frequency)
+constexpr int MEDIUM_MODES = 8, LOW_MODES = 5;
+constexpr double MEDIUM_F = 10000, LOW_F = 7000;
 
 // Half-band low-pass for the 2× decimation (Kaiser-windowed sinc, cut-off at the output Nyquist).
 void halfband(std::array<double, PipeEngine::FIR_N> &h, double beta = 8) {
@@ -98,6 +101,10 @@ void PipeEngine::Pipe::init(PipeEngine &eng, const PipeModel *model, int r, doub
   R = model; rank = r; stopped = model->stopped;
   os = eng.osFor(model->f);
   fsI = eng.fs * os; h = 1 / fsI; n = model->nModes;
+  // Quality: Medium and Low leave out the pipe's highest modes, the weakest of its sound
+  const double fTop = eng.pick<double>(INFINITY, MEDIUM_F, LOW_F);
+  const int nTop = eng.pick(MODES_OPEN, MEDIUM_MODES, LOW_MODES);
+  while (n > 3 && (n > nTop || model->modes[n - 1].om > TAU * fTop)) n--;
   const Geometry &g = model->geo;
   retime(1);
   // the jet
@@ -348,7 +355,7 @@ bool PipeEngine::startKey(int key, double velocity, const KeyModels *models, Dat
     voices[nVoices++] = v; byKey[key] = v;
     int live = 0;
     for (int i = 0; i < nVoices; i++) if (!voices[i]->fading && !voices[i]->dead) live++;
-    if (live > MAX_KEYS) { // the quietest released key (never a young one) fades out
+    if (live > pick(MAX_KEYS, 12, 8)) { // the quietest released key (never a young one) fades out; Medium and Low let fewer keys sound
       Voice *victim = nullptr;
       double score = INFINITY;
       for (int i = 0; i < nVoices; i++) {

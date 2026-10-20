@@ -440,7 +440,7 @@ carillon/src/carillon-main.js             page wiring and views
 carillon/src/carillon-wasm.js             the C++ engine and model as WebAssembly (carillon/wasm/carillon.wasm)
 native/instruments/carillon/              the physics in C++: bells, losses, radiation, doublets, clapper, air absorption, historic
                                           bells, strike-note estimator (carillon-model), the engine, the table as a generated header, reference
-test/carillon-tests.mjs                   node test/carillon-tests.mjs (26 tests, ~20 s, on the WebAssembly)
+test/carillon-tests.mjs                   node test/carillon-tests.mjs (30 tests, ~20 s, on the WebAssembly)
 tools/carillon-profile.mjs                node tools/carillon-profile.mjs → carillon/src/bell-table.js and its C++ (~20 min)
 tools/carillon-native-table.mjs           node tools/carillon-native-table.mjs → native/instruments/carillon/bell-table.h
 tools/render-carillon.mjs                 node tools/render-carillon.mjs → examples/carillon/
@@ -482,6 +482,16 @@ tools/render-carillon.mjs                 node tools/render-carillon.mjs → exa
   nominals stray further from 3 and 4 × the prime (above). Hibbert (2008)
   measured how real strike pitches shift; nothing here is fitted to his
   data.
+
+## Quality
+
+The Quality setting (in the controls, for phones and older computers) keeps
+High as described here. Medium lets 24 bells ring at once instead of 36,
+leaves out each bell's modes above 16 kHz and stops a mode once it is 70 dB
+under the bell's loudest (100 dB at High); Low lets 12 bells ring, stops at
+12 kHz and 60 dB. A bell keeps its partials, pitch and level: what goes is
+the faintest top of the spectrum and the last whisper of a long ring, and in
+a fast, full passage the oldest, quietest bells fade sooner.
 
 ## Prior art and references
 

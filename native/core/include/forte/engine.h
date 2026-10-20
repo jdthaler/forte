@@ -23,6 +23,14 @@ struct Message {
   float values[30] = {};
 };
 
+// How much of its physics an engine plays: the Quality setting, a choice for the device rather
+// than the sound (the pages keep it per browser, the plugins in the project, and no preset or
+// link carries it). High plays everything, as the instrument always has. Medium and Low trim what
+// costs the most and is heard the least, for phones and older computers: fewer voices sounding at
+// once, fewer partials or modes, optional physics (sympathetic strings) lighter or off. Each
+// instrument's README says what it trims.
+enum class Quality : int { high = 0, medium = 1, low = 2 };
+
 class Engine {
  public:
   explicit Engine(double fs) : fs(fs) {}
@@ -46,6 +54,13 @@ class Engine {
   virtual void noteBend(double /*ratio*/, int /*key*/) {}
   virtual void slide(double /*value*/, int /*key*/) {}
   virtual int voiceCount() const { return 0; }
+  // The host's Quality (any thread the engine's other calls come from; never allocates). The
+  // engine reads `quality` where it builds a voice, so a change applies to the notes that follow,
+  // or in process where a trim can change at once without a click.
+  virtual void setQuality(Quality q) { quality = q; }
+  Quality quality = Quality::high;
+  // The value for this quality: high, medium or low.
+  template <class T> T pick(T high, T medium, T low) const { return quality == Quality::high ? high : quality == Quality::medium ? medium : low; }
   // Fill n samples (any n ≥ 1; the hosts call it with at most 128). Never allocates.
   virtual void process(float *L, float *R, int n) = 0;
 

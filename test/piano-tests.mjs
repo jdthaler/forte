@@ -390,6 +390,74 @@ test('sympathetic strings: an undamped key rings along where its partials meet t
   console.log(`        (C3 struck: held C4's group ${(c4.E(60) / cs4.E(61)).toFixed(0)} × held C♯4's; C3 held: its own group ${(own.E(48) / pair.E(60)).toExponential(1)} × C4's; ${ped.running} partials ring with the pedal down)`);
 });
 
+test('Quality: Medium and Low strike voices with fewer modes (none above 7 and 5 kHz but a family\'s first 8, none past the 80th and 56th), hold a smaller budget, give the sympathetic strings 3 partials and none; a note keeps its pitch and level', () => {
+  const p = P(), fTop = { high: Infinity, medium: 7000, low: 5000 }, nTop = { high: Infinity, medium: 80, low: 56 };
+  const data = new Map();
+  for (let k = 21; k <= 108; k++) data.set(k, keyModel(k, p, FS));
+  const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
+  const engine = (quality) => {
+    const e = new PianoEngine(FS);
+    e.setQuality(quality); e.setParams(p);
+    for (let k = 21; k <= 108; k++) e.offer(data.get(k).packed);
+    e.process(L, R, bl);
+    return e;
+  };
+  // a pedalled chord, struck hard across the bass and middle
+  const chord = [24, 28, 31, 36, 40, 43, 48, 52, 55, 60, 64, 67, 72, 76, 79, 84];
+  const res = {};
+  for (const q of ['high', 'medium', 'low']) {
+    const e = engine(q);
+    e.setSustain(true);
+    for (const k of chord) e.noteOn(k, 3);
+    let modes = 0;
+    for (let b = 0; b < Math.round((0.5 * FS) / bl); b++) {
+      e.process(L, R, bl);
+      for (let i = 0; i < bl; i++) assert.ok(Number.isFinite(L[i]) && Number.isFinite(R[i]), `${q}: not finite`);
+    }
+    for (const v of e.voices) {
+      const d = data.get(v.key).data;
+      let want = 0;
+      for (let j = 0; j < d.n; j++) if (d.idx[j] < nTop[q] && (d.freq[j] < fTop[q] || d.idx[j] < 8)) want++;
+      assert.equal(v.N, want, `${q}: key ${v.key} runs ${v.N} modes`);
+      if (!v.killing) modes += v.N;
+    }
+    res[q] = { modes, sym: e.sympatheticRunning() };
+    e.destroy();
+  }
+  assert.ok(res.medium.modes < 0.8 * res.high.modes && res.low.modes < 0.6 * res.high.modes, `modes ${res.high.modes}, ${res.medium.modes}, ${res.low.modes}`);
+  assert.ok(res.high.sym > 600 && res.medium.sym <= 3 * 88 && res.medium.sym > 100 && res.low.sym === 0, `sympathetic partials ${res.high.sym}, ${res.medium.sym}, ${res.low.sym}`);
+  // the budget: at Low a third of it (4500 by default)
+  {
+    const e = engine('low');
+    e.setSustain(true);
+    for (let k = 21; k <= 92; k += 3) { e.noteOn(k, 3); e.process(L, R, bl); }
+    for (let b = 0; b < 40; b++) e.process(L, R, bl);
+    const live = e.voices.filter((v) => !v.killing).reduce((s, v) => s + v.N, 0);
+    assert.ok(live <= 0.35 * 4500, `Low: ${live} modes sounding`);
+    e.destroy();
+  }
+  // single notes: the same pitch (a fraction of a cent) and level (within 1 dB)
+  const dB = [], dc = [];
+  for (const key of [33, 60, 84]) {
+    const x = {};
+    for (const q of ['high', 'medium', 'low']) {
+      const e = engine(q), n = FS, out = new Float32Array(n);
+      e.noteOn(key, 2.5);
+      for (let s = 0; s < n; s += bl) { e.process(L, R, bl); out.set(L.subarray(0, Math.min(bl, n - s)), s); }
+      e.destroy();
+      let s2 = 0;
+      for (const v of out) s2 += v * v;
+      x[q] = { rms: Math.sqrt(s2 / n), f: peakFreqNear(out.subarray(4800, 4800 + 32768), keyFreq(key)) };
+    }
+    for (const q of ['medium', 'low']) {
+      dB.push(20 * Math.log10(x[q].rms / x.high.rms)); dc.push(cents(x[q].f, x.high.f));
+      assert.ok(Math.abs(dB.at(-1)) < 1, `key ${key}, ${q}: ${dB.at(-1).toFixed(2)} dB`);
+      assert.ok(Math.abs(dc.at(-1)) < 0.05, `key ${key}, ${q}: ${dc.at(-1).toFixed(3)} ¢`);
+    }
+  }
+  console.log(`        pedalled chord: ${res.high.modes} → ${res.medium.modes} → ${res.low.modes} modes, ${res.high.sym} → ${res.medium.sym} → ${res.low.sym} sympathetic partials; notes within ${Math.max(...dB.map(Math.abs)).toFixed(2)} dB, ${Math.max(...dc.map(Math.abs)).toFixed(3)} ¢`);
+});
+
 test('every preset-ish extreme stays stable', () => {
   const cases = [
     P({ shape: 'ribbon', aspect: 60, roll: 45, offset: 1, taper: 0.95, unisons: 3 }),

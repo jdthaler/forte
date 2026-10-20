@@ -176,8 +176,16 @@ void KalimbaEngine::allNotesOff() { voices.clear(); body.reset(); }
 void KalimbaEngine::noteOn(int key, double velocity) {
   if (!hasParams) return;
   for (Voice &x : voices) if (x.key == key) x.grabbed = true; // the thumb stops it before plucking again
+  // Quality: past 32 tines ringing at Medium and 16 at Low, the oldest is stilled (as the thumb
+  // stills one), and a tine is let go at −80 and −60 dB instead of −100
+  if (quality != Quality::high) {
+    int ringing = 0;
+    for (const Voice &x : voices) ringing += !x.grabbed;
+    if (ringing >= pick(kMaxVoices, 32, 16)) for (Voice &x : voices) if (!x.grabbed) { x.grabbed = true; break; }
+  }
   Voice v;
   v.key = key;
+  v.floor = pick(1e-5, 1e-4, 1e-3);
   const KeyModes km = keyModes(key, P.data());
   const double k = 1 / fs;
   double F0 = 0;
@@ -231,11 +239,11 @@ void KalimbaEngine::process(float *L, float *R, int n) {
     const float out = (float)(OUT * body.run(F));
     L[i] = R[i] = out;
   }
-  // voices that have died away (−100 dB from their pluck), in place
+  // voices that have died away (−100 dB from their pluck, or Quality's floor), in place
   std::erase_if(voices, [](const Voice &v) {
     double s = 0;
     for (int m = 0; m < v.count; m++) s += std::fabs(v.modes[m].y1) + std::fabs(v.modes[m].y2);
-    return !(v.level * s > 1e-5 * v.start);
+    return !(v.level * s > v.floor * v.start);
   });
 }
 

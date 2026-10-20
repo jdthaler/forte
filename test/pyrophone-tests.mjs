@@ -355,6 +355,17 @@ test('seeded random combinations of parameter extremes at 44.1 and 48 kHz: no Na
   assert.ok(worst.pk < 3, `${worst.fs} Hz: peak ${worst.pk.toFixed(2)} with ${JSON.stringify(worst.Pm)}`);
   console.log(`        loudest of 20: ${worst.pk.toFixed(2)}`);
 });
+test('Quality: nothing to trim (every tube sings by its own modes and flame; released ones already fade once silent): Medium and Low play 24 held tubes exactly as High', () => {
+  const render = (quality) => {
+    const e = new PyrophoneEngine(FS); e.setQuality(quality); e.setParams(P());
+    for (let i = 0; i < 24; i++) e.noteOn(36 + 2 * i, 0.8);
+    const L = new Float32Array(128), R = new Float32Array(128), out = new Float32Array(0.5 * FS);
+    for (let s = 0; s < out.length; s += 128) { e.process(L, R, 128); out.set(L.subarray(0, Math.min(128, out.length - s)), s); }
+    return out;
+  };
+  const hi = render('high');
+  for (const quality of ['medium', 'low']) { const q = render(quality); for (let i = 0; i < hi.length; i++) if (q[i] !== hi[i]) throw new Error(`${quality} differs at sample ${i}`); }
+});
 test('CPU: 10 tubes render in well under 30 % of real time', () => {
   const e = new PyrophoneEngine(FS);
   e.setParams(P());

@@ -63,8 +63,9 @@ const hydrophoneGains = (key) => [R_REF / rHydro(nozzleX(key), 0), R_REF / rHydr
 
 // Run the engine through events ([t, 'on', key, vel] | [t, 'off', key] | [t, 'params', P] | [t, 'press', key, v]),
 // in 128-sample blocks like the AudioWorklet; tap(engine) after every block.
-function run(params, events, sec, { fs = FS, tap, seed, log, opts } = {}) {
+function run(params, events, sec, { fs = FS, tap, seed, log, opts, quality } = {}) {
   const e = new BubbleEngine(fs, seed, opts);
+  if (quality) e.setQuality(quality);
   if (log) e.log = [];
   e.setParams(params);
   const n = Math.round(sec * fs), L = new Float64Array(n), R = new Float64Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
@@ -421,6 +422,21 @@ test('voice stealing: ten keys at 40 bubbles/s stay within the pool; the quietes
   // a click would put a step into d (second difference ~ its size); a smooth fade of tones below
   // 600 Hz keeps it near (2π·600/fs)² = 0.006 of it
   assert.ok(dmax > 0 && d2 < 0.02 * dmax, `second difference ${(d2 / dmax).toFixed(4)} of the stolen tails' ${dmax.toFixed(3)}`);
+});
+test('Quality: Medium and Low keep at most 80 and 50 bubbles ringing (High 160), the quietest old ones faded out, and free a bubble 70 and 60 dB below its peak (High 80); a ping keeps its level (within 0.1 dB) and its pitch (within 0.1 ¢); ten brooks at 40 bubbles/s stay finite', () => {
+  const ev = [57, 59, 60, 62, 64, 65, 67, 69, 71, 72].map((k) => [0, 'on', k, 0.8]), p = P({ rate: 40 }), res = [];
+  const ref = ping(69, P()).L, f0 = zeroCrossFreq(ref, 0, 0.1 * FS);
+  for (const [quality, cap] of [['high', 160], ['medium', 80], ['low', 50]]) {
+    let most = 0;
+    const { L, R } = run(p, ev, 1.5, { quality, tap: (eng) => { let live = 0; for (const b of eng.pool) if (b.on && b.fadeStep === 0) live++; most = Math.max(most, live); } });
+    for (let i = 0; i < L.length; i++) assert.ok(Number.isFinite(L[i] + R[i]), `${quality}: not finite`);
+    assert.ok(most <= cap, `${quality}: ${most} ringing`);
+    const x = ping(69, P(), 0.8, 0.6, { quality }).L, dB = rmsDb(x) - rmsDb(ref), c = cents(zeroCrossFreq(x, 0, 0.1 * FS), f0);
+    assert.ok(Math.abs(dB) < 0.1, `${quality}: ping ${dB.toFixed(3)} dB from High`);
+    assert.ok(Math.abs(c) < 0.1, `${quality}: ping ${c.toFixed(3)} ¢ from High`);
+    res.push(`${quality} ${most} ringing, ping ${dB.toFixed(3)} dB`);
+  }
+  console.log(`         ${res.join('; ')}`);
 });
 test('level: a forte ping peaks at 0.1–0.5 on every key at 44.1 and 48 kHz; a 4-key forte and a 6-key mf chord stay under 1; every preset within 10 dB of the default', () => {
   for (const fs of [44100, 48000]) for (let k = KEY_LO; k <= KEY_HI; k += 3) {

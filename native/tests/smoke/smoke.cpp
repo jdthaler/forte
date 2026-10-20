@@ -1,7 +1,7 @@
 // smoke.cpp — a test instrument for the shared plugin (tests/plugin-tests.cpp): struck sines,
-// a pedal, a mod wheel, two parameters, a compass and a preset; the pitch wheel and each note's own
-// bend and slide (its ring time) move a sounding sine at once. It proved the plugin pipeline in CI until
-// the template was ported; it is not built as a plugin.
+// a pedal, a mod wheel, two parameters, a compass, a preset, and one voice at Low quality; the pitch
+// wheel and each note's own bend and slide (its ring time) move a sounding sine at once. It proved
+// the plugin pipeline in CI until the template was ported; it is not built as a plugin.
 
 #include <cmath>
 #include <numbers>
@@ -32,7 +32,7 @@ class SmokeEngine : public Engine {
   void setParams(const double *P) override { decay = P[kDecay]; } // the volume is the chain's
   void noteOn(int key, double velocity) override {
     double f = 440 * std::pow(2.0, (key - 69) / 12.0), w = 2 * std::numbers::pi * f / fs;
-    if (voices.size() < voices.capacity()) { voices.push_back({w, 0, 0.2 * velocity, 0, key}); tune(voices.back()); }
+    if ((int)voices.size() < pick(32, 8, 1)) { voices.push_back({w, 0, 0.2 * velocity, 0, key}); tune(voices.back()); } // Quality: fewer voices
   }
   void bend(double v) override { wheel = std::pow(2.0, v * kBendSemitones / 12); for (auto &x : voices) tune(x); }
   void noteBend(double r, int key) override { expr.setBend(r, key); for (auto &x : voices) if (x.key == key) tune(x); }

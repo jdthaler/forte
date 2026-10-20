@@ -248,6 +248,16 @@ tools/render-steelpan.mjs                 node tools/render-steelpan.mjs → exa
 - **No stick bounce or double strokes**, and the stick does not stop the
   note while it is in contact.
 
+## Quality
+
+The Quality setting (in the controls, for phones and older computers) keeps
+High as described here. The pan is light already, so Medium and Low trim
+only a little: a stroke rings at most 8 of a note's modes at Medium and 6 at
+Low (12 at High), dropping the highest untuned ones and any above 16 and
+12 kHz, and a note goes quiet a little sooner once it has rung out. The
+fundamental, octave and twelfth, the dome's coupling and the neighbours
+singing along all stay; what goes is a little of the stick's metallic top.
+
 ## Prior art and references
 
 **The original instrument.**

@@ -41,8 +41,9 @@ const rel = (a, b) => Math.abs(a / b - 1);
 
 // Run the engine through events ([t, 'on', key, vel, data?] | [t, 'off', key] | [t, 'sus', on] | [t, 'params', P] | [t, 'msg', m])
 // in 128-sample blocks like the AudioWorklet. Returns L + R (or [L, R, engine]).
-function run(params, events, sec, { fs = FS, stereo = false, tap } = {}) {
+function run(params, events, sec, { fs = FS, stereo = false, tap, quality } = {}) {
   const e = new StarEngine(fs);
+  if (quality) e.setQuality(quality);
   e.setParams(params);
   const n = Math.round(sec * fs), L = new Float64Array(n), R = new Float64Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
   const ev = events.map(([t, ...r]) => [Math.round(t * fs), ...r]).sort((a, b) => a[0] - b[0]);
@@ -384,6 +385,36 @@ test('voices: pressing a sounding key drives the same star again (one voice); vo
   assert.ok(worst < 0.5 * peakAbs(y), `second difference ${worst.toExponential(2)} vs peak ${peakAbs(y).toFixed(3)}`);
   const gone = run(P({ damping: 10 }), [[0, 'on', 90, 0.7], [0.3, 'off', 90]], 2);
   assert.equal(gone.engine.voiceCount(), 0, 'a released dwarf with broad modes is gone within 2 s');
+});
+test('Quality: Medium and Low play fewer stars at once (11 and 8 of 14) and only each star\'s strongest modes (60 % and 40 %), lifted to the note\'s level: a struck star keeps its level (within 1 dB) and its pitch (the log-power centroid within 6 ¢); 16 held red giants stay finite', () => {
+  const held = Array.from({ length: 16 }, (_, i) => [0.02 * i, 'on', 36 + i, 0.8]), res = [];
+  const ring = (p, key, quality) => run(p, [[0, 'on', key, 1]], 1, { quality });
+  const centroid = (x, f) => {
+    const { S, df } = psd(x, 0, x.length, 1 << 14);
+    let w = 0, s = 0;
+    for (let i = Math.floor((0.55 * f) / df); i < (1.6 * f) / df; i++) { w += S[i]; s += S[i] * Math.log(i * df); }
+    return Math.exp(s / w);
+  };
+  const p = P({ driving: 0, flare: 1 }), ds = P({ family: 'dscuti', driving: 1 });
+  const ref = { 48: ring(p, 48, 'high'), 72: ring(p, 72, 'high'), ds: ring(ds, 60, 'high') };
+  for (const [quality, voices, share] of [['high', 14, 1], ['medium', 11, 0.6], ['low', 8, 0.4]]) {
+    const x = run(P(), held, 1.5, { quality }), e = x.engine, live = e.voices.filter((v) => !v.fading);
+    for (const v of x) assert.ok(Number.isFinite(v), `${quality}: not finite`);
+    assert.ok(live.length <= voices, `${quality}: ${live.length} stars sounding`);
+    for (const v of live) assert.ok(v.nAct <= Math.ceil(share * v.N), `${quality}: key ${v.key} plays ${v.nAct} of ${v.N} modes`);
+    const modes = live.reduce((s, v) => s + v.nAct, 0);
+    const dB = [], dc = [];
+    for (const key of [48, 72]) {
+      const y = ring(p, key, quality);
+      dB.push(10 * Math.log10(msOf(y) / msOf(ref[key])));
+      dc.push(cents(centroid(y, keyFreq(key)), centroid(ref[key], keyFreq(key))));
+    }
+    dB.push(10 * Math.log10(msOf(ring(ds, 60, quality), 0.5 * FS) / msOf(ref.ds, 0.5 * FS)));
+    for (const d of dB) assert.ok(Math.abs(d) < 1, `${quality}: level ${d.toFixed(2)} dB from High`);
+    for (const c of dc) assert.ok(Math.abs(c) < 6, `${quality}: pitch ${c.toFixed(1)} ¢ from High`);
+    res.push(`${quality} ${live.length} stars, ${modes} modes, ${dB.map((d) => d.toFixed(2)).join('/')} dB, ${dc.map((c) => c.toFixed(1)).join('/')} ¢`);
+  }
+  console.log(`         ${res.join('; ')}`);
 });
 test('the page builds the stars and sends them with the note: the engine plays the page\'s data exactly as its own; data for another star is ignored', () => {
   const p = P(), data = keyStar(45, p);

@@ -46,12 +46,23 @@ void GrandEngine::Voice::start(const GrandEngine &eng, Data::Ref r, uint64_t ver
   gw = d.g.data(); ep = B.ep.data(); str = d.str.data(); Tt = d.S.T; kcGain = d.kc;
   dT[0] = dT[1] = dT[2] = 0; stretched = false;
   for (int i = 0; i < N; i++) q[i] = q1[i] = 0;
-  comp0 = B.comp0; nVa = nV; nHa = N - nV;
+  comp0 = B.comp0;
+  // a prefix of each polarisation's partials (all of them at High)
+  nVq = nV; nHq = N - nV;
+  if (eng.quality != Quality::high) {
+    int i = 0;
+    while (i < nV && eng.keeps(d, i)) i += ns;
+    nVq = i;
+    for (i = nV; i < N && eng.keeps(d, i);) i += ns;
+    nHq = i - nV;
+  }
+  nVa = nVq; nHa = nHq;
   bridgeSums();
   hammer = d.hammer; seg = d.seg; hasDamper = d.hasDamper;
   const auto [pl, pr] = keyPan(key, 0.5, KEY_LO, KEY_HI);
   panL = pl; panR = pr;
-  trim = pickupTrim(key); dropThr = DROP / (OUT * trim);
+  trim = pickupTrim(key); dropThr = eng.pick(DROP, 1e-5, 5e-5) / (OUT * trim); // (Quality: sooner)
+  quietThr = eng.pick(2e-6, 5e-6, 1e-5);
   keyDown = true; damped = false; killing = false; dead = false;
   hammerOn = false; peak = 0; quiet = 0; age = 0; struck = -INFINITY;
   eta = 0; etaPrev = 0; dPrev = -1; F = 0; FV = 0; FH = 0; Fmax = 0; contactSamples = 0; hammerSamples = 0; contact = false;
@@ -109,7 +120,7 @@ void GrandEngine::Voice::coef(double *A1, double *A2, bool kill, double sd) cons
 void GrandEngine::Voice::strike(double v) {
   double uu = 0;
   for (int i = 0; i < N; i++) uu += h[i] * q[i];
-  if (nVa < nV || nHa < N - nV) { nVa = nV; nHa = N - nV; bridgeSums(); }
+  if (nVa < nVq || nHa < nHq) { nVa = nVq; nHa = nHq; bridgeSums(); }
   eta = uu - 1.5 * v * k; etaPrev = eta - v * k;
   dPrev = -1; hammerOn = true; stretched = true; hammerSamples = 0; contact = false;
   contactSamples = 0; Fmax = 0; v0 = v; struck = age;
@@ -142,11 +153,12 @@ double GrandEngine::Voice::contactForce(double dFree) {
 // sums together (q holds the actual state here).
 void GrandEngine::Voice::hammerStep(const double *A1, const double *A2, const GrandEngine &eng, bool kc) {
   double aV = 0, aH = 0, uf = 0;
-  for (int i = 0; i < nV; i++) {
+  const int h1 = nV + nHa;
+  for (int i = 0; i < nVa; i++) {
     const double q0 = q[i], qm = q1[i], f = (kc ? A1[i] - ep[i] * dT[str[i]] : A1[i]) * q0 - A2[i] * qm;
     aV += u[i] * (f - qm); uf += h[i] * f; q1[i] = q0; q[i] = f;
   }
-  for (int i = nV; i < N; i++) {
+  for (int i = nV; i < h1; i++) {
     const double q0 = q[i], qm = q1[i], f = (kc ? A1[i] - ep[i] * dT[str[i]] : A1[i]) * q0 - A2[i] * qm;
     aH += u[i] * (f - qm); uf += h[i] * f; q1[i] = q0; q[i] = f;
   }
@@ -157,11 +169,12 @@ void GrandEngine::Voice::hammerStep(const double *A1, const double *A2, const Gr
   const double sV = sV0 + Fc * rhoV * invV, sH = sH0 + Fc * rhoH * invH;
   hsV = sV; hsH = sH;
   double fv = 0, fh = 0;
-  for (int i = 0; i < nV; i++) { const double x = q[i] - u[i] * sV + bh[i] * Fc; q[i] = x; fv += bf[i] * x; }
-  for (int i = nV; i < N; i++) { const double x = q[i] - u[i] * sH + bh[i] * Fc; q[i] = x; fh += bf[i] * x; }
+  for (int i = 0; i < nVa; i++) { const double x = q[i] - u[i] * sV + bh[i] * Fc; q[i] = x; fv += bf[i] * x; }
+  for (int i = nV; i < h1; i++) { const double x = q[i] - u[i] * sH + bh[i] * Fc; q[i] = x; fh += bf[i] * x; }
   if (kc) {
     double Q[3] = {0, 0, 0};
-    for (int i = 0; i < N; i++) Q[str[i]] += gw[i] * q[i] * q[i];
+    for (int i = 0; i < nVa; i++) Q[str[i]] += gw[i] * q[i] * q[i];
+    for (int i = nV; i < h1; i++) Q[str[i]] += gw[i] * q[i] * q[i];
     for (int s = 0; s < ns; s++) dT[s] = std::min(kcGain * Q[s], 0.1 * Tt);
   }
   if (Fc > 0) {
@@ -267,7 +280,7 @@ void GrandEngine::Voice::render(double *PL, double *PR, double *SEG, int n, Gran
   }
   if (!hammerOn) {
     dropTop();
-    quiet = pk < (damped ? 1e-5 : 2e-6) ? quiet + 1 : 0;
+    quiet = pk < (damped ? 1e-5 : quietThr) ? quiet + 1 : 0;
     if (quiet > 40) dead = true;
   }
 }
@@ -527,7 +540,8 @@ void GrandEngine::allNotesOff() {
 void GrandEngine::enforceBudget(const Voice *keep) {
   int total = 0;
   for (int i = 0; i < nVoices; i++) if (!voices[i]->killing) total += voices[i]->active();
-  while (total > maxModes) {
+  const int most = std::min(maxModes, pick(MODE_BUDGET, 2400, 1400)); // (Quality: a lower ceiling)
+  while (total > most) {
     Voice *victim = nullptr;
     double score = INFINITY;
     for (int i = 0; i < nVoices; i++) {
@@ -604,15 +618,15 @@ void GrandEngine::run(float *L, float *R, int n) {
 // (without threads, one key built in place a block). A new damper strength marks every group stale.
 void GrandEngine::symFetch() {
   constexpr uint64_t STALE = ~uint64_t(0);
-  if (P[p::damper] != symDamperSigma) {
-    symDamperSigma = P[p::damper];
+  if (P[p::damper] != symDamperSigma || quality != symQuality) {
+    symDamperSigma = P[p::damper]; symQuality = quality;
     for (int key = KEY_MIN; key <= KEY_MAX; key++) if (symVer[key]) symVer[key] = STALE;
   }
   if (P[p::pickH] != symPickH) {
     symPickH = P[p::pickH];
     for (int key = KEY_MIN; key <= KEY_MAX; key++) if (symVer[key]) symRoute(key);
   }
-  if (P[p::sympathy] <= 0) return;
+  if (P[p::sympathy] <= 0 || quality == Quality::low) return; // (Quality: none at Low; symRun lets them fade)
   constexpr int KEYS = KEY_MAX - KEY_MIN + 1;
   for (int n = 0, tries = 0; n < (FORTE_THREADS ? 8 : 1) && tries < KEYS; tries++) {
     const int key = KEY_MIN + symNext;
@@ -633,8 +647,9 @@ void GrandEngine::symSet(int key, const Built &b, uint64_t ver) {
   std::array<SympatheticMode, 2 * SYM_MODES> modes;
   int nv = 0, nh = 0;
   double cv = 0, ch = 0;
+  const int most = symModes(); // (Quality: fewer at Medium)
   auto take = [&](int i0, int i1, bool hor, int &m, double &c2) {
-    for (int i = i0; i < i1 && m < SYM_MODES; i++) {
+    for (int i = i0; i < i1 && m < most; i++) {
       if (d.str[i] != 0 || d.freq[i] >= fmax) continue;
       SympatheticMode &md = modes[nv + nh];
       md.omega = b.om[i];
@@ -676,7 +691,14 @@ void GrandEngine::symRun(double *PL, double *PR, double *SEG, int n) {
     for (int i = 0; i < nVoices; i++) if (!voices[i]->dead) return;
     symHush = false;
   }
-  for (int key = KEY_MIN; key <= KEY_MAX; key++) sym.damp(key, !(sustain || down[key] || !symDamper[key]));
+  // at Low the groups are off: undriven, their dampers down, what still rings fades, and then they rest
+  const bool off = quality == Quality::low;
+  if (off) {
+    bool still = true;
+    for (int key = KEY_MIN; key <= KEY_MAX && still; key++) still = sym.silent(key);
+    if (still) return;
+  }
+  for (int key = KEY_MIN; key <= KEY_MAX; key++) sym.damp(key, off || !(sustain || down[key] || !symDamper[key]));
   // Σ u Δq ≈ k√(2k) Σ c q̇ (u = ±√β, β ≈ c² k/2)
   const double toS = 1 / ((1 / fs) * std::sqrt(2 / fs));
   bool any = false;
@@ -698,7 +720,7 @@ void GrandEngine::symRun(double *PL, double *PR, double *SEG, int n) {
     sym.own(key, ov, oh);
   }
   double *const buses[2 + SEGMENTS] = {PL, PR, SEG, SEG + BLOCK, SEG + 2 * BLOCK};
-  sym.run(kap, tV.data(), tH.data(), any, n, buses);
+  sym.run(off ? 0 : kap, tV.data(), tH.data(), any, n, buses);
 }
 
 } // namespace forte::grand

@@ -459,6 +459,50 @@ test('every parameter at its min and max: finite output, no blow-up', () => {
     }
   }
 });
+test('Quality: Medium and Low keep the sympathy of C2–B3 or none, run the board at half rate and let released strings go sooner; a note keeps its motion, level (1.5 dB) and pitch (1 ¢)', () => {
+  const at = (quality, params = P()) => { const e = new OrganistaEngine(FS); e.setQuality(quality); e.setParams(params); return e; };
+  // dampers lifted, C3–E3–G3 held: High rings the 49 strings of C2–C6 along, Medium the 24 of C2–B3, Low none
+  const lifted = [48, 52, 55].map((k) => [0, 'on', k, 0.7]);
+  for (const [quality, n] of [['high', 49], ['medium', 24], ['low', 3]]) { // (the three are among C2–B3)
+    const e = at(quality, P({ lifted: true }));
+    renderEngine(e, 0.3, lifted, FS);
+    assert.equal(e.nAct, n, `${quality}: ${e.nAct} strings in the loop`);
+    e.destroy(); // its WebAssembly memory (each string's rings), as the suite's other engines
+  }
+  // a released string leaves the loop sooner (at about −70 dB rather than −130)
+  const gone = {};
+  for (const quality of ['high', 'low']) {
+    const e = at(quality, P({ damper: 1 }));
+    renderEngine(e, 0.5, [[0, 'on', 60, 0.7], [0.2, 'off', 60]], FS);
+    let t = 0.5;
+    while (e.nAct && t < 6) { renderEngine(e, 0.05, [], FS); t += 0.05; }
+    gone[quality] = t;
+    e.destroy();
+  }
+  assert.ok(gone.low < 0.7 * gone.high, `released C4 leaves the loop at ${gone.low.toFixed(2)} s (Low), ${gone.high.toFixed(2)} s (High)`);
+  // a note's level (above 30 Hz, 0.5–1 s) and pitch at each Quality, against High
+  const res = [];
+  const note = (k, quality) => {
+    const e = at(quality); e.noteOn(k, 0.7);
+    const [x] = renderEngine(e, 1, [], FS), a = 1 - Math.exp((-2 * Math.PI * 30) / FS);
+    let lp = 0, sum = 0;
+    for (let i = 0; i < x.length; i++) { assert.ok(Number.isFinite(x[i]), `${quality}, key ${k}: not finite`); lp += a * (x[i] - lp); if (i >= FS / 2) sum += (x[i] - lp) ** 2; }
+    const r = { dB: 10 * Math.log10(sum / (FS / 2)), f: pitchOf(x, 0.5 * FS, FS, keyFreq(k)), kind: e.S[k].motion(16).kind };
+    e.destroy();
+    return r;
+  };
+  for (const k of [36, 60, 72, 84, 96]) {
+    const hi = note(k, 'high');
+    for (const quality of ['medium', 'low']) {
+      const q = note(k, quality), d = q.dB - hi.dB, c = cents(q.f, hi.f);
+      assert.equal(q.kind, hi.kind, `${quality}, key ${k}: ${q.kind} (High ${hi.kind})`);
+      assert.ok(Math.abs(d) < 1.5, `${quality}, key ${k}: ${d.toFixed(2)} dB from High`);
+      assert.ok(Math.abs(c) < 1, `${quality}, key ${k}: ${c.toFixed(2)} ¢ from High`);
+      res.push(`${quality} ${k}: ${d.toFixed(2)} dB`);
+    }
+  }
+  console.log(`        released C4 gone at ${gone.high.toFixed(2)} s (High), ${gone.low.toFixed(2)} s (Low); ${res.join(', ')}`);
+});
 test('CPU: 10 voices render in under 30 % of real time', () => {
   const chord = [36, 43, 48, 55, 60, 64, 67, 72, 79, 84];
   play(chord.map((k) => [0, 'on', k, 0.8]), 0.5); // warm up the JIT

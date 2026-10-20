@@ -71,6 +71,7 @@ class PianetEngine : public Engine {
     int wait = 0;
     double fade = 1;
     bool dying = false, dead = false;
+    double loud = 0, rel = 0; // the most energy it has had; Medium and Low: it rests this far below that
     double g = 0, g1 = 0, ye = 0, ye1 = 0, gT = 0, yeT = 0, c0 = 0;
     double phiPrev = 0, dC = 0;
 

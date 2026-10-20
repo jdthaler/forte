@@ -17,6 +17,7 @@ import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
 import { attachScala } from '../../shared/tuning-ui.js';
+import { connectQuality, qualityControl } from '../../shared/quality.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'ribbon-piano/params/v1';
@@ -87,6 +88,7 @@ function startAudio() {
     audio = { ctx, node, analyser, chain };
     applyMix();
     node.port.postMessage(paramsMessage());
+    connectQuality(node, { toast }); // the device's Quality (shared/quality.js)
     node.port.postMessage({ type: 'sustain', on: sustain });
     spectrum.setAnalyser(analyser); spectro.setAnalyser(analyser);
     if (ctx.state !== 'running') await ctx.resume();
@@ -580,6 +582,7 @@ buildControls();
 for (const id of controls.keys()) refreshControl(id);
 refreshVisibility();
 attachScala({ set: (v) => setAll({ ...P, ...v }), toast }); // (this page has no user presets to attach it)
+qualityControl(); // the device's Quality, after the controls
 updateHelp();
 keyboardView.labels(keyLabels());
 setFocus(60, P.velocity);

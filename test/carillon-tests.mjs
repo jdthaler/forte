@@ -38,9 +38,10 @@ const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const ribOf = (profile, register) => BELL_TABLE.ribs.find((r) => r.profile === profile && r.register === register);
 
 // Run the engine through events ([t, 'on', key, vel] | [t, 'off', key] | [t, 'sus', on] | [t, 'params', P]) in
-// 128-sample blocks like the AudioWorklet; tap(engine) after every block.
-function run(params, events, sec, { fs = FS, tap, stereo = false } = {}) {
+// 128-sample blocks like the AudioWorklet, at a Quality (High unless given); tap(engine) after every block.
+function run(params, events, sec, { fs = FS, tap, stereo = false, quality } = {}) {
   const e = new CarillonEngine(fs);
+  if (quality) e.setQuality(quality);
   e.setParams(params);
   const n = Math.round(sec * fs), L = new Float64Array(n), R = new Float64Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
   const ev = events.map(([t, ...r]) => [Math.round(t * fs), ...r]).sort((a, b) => a[0] - b[0]);
@@ -422,6 +423,27 @@ test('knobs glide: distance, listener angle, asymmetry and bronze loss moved mid
     let before = 0, after = 0;
     for (let i = Math.round(0.25 * FS); i < x.length; i++) { const d = Math.abs(x[i] - 2 * x[i - 1] + x[i - 2]); if (i < 0.4 * FS) before = Math.max(before, d); else after = Math.max(after, d); }
     assert.ok(after < 1.5 * before + 1e-6, `${id}: second difference ${after.toExponential(2)} after, ${before.toExponential(2)} before`);
+  }
+});
+test('Quality: Medium and Low ring at most 24 and 12 bells at once, leave out the modes above 16 and 12 kHz and prune the rest sooner (−70, −60 dB); a bell keeps its pitch and level', () => {
+  const ev = [];
+  for (let i = 0; i <= KEY_HI - KEY_LO; i++) ev.push([0.04 * i, 'on', KEY_LO + i, 0.5]);
+  const work = {};
+  for (const quality of ['high', 'medium', 'low']) {
+    let live = 0, modes = 0;
+    const x = run(P(), ev, 3, { quality, tap: (e, s) => { if (s % 1280) return; const vs = e.voices; live = Math.max(live, vs.filter((v) => !v.fading).length); for (const v of vs) modes += v.playing; } });
+    assert.ok(x.every(Number.isFinite) && peakAbs(x) < 1, `${quality}: NaN or peak ${peakAbs(x).toFixed(3)}`);
+    assert.ok(live <= { high: 36, medium: 24, low: 12 }[quality], `${quality}: ${live} bells`);
+    work[quality] = modes;
+  }
+  console.log(`         modes × time at Medium ${((100 * work.medium) / work.high).toFixed(0)} %, Low ${((100 * work.low) / work.high).toFixed(0)} % of High's`);
+  assert.ok(work.medium < 0.65 * work.high && work.low < 0.35 * work.high, JSON.stringify(work));
+  for (const key of [KEY_LO, 72, KEY_HI]) {
+    const f = 2 * keyFreq(key), at = (quality) => run(P(), [[0, 'on', key, 0.7]], 0.9, { quality }), hi = at('high'), a = Math.round(0.15 * FS);
+    for (const quality of ['medium', 'low']) {
+      const x = at(quality), d = rmsDb(x, 0, x.length) - rmsDb(hi, 0, hi.length), c = cents(peak(x, f * 0.995, f * 1.005, a, x.length, f * 0.0005), peak(hi, f * 0.995, f * 1.005, a, hi.length, f * 0.0005));
+      assert.ok(Math.abs(d) < 1.5 && Math.abs(c) < 0.1, `key ${key} at ${quality}: ${d.toFixed(2)} dB, ${c.toFixed(3)} ¢`);
+    }
   }
 });
 test('CPU: 24 bells ringing (a passage struck over 3 s) at 48 kHz in under 30 % of one core', () => {

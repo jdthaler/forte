@@ -22,6 +22,11 @@ constexpr double WH_MAX = 0.4;         // a string steps at 1/2 or 1/4 of the sa
 constexpr double WH_BENT = 0.45;       // and, bent up, while its top mode's ω h stays under this (the wheel's two semitones keep within it)
 constexpr double F_TOP = 0.48;         // × fs: a mode bent up past this stays there, rather than fold back under Nyquist (the wheel lifts none past 0.472)
 constexpr double PI = std::numbers::pi;
+// The Quality: keys sounding at once past which a released (shut) key is let go, a held or
+// pedalled one only past MAX_VOICES as at High; and how quiet a shut string must be to retire,
+// its peak bridge force over (T/L)·D (about 130, 90 and 70 dB under a sounding string)
+constexpr int SHUT_VOICES[3] = {WindHarpEngine::MAX_VOICES, 8, 6};
+constexpr double QUIET[3] = {1e-7, 1e-5, 1e-4};
 using fdlibm::exp;
 using fdlibm::pow;
 
@@ -334,7 +339,7 @@ void WindHarpEngine::noteOn(int key, double velocity) {
     voices[nv++] = v; byKey[key] = v;
     int live = 0;
     for (int i = 0; i < nv; i++) if (!voices[i]->fading && !voices[i]->dead) live++;
-    if (live > MAX_VOICES) {
+    if (live > SHUT_VOICES[(int)quality]) {
       Voice *victim = nullptr;
       double score = INFINITY;
       for (int i = 0; i < nv; i++) {
@@ -343,7 +348,7 @@ void WindHarpEngine::noteOn(int key, double velocity) {
         const double sc = (u->held || u->pedal ? 1e6 : 0) + u->env;
         if (sc < score) { score = sc; victim = u; }
       }
-      if (victim) victim->fading = true;
+      if (victim && (live > MAX_VOICES || !(victim->held || victim->pedal))) victim->fading = true;
     }
   }
   v->pedal = false;
@@ -454,7 +459,7 @@ void WindHarpEngine::process(float *L, float *R, int n) {
     // retire: faded, or shut and silent
     const StringDesign &S = v.strings[0].S;
     if (v.fading && fade < 1e-4) v.dead = true;
-    if (!v.fading && v.target == 0 && v.x == 0 && env < 1e-7 * (S.T / S.L) * S.D && wq < 1e-6) v.dead = true;
+    if (!v.fading && v.target == 0 && v.x == 0 && env < QUIET[(int)quality] * (S.T / S.L) * S.D && wq < 1e-6) v.dead = true;
   }
   // the box's resonances on the summed (centre) pressure, and the mix
   for (int i = 0; i < n; i++) {

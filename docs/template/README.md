@@ -42,6 +42,11 @@ tools/render-{slug}.mjs               node tools/render-{slug}.mjs → examples/
 
 What is left out or approximated, and how much it matters.
 
+## Quality
+
+What Medium and Low trim (High plays everything) and what you hear. Here:
+past 24 bars ringing at Medium and 12 at Low, the oldest fades out.
+
 ## Prior art and references
 
 **The original instrument.** Inventors, patents, first descriptions.

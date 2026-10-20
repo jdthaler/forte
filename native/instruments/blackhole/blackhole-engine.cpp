@@ -156,7 +156,8 @@ void RingdownEngine::noteOn(int key, double velocity) {
     Voice *v = voices[i];
     if (!v->stolen) { live++; if (!quiet || v->level < quiet->level) quiet = v; }
   }
-  if (live >= maxVoices && quiet) quiet->stolen = true;
+  // (Quality: at most 24 voices at Medium and 12 at Low, or fewer if the page asks)
+  if (live >= std::min(maxVoices, pick(MAX_VOICES, 24, 12)) && quiet) quiet->stolen = true;
   Voice *v = slot();
   if (!v) return; // never: the hard limit below keeps a slot free
   v->start(*this, key, d, velocity);

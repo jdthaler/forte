@@ -16,6 +16,7 @@ import { startMIDI, resumeMIDI, wheelValue, pageMpe, createSostenuto } from '../
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
+import { connectQuality, qualityControl } from '../../shared/quality.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'huygens-keyboard/params/v1';
@@ -60,6 +61,7 @@ function startAudio() {
     audio = { ctx, node, chain };
     applyMix();
     node.port.postMessage(paramsMessage());
+    connectQuality(node, { toast }); // the device's Quality (shared/quality.js)
     if (ctx.state !== 'running') await ctx.resume();
     live = true;
     $('#start').textContent = `Audio on · ${(ctx.sampleRate / 1000).toFixed(1)} kHz`;
@@ -369,3 +371,4 @@ updateTables({ notes: [], pairs: [] }, 0);
 recomputeStair(true);
 requestAnimationFrame(frame);
 attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v) => setAll({ ...P, ...v }), toast }); // your own presets and links
+qualityControl(); // the device's Quality, after the controls

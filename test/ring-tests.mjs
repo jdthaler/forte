@@ -222,6 +222,23 @@ test('the difference signal is in units of the kick: as loud whatever the kick a
   assert.ok(db(d / pair) > 0 && db(d / pair) < 8, `difference ${db(d / pair).toFixed(1)} dB against two buttons`);
   assert.ok(d * DEFAULTS.volume < 0.71, `peak ${d}: into the limiter (−3 dB)`);
 });
+test('Quality: past 24 stored beams at Medium and 12 at Low the oldest is scraped away; a ring alone plays as at High', () => {
+  const bl = new Float32Array(128), br = new Float32Array(128);
+  for (const [quality, cap] of [['high', 30], ['medium', 24], ['low', 12]]) {
+    const e = new StorageRingEngine(FS);
+    e.setQuality(quality); e.setParams(P()); e.setSustain(true);
+    let ok = true;
+    for (let b = 0; b < 3 * FS / 128; b++) { // 30 keys over 1.5 s, the pedal down; then the scraped beams die away
+      if (b % 20 === 0 && b / 20 < 30) { e.noteOn(36 + b / 20, 0.8); e.noteOff(36 + b / 20); }
+      e.process(bl, br, 128);
+      ok &&= bl.every(Number.isFinite);
+    }
+    assert.ok(ok, `${quality}: NaN`);
+    assert.equal(e.voiceCount(), cap, `${quality}: beams stored`);
+  }
+  const at = (quality) => render(P(), 0.5, [[0, (e) => { e.setQuality(quality); e.noteOn(60, 0.8); }]])[0], hi = at('high');
+  for (const quality of ['medium', 'low']) assert.ok(at(quality).every((v, i) => v === hi[i]), `${quality}: one ring sounds as at High`);
+});
 test('CPU: ten rings render far faster than real time', () => {
   const e = new StorageRingEngine(FS); e.setParams(P({ bunch: 0.15 }));
   for (let k = 40; k < 90; k += 5) e.noteOn(k, 0.8);

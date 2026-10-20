@@ -50,6 +50,11 @@ class MpeDecoder {
   bool isMember(int channel) const; // 0-based
   double memberBend(int zone) const { return range_[zone]; }
   void reset();                     // forget every configuration message and channel
+  // take another decoder's zones and member bend ranges (not its notes): the Forte app's next
+  // instrument hears the controller as the last one did
+  void adoptZones(const MpeDecoder &o) {
+    for (int z = 0; z < 2; z++) { zone_[z] = o.zone_[z]; range_[z] = o.range_[z]; }
+  }
 
  private:
   struct Channel {

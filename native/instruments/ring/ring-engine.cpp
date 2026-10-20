@@ -88,6 +88,13 @@ void StorageRingEngine::noteOn(int key, double velocity) {
   }
   v->inject(velocity, P.data());
   v->chroma = expr.slideOr(key, P[p::chroma]); v->slid = false; // a slide starts there
+  // Quality: past 24 beams stored at Medium and 12 at Low, the oldest still stored is scraped away
+  // (as when its key is let go)
+  if (quality != Quality::high) {
+    int stored = 0;
+    for (const Voice &x : voices) stored += !x.scraped;
+    if (stored > pick(kMaxVoices, 24, 12)) for (Voice &x : voices) if (!x.scraped && &x != v) { x.scraped = true; break; }
+  }
   if ((int)voices.size() > kMaxVoices) voices.erase(voices.begin()); // the oldest goes
 }
 

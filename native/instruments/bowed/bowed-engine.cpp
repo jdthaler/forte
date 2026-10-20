@@ -17,6 +17,9 @@ constexpr int POST_EVERY = 2048;    // samples between view updates (≈ 23 per 
 constexpr double STROBE = 1.0 / 48; // the shape is sampled stroboscopically: the corner advances 1/48 period per frame
 constexpr double FLYWHEEL = 0.5;    // s: the crank's flywheel smooths changes of treadle speed
 constexpr double BEND_T = 0.02;     // s: the pitch wheel's glide
+// Released strings leave the loop once this quiet (mean v² at the bow, m²/s²): High waits until
+// about 130 dB below a voiced note, Medium and Low 80 and 70.
+constexpr double QUIET[3] = {1e-14, 1e-9, 1e-8};
 
 static Params paramsOf(const double *P) {
   Params x;
@@ -43,7 +46,24 @@ OrganistaEngine::OrganistaEngine(double fs) : Engine(fs), fly(1 - fdlibm::exp(-1
   voiced(KEY_LO);           // the voicing table, now rather than at the first note
 }
 
+// The Quality, applied at the top of a block (and of setParams), at once and without a click: the
+// strings' reads (the same strings); the sympathy (a string that leaves it rings on while the
+// others keep it going, and retires once quiet); the board's rate, its modes' motion carried
+// across (two samples of a free resonator give the next or the one before).
+void OrganistaEngine::applyQuality() {
+  applied = quality;
+  for (auto &s : S) s->fast = applied != Quality::high;
+  if (hasParams && Pm.lifted) liftAll();
+  const bool h = applied != Quality::high;
+  if (h == half) return;
+  for (int m = 0; m < M; m++)
+    if (h) q2[m] = (a1[m] * q2[m] - q1[m]) / a2[m]; // q[n−2] from q[n] and q[n−1]
+    else q2[m] = (q1[m] + a2[m] * q2[m]) / a1[m];   // q[n−1] from q[n] and q[n−2]
+  half = h; pair = 0; segH.fill(0);
+}
+
 void OrganistaEngine::setParams(const double *P) {
+  if (quality != applied) applyQuality(); // (before the dampers are lifted below)
   const bool first = !hasParams;
   const Params old = Pm;
   Pm = paramsOf(P);
@@ -79,6 +99,15 @@ void OrganistaEngine::buildBody(double eta) {
     // mic j hears Re[w_j V]: w_r·v − w_i·(ω q) for a mode ringing at ω, written as w_r·v + w_i·a/ω
     cLr[i] = (m.w[0][0] * fs) / 2; cLi[i] = (m.w[0][1] * fs * fs) / om;
     cRr[i] = (m.w[1][0] * fs) / 2; cRi[i] = (m.w[1][1] * fs * fs) / om;
+    // Medium and Low: the same mode at fs/2, driven by each pair of samples' mean force and heard
+    // held for two samples; at its own frequency it answers as at fs, the averaging, the hold and
+    // the coarser differences made up (every mode is below fs/20, so none of them is far off)
+    const ModeCoeffs h = modeCoeffs(m.f, sigma, fs / 2);
+    const double x = om / fs, hold = fdlibm::cos(x / 2), sx = fdlibm::sin(x), gv = 2 * sx / fdlibm::sin(2 * x), ga = 4 * fdlibm::pow(fdlibm::sin(x / 2) / sx, 2);
+    a1h[i] = h.a1; a2h[i] = h.a2;
+    for (int g = 0; g < NSEG; g++) driveH[i * NSEG + g] = (drive[i * NSEG + g] / c.b) * h.b / (2 * hold);
+    cLrh[i] = (cLr[i] / 2) * gv / hold; cLih[i] = (cLi[i] / 4) * ga / hold;
+    cRrh[i] = (cRr[i] / 2) * gv / hold; cRih[i] = (cRi[i] / 4) * ga / hold;
   }
   // above the modelled modes the board is dense: radiate the bridge force directly
   setFilter(hp[0], Biquad::hp, F_BODY, 0.5412, fs); setFilter(hp[1], Biquad::hp, F_BODY, 1.3066, fs);
@@ -136,6 +165,7 @@ void OrganistaEngine::bend(double value) {
 }
 
 void OrganistaEngine::process(float *L, float *R, int n) {
+  if (quality != applied) applyQuality();
   for (int at = 0; at < n; at += 128) {
     const int m = std::min(128, n - at);
     const bool wheel = bendNow != bendTo;
@@ -162,6 +192,9 @@ void OrganistaEngine::run(float *Lo, float *Ro, int n) {
   // the bridge segments that carry sounding strings this block
   int nSeg = 0;
   for (int g = 0; g < NSEG; g++) for (int j = 0; j < nAct; j++) if (act[j]->seg == g) { segOn[nSeg++] = g; break; }
+  // and each mode's drive at just those, packed (the same products, summed in the same order)
+  const double *dsrc = half ? driveH.data() : drive.data();
+  for (int m = 0; m < M; m++) for (int k = 0; k < nSeg; k++) driveOn[m * nSeg + k] = dsrc[m * NSEG + segOn[k]];
   const double dph = (TAU * Pm.treadleRate) / fs, swing = Pm.treadle;
   const double sDamp = 6.91 / Pm.damper;
   Key &fo = *S[focus - KEY_MIN];
@@ -188,17 +221,39 @@ void OrganistaEngine::run(float *Lo, float *Ro, int n) {
     }
     // soundboard
     double l = 0, r = 0;
-    for (int m = 0; m < M; m++) {
-      const int o = m * NSEG;
-      double d = 0;
-      for (int k = 0; k < nSeg; k++) d += drive[o + segOn[k]] * seg[segOn[k]];
-      const double Q1 = q1[m], Q2 = q2[m], q = a1[m] * Q1 - a2[m] * Q2 + d;
-      // modal velocity and acceleration, both centred on the previous sample: v = (q − q2)·fs/2,
-      // a = (q − 2q1 + q2)·fs²; the quadrature part of the radiation is −a/ω
-      const double dv = q - Q2, da = q - 2 * Q1 + Q2;
-      q2[m] = Q1; q1[m] = q;
-      l += cLr[m] * dv + cLi[m] * da;
-      r += cRr[m] * dv + cRi[m] * da;
+    if (!half) {
+      for (int k = 0; k < nSeg; k++) segF[k] = seg[segOn[k]];
+      for (int m = 0; m < M; m++) {
+        const double *dr = &driveOn[m * nSeg];
+        double d = 0;
+        for (int k = 0; k < nSeg; k++) d += dr[k] * segF[k];
+        const double Q1 = q1[m], Q2 = q2[m], q = a1[m] * Q1 - a2[m] * Q2 + d;
+        // modal velocity and acceleration, both centred on the previous sample: v = (q − q2)·fs/2,
+        // a = (q − 2q1 + q2)·fs²; the quadrature part of the radiation is −a/ω
+        const double dv = q - Q2, da = q - 2 * Q1 + Q2;
+        q2[m] = Q1; q1[m] = q;
+        l += cLr[m] * dv + cLi[m] * da;
+        r += cRr[m] * dv + cRi[m] * da;
+      }
+      holdL = l; holdR = r; // (what a switch to fs/2 holds until its first step)
+    } else { // Medium and Low: the board at fs/2 (applyQuality), a step every second sample
+      for (int k = 0; k < nSeg; k++) segH[k] += seg[segOn[k]];
+      if (pair) {
+        for (int m = 0; m < M; m++) {
+          const double *dr = &driveOn[m * nSeg];
+          double d = 0;
+          for (int k = 0; k < nSeg; k++) d += dr[k] * segH[k];
+          const double Q1 = q1[m], Q2 = q2[m], q = a1h[m] * Q1 - a2h[m] * Q2 + d;
+          const double dv = q - Q2, da = q - 2 * Q1 + Q2;
+          q2[m] = Q1; q1[m] = q;
+          l += cLrh[m] * dv + cLih[m] * da;
+          r += cRrh[m] * dv + cRih[m] * da;
+        }
+        holdL = l; holdR = r;
+        segH.fill(0);
+      }
+      pair ^= 1;
+      l = holdL; r = holdR;
     }
     const double hf = G_DIRECT * mass.run(hp[1].run(hp[0].run(ftot)));
     dl[dw] = hf; dw = (dw + 1) & 63;
@@ -237,7 +292,7 @@ void OrganistaEngine::retire() {
   for (int i = 0; i < nAct; i++) {
     Key &s = *act[i];
     if (!(s.e < 1e6 * s.os * 128)) fault(s); // |v| > 1 km/s, or NaN
-    const bool quiet = !s.down && s.FN == 0 && !(Pm.lifted && sympathetic(s.key)) && s.e < 1e-14 * s.os * 128;
+    const bool quiet = !s.down && s.FN == 0 && !(Pm.lifted && sympathetic(s.key)) && s.e < QUIET[(int)applied] * s.os * 128;
     s.e = 0;
     s.idle = quiet ? s.idle + 1 : 0;
     if (s.idle > 8) { s.active = false; s.clear(); } else act[j++] = &s;

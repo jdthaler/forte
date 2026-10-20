@@ -121,7 +121,8 @@ bool BubbleEngine::release(Nozzle &z, int offset) {
   Bubble *slot = nullptr;
   int live = 0;
   for (Bubble &b : pool) { if (!b.on) { if (!slot) slot = &b; } else if (b.fadeStep == 0) live++; }
-  if (live >= soft) { // fade the quietest bubble that has had time to sound
+  // (Quality: Medium and Low keep a half and 5/16 as many ringing)
+  if (live >= pick(soft, (int)(0.5 * soft), (int)(0.3125 * soft))) { // fade the quietest bubble that has had time to sound
     Bubble *victim = nullptr;
     for (Bubble &b : pool) if (b.on && b.fadeStep == 0 && b.age >= MIN_AGE * fs && (!victim || b.env < victim->env)) victim = &b;
     if (victim) startFade(*victim, FADE);
@@ -250,7 +251,8 @@ void BubbleEngine::render(Bubble &b, float *L, float *Rt, int n) {
   b.age += n - i0; b.start = 0;
   b.env = std::hypot(ur, ui) * std::hypot(b.cr, b.ci) * fade;
   if (b.env > b.peak) b.peak = b.env;
-  const bool over = fade <= 0 || (b.rampLeft == 0 && b.env <= END * b.peak) || !(b.env < 1e3);
+  // (Quality: Medium and Low free a bubble sooner, 70 and 60 dB below its peak)
+  const bool over = fade <= 0 || (b.rampLeft == 0 && b.env <= pick(END, 3e-4, 1e-3) * b.peak) || !(b.env < 1e3);
   if (over) b.on = false;
   if (recording && (over || waveCount >= WAVE_N)) { waveDone = true; rec = nullptr; }
 }

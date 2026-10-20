@@ -454,6 +454,30 @@ test('level at the extremes: the gap no longer sets the loudness, and the pickup
   }
 });
 
+test('Quality: Medium and Low sound at most 16 and 10 keys at once (24 at High), the quietest fading; a note alone sounds just as at High', () => {
+  const play = (q, keys, sec) => {
+    const e = new ClavierEngine(FS);
+    e.setQuality(q); e.setParams(P());
+    const n = Math.round(sec * FS), out = new Float64Array(n), bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
+    let live = 0;
+    for (let s = 0, i = 0; s < n; s += bl) {
+      if (i < keys.length && s >= i * 0.02 * FS) e.noteOn(keys[i++], 0.8); // held, one every 20 ms
+      e.process(L, R, bl);
+      out.set(L.subarray(0, Math.min(bl, n - s)), s);
+      live = Math.max(live, e.voices.filter((v) => !v.killing && !v.dead).length);
+    }
+    e.destroy();
+    return { out, live };
+  };
+  const keys = Array.from({ length: 24 }, (_, i) => 36 + 2 * i);
+  for (const [q, most] of [['high', 24], ['medium', 16], ['low', 10]]) {
+    const { out, live } = play(q, keys, 0.8);
+    assert.ok(out.every(Number.isFinite), `${q}: not finite`);
+    assert.equal(live, most, `${q}: ${live} keys sounding`);
+    const one = play(q, [60], 0.5).out, ref = play('high', [60], 0.5).out;
+    assert.ok(one.every((v, i) => v === ref[i]), `${q}: a single note differs from High`);
+  }
+});
 test('CPU: 10 bass voices (the most modes) render well under real time', () => {
   const keys = [29, 31, 33, 34, 36, 38, 40, 41, 43, 45];
   render(P(), 0.3, keys.map((k) => [0, 'on', k, 0.8])); // warm up the JIT

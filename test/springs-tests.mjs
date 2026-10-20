@@ -29,8 +29,9 @@ const DRY = { endLoss: 0.005, eta: 1e-5, oil: 0 };        // as little loss as t
 
 // Run the engine through events ([t, 'on', key, vel] | [t, 'off', key, vel?] | [t, 'sus', on] | [t, 'params', P] | [t, 'msg', m])
 // in 128-sample blocks like the AudioWorklet. Returns L + R (or [L, R, engine]).
-function run(params, events, sec, { fs = FS, stereo = false, tap } = {}) {
+function run(params, events, sec, { fs = FS, stereo = false, tap, quality } = {}) {
   const e = new SpringEngine(fs);
+  if (quality) e.setQuality(quality);
   e.setParams(params);
   const n = Math.round(sec * fs), L = new Float64Array(n), R = new Float64Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
   const ev = events.map(([t, ...r]) => [Math.round(t * fs), ...r]).sort((a, b) => a[0] - b[0]);
@@ -517,6 +518,31 @@ test('the keys past C2–C6 (A0–B1, C♯6–C7): tuned by ear within 1 ¢, the
 });
 
 console.log('levels and stability');
+test('Quality: Medium and Low let 10 and 6 keys ring at once (of 16) and let a spring\'s modes go 65 and 60 dB under its loudest (a strike does not start those), so far fewer modes sound; a note keeps its level (within 1 dB) and its pitch by ear (within 3 ¢); 18 pedalled strikes stay finite', () => {
+  const ev = [[0, 'sus', true], ...Array.from({ length: 18 }, (_, i) => [0.05 * i, 'on', 30 + 3 * i, 0.9])], res = [];
+  const one = (key, quality) => run(P(), [[0, 'on', key, MF]], 1, { quality });
+  const ref = { 45: one(45, 'high'), 69: one(69, 'high') }, pitch = { 45: heardPitch(ref[45], keyFreq(45)), 69: heardPitch(ref[69], keyFreq(69)) };
+  let high = 0;
+  for (const [quality, voices, share] of [['high', 16, 1], ['medium', 10, 0.6], ['low', 6, 0.35]]) {
+    let modes = 0, first = 0;
+    const x = run(P(), ev, 1.5, { quality, tap: (e, s) => { if (s === 128 * 4) first = e.voices[0].nAct; if (s % (128 * 25) === 0) modes += e.voices.reduce((a, v) => a + (v.fading ? 0 : v.nAct), 0); } });
+    for (const v of x) assert.ok(Number.isFinite(v), `${quality}: not finite`);
+    const live = x.engine.voices.filter((v) => !v.fading).length;
+    assert.ok(live <= voices, `${quality}: ${live} keys ringing`);
+    if (quality === 'high') high = modes;
+    assert.ok(modes <= share * high, `${quality}: ${modes} modes sounding against High's ${high}`);
+    const dB = [], dc = [];
+    for (const key of [45, 69]) {
+      const y = one(key, quality);
+      dB.push(rmsDb(y, 0, y.length) - rmsDb(ref[key], 0, y.length));
+      dc.push(cents(heardPitch(y, keyFreq(key)), pitch[key]));
+    }
+    for (const d of dB) assert.ok(Math.abs(d) < 1, `${quality}: level ${d.toFixed(2)} dB from High`);
+    for (const c of dc) assert.ok(Math.abs(c) < 3, `${quality}: pitch ${c.toFixed(2)} ¢ from High`);
+    res.push(`${quality} ${live} ringing, ${(100 * modes / high).toFixed(0)} % of the modes (the first strike starts ${first}), ${dB.map((d) => d.toFixed(2)).join('/')} dB, ${dc.map((c) => c.toFixed(2)).join('/')} ¢`);
+  }
+  console.log(`         ${res.join('; ')}`);
+});
 test('level: a forte note peaks at 0.1–0.5 across the compass at 44.1 and 48 kHz; forte chords of 4 and 6 notes stay under 1; every preset within 10 dB of the default', () => {
   const stereoPeak = (p, ev, sec, o) => { const [L, R] = run(p, ev, sec, { ...o, stereo: true }); return Math.max(peakAbs(L), peakAbs(R)); };
   const pk = [];

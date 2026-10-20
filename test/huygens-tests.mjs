@@ -376,6 +376,17 @@ await test('finite output and sane level across settings', () => {
     assert.ok(r.finite && r.pk < 5, JSON.stringify(eng));
   }
 });
+await test('Quality: nothing to trim (every lamp kicks every other, so leaving one out would move where they lock): Medium and Low play 24 coupled lamps exactly as High', () => {
+  const render = (quality) => {
+    const e = new HuygensEngine(FS); e.setQuality(quality); e.setParams({ kick: 0.08 });
+    for (let i = 0; i < 24; i++) e.noteOn(36 + 2 * i, 1, { f: keyFreq(36 + 2 * i) });
+    const L = new Float32Array(128), R = new Float32Array(128), out = new Float32Array(0.5 * FS);
+    for (let s = 0; s < out.length; s += 128) { e.process(L, R, 128); out.set(L.subarray(0, Math.min(128, out.length - s)), s); }
+    return out;
+  };
+  const hi = render('high');
+  for (const quality of ['medium', 'low']) { const q = render(quality); for (let i = 0; i < hi.length; i++) if (q[i] !== hi[i]) throw new Error(`${quality} differs at sample ${i}`); }
+});
 await test('performance: 24 oscillators', () => {
   const e = new HuygensEngine(FS); e.setParams({ kick: 0.08 });
   for (let i = 0; i < 24; i++) e.noteOn(36 + 2 * i, 1, { f: keyFreq(36 + 2 * i) });

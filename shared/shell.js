@@ -52,6 +52,7 @@ import { trimGain } from './registry.js';
 import { controlOwns, focusedByPointer } from './focus.js';
 import { startMIDI, resumeMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe } from './midi.js';
 import { attachPresets } from './user-presets.js';
+import { connectQuality, qualityControl } from './quality.js';
 // after a change, a control picked with the pointer lets go of the focus (the keys go back to the
 // instrument); one reached with Tab keeps it, so the next Space or arrow works it again
 const unfocus = (el) => { if (focusedByPointer(el)) el.blur(); };
@@ -137,6 +138,7 @@ export function createShell(cfg) {
       // Params go first, straight to the port. Everything else waits for `starting` and is
       // posted in order (shell.post), so a quick note-off can never overtake its note-on.
       node.port.postMessage(paramsMessage());
+      connectQuality(node, { toast }); // the device's Quality (shared/quality.js)
       if (cfg.space === 'sustain') node.port.postMessage({ type: 'sustain', on: shell.sustain });
       if (ctx.state !== 'running') await ctx.resume();
       shell.audio = { ctx, node, tone: chain.tone, master: chain.master, roomGain: chain.roomGain, analyser, chain };
@@ -356,6 +358,7 @@ export function createShell(cfg) {
     }
     $('#groups').appendChild(det);
   }
+  qualityControl(); // the device's Quality, after the instrument's groups
   function refresh(id, dragging = false) {
     const c = controls.get(id);
     if (!c) return;

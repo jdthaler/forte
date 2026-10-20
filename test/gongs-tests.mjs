@@ -61,9 +61,10 @@ function potential(S, x, Nv = S.N) {
 
 // Render through the engine in 128-sample blocks, like the AudioWorklet. events: [t, 'on'|'off', key, vel],
 // [t, 'msg', message] or [t, 'params', P]
-function render(params, sec, events, post) {
+function render(params, sec, events, post, quality) {
   const e = new GongEngine(FS);
   if (post) e.post = post;
+  if (quality) e.setQuality(quality);
   e.setParams(params);
   const n = Math.round(sec * FS), L = new Float64Array(n), R = new Float64Array(n), bl = new Float32Array(128), br = new Float32Array(128);
   const ev = events.map(([t, ty, k, v]) => ({ s: Math.round(t * FS), ty, k, v })).sort((a, b) => a.s - b.s);
@@ -600,6 +601,26 @@ test('regression: a gong cut off from its coupling (nonlinear-voice cap) keeps i
     assert.ok(Math.abs(cut.after - ref.after) < 20, `${name}: ${cut.before.toFixed(0)} → ${cut.after.toFixed(0)} ¢ when cut off, ${ref.after.toFixed(0)} ¢ left nonlinear`);
     console.log(`        ${name}: ${cut.before.toFixed(0)} → ${cut.after.toFixed(0)} ¢ when cut off, ${ref.after.toFixed(0)} ¢ left nonlinear`);
   }
+});
+test('Quality: Medium and Low run at most 2 and 1 gongs on the nonlinear coupling (fewer if Nonlinear voices says so) and let 12 and 8 ring at once; a phrase keeps its level (within 1.5 dB) and the cut-off gong its pitch (within 3 ¢); 20 fff gongs stay finite', () => {
+  const crash = Array.from({ length: 20 }, (_, i) => [0.04 * i, 'on', 40 + 2 * i, 1]);
+  const phrase = [[0, 'on', 57, 0.8], [0.25, 'on', 64, 0.8], [0.5, 'on', 50, 0.8]];
+  const ref = render(P(), 1.5, phrase), mix = (r) => r.L.map((v, i) => v + r.R[i]), x0 = mix(ref), f = keyFreq(57);
+  const ms = (x) => x.reduce((a, v) => a + v * v, 0) / x.length, p0 = peak(x0, f, 0.9 * FS, 1.5 * FS), res = [];
+  for (const [quality, nl, ringing] of [['high', 16, 16], ['medium', 2, 12], ['low', 1, 8]]) {
+    const { L, R, e } = render(P({ nlvoices: 16 }), 1.5, crash, null, quality);
+    for (let i = 0; i < L.length; i++) assert.ok(Number.isFinite(L[i]) && Number.isFinite(R[i]), `${quality}: not finite`);
+    const live = e.voices.filter((v) => !v.killing && !v.dead), nonlinear = live.filter((v) => v.nl).length;
+    assert.ok(live.length <= ringing, `${quality}: ${live.length} gongs ringing`);
+    assert.ok(nonlinear <= nl, `${quality}: ${nonlinear} gongs nonlinear`);
+    const y = mix(render(P(), 1.5, phrase, null, quality)), dB = 10 * Math.log10(ms(y) / ms(x0)), c = cents(peak(y, f, 0.9 * FS, 1.5 * FS) / p0);
+    assert.ok(Math.abs(dB) < 1.5, `${quality}: phrase ${dB.toFixed(2)} dB from High`);
+    assert.ok(Math.abs(c) < 3, `${quality}: A3 ${c.toFixed(2)} ¢ from High`);
+    res.push(`${quality} ${live.length} ringing, ${nonlinear} nonlinear, ${dB.toFixed(2)} dB, ${c.toFixed(2)} ¢`);
+  }
+  console.log(`        ${res.join('; ')}`);
+  const four = render(P({ nlvoices: 4 }), 0.6, crash.slice(0, 6), null, 'medium').e.voices.filter((v) => v.nl && !v.killing).length;
+  assert.ok(four <= 2, `medium, Nonlinear voices 4: ${four} nonlinear`);
 });
 // Blocks of 128 samples, timed one by one, as the AudioWorklet runs them.
 function blockTimes(params, events, seconds, pedal = false) {

@@ -62,9 +62,15 @@ void SteelPanEngine::activate(Note &v) {
 // where it lands. The note keeps what it was doing: the strike adds to it.
 void SteelPanEngine::strike(Note &v, double velocity) {
   if (v.version != version) retune(v);
-  v.run = v.nm.count;
+  // Quality: at Medium and Low a stroke rings at most 8 and 6 modes, none of the untuned ones above
+  // 16 and 12 kHz (they come by frequency: the highest go)
+  const int most = pick(kModes, 8, 6);
+  const double top = pick<double>(INFINITY, 16000, 12000);
+  int run = std::min(kTuned, v.nm.count);
+  while (run < v.nm.count && run < most && v.nm.m[run].f < top) run++;
+  v.run = std::max(v.run, run);
   const double f1 = v.nm.m[0].f, tau = contactTime(P[p::contact], f1, velocity);
-  for (int i = 0; i < v.nm.count; i++) v.y1[i] += v.b[i] * strikeGain(v.nm.m[i], f1, tau) * velocity * fs;
+  for (int i = 0; i < run; i++) v.y1[i] += v.b[i] * strikeGain(v.nm.m[i], f1, tau) * velocity * fs;
   v.struck = true; v.age = 0;
 }
 
@@ -200,8 +206,10 @@ void SteelPanEngine::process(float *L, float *R, int n) {
     }
     L[s] = (float)l; R[s] = (float)r;
   }
-  // asleep: notes that have rung out and are no longer driven
+  // asleep: notes that have rung out and are no longer driven (Quality: sooner at Medium and Low,
+  // 20 and 34 dB above High's −108 dB under a full stroke)
   bool changed = false;
+  const double quiet = pick(QUIET, 2e-5, 1e-4);
   for (size_t k = 0; k < live.size();) {
     Note &v = notes[live[k]];
     v.age += n;
@@ -209,7 +217,7 @@ void SteelPanEngine::process(float *L, float *R, int n) {
     for (int p = 0; p < v.run; p++) e = std::max(e, std::fabs(v.y1[p]) + std::fabs(v.y2[p]));
     const bool rolling = v.held && rollOf(v) > 0.005;
     if (!std::isfinite(e)) e = 0; // a numerical failure: let it go
-    if (e < QUIET && v.age > GRACE && !rolling) {
+    if (e < quiet && v.age > GRACE && !rolling) {
       v.active = false; v.struck = false;
       live[k] = live.back(); live.pop_back();
       changed = true;

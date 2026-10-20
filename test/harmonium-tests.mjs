@@ -388,6 +388,31 @@ test('voice stealing: past 16 keys the quietest released key fades out over 30 m
   for (let i = Math.round(0.45 * FS); i < Math.round(0.6 * FS); i++) jump = Math.max(jump, Math.abs(r.L[i] - r.L[i - 1]));
   assert.ok(jump < 0.2, `largest step ${jump}`);
 });
+test('Quality: Medium and Low let fewer keys sound (8, 5), the quietest fading; a note keeps its pitch and level', () => {
+  const play = (q, events, sec, tap) => {
+    const e = new HarmoniumEngine(FS, 1, { track: true }); e.setQuality(q); e.setParams(P());
+    const n = Math.round(sec * FS), L = new Float64Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
+    for (let s = 0, j = 0; s < n; s += bl) {
+      while (j < events.length && events[j][0] * FS <= s) { const [, k, v] = events[j++]; e.noteOn(k, v); }
+      e.process(bL, bR, bl); L.set(bL.subarray(0, Math.min(bl, n - s)), s); tap?.(e);
+    }
+    return { L, e };
+  };
+  const level = {};
+  for (const [q, cap] of [['high', 16], ['medium', 8], ['low', 5]]) {
+    // twelve keys held down, one every 60 ms
+    let live = 0;
+    play(q, Array.from({ length: 12 }, (_, i) => [0.06 * i, 40 + 3 * i, 0.7]), 1, (e) => { live = Math.max(live, e.voices.filter((v) => !v.fading).length); });
+    assert.ok(live === Math.min(cap, 12), `${q}: ${live} keys sounding`);
+    for (const key of [57, 81]) { // a 1× reed and a 2× one
+      const { L, e } = play(q, [[0, key, 0.7]], 0.8), f0 = keyFreq(key), f = freqAt(L, f0, Math.round(0.5 * FS), L.length);
+      assert.ok(L.every(Number.isFinite) && Math.abs(cents(f, f0)) < 3 && Math.abs(cents(e.voices[0].reeds[1].freq(), f0)) < 3, `${q} ${key}: ${cents(f, f0).toFixed(2)} ¢`);
+      level[q + key] = rms(L, Math.round(0.4 * FS), L.length);
+      const d = 20 * Math.log10(level[q + key] / level['high' + key]);
+      assert.ok(Math.abs(d) < 1.5, `${q} ${key}: ${d.toFixed(2)} dB from High`);
+    }
+  }
+});
 
 console.log('levels and stability');
 test('level: at the default wind a single note peaks at 0.1–0.5 from C2 to C6 and above 0.04 up to C7, at 44.1 and 48 kHz; a ten-key chord stays under 1.5', () => {

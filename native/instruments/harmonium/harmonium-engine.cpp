@@ -279,10 +279,12 @@ void HarmoniumEngine::noteOn(int key, double velocity) {
     n.nList = 0;
     voices[count++] = v; byKey[key] = v;
     if (auto d = keys.get(key, version)) { n.data = d; keys.acquire(d); for (int r = 0; r < NRANKS; r++) n.reeds[r].init(*this, d.data->r[r], bendNow * n.nb); n.pending = false; }
-    // too many keys: the quietest released one (never a young one) fades out
+    // too many keys: the quietest released one (never a young one) fades out. Quality: Medium and
+    // Low let fewer keys sound (each reed's step is the cost, and every one is heard; the reeds
+    // from 440 Hz up keep their 2×, without which they would sound softer and alias)
     int live = 0;
     for (int i = 0; i < count; i++) if (!voices[i]->fading && !voices[i]->dead) live++;
-    if (live > MAX_KEYS) {
+    if (live > pick(MAX_KEYS, 8, 5)) {
       Voice *victim = nullptr;
       double score = INF;
       for (int i = 0; i < count; i++) {

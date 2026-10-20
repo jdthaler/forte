@@ -36,9 +36,10 @@ const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const cents = (a, b) => 1200 * Math.log2(a / b);
 
 // Run the engine through events ([t, 'on', key, vel] | [t, 'off', key] | [t, 'sus', on] | [t, 'params', P]),
-// in 128-sample blocks like the AudioWorklet; tap(engine) after every block.
-function run(params, events, sec, { fs = FS, tap, stereo = false } = {}) {
+// in 128-sample blocks like the AudioWorklet, at a Quality (High unless given); tap(engine) after every block.
+function run(params, events, sec, { fs = FS, tap, stereo = false, quality } = {}) {
   const e = new VibraphoneEngine(fs);
+  if (quality) e.setQuality(quality);
   e.setParams(params);
   const n = Math.round(sec * fs), L = new Float64Array(n), R = new Float64Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
   const ev = events.map(([t, ...r]) => [Math.round(t * fs), ...r]).sort((a, b) => a[0] - b[0]);
@@ -457,6 +458,29 @@ test('knobs glide: the gap, tube tuning, disc size, shaft phase and temperature 
     for (let i = Math.round(0.3 * FS); i < x.length; i++) { const d = Math.abs(x[i] - 2 * x[i - 1] + x[i - 2]); if (i < 0.5 * FS) before = Math.max(before, d); else after = Math.max(after, d); }
     assert.ok(after < 3 * before + 1e-6, `${id}: second difference ${after.toExponential(2)} after, ${before.toExponential(2)} before`);
   }
+});
+test('Quality: Medium and Low let 12 and 8 bars ring at once and let a bar go at −70 and −60 dB (−90 at High); a bar keeps its pitch and level', () => {
+  const ev = [[0, 'sus', true]];
+  for (let i = 0; i < 30; i++) ev.push([0.05 * i, 'on', KEY_LO + i, 0.5]);
+  const time = {};
+  for (const [quality, cap] of [['high', 16], ['medium', 12], ['low', 8]]) {
+    let most = 0, t = 0;
+    const x = run(P(), ev, 4, { quality, tap: (e, s) => { if (s % 1280) return; const vs = e.voices; most = Math.max(most, vs.filter((v) => !v.fading).length); t += vs.length; } });
+    assert.ok(x.every(Number.isFinite) && peakAbs(x) < 1, `${quality}: NaN or peak ${peakAbs(x).toFixed(3)}`);
+    assert.ok(most <= cap, `${quality}: ${most} bars`);
+    time[quality] = t;
+  }
+  console.log(`         bars × time at Medium ${((100 * time.medium) / time.high).toFixed(0)} %, Low ${((100 * time.low) / time.high).toFixed(0)} % of High's`);
+  assert.ok(time.medium < 0.8 * time.high && time.low < 0.6 * time.high, JSON.stringify(time));
+  for (const key of [53, 69, 89]) {
+    const f = keyFreq(key), a = Math.round(0.1 * FS), at = (quality) => run(P({ motor: 'open' }), [[0, 'on', key, 0.7]], 1, { quality }), hi = at('high');
+    for (const quality of ['medium', 'low']) {
+      const x = at(quality), c = cents(peak(x, f * 0.99, f * 1.01, a, x.length, f / 2000), peak(hi, f * 0.99, f * 1.01, a, hi.length, f / 2000)), d = rmsDb(x, 0, x.length) - rmsDb(hi, 0, hi.length);
+      assert.ok(Math.abs(c) < 0.1 && Math.abs(d) < 1.5, `key ${key} at ${quality}: ${c.toFixed(3)} ¢, ${d.toFixed(2)} dB`);
+    }
+  }
+  const life = (quality) => { let n = 0; run(P({ motor: 'open' }), [[0, 'on', 69, 0.7]], 12, { quality, tap: (e) => { n += e.voiceCount(); } }); return n; };
+  assert.ok(life('low') < life('high'), 'a bar is let go sooner at Low');
 });
 test('CPU: 10 sounding bars at 48 kHz, motor running, in well under 30 % of real time', () => {
   const e = new VibraphoneEngine(FS); e.setParams(P()); e.setSustain(true);

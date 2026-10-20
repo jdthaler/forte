@@ -195,6 +195,13 @@ seeded generator. Ten coupled keys take about 1.6 % of a core. The C++ is in
 forms (the kick for a window δ, the tongue edges, the capture time) that the
 tests hold it to.
 
+## Quality
+
+The Quality setting (in the controls, for phones and older computers) changes
+nothing here: Medium and Low play exactly as High. Every lamp kicks every
+other, so leaving one out, or stepping them more coarsely, would move where
+they lock; and two dozen lamps cost little.
+
 ## Prior art and references
 
 ### The original observation and the oscillator
