@@ -16,6 +16,83 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-20 — the controls no longer show above their toggles as they scroll; Early Universe; the Quality choice in the top bar; the site goes live before the plugins finish building; Whistlers
+
+### Forte 0.37.0
+- **Scrolled, the controls pass under their row of toggles:** they showed in a strip above it,
+  in the panel's top padding, both below the views and beside them.
+- `tools/check-pages.mjs` scrolls the Controls panel in both arrangements and fails if anything
+  shows above its toggles.
+- **Quality** moves from the controls to the top bar, beside the CPU readout: until the audio
+  starts it is a pill of its own ("Quality High"), then the two read as one ("CPU 12 % · 3
+  voices | High"), so what the page costs and what to do about it sit together. The suggestion
+  after dropouts points there.
+- The velocity curve and MPE menus are drawn as pills on the Ribbon Piano, Tonewheel Organ,
+  Tine Piano and Huygens Keyboard pages too.
+- **A release puts the site up in minutes:** its pull request into `live` builds the plugins on
+  Linux only, like any other, and the macOS and Windows builds, auval and the release archives
+  run on `live` after the merge. The plugin release follows when that run is green.
+- **The downloads say which plugin release they are:** under the downloads, All Plugins and each
+  instrument's Plugin dialog name the latest plugin release, and say so when this version of the
+  site or the instrument is newer and its plugins are still to come. An instrument not in a plugin
+  release yet shows no downloads until it is.
+
+### Whistlers 0.1.0
+- New instrument: lightning's radio crack, dispersed along the Earth's magnetic field into a
+  falling tone, a whistler, for every key, A0–C8. Each key is the dipole field line (L = 4.2 at
+  C8 out to 23 at A0) whose nose, the frequency that arrives first, is the note: the group delay
+  is the cold-plasma whistler's exact group index integrated along the line, through Carpenter
+  and Anderson's plasmasphere, plasmapause and trough. Below the nose the tone falls as
+  Eckersley's 1/√f; above it a short branch rises to the duct's cutoff at half the
+  gyrofrequency. The tests check the delays against Eckersley's law, a polyline integral and the
+  nose's tuning (within a hundredth of a cent, in any tuning).
+- **The plasma:** the plasmapause (with the Kp that puts it there) and the density; inside the
+  plasmasphere, a hundred times thicker, the top keys' whistlers are slower than the ones below.
+- **Ducts and echoes:** up to five ducts side by side for multi-path whistlers; the ionosphere's
+  reflection sends echoes back along the line, each slower and thinner, heard at the line's far
+  end (1, 3, 5 hops) or near the lightning (2, 4, 6).
+- **The crack:** a click and its tweeks, the Earth–ionosphere waveguide's modes ringing down
+  onto their cutoffs, set by the stroke's distance and the ionosphere's height. **Real travel
+  time** plays the crack first and the whistler when it would arrive.
+- **Chorus:** held keys sing rising elements, as hot electrons do at dawn; the mod wheel sets how
+  many, key pressure brings more.
+- Ten presets, from a quiet week to a magnetic storm, an echo train and dawn chorus; eight demos.
+  The page draws the field line with the whistler's frequencies travelling along it, a
+  spectrogram, the dispersion, the spectrum and the plasma's density.
+- **Quality:** fewer strokes at once (16 and 10, against 24), ducts (3 and 2), echoes (cut at
+  −40 and −30 dB), tweek modes and chorus elements.
+- The plugins (AU, VST3, CLAP) and the Forte app play it too.
+
+### Early Universe 0.1.0
+- New instrument: a young universe for every key, A0–C8, its harmonics the sound waves of the
+  photon–baryon plasma that the microwave background's acoustic peaks show. Harmonic m is the
+  wave of the m-th peak, k = mπ/r_s; pressing the key starts that universe's clock at the
+  beginning, each harmonic follows its wave through the radiation era, equality and
+  recombination, and the note then holds what the sky shows. Each universe is scaled so its first
+  peak is the note.
+- **The physics, from the ingredients:** the waves are Ma and Bertschinger's equations in the
+  conformal Newtonian gauge (the tightly coupled fluid, cold dark matter, free-streaming
+  neutrinos, Einstein's equations), from adiabatic initial conditions; recombination is Saha's
+  equation for helium and hydrogen, then Peebles's three-level atom (RECFAST's fudge); Silk
+  damping is the diffusion integral with Kaiser's 16/15. From Planck 2018's ω_b and ω_c it gives
+  z* = 1089.5, r_s* = 144.5 Mpc, k_D = 0.1407 Mpc⁻¹ and z_eq = 3403, within Planck's errors or
+  a few tenths of a percent of them. The tests also check the exact potentials of a radiation
+  universe, Kodama and Sasaki's 9/10 through equality, the waves' phase and (1 + R)^(−1/4), Saha
+  and Peebles, and the damping, against calculations done independently.
+- **A knob per cosmological parameter:** baryon density (more of it, the odd harmonics, the
+  compressions, ring louder, and the upper ones last longer), dark matter density (less of it, a
+  later equality, the waves driven harder by radiation), neutrino species, helium fraction (more
+  of it, the light diffuses and the upper harmonics fade) and the spectral tilt n_s (the mod
+  wheel).
+- **Listening:** the sky (the temperature with its climb out of the potential well, the
+  Sachs–Wolfe effect, and the Doppler shift a quarter cycle on, which can be switched off) or
+  inside the plasma, where the note fades by itself once the light goes free. Time to
+  recombination sets the clock; letting go of the key sets the light free, and what is left
+  streams away as j₀, the upper harmonics first. The pedal keeps the notes.
+- Views: each harmonic's wave through the history, with the epochs; a patch of sky made of the
+  note's waves in Planck's colours; spectrum, spectrogram and a table of this universe's history
+  against Planck's. Eleven presets, seven demos. Plugins and WebAssembly from the start.
+
 ## 2026-10-20 — black-hole spheroidal harmonics; Collider Showers; a toggle for every group of controls, and the controls beside or below the views; only controls for playing above the keys, and each row of toggles at the head of its side; the Electric Grand's stereo tremolo; MPE: each note bends and slides on its own; a Quality setting for phones and older computers; Ramsey fringes on the Quantum Keyboard; tunings and temperaments; view toggles that turn their views on and off
 
 ### Forte 0.36.0
