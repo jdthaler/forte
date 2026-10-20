@@ -1,10 +1,9 @@
 # a toggle for every group of controls, and the controls beside or below the views
 
 ### Forte (minor)
-- **Every group of controls has a toggle,** in the row with the views' toggles: a tap shows or
+- **Every group of controls has a toggle,** in a row at the top of the Controls panel: a tap shows or
   hides that group in the Controls panel, in place of folding it. Every group is on at first,
-  each page remembers which are on, and a group added later gets a toggle of its own. With
-  every group off, the views take the panel's room.
+  each page remembers which are on, and a group added later gets a toggle of its own.
 - **The Controls panel beside the views or below them:** a switch in the top bar (on wide
   screens) puts the groups in a column beside the views, as before, or side by side below them.
   The choice holds on every page. Tablets and phones always put them below the views, where the

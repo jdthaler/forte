@@ -101,7 +101,7 @@ inline const ParamInfo kParams[p::count] = {
   {"kc", "Tension modulation (pitch glide)", "Strings and tuning", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"fullRange", "Full range (A0–C8)", "Strings and tuning", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"soundboard", "Soundboard", "Body and output", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
-  {"room", "Room", "Body and output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},
+  {"room", "Room", "Body and output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Body and output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Body and output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
 };

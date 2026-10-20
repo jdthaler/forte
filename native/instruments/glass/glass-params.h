@@ -56,7 +56,7 @@ inline const FormatSegment kFormat_cents11[] = {{kNoLimit, "", " ¢", 1, 0, 2, f
 
 inline const ParamInfo kParams[p::count] = {
   {"press", "Finger pressure", "Finger", ParamKind::continuous, 0.1, 20, 6, 0, true, true, nullptr, 0, kFormat_press, 1},
-  {"wet", "Skin moisture", "Finger", ParamKind::continuous, 0, 1, 0.85, 0.01, false, true, nullptr, 0, kFormat_wet, 3},
+  {"wet", "Skin moisture", "Finger", ParamKind::continuous, 0, 1, 0.85, 0.01, false, false, nullptr, 0, kFormat_wet, 3},
   {"v0", "Stribeck speed v₀", "Finger", ParamKind::continuous, 0.05, 2, 0.5, 0, true, false, nullptr, 0, kFormat_v0, 1},
   {"rough", "Skin ridges (friction noise)", "Finger", ParamKind::continuous, 0, 0.1, 0.02, 0.001, false, false, nullptr, 0, kFormat_rough, 1},
   {"speed", "Treadle speed", "Spindle", ParamKind::continuous, 0.1, 3, 0.5, 0, true, true, nullptr, 0, kFormat_speed, 1},
@@ -65,7 +65,7 @@ inline const ParamInfo kParams[p::count] = {
   {"loss", "Glass loss factor", "Glass", ParamKind::continuous, 0.00003, 0.003, 0.0004, 0, true, false, nullptr, 0, kFormat_loss, 5},
   {"water", "Water in the bowls", "Glass", ParamKind::continuous, 0, 0.8, 0, 0.01, false, false, nullptr, 0, kFormat_water, 1},
   {"fullRange", "Full range (A0–C8)", "Glass", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
-  {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, true, nullptr, 0, kFormat_room, 1},
+  {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, false, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
   {"pitch", "Pitch", "Tuning", ParamKind::choice, 0, 8, 0, 1, false, false, kChoices_pitch, 9, nullptr, 0, kKeys_pitch},

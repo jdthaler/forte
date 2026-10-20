@@ -17,7 +17,7 @@ export const GROUPS = [
         hint: 'How far each note’s octave and third partial may miss their targets. A few cents: they beat slowly against the partials the dome makes itself.' },
       { id: 'aspect', label: 'Note shape (length / width)', min: 1, max: 2.5, def: 1.3, step: 0.01, fmt: (v) => `${v.toFixed(2)} : 1`,
         hint: 'The note area’s length over its width. It places the upper, untuned modes (and, untuned, the octave and twelfth too: at √2 = 1.41 they fall on 1 : 2 : 3 by themselves).' },
-      { id: 'rise', label: 'Dome rise (curvature)', perform: true, min: 0, max: 10, def: 3, step: 0.1, fmt: (v) => `${v.toFixed(1)} × thickness`,
+      { id: 'rise', label: 'Dome rise (curvature)', min: 0, max: 10, def: 3, step: 0.1, fmt: (v) => `${v.toFixed(1)} × thickness`,
         hint: 'How far each note’s dome stands above its rim. The curvature couples its modes: struck hard, the fundamental pumps the octave and twelfth, so the tone blooms and brightens. Flat: the note is linear, and every stroke has the same colour.' },
       { id: 't60', label: 'Ring time at C4', min: 0.2, max: 8, def: 1.6, log: true, fmt: s,
         hint: 'How long C4’s fundamental takes to fall 60 dB (steel, the rim and the air). Lower notes ring longer, higher ones less (as 1/√f).' },
@@ -41,7 +41,7 @@ export const GROUPS = [
   {
     title: 'Sticks',
     params: [
-      { id: 'contact', label: 'Stick contact (at C4)', perform: true, min: 0.2, max: 3, def: 0.7, log: true, fmt: ms,
+      { id: 'contact', label: 'Stick contact (at C4)', min: 0.2, max: 3, def: 0.7, log: true, fmt: ms,
         hint: 'How long the rubber tip stays on the note at C4 (shorter on higher, stiffer notes, and on harder strokes, as a Hertz contact). Short: a bright, clicky stroke; long: a round one that reaches only the fundamental.' },
       { id: 'along', label: 'Strike point (centre → edge)', perform: true, min: 0, max: 0.95, def: 0.35, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} % of the half-length`,
         hint: 'Where the stick lands along the note. At the centre the octave mode has its node and is silent, so only the dome can make it; towards the edge it speaks at once.' },
@@ -66,7 +66,7 @@ export const GROUPS = [
   {
     title: 'Output',
     params: [
-      { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      { id: 'room', label: 'Room', min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],

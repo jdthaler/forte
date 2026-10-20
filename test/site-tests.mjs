@@ -361,8 +361,9 @@ console.log('parameters and presets');
 for (const i of ready) {
   const file = readdirSync(new URL(`${i.id}/src/`, R)).find((f) => /params\.js$/.test(f));
   const mod = await import(new URL(`${i.id}/src/${file}`, R));
+  // the organ's console (its drawbars and switches) sits above the keys too
   test(`${i.name}: a few performance controls (perform: true), volume among them`, () => {
-    const perform = mod.GROUPS.flatMap((g) => g.params).filter((p) => p.perform);
+    const perform = [...mod.GROUPS, ...(mod.CONSOLE_GROUPS ?? [])].flatMap((g) => g.params).filter((p) => p.perform);
     assert.ok(perform.length >= 3 && perform.length <= 10, `${perform.length} performance controls (3–10 fit above the keys)`);
     assert.ok(perform.some((p) => p.id === 'volume'), 'volume');
     for (const p of perform) assert.equal(p.perform, true, p.id);
