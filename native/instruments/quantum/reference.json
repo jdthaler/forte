@@ -1,6 +1,6 @@
 {
  "slug": "quantum",
- "engine": "js",
+ "engine": "wasm",
  "fs": 48000,
  "frame": 0.1,
  "scripts": [
@@ -876,6 +876,49 @@
     "partial": 784.951,
     "centroid": 2080,
     "decay": 0.5
+   }
+  },
+  {
+   "name": "preset: Coherent restrike: Ramsey fringes",
+   "preset": 9,
+   "seconds": 1.6,
+   "events": [
+    [
+     0,
+     "on",
+     60,
+     0.7
+    ],
+    [
+     1,
+     "off",
+     60
+    ]
+   ],
+   "summary": {
+    "peak": -15.92,
+    "rms": -36.29,
+    "env": [
+     -30.26,
+     -40.29,
+     -34.63,
+     -44.42,
+     -35.34,
+     -39.82,
+     -29.41,
+     -36.19,
+     -37.1,
+     -40.36,
+     -43.02,
+     -40.89,
+     -44.65,
+     -39.94,
+     -53.31,
+     -52.78
+    ],
+    "partial": 784.966,
+    "centroid": 1153,
+    "decay": 6.56
    }
   }
  ]
