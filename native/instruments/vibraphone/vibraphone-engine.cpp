@@ -33,6 +33,10 @@ void VibraphoneEngine::Voice::start(VibraphoneEngine &eng, Data::Ref r, uint64_t
   out0 = d->out[0];
   gl = d->pan[0]; gr = d->pan[1];
   eng.data.acquire(r);
+  // Quality: Medium and Low leave out the modes above 16 and 12 kHz, and let the bar go at −70 and
+  // −60 dB under its loudest instead of −90
+  top = eng.pick(NYQUIST * eng.fs, std::min(NYQUIST * eng.fs, 16000.0), std::min(NYQUIST * eng.fs, 12000.0));
+  floor = eng.pick(1e-9, 1e-7, 1e-6);
   coefs(eng);
 }
 
@@ -43,8 +47,8 @@ void VibraphoneEngine::Voice::coefs(const VibraphoneEngine &eng) {
     const double f = d->f[i] * ts, om = TAU * f, s = d->sigFixed[i] + pi * f * eng.P[p::eta] + sd * d->dampW[i];
     sig[i] = s;
     if (i == 0) { K11 = om * om; sig1 = s; continue; }
-    cut[i] = f >= NYQUIST * eng.fs;
-    if (cut[i]) { a1[i] = a2[i] = bc[i] = accOut[i] = 0; continue; } // above what the sample rate holds: silent, never struck
+    cut[i] = f >= top;
+    if (cut[i]) { a1[i] = a2[i] = bc[i] = accOut[i] = 0; continue; } // above what the sample rate holds (or Quality's top): silent, never struck
     const double r = std::exp(-s * k), od = std::sqrt(std::max(om * om - s * s, 1e-6));
     a1[i] = 2 * r * std::cos(od * k); a2[i] = r * r; bc[i] = (k * r * std::sin(od * k)) / od;
     accOut[i] = om * om * d->out[i];
@@ -197,7 +201,7 @@ void VibraphoneEngine::Voice::render(float *L, float *Rt, int n, VibraphoneEngin
     eng.post(m);
     return;
   }
-  if (!malletOn && age > YOUNG && (E <= 1e-9 * Emax || (damp > 0.99 && E < 1e-7 * Emax))) dead = true;
+  if (!malletOn && age > YOUNG && (E <= floor * Emax || (damp > 0.99 && E < std::max(1e-7, floor) * Emax))) dead = true;
 }
 
 // ---- the engine ------------------------------------------------------------------------------
@@ -205,10 +209,12 @@ void VibraphoneEngine::Voice::render(float *L, float *Rt, int n, VibraphoneEngin
 VibraphoneEngine::VibraphoneEngine(double fs)
     : Engine(fs), data([this](int key, uint64_t version) -> std::unique_ptr<VoiceData> {
         if (key < KEY_MIN || key > KEY_MAX) return nullptr;
+        const Snapshot &s = snapshots[version % snapshots.size()];
+        const double depth = s.depth.load(std::memory_order_relaxed), ratio = s.ratio[key % 12].load(std::memory_order_relaxed);
 #if !FORTE_THREADS
-        if (offered && offered->key == key && versionOf(offered->depth) == version) return std::move(offered);
+        if (offered && offered->key == key && offered->depth == depth && offered->ratio == ratio) return std::move(offered);
 #endif
-        return std::make_unique<VoiceData>(voiceData(key, std::bit_cast<double>(version)));
+        return std::make_unique<VoiceData>(voiceData(key, depth, ratio));
       }),
       malletMax((int)std::round(MALLET_MAX * fs)) {
   vibe.type = msg::vibe; vibe.key = 0; vibe.count = 19;
@@ -233,9 +239,15 @@ void VibraphoneEngine::setParams(const double *p) {
   hasParams = true;
   T = {P[p::gap] / 1000, P[p::detune], P[p::temp], P[p::cd], P[p::tubes] != 0 ? 1.0 : 0.0, P[p::twist], P[p::shaft2]};
   if (first) S = T;
-  // the bars are built for the depth the knob is at, nearest the last key played first
-  const uint64_t v = versionOf(P[p::depth]);
-  if (first || v != version) { version = v; data.prepare(version, KEY_MIN, KEY_MAX, focus ? focus->key : 60); }
+  // the bars are built for the depth the knob is at and the tuning, nearest the last key played first
+  const forte::Tuning tuning = tuningOf(P.data());
+  if (first || P[p::depth] != physDepth || !(tuning == physTuning)) {
+    physDepth = P[p::depth]; physTuning = tuning; version++;
+    Snapshot &s = snapshots[version % snapshots.size()];
+    s.depth.store(physDepth + 0.0, std::memory_order_relaxed); // (−0 is 0)
+    for (int i = 0; i < 12; i++) s.ratio[i].store(tuning.r[i], std::memory_order_relaxed);
+    data.prepare(version, KEY_MIN, KEY_MAX, focus ? focus->key : 60);
+  }
   // bar losses and the damper apply at once to every sounding bar
   for (int i = 0; i < nVoices; i++) voices[i]->coefs(*this);
 }
@@ -277,7 +289,7 @@ void VibraphoneEngine::strikeKey(int key, double velocity, Data::Ref r) {
   focus = v;
   int live = 0;
   for (int i = 0; i < nVoices; i++) if (!voices[i]->fading) live++;
-  if (live > MAX_VOICES) {
+  if (live > pick(MAX_VOICES, 12, 8)) { // Quality: fewer bars ring at once at Medium and Low
     Voice *victim = nullptr;
     double score = INFINITY;
     for (int i = 0; i < nVoices; i++) {

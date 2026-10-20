@@ -50,6 +50,7 @@ struct Mode {
   double f;           // Hz, untuned (no bend, no detuning)
   double phase;       // phase advance per cell
   std::complex<double> kick; // the amplitude a unit-charge bunch leaves (√energy, the π mode's field units)
+  std::complex<double> kick1; // the same per unit of the band's field where the bunch passes (radialOf)
   double x1, xN;      // the mode in the end cells (the probes)
   double invQ0;       // 1/Q0 of the walls, superconducting at the bath temperature
   double invQn;       // 1/Q0 normal-conducting (quenched)
@@ -61,7 +62,11 @@ struct Cavity {
   std::array<Mode, MAX_MODES> modes;
   std::array<double, MAX_CELLS * MAX_CELLS> x; // the accelerating passband's modes in each cell, x[mode·N + n]
 };
-// One key's cavity under the parameters P (indexed as in cavity-params.h).
+// A band's field where a beam `offset` off the axis passes (in the cell's radius), against the axis's
+// TM010: J0 for the monopoles, J1 for the dipoles.
+double radialOf(int band, double offset);
+// One key's cavity under the parameters P (indexed as in cavity-params.h): its π mode at the key's
+// equal-tempered pitch times the keyboard's tuning (tuningOf(P).ratio(key)).
 Cavity cavityOf(int key, const double *P);
 // The single cell's band frequency over its TM010's, for the cell design speed βg and coupling k.
 double bandRatio(int band, double betag, double k);

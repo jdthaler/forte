@@ -108,9 +108,11 @@ double reedSigma(double f, double h, double eta) {
   return AIR_SIGMA + PI * f * (eta + (tedDelta() * u) / (1 + u * u));
 }
 
-KeyReed keyReed(int m, double tipMass, double loss, double fs) {
+KeyReed keyReed(int m, double tipMass, double loss, double fs, double ratio) {
   const double E = STEEL.E, rho = STEEL.rho, t = std::min(1.0, std::max(0.0, (double)(m - KEY_LO) / (KEY_HI - KEY_LO)));
-  const double f0 = keyFreq(m), b = REED.b, h = REED.hBass * (1 - t) + REED.hTreble * t;
+  // the key's pitch in the keyboard's tuning (ratio exactly 1 at the defaults): the length is cut
+  // to it; the reed's section, solder and voicing stay the key's
+  const double f0 = keyFreq(m) * ratio, b = REED.b, h = REED.hBass * (1 - t) + REED.hTreble * t;
   const double r = tipMass * pow(REED.rBass, 1 - t) * pow(REED.rTreble, t), bl = REED.blob;
   KeyReed kr;
   kr.unit = unitReed(r, 1 - bl / 2, (r * (bl * bl + pow(bl / 2, 2))) / 12, REED.nModes);
@@ -141,7 +143,7 @@ PlateRail::PlateRail(double fs) : d(fdlibm::exp(-1 / (fs * ES.R * ES.Cbus))), Q(
 
 // ---- the mechanism of one key ------------------------------------------------------------------
 
-Pluck::Pluck(const KeyReed &r, const PadParams &P, double fs_, double bend_) : kr(&r), N(r.N), k(1 / fs_), fs(fs_) {
+Pluck::Pluck(const KeyReed &r, const PadParams &P, double fs_, double bend_, int nMax) : kr(&r), N(std::min(r.N, nMax)), k(1 / fs_), fs(fs_) {
   coeffs(bend_);
   setPad(P);
   // at rest: the pad presses the reed with the preload, bonded over the full disc
@@ -154,12 +156,13 @@ Pluck::Pluck(const KeyReed &r, const PadParams &P, double fs_, double bend_) : k
 }
 
 // The modes at bend × their frequencies (the reed's stiffness × bend²): the recursions, the
-// compliances at the pad and the tip, and the end stop.
+// compliances at the pad and the tip, and the end stop. A mode bent past 0.45 × the rate (where
+// keyReed cuts them) stays there: far above the output's band, and its recursion stays stable.
 void Pluck::coeffs(double r) {
   double Csum = 0, cs = 0, Ctip = 0;
   for (int i = 0; i < N; i++) {
     const ReedMode &md = kr->modes[i];
-    const double rr = fdlibm::exp(-md.sigma * k), wd = TWO_PI * md.f * r;
+    const double rr = fdlibm::exp(-md.sigma * k), wd = std::min(TWO_PI * md.f * r, TWO_PI * 0.45 * fs);
     A1[i] = 2 * rr * fdlibm::cos(wd * k); A2[i] = rr * rr;
     const double b = (k * rr * fdlibm::sin(wd * k)) / wd;
     PC[i] = md.phiC; PT[i] = md.phiT; B[i] = b * md.phiC; BT[i] = b * md.phiT;
@@ -241,8 +244,8 @@ double Pluck::energy() const { // vibration energy (J) about the static shape un
 
 // ---- offline runs ------------------------------------------------------------------------------
 
-Simulation simulatePluck(int m, double tipMass, double loss, const PadParams &P, double vel, double fs, double periods, int frames, double maxT) {
-  const KeyReed kr = keyReed(m, tipMass, loss, fs);
+Simulation simulatePluck(int m, double tipMass, double loss, const PadParams &P, double vel, double fs, double periods, int frames, double maxT, double ratio) {
+  const KeyReed kr = keyReed(m, tipMass, loss, fs, ratio);
   Simulation out;
   {
     Pluck p(kr, P, fs);

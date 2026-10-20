@@ -19,6 +19,9 @@ constexpr double NOISE = 2e-3;   // turbulence: velocity fluctuations at the flu
 constexpr int POST_BLOCKS = 6;
 constexpr int RANK_ORDER[RANKS] = {0, 2, 1, 3, 4, 5}; // the pipe the views show: the first drawn of P8, G8, O4, mixture
 constexpr double PI = std::numbers::pi;
+// Quality: the modes a pipe keeps at Medium and Low (at most this many, up to this frequency)
+constexpr int MEDIUM_MODES = 8, LOW_MODES = 5;
+constexpr double MEDIUM_F = 10000, LOW_F = 7000;
 
 // Half-band low-pass for the 2× decimation (Kaiser-windowed sinc, cut-off at the output Nyquist).
 void halfband(std::array<double, PipeEngine::FIR_N> &h, double beta = 8) {
@@ -36,11 +39,11 @@ void halfband(std::array<double, PipeEngine::FIR_N> &h, double beta = 8) {
 
 // ---- a key's pipes, and their packed form ---------------------------------------------------------
 
-KeyModels keyModels(int key, const Voicing &design) {
+KeyModels keyModels(int key, const Voicing &design, double ratio) {
   KeyModels k;
-  k.key = key; k.design = design;
+  k.key = key; k.design = design; k.ratio = ratio;
   for (int r = 0; r < RANKS; r++) {
-    const double f = pipeFreq(key, r);
+    const double f = pipeFreq(key, r, ratio);
     const bool stopped = RANK[r].stopped;
     ModelOptions o;
     o.tune = tuning(f, stopped);
@@ -51,7 +54,7 @@ KeyModels keyModels(int key, const Voicing &design) {
 
 int packKeyModels(const KeyModels &k, double *out) {
   int n = 0;
-  for (double v : {(double)k.key, k.design.cutup, k.design.gain, k.design.offset}) out[n++] = v;
+  for (double v : {(double)k.key, k.design.cutup, k.design.gain, k.design.offset, k.ratio}) out[n++] = v;
   for (const PipeModel &R : k.pipes) {
     const Geometry &g = R.geo;
     for (double v : {R.f, R.stopped ? 1.0 : 0.0, R.M, R.A, g.W, g.b, g.H, g.y0, g.h, g.dd, g.Sm, g.D, (double)R.nModes}) out[n++] = v;
@@ -64,7 +67,7 @@ bool unpackKeyModels(const double *in, int n, KeyModels &k) {
   int i = 0;
   const auto take = [&](double &v) { if (i >= n) return false; v = in[i++]; return true; };
   double key = 0;
-  if (!take(key) || !take(k.design.cutup) || !take(k.design.gain) || !take(k.design.offset)) return false;
+  if (!take(key) || !take(k.design.cutup) || !take(k.design.gain) || !take(k.design.offset) || !take(k.ratio)) return false;
   k.key = (int)key;
   for (PipeModel &R : k.pipes) {
     R = PipeModel{};
@@ -94,10 +97,14 @@ int PipeEngine::Pipe::lineLength(double tauK) {
 
 // Its constants and state. Modes: per mode 6 constants (exact transition over one step for
 // x'' + 2σx' + ω²x = F/M, F held) and 2 states (volume displacement x, volume flow v).
-void PipeEngine::Pipe::init(PipeEngine &eng, const PipeModel *model, int r, double *line) {
+void PipeEngine::Pipe::init(PipeEngine &eng, const PipeModel *model, int r, double *line, double bent) {
   R = model; rank = r; stopped = model->stopped;
   os = eng.osFor(model->f);
   fsI = eng.fs * os; h = 1 / fsI; n = model->nModes;
+  // Quality: Medium and Low leave out the pipe's highest modes, the weakest of its sound
+  const double fTop = eng.pick<double>(INFINITY, MEDIUM_F, LOW_F);
+  const int nTop = eng.pick(MODES_OPEN, MEDIUM_MODES, LOW_MODES);
+  while (n > 3 && (n > nTop || model->modes[n - 1].om > TAU * fTop)) n--;
   const Geometry &g = model->geo;
   retime(1);
   // the jet
@@ -116,7 +123,7 @@ void PipeEngine::Pipe::init(PipeEngine &eng, const PipeModel *model, int r, doub
   lp = qin = vm = Q = dp = eta = out = 0; asleep = true; foot = Uj = 0;
   track = eng.track; dsp = mean = prev = t = 0; last = -1; per = 0; nx = 0;
   kMean = 1 - std::exp(-h * 2 * PI * std::min(20.0, model->f / 8));
-  if (eng.bendNow != 1) retime(eng.bendNow);
+  if (bent != 1) retime(bent);
 }
 
 // The constants of one step of this pipe's own time, r/fsI: pitch bend, the organ's air warmer
@@ -218,21 +225,29 @@ PipeEngine::PipeEngine(double fs, double fOS)
       data([this](int key, uint64_t ver) -> std::unique_ptr<KeyModels> {
         const Design &d = designs[ver & 15];
         const Voicing v{d.cutup.load(std::memory_order_relaxed), d.gain.load(std::memory_order_relaxed), d.offset.load(std::memory_order_relaxed)};
+        const double ratio = d.ratio[((key % 12) + 12) % 12].load(std::memory_order_relaxed);
 #if !FORTE_THREADS
-        if (offered && offered->key == key && offered->design == v) return std::move(offered);
+        if (offered && offered->key == key && offered->design == v && offered->ratio == ratio) return std::move(offered);
 #endif
-        return std::make_unique<KeyModels>(keyModels(key, v));
+        return std::make_unique<KeyModels>(keyModels(key, v, ratio));
       }),
       wsys(windSystem(0.3)) {
   configure(1, false);
   halfband(fir);
-  // each voice's delay lines: enough for the longest key at the widest cut-up
+  // each voice's delay lines: enough for the longest key at the widest cut-up, in any tuning (a
+  // pipe's line is longest at the lowest pitch of each oversampling band it can fall in)
   const double cutMax = kParams[p::cutup].max;
   for (int k = KEY_MIN; k <= KEY_MAX; k++) {
     size_t need = 0;
     for (int r = 0; r < RANKS; r++) {
-      const double f = pipeFreq(k, r), W = (U_NOM / ((RANK[r].stopped ? THETA_STOPPED : THETA_OPEN) * f)) * cutMax;
-      need += Pipe::lineLength((W / CP) * fs * osFor(f));
+      const double f0 = pipeFreq(k, r);
+      size_t most = 0;
+      for (double f : {f0 * RATIO_MIN, fOS, 3 * fOS}) {
+        if (f < f0 * RATIO_MIN || f > f0 * RATIO_MAX) continue;
+        const double W = (U_NOM / ((RANK[r].stopped ? THETA_STOPPED : THETA_OPEN) * f)) * cutMax;
+        most = std::max(most, (size_t)Pipe::lineLength((W / CP) * fs * osFor(f)));
+      }
+      need += most;
     }
     lineMax = std::max(lineMax, need);
   }
@@ -276,10 +291,12 @@ void PipeEngine::setParams(const double *p) {
   const bool first = !hasParams;
   hasParams = true;
   const Voicing dk{P[p::cutup], P[p::gain], P[p::offset]};
-  if (first || !(dk == design)) {
-    design = dk; version++;
+  const Tuning t = tuningOf(P.data()); // the keyboard's: a change of it cuts new pipes for the next notes
+  if (first || !(dk == design) || !(t == tuning)) {
+    design = dk; tuning = t; version++;
     Design &d = designs[version & 15];
     d.cutup.store(dk.cutup, std::memory_order_relaxed); d.gain.store(dk.gain, std::memory_order_relaxed); d.offset.store(dk.offset, std::memory_order_relaxed);
+    for (int i = 0; i < 12; i++) d.ratio[i].store(t.r[i], std::memory_order_relaxed);
     data.prepare(version, KEY_MIN, KEY_MAX, focus ? focus->key : 60);
   }
   if (!started) { Pset = Pr = Pc = P[p::pressure]; nz = NOISE * P[p::noise]; started = true; }
@@ -320,10 +337,10 @@ bool PipeEngine::startKey(int key, double velocity, const KeyModels *models, Dat
     for (int r = 0; r < RANKS; r++) need += Pipe::lineLength((models->pipes[r].geo.W / CP) * fs * osFor(models->pipes[r].f));
     v = freeVoice(need);
     if (!v) return false;
-    v->inUse = true; v->key = key; v->version = version; v->models = models; v->ref = ref;
+    v->inUse = true; v->key = key; v->version = version; v->models = models; v->ref = ref; v->nb = expr.bendOf(key);
     data.acquire(ref);
     size_t at = 0;
-    for (int r = 0; r < RANKS; r++) { v->pipes[r].init(*this, &models->pipes[r], r, v->lines.data() + at); at += v->pipes[r].N; }
+    for (int r = 0; r < RANKS; r++) { v->pipes[r].init(*this, &models->pipes[r], r, v->lines.data() + at, bendNow * v->nb); at += v->pipes[r].N; }
     bool stops[STOPS] = {P[p::principal] != 0, P[p::octave] != 0, P[p::gedackt] != 0, P[p::mixture] != 0};
     engaged(stops, on);
     for (int r = 0; r < RANKS; r++) v->slider[r] = v->open[r] = on[r] ? 1 : 0;
@@ -338,7 +355,7 @@ bool PipeEngine::startKey(int key, double velocity, const KeyModels *models, Dat
     voices[nVoices++] = v; byKey[key] = v;
     int live = 0;
     for (int i = 0; i < nVoices; i++) if (!voices[i]->fading && !voices[i]->dead) live++;
-    if (live > MAX_KEYS) { // the quietest released key (never a young one) fades out
+    if (live > pick(MAX_KEYS, 12, 8)) { // the quietest released key (never a young one) fades out; Medium and Low let fewer keys sound
       Voice *victim = nullptr;
       double score = INFINITY;
       for (int i = 0; i < nVoices; i++) {
@@ -350,6 +367,7 @@ bool PipeEngine::startKey(int key, double velocity, const KeyModels *models, Dat
       if (victim) victim->fading = true;
     }
   }
+  v->nb = expr.bendOf(key); // a key pressed again starts at its own bend, at once (process retimes its pipes)
   v->down = true; v->aTarget = 1; v->aRate = 1 / (palletTime(velocity, P[p::rise]) * fs);
   for (int r = 0; r < RANKS; r++) if (v->slider[r] > 0) v->pipes[r].asleep = false;
   focus = v;
@@ -404,13 +422,21 @@ void PipeEngine::bend(double value) {
 
 void PipeEngine::process(float *L, float *R, int n) {
   for (int at = 0, m; at < n; at += m) {
-    // pitch bend glides in steps of at most 128 samples, every pipe retimed at each
-    m = std::min(bendNow != bendTo ? 128 : BLOCK_MAX, n - at);
+    // pitch bend (the wheel's, and each key's own) glides in steps of at most 128 samples, the
+    // pipes whose bend moved retimed at each
+    bool own = false;
+    for (int i = 0; i < nVoices && !own; i++) own = voices[i]->nb != expr.bendOf(voices[i]->key);
+    m = std::min(bendNow != bendTo || own ? 128 : BLOCK_MAX, n - at);
     if (bendNow != bendTo) {
       bendNow += (bendTo - bendNow) * (1 - std::exp(-m / (BEND_T * fs)));
       if (std::fabs(bendNow - bendTo) < 1e-9) bendNow = bendTo;
     }
-    for (int i = 0; i < nVoices; i++) for (Pipe &q : voices[i]->pipes) if (q.R && q.rt != bendNow) q.retime(bendNow);
+    for (int i = 0; i < nVoices; i++) {
+      Voice &v = *voices[i];
+      if (own) v.nb = glideTo(v.nb, expr.bendOf(v.key), m / fs, BEND_T);
+      const double r = bendNow * v.nb;
+      for (Pipe &q : v.pipes) if (q.R && q.rt != r) q.retime(r);
+    }
     processBlock(L + at, R + at, m);
   }
   data.audioCycle();

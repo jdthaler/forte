@@ -4,6 +4,7 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './sync-params.js';
 import { KEY_LO, KEY_HI } from './tuning.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -11,10 +12,11 @@ export const INSTRUMENT = {
   id: 'huygens',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'venue', 'tone', 'body'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'tone', 'body', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_LO, KEY_HI],                  // MIDI keys: A0–C8, 21–108
   space: 'hold',                            // Space and CC64 latch the keys
   modWheel: 'kick',                         // CC1: the pulse coupling, from its default up
+  mpe: { bend: 48 },                        // MPE: a note's bend turns its lamp's resistor (the coupling is every lamp's: no slide)
   // the engine: the physics in C++ (native/instruments/huygens), built as WebAssembly. It tunes each
   // key itself (tuning, tonic, mistuning), or plays the frequency a note brings (huygens-wasm.js)
   wasm: { name: 'HuygensWasmEngine', module: new URL('./huygens-wasm.js', import.meta.url).href, binary: new URL('../wasm/huygens.wasm', import.meta.url).href },

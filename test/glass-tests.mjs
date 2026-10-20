@@ -249,6 +249,14 @@ test('tuning: every bowl F3–A6 speaks within ±3 ¢ of 12-TET (perfect bowls)'
   assert.ok(Math.abs(worst) < 3, `worst ${worst.toFixed(2)} ¢ at ${wk}`);
   console.log(`        worst ${worst.toFixed(2)} ¢ (key ${wk})`);
 });
+test('the keyboard\'s tuning: at A = 415 Hz, and in ¼-comma meantone (E4 −3.42 ¢, C4 +10.26 ¢), the bowl is ground to its tuned note and speaks within ±3 ¢ of it', () => {
+  for (const [k, o, c] of [[69, { pitch: 415 }, cents(415, 440)], [64, { temperament: 'meantone' }, -3.42], [60, { temperament: 'meantone' }, 10.26]]) {
+    const Q = P({ ...QUIET, ...o }), f = keyFreq(k) * 2 ** (c / 1200);
+    near(cents(bowl(k, Q).modes[0].f, f), 0, 0.01, `${k}: the model's bowl (¢)`);
+    const { L } = hold(k, 0.6, 1.6, Q);
+    near(cents(peakFreq(L, 0.9 * FS, 1.6 * FS, f), f), 0, 3, `${k}: it speaks at (¢)`);
+  }
+});
 test('tuning past the compass: A2–E3 and A♯6–C8 speak within ±3 ¢, the big bowls below A2 a few cents sharp (the finger), bounded', () => {
   for (const k of [KEY_MIN, 28, 36, 45, 52, 94, 100, 104, KEY_MAX]) {
     const sec = k < 40 ? 3 : 1.6, { L, R } = hold(k, 0.6, sec, P(QUIET)), x = k > 73 ? R : L;
@@ -392,6 +400,47 @@ test('no clicks: onsets and releases are smooth (largest step < 3 × typical slo
     const seg = d.slice(t0 * FS, t1 * FS), mx = Math.max(...seg), typ = Math.max(...d.slice(0.6 * FS, 0.9 * FS));
     assert.ok(mx < 3 * typ, `${t0}–${t1} s: step ${mx.toExponential(2)} vs steady ${typ.toExponential(2)}`);
   }
+});
+test('Quality: Medium and Low play the families up to (4,0) and (3,0) and let fewer untouched bowls ring (24, 16), never a touched one; a bowl keeps its pitch (1 ¢), level (1.5 dB) and squeal', () => {
+  const at = (quality, params, events, sec) => {
+    const e = new ArmonicaEngine(FS); e.setQuality(quality); e.setParams(params);
+    const n = Math.round(sec * FS), L = new Float32Array(n), R = new Float32Array(n), bL = new Float32Array(128), bR = new Float32Array(128);
+    const ev = events.map(([t, type, a, b]) => ({ s: Math.round(t * FS), type, a, b })).sort((x, y) => x.s - y.s);
+    let j = 0, most = 0;
+    for (let s = 0; s < n; s += 128) {
+      while (j < ev.length && ev[j].s <= s) { const { type, a, b } = ev[j++]; if (type === 'on') e.noteOn(a, b); else e.noteOff(a); }
+      e.process(bL, bR, 128); L.set(bL.subarray(0, Math.min(128, n - s)), s); R.set(bR.subarray(0, Math.min(128, n - s)), s);
+      most = Math.max(most, e.voiceCount());
+    }
+    return { L, R, e, most };
+  };
+  // 12 bowls rubbed and let go, then 12 more held: the untouched ones ring on up to the Quality's count
+  const first = Array.from({ length: 12 }, (_, i) => 55 + 2 * i), then = first.map((k) => k + 1);
+  const ev = [...first.map((k) => [0, 'on', k, 0.7]), ...first.map((k) => [1, 'off', k]), ...then.map((k, i) => [1.2 + 0.02 * i, 'on', k, 0.7])];
+  const res = [];
+  for (const [quality, cap, fam] of [['high', 24, 5], ['medium', 24, 3], ['low', 16, 2]]) {
+    const { L, e, most } = at(quality, P(), ev, 1.8), v = e.voices;
+    for (const x of L) assert.ok(Number.isFinite(x), `${quality}: not finite`);
+    assert.ok(most <= cap, `${quality}: ${most} bowls at once`);
+    assert.equal(v.filter((x) => x.touch).length, 12, `${quality}: every touched bowl sounds`);
+    for (const x of v) assert.ok(x.N <= fam, `${quality}: key ${x.key} plays ${x.N} families`);
+    res.push(`${quality} ${most} bowls`);
+  }
+  // pitch (perfect bowls), level, and pressing hard still squeals in (3,0)
+  for (const key of [53, 64, 76, 88]) {
+    const hq = at('high', P(QUIET), [[0, 'on', key, 0.6]], 1.6), hd = at('high', P(), [[0, 'on', key, 0.6]], 1.6), f = keyFreq(key);
+    const f0 = peakFreq(hq.L, 0.9 * FS, 1.6 * FS, f), l0 = rms(hd.L, 0.9 * FS, 1.6 * FS);
+    for (const quality of ['medium', 'low']) {
+      const c = cents(peakFreq(at(quality, P(QUIET), [[0, 'on', key, 0.6]], 1.6).L, 0.9 * FS, 1.6 * FS, f), f0);
+      const d = 20 * Math.log10(rms(at(quality, P(), [[0, 'on', key, 0.6]], 1.6).L, 0.9 * FS, 1.6 * FS) / l0);
+      assert.ok(Math.abs(c) < 1, `${quality}, key ${key}: ${c.toFixed(2)} ¢ from High`);
+      assert.ok(Math.abs(d) < 1.5, `${quality}, key ${key}: ${d.toFixed(2)} dB from High`);
+      if (key === 64) res.push(`${quality} E4 ${c.toFixed(2)} ¢ ${d.toFixed(2)} dB`);
+    }
+  }
+  const b = bowl(64, P(QUIET)), hard = at('low', P({ ...QUIET, press: 20 }), [[0, 'on', 64, 1]], 2).L;
+  assert.ok(tone(hard, b.modes[1].f, 1.2 * FS, 2 * FS) > 3 * tone(hard, b.modes[0].f, 1.2 * FS, 2 * FS), 'Low, pressing hard: (3,0) over (2,0)');
+  console.log(`        ${res.join('; ')}`);
 });
 test('CPU: 10 bowls rubbed at once render well under real time', () => {
   const keys = [55, 59, 62, 65, 69, 72, 76, 79, 84, 88], t0 = performance.now();

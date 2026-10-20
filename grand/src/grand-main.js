@@ -9,6 +9,7 @@ import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './grand-instrument.js';
 import { wasmModel } from './grand-wasm.js';
+import { tuningRatio } from '../../shared/tuning.js';
 
 const model = await wasmModel();
 const MODE_BUDGET = 4000; // the engine's default oscillator budget (grand-engine.h)
@@ -93,6 +94,13 @@ function simulate(key, vel) {
 }
 
 const sci = (v) => v.toExponential(1);
+const signed = (c) => `${c >= 0 ? '+' : ''}${c.toFixed(1)}`;
+// the key's pitch from 12-TET at A = 440 Hz: the keyboard's tuning's share and the stretch's
+function tuningRow(P, S) {
+  const tuned = 1200 * Math.log2(tuningRatio(P, S.key)), stretch = S.cents - tuned;
+  if (Math.abs(tuned) < 0.05) return P.stretch === false ? '12-TET' : `${signed(S.cents)} ¢ from 12-TET (stretched: every octave beatless)`;
+  return `${signed(S.cents)} ¢ from 12-TET at A = 440 Hz (the tuning ${signed(tuned)} ¢${P.stretch === false ? '' : `, the stretch ${signed(stretch)} ¢: every octave beatless`})`;
+}
 function update() {
   const P = shell.P, B = getBoard(P);
   sim = simulate(focus, focusVel); t0 = performance.now();
@@ -117,7 +125,7 @@ function update() {
     ['String', `L = ${(S.L * 100).toFixed(1)} cm · ${S.wound ? `⌀${(S.d * 1e3).toFixed(2)} mm core, copper-wound to ⌀${(S.dOut * 1e3).toFixed(1)} mm` : `plain steel ⌀${(S.d * 1e3).toFixed(2)} mm`}`],
     ['Tension', `${S.T.toFixed(0)} N (${((100 * S.stress) / 2.2e9).toFixed(0)} % of breaking) · μ = ${(S.mu * 1e3).toFixed(1)} g/m`],
     ['Inharmonicity', `B = ${S.B.toExponential(2)}${ps[9] ? ` · 10th partial ${ps[9].stretch >= 0 ? '+' : ''}${ps[9].stretch.toFixed(0)} ¢` : ''}`],
-    ['Tuning', P.stretch === false ? '12-TET' : `${S.cents >= 0 ? '+' : ''}${S.cents.toFixed(1)} ¢ from 12-TET (stretched: every octave beatless)`],
+    ['Tuning', tuningRow(P, S)],
     ['Hammer', `${(d.hammer.mass / ns * 1e3).toFixed(1)} g at ${sim.v0.toFixed(2)} m/s, x = ${(d.xh * 100).toFixed(1)} cm · contact ${sim.contactMs.toFixed(2)} ms, peak ${sim.Fmax.toFixed(0)} N`],
     ['Bridge', B ? `soundboard: Re Y(f₁) = ${sci(ps[0].GV)} s/kg (board mean ${sci(B.Ginf)}) · σ_b = ${sb.toFixed(2)} s⁻¹` : `frame: G = ${sci(P.gFrame)} s/kg · σ_b = ${sb.toFixed(3)} s⁻¹ per string`],
     ['Unison', ns > 1 ? `coupling ${ns}σ_b = ${(ns * sb).toFixed(3)} s⁻¹ vs mistuning 2πΔf = ${dw.toFixed(3)} s⁻¹ → ${dw > ns * sb ? 'they beat' : 'they lock'}` : 'one string'],

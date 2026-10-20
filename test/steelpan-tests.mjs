@@ -24,10 +24,11 @@ const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const cents = (a, b) => 1200 * Math.log2(a / b);
 const dB = (x) => 20 * Math.log10(Math.max(x, 1e-12));
 
-// Play events [[t, 'on'|'off'|'pressure'|'sustain', key, value]] through an engine in 128-sample
-// blocks; `watch(e, t)` is called after each block.
-function play(params, sec, events, { fs = FS, watch } = {}) {
+// Play events [[t, 'on'|'off'|'pressure'|'slide'|'sustain'|'params', key, value]] through an engine in 128-sample
+// blocks, at a Quality (High unless given); `watch(e, t)` is called after each block.
+function play(params, sec, events, { fs = FS, watch, quality } = {}) {
   const e = new SteelPanEngine(fs);
+  if (quality) e.setQuality(quality);
   e.setParams(params);
   const n = Math.round(sec * fs), L = new Float32Array(n), R = new Float32Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
   const ev = [...events].sort((a, b) => a[0] - b[0]);
@@ -37,6 +38,7 @@ function play(params, sec, events, { fs = FS, watch } = {}) {
       const [, what, key, v] = ev[k];
       if (what === 'on') e.noteOn(key, v); else if (what === 'off') e.noteOff(key);
       else if (what === 'sustain') e.setSustain(v); else if (what === 'pressure') e.handle({ type: 'pressure', key, value: v });
+      else if (what === 'slide') e.handle({ type: 'slide', key, value: v }); else if (what === 'params') e.setParams(v);
     }
     e.process(bL, bR, bl);
     L.set(bL.subarray(0, Math.min(bl, n - s)), s); R.set(bR.subarray(0, Math.min(bl, n - s)), s);
@@ -96,6 +98,19 @@ test('every key\'s fundamental is on equal-tempered pitch (A0–C8), and its mod
     assert.ok(Math.abs(cents(m[0].f, keyFreq(key))) < 1e-9, `${key}`);
     assert.deepEqual(m.slice(0, 3).map((x) => [x.i, x.j]), [[1, 1], [2, 1], [1, 2]]);
     for (let i = 4; i < m.length; i++) assert.ok(m[i].f >= m[i - 1].f && m[i].f < 18000);
+  }
+});
+test('the keyboard\'s tuning moves each note, and the pan\'s own tuning stays over it: at A = 415 Hz, and in ¼-comma meantone (E4 −3.42 ¢, C4 +10.26 ¢), 1 : 2 : 3 (or 1 : 2 : 4) on the tuned note, which sounds there (within 0.5 ¢)', () => {
+  for (const [key, o, c] of [[69, { pitch: 415 }, cents(415, 440)], [64, { temperament: 'meantone' }, -3.42], [60, { temperament: 'meantone' }, 10.26]]) {
+    const f1 = keyFreq(key) * 2 ** (c / 1200);
+    let m = M.noteModes(key, P({ accuracy: 0, ...o }));
+    assert.ok(Math.abs(cents(m[0].f, f1)) < 0.01 && Math.abs(m[1].f / m[0].f - 2) < 1e-12 && Math.abs(m[2].f / m[0].f - 3) < 1e-12, `${key}: 1 : 2 : 3`);
+    m = M.noteModes(key, P({ accuracy: 0, tuning: 'double', ...o }));
+    assert.ok(Math.abs(m[2].f / m[0].f - 4) < 1e-12, `${key}: 1 : 2 : 4`);
+    const x = render(key, P({ ...LIN, ...o }), 0.7, 0.6), a = 4800, b = 4800 + 16384;
+    let lo = f1 * 2 ** (-10 / 1200), hi = f1 * 2 ** (10 / 1200); // the strongest frequency within ±10 ¢ (golden section)
+    for (let it = 0; it < 40; it++) { const m1 = hi - 0.618 * (hi - lo), m2 = lo + 0.618 * (hi - lo); if (tone(x, m1, a, b) > tone(x, m2, a, b)) hi = m2; else lo = m1; }
+    assert.ok(Math.abs(cents((lo + hi) / 2, f1)) < 0.5, `${key}: sounds ${cents((lo + hi) / 2, f1).toFixed(2)} ¢ from its tuned note`);
   }
 });
 test('Hertz contact: the stick\'s contact time goes as v^(−1/5); a half-sine pulse has its first zero at 1.5/τ', () => {
@@ -233,6 +248,36 @@ test('a roll: while the key is down the sticks keep striking; leaning on the key
   const released = play(P({ letRing: true, roll: 0.6 }), 1.5, [...ev, [0.5, 'off', key]]).L;
   assert.ok(dB(late(released) / early(released)) < -20, 'and stops with the key');
 });
+// A note's own slide (MPE) is its own roll.
+const same = (x, y, what) => { for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) assert.fail(`${what}: sample ${i} differs`); };
+test('a note\'s own slide is its roll: a lone note slid to x is the note rolled at x, bit for bit, and the note beside it is not rolled', () => {
+  const key = 64, ev = [[0, 'on', key, 0.7]];
+  for (const x of [0.3, 1]) {
+    same(play(P({ letRing: true }), 1, [[0, 'slide', key, x], ...ev]).L, play(P({ letRing: true, roll: x }), 1, ev).L, `roll ${x}`);
+    // slid while it sounds, as the wheel moved then
+    same(play(P({ letRing: true }), 1, [...ev, [0.3, 'slide', key, x]]).L, play(P({ letRing: true }), 1, [...ev, [0.3, 'params', 0, P({ letRing: true, roll: x })]]).L, `roll ${x}, slid`);
+  }
+  // two notes far apart, uncoupled: the chord is the rolled note and the struck one, apart
+  const Q = P({ letRing: true, coupling: 0 }), chord = play(Q, 1, [[0, 'slide', key, 0.6], ...ev, [0, 'on', 48, 0.7]]).L;
+  const a = play({ ...Q, roll: 0.6 }, 1, ev).L, b = play(Q, 1, [[0, 'on', 48, 0.7]]).L;
+  let d = 0, pk = 0;
+  for (let i = 0; i < chord.length; i++) { d = Math.max(d, Math.abs(chord[i] - a[i] - b[i])); pk = Math.max(pk, Math.abs(chord[i])); }
+  assert.ok(d < 1e-5 * pk, `differs by ${(d / pk).toExponential(2)} of the peak`);
+  // and back to none (NaN), before the note and while it sounds: bit-identical, wheel up or not
+  for (const roll of [0, 0.5]) {
+    same(play(P({ roll }), 0.6, [[0, 'slide', key, 1], [0, 'slide', key, NaN], ...ev, [0.2, 'slide', 67, 0.4], [0.2, 'slide', 67, NaN], [0.3, 'on', 67, 0.5]]).L,
+      play(P({ roll }), 0.6, [...ev, [0.3, 'on', 67, 0.5]]).L, `slid and back, roll ${roll}`);
+  }
+});
+test('stability: each note\'s own roll swept every block, on chords at the corners, at 44.1, 48 and 96 kHz', () => {
+  for (const fs of [44100, 48000, 96000]) for (const o of [{}, { rise: 10, coupling: 0.01, contact: 0.2, rollRate: 24, letRing: true }]) {
+    const keys = [21, 60, 64, 67, 108], ev = keys.map((k) => [0, 'on', k, 1]);
+    const { L } = play(P(o), 0.5, ev, { fs, watch: (e, t) => keys.forEach((k, i) => e.handle({ type: 'slide', key: k, value: 0.5 + 0.5 * Math.sin(t * fs / 128 / (2 + i)) })) });
+    let pk = 0;
+    for (const v of L) { assert.ok(Number.isFinite(v), `${fs} Hz ${JSON.stringify(o)}: NaN`); pk = Math.max(pk, Math.abs(v)); }
+    assert.ok(pk < 4, `${fs} Hz ${JSON.stringify(o)}: peak ${pk.toFixed(2)}`);
+  }
+});
 test('the compass is the steel band\'s, six bass to high tenor (A1–F♯6), with Full range opening A0–C8', () => {
   assert.deepEqual(INSTRUMENT.compass.keys, [33, 90]);
   assert.equal(KEY_LO, 33); assert.equal(KEY_HI, 90);
@@ -270,6 +315,32 @@ test('silence after Panic, and the notes go to sleep once rung out', () => {
   assert.ok(a.every((v) => v === 0) && e.voiceCount() === 0 && L.length);
   const short = play(P({ t60: 0.2 }), 3, [[0, 'on', 72, 0.5], [0.05, 'off', 72]]).e;
   assert.ok(!short.active(72) && !short.active(79), 'asleep');
+});
+test('Quality: a stroke rings at most 8 modes at Medium and 6 at Low (all 12 at High), and notes go to sleep sooner; a note keeps its pitch and level', () => {
+  const keys = Array.from({ length: 24 }, (_, i) => KEY_LO + ((i * 7) % (KEY_HI - KEY_LO))), work = {};
+  for (const [quality, most] of [['high', 12], ['medium', 8], ['low', 6]]) {
+    let w = 0, top = 0;
+    const { L } = play(P(), 4, keys.map((k, i) => [0.1 * i, 'on', k, 0.8]), { quality, watch: (e) => { for (let k = 21; k <= 108; k++) { const m = e.modes(k); w += m; top = Math.max(top, m); } } });
+    assert.ok(L.every(Number.isFinite), `${quality}: NaN`);
+    assert.ok(top <= most && (quality !== 'high' || top === 12), `${quality}: ${top} modes`);
+    work[quality] = w;
+  }
+  console.log(`         modes × time at Medium ${((100 * work.medium) / work.high).toFixed(0)} %, Low ${((100 * work.low) / work.high).toFixed(0)} % of High's`);
+  assert.ok(work.medium < 0.8 * work.high && work.low < 0.6 * work.high, JSON.stringify(work));
+  const line = (x, f, a, b) => { // the strongest line within 1 % of f (golden section)
+    let lo = f * 0.99, hi = f * 1.01;
+    for (let i = 0; i < 50; i++) { const m1 = hi - 0.618 * (hi - lo), m2 = lo + 0.618 * (hi - lo); if (tone(x, m1, a, b) > tone(x, m2, a, b)) hi = m2; else lo = m1; }
+    return (lo + hi) / 2;
+  };
+  for (const key of [48, 62, 79]) {
+    const f = keyFreq(key), at = (quality) => play(P(LIN), 1, [[0, 'on', key, 0.8]], { quality }).L, hi = at('high'), a = 0.1 * FS, b = FS;
+    for (const quality of ['medium', 'low']) {
+      const x = at(quality), d = dB(rms(x, 0, x.length) / rms(hi, 0, hi.length)), c = cents(line(x, f, a, b), line(hi, f, a, b));
+      assert.ok(Math.abs(d) < 1.5 && Math.abs(c) < 0.1, `key ${key} at ${quality}: ${d.toFixed(2)} dB, ${c.toFixed(3)} ¢`);
+    }
+  }
+  const awake = (quality) => { let t = 0; play(P({ letRing: true }), 8, [[0, 'on', 60, 0.8]], { quality, watch: (e, s) => { if (e.active(60)) t = s; } }); return t; };
+  assert.ok(awake('low') < awake('high'), 'a note goes to sleep sooner at Low');
 });
 test('CPU: 10 notes and their neighbours render faster than 5× real time', () => {
   const keys = [48, 52, 55, 60, 64, 67, 71, 72, 76, 79], sec = 2;

@@ -333,6 +333,15 @@ tools/render-pianet.mjs               node tools/render-pianet.mjs → examples/
 * The valve combo is a generic soft clipper and speaker filter, not a model
   of a particular amplifier.
 
+## Quality
+
+The Pianet costs little, so Medium and Low trim little. Medium lets 16
+notes ring at once (40 at High), and the pedal's held notes can now make
+way for new ones, quietest first; a reed also comes to rest once it has
+rung down 70 dB from its loudest. Low lets 10 notes ring, rests a reed at
+60 dB down, and leaves out the reed modes above 12 kHz, a faint shimmer at
+the top of the bass reeds' attack. A single note sounds the same.
+
 ## Prior art and references
 
 ### The original instrument and its inventor

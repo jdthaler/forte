@@ -29,10 +29,17 @@ static const double DEAD = fd::pow(10, -6.5); // and the voice when its whole po
 
 static double voicing(int key) { return fd::pow(2, (60 - key) / 48.0); }
 
-// the stars' version: the kind, mass and speed-up that build them
+// the stars' version: the kind, mass and speed-up that build them, and the keyboard's tuning (its
+// root only in a temperament other than equal, its custom cents only in custom: stars-wasm.js
+// starId names a star by the same values)
 static uint64_t versionOf(const double *P) {
   uint64_t h = 1469598103934665603ull;
-  for (double v : {P[p::family], P[p::mass], P[p::speedup]}) {
+  const int t = (int)P[p::temperament];
+  const bool tempered = t != forte::temperament::equal, custom = t == forte::temperament::custom;
+  const double c = custom ? 1 : 0;
+  for (double v : {P[p::family], P[p::mass], P[p::speedup], P[p::pitch], P[p::temperament], tempered ? P[p::tuningRoot] : 0,
+                   c * P[p::cents1], c * P[p::cents2], c * P[p::cents3], c * P[p::cents4], c * P[p::cents5], c * P[p::cents6],
+                   c * P[p::cents7], c * P[p::cents8], c * P[p::cents9], c * P[p::cents10], c * P[p::cents11]}) {
     v += 0.0;
     uint64_t b;
     std::memcpy(&b, &v, 8);
@@ -48,11 +55,13 @@ void StarEngine::Voice::start(StarEngine &eng, int key_, const Star &d, uint64_t
   for (int i = 0; i < N; i++) {
     F0[i] = d.f[i]; L[i] = d.l[i]; M[i] = d.m[i]; WE[i] = d.wEnv[i]; WC[i] = d.wCore[i]; Pw[i] = d.p[i]; GAM[i] = d.gamma[i]; Z[i] = d.zeta[i]; AS[i] = d.asat[i];
     W[i] = C[i] = S[i] = RHO[i] = A1[i] = A2[i] = Y1[i] = Y2[i] = G[i] = GT[i] = AMP[i] = ETA[i] = 0;
-    act[i] = 1;
   }
+  trim(eng);
+  for (int i = 0; i < N; i++) act[i] = on[i];
   const double pp = 0.6 * std::max(-1.0, std::min(1.0, 2.0 * (key - PAN_LO) / (PAN_HI - PAN_LO) - 1)), a = ((pp + 1) * pi) / 4;
   gl = fd::cos(a); gr = fd::sin(a);
   vel = 0.7; pressure = 1; held = false; age = 0; fade = 1; fading = false; dead = false;
+  spin = eng.expr.slideOr(key, eng.S[kSpin]); slid = false; // a slide starts there
   peak = 1e-12; level = 0; seed = Rng(key * 104729 + (int)(eng.presses++ & 0xffff));
   compact();
   freqs(eng); coeffs(eng); gains(eng, true);
@@ -60,17 +69,54 @@ void StarEngine::Voice::start(StarEngine &eng, int key_, const Star &d, uint64_t
     for (int i = 0; i < N; i++) {
       const double u = 1e-3 * AS[i] * fd::cos(2 * pi * seed());
       const double v = 1e-3 * AS[i] * fd::sin(2 * pi * seed());
-      addC(i, u, v);
+      if (on[i]) addC(i, u, v);
     }
   }
   inUse = true;
 }
 
+// Quality: Medium and Low play only the strongest 60 % and 40 % of the modes (by the power the
+// observer hears from each on average over inclinations: the weak outer modes of the envelope and
+// the faint l = 3 go first), lifted together by the power the others had, so the note keeps its level.
+void StarEngine::Voice::trim(StarEngine &eng) {
+  const int keep = eng.pick(N, (int)std::ceil(0.6 * N), (int)std::ceil(0.4 * N));
+  lift = 1; nOn = N;
+  std::fill(on.begin(), on.begin() + N, 1);
+  if (keep >= N) return;
+  double all = 0, kept = 0;
+  for (int i = 0; i < N; i++) { eng.rank[i] = (dscuti ? AS[i] * AS[i] : Pw[i]) * VIS[L[i]] / (2 * L[i] + 1); all += eng.rank[i]; }
+  double *r = eng.rank.data();
+  std::nth_element(r, r + (N - keep), r + N);
+  const double floor = r[N - keep];
+  nOn = 0;
+  for (int i = 0; i < N; i++) {
+    const double w = (dscuti ? AS[i] * AS[i] : Pw[i]) * VIS[L[i]] / (2 * L[i] + 1);
+    on[i] = w >= floor && nOn < keep;
+    if (on[i]) { nOn++; kept += w; }
+  }
+  if (kept > 0 && all > kept) lift = std::sqrt(all / kept);
+}
+
 void StarEngine::Voice::compact() { int k = 0; for (int r = 0; r < N; r++) if (act[r]) idx[k++] = r; nAct = k; }
+
+// The star's rotation this block: the knob's, or gliding toward its slide (and back to the knob's
+// once the slide is gone). Whether it moved.
+bool StarEngine::Voice::turn(const StarEngine &eng, int n) {
+  const double x = eng.expr.slideOr(key, NAN), was = spin;
+  const bool own = x == x;
+  if (own) slid = true;
+  if (!slid) spin = eng.S[kSpin];
+  else {
+    const double to = own ? x : eng.S[kSpin];
+    spin = glideTo(spin, to, n / eng.fs, GLIDE);
+    if (!own && spin == to) slid = false;
+  }
+  return spin != was;
+}
 
 // frequencies with rotational splitting: δν = m (w_env Ω_env + w_core Ω_core)/2π, sped up K times
 void StarEngine::Voice::freqs(const StarEngine &eng) {
-  const double Kc = K * 1e-6, env = eng.S[kSpin] * SUN.rot, core = env * (dscuti ? 1 : eng.S[kCore]), fs = eng.fs;
+  const double Kc = K * 1e-6, env = spin * SUN.rot, core = env * (dscuti ? 1 : eng.S[kCore]), fs = eng.fs;
   for (int i = 0; i < N; i++) {
     const double f = jsMin(0.45 * fs, jsMax(1, F0[i] + M[i] * Kc * (WE[i] * env + WC[i] * core)));
     const double w = (2 * pi * f) / fs;
@@ -89,7 +135,7 @@ void StarEngine::Voice::coeffs(const StarEngine &eng) {
 
 // what the observer sees of each m component: √(V_l² E_lm(i)), and the voicing
 void StarEngine::Voice::gains(const StarEngine &eng, bool now) {
-  const double g = OUT * voicing(key);
+  const double g = OUT * voicing(key) * lift;
   for (int i = 0; i < N; i++) { GT[i] = g * eng.gtab[L[i] * 7 + M[i] + 3]; if (now) G[i] = GT[i]; }
 }
 
@@ -109,7 +155,7 @@ double StarEngine::Voice::amp2(int i) const {
 // star, random and seeded; each mode pushed by its spherical harmonic there, in sine phase).
 void StarEngine::Voice::press(const StarEngine &eng, double velocity) {
   vel = velocity; held = true; fading = false; fade = 1; dead = false; age = 0;
-  if (nAct < N) { for (int i = 0; i < N; i++) act[i] = 1; compact(); }
+  if (nAct < nOn) { for (int i = 0; i < N; i++) act[i] = on[i]; compact(); }
   const double F = eng.S[kFlare] * velocity * (dscuti ? 0.3 : 1);
   if (!(F > 0)) return;
   const double x = 2 * seed() - 1, s = std::sqrt(1 - x * x);
@@ -159,7 +205,7 @@ void StarEngine::Voice::render(float *Lo, float *Ro, int n, StarEngine &eng) {
   double *buf = eng.buf.data();
   const double glide = 1 - fd::exp(-n / (GLIDE * eng.fs));
   const bool driving = held || eng.sustain;
-  if (eng.freqMoved) { freqs(eng); coeffs(eng); }
+  if (turn(eng, n) || eng.freqMoved) { freqs(eng); coeffs(eng); }
   else if (eng.dampMoved) coeffs(eng);
   if (eng.inclMoved) gains(eng, false);
   if (dscuti) landau(eng, n, driving);
@@ -247,6 +293,7 @@ StarEngine::StarEngine(double fs)
           sp.family = (int)s.family.load(std::memory_order_relaxed);
           sp.mass = s.mass.load(std::memory_order_relaxed);
           sp.speedup = s.speedup.load(std::memory_order_relaxed);
+          for (int i = 0; i < 12; i++) sp.tuning.r[i] = s.ratio[i].load(std::memory_order_relaxed);
           std::atomic_thread_fence(std::memory_order_acquire);
           if (s.version.load(std::memory_order_relaxed) != v) return nullptr;
           return std::make_unique<Star>(keyStar(key, sp));
@@ -313,6 +360,8 @@ void StarEngine::setParams(const double *np) {
       s.family.store(P[p::family], std::memory_order_relaxed);
       s.mass.store(P[p::mass], std::memory_order_relaxed);
       s.speedup.store(P[p::speedup], std::memory_order_relaxed);
+      const forte::Tuning tu = tuningOf(P.data());
+      for (int i = 0; i < 12; i++) s.ratio[i].store(tu.r[i], std::memory_order_relaxed);
       s.version.store(version, std::memory_order_release);
     }
     data.prepare(version, KEY_LO, KEY_HI, focus ? focus->key : 60);
@@ -394,7 +443,7 @@ void StarEngine::startNote(int key, double velocity, const Star &d, uint64_t id)
   focus = v; postT = POST_EVERY; // post its amplitudes soon
   int live = 0;
   for (int i = 0; i < nVoices; i++) if (!voices[i]->fading) live++;
-  if (live > MAX_VOICES) {
+  if (live > pick(MAX_VOICES, 11, 8)) { // Quality: fewer stars at once at Medium and Low
     Voice *victim = nullptr;
     double score = INFINITY;
     for (int i = 0; i < nVoices; i++) {

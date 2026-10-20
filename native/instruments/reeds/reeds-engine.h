@@ -22,6 +22,7 @@
 #include "forte/background.h"
 #include "forte/dsp.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "reeds-model.h"
 #include "reeds-params.h"
 
@@ -32,6 +33,7 @@ class ReedEngine : public Engine {
   static constexpr int OS = 2;
   static constexpr int BLOCK = 128;   // samples per block at the output rate (longer calls are split)
   static constexpr int POOL = 96;     // voices, sounding or fading
+  static constexpr double NOTE_BEND = 48; // semitones: one note's own bend (MPE) at most
   explicit ReedEngine(double fs);
 
   void setParams(const double *P) override;
@@ -40,20 +42,26 @@ class ReedEngine : public Engine {
   void setSustain(bool on) override;
   void allNotesOff() override;
   void bend(double value) override; // every reed's bending stiffness ×r², its notes ×r
+  void noteBend(double ratio, int key) override; // one reed's stiffness ×r², on top of the wheel's
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // A reed its page's model built already (packVoiceData; the page's noteData), for the next
   // note on that key, so the audio thread needn't build it. Only without threads (WebAssembly):
   // with them, the worker builds every key ahead.
   bool offer(const double *packed, int n);
+  // whether key's reed is built for the knobs as they are (the tests wait for it)
+  bool ready(int key) { return bool(data.get(key, version)); }
 
   struct Voice {
-    int key = 0, N = 0;
+    int key = 0, N = 0, Nall = 0; // N: the modes still played (Medium and Low drop the ones decayed away), of Nall
     uint64_t version = 0;
     bool inUse = false;
     double k = 0;
+    int os = OS, hMax = 0; // this voice's oversampling (Medium and Low play their reeds at the output rate), the hammer's longest flight
+    double prune = 0, deathRel = 0, loudest = 0; // Medium, Low: a mode / the voice ends this far below the loudest
     std::array<double, MAX_MODES> q{}, q1{}, a1{}, a2{}, a1d{}, a2d{}, w{}, bw{}, pk{}, bp{}, om{}, sig{}, dw{}, om0{};
-    double bend = 1; // om0: the modes unbent; bend: the ratio om is tuned to
+    // om0: the modes unbent; bend: the ratio om is tuned to, the wheel's × the note's own (own, gliding to its key's)
+    double bend = 1, own = 1;
     double comp = 0, cStop = 0, stopDen = 1;
     int hits = 0;
     Hammer hammer{};
@@ -72,6 +80,8 @@ class ReedEngine : public Engine {
     double contactForce(double dFree);
     double felt(double D) const;
     void render(double *buf, int n, const ReedEngine &eng);
+    void pruneModes();
+    void stopFor(int n); // the frame stop's compliance over the first n modes
   };
 
   // read by the tests and the views (through the WebAssembly's hooks), in the order they started
@@ -83,6 +93,7 @@ class ReedEngine : public Engine {
   const int hammerMax;
   double damperSigma = LOSS.damper;
   double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
+  NoteExpression expr{NOTE_BEND};  // each key's own bend (MPE)
   double kF = 0, nodeA = 0, nodeB = 0;
   double *capA, *capB; // C(y) for the current gap and, while it glides, the next block's
   double y0 = 0, y0N = 0, cRest = 0, cRestN = 0, dRest = 0, dRestN = 0;
@@ -103,6 +114,7 @@ class ReedEngine : public Engine {
   bool hasParams = false;
   const int maxVoices = 32;
   std::array<double, BLOCK * OS> mono{};
+  std::array<double, BLOCK> mono1{}; // Medium's and Low's reeds, at the output rate
   // decimator: Blackman-windowed sinc, symmetric (applied folded)
   static constexpr int T = 47;
   std::array<double, T> fir{};
@@ -117,8 +129,8 @@ class ReedEngine : public Engine {
   double mix = 1, mixStep;
   double drive = 1, tremInc = 0, ldrOn = 0, ldrOff = 0;
 
-  // the reeds, built off the audio thread for each version of solder, strike and hardness
-  struct Snapshot { std::atomic<uint64_t> version{0}; std::atomic<double> solder{1}, strike{0.4}, hardness{1}; };
+  // the reeds, built off the audio thread for each version of solder, strike, hardness and the tuning
+  struct Snapshot { std::atomic<uint64_t> version{0}; std::atomic<double> solder{1}, strike{0.4}, hardness{1}, ratio[12] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; };
   std::array<Snapshot, 8> snapshots;
   int snapAt = 0;
   uint64_t version = 0;

@@ -2,6 +2,7 @@
 // a unit; the hint says what it does to the sound.
 
 import { VENUE } from '../../shared/chain.js';
+import { TUNING_GROUP } from '../../shared/tuning.js';
 
 export const RANGE = [21, 98]; // the keys: A0–D7
 export const KEY_LO = 36, KEY_HI = 84; // C2–C6: the 49 strings the bridge and board are drawn on
@@ -23,7 +24,7 @@ export const GROUPS = [
     title: 'Keys',
     params: [
       { id: 'force', label: 'Key pressure', perform: true, min: 0.05, max: 6, def: 1, log: true, fmt: (v) => `× ${v.toFixed(2)}`, hint: 'Bow force relative to the voiced touch (half of Schelleng\'s maximum). Low: whistly surface sound (double slips). High: raucous crunch. MIDI aftertouch adds to it.' },
-      { id: 'attack', label: 'Key travel time', perform: true, min: 1, max: 150, def: 8, log: true, fmt: ms, hint: 'How long a full-speed key takes to bring the string onto the wheel at full force (slower keys take longer). The attack\'s quality comes out of the stick–slip physics.' },
+      { id: 'attack', label: 'Key travel time', min: 1, max: 150, def: 8, log: true, fmt: ms, hint: 'How long a full-speed key takes to bring the string onto the wheel at full force (slower keys take longer). The attack\'s quality comes out of the stick–slip physics.' },
       { id: 'velocity', label: 'Velocity (computer keys)', min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2), hint: 'Faster keys bring the force up sooner and press a little harder.' },
     ],
   },
@@ -53,11 +54,12 @@ export const GROUPS = [
   {
     title: 'Output',
     params: [
-      { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.3, step: 0.01, fmt: pct },
+      { id: 'room', label: 'Room', min: 0, max: 1, def: 0.3, step: 0.01, fmt: pct },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
+  TUNING_GROUP,
 ];
 
 export const DEFAULTS = Object.fromEntries(GROUPS.flatMap((g) => g.params).map((p) => [p.id, p.def]));

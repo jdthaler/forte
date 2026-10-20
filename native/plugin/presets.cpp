@@ -14,6 +14,7 @@
 
 #include "choc/containers/choc_Value.h"
 #include "choc/text/choc_JSON.h"
+#include "forte/tuning.h"
 
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -57,20 +58,14 @@ fs::path root() {
 }
 fs::path folderOf(const InstrumentInfo &I) { const fs::path r = root(); return r.empty() ? r : r / I.slug; }
 
-// a number as JavaScript's String() writes it, for a choice whose options are numbers (440, 415)
-std::string numberText(double x) {
-  char buf[40];
-  for (int digits = 1; digits <= 17; digits++) {
-    std::snprintf(buf, sizeof buf, "%.*g", digits, x);
-    if (std::strtod(buf, nullptr) == x) break;
-  }
-  return buf;
-}
+std::string jsNumber(double x);
+// a choice whose options are numbers (440, 415) keeps them as numbers: its key is one when JavaScript's
+// String() writes the number back the same
 bool isNumber(const std::string &s) {
   if (s.empty()) return false;
   char *end = nullptr;
   std::strtod(s.c_str(), &end);
-  return end && *end == 0 && numberText(std::strtod(s.c_str(), nullptr)) == s;
+  return end && *end == 0 && jsNumber(std::strtod(s.c_str(), nullptr)) == s;
 }
 const char *keyOf(const ParamInfo &p, int k) { return p.keys ? p.keys[k] : p.choices[k]; }
 
@@ -78,7 +73,7 @@ const char *keyOf(const ParamInfo &p, int k) { return p.keys ? p.keys[k] : p.cho
 double valueOf(const ParamInfo &p, const choc::value::ValueView &v) {
   const bool number = v.isFloat() || v.isInt();
   if (p.kind == ParamKind::choice) {
-    const std::string s = v.isString() ? std::string(v.getString()) : number ? numberText(v.get<double>()) : std::string();
+    const std::string s = v.isString() ? std::string(v.getString()) : number ? jsNumber(v.get<double>()) : std::string();
     for (int k = 0; k < p.choiceCount; k++) if (s == keyOf(p, k)) return k;
     return p.def;
   }
@@ -251,6 +246,33 @@ std::string writePreset(const InstrumentInfo &I, const std::string &name, const 
     if (!out) { error = "The preset couldn't be saved in " + utf8Of(dir) + "."; return ""; }
   }
   return file;
+}
+
+std::string tuningsFolder() { const fs::path r = root(); return r.empty() ? std::string() : utf8Of(r / "Tunings"); }
+
+std::vector<std::string> listScalas() {
+  std::vector<std::string> out;
+  std::error_code ec;
+  const fs::path dir = pathOf(tuningsFolder());
+  if (dir.empty()) return out;
+  for (fs::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {
+    std::string ext = utf8Of(it->path().extension());
+    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+    std::error_code e2;
+    if (ext == ".scl" && it->is_regular_file(e2)) out.push_back(utf8Of(it->path().filename()));
+  }
+  std::sort(out.begin(), out.end(), [](const std::string &a, const std::string &b) { return lessName(a, b) || (!lessName(b, a) && a < b); });
+  return out;
+}
+
+bool readScalaFile(const std::string &file, double (&cents)[11], std::string &name, std::string &error) {
+  const fs::path dir = pathOf(tuningsFolder()), f = pathOf(file);
+  if (dir.empty() || file.empty() || f.has_parent_path() || f.filename() != f) { error = "There is no such Scala file."; return false; }
+  std::string text;
+  if (!readText(dir / f, text)) { error = "The Scala file can't be read."; return false; }
+  if (!readScala(text, cents, name, error)) return false;
+  if (name.empty()) name = utf8Of(f.stem());
+  return true;
 }
 
 bool showFolder(const std::string &folder) {

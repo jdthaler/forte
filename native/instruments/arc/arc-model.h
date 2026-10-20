@@ -15,6 +15,8 @@
 #include <cstdint>
 #include <numbers>
 
+#include "forte/tuning.h"
+
 namespace forte::arc {
 
 constexpr double TAU = 2 * std::numbers::pi;
@@ -43,6 +45,7 @@ struct ArcParams {
   double current = 3, gap = 3, tau = 26, restrike = 1.25, coil = 20, coilR = 0.3;
   int tune = 0; // 0: the sounding note, 1: Kelvin's formula
   bool talk = false;
+  forte::Tuning tuning; // the keyboard's (forte/tuning.h): each key's capacitor is cut for its tuned note
 };
 ArcParams arcParams(const double *P); // from the parameters, indexed as in arc-params.h
 
@@ -87,6 +90,7 @@ struct SteadyOptions { int M = 256; double kick = -1; double settle = 0.06; int 
 struct Steady { double f, iaMin, iaMax, uMax, Iac; };
 Steady steadyNote(const ArcParams &P, double C, const SteadyOptions &o, const Op &op);
 inline Steady steadyNote(const ArcParams &P, double C, const SteadyOptions &o = {}) { return steadyNote(P, C, o, arcOp(P)); }
+inline double keyTarget(int key, const ArcParams &P) { return keyFreq(key) * P.tuning.ratio(key); } // the key's tuned note
 double startCap(int key, const ArcParams &P, const Op &op); // the capacitance whose note starts on the key
 double capFor(int key, const ArcParams &P, const Op &op);   // the one whose steady note sounds it
 inline double capFor(int key, const ArcParams &P) { return capFor(key, P, arcOp(P)); }

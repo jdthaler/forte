@@ -37,4 +37,12 @@ std::string writePreset(const InstrumentInfo &I, const std::string &name, const 
 // Show the folder (made first if need be) in the Finder, Explorer or the file manager.
 bool showFolder(const std::string &folder);
 
+// Scala files (.scl) for the custom temperament (forte/tuning.h), in a folder every instrument
+// shares beside theirs: Tunings (~/Library/Audio/Presets/Forte/Tunings on a Mac).
+std::string tuningsFolder();
+std::vector<std::string> listScalas(); // the files' names, sorted
+// A file in the folder read as a Scala file: the custom temperament's cents and its description,
+// or false with the reason in error.
+bool readScalaFile(const std::string &file, double (&cents)[11], std::string &name, std::string &error);
+
 } // namespace forte

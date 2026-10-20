@@ -2,6 +2,7 @@
 // a unit; the hint says what it does to the sound.
 
 import { VENUE } from '../../shared/chain.js';
+import { TUNING_GROUP } from '../../shared/tuning.js';
 
 const pct = (v) => `${(v * 100).toFixed(0)} %`;
 
@@ -13,8 +14,8 @@ export const GROUPS = [
       { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2), hint: 'How far a key parts the flames: β = K β_H (0.4 + 0.6 v).' },
       { id: 'xf', label: 'Flame position x_f / L', min: 0.02, max: 0.98, def: 1 / 3, step: 0.001, fmt: (v) => `${(v * 100).toFixed(1)} % up the tube`, hint: 'Rayleigh: the fundamental is driven in the lower half (best near ¼), the octave mode in the lowest and third quarters. Kastner put the flames at ⅓.' },
       { id: 'lag', label: 'Flame lag τ', min: 0.02, max: 1.5, def: 0.25, log: true, fmt: (v) => `${v.toFixed(2)} L/c · ${(v * 180).toFixed(0)}° of the fundamental`, hint: 'Delay of the heat release behind the flow; a bigger flame responds later. Rayleigh needs the heat in phase with the pressure.' },
-      { id: 'keyup', label: 'Key-up flame power', perform: true, min: 0, max: 0.98, def: 0.2, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} % of threshold`, hint: 'Flames rejoined. Above the fold (≈ 87 %) a tube that was singing keeps singing after release: it remembers. Lower it or press Panic to stop them.' },
-      { id: 'noise', label: 'Flame turbulence', perform: true, min: 0.001, max: 0.1, def: 0.02, step: 0.001, fmt: (v) => `${(v * 100).toFixed(1)} % of the draught`, hint: 'Turbulent velocity at the flame (rms). Breath in the tone; it is what starts a tube, and it can kick one in the bistable zone into song.' },
+      { id: 'keyup', label: 'Key-up flame power', min: 0, max: 0.98, def: 0.2, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} % of threshold`, hint: 'Flames rejoined. Above the fold (≈ 87 %) a tube that was singing keeps singing after release: it remembers. Lower it or press Panic to stop them.' },
+      { id: 'noise', label: 'Flame turbulence', min: 0.001, max: 0.1, def: 0.02, step: 0.001, fmt: (v) => `${(v * 100).toFixed(1)} % of the draught`, hint: 'Turbulent velocity at the flame (rms). Breath in the tone; it is what starts a tube, and it can kick one in the bistable zone into song.' },
     ],
   },
   {
@@ -31,11 +32,12 @@ export const GROUPS = [
     title: 'Output',
     params: [
       { id: 'listen', label: 'Listening point', min: 0, max: 1, def: 0.5, step: 0.01, fmt: (v) => (v < 0.02 ? 'at the top mouth' : v > 0.98 ? 'far, side-on' : `bottom mouth × ${v.toFixed(2)}`), hint: 'Side-on, the two open ends cancel the even modes (the octave), leaving a hollow tone; at the top mouth you hear them all.' },
-      { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.3, step: 0.01, fmt: pct },
+      { id: 'room', label: 'Room', min: 0, max: 1, def: 0.3, step: 0.01, fmt: pct },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
+  TUNING_GROUP,
 ];
 
 export const DEFAULTS = Object.fromEntries(GROUPS.flatMap((g) => g.params).map((p) => [p.id, p.def]));

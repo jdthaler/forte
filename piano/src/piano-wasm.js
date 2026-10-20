@@ -5,6 +5,7 @@
 import { GROUPS, ALL_PARAMS } from './params.js';
 import { MATERIALS, SHAPES, noteName } from './materials.js';
 import { wasmEngine, nativeParams, nativeValue, scratch } from '../../shared/wasm.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'piano', name: 'PianoWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/piano.wasm', import.meta.url).href };
@@ -115,9 +116,10 @@ export const ready = () => PianoWasmEngine.ready();
 // The model's functions the views and the tests call, computed by the WebAssembly:
 // keyModel(key, P, fs) gives { model, data, packed }: the string model (piano-model.cpp,
 // computeKeyModel, with its secAt), the voice data (buildVoiceData) and that data packed for the
-// engine. Cached per key for the latest version asked for (the 'model' parameters and fs).
+// engine. Cached per key for the latest version asked for (the 'model' parameters, the tuning's
+// and fs).
 // sectionProps(shape, A, aspect, scale) gives a cross-section's properties.
-const MODEL = ALL_PARAMS.filter((p) => p.kind === 'model').map((p) => p.id);
+const MODEL = [...ALL_PARAMS.filter((p) => p.kind === 'model').map((p) => p.id), ...TUNING_KEEP];
 const FAMILY = ['bend1', 'bend2', 'torsion'];
 const SEC = ['A', 'I1', 'I2', 'J', 'Ip', 'half', 'lever', 'w', 't'];
 export async function wasmModel() {

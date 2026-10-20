@@ -113,6 +113,18 @@ test('every key is on pitch: the pulse train repeats at f_rev', () => {
     assert.ok(Math.abs(bestC) <= 0.5, `${k}: ${bestC} cents`);
   }
 });
+test('the keyboard\'s tuning: f_rev is 440·2^((m−69)/12)·415/440 at A = 415 Hz, and in ¼-comma meantone on C E4 lies 3.42 ¢ flat of equal temperament, C4 10.26 ¢ sharp, A4 on 440 Hz; the pulse train repeats there; the lattice stays the key\'s', () => {
+  const cents = (a, b) => 1200 * Math.log2(a / b), mt = P({ temperament: 'meantone' });
+  for (const k of [36, 64, 96]) assert.ok(Math.abs(ringOf(k, P({ pitch: 415 })).frev / ((keyFreq(k) * 415) / 440) - 1) < 1e-12, `${k} at 415 Hz`);
+  for (const [k, want] of [[64, -3.42], [60, 10.26], [69, 0]]) { const c = cents(ringOf(k, mt).frev, keyFreq(k)); assert.ok(Math.abs(c - want) < 0.01, `${k} in meantone: ${c.toFixed(3)} ¢`); }
+  assert.equal(ringOf(48, mt).chroma, ringOf(48, P()).chroma, 'the same cells');
+  for (const [k, p] of [[50, P({ pitch: 415 })], [64, mt], [60, mt]]) {
+    const f = ringOf(k, p).frev, [L] = note(k, { ...p, kick: 0, phase: 0, pickup: 'single' }, 1.2), a = 4800, b = 4800 + 32768;
+    let best = 0, bestC = 0;
+    for (let c = -8; c <= 8; c += 0.25) { const v = tone(L, 2 * f * 2 ** (c / 1200), a, b); if (v > best) { best = v; bestC = c; } }
+    assert.ok(Math.abs(bestC) <= 0.5, `${k}: ${bestC} cents from the tuned pitch`);
+  }
+});
 test('the harmonics roll off as the bunch\'s form factor through the button\'s high-pass', () => {
   const Pp = P({ kick: 0, phase: 0, pickup: 'single', bunch: 0.05, cutoff: 60 }), k = 57, f = keyFreq(k);
   const [L] = note(k, Pp, 1), a = 4800, b = 4800 + 32768;
@@ -210,6 +222,23 @@ test('the difference signal is in units of the kick: as loud whatever the kick a
   assert.ok(db(d / pair) > 0 && db(d / pair) < 8, `difference ${db(d / pair).toFixed(1)} dB against two buttons`);
   assert.ok(d * DEFAULTS.volume < 0.71, `peak ${d}: into the limiter (−3 dB)`);
 });
+test('Quality: past 24 stored beams at Medium and 12 at Low the oldest is scraped away; a ring alone plays as at High', () => {
+  const bl = new Float32Array(128), br = new Float32Array(128);
+  for (const [quality, cap] of [['high', 30], ['medium', 24], ['low', 12]]) {
+    const e = new StorageRingEngine(FS);
+    e.setQuality(quality); e.setParams(P()); e.setSustain(true);
+    let ok = true;
+    for (let b = 0; b < 3 * FS / 128; b++) { // 30 keys over 1.5 s, the pedal down; then the scraped beams die away
+      if (b % 20 === 0 && b / 20 < 30) { e.noteOn(36 + b / 20, 0.8); e.noteOff(36 + b / 20); }
+      e.process(bl, br, 128);
+      ok &&= bl.every(Number.isFinite);
+    }
+    assert.ok(ok, `${quality}: NaN`);
+    assert.equal(e.voiceCount(), cap, `${quality}: beams stored`);
+  }
+  const at = (quality) => render(P(), 0.5, [[0, (e) => { e.setQuality(quality); e.noteOn(60, 0.8); }]])[0], hi = at('high');
+  for (const quality of ['medium', 'low']) assert.ok(at(quality).every((v, i) => v === hi[i]), `${quality}: one ring sounds as at High`);
+});
 test('CPU: ten rings render far faster than real time', () => {
   const e = new StorageRingEngine(FS); e.setParams(P({ bunch: 0.15 }));
   for (let k = 40; k < 90; k += 5) e.noteOn(k, 0.8);
@@ -217,6 +246,53 @@ test('CPU: ten rings render far faster than real time', () => {
   for (let i = 0; i < 375 * 2; i++) e.process(L, R, 128);
   const ms = performance.now() - t0;
   assert.ok(ms < 400, `${ms.toFixed(0)} ms for 2 s of audio`);
+});
+
+console.log('MPE');
+// A note's slide is its own ring's chromaticity (the rings don't bend): events [t, fn(engine)] in order
+const slide = (key, value) => (e) => e.handle({ type: 'slide', key, value });
+const on = (key, vel = 0.8) => (e) => e.noteOn(key, vel);
+const same = (a, b) => a.every((v, i) => v === b[i]);
+test('a ring with its own chromaticity (a slide before the note) sounds as the knob there, sample for sample; a ring held beside it keeps the knob\'s', () => {
+  const Pp = P({ pickup: 'delta', phase: 0 }), x = 34;
+  const [L, R] = render(Pp, 1, [[0, slide(60, x)], [0, on(60)]]), [kL, kR] = render({ ...Pp, chroma: x }, 1, [[0, on(60)]]);
+  assert.ok(same(L, kL) && same(R, kR), 'as the knob at Q′ = 34');
+  assert.ok(!same(L, render(Pp, 1, [[0, on(60)]])[0]), 'and not as the knob\'s own');
+  // 67 first, then 60: the chord less 67 alone is 60, whether 67 slides or not
+  const d = (ev) => { const [c] = render(Pp, 1, [...ev, [0, on(67)], [0, on(60)]]), [s] = render(Pp, 1, [...ev, [0, on(67)]]); return c.map((v, i) => v - s[i]); };
+  const a = d([[0, slide(67, x)]]), b = d([]);
+  const err = Math.max(...a.map((v, i) => Math.abs(v - b[i]))), pk = Math.max(...b.map(Math.abs));
+  assert.ok(err < 1e-6 * pk + 1e-7 && pk > 0.01, `the other ring moves by ${err.toExponential(2)} (peak ${pk.toFixed(3)})`);
+});
+test('a slide while the beam circulates glides there: a turn at a time, then the knob\'s sound at that chromaticity (to −60 dB)', () => {
+  const Pp = P({ pickup: 'delta', phase: 0, chroma: 6 }), k = 60;
+  const [L] = render(Pp, 1.5, [[0, on(k)], [0.3, slide(k, 30)]]), [K] = render(Pp, 1.5, [[0, on(k)], [0.3, (e) => e.setParams({ ...Pp, chroma: 30 })]]);
+  const a = Math.round(0.9 * FS), b = Math.round(1.5 * FS), dd = L.map((v, i) => v - K[i]);
+  assert.ok(rms(dd, a, b) < 1e-3 * rms(K, a, b), `${db(rms(dd, a, b) / rms(K, a, b)).toFixed(1)} dB from the knob's`);
+  assert.ok(rms(L, 0.3 * FS + 2400, 0.3 * FS + 4800) > 0, 'sounding');
+  const [U] = render(Pp, 1.5, [[0, on(k)]]);
+  assert.ok(rms(L.map((v, i) => v - U[i]), a, b) > 0.1 * rms(U, a, b), 'and not where it was');
+});
+test('slide(NaN) leaves the sound bit for bit as it was, before the note and while it sounds; a slide taken back glides home', () => {
+  const Pp = P({ pickup: 'delta' }), [L] = render(Pp, 0.8, [[0, slide(60, NaN)], [0, on(60)], [0.2, slide(60, NaN)], [0.3, (e) => e.handle({ type: 'noteBend', key: 60, value: 1 })]]);
+  assert.ok(same(L, render(Pp, 0.8, [[0, on(60)]])[0]));
+  const [B] = render(Pp, 1.6, [[0, on(60)], [0.2, slide(60, 50)], [0.4, slide(60, NaN)]]), [U] = render(Pp, 1.6, [[0, on(60)]]);
+  const a = Math.round(1.2 * FS), b = Math.round(1.6 * FS);
+  assert.ok(rms(B.map((v, i) => v - U[i]), a, b) < 1e-3 * rms(U, a, b), 'back at the knob\'s');
+});
+test('slide sweeps on a chord, sent every block across the whole range, stay finite and bounded at 44.1, 48 and 96 kHz', () => {
+  for (const fs of [44100, 48000, 96000]) for (const pickup of ['pair', 'delta']) {
+    const e = new StorageRingEngine(fs); e.setParams(P({ pickup }));
+    const keys = [21, 48, 60, 64, 67, 108], bL = new Float32Array(128), bR = new Float32Array(128);
+    for (const k of keys) e.noteOn(k, 1);
+    let pk = 0;
+    for (let b = 0; b < Math.round((0.6 * fs) / 128); b++) {
+      keys.forEach((k, i) => e.handle({ type: 'slide', key: k, value: 30 + 30 * Math.sin(b / (3 + i)) }));
+      e.process(bL, bR, 128);
+      for (const v of [...bL, ...bR]) { assert.ok(Number.isFinite(v), `${fs} ${pickup}: NaN`); pk = Math.max(pk, Math.abs(v)); }
+    }
+    assert.ok(pk < 3, `${fs} ${pickup}: peak ${pk.toFixed(2)}`);
+  }
 });
 
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');

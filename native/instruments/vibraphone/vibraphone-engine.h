@@ -8,12 +8,12 @@
 //
 // One voice per bar: striking a ringing bar hits it where it is. Each bar's modes (a finite-element
 // solve, the page's noteData) are built off the audio thread by forte/background.h, for the
-// undercut depth the knob is at; a note whose bar is not built yet waits for it (a few ms). Voices
+// undercut depth the knob is at and the keyboard's tuning (each bar cut to its key's pitch); a note whose bar is not built yet waits for it (a few ms). Voices
 // come from a fixed pool: nothing is allocated in process().
 #pragma once
 
 #include <array>
-#include <bit>
+#include <atomic>
 #include <cstdint>
 #include <memory>
 
@@ -78,6 +78,7 @@ class VibraphoneEngine : public Engine {
     bool fading = false, dead = false;
     double age = 0;
     double E = 0, Emax = 0, Eb = 0, Et = 0;
+    double top = 0, floor = 0; // Quality's, when the bar was struck: its highest mode (Hz), and where it is let go (× its most energy)
     double gl = 0, gr = 0;
     Mallet mal{};
     double kOverM = 0, halfAlpha = 0;
@@ -104,7 +105,6 @@ class VibraphoneEngine : public Engine {
   void shaft(int n);
   void postFocus();
   void processBlock(float *L, float *R, int n);
-  static uint64_t versionOf(double depth) { return std::bit_cast<uint64_t>(depth + 0.0); } // the bar's id: its depth (−0 is 0)
 
   std::array<double, p::count> P{};
   bool hasParams = false;
@@ -112,7 +112,13 @@ class VibraphoneEngine : public Engine {
   enum { gGap, gDetune, gTemp, gCd, gTubes, gTwist, gShaft2, gCount };
   std::array<double, gCount> S{}, T{};
   bool sustain = false;
+  // the bars' version: a new one when the depth or the tuning changes; its snapshot (a ring, read
+  // by the builder) holds what that version's bars are cut for
   uint64_t version = 0;
+  double physDepth = 1;
+  forte::Tuning physTuning;
+  struct Snapshot { std::atomic<double> depth{1}, ratio[12] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; };
+  std::array<Snapshot, 8> snapshots;
   Data data;
   std::unique_ptr<VoiceData> offered;
   std::array<Voice, POOL> pool{};

@@ -3,6 +3,7 @@
 // plugins (tools/gen-native-params.mjs) all start here. No DOM, no Web Audio.
 
 import { GROUPS, DEFAULTS, PRESETS } from './glass-params.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -10,7 +11,7 @@ export const INSTRUMENT = {
   id: 'glass',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                     // MIDI keys: A0–C8
   compass: { keys: [53, 93], param: 'fullRange' }, // F3–A6 (Franklin: 37 bowls, G3–G6), until Full range opens the rest
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
@@ -18,6 +19,9 @@ export const INSTRUMENT = {
   // faster) and a faster warble. Not the slider's full 3 rev/s: faster than ~1.2 rev/s the
   // big bowls can no longer speak.
   modWheel: { param: 'speed', max: 2 * DEFAULTS.speed },
+  // MPE: each note's own bend retunes its bowl alone, as the wheel retunes them all (±4 octaves).
+  // No slide: the treadle turns one spindle for every bowl.
+  mpe: { bend: 48 },
   // the engine: the physics in C++ (native/instruments/glass), built as WebAssembly
   wasm: { name: 'ArmonicaWasmEngine', module: new URL('./glass-wasm.js', import.meta.url).href, binary: new URL('../wasm/glass.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

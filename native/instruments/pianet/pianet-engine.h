@@ -17,6 +17,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "pianet-model.h"
 #include "pianet-params.h"
 
@@ -36,6 +37,10 @@ class PianetEngine : public Engine {
   static constexpr int OS = 2;
   static constexpr int POOL = 96;        // voices, sounding or fading (40 sound at most, then the quietest goes)
   static constexpr int BLOCK_MAX = 4096; // the buffers' length: blocks longer than this are split
+  // semitones: one note's own bend (MPE) at most. The pad's preload and tack are forces, so a reed
+  // softened by r² is held and pulled 1/r² as far: an octave down, a forte note already swings
+  // into the T's pole piece up to C5 and plays up to 4× louder; two octaves down, past every gap.
+  static constexpr double NOTE_BEND = 12;
   explicit PianetEngine(double fs);
 
   void setParams(const double *P) override;
@@ -44,6 +49,7 @@ class PianetEngine : public Engine {
   void setSustain(bool on) override;
   void allNotesOff() override;
   void bend(double value) override; // every reed's stiffness ×r², its notes ×r
+  void noteBend(double ratio, int key) override; // one reed's stiffness ×r², on top of the wheel's
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // whether key's reed is built for the knobs as they are (the tests wait for it)
@@ -56,6 +62,7 @@ class PianetEngine : public Engine {
     Data::Ref ref;
     bool inUse = false;
     Pluck p;
+    double own = 1; // its own bend (MPE), gliding to its key's: p.bend is the wheel's × this
     double pol = 1;
     bool held = false, posted = false, sleep = false;
     int quiet = 0;
@@ -64,6 +71,7 @@ class PianetEngine : public Engine {
     int wait = 0;
     double fade = 1;
     bool dying = false, dead = false;
+    double loud = 0, rel = 0; // the most energy it has had; Medium and Low: it rests this far below that
     double g = 0, g1 = 0, ye = 0, ye1 = 0, gT = 0, yeT = 0, c0 = 0;
     double phiPrev = 0, dC = 0;
 
@@ -82,8 +90,9 @@ class PianetEngine : public Engine {
   const double fs2;
   std::array<double, p::count> P{};
   bool hasParams = false;
-  // the reeds, built off the audio thread for each version of (tip mass, loss)
-  struct Snapshot { std::atomic<double> tipMass{1}, loss{1e-3}; };
+  // the reeds, built off the audio thread for each version of (tip mass, loss, the tuning)
+  struct Snapshot { std::atomic<double> tipMass{1}, loss{1e-3}, ratio[12] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; };
+  Tuning physTuning;
   std::array<Snapshot, 8> snapshots;
   uint64_t version = 0;
   Data data;
@@ -103,6 +112,7 @@ class PianetEngine : public Engine {
   int pick = pickup_::em;
   double duck = 1;
   double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
+  NoteExpression expr{NOTE_BEND};  // each key's own bend (MPE)
   PlateRail rail;
   double glideA, mix = 0, mixStep, duckStep;
   int waitMax;

@@ -5,6 +5,7 @@
 import { GROUPS } from './quantum-params.js';
 import { wasmEngine, scratch, nativeValue } from '../../shared/wasm.js';
 import { waveGrid as gridOf } from './quantum-waves.js';
+import { TUNING_PARAMS } from '../../shared/tuning.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'quantum', name: 'QuantumWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/quantum.wasm', import.meta.url).href };
@@ -15,12 +16,13 @@ const Base = wasmEngine(BUILD);
 
 // A packet (the WebAssembly model's makePacket) packed for the engine
 // (unpackPacket in quantum-engine.cpp): key, d, dc, sigma, pitch, scale, the number of states and of
-// pairs, E, then i, j, k, f and w per pair.
+// pairs, E, c, then i, j, k, f and w per pair.
 function packPacket(pk) {
-  const N = pk.E.length, NP = pk.pairs.length, a = new Float64Array(8 + N + 5 * NP);
+  const N = pk.E.length, NP = pk.pairs.length, a = new Float64Array(8 + 2 * N + 5 * NP);
   a.set([pk.key, pk.d, pk.dc || 0, pk.sigma, pk.pitch, pk.scale, N, NP]);
   a.set(pk.E, 8);
-  pk.pairs.forEach((p, q) => a.set([p.i, p.j, p.k, p.f, p.w], 8 + N + 5 * q));
+  a.set(pk.c, 8 + N);
+  pk.pairs.forEach((p, q) => a.set([p.i, p.j, p.k, p.f, p.w], 8 + 2 * N + 5 * q));
   return a;
 }
 
@@ -29,8 +31,8 @@ function packPacket(pk) {
 // its packet. A note may bring its packet (the page's noteData, from the page's WebAssembly model),
 // so the audio thread needn't build it. Rendered into Float64Arrays (the tests'), it renders in
 // double precision.
-const VOICE = ['key', 'count', 'gl', 'gr', 'active', 'G', 'S', 's0', 's1', 'released', 'quench', 'stolen', 'dead', 'env', 'useIm', 'dc'];
-const FLAGS = new Set(['released', 'quench', 'stolen', 'dead', 'useIm']);
+const VOICE = ['key', 'count', 'gl', 'gr', 'active', 'G', 'S', 's0', 's1', 'released', 'quench', 'stolen', 'dead', 'env', 'useIm', 'dc', 'coh'];
+const FLAGS = new Set(['released', 'quench', 'stolen', 'dead', 'useIm', 'coh']);
 const ARRAYS = [['w', Float64Array, MAX_W], ['gD', Float64Array, MAX_STATES], ['gR', Float64Array, MAX_STATES],
   ['gk', Int32Array, MAX_STATES], ['ga', Int32Array, MAX_STATES], ['gb', Int32Array, MAX_STATES], ['gw', Int32Array, MAX_STATES]];
 function voiceView(x, p) {
@@ -44,8 +46,8 @@ function voiceView(x, p) {
     get: () => {
       if (pk) return pk;
       const n = x.quantum_voice_packet(p, s.at, s.size / 8), a = s.f64(n).slice(), N = a[6], NP = a[7];
-      const pairs = Array.from({ length: NP }, (_, q) => { const b = 8 + N + 5 * q; return { i: a[b], j: a[b + 1], k: a[b + 2], f: a[b + 3], w: a[b + 4] }; });
-      pk = { key: a[0], d: a[1], dc: a[2], sigma: a[3], pitch: a[4], scale: a[5], E: Array.from(a.subarray(8, 8 + N)), pairs };
+      const pairs = Array.from({ length: NP }, (_, q) => { const b = 8 + 2 * N + 5 * q; return { i: a[b], j: a[b + 1], k: a[b + 2], f: a[b + 3], w: a[b + 4] }; });
+      pk = { key: a[0], d: a[1], dc: a[2], sigma: a[3], pitch: a[4], scale: a[5], E: Array.from(a.subarray(8, 8 + N)), c: Array.from(a.subarray(8 + N, 8 + 2 * N)), pairs };
       return pk;
     },
   });
@@ -85,10 +87,11 @@ export const ready = () => QuantumWasmEngine.ready();
 // cₙ, Eₙ, its Bohr pairs, pitch and time scales); solveNbar(key, P, info); and waveGrid(pk, P,
 // rows), quantum-waves.js's grid around the eigenfunctions computed here.
 const PARAMS = GROUPS.flatMap((g) => g.params);
-const KNOBS = ['potential', 'eta', 'lock', 'bpm', 'beats', 'nbar', 'sigma', 'detector'].map((id) => PARAMS.find((p) => p.id === id));
+// (the tuning's last: a key's pitch is its equal-tempered one times the tuning's ratio)
+const KNOBS = ['potential', 'eta', 'lock', 'bpm', 'beats', 'nbar', 'sigma', 'detector', ...TUNING_PARAMS.map((p) => p.id)].map((id) => PARAMS.find((p) => p.id === id));
 export async function wasmModel() {
-  const x = await ready(), s = scratch(x), at = 8 * 8; // the knobs first, then the results
-  const knobs = (P) => { s.f64(8).set(KNOBS.map((p) => nativeValue(p, P[p.id] ?? p.def))); return s.at; };
+  const x = await ready(), s = scratch(x), at = 8 * KNOBS.length; // the knobs first, then the results
+  const knobs = (P) => { s.f64(KNOBS.length).set(KNOBS.map((p) => nativeValue(p, P[p.id] ?? p.def))); return s.at; };
   const solve = (pk, P, rows) => {
     const N = pk.ns.length;
     s.f64(2 * N).set([...pk.ns, ...pk.E]);

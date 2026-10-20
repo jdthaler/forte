@@ -9,10 +9,12 @@ import { createChain } from '../../shared/chain.js';
 import { SpectrogramView } from '../../shared/views.js';
 import { drawPlane, drawKerr, WaveView, Lazy } from './ringdown-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, wheelValue, touched, SOFT_PEDAL, createSostenuto } from '../../shared/midi.js';
+import { startMIDI, resumeMIDI, wheelValue, pageMpe, touched, SOFT_PEDAL, createSostenuto } from '../../shared/midi.js';
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
+import { connectQuality, qualityControl } from '../../shared/quality.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'blackhole-keyboard/params/v1';
@@ -59,6 +61,7 @@ function startAudio() {
     audio = { ctx, node, chain };
     applyMix();
     node.port.postMessage(paramsMessage());
+    connectQuality(node, { toast }); // the device's Quality (shared/quality.js)
     if (ctx.state !== 'running') await ctx.resume();
     live = true;
     $('#start').textContent = `Audio on · ${(fs / 1000).toFixed(1)} kHz`;
@@ -74,11 +77,12 @@ function applyMix() { if (audio) audio.chain.apply(P, trimGain('blackhole')); } 
 // ---------------------------------------------------------------------------
 // keys
 
-async function noteOn(key, vel = INSTRUMENT.keyVelocity) { // computer keys: keyVelocity (1)
+async function noteOn(key, vel = INSTRUMENT.keyVelocity, own) { // computer keys: keyVelocity (1); own: an MPE note's own (midi.js pageMpe)
   if (key < KEY_LO || key > KEY_HI) return;
   down.add(key); sost.strike(key);
   keyboardView.set(key, true);
   const a = await startAudio();
+  for (const m of notes.strike(key, own)) a.node.port.postMessage(m);
   a.node.port.postMessage({ type: 'noteOn', key, velocity: vel }); // the engine builds the voice the views show
   setFocus(key, vel);
 }
@@ -124,9 +128,11 @@ function updateHelp() {
 function initMIDI() {
   startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn') });
 }
+const notes = pageMpe({ post, params: () => P, modWheel: INSTRUMENT.modWheel, groups: GROUPS }); // MPE: each note's own
 function onMIDI(ev) {
-  const [st, d1, d2] = ev.data, cmd = st & 0xf0;
-  if (cmd === 0x90 && d2 > 0) noteOn(d1, INSTRUMENT.midiVelocity(touched(d2 / 127) * (soft ? SOFT_PEDAL : 1)));
+  const [st, d1, d2] = ev.data, cmd = st & 0xf0, mpe = notes.midi(ev.data);
+  if (mpe.own) return;
+  if (cmd === 0x90 && d2 > 0) noteOn(d1, INSTRUMENT.midiVelocity(touched(d2 / 127) * (soft ? SOFT_PEDAL : 1)), mpe.with);
   else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) noteOff(d1);
   else if (cmd === 0xb0 && d1 === 1) setParam(INSTRUMENT.modWheel, wheelValue(ALL_PARAMS.find((q) => q.id === INSTRUMENT.modWheel), d2)); // at rest: the default spin
   else if (cmd === 0xb0 && d1 === 66) { for (const k of sost.set(d2 >= 64, down)) if (!down.has(k)) release(k); }
@@ -149,14 +155,20 @@ function fromSlider(p, t) {
 function buildControls() {
   for (const g of GROUPS) {
     const det = document.createElement('details');
-    det.className = 'group'; det.open = true;
+    det.className = 'group'; det.open = g.open ?? true; // (the tuning's starts closed)
     det.innerHTML = `<summary>${g.title}</summary>`;
     for (const p of g.params) {
       const wrap = document.createElement('div');
       wrap.className = 'param';
       if (p.perform) wrap.dataset.perform = ''; // above the keys in Perform (shared/layout.js)
       let input, val = null;
-      if (p.type === 'checkbox') {
+      if (p.type === 'select') { // the keyboard's tuning: its pitch, temperament and root
+        wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;
+        input = document.createElement('select'); input.id = `p-${p.id}`;
+        for (const [k, name] of p.options) input.add(new Option(name, k));
+        input.addEventListener('change', () => { setParam(p.id, typeof p.def === 'number' ? +input.value : input.value); input.blur(); });
+        wrap.appendChild(input);
+      } else if (p.type === 'checkbox') {
         wrap.classList.add('check');
         input = document.createElement('input'); input.type = 'checkbox'; input.id = `p-${p.id}`;
         input.addEventListener('change', () => setParam(p.id, input.checked));
@@ -190,7 +202,8 @@ function buildControls() {
 function refreshControl(id, dragging = false) {
   const c = controls.get(id);
   if (!c) return;
-  if (c.p.type === 'checkbox') c.input.checked = !!P[id];
+  if (c.p.type === 'select') c.input.value = P[id];
+  else if (c.p.type === 'checkbox') c.input.checked = !!P[id];
   else { if (!dragging) c.input.value = toSlider(c.p, P[id]); c.val.textContent = c.p.fmt ? c.p.fmt(P[id]) : String(P[id]); }
 }
 function refreshVisibility() { for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(P) : false; }
@@ -209,7 +222,7 @@ function setParam(id, v, dragging = false) {
   $('#preset').value = '';
   if (p.kind === 'mix') applyMix();
   else post(paramsMessage());
-  if (p.kind === 'model') { clearTimeout(focusTimer); focusTimer = setTimeout(() => setFocus(focusKey, lastVel), 60); } // voiceFor recomputes
+  if (p.kind === 'model' || TUNING_KEEP.includes(id)) { clearTimeout(focusTimer); focusTimer = setTimeout(() => setFocus(focusKey, lastVel), 60); } // voiceFor recomputes
 }
 
 // ---------------------------------------------------------------------------
@@ -286,3 +299,4 @@ updateHelp();
 setFocus(60, 1);
 requestAnimationFrame(frame);
 attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v) => setAll({ ...P, ...v }), toast }); // your own presets and links
+qualityControl(); // the device's Quality, after the controls

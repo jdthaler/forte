@@ -188,6 +188,22 @@ test('stretch off: every key within ±3 ¢ of 12-TET A440 (measured from the out
   assert.ok(worst < 3, `worst ${worst.toFixed(2)} ¢ at key ${wk}`);
   console.log(`        (worst ${worst.toFixed(2)} ¢ at key ${wk})`);
 });
+test('the keyboard’s tuning: at A = 415 Hz every key 415/440 of 12-TET A440, in ¼-comma meantone E4 −3.42 ¢ and C4 +10.26 ¢; stretched, its octaves still beatless', () => {
+  // ¼-comma meantone on C, A kept: E sits a fifth's narrowing (q − 700) from 12-TET, C 2100 − 3q
+  const q = 1200 * Math.log2(3 / 2) - 300 * Math.log2(81 / 80);
+  const cases = [[{ pitch: 415 }, 64, cents(415, 440)], [{ pitch: 415 }, 60, cents(415, 440)], [{ temperament: 'meantone' }, 64, q - 700], [{ temperament: 'meantone' }, 60, 2100 - 3 * q]];
+  for (const [o, m, want] of cases) {
+    const S = keyModel(m, P({ stretch: false, ...o })).S;
+    assert.ok(Math.abs(cents(S.f0, keyFreq(m)) - want) < 1e-9, `${JSON.stringify(o)} key ${m}: target ${cents(S.f0, keyFreq(m))} ¢, not ${want} ¢`);
+    const f = keyFreq(m) * 2 ** (want / 1200), x = note(P({ stretch: false, ...o }), m, 0.6, 1.3);
+    const c = cents(peakFreq(x, f, Math.round(0.1 * FS), x.length), f);
+    assert.ok(Math.abs(c) < 3, `${JSON.stringify(o)} key ${m}: sounds ${c.toFixed(2)} ¢ off`);
+  }
+  for (let m = 40; m + 12 <= 90; m += 7) { // the stretch on top: each octave still that of its lower note's partial 2
+    const lo = keyModel(m, P({ temperament: 'meantone' })), hi = keyModel(m + 12, P({ temperament: 'meantone' }));
+    assert.ok(Math.abs(lo.partials[1].f - hi.partials[0].f) < 1e-3, `${m}–${m + 12}: beats`);
+  }
+});
 test('stretch tuning: every octave\'s 2:1 partials coincide, so the octaves stop beating (12-TET: up to 25 Hz)', () => {
   for (const scale of ['cp70', 'concert']) {
     let worst = 0, beat12 = 0;
@@ -335,6 +351,50 @@ test('EQ: shelves and mid peak follow their analog RC prototypes', () => {
     assert.ok(Math.abs(got - H(f)) < 0.5, `${f.toFixed(0)} Hz: ${got.toFixed(2)} vs ${H(f).toFixed(2)} dB`);
   }
 });
+test('stereo tremolo: off by default and exact when off; on, each output dips in turn at its rate, to 1 − depth·K/(1 + K), faster than it recovers', () => {
+  // the chord held, as two channels; events as render()'s
+  const stereo = (params, events = []) => {
+    const e = new GrandEngine(FS);
+    e.setParams(params);
+    for (const k of [48, 60, 64, 67]) e.noteOn(k, 0.7);
+    const n = 3 * FS, L = new Float64Array(n), R = new Float64Array(n), bl = 128, a = new Float32Array(bl), b = new Float32Array(bl);
+    let j = 0;
+    for (let s = 0; s < n; s += bl) {
+      while (j < events.length && Math.round(events[j][0] * FS) <= s) e.setParams(events[j++][2]);
+      e.process(a, b, bl);
+      for (let i = 0; i < bl && s + i < n; i++) { L[s + i] = a[i]; R[s + i] = b[i]; }
+    }
+    return { L, R };
+  };
+  const off = stereo(P());
+  // the rate alone does nothing, and a tremolo turned off is gone exactly once its depth has glided out
+  const fast = stereo(P({ tremRate: 9 })), wasOn = stereo(P({ tremDepth: 1 }), [[1, 'params', P()]]);
+  for (let i = 0; i < off.L.length; i++) assert.ok(fast.L[i] === off.L[i] && fast.R[i] === off.R[i], `rate alone changed sample ${i}`);
+  for (let i = Math.round(1.3 * FS); i < off.L.length; i++) assert.ok(wasOn.L[i] === off.L[i] && wasOn.R[i] === off.R[i], `still on at ${(i / FS).toFixed(3)} s`);
+  // each output's gain against the tremolo off, in 5 ms windows from 1 s
+  const W = 240, gain = (x, y) => { const g = []; for (let i = FS; i + W <= x.length; i += W) { let a = 0, c = 0; for (let k = i; k < i + W; k++) { a += x[k] * x[k]; c += y[k] * y[k]; } g.push(10 * Math.log10(a / c)); } return g; };
+  const said = [], energy = (x) => x.L.reduce((s, v) => s + v * v, 0) + x.R.reduce((s, v) => s + v * v, 0);
+  for (const [depth, rate] of [[1, 5], [0.6, 5.5], [0.3, 3]]) {
+    const on = stereo(P({ tremDepth: depth, tremRate: rate })), gL = gain(on.L, off.L), gR = gain(on.R, off.R);
+    const floor = 20 * Math.log10(1 - depth * 9 / 10), lo = Math.min(...gL), hi = Math.max(...gL);
+    assert.ok(Math.abs(lo - floor) < 1 && hi > -1.5 * (depth * 4), `depth ${depth}: ${lo.toFixed(1)} … ${hi.toFixed(1)} dB (floor ${floor.toFixed(1)})`);
+    // in turn: the two outputs' gains move against each other
+    const mL = gL.reduce((s, v) => s + v) / gL.length, mR = gR.reduce((s, v) => s + v) / gR.length;
+    let sLR = 0, sLL = 0, sRR = 0;
+    for (let i = 0; i < gL.length; i++) { sLR += (gL[i] - mL) * (gR[i] - mR); sLL += (gL[i] - mL) ** 2; sRR += (gR[i] - mR) ** 2; }
+    const corr = sLR / Math.sqrt(sLL * sRR);
+    // at its rate: one dip per cycle, over the 2 s
+    let dips = 0;
+    for (let i = 1; i < gL.length; i++) if (gL[i - 1] >= mL && gL[i] < mL) dips++;
+    // the photocell lights fast and goes dark slowly: the gain falls in less of the cycle than it rises
+    let falling = 0;
+    for (let i = 1; i < gL.length; i++) if (gL[i] < gL[i - 1]) falling++;
+    assert.ok(corr < -0.5 && Math.abs(dips - 2 * rate) <= 1 && falling / (gL.length - 1) < 0.4,
+      `depth ${depth}, ${rate} Hz: L/R correlation ${corr.toFixed(2)}, ${dips} dips, falling ${(100 * falling / (gL.length - 1)).toFixed(0)} % of the time`);
+    said.push(`${depth * 100} %: ${lo.toFixed(1)} to ${hi.toFixed(1)} dB, level ${(10 * Math.log10(energy(on) / energy(off))).toFixed(1)} dB`);
+  }
+  console.log(`        (each output, depth ${said.join('; ')})`);
+});
 test('dampers: release stops a note ≥ 40 dB in 0.5 s; the pedal holds it; no dampers above E6', () => {
   const rms = (x, t) => { let s = 0; const a = Math.round(t * FS); for (let i = a; i < a + 2400; i++) s += x[i] * x[i]; return Math.sqrt(s) + 1e-12; };
   const rel = render(P(), [[0, 'on', 60, 0.7], [0.3, 'off', 60]], 0.9).x;
@@ -458,6 +518,70 @@ test('sympathetic strings: an undamped key rings along where its partials meet t
   }
   console.log(`        (C3 struck: held C4's group ${(c4.E(60) / cs4.E(61)).toFixed(0)} × held C♯4's, ${(board.E(60) / c4.E(60)).toFixed(0)} × more on a soundboard; ${ped.running} partials ring with the pedal down)`);
 });
+test('Quality: Medium and Low strike voices with fewer partials (none above 6 and 4.5 kHz but the first 8, none from the 80th and 56th), hold a lower ceiling under the page\'s budget, give the sympathetic strings 3 partials and none; a note keeps its pitch and level', () => {
+  const fTop = { high: Infinity, medium: 6000, low: 4500 }, nTop = { high: Infinity, medium: 80, low: 56 };
+  const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
+  const engine = (quality) => {
+    const e = new GrandEngine(FS);
+    e.setQuality(quality); e.setParams(P());
+    for (let b = 0; b < 100; b++) e.process(L, R, bl); // (every key's group made, one a block)
+    return e;
+  };
+  // the partials a strike sets going: a prefix of each polarisation's, partial by partial
+  const want = (d, q) => {
+    const top = (i0, i1) => { let i = i0; while (i < i1 && d.idx[i] < nTop[q] && (d.freq[i] < fTop[q] || d.idx[i] <= 8)) i += d.ns; return i - i0; };
+    return top(0, d.nV) + top(d.nV, d.n);
+  };
+  const chord = [28, 31, 36, 40, 43, 48, 52, 55, 60, 64, 67, 72, 76, 79, 84];
+  const res = {};
+  for (const q of ['high', 'medium', 'low']) {
+    const e = engine(q);
+    e.setSustain(true);
+    let modes = 0, full = 0;
+    for (const k of chord) {
+      const v = e.noteOn(k, 0.9);
+      assert.equal(v.active, want(v.data, q), `${q}: key ${k} sets ${v.active} of ${v.N} modes going`);
+      modes += v.active; full += v.N;
+    }
+    for (let b = 0; b < Math.round((0.5 * FS) / bl); b++) {
+      e.process(L, R, bl);
+      for (let i = 0; i < bl; i++) assert.ok(Number.isFinite(L[i]) && Number.isFinite(R[i]), `${q}: not finite`);
+    }
+    const size = Math.max(...chord.map((k) => e.sympathetic(k).size));
+    res[q] = { modes, full, sym: e.sympatheticRunning(), size };
+    // the ceiling: Low holds 1400 oscillators, and a page's budget below it still rules
+    if (q === 'low') {
+      for (let k = 30; k <= 90; k += 2) e.noteOn(k, 0.9);
+      let total = 0; for (const u of e.voices) if (!u.killing) total += u.active;
+      assert.ok(total <= 1400, `Low: ${total} oscillators sounding`);
+      e.handle({ type: 'budget', modes: 1000 });
+      total = 0; for (const u of e.voices) if (!u.killing) total += u.active;
+      assert.ok(total <= 1000, `Low: ${total} oscillators after the page's budget fell to 1000`);
+    }
+    e.destroy();
+  }
+  assert.ok(res.medium.modes < 0.85 * res.high.modes && res.low.modes < 0.7 * res.high.modes, `modes ${res.high.modes}, ${res.medium.modes}, ${res.low.modes}`);
+  assert.ok(res.high.size === 16 && res.medium.size === 3 && res.low.size === 0 && res.high.sym > 600 && res.medium.sym <= 3 * 88 && res.low.sym === 0,
+    `sympathetic strings: ${res.high.size}, ${res.medium.size}, ${res.low.size} partials, ${res.high.sym}, ${res.medium.sym}, ${res.low.sym} running`);
+  // single notes: the same pitch (a fraction of a cent) and level (within 1 dB)
+  const dB = [], dc = [];
+  for (const key of [28, 52, 76]) {
+    const x = {};
+    for (const q of ['high', 'medium', 'low']) {
+      const e = engine(q), n = FS, out = new Float64Array(n);
+      e.noteOn(key, 0.9);
+      for (let s = 0; s < n; s += bl) { e.process(L, R, bl); for (let i = 0; i < bl && s + i < n; i++) out[s + i] = L[i] + R[i]; }
+      e.destroy();
+      x[q] = { rms: Math.sqrt(out.reduce((a, v) => a + v * v, 0) / n), f: peakFreq(out, keyFreq(key), 4800, n) };
+    }
+    for (const q of ['medium', 'low']) {
+      dB.push(20 * Math.log10(x[q].rms / x.high.rms)); dc.push(cents(x[q].f, x.high.f));
+      assert.ok(Math.abs(dB.at(-1)) < 1, `key ${key}, ${q}: ${dB.at(-1).toFixed(2)} dB`);
+      assert.ok(Math.abs(dc.at(-1)) < 0.1, `key ${key}, ${q}: ${dc.at(-1).toFixed(3)} ¢`);
+    }
+  }
+  console.log(`        (pedalled chord: ${res.high.modes} → ${res.medium.modes} → ${res.low.modes} oscillators, ${res.high.sym} → ${res.medium.sym} → ${res.low.sym} sympathetic partials; notes within ${Math.max(...dB.map(Math.abs)).toFixed(2)} dB, ${Math.max(...dc.map(Math.abs)).toFixed(3)} ¢)`);
+});
 test('stability: every parameter at its min and max gives finite, bounded output', () => {
   const ps = GROUPS.flatMap((g) => g.params);
   const cases = [];
@@ -466,7 +590,8 @@ test('stability: every parameter at its min and max gives finite, bounded output
     else if (p.type !== 'checkbox') cases.push({ [p.id]: p.min }, { [p.id]: p.max });
   }
   for (const c of cases) for (const mount of ['frame', 'board']) {
-    const x = render(P({ mount, ...c }), [[0, 'on', 28, 1], [0, 'on', 64, 1], [0, 'on', 100, 1], [0.15, 'off', 64]], 0.3).x;
+    const { x, e } = render(P({ mount, ...c }), [[0, 'on', 28, 1], [0, 'on', 64, 1], [0, 'on', 100, 1], [0.15, 'off', 64]], 0.3);
+    e.destroy(); // its WebAssembly memory: the cases (the tuning's among them) would exhaust it
     const pk = peak(x) / 2;
     assert.ok(Number.isFinite(pk) && pk < 1.5, `${JSON.stringify(c)} ${mount}: peak ${pk}`);
     if (c.volume === undefined) assert.ok(pk > 1e-3, `${JSON.stringify(c)} ${mount}: silent (${pk})`);

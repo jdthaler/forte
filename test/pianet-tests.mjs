@@ -230,6 +230,21 @@ test('every key on pitch within ±3 ¢ of 12-TET A440 (measured from the output)
   }
   console.log(`        worst key ${worst.toFixed(2)} ¢`);
 });
+test('the keyboard’s tuning: at A = 415 Hz a key sounds 415/440 of its 12-TET pitch; in ¼-comma meantone E4 −3.42 ¢, C4 +10.26 ¢', () => {
+  // ¼-comma meantone on C, A kept: E a fifth's narrowing (q − 700) from 12-TET, C 2100 − 3q
+  const q = 1200 * Math.log2(3 / 2) - 300 * Math.log2(81 / 80);
+  for (const [o, m, want] of [[{ pitch: 415 }, 64, cents(415, 440)], [{ pitch: 415 }, 60, cents(415, 440)], [{ temperament: 'meantone' }, 64, q - 700], [{ temperament: 'meantone' }, 60, 2100 - 3 * q]]) {
+    const f0 = keyFreq(m) * 2 ** (want / 1200), kr = keyReed(m, P(o));
+    assert.ok(Math.abs(cents(kr.modes[0].f, f0)) < 0.01, `${JSON.stringify(o)} ${m}: the reed is cut to ${kr.modes[0].f} Hz`);
+    // measured from the output, as above
+    const x = note(m, P({ tone: 20000, ...o }), 0.6, 0.65), a = Math.round(0.12 * FS), b = x.length;
+    let bf = f0, best = 0;
+    for (let c = -8; c <= 8; c += 0.5) { const f = f0 * 2 ** (c / 1200), g = tone(x, f, a, b); if (g > best) { best = g; bf = f; } }
+    const gl = tone(x, bf * 2 ** (-0.5 / 1200), a, b), gr = tone(x, bf * 2 ** (0.5 / 1200), a, b);
+    const c = cents(bf, f0) + (0.5 * 0.5 * (gl - gr)) / (gl - 2 * best + gr);
+    assert.ok(Math.abs(c) < 3, `${JSON.stringify(o)} ${m}: ${c.toFixed(2)} ¢`);
+  }
+});
 test('held note decays at the model\'s σ₁ (reed loss + thermoelastic + air)', () => {
   for (const m of [60, 76]) {
     const kr = keyReed(m, P()), f = kr.f0, x = note(m, P({ tone: 20000 }), 0.6, 2.4), W = 8192, a = Math.round(0.2 * FS), b = a + FS;
@@ -408,6 +423,35 @@ test('hints: a higher rate exponent gives more touch response; stiffer foam is l
   assert.ok(range(36, 0.1) < 0, `rate-blind bass: ff − pp = ${range(36, 0.1).toFixed(1)} dB`);
   for (const m of [60, 84]) assert.ok(lv(m, { padK: 0.1 }, 0.7) < lv(m, {}, 0.7) && lv(m, {}, 0.7) < lv(m, { padK: 5 }, 0.7), `${m}: pad stiffness`);
   assert.ok(lv(36, {}, 0.7) > Math.max(lv(36, { padK: 0.1 }, 0.7), lv(36, { padK: 5 }, 0.7)), 'C2 loudest near the default foam');
+});
+test('Quality: Medium and Low let fewer notes ring under the pedal; a note keeps its pitch and level', () => {
+  const play = (q, events, sec) => {
+    const e = new PianetEngine(FS); e.setQuality(q); e.setParams(P());
+    const n = Math.round(sec * FS), L = new Float32Array(n), bl = 128, bR = new Float32Array(bl), bL = new Float32Array(bl);
+    const ev = events.map(([t, ...r]) => [Math.round(t * FS), ...r]);
+    for (let s = 0, j = 0; s < n; s += bl) {
+      while (j < ev.length && ev[j][0] <= s) { const [, type, a, b] = ev[j++]; if (type === 'on') e.noteOn(a, b); else if (type === 'off') e.noteOff(a); else e.setSustain(a); }
+      e.process(bL, bR, bl); L.set(bL.subarray(0, Math.min(bl, n - s)), s);
+    }
+    return { L, e };
+  };
+  // a pedalled run of 30 keys, each let go: the pedal holds them, up to the voice limit
+  const run = [[0, 'sus', true]];
+  for (let i = 0; i < 30; i++) run.push([i * 0.06, 'on', 40 + i, 0.8], [i * 0.06 + 0.05, 'off', 40 + i]);
+  const level = {};
+  for (const [q, cap] of [['high', 40], ['medium', 16], ['low', 10]]) {
+    const { e } = play(q, run, 2);
+    assert.ok(e.voiceCount() <= cap && (q !== 'high' || e.voiceCount() === 30), `${q}: ${e.voiceCount()} voices`);
+    for (const key of [36, 60]) {
+      const { L } = play(q, [[0, 'on', key, 0.7]], 0.7), f0 = keyFreq(key), a = Math.round(0.12 * FS);
+      assert.ok(L.every(Number.isFinite), q);
+      let bf = f0, best = 0;
+      for (let c = -8; c <= 8; c += 0.25) { const f = f0 * 2 ** (c / 1200), g = tone(L, f, a, L.length); if (g > best) { best = g; bf = f; } }
+      assert.ok(Math.abs(cents(bf, f0)) < 3, `${q} ${key}: ${cents(bf, f0).toFixed(2)} ¢`);
+      level[q + key] = rms(L, 0, L.length);
+      assert.ok(Math.abs(dB(level[q + key], level['high' + key])) < 1.5, `${q} ${key}: ${dB(level[q + key], level['high' + key]).toFixed(2)} dB from High`);
+    }
+  }
 });
 test('CPU: 10 voices render well inside real time', () => {
   const e = new PianetEngine(FS); e.setParams(P());

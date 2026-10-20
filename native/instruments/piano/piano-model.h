@@ -113,7 +113,7 @@ int packVoiceData(const VoiceData &d, double *out);  // returns PACK_HEAD + PACK
 bool unpackVoiceData(const double *in, int count, VoiceData &d);
 
 // The voice data's version: the sample rate and the 'model' parameters (piano-instrument.js,
-// modelVersion), as a whole number below 2⁵² (it travels as a double).
+// modelVersion) and the tuning's, as a whole number below 2⁵² (it travels as a double).
 uint64_t modelVersion(const double *P, double fs);
 bool isModelParam(int i);
 

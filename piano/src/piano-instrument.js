@@ -3,6 +3,7 @@
 // plugins (tools/gen-native-params.mjs) all start here. No DOM, no Web Audio.
 
 import { GROUPS, DEFAULTS, PRESETS } from './params.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -10,7 +11,7 @@ export const INSTRUMENT = {
   id: 'piano',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'venue', 'soundboard', 'velocity', 'maxFreq'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'soundboard', 'velocity', 'maxFreq', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],      // MIDI keys: A0–C8
   space: 'sustain',      // Space and CC64: the damper pedal, sent to the engine
   controllers: { 67: 'unaCorda' }, // MIDI CC67, the soft pedal: on at 64 and above

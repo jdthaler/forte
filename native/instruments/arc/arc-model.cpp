@@ -33,6 +33,7 @@ ArcParams arcParams(const double *P) {
   ArcParams a;
   a.current = P[p::current]; a.gap = P[p::gap]; a.tau = P[p::tau]; a.restrike = P[p::restrike];
   a.coil = P[p::coil]; a.coilR = P[p::coilR]; a.tune = (int)P[p::tune]; a.talk = (int)P[p::mode] == mode_::talk;
+  a.tuning = tuningOf(P);
   return a;
 }
 
@@ -225,7 +226,7 @@ Steady steadyNote(const ArcParams &P, double C, const SteadyOptions &o, const Op
 // ---- the keyboard's capacitors ------------------------------------------------------------------
 
 double startCap(int key, const ArcParams &P, const Op &op) {
-  const double f = keyFreq(key), L = P.coil * 1e-3;
+  const double f = keyTarget(key, P), L = P.coil * 1e-3;
   double C = kelvinC(f, L);
   for (int it = 0; it < 4; it++) {
     const double fs = linearAnalysis(circuit(P, C, op)).f;
@@ -236,7 +237,7 @@ double startCap(int key, const ArcParams &P, const Op &op) {
   return C;
 }
 double capFor(int key, const ArcParams &P, const Op &op) {
-  const double f = keyFreq(key), L = P.coil * 1e-3;
+  const double f = keyTarget(key, P), L = P.coil * 1e-3;
   if (P.tune == tune_::kelvin) return kelvinC(f, L);
   double C = startCap(key, P, op);
   const double lin = C;
@@ -273,6 +274,7 @@ uint64_t tuneVersion(const ArcParams &P) {
     for (int k = 0; k < 8; k++) { h ^= (b >> (8 * k)) & 0xff; h *= 1099511628211ull; }
   };
   for (double v : {P.current, P.gap, P.tau, P.restrike, P.coil, P.coilR, (double)P.tune}) add(v);
+  if (!P.tuning.equal) for (double r : P.tuning.r) add(r); // (equal temperament at 440 Hz: the hash it always had)
   return h | 1; // never 0
 }
 

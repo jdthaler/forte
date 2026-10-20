@@ -1,6 +1,7 @@
 // vibraphone-main.js — the page: wires the shell to the engine and draws the views.
 
 import { createShell, noteName } from '../../shared/shell.js';
+import { tuningRatio, TUNING_KEEP } from '../../shared/tuning.js';
 import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './vibraphone-instrument.js';
 import { EB_RATIOS } from './bar.js';
@@ -17,26 +18,29 @@ new SpectrogramView($('#spectrogram'), { spectrum });
 let focus = 60, live = null, history = [], etPeak = 0;
 
 // The bars' modal data (a few ms each) is sent with each note, packed by the model, so the audio
-// thread never solves a bar. Built ahead, a key at a time, when the page is idle.
+// thread never solves a bar. Built ahead, a key at a time, when the page is idle. A bar is cut for
+// the undercut depth and the keyboard's tuning.
 const packed = new Map();
-function dataFor(key, depth) {
-  const id = `${key}|${depth}`;
+const CUT = ['depth', ...TUNING_KEEP];
+const cutOf = (P) => CUT.map((id) => P[id]).join('|');
+function dataFor(key, P) {
+  const id = `${key}|${cutOf(P)}`;
   let d = packed.get(id);
-  if (!d) { d = model.voiceData(key, depth); if (packed.size > 256) packed.clear(); packed.set(id, d); }
+  if (!d) { d = model.voiceData(key, P); if (packed.size > 256) packed.clear(); packed.set(id, d); }
   return d;
 }
-const noteData = (key, vel, P) => dataFor(key, P.depth);
+const noteData = (key, vel, P) => dataFor(key, P);
 let warm = null;
 function warmUp() {
   clearTimeout(warm);
-  const depth = shell.P.depth, keys = [];
-  const [lo, hi] = shell.P.fullRange ? INSTRUMENT.range : INSTRUMENT.compass.keys; // the keys that play
-  for (let k = lo; k <= hi; k++) if (!packed.has(`${k}|${depth}`)) keys.push(k);
+  const P = { ...shell.P }, cut = cutOf(P), keys = [];
+  const [lo, hi] = P.fullRange ? INSTRUMENT.range : INSTRUMENT.compass.keys; // the keys that play
+  for (let k = lo; k <= hi; k++) if (!packed.has(`${k}|${cut}`)) keys.push(k);
   keys.sort((a, b) => Math.abs(a - focus) - Math.abs(b - focus));
   const step = () => {
     const k = keys.shift();
-    if (k === undefined || depth !== shell.P.depth) return;
-    dataFor(k, depth);
+    if (k === undefined || cut !== cutOf(shell.P)) return;
+    dataFor(k, P);
     warm = setTimeout(step, 15);
   };
   warm = setTimeout(step, 200);
@@ -49,7 +53,7 @@ const shell = createShell({
   arrows: { param: 'velocity', step: 0.05 },
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
   onNoteOn: (key) => { if (key !== focus) history = []; focus = key; shell.keys.focus(key); update(); },
-  onParam: (id) => { if (id === 'depth' || id === 'fullRange' || id === '*') warmUp(); update(); },
+  onParam: (id) => { if (CUT.includes(id) || id === 'fullRange' || id === '*') warmUp(); update(); },
   onMessage: (m) => {
     if (m.type !== 'vibe') return;
     live = { ...m, amp: Float64Array.from(m.amp), t: performance.now() / 1000 };
@@ -66,7 +70,7 @@ let B = null, TG = null, TS = null;
 const fmtHz = (f) => (f < 1000 ? f.toFixed(1) : f.toFixed(0));
 function update() {
   const P = shell.P;
-  B = model.barModel(focus, P.depth);
+  B = model.barModel(focus, P.depth, tuningRatio(P, focus)); // cut for the key's tuning, as the engine cuts it
   TG = model.tubeGeometry(focus, B);
   TS = model.tubeState(TG, B.modes[0].f, { gap: P.gap / 1000, detune: P.detune, temp: P.temp, cd: P.cd });
   const g = B.geom, ts = model.barTempScale(P.temp), f1 = B.modes[0].f * ts, name = noteName(focus);

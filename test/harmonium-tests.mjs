@@ -17,6 +17,7 @@ import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../harmonium/src/harmonium-params.js';
 import { fft } from '../tools/audio-util.mjs';
 import { keyFreq } from '../shared/dsp.js';
+import { TUNING_PARAMS, TUNING_KEEP } from '../shared/tuning.js';
 
 const HarmoniumEngine = await loadEngine(INSTRUMENT);
 const { reedModel, threshold, equilibrium, linearRoot, cassotto, gapWidth, rankFreq, modeShape } = await wasmModel();
@@ -65,7 +66,7 @@ const cents = (a, b) => 1200 * Math.log2(a / b);
 const rel = (a, b) => Math.abs(a / b - 1);
 const TAU = 2 * Math.PI;
 
-// Run the engine through events ([t, 'on', key, vel] | [t, 'off', key] | [t, 'params', P] | [t, 'press', value]),
+// Run the engine through events ([t, 'on', key, vel] | [t, 'off', key] | [t, 'params', P] | [t, 'press', value] | [t, 'msg', message]),
 // in 128-sample blocks like the AudioWorklet; tap(engine, t) after every block.
 function run(params, events, sec, { fs = FS, seed = 1, tap, opts = { track: true } } = {}) {
   const e = new HarmoniumEngine(fs, seed, opts);
@@ -78,6 +79,7 @@ function run(params, events, sec, { fs = FS, seed = 1, tap, opts = { track: true
       const [, type, a, b] = ev[j++];
       if (type === 'on') e.noteOn(a, b); else if (type === 'off') e.noteOff(a, b); else if (type === 'params') e.setParams(a);
       else if (type === 'press') e.handle({ type: 'pressure', key: null, value: a });
+      else if (type === 'msg') e.handle(a);
     }
     e.process(bL, bR, bl);
     for (let i = 0; i < bl && s + i < n; i++) { L[s + i] = bL[i]; R[s + i] = bR[i]; }
@@ -246,6 +248,14 @@ test('tuning: every key C2–C7 sounds within ±3 ¢ of equal temperament at the
   for (const k of [85, 90, 96]) check(k, P({ principal: false, piccolo: true }), 4, 48000);
   console.log(`        worst ${worst.toFixed(2)} ¢`);
 });
+test('the keyboard\'s tuning: at A = 415 Hz in ¼-comma meantone (root C), C4, E4 and A4 (8′) sound within ±3 ¢ of 440·2^((m−69)/12)·415/440, C4 +10.26 ¢ and E4 −3.42 ¢ from equal temperament, A4 on the standard (the reeds cut for it)', () => {
+  const p = P({ pitch: 415, temperament: 'meantone', tuningRoot: 0 });
+  for (const [key, off] of [[60, 10.26], [64, -3.42], [69, 0]]) {
+    const f0 = keyFreq(key) * (415 / 440) * 2 ** (off / 1200), r = hold(key, p, 1.0, { opts: { track: true } }), c = cents(freqAt(r.L, f0, Math.round(0.5 * 48000), r.L.length, 48000), f0);
+    assert.ok(Math.abs(cents(rankFreq(key, 1, p), f0)) < 0.01, `key ${key}: the reed's design frequency`);
+    assert.ok(Math.abs(c) < 3, `key ${key}: ${c.toFixed(2)} ¢ from its target`);
+  }
+});
 test('past C2–C7 (Full range): the 8′ from A0 to C8 in tune within ±3 ¢ and speaking within 0.5 s, the 4′ up to G♯7 in tune, the 16′ down to A0 (13.75 Hz) within 5 ¢', () => {
   const check = (key, p, rank) => {
     const long = key < 30, r = hold(key, p, long ? 2.4 : 1.0, { opts: { track: true } }), f0 = rankFreq(key, rank, p);
@@ -378,6 +388,31 @@ test('voice stealing: past 16 keys the quietest released key fades out over 30 m
   for (let i = Math.round(0.45 * FS); i < Math.round(0.6 * FS); i++) jump = Math.max(jump, Math.abs(r.L[i] - r.L[i - 1]));
   assert.ok(jump < 0.2, `largest step ${jump}`);
 });
+test('Quality: Medium and Low let fewer keys sound (8, 5), the quietest fading; a note keeps its pitch and level', () => {
+  const play = (q, events, sec, tap) => {
+    const e = new HarmoniumEngine(FS, 1, { track: true }); e.setQuality(q); e.setParams(P());
+    const n = Math.round(sec * FS), L = new Float64Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
+    for (let s = 0, j = 0; s < n; s += bl) {
+      while (j < events.length && events[j][0] * FS <= s) { const [, k, v] = events[j++]; e.noteOn(k, v); }
+      e.process(bL, bR, bl); L.set(bL.subarray(0, Math.min(bl, n - s)), s); tap?.(e);
+    }
+    return { L, e };
+  };
+  const level = {};
+  for (const [q, cap] of [['high', 16], ['medium', 8], ['low', 5]]) {
+    // twelve keys held down, one every 60 ms
+    let live = 0;
+    play(q, Array.from({ length: 12 }, (_, i) => [0.06 * i, 40 + 3 * i, 0.7]), 1, (e) => { live = Math.max(live, e.voices.filter((v) => !v.fading).length); });
+    assert.ok(live === Math.min(cap, 12), `${q}: ${live} keys sounding`);
+    for (const key of [57, 81]) { // a 1× reed and a 2× one
+      const { L, e } = play(q, [[0, key, 0.7]], 0.8), f0 = keyFreq(key), f = freqAt(L, f0, Math.round(0.5 * FS), L.length);
+      assert.ok(L.every(Number.isFinite) && Math.abs(cents(f, f0)) < 3 && Math.abs(cents(e.voices[0].reeds[1].freq(), f0)) < 3, `${q} ${key}: ${cents(f, f0).toFixed(2)} ¢`);
+      level[q + key] = rms(L, Math.round(0.4 * FS), L.length);
+      const d = 20 * Math.log10(level[q + key] / level['high' + key]);
+      assert.ok(Math.abs(d) < 1.5, `${q} ${key}: ${d.toFixed(2)} dB from High`);
+    }
+  }
+});
 
 console.log('levels and stability');
 test('level: at the default wind a single note peaks at 0.1–0.5 from C2 to C6 and above 0.04 up to C7, at 44.1 and 48 kHz; a ten-key chord stays under 1.5', () => {
@@ -406,16 +441,20 @@ test('aliasing: a 2×-integrated C7 and a 1×-integrated G4 keep every inharmoni
   }
 });
 test('stability: seeded random combinations of extreme settings at 44.1 and 48 kHz, changed mid-note, with full aftertouch: no NaN, bounded, dying away after release', () => {
-  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'venue', 'fullRange'].includes(q.id));
+  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'venue', 'fullRange', ...TUNING_KEEP].includes(q.id));
   let seed = 4242, worst = { pk: 0 };
   const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  // the keyboard's tuning drawn apart, from its own sequence, so that the other parameters' combinations stay the ones they were
+  let tseed = 777;
+  const trnd = () => ((tseed = (tseed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  const tune = (p) => { for (const q of TUNING_PARAMS) { if (trnd() < 0.5) continue; p[q.id] = q.options ? q.options[Math.floor(trnd() * q.options.length)][0] : trnd() < 0.5 ? q.min : q.max; } return p; };
   const pick = () => {
     const p = P();
     for (const q of sliders) {
       if (rnd() < 0.5) continue;
       p[q.id] = q.type === 'checkbox' ? rnd() < 0.5 : q.type === 'select' ? q.options[Math.floor(rnd() * q.options.length)][0] : rnd() < 0.5 ? q.min : q.max;
     }
-    return p;
+    return tune(p);
   };
   for (const fs of [44100, 48000]) for (let c = 0; c < 6; c++) {
     const p1 = pick(), p2 = pick(), ev = [];
@@ -432,6 +471,17 @@ test('stability: seeded random combinations of extreme settings at 44.1 and 48 k
   }
   assert.ok(worst.pk < 4, `${worst.fs}: peak ${worst.pk.toFixed(2)} with ${JSON.stringify(worst.p1)} → ${JSON.stringify(worst.p2)}`);
   console.log(`        loudest of 12: ${worst.pk.toFixed(2)}`);
+});
+test(`MPE: a key's own bend reaches the WebAssembly as far as the descriptor's ±${INSTRUMENT.mpe.bend} semitones: C4 bent so far sounds there (within 12 ¢: the throat and cell keep their tuning), a bend past it lands at it, a bend of 1 changes nothing, and there is no slide (the wind is every key's)`, () => {
+  const max = INSTRUMENT.mpe.bend, bent = (st) => run(P(), [[0, 'msg', { type: 'noteBend', key: 60, value: 2 ** (st / 12) }], [0, 'msg', { type: 'slide', key: 60, value: 3000 }], [0, 'on', 60, 0.7]], 1);
+  const plain = hold(60, P(), 1);
+  assert.ok(INSTRUMENT.mpe.slide === undefined);
+  assert.deepEqual(bent(0).L, plain.L);
+  for (const s of [1, -1]) {
+    const r = bent(s * max), want = keyFreq(60) * 2 ** ((s * max) / 12), f = freqAt(r.L, want, 0.5 * FS, FS);
+    assert.ok(Math.abs(cents(f, want)) < 12, `${s * max}: ${cents(f, want).toFixed(1)} ¢`);
+    assert.deepEqual(bent(2 * s * max).L, r.L);
+  }
 });
 test('presets use their own parameters, and each speaks without NaN', () => {
   for (const pr of PRESETS) {

@@ -110,6 +110,9 @@ struct Gong {
   std::array<double, NMAX> sigma{};
 };
 // The key's gong, tuned so that its first axisymmetric mode is the key's pitch.
+// The key's pitch (Hz): equal temperament's times the keyboard's tuning (forte/tuning.h). The gong
+// is cut for it: its radius is solved from this pitch.
+double gongPitch(int key, const double *P);
 void keyGong(Gong &g, int key, const double *P, double fs, const Shell &S);
 // Damping of each mode (internal friction, thermoelastic, radiation): g.loss and g.sigma.
 void modeLoss(Gong &g, const double *P);

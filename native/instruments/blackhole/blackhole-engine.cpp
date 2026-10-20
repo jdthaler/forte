@@ -126,14 +126,15 @@ void RingdownEngine::setParams(const double *P) {
   ModelParams m;
   m.spinU = P[p::spinU]; m.massRatio = P[p::massRatio]; m.inclination = P[p::inclination]; m.t0 = P[p::t0];
   m.overtones = P[p::overtones]; m.retrograde = P[p::retrograde]; m.inspiral = P[p::inspiral] > 0.5; m.inspiralOct = P[p::inspiralOct];
+  m.tuning = tuningOf(P);
   if (!(m == model)) { model = m; std::fill(std::begin(cached), std::end(cached), false); }
 }
 
 // A key's voice at the current model parameters, built once per key until they change.
 const KeyVoice &RingdownEngine::voiceFor(int key) {
-  if (key < KEY_LO || key > KEY_HI) { keyVoice(key, model, fs, other); return other; }
+  if (key < KEY_LO || key > KEY_HI) { keyVoice(key, model, fs, other, &angular); return other; }
   const int i = key - KEY_LO;
-  if (!cached[i]) { keyVoice(key, model, fs, cache[i]); cached[i] = true; }
+  if (!cached[i]) { keyVoice(key, model, fs, cache[i], &angular); cached[i] = true; }
   return cache[i];
 }
 
@@ -142,7 +143,11 @@ void RingdownEngine::offer(const KeyVoice &v) { offer_ = v; hasOffer = true; }
 Voice *RingdownEngine::slot() { return nfree ? free_[--nfree] : nullptr; }
 
 void RingdownEngine::noteOn(int key, double velocity) {
-  const KeyVoice &d = hasOffer ? offer_ : voiceFor(key);
+  // a key with a slide of its own: its black hole at that spin, built here (the page's voice is
+  // the knob's)
+  const double u = expr.slideOr(key, NAN);
+  if (u == u) { ModelParams m = model; m.spinU = std::max(0.0, u); keyVoice(key, m, fs, spun, &spunAngular); }
+  const KeyVoice &d = u == u ? spun : hasOffer ? offer_ : voiceFor(key);
   hasOffer = false;
   // over the limit: fade out the quietest voice that is not already going
   int live = 0;
@@ -151,7 +156,8 @@ void RingdownEngine::noteOn(int key, double velocity) {
     Voice *v = voices[i];
     if (!v->stolen) { live++; if (!quiet || v->level < quiet->level) quiet = v; }
   }
-  if (live >= maxVoices && quiet) quiet->stolen = true;
+  // (Quality: at most 24 voices at Medium and 12 at Low, or fewer if the page asks)
+  if (live >= std::min(maxVoices, pick(MAX_VOICES, 24, 12)) && quiet) quiet->stolen = true;
   Voice *v = slot();
   if (!v) return; // never: the hard limit below keeps a slot free
   v->start(*this, key, d, velocity);

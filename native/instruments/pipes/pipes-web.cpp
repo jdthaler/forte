@@ -29,7 +29,7 @@ FORTE_EXPORT int pipes_pipe_model(double f, int stopped, double cutup, double ga
   return n;
 }
 FORTE_EXPORT double pipes_tuning(double f, int stopped) { return tuning(f, stopped != 0); }
-FORTE_EXPORT double pipes_pipe_freq(int key, int r) { return pipeFreq(key, r); }
+FORTE_EXPORT double pipes_pipe_freq(int key, int r, double ratio) { return pipeFreq(key, r, ratio); }
 FORTE_EXPORT double pipes_mode_freq(int n, double Le, int stopped) { return modeFreq(n, Le, stopped != 0); }
 FORTE_EXPORT double pipes_chest_pan(int key) { return chestPan(key); }
 // The wind system at stiffness stiff into out: Cc, Mt, Gs, Gr, Cr, Rt, fw.
@@ -89,9 +89,10 @@ FORTE_EXPORT int pipes_speaking_window(const double *flat, int n, double thetaLo
 }
 
 // A key's six pipes, packed (packKeyModels) into out, returning how many numbers: what the page
-// sends with a note, and its engine takes (pipes_offer).
-FORTE_EXPORT int pipes_key_models(int key, double cutup, double gain, double offset, double *out) {
-  return packKeyModels(keyModels(key, {cutup, gain, offset}), out);
+// sends with a note, and its engine takes (pipes_offer), cut for the keyboard's tuning; P is
+// indexed as in pipes-params.h.
+FORTE_EXPORT int pipes_key_models(int key, const double *P, double *out) {
+  return packKeyModels(keyModels(key, {P[p::cutup], P[p::gain], P[p::offset]}, tuningOf(P).ratio(key)), out);
 }
 FORTE_EXPORT int pipes_offer(PipeEngine *e, const double *packed, int n) { return e->offer(packed, n); }
 FORTE_EXPORT int pipes_use_models(PipeEngine *e, const double *packed, int n) { return e->useModels(packed, n); }

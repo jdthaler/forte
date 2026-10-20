@@ -3,6 +3,7 @@
 // plugins (tools/gen-native-params.mjs) all start here. No DOM, no Web Audio.
 
 import { GROUPS, DEFAULTS, PRESETS } from './quantum-params.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -13,10 +14,11 @@ export const INSTRUMENT = {
   id: 'quantum',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                     // MIDI keys: A0–C8
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'dephase',                  // CC1: dephasing, from its default up to its maximum
+  mpe: { slide: true },                 // MPE: a note's slide is the noise on its own well (no bend)
   // the engine: the physics in C++ (native/instruments/quantum), built as WebAssembly. Each note's
   // packet (~1 ms) is computed off the audio thread, by the page's WebAssembly model, and sent with
   // the noteOn (the page's noteData)

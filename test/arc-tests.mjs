@@ -239,6 +239,16 @@ test('capacitors cut by Kelvin\'s formula: every note sounds flat, by 1 % at the
   assert.ok(sh[3] > 0.007 && sh[3] < 0.015, `C6 ${(sh[3] * 100).toFixed(2)} % flat`);
   for (let k = 1; k < sh.length; k++) assert.ok(sh[k] < sh[k - 1] + 1e-3, `${sh.map((v) => (v * 100).toFixed(2))} %`);
 });
+test('the keyboard\'s tuning: at A = 415 Hz (the page\'s bank) and in ¼-comma meantone (the engine\'s own) each capacitor is cut for its tuned note, within 1 cent', () => {
+  const want = { 415: [[64, 440 * 2 ** (-5 / 12) * 415 / 440], [60, 440 * 2 ** (-9 / 12) * 415 / 440]], meantone: [[64, keyFreq(64) * 2 ** (-3.42 / 1200)], [60, keyFreq(60) * 2 ** (10.26 / 1200)], [69, 440]] };
+  for (const [what, keys] of Object.entries(want)) {
+    const p = what === '415' ? P({ pitch: 415 }) : P({ temperament: 'meantone' });
+    for (const [key, f0] of keys) {
+      const { L } = run(what === '415' ? { ...p, table: table(p) } : p, [[0, 'on', key]], 0.75), f = freqAt(L, f0, 14400, 36000);
+      assert.ok(Math.abs(cents(f, f0)) < 1, `${what}, ${noteName(key)}: ${f.toFixed(3)} Hz, ${cents(f, f0).toFixed(2)} ¢ from ${f0.toFixed(3)}`);
+    }
+  }
+});
 test('a quick tune on one arc: every note of a detached melody speaks, in tune', () => {
   const p = P(), kc = table(p), notes = [67, 67, 69, 66, 67, 69, 71, 71, 72, 71, 69, 67], d = 0.32, gap = 0.04;
   const ev = notes.flatMap((k, i) => [[0.05 + i * d, 'on', k], [0.05 + (i + 1) * d - gap, 'off', k]]);
@@ -394,6 +404,17 @@ test('switching between one arc, several and the talking arc mid-note releases c
 test('presets use real parameters', () => {
   const ids = new Set(GROUPS.flatMap((g) => g.params).map((q) => q.id));
   for (const pr of PRESETS) for (const k of Object.keys(pr.p)) assert.ok(ids.has(k), `${pr.name}: ${k}`);
+});
+test('Quality: nothing to trim (the arc lamps are a parameter, and each is one circuit that has to be stepped finely to sing): Medium and Low play six singing arcs exactly as High', () => {
+  const render = (quality) => {
+    const e = new ArcEngine(FS); e.setQuality(quality); e.setParams(P({ mode: 'poly', arcs: 6, table: table(P()) }));
+    for (const k of [55, 60, 64, 67, 72, 79]) e.noteOn(k);
+    const L = new Float32Array(128), R = new Float32Array(128), out = new Float32Array(0.5 * FS);
+    for (let s = 0; s < out.length; s += 128) { e.process(L, R, 128); out.set(L.subarray(0, Math.min(128, out.length - s)), s); }
+    return out;
+  };
+  const hi = render('high');
+  for (const quality of ['medium', 'low']) { const q = render(quality); for (let i = 0; i < hi.length; i++) if (q[i] !== hi[i]) throw new Error(`${quality} differs at sample ${i}`); }
 });
 test('CPU: six arcs singing take under 30 % of one core', () => {
   const e = new ArcEngine(FS); e.setParams(P({ mode: 'poly', arcs: 6, table: table(P()) }));

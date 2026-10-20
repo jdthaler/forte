@@ -3,7 +3,7 @@
 // functions for the views and the tests.
 
 import { GROUPS } from './vibraphone-params.js';
-import { wasmEngine, scratch } from '../../shared/wasm.js';
+import { wasmEngine, scratch, nativeParams, nativeValue } from '../../shared/wasm.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'vibraphone', name: 'VibraphoneWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/vibraphone.wasm', import.meta.url).href };
@@ -53,18 +53,20 @@ export const ready = () => VibraphoneWasmEngine.ready();
 
 // The model's functions (vibraphone-model.h: barModel, tubeGeometry, tubeState, coupling,
 // barTempScale, malletOf; bar.h: thickness), computed by the WebAssembly, and voiceData: a bar's
-// data packed for the engine (the page's noteData).
+// data packed for the engine (the page's noteData). barModel(k, depth, ratio) cuts the bar for its
+// key's tuning ratio (shared/tuning.js tuningRatio; 1 in equal temperament at A = 440 Hz);
+// voiceData(k, P) takes the depth and the tuning from the parameters, as the engine does.
 const TUBE = ['a', 'S', 'Sb', 'Rb', 'delta0', 'lv'];
 const STATE = ['length', 'le', 'ma', 'Ka', 'mg', 'Sb', 'Rrad', 'Rwall', 'R', 'lvS', 'cd', 'M11', 'M12', 'M22', 'Rdisc'];
 const T_TUNE = 20;
 export async function wasmModel() {
-  const x = await ready(), s = scratch(x);
+  const x = await ready(), s = scratch(x), params = nativeParams(BUILD);
   const bars = new Map();
   const model = {
-    barModel(k, depth = 1) {
-      const id = `${k}|${depth}`;
+    barModel(k, depth = 1, ratio = 1) {
+      const id = `${k}|${depth}|${ratio}`;
       if (bars.has(id)) return bars.get(id);
-      const n = x.vibraphone_bar_model(k, depth, s.at), a = s.f64(n).slice();
+      const n = x.vibraphone_bar_model(k, depth, ratio, s.at), a = s.f64(n).slice();
       const nx = a[14], N = a[15], nn = a[16];
       let i = 17;
       const take = (m) => { const v = a.slice(i, i + m); i += m; return v; };
@@ -74,13 +76,13 @@ export async function wasmModel() {
         modes.push({ kind: tors ? 'tors' : 'bend', n: nth, f, ratio, sym: sym > 0, w: take(nx), sigTE, sigSup, sigRad, out });
       }
       const geom = { key: a[0], L: a[1], b: a[2], h0: a[3], cf: a[4], A: a[5], D: a[6], depth: a[7], cut: { h0: a[8], a: a[9], c: a[10], d: a[11] } };
-      const bar = { key: a[0], geom, xs, modes, nodes, mass: a[12], hmin: a[13] };
+      const bar = { key: a[0], geom, ratio, xs, modes, nodes, mass: a[12], hmin: a[13] };
       if (bars.size > 256) bars.clear();
       bars.set(id, bar);
       return bar;
     },
     tubeGeometry(k, bar) {
-      x.vibraphone_tube_geometry(bar.key, bar.geom.depth, s.at);
+      x.vibraphone_tube_geometry(bar.key, bar.geom.depth, bar.ratio, s.at);
       const a = s.f64(TUBE.length);
       return Object.fromEntries(TUBE.map((key, i) => [key, a[i]]));
     },
@@ -104,9 +106,10 @@ export async function wasmModel() {
       return { m: a[0], K: a[1], p: a[2], alpha: a[3] };
     },
     thickness: (cut, X) => x.vibraphone_thickness(cut.h0, cut.a, cut.c, cut.d, X),
-    voiceData(k, depth = 1) {
-      const n = x.vibraphone_voice_data(k, depth, s.at);
-      return s.f64(n).slice();
+    voiceData(k, P) {
+      s.f64(params.length).set(params.map((p) => nativeValue(p, P[p.id])));
+      const n = x.vibraphone_voice_data(k, s.at, s.at + 8 * params.length);
+      return s.f64(n, 8 * params.length).slice();
     },
   };
   return model;

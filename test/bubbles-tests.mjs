@@ -63,8 +63,9 @@ const hydrophoneGains = (key) => [R_REF / rHydro(nozzleX(key), 0), R_REF / rHydr
 
 // Run the engine through events ([t, 'on', key, vel] | [t, 'off', key] | [t, 'params', P] | [t, 'press', key, v]),
 // in 128-sample blocks like the AudioWorklet; tap(engine) after every block.
-function run(params, events, sec, { fs = FS, tap, seed, log, opts } = {}) {
+function run(params, events, sec, { fs = FS, tap, seed, log, opts, quality } = {}) {
   const e = new BubbleEngine(fs, seed, opts);
+  if (quality) e.setQuality(quality);
   if (log) e.log = [];
   e.setParams(params);
   const n = Math.round(sec * fs), L = new Float64Array(n), R = new Float64Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
@@ -302,6 +303,13 @@ test('every key A3–C8 sounds on pitch at the defaults (its first bubble, withi
   }
   console.log(`         worst ${worst.toFixed(2)} ¢`);
 });
+test('the keyboard\'s tuning cuts the nozzles: at A = 415 Hz E4 sounds 440·2^(−5/12)·415/440; in ¼-comma meantone E4 −3.42 ¢, C4 +10.26 ¢, A4 440 Hz; a custom E +35 ¢ (±1.5 ¢); kept in tune under 20 m of water too (±2 ¢)', () => {
+  for (const [o, k, f0] of [[{ pitch: 415 }, 64, 440 * 2 ** (-5 / 12) * 415 / 440], [{ temperament: 'meantone' }, 64, keyFreq(64) * 2 ** (-3.42 / 1200)], [{ temperament: 'meantone' }, 60, keyFreq(60) * 2 ** (10.26 / 1200)], [{ temperament: 'meantone' }, 69, 440], [{ temperament: 'custom', cents4: 35 }, 64, keyFreq(64) * 2 ** (35 / 1200)], [{ pitch: 415, depth: 20, keepInTune: true }, 64, 440 * 2 ** (-5 / 12) * 415 / 440]]) {
+    const { L } = ping(k, P(o), 0.8, 0.25), i0 = firstSample(L) + Math.round(0.0005 * FS);
+    const c = cents(zeroCrossFreq(L, i0, Math.round(i0 + Math.min(Math.max(12, 0.02 * f0), 60) * (FS / f0))), f0);
+    assert.ok(Math.abs(c) < (o.keepInTune ? 2 : 1.5), `${JSON.stringify(o)} key ${k}: ${c.toFixed(2)} ¢ from ${f0.toFixed(2)} Hz`);
+  }
+});
 test('keep in tune: under 20 m of water, helium, glycerol or a quarter atmosphere every key stays within 2 ¢; off, it moves as the model says', () => {
   for (const o of [{ depth: 20 }, { gas: 'helium' }, { liquid: 'glycerol' }, { pressure: 0.25 }, { gas: 'sf6', depth: 5 }]) {
     for (let k = KEY_LO + 2; k <= KEY_HI; k += 7) {
@@ -414,6 +422,21 @@ test('voice stealing: ten keys at 40 bubbles/s stay within the pool; the quietes
   // a click would put a step into d (second difference ~ its size); a smooth fade of tones below
   // 600 Hz keeps it near (2π·600/fs)² = 0.006 of it
   assert.ok(dmax > 0 && d2 < 0.02 * dmax, `second difference ${(d2 / dmax).toFixed(4)} of the stolen tails' ${dmax.toFixed(3)}`);
+});
+test('Quality: Medium and Low keep at most 80 and 50 bubbles ringing (High 160), the quietest old ones faded out, and free a bubble 70 and 60 dB below its peak (High 80); a ping keeps its level (within 0.1 dB) and its pitch (within 0.1 ¢); ten brooks at 40 bubbles/s stay finite', () => {
+  const ev = [57, 59, 60, 62, 64, 65, 67, 69, 71, 72].map((k) => [0, 'on', k, 0.8]), p = P({ rate: 40 }), res = [];
+  const ref = ping(69, P()).L, f0 = zeroCrossFreq(ref, 0, 0.1 * FS);
+  for (const [quality, cap] of [['high', 160], ['medium', 80], ['low', 50]]) {
+    let most = 0;
+    const { L, R } = run(p, ev, 1.5, { quality, tap: (eng) => { let live = 0; for (const b of eng.pool) if (b.on && b.fadeStep === 0) live++; most = Math.max(most, live); } });
+    for (let i = 0; i < L.length; i++) assert.ok(Number.isFinite(L[i] + R[i]), `${quality}: not finite`);
+    assert.ok(most <= cap, `${quality}: ${most} ringing`);
+    const x = ping(69, P(), 0.8, 0.6, { quality }).L, dB = rmsDb(x) - rmsDb(ref), c = cents(zeroCrossFreq(x, 0, 0.1 * FS), f0);
+    assert.ok(Math.abs(dB) < 0.1, `${quality}: ping ${dB.toFixed(3)} dB from High`);
+    assert.ok(Math.abs(c) < 0.1, `${quality}: ping ${c.toFixed(3)} ¢ from High`);
+    res.push(`${quality} ${most} ringing, ping ${dB.toFixed(3)} dB`);
+  }
+  console.log(`         ${res.join('; ')}`);
 });
 test('level: a forte ping peaks at 0.1–0.5 on every key at 44.1 and 48 kHz; a 4-key forte and a 6-key mf chord stay under 1; every preset within 10 dB of the default', () => {
   for (const fs of [44100, 48000]) for (let k = KEY_LO; k <= KEY_HI; k += 3) {

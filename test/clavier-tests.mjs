@@ -167,6 +167,16 @@ test('tuning: every key settles within ±3 ¢ of equal temperament (A440), held 
   console.log(`        worst ${worst.toFixed(2)} ¢ (key ${wk})`);
 });
 
+test('the keyboard\'s tuning: at A = 415 Hz in ¼-comma meantone (root C), C4, E4 and A4 settle within ±3 ¢ of 440·2^((m−69)/12)·415/440, C4 +10.26 ¢ and E4 −3.42 ¢ from equal temperament, A4 on the standard; a key struck again after the tuning changes is restrung to it', () => {
+  const T = { pitch: 415, temperament: 'meantone', tuningRoot: 0 }, target = (k, off) => keyFreq(k) * (415 / 440) * 2 ** (off / 1200);
+  for (const [k, off] of [[60, 10.26], [64, -3.42], [69, 0]]) {
+    const x = note(k, P(T), 0.3, 2.2), f = target(k, off), c = cents(peakFreq(x, f, sec(1.4), sec(2.2)), f);
+    assert.ok(Math.abs(c) < 3, `key ${k}: ${c.toFixed(2)} ¢ from its target`);
+  }
+  const x = render(P(), 2.4, [[0, 'on', 64, 0.3], [0.1, 'params', P(T)], [0.2, 'on', 64, 0.3]]), f = target(64, -3.42), c = cents(peakFreq(x, f, sec(1.6), sec(2.4)), f);
+  assert.ok(Math.abs(c) < 3, `struck again: ${c.toFixed(2)} ¢ from its target`);
+});
+
 test('past F1–E6 (Full range): the scale carried on, A0 to C8, below 65 % of breaking, pulling well under the key\'s 4 N, on pitch and sounding', () => {
   for (let k = KEY_MIN; k <= KEY_MAX; k++) {
     if (k >= LO && k <= HI) continue;
@@ -241,6 +251,57 @@ test('key pressure: the pitch rises as ΔT = EA·ΔL/L with the wrap ΔL = δ²/
     assert.ok(Math.abs(cents(hard, base) - want) < 0.06 * want + 0.5, `key ${key}: ${cents(hard, base).toFixed(2)} ¢ vs theory ${want.toFixed(2)} ¢`);
     assert.ok(Math.abs(cents(at, hard)) < 0.5, `aftertouch ${cents(at, base).toFixed(2)} ¢`);
     assert.ok(want > 15 && want < 90, `${want.toFixed(1)} ¢ at 16 N`);
+  }
+});
+
+// A note's own bend (MPE): its key pressed as the wheel would press it, so up to the wheel's 2 semitones.
+const noteBend = (key, st) => ({ type: 'noteBend', key, value: 2 ** (st / 12) });
+const near = (x, y, tol) => { let d = 0, pk = 0; for (let i = 0; i < x.length; i++) { d = Math.max(d, Math.abs(x[i] - y[i])); pk = Math.max(pk, Math.abs(y[i])); } assert.ok(d < tol * pk, `differs by ${(d / pk).toExponential(2)} of the peak`); };
+const same = (x, y, what) => { for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) assert.fail(`${what}: sample ${i} differs`); };
+
+test('a note\'s own bend presses its key as the wheel would (a semitone: half its 12 N), and that key alone', () => {
+  for (const [key, other] of [[40, 52], [72, 65]]) {
+    const f0 = keyFreq(key), a = sec(0.5), b = sec(1.0);
+    for (const st of [1, 2]) { // before the note-on, and while it sounds
+      near(render(P(), 1, [[0, 'msg', noteBend(key, st)], [0, 'on', key, 0.3]]), render(P(), 1, [[0, 'msg', { type: 'bend', value: st / 2 }], [0, 'on', key, 0.3]]), 1e-6);
+      near(render(P(), 1, [[0, 'on', key, 0.3], [0.3, 'msg', noteBend(key, st)]]), render(P(), 1, [[0, 'on', key, 0.3], [0.3, 'msg', { type: 'bend', value: st / 2 }]]), 1e-6);
+    }
+    // all the way: the pitch of 16 N, as the key-pressure test measures it against ΔT = EA·ΔL/L
+    const base = peakFreq(note(key, P(), 0.3, 1.0), f0, a, b);
+    const bent = peakFreq(render(P(), 1, [[0, 'on', key, 0.3], [0.05, 'msg', noteBend(key, 48)]]), f0 * 1.02, a, b, 80);
+    const hard = peakFreq(note(key, P({ press: 16 }), 0.3, 1.0), f0 * 1.02, a, b, 80);
+    assert.ok(Math.abs(cents(bent, hard)) < 0.5 && cents(bent, base) > 15, `key ${key}: +${cents(bent, base).toFixed(1)} ¢ bent, +${cents(hard, base).toFixed(1)} ¢ at 16 N`);
+    // the other key held beside it keeps its pitch: the chord is the bent note and the other one, apart
+    const chord = render(P(), 1, [[0, 'on', key, 0.3], [0, 'on', other, 0.3], [0.05, 'msg', noteBend(key, 2)]]);
+    const apart = [render(P(), 1, [[0, 'on', key, 0.3], [0.05, 'msg', { type: 'bend', value: 1 }]]), note(other, P(), 0.3, 1)];
+    near(chord, chord.map((_, i) => apart[0][i] + apart[1][i]), 1e-5);
+  }
+});
+
+test('a note\'s own bend down, or back to 1, leaves the output bit-identical; down takes the wheel\'s press off that key', () => {
+  const key = 60, ev = [[0, 'on', key, 0.5], [0, 'on', 67, 0.5], [0.3, 'off', 67]];
+  same(render(P(), 0.6, [[0, 'msg', noteBend(key, 1.5)], [0, 'msg', noteBend(key, 0)], ...ev, [0.2, 'msg', noteBend(67, 1.5)], [0.2, 'msg', noteBend(67, 0)], [0.25, 'msg', noteBend(key, 0)], [0.1, 'msg', { type: 'bend', value: 0.3 }]]),
+    render(P(), 0.6, [...ev, [0.1, 'msg', { type: 'bend', value: 0.3 }]]), 'bent and back');
+  same(render(P(), 0.6, [...ev, [0.1, 'msg', noteBend(key, -48)], [0.2, 'msg', noteBend(67, -1)]]), render(P(), 0.6, ev), 'bent down');
+  // the wheel at half, the key two semitones down: as if the wheel had left it alone
+  const solo = [[0, 'on', key, 0.5]];
+  same(render(P(), 0.6, [...solo, [0, 'msg', noteBend(key, -2)], [0.1, 'msg', { type: 'bend', value: 0.5 }]]), render(P(), 0.6, solo), 'the wheel undone');
+});
+
+test('stability: ± 48 semitones of each note\'s own bend, swept every block on chords, with the wheel and releases, at 44.1, 48 and 96 kHz', () => {
+  for (const fs of [44100, 48000, 96000]) for (const o of [{}, { press: 20, tip: 1, keyMass: 40 }, { press: 0.5, tipLoss: 0.1, kc: true }]) {
+    const e = new ClavierEngine(fs);
+    e.setParams(P(o));
+    const keys = [29, 41, 60, 72, 88], L = new Float32Array(128), R = new Float32Array(128);
+    let pk = 0;
+    for (let b = 0, n = Math.round(0.6 * fs / 128); b < n; b++) {
+      if (b === 0) for (const k of keys) e.noteOn(k, 1);
+      if (b === Math.round(n / 2)) { e.noteOff(41); e.noteOn(41, 0.6); e.handle({ type: 'bend', value: 1 }); }
+      keys.forEach((k, i) => e.handle(noteBend(k, 48 * Math.sin(b / (3 + i)))));
+      e.process(L, R, 128);
+      for (const y of L) { assert.ok(Number.isFinite(y), `${fs} Hz ${JSON.stringify(o)}: NaN`); pk = Math.max(pk, Math.abs(y)); }
+    }
+    assert.ok(pk / 10 ** (P(o).gain / 20) < 1.5, `${fs} Hz ${JSON.stringify(o)}: peak ${pk.toFixed(2)}`);
   }
 });
 
@@ -393,6 +454,30 @@ test('level at the extremes: the gap no longer sets the loudness, and the pickup
   }
 });
 
+test('Quality: Medium and Low sound at most 16 and 10 keys at once (24 at High), the quietest fading; a note alone sounds just as at High', () => {
+  const play = (q, keys, sec) => {
+    const e = new ClavierEngine(FS);
+    e.setQuality(q); e.setParams(P());
+    const n = Math.round(sec * FS), out = new Float64Array(n), bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
+    let live = 0;
+    for (let s = 0, i = 0; s < n; s += bl) {
+      if (i < keys.length && s >= i * 0.02 * FS) e.noteOn(keys[i++], 0.8); // held, one every 20 ms
+      e.process(L, R, bl);
+      out.set(L.subarray(0, Math.min(bl, n - s)), s);
+      live = Math.max(live, e.voices.filter((v) => !v.killing && !v.dead).length);
+    }
+    e.destroy();
+    return { out, live };
+  };
+  const keys = Array.from({ length: 24 }, (_, i) => 36 + 2 * i);
+  for (const [q, most] of [['high', 24], ['medium', 16], ['low', 10]]) {
+    const { out, live } = play(q, keys, 0.8);
+    assert.ok(out.every(Number.isFinite), `${q}: not finite`);
+    assert.equal(live, most, `${q}: ${live} keys sounding`);
+    const one = play(q, [60], 0.5).out, ref = play('high', [60], 0.5).out;
+    assert.ok(one.every((v, i) => v === ref[i]), `${q}: a single note differs from High`);
+  }
+});
 test('CPU: 10 bass voices (the most modes) render well under real time', () => {
   const keys = [29, 31, 33, 34, 36, 38, 40, 41, 43, 45];
   render(P(), 0.3, keys.map((k) => [0, 'on', k, 0.8])); // warm up the JIT

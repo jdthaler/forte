@@ -3,6 +3,7 @@
 // plugins (tools/gen-native-params.mjs) all start here. No DOM, no Web Audio.
 
 import { GROUPS, DEFAULTS, PRESETS, KEY_LO, KEY_HI } from './ringdown-params.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -10,10 +11,11 @@ export const INSTRUMENT = {
   id: 'blackhole',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'venue', 'tone', 'stereo'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'tone', 'stereo', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_LO, KEY_HI],                    // MIDI keys: A0–C8, 21–108
   space: null,                                // a ringdown has no damper; nothing to hold
   modWheel: 'spinU',                          // CC1: the spin, from its default up to 1 − 10⁻⁶
+  mpe: { slide: true },                       // MPE: a note's slide is its own hole's spin, at the merger (no bend)
   midiVelocity: (v) => v ** 1.5,              // MIDI velocity / 127 → the engine's
   keyVelocity: 1,                             // the velocity the computer keys play (no velocity parameter)
   // the engine, in C++ (native/instruments/blackhole), built as WebAssembly: it builds each key's

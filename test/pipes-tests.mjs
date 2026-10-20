@@ -17,11 +17,12 @@ import { wasmModel } from '../pipes/src/pipes-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../pipes/src/pipes-params.js';
 import { TUNING } from '../pipes/src/tuning-table.js';
+import { TUNING_PARAMS, TUNING_KEEP } from '../shared/tuning.js';
 import { tuningHeader } from '../tools/pipes-tuning.mjs';
 import { keyFreq } from '../shared/dsp.js';
 
 const PipeEngine = await loadEngine(INSTRUMENT);
-const { pipeModel, pipeFreq, tuning, modeFreq, chestPan, windSystem, linearRoot, loopGain, thetaAt, pressureAt, speakingWindow } = await wasmModel();
+const { pipeModel, pipeFreq, tuning, modeFreq, chestPan, windSystem, linearRoot, loopGain, thetaAt, pressureAt, speakingWindow, keyModels } = await wasmModel();
 // the C++'s numbers (pipes-model.h): air; the wind the pipes are voiced for; the jet's phase
 // velocity and roll-off; the voicing's loop gain; the wind system's trunk and chest
 const AIR = { rho: 1.2, c: 343, nu: 1.51e-5, gamma: 1.4, Pr: 0.71 }, P_NOM = 700, U_NOM = Math.sqrt((2 * P_NOM) / AIR.rho);
@@ -60,7 +61,7 @@ function wallAlpha(f, a) { const { c, nu, gamma, Pr } = AIR; return (Math.sqrt((
 // window is the range of θ = U_j/(f₁W) over which it does. The engine never runs it: it integrates
 // the nonlinear equations in time.
 
-// Run the engine through events ([t, 'on', key, vel] | [t, 'off', key] | [t, 'params', P]) in
+// Run the engine through events ([t, 'on', key, vel] | [t, 'off', key] | [t, 'params', P] | [t, 'msg', message]) in
 // 128-sample blocks like the AudioWorklet; tap(engine, t) after every block.
 function run(params, events, sec, { fs = FS, seed = 1, tap, track = false } = {}) {
   const e = new PipeEngine(fs, seed, { track });
@@ -72,6 +73,7 @@ function run(params, events, sec, { fs = FS, seed = 1, tap, track = false } = {}
     while (j < ev.length && ev[j][0] <= s) {
       const [, type, a, b] = ev[j++];
       if (type === 'on') e.noteOn(a, b); else if (type === 'off') e.noteOff(a, b); else if (type === 'params') e.setParams(a);
+      else if (type === 'msg') e.handle(a);
     }
     e.process(bL, bR, bl);
     for (let i = 0; i < bl && s + i < n; i++) { L[s + i] = bL[i]; R[s + i] = bR[i]; }
@@ -327,6 +329,16 @@ test('tuning at 44.1 kHz: every third key C–f³ on the Principal 8′, Octave 
     assert.ok(Math.abs(c) < 3, `${organName(k)} ${RANKS[r].id}: ${c.toFixed(2)} ¢`);
   }
   console.log(`        worst ${worst.toFixed(2)} ¢`);
+});
+test('the keyboard\'s tuning: at A = 415 Hz in ¼-comma meantone (root C), the Principal 8′ c¹, e¹ and a¹ sound within ±3 ¢ of 440·2^((m−69)/12)·415/440, c¹ +10.26 ¢ and e¹ −3.42 ¢ from equal temperament, a¹ on the standard; the pipes the page sends with a note are cut for it', () => {
+  const T = { pitch: 415, temperament: 'meantone', tuningRoot: 0 };
+  for (const [k, off] of [[60, 10.26], [64, -3.42], [69, 0]]) {
+    const f0 = keyFreq(k) * (415 / 440) * 2 ** (off / 1200), res = run(P({ ...ONLY.principal, noise: 0, ...T }), [[0, 'on', k, 0.7]], 0.9);
+    const c = cents(freqAt(res.L, f0, res.L.length - Math.round(0.4 * FS), res.L.length, FS), f0);
+    assert.ok(Math.abs(c) < 3, `${organName(k)}: ${c.toFixed(2)} ¢ from its target`);
+    const packed = keyModels(k, P(T));
+    assert.ok(Math.abs(cents(packed[4] * keyFreq(k), f0)) < 0.01 && rel(packed[5], packed[4] * keyFreq(k)) < 1e-12, `${organName(k)}: the packed pipes' tuning`);
+  }
 });
 test('the Gedackt is stopped: its even harmonics are at least 25 dB under its odd ones; the open Principal has both (its octave within 20 dB of the fundamental)', () => {
   for (const k of [36, 48, 60, 72, 84]) {
@@ -598,6 +610,30 @@ test('voice stealing: past 20 keys the quietest released key fades out over 30 m
   for (let i = Math.round(0.55 * FS); i < Math.round(0.7 * FS); i++) jump = Math.max(jump, Math.abs(r.L[i] - r.L[i - 1]));
   assert.ok(jump < 0.1, `largest step ${jump}`);
 });
+test('Quality: Medium and Low let fewer keys sound (12, 8) and give each pipe fewer modes (8, 5); a full-organ c¹ keeps its pitches and level', () => {
+  const play = (q, params, keys, sec, tap) => {
+    const e = new PipeEngine(FS, 1, { track: true }); e.setQuality(q); e.setParams(params);
+    const n = Math.round(sec * FS), L = new Float64Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
+    for (let s = 0, j = 0; s < n; s += bl) {
+      while (j < keys.length && j * 0.06 * FS <= s) e.noteOn(keys[j++], 0.7);
+      e.process(bL, bR, bl); L.set(bL.subarray(0, Math.min(bl, n - s)), s); tap?.(e);
+    }
+    return { L, e };
+  };
+  const ref = {};
+  for (const [q, cap, modes] of [['high', 20, 10], ['medium', 12, 8], ['low', 8, 5]]) {
+    let live = 0;
+    play(q, P(), Array.from({ length: 14 }, (_, i) => 40 + 3 * i), 1.1, (e) => { live = Math.max(live, e.voices.filter((v) => !v.fading).length); });
+    assert.ok(live === Math.min(cap, 14), `${q}: ${live} keys sounding`);
+    const { L, e } = play(q, P({ octave: 1, gedackt: 1, mixture: 1 }), [60], 1.2), pipes = e.voices[0].pipes;
+    assert.ok(L.every(Number.isFinite), q);
+    const f = pipes.map((p) => p.freq()), lvl = rms(L, Math.round(0.7 * FS), L.length), n = pipes[0].v.length;
+    if (q === 'high') Object.assign(ref, { f, lvl, n });
+    assert.ok(q === 'high' ? n === modes : n === Math.min(modes, ref.n), `${q}: the Principal's c¹ plays ${n} modes`);
+    f.forEach((x, r) => assert.ok(x > 0 && Math.abs(cents(x, ref.f[r])) < 1, `${q}, rank ${r}: ${cents(x, ref.f[r]).toFixed(2)} ¢ from High`));
+    assert.ok(Math.abs(20 * Math.log10(lvl / ref.lvl)) < 1.5, `${q}: ${(20 * Math.log10(lvl / ref.lvl)).toFixed(2)} dB from High`);
+  }
+});
 
 console.log('levels and stability');
 test('level: a single Principal note peaks at 0.03–0.5 from C to f³ (0.1–0.5 up to c¹) at 44.1 and 48 kHz; a ten-key full-organ chord stays under 2', () => {
@@ -610,13 +646,17 @@ test('level: a single Principal note peaks at 0.03–0.5 from C to f³ (0.1–0.
   console.log(`        full-organ chord peaks at ${peakAbs(chord).toFixed(2)}`);
 });
 test('stability: seeded random combinations of extreme settings at 44.1 and 48 kHz, changed mid-note: no NaN, bounded, silent after release', () => {
-  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'venue', 'fullRange'].includes(q.id));
+  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'venue', 'fullRange', ...TUNING_KEEP].includes(q.id));
   let seed = 4242, worst = 0;
   const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  // the keyboard's tuning drawn apart, from its own sequence, so that the other parameters' combinations stay the ones they were
+  let tseed = 777;
+  const trnd = () => ((tseed = (tseed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  const tune = (p) => { for (const q of TUNING_PARAMS) { if (trnd() < 0.5) continue; p[q.id] = q.options ? q.options[Math.floor(trnd() * q.options.length)][0] : trnd() < 0.5 ? q.min : q.max; } return p; };
   const pick = () => {
     const p = P();
     for (const q of sliders) { if (rnd() < 0.5) continue; p[q.id] = q.type === 'checkbox' ? rnd() < 0.5 : rnd() < 0.5 ? q.min : q.max; }
-    return p;
+    return tune(p);
   };
   for (const fs of [44100, 48000]) for (let c = 0; c < 5; c++) {
     const p1 = pick(), p2 = pick(), ev = [];
@@ -632,6 +672,18 @@ test('stability: seeded random combinations of extreme settings at 44.1 and 48 k
     assert.ok(t2 < 1e-4 || (t2 < 0.05 * note && t2 < 0.8 * t1), `${fs}: still sounding (${t2.toFixed(5)} after ${t1.toFixed(5)}, note ${note.toFixed(4)}) with ${JSON.stringify(p2)}`);
   }
   console.log(`        loudest of 10: ${worst.toFixed(2)}`);
+});
+test(`MPE: a key's own bend reaches the WebAssembly as far as the descriptor's ±${INSTRUMENT.mpe.bend} semitones: c¹'s Principal bent so far sounds there (within 6 ¢), a bend past it lands at it, a bend of 1 changes nothing, and there is no slide (the wind is every key's)`, () => {
+  const p = P({ principal: 1, octave: 0, gedackt: 0, mixture: 0, noise: 0 }), max = INSTRUMENT.mpe.bend;
+  const bent = (st) => run(p, [[0, 'msg', { type: 'noteBend', key: 60, value: 2 ** (st / 12) }], [0, 'msg', { type: 'slide', key: 60, value: 3000 }], [0, 'on', 60, 0.7]], 1);
+  const plain = run(p, [[0, 'on', 60, 0.7]], 1);
+  assert.ok(INSTRUMENT.mpe.slide === undefined);
+  assert.deepEqual(bent(0).L, plain.L);
+  for (const s of [1, -1]) {
+    const r = bent(s * max), want = pipeFreq(60, 0) * 2 ** ((s * max) / 12), f = freqAt(r.L, want, 0.5 * FS, FS);
+    assert.ok(Math.abs(cents(f, want)) < 6, `${s * max}: ${cents(f, want).toFixed(1)} ¢`);
+    assert.deepEqual(bent(2 * s * max).L, r.L);
+  }
 });
 test('presets use their own parameters, and each speaks without NaN', () => {
   for (const pr of PRESETS) {

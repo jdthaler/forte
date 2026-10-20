@@ -4,6 +4,7 @@
 // sounds, voice stealing and Panic, every sample rate, and ten voices within the CPU budget.
 // The physics tests are the JavaScript suite's, run on the WebAssembly (node test/pianet-tests.mjs).
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
@@ -117,6 +118,105 @@ TEST("engine: pitch bend stiffens or softens the reeds: a note struck before it 
     for (double c = -10; c <= 10; c += 0.25) { const double f = f0 * std::pow(2.0, c / 1200), g = tone(x, f, (int)(0.1 * fs), (int)x.size(), fs); if (g > best) { best = g; bf = f; } }
     CHECK(std::fabs(cents(bf, f0)) < 3);
     CHECK(peak(x) < 0.5);
+  }
+}
+
+// the strongest frequency within ±10 ¢ of want in x[a, end)
+static double near(const std::vector<float> &x, double want, int a, double fs) {
+  double best = 0, bf = want;
+  for (double c = -10; c <= 10; c += 0.25) { const double f = want * std::pow(2.0, c / 1200), g = tone(x, f, a, (int)x.size(), fs); if (g > best) { best = g; bf = f; } }
+  return bf;
+}
+
+TEST("engine: one note's own bend (MPE) stiffens its reed alone: it lands on the ratio, on top of the wheel's; a held note stays") {
+  const double fs = 48000;
+  auto P = defaults();
+  P[p::tone] = 20000;
+  for (double v : {0.0, 1.0}) {
+    auto e = std::make_unique<PianetEngine>(fs);
+    e->setParams(P.data());
+    waitFor(*e, 48); waitFor(*e, 60);
+    e->noteOn(48, 0.6); e->noteOn(60, 0.6);
+    render(*e, (int)(0.05 * fs));
+    e->noteBend(std::pow(2.0, 5.0 / 12), 60);
+    e->bend(v);
+    const auto x = render(*e, (int)(0.65 * fs));
+    const double w = 2 * v, a = pianet::keyFreq(48) * std::pow(2.0, w / 12), b = pianet::keyFreq(60) * std::pow(2.0, (w + 5) / 12);
+    CHECK(std::fabs(cents(near(x, a, (int)(0.1 * fs), fs), a)) < 3);
+    CHECK(std::fabs(cents(near(x, b, (int)(0.1 * fs), fs), b)) < 3);
+  }
+  // to the ends, an octave (and no further), each bent at rest under its pad before it is played
+  for (auto [key, semis] : {std::pair{36, 12.0}, std::pair{84, -12.0}, std::pair{60, 24.0}}) {
+    auto e = std::make_unique<PianetEngine>(fs);
+    e->setParams(P.data());
+    waitFor(*e, key);
+    e->noteBend(std::pow(2.0, semis / 12), key);
+    e->noteOn(key, 0.6);
+    const auto x = render(*e, (int)(0.65 * fs));
+    const double f = pianet::keyFreq(key) * std::pow(2.0, std::clamp(semis, -PianetEngine::NOTE_BEND, PianetEngine::NOTE_BEND) / 12);
+    CHECK(std::fabs(cents(near(x, f, (int)(0.1 * fs), fs), f)) < 3);
+  }
+}
+
+TEST("engine: a lone note's own bend sounds as the wheel bent as far; a bend of 1 leaves the sound bit-identical") {
+  const double fs = 48000;
+  const int keys[] = {48, 55, 60};
+  auto play = [&](int how) { // 0: the wheel, 1: each note's own, 2: own bends of 1 every block, 3: nothing
+    auto e = std::make_unique<PianetEngine>(fs);
+    e->setParams(defaults().data());
+    for (int k : keys) waitFor(*e, k);
+    if (how == 2) { e->noteBend(1.3, 55); e->noteBend(1, 55); } // set and reset before the note
+    for (int k : keys) e->noteOn(k, 0.7);
+    std::vector<float> out, L(128), R(128);
+    for (int b = 0; b < (int)(0.8 * fs / 128); b++) {
+      if (b == 40 && how == 0) e->bend(1);
+      if (b == 40 && how == 1) for (int k : keys) e->noteBend(forte::fdlibm::pow(2.0, 2.0 / 12), k);
+      if (how == 2) for (int k : keys) e->noteBend(1, k);
+      if (b == 100) e->noteOff(55, -1); // its pad lands back on the bent reed
+      e->process(L.data(), R.data(), 128);
+      out.insert(out.end(), L.begin(), L.end());
+    }
+    return out;
+  };
+  const auto wheel = play(0), own = play(1), ones = play(2), none = play(3);
+  double d = 0;
+  for (size_t i = 0; i < wheel.size(); i++) d = std::max(d, (double)std::fabs(wheel[i] - own[i]));
+  CHECK(d < 1e-5 * peak(wheel));
+  CHECK(ones == none);
+}
+
+TEST("engine: own bends swept over their octave each way on a chord, every block, both pickups, stay finite and bounded at 44.1, 48 and 96 kHz") {
+  for (double fs : {44100.0, 48000.0, 96000.0}) {
+    for (int pickup : {0, 1}) {
+      auto P = defaults();
+      P[p::pickup] = pickup;
+      auto e = std::make_unique<PianetEngine>(fs);
+      SpscQueue<Message> q(1024);
+      e->messages = &q;
+      e->setParams(P.data());
+      e->setSustain(true);
+      const int keys[] = {36, 48, 57, 69, 81, 96};
+      for (int k : keys) { waitFor(*e, k); e->noteOn(k, 1); }
+      std::vector<float> L(128), R(128);
+      bool finite = true;
+      double pk = 0;
+      for (int b = 0; b < (int)(2 * fs / 128); b++) {
+        const double t = b * 128 / fs;
+        for (int i = 0; i < 6; i++) {
+          // half the keys sweep smoothly, half jump between the ends
+          const double s = PianetEngine::NOTE_BEND * (i % 2 ? std::sin(TAU * (0.7 + 0.3 * i) * t) : std::fmod(t * (3 + i), 1) < 0.5 ? 1 : -1);
+          e->noteBend(std::pow(2.0, s / 12), keys[i]);
+        }
+        if (b == (int)(0.5 * fs / 128)) e->bend(1);
+        if (b == (int)(1.5 * fs / 128)) for (int k : keys) e->noteOn(k, 1); // pressed again: the pads drop on the swinging reeds
+        e->process(L.data(), R.data(), 128);
+        for (int j = 0; j < 128; j++) { finite &= std::isfinite(L[j]) && std::isfinite(R[j]); pk = std::max(pk, (double)std::fabs(L[j])); }
+      }
+      int errors = 0;
+      for (Message m; q.pop(m);) errors += m.type == msg::error;
+      std::printf("       %.1f kHz, %s: peak %.2f\n", fs / 1000, pickup ? "electrostatic" : "magnetic", pk);
+      CHECK(finite && pk < 2 && errors == 0);
+    }
   }
 }
 

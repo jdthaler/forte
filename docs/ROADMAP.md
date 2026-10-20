@@ -59,8 +59,8 @@ Every other idea only adds, and can come before or after 1.0.
 | Velocity curve (soft, normal, hard) | S | Done, for the next release. |
 | Sostenuto (CC66) and soft pedal (CC67) | S–M | Done, for the next release. |
 | Pitch bend on more instruments | S each | Done: thirteen instruments bend by something physical (the clavier, the two organs, the free reeds, the tines, both reed pianos, the Viola Organista, the Glass Armonica, the Wind Harp, the bubbles, the arc and the pyrophone). The struck strings, bars, bells, plates and the phenomena keep their pitch, as the real ones do. Adding a bend to one of them after 1.0 would change songs that send pitch bend. |
-| MPE (per-note pitch bend and slide) | M | The engines already take per-key pressure. |
-| Alternative tunings and temperaments | M | Equal, well-tempered, meantone, just intonation; Scala files; A4 other than 440 Hz. |
+| MPE (per-note pitch bend and slide) | M | Done, for the next release: an MPE menu (Auto, On, Off) on every page and an MPE plugin parameter; CLAP note expressions too. Fourteen instruments bend one note by something physical (a reed, a pipe, a string, a bowl, a lamp, a cavity), and eleven slide (CC74) what their mod wheel moves for one note. The struck strings, bars and bells keep their pitch, as the real ones do, and the tonewheel organ turns every wheel on one shaft; the vibraphone (one motor) and kalimba (one hand on the hole) have no per-note slide. Not yet tried on a real MPE controller. |
+| Alternative tunings and temperaments | M | Done, for the next release: a Tuning group on every page and plugin: nine pitch standards (A = 392 to 466 Hz), equal, meantone (¼ and ⅙ comma), Werckmeister III, Kirnberger III, Vallotti, Young, Pythagorean and just on any root, and a custom temperament a Scala file can fill. Equal at 440 Hz, the default, sounds as before. |
 | Transpose and octave controls on every page and plugin | S | |
 | Split and layer two instruments | M | Most useful in the Forte app and on the site. |
 
@@ -71,13 +71,13 @@ Every other idea only adds, and can come before or after 1.0.
 | Save your own presets | M | Done, for the next release: in the Presets menu on every page (kept in the browser, saved to and opened from a file) and in the plugins' window (files in a presets folder per instrument, the same format). |
 | A choice of rooms (reverb) | M | Done, for the next release: a Venue choice on every page and plugin (Studio, Room, Recital hall, Concert hall, Cathedral), Room, the original, the default. |
 | Morph between two presets | S–M | |
-| Quality or CPU setting | S–M | Fewer modes or voices, for phones and old laptops. |
+| Quality or CPU setting | S–M | Done, for the next release: a Quality choice (High, Medium, Low) on every page and plugin. High sounds exactly as before; Medium and Low play fewer voices, partials or modes and lighten or drop the sympathetic strings, at about 60 % and a third of High's cost on the heavy instruments. A device's setting: in no preset or link, and the page suggests it when the audio drops out. |
 
 ### The site
 
 | Idea | Size | Notes |
 |------|------|-------|
-| Record and download what you play (WAV) | S–M | |
+| Record and download what you play (WAV) | S–M | Decided against (2026-10-19): not wanted. |
 | Share a link with your settings | S | Done, for the next release: *Copy a link to these settings* in the Presets menu; the link carries the parameters that differ from the defaults. |
 | Works offline, installable on phones | S–M | A service worker; the manifest already exists. |
 | Demo songs played from MIDI files | M | A listen button per instrument, and drag and drop a `.mid` to play it. |
@@ -109,18 +109,18 @@ default in the existing presets, or would change what an existing knob means.
 | The Tonewheel Organ's key scaling, preamp response and computed tonewheel waveform | S–M | Done, for the next release: the B-3's resistance wires, wheel levels and filters, the swell pedal's shut plate, and a waveform from the tooth and pickup (*Tooth relief* replaces *Wheel harmonics*). |
 | Companion modes on the Gong Keyboard | M | Done, for the next release: every asymmetric mode has its sin twin, split by a mass asymmetry (*Asymmetry ε*, 0.5 %) and struck off the heavy axis (*Strike angle*, 20°), so gongs beat and their nodal lines wander. The engine runs each pair as one complex amplitude; *Coupling terms* went from 600 to 300 so the page's CPU stays where it was. |
 | Resonator tube losses on the Vibraphone | S | Done, for the next release: boundary-layer losses on the shaft, the disc (growing as it closes) and the bottom plug, 14 % more than the walls alone at F3. The bass's pitch wobble moved by under 2 ¢, so a leaking plug or the tube's wall vibrating would have to be what makes real tubes broader, if they are. |
-| Spheroidal harmonics on the Black-Hole Keyboard | S–M | **Before 1.0.** Mode mixing at high spin. |
+| Spheroidal harmonics on the Black-Hole Keyboard | S–M | Done, for the next release: each mode is seen through its spin-weighted spheroidal harmonic (the spectral method, checked against Leaver's separation constants), so at high spin the higher l = m modes grow by up to half and the l ≠ m ones change. |
 | The Harpsichord's second polarisation after release | S–M | **Before 1.0** if wanted: the two-stage decay of a plucked string. |
 | An immovable clamped rim on the Gong Keyboard | L | **Before 1.0** if wanted: the clamped plate's nonlinearity is about 3× too weak. Needs a new Airy basis. |
 | The Tonewheel Organ's lower manual and pedals | M | A MIDI channel or a split each. |
 | A pedal division on the Pipe Organ | M | |
-| The Electric Grand's tremolo | S | |
+| The Electric Grand's tremolo | S | Done, for the next release: the CP-70/CP-80 preamp's stereo tremolo, an oscillator lighting a photocell on each output in turn (*Tremolo depth*, off by default, and *Tremolo rate*), and a *Stereo tremolo* preset. |
 
 ### New instruments
 
 | Idea | Size | Notes |
 |------|------|-------|
-| RF Cavity Bells, Collider Showers | M each | RF Cavity Bells: done, for the next release. Collider Showers is the accelerator idea still left over from the Storage Ring. |
+| RF Cavity Bells, Collider Showers | M each | Both done: RF Cavity Bells in 0.35.0; Collider Showers, a calorimeter's crystals rung by the heat of particle showers, for the next release. |
 | Celesta | M | Done, for the next release: Timoshenko steel bars over tuned wooden boxes, felt hammers and dampers. |
 | Steel pan | M | Done, for the next release: the Steel Pan, note areas tuned to octave and twelfth whose domes couple their modes, ringing along with their neighbours in a fourths-and-fifths layout. |
 | Hammered dulcimer or cimbalom | M | |

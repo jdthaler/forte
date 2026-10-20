@@ -51,7 +51,8 @@ FORTE_EXPORT void bubbles_glide(double R0, double p0, double d0, int liquid, int
 // Each key's radius for parameters P (indexed as in bubbles-params.h), A3–C8, in out.
 FORTE_EXPORT void bubbles_key_radii(const double *P, double *out) {
   const Env env = nozzleEnv(P), def = defaultEnv();
-  for (int k = KEY_LO; k <= KEY_HI; k++) out[k - KEY_LO] = tuneRadius(forte::keyFreq(k), P[p::keepInTune] ? env : def);
+  const forte::Tuning t = tuningOf(P);
+  for (int k = KEY_LO; k <= KEY_HI; k++) out[k - KEY_LO] = tuneRadius(forte::keyFreq(k) * t.ratio(k), P[p::keepInTune] ? env : def);
 }
 FORTE_EXPORT double bubbles_ambient(const double *P) { return nozzleEnv(P).p0; }
 FORTE_EXPORT double bubbles_rise_distance(double t, double U) { return riseDistance(t, U); }

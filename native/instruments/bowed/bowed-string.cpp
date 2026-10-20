@@ -19,9 +19,17 @@ inline double tap(const double *buf, int m, int w, double d) {
   const double c1 = 0.5 * (x2 - x0), c2 = x0 - 2.5 * x1 + 2 * x2 - 0.5 * x3, c3 = 0.5 * (x3 - x0) + 1.5 * (x1 - x2);
   return ((c3 * f + c2) * f + c1) * f + x1;
 }
-// C2 bent down 2 semitones fits (C2–C6 keep that); the keys past them hold their own string bent down so far
+// the same read with its weights worked out beforehand (BowedString::frac)
+template <class F> inline double read(const double *buf, int m, int w, const F &k) {
+  const int p = w - k.i;
+  return k.w0 * buf[(p + 1) & m] + k.w1 * buf[p & m] + k.w2 * buf[(p - 1) & m] + k.w3 * buf[(p - 2) & m];
+}
+// C2 bent down 2 semitones fits (C2–C6 keep that); the keys past them hold their own string bent
+// down so far; and every string holds itself bent down by that and its own bend (MPE_BEND) too
 int ringSize(double fs, int key) {
-  return 1 << (int)std::ceil(std::log2((key >= KEY_LO && key <= KEY_HI ? fs / 50 : fs / (0.89 * keyFreq(key))) + 16));
+  const double own = fdlibm::pow(2.0, -MPE_BEND / 12);
+  const double lo = key >= KEY_LO && key <= KEY_HI ? std::min(50.0, (50 / keyFreq(KEY_LO)) * keyFreq(key) * own) : 0.89 * keyFreq(key) * own;
+  return 1 << (int)std::ceil(std::log2(fs / lo + 16));
 }
 } // namespace
 
@@ -43,6 +51,14 @@ void BowedString::design(const Loop &l) {
   gn = L.gn * (1 - L.pn); pn = L.pn;
   T0 = L.N0; bent = 1;
   wheel = L.wheel; // this string's wheel turns this much faster than the treadle setting
+  weigh();
+}
+
+// tap()'s cubic, gathered by sample: x1 + f c1 + f² c2 + f³ c3 with c1…c3 as there
+BowedString::Frac BowedString::frac(double d) {
+  const int i = (int)d;
+  const double f = d - i, f2 = f * f, f3 = f2 * f;
+  return {i, -0.5 * f + f2 - 0.5 * f3, 1 - 2.5 * f2 + 1.5 * f3, 0.5 * f + 2 * f2 - 1.5 * f3, 0.5 * (f3 - f2)};
 }
 
 // Pitch bend: the bridge slides, the sounding string ÷ r long, so its bending and its twisting
@@ -54,6 +70,7 @@ void BowedString::bend(double r) {
   Dfb = std::max(1.0, 2 * L.Db - 1 - L.beta * L.N0 * k); Dnl = std::max(1.0, 2 * L.Dn - 1 - (1 - L.beta) * L.N0 * k);
   Dtb = std::max(1.0, L.Dtb / r - 1); Dtn = std::max(1.0, L.Dtn / r - 1);
   T0 = L.N0 / r; bent = r;
+  weigh();
 }
 
 void BowedString::setDamper(bool on, double sigma) { dampT = on ? fdlibm::exp(-sigma / L.f0) : 1; }
@@ -68,14 +85,14 @@ void BowedString::clear() {
 double BowedString::bow(double vB, double FN, const Friction &Fr) {
   const int m = mask;
   const double *FB = fb.data(), *NL = nl.data(), *TB = tb.data(), *TN = tn.data();
-  lb = gb * tap(FB, m, w, Dfb) + pb * lb;
+  lb = gb * (fast ? read(FB, m, w, kfb) : tap(FB, m, w, Dfb)) + pb * lb;
   damp += 0.004 * (dampT - damp);
-  ln = gn * damp * tap(NL, m, wn, Dnl) + pn * ln;
+  ln = gn * damp * (fast ? read(NL, m, wn, knl) : tap(NL, m, wn, Dnl)) + pn * ln;
   const double bin = lb, nin = -ln, vh = bin + nin;
   // torsion: the string's surface under the bow also moves by rolling (only friction drives it,
   // so off the wheel it soon dies and is skipped)
   const bool tLive = FN > 0 || tIdle < Dtn + 4;
-  const double tbi = tLive ? -rtb * tap(TB, m, wn, Dtb) : 0, tni = tLive ? -rtn * tap(TN, m, wn, Dtn) : 0;
+  const double tbi = tLive ? -rtb * (fast ? read(TB, m, wn, ktb) : tap(TB, m, wn, Dtb)) : 0, tni = tLive ? -rtn * (fast ? read(TN, m, wn, ktn) : tap(TN, m, wn, Dtn)) : 0;
   const double vsh = vh + tbi + tni;
   double f = 0;
   if (FN > 0) {

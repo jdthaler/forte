@@ -108,6 +108,26 @@ including each mode's mirror partner for a non-precessing binary. **Left
 channel = h₊, right = h×**. Face-on gives circular polarisation (the channels
 are 90° apart), and edge-on is linear (h× from the (2,2) mode vanishes).
 
+**Seen through spheroidal harmonics.** Written above with ₋₂Y_lm, the angular
+pattern of a Kerr mode is really the spin-weighted *spheroidal* harmonic
+₋₂S_lm(ι; aω), the angular half of the Teukolsky equation the solver's
+separation constants come from. It mixes in the spherical harmonics of the same
+m and the other l as aω grows, and since ω is complex, so is S. The model
+computes it by the spectral method (Hughes 2000; Cook & Zalutskiy 2014): in the
+basis ₋₂Y_jm, the angular equation is the eigenproblem
+A b = (j(j + 1) − s(s + 1) − c² cos²θ + 2cs cos θ) b, with c = aω, a banded
+complex-symmetric matrix of 14 harmonics. The mode's eigenvector is followed from
+c = 0 by Rayleigh-quotient inverse iteration, normalised on the sphere with its
+₋₂Y_lm part real and positive, so it is ₋₂Y_lm at a = 0. Its eigenvalue matches
+the continued fraction's A to better than 10⁻¹² for every mode in the table. The mirror
+partner's function is the mode's turned over:
+₋₂S_l,−m(θ; −aω*) = (−1)^l ₋₂S_lm(π − θ; aω)*.
+
+Mixing matters at high spin. At a = 1 − 10⁻⁶, seen at 30°, the (2,2) mode is
+about a tenth stronger than its spherical harmonic says, (3,3) a third and
+(4,4) a half; (2,1) gains a fifth. Each key's voice computes the angular
+functions once per spin and inclination and shares them with every key.
+
 * **Ringdown start** (t₀ after the strain peak): overtones (2,2,1) and (2,2,2)
   damp faster, so starting earlier lets them through. Their amplitudes at the
   peak are illustrative, since NR fits give large, phase-alternating values
@@ -129,10 +149,6 @@ check it against the engine's output.
 
 ## Simplifications
 
-* The angular pattern uses spin-weighted *spherical* harmonics, not the
-  spheroidal ones, so mode mixing at high aω is neglected. The solver's
-  separation constants agree with the published ones, so the spheroidal
-  functions (Leaver's angular series) are a natural next step.
 * Mode phases are fixed rather than taken from NR. The merger bridge is
   phenomenological, and so is the inspiral's amplitude above the ISCO.
 * The excitation model is extrapolated wherever spin and mass ratio are off
@@ -161,6 +177,13 @@ Leaver solver (`src/qnm.js`, which makes the table) stays in JavaScript; the
 tests check the C++ against it and against the literature. Ten twelve-mode voices take about 1–2 % of a core in C++. The
 port is in `native/instruments/blackhole/`, its WebAssembly in
 `blackhole/wasm/` (wrapped by `blackhole/src/blackhole-wasm.js`).
+
+## Quality
+
+A ringdown costs little, so the Quality setting (for phones and older computers) only lowers how
+many black holes ring at once: 24 at Medium and 12 at Low (High 48); past that the quietest fades
+out in about 10 ms. Each note sounds exactly as at High. The inspiral's chirp, the costliest part
+of a note, is left whole.
 
 ## Prior art and references
 
@@ -242,6 +265,10 @@ port is in `native/instruments/blackhole/`, its WebAssembly in
 * Cook, G. B. & Zalutskiy, M. (2014). "Gravitational perturbations of the
   Kerr geometry: High-accuracy study." *Phys. Rev. D* 90, 124021.
   [doi:10.1103/PhysRevD.90.124021](https://doi.org/10.1103/PhysRevD.90.124021)
+* Hughes, S. A. (2000). "Evolution of circular, nonequatorial orbits of Kerr
+  black holes due to gravitational-wave emission." *Phys. Rev. D* 61, 084004.
+  Spheroidal harmonics as sums of spherical ones.
+  [doi:10.1103/PhysRevD.61.084004](https://doi.org/10.1103/PhysRevD.61.084004)
 
 **Exciting the modes and the inspiral**
 

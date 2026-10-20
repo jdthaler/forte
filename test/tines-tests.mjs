@@ -58,6 +58,16 @@ test('every key, A0–C8: the sustaining fork mode sits on pitch', () => {
     assert.ok(Math.abs(cents(best.f, f0)) < 0.5, `${m}: ${cents(best.f, f0)} ¢`);
   }
 });
+test('the keyboard’s tuning: at A = 415 Hz the fork mode sits at 415/440 of the key’s pitch; in ¼-comma meantone E4 −3.42 ¢, C4 +10.26 ¢', () => {
+  // ¼-comma meantone on C, A kept: E a fifth's narrowing (q − 700) from equal temperament, C 2100 − 3q
+  const q = 1200 * Math.log2(3 / 2) - 300 * Math.log2(81 / 80);
+  for (const [o, m, want] of [[{ pitch: 415 }, 64, cents(415, 440)], [{ pitch: 415 }, 69, cents(415, 440)], [{ temperament: 'meantone' }, 64, q - 700], [{ temperament: 'meantone' }, 60, 2100 - 3 * q]]) {
+    const k = keyModel(m, P(o), FS), f0 = keyFreq(m) * 2 ** (want / 1200);
+    assert.ok(Math.abs(cents(k.info.f0, f0)) < 1e-9, `${JSON.stringify(o)} ${m}: target ${k.info.f0} Hz`);
+    const best = k.modes.filter((x) => Math.abs(cents(x.f, f0)) < 100).reduce((a, b) => (b.sigma < a.sigma ? b : a));
+    assert.ok(Math.abs(cents(best.f, f0)) < 0.5, `${JSON.stringify(o)} ${m}: ${cents(best.f, f0)} ¢`);
+  }
+});
 test('tone bar: matched bar keeps the block still → long sustain; no bar → short', () => {
   const t60 = (o) => {
     const k = keyModel(69, P(o), FS), f0 = keyFreq(69);
@@ -70,12 +80,14 @@ test('tone bar: matched bar keeps the block still → long sustain; no bar → s
 });
 
 console.log('engine');
-test('A4 plays 440 Hz and is finite', () => {
-  const { L } = render(69, P(), 1.8, 1.2, DRY);
-  let best = 0, bf = 0;
-  for (let f = 437; f <= 443; f += 0.05) { const g = goertzel(L, f, 0.2 * FS, 1.2 * FS); if (g > best) { best = g; bf = f; } }
-  assert.ok(Math.abs(cents(bf, 440)) < 2, `f=${bf}`);
-  for (const s of L) assert.ok(Number.isFinite(s));
+test('A4 plays 440 Hz and is finite; at A = 415 Hz, 415 Hz', () => {
+  for (const a4 of [440, 415]) {
+    const { L } = render(69, P({ pitch: a4 }), 1.8, 1.2, DRY);
+    let best = 0, bf = 0;
+    for (let f = a4 - 3; f <= a4 + 3; f += 0.05) { const g = goertzel(L, f, 0.2 * FS, 1.2 * FS); if (g > best) { best = g; bf = f; } }
+    assert.ok(Math.abs(cents(bf, a4)) < 2, `f=${bf}`);
+    for (const s of L) assert.ok(Number.isFinite(s));
+  }
 });
 test('the 88-key range\'s ends: A0 and C8 play on pitch (A0 heard through its pickup harmonics), finite, C8 within 12 dB of E7', () => {
   const level = (L) => { let s = 0; for (let i = 0; i < 0.2 * FS; i++) s += L[i] ** 2; return 10 * Math.log10(s / (0.2 * FS)); };
@@ -179,6 +191,33 @@ test('stable across extremes', () => {
     for (const s of L) assert.ok(Number.isFinite(s) && Math.abs(s) < 20);
   }
 });
+test('Quality: Medium and Low sound fewer voices and drop decayed modes; A4 keeps its pitch and level', () => {
+  const vd = (k) => keyModel(k, P(), FS).packed, bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
+  const level = {};
+  for (const [q, cap] of [['high', 40], ['medium', 16], ['low', 10]]) {
+    // a pedalled run of 30 keys: the voice limit holds
+    const e = new TinesEngine(FS); e.setQuality(q); e.setParams(P()); e.setSustain(true);
+    for (let k = 40; k < 70; k++) { e.noteOn(k, 1.8, vd(k)); for (let i = 0; i < 4; i++) e.process(L, R, bl); }
+    const live = e.voices.filter((v) => !v.killing).length;
+    assert.ok(live <= cap && (q !== 'high' || live === 30), `${q}: ${live} voices`);
+    // half a second after the strike, Medium and Low play only the modes still heard
+    const f = new TinesEngine(FS); f.setQuality(q); f.setParams(P());
+    const v = f.noteOn(60, 1.8, vd(60)), all = v.N;
+    for (let i = 0; i < 0.5 * FS / bl; i++) f.process(L, R, bl);
+    assert.ok(q === 'high' ? v.N === all : v.N < all / 2, `${q}: ${v.N} of ${all} modes`);
+    // A4: on pitch, finite, the same level
+    const r = new TinesEngine(FS); r.setQuality(q); r.setParams({ ...P(), ...DRY });
+    r.noteOn(69, 1.8, vd(69));
+    const n = 1.2 * FS, x = new Float32Array(n);
+    for (let s = 0; s < n; s += bl) { r.process(L, R, bl); x.set(L, s); }
+    assert.ok(x.every(Number.isFinite), q);
+    let best = 0, bf = 0;
+    for (let fr = 437; fr <= 443; fr += 0.05) { const g = goertzel(x, fr, 0.2 * FS, 1.2 * FS); if (g > best) { best = g; bf = fr; } }
+    assert.ok(Math.abs(cents(bf, 440)) < 2, `${q}: ${bf} Hz`);
+    level[q] = 10 * Math.log10(x.reduce((a, b) => a + b * b, 0));
+    assert.ok(Math.abs(level[q] - level.high) < 1.5, `${q}: ${(level[q] - level.high).toFixed(2)} dB from High`);
+  }
+});
 
 console.log('performance');
 test('CPU: 20 sounding keys render in under 40 % of one core', () => {
@@ -191,6 +230,21 @@ test('CPU: 20 sounding keys render in under 40 % of one core', () => {
   const ms = performance.now() - t0, audio = (blocks * bl * 1000) / FS;
   console.log(`        ${(100 * ms / audio).toFixed(1)} % of one core`);
   assert.ok(ms < 0.4 * audio);
+});
+test('CPU: Low renders 20 sounding keys in under half of High’s time', () => {
+  const time = (q) => {
+    const e = new TinesEngine(FS); e.setQuality(q); e.setParams(P()); e.setSustain(true);
+    for (let i = 0; i < 20; i++) { const key = 36 + 3 * i; e.noteOn(key, 2, keyModel(key, P(), FS).packed); }
+    const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
+    for (let i = 0; i < 50; i++) e.process(L, R, bl);
+    const t0 = performance.now();
+    for (let i = 0; i < 1500; i++) e.process(L, R, bl);
+    return performance.now() - t0;
+  };
+  time('high');
+  const hi = time('high'), lo = time('low');
+  console.log(`        Low takes ${(100 * lo / hi).toFixed(0)} % of High's time`);
+  assert.ok(lo < 0.5 * hi);
 });
 
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');

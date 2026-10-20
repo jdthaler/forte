@@ -19,6 +19,7 @@
 
 #include "check.h"
 #include "choc/text/choc_JSON.h"
+#include "forte/tuning.h"
 #include "plugin.h"
 
 // the app's entry (generated suite-entry.cpp)
@@ -114,6 +115,23 @@ TEST("suite: switches instrument while the audio runs: its parameters, its keys,
   const std::string v = app.call("[\"describe\"]");
   CHECK(v.find("\"name\": \"Vibraphone\"") != std::string::npos);
   CHECK(app.run(24000, (app.number(v, "keyLo") + app.number(v, "keyHi")) / 2) > 0.001);
+}
+
+TEST("suite: Quality belongs to the computer and MPE to the controller: a new instrument keeps them") {
+  App app;
+  const uint32_t mpe = app.params->count(app.p) - 1, last = mpe - 1; // Quality, after the velocity curve, then MPE
+  clap_param_info_t info, mpeInfo;
+  CHECK(app.params->get_info(app.p, last, &info) && !std::strcmp(info.name, "Quality"));
+  CHECK(app.params->get_info(app.p, mpe, &mpeInfo) && !std::strcmp(mpeInfo.name, "MPE"));
+  app.call("[\"set\", " + std::to_string(last) + ", 2]"); // Low
+  app.call("[\"set\", " + std::to_string(mpe) + ", 1]");  // On
+  app.run(512);
+  CHECK(app.call("[\"choose\", \"celesta\"]") == "true");
+  app.run(512);
+  double v = -1, m = -1;
+  CHECK(app.params->get_value(app.p, info.id, &v) && v == 2);
+  CHECK(app.params->get_value(app.p, mpeInfo.id, &m) && m == 1);
+  CHECK(app.run(24000, 72) > 0.001);
 }
 
 TEST("suite: switches before the host activates it, and its state remembers the instrument") {
@@ -318,6 +336,39 @@ TEST("your presets: another instrument's file, a damaged one and a path out of t
   // a name a file system won't take still saves, under a name it will
   CHECK(app.call("[\"savePreset\", \"Bells: 1/2 \\\"open\\\"?\"]").find("\"file\": \"Bells- 1-2 -open--.json\"") != std::string::npos);
   CHECK(has(listed(app), "Bells: 1/2 \"open\"?|Bells- 1-2 -open--.json|0"));
+  std::filesystem::remove_all(home);
+}
+
+// ---- Scala files for the custom temperament (plugin/presets.h, forte/tuning.h) ----------------------
+TEST("tunings: Scala files in the Tunings folder are listed, and one sets the custom temperament to its scale; a file Forte can't play, or a path out of the folder, does not") {
+  const auto home = presetsHome();
+  std::filesystem::create_directories(home / "Tunings");
+  for (const char *f : {"werckmeister3.scl", "19-edo.scl"}) std::filesystem::copy_file(std::filesystem::path(FORTE_TUNING_TEST_DIR) / f, home / "Tunings" / f);
+  { std::ofstream(home / "Tunings" / "notes.txt") << "not a scale"; }
+  { std::ofstream(home / "outside.scl") << readFile(std::filesystem::path(FORTE_TUNING_TEST_DIR) / "meantone.scl"); }
+  App app;
+  app.call("[\"choose\", \"harpsichord\"]");
+  app.run(512);
+  const auto r = choc::json::parse(app.call("[\"scalas\"]"));
+  CHECK(std::string(r["folder"].getString()).find("Tunings") != std::string::npos);
+  CHECK(r["list"].size() == 2 && std::string(r["list"][0].getString()) == "19-edo.scl" && std::string(r["list"][1].getString()) == "werckmeister3.scl");
+  // the parameters' places, from the window's description
+  const auto d = choc::json::parse(app.call("[\"describe\"]"));
+  auto at = [&](const std::string &id) { for (uint32_t i = 0; i < d["params"].size(); i++) if (d["params"][i]["id"].getString() == id) return (int)i; return -1; };
+  const int temper = at("temperament"), c1 = at("cents1"), c4 = at("cents4");
+  CHECK(temper >= 0 && c1 >= 0 && c4 >= 0);
+  const auto ok = choc::json::parse(app.call("[\"loadScala\", \"werckmeister3.scl\"]"));
+  CHECK(ok["ok"].getBool() && std::string(ok["name"].getString()) == "Werckmeister III (1691)");
+  app.run(512);
+  const std::vector<double> v = values(app);
+  double t[12];
+  forte::temperamentCents(forte::temperament::werckmeister, t);
+  CHECK(v[temper] == forte::temperament::custom);
+  CHECK_NEAR(v[c1], t[1] - 100, 0.0051);  // C♯ 90.22 ¢: −9.78
+  CHECK_NEAR(v[c4], t[4] - 400, 0.0051);  // E 390.22 ¢: −9.78
+  CHECK(app.call("[\"loadScala\", \"19-edo.scl\"]").find("19 notes") != std::string::npos);
+  CHECK(app.call("[\"loadScala\", \"notes.txt\"]").find("\"ok\": false") != std::string::npos);
+  CHECK(app.call("[\"loadScala\", \"../outside.scl\"]").find("\"ok\": false") != std::string::npos);
   std::filesystem::remove_all(home);
 }
 

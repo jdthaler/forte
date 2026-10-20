@@ -43,7 +43,7 @@ TEST("organ: the gears put A4 at 440 Hz and every wheel within 0.71 ¢ (2.1 ¢ o
   for (int w = 85; w <= NUM_WHEELS; w++) CHECK(wheelSpec(w).teeth == 192 && std::fabs(centsOff(w)) < 2.1);
   CHECK(keyWheel(36, 2) == 13 && keyWheel(36, 0) == 13 && keyWheel(96, 8) == 85);
   Analysis a[9];
-  keyAnalysis(60, gears, b3, 60, a);
+  keyAnalysis(60, gears, b3, 60, forte::Tuning{}, a);
   CHECK(std::fabs(a[6].cents - 13.7) < 1 && std::fabs(a[4].cents + 1.96) < 1);
 }
 

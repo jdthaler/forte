@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "cavity-model.h"
 #include "cavity-params.h"
 
@@ -24,8 +25,13 @@ class CavityBellsEngine : public Engine {
   void setSustain(bool on) override;
   void pressure(double value, int key) override;
   void bend(double value) override;
+  // MPE: one key's tuner squeezes its own cavity (its train keeps step), and its beam passes off
+  // the axis by its own offset
+  void noteBend(double ratio, int key) override { ex.setBend(ratio, key); }
+  void slide(double value, int key) override { ex.setSlide(value, key); }
   void allNotesOff() override { voices.clear(); }
   int voiceCount() const override { return (int)voices.size(); }
+  int ringing() const; // modes ringing, over every voice (for the tests)
   void process(float *L, float *R, int n) override;
 
  private:
@@ -35,21 +41,28 @@ class CavityBellsEngine : public Engine {
     Cavity cav;
     std::array<double, MAX_MODES> ar{}, ai{}, rr{}, ri{}, w{}; // amplitude, a sample's turn, ω per sample
     std::array<bool, MAX_MODES> on{};                            // modes still ringing
+    std::array<bool, MAX_MODES> use{};                           // modes a bunch rings (Quality leaves out the faintest)
+    double cut = 0, modeSilent = 0, silent = 0;                  // Quality's, when the key was struck (see noteOn)
     double charge = 0;          // the key's bunch charge (its velocity)
     double press = 0, pressTarget = 0;
     double toNext = 0;          // samples to the train's next bunch
     double det = 0, det1 = 0;   // the walls' detuning (cents) and its last value: the mechanical mode
+    double nb = 1;              // the key's own bend (MPE), gliding as the wheel's
+    double off = 0;             // the beam's offset the kicks are cut for (the key's slide, or P's)
     double quenchLeft = 0;      // s still normal-conducting after a quench
     double peak = 0;            // the highest cell field, in a full-velocity bunch's
     bool held = true, released = false, damped = false, quenched = false, stolen = false;
     void kick(double q, double frac);
   };
   void retune(Voice &v, int count);
+  void aim(Voice &v, double offset);
+  static void choose(Voice &v);
   void report(const Voice &v);
   std::array<double, p::count> P{};
   bool hasParams = false, sustain = false;
   int version = 0, focus = -1;
   double bendTo = 1, bendNow = 1;
+  NoteExpression ex{48};
   int sinceReport = 0;
   std::vector<Voice> voices; // reserved (twice kMaxVoices, for the stolen ones fading out): never reallocates
 };

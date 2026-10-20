@@ -2,6 +2,7 @@
 // says what it does to the sound.
 
 import { VENUE } from '../../shared/chain.js';
+import { TUNING_GROUP } from '../../shared/tuning.js';
 
 const sci = (v) => { const e = Math.floor(Math.log10(v)), m = v / 10 ** e; return `${m.toFixed(1)}×10${String(e).replace('-', '⁻').replace(/\d/g, (d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d])}`; };
 const times = (v) => `× ${v.toFixed(2)}`;
@@ -10,7 +11,7 @@ export const GROUPS = [
   {
     title: 'Springs',
     params: [
-      { id: 'springs', label: 'Springs per key', perform: true, min: 1, max: 3, def: 2, step: 1, fmt: (v) => (v === 1 ? 'one spring' : `${v} springs in parallel`),
+      { id: 'springs', label: 'Springs per key', min: 1, max: 3, def: 2, step: 1, fmt: (v) => (v === 1 ? 'one spring' : `${v} springs in parallel`),
         hint: 'As in a reverb tank: the springs are cut a little apart, so their echoes drift out of step and blur into a wash.' },
       { id: 'spread', label: 'Length difference', min: 0, max: 6, def: 1.5, step: 0.1, fmt: (v) => `${v.toFixed(1)} %`,
         hint: 'How much neighbouring springs differ in length, centred on the note. Their notes and echoes part by as much.' },
@@ -34,7 +35,7 @@ export const GROUPS = [
   {
     title: 'Damping',
     params: [
-      { id: 'endLoss', label: 'Mounts: loss per reflection', perform: true, min: 0.005, max: 1, def: 0.06, log: true, fmt: (v) => `${v < 0.1 ? v.toFixed(3) : v.toFixed(2)} dB`,
+      { id: 'endLoss', label: 'Mounts: loss per reflection', min: 0.005, max: 1, def: 0.06, log: true, fmt: (v) => `${v < 0.1 ? v.toFixed(3) : v.toFixed(2)} dB`,
         hint: 'What the beads’ mounts absorb each time a wave reaches an end. The low notes ring longest; near F_C the waves crawl and are hardly damped.' },
       { id: 'eta', label: 'Steel’s internal friction', min: 1e-5, max: 3e-3, def: 2e-4, log: true, fmt: sci,
         hint: 'Loss factor η, σ = πfη: the high modes die first.' },
@@ -49,21 +50,22 @@ export const GROUPS = [
   {
     title: 'Mallet and beads',
     params: [
-      { id: 'mallet', label: 'Mallet contact', perform: true, min: 0.05, max: 5, def: 0.35, log: true, fmt: (v) => `${v < 1 ? v.toFixed(2) : v.toFixed(1)} ms`,
+      { id: 'mallet', label: 'Mallet contact', min: 0.05, max: 5, def: 0.35, log: true, fmt: (v) => `${v < 1 ? v.toFixed(2) : v.toFixed(1)} ms`,
         hint: 'How long the mallet stays on the bead (at mf; shorter when struck harder). A short tap reaches the chirps up to F_C; a soft one only the low echoes.' },
       { id: 'bead', label: 'Bead inertia', min: 0.3, max: 30, def: 1, log: true, fmt: (v) => `${v < 1 ? v.toFixed(2) : v.toFixed(1)} % of the spring’s`,
         hint: 'A light bead passes the high modes in and out; a heavy one, on a soft mount, keeps only the low ones (corner ≈ f₀/πμ).' },
-      { id: 'velocity', label: 'Velocity (computer keys)', min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2) },
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2) },
     ],
   },
   {
     title: 'Output',
     params: [
-      { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.15, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      { id: 'room', label: 'Room', min: 0, max: 1, def: 0.15, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
+  TUNING_GROUP,
 ];
 
 export const DEFAULTS = Object.fromEntries(GROUPS.flatMap((g) => g.params).map((p) => [p.id, p.def]));

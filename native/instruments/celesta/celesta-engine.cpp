@@ -22,12 +22,16 @@ constexpr double NYQUIST = 0.45;    // × fs: modes from here up are left out (t
 
 // ---- a voice: one bar and its box -----------------------------------------------------------
 
-void CelestaEngine::Voice::start(CelestaEngine &eng, const Bar &b, double thickness) {
+void CelestaEngine::Voice::start(CelestaEngine &eng, const Bar &b, double thickness, double tuned) {
   *this = Voice{};
   inUse = true;
-  bar = b; thick = thickness;
+  bar = b; thick = thickness; ratio = tuned;
   key = b.geom.key; N = b.count;
   out0 = b.out[0];
+  // Quality: Medium and Low leave out the modes above 16 and 12 kHz, and let the bar go at −70 and
+  // −60 dB under its loudest instead of −90
+  top = eng.pick(NYQUIST * eng.fs, std::min(NYQUIST * eng.fs, 16000.0), std::min(NYQUIST * eng.fs, 12000.0));
+  floor = eng.pick(1e-9, 1e-7, 1e-6);
   coefs(eng);
 }
 
@@ -38,8 +42,8 @@ void CelestaEngine::Voice::coefs(const CelestaEngine &eng) {
     const double f = bar.f[i], om = TAU * f, s = bar.sigTE[i] + bar.sigSup[i] + bar.sigRad[i] + pi * f * eng.P[p::eta] + sd * bar.dampW[i];
     sig[i] = s;
     if (i == 0) { K11 = om * om; sig1 = s; continue; }
-    cut[i] = f >= NYQUIST * eng.fs;
-    if (cut[i]) { a1[i] = a2[i] = bc[i] = accOut[i] = 0; continue; } // above what the sample rate holds: silent, never struck
+    cut[i] = f >= top;
+    if (cut[i]) { a1[i] = a2[i] = bc[i] = accOut[i] = 0; continue; } // above what the sample rate holds (or Quality's top): silent, never struck
     const double r = std::exp(-s * k), od = std::sqrt(std::max(om * om - s * s, 1e-6));
     a1[i] = 2 * r * std::cos(od * k); a2[i] = r * r; bc[i] = (k * r * std::sin(od * k)) / od;
     accOut[i] = om * om * bar.out[i];
@@ -68,7 +72,7 @@ void CelestaEngine::Voice::strike(const CelestaEngine &eng, double velocity) {
     if (i > 0) { bws[i] = bc[i] * wsi; comp += bc[i] * wsi * wsi; }
   }
   ws0 = ws[0]; compModes = comp;
-  const Hammer H = hammerOf(key, P[p::hardness], P[p::mass]);
+  const Hammer H = hammerOf(key, eng.expr.slideOr(key, P[p::hardness]), P[p::mass]); // the key's own felt, or the knob's
   const double v = P[p::speedMax] * std::max(0.0, std::min(1.0, velocity)), h = 1 / eng.fs;
   if (!(v > 0)) return;
   ham = H; kOverM = (h * h) / H.m; halfAlpha = H.alpha / (2 * h);
@@ -176,7 +180,7 @@ void CelestaEngine::Voice::render(float *L, float *Rt, int n, CelestaEngine &eng
     eng.post(m);
     return;
   }
-  if (!hammerOn && age > YOUNG && (E <= 1e-9 * Emax || (damp > 0.99 && E < 1e-7 * Emax))) dead = true;
+  if (!hammerOn && age > YOUNG && (E <= floor * Emax || (damp > 0.99 && E < std::max(1e-7, floor) * Emax))) dead = true;
 }
 
 // ---- the engine ------------------------------------------------------------------------------
@@ -186,9 +190,17 @@ CelestaEngine::CelestaEngine(double fs)
   cel.type = msg::cel; cel.key = 0; cel.count = 16;
 }
 
+bool CelestaEngine::stale(int key) const {
+  const int i = key - KEY_MIN;
+  return built[i] != P[p::thick] || builtRatio[i] != tuning.ratio(key);
+}
+
 const Bar &CelestaEngine::barFor(int key) {
   const int i = key - KEY_MIN;
-  if (built[i] != P[p::thick]) { buildBar(key, P[p::thick], (*bars)[i]); built[i] = P[p::thick]; }
+  if (stale(key)) {
+    buildBar(key, P[p::thick], (*bars)[i], tuning.ratio(key));
+    built[i] = P[p::thick]; builtRatio[i] = tuning.ratio(key);
+  }
   return (*bars)[i];
 }
 
@@ -196,6 +208,7 @@ void CelestaEngine::setParams(const double *p) {
   const bool first = !hasParams;
   for (int i = 0; i < p::count; i++) P[i] = p[i];
   hasParams = true;
+  tuning = tuningOf(P.data());
   T = {P[p::gap] / 1000, P[p::detune], P[p::boxes] != 0 ? 1.0 : 0.0};
   if (first) S = T;
   // bar losses and the damper apply at once to every sounding bar
@@ -206,13 +219,13 @@ void CelestaEngine::noteOn(int key, double velocity) {
   if (!hasParams || !(key >= KEY_MIN && key <= KEY_MAX)) return; // A0–C8: there is no bar outside
   const Bar &b = barFor(key);
   Voice *v = byKey[key];
-  if (!v || v->dead || v->fading || v->thick != P[p::thick]) {
+  if (!v || v->dead || v->fading || v->thick != P[p::thick] || v->ratio != tuning.ratio(key)) {
     if (v && !v->dead) v->fading = true; // the bar was re-cut: the old one fades out quickly
     Voice *free = nullptr;
     for (Voice &u : pool) if (!u.inUse) { free = &u; break; }
     if (!free) return; // every voice busy (beyond anything the stealing below lets happen)
     v = free;
-    v->start(*this, b, P[p::thick]);
+    v->start(*this, b, P[p::thick], tuning.ratio(key));
     v->box(*this);
     voices[nVoices++] = v; byKey[key] = v;
   }
@@ -220,7 +233,7 @@ void CelestaEngine::noteOn(int key, double velocity) {
   focus = v;
   int live = 0;
   for (int i = 0; i < nVoices; i++) if (!voices[i]->fading) live++;
-  if (live > MAX_VOICES) {
+  if (live > pick(MAX_VOICES, 16, 10)) { // Quality: fewer bars ring at once at Medium and Low
     Voice *victim = nullptr;
     double score = INFINITY;
     for (int i = 0; i < nVoices; i++) {
@@ -251,7 +264,7 @@ void CelestaEngine::processBlock(float *L, float *R, int n) {
   // build one bar ahead per block, the compass first, so most notes find theirs ready
   for (int tries = 0; tries < KEY_MAX - KEY_MIN + 1; tries++) {
     const int key = KEY_LO + (warm++ % (KEY_MAX - KEY_MIN + 1)), k = key > KEY_MAX ? key - (KEY_MAX - KEY_MIN + 1) : key;
-    if (built[k - KEY_MIN] != P[p::thick]) { barFor(k); break; }
+    if (stale(k)) { barFor(k); break; }
   }
   // knobs glide
   bool moving = false;

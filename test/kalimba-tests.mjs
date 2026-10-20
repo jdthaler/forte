@@ -26,9 +26,11 @@ function test(name, fn) {
 const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const near = (a, b, tol, what = '') => assert.ok(Math.abs(a - b) <= tol, `${what} ${a} vs ${b} (±${tol})`);
 
-// Render through the engine, 128-sample blocks like the AudioWorklet: events [t, 'on'|'off'|'sustain', key, vel].
-function render(params, sec, events) {
+// Render through the engine, 128-sample blocks like the AudioWorklet: events [t, 'on'|'off'|'sustain', key, vel];
+// at a Quality (High unless given), each(engine) after every block.
+function render(params, sec, events, { quality, each } = {}) {
   const e = new KalimbaEngine(FS);
+  if (quality) e.setQuality(quality);
   e.setParams(params);
   const n = Math.round(sec * FS), L = new Float32Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
   const ev = events.map(([t, ...r]) => [Math.round(t * FS), ...r]).sort((a, b) => a[0] - b[0]);
@@ -39,6 +41,7 @@ function render(params, sec, events) {
       if (type === 'on') e.noteOn(key, vel); else if (type === 'off') e.noteOff(key); else if (type === 'sustain') e.setSustain(key);
     }
     e.process(bL, bR, bl); L.set(bL.subarray(0, Math.min(bl, n - s)), s);
+    each?.(e);
   }
   return L;
 }
@@ -204,6 +207,16 @@ test('each key sounds its note: the fundamental stands out at keyFreq', () => {
     assert.ok(tone(x, f, a, b) > 20 * tone(x, f * 1.04, a, b) && tone(x, f, a, b) > 20 * tone(x, f / 1.04, a, b), `key ${k}`);
   }
 });
+test('the keyboard’s tuning: at A = 415 Hz, and in ¼-comma meantone (E4 −3.42 ¢, C4 +10.26 ¢), the tine is cut to its tuned note and sounds there (within 0.5 ¢)', () => {
+  const cents = (a, b) => 1200 * Math.log2(a / b);
+  for (const [k, o, c] of [[69, { pitch: 415 }, cents(415, 440)], [64, { temperament: 'meantone' }, -3.42], [60, { temperament: 'meantone' }, 10.26]]) {
+    const Q = P(o), f = keyFreq(k) * 2 ** (c / 1200), x = note(k, Q, 0.7, 1.2), a = 9600, b = a + 32768;
+    near(cents(model.keyModes(k, Q)[0].f, f), 0, 0.01, `key ${k}: the model's fundamental (¢)`);
+    let lo = f * 2 ** (-10 / 1200), hi = f * 2 ** (10 / 1200); // the strongest frequency within ±10 ¢ (golden section)
+    for (let it = 0; it < 40; it++) { const m1 = hi - 0.618 * (hi - lo), m2 = lo + 0.618 * (hi - lo); if (tone(x, m1, a, b) > tone(x, m2, a, b)) hi = m2; else lo = m1; }
+    near(cents((lo + hi) / 2, f), 0, 0.5, `key ${k}: its sound (¢)`);
+  }
+});
 test('the first overtone sounds at the model’s ratio, and fades much sooner than the fundamental', () => {
   const x = note(67, P(), 0.8, 1.5), m = model.keyModes(67, P()), W = 8192;
   assert.ok(tone(x, m[1].f, 0, W) > 10 * tone(x, m[1].f * 1.03, 0, W), 'overtone present');
@@ -253,6 +266,30 @@ test('output level is sane, finite everywhere, and Panic leaves silence', () => 
   for (let i = 0; i < 20; i++) e.process(L, R, 128);
   e.allNotesOff(); e.process(L, R, 128);
   assert.ok(L.every((v) => v === 0), 'silent after Panic');
+});
+test('Quality: past 32 tines at Medium and 16 at Low the oldest is stilled, and a tine is let go at −80 and −60 dB (−100 at High); a tine keeps its pitch and level', () => {
+  const ev = Array.from({ length: 60 }, (_, i) => [0.04 * i, 'on', 60 + ((i * 5) % 29), 0.7]), time = {};
+  for (const [quality, cap] of [['high', 48], ['medium', 32], ['low', 16]]) {
+    let most = 0, t = 0;
+    const x = render(P(), 5, ev, { quality, each: (e) => { most = Math.max(most, e.voiceCount()); t += e.voiceCount(); } });
+    assert.ok(x.every(Number.isFinite), `${quality}: NaN`);
+    assert.ok(most <= cap + 1, `${quality}: ${most} tines`); // (and the one being stilled)
+    time[quality] = t;
+  }
+  console.log(`         tines × time at Medium ${((100 * time.medium) / time.high).toFixed(0)} %, Low ${((100 * time.low) / time.high).toFixed(0)} % of High's`);
+  assert.ok(time.medium < 0.97 * time.high && time.low < 0.6 * time.high, JSON.stringify(time));
+  const line = (x, f) => { // the strongest line within 1 % of f (golden section)
+    let lo = f * 0.99, hi = f * 1.01;
+    for (let i = 0; i < 50; i++) { const m1 = hi - 0.618 * (hi - lo), m2 = lo + 0.618 * (hi - lo); if (tone(x, m1, 0, x.length) > tone(x, m2, 0, x.length)) hi = m2; else lo = m1; }
+    return (lo + hi) / 2;
+  };
+  for (const key of [60, 72, 84]) {
+    const hi = render(P(), 1, [[0, 'on', key, 0.7]]), f = line(hi, keyFreq(key));
+    for (const quality of ['medium', 'low']) {
+      const x = render(P(), 1, [[0, 'on', key, 0.7]], { quality }), c = 1200 * Math.log2(line(x, keyFreq(key)) / f), d = db(rms(x) / rms(hi));
+      assert.ok(Math.abs(c) < 0.1 && Math.abs(d) < 1.5, `key ${key} at ${quality}: ${c.toFixed(3)} ¢, ${d.toFixed(2)} dB`);
+    }
+  }
 });
 test('CPU: 10 tines with 8 caps render 10× faster than real time', () => {
   const e = new KalimbaEngine(FS); e.setParams(P({ buzz: 8, fullRange: true }));

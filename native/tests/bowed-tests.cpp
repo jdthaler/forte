@@ -1,7 +1,7 @@
 // bowed-tests.cpp — the viola organista's model and engine in C++: V8's math (fdlibm), the scale
-// and the loop filters, a held note in Helmholtz motion at its pitch at every sample rate, the key
-// action and aftertouch, the dampers, a string gone non-finite stopped alone, the views' messages,
-// and ten strings in the CPU budget. The physics tests are the JavaScript suite's, run on the
+// and the loop filters, a held note in Helmholtz motion at its pitch at every sample rate, the pitch
+// wheel and a key's own bend (MPE), the key action and aftertouch, the dampers, a string gone
+// non-finite stopped alone, the views' messages, and ten strings in the CPU budget. The physics tests are the JavaScript suite's, run on the
 // WebAssembly (node test/bowed-tests.mjs).
 
 #include <chrono>
@@ -45,6 +45,11 @@ static double rms(const std::vector<float> &x, int a, int b) {
   return std::sqrt(s / (b - a));
 }
 static double cents(double f, double g) { return 1200 * std::log2(f / g); }
+// a bowed string's own pitch, from its last 32 slips (one a period in Helmholtz motion)
+static double slipFreq(const BowedString &s) {
+  const int64_t n = s.nSlip - 1;
+  return s.fs * 32 / (s.slipT[n % SLIPS] - s.slipT[(n - 32) % SLIPS]);
+}
 
 TEST("bowed: V8's sin, cos, exp, log, atan2 and pow (fdlibm) on exact cases and against the C library") {
   CHECK(fdlibm::sin(0) == 0 && fdlibm::cos(0) == 1 && fdlibm::exp(0) == 1 && fdlibm::log(1) == 0);
@@ -110,6 +115,112 @@ TEST("bowed: pitch bend slides the bridges: a bowed note follows, two semitones 
     const double want = bowed::keyFreq(key) * std::pow(2.0, 2 * v / 12), f = pitch(L, (int)(0.5 * fs), (int)(1.0 * fs), want, fs);
     CHECK(e.string(key)->motion(16).kind == Kind::helmholtz);
     CHECK(std::fabs(cents(f, want)) < 3);
+  }
+}
+
+TEST("bowed: a key's own bend (MPE) slides its bridge alone: a bowed note follows an octave either way, still in Helmholtz motion, sounds as the wheel bent as far, and a key bowed beside it stays") {
+  const double fs = 48000;
+  for (int key : {36, 48, 60, 72, 84}) for (double st : {12.0, -12.0}) {
+    double f = 0, g[2];
+    bool helmholtz = false;
+    std::vector<float> L;
+    for (int bent = 0; bent < 2; bent++) { // a lone note; then the key bowed beside it, against the same without the bend
+      auto P = defaultParams();
+      P[p::treadle] = 0;
+      auto engine = std::make_unique<OrganistaEngine>(fs);
+      OrganistaEngine &e = *engine;
+      e.setParams(P.data());
+      e.noteOn(key, 0.7);
+      if (bent) e.noteOn(key + 4, 0.7);
+      render(e, (int)(0.4 * fs));
+      e.noteBend(std::pow(2.0, st / 12), key);
+      L = render(e, (int)(1.0 * fs));
+      if (!bent) { f = pitch(L, (int)(0.5 * fs), (int)(1.0 * fs), bowed::keyFreq(key) * std::pow(2.0, st / 12), fs); helmholtz = e.string(key)->motion(16).kind == Kind::helmholtz; }
+      else g[1] = slipFreq(*e.string(key + 4));
+    }
+    {
+      auto P = defaultParams();
+      P[p::treadle] = 0;
+      auto engine = std::make_unique<OrganistaEngine>(fs);
+      OrganistaEngine &e = *engine;
+      e.setParams(P.data());
+      e.noteOn(key, 0.7); e.noteOn(key + 4, 0.7);
+      render(e, (int)(1.4 * fs));
+      g[0] = slipFreq(*e.string(key + 4));
+    }
+    const double want = bowed::keyFreq(key) * std::pow(2.0, st / 12);
+    std::printf("       %d %+.0f: %.1f ¢ (the other key %.3f ¢)\n", key, st, cents(f, want), cents(g[1], g[0]));
+    CHECK(helmholtz);
+    CHECK(std::fabs(cents(f, want)) < 16); // the voicer made up for the bow's flattening at the string's own pitch, not the bent one
+    CHECK(std::fabs(cents(g[1], g[0])) < 0.5);
+  }
+  for (int key : {48, 72}) for (double v : {1.0, -1.0}) { // the wheel's end and the key's own bend as far
+    double f[2], level[2];
+    for (int own = 0; own < 2; own++) {
+      auto P = defaultParams();
+      P[p::treadle] = 0;
+      auto engine = std::make_unique<OrganistaEngine>(fs);
+      OrganistaEngine &e = *engine;
+      e.setParams(P.data());
+      e.noteOn(key, 0.7);
+      render(e, (int)(0.4 * fs));
+      if (own) e.noteBend(std::pow(2.0, 2 * v / 12), key); else e.bend(v);
+      const auto L = render(e, (int)(1.0 * fs));
+      f[own] = pitch(L, (int)(0.5 * fs), (int)(1.0 * fs), bowed::keyFreq(key) * std::pow(2.0, 2 * v / 12), fs); level[own] = rms(L, (int)(0.5 * fs), (int)(1.0 * fs));
+    }
+    CHECK(std::fabs(cents(f[1], f[0])) < 0.2);
+    CHECK(std::fabs(level[1] / level[0] - 1) < 0.01);
+  }
+}
+
+TEST("bowed: a key's bend of 1 (MPE's reset) and a slide leave the sound bit-identical, the wheel moving too, the dampers down or lifted") {
+  for (double fs : {44100.0, 48000.0}) for (int lifted : {0, 1}) {
+    std::vector<float> out[2];
+    for (int mpe = 0; mpe < 2; mpe++) {
+      auto P = defaultParams();
+      P[p::lifted] = lifted;
+      auto engine = std::make_unique<OrganistaEngine>(fs);
+      OrganistaEngine &e = *engine;
+      const int keys[3] = {43, 60, 79};
+      if (mpe) for (int k : keys) { e.noteBend(1, k); e.slide(NAN, k); }
+      e.setParams(P.data());
+      for (int k : keys) e.noteOn(k, 0.8);
+      std::vector<float> R1, R2;
+      auto L1 = render(e, (int)(0.4 * fs), &R1);
+      e.bend(0.8);
+      if (mpe) for (int k : keys) { e.noteBend(1, k); e.slide(NAN, k); }
+      auto L2 = render(e, (int)(0.4 * fs), &R2);
+      for (auto *x : {&L1, &R1, &L2, &R2}) out[mpe].insert(out[mpe].end(), x->begin(), x->end());
+    }
+    CHECK(out[0] == out[1]);
+  }
+}
+
+TEST("bowed: every key's own bend swept across its octave each way (and past it) every block, with the wheel and the dampers lifted, at 44.1, 48 and 96 kHz, stays finite and bounded, every string playing on") {
+  for (double fs : {44100.0, 48000.0, 96000.0}) {
+    auto P = defaultParams();
+    P[p::lifted] = 1;
+    auto engine = std::make_unique<OrganistaEngine>(fs);
+    OrganistaEngine &e = *engine;
+    e.setParams(P.data());
+    const int keys[6] = {KEY_MIN, KEY_LO, 55, 67, KEY_HI, KEY_MAX};
+    for (int k : keys) e.noteOn(k, 1);
+    std::vector<float> L(128), R(128);
+    double pk = 0;
+    bool finite = true, playing = true;
+    const int blocks = (int)(1.2 * fs / 128);
+    for (int b = 0; b < blocks; b++) {
+      const double t = b * 128 / fs;
+      for (int j = 0; j < 6; j++) e.noteBend(std::pow(2.0, 14 * std::sin(TAU * (1.5 + 0.4 * j) * t + j) / 12), keys[j]);
+      if (b % 16 == 0) e.bend(std::sin(TAU * 0.7 * t));
+      if (b == blocks / 2) for (int k : keys) playing = playing && e.string(k)->down; // no string stopped as unstable
+      if (b == blocks / 2) for (int k : keys) e.noteOff(k, -1);
+      e.process(L.data(), R.data(), 128);
+      for (int i = 0; i < 128; i++) { finite = finite && std::isfinite(L[i]) && std::isfinite(R[i]); pk = std::max(pk, (double)std::fabs(L[i])); }
+    }
+    std::printf("       %.1f kHz: peak %.2f\n", fs / 1000, pk);
+    CHECK(finite && playing);
+    CHECK(pk < 4);
   }
 }
 

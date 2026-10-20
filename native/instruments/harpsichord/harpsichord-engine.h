@@ -66,6 +66,15 @@ class HarpsichordEngine : public Engine {
   static constexpr int SYM_MODES = 16;     // partials per string
   static constexpr double SYM_FMAX = 4000; // Hz: none above
   Sympathetic sym;
+  // Quality (forte/engine.h): Medium and Low sound fewer keys at once, make a string with fewer
+  // partials (none above fTop() but its first sixteen, none beyond the nTop()-th), stop its fading
+  // top partials sooner, and give each sympathetic string fewer partials (Medium) or none (Low)
+  int maxVoices() const { return pick(16, 12, 8); }
+  int hardVoices() const { return pick(24, 16, 10); }
+  double fTop() const { return pick<double>(INFINITY, 7000, 5000); }
+  int nTop() const { return pick(N_MAX, 64, 40); }
+  int kept(const Partials &pt) const;
+  int symModes() const { return pick(SYM_MODES, 3, 0); }
 
   using Data = KeyData<KeyStrings>;
   struct Voice {
@@ -133,10 +142,11 @@ class HarpsichordEngine : public Engine {
   std::array<double, p::count> P{};
   Params mp;
   bool hasParams = false;
-  std::array<double, 6> physSig{};
+  std::array<double, 4> physSig{};
+  Tuning physTuning;
   uint64_t version = 0;
   // the strings, built off the audio thread for each version of the physics knobs
-  struct Snapshot { std::atomic<double> pitch{440}, temperament{0}, detune{0}, loss{1}, fmax{10}; };
+  struct Snapshot { std::atomic<double> ratio[12] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, detune{0}, loss{1}, fmax{10}; };
   std::array<Snapshot, 8> snapshots;
   Data data;
   int focus = 60;
@@ -155,6 +165,7 @@ class HarpsichordEngine : public Engine {
   std::array<uint8_t, 128> down{};
   std::array<uint64_t, 128> symVer{};
   std::array<double, 4> symSig{}; // the knobs a group's damping depends on, as it was made
+  Quality symQuality = Quality::high; // and the Quality
   std::array<std::array<double, BLOCK>, 3 * 128> own{};
   std::array<int, 3 * 128> ownAt{};
   int symStamp = 0;

@@ -8,10 +8,12 @@ using namespace forte::windharp;
 
 namespace {
 // A string's design from its inputs, as the page passes them: key, n0, tuning, unison, mass, q,
-// and its place in the course (cents, gauge, idx, course).
+// its place in the course (cents, gauge, idx, course), and the keyboard's tuning (each pitch
+// class's ratio, C first: in[10 … 21]).
 StringDesign designOf(const double *in) {
   DesignParams P;
   P.n0 = in[1]; P.tuning = (int)in[2]; P.unison = in[3]; P.mass = in[4]; P.q = in[5];
+  for (int i = 0; i < 12; i++) { P.keyboard.r[i] = in[10 + i]; P.keyboard.equal = P.keyboard.equal && in[10 + i] == 1; }
   CourseOffset o;
   o.cents = in[6]; o.gauge = in[7]; o.idx = (int)in[8]; o.course = (int)in[9];
   return stringDesign((int)in[0], P, o);

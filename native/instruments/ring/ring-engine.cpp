@@ -18,6 +18,7 @@ constexpr double DELTA = 2.0;
 constexpr double AHEAD = 2;         // turns: a pulse is queued this long before it arrives
 constexpr double REACH = 6;         // a pulse is computed out to ±6 of its σ
 constexpr double PRESS_TIME = 0.02; // s: a key's pressure is followed with this time constant
+constexpr double SLIDE_T = 0.02;    // s: and a key's slide (its chromaticity)
 
 void StorageRingEngine::Voice::inject(double velocity, const double *P) {
   charge = velocity; Z = P[p::kick];
@@ -25,9 +26,18 @@ void StorageRingEngine::Voice::inject(double velocity, const double *P) {
   released = false; scraped = false;
 }
 
-// Queue the next turn's pulse, then go one turn on.
-void StorageRingEngine::Voice::schedule(const double *P, double fs) {
-  const Ring r = ringOf(key, P, press);
+// Queue the next turn's pulse, then go one turn on. The chromaticity is P's, or glides a turn at a
+// time toward the key's slide (and back to P's once the slide is gone).
+void StorageRingEngine::Voice::schedule(const double *P, const forte::Tuning &tuning, double fs, double slide) {
+  const bool own = slide == slide;
+  if (own) slid = true;
+  if (!slid) chroma = P[p::chroma];
+  else {
+    const double to = own ? slide : P[p::chroma];
+    chroma = glideTo(chroma, to, T / fs, SLIDE_T);
+    if (!own && chroma == to) slid = false;
+  }
+  const Ring r = ringOf(key, P, press, tuning, chroma);
   T = fs / r.frev;
   const Detuning d = detuning(theta, Z);
   const double x = Z * d.amp * chromatic(r.D, phiS) * std::exp(logX) * std::cos(phiB + d.phase);
@@ -55,6 +65,7 @@ StorageRingEngine::StorageRingEngine(double fs) : Engine(fs) { voices.reserve(kM
 
 void StorageRingEngine::setParams(const double *p) {
   for (int i = 0; i < p::count; i++) P[i] = p[i];
+  tuning = tuningOf(P.data());
   hasParams = true;
 }
 
@@ -70,12 +81,20 @@ void StorageRingEngine::noteOn(int key, double velocity) {
   if (!v) {
     Voice nv;
     nv.key = key;
-    nv.T = fs / keyFreq(key);
+    nv.T = fs / (keyFreq(key) * tuning.ratio(key));
     nv.next = 0.5 * nv.T; // the first arrival, half a turn in
     voices.push_back(nv);
     v = &voices.back();
   }
   v->inject(velocity, P.data());
+  v->chroma = expr.slideOr(key, P[p::chroma]); v->slid = false; // a slide starts there
+  // Quality: past 24 beams stored at Medium and 12 at Low, the oldest still stored is scraped away
+  // (as when its key is let go)
+  if (quality != Quality::high) {
+    int stored = 0;
+    for (const Voice &x : voices) stored += !x.scraped;
+    if (stored > pick(kMaxVoices, 24, 12)) for (Voice &x : voices) if (!x.scraped && &x != v) { x.scraped = true; break; }
+  }
   if ((int)voices.size() > kMaxVoices) voices.erase(voices.begin()); // the oldest goes
 }
 
@@ -96,7 +115,7 @@ void StorageRingEngine::process(float *L, float *R, int n) {
     const double dg = mode == 2 ? DELTA / (P[p::size] * std::max(v.Z, 1.0)) : 1;
     for (int i = 0; i < n; i++) {
       const double t = v.t;
-      while (t >= v.next - AHEAD * v.T) v.schedule(P.data(), fs);
+      while (t >= v.next - AHEAD * v.T) v.schedule(P.data(), tuning, fs, expr.slideOr(v.key, NAN));
       while (v.count && t > v.pt[v.head] + v.pr[v.head]) { v.head = (v.head + 1) % SLOTS; v.count--; } // pulses gone by
       double s = 0, dsum = 0;
       for (int j = 0, k = v.head; j < v.count; j++, k = (k + 1) % SLOTS) {

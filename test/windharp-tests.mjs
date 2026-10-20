@@ -20,6 +20,7 @@ import { wasmModel } from '../windharp/src/windharp-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../windharp/src/windharp-params.js';
 import { fft } from '../tools/audio-util.mjs';
+import { TUNING_PARAMS, TUNING_KEEP } from '../shared/tuning.js';
 
 const WindHarpEngine = await loadEngine(INSTRUMENT);
 const { shedding, stringDesign, courseOffsets, lockBand, lockedAmplitude, lockedRange, homeHarmonic, massDamping, balance, lockedState } = await wasmModel();
@@ -372,6 +373,15 @@ test('tuning: at the reference wind every key G3–C7 locks onto its 3rd harmoni
   for (const n0 of [2, 5]) for (const k of [57, 69, 81, 93]) check(k, P({ n0 }), 48000, n0);
   console.log(`        worst ${worst.toFixed(2)} ¢`);
 });
+test('the keyboard\'s tuning: at the reference wind E4 at A = 415 Hz sounds 101.27 ¢ low, in ¼-comma meantone E4 −3.42 ¢ and C4 +10.26 ¢ from equal temperament, A4 at 440 Hz (within 3 ¢, on its 3rd harmonic); in unison every string follows the unison key\'s', () => {
+  for (const [o, key, want] of [[{ pitch: 415 }, 64, keyFreq(64) * 415 / 440], [{ temperament: 'meantone' }, 64, keyFreq(64) * 2 ** (-3.42 / 1200)],
+    [{ temperament: 'meantone' }, 60, keyFreq(60) * 2 ** (10.26 / 1200)], [{ temperament: 'meantone' }, 69, 440]]) {
+    const T = 2.6, r = hold(key, P(o), T), l = lockOf(r.e), c = cents(pitchOf(r.L, want, Math.round((T - 1.5) * FS), r.L.length), want);
+    assert.ok(l.n === 3 && Math.abs(c) < 3, `${JSON.stringify(o)}, ${noteName(key)}: harmonic ${l.n}, ${c.toFixed(2)} ¢`);
+  }
+  const p = P({ tuning: 'unison', unison: 55, pitch: 415 });
+  assert.ok(Math.abs(cents(stringDesign(74, p).target, keyFreq(55) * 415 / 440)) < 1e-9, 'unison at 415 Hz');
+});
 test('unison courses: one string a key to B4, two from C5 to C7; at the reference wind every string of every course locks onto the 3rd harmonic on its own, within 3 ¢ of the note, its strings 0.5–4 ¢ apart (they beat slowly: the course shimmers)', () => {
   const courseSize = (k) => courseOffsets(k).length;
   assert.ok(courseSize(55) === 1 && courseSize(71) === 1 && courseSize(72) === 2 && courseSize(96) === 2);
@@ -512,16 +522,20 @@ test('level: at the reference wind a single forte note peaks at 0.1–0.5 on eve
   }
 });
 test('stability: seeded random combinations of extreme settings at 44.1 and 48 kHz, changed mid-note, with full aftertouch: no NaN, bounded, and falling away after release', () => {
-  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'venue'].includes(q.id));
+  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'venue', ...TUNING_KEEP].includes(q.id));
   let seed = 4242, worst = { pk: 0 };
   const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  // the keyboard's tuning drawn apart, from its own sequence, so that the other parameters' combinations stay the ones they were
+  let tseed = 777;
+  const trnd = () => ((tseed = (tseed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  const tune = (p) => { for (const q of TUNING_PARAMS) { if (trnd() < 0.5) continue; p[q.id] = q.options ? q.options[Math.floor(trnd() * q.options.length)][0] : trnd() < 0.5 ? q.min : q.max; } return p; };
   const pick = () => {
     const p = P();
     for (const q of sliders) {
       if (rnd() < 0.5) continue;
       p[q.id] = q.type === 'checkbox' ? rnd() < 0.5 : q.type === 'select' ? q.options[Math.floor(rnd() * q.options.length)][0] : rnd() < 0.5 ? q.min : q.max;
     }
-    return p;
+    return tune(p);
   };
   for (const fs of [44100, 48000]) for (let c = 0; c < 5; c++) {
     const p1 = pick(), p2 = pick(), ev = [];
@@ -537,6 +551,29 @@ test('stability: seeded random combinations of extreme settings at 44.1 and 48 k
   assert.ok(worst.pk < 4, `${worst.fs}: peak ${worst.pk.toFixed(2)} with ${JSON.stringify(worst.p1)} → ${JSON.stringify(worst.p2)}`);
   console.log(`        loudest of 10: ${worst.pk.toFixed(2)}`);
 });
+test('regression: the top strings in a 12 m/s wind, their shedding up to 0.29 of 44.1 kHz (Ω h 1.2–1.8; at the sample rate the wake’s leapfrog went to NaN): a fixed C7 and E7 (at A = 440 and 466 Hz) shed at f_s (within 0.5 %) with the van der Pol swing 2√r (within 1 %), and C7, C♯7, D7 and E7 alone in an 8 m/s wind with 30 % gusts stay finite, under a peak of 4, their wakes under 3 × that swing', () => {
+  for (const [key, pitch] of [[96, 440], [96, 466], [100, 466]]) {
+    const fs = 44100, p = P({ wind: 8, pitch }), S = design(key, p), e = new WindHarpEngine(fs, 1, { rigid: true, noise: 0 });
+    e.setParams(p); e.Uw = p.wind; e.handle({ type: 'pressure', value: 1, key: null }); // aftertouch: 12 m/s
+    const vc = openNow(e, key), bL = new Float32Array(1), bR = new Float32Array(1), rec = [];
+    for (let i = 0; i < 0.8 * fs; i++) { e.process(bL, bR, 1); if (i > 0.3 * fs) rec.push(vc.q[2]); }
+    const sh = shedding(e.U, S.D), zc = [];
+    for (let i = 1; i < rec.length; i++) if (rec[i - 1] < 0 && rec[i] >= 0) zc.push(i - 1 + rec[i - 1] / (rec[i - 1] - rec[i]));
+    const f = ((zc.length - 1) * fs) / (zc[zc.length - 1] - zc[0]), swing = Math.max(...rec.map(Math.abs));
+    assert.ok(Math.abs(e.U - 12) < 1e-3 && sh.Om / fs > 1.19, `${noteName(key)} at ${pitch}: U ${e.U}, Ω h ${(sh.Om / fs).toFixed(3)}`);
+    assert.ok(rel(f, sh.fs) < 5e-3 && rel(swing, 2) < 0.01, `${noteName(key)} at ${pitch}: ${f.toFixed(1)} Hz vs f_s ${sh.fs.toFixed(1)}, swing ${swing.toFixed(4)}`);
+  }
+  let worst = { pk: 0, q: 0 };
+  for (const pitch of [440, 466]) for (const key of [96, 97, 98, 100]) {
+    let q = 0;
+    const r = run(P({ wind: 8, gust: 0.3, pitch }), [[0, 'on', key, 0.7]], 2.5, { fs: 44100, wind: 8, tap: (e) => { for (const v of e.voices) for (const st of v.strings) for (const x of st.q) q = Math.max(q, Math.abs(x)); } });
+    let pk = 0;
+    for (let i = 0; i < r.L.length; i++) { assert.ok(Number.isFinite(r.L[i] + r.R[i]), `${noteName(key)} at ${pitch}: NaN at ${(i / 44100).toFixed(3)} s`); pk = Math.max(pk, Math.abs(r.L[i]), Math.abs(r.R[i])); }
+    assert.ok(pk < 4 && q < 6, `${noteName(key)} at ${pitch}: peak ${pk.toFixed(2)}, |q| ${q.toFixed(2)}`);
+    worst = { pk: Math.max(worst.pk, pk), q: Math.max(worst.q, q) };
+  }
+  console.log(`        loudest ${worst.pk.toFixed(2)}, wake |q| ≤ ${worst.q.toFixed(2)}`);
+});
 test('live knobs glide: wind, gustiness, Q and aftertouch moved mid-note change the sound without a click (no sample step over twice the steady largest)', () => {
   const steadyStep = (r, a, b) => { let m = 0; for (let i = a; i < b; i++) m = Math.max(m, Math.abs(r.L[i] - r.L[i - 1])); return m; };
   const ev = [[0, 'on', 72, 0.9], [1.2, 'params', P({ wind: 4.08, q: 900 })], [1.4, 'press', 0.04], [1.6, 'params', P({ wind: 4.08, q: 900, gust: 0.02 })]];
@@ -551,6 +588,43 @@ test('presets use their own parameters, and each speaks without NaN', () => {
     for (const v of r.L) { assert.ok(Number.isFinite(v), pr.name); pk = Math.max(pk, Math.abs(v)); }
     assert.ok(pk > 0.005, `${pr.name}: ${pk}`);
   }
+});
+test('Quality: Medium and Low let fewer shut keys ring at once (8, 6) and retire a shut string sooner (about 90 and 70 dB down), never a held or pedalled one; a held string plays exactly as at High', () => {
+  const play = (quality, events, sec) => {
+    const e = new WindHarpEngine(FS, 1); e.setQuality(quality); e.setParams(P()); e.Uw = DEFAULTS.wind;
+    const n = Math.round(sec * FS), L = new Float64Array(n), bL = new Float32Array(128), bR = new Float32Array(128);
+    const ev = events.map(([t, ...r]) => [Math.round(t * FS), ...r]).sort((a, b) => a[0] - b[0]);
+    for (let s = 0, j = 0; s < n; s += 128) {
+      while (j < ev.length && ev[j][0] <= s) { const [, type, a, b] = ev[j++]; if (type === 'on') e.noteOn(a, b); else if (type === 'off') e.noteOff(a, b); else e.setSustain(a); }
+      e.process(bL, bR, 128);
+      for (let i = 0; i < 128 && s + i < n; i++) L[s + i] = bL[i];
+    }
+    return { L, e };
+  };
+  const live = (e) => e.voices.filter((v) => !v.fading && !v.dead);
+  // four keys let go, then four more held: Medium keeps all eight, Low lets two shut ones go
+  const four = [60, 64, 67, 72], ev = [...four.map((k) => [0, 'on', k, 0.8]), ...four.map((k) => [0.4, 'off', k]), ...four.map((k, i) => [0.5 + 0.06 * i, 'on', k + 2, 0.8])];
+  const res = [];
+  for (const [quality, n] of [['high', 8], ['medium', 8], ['low', 6]]) {
+    const { e } = play(quality, ev, 0.9);
+    assert.equal(live(e).length, n, `${quality}: ${live(e).length} keys`);
+    assert.equal(live(e).filter((v) => v.held).length, 4, `${quality}: every held key sounds`);
+    // ten held (or pedalled) keys: none is let go below 12
+    const held = play(quality, [[0, 'sus', true], ...Array.from({ length: 10 }, (_, i) => [0.05 * i, 'on', 55 + 3 * i, 0.8]), ...Array.from({ length: 5 }, (_, i) => [0.6, 'off', 55 + 3 * i])], 0.8);
+    assert.equal(live(held.e).length, 10, `${quality}: ${live(held.e).length} of 10 held and pedalled keys`);
+    res.push(`${quality} ${n}`);
+  }
+  // a released C5 retires sooner; a held one is the same to the last bit
+  const gone = {};
+  for (const quality of ['high', 'medium', 'low']) {
+    const { e } = play(quality, [[0, 'on', 72, 0.8], [1, 'off', 72]], 1.5);
+    let s = 1.5; for (; s < 12 && e.voiceCount(); s += 0.05) e.process(new Float32Array(2400), new Float32Array(2400), 2400);
+    gone[quality] = s;
+  }
+  assert.ok(gone.medium < 0.8 * gone.high && gone.low < gone.medium, `released C5 retires at ${Object.values(gone).map((x) => x.toFixed(2)).join(', ')} s`);
+  const hi = play('high', [[0, 'on', 72, 0.8]], 1).L, lo = play('low', [[0, 'on', 72, 0.8]], 1).L;
+  for (let i = 0; i < hi.length; i++) if (hi[i] !== lo[i]) throw new Error(`Low differs from High at sample ${i}`);
+  console.log(`        keys left: ${res.join(', ')}; released C5 gone at ${Object.values(gone).map((x) => x.toFixed(1)).join(' / ')} s`);
 });
 test('CPU: ten sounding keys across the compass (15 strings in their courses), locked at the reference wind, at 48 kHz in under 30 % of one core', () => {
   const e = new WindHarpEngine(FS);

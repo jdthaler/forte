@@ -21,7 +21,7 @@ constexpr double XFADE = 0.02;     // s: switching the valve combo in or out cro
 constexpr double DUCK = 0.01;      // s: a pickup switch fades out over this, then back in
 constexpr double RETACK = 0.95;    // a re-pressed key fires once its dropped pad has re-tacked this much of its disc …
 constexpr double RETACK_MAX = 0.15; // s … or after this long at most
-constexpr double BEND_T = 0.02;    // s: the pitch wheel's glide
+constexpr double BEND_T = 0.02;    // s: the pitch wheel's glide, and a note's own bend's
 
 // ---- a voice: one key's mechanism and its pickup -------------------------------------------
 
@@ -30,7 +30,14 @@ void PianetEngine::Voice::start(PianetEngine &eng, int k, Data::Ref r) {
   inUse = true;
   key = k; version = eng.version; ref = r;
   eng.data.acquire(r);
-  p = Pluck(*r.data, eng.pad(), eng.fs2, eng.bendNow);
+  own = eng.expr.bendOf(k);
+  // Quality: Low leaves out the reed's modes above 12 kHz; Medium and Low let a reed rest once
+  // its ringing is 70 / 60 dB below its loudest
+  const double fTop = eng.Engine::pick<double>(INFINITY, INFINITY, 12000);
+  int nMax = 0;
+  while (nMax < r.data->N && r.data->modes[nMax].f <= fTop) nMax++;
+  p = Pluck(*r.data, eng.pad(), eng.fs2, eng.bendNow * own, std::max(nMax, 1));
+  rel = eng.Engine::pick(0.0, 1e-7, 1e-6);
   pol = key % 2 ? -1 : 1;
   setPickup(eng, true);
   phiPrev = emFlux(p.y, g);
@@ -53,7 +60,8 @@ PianetEngine::PianetEngine(double fs)
     : Engine(fs), fs2(OS * fs),
       data([this](int key, uint64_t v) {
         const Snapshot &s = snapshots[v % snapshots.size()];
-        return std::make_unique<KeyReed>(keyReed(key, s.tipMass.load(std::memory_order_relaxed), s.loss.load(std::memory_order_relaxed), fs2));
+        const double ratio = s.ratio[((key % 12) + 12) % 12].load(std::memory_order_relaxed); // the tuning's, as Tuning::ratio
+        return std::make_unique<KeyReed>(keyReed(key, s.tipMass.load(std::memory_order_relaxed), s.loss.load(std::memory_order_relaxed), fs2, ratio));
       }),
       rail(fs2), glideA(1 - std::exp(-1 / (GLIDE * fs2))), mixStep(1 / (XFADE * fs)), duckStep(1 / (DUCK * fs)),
       waitMax((int)std::round(RETACK_MAX * fs2)), toneLP(6000, fs) {
@@ -70,13 +78,16 @@ PianetEngine::PianetEngine(double fs)
 }
 
 void PianetEngine::setParams(const double *in) {
-  const bool first = !hasParams, rebuild = first || in[p::tipMass] != P[p::tipMass] || in[p::loss] != P[p::loss];
+  const Tuning tuning = tuningOf(in); // the keyboard's: every reed is cut to its key's pitch
+  const bool first = !hasParams, rebuild = first || in[p::tipMass] != P[p::tipMass] || in[p::loss] != P[p::loss] || !(tuning == physTuning);
   for (int i = 0; i < p::count; i++) P[i] = in[i];
   hasParams = true;
   if (rebuild) { // a new version of every reed: sounding notes keep theirs, new ones get it
     version++;
+    physTuning = tuning;
     Snapshot &s = snapshots[version % snapshots.size()];
     s.tipMass.store(P[p::tipMass], std::memory_order_relaxed); s.loss.store(P[p::loss], std::memory_order_relaxed);
+    for (int i = 0; i < 12; i++) s.ratio[i].store(tuning.r[i], std::memory_order_relaxed);
     data.prepare(version, KEY_MIN, KEY_MAX, lastKey);
   }
   const PadParams pd = pad();
@@ -108,19 +119,21 @@ void PianetEngine::noteOn(int key, double velocity) {
   if (!fresh) { byKey[key] = nullptr; return; } // every voice busy (beyond anything the stealing below lets happen)
   fresh->start(*this, key, r);
   voices[nVoices++] = fresh; byKey[key] = fresh;
-  if (nVoices > MAX_VOICES) {
+  if (nVoices > Engine::pick(MAX_VOICES, 16, 10)) { // Quality: Medium and Low let fewer notes sound at once
     Voice *victim = nullptr;
     double e = INFINITY;
     for (int i = 0; i < nVoices; i++) {
       Voice *u = voices[i];
-      if (u != fresh && !u->dying && !u->p.down && u->p.energy() < e) { e = u->p.energy(); victim = u; }
+      // (Medium and Low may also take a note the pedal holds)
+      if (u != fresh && !u->dying && (!u->p.down || (u->held && quality != Quality::high)) && u->p.energy() < e) { e = u->p.energy(); victim = u; }
     }
     if (victim) { victim->retire(); byKey[victim->key] = nullptr; }
   }
   startNote(key, velocity, fresh);
 }
 
-void PianetEngine::startNote(int, double velocity, Voice *v) {
+void PianetEngine::startNote(int key, double velocity, Voice *v) {
+  if (v->own != expr.bendOf(key)) { v->own = expr.bendOf(key); v->p.retune(bendNow * v->own, v->sleep); } // pressed again: at the key's own bend
   v->held = false; v->posted = false; v->sleep = false; v->quiet = 0;
   Pluck &p = v->p;
   if (p.down || v->pending) {
@@ -190,15 +203,24 @@ void PianetEngine::bend(double value) {
   bendTo = forte::fdlibm::pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12);
 }
 
+void PianetEngine::noteBend(double ratio, int key) { expr.setBend(ratio, key); }
+
 void PianetEngine::process(float *L, float *R, int n) {
   for (int at = 0, m; at < n; at += m) {
-    // pitch bend glides in steps of at most 128 samples, the reeds retuned at each
-    m = std::min(bendNow != bendTo ? 128 : BLOCK_MAX, n - at);
+    // pitch bend, the wheel's and each note's own, glides in steps of at most 128 samples, the
+    // reeds retuned at each (only those whose bend moved)
+    bool moving = bendNow != bendTo;
+    for (int i = 0; i < nVoices && !moving; i++) moving = voices[i]->own != expr.bendOf(voices[i]->key);
+    m = std::min(moving ? 128 : BLOCK_MAX, n - at);
     if (bendNow != bendTo) {
       bendNow += (bendTo - bendNow) * (1 - forte::fdlibm::exp(-m / (BEND_T * fs)));
       if (std::fabs(bendNow - bendTo) < 1e-9) bendNow = bendTo;
     }
-    for (int i = 0; i < nVoices; i++) if (voices[i]->p.bend != bendNow) voices[i]->p.retune(bendNow, voices[i]->sleep);
+    for (int i = 0; i < nVoices; i++) {
+      Voice &v = *voices[i];
+      v.own = glideTo(v.own, expr.bendOf(v.key), m / fs, BEND_T);
+      if (v.p.bend != bendNow * v.own) v.p.retune(bendNow * v.own, v.sleep);
+    }
     processBlock(L + at, R + at, m);
   }
   data.audioCycle();
@@ -242,13 +264,14 @@ void PianetEngine::processBlock(float *L, float *R, int n) {
       post(m);
     }
     // bookkeeping: retire faded voices; sleep or free reeds that have stopped
+    if (v.rel > 0) v.loud = std::max(v.loud, p.energy());
     if (v.dying && v.fade <= 0) v.dead = true;
     else if (!(std::fabs(p.y) < 1)) {
       v.dead = true;
       Message m;
       m.type = msg::error; m.key = (int16_t)v.key;
       post(m);
-    } else if (p.hv == 0 && !v.pending && !(p.F > 0 && p.a > 0) && p.energy() < 1e-13) { // (a bond under tension may still be creeping)
+    } else if (p.hv == 0 && !v.pending && !(p.F > 0 && p.a > 0) && p.energy() < std::max(1e-13, v.rel * v.loud)) { // (a bond under tension may still be creeping)
       if (++v.quiet > 20) { if (p.down || v.held) v.sleep = true; else if (p.a > PAD.aMin * PAD.a0) v.dead = true; }
     } else v.quiet = 0;
   }

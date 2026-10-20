@@ -10,6 +10,7 @@ import { INSTRUMENT, DEFAULTS, KEY_LO, KEY_HI, KEY_MIN, KEY_MAX } from '../celes
 import { wasmModel } from '../celesta/src/celesta-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { keyFreq } from '../shared/dsp.js';
+import { tuningRatio } from '../shared/tuning.js';
 
 const CelestaEngine = await loadEngine(INSTRUMENT);
 const M = await wasmModel();
@@ -25,16 +26,18 @@ function test(name, fn) {
 const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const cents = (a, b) => 1200 * Math.log2(a / b);
 
-// Render through the engine in 128-sample blocks, as the AudioWorklet does. events: [t, 'on'|'off'|'sus', key|on, vel]
+// Render through the engine in 128-sample blocks, as the AudioWorklet does, at a Quality (opts.quality,
+// High unless given). events: [t, 'on'|'off'|'sus', key|on, vel] and [t, 'msg', message] or [t, 'params', P]
 function play(params, sec, events, opts = {}) {
   const e = new CelestaEngine(FS);
+  if (opts.quality) e.setQuality(opts.quality);
   e.setParams(params);
   const n = Math.round(sec * FS), L = new Float32Array(n), R = new Float32Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
   const ev = [...events].sort((a, b) => a[0] - b[0]);
   for (let s = 0; s < n; s += bl) {
     while (ev.length && ev[0][0] * FS <= s) {
       const [, type, k, v] = ev.shift();
-      if (type === 'on') e.noteOn(k, v); else if (type === 'off') e.noteOff(k); else e.setSustain(k);
+      if (type === 'on') e.noteOn(k, v); else if (type === 'off') e.noteOff(k); else if (type === 'msg') e.handle(k); else if (type === 'params') e.setParams(k); else e.setSustain(k);
     }
     e.process(bL, bR, bl);
     L.set(bL.subarray(0, Math.min(bl, n - s)), s); R.set(bR.subarray(0, Math.min(bl, n - s)), s);
@@ -152,6 +155,13 @@ test('without boxes, the bar sounds on pitch (within 0.5 ¢) with its overtones 
     if (f2 < 15000) assert.ok(Math.abs(cents(peak(x, f2, a, a + 16384, 20), f2)) < 2, `${k}: mode 2 at ${f2}`);
   }
 });
+test('the keyboard\'s tuning: at A = 415 Hz, and in ¼-comma meantone (E4 −3.42 ¢, C4 +10.26 ¢), the bar is cut to its tuned pitch and sounds there (within 0.5 ¢)', () => {
+  for (const [k, o, c] of [[72, { pitch: 415 }, cents(415, 440)], [64, { temperament: 'meantone' }, -3.42], [60, { temperament: 'meantone' }, 10.26]]) {
+    const f = keyFreq(k) * 2 ** (c / 1200), Q = P({ boxes: false, pedalLock: true, ...o }), x = note(k, Q, 0.8, 1.2), a = 4800, b = a + 32768;
+    assert.ok(Math.abs(cents(M.bar(k, Q.thick, tuningRatio(Q, k)).modes[0].f, f)) < 0.01, `${k}: the model's bar`);
+    assert.ok(Math.abs(cents(peak(x, f, a, b), f)) < 0.5, `${k}: ${peak(x, f, a, b)} vs ${f}`);
+  }
+});
 test('the box makes the note louder, and shorter', () => {
   const on = note(72, P({ pedalLock: true }), 0.8, 2), off = note(72, P({ boxes: false, pedalLock: true }), 0.8, 2);
   assert.ok(rms(on, 0, FS / 4) > 4 * rms(off, 0, FS / 4), `${rms(on, 0, FS / 4)} vs ${rms(off, 0, FS / 4)}`);
@@ -184,6 +194,47 @@ test('harder felt reaches the upper modes: brighter, with a shorter contact', ()
   assert.ok(hard < 0.5 * soft, `contact ${hard} ms vs ${soft} ms`);
   const xs = note(k, P({ hardness: 40 }), 0.8, 0.2), xh = note(k, P({ hardness: 3000 }), 0.8, 0.2), f1 = keyFreq(k);
   assert.ok(tone(xh, f4, a, b) / tone(xh, f1, a, b) > 10 * (tone(xs, f4, a, b) / tone(xs, f1, a, b)), 'mode 4 against the fundamental');
+});
+// A note's own slide (MPE) is its hammer's felt, taken as the hammer is thrown.
+const slide = (key, value) => ({ type: 'slide', key, value });
+const same = (x, y, what) => { for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) assert.fail(`${what}: sample ${i} differs`); };
+test('a note\'s own slide is its hammer\'s felt: a lone note slid to x is the note with the felt at x, bit for bit, from its next strike on', () => {
+  const k = 72;
+  for (const x of [40, 3000]) {
+    same(play(P(), 0.3, [[0, 'msg', slide(k, x)], [0, 'on', k, 0.8]]).L, note(k, P({ hardness: x }), 0.8, 0.3), `felt ${x}`);
+    // slid while it rings: the bar rings on as it was struck, and the next strike has the new felt
+    same(play(P(), 0.4, [[0, 'on', k, 0.8], [0.1, 'msg', slide(k, x)], [0.2, 'on', k, 0.8]]).L, play(P(), 0.4, [[0, 'on', k, 0.8], [0.1, 'params', P({ hardness: x })], [0.2, 'on', k, 0.8]]).L, `felt ${x}, slid`);
+  }
+  // the other bar of a chord keeps the knob's felt: the chord is its two notes, apart
+  const chord = play(P(), 0.3, [[0, 'msg', slide(k, 3000)], [0, 'on', k, 0.8], [0, 'on', 79, 0.8]]).L;
+  const a = note(k, P({ hardness: 3000 }), 0.8, 0.3), b = note(79, P(), 0.8, 0.3);
+  let d = 0, pk = 0;
+  for (let i = 0; i < chord.length; i++) { d = Math.max(d, Math.abs(chord[i] - a[i] - b[i])); pk = Math.max(pk, Math.abs(chord[i])); }
+  assert.ok(d < 1e-5 * pk, `differs by ${(d / pk).toExponential(2)} of the peak`);
+});
+test('a note\'s slide back to none (NaN) leaves the output bit-identical', () => {
+  const ev = [[0, 'on', 60, 0.8], [0, 'on', 67, 0.6], [0.1, 'on', 60, 1]];
+  same(play(P(), 0.3, [[0, 'msg', slide(60, 3000)], [0, 'msg', slide(60, NaN)], [0.05, 'msg', slide(67, 20)], [0.05, 'msg', slide(67, NaN)], ...ev]).L, play(P(), 0.3, ev).L, 'slid and back');
+});
+test('stability: each note\'s own felt swept over its whole range every block, on chords struck again and again, at 44.1, 48 and 96 kHz', () => {
+  // the chord's peak, against the same chord with the knob at either end of the felt
+  const chord = (fs, o, slid) => {
+    const e = new CelestaEngine(fs);
+    e.setParams(P(o));
+    const keys = [21, 60, 72, 96, 108], L = new Float32Array(128), R = new Float32Array(128);
+    let pk = 0;
+    for (let b = 0, n = Math.round((0.5 * fs) / 128); b < n; b++) {
+      if (slid) keys.forEach((k, i) => e.handle(slide(k, 10 * 1000 ** (0.5 + 0.5 * Math.sin(b / (2 + i))))));
+      if (b % 20 === 0) for (const k of keys) e.noteOn(k, 1);
+      e.process(L, R, 128);
+      for (const y of L) { assert.ok(Number.isFinite(y), `${fs} Hz ${JSON.stringify(o)}: NaN`); pk = Math.max(pk, Math.abs(y)); }
+    }
+    return pk;
+  };
+  for (const fs of [44100, 48000, 96000]) for (const o of [{}, { mass: 12, speedMax: 5, fullRange: true }]) {
+    const pk = chord(fs, o, true), ends = Math.max(chord(fs, { ...o, hardness: 10 }), chord(fs, { ...o, hardness: 10000 }));
+    assert.ok(pk < 1.2 * ends, `${fs} Hz ${JSON.stringify(o)}: peak ${pk.toFixed(2)}, ${ends.toFixed(2)} with the knob`);
+  }
 });
 test('the hammer gives the bar no more energy than it brings (½mv²)', () => {
   for (const k of [60, 84, 108]) {
@@ -220,6 +271,27 @@ test('striking a ringing bar again adds to it; every voice ends after release', 
 test('only A0–C8 have bars', () => {
   const r = play(P(), 0.2, [[0, 'on', 20, 1], [0, 'on', 109, 1]]);
   assert.equal(rms(r.L), 0);
+});
+test('Quality: Medium and Low let 16 and 10 bars ring at once and let a bar go at −70 and −60 dB (−90 at High); a bar keeps its pitch and level', () => {
+  const ev = [[0, 'sus', true]];
+  for (let i = 0; i < 36; i++) ev.push([0.04 * i, 'on', KEY_LO + i, 0.6]);
+  const time = {};
+  for (const [quality, cap] of [['high', 24], ['medium', 16], ['low', 10]]) {
+    let most = 0, t = 0;
+    const { L } = play(P(), 4, ev, { quality, each: (e, s) => { if (s % 1280) return; const vs = e.voices; most = Math.max(most, vs.filter((v) => !v.fading).length); t += vs.length; } });
+    assert.ok(L.every(Number.isFinite), `${quality}: NaN`);
+    assert.ok(most <= cap, `${quality}: ${most} bars`);
+    time[quality] = t;
+  }
+  console.log(`         bars × time at Medium ${((100 * time.medium) / time.high).toFixed(0)} %, Low ${((100 * time.low) / time.high).toFixed(0)} % of High's`);
+  assert.ok(time.medium < 0.8 * time.high && time.low < 0.6 * time.high, JSON.stringify(time));
+  for (const key of [60, 84, 100]) {
+    const f = keyFreq(key), at = (quality) => play(P(), 1, [[0, 'on', key, 0.8]], { quality }).L, hi = at('high');
+    for (const quality of ['medium', 'low']) {
+      const x = at(quality), c = cents(peak(x, f, 0.1 * FS, FS), peak(hi, f, 0.1 * FS, FS)), d = 20 * Math.log10(rms(x) / rms(hi));
+      assert.ok(Math.abs(c) < 0.1 && Math.abs(d) < 1.5, `key ${key} at ${quality}: ${c.toFixed(3)} ¢, ${d.toFixed(2)} dB`);
+    }
+  }
 });
 test('CPU: 16 sounding bars render faster than 5× real time', () => {
   const keys = Array.from({ length: 16 }, (_, i) => 60 + 3 * i), t0 = performance.now();

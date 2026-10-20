@@ -21,7 +21,8 @@ double pulseSpectrum(double f, double tau) {
 
 KeyModes keyModes(int key, const double *P) {
   KeyModes out;
-  const double f1 = keyFreq(key);
+  // the note: equal temperament × the keyboard's tuning (forte/tuning.h; exactly 1 at its defaults)
+  const double f1 = keyFreq(key) * tuningOf(P).ratio(key);
   for (int n = 0; n < (int)BETA_L.size(); n++) {
     const double q = BETA_L[n] / BETA_L[0];
     const double ratio = q * q * (1 + P[p::stretch] * n);

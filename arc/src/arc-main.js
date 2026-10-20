@@ -3,8 +3,9 @@
 import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT, bankParams } from './arc-instrument.js';
-import { KEY_LO, KEY_HI, TAU, SUPPLY, TALK, keyFreq, ayrtonV, kelvinC, tuneKey } from './arc-model.js';
+import { KEY_LO, KEY_HI, TAU, SUPPLY, TALK, ayrtonV, kelvinC, tuneKey } from './arc-model.js';
 import { wasmModel } from './arc-wasm.js';
+import { tunedFreq } from '../../shared/tuning.js';
 
 // The views and the capacitor bank use the engine's model: the same C++, built as WebAssembly.
 const model = await wasmModel();
@@ -45,7 +46,7 @@ function retune() {
   const P = bankParams(shell.P), key = tuneKey(P);
   if ((table && table.key === key) || (job && job.key === key)) return;
   const quick = new Float64Array(KEY_HI - KEY_LO + 1);
-  for (let k = KEY_LO; k <= KEY_HI; k++) quick[k - KEY_LO] = P.tune === 'kelvin' ? kelvinC(keyFreq(k), P.coil * 1e-3) : model.startCap(k, P);
+  for (let k = KEY_LO; k <= KEY_HI; k++) quick[k - KEY_LO] = P.tune === 'kelvin' ? kelvinC(tunedFreq(P, k), P.coil * 1e-3) : model.startCap(k, P);
   if (!table || P.tune === 'kelvin') table = { key: P.tune === 'kelvin' ? key : `start|${key}`, lo: KEY_LO, caps: quick };
   if (P.tune === 'kelvin') { job = null; return; }
   job = { key, P: { ...P }, caps: new Float64Array(KEY_HI - KEY_LO + 1), k: KEY_LO };
@@ -70,10 +71,10 @@ function update() {
   clearTimeout(readTimer);
   readTimer = setTimeout(readouts, 60);
   const P = shell.P, talk = P.mode === 'talk', C = capOf(focus), L = talk ? TALK.L : P.coil * 1e-3;
-  spectrum.set(keyFreq(focus), talk ? [] : [{ f: 1 / (TAU * Math.sqrt(L * C)), color: css('--accent-2') }, { f: keyFreq(focus), color: css('--accent') }]);
+  spectrum.set(tunedFreq(P, focus), talk ? [] : [{ f: 1 / (TAU * Math.sqrt(L * C)), color: css('--accent-2') }, { f: tunedFreq(P, focus), color: css('--accent') }]);
   $('#ckt-read').textContent = `E ${SUPPLY.E} V · R_b ${op.Rb.toFixed(1)} Ω · L_b ${SUPPLY.Lb} H`;
 }
-const capOf = (key) => (shell.P.mode === 'talk' ? TALK.C : table?.caps[key - KEY_LO] ?? kelvinC(keyFreq(key), shell.P.coil * 1e-3));
+const capOf = (key) => (shell.P.mode === 'talk' ? TALK.C : table?.caps[key - KEY_LO] ?? kelvinC(tunedFreq(shell.P, key), shell.P.coil * 1e-3));
 function readouts() {
   const P = shell.P, o = op, talk = P.mode === 'talk', C = capOf(focus), L = talk ? TALK.L : P.coil * 1e-3;
   const la = model.linearAnalysis(model.circuit(P, C)), fK = 1 / (TAU * Math.sqrt(L * C));
@@ -87,7 +88,7 @@ function readouts() {
     row('note starts', la.sigma > 0 ? `${fmtHz(la.f)}, ×e every ${(1000 / la.sigma).toFixed(0)} ms` : `no: decays at ${(-la.sigma).toFixed(0)}/s`),
   ];
   if (!talk) {
-    const Ck = kelvinC(keyFreq(focus), L);
+    const Ck = kelvinC(tunedFreq(P, focus), L);
     rows.push(row('sings while', `coil < ${model.thresholdR(P, Ck).toFixed(2)} Ω, arc < ${model.thresholdCurrent(P, Ck).toFixed(1)} A`));
     rows.push(row('upper limit', fmtHz(model.upperLimit(P))));
   }

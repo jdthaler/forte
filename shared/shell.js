@@ -42,14 +42,17 @@
 //   onNoteOn(key, vel)  onNoteOff(key)  onSustain(on)  onPanic()  onCC(cc, value)
 //   onPressure(value, key|null)  onBend(value)   (MIDI aftertouch 0..1 and pitch bend −1..1; the
 //                   engine also receives { type: 'pressure', value, key } and { type: 'bend', value })
+//   (MPE, shared/mpe.js: a member channel's bend, slide and pressure go to its note's engine as
+//   { type: 'noteBend', key, value }, { type: 'slide', key, value } and pressure: midi.js pageMpe)
 //   onParam(id, value, P, param, dragging)   id = '*' after a preset or reset
 
 import { createChain } from './chain.js';
 import { createKeyboard } from './keyboard.js';
 import { trimGain } from './registry.js';
 import { controlOwns, focusedByPointer } from './focus.js';
-import { startMIDI, resumeMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto } from './midi.js';
+import { startMIDI, resumeMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe } from './midi.js';
 import { attachPresets } from './user-presets.js';
+import { connectQuality, qualityControl } from './quality.js';
 // after a change, a control picked with the pointer lets go of the focus (the keys go back to the
 // instrument); one reached with Tab keeps it, so the next Space or arrow works it again
 const unfocus = (el) => { if (focusedByPointer(el)) el.blur(); };
@@ -135,6 +138,7 @@ export function createShell(cfg) {
       // Params go first, straight to the port. Everything else waits for `starting` and is
       // posted in order (shell.post), so a quick note-off can never overtake its note-on.
       node.port.postMessage(paramsMessage());
+      connectQuality(node, { toast }); // the device's Quality (shared/quality.js)
       if (cfg.space === 'sustain') node.port.postMessage({ type: 'sustain', on: shell.sustain });
       if (ctx.state !== 'running') await ctx.resume();
       shell.audio = { ctx, node, tone: chain.tone, master: chain.master, roomGain: chain.roomGain, analyser, chain };
@@ -163,10 +167,15 @@ export function createShell(cfg) {
   shell.applyMix = () => { if (shell.audio) shell.audio.chain.apply(shell.P, trimGain(cfg.id)); };
 
   // ---- notes ---------------------------------------------------------------
+  // MPE: a member channel's bend, slide and pressure are its note's (a note-on's go with it)
+  const notes = pageMpe({ post: (m) => shell.post(m), params: () => shell.P, modWheel: cfg.modWheel, groups: cfg.groups });
+  shell.mpe = notes.mpe;
   // an instrument that speaks only while held says so the first time a key is let go too soon
   const pressedAt = new Map();
   let holdHinted = false;
-  async function down(key, vel) {
+  // own: the note's own expression (MPE), posted just before it; without, a key that had some
+  // starts plain again
+  async function down(key, vel, own) {
     if (key < LO || key > HI) return;
     if (cfg.holdHint) pressedAt.set(key, performance.now());
     latched.delete(key); sost.strike(key);
@@ -174,6 +183,7 @@ export function createShell(cfg) {
     shell.keys.set(key, true);
     if (shell.audio) shell.startAudio(); // resumes a suspended context; no await, so order is kept
     else try { await shell.startAudio(); } catch { return; }
+    for (const m of notes.strike(key, own)) shell.post(m);
     shell.post({ type: 'noteOn', key, velocity: vel, data: cfg.noteData?.(key, vel, shell.P, shell.audio.ctx.sampleRate) });
     cfg.onNoteOn?.(key, vel);
   }
@@ -277,7 +287,9 @@ export function createShell(cfg) {
   }
   function onMIDI(ev) {
     const [st, d1, d2] = ev.data, cmd = st & 0xf0;
-    if (cmd === 0x90 && d2 > 0) down(d1, touched(d2 / 127) * (soft ? SOFT_PEDAL : 1)); // the velocity curve, the soft pedal
+    const { own: its, with: own } = notes.midi(ev.data);
+    if (its) return;
+    if (cmd === 0x90 && d2 > 0) down(d1, touched(d2 / 127) * (soft ? SOFT_PEDAL : 1), own); // the velocity curve, the soft pedal
     else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) up(d1, cmd === 0x80 ? d2 / 127 : undefined);
     else if (cmd === 0xb0) {
       if (d1 === 64 && cfg.space) setSustain(d2 >= 64);
@@ -346,6 +358,7 @@ export function createShell(cfg) {
     }
     $('#groups').appendChild(det);
   }
+  qualityControl(); // the device's Quality, after the instrument's groups
   function refresh(id, dragging = false) {
     const c = controls.get(id);
     if (!c) return;

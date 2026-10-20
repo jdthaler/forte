@@ -33,6 +33,7 @@ void CarillonEngine::setParams(const double *p) {
   const bool first = !hasParams;
   for (int i = 0; i < p::count; i++) P[i] = p[i];
   hasParams = true;
+  tuning = tuningOf(P.data());
   T_asym = P[p::asym] / 100; T_distance = P[p::distance];
   if (first) { S_asym = T_asym; S_distance = T_distance; }
   for (int i = 0; i < nVoices; i++) { Voice &v = pool[order[i]]; coefs(v, false); gains(v, false); } // losses, listener: at once (gains glide)
@@ -62,8 +63,8 @@ int CarillonEngine::newVoice(int key) {
     nVoices--;
   }
   Voice &v = pool[slot];
-  v.key = key; v.profile = (int)P[p::profile]; v.historicAmount = P[p::historic];
-  bellOf(key, v.profile, v.historicAmount, v.bell);
+  v.key = key; v.profile = (int)P[p::profile]; v.historicAmount = P[p::historic]; v.ratio = tuning.ratio(key);
+  bellOf(key, v.profile, v.historicAmount, v.bell, v.ratio);
   v.nModes = bellModes(v.bell, P.data(), v.modes);
   // resonators: one per m = 0 mode, two (the doublet) per m ≥ 1 mode
   int N = 0;
@@ -72,6 +73,10 @@ int CarillonEngine::newVoice(int key) {
     if (v.modes[i].m > 0) { v.src[N] = i; v.mem[N++] = 1; }
   }
   v.N = N;
+  // Quality: Medium and Low leave out the modes above 16 and 12 kHz (faint, and soon gone in the air)
+  // and prune the rest at −70 and −60 dB under the bell's loudest instead of −100
+  v.fMax = pick(0.45 * fs, std::min(0.45 * fs, 16000.0), std::min(0.45 * fs, 12000.0));
+  v.floor = pick(PRUNE, 3e-4, 1e-3);
   for (double *a : {v.A1, v.A2, v.Bc, v.PHI, v.B, v.G, v.GT, v.Y1, v.Y2, v.W, v.SIG, v.AMP, v.ANG, v.HRE, v.HIM}) std::fill(a, a + RES_MAX, 0.0);
   std::fill(v.act, v.act + RES_MAX, 0);
   std::fill(v.idx, v.idx + RES_MAX, 0);
@@ -89,7 +94,7 @@ int CarillonEngine::newVoice(int key) {
 
 // Frequencies (with the doublet split at the current asymmetry) and damping → two-pole coefficients.
 void CarillonEngine::coefs(Voice &v, bool first) {
-  const double h = 1 / fs, eps = S_asym, nyq = 0.45 * fs;
+  const double h = 1 / fs, eps = S_asym, top = v.fMax; // below Nyquist (0.45 fs), or Quality's ceiling
   v.eps = eps;
   if (first) { // a historic bell's own asymmetry in harmonic 2m, as a phasor (the knob's lies along ψ = 0)
     for (int r = 0; r < v.N; r++) {
@@ -107,7 +112,7 @@ void CarillonEngine::coefs(Voice &v, bool first) {
     // the pair's orientation is set when the bell is hung (a ringing doublet keeps its axes)
     if (first) v.ANG[r] = e > 0 && m > 0 ? std::atan2(im, re) / (2 * m) : 0;
     v.W[r] = w; v.SIG[r] = sig;
-    if (f >= nyq) { v.A1[r] = 0; v.A2[r] = 0; v.Bc[r] = 0; continue; }
+    if (f >= top) { v.A1[r] = 0; v.A2[r] = 0; v.Bc[r] = 0; continue; }
     v.A1[r] = 2 * rr * std::cos(w * h); v.A2[r] = rr * rr; v.Bc[r] = (h * rr * std::sin(w * h)) / w;
   }
 }
@@ -292,7 +297,7 @@ void CarillonEngine::prune(Voice &v) {
   if (sum > v.peak) v.peak = sum;
   v.level = sum;
   if (v.cl.on || v.age < YOUNG) return;
-  const double floor = PRUNE * v.peak;
+  const double floor = v.floor * v.peak;
   for (int r = 0; r < N; r++) if (v.act[r]) { if (v.AMP[r] < floor || v.AMP[r] < 1e-12) v.act[r] = 0; else any = true; }
   compact(v);
   if (!any) v.dead = true;
@@ -309,7 +314,7 @@ void CarillonEngine::noteOn(int key, double velocity) {
   const int profile = (int)P[p::profile];
   const double hist = P[p::historic];
   int slot = byKey[key - KEY_MIN];
-  if (slot < 0 || pool[slot].dead || pool[slot].fading || pool[slot].profile != profile || pool[slot].historicAmount != hist) {
+  if (slot < 0 || pool[slot].dead || pool[slot].fading || pool[slot].profile != profile || pool[slot].historicAmount != hist || pool[slot].ratio != tuning.ratio(key)) {
     if (slot >= 0 && !pool[slot].dead) pool[slot].fading = true; // a different bell now hangs there: the old one fades out
     slot = newVoice(key);
     byKey[key - KEY_MIN] = slot;
@@ -319,7 +324,7 @@ void CarillonEngine::noteOn(int key, double velocity) {
   focus = slot;
   int live = 0;
   for (int i = 0; i < nVoices; i++) if (!pool[order[i]].fading) live++;
-  if (live > MAX_VOICES) {
+  if (live > pick(MAX_VOICES, 24, 12)) { // Quality: fewer bells ring at once at Medium and Low
     Voice *victim = nullptr;
     double score = INFINITY;
     for (int i = 0; i < nVoices; i++) {

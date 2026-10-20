@@ -94,7 +94,8 @@ struct KeyModel {
 };
 KeyModel computeKey(int m, const double *P, double fs = 48000);
 
-// The 'model' parameters (kind: 'model'): a key's modes depend on them and the sample rate only.
+// The 'model' parameters (kind: 'model') and the tuning's: a key's modes depend on them and the
+// sample rate only.
 bool isModelParam(int i);
 // Their values and fs as one number below 2⁵² (it travels as a double), never 0.
 uint64_t modelVersion(const double *P, double fs);

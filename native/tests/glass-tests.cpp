@@ -1,6 +1,6 @@
 // glass-tests.cpp — the armonica's model and engine in C++: Rayleigh's ratios and Bryan's factor,
 // the bowls on pitch, a rubbed bowl speaking at its note (its bowl built on the worker thread),
-// water poured into a ringing bowl, the views' messages, and ten bowls in the CPU budget. The
+// the pitch wheel and each note's own bend (MPE), water poured into a ringing bowl, the views' messages, and ten bowls in the CPU budget. The
 // physics tests are the JavaScript suite's, run on the WebAssembly (node test/glass-tests.mjs).
 
 #include <chrono>
@@ -111,6 +111,127 @@ TEST("glass: pitch bend moves every bowl's modes: a rubbed note follows, two sem
     const double want = 440 * std::pow(2.0, 2 * v / 12), f = zeroCrossFreq(L, (int)(0.4 * fs), (int)(1.0 * fs), fs);
     CHECK(std::fabs(1200 * std::log2(f / want)) < 3);
     CHECK(rms(L, (int)(0.4 * fs), (int)(1.0 * fs)) > 0.01);
+  }
+}
+
+// the strongest frequency within ±60 ¢ of f (Hann window, ½ ¢ steps)
+static double peakNear(const std::vector<float> &x, int a, int b, double f, double fs) {
+  double best = 0, bf = f;
+  for (double c = -60; c <= 60; c += 0.5) {
+    const double g = f * std::pow(2.0, c / 1200);
+    double re = 0, im = 0;
+    for (int i = a; i < b; i++) {
+      const double h = 0.5 - 0.5 * std::cos(TAU * (i - a) / (b - a)), w = (TAU * g * i) / fs;
+      re += h * x[i] * std::cos(w); im += h * x[i] * std::sin(w);
+    }
+    if (std::hypot(re, im) > best) { best = std::hypot(re, im); bf = g; }
+  }
+  return bf;
+}
+
+TEST("glass: a note's own bend (MPE) retunes its bowl alone: A4 lands a fourth down, A3 held beside it stays") {
+  const double fs = 48000;
+  auto P = defaults();
+  P[p::split] = 0; P[p::treadle] = 0;
+  auto engine = std::make_unique<ArmonicaEngine>(fs);
+  ArmonicaEngine &e = *engine;
+  e.setParams(P.data());
+  waitFor(e, 57); waitFor(e, 69);
+  e.noteOn(57, 0.6); e.noteOn(69, 0.6);
+  render(e, (int)(0.8 * fs));
+  const double r = std::pow(2.0, -5.0 / 12);
+  e.noteBend(r, 69);
+  auto L = render(e, (int)(1.2 * fs));
+  const int a = (int)(0.4 * fs), b = (int)(1.2 * fs);
+  CHECK(std::fabs(1200 * std::log2(peakNear(L, a, b, 440 * r, fs) / (440 * r))) < 3);
+  CHECK(std::fabs(1200 * std::log2(peakNear(L, a, b, 220, fs) / 220)) < 3);
+}
+
+TEST("glass: a lone note's own bend sounds as the wheel bent as far: two semitones up and down") {
+  const double fs = 48000;
+  for (double v : {1.0, -1.0}) {
+    std::vector<float> out[2];
+    for (int which = 0; which < 2; which++) {
+      auto P = defaults();
+      P[p::split] = 0; P[p::treadle] = 0;
+      auto engine = std::make_unique<ArmonicaEngine>(fs);
+      ArmonicaEngine &e = *engine;
+      e.setParams(P.data());
+      waitFor(e, 69);
+      e.noteOn(69, 0.6);
+      render(e, (int)(0.8 * fs));
+      if (which) e.noteBend(std::pow(2.0, 2 * v / 12), 69); else e.bend(v);
+      out[which] = render(e, (int)(1.0 * fs));
+    }
+    const int a = (int)(0.4 * fs), b = (int)(1.0 * fs);
+    const double fw = zeroCrossFreq(out[0], a, b, fs), fn = zeroCrossFreq(out[1], a, b, fs);
+    CHECK(std::fabs(1200 * std::log2(fn / fw)) < 1);
+    CHECK(std::fabs(1200 * std::log2(fn / (440 * std::pow(2.0, 2 * v / 12)))) < 3);
+    CHECK(std::fabs(20 * std::log10(rms(out[1], a, b) / rms(out[0], a, b))) < 0.5);
+  }
+}
+
+TEST("glass: a bend sent before the key starts its bowl there; bends of 1 leave every sample as it was") {
+  const double fs = 48000;
+  auto P = defaults();
+  P[p::split] = 0; P[p::treadle] = 0;
+  { // struck already bent: on pitch from the first rub, no glide up to it
+    auto engine = std::make_unique<ArmonicaEngine>(fs);
+    ArmonicaEngine &e = *engine;
+    e.setParams(P.data());
+    waitFor(e, 69);
+    const double r = std::pow(2.0, 7.0 / 12);
+    e.noteBend(r, 69);
+    e.noteOn(69, 0.6);
+    auto L = render(e, (int)(1.4 * fs));
+    CHECK(std::fabs(1200 * std::log2(peakNear(L, (int)(0.8 * fs), (int)(1.4 * fs), 440 * r, fs) / (440 * r))) < 3);
+    CHECK(rms(L, (int)(0.8 * fs), (int)(1.4 * fs)) > 0.01);
+  }
+  std::vector<float> out[2];
+  for (int which = 0; which < 2; which++) {
+    auto engine = std::make_unique<ArmonicaEngine>(fs);
+    ArmonicaEngine &e = *engine;
+    e.setParams(defaults().data());
+    waitFor(e, 60); waitFor(e, 69);
+    if (which) e.noteBend(1, 69);
+    e.noteOn(60, 0.6); e.noteOn(69, 0.6);
+    std::vector<float> L(128), R(128);
+    for (int blk = 0; blk < (int)(fs / 128); blk++) {
+      if (which) { e.noteBend(1, 60); e.noteBend(1, 69); e.noteBend(1, 72); }
+      if (blk == 200) e.bend(0.5);
+      e.process(L.data(), R.data(), 128);
+      out[which].insert(out[which].end(), L.begin(), L.end());
+      out[which].insert(out[which].end(), R.begin(), R.end());
+    }
+  }
+  CHECK(out[0] == out[1]);
+}
+
+TEST("glass: ±48 semitones of each note's own bend, swept every block on a chord across the full range, stay finite and bounded at 44.1, 48 and 96 kHz") {
+  for (double fs : {44100.0, 48000.0, 96000.0}) {
+    auto P = defaults();
+    P[p::fullRange] = 1; P[p::press] = 12;
+    auto engine = std::make_unique<ArmonicaEngine>(fs);
+    ArmonicaEngine &e = *engine;
+    e.setParams(P.data());
+    const int keys[] = {21, 45, 60, 69, 84, 108};
+    for (int key : keys) { waitFor(e, key); e.noteOn(key, 0.8); }
+    std::vector<float> L(128), R(128);
+    double pk = 0;
+    bool finite = true;
+    const int blocks = (int)(3 * fs / 128);
+    for (int blk = 0; blk < blocks; blk++) {
+      const double t = blk * 128 / fs;
+      for (int i = 0; i < 6; i++) { // a sweep each, then held at an end
+        const double s = t < 2 ? std::sin(TAU * (0.7 + 0.3 * i) * t) : (i & 1 ? 1 : -1);
+        e.noteBend(std::pow(2.0, 48 * s / 12), keys[i]);
+      }
+      e.process(L.data(), R.data(), 128);
+      for (int i = 0; i < 128; i++) { finite = finite && std::isfinite(L[i]) && std::isfinite(R[i]); pk = std::max({pk, (double)std::fabs(L[i]), (double)std::fabs(R[i])}); }
+    }
+    std::printf("       %.1f kHz: peak %.2f\n", fs / 1000, pk);
+    CHECK(finite);
+    CHECK(pk < 30); // unbent, the chord peaks at 1.5–2.6; a bowl bent two octaves down, pressed this hard, speaks up to 7× louder
   }
 }
 

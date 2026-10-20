@@ -63,6 +63,7 @@ The front page sorts them into four kinds, as here.
 | ✅ | [Wind Harp](windharp/) | stiff nylon strings in a wind, each with van der Pol wake oscillators along it (Facchinetti, de Langre & Biolley): the wake locks onto a harmonic inside the band a linear analysis predicts (de Langre's coupled-mode flutter) and holds on past it (hysteresis, from a harmonic balance); every string cut to lock on its note at 4 m/s, so the wind hops each string up or down its own series; shutters that slide open, seeded gusts, mass–damping, Kircher's unison harp, the aeolian tone as a dipole |
 | ✅ | [Storage Ring](ring/) | a particle accelerator's storage ring heard through a beam pickup: a Gaussian bunch's pulse train at the revolution frequency, betatron sidebands at (n ± Q)·f_rev after an injection kick, decoherence by chromaticity that recoheres every synchrotron period and by octupole amplitude detuning that never does (Meller et al.'s closed forms, checked against tracked particles); RF voltage under key pressure, adiabatic bunch shortening, radiation damping, two-button or difference pickups |
 | ✅ | [RF Cavity Bells](cavity/) | superconducting accelerator cavities rung by a passing bunch: nine coupled pillbox cells whose passband beats (Nagle, Knapp & Knapp's circuit model), higher-order modes at Bessel-zero ratios for a bell's partials, kicks from the transit-time integral, offset and bunch-length form factors; input and HOM couplers, BCS surface resistance against the helium bath, beam loading from a bunch train, Lorentz-force detuning through the walls' mechanical mode, quench and recovery |
+| ✅ | [Collider Showers](showers/) | a collider calorimeter's lead tungstate crystals (CMS's) rung by the heat of the particle showers they catch, the thermo-acoustic effect: PDG's electromagnetic shower profiles, photon conversion, charged pions' hadronic showers that differ every time, the Molière-radius spread into neighbouring crystals; stretching modes (Love's rod theory) rung by where along the crystal the shower peaks, so TeV showers ring the odd harmonics; bending modes from an off-axis impact; pile-up; piezo or accelerometer readout |
 
 ✅ playable · 🛠 in the workshop ([build briefs](docs/WORKSHOP.md)). Each instrument's README has its equations,
 numbers, sources, and a list of what is simplified. The same notes open on
@@ -83,6 +84,17 @@ sostenuto and soft pedals, aftertouch and, where it means something, the
 mod wheel and pitch bend. Once MIDI is on, every other instrument page
 turns it on by itself.
 
+**MPE:** a controller that gives each note a channel of its own (a ROLI
+Seaboard, a LinnStrument, an Expressive E Osmose) bends, slides and presses
+each note alone, wherever the instrument can: a reed, a pipe, a string or a
+bow bends; a struck bar or bell keeps its pitch, but its slide (CC74) still
+moves what the mod wheel moves, for that note. The MPE menu beside Enable
+MIDI is on Auto, which turns MPE on when the controller announces it (its
+MPE Configuration Message) and leaves any other keyboard as it was; On
+reads channels 2–16 as MPE without the announcement, and Off never does.
+The plugins have the same choice as their MPE parameter, and also take
+CLAP's per-note expressions.
+
 **Latency:** play through wired headphones or speakers. Bluetooth ones
 delay every note by 100–200 ms, enough to make any instrument feel
 sluggish; a page warns you once when the browser reports that much (Safari
@@ -93,13 +105,15 @@ play the plugins in a DAW with a small buffer.
 Each instrument page reads top to bottom. At the top, the instrument's
 name opens the menu of every instrument (and Forte's home page), next to
 **How it works** and the mode. In the middle are the views,
-pictures of the physics as it plays, with a row of toggles above them
-that turns each one on or off (the main ones are on at first, and the
-page remembers your choice). At the bottom, right above the keys, are the controls a
-player reaches for (stops and registrations, tremolo, drive, the mallet,
-the spin, the room and the volume, or the organ's drawbars), with **More
-controls** for everything else, and the presets just above the keys (the
-first control on a phone). Each shows its name, and its value while
+pictures of the physics as it plays, and the rest of the controls,
+grouped, beside them or below them (a switch at the top chooses, on a
+wide screen). Each side has its row of toggles on top: the views' turn
+each view on or off, the controls' each group of controls. The main views
+and every group are on at first, and the page remembers your choice. At
+the bottom, right above the keys, are only the controls you'd change
+while playing (stops and registrations, pedals, tremolo, where the mallet
+strikes, the volume, or the organ's drawbars), and the presets just above the keys (the first control on a
+phone). Each shows its name, and its value while
 you move it. Explanations wait behind ⓘ buttons.
 
 **Your own presets** live in the same menu. *Save these settings…* keeps
@@ -108,11 +122,32 @@ these settings* makes a link that opens the page playing them, to send
 to someone. *Your presets and files…* lists yours, and saves them to a
 file or opens one: the plugins read and write the same files.
 
+**Tuning**, among the controls, is the same on every instrument: the
+**pitch** standard (A = 440 Hz, or 415 for baroque pitch, 392, 422.5, 430,
+435, 442, 443 or 466), the **temperament** (equal, ¼- and ⅙-comma
+meantone, Werckmeister III, Kirnberger III, Vallotti, Young, Pythagorean
+or just intonation) and the **root** it is built on (meantone on D is
+purest in D). **Custom** sets each note's cents from equal temperament
+by hand, or from a **Scala file** (`.scl`, twelve notes to the octave):
+*Load a Scala file* opens one. The instrument is retuned, not
+resampled: at 415 Hz the strings are slacker, the bars and bells cut for
+their new notes. Presets keep your tuning; your own presets and links
+carry it.
+
+**Quality**, the last group of controls (CPU), is for phones and older
+computers. **High** plays all the physics, as the instruments always have;
+**Medium** and **Low** play less of what costs the most and is heard the
+least (fewer voices sounding at once, fewer partials, the sympathetic
+strings lighter or off), and each instrument's notes say what. It belongs
+to the device, not the sound: one choice for every instrument in this
+browser, which presets and links leave alone. If the sound starts to
+crackle, the page suggests a lower setting.
+
 There are two modes. **Discover** shows it all. **Perform** shows just
 the views you turned on, filling the screen, with no toggles and no text
 in them: for playing,
-or for a projector (**Full screen** fills it). The controls stay where
-they are.
+or for a projector (**Full screen** fills it). The controls above the
+keys stay where they are, and **More controls** brings back the rest.
 
 **The keys** fill the width at the key size you choose (− +), like
 GarageBand's: a phone shows an octave or so, a laptop most of the range.
@@ -145,6 +180,13 @@ In a plugin's window the Presets menu has your own presets too: *Save these sett
 one as a file in a presets folder for that instrument (`~/Library/Audio/Presets/Forte/<id>` on a
 Mac, `%APPDATA%\Forte\Presets\<id>` on Windows, `~/.local/share/forte/presets/<id>` on
 Linux), and *Open the presets folder* shows it, so a file saved on the site can go there too.
+Scala files for the custom temperament go in the `Tunings` folder beside the instruments' (on a
+Mac, `~/Library/Audio/Presets/Forte/Tunings`): the menu under Temperament lists them and opens the
+folder.
+
+**Quality** (in the CPU group) is in every plugin too, kept with the project and in no preset.
+A VST3 or CLAP host that bounces or freezes a track offline gets High whatever it says; the AU
+isn't told, so set it back to High before a bounce in Logic.
 
 Releases publish themselves: after each green `native` run on `live` (the branch the site is
 published from), the **release-plugins** workflow releases that run's plugins if an instrument's

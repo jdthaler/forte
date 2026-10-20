@@ -2,7 +2,10 @@
 // what a layout regression breaks: errors in the console, a page that scrolls sideways (as
 // loaded, with the menus, Controls and every view turned on, and with audio started), the
 // controls each page should place (the perform controls above the keys, the ⓘ buttons, "Default
-// settings" among the presets, the keys), and the front page's Listen buttons (one for each
+// settings" among the presets, the keys, the Quality choice, set while audio plays), that each
+// toggle turns its view or group of controls off and on (and on the desktop, that what's turned
+// on is still on after a reload, that the switch puts the controls below the views and beside
+// them, and that every view shows in Perform), and the front page's Listen buttons (one for each
 // instrument with a demo, and two in turn play).
 //
 // Usage: node tools/check-pages.mjs [--base <git ref>] [--json <file>] [filter]
@@ -82,8 +85,10 @@ const COUNT = () => {
     defaultSettings: opts.includes('Default settings'),
     keys: n('.wk'),
     views: n('.forte-view-toggles button'),
+    controlGroups: n('.forte-control-toggles button'),
     viewsOn: n('.forte-view-toggles button[aria-pressed="true"]'),
     listen: n('button[data-src]'),
+    quality: n('#controls #quality'),
   };
 };
 const WIDE = () => document.documentElement.scrollWidth - window.innerWidth;
@@ -114,6 +119,55 @@ async function listen(tab) {
   return out;
 }
 
+// Each toggle turns its view, or its group of controls, off and on again, the button and what it
+// shows both following; everything is on at the end. Returns how many toggles there are.
+const ROWS = [
+  ['.forte-view-toggles button', '.forte-stage > .card', 'view'],
+  ['.forte-control-toggles button', '#controls details.group[data-key]', 'controls'],
+];
+const TOGGLES = (sel) => [...document.querySelectorAll(sel)].map((b) => b.getAttribute('aria-pressed') === 'true');
+const SHOWN = (sel) => [...document.querySelectorAll(sel)].map((c) => c.offsetParent !== null);
+async function toggles(tab, broken) {
+  let n = 0;
+  for (const [row, items, what] of ROWS) {
+    const buttons = await tab.locator(row).all();
+    n += buttons.length;
+    for (const [i, b] of buttons.entries()) {
+      const name = (await b.textContent()).trim();
+      if (!(await b.isVisible())) { broken.push(`the "${name}" toggle is hidden`); continue; }
+      for (const want of [true, false, true]) { // on (if it was off), off, and on again
+        if ((await tab.evaluate(TOGGLES, row))[i] === want) continue;
+        await b.click({ timeout: 2000 }).catch(() => {});
+        if ((await tab.evaluate(TOGGLES, row))[i] !== want || (await tab.evaluate(SHOWN, items))[i] !== want) broken.push(`the "${name}" toggle doesn't turn its ${what} ${want ? 'on' : 'off'}`);
+      }
+    }
+  }
+  return n;
+}
+// With everything on: still on after a reload, the controls below the views and beside them
+// with the switch, and every view shown in Perform.
+async function remembered(tab) {
+  const out = [];
+  await tab.reload({ waitUntil: 'networkidle' });
+  await tab.waitForTimeout(300);
+  for (const [row, items, what] of ROWS) {
+    if (!(await tab.evaluate(TOGGLES, row)).every(Boolean) || !(await tab.evaluate(SHOWN, items)).every(Boolean)) out.push(`the ${what} turned on are not on after a reload`);
+  }
+  // the controls below the views, then beside them again
+  for (const v of ['1', '0']) {
+    await tab.locator(`.forte-arrange button[data-below="${v}"]`).click({ timeout: 2000 }).catch(() => {});
+    await tab.waitForTimeout(150);
+    const below = await tab.evaluate(() => document.body.classList.contains('controls-below'));
+    if (below !== (v === '1')) out.push(`the switch doesn't put the controls ${v === '1' ? 'below' : 'beside'} the views`);
+    if (!(await tab.evaluate(SHOWN, ROWS[1][1])).every(Boolean)) out.push(`the controls are not all shown ${v === '1' ? 'below' : 'beside'} the views`);
+    if (await tab.evaluate(WIDE) > 0) out.push(`scrolls sideways with the controls ${v === '1' ? 'below' : 'beside'} the views`);
+  }
+  await tab.locator('.forte-mode button[data-mode="perform"]').click({ timeout: 2000 }).catch(() => {});
+  await tab.waitForTimeout(250);
+  if (!(await tab.evaluate(SHOWN, ROWS[0][1])).every(Boolean)) out.push('Perform does not show every view turned on');
+  return out;
+}
+
 async function checkPage(browser, url, page, size) {
   const { name, ios, ...device } = size;
   const ctx = await browser.newContext({ ...device, deviceScaleFactor: 1 });
@@ -141,10 +195,14 @@ async function checkPage(browser, url, page, size) {
     if (!page) broken.push(...await listen(tab));
     if (await click('details.forte-switch > summary')) { await sideways('menu open'); await click('details.forte-switch > summary'); }
     if (await click('.forte-more')) { await sideways('Controls open'); await tab.keyboard.press('Escape'); await click('.forte-more'); }
-    let more = 0; // every view on
-    for (const t of await tab.locator('.forte-view-toggles button[aria-pressed="false"]').all()) if (await t.isVisible()) { await t.click({ timeout: 2000 }).catch(() => {}); more++; }
-    if (more) { await tab.waitForTimeout(250); await sideways('every view on'); }
-    if (await click('#start')) { await tab.waitForTimeout(500); await sideways('audio started'); }
+    if (await toggles(tab, broken)) { await tab.waitForTimeout(250); await sideways('every view on'); }
+    if (name === 'desktop' && counts.views) broken.push(...await remembered(tab));
+    if (await click('#start')) {
+      await tab.waitForTimeout(500); await sideways('audio started');
+      // the Quality choice reaches the playing engine (shared/quality.js), and back
+      const q = await tab.evaluate(() => { const s = document.querySelector('#quality'); if (!s) return false; for (const v of ['low', 'medium', 'high']) { s.value = v; s.dispatchEvent(new Event('change')); } return true; });
+      if (q) await tab.waitForTimeout(250);
+    }
     return { page: page || 'index', size: name, counts, errors, wide, broken };
   } catch (e) {
     return { page: page || 'index', size: name, counts: null, errors: [...errors, e.message], wide, broken };
@@ -162,6 +220,7 @@ function failures(r, instrument) {
   if (!c.defaultSettings) f.push('no "Default settings" among the presets');
   if (!c.performControls) f.push('no perform controls above the keys');
   if (!c.views) f.push('no toggles for the views');
+  if (!c.quality) f.push('no Quality choice in the controls');
   return f;
 }
 

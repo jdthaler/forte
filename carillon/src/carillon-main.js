@@ -6,6 +6,7 @@ import { INSTRUMENT } from './carillon-instrument.js';
 import { PARTIAL_NAMES, DESIGNATION, idealRatio } from './partials.js';
 import { geomOf, innerAt, outerAt } from './bell-profile.js';
 import { wasmModel } from './carillon-wasm.js';
+import { tuningRatio } from '../../shared/tuning.js';
 
 // The views draw what the engine plays: its model, from the same C++, built as WebAssembly. (The
 // rib's outline, drawn from its stations, is the FEM's JavaScript: bell-profile.js.)
@@ -60,7 +61,7 @@ function partialsFrom(amp) {
 }
 function update() {
   const P = shell.P;
-  B = model.bellOf(focus, P.profile, P.historic);
+  B = model.bellOf(focus, P.profile, P.historic, tuningRatio(P, focus)); // cast for the keyboard's tuning, as the engine's
   MODES = model.bellModes(B, P);
   RES = [];
   MODES.forEach((md, i) => { RES.push([i, 0]); if (md.m > 0) RES.push([i, 1]); });

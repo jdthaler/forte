@@ -16,6 +16,9 @@ PacketParams paramsOf(const double *a) {
   PacketParams q;
   q.potential = (int)a[0]; q.eta = a[1]; q.lock = a[2] != 0; q.bpm = a[3];
   q.beats = a[4]; q.nbar = a[5]; q.sigma = a[6]; q.detector = (int)a[7];
+  double custom[forte::kCustomCents]; // then the tuning: pitch, temperament, root, the custom cents
+  for (int i = 0; i < forte::kCustomCents; i++) custom[i] = a[11 + i];
+  q.tuning = forte::makeTuning(a[8], a[9], a[10], custom);
   return q;
 }
 double L64[128], R64[128];
@@ -24,7 +27,7 @@ std::vector<double> grid;
 
 extern "C" {
 // makePacket(key, P, { fMax, maxPairs, rel }) for P = potential, eta, lock, bpm, beats, nbar, sigma,
-// detector: key, id, d, f0, pitch, nbar, sigma, scale, offBeat, Tcl, Trev, Tsr, tColl, kap, dc, the
+// detector, then the tuning's 14 (pitch, temperament, tuningRoot, cents1 … cents11): key, id, d, f0, pitch, nbar, sigma, scale, offBeat, Tcl, Trev, Tsr, tColl, kap, dc, the
 // number of states N and of pairs NP, then ns, c and E (N each) and i, j, k, f, w per pair. Returns
 // the count, or 0 if out has not room for `max`.
 FORTE_EXPORT int quantum_make_packet(const double *P, int key, double fMax, int maxPairs, double rel, double *out, int max) {
@@ -66,15 +69,16 @@ FORTE_EXPORT double *quantum_left64() { return L64; }
 FORTE_EXPORT double *quantum_right64() { return R64; }
 
 // The hooks, on the engine of a handle (forte_engine): its voices in order; each one's key, count,
-// gl, gr, active, G, S, s0, s1, released, quench, stolen, dead, env, useIm, dc; its arrays (0 w,
+// gl, gr, active, G, S, s0, s1, released, quench, stolen, dead, env, useIm, dc, coh; its arrays (0 w,
 // 1 gD, 2 gR as doubles; 3 gk, 4 ga, 5 gb, 6 gw as int32); and its packet, packed (packPacket). A
 // voice stays where it is in the pool while it sounds.
 FORTE_EXPORT int quantum_voices(QuantumEngine *e) { return e->nVoices; }
 FORTE_EXPORT Voice *quantum_voice(QuantumEngine *e, int i) { return i >= 0 && i < e->nVoices ? e->voices[i] : nullptr; }
 FORTE_EXPORT void quantum_voice_state(const Voice *v, double *out) {
-  const double x[16] = {(double)v->key, (double)v->count, v->gl, v->gr, (double)v->active, (double)v->G, (double)v->S, (double)v->s0, (double)v->s1,
-                        v->released ? 1.0 : 0.0, v->quench ? 1.0 : 0.0, v->stolen ? 1.0 : 0.0, v->dead ? 1.0 : 0.0, v->env, v->useIm ? 1.0 : 0.0, v->dc};
-  for (int k = 0; k < 16; k++) out[k] = x[k];
+  const double x[17] = {(double)v->key, (double)v->count, v->gl, v->gr, (double)v->active, (double)v->G, (double)v->S, (double)v->s0, (double)v->s1,
+                        v->released ? 1.0 : 0.0, v->quench ? 1.0 : 0.0, v->stolen ? 1.0 : 0.0, v->dead ? 1.0 : 0.0, v->env, v->useIm ? 1.0 : 0.0, v->dc,
+                        v->coh ? 1.0 : 0.0};
+  for (int k = 0; k < 17; k++) out[k] = x[k];
 }
 FORTE_EXPORT void *quantum_voice_array(Voice *v, int which) {
   switch (which) {

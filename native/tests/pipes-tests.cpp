@@ -1,7 +1,7 @@
 // pipes-tests.cpp — the pipe organ in C++: the pipe against tube acoustics and the retired JavaScript
-// model's numbers, the packed form the page sends, the engine on pitch, a key that waits for its
-// pipes to be voiced (forte/background.h) and keeps them while the voicing changes, the views'
-// messages, and ten keys within the CPU budget. The physics tests are the JavaScript suite's, run
+// model's numbers, the packed form the page sends, the engine on pitch, the pitch wheel and a key's
+// own bend (MPE), a key that waits for its pipes to be voiced (forte/background.h) and keeps them
+// while the voicing changes, the views' messages, and ten keys within the CPU budget. The physics tests are the JavaScript suite's, run
 // on the WebAssembly (node test/pipes-tests.mjs).
 
 #include <chrono>
@@ -104,13 +104,13 @@ TEST("pipe: every pipe of every rank speaks (its fundamental's root has Re s > 0
 }
 
 TEST("packed: a key's pipes round-trip through the page's packed form (all the engine reads of them)") {
-  const KeyModels a = keyModels(53, {0.8, 1.4, 0.2});
+  const KeyModels a = keyModels(53, {0.8, 1.4, 0.2}, 1.03); // (cut for a tuning a little sharp)
   std::vector<double> buf(PACKED_MAX);
   const int n = packKeyModels(a, buf.data());
   CHECK(n <= PACKED_MAX);
   KeyModels b;
   CHECK(unpackKeyModels(buf.data(), n, b));
-  CHECK(b.key == 53 && b.design == a.design);
+  CHECK(b.key == 53 && b.design == a.design && b.ratio == a.ratio && a.pipes[0].f == pipeFreq(53, 0) * 1.03);
   for (int r = 0; r < RANKS; r++) {
     const PipeModel &x = a.pipes[r], &y = b.pipes[r];
     CHECK(x.f == y.f && x.stopped == y.stopped && x.M == y.M && x.A == y.A && x.nModes == y.nModes);
@@ -178,6 +178,114 @@ TEST("engine: pitch bend warms or cools the organ's air: a sounding pipe follows
     const auto L = render(e, (int)(sec * fs));
     const double f0 = pipeFreq(key, r) * std::pow(2.0, 2 * v / 12), f = peakNear(L, f0, (int)((sec - 0.4) * fs), (int)(sec * fs), fs);
     CHECK(std::fabs(cents(f, f0)) < 3);
+  }
+}
+
+TEST("engine: a key's own bend (MPE) warms or cools the air in its pipes alone: a sounding pipe follows an octave either way, sounds as the wheel bent as far, and a key held beside it stays") {
+  const double fs = 48000;
+  const auto setup = [](std::vector<double> &P, int r) { P[p::noise] = 0; P[p::principal] = r == 0; P[p::octave] = 0; P[p::gedackt] = r == 2; };
+  for (int r : {0, 2}) for (int key : {KEY_LO, 60, KEY_HI}) for (double st : {12.0, -12.0}) {
+    const int other = key + 4;
+    double f = 0, g[2];
+    for (int bent = 0; bent < 2; bent++) { // the key held beside it against the same without the bend
+      auto P = defaults();
+      setup(P, r);
+      auto ep = std::make_unique<PipeEngine>(fs);
+      PipeEngine &e = *ep;
+      e.configure(1, true);
+      e.setParams(P.data());
+      e.noteOn(key, 0.7);
+      e.noteOn(other, 0.7);
+      CHECK(until(e, 2));
+      render(e, (int)(0.6 * fs));
+      if (bent) e.noteBend(std::pow(2.0, st / 12), key);
+      render(e, (int)((r == 2 || key < 48 ? 1.2 : 0.8) * fs));
+      if (bent) f = e.byKey[key]->pipes[r].freq();
+      g[bent] = e.byKey[other]->pipes[r].freq();
+    }
+    const double want = pipeFreq(key, r) * std::pow(2.0, st / 12);
+    std::printf("       %s %d %+.0f: %.2f ¢ (the other key %.3f ¢)\n", r ? "G8" : "P8", key, st, cents(f, want), cents(g[1], g[0]));
+    CHECK(std::fabs(cents(f, want)) < 6);
+    CHECK(std::fabs(cents(g[1], g[0])) < 0.1);
+  }
+  for (int key : {48, 72}) for (double v : {1.0, -1.0}) { // the wheel's end and the key's own bend as far
+    double f[2], level[2];
+    for (int own = 0; own < 2; own++) {
+      auto P = defaults();
+      setup(P, 0);
+      auto ep = std::make_unique<PipeEngine>(fs);
+      PipeEngine &e = *ep;
+      e.configure(1, true);
+      e.setParams(P.data());
+      e.noteOn(key, 0.7);
+      CHECK(until(e, 1));
+      render(e, (int)(0.6 * fs));
+      if (own) e.noteBend(std::pow(2.0, 2 * v / 12), key); else e.bend(v);
+      const auto L = render(e, (int)(0.8 * fs));
+      f[own] = e.voices[0]->pipes[0].freq();
+      double s = 0;
+      for (int i = (int)(0.4 * fs); i < (int)(0.8 * fs); i++) s += (double)L[i] * L[i];
+      level[own] = s;
+    }
+    CHECK(std::fabs(cents(f[1], f[0])) < 0.2);
+    CHECK(std::fabs(std::sqrt(level[1] / level[0]) - 1) < 0.01);
+  }
+}
+
+TEST("engine: a key's bend of 1 (MPE's reset) and a slide leave the sound bit-identical, the wheel moving too, in blocks of 128 or 1000") {
+  for (double fs : {44100.0, 48000.0}) for (int block : {128, 1000}) {
+    std::vector<float> out[2];
+    for (int mpe = 0; mpe < 2; mpe++) {
+      auto P = defaults();
+      P[p::mixture] = 1; P[p::gedackt] = 1;
+      auto ep = std::make_unique<PipeEngine>(fs);
+      PipeEngine &e = *ep;
+      e.setParams(P.data());
+      const int keys[3] = {41, 60, 76};
+      std::vector<float> L(block), R(block);
+      // every key's pipes built first, so the notes start in the same block on both runs (with
+      // threads, a note waits for its key's however long the build takes)
+      for (int i = 0; i < 5000 && !(e.ready(41) && e.ready(60) && e.ready(76)); i++) { e.process(L.data(), R.data(), block); std::this_thread::sleep_for(std::chrono::milliseconds(1)); }
+      CHECK(e.ready(41) && e.ready(60) && e.ready(76));
+      for (int k : keys) { if (mpe) { e.noteBend(1, k); e.slide(NAN, k); } e.noteOn(k, 0.8); }
+      CHECK(e.nVoices == 3);
+      const int n = (int)(0.6 * fs / block);
+      for (int b = 0; b < n; b++) {
+        if (b == n / 2) { e.bend(-0.6); if (mpe) for (int k : keys) { e.noteBend(1, k); e.slide(NAN, k); } }
+        e.process(L.data(), R.data(), block);
+        out[mpe].insert(out[mpe].end(), L.begin(), L.end());
+        out[mpe].insert(out[mpe].end(), R.begin(), R.end());
+      }
+    }
+    CHECK(out[0] == out[1]);
+  }
+}
+
+TEST("engine: every key's own bend swept across its octave each way (and past it) every block, with the wheel, on a chord of every stop at 44.1, 48 and 96 kHz, stays finite and bounded") {
+  for (double fs : {44100.0, 48000.0, 96000.0}) {
+    auto P = defaults();
+    P[p::octave] = 1; P[p::gedackt] = 1; P[p::mixture] = 1; P[p::fullRange] = 1;
+    auto ep = std::make_unique<PipeEngine>(fs);
+    PipeEngine &e = *ep;
+    e.setParams(P.data());
+    const int keys[6] = {KEY_MIN, KEY_LO, 55, 67, KEY_HI, KEY_MAX};
+    for (int k : keys) e.noteOn(k, 1);
+    CHECK(until(e, 6));
+    std::vector<float> L(128), R(128);
+    double pk = 0;
+    bool finite = true;
+    const int blocks = (int)(1.2 * fs / 128);
+    for (int b = 0; b < blocks; b++) {
+      const double t = b * 128 / fs;
+      for (int j = 0; j < 6; j++) e.noteBend(std::pow(2.0, 14 * std::sin(TAU * (1.5 + 0.4 * j) * t + j) / 12), keys[j]);
+      if (b % 16 == 0) e.bend(std::sin(TAU * 0.7 * t));
+      if (b == blocks / 2) for (int k : keys) e.noteOff(k, -1);
+      e.process(L.data(), R.data(), 128);
+      for (int i = 0; i < 128; i++) { finite = finite && std::isfinite(L[i]) && std::isfinite(R[i]); pk = std::max(pk, (double)std::fabs(L[i])); }
+    }
+    std::printf("       %.1f kHz: peak %.2f\n", fs / 1000, pk);
+    CHECK(finite);
+    CHECK(pk < 4);
   }
 }
 

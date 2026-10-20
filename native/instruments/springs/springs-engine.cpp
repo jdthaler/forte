@@ -17,6 +17,7 @@ static constexpr double YOUNG = 0.05;    // s: a voice this young is never stole
 static constexpr double GLIDE = 0.03;    // s: damping and output gains glide over this
 static constexpr double PRUNE = 3e-5;    // a mode below this × the voice's loudest is skipped (−90 dB)
 static constexpr double PULSE_MAX = 0.012; // s: the longest mallet pulse
+static double handSigma(double h) { return 60 * h * h; } // a hand h (0..1) on the coils: σ = 60h² s⁻¹
 static const double PANS[3][3] = {{0, 0, 0}, {-0.3, 0.3, 0}, {0, 0.35, -0.35}}; // each spring's pickup, left/right of the key's place
 
 // Equal-power pan of a position p ∈ [−1, 1].
@@ -169,7 +170,7 @@ void SpringEngine::Voice::start(SpringEngine &eng, int k, Data::Ref r, uint64_t 
   pulseN = 0; pulseAt = 0; tau = 0;
   age = 0; fade = 1; fading = false; dead = false; peak = 0; level = 0;
   released = false; dampGlide = GLIDE;
-  extra = eng.S[kHand];
+  extra = eng.handOf(key);
   for (int s = 0; s < nBanks; s++) banks[s].sigma(eng, extra); // a hand already on the spring
 }
 
@@ -180,7 +181,22 @@ void SpringEngine::Voice::strike(SpringEngine &eng, double velocity) {
   const double amp = (velocity * PI * eng.fs) / (2 * n); // Σ F·h = velocity
   for (int i = 0; i < n; i++) pulse[i] = amp * fd::sin((PI * (i + 0.5)) / n);
   pulseN = n; pulseAt = 0;
-  for (int s = 0; s < nBanks; s++) { Bank &b = banks[s]; std::fill(b.act.begin(), b.act.begin() + b.N, 1); b.compact(); }
+  // Quality: at Medium and Low a mode this strike leaves 65 or 60 dB under the voice's level is not
+  // started (it would be let go once the voice is YOUNG no more); those ringing already go on
+  const double cut = eng.pick(0.0, 5.6e-4, 1e-3);
+  if (cut > 0) {
+    double sum = 0;
+    for (int s = 0; s < nBanks; s++) {
+      Bank &b = banks[s];
+      for (int i = 0; i < b.N; i++) { const double a = std::fabs(b.GT[i]) * pulseSpectrum(b.sp->f[i], tau); b.AMP[i] = a; sum += a * a; }
+    }
+    const double floor = cut * std::sqrt(sum);
+    for (int s = 0; s < nBanks; s++) {
+      Bank &b = banks[s];
+      for (int i = 0; i < b.N; i++) { b.act[i] = b.AMP[i] >= floor || b.Y1[i] != 0 || b.Y2[i] != 0; b.AMP[i] = 0; }
+      b.compact();
+    }
+  } else for (int s = 0; s < nBanks; s++) { Bank &b = banks[s]; std::fill(b.act.begin(), b.act.begin() + b.N, 1); b.compact(); }
   fading = false; fade = 1; dead = false; age = 0;
   released = false;
 }
@@ -194,7 +210,7 @@ void SpringEngine::Voice::render(float *L, float *R, int n, SpringEngine &eng) {
     if (pulseAt < pulseN) { force[s] = pulse[pulseAt++]; pushing = true; } else force[s] = 0;
   }
   // the hand and the damper (once the key is up, unless the pedal holds it off): extra damping, gliding in
-  const double target = eng.S[kHand] + (released && !eng.sustain ? eng.dampSigma : 0);
+  const double target = eng.handOf(key) + (released && !eng.sustain ? eng.dampSigma : 0);
   if (target != extra || eng.lossMoved) {
     const double tg = target > extra && released ? dampGlide : GLIDE;
     extra += (1 - fd::exp(-n / (tg * eng.fs))) * (target - extra);
@@ -218,7 +234,7 @@ void SpringEngine::Voice::render(float *L, float *R, int n, SpringEngine &eng) {
       L[s] += gl * y; R[s] += gr * y;
       if (cap) eng.capture[eng.capN + s] += y * 0.7071;
     }
-    sum += prune(b, pushing);
+    sum += prune(eng, b, pushing);
   }
   if (fading) { fade -= n / (FADE * eng.fs); if (fade <= 0) { fade = 0; dead = true; } }
   if (eng.capturing == this) { eng.capN += n; if (eng.capN + BLOCK_MAX > eng.capLen) eng.finishCapture(); }
@@ -240,10 +256,11 @@ bool SpringEngine::Voice::anyActive() const {
 }
 
 // Each mode's amplitude as heard; skip those far below the voice's loudest. Returns the bank's power.
-double SpringEngine::Voice::prune(Bank &b, bool pushing) {
+double SpringEngine::Voice::prune(const SpringEngine &eng, Bank &b, bool pushing) {
   const double sum = amplitudes(b.Y1.data(), b.Y2.data(), b.C.data(), b.KA.data(), b.AMP.data(), b.idx.data(), b.nAct);
   if (pushing || age < YOUNG) return sum;
-  const double floor = std::max(PRUNE * peak, 1e-9);
+  // (Quality: Medium and Low let a mode go sooner, 65 and 60 dB under the loudest)
+  const double floor = std::max(eng.pick(PRUNE, 5.6e-4, 1e-3) * peak, 1e-9);
   bool changed = false;
   // (a skipped mode is let go entirely, so a later strike starts it afresh)
   for (int q = 0; q < b.nAct; q++) {
@@ -255,6 +272,11 @@ double SpringEngine::Voice::prune(Bank &b, bool pushing) {
 }
 
 // ---- the engine ---------------------------------------------------------------------------------------
+
+double SpringEngine::handOf(int key) const {
+  const double h = expr.slideOr(key, NAN);
+  return h == h ? handSigma(h) : S[kHand];
+}
 
 SpringEngine::SpringEngine(double fs)
     : Engine(fs), data([this](int key, uint64_t version) -> std::unique_ptr<KeySprings> {
@@ -289,7 +311,7 @@ void SpringEngine::setParams(const double *p) {
   for (int i = 0; i < p::count; i++) P[i] = p[i];
   hasParams = true;
   // live: losses, hand, bead (they glide); the rest applies at the next strike
-  T = {P[p::endLoss], P[p::eta], P[p::oil], 60 * P[p::hand] * P[p::hand], P[p::bead]};
+  T = {P[p::endLoss], P[p::eta], P[p::oil], handSigma(P[p::hand]), P[p::bead]};
   if (first) S = T;
   dampSigma = fd::log(1000) / P[p::damper];
   // the keys' springs are built for the geometry the knobs are at, nearest the last key played first
@@ -305,29 +327,31 @@ void SpringEngine::setParams(const double *p) {
 static void toArray(const Params &g, double *a) {
   const double v[12] = {g.slinky ? 1.0 : 0.0, g.axial ? 1.0 : 0.0, g.coil, g.wire, g.helix, g.springs, g.spread, g.mallet, g.bead, g.endLoss, g.eta, g.oil};
   for (int i = 0; i < 12; i++) a[i] = v[i];
+  for (int i = 0; i < 12; i++) a[12 + i] = g.tuning.r[i]; // the tuning's ratios
 }
 static Params fromArray(const double *a) {
   Params g;
   g.slinky = a[0] != 0; g.axial = a[1] != 0; g.coil = a[2]; g.wire = a[3]; g.helix = a[4]; g.springs = a[5]; g.spread = a[6];
   g.mallet = a[7]; g.bead = a[8]; g.endLoss = a[9]; g.eta = a[10]; g.oil = a[11];
+  for (int i = 0; i < 12; i++) { g.tuning.r[i] = a[12 + i]; if (a[12 + i] != 1) g.tuning.equal = false; }
   return g;
 }
 void SpringEngine::publish(const Params &g, uint64_t v) {
   Snapshot &s = snaps[snapAt];
   snapAt = (snapAt + 1) % (int)snaps.size();
-  double a[12];
+  double a[NSNAP];
   toArray(g, a);
   s.seq.fetch_add(1, std::memory_order_acq_rel); // odd: being written
   s.version.store(v, std::memory_order_relaxed);
-  for (int i = 0; i < 12; i++) s.v[i].store(a[i], std::memory_order_relaxed);
+  for (int i = 0; i < NSNAP; i++) s.v[i].store(a[i], std::memory_order_relaxed);
   s.seq.fetch_add(1, std::memory_order_release);
 }
 bool SpringEngine::snapshot(uint64_t v, Params &g) const {
   for (const Snapshot &s : snaps) {
     const uint32_t q = s.seq.load(std::memory_order_acquire);
     if (q & 1 || s.version.load(std::memory_order_relaxed) != v) continue;
-    double a[12];
-    for (int i = 0; i < 12; i++) a[i] = s.v[i].load(std::memory_order_relaxed);
+    double a[NSNAP];
+    for (int i = 0; i < NSNAP; i++) a[i] = s.v[i].load(std::memory_order_relaxed);
     std::atomic_thread_fence(std::memory_order_acquire);
     if (s.seq.load(std::memory_order_relaxed) != q) continue;
     g = fromArray(a);
@@ -378,7 +402,7 @@ void SpringEngine::strikeKey(int key, double velocity, Data::Ref r) {
   capLen = std::min(CAPTURE, std::max(2048, (int)jsRound(std::min(10 * v->sp->TD + 0.004, 0.65) * fs)));
   int live = 0;
   for (int i = 0; i < nVoices; i++) if (!voices[i]->fading) live++;
-  if (live > MAX_VOICES) {
+  if (live > pick(MAX_VOICES, 10, 6)) { // Quality: fewer keys at once at Medium and Low
     Voice *victim = nullptr;
     double score = INFINITY;
     for (int i = 0; i < nVoices; i++) {

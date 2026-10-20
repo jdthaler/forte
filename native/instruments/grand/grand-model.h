@@ -20,6 +20,8 @@
 #include <numbers>
 #include <vector>
 
+#include "forte/tuning.h"
+
 namespace forte::grand {
 
 constexpr int KEY_LO = 28, KEY_HI = 100; // the CP-70's 73 keys, E1–E7, which its scale and pan are drawn on
@@ -41,6 +43,7 @@ struct ModelParams {
   int mount = 0;      // 0 frame, 1 board
   double stiffness = 1, detune = 1.2, loss = 1, gFrame = 5e-5, boardH = 9, tilt = 6, hRatio = 0.2, kH = 1e7;
   double hardness = 1, strike = 0.12, maxFreq = 10000, hammerMass = 1;
+  Tuning tuning;      // the keyboard's (forte/tuning.h): each key's pitch, before the stretch
 };
 ModelParams modelParams(const double *P); // from the engine's parameters (grand-params.h order)
 

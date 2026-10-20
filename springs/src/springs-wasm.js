@@ -4,6 +4,7 @@
 
 import { GROUPS } from './springs-params.js';
 import { wasmEngine, scratch, nativeParams, nativeValue } from '../../shared/wasm.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'springs', name: 'SpringWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/springs.wasm', import.meta.url).href };
@@ -24,9 +25,9 @@ const Base = wasmEngine(BUILD, { messages: views });
 const dropped = typeof FinalizationRegistry === 'function' ? new FinalizationRegistry((h) => Base.exports?.forte_destroy(h)) : null;
 
 // The engine, with the tests' hooks: e.voices (each one's key, fading, dead, released, level, peak,
-// age) and e.byKey, read back. A note may bring its key's springs, packed by the page's WebAssembly
+// age, and its springs' modes, N and nAct sounding) and e.byKey, read back. A note may bring its key's springs, packed by the page's WebAssembly
 // model (wasmModel().keySprings(…).packed), so the audio thread needn't build them.
-const VOICE = ['key', 'fading', 'dead', 'released', 'level', 'peak', 'age', 'own'];
+const VOICE = ['key', 'fading', 'dead', 'released', 'level', 'peak', 'age', 'own', 'N', 'nAct'];
 const FLAGS = new Set(['fading', 'dead', 'released', 'own']);
 export class SpringWasmEngine extends Base {
   constructor(fs) {
@@ -61,7 +62,7 @@ export const ready = () => SpringWasmEngine.ready();
 // { fTop, n }), its two acoustic sheets (k, f, c_g, bead share); modeSigma, pulseLength and
 // pulseSpectrum; and, for the tests, rodSolve, Wittrick's rod at any shape and wavenumber.
 const TUNE = ['R', 'r', 'alpha', 'nu', 'E', 'rho', 'slinky', 'key', 'f0', 'L', 'turns', 'height', 'mass', 'c0', 'TD', 'Fc', 'kc', 'sheet', 'onBranch', 'axial', 'fMax', 'A'];
-const geometryId = (P) => `${P.family}|${P.coil}|${P.wire}|${P.helix}|${P.drive}|${P.springs}|${P.spread}|${P.mallet}|${P.bead}|${P.endLoss}|${P.eta}|${P.oil}`;
+const geometryId = (P) => `${P.family}|${P.coil}|${P.wire}|${P.helix}|${P.drive}|${P.springs}|${P.spread}|${P.mallet}|${P.bead}|${P.endLoss}|${P.eta}|${P.oil}|${TUNING_KEEP.map((id) => P[id]).join('|')}`; // (and the tuning: each spring is cut for its key's tuned note)
 export async function wasmModel() {
   const x = await ready(), s = scratch(x), params = nativeParams(BUILD), OUT = 8 * params.length;
   const writeP = (P) => { const a = s.f64(params.length); params.forEach((p, i) => { a[i] = nativeValue(p, P[p.id]); }); return s.at; };

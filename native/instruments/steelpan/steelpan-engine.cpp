@@ -62,9 +62,15 @@ void SteelPanEngine::activate(Note &v) {
 // where it lands. The note keeps what it was doing: the strike adds to it.
 void SteelPanEngine::strike(Note &v, double velocity) {
   if (v.version != version) retune(v);
-  v.run = v.nm.count;
+  // Quality: at Medium and Low a stroke rings at most 8 and 6 modes, none of the untuned ones above
+  // 16 and 12 kHz (they come by frequency: the highest go)
+  const int most = pick(kModes, 8, 6);
+  const double top = pick<double>(INFINITY, 16000, 12000);
+  int run = std::min(kTuned, v.nm.count);
+  while (run < v.nm.count && run < most && v.nm.m[run].f < top) run++;
+  v.run = std::max(v.run, run);
   const double f1 = v.nm.m[0].f, tau = contactTime(P[p::contact], f1, velocity);
-  for (int i = 0; i < v.nm.count; i++) v.y1[i] += v.b[i] * strikeGain(v.nm.m[i], f1, tau) * velocity * fs;
+  for (int i = 0; i < run; i++) v.y1[i] += v.b[i] * strikeGain(v.nm.m[i], f1, tau) * velocity * fs;
   v.struck = true; v.age = 0;
 }
 
@@ -127,6 +133,9 @@ void SteelPanEngine::pressure(double value, int key) {
   else if (key >= KEY_MIN && key <= KEY_MAX && notes[key - KEY_MIN].held) notes[key - KEY_MIN].press = value;
 }
 
+// The roll: the wheel's (or the key's own slide), or leaning on the keys, whichever is more.
+double SteelPanEngine::rollOf(const Note &v) const { return std::max(std::max(expr.slideOr(v.key, P[p::roll]), channelPress), v.press); }
+
 int SteelPanEngine::voiceCount() const {
   int n = 0;
   for (int i : live) n += notes[i].struck;
@@ -166,7 +175,6 @@ double SteelPanEngine::amplitude(const Note &v, int p) const {
 void SteelPanEngine::process(float *L, float *R, int n) {
   for (int i = 0; i < n; i++) L[i] = R[i] = 0;
   if (couplingsDirty) rebuildCouplings();
-  const double rollAmt0 = std::max(P[p::roll], channelPress);
   for (int s = 0; s < n; s++) {
     for (const Coupling &c : couplings) {
       Note &a = notes[c.a], &b = notes[c.b];
@@ -187,7 +195,7 @@ void SteelPanEngine::process(float *L, float *R, int n) {
       }
       l += v.gl * out; r += v.gr * out;
       if (v.held) { // a roll: the sticks strike again while the key is down
-        const double amt = std::max(rollAmt0, v.press);
+        const double amt = rollOf(v);
         if (amt > 0.005 && --v.rollIn <= 0) {
           rng = rng * 1664525u + 1013904223u;
           strike(v, v.vel * amt * (v.hand ? 0.85 : 1));
@@ -198,16 +206,18 @@ void SteelPanEngine::process(float *L, float *R, int n) {
     }
     L[s] = (float)l; R[s] = (float)r;
   }
-  // asleep: notes that have rung out and are no longer driven
+  // asleep: notes that have rung out and are no longer driven (Quality: sooner at Medium and Low,
+  // 20 and 34 dB above High's −108 dB under a full stroke)
   bool changed = false;
+  const double quiet = pick(QUIET, 2e-5, 1e-4);
   for (size_t k = 0; k < live.size();) {
     Note &v = notes[live[k]];
     v.age += n;
     double e = 0;
     for (int p = 0; p < v.run; p++) e = std::max(e, std::fabs(v.y1[p]) + std::fabs(v.y2[p]));
-    const bool rolling = v.held && std::max(rollAmt0, v.press) > 0.005;
+    const bool rolling = v.held && rollOf(v) > 0.005;
     if (!std::isfinite(e)) e = 0; // a numerical failure: let it go
-    if (e < QUIET && v.age > GRACE && !rolling) {
+    if (e < quiet && v.age > GRACE && !rolling) {
       v.active = false; v.struck = false;
       live[k] = live.back(); live.pop_back();
       changed = true;

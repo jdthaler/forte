@@ -10,7 +10,8 @@
 // Each sample the string's modal accelerations give each station's acceleration, each station's van
 // der Pol wake advances by leapfrog, and the lift is projected back onto the modes, each of which
 // steps exactly under a first-order hold (windharp/README.md, "The engine", has the details). A low
-// string steps at a half or a quarter of the sample rate. The wind follows the slider, two seeded
+// string steps at a half or a quarter of the sample rate; a string whose shedding nears Nyquist (a
+// top string in a strong wind) steps 2, 4 or 8 times a sample. The wind follows the slider, two seeded
 // Ornstein–Uhlenbeck gusts and aftertouch, worked out once a block and ramped across it.
 //
 // One voice per key: a course of one or two strings behind one shutter. A string's design is a
@@ -23,6 +24,7 @@
 
 #include "forte/dsp.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "windharp-model.h"
 #include "windharp-params.h"
 
@@ -42,6 +44,8 @@ enum : uint16_t {
 // at most 128 samples; the tests play some in blocks of 256 and 512 (the wind is worked out once a
 // block), which the WebAssembly passes whole (windharp_process).
 constexpr int BLOCK = 512;
+// A string steps at most this many times a sample (where its shedding Ωh would pass WAKE_MAX).
+constexpr int SUB_MAX = 8;
 
 // The engine's options, for the tests.
 struct EngineOptions {
@@ -66,6 +70,7 @@ class WindHarpEngine : public Engine {
   void allNotesOff() override;
   void pressure(double value, int key) override; // aftertouch: the wind blows harder
   void bend(double value) override;              // every string's tension ×r²
+  void noteBend(double ratio, int key) override; // one key's strings' tension ×r², on top of the wheel's
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -83,7 +88,9 @@ class WindHarpEngine : public Engine {
     double Ad = 0, Ucur = 0, Om = 0, Re = 0, r = 0, zetaAt = -1, OmAt = -1;
     int home = 1;
     double x = 0, target = 0;                // its shutter's position and target (the voice's, copied each block)
-    int Dmax = 1, D = 1;                     // its step, in samples
+    int Dmax = 1, D = 1, M = 1;              // its step: D samples, or 1/M of one
+    int Dtop = 1;                            // the longest step its design allows (Dmax, unless it is bent up past the wheel's reach)
+    double wShed = 0;                        // its shedding's ω at 1.5 × the top wind
     double hs = 0, fbLast = 0, dipLast = 0;
     double bent = 1;                         // the tension's ratio (squared) its modes are tuned to
   };
@@ -94,6 +101,7 @@ class WindHarpEngine : public Engine {
     bool used = false, held = false, pedal = false, fading = false, dead = false;
     double x = 0, target = 0, rate = 0, fade = 1, age = 0, env = 0, press = 0, pressS = 0;
     double pb = 0, gl = 0, gr = 0, liftPrev = 0;
+    double nb = 1; // its own bend (MPE), where its glide is
     void open(double velocity);
     void close(double velocity);
   };
@@ -108,10 +116,11 @@ class WindHarpEngine : public Engine {
   Voice *byKey[128] = {};
   double Uw = U_REF, U = U_REF;
   double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
+  NoteExpression expr{12};        // each key's own bend: an octave either way (tension ×4 up, past which the strings would get far louder and snap)
   Options opts;
 
  private:
-  void initString(Str &s, int key, const StringDesign &S);
+  void initString(Str &s, int key, const StringDesign &S, double r);
   void tension(Str &s, double r);
   void prepare(Str &s, double U, int n, double x0, double x1, double target);
   static bool quiet(const Str &s);
@@ -127,6 +136,7 @@ class WindHarpEngine : public Engine {
   bool hasParams = false, started = false, sustain = false;
   double seed, h;
   double designKey[4] = {};
+  forte::Tuning designKeyboard; // and the keyboard's tuning the designs were made in
   int version = 0;
   uint32_t randState = 1;
   double g1 = 0, g2 = 0, Ug = 0, chanPress = 0, chanS = 0;
@@ -136,7 +146,7 @@ class WindHarpEngine : public Engine {
   int blocks = 0;
   // a block's scratch: the mix, a voice's sums, a string's force and lift (at its own rate, then the sample rate)
   double flatL[BLOCK], flatR[BLOCK], mono[BLOCK], dipL[BLOCK], dipR[BLOCK], fbSum[BLOCK], dipSum[BLOCK];
-  double fbs[BLOCK], dips[BLOCK], fb[BLOCK], dip[BLOCK];
+  double fbs[BLOCK * SUB_MAX], dips[BLOCK * SUB_MAX], fb[BLOCK], dip[BLOCK];
 };
 
 } // namespace forte::windharp

@@ -27,6 +27,8 @@
 // The sound: the column expands with the heat put into it, so it radiates as a small
 // thermophone, p(r, t) = (γ − 1)/(4π c² r) · dP/dt, with P = u·i.
 
+import { TUNING_KEEP } from '../../shared/tuning.js';
+
 export const TAU = 2 * Math.PI;
 export const KEY_LO = 21, KEY_HI = 108; // A0–C8
 export const keyFreq = (m) => 440 * 2 ** ((m - 69) / 12);
@@ -47,9 +49,10 @@ export const ayrtonV = (I, l) => { const { A, B } = ayrtonAB(l); return A + B / 
 
 // Kelvin's formula, the LC frequency.
 export const kelvinC = (f, L) => 1 / ((TAU * f) ** 2 * L);
-// The parameters the capacitor bank depends on (the C++ cuts it, arc-model.cpp keyCaps): the page
-// and the tests key a bank on these.
-export const tuneKey = (P) => [P.current, P.gap, P.tau, P.restrike, P.coil, P.coilR, P.tune].join('|');
+// The parameters the capacitor bank depends on (the C++ cuts it, arc-model.cpp capFor): the page
+// and the tests key a bank on these; the keyboard's tuning too, since each capacitor is cut for its
+// key's tuned note.
+export const tuneKey = (P) => [P.current, P.gap, P.tau, P.restrike, P.coil, P.coilR, P.tune, ...TUNING_KEEP.map((id) => P[id])].join('|');
 
 // ---- the checks: Mayr's law worked independently of the C++ ----------------------------------
 // The tests hold the C++'s operating point (arc_op), its analytic impedance and its quartic to

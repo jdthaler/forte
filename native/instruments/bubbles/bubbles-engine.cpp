@@ -25,10 +25,12 @@ constexpr int EV_MAX = 48;           // release events posted per block at most
 BubbleEngine::BubbleEngine(double fs, uint32_t seed, int pool, int soft) : Engine(fs), rand(seed) {
   configure(seed, pool, soft);
   for (int i = 0; i < NK; i++) nozzles[i].key = KEY_LO + i;
-  // each nozzle's radius at the default conditions (with "keep in tune", cached per condition version)
-  const Env def = defaultEnv();
+  // each nozzle's radius at the default conditions, cut for its key's note in the keyboard's tuning
+  // (equal temperament until it changes: cached per tuning version), and with "keep in tune"
+  // re-sized for the conditions (cached per condition version)
+  def = defaultEnv();
   for (int i = 0; i < NK; i++) Rnom[i] = tuneRadius(keyFreq(KEY_LO + i), def);
-  tuneVer.fill(-1);
+  tuneVer.fill(-1); nomVer.fill(0);
   for (int i = 0; i < NK; i++) { double g[2]; hydrophoneGains(KEY_LO + i, g); gainL[i] = g[0]; gainR[i] = g[1]; }
   env = def;
 }
@@ -46,6 +48,8 @@ void BubbleEngine::setParams(const double *p) {
   const bool changed = !hasParams || P[p::depth] != p[p::depth] || P[p::pressure] != p[p::pressure] || P[p::gas] != p[p::gas]
                        || P[p::liquid] != p[p::liquid] || P[p::keepInTune] != p[p::keepInTune];
   for (int i = 0; i < p::count; i++) P[i] = p[i];
+  const forte::Tuning t = tuningOf(P.data());
+  if (!(t == tuning)) { tuning = t; nomV++; ver++; } // every nozzle re-cut for the new tuning
   env = nozzleEnv(P.data());
   pTarget = P[p::pressure] * P_ATM;
   if (!hasParams) pT = pTarget;
@@ -93,13 +97,17 @@ double BubbleEngine::gauss() {
 
 // samples to the nozzle's next release: mean 1/rate, regular blended with exponential (Poisson) gaps
 double BubbleEngine::interval(const Nozzle &z) {
-  const double mean = fs / (P[p::rate] * (1 + PRESS_GAIN * z.press)), j = P[p::irregular];
+  const double mean = fs / (expr.slideOr(z.key, P[p::rate]) * (1 + PRESS_GAIN * z.press)), j = P[p::irregular];
   return std::max(1.0, mean * (1 - j + j * -std::log(1 - rand())));
 }
 
 double BubbleEngine::radius(int i) {
-  if (!P[p::keepInTune]) return Rnom[i];
-  if (tuneVer[i] != ver) { Rtune[i] = tuneRadius(keyFreq(KEY_LO + i), env); tuneVer[i] = ver; }
+  const int key = KEY_LO + i;
+  if (!P[p::keepInTune]) {
+    if (nomVer[i] != nomV) { Rnom[i] = tuneRadius(keyFreq(key) * tuning.ratio(key), def); nomVer[i] = nomV; }
+    return Rnom[i];
+  }
+  if (tuneVer[i] != ver) { Rtune[i] = tuneRadius(keyFreq(key) * tuning.ratio(key), env); tuneVer[i] = ver; }
   return Rtune[i];
 }
 
@@ -113,7 +121,8 @@ bool BubbleEngine::release(Nozzle &z, int offset) {
   Bubble *slot = nullptr;
   int live = 0;
   for (Bubble &b : pool) { if (!b.on) { if (!slot) slot = &b; } else if (b.fadeStep == 0) live++; }
-  if (live >= soft) { // fade the quietest bubble that has had time to sound
+  // (Quality: Medium and Low keep a half and 5/16 as many ringing)
+  if (live >= pick(soft, (int)(0.5 * soft), (int)(0.3125 * soft))) { // fade the quietest bubble that has had time to sound
     Bubble *victim = nullptr;
     for (Bubble &b : pool) if (b.on && b.fadeStep == 0 && b.age >= MIN_AGE * fs && (!victim || b.env < victim->env)) victim = &b;
     if (victim) startFade(*victim, FADE);
@@ -122,7 +131,13 @@ bool BubbleEngine::release(Nozzle &z, int offset) {
   const int i = z.key - KEY_LO;
   const Liquid *liq = env.liq;
   const Gas *gas = env.gas;
+  // the bubble at its nozzle, under the tank's pressure as it is now
+  Env renv;
+  renv.liq = liq; renv.gas = gas; renv.d = P[p::depth]; renv.p0 = pB + liq->rho * G * P[p::depth];
   double R = radius(i), vel = z.vel;
+  // the key's own bend: its nozzle releases the bubble that rings r × the note its own would ring
+  // here and now (a bubble's note is set as it pinches off: those already rising keep theirs)
+  if (const double r = expr.bendOf(z.key); r != 1) R = tuneRadius(acoustics(R, renv).fd * r, renv);
   const bool first = z.first;
   if (!first) {
     R *= 1 + (P[p::spread] / 100) * gauss();
@@ -130,9 +145,6 @@ bool BubbleEngine::release(Nozzle &z, int offset) {
   }
   z.first = false; z.released++;
   if (logging) log.push_back({z.key, frame + offset, R, vel, first}); // tests only
-  // the bubble at its nozzle, under the tank's pressure as it is now
-  Env renv;
-  renv.liq = liq; renv.gas = gas; renv.d = P[p::depth]; renv.p0 = pB + liq->rho * G * P[p::depth];
   const Acoustics a = acoustics(R, renv);
   Bubble &b = *slot;
   b.on = true; b.key = z.key; b.age = 0; b.start = offset; b.fade = 1; b.fadeStep = 0;
@@ -239,13 +251,23 @@ void BubbleEngine::render(Bubble &b, float *L, float *Rt, int n) {
   b.age += n - i0; b.start = 0;
   b.env = std::hypot(ur, ui) * std::hypot(b.cr, b.ci) * fade;
   if (b.env > b.peak) b.peak = b.env;
-  const bool over = fade <= 0 || (b.rampLeft == 0 && b.env <= END * b.peak) || !(b.env < 1e3);
+  // (Quality: Medium and Low free a bubble sooner, 70 and 60 dB below its peak)
+  const bool over = fade <= 0 || (b.rampLeft == 0 && b.env <= pick(END, 3e-4, 1e-3) * b.peak) || !(b.env < 1e3);
   if (over) b.on = false;
   if (recording && (over || waveCount >= WAVE_N)) { waveDone = true; rec = nullptr; }
 }
 
 void BubbleEngine::bend(double value) {
   bendTo = std::pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12);
+}
+
+void BubbleEngine::noteBend(double ratio, int key) { expr.setBend(ratio, key); }
+
+// Slide sets the key's own bubble rate, as the wheel sets every nozzle's: the next gap it draws is
+// at that rate.
+void BubbleEngine::slide(double value, int key) {
+  const ParamInfo &r = kParams[p::rate];
+  expr.setSlide(value == value ? std::clamp(value, r.min, r.max) : value, key);
 }
 
 void BubbleEngine::process(float *L, float *R, int n) {

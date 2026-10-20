@@ -4,7 +4,8 @@
      in the site's style (shared/instrument.css, shared/keyboard.js, shared/shell.js). Every call
      goes through window.forte(method, …args) (plugin.cpp, "The editor's calls"). The Presets menu
      has the instrument's presets, then your own (files in the site's format, presets.h), saving
-     them and their folder. Opened as a file, it plays a made-up instrument, to work on it in a
+     them and their folder; under Temperament, Scala files from the Tunings folder (presets.h)
+     set the custom temperament. Opened as a file, it plays a made-up instrument, to work on it in a
      browser. -->
 <html lang="en">
 <head>
@@ -170,6 +171,7 @@ const HIGH_LBL = ['q', '2', 'w', '3', 'e', 'r', '5', 't', '6', 'y', '7', 'u', 'i
 
 let D, LO, HI;
 const controls = new Map(); // parameter index → [{ el, val }]
+const boxes = new Map();    // parameter id → its control in the groups
 let values = [];            // parameter index → x (slider position, choice index, toggle)
 
 function lighter(hex, t) { // the accent mixed with white, for a white key held down
@@ -232,6 +234,7 @@ function show(i, x, text) {
   const was = values[i];
   values[i] = x;
   if (D.compass && i === D.compass[2] && (was > 0.5) !== (x > 0.5)) rebound();
+  if (D.params[i].id === 'temperament') temperamentShown();
   for (const c of controls.get(i) || []) {
     if (c.el.type === 'checkbox') c.el.checked = x > 0.5;
     else if (c.el.tagName === 'SELECT') c.el.value = String(Math.round(x));
@@ -278,9 +281,10 @@ function build() {
     const h = document.createElement('h2');
     h.textContent = title;
     card.appendChild(h);
-    for (const i of list) { const [box, c] = control(i); card.appendChild(box); register(i, c); }
+    for (const i of list) { const [box, c] = control(i); card.appendChild(box); register(i, c); boxes.set(D.params[i].id, box); }
     root.appendChild(card);
   }
+  buildScalas();
   // the controls a player reaches for while playing, above the keys too
   D.params.forEach((p, i) => { if (p.perform && i !== D.presets) { const [box, c] = control(i); $('#perform').appendChild(box); register(i, c); } });
   buildPresets();
@@ -344,6 +348,51 @@ async function refreshMine() {
   if ([...menu.options].some((o) => o.value === was)) menu.value = was;
   else if (D.presets >= 0) menu.value = String(Math.round(values[D.presets]));
   if (menu.value !== 'save' && menu.value !== 'folder') before = menu.value;
+}
+
+// ---- the tuning: the root only for a temperament, the custom cents only for custom, and Scala
+// files (forte/tuning.h) from the Tunings folder every instrument shares -------------------------
+function temperamentShown() {
+  const i = D.params.findIndex((p) => p.id === 'temperament'), k = Math.round(values[i]);
+  const custom = /^Custom/.test(D.params[i].choices[k] ?? '');
+  for (const [id, box] of boxes) {
+    if (/^cents\d+$/.test(id)) box.hidden = !custom;
+    else if (id === 'tuningRoot') box.hidden = k === 0;
+  }
+}
+const scalaMenu = document.createElement('select');
+let tunings = '';
+function buildScalas() {
+  const after = boxes.get('temperament');
+  if (!after) return;
+  const box = document.createElement('div');
+  box.className = 'param';
+  scalaMenu.title = 'A Scala file (.scl) sets the custom temperament: twelve notes to the octave, built on the temperament root';
+  box.append(scalaMenu);
+  after.after(box);
+  scalaMenu.addEventListener('pointerdown', refreshScalas);
+  scalaMenu.addEventListener('change', async () => {
+    const v = scalaMenu.value;
+    scalaMenu.value = '';
+    scalaMenu.blur();
+    if (v === 'folder') { if (!(await forte('showScalas'))) toast(`Put Scala files (.scl) in ${tunings}`); return; }
+    if (!v) return;
+    const r = await forte('loadScala', v);
+    toast(r?.ok ? `Tuned to “${r.name}”: the custom temperament is its scale` : r?.error || 'That Scala file is gone.');
+    refreshScalas();
+  });
+  window.addEventListener('focus', refreshScalas);
+  refreshScalas();
+}
+async function refreshScalas() {
+  const r = await forte('scalas');
+  if (!r) return;
+  tunings = r.folder;
+  const files = r.list.map((f) => option(f.replace(/\.scl$/i, ''), f));
+  const none = option('(none yet: put .scl files in the tunings folder)', '-');
+  none.disabled = true;
+  scalaMenu.replaceChildren(option('Load a Scala file (.scl)…', ''), ...(files.length ? files : [none]), option('Open the tunings folder', 'folder'));
+  scalaMenu.value = '';
 }
 
 // saving: a name, and the file it makes in the folder (one of that name is replaced)
@@ -584,16 +633,21 @@ function mockForte() {
     { id: 'room', label: 'Room', group: 'Output', kind: 'continuous', perform: false, def: 0.3, choices: [] },
     { id: 'venue', label: 'Venue', group: 'Output', kind: 'choice', perform: false, def: 1, choices: ['Studio', 'Room', 'Recital hall', 'Concert hall', 'Cathedral'] },
     { id: 'volume', label: 'Volume', group: 'Output', kind: 'continuous', perform: true, def: 0.7, choices: [] },
+    { id: 'pitch', label: 'Pitch', group: 'Tuning', kind: 'choice', perform: false, def: 0, choices: ['A = 440 Hz (modern)', 'A = 415 Hz (baroque pitch)'] },
+    { id: 'temperament', label: 'Temperament', group: 'Tuning', kind: 'choice', perform: false, def: 0, choices: ['Equal temperament', '¼-comma meantone', 'Custom (or a Scala file)'] },
+    { id: 'tuningRoot', label: 'Temperament root', group: 'Tuning', kind: 'choice', perform: false, def: 0, choices: ['C', 'C♯', 'D'] },
+    { id: 'cents1', label: 'Minor 2nd (custom)', group: 'Tuning', kind: 'continuous', perform: false, def: 0.5, choices: [] },
+    { id: 'cents2', label: 'Major 2nd (custom)', group: 'Tuning', kind: 'continuous', perform: false, def: 0.5, choices: [] },
     { id: 'preset', label: 'Preset', group: '', kind: 'choice', perform: false, def: 0, choices: ['Default settings', 'Bright', 'Dark'] },
   ];
-  const v = params.map((p) => p.def), keys = new Set();
+  const v = params.map((p) => p.def), keys = new Set(), P = params.findIndex((p) => p.id === 'preset');
   let mine = [{ name: 'Soft glass', file: 'Soft glass.json', v: params.map((p) => p.def) }];
   let pedal = false;
   const text = (i) => (params[i].kind === 'choice' ? params[i].choices[v[i]] : params[i].kind === 'toggle' ? (v[i] ? 'on' : 'off') : `${(100 * v[i]).toFixed(1)} %`);
   const sent = v.map(() => NaN);
   return async (m, ...a) => {
     if (m === 'describe') {
-      const d = { slug: 'mock', name: 'Practice Bars', version: '0.0.0', accent: '#5fd0c8', keyLo: 21, keyHi: 108, compass: [53, 89, 4], space: 'sustain', presets: 10, params };
+      const d = { slug: 'mock', name: 'Practice Bars', version: '0.0.0', accent: '#5fd0c8', keyLo: 21, keyHi: 108, compass: [53, 89, 4], space: 'sustain', presets: P, params };
       // ?suite: as the Forte app shows it, with its Instrument menu
       if (location.search.includes('suite')) d.instruments = [{ slug: 'drums', name: 'Practice Drums' }, { slug: 'mock', name: 'Practice Bars' }];
       return d;
@@ -609,10 +663,14 @@ function mockForte() {
     }
     if (m === 'loadPreset') {
       const u = mine.find((x) => x.file === a[0]);
-      if (u) u.v.forEach((x, i) => { if (i !== 10) v[i] = x; });
+      if (u) u.v.forEach((x, i) => { if (i !== P) v[i] = x; });
       return { ok: !!u, error: u ? '' : 'There is no such preset.' };
     }
     if (m === 'showPresets') return false;
+    // Scala files: one in the folder, which sets the custom temperament
+    if (m === 'scalas') return { folder: '~/Library/Audio/Presets/Forte/Tunings', list: ['werckmeister3.scl'] };
+    if (m === 'loadScala') { v[params.findIndex((p) => p.id === 'temperament')] = 2; return { ok: true, name: 'Werckmeister III (1691)', error: '' }; }
+    if (m === 'showScalas') return false;
     if (m === 'pedal') pedal = !!a[0];
     if (m === 'poll') {
       const p = [];

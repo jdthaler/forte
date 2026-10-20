@@ -9,6 +9,7 @@ import { convolve, FS_SHIM, webAudioIR } from './audio-util.mjs';
 import { soundboardIR, venueIR, venueGain } from '../shared/impulses.js';
 import { chainGains, ROOM, TONE_Q } from '../shared/chain.js';
 import { wheelValue } from '../shared/midi.js';
+import { bendRatio } from '../shared/mpe.js';
 import { byId } from '../shared/registry.js';
 
 const R = new URL('../', import.meta.url);
@@ -37,8 +38,10 @@ export function withPreset(I, i, P = defaultsOf(I)) {
 
 // One instrument, played block by block (128 samples, like the AudioWorklet).
 export class Player {
-  constructor(I, Engine, fs, P = defaultsOf(I)) {
+  // quality: the device's Quality ('high', 'medium', 'low'; shared/quality.js), High unless given
+  constructor(I, Engine, fs, P = defaultsOf(I), { quality } = {}) {
     this.I = I; this.fs = fs; this.engine = new Engine(fs);
+    if (quality) this.engine.setQuality(quality);
     this.sustained = false; this.latched = new Set();
     this.setParams(P);
     if (I.space === 'sustain') this.engine.setSustain?.(false);
@@ -89,11 +92,20 @@ export class Player {
   }
   pressure(value, key = null) { this.engine.handle?.({ type: 'pressure', value, key }); }
   bend(value) { this.engine.handle?.({ type: 'bend', value }); }
+  // one note's own (MPE, as shared/shell.js sends it): its bend in semitones along the tuning, and
+  // its slide 0..1 (NaN: none) as its own mod wheel
+  noteBend(key, semitones) { this.engine.handle?.({ type: 'noteBend', key, value: bendRatio(this.P, key, semitones) }); }
+  slide(key, u) {
+    if (!this.I.modWheel) return;
+    const mw = typeof this.I.modWheel === 'string' ? { param: this.I.modWheel } : this.I.modWheel;
+    const p = paramsOf(this.I).find((q) => q.id === mw.param);
+    this.engine.handle?.({ type: 'slide', key, value: Number.isNaN(u) ? NaN : wheelValue(p, u * 127, mw.max ?? p.max) });
+  }
   panic() { this.latched.clear(); this.sustained = false; this.engine.allNotesOff?.(); }
 
   // Play `events` for `seconds`: [t, 'on', key, vel] | [t, 'off', key] | [t, 'pedal', bool] |
   // [t, 'wheel', 0..127] | [t, 'cc', n, 0..127] | [t, 'pressure', value, key?] | [t, 'bend', value] |
-  // [t, 'param', id, value] | [t, 'preset', i]
+  // [t, 'noteBend', key, semitones] | [t, 'slide', key, 0..1] | [t, 'param', id, value] | [t, 'preset', i]
   render(seconds, events = []) {
     const n = Math.round(seconds * this.fs), L = new Float64Array(n), Rr = new Float64Array(n);
     const bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
@@ -114,15 +126,17 @@ export class Player {
     else if (type === 'wheel') this.modWheel(a);
     else if (type === 'pressure') this.pressure(a, b ?? null);
     else if (type === 'bend') this.bend(a);
+    else if (type === 'noteBend') this.noteBend(a, b);
+    else if (type === 'slide') this.slide(a, b);
     else if (type === 'param') this.set(a, b);
     else if (type === 'preset') this.setParams(withPreset(this.I, a, this.P));
     else throw new Error(`unknown event ${type}`);
   }
 }
 
-export async function player(slug, fs = 48000, P) {
+export async function player(slug, fs = 48000, P, options) {
   const I = await loadInstrument(slug);
-  return new Player(I, await loadEngine(I), fs, P);
+  return new Player(I, await loadEngine(I), fs, P, options);
 }
 
 // The output chain offline (shared/chain.js), without the limiter: tone low-pass, body,

@@ -132,6 +132,94 @@ TEST("engine: pitch bend stiffens or softens the reed: a sounding note follows, 
   }
 }
 
+// wait for key's reed to be built (so a note struck now sounds in this block)
+static void waitFor(ReedEngine &e, int key) {
+  for (int i = 0; i < 5000 && !e.ready(key); i++) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  CHECK(e.ready(key));
+}
+
+TEST("engine: one note's own bend (MPE) stiffens its reed alone: it lands on the ratio, on top of the wheel's; a held note stays") {
+  const double fs = 48000;
+  for (double v : {0.0, 1.0}) {
+    auto e = std::make_unique<ReedEngine>(fs);
+    e->setParams(dry().data());
+    e->noteOn(45, 0.5); e->noteOn(57, 0.5);
+    CHECK(until(*e, 2));
+    render(*e, (int)(0.05 * fs));
+    e->noteBend(std::pow(2.0, 5.0 / 12), 57);
+    e->bend(v);
+    const std::vector<float> L = render(*e, (int)(0.8 * fs));
+    const double w = 2 * v, a = keyFreq(45) * std::pow(2.0, w / 12), b = keyFreq(57) * std::pow(2.0, (w + 5) / 12);
+    CHECK(std::fabs(cents(freqNear(L, a, (int)(0.15 * fs), (int)(0.25 * fs), (int)(0.3 * fs), fs), a)) < 3);
+    CHECK(std::fabs(cents(freqNear(L, b, (int)(0.15 * fs), (int)(0.25 * fs), (int)(0.3 * fs), fs), b)) < 3);
+  }
+  // to the ends: A2 four octaves up, A5 two down, each bent before it is struck
+  for (auto [key, semis] : {std::pair{45, 48.0}, std::pair{81, -24.0}}) {
+    auto e = std::make_unique<ReedEngine>(fs);
+    e->setParams(dry().data());
+    e->noteBend(std::pow(2.0, semis / 12), key);
+    e->noteOn(key, 0.5);
+    CHECK(until(*e, 1));
+    const std::vector<float> L = render(*e, (int)(0.8 * fs));
+    const double f = keyFreq(key) * std::pow(2.0, semis / 12);
+    CHECK(std::fabs(cents(freqNear(L, f, (int)(0.15 * fs), (int)(0.25 * fs), (int)(0.3 * fs), fs), f)) < 3);
+  }
+}
+
+TEST("engine: a lone note's own bend sounds as the wheel bent as far; a bend of 1 leaves the sound bit-identical") {
+  const double fs = 48000;
+  const int keys[] = {57, 64, 69};
+  auto play = [&](int how) { // 0: the wheel, 1: each note's own, 2: own bends of 1 every block, 3: nothing
+    auto e = std::make_unique<ReedEngine>(fs);
+    e->setParams(defaults().data());
+    for (int k : keys) waitFor(*e, k);
+    if (how == 2) { e->noteBend(1.3, 64); e->noteBend(1, 64); } // set and reset before the note
+    for (int k : keys) e->noteOn(k, 0.6);
+    std::vector<float> out, L(128), R(128);
+    for (int b = 0; b < (int)(0.8 * fs / 128); b++) {
+      if (b == 40 && how == 0) e->bend(1);
+      if (b == 40 && how == 1) for (int k : keys) e->noteBend(std::pow(2.0, 2.0 / 12), k);
+      if (how == 2) for (int k : keys) e->noteBend(1, k);
+      e->process(L.data(), R.data(), 128);
+      out.insert(out.end(), L.begin(), L.end());
+    }
+    return out;
+  };
+  const auto wheel = play(0), own = play(1), ones = play(2), none = play(3);
+  double d = 0, pk = 0;
+  for (size_t i = 0; i < wheel.size(); i++) { d = std::max(d, (double)std::fabs(wheel[i] - own[i])); pk = std::max(pk, (double)std::fabs(wheel[i])); }
+  CHECK(d < 1e-5 * pk);
+  CHECK(ones == none);
+}
+
+TEST("engine: own bends swept over ±48 semitones on a chord, every block, stay finite and bounded at 44.1, 48 and 96 kHz") {
+  for (double fs : {44100.0, 48000.0, 96000.0}) {
+    auto e = std::make_unique<ReedEngine>(fs);
+    e->setParams(defaults().data());
+    e->setSustain(true);
+    const int keys[] = {33, 45, 57, 64, 72, 84};
+    for (int k : keys) e->noteOn(k, 1);
+    CHECK(until(*e, 6));
+    std::vector<float> L(128), R(128);
+    bool finite = true;
+    double pk = 0;
+    for (int b = 0; b < (int)(2 * fs / 128); b++) {
+      const double t = b * 128 / fs;
+      for (int i = 0; i < 6; i++) {
+        // half the keys sweep smoothly, half jump between the ends
+        const double s = i % 2 ? 48 * std::sin(TAU * (0.7 + 0.3 * i) * t) : (std::fmod(t * (3 + i), 1) < 0.5 ? 48 : -48);
+        e->noteBend(std::pow(2.0, s / 12), keys[i]);
+      }
+      if (b == (int)(0.5 * fs / 128)) e->bend(1);
+      e->process(L.data(), R.data(), 128);
+      for (int j = 0; j < 128; j++) { finite &= std::isfinite(L[j]) && std::isfinite(R[j]); pk = std::max(pk, (double)std::fabs(L[j])); }
+    }
+    std::printf("       %.1f kHz: peak %.2f\n", fs / 1000, pk);
+    CHECK(finite && pk < 2);
+    CHECK(e->voiceCount() == 6); // none blown up
+  }
+}
+
 TEST("engine: the bark: a harder strike raises the 2nd harmonic") {
   const double fs = 48000, f = keyFreq(57);
   auto h2 = [&](double vel) {

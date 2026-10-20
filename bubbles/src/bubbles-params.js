@@ -2,6 +2,7 @@
 // a unit; the hint says what it does to the sound.
 
 import { VENUE } from '../../shared/chain.js';
+import { TUNING_GROUP } from '../../shared/tuning.js';
 
 const depthFmt = (v) => (v < 1 ? `${(v * 100).toFixed(0)} cm` : v < 10 ? `${v.toFixed(2)} m` : `${v.toFixed(1)} m`);
 const atm = (v) => `${v.toFixed(2)} atm${v < 0.995 ? ' (partial vacuum)' : ''}`;
@@ -10,7 +11,7 @@ export const GROUPS = [
   {
     title: 'Tank',
     params: [
-      { id: 'depth', label: 'Nozzle depth', perform: true, min: 0.1, max: 100, def: 0.3, log: true, fmt: depthFmt,
+      { id: 'depth', label: 'Nozzle depth', min: 0.1, max: 100, def: 0.3, log: true, fmt: depthFmt,
         hint: 'How far below the surface the nozzles sit. The water above adds ρgh to the pressure on the bubbles (1 atm per 10.3 m), and every pitch rises with √p₀. Near the surface the bubbles ring a little higher still, radiate less and ring longer.' },
       { id: 'pressure', label: 'Air pressure above the water', min: 0.25, max: 4, def: 1, log: true, fmt: atm,
         hint: 'Pump the tank up or down. Every pitch moves with √p₀: a quarter of an atmosphere puts the keyboard about an octave down. Bubbles already ringing follow it too.' },
@@ -21,7 +22,7 @@ export const GROUPS = [
   {
     title: 'Gas and liquid',
     params: [
-      { id: 'gas', label: 'Gas', perform: true, type: 'select', def: 'air',
+      { id: 'gas', label: 'Gas', type: 'select', def: 'air',
         options: [['air', 'Air (γ = 1.40)'], ['helium', 'Helium (γ = 5/3, conducts heat fast)'], ['argon', 'Argon (γ = 5/3, conducts heat slowly)'], ['sf6', 'SF₆ (γ = 1.10)']],
         hint: 'The gas is the spring: pitch ∝ √κ, with κ between 1 (isothermal) and γ (adiabatic). Helium carries heat to the wall so fast that its small bubbles fall back towards isothermal, and lose energy doing it: shorter, duller notes.' },
       { id: 'liquid', label: 'Liquid', type: 'select', def: 'water',
@@ -47,11 +48,12 @@ export const GROUPS = [
   {
     title: 'Output',
     params: [
-      { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      { id: 'room', label: 'Room', min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
+  TUNING_GROUP,
 ];
 
 export const DEFAULTS = Object.fromEntries(GROUPS.flatMap((g) => g.params).map((p) => [p.id, p.def]));

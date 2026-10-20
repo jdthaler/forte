@@ -17,6 +17,7 @@ import { wasmModel } from '../gongs/src/gongs-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS, PRESETS } from '../gongs/src/gongs-params.js';
 import { keyFreq } from '../shared/dsp.js';
+import { TUNING_PARAMS, TUNING_KEEP } from '../shared/tuning.js';
 import { readFileSync } from 'node:fs';
 import { header as tableHeader } from '../tools/gongs-native-table.mjs';
 
@@ -58,16 +59,18 @@ function potential(S, x, Nv = S.N) {
   return { V, g };
 }
 
-// Render through the engine in 128-sample blocks, like the AudioWorklet. events: [t, 'on'|'off', key, vel]
-function render(params, sec, events, post) {
+// Render through the engine in 128-sample blocks, like the AudioWorklet. events: [t, 'on'|'off', key, vel],
+// [t, 'msg', message] or [t, 'params', P]
+function render(params, sec, events, post, quality) {
   const e = new GongEngine(FS);
   if (post) e.post = post;
+  if (quality) e.setQuality(quality);
   e.setParams(params);
   const n = Math.round(sec * FS), L = new Float64Array(n), R = new Float64Array(n), bl = new Float32Array(128), br = new Float32Array(128);
   const ev = events.map(([t, ty, k, v]) => ({ s: Math.round(t * FS), ty, k, v })).sort((a, b) => a.s - b.s);
   let j = 0;
   for (let s = 0; s < n; s += 128) {
-    while (j < ev.length && ev[j].s <= s) { const q = ev[j++]; if (q.ty === 'on') e.noteOn(q.k, q.v); else e.noteOff(q.k); }
+    while (j < ev.length && ev[j].s <= s) { const q = ev[j++]; if (q.ty === 'on') e.noteOn(q.k, q.v); else if (q.ty === 'msg') e.handle(q.k); else if (q.ty === 'params') e.setParams(q.k); else e.noteOff(q.k); }
     e.process(bl, br, 128);
     for (let i = 0; i < 128 && s + i < n; i++) { L[s + i] = bl[i]; R[s + i] = br[i]; }
   }
@@ -297,6 +300,16 @@ test('tuning: every key (C2–C6) has its strike tone within ±3 ¢ of 12-TET (s
   console.log(`        worst ${worst.toFixed(2)} ¢ (key ${wk})`);
   assert.ok(Math.abs(worst) < 3, `worst ${worst.toFixed(2)} ¢ at key ${wk}`);
 });
+test('the keyboard\'s tuning: at A = 415 Hz in ¼-comma meantone (root C), C4, E4 and A4 sound within ±3 ¢ of 440·2^((m−69)/12)·415/440, C4 +10.26 ¢ and E4 −3.42 ¢ from equal temperament, A4 on the standard; each gong cut for its pitch (a ∝ 1/f)', () => {
+  const T = { pitch: 415, temperament: 'meantone', tuningRoot: 0 };
+  for (const [key, off] of [[60, 10.26], [64, -3.42], [69, 0]]) {
+    const { L } = render(P({ strike: 0, speed: 0.5, eta: 1e-4, ...T }), 0.75, [[0, 'on', key, 0.2]]);
+    const f = keyFreq(key) * (415 / 440) * 2 ** (off / 1200), c = cents(peak(L, f, Math.round(0.05 * FS), L.length, 0.02) / f);
+    assert.ok(Math.abs(c) < 3, `key ${key}: ${c.toFixed(2)} ¢ from its target`);
+    const g = keyGong(key, P(T), FS), g0 = keyGong(key, P(), FS);
+    assert.ok(Math.abs(cents(g.f0 / f)) < 0.01 && Math.abs((g.a * g.f0) / (g0.a * keyFreq(key)) - 1) < 1e-9, `key ${key}: the model's pitch and radius`);
+  }
+});
 test('the keys past C2–C6 (A0–B1, C♯6–C8): in tune, a forte note peaks 0.05–0.5, and the top keys keep ≥ 5 modes', () => {
   const out = [];
   for (const key of [21, 27, 33, 90, 97, 103, 108]) {
@@ -328,6 +341,47 @@ test('a centre strike rings only axisymmetric modes; off centre wakes the asymme
   assert.ok(asym.every((q) => q === 0) && sym.some((q) => q !== 0), 'centre, even at mf: every m ≠ 0 coordinate exactly zero (an invariant subspace)');
   const r = (x) => tone(x, f20, 4800, 4800 + 16384) / tone(x, f0, 4800, 4800 + 16384);
   assert.ok(r(o) > 0.05, `off centre: (2,0)/(0,1) = ${r(o).toFixed(3)}`);
+});
+// A note's own slide (MPE) is where its mallet lands, taken as it strikes.
+const slide = (key, value) => ({ type: 'slide', key, value });
+const same = (x, y, what) => { for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) assert.fail(`${what}: sample ${i} differs`); };
+test('a note\'s own slide is its strike point: a lone gong slid to x is the gong struck at x, bit for bit, from its next strike on', () => {
+  const key = 57;
+  for (const x of [0, 0.5, 0.9]) {
+    same(render(P(), 0.3, [[0, 'msg', slide(key, x)], [0, 'on', key, 0.6]]).L, render(P({ strike: x }), 0.3, [[0, 'on', key, 0.6]]).L, `struck at ${x}`);
+    // slid while it rings: it rings on as it was struck, and the next stroke lands at x
+    same(render(P(), 0.3, [[0, 'on', key, 0.6], [0.1, 'msg', slide(key, x)], [0.2, 'on', key, 0.8]]).L,
+      render(P(), 0.3, [[0, 'on', key, 0.6], [0.1, 'params', P({ strike: x })], [0.2, 'on', key, 0.8]]).L, `struck at ${x}, slid`);
+  }
+  // a gong beside it keeps the knob's strike point: the pair is its two gongs, apart
+  const pair = render(P(), 0.3, [[0, 'msg', slide(key, 0.7)], [0, 'on', key, 0.5], [0, 'on', 64, 0.5]]).L;
+  const a = render(P({ strike: 0.7 }), 0.3, [[0, 'on', key, 0.5]]).L, b = render(P(), 0.3, [[0, 'on', 64, 0.5]]).L;
+  let d = 0, pk = 0;
+  for (let i = 0; i < pair.length; i++) { d = Math.max(d, Math.abs(pair[i] - a[i] - b[i])); pk = Math.max(pk, Math.abs(pair[i])); }
+  assert.ok(d < 1e-5 * pk, `differs by ${(d / pk).toExponential(2)} of the peak`);
+  // and back to none (NaN): bit-identical
+  same(render(P(), 0.2, [[0, 'msg', slide(key, 0.7)], [0, 'msg', slide(key, NaN)], [0, 'on', key, 0.5], [0.05, 'msg', slide(64, 0.3)], [0.05, 'msg', slide(64, NaN)], [0.1, 'on', 64, 0.5]]).L,
+    render(P(), 0.2, [[0, 'on', key, 0.5], [0.1, 'on', 64, 0.5]]).L, 'slid and back');
+});
+test('stability: each note\'s own strike point swept centre to rim every block, on chords struck ff again and again, at 44.1, 48 and 96 kHz', () => {
+  // the chord's peak, against the same chord struck at the centre and at the rim by the knob
+  const chord = (fs, o, slid) => {
+    const e = new GongEngine(fs);
+    e.setParams(P(o));
+    const keys = [40, 57, 79], L = new Float32Array(128), R = new Float32Array(128);
+    let pk = 0;
+    for (let b = 0, n = Math.round((0.25 * fs) / 128); b < n; b++) {
+      if (slid) keys.forEach((k, i) => e.handle(slide(k, 0.475 + 0.475 * Math.sin(b / (2 + i)))));
+      if (b % 15 === 0) for (const k of keys) e.noteOn(k, 1);
+      e.process(L, R, 128);
+      for (let i = 0; i < 128; i++) { assert.ok(Number.isFinite(L[i]) && Number.isFinite(R[i]), `${fs} Hz ${JSON.stringify(o)}: NaN`); pk = Math.max(pk, Math.abs(L[i]), Math.abs(R[i])); }
+    }
+    return pk;
+  };
+  for (const fs of [44100, 48000, 96000]) for (const o of [{}, { rise: 4, thick: 0.003, speed: 12 }]) {
+    const pk = chord(fs, o, true), ends = Math.max(chord(fs, { ...o, strike: 0 }), chord(fs, { ...o, strike: 0.95 }));
+    assert.ok(pk < Math.max(1.5 * ends, 0.5), `${fs} Hz ${JSON.stringify(o)}: peak ${pk.toFixed(2)}, ${ends.toFixed(2)} with the knob`);
+  }
 });
 console.log('twins');
 test('every asymmetric mode has a sin twin, ε/2 higher (ε in ω²); the axisymmetric modes and the strike tone are untouched', () => {
@@ -500,9 +554,13 @@ test('regression: a 3 ‰ clamped bronze dome (4 h) at 12 m/s, six keys struck t
   console.log(`        energy ≤ ${worst.toFixed(3)}× the mallets'; output peak ${r.peak.toFixed(2)}`);
 });
 test('seeded random combinations of parameter extremes at 44.1 and 48 kHz: no NaN, bounded output', () => {
-  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'velocity'].includes(q.id));
+  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'velocity', ...TUNING_KEEP].includes(q.id));
   let seed = 12345, worst = { bus: 0 }, clipped = 0, n = 0;
   const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  // the keyboard's tuning drawn apart, from its own sequence, so that the other parameters' combinations stay the ones they were
+  let tseed = 777;
+  const trnd = () => ((tseed = (tseed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  const tune = (p) => { for (const q of TUNING_PARAMS) { if (trnd() < 0.5) continue; p[q.id] = q.options ? q.options[Math.floor(trnd() * q.options.length)][0] : trnd() < 0.5 ? q.min : q.max; } return p; };
   for (const fs of [44100, 48000]) for (let c = 0; c < 12; c++) {
     const p = { ...DEFAULTS };
     for (const q of sliders) {
@@ -510,6 +568,7 @@ test('seeded random combinations of parameter extremes at 44.1 and 48 kHz: no Na
       if (q.type === 'select') p[q.id] = q.options[Math.floor(rnd() * q.options.length)][0];
       else p[q.id] = rnd() < 0.5 ? q.min : q.max;
     }
+    tune(p);
     const r = sixTwice(p, fs, 1.6);
     assert.ok(!r.nan, `${fs} Hz, ${JSON.stringify(p)}: NaN`);
     if (r.bus > worst.bus) worst = { ...r, p, fs };
@@ -542,6 +601,26 @@ test('regression: a gong cut off from its coupling (nonlinear-voice cap) keeps i
     assert.ok(Math.abs(cut.after - ref.after) < 20, `${name}: ${cut.before.toFixed(0)} → ${cut.after.toFixed(0)} ¢ when cut off, ${ref.after.toFixed(0)} ¢ left nonlinear`);
     console.log(`        ${name}: ${cut.before.toFixed(0)} → ${cut.after.toFixed(0)} ¢ when cut off, ${ref.after.toFixed(0)} ¢ left nonlinear`);
   }
+});
+test('Quality: Medium and Low run at most 2 and 1 gongs on the nonlinear coupling (fewer if Nonlinear voices says so) and let 12 and 8 ring at once; a phrase keeps its level (within 1.5 dB) and the cut-off gong its pitch (within 3 ¢); 20 fff gongs stay finite', () => {
+  const crash = Array.from({ length: 20 }, (_, i) => [0.04 * i, 'on', 40 + 2 * i, 1]);
+  const phrase = [[0, 'on', 57, 0.8], [0.25, 'on', 64, 0.8], [0.5, 'on', 50, 0.8]];
+  const ref = render(P(), 1.5, phrase), mix = (r) => r.L.map((v, i) => v + r.R[i]), x0 = mix(ref), f = keyFreq(57);
+  const ms = (x) => x.reduce((a, v) => a + v * v, 0) / x.length, p0 = peak(x0, f, 0.9 * FS, 1.5 * FS), res = [];
+  for (const [quality, nl, ringing] of [['high', 16, 16], ['medium', 2, 12], ['low', 1, 8]]) {
+    const { L, R, e } = render(P({ nlvoices: 16 }), 1.5, crash, null, quality);
+    for (let i = 0; i < L.length; i++) assert.ok(Number.isFinite(L[i]) && Number.isFinite(R[i]), `${quality}: not finite`);
+    const live = e.voices.filter((v) => !v.killing && !v.dead), nonlinear = live.filter((v) => v.nl).length;
+    assert.ok(live.length <= ringing, `${quality}: ${live.length} gongs ringing`);
+    assert.ok(nonlinear <= nl, `${quality}: ${nonlinear} gongs nonlinear`);
+    const y = mix(render(P(), 1.5, phrase, null, quality)), dB = 10 * Math.log10(ms(y) / ms(x0)), c = cents(peak(y, f, 0.9 * FS, 1.5 * FS) / p0);
+    assert.ok(Math.abs(dB) < 1.5, `${quality}: phrase ${dB.toFixed(2)} dB from High`);
+    assert.ok(Math.abs(c) < 3, `${quality}: A3 ${c.toFixed(2)} ¢ from High`);
+    res.push(`${quality} ${live.length} ringing, ${nonlinear} nonlinear, ${dB.toFixed(2)} dB, ${c.toFixed(2)} ¢`);
+  }
+  console.log(`        ${res.join('; ')}`);
+  const four = render(P({ nlvoices: 4 }), 0.6, crash.slice(0, 6), null, 'medium').e.voices.filter((v) => v.nl && !v.killing).length;
+  assert.ok(four <= 2, `medium, Nonlinear voices 4: ${four} nonlinear`);
 });
 // Blocks of 128 samples, timed one by one, as the AudioWorklet runs them.
 function blockTimes(params, events, seconds, pedal = false) {

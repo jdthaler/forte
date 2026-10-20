@@ -48,4 +48,6 @@ FORTE_EXPORT double steelpan_amplitude(forte::Engine *e, int key, int p) {
   return s->note(key).active ? s->amplitude(s->note(key), p) : 0;
 }
 FORTE_EXPORT double steelpan_displacement(forte::Engine *e, int key, int p) { return static_cast<SteelPanEngine *>(e)->note(key).y1[p]; }
+// the modes a note integrates (0 asleep)
+FORTE_EXPORT int steelpan_modes(forte::Engine *e, int key) { const auto &v = static_cast<SteelPanEngine *>(e)->note(key); return v.active ? v.run : 0; }
 }

@@ -25,21 +25,23 @@ const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const cents = (a, b) => 1200 * Math.log2(a / b);
 const rel = (a, b) => Math.abs(a / b - 1);
 
-// Render through the engine in 128-sample blocks (Float64 buffers), left channel.
-function render(params, events, sec) {
+// Render through the engine in 128-sample blocks (Float64 buffers), left channel; events [t, 'on', key, vel] |
+// [t, 'off', key] | [t, 'params', P] | [t, 'msg', m].
+function render(params, events, sec, quality) {
   const e = new QuantumEngine(FS);
+  if (quality) e.setQuality(quality);
   e.setParams(params);
   const n = Math.round(sec * FS), L = new Float64Array(n), R = new Float64Array(n), bl = 128, bL = new Float64Array(bl), bR = new Float64Array(bl);
   const ev = events.map(([t, ...r]) => [Math.round(t * FS), ...r]).sort((a, b) => a[0] - b[0]);
   let j = 0;
   for (let s = 0; s < n; s += bl) {
-    while (j < ev.length && ev[j][0] <= s) { const [, type, k, v] = ev[j++]; if (type === 'on') e.noteOn(k, v); else if (type === 'off') e.noteOff(k); }
+    while (j < ev.length && ev[j][0] <= s) { const [, type, k, v] = ev[j++]; if (type === 'on') e.noteOn(k, v); else if (type === 'off') e.noteOff(k); else if (type === 'params') e.setParams(k); else if (type === 'msg') e.handle(k); }
     e.process(bL, bR, bl);
     L.set(bL.subarray(0, Math.min(bl, n - s)), s); R.set(bR.subarray(0, Math.min(bl, n - s)), s);
   }
   return { L, R, M: L.map((v, i) => v + R[i]), e };
 }
-const note = (params, key, sec, vel = 1) => render(params, [[0, 'on', key, vel]], sec);
+const note = (params, key, sec, vel = 1, quality) => render(params, [[0, 'on', key, vel]], sec, quality);
 // Amplitude of frequency f in x[a, b) (Hann-windowed Goertzel).
 function tone(x, f, a, b) {
   const w = (2 * PI * f) / FS; let re = 0, im = 0;
@@ -255,6 +257,18 @@ test('…and for every well and detector, tempo-locked or at fixed n̄', () => {
   assert.ok(Math.abs(worst) < 3, `worst ${worst.toFixed(2)} ¢ (${what})`);
   console.log(`        worst ${worst.toFixed(2)} ¢ (${what})`);
 });
+test('the keyboard\'s tuning: at A = 415 Hz a key launches at 440·2^((m−69)/12)·415/440 (±3 ¢), tempo-locked (its revival still on the beat) or at fixed n̄; in ¼-comma meantone on C the packet\'s pitch is E4 3.42 ¢ flat of equal temperament, C4 10.26 ¢ sharp, A4 on 440 Hz', () => {
+  for (const lock of [true, false]) for (const k of [48, 64]) {
+    const p = P({ lock, pitch: 415 }), pk = makePacket(k, p), f0 = (keyFreq(k) * 415) / 440, { L } = note(p, k, 0.12);
+    const c = cents(launchPitch(L, f0, 2.5 / f0, 2.5 / f0 + 0.3 * pk.tColl), f0);
+    assert.ok(Math.abs(c) < 3, `key ${k}${lock ? ', locked' : ''}: ${c.toFixed(2)} ¢`);
+    if (lock) assert.ok(rel(pk.Trev, makePacket(k, P()).Trev) < 1e-9 && !pk.offBeat, `key ${k}: the revival moved, T_rev ${pk.Trev}`);
+  }
+  for (const [k, want] of [[64, -3.42], [60, 10.26], [69, 0]]) {
+    const c = cents(makePacket(k, P({ temperament: 'meantone' })).pitch, keyFreq(k));
+    assert.ok(Math.abs(c - want) < 0.01, `key ${k} in meantone: ${c.toFixed(3)} ¢, not ${want}`);
+  }
+});
 test('engine = model: every well and detector, sample for sample, with T₁ and T_φ', () => {
   for (const potential of ['box', 'morse', 'hydrogen', 'bouncer', 'harmonic']) for (const detector of ['x', 'v', 'a']) {
     const p = P({ potential, detector, T1: 2, dephase: 1 / 0.7 }), e = new QuantumEngine(FS);
@@ -418,6 +432,138 @@ test('polyphony: all voices together sum at most 3000 pairs, the weakest dropped
   assert.ok(kept(last) > 0.85 && last.active >= first.active, `newest note keeps ${(100 * kept(last)).toFixed(1)} % of its power (${last.active} pairs; the oldest ${first.active})`);
   console.log(`        24 voices: ${total} pairs; the newest keeps ${last.active} (${(100 * kept(last)).toFixed(1)} % of its power), the oldest ${first.active}`);
 });
+test('Quality: Medium and Low sum at most 1500 and 800 pairs over all voices (High 3000), let 14 and 9 voices sound (High 24) and drop each voice\'s pairs 50 and 40 dB under its strongest; a note keeps its level (within 1 dB) and its launch pitch (within 1 ¢); 24 hydrogen voices stay finite', () => {
+  const p = P({ potential: 'hydrogen', sigma: 4, detector: 'a', T1: 30 }), sharp = P({ potential: 'hydrogen', bpm: 40, beats: 8, detector: 'x' }), f0 = keyFreq(96), res = [];
+  const kept = (v) => { let a = 0, s = 0; for (let g = 0; g < v.G; g++) for (let i = v.ga[g], q = v.gw[g]; i < v.gb[g]; i++, q++) a += v.w[q] ** 2; for (const q of v.pk.pairs) s += q.w ** 2; return a / s; };
+  const ref = note(P(), 60, 1).M, pitch = launchPitch(note(sharp, 96, 0.2).M, f0, 0.03, 0.03 + 3 / f0);
+  for (const [quality, budget, voices] of [['high', 3000, 24], ['medium', 1500, 14], ['low', 800, 9]]) {
+    const e = new QuantumEngine(FS); e.setQuality(quality); e.setParams(p); e.setSustain(true);
+    const bl = new Float64Array(128), br = new Float64Array(128);
+    for (let i = 0; i < 24; i++) {
+      e.noteOn(48 + i, 0.8);
+      for (let b = 0; b < 8; b++) { e.process(bl, br, 128); for (let j = 0; j < 128; j++) assert.ok(Number.isFinite(bl[j] + br[j]), `${quality}: not finite`); }
+    }
+    const live = e.voices.filter((v) => !v.stolen), total = live.reduce((s, v) => s + v.active, 0), last = live[live.length - 1];
+    assert.ok(total <= budget * 1.02, `${quality}: ${total} pairs summed`);
+    assert.ok(live.length <= voices, `${quality}: ${live.length} voices`);
+    assert.ok(kept(last) > 0.7, `${quality}: the newest note keeps ${(100 * kept(last)).toFixed(1)} % of its power`);
+    const x = note(P(), 60, 1, 1, quality).M, dB = 20 * Math.log10(rms(x, 0, x.length) / rms(ref, 0, ref.length));
+    const c = cents(launchPitch(note(sharp, 96, 0.2, 1, quality).M, f0, 0.03, 0.03 + 3 / f0), pitch);
+    assert.ok(Math.abs(dB) < 1, `${quality}: level ${dB.toFixed(2)} dB from High`);
+    assert.ok(Math.abs(c) < 1, `${quality}: launch pitch ${c.toFixed(2)} ¢ from High`);
+    res.push(`${quality} ${live.length} voices, ${total} pairs, the newest keeps ${(100 * kept(last)).toFixed(1)} %, ${dB.toFixed(2)} dB, ${c.toFixed(2)} ¢`);
+  }
+  console.log(`        ${res.join('; ')}`);
+});
+
+// ---- coherent restrike: Ramsey fringes between two pulses -----------------------------------------
+
+// A key struck at t = 0 (velocity v1) and again `delay` seconds later (v2, or the velocity that
+// makes the second pulse's amplitude equal to what is left of the first's), rendered in blocks that
+// put the second note-on at exactly round(delay·FS) samples. Returns the output from the restrike
+// on, the ratio ρ of the two pulses' amplitudes at the second's centre, how many samples after the
+// note-on that centre is (the pump's lead), and the engine.
+function restrike(params, key, delay, after, { v1 = 0.8, v2, match = false } = {}) {
+  const e = new QuantumEngine(FS); e.setParams(params);
+  const at = Math.round(delay * FS), n = at + Math.round(after * FS), L = new Float64Array(n), R = new Float64Array(n);
+  e.noteOn(key, v1);
+  let s = 0, rho = 0, lead = 0;
+  while (s < n) {
+    if (s === at) {
+      // the first packet's level now, and at the second pulse's centre: T₁ acts from a sample's output on
+      const probe = new QuantumEngine(FS); probe.setParams(params); probe.noteOn(key, 1);
+      lead = -probe.voices[0].count;
+      const env1 = e.voices.at(-1).env * Math.exp(-(lead - 1) / (FS * params.T1));
+      const vel = match ? env1 / 0.3 : v2; // OUT = 0.3 at full velocity
+      e.noteOn(key, vel);
+      rho = Math.sqrt(env1 / (0.3 * vel));
+    }
+    const m = Math.min(128, (s < at ? at : n) - s), bL = new Float64Array(m), bR = new Float64Array(m);
+    e.process(bL, bR, m);
+    L.set(bL, s); R.set(bR, s); s += m;
+  }
+  return { y: L.subarray(at), rho, lead, e };
+}
+const TREV = Math.round((2 * 60 / 90) * FS); // the default lock: T_rev = 2 beats at 90 BPM, 64 000 samples
+
+test('coherent restrike is off by default: a restruck key adds a fresh packet (two voices); on, the second pulse takes the first\'s packet over (one voice)', () => {
+  assert.equal(DEFAULTS.ramsey, false);
+  const off = restrike(P(), 60, 0.3, 0.05, { v2: 0.8 }), on = restrike(P({ ramsey: true }), 60, 0.3, 0.05, { v2: 0.8 });
+  assert.equal(off.e.voices.length, 2);
+  assert.equal(on.e.voices.length, 1);
+  assert.ok(on.e.voices[0].coh && !off.e.voices[1].coh);
+  // a knob that changes the well since: the packets differ, so the restrike is a fresh atom again
+  const e = new QuantumEngine(FS); e.setParams(P({ ramsey: true }));
+  e.noteOn(60, 0.8); e.process(new Float64Array(128), new Float64Array(128), 128);
+  e.setParams(P({ ramsey: true, sigma: 3 })); e.noteOn(60, 0.8);
+  assert.equal(e.voices.length, 2);
+});
+
+test('Ramsey\'s formula: restruck on a full revival of the square well, the note is |1 + ρe^(i(2πδT − φ))|² times a fresh one, for any detuning δ and phase φ', () => {
+  const T = TREV / FS;
+  for (const [d, ph] of [[0, 0], [0, 180], [0, 90], [0.25, 0], [-1.3, 45], [3.7, 300]]) {
+    const p = P({ ramsey: true, ramseyDetune: d, ramseyPhase: ph, T1: 30 });
+    const { y, rho } = restrike(p, 57, T, 0.25, { v2: 0.6 });
+    const single = note(p, 57, 0.25, 0.6).L;
+    const Phi = 2 * PI * d * T - (ph * PI) / 180, want = 1 + rho * rho + 2 * rho * Math.cos(Phi);
+    let worst = 0, peak = 0;
+    for (let i = 960; i < single.length; i++) { worst = Math.max(worst, Math.abs(y[i] - want * single[i])); peak = Math.max(peak, Math.abs(single[i])); } // past the pump (20 ms)
+    assert.ok(worst < 1e-6 * peak * Math.max(want, 1), `δ = ${d} Hz, φ = ${ph}°: off by ${(worst / peak).toExponential(2)} (×${want.toFixed(3)} wanted)`);
+  }
+  // equal amplitudes, out of phase: the second pulse takes the packet back (the atom is in its ground state)
+  const p = P({ ramsey: true, ramseyPhase: 180, T1: 30 });
+  const { y, e } = restrike(p, 57, T, 0.25, { match: true });
+  assert.ok(rms(y, 960, y.length) < 1e-6, `${rms(y, 960, y.length)}`);
+  assert.equal(e.voices.length, 0, 'nothing left to radiate: the voice ends');
+});
+
+test('a restrike on the box\'s half revival keeps every other level: its dipole, which joins levels of opposite parity only, goes silent (a dark state); the Morse well\'s, with every Δn, does not', () => {
+  const p = P({ ramsey: true, T1: 30 });
+  const box = restrike(p, 57, TREV / 2 / FS, 0.25, { match: true }), single = note(p, 57, 0.25, 0.8).L;
+  const quiet = rms(box.y, 960, box.y.length) / rms(single, 960, single.length);
+  assert.ok(quiet < 1e-5, `box at T_rev/2: ${(20 * Math.log10(quiet)).toFixed(0)} dB`);
+  const pm = P({ ramsey: true, T1: 30, potential: 'morse' });
+  const morse = restrike(pm, 57, TREV / 2 / FS, 0.25, { match: true }), sm = note(pm, 57, 0.25, 0.8).L;
+  assert.ok(rms(morse.y, 960, morse.y.length) > 0.3 * rms(sm, 960, sm.length), 'Morse at T_rev/2');
+});
+
+test('averaged over the second pulse\'s phase (0°, 90°, 180°, 270°), a coherent restrike is two separate packets, sample for sample from its centre on, at any delay and in any well', () => {
+  for (const [potential, key, delay] of [['box', 57, 0.3137], ['morse', 45, 0.0517], ['hydrogen', 64, 0.9], ['bouncer', 70, 0.5]]) {
+    const p = P({ potential, T1: 30 });
+    const { y: inc, lead } = restrike(p, key, delay, 0.3, { v2: 0.5 });
+    const mean = new Float64Array(inc.length);
+    for (const ph of [0, 90, 180, 270]) restrike({ ...p, ramsey: true, ramseyPhase: ph }, key, delay, 0.3, { v2: 0.5 }).y.forEach((v, i) => { mean[i] += v / 4; });
+    // (from the second pulse's centre on: over the pump's lead the first packet's T₁ decay waits for it)
+    let worst = 0, peak = 0;
+    for (let i = lead; i < inc.length; i++) { worst = Math.max(worst, Math.abs(mean[i] - inc[i])); peak = Math.max(peak, Math.abs(inc[i])); }
+    assert.ok(worst < 1e-6 * peak, `${potential}: ${(worst / peak).toExponential(2)}`);
+  }
+});
+
+test('dephasing before the restrike washes the fringes out: on a full revival the contrast between φ = 0° and 180° falls as Γ_φ grows', () => {
+  const contrast = (dephase) => {
+    const p = P({ ramsey: true, T1: 30, dephase });
+    const [a, b] = [0, 180].map((ph) => restrike({ ...p, ramseyPhase: ph }, 57, TREV / FS, 0.12, { match: true }).y).map((y) => rms(y, 960, y.length));
+    return (a - b) / (a + b);
+  };
+  const c = [0, 0.3, 1, 3].map(contrast);
+  assert.ok(c[0] > 0.999, `Γ_φ = 0: ${c[0]}`);
+  for (let i = 1; i < c.length; i++) assert.ok(c[i] < c[i - 1], c.map((v) => v.toFixed(3)).join(' '));
+  assert.ok(c[3] < 0.5 * c[0], c.map((v) => v.toFixed(3)).join(' '));
+  console.log(`        contrast at Γ_φ = 0, 0.3, 1, 3 s⁻¹: ${c.map((v) => v.toFixed(3)).join(', ')}`);
+});
+
+test('a coherent restrike has no click: at the second pulse the output moves no more than the note\'s own swing, for every detector', () => {
+  for (const detector of ['x', 'v', 'a']) for (const delay of [0.02, 0.3137, TREV / 2 / FS]) {
+    const p = P({ ramsey: true, detector, T1: 30 });
+    const { y } = restrike(p, 45, delay, 0.05, { v2: 0.8 }), single = note(p, 45, 0.05, 0.8).L;
+    let jump = 0, swing = 0;
+    for (let i = 1; i < 48; i++) jump = Math.max(jump, Math.abs(y[i] - y[i - 1]));
+    for (let i = 1; i < single.length; i++) swing = Math.max(swing, Math.abs(single[i] - single[i - 1]));
+    assert.ok(jump < 4 * swing, `${detector} at ${delay.toFixed(3)} s: step ${jump.toExponential(2)} vs the note's ${swing.toExponential(2)}`);
+  }
+});
+
 test('seeded random combinations of knob extremes at 44.1 and 48 kHz: no NaN, bounded output', () => {
   const ranged = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'velocity'].includes(q.id));
   let seed = 12345, worst = { pk: 0 };
@@ -440,10 +586,52 @@ test('seeded random combinations of knob extremes at 44.1 and 48 kHz: no NaN, bo
       e.process(bl, br, 128);
       for (let i = 0; i < 128; i++) { assert.ok(Number.isFinite(bl[i] + br[i]), `${fs} Hz ${JSON.stringify(p)}: NaN`); pk = Math.max(pk, Math.abs(bl[i]), Math.abs(br[i])); }
     }
-    if (pk > worst.pk) worst = { pk, p, fs };
+    // (a coherent restrike can add the two pulses' amplitudes: up to 4× one's power, twice two atoms')
+    if (pk / (p.ramsey ? 2 : 1) > worst.pk) worst = { pk: pk / (p.ramsey ? 2 : 1), p, fs };
   }
-  assert.ok(worst.pk < 2, `${worst.fs} Hz: seven notes struck twice peak ${worst.pk.toFixed(2)} with ${JSON.stringify(worst.p)}`);
+  assert.ok(worst.pk < 2, `${worst.fs} Hz: seven notes struck twice peak ${worst.pk.toFixed(2)} (half that if coherent) with ${JSON.stringify(worst.p)}`);
   console.log(`        loudest of 30 (seven notes struck twice): ${worst.pk.toFixed(2)}`);
+});
+console.log('MPE');
+// A note's slide is the noise on its own well: its own dephasing rate (the wells don't bend)
+const slide = (t, key, value) => [t, 'msg', { type: 'slide', key, value }];
+const same = (a, b) => a.every((v, i) => v === b[i]);
+test('a packet with its own dephasing (a slide before the note) sounds as the knob there, sample for sample; a packet beside it keeps the knob\'s', () => {
+  const base = P({ bpm: 120, beats: 2 }), x = render(base, [slide(0, 57, 2.5), [0, 'on', 57, 1]], 1.1), k = note({ ...base, dephase: 2.5 }, 57, 1.1);
+  assert.ok(same(x.L, k.L) && same(x.R, k.R), 'as the knob at Γ_φ = 2.5 s⁻¹');
+  assert.ok(!same(x.L, note(base, 57, 1.1).L), 'and not as the knob\'s own');
+  const c = render(base, [slide(0, 64, 5), [0, 'on', 64, 1], [0, 'on', 57, 1]], 1.1).L, s = render(base, [slide(0, 64, 5), [0, 'on', 64, 1]], 1.1).L, a = note(base, 57, 1.1).L;
+  const err = Math.max(...a.map((v, i) => Math.abs(c[i] - s[i] - v))), pk = Math.max(...a.map(Math.abs));
+  assert.ok(err < 1e-12 * pk && pk > 0.01, `the other packet moves by ${err.toExponential(2)} (peak ${pk.toFixed(3)})`);
+});
+test('a slide while the packet sounds glides there (20 ms): the revival keeps e^(−(T_rev − t − 20 ms)/T_φ) of its fundamental', () => {
+  const base = P({ bpm: 120, beats: 2, T1: 1e9 }), Tphi = 0.4, t = 0.2, f0 = keyFreq(57);
+  const { L: A } = note(base, 57, 1.1), { L: D } = render(base, [[0, 'on', 57, 1], slide(t, 57, 1 / Tphi)], 1.1);
+  const g = tone(D, f0, FS - 1200, FS + 1200) / tone(A, f0, FS - 1200, FS + 1200), want = Math.exp(-(1 - t - 0.02) / Tphi);
+  assert.ok(Math.abs(g / want - 1) < 0.01, `revival keeps ${g.toFixed(4)} vs ${want.toFixed(4)}`);
+  assert.ok(same(D.subarray(0, Math.round(t * FS)), A.subarray(0, Math.round(t * FS))), 'untouched before the slide');
+});
+test('slide(NaN) leaves the sound bit for bit as it was, before the note and while it sounds; a slide taken back glides home', () => {
+  const base = P({ dephase: 1 }), x = render(base, [slide(0, 57, NaN), [0, 'on', 57, 1], slide(0.2, 57, NaN), [0.3, 'msg', { type: 'noteBend', key: 57, value: 1 }]], 0.6);
+  assert.ok(same(x.L, note(base, 57, 0.6).L));
+  // a slide there and back again leaves a packet that dephased longer, at the knob's rate since
+  const y = render(base, [[0, 'on', 57, 1], slide(0.1, 57, 6), slide(0.3, 57, NaN)], 0.9).L, u = note(base, 57, 0.9).L;
+  const r1 = rms(y, 0.5 * FS, 0.6 * FS) / rms(u, 0.5 * FS, 0.6 * FS), r2 = rms(y, 0.8 * FS, 0.9 * FS) / rms(u, 0.8 * FS, 0.9 * FS);
+  assert.ok(r1 < 0.9 && Math.abs(r2 / r1 - 1) < 0.15, `${r1.toFixed(3)} then ${r2.toFixed(3)} of the plain note's`);
+});
+test('slide sweeps on chords, sent every block across the whole range, stay finite and bounded at 44.1, 48 and 96 kHz, every well', () => {
+  for (const fs of [44100, 48000, 96000]) for (const potential of ['box', 'morse', 'hydrogen']) {
+    const e = new QuantumEngine(fs); e.setParams(P({ potential }));
+    const keys = [36, 50, 57, 64, 71, 96], bl = new Float64Array(128), br = new Float64Array(128);
+    for (const k of keys) e.noteOn(k, 1);
+    let pk = 0;
+    for (let b = 0; b < Math.round((0.8 * fs) / 128); b++) {
+      keys.forEach((k, i) => e.handle({ type: 'slide', key: k, value: 5 + 5 * Math.sin(b / (3 + i)) }));
+      e.process(bl, br, 128);
+      for (let i = 0; i < 128; i++) { assert.ok(Number.isFinite(bl[i] + br[i]), `${fs} ${potential}: NaN`); pk = Math.max(pk, Math.abs(bl[i]), Math.abs(br[i])); }
+    }
+    assert.ok(pk > 0.01 && pk < 2, `${fs} ${potential}: peak ${pk.toFixed(2)}`);
+  }
 });
 test('CPU: 10 voices render well under real time', () => {
   const run = (p) => {

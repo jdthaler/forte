@@ -81,9 +81,12 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `linalg.js` | `symEig`, `genEig` (generalised symmetric), `cholesky` |
 | `views.js` | `fit`, `css`, `animate`, `SpectrumView` (live spectrum + model markers), `SpectrogramView` (scrolling spectrogram, the markers as ticks), `ScopeView` |
 | `impulses.js` | the rooms: `roomIR` (the pages' original synthetic room) and the venues (`VENUES`: a studio and three halls built from their size, walls and air: image sources, then a tail decaying in each octave in Eyring's time) |
+| `tuning.js`, `tuning-ui.js` | the keyboard's tuning, the same on every instrument and in the plugins (`native/core` `tuning.h`): the pitch standard (A4), the temperament (equal, meantone, the well temperaments, Pythagorean, just, custom) on a root key, and a custom temperament's cents; `readScala` reads a Scala file (`.scl`) into them. `tuning-ui.js` is the pages' *Load a Scala file* button, which `user-presets.js` adds under Temperament. |
+| `quality.js` | the Quality setting (High, Medium, Low): how much of its physics the engine plays, for phones and older computers. One choice per browser, for every page, shown as the CPU group at the end of the controls and in no preset or link; `connectQuality(node)` sends it to the page's engine and suggests a lower setting when the audio drops out. |
 | `registry.js` | the instrument list behind the landing page and the menus |
 | `presets.js`, `user-presets.js` | your own presets and shared links. `presets.js` is the format, the same in the plugins (`native/plugin/presets.cpp`): every parameter of the contract by id, in a versioned file or in a link's fragment. `user-presets.js` adds them to the Presets menu (save, link, a sheet to play, link, save to a file, delete and open files); the shell attaches it, and a page with its own state calls `attachPresets` with how to get and set its parameters by contract id (the organ's console is `CONSOLE.get` and `CONSOLE.put`). |
-| `midi.js` | Web MIDI for every page (the shell and the five older pages): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen next to Enable MIDI, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling. |
+| `midi.js` | Web MIDI for every page (the shell and the five older pages): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen next to Enable MIDI, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling; `pageMpe` decodes MPE for a page (below) and turns it into the engine's `noteBend`, `slide` and `pressure` messages. |
+| `mpe.js` | MPE (MIDI Polyphonic Expression), message for message as the plugins' `forte/mpe.h`: zones from the MPE Configuration Message, member channels' bend (±48 semitones unless RPN 0 says otherwise), pressure and CC74, the Auto/On/Off mode, and `bendRatio`, a note's bend along the keyboard's tuning. |
 | `focus.js` | who gets a key press: a control reached with Tab keeps the keys it uses (Space ticks a stop, arrows move a slider); one last touched with the mouse or a finger hands them back to the instrument. Every page's key handler asks `controlOwns(e)` first. |
 | `notes.js`, `markdown.js` | **How it works**: the page's README in a dialog (button by the title, or a link to `…/#about`) |
 | `instrument.css`, `forte.css` | page layout; Forte nav and notes |
@@ -109,6 +112,9 @@ export const INSTRUMENT = {
   compass: { keys: [36, 84], param: 'fullRange' }, // a historical compass: only these play until the checkbox opens the range
   space: 'sustain',                     // Space and CC64: 'sustain' (a damper, sent to the engine), 'hold' (keys latch) or null
   modWheel: 'strike',                   // CC1 (or { param, max })
+  mpe: { bend: 48, slide: true },       // MPE: how far one note bends (semitones, up to 96; 0: none), and
+                                        // whether CC74 slides the mod wheel's parameter for that note alone;
+                                        // press: true when a bend presses the key as the wheel does (the clavier)
   controllers: { 67: 'unaCorda' },      // other MIDI controllers → parameters (a toggle is on at 64);
                                         // { param, values: [a, b] } picks b from 64 up, { param, toggle: [a, b] } flips on each press
   console: { groups, defaults, get },   // state the page keeps beside its groups (the organ's drawbars): plugin parameters too
@@ -153,7 +159,9 @@ export class GongWasmEngine {
   noteOff(key, velocity) { … }      // velocity: MIDI release velocity 0..1, or undefined
   setSustain(on) { … }             // optional
   allNotesOff() { … }              // optional (Panic)
-  handle(msg) { … }                // optional: other messages, incl. MIDI { type: 'pressure', value, key } and { type: 'bend', value }
+  handle(msg) { … }                // optional: other messages, incl. MIDI { type: 'pressure', value, key } and { type: 'bend', value },
+                                   // and MPE's { type: 'noteBend', key, value } and { type: 'slide', key, value } (below)
+  setQuality(level) { … }          // 'high', 'medium' or 'low' (shared/quality.js; the C++'s Engine::quality)
   voiceCount() { … }               // optional, shown in the CPU pill
   stats() { … }                    // optional: more fields for the page's stats message
   process(L, R, n) { … }           // fill n samples (n = 128 in the browser)
@@ -165,10 +173,32 @@ globalThis.GongWasmEngine = GongWasmEngine;
 for example to drive a live view: the C++ engine posts `Message`s, which the wrapper turns
 into the page's (see The native port).
 
+**MPE.** A controller that gives every note a channel of its own (a Seaboard, a LinnStrument,
+an Osmose) bends, slides and presses each note alone. `shared/mpe.js` and the plugins' decoder
+(`forte/mpe.h`) turn that into three per-note messages, the C++ `Engine`'s virtuals:
+
+* `noteBend(ratio, key)`: the note's frequency × `ratio`, already along the keyboard's tuning
+  (`bendRatio`, so a slide onto the next key lands on its tuned pitch), on top of the
+  instrument's wheel bend;
+* `slide(value, key)`: the note's own value of the mod wheel's parameter, in its units, as the
+  wheel would set it (NaN: the parameter's own again);
+* `pressure(value, key)`, which per-key pressure already was.
+
+Either may come before the key's `noteOn`: keep them per key (`forte/expression.h`
+`NoteExpression`) and start the note there; glide a sounding note toward them as the wheel
+glides (`glideTo`). Bend only what the physics can bend (a string's tension, a reed's or
+pipe's pitch, a bow's speed): a struck bar or a bell rings at its own pitch, so its descriptor
+says `bend: 0`. A plain note on a key that had its own expression starts without it. Ordinary
+MIDI never sends these, so an instrument without them plays as before; `test/mpe-tests.mjs`
+checks every instrument against its descriptor.
+
 Rules of thumb:
 
 * **Budget:** ≤ 30 % of one core with 10 voices at 48 kHz on a laptop. Watch
-  the CPU pill.
+  the CPU pill, and `node tools/bench.mjs <slug>`.
+* **Quality:** High plays everything. At Medium and Low the engine trims what
+  costs the most and is heard the least (see The native port), so a phone keeps
+  up.
 * **No allocation in `process`.** Allocate per voice, at note-on.
 * **Expensive setup** (eigen-solves, tables) belongs in the model. Cache it
   per key and parameter version. If it is slow (> 5 ms), build it on the
@@ -191,7 +221,11 @@ Rules of thumb:
 ```
 
 `type: 'select'` with `options: [[value, label], …]`, or `type: 'checkbox'`.
-`showIf: (P) => …` hides a control when it is irrelevant. Keep `volume`
+`showIf: (P) => …` hides a control when it is irrelevant. End `GROUPS` with `TUNING_GROUP`
+(`shared/tuning.js`: pitch, temperament, its root and the custom cents) and keep its ids
+(`...TUNING_KEEP` in `keep`), and make the model's pitch target each key's equal-tempered
+frequency times `tuningOf(P).ratio(key)` (the generated `<slug>-params.h`; see The native port).
+Keep `volume`
 (0–2, def ≈ 0.8) and `room` (0–1) in an *Output* group, with `VENUE`
 (`shared/chain.js`, the room's space) right after `room`, in `keep` and
 as the chain's `venue`. Keep `velocity`
@@ -199,10 +233,13 @@ as the chain's `venue`. Keep `velocity`
 velocity-sensitive. Presets override defaults. Make each preset show one
 physical idea and give it a descriptive name.
 
-Mark the controls a player reaches for *while playing* with
-`perform: true`: stops and registrations, tremolo and drive, the mallet
-or the bow, the main physical knob (the black hole's spin), `room` and
-`volume`. They sit in a strip above the keys in both modes, so they never
+Mark only the controls a player changes *while playing* with
+`perform: true`: stops and registrations, pedals and mutes, tremolo and
+vibrato, where the mallet strikes or the bow sits, the main physical knob
+(the black hole's spin), and `volume`. The instrument's build (sizes,
+materials, losses), its voicing (felt hardness) and `room` are set once,
+so they stay in the Controls panel. The same flag fills the row above the
+plugin window's keyboard. They sit in a strip above the keys in both modes, so they never
 move; a checkbox there becomes a stop that lights up, and in Discover a
 control with a `hint` gets an ⓘ button that opens it (a tap, not a
 tooltip, so it works on a tablet). A tile shows its label at rest, with
@@ -238,11 +275,18 @@ and say which in the footer help.
 (loaded last in `<head>`) give every page the same layout, top to bottom:
 - **The header.** The instrument's name is also the menu (Forte's home
   page and every instrument, from `shared/nav.js`; the page's `<h1>`
-  moves into it). Then How it works, **Discover | Perform**, audio, MIDI
-  and Panic.
-- **The views: pictures only.** Above them is a row of toggles, one for
-  each view, named by its `data-view` (or its `<h2>`): a tap turns that
-  view on or off, and the page remembers which are on. The views that are
+  moves into it). Then How it works, **Discover | Perform**, a switch
+  that puts the Controls panel beside the views or below them (wide
+  screens; a narrow one always puts it below), audio, MIDI and Panic.
+- **The toggles.** Two rows, each heading its side: at the top of the
+  views one for each view, named by its `data-view` (or its `<h2>`), and
+  at the top of `#controls` (staying there as the panel scrolls) one for
+  each group of controls (each `details.group`, named by its
+  `<summary>`; a group whose parameters have all moved above the keys has
+  none, and a group the page adds later gets one). A tap turns that view
+  or group on or off, and the page remembers which are on. Every group is
+  on at first. With every group off, the panel keeps its toggles.
+- **The views: pictures only.** The views that are
   on share the space in rows, side by side on a wide screen and stacked on
   a tall one; a short last row stretches across. At first only the cards
   marked `data-perform` (one or two: `test/site-tests.mjs` checks) are on,
@@ -251,11 +295,10 @@ and say which in the footer help.
 - **The controls, above the keys.** A card marked `data-control` is a
   control surface, not a view (the organ's drawbars and switches): it
   moves here, ahead of the `perform: true` parameters. A dropdown there
-  with a few short choices becomes a row of buttons. "More controls"
-  opens `#controls`, the rest of the parameters, grouped (a column on
-  wide screens, a panel sliding over the views on narrow ones), where
-  each hint waits behind an ⓘ. A handle on the footer's edge folds the
-  controls away.
+  with a few short choices becomes a row of buttons. The rest of the
+  parameters are in the Controls panel, `#controls`, grouped, where each
+  hint waits behind an ⓘ. A handle on the footer's edge folds the
+  controls above the keys away.
 - **The keyboard bar and the keys** (`shared/keyboard.js`: multi-touch,
   glissando across the keys, aftertouch from leaning on a held key along
   its length or from Pencil pressure). As many keys as fit the width at the
@@ -267,13 +310,16 @@ and say which in the footer help.
   control above the keys instead. The pedal button presses Space. The page's footer hints
   (`.kb-help`: computer keys, MIDI, readouts) go behind ⌨.
 - **Perform** is for playing and for a projector: the views that are on,
-  filling the screen, with no toggles and no text in them. The card's `.card-head`,
+  filling the screen, with no toggles and no text in them. The Controls
+  panel waits behind "More controls" (sliding over the views on a narrow
+  screen). The card's `.card-head`,
   `.caption`, `.legend`, `.readout`, `<dl>` and `<table>` are hidden, and
   `fillText` draws nothing on their canvases (a card with
   `data-keep-text` keeps its text). Full screen appears. The mode is the
   same on every page; the rest is remembered per page.
 - On phones the page scrolls above the controls and keys, which stay put,
-  and "More controls" replaces the views. Turned sideways, the controls
+  and the Controls panel follows the views; each row of toggles slides
+  sideways when it doesn't fit. Turned sideways, the controls
   share a row with the keyboard bar and show one row of tiles at a time.
 - While one finger holds a key, a tap with another finger works any
   button, stop or tab (browsers give such a tap no click; `layout.js`
@@ -325,7 +371,9 @@ the whole file under ~30 s. Aim for 10–25 tests that cover:
 6. CPU: a rough timing check that 10 voices render faster than real time
    by a healthy margin. Name it `CPU: …`: timing tests are skipped on CI
    (`process.env.CI`), whose shared machines are too slow and noisy to
-   hold a desktop budget.
+   hold a desktop budget;
+7. Quality: what Medium and Low trim (fewer voices, modes or partials,
+   counted rather than timed), with the pitch and level kept.
 
 `npm test` runs every suite in parallel (`tools/test-all.mjs`) and
 reports all failures; `node tools/test-all.mjs <name>` runs a subset.
@@ -386,6 +434,27 @@ sends it with the note (its `noteData`), as the vibraphone's bars and the piano'
 (`vibraphone/src/vibraphone-wasm.js`; the piano also offers every key's ahead of its notes, for its
 sympathetic strings). The views call the WebAssembly model, which the page awaits before drawing
 (`const model = await wasmModel()`).
+
+Every instrument follows the keyboard's tuning (`forte/tuning.h`): its `<slug>-params.h` has
+`tuningOf(P)`, whose `ratio(key)` is the key's frequency over equal temperament's at A = 440 Hz,
+exactly 1 at the defaults. Multiply the key's pitch target by it (a string's tension, a bar's cut,
+a bell's profile then follow as they do for its note), leave what designs the instrument from the
+key number alone, and rebuild the per-key data when the tuning changes. `test/tuning-tests.mjs`
+plays every instrument retuned (A = 415 Hz, and a custom temperament) and checks it moves by the
+cents its tuning gives, and not at all at the defaults.
+
+Every engine follows the Quality setting (`forte::Quality` in `engine.h`): the page's choice or
+the plugin's parameter, a device's and not the sound's, so it is no parameter of the instrument
+and no preset carries it. High is the instrument as it always was, to the bit. Medium and Low
+play less, least audible first: work nobody hears (partials past hearing or far under the
+loudest, voices decayed to nothing), fewer partials or modes a voice, fewer voices at once (the
+engine's own stealing, at `pick(MAX_VOICES, …, …)`), and optional physics lighter or off (the
+sympathetic strings). Aim for Medium at about 60 % of High's cost in `node tools/bench.mjs <slug>`
+and Low at about a third, and keep the pitch and a note's level. Read `quality` where a voice is
+built, so a change applies to the notes that follow, and build per-key data in full, trimming it
+for the voice. Say what each level trims in the README's `## Quality` section, and test it in
+the suite (a `Quality: …` test that counts the voices or modes, not the time); `test/quality-tests.mjs`
+checks every instrument's High is unchanged and its Medium and Low still play.
 
 Strings that share a bridge can ring along with one another through `forte/sympathetic.h`: each
 key's (or string's) lowest partials as a group, driven by the bridge signal of every voice and

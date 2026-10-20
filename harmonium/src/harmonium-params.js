@@ -2,6 +2,7 @@
 // a unit; the hint says what it does to the sound.
 
 import { VENUE } from '../../shared/chain.js';
+import { TUNING_GROUP } from '../../shared/tuning.js';
 
 const pa = (v) => `${v.toFixed(0)} Pa (${(v / 9.81).toFixed(0)} mm of water)`;
 const times = (v) => `× ${v < 1 ? v.toFixed(2) : v.toFixed(1)}`;
@@ -62,11 +63,12 @@ export const GROUPS = [
         hint: 'The accordion’s tone chamber: the reeds sound into a box with one mouth, a Helmholtz resonator that softens everything above its resonance and puts its pressure back on the reeds. Mono: the sound leaves through one mouth.' },
       { id: 'cassF', label: 'Cassotto resonance', min: 300, max: 3000, def: 1500, log: true, fmt: (v) => `${v.toFixed(0)} Hz`, showIf: (P) => P.cassotto,
         hint: 'The chamber’s Helmholtz frequency (volume and mouth): above it the sound falls 12 dB per octave.' },
-      { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.3, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      { id: 'room', label: 'Room', min: 0, max: 1, def: 0.3, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
+  TUNING_GROUP,
 ];
 
 export const DEFAULTS = Object.fromEntries(GROUPS.flatMap((g) => g.params).map((p) => [p.id, p.def]));

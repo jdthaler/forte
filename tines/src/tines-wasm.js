@@ -5,6 +5,7 @@
 import { GROUPS, ALL_PARAMS } from './rhodes-params.js';
 import { noteName } from './tine.js';
 import { wasmEngine, nativeParams, nativeValue, scratch } from '../../shared/wasm.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
 
 // (the descriptor's wasm field names it; this module also runs in the AudioWorklet, which has no URL)
 const BUILD = { id: 'tines', name: 'TinesWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/tines.wasm', import.meta.url).href };
@@ -79,10 +80,10 @@ export const ready = () => TinesWasmEngine.ready();
 // (tines-model.cpp): keyModel(key, P, fs) gives the key's model (info, the tine with its
 // shape(j, x) and participation factors Γ, the kept modes, the voice data, the coupled shapes), its pickup set from P,
 // plus `packed`, the voice data for the engine. Cached per key for the latest version asked
-// for: a key's modes depend on the 'model' parameters and the rate only, and the pickups
+// for: a key's modes depend on the 'model' parameters, the tuning's and the rate only, and the pickups
 // ('pickup') move live, so they are patched in, not recomputed. flux(Y, w) is the pickup's
 // normalised flux, (1 + (Y/w)²)^(−3/2).
-const MODEL = ALL_PARAMS.filter((p) => p.kind === 'model').map((p) => p.id);
+const MODEL = [...ALL_PARAMS.filter((p) => p.kind === 'model').map((p) => p.id), ...TUNING_KEEP];
 const MODE = ['col', 'f', 'sigma', 'w', 'pk', 'dampW', 'tineFrac', 'barFrac', 'blockFrac'];
 export async function wasmModel() {
   const x = await ready(), s = scratch(x), params = nativeParams(BUILD);

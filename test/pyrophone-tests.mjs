@@ -145,6 +145,12 @@ test('every key C3–C6 settles within ±3 ¢ of equal temperament (auto-tuned, 
   }
   assert.ok(worst < 3, `worst ${worst.toFixed(2)} ¢ (key ${wk})`);
 });
+test('the keyboard\'s tuning cuts the tubes: at A = 415 Hz E4 settles at 440·2^(−5/12)·415/440; in ¼-comma meantone E4 at −3.42 ¢, C4 at +10.26 ¢ and A4 at 440 Hz (±3 ¢)', () => {
+  for (const [o, k, f0] of [[{ pitch: 415 }, 64, 440 * 2 ** (-5 / 12) * 415 / 440], [{ temperament: 'meantone' }, 64, keyFreq(64) * 2 ** (-3.42 / 1200)], [{ temperament: 'meantone' }, 60, keyFreq(60) * 2 ** (10.26 / 1200)], [{ temperament: 'meantone' }, 69, 440]]) {
+    const { out } = run(P({ drift: 4, warm: 0.15, ...o }), 1.6, [note(0, k, 0.7)]), c = cents(freq(out, f0, Math.round(1.1 * FS), out.length) / f0);
+    assert.ok(Math.abs(c) < 3, `${JSON.stringify(o)}, key ${k}: ${c.toFixed(2)} ¢ from ${f0.toFixed(2)} Hz`);
+  }
+});
 test('the keys past C3–C6, A0 to C8 (the top keys keep only the modes below 0.45 fs): each settles within ±3 ¢, at 44.1 and 48 kHz; at the top of the flame power, pressed, they sing their note, not a scream', () => {
   const out = [], top = GROUPS.flatMap((g) => g.params).find((p) => p.id === 'flame').max;
   for (const [k, fs] of [[21, 48000], [24, 48000], [30, 48000], [40, 48000], [90, 48000], [96, 44100], [102, 48000], [108, 48000], [108, 44100]]) {
@@ -348,6 +354,17 @@ test('seeded random combinations of parameter extremes at 44.1 and 48 kHz: no Na
   // or whose lag is near 270°, singing in a high mode (several times the key's pitch)
   assert.ok(worst.pk < 3, `${worst.fs} Hz: peak ${worst.pk.toFixed(2)} with ${JSON.stringify(worst.Pm)}`);
   console.log(`        loudest of 20: ${worst.pk.toFixed(2)}`);
+});
+test('Quality: nothing to trim (every tube sings by its own modes and flame; released ones already fade once silent): Medium and Low play 24 held tubes exactly as High', () => {
+  const render = (quality) => {
+    const e = new PyrophoneEngine(FS); e.setQuality(quality); e.setParams(P());
+    for (let i = 0; i < 24; i++) e.noteOn(36 + 2 * i, 0.8);
+    const L = new Float32Array(128), R = new Float32Array(128), out = new Float32Array(0.5 * FS);
+    for (let s = 0; s < out.length; s += 128) { e.process(L, R, 128); out.set(L.subarray(0, Math.min(128, out.length - s)), s); }
+    return out;
+  };
+  const hi = render('high');
+  for (const quality of ['medium', 'low']) { const q = render(quality); for (let i = 0; i < hi.length; i++) if (q[i] !== hi[i]) throw new Error(`${quality} differs at sample ${i}`); }
 });
 test('CPU: 10 tubes render in well under 30 % of real time', () => {
   const e = new PyrophoneEngine(FS);

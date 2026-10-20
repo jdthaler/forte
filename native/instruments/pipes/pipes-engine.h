@@ -20,6 +20,7 @@
 // the longest key at the widest cut-up: nothing is allocated in process().
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstdint>
@@ -28,6 +29,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "pipes-model.h"
 #include "pipes-params.h"
 
@@ -46,17 +48,30 @@ enum : uint16_t {
 }
 
 // A key's six pipes, voiced: what a note needs and the page's model can send (packKeyModels).
+// The pipes are cut for the key's pitch in the keyboard's tuning: ratio, its tuning's (forte/tuning.h).
 struct KeyModels {
   int key = 0;
   Voicing design;
+  double ratio = 1;
   std::array<PipeModel, RANKS> pipes{};
 };
-KeyModels keyModels(int key, const Voicing &design);
-// Packed as numbers: key, cutup, gain, offset, then per pipe f, stopped, M, A, W, b, H, y0, h, dd,
-// Sm, D, the number of modes and each mode's ω and σ (all the engine reads of a pipe).
+KeyModels keyModels(int key, const Voicing &design, double ratio = 1);
+// Packed as numbers: key, cutup, gain, offset, ratio, then per pipe f, stopped, M, A, W, b, H, y0,
+// h, dd, Sm, D, the number of modes and each mode's ω and σ (all the engine reads of a pipe).
 int packKeyModels(const KeyModels &k, double *out);
 bool unpackKeyModels(const double *in, int n, KeyModels &k);
-constexpr int PACKED_MAX = 4 + RANKS * (13 + 2 * MODES_OPEN);
+constexpr int PACKED_MAX = 5 + RANKS * (13 + 2 * MODES_OPEN);
+// The keyboard's tuning moves a key at most this far from equal temperament at A = 440 Hz (the
+// lowest and highest pitch standards, a custom temperament's ±100 ¢ less A's own): the delay lines
+// a voice keeps ready are sized for it.
+inline const double RATIO_MIN = *std::min_element(kPitches, kPitches + kPitchCount) / 440 * std::pow(2.0, -2 * kCentsRange / 1200);
+inline const double RATIO_MAX = *std::max_element(kPitches, kPitches + kPitchCount) / 440 * std::pow(2.0, 2 * kCentsRange / 1200);
+
+// A key's own bend (MPE) reaches an octave either way. Further up, the jet's transit across the
+// mouth of the highest pipes falls under the two steps the delay line's interpolation needs (and
+// their upper modes past the Nyquist frequency); further down, the delay lines a voice keeps ready
+// no longer hold the transit of the jets a low wind blows.
+constexpr double MPE_BEND = 12;
 
 class PipeEngine : public Engine {
  public:
@@ -77,7 +92,10 @@ class PipeEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void allNotesOff() override;
   void bend(double value) override; // the organ's air warms or cools: every pipe's sound and jets ×r
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the air in one key's pipes alone
   int voiceCount() const override;
+  // whether key's pipes are built for the parameters as they are (the tests wait for it)
+  bool ready(int key) { return bool(data.get(key, version)); }
   void process(float *L, float *R, int n) override;
 
   // The tests' and tools' options: the turbulence's seed (its table is drawn again) and
@@ -112,7 +130,7 @@ class PipeEngine : public Engine {
     int nx = 0;
 
     static int lineLength(double tauK); // the delay line's length for a jet transit of tauK/U_j
-    void init(PipeEngine &eng, const PipeModel *R, int rank, double *buf);
+    void init(PipeEngine &eng, const PipeModel *R, int rank, double *buf, double r); // r: the bend it starts at
     void retime(double r);
     double freq() const { return per > 0 ? fsI / per : 0; }
     void reset();
@@ -126,6 +144,7 @@ class PipeEngine : public Engine {
     std::array<Pipe, RANKS> pipes{};
     std::array<double, RANKS> slider{}, open{}; // slider travel, and the foot's opening
     double kPal = 0, a = 0, aTarget = 0, aRate = 0, fade = 1, env = 0, age = 0, pg = 0, gl = 0, gr = 0;
+    double nb = 1; // its key's own bend (MPE), where the glide is
     bool down = false, fading = false, dead = false, inUse = false;
     std::array<Pipe *, RANKS> list{};
     int nList = 0;
@@ -162,9 +181,10 @@ class PipeEngine : public Engine {
   const double fOS, h;
   uint32_t seed = 1;
   // the voicing each version was built for (a ring the worker reads)
-  struct Design { std::atomic<double> cutup{1}, gain{1}, offset{0.4}; };
+  struct Design { std::atomic<double> cutup{1}, gain{1}, offset{0.4}, ratio[12] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; };
   std::array<Design, 16> designs{};
   Voicing design;
+  Tuning tuning; // the keyboard's, as the current version's pipes are cut for it
   uint64_t version = 0;
   Data data;
   std::unique_ptr<KeyModels> offered;
@@ -178,6 +198,7 @@ class PipeEngine : public Engine {
   WindSystem wsys;
   double stiff = -1, trem = 0, tremPh = 0, nz = 0;
   double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
+  NoteExpression expr{MPE_BEND};  // each key's own bend
   // the decimator
   std::array<double, FIR_N> fir{};
   std::array<double, 2 * FIR_N> histL{}, histR{};

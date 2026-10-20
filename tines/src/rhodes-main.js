@@ -11,10 +11,11 @@ import { createChain } from '../../shared/chain.js';
 import { MotionView, PickupView, SpectrumView, MODE_COLORS, modeKind } from './rhodes-viz.js';
 import { SpectrogramView } from '../../shared/views.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto } from '../../shared/midi.js';
+import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto, pageMpe } from '../../shared/midi.js';
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
+import { connectQuality, qualityControl } from '../../shared/quality.js';
 
 const $ = (s) => document.querySelector(s);
 const [KEY_LO, KEY_HI] = INSTRUMENT.range;
@@ -63,6 +64,7 @@ function startAudio() {
     audio = { ctx, node, analyser, chain };
     applyMix();
     node.port.postMessage(paramsMessage());
+    connectQuality(node, { toast }); // the device's Quality (shared/quality.js)
     node.port.postMessage({ type: 'sustain', on: sustain });
     spectrum.setAnalyser(analyser); spectro.setAnalyser(analyser);
     if (ctx.state !== 'running') await ctx.resume();
@@ -87,7 +89,7 @@ function onWorklet(m) {
 // ---------------------------------------------------------------------------
 // notes
 
-async function noteOn(key, velocity) {
+async function noteOn(key, velocity, own) { // own: an MPE note's own bend (midi.js pageMpe)
   if (key < KEY_LO || key > KEY_HI) return;
   sounding.set(key, (sounding.get(key) || 0) + 1);
   sost.strike(key);
@@ -96,6 +98,7 @@ async function noteOn(key, velocity) {
   const data = noteData(key);
   const msg = { type: 'noteOn', key, velocity };
   if (sent.get(key) !== data[0]) { msg.data = data; sent.set(key, data[0]); }
+  for (const m of notes.strike(key, own)) a.node.port.postMessage(m);
   a.node.port.postMessage(msg);
   setFocus(key, velocity);
 }
@@ -179,17 +182,20 @@ function updateHelp() {
 
 const sost = createSostenuto(); // CC66
 let soft = false;               // CC67
+const notes = pageMpe({ post, params: () => P, groups: GROUPS }); // MPE: each note's own bend
 function initMIDI() {
   startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn') });
 }
 function onMIDI(ev) {
-  const [st, d1, d2] = ev.data, cmd = st & 0xf0;
-  if (cmd === 0x90 && d2 > 0) noteOn(d1, INSTRUMENT.midiVelocity(touched(d2 / 127) * (soft ? SOFT_PEDAL : 1))); // hammer speed, m/s
+  const [st, d1, d2] = ev.data, cmd = st & 0xf0, mpe = notes.midi(ev.data);
+  if (mpe.own) return;
+  if (cmd === 0x90 && d2 > 0) noteOn(d1, INSTRUMENT.midiVelocity(touched(d2 / 127) * (soft ? SOFT_PEDAL : 1)), mpe.with); // hammer speed, m/s
   else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) noteOff(d1);
   else if (cmd === 0xb0 && d1 === 64) setSustain(d2 >= 64);
   else if (cmd === 0xb0 && d1 === 66) { for (const k of sost.set(d2 >= 64, sounding.keys())) if (!sounding.has(k)) release(k); }
   else if (cmd === 0xb0 && d1 === 67) soft = d2 >= 64;
   else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) panic();
+  else if (cmd === 0xe0) post({ type: 'bend', value: Math.max(-1, ((d2 << 7) + d1 - 8192) / 8191) }); // the tuning springs slide
 }
 
 // ---------------------------------------------------------------------------
@@ -217,15 +223,24 @@ function buildControls() {
       const wrap = document.createElement('div');
       wrap.className = 'param';
       if (p.perform) wrap.dataset.perform = ''; // above the keys in Perform (shared/layout.js)
-      wrap.innerHTML = `<div class="row"><label for="p-${p.id}">${p.label}</label><span class="val"></span></div>`;
-      const input = document.createElement('input');
-      input.type = 'range'; input.min = 0; input.max = 1000; input.step = 1; input.id = `p-${p.id}`;
-      input.addEventListener('input', () => setParam(p.id, fromSlider(p, +input.value), true));
-      input.addEventListener('dblclick', () => setParam(p.id, p.def));
+      let input;
+      if (p.type === 'select') { // the venue and the tuning's choices: the option's own value (a number, for the pitch)
+        wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;
+        input = document.createElement('select');
+        input.id = `p-${p.id}`;
+        for (const [k, name] of p.options) input.add(new Option(name, k));
+        input.addEventListener('change', () => { setParam(p.id, p.options[input.selectedIndex][0]); input.blur(); });
+      } else {
+        wrap.innerHTML = `<div class="row"><label for="p-${p.id}">${p.label}</label><span class="val"></span></div>`;
+        input = document.createElement('input');
+        input.type = 'range'; input.min = 0; input.max = 1000; input.step = 1; input.id = `p-${p.id}`;
+        input.addEventListener('input', () => setParam(p.id, fromSlider(p, +input.value), true));
+        input.addEventListener('dblclick', () => setParam(p.id, p.def));
+      }
       wrap.appendChild(input);
       if (p.hint) { const h = document.createElement('div'); h.className = 'hint'; h.textContent = p.hint; wrap.appendChild(h); }
       det.appendChild(wrap);
-      controls.set(p.id, { p, input, val: wrap.querySelector('.val') });
+      controls.set(p.id, { p, input, val: wrap.querySelector('.val'), wrap });
     }
     $('#groups').appendChild(det);
   }
@@ -243,12 +258,18 @@ function buildControls() {
 function refreshControl(id, dragging = false) {
   const c = controls.get(id);
   if (!c) return;
+  if (c.p.type === 'select') { c.input.value = P[id]; return; }
   if (!dragging) c.input.value = toSlider(c.p, P[id]);
   c.val.textContent = c.p.fmt ? c.p.fmt(P[id]) : String(P[id]);
+}
+// the tuning's root and custom cents show only for a temperament that uses them
+function refreshVisibility() {
+  for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(P) : false;
 }
 function setAll(np) {
   P = np;
   for (const id of controls.keys()) refreshControl(id);
+  refreshVisibility();
   post(paramsMessage()); applyMix(); updateHelp(); save();
   modelChanged();
 }
@@ -262,8 +283,9 @@ function setParam(id, v, dragging = false) {
   $('#preset').value = '';
   if (p.kind === 'play') { updateHelp(); return; }
   if (p.kind === 'mix') { applyMix(); return; }
-  // 'model': the key models (and their version) follow P, so the next note sends new data (and
-  // the engine has P too, for a key it builds itself)
+  // 'model', and the tuning's (no kind): the key models (and their version) follow P, so the next
+  // note sends new data (and the engine has P too, for a key it builds itself)
+  refreshVisibility();
   post(paramsMessage());
   clearTimeout(mcTimer);
   mcTimer = setTimeout(modelChanged, 120);
@@ -373,8 +395,10 @@ $('#speed').addEventListener('change', (e) => { motion.speed = +e.target.value; 
 
 buildControls();
 for (const id of controls.keys()) refreshControl(id);
+refreshVisibility();
 updateHelp();
 keyboardView.labels(keyLabels());
 setFocus(60, P.velocity);
 precompute();
 attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v) => setAll({ ...P, ...v }), toast }); // your own presets and links
+qualityControl(); // the device's Quality, after the controls

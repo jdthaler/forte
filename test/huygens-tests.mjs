@@ -343,6 +343,22 @@ await test('the design tuning: equal temperament; 5-limit just above the tonic; 
   for (let k = INSTRUMENT.range[0]; k <= INSTRUMENT.range[1]; k++) { const d = c(tunedFreq(k, P) / keyFreq(k)); assert.ok(Math.abs(d) <= 33.5 && tunedFreq(k, P) === tunedFreq(k, { ...P }), `key ${k}: ${d}`); dev.push(Math.abs(d)); }
   assert.ok(Math.max(...dev) > 25 && new Set(dev.map((d) => d.toFixed(3))).size > 50, 'every key its own');
 });
+await test('the keyboard\'s tuning, on top of the lamps\': uncoupled, the engine\'s own E4 at A = 415 Hz is 101.27 ¢ low; in ¼-comma meantone E4 −3.42 ¢, C4 +10.26 ¢, A4 at 440 Hz; with just intonation each key takes both, and the page\'s design frequency is the engine\'s', () => {
+  const play = (k, o) => {
+    const e = new HuygensEngine(FS), L = new Float32Array(128), R = new Float32Array(128);
+    e.setParams({ ...DEFAULTS, pitchHold: 0, kick: 0, ...o });
+    e.noteOn(k, 1); // no note data: the engine's own tuning
+    for (let s = 0; s < 1.5 * FS; s += 128) e.process(L, R, 128);
+    return e.report(1.0)[0].f;
+  };
+  const JUST = [1, 16 / 15, 9 / 8, 6 / 5, 5 / 4, 4 / 3, 45 / 32, 3 / 2, 8 / 5, 5 / 3, 9 / 5, 15 / 8];
+  for (const [o, k, want] of [[{ pitch: 415 }, 64, keyFreq(64) * 415 / 440], [{ temperament: 'meantone' }, 64, keyFreq(64) * 2 ** (-3.42 / 1200)],
+    [{ temperament: 'meantone' }, 60, keyFreq(60) * 2 ** (10.26 / 1200)], [{ temperament: 'meantone' }, 69, 440],
+    [{ tuning: 'just', pitch: 415 }, 64, keyFreq(60) * JUST[4] * 415 / 440]]) {
+    assert.ok(Math.abs(c(play(k, o) / want)) < 0.01, `${JSON.stringify(o)}, key ${k}: ${c(play(k, o) / want).toFixed(3)} ¢`);
+    assert.ok(Math.abs(c(tunedFreq(k, { ...DEFAULTS, ...o }) / want)) < 0.01, `${JSON.stringify(o)}, key ${k}: the page's design frequency`);
+  }
+});
 await test('the lock map: with the supply\'s sag vanishing, the simulated points (the engine) find the exact map\'s locks; with sag, they are reproducible', () => {
   const P = { ...DEFAULTS, rSrc: 0 };
   for (let cents = 0; cents <= 1200; cents += 37) {
@@ -360,6 +376,17 @@ await test('finite output and sane level across settings', () => {
     assert.ok(r.finite && r.pk < 5, JSON.stringify(eng));
   }
 });
+await test('Quality: nothing to trim (every lamp kicks every other, so leaving one out would move where they lock): Medium and Low play 24 coupled lamps exactly as High', () => {
+  const render = (quality) => {
+    const e = new HuygensEngine(FS); e.setQuality(quality); e.setParams({ kick: 0.08 });
+    for (let i = 0; i < 24; i++) e.noteOn(36 + 2 * i, 1, { f: keyFreq(36 + 2 * i) });
+    const L = new Float32Array(128), R = new Float32Array(128), out = new Float32Array(0.5 * FS);
+    for (let s = 0; s < out.length; s += 128) { e.process(L, R, 128); out.set(L.subarray(0, Math.min(128, out.length - s)), s); }
+    return out;
+  };
+  const hi = render('high');
+  for (const quality of ['medium', 'low']) { const q = render(quality); for (let i = 0; i < hi.length; i++) if (q[i] !== hi[i]) throw new Error(`${quality} differs at sample ${i}`); }
+});
 await test('performance: 24 oscillators', () => {
   const e = new HuygensEngine(FS); e.setParams({ kick: 0.08 });
   for (let i = 0; i < 24; i++) e.noteOn(36 + 2 * i, 1, { f: keyFreq(36 + 2 * i) });
@@ -370,6 +397,65 @@ await test('performance: 24 oscillators', () => {
   const ms = performance.now() - t0, audio = (blocks * 128 * 1000) / FS;
   console.log(`        ${(100 * ms / audio).toFixed(1)} % of one core`);
   assert.ok(ms < 0.4 * audio);
+});
+
+console.log('MPE');
+// A note's bend turns its own lamp's timing resistor (R/r); the coupling is every lamp's (no slide).
+// Events [t, fn(engine)] in 128-sample blocks; the left channel and the engine.
+function play(eng, events, sec, fs = FS) {
+  const e = new HuygensEngine(fs);
+  e.setParams({ pitchHold: 0, ...eng });
+  const n = Math.round(sec * fs), out = new Float32Array(n), L = new Float32Array(128), R = new Float32Array(128);
+  const ev = events.map(([t, f]) => [Math.round(t * fs), f]);
+  let j = 0;
+  for (let s = 0; s < n; s += 128) {
+    while (j < ev.length && ev[j][0] <= s) ev[j++][1](e);
+    e.process(L, R, 128);
+    out.set(L.subarray(0, Math.min(128, n - s)), s);
+  }
+  return { out, e };
+}
+const bend = (key, r) => (e) => e.handle({ type: 'noteBend', key, value: r });
+const lamp = (key, f = keyFreq(key)) => (e) => e.noteOn(key, 1, { f });
+const same = (a, b) => a.every((v, i) => v === b[i]);
+await test('a note\'s own bend turns its lamp\'s resistor: a lone lamp plays f·r (from its firings, within 0.01 ¢) from ±1 to ±48 semitones, bent before the note or while it sounds; a lamp held beside it keeps its pitch', () => {
+  for (const st of [-48, -24, -12, -1, 1, 12, 24, 48]) {
+    const r = 2 ** (st / 12);
+    for (const ev of [[[0, bend(60, r)], [0, lamp(60)], [0, lamp(67)]], [[0, lamp(60)], [0, lamp(67)], [0.5, bend(60, r)]]]) {
+      const { e } = play({ kick: 0 }, ev, 2.5), [a, b] = e.report(1.0);
+      assert.ok(Math.abs(c(a.f / (keyFreq(60) * r))) < 0.01, `${st} semitones: ${c(a.f / keyFreq(60)).toFixed(3)} ¢`);
+      assert.ok(Math.abs(a.fTarget / (keyFreq(60) * r) - 1) < 1e-12, 'its target bent');
+      assert.ok(Math.abs(c(b.f / keyFreq(67))) < 0.01, `${st} semitones: the other lamp ${c(b.f / keyFreq(67)).toFixed(3)} ¢`);
+    }
+  }
+});
+await test('bending is retuning: a lamp bent by r fires as one built for f·r, sample for sample, alone and in a coupled chord with the servo on', () => {
+  const r = 2 ** (7.3 / 12), keys = [48, 55, 60, 64, 67];
+  for (const eng of [{ kick: 0 }, { kick: 0.055, pitchHold: 1 }]) {
+    const a = play(eng, [[0, bend(60, r)], ...keys.map((k) => [0, lamp(k)])], 1).out, b = play(eng, keys.map((k) => [0, lamp(k, k === 60 ? keyFreq(k) * r : keyFreq(k))]), 1).out;
+    assert.ok(same(a, b), JSON.stringify(eng));
+  }
+});
+await test('the pitch servo holds the bent pitch: a lamp bent a fourth while sounding lands there, and the keyboard keeps its own', () => {
+  const { e } = play({ kick: 0, pitchHold: 1 }, [[0, lamp(60)], [0, lamp(67)], [0.5, bend(60, 2 ** (5 / 12))]], 3), [a, b] = e.report(1.0);
+  assert.ok(Math.abs(c(a.f / (keyFreq(60) * 2 ** (5 / 12)))) < 0.5 && Math.abs(c(b.f / keyFreq(67))) < 0.5, `${c(a.f / keyFreq(60)).toFixed(2)} ¢, ${c(b.f / keyFreq(67)).toFixed(2)} ¢`);
+});
+await test('noteBend(1) and slide (the coupling is no one lamp\'s) leave the firings bit for bit as they were', () => {
+  const keys = [48, 60, 67], plain = play({ kick: 0.055, pitchHold: 1 }, keys.map((k) => [0, lamp(k)]), 1).out;
+  const x = play({ kick: 0.055, pitchHold: 1 }, [[0, bend(60, 1)], [0, (e) => e.handle({ type: 'slide', key: 60, value: 0.1 })], ...keys.map((k) => [0, lamp(k)]), [0.3, bend(60, 1)], [0.4, (e) => e.handle({ type: 'slide', key: 67, value: NaN })]], 1).out;
+  assert.ok(same(x, plain));
+});
+await test('bend sweeps of ±48 semitones on chords, sent every block, stay finite and bounded at 44.1, 48 and 96 kHz; a lamp bent past fs/4 stops there', () => {
+  for (const fs of [44100, 48000, 96000]) {
+    const keys = [21, 36, 60, 64, 67, 108], ev = keys.map((k) => [0, lamp(k)]);
+    for (let b = 0; b < (1 * fs) / 128; b++) keys.forEach((k, i) => ev.push([(b * 128) / fs, bend(k, 2 ** ((48 * Math.sin(b / (3 + i))) / 12))]));
+    const { out } = play({ kick: 0.055, pitchHold: 1 }, ev, 1, fs);
+    let pk = 0;
+    for (const v of out) { assert.ok(Number.isFinite(v), `${fs}: NaN`); pk = Math.max(pk, Math.abs(v)); }
+    assert.ok(pk > 0.01 && pk < 5, `${fs}: peak ${pk.toFixed(2)}`);
+    const { e } = play({ kick: 0 }, [[0, bend(108, 16)], [0, lamp(108)]], 0.5, fs), [o] = e.report(0.2);
+    assert.ok(Math.abs(c(o.f / (fs / 4))) < 0.01, `${fs}: C8 bent four octaves plays ${o.f.toFixed(1)} Hz`);
+  }
 });
 
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');

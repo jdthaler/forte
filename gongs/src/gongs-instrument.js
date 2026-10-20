@@ -3,6 +3,7 @@
 // plugins (tools/gen-native-params.mjs) all start here. No DOM, no Web Audio.
 
 import { GROUPS, DEFAULTS, PRESETS } from './gongs-params.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -10,10 +11,11 @@ export const INSTRUMENT = {
   id: 'gongs',
   groups: GROUPS,
   presets: PRESETS,
-  keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
+  keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                     // MIDI keys: A0–C8
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'strike',                   // CC1: strike point, from its default (near the centre) out to 95 % of the radius
+  mpe: { slide: true },                 // a note's own slide: where its mallet lands, at the strike (a plate cannot bend)
   // the engine: the physics in C++ (native/instruments/gongs), built as WebAssembly (it builds its
   // own coupling tables)
   wasm: { name: 'GongWasmEngine', module: new URL('./gongs-wasm.js', import.meta.url).href, binary: new URL('../wasm/gongs.wasm', import.meta.url).href },

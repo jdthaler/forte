@@ -22,6 +22,8 @@
 #include <cmath>
 #include <vector>
 
+#include "forte/tuning.h"
+
 namespace forte::quantum {
 
 constexpr double DC_FADE = 0.06; // s: the electrode's AC coupling, a raised-cosine fade of the Franck–Condon reference
@@ -45,13 +47,14 @@ double morseX(int m, int n, double kap);
 double kepler(double nc, int l = HYDROGEN_L);
 
 // The knobs a packet depends on (the descriptor's P: potential, eta, lock, bpm, beats, nbar,
-// sigma, detector).
+// sigma, detector), and the keyboard's tuning: a key's pitch is keyFreq(key) · tuning.ratio(key).
 struct PacketParams {
   int potential = box;
   double eta = 0.5;
   bool lock = true;
   double bpm = 90, beats = 2, nbar = 40, sigma = 2;
   int detector = antenna;
+  forte::Tuning tuning{};
   bool operator==(const PacketParams &) const = default;
 };
 

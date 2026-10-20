@@ -222,6 +222,18 @@ test('every key is within ±3 ¢ of 12-TET A440 in the engine output', () => {
   assert.ok(worst < 3, `key ${wk}: ${worst.toFixed(3)} ¢`);
   note(`worst key ${wk}: ${worst.toFixed(3)} ¢`);
 });
+test('the keyboard’s tuning: at A = 415 Hz a reed is cut to 415/440 of its 12-TET pitch; in ¼-comma meantone E4 −3.42 ¢, C4 +10.26 ¢ (model and output)', () => {
+  // ¼-comma meantone on C, A kept: E a fifth's narrowing (q − 700) from 12-TET, C 2100 − 3q
+  const q = 1200 * Math.log2(3 / 2) - 300 * Math.log2(81 / 80);
+  for (const [o, m, want] of [[{ pitch: 415 }, 64, cents(415, 440)], [{ pitch: 415 }, 60, cents(415, 440)], [{ temperament: 'meantone' }, 64, q - 700], [{ temperament: 'meantone' }, 60, 2100 - 3 * q]]) {
+    const f = keyFreq(m) * 2 ** (want / 1200), k = keyModel(m, P(o), 2 * FS);
+    assert.ok(Math.abs(cents(k.reed.omega[0] / TAU, f)) < 0.01, `${JSON.stringify(o)} ${m}: cut to ${k.reed.omega[0] / TAU} Hz`);
+    assert.ok(k.packed[0] !== keyModel(m, P(), 2 * FS).packed[0], 'a new version of the reed');
+    const { L } = render(m, P({ ...DRY, ...o }), 0.5, 0.75);
+    const c = cents(freqNear(L, f, Math.round(0.08 * FS), Math.round(0.3 * FS), Math.round(0.3 * FS)), f);
+    assert.ok(Math.abs(c) < 3, `${JSON.stringify(o)} ${m}: ${c.toFixed(3)} ¢`);
+  }
+});
 test('past A1–C7 (Full range): the solder graded on (halving about every octave), every reed cut to its pitch, A0 and C8 on pitch in the output and finite at the solder knob\'s ends', () => {
   for (let m = KEY_MIN; m <= KEY_MAX; m++) {
     if (m >= KEY_LO && m <= KEY_HI) continue;
@@ -410,6 +422,35 @@ test('knobs glide: gap, reed height and output switches mid-note do not click', 
     for (let i = c + 7200; i < c + 9600; i++) typ = Math.max(typ, Math.abs(L[i] - L[i - 1]));
     for (let i = c; i < c + 2400; i++) jump = Math.max(jump, Math.abs(L[i] - L[i - 1]));
     assert.ok(jump < 1.5 * typ, `${JSON.stringify(change)}: jump ${(jump / typ).toFixed(2)}× the note's largest step`);
+  }
+});
+test('Quality: Medium and Low sound fewer reeds and stay stable; a note keeps its pitch and level', () => {
+  const at = (q, params, events, sec) => {
+    const e = new ReedEngine(FS); e.setQuality(q); e.setParams(params);
+    const [L] = renderEngine(e, sec, events, FS);
+    return { L, e };
+  };
+  // a pedalled run of 30 keys: the voice limit holds
+  const run = [[0, 'sus', true]];
+  for (let i = 0; i < 30; i++) run.push([i * 0.05, 'on', 40 + i, 0.8], [i * 0.05 + 0.04, 'off', 40 + i]);
+  const level = {};
+  for (const [q, cap] of [['high', 32], ['medium', 20], ['low', 10]]) {
+    const { e } = at(q, P(), run, 1.6);
+    assert.ok(e.voiceCount() <= cap && (q !== 'high' || e.voiceCount() === 30), `${q}: ${e.voiceCount()} voices`);
+    for (const m of [45, 81]) {
+      const { L } = at(q, P(DRY), [[0, 'on', m, 0.6]], 0.75), f = keyFreq(m);
+      assert.ok(L.every(Number.isFinite), q);
+      const fm = freqNear(L, f, Math.round(0.08 * FS), Math.round(0.3 * FS), Math.round(0.3 * FS));
+      assert.ok(Math.abs(cents(fm, f)) < 3, `${q} ${m}: ${cents(fm, f).toFixed(2)} ¢`);
+      level[q + m] = Math.sqrt(L.reduce((a, v) => a + v * v, 0));
+      assert.ok(Math.abs(dB(level[q + m], level['high' + m])) < 1.5, `${q} ${m}: ${dB(level[q + m], level['high' + m]).toFixed(2)} dB from High`);
+    }
+    // every slider at its max, then its min: finite and bounded
+    const sliders = GROUPS.flatMap((g) => g.params).filter((p) => p.type !== 'select' && p.type !== 'checkbox');
+    for (const end of ['max', 'min']) for (const m of [KEY_LO, KEY_HI]) {
+      const { L } = at(q, P(Object.fromEntries(sliders.map((p) => [p.id, p[end]]))), [[0, 'on', m, 1]], 0.25);
+      assert.ok(L.every((v) => Number.isFinite(v) && Math.abs(v) < 2), `${q}: every slider at its ${end}, key ${m}`);
+    }
   }
 });
 test('CPU: 10 sounding voices at ≤ 30 % of real time', () => {

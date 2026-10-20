@@ -1,8 +1,11 @@
 // plugin-tests.cpp — the shared CLAP plugin driven as a host drives it, on the smoke-test
-// instrument: any sample rate and block size, notes and MIDI, presets, controllers, state.
+// instrument: any sample rate and block size, notes and MIDI, presets, controllers, state, and MPE
+// (from MIDI, and as CLAP's note expressions).
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <numbers>
 #include <string>
 #include <vector>
 
@@ -27,6 +30,22 @@ struct Events { // a host's event lists
   void note(uint32_t t, bool on, int key, double vel) {
     clap_event_note_t e{{sizeof e, t, CLAP_CORE_EVENT_SPACE_ID, (uint16_t)(on ? CLAP_EVENT_NOTE_ON : CLAP_EVENT_NOTE_OFF), 0}, -1, 0, 0, (int16_t)key, vel};
     add(e);
+  }
+  void note(uint32_t t, bool on, int channel, int key, double vel) {
+    clap_event_note_t e{{sizeof e, t, CLAP_CORE_EVENT_SPACE_ID, (uint16_t)(on ? CLAP_EVENT_NOTE_ON : CLAP_EVENT_NOTE_OFF), 0}, -1, 0, (int16_t)channel, (int16_t)key, vel};
+    add(e);
+  }
+  void expression(uint32_t t, int id, int channel, int key, double v) {
+    clap_event_note_expression_t e{{sizeof e, t, CLAP_CORE_EVENT_SPACE_ID, CLAP_EVENT_NOTE_EXPRESSION, 0}, (clap_note_expression)id, -1, 0, (int16_t)channel, (int16_t)key, v};
+    add(e);
+  }
+  // MPE's configuration message on a master (channel 0 or 15): `members` member channels
+  void mcm(uint32_t t, int master, int members) {
+    midi(t, 0xb0 | master, 101, 0); midi(t, 0xb0 | master, 100, 6); midi(t, 0xb0 | master, 6, members);
+  }
+  void bend(uint32_t t, int channel, double v) { // −1 … 1
+    const int b = std::clamp((int)std::lround(v * 8191) + 8192, 0, 16383);
+    midi(t, 0xe0 | channel, b & 127, b >> 7);
   }
   void midi(uint32_t t, uint8_t a, uint8_t b, uint8_t c) {
     clap_event_midi_t e{{sizeof e, t, CLAP_CORE_EVENT_SPACE_ID, CLAP_EVENT_MIDI, 0}, 0, {a, b, c}};
@@ -84,6 +103,20 @@ struct Instance {
     return L;
   }
 };
+
+// the amplitude of the tone at f Hz in x[a … b)
+double tone(const std::vector<float> &x, double f, double fs, int a, int b) {
+  double c = 0, d = 0;
+  for (int i = a; i < b; i++) { c += x[i] * std::cos(2 * std::numbers::pi * f * i / fs); d += x[i] * std::sin(2 * std::numbers::pi * f * i / fs); }
+  return 2 * std::hypot(c, d) / (b - a);
+}
+// the loudest of the frequencies `fs` in x[a … b), as an index
+int loudest(const std::vector<float> &x, std::initializer_list<double> fs, int a, int b) {
+  int best = -1, k = 0;
+  double m = 0;
+  for (double f : fs) { const double t = tone(x, f, 48000, a, b); if (t > m) { m = t; best = k; } k++; }
+  return best;
+}
 
 double peak(const std::vector<float> &x, int a = 0, int b = -1) {
   double m = 0;
@@ -156,6 +189,34 @@ TEST("plugin: the velocity curve bends MIDI velocity; the soft pedal strikes sof
   in.params->value_to_text(in.p, in.id("Velocity curve"), 2, text, sizeof text);
   CHECK(!std::strcmp(text, "Hard"));
 }
+TEST("plugin: Quality is the plugin's own (High by default, not automatable), reaches the engine, and is High when the host renders offline") {
+  // two notes at once: the smoke engine plays one voice at Low
+  auto level = [](double quality, bool offline) {
+    Instance in(48000);
+    if (offline) {
+      auto render = (const clap_plugin_render_t *)in.p->get_extension(in.p, CLAP_EXT_RENDER);
+      CHECK(render && !render->has_hard_realtime_requirement(in.p));
+      in.p->stop_processing(in.p);
+      CHECK(render->set(in.p, CLAP_RENDER_OFFLINE));
+      in.p->start_processing(in.p);
+    }
+    Events ev;
+    ev.param(0, in.id("Quality"), quality);
+    ev.note(10, true, 60, 0.8); ev.note(10, true, 67, 0.8);
+    return peak(in.run(9600, 128, ev));
+  };
+  const double high = level(0, false), low = level(2, false);
+  CHECK(high > 0.25 && low > 0.1 && low < 0.2);         // two voices, then one
+  CHECK(std::fabs(level(1, false) - high) < 1e-9);      // Medium: eight voices, both play
+  CHECK(std::fabs(level(2, true) - high) < 1e-9);       // offline: High
+  Instance in(48000);
+  CHECK(in.value("Quality") == 0);
+  char text[64];
+  CHECK(in.params->value_to_text(in.p, in.id("Quality"), 2, text, sizeof text) && std::string(text) == "Low");
+  clap_param_info_t info;
+  for (uint32_t i = 0; i < in.params->count(in.p); i++) if (in.params->get_info(in.p, i, &info) && info.id == in.id("Quality")) break;
+  CHECK(!(info.flags & CLAP_PARAM_IS_AUTOMATABLE) && std::string(info.module) == "CPU");
+}
 TEST("plugin: the sostenuto pedal holds the keys down as it goes down, and only those") {
   Instance in(48000);
   Events ev;
@@ -203,6 +264,7 @@ TEST("plugin: state saved and loaded into a new instance, by parameter id") {
     Events ev;
     ev.param(0, a.id("Ring time"), 3.5);
     ev.param(0, a.id("Volume"), 0.25);
+    ev.param(0, a.id("Quality"), 1);
     a.run(128, 128, ev);
     clap_ostream_t os{&saved, [](const clap_ostream_t *s, const void *b, uint64_t n) -> int64_t { ((std::string *)s->ctx)->append((const char *)b, n); return (int64_t)n; }};
     CHECK(a.state->save(a.p, &os));
@@ -218,6 +280,7 @@ TEST("plugin: state saved and loaded into a new instance, by parameter id") {
   b.run(128, 128, none);
   CHECK(std::fabs(b.value("Ring time") - 3.5) < 1e-12);
   CHECK(std::fabs(b.value("Volume") - 0.25) < 1e-12);
+  CHECK(b.value("Quality") == 1); // the project keeps its Quality
 }
 TEST("plugin: values read as the page shows them, and typed values are understood") {
   Instance in(48000);
@@ -269,6 +332,90 @@ TEST("plugin: the editor's calls set parameters, play notes and show what the ho
   L = in.run(4800, 128, none);
   CHECK(call("[\"poll\"]").find("\"keys\": []") != std::string::npos);
   CHECK(call("[\"set\", 99, 1]") == "null" && call("[\"nonsense\"]") == "null" && call("not json") == "error");
+}
+
+const double kC4 = 261.6255653005986, kE4 = 329.6275569128699;
+const double up(double f, double semitones) { return f * std::pow(2.0, semitones / 12); }
+
+TEST("plugin: MPE on Auto: plain MIDI until the configuration message, then each member channel bends and slides its own note") {
+  Instance in(48000);
+  CHECK(in.value("MPE") == 0); // Auto
+  Events ev;
+  ev.midi(0, 0x91, 60, 100); ev.midi(0, 0x92, 64, 100); // C4 on channel 2, E4 on 3
+  ev.bend(10, 1, 0.5);                                   // plain MIDI: the whole instrument, +1 semitone
+  auto L = in.run(9600, 128, ev);
+  CHECK(loudest(L, {up(kC4, 1), up(kC4, 24)}, 4800, 9600) == 0);
+  CHECK(loudest(L, {up(kE4, 1), kE4}, 4800, 9600) == 0);
+
+  Events mpe;
+  mpe.bend(0, 1, 0); mpe.midi(0, 0xb1, 74, 0); // as a controller sends them before its note
+  mpe.mcm(0, 0, 15);                          // the lower zone, 15 members
+  mpe.midi(0, 0x81, 60, 0); mpe.midi(0, 0x82, 64, 0);
+  mpe.bend(100, 1, 0.25);                     // ignored: no note on channel 2 yet
+  mpe.midi(200, 0x91, 60, 100);               // C4 struck at channel 2's bend: +12 semitones
+  mpe.midi(200, 0x92, 64, 100);
+  mpe.bend(4800, 2, -1.0 / 48);               // E4 down a semitone, C4 left where it is
+  L = in.run(14400, 128, mpe);
+  CHECK(loudest(L, {kC4, up(kC4, 12)}, 1000, 4800) == 1);
+  CHECK(loudest(L, {up(kC4, 12), kC4, up(kC4, 11)}, 9600, 14400) == 0);
+  CHECK(loudest(L, {kE4, up(kE4, -1)}, 9600, 14400) == 1);
+}
+
+TEST("plugin: MPE On needs no configuration message; Off never decodes one; the choice is saved") {
+  for (int mode : {1, 2}) {
+    Instance in(48000);
+    Events ev;
+    ev.param(0, in.id("MPE"), mode);
+    ev.mcm(0, 15, mode == 2 ? 15 : 0); // On: an upper zone of none leaves the lower zone as it was
+    ev.midi(10, 0x93, 60, 100);
+    ev.bend(10, 3, 0.25);               // +12 on MPE, +0.5 as plain MIDI
+    auto L = in.run(9600, 128, ev);
+    CHECK(loudest(L, {up(kC4, 12), up(kC4, 0.5)}, 4800, 9600) == (mode == 1 ? 0 : 1));
+    std::string saved;
+    clap_ostream_t os{&saved, [](const clap_ostream_t *s, const void *b, uint64_t n) -> int64_t { ((std::string *)s->ctx)->append((const char *)b, n); return (int64_t)n; }};
+    CHECK(in.state->save(in.p, &os));
+    CHECK(saved.find("\nmpe " + std::to_string(mode) + "\n") != std::string::npos);
+  }
+}
+
+TEST("plugin: RPN 0 on a member sets the zone's bend range; a note struck plain after an MPE note on its key starts unbent") {
+  Instance in(48000);
+  Events ev;
+  ev.mcm(0, 0, 7);
+  ev.midi(0, 0xb2, 101, 0); ev.midi(0, 0xb2, 100, 0); ev.midi(0, 0xb2, 6, 12); // ±12 semitones
+  ev.bend(0, 4, 0.5);
+  ev.midi(10, 0x94, 60, 100);
+  auto L = in.run(9600, 128, ev);
+  CHECK(loudest(L, {up(kC4, 6), up(kC4, 24)}, 4800, 9600) == 0);
+  Events plain;
+  plain.midi(0, 0x84, 60, 0);
+  plain.midi(4800, 0x90, 60, 100); // on the master: a plain note
+  L = in.run(14400, 128, plain);
+  CHECK(loudest(L, {kC4, up(kC4, 6)}, 9600, 14400) == 0);
+}
+
+TEST("plugin: CLAP's note expressions bend and slide one note; the AU wrapper's channel-wide bend and pressure are the channel's MIDI") {
+  Instance in(48000);
+  Events ev;
+  ev.note(0, true, 0, 60, 0.8); ev.note(0, true, 0, 64, 0.8);
+  ev.expression(10, CLAP_NOTE_EXPRESSION_TUNING, 0, 64, -2); // E4 down a tone (Bitwig, VST3's tuning)
+  ev.expression(10, CLAP_NOTE_EXPRESSION_BRIGHTNESS, 0, 60, 0); // C4's own ring time: the wheel at rest, the default
+  auto L = in.run(9600, 128, ev);
+  CHECK(loudest(L, {kE4, up(kE4, -2)}, 4800, 9600) == 1);
+  CHECK(loudest(L, {kC4, up(kC4, -2)}, 4800, 9600) == 0);
+  Events au;
+  au.expression(0, CLAP_NOTE_EXPRESSION_TUNING, 0, -1, 1); // the wheel half up, as the AU wrapper sends it: +1 semitone, every note
+  L = in.run(9600, 128, au);
+  CHECK(loudest(L, {kC4, up(kC4, 1)}, 4800, 9600) == 1);
+  CHECK(loudest(L, {up(kE4, -2), up(kE4, -1)}, 4800, 9600) == 1);
+  // a slide shortens one note's ring: fully up, the wheel's top (10 s) from the default 1 s
+  Events slide;
+  slide.note(0, true, 0, 72, 0.8);
+  slide.expression(0, CLAP_NOTE_EXPRESSION_BRIGHTNESS, 0, 72, 1);
+  slide.note(0, true, 0, 76, 0.8);
+  L = in.run(48000, 128, slide);
+  const double c5 = tone(L, up(kC4, 13), 48000, 36000, 48000), e5 = tone(L, up(kE4, 13), 48000, 36000, 48000);
+  CHECK(c5 > 5 * e5);
 }
 
 int main() { return check::run(); }

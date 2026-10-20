@@ -15,10 +15,15 @@
 //   touch() is the velocity curve the player chose (every page shares it, from the menu startMIDI
 //   puts beside the #midi status), touched(v) a MIDI velocity (0..1) through it; SOFT_PEDAL
 //   scales the velocity of keys struck under CC67; createSostenuto() keeps the keys CC66 holds.
-//   The plugins do the same (native/plugin/plugin.cpp: kTouchGamma, kSoftPedal, sostenutoPedal).
+//   mpeMode() is MPE's mode the player chose (shared/mpe.js: 'auto', 'on' or 'off'; every page
+//   shares it, from a menu beside the velocity curve's); pageMpe() decodes it for a page.
+//   The plugins do the same (native/plugin/plugin.cpp: kTouchGamma, kSoftPedal, sostenutoPedal, kMpeId).
+
+import { MODES, createMpe, bendRatio } from './mpe.js';
 
 const KEY = 'forte/midi/v1';
 const TOUCH_KEY = 'forte/touch/v1';
+const MPE_KEY = 'forte/mpe/v1';
 
 // The velocity curve: v^γ. Soft makes a light touch louder, Hard asks for a firmer one.
 export const TOUCH = [{ name: 'Soft', gamma: 0.6 }, { name: 'Normal', gamma: 1 }, { name: 'Hard', gamma: 1.6 }];
@@ -32,6 +37,14 @@ export function setTouch(i) {
   try { localStorage.setItem(TOUCH_KEY, String(i)); } catch { /* storage blocked */ }
 }
 export const touched = (v) => v ** TOUCH[touchIndex].gamma;
+let mpe = 'auto';
+try { const m = localStorage.getItem(MPE_KEY); if (MODES.some(([id]) => id === m)) mpe = m; } catch { /* storage blocked, or Node */ }
+export const mpeMode = () => mpe;
+export function setMpeMode(m) {
+  if (!MODES.some(([id]) => id === m)) return;
+  mpe = m;
+  try { localStorage.setItem(MPE_KEY, m); } catch { /* storage blocked */ }
+}
 // Without the User Activation API (older browsers), let the notes through as before.
 const mayPlay = () => !navigator.userActivation || navigator.userActivation.hasBeenActive;
 // (shell.js is imported here only when needed: the tools import this module in Node)
@@ -75,6 +88,7 @@ export function startMIDI({ onMIDI, status = () => {}, button = null }) {
     acc.onstatechange = bind;
     if (button) button.hidden = true;
     touchMenu();
+    mpeMenu();
   }, () => status('MIDI: permission denied'));
 }
 
@@ -90,6 +104,20 @@ function touchMenu() {
   el.value = String(touchIndex);
   el.addEventListener('change', () => { setTouch(+el.value); el.blur(); });
   pill.after(el);
+}
+
+// MPE's menu, after the velocity curve's.
+function mpeMenu() {
+  const after = document.querySelector('#touch') ?? document.querySelector('#midi');
+  if (!after || document.querySelector('#mpe')) return;
+  const el = document.createElement('select');
+  el.id = 'mpe';
+  el.title = 'MPE: a controller that gives each note a MIDI channel of its own, so each finger bends, slides and presses its own note. Auto turns it on when the controller says it sends MPE.';
+  el.setAttribute('aria-label', 'MPE');
+  for (const [id, name] of MODES) el.add(new Option(`MPE: ${name.toLowerCase()}`, id));
+  el.value = mpe;
+  el.addEventListener('change', () => { setMpeMode(el.value); el.blur(); });
+  after.after(el);
 }
 
 /**
@@ -116,6 +144,52 @@ export function createSostenuto() {
     strike(key) { holding.delete(key); },
     keys: () => holding,
     clear() { on = false; caught.clear(); holding.clear(); },
+  };
+}
+
+/**
+ * A page's MPE (shared/mpe.js, in the mode the player chose): each note's own bend, slide and
+ * pressure as the engine's messages, which shared/shell.js and the pages with their own MIDI post.
+ *   const notes = pageMpe({ post, params: () => P, modWheel })   (modWheel: the descriptor's, or none)
+ *   const r = notes.midi(data)   r.own: MPE's own message (the page does nothing more with it);
+ *                                r.with: a note-on's own expression, to post just before its noteOn
+ *   notes.strike(key, own)       what to post before a key's noteOn: its own (r.with), or, for a note
+ *                                without, a reset if the key had some
+ * A bend becomes { type: 'noteBend', key, value: the frequency ratio along the tuning }, a slide
+ * { type: 'slide', key, value: the mod wheel's parameter as the wheel would set it (NaN: none) },
+ * pressure { type: 'pressure', value, key }.
+ */
+export function pageMpe({ post, params, modWheel, groups = [] }) {
+  const wheel = modWheel && (typeof modWheel === 'string' ? { param: modWheel } : modWheel);
+  const p = wheel && groups.flatMap((g) => g.params).find((q) => q.id === wheel.param);
+  const expressed = new Set(); // keys the engine was given their own bend or slide
+  let gathering = null;        // a note-on's own, gathered to go with it
+  const express = (m) => { expressed.add(m.key); if (gathering) gathering.push(m); else post(m); };
+  const mpe = createMpe({
+    noteBend: (key, semitones) => express({ type: 'noteBend', key, value: bendRatio(params(), key, semitones) }),
+    noteSlide: (key, u) => { if (p) express({ type: 'slide', key, value: Number.isNaN(u) ? NaN : wheelValue(p, u * 127, wheel.max ?? p.max) }); },
+    notePressure: (key, value) => post({ type: 'pressure', value, key }),
+  });
+  let on = false;
+  return {
+    mpe,
+    midi(data) {
+      mpe.mode = mpeMode();
+      gathering = (data[0] & 0xf0) === 0x90 && data[2] > 0 ? [] : null;
+      const own = mpe.midi(data), got = gathering;
+      gathering = null;
+      if (mpe.active() !== on) {
+        on = mpe.active();
+        if (mpe.mode === 'auto') import('./shell.js').then(({ toast }) => toast(on ? `MPE on: each note on a channel of its own (${mpe.members(0) + mpe.members(1)} channels)` : 'MPE off'));
+      }
+      return { own, with: got?.length ? got : undefined };
+    },
+    strike(key, own) {
+      if (own) return own;
+      if (!expressed.has(key)) return [];
+      expressed.delete(key);
+      return [{ type: 'noteBend', key, value: 1 }, { type: 'slide', key, value: NaN }];
+    },
   };
 }
 

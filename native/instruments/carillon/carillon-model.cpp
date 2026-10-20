@@ -77,19 +77,19 @@ void historic(int key, const Rib &rib, double amount, Historic &out) {
   }
 }
 
-void bellSize(int key, int profile, double &D, double &mass) {
+void bellSize(int key, int profile, double &D, double &mass, double ratio) {
   const Rib &rib = ribFor(profile, key);
   const TableMode &nom = rib.modes[nominalOf(rib)];
-  const double fNom = 2 * keyFreq(key), lamNom = rib.lamPrime * nom.r * nom.r;
+  const double fNom = 2 * keyFreq(key) * ratio, lamNom = rib.lamPrime * nom.r * nom.r;
   D = (std::sqrt(lamNom) / TAU) * cBronze / fNom;
   mass = BRONZE.rho * rib.volume * std::pow(D, 3);
 }
 
-void bellOf(int key, int profile, double historicAmount, Bell &b) {
+void bellOf(int key, int profile, double historicAmount, Bell &b, double ratio) {
   const Rib &rib = ribFor(profile, key);
   const TableMode &nom = rib.modes[nominalOf(rib)];
-  b.key = key; b.profile = profile; b.rib = &rib;
-  b.fNom = 2 * keyFreq(key);
+  b.key = key; b.profile = profile; b.rib = &rib; b.ratio = ratio;
+  b.fNom = 2 * keyFreq(key) * ratio; // the rib is the key's; the bell is cast (sized) for its tuned nominal
   const double lamNom = rib.lamPrime * nom.r * nom.r;
   b.D = (std::sqrt(lamNom) / TAU) * cBronze / b.fNom;
   b.fPrime = b.fNom / nom.r;

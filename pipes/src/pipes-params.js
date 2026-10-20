@@ -2,6 +2,7 @@
 // it does to the sound.
 
 import { VENUE } from '../../shared/chain.js';
+import { TUNING_GROUP } from '../../shared/tuning.js';
 
 const pa = (v) => `${v.toFixed(0)} Pa (${(v / 9.81).toFixed(0)} mm of water)`;
 const times = (v) => `× ${v < 1 ? v.toFixed(2) : v.toFixed(1)}`;
@@ -29,7 +30,7 @@ export const GROUPS = [
   {
     title: 'Wind',
     params: [
-      { id: 'pressure', label: 'Wind pressure', perform: true, min: 150, max: 6000, def: 700, log: true, fmt: pa,
+      { id: 'pressure', label: 'Wind pressure', min: 150, max: 6000, def: 700, log: true, fmt: pa,
         hint: 'The pressure the bellows’ weights set. The jets go faster (U = √(2p/ρ)), the pipes louder and brighter, the pitch barely higher; far above the voiced 700 Pa the pipes overblow to their next mode (an open pipe’s octave, a stopped one’s twelfth), and come back only well below where they jumped (lower the cut-up to bring that within reach). Too little and the pipes speak late and weak, then barely at all. Mod wheel: up to 3000 Pa.' },
       { id: 'wind', label: 'Wind: steady … flexible', min: 0, max: 1, def: 0.35, step: 0.01, fmt: (v) => (v < 0.15 ? `steady (Schwimmer) ${(v * 100).toFixed(0)} %` : v > 0.85 ? `flexible (long trunk) ${(v * 100).toFixed(0)} %` : `${(v * 100).toFixed(0)} % flexible`),
         hint: 'Steady: a regulator in the chest holds the pressure. Flexible, the Baroque way: the chest is fed only through the trunk from the bellows, so big chords drain it, the pressure dips and the wind “breathes”, ringing at a few hertz.' },
@@ -57,11 +58,12 @@ export const GROUPS = [
   {
     title: 'Output',
     params: [
-      { id: 'room', label: 'Room (church)', perform: true, min: 0, max: 1, def: 0.55, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      { id: 'room', label: 'Room (church)', min: 0, max: 1, def: 0.55, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
+  TUNING_GROUP,
 ];
 
 export const DEFAULTS = Object.fromEntries(GROUPS.flatMap((g) => g.params).map((p) => [p.id, p.def]));

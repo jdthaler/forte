@@ -9,6 +9,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "forte/tuning.h"
+
 namespace forte::stars {
 
 constexpr int KEY_LO = 21, KEY_HI = 108; // A0–C8: the keys it plays
@@ -52,8 +54,9 @@ struct Rng {
   double operator()() { s ^= s << 13; s ^= s >> 17; s ^= s << 5; return s / 4294967296.0; }
 };
 
-// What builds a star: the kind, the track's mass and the speed-up.
-struct StarParams { int family = 0; double mass = 1, speedup = K0; };
+// What builds a star: the kind, the track's mass, the speed-up, and the keyboard's tuning (each
+// key's target pitch is its equal-tempered one times tuning.ratio(key): the star is found for it).
+struct StarParams { int family = 0; double mass = 1, speedup = K0; forte::Tuning tuning{}; };
 
 // A key's star: what the engine needs, per m component (keyStar's modes), and what the views draw.
 struct Star {

@@ -19,11 +19,14 @@ FORTE_EXPORT void organ_wheel_spec(int w, double *out) {
 FORTE_EXPORT int organ_key_wheel(int key, int d) { return keyWheel(key, d); }
 FORTE_EXPORT int organ_perc_wheel(int key, int third) { return percWheel(key, third != 0); }
 FORTE_EXPORT double organ_drawbar_gain(int n) { return drawbarGain(n); }
-// keyAnalysis(key, P) for tuning (0 gears, 1 et, 2 harmonic), levels (0 B-3, 1 flat) and mains
-// (Hz): per drawbar w, actual, ideal, cents, folded, db in out (54 numbers)
-FORTE_EXPORT void organ_key_analysis(int key, int tuning, int levels, double mains, double *out) {
+// keyAnalysis(key, P) for tuning (0 gears, 1 et, 2 harmonic), levels (0 B-3, 1 flat), mains
+// (Hz) and the keyboard's tuning (each pitch class's ratio, C first, in ratio[12]): per drawbar
+// w, actual, ideal, cents, folded, db in out (54 numbers)
+FORTE_EXPORT void organ_key_analysis(int key, int tuning, int levels, double mains, const double *ratio, double *out) {
+  forte::Tuning keyboard;
+  for (int i = 0; i < 12; i++) { keyboard.r[i] = ratio[i]; keyboard.equal = keyboard.equal && ratio[i] == 1; }
   Analysis a[9];
-  keyAnalysis(key, tuning, levels, mains, a);
+  keyAnalysis(key, tuning, levels, mains, keyboard, a);
   for (int d = 0; d < 9; d++) {
     double *o = out + 6 * d;
     o[0] = a[d].w; o[1] = a[d].actual; o[2] = a[d].ideal; o[3] = a[d].cents; o[4] = a[d].folded; o[5] = a[d].db;

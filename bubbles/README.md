@@ -420,6 +420,13 @@ tools/render-bubbles.mjs               node tools/render-bubbles.mjs → example
   glycerol's surface tension and sound speed are interpolated between water
   and glycerol (its density and viscosity are tabulated values).
 
+## Quality
+
+A bubble costs little, so the Quality setting (for phones and older computers) only lowers how
+many ring at once: 80 at Medium and 50 at Low (High 160). Past that the quietest bubble that has
+sounded for 12 ms fades out, which only a dense brook of many held keys reaches. Medium and Low
+also free each bubble 70 and 60 dB below its peak instead of 80; a single bubble sounds as at High.
+
 ## Prior art and references
 
 **The physics, and the people who worked it out.**

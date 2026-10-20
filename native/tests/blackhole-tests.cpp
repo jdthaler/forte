@@ -1,8 +1,9 @@
 // blackhole-tests.cpp — the Black-Hole Keyboard in C++: V8's log10, the table read as the
 // JavaScript read it, each key tuned on its (2,2,0) mode, a key's voice and the samples to the
-// last bit of the retired JavaScript engine's, the inspiral handing over to the ringdown, the voice cache, voice
-// stealing, a flood of notes, and ten voices within the CPU budget. The physics tests are the
-// JavaScript suite's, run on the WebAssembly (node test/blackhole-tests.mjs).
+// last bit of the WebAssembly's (the JavaScript suite checks the same numbers), the inspiral
+// handing over to the ringdown, the voice cache, voice stealing, a flood of notes, and ten voices
+// within the CPU budget. The physics tests are the JavaScript suite's, run on the WebAssembly
+// (node test/blackhole-tests.mjs).
 
 #include <chrono>
 #include <cmath>
@@ -73,34 +74,34 @@ TEST("blackhole: each key is tuned on its (2,2,0) mode; equal masses switch off 
   }
 }
 
-TEST("blackhole: a key's voice is the JavaScript's to the last bit") {
+TEST("blackhole: a key's voice is the WebAssembly's to the last bit") {
   KeyVoice v;
-  keyVoice(60, model(defaults()), 48000, v); // the JavaScript model's keyVoice(60, DEFAULTS, bank, 48000)
+  keyVoice(60, model(defaults()), 48000, v); // keyVoice(60, DEFAULTS, 48000) in test/blackhole-tests.mjs
   CHECK(v.count == 6);
   const Mode *m = find(v, 2, 2, 0);
-  CHECK(m && m->f == 261.62556530059862 && m->gamma == 252.57988761231820 && m->cpr == 0.86776859504132209 && m->cxi == 0);
+  CHECK(m && m->f == 261.62556530059862 && m->gamma == 252.57988761231820 && m->cpr == 0.90693882927838598 && m->cxi == -0.0068618432905640523);
   m = find(v, 2, 2, 1);
-  CHECK(m && m->f == 255.81115964040737 && m->gamma == 763.72947854791903 && m->cpr == -0.76343327861991683 && m->cxi == 9.2534677911183620e-17);
+  CHECK(m && m->f == 255.81115964040737 && m->gamma == 763.72947854791903 && m->cpr == -0.79666121488030150 && m->cxi == 0.018259029459329400);
   m = find(v, 3, 3, 0);
-  CHECK(m && m->f == 414.66495736563309 && m->cpr == -0.031965598503578919);
+  CHECK(m && m->f == 414.66495736563309 && m->cpr == -0.035546247599022869);
   m = find(v, 4, 4, 0);
-  CHECK(m && m->f == 561.62583587703864 && m->gamma == 263.55857986269314 && m->cpr == 0.017023756119076642);
+  CHECK(m && m->f == 561.62583587703864 && m->gamma == 263.55857986269314 && m->cpr == 0.019876843144860760);
   auto P = defaults();
   P[p::inspiral] = 1; P[p::retrograde] = 0.5; P[p::massRatio] = 3; P[p::inclination] = 70;
   keyVoice(57, model(P), 48000, v);
   CHECK(v.count == 12 && v.hasChirp);
-  CHECK(v.chirp.amp == 0.99474673641544542 && v.chirp.psi == 1.2184788905409255e-16 && v.chirp.tc == 0.84830873035114396 && v.chirp.fStart == 19.497461561909621);
+  CHECK(v.chirp.amp == 0.97542036346744299 && v.chirp.psi == 0.0010077670543947976 && v.chirp.tc == 0.84830873035114396 && v.chirp.fStart == 19.497461561909621);
 }
 
-TEST("blackhole: the engine plays the JavaScript's samples, inspiral included") {
+TEST("blackhole: the engine plays the WebAssembly's samples, inspiral included") {
   auto P = defaults();
   P[p::inspiral] = 1; P[p::retrograde] = 0.5; P[p::massRatio] = 3; P[p::inclination] = 70;
   auto e = std::make_unique<RingdownEngine>(48000);
   e->setParams(P.data());
   e->noteOn(57, 0.8);
-  // the JavaScript engine's L[17] and R[99] of blocks 0, 50, 100 and 150
-  const float want[8] = {0.000023236070774146356f, 0.00012161751510575414f, -0.025927901268005371f, -0.042760584503412247f,
-                         -0.067498341202735901f, -0.028430422767996788f, -0.020221082493662834f, -0.048638440668582916f};
+  // the WebAssembly engine's L[17] and R[99] of blocks 0, 50, 100 and 150 (test/blackhole-tests.mjs)
+  const float want[8] = {0.000022784630345995538f, 0.00011925467697437853f, -0.025424161925911903f, -0.041929814964532852f,
+                         -0.066186957061290741f, -0.027878062799572945f, -0.019828218966722488f, -0.047693472355604172f};
   float L[128], R[128];
   int j = 0;
   for (int b = 0; b < 200; b++) {

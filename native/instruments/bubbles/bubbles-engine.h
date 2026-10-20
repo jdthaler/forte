@@ -1,6 +1,7 @@
 // bubbles-engine.h — the real-time bubble organ, on the engine contract (forte/engine.h).
 //
-//   key held ─▶ its nozzle releases bubbles (the first at once, then at the set rate, seeded random gaps)
+//   key held ─▶ its nozzle releases bubbles (the first at once, then at the set rate, seeded random gaps;
+//   with MPE, the key's own bend sizes its next bubbles to ring ×r, and its slide sets its own rate)
 //   each bubble: the neck snaps (a pressure kick, ramped over the snap time) ─▶ a damped oscillator for
 //   its wall, run as a rotating phasor (exact for constant ω₀ and b)
 //   while it rises, its depth, size and the surface's image change ω₀ and b: recomputed every block,
@@ -18,6 +19,7 @@
 #include "bubbles-model.h"
 #include "bubbles-params.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "forte/impulses.h"
 
 namespace forte::bubbles {
@@ -49,6 +51,8 @@ class BubbleEngine : public Engine {
   void allNotesOff() override;
   void pressure(double value, int key) override; // aftertouch: more gas through the nozzle
   void bend(double value) override;              // the pump: the pressure at the nozzles ×r², the notes ×r
+  void noteBend(double ratio, int key) override; // one nozzle's next bubbles sized to ring ×r
+  void slide(double value, int key) override;    // one nozzle's own bubble rate
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -94,12 +98,15 @@ class BubbleEngine : public Engine {
   double spare;
   int soft;
   std::array<double, NK> Rnom{}, Rtune{}, gainL{}, gainR{};
-  std::array<int, NK> tuneVer{};
-  int ver = 0;
+  std::array<int, NK> tuneVer{}, nomVer{};
+  int ver = 0, nomV = 0; // the conditions' version (Rtune), and the keyboard tuning's (Rnom)
+  forte::Tuning tuning;  // the keyboard's (forte/tuning.h): each nozzle is cut for its key's tuned note
+  Env def;               // the default conditions, which the nozzles are cut for without "keep in tune"
   Env env;       // conditions at the nozzles (targets)
   Acoustics ac{}; // scratch: a rising bubble's acoustics
   double pT = P_ATM, pTarget = P_ATM, pB = P_ATM; // pB: the air above the water with pitch bend's push
   double bendTo = 1, bendNow = 1;                 // pitch bend: the ratio, and where the glide is
+  NoteExpression expr{24};                        // each nozzle's own bend and rate (MPE)
   int64_t frame = 0;
   int blocks = 0, nev = 0;
   // the latest bubble's waveform, for the page

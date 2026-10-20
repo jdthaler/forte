@@ -20,6 +20,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "springs-model.h"
 #include "springs-params.h"
 
@@ -48,6 +49,8 @@ class SpringEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override { sustain = on; }
   void allNotesOff() override;
+  // a note's slide: a hand on that key's own springs, gliding in as the knob's does
+  void slide(double value, int key) override { expr.setSlide(value, key); }
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // A key's springs its page's model built already (packKeySprings), for the next note on that
@@ -84,7 +87,7 @@ class SpringEngine : public Engine {
     void start(SpringEngine &eng, int key, Data::Ref r, uint64_t version);
     void strike(SpringEngine &eng, double velocity);
     void render(float *L, float *R, int n, SpringEngine &eng);
-    double prune(Bank &b, bool pushing);
+    double prune(const SpringEngine &eng, Bank &b, bool pushing);
     bool anyActive() const;
   };
 
@@ -109,10 +112,11 @@ class SpringEngine : public Engine {
   // What the keys' springs depend on, for each of the last few versions: the worker builds a
   // version from its snapshot (written by setParams, read without locks, checked by a sequence
   // number); a version that has scrolled out is not built, and a newer one is asked for instead.
+  static constexpr int NSNAP = 12 + 12; // Params: the knobs, then the tuning's ratios
   struct Snapshot {
     std::atomic<uint32_t> seq{0};
     std::atomic<uint64_t> version{0};
-    std::array<std::atomic<double>, 12> v{};
+    std::array<std::atomic<double>, NSNAP> v{};
   };
   std::array<Snapshot, 8> snaps{};
   int snapAt = 0;
@@ -124,6 +128,8 @@ class SpringEngine : public Engine {
   std::array<double, kCount> S{}, T{};
   bool sustain = false, lossMoved = false;
   double dampSigma = 0;
+  forte::NoteExpression expr{0}; // each key's slide (the springs don't bend)
+  double handOf(int key) const; // the hand on a key's springs (σ): the knob's, or the key's slide
   uint64_t version = 0;
   int lastKey = 60;
   Data data;

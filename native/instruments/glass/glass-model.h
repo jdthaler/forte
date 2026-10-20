@@ -36,13 +36,14 @@ inline double ringRatio(int n) { return (n * (n * n - 1.0)) / std::sqrt(n * n + 
 inline double ringBryan(int n) { return 2 / (n * n + 1.0); }
 
 double bowlRadius(double key);
-double bowlThickness(double key);
+double bowlThickness(double key, double ratio = 1); // ratio: the key's tuning (below)
 double radiationEff(int n, double ka);
 double keyNoise(int m, int salt = 0);
 double waterLoad(int n, double a, double h, double fill);
 
-// The parameters a bowl depends on (P.split, P.loss, P.water).
-struct BowlParams { double split = 0, loss = 4e-4, water = 0; };
+// The parameters a bowl depends on (P.split, P.loss, P.water), and its key's tuning: the ratio of
+// its pitch to equal temperament's at A = 440 Hz (forte/tuning.h), which its wall is ground to.
+struct BowlParams { double split = 0, loss = 4e-4, water = 0, ratio = 1; };
 // One family of a bowl (bowl: modes[]).
 struct Mode {
   int n;

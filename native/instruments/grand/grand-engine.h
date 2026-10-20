@@ -51,6 +51,11 @@ constexpr double C_PIEZO = 10e-9;  // F, capacitance of the piezo elements
 struct Eq { double bass, mid, midQ, treble; };
 constexpr Eq EQ = {120, 1000, 0.8, 3500}; // Hz
 constexpr int BOARD_MODES = BOARD.maxModes;
+// The preamp's stereo tremolo: an oscillator lights one LED per output, in antiphase, and the
+// photocell beside each shunts its output through the depth pot: gain 1 − depth·Kℓ/(1 + Kℓ) for
+// light ℓ. Photocells light fast and go dark slowly (a VTL5C3: 2.5 ms on, 35 ms off).
+struct Trem { double K, on, off, glide; };
+constexpr Trem TREM = {9, 0.004, 0.035, 0.01}; // full light and depth: −20 dB; time constants in s
 
 // First-order analog section (b1 s + b0)/(a1 s + a0), bilinear with prewarping at fw.
 class RC1 {
@@ -109,11 +114,20 @@ class GrandEngine : public Engine {
   static constexpr int SYM_MODES = 16;     // partials per key and polarisation
   static constexpr double SYM_FMAX = 4000; // Hz: none above
   Sympathetic sym;
+  // Quality (forte/engine.h): Medium and Low strike a voice with fewer partials (none above fTop()
+  // but the first eight, none from the nTop()-th on), stop its fading top partials and the voice
+  // itself sooner, hold the oscillators under a lower ceiling (the page's budget below it still
+  // rules), and give each sympathetic string fewer partials (Medium) or none (Low)
+  double fTop() const { return pick<double>(INFINITY, 6000, 4500); }
+  int nTop() const { return pick(1 << 30, 80, 56); }
+  bool keeps(const KeyModel &d, int i) const { return d.idx[i] < nTop() && (d.freq[i] < fTop() || d.idx[i] <= 8); } // (idx: partial n, from 1)
+  int symModes() const { return pick(SYM_MODES, 3, 0); }
   bool symReady(int key) const { return symVer[key] != 0; }
 
   using Data = KeyData<Built>;
   struct Voice {
     int key = 0, N = 0, nV = 0, ns = 1, nVa = 0, nHa = 0, seg = 0;
+    int nVq = 0, nHq = 0; // the partials a strike sets going (fewer below High Quality)
     double k = 0;
     uint64_t version = 0;
     bool inUse = false;
@@ -130,7 +144,7 @@ class GrandEngine : public Engine {
     double comp0 = 0, comp = 0, invV = 1, invH = 1, kapV = 0, kapH = 0, swV = 0, swH = 0, rhoV = 0, rhoH = 0;
     Hammer hammer;
     bool hasDamper = false;
-    double panL = 0, panR = 0, trim = 1, dropThr = 0;
+    double panL = 0, panR = 0, trim = 1, dropThr = 0, quietThr = 2e-6;
     bool keyDown = false, damped = false, killing = false, dead = false, hammerOn = false, contact = false;
     double peak = 0, age = 0, struck = -INFINITY;
     int quiet = 0;
@@ -204,6 +218,10 @@ class GrandEngine : public Engine {
   std::array<RC1, 2> hp{}, lo{}, hi{};
   std::array<Biquad, 2> mid{};
   double mix = 0;
+  // the tremolo: its oscillator's phase (0…1) and step, each photocell's light and their time
+  // constants, the depth (gliding to the knob's)
+  double tremPhase = 0, tremInc = 0, ldrOn = 0, ldrOff = 0, tremDepth = 0, tremGlide = 0;
+  std::array<double, 2> ldr{};
   std::array<BoardSlot, 5> boards{};
   BoardSlot *board = nullptr;
   double wantBoard = NAN; // a thickness whose board is being built (only with threads)
@@ -216,6 +234,7 @@ class GrandEngine : public Engine {
   std::array<int, 128> ownAt{};
   int symNext = 0, symStamp = 0;
   double symDamperSigma = -1, symPickH = -1;
+  Quality symQuality = Quality::high; // the Quality the groups were built at
   bool symHush = false; // Panic: the groups wait for the voices to fade
   std::array<double, BLOCK> tV{}, tH{};
 

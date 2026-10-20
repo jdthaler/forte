@@ -14,6 +14,9 @@ constexpr double KILL = 300;         // s⁻¹: voice stealing / panic / a re-st
 constexpr double GLIDE = 0.02;       // s: the gap and the rest height follow their knobs with this time constant
 constexpr double XFADE = 0.02;       // s: switching between speakers and direct out crossfades over this
 constexpr double XMAX = SLOT_Y.n - 3 - 1e-9; // last table position the cubic interpolation can use
+// A mode bent past this fraction of the reeds' rate stays there: it is far above the output's
+// band (the decimator removes it) and its recursion stays stable. Only a note's own bend goes so far.
+constexpr double TOP = 0.45;
 
 static int jsRound(double x) { return (int)std::floor(x + 0.5); } // Math.round
 
@@ -22,35 +25,53 @@ static int jsRound(double x) { return (int)std::floor(x + 0.5); } // Math.round
 void ReedEngine::Voice::start(const ReedEngine &eng, int key_, const VoiceData &d) {
   *this = Voice{};
   inUse = true;
-  key = key_; N = d.n; k = 1 / eng.fs2; version = d.version;
-  for (int i = 0; i < N; i++) {
-    om0[i] = TAU * d.freq[i]; sig[i] = d.sigma[i]; dw[i] = d.dampW[i];
-    w[i] = d.w[i]; pk[i] = d.pk[i];
+  // Quality: Medium and Low play the reed at the output rate, not twice it (its aliasing stays
+  // below what the slot's harmonics leave), leave out the modes above 16 kHz, drop each mode once
+  // it has decayed 80 / 60 dB below the strongest, and end a reed 70 / 60 dB below its loudest
+  const double fTop = eng.quality == Quality::high ? INFINITY : 16000;
+  prune = eng.pick(0.0, 1e-4, 1e-3); deathRel = eng.pick(0.0, 3e-4, 1e-3);
+  os = eng.pick(OS, 1, 1);
+  hMax = os == OS ? eng.hammerMax : jsRound(HAMMER_MAX * eng.fs);
+  key = key_; N = 0; k = 1 / (os == OS ? eng.fs2 : eng.fs); version = d.version;
+  for (int j = 0; j < d.n; j++) {
+    if (d.freq[j] > fTop && N) continue;
+    const int i = N++;
+    om0[i] = TAU * d.freq[j]; sig[i] = d.sigma[j]; dw[i] = d.dampW[j];
+    w[i] = d.w[j]; pk[i] = d.pk[j];
   }
-  tune(eng.bendNow);
+  Nall = N;
+  own = eng.expr.bendOf(key);
+  tune(eng.bendNow * own);
   hits = 0;
   hammer = d.hammer;
   setDamper(eng.damperSigma);
 }
 
 void ReedEngine::Voice::tune(double r) {
-  double cmp = 0, cpk = 0;
-  for (int i = 0; i < N; i++) {
-    const double o = om0[i] * r, s = sig[i];
+  double cmp = 0;
+  for (int i = 0; i < Nall; i++) {
+    const double o = std::min(om0[i] * r, TAU * TOP / k), s = sig[i];
     om[i] = o;
     const double rr = std::exp(-s * k), od = std::sqrt(std::max(o * o - s * s, 1e-6));
     a1[i] = 2 * rr * std::cos(od * k); a2[i] = rr * rr;
     const double b = (k * rr * std::sin(od * k)) / od; // response to a unit force impulse (unit modal mass)
     bw[i] = b * w[i]; cmp += b * w[i] * w[i];
-    bp[i] = b * pk[i]; cpk += b * pk[i] * pk[i];
+    bp[i] = b * pk[i];
   }
   comp = cmp; // strike-point compliance over one step: Σ b w²
-  cStop = cpk; stopDen = 1 / (1 + STOP.K * cpk); // the same at the slot, for the frame stop
+  stopFor(N);
   bend = r;
 }
 
+// the same at the slot, for the frame stop: Σ b pk² over the modes played
+void ReedEngine::Voice::stopFor(int n) {
+  double cpk = 0;
+  for (int i = 0; i < n; i++) cpk += bp[i] * pk[i];
+  cStop = cpk; stopDen = 1 / (1 + STOP.K * cpk);
+}
+
 void ReedEngine::Voice::setDamper(double sd) {
-  for (int i = 0; i < N; i++) {
+  for (int i = 0; i < Nall; i++) {
     const double s = sig[i] + (killing ? KILL : sd * dw[i]), o = om[i];
     const double r = std::exp(-s * k), od = std::sqrt(std::max(o * o - s * s, 1e-6));
     a1d[i] = 2 * r * std::cos(od * k); a2d[i] = r * r;
@@ -64,6 +85,7 @@ void ReedEngine::Voice::kill(const ReedEngine &eng) {
 
 // Launch the hammer from just below the reed's current position at speed v.
 void ReedEngine::Voice::strike(double v) {
+  if (N != Nall) { N = Nall; stopFor(N); } // every mode takes the blow
   double uu = 0;
   for (int i = 0; i < N; i++) uu += w[i] * q[i];
   eta = uu - 1.5 * v * k; etaPrev = eta - v * k;
@@ -141,7 +163,7 @@ void ReedEngine::Voice::render(double *buf, int n, const ReedEngine &eng) {
         if (F > Fmax) Fmax = F;
       }
       for (int i = 0; i < N; i++) y += PK[i] * Q[i];
-      if (++hammerSamples > eng.hammerMax || (contact && F == 0 && dPrev < -2e-4)) hammerOn = false;
+      if (++hammerSamples > hMax || (contact && F == 0 && dPrev < -2e-4)) hammerOn = false;
     }
     if (bl) { t = (s + 1) * inv; y0 = y0a + t * dy0; cRest = cRa + t * dcR; dRest = dRa + t * ddR; }
     // the frame: a stiff elastic stop at |y₀ + y| = H − h/2, solved implicitly
@@ -174,10 +196,35 @@ void ReedEngine::Voice::render(double *buf, int n, const ReedEngine &eng) {
   }
   yMin = ymn; yMax = ymx; peak = pkMax;
   if (!(pkMax < 0.05)) { dead = true; return; } // 5 cm: numerically blown up
+  if (pkMax > loudest) loudest = pkMax;
   if (!hammerOn) {
-    quiet = pkMax < (damped ? 3e-8 : 3e-9) ? quiet + 1 : 0;
+    quiet = pkMax < std::max(damped ? 3e-8 : 3e-9, deathRel * loudest) ? quiet + 1 : 0;
     if (quiet > 40) dead = true;
+    if (prune > 0) pruneModes();
   }
+}
+
+// Medium and Low: a mode whose part of the reed's swing at the slot (its weight there × amplitude) has
+// decayed `prune` below the strongest's is no longer played. It moves past N, kept (and still
+// tuned and damped) for the key's next strike.
+void ReedEngine::Voice::pruneModes() {
+  std::array<double, MAX_MODES> e{};
+  double top = 0;
+  for (int i = 0; i < N; i++) {
+    // a two-pole recursion's amplitude from its last two samples
+    const double c = a1[i] / (2 * std::sqrt(a2[i])), s2 = std::max(1 - c * c, 1e-12);
+    e[i] = pk[i] * pk[i] * std::max(q[i] * q[i] + q1[i] * q1[i] - 2 * c * q[i] * q1[i], 0.0) / s2;
+    top = std::max(top, e[i]);
+  }
+  const int n0 = N;
+  for (int i = N - 1; i >= 0; i--) {
+    if (e[i] >= top * prune * prune) continue;
+    const int j = --N;
+    if (i == j) continue;
+    for (auto *a : {&q, &q1, &a1, &a2, &a1d, &a2d, &w, &bw, &pk, &bp, &om, &sig, &dw, &om0}) std::swap((*a)[i], (*a)[j]);
+    std::swap(e[i], e[j]);
+  }
+  if (N != n0) stopFor(N);
 }
 
 // ---- the engine --------------------------------------------------------------------------------
@@ -192,9 +239,11 @@ ReedEngine::ReedEngine(double fs)
           if (s.version.load(std::memory_order_acquire) != v) continue;
           const double solder = s.solder.load(std::memory_order_relaxed), strike = s.strike.load(std::memory_order_relaxed),
                        hardness = s.hardness.load(std::memory_order_relaxed);
+          Tuning tuning; // the keyboard's: its ratios are all keyModel and reedVersion read
+          for (int i = 0; i < 12; i++) tuning.r[i] = s.ratio[i].load(std::memory_order_relaxed);
           std::atomic_thread_fence(std::memory_order_acquire);
           if (s.version.load(std::memory_order_relaxed) != v) return nullptr;
-          KeyModel m = keyModel(key, solder, strike, hardness, fs2);
+          KeyModel m = keyModel(key, solder, strike, hardness, fs2, tuning);
           if (!m.reed.ok) return nullptr;
           return std::make_unique<VoiceData>(m.voice);
         }
@@ -249,7 +298,8 @@ void ReedEngine::setParams(const double *np) {
   spk[3].set(Biquad::peak, 900, 1.0, fs, -2.5);   // dip between the lid's baffle step and break-up
   hpA = std::exp((-TAU * 280) / fs);              // open back: front–rear cancellation below ~c/2d
   // a new version of every key's reed: built off the audio thread, nearest the last key first
-  const uint64_t v = reedVersion(P[p::solder], P[p::strike], P[p::hardness], fs2);
+  const Tuning tuning = tuningOf(P.data()); // the keyboard's: every reed is cut to its key's pitch
+  const uint64_t v = reedVersion(P[p::solder], P[p::strike], P[p::hardness], fs2, tuning);
   if (first || v != version) {
     if (v != version) {
       version = v;
@@ -260,6 +310,7 @@ void ReedEngine::setParams(const double *np) {
       s.solder.store(P[p::solder], std::memory_order_relaxed);
       s.strike.store(P[p::strike], std::memory_order_relaxed);
       s.hardness.store(P[p::hardness], std::memory_order_relaxed);
+      for (int i = 0; i < 12; i++) s.ratio[i].store(tuning.r[i], std::memory_order_relaxed);
       s.version.store(version, std::memory_order_release);
     }
 #if FORTE_THREADS
@@ -342,9 +393,10 @@ void ReedEngine::strikeKey(int key, double velocity, const VoiceData &d) {
     voices[nVoices++] = v;
     byKey[key] = v;
   }
+  if (v->own != expr.bendOf(key)) { v->own = expr.bendOf(key); v->tune(bendNow * v->own); v->setDamper(damperSigma); } // struck again: at the key's own bend
   v->keyDown = true; v->updateDamping(*this);
   v->strike(hammerSpeed(velocity));
-  if (nVoices > maxVoices) {
+  if (nVoices > pick(maxVoices, 20, 10)) { // Quality: Medium and Low let fewer reeds sound at once
     Voice *victim = nullptr;
     double score = INFINITY;
     for (int i = 0; i < nVoices; i++) { Voice *u = voices[i]; if (u != v && !u->killing && u->peak < score) { score = u->peak; victim = u; } }
@@ -367,6 +419,8 @@ void ReedEngine::bend(double value) {
   bendTo = std::pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12);
 }
 
+void ReedEngine::noteBend(double ratio, int key) { expr.setBend(ratio, key); }
+
 void ReedEngine::process(float *L, float *R, int n) {
   if (nPending) retryPending();
   for (int at = 0; at < n; at += BLOCK) processBlock(L + at, R + at, std::min(BLOCK, n - at));
@@ -388,13 +442,28 @@ void ReedEngine::processBlock(float *L, float *R, int n) {
     restAt(gl ? capB : capA, yN, cRestN, dRestN);
     gapN = gN; y0N = yN;
   } else { y0N = y0; cRestN = cRest; dRestN = dRest; }
-  // pitch bend glides as the slot does; the sounding reeds are retuned each block
+  // pitch bend, the wheel's and each note's own, glides as the slot does; the reeds whose bend
+  // moved are retuned each block
   if (bendNow != bendTo) {
     bendNow += (1 - std::exp(-n / (GLIDE * fs))) * (bendTo - bendNow);
     if (std::fabs(bendNow - bendTo) < 1e-9) bendNow = bendTo;
   }
-  for (int i = 0; i < nVoices; i++) if (voices[i]->bend != bendNow) { voices[i]->tune(bendNow); voices[i]->setDamper(damperSigma); }
-  if (hasParams) for (int i = 0; i < nVoices; i++) voices[i]->render(mono.data(), n2, *this);
+  for (int i = 0; i < nVoices; i++) {
+    Voice &v = *voices[i];
+    v.own = glideTo(v.own, expr.bendOf(v.key), n / fs, GLIDE);
+    if (v.bend != bendNow * v.own) { v.tune(bendNow * v.own); v.setDamper(damperSigma); }
+  }
+  if (hasParams) {
+    bool low = false; // Medium's and Low's reeds, at the output rate: summed apart, then each sample held twice
+    for (int i = 0; i < nVoices; i++) {
+      if (voices[i]->os == OS) voices[i]->render(mono.data(), n2, *this);
+      else {
+        if (!low) { std::fill(mono1.begin(), mono1.begin() + n, 0.0); low = true; }
+        voices[i]->render(mono1.data(), n, *this);
+      }
+    }
+    if (low) for (int s = 0; s < n; s++) { mono[2 * s] += mono1[s]; mono[2 * s + 1] += mono1[s]; }
+  }
   if (hasExtra) { for (int s = 0; s < n2; s++) mono[s] += extra[s]; hasExtra = false; }
   if (blend) {
     if (gl) std::swap(capA, capB);
@@ -421,7 +490,7 @@ void ReedEngine::processBlock(float *L, float *R, int n) {
     // tremolo: the oscillator lights an LED on its positive half-cycles; the photocell beside it
     // shunts the preamp's signal as it lights up
     ph += inc; if (ph >= 1) ph -= 1;
-    const double led = depth * std::max(0.0, std::sin(TAU * ph));
+    const double led = depth != 0 ? depth * std::max(0.0, std::sin(TAU * ph)) : 0; // (no sine to work out with the tremolo off)
     lr += (led > lr ? ldrOn : ldrOff) * (led - lr);
     double v = (gain * uu) / (1 + 3 * lr);
     // preamp stage: transistor runs out of swing sooner on one side

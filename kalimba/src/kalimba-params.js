@@ -2,6 +2,7 @@
 // a unit; the hint says what it does to the sound.
 
 import { VENUE } from '../../shared/chain.js';
+import { TUNING_GROUP } from '../../shared/tuning.js';
 
 const ms = (v) => `${v < 1 ? v.toFixed(2) : v.toFixed(1)} ms`;
 const thumb = (v) => (v < 0.3 ? 'thumbnail' : v < 1.5 ? 'nail and flesh' : 'flesh');
@@ -27,7 +28,7 @@ export const GROUPS = [
     params: [
       { id: 'pluck', label: 'Pluck point', min: 0.3, max: 1, def: 0.9, step: 0.005, fmt: (v) => `${(v * 100).toFixed(1)} % of the front from the bridge`,
         hint: 'Where the thumb pushes the tine down. Near the tip the fundamental dominates; closer to the bridge the overtones speak more. On a mode’s node it stays silent.' },
-      { id: 'thumb', label: 'Release', perform: true, min: 0.05, max: 5, def: 0.6, log: true, fmt: (v) => `${ms(v)} (${thumb(v)})`,
+      { id: 'thumb', label: 'Release', min: 0.05, max: 5, def: 0.6, log: true, fmt: (v) => `${ms(v)} (${thumb(v)})`,
         hint: 'How long the thumb takes to let go. A nail flicks off at once and every mode rings: a bright ping. Soft flesh rolls off slowly and cannot reach modes above about 1.5 / release time.' },
       { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2) },
       { id: 'ring', label: 'Let the tines ring', perform: true, type: 'checkbox', def: true,
@@ -43,18 +44,19 @@ export const GROUPS = [
         hint: 'The air in the hole bounces on the air in the box (a Helmholtz resonator) and pairs with the top’s first mode: two resonances, the lower one boosting the low tines. Smaller holes tune it down.' },
       { id: 'cover', label: 'Hole covered', perform: true, min: 0, max: 1, def: 0, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %`,
         hint: 'A finger over the hole, as kalimba players do for a wah: covering it tunes the air resonance down until it vanishes and the top alone is left. The mod wheel moves it.' },
-      { id: 'buzz', label: 'Buzzers (bottle caps)', perform: true, min: 0, max: 8, def: 0, step: 1, fmt: (v) => (v === 0 ? 'none' : `${v.toFixed(0)} cap${v === 1 ? '' : 's'}`),
+      { id: 'buzz', label: 'Buzzers (bottle caps)', min: 0, max: 8, def: 0, step: 1, fmt: (v) => (v === 0 ? 'none' : `${v.toFixed(0)} cap${v === 1 ? '' : 's'}`),
         hint: 'Loose caps on the top, as on an mbira. A cap stays put until the top under it accelerates downward faster than gravity; then it flies, lands and rattles. Soft notes leave them silent; loud ones buzz.' },
     ],
   },
   {
     title: 'Output',
     params: [
-      { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      { id: 'room', label: 'Room', min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
+  TUNING_GROUP,
 ];
 
 export const DEFAULTS = Object.fromEntries(GROUPS.flatMap((g) => g.params).map((p) => [p.id, p.def]));

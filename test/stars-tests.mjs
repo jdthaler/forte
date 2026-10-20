@@ -39,10 +39,11 @@ function test(name, fn) {
 const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const rel = (a, b) => Math.abs(a / b - 1);
 
-// Run the engine through events ([t, 'on', key, vel, data?] | [t, 'off', key] | [t, 'sus', on] | [t, 'params', P])
+// Run the engine through events ([t, 'on', key, vel, data?] | [t, 'off', key] | [t, 'sus', on] | [t, 'params', P] | [t, 'msg', m])
 // in 128-sample blocks like the AudioWorklet. Returns L + R (or [L, R, engine]).
-function run(params, events, sec, { fs = FS, stereo = false, tap } = {}) {
+function run(params, events, sec, { fs = FS, stereo = false, tap, quality } = {}) {
   const e = new StarEngine(fs);
+  if (quality) e.setQuality(quality);
   e.setParams(params);
   const n = Math.round(sec * fs), L = new Float64Array(n), R = new Float64Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
   const ev = events.map(([t, ...r]) => [Math.round(t * fs), ...r]).sort((a, b) => a[0] - b[0]);
@@ -50,7 +51,7 @@ function run(params, events, sec, { fs = FS, stereo = false, tap } = {}) {
   for (let s = 0; s < n; s += bl) {
     while (j < ev.length && ev[j][0] <= s) {
       const [, type, a, b, c] = ev[j++];
-      if (type === 'on') e.noteOn(a, b, c); else if (type === 'off') e.noteOff(a); else if (type === 'sus') e.setSustain(a); else if (type === 'params') e.setParams(a);
+      if (type === 'on') e.noteOn(a, b, c); else if (type === 'off') e.noteOff(a); else if (type === 'sus') e.setSustain(a); else if (type === 'params') e.setParams(a); else if (type === 'msg') e.handle(a);
     }
     e.process(bL, bR, bl);
     for (let i = 0; i < bl && s + i < n; i++) { L[s + i] = bL[i]; R[s + i] = bR[i]; }
@@ -219,6 +220,19 @@ test('every key in tune: the star\'s heard pitch (the power-weighted mean log fr
   for (const o of [{ mass: 0.9 }, { mass: 1.3 }, { mass: 1.8 }, { speedup: 350000 }, { speedup: 1e6 }]) check(P(o), 4);
   console.log(`         ν_max ${Math.min(...noff).toFixed(1)} to ${Math.max(...noff).toFixed(1)} ¢ above the note; nearest radial mode ${Math.min(...roff).toFixed(0)} to +${Math.max(...roff).toFixed(0)} ¢`);
 });
+test('the keyboard\'s tuning: each key\'s star is found for its tuned pitch, its heard pitch × K within 0.02 ¢ of 440·2^((m−69)/12)·415/440 at A = 415 Hz (a giant, a subgiant, a dwarf, a δ Scuti star), and in ¼-comma meantone on C, E4 3.42 ¢ flat of equal temperament, C4 10.26 ¢ sharp, A4 on 440 Hz; the engine plays the page\'s tuned star as its own, and ignores one built for another tuning', () => {
+  for (const [k, o] of [[40, {}], [64, {}], [88, {}], [48, { family: 'dscuti' }]]) {
+    const c = cents(keyStar(k, P({ ...o, pitch: 415 })).pitch, (keyFreq(k) * 415) / 440);
+    assert.ok(Math.abs(c) < 0.02, `key ${k} ${o.family ?? ''} at 415 Hz: ${c.toFixed(3)} ¢`);
+  }
+  for (const [k, want] of [[64, -3.42], [60, 10.26], [69, 0]]) {
+    const c = cents(keyStar(k, P({ temperament: 'meantone' })).pitch, keyFreq(k));
+    assert.ok(Math.abs(c - want) < 0.02, `key ${k} in meantone: ${c.toFixed(3)} ¢, not ${want}`);
+  }
+  const p = P({ temperament: 'meantone', tuningRoot: 2 }), data = keyStar(52, p);
+  const own = run(p, [[0, 'on', 52, 0.7]], 0.2), sent = run(p, [[0, 'on', 52, 0.7, data]], 0.2), other = run(p, [[0, 'on', 52, 0.7, keyStar(52, P())]], 0.2);
+  for (let i = 0; i < own.length; i++) { assert.equal(own[i], sent[i]); assert.equal(own[i], other[i]); }
+});
 test('rotation: a p mode splits by mΩ/2π (C_nl ≈ 0), a g-dominated dipole mode by ζ·½·mΩ_core/2π + (1 − ζ)·mΩ_env/2π (C_g = ½), so the splitting ∝ Ω(1 − C_nl); δ Scuti\'s low-order modes by (1 − 0.05)mΩ/2π', () => {
   for (const key of [40, 84]) {
     const d = keyStar(key, P()), md = d.modes;
@@ -372,6 +386,36 @@ test('voices: pressing a sounding key drives the same star again (one voice); vo
   const gone = run(P({ damping: 10 }), [[0, 'on', 90, 0.7], [0.3, 'off', 90]], 2);
   assert.equal(gone.engine.voiceCount(), 0, 'a released dwarf with broad modes is gone within 2 s');
 });
+test('Quality: Medium and Low play fewer stars at once (11 and 8 of 14) and only each star\'s strongest modes (60 % and 40 %), lifted to the note\'s level: a struck star keeps its level (within 1 dB) and its pitch (the log-power centroid within 6 ¢); 16 held red giants stay finite', () => {
+  const held = Array.from({ length: 16 }, (_, i) => [0.02 * i, 'on', 36 + i, 0.8]), res = [];
+  const ring = (p, key, quality) => run(p, [[0, 'on', key, 1]], 1, { quality });
+  const centroid = (x, f) => {
+    const { S, df } = psd(x, 0, x.length, 1 << 14);
+    let w = 0, s = 0;
+    for (let i = Math.floor((0.55 * f) / df); i < (1.6 * f) / df; i++) { w += S[i]; s += S[i] * Math.log(i * df); }
+    return Math.exp(s / w);
+  };
+  const p = P({ driving: 0, flare: 1 }), ds = P({ family: 'dscuti', driving: 1 });
+  const ref = { 48: ring(p, 48, 'high'), 72: ring(p, 72, 'high'), ds: ring(ds, 60, 'high') };
+  for (const [quality, voices, share] of [['high', 14, 1], ['medium', 11, 0.6], ['low', 8, 0.4]]) {
+    const x = run(P(), held, 1.5, { quality }), e = x.engine, live = e.voices.filter((v) => !v.fading);
+    for (const v of x) assert.ok(Number.isFinite(v), `${quality}: not finite`);
+    assert.ok(live.length <= voices, `${quality}: ${live.length} stars sounding`);
+    for (const v of live) assert.ok(v.nAct <= Math.ceil(share * v.N), `${quality}: key ${v.key} plays ${v.nAct} of ${v.N} modes`);
+    const modes = live.reduce((s, v) => s + v.nAct, 0);
+    const dB = [], dc = [];
+    for (const key of [48, 72]) {
+      const y = ring(p, key, quality);
+      dB.push(10 * Math.log10(msOf(y) / msOf(ref[key])));
+      dc.push(cents(centroid(y, keyFreq(key)), centroid(ref[key], keyFreq(key))));
+    }
+    dB.push(10 * Math.log10(msOf(ring(ds, 60, quality), 0.5 * FS) / msOf(ref.ds, 0.5 * FS)));
+    for (const d of dB) assert.ok(Math.abs(d) < 1, `${quality}: level ${d.toFixed(2)} dB from High`);
+    for (const c of dc) assert.ok(Math.abs(c) < 6, `${quality}: pitch ${c.toFixed(1)} ¢ from High`);
+    res.push(`${quality} ${live.length} stars, ${modes} modes, ${dB.map((d) => d.toFixed(2)).join('/')} dB, ${dc.map((c) => c.toFixed(1)).join('/')} ¢`);
+  }
+  console.log(`         ${res.join('; ')}`);
+});
 test('the page builds the stars and sends them with the note: the engine plays the page\'s data exactly as its own; data for another star is ignored', () => {
   const p = P(), data = keyStar(45, p);
   const own = run(p, [[0, 'on', 45, 0.7]], 0.2), sent = run(p, [[0, 'on', 45, 0.7, data]], 0.2);
@@ -416,6 +460,45 @@ test('knobs glide: rotation, inclination and driving moved mid-note do not click
     const ref = id === 'damping' ? second(run(P({ flare: 0, damping: 10 }), [[0, 'on', 76, 0.7]], 0.75), 0.5 * FS, 0.75 * FS) : second(x, 0.25 * FS, 0.5 * FS);
     const after = second(x, 0.5 * FS, 0.75 * FS);
     assert.ok(after < 2 * ref + 1e-6, `${id}: second difference ${after.toExponential(2)} after, ${ref.toExponential(2)} for reference`);
+  }
+});
+console.log('MPE');
+// A note's slide is its own star's rotation (a star doesn't bend)
+const slide = (t, key, value) => [t, 'msg', { type: 'slide', key, value }];
+const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+test('a star with its own rotation (a slide before the note) sounds as the knob there, sample for sample, both families; a star held beside it keeps the knob\'s', () => {
+  for (const family of ['track', 'dscuti']) {
+    const p = P({ family });
+    const x = run(p, [slide(0, 76, 15), [0, 'on', 76, 0.8]], 1), k = run(P({ family, spin: 15 }), [[0, 'on', 76, 0.8]], 1);
+    assert.ok(same(x, k), `${family}: as the knob at 15× the Sun`);
+    assert.ok(!same(x, run(p, [[0, 'on', 76, 0.8]], 1)), `${family}: and not as the knob's own`);
+  }
+  // struck by the flare alone (the convection's draws are shared), 79 first, then 76: the chord less
+  // 79 alone is 76, whether 79 spins or not
+  const q = P({ driving: 0 });
+  const d = (ev) => { const c = run(q, [...ev, [0, 'on', 79, 0.8], [0, 'on', 76, 0.8]], 1), s = run(q, [...ev, [0, 'on', 79, 0.8]], 1); return c.map((v, i) => v - s[i]); };
+  const a = d([slide(0, 79, 25)]), b = d([]);
+  const err = peakAbs(a.map((v, i) => v - b[i])), pk = peakAbs(b);
+  assert.ok(err < 1e-6 * pk && pk > 0.01, `the other star moves by ${err.toExponential(2)} (peak ${pk.toFixed(3)})`);
+});
+test('a slide while the star sounds glides, as the knob does: no click, and the star spins up', () => {
+  const second = (x, a, b) => { let m = 0; for (let i = Math.max(2, a); i < b; i++) m = Math.max(m, Math.abs(x[i] - 2 * x[i - 1] + x[i - 2])); return m; };
+  const p = P({ flare: 0 }), x = run(p, [[0, 'on', 76, 0.7], slide(0.5, 76, 30)], 0.75);
+  const before = second(x, 0.25 * FS, 0.5 * FS), after = second(x, 0.5 * FS, 0.75 * FS);
+  assert.ok(after < 2 * before + 1e-6, `second difference ${after.toExponential(2)} after, ${before.toExponential(2)} before`);
+  assert.ok(!same(x, run(p, [[0, 'on', 76, 0.7]], 0.75)), 'it moved');
+});
+test('slide(NaN) leaves the sound bit for bit as it was, before the note and while it sounds', () => {
+  const x = run(P(), [slide(0, 60, NaN), [0, 'on', 60, 0.8], slide(0.2, 60, NaN), [0.3, 'msg', { type: 'noteBend', key: 60, value: 1 }]], 0.8);
+  assert.ok(same(x, run(P(), [[0, 'on', 60, 0.8]], 0.8)));
+});
+test('slide sweeps on chords, sent every block across the whole range, stay finite and bounded at 44.1, 48 and 96 kHz, both families', () => {
+  for (const fs of [44100, 48000, 96000]) for (const family of ['track', 'dscuti']) {
+    const keys = [KEY_LO, 48, 60, 64, 67, KEY_HI], ev = keys.map((k) => [0, 'on', k, 1]);
+    for (let b = 0; b < (0.8 * fs) / 128; b++) keys.forEach((k, i) => ev.push(slide((b * 128) / fs, k, 15 + 15 * Math.sin(b / (3 + i)))));
+    const x = run(P({ family }), ev, 0.8, { fs });
+    for (const v of x) assert.ok(Number.isFinite(v), `${fs} ${family}: NaN`);
+    assert.ok(peakAbs(x) < 3, `${fs} ${family}: peak ${peakAbs(x).toFixed(2)}`);
   }
 });
 function cpu(keys) {

@@ -7,6 +7,7 @@
 
 import { MATERIALS, SHAPES } from './materials.js';
 import { VENUE } from '../../shared/chain.js';
+import { TUNING_GROUP } from '../../shared/tuning.js';
 
 const x = (v) => `×${v < 1 ? v.toFixed(2) : v.toFixed(v < 10 ? 2 : 1)}`;
 
@@ -46,7 +47,7 @@ export const GROUPS = [
         hint: 'Distance from the agraffe end as a fraction of length. Partials with a node here vanish.' },
       { id: 'offset', label: 'Strike offset across width', kind: 'model', min: -1, max: 1, step: 0.01, def: 0,
         fmt: (v) => `${(v * 100).toFixed(0)} %`, hint: 'Off-centre hits twist flat faces → torsional waves. (No effect on round wire.)' },
-      { id: 'hardness', label: 'Felt hardness', perform: true, kind: 'model', min: 0.1, max: 10, def: 1, log: true, fmt: x },
+      { id: 'hardness', label: 'Felt hardness', kind: 'model', min: 0.1, max: 10, def: 1, log: true, fmt: x },
       { id: 'feltExp', label: 'Felt nonlinearity Δp', kind: 'model', min: -0.8, max: 1, step: 0.05, def: 0,
         fmt: (v) => (v >= 0 ? '+' : '') + v.toFixed(2), hint: 'F = K δ^p. Larger p: brighter when loud, darker when soft.' },
       { id: 'hammerMass', label: 'Hammer mass', kind: 'model', min: 0.25, max: 4, def: 1, log: true, fmt: x },
@@ -80,8 +81,8 @@ export const GROUPS = [
       { id: 'gainV', label: 'Vertical bridge force', kind: 'engine', min: 0, max: 1.5, step: 0.01, def: 1, fmt: (v) => v.toFixed(2) },
       { id: 'gainH', label: 'Horizontal bridge force', kind: 'engine', min: 0, max: 1.5, step: 0.01, def: 0.35, fmt: (v) => v.toFixed(2) },
       { id: 'gainT', label: 'Torsion pickup', kind: 'engine', min: 0, max: 2, step: 0.01, def: 0.6, fmt: (v) => v.toFixed(2) },
-      { id: 'soundboard', label: 'Soundboard body', perform: true, kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.6, fmt: (v) => v.toFixed(2) },
-      { id: 'room', label: 'Room', perform: true, kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.25, fmt: (v) => v.toFixed(2) },
+      { id: 'soundboard', label: 'Soundboard body', kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.6, fmt: (v) => v.toFixed(2) },
+      { id: 'room', label: 'Room', kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.25, fmt: (v) => v.toFixed(2) },
       VENUE,
       { id: 'width', label: 'Stereo spread', kind: 'engine', min: 0, max: 1, step: 0.01, def: 0.6, fmt: (v) => v.toFixed(2) },
       { id: 'voicing', label: 'Treble voicing', kind: 'model', min: 0, max: 6, step: 0.1, def: 2.5, fmt: (v) => `${v.toFixed(1)} dB/oct`,
@@ -91,6 +92,7 @@ export const GROUPS = [
         fmt: (v) => `${(v / 1000).toFixed(1)} kHz`, hint: 'Lower this if the CPU meter runs hot.' },
     ],
   },
+  TUNING_GROUP,
 ];
 
 export const ALL_PARAMS = GROUPS.flatMap((g) => g.params);

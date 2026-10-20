@@ -216,6 +216,15 @@ test('the π mode is the note, within a cent, across the keyboard', () => {
     assert.ok(Math.abs(cents(got, f)) < 1, `${key}: ${cents(got, f).toFixed(2)} ¢`);
   }
 });
+test('the keyboard\'s tuning: the π mode is 440·2^((m−69)/12)·415/440 at A = 415 Hz, and in ¼-comma meantone on C E4 lies 3.42 ¢ flat of equal temperament, C4 10.26 ¢ sharp, A4 on 440 Hz, in the model and (within a cent) in the sound; the cavity is the same one, scaled', () => {
+  const N = DEFAULTS.cells, mt = P({ ...QUIET, temperament: 'meantone' }), pi = (k, p) => piMode(Model.modes(k, p), N).f;
+  for (const k of [40, 64, 96]) assert.ok(Math.abs(pi(k, P({ pitch: 415 })) / pi(k, P()) - 415 / 440) < 1e-12, `${k} at 415 Hz`);
+  for (const [k, want] of [[64, -3.42], [60, 10.26], [69, 0]]) { const c = cents(pi(k, mt), pi(k, P())); assert.ok(Math.abs(c - want) < 0.01, `${k} in meantone: ${c.toFixed(3)} ¢`); }
+  for (const [key, p, f] of [[64, P({ ...QUIET, pitch: 415 }), (keyFreq(64) * 415) / 440], [64, mt, keyFreq(64) * 2 ** (-3.4216 / 1200)], [60, mt, keyFreq(60) * 2 ** (10.2647 / 1200)]]) {
+    const [L] = note(key, p, 1.2), a = 2400, b = a + 48000, got = peak(L, f, a, b, 0.004);
+    assert.ok(Math.abs(cents(got, f)) < 1, `${key}: ${cents(got, f).toFixed(2)} ¢ from the tuned pitch`);
+  }
+});
 test('the ring time is the loaded Q\'s: T60 = ln 1000 · Q_L / (π f)', () => {
   for (const [key, qext] of [[60, 1e9], [72, 3e8]]) {
     const params = P({ ...QUIET, qext }), m = piMode(Model.modes(key, params), 9), f = keyFreq(key), W = 16384;
@@ -357,6 +366,122 @@ test('every preset plays: sane level (peak 0.02 – 1), no NaN, silent after rel
   let pk = 0;
   for (const v of note(60, P(), 0.3, 1)[0]) pk = Math.max(pk, Math.abs(v));
   assert.ok(pk > 0.1 && pk < 0.5, `one forte note peaks at ${pk.toFixed(3)}`);
+});
+console.log('MPE');
+const semis = (st) => 2 ** (st / 12);
+const noteBend = (key, st) => (e) => e.handle({ type: 'noteBend', key, value: semis(st) });
+test('MPE: a key\'s own bend squeezes its own cavity: the π mode lands on the ratio, from the strike', () => {
+  const f = keyFreq(60);
+  for (const st of [-24, -7, 5, 24, 48]) { // (bent up the note rings shorter: the Q is the cavity's, the cycles faster)
+    const [L] = render(P(QUIET), 0.5, [[0, noteBend(60, st)], [0, (e) => e.noteOn(60, 0.8)]]);
+    const got = peak(L, f * semis(st), 2400, 2400 + 16384, 0.01);
+    assert.ok(Math.abs(cents(got, f) - 100 * st) < 1, `${st} semitones: ${cents(got, f).toFixed(2)} ¢`);
+  }
+});
+test('MPE: a held neighbour stays where it was while one key bends, and that key glides to its ratio', () => {
+  const f = keyFreq(60), g = keyFreq(67), on = [[0, (e) => e.noteOn(60, 0.8)], [0, (e) => e.noteOn(67, 0.8)]];
+  const [plain] = render(P(QUIET), 1, on), [bent] = render(P(QUIET), 1, [...on, [0.1, noteBend(67, 5)]]);
+  const a = peak(plain, f, 24000, 24000 + 16384, 0.005), b = peak(bent, f, 24000, 24000 + 16384, 0.005);
+  assert.ok(Math.abs(cents(b, a)) < 0.05, `C4 moved ${cents(b, a).toFixed(3)} ¢`);
+  const got = peak(bent, g * semis(5), 24000, 24000 + 16384, 0.01);
+  assert.ok(Math.abs(cents(got, g) - 500) < 1, `G4 bent: ${cents(got, g).toFixed(2)} ¢`);
+});
+test('MPE: a lone key\'s bend is the wheel\'s, bent to the same ratio; its train keeps step (the same beam loading)', () => {
+  const f = keyFreq(60), on = [0, (e) => e.noteOn(60, 0.8)];
+  const [wheel] = render(P(QUIET), 1, [[0, (e) => e.handle({ type: 'bend', value: 1 })], on]);
+  const [own] = render(P(QUIET), 1, [[0, noteBend(60, 2)], on]);
+  const a = peak(wheel, f * semis(2), 24000, 24000 + 16384, 0.005), b = peak(own, f * semis(2), 24000, 24000 + 16384, 0.005);
+  assert.ok(Math.abs(cents(b, a)) < 0.05, `own ${cents(b, f).toFixed(3)} ¢, wheel ${cents(a, f).toFixed(3)} ¢`);
+  // σT_b is the same at any pitch (Q and the spacing in periods are), so the train builds the same field
+  const params = P({ ...QUIET, current: 1, spacing: 4 }), field = (st) => {
+    let last = null;
+    render(params, 6, [[0, noteBend(60, st)], [0, (e) => e.noteOn(60, 0.6)]], (m) => { if (m.type === 'cells') last = m; });
+    return last.peak;
+  };
+  const f0 = field(0), f7 = field(7), fd = field(-12);
+  assert.ok(Math.abs(f7 / f0 - 1) < 0.03 && Math.abs(fd / f0 - 1) < 0.03, `field ${f0.toFixed(3)}, +7: ${f7.toFixed(3)}, −12: ${fd.toFixed(3)}`);
+});
+test('MPE: a key\'s slide is its own beam offset: struck with it, the note is the one at that offset', () => {
+  const base = P({ lorentz: 0, qhom: 1e10 }), on = [0, (e) => e.noteOn(60, 0.8)];
+  for (const x of [0, 0.35, 0.6]) {
+    const [a] = render({ ...base, offset: x }, 0.5, [on]);
+    const [b] = render(base, 0.5, [[0, (e) => e.handle({ type: 'slide', key: 60, value: x })], on]);
+    let err = 0, big = 0;
+    for (let i = 0; i < a.length; i++) { err = Math.max(err, Math.abs(a[i] - b[i])); big = Math.max(big, Math.abs(a[i])); }
+    assert.ok(err < 1e-6 * big, `offset ${x}: the slid note differs by ${err.toExponential(2)} of ${big.toFixed(3)}`); // (the kicks scaled, not cut anew)
+  }
+});
+test('MPE: sliding a held key\'s beam off the axis rings its dipole modes from then on; its neighbour is untouched', () => {
+  const params = P({ lorentz: 0, offset: 0, qhom: 1e10, current: 1 }), t = Math.round(0.2 * FS);
+  const dip = Model.modes(60, { ...params, offset: 0.3 }).filter((q) => q.band === 2).reduce((x, y) => (kickOf(y) > kickOf(x) ? y : x)).f;
+  const slide = [0.2, (e) => e.handle({ type: 'slide', key: 60, value: 0.3 })];
+  const [plain] = render(params, 1, [[0, (e) => e.noteOn(60, 0.8)]]), [slid] = render(params, 1, [[0, (e) => e.noteOn(60, 0.8)], slide]);
+  assert.ok(plain.slice(0, t).every((v, i) => v === slid[i]), 'nothing changes before the slide');
+  const a = tone(plain, dip, 24000, 24000 + 16384), b = tone(slid, dip, 24000, 24000 + 16384);
+  assert.ok(b > 30 * a, `the dipole mode at ${dip.toFixed(1)} Hz: ${a.toExponential(2)} on the axis, ${b.toExponential(2)} slid off`);
+  // with a neighbour held, the slid key's sound is the same plus the neighbour's own
+  const [alone] = render(params, 1, [[0, (e) => e.noteOn(72, 0.8)]]);
+  const [both] = render(params, 1, [[0, (e) => e.noteOn(60, 0.8)], [0, (e) => e.noteOn(72, 0.8)], slide]);
+  let err = 0, big = 0;
+  for (let i = 0; i < both.length; i++) { err = Math.max(err, Math.abs(both[i] - slid[i] - alone[i])); big = Math.max(big, Math.abs(alone[i])); }
+  assert.ok(err < 1e-5 * big, `C5 beside the slid C4: ${err.toExponential(2)} of ${big.toFixed(3)}`);
+});
+test('MPE: noteBend(1) and slide(NaN), before and during the notes, leave the sound bit-identical', () => {
+  const keys = [48, 60, 67], on = keys.map((k) => [0, (e) => e.noteOn(k, 0.8)]), off = keys.map((k) => [0.4, (e) => e.noteOff(k)]);
+  const reset = (t) => keys.map((k) => [t, (e) => { e.handle({ type: 'noteBend', key: k, value: 1 }); e.handle({ type: 'slide', key: k, value: NaN }); }]);
+  const [a, ar] = render(P(), 0.8, [...on, ...off]);
+  const [b, br] = render(P(), 0.8, [...reset(0), ...on, ...reset(0.1), ...reset(0.2), ...off, ...reset(0.5)]);
+  assert.ok(a.every((v, i) => v === b[i]) && ar.every((v, i) => v === br[i]));
+});
+test('MPE: ±48 semitones and the whole slide on a chord, sent every block: finite and bounded at 44.1, 48 and 96 kHz', () => {
+  const keys = [24, 48, 60, 72, 96, 108];
+  for (const fs of [44100, 48000, 96000]) {
+    const e = new CavityEngine(fs);
+    e.setParams(P({ current: 0.5 }));
+    for (const k of keys) e.noteOn(k, 1);
+    const bL = new Float32Array(128), bR = new Float32Array(128);
+    let pk = 0;
+    for (let s = 0, b = 0; s < fs; s += 128, b++) {
+      keys.forEach((k, i) => {
+        const t = s / fs + i * 0.13;
+        e.handle({ type: 'noteBend', key: k, value: semis(60 * Math.sin(2 * Math.PI * 1.3 * t)) }); // past ±48: clamped
+        e.handle({ type: 'slide', key: k, value: 0.3 + 0.3 * Math.sin(2 * Math.PI * 2.1 * t) });
+      });
+      if (b === 300) for (const k of keys) e.noteOff(k);
+      e.process(bL, bR, 128);
+      for (let i = 0; i < 128; i++) { assert.ok(Number.isFinite(bL[i]) && Number.isFinite(bR[i]), `${fs} Hz: NaN`); pk = Math.max(pk, Math.abs(bL[i]), Math.abs(bR[i])); }
+    }
+    assert.ok(pk < 2, `${fs} Hz: peak ${pk.toFixed(3)}`);
+  }
+});
+test('Quality: Medium and Low keep 16 and 8 keys at most, ring only the modes heard within 40 and 30 dB of the loudest and let them go sooner; a note keeps its pitch and level', () => {
+  const X = CavityEngine.exports, ringing = (e) => X.cavity_ringing(X.forte_engine(e.h));
+  const keys = Array.from({ length: 24 }, (_, i) => 36 + 2 * i), work = {}, bL = new Float32Array(128), bR = new Float32Array(128);
+  for (const [quality, cap] of [['high', 24], ['medium', 16], ['low', 8]]) {
+    const e = new CavityEngine(FS);
+    e.setQuality(quality); e.setParams(P()); e.setSustain(true);
+    let w = 0, most = 0, ok = true;
+    for (let b = 0; b < (3 * FS) / 128; b++) { // a key every 16 blocks (43 ms), the pedal down
+      if (b % 16 === 0 && b / 16 < keys.length) { e.noteOn(keys[b / 16], 0.8); if (b) e.noteOff(keys[b / 16 - 1]); }
+      e.process(bL, bR, 128);
+      ok &&= bL.every(Number.isFinite) && bR.every(Number.isFinite);
+      w += ringing(e); most = Math.max(most, e.voiceCount());
+    }
+    assert.ok(ok, `${quality}: NaN`);
+    assert.ok(most <= cap + 1, `${quality}: ${most} voices`); // (and the one fading out)
+    work[quality] = w;
+  }
+  console.log(`         modes × time at Medium ${((100 * work.medium) / work.high).toFixed(0)} %, Low ${((100 * work.low) / work.high).toFixed(0)} % of High's`);
+  assert.ok(work.medium < 0.6 * work.high && work.low < 0.35 * work.high, JSON.stringify(work));
+  const at = (key, quality) => render(P(), 1, [[0, (e) => { e.setQuality(quality); e.noteOn(key, 0.8); }], [0.5, (e) => e.noteOff(key)]])[0];
+  const rms = (x) => Math.sqrt(x.reduce((a, v) => a + v * v, 0) / x.length);
+  for (const key of [36, 60, 84]) {
+    const hi = at(key, 'high'), f = peak(hi, keyFreq(key), 0, FS / 2);
+    for (const quality of ['medium', 'low']) {
+      const x = at(key, quality), c = cents(peak(x, keyFreq(key), 0, FS / 2), f), d = db(rms(x) / rms(hi));
+      assert.ok(Math.abs(c) < 0.1 && Math.abs(d) < 1.5, `key ${key} at ${quality}: ${c.toFixed(3)} ¢, ${d.toFixed(2)} dB`);
+    }
+  }
 });
 test('CPU: ten voices, a held bunch train, faster than real time ×4', () => {
   const e = new CavityEngine(FS);

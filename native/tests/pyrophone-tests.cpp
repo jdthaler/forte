@@ -55,7 +55,7 @@ TEST("pyrophone model: Magri & Juniper's eigenvalues, and the default tube's Hop
   const Cx a = root(sys, 0, 0.1, true), b = root(sys, 0, 0.5, true);
   CHECK(std::fabs(a.re + 0.0056) < 5e-5 && std::fabs(a.im - 3.1848) < 5e-5);
   CHECK(std::fabs(b.re - 0.00023) < 5e-6 && std::fabs(b.im - 3.3570) < 5e-5);
-  const Tuning t = tuning(TubeParams{});
+  const pyrophone::Tuning t = tuning(TubeParams{});
   CHECK(t.mode == 1);
   CHECK_NEAR(t.betaH, 0.0884, 5e-4);
   CHECK_NEAR(t.fold, 0.0768, 5e-4);
@@ -108,7 +108,7 @@ TEST("pyrophone: a new tube keeps playing from the last table until its own is i
   waitFor(e);
   e.noteOn(60, 0.7);
   render(e, 4800);
-  const Tuning *before = e.tune;
+  const pyrophone::Tuning *before = e.tune;
   P[p::bore] = 0.05;
   e.setParams(P.data());
   e.noteOn(64, 0.7); // no wait: the old table cuts it
@@ -179,6 +179,142 @@ TEST("pyrophone: the views' messages (every tube, the focused one's trail and sn
     }
   }
   CHECK(ends > 20 && tubes == 2 * ends && focus == ends && trail >= ends && snaps > 5);
+}
+
+// MPE (forte/expression.h): one key's own bend heats its tube's gas alone, its slide is its flames' power
+static const PyrophoneEngine::Voice *voiceOf(const PyrophoneEngine &e, int key) {
+  for (int i = 0; i < e.nVoices; i++) if (e.voices[i]->key == key && !e.voices[i]->fade) return e.voices[i];
+  return nullptr;
+}
+static std::unique_ptr<PyrophoneEngine> ready(double fs, const std::vector<double> &P) {
+  auto e = std::make_unique<PyrophoneEngine>(fs);
+  e->setParams(P.data());
+  waitFor(*e);
+  return e;
+}
+
+TEST("pyrophone: MPE: a key's own bend heats its tube's gas: it sings at the ratio from the strike, as the wheel bent as far") {
+  const double fs = 48000;
+  auto P = defaults();
+  P[p::drift] = 0;
+  for (double st : {-24.0, -7.0, 5.0, 12.0}) {
+    auto e = ready(fs, P);
+    e->noteBend(std::pow(2.0, st / 12), 69);
+    e->noteOn(69, 0.7);
+    const auto L = render(*e, (int)(1.6 * fs));
+    const double f = zeroCrossFreq(L, (int)(1.1 * fs), (int)(1.6 * fs), fs);
+    CHECK(std::fabs(1200 * std::log2(f / 440) - 100 * st) < 3);
+  }
+  // the wheel at its end and the key bent as far: once the wheel's glide lands, the same tube
+  auto w = ready(fs, P), k = ready(fs, P);
+  w->bend(1);
+  k->noteBend(fdlibm::pow(2.0, kBendSemitones / 12), 69);
+  w->noteOn(69, 0.7);
+  k->noteOn(69, 0.7);
+  const auto A = render(*w, (int)(1.6 * fs)), B = render(*k, (int)(1.6 * fs));
+  CHECK(voiceOf(*w, 69)->h == voiceOf(*k, 69)->h);
+  const double fa = zeroCrossFreq(A, (int)(1.1 * fs), (int)(1.6 * fs), fs), fb = zeroCrossFreq(B, (int)(1.1 * fs), (int)(1.6 * fs), fs);
+  CHECK(std::fabs(1200 * std::log2(fb / fa)) < 0.5);
+}
+
+TEST("pyrophone: MPE: one key bends, its held neighbour stays where it was") {
+  const double fs = 48000;
+  auto P = defaults();
+  auto a = ready(fs, P), b = ready(fs, P);
+  for (auto *e : {a.get(), b.get()}) { e->noteOn(64, 0.7); e->noteOn(69, 0.7); render(*e, (int)(0.5 * fs)); }
+  const double r = std::pow(2.0, 5.0 / 12);
+  b->noteBend(r, 69);
+  render(*a, (int)(0.5 * fs));
+  render(*b, (int)(0.5 * fs));
+  CHECK(voiceOf(*a, 64)->h == voiceOf(*b, 64)->h);
+  CHECK_NEAR(voiceOf(*b, 69)->h / voiceOf(*a, 69)->h, r, 1e-12);
+}
+
+TEST("pyrophone: MPE: bent far up a tube keeps only the modes a sample holds, and sings again in tune when it comes back") {
+  const double fs = 44100;
+  auto P = defaults();
+  P[p::drift] = 0;
+  auto e = ready(fs, P);
+  e->noteOn(96, 0.8);
+  render(*e, (int)(0.5 * fs));
+  const int N = voiceOf(*e, 96)->N;
+  e->noteBend(std::pow(2.0, 24.0 / 12), 96);
+  const auto up = render(*e, (int)(0.5 * fs));
+  const int M = voiceOf(*e, 96)->M;
+  CHECK(M >= 1 && M < N);
+  for (float x : up) CHECK(std::isfinite(x) && std::fabs(x) < 2);
+  e->noteBend(1, 96);
+  const auto back = render(*e, (int)(1.5 * fs));
+  CHECK(voiceOf(*e, 96)->M == N);
+  const double f = zeroCrossFreq(back, (int)(1.0 * fs), (int)(1.5 * fs), fs), want = 440 * std::pow(2.0, (96 - 69) / 12.0);
+  CHECK(std::fabs(1200 * std::log2(f / want)) < 3);
+}
+
+TEST("pyrophone: MPE: a key's slide is its own flames' power: the note is the one played at that power, struck with it or slid while it sings") {
+  const double fs = 48000;
+  for (double x : {1.5, 5.0}) {
+    auto P = defaults(), Px = P;
+    Px[p::flame] = x;
+    // struck with it
+    auto a = ready(fs, Px), b = ready(fs, P);
+    b->slide(x, 60);
+    a->noteOn(60, 0.7);
+    b->noteOn(60, 0.7);
+    const auto A = render(*a, (int)(0.8 * fs)), B = render(*b, (int)(0.8 * fs));
+    CHECK(A == B);
+    // slid while it sings, beside a neighbour that keeps the panel's power
+    auto c = ready(fs, P), d = ready(fs, P), n = ready(fs, P);
+    for (auto *e : {c.get(), d.get()}) { e->noteOn(60, 0.7); render(*e, (int)(0.4 * fs)); }
+    c->setParams(Px.data());
+    d->slide(x, 60);
+    CHECK(render(*c, (int)(0.6 * fs)) == render(*d, (int)(0.6 * fs)));
+    d->noteOn(67, 0.7);
+    n->noteOn(67, 0.7);
+    CHECK(voiceOf(*d, 67)->betaT == voiceOf(*n, 67)->betaT);
+  }
+}
+
+TEST("pyrophone: MPE: noteBend(1) and slide(NaN), before and during the notes, leave the sound bit-identical") {
+  const double fs = 48000;
+  auto P = defaults();
+  auto a = ready(fs, P), b = ready(fs, P);
+  const int keys[] = {48, 60, 67};
+  for (int k : keys) { b->noteBend(1, k); b->slide(NAN, k); }
+  for (auto *e : {a.get(), b.get()}) for (int k : keys) e->noteOn(k, 0.7);
+  std::vector<float> A, B;
+  for (int blk = 0; blk < (int)(1.0 * fs / 128); blk++) {
+    if (blk % 7 == 0) for (int k : keys) { b->noteBend(1, k); b->slide(NAN, k); }
+    if (blk == 200) for (auto *e : {a.get(), b.get()}) for (int k : keys) e->noteOff(k, -1);
+    const auto x = render(*a, 128), y = render(*b, 128);
+    A.insert(A.end(), x.begin(), x.end());
+    B.insert(B.end(), y.begin(), y.end());
+  }
+  CHECK(A == B);
+}
+
+TEST("pyrophone: MPE: ±48 semitones and the whole slide on a chord, sent every block: finite and bounded at 44.1, 48 and 96 kHz") {
+  for (double fs : {44100.0, 48000.0, 96000.0}) for (int set = 0; set < 2; set++) {
+    auto P = defaults();
+    if (set) { P[p::lag] = 1.5; P[p::drift] = 60; } // the longest flame lag, cold: the delay line's limit going down
+    auto e = ready(fs, P);
+    const int keys[] = {21, 45, 69, 93, 108};
+    for (int k : keys) e->noteOn(k, 1);
+    double pk = 0;
+    bool finite = true, fits = true;
+    for (int blk = 0; blk < (int)(1.5 * fs / 128); blk++) {
+      for (int i = 0; i < 5; i++) {
+        const double t = blk * 128 / fs + 0.13 * i;
+        e->noteBend(std::pow(2.0, 60 * std::sin(TAU * 1.3 * t) / 12), keys[i]); // past ±48: clamped
+        e->slide(3.25 + 2.75 * std::sin(TAU * 2.1 * t), keys[i]);               // the flame power's range, 0.5 to 6
+      }
+      if (blk == (int)(fs / 128)) for (int k : keys) e->noteOff(k, -1);
+      const auto L = render(*e, 128);
+      for (float x : L) { finite = finite && std::isfinite(x); pk = std::max(pk, (double)std::fabs(x)); }
+      for (int i = 0; i < e->nVoices; i++) fits = fits && e->voices[i]->d < PyrophoneEngine::HIST - 4; // the bend stops short of the line's end
+    }
+    CHECK(finite && fits);
+    CHECK(pk < 2);
+  }
 }
 
 TEST("CPU: ten tubes singing at once at 48 kHz take a small part of a core") {

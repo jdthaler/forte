@@ -7,7 +7,8 @@
 //                              a link that opens the page with them (shared/presets.js)
 //   Your presets and files…    the list (play, link, save to a file, delete), and opening a
 //                              preset file, which the plugins' Presets menu reads and writes too
-// Opening a link made that way applies its settings and takes them off the address.
+// Opening a link made that way applies its settings and takes them off the address. It also puts
+// the Scala file button under the Temperament control (shared/tuning-ui.js).
 //
 //   attachPresets({ instrument: INSTRUMENT, get: () => P, set: (values) => …, toast })
 // get gives the page's parameters (for the organ, P with its console); values() turns them into
@@ -17,6 +18,7 @@
 import { presetParams, presetFile, readPresetFile, linkHash, readLinkHash, complete, cleanName } from './presets.js';
 import { byId, INSTRUMENTS } from './registry.js';
 import { sheet, show } from './notes.js';
+import { attachScala } from './tuning-ui.js';
 
 const NAMES = Object.fromEntries(INSTRUMENTS.map((i) => [i.id, i.name]));
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -232,5 +234,8 @@ export function attachPresets({ instrument: I, get, set, values = (P) => P, toas
     if (save) { input.focus(); input.select(); }
   }
 
-  return { params, open: openSheet, copyLink };
+  // a Scala file sets the custom temperament (shared/tuning-ui.js), as a preset would
+  const scala = attachScala({ set: (v) => set({ ...now(), ...v }), toast });
+
+  return { params, open: openSheet, copyLink, scala };
 }

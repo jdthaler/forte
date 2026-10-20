@@ -10,10 +10,12 @@ import { createChain } from '../../shared/chain.js';
 import { SpectrogramView } from '../../shared/views.js';
 import { GeneratorView, LeslieView, OutputView, drawScanner, BAR_COLORS, useModel } from './organ-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto } from '../../shared/midi.js';
+import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto, pageMpe } from '../../shared/midi.js';
 import { controlOwns, focusedByPointer } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
+import { tuningRatio } from '../../shared/tuning.js';
+import { connectQuality, qualityControl } from '../../shared/quality.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'tonewheel-organ/params/v1';
@@ -69,6 +71,7 @@ function startAudio() {
     fs = ctx.sampleRate;
     audio = { ctx, node, analyser, chain };
     node.port.postMessage(paramsMessage()); // the engine builds its generator from these
+    connectQuality(node, { toast }); // the device's Quality (shared/quality.js)
     applyMix();
     output.setAnalyser(analyser); spectro.setAnalyser(analyser);
     if (ctx.state !== 'running') await ctx.resume();
@@ -201,8 +204,10 @@ function initMIDI() {
 let lastSustain = false;
 const sost = createSostenuto(); // CC66
 let soft = false;               // CC67
+const notes = pageMpe({ post: () => {}, params: () => P }); // MPE: the generator turns every wheel, so no note bends alone, and a member's bend is no one else's
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data, cmd = st & 0xf0;
+  if (notes.midi(ev.data).own) return;
   if (cmd === 0x90 && d2 > 0) keyDown(d1, touched(d2 / 127) * (soft ? SOFT_PEDAL : 1));
   else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) keyUp(d1);
   else if (cmd === 0xb0) {
@@ -342,7 +347,7 @@ function buildControls() {
         input = document.createElement('select');
         input.id = `p-${p.id}`;
         for (const [k, name] of p.options) input.add(new Option(name, k));
-        input.addEventListener('change', () => { setP({ [p.id]: input.value }); input.blur(); });
+        input.addEventListener('change', () => { setP({ [p.id]: typeof p.def === 'number' ? +input.value : input.value }); input.blur(); }); // (the tuning's pitch and root are numbers)
         wrap.appendChild(input);
       } else {
         wrap.innerHTML = `<div class="row"><label for="p-${p.id}">${p.label}</label><span class="val"></span></div>`;
@@ -355,7 +360,7 @@ function buildControls() {
       }
       if (p.hint) { const h = document.createElement('div'); h.className = 'hint'; h.textContent = p.hint; wrap.appendChild(h); }
       det.appendChild(wrap);
-      controls.set(p.id, { p, input, val });
+      controls.set(p.id, { p, input, val, wrap });
     }
     $('#groups').appendChild(det);
   }
@@ -370,6 +375,9 @@ function buildControls() {
   });
   $('#reset').addEventListener('click', () => { replaceP({ ...DEFAULTS }); $('#preset').value = ''; });
 }
+
+// a control that applies only to some settings (the tuning's root and custom cents) shows only then
+const refreshVisibility = () => { for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(P) : false; };
 
 function refreshControl(id, fromSliderDrag = false) {
   const c = controls.get(id);
@@ -396,6 +404,7 @@ function setP(changes, fromSliderDrag = false) {
   if (gen) refreshGenerator();
   if (gen || eng) sendParams(); // the engine rebuilds its generator when a 'gen' parameter changed
   if (mix) applyMix();
+  refreshVisibility();
   refreshConsole();
   refreshFocus();
   refreshActivity();
@@ -407,6 +416,7 @@ function setP(changes, fromSliderDrag = false) {
 function replaceP(newP) {
   P = { ...newP, drawbars: [...newP.drawbars] };
   for (const id of controls.keys()) refreshControl(id);
+  refreshVisibility();
   sendParams(); applyMix();
   refreshConsole(); refreshGenerator(); refreshFocus(); refreshActivity(); updateHelp(); save();
 }
@@ -417,7 +427,7 @@ function replaceP(newP) {
 const genView = new GeneratorView($('#generator'), (w) => {
   if (w === null) { $('#gen-caption').textContent = defaultCaption; return; }
   const s = wheelSpec(w);
-  const f = (P.tuning === 'et' ? etFreq(w) : gearFreq(w)) * (P.mains / 60);
+  const f = (P.tuning === 'et' ? etFreq(w) : gearFreq(w)) * (P.mains / 60) * tuningRatio(P, w + 23); // wheel 46 = A4, in the keyboard's tuning
   const users = [];
   for (const k of sounding.keys()) for (let d = 0; d < 9; d++) if (keyWheel(k, d) === w && P.drawbars[d] > 0) users.push(`${noteName(k)} ${DRAWBARS[d].name}`);
   $('#gen-caption').textContent = `Wheel ${w} · ${wheelName(w)} · ${s.teeth} teeth on the ${s.gear[0]}/${s.gear[1]} gear · ${f.toFixed(3)} Hz · ${centsOff(w) >= 0 ? '+' : ''}${centsOff(w).toFixed(2)} ¢ vs ET`
@@ -493,6 +503,7 @@ $('#panic').addEventListener('click', (e) => { panic(); e.currentTarget.blur(); 
 
 buildControls();
 for (const id of controls.keys()) refreshControl(id);
+refreshVisibility();
 keyboardView.labels(keyLabels());
 refreshConsole();
 refreshGenerator();
@@ -501,3 +512,4 @@ updateHelp();
 requestAnimationFrame(frame);
 // your own presets and links: the console's state goes in as its parameters (organ-params.js)
 attachPresets({ instrument: INSTRUMENT, get: () => P, values: (p) => ({ ...p, ...CONSOLE.get(p) }), set: (v) => replaceP({ ...P, ...Object.fromEntries(ALL_PARAMS.map((p) => [p.id, v[p.id]])), ...CONSOLE.put(v, P) }), toast });
+qualityControl(); // the device's Quality, after the controls

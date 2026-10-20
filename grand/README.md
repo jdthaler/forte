@@ -217,6 +217,29 @@ bilinear transform (prewarped):
 Each stage is ±15 dB. The engine's response matches the analog prototypes
 to 0.5 dB, measured on note partials. The EQ applies only to the piezo.
 
+**Stereo tremolo.** After the EQ, the CP's preamp has a stereo tremolo with
+two knobs, speed and depth: played in stereo the sound swings from one
+output to the other, and through one output it throbs. We have not found
+its schematic. Spectrasonics' CP-70 model speaks of an "opto-circuit", so
+we model it the way the photocell tremolos of the time work (the
+[Reed Piano](../reeds/README.md)'s is one). An oscillator at *Tremolo rate*
+(1–10 Hz) lights one LED per output, in turn: the left one on its positive
+half-cycles, the right one on its negative. Beside each LED a CdS photocell
+shunts its output through the depth pot, a gain of
+
+  g = 1 − d·Kℓ/(1 + Kℓ),  K = 9,
+
+for light ℓ (0–1) and *Tremolo depth* d, so at full depth and full light an
+output falls 20 dB, and the other is untouched. Photocells light up fast and
+go dark slowly (a VTL5C3: 2.5 ms on, 35 ms off), modelled with 4 ms and
+35 ms time constants. So each output dips quickly and spends the rest of
+its cycle recovering, and at 5 Hz it never quite gets back. Like any
+photocell tremolo, it takes some level: on a held chord at 60 % depth each
+output swings between −6.7 and −1.7 dB, 4.2 dB down on average (tested). The
+depth glides to a new setting over 10 ms, so turning it never clicks, and
+at 0 (the default) the output is exactly as without it. The tremolo is part
+of the piezo's preamp, so it does not touch the soundboard's microphones.
+
 **The acoustic alternative: a soundboard.** *Bridge mounted on → A spruce
 soundboard* glues the same bridge to a plate. We model it as an equivalent
 isotropic, simply supported plate, 1.3 × 0.77 m, with ρh = 6.7 kg/m² and
@@ -327,6 +350,9 @@ C++.
    is the out-of-tune CP-70 sound many remember. (With the octaves stretched,
    A3 and A4 no longer beat against each other; in 12-TET the in-tune take
    measures 0.95 dB.)
+8. **Stereo tremolo, slow then fast**: the same chord at 60 % depth, at
+   3 Hz and then 7 Hz. In headphones it swings from ear to ear; each side
+   ducks quickly and comes back slowly, the photocells' lopsided throb.
 
 On the page, the slow-motion view replays the focused key's strike. You
 see the kink leave the hammer and reflect, and the bridge force (what the
@@ -336,7 +362,7 @@ displacement and at the transducer. *Why the piezo is bright* plots those
 two (and the microphone's) side by side.
 
 Regenerate the demos with `node tools/render-grand.mjs`. Run the tests with
-`node test/grand-tests.mjs` (33 tests, ~30 s).
+`node test/grand-tests.mjs` (36 tests, ~50 s).
 
 ## Files
 
@@ -387,8 +413,22 @@ tools/render-grand.mjs               node tools/render-grand.mjs → examples/gr
 * **Stretch tuning is octaves only.** It sets every 2:1 octave beatless, from a
   temperament octave in which the stretch is spread evenly. A tuner would
   weigh fifths and the 4:2 and 6:3 octaves too, especially in the bass.
-* The CP-70's tremolo (an electronic amplitude modulation, on some units)
-  is left out.
+* **The tremolo's circuit is a guess.** We found no schematic of the CP's
+  tremolo: the photocells, their time constants, the depth law and the
+  1–10 Hz range are those of the photocell tremolos of the time, not
+  measured on a CP. The oscillator is a pure sine.
+
+## Quality
+
+The Quality setting (in the controls, for phones and older computers) keeps High as described
+here. Medium strikes each string with fewer partials, none above 6 kHz (but always the first eight)
+and none from the 80th on, stops integrating a fading top partial once it is 100 dB down (140 dB at
+High) and a dying voice a little sooner, holds the oscillators under 2400 (the page's own budget,
+which follows the measured load, still rules below that), and gives each sympathetic string only its
+three lowest partials. Low stops at 4.5 kHz and the 56th partial, holds 1400 oscillators and turns the
+sympathetic strings off (what still rings fades as if damped, and the page stops building every key's
+strings for them). A note keeps its pitch and level and nearly all its tone; with the pedal down
+there is less of the halo of strings ringing along.
 
 ## Prior art and references
 
@@ -421,6 +461,12 @@ Earlier pianos that picked up their strings electrically:
 * Martin, D. W. & Stein, J. L. [US 3,519,721](https://patents.google.com/patent/US3519721A/en),
   "Electropiano with plural piezoelectric pickups on unitary acoustic
   rail" (granted 1970).
+
+The tremolo: "all CP pianos featured stereo tremolo output", with speed and
+depth controls, and all the electronics sit in the harp section
+([Chicago Electric Piano](https://chicagoelectricpiano.com/yamaha/death-star-yamaha-cp80/));
+Spectrasonics' Keyscape manual calls the CP-70's an "opto-circuit"
+([Keyscape: Tremolo](https://support.spectrasonics.net/manual/Keyscape/11/en/topic/tremolo)).
 
 ### The physics
 

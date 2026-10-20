@@ -11,7 +11,7 @@ import { header as tableHeader, headerFile } from '../tools/blackhole-native-tab
 const RingdownEngine = await loadEngine(INSTRUMENT);
 // the model the views call, in the same C++: the QNM bank (the table, interpolated), a key's voice
 // and its strain in closed form
-const { bank, swsh, strainCurve, keyVoice } = await wasmModel();
+const { bank, swsh, spheroidal, strainCurve, keyVoice } = await wasmModel();
 const MSUN_S = 4.925490947e-6;                            // G M☉ / c³ in seconds
 const keyFreq = (m) => 440 * 2 ** ((m - 69) / 12);
 
@@ -121,6 +121,62 @@ test('spin-weighted spherical harmonics: closed forms and unit norm', () => {
   }
 });
 
+test('spin-weighted spheroidal harmonics: their separation constants are Leaver\'s (the angular continued fraction) for every mode in the table', () => {
+  for (const md of bank.modes) for (const a of [0.3, 0.9, 0.999, 1 - 1e-6]) {
+    const w = bank.omega(md.l, md.m, md.n, a), c = { re: a * w.re, im: a * w.im };
+    const { A } = spheroidal(-2, md.l, md.m, c, 1), L = separationConstant(C.cx(c.re, c.im), md.l, md.m, -2);
+    assert.ok(Math.hypot(A.re - L.re, A.im - L.im) < 1e-10 * Math.max(1, Math.hypot(L.re, L.im)), `(${md.l},${md.m},${md.n}) a=${a}: ${A.re} ${A.im} vs ${L.re} ${L.im}`);
+  }
+});
+test('spheroidal harmonics: the spherical ones at c = 0, unit norm, and a mirror mode\'s is the mode\'s turned over', () => {
+  for (const [l, m] of [[2, 2], [3, 1], [4, -4]]) for (const th of [0.3, 1.2, 2.8]) {
+    const z = spheroidal(-2, l, m, { re: 0, im: 0 }, th).S;
+    assert.ok(Math.abs(z.re - swsh(-2, l, m, th)) < 1e-13 && z.im === 0, `(${l},${m}) at c = 0`);
+  }
+  for (const [l, m, n] of [[2, 2, 0], [3, 3, 0], [4, 4, 0], [2, 1, 2], [3, -2, 1]]) {
+    const w = bank.omega(l, m, n, 1 - 1e-6), c = { re: (1 - 1e-6) * w.re, im: (1 - 1e-6) * w.im };
+    let norm = 0;
+    for (let i = 0; i < 2000; i++) { const t = (Math.PI * (i + 0.5)) / 2000, z = spheroidal(-2, l, m, c, t).S; norm += (z.re ** 2 + z.im ** 2) * Math.sin(t) * (Math.PI / 2000) * 2 * Math.PI; }
+    assert.ok(Math.abs(norm - 1) < 1e-5, `(${l},${m},${n}) norm ${norm}`);
+    // ₋₂S_l,−m(θ; −c*) = (−1)^l ₋₂S_lm(π − θ; c)*
+    for (const th of [0.4, 1.9]) {
+      const z = spheroidal(-2, l, -m, { re: -c.re, im: c.im }, th).S, y = spheroidal(-2, l, m, c, Math.PI - th).S, sg = l % 2 ? -1 : 1;
+      assert.ok(Math.abs(z.re - sg * y.re) < 1e-12 && Math.abs(z.im + sg * y.im) < 1e-12, `(${l},${m},${n}) mirror at ${th}`);
+    }
+  }
+});
+test('the modes are seen through their spheroidal harmonics, which mix in other l as aω grows: the higher l = m modes grow most', () => {
+  const norm = 1 / (0.864 * 0.25 * swsh(-2, 2, 2, 0));
+  const grow = {};
+  for (const spinU of [0, 0.5, 2, 6]) for (const inclination of [0, 30, 70, 90, 140]) {
+    const P = { ...DEFAULTS, spinU, inclination, massRatio: 3 }, v = keyVoice(60, P, 48000), a = v.info.a, iota = (inclination * Math.PI) / 180;
+    for (const md of v.modes.filter((x) => x.n === 0)) {
+      const w = bank.omega(md.l, md.m, 0, a), c = { re: a * w.re, im: a * w.im };
+      const y = spheroidal(-2, md.l, md.m, c, iota).S, r = spheroidal(-2, md.l, md.m, c, Math.PI - iota).S, k = md.amp * norm;
+      const want = [k * (y.re + r.re), k * (y.im + r.im), k * (y.re - r.re), k * (y.im - r.im)];
+      [md.cpr, md.cpi, md.cxr, md.cxi].forEach((got, i) => assert.ok(Math.abs(got - want[i]) < 1e-12, `(${md.l},${md.m}) a=${a} ι=${inclination}`));
+      if (spinU === 0) assert.ok(Math.abs(y.re - swsh(-2, md.l, md.m, iota)) < 1e-13 && y.im === 0, 'spherical at a = 0');
+      if (spinU === 6 && inclination === 30) grow[`${md.l},${md.m}`] = Math.hypot(y.re, y.im) / Math.abs(swsh(-2, md.l, md.m, iota));
+    }
+  }
+  // near extremality, seen at ι = 30°: (2,2) by about a tenth, (3,3) by a third, (4,4) by a half
+  const g = (k) => grow[k];
+  assert.ok(g('2,2') > 1.05 && g('2,2') < 1.2 && g('3,3') > 1.2 && g('3,3') < 1.45 && g('4,4') > 1.4 && g('4,4') < 1.7, JSON.stringify(grow));
+});
+test('a key\'s voice and samples are the plugins\' to the last bit (native/tests/blackhole-tests.cpp checks the same numbers)', () => {
+  const v = keyVoice(60, DEFAULTS, 48000), f = (l, m, n) => v.modes.find((x) => x.l === l && x.m === m && x.n === n);
+  assert.equal(v.modes.length, 6);
+  assert.ok(f(2, 2, 0).cpr === 0.90693882927838598 && f(2, 2, 0).cxi === -0.0068618432905640523);
+  assert.ok(f(2, 2, 1).cpr === -0.79666121488030150 && f(2, 2, 1).cxi === 0.018259029459329400);
+  assert.ok(f(3, 3, 0).cpr === -0.035546247599022869 && f(4, 4, 0).cpr === 0.019876843144860760);
+  const P = { ...DEFAULTS, inspiral: true, retrograde: 0.5, massRatio: 3, inclination: 70 }, c = keyVoice(57, P, 48000).chirp;
+  assert.ok(c.amp === 0.97542036346744299 && c.psi === 0.0010077670543947976);
+  const e = new RingdownEngine(48000), L = new Float32Array(128), R = new Float32Array(128), got = [];
+  e.setParams(P); e.noteOn(57, 0.8);
+  for (let b = 0; b < 200; b++) { e.process(L, R, 128); if (b % 50 === 0) got.push(L[17], R[99]); }
+  assert.deepEqual(got, [0.000022784630345995538, 0.00011925467697437853, -0.025424161925911903, -0.041929814964532852,
+    -0.066186957061290741, -0.027878062799572945, -0.019828218966722488, -0.047693472355604172].map(Math.fround));
+});
 test('the native port\'s copy of the table (native/instruments/blackhole/qnm-table.h) is this one, converted number for number', () => {
   assert.ok(readFileSync(headerFile, 'utf8') === tableHeader(), 'stale: run node tools/blackhole-native-table.mjs');
 });
@@ -275,6 +331,29 @@ test('voice stealing fades the quietest voice instead of cutting the oldest', ()
   for (let i = 1; i < a.length; i++) { jump = Math.max(jump, Math.abs((a[i] - b[i]) - (a[i - 1] - b[i - 1]))); amp = Math.max(amp, Math.abs(a[i] - b[i])); }
   assert.ok(amp > 0 && jump < 0.05 * amp, `largest step ${(jump / amp).toFixed(3)} of the stolen voice's level`);
 });
+test('Quality: Medium and Low let 24 and 12 black holes ring at once (High 48; fewer if the page asks), the quietest faded out past that; a note alone is High\'s to the last bit', () => {
+  const P = { ...DEFAULTS, spinU: 6 }, L = new Float32Array(128), R = new Float32Array(128), res = [];
+  const alone = (quality) => { const e = new RingdownEngine(48000); e.setQuality(quality); e.setParams(P); e.noteOn(60, 0.8); const out = []; for (let i = 0; i < 100; i++) { e.process(L, R, 128); out.push(...L, ...R); } return out; };
+  const ref = alone('high');
+  for (const [quality, cap] of [['high', 48], ['medium', 24], ['low', 12]]) {
+    const e = new RingdownEngine(48000); e.setQuality(quality); e.setParams(P);
+    let most = 0;
+    for (let b = 0; b < 200; b++) {
+      if (b % 4 === 0) e.noteOn(36 + ((b / 4) * 7) % 48, 0.8);
+      e.process(L, R, 128);
+      for (let i = 0; i < 128; i++) assert.ok(Number.isFinite(L[i] + R[i]), `${quality}: not finite`);
+      most = Math.max(most, e.voices.filter((v) => !v.stolen).length);
+    }
+    assert.ok(most <= cap, `${quality}: ${most} ringing`);
+    const asked = new RingdownEngine(48000); asked.setQuality(quality); asked.setParams({ ...P, maxVoices: 8 });
+    for (let k = 0; k < 20; k++) asked.noteOn(40 + k, 0.8);
+    assert.ok(asked.voices.filter((v) => !v.stolen).length <= 8, `${quality}: the page's 8`);
+    const x = alone(quality);
+    for (let i = 0; i < x.length; i++) assert.equal(x[i], ref[i]);
+    res.push(`${quality} ${most}`);
+  }
+  console.log(`        ringing at most: ${res.join(', ')}`);
+});
 test('near extremality the l = m modes, and some l ≠ m overtones, ring at mΩ_H', () => {
   const a = 1 - 1e-6, OmH = a / (2 * (1 + Math.sqrt(1 - a * a)));
   const long = new Set(['2,1,2', '3,2,1', '3,2,2', '4,3,0', '4,3,1', '4,3,2']);
@@ -322,6 +401,83 @@ test('the engine plays the voice the views show: a note without data is a note w
   const a = out(false);
   assert.ok(a.some((x) => x !== 0));
   assert.deepEqual(a, out(true));
+});
+
+test('the keyboard\'s tuning moves each black hole\'s (2,2,0) mode (the engine\'s own note, and the views\' keyVoice): E4 at A = 415 Hz 101.27 ¢ low; in ¼-comma meantone E4 −3.42 ¢, C4 +10.26 ¢, A4 at 440 Hz', () => {
+  for (const [o, key, want] of [[{ pitch: 415 }, 64, keyFreq(64) * 415 / 440], [{ temperament: 'meantone' }, 64, keyFreq(64) * 2 ** (-3.42 / 1200)],
+    [{ temperament: 'meantone' }, 60, keyFreq(60) * 2 ** (10.26 / 1200)], [{ temperament: 'meantone' }, 69, 440]]) {
+    const P = { ...DEFAULTS, spinU: uFromSpin(0.999), overtones: 0, massRatio: 1, inclination: 0, ...o };
+    const m220 = keyVoice(key, P, 48000).modes.find((m) => m.l === 2 && m.m === 2 && m.n === 0);
+    assert.ok(Math.abs(1200 * Math.log2(m220.f / want)) < 0.01, `${JSON.stringify(o)}, key ${key}: keyVoice's (2,2,0) at ${m220.f}`);
+    const e = new RingdownEngine(48000), n = 48000, L = new Float32Array(n), bL = new Float32Array(128), bR = new Float32Array(128);
+    e.setParams(P); e.noteOn(key, 1);
+    let pk = 0;
+    for (let s = 0; s < n; s += 128) { e.process(bL, bR, 128); L.set(bL.subarray(0, Math.min(128, n - s)), s); for (const x of bL) pk = Math.max(pk, Math.abs(x)); }
+    let end = n - 1; while (end > 0 && Math.abs(L[end]) < 1e-3 * pk) end--; // the ringdown, while it is well above the float noise
+    const zc = []; for (let i = 1; i < end; i++) if (L[i - 1] < 0 && L[i] >= 0) zc.push(i - 1 + L[i - 1] / (L[i - 1] - L[i]));
+    const f = (48000 * (zc.length - 1)) / (zc.at(-1) - zc[0]);
+    assert.ok(Math.abs(1200 * Math.log2(f / want)) < 1, `${JSON.stringify(o)}, key ${key}: ${f.toFixed(3)} Hz, want ${want.toFixed(3)}`);
+  }
+});
+
+console.log('MPE');
+// A note's slide is its own black hole's spin, set at the merger (a ringdown's spin is fixed; a hole
+// doesn't bend). Events [t, fn(engine)] in 128-sample blocks; L and R.
+function ring(params, events, sec, fs = 48000) {
+  const e = new RingdownEngine(fs); e.setParams(params);
+  const n = Math.round(sec * fs), L = new Float32Array(n), R = new Float32Array(n), bL = new Float32Array(128), bR = new Float32Array(128);
+  const ev = events.map(([t, f]) => [Math.round(t * fs), f]);
+  let j = 0;
+  for (let s = 0; s < n; s += 128) {
+    while (j < ev.length && ev[j][0] <= s) ev[j++][1](e);
+    e.process(bL, bR, 128);
+    L.set(bL.subarray(0, Math.min(128, n - s)), s); R.set(bR.subarray(0, Math.min(128, n - s)), s);
+  }
+  return [L, R];
+}
+const slide = (key, value) => (e) => e.handle({ type: 'slide', key, value });
+const strike = (key, vel = 0.8, data) => (e) => e.noteOn(key, vel, data);
+const same = ([a, b], [c, d]) => a.every((v, i) => v === c[i]) && b.every((v, i) => v === d[i]);
+test('a black hole with its own spin (a slide before the strike) rings as the knob there, sample for sample, with and without the inspiral, whatever voice the page sends; one beside it keeps the knob\'s', () => {
+  for (const inspiral of [false, true]) {
+    const p = { ...DEFAULTS, inspiral, massRatio: 2 }, u = 4;
+    const x = ring(p, [[0, slide(57, u)], [0, strike(57, 0.8, keyVoice(57, p, 48000))]], 1.5);
+    assert.ok(same(x, ring({ ...p, spinU: u }, [[0, strike(57)]], 1.5)), `inspiral ${inspiral}: as the knob at a = 1 − 10⁻⁴`);
+    assert.ok(!same(x, ring(p, [[0, strike(57)]], 1.5)), 'and not as the knob\'s own');
+  }
+  const p = DEFAULTS, [c] = ring(p, [[0, slide(64, 6)], [0, strike(64)], [0, strike(57)]], 1), [s] = ring(p, [[0, slide(64, 6)], [0, strike(64)]], 1), [a] = ring(p, [[0, strike(57)]], 1);
+  const err = Math.max(...a.map((v, i) => Math.abs(c[i] - s[i] - v))), pk = Math.max(...a.map(Math.abs));
+  assert.ok(err < 1e-6 * pk && pk > 0.01, `the other hole moves by ${err.toExponential(2)} (peak ${pk.toFixed(3)})`);
+});
+test('a slide while it rings changes nothing (the merger set its spin): the next strike on the key takes it', () => {
+  const p = DEFAULTS, x = ring(p, [[0, strike(57)], [0.1, slide(57, 6)]], 0.6);
+  assert.ok(same(x, ring(p, [[0, strike(57)]], 0.6)), 'the ringing hole keeps its spin');
+  const [y] = ring(p, [[0, strike(57)], [0.1, slide(57, 6)], [0.3, strike(57)]], 0.6), [z] = ring(p, [[0, strike(57)], [0.3, (e) => { e.setParams({ ...p, spinU: 6 }); e.noteOn(57, 0.8); }]], 0.6);
+  assert.ok(y.every((v, i) => v === z[i]), 'the next one rings at the slide\'s spin');
+});
+test('slide(NaN) leaves the sound bit for bit as it was', () => {
+  const p = { ...DEFAULTS, inspiral: true }, x = ring(p, [[0, slide(57, NaN)], [0, strike(57)], [0.2, slide(57, NaN)], [0.3, (e) => e.handle({ type: 'noteBend', key: 57, value: 1 })], [0.4, strike(57)]], 1);
+  assert.ok(same(x, ring(p, [[0, strike(57)], [0.4, strike(57)]], 1)));
+});
+test('slide sweeps across the whole range, sent every block while chords are struck, stay finite and no louder than the same chords at the fastest spin, at 44.1, 48 and 96 kHz', () => {
+  for (const fs of [44100, 48000, 96000]) for (const inspiral of [false, true]) {
+    const keys = [21, 36, 57, 64, 84, 108], ev = [], chords = [];
+    for (let b = 0; b < (1.2 * fs) / 128; b++) {
+      keys.forEach((k, i) => ev.push([(b * 128) / fs, slide(k, 3 + 3 * Math.sin(b / (3 + i)))]));
+      if (b % 40 === 0) keys.forEach((k) => chords.push([(b * 128) / fs, strike(k, 1)]));
+    }
+    const peak = (x) => { let pk = 0; for (const v of [...x[0], ...x[1]]) { assert.ok(Number.isFinite(v), `${fs} Hz: NaN`); pk = Math.max(pk, Math.abs(v)); } return pk; };
+    const pk = peak(ring({ ...DEFAULTS, inspiral }, [...ev, ...chords].sort((a, b) => a[0] - b[0]), 1.2, fs)), top = peak(ring({ ...DEFAULTS, inspiral, spinU: 6 }, chords, 1.2, fs));
+    assert.ok(pk > 0.01 && pk < 1.25 * top, `${fs} Hz, inspiral ${inspiral}: peak ${pk.toFixed(2)}, ${top.toFixed(2)} at the fastest spin`);
+  }
+});
+test('CPU: a strike with its own spin builds its black hole (the modes and their spheroidal harmonics) in well under a block', () => {
+  const e = new RingdownEngine(48000); e.setParams({ ...DEFAULTS, retrograde: 1 });
+  const t0 = performance.now();
+  for (let i = 0; i < 200; i++) { e.handle({ type: 'slide', key: 57, value: (i * 6) / 200 }); e.noteOn(57, 0.8); }
+  const ms = (performance.now() - t0) / 200;
+  console.log(`         ${ms.toFixed(3)} ms a strike`);
+  assert.ok(ms < 0.5, `${ms.toFixed(3)} ms (a block is 2.7 ms)`);
 });
 
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');
