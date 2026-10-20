@@ -23,6 +23,7 @@
 #include "bowed-model.h"
 #include "bowed-params.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "bowed-string.h"
 
 namespace forte::bowed {
@@ -53,6 +54,7 @@ class OrganistaEngine : public Engine {
   void allNotesOff() override;
   void pressure(double value, int key) override; // aftertouch: the finger presses harder
   void bend(double value) override;              // the strings' bridges slide: every sounding length ÷r, the notes ×r
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // one key's bridge alone
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -61,6 +63,7 @@ class OrganistaEngine : public Engine {
     Key(int key, double fs) : BowedString(key, fs) {}
     bool down = false, active = false;
     double vel = 0, after = 0, FN = 0, FT = 0, up = 0, dn = 0;
+    double nb = 1; // its key's own bend (MPE), where the glide is
     int idle = 0, seg = 0;
   };
   Key *string(int key) { return key >= KEY_MIN && key <= KEY_MAX ? S[key - KEY_MIN].get() : nullptr; }
@@ -69,6 +72,7 @@ class OrganistaEngine : public Engine {
   int nAct = 0;
   double vB = 0;
   double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
+  NoteExpression expr{MPE_BEND};  // each key's own bend
 
  private:
   void run(float *L, float *R, int n);

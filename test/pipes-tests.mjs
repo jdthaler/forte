@@ -61,7 +61,7 @@ function wallAlpha(f, a) { const { c, nu, gamma, Pr } = AIR; return (Math.sqrt((
 // window is the range of θ = U_j/(f₁W) over which it does. The engine never runs it: it integrates
 // the nonlinear equations in time.
 
-// Run the engine through events ([t, 'on', key, vel] | [t, 'off', key] | [t, 'params', P]) in
+// Run the engine through events ([t, 'on', key, vel] | [t, 'off', key] | [t, 'params', P] | [t, 'msg', message]) in
 // 128-sample blocks like the AudioWorklet; tap(engine, t) after every block.
 function run(params, events, sec, { fs = FS, seed = 1, tap, track = false } = {}) {
   const e = new PipeEngine(fs, seed, { track });
@@ -73,6 +73,7 @@ function run(params, events, sec, { fs = FS, seed = 1, tap, track = false } = {}
     while (j < ev.length && ev[j][0] <= s) {
       const [, type, a, b] = ev[j++];
       if (type === 'on') e.noteOn(a, b); else if (type === 'off') e.noteOff(a, b); else if (type === 'params') e.setParams(a);
+      else if (type === 'msg') e.handle(a);
     }
     e.process(bL, bR, bl);
     for (let i = 0; i < bl && s + i < n; i++) { L[s + i] = bL[i]; R[s + i] = bR[i]; }
@@ -647,6 +648,18 @@ test('stability: seeded random combinations of extreme settings at 44.1 and 48 k
     assert.ok(t2 < 1e-4 || (t2 < 0.05 * note && t2 < 0.8 * t1), `${fs}: still sounding (${t2.toFixed(5)} after ${t1.toFixed(5)}, note ${note.toFixed(4)}) with ${JSON.stringify(p2)}`);
   }
   console.log(`        loudest of 10: ${worst.toFixed(2)}`);
+});
+test(`MPE: a key's own bend reaches the WebAssembly as far as the descriptor's ±${INSTRUMENT.mpe.bend} semitones: c¹'s Principal bent so far sounds there (within 6 ¢), a bend past it lands at it, a bend of 1 changes nothing, and there is no slide (the wind is every key's)`, () => {
+  const p = P({ principal: 1, octave: 0, gedackt: 0, mixture: 0, noise: 0 }), max = INSTRUMENT.mpe.bend;
+  const bent = (st) => run(p, [[0, 'msg', { type: 'noteBend', key: 60, value: 2 ** (st / 12) }], [0, 'msg', { type: 'slide', key: 60, value: 3000 }], [0, 'on', 60, 0.7]], 1);
+  const plain = run(p, [[0, 'on', 60, 0.7]], 1);
+  assert.ok(INSTRUMENT.mpe.slide === undefined);
+  assert.deepEqual(bent(0).L, plain.L);
+  for (const s of [1, -1]) {
+    const r = bent(s * max), want = pipeFreq(60, 0) * 2 ** ((s * max) / 12), f = freqAt(r.L, want, 0.5 * FS, FS);
+    assert.ok(Math.abs(cents(f, want)) < 6, `${s * max}: ${cents(f, want).toFixed(1)} ¢`);
+    assert.deepEqual(bent(2 * s * max).L, r.L);
+  }
 });
 test('presets use their own parameters, and each speaks without NaN', () => {
   for (const pr of PRESETS) {

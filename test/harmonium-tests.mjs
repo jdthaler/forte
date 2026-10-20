@@ -66,7 +66,7 @@ const cents = (a, b) => 1200 * Math.log2(a / b);
 const rel = (a, b) => Math.abs(a / b - 1);
 const TAU = 2 * Math.PI;
 
-// Run the engine through events ([t, 'on', key, vel] | [t, 'off', key] | [t, 'params', P] | [t, 'press', value]),
+// Run the engine through events ([t, 'on', key, vel] | [t, 'off', key] | [t, 'params', P] | [t, 'press', value] | [t, 'msg', message]),
 // in 128-sample blocks like the AudioWorklet; tap(engine, t) after every block.
 function run(params, events, sec, { fs = FS, seed = 1, tap, opts = { track: true } } = {}) {
   const e = new HarmoniumEngine(fs, seed, opts);
@@ -79,6 +79,7 @@ function run(params, events, sec, { fs = FS, seed = 1, tap, opts = { track: true
       const [, type, a, b] = ev[j++];
       if (type === 'on') e.noteOn(a, b); else if (type === 'off') e.noteOff(a, b); else if (type === 'params') e.setParams(a);
       else if (type === 'press') e.handle({ type: 'pressure', key: null, value: a });
+      else if (type === 'msg') e.handle(a);
     }
     e.process(bL, bR, bl);
     for (let i = 0; i < bl && s + i < n; i++) { L[s + i] = bL[i]; R[s + i] = bR[i]; }
@@ -445,6 +446,17 @@ test('stability: seeded random combinations of extreme settings at 44.1 and 48 k
   }
   assert.ok(worst.pk < 4, `${worst.fs}: peak ${worst.pk.toFixed(2)} with ${JSON.stringify(worst.p1)} → ${JSON.stringify(worst.p2)}`);
   console.log(`        loudest of 12: ${worst.pk.toFixed(2)}`);
+});
+test(`MPE: a key's own bend reaches the WebAssembly as far as the descriptor's ±${INSTRUMENT.mpe.bend} semitones: C4 bent so far sounds there (within 12 ¢: the throat and cell keep their tuning), a bend past it lands at it, a bend of 1 changes nothing, and there is no slide (the wind is every key's)`, () => {
+  const max = INSTRUMENT.mpe.bend, bent = (st) => run(P(), [[0, 'msg', { type: 'noteBend', key: 60, value: 2 ** (st / 12) }], [0, 'msg', { type: 'slide', key: 60, value: 3000 }], [0, 'on', 60, 0.7]], 1);
+  const plain = hold(60, P(), 1);
+  assert.ok(INSTRUMENT.mpe.slide === undefined);
+  assert.deepEqual(bent(0).L, plain.L);
+  for (const s of [1, -1]) {
+    const r = bent(s * max), want = keyFreq(60) * 2 ** ((s * max) / 12), f = freqAt(r.L, want, 0.5 * FS, FS);
+    assert.ok(Math.abs(cents(f, want)) < 12, `${s * max}: ${cents(f, want).toFixed(1)} ¢`);
+    assert.deepEqual(bent(2 * s * max).L, r.L);
+  }
 });
 test('presets use their own parameters, and each speaks without NaN', () => {
   for (const pr of PRESETS) {

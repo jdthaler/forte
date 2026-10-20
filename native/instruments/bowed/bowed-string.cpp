@@ -19,9 +19,12 @@ inline double tap(const double *buf, int m, int w, double d) {
   const double c1 = 0.5 * (x2 - x0), c2 = x0 - 2.5 * x1 + 2 * x2 - 0.5 * x3, c3 = 0.5 * (x3 - x0) + 1.5 * (x1 - x2);
   return ((c3 * f + c2) * f + c1) * f + x1;
 }
-// C2 bent down 2 semitones fits (C2–C6 keep that); the keys past them hold their own string bent down so far
+// C2 bent down 2 semitones fits (C2–C6 keep that); the keys past them hold their own string bent
+// down so far; and every string holds itself bent down by that and its own bend (MPE_BEND) too
 int ringSize(double fs, int key) {
-  return 1 << (int)std::ceil(std::log2((key >= KEY_LO && key <= KEY_HI ? fs / 50 : fs / (0.89 * keyFreq(key))) + 16));
+  const double own = fdlibm::pow(2.0, -MPE_BEND / 12);
+  const double lo = key >= KEY_LO && key <= KEY_HI ? std::min(50.0, (50 / keyFreq(KEY_LO)) * keyFreq(key) * own) : 0.89 * keyFreq(key) * own;
+  return 1 << (int)std::ceil(std::log2(fs / lo + 16));
 }
 } // namespace
 

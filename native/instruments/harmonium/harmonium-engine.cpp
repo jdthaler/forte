@@ -41,7 +41,7 @@ static std::array<double, 63> halfband(double beta = 8) {
 
 // ---- a reed --------------------------------------------------------------------------------
 
-void HarmoniumEngine::Reed::init(HarmoniumEngine &eng, const ReedModel &model) {
+void HarmoniumEngine::Reed::init(HarmoniumEngine &eng, const ReedModel &model, double r) {
   const bool keepTrack = track;
   *this = Reed{};
   R = &model;
@@ -61,7 +61,7 @@ void HarmoniumEngine::Reed::init(HarmoniumEngine &eng, const ReedModel &model) {
   track = eng.trackAll || keepTrack;
   reset();
   st[S_LASTX] = -1;
-  if (eng.bendNow != 1) stiffen(eng.bendNow);
+  if (r != 1) stiffen(r);
 }
 
 // The tongue's modes with its stiffness × r² (pitch bend: the mass and the set unchanged, so each
@@ -242,7 +242,7 @@ void HarmoniumEngine::setParams(const double *p) {
 // The voice's reeds, once its key's are designed: what noteOn does with them.
 void HarmoniumEngine::start(Voice &v) {
   const bool focused = focus == &v;
-  for (int r = 0; r < NRANKS; r++) { v.reeds[r].track = focused; v.reeds[r].init(*this, v.data.data->r[r]); }
+  for (int r = 0; r < NRANKS; r++) { v.reeds[r].track = focused; v.reeds[r].init(*this, v.data.data->r[r], bendNow * v.nb); }
   v.pending = false;
   for (int r = 0; r < NRANKS; r++) if (v.mute[r] > 0 && v.down) v.reeds[r].asleep = false;
   // percussion: a hammer strikes the 8′ reed (into the slot) as the key goes down
@@ -274,11 +274,11 @@ void HarmoniumEngine::noteOn(int key, double velocity) {
     for (int r = 0; r < NRANKS; r++) n.mute[r] = on[r] ? 1 : 0;
     for (double &x : n.s) x = 0;
     n.s[V_FADE] = 1;
-    n.down = false; n.fading = false; n.dead = false; n.age = 0;
+    n.down = false; n.fading = false; n.dead = false; n.age = 0; n.nb = expr.bendOf(key);
     std::tie(n.gl, n.gr) = keyPan(key, 0.5, 36, 96);
     n.nList = 0;
     voices[count++] = v; byKey[key] = v;
-    if (auto d = keys.get(key, version)) { n.data = d; keys.acquire(d); for (int r = 0; r < NRANKS; r++) n.reeds[r].init(*this, d.data->r[r]); n.pending = false; }
+    if (auto d = keys.get(key, version)) { n.data = d; keys.acquire(d); for (int r = 0; r < NRANKS; r++) n.reeds[r].init(*this, d.data->r[r], bendNow * n.nb); n.pending = false; }
     // too many keys: the quietest released one (never a young one) fades out
     int live = 0;
     for (int i = 0; i < count; i++) if (!voices[i]->fading && !voices[i]->dead) live++;
@@ -293,6 +293,10 @@ void HarmoniumEngine::noteOn(int key, double velocity) {
       }
       if (victim) victim->fading = true;
     }
+  }
+  if (v->nb != expr.bendOf(key)) { // a key pressed again starts at its own bend (no glide)
+    v->nb = expr.bendOf(key);
+    for (Reed &r : v->reeds) if (r.R) r.stiffen(bendNow * v->nb);
   }
   v->down = true; v->s[V_AT] = 1; v->s[V_AR] = 1 / (palletOpen(velocity) * fs); v->vel = velocity;
   if (!v->pending) {
@@ -347,10 +351,16 @@ void HarmoniumEngine::bend(double value) {
 void HarmoniumEngine::process(float *L, float *R, int n) {
   for (int at = 0; at < n; at += 128) {
     const int m = std::min(128, n - at);
-    if (bendNow != bendTo) { // the pitch wheel glides; every reed is retuned each block
+    const bool wheel = bendNow != bendTo;
+    if (wheel) { // the pitch wheel glides; every reed is retuned each block
       bendNow += (bendTo - bendNow) * (1 - std::exp(-m / (BEND_T * fs)));
       if (std::fabs(bendNow - bendTo) < 1e-9) bendNow = bendTo;
-      for (int i = 0; i < count; i++) for (Reed &r : voices[i]->reeds) if (r.R) r.stiffen(bendNow);
+    }
+    for (int i = 0; i < count; i++) { // and a key's own bend, only the reeds of keys whose bend moves
+      Voice &v = *voices[i];
+      const double to = expr.bendOf(v.key), was = v.nb;
+      if (was != to) v.nb = glideTo(was, to, m / fs, BEND_T);
+      if (wheel || was != to) for (Reed &r : v.reeds) if (r.R) r.stiffen(bendNow * v.nb);
     }
     run(L + at, R + at, m);
   }

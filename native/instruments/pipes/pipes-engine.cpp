@@ -94,7 +94,7 @@ int PipeEngine::Pipe::lineLength(double tauK) {
 
 // Its constants and state. Modes: per mode 6 constants (exact transition over one step for
 // x'' + 2σx' + ω²x = F/M, F held) and 2 states (volume displacement x, volume flow v).
-void PipeEngine::Pipe::init(PipeEngine &eng, const PipeModel *model, int r, double *line) {
+void PipeEngine::Pipe::init(PipeEngine &eng, const PipeModel *model, int r, double *line, double bent) {
   R = model; rank = r; stopped = model->stopped;
   os = eng.osFor(model->f);
   fsI = eng.fs * os; h = 1 / fsI; n = model->nModes;
@@ -116,7 +116,7 @@ void PipeEngine::Pipe::init(PipeEngine &eng, const PipeModel *model, int r, doub
   lp = qin = vm = Q = dp = eta = out = 0; asleep = true; foot = Uj = 0;
   track = eng.track; dsp = mean = prev = t = 0; last = -1; per = 0; nx = 0;
   kMean = 1 - std::exp(-h * 2 * PI * std::min(20.0, model->f / 8));
-  if (eng.bendNow != 1) retime(eng.bendNow);
+  if (bent != 1) retime(bent);
 }
 
 // The constants of one step of this pipe's own time, r/fsI: pitch bend, the organ's air warmer
@@ -330,10 +330,10 @@ bool PipeEngine::startKey(int key, double velocity, const KeyModels *models, Dat
     for (int r = 0; r < RANKS; r++) need += Pipe::lineLength((models->pipes[r].geo.W / CP) * fs * osFor(models->pipes[r].f));
     v = freeVoice(need);
     if (!v) return false;
-    v->inUse = true; v->key = key; v->version = version; v->models = models; v->ref = ref;
+    v->inUse = true; v->key = key; v->version = version; v->models = models; v->ref = ref; v->nb = expr.bendOf(key);
     data.acquire(ref);
     size_t at = 0;
-    for (int r = 0; r < RANKS; r++) { v->pipes[r].init(*this, &models->pipes[r], r, v->lines.data() + at); at += v->pipes[r].N; }
+    for (int r = 0; r < RANKS; r++) { v->pipes[r].init(*this, &models->pipes[r], r, v->lines.data() + at, bendNow * v->nb); at += v->pipes[r].N; }
     bool stops[STOPS] = {P[p::principal] != 0, P[p::octave] != 0, P[p::gedackt] != 0, P[p::mixture] != 0};
     engaged(stops, on);
     for (int r = 0; r < RANKS; r++) v->slider[r] = v->open[r] = on[r] ? 1 : 0;
@@ -360,6 +360,7 @@ bool PipeEngine::startKey(int key, double velocity, const KeyModels *models, Dat
       if (victim) victim->fading = true;
     }
   }
+  v->nb = expr.bendOf(key); // a key pressed again starts at its own bend, at once (process retimes its pipes)
   v->down = true; v->aTarget = 1; v->aRate = 1 / (palletTime(velocity, P[p::rise]) * fs);
   for (int r = 0; r < RANKS; r++) if (v->slider[r] > 0) v->pipes[r].asleep = false;
   focus = v;
@@ -414,13 +415,21 @@ void PipeEngine::bend(double value) {
 
 void PipeEngine::process(float *L, float *R, int n) {
   for (int at = 0, m; at < n; at += m) {
-    // pitch bend glides in steps of at most 128 samples, every pipe retimed at each
-    m = std::min(bendNow != bendTo ? 128 : BLOCK_MAX, n - at);
+    // pitch bend (the wheel's, and each key's own) glides in steps of at most 128 samples, the
+    // pipes whose bend moved retimed at each
+    bool own = false;
+    for (int i = 0; i < nVoices && !own; i++) own = voices[i]->nb != expr.bendOf(voices[i]->key);
+    m = std::min(bendNow != bendTo || own ? 128 : BLOCK_MAX, n - at);
     if (bendNow != bendTo) {
       bendNow += (bendTo - bendNow) * (1 - std::exp(-m / (BEND_T * fs)));
       if (std::fabs(bendNow - bendTo) < 1e-9) bendNow = bendTo;
     }
-    for (int i = 0; i < nVoices; i++) for (Pipe &q : voices[i]->pipes) if (q.R && q.rt != bendNow) q.retime(bendNow);
+    for (int i = 0; i < nVoices; i++) {
+      Voice &v = *voices[i];
+      if (own) v.nb = glideTo(v.nb, expr.bendOf(v.key), m / fs, BEND_T);
+      const double r = bendNow * v.nb;
+      for (Pipe &q : v.pipes) if (q.R && q.rt != r) q.retime(r);
+    }
     processBlock(L + at, R + at, m);
   }
   data.audioCycle();
