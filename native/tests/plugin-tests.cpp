@@ -2,6 +2,7 @@
 // instrument: any sample rate and block size, notes and MIDI, presets, controllers, state, and MPE
 // (from MIDI, and as CLAP's note expressions).
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <string>
