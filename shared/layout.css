@@ -60,6 +60,19 @@ body[data-instrument] .forte-presets #reset { display: none; } /* "Default setti
 body[data-instrument] #start.running,
 body[data-instrument] #start:not(.running) ~ :is(#cpu, #voices) { display: none; }
 .pill[hidden] { display: none; }
+/* the velocity curve and MPE beside the MIDI status (shared/midi.js touchMenu, mpeMenu): menus
+   drawn as pills */
+body[data-instrument] :is(#touch, #mpe) { color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; font: inherit; min-width: 0; }
+/* Quality beside the CPU readout (shared/quality.js): a pill of its own until the audio starts,
+   then one pill with the readout, "CPU 12 % · 3 voices | High" */
+body[data-instrument] .forte-quality {
+  display: inline-flex; align-items: center; gap: 2px; min-width: 0; white-space: nowrap; cursor: pointer;
+  color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0 2px 0 10px;
+}
+body[data-instrument] .forte-quality select { color: var(--text); background: transparent; border: 0; border-radius: 999px; padding: 2px 6px; min-width: 0; }
+body[data-instrument] #start.running ~ :is(#cpu, #voices):has(+ .forte-quality) { border-top-right-radius: 0; border-bottom-right-radius: 0; align-self: stretch; align-content: center; }
+body[data-instrument] #start.running ~ :is(#cpu, #voices) + .forte-quality { margin-left: -9px; padding-left: 2px; border-left-color: transparent; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+body[data-instrument] #start.running ~ :is(#cpu, #voices) + .forte-quality > span { display: none; }
 body:not(.perform) .forte-fullscreen { display: none; }
 
 /* ---- the page: the Controls panel beside the views or below them, each headed by its row
@@ -266,6 +279,7 @@ body.perform #midi,
 body.perform #touch,
 body.perform #mpe,
 body.perform #cpu:not(.hot),
+body.perform #cpu:not(.hot) + .forte-quality,
 body.perform .forte-toggles,
 body.perform .forte-no-view,
 body.perform #views .card:not([data-keep-text]) :is(.card-head, .caption, .legend, .readout, .tabs, dl, table) { display: none; }
@@ -362,6 +376,9 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
   body[data-instrument] .forte-play { order: 2; flex: 1 1 100%; }
   body[data-instrument] > header button { white-space: nowrap; }
   body[data-instrument] .pill { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  /* one row: the CPU readout gives way (its text ends in …) before the row wraps */
+  body[data-instrument] > header .status { flex-wrap: nowrap; min-width: 0; }
+  body[data-instrument] #start.running ~ :is(#cpu, #voices) + .forte-quality { margin-left: -7px; }
   body[data-instrument] .forte-switch { position: static; }
   body[data-instrument] .forte-menu { top: calc(100% + 4px); max-height: 70vh; max-height: 70svh; overflow: auto; }
   body[data-instrument] .forte-menu { left: max(8px, env(safe-area-inset-left)); width: min(400px, calc(100vw - 16px)); }
@@ -409,6 +426,9 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
   body:not(.deck-shut) .forte-kbmap { flex: 0 0 72px; min-width: 0; } /* beside the controls: a thumbnail */
   body[data-instrument] #keyboard { height: min(var(--kb-h, 115px), 36svh); }
   body[data-instrument] .forte-play { order: 0; flex: 1 1 auto; }
+  /* one row: the name keeps its width and the CPU readout gives way */
+  body[data-instrument] .brand { flex: 0 0.1 auto; }
+  body[data-instrument] > header .status { flex: 0 1 auto; }
 }
 /* 16px text in dropdowns on phones, or iOS zooms the page in when one is tapped */
 @media (pointer: coarse) and (max-width: 600px), (pointer: coarse) and (max-width: 1050px) and (max-height: 500px) {

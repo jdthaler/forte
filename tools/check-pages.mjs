@@ -2,7 +2,7 @@
 // what a layout regression breaks: errors in the console, a page that scrolls sideways (as
 // loaded, with the menus, Controls and every view turned on, and with audio started), the
 // controls each page should place (the perform controls above the keys, the ⓘ buttons, "Default
-// settings" among the presets, the keys, the Quality choice, set while audio plays), that each
+// settings" among the presets, the keys, the Quality choice in the header, set while audio plays), that each
 // toggle turns its view or group of controls off and on (and on the desktop, that what's turned
 // on is still on after a reload, that the switch puts the controls below the views and beside
 // them, and that every view shows in Perform), and the front page's Listen buttons (one for each
@@ -88,7 +88,7 @@ const COUNT = () => {
     controlGroups: n('.forte-control-toggles button'),
     viewsOn: n('.forte-view-toggles button[aria-pressed="true"]'),
     listen: n('button[data-src]'),
-    quality: n('#controls #quality'),
+    quality: [...document.querySelectorAll('header #quality')].filter((e) => e.checkVisibility()).length,
   };
 };
 const WIDE = () => document.documentElement.scrollWidth - window.innerWidth;
@@ -230,7 +230,7 @@ function failures(r, instrument) {
   if (!c.defaultSettings) f.push('no "Default settings" among the presets');
   if (!c.performControls) f.push('no perform controls above the keys');
   if (!c.views) f.push('no toggles for the views');
-  if (!c.quality) f.push('no Quality choice in the controls');
+  if (!c.quality) f.push('no Quality choice in the header');
   return f;
 }
 
