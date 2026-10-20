@@ -5,8 +5,9 @@
    (see the end): the page scrolls and the keyboard sticks to the bottom.
    Body classes from shared/layout.js:
      perform         Perform mode: the views turned on fill the screen, with no text in them
-     hide-controls   the Controls column hidden (wide screens)
-     drawer-open     the Controls panel slid over the views (narrow screens; on phones it replaces them)
+     hide-controls   the Controls panel hidden (every group off; in Perform, until More controls)
+     controls-below  the Controls panel below the views, not beside them (always on a narrow screen)
+     drawer-open     in Perform on a narrow screen, the Controls panel slid over the views (on phones it replaces them)
      deck-shut       the controls above the keys folded away
      no-views        a page with no views: the controls take the space
      no-midi         a touch device with no Web MIDI (iPhone, iPad): MIDI buttons and hints hidden
@@ -61,22 +62,53 @@ body[data-instrument] #start:not(.running) ~ :is(#cpu, #voices) { display: none;
 .pill[hidden] { display: none; }
 body:not(.perform) .forte-fullscreen { display: none; }
 
-/* ---- views: a row of toggles, then the views turned on, in rows (shared/layout.js
-   sets each card's span of the twelve columns, and --rows) --------------------- */
-body[data-instrument] #views { display: flex; flex-direction: column; gap: 10px; }
-.forte-view-toggles { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-body[data-instrument] .forte-view-toggles button {
+/* ---- the page: a row of toggles on top, then the Controls panel beside the views or below
+   them. The toggles turn each view and each group of controls on or off ------------------ */
+body[data-instrument] > main {
+  grid-template-columns: 320px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: "bar bar" "controls views";
+}
+body.controls-below > main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "bar" "views" "controls"; }
+body.hide-controls > main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "bar" "views"; }
+body[data-instrument] #controls { grid-area: controls; }
+body[data-instrument] #views { grid-area: views; }
+.forte-toggles {
+  grid-area: bar; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 22px;
+  padding: 10px 14px 0; min-width: 0;
+}
+.forte-toggles > div { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.forte-toggles-label { font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
+body[data-instrument] .forte-toggles button {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 3px 12px 3px 10px; border-radius: 999px; font-size: 12px; color: var(--muted);
   background: transparent; border: 1px solid var(--line);
 }
-.forte-view-toggles button::before {
+.forte-toggles button::before {
   content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%;
   border: 1.5px solid currentColor; opacity: 0.7;
 }
-body[data-instrument] .forte-view-toggles button:hover { color: var(--text); }
-body[data-instrument] .forte-view-toggles button[aria-pressed="true"] { color: var(--text); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
-.forte-view-toggles button[aria-pressed="true"]::before { background: var(--accent); border-color: var(--accent); opacity: 1; }
+body[data-instrument] .forte-toggles button:hover { color: var(--text); }
+body[data-instrument] .forte-toggles button[aria-pressed="true"] { color: var(--text); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.forte-toggles button[aria-pressed="true"]::before { background: var(--accent); border-color: var(--accent); opacity: 1; }
+/* a group's toggle stands in for folding it */
+#controls details.group[hidden] { display: none; }
+#controls details.group[data-key] > summary { cursor: default; }
+#controls details.group[data-key] > summary::after { content: none; }
+/* below the views, the groups side by side, scrolling within a part of the height */
+body.controls-below #controls { border-right: 0; border-top: 1px solid var(--line); max-height: 38vh; max-height: 38dvh; padding-top: 4px; }
+body.controls-below #groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); column-gap: 26px; align-items: start; }
+/* the switch in the header: controls beside the views, or below them */
+.forte-arrange { display: inline-flex; flex: none; padding: 2px; gap: 2px; border: 1px solid var(--line); border-radius: 9px; background: rgba(0, 0, 0, 0.28); }
+body[data-instrument] .forte-arrange button { display: grid; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--muted); padding: 4px 8px; }
+body[data-instrument] .forte-arrange button:hover { color: var(--text); }
+body[data-instrument] .forte-arrange button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink, #111); }
+.forte-arrange svg { width: 20px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; }
+.forte-arrange svg .fill { fill: currentColor; stroke: none; }
+body.perform .forte-arrange { display: none; }
+
+/* ---- views: the views turned on, in rows (shared/layout.js sets each card's span of the
+   twelve columns, and --rows) ------------------------------------------------------------ */
+body[data-instrument] #views { display: flex; flex-direction: column; gap: 10px; }
 .forte-stage {
   flex: 1 1 0; display: grid; gap: 12px; min-height: 0;
   grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: repeat(var(--rows, 1), minmax(220px, 1fr));
@@ -92,8 +124,8 @@ body[data-instrument] .card-head h2 .forte-info { margin-left: 7px; vertical-ali
 @keyframes forte-reveal { from { opacity: 0; transform: translateY(-4px); } }
 
 /* ---- controls: the deck above the keys ----------------------------------------- */
-body.hide-controls > main { grid-template-columns: 1fr; }
 body.hide-controls #controls { display: none; }
+body:not(.perform) .forte-more { display: none; } /* Discover has the toggles */
 .drawer-close { display: none; }
 details.group:not(:has(.param)) { display: none; } /* every control in it is above the keys */
 /* the handle on the footer's top edge folds the deck away */
@@ -226,7 +258,7 @@ body.perform .forte-info,
 body.perform #midi,
 body.perform #touch,
 body.perform #cpu:not(.hot),
-body.perform .forte-view-toggles,
+body.perform .forte-toggles,
 body.perform .forte-no-view,
 body.perform #views .card:not([data-keep-text]) :is(.card-head, .caption, .legend, .readout, .tabs, dl, table) { display: none; }
 body.perform #views .card { background: transparent; border-color: transparent; padding: 4px; }
@@ -235,21 +267,27 @@ body.perform #views .card:not([data-keep-text]) canvas { flex: 1 1 0; height: au
 
 /* ---- narrow screens (tablets, narrow windows) ----------------------------------- */
 @media (max-width: 1050px) {
-  /* the Controls panel slides over the views */
-  body[data-instrument]:not(.no-views) > main { grid-template-columns: minmax(0, 1fr); }
-  body[data-instrument]:not(.no-views) #controls {
+  /* the controls always go below the views here: no switch */
+  body[data-instrument] .forte-arrange { display: none; }
+  body[data-instrument]:not(.no-views) > main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "bar" "views" "controls"; }
+  body.perform:not(.no-views) #controls { grid-area: auto; }
+  /* in Perform, More controls slides the Controls panel over the views */
+  body.perform:not(.no-views) #controls {
     display: none;
     position: absolute; z-index: 30; top: 0; bottom: 0; left: 0;
     width: min(380px, 92vw);
     border-right: 1px solid var(--line); border-bottom: 0;
     box-shadow: 10px 0 40px rgba(0, 0, 0, 0.6);
   }
-  body.drawer-open:not(.no-views) #controls { display: block; }
-  body[data-instrument]:not(.no-views) .drawer-close { display: block; width: 100%; margin-bottom: 10px; }
+  body.perform.drawer-open:not(.no-views) #controls { display: block; }
+  body.perform:not(.no-views) .drawer-close { display: block; width: 100%; margin-bottom: 10px; }
 }
 /* tablets: in Discover the views scroll, each as tall as it needs (a page's canvases
    are 230px at least here) */
 @media (min-width: 601px) and (max-width: 1050px) and (min-height: 501px) {
+  /* … and the controls below them: the two scroll together, as one column */
+  body[data-instrument]:not(.perform) > main { overflow-y: auto; overscroll-behavior: contain; grid-template-rows: auto max-content max-content; align-content: start; }
+  body[data-instrument]:not(.perform) #views, body.controls-below:not(.perform) #controls { overflow: visible; max-height: none; }
   body[data-instrument]:not(.perform) .forte-stage { flex: none; grid-template-rows: none; grid-auto-rows: max-content; }
   body[data-instrument]:not(.perform) .forte-stage > .card { min-height: 300px; max-height: 70vh; }
 }
@@ -291,8 +329,17 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
   body[data-instrument] #views { padding: 10px; }
   body[data-instrument] .forte-stage { flex: none; grid-template-rows: none; grid-auto-rows: max-content; }
   body[data-instrument] #views .card { overflow-x: auto; } /* wide tables scroll inside their card */
-  body[data-instrument] .forte-view-toggles { gap: 5px; }
-  body[data-instrument] .forte-view-toggles button { min-height: 30px; padding-block: 2px; }
+  /* a row of toggles each, sliding sideways when they don't fit */
+  body[data-instrument] .forte-toggles { padding: 10px 0 0; gap: 6px; }
+  body[data-instrument] .forte-toggles > div {
+    flex: 1 1 100%; flex-wrap: nowrap; gap: 5px; overflow-x: auto; overscroll-behavior-x: contain;
+    padding: 0 10px; scrollbar-width: none;
+  }
+  .forte-toggles > div::-webkit-scrollbar { display: none; }
+  body[data-instrument] .forte-toggles button { flex: none; }
+  .forte-toggles-label { flex: none; }
+  body[data-instrument] .forte-toggles button { min-height: 30px; padding-block: 2px; }
+  body.controls-below #controls { max-height: none; }
 
   body[data-instrument] > header {
     position: relative; gap: 6px 10px;
@@ -310,8 +357,8 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
   body[data-instrument] .forte-fullscreen { display: none; }
 
   body.drawer-open:not(.no-views) #views { display: none; }
-  body[data-instrument]:not(.no-views) #controls { position: static; width: auto; border: 0; box-shadow: none; }
-  body[data-instrument]:not(.no-views) .drawer-close { position: sticky; top: max(6px, env(safe-area-inset-top)); z-index: 5; }
+  body.perform:not(.no-views) #controls { position: static; width: auto; border: 0; box-shadow: none; }
+  body.perform:not(.no-views) .drawer-close { position: sticky; top: max(6px, env(safe-area-inset-top)); z-index: 5; }
 
   body[data-instrument] > footer {
     position: sticky; bottom: 0; z-index: 20;

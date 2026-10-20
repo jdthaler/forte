@@ -94,13 +94,15 @@ play the plugins in a DAW with a small buffer.
 Each instrument page reads top to bottom. At the top, the instrument's
 name opens the menu of every instrument (and Forte's home page), next to
 **How it works** and the mode. In the middle are the views,
-pictures of the physics as it plays, with a row of toggles above them
-that turns each one on or off (the main ones are on at first, and the
-page remembers your choice). At the bottom, right above the keys, are the controls a
-player reaches for (stops and registrations, tremolo, drive, the mallet,
-the spin, the room and the volume, or the organ's drawbars), with **More
-controls** for everything else, and the presets just above the keys (the
-first control on a phone). Each shows its name, and its value while
+pictures of the physics as it plays, and the rest of the controls,
+grouped, beside them or below them (a switch at the top chooses, on a
+wide screen). A row of toggles above turns each view and each group of
+controls on or off: the main views and every group are on at first, and
+the page remembers your choice. At the bottom, right above the keys, are
+the controls a player reaches for (stops and registrations, tremolo,
+drive, the mallet, the spin, the room and the volume, or the organ's
+drawbars), and the presets just above the keys (the first control on a
+phone). Each shows its name, and its value while
 you move it. Explanations wait behind ⓘ buttons.
 
 **Your own presets** live in the same menu. *Save these settings…* keeps
@@ -109,7 +111,7 @@ these settings* makes a link that opens the page playing them, to send
 to someone. *Your presets and files…* lists yours, and saves them to a
 file or opens one: the plugins read and write the same files.
 
-**Tuning**, under More controls, is the same on every instrument: the
+**Tuning**, among the controls, is the same on every instrument: the
 **pitch** standard (A = 440 Hz, or 415 for baroque pitch, 392, 422.5, 430,
 435, 442, 443 or 466), the **temperament** (equal, ¼- and ⅙-comma
 meantone, Werckmeister III, Kirnberger III, Vallotti, Young, Pythagorean
@@ -124,8 +126,8 @@ carry it.
 There are two modes. **Discover** shows it all. **Perform** shows just
 the views you turned on, filling the screen, with no toggles and no text
 in them: for playing,
-or for a projector (**Full screen** fills it). The controls stay where
-they are.
+or for a projector (**Full screen** fills it). The controls above the
+keys stay where they are, and **More controls** brings back the rest.
 
 **The keys** fill the width at the key size you choose (− +), like
 GarageBand's: a phone shows an octave or so, a laptop most of the range.

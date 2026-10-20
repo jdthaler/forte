@@ -243,11 +243,17 @@ and say which in the footer help.
 (loaded last in `<head>`) give every page the same layout, top to bottom:
 - **The header.** The instrument's name is also the menu (Forte's home
   page and every instrument, from `shared/nav.js`; the page's `<h1>`
-  moves into it). Then How it works, **Discover | Perform**, audio, MIDI
-  and Panic.
-- **The views: pictures only.** Above them is a row of toggles, one for
-  each view, named by its `data-view` (or its `<h2>`): a tap turns that
-  view on or off, and the page remembers which are on. The views that are
+  moves into it). Then How it works, **Discover | Perform**, a switch
+  that puts the Controls panel beside the views or below them (wide
+  screens; a narrow one always puts it below), audio, MIDI and Panic.
+- **The toggles.** A row of them across the top: one for each view,
+  named by its `data-view` (or its `<h2>`), and one for each group of
+  controls in `#controls` (each `details.group`, named by its
+  `<summary>`; a group whose parameters have all moved above the keys has
+  none, and a group the page adds later gets one). A tap turns that view
+  or group on or off, and the page remembers which are on. Every group is
+  on at first. With every group off, the views take the panel's room.
+- **The views: pictures only.** The views that are
   on share the space in rows, side by side on a wide screen and stacked on
   a tall one; a short last row stretches across. At first only the cards
   marked `data-perform` (one or two: `test/site-tests.mjs` checks) are on,
@@ -256,11 +262,10 @@ and say which in the footer help.
 - **The controls, above the keys.** A card marked `data-control` is a
   control surface, not a view (the organ's drawbars and switches): it
   moves here, ahead of the `perform: true` parameters. A dropdown there
-  with a few short choices becomes a row of buttons. "More controls"
-  opens `#controls`, the rest of the parameters, grouped (a column on
-  wide screens, a panel sliding over the views on narrow ones), where
-  each hint waits behind an ⓘ. A handle on the footer's edge folds the
-  controls away.
+  with a few short choices becomes a row of buttons. The rest of the
+  parameters are in the Controls panel, `#controls`, grouped, where each
+  hint waits behind an ⓘ. A handle on the footer's edge folds the
+  controls above the keys away.
 - **The keyboard bar and the keys** (`shared/keyboard.js`: multi-touch,
   glissando across the keys, aftertouch from leaning on a held key along
   its length or from Pencil pressure). As many keys as fit the width at the
@@ -272,13 +277,16 @@ and say which in the footer help.
   control above the keys instead. The pedal button presses Space. The page's footer hints
   (`.kb-help`: computer keys, MIDI, readouts) go behind ⌨.
 - **Perform** is for playing and for a projector: the views that are on,
-  filling the screen, with no toggles and no text in them. The card's `.card-head`,
+  filling the screen, with no toggles and no text in them. The Controls
+  panel waits behind "More controls" (sliding over the views on a narrow
+  screen). The card's `.card-head`,
   `.caption`, `.legend`, `.readout`, `<dl>` and `<table>` are hidden, and
   `fillText` draws nothing on their canvases (a card with
   `data-keep-text` keeps its text). Full screen appears. The mode is the
   same on every page; the rest is remembered per page.
 - On phones the page scrolls above the controls and keys, which stay put,
-  and "More controls" replaces the views. Turned sideways, the controls
+  and the Controls panel follows the views; each row of toggles slides
+  sideways when it doesn't fit. Turned sideways, the controls
   share a row with the keyboard bar and show one row of tiles at a time.
 - While one finger holds a key, a tap with another finger works any
   button, stop or tab (browsers give such a tap no click; `layout.js`
