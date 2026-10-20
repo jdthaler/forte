@@ -258,6 +258,13 @@ export const INSTRUMENTS = [
     accent: '#8fd4ff',
   },
   {
+    id: 'whistlers', name: 'Whistlers', section: 'phenomena', ready: true, version: '0.1.0', trim: 4.5,
+    plugin: { code: 'Whis', ready: true },
+    tagline: 'Lightning\'s radio crack, drawn out along the Earth\'s magnetic field into falling tones: every key a field line, its whistler\'s nose the note.',
+    physics: 'Magnetospheric physics · whistler-mode dispersion · the plasmasphere',
+    accent: '#7dffb0',
+  },
+  {
     id: 'universe', name: 'Early Universe', section: 'phenomena', ready: true, version: '0.1.0', trim: 2,
     plugin: { code: 'Univ', ready: true },
     tagline: 'Every key a young universe, its plasma ringing with the sound waves the microwave background shows: baryons make the odd harmonics louder, diffusion fades the high ones.',

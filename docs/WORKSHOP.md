@@ -127,3 +127,10 @@ Now an instrument: see [cavity/README.md](../cavity/README.md), whose
 
 Now an instrument: see [showers/README.md](../showers/README.md), whose
 *Prior art and references* carry its research.
+
+---
+
+## Whistlers (`whistlers`): built
+
+Now an instrument: see [whistlers/README.md](../whistlers/README.md), whose
+*Prior art and references* carry its research.

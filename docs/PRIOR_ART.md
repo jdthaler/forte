@@ -658,6 +658,17 @@ data):
   electron beam by B. Buonomo et al., *Astropart. Phys.* **24**, 65 (2005),
   [arXiv:gr-qc/0505009](https://arxiv.org/abs/gr-qc/0505009)). *LHCsound*
   (L. Asquith and others, ATLAS, 2010) sonified ATLAS events as data.
+* **Whistlers and the magnetosphere's radio.** Whistlers were heard before
+  they were understood: H. Barkhausen's field telephones in 1919, T. L.
+  Eckersley's D/√f law in 1935, and L. R. O. Storey's explanation in 1953,
+  lightning's crack dispersed along the Earth's field lines (*Phil. Trans.
+  R. Soc. A* **246**, 113 (1953),
+  [doi:10.1098/rsta.1953.0011](https://doi.org/10.1098/rsta.1953.0011)).
+  Recordings of whistlers, tweeks and chorus have been played as music ever
+  since, and receivers such as HamSCI's Whistler Catcher make them; the
+  Contralogic *Whistler* plugin imitates them with noise through resonant
+  filters. Whistlers computes them: every key a field line, its whistler
+  the cold-plasma group delay along it.
 * **The sound of the Big Bang.** M. Whittle's *Big Bang Acoustics*
   (University of Virginia, from 2004) plays the microwave background's
   power spectrum as sound, and the first million years as a falling roar;

@@ -947,6 +947,40 @@
    "title": "Centre end and node strikes"
   }
  ],
+ "whistlers": [
+  {
+   "file": "01-a-night-of-whistlers.m4a",
+   "title": "A night of whistlers"
+  },
+  {
+   "file": "02-across-the-plasmapause.m4a",
+   "title": "Across the plasmapause"
+  },
+  {
+   "file": "03-an-echo-train.m4a",
+   "title": "An echo train"
+  },
+  {
+   "file": "04-far-end-then-near-the-lightning.m4a",
+   "title": "Far end then near the lightning"
+  },
+  {
+   "file": "05-one-duct-then-five.m4a",
+   "title": "One duct then five"
+  },
+  {
+   "file": "06-the-crack-then-the-whistler.m4a",
+   "title": "The crack then the whistler"
+  },
+  {
+   "file": "07-tweeks-near-then-far.m4a",
+   "title": "Tweeks near then far"
+  },
+  {
+   "file": "08-dawn-chorus.m4a",
+   "title": "Dawn chorus"
+  }
+ ],
  "windharp": [
   {
    "file": "01-a-slow-tune-in-a-breathing-wind.m4a",
