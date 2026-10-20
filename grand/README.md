@@ -418,6 +418,18 @@ tools/render-grand.mjs               node tools/render-grand.mjs → examples/gr
   1–10 Hz range are those of the photocell tremolos of the time, not
   measured on a CP. The oscillator is a pure sine.
 
+## Quality
+
+The Quality setting (in the controls, for phones and older computers) keeps High as described
+here. Medium strikes each string with fewer partials, none above 6 kHz (but always the first eight)
+and none from the 80th on, stops integrating a fading top partial once it is 100 dB down (140 dB at
+High) and a dying voice a little sooner, holds the oscillators under 2400 (the page's own budget,
+which follows the measured load, still rules below that), and gives each sympathetic string only its
+three lowest partials. Low stops at 4.5 kHz and the 56th partial, holds 1400 oscillators and turns the
+sympathetic strings off (what still rings fades as if damped, and the page stops building every key's
+strings for them). A note keeps its pitch and level and nearly all its tone; with the pedal down
+there is less of the halo of strings ringing along.
+
 ## Prior art and references
 
 ### The original instrument

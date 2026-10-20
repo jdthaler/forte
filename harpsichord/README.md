@@ -493,6 +493,17 @@ tools/render-harpsichord.mjs               node tools/render-harpsichord.mjs →
   accelerates. The damper felt, the tongue's spring and the buff's leather
   are linear.
 
+## Quality
+
+The Quality setting (in the controls, for phones and older computers) keeps High as described
+here. Medium fades the quietest released key once 12 sound (16 at High) and the quietest of all
+once 16 do (24), makes each string with fewer partials, none above 7 kHz (but always the first
+sixteen) and none past the 64th, stops a fading top partial sooner, and gives each held key's
+sympathetic strings only their three lowest partials. Low does so at 8 and 10 keys, stops at 5 kHz
+and the 40th partial, and turns the sympathetic strings off. A note keeps its pitch and its level
+within about a decibel (where the plectrum lets go depends a little on every partial the string
+has); the lowest bass loses a little of its buzz at Low.
+
 ## Prior art and references
 
 **The original instrument.**

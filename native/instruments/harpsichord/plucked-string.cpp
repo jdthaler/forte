@@ -385,6 +385,11 @@ void PluckedString::dropTop(double thr) {
   }
   if (n) { cDirty = true; hv.fill(0); }
 }
+void PluckedString::limit(int n) {
+  if (n >= N) return;
+  for (int i = n; i < N; i++) qa[i] = qb[i] = 0;
+  N = Na = n; cDirty = true; hv.fill(0);
+}
 void PluckedString::wake() { if (Na != N) { Na = N; cDirty = true; hv.fill(0); } }
 void PluckedString::silence() { qa.fill(0); qb.fill(0); hv.fill(0); stretched = false; dT = 0; }
 

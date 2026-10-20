@@ -49,7 +49,8 @@ void ColliderShowersEngine::setSustain(bool on) {
 
 ColliderShowersEngine::Voice *ColliderShowersEngine::voiceFor(int key) {
   for (Voice &x : voices) if (x.key == key && !x.stolen) return &x;
-  // past kMaxVoices, the quietest voice whose key is up (or else the oldest) fades out
+  // past kMaxVoices (fewer at Medium and Low Quality), the quietest voice whose key is up (or else
+  // the oldest) fades out
   int live = 0;
   Voice *victim = nullptr;
   for (Voice &x : voices) {
@@ -57,7 +58,7 @@ ColliderShowersEngine::Voice *ColliderShowersEngine::voiceFor(int key) {
     live++;
     if (!x.held && (!victim || x.level < victim->level)) victim = &x;
   }
-  if (live >= kMaxVoices) {
+  if (live >= pick(kMaxVoices, 20, 12)) { // Quality: fewer crystals ring at once at Medium and Low
     if (!victim) for (Voice &x : voices) if (!x.stolen) { victim = &x; break; }
     if (victim) victim->stolen = true;
   }

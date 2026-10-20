@@ -39,6 +39,9 @@ enum : uint16_t {
 class ClavierEngine : public Engine {
  public:
   static constexpr int MAX_VOICES = 24; // beyond this the quietest other voice fades out
+  // Quality (forte/engine.h): the only trim, fewer voices at once at Medium and Low (a string is
+  // cheap; its partials and its tangent's solve are what it is)
+  int maxVoices() const { return pick(MAX_VOICES, 16, 10); }
   static constexpr int POOL = 64;       // voices kept, with those fading out
   static constexpr int BLOCK_MAX = 4096;
   explicit ClavierEngine(double fs);

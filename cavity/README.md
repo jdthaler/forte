@@ -221,7 +221,7 @@ cavity/src/cavity-instrument.js       the descriptor: everything but the page
 cavity/src/cavity-main.js             page wiring and views
 cavity/src/cavity-wasm.js             the engine and model, the C++ as WebAssembly (cavity/wasm/cavity.wasm)
 native/instruments/cavity/            the physics in C++: model, engine, generated tables, reference (plugins and WebAssembly)
-test/cavity-tests.mjs                 node test/cavity-tests.mjs (24 tests, about 4 s)
+test/cavity-tests.mjs                 node test/cavity-tests.mjs (28 tests, about 4 s)
 tools/render-cavity.mjs               node tools/render-cavity.mjs → examples/cavity/
 ```
 
@@ -246,6 +246,16 @@ tools/render-cavity.mjs               node tools/render-cavity.mjs → examples/
   cavity's losses, so the bath temperature does the same to every key.
 * The bunch's own field and its wakefield in the beam pipe are left out, and
   the bunches are not themselves accelerated or deflected.
+
+## Quality
+
+The Quality setting (in the controls, for phones and older computers) keeps
+High as described here. Medium rings at most 16 cavities at once and leaves
+out the modes a bunch rings 40 dB or more under a cavity's loudest; Low rings
+8, and keeps only the modes within 30 dB. Both let a mode, and a cavity, go
+quiet a little sooner. The note, its ring time and its strongest higher-order
+modes stay; what goes is the faintest shimmer of the higher passbands, and in
+a fast, pedalled passage the quietest cavities fade sooner.
 
 ## Prior art and references
 

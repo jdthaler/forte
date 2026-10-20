@@ -25,9 +25,9 @@ const Base = wasmEngine(BUILD, { messages: views });
 const dropped = typeof FinalizationRegistry === 'function' ? new FinalizationRegistry((h) => Base.exports?.forte_destroy(h)) : null;
 
 // The engine, with the tests' hooks: e.voices (each one's key, fading, dead, released, level, peak,
-// age) and e.byKey, read back. A note may bring its key's springs, packed by the page's WebAssembly
+// age, and its springs' modes, N and nAct sounding) and e.byKey, read back. A note may bring its key's springs, packed by the page's WebAssembly
 // model (wasmModel().keySprings(…).packed), so the audio thread needn't build them.
-const VOICE = ['key', 'fading', 'dead', 'released', 'level', 'peak', 'age', 'own'];
+const VOICE = ['key', 'fading', 'dead', 'released', 'level', 'peak', 'age', 'own', 'N', 'nAct'];
 const FLAGS = new Set(['fading', 'dead', 'released', 'own']);
 export class SpringWasmEngine extends Base {
   constructor(fs) {

@@ -57,6 +57,7 @@ class KalimbaEngine : public Engine {
     int count = 0;
     std::array<double, PLATE_MODES> w{}; // where it drives the plate modes
     double level = 1, start = 0;         // start: Σ|force| at release, for when it has died away
+    double floor = 1e-5;                 // …this far under it (Quality's, when it was plucked)
     bool released = false, damped = false, grabbed = false;
   };
   void rebuildBody();

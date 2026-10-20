@@ -43,6 +43,11 @@ constexpr uint32_t kPresetId = 0x7ffffffe;
 constexpr uint32_t kTouchId = 0x7ffffffd;
 const char *const kTouchChoices[] = {"Soft", "Normal", "Hard"};
 constexpr double kTouchGamma[] = {0.6, 1, 1.6};
+// Quality (forte/engine.h): how much of the physics the engine plays, for a slow computer. Every
+// plugin has it; the project keeps it, presets don't. A host that renders offline (a bounce, a
+// freeze) gets High whatever it is set to.
+constexpr uint32_t kQualityId = 0x7ffffffc;
+const char *const kQualityChoices[] = {"High", "Medium", "Low"};
 // The soft pedal (CC67): a key struck while it is down is struck this much slower, so it sounds
 // softer and, where the instrument's hammer or mallet is nonlinear, darker too.
 constexpr double kSoftPedal = 0.6;
@@ -81,8 +86,8 @@ struct Plugin : Instance {
   const InstrumentInfo &I;
   const std::string accent;  // the window's colour
   const bool hasPresets;
-  const int nParams;        // the instrument's parameters, then Preset if it has presets, then the velocity curve
-  const int presetAt, touchAt; // their indices (presetAt −1 without presets)
+  const int nParams;        // the instrument's parameters, then Preset if it has presets, the velocity curve, Quality
+  const int presetAt, touchAt, qualityAt; // their indices (presetAt −1 without presets)
   std::vector<uint32_t> ids; // hashed parameter ids, by index
 
   std::unique_ptr<Engine> engine;
@@ -93,6 +98,7 @@ struct Plugin : Instance {
   std::atomic<bool> loadPending{false};
   std::atomic<bool> processing{false};
   bool dirty = true;                   // the engine needs setParams
+  bool offline = false;                // the host renders offline (CLAP's render extension): High
 
   // notes as the shell counts them: how many channels hold each key, and the keys latched by Hold
   uint8_t held[16][128]{};
@@ -113,16 +119,18 @@ struct Plugin : Instance {
 
   Plugin(const clap_host_t *h, const InstrumentInfo &info, const clap_plugin_descriptor_t *desc, const std::string &colour)
       : Instance(h, desc), I(info), accent(colour.size() < 2 ? "#f0b35a" : colour), hasPresets(info.presetCount > 0),
-        nParams(info.paramCount + (hasPresets ? 2 : 1)), presetAt(hasPresets ? info.paramCount : -1), touchAt(nParams - 1) {
+        nParams(info.paramCount + (hasPresets ? 3 : 2)), presetAt(hasPresets ? info.paramCount : -1), touchAt(nParams - 2), qualityAt(nParams - 1) {
     for (int i = 0; i < I.paramCount; i++) ids.push_back(paramHash(I.params[i].id));
     if (hasPresets) ids.push_back(kPresetId);
     ids.push_back(kTouchId);
+    ids.push_back(kQualityId);
     P.resize(nParams);
     pending.resize(nParams);
     shown.reset(new std::atomic<double>[nParams]);
     for (int i = 0; i < I.paramCount; i++) P[i] = I.params[i].def;
     if (hasPresets) P[presetAt] = 0;
     P[touchAt] = 1;
+    P[qualityAt] = 0;
     for (int i = 0; i < nParams; i++) shown[i] = P[i];
     sent.assign(nParams, NAN);
   }
@@ -137,6 +145,7 @@ struct Plugin : Instance {
   // applies it: the defaults, then the kept parameters, then the preset's values (shell.js).
   void set(int i, double v, const clap_output_events_t *out) {
     if (i == touchAt) { P[i] = constrain(touchParam(), v); shown[i] = P[i]; return; }
+    if (i == qualityAt) { P[i] = constrain(qualityParam(), v); shown[i] = P[i]; dirty = true; return; }
     if (i == presetAt) {
       int k = (int)std::lround(v);
       k = k < 0 ? 0 : k > I.presetCount ? I.presetCount : k;
@@ -330,7 +339,7 @@ struct Plugin : Instance {
       }
       uint32_t end = pos + kBlock < n ? pos + kBlock : n;
       if (next < count) { uint32_t t = in->get(in, next)->time; if (t < end) end = t; }
-      if (dirty && engine) { engine->setParams(P.data()); chain.setParams(P.data()); dirty = false; }
+      if (dirty && engine) { engine->setQuality(quality()); engine->setParams(P.data()); chain.setParams(P.data()); dirty = false; }
       if (L) render(L + pos, R ? R + pos : spare, end - pos);
       pos = end;
     }
@@ -398,7 +407,7 @@ struct Plugin : Instance {
   //   loadScala(file)     one of them sets the custom temperament: { ok, name, error }
   //   showScalas()        opens that folder
   int paramIndex(const char *id) const { for (int i = 0; i < I.paramCount; i++) if (!std::strcmp(I.params[i].id, id)) return i; return -1; }
-  ParamInfo infoOf(int i) const { return i < I.paramCount ? I.params[i] : i == presetAt ? presetParam() : touchParam(); }
+  ParamInfo infoOf(int i) const { return i < I.paramCount ? I.params[i] : i == presetAt ? presetParam() : i == touchAt ? touchParam() : qualityParam(); }
   double along(int i, double v) const { const ParamInfo p = infoOf(i); return p.kind == ParamKind::continuous ? toNormalized(p, v) : v; }
   std::string text(int i, double v) const {
     if (i == presetAt) { int k = (int)std::lround(v); return k <= 0 ? "Default settings" : k <= I.presetCount ? I.presets[k - 1].name : "?"; }
@@ -581,7 +590,7 @@ struct Plugin : Instance {
     char buf[64];
     for (int i = 0; i < nParams; i++) {
       std::snprintf(buf, sizeof buf, " %.17g\n", shown[i].load());
-      t += (i < I.paramCount ? I.params[i].id : i == presetAt ? "preset" : "touch") + std::string(buf);
+      t += (i < I.paramCount ? I.params[i].id : i == presetAt ? "preset" : i == touchAt ? "touch" : "quality") + std::string(buf);
     }
     const char *p = t.data();
     size_t left = t.size();
@@ -601,6 +610,7 @@ struct Plugin : Instance {
     for (int i = 0; i < I.paramCount; i++) v[i] = I.params[i].def; // missing parameters (an older version): defaults
     if (hasPresets) v[presetAt] = 0;
     v[touchAt] = 1;
+    v[qualityAt] = 0;
     size_t at = t.find('\n');
     while (at != std::string::npos && at + 1 < t.size()) {
       size_t eol = t.find('\n', at + 1);
@@ -611,6 +621,7 @@ struct Plugin : Instance {
         double x = std::strtod(line.c_str() + sp + 1, nullptr);
         if (id == "preset" && hasPresets) v[presetAt] = constrain(presetParam(), x);
         else if (id == "touch") v[touchAt] = constrain(touchParam(), x);
+        else if (id == "quality") v[qualityAt] = constrain(qualityParam(), x);
         else for (int i = 0; i < I.paramCount; i++) if (id == I.params[i].id) { v[i] = constrain(I.params[i], x); break; }
       }
       at = eol;
@@ -637,6 +648,11 @@ struct Plugin : Instance {
   ParamInfo touchParam() const {
     return ParamInfo{"touch", "Velocity curve", "MIDI", ParamKind::choice, 0, 2, 1, 1, false, false, kTouchChoices, 3, {}};
   }
+  ParamInfo qualityParam() const {
+    return ParamInfo{"quality", "Quality", "CPU", ParamKind::choice, 0, 2, 0, 1, false, false, kQualityChoices, 3, {}};
+  }
+  // what the engine plays: the Quality parameter, or High when the host renders offline
+  Quality quality() const { return offline ? Quality::high : (Quality)(int)P[qualityAt]; }
   ParamInfo presetParam() const {
     return ParamInfo{"preset", "Preset", "", ParamKind::choice, 0, (double)I.presetCount, 0, 1, false, false, nullptr, I.presetCount + 1, {}};
   }
@@ -737,6 +753,16 @@ const clap_plugin_state_t state{stateSave, stateLoad};
 uint32_t latencyGet(const clap_plugin_t *) { return 0; }
 const clap_plugin_latency_t latency{latencyGet};
 
+// Offline rendering (a bounce, a freeze) plays at High whatever Quality says: time is no object there.
+bool renderHardRealtime(const clap_plugin_t *) { return false; }
+bool renderSet(const clap_plugin_t *p, clap_plugin_render_mode mode) {
+  Plugin *s = self(p);
+  s->offline = mode == CLAP_RENDER_OFFLINE;
+  s->dirty = true;
+  return true;
+}
+const clap_plugin_render_t render{renderHardRealtime, renderSet};
+
 // AU hosts order parameters by id unless told otherwise: keep the descriptor's order
 bool auParamOrder(const clap_plugin_t *, size_t *order, size_t count) {
   for (size_t i = 0; i < count; i++) order[i] = i;
@@ -833,6 +859,7 @@ bool pluginActivate(const clap_plugin_t *p, double fs, uint32_t, uint32_t) {
   Plugin *s = self(p);
   // a new engine at the host's rate (any, 44.1–192 kHz), and the chain's impulse responses for it
   s->engine.reset(s->I.create(fs));
+  s->engine->setQuality(s->quality());
   s->chain.configure(s->I.chain, fs, s->P.data());
   s->panic();
   if (s->I.space == Space::sustain) s->engine->setSustain(false);
@@ -850,6 +877,7 @@ const void *pluginGetExtension(const clap_plugin_t *, const char *id) {
   if (!std::strcmp(id, CLAP_EXT_PARAMS)) return &params;
   if (!std::strcmp(id, CLAP_EXT_STATE)) return &state;
   if (!std::strcmp(id, CLAP_EXT_LATENCY)) return &latency;
+  if (!std::strcmp(id, CLAP_EXT_RENDER)) return &render;
   if (!std::strcmp(id, CLAP_PLUGIN_AUV2_PARAM_ORDERING)) return &auOrdering;
 #ifdef FORTE_EDITOR
   if (!std::strcmp(id, CLAP_EXT_GUI)) return &gui;
@@ -895,6 +923,7 @@ struct Suite : Instance {
     if (k < 0 || k >= count || old) return false;
     if (cur && &cur->I == &list[k].info()) return true;
     std::unique_ptr<Plugin> p(new Plugin(host, list[k].info(), clap.desc, list[k].accent));
+    if (cur) { p->P[p->qualityAt] = cur->shown[cur->qualityAt].load(); p->shown[p->qualityAt] = p->P[p->qualityAt]; p->offline = cur->offline; } // the computer's, not the instrument's
     p->hostParams = (const clap_host_params_t *)host->get_extension(host, CLAP_EXT_PARAMS);
     if (!active) { cur = std::move(p); live = cur.get(); }
     else {
@@ -1017,8 +1046,11 @@ const clap_plugin_state_t suiteState{
     [](const clap_plugin_t *p, const clap_ostream_t *s) { return suite(p)->save(s); },
     [](const clap_plugin_t *p, const clap_istream_t *s) { return suite(p)->load(s); }};
 
+const clap_plugin_render_t suiteRender{renderHardRealtime, [](const clap_plugin_t *p, clap_plugin_render_mode mode) { return renderSet(inner(p), mode); }};
+
 const void *suiteGetExtension(const clap_plugin_t *p, const char *id) {
   if (!std::strcmp(id, CLAP_EXT_PARAMS)) return &suiteParams;
+  if (!std::strcmp(id, CLAP_EXT_RENDER)) return &suiteRender;
   if (!std::strcmp(id, CLAP_EXT_STATE)) return &suiteState;
   if (!std::strcmp(id, CLAP_PLUGIN_AUV2_PARAM_ORDERING)) return nullptr;
   return pluginGetExtension(p, id);

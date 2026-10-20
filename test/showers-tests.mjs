@@ -354,6 +354,17 @@ test('voices: finished crystals are dropped, and fast playing never runs past th
   const [A, , e2] = render(P({ width: 0.5 }), 1.2, ev);
   assert.ok(e2.voiceCount() <= 64 && A.every(Number.isFinite));
 });
+test('Quality: Medium and Low let 20 and 12 crystals ring at once (High 32); a single note sounds the same at every quality', () => {
+  const ev = Array.from({ length: 40 }, (_, i) => [0.02 * i, (x) => { x.noteOn(30 + 2 * i, 0.8); x.noteOff(30 + 2 * i); }]); // the pedal holds them
+  const one = (q) => render(P(), 0.5, [[0, (x) => { x.setQuality(q); x.noteOn(60, 0.8); }]])[0];
+  const high = one('high');
+  for (const [q, cap] of [['high', 32], ['medium', 20], ['low', 12]]) {
+    const [A, , e] = render(P(), 1.2, [[0, (x) => { x.setQuality(q); x.setSustain(true); }], ...ev]);
+    assert.ok(e.voiceCount() <= cap && e.voiceCount() >= cap - 2, `${q}: ${e.voiceCount()} voices`);
+    assert.ok(A.every(Number.isFinite), `${q}: not finite`);
+    assert.ok(one(q).every((v, i) => v === high[i]), `${q}: a single note differs from High's`);
+  }
+});
 test('CPU: ten held voices with pile-up render well faster than real time', () => {
   const t0 = performance.now();
   render(P({ pileup: 200 }), 5, Array.from({ length: 10 }, (_, i) => [0, (e) => e.noteOn(40 + 4 * i, 0.8)]));

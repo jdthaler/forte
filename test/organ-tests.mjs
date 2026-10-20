@@ -325,6 +325,15 @@ test('stable and finite across extreme settings', () => {
     for (let i = 0; i < L.length; i++) assert.ok(Number.isFinite(L[i]) && Math.abs(L[i]) < 20 && Number.isFinite(R[i]));
   }
 });
+test('Quality: Medium and Low trim nothing (the generator and the Leslie cost the same whatever is played): a full chord plays the same samples', () => {
+  const out = ['high', 'medium', 'low'].map((q) => {
+    const e = new OrganEngine(FS); e.setQuality(q);
+    e.setParams(P({ drawbars: [8, 8, 8, 8, 8, 8, 8, 8, 8], vib: 'C3', leslie: 'fast', drive: 0.5, percOn: true }));
+    for (const k of [36, 43, 48, 52, 55, 60, 64, 67, 72, 76, 79, 84]) e.noteOn(k);
+    return run(e, 0.5);
+  });
+  for (const r of out.slice(1)) for (const ch of ['L', 'R']) assert.ok(r[ch].every((v, i) => v === out[0][ch][i] && Number.isFinite(v)), ch);
+});
 
 console.log('performance');
 test('real-time budget: 10 keys, full drawbars, chorus, drive, Leslie', () => {

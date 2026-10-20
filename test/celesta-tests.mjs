@@ -26,9 +26,11 @@ function test(name, fn) {
 const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const cents = (a, b) => 1200 * Math.log2(a / b);
 
-// Render through the engine in 128-sample blocks, as the AudioWorklet does. events: [t, 'on'|'off'|'sus', key|on, vel]
+// Render through the engine in 128-sample blocks, as the AudioWorklet does, at a Quality (opts.quality,
+// High unless given). events: [t, 'on'|'off'|'sus', key|on, vel]
 function play(params, sec, events, opts = {}) {
   const e = new CelestaEngine(FS);
+  if (opts.quality) e.setQuality(opts.quality);
   e.setParams(params);
   const n = Math.round(sec * FS), L = new Float32Array(n), R = new Float32Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
   const ev = [...events].sort((a, b) => a[0] - b[0]);
@@ -228,6 +230,27 @@ test('striking a ringing bar again adds to it; every voice ends after release', 
 test('only A0–C8 have bars', () => {
   const r = play(P(), 0.2, [[0, 'on', 20, 1], [0, 'on', 109, 1]]);
   assert.equal(rms(r.L), 0);
+});
+test('Quality: Medium and Low let 16 and 10 bars ring at once and let a bar go at −70 and −60 dB (−90 at High); a bar keeps its pitch and level', () => {
+  const ev = [[0, 'sus', true]];
+  for (let i = 0; i < 36; i++) ev.push([0.04 * i, 'on', KEY_LO + i, 0.6]);
+  const time = {};
+  for (const [quality, cap] of [['high', 24], ['medium', 16], ['low', 10]]) {
+    let most = 0, t = 0;
+    const { L } = play(P(), 4, ev, { quality, each: (e, s) => { if (s % 1280) return; const vs = e.voices; most = Math.max(most, vs.filter((v) => !v.fading).length); t += vs.length; } });
+    assert.ok(L.every(Number.isFinite), `${quality}: NaN`);
+    assert.ok(most <= cap, `${quality}: ${most} bars`);
+    time[quality] = t;
+  }
+  console.log(`         bars × time at Medium ${((100 * time.medium) / time.high).toFixed(0)} %, Low ${((100 * time.low) / time.high).toFixed(0)} % of High's`);
+  assert.ok(time.medium < 0.8 * time.high && time.low < 0.6 * time.high, JSON.stringify(time));
+  for (const key of [60, 84, 100]) {
+    const f = keyFreq(key), at = (quality) => play(P(), 1, [[0, 'on', key, 0.8]], { quality }).L, hi = at('high');
+    for (const quality of ['medium', 'low']) {
+      const x = at(quality), c = cents(peak(x, f, 0.1 * FS, FS), peak(hi, f, 0.1 * FS, FS)), d = 20 * Math.log10(rms(x) / rms(hi));
+      assert.ok(Math.abs(c) < 0.1 && Math.abs(d) < 1.5, `key ${key} at ${quality}: ${c.toFixed(3)} ¢, ${d.toFixed(2)} dB`);
+    }
+  }
 });
 test('CPU: 16 sounding bars render faster than 5× real time', () => {
   const keys = Array.from({ length: 16 }, (_, i) => 60 + 3 * i), t0 = performance.now();

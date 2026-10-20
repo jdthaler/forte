@@ -90,7 +90,8 @@ FORTE_EXPORT void harpsichord_beam(double tau, double EI0, double len, double fo
 // ---- the engine's test hooks
 FORTE_EXPORT int harpsichord_voices(forte::Engine *e) { return static_cast<HarpsichordEngine *>(e)->nVoices; }
 // voice i: key, killing, dead, sounded, keyDown, pending, vDown, lift, peak, own (byKey), then per
-// choir (front, back, 4′): has a string, its plectra's phases (0 off, 1 under, 2 above)
+// choir (front, back, 4′): has a string, its plectra's phases (0 off, 1 under, 2 above), then per
+// choir its string's partials (N: fewer below High Quality)
 FORTE_EXPORT void harpsichord_voice(forte::Engine *e, int i, double *out) {
   auto *eng = static_cast<HarpsichordEngine *>(e);
   const HarpsichordEngine::Voice &v = *eng->voices[i];
@@ -100,6 +101,7 @@ FORTE_EXPORT void harpsichord_voice(forte::Engine *e, int i, double *out) {
     out[10 + 3 * c] = v.has[c];
     out[11 + 3 * c] = (double)v.strings[c].phase[0];
     out[12 + 3 * c] = (double)v.strings[c].phase[1];
+    out[19 + c] = v.has[c] ? v.strings[c].N : 0;
   }
 }
 FORTE_EXPORT int harpsichord_ready(forte::Engine *e, int key) { return static_cast<HarpsichordEngine *>(e)->ready(key) ? 1 : 0; }

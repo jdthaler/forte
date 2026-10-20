@@ -61,6 +61,13 @@ void TemplateEngine::noteOn(int key, double velocity) {
     v = &voices.back();
   }
   v->strike(velocity, fs);
+  // Quality: past 24 bars ringing at Medium and 12 at Low, the oldest is damped and fades out as on
+  // key-up (High keeps only the hard limit below)
+  if (quality != Quality::high) {
+    int ringing = 0;
+    for (const Voice &x : voices) ringing += !x.damped;
+    if (ringing > pick(kMaxVoices, 24, 12)) for (Voice &x : voices) if (!x.damped && &x != v) { x.damped = true; break; }
+  }
   if ((int)voices.size() > kMaxVoices) voices.erase(voices.begin()); // the oldest goes
 }
 

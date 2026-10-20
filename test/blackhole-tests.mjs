@@ -331,6 +331,29 @@ test('voice stealing fades the quietest voice instead of cutting the oldest', ()
   for (let i = 1; i < a.length; i++) { jump = Math.max(jump, Math.abs((a[i] - b[i]) - (a[i - 1] - b[i - 1]))); amp = Math.max(amp, Math.abs(a[i] - b[i])); }
   assert.ok(amp > 0 && jump < 0.05 * amp, `largest step ${(jump / amp).toFixed(3)} of the stolen voice's level`);
 });
+test('Quality: Medium and Low let 24 and 12 black holes ring at once (High 48; fewer if the page asks), the quietest faded out past that; a note alone is High\'s to the last bit', () => {
+  const P = { ...DEFAULTS, spinU: 6 }, L = new Float32Array(128), R = new Float32Array(128), res = [];
+  const alone = (quality) => { const e = new RingdownEngine(48000); e.setQuality(quality); e.setParams(P); e.noteOn(60, 0.8); const out = []; for (let i = 0; i < 100; i++) { e.process(L, R, 128); out.push(...L, ...R); } return out; };
+  const ref = alone('high');
+  for (const [quality, cap] of [['high', 48], ['medium', 24], ['low', 12]]) {
+    const e = new RingdownEngine(48000); e.setQuality(quality); e.setParams(P);
+    let most = 0;
+    for (let b = 0; b < 200; b++) {
+      if (b % 4 === 0) e.noteOn(36 + ((b / 4) * 7) % 48, 0.8);
+      e.process(L, R, 128);
+      for (let i = 0; i < 128; i++) assert.ok(Number.isFinite(L[i] + R[i]), `${quality}: not finite`);
+      most = Math.max(most, e.voices.filter((v) => !v.stolen).length);
+    }
+    assert.ok(most <= cap, `${quality}: ${most} ringing`);
+    const asked = new RingdownEngine(48000); asked.setQuality(quality); asked.setParams({ ...P, maxVoices: 8 });
+    for (let k = 0; k < 20; k++) asked.noteOn(40 + k, 0.8);
+    assert.ok(asked.voices.filter((v) => !v.stolen).length <= 8, `${quality}: the page's 8`);
+    const x = alone(quality);
+    for (let i = 0; i < x.length; i++) assert.equal(x[i], ref[i]);
+    res.push(`${quality} ${most}`);
+  }
+  console.log(`        ringing at most: ${res.join(', ')}`);
+});
 test('near extremality the l = m modes, and some l ≠ m overtones, ring at mΩ_H', () => {
   const a = 1 - 1e-6, OmH = a / (2 * (1 + Math.sqrt(1 - a * a)));
   const long = new Set(['2,1,2', '3,2,1', '3,2,2', '4,3,0', '4,3,1', '4,3,2']);

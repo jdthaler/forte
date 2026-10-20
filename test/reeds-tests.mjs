@@ -424,6 +424,35 @@ test('knobs glide: gap, reed height and output switches mid-note do not click', 
     assert.ok(jump < 1.5 * typ, `${JSON.stringify(change)}: jump ${(jump / typ).toFixed(2)}× the note's largest step`);
   }
 });
+test('Quality: Medium and Low sound fewer reeds and stay stable; a note keeps its pitch and level', () => {
+  const at = (q, params, events, sec) => {
+    const e = new ReedEngine(FS); e.setQuality(q); e.setParams(params);
+    const [L] = renderEngine(e, sec, events, FS);
+    return { L, e };
+  };
+  // a pedalled run of 30 keys: the voice limit holds
+  const run = [[0, 'sus', true]];
+  for (let i = 0; i < 30; i++) run.push([i * 0.05, 'on', 40 + i, 0.8], [i * 0.05 + 0.04, 'off', 40 + i]);
+  const level = {};
+  for (const [q, cap] of [['high', 32], ['medium', 20], ['low', 10]]) {
+    const { e } = at(q, P(), run, 1.6);
+    assert.ok(e.voiceCount() <= cap && (q !== 'high' || e.voiceCount() === 30), `${q}: ${e.voiceCount()} voices`);
+    for (const m of [45, 81]) {
+      const { L } = at(q, P(DRY), [[0, 'on', m, 0.6]], 0.75), f = keyFreq(m);
+      assert.ok(L.every(Number.isFinite), q);
+      const fm = freqNear(L, f, Math.round(0.08 * FS), Math.round(0.3 * FS), Math.round(0.3 * FS));
+      assert.ok(Math.abs(cents(fm, f)) < 3, `${q} ${m}: ${cents(fm, f).toFixed(2)} ¢`);
+      level[q + m] = Math.sqrt(L.reduce((a, v) => a + v * v, 0));
+      assert.ok(Math.abs(dB(level[q + m], level['high' + m])) < 1.5, `${q} ${m}: ${dB(level[q + m], level['high' + m]).toFixed(2)} dB from High`);
+    }
+    // every slider at its max, then its min: finite and bounded
+    const sliders = GROUPS.flatMap((g) => g.params).filter((p) => p.type !== 'select' && p.type !== 'checkbox');
+    for (const end of ['max', 'min']) for (const m of [KEY_LO, KEY_HI]) {
+      const { L } = at(q, P(Object.fromEntries(sliders.map((p) => [p.id, p[end]]))), [[0, 'on', m, 1]], 0.25);
+      assert.ok(L.every((v) => Number.isFinite(v) && Math.abs(v) < 2), `${q}: every slider at its ${end}, key ${m}`);
+    }
+  }
+});
 test('CPU: 10 sounding voices at ≤ 30 % of real time', () => {
   const e = new ReedEngine(FS); e.setParams(P());
   const keys = Array.from({ length: 10 }, (_, i) => 36 + 5 * i), bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);

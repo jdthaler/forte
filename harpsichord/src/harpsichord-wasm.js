@@ -27,7 +27,7 @@ const Base = wasmEngine(BUILD);
 
 // The engine, with the tests' hooks: e.listeners (functions called with each
 // message), e.voices (each key's voice: key, killing, dead, sounded, keyDown, pending, vDown, lift,
-// peak and its strings' plectra), e.byKey and e.sympathetic(key, choir), read back.
+// peak and its strings' plectra and partials), e.byKey and e.sympathetic(key, choir), read back.
 const VOICE = ['key', 'killing', 'dead', 'sounded', 'keyDown', 'pending', 'vDown', 'lift', 'peak', 'own'];
 const FLAGS = new Set(['killing', 'dead', 'sounded', 'keyDown', 'pending', 'own']);
 export class HarpsichordWasmEngine extends Base {
@@ -50,13 +50,13 @@ export class HarpsichordWasmEngine extends Base {
     }
   }
   get voices() {
-    const x = Base.exports, s = scratch(x), out = s.f64(VOICE.length + 9);
+    const x = Base.exports, s = scratch(x), out = s.f64(VOICE.length + 12);
     return Array.from({ length: x.harpsichord_voices(this.e) }, (_, i) => {
       x.harpsichord_voice(this.e, i, s.at);
       const v = Object.fromEntries(VOICE.map((k, j) => [k, FLAGS.has(k) ? out[j] > 0 : out[j]]));
       v.strings = Object.fromEntries(CHOIRS.map((c, j) => {
         const a = VOICE.length + 3 * j;
-        return [c, out[a] > 0 ? { phase: [PHASES[out[a + 1]], PHASES[out[a + 2]]] } : null];
+        return [c, out[a] > 0 ? { phase: [PHASES[out[a + 1]], PHASES[out[a + 2]]], partials: out[VOICE.length + 9 + j] } : null];
       }));
       return v;
     });

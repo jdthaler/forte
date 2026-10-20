@@ -36,7 +36,8 @@ function views(m, e) {
 const Base = wasmEngine(BUILD, { messages: views });
 
 // The engine, with the tests' hooks: e.voices (in the order they were struck:
-// key, fading, released, and the clapper's cl: on, ms, fwhm, Fmax, v) and e.byKey (key → voice).
+// key, fading, released, its resonators and those playing, and the clapper's cl: on, ms, fwhm, Fmax,
+// v) and e.byKey (key → voice).
 export class CarillonWasmEngine extends Base {
   constructor(fs) {
     super(fs);
@@ -48,11 +49,11 @@ export class CarillonWasmEngine extends Base {
     super.setParams(P);
   }
   get voices() {
-    const x = Base.exports, s = scratch(x), out = s.f64(11);
+    const x = Base.exports, s = scratch(x), out = s.f64(13);
     return Array.from({ length: x.carillon_voices(this.e) }, (_, i) => {
       x.carillon_voice(this.e, i, s.at);
-      const [key, fading, dead, released, on, ms, fwhm, Fmax, v, age, level] = out;
-      return { key, fading: fading > 0, dead: dead > 0, released: released > 0, age, level, cl: { on: on > 0, ms, fwhm, Fmax, v } };
+      const [key, fading, dead, released, on, ms, fwhm, Fmax, v, age, level, resonators, playing] = out;
+      return { key, fading: fading > 0, dead: dead > 0, released: released > 0, age, level, resonators, playing, cl: { on: on > 0, ms, fwhm, Fmax, v } };
     });
   }
   get byKey() {

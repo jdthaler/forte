@@ -70,7 +70,9 @@ class TinesEngine : public Engine {
   };
 
   struct Voice {
-    int key = 0, N = 0;
+    int key = 0, N = 0, Nall = 0; // N: the modes still played (Medium and Low drop the ones decayed away), of Nall
+    int os = OS;                  // this voice's oversampling: Low plays its voices at the output rate
+    double prune = 0, deathRel = 0, loudest = 0; // Medium, Low: a mode / the voice ends this far below the loudest
     uint64_t version = 0;
     bool inUse = false;
     double k = 0;
@@ -96,6 +98,7 @@ class TinesEngine : public Engine {
     void strike(double v);
     double contactForce(double dFree);
     void render(double *buf, int n, TinesEngine &eng);
+    void pruneModes();
   };
 
   // read by the tests and the slow-motion view (through the WebAssembly's hooks), in the order
@@ -118,18 +121,18 @@ class TinesEngine : public Engine {
   bool sustain = false;
   const double fs2;
   const int hammerMax;
-  const double aSm, aPick;
+  const double aSm, aPick, aPick1; // aPick1: for Low's voices, at the output rate
   bool overLimit = false;
   // the output stage: harp resonance, vibrato, drive, decimation, speaker
   std::array<double, T> fir{};
   std::array<double, 128> histL{}, histR{};
-  int hi = 0;
+  int hi = 0, sameLR = T; // sameLR: how many of the latest samples were the same on both sides (up to T)
   Biquad harp, hpL, hpR, lpL, lpR;
   double tremPhase = 0;
   double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
   double sCable = 0, sResQ = 0, sTone = 0, sDrive = 0, sDepth = 0, sMaster = 1;
   bool gliding = false;
-  std::vector<double> mono;
+  std::vector<double> mono, mono1; // the voices' sum at 2× (and at 1×, Low's voices)
 
   // the voice data, built off the audio thread for each version of the model parameters
   struct Snapshot { std::atomic<uint64_t> version{0}; std::array<std::atomic<double>, p::count> P{}; };

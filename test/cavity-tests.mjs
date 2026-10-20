@@ -367,6 +367,35 @@ test('every preset plays: sane level (peak 0.02 – 1), no NaN, silent after rel
   for (const v of note(60, P(), 0.3, 1)[0]) pk = Math.max(pk, Math.abs(v));
   assert.ok(pk > 0.1 && pk < 0.5, `one forte note peaks at ${pk.toFixed(3)}`);
 });
+test('Quality: Medium and Low keep 16 and 8 keys at most, ring only the modes heard within 40 and 30 dB of the loudest and let them go sooner; a note keeps its pitch and level', () => {
+  const X = CavityEngine.exports, ringing = (e) => X.cavity_ringing(X.forte_engine(e.h));
+  const keys = Array.from({ length: 24 }, (_, i) => 36 + 2 * i), work = {}, bL = new Float32Array(128), bR = new Float32Array(128);
+  for (const [quality, cap] of [['high', 24], ['medium', 16], ['low', 8]]) {
+    const e = new CavityEngine(FS);
+    e.setQuality(quality); e.setParams(P()); e.setSustain(true);
+    let w = 0, most = 0, ok = true;
+    for (let b = 0; b < (3 * FS) / 128; b++) { // a key every 16 blocks (43 ms), the pedal down
+      if (b % 16 === 0 && b / 16 < keys.length) { e.noteOn(keys[b / 16], 0.8); if (b) e.noteOff(keys[b / 16 - 1]); }
+      e.process(bL, bR, 128);
+      ok &&= bL.every(Number.isFinite) && bR.every(Number.isFinite);
+      w += ringing(e); most = Math.max(most, e.voiceCount());
+    }
+    assert.ok(ok, `${quality}: NaN`);
+    assert.ok(most <= cap + 1, `${quality}: ${most} voices`); // (and the one fading out)
+    work[quality] = w;
+  }
+  console.log(`         modes × time at Medium ${((100 * work.medium) / work.high).toFixed(0)} %, Low ${((100 * work.low) / work.high).toFixed(0)} % of High's`);
+  assert.ok(work.medium < 0.6 * work.high && work.low < 0.35 * work.high, JSON.stringify(work));
+  const at = (key, quality) => render(P(), 1, [[0, (e) => { e.setQuality(quality); e.noteOn(key, 0.8); }], [0.5, (e) => e.noteOff(key)]])[0];
+  const rms = (x) => Math.sqrt(x.reduce((a, v) => a + v * v, 0) / x.length);
+  for (const key of [36, 60, 84]) {
+    const hi = at(key, 'high'), f = peak(hi, keyFreq(key), 0, FS / 2);
+    for (const quality of ['medium', 'low']) {
+      const x = at(key, quality), c = cents(peak(x, keyFreq(key), 0, FS / 2), f), d = db(rms(x) / rms(hi));
+      assert.ok(Math.abs(c) < 0.1 && Math.abs(d) < 1.5, `key ${key} at ${quality}: ${c.toFixed(3)} ¢, ${d.toFixed(2)} dB`);
+    }
+  }
+});
 test('CPU: ten voices, a held bunch train, faster than real time ×4', () => {
   const e = new CavityEngine(FS);
   e.setParams(P({ current: 0.5, cells: 12, qhom: 1e10 }));

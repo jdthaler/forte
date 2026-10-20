@@ -28,6 +28,10 @@ void CelestaEngine::Voice::start(CelestaEngine &eng, const Bar &b, double thickn
   bar = b; thick = thickness; ratio = tuned;
   key = b.geom.key; N = b.count;
   out0 = b.out[0];
+  // Quality: Medium and Low leave out the modes above 16 and 12 kHz, and let the bar go at −70 and
+  // −60 dB under its loudest instead of −90
+  top = eng.pick(NYQUIST * eng.fs, std::min(NYQUIST * eng.fs, 16000.0), std::min(NYQUIST * eng.fs, 12000.0));
+  floor = eng.pick(1e-9, 1e-7, 1e-6);
   coefs(eng);
 }
 
@@ -38,8 +42,8 @@ void CelestaEngine::Voice::coefs(const CelestaEngine &eng) {
     const double f = bar.f[i], om = TAU * f, s = bar.sigTE[i] + bar.sigSup[i] + bar.sigRad[i] + pi * f * eng.P[p::eta] + sd * bar.dampW[i];
     sig[i] = s;
     if (i == 0) { K11 = om * om; sig1 = s; continue; }
-    cut[i] = f >= NYQUIST * eng.fs;
-    if (cut[i]) { a1[i] = a2[i] = bc[i] = accOut[i] = 0; continue; } // above what the sample rate holds: silent, never struck
+    cut[i] = f >= top;
+    if (cut[i]) { a1[i] = a2[i] = bc[i] = accOut[i] = 0; continue; } // above what the sample rate holds (or Quality's top): silent, never struck
     const double r = std::exp(-s * k), od = std::sqrt(std::max(om * om - s * s, 1e-6));
     a1[i] = 2 * r * std::cos(od * k); a2[i] = r * r; bc[i] = (k * r * std::sin(od * k)) / od;
     accOut[i] = om * om * bar.out[i];
@@ -176,7 +180,7 @@ void CelestaEngine::Voice::render(float *L, float *Rt, int n, CelestaEngine &eng
     eng.post(m);
     return;
   }
-  if (!hammerOn && age > YOUNG && (E <= 1e-9 * Emax || (damp > 0.99 && E < 1e-7 * Emax))) dead = true;
+  if (!hammerOn && age > YOUNG && (E <= floor * Emax || (damp > 0.99 && E < std::max(1e-7, floor) * Emax))) dead = true;
 }
 
 // ---- the engine ------------------------------------------------------------------------------
@@ -229,7 +233,7 @@ void CelestaEngine::noteOn(int key, double velocity) {
   focus = v;
   int live = 0;
   for (int i = 0; i < nVoices; i++) if (!voices[i]->fading) live++;
-  if (live > MAX_VOICES) {
+  if (live > pick(MAX_VOICES, 16, 10)) { // Quality: fewer bars ring at once at Medium and Low
     Voice *victim = nullptr;
     double score = INFINITY;
     for (int i = 0; i < nVoices; i++) {

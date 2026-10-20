@@ -515,7 +515,7 @@ void Voice::render(double *bl, double *br, int n, GongEngine &e) {
     const double a = l < 0 ? -l : l;
     if (a > pk) pk = a;
     if (nl && adapt) { // substep control
-      if (defect > UP && m < MAX_SUB && e.subVoices < SUB_VOICES) { setSub(2 * m); e.subVoices++; }
+      if (defect > UP && m < MAX_SUB && e.subVoices < e.pick(SUB_VOICES, SUB_VOICES, 1)) { setSub(2 * m); e.subVoices++; }
       else if (m > 1 && defect < DOWN) { if ((calm += k / g.w0) > CALM) setSub(m / 2); }
       else calm = 0;
       defect = 0;
@@ -554,7 +554,9 @@ void Voice::render(double *bl, double *br, int n, GongEngine &e) {
   }
   if (!nl && !hit.on) {
     // dead after 40 quiet blocks of 128 output samples (counted in this voice's samples)
-    quiet = pk < (damped ? 1e-5 : 3e-6) ? quiet + n : 0;
+    // (Quality: at Medium and Low, also once it is 60 dB under the loudest gong, or under 3·10⁻⁵)
+    const double floor = damped ? 1e-5 : 3e-6;
+    quiet = pk < e.pick(floor, std::max(3e-5, 1e-3 * e.loudest), std::max(3e-5, 1e-3 * e.loudest)) ? quiet + n : 0;
     if (quiet > 40 * (BLOCK / R)) dead = true;
   }
 }
@@ -705,7 +707,7 @@ void GongEngine::start(int key, double velocity) {
   focus = v;
   int live = 0;
   for (int i = 0; i < nv; i++) if (!order[i]->killing && !order[i]->dead) live++;
-  if (live > MAX_VOICES) {
+  if (live > pick(MAX_VOICES, 12, 8)) { // Quality: fewer gongs at once at Medium and Low
     Voice *victim = nullptr;
     for (int i = 0; i < nv; i++) { Voice *u = order[i]; if (!u->killing && !u->dead && u != v && (!victim || u->peak < victim->peak)) victim = u; }
     if (victim) { victim->killing = true; victim->setDamping(); }
@@ -742,9 +744,10 @@ Voice *GongEngine::place(int key, const double *x0, int n) {
 }
 bool GongEngine::ready() { return hasP && shells.find(specOf(P.data())); }
 
-// Polyphony of the expensive part: at most P.nlvoices gongs run their nonlinear coupling at once.
+// Polyphony of the expensive part: at most P.nlvoices gongs run their nonlinear coupling at once
+// (Quality: at most 2 at Medium and 1 at Low; the others ring on linearly, as they would later).
 void GongEngine::limitNonlinear() {
-  const double cap = std::max(1.0, hasP ? P[p::nlvoices] : 4.0);
+  const double cap = std::max(1.0, std::min(hasP ? P[p::nlvoices] : 4.0, pick(16.0, 2.0, 1.0)));
   int count = 0;
   for (int i = 0; i < nv; i++) if (order[i]->nl && !order[i]->killing) count++;
   while (count > cap) {

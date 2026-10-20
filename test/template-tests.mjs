@@ -24,9 +24,11 @@ function test(name, fn) {
   try { fn(); console.log('  ok  ', name); } catch (e) { failures++; console.log('  FAIL', name, '\n       ', e.message); } }
 const P = (o = {}) => ({ ...DEFAULTS, ...o });
 
-// Render one note through the engine, 128-sample blocks like the AudioWorklet.
-function render(key, params, vel, sec) {
+// Render one note through the engine, 128-sample blocks like the AudioWorklet, at a Quality
+// ('high', 'medium' or 'low'; High unless given).
+function render(key, params, vel, sec, quality) {
   const e = new TemplateEngine(FS);
+  if (quality) e.setQuality(quality);
   e.setParams(params);
   e.noteOn(key, vel);
   const n = Math.round(sec * FS), L = new Float32Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
@@ -102,6 +104,29 @@ test('output level is sane (peak 0.02 – 1 at full velocity)', () => {
   let pk = 0;
   for (const k of [21, 36, 60, 84, 96, 108]) for (const v of render(k, P(), 1, 0.3)) pk = Math.max(pk, Math.abs(v));
   assert.ok(pk > 0.02 && pk < 1, `peak ${pk}`);
+});
+
+// What the Quality setting trims (the engine's README says it): fewer bars at once, checked
+// without timing, and the sound a note keeps.
+test('Quality: past 24 bars ringing at Medium and 12 at Low the oldest is damped and fades out; a note keeps its pitch and level', () => {
+  const bL = new Float32Array(128), bR = new Float32Array(128);
+  for (const [quality, cap] of [['high', 36], ['medium', 24], ['low', 12]]) {
+    const e = new TemplateEngine(FS);
+    e.setQuality(quality); e.setParams(P()); e.setSustain(true);
+    let ok = true;
+    for (let i = 0; i < 36; i++) { e.noteOn(36 + i, 0.7); for (let b = 0; b < 10; b++) { e.process(bL, bR, 128); ok &&= bL.every(Number.isFinite); } } // the pedal down
+    for (let b = 0; b < 400; b++) e.process(bL, bR, 128); // the damped bars die away
+    assert.ok(ok, `${quality}: NaN`);
+    assert.equal(e.voiceCount(), cap, `${quality}: bars ringing`);
+  }
+  const rms = (x) => Math.sqrt(x.reduce((s, v) => s + v * v, 0) / x.length);
+  for (const k of [48, 69, 84]) {
+    const f = keyFreq(k), hi = render(k, P(), 0.7, 0.5);
+    for (const quality of ['medium', 'low']) {
+      const x = render(k, P(), 0.7, 0.5, quality), c = cents(peak(x, f, 0, x.length), peak(hi, f, 0, hi.length)), d = 20 * Math.log10(rms(x) / rms(hi));
+      assert.ok(Math.abs(c) < 0.1 && Math.abs(d) < 1.5, `key ${k} at ${quality}: ${c.toFixed(3)} ¢, ${d.toFixed(2)} dB`);
+    }
+  }
 });
 
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');

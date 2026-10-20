@@ -267,6 +267,13 @@ tools/render-showers.mjs               node tools/render-showers.mjs → example
 * Each crystal is free: no glue, wrapping or support couples it to its
   neighbours, and the damper is a Q, not a felt.
 
+## Quality
+
+The Quality setting (CPU, at the end of the controls) lets fewer crystals ring at once: 20 at
+Medium and 12 at Low, against 32 at High, the quietest one whose key is up fading first. A
+crystal on its own sounds the same at every setting; the instrument is light already, so that
+is all it trims.
+
 ## Prior art and references
 
 **The physics**

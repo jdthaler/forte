@@ -109,7 +109,7 @@ struct Release { double y = 0, F = 0, v = 0, t = 0, V = 0; };
 class Pluck {
  public:
   Pluck() = default;
-  Pluck(const KeyReed &kr, const PadParams &P, double fs, double bend = 1);
+  Pluck(const KeyReed &kr, const PadParams &P, double fs, double bend = 1, int nMax = MAX_MODES); // nMax: the lowest modes kept
   void retune(double bend, bool resting); // pitch bend: the modes × bend; resting: rescale the state too
   void setPad(const PadParams &P);
   double tip() const;

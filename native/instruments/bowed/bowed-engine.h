@@ -75,8 +75,11 @@ class OrganistaEngine : public Engine {
   void buildBody(double eta);
   bool damped(const Key &s) const { return !s.down && !Pm.lifted; }
   // With the dampers lifted, the 49 strings of C2–C6 (the board is drawn on them) ring in sympathy;
-  // the strings past them join only when played, and leave the loop once they are silent.
-  static bool sympathetic(int key) { return key >= KEY_LO && key <= KEY_HI; }
+  // the strings past them join only when played, and leave the loop once they are silent. Medium
+  // keeps the sympathy of the 24 below C4 (each runs at the output rate), Low none: a string
+  // then joins only when played.
+  bool sympathetic(int key) const { return key >= KEY_LO && key <= (applied == Quality::high ? KEY_HI : applied == Quality::medium ? KEY_LO + 23 : KEY_LO - 1); }
+  void applyQuality();
   void liftAll();
   void activate(Key &s);
   void fault(Key &s);
@@ -107,13 +110,23 @@ class OrganistaEngine : public Engine {
   int dw = 0;
   double etaBody = -1;
   int faults = 0;
+  Quality applied = Quality::high; // the Quality the strings, the sympathy and the board follow
   const double fly;
 
   // the board: its modes (found once; the loss factor sets their damping) and their state
   int M = 0;
   std::array<BoardMode, MAX_MODES> modes{};
   std::array<double, MAX_MODES> a1{}, a2{}, q1{}, q2{}, cLr{}, cLi{}, cRr{}, cRi{};
-  std::array<double, MAX_MODES * NSEG> drive{};
+  std::array<double, MAX_MODES * NSEG> drive{}, driveOn{}; // (driveOn: at the segments sounding this block)
+  std::array<double, NSEG> segF{};
+  // Medium and Low: the board at fs/2 (buildBody), each pair of samples' bridge forces summed in
+  // segH, its output held for two samples
+  bool half = false;
+  int pair = 0;
+  double holdL = 0, holdR = 0;
+  std::array<double, NSEG> segH{};
+  std::array<double, MAX_MODES> a1h{}, a2h{}, cLrh{}, cLih{}, cRrh{}, cRih{};
+  std::array<double, MAX_MODES * NSEG> driveH{};
 };
 
 } // namespace forte::bowed

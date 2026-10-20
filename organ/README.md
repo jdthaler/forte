@@ -198,6 +198,13 @@ bottom octave's complex-tone wheels, which only the pedals use; and cabinet
 resonances beyond one reflection. The wheel levels and wire gauges are one
 organ's measurements, not an average of many.
 
+## Quality
+
+The organ is cheap at any Quality, and almost all of its cost is the 91
+tonewheels, the scanner and the Leslie, which turn whatever is played: there
+is no voice to drop and no detail nobody hears. So Medium and Low play it
+exactly as High does.
+
 ## Prior art and references
 
 ### The original instruments and their inventors

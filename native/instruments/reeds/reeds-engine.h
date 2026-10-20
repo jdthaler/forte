@@ -48,10 +48,12 @@ class ReedEngine : public Engine {
   bool offer(const double *packed, int n);
 
   struct Voice {
-    int key = 0, N = 0;
+    int key = 0, N = 0, Nall = 0; // N: the modes still played (Medium and Low drop the ones decayed away), of Nall
     uint64_t version = 0;
     bool inUse = false;
     double k = 0;
+    int os = OS, hMax = 0; // this voice's oversampling (Medium and Low play their reeds at the output rate), the hammer's longest flight
+    double prune = 0, deathRel = 0, loudest = 0; // Medium, Low: a mode / the voice ends this far below the loudest
     std::array<double, MAX_MODES> q{}, q1{}, a1{}, a2{}, a1d{}, a2d{}, w{}, bw{}, pk{}, bp{}, om{}, sig{}, dw{}, om0{};
     double bend = 1; // om0: the modes unbent; bend: the ratio om is tuned to
     double comp = 0, cStop = 0, stopDen = 1;
@@ -72,6 +74,8 @@ class ReedEngine : public Engine {
     double contactForce(double dFree);
     double felt(double D) const;
     void render(double *buf, int n, const ReedEngine &eng);
+    void pruneModes();
+    void stopFor(int n); // the frame stop's compliance over the first n modes
   };
 
   // read by the tests and the views (through the WebAssembly's hooks), in the order they started
@@ -103,6 +107,7 @@ class ReedEngine : public Engine {
   bool hasParams = false;
   const int maxVoices = 32;
   std::array<double, BLOCK * OS> mono{};
+  std::array<double, BLOCK> mono1{}; // Medium's and Low's reeds, at the output rate
   // decimator: Blackman-windowed sinc, symmetric (applied folded)
   static constexpr int T = 47;
   std::array<double, T> fir{};

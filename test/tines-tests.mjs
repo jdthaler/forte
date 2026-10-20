@@ -191,6 +191,33 @@ test('stable across extremes', () => {
     for (const s of L) assert.ok(Number.isFinite(s) && Math.abs(s) < 20);
   }
 });
+test('Quality: Medium and Low sound fewer voices and drop decayed modes; A4 keeps its pitch and level', () => {
+  const vd = (k) => keyModel(k, P(), FS).packed, bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
+  const level = {};
+  for (const [q, cap] of [['high', 40], ['medium', 16], ['low', 10]]) {
+    // a pedalled run of 30 keys: the voice limit holds
+    const e = new TinesEngine(FS); e.setQuality(q); e.setParams(P()); e.setSustain(true);
+    for (let k = 40; k < 70; k++) { e.noteOn(k, 1.8, vd(k)); for (let i = 0; i < 4; i++) e.process(L, R, bl); }
+    const live = e.voices.filter((v) => !v.killing).length;
+    assert.ok(live <= cap && (q !== 'high' || live === 30), `${q}: ${live} voices`);
+    // half a second after the strike, Medium and Low play only the modes still heard
+    const f = new TinesEngine(FS); f.setQuality(q); f.setParams(P());
+    const v = f.noteOn(60, 1.8, vd(60)), all = v.N;
+    for (let i = 0; i < 0.5 * FS / bl; i++) f.process(L, R, bl);
+    assert.ok(q === 'high' ? v.N === all : v.N < all / 2, `${q}: ${v.N} of ${all} modes`);
+    // A4: on pitch, finite, the same level
+    const r = new TinesEngine(FS); r.setQuality(q); r.setParams({ ...P(), ...DRY });
+    r.noteOn(69, 1.8, vd(69));
+    const n = 1.2 * FS, x = new Float32Array(n);
+    for (let s = 0; s < n; s += bl) { r.process(L, R, bl); x.set(L, s); }
+    assert.ok(x.every(Number.isFinite), q);
+    let best = 0, bf = 0;
+    for (let fr = 437; fr <= 443; fr += 0.05) { const g = goertzel(x, fr, 0.2 * FS, 1.2 * FS); if (g > best) { best = g; bf = fr; } }
+    assert.ok(Math.abs(cents(bf, 440)) < 2, `${q}: ${bf} Hz`);
+    level[q] = 10 * Math.log10(x.reduce((a, b) => a + b * b, 0));
+    assert.ok(Math.abs(level[q] - level.high) < 1.5, `${q}: ${(level[q] - level.high).toFixed(2)} dB from High`);
+  }
+});
 
 console.log('performance');
 test('CPU: 20 sounding keys render in under 40 % of one core', () => {
@@ -203,6 +230,21 @@ test('CPU: 20 sounding keys render in under 40 % of one core', () => {
   const ms = performance.now() - t0, audio = (blocks * bl * 1000) / FS;
   console.log(`        ${(100 * ms / audio).toFixed(1)} % of one core`);
   assert.ok(ms < 0.4 * audio);
+});
+test('CPU: Low renders 20 sounding keys in under half of High’s time', () => {
+  const time = (q) => {
+    const e = new TinesEngine(FS); e.setQuality(q); e.setParams(P()); e.setSustain(true);
+    for (let i = 0; i < 20; i++) { const key = 36 + 3 * i; e.noteOn(key, 2, keyModel(key, P(), FS).packed); }
+    const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
+    for (let i = 0; i < 50; i++) e.process(L, R, bl);
+    const t0 = performance.now();
+    for (let i = 0; i < 1500; i++) e.process(L, R, bl);
+    return performance.now() - t0;
+  };
+  time('high');
+  const hi = time('high'), lo = time('low');
+  console.log(`        Low takes ${(100 * lo / hi).toFixed(0)} % of High's time`);
+  assert.ok(lo < 0.5 * hi);
 });
 
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');

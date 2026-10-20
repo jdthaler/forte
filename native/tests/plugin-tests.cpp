@@ -156,6 +156,34 @@ TEST("plugin: the velocity curve bends MIDI velocity; the soft pedal strikes sof
   in.params->value_to_text(in.p, in.id("Velocity curve"), 2, text, sizeof text);
   CHECK(!std::strcmp(text, "Hard"));
 }
+TEST("plugin: Quality is the plugin's own (High by default, not automatable), reaches the engine, and is High when the host renders offline") {
+  // two notes at once: the smoke engine plays one voice at Low
+  auto level = [](double quality, bool offline) {
+    Instance in(48000);
+    if (offline) {
+      auto render = (const clap_plugin_render_t *)in.p->get_extension(in.p, CLAP_EXT_RENDER);
+      CHECK(render && !render->has_hard_realtime_requirement(in.p));
+      in.p->stop_processing(in.p);
+      CHECK(render->set(in.p, CLAP_RENDER_OFFLINE));
+      in.p->start_processing(in.p);
+    }
+    Events ev;
+    ev.param(0, in.id("Quality"), quality);
+    ev.note(10, true, 60, 0.8); ev.note(10, true, 67, 0.8);
+    return peak(in.run(9600, 128, ev));
+  };
+  const double high = level(0, false), low = level(2, false);
+  CHECK(high > 0.25 && low > 0.1 && low < 0.2);         // two voices, then one
+  CHECK(std::fabs(level(1, false) - high) < 1e-9);      // Medium: eight voices, both play
+  CHECK(std::fabs(level(2, true) - high) < 1e-9);       // offline: High
+  Instance in(48000);
+  CHECK(in.value("Quality") == 0);
+  char text[64];
+  CHECK(in.params->value_to_text(in.p, in.id("Quality"), 2, text, sizeof text) && std::string(text) == "Low");
+  clap_param_info_t info;
+  for (uint32_t i = 0; i < in.params->count(in.p); i++) if (in.params->get_info(in.p, i, &info) && info.id == in.id("Quality")) break;
+  CHECK(!(info.flags & CLAP_PARAM_IS_AUTOMATABLE) && std::string(info.module) == "CPU");
+}
 TEST("plugin: the sostenuto pedal holds the keys down as it goes down, and only those") {
   Instance in(48000);
   Events ev;
@@ -203,6 +231,7 @@ TEST("plugin: state saved and loaded into a new instance, by parameter id") {
     Events ev;
     ev.param(0, a.id("Ring time"), 3.5);
     ev.param(0, a.id("Volume"), 0.25);
+    ev.param(0, a.id("Quality"), 1);
     a.run(128, 128, ev);
     clap_ostream_t os{&saved, [](const clap_ostream_t *s, const void *b, uint64_t n) -> int64_t { ((std::string *)s->ctx)->append((const char *)b, n); return (int64_t)n; }};
     CHECK(a.state->save(a.p, &os));
@@ -218,6 +247,7 @@ TEST("plugin: state saved and loaded into a new instance, by parameter id") {
   b.run(128, 128, none);
   CHECK(std::fabs(b.value("Ring time") - 3.5) < 1e-12);
   CHECK(std::fabs(b.value("Volume") - 0.25) < 1e-12);
+  CHECK(b.value("Quality") == 1); // the project keeps its Quality
 }
 TEST("plugin: values read as the page shows them, and typed values are understood") {
   Instance in(48000);

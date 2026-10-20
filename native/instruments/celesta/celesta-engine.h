@@ -68,6 +68,7 @@ class CelestaEngine : public Engine {
     bool fading = false, dead = false;
     double age = 0;
     double E = 0, Emax = 0, Eb = 0, Et = 0;
+    double top = 0, floor = 0; // Quality's, when the bar was struck: its highest mode (Hz), and where it is let go (× its most energy)
     Hammer ham{};
     double kOverM = 0, halfAlpha = 0;
     double fd0 = 0, fV0 = 0, fP0 = 0; // the contact's step: compression, potential and δ^p two steps back

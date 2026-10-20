@@ -37,8 +37,10 @@ export function withPreset(I, i, P = defaultsOf(I)) {
 
 // One instrument, played block by block (128 samples, like the AudioWorklet).
 export class Player {
-  constructor(I, Engine, fs, P = defaultsOf(I)) {
+  // quality: the device's Quality ('high', 'medium', 'low'; shared/quality.js), High unless given
+  constructor(I, Engine, fs, P = defaultsOf(I), { quality } = {}) {
     this.I = I; this.fs = fs; this.engine = new Engine(fs);
+    if (quality) this.engine.setQuality(quality);
     this.sustained = false; this.latched = new Set();
     this.setParams(P);
     if (I.space === 'sustain') this.engine.setSustain?.(false);
@@ -120,9 +122,9 @@ export class Player {
   }
 }
 
-export async function player(slug, fs = 48000, P) {
+export async function player(slug, fs = 48000, P, options) {
   const I = await loadInstrument(slug);
-  return new Player(I, await loadEngine(I), fs, P);
+  return new Player(I, await loadEngine(I), fs, P, options);
 }
 
 // The output chain offline (shared/chain.js), without the limiter: tone low-pass, body,

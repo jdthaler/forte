@@ -26,6 +26,7 @@
 
 #include <array>
 #include <atomic>
+#include <cmath>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -124,11 +125,20 @@ class PianoEngine : public Engine {
   std::array<Voice *, 128> byKey{};
   double maxModes = 4500; // CPU budget (total oscillators across all voices)
   bool overBudget = false;
+  // Quality (forte/engine.h): Medium and Low strike a voice with fewer modes (none above fTop()
+  // but a family's first eight, which carry the treble's tone and its blow; none beyond the
+  // nTop()-th, the faint top of the bass), give it a smaller share of the budget, let a fading
+  // voice go sooner, and give each sympathetic string fewer partials (Medium) or none (Low)
+  double fTop() const { return pick<double>(INFINITY, 7000, 5000); }
+  int nTop() const { return pick(1 << 30, 80, 56); }
+  bool keeps(const VoiceData &d, int j) const { return d.idx[j] < nTop() && (d.freq[j] < fTop() || d.idx[j] < 8); }
+  int kept(const VoiceData &d) const;
   Voice *last = nullptr;  // the voice the latest noteOn struck
   // the sympathetic strings: a group per key (the tests read it)
   static constexpr int SYM_MODES = 16;     // partials per key
   static constexpr double SYM_FMAX = 4000; // Hz: none above
   Sympathetic sym;
+  int symModes() const { return pick(SYM_MODES, 3, 0); }
   bool symReady(int key) const { return symVer[key] != 0; }
 
  private:
@@ -159,6 +169,7 @@ class PianoEngine : public Engine {
   std::array<int, 128> ownAt{};
   int symNext = 0, symStamp = 0;
   double symDamperSigma = -1, symWidth = -1;
+  Quality symQuality = Quality::high; // the Quality the groups were built at
   bool symHush = false; // Panic: the groups wait for the voices to fade
   std::array<double, MAXB + 1> tV{}, tH{};
   std::array<std::array<double, MAXB>, 4> bus{}; // V left, V right, H left, H right
