@@ -1,0 +1,8 @@
+/* The page's own palette and any layout beyond shared/instrument.css: the blue of lead tungstate's
+   scintillation (420 nm) and the amber of the heat a shower leaves. */
+:root {
+  --accent: #8fd4ff;
+  --accent-2: #ffb347;
+  --accent-ink: #061524;
+}
+#event, #profile { height: 300px; }

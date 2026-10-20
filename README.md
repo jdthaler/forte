@@ -63,6 +63,7 @@ The front page sorts them into four kinds, as here.
 | ✅ | [Wind Harp](windharp/) | stiff nylon strings in a wind, each with van der Pol wake oscillators along it (Facchinetti, de Langre & Biolley): the wake locks onto a harmonic inside the band a linear analysis predicts (de Langre's coupled-mode flutter) and holds on past it (hysteresis, from a harmonic balance); every string cut to lock on its note at 4 m/s, so the wind hops each string up or down its own series; shutters that slide open, seeded gusts, mass–damping, Kircher's unison harp, the aeolian tone as a dipole |
 | ✅ | [Storage Ring](ring/) | a particle accelerator's storage ring heard through a beam pickup: a Gaussian bunch's pulse train at the revolution frequency, betatron sidebands at (n ± Q)·f_rev after an injection kick, decoherence by chromaticity that recoheres every synchrotron period and by octupole amplitude detuning that never does (Meller et al.'s closed forms, checked against tracked particles); RF voltage under key pressure, adiabatic bunch shortening, radiation damping, two-button or difference pickups |
 | ✅ | [RF Cavity Bells](cavity/) | superconducting accelerator cavities rung by a passing bunch: nine coupled pillbox cells whose passband beats (Nagle, Knapp & Knapp's circuit model), higher-order modes at Bessel-zero ratios for a bell's partials, kicks from the transit-time integral, offset and bunch-length form factors; input and HOM couplers, BCS surface resistance against the helium bath, beam loading from a bunch train, Lorentz-force detuning through the walls' mechanical mode, quench and recovery |
+| ✅ | [Collider Showers](showers/) | a collider calorimeter's lead tungstate crystals (CMS's) rung by the heat of the particle showers they catch, the thermo-acoustic effect: PDG's electromagnetic shower profiles, photon conversion, charged pions' hadronic showers that differ every time, the Molière-radius spread into neighbouring crystals; stretching modes (Love's rod theory) rung by where along the crystal the shower peaks, so TeV showers ring the odd harmonics; bending modes from an off-axis impact; pile-up; piezo or accelerometer readout |
 
 ✅ playable · 🛠 in the workshop ([build briefs](docs/WORKSHOP.md)). Each instrument's README has its equations,
 numbers, sources, and a list of what is simplified. The same notes open on
@@ -104,13 +105,15 @@ play the plugins in a DAW with a small buffer.
 Each instrument page reads top to bottom. At the top, the instrument's
 name opens the menu of every instrument (and Forte's home page), next to
 **How it works** and the mode. In the middle are the views,
-pictures of the physics as it plays, with a row of toggles above them
-that turns each one on or off (the main ones are on at first, and the
-page remembers your choice). At the bottom, right above the keys, are the controls a
-player reaches for (stops and registrations, tremolo, drive, the mallet,
-the spin, the room and the volume, or the organ's drawbars), with **More
-controls** for everything else, and the presets just above the keys (the
-first control on a phone). Each shows its name, and its value while
+pictures of the physics as it plays, and the rest of the controls,
+grouped, beside them or below them (a switch at the top chooses, on a
+wide screen). A row of toggles above turns each view and each group of
+controls on or off: the main views and every group are on at first, and
+the page remembers your choice. At the bottom, right above the keys, are
+the controls a player reaches for (stops and registrations, tremolo,
+drive, the mallet, the spin, the room and the volume, or the organ's
+drawbars), and the presets just above the keys (the first control on a
+phone). Each shows its name, and its value while
 you move it. Explanations wait behind ⓘ buttons.
 
 **Your own presets** live in the same menu. *Save these settings…* keeps
@@ -119,7 +122,7 @@ these settings* makes a link that opens the page playing them, to send
 to someone. *Your presets and files…* lists yours, and saves them to a
 file or opens one: the plugins read and write the same files.
 
-**Tuning**, under More controls, is the same on every instrument: the
+**Tuning**, among the controls, is the same on every instrument: the
 **pitch** standard (A = 440 Hz, or 415 for baroque pitch, 392, 422.5, 430,
 435, 442, 443 or 466), the **temperament** (equal, ¼- and ⅙-comma
 meantone, Werckmeister III, Kirnberger III, Vallotti, Young, Pythagorean
@@ -134,8 +137,8 @@ carry it.
 There are two modes. **Discover** shows it all. **Perform** shows just
 the views you turned on, filling the screen, with no toggles and no text
 in them: for playing,
-or for a projector (**Full screen** fills it). The controls stay where
-they are.
+or for a projector (**Full screen** fills it). The controls above the
+keys stay where they are, and **More controls** brings back the rest.
 
 **The keys** fill the width at the key size you choose (− +), like
 GarageBand's: a phone shows an octave or so, a laptop most of the range.

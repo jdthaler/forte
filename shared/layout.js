@@ -1,16 +1,18 @@
 // layout.js — the layout of every instrument page, the same on a phone, a tablet
 // and a desktop. Three parts, top to bottom:
 //   header  the instrument's name, which is also the menu (shared/nav.js); How it
-//           works; Discover | Perform (and C++ | JS, shared/shell.js); audio, MIDI
-//           and Panic;
-//   views   the pictures only, with a row of toggles above them, one for each view: a
-//           tap turns it on or off. The ones turned on share the space in rows. At
-//           first the main ones (cards marked data-perform) are on and the rest off;
+//           works; Discover | Perform; where the controls go (beside the views or
+//           below them, on a wide screen); audio, MIDI and Panic;
+//   toggles a row of them, one for each view and one for each group of controls in
+//           the Controls panel: a tap turns it on or off. At first the main views
+//           (cards marked data-perform) are on, the other views off, every group on;
+//   views   the pictures only, the ones turned on sharing the space in rows, and the
+//           Controls panel (#controls: the groups turned on) beside them or below;
 //   footer  the controls you play with, right above the keys: any control surface
 //           a page marks data-control (the organ's drawbars) and the parameters
-//           marked `perform: true` (which the page gives data-perform), then "More
-//           controls" for the rest (#controls: a column on wide screens, a panel
-//           that slides over the views on narrow ones). A handle folds them away.
+//           marked `perform: true` (which the page gives data-perform), then, in
+//           Perform, "More controls" for the Controls panel (sliding over the views
+//           on a narrow screen). A handle folds them away.
 //           Then the keyboard bar (◀ an overview of the whole range ▶, the presets
 //           (with "Default settings", which stands in for the page's Reset button;
 //           on a phone they lead the controls above the keys instead), key size,
@@ -18,11 +20,12 @@
 //           the keys: as many as fit the width at the chosen key size.
 // Explanations wait behind ⓘ buttons: a parameter's hint, a view's caption.
 // Discover shows the toggles and every explanation. Perform is for playing and for a
-// projector: the views turned on fill the screen with no toggles and no text in them
+// projector: the views turned on fill the screen with no toggles, no Controls panel
+// until More controls, and no text in them
 // (no titles, readouts, captions, legends or tables, and nothing drawn by fillText on
 // their canvases; a card with data-keep-text keeps its own). The mode is the same on
-// every page; everything else, the views turned on among it, is remembered per
-// instrument. Also handles iOS audio quirks. Imported by
+// every page, and so is where the controls go; everything else, what's turned on among
+// it, is remembered per instrument. Also handles iOS audio quirks. Imported by
 // shared/nav.js, so it runs before the page's own scripts.
 
 const body = document.body;
@@ -38,18 +41,21 @@ const prefs = (() => {
   let s = {};
   try { s = JSON.parse(localStorage.getItem(STORE) || '{}') || {}; } catch { /* corrupt */ }
   const bool = (v, d) => (typeof v === 'boolean' ? v : d);
+  const flags = (o) => Object.fromEntries(Object.entries(o && typeof o === 'object' ? o : {}).filter(([, v]) => typeof v === 'boolean'));
   return { // keep only well-formed stored values
-    controls: bool(s.controls, true), // the Controls column, on wide screens in Discover
-    perform: { controls: bool(s.perform?.controls, false) }, // … and in Perform
+    perform: { controls: bool(s.perform?.controls, false) }, // the controls panel in Perform (More controls)
     deck: bool(s.deck, true), // the controls above the keys
-    views: Object.fromEntries(Object.entries(s.views && typeof s.views === 'object' ? s.views : {})
-      .filter(([, v]) => typeof v === 'boolean')), // each view turned on or off; the rest as the page has them
+    views: flags(s.views), // each view turned on or off; the rest as the page has them
+    groups: flags(s.groups), // each group of controls turned on or off; the rest on
     kb: SIZES.includes(s.kb) ? s.kb : touch ? 'l' : 'm',
     start: Number.isInteger(s.start) ? s.start : null, // the first key shown
   };
 })();
 const save = () => { try { localStorage.setItem(STORE, JSON.stringify(prefs)); } catch { /* storage unavailable */ } };
 let mode = (() => { try { return localStorage.getItem(MODE) === 'perform' ? 'perform' : 'discover'; } catch { return 'discover'; } })();
+// the controls beside the views or below them, on every page (a narrow screen always stacks them)
+const ARRANGE = 'forte/controls-below/v1';
+let below = (() => { try { return localStorage.getItem(ARRANGE) === '1'; } catch { return false; } })();
 const performing = () => mode === 'perform';
 
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -69,8 +75,8 @@ const header = document.querySelector('body > header');
 const sidebar = document.querySelector('#controls');
 const footer = document.querySelector('body > footer');
 const viewsEl = document.querySelector('#views');
-let drawerOpen = false;
-const drawerMode = () => narrow.matches && !body.classList.contains('no-views');
+let drawerOpen = false; // in Perform on a narrow screen, More controls slides the panel over the views
+const drawerMode = () => performing() && narrow.matches && !body.classList.contains('no-views');
 
 // ---------------------------------------------------------------------------
 // views: a row of toggles, one for each view, and the views turned on, in a grid
@@ -85,11 +91,19 @@ const viewName = (c, i) => c.dataset.view || c.querySelector('h2')?.textContent.
 const viewKey = (c, i) => c.id || viewName(c, i).toLowerCase().replace(/[^a-z0-9]+/g, '-');
 // the key once, from the page as written: a title changes (its note, its ⓘ), the key mustn't
 const views = shown.map((card, i) => { const key = viewKey(card, i); return { card, key, on: () => prefs.views[key] ?? main.includes(card) }; });
+// The toggles, the views' and the controls' groups', share a row across the top of the page.
+const toggles = el('div', 'forte-toggles');
+function toggleRow(cls, label, aria) {
+  const row = el('div', cls);
+  row.setAttribute('role', 'group');
+  row.setAttribute('aria-label', aria);
+  row.appendChild(el('span', 'forte-toggles-label', label));
+  toggles.appendChild(row);
+  return row;
+}
 let stage = null, hint = null;
 if (viewsEl && shown.length) {
-  const bar = el('div', 'forte-view-toggles');
-  bar.setAttribute('role', 'group');
-  bar.setAttribute('aria-label', 'Views to show');
+  const bar = toggleRow('forte-view-toggles', 'Views', 'Views to show');
   for (const v of views) {
     v.toggle = button(viewName(v.card, 0), 'Show or hide this view');
     v.toggle.addEventListener('click', () => { prefs.views[v.key] = !v.on(); save(); apply(); v.toggle.blur(); });
@@ -98,8 +112,9 @@ if (viewsEl && shown.length) {
   stage = el('div', 'forte-stage');
   hint = el('p', 'forte-no-view', 'Every view is off: turn one on above.');
   stage.append(...shown, hint);
-  viewsEl.replaceChildren(bar, stage);
+  viewsEl.replaceChildren(stage);
 }
+if (toggles.firstChild || sidebar) document.querySelector('body > main')?.prepend(toggles);
 // The views turned on fill the stage in rows, as even as they go: the first rows take
 // the extra one, and a short last row stretches across. Side by side on a wide screen,
 // stacked on a tall one (two abreast from four), one above another on a phone.
@@ -123,6 +138,31 @@ function arrange() {
   }
   stage.style.setProperty('--rows', rows);
   hint.hidden = n > 0;
+}
+
+// The groups of controls in the Controls panel (the page builds them, maybe after this runs,
+// so each gets its toggle once it has its parameters). A group whose parameters have all moved
+// above the keys has none. The groups start on; folding a group gives way to its toggle.
+const groups = [];
+let groupBar = null;
+function addGroups() {
+  if (!sidebar) return;
+  for (const det of sidebar.querySelectorAll('details.group:not([data-key])')) {
+    if (!det.querySelector('.param')) continue;
+    const sum = det.querySelector('summary'), name = sum?.textContent.trim() || `Controls ${groups.length + 1}`;
+    const key = det.dataset.key = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    sum?.addEventListener('click', (e) => e.preventDefault());
+    groupBar ??= toggleRow('forte-control-toggles', 'Controls', 'Controls to show');
+    const g = { det, key, on: () => prefs.groups[key] ?? true, toggle: button(name, 'Show or hide these controls') };
+    g.toggle.addEventListener('click', () => { prefs.groups[key] = !g.on(); save(); apply(); g.toggle.blur(); });
+    groupBar.appendChild(g.toggle);
+    groups.push(g);
+  }
+  for (const g of groups) {
+    g.det.open = true;
+    g.det.hidden = !g.on();
+    g.toggle.setAttribute('aria-pressed', String(g.on()));
+  }
 }
 // a view's caption waits behind ⓘ in its title
 for (const c of shown) {
@@ -159,12 +199,11 @@ if (footer && (sidebar || surfaces.length)) {
   for (const s of surfaces) { s.classList.add('forte-surface'); deck.appendChild(s); }
   deck.appendChild(strip);
   if (sidebar) {
-    more = button('More controls', 'Every other control, grouped');
+    more = button('More controls', 'Every other control, grouped'); // in Perform: Discover has the toggles
     more.className = 'forte-more';
     more.addEventListener('click', () => {
       if (drawerMode()) drawerOpen = !drawerOpen;
-      else if (performing()) { prefs.perform.controls = !prefs.perform.controls; save(); }
-      else { prefs.controls = !prefs.controls; save(); }
+      else { prefs.perform.controls = !prefs.perform.controls; save(); }
       apply(); more.blur();
     });
     strip.appendChild(more);
@@ -323,7 +362,7 @@ function addDefaults() {
 // ---------------------------------------------------------------------------
 // header: the mode, Full screen and MIDI (and the presets' "Default settings")
 
-const modeBtns = [];
+const modeBtns = [], arrangeBtns = [];
 let presetTile = null, presetSlot = null;
 function placePresets() {
   if (!presetTile) return;
@@ -352,6 +391,29 @@ if (header) {
     seg.appendChild(b); modeBtns.push(b);
   }
   play.appendChild(seg);
+  // the controls beside the views, or below them (wide screens: a narrow one stacks them)
+  if (sidebar && viewsEl) {
+    const lay = el('div', 'forte-arrange');
+    lay.setAttribute('role', 'group');
+    lay.setAttribute('aria-label', 'Where the controls go');
+    const svg = (path) => `<svg viewBox="0 0 20 16" aria-hidden="true"><rect x="1" y="1" width="18" height="14" rx="2"/>${path}</svg>`;
+    for (const [v, title, icon] of [
+      ['0', 'Controls beside the views', svg('<rect class="fill" x="1" y="1" width="6" height="14" rx="2"/>')],
+      ['1', 'Controls below the views', svg('<rect class="fill" x="1" y="10" width="18" height="5" rx="2"/>')],
+    ]) {
+      const b = button('', title);
+      b.innerHTML = icon;
+      b.dataset.below = v;
+      b.setAttribute('aria-label', title);
+      b.addEventListener('click', () => {
+        below = v === '1';
+        try { localStorage.setItem(ARRANGE, below ? '1' : '0'); } catch { /* storage unavailable */ }
+        apply(); b.blur();
+      });
+      lay.appendChild(b); arrangeBtns.push(b);
+    }
+    play.appendChild(lay);
+  }
   // the presets: in the keyboard bar, or on a phone (where the bar is full) the first tile of
   // the controls above the keys; on a page with neither, the top of the Controls panel
   const presets = sidebar?.querySelector('.preset-row');
@@ -412,11 +474,15 @@ function apply() {
   for (const b of modeBtns) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
   body.classList.toggle('no-views', !shown.length);
   arrange();
-  // the controls
-  const panel = performing() ? prefs.perform.controls : prefs.controls;
-  body.classList.toggle('hide-controls', !!sidebar && !drawerMode() && !panel);
-  body.classList.toggle('drawer-open', drawerMode() && drawerOpen);
-  more?.setAttribute('aria-pressed', String(drawerMode() ? drawerOpen : panel));
+  // the controls: the groups turned on, beside the views or below them (in Perform, if asked for)
+  addGroups();
+  const panel = !!sidebar && (performing() ? prefs.perform.controls : groups.some((g) => g.on()));
+  const drawer = drawerMode();
+  body.classList.toggle('hide-controls', !!sidebar && (drawer ? !drawerOpen : !panel));
+  body.classList.toggle('drawer-open', drawer && drawerOpen);
+  body.classList.toggle('controls-below', !!sidebar && !drawer && (below || narrow.matches));
+  more?.setAttribute('aria-pressed', String(drawer ? drawerOpen : panel));
+  for (const b of arrangeBtns) b.setAttribute('aria-pressed', String((b.dataset.below === '1') === below));
   body.classList.toggle('deck-shut', !prefs.deck);
   if (grab) {
     grab.setAttribute('aria-expanded', String(prefs.deck));

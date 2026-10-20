@@ -431,6 +431,114 @@ test('polyphony: all voices together sum at most 3000 pairs, the weakest dropped
   assert.ok(kept(last) > 0.85 && last.active >= first.active, `newest note keeps ${(100 * kept(last)).toFixed(1)} % of its power (${last.active} pairs; the oldest ${first.active})`);
   console.log(`        24 voices: ${total} pairs; the newest keeps ${last.active} (${(100 * kept(last)).toFixed(1)} % of its power), the oldest ${first.active}`);
 });
+// ---- coherent restrike: Ramsey fringes between two pulses -----------------------------------------
+
+// A key struck at t = 0 (velocity v1) and again `delay` seconds later (v2, or the velocity that
+// makes the second pulse's amplitude equal to what is left of the first's), rendered in blocks that
+// put the second note-on at exactly round(delay·FS) samples. Returns the output from the restrike
+// on, the ratio ρ of the two pulses' amplitudes at the second's centre, how many samples after the
+// note-on that centre is (the pump's lead), and the engine.
+function restrike(params, key, delay, after, { v1 = 0.8, v2, match = false } = {}) {
+  const e = new QuantumEngine(FS); e.setParams(params);
+  const at = Math.round(delay * FS), n = at + Math.round(after * FS), L = new Float64Array(n), R = new Float64Array(n);
+  e.noteOn(key, v1);
+  let s = 0, rho = 0, lead = 0;
+  while (s < n) {
+    if (s === at) {
+      // the first packet's level now, and at the second pulse's centre: T₁ acts from a sample's output on
+      const probe = new QuantumEngine(FS); probe.setParams(params); probe.noteOn(key, 1);
+      lead = -probe.voices[0].count;
+      const env1 = e.voices.at(-1).env * Math.exp(-(lead - 1) / (FS * params.T1));
+      const vel = match ? env1 / 0.3 : v2; // OUT = 0.3 at full velocity
+      e.noteOn(key, vel);
+      rho = Math.sqrt(env1 / (0.3 * vel));
+    }
+    const m = Math.min(128, (s < at ? at : n) - s), bL = new Float64Array(m), bR = new Float64Array(m);
+    e.process(bL, bR, m);
+    L.set(bL, s); R.set(bR, s); s += m;
+  }
+  return { y: L.subarray(at), rho, lead, e };
+}
+const TREV = Math.round((2 * 60 / 90) * FS); // the default lock: T_rev = 2 beats at 90 BPM, 64 000 samples
+
+test('coherent restrike is off by default: a restruck key adds a fresh packet (two voices); on, the second pulse takes the first\'s packet over (one voice)', () => {
+  assert.equal(DEFAULTS.ramsey, false);
+  const off = restrike(P(), 60, 0.3, 0.05, { v2: 0.8 }), on = restrike(P({ ramsey: true }), 60, 0.3, 0.05, { v2: 0.8 });
+  assert.equal(off.e.voices.length, 2);
+  assert.equal(on.e.voices.length, 1);
+  assert.ok(on.e.voices[0].coh && !off.e.voices[1].coh);
+  // a knob that changes the well since: the packets differ, so the restrike is a fresh atom again
+  const e = new QuantumEngine(FS); e.setParams(P({ ramsey: true }));
+  e.noteOn(60, 0.8); e.process(new Float64Array(128), new Float64Array(128), 128);
+  e.setParams(P({ ramsey: true, sigma: 3 })); e.noteOn(60, 0.8);
+  assert.equal(e.voices.length, 2);
+});
+
+test('Ramsey\'s formula: restruck on a full revival of the square well, the note is |1 + ρe^(i(2πδT − φ))|² times a fresh one, for any detuning δ and phase φ', () => {
+  const T = TREV / FS;
+  for (const [d, ph] of [[0, 0], [0, 180], [0, 90], [0.25, 0], [-1.3, 45], [3.7, 300]]) {
+    const p = P({ ramsey: true, ramseyDetune: d, ramseyPhase: ph, T1: 30 });
+    const { y, rho } = restrike(p, 57, T, 0.25, { v2: 0.6 });
+    const single = note(p, 57, 0.25, 0.6).L;
+    const Phi = 2 * PI * d * T - (ph * PI) / 180, want = 1 + rho * rho + 2 * rho * Math.cos(Phi);
+    let worst = 0, peak = 0;
+    for (let i = 960; i < single.length; i++) { worst = Math.max(worst, Math.abs(y[i] - want * single[i])); peak = Math.max(peak, Math.abs(single[i])); } // past the pump (20 ms)
+    assert.ok(worst < 1e-6 * peak * Math.max(want, 1), `δ = ${d} Hz, φ = ${ph}°: off by ${(worst / peak).toExponential(2)} (×${want.toFixed(3)} wanted)`);
+  }
+  // equal amplitudes, out of phase: the second pulse takes the packet back (the atom is in its ground state)
+  const p = P({ ramsey: true, ramseyPhase: 180, T1: 30 });
+  const { y, e } = restrike(p, 57, T, 0.25, { match: true });
+  assert.ok(rms(y, 960, y.length) < 1e-6, `${rms(y, 960, y.length)}`);
+  assert.equal(e.voices.length, 0, 'nothing left to radiate: the voice ends');
+});
+
+test('a restrike on the box\'s half revival keeps every other level: its dipole, which joins levels of opposite parity only, goes silent (a dark state); the Morse well\'s, with every Δn, does not', () => {
+  const p = P({ ramsey: true, T1: 30 });
+  const box = restrike(p, 57, TREV / 2 / FS, 0.25, { match: true }), single = note(p, 57, 0.25, 0.8).L;
+  const quiet = rms(box.y, 960, box.y.length) / rms(single, 960, single.length);
+  assert.ok(quiet < 1e-5, `box at T_rev/2: ${(20 * Math.log10(quiet)).toFixed(0)} dB`);
+  const pm = P({ ramsey: true, T1: 30, potential: 'morse' });
+  const morse = restrike(pm, 57, TREV / 2 / FS, 0.25, { match: true }), sm = note(pm, 57, 0.25, 0.8).L;
+  assert.ok(rms(morse.y, 960, morse.y.length) > 0.3 * rms(sm, 960, sm.length), 'Morse at T_rev/2');
+});
+
+test('averaged over the second pulse\'s phase (0°, 90°, 180°, 270°), a coherent restrike is two separate packets, sample for sample from its centre on, at any delay and in any well', () => {
+  for (const [potential, key, delay] of [['box', 57, 0.3137], ['morse', 45, 0.0517], ['hydrogen', 64, 0.9], ['bouncer', 70, 0.5]]) {
+    const p = P({ potential, T1: 30 });
+    const { y: inc, lead } = restrike(p, key, delay, 0.3, { v2: 0.5 });
+    const mean = new Float64Array(inc.length);
+    for (const ph of [0, 90, 180, 270]) restrike({ ...p, ramsey: true, ramseyPhase: ph }, key, delay, 0.3, { v2: 0.5 }).y.forEach((v, i) => { mean[i] += v / 4; });
+    // (from the second pulse's centre on: over the pump's lead the first packet's T₁ decay waits for it)
+    let worst = 0, peak = 0;
+    for (let i = lead; i < inc.length; i++) { worst = Math.max(worst, Math.abs(mean[i] - inc[i])); peak = Math.max(peak, Math.abs(inc[i])); }
+    assert.ok(worst < 1e-6 * peak, `${potential}: ${(worst / peak).toExponential(2)}`);
+  }
+});
+
+test('dephasing before the restrike washes the fringes out: on a full revival the contrast between φ = 0° and 180° falls as Γ_φ grows', () => {
+  const contrast = (dephase) => {
+    const p = P({ ramsey: true, T1: 30, dephase });
+    const [a, b] = [0, 180].map((ph) => restrike({ ...p, ramseyPhase: ph }, 57, TREV / FS, 0.12, { match: true }).y).map((y) => rms(y, 960, y.length));
+    return (a - b) / (a + b);
+  };
+  const c = [0, 0.3, 1, 3].map(contrast);
+  assert.ok(c[0] > 0.999, `Γ_φ = 0: ${c[0]}`);
+  for (let i = 1; i < c.length; i++) assert.ok(c[i] < c[i - 1], c.map((v) => v.toFixed(3)).join(' '));
+  assert.ok(c[3] < 0.5 * c[0], c.map((v) => v.toFixed(3)).join(' '));
+  console.log(`        contrast at Γ_φ = 0, 0.3, 1, 3 s⁻¹: ${c.map((v) => v.toFixed(3)).join(', ')}`);
+});
+
+test('a coherent restrike has no click: at the second pulse the output moves no more than the note\'s own swing, for every detector', () => {
+  for (const detector of ['x', 'v', 'a']) for (const delay of [0.02, 0.3137, TREV / 2 / FS]) {
+    const p = P({ ramsey: true, detector, T1: 30 });
+    const { y } = restrike(p, 45, delay, 0.05, { v2: 0.8 }), single = note(p, 45, 0.05, 0.8).L;
+    let jump = 0, swing = 0;
+    for (let i = 1; i < 48; i++) jump = Math.max(jump, Math.abs(y[i] - y[i - 1]));
+    for (let i = 1; i < single.length; i++) swing = Math.max(swing, Math.abs(single[i] - single[i - 1]));
+    assert.ok(jump < 4 * swing, `${detector} at ${delay.toFixed(3)} s: step ${jump.toExponential(2)} vs the note's ${swing.toExponential(2)}`);
+  }
+});
+
 test('seeded random combinations of knob extremes at 44.1 and 48 kHz: no NaN, bounded output', () => {
   const ranged = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'velocity'].includes(q.id));
   let seed = 12345, worst = { pk: 0 };
@@ -453,9 +561,10 @@ test('seeded random combinations of knob extremes at 44.1 and 48 kHz: no NaN, bo
       e.process(bl, br, 128);
       for (let i = 0; i < 128; i++) { assert.ok(Number.isFinite(bl[i] + br[i]), `${fs} Hz ${JSON.stringify(p)}: NaN`); pk = Math.max(pk, Math.abs(bl[i]), Math.abs(br[i])); }
     }
-    if (pk > worst.pk) worst = { pk, p, fs };
+    // (a coherent restrike can add the two pulses' amplitudes: up to 4× one's power, twice two atoms')
+    if (pk / (p.ramsey ? 2 : 1) > worst.pk) worst = { pk: pk / (p.ramsey ? 2 : 1), p, fs };
   }
-  assert.ok(worst.pk < 2, `${worst.fs} Hz: seven notes struck twice peak ${worst.pk.toFixed(2)} with ${JSON.stringify(worst.p)}`);
+  assert.ok(worst.pk < 2, `${worst.fs} Hz: seven notes struck twice peak ${worst.pk.toFixed(2)} (half that if coherent) with ${JSON.stringify(worst.p)}`);
   console.log(`        loudest of 30 (seven notes struck twice): ${worst.pk.toFixed(2)}`);
 });
 console.log('MPE');

@@ -22,6 +22,9 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/quantum/>
 | `Space` | sustain pedal (released notes keep their lifetime T₁) |
 | MIDI | notes, velocity, sustain pedal (CC64), **mod wheel = dephasing rate** |
 
+With **Coherent restrike** on, striking a key again while its packet still rings sends a second,
+phase-locked pulse into the same atom, and the two pulses interfere (Ramsey fringes; see below).
+
 ## The physics
 
 **The state.** A short pump pulse excites a band of levels around n̄:
@@ -196,6 +199,45 @@ processes act on the density matrix ρ_mn:
   fundamental at the revival, < 10⁻⁶ for the 3rd harmonic, and a 97 %
   intact attack.
 
+**Coherent restrike: Ramsey fringes.** Normally a restruck key excites a fresh packet in another
+atom, and the two add incoherently: their powers add. With *Coherent restrike (Ramsey fringes)*
+on, the second strike is the second pulse of a phase-locked pair on the *same* atom, as in
+wavepacket interferometry (Scherer et al. 1991; Noordam, Duncan & Gallagher 1992). In the weak-field
+limit each pulse adds its amplitude cₙ to every level, so a pulse a delay T after the first leaves
+
+  bₙ = cₙ (1 + ρ Vₙ e^(−iδₙT)),  δₙ = (Eₙ − Eₙ₀)/ħ − 2πδ,
+
+with the phase φ of the pulse pair on top. ρ is what is left of the first pulse's amplitude (T₁
+and the release take it) over the second's (its velocity), n₀ is the level at the packet's centre,
+whose line the pump's carrier sits δ off (*Pump detuning*), and Vₙ is what dephasing has left of
+the level's coherence with the pump (below). The new state then rings, collapses and revives like
+any other. What you hear depends on where the first packet is when the second pulse comes:
+
+* **On a full revival** the first packet is its launch again (exactly so in the square well, where
+  every (Eₙ − Eₙ₀)T is a multiple of 2π), and the restrike is Ramsey's formula: the note is
+  1 + ρ² + 2ρ cos(2πδT − φ) times a fresh one. At δ = 0 and φ = 0 the two pulses add: every level's
+  amplitude doubles, so the dipole you hear is four times a fresh note's (12 dB up); at φ = 180° and equal amplitudes the second
+  pulse takes the packet back down, the atom is left in its ground state and the note stops dead.
+  With δ ≠ 0, restrikes on successive revivals swing between the two every 1/δ seconds: the fringes.
+* **On the half revival in the box** (on the beat, with the tempo lock's default of two beats) the
+  first packet is its mirror image, e^(−iδₙT) = ±(−1)^(n−n₀), and the second pulse doubles every
+  other level and empties the rest. The box's dipole joins levels of opposite parity only, so the
+  atom can no longer radiate: the note goes silent (a dark state, −100 dB in the tests) though the
+  packet is still there. The Morse well, whose dipole joins every pair, keeps sounding.
+* **Anywhere else** the two packets sit at different points of the orbit, or the first has
+  collapsed. Then the second pulse writes fringes across the levels, |1 + ρe^(−iδₙT)|², and the
+  note's timbre and its later revivals change with the delay to a fraction of a period. A player's
+  hand is not that precise, so from the keys this sounds like a restrike that changes colour each
+  time; a sequencer that puts its notes on the sample (the plugins do) gets the same fringe every time.
+
+Averaged over the phase φ the cross terms vanish and the restrike is two incoherent packets again
+(the tests check this sample for sample, in four wells and at delays off any revival). Pure dephasing destroys
+the coherence the fringes need: with the noise of the model below, a level's coherence with the
+pump decays as Vₙ = e^(−Γ_φ(n − n̄)²T), so the fringes wash out as Γ_φT grows; what dephasing took
+rings on beside the new packet as an incoherent remainder. The carrier's line is the key's
+(retuned) pitch's level, so the fringes follow the tuning. Turning the knobs between the strikes
+changes the well, and then the second strike is a fresh atom again.
+
 **The engine.** Each voice keeps one unit phasor per level. At the start of
 every 128-sample block its phase is recomputed from the integer sample
 count in double precision, and within the block it is rotated sample by
@@ -275,7 +317,7 @@ quantum/src/quantum-waves.js           the views' grid for each well around the 
 quantum/src/quantum-wasm.js            the C++ engine and model as WebAssembly (quantum/wasm/quantum.wasm)
 native/instruments/quantum/            the C++: spectra, matrix elements, packets, time scales, eigenfunctions
                                        (Numerov / closed forms) and the engine (plugins and WebAssembly)
-test/quantum-tests.mjs                 node test/quantum-tests.mjs (26 tests, ~15 s)
+test/quantum-tests.mjs                 node test/quantum-tests.mjs (33 tests, ~20 s)
 tools/render-quantum.mjs               node tools/render-quantum.mjs → examples/quantum/
 ```
 
@@ -304,8 +346,13 @@ tools/render-quantum.mjs               node tools/render-quantum.mjs → example
   Franck–Condon offset rather than an RC filter, so no decaying offset
   lingers under the note.
 * **Restriking** a sounding key excites a fresh packet (another atom), which
-  adds incoherently. Coherent double-pulse excitation (wavepacket
-  interferometry, Ramsey fringes between packets) is not modelled.
+  adds incoherently, unless *Coherent restrike* is on. Then the pulses are weak (perturbative):
+  their amplitudes add, so two pulses in phase make four times one's population and signal, where a strong pulse
+  would saturate and Rabi-cycle the levels. Dephasing between the pulses is split in two: each
+  level's coherence with the pump (Vₙ) goes into the new packet, and each group of coherences keeps,
+  on average over its pairs, what dephasing left beyond Vₘ·Vₙ in an incoherent remainder; the exact
+  state would need one more voice per restrike. Over the second pump's rise (8τ, a millisecond or
+  so) the first packet's T₁ decay waits for it.
 * **Pair budget.** At most 300 pairs per voice, down to −60 dB. The antenna
   on hydrogen or the bouncer at σₙ = 4 needs more, and loses its weakest top
   harmonics (about −20 dB of the energy). Past 3000 pairs over all voices the
@@ -315,7 +362,7 @@ tools/render-quantum.mjs               node tools/render-quantum.mjs → example
   < 10⁻⁹). T_rev for hydrogen and the bouncer is the local estimate from E″.
   Their true best revival times shift by O(σₙ²/n̄²).
 * The views ignore T₁ (the carpet is normalised to the surviving population)
-  and are strobed.
+  and are strobed, and they show a single pulse's packet, even after a coherent restrike.
 
 ## Prior art and references
 
@@ -453,6 +500,20 @@ above is listed here, with its DOI or a stable link.
 * Naccache, P. F. (1972). "Matrix elements and correspondence principles."
   *J. Phys. B* 5(7), 1308–1319.
   [doi:10.1088/0022-3700/5/7/008](https://doi.org/10.1088/0022-3700/5/7/008).
+
+**Wavepacket interferometry and Ramsey fringes**
+
+* Ramsey, N. F. (1950). "A molecular beam resonance method with separated oscillating fields."
+  *Phys. Rev.* 78(6), 695–699.
+  [doi:10.1103/PhysRev.78.695](https://doi.org/10.1103/PhysRev.78.695).
+* Scherer, N. F., Carlson, R. J., Matro, A., Du, M., Ruggiero, A. J., Romero-Rochin, V., Cina, J. A.,
+  Fleming, G. R. & Rice, S. A. (1991). "Fluorescence-detected wave packet interferometry: time
+  resolved molecular spectroscopy with sequences of femtosecond phase-locked pulses."
+  *J. Chem. Phys.* 95(3), 1487–1511.
+  [doi:10.1063/1.461064](https://doi.org/10.1063/1.461064).
+* Noordam, L. D., Duncan, D. I. & Gallagher, T. F. (1992). "Ramsey fringes in atomic Rydberg wave
+  packets." *Phys. Rev. A* 45(7), 4734–4737.
+  [doi:10.1103/PhysRevA.45.4734](https://doi.org/10.1103/PhysRevA.45.4734).
 
 **Decoherence and dephasing**
 
