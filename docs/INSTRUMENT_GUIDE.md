@@ -84,7 +84,8 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `tuning.js`, `tuning-ui.js` | the keyboard's tuning, the same on every instrument and in the plugins (`native/core` `tuning.h`): the pitch standard (A4), the temperament (equal, meantone, the well temperaments, Pythagorean, just, custom) on a root key, and a custom temperament's cents; `readScala` reads a Scala file (`.scl`) into them. `tuning-ui.js` is the pages' *Load a Scala file* button, which `user-presets.js` adds under Temperament. |
 | `registry.js` | the instrument list behind the landing page and the menus |
 | `presets.js`, `user-presets.js` | your own presets and shared links. `presets.js` is the format, the same in the plugins (`native/plugin/presets.cpp`): every parameter of the contract by id, in a versioned file or in a link's fragment. `user-presets.js` adds them to the Presets menu (save, link, a sheet to play, link, save to a file, delete and open files); the shell attaches it, and a page with its own state calls `attachPresets` with how to get and set its parameters by contract id (the organ's console is `CONSOLE.get` and `CONSOLE.put`). |
-| `midi.js` | Web MIDI for every page (the shell and the five older pages): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen next to Enable MIDI, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling. |
+| `midi.js` | Web MIDI for every page (the shell and the five older pages): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen next to Enable MIDI, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling; `pageMpe` decodes MPE for a page (below) and turns it into the engine's `noteBend`, `slide` and `pressure` messages. |
+| `mpe.js` | MPE (MIDI Polyphonic Expression), message for message as the plugins' `forte/mpe.h`: zones from the MPE Configuration Message, member channels' bend (±48 semitones unless RPN 0 says otherwise), pressure and CC74, the Auto/On/Off mode, and `bendRatio`, a note's bend along the keyboard's tuning. |
 | `focus.js` | who gets a key press: a control reached with Tab keeps the keys it uses (Space ticks a stop, arrows move a slider); one last touched with the mouse or a finger hands them back to the instrument. Every page's key handler asks `controlOwns(e)` first. |
 | `notes.js`, `markdown.js` | **How it works**: the page's README in a dialog (button by the title, or a link to `…/#about`) |
 | `instrument.css`, `forte.css` | page layout; Forte nav and notes |
@@ -110,6 +111,8 @@ export const INSTRUMENT = {
   compass: { keys: [36, 84], param: 'fullRange' }, // a historical compass: only these play until the checkbox opens the range
   space: 'sustain',                     // Space and CC64: 'sustain' (a damper, sent to the engine), 'hold' (keys latch) or null
   modWheel: 'strike',                   // CC1 (or { param, max })
+  mpe: { bend: 48, slide: true },       // MPE: how far one note bends (semitones, up to 96; 0: none), and
+                                        // whether CC74 slides the mod wheel's parameter for that note alone
   controllers: { 67: 'unaCorda' },      // other MIDI controllers → parameters (a toggle is on at 64);
                                         // { param, values: [a, b] } picks b from 64 up, { param, toggle: [a, b] } flips on each press
   console: { groups, defaults, get },   // state the page keeps beside its groups (the organ's drawbars): plugin parameters too
@@ -154,7 +157,8 @@ export class GongWasmEngine {
   noteOff(key, velocity) { … }      // velocity: MIDI release velocity 0..1, or undefined
   setSustain(on) { … }             // optional
   allNotesOff() { … }              // optional (Panic)
-  handle(msg) { … }                // optional: other messages, incl. MIDI { type: 'pressure', value, key } and { type: 'bend', value }
+  handle(msg) { … }                // optional: other messages, incl. MIDI { type: 'pressure', value, key } and { type: 'bend', value },
+                                   // and MPE's { type: 'noteBend', key, value } and { type: 'slide', key, value } (below)
   voiceCount() { … }               // optional, shown in the CPU pill
   stats() { … }                    // optional: more fields for the page's stats message
   process(L, R, n) { … }           // fill n samples (n = 128 in the browser)
@@ -165,6 +169,25 @@ globalThis.GongWasmEngine = GongWasmEngine;
 `this.post(msg)` (set by the worklet wrapper) sends data back to the page,
 for example to drive a live view: the C++ engine posts `Message`s, which the wrapper turns
 into the page's (see The native port).
+
+**MPE.** A controller that gives every note a channel of its own (a Seaboard, a LinnStrument,
+an Osmose) bends, slides and presses each note alone. `shared/mpe.js` and the plugins' decoder
+(`forte/mpe.h`) turn that into three per-note messages, the C++ `Engine`'s virtuals:
+
+* `noteBend(ratio, key)`: the note's frequency × `ratio`, already along the keyboard's tuning
+  (`bendRatio`, so a slide onto the next key lands on its tuned pitch), on top of the
+  instrument's wheel bend;
+* `slide(value, key)`: the note's own value of the mod wheel's parameter, in its units, as the
+  wheel would set it (NaN: the parameter's own again);
+* `pressure(value, key)`, which per-key pressure already was.
+
+Either may come before the key's `noteOn`: keep them per key (`forte/expression.h`
+`NoteExpression`) and start the note there; glide a sounding note toward them as the wheel
+glides (`glideTo`). Bend only what the physics can bend (a string's tension, a reed's or
+pipe's pitch, a bow's speed): a struck bar or a bell rings at its own pitch, so its descriptor
+says `bend: 0`. A plain note on a key that had its own expression starts without it. Ordinary
+MIDI never sends these, so an instrument without them plays as before; `test/mpe-tests.mjs`
+checks every instrument against its descriptor.
 
 Rules of thumb:
 
