@@ -113,19 +113,26 @@ Only when the owner asks for a release:
 2. Commit with every version bumped in the title, e.g.
    `Release Forte 0.31.0, Gong Keyboard 0.4.1`, and open a pull request
    into `live` whose body is the new changelog entry.
-3. CI runs in full on it: `native` adds macOS, Windows, auval and the
-   release archives (the downloads' Makefile tried on each), and `tests`
-   checks that no notes are left. Whatever fails is fixed on `main` first,
-   then the release branch merges `main` in.
+3. CI runs on it as on any pull request (`native` builds the plugins on
+   Linux only), and `tests` also checks that no notes are left. So it is
+   green in minutes, and the site waits on nothing slower. Whatever fails
+   is fixed on `main` first, then the release branch merges `main` in.
 4. Merge it with a merge commit when the owner asks. GitHub Pages
-   publishes `live`, `release-plugins` publishes the plugins when they
-   changed. Then bring `live` back into `main` with a pull request: a branch
-   at `live` into `main`, merged with a merge commit once green (the
+   publishes `live` at once. The plugins follow: the push to `live` runs
+   `native` in full (macOS, Windows, auval and the release archives, the
+   downloads' Makefile and `install.cmd` tried on each), and when it is
+   green `release-plugins` publishes them if they changed. Until then the
+   downloads stay the latest plugin release's, and each Plugin dialog says
+   which release that is and which instruments or versions are still to
+   come (`shared/plugins.js`). If that run fails, the site stays up with the
+   older plugins: fix it on `main` and release again (a run that failed
+   for no reason of the code's can be re-run on `live` instead). A newer
+   release pushed while it builds replaces it.
+5. Then bring `live` back into `main` with a pull request: a branch at
+   `live` into `main`, merged with a merge commit once green (the
    release-note check looks only at what it adds beyond `live`). No workflow
    does this: `main`'s ruleset refuses a push that hasn't passed its required
-   checks, and a pull request opened by a workflow runs none. The push to
-   `live` builds nothing again when the pull request's green run built the
-   same tree: `native` finds that run and the release takes its archives.
+   checks, and a pull request opened by a workflow runs none.
 
 Releases are not tagged any more (Claude Code cloud sessions cannot push
 tags). The changelog and the commit titles record each version.

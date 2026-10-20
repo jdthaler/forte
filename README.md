@@ -64,6 +64,8 @@ The front page sorts them into four kinds, as here.
 | ✅ | [Storage Ring](ring/) | a particle accelerator's storage ring heard through a beam pickup: a Gaussian bunch's pulse train at the revolution frequency, betatron sidebands at (n ± Q)·f_rev after an injection kick, decoherence by chromaticity that recoheres every synchrotron period and by octupole amplitude detuning that never does (Meller et al.'s closed forms, checked against tracked particles); RF voltage under key pressure, adiabatic bunch shortening, radiation damping, two-button or difference pickups |
 | ✅ | [RF Cavity Bells](cavity/) | superconducting accelerator cavities rung by a passing bunch: nine coupled pillbox cells whose passband beats (Nagle, Knapp & Knapp's circuit model), higher-order modes at Bessel-zero ratios for a bell's partials, kicks from the transit-time integral, offset and bunch-length form factors; input and HOM couplers, BCS surface resistance against the helium bath, beam loading from a bunch train, Lorentz-force detuning through the walls' mechanical mode, quench and recovery |
 | ✅ | [Collider Showers](showers/) | a collider calorimeter's lead tungstate crystals (CMS's) rung by the heat of the particle showers they catch, the thermo-acoustic effect: PDG's electromagnetic shower profiles, photon conversion, charged pions' hadronic showers that differ every time, the Molière-radius spread into neighbouring crystals; stretching modes (Love's rod theory) rung by where along the crystal the shower peaks, so TeV showers ring the odd harmonics; bending modes from an off-axis impact; pile-up; piezo or accelerometer readout |
+| ✅ | [Whistlers](whistlers/) | lightning's VLF crack dispersed along the Earth's magnetic field into falling tones: every key the dipole field line whose whistler's nose is the note, the exact cold-plasma group delay integrated through Carpenter and Anderson's plasmasphere, plasmapause and trough; Eckersley's 1/√f below the nose and a rising branch to the duct's half-gyrofrequency cutoff above it; multi-path ducts, echo trains, one- and two-hop receivers, the crack's tweeks in the Earth–ionosphere waveguide, and dawn chorus on held keys |
+| ✅ | [Early Universe](universe/) | the photon–baryon plasma's sound waves, the acoustic peaks of the microwave background, as a key's harmonics: Ma & Bertschinger's equations from adiabatic initial conditions to recombination (Saha, then Peebles's three-level atom), free-streaming neutrinos, Silk damping; checked against Planck 2018's z*, r_s*, k_D and z_eq; a knob per cosmological parameter: baryons make the odd harmonics louder, dark matter sets the radiation driving, neutrinos, helium, the spectral tilt on the mod wheel; listen from the sky (Sachs–Wolfe and Doppler) or inside the plasma, and let the light stream away |
 
 ✅ playable · 🛠 in the workshop ([build briefs](docs/WORKSHOP.md)). Each instrument's README has its equations,
 numbers, sources, and a list of what is simplified. The same notes open on
@@ -134,7 +136,7 @@ resampled: at 415 Hz the strings are slacker, the bars and bells cut for
 their new notes. Presets keep your tuning; your own presets and links
 carry it.
 
-**Quality**, the last group of controls (CPU), is for phones and older
+**Quality**, beside the CPU readout at the top of the page, is for phones and older
 computers. **High** plays all the physics, as the instruments always have;
 **Medium** and **Low** play less of what costs the most and is heard the
 least (fewer voices sounding at once, fewer partials, the sympathetic
@@ -188,10 +190,12 @@ folder.
 A VST3 or CLAP host that bounces or freezes a track offline gets High whatever it says; the AU
 isn't told, so set it back to High before a bounce in Logic.
 
-Releases publish themselves: after each green `native` run on `live` (the branch the site is
-published from), the **release-plugins** workflow releases that run's plugins if an instrument's
+Releases publish themselves: the site goes live first, and after the green `native` run on
+`live` (the branch the site is published from) that follows, the **release-plugins** workflow releases that run's plugins if an instrument's
 version or anything under `native/` changed since the latest release (tagged `plugins-v<Forte version>`, with `-2`, `-3`… when
-Forte's version didn't change). It can also be started by hand from the Actions tab.
+Forte's version didn't change). It can also be started by hand from the Actions tab. Until it
+has, the downloads are the latest release's, and they say which release that is and when an
+instrument's newer version is still to come.
 
 ## Running locally
 

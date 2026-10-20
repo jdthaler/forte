@@ -121,8 +121,10 @@ default in the existing presets, or would change what an existing knob means.
 | Idea | Size | Notes |
 |------|------|-------|
 | RF Cavity Bells, Collider Showers | M each | Both done: RF Cavity Bells in 0.35.0; Collider Showers, a calorimeter's crystals rung by the heat of particle showers, for the next release. |
+| Whistlers | M | Done, for the next release: lightning's crack dispersed along the Earth's field lines into falling tones, each key the field line whose nose is the note, with ducts, echoes, tweeks and dawn chorus. |
 | Celesta | M | Done, for the next release: Timoshenko steel bars over tuned wooden boxes, felt hammers and dampers. |
 | Steel pan | M | Done, for the next release: the Steel Pan, note areas tuned to octave and twelfth whose domes couple their modes, ringing along with their neighbours in a fourths-and-fifths layout. |
+| Early Universe | M | Done, for the next release: the photon–baryon plasma's sound waves, the CMB's acoustic peaks, as each key's harmonics, with a knob per cosmological parameter. |
 | Hammered dulcimer or cimbalom | M | |
 | Theremin or ondes Martenot | M | Continuous pitch suits MPE. |
 | Kalimba (mbira) | S–M | Close to the tine piano. |

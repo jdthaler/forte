@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Whistlers · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="whistlers">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Whistlers</h1>
+      <span class="sub">lightning's radio crack, drawn out along the Earth's magnetic field into falling tones</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="The field line">
+          <div class="card-head"><h2>The field line of <b id="focus-name">C4</b></h2><span class="muted" id="line-read"></span></div>
+          <canvas id="field"></canvas>
+          <div class="caption">The Earth and its dipole field, seen from the side: the played key's field line, the lines of every C for scale, and the plasmasphere, shaded, out to the plasmapause. A stroke at one foot sends its crack up the line as a spread of frequencies, coloured from the nose (the fastest, bright) down to the low ones (slow, amber), which you can watch fall behind; at the far foot each echo turns back. Chorus sparks at the equator.</div>
+        </div>
+        <div class="card" data-perform data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the nose, the duct's cutoff and the tweeks' cutoff</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">Each whistler is a falling curve that starts at its nose, the note, with a short rising branch above it that stops at the duct's cutoff, half the gyrofrequency. Its echoes fall more slowly, and the crack's tweeks hook down onto the waveguide's cutoff near 1.8 kHz.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Dispersion">
+          <div class="card-head"><h2>Dispersion of <b id="focus-name2">C4</b></h2><span class="muted">frequency against arrival time</span></div>
+          <canvas id="dispersion"></canvas>
+          <div class="caption">When each frequency arrives after the stroke, for the first hop and its echoes: the curve the spectrogram draws. The nose is where it turns; Eckersley's law, a delay of D/√f (dashed), fits the low frequencies and misses the nose, which comes from the gyrofrequency along the line. The dotted line is the duct's cutoff, half the gyrofrequency on the equator.</div>
+        </div>
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the nose, the duct's cutoff and the tweeks' cutoff</span></div>
+          <canvas id="spectrum"></canvas>
+        </div>
+        <div class="card" data-view="The plasma">
+          <div class="card-head"><h2>The plasma</h2><span class="muted">electrons per cm³ on the equator</span></div>
+          <canvas id="density"></canvas>
+          <div class="caption">Carpenter and Anderson's equatorial density against L: the plasmasphere, the plasmapause's fall, and the trough beyond. The keys sit along the top at the lines whose nose they are, the played one marked.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>receivers open: hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>mod wheel: chorus · key pressure: more chorus</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/whistlers-main.js"></script>
+</body>
+</html>

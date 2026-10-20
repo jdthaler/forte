@@ -658,6 +658,30 @@ data):
   electron beam by B. Buonomo et al., *Astropart. Phys.* **24**, 65 (2005),
   [arXiv:gr-qc/0505009](https://arxiv.org/abs/gr-qc/0505009)). *LHCsound*
   (L. Asquith and others, ATLAS, 2010) sonified ATLAS events as data.
+* **Whistlers and the magnetosphere's radio.** Whistlers were heard before
+  they were understood: H. Barkhausen's field telephones in 1919, T. L.
+  Eckersley's D/√f law in 1935, and L. R. O. Storey's explanation in 1953,
+  lightning's crack dispersed along the Earth's field lines (*Phil. Trans.
+  R. Soc. A* **246**, 113 (1953),
+  [doi:10.1098/rsta.1953.0011](https://doi.org/10.1098/rsta.1953.0011)).
+  Recordings of whistlers, tweeks and chorus have been played as music ever
+  since, and receivers such as HamSCI's Whistler Catcher make them; the
+  Contralogic *Whistler* plugin imitates them with noise through resonant
+  filters. Whistlers computes them: every key a field line, its whistler
+  the cold-plasma group delay along it.
+* **The sound of the Big Bang.** M. Whittle's *Big Bang Acoustics*
+  (University of Virginia, from 2004) plays the microwave background's
+  power spectrum as sound, and the first million years as a falling roar;
+  J. G. Cramer's *The Sound of the Big Bang* (University of Washington, with
+  WMAP's data in 2003 and Planck's in 2013),
+  <https://faculty.washington.edu/jcramer/BBSound_2013.html>, does the same
+  from the measured spectrum. The Early Universe integrates each note's
+  waves from the cosmological parameters instead (C.-P. Ma and
+  E. Bertschinger, *Astrophys. J.* **455**, 7 (1995),
+  [arXiv:astro-ph/9506072](https://arxiv.org/abs/astro-ph/9506072)), so its
+  knobs change the universe; W. Hu and M. White, "The cosmic symphony",
+  *Scientific American* **290** (2), 44 (2004), describes the peaks as a
+  harmonic series.
 * **Synchronisation and mode locking in musical oscillators.**
   B. van der Pol and J. van der Mark, "Frequency demultiplication",
   *Nature* **120**, 363–364 (1927),

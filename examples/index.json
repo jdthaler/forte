@@ -883,6 +883,36 @@
    "title": "Suitcase stereo vibrato"
   }
  ],
+ "universe": [
+  {
+   "file": "01-our-universe-with-the-pedal.m4a",
+   "title": "Our universe with the pedal"
+  },
+  {
+   "file": "02-few-baryons-then-many.m4a",
+   "title": "Few baryons then many"
+  },
+  {
+   "file": "03-little-dark-matter-then-much.m4a",
+   "title": "Little dark matter then much"
+  },
+  {
+   "file": "04-a-slow-universe.m4a",
+   "title": "A slow universe"
+  },
+  {
+   "file": "05-the-sky-then-inside-the-plasma.m4a",
+   "title": "The sky then inside the plasma"
+  },
+  {
+   "file": "06-our-helium-then-more.m4a",
+   "title": "Our helium then more"
+  },
+  {
+   "file": "07-scale-invariant-then-ours.m4a",
+   "title": "Scale invariant then ours"
+  }
+ ],
  "vibraphone": [
   {
    "file": "01-ballad-slow-motor-pedal-down.m4a",
@@ -915,6 +945,40 @@
   {
    "file": "08-centre-end-and-node-strikes.m4a",
    "title": "Centre end and node strikes"
+  }
+ ],
+ "whistlers": [
+  {
+   "file": "01-a-night-of-whistlers.m4a",
+   "title": "A night of whistlers"
+  },
+  {
+   "file": "02-across-the-plasmapause.m4a",
+   "title": "Across the plasmapause"
+  },
+  {
+   "file": "03-an-echo-train.m4a",
+   "title": "An echo train"
+  },
+  {
+   "file": "04-far-end-then-near-the-lightning.m4a",
+   "title": "Far end then near the lightning"
+  },
+  {
+   "file": "05-one-duct-then-five.m4a",
+   "title": "One duct then five"
+  },
+  {
+   "file": "06-the-crack-then-the-whistler.m4a",
+   "title": "The crack then the whistler"
+  },
+  {
+   "file": "07-tweeks-near-then-far.m4a",
+   "title": "Tweeks near then far"
+  },
+  {
+   "file": "08-dawn-chorus.m4a",
+   "title": "Dawn chorus"
   }
  ],
  "windharp": [

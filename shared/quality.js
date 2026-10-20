@@ -7,7 +7,7 @@
 //   connectQuality(node, { toast })  a page's engine (its forte-processor node): sent the choice
 //                                    now and whenever it changes; its CPU reports, watched for
 //                                    dropouts, suggest a lower setting (once a visit)
-//   qualityControl()                 the choice, as the last group of the page's controls
+//   qualityControl()                 the choice, in the header beside the CPU readout (#cpu, or #voices)
 
 import { QUALITY_LEVELS } from './wasm.js';
 
@@ -48,33 +48,31 @@ export function connectQuality(node, { toast = () => {} } = {}) {
     if (recent.filter(Boolean).length < 3) return;
     suggested = true;
     const next = level === 'high' ? 'Medium' : 'Low';
-    toast(`The audio is struggling on this device. Try Quality: ${next}, in the CPU group of controls.`);
+    toast(`The audio is struggling on this device. Try Quality: ${next.toLowerCase()}, beside the CPU readout at the top.`);
   });
   node.port.start?.();
   return () => nodes.delete(node);
 }
 
-// The choice, in a "CPU" group after the page's own (in #groups, or the controls panel).
+// The choice, in the header beside the CPU readout: the page's audio load and what to do about it
+// in one place, to change before the audio starts and while it plays. Once the audio plays the two
+// read as one pill, "CPU 12 % · 3 voices | High"; until then the choice says what it is.
 export function qualityControl() {
   if (document.querySelector('#quality')) return null;
-  const host = document.querySelector('#groups') ?? document.querySelector('#controls');
-  if (!host) return null;
-  const det = document.createElement('details');
-  det.className = 'group quality-group'; det.open = true;
-  det.innerHTML = '<summary>CPU</summary>';
-  const wrap = document.createElement('div');
-  wrap.className = 'param';
-  wrap.innerHTML = '<label for="quality">Quality</label>';
+  const cpu = document.querySelector('#cpu') ?? document.querySelector('#voices'); // the black hole's readout counts ringdowns
+  if (!cpu) return null;
+  const wrap = document.createElement('label');
+  wrap.className = 'forte-quality';
+  wrap.title = QUALITY_HINT;
+  wrap.innerHTML = '<span>Quality</span>';
   const sel = document.createElement('select');
   sel.id = 'quality';
+  sel.setAttribute('aria-label', 'Quality');
   for (const [id, name] of QUALITIES) sel.add(new Option(name, id));
   sel.value = level;
   sel.addEventListener('change', () => { setQuality(sel.value); sel.blur(); });
   listeners.add((q) => { sel.value = q; });
-  const hint = document.createElement('div');
-  hint.className = 'hint'; hint.textContent = QUALITY_HINT;
-  wrap.append(sel, hint);
-  det.append(wrap);
-  host.append(det);
+  wrap.append(sel);
+  cpu.after(wrap);
   return sel;
 }

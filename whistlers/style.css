@@ -1,0 +1,9 @@
+/* The page's own palette and any layout beyond shared/instrument.css: the green of an aurora's
+   oxygen line (557.7 nm), on the field lines whistlers share with it, and the amber of lightning. */
+:root {
+  --accent: #7dffb0;
+  --accent-2: #ffc46b;
+  --accent-ink: #04170c;
+}
+#field { height: 320px; }
+#dispersion, #density { height: 240px; }
