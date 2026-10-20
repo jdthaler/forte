@@ -231,5 +231,52 @@ test('CPU: ten rings render far faster than real time', () => {
   assert.ok(ms < 400, `${ms.toFixed(0)} ms for 2 s of audio`);
 });
 
+console.log('MPE');
+// A note's slide is its own ring's chromaticity (the rings don't bend): events [t, fn(engine)] in order
+const slide = (key, value) => (e) => e.handle({ type: 'slide', key, value });
+const on = (key, vel = 0.8) => (e) => e.noteOn(key, vel);
+const same = (a, b) => a.every((v, i) => v === b[i]);
+test('a ring with its own chromaticity (a slide before the note) sounds as the knob there, sample for sample; a ring held beside it keeps the knob\'s', () => {
+  const Pp = P({ pickup: 'delta', phase: 0 }), x = 34;
+  const [L, R] = render(Pp, 1, [[0, slide(60, x)], [0, on(60)]]), [kL, kR] = render({ ...Pp, chroma: x }, 1, [[0, on(60)]]);
+  assert.ok(same(L, kL) && same(R, kR), 'as the knob at Q′ = 34');
+  assert.ok(!same(L, render(Pp, 1, [[0, on(60)]])[0]), 'and not as the knob\'s own');
+  // 67 first, then 60: the chord less 67 alone is 60, whether 67 slides or not
+  const d = (ev) => { const [c] = render(Pp, 1, [...ev, [0, on(67)], [0, on(60)]]), [s] = render(Pp, 1, [...ev, [0, on(67)]]); return c.map((v, i) => v - s[i]); };
+  const a = d([[0, slide(67, x)]]), b = d([]);
+  const err = Math.max(...a.map((v, i) => Math.abs(v - b[i]))), pk = Math.max(...b.map(Math.abs));
+  assert.ok(err < 1e-6 * pk + 1e-7 && pk > 0.01, `the other ring moves by ${err.toExponential(2)} (peak ${pk.toFixed(3)})`);
+});
+test('a slide while the beam circulates glides there: a turn at a time, then the knob\'s sound at that chromaticity (to −60 dB)', () => {
+  const Pp = P({ pickup: 'delta', phase: 0, chroma: 6 }), k = 60;
+  const [L] = render(Pp, 1.5, [[0, on(k)], [0.3, slide(k, 30)]]), [K] = render(Pp, 1.5, [[0, on(k)], [0.3, (e) => e.setParams({ ...Pp, chroma: 30 })]]);
+  const a = Math.round(0.9 * FS), b = Math.round(1.5 * FS), dd = L.map((v, i) => v - K[i]);
+  assert.ok(rms(dd, a, b) < 1e-3 * rms(K, a, b), `${db(rms(dd, a, b) / rms(K, a, b)).toFixed(1)} dB from the knob's`);
+  assert.ok(rms(L, 0.3 * FS + 2400, 0.3 * FS + 4800) > 0, 'sounding');
+  const [U] = render(Pp, 1.5, [[0, on(k)]]);
+  assert.ok(rms(L.map((v, i) => v - U[i]), a, b) > 0.1 * rms(U, a, b), 'and not where it was');
+});
+test('slide(NaN) leaves the sound bit for bit as it was, before the note and while it sounds; a slide taken back glides home', () => {
+  const Pp = P({ pickup: 'delta' }), [L] = render(Pp, 0.8, [[0, slide(60, NaN)], [0, on(60)], [0.2, slide(60, NaN)], [0.3, (e) => e.handle({ type: 'noteBend', key: 60, value: 1 })]]);
+  assert.ok(same(L, render(Pp, 0.8, [[0, on(60)]])[0]));
+  const [B] = render(Pp, 1.6, [[0, on(60)], [0.2, slide(60, 50)], [0.4, slide(60, NaN)]]), [U] = render(Pp, 1.6, [[0, on(60)]]);
+  const a = Math.round(1.2 * FS), b = Math.round(1.6 * FS);
+  assert.ok(rms(B.map((v, i) => v - U[i]), a, b) < 1e-3 * rms(U, a, b), 'back at the knob\'s');
+});
+test('slide sweeps on a chord, sent every block across the whole range, stay finite and bounded at 44.1, 48 and 96 kHz', () => {
+  for (const fs of [44100, 48000, 96000]) for (const pickup of ['pair', 'delta']) {
+    const e = new StorageRingEngine(fs); e.setParams(P({ pickup }));
+    const keys = [21, 48, 60, 64, 67, 108], bL = new Float32Array(128), bR = new Float32Array(128);
+    for (const k of keys) e.noteOn(k, 1);
+    let pk = 0;
+    for (let b = 0; b < Math.round((0.6 * fs) / 128); b++) {
+      keys.forEach((k, i) => e.handle({ type: 'slide', key: k, value: 30 + 30 * Math.sin(b / (3 + i)) }));
+      e.process(bL, bR, 128);
+      for (const v of [...bL, ...bR]) { assert.ok(Number.isFinite(v), `${fs} ${pickup}: NaN`); pk = Math.max(pk, Math.abs(v)); }
+    }
+    assert.ok(pk < 3, `${fs} ${pickup}: peak ${pk.toFixed(2)}`);
+  }
+});
+
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');
 process.exit(failures ? 1 : 0);

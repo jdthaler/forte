@@ -24,6 +24,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "quantum-model.h"
 #include "quantum-params.h"
 
@@ -43,6 +44,8 @@ class QuantumEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override;
   void allNotesOff() override;
+  // a note's slide: its own well's dephasing rate (the noise on that well alone), gliding
+  void slide(double value, int key) override { expr.setSlide(value, key); }
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // the same in double precision (the WebAssembly's hook for the tests, which render into
@@ -68,6 +71,7 @@ class QuantumEngine : public Engine {
     std::array<double, MAX_STATES> gD{}, gR{};
     bool useIm = false;
     double dc = 0, rampK = 0, env = 0, gl = 0, gr = 0, r1 = 1;
+    double deph = 0; bool slid = false; // the dephasing rate it decoheres at (P's, or its slide's), and whether a slide moves it
     int64_t count = 0, rampEnd = 0, dcEnd = 0;
     bool released = false, quench = false, stolen = false, dead = false;
 
@@ -75,6 +79,7 @@ class QuantumEngine : public Engine {
     int strengths(double *buf, int m) const;
     void trim(double tau);
     void rates(const QuantumEngine &eng);
+    void dephase(const QuantumEngine &eng, int n);
     void sync();
     template <class T> void render(T *L, T *R, int n);
   };
@@ -93,6 +98,7 @@ class QuantumEngine : public Engine {
 
   std::array<double, p::count> P{};
   bool hasParams = false, sustain = false;
+  forte::NoteExpression expr{0}; // each key's slide (the wells don't bend)
   const double fMax;
   std::array<Voice, POOL> pool{};
   std::array<double, BUF> buf{};

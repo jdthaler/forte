@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "ring-model.h"
 #include "ring-params.h"
 
@@ -20,6 +21,8 @@ class StorageRingEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override;
   void pressure(double value, int key) override;
+  // a note's slide: its own ring's chromaticity (its sextupoles), gliding turn by turn
+  void slide(double value, int key) override { expr.setSlide(value, key); }
   void allNotesOff() override { voices.clear(); }
   int voiceCount() const override { return (int)voices.size(); }
   void process(float *L, float *R, int n) override;
@@ -33,14 +36,16 @@ class StorageRingEngine : public Engine {
     int head = 0, count = 0;
     double t = 0, next = 0, T = 0;   // samples: now, the next turn's nominal arrival, a turn
     double press = 0, pressTarget = 0;
+    double chroma = 0; bool slid = false; // the chromaticity it runs at, and whether a slide moves it
     double charge = 0, Z = 0, theta = 0, phiS = 0, phiB = 0, logX = 0, logS = 0;
     bool released = false, scraped = false;
     double hl0 = 0, hl1 = 0, hr0 = 0, hr1 = 0; // the buttons' high-pass states
     void inject(double velocity, const double *P);
-    void schedule(const double *P, const forte::Tuning &tuning, double fs);
+    void schedule(const double *P, const forte::Tuning &tuning, double fs, double slide);
   };
   std::array<double, p::count> P{};
   forte::Tuning tuning; // the keyboard's (tuningOf(P)): each ring's f_rev, followed live
+  forte::NoteExpression expr{0}; // each key's slide (the rings don't bend)
   bool hasParams = false, sustain = false;
   std::vector<Voice> voices; // reserved: never reallocates
 };

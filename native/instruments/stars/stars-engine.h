@@ -20,6 +20,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "stars-model.h"
 #include "stars-params.h"
 
@@ -48,6 +49,8 @@ class StarEngine : public Engine {
   void setSustain(bool on) override { sustain = on; }
   void allNotesOff() override;
   void pressure(double value, int key) override;
+  // a note's slide: its own star's rotation, gliding as the knob does
+  void slide(double value, int key) override { expr.setSlide(value, key); }
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // A star its page built (the page's noteData, packed: key, K, δ Scuti?, N, then f, l, m,
@@ -69,11 +72,13 @@ class StarEngine : public Engine {
     std::array<double, MAX_MODES> W{}, C{}, S{}, RHO{}, A1{}, A2{}, Y1{}, Y2{}, G{}, GT{}, AMP{}, ETA{};
     double gl = 0, gr = 0;
     double vel = 0.7, pressure = 1, age = 0, fade = 1, peak = 1e-12, level = 0;
+    double spin = 1; bool slid = false; // the rotation it turns at (the knob's, or its slide's), and whether a slide moves it
     bool held = false, fading = false, dead = false;
     Rng seed{1};
 
     void start(StarEngine &eng, int key, const Star &d, uint64_t id);
     void compact();
+    bool turn(const StarEngine &eng, int n);
     void freqs(const StarEngine &eng);
     void coeffs(const StarEngine &eng);
     void gains(const StarEngine &eng, bool now);
@@ -106,6 +111,7 @@ class StarEngine : public Engine {
   enum { kSpin, kCore, kIncl, kDamping, kDriving, kFlare, kGrowth, kCount };
   std::array<double, kCount> S{}, T{};
   bool sustain = false, freqMoved = false, dampMoved = false, inclMoved = false;
+  forte::NoteExpression expr{0}; // each key's slide (a star doesn't bend)
   uint32_t presses = 0, rs = 0x2545f491;
   double postT = 0;
   std::array<double, 28> gtab{}; // √(V_l² E_lm(i)) at [l·7 + m + 3]

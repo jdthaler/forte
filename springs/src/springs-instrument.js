@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C7
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'hand',                     // CC1: a hand on the springs
+  mpe: { slide: true },                 // MPE: a note's slide, a hand on its own springs (no bend)
   // the engine: the physics in C++ (native/instruments/springs), built as WebAssembly. The page
   // builds each key's springs with its WebAssembly model and sends them with the note (noteData)
   wasm: { name: 'SpringWasmEngine', module: new URL('./springs-wasm.js', import.meta.url).href, binary: new URL('../wasm/springs.wasm', import.meta.url).href },

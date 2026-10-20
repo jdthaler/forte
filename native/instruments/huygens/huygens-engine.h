@@ -18,6 +18,7 @@
 #include <cstdint>
 
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "forte/impulses.h"
 #include "huygens-model.h"
 #include "huygens-params.h"
@@ -62,7 +63,11 @@ struct Osc {
   double drift = 0, driftCents = 0;
   double panL = 0, panR = 0;
   double supply = 0, V0 = 0, fireAt = -1;
+  double bend = 1;               // the note's own bend: its timing resistor turned to R/bend
+  int64_t bentAt = INT64_MIN / 2; // when it last moved (the servo doesn't hear a lamp mid-bend)
 
+  // what it is tuned to play: its design frequency, bent
+  double target() const { return fTarget * bend; }
   void start(NeonEngine &eng, int key, double f, double phase, bool settled);
   void setPan(double width);
   void retune(double f, const Neon &p);
@@ -86,6 +91,11 @@ class NeonEngine : public Engine {
   void noteOn(int key, double velocity) override;
   void noteOff(int key, double velocity) override;
   void allNotesOff() override;
+  // a note's bend: its lamp's timing resistor turned, gliding (the pulse coupling, the rail's, is
+  // every lamp's: no slide)
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
+  // the key's bend for a lamp designed to play f: short of fs/4 (one already up there is not bent up)
+  double bendOf(int key, double f) const;
   int voiceCount() const override { return nos; }
   void process(float *L, float *R, int n) override;
 
@@ -130,6 +140,7 @@ class NeonEngine : public Engine {
   double vr, Ilp = 0;
   int tuning = 0, tonic = 0;
   double mistune = 0;
+  forte::NoteExpression expr{48}; // each key's bend
   forte::Tuning keyboard; // the keyboard's tuning (forte/tuning.h), on top of the lamps' own
   // a key's design frequency: the lamps' tuning (equal or just, mistuned) times the keyboard's
   double keyTarget(int key) const { return tunedFreq(key, tuning, tonic, mistune) * keyboard.ratio(key); }

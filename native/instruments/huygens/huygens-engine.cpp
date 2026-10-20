@@ -16,6 +16,9 @@ using fdlibm::pow;
 using fdlibm::sin;
 
 static constexpr double PI = 3.141592653589793, TWO_PI = 2 * PI, SQRT2 = 1.4142135623730951;
+static constexpr double BEND_T = 0.02;   // s: a note's bend glides with this time constant
+static constexpr double BEND_TOP = 0.25; // a bent lamp plays at most fs/4: the polyBLEP corrects one reset at a time
+static constexpr double SERVO_WIN = 0.12; // s: the pitch servo's window on each lamp
 
 double tuneR(double f, const Neon &p) {
   return 1 / (f * p.cap * log((p.vNom - p.vExt) / (p.vNom - p.vStrike)));
@@ -27,6 +30,7 @@ void Osc::start(NeonEngine &eng, int k, double f, double phase, bool settled) {
   key = k; fTarget = f;
   C = eng.p.cap;
   driftCents = 0;
+  bend = eng.bendOf(k, f); bentAt = INT64_MIN / 2; // a bend starts there
   retune(f, eng.p);
   // initial phase: random (a real key), or given (0 = just fired) for analysis
   const Neon &p = eng.p;
@@ -52,7 +56,7 @@ void Osc::setPan(double width) {
 
 void Osc::retune(double f, const Neon &p) {
   fTarget = f;
-  R = tuneR(f, p);
+  R = tuneR(f * bend, p);
   tau = R * C * pow(2, -driftCents / 1200);
 }
 
@@ -124,7 +128,7 @@ double Osc::frequency(double t, double win, double fs) const {
   const int64_t n = std::min<int64_t>(nf, 256);
   if (n < 4) return 0;
   const double lastT = fires[(nf - 1) & 255];
-  if (t - lastT > (3 * fs) / fTarget) return 0;
+  if (t - lastT > (3 * fs) / target()) return 0;
   double cnt = 0, sx = 0, sy = 0, sxx = 0, sxy = 0;
   for (int64_t j = 1; j <= n; j++) {
     const double ts = fires[(nf - j) & 255];
@@ -174,6 +178,10 @@ void NeonEngine::setParams(const double *P) {
   }
 }
 
+double NeonEngine::bendOf(int key, double f) const {
+  return std::min(expr.bendOf(key), std::max(1.0, (BEND_TOP * fs) / f));
+}
+
 void NeonEngine::retune(int key, double f) {
   if (key < 0 || key > 127) return;
   if (Osc *o = byKey[key]) o->retune(f, p);
@@ -202,7 +210,10 @@ void NeonEngine::noteOn(int key, double) {
   Osc *o = byKey[key];
   if (o && !o->dead) {
     o->keyDown = true;
-    if (f != o->fTarget) o->retune(f, p);
+    const double b = bendOf(key, f); // a bend starts there
+    const bool bent = b != o->bend;
+    if (bent) { o->bend = b; o->bentAt = t; }
+    if (f != o->fTarget || bent) o->retune(f, p);
     last = o;
     return;
   }
@@ -237,9 +248,9 @@ double NeonEngine::supplySetpoint(double dt) {
     int n = 0;
     for (int i = 0; i < nos; i++) {
       const Osc &o = *osc[i];
-      if (!o.keyDown || o.power < 0.9) continue;
-      const double f = o.frequency((double)t, 0.12, fs);
-      if (f > 0) { err += huygens::log2(f / o.fTarget) + hold; n++; }
+      if (!o.keyDown || o.power < 0.9 || t - o.bentAt < SERVO_WIN * fs) continue;
+      const double f = o.frequency((double)t, SERVO_WIN, fs);
+      if (f > 0) { err += huygens::log2(f / o.target()) + hold; n++; }
     }
     // err: what each would play at the nominal supply, in octaves
     if (n) hold += ((err / n - hold) * dt) / p.holdTime;
@@ -263,6 +274,11 @@ static int removeAt(Osc **order, int n, int i) {
 }
 
 void NeonEngine::process(float *L, float *R, int n) {
+  for (int j = 0; j < nos; j++) { // the bends glide, block by block: only those moving are retuned
+    Osc &o = *osc[j];
+    const double to = bendOf(o.key, o.fTarget);
+    if (o.bend != to) { o.bend = glideTo(o.bend, to, n * k, BEND_T); o.retune(o.fTarget, p); o.bentAt = t; }
+  }
   for (int j = 0; j < nos; j++) osc[j]->applyDrift(*this, n * k);
   const double vSet = supplySetpoint(n * k);
   const double tauRail = p.rSrc * p.cRail, eR = tauRail > 0 ? exp(-k / tauRail) : 0;
@@ -350,7 +366,7 @@ int NeonEngine::summary(double *buf, int cap) const {
   int w = 0;
   for (int i = 0; i < nos; i++) {
     const Osc &o = *osc[i];
-    if (o.keyDown && w + 3 <= cap) { buf[w++] = o.key; buf[w++] = o.fTarget; buf[w++] = o.driftCents; }
+    if (o.keyDown && w + 3 <= cap) { buf[w++] = o.key; buf[w++] = o.target(); buf[w++] = o.driftCents; }
   }
   return w;
 }
@@ -359,7 +375,7 @@ int NeonEngine::report(double win, Report *out, int cap) const {
   int w = 0;
   for (int i = 0; i < nos && w < cap; i++) {
     const Osc &o = *osc[i];
-    out[w++] = {o.key, o.keyDown ? o.frequency((double)t, win, fs) : 0, o.fTarget, o.driftCents};
+    out[w++] = {o.key, o.keyDown ? o.frequency((double)t, win, fs) : 0, o.target(), o.driftCents};
   }
   return w;
 }

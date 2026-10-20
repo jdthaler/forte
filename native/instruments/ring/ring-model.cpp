@@ -13,7 +13,9 @@ namespace forte::ring {
 // chromaticity and the amplitude detuning are the C4 ring's, scaled by f_rev(C4)/f_rev. (The cells
 // are the key's ring's, as it was built for equal temperament: the tuning moves f_rev alone, as a
 // slightly larger or smaller ring of the same cells.)
-Ring ringOf(int key, const double *P, double pressure, const forte::Tuning &T) {
+Ring ringOf(int key, const double *P, double pressure, const forte::Tuning &T) { return ringOf(key, P, pressure, T, P[p::chroma]); }
+
+Ring ringOf(int key, const double *P, double pressure, const forte::Tuning &T, double chroma) {
   Ring r{};
   const double f = keyFreq(key);
   r.frev = f * T.ratio(key);
@@ -22,7 +24,7 @@ Ring ringOf(int key, const double *P, double pressure, const forte::Tuning &T) {
   r.Qs = r.fsyn / r.frev;
   r.sigma = P[p::bunch] * std::pow(V, -0.25);
   r.sigmaDelta = P[p::spread] * std::pow(V, 0.25);
-  r.chroma = P[p::chroma] * cells;
+  r.chroma = chroma * cells;
   r.D = (r.chroma * r.sigmaDelta) / r.Qs;
   r.mu = P[p::octupole] * OCTUPOLE_UNIT * cells;
   return r;

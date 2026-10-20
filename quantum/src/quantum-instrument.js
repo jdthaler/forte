@@ -18,6 +18,7 @@ export const INSTRUMENT = {
   range: [21, 108],                     // MIDI keys: A0–C8
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'dephase',                  // CC1: dephasing, from its default up to its maximum
+  mpe: { slide: true },                 // MPE: a note's slide is the noise on its own well (no bend)
   // the engine: the physics in C++ (native/instruments/quantum), built as WebAssembly. Each note's
   // packet (~1 ms) is computed off the audio thread, by the page's WebAssembly model, and sent with
   // the noteOn (the page's noteData)

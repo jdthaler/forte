@@ -27,7 +27,7 @@ function test(name, fn) {
 const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const DRY = { endLoss: 0.005, eta: 1e-5, oil: 0 };        // as little loss as the knobs allow
 
-// Run the engine through events ([t, 'on', key, vel] | [t, 'off', key, vel?] | [t, 'sus', on] | [t, 'params', P])
+// Run the engine through events ([t, 'on', key, vel] | [t, 'off', key, vel?] | [t, 'sus', on] | [t, 'params', P] | [t, 'msg', m])
 // in 128-sample blocks like the AudioWorklet. Returns L + R (or [L, R, engine]).
 function run(params, events, sec, { fs = FS, stereo = false, tap } = {}) {
   const e = new SpringEngine(fs);
@@ -38,7 +38,7 @@ function run(params, events, sec, { fs = FS, stereo = false, tap } = {}) {
   for (let s = 0; s < n; s += bl) {
     while (j < ev.length && ev[j][0] <= s) {
       const [, type, a, b, c] = ev[j++];
-      if (type === 'on') e.noteOn(a, b, c); else if (type === 'off') e.noteOff(a, b); else if (type === 'sus') e.setSustain(a); else if (type === 'params') e.setParams(a);
+      if (type === 'on') e.noteOn(a, b, c); else if (type === 'off') e.noteOff(a, b); else if (type === 'sus') e.setSustain(a); else if (type === 'params') e.setParams(a); else if (type === 'msg') e.handle(a);
     }
     e.process(bL, bR, bl);
     for (let i = 0; i < bl && s + i < n; i++) { L[s + i] = bL[i]; R[s + i] = bR[i]; }
@@ -552,6 +552,45 @@ test('knobs glide: mount loss, steel friction, oil, the hand and the bead moved 
     let before = 0, after = 0;
     for (let i = Math.round(0.15 * FS); i < x.length; i++) { const d = Math.abs(x[i] - 2 * x[i - 1] + x[i - 2]); if (i < 0.3 * FS) before = Math.max(before, d); else after = Math.max(after, d); }
     assert.ok(after < 1.5 * before + 1e-6, `${id}: second difference ${after.toExponential(2)} after, ${before.toExponential(2)} before`);
+  }
+});
+console.log('MPE');
+// A note's slide is a hand on its own springs (the springs don't bend)
+const slide = (t, key, value) => [t, 'msg', { type: 'slide', key, value }];
+const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+test('a hand on one key\'s springs (a slide before the note) sounds as the knob there, sample for sample; the springs struck beside them ring on', () => {
+  const x = run(P(), [slide(0, 57, 0.5), [0, 'on', 57, 0.8]], 0.8), k = run(P({ hand: 0.5 }), [[0, 'on', 57, 0.8]], 0.8);
+  assert.ok(same(x, k), 'as the knob at 50 %');
+  assert.ok(!same(x, run(P(), [[0, 'on', 57, 0.8]], 0.8)), 'and not as the knob\'s own');
+  const c = run(P(), [slide(0, 64, 1), [0, 'on', 64, 0.8], [0, 'on', 57, 0.8]], 0.8), s = run(P(), [slide(0, 64, 1), [0, 'on', 64, 0.8]], 0.8), a = run(P(), [[0, 'on', 57, 0.8]], 0.8);
+  const err = peakAbs(a.map((v, i) => c[i] - s[i] - v)), pk = peakAbs(a);
+  assert.ok(err < 1e-6 * pk && pk > 0.01, `the other springs move by ${err.toExponential(2)} (peak ${pk.toFixed(3)})`);
+});
+test('a hand laid on while the springs ring glides in, as the knob\'s does: no click, then every mode damped as the knob damps them', () => {
+  const key = 55, o = { springs: 1, ...DRY }, f = keyFreq(key) * keySprings(key, P(o), FS).rho;
+  const x = run(P(o), [[0, 'on', key, 0.7], slide(0.3, key, 0.5)], 1), k = run(P(o), [[0, 'on', key, 0.7], [0.3, 'params', P({ ...o, hand: 0.5 })]], 1);
+  let before = 0, after = 0;
+  for (let i = Math.round(0.15 * FS); i < 0.45 * FS; i++) { const d = Math.abs(x[i] - 2 * x[i - 1] + x[i - 2]); if (i < 0.3 * FS) before = Math.max(before, d); else after = Math.max(after, d); }
+  assert.ok(after < 1.5 * before + 1e-6, `second difference ${after.toExponential(2)} after, ${before.toExponential(2)} before`);
+  const W = 4800, at = (y, t) => tone(y, f, Math.round(t * FS), Math.round(t * FS) + W);
+  const sx = Math.log(at(x, 0.5) / at(x, 0.8)) / 0.3, sk = Math.log(at(k, 0.5) / at(k, 0.8)) / 0.3;
+  assert.ok(Math.abs(sx / sk - 1) < 0.02, `σ ${sx.toFixed(2)} under the hand, ${sk.toFixed(2)} under the knob's`);
+});
+test('slide(NaN) leaves the sound bit for bit as it was, before the note and while it sounds; a hand lifted off glides back to the knob\'s', () => {
+  const p = P({ hand: 0.3 }), x = run(p, [slide(0, 57, NaN), [0, 'on', 57, 0.8], slide(0.2, 57, NaN), [0.3, 'msg', { type: 'noteBend', key: 57, value: 1 }]], 0.6);
+  assert.ok(same(x, run(p, [[0, 'on', 57, 0.8]], 0.6)));
+  const key = 55, o = { springs: 1, ...DRY }, f = keyFreq(key) * keySprings(key, P(o), FS).rho, W = 4800, at = (y, t) => tone(y, f, Math.round(t * FS), Math.round(t * FS) + W);
+  const y = run(P(o), [[0, 'on', key, 0.7], slide(0.1, key, 0.8), slide(0.2, key, NaN)], 1), u = run(P(o), [[0, 'on', key, 0.7]], 1);
+  const sy = Math.log(at(y, 0.5) / at(y, 0.8)) / 0.3, su = Math.log(at(u, 0.5) / at(u, 0.8)) / 0.3;
+  assert.ok(at(y, 0.5) < 0.5 * at(u, 0.5) && Math.abs(sy - su) < 0.05 * su + 0.05, `σ ${sy.toFixed(2)} after, ${su.toFixed(2)} without`);
+});
+test('slide sweeps on chords, sent every block across the whole range, stay finite and bounded at 44.1, 48 and 96 kHz', () => {
+  for (const fs of [44100, 48000, 96000]) {
+    const keys = [KEY_MIN, 40, 52, 57, 64, 76], ev = keys.map((k) => [0, 'on', k, 1]);
+    for (let b = 0; b < (0.6 * fs) / 128; b++) keys.forEach((k, i) => ev.push(slide((b * 128) / fs, k, 0.5 + 0.5 * Math.sin(b / (3 + i)))));
+    const x = run(P(), ev, 0.6, { fs });
+    for (const v of x) assert.ok(Number.isFinite(v), `${fs}: NaN`);
+    assert.ok(peakAbs(x) > 0.01 && peakAbs(x) < 3, `${fs}: peak ${peakAbs(x).toFixed(2)}`);
   }
 });
 test('CPU: 10 keys across the compass, two springs each, struck in turn and ringing, at 48 kHz in under 30 % of one core (the modes sent with the notes, as the page does)', () => {

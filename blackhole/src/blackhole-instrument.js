@@ -15,6 +15,7 @@ export const INSTRUMENT = {
   range: [KEY_LO, KEY_HI],                    // MIDI keys: A0–C8, 21–108
   space: null,                                // a ringdown has no damper; nothing to hold
   modWheel: 'spinU',                          // CC1: the spin, from its default up to 1 − 10⁻⁶
+  mpe: { slide: true },                       // MPE: a note's slide is its own hole's spin, at the merger (no bend)
   midiVelocity: (v) => v ** 1.5,              // MIDI velocity / 127 → the engine's
   keyVelocity: 1,                             // the velocity the computer keys play (no velocity parameter)
   // the engine, in C++ (native/instruments/blackhole), built as WebAssembly: it builds each key's

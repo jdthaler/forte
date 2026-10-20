@@ -397,5 +397,65 @@ test('the keyboard\'s tuning moves each black hole\'s (2,2,0) mode (the engine\'
   }
 });
 
+console.log('MPE');
+// A note's slide is its own black hole's spin, set at the merger (a ringdown's spin is fixed; a hole
+// doesn't bend). Events [t, fn(engine)] in 128-sample blocks; L and R.
+function ring(params, events, sec, fs = 48000) {
+  const e = new RingdownEngine(fs); e.setParams(params);
+  const n = Math.round(sec * fs), L = new Float32Array(n), R = new Float32Array(n), bL = new Float32Array(128), bR = new Float32Array(128);
+  const ev = events.map(([t, f]) => [Math.round(t * fs), f]);
+  let j = 0;
+  for (let s = 0; s < n; s += 128) {
+    while (j < ev.length && ev[j][0] <= s) ev[j++][1](e);
+    e.process(bL, bR, 128);
+    L.set(bL.subarray(0, Math.min(128, n - s)), s); R.set(bR.subarray(0, Math.min(128, n - s)), s);
+  }
+  return [L, R];
+}
+const slide = (key, value) => (e) => e.handle({ type: 'slide', key, value });
+const strike = (key, vel = 0.8, data) => (e) => e.noteOn(key, vel, data);
+const same = ([a, b], [c, d]) => a.every((v, i) => v === c[i]) && b.every((v, i) => v === d[i]);
+test('a black hole with its own spin (a slide before the strike) rings as the knob there, sample for sample, with and without the inspiral, whatever voice the page sends; one beside it keeps the knob\'s', () => {
+  for (const inspiral of [false, true]) {
+    const p = { ...DEFAULTS, inspiral, massRatio: 2 }, u = 4;
+    const x = ring(p, [[0, slide(57, u)], [0, strike(57, 0.8, keyVoice(57, p, 48000))]], 1.5);
+    assert.ok(same(x, ring({ ...p, spinU: u }, [[0, strike(57)]], 1.5)), `inspiral ${inspiral}: as the knob at a = 1 − 10⁻⁴`);
+    assert.ok(!same(x, ring(p, [[0, strike(57)]], 1.5)), 'and not as the knob\'s own');
+  }
+  const p = DEFAULTS, [c] = ring(p, [[0, slide(64, 6)], [0, strike(64)], [0, strike(57)]], 1), [s] = ring(p, [[0, slide(64, 6)], [0, strike(64)]], 1), [a] = ring(p, [[0, strike(57)]], 1);
+  const err = Math.max(...a.map((v, i) => Math.abs(c[i] - s[i] - v))), pk = Math.max(...a.map(Math.abs));
+  assert.ok(err < 1e-6 * pk && pk > 0.01, `the other hole moves by ${err.toExponential(2)} (peak ${pk.toFixed(3)})`);
+});
+test('a slide while it rings changes nothing (the merger set its spin): the next strike on the key takes it', () => {
+  const p = DEFAULTS, x = ring(p, [[0, strike(57)], [0.1, slide(57, 6)]], 0.6);
+  assert.ok(same(x, ring(p, [[0, strike(57)]], 0.6)), 'the ringing hole keeps its spin');
+  const [y] = ring(p, [[0, strike(57)], [0.1, slide(57, 6)], [0.3, strike(57)]], 0.6), [z] = ring(p, [[0, strike(57)], [0.3, (e) => { e.setParams({ ...p, spinU: 6 }); e.noteOn(57, 0.8); }]], 0.6);
+  assert.ok(y.every((v, i) => v === z[i]), 'the next one rings at the slide\'s spin');
+});
+test('slide(NaN) leaves the sound bit for bit as it was', () => {
+  const p = { ...DEFAULTS, inspiral: true }, x = ring(p, [[0, slide(57, NaN)], [0, strike(57)], [0.2, slide(57, NaN)], [0.3, (e) => e.handle({ type: 'noteBend', key: 57, value: 1 })], [0.4, strike(57)]], 1);
+  assert.ok(same(x, ring(p, [[0, strike(57)], [0.4, strike(57)]], 1)));
+});
+test('slide sweeps across the whole range, sent every block while chords are struck, stay finite and no louder than the same chords at the fastest spin, at 44.1, 48 and 96 kHz', () => {
+  for (const fs of [44100, 48000, 96000]) for (const inspiral of [false, true]) {
+    const keys = [21, 36, 57, 64, 84, 108], ev = [], chords = [];
+    for (let b = 0; b < (1.2 * fs) / 128; b++) {
+      keys.forEach((k, i) => ev.push([(b * 128) / fs, slide(k, 3 + 3 * Math.sin(b / (3 + i)))]));
+      if (b % 40 === 0) keys.forEach((k) => chords.push([(b * 128) / fs, strike(k, 1)]));
+    }
+    const peak = (x) => { let pk = 0; for (const v of [...x[0], ...x[1]]) { assert.ok(Number.isFinite(v), `${fs} Hz: NaN`); pk = Math.max(pk, Math.abs(v)); } return pk; };
+    const pk = peak(ring({ ...DEFAULTS, inspiral }, [...ev, ...chords].sort((a, b) => a[0] - b[0]), 1.2, fs)), top = peak(ring({ ...DEFAULTS, inspiral, spinU: 6 }, chords, 1.2, fs));
+    assert.ok(pk > 0.01 && pk < 1.25 * top, `${fs} Hz, inspiral ${inspiral}: peak ${pk.toFixed(2)}, ${top.toFixed(2)} at the fastest spin`);
+  }
+});
+test('CPU: a strike with its own spin builds its black hole (the modes and their spheroidal harmonics) in well under a block', () => {
+  const e = new RingdownEngine(48000); e.setParams({ ...DEFAULTS, retrograde: 1 });
+  const t0 = performance.now();
+  for (let i = 0; i < 200; i++) { e.handle({ type: 'slide', key: 57, value: (i * 6) / 200 }); e.noteOn(57, 0.8); }
+  const ms = (performance.now() - t0) / 200;
+  console.log(`         ${ms.toFixed(3)} ms a strike`);
+  assert.ok(ms < 0.5, `${ms.toFixed(3)} ms (a block is 2.7 ms)`);
+});
+
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');
 process.exit(failures ? 1 : 0);
