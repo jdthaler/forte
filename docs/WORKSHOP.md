@@ -120,3 +120,10 @@ Now an instrument: see [ring/README.md](../ring/README.md), whose
 
 Now an instrument: see [cavity/README.md](../cavity/README.md), whose
 *Prior art and references* carry its research.
+
+---
+
+## Collider Showers (`showers`): built
+
+Now an instrument: see [showers/README.md](../showers/README.md), whose
+*Prior art and references* carry its research.
