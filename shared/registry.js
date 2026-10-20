@@ -257,6 +257,13 @@ export const INSTRUMENTS = [
     physics: 'Calorimetry · electromagnetic and hadronic showers · the thermo-acoustic effect',
     accent: '#8fd4ff',
   },
+  {
+    id: 'whistlers', name: 'Whistlers', section: 'phenomena', ready: true, version: '0.1.0', trim: 4.5,
+    plugin: { code: 'Whis', ready: true },
+    tagline: 'Lightning\'s radio crack, drawn out along the Earth\'s magnetic field into falling tones: every key a field line, its whistler\'s nose the note.',
+    physics: 'Magnetospheric physics · whistler-mode dispersion · the plasmasphere',
+    accent: '#7dffb0',
+  },
 ];
 
 // The template (docs/template/), the starting point for new instruments: not listed, but it
