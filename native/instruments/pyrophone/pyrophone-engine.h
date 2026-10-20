@@ -21,6 +21,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "pyrophone-model.h"
 #include "pyrophone-params.h"
 
@@ -51,6 +52,9 @@ class PyrophoneEngine : public Engine {
   void allNotesOff() override;
   void pressure(double value, int key) override; // aftertouch: parts the flames further
   void bend(double value) override;              // the burner's gas: a hotter flame, faster sound, every tube up
+  // MPE: one tube's gas alone (its sound speed, as the wheel's), and its own flames' power
+  void noteBend(double ratio, int key) override { ex.setBend(ratio, key); }
+  void slide(double value, int key) override;
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
 
@@ -63,7 +67,7 @@ class PyrophoneEngine : public Engine {
   bool ready() { return current() && tuneVersion == version; }
 
   struct Voice {
-    int key = 0, N = N_MODES;
+    int key = 0, N = N_MODES, M = N_MODES; // the modes cut, and those a sample holds at the key's own bend
     uint32_t id = 0;
     std::array<double, N_MODES> eta{}, vel{}, cf{}, g{}, wo{}, m11{}, m12{}, m21{}, m22{}, b1{};
     std::array<double, HIST> hist{};
@@ -71,6 +75,7 @@ class PyrophoneEngine : public Engine {
     double panL = 0, panR = 0;
     double beta = 0, betaT = 0, press = 0, vel0 = 0;
     double xf = -1, h = 0, dBore = NAN, dDamp = NAN, d = 0, W = 1, hHot = 0;
+    double nb = 1; // the key's own bend (MPE), gliding as the wheel's
     double gain = 1;
     int fade = 0;
     bool dead = false;
@@ -103,7 +108,8 @@ class PyrophoneEngine : public Engine {
   const Tuning *current();
   double bH() { const Tuning *t = current(); return t ? t->betaH : B_MAX; }
   double betaMax() const { return tune ? tune->betaMax : B_MAX; }
-  double betaDown(double vel, double press);
+  double flameOf(int key) const { return ex.slideOr(key, P[p::flame]); } // the key's flame power (its slide, or P's)
+  double betaDown(int key, double vel, double press);
   double betaUp() { return P[p::keyup] * bH(); }
   double coolTheta(int key) const;
   void start(int key, double velocity);
@@ -120,6 +126,7 @@ class PyrophoneEngine : public Engine {
   std::array<double, 128> warm{}, warmAt{};
   double time = 0, sincePost = 0, pressure_ = 0;
   double bendTo = 1, bendNow = 1; // pitch bend: the sound speed's ratio, and where it is going
+  NoteExpression ex{48};
   forte::Tuning keys; // the keyboard's tuning (forte/tuning.h): each tube is cut for its key's tuned note
   uint32_t seed = 0x2545f491;
   int focus = -1;

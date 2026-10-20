@@ -15,6 +15,7 @@ export const INSTRUMENT = {
   range: [21, 108],                     // MIDI keys: all 88, A0–C8
   space: 'sustain',                     // Space and CC64: keeps the couplers' antennas back, so released cavities ring on
   modWheel: 'offset',                   // CC1: the beam's offset, from its default out
+  mpe: { bend: 48, slide: true },       // MPE: a key's own bend squeezes its own cavity (its train keeps step); its slide, its beam's offset
   // the engine: the physics in C++ (native/instruments/cavity), built as WebAssembly
   wasm: { name: 'CavityBellsWasmEngine', module: new URL('./cavity-wasm.js', import.meta.url).href, binary: new URL('../wasm/cavity.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

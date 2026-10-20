@@ -86,6 +86,11 @@ static double energyRatio(int band, double betag, double k) {
   return az * jr * jr * z;
 }
 
+double radialOf(int band, double r) {
+  const Band &B = BAND[band];
+  return B.m == 0 ? besselJ(0, B.j * r) : besselJ(1, B.j * r);
+}
+
 Cavity cavityOf(int key, const double *P) {
   Cavity c;
   const int N = std::clamp((int)std::lround(P[p::cells]), 1, MAX_CELLS);
@@ -97,7 +102,7 @@ Cavity cavityOf(int key, const double *P) {
     const Band &B = BAND[b];
     const bool tuned = b == 0;
     const double fb = fc * bandRatio(b, betag, k), u = energyRatio(b, betag, k);
-    const double radial = B.m == 0 ? besselJ(0, B.j * r) : besselJ(1, B.j * r); // the field where the bunch passes
+    const double radial = radialOf(b, r); // the field where the bunch passes
     for (int m = 1; m <= N; m++) {
       Mode &M = c.modes[c.count++];
       M.band = b; M.mode = m;
@@ -107,10 +112,12 @@ Cavity cavityOf(int key, const double *P) {
       const double theta = std::numbers::pi * (M.f / c.fpi) * (betag / beta);
       std::complex<double> V = 0;
       for (int n = 1; n <= N; n++) V += modeShape(tuned, N, m, n) * std::polar(1.0, theta * (n - 1));
-      V *= transit(B.p, theta) * radial;
+      const std::complex<double> t = transit(B.p, theta), V1 = V * t;
+      V *= t * radial;
       const double ff = TAU * (M.f / c.fpi) * P[p::bunch];
       // in units where a point bunch through the matched π mode leaves √N (a field of 1 in every cell)
       M.kick = std::conj(V) * (std::numbers::pi / 2) / std::sqrt(u) * std::exp(-0.5 * ff * ff);
+      M.kick1 = std::conj(V1) * (std::numbers::pi / 2) / std::sqrt(u) * std::exp(-0.5 * ff * ff);
       M.x1 = modeShape(tuned, N, m, 1);
       M.xN = modeShape(tuned, N, m, N);
       const double fp = physicalFrequency(M.f, c.fpi);
