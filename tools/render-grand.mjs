@@ -63,6 +63,10 @@ const demos = [
   ['07-unisons-in-tune-then-honky-tonk', () => cat(
     play(P({ detune: 0.3 }), 3.5, chord(0.05, [57, 64, 69, 73], 0.65, 3.2)),
     play(P({ detune: 10 }), 3.5, chord(0.05, [57, 64, 69, 73], 0.65, 3.2)))],
+  ['08-stereo-tremolo-slow-then-fast', () => {
+    const phrase = [...chord(0.05, [45, 57], 0.6, 2.9), ...chord(0.08, [64, 67, 72], 0.55, 2.9, 0.03), ...chord(1.5, [76], 0.65, 1.4)];
+    return cat(play(P({ tremDepth: 0.6, tremRate: 3 }), 3.3, phrase), play(P({ tremDepth: 0.6, tremRate: 7 }), 3.3, phrase));
+  }],
 ];
 
 const only = process.argv[2];
