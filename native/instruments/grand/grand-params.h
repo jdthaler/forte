@@ -17,7 +17,7 @@
 namespace forte::grand {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { hardness, strike, damper, sympathy, scale, stringing, detune, stiffness, stretch, loss, kc, mount, gFrame, boardH, tilt, hRatio, kH, listen, pickH, rIn, bass, mid, treble, maxFreq, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { hardness, strike, damper, sympathy, scale, stringing, detune, stiffness, stretch, loss, kc, mount, gFrame, boardH, tilt, hRatio, kH, listen, pickH, rIn, bass, mid, treble, tremDepth, tremRate, maxFreq, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -48,6 +48,8 @@ inline const FormatSegment kFormat_rIn[] = {{999.9999999999999, "", " kΩ", 1, 0
 inline const FormatSegment kFormat_bass[] = {{-0.05, "", " dB", 1, 0, 1, false, false, true, false}, {0, "", " dB", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " dB", 1, 0, 1, false, false, true, false}};
 inline const FormatSegment kFormat_mid[] = {{-0.05, "", " dB", 1, 0, 1, false, false, true, false}, {0, "", " dB", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " dB", 1, 0, 1, false, false, true, false}};
 inline const FormatSegment kFormat_treble[] = {{-0.05, "", " dB", 1, 0, 1, false, false, true, false}, {0, "", " dB", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " dB", 1, 0, 1, false, false, true, false}};
+inline const FormatSegment kFormat_tremDepth[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
+inline const FormatSegment kFormat_tremRate[] = {{kNoLimit, "", " Hz", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_maxFreq[] = {{kNoLimit, "", " kHz", 0.001, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
@@ -97,6 +99,8 @@ inline const ParamInfo kParams[p::count] = {
   {"bass", "Bass (shelf 120 Hz)", "EQ (preamp)", ParamKind::continuous, -15, 15, 0, 0.5, false, true, nullptr, 0, kFormat_bass, 3},
   {"mid", "Middle (peak 1 kHz)", "EQ (preamp)", ParamKind::continuous, -15, 15, 0, 0.5, false, true, nullptr, 0, kFormat_mid, 3},
   {"treble", "Treble (shelf 3.5 kHz)", "EQ (preamp)", ParamKind::continuous, -15, 15, 0, 0.5, false, true, nullptr, 0, kFormat_treble, 3},
+  {"tremDepth", "Tremolo depth", "Tremolo (preamp)", ParamKind::continuous, 0, 1, 0, 0.01, false, true, nullptr, 0, kFormat_tremDepth, 2},
+  {"tremRate", "Tremolo rate", "Tremolo (preamp)", ParamKind::continuous, 1, 10, 5, 0.05, false, false, nullptr, 0, kFormat_tremRate, 1},
   {"maxFreq", "Highest partial", "Output", ParamKind::continuous, 3000, 16000, 10000, 0, true, false, nullptr, 0, kFormat_maxFreq, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.12, 0.01, false, true, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
@@ -126,6 +130,7 @@ inline const PresetValue kPreset6[] = {{p::stringing, 2}, {p::mount, 1}, {p::lis
 inline const PresetValue kPreset7[] = {{p::strike, 0.5}};
 inline const PresetValue kPreset8[] = {{p::rIn, 22}};
 inline const PresetValue kPreset9[] = {{p::bass, 4}, {p::mid, -5}, {p::treble, 7}};
+inline const PresetValue kPreset10[] = {{p::tremDepth, 0.6}, {p::tremRate, 5.5}};
 inline const Preset kPresets[] = {
   {"CP-70", nullptr, 0},
   {"Same strings on a soundboard, heard by microphones", kPreset1, 2},
@@ -137,6 +142,7 @@ inline const Preset kPresets[] = {
   {"Struck at the middle (odd partials)", kPreset7, 1},
   {"Low-impedance preamp (thin bass)", kPreset8, 1},
   {"Stage EQ: bright and scooped", kPreset9, 3},
+  {"Stereo tremolo", kPreset10, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::maxFreq, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{0, -1}};
@@ -155,7 +161,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "A real piano action with no soundboard: piezo pickups under the bridge hear the strings directly.", .auSubtype = "EGrd",
     .vst3Id = {0x05, 0xb4, 0x87, 0xca, 0x60, 0x04, 0x56, 0x72, 0x51, 0x4d, 0x75, 0xd6, 0x99, 0xc4, 0x8d, 0x16},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 10,
+    .presets = kPresets, .presetCount = 11,
     .keep = kKeep, .keepCount = 18,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = -1, .modWheelMax = 0,

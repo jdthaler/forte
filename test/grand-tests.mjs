@@ -351,6 +351,50 @@ test('EQ: shelves and mid peak follow their analog RC prototypes', () => {
     assert.ok(Math.abs(got - H(f)) < 0.5, `${f.toFixed(0)} Hz: ${got.toFixed(2)} vs ${H(f).toFixed(2)} dB`);
   }
 });
+test('stereo tremolo: off by default and exact when off; on, each output dips in turn at its rate, to 1 − depth·K/(1 + K), faster than it recovers', () => {
+  // the chord held, as two channels; events as render()'s
+  const stereo = (params, events = []) => {
+    const e = new GrandEngine(FS);
+    e.setParams(params);
+    for (const k of [48, 60, 64, 67]) e.noteOn(k, 0.7);
+    const n = 3 * FS, L = new Float64Array(n), R = new Float64Array(n), bl = 128, a = new Float32Array(bl), b = new Float32Array(bl);
+    let j = 0;
+    for (let s = 0; s < n; s += bl) {
+      while (j < events.length && Math.round(events[j][0] * FS) <= s) e.setParams(events[j++][2]);
+      e.process(a, b, bl);
+      for (let i = 0; i < bl && s + i < n; i++) { L[s + i] = a[i]; R[s + i] = b[i]; }
+    }
+    return { L, R };
+  };
+  const off = stereo(P());
+  // the rate alone does nothing, and a tremolo turned off is gone exactly once its depth has glided out
+  const fast = stereo(P({ tremRate: 9 })), wasOn = stereo(P({ tremDepth: 1 }), [[1, 'params', P()]]);
+  for (let i = 0; i < off.L.length; i++) assert.ok(fast.L[i] === off.L[i] && fast.R[i] === off.R[i], `rate alone changed sample ${i}`);
+  for (let i = Math.round(1.3 * FS); i < off.L.length; i++) assert.ok(wasOn.L[i] === off.L[i] && wasOn.R[i] === off.R[i], `still on at ${(i / FS).toFixed(3)} s`);
+  // each output's gain against the tremolo off, in 5 ms windows from 1 s
+  const W = 240, gain = (x, y) => { const g = []; for (let i = FS; i + W <= x.length; i += W) { let a = 0, c = 0; for (let k = i; k < i + W; k++) { a += x[k] * x[k]; c += y[k] * y[k]; } g.push(10 * Math.log10(a / c)); } return g; };
+  const said = [], energy = (x) => x.L.reduce((s, v) => s + v * v, 0) + x.R.reduce((s, v) => s + v * v, 0);
+  for (const [depth, rate] of [[1, 5], [0.6, 5.5], [0.3, 3]]) {
+    const on = stereo(P({ tremDepth: depth, tremRate: rate })), gL = gain(on.L, off.L), gR = gain(on.R, off.R);
+    const floor = 20 * Math.log10(1 - depth * 9 / 10), lo = Math.min(...gL), hi = Math.max(...gL);
+    assert.ok(Math.abs(lo - floor) < 1 && hi > -1.5 * (depth * 4), `depth ${depth}: ${lo.toFixed(1)} … ${hi.toFixed(1)} dB (floor ${floor.toFixed(1)})`);
+    // in turn: the two outputs' gains move against each other
+    const mL = gL.reduce((s, v) => s + v) / gL.length, mR = gR.reduce((s, v) => s + v) / gR.length;
+    let sLR = 0, sLL = 0, sRR = 0;
+    for (let i = 0; i < gL.length; i++) { sLR += (gL[i] - mL) * (gR[i] - mR); sLL += (gL[i] - mL) ** 2; sRR += (gR[i] - mR) ** 2; }
+    const corr = sLR / Math.sqrt(sLL * sRR);
+    // at its rate: one dip per cycle, over the 2 s
+    let dips = 0;
+    for (let i = 1; i < gL.length; i++) if (gL[i - 1] >= mL && gL[i] < mL) dips++;
+    // the photocell lights fast and goes dark slowly: the gain falls in less of the cycle than it rises
+    let falling = 0;
+    for (let i = 1; i < gL.length; i++) if (gL[i] < gL[i - 1]) falling++;
+    assert.ok(corr < -0.5 && Math.abs(dips - 2 * rate) <= 1 && falling / (gL.length - 1) < 0.4,
+      `depth ${depth}, ${rate} Hz: L/R correlation ${corr.toFixed(2)}, ${dips} dips, falling ${(100 * falling / (gL.length - 1)).toFixed(0)} % of the time`);
+    said.push(`${depth * 100} %: ${lo.toFixed(1)} to ${hi.toFixed(1)} dB, level ${(10 * Math.log10(energy(on) / energy(off))).toFixed(1)} dB`);
+  }
+  console.log(`        (each output, depth ${said.join('; ')})`);
+});
 test('dampers: release stops a note ≥ 40 dB in 0.5 s; the pedal holds it; no dampers above E6', () => {
   const rms = (x, t) => { let s = 0; const a = Math.round(t * FS); for (let i = a; i < a + 2400; i++) s += x[i] * x[i]; return Math.sqrt(s) + 1e-12; };
   const rel = render(P(), [[0, 'on', 60, 0.7], [0.3, 'off', 60]], 0.9).x;
