@@ -701,7 +701,8 @@ void GongEngine::start(int key, double velocity) {
   if (v && v->g.f0 != gongPitch(key, P.data())) { v->killing = true; v->setDamping(); v = nullptr; } // retuned: another gong, cut for the new pitch
   if (!v) v = add(key, *S);
   v->P = P; v->extra = 6.91 / P[p::release]; v->setOutput(P.data());
-  v->strike(std::max(0.01, std::min(1.0, velocity)), P.data());
+  v->P[p::strike] = expr.slideOr(key, P[p::strike]); // the key's own strike point, or the knob's
+  v->strike(std::max(0.01, std::min(1.0, velocity)), v->P.data());
   focus = v;
   int live = 0;
   for (int i = 0; i < nv; i++) if (!order[i]->killing && !order[i]->dead) live++;

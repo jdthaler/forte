@@ -27,6 +27,7 @@ const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const cents = (a, b) => 1200 * Math.log2(a / b);
 
 // Render through the engine in 128-sample blocks, as the AudioWorklet does. events: [t, 'on'|'off'|'sus', key|on, vel]
+// and [t, 'msg', message] or [t, 'params', P]
 function play(params, sec, events, opts = {}) {
   const e = new CelestaEngine(FS);
   e.setParams(params);
@@ -35,7 +36,7 @@ function play(params, sec, events, opts = {}) {
   for (let s = 0; s < n; s += bl) {
     while (ev.length && ev[0][0] * FS <= s) {
       const [, type, k, v] = ev.shift();
-      if (type === 'on') e.noteOn(k, v); else if (type === 'off') e.noteOff(k); else e.setSustain(k);
+      if (type === 'on') e.noteOn(k, v); else if (type === 'off') e.noteOff(k); else if (type === 'msg') e.handle(k); else if (type === 'params') e.setParams(k); else e.setSustain(k);
     }
     e.process(bL, bR, bl);
     L.set(bL.subarray(0, Math.min(bl, n - s)), s); R.set(bR.subarray(0, Math.min(bl, n - s)), s);
@@ -192,6 +193,47 @@ test('harder felt reaches the upper modes: brighter, with a shorter contact', ()
   assert.ok(hard < 0.5 * soft, `contact ${hard} ms vs ${soft} ms`);
   const xs = note(k, P({ hardness: 40 }), 0.8, 0.2), xh = note(k, P({ hardness: 3000 }), 0.8, 0.2), f1 = keyFreq(k);
   assert.ok(tone(xh, f4, a, b) / tone(xh, f1, a, b) > 10 * (tone(xs, f4, a, b) / tone(xs, f1, a, b)), 'mode 4 against the fundamental');
+});
+// A note's own slide (MPE) is its hammer's felt, taken as the hammer is thrown.
+const slide = (key, value) => ({ type: 'slide', key, value });
+const same = (x, y, what) => { for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) assert.fail(`${what}: sample ${i} differs`); };
+test('a note\'s own slide is its hammer\'s felt: a lone note slid to x is the note with the felt at x, bit for bit, from its next strike on', () => {
+  const k = 72;
+  for (const x of [40, 3000]) {
+    same(play(P(), 0.3, [[0, 'msg', slide(k, x)], [0, 'on', k, 0.8]]).L, note(k, P({ hardness: x }), 0.8, 0.3), `felt ${x}`);
+    // slid while it rings: the bar rings on as it was struck, and the next strike has the new felt
+    same(play(P(), 0.4, [[0, 'on', k, 0.8], [0.1, 'msg', slide(k, x)], [0.2, 'on', k, 0.8]]).L, play(P(), 0.4, [[0, 'on', k, 0.8], [0.1, 'params', P({ hardness: x })], [0.2, 'on', k, 0.8]]).L, `felt ${x}, slid`);
+  }
+  // the other bar of a chord keeps the knob's felt: the chord is its two notes, apart
+  const chord = play(P(), 0.3, [[0, 'msg', slide(k, 3000)], [0, 'on', k, 0.8], [0, 'on', 79, 0.8]]).L;
+  const a = note(k, P({ hardness: 3000 }), 0.8, 0.3), b = note(79, P(), 0.8, 0.3);
+  let d = 0, pk = 0;
+  for (let i = 0; i < chord.length; i++) { d = Math.max(d, Math.abs(chord[i] - a[i] - b[i])); pk = Math.max(pk, Math.abs(chord[i])); }
+  assert.ok(d < 1e-5 * pk, `differs by ${(d / pk).toExponential(2)} of the peak`);
+});
+test('a note\'s slide back to none (NaN) leaves the output bit-identical', () => {
+  const ev = [[0, 'on', 60, 0.8], [0, 'on', 67, 0.6], [0.1, 'on', 60, 1]];
+  same(play(P(), 0.3, [[0, 'msg', slide(60, 3000)], [0, 'msg', slide(60, NaN)], [0.05, 'msg', slide(67, 20)], [0.05, 'msg', slide(67, NaN)], ...ev]).L, play(P(), 0.3, ev).L, 'slid and back');
+});
+test('stability: each note\'s own felt swept over its whole range every block, on chords struck again and again, at 44.1, 48 and 96 kHz', () => {
+  // the chord's peak, against the same chord with the knob at either end of the felt
+  const chord = (fs, o, slid) => {
+    const e = new CelestaEngine(fs);
+    e.setParams(P(o));
+    const keys = [21, 60, 72, 96, 108], L = new Float32Array(128), R = new Float32Array(128);
+    let pk = 0;
+    for (let b = 0, n = Math.round((0.5 * fs) / 128); b < n; b++) {
+      if (slid) keys.forEach((k, i) => e.handle(slide(k, 10 * 1000 ** (0.5 + 0.5 * Math.sin(b / (2 + i))))));
+      if (b % 20 === 0) for (const k of keys) e.noteOn(k, 1);
+      e.process(L, R, 128);
+      for (const y of L) { assert.ok(Number.isFinite(y), `${fs} Hz ${JSON.stringify(o)}: NaN`); pk = Math.max(pk, Math.abs(y)); }
+    }
+    return pk;
+  };
+  for (const fs of [44100, 48000, 96000]) for (const o of [{}, { mass: 12, speedMax: 5, fullRange: true }]) {
+    const pk = chord(fs, o, true), ends = Math.max(chord(fs, { ...o, hardness: 10 }), chord(fs, { ...o, hardness: 10000 }));
+    assert.ok(pk < 1.2 * ends, `${fs} Hz ${JSON.stringify(o)}: peak ${pk.toFixed(2)}, ${ends.toFixed(2)} with the knob`);
+  }
 });
 test('the hammer gives the bar no more energy than it brings (½mv²)', () => {
   for (const k of [60, 84, 108]) {

@@ -68,7 +68,7 @@ void CelestaEngine::Voice::strike(const CelestaEngine &eng, double velocity) {
     if (i > 0) { bws[i] = bc[i] * wsi; comp += bc[i] * wsi * wsi; }
   }
   ws0 = ws[0]; compModes = comp;
-  const Hammer H = hammerOf(key, P[p::hardness], P[p::mass]);
+  const Hammer H = hammerOf(key, eng.expr.slideOr(key, P[p::hardness]), P[p::mass]); // the key's own felt, or the knob's
   const double v = P[p::speedMax] * std::max(0.0, std::min(1.0, velocity)), h = 1 / eng.fs;
   if (!(v > 0)) return;
   ham = H; kOverM = (h * h) / H.m; halfAlpha = H.alpha / (2 * h);
