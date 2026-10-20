@@ -64,6 +64,13 @@ export const GROUPS = [
     ],
   },
   {
+    title: 'Tremolo (preamp)',
+    params: [
+      { id: 'tremDepth', label: 'Tremolo depth', perform: true, min: 0, max: 1, step: 0.01, def: 0, fmt: (v) => (v === 0 ? 'off' : `${(v * 100).toFixed(0)} %`), hint: 'The preamp\'s stereo tremolo: an oscillator lights an LED beside each output\'s photocell, in turn, and the photocell shunts that output. Played in stereo the sound swings from side to side; through one output it throbs. Photocells light fast and go dark slowly. Applies to the piezo, not to the microphones.' },
+      { id: 'tremRate', label: 'Tremolo rate', min: 1, max: 10, step: 0.05, def: 5, fmt: (v) => `${v.toFixed(2)} Hz`, hint: 'How many times a second the sound goes left and back.' },
+    ],
+  },
+  {
     title: 'Output',
     params: [
       { id: 'maxFreq', label: 'Highest partial', min: 3000, max: 16000, def: 10000, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz`, hint: 'Partials above this are left out (new notes). Lower it if the CPU meter runs hot; the engine also sheds the quietest voices when the audio thread is overloaded.' },
@@ -88,4 +95,5 @@ export const PRESETS = [
   { name: 'Struck at the middle (odd partials)', p: { strike: 0.5 } },
   { name: 'Low-impedance preamp (thin bass)', p: { rIn: 22 } },
   { name: 'Stage EQ: bright and scooped', p: { bass: 4, mid: -5, treble: 7 } },
+  { name: 'Stereo tremolo', p: { tremDepth: 0.6, tremRate: 5.5 } },
 ];
