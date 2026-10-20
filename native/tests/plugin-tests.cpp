@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <numbers>
 #include <string>
 #include <vector>
 
@@ -106,7 +107,7 @@ struct Instance {
 // the amplitude of the tone at f Hz in x[a … b)
 double tone(const std::vector<float> &x, double f, double fs, int a, int b) {
   double c = 0, d = 0;
-  for (int i = a; i < b; i++) { c += x[i] * std::cos(2 * M_PI * f * i / fs); d += x[i] * std::sin(2 * M_PI * f * i / fs); }
+  for (int i = a; i < b; i++) { c += x[i] * std::cos(2 * std::numbers::pi * f * i / fs); d += x[i] * std::sin(2 * std::numbers::pi * f * i / fs); }
   return 2 * std::hypot(c, d) / (b - a);
 }
 // the loudest of the frequencies `fs` in x[a … b), as an index
