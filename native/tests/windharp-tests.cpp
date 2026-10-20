@@ -1,6 +1,6 @@
 // windharp-tests.cpp — the wind harp in C++: the model gives the retired JavaScript's strings and lock-in
-// analysis, a key locks onto its harmonic at the balance's swing at every sample rate, the shutters
-// and the pedal, aftertouch, voice stealing and a flood of keys, blocks of any length, the views'
+// analysis, a key locks onto its harmonic at the balance's swing at every sample rate, the pitch
+// wheel and each key's own bend (MPE), the shutters and the pedal, aftertouch, voice stealing and a flood of keys, blocks of any length, the views'
 // messages, and ten keys within the CPU budget. The physics tests are the JavaScript suite's, run
 // on the WebAssembly (node test/windharp-tests.mjs).
 
@@ -117,6 +117,133 @@ TEST("windharp: pitch bend tightens or slackens the strings: a sounding key foll
     const auto d = WindHarpEngine::dominant(vo->strings[0]);
     CHECK(d.n == 3);
     CHECK(std::fabs(1200 * std::log2(bf / want)) < 10); // the wake pulls the lock a few cents toward its own frequency
+  }
+}
+
+// the strongest frequency within ±60 ¢ of f in the next second of the engine's left channel
+static double peakNear(WindHarpEngine &e, double f) {
+  const int n = (int)e.fs;
+  std::vector<float> L(n), R(n);
+  for (int s = 0; s < n; s += 128) e.process(L.data() + s, R.data() + s, std::min(128, n - s));
+  double best = 0, bf = f;
+  for (double c = -60; c <= 60; c += 0.5) { const double g = f * std::pow(2.0, c / 1200), t = tone(L, g, e.fs); if (t > best) { best = t; bf = g; } }
+  return bf;
+}
+static double cents(double f, double g) { return 1200 * std::log2(f / g); }
+
+TEST("windharp: a key's own bend (MPE) tightens its strings alone: C6 bent up and down two semitones follows on its harmonic, C5 held beside it stays; bent before the key, it starts there") {
+  const double fs = 48000;
+  for (double st : {2.0, -2.0}) {
+    auto P = defaults();
+    auto e = std::make_unique<WindHarpEngine>(fs);
+    e->setParams(P.data());
+    e->noteOn(72, 1); e->noteOn(84, 1);
+    CHECK(render(*e, 1.5));
+    const double f72 = voiceOf(*e, 72)->strings[0].S.fNote, f84 = voiceOf(*e, 84)->strings[0].S.fNote, r = std::pow(2.0, st / 12);
+    e->noteBend(r, 84);
+    CHECK(render(*e, 1.5));
+    std::vector<float> L(48000), R(48000);
+    for (int s = 0; s < 48000; s += 128) e->process(L.data() + s, R.data() + s, 128);
+    double b84 = 0, f84b = 0, b72 = 0, f72b = 0;
+    for (double c = -60; c <= 60; c += 0.5) {
+      const double g = f84 * r * std::pow(2.0, c / 1200), t = tone(L, g, fs), h = f72 * std::pow(2.0, c / 1200), u = tone(L, h, fs);
+      if (t > b84) { b84 = t; f84b = g; }
+      if (u > b72) { b72 = u; f72b = h; }
+    }
+    CHECK(WindHarpEngine::dominant(voiceOf(*e, 84)->strings[0]).n == 3 && WindHarpEngine::dominant(voiceOf(*e, 72)->strings[0]).n == 3);
+    CHECK(std::fabs(cents(f84b, f84 * r)) < 10); // the wake pulls the lock a few cents toward its own frequency, as for the wheel
+    CHECK(std::fabs(cents(f72b, f72)) < 3);
+    CHECK(voiceOf(*e, 72)->strings[0].bent == 1);
+    // struck already bent
+    auto e2 = std::make_unique<WindHarpEngine>(fs);
+    e2->setParams(P.data());
+    e2->noteBend(r, 84);
+    e2->noteOn(84, 1);
+    CHECK(voiceOf(*e2, 84)->strings[0].bent == r);
+    CHECK(render(*e2, 1.5));
+    CHECK(WindHarpEngine::dominant(voiceOf(*e2, 84)->strings[0]).n == 3);
+    CHECK(std::fabs(cents(peakNear(*e2, f84 * r), f84 * r)) < 10);
+  }
+}
+
+TEST("windharp: a lone key's own bend sounds as the wheel bent as far: the same note within 1 ¢ and the same swing within 2 %") {
+  const double fs = 48000;
+  for (int key : {55, 84}) for (double v : {1.0, -1.0}) {
+    double f[2], amp[2];
+    for (int which = 0; which < 2; which++) {
+      auto P = defaults();
+      auto e = std::make_unique<WindHarpEngine>(fs);
+      e->setParams(P.data());
+      e->noteOn(key, 1);
+      CHECK(render(*e, key < 72 ? 4 : 1.5));
+      if (which) e->noteBend(std::pow(2.0, 2 * v / 12), key); else e->bend(v);
+      CHECK(render(*e, 1.5));
+      const double want = voiceOf(*e, key)->strings[0].S.fNote * std::pow(2.0, 2 * v / 12);
+      f[which] = peakNear(*e, want);
+      amp[which] = WindHarpEngine::dominant(voiceOf(*e, key)->strings[0]).amp;
+    }
+    CHECK(std::fabs(cents(f[1], f[0])) < 1);
+    CHECK(rel(amp[1], amp[0]) < 0.02);
+  }
+}
+
+TEST("windharp: bends of 1 sent every block leave every sample as it was, the wheel moving and the wind gusting") {
+  std::vector<float> out[2];
+  for (int which = 0; which < 2; which++) {
+    auto P = defaults();
+    P[p::gust] = 0.2;
+    auto e = std::make_unique<WindHarpEngine>(44100);
+    e->setParams(P.data());
+    if (which) e->noteBend(1, 60);
+    e->noteOn(60, 0.8); e->noteOn(79, 0.8); e->noteOn(96, 0.8);
+    std::vector<float> L(128), R(128);
+    for (int blk = 0; blk < 700; blk++) {
+      if (which) for (int key : {60, 79, 96, 97}) e->noteBend(1, key);
+      if (blk == 300) e->bend(-0.7);
+      e->process(L.data(), R.data(), 128);
+      out[which].insert(out[which].end(), L.begin(), L.end());
+      out[which].insert(out[which].end(), R.begin(), R.end());
+    }
+  }
+  CHECK(out[0] == out[1]);
+}
+
+TEST("windharp: ±48 semitones of each key's own bend, swept every block on a chord from A0 to E7 (strings stepping at a quarter of the sample rate to several times a sample), stay finite and bounded at 44.1, 48 and 96 kHz") {
+  for (double fs : {44100.0, 48000.0, 96000.0}) {
+    auto P = defaults();
+    P[p::gust] = 0.1;
+    auto e = std::make_unique<WindHarpEngine>(fs);
+    e->setParams(P.data());
+    e->Uw = 6;
+    P[p::wind] = 6;
+    e->setParams(P.data());
+    const int keys[] = {21, 43, 60, 79, 96, 100};
+    for (int key : keys) e->noteOn(key, 1);
+    std::vector<float> L(128), R(128);
+    double pk = 0;
+    bool finite = true;
+    const int blocks = (int)(3 * fs / 128);
+    for (int blk = 0; blk < blocks; blk++) {
+      const double t = blk * 128 / fs;
+      for (int i = 0; i < 6; i++) { // a sweep each, then held at an end
+        const double s = t < 2 ? std::sin(windharp::TAU * (0.7 + 0.3 * i) * t) : (i & 1 ? 1 : -1);
+        e->noteBend(std::pow(2.0, 48 * s / 12), keys[i]);
+      }
+      e->process(L.data(), R.data(), 128);
+      for (int i = 0; i < 128; i++) { finite = finite && std::isfinite(L[i]) && std::isfinite(R[i]); pk = std::max({pk, (double)std::fabs(L[i]), (double)std::fabs(R[i])}); }
+    }
+    double q = 0;
+    for (int key : keys) if (const auto *v = voiceOf(*e, key)) for (int i = 0; i < v->ns; i++) for (int j = 0; j < v->strings[i].J; j++) q = std::max(q, std::fabs(v->strings[i].q[j]));
+    double held = 0; // and with the bends held at their ends
+    CHECK(render(*e, 1, 128, &held));
+    std::printf("       %.1f kHz: peak %.2f swept, %.2f held; wakes %.2f\n", fs / 1000, pk, held, q);
+    CHECK(finite);
+    // A string tightened far pulls harder on the bridge (tension × slope, the tension ×r²): G2 swept
+    // through four octaves, locking on its way, peaks at 2–5 (alike from 44.1 to 192 kHz), 10–50
+    // times its own level; held far off their notes, the strings unlock and the chord quietens.
+    CHECK(pk < 12);
+    CHECK(held < 2);
+    CHECK(q < 6);
   }
 }
 
