@@ -78,6 +78,7 @@ class VibraphoneEngine : public Engine {
     bool fading = false, dead = false;
     double age = 0;
     double E = 0, Emax = 0, Eb = 0, Et = 0;
+    double top = 0, floor = 0; // Quality's, when the bar was struck: its highest mode (Hz), and where it is let go (× its most energy)
     double gl = 0, gr = 0;
     Mallet mal{};
     double kOverM = 0, halfAlpha = 0;

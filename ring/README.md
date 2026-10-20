@@ -156,7 +156,7 @@ ring/src/ring-params.js               parameters and presets
 ring/src/ring-main.js                 page wiring and views
 ring/src/ring-wasm.js                 the engine and model, the C++ as WebAssembly (ring/wasm/ring.wasm)
 native/instruments/ring/              the physics in C++: model, engine, generated tables, reference (plugins and WebAssembly)
-test/ring-tests.mjs                   node test/ring-tests.mjs (19 tests, about 2 s)
+test/ring-tests.mjs                   node test/ring-tests.mjs (21 tests, about 2 s)
 tools/render-ring.mjs                 node tools/render-ring.mjs → examples/ring/
 ```
 
@@ -177,6 +177,14 @@ tools/render-ring.mjs                 node tools/render-ring.mjs → examples/ri
   nothing radiates: the electrodes' signal goes to the speakers as it is.
 * The rings are audio-scaled: the bunch is a few per cent of the ring, where
   a real one is a millionth.
+
+## Quality
+
+The storage ring costs little at any setting, so the Quality setting (in the
+controls, for phones and older computers) changes only one thing: with the
+pedal holding beams stored, Medium keeps at most 24 at once and Low 12 (32
+at High). Past that the oldest stored beam is scraped away, as if its key
+had been let go. A ring on its own sounds exactly as at High.
 
 ## Prior art and references
 

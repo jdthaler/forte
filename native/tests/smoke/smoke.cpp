@@ -1,6 +1,6 @@
 // smoke.cpp — a test instrument for the shared plugin (tests/plugin-tests.cpp): struck sines,
-// a pedal, a mod wheel, two parameters, a compass and a preset. It proved the plugin pipeline in CI until
-// the template was ported; it is not built as a plugin.
+// a pedal, a mod wheel, two parameters, a compass, a preset, and one voice at Low quality. It
+// proved the plugin pipeline in CI until the template was ported; it is not built as a plugin.
 
 #include <cmath>
 #include <numbers>
@@ -30,7 +30,7 @@ class SmokeEngine : public Engine {
   void setParams(const double *P) override { decay = P[kDecay]; } // the volume is the chain's
   void noteOn(int key, double velocity) override {
     double f = 440 * std::pow(2.0, (key - 69) / 12.0), w = 2 * std::numbers::pi * f / fs;
-    if (voices.size() < voices.capacity()) voices.push_back({w, 0, 0.2 * velocity, std::exp(-6.9 / (decay * fs)), key});
+    if ((int)voices.size() < pick(32, 8, 1)) voices.push_back({w, 0, 0.2 * velocity, std::exp(-6.9 / (decay * fs)), key}); // Quality: fewer voices
   }
   void noteOff(int key, double) override { for (auto &v : voices) if (v.key == key) { v.off = true; if (!sustain) damp(v); } }
   void setSustain(bool on) override { sustain = on; if (!on) for (auto &v : voices) if (v.off) damp(v); }

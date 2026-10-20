@@ -74,11 +74,13 @@ FORTE_EXPORT double carillon_radiation_efficiency(int l, double ka) { return rad
 // struck, and which one hangs at a key.
 FORTE_EXPORT int carillon_voices(CarillonEngine *e) { return e->nVoices; }
 // key, fading, dead, released, the clapper on, its contact (ms), its force pulse's width (ms), its
-// peak force, its speed, the voice's age and level
+// peak force, its speed, the voice's age and level, its resonators and those still playing
 FORTE_EXPORT void carillon_voice(CarillonEngine *e, int i, double *out) {
   const CarillonEngine::Voice &v = e->voice(i);
-  const double x[] = {(double)v.key, (double)v.fading, (double)v.dead, (double)v.released, (double)v.cl.on, v.cl.ms, v.cl.fwhm, v.cl.Fmax, v.cl.v, v.age, v.level};
-  for (int k = 0; k < 11; k++) out[k] = x[k];
+  int playing = 0;
+  for (int r = 0; r < v.N; r++) playing += v.act[r] && v.A1[r] != 0;
+  const double x[] = {(double)v.key, (double)v.fading, (double)v.dead, (double)v.released, (double)v.cl.on, v.cl.ms, v.cl.fwhm, v.cl.Fmax, v.cl.v, v.age, v.level, (double)v.N, (double)playing};
+  for (int k = 0; k < 13; k++) out[k] = x[k];
 }
 // the index (in carillon_voice's order) of the voice at a key, or −1
 FORTE_EXPORT int carillon_by_key(CarillonEngine *e, int key) {

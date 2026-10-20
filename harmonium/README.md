@@ -426,6 +426,16 @@ the three-reed musette (30 reeds), about 20 %.
 - **Tuning and level** are set at the default wind, as a voicer would. Other
   winds and voicings change the pitch and the level, as on the instrument.
 
+## Quality
+
+Every reed that sounds is heard, and each one's step through the air and
+the tongue is what costs, so Medium and Low trim only how many keys sound at
+once: 8 at Medium and 5 at Low, against 16 at High. Past that, the quietest
+key fades out over 30 ms, a released one first; a key held under a full
+chord can give way at Low. The reeds from 440 Hz up keep their 2×
+integration at every setting (without it they would sound softer and
+alias), so a chord within the limit sounds exactly as at High.
+
 ## Prior art and references
 
 **The original instrument.**

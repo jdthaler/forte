@@ -30,7 +30,13 @@ void PianetEngine::Voice::start(PianetEngine &eng, int k, Data::Ref r) {
   inUse = true;
   key = k; version = eng.version; ref = r;
   eng.data.acquire(r);
-  p = Pluck(*r.data, eng.pad(), eng.fs2, eng.bendNow);
+  // Quality: Low leaves out the reed's modes above 12 kHz; Medium and Low let a reed rest once
+  // its ringing is 70 / 60 dB below its loudest
+  const double fTop = eng.Engine::pick<double>(INFINITY, INFINITY, 12000);
+  int nMax = 0;
+  while (nMax < r.data->N && r.data->modes[nMax].f <= fTop) nMax++;
+  p = Pluck(*r.data, eng.pad(), eng.fs2, eng.bendNow, std::max(nMax, 1));
+  rel = eng.Engine::pick(0.0, 1e-7, 1e-6);
   pol = key % 2 ? -1 : 1;
   setPickup(eng, true);
   phiPrev = emFlux(p.y, g);
@@ -112,12 +118,13 @@ void PianetEngine::noteOn(int key, double velocity) {
   if (!fresh) { byKey[key] = nullptr; return; } // every voice busy (beyond anything the stealing below lets happen)
   fresh->start(*this, key, r);
   voices[nVoices++] = fresh; byKey[key] = fresh;
-  if (nVoices > MAX_VOICES) {
+  if (nVoices > Engine::pick(MAX_VOICES, 16, 10)) { // Quality: Medium and Low let fewer notes sound at once
     Voice *victim = nullptr;
     double e = INFINITY;
     for (int i = 0; i < nVoices; i++) {
       Voice *u = voices[i];
-      if (u != fresh && !u->dying && !u->p.down && u->p.energy() < e) { e = u->p.energy(); victim = u; }
+      // (Medium and Low may also take a note the pedal holds)
+      if (u != fresh && !u->dying && (!u->p.down || (u->held && quality != Quality::high)) && u->p.energy() < e) { e = u->p.energy(); victim = u; }
     }
     if (victim) { victim->retire(); byKey[victim->key] = nullptr; }
   }
@@ -246,13 +253,14 @@ void PianetEngine::processBlock(float *L, float *R, int n) {
       post(m);
     }
     // bookkeeping: retire faded voices; sleep or free reeds that have stopped
+    if (v.rel > 0) v.loud = std::max(v.loud, p.energy());
     if (v.dying && v.fade <= 0) v.dead = true;
     else if (!(std::fabs(p.y) < 1)) {
       v.dead = true;
       Message m;
       m.type = msg::error; m.key = (int16_t)v.key;
       post(m);
-    } else if (p.hv == 0 && !v.pending && !(p.F > 0 && p.a > 0) && p.energy() < 1e-13) { // (a bond under tension may still be creeping)
+    } else if (p.hv == 0 && !v.pending && !(p.F > 0 && p.a > 0) && p.energy() < std::max(1e-13, v.rel * v.loud)) { // (a bond under tension may still be creeping)
       if (++v.quiet > 20) { if (p.down || v.held) v.sleep = true; else if (p.a > PAD.aMin * PAD.a0) v.dead = true; }
     } else v.quiet = 0;
   }

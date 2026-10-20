@@ -311,6 +311,17 @@ tools/reeds-native-table.mjs          node tools/reeds-native-table.mjs → nati
 * **The frame stop is lossless,** and only the slot point (1.5 mm from the
   tip) touches it.
 
+## Quality
+
+Medium and Low play each reed at the output rate instead of twice it (the
+slot's harmonics alias no more than they do at High), leave out the reed
+modes above 16 kHz, and stop working out a mode once it has rung down far
+below the strongest (80 dB at Medium, 60 dB at Low; a new strike brings it
+back). A ringing reed ends 70 dB (Medium) or 60 dB (Low) below its loudest,
+and 20 (Medium) or 10 (Low) reeds sound at once, against 32 at High, the
+quietest giving way first. A single note sounds the same; the top octaves'
+attack differs very slightly.
+
 ## Prior art and references
 
 ### The original instrument and its inventors

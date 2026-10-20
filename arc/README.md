@@ -411,6 +411,13 @@ tools/render-arc.mjs                node tools/render-arc.mjs → examples/arc/
   transformer is an EMF with a series resistance and inductance, with no
   carbon-microphone nonlinearity.
 
+## Quality
+
+The Quality setting (in the controls, for phones and older computers) changes
+nothing here: Medium and Low play exactly as High. Each lamp is one circuit
+that has to be stepped finely for its arc to sing at all, the number of lamps
+is yours to set (Number of arcs), and six of them cost little.
+
 ## Prior art and references
 
 **History and invention.**

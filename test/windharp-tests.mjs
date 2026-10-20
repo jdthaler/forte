@@ -589,6 +589,43 @@ test('presets use their own parameters, and each speaks without NaN', () => {
     assert.ok(pk > 0.005, `${pr.name}: ${pk}`);
   }
 });
+test('Quality: Medium and Low let fewer shut keys ring at once (8, 6) and retire a shut string sooner (about 90 and 70 dB down), never a held or pedalled one; a held string plays exactly as at High', () => {
+  const play = (quality, events, sec) => {
+    const e = new WindHarpEngine(FS, 1); e.setQuality(quality); e.setParams(P()); e.Uw = DEFAULTS.wind;
+    const n = Math.round(sec * FS), L = new Float64Array(n), bL = new Float32Array(128), bR = new Float32Array(128);
+    const ev = events.map(([t, ...r]) => [Math.round(t * FS), ...r]).sort((a, b) => a[0] - b[0]);
+    for (let s = 0, j = 0; s < n; s += 128) {
+      while (j < ev.length && ev[j][0] <= s) { const [, type, a, b] = ev[j++]; if (type === 'on') e.noteOn(a, b); else if (type === 'off') e.noteOff(a, b); else e.setSustain(a); }
+      e.process(bL, bR, 128);
+      for (let i = 0; i < 128 && s + i < n; i++) L[s + i] = bL[i];
+    }
+    return { L, e };
+  };
+  const live = (e) => e.voices.filter((v) => !v.fading && !v.dead);
+  // four keys let go, then four more held: Medium keeps all eight, Low lets two shut ones go
+  const four = [60, 64, 67, 72], ev = [...four.map((k) => [0, 'on', k, 0.8]), ...four.map((k) => [0.4, 'off', k]), ...four.map((k, i) => [0.5 + 0.06 * i, 'on', k + 2, 0.8])];
+  const res = [];
+  for (const [quality, n] of [['high', 8], ['medium', 8], ['low', 6]]) {
+    const { e } = play(quality, ev, 0.9);
+    assert.equal(live(e).length, n, `${quality}: ${live(e).length} keys`);
+    assert.equal(live(e).filter((v) => v.held).length, 4, `${quality}: every held key sounds`);
+    // ten held (or pedalled) keys: none is let go below 12
+    const held = play(quality, [[0, 'sus', true], ...Array.from({ length: 10 }, (_, i) => [0.05 * i, 'on', 55 + 3 * i, 0.8]), ...Array.from({ length: 5 }, (_, i) => [0.6, 'off', 55 + 3 * i])], 0.8);
+    assert.equal(live(held.e).length, 10, `${quality}: ${live(held.e).length} of 10 held and pedalled keys`);
+    res.push(`${quality} ${n}`);
+  }
+  // a released C5 retires sooner; a held one is the same to the last bit
+  const gone = {};
+  for (const quality of ['high', 'medium', 'low']) {
+    const { e } = play(quality, [[0, 'on', 72, 0.8], [1, 'off', 72]], 1.5);
+    let s = 1.5; for (; s < 12 && e.voiceCount(); s += 0.05) e.process(new Float32Array(2400), new Float32Array(2400), 2400);
+    gone[quality] = s;
+  }
+  assert.ok(gone.medium < 0.8 * gone.high && gone.low < gone.medium, `released C5 retires at ${Object.values(gone).map((x) => x.toFixed(2)).join(', ')} s`);
+  const hi = play('high', [[0, 'on', 72, 0.8]], 1).L, lo = play('low', [[0, 'on', 72, 0.8]], 1).L;
+  for (let i = 0; i < hi.length; i++) if (hi[i] !== lo[i]) throw new Error(`Low differs from High at sample ${i}`);
+  console.log(`        keys left: ${res.join(', ')}; released C5 gone at ${Object.values(gone).map((x) => x.toFixed(1)).join(' / ')} s`);
+});
 test('CPU: ten sounding keys across the compass (15 strings in their courses), locked at the reference wind, at 48 kHz in under 30 % of one core', () => {
   const e = new WindHarpEngine(FS);
   e.setParams(P());

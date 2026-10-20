@@ -22,6 +22,7 @@ constexpr double STEAL_T = 0.004;   // s: a stolen voice's amplitudes fade with 
 // each mode takes the bunch's kick, turned on by the rest of that sample (to second order).
 void CavityBellsEngine::Voice::kick(double q, double frac) {
   for (int j = 0; j < cav.count; j++) {
+    if (!use[j]) continue;
     const double psi = w[j] * frac, c = 1 - 0.5 * psi * psi, s = psi - (psi * psi * psi) / 6;
     const double kr = q * cav.modes[j].kick.real(), ki = q * cav.modes[j].kick.imag();
     ar[j] += kr * c - ki * s;
@@ -32,6 +33,21 @@ void CavityBellsEngine::Voice::kick(double q, double frac) {
 
 CavityBellsEngine::CavityBellsEngine(double fs) : Engine(fs) { voices.reserve(2 * kMaxVoices); }
 
+// The modes a bunch rings: all of them, or (with Quality's cut) those heard within `cut` of the
+// loudest, by the kick a bunch gives them and their larger probe.
+void CavityBellsEngine::choose(Voice &v) {
+  const Cavity &c = v.cav;
+  double top = 0;
+  for (int j = 0; j < c.count; j++) top = std::max(top, std::abs(c.modes[j].kick) * std::max(std::fabs(c.modes[j].x1), std::fabs(c.modes[j].xN)));
+  for (int j = 0; j < c.count; j++) v.use[j] = std::abs(c.modes[j].kick) * std::max(std::fabs(c.modes[j].x1), std::fabs(c.modes[j].xN)) >= v.cut * top;
+}
+
+int CavityBellsEngine::ringing() const {
+  int k = 0;
+  for (const Voice &v : voices) for (int j = 0; j < v.cav.count; j++) k += v.on[j];
+  return k;
+}
+
 void CavityBellsEngine::setParams(const double *p) {
   for (int i = 0; i < p::count; i++) P[i] = p[i];
   hasParams = true;
@@ -40,6 +56,7 @@ void CavityBellsEngine::setParams(const double *p) {
     const int count = v.cav.count, cells = v.cav.cells;
     v.cav = cavityOf(v.key, P.data());
     if (v.cav.cells != cells) { v.ar.fill(0); v.ai.fill(0); } // a new cavity: what rang has gone
+    choose(v);
     retune(v, count);
   }
 }
@@ -69,6 +86,12 @@ void CavityBellsEngine::noteOn(int key, double velocity) {
     v = &voices.back();
     v->key = key;
     v->cav = cavityOf(key, P.data());
+    // Quality: Medium and Low ring only the modes heard within 40 and 30 dB of the loudest, and let
+    // a mode go 30 and 50 dB sooner than High, the key 5 and 20 dB sooner
+    v->cut = pick(0.0, 1e-2, 3e-2);
+    v->modeSilent = pick(MODE_SILENT, 1e-10, 1e-8);
+    v->silent = pick(SILENT, 3e-8, 1e-6);
+    choose(*v);
     retune(*v, 0);
   }
   // a second bunch adds to what still rings, in or out of phase with it
@@ -77,7 +100,8 @@ void CavityBellsEngine::noteOn(int key, double velocity) {
   v->kick(velocity, 0);
   v->toNext = (P[p::spacing] * fs) / (v->cav.fpi * bendNow);
   focus = key;
-  // past kMaxVoices, the quietest voice whose key is up (or else the oldest) fades out
+  // past kMaxVoices (Quality: 16 at Medium, 8 at Low), the quietest voice whose key is up (or else
+  // the oldest) fades out
   int live = 0;
   Voice *victim = nullptr;
   for (Voice &x : voices) {
@@ -85,7 +109,7 @@ void CavityBellsEngine::noteOn(int key, double velocity) {
     live++;
     if (&x != v && !x.held && (!victim || x.peak < victim->peak)) victim = &x;
   }
-  if (live > kMaxVoices) {
+  if (live > pick(kMaxVoices, 16, 8)) {
     if (!victim) for (Voice &x : voices) if (!x.stolen && &x != v) { victim = &x; break; }
     if (victim) victim->stolen = true;
   }
@@ -139,6 +163,7 @@ void CavityBellsEngine::process(float *L, float *R, int n) {
     // each mode's turn and decay this block
     double energy = 0;
     for (int j = 0; j < c.count; j++) {
+      if (!v.use[j] && !v.on[j]) continue; // left out by Quality: never rung
       if (v.w[j] > 0.45 * TAU) { v.ar[j] = v.ai[j] = 0; v.on[j] = false; continue; } // past Nyquist
       const double sig = decayRate(c.modes[j], Qin, Qhom, v.damped ? Qrel : 0, v.quenched) * (v.w[j] / (TAU * c.modes[j].f / fs))
                          + (v.stolen ? 1 / STEAL_T : 0);
@@ -147,7 +172,7 @@ void CavityBellsEngine::process(float *L, float *R, int n) {
       v.ri[j] = g * std::sin(v.w[j]);
       const double e = v.ar[j] * v.ar[j] + v.ai[j] * v.ai[j];
       energy += e;
-      if (e < MODE_SILENT) { v.ar[j] = v.ai[j] = 0; v.on[j] = false; }
+      if (e < v.modeSilent) { v.ar[j] = v.ai[j] = 0; v.on[j] = false; }
     }
     // the train: while the key is held, a bunch every `spacing` periods of the π mode
     const double current = std::clamp(P[p::current] + v.press * (1 - P[p::current]), 0.0, 1.0);
@@ -178,7 +203,7 @@ void CavityBellsEngine::process(float *L, float *R, int n) {
       v.toNext -= i1 - i0;
       i0 = i1;
     }
-    if (!train && energy < (v.damped || v.stolen ? SILENT_DAMPED : SILENT)) v.charge = 0; // finished
+    if (!train && energy < (v.damped || v.stolen ? std::max(SILENT_DAMPED, v.silent) : v.silent)) v.charge = 0; // finished
   }
   if (focus >= 0 && (sinceReport += n) >= fs / REPORT_HZ) {
     sinceReport = 0;

@@ -424,6 +424,35 @@ test('hints: a higher rate exponent gives more touch response; stiffer foam is l
   for (const m of [60, 84]) assert.ok(lv(m, { padK: 0.1 }, 0.7) < lv(m, {}, 0.7) && lv(m, {}, 0.7) < lv(m, { padK: 5 }, 0.7), `${m}: pad stiffness`);
   assert.ok(lv(36, {}, 0.7) > Math.max(lv(36, { padK: 0.1 }, 0.7), lv(36, { padK: 5 }, 0.7)), 'C2 loudest near the default foam');
 });
+test('Quality: Medium and Low let fewer notes ring under the pedal; a note keeps its pitch and level', () => {
+  const play = (q, events, sec) => {
+    const e = new PianetEngine(FS); e.setQuality(q); e.setParams(P());
+    const n = Math.round(sec * FS), L = new Float32Array(n), bl = 128, bR = new Float32Array(bl), bL = new Float32Array(bl);
+    const ev = events.map(([t, ...r]) => [Math.round(t * FS), ...r]);
+    for (let s = 0, j = 0; s < n; s += bl) {
+      while (j < ev.length && ev[j][0] <= s) { const [, type, a, b] = ev[j++]; if (type === 'on') e.noteOn(a, b); else if (type === 'off') e.noteOff(a); else e.setSustain(a); }
+      e.process(bL, bR, bl); L.set(bL.subarray(0, Math.min(bl, n - s)), s);
+    }
+    return { L, e };
+  };
+  // a pedalled run of 30 keys, each let go: the pedal holds them, up to the voice limit
+  const run = [[0, 'sus', true]];
+  for (let i = 0; i < 30; i++) run.push([i * 0.06, 'on', 40 + i, 0.8], [i * 0.06 + 0.05, 'off', 40 + i]);
+  const level = {};
+  for (const [q, cap] of [['high', 40], ['medium', 16], ['low', 10]]) {
+    const { e } = play(q, run, 2);
+    assert.ok(e.voiceCount() <= cap && (q !== 'high' || e.voiceCount() === 30), `${q}: ${e.voiceCount()} voices`);
+    for (const key of [36, 60]) {
+      const { L } = play(q, [[0, 'on', key, 0.7]], 0.7), f0 = keyFreq(key), a = Math.round(0.12 * FS);
+      assert.ok(L.every(Number.isFinite), q);
+      let bf = f0, best = 0;
+      for (let c = -8; c <= 8; c += 0.25) { const f = f0 * 2 ** (c / 1200), g = tone(L, f, a, L.length); if (g > best) { best = g; bf = f; } }
+      assert.ok(Math.abs(cents(bf, f0)) < 3, `${q} ${key}: ${cents(bf, f0).toFixed(2)} ¢`);
+      level[q + key] = rms(L, 0, L.length);
+      assert.ok(Math.abs(dB(level[q + key], level['high' + key])) < 1.5, `${q} ${key}: ${dB(level[q + key], level['high' + key]).toFixed(2)} dB from High`);
+    }
+  }
+});
 test('CPU: 10 voices render well inside real time', () => {
   const e = new PianetEngine(FS); e.setParams(P());
   for (const k of [48, 52, 55, 59, 60, 64, 67, 71, 72, 76]) e.noteOn(k, 0.8);

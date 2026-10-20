@@ -480,6 +480,17 @@ tools/render-windharp.mjs                 node tools/render-windharp.mjs → exa
 - **Shutters** expose each station all at once as they pass; the flow round
   a shutter's edge is not modelled.
 
+## Quality
+
+The Quality setting (in the controls, for phones and older computers) keeps
+High as described here. A string whose shutter is open plays exactly as at
+High at every setting: its modes and wake stations are what make it lock onto
+a harmonic, so none are left out. What Medium and Low trim is the strings you
+have shut: they ring on until about 90 dB (Medium) or 70 dB (Low) down rather
+than 130, and with more than 8 (Medium) or 6 (Low) keys sounding the quietest
+shut one fades out. Held and pedalled keys are let go only past 12, as at
+High, so a full chord costs about what it does at High.
+
 ## Prior art and references
 
 **The instrument and its history.**

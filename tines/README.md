@@ -104,6 +104,17 @@ bar is a single mode. The grommet's resonance is set per register as a
 fraction of each note's frequency. The damper is a viscous felt at 60% of
 the tine length, and the hammer has no escapement mechanics.
 
+## Quality
+
+High plays every mode of every voice, twice oversampled, as above. Medium
+stops working out a mode once it has decayed 60 dB below the strongest one
+in its voice (a fresh strike brings it back), ends a ringing note 60 dB below
+its loudest, and lets 16 notes sound at once (40 at High): it sounds the
+same. Low does the same with 10 notes, and plays the keys below the top two
+octaves at the output rate instead of twice it, which changes a note's level
+by a few tenths of a dB at most; in a long pedalled run the quietest notes
+give way sooner.
+
 ## Prior art and references
 
 ### The original instrument and its inventor

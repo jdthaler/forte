@@ -521,6 +521,15 @@ tools/render-springs.mjs                 node tools/render-springs.mjs → examp
   and three springs far apart (3 % and more) make a chorus with no single
   pitch to land on.
 
+## Quality
+
+The Quality setting (for phones and older computers) trims what costs the most: the hundreds of
+modes each spring rings with, and how many keys ring at once. Medium lets a mode go once it has
+fallen 65 dB under the spring's loudest, and Low at 60 dB (High waits for 90 dB), and a strike does
+not start the modes it would leave that quiet; what goes is the faintest top of the hiss and the
+last of each tail. Medium lets 10 keys ring at once and Low 6 (High 16): with the pedal down, the
+quietest older spring fades out sooner.
+
 ## Prior art and references
 
 **History and invention.**

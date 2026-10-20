@@ -317,6 +317,15 @@ tools/render-quantum.mjs               node tools/render-quantum.mjs → example
 * The views ignore T₁ (the carpet is normalised to the surviving population)
   and are strobed.
 
+## Quality
+
+The Quality setting (for phones and older computers) trims the sum the engine does every sample,
+one term per pair of states. Medium drops each note's pairs 50 dB under its strongest and Low
+40 dB under (High keeps them down to 60 dB), lets 14 and 9 notes sound at once (High 24), and
+shares a smaller budget among all the notes, 1500 and 800 pairs (High 3000), the weakest dropped
+first. A single note sounds as it does at High; in a dense pedalled cluster of broad packets the
+older notes lose their faintest overtones and the oldest are quenched sooner.
+
 ## Prior art and references
 
 The physics this instrument plays is that of the work below. Every work cited

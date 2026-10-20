@@ -483,6 +483,15 @@ tools/render-stars.mjs               node tools/render-stars.mjs → examples/st
   coupling), with compressed growth times and a density-from-period
   relation that leaves the upper keys' stars unphysically dense.
 
+## Quality
+
+The Quality setting (for phones and older computers) trims what costs the most: each star's
+oscillating modes, and how many stars sound at once. Medium plays only the strongest 60 % of a
+star's modes and Low the strongest 40 %, raised together so the note keeps its level: what goes
+is the faint fringe of the envelope far from ν_max and most of the barely visible l = 3 modes, so
+the pattern sounds a little sparser, most of all in the red giants' dense mixed modes. Medium lets
+11 stars sound at once and Low 8 (High 14); past that the quietest older star fades out.
+
 ## Prior art and references
 
 **History and discovery.**

@@ -75,11 +75,14 @@ FORTE_EXPORT double springs_pulse_spectrum(double f, double tau) { return pulseS
 FORTE_EXPORT const float *springs_capture(SpringEngine *e) { return e->capture.data(); }
 
 // The tests' hooks, on the engine of a handle (forte_engine): its voices in order, and each one's
-// key, fading, dead, released, level, peak, age and whether it is its key's (byKey).
+// key, fading, dead, released, level, peak, age, whether it is its key's (byKey), and its springs'
+// modes, N in all and nAct of them sounding.
 FORTE_EXPORT int springs_voices(SpringEngine *e) { return e->nVoices; }
 FORTE_EXPORT void springs_voice(SpringEngine *e, int i, double *out) {
   const SpringEngine::Voice &v = *e->voices[i];
-  const double x[8] = {(double)v.key, (double)v.fading, (double)v.dead, (double)v.released, v.level, v.peak, v.age, (double)(e->byKey[v.key] == &v)};
-  for (int k = 0; k < 8; k++) out[k] = x[k];
+  int N = 0, nAct = 0;
+  for (int s = 0; s < v.nBanks; s++) { N += v.banks[s].N; nAct += v.banks[s].nAct; }
+  const double x[10] = {(double)v.key, (double)v.fading, (double)v.dead, (double)v.released, v.level, v.peak, v.age, (double)(e->byKey[v.key] == &v), (double)N, (double)nAct};
+  for (int k = 0; k < 10; k++) out[k] = x[k];
 }
 }

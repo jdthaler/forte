@@ -18,7 +18,7 @@ constexpr double KILL_SIGMA = 250;
 void PianoEngine::Voice::start(PianoEngine &eng, int key_, const VoiceData &d, int at_) {
   *this = Voice{};
   inUse = true;
-  k = eng.k; key = key_; version = d.version; N = d.n; at = at_;
+  k = eng.k; key = key_; version = d.version; N = eng.kept(d); at = at_;
   const int nu = d.unisons > 0 ? d.unisons : 1;
   const double una = nu > 1 ? (double)nu / (nu - 1) : 1;
   double *base = eng.arena.data() + (size_t)at * ARRAYS;
@@ -31,7 +31,7 @@ void PianoEngine::Voice::start(PianoEngine &eng, int key_, const VoiceData &d, i
   for (int s = 0; s < 4; s++) {
     for (int u = 0; u < nu; u++) {
       run[s][u] = at2;
-      for (int j = 0; j < N; j++) if (seg(j) == s && d.uni[j] == u) perm[at2++] = j;
+      for (int j = 0; j < d.n; j++) if (seg(j) == s && d.uni[j] == u && eng.keeps(d, j)) perm[at2++] = j;
     }
     run[s][nu] = at2;
     ends[s] = at2;
@@ -303,7 +303,7 @@ void PianoEngine::Voice::render(float *L, float *R, int n, PianoEngine &eng) {
     return;
   }
   if (!hammerOn) {
-    const double thr = damped ? 1e-4 : 1e-5;
+    const double thr = damped ? 1e-4 : eng.pick(1e-5, 2e-5, 5e-5); // (Quality: a fading voice goes sooner)
     quiet = pk < thr ? quiet + 1 : 0;
     if (quiet > 30) dead = true;
   }
@@ -449,7 +449,7 @@ void PianoEngine::strikeKey(int key, double velocity, const VoiceData &d) {
     if (d.n > MAX_N || nVoices >= POOL) return;
     Voice *slot = nullptr;
     for (int i = 0; i < POOL && !slot; i++) { Voice &u = pool[(nextSlot + i) % POOL]; if (!u.inUse) { slot = &u; nextSlot = (nextSlot + i + 1) % POOL; } }
-    const int at = slot ? allocate(d.n) : -1;
+    const int at = slot ? allocate(kept(d)) : -1;
     if (at < 0) return; // every voice or the whole arena busy (beyond anything the budget lets happen)
     v = slot;
     v->start(*this, key, d, at);
@@ -483,6 +483,14 @@ void PianoEngine::allNotesOff() {
   for (int i = 0; i < nVoices; i++) voices[i]->kill();
 }
 
+// The modes of d a voice struck now runs (all of them at High).
+int PianoEngine::kept(const VoiceData &d) const {
+  if (quality == Quality::high) return d.n;
+  int n = 0;
+  for (int j = 0; j < d.n; j++) n += keeps(d, j);
+  return n;
+}
+
 int PianoEngine::modeCount() const {
   int n = 0;
   for (int i = 0; i < nVoices; i++) n += voices[i]->N;
@@ -496,7 +504,8 @@ void PianoEngine::enforceBudget(const Voice *keep) {
   double total = 0;
   for (int i = 0; i < nVoices; i++) if (!voices[i]->killing) total += voices[i]->N;
   overBudget = false;
-  while (total > maxModes) {
+  const double most = maxModes * pick(1.0, 0.6, 0.35); // (Quality: a smaller budget)
+  while (total > most) {
     Voice *victim = nullptr;
     double score = INFINITY;
     for (int i = 0; i < nVoices; i++) {
@@ -552,10 +561,11 @@ void PianoEngine::process(float *L, float *R, int n) {
 // built in place a block. A new damper strength marks every group stale.
 void PianoEngine::symFetch() {
   constexpr uint64_t STALE = ~uint64_t(0);
-  if (P[p::damper] != symDamperSigma) {
-    symDamperSigma = P[p::damper];
+  if (P[p::damper] != symDamperSigma || quality != symQuality) {
+    symDamperSigma = P[p::damper]; symQuality = quality;
     for (int key = KEY_LO; key <= KEY_HI; key++) if (symVer[key]) symVer[key] = STALE;
   }
+  if (quality == Quality::low) return; // (Quality: no sympathetic strings; symRun lets them fade)
   for (int n = 0, tries = 0; n < 8 && tries < KEY_HI - KEY_LO + 1; tries++) {
     const int key = KEY_LO + symNext;
     symNext = (symNext + 1) % (KEY_HI - KEY_LO + 1);
@@ -585,7 +595,7 @@ void PianoEngine::symSet(int key, const VoiceData &d, uint64_t ver) {
   int m = 0;
   const double fmax = std::min(SYM_FMAX, 0.45 * fs);
   for (int j = 0; j < d.n && m < MAX_N; j++) if (d.uni[j] == 0 && (d.cv[j] != 0 || d.ch[j] != 0) && d.freq[j] < fmax) pick[m++] = j;
-  const int n = std::min(m, SYM_MODES);
+  const int n = std::min(m, symModes()); // (Quality: fewer at Medium)
   std::partial_sort(pick.begin(), pick.begin() + n, pick.begin() + m, [&](int a, int b) { return d.freq[a] < d.freq[b]; });
   const double sq = std::sqrt((double)std::max(1, d.unisons)), oV = d.outV * OUT_SCALE, oH = d.outH * OUT_SCALE;
   std::array<SympatheticMode, SYM_MODES> modes;
@@ -624,7 +634,14 @@ void PianoEngine::symRun(float *L, float *R, int n, const double *GV, const doub
       sym.route(key, t, sym.horizontal(key) ? 4 : 2);
     }
   }
-  for (int key = KEY_LO; key <= KEY_HI; key++) sym.damp(key, !(sustain || down[key] || !symDamper[key]));
+  // at Low the groups are off: undriven, their dampers down, what still rings fades, and then they rest
+  const bool off = quality == Quality::low;
+  if (off) {
+    bool still = true;
+    for (int key = KEY_LO; key <= KEY_HI && still; key++) still = sym.silent(key);
+    if (still) return;
+  }
+  for (int key = KEY_LO; key <= KEY_HI; key++) sym.damp(key, off || !(sustain || down[key] || !symDamper[key]));
   bool any = false;
   symStamp++;
   std::fill(tV.begin(), tV.begin() + n, 0.0); std::fill(tH.begin(), tH.begin() + n, 0.0);
@@ -644,7 +661,7 @@ void PianoEngine::symRun(float *L, float *R, int n, const double *GV, const doub
   }
   for (auto &b : bus) std::fill(b.begin(), b.begin() + n, 0.0);
   double *const buses[4] = {bus[0].data(), bus[1].data(), bus[2].data(), bus[3].data()};
-  sym.run(kap, tV.data(), tH.data(), any, n, buses);
+  sym.run(off ? 0 : kap, tV.data(), tH.data(), any, n, buses);
   for (int s = 0; s < n; s++) {
     L[s] += (float)(GV[s] * bus[0][s] + GH[s] * bus[2][s]);
     R[s] += (float)(GV[s] * bus[1][s] + GH[s] * bus[3][s]);

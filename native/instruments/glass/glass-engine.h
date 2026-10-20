@@ -69,10 +69,11 @@ class ArmonicaEngine : public Engine {
     uint64_t version = 0; // of the bowl it was built from
     Bowl b;
     int N = 0;
+    int cap = MODES; // the families it plays (the Quality when it started: build)
     std::array<double, MODES> qc{}, qc1{}, qs{}, qs1{};
     std::array<double, MODES> a1c{}, a2c{}, bc{}, a1s{}, a2s{}, bs{}, buc{}, bus{};
-    std::array<double, MODES> nd{}, cpsi{}, spsi{}, g{}, gain{}, cmL{}, smL{}, cmR{}, smR{};
-    std::array<double, MODES> cx{}, sx{}, dc{}, ds{}, bet{}, bes{};
+    std::array<double, MODES> nd{}, cpsi{}, spsi{}, g{}, gain{}, cmL{}, smL{}, cmR{}, smR{}, gcL{}, gsL{}, gcR{}, gsR{};
+    std::array<double, MODES> cx{}, sx{}, dc{}, ds{}, bet{}, bes{}, det{};
     std::array<int, MODES> n{};
   };
 

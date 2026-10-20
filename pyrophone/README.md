@@ -299,6 +299,14 @@ tools/render-pyrophone.mjs                  node tools/render-pyrophone.mjs → 
   equalised across the keyboard. The radiation is two point sources with no
   diffraction around the tube.
 
+## Quality
+
+The Quality setting (in the controls, for phones and older computers) changes
+nothing here: Medium and Low play exactly as High. A tube sings through all of
+its modes and its flame together, so none can go without changing the note,
+a released tube already fades out as soon as it stops singing, and two dozen
+tubes cost little.
+
 ## Prior art and references
 
 The instrument is Kastner's, the singing tube was found and explained over the

@@ -55,8 +55,9 @@ void StarEngine::Voice::start(StarEngine &eng, int key_, const Star &d, uint64_t
   for (int i = 0; i < N; i++) {
     F0[i] = d.f[i]; L[i] = d.l[i]; M[i] = d.m[i]; WE[i] = d.wEnv[i]; WC[i] = d.wCore[i]; Pw[i] = d.p[i]; GAM[i] = d.gamma[i]; Z[i] = d.zeta[i]; AS[i] = d.asat[i];
     W[i] = C[i] = S[i] = RHO[i] = A1[i] = A2[i] = Y1[i] = Y2[i] = G[i] = GT[i] = AMP[i] = ETA[i] = 0;
-    act[i] = 1;
   }
+  trim(eng);
+  for (int i = 0; i < N; i++) act[i] = on[i];
   const double pp = 0.6 * std::max(-1.0, std::min(1.0, 2.0 * (key - PAN_LO) / (PAN_HI - PAN_LO) - 1)), a = ((pp + 1) * pi) / 4;
   gl = fd::cos(a); gr = fd::sin(a);
   vel = 0.7; pressure = 1; held = false; age = 0; fade = 1; fading = false; dead = false;
@@ -67,10 +68,32 @@ void StarEngine::Voice::start(StarEngine &eng, int key_, const Star &d, uint64_t
     for (int i = 0; i < N; i++) {
       const double u = 1e-3 * AS[i] * fd::cos(2 * pi * seed());
       const double v = 1e-3 * AS[i] * fd::sin(2 * pi * seed());
-      addC(i, u, v);
+      if (on[i]) addC(i, u, v);
     }
   }
   inUse = true;
+}
+
+// Quality: Medium and Low play only the strongest 60 % and 40 % of the modes (by the power the
+// observer hears from each on average over inclinations: the weak outer modes of the envelope and
+// the faint l = 3 go first), lifted together by the power the others had, so the note keeps its level.
+void StarEngine::Voice::trim(StarEngine &eng) {
+  const int keep = eng.pick(N, (int)std::ceil(0.6 * N), (int)std::ceil(0.4 * N));
+  lift = 1; nOn = N;
+  std::fill(on.begin(), on.begin() + N, 1);
+  if (keep >= N) return;
+  double all = 0, kept = 0;
+  for (int i = 0; i < N; i++) { eng.rank[i] = (dscuti ? AS[i] * AS[i] : Pw[i]) * VIS[L[i]] / (2 * L[i] + 1); all += eng.rank[i]; }
+  double *r = eng.rank.data();
+  std::nth_element(r, r + (N - keep), r + N);
+  const double floor = r[N - keep];
+  nOn = 0;
+  for (int i = 0; i < N; i++) {
+    const double w = (dscuti ? AS[i] * AS[i] : Pw[i]) * VIS[L[i]] / (2 * L[i] + 1);
+    on[i] = w >= floor && nOn < keep;
+    if (on[i]) { nOn++; kept += w; }
+  }
+  if (kept > 0 && all > kept) lift = std::sqrt(all / kept);
 }
 
 void StarEngine::Voice::compact() { int k = 0; for (int r = 0; r < N; r++) if (act[r]) idx[k++] = r; nAct = k; }
@@ -96,7 +119,7 @@ void StarEngine::Voice::coeffs(const StarEngine &eng) {
 
 // what the observer sees of each m component: √(V_l² E_lm(i)), and the voicing
 void StarEngine::Voice::gains(const StarEngine &eng, bool now) {
-  const double g = OUT * voicing(key);
+  const double g = OUT * voicing(key) * lift;
   for (int i = 0; i < N; i++) { GT[i] = g * eng.gtab[L[i] * 7 + M[i] + 3]; if (now) G[i] = GT[i]; }
 }
 
@@ -116,7 +139,7 @@ double StarEngine::Voice::amp2(int i) const {
 // star, random and seeded; each mode pushed by its spherical harmonic there, in sine phase).
 void StarEngine::Voice::press(const StarEngine &eng, double velocity) {
   vel = velocity; held = true; fading = false; fade = 1; dead = false; age = 0;
-  if (nAct < N) { for (int i = 0; i < N; i++) act[i] = 1; compact(); }
+  if (nAct < nOn) { for (int i = 0; i < N; i++) act[i] = on[i]; compact(); }
   const double F = eng.S[kFlare] * velocity * (dscuti ? 0.3 : 1);
   if (!(F > 0)) return;
   const double x = 2 * seed() - 1, s = std::sqrt(1 - x * x);
@@ -404,7 +427,7 @@ void StarEngine::startNote(int key, double velocity, const Star &d, uint64_t id)
   focus = v; postT = POST_EVERY; // post its amplitudes soon
   int live = 0;
   for (int i = 0; i < nVoices; i++) if (!voices[i]->fading) live++;
-  if (live > MAX_VOICES) {
+  if (live > pick(MAX_VOICES, 11, 8)) { // Quality: fewer stars at once at Medium and Low
     Voice *victim = nullptr;
     double score = INFINITY;
     for (int i = 0; i < nVoices; i++) {

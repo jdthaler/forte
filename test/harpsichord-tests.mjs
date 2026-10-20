@@ -407,6 +407,63 @@ test('sympathetic strings: a held key\'s strings ring along where their partials
   assert.ok(Number.isFinite(loud.peak) && loud.peak < 2.5, `ten keys held at 100 %: peak ${loud.peak}`);
   console.log(`        (c5 struck: held C4's 4′ ${(c4.E(60, 'four') / cs4.E(61, 'four')).toFixed(0)} × held C♯4's; ${loud.running} partials ring with ten keys held)`);
 });
+test('Quality: Medium and Low sound fewer keys (16 and 10 held), make strings with fewer partials (none above 7 and 5 kHz but the first 16, none past the 64th and 40th), give the sympathetic strings 3 partials and none; a note keeps its pitch and level', () => {
+  const fTop = { high: Infinity, medium: 7000, low: 5000 }, nTop = { high: Infinity, medium: 64, low: 40 }, hard = { high: 24, medium: 16, low: 10 };
+  const p = P({ room: 0 }), res = {};
+  // 20 keys held across the compass, plucked one after another
+  const held = Array.from({ length: 20 }, (_, i) => 29 + 3 * i);
+  for (const q of ['high', 'medium', 'low']) {
+    const e = new HarpsichordEngine(FS);
+    e.setQuality(q); e.setParams(p);
+    const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
+    let live = 0;
+    for (const k of held) {
+      e.noteOn(k, 0.7);
+      for (let b = 0; b < 8; b++) {
+        e.process(L, R, bl);
+        for (let i = 0; i < bl; i++) assert.ok(Number.isFinite(L[i]) && Number.isFinite(R[i]), `${q}: not finite`);
+      }
+      live = Math.max(live, e.voices.filter((v) => !v.killing).length);
+    }
+    assert.ok(live <= hard[q], `${q}: ${live} keys sounding`);
+    let strings = 0, partials = 0;
+    for (const v of e.voices) for (const c of ['front', 'back']) {
+      const st = v.strings[c];
+      if (!st) continue;
+      const all = stringPartials(stringDesign(v.key, c, p), p).partials;
+      let want = 0;
+      while (want < all.length && want < nTop[q] && (all[want].f < fTop[q] || want < 16)) want++;
+      assert.equal(st.partials, want, `${q}: key ${v.key}'s ${c} 8′ runs ${st.partials} of ${all.length} partials`);
+      strings++; partials += st.partials;
+    }
+    const size = Math.max(...held.map((k) => e.sympathetic(k, 'back').size));
+    res[q] = { live, partials: partials / strings, size, running: e.sympatheticRunning() };
+    e.destroy();
+  }
+  assert.ok(res.high.size === 16 && res.medium.size === 3 && res.low.size === 0 && res.low.running === 0, `sympathetic strings: ${res.high.size}, ${res.medium.size}, ${res.low.size} partials`);
+  // single notes: the same pitch (a fraction of a cent) and level (within 1.5 dB: where the plectrum
+  // lets go depends a little on every partial the string has)
+  const dB = [], dc = [];
+  for (const key of [41, 53, 65, 77]) {
+    const x = {};
+    for (const q of ['high', 'medium', 'low']) {
+      const e = new HarpsichordEngine(FS);
+      e.setQuality(q); e.setParams(p);
+      const n = FS, out = new Float64Array(n), bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
+      e.noteOn(key, 0.7);
+      for (let s = 0; s < n; s += bl) { e.process(L, R, bl); for (let i = 0; i < bl && s + i < n; i++) out[s + i] = L[i] + R[i]; }
+      e.destroy();
+      const f0 = keyPitch(key, p);
+      x[q] = { rms: rms(out, 0, n), f: peak(out, 0.99 * f0, 1.01 * f0, 0.3 * FS, n) };
+    }
+    for (const q of ['medium', 'low']) {
+      dB.push(20 * Math.log10(x[q].rms / x.high.rms)); dc.push(cents(x[q].f, x.high.f));
+      assert.ok(Math.abs(dB.at(-1)) < 1.5, `key ${key}, ${q}: ${dB.at(-1).toFixed(2)} dB`);
+      assert.ok(Math.abs(dc.at(-1)) < 0.2, `key ${key}, ${q}: ${dc.at(-1).toFixed(3)} ¢`);
+    }
+  }
+  console.log(`        (20 keys held: ${res.high.live} → ${res.medium.live} → ${res.low.live} sounding, ${res.high.partials.toFixed(0)} → ${res.medium.partials.toFixed(0)} → ${res.low.partials.toFixed(0)} partials a string; notes within ${Math.max(...dB.map(Math.abs)).toFixed(2)} dB, ${Math.max(...dc.map(Math.abs)).toFixed(3)} ¢)`);
+});
 test('stability: seeded random combinations of extreme settings at 44.1 and 48 kHz, changed mid-note: no NaN, bounded, silent after Panic', () => {
   let seed = 12345;
   const rnd = () => { seed = (seed * 1103515245 + 12345) >>> 0; return seed / 4294967296; };

@@ -58,22 +58,23 @@ class StarEngine : public Engine {
   bool ready(int key) { return hasParams && key >= KEY_LO && key <= KEY_HI && (bool)data.get(key, version); }
 
   struct Voice {
-    int key = 0, N = 0, nAct = 0;
+    int key = 0, N = 0, nAct = 0, nOn = 0;
     uint64_t id = 0; // the star's: its version (or a warm-up star's)
     uint32_t gen = 0; // and the version's generation (for the page: which star it is)
     bool dscuti = false, inUse = false;
     double K = K0;
     std::array<double, MAX_MODES> F0{}, WE{}, WC{}, Pw{}, GAM{}, Z{}, AS{};
     std::array<int, MAX_MODES> L{}, M{}, idx{};
-    std::array<uint8_t, MAX_MODES> act{};
+    std::array<uint8_t, MAX_MODES> act{}, on{}; // sounding now; played at all (the Quality's trim)
     std::array<double, MAX_MODES> W{}, C{}, S{}, RHO{}, A1{}, A2{}, Y1{}, Y2{}, G{}, GT{}, AMP{}, ETA{};
-    double gl = 0, gr = 0;
+    double gl = 0, gr = 0, lift = 1; // lift: the played modes' gain, for the power of those trimmed
     double vel = 0.7, pressure = 1, age = 0, fade = 1, peak = 1e-12, level = 0;
     bool held = false, fading = false, dead = false;
     Rng seed{1};
 
     void start(StarEngine &eng, int key, const Star &d, uint64_t id);
     void compact();
+    void trim(StarEngine &eng);
     void freqs(const StarEngine &eng);
     void coeffs(const StarEngine &eng);
     void gains(const StarEngine &eng, bool now);
@@ -113,6 +114,7 @@ class StarEngine : public Engine {
   std::array<Voice, POOL> pool{};
   std::array<float, MAX_MODES> ampOut{};
   std::array<double, BLOCK_MAX> buf{}; // a voice's block, before its pan
+  std::array<double, MAX_MODES> rank{}; // scratch: the modes' powers, for the Quality's trim
 
   // each key's star, built off the audio thread for the kind, mass, speed-up and tuning (each pitch
   // class's ratio) of a version

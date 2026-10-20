@@ -47,6 +47,11 @@ class BowedString {
   // Displacement along the string at out.size() points, bridge to nut.
   void shape(float *out, int nP) const;
 
+  // Medium and Low (the engine sets it): the four fractional reads take their Catmull–Rom weights,
+  // worked out once whenever a delay is set (design, bend), instead of from the delay every
+  // sample. The same reads and the same string, rounded differently; High keeps tap() to the bit.
+  bool fast = false;
+
   // the state (the engine, the views' messages and the test hooks read it)
   const int key, os;
   const double fs, fsBase;
@@ -67,6 +72,10 @@ class BowedString {
   double gb = 0, pb = 0, gn = 0, pn = 0, T0 = 0, wheel = 1, bent = 1;
 
  private:
+  struct Frac { int i = 1; double w0 = 0, w1 = 1, w2 = 0, w3 = 0; }; // a delay's whole samples and its four weights
+  Frac kfb, knl, ktb, ktn;
+  static Frac frac(double d);
+  void weigh() { kfb = frac(Dfb); knl = frac(Dnl); ktb = frac(Dtb); ktn = frac(Dtn); }
   double bridge(double V) {
     const double a = ob;
     w = (w + 1) & mask;

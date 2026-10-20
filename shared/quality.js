@@ -31,7 +31,7 @@ export function setQuality(q) {
   for (const f of listeners) f(level);
 }
 // another tab changed it: this one follows
-addEventListener?.('storage', (e) => { if (e.key === KEY) setQuality(read()); });
+globalThis.addEventListener?.('storage', (e) => { if (e.key === KEY) setQuality(read()); });
 
 // The engine's node: its quality now and on every change, and its CPU reports watched. Over budget
 // in three of the last six reports (about 1.5 s): the worst block took longer than the block lasts,

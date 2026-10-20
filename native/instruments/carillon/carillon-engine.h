@@ -68,6 +68,7 @@ class CarillonEngine : public Engine {
     double A1[RES_MAX], A2[RES_MAX], Bc[RES_MAX], PHI[RES_MAX], B[RES_MAX], G[RES_MAX], GT[RES_MAX];
     double Y1[RES_MAX], Y2[RES_MAX], W[RES_MAX], SIG[RES_MAX], AMP[RES_MAX], ANG[RES_MAX], HRE[RES_MAX], HIM[RES_MAX];
     double gl = 0, gr = 0, eps = 0, age = 0, fade = 1, peak = 0, level = 0;
+    double fMax = 0, floor = 0; // Quality's, when the bell was hung: its highest mode (Hz), and where a mode is pruned (× the loudest)
     bool fading = false, dead = false, released = false;
     Clapper clap{};
     double Cm = 0, hm = 0, fd0 = 0, fV0 = 0;

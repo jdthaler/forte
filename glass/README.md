@@ -310,6 +310,17 @@ split, loss or water change. Ten bowls take about 7 % of a core in C++.
 * **Treadle** speed variation is a once-per-turn sinusoid smoothed by a
   first-order flywheel.
 
+## Quality
+
+The Quality setting (in the controls, for phones and older computers) keeps
+High as described here. Medium plays each bowl's families up to (4,0) and Low
+up to (3,0): the (2,0) note and its (3,0) shimmer, which is also where a bowl
+squeals when pressed hard, stay; the higher families, 25–60 dB under the note,
+go. Both solve the finger's friction with fewer divisions, to the same
+answer. A bowl you are touching always sounds; of the bowls ringing on after
+you let go, Medium keeps 24 and Low 16 (High 36), and they stop a little
+sooner as they fade.
+
 ## Prior art and references
 
 The instrument is Franklin's, built on the musical glasses before it; the

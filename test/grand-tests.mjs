@@ -474,6 +474,70 @@ test('sympathetic strings: an undamped key rings along where its partials meet t
   }
   console.log(`        (C3 struck: held C4's group ${(c4.E(60) / cs4.E(61)).toFixed(0)} × held C♯4's, ${(board.E(60) / c4.E(60)).toFixed(0)} × more on a soundboard; ${ped.running} partials ring with the pedal down)`);
 });
+test('Quality: Medium and Low strike voices with fewer partials (none above 6 and 4.5 kHz but the first 8, none from the 80th and 56th), hold a lower ceiling under the page\'s budget, give the sympathetic strings 3 partials and none; a note keeps its pitch and level', () => {
+  const fTop = { high: Infinity, medium: 6000, low: 4500 }, nTop = { high: Infinity, medium: 80, low: 56 };
+  const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl);
+  const engine = (quality) => {
+    const e = new GrandEngine(FS);
+    e.setQuality(quality); e.setParams(P());
+    for (let b = 0; b < 100; b++) e.process(L, R, bl); // (every key's group made, one a block)
+    return e;
+  };
+  // the partials a strike sets going: a prefix of each polarisation's, partial by partial
+  const want = (d, q) => {
+    const top = (i0, i1) => { let i = i0; while (i < i1 && d.idx[i] < nTop[q] && (d.freq[i] < fTop[q] || d.idx[i] <= 8)) i += d.ns; return i - i0; };
+    return top(0, d.nV) + top(d.nV, d.n);
+  };
+  const chord = [28, 31, 36, 40, 43, 48, 52, 55, 60, 64, 67, 72, 76, 79, 84];
+  const res = {};
+  for (const q of ['high', 'medium', 'low']) {
+    const e = engine(q);
+    e.setSustain(true);
+    let modes = 0, full = 0;
+    for (const k of chord) {
+      const v = e.noteOn(k, 0.9);
+      assert.equal(v.active, want(v.data, q), `${q}: key ${k} sets ${v.active} of ${v.N} modes going`);
+      modes += v.active; full += v.N;
+    }
+    for (let b = 0; b < Math.round((0.5 * FS) / bl); b++) {
+      e.process(L, R, bl);
+      for (let i = 0; i < bl; i++) assert.ok(Number.isFinite(L[i]) && Number.isFinite(R[i]), `${q}: not finite`);
+    }
+    const size = Math.max(...chord.map((k) => e.sympathetic(k).size));
+    res[q] = { modes, full, sym: e.sympatheticRunning(), size };
+    // the ceiling: Low holds 1400 oscillators, and a page's budget below it still rules
+    if (q === 'low') {
+      for (let k = 30; k <= 90; k += 2) e.noteOn(k, 0.9);
+      let total = 0; for (const u of e.voices) if (!u.killing) total += u.active;
+      assert.ok(total <= 1400, `Low: ${total} oscillators sounding`);
+      e.handle({ type: 'budget', modes: 1000 });
+      total = 0; for (const u of e.voices) if (!u.killing) total += u.active;
+      assert.ok(total <= 1000, `Low: ${total} oscillators after the page's budget fell to 1000`);
+    }
+    e.destroy();
+  }
+  assert.ok(res.medium.modes < 0.85 * res.high.modes && res.low.modes < 0.7 * res.high.modes, `modes ${res.high.modes}, ${res.medium.modes}, ${res.low.modes}`);
+  assert.ok(res.high.size === 16 && res.medium.size === 3 && res.low.size === 0 && res.high.sym > 600 && res.medium.sym <= 3 * 88 && res.low.sym === 0,
+    `sympathetic strings: ${res.high.size}, ${res.medium.size}, ${res.low.size} partials, ${res.high.sym}, ${res.medium.sym}, ${res.low.sym} running`);
+  // single notes: the same pitch (a fraction of a cent) and level (within 1 dB)
+  const dB = [], dc = [];
+  for (const key of [28, 52, 76]) {
+    const x = {};
+    for (const q of ['high', 'medium', 'low']) {
+      const e = engine(q), n = FS, out = new Float64Array(n);
+      e.noteOn(key, 0.9);
+      for (let s = 0; s < n; s += bl) { e.process(L, R, bl); for (let i = 0; i < bl && s + i < n; i++) out[s + i] = L[i] + R[i]; }
+      e.destroy();
+      x[q] = { rms: Math.sqrt(out.reduce((a, v) => a + v * v, 0) / n), f: peakFreq(out, keyFreq(key), 4800, n) };
+    }
+    for (const q of ['medium', 'low']) {
+      dB.push(20 * Math.log10(x[q].rms / x.high.rms)); dc.push(cents(x[q].f, x.high.f));
+      assert.ok(Math.abs(dB.at(-1)) < 1, `key ${key}, ${q}: ${dB.at(-1).toFixed(2)} dB`);
+      assert.ok(Math.abs(dc.at(-1)) < 0.1, `key ${key}, ${q}: ${dc.at(-1).toFixed(3)} ¢`);
+    }
+  }
+  console.log(`        (pedalled chord: ${res.high.modes} → ${res.medium.modes} → ${res.low.modes} oscillators, ${res.high.sym} → ${res.medium.sym} → ${res.low.sym} sympathetic partials; notes within ${Math.max(...dB.map(Math.abs)).toFixed(2)} dB, ${Math.max(...dc.map(Math.abs)).toFixed(3)} ¢)`);
+});
 test('stability: every parameter at its min and max gives finite, bounded output', () => {
   const ps = GROUPS.flatMap((g) => g.params);
   const cases = [];

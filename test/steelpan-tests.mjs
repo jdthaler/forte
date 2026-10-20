@@ -25,9 +25,10 @@ const cents = (a, b) => 1200 * Math.log2(a / b);
 const dB = (x) => 20 * Math.log10(Math.max(x, 1e-12));
 
 // Play events [[t, 'on'|'off'|'pressure'|'sustain', key, value]] through an engine in 128-sample
-// blocks; `watch(e, t)` is called after each block.
-function play(params, sec, events, { fs = FS, watch } = {}) {
+// blocks, at a Quality (High unless given); `watch(e, t)` is called after each block.
+function play(params, sec, events, { fs = FS, watch, quality } = {}) {
   const e = new SteelPanEngine(fs);
+  if (quality) e.setQuality(quality);
   e.setParams(params);
   const n = Math.round(sec * fs), L = new Float32Array(n), R = new Float32Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
   const ev = [...events].sort((a, b) => a[0] - b[0]);
@@ -283,6 +284,32 @@ test('silence after Panic, and the notes go to sleep once rung out', () => {
   assert.ok(a.every((v) => v === 0) && e.voiceCount() === 0 && L.length);
   const short = play(P({ t60: 0.2 }), 3, [[0, 'on', 72, 0.5], [0.05, 'off', 72]]).e;
   assert.ok(!short.active(72) && !short.active(79), 'asleep');
+});
+test('Quality: a stroke rings at most 8 modes at Medium and 6 at Low (all 12 at High), and notes go to sleep sooner; a note keeps its pitch and level', () => {
+  const keys = Array.from({ length: 24 }, (_, i) => KEY_LO + ((i * 7) % (KEY_HI - KEY_LO))), work = {};
+  for (const [quality, most] of [['high', 12], ['medium', 8], ['low', 6]]) {
+    let w = 0, top = 0;
+    const { L } = play(P(), 4, keys.map((k, i) => [0.1 * i, 'on', k, 0.8]), { quality, watch: (e) => { for (let k = 21; k <= 108; k++) { const m = e.modes(k); w += m; top = Math.max(top, m); } } });
+    assert.ok(L.every(Number.isFinite), `${quality}: NaN`);
+    assert.ok(top <= most && (quality !== 'high' || top === 12), `${quality}: ${top} modes`);
+    work[quality] = w;
+  }
+  console.log(`         modes × time at Medium ${((100 * work.medium) / work.high).toFixed(0)} %, Low ${((100 * work.low) / work.high).toFixed(0)} % of High's`);
+  assert.ok(work.medium < 0.8 * work.high && work.low < 0.6 * work.high, JSON.stringify(work));
+  const line = (x, f, a, b) => { // the strongest line within 1 % of f (golden section)
+    let lo = f * 0.99, hi = f * 1.01;
+    for (let i = 0; i < 50; i++) { const m1 = hi - 0.618 * (hi - lo), m2 = lo + 0.618 * (hi - lo); if (tone(x, m1, a, b) > tone(x, m2, a, b)) hi = m2; else lo = m1; }
+    return (lo + hi) / 2;
+  };
+  for (const key of [48, 62, 79]) {
+    const f = keyFreq(key), at = (quality) => play(P(LIN), 1, [[0, 'on', key, 0.8]], { quality }).L, hi = at('high'), a = 0.1 * FS, b = FS;
+    for (const quality of ['medium', 'low']) {
+      const x = at(quality), d = dB(rms(x, 0, x.length) / rms(hi, 0, hi.length)), c = cents(line(x, f, a, b), line(hi, f, a, b));
+      assert.ok(Math.abs(d) < 1.5 && Math.abs(c) < 0.1, `key ${key} at ${quality}: ${d.toFixed(2)} dB, ${c.toFixed(3)} ¢`);
+    }
+  }
+  const awake = (quality) => { let t = 0; play(P({ letRing: true }), 8, [[0, 'on', 60, 0.8]], { quality, watch: (e, s) => { if (e.active(60)) t = s; } }); return t; };
+  assert.ok(awake('low') < awake('high'), 'a note goes to sleep sooner at Low');
 });
 test('CPU: 10 notes and their neighbours render faster than 5× real time', () => {
   const keys = [48, 52, 55, 60, 64, 67, 71, 72, 76, 79], sec = 2;

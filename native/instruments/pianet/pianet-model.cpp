@@ -143,7 +143,7 @@ PlateRail::PlateRail(double fs) : d(fdlibm::exp(-1 / (fs * ES.R * ES.Cbus))), Q(
 
 // ---- the mechanism of one key ------------------------------------------------------------------
 
-Pluck::Pluck(const KeyReed &r, const PadParams &P, double fs_, double bend_) : kr(&r), N(r.N), k(1 / fs_), fs(fs_) {
+Pluck::Pluck(const KeyReed &r, const PadParams &P, double fs_, double bend_, int nMax) : kr(&r), N(std::min(r.N, nMax)), k(1 / fs_), fs(fs_) {
   coeffs(bend_);
   setPad(P);
   // at rest: the pad presses the reed with the preload, bonded over the full disc
