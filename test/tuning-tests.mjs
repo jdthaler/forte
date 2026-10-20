@@ -164,6 +164,7 @@ const OWN = {
   stars: 'each key\'s star is solved for its pitch, so its large separation moves about 80 ¢ a semitone',
   quantum: 'the tempo lock keeps the revival time, which spaces the comb, on the beat',
   blackhole: 'at the default spin a note rings for a few milliseconds, all over before the spectrum starts',
+  whistlers: 'a falling tone: its spectrum spreads below the note, by how much depending on the line, so its own suite measures the nose at the onset',
 };
 
 console.log('the instruments');
