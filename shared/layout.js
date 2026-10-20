@@ -91,14 +91,14 @@ const viewName = (c, i) => c.dataset.view || c.querySelector('h2')?.textContent.
 const viewKey = (c, i) => c.id || viewName(c, i).toLowerCase().replace(/[^a-z0-9]+/g, '-');
 // the key once, from the page as written: a title changes (its note, its ⓘ), the key mustn't
 const views = shown.map((card, i) => { const key = viewKey(card, i); return { card, key, on: () => prefs.views[key] ?? main.includes(card) }; });
-// The toggles, the views' and the controls' groups', share a row across the top of the page.
-const toggles = el('div', 'forte-toggles');
+// A row of toggles heads each side: the views' at the top of the views, the groups' at the
+// top of the Controls panel.
 function toggleRow(cls, label, aria) {
-  const row = el('div', cls);
+  const bar = el('div', 'forte-toggles'), row = el('div', cls);
   row.setAttribute('role', 'group');
   row.setAttribute('aria-label', aria);
   row.appendChild(el('span', 'forte-toggles-label', label));
-  toggles.appendChild(row);
+  bar.appendChild(row);
   return row;
 }
 let stage = null, hint = null;
@@ -112,9 +112,8 @@ if (viewsEl && shown.length) {
   stage = el('div', 'forte-stage');
   hint = el('p', 'forte-no-view', 'Every view is off: turn one on above.');
   stage.append(...shown, hint);
-  viewsEl.replaceChildren(stage);
+  viewsEl.replaceChildren(bar.parentNode, stage);
 }
-if (toggles.firstChild || sidebar) document.querySelector('body > main')?.prepend(toggles);
 // The views turned on fill the stage in rows, as even as they go: the first rows take
 // the extra one, and a short last row stretches across. Side by side on a wide screen,
 // stacked on a tall one (two abreast from four), one above another on a phone.
@@ -144,7 +143,7 @@ function arrange() {
 // so each gets its toggle once it has its parameters). A group whose parameters have all moved
 // above the keys has none. The groups start on; folding a group gives way to its toggle.
 const groups = [];
-let groupBar = null;
+let groupBar = null, groupHint = null;
 function addGroups() {
   if (!sidebar) return;
   for (const det of sidebar.querySelectorAll('details.group:not([data-key])')) {
@@ -152,7 +151,11 @@ function addGroups() {
     const sum = det.querySelector('summary'), name = sum?.textContent.trim() || `Controls ${groups.length + 1}`;
     const key = det.dataset.key = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     sum?.addEventListener('click', (e) => e.preventDefault());
-    groupBar ??= toggleRow('forte-control-toggles', 'Controls', 'Controls to show');
+    if (!groupBar) {
+      groupBar = toggleRow('forte-control-toggles', 'Controls', 'Controls to show');
+      groupHint = el('p', 'forte-no-view', 'Every group of controls is off: turn one on above.');
+      sidebar.prepend(groupBar.parentNode, groupHint);
+    }
     const g = { det, key, on: () => prefs.groups[key] ?? true, toggle: button(name, 'Show or hide these controls') };
     g.toggle.addEventListener('click', () => { prefs.groups[key] = !g.on(); save(); apply(); g.toggle.blur(); });
     groupBar.appendChild(g.toggle);
@@ -163,6 +166,7 @@ function addGroups() {
     g.det.hidden = !g.on();
     g.toggle.setAttribute('aria-pressed', String(g.on()));
   }
+  if (groupHint) groupHint.hidden = groups.some((g) => g.on());
 }
 // a view's caption waits behind ⓘ in its title
 for (const c of shown) {
@@ -476,7 +480,8 @@ function apply() {
   arrange();
   // the controls: the groups turned on, beside the views or below them (in Perform, if asked for)
   addGroups();
-  const panel = !!sidebar && (performing() ? prefs.perform.controls : groups.some((g) => g.on()));
+  // in Discover the panel stays, with its toggles, even with every group off
+  const panel = !!sidebar && (performing() ? prefs.perform.controls : groups.length > 0);
   const drawer = drawerMode();
   body.classList.toggle('hide-controls', !!sidebar && (drawer ? !drawerOpen : !panel));
   body.classList.toggle('drawer-open', drawer && drawerOpen);

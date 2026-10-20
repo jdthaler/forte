@@ -29,9 +29,9 @@ export const GROUPS = [
   {
     id: 'merger', title: 'How it was struck (a binary merger)',
     params: [
-      { id: 'massRatio', label: 'Mass ratio q', perform: true, kind: 'model', min: 1, max: 20, def: 1.2, log: true, fmt: (v) => `${v.toFixed(2)} : 1`,
+      { id: 'massRatio', label: 'Mass ratio q', kind: 'model', min: 1, max: 20, def: 1.2, log: true, fmt: (v) => `${v.toFixed(2)} : 1`,
         hint: 'Equal masses excite only even-m modes. Lopsided mergers switch on (2,1) and (3,3): “black-hole hair loss”.' },
-      { id: 'inclination', label: 'Viewing inclination ι', perform: true, kind: 'model', min: 0, max: 180, step: 1, def: 30, fmt: (v) => `${v.toFixed(0)}°`,
+      { id: 'inclination', label: 'Viewing inclination ι', kind: 'model', min: 0, max: 180, step: 1, def: 30, fmt: (v) => `${v.toFixed(0)}°`,
         hint: 'Angle between the spin axis and your line of sight. Face-on: circular polarisation; edge-on: linear.' },
       { id: 't0', label: 'Ringdown start', kind: 'model', min: 0, max: 30, step: 0.5, def: 5, fmt: (v) => `${v.toFixed(1)} M after peak`,
         hint: 'Start closer to the merger and the fast-dying overtones (2,2,1), (2,2,2) are still loud.' },
@@ -50,7 +50,7 @@ export const GROUPS = [
       { id: 'stereo', label: 'Left = h₊, right = h× (polarisations)', kind: 'engine', type: 'checkbox', def: true },
       { id: 'releaseMute', label: 'Key release mutes', kind: 'engine', type: 'checkbox', def: false, hint: 'Unphysical, but handy for long near-extremal rings.' },
       { id: 'tone', label: 'Tone (low-pass)', perform: true, kind: 'mix', min: 500, max: 20000, def: 14000, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz` },
-      { id: 'room', label: 'Room', perform: true, kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.25, fmt: (v) => v.toFixed(2) },
+      { id: 'room', label: 'Room', kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.25, fmt: (v) => v.toFixed(2) },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => v.toFixed(2) },
     ],

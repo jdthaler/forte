@@ -91,7 +91,7 @@ export const GROUPS = [
     params: [
       { id: 'soundboard', label: 'Soundboard', type: 'checkbox', def: true,
         hint: 'The strings make little sound themselves; the board, driven by the bridge, does. Off, you hear the force on the bridge directly, as a contact pickup would: thin, without the board’s resonances.' },
-      { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      { id: 'room', label: 'Room', min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],

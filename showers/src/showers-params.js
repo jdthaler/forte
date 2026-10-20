@@ -22,7 +22,7 @@ export const GROUPS = [
         hint: 'The particle\'s energy at full velocity. A shower peaks deeper the more energy it has (by the logarithm of it), so low energies light the front of the crystal and ring its upper modes, and TeV showers peak near the middle, which rings the odd harmonics and hardly the even ones: a darker, hollow note.' },
       { id: 'offset', label: 'Impact point (off the axis)', perform: true, min: 0, max: 0.5, def: 0, step: 0.005, fmt: (v) => `${(v * 100).toFixed(1)} % of a crystal`,
         hint: 'How far from the crystal\'s axis the particle lands, toward the next key up. Off the axis the heat is lopsided and bends the crystal, ringing its bending modes, which are not harmonic; at 50 % it lands on the crack and the two crystals share the shower. The mod wheel moves it.' },
-      { id: 'pileup', label: 'Pile-up (held keys)', perform: true, min: 0, max: 400, def: 0, step: 1, fmt: (v) => `${v.toFixed(0)} a second`,
+      { id: 'pileup', label: 'Pile-up (held keys)', min: 0, max: 400, def: 0, step: 1, fmt: (v) => `${v.toFixed(0)} a second`,
         hint: 'While a key is held, collisions keep coming: soft photons from other proton–proton collisions in the same bunch crossings land at random in the crystal and ring it again, a crackle at its harmonics. Key pressure adds to it. 0: one particle, a struck crystal.' },
     ],
   },
@@ -33,7 +33,7 @@ export const GROUPS = [
         hint: 'The crystal\'s length in radiation lengths: CMS\'s barrel crystals are 23 cm of lead tungstate, 25.8 X₀. A short crystal holds only the front of a shower and the rest leaks out the back; a long one holds it all near its front face, so the note is brighter.' },
       { id: 'width', label: 'Crystal width', min: 0.4, max: 4, def: 1.12, step: 0.01, fmt: (v) => `${v.toFixed(2)} R_M`,
         hint: 'The crystal\'s face in Molière radii (CMS\'s are 22 mm, 1.12 R_M). A shower spreads sideways about one Molière radius, so narrow crystals share it with their neighbours, which ring softly a semitone either side, and wide ones keep it. Depth over width also sets the crystal\'s slenderness, and so where its bending modes fall.' },
-      { id: 'q', label: 'Crystal Q', perform: true, min: 100, max: 20000, def: 1500, log: true, fmt: (v) => `Q = ${v.toFixed(0)}`,
+      { id: 'q', label: 'Crystal Q', min: 100, max: 20000, def: 1500, log: true, fmt: (v) => `Q = ${v.toFixed(0)}`,
         hint: 'How little the crystal loses as it rings: every mode rings for Q periods of its own, about 13 s for C4 at 1500, so low keys and low modes ring longest.' },
       { id: 'damper', label: 'Damper on release (Q)', min: 3, max: 500, def: 25, log: true, fmt: (v) => `Q = ${v.toFixed(0)}`,
         hint: 'Letting go of a key presses a damper against the crystal, so it rings out at this Q (about 0.2 s for C4 at 25). The pedal (Space) keeps the dampers off.' },
@@ -53,7 +53,7 @@ export const GROUPS = [
   {
     title: 'Output',
     params: [
-      { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.3, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
+      { id: 'room', label: 'Room', min: 0, max: 1, def: 0.3, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],

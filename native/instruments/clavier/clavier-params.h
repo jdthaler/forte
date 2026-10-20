@@ -89,7 +89,7 @@ inline const ParamInfo kParams[p::count] = {
   {"muteOn", "Mute engaged (or hold Space)", "Mute bar", ParamKind::toggle, 0, 1, 0, 1, false, true, nullptr, 0, nullptr, 0},
   {"mute", "Felt pressure", "Mute bar", ParamKind::continuous, 0.05, 1, 0.6, 0.01, false, false, nullptr, 0, kFormat_mute, 1},
   {"muteX", "Felt position", "Mute bar", ParamKind::continuous, 3, 60, 14, 0.5, false, false, nullptr, 0, kFormat_muteX, 1},
-  {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.2, 0.01, false, true, nullptr, 0, kFormat_room, 1},
+  {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.2, 0.01, false, false, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
   {"pitch", "Pitch", "Tuning", ParamKind::choice, 0, 8, 0, 1, false, false, kChoices_pitch, 9, nullptr, 0, kKeys_pitch},

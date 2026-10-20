@@ -55,8 +55,8 @@ inline const FormatSegment kFormat_cents11[] = {{kNoLimit, "", " ¢", 1, 0, 2, f
 
 inline const ParamInfo kParams[p::count] = {
   {"spinU", "Spin", "Black hole", ParamKind::continuous, 0, 6, 0.5086383061657272, 0.005, false, true, nullptr, 0, kFormat_spinU, 3},
-  {"massRatio", "Mass ratio q", "How it was struck (a binary merger)", ParamKind::continuous, 1, 20, 1.2, 0, true, true, nullptr, 0, kFormat_massRatio, 1},
-  {"inclination", "Viewing inclination ι", "How it was struck (a binary merger)", ParamKind::continuous, 0, 180, 30, 1, false, true, nullptr, 0, kFormat_inclination, 1},
+  {"massRatio", "Mass ratio q", "How it was struck (a binary merger)", ParamKind::continuous, 1, 20, 1.2, 0, true, false, nullptr, 0, kFormat_massRatio, 1},
+  {"inclination", "Viewing inclination ι", "How it was struck (a binary merger)", ParamKind::continuous, 0, 180, 30, 1, false, false, nullptr, 0, kFormat_inclination, 1},
   {"t0", "Ringdown start", "How it was struck (a binary merger)", ParamKind::continuous, 0, 30, 5, 0.5, false, false, nullptr, 0, kFormat_t0, 1},
   {"overtones", "Overtone strength", "How it was struck (a binary merger)", ParamKind::continuous, 0, 2, 1, 0.01, false, false, nullptr, 0, kFormat_overtones, 1},
   {"retrograde", "Counter-rotating modes", "How it was struck (a binary merger)", ParamKind::continuous, 0, 1, 0, 0.01, false, false, nullptr, 0, kFormat_retrograde, 1},
@@ -65,7 +65,7 @@ inline const ParamInfo kParams[p::count] = {
   {"stereo", "Left = h₊, right = h× (polarisations)", "Listening", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"releaseMute", "Key release mutes", "Listening", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"tone", "Tone (low-pass)", "Listening", ParamKind::continuous, 500, 20000, 14000, 0, true, true, nullptr, 0, kFormat_tone, 1},
-  {"room", "Room", "Listening", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},
+  {"room", "Room", "Listening", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Listening", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Listening", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 1},
   {"pitch", "Pitch", "Tuning", ParamKind::choice, 0, 8, 0, 1, false, false, kChoices_pitch, 9, nullptr, 0, kKeys_pitch},

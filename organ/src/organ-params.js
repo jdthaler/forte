@@ -96,7 +96,7 @@ export const GROUPS = [
         hint: 'Gain into an off-centre-biased tube: even harmonics, then compression. A full chord keeps its level.' },
       { id: 'expression', label: 'Expression pedal', kind: 'engine', min: 0, max: 1, step: 0.01, def: 0.85, fmt: (v) => `${((v - 1) * 40).toFixed(0)} dB`,
         hint: 'The treble’s level. The bass falls less as the pedal closes (+15 dB shut), as on the B-3. Before the drive, so it changes the grit too. MIDI CC 11.' },
-      { id: 'room', label: 'Room', perform: true, kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.2, fmt: (v) => v.toFixed(2) },
+      { id: 'room', label: 'Room', kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.2, fmt: (v) => v.toFixed(2) },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => v.toFixed(2) },
     ],
