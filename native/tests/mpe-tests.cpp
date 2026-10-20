@@ -1,6 +1,7 @@
 // mpe-tests.cpp — MPE (forte/mpe.h) against shared/mpe.js (js-vectors.h): a stream decoded message
 // for message, with what it hands each note, and a note's bend along the tunings.
 
+#include <algorithm>
 #include <cmath>
 #include <vector>
 

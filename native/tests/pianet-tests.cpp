@@ -4,6 +4,7 @@
 // sounds, voice stealing and Panic, every sample rate, and ten voices within the CPU budget.
 // The physics tests are the JavaScript suite's, run on the WebAssembly (node test/pianet-tests.mjs).
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
