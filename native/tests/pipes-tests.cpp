@@ -242,9 +242,13 @@ TEST("engine: a key's bend of 1 (MPE's reset) and a slide leave the sound bit-id
       PipeEngine &e = *ep;
       e.setParams(P.data());
       const int keys[3] = {41, 60, 76};
-      for (int k : keys) { if (mpe) { e.noteBend(1, k); e.slide(NAN, k); } e.noteOn(k, 0.8); }
-      CHECK(until(e, 3));
       std::vector<float> L(block), R(block);
+      // every key's pipes built first, so the notes start in the same block on both runs (with
+      // threads, a note waits for its key's however long the build takes)
+      for (int i = 0; i < 5000 && !(e.ready(41) && e.ready(60) && e.ready(76)); i++) { e.process(L.data(), R.data(), block); std::this_thread::sleep_for(std::chrono::milliseconds(1)); }
+      CHECK(e.ready(41) && e.ready(60) && e.ready(76));
+      for (int k : keys) { if (mpe) { e.noteBend(1, k); e.slide(NAN, k); } e.noteOn(k, 0.8); }
+      CHECK(e.nVoices == 3);
       const int n = (int)(0.6 * fs / block);
       for (int b = 0; b < n; b++) {
         if (b == n / 2) { e.bend(-0.6); if (mpe) for (int k : keys) { e.noteBend(1, k); e.slide(NAN, k); } }

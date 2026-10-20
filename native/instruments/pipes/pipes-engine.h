@@ -94,6 +94,8 @@ class PipeEngine : public Engine {
   void bend(double value) override; // the organ's air warms or cools: every pipe's sound and jets ×r
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the air in one key's pipes alone
   int voiceCount() const override;
+  // whether key's pipes are built for the parameters as they are (the tests wait for it)
+  bool ready(int key) { return bool(data.get(key, version)); }
   void process(float *L, float *R, int n) override;
 
   // The tests' and tools' options: the turbulence's seed (its table is drawn again) and
