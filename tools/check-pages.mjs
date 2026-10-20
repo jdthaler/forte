@@ -2,8 +2,10 @@
 // what a layout regression breaks: errors in the console, a page that scrolls sideways (as
 // loaded, with the menus, Controls and every view turned on, and with audio started), the
 // controls each page should place (the perform controls above the keys, the ⓘ buttons, "Default
-// settings" among the presets, the keys), and the front page's Listen buttons (one for each
-// instrument with a demo, and two in turn play).
+// settings" among the presets, the keys), that each view's toggle turns its view off and on
+// (and on the desktop, that the views turned on are still on after a reload and all show in
+// Perform), and the front page's Listen buttons (one for each instrument with a demo, and two
+// in turn play).
 //
 // Usage: node tools/check-pages.mjs [--base <git ref>] [--json <file>] [filter]
 //   filter       only the pages whose path contains it (gongs, index, credits, template)
@@ -114,6 +116,37 @@ async function listen(tab) {
   return out;
 }
 
+// Each view's toggle turns it off and on again, the button and the card both following; every
+// view is on at the end. Returns how many toggles there are.
+const TOGGLES = () => [...document.querySelectorAll('.forte-view-toggles button')].map((b) => b.getAttribute('aria-pressed') === 'true');
+const CARDS = () => [...document.querySelectorAll('.forte-stage > .card')].map((c) => c.offsetParent !== null);
+async function toggles(tab, broken) {
+  const close = tab.locator('.drawer-close'); // on a phone, Controls left open hides the views
+  if (await close.isVisible()) await close.click({ timeout: 2000 }).catch(() => {});
+  const buttons = await tab.locator('.forte-view-toggles button').all();
+  for (const [i, b] of buttons.entries()) {
+    if (!(await b.isVisible())) { broken.push(`the "${(await b.textContent()).trim()}" toggle is hidden`); continue; }
+    const name = (await b.textContent()).trim();
+    for (const want of [true, false, true]) { // on (if it was off), off, and on again
+      if ((await tab.evaluate(TOGGLES))[i] === want) continue;
+      await b.click({ timeout: 2000 }).catch(() => {});
+      if ((await tab.evaluate(TOGGLES))[i] !== want || (await tab.evaluate(CARDS))[i] !== want) broken.push(`the "${name}" toggle doesn't turn its view ${want ? 'on' : 'off'}`);
+    }
+  }
+  return buttons.length;
+}
+// With every view on: still on after a reload, and all of them shown in Perform.
+async function remembered(tab) {
+  const out = [];
+  await tab.reload({ waitUntil: 'networkidle' });
+  await tab.waitForTimeout(300);
+  if (!(await tab.evaluate(TOGGLES)).every(Boolean) || !(await tab.evaluate(CARDS)).every(Boolean)) out.push('the views turned on are not on after a reload');
+  await tab.locator('.forte-mode button[data-mode="perform"]').click({ timeout: 2000 }).catch(() => {});
+  await tab.waitForTimeout(250);
+  if (!(await tab.evaluate(CARDS)).every(Boolean)) out.push('Perform does not show every view turned on');
+  return out;
+}
+
 async function checkPage(browser, url, page, size) {
   const { name, ios, ...device } = size;
   const ctx = await browser.newContext({ ...device, deviceScaleFactor: 1 });
@@ -141,9 +174,8 @@ async function checkPage(browser, url, page, size) {
     if (!page) broken.push(...await listen(tab));
     if (await click('details.forte-switch > summary')) { await sideways('menu open'); await click('details.forte-switch > summary'); }
     if (await click('.forte-more')) { await sideways('Controls open'); await tab.keyboard.press('Escape'); await click('.forte-more'); }
-    let more = 0; // every view on
-    for (const t of await tab.locator('.forte-view-toggles button[aria-pressed="false"]').all()) if (await t.isVisible()) { await t.click({ timeout: 2000 }).catch(() => {}); more++; }
-    if (more) { await tab.waitForTimeout(250); await sideways('every view on'); }
+    if (await toggles(tab, broken)) { await tab.waitForTimeout(250); await sideways('every view on'); }
+    if (name === 'desktop' && counts.views) broken.push(...await remembered(tab));
     if (await click('#start')) { await tab.waitForTimeout(500); await sideways('audio started'); }
     return { page: page || 'index', size: name, counts, errors, wide, broken };
   } catch (e) {
