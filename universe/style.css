@@ -1,0 +1,8 @@
+/* The page's own palette and any layout beyond shared/instrument.css: the orange of the
+   microwave background's warm spots, and the blue of its cold ones. */
+:root {
+  --accent: #ff9a62;
+  --accent-2: #6fa8ff;
+  --accent-ink: #1e0d04;
+}
+#waves, #sky { height: 300px; }
