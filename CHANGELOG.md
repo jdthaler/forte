@@ -16,6 +16,496 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-20 — black-hole spheroidal harmonics; Collider Showers; a toggle for every group of controls, and the controls beside or below the views; only controls for playing above the keys, and each row of toggles at the head of its side; the Electric Grand's stereo tremolo; MPE: each note bends and slides on its own; a Quality setting for phones and older computers; Ramsey fringes on the Quantum Keyboard; tunings and temperaments; view toggles that turn their views on and off
+
+### Forte 0.36.0
+- **Every group of controls has a toggle,** in a row at the top of the Controls panel: a tap shows or
+  hides that group in the Controls panel, in place of folding it. Every group is on at first,
+  each page remembers which are on, and a group added later gets a toggle of its own.
+- **The Controls panel beside the views or below them:** a switch in the top bar (on wide
+  screens) puts the groups in a column beside the views, as before, or side by side below them.
+  The choice holds on every page. Tablets and phones always put them below the views, where the
+  views and the controls scroll together; on a phone each row of toggles slides sideways.
+- **More controls is for Perform:** Discover has the toggles, and Perform hides the toggles and
+  the panel until More controls brings the panel back.
+- `tools/check-pages.mjs` flips every group's toggle as it does the views', and on the desktop
+  tries the switch both ways.
+- **The views' toggles head the views and the controls' toggles head the Controls panel,** so the
+  two sides read apart; the controls' row stays at the top of the panel as it scrolls, and with
+  every group off the panel keeps its toggles.
+- `docs/INSTRUMENT_GUIDE.md` says which controls belong above the keys: only what a player changes
+  while playing, not the instrument's build, its voicing or the room.
+- **MPE (MIDI Polyphonic Expression)** on every page and in every plugin: a controller that gives
+  each note a channel of its own (a ROLI Seaboard, a LinnStrument, an Expressive E Osmose) bends,
+  slides (CC74) and presses each note alone, wherever the instrument can. Lower and upper zones,
+  the MPE Configuration Message, ±48 semitones per note until RPN 0 sets another range; a bend
+  follows the keyboard's tuning, so a slide onto the next key lands on its tuned pitch.
+- **An MPE menu** beside Enable MIDI (Auto, On, Off; not on phones) and an *MPE* plugin parameter
+  (the same three, saved with the song). Auto, the default, turns MPE on only when the controller
+  announces it, so an ordinary keyboard and saved songs play as before; a toast says when it
+  turns on.
+- **The plugins take CLAP's per-note expressions** (tuning, brightness, pressure), and the VST3
+  asks for 16 MIDI channels and those note expressions.
+- **Pitch bend and channel pressure reach the AU plugins:** clap-wrapper hands them on as
+  expressions for every note, which the plugins used to drop, so the wheel did nothing in Logic
+  or MainStage.
+- **The engine contract** gains `noteBend(ratio, key)` and `slide(value, key)`
+  (`forte/expression.h` keeps them per key), and each descriptor says what its notes do with
+  them (`mpe: { bend, slide }`); `test/mpe-tests.mjs` checks every instrument against it.
+- **Quality** (High, Medium, Low) on every instrument page and in every plugin, for phones and older
+  computers: High plays all the physics, exactly as before; Medium and Low play less of what costs
+  the most and is heard the least (fewer voices at once, fewer partials or modes, the sympathetic
+  strings lighter or off). On the pages it is the last group of controls, CPU: one choice for every
+  instrument in the browser, which presets and links leave alone. When the audio starts to drop out,
+  the page suggests a lower setting.
+- In the plugins Quality is a parameter of its own after the velocity curve, kept with the
+  project and in no preset; the Forte app keeps it when you change instrument. A VST3 or CLAP
+  host that renders offline (a bounce, a freeze) gets High whatever it is set to.
+- `node tools/bench.mjs [slug…]` measures each instrument's engine at each Quality;
+  `test/quality-tests.mjs` checks every instrument's High is unchanged to the bit and its Medium
+  and Low still play the passage; `tools/check-pages.mjs` checks every page has the choice and
+  can change it while the audio plays. The template's engine plays fewer bars at once at Low,
+  as an example for new instruments.
+- **Tunings and temperaments** on every instrument, the same on the pages and in the plugins: a
+  pitch standard (A4 = 440 Hz, 415, 392, 422.5, 430, 435, 442, 443 or 466), a temperament (equal,
+  ¼- and ⅙-comma meantone, Werckmeister III, Kirnberger III, Vallotti, Young, Pythagorean, 5-limit
+  just, or custom) built on a chosen root key, and the custom temperament's cents note by note.
+  The historical temperaments are built from their circles of fifths and checked against their
+  published tables. The instruments are retuned, not resampled: each key's pitch target moves,
+  and the strings, bars, bells, pipes and oscillators are tuned to it as they are to their note.
+  Equal temperament at 440 Hz, the default, sounds exactly as before. Presets keep the tuning;
+  your own presets and shared links carry it.
+- **Scala files** (.scl, twelve notes to the octave): *Load a Scala file* under Temperament on the
+  pages, and in the plugins a menu of the files in a Tunings folder beside the presets' (on a Mac,
+  ~/Library/Audio/Presets/Forte/Tunings), which it can open. A scale Forte can't play (not twelve
+  notes, not repeating at the octave) says why.
+- The plugin window shows the temperament's root only for a temperament, and the custom cents only
+  for Custom.
+- **Every view's toggle works:** on thirteen instrument pages some toggles did nothing (the RF
+  Cavity Bells' passband among them). A view named by its title was looked up under a name that
+  changed once its ⓘ was added.
+- `tools/check-pages.mjs` turns every view's toggle off and on at every size, and on the desktop
+  checks that the views turned on are still on after a reload and all show in Perform.
+
+### Ribbon Piano 0.9.0
+- **Above the keys, only controls for playing:** keyboard velocity, una corda and volume. Felt
+  hardness, soundboard body and room are in the Controls panel; the plugin window's row follows.
+- **Quality:** Medium builds each voice with fewer modes (none above 7 kHz but each family's
+  first eight, none past the 80th partial), lowers the oscillator budget to 60 %, lets an
+  undamped voice go a little sooner and keeps three partials on each sympathetic string; Low
+  stops at 5 kHz, a 35 % budget, and turns the sympathetic strings off. About 60 % and 30 % of
+  High's work.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Harpsichord 0.7.0
+- **Above the keys, only controls for playing:** the manuals, coupler and stops, and volume. Room
+  is in the Controls panel; the plugin window's row follows.
+- **Quality:** Medium plays 12 released and 16 sounding keys at most (High 16 and 24), fewer
+  partials (none above 7 kHz but the first sixteen, none past the 64th) and three partials on
+  each sympathetic string; Low 8 and 10 keys, 5 kHz, and no sympathetic strings. About 60 % and
+  30 % of High's work.
+- **Tuning:** its Pitch and Temperament become the keyboard's tuning, which every instrument now
+  has: seven more pitch standards (392 to 466 Hz), ⅙-comma meantone, Kirnberger III, Vallotti,
+  Young, Pythagorean and just intonation besides equal, ¼-comma meantone and Werckmeister III, a
+  root for the temperament, and a custom temperament from cents or a Scala file. Saved settings
+  and presets keep their pitch and temperament; choosing a preset now keeps the tuning, as it
+  keeps the room.
+
+### Pipe Organ 0.7.0
+- **Above the keys, only controls for playing:** the stops, tremulant and volume. Wind pressure
+  and room are in the Controls panel; the plugin window's row follows.
+- **Per-note bend, an octave either way:** the air in one key's pipes warms or cools alone.
+- **Quality:** each pipe keeps at most eight modes up to 10 kHz at Medium and five up to 7 kHz at
+  Low (ten up to 15 kHz at High), and 12 and 8 keys sound at once (20). About 66 % and 44 % of
+  High's work.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Free-Reed Organ 0.7.0
+- **Above the keys, only controls for playing:** the stops, bellows pressure, expression and
+  volume. Room is in the Controls panel; the plugin window's row follows.
+- **Per-note bend, an octave either way:** one key's tongues stiffen or soften alone. Further, its
+  throat and cell no longer drive the reed.
+- **Quality:** 8 keys at once at Medium and 5 at Low (16 at High); every reed that sounds is
+  played in full.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Vibraphone 0.7.0
+- **Above the keys, only controls for playing:** motor, shaft speed, velocity, pedal and volume.
+  Mallet hardness and room are in the Controls panel; the plugin window's row follows.
+- **Quality:** modes above 16 kHz (Medium) or 12 kHz (Low) are left out, a bar is let go at −70 or
+  −60 dB, and 12 or 8 bars ring at once (16 at High).
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Carillon 0.5.0
+- **Above the keys, only controls for playing:** velocity, distance from the tower and volume. The bell's
+  profile, asymmetry, clapper, strike angle and the belfry are in the Controls panel; the plugin
+  window's row follows.
+- **Quality:** a bell leaves out its modes above 16 kHz (Medium) or 12 kHz (Low), lets a mode go
+  70 or 60 dB under its loudest, and 24 or 12 bells ring at once (36 at High). About 55 % and
+  34 % of High's work.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Celesta 0.2.0
+- **Above the keys, only controls for playing:** velocity, pedal and volume. Hammer felt and room
+  are in the Controls panel; the plugin window's row follows.
+- **Per-note slide: each key's own hammer felt**, taken as the hammer is thrown.
+- **Quality:** modes above 16 kHz (Medium) or 12 kHz (Low) are left out, a bar is let go at −70 or
+  −60 dB, and 16 or 10 bars ring at once (24 at High).
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Kalimba 0.2.0
+- **Above the keys, only controls for playing:** velocity, let the tines ring, hole covered and
+  volume. Release, buzzers and room are in the Controls panel; the plugin window's row follows.
+- **Quality:** a tine is let go at −80 dB (Medium) or −60 dB (Low), and past 32 or 16 ringing
+  tines the oldest is stilled.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Steel Pan 0.2.0
+- **Above the keys, only controls for playing:** strike point, roll, velocity, let notes ring and
+  volume. Dome rise, stick contact and room are in the Controls panel; the plugin window's row
+  follows.
+- **Per-note slide: each note's own roll.**
+- **Quality:** a stroke rings at most eight modes at Medium and six at Low (twelve at High), the
+  three tuned ones always among them, and notes go quiet sooner.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Electric Grand 0.8.0
+- **Above the keys, only controls for playing:** velocity, tremolo depth and rate, and volume.
+  Felt hardness, the pickup mix, the three-band EQ and room are in the Controls panel; the plugin
+  window's row follows.
+- **Stereo tremolo:** the CP's preamp tremolo, after the EQ. An oscillator lights a photocell on
+  each output in turn, so in stereo the sound swings from side to side, quick to duck and slow to
+  come back. *Tremolo depth* (off by default, so saved songs and presets sound as before; in the
+  strip above the keys) and *Tremolo rate* (1–10 Hz, in Controls) are plugin parameters too, with
+  a new *Stereo tremolo* preset and a demo, slow then fast.
+- **Quality:** Medium strikes fewer partials (none above 6 kHz but the first eight, none past the
+  80th), lets fading ones go sooner, caps the oscillators at 2400 (the page's own adaptive budget
+  still works under it) and keeps three partials on each sympathetic string; Low stops at
+  4.5 kHz, caps at 1400 and turns the sympathetic strings off. About 55 % and 27 % of High's work.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Tonewheel Organ 0.9.0
+- **Above the keys, only controls for playing:** the drawbars and switches, tube drive and volume.
+  Room is in the Controls panel; the plugin window's row follows.
+- **An MPE controller's member channels no longer bend the whole organ**: one generator shaft
+  turns every wheel, so its notes cannot bend alone.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+- The tuning moves each tonewheel, on top of the gear ratios (or exact equal temperament, or
+  ideal harmonics) and the mains frequency.
+
+### Tine Piano 0.9.0
+- **Above the keys, only controls for playing:** keyboard velocity, stereo vibrato depth and rate,
+  and volume. Amp drive, speaker top end and room are in the Controls panel; the plugin window's
+  row follows.
+- **Per-note bend, ±4 octaves:** a key's tuning spring slides alone, as the wheel slides them all.
+- **The page passes the pitch wheel on**, which it used to drop.
+- **Quality:** a mode 60 dB under its voice's strongest stops being worked out, a voice ends 60 dB
+  under its loudest, and 16 voices (Medium) or 10 (Low) sound at once (40 at High); at Low the
+  keys below C6 run at the output rate. About 65 % and 38 % of High's work, and far less with
+  long pedalled notes.
+- Its output stage works out the drive and decimation once instead of twice when the vibrato is
+  off: the same samples, a little cheaper.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Reed Piano 0.8.0
+- **Above the keys, only controls for playing:** velocity, tremolo depth and rate, and volume.
+  Preamp drive, output and room are in the Controls panel; the plugin window's row follows.
+- **Per-note bend, ±4 octaves:** one reed stiffens or softens alone, as the wheel does them all.
+- **Quality:** the reeds run at the output rate instead of twice it, without modes above 16 kHz,
+  pruned as they decay (80 dB down at Medium, 60 at Low); 20 and 10 voices (32 at High). About
+  40 % and 28 % of High's work.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Tangent Clavier 0.7.0
+- **Above the keys, only controls for playing:** velocity, the pickup selector and tone tabs, the
+  mute and volume. Room is in the Controls panel; the plugin window's row follows.
+- **Per-note bend presses that key harder**, as the wheel presses them all: up only, as far as
+  the wheel at full.
+- **Quality:** at most 16 voices at Medium and 10 at Low (24 at High); a single note sounds the
+  same at every quality.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Sticky-Pad Piano 0.8.0
+- **Above the keys, only controls for playing:** velocity, tone, amp drive and volume. The
+  amplifier and room are in the Controls panel; the plugin window's row follows.
+- **Per-note bend, an octave either way:** one reed alone; further down it would swing into the
+  pickup's pole piece.
+- **Quality:** 16 voices at Medium and 10 at Low (40 at High), a reed rested 70 or 60 dB under its
+  loudest, and at Low no reed modes above 12 kHz.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Viola Organista 0.8.0
+- **Above the keys, only controls for playing:** wheel speed, bow position, key pressure, dampers
+  lifted and volume. Key travel time and room are in the Controls panel; the plugin window's row
+  follows.
+- **Per-note bend, an octave either way:** one key's bridge slides alone, its string staying in
+  Helmholtz motion.
+- **Quality:** with the dampers lifted the sympathetic strings ring from C2 to B3 at Medium and
+  not at all at Low (C2–C6 at High); the soundboard runs at half rate and released strings stop
+  sooner. A held note bows as at High, in pitch and in kind.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Glass Armonica 0.8.0
+- **Above the keys, only controls for playing:** finger pressure, treadle speed and volume. Skin
+  moisture and room are in the Controls panel; the plugin window's row follows.
+- **Per-note bend, ±4 octaves:** one bowl's glass stiffens or softens alone.
+- **Quality:** three mode families a bowl at Medium and two at Low, 24 and 16 bowls at once (only
+  released ones are let go, never a touched one), quiet bowls stopped sooner, and a leaner
+  friction solver.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Pyrophone 0.8.0
+- **Above the keys, only controls for playing:** flame power, velocity and volume. Key-up flame
+  power, turbulence and room are in the Controls panel; the plugin window's row follows.
+- **Per-note bend, ±4 octaves** (one tube's gas heats or cools alone) and **per-note slide: each
+  tube's own flame power.**
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Singing Arc 0.6.0
+- **Above the keys, only controls for playing:** arc current, electrode gap and volume. The
+  column's time constant, the arcs, the coil and room are in the Controls panel; the plugin
+  window's row follows.
+- **Per-note bend, an octave either way:** one coil's iron core slides alone. With one arc it
+  follows its newest key, as it plays.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Huygens Keyboard 0.8.0
+- **Above the keys, only controls for playing:** pulse coupling, tone and volume. The tuning, its
+  tonic, key attack and release, and room are in the Controls panel; the plugin window's row
+  follows.
+- **Per-note bend, ±4 octaves:** one lamp's timing resistor turns alone; the pitch servo holds a
+  bent lamp at its bent pitch.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+- The tuning moves each oscillator's design pitch, on top of the keyboard's own just tuning and
+  mistuning, which stay as they were.
+
+### Gong Keyboard 0.8.0
+- **Above the keys, only controls for playing:** strike point, velocity and volume. Dome rise,
+  asymmetry, head stiffness, strike angle, hand damping and room are in the Controls panel; the
+  plugin window's row follows.
+- **Per-note slide: where each key's mallet lands**, taken as it strikes.
+- **Quality:** at most two gongs on the nonlinear coupling at Medium and one at Low (never more
+  than *Nonlinear voices*), 12 and 8 gongs at once (16 at High), a gong let go 60 dB under the
+  loudest, and at Low one gong at a time taking extra substeps. About 57 % and 36 % of High's work.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Black-Hole Keyboard 0.8.0
+- **Spheroidal harmonics:** each quasinormal mode is now seen through its spin-weighted
+  spheroidal harmonic ₋₂S_lm(ι; aω) instead of the spherical ₋₂Y_lm, so at high spin the modes
+  mix in other l, as general relativity says. The harmonics come from the spectral method and
+  match Leaver's separation constants to better than 10⁻¹². Near extremality, seen at 30°, the (2,2) mode is
+  about a tenth louder, (3,3) a third and (4,4) a half; at the default spin, a few per cent.
+- **Above the keys, only controls for playing:** spin, the inspiral, tone and volume. Mass ratio,
+  inclination and room are in the Controls panel; the plugin window's row follows.
+- **Per-note slide: each key's own black hole's spin**, taken at the strike.
+- **Quality:** at most 24 ringdowns at Medium and 12 at Low (48 at High); a note alone sounds
+  the same at every quality.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Quantum Keyboard 0.7.0
+- **Above the keys, only controls for playing:** velocity, coherent restrike and volume. The
+  potential, tempo, revival time, dephasing and room are in the Controls panel; the plugin
+  window's row follows.
+- **Per-note slide: each key's own well's dephasing.**
+- **Quality:** a pair budget of 1500 at Medium and 800 at Low (3000 at High), 14 and 9 voices
+  (24), and a new note's pairs 50 or 40 dB under its strongest left out. About 61 % and 35 % of
+  High's work.
+- **Coherent restrike (Ramsey fringes)**, off by default: a key struck again while its packet still
+  rings sends a second, phase-locked pulse into the same atom instead of a fresh one, and the two
+  pulses' amplitudes add. On a full revival the note follows Ramsey's formula,
+  1 + ρ² + 2ρ cos(2πδT − φ) times a fresh note: four times as strong in phase, gone out of phase.
+  On the square well's half revival the second pulse leaves every other level, which the box's
+  dipole cannot join, so the note goes silent (a dark state). Elsewhere the pulses write fringes
+  across the levels and the restrike changes the note's colour and its later revivals with the
+  delay. Dephasing between the pulses washes the fringes out.
+- Two knobs go with it: the pump's detuning δ from the central level's line (−4 to +4 Hz: the
+  fringes as a function of the delay, one every 1/δ seconds) and the pulse pair's phase φ.
+- A new preset, *Coherent restrike: Ramsey fringes*. Existing presets and saved settings sound as
+  before.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Bubble Organ 0.7.0
+- **Above the keys, only controls for playing:** bubbles per second, irregularity, velocity and
+  volume. Nozzle depth, gas and room are in the Controls panel; the plugin window's row follows.
+- **Per-note bend, ±2 octaves, from the next bubble on**, and **per-note slide: each nozzle's own
+  bubble rate.**
+- **Quality:** at most 80 bubbles ringing at Medium and 50 at Low (160 at High), each freed 70 or
+  60 dB under its peak (80 at High).
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Spring Keyboard 0.5.0
+- **Above the keys, only controls for playing:** velocity, hand on the spring and volume. Springs per key,
+  the mounts' loss, mallet contact and room are in the Controls panel; the plugin window's row
+  follows.
+- **Per-note slide: a hand on each key's own springs.**
+- **Quality:** a mode is let go 65 dB (Medium) or 60 dB (Low) under the voice's loudest (90 at
+  High), and a strike doesn't start modes it would leave below that; 10 and 6 keys at once (16 at
+  High). About 55 % and 36 % of High's work.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Star Keyboard 0.5.0
+- **Above the keys, only controls for playing:** convective driving, flare kick and volume.
+  Rotation period, inclination and room are in the Controls panel; the plugin window's row
+  follows.
+- **Per-note slide: each key's own star's spin.**
+- **Quality:** Medium plays each star's strongest 60 % of modes and Low its strongest 40 %, as
+  the observer hears them, raised to keep the note's level; 11 and 8 stars at once (14 at High).
+  About 48 % and 25 % of High's work.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+- **No error when the spectrogram is on as the page loads:** it could draw before the page had
+  set up the star it labels its axis from.
+
+### Wind Harp 0.6.0
+- **Above the keys, only controls for playing:** wind speed, gustiness, velocity and volume. Room
+  is in the Controls panel; the plugin window's row follows.
+- **Per-note bend, an octave either way:** one key's strings tighten or slacken alone; a string
+  bent out of its band moves to the harmonic the wake picks.
+- **Quality:** 8 strings at Medium and 6 at Low ring once released (held and pedalled strings
+  always sound), and released strings stop sooner. A held string sounds as at High.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+- **The top strings stay stable and in tune in strong winds.** A wake shedding close to the sample
+  rate (C7 at 12 m/s and 44.1 kHz) could blow up into silence; such a string now steps its wake
+  two to eight times a sample, so it sheds at its true frequency (E7 at 8 m/s sounds about twice
+  as loud as before). The reference wind sounds as before.
+
+### Storage Ring 0.3.0
+- **Above the keys, only controls for playing:** injection kick, chromaticity, velocity and volume.
+  Synchrotron frequency, bunch length, pickup and room are in the Controls panel; the plugin
+  window's row follows.
+- **Per-note slide: each key's own ring's chromaticity.**
+- **Quality:** past 24 (Medium) or 12 (Low) beams stored under the pedal, the oldest is scraped
+  away; a single beam sounds the same at every quality.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### RF Cavity Bells 0.2.0
+- **Above the keys, only controls for playing:** velocity, beam offset, beam current and volume.
+  Bunch length, cell-to-cell coupling, input coupler, helium bath and room are in the Controls
+  panel; the plugin window's row follows.
+- **Per-note bend, ±4 octaves** (one cavity squeezed alone, its bunch train keeping step) and
+  **per-note slide: each cavity's own beam offset.** A mode bent past the Nyquist frequency takes
+  no kick.
+- **Quality:** a bunch rings only the modes heard within 40 dB (Medium) or 30 dB (Low) of the
+  cavity's loudest, modes and keys are let go sooner, and 16 or 8 keys sound at once (24 at
+  High). About 51 % and 27 % of High's work.
+- **Tuning:** a Tuning group under More controls, kept across presets: the pitch standard
+  (A = 440 Hz as before, or 415, 392, 422.5, 430, 435, 442, 443, 466), the temperament on a root
+  key, and a custom temperament from cents or a Scala file. Equal temperament at 440 Hz, the
+  default, sounds as before.
+
+### Collider Showers 0.1.0
+- New instrument: a collider calorimeter's lead tungstate crystal for every key, A0–C8, rung by
+  the particle shower it catches. The shower's energy heats the crystal at once, and the heat's
+  thermal expansion rings it (the thermo-acoustic effect, as in the RAP experiment's bars rung by
+  an electron beam): its stretching modes, a harmonic series flattened by the crystal's lateral
+  inertia (Love's rod theory), by the overlap of the heat with each mode's strain, and its
+  bending modes, inharmonic (a free–free beam), when the heat lies off the axis. The crystals are
+  CMS's by default, 25.8 radiation lengths deep and 1.12 Molière radii wide, scaled so the first
+  mode is the note. The tests check the profiles against the incomplete gamma function and the
+  textbooks' containment, and the kicks against the wave and beam equations solved numerically.
+- **The shower:** electrons follow PDG's gamma profile, peaking deeper by the logarithm of the
+  energy, so low energies ring bright and TeV showers, peaking near the middle, ring the odd
+  harmonics and hardly the even ones. Photons convert at a random depth first (9/7 X₀ on
+  average); charged pions cross as a track to a random first interaction and split into photons
+  and hadrons (Groom's electromagnetic fraction, Bock et al.'s profile, invisible energy), so no
+  two notes are alike. Velocity is the energy: harder is louder and darker.
+- **Sideways:** the shower's radial profile (Grindhammer & Peters, 90 % within a Molière radius)
+  shares it with the crystals a semitone either side; the impact point (the mod wheel) bends the
+  crystal and, on the crack, splits the shower between two keys. Narrow crystals spread it more.
+- **Pile-up:** held keys keep catching soft photons from other collisions, at a rate key pressure
+  raises: a crackle at the crystal's harmonics.
+- A piezo on the side reads the strain (both kinds of mode; its position silences the modes with
+  a node there) or an accelerometer on the back face the stretching modes alone. Dampers on
+  release; the pedal keeps them off.
+- Views: the row of crystals with the particle, its cascade, the heat it leaves and the crystals
+  stretching and bending in slow motion; the shower's deposit along the crystal against the mean
+  profile with each mode's strain shape and level; spectrum, spectrogram and a table of the
+  modes. Eight demos. Plugins and WebAssembly from the start.
+- **Above the keys, only controls for playing:** velocity, particle, energy, impact point and
+  volume. Pile-up, crystal Q and room are in the Controls panel; the plugin window's row follows.
+- **Quality:** 20 crystals ring at once at Medium and 12 at Low (32 at High); a single crystal
+  sounds the same at every quality.
+
 ## 2026-10-19 — a new instrument: the celesta; the site's links to the changelog and docs show what is published; Gong twins; a kalimba; RF Cavity Bells; spectrogram labels on the right, where the sound comes in; a new instrument: the Steel Pan; sympathetic strings: undamped strings ring along; tension modulation: hard notes start sharp and glide down; licence notices in the downloads; the vibraphone's resonator fittings lose energy; a toggle for every view; your own presets, and links that share settings
 
 ### Forte 0.35.0
