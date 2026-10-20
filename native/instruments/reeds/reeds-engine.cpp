@@ -14,6 +14,9 @@ constexpr double KILL = 300;         // s⁻¹: voice stealing / panic / a re-st
 constexpr double GLIDE = 0.02;       // s: the gap and the rest height follow their knobs with this time constant
 constexpr double XFADE = 0.02;       // s: switching between speakers and direct out crossfades over this
 constexpr double XMAX = SLOT_Y.n - 3 - 1e-9; // last table position the cubic interpolation can use
+// A mode bent past this fraction of the reeds' rate stays there: it is far above the output's
+// band (the decimator removes it) and its recursion stays stable. Only a note's own bend goes so far.
+constexpr double TOP = 0.45;
 
 static int jsRound(double x) { return (int)std::floor(x + 0.5); } // Math.round
 
@@ -27,7 +30,8 @@ void ReedEngine::Voice::start(const ReedEngine &eng, int key_, const VoiceData &
     om0[i] = TAU * d.freq[i]; sig[i] = d.sigma[i]; dw[i] = d.dampW[i];
     w[i] = d.w[i]; pk[i] = d.pk[i];
   }
-  tune(eng.bendNow);
+  own = eng.expr.bendOf(key);
+  tune(eng.bendNow * own);
   hits = 0;
   hammer = d.hammer;
   setDamper(eng.damperSigma);
@@ -36,7 +40,7 @@ void ReedEngine::Voice::start(const ReedEngine &eng, int key_, const VoiceData &
 void ReedEngine::Voice::tune(double r) {
   double cmp = 0, cpk = 0;
   for (int i = 0; i < N; i++) {
-    const double o = om0[i] * r, s = sig[i];
+    const double o = std::min(om0[i] * r, TAU * TOP / k), s = sig[i];
     om[i] = o;
     const double rr = std::exp(-s * k), od = std::sqrt(std::max(o * o - s * s, 1e-6));
     a1[i] = 2 * rr * std::cos(od * k); a2[i] = rr * rr;
@@ -346,6 +350,7 @@ void ReedEngine::strikeKey(int key, double velocity, const VoiceData &d) {
     voices[nVoices++] = v;
     byKey[key] = v;
   }
+  if (v->own != expr.bendOf(key)) { v->own = expr.bendOf(key); v->tune(bendNow * v->own); v->setDamper(damperSigma); } // struck again: at the key's own bend
   v->keyDown = true; v->updateDamping(*this);
   v->strike(hammerSpeed(velocity));
   if (nVoices > maxVoices) {
@@ -371,6 +376,8 @@ void ReedEngine::bend(double value) {
   bendTo = std::pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12);
 }
 
+void ReedEngine::noteBend(double ratio, int key) { expr.setBend(ratio, key); }
+
 void ReedEngine::process(float *L, float *R, int n) {
   if (nPending) retryPending();
   for (int at = 0; at < n; at += BLOCK) processBlock(L + at, R + at, std::min(BLOCK, n - at));
@@ -392,12 +399,17 @@ void ReedEngine::processBlock(float *L, float *R, int n) {
     restAt(gl ? capB : capA, yN, cRestN, dRestN);
     gapN = gN; y0N = yN;
   } else { y0N = y0; cRestN = cRest; dRestN = dRest; }
-  // pitch bend glides as the slot does; the sounding reeds are retuned each block
+  // pitch bend, the wheel's and each note's own, glides as the slot does; the reeds whose bend
+  // moved are retuned each block
   if (bendNow != bendTo) {
     bendNow += (1 - std::exp(-n / (GLIDE * fs))) * (bendTo - bendNow);
     if (std::fabs(bendNow - bendTo) < 1e-9) bendNow = bendTo;
   }
-  for (int i = 0; i < nVoices; i++) if (voices[i]->bend != bendNow) { voices[i]->tune(bendNow); voices[i]->setDamper(damperSigma); }
+  for (int i = 0; i < nVoices; i++) {
+    Voice &v = *voices[i];
+    v.own = glideTo(v.own, expr.bendOf(v.key), n / fs, GLIDE);
+    if (v.bend != bendNow * v.own) { v.tune(bendNow * v.own); v.setDamper(damperSigma); }
+  }
   if (hasParams) for (int i = 0; i < nVoices; i++) voices[i]->render(mono.data(), n2, *this);
   if (hasExtra) { for (int s = 0; s < n2; s++) mono[s] += extra[s]; hasExtra = false; }
   if (blend) {

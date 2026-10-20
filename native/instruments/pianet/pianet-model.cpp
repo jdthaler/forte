@@ -156,12 +156,13 @@ Pluck::Pluck(const KeyReed &r, const PadParams &P, double fs_, double bend_) : k
 }
 
 // The modes at bend × their frequencies (the reed's stiffness × bend²): the recursions, the
-// compliances at the pad and the tip, and the end stop.
+// compliances at the pad and the tip, and the end stop. A mode bent past 0.45 × the rate (where
+// keyReed cuts them) stays there: far above the output's band, and its recursion stays stable.
 void Pluck::coeffs(double r) {
   double Csum = 0, cs = 0, Ctip = 0;
   for (int i = 0; i < N; i++) {
     const ReedMode &md = kr->modes[i];
-    const double rr = fdlibm::exp(-md.sigma * k), wd = TWO_PI * md.f * r;
+    const double rr = fdlibm::exp(-md.sigma * k), wd = std::min(TWO_PI * md.f * r, TWO_PI * 0.45 * fs);
     A1[i] = 2 * rr * fdlibm::cos(wd * k); A2[i] = rr * rr;
     const double b = (k * rr * fdlibm::sin(wd * k)) / wd;
     PC[i] = md.phiC; PT[i] = md.phiT; B[i] = b * md.phiC; BT[i] = b * md.phiT;

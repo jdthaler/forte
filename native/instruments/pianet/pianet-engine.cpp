@@ -21,7 +21,7 @@ constexpr double XFADE = 0.02;     // s: switching the valve combo in or out cro
 constexpr double DUCK = 0.01;      // s: a pickup switch fades out over this, then back in
 constexpr double RETACK = 0.95;    // a re-pressed key fires once its dropped pad has re-tacked this much of its disc …
 constexpr double RETACK_MAX = 0.15; // s … or after this long at most
-constexpr double BEND_T = 0.02;    // s: the pitch wheel's glide
+constexpr double BEND_T = 0.02;    // s: the pitch wheel's glide, and a note's own bend's
 
 // ---- a voice: one key's mechanism and its pickup -------------------------------------------
 
@@ -30,7 +30,8 @@ void PianetEngine::Voice::start(PianetEngine &eng, int k, Data::Ref r) {
   inUse = true;
   key = k; version = eng.version; ref = r;
   eng.data.acquire(r);
-  p = Pluck(*r.data, eng.pad(), eng.fs2, eng.bendNow);
+  own = eng.expr.bendOf(k);
+  p = Pluck(*r.data, eng.pad(), eng.fs2, eng.bendNow * own);
   pol = key % 2 ? -1 : 1;
   setPickup(eng, true);
   phiPrev = emFlux(p.y, g);
@@ -124,7 +125,8 @@ void PianetEngine::noteOn(int key, double velocity) {
   startNote(key, velocity, fresh);
 }
 
-void PianetEngine::startNote(int, double velocity, Voice *v) {
+void PianetEngine::startNote(int key, double velocity, Voice *v) {
+  if (v->own != expr.bendOf(key)) { v->own = expr.bendOf(key); v->p.retune(bendNow * v->own, v->sleep); } // pressed again: at the key's own bend
   v->held = false; v->posted = false; v->sleep = false; v->quiet = 0;
   Pluck &p = v->p;
   if (p.down || v->pending) {
@@ -194,15 +196,24 @@ void PianetEngine::bend(double value) {
   bendTo = forte::fdlibm::pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12);
 }
 
+void PianetEngine::noteBend(double ratio, int key) { expr.setBend(ratio, key); }
+
 void PianetEngine::process(float *L, float *R, int n) {
   for (int at = 0, m; at < n; at += m) {
-    // pitch bend glides in steps of at most 128 samples, the reeds retuned at each
-    m = std::min(bendNow != bendTo ? 128 : BLOCK_MAX, n - at);
+    // pitch bend, the wheel's and each note's own, glides in steps of at most 128 samples, the
+    // reeds retuned at each (only those whose bend moved)
+    bool moving = bendNow != bendTo;
+    for (int i = 0; i < nVoices && !moving; i++) moving = voices[i]->own != expr.bendOf(voices[i]->key);
+    m = std::min(moving ? 128 : BLOCK_MAX, n - at);
     if (bendNow != bendTo) {
       bendNow += (bendTo - bendNow) * (1 - forte::fdlibm::exp(-m / (BEND_T * fs)));
       if (std::fabs(bendNow - bendTo) < 1e-9) bendNow = bendTo;
     }
-    for (int i = 0; i < nVoices; i++) if (voices[i]->p.bend != bendNow) voices[i]->p.retune(bendNow, voices[i]->sleep);
+    for (int i = 0; i < nVoices; i++) {
+      Voice &v = *voices[i];
+      v.own = glideTo(v.own, expr.bendOf(v.key), m / fs, BEND_T);
+      if (v.p.bend != bendNow * v.own) v.p.retune(bendNow * v.own, v.sleep);
+    }
     processBlock(L + at, R + at, m);
   }
   data.audioCycle();

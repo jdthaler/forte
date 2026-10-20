@@ -22,6 +22,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "tines-model.h"
 #include "tines-params.h"
 
@@ -43,6 +44,7 @@ class TinesEngine : public Engine {
   static constexpr int POOL = 160;      // voices, sounding or dying
   static constexpr int MAX_VOICES = 40; // sounding at once: beyond this the quietest is released
   static constexpr int T = 63;          // decimation FIR taps
+  static constexpr double NOTE_BEND = 48; // semitones: one note's own bend (MPE) at most
   explicit TinesEngine(double fs);
 
   void setParams(const double *P) override;
@@ -51,12 +53,15 @@ class TinesEngine : public Engine {
   void setSustain(bool on) override;
   void allNotesOff() override;
   void bend(double value) override; // the tuning springs slide: every fork's stiffness ×r², its notes ×r
+  void noteBend(double ratio, int key) override; // one fork's spring slides: its stiffness ×r², on top of the wheel's
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // A key's voice data from the page (packVoiceData), kept for that key's notes until the next
   // is sent. Only without threads (WebAssembly).
   bool offer(const double *packed, int n);
   double *offerBuffer() { return offered.data(); } // where the page writes it (PACK_MAX numbers)
+  // whether key's modes are built for the parameters as they are (the tests wait for it)
+  bool ready(int key) { return bool(data.get(key, version)); }
 
   struct Biquad {
     double b0 = 1, b1 = 0, b2 = 0, a1 = 0, a2 = 0, z1 = 0, z2 = 0;
@@ -75,7 +80,8 @@ class TinesEngine : public Engine {
     bool inUse = false;
     double k = 0;
     std::array<double, MAX_MODES> q{}, q1{}, a1{}, a2{}, a1d{}, a2d{}, w{}, bw{}, pk{}, om{}, sig{}, dw{}, om0{};
-    double comp = 0, bend = 1; // om0: the modes unbent; bend: the ratio om is tuned to
+    // om0: the modes unbent; bend: the ratio om is tuned to, the wheel's × the note's own (own, gliding to its key's)
+    double comp = 0, bend = 1, own = 1;
     Hammer hammer{};
     double wid = 0, wid1 = 0, tWid = 0, yoff = 0, yoff1 = 0, tYoff = 0, gain = 0, gain1 = 0, tGain = 0;
     bool pickupMoving = false;
@@ -127,6 +133,7 @@ class TinesEngine : public Engine {
   Biquad harp, hpL, hpR, lpL, lpR;
   double tremPhase = 0;
   double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
+  NoteExpression expr{NOTE_BEND};  // each key's own bend (MPE)
   double sCable = 0, sResQ = 0, sTone = 0, sDrive = 0, sDepth = 0, sMaster = 1;
   bool gliding = false;
   std::vector<double> mono;
