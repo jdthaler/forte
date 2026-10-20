@@ -114,7 +114,7 @@ default in the existing presets, or would change what an existing knob means.
 | An immovable clamped rim on the Gong Keyboard | L | **Before 1.0** if wanted: the clamped plate's nonlinearity is about 3× too weak. Needs a new Airy basis. |
 | The Tonewheel Organ's lower manual and pedals | M | A MIDI channel or a split each. |
 | A pedal division on the Pipe Organ | M | |
-| The Electric Grand's tremolo | S | |
+| The Electric Grand's tremolo | S | Done, for the next release: the CP-70/CP-80 preamp's stereo tremolo, an oscillator lighting a photocell on each output in turn (*Tremolo depth*, off by default, and *Tremolo rate*), and a *Stereo tremolo* preset. |
 
 ### New instruments
 

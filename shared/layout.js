@@ -83,7 +83,8 @@ if (!main.length) main = shown.filter((c) => c.querySelector('canvas')).slice(0,
 shown = [...main, ...shown.filter((c) => !main.includes(c))]; // the main ones first
 const viewName = (c, i) => c.dataset.view || c.querySelector('h2')?.textContent.trim() || `View ${i + 1}`;
 const viewKey = (c, i) => c.id || viewName(c, i).toLowerCase().replace(/[^a-z0-9]+/g, '-');
-const views = shown.map((card, i) => ({ card, key: viewKey(card, i), on: () => prefs.views[viewKey(card, i)] ?? main.includes(card) }));
+// the key once, from the page as written: a title changes (its note, its ⓘ), the key mustn't
+const views = shown.map((card, i) => { const key = viewKey(card, i); return { card, key, on: () => prefs.views[key] ?? main.includes(card) }; });
 let stage = null, hint = null;
 if (viewsEl && shown.length) {
   const bar = el('div', 'forte-view-toggles');

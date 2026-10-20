@@ -134,7 +134,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::offset, .modWheelMax = 0.5,
     .controllers = kControllers, .controllerCount = 0,
-    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 0},
+    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 4},
     .midiVelocity = midiVelocity, .create = create,
   };
 }
