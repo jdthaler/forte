@@ -725,6 +725,40 @@
    "title": "Short lifetime plucked"
   }
  ],
+ "showers": [
+  {
+   "file": "01-cms-crystals-with-the-pedal.m4a",
+   "title": "Cms crystals with the pedal"
+  },
+  {
+   "file": "02-shallow-showers-then-deep-ones.m4a",
+   "title": "Shallow showers then deep ones"
+  },
+  {
+   "file": "03-harder-is-deeper.m4a",
+   "title": "Harder is deeper"
+  },
+  {
+   "file": "04-electrons-photons-pions.m4a",
+   "title": "Electrons photons pions"
+  },
+  {
+   "file": "05-on-the-axis-off-it-and-on-the-crack.m4a",
+   "title": "On the axis off it and on the crack"
+  },
+  {
+   "file": "06-pile-up-held-chords.m4a",
+   "title": "Pile up held chords"
+  },
+  {
+   "file": "07-narrow-crystals-the-shower-spreads.m4a",
+   "title": "Narrow crystals the shower spreads"
+  },
+  {
+   "file": "08-piezo-then-accelerometer.m4a",
+   "title": "Piezo then accelerometer"
+  }
+ ],
  "springs": [
   {
    "file": "01-a-tune-on-the-springs.m4a",

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Collider Showers · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="showers">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Collider Showers</h1>
+      <span class="sub">particle showers in a calorimeter's crystals, heard by the heat they leave</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="The event">
+          <div class="card-head"><h2>The event around <b id="focus-name">C4</b></h2></div>
+          <canvas id="event"></canvas>
+          <div class="caption">Seven crystals of the row, the struck key's in the middle and its neighbours a semitone either side, the particle coming in from the collision on the left. The glow is the heat each shower left along a crystal; the lines are the crystal ringing, in slow motion and exaggerated: the stretching modes squeeze the marks along it together and apart, the bending modes curve it.</div>
+        </div>
+        <div class="card" data-perform data-view="The shower">
+          <div class="card-head"><h2>The shower</h2><span class="muted">energy left per radiation length</span></div>
+          <canvas id="profile"></canvas>
+          <div class="caption">The last shower's profile along the crystal, from the front face to the back (the shaded part past it leaked out), and the crystal's first few stretching modes, whose strain the heat projects onto: a mode whose strain changes sign under the shower's peak is hardly rung. The bars are how loud each mode rings now, the stretching modes' harmonics and, in amber, the bending modes.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the crystal's modes, the bending ones in amber</span></div>
+          <canvas id="spectrum"></canvas>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">A harmonic series, a little flat at the top (the crystal's thickness slows its higher modes), whose upper lines die first; off the axis the bending modes join it, and with pile-up the lines keep being lit again.</div>
+        </div>
+        <div class="card" data-view="Modes">
+          <div class="card-head"><h2>Modes of <b id="focus-name2">C4</b></h2><span class="muted">what this particle rings, loudest first</span></div>
+          <table class="modes" id="modetab"></table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>dampers off: hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>mod wheel: impact point · key pressure: pile-up</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/showers-main.js"></script>
+</body>
+</html>
