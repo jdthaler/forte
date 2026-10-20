@@ -883,6 +883,36 @@
    "title": "Suitcase stereo vibrato"
   }
  ],
+ "universe": [
+  {
+   "file": "01-our-universe-with-the-pedal.m4a",
+   "title": "Our universe with the pedal"
+  },
+  {
+   "file": "02-few-baryons-then-many.m4a",
+   "title": "Few baryons then many"
+  },
+  {
+   "file": "03-little-dark-matter-then-much.m4a",
+   "title": "Little dark matter then much"
+  },
+  {
+   "file": "04-a-slow-universe.m4a",
+   "title": "A slow universe"
+  },
+  {
+   "file": "05-the-sky-then-inside-the-plasma.m4a",
+   "title": "The sky then inside the plasma"
+  },
+  {
+   "file": "06-our-helium-then-more.m4a",
+   "title": "Our helium then more"
+  },
+  {
+   "file": "07-scale-invariant-then-ours.m4a",
+   "title": "Scale invariant then ours"
+  }
+ ],
  "vibraphone": [
   {
    "file": "01-ballad-slow-motor-pedal-down.m4a",
