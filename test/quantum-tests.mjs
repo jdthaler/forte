@@ -26,8 +26,9 @@ const cents = (a, b) => 1200 * Math.log2(a / b);
 const rel = (a, b) => Math.abs(a / b - 1);
 
 // Render through the engine in 128-sample blocks (Float64 buffers), left channel.
-function render(params, events, sec) {
+function render(params, events, sec, quality) {
   const e = new QuantumEngine(FS);
+  if (quality) e.setQuality(quality);
   e.setParams(params);
   const n = Math.round(sec * FS), L = new Float64Array(n), R = new Float64Array(n), bl = 128, bL = new Float64Array(bl), bR = new Float64Array(bl);
   const ev = events.map(([t, ...r]) => [Math.round(t * FS), ...r]).sort((a, b) => a[0] - b[0]);
@@ -39,7 +40,7 @@ function render(params, events, sec) {
   }
   return { L, R, M: L.map((v, i) => v + R[i]), e };
 }
-const note = (params, key, sec, vel = 1) => render(params, [[0, 'on', key, vel]], sec);
+const note = (params, key, sec, vel = 1, quality) => render(params, [[0, 'on', key, vel]], sec, quality);
 // Amplitude of frequency f in x[a, b) (Hann-windowed Goertzel).
 function tone(x, f, a, b) {
   const w = (2 * PI * f) / FS; let re = 0, im = 0;
@@ -430,6 +431,30 @@ test('polyphony: all voices together sum at most 3000 pairs, the weakest dropped
   assert.ok(kept(last) > 0.85 && last.active >= first.active, `newest note keeps ${(100 * kept(last)).toFixed(1)} % of its power (${last.active} pairs; the oldest ${first.active})`);
   console.log(`        24 voices: ${total} pairs; the newest keeps ${last.active} (${(100 * kept(last)).toFixed(1)} % of its power), the oldest ${first.active}`);
 });
+test('Quality: Medium and Low sum at most 1500 and 800 pairs over all voices (High 3000), let 14 and 9 voices sound (High 24) and drop each voice\'s pairs 50 and 40 dB under its strongest; a note keeps its level (within 1 dB) and its launch pitch (within 1 ¢); 24 hydrogen voices stay finite', () => {
+  const p = P({ potential: 'hydrogen', sigma: 4, detector: 'a', T1: 30 }), sharp = P({ potential: 'hydrogen', bpm: 40, beats: 8, detector: 'x' }), f0 = keyFreq(96), res = [];
+  const kept = (v) => { let a = 0, s = 0; for (let g = 0; g < v.G; g++) for (let i = v.ga[g], q = v.gw[g]; i < v.gb[g]; i++, q++) a += v.w[q] ** 2; for (const q of v.pk.pairs) s += q.w ** 2; return a / s; };
+  const ref = note(P(), 60, 1).M, pitch = launchPitch(note(sharp, 96, 0.2).M, f0, 0.03, 0.03 + 3 / f0);
+  for (const [quality, budget, voices] of [['high', 3000, 24], ['medium', 1500, 14], ['low', 800, 9]]) {
+    const e = new QuantumEngine(FS); e.setQuality(quality); e.setParams(p); e.setSustain(true);
+    const bl = new Float64Array(128), br = new Float64Array(128);
+    for (let i = 0; i < 24; i++) {
+      e.noteOn(48 + i, 0.8);
+      for (let b = 0; b < 8; b++) { e.process(bl, br, 128); for (let j = 0; j < 128; j++) assert.ok(Number.isFinite(bl[j] + br[j]), `${quality}: not finite`); }
+    }
+    const live = e.voices.filter((v) => !v.stolen), total = live.reduce((s, v) => s + v.active, 0), last = live[live.length - 1];
+    assert.ok(total <= budget * 1.02, `${quality}: ${total} pairs summed`);
+    assert.ok(live.length <= voices, `${quality}: ${live.length} voices`);
+    assert.ok(kept(last) > 0.7, `${quality}: the newest note keeps ${(100 * kept(last)).toFixed(1)} % of its power`);
+    const x = note(P(), 60, 1, 1, quality).M, dB = 20 * Math.log10(rms(x, 0, x.length) / rms(ref, 0, ref.length));
+    const c = cents(launchPitch(note(sharp, 96, 0.2, 1, quality).M, f0, 0.03, 0.03 + 3 / f0), pitch);
+    assert.ok(Math.abs(dB) < 1, `${quality}: level ${dB.toFixed(2)} dB from High`);
+    assert.ok(Math.abs(c) < 1, `${quality}: launch pitch ${c.toFixed(2)} ¢ from High`);
+    res.push(`${quality} ${live.length} voices, ${total} pairs, the newest keeps ${(100 * kept(last)).toFixed(1)} %, ${dB.toFixed(2)} dB, ${c.toFixed(2)} ¢`);
+  }
+  console.log(`        ${res.join('; ')}`);
+});
+
 // ---- coherent restrike: Ramsey fringes between two pulses -----------------------------------------
 
 // A key struck at t = 0 (velocity v1) and again `delay` seconds later (v2, or the velocity that

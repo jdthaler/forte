@@ -609,6 +609,30 @@ test('voice stealing: past 20 keys the quietest released key fades out over 30 m
   for (let i = Math.round(0.55 * FS); i < Math.round(0.7 * FS); i++) jump = Math.max(jump, Math.abs(r.L[i] - r.L[i - 1]));
   assert.ok(jump < 0.1, `largest step ${jump}`);
 });
+test('Quality: Medium and Low let fewer keys sound (12, 8) and give each pipe fewer modes (8, 5); a full-organ c¹ keeps its pitches and level', () => {
+  const play = (q, params, keys, sec, tap) => {
+    const e = new PipeEngine(FS, 1, { track: true }); e.setQuality(q); e.setParams(params);
+    const n = Math.round(sec * FS), L = new Float64Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
+    for (let s = 0, j = 0; s < n; s += bl) {
+      while (j < keys.length && j * 0.06 * FS <= s) e.noteOn(keys[j++], 0.7);
+      e.process(bL, bR, bl); L.set(bL.subarray(0, Math.min(bl, n - s)), s); tap?.(e);
+    }
+    return { L, e };
+  };
+  const ref = {};
+  for (const [q, cap, modes] of [['high', 20, 10], ['medium', 12, 8], ['low', 8, 5]]) {
+    let live = 0;
+    play(q, P(), Array.from({ length: 14 }, (_, i) => 40 + 3 * i), 1.1, (e) => { live = Math.max(live, e.voices.filter((v) => !v.fading).length); });
+    assert.ok(live === Math.min(cap, 14), `${q}: ${live} keys sounding`);
+    const { L, e } = play(q, P({ octave: 1, gedackt: 1, mixture: 1 }), [60], 1.2), pipes = e.voices[0].pipes;
+    assert.ok(L.every(Number.isFinite), q);
+    const f = pipes.map((p) => p.freq()), lvl = rms(L, Math.round(0.7 * FS), L.length), n = pipes[0].v.length;
+    if (q === 'high') Object.assign(ref, { f, lvl, n });
+    assert.ok(q === 'high' ? n === modes : n === Math.min(modes, ref.n), `${q}: the Principal's c¹ plays ${n} modes`);
+    f.forEach((x, r) => assert.ok(x > 0 && Math.abs(cents(x, ref.f[r])) < 1, `${q}, rank ${r}: ${cents(x, ref.f[r]).toFixed(2)} ¢ from High`));
+    assert.ok(Math.abs(20 * Math.log10(lvl / ref.lvl)) < 1.5, `${q}: ${(20 * Math.log10(lvl / ref.lvl)).toFixed(2)} dB from High`);
+  }
+});
 
 console.log('levels and stability');
 test('level: a single Principal note peaks at 0.03–0.5 from C to f³ (0.1–0.5 up to c¹) at 44.1 and 48 kHz; a ten-key full-organ chord stays under 2', () => {

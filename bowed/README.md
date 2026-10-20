@@ -436,6 +436,18 @@ tools/render-bowed.mjs                node tools/render-bowed.mjs → examples/b
   the string losses changes the flattening and so the pitch, as it would on the
   instrument.
 
+## Quality
+
+The Quality setting (in the controls, for phones and older computers) keeps
+High as described here. Every held string is bowed in full at every setting,
+so a note speaks, settles and sits at the same pitch. Medium and Low run the
+soundboard at half the sample rate (each mode tuned to answer as at High) and
+let a released string go once it is about 80 dB (Medium) or 70 dB (Low) down.
+With the dampers lifted, Medium lets only the 24 strings below C4 ring in
+sympathy, and Low none: a played string still rings on after it is released.
+Many held notes cost about as much as at High, since the strings themselves
+are what costs.
+
 ## Prior art and references
 
 Everything above stands on earlier work: the instrument is Leonardo's and its

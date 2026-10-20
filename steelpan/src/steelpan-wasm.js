@@ -23,12 +23,13 @@ function views(m, e) {
 const Base = wasmEngine(BUILD, { messages: views });
 
 // The engine, with the tests' hooks on its notes: active(key), amplitude(key, p) (mode p's, in
-// thicknesses) and displacement(key, p).
+// thicknesses), displacement(key, p) and modes(key) (how many it integrates, 0 asleep).
 export class SteelPanWasmEngine extends Base {
   constructor(fs) { super(fs); this.e = Base.exports.forte_engine(this.h); }
   active(key) { return Base.exports.steelpan_active(this.e, key) > 0; }
   amplitude(key, p) { return Base.exports.steelpan_amplitude(this.e, key, p); }
   displacement(key, p) { return Base.exports.steelpan_displacement(this.e, key, p); }
+  modes(key) { return Base.exports.steelpan_modes(this.e, key); }
 }
 export const ready = () => SteelPanWasmEngine.ready();
 

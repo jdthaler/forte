@@ -84,7 +84,7 @@ class SpringEngine : public Engine {
     void start(SpringEngine &eng, int key, Data::Ref r, uint64_t version);
     void strike(SpringEngine &eng, double velocity);
     void render(float *L, float *R, int n, SpringEngine &eng);
-    double prune(Bank &b, bool pushing);
+    double prune(const SpringEngine &eng, Bank &b, bool pushing);
     bool anyActive() const;
   };
 

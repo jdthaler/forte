@@ -434,7 +434,7 @@ vibraphone/src/vibraphone-main.js         page wiring and views
 vibraphone/src/vibraphone-wasm.js         the C++ engine and model as WebAssembly (vibraphone/wasm/vibraphone.wasm)
 native/instruments/vibraphone/            the physics in C++: FEM (bar), bars, losses, radiation, tubes, coupling, discs,
                                           mallet (vibraphone-model), the engine, generated tables, reference
-test/vibraphone-tests.mjs                 node test/vibraphone-tests.mjs (26 tests, ~35 s, on the WebAssembly)
+test/vibraphone-tests.mjs                 node test/vibraphone-tests.mjs (28 tests, ~35 s, on the WebAssembly)
 tools/vibraphone-bars.mjs                 node tools/vibraphone-bars.mjs → vibraphone/src/bar-table.js and its C++ copy
 tools/render-vibraphone.mjs               node tools/render-vibraphone.mjs → examples/vibraphone/
 ```
@@ -470,6 +470,16 @@ tools/render-vibraphone.mjs               node tools/render-vibraphone.mjs → e
   bar's dipole radiates mostly up and down, the tubes all round).
 * **Temperature**: aluminium's dE/dT is a typical value; the bars' and the
   air's temperatures are taken to be equal.
+
+## Quality
+
+The Quality setting (in the controls, for phones and older computers) keeps
+High as described here. The vibraphone is light already, so Medium and Low
+trim little: Medium lets 12 bars ring at once instead of 16, Low 8, and both
+leave out a bar's modes above 16 and 12 kHz and let a bar go once it has
+fallen 70 and 60 dB (90 dB at High). Each bar and its tube are played in
+full, so a note sounds the same; with the pedal down in a fast passage the
+quietest older bars fade sooner.
 
 ## Prior art and references
 

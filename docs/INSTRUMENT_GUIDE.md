@@ -82,6 +82,7 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `views.js` | `fit`, `css`, `animate`, `SpectrumView` (live spectrum + model markers), `SpectrogramView` (scrolling spectrogram, the markers as ticks), `ScopeView` |
 | `impulses.js` | the rooms: `roomIR` (the pages' original synthetic room) and the venues (`VENUES`: a studio and three halls built from their size, walls and air: image sources, then a tail decaying in each octave in Eyring's time) |
 | `tuning.js`, `tuning-ui.js` | the keyboard's tuning, the same on every instrument and in the plugins (`native/core` `tuning.h`): the pitch standard (A4), the temperament (equal, meantone, the well temperaments, Pythagorean, just, custom) on a root key, and a custom temperament's cents; `readScala` reads a Scala file (`.scl`) into them. `tuning-ui.js` is the pages' *Load a Scala file* button, which `user-presets.js` adds under Temperament. |
+| `quality.js` | the Quality setting (High, Medium, Low): how much of its physics the engine plays, for phones and older computers. One choice per browser, for every page, shown as the CPU group at the end of the controls and in no preset or link; `connectQuality(node)` sends it to the page's engine and suggests a lower setting when the audio drops out. |
 | `registry.js` | the instrument list behind the landing page and the menus |
 | `presets.js`, `user-presets.js` | your own presets and shared links. `presets.js` is the format, the same in the plugins (`native/plugin/presets.cpp`): every parameter of the contract by id, in a versioned file or in a link's fragment. `user-presets.js` adds them to the Presets menu (save, link, a sheet to play, link, save to a file, delete and open files); the shell attaches it, and a page with its own state calls `attachPresets` with how to get and set its parameters by contract id (the organ's console is `CONSOLE.get` and `CONSOLE.put`). |
 | `midi.js` | Web MIDI for every page (the shell and the five older pages): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen next to Enable MIDI, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling. |
@@ -155,6 +156,7 @@ export class GongWasmEngine {
   setSustain(on) { … }             // optional
   allNotesOff() { … }              // optional (Panic)
   handle(msg) { … }                // optional: other messages, incl. MIDI { type: 'pressure', value, key } and { type: 'bend', value }
+  setQuality(level) { … }          // 'high', 'medium' or 'low' (shared/quality.js; the C++'s Engine::quality)
   voiceCount() { … }               // optional, shown in the CPU pill
   stats() { … }                    // optional: more fields for the page's stats message
   process(L, R, n) { … }           // fill n samples (n = 128 in the browser)
@@ -169,7 +171,10 @@ into the page's (see The native port).
 Rules of thumb:
 
 * **Budget:** ≤ 30 % of one core with 10 voices at 48 kHz on a laptop. Watch
-  the CPU pill.
+  the CPU pill, and `node tools/bench.mjs <slug>`.
+* **Quality:** High plays everything. At Medium and Low the engine trims what
+  costs the most and is heard the least (see The native port), so a phone keeps
+  up.
 * **No allocation in `process`.** Allocate per voice, at note-on.
 * **Expensive setup** (eigen-solves, tables) belongs in the model. Cache it
   per key and parameter version. If it is slow (> 5 ms), build it on the
@@ -342,7 +347,9 @@ the whole file under ~30 s. Aim for 10–25 tests that cover:
 6. CPU: a rough timing check that 10 voices render faster than real time
    by a healthy margin. Name it `CPU: …`: timing tests are skipped on CI
    (`process.env.CI`), whose shared machines are too slow and noisy to
-   hold a desktop budget.
+   hold a desktop budget;
+7. Quality: what Medium and Low trim (fewer voices, modes or partials,
+   counted rather than timed), with the pitch and level kept.
 
 `npm test` runs every suite in parallel (`tools/test-all.mjs`) and
 reports all failures; `node tools/test-all.mjs <name>` runs a subset.
@@ -411,6 +418,19 @@ a bell's profile then follow as they do for its note), leave what designs the in
 key number alone, and rebuild the per-key data when the tuning changes. `test/tuning-tests.mjs`
 plays every instrument retuned (A = 415 Hz, and a custom temperament) and checks it moves by the
 cents its tuning gives, and not at all at the defaults.
+
+Every engine follows the Quality setting (`forte::Quality` in `engine.h`): the page's choice or
+the plugin's parameter, a device's and not the sound's, so it is no parameter of the instrument
+and no preset carries it. High is the instrument as it always was, to the bit. Medium and Low
+play less, least audible first: work nobody hears (partials past hearing or far under the
+loudest, voices decayed to nothing), fewer partials or modes a voice, fewer voices at once (the
+engine's own stealing, at `pick(MAX_VOICES, …, …)`), and optional physics lighter or off (the
+sympathetic strings). Aim for Medium at about 60 % of High's cost in `node tools/bench.mjs <slug>`
+and Low at about a third, and keep the pitch and a note's level. Read `quality` where a voice is
+built, so a change applies to the notes that follow, and build per-key data in full, trimming it
+for the voice. Say what each level trims in the README's `## Quality` section, and test it in
+the suite (a `Quality: …` test that counts the voices or modes, not the time); `test/quality-tests.mjs`
+checks every instrument's High is unchanged and its Medium and Low still play.
 
 Strings that share a bridge can ring along with one another through `forte/sympathetic.h`: each
 key's (or string's) lowest partials as a group, driven by the bridge signal of every voice and

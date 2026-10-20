@@ -15,6 +15,7 @@ import { controlOwns, focusedByPointer } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
 import { tuningRatio } from '../../shared/tuning.js';
+import { connectQuality, qualityControl } from '../../shared/quality.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'tonewheel-organ/params/v1';
@@ -70,6 +71,7 @@ function startAudio() {
     fs = ctx.sampleRate;
     audio = { ctx, node, analyser, chain };
     node.port.postMessage(paramsMessage()); // the engine builds its generator from these
+    connectQuality(node, { toast }); // the device's Quality (shared/quality.js)
     applyMix();
     output.setAnalyser(analyser); spectro.setAnalyser(analyser);
     if (ctx.state !== 'running') await ctx.resume();
@@ -508,3 +510,4 @@ updateHelp();
 requestAnimationFrame(frame);
 // your own presets and links: the console's state goes in as its parameters (organ-params.js)
 attachPresets({ instrument: INSTRUMENT, get: () => P, values: (p) => ({ ...p, ...CONSOLE.get(p) }), set: (v) => replaceP({ ...P, ...Object.fromEntries(ALL_PARAMS.map((p) => [p.id, v[p.id]])), ...CONSOLE.put(v, P) }), toast });
+qualityControl(); // the device's Quality, after the controls

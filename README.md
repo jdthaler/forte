@@ -123,6 +123,15 @@ resampled: at 415 Hz the strings are slacker, the bars and bells cut for
 their new notes. Presets keep your tuning; your own presets and links
 carry it.
 
+**Quality**, the last group of controls (CPU), is for phones and older
+computers. **High** plays all the physics, as the instruments always have;
+**Medium** and **Low** play less of what costs the most and is heard the
+least (fewer voices sounding at once, fewer partials, the sympathetic
+strings lighter or off), and each instrument's notes say what. It belongs
+to the device, not the sound: one choice for every instrument in this
+browser, which presets and links leave alone. If the sound starts to
+crackle, the page suggests a lower setting.
+
 There are two modes. **Discover** shows it all. **Perform** shows just
 the views you turned on, filling the screen, with no toggles and no text
 in them: for playing,
@@ -163,6 +172,10 @@ Linux), and *Open the presets folder* shows it, so a file saved on the site can 
 Scala files for the custom temperament go in the `Tunings` folder beside the instruments' (on a
 Mac, `~/Library/Audio/Presets/Forte/Tunings`): the menu under Temperament lists them and opens the
 folder.
+
+**Quality** (in the CPU group) is in every plugin too, kept with the project and in no preset.
+A VST3 or CLAP host that bounces or freezes a track offline gets High whatever it says; the AU
+isn't told, so set it back to High before a bounce in Logic.
 
 Releases publish themselves: after each green `native` run on `live` (the branch the site is
 published from), the **release-plugins** workflow releases that run's plugins if an instrument's

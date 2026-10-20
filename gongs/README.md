@@ -486,6 +486,15 @@ tools/bench-gongs.mjs                node tools/bench-gongs.mjs: real-time load,
   are thicker and domed. The Thickness, Dome and Thermoelastic loss knobs show
   why.
 
+## Quality
+
+The Quality setting (for phones and older computers) trims the gong's most expensive physics, the
+nonlinear coupling between its modes. Medium lets at most two gongs run it at once and Low one
+(fewer if Nonlinear voices is set lower): the newest, wildest gongs keep their crash and pitch
+glide, and the calmer ones ring on linearly, as they would a little later anyway. Medium lets 12
+gongs ring at once and Low 8 (High 16), and both let go of a gong once it has fallen 60 dB under
+the loudest one. Low also lets only one gong take extra substeps through a hard strike.
+
 ## Prior art and references
 
 The physics this instrument computes, and the idea of synthesising gongs from

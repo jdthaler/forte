@@ -179,6 +179,14 @@ tools/render-kalimba.mjs                 node tools/render-kalimba.mjs → examp
 - **The thumb** is a force released along a raised cosine, the same for every
   tine, and it always plucks from rest.
 
+## Quality
+
+The kalimba costs little at any setting, so the Quality setting (in the
+controls, for phones and older computers) changes little. High plays as
+described here; Medium and Low let a tine go once it has faded 80 and 60 dB
+(100 dB at High), and past 32 and 16 tines ringing at once the oldest is
+stilled, as a thumb would. Every tine and the box are played in full.
+
 ## Prior art and references
 
 **The original instrument.** Lamellophones (the mbira of the Shona of

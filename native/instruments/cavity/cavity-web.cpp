@@ -1,6 +1,7 @@
 // cavity-web.cpp — the model's functions the page's views call (cavity/src/cavity-wasm.js) and the tests.
 
 #include "forte/web.h"
+#include "cavity-engine.h"
 #include "cavity-model.h"
 #include "cavity-params.h"
 
@@ -41,4 +42,6 @@ FORTE_EXPORT double cavity_band_j(int b) { return BAND[b].j; }
 FORTE_EXPORT double cavity_qscale() { return QSCALE; }
 FORTE_EXPORT double cavity_train() { return TRAIN; }
 FORTE_EXPORT double cavity_tc() { return TC; }
+// The tests' hook, on the engine of a handle (forte_engine): the modes ringing, over every voice.
+FORTE_EXPORT int cavity_ringing(CavityBellsEngine *e) { return e->ringing(); }
 }

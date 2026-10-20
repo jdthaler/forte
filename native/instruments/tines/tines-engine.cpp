@@ -14,6 +14,7 @@ constexpr double SMOOTH_T = 0.01; // s: glide of the output-stage controls
 // moving smoothly: the flux change through the coil is heard as a soft thump, not a click.
 constexpr double PICKUP_T = 0.01;
 constexpr double BEND_T = 0.02; // s: the pitch wheel's glide
+constexpr int LOW_OS_KEY = 84;  // Low plays the keys below this at the output rate
 
 void TinesEngine::Biquad::set(bool lowpass, double f, double Q, double fs) {
   const double w = (TAU * std::min(f, 0.45 * fs)) / fs, c = std::cos(w), al = std::sin(w) / (2 * Q), a0 = 1 + al;
@@ -30,12 +31,22 @@ static double harpHz(double cablePF) { return 1 / (TAU * std::sqrt(1.0 * cablePF
 void TinesEngine::Voice::start(TinesEngine &eng, int key_, const VoiceData &d) {
   *this = Voice{};
   inUse = true;
-  N = std::min(d.n, MAX_MODES);
-  k = 1 / eng.fs2; key = key_; version = d.version;
-  for (int i = 0; i < N; i++) {
-    om0[i] = TAU * d.freq[i]; sig[i] = d.sigma[i]; dw[i] = d.dampW[i];
-    w[i] = d.w[i]; pk[i] = d.pk[i];
+  // Quality: Medium and Low drop each mode once it has decayed away (pruneModes) and end a voice
+  // sooner; Low plays it at the output rate, not twice it, below the top two octaves (whose
+  // hammers leave the tine too quickly for it), without the modes that would come near that
+  // rate's Nyquist frequency (bent up a tone)
+  os = eng.quality == Quality::low && key_ < LOW_OS_KEY ? 1 : OS;
+  prune = eng.pick(0.0, 1e-3, 1e-3); deathRel = eng.pick(0.0, 1e-3, 1e-3);
+  const double fTop = os == OS ? INFINITY : 0.4 * eng.fs;
+  N = 0;
+  k = 1 / (eng.fs * os); key = key_; version = d.version;
+  for (int j = 0; j < std::min(d.n, MAX_MODES); j++) {
+    if (d.freq[j] > fTop) continue;
+    const int i = N++;
+    om0[i] = TAU * d.freq[j]; sig[i] = d.sigma[j]; dw[i] = d.dampW[j];
+    w[i] = d.w[j]; pk[i] = d.pk[j];
   }
+  Nall = N;
   tune(eng.bendNow);
   hammer = d.hammer;
   // the engine's own pickup settings win over the (possibly cached) voice data
@@ -52,7 +63,7 @@ void TinesEngine::Voice::start(TinesEngine &eng, int key_, const VoiceData &d) {
 
 void TinesEngine::Voice::tune(double r) {
   double cmp = 0;
-  for (int i = 0; i < N; i++) {
+  for (int i = 0; i < Nall; i++) {
     const double o = om0[i] * r, s = sig[i];
     om[i] = o;
     const double rr = std::exp(-s * k), od = std::sqrt(std::max(o * o - s * s, 1e-6));
@@ -70,7 +81,7 @@ void TinesEngine::Voice::retargetPickup(const Pickup &pu) {
 }
 
 void TinesEngine::Voice::setDamper(double sd) {
-  for (int i = 0; i < N; i++) {
+  for (int i = 0; i < Nall; i++) {
     const double s = sig[i] + (killing ? 300 : sd * dw[i]), o = om[i];
     const double r = std::exp(-s * k), od = std::sqrt(std::max(o * o - s * s, 1e-6));
     a1d[i] = 2 * r * std::cos(od * k); a2d[i] = r * r;
@@ -79,6 +90,7 @@ void TinesEngine::Voice::setDamper(double sd) {
 }
 
 void TinesEngine::Voice::strike(double v) {
+  N = Nall; // every mode takes the blow
   double u = 0;
   for (int i = 0; i < N; i++) u += w[i] * q[i];
   eta = u - 1.5 * v * k; etaPrev = eta - v * k;
@@ -112,7 +124,8 @@ double TinesEngine::Voice::contactForce(double dFree) {
 
 void TinesEngine::Voice::render(double *buf, int n, TinesEngine &eng) {
   const double *A1 = damped ? a1d.data() : a1.data(), *A2 = damped ? a2d.data() : a2.data();
-  const double gs = OUT_SCALE * eng.fs2, aP = eng.aPick;
+  const bool full = os == OS; // else Low's voice at the output rate
+  const double rate = full ? eng.fs2 : eng.fs, gs = OUT_SCALE * rate, aP = full ? eng.aPick : eng.aPick1;
   const bool moving = pickupMoving;
   double wid_ = wid, yoff_ = yoff, gain_ = gain, wid1_ = wid1, yoff1_ = yoff1, gain1_ = gain1;
   double g = gain_ * gs, iw2 = 1 / (wid_ * wid_);
@@ -140,11 +153,11 @@ void TinesEngine::Voice::render(double *buf, int n, TinesEngine &eng) {
       }
       for (int i = 0; i < N; i++) y += pk[i] * q[i];
       hammerSamples++;
-      if (hammerSamples > eng.hammerMax || (contact && F == 0 && dPrev < -2e-3)) {
+      if (hammerSamples > (full ? eng.hammerMax : eng.hammerMax / OS) || (contact && F == 0 && dPrev < -2e-3)) {
         hammerOn = false;
         Message m;
         m.type = msg::hammer; m.key = (int16_t)key; m.count = 2;
-        m.values[0] = (float)((contactSamples / eng.fs2) * 1000); m.values[1] = (float)Fmax;
+        m.values[0] = (float)((contactSamples / rate) * 1000); m.values[1] = (float)Fmax;
         eng.post(m);
       }
     }
@@ -180,9 +193,35 @@ void TinesEngine::Voice::render(double *buf, int n, TinesEngine &eng) {
     eng.post(m);
     return;
   }
+  if (pkMax > loudest) loudest = pkMax;
   if (!hammerOn) {
-    quiet = pkMax < (damped ? 2e-5 : 2e-6) ? quiet + 1 : 0;
+    quiet = pkMax < std::max(damped ? 2e-5 : 2e-6, deathRel * loudest) ? quiet + 1 : 0;
     if (quiet > 60) dead = true;
+    if (prune > 0) pruneModes();
+  }
+}
+
+// Medium and Low: a mode whose part of the pickup's signal (∝ its tip weight × amplitude ×
+// frequency) has decayed `prune` below the strongest's is no longer played. It moves past N, kept
+// (and still tuned and damped) for the key's next strike. The modes are uncoupled, so the others
+// do not notice.
+void TinesEngine::Voice::pruneModes() {
+  std::array<double, MAX_MODES> e{};
+  double top = 0;
+  for (int i = 0; i < N; i++) {
+    // a two-pole recursion's amplitude from its last two samples
+    const double c = a1[i] / (2 * std::sqrt(a2[i])), s2 = std::max(1 - c * c, 1e-12);
+    const double A2 = std::max(q[i] * q[i] + q1[i] * q1[i] - 2 * c * q[i] * q1[i], 0.0) / s2;
+    e[i] = pk[i] * pk[i] * om[i] * om[i] * A2;
+    top = std::max(top, e[i]);
+  }
+  const double thr = top * prune * prune;
+  for (int i = N - 1; i >= 0; i--) {
+    if (e[i] >= thr) continue;
+    const int j = --N;
+    if (i == j) continue;
+    for (auto *a : {&q, &q1, &a1, &a2, &a1d, &a2d, &w, &bw, &pk, &om, &sig, &dw, &om0}) std::swap((*a)[i], (*a)[j]);
+    std::swap(e[i], e[j]);
   }
 }
 
@@ -190,7 +229,7 @@ void TinesEngine::Voice::render(double *buf, int n, TinesEngine &eng) {
 
 TinesEngine::TinesEngine(double fs)
     : Engine(fs), fs2(OS * fs), hammerMax((int)std::round(0.05 * fs2)), aSm(1 - std::exp(-1 / (SMOOTH_T * fs2))),
-      aPick(1 - std::exp(-1 / (PICKUP_T * fs2))), mono((size_t)OS * MAXN, 0.0),
+      aPick(1 - std::exp(-1 / (PICKUP_T * fs2))), aPick1(1 - std::exp(-1 / (PICKUP_T * fs))), mono((size_t)OS * MAXN, 0.0), mono1(MAXN, 0.0),
       data([this](int key, uint64_t v) -> std::unique_ptr<VoiceData> {
         if (key < KEY_MIN || key > KEY_MAX) return nullptr;
         // the parameters of that version (a snapshot the audio thread may be rewriting: check)
@@ -327,7 +366,9 @@ void TinesEngine::trimVoices(const Voice *keep) {
   int live = 0;
   for (int i = 0; i < nVoices; i++) if (!voices[i]->killing) live++;
   overLimit = false;
-  while (live > MAX_VOICES) {
+  // Quality: Medium and Low let fewer voices sound at once
+  const int cap = pick(MAX_VOICES, 16, 10);
+  while (live > cap) {
     Voice *victim = nullptr;
     double score = INFINITY;
     for (int i = 0; i < nVoices; i++) {
@@ -378,7 +419,15 @@ void TinesEngine::block(float *L, float *R, int off, int n) {
   const int n2 = n * OS;
   double *m = mono.data();
   std::fill(m, m + n2, 0.0);
-  for (int i = 0; i < nVoices; i++) voices[i]->render(m, n2, *this);
+  bool low = false; // Low's voices, at the output rate: summed apart, then each sample held twice
+  for (int i = 0; i < nVoices; i++) {
+    if (voices[i]->os == OS) voices[i]->render(m, n2, *this);
+    else {
+      if (!low) { std::fill(mono1.begin(), mono1.begin() + n, 0.0); low = true; }
+      voices[i]->render(mono1.data(), n, *this);
+    }
+  }
+  if (low) for (int s = 0; s < n; s++) { m[2 * s] += mono1[s]; m[2 * s + 1] += mono1[s]; }
   int j = 0;
   for (int i = 0; i < nVoices; i++) {
     Voice *v = voices[i];
@@ -429,13 +478,25 @@ void TinesEngine::block(float *L, float *R, int off, int n) {
       const double lfo = std::sin(TAU * tremPhase);
       l = x * (1 - depth * 0.5 * (1 + lfo)); r = x * (1 - depth * 0.5 * (1 - lfo));
     }
-    if (drive > 0) { l += dmix * (std::tanh(dk * l) * dn - l); r += dmix * (std::tanh(dk * r) * dn - r); }
+    // without the vibrato both sides are the same: the drive, and the decimation once the last T
+    // samples were, are worked out once (the same numbers)
+    if (drive > 0) {
+      const double tl = std::tanh(dk * l), tr = r == l ? tl : std::tanh(dk * r);
+      l += dmix * (tl * dn - l); r += dmix * (tr * dn - r);
+    }
+    sameLR = l == r ? std::min(sameLR + 1, T) : 0;
     hi = (hi + 1) & 127;
     hL[hi] = l; hR[hi] = r;
     if (s & 1) {
       const int hc = (hi - TC) & 127;
-      double al = fir[TC] * hL[hc], ar = fir[TC] * hR[hc];
-      for (int t = 0; t < T; t += 2) { const int idx = (hi - t) & 127; al += fir[t] * hL[idx]; ar += fir[t] * hR[idx]; }
+      double al = fir[TC] * hL[hc], ar;
+      if (sameLR >= T) {
+        for (int t = 0; t < T; t += 2) al += fir[t] * hL[(hi - t) & 127];
+        ar = al;
+      } else {
+        ar = fir[TC] * hR[hc];
+        for (int t = 0; t < T; t += 2) { const int idx = (hi - t) & 127; al += fir[t] * hL[idx]; ar += fir[t] * hR[idx]; }
+      }
       const int o = off + (s >> 1);
       L[o] = (float)(lpL.run(hpL.run(al)) * master);
       R[o] = (float)(lpR.run(hpR.run(ar)) * master);

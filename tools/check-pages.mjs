@@ -2,11 +2,11 @@
 // what a layout regression breaks: errors in the console, a page that scrolls sideways (as
 // loaded, with the menus, Controls and every view turned on, and with audio started), the
 // controls each page should place (the perform controls above the keys, the ⓘ buttons, "Default
-// settings" among the presets, the keys), that each toggle turns its view or group of controls
-// off and on (and on the desktop, that what's turned on is still on after a reload, that the
-// switch puts the controls below the views and beside them, and that every view shows in
-// Perform), and the front page's Listen buttons (one for each instrument with a demo, and two
-// in turn play).
+// settings" among the presets, the keys, the Quality choice, set while audio plays), that each
+// toggle turns its view or group of controls off and on (and on the desktop, that what's turned
+// on is still on after a reload, that the switch puts the controls below the views and beside
+// them, and that every view shows in Perform), and the front page's Listen buttons (one for each
+// instrument with a demo, and two in turn play).
 //
 // Usage: node tools/check-pages.mjs [--base <git ref>] [--json <file>] [filter]
 //   filter       only the pages whose path contains it (gongs, index, credits, template)
@@ -88,6 +88,7 @@ const COUNT = () => {
     controlGroups: n('.forte-control-toggles button'),
     viewsOn: n('.forte-view-toggles button[aria-pressed="true"]'),
     listen: n('button[data-src]'),
+    quality: n('#controls #quality'),
   };
 };
 const WIDE = () => document.documentElement.scrollWidth - window.innerWidth;
@@ -196,7 +197,12 @@ async function checkPage(browser, url, page, size) {
     if (await click('.forte-more')) { await sideways('Controls open'); await tab.keyboard.press('Escape'); await click('.forte-more'); }
     if (await toggles(tab, broken)) { await tab.waitForTimeout(250); await sideways('every view on'); }
     if (name === 'desktop' && counts.views) broken.push(...await remembered(tab));
-    if (await click('#start')) { await tab.waitForTimeout(500); await sideways('audio started'); }
+    if (await click('#start')) {
+      await tab.waitForTimeout(500); await sideways('audio started');
+      // the Quality choice reaches the playing engine (shared/quality.js), and back
+      const q = await tab.evaluate(() => { const s = document.querySelector('#quality'); if (!s) return false; for (const v of ['low', 'medium', 'high']) { s.value = v; s.dispatchEvent(new Event('change')); } return true; });
+      if (q) await tab.waitForTimeout(250);
+    }
     return { page: page || 'index', size: name, counts, errors, wide, broken };
   } catch (e) {
     return { page: page || 'index', size: name, counts: null, errors: [...errors, e.message], wide, broken };
@@ -214,6 +220,7 @@ function failures(r, instrument) {
   if (!c.defaultSettings) f.push('no "Default settings" among the presets');
   if (!c.performControls) f.push('no perform controls above the keys');
   if (!c.views) f.push('no toggles for the views');
+  if (!c.quality) f.push('no Quality choice in the controls');
   return f;
 }
 

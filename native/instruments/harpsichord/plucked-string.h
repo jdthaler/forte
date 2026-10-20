@@ -70,6 +70,7 @@ class PluckedString {
   double render(int n, const double *lift, bool keyDown, const double *buffG, double *seg, int stride, const double *wts, int w0, int w1, double gain,
                 double *sym = nullptr);
   void dropTop(double thr);
+  void limit(int n); // run only the first n partials from now on (the engine's Quality)
   void wake();
   void silence(); // q, q1 to zero, the contacts forgotten (asleep)
 

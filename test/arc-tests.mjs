@@ -405,6 +405,17 @@ test('presets use real parameters', () => {
   const ids = new Set(GROUPS.flatMap((g) => g.params).map((q) => q.id));
   for (const pr of PRESETS) for (const k of Object.keys(pr.p)) assert.ok(ids.has(k), `${pr.name}: ${k}`);
 });
+test('Quality: nothing to trim (the arc lamps are a parameter, and each is one circuit that has to be stepped finely to sing): Medium and Low play six singing arcs exactly as High', () => {
+  const render = (quality) => {
+    const e = new ArcEngine(FS); e.setQuality(quality); e.setParams(P({ mode: 'poly', arcs: 6, table: table(P()) }));
+    for (const k of [55, 60, 64, 67, 72, 79]) e.noteOn(k);
+    const L = new Float32Array(128), R = new Float32Array(128), out = new Float32Array(0.5 * FS);
+    for (let s = 0; s < out.length; s += 128) { e.process(L, R, 128); out.set(L.subarray(0, Math.min(128, out.length - s)), s); }
+    return out;
+  };
+  const hi = render('high');
+  for (const quality of ['medium', 'low']) { const q = render(quality); for (let i = 0; i < hi.length; i++) if (q[i] !== hi[i]) throw new Error(`${quality} differs at sample ${i}`); }
+});
 test('CPU: six arcs singing take under 30 % of one core', () => {
   const e = new ArcEngine(FS); e.setParams(P({ mode: 'poly', arcs: 6, table: table(P()) }));
   for (const k of [55, 60, 64, 67, 72, 79]) e.noteOn(k);

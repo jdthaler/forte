@@ -242,6 +242,18 @@ src/params.js             every parameter, with ranges, hints and presets
   steals the quietest voices. If the CPU pill turns red, lower **Highest
   partial** or **Strings per note**.
 
+## Quality
+
+The Quality setting (in the controls, for phones and older computers) keeps High as described
+here. Medium strikes each string with fewer modes, none above 7 kHz (but every family's first
+eight, which carry the treble's tone) and none past the 80th partial, the faint top of the bass; it
+holds a smaller share of the oscillator budget, lets a dying voice go a little sooner, and gives each
+sympathetic string only its three lowest partials. Low stops at 5 kHz and the 56th partial, holds a
+third of the budget and turns the sympathetic strings off (what still rings fades as if damped). A
+note keeps its pitch and level; you hear a little less sparkle in the bass and treble, and with the
+pedal down less of the halo of strings ringing along, so a pedalled note also loses a little less to
+them and sounds up to about 1.5 dB louder at Low.
+
 ## Prior art and references
 
 ### The original instrument

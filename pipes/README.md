@@ -476,6 +476,17 @@ tools/render-pipes.mjs                node tools/render-pipes.mjs → examples/p
   directivity, no case or façade, and the church is the page's synthetic
   room.
 
+## Quality
+
+Medium and Low give each pipe fewer modes: at most 8 up to 10 kHz at
+Medium and 5 up to 7 kHz at Low (10 up to 15 kHz at High), never fewer than
+its lowest three. The partials they carried are the pipe's weakest, so the
+Principal loses a little of its edge at Low, while pitch and loudness stay
+(within a fraction of a cent and a few tenths of a dB). They also let fewer
+keys sound at once, 12 at Medium and 8 at Low against 20, the quietest
+released key fading first: with every stop drawn each key is six pipes.
+The jets keep their oversampling, which their timing needs.
+
 ## Prior art and references
 
 **The original instrument.**

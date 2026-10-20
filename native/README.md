@@ -120,6 +120,10 @@ clap-wrapper builds the VST3, AU v2 and standalone from the CLAP. Each plugin:
 - has the instrument's parameters, with stable ids hashed from the JavaScript ids, and a
   Preset parameter that applies a factory preset (the defaults, then the kept parameters,
   then the preset's values, as the pages do);
+- has a Quality choice (High, Medium, Low; `forte::Quality` in `engine.h`) after the velocity
+  curve: the engine plays less physics at Medium and Low for a slow computer. The project keeps
+  it, presets don't, and a host rendering offline (CLAP's render extension, which clap-wrapper's
+  VST3 passes on and its AU v2 does not) gets High;
 - saves its state as text (`forte <slug> <version>`, then `<id> <value>` per line), so a
   project survives parameters being added;
 - plays through the output chain, with flush-to-zero, a NaN guard, and engine blocks of at

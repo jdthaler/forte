@@ -24,6 +24,9 @@ export function nativeValue(p, v) {
   return typeof v === 'number' && Number.isFinite(v) ? v : p.def;
 }
 
+// The Quality levels in the C++'s order (forte/engine.h; shared/quality.js names them).
+export const QUALITY_LEVELS = ['high', 'medium', 'low'];
+
 const isNode = typeof process !== 'undefined' && !!process.versions?.node && typeof window === 'undefined';
 
 // Compile and instantiate synchronously (an AudioWorklet or Node may; a page's main thread may
@@ -98,6 +101,8 @@ export function wasmEngine(I, { messages } = {}) {
       else if (m.type === 'bend') x.forte_bend(this.h, m.value);
     }
     voiceCount() { return x.forte_voice_count(this.h); }
+    // Quality (shared/quality.js): 'high', 'medium' or 'low', or its index
+    setQuality(q) { x.forte_set_quality(this.h, typeof q === 'number' ? q : Math.max(0, QUALITY_LEVELS.indexOf(q))); }
     // the keyboard's tuning the C++ makes of the parameters set (forte/tuning.h): each pitch
     // class's cents from equal temperament at A = 440 Hz (the tests compare it with shared/tuning.js)
     tuningCents() { const s = scratch(x); return x.forte_tuning_cents(this.h, s.at) ? Array.from(s.f64(12)) : null; }

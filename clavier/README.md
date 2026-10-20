@@ -330,6 +330,13 @@ tools/render-clavier.mjs               node tools/render-clavier.mjs → example
   and the key's flight adds up to 5 ms at pianissimo. That is real physics,
   and it makes the bass slightly late.
 
+## Quality
+
+The Quality setting (in the controls, for phones and older computers) changes one thing: how many
+keys sound at once, 16 at Medium and 10 at Low (24 at High), the quietest fading when one more is
+played. A string costs little, and its partials and its tangent's solve are what make it a
+clavichord, so a note sounds exactly as at High.
+
 ## Prior art and references
 
 ### The original instrument and its inventor

@@ -72,6 +72,13 @@ bool QuantumEngine::Voice::start(const QuantumEngine &eng, int k, double vel, co
   released = quench = stolen = dead = false;
   coh = folded = false; lam = 0; gain = 1; dcB = dcC = 0;
   s0 = 0; s1 = S; active = NP; // the states rotated, and the pairs summed (see trim)
+  // Quality: Medium and Low drop the pairs 50 and 40 dB under the voice's strongest (High keeps
+  // what the packet keeps, down to 60 dB)
+  if (eng.quality != Quality::high) {
+    double top = 0;
+    for (int q = 0; q < nw; q++) top = std::max(top, std::fabs(w[q]));
+    trim(eng.pick(0.0, 3e-3, 1e-2) * env * top);
+  }
   rates(eng);
   return true;
 }
@@ -419,7 +426,7 @@ void QuantumEngine::startNote(int key, double velocity, Data::Ref r, std::unique
   for (int i = nVoices - 1; i >= 0; i--) {
     Voice *u = voices[i];
     if (u->stolen) continue;
-    if (++live > MAX_VOICES) { u->stolen = true; u->rates(*this); }
+    if (++live > pick(MAX_VOICES, 14, 9)) { u->stolen = true; u->rates(*this); } // (Quality: fewer at Medium and Low)
   }
   budget();
 }
@@ -427,14 +434,15 @@ void QuantumEngine::startNote(int key, double velocity, Data::Ref r, std::unique
 // At most BUDGET pairs summed per sample, over all voices: past it, the weakest pairs of all, by
 // their amplitude now (velocity, T₁ decay and dephasing included), are dropped for good.
 void QuantumEngine::budget() {
+  const int cap = pick(BUDGET, 1500, 800); // Quality: a smaller budget at Medium and Low
   int n = 0;
   for (int i = 0; i < nVoices; i++) n += voices[i]->active;
-  if (n <= BUDGET) return;
+  if (n <= cap) return;
   int m = 0;
   for (int i = 0; i < nVoices; i++) m = voices[i]->strengths(buf.data(), m);
-  if (m <= BUDGET) return;
-  // the (m − BUDGET)th smallest of what the buffer kept, or none
-  const int len = std::min(m, BUF), at = m - BUDGET;
+  if (m <= cap) return;
+  // the (m − cap)th smallest of what the buffer kept, or none
+  const int len = std::min(m, BUF), at = m - cap;
   double tau = NAN;
   if (at < len) { std::nth_element(buf.begin(), buf.begin() + at, buf.begin() + len); tau = buf[at]; }
   for (int i = 0; i < nVoices; i++) voices[i]->trim(tau);

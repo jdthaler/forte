@@ -180,7 +180,22 @@ void SpringEngine::Voice::strike(SpringEngine &eng, double velocity) {
   const double amp = (velocity * PI * eng.fs) / (2 * n); // Σ F·h = velocity
   for (int i = 0; i < n; i++) pulse[i] = amp * fd::sin((PI * (i + 0.5)) / n);
   pulseN = n; pulseAt = 0;
-  for (int s = 0; s < nBanks; s++) { Bank &b = banks[s]; std::fill(b.act.begin(), b.act.begin() + b.N, 1); b.compact(); }
+  // Quality: at Medium and Low a mode this strike leaves 65 or 60 dB under the voice's level is not
+  // started (it would be let go once the voice is YOUNG no more); those ringing already go on
+  const double cut = eng.pick(0.0, 5.6e-4, 1e-3);
+  if (cut > 0) {
+    double sum = 0;
+    for (int s = 0; s < nBanks; s++) {
+      Bank &b = banks[s];
+      for (int i = 0; i < b.N; i++) { const double a = std::fabs(b.GT[i]) * pulseSpectrum(b.sp->f[i], tau); b.AMP[i] = a; sum += a * a; }
+    }
+    const double floor = cut * std::sqrt(sum);
+    for (int s = 0; s < nBanks; s++) {
+      Bank &b = banks[s];
+      for (int i = 0; i < b.N; i++) { b.act[i] = b.AMP[i] >= floor || b.Y1[i] != 0 || b.Y2[i] != 0; b.AMP[i] = 0; }
+      b.compact();
+    }
+  } else for (int s = 0; s < nBanks; s++) { Bank &b = banks[s]; std::fill(b.act.begin(), b.act.begin() + b.N, 1); b.compact(); }
   fading = false; fade = 1; dead = false; age = 0;
   released = false;
 }
@@ -218,7 +233,7 @@ void SpringEngine::Voice::render(float *L, float *R, int n, SpringEngine &eng) {
       L[s] += gl * y; R[s] += gr * y;
       if (cap) eng.capture[eng.capN + s] += y * 0.7071;
     }
-    sum += prune(b, pushing);
+    sum += prune(eng, b, pushing);
   }
   if (fading) { fade -= n / (FADE * eng.fs); if (fade <= 0) { fade = 0; dead = true; } }
   if (eng.capturing == this) { eng.capN += n; if (eng.capN + BLOCK_MAX > eng.capLen) eng.finishCapture(); }
@@ -240,10 +255,11 @@ bool SpringEngine::Voice::anyActive() const {
 }
 
 // Each mode's amplitude as heard; skip those far below the voice's loudest. Returns the bank's power.
-double SpringEngine::Voice::prune(Bank &b, bool pushing) {
+double SpringEngine::Voice::prune(const SpringEngine &eng, Bank &b, bool pushing) {
   const double sum = amplitudes(b.Y1.data(), b.Y2.data(), b.C.data(), b.KA.data(), b.AMP.data(), b.idx.data(), b.nAct);
   if (pushing || age < YOUNG) return sum;
-  const double floor = std::max(PRUNE * peak, 1e-9);
+  // (Quality: Medium and Low let a mode go sooner, 65 and 60 dB under the loudest)
+  const double floor = std::max(eng.pick(PRUNE, 5.6e-4, 1e-3) * peak, 1e-9);
   bool changed = false;
   // (a skipped mode is let go entirely, so a later strike starts it afresh)
   for (int q = 0; q < b.nAct; q++) {
@@ -380,7 +396,7 @@ void SpringEngine::strikeKey(int key, double velocity, Data::Ref r) {
   capLen = std::min(CAPTURE, std::max(2048, (int)jsRound(std::min(10 * v->sp->TD + 0.004, 0.65) * fs)));
   int live = 0;
   for (int i = 0; i < nVoices; i++) if (!voices[i]->fading) live++;
-  if (live > MAX_VOICES) {
+  if (live > pick(MAX_VOICES, 10, 6)) { // Quality: fewer keys at once at Medium and Low
     Voice *victim = nullptr;
     double score = INFINITY;
     for (int i = 0; i < nVoices; i++) {
