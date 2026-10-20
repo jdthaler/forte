@@ -414,6 +414,10 @@ void GrandEngine::setParams(const double *p) {
     mid[c].set(Biquad::peak, EQ.mid, EQ.midQ, fs, P[p::mid]);
     hi[c].highShelf(EQ.treble, std::pow(10.0, P[p::treble] / 20), fs);
   }
+  tremInc = P[p::tremRate] / fs;
+  ldrOn = 1 - std::exp(-1 / (TREM.on * fs)); ldrOff = 1 - std::exp(-1 / (TREM.off * fs));
+  tremGlide = 1 - std::exp(-1 / (TREM.glide * fs));
+  if (first) tremDepth = P[p::tremDepth];
 }
 
 // The board for a thickness: kept from before, or its coefficients now (or null: being built).
@@ -558,12 +562,29 @@ void GrandEngine::run(float *L, float *R, int n) {
   }
   BoardSlot *b = board;
   if (b) b->run(SEG, mL.data(), mR.data(), n, nVoices > 0);
-  const double gp = 1 - mix;
+  const double gp = 1 - mix, depth = P[p::tremDepth];
+  const bool trem = depth > 0 || tremDepth > 0;
+  double lL = ldr[0], lR = ldr[1], ph = tremPhase, d = tremDepth;
   for (int s = 0; s < n; s++) {
-    const double l = hi[0].run(mid[0].run(lo[0].run(hp[0].run(PL[s])))), r = hi[1].run(mid[1].run(lo[1].run(hp[1].run(PR[s]))));
+    double l = hi[0].run(mid[0].run(lo[0].run(hp[0].run(PL[s])))), r = hi[1].run(mid[1].run(lo[1].run(hp[1].run(PR[s]))));
+    // the stereo tremolo, after the EQ: each output's LED lights on its half of the oscillator's
+    // cycle, and its photocell shunts that output through the depth pot
+    ph += tremInc; if (ph >= 1) ph -= 1;
+    const double o = std::sin(TAU * ph), eL = std::max(0.0, o), eR = std::max(0.0, -o);
+    lL += (eL > lL ? ldrOn : ldrOff) * (eL - lL);
+    lR += (eR > lR ? ldrOn : ldrOff) * (eR - lR);
+    if (trem) {
+      d += tremGlide * (depth - d);
+      l *= 1 - d * TREM.K * lL / (1 + TREM.K * lL);
+      r *= 1 - d * TREM.K * lR / (1 + TREM.K * lR);
+    }
     L[s] = (float)(gp * l + (b ? mix * mL[s] : 0));
     R[s] = (float)(gp * r + (b ? mix * mR[s] : 0));
   }
+  tremPhase = ph;
+  ldr = {lL, lR};
+  // turned off: once the depth has glided to nothing, the output is exactly as without it
+  tremDepth = depth == 0 && d < 1e-6 ? 0 : d;
   int j = 0;
   for (int i = 0; i < nVoices; i++) {
     Voice *v = voices[i];
