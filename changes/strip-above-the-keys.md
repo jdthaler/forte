@@ -1,7 +1,7 @@
-# only volume, velocity and pedals above the keys
+# only volume, velocity and pedals above the keys, in the keyboard's bar
 
 ### Forte (minor)
-- **The strip right above the keys keeps to what matters mid-phrase:** the volume, the computer keys' velocity and a pedal (the vibraphone's and celesta's held pedal, the piano's una corda, the clavier's mute, the viola organista's lifted dampers, the kalimba's and steel pan's let-ring), and the organ's drawbars. Every other control (stops, tremolo, strike point, motor and the like) stays in its group in the Controls panel, now always just above. A parameter goes in the strip with `strip: true`; `perform: true` still picks the plugins' window's row.
+- **The strip right above the keys keeps to what matters mid-phrase:** the volume, the computer keys' velocity and a pedal (the vibraphone's and celesta's held pedal, the piano's una corda, the clavier's mute, the viola organista's lifted dampers, the kalimba's and steel pan's let-ring). They are small tiles in the keyboard's own bar, beside ◀ ▶, the key size and the pedal button, so the keys have one bar above them, not two; where the line is too short (an upright phone, a tablet, a narrow window) the tiles take a line of their own above the rest. Every other control (stops, tremolo, strike point, motor and the like) stays in its group in the Controls panel, now always just above. In Perform, the chevron on the controls' bar is More controls. A parameter goes in the strip with `strip: true`; `perform: true` still picks the plugins' window's row; a control surface marked `data-control` heads the Controls panel with a toggle of its own.
 
 ### Harpsichord (patch)
 - Above the keys: Volume. Play on, Coupler, Front 8′, Back 8′, 4′, Lute row and Buff stop move to their groups in the Controls panel.
@@ -28,7 +28,7 @@
 - Above the keys: Velocity and Volume. Tremolo depth and Tremolo rate move to their groups in the Controls panel.
 
 ### Tonewheel Organ (patch)
-- Above the keys: Volume. Tube drive moves to its group in the Controls panel.
+- Above the keys: Volume. The drawbars and switches move to the top of the Controls panel, with a toggle of their own (Drawbars and switches); Tube drive moves to its group there.
 
 ### Tine Piano (patch)
 - Above the keys: Keyboard velocity and Volume. Stereo vibrato depth and Stereo vibrato rate move to their groups in the Controls panel.

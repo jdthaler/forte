@@ -241,8 +241,9 @@ materials, losses), its voicing (felt hardness) and `room` are set once,
 so they stay in the Controls panel. The same flag fills the row above the
 plugin window's keyboard.
 
-The page's strip right above the keys is smaller: only what matters
-mid-phrase, marked `strip: true` as well. That is `volume`, `velocity` (the
+The page's strip is smaller: only what matters mid-phrase, marked
+`strip: true` as well, and small enough to sit in the keyboard bar, right
+above the keys. That is `volume`, `velocity` (the
 computer keys') and a pedal or what stands in for one (the vibraphone's and
 celesta's held pedal, the piano's una corda, the clavier's mute, the viola
 organista's lifted dampers, the kalimba's and steel pan's let-ring);
@@ -251,8 +252,8 @@ control stays in its group in the Controls panel, which is never far from the
 keys. The strip's controls sit there in both modes, so they never
 move; a checkbox there becomes a stop that lights up, and in Discover a
 control with a `hint` gets an ⓘ button that opens it (a tap, not a
-tooltip, so it works on a tablet). A tile shows its label at rest, with
-the value beside it only if both fit, and its value while it moves. The
+tooltip, so it works on a tablet). A tile shows its label, the
+slider and the value on one line. The
 strip drops a label's explanation, a trailing "(…)" or "= …", so put the
 name first: "Dome rise (curvature)" shows as "Dome rise" (the whole label
 stays in the tooltip, the ⓘ and the control's accessible name). On a touch
@@ -291,7 +292,7 @@ and say which in the footer help.
   each view, named by its `data-view` (or its `<h2>`), and **Discover |
   Perform**; the controls' bar has a toggle for each group of controls
   (each `details.group`, named by its `<summary>`; a group whose
-  parameters have all moved above the keys has none, and a group the
+  parameters have all moved to the keyboard bar has none, and a group the
   page adds later gets one) and the presets (`.preset-row`, moved here
   from `#controls`), whose menu gains "Default settings", which presses
   the page's `#reset`. A tap on a toggle turns that view or group on or
@@ -313,25 +314,28 @@ and say which in the footer help.
   marked `data-perform` (one or two: `test/site-tests.mjs` checks) are on,
   and their toggles come first. A card's `.caption` waits behind an ⓘ in
   its title.
-- **The controls, above the keys.** A card marked `data-control` is a
+- **The Controls panel**, `#controls`. A card marked `data-control` is a
   control surface, not a view (the organ's drawbars and switches): it
-  moves here, ahead of the `strip: true` parameters. A dropdown there
-  with a few short choices becomes a row of buttons. The rest of the
-  parameters are in the Controls panel, `#controls`, grouped (the groups
-  side by side), where each hint waits behind an ⓘ. A handle on the footer's edge folds the
-  controls above the keys away.
+  heads the panel, with a toggle of its own named by its `data-view`.
+  Then the parameters, grouped (the groups side by side), where each hint
+  waits behind an ⓘ.
 - **The keyboard bar and the keys** (`shared/keyboard.js`: multi-touch,
   glissando across the keys, aftertouch from leaning on a held key along
   its length or from Pencil pressure). As many keys as fit the width at the
   chosen key size (− +), like GarageBand: ◀ ▶ move an octave, and an
   overview of the whole range, with the keys on screen framed, drags
-  anywhere. The pedal button presses Space. The page's footer hints
+  anywhere. Then the `strip: true` parameters, each a small tile (a
+  dropdown with a few short choices becomes a row of buttons), the key
+  size and the pedal button, which presses Space. Where they don't fit on
+  one line (a phone held upright, a tablet, a narrow window) the strip
+  takes a line of its own above the rest. The page's footer hints
   (`.kb-help`: computer keys, MIDI, readouts) go behind ⌨.
 - **Perform** is for playing and for a projector: the views that are on,
   filling the screen, with no toggles and no text in them. The views' bar
   is just Discover | Perform, over their corner, and the controls' bar
-  just the presets; the Controls panel waits behind "More controls" (at
-  the share last chosen; on a phone, in place of the views). The card's `.card-head`,
+  just the presets; the Controls panel waits behind its chevron, "More
+  controls" (at the share last chosen; on a phone, in place of the
+  views). The card's `.card-head`,
   `.caption`, `.legend`, `.readout`, `<dl>` and `<table>` are hidden, and
   `fillText` draws nothing on their canvases (a card with
   `data-keep-text` keeps its text). Full screen appears. The mode is the
@@ -341,8 +345,8 @@ and say which in the footer help.
   views; each bar's toggles slide sideways when they don't fit. Upright,
   the controls' bar (with the presets) sticks just above the controls and
   keys until it heads the Controls panel as it scrolls by. Turned
-  sideways, it scrolls with the panel, and the controls above the keys
-  share a row with the keyboard bar and show one row of tiles at a time.
+  sideways, it scrolls with the panel, and the keyboard bar keeps to one
+  line, its overview of the range shrunk to a thumbnail.
 - While one finger holds a key, a tap with another finger works any
   button, stop or tab (browsers give such a tap no click; `layout.js`
   clicks for it).
@@ -357,7 +361,8 @@ To fit in:
   read as pictures, and let their canvases stretch (Perform sizes them
   with flex, overriding a fixed height).
 - Keep controls out of the views. A custom control surface (drawbars, a
-  console) is a `.card` with `data-control`; it goes above the keys.
+  console) is a `.card` with `data-control`; it heads the Controls
+  panel. Only small things fit the keyboard bar.
 - Start every animation loop with `requestAnimationFrame` and skip
   hidden canvases. `animate(draw, canvas)` does both.
 - Make drawing code survive a tiny canvas.
