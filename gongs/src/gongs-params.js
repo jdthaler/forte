@@ -42,7 +42,7 @@ export const GROUPS = [
         hint: 'Where round the gong the mallet lands, from the asymmetry’s heavy axis. On the axis only one twin of each pair rings; between the axes both do, and beat.' },
       { id: 'speed', label: 'Strike speed at full velocity', min: 0.5, max: 12, def: 9, log: true, fmt: (v) => `${v.toFixed(1)} m/s`,
         hint: 'Impact speed for velocity 1 (it goes as velocity²). The deflection in thicknesses, and so the nonlinearity, scales with it.' },
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.6, step: 0.01, fmt: (v) => v.toFixed(2) },
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.6, step: 0.01, fmt: (v) => v.toFixed(2) },
     ],
   },
   {
@@ -58,7 +58,7 @@ export const GROUPS = [
         hint: 'How many of the round gong’s strongest von Kármán coupling terms are kept (each brings its twins’ terms). More is more accurate turbulence, and more CPU.' },
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.3, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
   TUNING_GROUP,

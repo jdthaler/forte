@@ -36,7 +36,7 @@ export const GROUPS = [
         hint: 'Where round the bell the clapper hits, from the asymmetry’s axis. On an axis of a doublet only one of its pair rings (no warble); between them both do, and beat.' },
       { id: 'speedMax', label: 'Clapper speed at full velocity', min: 0.3, max: 4, def: 2, step: 0.05, fmt: (v) => `${v.toFixed(2)} m/s`,
         hint: 'How fast a full baton stroke throws the ball against the bell. Faster: louder, a shorter contact and a brighter sound.' },
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2) },
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2) },
     ],
   },
   {
@@ -53,7 +53,7 @@ export const GROUPS = [
     params: [
       { id: 'room', label: 'Belfry and square', min: 0, max: 1, def: 0.15, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
   TUNING_GROUP,

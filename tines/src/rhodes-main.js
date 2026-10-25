@@ -222,7 +222,7 @@ function buildControls() {
     for (const p of g.params) {
       const wrap = document.createElement('div');
       wrap.className = 'param';
-      if (p.perform) wrap.dataset.perform = ''; // above the keys in Perform (shared/layout.js)
+      if (p.strip) wrap.dataset.perform = ''; // in the strip above the keys (shared/layout.js)
       let input;
       if (p.type === 'select') { // the venue and the tuning's choices: the option's own value (a number, for the pitch)
         wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;

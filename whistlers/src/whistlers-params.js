@@ -15,7 +15,7 @@ export const GROUPS = [
   {
     title: 'The lightning',
     params: [
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2),
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2),
         hint: 'How hard the lightning strikes for the computer keys (a MIDI keyboard\'s velocity does the same): its current, and so how loud its radio crack and its whistler are.' },
       { id: 'sferic', label: 'Sferic (the lightning\'s crack)', perform: true, min: 0, max: 1, def: 0.3, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %`,
         hint: 'How loud the lightning\'s own radio crack is, heard straight along the ground between the Earth and the ionosphere: a click, then a tweek, a ping that slides down onto the waveguide\'s cutoff (about 1.8 kHz at night) and its harmonics. 0: the whistler alone.' },
@@ -71,7 +71,7 @@ export const GROUPS = [
     params: [
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
   TUNING_GROUP,

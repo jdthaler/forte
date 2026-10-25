@@ -56,7 +56,7 @@ export const GROUPS = [
         hint: 'Two buttons, left and right of the beam, on the two channels: the betatron oscillation moves between them. One button on both channels. Difference: left minus right, which hears only the oscillation, fading and recohering.' },
       { id: 'cutoff', label: 'Pickup cutoff', min: 10, max: 3000, def: 120, log: true, fmt: (v) => `${v.toFixed(0)} Hz`,
         hint: 'A button pickup is a capacitor into a resistor: it passes the bunch\'s harmonics above 1/(2πRC) and weakens those below.' },
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2),
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2),
         hint: 'The bunch charge the computer keys inject (a MIDI keyboard\'s velocity does the same).' },
     ],
   },
@@ -65,7 +65,7 @@ export const GROUPS = [
     params: [
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.2, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
   TUNING_GROUP,
