@@ -682,6 +682,16 @@ data):
   knobs change the universe; W. Hu and M. White, "The cosmic symphony",
   *Scientific American* **290** (2), 44 (2004), describes the peaks as a
   harmonic series.
+* **Cyclotron radiation from single electrons.** B. Monreal and
+  J. A. Formaggio proposed hearing each tritium decay electron by its
+  cyclotron radiation (*Phys. Rev. D* **80**, 051301 (2009),
+  [doi:10.1103/PhysRevD.80.051301](https://doi.org/10.1103/PhysRevD.80.051301)),
+  and Project 8 first did it with krypton-83m (D. M. Asner et al.,
+  *Phys. Rev. Lett.* **114**, 162501 (2015),
+  [doi:10.1103/PhysRevLett.114.162501](https://doi.org/10.1103/PhysRevLett.114.162501));
+  its chirping tracks are drawn as spectrograms, not played. We know of no
+  instrument built on them before Project 8, which computes each electron's
+  radiation, bounce and collisions and moves its frequencies to the key.
 * **Synchronisation and mode locking in musical oscillators.**
   B. van der Pol and J. van der Mark, "Frequency demultiplication",
   *Nature* **120**, 363–364 (1927),
