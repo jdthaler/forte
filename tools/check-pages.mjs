@@ -2,11 +2,12 @@
 // what a layout regression breaks: errors in the console, a page that scrolls sideways (as
 // loaded, with the menus, Controls and every view turned on, and with audio started), the
 // controls each page should place (the perform controls above the keys, the ⓘ buttons, "Default
-// settings" among the presets, the keys, the Quality choice in the header, set while audio plays), that each
-// toggle turns its view or group of controls off and on (and on the desktop, that what's turned
-// on is still on after a reload, that the switch puts the controls below the views and beside
-// them, and that every view shows in Perform), and the front page's Listen buttons (one for each
-// instrument with a demo, and two in turn play).
+// settings" among the presets in the controls' bar, Discover | Perform in the views' bar, the keys,
+// the Quality choice in the header, set while audio plays), that each toggle turns its view or
+// group of controls off and on (and on the desktop, that what's turned on is still on after a
+// reload, that each bar's fold button folds its panel away and back, that the handle shares the
+// height, and that every view shows in Perform), and the front page's Listen buttons (one for
+// each instrument with a demo, and two in turn play).
 //
 // Usage: node tools/check-pages.mjs [--base <git ref>] [--json <file>] [filter]
 //   filter       only the pages whose path contains it (gongs, index, credits, template)
@@ -87,6 +88,8 @@ const COUNT = () => {
     views: n('.forte-view-toggles button'),
     controlGroups: n('.forte-control-toggles button'),
     viewsOn: n('.forte-view-toggles button[aria-pressed="true"]'),
+    mode: [...document.querySelectorAll('.forte-views-bar .forte-mode button')].filter((e) => e.checkVisibility()).length,
+    barPresets: [...document.querySelectorAll('.forte-controls-bar .forte-presets select')].filter((e) => e.checkVisibility()).length,
     listen: n('button[data-src]'),
     quality: [...document.querySelectorAll('header #quality')].filter((e) => e.checkVisibility()).length,
   };
@@ -144,8 +147,8 @@ async function toggles(tab, broken) {
   }
   return n;
 }
-// With everything on: still on after a reload, the controls below the views and beside them
-// with the switch, and every view shown in Perform.
+// With everything on: still on after a reload, each panel folded away and back by its bar, the
+// height shared by the handle, and every view shown in Perform.
 async function remembered(tab) {
   const out = [];
   await tab.reload({ waitUntil: 'networkidle' });
@@ -153,24 +156,30 @@ async function remembered(tab) {
   for (const [row, items, what] of ROWS) {
     if (!(await tab.evaluate(TOGGLES, row)).every(Boolean) || !(await tab.evaluate(SHOWN, items)).every(Boolean)) out.push(`the ${what} turned on are not on after a reload`);
   }
-  // the controls below the views, then beside them again
-  for (const v of ['1', '0']) {
-    await tab.locator(`.forte-arrange button[data-below="${v}"]`).click({ timeout: 2000 }).catch(() => {});
+  // each bar's fold button folds its panel away, the other taking the room, and brings it back
+  const HEIGHTS = () => [document.querySelector('#views'), document.querySelector('#controls')].map((e) => e.offsetHeight);
+  for (const [i, kind] of ['views', 'controls'].entries()) {
+    const fold = tab.locator(`.forte-${kind}-bar .forte-fold`);
+    await fold.click({ timeout: 2000 }).catch(() => {});
     await tab.waitForTimeout(150);
-    const below = await tab.evaluate(() => document.body.classList.contains('controls-below'));
-    if (below !== (v === '1')) out.push(`the switch doesn't put the controls ${v === '1' ? 'below' : 'beside'} the views`);
-    if (!(await tab.evaluate(SHOWN, ROWS[1][1])).every(Boolean)) out.push(`the controls are not all shown ${v === '1' ? 'below' : 'beside'} the views`);
-    if (await tab.evaluate(WIDE) > 0) out.push(`scrolls sideways with the controls ${v === '1' ? 'below' : 'beside'} the views`);
-    // scrolled, the controls pass under their row of toggles, never above it
-    const gap = await tab.evaluate(() => {
-      const c = document.querySelector('#controls'), bar = c?.querySelector(':scope > .forte-toggles');
-      if (!bar) return 0;
-      c.scrollTop = c.scrollHeight;
-      const g = bar.getBoundingClientRect().top - c.getBoundingClientRect().top - c.clientTop;
-      c.scrollTop = 0;
-      return g;
-    });
-    if (gap > 1) out.push(`scrolled, the controls show above their toggles ${v === '1' ? 'below' : 'beside'} the views`);
+    const h = await tab.evaluate(HEIGHTS);
+    if (h[i] !== 0 || !(h[1 - i] > 0)) out.push(`folding the ${kind} leaves them ${h[i]}px and the others ${h[1 - i]}px`);
+    if (!(await tab.evaluate(SHOWN, ROWS[1 - i][1])).every(Boolean)) out.push(`the ${ROWS[1 - i][2]} turned on are not all shown with the ${kind} folded away`);
+    if (await tab.evaluate(WIDE) > 0) out.push(`scrolls sideways with the ${kind} folded away`);
+    await fold.click({ timeout: 2000 }).catch(() => {});
+    await tab.waitForTimeout(150);
+    if ((await tab.evaluate(HEIGHTS)).some((x) => !(x > 0))) out.push(`the ${kind}' fold button doesn't bring them back`);
+  }
+  // the handle: dragged down, the views take more of the height and the controls less
+  const before = await tab.evaluate(HEIGHTS), handle = await tab.locator('.forte-split').boundingBox().catch(() => null);
+  if (!handle) out.push('no handle to share the height');
+  else {
+    const x = handle.x + handle.width / 2, y = handle.y + handle.height / 2;
+    await tab.mouse.move(x, y); await tab.mouse.down(); await tab.mouse.move(x, y + 60, { steps: 4 }); await tab.mouse.up();
+    await tab.waitForTimeout(150);
+    const after = await tab.evaluate(HEIGHTS);
+    if (!(after[0] > before[0] + 30 && after[1] < before[1] - 30)) out.push(`dragging the handle 60px down takes the views from ${before[0]} to ${after[0]}px and the controls from ${before[1]} to ${after[1]}px`);
+    await tab.mouse.move(x, y + 60); await tab.mouse.down(); await tab.mouse.move(x, y, { steps: 4 }); await tab.mouse.up();
   }
   await tab.locator('.forte-mode button[data-mode="perform"]').click({ timeout: 2000 }).catch(() => {});
   await tab.waitForTimeout(250);
@@ -230,6 +239,8 @@ function failures(r, instrument) {
   if (!c.defaultSettings) f.push('no "Default settings" among the presets');
   if (!c.performControls) f.push('no perform controls above the keys');
   if (!c.views) f.push('no toggles for the views');
+  if (!c.mode) f.push('no Discover | Perform in the views\' bar');
+  if (!c.barPresets) f.push('no presets in the controls\' bar');
   if (!c.quality) f.push('no Quality choice in the header');
   return f;
 }

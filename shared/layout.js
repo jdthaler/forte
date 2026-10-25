@@ -1,38 +1,41 @@
 // layout.js — the layout of every instrument page, the same on a phone, a tablet
-// and a desktop. Three parts, top to bottom:
-//   header  the instrument's name, which is also the menu (shared/nav.js); How it
-//           works; Discover | Perform; where the controls go (beside the views or
-//           below them, on a wide screen); audio, MIDI and Panic;
-//   toggles a row of them, one for each view and one for each group of controls in
-//           the Controls panel: a tap turns it on or off. At first the main views
-//           (cards marked data-perform) are on, the other views off, every group on;
-//   views   the pictures only, the ones turned on sharing the space in rows, and the
-//           Controls panel (#controls: the groups turned on) beside them or below;
-//   footer  the controls you play with, right above the keys: any control surface
-//           a page marks data-control (the organ's drawbars) and the parameters
-//           marked `perform: true` (which the page gives data-perform), then, in
-//           Perform, "More controls" for the Controls panel (sliding over the views
-//           on a narrow screen). A handle folds them away.
-//           Then the keyboard bar (◀ an overview of the whole range ▶, the presets
-//           (with "Default settings", which stands in for the page's Reset button;
-//           on a phone they lead the controls above the keys instead), key size,
-//           the pedal, and ⌨ for the page's computer-keyboard and MIDI hints) and
-//           the keys: as many as fit the width at the chosen key size.
+// and a desktop. Top to bottom:
+//   header    the instrument's name, which is also the menu (shared/nav.js); How it
+//             works; audio, MIDI and Panic;
+//   views     a bar, then the pictures only, the ones turned on sharing the space in rows.
+//             The bar has a toggle for each view (a tap turns it on or off: at first the
+//             main views, cards marked data-perform, are on and the rest off), then its
+//             tools (Discover | Perform) and a button that folds the views away;
+//   controls  a bar, then the Controls panel (#controls: the groups turned on, side by
+//             side). The bar has a toggle for each group of controls (all on at first),
+//             then its tools (the presets, with "Default settings", which stands in for
+//             the page's Reset button) and a button that folds the panel away. Its top
+//             edge is a handle: dragged, it shares the height between the views and the
+//             controls, down to nothing for either (the bars stay);
+//   footer    the controls you play with, right above the keys: any control surface
+//             a page marks data-control (the organ's drawbars) and the parameters
+//             marked `perform: true` (which the page gives data-perform), then, in
+//             Perform, "More controls" for the Controls panel. A handle folds them away.
+//             Then the keyboard bar (◀ an overview of the whole range ▶, key size, the
+//             pedal, and ⌨ for the page's computer-keyboard and MIDI hints) and the keys:
+//             as many as fit the width at the chosen key size.
+// A phone has no room to share: there the page scrolls, the views above the controls, and
+// the controls' bar sticks above the keys.
 // Explanations wait behind ⓘ buttons: a parameter's hint, a view's caption.
 // Discover shows the toggles and every explanation. Perform is for playing and for a
 // projector: the views turned on fill the screen with no toggles, no Controls panel
 // until More controls, and no text in them
 // (no titles, readouts, captions, legends or tables, and nothing drawn by fillText on
 // their canvases; a card with data-keep-text keeps its own). The mode is the same on
-// every page, and so is where the controls go; everything else, what's turned on among
+// every page, and so is how the height is shared; everything else, what's turned on among
 // it, is remembered per instrument. Also handles iOS audio quirks. Imported by
-// shared/nav.js, so it runs before the page's own scripts.
+// shared/nav.js, so it runs before the page's own scripts. Other code can add its own
+// tools to either bar: barTools('views') or barTools('controls').
 
 const body = document.body;
 const STORE = `forte/${body.dataset.instrument || 'page'}/layout/v1`;
 const MODE = 'forte/mode/v1';
 const touch = matchMedia('(pointer: coarse)').matches;
-const narrow = matchMedia('(max-width: 1050px)');
 const phoneQuery = matchMedia('(max-width: 600px), (max-width: 1050px) and (max-height: 500px)'); // as shared/layout.css
 const SIZES = ['s', 'm', 'l', 'xl'];
 const KEY_W = { s: 22, m: 30, l: 42, xl: 56 }; // the narrowest a white key may be, px
@@ -53,10 +56,17 @@ const prefs = (() => {
 })();
 const save = () => { try { localStorage.setItem(STORE, JSON.stringify(prefs)); } catch { /* storage unavailable */ } };
 let mode = (() => { try { return localStorage.getItem(MODE) === 'perform' ? 'perform' : 'discover'; } catch { return 'discover'; } })();
-// the controls beside the views or below them, on every page (a narrow screen always stacks them)
-const ARRANGE = 'forte/controls-below/v1';
-let below = (() => { try { return localStorage.getItem(ARRANGE) === '1'; } catch { return false; } })();
 const performing = () => mode === 'perform';
+// The views' share of the height the views and the controls have between them, on every page:
+// 0 folds the views away, 1 the controls; `open` is the share to go back to from either.
+const SPLIT = 'forte/split/v1', SHARE = 0.6;
+const split = (() => {
+  let s = {};
+  try { s = JSON.parse(localStorage.getItem(SPLIT) || '{}') || {}; } catch { /* corrupt */ }
+  const share = (v, d, ends) => (Number.isFinite(v) && v >= 0 && v <= 1 && (ends || (v > 0 && v < 1)) ? v : d);
+  return { views: share(s.views, SHARE, true), open: share(s.open, SHARE, false) };
+})();
+const saveSplit = () => { try { localStorage.setItem(SPLIT, JSON.stringify(split)); } catch { /* storage unavailable */ } };
 
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
 const noteName = (m) => NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
@@ -72,14 +82,38 @@ function infoButton(label) {
 }
 
 const header = document.querySelector('body > header');
+const mainEl = document.querySelector('body > main');
 const sidebar = document.querySelector('#controls');
 const footer = document.querySelector('body > footer');
 const viewsEl = document.querySelector('#views');
-let drawerOpen = false; // in Perform on a narrow screen, More controls slides the panel over the views
-const drawerMode = () => performing() && narrow.matches && !body.classList.contains('no-views');
 
 // ---------------------------------------------------------------------------
-// views: a row of toggles, one for each view, and the views turned on, in a grid
+// the bars: one heads the views and one the controls. Each has its toggles (which take what
+// room is left, wrapping, or on a phone sliding sideways), then its tools, then a button
+// that folds its panel away.
+
+const CHEVRON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 6 8 10.5 12.5 6"/></svg>';
+function makeBar(kind, label, aria, panel) {
+  const bar = el('div', `forte-bar forte-${kind}-bar`);
+  const toggles = el('div', 'forte-toggles'), row = el('div', `forte-${kind === 'views' ? 'view' : 'control'}-toggles`);
+  row.setAttribute('role', 'group');
+  row.setAttribute('aria-label', aria);
+  row.appendChild(el('span', 'forte-toggles-label', label));
+  toggles.appendChild(row);
+  const tools = el('div', 'forte-bar-tools');
+  const fold = button('');
+  fold.className = 'forte-fold';
+  fold.innerHTML = CHEVRON;
+  fold.setAttribute('aria-controls', panel.id);
+  bar.append(toggles, tools, fold);
+  panel.before(bar);
+  return { bar, row, tools, fold };
+}
+const bars = {};
+export function barTools(kind) { return bars[kind]?.tools ?? null; }
+
+// ---------------------------------------------------------------------------
+// views: a toggle for each view in the views' bar, and the views turned on, in a grid
 
 const cards = viewsEl ? [...viewsEl.querySelectorAll('.card')] : [];
 const surfaces = cards.filter((c) => c.hasAttribute('data-control')); // controls, not views
@@ -91,41 +125,44 @@ const viewName = (c, i) => c.dataset.view || c.querySelector('h2')?.textContent.
 const viewKey = (c, i) => c.id || viewName(c, i).toLowerCase().replace(/[^a-z0-9]+/g, '-');
 // the key once, from the page as written: a title changes (its note, its ⓘ), the key mustn't
 const views = shown.map((card, i) => { const key = viewKey(card, i); return { card, key, on: () => prefs.views[key] ?? main.includes(card) }; });
-// A row of toggles heads each side: the views' at the top of the views, the groups' at the
-// top of the Controls panel.
-function toggleRow(cls, label, aria) {
-  const bar = el('div', 'forte-toggles'), row = el('div', cls);
-  row.setAttribute('role', 'group');
-  row.setAttribute('aria-label', aria);
-  row.appendChild(el('span', 'forte-toggles-label', label));
-  bar.appendChild(row);
-  return row;
-}
 let stage = null, hint = null;
-if (viewsEl && shown.length) {
-  const bar = toggleRow('forte-view-toggles', 'Views', 'Views to show');
+if (viewsEl && shown.length && mainEl) {
+  bars.views = makeBar('views', 'Views', 'Views to show', viewsEl);
   for (const v of views) {
     v.toggle = button(viewName(v.card, 0), 'Show or hide this view');
     v.toggle.addEventListener('click', () => { prefs.views[v.key] = !v.on(); save(); apply(); v.toggle.blur(); });
-    bar.appendChild(v.toggle);
+    bars.views.row.appendChild(v.toggle);
   }
   stage = el('div', 'forte-stage');
   hint = el('p', 'forte-no-view', 'Every view is off: turn one on above.');
   stage.append(...shown, hint);
-  viewsEl.replaceChildren(bar.parentNode, stage);
+  viewsEl.replaceChildren(stage);
 }
-// The views turned on fill the stage in rows, as even as they go: the first rows take
-// the extra one, and a short last row stretches across. Side by side on a wide screen,
-// stacked on a tall one (two abreast from four), one above another on a phone.
+// The views turned on fill the stage in rows, as even as they go: the first rows take the
+// extra one, and a short last row stretches across. As many abreast (up to four) as gives
+// each the most room, so a short stage puts them side by side and a tall one stacks them;
+// on a phone, where the page scrolls, one above another (two abreast in landscape).
 const tall = matchMedia('(orientation: portrait)');
+const GAP = 12, ASPECT = 1.6, NARROWEST = 260; // the stage's gap; a view's shape, and its narrowest, px
+function columns(n) {
+  if (phoneQuery.matches) return tall.matches ? 1 : Math.min(n, 2);
+  const W = stage.clientWidth, H = stage.clientHeight;
+  if (!W || !H) return null; // folded away: as it was
+  let best = 1, room = 0;
+  for (let c = 1; c <= Math.min(n, 4); c++) {
+    const r = Math.ceil(n / c), w = (W - GAP * (c - 1)) / c, h = (H - GAP * (r - 1)) / r;
+    if (c > 1 && w < NARROWEST) break;
+    const fit = Math.min(w / ASPECT, h); // the largest view of that shape the cell holds
+    if (fit > room + 1) { room = fit; best = c; }
+  }
+  return best;
+}
+let cols = 1;
 function arrange() {
   if (!stage) return;
   const on = views.filter((v) => v.on()), n = on.length;
-  const phone = phoneQuery.matches;
-  const cols = phone ? (tall.matches ? 1 : Math.min(n, 2))
-    : tall.matches ? (n <= 3 ? 1 : 2)
-      : n <= 2 ? n : n <= 4 ? 2 : n <= 9 ? 3 : 4;
-  const rows = Math.ceil(n / Math.max(1, cols));
+  cols = columns(n) ?? cols;
+  const rows = Math.ceil(n / Math.max(1, Math.min(cols, n)));
   let i = 0;
   for (let r = 0; r < rows; r++) {
     const k = Math.ceil((n - i) / (rows - r)); // views in this row
@@ -143,22 +180,23 @@ function arrange() {
 // so each gets its toggle once it has its parameters). A group whose parameters have all moved
 // above the keys has none. The groups start on; folding a group gives way to its toggle.
 const groups = [];
-let groupBar = null, groupHint = null;
+let groupHint = null;
+if (sidebar && mainEl) {
+  bars.controls = makeBar('controls', 'Controls', 'Controls to show', sidebar);
+  groupHint = el('p', 'forte-no-view', 'Every group of controls is off: turn one on above.');
+  groupHint.hidden = true;
+  sidebar.prepend(groupHint);
+}
 function addGroups() {
-  if (!sidebar) return;
+  if (!bars.controls) return;
   for (const det of sidebar.querySelectorAll('details.group:not([data-key])')) {
     if (!det.querySelector('.param')) continue;
     const sum = det.querySelector('summary'), name = sum?.textContent.trim() || `Controls ${groups.length + 1}`;
     const key = det.dataset.key = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     sum?.addEventListener('click', (e) => e.preventDefault());
-    if (!groupBar) {
-      groupBar = toggleRow('forte-control-toggles', 'Controls', 'Controls to show');
-      groupHint = el('p', 'forte-no-view', 'Every group of controls is off: turn one on above.');
-      sidebar.prepend(groupBar.parentNode, groupHint);
-    }
     const g = { det, key, on: () => prefs.groups[key] ?? true, toggle: button(name, 'Show or hide these controls') };
     g.toggle.addEventListener('click', () => { prefs.groups[key] = !g.on(); save(); apply(); g.toggle.blur(); });
-    groupBar.appendChild(g.toggle);
+    bars.controls.row.appendChild(g.toggle);
     groups.push(g);
   }
   for (const g of groups) {
@@ -166,7 +204,7 @@ function addGroups() {
     g.det.hidden = !g.on();
     g.toggle.setAttribute('aria-pressed', String(g.on()));
   }
-  if (groupHint) groupHint.hidden = groups.some((g) => g.on());
+  if (groupHint) groupHint.hidden = !groups.length || groups.some((g) => g.on());
 }
 // a view's caption waits behind ⓘ in its title
 for (const c of shown) {
@@ -191,6 +229,91 @@ for (const name of ['fillText', 'strokeText']) {
 }
 
 // ---------------------------------------------------------------------------
+// sharing the height: the views' share, as shown. In Discover it is the one chosen; in Perform
+// the views fill the room until More controls, which opens the panel at the share last chosen
+// short of either end (on a phone, in place of the views).
+
+function share() {
+  if (!bars.controls) return 1;
+  if (!bars.views) return 0;
+  if (performing()) return !prefs.perform.controls ? 1 : phoneQuery.matches ? 0 : split.views > 0 && split.views < 1 ? split.views : split.open;
+  return groups.length ? split.views : 1;
+}
+// what the handle and the fold buttons do: only in Discover, with both bars
+const sharing = () => !performing() && !!bars.views && !!bars.controls;
+function setShare(v, keep = true) {
+  split.views = clamp(v, 0, 1);
+  if (keep) {
+    if (split.views > 0 && split.views < 1) split.open = split.views;
+    saveSplit();
+  }
+  apply();
+}
+let handle = null;
+if (bars.views && bars.controls) {
+  // the handle on the controls' bar's top edge: drag it, or the bar itself where it has
+  // nothing to tap; arrows, Home and End move it from the keyboard; a double click goes back
+  // to the usual share
+  handle = el('div', 'forte-split');
+  handle.tabIndex = 0;
+  handle.setAttribute('role', 'separator');
+  handle.setAttribute('aria-orientation', 'horizontal');
+  handle.setAttribute('aria-controls', `${viewsEl.id} ${sidebar.id}`);
+  handle.setAttribute('aria-label', 'Share the height between the views and the controls');
+  handle.setAttribute('aria-valuemin', '0');
+  handle.setAttribute('aria-valuemax', '100');
+  handle.title = 'Drag to share the height between the views and the controls (double-click: as it was)';
+  bars.controls.bar.prepend(handle);
+  const SNAP = 56; // px: a panel smaller than this folds away
+  let drag = null, tapped = 0;
+  const grab = (e) => {
+    if (!sharing() || phoneQuery.matches || e.button > 0) return;
+    if (e.target !== handle && e.target.closest('button, select, input, a, label')) return;
+    e.preventDefault();
+    try { bars.controls.bar.setPointerCapture(e.pointerId); } catch { /* gone */ }
+    const v = viewsEl.getBoundingClientRect().height, c = sidebar.getBoundingClientRect().height;
+    drag = { id: e.pointerId, y: e.clientY, v, total: v + c, moved: false, onHandle: e.target === handle };
+    body.classList.add('sharing');
+  };
+  bars.controls.bar.addEventListener('pointerdown', grab);
+  bars.controls.bar.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id || !drag.total) return;
+    if (Math.abs(e.clientY - drag.y) > 3) drag.moved = true;
+    if (!drag.moved) return;
+    let v = clamp(drag.v + e.clientY - drag.y, 0, drag.total);
+    if (v < SNAP) v = 0; else if (drag.total - v < SNAP) v = drag.total;
+    setShare(v / drag.total, false);
+  });
+  for (const ev of ['pointerup', 'pointercancel']) {
+    bars.controls.bar.addEventListener(ev, (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const { moved, onHandle } = drag;
+      drag = null; body.classList.remove('sharing');
+      if (moved) { setShare(split.views); return; }
+      // two taps on the handle: the usual share
+      if (onHandle && e.timeStamp - tapped < 400) { tapped = 0; setShare(SHARE); } else tapped = onHandle ? e.timeStamp : 0;
+    });
+  }
+  handle.addEventListener('keydown', (e) => {
+    const to = { ArrowUp: split.views - 0.05, ArrowDown: split.views + 0.05, Home: 0, End: 1 }[e.key];
+    if (to === undefined || !sharing()) return;
+    e.preventDefault();
+    setShare(Math.round(to * 20) / 20);
+  });
+}
+// Each bar's fold button folds its panel away, and brings it back at the share it had.
+// In Perform the controls' one is More controls.
+function fold(kind) {
+  if (kind === 'controls' && performing()) { prefs.perform.controls = !prefs.perform.controls; save(); apply(); return; }
+  const end = kind === 'views' ? 0 : 1;
+  setShare(split.views === end ? split.open : end);
+}
+for (const kind of ['views', 'controls']) {
+  const b = bars[kind]?.fold;
+  b?.addEventListener('click', () => { fold(kind); b.blur(); });
+}
+
+// ---------------------------------------------------------------------------
 // controls: the deck above the keys, and More controls for the rest
 
 const deck = el('div', 'forte-deck');
@@ -205,16 +328,8 @@ if (footer && (sidebar || surfaces.length)) {
   if (sidebar) {
     more = button('More controls', 'Every other control, grouped'); // in Perform: Discover has the toggles
     more.className = 'forte-more';
-    more.addEventListener('click', () => {
-      if (drawerMode()) drawerOpen = !drawerOpen;
-      else { prefs.perform.controls = !prefs.perform.controls; save(); }
-      apply(); more.blur();
-    });
+    more.addEventListener('click', () => { fold('controls'); more.blur(); });
     strip.appendChild(more);
-    const close = button('Close ✕');
-    close.className = 'drawer-close';
-    close.addEventListener('click', () => { drawerOpen = false; apply(); });
-    sidebar.prepend(close);
   }
   grab = button('');
   grab.className = 'forte-grab';
@@ -364,24 +479,17 @@ function addDefaults() {
 }
 
 // ---------------------------------------------------------------------------
-// header: the mode, Full screen and MIDI (and the presets' "Default settings")
+// the bars' tools: Discover | Perform for the views, the presets for the controls; and in the
+// header Full screen and MIDI
 
-const modeBtns = [], arrangeBtns = [];
-let presetTile = null, presetSlot = null;
-function placePresets() {
-  if (!presetTile) return;
-  if (presetSlot && !phoneQuery.matches) presetSlot.appendChild(presetTile);
-  else if (presetTile.parentNode !== strip) strip.prepend(presetTile);
-}
+const modeBtns = [];
 function setMode(m) {
   if (m === mode) return;
-  mode = m; drawerOpen = false;
+  mode = m;
   try { localStorage.setItem(MODE, m); } catch { /* storage unavailable */ }
   apply();
 }
-if (header) {
-  const status = header.querySelector('.status');
-  const play = el('div', 'forte-play');
+{
   const seg = el('div', 'forte-mode');
   seg.setAttribute('role', 'group');
   seg.setAttribute('aria-label', 'Mode');
@@ -394,55 +502,24 @@ if (header) {
     b.addEventListener('click', () => { setMode(m); b.blur(); });
     seg.appendChild(b); modeBtns.push(b);
   }
-  play.appendChild(seg);
-  // the controls beside the views, or below them (wide screens: a narrow one stacks them)
-  if (sidebar && viewsEl) {
-    const lay = el('div', 'forte-arrange');
-    lay.setAttribute('role', 'group');
-    lay.setAttribute('aria-label', 'Where the controls go');
-    const svg = (path) => `<svg viewBox="0 0 20 16" aria-hidden="true"><rect x="1" y="1" width="18" height="14" rx="2"/>${path}</svg>`;
-    for (const [v, title, icon] of [
-      ['0', 'Controls beside the views', svg('<rect class="fill" x="1" y="1" width="6" height="14" rx="2"/>')],
-      ['1', 'Controls below the views', svg('<rect class="fill" x="1" y="10" width="18" height="5" rx="2"/>')],
-    ]) {
-      const b = button('', title);
-      b.innerHTML = icon;
-      b.dataset.below = v;
-      b.setAttribute('aria-label', title);
-      b.addEventListener('click', () => {
-        below = v === '1';
-        try { localStorage.setItem(ARRANGE, below ? '1' : '0'); } catch { /* storage unavailable */ }
-        apply(); b.blur();
-      });
-      lay.appendChild(b); arrangeBtns.push(b);
-    }
-    play.appendChild(lay);
-  }
-  // the presets: in the keyboard bar, or on a phone (where the bar is full) the first tile of
-  // the controls above the keys; on a page with neither, the top of the Controls panel
-  const presets = sidebar?.querySelector('.preset-row');
-  if (presets) {
-    presets.classList.add('forte-presets');
-    if (strip.isConnected) {
-      presetTile = el('div', 'forte-preset-tile');
-      const lab = el('label', '', 'Preset');
-      const sel = presets.querySelector('select');
-      if (sel?.id) lab.htmlFor = sel.id;
-      presetTile.append(lab, presets);
-      placePresets();
-      phoneQuery.addEventListener('change', placePresets);
-    }
-    // "Default settings": stop the page seeing it as a preset, and reset instead
-    presets.addEventListener('change', (e) => {
-      if (e.target.value !== '__default') return;
-      e.stopPropagation();
-      e.target.value = '';
-      presets.querySelector('#reset')?.click();
-      e.target.blur();
-    }, true);
-  }
-  header.insertBefore(play, status);
-
+  if (bars.views) bars.views.tools.appendChild(seg);
+  else if (header) header.insertBefore(seg, header.querySelector('.status'));
+}
+const presets = sidebar?.querySelector('.preset-row');
+if (presets) {
+  presets.classList.add('forte-presets');
+  bars.controls?.tools.appendChild(presets);
+  // "Default settings": stop the page seeing it as a preset, and reset instead
+  presets.addEventListener('change', (e) => {
+    if (e.target.value !== '__default') return;
+    e.stopPropagation();
+    e.target.value = '';
+    presets.querySelector('#reset')?.click();
+    e.target.blur();
+  }, true);
+}
+if (header) {
+  const status = header.querySelector('.status');
   // Full screen, for a projector or a stage (not on iPhone, which has no such thing for pages)
   const d = document, root = d.documentElement;
   if (d.fullscreenEnabled || d.webkitFullscreenEnabled) {
@@ -477,17 +554,27 @@ function apply() {
   document.documentElement.classList.toggle('perform', performing()); // for :root's colours (shared/layout.css)
   for (const b of modeBtns) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
   body.classList.toggle('no-views', !shown.length);
-  arrange();
-  // the controls: the groups turned on, beside the views or below them (in Perform, if asked for)
+  // the controls: the groups turned on (in Discover the panel stays, with its toggles, even
+  // with every group off)
   addGroups();
-  // in Discover the panel stays, with its toggles, even with every group off
-  const panel = !!sidebar && (performing() ? prefs.perform.controls : groups.length > 0);
-  const drawer = drawerMode();
-  body.classList.toggle('hide-controls', !!sidebar && (drawer ? !drawerOpen : !panel));
-  body.classList.toggle('drawer-open', drawer && drawerOpen);
-  body.classList.toggle('controls-below', !!sidebar && !drawer && (below || narrow.matches));
-  more?.setAttribute('aria-pressed', String(drawer ? drawerOpen : panel));
-  for (const b of arrangeBtns) b.setAttribute('aria-pressed', String((b.dataset.below === '1') === below));
+  // the height, shared: a panel with no share folds away, leaving its bar
+  const v = share();
+  body.classList.toggle('views-folded', !!bars.views && v === 0);
+  body.classList.toggle('controls-folded', !!bars.controls && v === 1);
+  body.style.setProperty('--split-rows', `auto minmax(0, ${v}fr) auto minmax(0, ${1 - v}fr)`);
+  for (const [kind, folded, name] of [['views', v === 0, 'views'], ['controls', v === 1, 'controls']]) {
+    const b = bars[kind]?.fold;
+    if (!b) continue;
+    b.setAttribute('aria-expanded', String(!folded));
+    b.title = folded ? `Show the ${name}` : `Hide the ${name}: the ${name === 'views' ? 'controls' : 'views'} take their room`;
+    b.setAttribute('aria-label', b.title);
+  }
+  if (handle) {
+    handle.setAttribute('aria-valuenow', String(Math.round(100 * split.views)));
+    handle.setAttribute('aria-valuetext', `views ${Math.round(100 * split.views)} %, controls ${Math.round(100 * (1 - split.views))} %`);
+  }
+  arrange();
+  more?.setAttribute('aria-pressed', String(prefs.perform.controls));
   body.classList.toggle('deck-shut', !prefs.deck);
   if (grab) {
     grab.setAttribute('aria-expanded', String(prefs.deck));
@@ -507,12 +594,18 @@ const unplaced = () => sidebar?.querySelector('.param:not([data-placed])')
   || (document.querySelector('#reset') && document.querySelector('#preset option[value=""]') && !document.querySelector('#preset option[value="__default"]'));
 const lateControls = new MutationObserver(() => { if (unplaced()) apply(); });
 for (const t of [sidebar, document.querySelector('#preset')]) if (t) lateControls.observe(t, { childList: true, subtree: true });
-narrow.addEventListener('change', apply);
-for (const q of [phoneQuery, tall]) q.addEventListener('change', arrange);
+phoneQuery.addEventListener('change', apply);
+tall.addEventListener('change', arrange);
 apply();
 document.querySelector('#toast')?.setAttribute('role', 'status');
-// --footer-h: toasts sit just above the keyboard and its tools, however they wrap
-if (footer && window.ResizeObserver) new ResizeObserver(() => body.style.setProperty('--footer-h', `${footer.offsetHeight}px`)).observe(footer);
+if (window.ResizeObserver) {
+  // the views rearrange as their room changes shape (a drag of the handle, the window)
+  if (stage) new ResizeObserver(() => { const c = cols; arrange(); if (cols !== c) window.dispatchEvent(new Event('resize')); }).observe(stage);
+  // --footer-h: toasts sit just above the keyboard and its tools, however they wrap;
+  // --bar-h: on a phone the controls' bar sticks above them
+  if (footer) new ResizeObserver(() => body.style.setProperty('--footer-h', `${footer.offsetHeight}px`)).observe(footer);
+  if (bars.controls) new ResizeObserver(() => body.style.setProperty('--bar-h', `${bars.controls.bar.offsetHeight}px`)).observe(bars.controls.bar);
+}
 
 // ---------------------------------------------------------------------------
 // the keyboard bar (called by shared/keyboard.js once the page builds its keys)
@@ -639,9 +732,7 @@ export function attachKeyboard(kb) {
   sizes.setAttribute('role', 'group');
   sizes.setAttribute('aria-label', 'Key size');
   sizes.append(smaller, larger);
-  presetSlot = el('div', 'forte-kbpresets');
-  bar.append(prev, map, next, presetSlot, sizes);
-  placePresets();
+  bar.append(prev, map, next, sizes);
 
   // The pedal: a button that presses Space, so pages need no touch-specific code.
   const label = body.dataset.space;
