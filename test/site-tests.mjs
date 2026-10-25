@@ -384,6 +384,14 @@ for (const i of ready) {
     assert.ok(perform.some((p) => p.id === 'volume'), 'volume');
     for (const p of perform) assert.equal(p.perform, true, p.id);
   });
+  // the page's strip above the keys keeps to what matters mid-phrase: volume, the computer keys'
+  // velocity, a pedal
+  test(`${i.name}: the strip above the keys (strip: true) is volume and at most two more, all performance controls`, () => {
+    const strip = mod.GROUPS.flatMap((g) => g.params).filter((p) => p.strip);
+    assert.ok(strip.some((p) => p.id === 'volume'), 'volume');
+    assert.ok(strip.length <= 3, `${strip.length} controls in the strip: ${strip.map((p) => p.id)}`);
+    for (const p of strip) assert.equal(p.perform, true, `${p.id} is in the strip but not marked perform`);
+  });
   test(`${i.name}: presets use real parameters, with values in range`, () => {
     const params = new Map(mod.GROUPS.flatMap((g) => g.params).map((p) => [p.id, p]));
     for (const pr of mod.PRESETS) for (const [id, v] of Object.entries(pr.p)) {

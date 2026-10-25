@@ -15,7 +15,10 @@
 //   id            instrument slug (localStorage key)
 //   groups        parameter groups: [{ title, open?, params: [{ id, label, min, max, def, step?, log?,
 //                 fmt?, hint?, type?: 'select' | 'checkbox', options?: [[value, name]…], showIf?(P),
-//                 perform? }] }]   perform: true puts the control in Perform's strip above the keys
+//                 perform?, strip? }] }]   perform: true marks a control you'd play with (the plugins'
+//                 window shows those first); strip: true puts it in the page's strip right above the
+//                 keys, which keeps to the few that matter mid-phrase (volume, the computer keys'
+//                 velocity, a pedal): the rest stay in the Controls panel, in their groups
 //   presets       [{ name, p: { …overrides } }]   (and your own, and links: shared/user-presets.js)
 //   keep          param ids kept when switching presets (e.g. ['volume', 'room'])
 //   range         [lowest MIDI key, highest MIDI key]   (default [36, 96])
@@ -329,7 +332,7 @@ export function createShell(cfg) {
     for (const p of g.params) {
       const wrap = document.createElement('div');
       wrap.className = 'param';
-      if (p.perform) wrap.dataset.perform = ''; // shown above the keys in Perform (shared/layout.js)
+      if (p.strip) wrap.dataset.perform = ''; // in the strip above the keys (shared/layout.js)
       let input, val = null;
       if (p.type === 'select') {
         wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;

@@ -14,7 +14,7 @@ export const GROUPS = [
   {
     title: 'The electrons',
     params: [
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2),
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2),
         hint: 'How loud the computer keys play an electron (a MIDI keyboard\'s velocity does the same).' },
       { id: 'source', label: 'Source', type: 'select', def: 'krypton',
         options: [['krypton', 'Krypton-83m: the K line, 17.8 keV'], ['tritium', 'Tritium β decay'], ['energy', 'One energy (below)']],
@@ -51,7 +51,7 @@ export const GROUPS = [
     params: [
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
   TUNING_GROUP,

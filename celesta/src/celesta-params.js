@@ -43,7 +43,7 @@ export const GROUPS = [
         hint: 'Striking towards a long edge twists the bar: its torsional modes join in, high and inharmonic.' },
       { id: 'speedMax', label: 'Hammer speed at full velocity', min: 0.5, max: 5, def: 2.5, step: 0.1, fmt: (v) => `${v.toFixed(1)} m/s`,
         hint: 'The hammer’s speed for velocity 1. Faster strikes squash the felt further and stiffen it: louder and brighter, not just louder.' },
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.6, step: 0.01, fmt: (v) => v.toFixed(2) },
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.6, step: 0.01, fmt: (v) => v.toFixed(2) },
     ],
   },
   {
@@ -51,7 +51,7 @@ export const GROUPS = [
     params: [
       { id: 'damp', label: 'Damper felt', min: 0.03, max: 3, def: 0.15, log: true, fmt: (v) => `T₆₀ ${v < 1 ? v.toFixed(2) : v.toFixed(1)} s`,
         hint: 'The felt pad that rests on each bar until its key goes down: how fast it stops the fundamental once the key is let go. The pedal lifts every damper.' },
-      { id: 'pedalLock', label: 'Pedal held down (nothing damped)', perform: true, type: 'checkbox', def: false,
+      { id: 'pedalLock', label: 'Pedal held down (nothing damped)', perform: true, strip: true, type: 'checkbox', def: false,
         hint: 'Every note rings until it dies away by itself.' },
     ],
   },
@@ -60,7 +60,7 @@ export const GROUPS = [
     params: [
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
   TUNING_GROUP,

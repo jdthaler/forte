@@ -42,7 +42,7 @@ export const GROUPS = [
       { id: 'dephase', label: 'Pure dephasing rate Γ_φ = 1/T_φ', min: 0, max: 10, def: 0, step: 0.01, fmt: (v) => (v > 0 ? `${v.toFixed(2)} s⁻¹ (T_φ ${s(1 / v)})` : 'off'),
         hint: 'Phase noise on the classical motion: coherence between levels k apart decays at k²Γ_φ. Kills revivals (and fractional ones first), keeps the attack. Mod wheel.' },
       { id: 'release', label: 'Release quench', min: 0.02, max: 2, def: 0.3, log: true, fmt: s, hint: 'Lifting the key ionises the packet: its population leaves at 1/T.' },
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.75, step: 0.01, fmt: (v) => v.toFixed(2) },
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.75, step: 0.01, fmt: (v) => v.toFixed(2) },
     ],
   },
   {
@@ -61,7 +61,7 @@ export const GROUPS = [
     params: [
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.3, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
   TUNING_GROUP,

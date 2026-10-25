@@ -239,7 +239,16 @@ vibrato, where the mallet strikes or the bow sits, the main physical knob
 (the black hole's spin), and `volume`. The instrument's build (sizes,
 materials, losses), its voicing (felt hardness) and `room` are set once,
 so they stay in the Controls panel. The same flag fills the row above the
-plugin window's keyboard. They sit in a strip above the keys in both modes, so they never
+plugin window's keyboard.
+
+The page's strip right above the keys is smaller: only what matters
+mid-phrase, marked `strip: true` as well. That is `volume`, `velocity` (the
+computer keys') and a pedal or what stands in for one (the vibraphone's and
+celesta's held pedal, the piano's una corda, the clavier's mute, the viola
+organista's lifted dampers, the kalimba's and steel pan's let-ring);
+`test/site-tests.mjs` allows three at most, `volume` among them. Every other
+control stays in its group in the Controls panel, which is never far from the
+keys. The strip's controls sit there in both modes, so they never
 move; a checkbox there becomes a stop that lights up, and in Discover a
 control with a `hint` gets an ⓘ button that opens it (a tap, not a
 tooltip, so it works on a tablet). A tile shows its label at rest, with
@@ -306,7 +315,7 @@ and say which in the footer help.
   its title.
 - **The controls, above the keys.** A card marked `data-control` is a
   control surface, not a view (the organ's drawbars and switches): it
-  moves here, ahead of the `perform: true` parameters. A dropdown there
+  moves here, ahead of the `strip: true` parameters. A dropdown there
   with a few short choices becomes a row of buttons. The rest of the
   parameters are in the Controls panel, `#controls`, grouped (the groups
   side by side), where each hint waits behind an ⓘ. A handle on the footer's edge folds the

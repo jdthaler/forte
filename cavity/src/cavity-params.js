@@ -18,7 +18,7 @@ export const GROUPS = [
   {
     title: 'Beam',
     params: [
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2),
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2),
         hint: 'The bunch charge the computer keys send through the cavity (a MIDI keyboard\'s velocity does the same). The field it leaves grows with the charge.' },
       { id: 'bunch', label: 'Bunch length', min: 0.005, max: 0.3, def: 0.06, log: true, fmt: pct(1),
         hint: 'The bunch\'s rms length as a share of an RF period. A Gaussian bunch reaches mode f with exp(−(2π f σ)²/2): short bunches ring the higher-order modes, the bell\'s upper partials; long ones only the accelerating mode.' },
@@ -72,7 +72,7 @@ export const GROUPS = [
     params: [
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.3, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
   TUNING_GROUP,

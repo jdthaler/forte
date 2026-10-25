@@ -302,7 +302,7 @@ function buildControls() {
     for (const p of g.params) {
       const wrap = document.createElement('div');
       wrap.className = 'param';
-      if (p.perform) wrap.dataset.perform = ''; // above the keys in Perform (shared/layout.js)
+      if (p.strip) wrap.dataset.perform = ''; // in the strip above the keys (shared/layout.js)
       let input, val = null;
       if (p.type === 'select') {
         wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;

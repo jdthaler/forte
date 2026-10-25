@@ -52,7 +52,7 @@ export const GROUPS = [
       { id: 'tone', label: 'Tone (low-pass)', perform: true, kind: 'mix', min: 500, max: 20000, def: 14000, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz` },
       { id: 'room', label: 'Room', kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.25, fmt: (v) => v.toFixed(2) },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => v.toFixed(2) },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => v.toFixed(2) },
     ],
   },
   TUNING_GROUP,

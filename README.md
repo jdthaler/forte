@@ -115,9 +115,9 @@ The main views and every group are on at first, and the page remembers
 your choice. Drag the handle on the controls' bar to share the height
 between the two, all the way to either end, or fold either away with the
 chevron at the end of its bar. At the bottom, right above the keys, are
-only the controls you'd change while playing (stops and registrations,
-pedals, tremolo, where the mallet strikes, the volume, or the organ's
-drawbars). Each shows its name, and its value while you move it.
+only the few you reach for mid-phrase: the volume, the computer keys'
+velocity, a pedal, or the organ's drawbars. Each shows its name, and its
+value while you move it.
 Explanations wait behind ⓘ buttons.
 
 **Your own presets** live in the same menu. *Save these settings…* keeps
