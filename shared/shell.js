@@ -6,7 +6,7 @@
 //
 // Expected DOM (copy docs/template/index.html):
 //   #start #midi-btn #midi #cpu #panic   header buttons / status pills
-//   #preset #reset #groups               sidebar: presets (shared/layout.js moves them to the header) and parameter groups
+//   #preset #reset #groups               sidebar: presets (shared/layout.js moves them to the controls' bar) and parameter groups
 //   #keyboard #oct #toast                keys, octave readout, toast
 //   optional: #ctl-read (readout of the ↑/↓ parameter), #hold (Space indicator)
 //

@@ -107,17 +107,18 @@ play the plugins in a DAW with a small buffer.
 
 Each instrument page reads top to bottom. At the top, the instrument's
 name opens the menu of every instrument (and Forte's home page), next to
-**How it works** and the mode. In the middle are the views,
-pictures of the physics as it plays, and the rest of the controls,
-grouped, beside them or below them (a switch at the top chooses, on a
-wide screen). Each side has its row of toggles on top: the views' turn
-each view on or off, the controls' each group of controls. The main views
-and every group are on at first, and the page remembers your choice. At
-the bottom, right above the keys, are only the controls you'd change
-while playing (stops and registrations, pedals, tremolo, where the mallet
-strikes, the volume, or the organ's drawbars), and the presets just above the keys (the first control on a
-phone). Each shows its name, and its value while
-you move it. Explanations wait behind ⓘ buttons.
+**How it works**. In the middle are the views, pictures of the physics as
+it plays, and below them the rest of the controls, grouped. Each has a
+bar on top: the views' turns each view on or off and holds the mode, the
+controls' turns each group of controls on or off and holds the presets.
+The main views and every group are on at first, and the page remembers
+your choice. Drag the handle on the controls' bar to share the height
+between the two, all the way to either end, or fold either away with the
+chevron at the end of its bar. At the bottom, right above the keys, are
+only the controls you'd change while playing (stops and registrations,
+pedals, tremolo, where the mallet strikes, the volume, or the organ's
+drawbars). Each shows its name, and its value while you move it.
+Explanations wait behind ⓘ buttons.
 
 **Your own presets** live in the same menu. *Save these settings…* keeps
 the page's settings under a name in your browser, and *Copy a link to
@@ -150,7 +151,7 @@ There are two modes. **Discover** shows it all. **Perform** shows just
 the views you turned on, filling the screen, with no toggles and no text
 in them: for playing,
 or for a projector (**Full screen** fills it). The controls above the
-keys stay where they are, and **More controls** brings back the rest.
+keys and the presets stay where they are, and **More controls** brings back the rest.
 
 **The keys** fill the width at the key size you choose (− +), like
 GarageBand's: a phone shows an octave or so, a laptop most of the range.
@@ -163,7 +164,8 @@ Armonica, Pyrophone, Gong Keyboard, Bubble Organ, Star Keyboard and Wind
 Harp), lean on a held key: slide the finger along it, either way, to
 press harder. The pedal button stands in for `Space`, and ⌨ lists the
 computer keys. The handle on top of the controls folds them away. On a
-phone the page scrolls above the keys, which stay put; turn it sideways
+phone the page scrolls above the keys, which stay put, with the
+controls' bar and its presets just above them; turn it sideways
 for wider keys, with the controls beside the keyboard's tools. Use
 *Share → Add to Home Screen* to run Forte as a full-screen app.
 
