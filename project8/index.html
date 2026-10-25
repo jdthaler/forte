@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Project 8 · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="project8">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Project 8</h1>
+      <span class="sub">single electrons in a magnetic trap, heard by their cyclotron radiation, as in the Project 8 neutrino-mass experiment</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="The receiver">
+          <div class="card-head"><h2>The receiver</h2><span class="muted" id="rx-read">frequency against time, as Project 8 plots it</span></div>
+          <canvas id="waterfall"></canvas>
+          <div class="caption">Each electron as Project 8's receiver sees it: its frequency in the real trap, in MHz above the reference (the krypton line, or tritium's endpoint), against time. A track climbs as the electron radiates and cools, about 300 MHz a second; a collision with the gas makes it jump (a dot) or ends it (a cross), and a track that reaches the trap's edge as its pitch angle closes ends too.</div>
+        </div>
+        <div class="card" data-perform data-view="The trap">
+          <div class="card-head"><h2>The trap of <b id="focus-name">C4</b></h2><span class="muted" id="trap-read"></span></div>
+          <canvas id="trap"></canvas>
+          <div class="caption">The magnetic bottle: the field along the axis, B₀ (1 + z²/L²), rising to the walls. Each electron bounces between the points where the field turns it back, here slowed to the note's scale (the real bounce is a hundred million times a second); one that bounces further sees more field, so it sounds a little sharp, and its Doppler vibrato is deeper. As an electron cools its bounce widens, until it reaches the walls and leaves.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Energies">
+          <div class="card-head"><h2>Electron energies</h2><span class="muted">the electrons played, and tritium's β spectrum</span></div>
+          <canvas id="energies"></canvas>
+          <div class="caption">How many electrons of each energy you have played, over tritium's β spectrum (the curve) with its endpoint, 18.57 keV, and the krypton line, 17.82 keV. Project 8 measures this spectrum by frequency: a neutrino's mass would pull the endpoint in and bend the last few eV of the curve.</div>
+        </div>
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the note, and where it would end if the electron cooled to rest</span></div>
+          <canvas id="spectrum"></canvas>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the note, and its ceiling</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">Each note rises from its key towards its ceiling, slowing as the electron cools, and stops when the electron leaves the trap. With the antenna ring, its harmonics rise with it and fade first.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>traps closed: hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>mod wheel: gas pressure · pitch bend: the magnetic field</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/project8-main.js"></script>
+</body>
+</html>

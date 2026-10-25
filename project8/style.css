@@ -1,0 +1,9 @@
+/* The page's own palette and any layout beyond shared/instrument.css: a violet for the electrons,
+   and the copper of the waveguide that carries their radiation. */
+:root {
+  --accent: #c99bff;
+  --accent-2: #e8a36a;
+  --accent-ink: #160a24;
+}
+#waterfall, #trap { height: 300px; }
+#energies { height: 220px; }

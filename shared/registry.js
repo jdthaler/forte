@@ -271,6 +271,13 @@ export const INSTRUMENTS = [
     physics: 'Cosmology · acoustic oscillations of the photon–baryon fluid · recombination and Silk damping',
     accent: '#ff9a62',
   },
+  {
+    id: 'project8', name: 'Project 8', section: 'phenomena', ready: true, version: '0.1.0', trim: -2,
+    plugin: { code: 'Proj', ready: true },
+    tagline: 'Every key a magnetic trap holding one electron, heard by its cyclotron radiation as the Project 8 neutrino-mass experiment hears it: a tone that chirps up as the electron cools, wavers as it bounces, and stops when it escapes.',
+    physics: 'Cyclotron radiation emission spectroscopy · relativistic radiation reaction · magnetic bottles',
+    accent: '#c99bff',
+  },
 ];
 
 // The template (docs/template/), the starting point for new instruments: not listed, but it

@@ -605,6 +605,40 @@
    "title": "Cut up high then as voiced then low"
   }
  ],
+ "project8": [
+  {
+   "file": "01-krypton-chords-climbing.m4a",
+   "title": "Krypton chords climbing"
+  },
+  {
+   "file": "02-one-electron-radiates-out.m4a",
+   "title": "One electron radiates out"
+  },
+  {
+   "file": "03-the-gas-rising.m4a",
+   "title": "The gas rising"
+  },
+  {
+   "file": "04-tritium-electrons.m4a",
+   "title": "Tritium electrons"
+  },
+  {
+   "file": "05-waveguide-then-antennas.m4a",
+   "title": "Waveguide then antennas"
+  },
+  {
+   "file": "06-deep-trap-then-long-trap.m4a",
+   "title": "Deep trap then long trap"
+  },
+  {
+   "file": "07-three-tesla.m4a",
+   "title": "Three tesla"
+  },
+  {
+   "file": "08-relativistic-electrons.m4a",
+   "title": "Relativistic electrons"
+  }
+ ],
  "pyrophone": [
   {
    "file": "01-chorale.m4a",
