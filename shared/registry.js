@@ -280,6 +280,13 @@ export const INSTRUMENTS = [
     physics: 'Cyclotron radiation emission spectroscopy · relativistic radiation reaction · magnetic bottles',
     accent: '#c99bff',
   },
+  {
+    id: 'abracadabra', name: 'ABRACADABRA', section: 'devices', ready: true, version: '0.1.0', trim: 3,
+    plugin: { code: 'Abra', ready: true },
+    tagline: 'Every key a universe whose dark matter is an axion of that key\'s mass, heard as the ABRACADABRA experiment would hear it: a toroidal magnet turns the axion into a faint flux through a pickup loop, a tone that swells and fades as the halo\'s waves drift in and out of step, over the hiss of the SQUID.',
+    physics: 'Axion electrodynamics · the Standard Halo Model · SQUID readout',
+    accent: '#7fd8c4',
+  },
 ];
 
 // The template (docs/template/), the starting point for new instruments: not listed, but it

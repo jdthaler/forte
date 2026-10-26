@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>ABRACADABRA · Forte</title>
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="abracadabra">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>ABRACADABRA</h1>
+      <span class="sub">every key a universe whose dark matter is an axion of that key's mass, heard through the ABRACADABRA experiment's toroidal magnet, pickup loop and SQUID</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="The toroid">
+          <div class="card-head"><h2>The toroid of <b id="focus-name">C4</b></h2><span class="muted" id="toroid-read"></span></div>
+          <canvas id="toroid"></canvas>
+          <div class="caption">The magnet's field circles inside the toroid (the copper arrows). The axion turns it into an effective current along the same circles, g √2ρ cos(mt) B, which threads an oscillating field through the hole, where the magnet has none, and so a flux through the pickup loop there (the vertical arrow and the loop's glow), slowed here from the axion's own frequency to one swing a second. Its size wanders as the halo's waves drift in and out of step.</div>
+        </div>
+        <div class="card" data-perform data-view="The search">
+          <div class="card-head"><h2>The search</h2><span class="muted" id="search-read">hold a key: its spectrum, averaged as ABRACADABRA averages</span></div>
+          <canvas id="search"></canvas>
+          <div class="caption">The SQUID's spectrum near the last key struck, mixed down to its axion's frequency, in μΦ₀² per Hz against Hz above m c²/h (real Hz: the same as the note's), averaged over the seconds the key is held. The dashed line is the SQUID's noise floor and the curve what the Standard Halo Model predicts: the axion's line, a millionth of its frequency wide and one-sided, since every speed only adds. Averaging calms the noise, not the line: a buried axion climbs out, as in the experiment, as the square root of the time.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Where it sits">
+          <div class="card-head"><h2>Where it sits</h2><span class="muted">the axion's coupling against its mass</span></div>
+          <canvas id="plane"></canvas>
+          <div class="caption">This universe's axion (the line, and a dot for each key sounding) on the plane every axion search plots: its coupling to photons against its mass. The keyboard spans 0.11 to 17 neV; ABRACADABRA-10 cm searched 0.41 to 8.3 neV and ruled out couplings down to 3.2×10⁻¹¹ GeV⁻¹ at its best; CAST and the stars allow 6.6×10⁻¹¹ at most. The QCD axion, the one that would also explain why the strong force keeps time reversal, lies far below, between its KSVZ and DFSZ lines.</div>
+        </div>
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · marker: the key's axion</span></div>
+          <canvas id="spectrum"></canvas>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the axions</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">Each note is a single line that brightens and fades on its own as its field wanders, the high notes faster (a million cycles is less time); the SQUID's noise is the haze around each, wider the higher the note.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>magnets kept charged: hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>mod wheel: the halo's speed</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/abracadabra-main.js"></script>
+</body>
+</html>
