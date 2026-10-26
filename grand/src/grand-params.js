@@ -59,16 +59,16 @@ export const GROUPS = [
   {
     title: 'EQ (preamp)',
     params: [
-      { id: 'bass', label: 'Bass (shelf 120 Hz)', min: -15, max: 15, step: 0.5, def: 0, fmt: db },
-      { id: 'mid', label: 'Middle (peak 1 kHz)', min: -15, max: 15, step: 0.5, def: 0, fmt: db },
-      { id: 'treble', label: 'Treble (shelf 3.5 kHz)', min: -15, max: 15, step: 0.5, def: 0, fmt: db, hint: 'Applies to the piezo signal (the CP-70\'s onboard EQ), not to the microphones.' },
+      { id: 'bass', face: 'knob', label: 'Bass (shelf 120 Hz)', min: -15, max: 15, step: 0.5, def: 0, fmt: db },
+      { id: 'mid', face: 'knob', label: 'Middle (peak 1 kHz)', min: -15, max: 15, step: 0.5, def: 0, fmt: db },
+      { id: 'treble', face: 'knob', label: 'Treble (shelf 3.5 kHz)', min: -15, max: 15, step: 0.5, def: 0, fmt: db, hint: 'Applies to the piezo signal (the CP-70\'s onboard EQ), not to the microphones.' },
     ],
   },
   {
     title: 'Tremolo (preamp)',
     params: [
-      { id: 'tremDepth', label: 'Tremolo depth', perform: true, min: 0, max: 1, step: 0.01, def: 0, fmt: (v) => (v === 0 ? 'off' : `${(v * 100).toFixed(0)} %`), hint: 'The preamp\'s stereo tremolo: an oscillator lights an LED beside each output\'s photocell, in turn, and the photocell shunts that output. Played in stereo the sound swings from side to side; through one output it throbs. Photocells light fast and go dark slowly. Applies to the piezo, not to the microphones.' },
-      { id: 'tremRate', label: 'Tremolo rate', perform: true, min: 1, max: 10, step: 0.05, def: 5, fmt: (v) => `${v.toFixed(2)} Hz`, hint: 'How many times a second the sound goes left and back.' },
+      { id: 'tremDepth', face: 'knob', label: 'Tremolo depth', perform: true, min: 0, max: 1, step: 0.01, def: 0, fmt: (v) => (v === 0 ? 'off' : `${(v * 100).toFixed(0)} %`), hint: 'The preamp\'s stereo tremolo: an oscillator lights an LED beside each output\'s photocell, in turn, and the photocell shunts that output. Played in stereo the sound swings from side to side; through one output it throbs. Photocells light fast and go dark slowly. Applies to the piezo, not to the microphones.' },
+      { id: 'tremRate', face: 'knob', label: 'Tremolo rate', perform: true, min: 1, max: 10, step: 0.05, def: 5, fmt: (v) => `${v.toFixed(2)} Hz`, hint: 'How many times a second the sound goes left and back.' },
     ],
   },
   {
