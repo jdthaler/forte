@@ -12,6 +12,7 @@
 
 import assert from 'node:assert/strict';
 import { INSTRUMENT, DEFAULTS } from '../project8/src/project8-instrument.js';
+import { GROUPS } from '../project8/src/project8-params.js';
 import { wasmModel } from '../project8/src/project8-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { tunedFreq } from '../shared/tuning.js';
@@ -19,6 +20,7 @@ import { tunedFreq } from '../shared/tuning.js';
 const Engine = await loadEngine(INSTRUMENT);
 const M = await wasmModel();
 const K = M.constants;
+const PARAMS = GROUPS.flatMap((g) => g.params);
 
 const FS = 48000;
 let failures = 0;
@@ -290,6 +292,19 @@ test('the gas: at Phase II\'s pressure collisions come at the model\'s rate, the
   assert.ok(life / 40 < 0.01, `mean life ${(1000 * life / 40).toFixed(2)} ms`);
   assert.ok(cols.some((c) => !c.out && c.loss > 0), 'some collisions leave it in the trap, a little lower in energy');
 });
+test('the gas all the way down is a perfect vacuum: no collisions (just above it, a few), and the slider says so', () => {
+  const count = (gas) => {
+    const msgs = [];
+    const ev = Array.from({ length: 24 }, (_, i) => [0.01 * i, (x) => x.noteOn(48 + i, 0.8)]);
+    render(P({ gas }), 12, ev, (m) => msgs.push(m));
+    return msgs.filter((m) => m.type === 'collision').length;
+  };
+  assert.equal(count(1e-11), 0, 'collisions in a perfect vacuum');
+  assert.ok(count(1e-9) > 0, 'collisions at 10⁻⁹ mbar');
+  const gas = PARAMS.find((q) => q.id === 'gas');
+  assert.match(gas.fmt(gas.min), /none/);
+  assert.match(gas.fmt(1.1e-11), /mbar/);
+});
 test('tritium: each electron\'s energy is drawn from the β spectrum, and its note is sharp of the key (the endpoint) by its lighter mass, γ(E₀)/γ(K)', () => {
   const p = P({ ...QUIET, source: 'tritium' }), msgs = [];
   render(p, 0.5, Array.from({ length: 300 }, (_, i) => [0, (x) => { x.noteOn(21 + (i % 80), 0.5); }]), (m) => msgs.push(m));
@@ -327,11 +342,11 @@ test('level: a forte note peaks between 0.1 and 0.5, chords stay finite, and the
   const [L] = render(DEFAULTS, 2, [48, 55, 64, 72, 79].map((k) => [0, (e) => e.noteOn(k, 1)]));
   assert.ok(L.every(Number.isFinite), 'finite');
 });
-test('Quality: Medium and Low hear 16 and 10 electrons at once (High 24), and the antennas hear 6 and 3 harmonics (High up to 12); one plain note is the same at every quality', () => {
+test('Quality: Medium and Low hear 16 and 10 electrons at once (High 48), and the antennas hear 6 and 3 harmonics (High up to 12); one plain note is the same at every quality', () => {
   const one = (q) => render(P(), 0.5, [[0, (x) => { x.setQuality(q); x.noteOn(60, 0.8); }]])[0];
   const high = one('high');
-  for (const [q, cap] of [['high', 24], ['medium', 16], ['low', 10]]) {
-    const [A, , e] = render(P(), 0.4, [[0, (x) => x.setQuality(q)], ...Array.from({ length: 30 }, (_, i) => [0.005 * i, (x) => x.noteOn(30 + 2 * i, 0.8)])]);
+  for (const [q, cap] of [['high', 48], ['medium', 16], ['low', 10]]) {
+    const [A, , e] = render(P(), 0.4, [[0, (x) => x.setQuality(q)], ...Array.from({ length: 60 }, (_, i) => [0.005 * i, (x) => x.noteOn(21 + i, 0.8)])]);
     assert.equal(e.voiceCount(), cap, `${q}: voices`);
     assert.ok(A.every(Number.isFinite), `${q}: finite`);
     assert.ok(one(q).every((v, i) => v === high[i]), `${q}: a plain note differs from High's`);

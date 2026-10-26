@@ -166,7 +166,8 @@ void Project8Engine::play(Voice &v, float *L, float *R, int n) {
   if (v.trapped) {
     v.e.cool(dt, tau);
     // the gas: the step's optical depth, each collision where the depth to the next runs out
-    const double depth = collisionRate(expr.slideOr(v.key, P[p::gas]), v.e.kinetic()) * dt, t0 = v.age - dt;
+    const double gas = expr.slideOr(v.key, P[p::gas]);
+    const double depth = gas <= NO_GAS ? 0 : collisionRate(gas, v.e.kinetic()) * dt, t0 = v.age - dt;
     double used = 0;
     while (v.trapped && v.optical <= depth - used) {
       used += v.optical;

@@ -161,7 +161,9 @@ elastic collisions a tenth as likely (as Project 8 found), scaled as 1/β² at
 other energies (Bethe's leading term), and the gas at the Phase II cell's 85 K.
 At 10⁻¹⁰ mbar (**Gas pressure**, the mod wheel) that is one every 3.9 s; at
 Phase II's 2 × 10⁻⁶ mbar one every 0.2 ms (Project 8 measured 0.15 to 0.19 ms),
-so each note is a blip.
+so each note is a blip. All the way down, **Gas pressure** is a perfect vacuum:
+no gas, no collisions (at 10⁻¹¹ mbar there would still be one every 40 s or so,
+enough to nudge one note in a few).
 
 * **Inelastic** (most): the molecule is excited or ionised. The electron loses
   12.6 eV (the peak of hydrogen's energy-loss spectrum) or 15.4 eV plus what
@@ -260,7 +262,7 @@ tools/render-project8.mjs                 node tools/render-project8.mjs → exa
 ## Quality
 
 The Quality setting (in the top bar, beside the CPU readout) trims what plays
-at once: 16 electrons at Medium and 10 at Low, against 24 at High (the quietest
+at once: 16 electrons at Medium and 10 at Low, against 48 at High (the quietest
 let-go one fading first), and the antenna ring's harmonics, 6 at Medium and 3
 at Low against up to 12. A single note with the waveguide sounds the same at
 every setting.
