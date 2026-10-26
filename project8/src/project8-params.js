@@ -8,7 +8,7 @@ import { VENUE } from '../../shared/chain.js';
 import { TUNING_GROUP } from '../../shared/tuning.js';
 
 // pressures in mbar, as Project 8 quotes them; the lowest setting is no gas at all
-const mbar = (v) => { if (v <= 1.000001e-11) return 'none (a perfect vacuum)'; const [m, e] = v.toExponential(1).split('e'); return `${m}×10${e.replace('+', '').replace('-', '⁻').replace(/\d/g, (d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d])} mbar`; };
+const mbar = (v) => { if (v <= 1e-11) return 'none (a perfect vacuum)'; const [m, e] = v.toExponential(1).split('e'); return `${m}×10${e.replace('+', '').replace('-', '⁻').replace(/\d/g, (d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d])} mbar`; };
 
 export const GROUPS = [
   {

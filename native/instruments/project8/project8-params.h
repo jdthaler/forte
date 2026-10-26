@@ -28,7 +28,7 @@ inline const FormatSegment kFormat_energy[] = {{9.999999999999998, "", " keV", 1
 inline const FormatSegment kFormat_field[] = {{kNoLimit, "", " T", 1, 0, 3, false, false, false, false}};
 inline const FormatSegment kFormat_depth[] = {{0.09999999999999999, "", " mT", 1, 0, 3, false, false, false, false}, {0.9999999999999999, "", " mT", 1, 0, 2, false, false, false, false}, {kNoLimit, "", " mT", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_length[] = {{9.999999999999998, "", " cm", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " cm", 1, 0, 0, false, false, false, false}};
-inline const FormatSegment kFormat_gas[] = {{1.000001e-11, "none (a perfect vacuum)", "", 1, 1e-11, -1, false, false, false, false}, {kNoLimit, "", " mbar", 1, 0, 1, false, true, false, false, false, true}};
+inline const FormatSegment kFormat_gas[] = {{1e-11, "none (a perfect vacuum)", "", 1, 1e-11, -1, false, false, false, false}, {kNoLimit, "", " mbar", 1, 0, 1, false, true, false, false, false, true}};
 inline const char *const kChoices_receiver[] = {"Waveguide", "Antenna ring"};
 inline const char *const kKeys_receiver[] = {"guide", "antennas"};
 namespace receiver_ { enum : int { guide, antennas }; }
