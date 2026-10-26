@@ -216,6 +216,72 @@ body[data-instrument] .forte-info:hover, body[data-instrument] .forte-info[aria-
 }
 .forte-hint-pop b { display: block; margin-bottom: 3px; color: var(--accent); font-weight: 600; }
 
+/* ---- faces (shared/faces.js): a control drawn as the instrument has it. The checkbox or range
+   stays, out of sight but in the tab order; the face is its label (or the knob) ------------------ */
+body[data-instrument] .param[data-face] { position: relative; display: inline-flex; flex-direction: column; align-items: center; gap: 5px; vertical-align: top; margin: 4px 12px 14px 0; }
+body[data-instrument] .param[data-face][hidden] { display: none; }
+body[data-instrument] .param[data-face] > :is(input[type=checkbox], input[type=range]) { position: absolute; left: 50%; top: 0; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+body[data-instrument] .param[data-face] .hint { flex-basis: auto; max-width: 180px; text-align: left; }
+body[data-instrument] .param[data-face]:has(> input:focus-visible) :is(> label, .forte-knob) { outline: 2px solid var(--accent); outline-offset: 3px; }
+body[data-instrument] .param[data-face]:not([data-face=lever]) .forte-info { position: absolute; top: -4px; right: -6px; z-index: 1; background: var(--panel, #16161a); }
+body[data-instrument] .param[data-face] > label { cursor: pointer; user-select: none; -webkit-user-select: none; }
+
+/* a drawknob: an ivory face in a dark rim, its stop's name in script; drawn, it stands out and lights */
+body[data-instrument] .param[data-face=drawknob] > label {
+  box-sizing: border-box; width: 72px; height: 72px; padding: 9px; border-radius: 50%; display: grid; place-items: center; text-align: center;
+  font: italic 600 11.5px/1.12 Georgia, "Iowan Old Style", "Times New Roman", serif; color: #2a1f15;
+  background: radial-gradient(circle at 36% 30%, #fffbf2, #ece2cc 55%, #cbbb98);
+  border: 5px solid #3a2818; box-shadow: 0 0 0 1px #120c07, 0 2px 3px rgba(0, 0, 0, 0.6);
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+body[data-instrument] .param[data-face=drawknob]:has(> input:checked) > label {
+  transform: translateY(-3px) scale(1.07);
+  box-shadow: 0 0 0 1px #120c07, 0 9px 10px rgba(0, 0, 0, 0.7), 0 0 16px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* a harpsichord's hand stop: a brass knob in a slot, slid across to bring the row on */
+body[data-instrument] .param[data-face=lever] { display: flex; flex-direction: row; align-items: center; margin: 0 0 9px; }
+body[data-instrument] .param[data-face=lever] > label { position: relative; display: flex; align-items: center; gap: 12px; }
+body[data-instrument] .param[data-face=lever] > label::before { content: ""; flex: none; width: 56px; height: 12px; border-radius: 6px; background: linear-gradient(#0c0906, #2b2117); box-shadow: inset 0 1px 3px #000, 0 1px 0 rgba(255, 255, 255, 0.06); }
+body[data-instrument] .param[data-face=lever] > label::after {
+  content: ""; position: absolute; left: -2px; top: 50%; width: 22px; height: 22px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff2bd, #d4a63e 50%, #7c5a1c); box-shadow: 0 2px 3px rgba(0, 0, 0, 0.7);
+  transform: translateY(-50%); transition: transform 0.15s;
+}
+body[data-instrument] .param[data-face=lever]:has(> input:checked) > label::after { transform: translate(36px, -50%); }
+body[data-instrument] .param[data-face=lever]:has(> input:checked) > label { color: var(--text); }
+
+/* a Clavinet's rocker tab: pressed at the top when on, its legend lit */
+body[data-instrument] .param[data-face=tab] { margin-right: 5px; }
+body[data-instrument] .param[data-face=tab] > label {
+  box-sizing: border-box; width: 58px; height: 46px; padding: 0 2px 6px; border-radius: 4px; display: flex; align-items: flex-end; justify-content: center; text-align: center;
+  font: 700 10px/1.1 system-ui, sans-serif; letter-spacing: 0.5px; text-transform: uppercase; color: #cfc8bd;
+  background: linear-gradient(#45403b, #2c2825 48%, #1d1a18 52%, #26221f); border: 1px solid #000; box-shadow: 0 3px 0 #000, 0 4px 5px rgba(0, 0, 0, 0.5);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+body[data-instrument] .param[data-face=tab]:has(> input:checked) > label {
+  color: var(--accent); background: linear-gradient(#1d1a18, #26221f 48%, #3b3632 52%, #4a443f);
+  transform: translateY(2px); box-shadow: 0 1px 0 #000, 0 2px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* an amp's knob: a black cap with a white line, in a ring that fills with the value */
+body[data-instrument] .param[data-face=knob] { width: 78px; gap: 2px; margin-right: 8px; }
+body[data-instrument] .param[data-face=knob] .row { flex-direction: column; align-items: center; gap: 0; text-align: center; }
+body[data-instrument] .param[data-face=knob] .row label { font-size: 12px; }
+body[data-instrument] .param[data-face=knob] .val { font-size: 11px; }
+.forte-knob { --turn: 0deg; --a0: 0deg; --a1: 0deg; position: relative; width: 56px; height: 56px; border-radius: 50%; cursor: ns-resize; touch-action: none; }
+.forte-knob::before {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(from -135deg, transparent 0 var(--a0), var(--accent) 0 var(--a1), transparent 0),
+    conic-gradient(from -135deg, rgba(255, 255, 255, 0.13) 0 270deg, transparent 0);
+  -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 4px), #000 calc(100% - 3px)); mask: radial-gradient(closest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+}
+.forte-knob-cap {
+  position: absolute; inset: 8px; z-index: 1; border-radius: 50%; transform: rotate(var(--turn));
+  background: radial-gradient(circle at 38% 30%, #575757, #1b1b1b 62%, #0d0d0d); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.18);
+}
+.forte-knob-mark { position: absolute; left: 50%; top: 3px; width: 3px; height: 12px; margin-left: -1.5px; border-radius: 2px; background: #f3eee6; }
+
 /* ---- the keyboard bar and the keys --------------------------------------------- */
 body[data-instrument] .kb-help { display: block; position: relative; margin: 0 0 7px; }
 .forte-kbbar { display: flex; align-items: center; gap: 6px; }
