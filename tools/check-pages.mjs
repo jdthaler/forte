@@ -126,7 +126,7 @@ async function listen(tab) {
 // shows both following; everything is on at the end. Returns how many toggles there are.
 const ROWS = [
   ['.forte-view-toggles button', '.forte-stage > .card', 'view'],
-  ['.forte-control-toggles button', '#controls details.group[data-key]', 'controls'],
+  ['.forte-control-toggles button', '#controls [data-key]', 'controls'],
 ];
 const TOGGLES = (sel) => [...document.querySelectorAll(sel)].map((b) => b.getAttribute('aria-pressed') === 'true');
 const SHOWN = (sel) => [...document.querySelectorAll(sel)].map((c) => c.offsetParent !== null);

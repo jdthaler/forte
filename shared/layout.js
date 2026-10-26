@@ -6,25 +6,24 @@
 //             The bar has a toggle for each view (a tap turns it on or off: at first the
 //             main views, cards marked data-perform, are on and the rest off), then its
 //             tools (Discover | Perform) and a button that folds the views away;
-//   controls  a bar, then the Controls panel (#controls: the groups turned on, side by
-//             side). The bar has a toggle for each group of controls (all on at first),
+//   controls  a bar, then the Controls panel (#controls: any control surface a page marks
+//             data-control, such as the organ's drawbars, then the groups, side by side).
+//             The bar has a toggle for each surface and group of controls (all on at first),
 //             then its tools (the presets, with "Default settings", which stands in for
 //             the page's Reset button) and a button that folds the panel away. Its top
 //             edge is a handle: dragged, it shares the height between the views and the
 //             controls, down to nothing for either (the bars stay);
-//   footer    the controls you play with, right above the keys: any control surface
-//             a page marks data-control (the organ's drawbars) and the parameters
-//             marked `perform: true` (which the page gives data-perform), then, in
-//             Perform, "More controls" for the Controls panel. A handle folds them away.
-//             Then the keyboard bar (◀ an overview of the whole range ▶, key size, the
-//             pedal, and ⌨ for the page's computer-keyboard and MIDI hints) and the keys:
-//             as many as fit the width at the chosen key size.
+//   footer    the keyboard bar (⌨ for the page's computer-keyboard and MIDI hints, ◀ an
+//             overview of the whole range ▶, the few small controls you reach for mid-phrase,
+//             marked `strip: true` (which the page gives data-perform): the volume, the
+//             computer keys' velocity, a pedal; then key size and the pedal button) and the
+//             keys: as many as fit the width at the chosen key size.
 // A phone has no room to share: there the page scrolls, the views above the controls, and
 // the controls' bar sticks above the keys.
 // Explanations wait behind ⓘ buttons: a parameter's hint, a view's caption.
 // Discover shows the toggles and every explanation. Perform is for playing and for a
 // projector: the views turned on fill the screen with no toggles, no Controls panel
-// until More controls, and no text in them
+// until the controls' bar's chevron (More controls), and no text in them
 // (no titles, readouts, captions, legends or tables, and nothing drawn by fillText on
 // their canvases; a card with data-keep-text keeps its own). The mode is the same on
 // every page, and so is how the height is shared; everything else, what's turned on among
@@ -47,7 +46,6 @@ const prefs = (() => {
   const flags = (o) => Object.fromEntries(Object.entries(o && typeof o === 'object' ? o : {}).filter(([, v]) => typeof v === 'boolean'));
   return { // keep only well-formed stored values
     perform: { controls: bool(s.perform?.controls, false) }, // the controls panel in Perform (More controls)
-    deck: bool(s.deck, true), // the controls above the keys
     views: flags(s.views), // each view turned on or off; the rest as the page has them
     groups: flags(s.groups), // each group of controls turned on or off; the rest on
     kb: SIZES.includes(s.kb) ? s.kb : touch ? 'l' : 'm',
@@ -187,11 +185,20 @@ if (sidebar && mainEl) {
   groupHint.hidden = true;
   sidebar.prepend(groupHint);
 }
+// A control surface (the organ's drawbars and switches) heads the panel, with a toggle of its own.
+if (bars.controls && surfaces.length) {
+  const at = sidebar.querySelector('#groups');
+  for (const s of surfaces) {
+    s.classList.add('forte-surface');
+    if (at?.parentNode === sidebar) sidebar.insertBefore(s, at); else sidebar.appendChild(s);
+  }
+}
 function addGroups() {
   if (!bars.controls) return;
-  for (const det of sidebar.querySelectorAll('details.group:not([data-key])')) {
-    if (!det.querySelector('.param')) continue;
-    const sum = det.querySelector('summary'), name = sum?.textContent.trim() || `Controls ${groups.length + 1}`;
+  for (const det of sidebar.querySelectorAll('.forte-surface:not([data-key]), details.group:not([data-key])')) {
+    const surface = det.classList.contains('forte-surface');
+    if (!surface && !det.querySelector('.param')) continue;
+    const sum = det.querySelector('summary'), name = (surface ? det.dataset.view : sum?.textContent.trim()) || `Controls ${groups.length + 1}`;
     const key = det.dataset.key = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     sum?.addEventListener('click', (e) => e.preventDefault());
     const g = { det, key, on: () => prefs.groups[key] ?? true, toggle: button(name, 'Show or hide these controls') };
@@ -200,7 +207,7 @@ function addGroups() {
     groups.push(g);
   }
   for (const g of groups) {
-    g.det.open = true;
+    if (g.det.tagName === 'DETAILS') g.det.open = true;
     g.det.hidden = !g.on();
     g.toggle.setAttribute('aria-pressed', String(g.on()));
   }
@@ -314,29 +321,13 @@ for (const kind of ['views', 'controls']) {
 }
 
 // ---------------------------------------------------------------------------
-// controls: the deck above the keys, and More controls for the rest
+// the strip: the few small controls you play with, in the keyboard bar (shared/keyboard.js has it
+// call attachKeyboard; until then, at the top of the footer)
 
-const deck = el('div', 'forte-deck');
-deck.id = 'forte-deck';
 const strip = el('div', 'forte-perform');
 strip.setAttribute('role', 'group');
 strip.setAttribute('aria-label', 'Controls to play with');
-let more = null, grab = null;
-if (footer && (sidebar || surfaces.length)) {
-  for (const s of surfaces) { s.classList.add('forte-surface'); deck.appendChild(s); }
-  deck.appendChild(strip);
-  if (sidebar) {
-    more = button('More controls', 'Every other control, grouped'); // in Perform: Discover has the toggles
-    more.className = 'forte-more';
-    more.addEventListener('click', () => { fold('controls'); more.blur(); });
-    strip.appendChild(more);
-  }
-  grab = button('');
-  grab.className = 'forte-grab';
-  grab.setAttribute('aria-controls', deck.id);
-  grab.addEventListener('click', () => { prefs.deck = !prefs.deck; save(); apply(); grab.blur(); });
-  footer.prepend(grab, deck);
-}
+if (footer && sidebar) footer.prepend(strip);
 
 // The hint of a control above the keys opens in a bubble over it; in the Controls
 // panel it slides open under the control. Either way, a tap: tooltips need a mouse.
@@ -402,41 +393,24 @@ function segment(p, label) {
   sync();
 }
 
-// A tile above the keys shows its label at rest, with the value beside it only if both fit whole
-// (.tight when they don't), and its value while the value moves (a drag, the arrows, the mod
-// wheel, a preset) and for a moment after, so it can be read (.live). Its tooltip has both.
-function live(p, name) {
-  const row = p.querySelector('.row'), lab = row?.querySelector('label'), val = row?.querySelector('.val');
-  if (!lab || !val) return;
+// A tile above the keys shows its label, slider and value on one line; its tooltip has the
+// whole name and the value.
+function titled(p, name) {
+  const val = p.querySelector('.val');
+  if (!val) return;
   const title = () => { p.title = `${name}: ${val.textContent}`; };
-  const input = p.querySelector('input[type=range]');
-  const fit = () => {
-    const info = row.querySelector('.forte-info'), gap = parseFloat(getComputedStyle(row).columnGap) || 0;
-    const need = lab.scrollWidth + gap + val.scrollWidth + (info?.offsetWidth ? info.offsetWidth + gap : 0);
-    p.classList.toggle('tight', need > row.clientWidth + 0.5);
-  };
-  let timer = 0, held = false;
-  const show = () => {
-    p.classList.add('live'); clearTimeout(timer);
-    if (!held) timer = setTimeout(() => p.classList.remove('live'), 1500);
-  };
-  new MutationObserver(() => { show(); fit(); title(); }).observe(val, { childList: true, characterData: true, subtree: true });
-  if (window.ResizeObserver) new ResizeObserver(fit).observe(row);
-  fit(); title();
-  if (!input) return;
-  input.addEventListener('pointerdown', () => { held = true; show(); });
-  for (const ev of ['pointerup', 'pointercancel']) input.addEventListener(ev, () => { held = false; show(); });
+  new MutationObserver(title).observe(val, { childList: true, characterData: true, subtree: true });
+  title();
 }
 // Above the keys a label drops its explanation, "(…)" or "= …": "Dome rise (curvature)" is
 // "Dome rise". The whole name stays the control's name, its tooltip and its ⓘ's title.
 const shortLabel = (t) => t.replace(/\s*\([^()]*\)\s*$/, '').replace(/\s+=\s.*$/, '').trim() || t;
 
 // Once the page has built its parameters: each gets its ⓘ, and the ones marked
-// data-perform move above the keys (the page keeps its references to them).
+// data-perform move to the strip in the keyboard bar (the page keeps its references to them).
 function placeControls() {
   if (!sidebar) return;
   const fresh = sidebar.querySelectorAll('.param:not([data-placed])');
-  if (fresh.length) requestAnimationFrame(() => { deck.scrollTop = 0; }); // the first row, once laid out
   for (const p of fresh) {
     p.dataset.placed = '';
     const lab = p.querySelector('label'), label = lab?.textContent ?? '', hint = p.querySelector('.hint')?.textContent;
@@ -460,10 +434,10 @@ function placeControls() {
         lab.textContent = short;
         p.querySelector('input, select')?.setAttribute('aria-label', label);
       }
-      live(p, label);
+      titled(p, label);
       // velocity for the computer keys: a touch sets it by where it strikes, MIDI by the note
       if (p.querySelector('#p-velocity')) p.classList.add('keys-only');
-      strip.insertBefore(p, more);
+      strip.appendChild(p);
     } else if (info) {
       info.addEventListener('click', () => { info.setAttribute('aria-expanded', String(p.classList.toggle('hint-open'))); info.blur(); });
     }
@@ -566,7 +540,8 @@ function apply() {
     const b = bars[kind]?.fold;
     if (!b) continue;
     b.setAttribute('aria-expanded', String(!folded));
-    b.title = folded ? `Show the ${name}` : `Hide the ${name}: the ${name === 'views' ? 'controls' : 'views'} take their room`;
+    b.title = kind === 'controls' && performing() ? (folded ? 'More controls' : 'Fewer controls: the views take the room')
+      : folded ? `Show the ${name}` : `Hide the ${name}: the ${name === 'views' ? 'controls' : 'views'} take their room`;
     b.setAttribute('aria-label', b.title);
   }
   if (handle) {
@@ -574,13 +549,6 @@ function apply() {
     handle.setAttribute('aria-valuetext', `views ${Math.round(100 * split.views)} %, controls ${Math.round(100 * (1 - split.views))} %`);
   }
   arrange();
-  more?.setAttribute('aria-pressed', String(prefs.perform.controls));
-  body.classList.toggle('deck-shut', !prefs.deck);
-  if (grab) {
-    grab.setAttribute('aria-expanded', String(prefs.deck));
-    grab.title = prefs.deck ? 'Fold the controls away' : 'Show the controls above the keys';
-    grab.setAttribute('aria-label', grab.title);
-  }
   for (const s of SIZES) body.classList.toggle(`kb-${s}`, prefs.kb === s);
   window.dispatchEvent(new Event('resize')); // let pages that size on resize refit
 }
@@ -668,7 +636,19 @@ export function attachKeyboard(kb) {
       count = n;
     }
     bar.classList.toggle('all-keys', count === whites.length);
+    stack();
     show(first, false);
+  }
+  // The strip shares the bar's line where it fits beside the rest, with room left for the
+  // overview; otherwise it takes a line of its own above it. A phone held sideways keeps one line.
+  const sideways = matchMedia('(max-width: 1050px) and (max-height: 500px)'); // as layout.css
+  function stack() {
+    bar.classList.remove('stacked');
+    if (strip.parentNode !== bar || !strip.childElementCount || sideways.matches || !bar.isConnected) return;
+    bar.classList.add('measure');
+    const over = bar.scrollWidth > bar.clientWidth + 1;
+    bar.classList.remove('measure');
+    bar.classList.toggle('stacked', over);
   }
   prev.addEventListener('click', () => { show(first - 7); prev.blur(); });
   next.addEventListener('click', () => { show(first + 7); next.blur(); });
@@ -732,7 +712,9 @@ export function attachKeyboard(kb) {
   sizes.setAttribute('role', 'group');
   sizes.setAttribute('aria-label', 'Key size');
   sizes.append(smaller, larger);
-  bar.append(prev, map, next, sizes);
+  bar.append(prev, map, next);
+  if (strip.parentNode === footer) bar.appendChild(strip); // the page's own strip, if any
+  bar.appendChild(sizes);
 
   // The pedal: a button that presses Space, so pages need no touch-specific code.
   const label = body.dataset.space;
@@ -761,6 +743,9 @@ export function attachKeyboard(kb) {
     }
   }
   row.appendChild(bar);
+  stack();
+  new MutationObserver(stack).observe(strip, { childList: true }); // the page builds its controls later
+  document.fonts?.ready.then(stack);
   // the range can change (a historical compass opened to every key): the window keeps its first key
   kb.onBounds(() => {
     const start = whites[first];

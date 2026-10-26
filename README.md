@@ -114,10 +114,9 @@ controls' turns each group of controls on or off and holds the presets.
 The main views and every group are on at first, and the page remembers
 your choice. Drag the handle on the controls' bar to share the height
 between the two, all the way to either end, or fold either away with the
-chevron at the end of its bar. At the bottom, right above the keys, are
-only the few you reach for mid-phrase: the volume, the computer keys'
-velocity, a pedal, or the organ's drawbars. Each shows its name, and its
-value while you move it.
+chevron at the end of its bar. The few you reach for mid-phrase (the
+volume, the computer keys' velocity, a pedal) sit in the keyboard's own
+bar, right above the keys, each with its name and its value.
 Explanations wait behind ⓘ buttons.
 
 **Your own presets** live in the same menu. *Save these settings…* keeps
@@ -150,8 +149,9 @@ crackle, the page suggests a lower setting.
 There are two modes. **Discover** shows it all. **Perform** shows just
 the views you turned on, filling the screen, with no toggles and no text
 in them: for playing,
-or for a projector (**Full screen** fills it). The controls above the
-keys and the presets stay where they are, and **More controls** brings back the rest.
+or for a projector (**Full screen** fills it). The controls in the
+keyboard's bar and the presets stay where they are, and the chevron on
+the controls' bar (**More controls**) brings back the rest.
 
 **The keys** fill the width at the key size you choose (− +), like
 GarageBand's: a phone shows an octave or so, a laptop most of the range.
@@ -163,10 +163,10 @@ aftertouch (Viola Organista, Tangent Clavier, Free-Reed Organ, Glass
 Armonica, Pyrophone, Gong Keyboard, Bubble Organ, Star Keyboard and Wind
 Harp), lean on a held key: slide the finger along it, either way, to
 press harder. The pedal button stands in for `Space`, and ⌨ lists the
-computer keys. The handle on top of the controls folds them away. On a
+computer keys. On a
 phone the page scrolls above the keys, which stay put, with the
 controls' bar and its presets just above them; turn it sideways
-for wider keys, with the controls beside the keyboard's tools. Use
+for wider keys. Use
 *Share → Add to Home Screen* to run Forte as a full-screen app.
 
 ## Plugins
