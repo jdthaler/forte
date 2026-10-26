@@ -131,8 +131,8 @@ test('ids are unique slugs; sections and accents are valid', () => {
     assert.ok(i.name && i.tagline && i.physics, i.id);
   }
 });
-test('four sections, each with a tab name and at least one ready instrument; ready ones listed first', () => {
-  assert.equal(SECTIONS.length, 4);
+test('five sections, each with a tab name and at least one ready instrument; ready ones listed first', () => {
+  assert.equal(SECTIONS.length, 5);
   for (const sec of SECTIONS) {
     assert.ok(sec.title && sec.short && sec.blurb, sec.id);
     const list = INSTRUMENTS.filter((i) => i.section === sec.id);
@@ -383,6 +383,14 @@ for (const i of ready) {
     assert.ok(perform.length >= 3 && perform.length <= 10, `${perform.length} performance controls (3–10 fit above the keys)`);
     assert.ok(perform.some((p) => p.id === 'volume'), 'volume');
     for (const p of perform) assert.equal(p.perform, true, p.id);
+  });
+  // the page's strip above the keys keeps to what matters mid-phrase: volume, the computer keys'
+  // velocity, a pedal
+  test(`${i.name}: the strip above the keys (strip: true) is volume and at most two more, all performance controls`, () => {
+    const strip = mod.GROUPS.flatMap((g) => g.params).filter((p) => p.strip);
+    assert.ok(strip.some((p) => p.id === 'volume'), 'volume');
+    assert.ok(strip.length <= 3, `${strip.length} controls in the strip: ${strip.map((p) => p.id)}`);
+    for (const p of strip) assert.equal(p.perform, true, `${p.id} is in the strip but not marked perform`);
   });
   test(`${i.name}: presets use real parameters, with values in range`, () => {
     const params = new Map(mod.GROUPS.flatMap((g) => g.params).map((p) => [p.id, p]));

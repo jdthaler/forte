@@ -42,7 +42,7 @@
     </aside>
 
     <section id="views">
-      <div class="card" data-control id="console" data-view="Drawbars and switches">
+      <div class="card" data-control id="console" data-view="Drawbars">
         <div class="drawbar-wrap">
           <div id="drawbars" role="group" aria-label="Drawbars"></div>
           <input id="registration" aria-label="Registration" spellcheck="false" autocomplete="off">
@@ -54,8 +54,8 @@
           <div class="ft">Swell<br><b id="swell-read"></b></div>
         </div>
         <div class="switches">
-          <div class="sw-group">
-            <span class="sw-title">Percussion</span>
+          <div class="sw-group" data-group="perc">
+            <span class="sw-title">Tabs</span>
             <div class="tabs-row" id="perc">
               <button data-k="percOn">On</button>
               <button data-k="percSoft">Soft</button>
@@ -63,7 +63,7 @@
               <button data-k="percThird">3rd</button>
             </div>
           </div>
-          <div class="sw-group">
+          <div class="sw-group" data-group="vib">
             <span class="sw-title">Vibrato &amp; chorus</span>
             <div class="seg" id="vib">
               <button data-v="off">Off</button><button data-v="V1">V1</button><button data-v="C1">C1</button>
@@ -71,13 +71,13 @@
             </div>
             <canvas id="scanner"></canvas>
           </div>
-          <div class="sw-group">
-            <span class="sw-title">Leslie <kbd>Space</kbd></span>
+          <div class="sw-group" data-group="leslie">
+            <span class="sw-title">Rotors <kbd>Space</kbd></span>
             <div class="seg" id="leslie">
               <button data-v="bypass">Bypass</button><button data-v="stop">Stop</button><button data-v="slow">Slow</button><button data-v="fast">Fast</button>
             </div>
           </div>
-          <div class="sw-group">
+          <div class="sw-group" data-group="gen">
             <span class="sw-title">Generator motor <kbd>`</kbd></span>
             <div class="motor-row">
               <button id="motor" class="motor on">Run</button>

@@ -38,7 +38,7 @@ export const GROUPS = [
   {
     title: 'Shutters',
     params: [
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => `${v.toFixed(2)} (${(300 * (1 / 30) ** v).toFixed(0)} ms)`,
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => `${v.toFixed(2)} (${(300 * (1 / 30) ** v).toFixed(0)} ms)`,
         hint: 'How fast a key slides its shutter open along the string: slowly, the wind reaches the string a little at a time.' },
     ],
   },
@@ -47,7 +47,7 @@ export const GROUPS = [
     params: [
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: dB },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: dB },
     ],
   },
   TUNING_GROUP,

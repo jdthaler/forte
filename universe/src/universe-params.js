@@ -27,7 +27,7 @@ export const GROUPS = [
   {
     title: 'The note',
     params: [
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2),
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2),
         hint: 'How strong the ripples are, for the computer keys (a MIDI keyboard\'s velocity does the same). The waves are linear, so it sets only how loud the note is.' },
       { id: 'recombination', label: 'Time to recombination', perform: true, min: 0.1, max: 20, def: 1.5, log: true, fmt: secs,
         hint: 'How long the universe\'s first 380,000 years take in the note. The clock runs in conformal time, the time light needs to cross a given distance: the key starts it at the beginning, and at recombination the light goes free. On the way, each harmonic\'s wave swells and fades as it oscillates, the upper ones faster, and dies away as the photons diffuse.' },
@@ -50,7 +50,7 @@ export const GROUPS = [
     params: [
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.3, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
   TUNING_GROUP,

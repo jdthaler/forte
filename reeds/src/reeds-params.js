@@ -17,7 +17,7 @@ export const GROUPS = [
       { id: 'hardness', label: 'Hammer felt hardness', min: 0.1, max: 10, def: 1, log: true, fmt: (v) => `× ${v.toFixed(2)}`, hint: 'Harder felt: shorter contact, brighter attack, more overtone. Applies to new notes.' },
       { id: 'fullRange', label: 'Full range (A0–C8)', type: 'checkbox', def: false,
         hint: 'Opens the keys beyond the 200A\'s A1–C7: the same reeds, the solder graded on past them (heavier below, almost none at C8) and each cut to pitch, struck by A1\'s or C7\'s hammer.' },
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.6, step: 0.01, fmt: (v) => `${v.toFixed(2)}  (${(HAMMER_VMAX * v).toFixed(1)} m/s)` },
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.6, step: 0.01, fmt: (v) => `${v.toFixed(2)}  (${(HAMMER_VMAX * v).toFixed(1)} m/s)` },
     ],
   },
   {
@@ -32,9 +32,9 @@ export const GROUPS = [
   {
     title: 'Preamp, tremolo and speakers',
     params: [
-      { id: 'drive', label: 'Preamp drive', min: 0, max: 1, def: 0.35, step: 0.01, fmt: pct, hint: 'How hard the pickup signal pushes the preamp transistor. It clips softly and asymmetrically: grit on hard chords.' },
-      { id: 'tremDepth', label: 'Tremolo depth', perform: true, min: 0, max: 1, def: 0, step: 0.01, fmt: pct, hint: 'An oscillator lights an LED; a photocell beside it shunts the preamp signal. Fast to light, slow to go dark: a lopsided throb.' },
-      { id: 'tremRate', label: 'Tremolo rate', perform: true, min: 2, max: 10, def: 5.6, step: 0.05, fmt: (v) => `${v.toFixed(2)} Hz` },
+      { id: 'drive', face: 'knob', label: 'Preamp drive', min: 0, max: 1, def: 0.35, step: 0.01, fmt: pct, hint: 'How hard the pickup signal pushes the preamp transistor. It clips softly and asymmetrically: grit on hard chords.' },
+      { id: 'tremDepth', face: 'knob', label: 'Tremolo depth', perform: true, min: 0, max: 1, def: 0, step: 0.01, fmt: pct, hint: 'An oscillator lights an LED; a photocell beside it shunts the preamp signal. Fast to light, slow to go dark: a lopsided throb.' },
+      { id: 'tremRate', face: 'knob', label: 'Tremolo rate', perform: true, min: 2, max: 10, def: 5.6, step: 0.05, fmt: (v) => `${v.toFixed(2)} Hz` },
       { id: 'output', label: 'Output', type: 'select', def: 'speaker', options: [['speaker', 'Built-in speakers (two 4"×8")'], ['direct', 'Direct out (preamp)']], hint: 'The small open-backed speakers drop the lowest fundamentals and add a cone break-up peak near 2.6 kHz.' },
     ],
   },
@@ -43,7 +43,7 @@ export const GROUPS = [
     params: [
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.2, step: 0.01, fmt: pct },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
   TUNING_GROUP,

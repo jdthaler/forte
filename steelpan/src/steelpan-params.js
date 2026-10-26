@@ -51,13 +51,13 @@ export const GROUPS = [
         hint: 'Held notes are rolled: the two sticks strike again and again, at this fraction of the first stroke. The mod wheel sets it, and leaning on a key (aftertouch) rolls that note.' },
       { id: 'rollRate', label: 'Roll speed', min: 4, max: 24, def: 12, step: 0.5, fmt: (v) => `${v.toFixed(1)} strokes/s`,
         hint: 'Strokes per second, both sticks together.' },
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2) },
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2) },
     ],
   },
   {
     title: 'Hands',
     params: [
-      { id: 'letRing', label: 'Let notes ring', perform: true, type: 'checkbox', def: false,
+      { id: 'letRing', label: 'Let notes ring', perform: true, strip: true, type: 'checkbox', def: false,
         hint: 'As a pannist plays: nothing stops a note but its own decay. Off, letting go of a key lays a hand on the note (Space or the pedal lifts it).' },
       { id: 'mute', label: 'Hand mute', min: 0.05, max: 2, def: 0.3, log: true, fmt: (v) => `T₆₀ ${s(v)}`, showIf: (P) => !P.letRing,
         hint: 'How fast a hand on the note stops it.' },
@@ -68,7 +68,7 @@ export const GROUPS = [
     params: [
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
   TUNING_GROUP,

@@ -56,7 +56,7 @@ export function connectQuality(node, { toast = () => {} } = {}) {
 
 // The choice, in the header beside the CPU readout: the page's audio load and what to do about it
 // in one place, to change before the audio starts and while it plays. Once the audio plays the two
-// read as one pill, "CPU 12 % · 3 voices | High"; until then the choice says what it is.
+// share one pill, "CPU 12 % | High"; until then the choice says what it is.
 export function qualityControl() {
   if (document.querySelector('#quality')) return null;
   const cpu = document.querySelector('#cpu') ?? document.querySelector('#voices'); // the black hole's readout counts ringdowns
@@ -73,6 +73,9 @@ export function qualityControl() {
   sel.addEventListener('change', () => { setQuality(sel.value); sel.blur(); });
   listeners.add((q) => { sel.value = q; });
   wrap.append(sel);
-  cpu.after(wrap);
+  const pill = document.createElement('span'); // the readout and the choice, one pill
+  pill.className = 'forte-load';
+  cpu.before(pill);
+  pill.append(cpu, wrap);
   return sel;
 }

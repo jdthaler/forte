@@ -41,7 +41,7 @@ export const GROUPS = [
         hint: 'The first bubble of each press forms in still liquid at its nozzle’s size; the ones after it form in their wake and scatter. A bubble 1 % bigger rings 17 ¢ flat.' },
       { id: 'snap', label: 'Neck snap time', min: 0.01, max: 2, def: 0.05, log: true, fmt: (v) => `${v < 0.1 ? (v * 1000).toFixed(0) + ' µs' : v.toFixed(2) + ' ms'}`,
         hint: 'How fast the neck pinches off. Quicker than a period, it rings the bubble fully; slower, it only nudges the small bubbles, and the treble fades.' },
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2),
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2),
         hint: 'How hard the neck snaps: the pressure kick, a fraction of the Laplace pressure 2σ/R.' },
     ],
   },
@@ -50,7 +50,7 @@ export const GROUPS = [
     params: [
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
   TUNING_GROUP,

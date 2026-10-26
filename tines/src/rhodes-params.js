@@ -25,7 +25,7 @@ export const GROUPS = [
     ],
   },
   {
-    id: 'bar', title: 'Tone bar & mount',
+    id: 'bar', title: 'Tone bar and mount',
     params: [
       { id: 'barMass', label: 'Tone bar mass', kind: 'model', min: 0.01, max: 60, def: 15, log: true, fmt: x,
         hint: '× tine mass. Tiny = no tone bar: the tine shakes its mount and dies fast. (Next note.)' },
@@ -44,7 +44,7 @@ export const GROUPS = [
       { id: 'tipExp', label: 'Tip nonlinearity Δp', kind: 'model', min: -0.5, max: 1, step: 0.05, def: 0, fmt: (v) => (v >= 0 ? '+' : '') + v.toFixed(2) },
       { id: 'hammerMass', label: 'Hammer mass', kind: 'model', min: 0.3, max: 3, def: 1, log: true, fmt: x },
       { id: 'hysteresis', label: 'Tip hysteresis α', kind: 'model', min: 0, max: 1e-3, step: 1e-5, def: 2e-4, fmt: (v) => `${(v * 1e6).toFixed(0)} µs` },
-      { id: 'velocity', label: 'Keyboard velocity', perform: true, kind: 'play', min: 0.2, max: 5, step: 0.05, def: 1.8, fmt: (v) => `${v.toFixed(2)} m/s`, hint: '↑ / ↓ arrows. MIDI uses key velocity.' },
+      { id: 'velocity', label: 'Keyboard velocity', perform: true, strip: true, kind: 'play', min: 0.2, max: 5, step: 0.05, def: 1.8, fmt: (v) => `${v.toFixed(2)} m/s`, hint: '↑ / ↓ arrows. MIDI uses key velocity.' },
     ],
   },
   {
@@ -71,17 +71,22 @@ export const GROUPS = [
     ],
   },
   {
-    id: 'amp', title: 'Suitcase & amp',
+    id: 'amp', title: 'Suitcase and amp',
     params: [
-      { id: 'tremDepth', label: 'Stereo vibrato depth', perform: true, kind: 'engine', min: 0, max: 1, step: 0.01, def: 0, fmt: (v) => v.toFixed(2) },
-      { id: 'tremRate', label: 'Stereo vibrato rate', perform: true, kind: 'engine', min: 0.5, max: 10, step: 0.05, def: 4, fmt: (v) => `${v.toFixed(2)} Hz` },
-      { id: 'drive', label: 'Amp drive', kind: 'engine', min: 0, max: 1, step: 0.01, def: 0.15, fmt: (v) => v.toFixed(2) },
-      { id: 'tone', label: 'Speaker top end', kind: 'engine', min: 1500, max: 14000, def: 6000, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz` },
+      { id: 'tremDepth', face: 'knob', label: 'Stereo vibrato depth', perform: true, kind: 'engine', min: 0, max: 1, step: 0.01, def: 0, fmt: (v) => v.toFixed(2) },
+      { id: 'tremRate', face: 'knob', label: 'Stereo vibrato rate', perform: true, kind: 'engine', min: 0.5, max: 10, step: 0.05, def: 4, fmt: (v) => `${v.toFixed(2)} Hz` },
+      { id: 'drive', face: 'knob', label: 'Amp drive', kind: 'engine', min: 0, max: 1, step: 0.01, def: 0.15, fmt: (v) => v.toFixed(2) },
+      { id: 'tone', face: 'knob', label: 'Speaker top end', kind: 'engine', min: 1500, max: 14000, def: 6000, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz` },
       { id: 'voicing', label: 'Register voicing', kind: 'pickup', min: -8, max: 4, step: 0.1, def: -3.5, fmt: (v) => `${v.toFixed(1)} dB/oct`,
         hint: 'Pickup emf ∝ frequency, so an unvoiced bass is quiet. Real instruments are balanced by voicing. Live.' },
+    ],
+  },
+  {
+    id: 'output', title: 'Output',
+    params: [
       { id: 'room', label: 'Room', kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.2, fmt: (v) => v.toFixed(2) },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => v.toFixed(2) },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => v.toFixed(2) },
     ],
   },
   TUNING_GROUP,

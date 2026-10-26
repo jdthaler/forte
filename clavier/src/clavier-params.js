@@ -20,7 +20,7 @@ export const GROUPS = [
   {
     title: 'Key and tangent',
     params: [
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => `${v.toFixed(2)} · ${strikeSpeed(v).toFixed(1)} m/s`, hint: 'Speed of the tangent when it meets the string (0.3–4 m/s, MIDI velocity maps the same way).' },
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => `${v.toFixed(2)} · ${strikeSpeed(v).toFixed(1)} m/s`, hint: 'Speed of the tangent when it meets the string (0.3–4 m/s, MIDI velocity maps the same way).' },
       { id: 'press', label: 'Key pressure', min: 0.5, max: 20, def: 4, step: 0.1, fmt: (v) => `${v.toFixed(1)} N`, hint: 'How hard held keys push the tangent onto the anvil. Tuned at 4 N; press harder and the rubber wraps the string tighter and the pitch goes sharp (aftertouch and the pitch wheel add up to 12 N more). Below the string\'s own pull (about 1.2 N in the top octave) it no longer reaches the anvil and buzzes on the rubber.' },
       { id: 'gap', label: 'String–anvil gap', min: 0.2, max: 2, def: 0.5, step: 0.05, fmt: mm, hint: 'How far the tangent carries the string before the anvil stops it. The carry time (gap ÷ speed) sets how bright the attack is; a wider gap also swings the string further (more pickup growl). Levels are matched across gaps (the output is scaled by 0.5 mm ÷ gap).' },
       { id: 'tip', label: 'Rubber tip squeeze at 4 N', min: 0.05, max: 1, def: 0.25, log: true, fmt: mm, hint: 'Compression of the tip (Hertzian, F ∝ δ^1.5). A softer tip squeezes further, wraps the string more and bends the pitch more per newton.' },
@@ -42,23 +42,28 @@ export const GROUPS = [
     ],
   },
   {
-    title: 'Pickups and tone',
+    title: 'Pickups',
     params: [
       { id: 'pickup', label: 'Pickup selector', perform: true, type: 'select', def: 'sum', options: [['lower', 'A · lower (centre) pickup'], ['upper', 'B · upper (bridge) pickup'], ['sum', 'A + B in phase'], ['diff', 'A − B out of phase']], hint: 'Each pickup hears mode n as sin(nπx/L). Out of phase, the low partials the two share cancel: thin and nasal.' },
       { id: 'xLower', label: 'Lower pickup, from tailpiece (at C4)', min: 1, max: 30, def: 10.3, step: 0.1, fmt: cm, hint: 'Partials with a node at the pickup vanish: a comb with teeth every L/x partials (the bar is slanted, 15 cm at F1 to 6 cm at E6).' },
       { id: 'xUpper', label: 'Upper pickup, from tailpiece (at C4)', min: 0.5, max: 15, def: 2.7, step: 0.1, fmt: cm, hint: 'Close to the tailpiece every partial is weak but the high ones less so: bright and quiet.' },
       { id: 'field', label: 'Pickup field depth', min: 0.5, max: 10, def: 2, log: true, fmt: mm, hint: 'Decay length λ of the magnet\'s field, Φ ∝ e^(−distance/λ). Shorter = more second-harmonic growl on loud notes.' },
       { id: 'gain', label: 'Amplifier gain', min: -12, max: 18, def: 0, step: 0.5, fmt: (v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} dB`, hint: 'The D6\'s volume control. The tone tabs change the level a lot (Soft alone is about 12 dB quieter); this makes it up.' },
-      { id: 'soft', label: 'Soft (30 kΩ ‖ 0.1 µF)', perform: true, type: 'checkbox', def: false, hint: 'A low-pass across the amplifier input.' },
-      { id: 'medium', label: 'Medium (10 kΩ ‖ 15 nF)', perform: true, type: 'checkbox', def: true, hint: 'A gentler low-pass, corner ≈ 2 kHz.' },
-      { id: 'treble', label: 'Treble (2 H ‖ 4.7 nF)', perform: true, type: 'checkbox', def: true, hint: 'A broad band-pass round 1.6 kHz.' },
-      { id: 'brilliant', label: 'Brilliant (0.6 H)', perform: true, type: 'checkbox', def: false, hint: 'A high-pass. Tabs combine in parallel; with none down the D6 is silent.' },
+    ],
+  },
+  {
+    title: 'Tone tabs',
+    params: [
+      { id: 'soft', face: 'tab', label: 'Soft (30 kΩ ‖ 0.1 µF)', perform: true, type: 'checkbox', def: false, hint: 'A low-pass across the amplifier input.' },
+      { id: 'medium', face: 'tab', label: 'Medium (10 kΩ ‖ 15 nF)', perform: true, type: 'checkbox', def: true, hint: 'A gentler low-pass, corner ≈ 2 kHz.' },
+      { id: 'treble', face: 'tab', label: 'Treble (2 H ‖ 4.7 nF)', perform: true, type: 'checkbox', def: true, hint: 'A broad band-pass round 1.6 kHz.' },
+      { id: 'brilliant', face: 'tab', label: 'Brilliant (0.6 H)', perform: true, type: 'checkbox', def: false, hint: 'A high-pass. Tabs combine in parallel; with none down the D6 is silent.' },
     ],
   },
   {
     title: 'Mute bar',
     params: [
-      { id: 'muteOn', label: 'Mute engaged (or hold Space)', perform: true, type: 'checkbox', def: false },
+      { id: 'muteOn', label: 'Mute engaged (or hold Space)', perform: true, strip: true, type: 'checkbox', def: false },
       { id: 'mute', label: 'Felt pressure', min: 0.05, max: 1, def: 0.6, step: 0.01, fmt: (v) => `${(MUTE_K * v).toFixed(0)} N/m · ${(MUTE_R * v).toFixed(2)} N·s/m`, hint: 'The felt is a spring and a dashpot on the string, solved against every mode. It kills the high partials first and nudges the pitch up.' },
       { id: 'muteX', label: 'Felt position', min: 3, max: 60, def: 14, step: 0.5, fmt: mm, hint: 'Distance from the tailpiece. Partials with a node at the felt escape it.' },
     ],
@@ -68,7 +73,7 @@ export const GROUPS = [
     params: [
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.2, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
   TUNING_GROUP,

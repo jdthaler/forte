@@ -17,7 +17,7 @@
 namespace forte::cavity {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { bunch, offset, beta, current, spacing, cells, coupling, betag, lorentz, mech, qext, qhom, release, temp, quench, recovery, probe, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { bunch, offset, beta, current, spacing, cells, coupling, betag, lorentz, mech, qext, qhom, release, probe, temp, quench, recovery, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -34,12 +34,12 @@ inline const FormatSegment kFormat_mech[] = {{kNoLimit, "", " Hz", 1, 0, 1, fals
 inline const FormatSegment kFormat_qext[] = {{kNoLimit, "Q = ", "", 1, 0, 1, false, true, false, false, false, true}};
 inline const FormatSegment kFormat_qhom[] = {{kNoLimit, "Q = ", "", 1, 0, 1, false, true, false, false, false, true}};
 inline const FormatSegment kFormat_release[] = {{kNoLimit, "Q = ", "", 1, 0, 1, false, true, false, false, false, true}};
-inline const FormatSegment kFormat_temp[] = {{kNoLimit, "", " K", 1, 0, 2, false, false, false, false}};
-inline const FormatSegment kFormat_quench[] = {{kNoLimit, "", " × a bunch's", 1, 0, 2, false, false, false, false}};
-inline const FormatSegment kFormat_recovery[] = {{0.9999999999999999, "", " ms", 1000, 0, 0, false, false, false, false}, {kNoLimit, "", " s", 1, 0, 2, false, false, false, false}};
 inline const char *const kChoices_probe[] = {"Both ends", "Far end"};
 inline const char *const kKeys_probe[] = {"ends", "far"};
 namespace probe_ { enum : int { ends, far }; }
+inline const FormatSegment kFormat_temp[] = {{kNoLimit, "", " K", 1, 0, 2, false, false, false, false}};
+inline const FormatSegment kFormat_quench[] = {{kNoLimit, "", " × a bunch's", 1, 0, 2, false, false, false, false}};
+inline const FormatSegment kFormat_recovery[] = {{0.9999999999999999, "", " ms", 1000, 0, 0, false, false, false, false}, {kNoLimit, "", " s", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
 inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
@@ -75,13 +75,13 @@ inline const ParamInfo kParams[p::count] = {
   {"betag", "Cell design speed (β_g)", "Cavity", ParamKind::continuous, 0.3, 1, 1, 0.005, false, false, nullptr, 0, kFormat_betag, 1},
   {"lorentz", "Lorentz-force detuning", "Cavity", ParamKind::continuous, 0, 60, 2, 0.1, false, false, nullptr, 0, kFormat_lorentz, 1},
   {"mech", "Mechanical resonance", "Cavity", ParamKind::continuous, 1, 80, 12, 0, true, false, nullptr, 0, kFormat_mech, 1},
-  {"qext", "Input coupler (Q_ext)", "Couplers and cryostat", ParamKind::continuous, 10000000, 100000000000, 1000000000, 0, true, false, nullptr, 0, kFormat_qext, 1},
-  {"qhom", "HOM couplers (Q_ext)", "Couplers and cryostat", ParamKind::continuous, 1000000, 100000000000, 200000000, 0, true, false, nullptr, 0, kFormat_qhom, 1},
-  {"release", "Coupler on release (Q_ext)", "Couplers and cryostat", ParamKind::continuous, 1000000, 1000000000, 30000000, 0, true, false, nullptr, 0, kFormat_release, 1},
-  {"temp", "Helium bath", "Couplers and cryostat", ParamKind::continuous, 1.6, 12, 2, 0.05, false, false, nullptr, 0, kFormat_temp, 1},
-  {"quench", "Quench field", "Couplers and cryostat", ParamKind::continuous, 0.5, 6, 3, 0.01, false, false, nullptr, 0, kFormat_quench, 1},
-  {"recovery", "Recovery after a quench", "Couplers and cryostat", ParamKind::continuous, 0.05, 5, 0.8, 0, true, false, nullptr, 0, kFormat_recovery, 2},
-  {"probe", "Probes", "Couplers and cryostat", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_probe, 2, nullptr, 0, kKeys_probe},
+  {"qext", "Input coupler (Q_ext)", "Couplers", ParamKind::continuous, 10000000, 100000000000, 1000000000, 0, true, false, nullptr, 0, kFormat_qext, 1},
+  {"qhom", "HOM couplers (Q_ext)", "Couplers", ParamKind::continuous, 1000000, 100000000000, 200000000, 0, true, false, nullptr, 0, kFormat_qhom, 1},
+  {"release", "Coupler on release (Q_ext)", "Couplers", ParamKind::continuous, 1000000, 1000000000, 30000000, 0, true, false, nullptr, 0, kFormat_release, 1},
+  {"probe", "Probes", "Couplers", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_probe, 2, nullptr, 0, kKeys_probe},
+  {"temp", "Helium bath", "Cryostat", ParamKind::continuous, 1.6, 12, 2, 0.05, false, false, nullptr, 0, kFormat_temp, 1},
+  {"quench", "Quench field", "Cryostat", ParamKind::continuous, 0.5, 6, 3, 0.01, false, false, nullptr, 0, kFormat_quench, 1},
+  {"recovery", "Recovery after a quench", "Cryostat", ParamKind::continuous, 0.05, 5, 0.8, 0, true, false, nullptr, 0, kFormat_recovery, 2},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, false, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},

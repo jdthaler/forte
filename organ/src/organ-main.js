@@ -340,7 +340,7 @@ function buildControls() {
     for (const p of g.params) {
       const wrap = document.createElement('div');
       wrap.className = 'param';
-      if (p.perform) wrap.dataset.perform = ''; // above the keys in Perform (shared/layout.js)
+      if (p.strip) wrap.dataset.perform = ''; // in the strip above the keys (shared/layout.js)
       let input, val = null;
       if (p.type === 'select') {
         wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;
@@ -362,8 +362,17 @@ function buildControls() {
       det.appendChild(wrap);
       controls.set(p.id, { p, input, val, wrap });
     }
+    det.dataset.group = g.id;
     $('#groups').appendChild(det);
   }
+  // The console's switches head the group they belong to (the Leslie's switch with its rotors),
+  // and the groups you play with come first, after the drawbars.
+  for (const sw of document.querySelectorAll('.switches .sw-group')) {
+    const det = $(`#groups details[data-group="${sw.dataset.group}"]`);
+    det.querySelector('summary').after(sw);
+  }
+  $('.switches').remove();
+  $('#groups details.group').before(...['perc', 'vib', 'leslie'].map((id) => $(`#groups details[data-group="${id}"]`)));
   const ps = $('#preset');
   ps.add(new Option('Registrations & setups…', ''));
   PRESETS.forEach((pr, i) => ps.add(new Option(pr.name, i)));

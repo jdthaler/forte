@@ -2,7 +2,7 @@
 // a unit; the hint says what it does to the sound.
 
 import { VENUE } from '../../shared/chain.js';
-import { PITCH, TEMPERAMENT, TUNING_ROOT, CENTS } from '../../shared/tuning.js';
+import { TUNING_GROUP } from '../../shared/tuning.js';
 
 const mm = (v) => `${v < 10 ? v.toFixed(1) : v.toFixed(0)} mm`;
 
@@ -26,17 +26,17 @@ export const GROUPS = [
       { id: 'manual', label: 'Play on', perform: true, type: 'select', def: 'lower',
         options: [['lower', 'Lower manual (back 8′, 4′)'], ['upper', 'Upper manual (front 8′, lute)']],
         hint: 'A French double: the upper manual plucks the front 8′ strings nearest the nut; the lower plucks the back 8′ (rounder) and the 4′. The keys here play whichever you choose.' },
-      { id: 'coupler', label: 'Coupler', perform: true, type: 'checkbox', def: true,
+      { id: 'coupler', face: 'lever', label: 'Coupler', perform: true, type: 'checkbox', def: true,
         hint: 'The shove coupler: the lower manual’s keys lift the upper manual’s, so its jacks pluck as well. Two 8′s together, a little apart in pitch and plucking point.' },
-      { id: 'front8', label: 'Front 8′ (upper manual)', perform: true, type: 'checkbox', def: true,
+      { id: 'front8', face: 'lever', label: 'Front 8′ (upper manual)', perform: true, type: 'checkbox', def: true,
         hint: 'Plucks nearest the nut (40 mm from it at c²): bright and a little nasal.' },
-      { id: 'back8', label: 'Back 8′ (lower manual)', perform: true, type: 'checkbox', def: true,
+      { id: 'back8', face: 'lever', label: 'Back 8′ (lower manual)', perform: true, type: 'checkbox', def: true,
         hint: 'Plucks further from the nut (62 mm at c²): rounder.' },
-      { id: 'four', label: '4′ (lower manual)', perform: true, type: 'checkbox', def: false,
+      { id: 'four', face: 'lever', label: '4′ (lower manual)', perform: true, type: 'checkbox', def: false,
         hint: 'Its own strings, half as long, an octave up: adds brilliance.' },
-      { id: 'lute', label: 'Lute row (upper manual)', perform: true, type: 'checkbox', def: false,
+      { id: 'lute', face: 'lever', label: 'Lute row (upper manual)', perform: true, type: 'checkbox', def: false,
         hint: 'A row of jacks plucking the back 8′ strings 12 mm from the nut (at c²): thin and nasal, the fundamental weak. With the back 8′ also rising, the lute plucks those strings instead. An English and German addition, not on a Ruckers.' },
-      { id: 'buff', label: 'Buff stop (back 8′)', perform: true, type: 'checkbox', def: false,
+      { id: 'buff', face: 'lever', label: 'Buff stop (back 8′)', perform: true, type: 'checkbox', def: false,
         hint: 'Leather pads pressed against the back 8′ strings 10 mm from the nut. They barely touch the fundamental and soak up the upper partials: a short, dull, pizzicato tone.' },
     ],
   },
@@ -67,9 +67,8 @@ export const GROUPS = [
     ],
   },
   {
-    title: 'Strings and tuning',
+    title: 'Strings and soundboard',
     params: [
-      PITCH, TEMPERAMENT, TUNING_ROOT, ...CENTS, // the keyboard's tuning (shared/tuning.js), here with the strings
       { id: 'detune', label: 'Unison spread (front vs back 8′)', min: 0, max: 8, def: 1.5, step: 0.1, fmt: (v) => `${v.toFixed(1)} ¢`,
         hint: 'No two choirs are ever exactly in tune: a cent or two apart, they beat slowly. Applies to new notes.' },
       { id: 'loss', label: 'String losses (air and wire)', min: 0.25, max: 4, def: 1, log: true, fmt: (v) => `× ${v.toFixed(2)}`,
@@ -84,18 +83,19 @@ export const GROUPS = [
         hint: 'A firm pluck stretches the wire, so its tension and pitch rise a little, then settle as the note decays. Short treble strings stretch the most.' },
       { id: 'fullRange', label: 'Full range (A0–C8)', type: 'checkbox', def: false,
         hint: 'Opens the keys beyond the five-octave FF–f³ compass: the same scale of strings, carried on down to A0 and up to C8.' },
+      { id: 'soundboard', label: 'Soundboard', type: 'checkbox', def: true,
+        hint: 'The strings make little sound themselves; the board, driven by the bridge, does. Off, you hear the force on the bridge directly, as a contact pickup would: thin, without the board’s resonances.' },
     ],
   },
   {
-    title: 'Body and output',
+    title: 'Output',
     params: [
-      { id: 'soundboard', label: 'Soundboard', type: 'checkbox', def: true,
-        hint: 'The strings make little sound themselves; the board, driven by the bridge, does. Off, you hear the force on the bridge directly, as a contact pickup would: thin, without the board’s resonances.' },
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
+  TUNING_GROUP,
 ];
 
 export const DEFAULTS = Object.fromEntries(GROUPS.flatMap((g) => g.params).map((p) => [p.id, p.def]));

@@ -11,7 +11,7 @@ export const GROUPS = [
     title: 'Flames',
     params: [
       { id: 'flame', label: 'Flame power K', perform: true, min: 0.5, max: 6, def: 3.4, log: true, fmt: (v) => `${v.toFixed(2)} × threshold`, hint: 'Heater gain with the flames fully apart, in units of the threshold β_H where silence breaks (so it means the same for every bore, damping and flame). Further past it: faster onsets, louder, richer limit cycles. Narrow bores scream sooner (from about 4.5× at 1/100).' },
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2), hint: 'How far a key parts the flames: β = K β_H (0.4 + 0.6 v).' },
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2), hint: 'How far a key parts the flames: β = K β_H (0.4 + 0.6 v).' },
       { id: 'xf', label: 'Flame position x_f / L', min: 0.02, max: 0.98, def: 1 / 3, step: 0.001, fmt: (v) => `${(v * 100).toFixed(1)} % up the tube`, hint: 'Rayleigh: the fundamental is driven in the lower half (best near ¼), the octave mode in the lowest and third quarters. Kastner put the flames at ⅓.' },
       { id: 'lag', label: 'Flame lag τ', min: 0.02, max: 1.5, def: 0.25, log: true, fmt: (v) => `${v.toFixed(2)} L/c · ${(v * 180).toFixed(0)}° of the fundamental`, hint: 'Delay of the heat release behind the flow; a bigger flame responds later. Rayleigh needs the heat in phase with the pressure.' },
       { id: 'keyup', label: 'Key-up flame power', min: 0, max: 0.98, def: 0.2, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} % of threshold`, hint: 'Flames rejoined. Above the fold (≈ 87 %) a tube that was singing keeps singing after release: it remembers. Lower it or press Panic to stop them.' },
@@ -29,12 +29,17 @@ export const GROUPS = [
     ],
   },
   {
-    title: 'Output',
+    title: 'Listening',
     params: [
       { id: 'listen', label: 'Listening point', min: 0, max: 1, def: 0.5, step: 0.01, fmt: (v) => (v < 0.02 ? 'at the top mouth' : v > 0.98 ? 'far, side-on' : `bottom mouth × ${v.toFixed(2)}`), hint: 'Side-on, the two open ends cancel the even modes (the octave), leaving a hollow tone; at the top mouth you hear them all.' },
+    ],
+  },
+  {
+    title: 'Output',
+    params: [
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.3, step: 0.01, fmt: pct },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
   TUNING_GROUP,

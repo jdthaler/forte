@@ -17,7 +17,7 @@ export const GROUPS = [
   {
     title: 'Action',
     params: [
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, step: 0.01, def: 0.7, fmt: (v) => `${hammerSpeed(v).toFixed(2)} m/s`, hint: 'Hammer speed at the string. MIDI velocity maps to 0.25–6 m/s.' },
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, step: 0.01, def: 0.7, fmt: (v) => `${hammerSpeed(v).toFixed(2)} m/s`, hint: 'Hammer speed at the string. MIDI velocity maps to 0.25–6 m/s.' },
       { id: 'hardness', label: 'Felt hardness', min: 0.2, max: 5, def: 1, log: true, fmt: x, hint: 'Felt stiffness K in F = Kδᵖ. Harder felt: shorter contact, more high partials. Applies to new notes.' },
       { id: 'strike', label: 'Strike position', min: 0.03, max: 0.5, step: 0.001, def: 0.12, fmt: (v) => `${v.toFixed(3)} L (1/${(1 / v).toFixed(1)})`, hint: 'Partials with a node at the hammer are missing: striking at 1/8 removes the 8th, 16th, …; at the middle, every even partial. Applies to new notes.' },
       { id: 'damper', label: 'Damper', min: 3, max: 80, def: 25, log: true, fmt: (v) => `${v.toFixed(0)} s⁻¹`, hint: 'Decay rate the damper felt adds on release (less on partials with a node under it). Keys above E6 have none.' },
@@ -34,6 +34,7 @@ export const GROUPS = [
       { id: 'stretch', label: 'Stretch tuning', type: 'checkbox', def: true, hint: 'Tune each octave beatless, as a tuner would: partial 2 of the lower note on the fundamental of the upper. Stiff strings then stretch the scale (CP-70: about −12 ¢ at E1, +25 ¢ at E7). Off: every fundamental on 12-TET, and the octaves beat. Applies to new notes.' },
       { id: 'loss', label: 'String losses', min: 0.25, max: 4, def: 1, log: true, fmt: x, hint: 'Air drag and internal friction of the wire, σ = b₁ + b₃ω² (higher for wound strings). Applies to new notes.' },
       { id: 'kc', label: 'Tension modulation (pitch glide)', type: 'checkbox', def: true, hint: 'A hard blow stretches the string, so its tension and pitch rise, then glide back as it decays. Stiff, short strings stretch the most.' },
+      { id: 'maxFreq', label: 'Highest partial', min: 3000, max: 16000, def: 10000, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz`, hint: 'Partials above this are left out (new notes). Lower it if the CPU meter runs hot; the engine also sheds the quietest voices when the audio thread is overloaded.' },
     ],
   },
   {
@@ -58,25 +59,24 @@ export const GROUPS = [
   {
     title: 'EQ (preamp)',
     params: [
-      { id: 'bass', label: 'Bass (shelf 120 Hz)', min: -15, max: 15, step: 0.5, def: 0, fmt: db },
-      { id: 'mid', label: 'Middle (peak 1 kHz)', min: -15, max: 15, step: 0.5, def: 0, fmt: db },
-      { id: 'treble', label: 'Treble (shelf 3.5 kHz)', min: -15, max: 15, step: 0.5, def: 0, fmt: db, hint: 'Applies to the piezo signal (the CP-70\'s onboard EQ), not to the microphones.' },
+      { id: 'bass', face: 'knob', label: 'Bass (shelf 120 Hz)', min: -15, max: 15, step: 0.5, def: 0, fmt: db },
+      { id: 'mid', face: 'knob', label: 'Middle (peak 1 kHz)', min: -15, max: 15, step: 0.5, def: 0, fmt: db },
+      { id: 'treble', face: 'knob', label: 'Treble (shelf 3.5 kHz)', min: -15, max: 15, step: 0.5, def: 0, fmt: db, hint: 'Applies to the piezo signal (the CP-70\'s onboard EQ), not to the microphones.' },
     ],
   },
   {
     title: 'Tremolo (preamp)',
     params: [
-      { id: 'tremDepth', label: 'Tremolo depth', perform: true, min: 0, max: 1, step: 0.01, def: 0, fmt: (v) => (v === 0 ? 'off' : `${(v * 100).toFixed(0)} %`), hint: 'The preamp\'s stereo tremolo: an oscillator lights an LED beside each output\'s photocell, in turn, and the photocell shunts that output. Played in stereo the sound swings from side to side; through one output it throbs. Photocells light fast and go dark slowly. Applies to the piezo, not to the microphones.' },
-      { id: 'tremRate', label: 'Tremolo rate', perform: true, min: 1, max: 10, step: 0.05, def: 5, fmt: (v) => `${v.toFixed(2)} Hz`, hint: 'How many times a second the sound goes left and back.' },
+      { id: 'tremDepth', face: 'knob', label: 'Tremolo depth', perform: true, min: 0, max: 1, step: 0.01, def: 0, fmt: (v) => (v === 0 ? 'off' : `${(v * 100).toFixed(0)} %`), hint: 'The preamp\'s stereo tremolo: an oscillator lights an LED beside each output\'s photocell, in turn, and the photocell shunts that output. Played in stereo the sound swings from side to side; through one output it throbs. Photocells light fast and go dark slowly. Applies to the piezo, not to the microphones.' },
+      { id: 'tremRate', face: 'knob', label: 'Tremolo rate', perform: true, min: 1, max: 10, step: 0.05, def: 5, fmt: (v) => `${v.toFixed(2)} Hz`, hint: 'How many times a second the sound goes left and back.' },
     ],
   },
   {
     title: 'Output',
     params: [
-      { id: 'maxFreq', label: 'Highest partial', min: 3000, max: 16000, def: 10000, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz`, hint: 'Partials above this are left out (new notes). Lower it if the CPU meter runs hot; the engine also sheds the quietest voices when the audio thread is overloaded.' },
       { id: 'room', label: 'Room', min: 0, max: 1, step: 0.01, def: 0.12, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
   TUNING_GROUP,

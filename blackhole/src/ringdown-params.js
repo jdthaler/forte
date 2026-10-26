@@ -50,9 +50,14 @@ export const GROUPS = [
       { id: 'stereo', label: 'Left = h₊, right = h× (polarisations)', kind: 'engine', type: 'checkbox', def: true },
       { id: 'releaseMute', label: 'Key release mutes', kind: 'engine', type: 'checkbox', def: false, hint: 'Unphysical, but handy for long near-extremal rings.' },
       { id: 'tone', label: 'Tone (low-pass)', perform: true, kind: 'mix', min: 500, max: 20000, def: 14000, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz` },
+    ],
+  },
+  {
+    id: 'output', title: 'Output',
+    params: [
       { id: 'room', label: 'Room', kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.25, fmt: (v) => v.toFixed(2) },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => v.toFixed(2) },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => v.toFixed(2) },
     ],
   },
   TUNING_GROUP,

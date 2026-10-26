@@ -44,7 +44,7 @@ kbd { font: 12px ui-monospace, Menlo, monospace; border: 1px solid var(--line); 
 .lede { font-size: clamp(15px, 1.6vw, 17px); margin: 0; color: #d9d4ca; max-width: 680px; }
 .top-links { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* the four kinds of instrument: tabs that stay at the top while the cards scroll */
+/* the kinds of instrument: tabs that stay at the top while the cards scroll */
 .cats {
   position: sticky; top: 0; z-index: 10;
   background: color-mix(in srgb, var(--bg) 88%, transparent);

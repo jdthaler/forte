@@ -1,0 +1,9 @@
+/* The page's own palette and any layout beyond shared/instrument.css: a sea green for the axion's
+   field, and the copper of the toroid's windings. */
+:root {
+  --accent: #7fd8c4;
+  --accent-2: #e09a5a;
+  --accent-ink: #06201a;
+}
+#toroid, #search { height: 300px; }
+#plane { height: 240px; }

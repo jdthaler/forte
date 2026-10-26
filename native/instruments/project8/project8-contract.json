@@ -1,0 +1,41 @@
+{
+  "slug": "project8",
+  "params": [
+    {"id":"source","kind":"choice","def":"krypton","options":["krypton","tritium","energy"]},
+    {"id":"energy","kind":"continuous","min":1,"max":300,"def":30,"step":0,"log":true},
+    {"id":"field","kind":"continuous","min":0.75,"max":3,"def":0.959,"step":0.001,"log":false},
+    {"id":"depth","kind":"continuous","min":0.01,"max":20,"def":0.5,"step":0,"log":true},
+    {"id":"length","kind":"continuous","min":1,"max":100,"def":10,"step":0,"log":true},
+    {"id":"gas","kind":"continuous","min":1e-11,"max":0.00001,"def":1e-10,"step":0,"log":true},
+    {"id":"receiver","kind":"choice","def":"guide","options":["guide","antennas"]},
+    {"id":"noise","kind":"continuous","min":0,"max":1,"def":0.1,"step":0.01,"log":false},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.25,"step":0.01,"log":false},
+    {"id":"venue","kind":"choice","def":"room","options":["studio","room","recital","hall","cathedral"]},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false},
+    {"id":"pitch","kind":"choice","def":440,"options":[440,415,392,422.5,430,435,442,443,466]},
+    {"id":"temperament","kind":"choice","def":"equal","options":["equal","meantone","werckmeister","sixth","kirnberger","vallotti","young","pythagorean","just","custom"]},
+    {"id":"tuningRoot","kind":"choice","def":0,"options":[0,1,2,3,4,5,6,7,8,9,10,11]},
+    {"id":"cents1","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents2","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents3","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents4","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents5","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents6","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents7","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents8","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents9","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents10","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"Krypton-83m in a Phase II trap","values":{}},
+    {"name":"Phase II's gas: tracks a fifth of a millisecond long","values":{"gas":0.000002}},
+    {"name":"Tritium: each electron sharp by its neutrino's energy","values":{"source":"tritium"}},
+    {"name":"Antenna ring: the harmonics","values":{"receiver":"antennas"}},
+    {"name":"A deep trap: wide bounces, deep vibrato","values":{"depth":8}},
+    {"name":"A long trap: a slow bounce","values":{"length":60,"depth":3}},
+    {"name":"3 tesla: quick chirps","values":{"field":3}},
+    {"name":"Relativistic: 300 keV electrons","values":{"source":"energy","energy":300,"receiver":"antennas"}},
+    {"name":"Perfect vacuum, quiet amplifier","values":{"gas":1e-11,"noise":0}}
+  ]
+}

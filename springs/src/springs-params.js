@@ -54,7 +54,7 @@ export const GROUPS = [
         hint: 'How long the mallet stays on the bead (at mf; shorter when struck harder). A short tap reaches the chirps up to F_C; a soft one only the low echoes.' },
       { id: 'bead', label: 'Bead inertia', min: 0.3, max: 30, def: 1, log: true, fmt: (v) => `${v < 1 ? v.toFixed(2) : v.toFixed(1)} % of the spring’s`,
         hint: 'A light bead passes the high modes in and out; a heavy one, on a soft mount, keeps only the low ones (corner ≈ f₀/πμ).' },
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2) },
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2) },
     ],
   },
   {
@@ -62,7 +62,7 @@ export const GROUPS = [
     params: [
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.15, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
   TUNING_GROUP,

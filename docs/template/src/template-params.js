@@ -20,7 +20,7 @@ export const GROUPS = [
     params: [
       { id: 'mallet', label: 'Contact time', min: 0.05, max: 10, def: 0.8, log: true, fmt: ms, hint: 'A soft mallet stays on longer and cannot excite modes above ~1/contact time.' },
       { id: 'strike', label: 'Strike point', perform: true, min: 0, max: 0.5, def: 0.12, step: 0.005, fmt: (v) => `${(v * 100).toFixed(1)} % of length`, hint: 'Striking on a mode\'s node leaves it silent (mode 1 nodes at 22.4 %).' },
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2) },
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2) },
     ],
   },
   {
@@ -28,7 +28,7 @@ export const GROUPS = [
     params: [
       { id: 'room', label: 'Room', perform: true, min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
   TUNING_GROUP,

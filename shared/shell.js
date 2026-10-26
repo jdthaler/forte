@@ -6,7 +6,7 @@
 //
 // Expected DOM (copy docs/template/index.html):
 //   #start #midi-btn #midi #cpu #panic   header buttons / status pills
-//   #preset #reset #groups               sidebar: presets (shared/layout.js moves them to the header) and parameter groups
+//   #preset #reset #groups               sidebar: presets (shared/layout.js moves them to the controls' bar) and parameter groups
 //   #keyboard #oct #toast                keys, octave readout, toast
 //   optional: #ctl-read (readout of the ↑/↓ parameter), #hold (Space indicator)
 //
@@ -15,7 +15,10 @@
 //   id            instrument slug (localStorage key)
 //   groups        parameter groups: [{ title, open?, params: [{ id, label, min, max, def, step?, log?,
 //                 fmt?, hint?, type?: 'select' | 'checkbox', options?: [[value, name]…], showIf?(P),
-//                 perform? }] }]   perform: true puts the control in Perform's strip above the keys
+//                 perform?, strip? }] }]   perform: true marks a control you'd play with (the plugins'
+//                 window shows those first); strip: true puts it in the page's strip right above the
+//                 keys, which keeps to the few that matter mid-phrase (volume, the computer keys'
+//                 velocity, a pedal): the rest stay in the Controls panel, in their groups
 //   presets       [{ name, p: { …overrides } }]   (and your own, and links: shared/user-presets.js)
 //   keep          param ids kept when switching presets (e.g. ['volume', 'room'])
 //   range         [lowest MIDI key, highest MIDI key]   (default [36, 96])
@@ -53,6 +56,7 @@ import { controlOwns, focusedByPointer } from './focus.js';
 import { startMIDI, resumeMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe } from './midi.js';
 import { attachPresets } from './user-presets.js';
 import { connectQuality, qualityControl } from './quality.js';
+import { rotaryKnob } from './faces.js';
 // after a change, a control picked with the pointer lets go of the focus (the keys go back to the
 // instrument); one reached with Tab keeps it, so the next Space or arrow works it again
 const unfocus = (el) => { if (focusedByPointer(el)) el.blur(); };
@@ -127,8 +131,8 @@ export function createShell(cfg) {
         if (m.type === 'stats' && $('#cpu')) {
           const el = $('#cpu');
           const pct = (x) => `${(x * 100).toFixed(0)} %`;
-          el.textContent = `CPU ${pct(m.load)}${m.peak !== undefined ? ` (peak ${pct(m.peak)})` : ''}${m.voices !== undefined ? ` · ${m.voices} voices` : ''}`;
-          el.title = 'Average and worst audio-block time, as a share of the time available. A peak over 100 % is an audible dropout.';
+          el.textContent = `CPU ${pct(m.load)}`; // the rest on hover
+          el.title = `${pct(m.load)} of the time available, on average${m.peak !== undefined ? `; the worst block ${pct(m.peak)}` : ''}${m.voices !== undefined ? `. ${m.voices} voices sounding` : ''}. A block over 100 % is an audible dropout.`;
           el.classList.toggle('hot', (m.peak ?? m.load) > 0.8);
         }
         else if (m.type === 'error') toast(m.message);
@@ -326,11 +330,17 @@ export function createShell(cfg) {
     const det = document.createElement('details');
     det.className = 'group'; det.open = g.open !== false;
     det.innerHTML = `<summary>${g.title}</summary>`;
-    for (const p of g.params) {
+    // faces first, side by side, then the rest (the page's order, not the parameters')
+    for (const p of [...g.params].sort((a, b) => !!b.face - !!a.face)) {
       const wrap = document.createElement('div');
       wrap.className = 'param';
-      if (p.perform) wrap.dataset.perform = ''; // shown above the keys in Perform (shared/layout.js)
-      let input, val = null;
+      if (p.strip) wrap.dataset.perform = ''; // in the strip above the keys (shared/layout.js)
+      // a face: the control drawn as the instrument has it (a drawknob, a hand stop, a tab, an amp's
+      // knob), its name without the explanation (or `faceLabel`, the name on the instrument); the whole
+      // label stays its accessible name
+      if (p.face) wrap.dataset.face = p.face;
+      const name = p.face ? p.faceLabel ?? p.label.replace(/\s*\([^()]*\)\s*$/, '') : p.label;
+      let input, val = null, knob = null;
       if (p.type === 'select') {
         wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;
         input = document.createElement('select'); input.id = `p-${p.id}`;
@@ -341,7 +351,8 @@ export function createShell(cfg) {
         wrap.classList.add('check');
         input = document.createElement('input'); input.type = 'checkbox'; input.id = `p-${p.id}`;
         input.addEventListener('change', () => { shell.setParam(p.id, input.checked); unfocus(input); });
-        const lab = document.createElement('label'); lab.htmlFor = input.id; lab.textContent = p.label;
+        const lab = document.createElement('label'); lab.htmlFor = input.id; lab.textContent = name;
+        if (name !== p.label) { input.setAttribute('aria-label', p.label); lab.title = p.label; }
         wrap.append(input, lab);
       } else {
         wrap.innerHTML = `<div class="row"><label for="p-${p.id}">${p.label}</label><span class="val"></span></div>`;
@@ -351,10 +362,15 @@ export function createShell(cfg) {
         input.addEventListener('input', () => shell.setParam(p.id, fromSlider(p, +input.value), true));
         input.addEventListener('dblclick', () => shell.setParam(p.id, p.def));
         wrap.appendChild(input);
+        if (p.face === 'knob') {
+          knob = rotaryKnob(input, () => shell.setParam(p.id, p.def), p.min < 0 && p.max > 0 ? toSlider(p, 0) / 1000 : 0);
+          if (name !== p.label) { wrap.querySelector('label').textContent = name; wrap.querySelector('label').title = p.label; input.setAttribute('aria-label', p.label); }
+          wrap.insertBefore(knob.el, wrap.firstChild);
+        }
       }
       if (p.hint) { const h = document.createElement('div'); h.className = 'hint'; h.textContent = p.hint; wrap.appendChild(h); }
       det.appendChild(wrap);
-      controls.set(p.id, { p, input, val, wrap });
+      controls.set(p.id, { p, input, val, wrap, knob });
     }
     $('#groups').appendChild(det);
   }
@@ -367,6 +383,7 @@ export function createShell(cfg) {
     else if (c.p.type === 'checkbox') c.input.checked = !!v;
     else {
       if (!dragging) c.input.value = toSlider(c.p, v);
+      c.knob?.show();
       c.val.textContent = c.p.fmt ? c.p.fmt(v) : String(v);
       c.input.setAttribute('aria-valuetext', c.val.textContent);
     }

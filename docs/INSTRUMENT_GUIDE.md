@@ -239,11 +239,21 @@ vibrato, where the mallet strikes or the bow sits, the main physical knob
 (the black hole's spin), and `volume`. The instrument's build (sizes,
 materials, losses), its voicing (felt hardness) and `room` are set once,
 so they stay in the Controls panel. The same flag fills the row above the
-plugin window's keyboard. They sit in a strip above the keys in both modes, so they never
+plugin window's keyboard.
+
+The page's strip is smaller: only what matters mid-phrase, marked
+`strip: true` as well, and small enough to sit in the keyboard bar, right
+above the keys. That is `volume`, `velocity` (the
+computer keys') and a pedal or what stands in for one (the vibraphone's and
+celesta's held pedal, the piano's una corda, the clavier's mute, the viola
+organista's lifted dampers, the kalimba's and steel pan's let-ring);
+`test/site-tests.mjs` allows three at most, `volume` among them. Every other
+control stays in its group in the Controls panel, which is never far from the
+keys. The strip's controls sit there in both modes, so they never
 move; a checkbox there becomes a stop that lights up, and in Discover a
 control with a `hint` gets an ⓘ button that opens it (a tap, not a
-tooltip, so it works on a tablet). A tile shows its label at rest, with
-the value beside it only if both fit, and its value while it moves. The
+tooltip, so it works on a tablet). A tile shows its label, the
+slider and the value on one line. The
 strip drops a label's explanation, a trailing "(…)" or "= …", so put the
 name first: "Dome rise (curvature)" shows as "Dome rise" (the whole label
 stays in the tooltip, the ⓘ and the control's accessible name). On a touch
@@ -252,6 +262,19 @@ the strip. Mark 3–10 of them,
 `volume` among them (`test/site-tests.mjs` checks). Leave the physics you
 set once (materials, dimensions, voicing) to the Controls panel and the
 presets.
+
+A control the real instrument has in a shape of its own can wear it: give
+the parameter `face` (`shared/faces.js`, styled in `shared/layout.css`), and
+the Controls panel draws it so. A checkbox can be a `'drawknob'` (an organ's
+or harmonium's stop: an ivory face that stands out when drawn), a `'lever'`
+(a harpsichord's hand stop, slid across) or a `'tab'` (a Clavinet's rocker);
+a slider can be a `'knob'` (an amp's or a preamp's: drag up or right to turn
+it, Shift for fine, two taps for the default). The faces of a group come
+first, side by side; the input stays, out of sight, for the keyboard and
+screen readers. A face drops a label's trailing "(…)" as the strip does,
+or shows `faceLabel` instead (the harmonium's "8′" is "Principal 8′" on its stop). It
+changes the page only: the plugins' windows and the native tables ignore it.
+Keep faces to what the instrument really has, a few to a group.
 
 ### Page and views
 
@@ -275,52 +298,68 @@ and say which in the footer help.
 (loaded last in `<head>`) give every page the same layout, top to bottom:
 - **The header.** The instrument's name is also the menu (Forte's home
   page and every instrument, from `shared/nav.js`; the page's `<h1>`
-  moves into it). Then How it works, **Discover | Perform**, a switch
-  that puts the Controls panel beside the views or below them (wide
-  screens; a narrow one always puts it below), audio, MIDI and Panic.
-- **The toggles.** Two rows, each heading its side: at the top of the
-  views one for each view, named by its `data-view` (or its `<h2>`), and
-  at the top of `#controls` (staying there as the panel scrolls) one for
-  each group of controls (each `details.group`, named by its
-  `<summary>`; a group whose parameters have all moved above the keys has
-  none, and a group the page adds later gets one). A tap turns that view
-  or group on or off, and the page remembers which are on. Every group is
-  on at first. With every group off, the panel keeps its toggles.
+  moves into it). Then How it works, audio, MIDI and Panic.
+- **The views and the Controls panel**, one above the other, each headed
+  by a bar. A bar has its toggles, then its tools, then a button (a
+  chevron) that folds its panel away. The views' bar has a toggle for
+  each view, named by its `data-view` (or its `<h2>`), and **Discover |
+  Perform**; the controls' bar has a toggle for each group of controls
+  (each `details.group`, named by its `<summary>`; a group whose
+  parameters have all moved to the keyboard bar has none, and a group the
+  page adds later gets one) and the presets (`.preset-row`, moved here
+  from `#controls`), whose menu gains "Default settings", which presses
+  the page's `#reset`. A tap on a toggle turns that view or group on or
+  off, and the page remembers which are on. Every group is on at first;
+  with every group off, the panel keeps its toggles. Other code can add
+  its own tools to either bar: `barTools('views')` or
+  `barTools('controls')` from `layout.js` is the element to append to.
+- **Sharing the height.** The handle on the controls' bar's top edge (or
+  the bar itself, where it has nothing to tap) drags the line between the
+  views and the controls, down to nothing for either: a panel dragged
+  under 56px, or folded by its chevron, folds away and leaves its bar,
+  and its chevron brings it back at the share it had. Arrows, Home and End
+  move the handle from the keyboard, and two taps on it go back to the
+  usual share (60 % for the views). The share is the same on every page.
 - **The views: pictures only.** The views that are
-  on share the space in rows, side by side on a wide screen and stacked on
-  a tall one; a short last row stretches across. At first only the cards
+  on share their panel in rows, as many abreast (up to four) as gives
+  each the most room, so a short panel puts them side by side and a tall
+  one stacks them; a short last row stretches across. At first only the cards
   marked `data-perform` (one or two: `test/site-tests.mjs` checks) are on,
   and their toggles come first. A card's `.caption` waits behind an ⓘ in
   its title.
-- **The controls, above the keys.** A card marked `data-control` is a
+- **The Controls panel**, `#controls`. A card marked `data-control` is a
   control surface, not a view (the organ's drawbars and switches): it
-  moves here, ahead of the `perform: true` parameters. A dropdown there
-  with a few short choices becomes a row of buttons. The rest of the
-  parameters are in the Controls panel, `#controls`, grouped, where each
-  hint waits behind an ⓘ. A handle on the footer's edge folds the
-  controls above the keys away.
+  heads the panel, with a toggle of its own named by its `data-view`.
+  Then the parameters, grouped (the groups side by side), where each hint
+  waits behind an ⓘ.
 - **The keyboard bar and the keys** (`shared/keyboard.js`: multi-touch,
   glissando across the keys, aftertouch from leaning on a held key along
   its length or from Pencil pressure). As many keys as fit the width at the
   chosen key size (− +), like GarageBand: ◀ ▶ move an octave, and an
   overview of the whole range, with the keys on screen framed, drags
-  anywhere. The presets (`.preset-row`, moved here from `#controls`) sit
-  beside them; their menu gains "Default settings", which presses the
-  page's `#reset`. On a phone, where the bar is full, they are the first
-  control above the keys instead. The pedal button presses Space. The page's footer hints
+  anywhere. Then the `strip: true` parameters, each a small tile (a
+  dropdown with a few short choices becomes a row of buttons), the key
+  size and the pedal button, which presses Space. Where they don't fit on
+  one line (a phone held upright, a tablet, a narrow window) the strip
+  takes a line of its own above the rest. The page's footer hints
   (`.kb-help`: computer keys, MIDI, readouts) go behind ⌨.
 - **Perform** is for playing and for a projector: the views that are on,
-  filling the screen, with no toggles and no text in them. The Controls
-  panel waits behind "More controls" (sliding over the views on a narrow
-  screen). The card's `.card-head`,
+  filling the screen, with no toggles and no text in them. The views' bar
+  is just Discover | Perform, over their corner, and the controls' bar
+  just the presets; the Controls panel waits behind its chevron, "More
+  controls" (at the share last chosen; on a phone, in place of the
+  views). The card's `.card-head`,
   `.caption`, `.legend`, `.readout`, `<dl>` and `<table>` are hidden, and
   `fillText` draws nothing on their canvases (a card with
   `data-keep-text` keeps its text). Full screen appears. The mode is the
   same on every page; the rest is remembered per page.
-- On phones the page scrolls above the controls and keys, which stay put,
-  and the Controls panel follows the views; each row of toggles slides
-  sideways when it doesn't fit. Turned sideways, the controls
-  share a row with the keyboard bar and show one row of tiles at a time.
+- On phones there is no room to share: the page scrolls above the
+  controls and keys, which stay put, and the Controls panel follows the
+  views; each bar's toggles slide sideways when they don't fit. Upright,
+  the controls' bar (with the presets) sticks just above the controls and
+  keys until it heads the Controls panel as it scrolls by. Turned
+  sideways, it scrolls with the panel, and the keyboard bar keeps to one
+  line, its overview of the range shrunk to a thumbnail.
 - While one finger holds a key, a tap with another finger works any
   button, stop or tab (browsers give such a tap no click; `layout.js`
   clicks for it).
@@ -335,7 +374,8 @@ To fit in:
   read as pictures, and let their canvases stretch (Perform sizes them
   with flex, overriding a fixed height).
 - Keep controls out of the views. A custom control surface (drawbars, a
-  console) is a `.card` with `data-control`; it goes above the keys.
+  console) is a `.card` with `data-control`; it heads the Controls
+  panel. Only small things fit the keyboard bar.
 - Start every animation loop with `requestAnimationFrame` and skip
   hidden canvases. `animate(draw, canvas)` does both.
 - Make drawing code survive a tiny canvas.
@@ -489,8 +529,9 @@ names it under All Plugins, its page gets a ↓ Plugin button, and the next plug
 
 Add the instrument to `shared/registry.js` with `ready: true, version: '0.1.0'` and the
 AU code from its descriptor (`plugin: { code }`, which then leaves the descriptor)
-in one of the four sections (`traditional`, `electric`, `experimental`,
-or `phenomena` for instruments only physics can build), after the other
+in one of the five sections (`traditional`, `electric`, `experimental`,
+`phenomena` for physical phenomena, or `devices` for the apparatus physicists
+build to study them), after the other
 ready ones in it, with `version: '0.1.0'`, and add a note to `changes/` with a
 `### <Name> (new)` section, which becomes its `CHANGELOG.md` entry when it is released. The landing page and
 every menu pick it up, and `test/site-tests.mjs` checks that all of this
