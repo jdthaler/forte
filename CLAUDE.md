@@ -87,8 +87,9 @@ Read first:
    pull request, once per push to it, and again on `main` after the merge. `native` builds nothing when a green run on
    the branch or on `main` already built the same sources (`native/`,
    `package.json`, the committed `.wasm`), so a site or docs change passes
-   it at once. Fix a failure at its root; never skip or weaken a test to
-   get green.
+   it at once; version numbers and new saved states don't count, so a
+   release's pull request passes it at once too. Fix a failure at its
+   root; never skip or weaken a test to get green.
 7. **Before the merge**, if `main` has moved since CI ran, merge it into
    the branch and let CI run again, so what was checked is what lands
    (two threads changing `shared/` can each pass alone and break
@@ -113,9 +114,11 @@ Only when the owner asks for a release:
 2. Commit with every version bumped in the title, e.g.
    `Release Forte 0.31.0, Gong Keyboard 0.4.1`, and open a pull request
    into `live` whose body is the new changelog entry.
-3. CI runs on it as on any pull request (`native` builds the plugins on
-   Linux only), and `tests` also checks that no notes are left. So it is
-   green in minutes, and the site waits on nothing slower. Whatever fails
+3. CI runs on it as on any pull request, and `tests` also checks that no
+   notes are left. `native` builds nothing when `main`'s latest run was
+   green, since the release changes only versions and saved states (on
+   Linux only otherwise). So it is green in minutes, as long as the page
+   checks take, and the site waits on nothing slower. Whatever fails
    is fixed on `main` first, then the release branch merges `main` in.
 4. Merge it with a merge commit when the owner asks. GitHub Pages
    publishes `live` at once. The plugins follow: the push to `live` runs
