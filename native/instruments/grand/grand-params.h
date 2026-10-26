@@ -17,7 +17,7 @@
 namespace forte::grand {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { hardness, strike, damper, sympathy, scale, stringing, detune, stiffness, stretch, loss, kc, mount, gFrame, boardH, tilt, hRatio, kH, listen, pickH, rIn, bass, mid, treble, tremDepth, tremRate, maxFreq, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { hardness, strike, damper, sympathy, scale, stringing, detune, stiffness, stretch, loss, kc, maxFreq, mount, gFrame, boardH, tilt, hRatio, kH, listen, pickH, rIn, bass, mid, treble, tremDepth, tremRate, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -34,6 +34,7 @@ namespace stringing_ { enum : int { cp70, grand, single }; }
 inline const FormatSegment kFormat_detune[] = {{kNoLimit, "", " ¢", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_stiffness[] = {{0, "none (ideal string)", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "×", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_loss[] = {{kNoLimit, "×", "", 1, 0, 2, false, false, false, false}};
+inline const FormatSegment kFormat_maxFreq[] = {{kNoLimit, "", " kHz", 0.001, 0, 1, false, false, false, false}};
 inline const char *const kChoices_mount[] = {"Iron frame, no soundboard (CP-70)", "A spruce soundboard (acoustic grand)"};
 inline const char *const kKeys_mount[] = {"frame", "board"};
 namespace mount_ { enum : int { frame, board }; }
@@ -50,7 +51,6 @@ inline const FormatSegment kFormat_mid[] = {{-0.05, "", " dB", 1, 0, 1, false, f
 inline const FormatSegment kFormat_treble[] = {{-0.05, "", " dB", 1, 0, 1, false, false, true, false}, {0, "", " dB", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " dB", 1, 0, 1, false, false, true, false}};
 inline const FormatSegment kFormat_tremDepth[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_tremRate[] = {{kNoLimit, "", " Hz", 1, 0, 2, false, false, false, false}};
-inline const FormatSegment kFormat_maxFreq[] = {{kNoLimit, "", " kHz", 0.001, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
 inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
@@ -87,6 +87,7 @@ inline const ParamInfo kParams[p::count] = {
   {"stretch", "Stretch tuning", "Strings", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"loss", "String losses", "Strings", ParamKind::continuous, 0.25, 4, 1, 0, true, false, nullptr, 0, kFormat_loss, 1},
   {"kc", "Tension modulation (pitch glide)", "Strings", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"maxFreq", "Highest partial", "Strings", ParamKind::continuous, 3000, 16000, 10000, 0, true, false, nullptr, 0, kFormat_maxFreq, 1},
   {"mount", "Bridge mounted on", "Bridge", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_mount, 2, nullptr, 0, kKeys_mount},
   {"gFrame", "Frame admittance", "Bridge", ParamKind::continuous, 0.000001, 0.003, 0.00005, 0, true, false, nullptr, 0, kFormat_gFrame, 7},
   {"boardH", "Soundboard thickness", "Bridge", ParamKind::continuous, 5, 16, 9, 0.1, false, false, nullptr, 0, kFormat_boardH, 1},
@@ -101,7 +102,6 @@ inline const ParamInfo kParams[p::count] = {
   {"treble", "Treble (shelf 3.5 kHz)", "EQ (preamp)", ParamKind::continuous, -15, 15, 0, 0.5, false, false, nullptr, 0, kFormat_treble, 3},
   {"tremDepth", "Tremolo depth", "Tremolo (preamp)", ParamKind::continuous, 0, 1, 0, 0.01, false, true, nullptr, 0, kFormat_tremDepth, 2},
   {"tremRate", "Tremolo rate", "Tremolo (preamp)", ParamKind::continuous, 1, 10, 5, 0.05, false, true, nullptr, 0, kFormat_tremRate, 1},
-  {"maxFreq", "Highest partial", "Output", ParamKind::continuous, 3000, 16000, 10000, 0, true, false, nullptr, 0, kFormat_maxFreq, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.12, 0.01, false, false, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},

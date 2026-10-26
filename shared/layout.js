@@ -13,10 +13,10 @@
 //             the page's Reset button) and a button that folds the panel away. Its top
 //             edge is a handle: dragged, it shares the height between the views and the
 //             controls, down to nothing for either (the bars stay);
-//   footer    the keyboard bar (⌨ for the page's computer-keyboard and MIDI hints, ◀ an
+//   footer    the keyboard bar (⌨ for the page's computer-keyboard and MIDI hints, key size, ◀ an
 //             overview of the whole range ▶, the few small controls you reach for mid-phrase,
 //             marked `strip: true` (which the page gives data-perform): the volume, the
-//             computer keys' velocity, a pedal; then key size and the pedal button) and the
+//             computer keys' velocity, a pedal; then the pedal button) and the
 //             keys: as many as fit the width at the chosen key size.
 // A phone has no room to share: there the page scrolls, the views above the controls, and
 // the controls' bar sticks above the keys.
@@ -38,7 +38,7 @@ const touch = matchMedia('(pointer: coarse)').matches;
 const phoneQuery = matchMedia('(max-width: 600px), (max-width: 1050px) and (max-height: 500px)'); // as shared/layout.css
 const SIZES = ['s', 'm', 'l', 'xl'];
 const KEY_W = { s: 22, m: 30, l: 42, xl: 56 }; // the narrowest a white key may be, px
-if (touch && !navigator.requestMIDIAccess) body.classList.add('no-midi'); // every browser on iPhone and iPad
+if (!navigator.requestMIDIAccess) body.classList.add('no-midi'); // Safari, and every browser on iPhone and iPad: no MIDI button (About Forte says where MIDI works)
 const prefs = (() => {
   let s = {};
   try { s = JSON.parse(localStorage.getItem(STORE) || '{}') || {}; } catch { /* corrupt */ }
@@ -185,12 +185,13 @@ if (sidebar && mainEl) {
   groupHint.hidden = true;
   sidebar.prepend(groupHint);
 }
-// A control surface (the organ's drawbars and switches) heads the panel, with a toggle of its own.
+// A control surface (the organ's drawbars) comes first among the groups, two columns wide, with
+// a toggle of its own.
 if (bars.controls && surfaces.length) {
   const at = sidebar.querySelector('#groups');
-  for (const s of surfaces) {
+  for (const s of [...surfaces].reverse()) {
     s.classList.add('forte-surface');
-    if (at?.parentNode === sidebar) sidebar.insertBefore(s, at); else sidebar.appendChild(s);
+    if (at) at.prepend(s); else sidebar.appendChild(s);
   }
 }
 function addGroups() {
@@ -712,9 +713,9 @@ export function attachKeyboard(kb) {
   sizes.setAttribute('role', 'group');
   sizes.setAttribute('aria-label', 'Key size');
   sizes.append(smaller, larger);
-  bar.append(prev, map, next);
+  // the keyboard's own tools on the left (key size, then which keys), what you play with on the right
+  bar.append(sizes, prev, map, next);
   if (strip.parentNode === footer) bar.appendChild(strip); // the page's own strip, if any
-  bar.appendChild(sizes);
 
   // The pedal: a button that presses Space, so pages need no touch-specific code.
   const label = body.dataset.space;

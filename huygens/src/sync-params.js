@@ -52,9 +52,14 @@ export const GROUPS = [
     params: [
       { id: 'tone', label: 'Tone (low-pass)', perform: true, kind: 'mix', min: 300, max: 16000, def: 2500, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz` },
       { id: 'body', label: 'Resonant body', kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.5, fmt: (v) => v.toFixed(2) },
+      { id: 'width', label: 'Stereo spread', kind: 'engine', min: 0, max: 1, step: 0.01, def: 0.5, fmt: (v) => v.toFixed(2) },
+    ],
+  },
+  {
+    id: 'output', title: 'Output',
+    params: [
       { id: 'room', label: 'Room', kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.3, fmt: (v) => v.toFixed(2) },
       VENUE,
-      { id: 'width', label: 'Stereo spread', kind: 'engine', min: 0, max: 1, step: 0.01, def: 0.5, fmt: (v) => v.toFixed(2) },
       { id: 'volume', label: 'Volume', perform: true, strip: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.7, fmt: (v) => v.toFixed(2) },
     ],
   },

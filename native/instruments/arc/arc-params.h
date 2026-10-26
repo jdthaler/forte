@@ -73,7 +73,7 @@ inline const ParamInfo kParams[p::count] = {
   {"coilR", "Coil resistance", "The circuit", ParamKind::continuous, 0.02, 4, 0.3, 0, true, false, nullptr, 0, kFormat_coilR, 2},
   {"tune", "Capacitors cut by", "The circuit", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_tune, 2, nullptr, 0, kKeys_tune},
   {"voice", "Microphone level", "Talking arc", ParamKind::continuous, 0, 6, 2, 0.05, false, false, nullptr, 0, kFormat_voice, 1},
-  {"dist", "Listening distance", "Output", ParamKind::continuous, 0.3, 5, 1, 0, true, false, nullptr, 0, kFormat_dist, 1},
+  {"dist", "Listening distance", "Listening", ParamKind::continuous, 0.3, 5, 1, 0, true, false, nullptr, 0, kFormat_dist, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, false, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},

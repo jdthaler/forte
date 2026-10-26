@@ -17,7 +17,7 @@
 namespace forte::gongs {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { material, thick, rise, bc, eta, thermal, radiation, asym, hardness, mass, strike, strikeAngle, speed, listen, release, nlvoices, terms, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { material, thick, rise, bc, eta, thermal, radiation, asym, hardness, mass, strike, strikeAngle, speed, release, listen, nlvoices, terms, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -38,8 +38,8 @@ inline const FormatSegment kFormat_mass[] = {{kNoLimit, "", " % of the gong", 10
 inline const FormatSegment kFormat_strike[] = {{kNoLimit, "", " % of the radius", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_strikeAngle[] = {{kNoLimit, "", "°", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_speed[] = {{kNoLimit, "", " m/s", 1, 0, 1, false, false, false, false}};
-inline const FormatSegment kFormat_listen[] = {{0.09999999999999999, "touching (plate motion)", "", 1, 0, -1, false, false, false, false}, {0.9, "", " % of the way out", 100, 0, 0, false, false, false, false}, {kNoLimit, "room (radiated power)", "", 1, 0.91, -1, false, false, false, false}};
 inline const FormatSegment kFormat_release[] = {{kNoLimit, "T₆₀ ", " s", 1, 0, 1, false, false, false, false}};
+inline const FormatSegment kFormat_listen[] = {{0.09999999999999999, "touching (plate motion)", "", 1, 0, -1, false, false, false, false}, {0.9, "", " % of the way out", 100, 0, 0, false, false, false, false}, {kNoLimit, "room (radiated power)", "", 1, 0.91, -1, false, false, false, false}};
 inline const FormatSegment kFormat_nlvoices[] = {{kNoLimit, "", " at once", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_terms[] = {{kNoLimit, "", "", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
@@ -75,15 +75,15 @@ inline const ParamInfo kParams[p::count] = {
   {"thermal", "Thermoelastic loss", "Gong", ParamKind::continuous, 0, 2, 1, 0.05, false, false, nullptr, 0, kFormat_thermal, 1},
   {"radiation", "Radiation loss", "Gong", ParamKind::continuous, 0, 3, 1, 0.05, false, false, nullptr, 0, kFormat_radiation, 1},
   {"asym", "Asymmetry ε", "Gong", ParamKind::continuous, 0, 3, 0.5, 0.01, false, false, nullptr, 0, kFormat_asym, 1},
-  {"hardness", "Head stiffness", "Mallet", ParamKind::continuous, 0.1, 3000, 4, 0, true, false, nullptr, 0, kFormat_hardness, 1},
-  {"mass", "Mallet mass", "Mallet", ParamKind::continuous, 0.01, 0.3, 0.06, 0, true, false, nullptr, 0, kFormat_mass, 1},
-  {"strike", "Strike point", "Mallet", ParamKind::continuous, 0, 0.95, 0.1, 0.01, false, true, nullptr, 0, kFormat_strike, 1},
-  {"strikeAngle", "Strike angle", "Mallet", ParamKind::continuous, 0, 90, 20, 0.5, false, false, nullptr, 0, kFormat_strikeAngle, 1},
-  {"speed", "Strike speed at full velocity", "Mallet", ParamKind::continuous, 0.5, 12, 9, 0, true, false, nullptr, 0, kFormat_speed, 1},
-  {"listen", "Microphone distance", "Output", ParamKind::continuous, 0, 1, 0.6, 0.01, false, false, nullptr, 0, kFormat_listen, 3},
-  {"release", "Hand damping on release", "Output", ParamKind::continuous, 0.1, 30, 2.5, 0, true, false, nullptr, 0, kFormat_release, 1},
-  {"nlvoices", "Nonlinear voices", "Output", ParamKind::continuous, 1, 16, 4, 1, false, false, nullptr, 0, kFormat_nlvoices, 1},
-  {"terms", "Coupling terms", "Output", ParamKind::continuous, 200, 2000, 300, 50, true, false, nullptr, 0, kFormat_terms, 1},
+  {"hardness", "Head stiffness", "Mallet and hand", ParamKind::continuous, 0.1, 3000, 4, 0, true, false, nullptr, 0, kFormat_hardness, 1},
+  {"mass", "Mallet mass", "Mallet and hand", ParamKind::continuous, 0.01, 0.3, 0.06, 0, true, false, nullptr, 0, kFormat_mass, 1},
+  {"strike", "Strike point", "Mallet and hand", ParamKind::continuous, 0, 0.95, 0.1, 0.01, false, true, nullptr, 0, kFormat_strike, 1},
+  {"strikeAngle", "Strike angle", "Mallet and hand", ParamKind::continuous, 0, 90, 20, 0.5, false, false, nullptr, 0, kFormat_strikeAngle, 1},
+  {"speed", "Strike speed at full velocity", "Mallet and hand", ParamKind::continuous, 0.5, 12, 9, 0, true, false, nullptr, 0, kFormat_speed, 1},
+  {"release", "Hand damping on release", "Mallet and hand", ParamKind::continuous, 0.1, 30, 2.5, 0, true, false, nullptr, 0, kFormat_release, 1},
+  {"listen", "Microphone distance", "Listening", ParamKind::continuous, 0, 1, 0.6, 0.01, false, false, nullptr, 0, kFormat_listen, 3},
+  {"nlvoices", "Nonlinear voices", "Accuracy", ParamKind::continuous, 1, 16, 4, 1, false, false, nullptr, 0, kFormat_nlvoices, 1},
+  {"terms", "Coupling terms", "Accuracy", ParamKind::continuous, 200, 2000, 300, 50, true, false, nullptr, 0, kFormat_terms, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, false, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
