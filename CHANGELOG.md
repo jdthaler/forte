@@ -16,6 +16,187 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-26 — ABRACADABRA; controls drawn as the instruments have them; the controls grouped alike on every instrument; Phenomena apart from the devices built to study them; the presets menu outlined; Project 8; only volume, velocity and pedals above the keys, in the keyboard's bar; the views above the controls, sharing the height
+
+### Forte 0.38.0
+- **Controls can wear the instrument's own shape:** a drawknob, a harpsichord's hand stop, a Clavinet's rocker tab or an amp's knob, in the Controls panel. Each still works from the keyboard and a screen reader, and a knob turns with a drag up or right (Shift for fine) and goes back to its default with two taps.
+- **Output is the same group on every instrument:** Room, Venue and Volume, and nothing else. What used to share it now has a group of its own (Listening, Amp, Cassotto, Sound and the like), and the plugins' windows group them the same way.
+- A control surface (the organ's drawbars) sits among the groups in the Controls panel, two columns wide, rather than across the top of it.
+- The ⓘ on a control in the keyboard bar is round again.
+- **No Enable MIDI button in a browser without Web MIDI** (Safari on a Mac, as on iPhone and iPad); About Forte says where MIDI works.
+- **The keyboard bar:** key size (− +) on the left with ⌨ and ◀ ▶, the velocity, volume and pedal on the right.
+- **The CPU readout and Quality are one pill**, lined up, and the readout shows only the share of the time the audio takes; hover over it for the worst moment and the voices sounding.
+- **A Devices section beside Phenomena:** the front page, its tabs and every page's instrument menu
+  now keep the physical phenomena (Huygens, gongs, black holes, wavefunctions, bubbles, springs,
+  stars, the wind harp, whistlers and the early universe) apart from the devices physicists build
+  to study physics (the Storage Ring, RF Cavity Bells, Collider Showers and Project 8).
+- The presets menu in the controls' bar is outlined in the instrument's colour, so it is easy to find.
+- **The strip right above the keys keeps to what matters mid-phrase:** the volume, the computer keys' velocity and a pedal (the vibraphone's and celesta's held pedal, the piano's una corda, the clavier's mute, the viola organista's lifted dampers, the kalimba's and steel pan's let-ring). They are small tiles in the keyboard's own bar, beside ◀ ▶, the key size and the pedal button, so the keys have one bar above them, not two; where the line is too short (an upright phone, a tablet, a narrow window) the tiles take a line of their own above the rest. Every other control (stops, tremolo, strike point, motor and the like) stays in its group in the Controls panel, now always just above. In Perform, the chevron on the controls' bar is More controls. A parameter goes in the strip with `strip: true`; `perform: true` still picks the plugins' window's row; a control surface marked `data-control` heads the Controls panel with a toggle of its own.
+- **The controls always sit below the views, right above the keys:** the switch that put them beside the views is gone, on every screen.
+- **Share the height between the views and the controls:** drag the handle on the controls' bar (or the bar itself), all the way to either end; the chevron at the end of each bar folds its panel away and brings it back. Arrows, Home and End move the handle too, and two taps on it go back to the usual share. The share is the same on every page.
+- **Each panel has a bar:** the views' bar holds the views' toggles and Discover | Perform; the controls' bar the groups' toggles and the presets (which leave the keyboard bar, and on a phone the controls above the keys). In Perform the mode floats over the views' corner and the presets stay above the keys. On an upright phone the controls' bar sticks just above the keys.
+- **The views arrange themselves to their room:** as many abreast as gives each the most space, so a short panel puts them side by side.
+
+### Harpsichord 0.7.1
+- The registers, the coupler and the buff stop are hand stops, slid across to bring a row on.
+- Strings and tuning becomes Strings and soundboard (the Soundboard switch joins it), and the tuning moves to a Tuning group at the end, as on every other instrument.
+- Above the keys: Volume. Play on, Coupler, Front 8′, Back 8′, 4′, Lute row and Buff stop move to their groups in the Controls panel.
+
+### Pipe Organ 0.7.1
+- The stops are drawknobs that stand out when drawn.
+- Above the keys: Volume. Principal 8′, Octave 4′, Gedackt 8′, Mixture III and Tremulant move to their groups in the Controls panel.
+
+### Free-Reed Organ 0.7.1
+- The stops are drawknobs that stand out when drawn.
+- Cassotto and output becomes Cassotto, then Output.
+- Above the keys: Volume. 8′, Musette, 16′, 4′, Percussion, Bellows pressure and Expression stop move to their groups in the Controls panel.
+
+### Vibraphone 0.7.1
+- Above the keys: Velocity, Pedal held down and Volume. Motor and Shaft speed move to their groups in the Controls panel.
+
+### Carillon 0.5.1
+- Above the keys: Velocity and Volume. Distance from the tower moves to its group in the Controls panel.
+
+### Kalimba 0.2.1
+- Above the keys: Velocity, Let the tines ring and Volume. Hole covered moves to its group in the Controls panel.
+
+### Steel Pan 0.2.1
+- Above the keys: Velocity, Let notes ring and Volume. Strike point and Roll move to their groups in the Controls panel.
+
+### Electric Grand 0.8.1
+- The EQ and the tremolo are knobs.
+- Highest partial moves from Output to Strings.
+- Above the keys: Velocity and Volume. Tremolo depth and Tremolo rate move to their groups in the Controls panel.
+
+### Tonewheel Organ 0.9.1
+- The console is split up: the drawbars and swell keep their panel, and each switch joins its group, so the Leslie's Bypass, Stop, Slow and Fast sit with its rotors, the percussion tabs with the percussion's decays, the vibrato and chorus with the scanner, and the motor with the tone generator. Percussion, Scanner vibrato and Leslie speaker come first. Amp & output becomes Amp, then Output.
+- Above the keys: Volume. The drawbars and switches move to the top of the Controls panel, with a toggle of their own (Drawbars and switches); Tube drive moves to its group there.
+
+### Tine Piano 0.9.1
+- The suitcase's vibrato, drive and top end are knobs.
+- Suitcase & amp becomes Suitcase and amp, then Output; Tone bar & mount becomes Tone bar and mount.
+- Above the keys: Keyboard velocity and Volume. Stereo vibrato depth and Stereo vibrato rate move to their groups in the Controls panel.
+
+### Reed Piano 0.8.1
+- The preamp's drive and the tremolo are knobs.
+- Above the keys: Velocity and Volume. Tremolo depth and Tremolo rate move to their groups in the Controls panel.
+
+### Tangent Clavier 0.7.1
+- The four tone tabs are rocker tabs, as on the Clavinet.
+- Pickups and tone splits into Pickups and Tone tabs.
+- Above the keys: Velocity, Mute engaged and Volume. Pickup selector, Soft, Medium, Treble and Brilliant move to their groups in the Controls panel.
+
+### Sticky-Pad Piano 0.8.1
+- The tone and the amp's drive are knobs.
+- Tone, Amplifier and Amp drive move from Output to an Amp group.
+- Above the keys: Velocity and Volume. Tone and Amp drive move to their groups in the Controls panel.
+
+### Viola Organista 0.8.1
+- Above the keys: Dampers lifted and Volume. Wheel speed, Bow position β and Key pressure move to their groups in the Controls panel.
+
+### Glass Armonica 0.8.1
+- Above the keys: Volume. Finger pressure and Treadle speed move to their groups in the Controls panel.
+
+### Pyrophone 0.8.1
+- Listening point moves from Output to a Listening group.
+- Above the keys: Velocity and Volume. Flame power K moves to its group in the Controls panel.
+
+### Singing Arc 0.6.1
+- Listening distance moves from Output to a Listening group.
+- Above the keys: Volume. Arc current and Electrode gap move to their groups in the Controls panel.
+
+### Huygens Keyboard 0.8.1
+- Sound keeps Tone, Resonant body and Stereo spread; Room, Venue and Volume move to an Output group.
+- Above the keys: Volume. Pulse coupling and Tone move to their groups in the Controls panel.
+
+### Gong Keyboard 0.8.1
+- Hand damping on release joins the mallet (Mallet and hand); Microphone distance gets a Listening group, and Nonlinear voices and Coupling terms an Accuracy group.
+- Above the keys: Velocity and Volume. Strike point moves to its group in the Controls panel.
+
+### Black-Hole Keyboard 0.8.1
+- Room, Venue and Volume move from Listening to an Output group.
+- Above the keys: Volume. Spin, Play the inspiral first and Tone move to their groups in the Controls panel.
+
+### Quantum Keyboard 0.7.1
+- Above the keys: Velocity and Volume. Coherent restrike moves to its group in the Controls panel.
+
+### Bubble Organ 0.7.1
+- Above the keys: Velocity and Volume. Bubbles per second and Irregularity move to their groups in the Controls panel.
+
+### Spring Keyboard 0.5.1
+- Above the keys: Velocity and Volume. Hand on the spring moves to its group in the Controls panel.
+
+### Star Keyboard 0.5.1
+- Above the keys: Volume. Convective driving and Flare kick move to their groups in the Controls panel.
+
+### Wind Harp 0.6.1
+- Above the keys: Velocity and Volume. Wind speed and Gustiness move to their groups in the Controls panel.
+
+### Storage Ring 0.3.1
+- Above the keys: Velocity and Volume. Injection kick and Chromaticity move to their groups in the Controls panel.
+
+### RF Cavity Bells 0.2.1
+- Couplers and cryostat splits into Couplers (with Probes) and Cryostat.
+- Above the keys: Velocity and Volume. Beam offset and Beam current move to their groups in the Controls panel.
+
+### Collider Showers 0.1.1
+- Above the keys: Velocity and Volume. Particle, Particle energy and Impact point move to their groups in the Controls panel.
+
+### Whistlers 0.1.1
+- Above the keys: Velocity and Volume. Sferic, Ducts, Echoes and Chorus move to their groups in the Controls panel.
+
+### Early Universe 0.1.1
+- Above the keys: Velocity and Volume. Baryon density, Dark matter density, Spectral tilt and Time to recombination move to their groups in the Controls panel.
+
+### Project 8 0.1.0
+- New instrument: every key a magnetic trap holding one electron, heard by its cyclotron radiation
+  as the Project 8 neutrino-mass experiment hears it (cyclotron radiation emission spectroscopy),
+  A0–C8. The key's note is the electron's starting frequency, about 26 GHz in Phase II's
+  0.959 T, moved down to the keyboard by one factor for every frequency; time is left alone, so
+  the electron cools, bounces and escapes as fast as in the real trap.
+- **The chirp:** the electron radiates (Larmor's power, the radiation reaction in Landau and
+  Lifshitz's closed form), loses energy, and so climbs sharp, about 18 cents in its first second
+  in Phase II's field (Project 8 measured 352 ± 55 MHz/s; the model gives 317), until its pitch
+  angle has opened past the trap's and it leaves.
+- **The trap:** a harmonic magnetic bottle whose depth and length set which pitch angles stay and
+  how fast they bounce; the waveguide hears the bounce as a Doppler vibrato (Project 8's
+  modulation index), the antenna ring hears the harmonics instead (Schott's Bessel functions).
+- **The gas:** hydrogen at the cell's 85 K, its pressure on the mod wheel: each collision is a
+  jump in pitch, and most knock the electron out; at Phase II's pressure a track lasts a fifth
+  of a millisecond.
+- **The sources:** krypton-83m's 17.8 keV line, tritium's β spectrum (every key's note a
+  different electron, sharp of it by what its neutrino took), or any energy from 1 to 300 keV.
+- The receiver's noise in each key's channel; the pitch bend moves the field; the pedal keeps the
+  traps closed.
+- Nine presets and eight demos. The page draws the receiver's waterfall, the trap with its
+  electrons bouncing, the energies over the β spectrum, a spectrum and a spectrogram.
+- **Quality:** fewer electrons at once (16 and 10, against 24) and fewer antenna harmonics (6 and
+  3, against 12).
+- The plugins (AU, VST3, CLAP) and the Forte app play it too.
+- Above the keys: Velocity and Volume. Trap depth, Gas pressure and Receiver move to their groups in the Controls panel.
+
+### ABRACADABRA 0.1.0
+- New instrument: every key a universe whose dark matter is an axion of that key's mass, heard
+  as the ABRACADABRA experiment would hear it, A0–C8. The axion's frequency in kHz is the key's
+  note in Hz (A4 is 1.82 neV, 440 kHz); its line, the SQUID's noise and every time stay in real
+  hertz and seconds.
+- **The flux:** the axion turns the toroid's field into an effective current, g √2ρ cos(mt) B,
+  which threads a flux through the pickup loop in the hole: ABRACADABRA-10 cm's g √ρ 𝒢 V B_max
+  (3–6 cm, 12 cm tall, 1 T, 𝒢 = 0.027, V = 890 cm³) and its SQUID coupling (M_in / L_T). The model
+  also computes 𝒢 for a rectangular toroid by Maxwell's mutual inductance.
+- **The halo:** 64 waves per key, their speeds from the Standard Halo Model (v₀ 220 km/s, the lab
+  at 232 km/s), so the tone is a one-sided line a millionth of its frequency wide and its
+  amplitude wanders, Rayleigh-distributed, over the coherence time (a second at A4). The field
+  lives on while a key is up. A cold stream (O'Hare and Green's) adds a second line that beats.
+- **The readout:** each key's channel hisses with the SQUID's 1 μΦ₀/√Hz; the louder of the axion
+  and the noise sets the level, so a weak coupling sinks the tone into the hiss. Velocity charges
+  the magnet over the ramp time; the pedal keeps it charged.
+- Knobs for the coupling, the halo's speed (the mod wheel; CC74 per key over MPE), the stream,
+  the field, the toroid's size and the ramp. Five views (the toroid, the search's averaged
+  spectrum with the halo's predicted line, where it sits in coupling against mass, spectrum,
+  spectrogram), eight presets, eight demos, a Quality trim, the plugin (AU Abra), icon, saved
+  state and reference.
+
 ## 2026-10-20 — the controls no longer show above their toggles as they scroll; Early Universe; the Quality choice in the top bar; the site goes live before the plugins finish building; Whistlers
 
 ### Forte 0.37.0
