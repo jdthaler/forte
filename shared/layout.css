@@ -108,7 +108,7 @@ body[data-instrument] .forte-toggles button[aria-pressed="true"] { color: var(--
 .forte-bar-tools:empty { display: none; }
 /* the presets */
 body[data-instrument] .forte-bar .forte-presets { margin: 0; min-width: 0; }
-body[data-instrument] .forte-bar .forte-presets select { width: clamp(150px, 15vw, 240px); padding: 3px 8px; text-overflow: ellipsis; }
+body[data-instrument] .forte-bar .forte-presets select { width: clamp(150px, 15vw, 240px); padding: 3px 8px; text-overflow: ellipsis; border-color: var(--accent); } /* outlined in the instrument's colour, to find it */
 body[data-instrument] .forte-presets #reset { display: none; } /* "Default settings" in the menu presses it */
 /* fold: a chevron that points the way the panel goes */
 body[data-instrument] .forte-fold {
