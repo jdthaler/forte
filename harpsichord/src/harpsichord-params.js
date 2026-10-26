@@ -2,7 +2,7 @@
 // a unit; the hint says what it does to the sound.
 
 import { VENUE } from '../../shared/chain.js';
-import { PITCH, TEMPERAMENT, TUNING_ROOT, CENTS } from '../../shared/tuning.js';
+import { TUNING_GROUP } from '../../shared/tuning.js';
 
 const mm = (v) => `${v < 10 ? v.toFixed(1) : v.toFixed(0)} mm`;
 
@@ -67,9 +67,8 @@ export const GROUPS = [
     ],
   },
   {
-    title: 'Strings and tuning',
+    title: 'Strings and soundboard',
     params: [
-      PITCH, TEMPERAMENT, TUNING_ROOT, ...CENTS, // the keyboard's tuning (shared/tuning.js), here with the strings
       { id: 'detune', label: 'Unison spread (front vs back 8′)', min: 0, max: 8, def: 1.5, step: 0.1, fmt: (v) => `${v.toFixed(1)} ¢`,
         hint: 'No two choirs are ever exactly in tune: a cent or two apart, they beat slowly. Applies to new notes.' },
       { id: 'loss', label: 'String losses (air and wire)', min: 0.25, max: 4, def: 1, log: true, fmt: (v) => `× ${v.toFixed(2)}`,
@@ -84,18 +83,19 @@ export const GROUPS = [
         hint: 'A firm pluck stretches the wire, so its tension and pitch rise a little, then settle as the note decays. Short treble strings stretch the most.' },
       { id: 'fullRange', label: 'Full range (A0–C8)', type: 'checkbox', def: false,
         hint: 'Opens the keys beyond the five-octave FF–f³ compass: the same scale of strings, carried on down to A0 and up to C8.' },
+      { id: 'soundboard', label: 'Soundboard', type: 'checkbox', def: true,
+        hint: 'The strings make little sound themselves; the board, driven by the bridge, does. Off, you hear the force on the bridge directly, as a contact pickup would: thin, without the board’s resonances.' },
     ],
   },
   {
-    title: 'Body and output',
+    title: 'Output',
     params: [
-      { id: 'soundboard', label: 'Soundboard', type: 'checkbox', def: true,
-        hint: 'The strings make little sound themselves; the board, driven by the bridge, does. Off, you hear the force on the bridge directly, as a contact pickup would: thin, without the board’s resonances.' },
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
+  TUNING_GROUP,
 ];
 
 export const DEFAULTS = Object.fromEntries(GROUPS.flatMap((g) => g.params).map((p) => [p.id, p.def]));

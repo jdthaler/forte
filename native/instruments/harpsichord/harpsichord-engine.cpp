@@ -340,6 +340,7 @@ void HarpsichordEngine::allNotesOff() {
   down.fill(0);
   for (int g = 0; g < sym.groups(); g++) sym.clear(g);
   symHush = true;
+  boardHush = true;
 }
 
 // Too many keys sounding: fade the quietest released one; never one that has not sounded yet.
@@ -413,6 +414,16 @@ void HarpsichordEngine::processBlock(float *L, float *R, int n) {
   nVoices = j;
   // soundboard microphones, or the bridge force itself (soundboard off), crossfaded
   board.run(seg.data(), bL.data(), bR.data(), n);
+  // after Panic, once the voices have faded, the board fades out over this block and rests
+  if (boardHush) {
+    bool quiet = true;
+    for (int i = 0; i < nVoices && quiet; i++) quiet = voices[i]->dead;
+    if (quiet) {
+      for (int t = 0; t < n; t++) { const double w = 1 - double(t + 1) / n; bL[t] *= w; bR[t] *= w; }
+      board.clear();
+      boardHush = false;
+    }
+  }
   const double mT = mp.soundboard ? 1 : 0;
   double mx = mix;
   const double *sg = seg.data();

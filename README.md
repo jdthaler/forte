@@ -85,8 +85,9 @@ up. `←`/`→` shift the octave, and `↑`/`↓` adjust each instrument's main
 control (usually velocity). `Space` is the sustain pedal or that
 instrument's equivalent (hold, mute bar, Leslie speed), on every
 instrument except the black hole, where there is nothing to hold.
-**Enable MIDI** connects a MIDI keyboard (Chrome, Edge and Firefox; no
-browser on iPhone or iPad has Web MIDI, so the button is hidden there),
+**Enable MIDI** connects a MIDI keyboard (Chrome, Edge and Firefox;
+Safari, and every browser on iPhone or iPad, has no Web MIDI, so the button
+is hidden there),
 including velocity (with a Soft, Normal or Hard curve), the sustain,
 sostenuto and soft pedals, aftertouch and, where it means something, the
 mod wheel and pitch bend. Once MIDI is on, every other instrument page
@@ -142,8 +143,9 @@ resampled: at 415 Hz the strings are slacker, the bars and bells cut for
 their new notes. Presets keep your tuning; your own presets and links
 carry it.
 
-**Quality**, beside the CPU readout at the top of the page, is for phones and older
-computers. **High** plays all the physics, as the instruments always have;
+**Quality**, beside the CPU readout at the top of the page (the share of the
+time the audio takes; hover over it for the worst moment and the voices
+sounding), is for phones and older computers. **High** plays all the physics, as the instruments always have;
 **Medium** and **Low** play less of what costs the most and is heard the
 least (fewer voices sounding at once, fewer partials, the sympathetic
 strings lighter or off), and each instrument's notes say what. It belongs

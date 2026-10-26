@@ -48,7 +48,7 @@ export const GROUPS = [
     ],
   },
   {
-    title: 'Couplers and cryostat',
+    title: 'Couplers',
     params: [
       { id: 'qext', label: 'Input coupler (Q_ext)', min: 1e7, max: 1e11, def: 1e9, log: true, fmt: (v) => `Q = ${sci(v)}`,
         hint: 'How strongly the power coupler on the first cell draws energy out: the accelerating mode\'s external Q. It sets the ring time: about 5 s for C4 at 10⁹, at a constant Q, so low keys ring longer. It couples to each mode by its field in the end cell, so modes with little field there ring on.' },
@@ -56,15 +56,20 @@ export const GROUPS = [
         hint: 'The higher-order-mode couplers at both ends, which notch out the accelerating passband and damp the rest: the bell\'s upper partials. A mode with little field in the end cells is trapped and rings on.' },
       { id: 'release', label: 'Coupler on release (Q_ext)', min: 1e6, max: 1e9, def: 3e7, log: true, fmt: (v) => `Q = ${sci(v)}`,
         hint: 'Letting go of a key pushes the coupler\'s antenna in, so the cavity rings out at this Q (about 0.15 s for C4 at 3×10⁷). The pedal (Space) keeps the antenna back.' },
+      { id: 'probe', label: 'Probes', type: 'select', def: 'ends',
+        options: [['ends', 'Both ends'], ['far', 'Far end']],
+        hint: 'Both ends: a field probe in each end cell, on the two channels, so modes even and odd about the middle sit apart. Far end: the transmitted-power probe alone, on both.' },
+    ],
+  },
+  {
+    title: 'Cryostat',
+    params: [
       { id: 'temp', label: 'Helium bath', min: 1.6, max: 12, def: 2, step: 0.05, fmt: (v) => `${v.toFixed(2)} K`,
         hint: 'The niobium\'s temperature. Its surface resistance (BCS) falls as exp(−Δ/kT): at 2 K the walls hardly lose anything, at 4.2 K they shorten the ring, and above niobium\'s 9.25 K the cavity is a normal metal and only clicks.' },
       { id: 'quench', label: 'Quench field', min: 0.5, max: 6, def: 3, step: 0.01, fmt: (v) => `${v.toFixed(2)} × a bunch\'s`,
         hint: 'The field at which a cell\'s surface goes normal (a quench), in units of the field one full-velocity bunch leaves. A beam that builds a mode past it collapses the field, and the cavity stays dead until the helium has cooled it.' },
       { id: 'recovery', label: 'Recovery after a quench', min: 0.05, max: 5, def: 0.8, log: true, fmt: sec,
         hint: 'How long a quenched cavity stays normal-conducting before the helium has it superconducting again.' },
-      { id: 'probe', label: 'Probes', type: 'select', def: 'ends',
-        options: [['ends', 'Both ends'], ['far', 'Far end']],
-        hint: 'Both ends: a field probe in each end cell, on the two channels, so modes even and odd about the middle sit apart. Far end: the transmitted-power probe alone, on both.' },
     ],
   },
   {

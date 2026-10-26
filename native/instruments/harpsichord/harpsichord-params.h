@@ -17,7 +17,7 @@
 namespace forte::harpsichord {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { manual, coupler, front8, back8, four, lute, buff, material, stiff, overlap, stagger, xFront, xBack, xFour, xLute, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, detune, loss, damper, sympathy, fmax, kc, fullRange, soundboard, room, venue, volume, count };
+enum : int { manual, coupler, front8, back8, four, lute, buff, material, stiff, overlap, stagger, xFront, xBack, xFour, xLute, detune, loss, damper, sympathy, fmax, kc, fullRange, soundboard, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -34,6 +34,16 @@ inline const FormatSegment kFormat_xFront[] = {{kNoLimit, "", " mm", 1, 0, 0, fa
 inline const FormatSegment kFormat_xBack[] = {{kNoLimit, "", " mm", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_xFour[] = {{kNoLimit, "", " mm", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_xLute[] = {{9.999999999999998, "", " mm", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " mm", 1, 0, 0, false, false, false, false}};
+inline const FormatSegment kFormat_detune[] = {{kNoLimit, "", " ¢", 1, 0, 1, false, false, false, false}};
+inline const FormatSegment kFormat_loss[] = {{kNoLimit, "× ", "", 1, 0, 2, false, false, false, false}};
+inline const FormatSegment kFormat_damper[] = {{kNoLimit, "× ", " √(Tμ)", 1, 0, 2, false, false, false, false}};
+inline const FormatSegment kFormat_sympathy[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
+inline const FormatSegment kFormat_fmax[] = {{kNoLimit, "", " kHz", 1, 0, 1, false, false, false, false}};
+inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
+inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
+inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
+namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
+inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 inline const char *const kChoices_pitch[] = {"A = 440 Hz (modern)", "A = 415 Hz (baroque pitch)", "A = 392 Hz (French baroque, ton de chambre)", "A = 422.5 Hz (Handel’s tuning fork, 1751)", "A = 430 Hz (classical)", "A = 435 Hz (diapason normal, 1859)", "A = 442 Hz (many orchestras today)", "A = 443 Hz (Berlin, Vienna)", "A = 466 Hz (Chorton, German organs)"};
 inline const char *const kKeys_pitch[] = {"440", "415", "392", "422.5", "430", "435", "442", "443", "466"};
 inline const char *const kChoices_temperament[] = {"Equal temperament", "¼-comma meantone", "Werckmeister III (1691)", "⅙-comma meantone (Silbermann)", "Kirnberger III (1779)", "Vallotti", "Young (1799)", "Pythagorean", "Just intonation (5-limit)", "Custom (or a Scala file)"};
@@ -52,16 +62,6 @@ inline const FormatSegment kFormat_cents8[] = {{kNoLimit, "", " ¢", 1, 0, 2, fa
 inline const FormatSegment kFormat_cents9[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
 inline const FormatSegment kFormat_cents10[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
 inline const FormatSegment kFormat_cents11[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
-inline const FormatSegment kFormat_detune[] = {{kNoLimit, "", " ¢", 1, 0, 1, false, false, false, false}};
-inline const FormatSegment kFormat_loss[] = {{kNoLimit, "× ", "", 1, 0, 2, false, false, false, false}};
-inline const FormatSegment kFormat_damper[] = {{kNoLimit, "× ", " √(Tμ)", 1, 0, 2, false, false, false, false}};
-inline const FormatSegment kFormat_sympathy[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
-inline const FormatSegment kFormat_fmax[] = {{kNoLimit, "", " kHz", 1, 0, 1, false, false, false, false}};
-inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
-inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
-inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
-namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
-inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 
 inline const ParamInfo kParams[p::count] = {
   {"manual", "Play on", "Registration", ParamKind::choice, 0, 1, 0, 1, false, true, kChoices_manual, 2, nullptr, 0, kKeys_manual},
@@ -79,31 +79,31 @@ inline const ParamInfo kParams[p::count] = {
   {"xBack", "Back 8′ from the nut", "Plucking points (at c²)", ParamKind::continuous, 10, 180, 62, 1, false, false, nullptr, 0, kFormat_xBack, 1},
   {"xFour", "4′ from its nut", "Plucking points (at c²)", ParamKind::continuous, 10, 80, 45, 1, false, false, nullptr, 0, kFormat_xFour, 1},
   {"xLute", "Lute row from the nut", "Plucking points (at c²)", ParamKind::continuous, 4, 40, 12, 1, false, false, nullptr, 0, kFormat_xLute, 2},
-  {"pitch", "Pitch", "Strings and tuning", ParamKind::choice, 0, 8, 0, 1, false, false, kChoices_pitch, 9, nullptr, 0, kKeys_pitch},
-  {"temperament", "Temperament", "Strings and tuning", ParamKind::choice, 0, 9, 0, 1, false, false, kChoices_temperament, 10, nullptr, 0, kKeys_temperament},
-  {"tuningRoot", "Temperament root", "Strings and tuning", ParamKind::choice, 0, 11, 0, 1, false, false, kChoices_tuningRoot, 12, nullptr, 0, kKeys_tuningRoot},
-  {"cents1", "Minor 2nd (custom)", "Strings and tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents1, 1},
-  {"cents2", "Major 2nd (custom)", "Strings and tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents2, 1},
-  {"cents3", "Minor 3rd (custom)", "Strings and tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents3, 1},
-  {"cents4", "Major 3rd (custom)", "Strings and tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents4, 1},
-  {"cents5", "Perfect 4th (custom)", "Strings and tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents5, 1},
-  {"cents6", "Tritone (custom)", "Strings and tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents6, 1},
-  {"cents7", "Perfect 5th (custom)", "Strings and tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents7, 1},
-  {"cents8", "Minor 6th (custom)", "Strings and tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents8, 1},
-  {"cents9", "Major 6th (custom)", "Strings and tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents9, 1},
-  {"cents10", "Minor 7th (custom)", "Strings and tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents10, 1},
-  {"cents11", "Major 7th (custom)", "Strings and tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
-  {"detune", "Unison spread (front vs back 8′)", "Strings and tuning", ParamKind::continuous, 0, 8, 1.5, 0.1, false, false, nullptr, 0, kFormat_detune, 1},
-  {"loss", "String losses (air and wire)", "Strings and tuning", ParamKind::continuous, 0.25, 4, 1, 0, true, false, nullptr, 0, kFormat_loss, 1},
-  {"damper", "Damper felt", "Strings and tuning", ParamKind::continuous, 0.1, 4, 1, 0, true, false, nullptr, 0, kFormat_damper, 1},
-  {"sympathy", "Sympathetic resonance", "Strings and tuning", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_sympathy, 2},
-  {"fmax", "Highest partial", "Strings and tuning", ParamKind::continuous, 4, 16, 10, 0.5, false, false, nullptr, 0, kFormat_fmax, 1},
-  {"kc", "Tension modulation (pitch glide)", "Strings and tuning", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
-  {"fullRange", "Full range (A0–C8)", "Strings and tuning", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
-  {"soundboard", "Soundboard", "Body and output", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
-  {"room", "Room", "Body and output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_room, 1},
-  {"venue", "Venue", "Body and output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
-  {"volume", "Volume", "Body and output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
+  {"detune", "Unison spread (front vs back 8′)", "Strings and soundboard", ParamKind::continuous, 0, 8, 1.5, 0.1, false, false, nullptr, 0, kFormat_detune, 1},
+  {"loss", "String losses (air and wire)", "Strings and soundboard", ParamKind::continuous, 0.25, 4, 1, 0, true, false, nullptr, 0, kFormat_loss, 1},
+  {"damper", "Damper felt", "Strings and soundboard", ParamKind::continuous, 0.1, 4, 1, 0, true, false, nullptr, 0, kFormat_damper, 1},
+  {"sympathy", "Sympathetic resonance", "Strings and soundboard", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_sympathy, 2},
+  {"fmax", "Highest partial", "Strings and soundboard", ParamKind::continuous, 4, 16, 10, 0.5, false, false, nullptr, 0, kFormat_fmax, 1},
+  {"kc", "Tension modulation (pitch glide)", "Strings and soundboard", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"fullRange", "Full range (A0–C8)", "Strings and soundboard", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
+  {"soundboard", "Soundboard", "Strings and soundboard", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_room, 1},
+  {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
+  {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
+  {"pitch", "Pitch", "Tuning", ParamKind::choice, 0, 8, 0, 1, false, false, kChoices_pitch, 9, nullptr, 0, kKeys_pitch},
+  {"temperament", "Temperament", "Tuning", ParamKind::choice, 0, 9, 0, 1, false, false, kChoices_temperament, 10, nullptr, 0, kKeys_temperament},
+  {"tuningRoot", "Temperament root", "Tuning", ParamKind::choice, 0, 11, 0, 1, false, false, kChoices_tuningRoot, 12, nullptr, 0, kKeys_tuningRoot},
+  {"cents1", "Minor 2nd (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents1, 1},
+  {"cents2", "Major 2nd (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents2, 1},
+  {"cents3", "Minor 3rd (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents3, 1},
+  {"cents4", "Major 3rd (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents4, 1},
+  {"cents5", "Perfect 4th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents5, 1},
+  {"cents6", "Tritone (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents6, 1},
+  {"cents7", "Perfect 5th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents7, 1},
+  {"cents8", "Minor 6th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents8, 1},
+  {"cents9", "Major 6th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents9, 1},
+  {"cents10", "Minor 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents10, 1},
+  {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
 };
 
 inline const PresetValue kPreset1[] = {{p::manual, 1}, {p::back8, 0}};
