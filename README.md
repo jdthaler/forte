@@ -49,7 +49,7 @@ The front page sorts them into four kinds, as here.
 | ✅ | [Pyrophone](pyrophone/) | Frédéric Kastner (1873) | flame-driven Rijke tubes on a subcritical Hopf bifurcation: slow self-excited onsets, hysteresis, warm-up drift |
 | ✅ | [Singing Arc](arc/) | William Duddell (1900) | Ayrton's falling arc characteristic with a Mayr-type thermal column driving Duddell's tuned circuit: each note grows at the rate a linear analysis gives and sounds about 1 % below Kelvin's formula; a floor from the hot carbons holds the first kind, a higher re-strike voltage the second; capacitors in parallel on one arc, several lamps, hiss, Simon's talking arc; the arc radiates as a thermophone, ∝ dP/dt |
 
-### Instruments only physics can build
+### Physical phenomena
 
 | | Instrument | the physics |
 |---|---|---|
@@ -61,11 +61,16 @@ The front page sorts them into four kinds, as here.
 | ✅ | [Spring Keyboard](springs/) | struck helical springs in modal form, from Wittrick's helical-rod dispersion: each key's spring cut so its heard pitch lands on the note, every echo a chirp rising to the transition frequency F_C; one to three springs a key, magnetic beads in rotation or along the axis, oil and mount damping, and a Slinky whose whistles fall |
 | ✅ | [Star Keyboard](stars/) | asteroseismology on an evolutionary track (dwarfs to red giants, sped up 510,800 times): p modes driven at random by convection, each a Lorentzian of its own linewidth, from the asymptotic relation and the scaling relations; mixed modes in red giants, rotational splitting, inclination, a flare kick, and self-excited δ Scuti stars |
 | ✅ | [Wind Harp](windharp/) | stiff nylon strings in a wind, each with van der Pol wake oscillators along it (Facchinetti, de Langre & Biolley): the wake locks onto a harmonic inside the band a linear analysis predicts (de Langre's coupled-mode flutter) and holds on past it (hysteresis, from a harmonic balance); every string cut to lock on its note at 4 m/s, so the wind hops each string up or down its own series; shutters that slide open, seeded gusts, mass–damping, Kircher's unison harp, the aeolian tone as a dipole |
+| ✅ | [Whistlers](whistlers/) | lightning's VLF crack dispersed along the Earth's magnetic field into falling tones: every key the dipole field line whose whistler's nose is the note, the exact cold-plasma group delay integrated through Carpenter and Anderson's plasmasphere, plasmapause and trough; Eckersley's 1/√f below the nose and a rising branch to the duct's half-gyrofrequency cutoff above it; multi-path ducts, echo trains, one- and two-hop receivers, the crack's tweeks in the Earth–ionosphere waveguide, and dawn chorus on held keys |
+| ✅ | [Early Universe](universe/) | the photon–baryon plasma's sound waves, the acoustic peaks of the microwave background, as a key's harmonics: Ma & Bertschinger's equations from adiabatic initial conditions to recombination (Saha, then Peebles's three-level atom), free-streaming neutrinos, Silk damping; checked against Planck 2018's z*, r_s*, k_D and z_eq; a knob per cosmological parameter: baryons make the odd harmonics louder, dark matter sets the radiation driving, neutrinos, helium, the spectral tilt on the mod wheel; listen from the sky (Sachs–Wolfe and Doppler) or inside the plasma, and let the light stream away |
+
+### Devices built to study physics
+
+| | Instrument | the physics |
+|---|---|---|
 | ✅ | [Storage Ring](ring/) | a particle accelerator's storage ring heard through a beam pickup: a Gaussian bunch's pulse train at the revolution frequency, betatron sidebands at (n ± Q)·f_rev after an injection kick, decoherence by chromaticity that recoheres every synchrotron period and by octupole amplitude detuning that never does (Meller et al.'s closed forms, checked against tracked particles); RF voltage under key pressure, adiabatic bunch shortening, radiation damping, two-button or difference pickups |
 | ✅ | [RF Cavity Bells](cavity/) | superconducting accelerator cavities rung by a passing bunch: nine coupled pillbox cells whose passband beats (Nagle, Knapp & Knapp's circuit model), higher-order modes at Bessel-zero ratios for a bell's partials, kicks from the transit-time integral, offset and bunch-length form factors; input and HOM couplers, BCS surface resistance against the helium bath, beam loading from a bunch train, Lorentz-force detuning through the walls' mechanical mode, quench and recovery |
 | ✅ | [Collider Showers](showers/) | a collider calorimeter's lead tungstate crystals (CMS's) rung by the heat of the particle showers they catch, the thermo-acoustic effect: PDG's electromagnetic shower profiles, photon conversion, charged pions' hadronic showers that differ every time, the Molière-radius spread into neighbouring crystals; stretching modes (Love's rod theory) rung by where along the crystal the shower peaks, so TeV showers ring the odd harmonics; bending modes from an off-axis impact; pile-up; piezo or accelerometer readout |
-| ✅ | [Whistlers](whistlers/) | lightning's VLF crack dispersed along the Earth's magnetic field into falling tones: every key the dipole field line whose whistler's nose is the note, the exact cold-plasma group delay integrated through Carpenter and Anderson's plasmasphere, plasmapause and trough; Eckersley's 1/√f below the nose and a rising branch to the duct's half-gyrofrequency cutoff above it; multi-path ducts, echo trains, one- and two-hop receivers, the crack's tweeks in the Earth–ionosphere waveguide, and dawn chorus on held keys |
-| ✅ | [Early Universe](universe/) | the photon–baryon plasma's sound waves, the acoustic peaks of the microwave background, as a key's harmonics: Ma & Bertschinger's equations from adiabatic initial conditions to recombination (Saha, then Peebles's three-level atom), free-streaming neutrinos, Silk damping; checked against Planck 2018's z*, r_s*, k_D and z_eq; a knob per cosmological parameter: baryons make the odd harmonics louder, dark matter sets the radiation driving, neutrinos, helium, the spectral tilt on the mod wheel; listen from the sky (Sachs–Wolfe and Doppler) or inside the plasma, and let the light stream away |
 | ✅ | [Project 8](project8/) | an electron in a magnetic trap heard by its cyclotron radiation, as the Project 8 neutrino-mass experiment hears it (CRES): every key a trap, its note the electron's starting frequency; Larmor's power and the radiation reaction in Landau and Lifshitz's closed form make it chirp sharp as it cools until its pitch angle leaves the bottle; the bounce as a waveguide's Doppler vibrato or an antenna ring's Schott harmonics; collisions with the gas on the mod wheel, each a jump or the end; krypton-83m's line, tritium's β spectrum or any energy to 300 keV; Phase II's field, trap, waveguide and noise |
 | ✅ | [ABRACADABRA](abracadabra/) | the axion dark-matter search as a keyboard: every key a universe whose axion has the key's mass (its frequency in kHz the note in Hz), heard through ABRACADABRA-10 cm's toroid, pickup loop and SQUID; the Standard Halo Model's waves make each tone a millionth-wide line whose amplitude swells and fades over its coherence time; the coupling decides whether you hear it over the SQUID's noise; a cold stream, a hot halo, a meter-scale toroid |
 
@@ -81,8 +86,9 @@ up. `←`/`→` shift the octave, and `↑`/`↓` adjust each instrument's main
 control (usually velocity). `Space` is the sustain pedal or that
 instrument's equivalent (hold, mute bar, Leslie speed), on every
 instrument except the black hole, where there is nothing to hold.
-**Enable MIDI** connects a MIDI keyboard (Chrome, Edge and Firefox; no
-browser on iPhone or iPad has Web MIDI, so the button is hidden there),
+**Enable MIDI** connects a MIDI keyboard (Chrome, Edge and Firefox;
+Safari, and every browser on iPhone or iPad, has no Web MIDI, so the button
+is hidden there),
 including velocity (with a Soft, Normal or Hard curve), the sustain,
 sostenuto and soft pedals, aftertouch and, where it means something, the
 mod wheel and pitch bend. Once MIDI is on, every other instrument page
@@ -138,8 +144,9 @@ resampled: at 415 Hz the strings are slacker, the bars and bells cut for
 their new notes. Presets keep your tuning; your own presets and links
 carry it.
 
-**Quality**, beside the CPU readout at the top of the page, is for phones and older
-computers. **High** plays all the physics, as the instruments always have;
+**Quality**, beside the CPU readout at the top of the page (the share of the
+time the audio takes; hover over it for the worst moment and the voices
+sounding), is for phones and older computers. **High** plays all the physics, as the instruments always have;
 **Medium** and **Low** play less of what costs the most and is heard the
 least (fewer voices sounding at once, fewer partials, the sympathetic
 strings lighter or off), and each instrument's notes say what. It belongs

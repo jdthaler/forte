@@ -1,5 +1,5 @@
 // registry.js — every Forte instrument, for the landing page and the header
-// switcher, in four sections (SECTIONS; `short` names the landing page's tabs),
+// switcher, in five sections (SECTIONS; `short` names the landing page's tabs),
 // ready instruments first in each. `ready: false` instruments are listed as
 // "in the workshop".
 //
@@ -23,8 +23,10 @@ export const SECTIONS = [
     blurb: 'Pianos and organs that vibrate metal and listen to it with pickups: tonewheels, tines, reeds, strings and sticky pads, with their electronics modelled too.' },
   { id: 'experimental', title: 'Experiments from history', short: 'Experimental',
     blurb: 'Inventions that never caught on: strings bowed by wheels, singing glass, flames in tubes and an arc lamp that sings.' },
-  { id: 'phenomena', title: 'Instruments only physics can build', short: 'Phenomena',
-    blurb: 'Keyboards made of phenomena rather than mechanisms: synchronising oscillators, nonlinear plates, black holes, wavefunctions and bubbles, each played from the keys. Several have been modelled or sonified before; see the prior art and credits.' },
+  { id: 'phenomena', title: 'Physical phenomena', short: 'Phenomena',
+    blurb: 'Keyboards made of phenomena rather than mechanisms: synchronising oscillators, nonlinear plates, black holes, wavefunctions, bubbles, stars, lightning\'s whistlers and the early universe\'s sound, each played from the keys. Several have been modelled or sonified before; see the prior art and credits.' },
+  { id: 'devices', title: 'Devices built to study physics', short: 'Devices',
+    blurb: 'Keyboards made of the apparatus physicists build to study nature: an accelerator\'s storage ring and its RF cavities, a collider\'s calorimeter crystals and the trap that weighs the neutrino, each heard through the pickups and antennas that read it out.' },
 ];
 
 export const INSTRUMENTS = [
@@ -237,21 +239,21 @@ export const INSTRUMENTS = [
     accent: '#a8e6a1',
   },
   {
-    id: 'ring', name: 'Storage Ring', section: 'phenomena', ready: true, version: '0.3.0', trim: -0.5,
+    id: 'ring', name: 'Storage Ring', section: 'devices', ready: true, version: '0.3.0', trim: -0.5,
     plugin: { code: 'Stor', ready: true },
     tagline: 'Every key a particle accelerator\'s storage ring, heard through a beam pickup: kicked bunches whose oscillation fades and recoheres.',
     physics: 'Accelerator physics · betatron decoherence · synchrotron motion',
     accent: '#6ec6ff',
   },
   {
-    id: 'cavity', name: 'RF Cavity Bells', section: 'phenomena', ready: true, version: '0.2.0', trim: 4,
+    id: 'cavity', name: 'RF Cavity Bells', section: 'devices', ready: true, version: '0.2.0', trim: 4,
     plugin: { code: 'Rfca', ready: true },
     tagline: 'Every key a superconducting accelerator cavity, rung by the bunch that crosses it: nine coupled cells that beat, higher-order modes for a bell\'s partials.',
     physics: 'RF cavities · coupled-cell passbands · beam loading',
     accent: '#9fb4ff',
   },
   {
-    id: 'showers', name: 'Collider Showers', section: 'phenomena', ready: true, version: '0.1.0', trim: 4,
+    id: 'showers', name: 'Collider Showers', section: 'devices', ready: true, version: '0.1.0', trim: 4,
     plugin: { code: 'Shwr', ready: true },
     tagline: 'Every key a crystal of a collider\'s calorimeter, rung by the heat of the particle shower inside it: deeper showers for higher energies, a darker note.',
     physics: 'Calorimetry · electromagnetic and hadronic showers · the thermo-acoustic effect',
@@ -272,7 +274,7 @@ export const INSTRUMENTS = [
     accent: '#ff9a62',
   },
   {
-    id: 'project8', name: 'Project 8', section: 'phenomena', ready: true, version: '0.1.0', trim: -2,
+    id: 'project8', name: 'Project 8', section: 'devices', ready: true, version: '0.1.0', trim: -2,
     plugin: { code: 'Proj', ready: true },
     tagline: 'Every key a magnetic trap holding one electron, heard by its cyclotron radiation as the Project 8 neutrino-mass experiment hears it: a tone that chirps up as the electron cools, wavers as it bounces, and stops when it escapes.',
     physics: 'Cyclotron radiation emission spectroscopy · relativistic radiation reaction · magnetic bottles',

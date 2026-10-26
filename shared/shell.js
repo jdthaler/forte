@@ -130,8 +130,8 @@ export function createShell(cfg) {
         if (m.type === 'stats' && $('#cpu')) {
           const el = $('#cpu');
           const pct = (x) => `${(x * 100).toFixed(0)} %`;
-          el.textContent = `CPU ${pct(m.load)}${m.peak !== undefined ? ` (peak ${pct(m.peak)})` : ''}${m.voices !== undefined ? ` · ${m.voices} voices` : ''}`;
-          el.title = 'Average and worst audio-block time, as a share of the time available. A peak over 100 % is an audible dropout.';
+          el.textContent = `CPU ${pct(m.load)}`; // the rest on hover
+          el.title = `${pct(m.load)} of the time available, on average${m.peak !== undefined ? `; the worst block ${pct(m.peak)}` : ''}${m.voices !== undefined ? `. ${m.voices} voices sounding` : ''}. A block over 100 % is an audible dropout.`;
           el.classList.toggle('hot', (m.peak ?? m.load) > 0.8);
         }
         else if (m.type === 'error') toast(m.message);

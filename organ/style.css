@@ -179,11 +179,12 @@ canvas { width: 100%; flex: 1; min-height: 0; display: block; }
 .swell-wrap .ft { font-size: 11px; color: var(--muted); text-align: center; white-space: nowrap; line-height: 1.3; }
 .swell-wrap .ft b { color: var(--text); font-weight: 600; }
 
-.switches { display: grid; grid-template-columns: repeat(2, minmax(190px, 1fr)); gap: 12px 20px; align-content: start; flex: 1; min-width: 380px; }
-.sw-group { display: flex; flex-direction: column; gap: 5px; }
+.sw-group { display: flex; flex-direction: column; gap: 5px; margin: 0 0 12px; } /* heads its group in the Controls panel */
 .sw-title { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; }
 .tabs-row, .seg { display: flex; gap: 4px; flex-wrap: wrap; }
 .tabs-row button, .seg button { padding: 5px 9px; }
+#vib { display: grid; grid-template-columns: repeat(7, 1fr); } /* one row, even in a narrow group */
+#vib button { padding: 5px 0; }
 .tabs-row button.on { background: #f6efe0; color: #2a2016; border-color: #f6efe0; font-weight: 600; }
 .seg button.on { background: var(--accent); color: #1a1004; border-color: var(--accent); font-weight: 600; }
 #scanner { height: 34px; flex: none; }
@@ -237,5 +238,10 @@ kbd {
   #views { max-height: none; grid-template-rows: auto 260px auto; }
   .row { grid-template-columns: 1fr; }
   #output { min-height: 220px; }
-  .switches { min-width: 0; grid-template-columns: 1fr; }
+}
+/* phones: narrower drawbars, so the swell pedal stays beside them */
+@media (max-width: 600px) {
+  #console { gap: 14px; padding: 12px; }
+  #drawbars { gap: 4px; padding: 0; }
+  .drawbar, .drawbar .slot { width: 26px; }
 }

@@ -34,6 +34,7 @@ export const GROUPS = [
       { id: 'stretch', label: 'Stretch tuning', type: 'checkbox', def: true, hint: 'Tune each octave beatless, as a tuner would: partial 2 of the lower note on the fundamental of the upper. Stiff strings then stretch the scale (CP-70: about −12 ¢ at E1, +25 ¢ at E7). Off: every fundamental on 12-TET, and the octaves beat. Applies to new notes.' },
       { id: 'loss', label: 'String losses', min: 0.25, max: 4, def: 1, log: true, fmt: x, hint: 'Air drag and internal friction of the wire, σ = b₁ + b₃ω² (higher for wound strings). Applies to new notes.' },
       { id: 'kc', label: 'Tension modulation (pitch glide)', type: 'checkbox', def: true, hint: 'A hard blow stretches the string, so its tension and pitch rise, then glide back as it decays. Stiff, short strings stretch the most.' },
+      { id: 'maxFreq', label: 'Highest partial', min: 3000, max: 16000, def: 10000, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz`, hint: 'Partials above this are left out (new notes). Lower it if the CPU meter runs hot; the engine also sheds the quietest voices when the audio thread is overloaded.' },
     ],
   },
   {
@@ -73,7 +74,6 @@ export const GROUPS = [
   {
     title: 'Output',
     params: [
-      { id: 'maxFreq', label: 'Highest partial', min: 3000, max: 16000, def: 10000, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz`, hint: 'Partials above this are left out (new notes). Lower it if the CPU meter runs hot; the engine also sheds the quietest voices when the audio thread is overloaded.' },
       { id: 'room', label: 'Room', min: 0, max: 1, step: 0.01, def: 0.12, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },

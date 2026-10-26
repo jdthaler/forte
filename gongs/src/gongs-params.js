@@ -30,7 +30,7 @@ export const GROUPS = [
     ],
   },
   {
-    title: 'Mallet',
+    title: 'Mallet and hand',
     params: [
       { id: 'hardness', label: 'Head stiffness', min: 0.1, max: 3000, def: 4, log: true, fmt: mpa,
         hint: 'Young’s modulus of the mallet head: soft yarn ~0.3 MPa, felt ~2 MPa, rubber ~10 MPa, plastic or wood ~2 GPa. Harder heads touch for less time and reach higher modes directly.' },
@@ -43,19 +43,29 @@ export const GROUPS = [
       { id: 'speed', label: 'Strike speed at full velocity', min: 0.5, max: 12, def: 9, log: true, fmt: (v) => `${v.toFixed(1)} m/s`,
         hint: 'Impact speed for velocity 1 (it goes as velocity²). The deflection in thicknesses, and so the nonlinearity, scales with it.' },
       { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.6, step: 0.01, fmt: (v) => v.toFixed(2) },
+      { id: 'release', label: 'Hand damping on release', min: 0.1, max: 30, def: 2.5, log: true, fmt: (v) => `T₆₀ ${v.toFixed(1)} s`,
+        hint: 'A hand on the gong when the key is let go (Space or the pedal holds it off). MIDI aftertouch presses harder.' },
+    ],
+  },
+  {
+    title: 'Listening',
+    params: [
+      { id: 'listen', label: 'Microphone distance', min: 0, max: 1, def: 0.6, step: 0.01, fmt: (v) => (v < 0.1 ? 'touching (plate motion)' : v > 0.9 ? 'room (radiated power)' : `${(100 * v).toFixed(0)} % of the way out`),
+        hint: 'Close up you hear the plate’s motion, ruled by its strike tone. Out in the room you hear what it radiates, and a gong smaller than the wavelength radiates its low modes poorly: the high modes, and the crash, come forward.' },
+    ],
+  },
+  {
+    title: 'Accuracy',
+    params: [
+      { id: 'nlvoices', label: 'Nonlinear voices', min: 1, max: 16, def: 4, step: 1, fmt: (v) => `${v.toFixed(0)} at once`,
+        hint: 'How many gongs may run their (costly) nonlinear coupling at once; beyond that the least nonlinear one rings on linearly. Lower it if a tablet crackles, raise it on a fast computer.' },
+      { id: 'terms', label: 'Coupling terms', min: 200, max: 2000, def: 300, step: 50, log: true, fmt: (v) => `${v.toFixed(0)}`,
+        hint: 'How many of the round gong’s strongest von Kármán coupling terms are kept (each brings its twins’ terms). More is more accurate turbulence, and more CPU.' },
     ],
   },
   {
     title: 'Output',
     params: [
-      { id: 'listen', label: 'Microphone distance', min: 0, max: 1, def: 0.6, step: 0.01, fmt: (v) => (v < 0.1 ? 'touching (plate motion)' : v > 0.9 ? 'room (radiated power)' : `${(100 * v).toFixed(0)} % of the way out`),
-        hint: 'Close up you hear the plate’s motion, ruled by its strike tone. Out in the room you hear what it radiates, and a gong smaller than the wavelength radiates its low modes poorly: the high modes, and the crash, come forward.' },
-      { id: 'release', label: 'Hand damping on release', min: 0.1, max: 30, def: 2.5, log: true, fmt: (v) => `T₆₀ ${v.toFixed(1)} s`,
-        hint: 'A hand on the gong when the key is let go (Space or the pedal holds it off). MIDI aftertouch presses harder.' },
-      { id: 'nlvoices', label: 'Nonlinear voices', min: 1, max: 16, def: 4, step: 1, fmt: (v) => `${v.toFixed(0)} at once`,
-        hint: 'How many gongs may run their (costly) nonlinear coupling at once; beyond that the least nonlinear one rings on linearly. Lower it if a tablet crackles, raise it on a fast computer.' },
-      { id: 'terms', label: 'Coupling terms', min: 200, max: 2000, def: 300, step: 50, log: true, fmt: (v) => `${v.toFixed(0)}`,
-        hint: 'How many of the round gong’s strongest von Kármán coupling terms are kept (each brings its twins’ terms). More is more accurate turbulence, and more CPU.' },
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.3, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },

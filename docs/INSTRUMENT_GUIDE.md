@@ -516,8 +516,9 @@ names it under All Plugins, its page gets a ↓ Plugin button, and the next plug
 
 Add the instrument to `shared/registry.js` with `ready: true, version: '0.1.0'` and the
 AU code from its descriptor (`plugin: { code }`, which then leaves the descriptor)
-in one of the four sections (`traditional`, `electric`, `experimental`,
-or `phenomena` for instruments only physics can build), after the other
+in one of the five sections (`traditional`, `electric`, `experimental`,
+`phenomena` for physical phenomena, or `devices` for the apparatus physicists
+build to study them), after the other
 ready ones in it, with `version: '0.1.0'`, and add a note to `changes/` with a
 `### <Name> (new)` section, which becomes its `CHANGELOG.md` entry when it is released. The landing page and
 every menu pick it up, and `test/site-tests.mjs` checks that all of this

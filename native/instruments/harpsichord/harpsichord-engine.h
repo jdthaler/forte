@@ -128,6 +128,7 @@ class HarpsichordEngine : public Engine {
     std::array<double, 8> hz{};
     void init(double fs);
     void run(const double *seg, double *L, double *R, int n);
+    void clear() { e0.fill(0); e1.fill(0); lp.fill(0); hz.fill(0); }
   };
 
   void processBlock(float *L, float *R, int n);
@@ -170,6 +171,7 @@ class HarpsichordEngine : public Engine {
   std::array<int, 3 * 128> ownAt{};
   int symStamp = 0;
   bool symHush = false; // Panic: the groups wait for the voices to fade
+  bool boardHush = false; // Panic: the board rings until the voices have faded, then fades out
   std::array<double, BLOCK> tS{};
   Message pluckMsg;
 };

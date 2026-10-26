@@ -66,7 +66,7 @@ inline const ParamInfo kParams[p::count] = {
   {"warm", "Warm-up time", "Tubes", ParamKind::continuous, 0.1, 10, 1, 0, true, false, nullptr, 0, kFormat_warm, 1},
   {"drift", "Warm-up ΔT", "Tubes", ParamKind::continuous, 0, 60, 4, 0.5, false, false, nullptr, 0, kFormat_drift, 1},
   {"autotune", "Cut each tube for its velocity", "Tubes", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
-  {"listen", "Listening point", "Output", ParamKind::continuous, 0, 1, 0.5, 0.01, false, false, nullptr, 0, kFormat_listen, 3},
+  {"listen", "Listening point", "Listening", ParamKind::continuous, 0, 1, 0.5, 0.01, false, false, nullptr, 0, kFormat_listen, 3},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, false, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
