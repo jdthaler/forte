@@ -263,6 +263,19 @@ the strip. Mark 3–10 of them,
 set once (materials, dimensions, voicing) to the Controls panel and the
 presets.
 
+A control the real instrument has in a shape of its own can wear it: give
+the parameter `face` (`shared/faces.js`, styled in `shared/layout.css`), and
+the Controls panel draws it so. A checkbox can be a `'drawknob'` (an organ's
+or harmonium's stop: an ivory face that stands out when drawn), a `'lever'`
+(a harpsichord's hand stop, slid across) or a `'tab'` (a Clavinet's rocker);
+a slider can be a `'knob'` (an amp's or a preamp's: drag up or right to turn
+it, Shift for fine, two taps for the default). The faces of a group come
+first, side by side; the input stays, out of sight, for the keyboard and
+screen readers. A face drops a label's trailing "(…)" as the strip does,
+or shows `faceLabel` instead (the harmonium's "8′" is "Principal 8′" on its stop). It
+changes the page only: the plugins' windows and the native tables ignore it.
+Keep faces to what the instrument really has, a few to a group.
+
 ### Page and views
 
 Copy the template's DOM. The sidebar, header, keyboard and footer are

@@ -73,10 +73,10 @@ export const GROUPS = [
   {
     id: 'amp', title: 'Suitcase and amp',
     params: [
-      { id: 'tremDepth', label: 'Stereo vibrato depth', perform: true, kind: 'engine', min: 0, max: 1, step: 0.01, def: 0, fmt: (v) => v.toFixed(2) },
-      { id: 'tremRate', label: 'Stereo vibrato rate', perform: true, kind: 'engine', min: 0.5, max: 10, step: 0.05, def: 4, fmt: (v) => `${v.toFixed(2)} Hz` },
-      { id: 'drive', label: 'Amp drive', kind: 'engine', min: 0, max: 1, step: 0.01, def: 0.15, fmt: (v) => v.toFixed(2) },
-      { id: 'tone', label: 'Speaker top end', kind: 'engine', min: 1500, max: 14000, def: 6000, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz` },
+      { id: 'tremDepth', face: 'knob', label: 'Stereo vibrato depth', perform: true, kind: 'engine', min: 0, max: 1, step: 0.01, def: 0, fmt: (v) => v.toFixed(2) },
+      { id: 'tremRate', face: 'knob', label: 'Stereo vibrato rate', perform: true, kind: 'engine', min: 0.5, max: 10, step: 0.05, def: 4, fmt: (v) => `${v.toFixed(2)} Hz` },
+      { id: 'drive', face: 'knob', label: 'Amp drive', kind: 'engine', min: 0, max: 1, step: 0.01, def: 0.15, fmt: (v) => v.toFixed(2) },
+      { id: 'tone', face: 'knob', label: 'Speaker top end', kind: 'engine', min: 1500, max: 14000, def: 6000, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz` },
       { id: 'voicing', label: 'Register voicing', kind: 'pickup', min: -8, max: 4, step: 0.1, def: -3.5, fmt: (v) => `${v.toFixed(1)} dB/oct`,
         hint: 'Pickup emf ∝ frequency, so an unvoiced bass is quiet. Real instruments are balanced by voicing. Live.' },
     ],

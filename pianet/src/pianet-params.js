@@ -38,9 +38,9 @@ export const GROUPS = [
   {
     title: 'Amp',
     params: [
-      { id: 'tone', label: 'Tone (output RC)', perform: true, min: 500, max: 20000, def: 7000, log: true, fmt: (v) => (v >= 1000 ? `${(v / 1000).toFixed(1)} kHz` : `${v.toFixed(0)} Hz`), hint: 'Corner of the RC low-pass after the pickup (tone pot and cable).' },
+      { id: 'tone', face: 'knob', label: 'Tone (output RC)', perform: true, min: 500, max: 20000, def: 7000, log: true, fmt: (v) => (v >= 1000 ? `${(v / 1000).toFixed(1)} kHz` : `${v.toFixed(0)} Hz`), hint: 'Corner of the RC low-pass after the pickup (tone pot and cable).' },
       { id: 'amp', label: 'Amplifier', type: 'select', def: 'off', options: [['off', 'Direct (DI)'], ['combo', 'Valve combo, 10″ speaker']], hint: 'The Pianet had no speaker: it went into whatever amp was at hand.' },
-      { id: 'drive', label: 'Amp drive', perform: true, min: 0, max: 1, def: 0.35, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %`, showIf: (P) => P.amp === 'combo', hint: 'Asymmetric valve clipping, then the speaker\'s band-pass.' },
+      { id: 'drive', face: 'knob', label: 'Amp drive', perform: true, min: 0, max: 1, def: 0.35, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %`, showIf: (P) => P.amp === 'combo', hint: 'Asymmetric valve clipping, then the speaker\'s band-pass.' },
     ],
   },
   {

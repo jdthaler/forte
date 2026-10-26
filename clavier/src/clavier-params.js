@@ -54,10 +54,10 @@ export const GROUPS = [
   {
     title: 'Tone tabs',
     params: [
-      { id: 'soft', label: 'Soft (30 kΩ ‖ 0.1 µF)', perform: true, type: 'checkbox', def: false, hint: 'A low-pass across the amplifier input.' },
-      { id: 'medium', label: 'Medium (10 kΩ ‖ 15 nF)', perform: true, type: 'checkbox', def: true, hint: 'A gentler low-pass, corner ≈ 2 kHz.' },
-      { id: 'treble', label: 'Treble (2 H ‖ 4.7 nF)', perform: true, type: 'checkbox', def: true, hint: 'A broad band-pass round 1.6 kHz.' },
-      { id: 'brilliant', label: 'Brilliant (0.6 H)', perform: true, type: 'checkbox', def: false, hint: 'A high-pass. Tabs combine in parallel; with none down the D6 is silent.' },
+      { id: 'soft', face: 'tab', label: 'Soft (30 kΩ ‖ 0.1 µF)', perform: true, type: 'checkbox', def: false, hint: 'A low-pass across the amplifier input.' },
+      { id: 'medium', face: 'tab', label: 'Medium (10 kΩ ‖ 15 nF)', perform: true, type: 'checkbox', def: true, hint: 'A gentler low-pass, corner ≈ 2 kHz.' },
+      { id: 'treble', face: 'tab', label: 'Treble (2 H ‖ 4.7 nF)', perform: true, type: 'checkbox', def: true, hint: 'A broad band-pass round 1.6 kHz.' },
+      { id: 'brilliant', face: 'tab', label: 'Brilliant (0.6 H)', perform: true, type: 'checkbox', def: false, hint: 'A high-pass. Tabs combine in parallel; with none down the D6 is silent.' },
     ],
   },
   {
