@@ -38,7 +38,7 @@ class Project8Engine : public Engine {
   void process(float *L, float *R, int n) override;
 
  private:
-  static constexpr int kMaxVoices = 24;
+  static constexpr int kMaxVoices = 48;
   struct Voice {
     int key = 0, nh = 1;
     double vel = 0, gl = 0, gr = 0;

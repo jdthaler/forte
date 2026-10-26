@@ -7,8 +7,8 @@
 import { VENUE } from '../../shared/chain.js';
 import { TUNING_GROUP } from '../../shared/tuning.js';
 
-// pressures in mbar, as Project 8 quotes them
-const mbar = (v) => { const [m, e] = v.toExponential(1).split('e'); return `${m}×10${e.replace('+', '').replace('-', '⁻').replace(/\d/g, (d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d])} mbar`; };
+// pressures in mbar, as Project 8 quotes them; the lowest setting is no gas at all
+const mbar = (v) => { if (v <= 1e-11) return 'none (a perfect vacuum)'; const [m, e] = v.toExponential(1).split('e'); return `${m}×10${e.replace('+', '').replace('-', '⁻').replace(/\d/g, (d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d])} mbar`; };
 
 export const GROUPS = [
   {
@@ -33,7 +33,7 @@ export const GROUPS = [
       { id: 'length', label: 'Trap length', min: 1, max: 100, def: 10, log: true, fmt: (v) => `${v < 10 ? v.toFixed(1) : v.toFixed(0)} cm`,
         hint: 'The bottle\'s length scale L, in B = B₀ (1 + z²/L²). The electron bounces along the field at v⊥ / 2πL, about 120 MHz in Phase II: in the note, a vibrato at about 1/200 of its frequency. A longer trap bounces more slowly and further, so its vibrato is slower and deeper.' },
       { id: 'gas', label: 'Gas pressure', perform: true, min: 1e-11, max: 1e-5, def: 1e-10, log: true, fmt: mbar,
-        hint: 'The hydrogen left in the trap. Each collision costs the electron energy (a step up in pitch) or knocks it sideways, often out of the trap, which ends its note. At 10⁻¹⁰ mbar an electron meets a molecule every few seconds; at Phase II\'s 2×10⁻⁶ mbar, every fifth of a millisecond, so each note is a blip. The mod wheel turns it up.' },
+        hint: 'The hydrogen left in the trap. Each collision costs the electron energy (a step up in pitch) or knocks it sideways, often out of the trap, which ends its note. At 10⁻¹⁰ mbar an electron meets a molecule every few seconds; at Phase II\'s 2×10⁻⁶ mbar, every fifth of a millisecond, so each note is a blip. All the way down, there is no gas at all. The mod wheel turns it up.' },
     ],
   },
   {
