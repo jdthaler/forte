@@ -14,7 +14,9 @@ name: native
 # The Linux-only runs build only what changed: when a green run on the branch or on main has
 # already built and validated the same sources (native/ and the few files outside it the builds
 # read), the plugins and wasm jobs pass at once without building, so their required checks
-# still report. A change to the site or the docs alone builds nothing here.
+# still report. A change to the site or the docs alone builds nothing here, and neither does a
+# release's pull request, which changes only version numbers and adds saved states
+# (.github/scripts/native-sources.sh); live's full run builds and tests those.
 
 on:
   push:
@@ -49,11 +51,12 @@ jobs:
 
       # A pull request or a push to main whose plugins' sources (native/, package.json for the Forte
       # app's version, this workflow) are those a green run on it or on main already built and
-      # validated doesn't build them again: the job passes at once, so the required check still
-      # reports. A docs or site change leaves them alone. The full runs always build.
+      # validated, version numbers aside, doesn't build them again: the job passes at once, so the
+      # required check still reports. A docs or site change leaves them alone, and so does a
+      # release. The full runs always build.
       - name: Were these sources built and validated already?
         if: env.FULL != 'true'
-        run: echo "PASSED_KEY=passed-plugins-${{ matrix.preset }}-${{ hashFiles('native/**', 'package.json', '.github/workflows/native.yml') }}" >> "$GITHUB_ENV"
+        run: echo "PASSED_KEY=passed-plugins-${{ matrix.preset }}-$(.github/scripts/native-sources.sh native package.json .github/workflows/native.yml .github/scripts/native-sources.sh)" >> "$GITHUB_ENV"
       - name: Look for that run
         id: passed
         if: env.FULL != 'true'
@@ -68,9 +71,20 @@ jobs:
           echo SKIP=true >> "$GITHUB_ENV"
           echo "::notice::A green run already built and validated these sources; not building them again."
 
+      # the packages downloaded once a runner image, so a slow mirror costs little
+      - name: Which runner image
+        if: env.SKIP != 'true' && runner.os == 'Linux'
+        run: echo "APT_ARCHIVES=$RUNNER_TEMP/apt" >> "$GITHUB_ENV"; echo "APT_KEY=apt-plugins-$ImageOS-$ImageVersion" >> "$GITHUB_ENV"
+      - name: Cache the Linux packages
+        if: env.SKIP != 'true' && runner.os == 'Linux'
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.APT_ARCHIVES }}
+          key: ${{ env.APT_KEY }}
+          restore-keys: apt-plugins-
       - name: Linux packages (the standalone's audio and MIDI, the window and its web view)
         if: env.SKIP != 'true' && runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y ninja-build libasound2-dev libjack-jackd2-dev libx11-dev libgtk-3-dev libwebkit2gtk-4.1-dev
+        run: .github/scripts/apt-install.sh ninja-build ccache libasound2-dev libjack-jackd2-dev libx11-dev libgtk-3-dev libwebkit2gtk-4.1-dev
       - name: Ninja
         if: env.SKIP != 'true' && runner.os == 'macOS'
         run: command -v ninja || brew install ninja
@@ -81,7 +95,7 @@ jobs:
       - name: ccache
         if: env.SKIP != 'true' && runner.os != 'Windows'
         run: |
-          if [ "$RUNNER_OS" = Linux ]; then sudo apt-get install -y ccache; else command -v ccache || brew install ccache; fi
+          [ "$RUNNER_OS" = Linux ] || command -v ccache || brew install ccache # Linux's came with its packages
           for lang in C CXX OBJC OBJCXX; do echo "CMAKE_${lang}_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"; done
           { echo "CCACHE_DIR=$RUNNER_TEMP/ccache"; echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE"; echo "CCACHE_MAXSIZE=500M"; } >> "$GITHUB_ENV"
       - name: Cache the compiler's output
@@ -280,11 +294,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # as the plugins' job does: sources a green run already built and checked (native/, the
-      # committed WebAssembly, package.json, which makes the tests' .js modules, and this workflow)
-      # aren't built again
+      # committed WebAssembly, package.json, which makes the tests' .js modules, and this workflow),
+      # version numbers aside, aren't built again
       - name: Were these sources built and checked already?
         if: github.event_name != 'workflow_dispatch' && github.ref != 'refs/heads/live'
-        run: echo "PASSED_KEY=passed-wasm-${{ hashFiles('native/**', '**/wasm/*.wasm', 'package.json', '.github/workflows/native.yml') }}" >> "$GITHUB_ENV"
+        run: echo "PASSED_KEY=passed-wasm-$(.github/scripts/native-sources.sh native ':(glob)**/wasm/*.wasm' package.json .github/workflows/native.yml .github/scripts/native-sources.sh)" >> "$GITHUB_ENV"
       - name: Look for that run
         id: passed
         if: env.PASSED_KEY != ''
@@ -310,7 +324,7 @@ jobs:
           "$RUNNER_TEMP/emsdk/emsdk" install "$v"
           "$RUNNER_TEMP/emsdk/emsdk" activate "$v"
           echo "EMSDK=$RUNNER_TEMP/emsdk" >> "$GITHUB_ENV"
-          sudo apt-get install -y ninja-build
+          .github/scripts/apt-install.sh ninja-build
       - name: Build
         if: env.SKIP != 'true'
         working-directory: native
