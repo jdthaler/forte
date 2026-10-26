@@ -131,8 +131,8 @@ test('ids are unique slugs; sections and accents are valid', () => {
     assert.ok(i.name && i.tagline && i.physics, i.id);
   }
 });
-test('four sections, each with a tab name and at least one ready instrument; ready ones listed first', () => {
-  assert.equal(SECTIONS.length, 4);
+test('five sections, each with a tab name and at least one ready instrument; ready ones listed first', () => {
+  assert.equal(SECTIONS.length, 5);
   for (const sec of SECTIONS) {
     assert.ok(sec.title && sec.short && sec.blurb, sec.id);
     const list = INSTRUMENTS.filter((i) => i.section === sec.id);
