@@ -1778,8 +1778,8 @@ inline const forte::FormatSegment kF881[] = {{0.09999999999999999, "", " mT", 1,
 inline const Case kC881[] = {{0.01, "0.010 mT"}, {0.0354953665975557, "0.035 mT"}, {0.1259921049894873, "0.13 mT"}, {0.447213595499958, "0.45 mT"}, {1.5874010519681991, "1.6 mT"}, {5.634538227695684, "5.6 mT"}, {20, "20.0 mT"}, {0.5, "0.50 mT"}};
 inline const forte::FormatSegment kF882[] = {{9.999999999999998, "", " cm", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " cm", 1, 0, 0, false, false, false, false}};
 inline const Case kC882[] = {{1, "1.0 cm"}, {2.154434690031884, "2.2 cm"}, {4.641588833612778, "4.6 cm"}, {10, "10 cm"}, {21.544346900318835, "22 cm"}, {46.41588833612779, "46 cm"}, {100, "100 cm"}};
-inline const forte::FormatSegment kF883[] = {{kNoLimit, "", " mbar", 1, 0, 1, false, true, false, false, false, true}};
-inline const Case kC883[] = {{1e-11, "1.0×10⁻¹¹ mbar"}, {9.999999999999998e-11, "1.0×10⁻¹⁰ mbar"}, {9.999999999999996e-10, "1.0×10⁻⁹ mbar"}, {1e-8, "1.0×10⁻⁸ mbar"}, {9.999999999999996e-8, "1.0×10⁻⁷ mbar"}, {0.0000010000000000000006, "1.0×10⁻⁶ mbar"}, {0.00001, "1.0×10⁻⁵ mbar"}, {1e-10, "1.0×10⁻¹⁰ mbar"}};
+inline const forte::FormatSegment kF883[] = {{1e-11, "none (a perfect vacuum)", "", 1, 1e-11, -1, false, false, false, false}, {kNoLimit, "", " mbar", 1, 0, 1, false, true, false, false, false, true}};
+inline const Case kC883[] = {{1e-11, "none (a perfect vacuum)"}, {9.999999999999998e-11, "1.0×10⁻¹⁰ mbar"}, {9.999999999999996e-10, "1.0×10⁻⁹ mbar"}, {1e-8, "1.0×10⁻⁸ mbar"}, {9.999999999999996e-8, "1.0×10⁻⁷ mbar"}, {0.0000010000000000000006, "1.0×10⁻⁶ mbar"}, {0.00001, "1.0×10⁻⁵ mbar"}, {1e-10, "1.0×10⁻¹⁰ mbar"}};
 inline const forte::FormatSegment kF884[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const Case kC884[] = {{0, "off"}, {0.17, "17 %"}, {0.33, "33 %"}, {0.5, "50 %"}, {0.67, "67 %"}, {0.8300000000000001, "83 %"}, {1, "100 %"}, {0.1, "10 %"}};
 inline const forte::FormatSegment kF885[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
@@ -2737,7 +2737,7 @@ inline const Vector kAll[] = {
   {"project8.field", {"field", "", "", forte::ParamKind::continuous, 0.75, 3, 0.959, 0.001, false, false, nullptr, 0, kF880, 1}, kC880, 8},
   {"project8.depth", {"depth", "", "", forte::ParamKind::continuous, 0.01, 20, 0.5, 0, true, false, nullptr, 0, kF881, 3}, kC881, 8},
   {"project8.length", {"length", "", "", forte::ParamKind::continuous, 1, 100, 10, 0, true, false, nullptr, 0, kF882, 2}, kC882, 7},
-  {"project8.gas", {"gas", "", "", forte::ParamKind::continuous, 1e-11, 0.00001, 1e-10, 0, true, false, nullptr, 0, kF883, 1}, kC883, 8},
+  {"project8.gas", {"gas", "", "", forte::ParamKind::continuous, 1e-11, 0.00001, 1e-10, 0, true, false, nullptr, 0, kF883, 2}, kC883, 8},
   {"project8.noise", {"noise", "", "", forte::ParamKind::continuous, 0, 1, 0.1, 0.01, false, false, nullptr, 0, kF884, 2}, kC884, 8},
   {"project8.room", {"room", "", "", forte::ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kF885, 1}, kC885, 8},
   {"project8.volume", {"volume", "", "", forte::ParamKind::continuous, 0, 2, 0.8, 0.01, false, false, nullptr, 0, kF886, 2}, kC886, 8},

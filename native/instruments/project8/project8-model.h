@@ -32,6 +32,7 @@ constexpr double SIGMA_INEL = 3.40e-22;       // m²: inelastic cross section of
 constexpr double SIGMA_REF_EV = 18600;        // eV: where it was measured
 constexpr double ELASTIC_SHARE = 0.1;         // elastic / inelastic: "an order of magnitude smaller" (Project 8 2023)
 constexpr double GAS_T = 85;                  // K: the Phase II cell (Project 8 2023)
+constexpr double NO_GAS = 1e-11;               // mbar: the gas's lowest setting, which is a perfect vacuum
 constexpr double LOSS_EXC = 12.6;             // eV: the peak of hydrogen's energy-loss spectrum (excitation)
 constexpr double LOSS_ION = 15.43;            // eV: H₂'s ionisation energy
 constexpr double INEL_ANGLE = 0.5 * 3.141592653589793 / 180; // rad: the mean inelastic scattering angle (KATRIN, Hannen et al. 2017)

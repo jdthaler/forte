@@ -28,7 +28,7 @@ inline const FormatSegment kFormat_energy[] = {{9.999999999999998, "", " keV", 1
 inline const FormatSegment kFormat_field[] = {{kNoLimit, "", " T", 1, 0, 3, false, false, false, false}};
 inline const FormatSegment kFormat_depth[] = {{0.09999999999999999, "", " mT", 1, 0, 3, false, false, false, false}, {0.9999999999999999, "", " mT", 1, 0, 2, false, false, false, false}, {kNoLimit, "", " mT", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_length[] = {{9.999999999999998, "", " cm", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " cm", 1, 0, 0, false, false, false, false}};
-inline const FormatSegment kFormat_gas[] = {{kNoLimit, "", " mbar", 1, 0, 1, false, true, false, false, false, true}};
+inline const FormatSegment kFormat_gas[] = {{1e-11, "none (a perfect vacuum)", "", 1, 1e-11, -1, false, false, false, false}, {kNoLimit, "", " mbar", 1, 0, 1, false, true, false, false, false, true}};
 inline const char *const kChoices_receiver[] = {"Waveguide", "Antenna ring"};
 inline const char *const kKeys_receiver[] = {"guide", "antennas"};
 namespace receiver_ { enum : int { guide, antennas }; }
@@ -63,7 +63,7 @@ inline const ParamInfo kParams[p::count] = {
   {"field", "Magnetic field", "The trap", ParamKind::continuous, 0.75, 3, 0.959, 0.001, false, false, nullptr, 0, kFormat_field, 1},
   {"depth", "Trap depth", "The trap", ParamKind::continuous, 0.01, 20, 0.5, 0, true, true, nullptr, 0, kFormat_depth, 3},
   {"length", "Trap length", "The trap", ParamKind::continuous, 1, 100, 10, 0, true, false, nullptr, 0, kFormat_length, 2},
-  {"gas", "Gas pressure", "The trap", ParamKind::continuous, 1e-11, 0.00001, 1e-10, 0, true, true, nullptr, 0, kFormat_gas, 1},
+  {"gas", "Gas pressure", "The trap", ParamKind::continuous, 1e-11, 0.00001, 1e-10, 0, true, true, nullptr, 0, kFormat_gas, 2},
   {"receiver", "Receiver", "The receiver", ParamKind::choice, 0, 1, 0, 1, false, true, kChoices_receiver, 2, nullptr, 0, kKeys_receiver},
   {"noise", "Receiver noise", "The receiver", ParamKind::continuous, 0, 1, 0.1, 0.01, false, false, nullptr, 0, kFormat_noise, 2},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_room, 1},
