@@ -114,6 +114,8 @@ function load() {
   loaded ??= fetch(new URL('README.md', here))
     .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); })
     .then((md) => {
+      // the README's line for GitHub readers ("Part of Forte. Play it at …") says nothing on the page itself
+      md = md.replace(/^Part of \[Forte\]\(\.\.\/README\.md\)[^]*?(?:\n[ \t]*\n|(?![^]))/m, '');
       const { html, sections } = renderMarkdown(md, { base: REPO + dir, skip: ['Files'], idPrefix: 'about-' });
       const toc = sections.length > 2
         ? `<nav class="forte-notes-toc" aria-label="Contents">${sections.map((s) => `<a href="#${s.id}">${esc(s.text)}</a>`).join('')}</nav>`

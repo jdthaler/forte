@@ -4,9 +4,6 @@ A playable piano whose strings are physical models — and whose strings you can
 swap for square bars, triangular bars, flat ribbons or tapered ("triangular")
 ribbons, then hit wherever you like.
 
-Runs in the browser with no build step: Web Audio for sound, your computer
-keyboard (or a MIDI keyboard) for input.
-
 Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/piano/>.
 
 ## Play it

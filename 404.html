@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Not found · Forte</title>
+  <!-- GitHub Pages serves this for any address it doesn't have, at that address: so every link
+       here is from the site's root -->
+  <link rel="icon" href="/icons/favicon-32.png">
+  <meta name="theme-color" content="#0b0b0e">
+  <style>
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    body { margin: 0; background: #0b0b0e; color: #ece8e1; font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    main { max-width: 760px; margin: 0 auto; padding: 48px max(20px, env(safe-area-inset-right)) 64px max(20px, env(safe-area-inset-left)); }
+    h1 { font: 400 clamp(40px, 9vw, 64px)/1 Georgia, "Times New Roman", serif; margin: 0 0 12px; }
+    p { color: #a8a39a; margin: 0 0 24px; }
+    a { color: #f0b35a; }
+    .home { display: inline-block; padding: 8px 14px; border: 1px solid #2b2833; border-radius: 8px; color: #ece8e1; text-decoration: none; }
+    .home:hover { border-color: #f0b35a; }
+    h2 { font: 600 13px/1 system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #8d887f; margin: 32px 0 10px; }
+    ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px 16px; }
+    li a { color: #ece8e1; text-decoration: none; }
+    li a:hover { color: var(--c, #f0b35a); }
+    li a::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--c); margin-right: 8px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Not here</h1>
+    <p>There is no page at this address. Perhaps the instrument you want is one of these.</p>
+    <a class="home" href="/">𝆑 Forte, every instrument</a>
+    <div id="list"></div>
+  </main>
+  <script type="module">
+    import { SECTIONS, INSTRUMENTS } from '/shared/registry.js';
+    const list = document.querySelector('#list');
+    for (const s of SECTIONS) {
+      const ready = INSTRUMENTS.filter((i) => i.section === s.id && i.ready);
+      if (!ready.length) continue;
+      const h = document.createElement('h2'); h.textContent = s.title;
+      const ul = document.createElement('ul');
+      for (const i of ready) {
+        const li = document.createElement('li'), a = document.createElement('a');
+        a.href = `/${i.id}/`; a.textContent = i.name; a.style.setProperty('--c', i.accent);
+        li.appendChild(a); ul.appendChild(li);
+      }
+      list.append(h, ul);
+    }
+  </script>
+</body>
+</html>

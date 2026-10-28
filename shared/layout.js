@@ -181,6 +181,8 @@ const groups = [];
 let groupHint = null;
 if (sidebar && mainEl) {
   bars.controls = makeBar('controls', 'Controls', 'Controls to show', sidebar);
+  // the views first in the page's order too, as on screen: Tab and screen readers reach them before the controls
+  if (bars.views && viewsEl.parentElement === bars.controls.bar.parentElement) bars.controls.bar.before(bars.views.bar, viewsEl);
   groupHint = el('p', 'forte-no-view', 'Every group of controls is off: turn one on above.');
   groupHint.hidden = true;
   sidebar.prepend(groupHint);
@@ -730,15 +732,18 @@ export function attachKeyboard(kb) {
       let on = false, latched = false;
       const latch = button('Latch', `Keep ${label.toLowerCase()} on until tapped again`);
       latch.className = 'forte-latch';
-      const set = (v) => { if (v === on) return; on = v; space(v ? 'keydown' : 'keyup'); pedal.classList.toggle('on', v); };
-      const setLatch = (v) => { latched = v; latch.classList.toggle('on', v); set(v); };
+      // on or off for a screen reader too, as the toggles say
+      const show = (b, v) => { b.classList.toggle('on', v); b.setAttribute('aria-pressed', String(v)); };
+      show(pedal, false); show(latch, false);
+      const set = (v) => { if (v === on) return; on = v; space(v ? 'keydown' : 'keyup'); show(pedal, v); };
+      const setLatch = (v) => { latched = v; show(latch, v); set(v); };
       pedal.addEventListener('pointerdown', (e) => { e.preventDefault(); try { pedal.setPointerCapture(e.pointerId); } catch { /* gone */ } if (latched) setLatch(false); else set(true); });
       for (const ev of ['pointerup', 'pointercancel']) pedal.addEventListener(ev, () => { if (!latched) set(false); });
       latch.addEventListener('click', () => setLatch(!latched));
       // the pedal follows the page: Space, a MIDI pedal and Panic light it or let it go too
       document.addEventListener('forte-sustain', (e) => {
-        on = e.detail; pedal.classList.toggle('on', on);
-        if (!on && latched) { latched = false; latch.classList.remove('on'); }
+        on = e.detail; show(pedal, on);
+        if (!on && latched) { latched = false; show(latch, false); }
       });
       bar.append(pedal, latch);
     }

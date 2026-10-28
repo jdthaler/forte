@@ -13,7 +13,7 @@ lands, the pickup's offset, how fast the black hole spins.
 
 ## Instruments
 
-The front page sorts them into four kinds, as here.
+The front page sorts them into five kinds, as here.
 
 ### Traditional instruments
 
