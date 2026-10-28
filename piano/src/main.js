@@ -18,6 +18,7 @@ import { trimGain } from '../../shared/registry.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
 import { attachScala } from '../../shared/tuning-ui.js';
 import { connectQuality, qualityControl } from '../../shared/quality.js';
+import { dress, faceOf } from '../../shared/faces.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'ribbon-piano/params/v1';
@@ -299,7 +300,7 @@ function buildControls() {
     det.className = 'group';
     det.open = g.id !== 'output';
     det.innerHTML = `<summary>${g.title}</summary>`;
-    for (const p of g.params) {
+    for (const p of [...g.params].sort((a, b) => !!faceOf(b) - !!faceOf(a))) { // faces first (shared/faces.js)
       const wrap = document.createElement('div');
       wrap.className = 'param';
       if (p.strip) wrap.dataset.perform = ''; // in the strip above the keys (shared/layout.js)
@@ -340,7 +341,8 @@ function buildControls() {
         wrap.appendChild(h);
       }
       det.appendChild(wrap);
-      controls.set(p.id, { p, input, val, wrap });
+      const face = dress(wrap, p, input, { reset: () => setParam(p.id, p.def), toSlider });
+      controls.set(p.id, { p, input, val, wrap, face });
     }
     root.appendChild(det);
   }
@@ -360,11 +362,12 @@ function refreshControl(id) {
   const c = controls.get(id);
   if (!c) return;
   const v = P[id];
-  if (c.p.type === 'select') c.input.value = v;
+  if (c.p.type === 'select') { c.input.value = v; c.face?.show(); }
   else if (c.p.type === 'checkbox') c.input.checked = !!v;
   else {
     c.input.value = toSlider(c.p, v);
     c.val.textContent = c.p.fmt ? c.p.fmt(v) : String(v);
+    c.face?.show();
   }
 }
 

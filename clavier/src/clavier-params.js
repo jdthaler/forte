@@ -44,7 +44,7 @@ export const GROUPS = [
   {
     title: 'Pickups',
     params: [
-      { id: 'pickup', label: 'Pickup selector', perform: true, type: 'select', def: 'sum', options: [['lower', 'A · lower (centre) pickup'], ['upper', 'B · upper (bridge) pickup'], ['sum', 'A + B in phase'], ['diff', 'A − B out of phase']], hint: 'Each pickup hears mode n as sin(nπx/L). Out of phase, the low partials the two share cancel: thin and nasal.' },
+      { id: 'pickup', label: 'Pickup selector', face: 'rockers', shortLabels: ['A', 'B', 'A+B', 'A−B'], perform: true, type: 'select', def: 'sum', options: [['lower', 'A · lower (centre) pickup'], ['upper', 'B · upper (bridge) pickup'], ['sum', 'A + B in phase'], ['diff', 'A − B out of phase']], hint: 'Each pickup hears mode n as sin(nπx/L). Out of phase, the low partials the two share cancel: thin and nasal.' },
       { id: 'xLower', label: 'Lower pickup, from tailpiece (at C4)', min: 1, max: 30, def: 10.3, step: 0.1, fmt: cm, hint: 'Partials with a node at the pickup vanish: a comb with teeth every L/x partials (the bar is slanted, 15 cm at F1 to 6 cm at E6).' },
       { id: 'xUpper', label: 'Upper pickup, from tailpiece (at C4)', min: 0.5, max: 15, def: 2.7, step: 0.1, fmt: cm, hint: 'Close to the tailpiece every partial is weak but the high ones less so: bright and quiet.' },
       { id: 'field', label: 'Pickup field depth', min: 0.5, max: 10, def: 2, log: true, fmt: mm, hint: 'Decay length λ of the magnet\'s field, Φ ∝ e^(−distance/λ). Shorter = more second-harmonic growl on loud notes.' },

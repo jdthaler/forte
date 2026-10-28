@@ -35,9 +35,9 @@ export const GROUPS = [
   {
     title: 'Motor',
     params: [
-      { id: 'motor', label: 'Motor', perform: true, type: 'select', def: 'run', options: [['run', 'Running'], ['open', 'Off, discs open'], ['closed', 'Off, discs closed']],
+      { id: 'motor', label: 'Motor', face: 'selector', shortLabels: ['Run', 'Open', 'Closed'], perform: true, type: 'select', def: 'run', options: [['run', 'Running'], ['open', 'Off, discs open'], ['closed', 'Off, discs closed']],
         hint: 'The motor turns a shaft with a butterfly disc in every tube’s mouth. Stopped, the shaft turns to the chosen position and parks there.' },
-      { id: 'speed', label: 'Shaft speed', perform: true, min: 0.5, max: 6, def: 2.25, step: 0.05, fmt: (v) => `${v.toFixed(2)} rev/s → ${(2 * v).toFixed(1)} Hz`, showIf: (P) => P.motor === 'run',
+      { id: 'speed', label: 'Shaft speed', face: 'knob', perform: true, min: 0.5, max: 6, def: 2.25, step: 0.05, fmt: (v) => `${v.toFixed(2)} rev/s → ${(2 * v).toFixed(1)} Hz`, showIf: (P) => P.motor === 'run',
         hint: 'Each disc opens its tube twice per turn, so the tremolo runs at twice the shaft speed. The shaft takes a moment to spin up or down.' },
       { id: 'cd', label: 'Disc size', min: 0.3, max: 0.97, def: 0.7, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} % of the bore`,
         hint: 'How much of the mouth a disc covers face-on. Bigger discs close the tube further: a deeper tremolo.' },
@@ -68,7 +68,7 @@ export const GROUPS = [
     params: [
       { id: 'damp', label: 'Damper felt', min: 0.05, max: 3, def: 0.3, log: true, fmt: (v) => `T₆₀ ${v < 1 ? v.toFixed(2) : v.toFixed(1)} s`,
         hint: 'The felt bar that presses on every bar unless the pedal is down: how fast it stops the fundamental. Space or the pedal lifts it; a held key also keeps it off its own bar.' },
-      { id: 'pedalLock', label: 'Pedal held down (nothing damped)', perform: true, strip: true, type: 'checkbox', def: false,
+      { id: 'pedalLock', label: 'Pedal held down (nothing damped)', pedal: true, perform: true, strip: true, type: 'checkbox', def: false,
         hint: 'Every note rings until it dies away by itself.' },
     ],
   },

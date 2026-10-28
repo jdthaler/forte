@@ -51,7 +51,7 @@ export const GROUPS = [
     params: [
       { id: 'damp', label: 'Damper felt', min: 0.03, max: 3, def: 0.15, log: true, fmt: (v) => `T₆₀ ${v < 1 ? v.toFixed(2) : v.toFixed(1)} s`,
         hint: 'The felt pad that rests on each bar until its key goes down: how fast it stops the fundamental once the key is let go. The pedal lifts every damper.' },
-      { id: 'pedalLock', label: 'Pedal held down (nothing damped)', perform: true, strip: true, type: 'checkbox', def: false,
+      { id: 'pedalLock', label: 'Pedal held down (nothing damped)', pedal: true, perform: true, strip: true, type: 'checkbox', def: false,
         hint: 'Every note rings until it dies away by itself.' },
     ],
   },

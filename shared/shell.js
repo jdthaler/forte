@@ -56,7 +56,7 @@ import { controlOwns, focusedByPointer } from './focus.js';
 import { startMIDI, resumeMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe } from './midi.js';
 import { attachPresets } from './user-presets.js';
 import { connectQuality, qualityControl } from './quality.js';
-import { rotaryKnob } from './faces.js';
+import { dress, faceOf } from './faces.js';
 // after a change, a control picked with the pointer lets go of the focus (the keys go back to the
 // instrument); one reached with Tab keeps it, so the next Space or arrow works it again
 const unfocus = (el) => { if (focusedByPointer(el)) el.blur(); };
@@ -331,16 +331,11 @@ export function createShell(cfg) {
     det.className = 'group'; det.open = g.open !== false;
     det.innerHTML = `<summary>${g.title}</summary>`;
     // faces first, side by side, then the rest (the page's order, not the parameters')
-    for (const p of [...g.params].sort((a, b) => !!b.face - !!a.face)) {
+    for (const p of [...g.params].sort((a, b) => !!faceOf(b) - !!faceOf(a))) {
       const wrap = document.createElement('div');
       wrap.className = 'param';
       if (p.strip) wrap.dataset.perform = ''; // in the strip above the keys (shared/layout.js)
-      // a face: the control drawn as the instrument has it (a drawknob, a hand stop, a tab, an amp's
-      // knob), its name without the explanation (or `faceLabel`, the name on the instrument); the whole
-      // label stays its accessible name
-      if (p.face) wrap.dataset.face = p.face;
-      const name = p.face ? p.faceLabel ?? p.label.replace(/\s*\([^()]*\)\s*$/, '') : p.label;
-      let input, val = null, knob = null;
+      let input, val = null;
       if (p.type === 'select') {
         wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;
         input = document.createElement('select'); input.id = `p-${p.id}`;
@@ -351,8 +346,7 @@ export function createShell(cfg) {
         wrap.classList.add('check');
         input = document.createElement('input'); input.type = 'checkbox'; input.id = `p-${p.id}`;
         input.addEventListener('change', () => { shell.setParam(p.id, input.checked); unfocus(input); });
-        const lab = document.createElement('label'); lab.htmlFor = input.id; lab.textContent = name;
-        if (name !== p.label) { input.setAttribute('aria-label', p.label); lab.title = p.label; }
+        const lab = document.createElement('label'); lab.htmlFor = input.id; lab.textContent = p.label;
         wrap.append(input, lab);
       } else {
         wrap.innerHTML = `<div class="row"><label for="p-${p.id}">${p.label}</label><span class="val"></span></div>`;
@@ -362,15 +356,13 @@ export function createShell(cfg) {
         input.addEventListener('input', () => shell.setParam(p.id, fromSlider(p, +input.value), true));
         input.addEventListener('dblclick', () => shell.setParam(p.id, p.def));
         wrap.appendChild(input);
-        if (p.face === 'knob') {
-          knob = rotaryKnob(input, () => shell.setParam(p.id, p.def), p.min < 0 && p.max > 0 ? toSlider(p, 0) / 1000 : 0);
-          if (name !== p.label) { wrap.querySelector('label').textContent = name; wrap.querySelector('label').title = p.label; input.setAttribute('aria-label', p.label); }
-          wrap.insertBefore(knob.el, wrap.firstChild);
-        }
       }
+      // a face: the control drawn as the instrument has it (shared/faces.js), named without the
+      // explanation; the whole label stays its accessible name
+      const face = dress(wrap, p, input, { reset: () => shell.setParam(p.id, p.def), toSlider });
       if (p.hint) { const h = document.createElement('div'); h.className = 'hint'; h.textContent = p.hint; wrap.appendChild(h); }
       det.appendChild(wrap);
-      controls.set(p.id, { p, input, val, wrap, knob });
+      controls.set(p.id, { p, input, val, wrap, face });
     }
     $('#groups').appendChild(det);
   }
@@ -379,11 +371,11 @@ export function createShell(cfg) {
     const c = controls.get(id);
     if (!c) return;
     const v = shell.P[id];
-    if (c.p.type === 'select') c.input.value = v;
+    if (c.p.type === 'select') { c.input.value = v; c.face?.show(); }
     else if (c.p.type === 'checkbox') c.input.checked = !!v;
     else {
       if (!dragging) c.input.value = toSlider(c.p, v);
-      c.knob?.show();
+      c.face?.show();
       c.val.textContent = c.p.fmt ? c.p.fmt(v) : String(v);
       c.input.setAttribute('aria-valuetext', c.val.textContent);
     }

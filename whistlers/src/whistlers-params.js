@@ -41,12 +41,12 @@ export const GROUPS = [
   {
     title: 'The echoes',
     params: [
-      { id: 'receiver', label: 'Receiver', type: 'select', def: 'conjugate',
+      { id: 'receiver', label: 'Receiver', face: 'selector', shortLabels: ['Far end', 'Near'], type: 'select', def: 'conjugate',
         options: [['conjugate', 'At the other end of the line (1, 3, 5 … hops)'], ['source', 'Near the lightning (2, 4, 6 … hops)']],
         hint: 'At the field line\'s other end, the whistler arrives after one hop, and its echoes after three, five and more. Near the lightning, it is heard only once it has come back, after two hops, twice as spread out.' },
       { id: 'echo', label: 'Echoes (the ionosphere\'s reflection)', perform: true, min: 0, max: 0.95, def: 0.35, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %`,
         hint: 'How much of the whistler the ionosphere at each end sends back up the field line. Each echo travels the line twice more, so it comes later, falls more slowly and is spread thinner: an echo train.' },
-      { id: 'travel', label: 'Real travel time', type: 'checkbox', def: false,
+      { id: 'travel', label: 'Real travel time', face: 'toggle', type: 'checkbox', def: false,
         hint: 'Off: the whistler starts as you press the key. On: you hear the lightning\'s crack at once and the whistler only when it arrives, after its trip along the field line: a fraction of a second at the top of the keyboard, minutes at the bottom.' },
     ],
   },

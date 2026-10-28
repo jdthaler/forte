@@ -405,6 +405,25 @@ function titled(p, name) {
   new MutationObserver(title).observe(val, { childList: true, characterData: true, subtree: true });
   title();
 }
+// A pedal, drawn: a brass shoe that goes down when it's on (shared/layout.css), for the pedal button
+// and a checkbox marked `pedal` above the keys. Its brass is defined once, in a hidden <svg>.
+const SVG = 'http://www.w3.org/2000/svg';
+function pedalGlyph() {
+  if (!document.querySelector('#forte-brass')) {
+    const defs = document.createElementNS(SVG, 'svg');
+    defs.setAttribute('aria-hidden', 'true');
+    defs.style.cssText = 'position:absolute;width:0;height:0';
+    defs.innerHTML = '<defs><linearGradient id="forte-brass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0b8"/><stop offset=".45" stop-color="#d4a63e"/><stop offset="1" stop-color="#7c5a1c"/></linearGradient>' +
+      '<linearGradient id="forte-brass-down" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d9b75e"/><stop offset=".5" stop-color="#9c7526"/><stop offset="1" stop-color="#5a3f12"/></linearGradient></defs>';
+    document.body.appendChild(defs);
+  }
+  const g = document.createElementNS(SVG, 'svg');
+  g.setAttribute('class', 'forte-pedal-glyph');
+  g.setAttribute('viewBox', '0 0 18 22');
+  g.setAttribute('aria-hidden', 'true');
+  g.innerHTML = '<rect x="7" y="0" width="4" height="4" rx="1" fill="#55555e"/><path d="M5 3h8l2 13c.3 3-2.4 5-6 5s-6.3-2-6-5z"/>';
+  return g;
+}
 // Above the keys a label drops its explanation, "(…)" or "= …": "Dome rise (curvature)" is
 // "Dome rise". The whole name stays the control's name, its tooltip and its ⓘ's title.
 const shortLabel = (t) => t.replace(/\s*\([^()]*\)\s*$/, '').replace(/\s+=\s.*$/, '').trim() || t;
@@ -438,6 +457,7 @@ function placeControls() {
         p.querySelector('input, select')?.setAttribute('aria-label', label);
       }
       titled(p, label);
+      if (p.hasAttribute('data-pedal') && lab) lab.prepend(pedalGlyph());
       // velocity for the computer keys: a touch sets it by where it strikes, MIDI by the note
       if (p.querySelector('#p-velocity')) p.classList.add('keys-only');
       strip.appendChild(p);
@@ -725,6 +745,7 @@ export function attachKeyboard(kb) {
     const space = (type) => window.dispatchEvent(new KeyboardEvent(type, { code: 'Space', key: ' ' }));
     const pedal = button(label, `Same as holding Space`);
     pedal.className = 'forte-pedal';
+    if (label === 'Sustain' || label === 'Hold') pedal.prepend(pedalGlyph()); // a pedal (not the organ's Leslie switch or the Clavinet's mute bar)
     if (body.dataset.spaceMode === 'tap') {
       pedal.addEventListener('click', () => { space('keydown'); space('keyup'); });
       bar.appendChild(pedal);

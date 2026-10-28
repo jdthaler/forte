@@ -56,7 +56,7 @@ export const GROUPS = [
         fmt: (v) => `${(v * 1e6).toFixed(0)} µs` },
       { id: 'velocity', label: 'Velocity', perform: true, strip: true, kind: 'play', min: 0.2, max: 6, step: 0.05, def: 2.5,
         fmt: (v) => `${v.toFixed(2)} m/s`, hint: '↑ / ↓ arrows. MIDI uses key velocity instead.' },
-      { id: 'unaCorda', label: 'Una corda (soft pedal)', perform: true, strip: true, kind: 'engine', type: 'checkbox', def: false,
+      { id: 'unaCorda', label: 'Una corda (soft pedal)', pedal: true, perform: true, strip: true, kind: 'engine', type: 'checkbox', def: false,
         hint: 'Shifts the action so each hammer misses one string (2 of 3, or 1 of 2). The missed string is driven only through the bridge: softer, with a longer aftersound. MIDI CC 67.' },
     ],
   },

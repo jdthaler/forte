@@ -181,17 +181,50 @@ canvas { width: 100%; flex: 1; min-height: 0; display: block; }
 
 .sw-group { display: flex; flex-direction: column; gap: 5px; margin: 0 0 12px; } /* heads its group in the Controls panel */
 .sw-title { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; }
-.tabs-row, .seg { display: flex; gap: 4px; flex-wrap: wrap; }
-.tabs-row button, .seg button { padding: 5px 9px; }
-#vib { display: grid; grid-template-columns: repeat(7, 1fr); } /* one row, even in a narrow group */
-#vib button { padding: 5px 0; }
-.tabs-row button.on { background: #f6efe0; color: #2a2016; border-color: #f6efe0; font-weight: 600; }
-.seg button.on { background: var(--accent); color: #1a1004; border-color: var(--accent); font-weight: 600; }
+/* the console as the B-3 has it (shared/faces.js draws the vibrato knob): ivory tilt tabs, each
+   with both its legends, the lit one pressed; the Leslie's half-moon, rocked left for slow and right
+   for fast; the generator's Run switch */
+.tilts { display: flex; gap: 4px; flex-wrap: wrap; }
+body[data-instrument] .tilt {
+  box-sizing: border-box; width: 50px; height: 74px; min-height: 0; padding: 6px 2px 8px; border-radius: 4px 4px 10px 10px;
+  display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+  font: 600 10px/1.05 var(--engrave); letter-spacing: 0.4px; text-transform: uppercase; color: #3b2f22; text-align: center;
+  background: linear-gradient(#cfc4ad, #f6efdf 38%, #fffaf0 62%, #e9dfca); border: 1px solid #1b140c;
+  box-shadow: 0 3px 0 #0d0905, 0 5px 6px rgba(0, 0, 0, 0.6); transition: background 0.12s, transform 0.12s;
+}
+body[data-instrument] .tilt.on { background: linear-gradient(#fffaf0, #e8dec8 38%, #f4ecdb 62%, #c9bea6); transform: translateY(1px); }
+.tilt span { opacity: 0.4; }
+.tilt.on span:first-child, .tilt:not(.on) span:last-child { opacity: 1; }
+body[data-instrument] .tilt.dark { background: linear-gradient(#211915, #3a2c22 38%, #4c3a2d 62%, #2b2019); color: #e9dccb; }
+body[data-instrument] .tilt.dark.on { background: linear-gradient(#4c3a2d, #2e231b 38%, #3c2e24 62%, #1d1612); }
+.vib-console, .leslie-console { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+#vib { border-radius: 8px; }
+#vib:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.moon { --tilt: 0deg; position: relative; width: 132px; height: 86px; flex: none; }
+.moon-body {
+  position: absolute; left: 50%; bottom: 22px; width: 88px; height: 44px; margin-left: -44px; border-radius: 44px 44px 4px 4px;
+  transform-origin: 50% 100%; transform: rotate(var(--tilt)); transition: transform 0.16s cubic-bezier(0.4, 1.5, 0.5, 1);
+  background: linear-gradient(#f2f3f5, #a7aab1 55%, #6b6e74); box-shadow: 0 0 0 1px #2a2a2e, 0 4px 6px rgba(0, 0, 0, 0.6); pointer-events: none;
+}
+.moon-body::after { content: ""; position: absolute; left: 50%; top: 6px; width: 3px; height: 28px; margin-left: -1.5px; background: #3a3a40; border-radius: 2px; }
+.moon-base { position: absolute; left: 14px; right: 14px; bottom: 16px; height: 8px; border-radius: 3px; background: linear-gradient(#262629, #121214); pointer-events: none; }
+.moon.bypassed .moon-body { opacity: 0.55; }
+/* each legend's button reaches up over its third of the switch, so the switch itself is pressed */
+body[data-instrument] .moon button {
+  position: absolute; bottom: 0; width: 33.3%; height: 100%; min-height: 0; padding: 0 0 1px; border: 0; background: none;
+  display: flex; align-items: flex-end; justify-content: center; font: 600 11px/1 var(--engrave); letter-spacing: 1px; text-transform: uppercase; color: #7b7b86;
+}
+body[data-instrument] .moon button.on { color: var(--accent); }
+.moon button:nth-of-type(1) { left: 0; } .moon button:nth-of-type(2) { left: 33.3%; } .moon button:nth-of-type(3) { right: 0; }
 #scanner { height: 34px; flex: none; }
-.motor-row { display: flex; align-items: center; gap: 10px; }
-.motor { min-width: 64px; font-weight: 600; }
-.motor.on { background: #2c3a26; color: var(--accent-3); border-color: #3f5536; }
-.motor.off { background: #3a2424; color: #ff9b9b; border-color: #553636; }
+.motor-row { display: flex; align-items: center; gap: 12px; }
+body[data-instrument] .motor { min-height: 0; padding: 0; border: 0; background: none; }
+.motor .forte-toggle .on-l { color: #7b7b86; }
+.motor.on .forte-toggle .on-l { color: var(--text); }
+.motor.on .forte-toggle .off-l { color: #7b7b86; }
+.motor.on .forte-toggle .bat { transform: scaleY(1); }
+.motor.on .forte-toggle .lamp { background: radial-gradient(circle at 40% 35%, #fff, var(--accent) 55%); box-shadow: 0 0 0 1.5px #2c2c32, 0 0 10px var(--accent); }
+.motor:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
 .readout { font-variant-numeric: tabular-nums; color: var(--muted); }
 
 #analysis { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 12px; }

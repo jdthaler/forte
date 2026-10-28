@@ -16,6 +16,7 @@ import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
 import { tuningRatio } from '../../shared/tuning.js';
 import { connectQuality, qualityControl } from '../../shared/quality.js';
+import { dress, faceOf, rotarySelector } from '../../shared/faces.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'tonewheel-organ/params/v1';
@@ -292,13 +293,24 @@ $('#registration').addEventListener('change', (e) => {
 for (const b of document.querySelectorAll('#perc button')) {
   b.addEventListener('click', () => { setP({ [b.dataset.k]: !P[b.dataset.k] }); b.blur(); });
 }
-for (const b of document.querySelectorAll('#vib button')) b.addEventListener('click', () => { setP({ vib: b.dataset.v }); b.blur(); });
+// The B-3's vibrato: a six-position knob, and its tab that turns it on; off, the knob keeps its place.
+const VIB = ['V1', 'C1', 'V2', 'C2', 'V3', 'C3'];
+let vibAt = 'C3';
+const vibKnob = rotarySelector(VIB, (i) => { vibAt = VIB[i]; setP({ vib: vibAt }); });
+$('#vib').appendChild(vibKnob.el);
+$('#vib').addEventListener('keydown', (e) => {
+  const step = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[e.key];
+  if (!step) return;
+  e.preventDefault(); e.stopPropagation();
+  vibAt = VIB[Math.max(0, Math.min(5, VIB.indexOf(vibAt) + step))];
+  setP({ vib: vibAt });
+});
+$('#vib-on').addEventListener('click', (e) => { setP({ vib: P.vib === 'off' ? vibAt : 'off' }); e.currentTarget.blur(); });
+// The Leslie's half-moon (slow, stop, fast), and a tab that bypasses the cabinet.
 for (const b of document.querySelectorAll('#leslie button')) {
-  b.addEventListener('click', () => {
-    setP(b.dataset.v === 'bypass' ? { leslieOn: false } : { leslieOn: true, leslie: b.dataset.v });
-    b.blur();
-  });
+  b.addEventListener('click', () => { setP({ leslieOn: true, leslie: b.dataset.v }); b.blur(); });
 }
+$('#leslie-on').addEventListener('click', (e) => { setP({ leslieOn: !P.leslieOn }); e.currentTarget.blur(); });
 $('#motor').addEventListener('click', (e) => { setP({ motor: !P.motor }); e.currentTarget.blur(); });
 
 function refreshConsole() {
@@ -310,14 +322,17 @@ function refreshConsole() {
     el.querySelector('.slot').style.opacity = d === 8 && P.percOn ? 0.45 : 1;
   });
   $('#registration').value = regString(P.drawbars);
-  for (const b of document.querySelectorAll('#perc button')) b.classList.toggle('on', !!P[b.dataset.k]);
-  for (const b of document.querySelectorAll('#vib button')) b.classList.toggle('on', P.vib === b.dataset.v);
-  for (const b of document.querySelectorAll('#leslie button')) {
-    b.classList.toggle('on', b.dataset.v === 'bypass' ? !P.leslieOn : P.leslieOn && P.leslie === b.dataset.v);
-  }
-  const m = $('#motor');
-  m.textContent = P.motor ? 'Run' : 'Off';
-  m.className = `motor ${P.motor ? 'on' : 'off'}`;
+  const press = (b, on) => { b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); };
+  for (const b of document.querySelectorAll('#perc button')) press(b, !!P[b.dataset.k]);
+  if (P.vib !== 'off') vibAt = P.vib;
+  vibKnob.show(VIB.indexOf(vibAt));
+  $('#vib').setAttribute('aria-valuetext', `${vibAt}${P.vib === 'off' ? ' (off)' : ''}`);
+  press($('#vib-on'), P.vib !== 'off');
+  for (const b of document.querySelectorAll('#leslie button')) press(b, P.leslie === b.dataset.v);
+  $('#leslie').style.setProperty('--tilt', `${{ slow: -16, stop: 0, fast: 16 }[P.leslie] ?? 0}deg`);
+  $('#leslie').classList.toggle('bypassed', !P.leslieOn);
+  press($('#leslie-on'), P.leslieOn);
+  press($('#motor'), P.motor);
 }
 
 // ---------------------------------------------------------------------------
@@ -337,7 +352,7 @@ function buildControls() {
     det.className = 'group';
     det.open = ['gen', 'keys'].includes(g.id);
     det.innerHTML = `<summary>${g.title}</summary>`;
-    for (const p of g.params) {
+    for (const p of [...g.params].sort((a, b) => !!faceOf(b) - !!faceOf(a))) { // faces first (shared/faces.js)
       const wrap = document.createElement('div');
       wrap.className = 'param';
       if (p.strip) wrap.dataset.perform = ''; // in the strip above the keys (shared/layout.js)
@@ -360,7 +375,8 @@ function buildControls() {
       }
       if (p.hint) { const h = document.createElement('div'); h.className = 'hint'; h.textContent = p.hint; wrap.appendChild(h); }
       det.appendChild(wrap);
-      controls.set(p.id, { p, input, val, wrap });
+      const face = dress(wrap, p, input, { reset: () => setP({ [p.id]: p.def }), toSlider });
+      controls.set(p.id, { p, input, val, wrap, face });
     }
     det.dataset.group = g.id;
     $('#groups').appendChild(det);
@@ -392,10 +408,11 @@ function refreshControl(id, fromSliderDrag = false) {
   const c = controls.get(id);
   if (!c) return;
   const v = P[id];
-  if (c.p.type === 'select') c.input.value = v;
+  if (c.p.type === 'select') { c.input.value = v; c.face?.show(); }
   else {
     if (!fromSliderDrag) c.input.value = toSlider(c.p, v);
     c.val.textContent = c.p.fmt ? c.p.fmt(v) : String(v);
+    c.face?.show();
   }
 }
 

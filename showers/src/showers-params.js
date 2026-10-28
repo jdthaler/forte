@@ -15,10 +15,10 @@ export const GROUPS = [
     params: [
       { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2),
         hint: 'The share of the particle energy the computer keys send into the crystal (a MIDI keyboard\'s velocity does the same). Harder means more energy: louder, and a deeper shower.' },
-      { id: 'particle', label: 'Particle', type: 'select', perform: true, def: 'electron',
+      { id: 'particle', label: 'Particle', face: 'selector', shortLabels: ['e⁻', 'γ', 'π±'], type: 'select', perform: true, def: 'electron',
         options: [['electron', 'Electron'], ['photon', 'Photon'], ['pion', 'Charged pion']],
         hint: 'Electron: an electromagnetic shower from the crystal\'s face, the same every time. Photon: it first travels a random distance (9/7 of a radiation length on average) before it turns into an electron pair, so each note starts a little deeper. Charged pion: it crosses part of the crystal before it hits a nucleus, then splits into photons, which shower, and hadrons, which mostly leak out the back: no two notes alike, and quieter.' },
-      { id: 'energy', label: 'Particle energy', perform: true, min: 0.5, max: 10000, def: 50, log: true, fmt: gev,
+      { id: 'energy', label: 'Particle energy', face: 'dial', perform: true, min: 0.5, max: 10000, def: 50, log: true, fmt: gev,
         hint: 'The particle\'s energy at full velocity. A shower peaks deeper the more energy it has (by the logarithm of it), so low energies light the front of the crystal and ring its upper modes, and TeV showers peak near the middle, which rings the odd harmonics and hardly the even ones: a darker, hollow note.' },
       { id: 'offset', label: 'Impact point (off the axis)', perform: true, min: 0, max: 0.5, def: 0, step: 0.005, fmt: (v) => `${(v * 100).toFixed(1)} % of a crystal`,
         hint: 'How far from the crystal\'s axis the particle lands, toward the next key up. Off the axis the heat is lopsided and bends the crystal, ringing its bending modes, which are not harmonic; at 50 % it lands on the crack and the two crystals share the shower. The mod wheel moves it.' },
@@ -42,7 +42,7 @@ export const GROUPS = [
   {
     title: 'Listening',
     params: [
-      { id: 'sensor', label: 'Sensor', type: 'select', def: 'piezo',
+      { id: 'sensor', label: 'Sensor', face: 'selector', shortLabels: ['Piezo', 'Accel'], type: 'select', def: 'piezo',
         options: [['piezo', 'Piezo on the side (strain)'], ['accel', 'Accelerometer on the back face']],
         hint: 'Piezo: a piezoelectric sensor glued to the crystal\'s side reads the strain where it sits, from both the stretching and the bending modes. Accelerometer: one on the back face, on the axis, feels only the stretching modes, the harmonic series, louder the higher they are.' },
       { id: 'piezo', label: 'Piezo position', min: 0.02, max: 0.98, def: 0.3, step: 0.005, fmt: (v) => `${(v * 100).toFixed(1)} % of the length`,

@@ -48,7 +48,7 @@ export const GROUPS = [
       { id: 'mobility', label: 'Bridge mobility', min: 0.2, max: 5, def: 1, log: true, fmt: (v) => `${(v * 8.5).toFixed(1)} mm/(N·s)`, hint: 'The soundboard\'s point admittance at the bridge (×1 = the plate\'s 8.5 mm/s per N). More: louder, shorter ring, higher minimum force, stronger sympathetic coupling.' },
       { id: 'boardEta', label: 'Soundboard loss factor', min: 0.005, max: 0.1, def: 0.03, log: true, fmt: (v) => `η = ${v.toFixed(3)}`, hint: 'Damping of the spruce board\'s modes (Q ≈ 1/η).' },
       { id: 'damper', label: 'Damper time', min: 0.03, max: 3, def: 0.25, log: true, fmt: (v) => `T60 ${v.toFixed(2)} s`, hint: 'How quickly the felt stops a released string.' },
-      { id: 'lifted', label: 'Dampers lifted (all strings ring in sympathy)', perform: true, strip: true, type: 'checkbox', def: false, hint: 'Every string is free: released notes ring on, and the bridge makes the others resonate with what you play.' },
+      { id: 'lifted', label: 'Dampers lifted (all strings ring in sympathy)', pedal: true, perform: true, strip: true, type: 'checkbox', def: false, hint: 'Every string is free: released notes ring on, and the bridge makes the others resonate with what you play.' },
     ],
   },
   {
