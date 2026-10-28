@@ -44,7 +44,7 @@ export const GROUPS = [
       { id: 'tipExp', label: 'Tip nonlinearity Δp', kind: 'model', min: -0.5, max: 1, step: 0.05, def: 0, fmt: (v) => (v >= 0 ? '+' : '') + v.toFixed(2) },
       { id: 'hammerMass', label: 'Hammer mass', kind: 'model', min: 0.3, max: 3, def: 1, log: true, fmt: x },
       { id: 'hysteresis', label: 'Tip hysteresis α', kind: 'model', min: 0, max: 1e-3, step: 1e-5, def: 2e-4, fmt: (v) => `${(v * 1e6).toFixed(0)} µs` },
-      { id: 'velocity', label: 'Keyboard velocity', perform: true, strip: true, kind: 'play', min: 0.2, max: 5, step: 0.05, def: 1.8, fmt: (v) => `${v.toFixed(2)} m/s`, hint: '↑ / ↓ arrows. MIDI uses key velocity.' },
+      { id: 'velocity', label: 'Velocity', perform: true, strip: true, kind: 'play', min: 0.2, max: 5, step: 0.05, def: 1.8, fmt: (v) => `${v.toFixed(2)} m/s`, hint: '↑ / ↓ arrows. MIDI uses key velocity.' },
     ],
   },
   {
@@ -84,9 +84,9 @@ export const GROUPS = [
   {
     id: 'output', title: 'Output',
     params: [
-      { id: 'room', label: 'Room', kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.2, fmt: (v) => v.toFixed(2) },
+      { id: 'room', label: 'Room', kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.2, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, strip: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => v.toFixed(2) },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.8, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
   TUNING_GROUP,

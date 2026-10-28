@@ -22,11 +22,11 @@ export const SECTIONS = [
   { id: 'electric', title: 'Electric instruments', short: 'Electric',
     blurb: 'Pianos and organs that vibrate metal and listen to it with pickups: tonewheels, tines, reeds, strings and sticky pads, with their electronics modelled too.' },
   { id: 'experimental', title: 'Experiments from history', short: 'Experimental',
-    blurb: 'Inventions that never caught on: strings bowed by wheels, singing glass, flames in tubes and an arc lamp that sings.' },
+    blurb: 'Inventions that came and went: strings bowed by wheels, singing glass, flames in tubes and an arc lamp that sings.' },
   { id: 'phenomena', title: 'Physical phenomena', short: 'Phenomena',
-    blurb: 'Keyboards made of phenomena rather than mechanisms: synchronising oscillators, nonlinear plates, black holes, wavefunctions, bubbles, stars, lightning\'s whistlers and the early universe\'s sound, each played from the keys. Several have been modelled or sonified before; see the prior art and credits.' },
+    blurb: 'Keyboards made of phenomena rather than mechanisms: synchronising oscillators, nonlinear plates, black holes, wavefunctions, bubbles, chirping springs, stars, strings sung by the wind, lightning\'s whistlers and the early universe\'s sound, each played from the keys. Several have been modelled or sonified before; see the prior art and credits.' },
   { id: 'devices', title: 'Devices built to study physics', short: 'Devices',
-    blurb: 'Keyboards made of the apparatus physicists build to study nature: an accelerator\'s storage ring and its RF cavities, a collider\'s calorimeter crystals and the trap that weighs the neutrino, each heard through the pickups and antennas that read it out.' },
+    blurb: 'Keyboards made of the apparatus physicists build to study nature: an accelerator\'s storage ring and its RF cavities, a collider\'s calorimeter crystals, the trap that weighs the neutrino and the magnet that listens for dark matter, each heard through the pickups and antennas that read it out.' },
 ];
 
 export const INSTRUMENTS = [
@@ -227,7 +227,7 @@ export const INSTRUMENTS = [
   {
     id: 'stars', name: 'Star Keyboard', section: 'phenomena', ready: true, version: '0.5.1', trim: 7,
     plugin: { code: 'Star', ready: true },
-    tagline: 'Every key a Sun-like star whose oscillations are rung continuously by convection: combs of modes that breathe rather than strike.',
+    tagline: 'Every key a star whose oscillations are rung continuously by convection, from dwarfs like the Sun to red giants: combs of modes that breathe rather than strike.',
     physics: 'Asteroseismology · stochastically driven modes',
     accent: '#ff6f91',
   },

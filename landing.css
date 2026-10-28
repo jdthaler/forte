@@ -62,7 +62,7 @@ kbd { font: 12px ui-monospace, Menlo, monospace; border: 1px solid var(--line); 
 }
 .cats a:hover { color: var(--text); border-color: #4a4a58; }
 .cats a[aria-current] { color: #1b1203; background: var(--accent); border-color: transparent; }
-.cats .n { font: 500 12px ui-monospace, Menlo, monospace; opacity: 0.75; }
+.cats .n { font: 500 12px ui-monospace, Menlo, monospace; opacity: 0.85; }
 
 /* instrument cards */
 main { max-width: 1180px; margin: 0 auto; padding: 4px max(24px, env(safe-area-inset-right)) 8px max(24px, env(safe-area-inset-left)); }

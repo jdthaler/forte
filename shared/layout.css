@@ -206,6 +206,11 @@ body[data-instrument] .forte-info {
 body[data-instrument] .forte-info::after { content: ""; position: absolute; inset: -9px; } /* a finger-sized target */
 body[data-instrument] .forte-info:hover, body[data-instrument] .forte-info[aria-expanded="true"] { color: var(--accent); }
 #controls .param .row .forte-info { margin-right: auto; } /* next to its label */
+/* the octaves' names on the white keys, dark enough to read (they were 2.9 : 1, now about 5 : 1) */
+body[data-instrument] .wk .c-label { color: #5f5c55; font-size: 10px; }
+/* a long readout ("2.50 mm at C4 → 2.00 mm at C8") wraps in its share of the row, short ones never;
+   unwrapped it ran into the next column */
+#controls .param:not([data-face]) .row > .val { flex: none; max-width: 62%; white-space: normal; text-align: right; }
 .forte-param-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
 #controls .param:not(.hint-open) > .hint { display: none; }
 #controls .param.hint-open > .hint { animation: forte-reveal 0.18s ease-out; }
