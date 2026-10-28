@@ -31,7 +31,7 @@ export const GROUPS = [
     params: [
       { id: 'pressure', label: 'Bellows pressure', perform: true, min: 100, max: 2500, def: 800, log: true, fmt: pa,
         hint: 'The wind every reed blows against: louder, brighter and quicker to speak as it rises, and a little flatter. Mod wheel up and aftertouch raise it (aftertouch up to double).' },
-      { id: 'expression', label: 'Expression stop', perform: true, type: 'checkbox', def: false,
+      { id: 'expression', label: 'Expression stop', face: 'drawknob', faceLabel: 'Expres\u00adsion', perform: true, type: 'checkbox', def: false,
         hint: 'Shuts off the reservoir, so the pressure follows the bellows within milliseconds (the harmonium’s expression stop, and how an accordion always works): a big chord’s sag is immediate, and the pumping is heard.' },
       { id: 'pump', label: 'Pumping', min: 0, max: 3, def: 0, step: 0.05, fmt: (v) => (v ? `${v.toFixed(2)} strokes/s per foot` : 'steady (a blower)'),
         hint: 'Two feeders worked alternately by the feet. Each stroke delivers unevenly, so the wind swells twice per stroke: smoothed by the reservoir, heard through the expression stop.' },

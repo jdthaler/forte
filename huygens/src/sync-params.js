@@ -19,7 +19,7 @@ export const GROUPS = [
       { id: 'rSrc', label: 'Rail-sag coupling', kind: 'engine', min: 0, max: 200e3, step: 1000, def: 0,
         fmt: (v) => (v === 0 ? 'off' : `${(v / 1000).toFixed(0)} kΩ`),
         hint: 'Slow coupling through the shared supply’s source resistance. Weak — compare it with the pulses.' },
-      { id: 'pitchHold', label: 'Pitch-hold supply servo', kind: 'engine', type: 'checkbox', def: true,
+      { id: 'pitchHold', label: 'Pitch-hold supply servo', face: 'toggle', faceLabel: 'Pitch hold', kind: 'engine', type: 'checkbox', def: true,
         hint: 'Pulses only advance lamps, so locked chords run sharp. The servo trims the supply voltage, which scales every period equally.' },
     ],
   },
@@ -39,7 +39,7 @@ export const GROUPS = [
   {
     id: 'circuit', title: 'Oscillator circuit',
     params: [
-      { id: 'vNom', label: 'Supply voltage', kind: 'engine', min: 100, max: 400, step: 1, def: 150, fmt: (v) => `${v.toFixed(0)} V`,
+      { id: 'vNom', label: 'Supply voltage', face: 'dial', kind: 'engine', min: 100, max: 400, step: 1, def: 150, fmt: (v) => `${v.toFixed(0)} V`,
         hint: 'Higher supply → straighter ramp (more sawtooth-like).' },
       { id: 'vStrike', label: 'Lamp striking voltage', kind: 'engine', min: 70, max: 110, step: 0.5, def: 90, fmt: (v) => `${v.toFixed(1)} V` },
       { id: 'vExt', label: 'Lamp extinction voltage', kind: 'engine', min: 40, max: 85, step: 0.5, def: 60, fmt: (v) => `${v.toFixed(1)} V` },

@@ -27,7 +27,7 @@ export const GROUPS = [
   {
     title: 'Lattice',
     params: [
-      { id: 'tune', label: 'Betatron tune (fraction)', min: 0.05, max: 0.95, def: 0.31, step: 0.001, fmt: (v) => `Q = ${v.toFixed(3)}`,
+      { id: 'tune', label: 'Betatron tune (fraction)', face: 'dial', min: 0.05, max: 0.95, def: 0.31, step: 0.001, fmt: (v) => `Q = ${v.toFixed(3)}`,
         hint: 'The fractional number of transverse oscillations per turn: where the sidebands sit between the harmonics. Near 0, ½ or 1 (an integer or half-integer resonance) they close in on the harmonics.' },
       { id: 'chroma', label: 'Chromaticity', perform: true, min: 0, max: 60, def: 20, step: 0.1, fmt: (v) => `Q′ = ${v.toFixed(1)}`,
         hint: 'How much the tune changes with momentum. Particles of different momentum dephase, so the betatron sidebands fade within a synchrotron period, then come back as the synchrotron motion brings every particle\'s momentum round again: recoherence. Given for the C4 ring; a bigger ring has more cells and more of it. The mod wheel turns it up.' },
@@ -40,7 +40,7 @@ export const GROUPS = [
   {
     title: 'RF',
     params: [
-      { id: 'synch', label: 'Synchrotron frequency', min: 0.5, max: 20, def: 4, log: true, fmt: (v) => `${v.toFixed(2)} Hz`,
+      { id: 'synch', label: 'Synchrotron frequency', face: 'dial', min: 0.5, max: 20, def: 4, log: true, fmt: (v) => `${v.toFixed(2)} Hz`,
         hint: 'How fast particles swing in energy in the RF bucket: the rate of the vibrato and of the recoherence. Pressing harder on a key raises the RF voltage, which raises it as √V.' },
       { id: 'bunch', label: 'Bunch length', min: 0.005, max: 0.15, def: 0.025, log: true, fmt: pct(1),
         hint: 'The bunch\'s rms length as a share of the ring. A Gaussian bunch rolls the harmonics off as exp(−(2πnσ)²/2): short bunches are bright, long ones soft. More RF voltage (pressure) squeezes it as V^(−¼).' },
@@ -51,7 +51,7 @@ export const GROUPS = [
   {
     title: 'Pickup',
     params: [
-      { id: 'pickup', label: 'Pickup', type: 'select', def: 'pair',
+      { id: 'pickup', label: 'Pickup', face: 'selector', shortLabels: ['Two', 'One', 'Diff'], type: 'select', def: 'pair',
         options: [['pair', 'Two buttons'], ['single', 'One button'], ['delta', 'Difference']],
         hint: 'Two buttons, left and right of the beam, on the two channels: the betatron oscillation moves between them. One button on both channels. Difference: left minus right, which hears only the oscillation, fading and recohering.' },
       { id: 'cutoff', label: 'Pickup cutoff', min: 10, max: 3000, def: 120, log: true, fmt: (v) => `${v.toFixed(0)} Hz`,

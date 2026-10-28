@@ -21,7 +21,7 @@ export const GROUPS = [
   {
     title: 'Wavepacket',
     params: [
-      { id: 'lock', label: 'Lock the revival time to a tempo', type: 'checkbox', def: true,
+      { id: 'lock', label: 'Lock the revival time to a tempo', face: 'toggle', faceLabel: 'Lock to tempo', type: 'checkbox', def: true,
         hint: 'Each key gets the n̄ whose revival time is the set number of beats, so every note returns on the beat.', showIf: notHO },
       { id: 'bpm', label: 'Tempo', min: 40, max: 200, def: 90, step: 1, fmt: (v) => `${v.toFixed(0)} BPM`, showIf: (P) => P.lock && notHO(P) },
       { id: 'beats', label: 'Revival time T_rev', min: 0.5, max: 8, def: 2, step: 0.25, fmt: (v) => `${v} beats`,
@@ -30,7 +30,7 @@ export const GROUPS = [
         hint: 'How classical the packet is. T_rev = 2n̄ periods in the box, 2n̄/3 in hydrogen, so a chord revives in polyrhythm.', showIf: (P) => !P.lock || !notHO(P) },
       { id: 'sigma', label: 'Level spread σₙ', min: 0.4, max: 4, def: 2, log: true, step: 0.01, fmt: (v) => `${v.toFixed(2)} levels`,
         hint: 'A short pump pulse excites many levels: a tight, bright packet that collapses fast. Below 1 it is a chord of a few Bohr lines.' },
-      { id: 'detector', label: 'Detector', type: 'select', def: 'a',
+      { id: 'detector', label: 'Detector', face: 'selector', type: 'select', def: 'a',
         options: [['x', 'Electrode: dipole ⟨x⟩ (mellow)'], ['v', 'Coil: current ⟨ẋ⟩'], ['a', 'Antenna: radiated field ⟨ẍ⟩ (bright)']],
         hint: 'Each time derivative weights the k-th Bohr harmonic by k more.' },
     ],
@@ -48,7 +48,7 @@ export const GROUPS = [
   {
     title: 'Restrike',
     params: [
-      { id: 'ramsey', label: 'Coherent restrike (Ramsey fringes)', perform: true, type: 'checkbox', def: false,
+      { id: 'ramsey', label: 'Coherent restrike (Ramsey fringes)', face: 'toggle', faceLabel: 'Restrike', perform: true, type: 'checkbox', def: false,
         hint: 'A restruck key sends a second, phase-locked pulse into the packet still ringing there: its amplitudes add to the old ones, so the note can come back twice as strong or vanish, depending on the delay. Off: every strike is a fresh atom.' },
       { id: 'ramseyDetune', label: 'Pump detuning δ', min: -4, max: 4, def: 0, step: 0.01, fmt: (v) => `${v > 0 ? '+' : ''}${v.toFixed(2)} Hz`,
         hint: 'The pump\'s carrier off the line of the packet\'s central level: the second pulse\'s phase turns by 2πδ per second of delay, so restrikes on the revival swing between louder and silent every 1/δ seconds.', showIf: (P) => P.ramsey },

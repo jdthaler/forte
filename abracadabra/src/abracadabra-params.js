@@ -32,7 +32,7 @@ export const GROUPS = [
   {
     title: 'The magnet',
     params: [
-      { id: 'field', label: 'Magnetic field', min: 0.1, max: 10, def: 1, log: true, fmt: (v) => `${v < 1 ? v.toFixed(2) : v.toFixed(1)} T`,
+      { id: 'field', label: 'Magnetic field', face: 'dial', min: 0.1, max: 10, def: 1, log: true, fmt: (v) => `${v < 1 ? v.toFixed(2) : v.toFixed(1)} T`,
         hint: 'The toroid\'s field at its inner radius, 1 T in ABRACADABRA-10 cm. The axion\'s flux grows with it; the SQUID\'s noise does not.' },
       { id: 'size', label: 'Toroid size', min: 6, max: 300, def: 12, log: true, fmt: (v) => (v < 100 ? `${v.toFixed(v < 20 ? 1 : 0)} cm` : `${(v / 100).toFixed(2)} m`),
         hint: 'The toroid\'s diameter and height, 12 cm in ABRACADABRA-10 cm, with the pickup scaled alike: the flux grows as the volume, so a meter-scale toroid hears an axion 580 times fainter.' },
