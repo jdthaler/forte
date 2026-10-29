@@ -5,6 +5,17 @@
   <script src="../shared/boot.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Tonewheel Organ · Forte</title>
+  <meta name="description" content="91 spinning gear-driven wheels, bouncing key contacts, a scanner on an LC delay line and a rotating Doppler horn.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="Tonewheel Organ · Forte">
+  <meta property="og:description" content="91 spinning gear-driven wheels, bouncing key contacts, a scanner on an LC delay line and a rotating Doppler horn.">
+  <meta property="og:url" content="https://forte.jthaler.net/organ/">
+  <meta property="og:image" content="https://forte.jthaler.net/organ/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Tonewheel Organ's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="../shared/forte.css">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="../shared/layout.css">
@@ -56,31 +67,35 @@
         <div class="switches">
           <div class="sw-group" data-group="perc">
             <span class="sw-title">Tabs</span>
-            <div class="tabs-row" id="perc">
-              <button data-k="percOn">On</button>
-              <button data-k="percSoft">Soft</button>
-              <button data-k="percFast">Fast</button>
-              <button data-k="percThird">3rd</button>
+            <div class="tilts" id="perc">
+              <button class="tilt" data-k="percOn" aria-label="Percussion on"><span>Perc on</span><span>Off</span></button>
+              <button class="tilt" data-k="percSoft" aria-label="Percussion soft"><span>Soft</span><span>Normal</span></button>
+              <button class="tilt" data-k="percFast" aria-label="Percussion fast decay"><span>Fast</span><span>Slow</span></button>
+              <button class="tilt" data-k="percThird" aria-label="Percussion on the third harmonic"><span>Third</span><span>Second</span></button>
             </div>
           </div>
           <div class="sw-group" data-group="vib">
             <span class="sw-title">Vibrato &amp; chorus</span>
-            <div class="seg" id="vib">
-              <button data-v="off">Off</button><button data-v="V1">V1</button><button data-v="C1">C1</button>
-              <button data-v="V2">V2</button><button data-v="C2">C2</button><button data-v="V3">V3</button><button data-v="C3">C3</button>
+            <div class="vib-console">
+              <button class="tilt dark" id="vib-on" aria-label="Vibrato on"><span>Vib on</span><span>Off</span></button>
+              <div id="vib" role="slider" tabindex="0" aria-label="Vibrato and chorus" title="Click to step, drag, or ← →"></div>
             </div>
             <canvas id="scanner"></canvas>
           </div>
           <div class="sw-group" data-group="leslie">
             <span class="sw-title">Rotors <kbd>Space</kbd></span>
-            <div class="seg" id="leslie">
-              <button data-v="bypass">Bypass</button><button data-v="stop">Stop</button><button data-v="slow">Slow</button><button data-v="fast">Fast</button>
+            <div class="leslie-console">
+              <div class="moon" id="leslie">
+                <div class="moon-base"></div><div class="moon-body"></div>
+                <button data-v="slow">Slow</button><button data-v="stop">Stop</button><button data-v="fast">Fast</button>
+              </div>
+              <button class="tilt dark" id="leslie-on" aria-label="Leslie on (off: bypassed)"><span>Leslie</span><span>Bypass</span></button>
             </div>
           </div>
           <div class="sw-group" data-group="gen">
             <span class="sw-title">Generator motor <kbd>`</kbd></span>
             <div class="motor-row">
-              <button id="motor" class="motor on">Run</button>
+              <button id="motor" class="motor on" aria-label="Generator motor running"><span class="forte-toggle"><span class="on-l">RUN</span><span class="lamp"></span><span class="nut"></span><span class="bat"></span><span class="off-l">OFF</span></span></button>
               <span id="shaft" class="readout">1200 rpm</span>
             </div>
           </div>

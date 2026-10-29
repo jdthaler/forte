@@ -267,13 +267,25 @@ A control the real instrument has in a shape of its own can wear it: give
 the parameter `face` (`shared/faces.js`, styled in `shared/layout.css`), and
 the Controls panel draws it so. A checkbox can be a `'drawknob'` (an organ's
 or harmonium's stop: an ivory face that stands out when drawn), a `'lever'`
-(a harpsichord's hand stop, slid across) or a `'tab'` (a Clavinet's rocker);
+(a harpsichord's hand stop, slid across), a `'tab'` (a Clavinet's rocker) or
+a `'toggle'` (an apparatus's bat-handle switch, its pilot lamp lit when on);
 a slider can be a `'knob'` (an amp's or a preamp's: drag up or right to turn
-it, Shift for fine, two taps for the default). The faces of a group come
-first, side by side; the input stays, out of sight, for the keyboard and
-screen readers. A face drops a label's trailing "(…)" as the strip does,
-or shows `faceLabel` instead (the harmonium's "8′" is "Principal 8′" on its stop). It
-changes the page only: the plugins' windows and the native tables ignore it.
+it, Shift for fine, two taps for the default) or a `'dial'` (a supply's or
+a generator's knurled knob over a printed scale, its value in a readout); a
+dropdown can be a `'selector'` (a pointer knob over engraved positions: click
+a legend, click the knob to step, or drag it) or `'rockers'` (a bank of
+rocker tabs, one down at a time). A dropdown's legends are its options' names
+up to their explanation, or `shortLabels`, one to an option. The faces of a
+group come first, side by side; the input stays, out of sight, for the
+keyboard and screen readers. A face drops a label's trailing "(…)" as the
+strip does, or shows `faceLabel` instead (the harmonium's "8′" is "Principal
+8′" on its stop). Every page gives Output's `room` a knob and its `venue` a
+selector without being asked; every other slider is a fader lit up to its
+value and every other checkbox a lamp button. A checkbox in the strip that
+is a pedal (the vibraphone's, Una corda) takes `pedal: true` and is drawn as
+one. A page that builds its own controls calls `dress()` on each and its
+`show()` when the value changes. Faces change the page only: the plugins'
+windows and the native tables ignore them.
 Keep faces to what the instrument really has, a few to a group.
 
 ### Page and views
@@ -423,6 +435,21 @@ headless Chromium at phone, tablet and desktop sizes, no console errors, no
 sideways scrolling, and the perform controls, ⓘ buttons, "Default settings"
 and keys in place (CI's `pages` job runs it on every page).
 
+### The picture a shared link shows
+
+A link to the page shows a picture of it in Messages, Slack and social sites,
+with the instrument's name and tagline. Once the instrument is ready (and
+again when its page's look changes much):
+
+```bash
+node tools/make-previews.mjs <slug>      # → <slug>/preview.jpg + the tags in <slug>/index.html
+```
+
+It plays a chord on the page in Perform, at 1200×630, with the buttons hidden.
+`node tools/make-previews.mjs --tags` rewrites only the tags (after a tagline
+changes); `test/site-tests.mjs` checks both. Then run it for `index` too: the
+front page's picture is made of sixteen instruments' pictures.
+
 ### Demos
 
 `tools/render-<slug>.mjs` renders 4–8 short demos (3–10 s each) to
@@ -535,7 +562,8 @@ build to study them), after the other
 ready ones in it, with `version: '0.1.0'`, and add a note to `changes/` with a
 `### <Name> (new)` section, which becomes its `CHANGELOG.md` entry when it is released. The landing page and
 every menu pick it up, and `test/site-tests.mjs` checks that all of this
-agrees.
+agrees. Then make its picture and tags for shared links (`node tools/make-previews.mjs <slug>`,
+then `index`; see "The picture a shared link shows").
 
 ### Versions
 

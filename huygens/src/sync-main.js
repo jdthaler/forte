@@ -17,6 +17,7 @@ import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
 import { connectQuality, qualityControl } from '../../shared/quality.js';
+import { dress, faceOf } from '../../shared/faces.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'huygens-keyboard/params/v1';
@@ -211,7 +212,7 @@ function buildControls() {
     const det = document.createElement('details');
     det.className = 'group'; det.open = g.id !== 'sound';
     det.innerHTML = `<summary>${g.title}</summary>`;
-    for (const p of g.params) {
+    for (const p of [...g.params].sort((a, b) => !!faceOf(b) - !!faceOf(a))) { // faces first (shared/faces.js)
       const wrap = document.createElement('div');
       wrap.className = 'param';
       if (p.strip) wrap.dataset.perform = ''; // in the strip above the keys (shared/layout.js)
@@ -239,7 +240,8 @@ function buildControls() {
       }
       if (p.hint) { const h = document.createElement('div'); h.className = 'hint'; h.textContent = p.hint; wrap.appendChild(h); }
       det.appendChild(wrap);
-      controls.set(p.id, { p, input, val, wrap });
+      const face = dress(wrap, p, input, { reset: () => setParam(p.id, p.def), toSlider });
+      controls.set(p.id, { p, input, val, wrap, face });
     }
     $('#groups').appendChild(det);
   }
@@ -257,9 +259,9 @@ function refreshControl(id, dragging = false) {
   const c = controls.get(id);
   if (!c) return;
   const v = P[id];
-  if (c.p.type === 'select') c.input.value = v;
+  if (c.p.type === 'select') { c.input.value = v; c.face?.show(); }
   else if (c.p.type === 'checkbox') c.input.checked = !!v;
-  else { if (!dragging) c.input.value = toSlider(c.p, v); c.val.textContent = c.p.fmt ? c.p.fmt(v) : String(v); }
+  else { if (!dragging) c.input.value = toSlider(c.p, v); c.val.textContent = c.p.fmt ? c.p.fmt(v) : String(v); c.face?.show(); }
 }
 function refreshVisibility() { for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(P) : false; }
 function retuneSounding() { post({ type: 'retune', list: activeKeys().map((k) => [k, tunedFreq(k, P)]) }); refreshMarks(); }

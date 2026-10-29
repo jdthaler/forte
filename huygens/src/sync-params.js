@@ -19,7 +19,7 @@ export const GROUPS = [
       { id: 'rSrc', label: 'Rail-sag coupling', kind: 'engine', min: 0, max: 200e3, step: 1000, def: 0,
         fmt: (v) => (v === 0 ? 'off' : `${(v / 1000).toFixed(0)} kΩ`),
         hint: 'Slow coupling through the shared supply’s source resistance. Weak — compare it with the pulses.' },
-      { id: 'pitchHold', label: 'Pitch-hold supply servo', kind: 'engine', type: 'checkbox', def: true,
+      { id: 'pitchHold', label: 'Pitch-hold supply servo', face: 'toggle', faceLabel: 'Pitch hold', kind: 'engine', type: 'checkbox', def: true,
         hint: 'Pulses only advance lamps, so locked chords run sharp. The servo trims the supply voltage, which scales every period equally.' },
     ],
   },
@@ -39,7 +39,7 @@ export const GROUPS = [
   {
     id: 'circuit', title: 'Oscillator circuit',
     params: [
-      { id: 'vNom', label: 'Supply voltage', kind: 'engine', min: 100, max: 400, step: 1, def: 150, fmt: (v) => `${v.toFixed(0)} V`,
+      { id: 'vNom', label: 'Supply voltage', face: 'dial', kind: 'engine', min: 100, max: 400, step: 1, def: 150, fmt: (v) => `${v.toFixed(0)} V`,
         hint: 'Higher supply → straighter ramp (more sawtooth-like).' },
       { id: 'vStrike', label: 'Lamp striking voltage', kind: 'engine', min: 70, max: 110, step: 0.5, def: 90, fmt: (v) => `${v.toFixed(1)} V` },
       { id: 'vExt', label: 'Lamp extinction voltage', kind: 'engine', min: 40, max: 85, step: 0.5, def: 60, fmt: (v) => `${v.toFixed(1)} V` },
@@ -58,9 +58,9 @@ export const GROUPS = [
   {
     id: 'output', title: 'Output',
     params: [
-      { id: 'room', label: 'Room', kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.3, fmt: (v) => v.toFixed(2) },
+      { id: 'room', label: 'Room', kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.3, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
-      { id: 'volume', label: 'Volume', perform: true, strip: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.7, fmt: (v) => v.toFixed(2) },
+      { id: 'volume', label: 'Volume', perform: true, strip: true, kind: 'mix', min: 0, max: 2, step: 0.01, def: 0.7, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
     ],
   },
   TUNING_GROUP,

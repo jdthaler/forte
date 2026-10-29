@@ -11,7 +11,7 @@ export const GROUPS = [
   {
     title: 'The arc',
     params: [
-      { id: 'current', label: 'Arc current', perform: true, min: 1.5, max: 20, def: 3, log: true, fmt: (v) => `${f2(v)} A`,
+      { id: 'current', label: 'Arc current', face: 'dial', perform: true, min: 1.5, max: 20, def: 3, log: true, fmt: (v) => `${f2(v)} A`,
         hint: 'The direct current the rheostat lets through. Less current, steeper falling curve and a stronger negative resistance; more and the arc stops singing, then hisses (mod wheel).' },
       { id: 'gap', label: 'Electrode gap', perform: true, min: 0.5, max: 8, def: 3, step: 0.05, fmt: (v) => `${f2(v)} mm`,
         hint: 'A longer arc burns at a higher voltage, falls more steeply (Ayrton\'s c + d·l) and starts to hiss only at a larger current.' },
@@ -43,7 +43,7 @@ export const GROUPS = [
   {
     title: 'Talking arc',
     params: [
-      { id: 'voice', label: 'Microphone level', min: 0, max: 6, def: 2, step: 0.05, fmt: (v) => `${f2(v)} V`, showIf: (P) => P.mode === 'talk',
+      { id: 'voice', label: 'Microphone level', face: 'knob', min: 0, max: 6, def: 2, step: 0.05, fmt: (v) => `${f2(v)} V`, showIf: (P) => P.mode === 'talk',
         hint: 'The EMF the microphone transformer puts into the arc circuit. The arc turns the current it drives into sound; too little arc current and the arc howls on its own.' },
     ],
   },

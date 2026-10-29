@@ -16,7 +16,7 @@ export const INSTRUMENT = {
   // ever cast (about 20 t), so the range stops there.
   range: [41, 108],
   compass: { keys: [48, 96], param: 'fullRange' }, // C3–C7, a four-octave concert carillon, until Full range opens the rest
-  space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
+  space: null,                          // a carillon has no dampers: no pedal to offer
   // the engine: the physics in C++ (native/instruments/carillon), built as WebAssembly
   wasm: { name: 'CarillonWasmEngine', module: new URL('./carillon-wasm.js', import.meta.url).href, binary: new URL('../wasm/carillon.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

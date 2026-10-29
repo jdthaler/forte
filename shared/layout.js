@@ -181,6 +181,8 @@ const groups = [];
 let groupHint = null;
 if (sidebar && mainEl) {
   bars.controls = makeBar('controls', 'Controls', 'Controls to show', sidebar);
+  // the views first in the page's order too, as on screen: Tab and screen readers reach them before the controls
+  if (bars.views && viewsEl.parentElement === bars.controls.bar.parentElement) bars.controls.bar.before(bars.views.bar, viewsEl);
   groupHint = el('p', 'forte-no-view', 'Every group of controls is off: turn one on above.');
   groupHint.hidden = true;
   sidebar.prepend(groupHint);
@@ -403,6 +405,25 @@ function titled(p, name) {
   new MutationObserver(title).observe(val, { childList: true, characterData: true, subtree: true });
   title();
 }
+// A pedal, drawn: a brass shoe that goes down when it's on (shared/layout.css), for the pedal button
+// and a checkbox marked `pedal` above the keys. Its brass is defined once, in a hidden <svg>.
+const SVG = 'http://www.w3.org/2000/svg';
+function pedalGlyph() {
+  if (!document.querySelector('#forte-brass')) {
+    const defs = document.createElementNS(SVG, 'svg');
+    defs.setAttribute('aria-hidden', 'true');
+    defs.style.cssText = 'position:absolute;width:0;height:0';
+    defs.innerHTML = '<defs><linearGradient id="forte-brass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0b8"/><stop offset=".45" stop-color="#d4a63e"/><stop offset="1" stop-color="#7c5a1c"/></linearGradient>' +
+      '<linearGradient id="forte-brass-down" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d9b75e"/><stop offset=".5" stop-color="#9c7526"/><stop offset="1" stop-color="#5a3f12"/></linearGradient></defs>';
+    document.body.appendChild(defs);
+  }
+  const g = document.createElementNS(SVG, 'svg');
+  g.setAttribute('class', 'forte-pedal-glyph');
+  g.setAttribute('viewBox', '0 0 18 22');
+  g.setAttribute('aria-hidden', 'true');
+  g.innerHTML = '<rect x="7" y="0" width="4" height="4" rx="1" fill="#55555e"/><path d="M5 3h8l2 13c.3 3-2.4 5-6 5s-6.3-2-6-5z"/>';
+  return g;
+}
 // Above the keys a label drops its explanation, "(…)" or "= …": "Dome rise (curvature)" is
 // "Dome rise". The whole name stays the control's name, its tooltip and its ⓘ's title.
 const shortLabel = (t) => t.replace(/\s*\([^()]*\)\s*$/, '').replace(/\s+=\s.*$/, '').trim() || t;
@@ -436,6 +457,7 @@ function placeControls() {
         p.querySelector('input, select')?.setAttribute('aria-label', label);
       }
       titled(p, label);
+      if (p.hasAttribute('data-pedal') && lab) lab.prepend(pedalGlyph());
       // velocity for the computer keys: a touch sets it by where it strikes, MIDI by the note
       if (p.querySelector('#p-velocity')) p.classList.add('keys-only');
       strip.appendChild(p);
@@ -723,6 +745,7 @@ export function attachKeyboard(kb) {
     const space = (type) => window.dispatchEvent(new KeyboardEvent(type, { code: 'Space', key: ' ' }));
     const pedal = button(label, `Same as holding Space`);
     pedal.className = 'forte-pedal';
+    if (label === 'Sustain' || label === 'Hold') pedal.prepend(pedalGlyph()); // a pedal (not the organ's Leslie switch or the Clavinet's mute bar)
     if (body.dataset.spaceMode === 'tap') {
       pedal.addEventListener('click', () => { space('keydown'); space('keyup'); });
       bar.appendChild(pedal);
@@ -730,15 +753,18 @@ export function attachKeyboard(kb) {
       let on = false, latched = false;
       const latch = button('Latch', `Keep ${label.toLowerCase()} on until tapped again`);
       latch.className = 'forte-latch';
-      const set = (v) => { if (v === on) return; on = v; space(v ? 'keydown' : 'keyup'); pedal.classList.toggle('on', v); };
-      const setLatch = (v) => { latched = v; latch.classList.toggle('on', v); set(v); };
+      // on or off for a screen reader too, as the toggles say
+      const show = (b, v) => { b.classList.toggle('on', v); b.setAttribute('aria-pressed', String(v)); };
+      show(pedal, false); show(latch, false);
+      const set = (v) => { if (v === on) return; on = v; space(v ? 'keydown' : 'keyup'); show(pedal, v); };
+      const setLatch = (v) => { latched = v; show(latch, v); set(v); };
       pedal.addEventListener('pointerdown', (e) => { e.preventDefault(); try { pedal.setPointerCapture(e.pointerId); } catch { /* gone */ } if (latched) setLatch(false); else set(true); });
       for (const ev of ['pointerup', 'pointercancel']) pedal.addEventListener(ev, () => { if (!latched) set(false); });
       latch.addEventListener('click', () => setLatch(!latched));
       // the pedal follows the page: Space, a MIDI pedal and Panic light it or let it go too
       document.addEventListener('forte-sustain', (e) => {
-        on = e.detail; pedal.classList.toggle('on', on);
-        if (!on && latched) { latched = false; latch.classList.remove('on'); }
+        on = e.detail; show(pedal, on);
+        if (!on && latched) { latched = false; show(latch, false); }
       });
       bar.append(pedal, latch);
     }

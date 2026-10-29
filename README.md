@@ -13,7 +13,7 @@ lands, the pickup's offset, how fast the black hole spins.
 
 ## Instruments
 
-The front page sorts them into four kinds, as here.
+The front page sorts them into five kinds, as here.
 
 ### Traditional instruments
 
@@ -73,6 +73,7 @@ The front page sorts them into four kinds, as here.
 | ✅ | [Collider Showers](showers/) | a collider calorimeter's lead tungstate crystals (CMS's) rung by the heat of the particle showers they catch, the thermo-acoustic effect: PDG's electromagnetic shower profiles, photon conversion, charged pions' hadronic showers that differ every time, the Molière-radius spread into neighbouring crystals; stretching modes (Love's rod theory) rung by where along the crystal the shower peaks, so TeV showers ring the odd harmonics; bending modes from an off-axis impact; pile-up; piezo or accelerometer readout |
 | ✅ | [Project 8](project8/) | an electron in a magnetic trap heard by its cyclotron radiation, as the Project 8 neutrino-mass experiment hears it (CRES): every key a trap, its note the electron's starting frequency; Larmor's power and the radiation reaction in Landau and Lifshitz's closed form make it chirp sharp as it cools until its pitch angle leaves the bottle; the bounce as a waveguide's Doppler vibrato or an antenna ring's Schott harmonics; collisions with the gas on the mod wheel, each a jump or the end; krypton-83m's line, tritium's β spectrum or any energy to 300 keV; Phase II's field, trap, waveguide and noise |
 | ✅ | [ABRACADABRA](abracadabra/) | the axion dark-matter search as a keyboard: every key a universe whose axion has the key's mass (its frequency in kHz the note in Hz), heard through ABRACADABRA-10 cm's toroid, pickup loop and SQUID; the Standard Halo Model's waves make each tone a millionth-wide line whose amplitude swells and fades over its coherence time; the coupling decides whether you hear it over the SQUID's noise; a cold stream, a hot halo, a meter-scale toroid |
+| ✅ | [TESS](tess/) | a planet crossing its star as NASA's Transiting Exoplanet Survey Satellite sees it: every key a planet whose year, sped up 38 million times, is its note, and the star's light the waveform; the limb-darkened disc's dip (ring by ring, Claret's TESS-band coefficients), Kepler's third law setting how much of its year it spends in front (low keys buzz, high keys are round); the impact parameter on the mod wheel; TESS's photon, read and zodiacal noise at the star's magnitude, velocity its brightness; π Mensae c, LHS 3844 b, TOI-700 d and WD 1856+534 b on A4 |
 
 ✅ playable · 🛠 in the workshop ([build briefs](docs/WORKSHOP.md)). Each instrument's README has its equations,
 numbers, sources, and a list of what is simplified. The same notes open on

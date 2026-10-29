@@ -15,6 +15,7 @@ import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
 import { connectQuality, qualityControl } from '../../shared/quality.js';
+import { dress, faceOf } from '../../shared/faces.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'blackhole-keyboard/params/v1';
@@ -157,7 +158,7 @@ function buildControls() {
     const det = document.createElement('details');
     det.className = 'group'; det.open = g.open ?? true; // (the tuning's starts closed)
     det.innerHTML = `<summary>${g.title}</summary>`;
-    for (const p of g.params) {
+    for (const p of [...g.params].sort((a, b) => !!faceOf(b) - !!faceOf(a))) { // faces first (shared/faces.js)
       const wrap = document.createElement('div');
       wrap.className = 'param';
       if (p.strip) wrap.dataset.perform = ''; // in the strip above the keys (shared/layout.js)
@@ -185,7 +186,8 @@ function buildControls() {
       }
       if (p.hint) { const h = document.createElement('div'); h.className = 'hint'; h.textContent = p.hint; wrap.appendChild(h); }
       det.appendChild(wrap);
-      controls.set(p.id, { p, input, val, wrap });
+      const face = dress(wrap, p, input, { reset: () => setParam(p.id, p.def), toSlider });
+      controls.set(p.id, { p, input, val, wrap, face });
     }
     $('#groups').appendChild(det);
   }
@@ -202,9 +204,9 @@ function buildControls() {
 function refreshControl(id, dragging = false) {
   const c = controls.get(id);
   if (!c) return;
-  if (c.p.type === 'select') c.input.value = P[id];
+  if (c.p.type === 'select') { c.input.value = P[id]; c.face?.show(); }
   else if (c.p.type === 'checkbox') c.input.checked = !!P[id];
-  else { if (!dragging) c.input.value = toSlider(c.p, P[id]); c.val.textContent = c.p.fmt ? c.p.fmt(P[id]) : String(P[id]); }
+  else { if (!dragging) c.input.value = toSlider(c.p, P[id]); c.val.textContent = c.p.fmt ? c.p.fmt(P[id]) : String(P[id]); c.face?.show(); }
 }
 function refreshVisibility() { for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(P) : false; }
 function setAll(np) {

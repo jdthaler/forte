@@ -16,7 +16,7 @@ import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
 import { connectQuality, qualityControl } from '../../shared/quality.js';
-import { rotaryKnob } from '../../shared/faces.js';
+import { dress, faceOf } from '../../shared/faces.js';
 
 const $ = (s) => document.querySelector(s);
 const [KEY_LO, KEY_HI] = INSTRUMENT.range;
@@ -220,12 +220,11 @@ function buildControls() {
     det.className = 'group';
     det.open = ['tine', 'bar', 'pickup'].includes(g.id);
     det.innerHTML = `<summary>${g.title}</summary>`;
-    for (const p of [...g.params].sort((a, b) => !!b.face - !!a.face)) { // faces first (shared/faces.js)
+    for (const p of [...g.params].sort((a, b) => !!faceOf(b) - !!faceOf(a))) { // faces first (shared/faces.js)
       const wrap = document.createElement('div');
       wrap.className = 'param';
       if (p.strip) wrap.dataset.perform = ''; // in the strip above the keys (shared/layout.js)
-      if (p.face) wrap.dataset.face = p.face;
-      let input, knob = null;
+      let input;
       if (p.type === 'select') { // the venue and the tuning's choices: the option's own value (a number, for the pitch)
         wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;
         input = document.createElement('select');
@@ -240,10 +239,10 @@ function buildControls() {
         input.addEventListener('dblclick', () => setParam(p.id, p.def));
       }
       wrap.appendChild(input);
-      if (p.face === 'knob') { knob = rotaryKnob(input, () => setParam(p.id, p.def), p.min < 0 && p.max > 0 ? toSlider(p, 0) / 1000 : 0); wrap.insertBefore(knob.el, wrap.firstChild); }
+      const face = dress(wrap, p, input, { reset: () => setParam(p.id, p.def), toSlider });
       if (p.hint) { const h = document.createElement('div'); h.className = 'hint'; h.textContent = p.hint; wrap.appendChild(h); }
       det.appendChild(wrap);
-      controls.set(p.id, { p, input, val: wrap.querySelector('.val'), wrap, knob });
+      controls.set(p.id, { p, input, val: wrap.querySelector('.val'), wrap, face });
     }
     $('#groups').appendChild(det);
   }
@@ -261,9 +260,9 @@ function buildControls() {
 function refreshControl(id, dragging = false) {
   const c = controls.get(id);
   if (!c) return;
-  if (c.p.type === 'select') { c.input.value = P[id]; return; }
+  if (c.p.type === 'select') { c.input.value = P[id]; c.face?.show(); return; }
   if (!dragging) c.input.value = toSlider(c.p, P[id]);
-  c.knob?.show();
+  c.face?.show();
   c.val.textContent = c.p.fmt ? c.p.fmt(P[id]) : String(P[id]);
 }
 // the tuning's root and custom cents show only for a temperament that uses them
