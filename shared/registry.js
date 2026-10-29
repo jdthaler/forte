@@ -14,7 +14,7 @@
 // `plugin.ready` marks an instrument whose native port is built and released as plugins (it has
 // a native/instruments/<id>/ folder); the landing page lists those under Plugins.
 
-export const FORTE_VERSION = '0.38.0';
+export const FORTE_VERSION = '0.39.0';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
@@ -31,7 +31,7 @@ export const SECTIONS = [
 
 export const INSTRUMENTS = [
   {
-    id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.9.0', trim: 3,
+    id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.10.0', trim: 3,
     plugin: { code: 'Ribn', ready: true },
     after: 'the concert grand',
     tagline: 'Stiff strings, felt hammers and a shared bridge — then swap the strings for square bars, triangular bars or twisting ribbons.',
@@ -55,7 +55,7 @@ export const INSTRUMENTS = [
     accent: '#9fb4ff',
   },
   {
-    id: 'harmonium', name: 'Free-Reed Organ', section: 'traditional', ready: true, version: '0.7.1', trim: -7,
+    id: 'harmonium', name: 'Free-Reed Organ', section: 'traditional', ready: true, version: '0.8.0', trim: -7,
     plugin: { code: 'Harm', ready: true },
     after: 'the harmonium and the accordion',
     tagline: 'Brass reeds driven by the airflow they choke; paired reeds tuned a little apart give the musette shimmer.',
@@ -63,7 +63,7 @@ export const INSTRUMENTS = [
     accent: '#ff9fb0',
   },
   {
-    id: 'vibraphone', name: 'Vibraphone', section: 'traditional', ready: true, version: '0.7.1', trim: 3,
+    id: 'vibraphone', name: 'Vibraphone', section: 'traditional', ready: true, version: '0.8.0', trim: 3,
     plugin: { code: 'Vibe', ready: true },
     after: 'the Deagan vibraharp (1927)',
     tagline: 'Undercut aluminium bars over tuned tubes, with motor-driven discs that open and close the resonators.',
@@ -71,7 +71,7 @@ export const INSTRUMENTS = [
     accent: '#5fd0c8',
   },
   {
-    id: 'carillon', name: 'Carillon', section: 'traditional', ready: true, version: '0.5.1', trim: 3.5,
+    id: 'carillon', name: 'Carillon', section: 'traditional', ready: true, version: '0.5.2', trim: 3.5,
     plugin: { code: 'Carl', ready: true },
     after: 'the Flemish carillon (Hemony bells, 1650s)',
     tagline: 'Bronze bells tuned partial by partial; the note you hear, the strike note, is a virtual pitch made by partials an octave and more above it.',
@@ -79,7 +79,7 @@ export const INSTRUMENTS = [
     accent: '#d9b45f',
   },
   {
-    id: 'celesta', name: 'Celesta', section: 'traditional', ready: true, version: '0.2.0', trim: 0.5,
+    id: 'celesta', name: 'Celesta', section: 'traditional', ready: true, version: '0.3.0', trim: 0.5,
     plugin: { code: 'Cele', ready: true },
     after: 'the Mustel celesta (Paris, 1886)',
     tagline: 'Felt hammers strike thin steel bars, each over a wooden box tuned to it: the bell-like sugar-plum sound.',
@@ -111,7 +111,7 @@ export const INSTRUMENTS = [
     accent: '#7fb2ff',
   },
   {
-    id: 'organ', name: 'Tonewheel Organ', section: 'electric', ready: true, version: '0.9.1', trim: 2,
+    id: 'organ', name: 'Tonewheel Organ', section: 'electric', ready: true, version: '0.10.0', trim: 2,
     plugin: { code: 'Tonw', ready: true },
     after: 'the Hammond B-3 and Leslie',
     tagline: '91 spinning gear-driven wheels, bouncing key contacts, a scanner on an LC delay line and a rotating Doppler horn.',
@@ -119,7 +119,7 @@ export const INSTRUMENTS = [
     accent: '#f0b35a',
   },
   {
-    id: 'tines', name: 'Tine Piano', section: 'electric', ready: true, version: '0.9.1', trim: -3,
+    id: 'tines', name: 'Tine Piano', section: 'electric', ready: true, version: '0.9.2', trim: -3,
     plugin: { code: 'Tine', ready: true },
     after: 'the Fender Rhodes',
     tagline: 'Each key an asymmetric tuning fork of steel tine and brass bar, heard through a nonlinear magnetic pickup.',
@@ -135,7 +135,7 @@ export const INSTRUMENTS = [
     accent: '#e8a0c8',
   },
   {
-    id: 'clavier', name: 'Tangent Clavier', section: 'electric', ready: true, version: '0.7.1', trim: 4.5,
+    id: 'clavier', name: 'Tangent Clavier', section: 'electric', ready: true, version: '0.8.0', trim: 4.5,
     plugin: { code: 'Clav', ready: true },
     after: 'the Hohner Clavinet',
     tagline: 'A rubber tangent pins the string to an anvil; two magnetic pickups comb-filter the twang.',
@@ -151,7 +151,7 @@ export const INSTRUMENTS = [
     accent: '#ffcf70',
   },
   {
-    id: 'bowed', name: 'Viola Organista', section: 'experimental', ready: true, version: '0.8.1', trim: 3,
+    id: 'bowed', name: 'Viola Organista', section: 'experimental', ready: true, version: '0.9.0', trim: 3,
     plugin: { code: 'Viol', ready: true },
     after: "Leonardo da Vinci's design (1488)",
     tagline: 'Rosined wheels bow the strings while you hold the keys: stick–slip friction, from scratch.',
@@ -175,7 +175,7 @@ export const INSTRUMENTS = [
     accent: '#ff7a45',
   },
   {
-    id: 'arc', name: 'Singing Arc', section: 'experimental', ready: true, version: '0.6.1', trim: 7,
+    id: 'arc', name: 'Singing Arc', section: 'experimental', ready: true, version: '0.7.0', trim: 7,
     plugin: { code: 'SArc', ready: true },
     after: "William Duddell's singing arc (1900)",
     tagline: 'An electric arc lamp that sings: its negative resistance drives an LC circuit, and the arc itself is the loudspeaker.',
@@ -183,7 +183,7 @@ export const INSTRUMENTS = [
     accent: '#ffe36b',
   },
   {
-    id: 'huygens', name: 'Huygens Keyboard', section: 'phenomena', ready: true, version: '0.8.1', trim: 9.5,
+    id: 'huygens', name: 'Huygens Keyboard', section: 'phenomena', ready: true, version: '0.9.0', trim: 9.5,
     plugin: { code: 'Huyg', ready: true },
     tagline: 'Relaxation oscillators that pull each other into just intonation — Arnold tongues you can play.',
     physics: 'Pulse-coupled oscillators · mode locking',
@@ -197,14 +197,14 @@ export const INSTRUMENTS = [
     accent: '#e6c15a',
   },
   {
-    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'phenomena', ready: true, version: '0.8.1', trim: 14,
+    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'phenomena', ready: true, version: '0.8.2', trim: 14,
     plugin: { code: 'BHol', ready: true },
     tagline: 'Every key a Kerr black hole, ringing in quasinormal modes computed from the Teukolsky equation.',
     physics: 'General relativity · quasinormal modes',
     accent: '#b18cff',
   },
   {
-    id: 'quantum', name: 'Quantum Keyboard', section: 'phenomena', ready: true, version: '0.7.1', trim: 9.5,
+    id: 'quantum', name: 'Quantum Keyboard', section: 'phenomena', ready: true, version: '0.8.0', trim: 9.5,
     plugin: { code: 'Qntm', ready: true },
     tagline: 'Each key a wavepacket in a potential well: notes that collapse, return an octave up as the packet splits, and revive on the beat.',
     physics: 'Schrödinger equation · quantum revivals',
@@ -225,7 +225,7 @@ export const INSTRUMENTS = [
     accent: '#c0c0d8',
   },
   {
-    id: 'stars', name: 'Star Keyboard', section: 'phenomena', ready: true, version: '0.5.1', trim: 7,
+    id: 'stars', name: 'Star Keyboard', section: 'phenomena', ready: true, version: '0.5.2', trim: 7,
     plugin: { code: 'Star', ready: true },
     tagline: 'Every key a star whose oscillations are rung continuously by convection, from dwarfs like the Sun to red giants: combs of modes that breathe rather than strike.',
     physics: 'Asteroseismology · stochastically driven modes',
@@ -239,28 +239,28 @@ export const INSTRUMENTS = [
     accent: '#a8e6a1',
   },
   {
-    id: 'ring', name: 'Storage Ring', section: 'devices', ready: true, version: '0.3.1', trim: -0.5,
+    id: 'ring', name: 'Storage Ring', section: 'devices', ready: true, version: '0.4.0', trim: -0.5,
     plugin: { code: 'Stor', ready: true },
     tagline: 'Every key a particle accelerator\'s storage ring, heard through a beam pickup: kicked bunches whose oscillation fades and recoheres.',
     physics: 'Accelerator physics · betatron decoherence · synchrotron motion',
     accent: '#6ec6ff',
   },
   {
-    id: 'cavity', name: 'RF Cavity Bells', section: 'devices', ready: true, version: '0.2.1', trim: 4,
+    id: 'cavity', name: 'RF Cavity Bells', section: 'devices', ready: true, version: '0.3.0', trim: 4,
     plugin: { code: 'Rfca', ready: true },
     tagline: 'Every key a superconducting accelerator cavity, rung by the bunch that crosses it: nine coupled cells that beat, higher-order modes for a bell\'s partials.',
     physics: 'RF cavities · coupled-cell passbands · beam loading',
     accent: '#9fb4ff',
   },
   {
-    id: 'showers', name: 'Collider Showers', section: 'devices', ready: true, version: '0.1.1', trim: 4,
+    id: 'showers', name: 'Collider Showers', section: 'devices', ready: true, version: '0.2.0', trim: 4,
     plugin: { code: 'Shwr', ready: true },
     tagline: 'Every key a crystal of a collider\'s calorimeter, rung by the heat of the particle shower inside it: deeper showers for higher energies, a darker note.',
     physics: 'Calorimetry · electromagnetic and hadronic showers · the thermo-acoustic effect',
     accent: '#8fd4ff',
   },
   {
-    id: 'whistlers', name: 'Whistlers', section: 'phenomena', ready: true, version: '0.1.1', trim: 4.5,
+    id: 'whistlers', name: 'Whistlers', section: 'phenomena', ready: true, version: '0.2.0', trim: 4.5,
     plugin: { code: 'Whis', ready: true },
     tagline: 'Lightning\'s radio crack, drawn out along the Earth\'s magnetic field into falling tones: every key a field line, its whistler\'s nose the note.',
     physics: 'Magnetospheric physics · whistler-mode dispersion · the plasmasphere',
@@ -274,14 +274,14 @@ export const INSTRUMENTS = [
     accent: '#ff9a62',
   },
   {
-    id: 'project8', name: 'Project 8', section: 'devices', ready: true, version: '0.1.0', trim: -2,
+    id: 'project8', name: 'Project 8', section: 'devices', ready: true, version: '0.2.0', trim: -2,
     plugin: { code: 'Proj', ready: true },
     tagline: 'Every key a magnetic trap holding one electron, heard by its cyclotron radiation as the Project 8 neutrino-mass experiment hears it: a tone that chirps up as the electron cools, wavers as it bounces, and stops when it escapes.',
     physics: 'Cyclotron radiation emission spectroscopy · relativistic radiation reaction · magnetic bottles',
     accent: '#c99bff',
   },
   {
-    id: 'abracadabra', name: 'ABRACADABRA', section: 'devices', ready: true, version: '0.1.0', trim: 3,
+    id: 'abracadabra', name: 'ABRACADABRA', section: 'devices', ready: true, version: '0.2.0', trim: 3,
     plugin: { code: 'Abra', ready: true },
     tagline: 'Every key a universe whose dark matter is an axion of that key\'s mass, heard as the ABRACADABRA experiment would hear it: a toroidal magnet turns the axion into a faint flux through a pickup loop, a tone that swells and fades as the halo\'s waves drift in and out of step, over the hiss of the SQUID.',
     physics: 'Axion electrodynamics · the Standard Halo Model · SQUID readout',

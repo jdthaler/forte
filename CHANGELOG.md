@@ -16,6 +16,116 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-29 — controls drawn as hardware; a picture for every shared link; more room for the views on a phone held sideways; Project 8's perfect vacuum and more electrons; fixes from a review of the whole site; TESS
+
+### Forte 0.39.0
+- **Every slider is a fader:** a ribbed cap in a slot over a scale of tenths, the slot lit from its left end to the cap so the setting reads at a glance. Every checkbox in the Controls panel is a button whose lamp lights.
+- **Output is a small console on every page:** Venue is a five-position selector knob (Studio, Room, Recital, Hall, Cathedral) and Room an amp knob.
+- **The pedals look like pedals:** Sustain and Hold above the keys, and the pedal switches beside them, show a brass pedal that goes down when held.
+- **Three new faces an instrument can give a control** (`face` in its parameters, `shared/faces.js`): a rotary selector for a short dropdown, a lab dial (a knurled knob over a printed scale, its value in a readout) for a slider, and a toggle switch with a pilot lamp for a checkbox; and a bank of rocker tabs for a dropdown.
+- **A shared link shows the instrument:** a link to any instrument's page now shows, in Messages, Slack and social sites, a picture of the page playing a chord, with the instrument's name and tagline; a link to the front page shows sixteen of them under Forte's name. `tools/make-previews.mjs` makes the pictures and writes the tags, and the tests check every page has them.
+- **The views get more of a phone held sideways:** the keys are a third shorter there (24 % of the screen's height, not 36 %), the header and the keyboard bar are slimmer, and in Perform Discover | Perform floats over the views as on a desktop. At 750×340 the first view shows 102 px as the page opens in Discover (40 before) and 149 px in Perform (42 before).
+- **Long readouts wrap in their column:** a value such as the Celesta's "2.50 mm at C4 → 2.00 mm at C8" ran into the next column's controls; a long one now wraps within its share of the row, and a short one never does.
+- **The views come first for the keyboard too:** Tab reaches the views' bar before the controls, in the order they are on screen. The pedal and Latch buttons tell a screen reader whether they are on.
+- **The octaves' names on the white keys are easier to read:** darker and a little larger (contrast 2.9 : 1 before, about 5 : 1 now). The front page's tab counts are a little brighter too.
+- **How it works no longer opens with the README's line for GitHub** ("Part of Forte. Play it at …").
+- **About Forte describes the page as it is now:** the presets in the controls' bar, and Perform showing the views you choose.
+- **The front page's words caught up with the instruments:** the Phenomena blurb names the springs and the wind harp, the Devices blurb the axion search, and the experiments from history "came and went".
+- **A page for a wrong address:** a mistyped address shows Forte's own page, listing every instrument.
+
+### Ribbon Piano 0.10.0
+- **Una corda above the keys is drawn as a pedal.**
+- **Volume reads in dB and Room in %, as on every other page** (0.80 is −1.9 dB); the computer keys' hammer speed is called Velocity, as on the Electric Grand. The plugins show the same text.
+
+### Free-Reed Organ 0.8.0
+- **The Expression stop is a drawknob among the stops,** as a harmonium's is.
+
+### Vibraphone 0.8.0
+- **The motor box:** the Motor is a switch knob (Run, discs open, discs closed) and the shaft speed an amp knob. The pedal above the keys is drawn as a pedal.
+
+### Carillon 0.5.2
+- **No Sustain button:** a carillon has no dampers, so the button did nothing; Space and the sustain pedal still change nothing.
+
+### Celesta 0.3.0
+- **The pedal above the keys is drawn as a pedal.**
+
+### Tonewheel Organ 0.10.0
+- **The console as the B-3 has it:** the percussion switches are four ivory tilt tabs with both legends (On/Off, Soft/Normal, Fast/Slow, Third/Second); the vibrato is the six-position V1–C3 knob with its on tab; the Leslie is the half-moon switch (slow, stop, fast) with a tab that bypasses it; the generator's motor is a Run switch.
+- **Volume reads in dB and Room in %, as on every other page.** The plugins show the same text.
+
+### Tine Piano 0.9.2
+- **Its knobs, faders and the Output console come from Forte's shared faces,** as on every other page.
+- **Volume reads in dB and Room in %, as on every other page;** the computer keys' hammer speed is called Velocity. The plugins show the same text.
+
+### Tangent Clavier 0.8.0
+- **The pickup selector is a bank of rocker tabs** (A, B, A+B, A−B) beside the tone tabs, one down at a time.
+
+### Viola Organista 0.9.0
+- **Dampers lifted, above the keys, is drawn as a pedal.**
+
+### Singing Arc 0.7.0
+- **The arc current is a rheostat dial;** the talking arc's microphone level a knob.
+
+### Huygens Keyboard 0.9.0
+- **The bench supply:** the supply voltage is a lab dial and the pitch-hold servo a toggle switch.
+- **Volume reads in dB and Room in %, as on every other page.** The plugins show the same text.
+
+### Black-Hole Keyboard 0.8.2
+- **Its faders, lamp buttons and the Output console come from Forte's shared faces,** as on every other page.
+- **Volume reads in dB and Room in %, as on every other page.** The plugins show the same text.
+
+### Quantum Keyboard 0.8.0
+- **The detector is a selector knob** (electrode, coil, antenna); the coherent restrike and the tempo lock are toggle switches.
+
+### Star Keyboard 0.5.2
+- **Its tagline says what it plays:** stars from dwarfs like the Sun to red giants, not only Sun-like ones.
+
+### Storage Ring 0.4.0
+- **The control room's knobs:** the pickup is a selector, the betatron tune and the synchrotron frequency lab dials.
+
+### RF Cavity Bells 0.3.0
+- **The RF rack:** the probes are a selector, the beam current and the input coupler lab dials.
+
+### Collider Showers 0.2.0
+- **The test beam's settings:** the particle and the sensor are selectors, the particle energy a lab dial.
+
+### Whistlers 0.2.0
+- **The VLF receiver's panel:** the receiver is a selector knob (far end, near) and the real travel time a toggle switch.
+
+### Project 8 0.2.0
+- **The rack:** the source and the receiver are selectors, the magnetic field a lab dial.
+- **A perfect vacuum is one:** the gas's lowest setting is now no gas at all (the slider says
+  "none"), so the "Perfect vacuum, quiet amplifier" preset no longer has collisions. At
+  10⁻¹¹ mbar there was still one every 40 s or so, enough to nudge one note in a few.
+- **More electrons at once:** High Quality now plays up to 48 (it was 24); Medium and Low stay
+  at 16 and 10.
+
+### ABRACADABRA 0.2.0
+- **The toroid's supply:** the magnetic field is a lab dial.
+
+### TESS 0.1.0
+- New instrument: every key a planet crossing its star, heard as NASA's Transiting Exoplanet
+  Survey Satellite sees it, by the star's light, A0–C8. The light is sped up until the planet's
+  year is the key's note (a one-day year plays A4 at the default speed-up of 38 million), so each
+  transit is one cycle of the waveform and the dip's shape is the timbre.
+- **The transit:** the light a dark disc blocks from a limb-darkened star (quadratic limb
+  darkening, Claret 2017's TESS-band coefficients by temperature), integrated ring by ring and
+  checked against Mandel and Agol's uniform-star overlap; Kepler's third law sets each key's
+  orbit from the star's mass, so low keys (far, short dips) buzz and high keys (close, long
+  dips) are round. The impact parameter is on the mod wheel: toward the star's edge the dips
+  get shorter and shallower, V-shaped, until the planet misses.
+- **TESS's noise:** photon counting from the star's TESS magnitude (Sullivan et al. 2015's
+  photon rate, collecting area, read noise and zodiacal light, and the 60 ppm-in-an-hour
+  floor), heard at the speed-up. Velocity is the star's brightness: a harder key's dips stand
+  clearer of the hiss.
+- Presets from TESS's discoveries, each planet's own year on A4: π Mensae c, LHS 3844 b,
+  TOI-700 d, WD 1856+534 b; and the Earth and the Sun. Eight demos. The page draws the star with
+  its planets crossing it, the light curve with a simulated sector of TESS's two-minute data and
+  whether TESS would find the planet, a spectrum and a spectrogram.
+- **Quality:** fewer planets at once (24 and 12, against 48) and the light curve's harmonics cut
+  at 12 or 8 kHz instead of 20 kHz.
+- The plugins (AU, VST3, CLAP) and the Forte app play it too.
+
 ## 2026-10-26 — ABRACADABRA; controls drawn as the instruments have them; the controls grouped alike on every instrument; Phenomena apart from the devices built to study them; the presets menu outlined; Project 8; only volume, velocity and pedals above the keys, in the keyboard's bar; the views above the controls, sharing the height
 
 ### Forte 0.38.0
