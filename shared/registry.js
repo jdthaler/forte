@@ -287,6 +287,13 @@ export const INSTRUMENTS = [
     physics: 'Axion electrodynamics · the Standard Halo Model · SQUID readout',
     accent: '#7fd8c4',
   },
+  {
+    id: 'tess', name: 'TESS', section: 'devices', ready: true, version: '0.1.0', trim: 7,
+    plugin: { code: 'Tess', ready: true },
+    tagline: 'Every key a planet crossing its star, its light played as NASA\'s Transiting Exoplanet Survey Satellite records it, sped up until each year is a note: the dips are the waveform, the star\'s limb darkening rounds them, and the photon noise hisses under faint stars.',
+    physics: 'Exoplanet transits · Kepler\'s third law · limb darkening · photon-counting noise',
+    accent: '#ff7b6b',
+  },
 ];
 
 // The template (docs/template/), the starting point for new instruments: not listed, but it

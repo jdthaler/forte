@@ -1,0 +1,41 @@
+{
+  "slug": "tess",
+  "params": [
+    {"id":"tmag","kind":"continuous","min":4,"max":17,"def":9,"step":0.1,"log":false},
+    {"id":"teff","kind":"continuous","min":3000,"max":7000,"def":5772,"step":1,"log":false},
+    {"id":"starMass","kind":"continuous","min":0.08,"max":3,"def":1,"step":0,"log":true},
+    {"id":"starRadius","kind":"continuous","min":0.01,"max":3,"def":1,"step":0,"log":true},
+    {"id":"planetRadius","kind":"continuous","min":0.3,"max":25,"def":11.21,"step":0,"log":true},
+    {"id":"impact","kind":"continuous","min":0,"max":1.1,"def":0.3,"step":0.001,"log":false},
+    {"id":"periodA4","kind":"continuous","min":0.05,"max":400,"def":1,"step":0,"log":true},
+    {"id":"scale","kind":"continuous","min":0.00001,"max":1,"def":0.01,"step":0,"log":true},
+    {"id":"noise","kind":"toggle","def":true},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.25,"step":0.01,"log":false},
+    {"id":"venue","kind":"choice","def":"room","options":["studio","room","recital","hall","cathedral"]},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false},
+    {"id":"pitch","kind":"choice","def":440,"options":[440,415,392,422.5,430,435,442,443,466]},
+    {"id":"temperament","kind":"choice","def":"equal","options":["equal","meantone","werckmeister","sixth","kirnberger","vallotti","young","pythagorean","just","custom"]},
+    {"id":"tuningRoot","kind":"choice","def":0,"options":[0,1,2,3,4,5,6,7,8,9,10,11]},
+    {"id":"cents1","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents2","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents3","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents4","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents5","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents6","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents7","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents8","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents9","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents10","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"A hot Jupiter round a Sun-like star","values":{}},
+    {"name":"π Mensae c: TESS's first planet (on A4)","values":{"tmag":5.1,"teff":6037,"starMass":1.094,"starRadius":1.1,"planetRadius":2.042,"impact":0.58,"periodA4":6.2679,"scale":0.0004}},
+    {"name":"LHS 3844 b: a hot rock round an M dwarf (on A4)","values":{"tmag":11.9,"teff":3036,"starMass":0.151,"starRadius":0.189,"planetRadius":1.323,"impact":0.175,"periodA4":0.46293,"scale":0.006}},
+    {"name":"TOI-700 d: an Earth in the habitable zone (on A4)","values":{"tmag":10.9,"teff":3480,"starMass":0.416,"starRadius":0.42,"planetRadius":1.19,"impact":0.39,"periodA4":37.426,"scale":0.001}},
+    {"name":"WD 1856+534 b: a giant round a white dwarf (on A4)","values":{"tmag":16.3,"teff":4710,"starMass":0.518,"starRadius":0.0131,"planetRadius":10.4,"impact":0.865,"periodA4":1.40794,"scale":0.6}},
+    {"name":"The Earth and the Sun (a year on A4)","values":{"planetRadius":1,"impact":0,"periodA4":365.256,"scale":0.00012}},
+    {"name":"Grazing: short V-shaped dips","values":{"impact":0.97,"scale":0.001}},
+    {"name":"A noiseless light curve","values":{"noise":false}}
+  ]
+}

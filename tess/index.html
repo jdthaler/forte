@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>TESS · Forte</title>
+  <meta name="description" content="Every key a planet crossing its star, its light played as NASA's Transiting Exoplanet Survey Satellite records it, sped up until each year is a note: the dips are the waveform, the star's limb darkening rounds them, and the photon noise hisses under faint stars.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="TESS · Forte">
+  <meta property="og:description" content="Every key a planet crossing its star, its light played as NASA's Transiting Exoplanet Survey Satellite records it, sped up until each year is a note: the dips are the waveform, the star's limb darkening rounds them, and the photon noise hisses under faint stars.">
+  <meta property="og:url" content="https://forte.jthaler.net/tess/">
+  <meta property="og:image" content="https://forte.jthaler.net/tess/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The TESS's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="tess">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>TESS</h1>
+      <span class="sub">every key a planet crossing its star, its light played as NASA's TESS records it, sped up until each year is a note</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="The transits">
+          <div class="card-head"><h2>The transits</h2><span class="muted" id="star-read"></span></div>
+          <canvas id="transit"></canvas>
+          <div class="caption">The star, darker toward its rim (limb darkening), and the planet of every key you hold crossing it on the same chord, slowed down: the A4 planet goes round in four seconds here, in a day in the real system, and in 1/440 of a second in the sound. Each crossing is one dip in the light, one cycle of the note.</div>
+        </div>
+        <div class="card" data-perform data-view="The light curve">
+          <div class="card-head"><h2>The light curve of <b id="focus-name">A4</b></h2><span class="muted" id="lc-read"></span></div>
+          <canvas id="lightcurve"></canvas>
+          <div class="caption">The star's light around one transit, as TESS would record it in one 27-day sector: the model (the line) and two-minute points with the star's photon noise, every transit of the sector folded on top of one another. The dip is one cycle of the note's waveform. <span id="lc-snr"></span></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the light curve's harmonics</span></div>
+          <canvas id="spectrum"></canvas>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the light curve's harmonics</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">A short dip in a long year is a sharp pulse with many harmonics: the low keys, whose planets are far out and cross their stars in a small share of the year, buzz; the high keys, close in, are round. A planet's path toward the star's edge makes shorter, shallower dips: a quieter, buzzier note.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>sustain: hold <kbd>Space</kbd> (TESS keeps watching) <b id="hold" class="off">off</b></span>
+      <span>mod wheel: the impact parameter</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/tess-main.js"></script>
+</body>
+</html>

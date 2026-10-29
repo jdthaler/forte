@@ -705,6 +705,16 @@ data):
   We found no instrument or sonification built on such a signal before
   ABRACADABRA, which plays the experiment's flux, the halo's line and the
   SQUID's noise at each key's axion.
+* **Planets as sound.** SYSTEM Sounds (Matt Russo, Dan Tamayo and others,
+  2017) sped TRAPPIST-1's planets up until their orbits were notes, a piano
+  note struck once an orbit, and ESA's 2021 animation of TOI-178's resonant
+  chain gave each planet a note at each orbit and half orbit. The transit
+  light curve itself, the signal TESS (G. R. Ricker et al., *J. Astron.
+  Telesc. Instrum. Syst.* **1**, 014003 (2015),
+  [doi:10.1117/1.JATIS.1.1.014003](https://doi.org/10.1117/1.JATIS.1.1.014003))
+  and Kepler search for, is drawn, not played; TESS plays it as the
+  waveform, each orbit one cycle, with the limb darkening and photon noise
+  that shape what the satellite records.
 * **Synchronisation and mode locking in musical oscillators.**
   B. van der Pol and J. van der Mark, "Frequency demultiplication",
   *Nature* **120**, 363–364 (1927),
