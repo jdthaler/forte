@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { INSTRUMENTS, SECTIONS, FORTE_VERSION, TEMPLATE } from '../shared/registry.js';
 import { ASSETS, notes } from '../tools/plugin-release.mjs';
+import { withTags, pictureOf } from '../tools/make-previews.mjs';
 import { readNotes, parseNote, plan, bump } from '../tools/release.mjs';
 import { compare, stateOf, contractPath, STATES } from '../tools/contract.mjs';
 import { TOUCH, SOFT_PEDAL, touch, touched, createSostenuto, wheelValue } from '../shared/midi.js';
@@ -147,6 +148,13 @@ test('every ready instrument has a page, a README and a test suite', () => {
     assert.ok(html.includes(`data-instrument="${i.id}"`), `${i.id}: data-instrument`);
     assert.ok(html.includes('../shared/nav.js'), `${i.id}: nav`);
     assert.ok(html.includes(`<title>${i.name} · Forte</title>`), `${i.id}: title`);
+  }
+});
+test('every ready instrument and the front page have a picture and the tags a shared link shows', () => {
+  for (const i of [null, ...ready]) {
+    const page = i ? `${i.id}/index.html` : 'index.html', html = read(page);
+    assert.ok(has(pictureOf(i?.id)), `${pictureOf(i?.id)} exists (node tools/make-previews.mjs ${i?.id ?? 'index'})`);
+    assert.equal(html, withTags(html, i), `${page}: its tags are up to date (node tools/make-previews.mjs --tags)`);
   }
 });
 test('every demo in examples/index.json exists', () => {
