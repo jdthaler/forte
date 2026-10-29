@@ -1,0 +1,8 @@
+/* The page's own palette and any layout beyond shared/instrument.css: TESS's red band, and the
+   gold of a Sun-like star. */
+:root {
+  --accent: #ff7b6b;
+  --accent-2: #ffd37a;
+  --accent-ink: #240a08;
+}
+#transit, #lightcurve { height: 300px; }
