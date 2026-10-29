@@ -73,3 +73,4 @@ writeFileSync(desc, readFileSync(desc, 'utf8').replace("  id: '", `  // until it
 execFileSync(process.execPath, [new URL('tools/gen-native-params.mjs', R).pathname, slug], { stdio: 'inherit' });
 console.log(`\nnext: build its WebAssembly (native/README.md: cmake --preset wasm, then cmake --build --preset wasm),`);
 console.log(`then node tools/render-reference.mjs ${slug}, node test/${slug}-tests.mjs, and open http://localhost:8765/${slug}/`);
+console.log(`and when it is ready, node tools/make-previews.mjs ${slug} for the picture and tags a shared link shows`);
