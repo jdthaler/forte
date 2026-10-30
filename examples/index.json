@@ -243,6 +243,36 @@
    "title": "Centre end and node strikes"
   }
  ],
+ "clavicylinder": [
+  {
+   "file": "01-chorale-in-f.m4a",
+   "title": "Chorale in f"
+  },
+  {
+   "file": "02-pressure-swell-and-smorzando.m4a",
+   "title": "Pressure swell and smorzando"
+  },
+  {
+   "file": "03-gentle-keys-swell-firm-keys-speak.m4a",
+   "title": "Gentle keys swell firm keys speak"
+  },
+  {
+   "file": "04-trills-and-runs.m4a",
+   "title": "Trills and runs"
+  },
+  {
+   "file": "05-cords-on-the-nodes-then-off.m4a",
+   "title": "Cords on the nodes then off"
+  },
+  {
+   "file": "06-damp-cloth-then-soaked.m4a",
+   "title": "Damp cloth then soaked"
+  },
+  {
+   "file": "07-compass-c2-to-f6.m4a",
+   "title": "Compass c2 to f6"
+  }
+ ],
  "clavier": [
   {
    "file": "01-funky-riff-in-e-minor.m4a",

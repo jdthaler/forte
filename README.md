@@ -46,6 +46,7 @@ The front page sorts them into five kinds, as here.
 |---|---|---|---|
 | ✅ | [Viola Organista](bowed/) | Leonardo da Vinci (1488) | strings bowed by a rosined wheel: implicit stick–slip friction, Helmholtz motion, live Schelleng diagram, sympathetic strings on a shared soundboard |
 | ✅ | [Glass Armonica](glass/) | Benjamin Franklin (1761) | wet-finger stick–slip on Rayleigh shell modes; split doublets warble as the bowls turn (Bryan effect); water loading |
+| ✅ | [Clavicylinder](clavicylinder/) | Ernst Chladni (1800) | iron free–free bars pressed by their keys against a turning wet glass cylinder, from Chladni's own account (1821): implicit stick–slip of a cloth pad on the glass, posts and bent ends rubbed along the lowest mode, keys regulated to the threshold linear stability gives, soaked cloth silencing the treble, cords off the nodes freeing an overtone |
 | ✅ | [Pyrophone](pyrophone/) | Frédéric Kastner (1873) | flame-driven Rijke tubes on a subcritical Hopf bifurcation: slow self-excited onsets, hysteresis, warm-up drift |
 | ✅ | [Singing Arc](arc/) | William Duddell (1900) | Ayrton's falling arc characteristic with a Mayr-type thermal column driving Duddell's tuned circuit: each note grows at the rate a linear analysis gives and sounds about 1 % below Kelvin's formula; a floor from the hot carbons holds the first kind, a higher re-strike voltage the second; capacitors in parallel on one arc, several lamps, hiss, Simon's talking arc; the arc radiates as a thermophone, ∝ dP/dt |
 

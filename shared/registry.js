@@ -167,6 +167,14 @@ export const INSTRUMENTS = [
     accent: '#9fe7ff',
   },
   {
+    id: 'clavicylinder', name: 'Clavicylinder', section: 'experimental', ready: true, version: '0.1.0', trim: 2,
+    plugin: { code: 'Clcy', ready: true },
+    after: "Ernst Chladni's clavicylinder (1800)",
+    tagline: 'Iron bars pressed by their keys against a turning wet glass cylinder: cloth sticks and slips on the glass and keeps each bar singing as long as the key is down.',
+    physics: 'Free–free bars · friction · regulation',
+    accent: '#9fd8c4',
+  },
+  {
     id: 'pyrophone', name: 'Pyrophone', section: 'experimental', ready: true, version: '0.8.1', trim: -3.5,
     plugin: { code: 'Pyro', ready: true },
     after: "Frédéric Kastner's flame organ (1873)",
