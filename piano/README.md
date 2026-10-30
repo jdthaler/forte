@@ -130,6 +130,35 @@ The pieces that couple to the modes:
   10⁻⁵ T (a hundredth of a cent) the voice runs linear again until the next
   blow, so a held chord costs what it did; while it glides a voice costs
   about a third more. *Tension modulation* under *String* switches it off.
+* **Longitudinal modes and phantom partials** (Bank & Sujbert 2005): the
+  stretch is not the same all along the string, and it travels as
+  longitudinal waves, which ring at k·f_L with f_L = √(EA/μ)/2L, about 14–17
+  times the pitch on the steel scale (f_L/f₁ ≈ √(EA/T); A0's first is at
+  378 Hz, G1's at 704 Hz, A4's at 6.4 kHz). The longitudinal equation
+  μ ξ_tt = EA ξ_xx + (EA/2)(u_x²)_x drives mode k with the k-th cosine
+  coefficient of the strain, G_k = (1/L)∫u_x² cos(kπx/L) dx, which for sine
+  modes is Σ √(g_n g_{n+k}) q_n q_{n+k}/L over pairs k apart: each pair drives
+  it at the sum and the difference of their frequencies. Mode k responds as
+  a resonator H_k with unit gain below k·f_L, and the bridge feels the tension
+  there beyond the uniform ΔT above, ΔF = EA Σ (−1)^k (G_k − H_k): nothing far
+  below a mode (the stretch is uniform there, which is tension modulation),
+  a peak at it, the local pull of u_x(L)² above it. So between a bass note's
+  partials come the sums of pairs (f_n + f_{n+1} near the odd longitudinal
+  modes, f_n + f_{n+2} near the even ones), louder near each k·f_L and
+  growing as the square of the blow; with stiffness they fall between the
+  harmonics. The engine runs the modes below 8 kHz (up to eight), from each
+  bending family's lowest 24 partials, summed over the unison (which move
+  nearly together) and leaving out pairs that sum below a quarter of a
+  mode's frequency (24 dB down and more), with Q = 150 (the bridge takes
+  longitudinal waves far better than transverse ones). The force is heard
+  through the vertical channel, not fed back to the strings. How much of it
+  the board takes up is the model's choice, set so that a forte G1 (5 m/s)
+  has its strongest longitudinal component between 1 and 2 kHz about as
+  loud as the partials beside it, as Bank & Sujbert show for a measured G1;
+  *Longitudinal modes* scales it (off for none). They fade up the keyboard:
+  at A4 they are 55 dB under the strongest partial, and above about C7 no
+  mode is below 8 kHz. A forte bass note costs about a third more; over a
+  passage, about a fifth (`tools/bench.mjs`).
 * **Soundboard and room**: synthetic impulse responses (dense plate modes and
   a diffuse tail), applied with ConvolverNodes.
 
@@ -216,12 +245,12 @@ src/params.js             every parameter, with ranges, hints and presets
 
 ## Known simplifications / natural next steps
 
-* **No longitudinal modes.** Tension modulation gives the pitch glide, but
-  the stretch it computes only retunes the transverse modes; nothing carries
-  it to the bridge as sound. The longitudinal modes it drives, and the
-  "phantom partials" at sums of transverse frequencies, matter for the real
-  piano bass and would be the next physics to add (they also couple to
-  torsion in a ribbon).
+* **Longitudinal modes, one way.** They are driven by the transverse motion
+  and heard, but do not act back on it (Bank & Sujbert drop that too), nor
+  couple to torsion in a ribbon. Pairs are taken as for a uniform string's
+  sine modes (a tapered member's small cross terms are left out), the
+  unisons share one longitudinal force, and the board's share of it is a
+  calibration rather than a measured bridge geometry.
 * **Sympathetic strings are simpler than sounding ones.** A key that rings
   along is its unison's in-phase motion only, its lowest 16 partials below
   4 kHz, without torsion or tension modulation. Every key meets the bridge at
@@ -245,8 +274,10 @@ The Quality setting (in the controls, for phones and older computers) keeps High
 here. Medium strikes each string with fewer modes, none above 7 kHz (but every family's first
 eight, which carry the treble's tone) and none past the 80th partial, the faint top of the bass; it
 holds a smaller share of the oscillator budget, lets a dying voice go a little sooner, and gives each
-sympathetic string only its three lowest partials. Low stops at 5 kHz and the 56th partial, holds a
-third of the budget and turns the sympathetic strings off (what still rings fades as if damped). A
+sympathetic string only its three lowest partials; its longitudinal modes are the first two, from 12
+partials. Low stops at 5 kHz and the 56th partial, holds a
+third of the budget and turns the sympathetic strings and the longitudinal modes off (what still
+rings fades as if damped). A
 note keeps its pitch and level; you hear a little less sparkle in the bass and treble, and with the
 pedal down less of the halo of strings ringing along, so a pedalled note also loses a little less to
 them and sounds up to about 1.5 dB louder at Low.

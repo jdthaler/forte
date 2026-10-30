@@ -12,6 +12,11 @@ constexpr double TWO_PI = 2 * PI;
 constexpr double OUT_SCALE = 24;  // bridge velocity → full-scale audio
 constexpr double SMOOTH_T = 0.01; // s: one-pole glide of live gains and pan (no zipper noise)
 constexpr double KILL_SIGMA = 250;
+// longitudinal modes: none above LONG_FMAX (Hz); pairs summing below LONG_BELOW × the mode's
+// frequency left out (≥ 24 dB down); the share of the longitudinal force the board takes up,
+// set so that a forte A1's strongest phantom partials stand about 15 dB under the partials beside
+// them (Conklin 1999; Bank & Sujbert 2005)
+constexpr double LONG_FMAX = 8000, LONG_BELOW = 0.25, LONG_SHARE = 0.4, LONG_Q = 150;
 
 // ---- a voice: one key's strings --------------------------------------------------------------
 
@@ -82,6 +87,82 @@ void PianoEngine::Voice::start(PianoEngine &eng, int key_, const VoiceData &d, i
   damperSigma = eng.P[p::damper];
   computeDamped();
   setPan(eng, true);
+  startLong(eng, d);
+}
+
+// The longitudinal modes this voice runs, from its kept partials (after start's arrays).
+void PianoEngine::Voice::startLong(const PianoEngine &eng, const VoiceData &d) {
+  nSlot = nLong = 0;
+  const int M = eng.longPartials(), K = eng.longModes();
+  if (M == 0 || K == 0 || !(d.fL > 0) || !(d.kc > 0)) return;
+  // a slot per bending family and partial below M, holding its mode in every unison
+  std::array<int, LONG_SLOTS> slotOf;
+  slotOf.fill(-1);
+  std::array<std::array<int16_t, 3>, LONG_SLOTS> at;
+  for (auto &a : at) a.fill(-1);
+  for (int i = 0; i < N; i++) {
+    const int j = (int)perm[i], f = d.famId[j], n = d.idx[j];
+    if (f < 2 && n < M) at[f * LONG_PARTIALS + n][d.uni[j]] = (int16_t)i;
+  }
+  const auto complete = [&](int s) { for (int u = 0; u < nu; u++) if (at[s][u] < 0) return false; return true; };
+  const double fMax = std::min(LONG_FMAX, 0.45 / k);
+  const auto slot = [&](int s) {
+    if (slotOf[s] < 0) { slotOf[s] = nSlot; slotAt[nSlot] = at[s]; nSlot++; }
+    return slotOf[s];
+  };
+  int np = 0;
+  for (int kk = 1; kk <= K; kk++) {
+    const double fk = kk * d.fL;
+    if (fk > fMax) break;
+    pairsOf[nLong] = np;
+    for (int f = 0; f < 2; f++)
+      for (int n = 0; n + kk < M; n++) {
+        const int a = f * LONG_PARTIALS + n, b = a + kk;
+        if (!complete(a) || !complete(b)) continue;
+        const int ia = at[a][0], ib = at[b][0];
+        const double sum = (om[ia] + om[ib]) / TWO_PI;
+        // far below the mode the stretch is uniform (that is tension modulation): G − H vanishes
+        // as (f/fk)²; above fMax nothing is heard
+        if (sum < LONG_BELOW * fk || sum > fMax) continue;
+        pairA[np] = (uint8_t)slot(a); pairB[np] = (uint8_t)slot(b);
+        pairC[np] = std::sqrt(gw[ia] * gw[ib]);
+        np++;
+      }
+    // its loss: Q = LONG_Q (the bridge takes a longitudinal wave far better than a transverse one)
+    const double w0 = TWO_PI * fk, sg = w0 / (2 * LONG_Q), r = std::exp(-sg * k), wd = std::sqrt(std::max(w0 * w0 - sg * sg, 1e-6));
+    LongMode &m = lm[nLong];
+    m.a1 = 2 * r * std::cos(wd * k); m.a2 = r * r;
+    m.b = 1 - m.a1 + m.a2; // unit gain far below the mode
+    m.sign = kk % 2 ? -1 : 1;
+    m.h0 = m.h1 = 0;
+    nLong++;
+  }
+  pairsOf[nLong] = np;
+  if (np == 0) { nSlot = nLong = 0; return; }
+  // the unisons move nearly together: each string's share of the pairs is 1/ν² of the summed
+  // amplitudes', so ν strings give 1/ν; ΔF = 2kc·Σ(…), as a bridge velocity like nsv's
+  // (√G_v × force), a share LONG_SHARE of it taken by the board
+  longGain = LONG_SHARE * std::sqrt(BRIDGE_G * eng.P[p::bridge]) * 2 * d.kc / nu;
+}
+
+// One sample of the longitudinal modes from the newest amplitudes: the force they put on the
+// bridge, as a bridge velocity.
+double PianoEngine::Voice::longStep(const double *qn) {
+  for (int s = 0; s < nSlot; s++) {
+    double x = 0;
+    for (int u = 0; u < nu; u++) x += qn[slotAt[s][u]];
+    slotQ[s] = x;
+  }
+  double F = 0;
+  for (int m = 0; m < nLong; m++) {
+    double G = 0;
+    for (int i = pairsOf[m]; i < pairsOf[m + 1]; i++) G += pairC[i] * slotQ[pairA[i]] * slotQ[pairB[i]];
+    LongMode &l = lm[m];
+    const double h = l.a1 * l.h0 - l.a2 * l.h1 + l.b * G;
+    F += l.sign * (G - l.h0);
+    l.h1 = l.h0; l.h0 = h;
+  }
+  return longGain * F;
 }
 
 void PianoEngine::Voice::computeDamped() {
@@ -131,6 +212,7 @@ void PianoEngine::Voice::strike(double v, bool unaCorda) {
   dPrev = -1;
   hammerOn = true;
   stretched = true;
+  longRinging = nLong > 0;
   hammerSamples = 0;
   contact = false;
   contactSamples = 0;
@@ -182,6 +264,8 @@ void PianoEngine::Voice::render(float *L, float *R, int n, PianoEngine &eng) {
   // δT is held below T/10: the first-order a₁ (slope θ sin θ, θ = ωk) then stays stable up to 0.45 fs
   const double kcG = kcGain, dTmax = 0.1 * Tt, dTmin = 1e-5 * Tt;
   if (!kc) dT[0] = dT[1] = dT[2] = 0;
+  const double lg = longRinging ? eng.P[p::longi] : 0;
+  double lMax = 0;
   for (int s = 0; s < n; s++) {
     double nsv = 0, nsh = 0, nst = 0;
     if (!hammerOn && kc) {
@@ -277,10 +361,12 @@ void PianoEngine::Voice::render(float *L, float *R, int n, PianoEngine &eng) {
         eng.post(m);
       }
     }
+    double yl = 0;
+    if (lg != 0) { yl = lg * longStep(qb); lMax = std::max(lMax, std::fabs(yl)); }
     double *t = qa; qa = qb; qb = t;
     svl = nsv; shl = nsh;
     bv[s + 1] = nsv; bh[s + 1] = nsh;
-    const double y = oV * (GV[s] * nsv + GT[s] * nst) + oH * GH[s] * nsh;
+    const double y = oV * (GV[s] * (nsv + yl) + GT[s] * nst) + oH * GH[s] * nsh;
     if (moving) { pl += (tl - pl) * aS; pr += (tr - pr) * aS; }
     L[s] += pl * y;
     R[s] += pr * y;
@@ -289,6 +375,11 @@ void PianoEngine::Voice::render(float *L, float *R, int n, PianoEngine &eng) {
   }
   q = qa; q1 = qb;
   sv = svl; sh = shl;
+  // once the longitudinal force has fallen 140 dB under full scale it only shrinks: stop it
+  if (lg != 0 && !hammerOn && lMax * oV < 1e-7) {
+    longRinging = false;
+    for (int m = 0; m < nLong; m++) lm[m].h0 = lm[m].h1 = 0;
+  }
   if (moving) {
     if (std::fabs(tl - pl) + std::fabs(tr - pr) < 1e-7) { pl = tl; pr = tr; panMoving = false; }
     panL = pl; panR = pr;
