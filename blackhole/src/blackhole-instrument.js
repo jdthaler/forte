@@ -18,6 +18,7 @@ export const INSTRUMENT = {
   mpe: { slide: true },                       // MPE: a note's slide is its own hole's spin, at the merger (no bend)
   midiVelocity: (v) => v ** 1.5,              // MIDI velocity / 127 → the engine's
   keyVelocity: 1,                             // the velocity the computer keys play (no velocity parameter)
+  faders: ['massRatio', 'inclination', 'overtones', 'tone', 'spinU'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine, in C++ (native/instruments/blackhole), built as WebAssembly: it builds each key's
   // voice (its modes, and chirp) from the QNM table and the parameters as the note starts
   wasm: { name: 'BlackholeWasmEngine', module: new URL('./blackhole-wasm.js', import.meta.url).href, binary: new URL('../wasm/blackhole.wasm', import.meta.url).href },

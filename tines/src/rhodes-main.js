@@ -11,7 +11,7 @@ import { createChain } from '../../shared/chain.js';
 import { MotionView, PickupView, SpectrumView, MODE_COLORS, modeKind } from './rhodes-viz.js';
 import { SpectrogramView } from '../../shared/views.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto, pageMpe } from '../../shared/midi.js';
+import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from '../../shared/midi.js';
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
@@ -187,6 +187,7 @@ const notes = pageMpe({ post, params: () => P, groups: GROUPS }); // MPE: each n
 function initMIDI() {
   startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn') });
 }
+const ccs = controllersOf(INSTRUMENT), ccLast = {}; // the descriptor's faders and pad (and controllers)
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data, cmd = st & 0xf0, mpe = notes.midi(ev.data);
   if (mpe.own) return;
@@ -196,6 +197,7 @@ function onMIDI(ev) {
   else if (cmd === 0xb0 && d1 === 66) { for (const k of sost.set(d2 >= 64, sounding.keys())) if (!sounding.has(k)) release(k); }
   else if (cmd === 0xb0 && d1 === 67) soft = d2 >= 64;
   else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) panic();
+  else if (cmd === 0xb0) { const set = controlled(ccs, ALL_PARAMS, P, d1, d2, ccLast); if (set) { setParam(...set); tellFader(d1, ALL_PARAMS.find((q) => q.id === set[0])); } }
   else if (cmd === 0xe0) post({ type: 'bend', value: Math.max(-1, ((d2 << 7) + d1 - 8192) / 8191) }); // the tuning springs slide
 }
 

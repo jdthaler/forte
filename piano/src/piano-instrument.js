@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   controllers: { 67: 'unaCorda' }, // MIDI CC67, the soft pedal: on at 64 and above
   // noteOn's velocity is the hammer's speed in m/s; MIDI velocity / 127 → 0.25 … 6 m/s
   midiVelocity: (v) => 0.25 * 24 ** v,
+  faders: ['damper', 'sympathy', 'soundboard', 'hardness', 'strikePos'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/piano), built as WebAssembly. A note may
   // offer it its key's voice data, packed by the model on the page's thread (main.js); without
   // it, the engine builds the key itself

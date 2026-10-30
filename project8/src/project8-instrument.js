@@ -16,6 +16,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: keep the traps closed after the keys come up
   modWheel: { param: 'gas', max: 3e-6 }, // CC1: gas into the traps, up to Phase II's pressure
   mpe: { bend: 24, slide: true },       // MPE: each key's own magnet bends its field; CC74 its own gas
+  faders: ['field', 'energy', 'noise', 'depth', 'gas'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/project8), built as WebAssembly
   wasm: { name: 'Project8WasmEngine', module: new URL('./project8-wasm.js', import.meta.url).href, binary: new URL('../wasm/project8.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

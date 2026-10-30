@@ -255,10 +255,10 @@ TEST("engine: over the oscillator budget the quietest voices go, never a chord j
   CHECK(hammers >= n);
 }
 
-TEST("plugin: MIDI velocity is the hammer's speed, 0.25 … 6 m/s; CC67 is the soft pedal; no latency") {
+TEST("plugin: MIDI velocity is the hammer's speed, 0.25 … 6 m/s; CC67 is the soft pedal, then the faders; no latency") {
   const InstrumentInfo &I = forte_instrument();
   CHECK(I.midiVelocity && std::fabs(I.midiVelocity(0) - 0.25) < 1e-12 && std::fabs(I.midiVelocity(1) - 6) < 1e-12);
-  CHECK(I.controllerCount == 1 && I.controllers[0].cc == 67 && I.controllers[0].param == p::unaCorda);
+  CHECK(I.controllerCount == 6 && I.controllers[0].cc == 67 && I.controllers[0].param == p::unaCorda && I.controllers[1].cc == 107);
   CHECK(I.space == Space::sustain && I.chain.body == p::soundboard);
 }
 

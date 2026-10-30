@@ -1,5 +1,5 @@
 // smoke.cpp — a test instrument for the shared plugin (tests/plugin-tests.cpp): struck sines,
-// a pedal, a mod wheel, two parameters, a compass, a preset, and one voice at Low quality; the pitch
+// a pedal, a mod wheel, two faders, two parameters, a compass, a preset, and one voice at Low quality; the pitch
 // wheel and each note's own bend and slide (its ring time) move a sounding sine at once. It proved
 // the plugin pipeline in CI until the template was ported; it is not built as a plugin.
 
@@ -25,6 +25,7 @@ const ParamInfo kParams[kCount] = {
 const PresetValue kLong[] = {{kDecay, 6}};
 const Preset kPresets[] = {{"Long ring", kLong, 1}};
 const uint16_t kKeep[] = {kVolume};
+const Controller kFaders[] = {{107, kDecay}, {109, kFullRange}}; // a Seaboard RISE's faders 1 and 2
 
 class SmokeEngine : public Engine {
  public:
@@ -66,6 +67,7 @@ const InstrumentInfo kInfo = {
   .vst3Id = {0x46, 0x6f, 0x72, 0x74, 0x65, 0x53, 0x6d, 0x6f, 0x6b, 0x65, 0x54, 0x65, 0x73, 0x74, 0x00, 0x01},
   .params = kParams, .paramCount = kCount, .presets = kPresets, .presetCount = 1, .keep = kKeep, .keepCount = 1,
   .keyLo = 21, .keyHi = 108, .compassLo = 36, .compassHi = 96, .compass = kFullRange, .space = Space::sustain, .modWheel = kDecay, .modWheelMax = 10,
+  .controllers = kFaders, .controllerCount = 2,
   .chain = {.volume = kVolume},
   .create = [](double fs) -> Engine * { return new SmokeEngine(fs); },
 };
