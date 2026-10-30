@@ -6,7 +6,8 @@
 // the Quality choice in the header, set while audio plays), that each toggle turns its view or
 // group of controls off and on (and on the desktop, that what's turned on is still on after a
 // reload, that each bar's fold button folds its panel away and back, that the handle shares the
-// height, and that every view shows in Perform), and the front page's Listen buttons (one for
+// height, that every view shows in Perform, with the presets and More controls in the keyboard
+// bar instead of the controls' bar), and the front page's Listen buttons (one for
 // each instrument with a demo, and two in turn play).
 //
 // Usage: node tools/check-pages.mjs [--base <git ref>] [--json <file>] [filter]
@@ -184,6 +185,17 @@ async function remembered(tab) {
   await tab.locator('.forte-mode button[data-mode="perform"]').click({ timeout: 2000 }).catch(() => {});
   await tab.waitForTimeout(250);
   if (!(await tab.evaluate(SHOWN, ROWS[0][1])).every(Boolean)) out.push('Perform does not show every view turned on');
+  // and gives the views the controls' bar's room: the presets and More controls are in the keyboard bar
+  const tools = await tab.evaluate(() => ({
+    presets: !!document.querySelector('.forte-kbbar .forte-presets select')?.checkVisibility(),
+    bar: !!document.querySelector('.forte-controls-bar')?.checkVisibility(),
+  }));
+  if (!tools.presets || tools.bar) out.push(`Perform: the presets are ${tools.presets ? '' : 'not '}in the keyboard bar, and the controls' bar is ${tools.bar ? 'still shown' : 'gone'}`);
+  const more = tab.locator('.forte-kbbar .forte-fold');
+  await more.click({ timeout: 2000 }).catch(() => {});
+  await tab.waitForTimeout(150);
+  if (!((await tab.evaluate(HEIGHTS))[1] > 0)) out.push('Perform: More controls in the keyboard bar doesn\'t open the controls');
+  await more.click({ timeout: 2000 }).catch(() => {});
   return out;
 }
 
