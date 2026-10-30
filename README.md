@@ -161,8 +161,8 @@ There are two modes. **Discover** shows it all. **Perform** shows just
 the views you turned on, filling the screen, with no toggles and no text
 in them: for playing,
 or for a projector (**Full screen** fills it). The controls in the
-keyboard's bar and the presets stay where they are, and the chevron on
-the controls' bar (**More controls**) brings back the rest.
+keyboard's bar stay where they are, the presets join them, and the
+chevron beside the presets (**More controls**) brings back the rest.
 
 **The keys** fill the width at the key size you choose (− +), like
 GarageBand's: a phone shows an octave or so, a laptop most of the range.
