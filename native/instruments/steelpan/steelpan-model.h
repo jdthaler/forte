@@ -2,7 +2,8 @@
 // steel set into the pan's bowl, struck by a rubber-tipped stick. Its modes are a plate's (a
 // length × width area, simply supported), the lowest three hammered by the tuner to the
 // fundamental, the octave and the twelfth (or double octave); the dome's curvature couples
-// them (quadratic terms: a 1 : 2 : 3 internal resonance), and the steel between notes couples a
+// every mode to the pairs whose sum tone it is (quadratic terms: a ladder of internal resonances,
+// 1 + 1 → 2, 1 + 2 → 3, 2 + 2 → 4, ..., up which a hard stroke climbs), and the steel between notes couples a
 // note's modes to its neighbours' (the fourths-and-fifths layout puts shared partials side by
 // side). The skirt decides how much of each partial radiates.
 #pragma once
@@ -16,10 +17,10 @@ constexpr int KEY_LO = 33, KEY_HI = 90; // the steel band's compass, six bass to
 
 constexpr int kTuned = 3;    // fundamental (1,1), octave (2,1), third partial (1,2)
 constexpr int kModes = 12;   // the tuned three and up to nine more
-constexpr double kAmp = 0.5; // the fundamental's displacement at velocity 1 for a unit mode shape, in thicknesses
+constexpr double kAmp = 1.2; // the fundamental's displacement at velocity 1 for a unit mode shape, in thicknesses (forte: 1.3)
 constexpr double kRise = 0.05; // the quadratic coupling per thickness of dome rise: g = kRise·rise·ω₁²
-constexpr double kHarden = 0.03; // the stretching (quartic) term, γ: a few cents sharper at fortissimo
-constexpr double kWindow = 0.03; // modes of neighbouring notes closer than this (relative) are coupled
+constexpr double kHarden = 0.015; // the stretching (quartic) term, γ: a full stroke starts ~15 cents sharp
+constexpr double kWindow = 0.03; // modes (of neighbours, or a note's own combination tones) closer than this (relative) are coupled
 constexpr double kSound = 343;   // m/s
 constexpr double kRim = 0.28;    // the drum's radius (m): a 55-gallon drum is 57 cm across
 
@@ -55,11 +56,23 @@ NoteModes noteModes(int key, const double *P, double fmax = 18000);
 // Its modes' strike gains: displacement (in thicknesses) per unit velocity... times velocity.
 double strikeGain(const Mode &m, double f1, double tau);
 
-// The quadratic coupling g (per unit ω₁²) and the potential's forces on the tuned modes:
-//   V = g (x₁²x₂ + x₁x₂x₃ + x₂²x₃) + (γω₁²/4)(Σ rₚ² xₚ²)²,   rₚ = ωₚ/ω₁
-// (x in thicknesses). Writes −∂V/∂xₚ into F.
-void tunedForces(const double *x, const double *w, double g, double *F);
-double tunedPotential(const double *x, const double *w, double g);
+// The dome's quadratic couplings among a note's modes: one term c·xᵢxⱼxₖ of the potential for
+// every pair of modes (i ≤ j) whose combination tone fᵢ + fⱼ falls within kWindow of a mode k,
+// which it then drives at resonance. On a tuned note that is a ladder: 1 + 1 → 2, 1 + 2 → 3,
+// 2 + 2 → 4 (the plate's pair there), 2 + 4 and 3 + 3 → 6, ..., so a hard stroke's energy climbs
+// it. c (per unit g·ω₁²) is the stretching the pair does: it grows with the modes' slopes, as
+// √(rᵢrⱼ) + √(rⱼrₖ) + √(rᵢrₖ) on a plate (rₚ = fₚ/f₁), normalised to 1 for 1 + 1 → 2.
+struct Triple { int i, j, k; double c; };
+constexpr int kTriples = 48; // the most a note has is about 31
+// A note's triples among its first n modes, sorted by their highest mode (so the ones a note
+// ringing only its tuned three needs come first): their number.
+int noteTriples(const NoteModes &nm, Triple *out);
+// The forces of the dome's potential on the modes below n,
+//   V = g Σ c xᵢxⱼxₖ + (γω₁²/4)(Σ rₚ² xₚ²)²,   rₚ = ωₚ/ω₁
+// (x in thicknesses, g in s⁻²): adds −∂V/∂xₚ into F. Only the triples whose modes are all below n
+// may be given.
+void domeForces(const Triple *t, int nt, int n, const double *x, const double *w, double g, double *F);
+double domePotential(const Triple *t, int nt, int n, const double *x, const double *w, double g);
 
 struct Neighbour { int key; double weight; };
 // The notes beside a key on the pan: in its own ring (an octave, laid out in fourths and fifths
