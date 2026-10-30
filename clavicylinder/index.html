@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Clavicylinder · Forte</title>
+  <meta name="description" content="Iron bars pressed by their keys against a turning wet glass cylinder: cloth sticks and slips on the glass and keeps each bar singing as long as the key is down.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="Clavicylinder · Forte">
+  <meta property="og:description" content="Iron bars pressed by their keys against a turning wet glass cylinder: cloth sticks and slips on the glass and keeps each bar singing as long as the key is down.">
+  <meta property="og:url" content="https://forte.jthaler.net/clavicylinder/">
+  <meta property="og:image" content="https://forte.jthaler.net/clavicylinder/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Clavicylinder's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="clavicylinder">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Clavicylinder</h1>
+      <span class="sub">Chladni's glass cylinder and iron bars (1800): cloth on wet glass keeps each bar singing while its key is pressed</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Bar">
+          <div class="card-head"><h2>Bar <b id="focus-name">C4</b> under the glass</h2><span class="muted" id="bar-scale"></span></div>
+          <canvas id="bar"></canvas>
+          <div class="caption">The iron bar from the side, tied on cork at the nodes of its lowest mode, bending in slow motion (hugely exaggerated). Its key lifts it against the turning cylinder; the cloth on its rubbed point (a riveted post below E4, the bent-up back end above) turns green while it sticks to the glass.</div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Under the cloth</h2><span class="muted" id="contact-read"></span></div>
+          <canvas id="contact"></canvas>
+          <div class="caption">Slip speed of the glass under the cloth over the last 21 ms. Flat on zero = stuck: once the bar sings, the cloth is carried along with the glass and snaps back once a cycle.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-perform>
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the bar's bending modes</span></div>
+          <canvas id="spectrum"></canvas>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">A bar speaks within a tenth of a second or so and holds its note while the key is down. The friction's stick and slip make true harmonics of the note; the bar's own overtones (2.76, 5.40 × the note) stay quiet because the cloth is set to drive only the lowest mode.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Mode table">
+          <div class="card-head"><h2>Bending modes of <b id="focus-name-2">C4</b></h2></div>
+          <table class="modes" id="modes"></table>
+        </div>
+        <div class="card" id="info-card">
+          <div class="card-head"><h2>Bar, key and glass</h2></div>
+          <dl id="info"></dl>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows; a bar sings while its key is held</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>key pressure <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>hold notes: <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>MIDI: aftertouch presses harder, mod wheel = treadle</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/clavicylinder-main.js"></script>
+</body>
+</html>

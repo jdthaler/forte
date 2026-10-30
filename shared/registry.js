@@ -14,7 +14,7 @@
 // `plugin.ready` marks an instrument whose native port is built and released as plugins (it has
 // a native/instruments/<id>/ folder); the landing page lists those under Plugins.
 
-export const FORTE_VERSION = '0.39.0';
+export const FORTE_VERSION = '0.39.1';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
@@ -165,6 +165,14 @@ export const INSTRUMENTS = [
     tagline: 'Wet fingers on spinning glass bowls: stick–slip friction drives the shell modes, and rotation makes the doublets warble.',
     physics: 'Shell modes · friction · fluid loading',
     accent: '#9fe7ff',
+  },
+  {
+    id: 'clavicylinder', name: 'Clavicylinder', section: 'experimental', ready: true, version: '0.1.0', trim: 2,
+    plugin: { code: 'Clcy', ready: true },
+    after: "Ernst Chladni's clavicylinder (1800)",
+    tagline: 'Iron bars pressed by their keys against a turning wet glass cylinder: cloth sticks and slips on the glass and keeps each bar singing as long as the key is down.',
+    physics: 'Free–free bars · friction · regulation',
+    accent: '#9fd8c4',
   },
   {
     id: 'pyrophone', name: 'Pyrophone', section: 'experimental', ready: true, version: '0.8.1', trim: -3.5,

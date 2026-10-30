@@ -67,7 +67,7 @@ requests.
   [doi:10.1121/1.390157](https://doi.org/10.1121/1.390157). A linear
   resonator coupled to a nonlinear excitation (bow, reed, jet) by a
   reflection function: the framework behind Forte's bowed and rubbed
-  instruments (Viola Organista, Glass Armonica).
+  instruments (Viola Organista, Glass Armonica, Clavicylinder).
 * **1983 — the plucked-string algorithm.** K. Karplus and A. Strong,
   "Digital synthesis of plucked-string and drum timbres", *Computer Music
   Journal* **7**(2), 43–55 (1983),
