@@ -16,6 +16,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: the heaters keep firing after the keys come up
   modWheel: { param: 'tbase', max: 14 }, // CC1: the heat sink warms, up to 14 mK
   mpe: { bend: 48, slide: false },      // MPE: each crystal's heater pulser fires at any rate; the sink is shared
+  faders: ['energy', 'periodA4', 'bias', 'clamp', 'tbase'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/cuore), built as WebAssembly
   wasm: { name: 'CuoreWasmEngine', module: new URL('./cuore-wasm.js', import.meta.url).href, binary: new URL('../wasm/cuore.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },
