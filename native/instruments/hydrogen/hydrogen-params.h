@@ -17,7 +17,7 @@
 namespace forte::hydrogen {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { excitation, temperature, laserLevel, caseB, density, glow, window, slowmo, alphaScale, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { excitation, temperature, laserLevel, caseB, density, glow, window, slowmo, shutter, alphaScale, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -32,6 +32,7 @@ inline const char *const kChoices_window[] = {"Visible (380–750 nm, what the e
 inline const char *const kKeys_window[] = {"visible", "ultraviolet", "infrared", "all"};
 namespace window_ { enum : int { visible, ultraviolet, infrared, all }; }
 inline const FormatSegment kFormat_slowmo[] = {{kNoLimit, "", "", 1, 0, 1, false, true, false, false, false, true}};
+inline const FormatSegment kFormat_shutter[] = {{0.9999999999999999, "T₆₀ ", " s", 1, 0, 2, false, false, false, false}, {29.949999999999996, "T₆₀ ", " s", 1, 0, 1, false, false, false, false}, {kNoLimit, "Open", "", 1, 30, -1, false, false, false, false}};
 inline const FormatSegment kFormat_alphaScale[] = {{9.994999999999997, "", " × real", 1, 0, 2, false, false, false, false}, {kNoLimit, "", " × real", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
@@ -66,6 +67,7 @@ inline const ParamInfo kParams[p::count] = {
   {"glow", "Time in the glow", "The lamp", ParamKind::continuous, 5, 2000, 60, 0, true, false, nullptr, 0, kFormat_glow, 3},
   {"window", "Window", "The spectrometer", ParamKind::choice, 0, 3, 0, 1, false, true, kChoices_window, 4, nullptr, 0, kKeys_window},
   {"slowmo", "Slow motion", "The spectrometer", ParamKind::continuous, 1000000, 1000000000, 30000000, 0, true, false, nullptr, 0, kFormat_slowmo, 1},
+  {"shutter", "Shutter on release", "The spectrometer", ParamKind::continuous, 0.05, 30, 1, 0, true, true, nullptr, 0, kFormat_shutter, 3},
   {"alphaScale", "Fine-structure constant", "The spectrometer", ParamKind::continuous, 1, 40, 1, 0, true, false, nullptr, 0, kFormat_alphaScale, 2},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, false, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
