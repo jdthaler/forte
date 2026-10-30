@@ -191,6 +191,14 @@ export const INSTRUMENTS = [
     accent: '#9fd8c4',
   },
   {
+    id: 'hurdygurdy', name: 'Hurdy-Gurdy', section: 'experimental', ready: true, version: '0.1.0', trim: -2.5,
+    plugin: { code: 'Hrdy', ready: true },
+    after: 'the French vielle à roue (18th century), in G/C',
+    tagline: 'A cranked, rosined wheel bows the melody strings and the drones; turn it faster and the trompette lifts its loose bridge, the chien, which buzzes on the soundboard in time with the hand.',
+    physics: 'Friction · tangent-stopped strings · a buzzing bridge',
+    accent: '#e08a5f',
+  },
+  {
     id: 'pyrophone', name: 'Pyrophone', section: 'experimental', ready: true, version: '0.8.1', trim: -3.5,
     plugin: { code: 'Pyro', ready: true },
     after: "Frédéric Kastner's flame organ (1873)",

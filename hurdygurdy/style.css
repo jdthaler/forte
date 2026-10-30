@@ -1,0 +1,15 @@
+/* The page's own palette and any layout beyond shared/instrument.css: maple and rosin, and the
+   drones' slate blue. */
+:root {
+  --accent: #e08a5f;
+  --accent-2: #8fb3d9;
+  --accent-ink: #1e0c04;
+  --buzz: #ffcf5c;
+  --wood: #b98a57;
+}
+
+#views { grid-template-rows: minmax(250px, 1.2fr) minmax(220px, 1fr) auto; }
+#info { grid-template-columns: auto 1fr; }
+@media (max-width: 1050px) {
+  #views { grid-template-rows: auto auto auto; }
+}
