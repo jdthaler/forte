@@ -16,6 +16,48 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-30 — Hydrogen Lamp; no haze over the header in the iPhone home-screen app; Perform gives the views the presets' bar; Perform keeps the screen awake
+
+### Forte 0.40.0
+- **No haze over the header in the home-screen app on iPhone:** every page asks iOS for a solid
+  black status bar instead of a see-through one. iOS 26 blurred and dimmed the page wherever it ran
+  under a see-through status bar, about 40 points deep, which hid the instrument's name, Quality
+  and Panic. An icon added to the home screen before this keeps the old status bar until it's
+  removed and added again.
+- Bars that stick to the top while the page scrolls (the front page's kinds of instrument, the
+  Controls bar on a phone) and the "Forte was updated" warning stop below the status bar wherever
+  the page still runs under one.
+- **In Perform the presets sit beside the keys:** the presets and More controls move to the end of the bar above the keys, and the bar that held only them goes, so the views are 40–50 px taller. Where the bar above the keys stacks (a phone upright, a tablet), they share the line its volume and pedals take; where even that line is full (the Ribbon Piano's, on a phone or a tablet), they take a line of their own, about the height the old bar had. A phone held sideways keeps them where they were, a scroll down the page, since its keyboard bar is full. Discover is unchanged.
+- **Perform keeps the screen on while you play:** once the audio has started, an instrument page in Perform asks the browser to keep the screen from dimming and locking (the Screen Wake Lock: Chrome, Edge, and Safari from iOS 16.4), so a phone or tablet on a stand, or a projector, stays lit through a long note or a MIDI performance. Discover, a hidden page and stopped audio let it sleep as usual.
+
+### Hydrogen Lamp 0.1.0
+- New instrument: a tube of glowing hydrogen as a keyboard. Every key plays the tube's spectrum,
+  each line at its exact frequency ratio to Hα, with Hα on the key's note: Hβ 27/20 above it, the
+  Balmer series crowding up to a just minor seventh, the Lyman series two octaves and a fourth up,
+  the infrared series below.
+- **The atom:** every level to n = 50 and every l (1275 states, 40 425 dipole transitions), with
+  Einstein coefficients from the exact radial integrals (NIST's to the digits it gives), the 2s
+  level's two-photon decay, and the radiative cascade from level to level down to 1s.
+- **The excitation:** a discharge (van Regemorter's electron collisions from the ground state), a
+  nebula's recombination (coefficients computed from Coulomb functions in
+  `tools/hydrogen-native-table.mjs`, matching Storey & Hummer's; Case B's Balmer decrement 2.83
+  against their 2.86), or a laser into one np level. Case A or B: the Lyman lines escaping or
+  trapped.
+- **The cascade in slow motion:** a key switches the excitation on and its release off; the
+  atoms' time runs 3 × 10⁷ times slower (a knob), so the low lines light first and the high ones
+  after, and the light fades as the levels empty. A *Time in the glow* drains every level.
+- **The widths:** each line a Lorentzian as wide as its levels' lifetimes in slow motion (the
+  atoms' light as a random process), plus Doppler widths from the temperature and Stark widths
+  from the density (Holtsmark's field, set by Hβ's measured width and checked against Inglis and
+  Teller's limit); the mod wheel is the density.
+- **The spectrometer:** a window (visible, ultraviolet, infrared or every line), pitch bend as a
+  redshift (MPE: each lamp's own, and with CC74 its own density), and a what-if fine-structure
+  constant up to 40 times the real one, which splits each line into Dirac's components.
+- Views: a spectroscope (the lines at their wavelengths, in their colours, lit as they sound) and
+  the energy levels, lit by their populations, with the lines heard between them; the spectrum and
+  the spectrogram.
+- Eleven presets, eight demos, and the plugins (AU code `Hydr`).
+
 ## 2026-10-30 — front-page cards a row shorter; Clavicylinder
 
 ### Forte 0.39.1
