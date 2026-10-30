@@ -90,9 +90,9 @@ function update() {
   $('#spec-read').textContent = `${noteName(focus)}, ${RANKS[s].name.toLowerCase()}: ${R.stopped ? 'stopped, odd modes 1 : 3 : 5' : 'open, modes 1 : 2 : 3'} · Q₁ ${R.Q1.toFixed(0)}`;
   $('#pipe-key').textContent = noteName(focus);
   const o = on(P);
-  $('#pipe-info').innerHTML = RANKS.map((r, i) => `<span class="${o[i] ? '' : 'off'}">${r.name}: ${pipes[i].f.toFixed(1)} Hz, ${len(Math.max(0, pipes[i].L))} × Ø${mm(pipes[i].D)}</span>`).join('');
+  $('#pipe-info').innerHTML = RANKS.map((r, i) => (o[i] ? `<span>${r.name}: ${pipes[i].f.toFixed(1)} Hz, ${len(Math.max(0, pipes[i].L))} × Ø${mm(pipes[i].D)}</span>` : '')).join('') || '<span class="off">no rank drawn: every stopcock shut</span>';
   const c = M.cistern(P.cistern, P.rim);
-  $('#cistern-read').textContent = `full at ${P.rim.toFixed(0)} Pa: ${(c.xRim * 1000).toFixed(0)} mm of fall inside, ${(c.Vrim * 1000).toFixed(1)} L of air · the water bounces at ${c.fb.toFixed(1)} Hz`;
+  $('#cistern-read').textContent = `full at ${P.rim.toFixed(0)} Pa · ${(c.Vrim * 1000).toFixed(1)} L of air · bounces at ${c.fb.toFixed(1)} Hz`;
 }
 
 // ---- view 1: the cistern and the pumps ----------------------------------------------------------------
@@ -249,8 +249,8 @@ animate(() => {
   const Dmax = Math.max(...R.keys.flat().map((p) => p.D));
   for (let r = 0; r < 4; r++) {
     const yb = (r + 1) * band;
-    ctx.fillStyle = o[r] ? css('--text') : css('--muted'); ctx.textAlign = 'left';
-    ctx.save(); ctx.translate(10, yb - band / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.fillText(['open', 'stopped', '8ve −', '8ve +'][r], 0, 0); ctx.restore();
+    ctx.fillStyle = o[r] ? css('--text') : css('--muted'); ctx.textAlign = 'left'; ctx.font = '9px system-ui, sans-serif';
+    ctx.fillText(['open', 'stop', '8vb', '8va'][r], 2, yb - 2); ctx.font = '10px system-ui, sans-serif';
     ctx.strokeStyle = css('--grid'); ctx.beginPath(); ctx.moveTo(x0, yb); ctx.lineTo(w - 4, yb); ctx.stroke();
     for (let i = 0; i < n; i++) {
       const key = R.lo + i, p = R.keys[i][r], ph = H(p.L), pw = Math.max(1, Math.min(cw - 1, cw * (0.35 + 0.6 * (p.D / Dmax))));

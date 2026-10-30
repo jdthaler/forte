@@ -202,6 +202,17 @@ requests.
   guitar function", *J. Acoust. Soc. Am.* **68**(3), 758–766 (1980),
   [doi:10.1121/1.384814](https://doi.org/10.1121/1.384814). The top and the
   sound hole as two coupled oscillators, the Kalimba's box.
+* **The hydraulis.** Hero's *Pneumatica* I.42 and Vitruvius's *De
+  architectura* X.8 describe it; W. Walcker-Mayer, *The Roman Organ of
+  Aquincum* (1972), reconstructs the organ of AD 228, and the European
+  Cultural Centre of Delphi's [reconstruction](https://eccd.gr/en/ancient-hydraulis/)
+  the Dion organ (1st century BC). Recordings of such reconstructions are
+  sold as sample libraries (for one,
+  [Rare Sound Essence's](https://pulse.audio/product/ancient-roman-pneumatic-organ-by-rare-sound-essence/)).
+  The Hydraulis plays its wind (the head of water under the bowl, the
+  water's bounce, the pumps, the bubbles at the rim) from those
+  descriptions, with the Pipe Organ's flue pipes; its sources are in
+  `hydraulis/README.md`.
 
 ## 2. Techniques Forte uses, and where they come from
 

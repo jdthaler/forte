@@ -98,7 +98,7 @@ inline const ParamInfo kParams[p::count] = {
 
 inline const PresetValue kPreset1[] = {{p::stopped, 1}};
 inline const PresetValue kPreset2[] = {{p::open, 0}, {p::stopped, 1}};
-inline const PresetValue kPreset3[] = {{p::stopped, 1}, {p::low, 1}, {p::high, 1}, {p::effort, 0.85}};
+inline const PresetValue kPreset3[] = {{p::stopped, 1}, {p::low, 1}, {p::high, 1}, {p::effort, 0.9}};
 inline const PresetValue kPreset4[] = {{p::open, 0}, {p::low, 1}, {p::high, 1}};
 inline const PresetValue kPreset5[] = {{p::effort, 0.12}, {p::stopped, 1}, {p::low, 1}};
 inline const PresetValue kPreset6[] = {{p::effort, 0.95}};

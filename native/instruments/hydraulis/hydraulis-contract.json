@@ -40,7 +40,7 @@
     {"name":"Open rank: the bronze pipes of Dion","values":{}},
     {"name":"Open and stopped ranks together","values":{"stopped":true}},
     {"name":"Stopped rank alone: soft and hollow","values":{"open":false,"stopped":true}},
-    {"name":"All four ranks, as at Aquincum (hard pumping)","values":{"stopped":true,"low":true,"high":true,"effort":0.85}},
+    {"name":"All four ranks, as at Aquincum (hard pumping)","values":{"stopped":true,"low":true,"high":true,"effort":0.9}},
     {"name":"Stopped octaves below and above","values":{"open":false,"low":true,"high":true}},
     {"name":"Tired pumpers: the wind sags under chords","values":{"effort":0.12,"stopped":true,"low":true}},
     {"name":"Eager pumpers: a full bowl, gurgling","values":{"effort":0.95}},

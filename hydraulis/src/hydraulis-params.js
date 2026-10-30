@@ -27,8 +27,8 @@ export const GROUPS = [
     title: 'Pumps and water',
     params: [
       { id: 'effort', label: 'Pumping effort', perform: true, strip: true, min: 0, max: 1, def: 0.5, step: 0.01,
-        fmt: (v) => `${(60 / strokeTime(v)).toFixed(0)} strokes a minute from each pump`,
-        hint: 'How fast and how hard the pumpers work the levers: each stroke of a piston pushes 2 litres of air through its valve into the bowl under the water, faster the more the wind has sagged. They rest while the bowl is full. Too slow for the pipes and the wind sags under chords (all four ranks need hard pumping); fast, and the bowl stays full, air gurgling out under its rim. Mod wheel and key pressure: harder pumping.' },
+        fmt: (v) => `${(60 / strokeTime(v)).toFixed(0)} strokes a minute`,
+        hint: 'How fast and how hard the pumpers work the levers (strokes a minute from each pump): each stroke of a piston pushes 2 litres of air through its valve into the bowl under the water, faster the more the wind has sagged. They rest while the bowl is full. Too slow for the pipes and the wind sags under chords (all four ranks need hard pumping); fast, and the bowl stays full, air gurgling out under its rim. Mod wheel and key pressure: harder pumping.' },
       { id: 'pumps', label: 'Pumps', type: 'select', def: 'two', options: [['one', 'One pump (Hero)'], ['two', 'Two pumps, in turn (Vitruvius)']],
         hint: 'Hero describes one cylinder and piston; Vitruvius two, worked in turn by a rocking lever, so the strokes come twice as often for the same effort and each one is half the work of keeping up.' },
       { id: 'rim', label: 'Water over the rim (full wind)', min: 200, max: 2500, def: 700, log: true, fmt: pa,

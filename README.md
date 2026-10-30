@@ -28,6 +28,7 @@ The front page sorts them into five kinds, as here.
 | ✅ | [Celesta](celesta/) | Mustel celesta (1886) | plain steel bars solved as Timoshenko beams, each coupled through the air in the gap to a stopped wooden box tuned to it; felt hammers (Hertzian, implicit), felt dampers and a damper pedal |
 | ✅ | [Kalimba](kalimba/) | Hugh Tracey's kalimba and the mbira | spring-steel tines as clamped–supported–free beams (the length behind the bridge sets the overtones), plucked from their static deflection by a thumb that lets go slowly or fast; a box whose top and sound-hole air are two coupled oscillators (cover the hole for a wah); bottle caps that rattle once the top outruns gravity |
 | ✅ | [Steel Pan](steelpan/) | Trinidad steelpan (1940s) | note areas as plates tuned by hammering to octave and twelfth, whose domes couple their modes (a 1 : 2 : 3 internal resonance: the octave blooms on hard strokes); neighbours coupled through the steel in a fourths-and-fifths layout; the skirt's radiation; rolls |
+| ✅ | [Hydraulis](hydraulis/) | Ctesibius's water organ (3rd century BC), the organs of Dion and Aquincum | hand pumps push air through their valves into a bowl standing in water: the hydrostatic head is the wind, capped at the rim where it bubbles out (Minnaert bubbles), the water bouncing on the air shut in the bowl; slides whose holes open as overlapping circles, sprung back; the Pipe Organ's flue pipes on an ancient, nearly constant bore in four ranks, one open and three stopped |
 
 ### Electric instruments
 
