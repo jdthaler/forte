@@ -491,6 +491,40 @@
    "title": "Drifting resistors uncoupled then coupled"
   }
  ],
+ "hydrogen": [
+  {
+   "file": "01-balmer-chords.m4a",
+   "title": "Balmer chords"
+  },
+  {
+   "file": "02-the-cascade-from-12p.m4a",
+   "title": "The cascade from 12p"
+  },
+  {
+   "file": "03-discharge-then-nebula.m4a",
+   "title": "Discharge then nebula"
+  },
+  {
+   "file": "04-visible-ultraviolet-infrared.m4a",
+   "title": "Visible ultraviolet infrared"
+  },
+  {
+   "file": "05-denser-and-denser.m4a",
+   "title": "Denser and denser"
+  },
+  {
+   "file": "06-fine-structure-1x-then-12x.m4a",
+   "title": "Fine structure 1x then 12x"
+  },
+  {
+   "file": "07-redshift.m4a",
+   "title": "Redshift"
+  },
+  {
+   "file": "08-quick-then-pure.m4a",
+   "title": "Quick then pure"
+  }
+ ],
  "kalimba": [
   {
    "file": "01-two-thumbs.m4a",

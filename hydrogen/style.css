@@ -1,0 +1,9 @@
+/* The page's own palette and any layout beyond shared/instrument.css: the crimson of Hα, and the
+   blue of Hβ. */
+:root {
+  --accent: #ff5a6e;
+  --accent-2: #5ac8ff;
+  --accent-ink: #26060b;
+}
+#scope { height: 180px; }
+#levels { height: 300px; }

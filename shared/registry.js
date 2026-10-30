@@ -282,6 +282,13 @@ export const INSTRUMENTS = [
     accent: '#ff9a62',
   },
   {
+    id: 'hydrogen', name: 'Hydrogen Lamp', section: 'phenomena', ready: true, version: '0.1.0', trim: -0.5,
+    plugin: { code: 'Hydr', ready: true },
+    tagline: 'Every key a tube of glowing hydrogen, its spectral lines played at their exact ratios with the red Hα line on the note: the atoms cascade down the levels in slow motion, so the lines light one after another, each as wide as its levels\' lifetimes, the atoms\' heat and the ions\' fields make it.',
+    physics: 'Atomic physics · Einstein coefficients and the radiative cascade · recombination · Stark and Doppler broadening · fine structure',
+    accent: '#ff5a6e',
+  },
+  {
     id: 'project8', name: 'Project 8', section: 'devices', ready: true, version: '0.2.0', trim: -2,
     plugin: { code: 'Proj', ready: true },
     tagline: 'Every key a magnetic trap holding one electron, heard by its cyclotron radiation as the Project 8 neutrino-mass experiment hears it: a tone that chirps up as the electron cools, wavers as it bounces, and stops when it escapes.',
