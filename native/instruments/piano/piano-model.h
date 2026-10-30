@@ -91,7 +91,8 @@ KeyModel computeKeyModel(int m, const double *P, double fs = 48000);
 // (vertical, horizontal, torsion → sound), stretch weight g = ∫φ′² dx (a bending mode's share of
 // the string's stretch, ∫u_x² = Σ g q², and its ω²'s rise per newton of tension; 0 for torsion),
 // family, unison string and index in its family. And the string's tension T and stretch
-// stiffness kc: tension modulation, ΔT = kc·∫u_x² (kc = EA/2L for a uniform core).
+// stiffness kc: tension modulation, ΔT = kc·∫u_x² (kc = EA/2L for a uniform core); and fL, its
+// first longitudinal mode (Hz), √(EA/μ)/2L: the stretch's waves along the string.
 struct VoiceData {
   uint64_t version = 0;
   int key = 0, n = 0, unisons = 1;
@@ -101,14 +102,14 @@ struct VoiceData {
   struct { double mass, K, p, alpha; } hammer{};
   double outV = 0, outH = 0;
   bool hasDamper = true;
-  double T = 0, kc = 0;
+  double T = 0, kc = 0, fL = 0;
 };
 VoiceData buildVoiceData(const KeyModel &model, const double *P, uint64_t version = 0);
 
 // A key's voice data as numbers (what the page sends with a note to the WebAssembly engine):
-// version, key, n, unisons, hammer mass, K, p, alpha, outV, outH, hasDamper, T, kc, then freq,
-// sigma, w, cv, ch, ct, g, famId, uni, idx (n each).
-constexpr int PACK_HEAD = 13, PACK_ARRAYS = 10;
+// version, key, n, unisons, hammer mass, K, p, alpha, outV, outH, hasDamper, T, kc, fL, then
+// freq, sigma, w, cv, ch, ct, g, famId, uni, idx (n each).
+constexpr int PACK_HEAD = 14, PACK_ARRAYS = 10;
 int packVoiceData(const VoiceData &d, double *out);  // returns PACK_HEAD + PACK_ARRAYS n
 bool unpackVoiceData(const double *in, int count, VoiceData &d);
 
