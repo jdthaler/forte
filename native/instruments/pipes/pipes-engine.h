@@ -30,6 +30,7 @@
 #include "forte/background.h"
 #include "forte/engine.h"
 #include "forte/expression.h"
+#include "pipes-flue.h"
 #include "pipes-model.h"
 #include "pipes-params.h"
 
@@ -78,7 +79,7 @@ class PipeEngine : public Engine {
   static constexpr int MAX_KEYS = 20;   // keys sounding at once
   static constexpr int POOL = 40;       // voices, sounding or fading
   static constexpr int BLOCK_MAX = 1024;
-  static constexpr int NOISE_N = 16384; // the seeded table of jet turbulence
+  static constexpr int NOISE_N = FLUE_NOISE_N; // the seeded table of jet turbulence
   static constexpr int TRACE = 256;     // points in the live trace of the focused pipe
   static constexpr int FIR_N = 63;
   explicit PipeEngine(double fs, double fOS = 2000);
@@ -110,33 +111,7 @@ class PipeEngine : public Engine {
   bool useModels(const double *packed, int n);
 
   using Data = KeyData<KeyModels>;
-  struct Pipe {
-    const PipeModel *R = nullptr;
-    int rank = 0, os = 1, n = 0;
-    bool stopped = false;
-    double fsI = 0, h = 0, fsS = 0, rt = 1; // fsS: steps per second of its own time (fsI/rt); rt: pitch bend's ratio
-    std::array<double, 6 * MODES_OPEN> c{};
-    std::array<double, MODES_OPEN> x{}, v{}, om{};
-    double cv = 0, W = 0, b = 0, H = 0, y0 = 0, ib = 0, bH = 0, hA = 0, Ks = 0, Kl = 0, iSm = 0, tauK = 0, kxc = 0, flue = 0;
-    double *buf = nullptr;
-    int N = 0, mask = 0, maxD = 0, w = 0, ni = 0;
-    const double *noise = nullptr;
-    // state
-    double lp = 0, qin = 0, vm = 0, Q = 0, dp = 0, eta = 0, out = 0, foot = 0, Uj = 0;
-    bool asleep = true;
-    // the live pitch: upward zero crossings of the mouth flow's running integral through its mean
-    bool track = false;
-    double dsp = 0, mean = 0, prev = 0, t = 0, last = -1, per = 0, kMean = 0;
-    int nx = 0;
-
-    static int lineLength(double tauK); // the delay line's length for a jet transit of tauK/U_j
-    void init(PipeEngine &eng, const PipeModel *R, int rank, double *buf, double r); // r: the bend it starts at
-    void retime(double r);
-    double freq() const { return per > 0 ? fsI / per : 0; }
-    void reset();
-    double energy() const;
-    void step(double Uj, double iU, double nz);
-  };
+  using Pipe = FluePipe; // (pipes-flue.h)
 
   struct Voice {
     int key = 0;
@@ -163,7 +138,6 @@ class PipeEngine : public Engine {
   Voice *focus = nullptr;
 
  private:
-  friend struct Pipe;
   double rand();
   bool startKey(int key, double velocity, const KeyModels *models, Data::Ref ref);
   Voice *freeVoice(size_t need);

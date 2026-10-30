@@ -103,6 +103,14 @@ export const INSTRUMENTS = [
     accent: '#ffb347',
   },
   {
+    id: 'hydraulis', name: 'Hydraulis', section: 'traditional', ready: true, version: '0.1.0', trim: 11.5,
+    plugin: { code: 'Hdls', ready: true },
+    after: "Ctesibius's water organ (3rd century BC), and the organs of Dion and Aquincum",
+    tagline: 'The first keyboard: hand pumps fill a bowl standing in water, whose weight holds the wind steady, while the pump strokes and the water’s bounce still make it breathe.',
+    physics: 'Hydrostatic wind regulator · water bouncing on the air · flue pipes on slides',
+    accent: '#c9a46a',
+  },
+  {
     id: 'grand', name: 'Electric Grand', section: 'electric', ready: true, version: '0.8.1', trim: 3.5,
     plugin: { code: 'EGrd', ready: true },
     after: 'the Yamaha CP-70',
