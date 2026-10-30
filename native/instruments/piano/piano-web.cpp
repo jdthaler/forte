@@ -106,7 +106,7 @@ FORTE_EXPORT PianoEngine::Voice *piano_voice_at(PianoEngine *e, int i) { return 
 FORTE_EXPORT void piano_voice(PianoEngine *e, PianoEngine::Voice *v, double *out) {
   const double x[17] = {(double)v->key, (double)v->N, (double)v->hammerOn, (double)v->contactSamples, v->Fmax, (double)v->killing,
                         (double)(v->dead || !v->inUse), v->eta, v->etaPrev, (double)v->keyDown, (double)v->damped, v->peak, v->age,
-                        (double)(e->byKey[v->key] == v), (double)v->nLong, (double)v->pairsOf[v->nLong], (double)v->longRinging};
+                        (double)(e->byKey[v->key] == v), (double)v->lon.nMode, (double)v->lon.pairs(), (double)v->lon.ringing};
   std::copy_n(x, 17, out);
 }
 // Its state q[n], q[n−1] and the order of its modes (perm[i]: index in the voice data), N each.

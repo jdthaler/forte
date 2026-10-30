@@ -17,7 +17,7 @@
 namespace forte::grand {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { hardness, strike, damper, sympathy, scale, stringing, detune, stiffness, stretch, loss, kc, maxFreq, mount, gFrame, boardH, tilt, hRatio, kH, listen, pickH, rIn, bass, mid, treble, tremDepth, tremRate, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { hardness, strike, damper, sympathy, scale, stringing, detune, stiffness, stretch, loss, kc, longi, maxFreq, mount, gFrame, boardH, tilt, hRatio, kH, listen, pickH, rIn, bass, mid, treble, tremDepth, tremRate, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -34,6 +34,7 @@ namespace stringing_ { enum : int { cp70, grand, single }; }
 inline const FormatSegment kFormat_detune[] = {{kNoLimit, "", " ¢", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_stiffness[] = {{0, "none (ideal string)", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "×", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_loss[] = {{kNoLimit, "×", "", 1, 0, 2, false, false, false, false}};
+inline const FormatSegment kFormat_longi[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "×", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_maxFreq[] = {{kNoLimit, "", " kHz", 0.001, 0, 1, false, false, false, false}};
 inline const char *const kChoices_mount[] = {"Iron frame, no soundboard (CP-70)", "A spruce soundboard (acoustic grand)"};
 inline const char *const kKeys_mount[] = {"frame", "board"};
@@ -87,6 +88,7 @@ inline const ParamInfo kParams[p::count] = {
   {"stretch", "Stretch tuning", "Strings", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"loss", "String losses", "Strings", ParamKind::continuous, 0.25, 4, 1, 0, true, false, nullptr, 0, kFormat_loss, 1},
   {"kc", "Tension modulation (pitch glide)", "Strings", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"longi", "Longitudinal modes (phantom partials)", "Strings", ParamKind::continuous, 0, 4, 1, 0.05, false, false, nullptr, 0, kFormat_longi, 2},
   {"maxFreq", "Highest partial", "Strings", ParamKind::continuous, 3000, 16000, 10000, 0, true, false, nullptr, 0, kFormat_maxFreq, 1},
   {"mount", "Bridge mounted on", "Bridge", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_mount, 2, nullptr, 0, kKeys_mount},
   {"gFrame", "Frame admittance", "Bridge", ParamKind::continuous, 0.000001, 0.003, 0.00005, 0, true, false, nullptr, 0, kFormat_gFrame, 7},

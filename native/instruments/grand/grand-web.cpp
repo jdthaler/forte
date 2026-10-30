@@ -118,9 +118,10 @@ FORTE_EXPORT int grand_voices(GrandEngine *e) { return e->nVoices; }
 FORTE_EXPORT Voice *grand_voice(GrandEngine *e, int i) { return i >= 0 && i < e->nVoices ? e->voices[i] : nullptr; }
 FORTE_EXPORT Voice *grand_by_key(GrandEngine *e, int key) { return key >= 0 && key < 128 ? e->byKey[key] : nullptr; }
 FORTE_EXPORT void grand_voice_state(const Voice *v, double *out) {
-  const double x[21] = {(double)v->key, (double)v->active(), (double)v->killing, (double)v->dead, v->struck, (double)v->contactSamples, v->Fmax, v->eta, v->etaPrev,
-                        v->FV, v->F, (double)v->hammerOn, v->age, (double)v->N, (double)v->nV, (double)v->ns, (double)v->keyDown, (double)v->damped, v->peak, v->FH, v->v0};
-  for (int k = 0; k < 21; k++) out[k] = x[k];
+  const double x[24] = {(double)v->key, (double)v->active(), (double)v->killing, (double)v->dead, v->struck, (double)v->contactSamples, v->Fmax, v->eta, v->etaPrev,
+                        v->FV, v->F, (double)v->hammerOn, v->age, (double)v->N, (double)v->nV, (double)v->ns, (double)v->keyDown, (double)v->damped, v->peak, v->FH, v->v0,
+                        (double)v->lon.nMode, (double)v->lon.pairs(), (double)v->lon.ringing};
+  for (int k = 0; k < 24; k++) out[k] = x[k];
 }
 FORTE_EXPORT double *grand_voice_q(Voice *v) { return v->q; }
 FORTE_EXPORT double *grand_voice_q1(Voice *v) { return v->q1; }

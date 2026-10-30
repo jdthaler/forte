@@ -128,6 +128,26 @@ velocity 0.6, E2 starts 3 ¢ sharp and C4 1 ¢, and at 0.2 E2 moves 0.2 ¢
 runs linear again until the next blow; while it glides it costs about 40 %
 more. *Tension modulation* under *Strings* switches it off.
 
+**Longitudinal modes and phantom partials** (Bank & Sujbert 2005; shared with
+the Ribbon Piano, `forte/longitudinal.h`). The stretch is not the same all
+along the string: it travels as longitudinal waves, ringing at k·f_L with
+f_L = √(E A_core/μ)/2L, 14–18 times the pitch. Mode k is driven by the k-th
+cosine coefficient of y_x², which for sine modes is Σ √(gₙ gₙ₊ₖ) qₙ qₙ₊ₖ over
+partials k apart, at the sums and differences of their frequencies; with
+H_k its response (unit gain below k·f_L) the bridge feels
+ΔF = E A_core Σ (−1)ᵏ (G_k − H_k) along the string, beyond tension
+modulation's uniform pull. The piezo and the board hear it with the
+vertical force, a share of it set so that a forte G1 (5 m/s) has its
+strongest longitudinal component between 1 and 2 kHz about as loud as the
+partials beside it, as Bank & Sujbert show for a measured grand's G1. Up to
+eight modes below 8 kHz, from each polarisation's lowest 24 partials summed
+over the unison, Q = 60. So hard bass notes grow partials between their
+overtones, which grow faster than the blow: about +10 dB of share for twice
+the speed until, at the hardest blows, tension modulation pulls the partials
+off the longitudinal modes. They fade up the keyboard (A4's are 70 dB under
+its strongest partial) and stop above about C7. *Longitudinal modes* under
+*Strings* scales them (off for none). A passage costs about a fifth more.
+
 **The bridge, two polarisations, Weinreich.** The string pushes on the
 bridge with
 
@@ -378,11 +398,10 @@ tools/render-grand.mjs               node tools/render-grand.mjs → examples/gr
 
 ## Simplifications
 
-* **No longitudinal modes.** Tension modulation gives the pitch glide, but
-  its stretch only retunes the transverse modes: the longitudinal modes it
-  drives, and the phantom partials at sums of transverse frequencies, are
-  left out. With short, stiff, heavily wound strings these would matter
-  more than on a concert grand.
+* **Longitudinal modes, one way.** They are driven and heard but do not act
+  back on the strings, the unisons share one longitudinal force, and how
+  much of it the piezo takes up is a calibration on a measured grand's G1,
+  not the CP-70's bridge geometry.
 * **The frame's admittance is a guess** (5·10⁻⁵ s/kg, frequency-independent,
   real). We have found no measurement of the CP-70's bridge mobility. The
   piezo's capacitance (10 nF) and the preamp's EQ corners are typical
@@ -425,8 +444,8 @@ here. Medium strikes each string with fewer partials, none above 6 kHz (but alwa
 and none from the 80th on, stops integrating a fading top partial once it is 100 dB down (140 dB at
 High) and a dying voice a little sooner, holds the oscillators under 2400 (the page's own budget,
 which follows the measured load, still rules below that), and gives each sympathetic string only its
-three lowest partials. Low stops at 4.5 kHz and the 56th partial, holds 1400 oscillators and turns the
-sympathetic strings off (what still rings fades as if damped, and the page stops building every key's
+three lowest partials, and the longitudinal modes only the first two, from 12 partials. Low stops at 4.5 kHz and the 56th partial, holds 1400 oscillators and turns the
+sympathetic strings and the longitudinal modes off (what still rings fades as if damped, and the page stops building every key's
 strings for them). A note keeps its pitch and level and nearly all its tone; with the pedal down
 there is less of the halo of strings ringing along.
 
@@ -479,6 +498,11 @@ this page draws on directly:
   elastic string." *Q. Appl. Math.* 3(2), 157–165.
   [doi:10.1090/qam/12351](https://doi.org/10.1090/qam/12351). Tension
   modulation.
+* Bank, B. & Sujbert, L. (2005). "Generation of longitudinal vibrations in
+  piano strings: From physics to sound synthesis." *J. Acoust. Soc. Am.*
+  117, 2268–2278. [doi:10.1121/1.1868212](https://doi.org/10.1121/1.1868212).
+  The longitudinal modes and their phantom partials, and the measured G1
+  their level is set by.
 * Railsback, O. L. (1938). "Scale temperament as applied to piano tuning."
   *J. Acoust. Soc. Am.* 9, 274 (abstract).
   [doi:10.1121/1.1902056](https://doi.org/10.1121/1.1902056). The
