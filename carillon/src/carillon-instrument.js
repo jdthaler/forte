@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   range: [41, 108],
   compass: { keys: [48, 96], param: 'fullRange' }, // C3–C7, a four-octave concert carillon, until Full range opens the rest
   space: null,                          // a carillon has no dampers: no pedal to offer
+  faders: ['hardness', 'strikeHeight', 'clapMass', 'around', 'distance'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/carillon), built as WebAssembly
   wasm: { name: 'CarillonWasmEngine', module: new URL('./carillon-wasm.js', import.meta.url).href, binary: new URL('../wasm/carillon.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

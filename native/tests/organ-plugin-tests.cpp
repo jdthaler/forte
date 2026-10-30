@@ -107,6 +107,13 @@ TEST("organ plugin: the mod wheel switches the Leslie, a sustain pedal's press f
   CHECK(in.cc(11, 0) == leslie_::bypass && in.value("expression") == 0); // CC11: the expression pedal
 }
 
+TEST("organ plugin: a Seaboard RISE's faders pull the 16', 8' and 4' drawbars; its pad's X drives the amp and Y the swell") {
+  Instance in(48000);
+  in.cc(107, 0); in.cc(109, 64); in.cc(111, 127); in.cc(113, 127); in.cc(114, 0);
+  CHECK(in.value("drawbar1") == 0 && in.value("drawbar3") == 4 && in.value("drawbar4") == 8);
+  CHECK(in.value("drive") == 1 && in.value("expression") == 0);
+}
+
 TEST("organ plugin: the window's Space bar flips the Leslie") {
   Instance in(48000);
   auto bridge = (const forte::EditorBridge *)in.p->get_extension(in.p, forte::kEditorBridge);

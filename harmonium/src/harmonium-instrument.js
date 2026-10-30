@@ -18,6 +18,7 @@ export const INSTRUMENT = {
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
   modWheel: 'pressure',                 // CC1: wind pressure, from its default up to its maximum
   mpe: { bend: 12 },                    // MPE: a key's own bend stiffens its tongues alone, an octave either way (the wind is every key's: no slide)
+  faders: ['bourdon', 'principal', 'piccolo', 'pump', 'pressure'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/harmonium), built as WebAssembly
   wasm: { name: 'HarmoniumWasmEngine', module: new URL('./harmonium-wasm.js', import.meta.url).href, binary: new URL('../wasm/harmonium.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

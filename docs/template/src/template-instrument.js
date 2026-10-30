@@ -14,6 +14,7 @@ export const INSTRUMENT = {
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                     // MIDI keys: all 88, A0–C8
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
+  faders: ['t60', 'damping', 'stretch', 'mallet', 'strike'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/template), built as WebAssembly
   wasm: { name: 'TemplateWasmEngine', module: new URL('./template-wasm.js', import.meta.url).href, binary: new URL('../wasm/template.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

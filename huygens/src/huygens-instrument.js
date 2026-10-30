@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   space: 'hold',                            // Space and CC64 latch the keys
   modWheel: 'kick',                         // CC1: the pulse coupling, from its default up
   mpe: { bend: 48 },                        // MPE: a note's bend turns its lamp's resistor (the coupling is every lamp's: no slide)
+  faders: ['rSrc', 'mistune', 'body', 'tone', 'kick'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/huygens), built as WebAssembly. It tunes each
   // key itself (tuning, tonic, mistuning), or plays the frequency a note brings (huygens-wasm.js)
   wasm: { name: 'HuygensWasmEngine', module: new URL('./huygens-wasm.js', import.meta.url).href, binary: new URL('../wasm/huygens.wasm', import.meta.url).href },

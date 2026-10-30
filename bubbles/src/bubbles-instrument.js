@@ -20,6 +20,7 @@ export const INSTRUMENT = {
   // note), two octaves either way: 6 cm bubbles at the bottom (A1), under Nyquist at 44.1 kHz at the
   // top. Slide is the nozzle's own bubble rate, as the wheel sets every nozzle's.
   mpe: { bend: 24, slide: true },
+  faders: ['spread', 'depth', 'pressure', 'irregular', 'rate'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/bubbles), built as WebAssembly
   wasm: { name: 'BubbleWasmEngine', module: new URL('./bubbles-wasm.js', import.meta.url).href, binary: new URL('../wasm/bubbles.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

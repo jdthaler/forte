@@ -24,7 +24,6 @@ const shell = createShell({
   onMessage: (m) => { if (m.type === 'state') { state = m; stateAt = performance.now(); } },
   onNoteOn: (key) => { focus = key; shell.keys.focus(key); update(); },
   onParam: () => update(),
-  onCC: (cc, v) => { if (cc === 11) shell.setParam('swell', v / 127); }, // the volume pedal
 });
 
 const live = () => (state && state.key === focus && performance.now() - stateAt < 300 ? state : null);

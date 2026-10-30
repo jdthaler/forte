@@ -15,6 +15,7 @@ export const INSTRUMENT = {
   range: [21, 108],                     // MIDI keys: all 88, A0–C8
   space: 'sustain',                     // Space and CC64: the notes keep sounding after the keys are up
   modWheel: 'tilt',                     // CC1: the primordial spectrum's tilt
+  faders: ['darkMatter', 'recombination', 'neutrinos', 'baryons', 'tilt'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/universe), built as WebAssembly
   wasm: { name: 'EarlyUniverseWasmEngine', module: new URL('./universe-wasm.js', import.meta.url).href, binary: new URL('../wasm/universe.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

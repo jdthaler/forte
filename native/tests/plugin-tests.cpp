@@ -257,6 +257,20 @@ TEST("plugin: the mod wheel moves its parameter from the default (at rest) to th
   in.run(128, 128, back);
   CHECK(std::fabs(in.value("Ring time") - 1) < 1e-9);
 }
+TEST("plugin: a fader moves its parameter across the whole range, in log(value) for a log one; a toggle at 64") {
+  Instance in(48000);
+  auto fader = [&](int cc, int v) { Events ev; ev.midi(0, 0xb0, (uint8_t)cc, (uint8_t)v); in.run(128, 128, ev); };
+  fader(107, 0);
+  CHECK(std::fabs(in.value("Ring time") - 0.1) < 1e-9);
+  fader(107, 127);
+  CHECK(std::fabs(in.value("Ring time") - 10) < 1e-9);
+  fader(107, 64);
+  CHECK(std::fabs(in.value("Ring time") - 0.1 * std::pow(100.0, 64 / 127.0)) < 1e-9); // as shared/midi.js ccValue
+  fader(109, 63);
+  CHECK(in.value("Full range") == 0);
+  fader(109, 64);
+  CHECK(in.value("Full range") == 1);
+}
 TEST("plugin: state saved and loaded into a new instance, by parameter id") {
   std::string saved;
   {
