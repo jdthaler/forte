@@ -163,6 +163,8 @@ in them: for playing,
 or for a projector (**Full screen** fills it). The controls in the
 keyboard's bar stay where they are, the presets join them, and the
 chevron beside the presets (**More controls**) brings back the rest.
+Once the audio is on, Perform keeps the screen from dimming and locking
+(where the browser can: Chrome, Edge, and Safari from iOS 16.4).
 
 **The keys** fill the width at the key size you choose (− +), like
 GarageBand's: a phone shows an octave or so, a laptop most of the range.

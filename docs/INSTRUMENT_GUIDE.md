@@ -364,7 +364,8 @@ and say which in the footer help.
   chosen; on a phone, in place of the views). The card's `.card-head`,
   `.caption`, `.legend`, `.readout`, `<dl>` and `<table>` are hidden, and
   `fillText` draws nothing on their canvases (a card with
-  `data-keep-text` keeps its text). Full screen appears. The mode is the
+  `data-keep-text` keeps its text). Full screen appears, and while an
+  AudioContext runs the page holds a screen wake lock. The mode is the
   same on every page; the rest is remembered per page.
 - On phones there is no room to share: the page scrolls above the
   controls and keys, which stay put, and the Controls panel follows the
