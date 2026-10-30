@@ -68,13 +68,15 @@ class HarpsichordEngine : public Engine {
   Sympathetic sym;
   // Quality (forte/engine.h): Medium and Low sound fewer keys at once, make a string with fewer
   // partials (none above fTop() but its first sixteen, none beyond the nTop()-th), stop its fading
-  // top partials sooner, and give each sympathetic string fewer partials (Medium) or none (Low)
+  // top partials sooner, give each sympathetic string fewer partials (Medium) or none (Low), and
+  // each string fewer sideways partials (Medium) or none (Low)
   int maxVoices() const { return pick(16, 12, 8); }
   int hardVoices() const { return pick(24, 16, 10); }
   double fTop() const { return pick<double>(INFINITY, 7000, 5000); }
   int nTop() const { return pick(N_MAX, 64, 40); }
   int kept(const Partials &pt) const;
   int symModes() const { return pick(SYM_MODES, 3, 0); }
+  int sideModes() const { return pick(NZ_MAX, 8, 0); } // each string's sideways partials
 
   using Data = KeyData<KeyStrings>;
   struct Voice {

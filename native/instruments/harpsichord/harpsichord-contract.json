@@ -22,6 +22,7 @@
     {"id":"sympathy","kind":"continuous","min":0,"max":1,"def":0.25,"step":0.01,"log":false},
     {"id":"fmax","kind":"continuous","min":4,"max":16,"def":10,"step":0.5,"log":false},
     {"id":"kc","kind":"toggle","def":true},
+    {"id":"side","kind":"continuous","min":0,"max":1,"def":0.2,"step":0.01,"log":false},
     {"id":"fullRange","kind":"toggle","def":false},
     {"id":"soundboard","kind":"toggle","def":true},
     {"id":"room","kind":"continuous","min":0,"max":1,"def":0.25,"step":0.01,"log":false},

@@ -130,6 +130,7 @@ void HarpsichordEngine::Voice::render(int n) {
     if (sleep[ch]) continue;
     const bool lifted = lifts[ch] && !killing;
     st.kcOn = e.P[p::kc] != 0;
+    st.setSide(e.P[p::side], e.sideModes()); // (Quality: fewer sideways partials, none at Low)
     const double pk = st.render(n, lifted ? lb : e.zeroBuf.data(), keyDown && lifted, ch == BACK ? e.buffBuf.data() : e.zeroBuf.data(), e.seg.data(), BLOCK, w[ch].data(), w0[ch], w1[ch], 1,
                                sy ? sb[ch].data() + 1 : nullptr);
     if (pk > pk0) pk0 = pk;
