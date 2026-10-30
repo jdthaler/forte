@@ -257,12 +257,22 @@ test('pitch bend is a redshift: every line moves by the same ratio', () => {
     assert.ok(Math.abs(c) < 1.5, `${name} ${c.toFixed(2)} ¢`);
   }
 });
-test('a lamp goes out after its key: its lines fade as its levels empty (the slowest in the glow\'s time), then it ends', () => {
-  const x = render(57, P(), 0.8, 16, undefined, 1), e = x.engine;
+test('a lamp goes out after its key: with the shutter open, its lines fade as its levels empty (the slowest in the glow\'s time), then it ends', () => {
+  const x = render(57, P({ shutter: 30 }), 0.8, 16, undefined, 1), e = x.engine;
   const lit = rms(x, 0.5 * FS, FS), after = rms(x, 3 * FS, 3.5 * FS);
   assert.ok(lit > 0.01 && after < 0.1 * lit, `${(20 * Math.log10(after / lit)).toFixed(1)} dB 2 s after`);
   assert.equal(e.voiceCount(), 0, 'it ends');
   assert.ok(Math.max(...x.slice(15 * FS).map(Math.abs)) === 0, 'silent after');
+});
+test('the shutter closes on release: 60 dB down in its time, then the lamp ends; open, the atoms fade alone', () => {
+  const T = 0.5, x = render(57, P({ shutter: T }), 0.8, 3, undefined, 1), e = x.engine;
+  const open = render(57, P({ shutter: 30 }), 0.8, 3, undefined, 1);
+  const lit = rms(x, 0.5 * FS, FS), half = rms(x, (1 + T / 2) * FS, (1 + T / 2 + 0.05) * FS), openHalf = rms(open, (1 + T / 2) * FS, (1 + T / 2 + 0.05) * FS);
+  const db = 20 * Math.log10(half / lit), dbOpen = 20 * Math.log10(openHalf / lit);
+  assert.ok(db < dbOpen - 20, `T/2 after the release: ${db.toFixed(1)} dB with the shutter, ${dbOpen.toFixed(1)} dB open`);
+  assert.equal(e.voiceCount(), 0, 'it ends within T');
+  assert.ok(Math.max(...x.slice(Math.round((1 + T + 0.05) * FS)).map(Math.abs)) === 0, 'silent after');
+  assert.equal(open.engine.voiceCount(), 1, 'open, the lamp still glows 2 s on');
 });
 test('Space keeps the lamps lit until it comes up', () => {
   const e = new HydrogenEngine(FS), bL = new Float32Array(128), bR = new Float32Array(128);
