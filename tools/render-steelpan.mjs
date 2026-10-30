@@ -58,6 +58,12 @@ const demos = [
     const ph = notes(0.1, 0.5, [36, 40, 43, 41, 36], 0.85, 0.48);
     return cat(play(preset('Six bass', { skirt: 0.25 }), 3, ph), play(preset('Six bass'), 3, ph));
   }],
+  // G♯4 struck three times, the skirt left out, then ringing (its octave, 831 Hz, is the skirt's
+  // 15th mode): the octave beats with the skirt and dies sooner
+  ['08-the-skirt-takes-a-partial', () => {
+    const ph = notes(0.1, 0.9, [68, 68, 68], 0.6, 0.85);
+    return cat(play(P({ letRing: true, wall: 0 }), 2.8, ph), play(P({ letRing: true }), 2.8, ph));
+  }],
 ];
 
 for (const [name, fn] of demos) saveExample(SLUG, name, await withRoom(fn(), 0.25, FS), FS);

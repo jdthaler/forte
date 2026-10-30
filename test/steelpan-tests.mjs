@@ -55,8 +55,8 @@ function tone(x, f, a, b, fs = FS) {
 }
 const rms = (x, a, b) => { let s = 0; for (let i = a; i < b; i++) s += x[i] * x[i]; return Math.sqrt(s / (b - a)); };
 
-// A clean note for the physics: linear unless asked, no neighbours, no tuner's errors.
-const LIN = { rise: 0, coupling: 0, accuracy: 0, letRing: true };
+// A clean note for the physics: linear unless asked, no neighbours or skirt, no tuner's errors.
+const LIN = { rise: 0, coupling: 0, wall: 0, accuracy: 0, letRing: true };
 
 console.log('physics');
 test('simply supported plate: ω ∝ (i/a)² + (j/b)², so at a/b = √2 modes (1,1), (2,1), (1,2) are 1 : 2 : 3', () => {
@@ -128,6 +128,14 @@ test('the skirt: a short one loses the low partials (front and back cancel), a l
   assert.ok(Math.abs(M.radiation(20, L) / (k(20) / 2) - 1) < 0.01, 'small kd: a dipole, ∝ f');
   assert.ok(M.radiation(20000, L) > 0.99, 'large kd: everything');
   for (let f = 50; f < 5000; f *= 1.3) assert.ok(M.radiation(f * 1.3, L) > M.radiation(f, L));
+});
+test('the skirt: a ring of 18-gauge steel 57 cm across, whose n-th inextensional mode is (h/2πR²)√(E/12ρ(1 − ν²))·n(n² − 1)/√(n² + 1), and whose 15th is the 830 Hz Hansen & Rossing measured', () => {
+  const f0 = (1.2e-3 / (2 * Math.PI * 0.28 ** 2)) * Math.sqrt(200e9 / (12 * 7850 * (1 - 0.09)));
+  for (const n of [2, 3, 10, 41]) assert.ok(Math.abs(M.ringFreq(n) / (f0 * n * (n * n - 1) / Math.sqrt(n * n + 1)) - 1) < 1e-12, `n = ${n}`);
+  assert.ok(Math.abs(M.ringFreq(15) / 830 - 1) < 0.01, `n = 15: ${M.ringFreq(15).toFixed(1)} Hz`);
+  // round the drum: by fifths C, G, D, … 30° apart; chromatic C, C♯, D, …
+  assert.ok(Math.abs(M.azimuth(67, 'fifths') - Math.PI / 6) < 1e-12 && Math.abs(M.azimuth(62, 'fifths') - Math.PI / 3) < 1e-12);
+  assert.ok(Math.abs(M.azimuth(61, 'chromatic') - Math.PI / 6) < 1e-12 && M.azimuth(72, 'fifths') === 0);
 });
 test('fourths and fifths: C4\'s neighbours share its partials; chromatic neighbours share none', () => {
   const nb = M.neighbours(60, 'fifths').map((n) => n.key).sort((a, b) => a - b);
@@ -278,6 +286,23 @@ test('neighbours sing along in fourths and fifths, not when laid out chromatical
   const ring = (layout) => { let best = 0; play(P({ letRing: true, layout, coupling: 0.004 }), 0.5, [[0, 'on', 60, 0.8]], { watch: (e) => { for (const k of layout === 'fifths' ? [55, 67] : [59, 61]) for (let p = 0; p < 3; p++) best = Math.max(best, e.amplitude(k, p)); } }); return best; };
   assert.ok(dB(ring('fifths') / Math.max(ring('chromatic'), 1e-12)) > 30, `ring neighbours: fifths ${ring('fifths').toExponential(2)}, chromatic ${ring('chromatic').toExponential(2)}`);
 });
+test('neighbours sing along with the upper modes too: C4\'s double octave sets C5\'s octave ringing (no dome, so no tuned mode of C4 is near it and C5 cannot make it)', () => {
+  let best = 0;
+  play(P({ ...LIN, coupling: 0.004 }), 0.3, [[0, 'on', 60, 0.8]], { watch: (e) => { best = Math.max(best, e.amplitude(72, 1)); } });
+  assert.ok(best > 1e-3, `C5's octave: ${best.toExponential(2)} thickness`);
+});
+test('the skirt takes a partial in tune with one of its modes and leaves the others: G♯4\'s octave (831 Hz, the 15th ring mode at 832) dies sooner, its fundamental (415 Hz, between the 10th and 11th at 367 and 445) does not', () => {
+  const key = 68, m = M.noteModes(key, P(LIN)), near = (f) => [...Array(40)].some((_, i) => Math.abs(M.ringFreq(i + 2) - f) < M.kWindow * M.ringFreq(i + 2));
+  assert.ok(near(m[1].f) && !near(m[0].f), 'the octave is near a ring mode, the fundamental is not');
+  const at = (wall, p) => { let a = 0; play(P({ ...LIN, wall }), 0.4, [[0, 'on', key, 0.8]], { watch: (e, t) => { if (t <= 0.4) a = e.amplitude(key, p); } }); return a; };
+  const oct = dB(at(0.005, 1) / at(0, 1)), fund = dB(at(0.005, 0) / at(0, 0));
+  assert.ok(oct < -6, `the octave after 0.4 s: ${oct.toFixed(1)} dB with the skirt`);
+  assert.ok(Math.abs(fund) < 0.1, `the fundamental: ${fund.toFixed(2)} dB`);
+  const { e } = play(P({ letRing: true }), 0.3, [[0, 'on', key, 0.8]]);
+  assert.ok(e.wallEnergy() > 0, 'the skirt rings');
+  e.allNotesOff();
+  assert.equal(e.wallEnergy(), 0, 'and Panic stills it');
+});
 test('a hand on the note: key-up mutes it; Let notes ring and the sustain pedal keep it', () => {
   const key = 60, ev = [[0, 'on', key, 0.7], [0.2, 'off', key]], a = Math.round(0.21 * FS), b = Math.round(0.6 * FS), c = Math.round(0.7 * FS);
   const drop = (o, extra = []) => { const x = play(P(o), 0.7, [...ev, ...extra]).L; return dB(rms(x, b, c) / rms(x, a, a + 2400)); };
@@ -305,7 +330,7 @@ test('a note\'s own slide is its roll: a lone note slid to x is the note rolled 
     same(play(P({ letRing: true }), 1, [...ev, [0.3, 'slide', key, x]]).L, play(P({ letRing: true }), 1, [...ev, [0.3, 'params', 0, P({ letRing: true, roll: x })]]).L, `roll ${x}, slid`);
   }
   // two notes far apart, uncoupled: the chord is the rolled note and the struck one, apart
-  const Q = P({ letRing: true, coupling: 0 }), chord = play(Q, 1, [[0, 'slide', key, 0.6], ...ev, [0, 'on', 48, 0.7]]).L;
+  const Q = P({ letRing: true, coupling: 0, wall: 0 }), chord = play(Q, 1, [[0, 'slide', key, 0.6], ...ev, [0, 'on', 48, 0.7]]).L;
   const a = play({ ...Q, roll: 0.6 }, 1, ev).L, b = play(Q, 1, [[0, 'on', 48, 0.7]]).L;
   let d = 0, pk = 0;
   for (let i = 0; i < chord.length; i++) { d = Math.max(d, Math.abs(chord[i] - a[i] - b[i])); pk = Math.max(pk, Math.abs(chord[i])); }

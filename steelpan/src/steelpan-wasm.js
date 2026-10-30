@@ -23,19 +23,22 @@ function views(m, e) {
 const Base = wasmEngine(BUILD, { messages: views });
 
 // The engine, with the tests' hooks on its notes: active(key), amplitude(key, p) (mode p's, in
-// thicknesses), displacement(key, p) and modes(key) (how many it integrates, 0 asleep).
+// thicknesses), displacement(key, p), modes(key) (how many it integrates, 0 asleep) and
+// wallEnergy() (the skirt's).
 export class SteelPanWasmEngine extends Base {
   constructor(fs) { super(fs); this.e = Base.exports.forte_engine(this.h); }
   active(key) { return Base.exports.steelpan_active(this.e, key) > 0; }
   amplitude(key, p) { return Base.exports.steelpan_amplitude(this.e, key, p); }
   displacement(key, p) { return Base.exports.steelpan_displacement(this.e, key, p); }
   modes(key) { return Base.exports.steelpan_modes(this.e, key); }
+  wallEnergy() { return Base.exports.steelpan_wall_energy(this.e); }
 }
 export const ready = () => SteelPanWasmEngine.ready();
 
 // The model, computed by the WebAssembly (steelpan-model.cpp): noteModes(key, P), a key's modes
 // [{ f, sigma, shape, rad, i, j }], the tuned three first; strike(key, P, v), a stroke's impulse
-// on each; triples(key, P), the dome's couplings among its modes [{ i, j, k, c }]; shape(i, j, x, y); plateRatio(i, j, r); pulse(f, tau); contact(tau0, f1, v);
+// on each; triples(key, P), the dome's couplings among its modes [{ i, j, k, c }]; ringFreq(n), the
+// skirt's ring modes; azimuth(key, layout), where a note sits round the drum; shape(i, j, x, y); plateRatio(i, j, r); pulse(f, tau); contact(tau0, f1, v);
 // skirt(key, scale); radiation(f, L); ringTime(key, t60); neighbours(key, layout) [{ key, weight }];
 // and the constants kAmp, kRise, kHarden, kWindow.
 export async function wasmModel() {
@@ -57,6 +60,8 @@ export async function wasmModel() {
       const out = put(P), n = x.steelpan_triples(key, s.at, out), m = new Float64Array(x.memory.buffer, out, 4 * n);
       return Array.from({ length: n }, (_, q) => ({ i: m[4 * q], j: m[4 * q + 1], k: m[4 * q + 2], c: m[4 * q + 3] }));
     },
+    ringFreq: (n) => x.steelpan_ring_freq(n),
+    azimuth: (key, layout) => x.steelpan_azimuth(key, typeof layout === 'string' ? LAYOUTS.indexOf(layout) : layout),
     shape: (i, j, u, v) => x.steelpan_shape(i, j, u, v),
     plateRatio: (i, j, r) => x.steelpan_plate_ratio(i, j, r),
     pulse: (f, tau) => x.steelpan_pulse(f, tau),

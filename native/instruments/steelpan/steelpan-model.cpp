@@ -114,6 +114,16 @@ double domePotential(const Triple *t, int nt, int n, const double *x, const doub
   return V + 0.25 * kHarden * w[0] * w[0] * Q * Q;
 }
 
+double ringFreq(int n) {
+  const double f0 = kWall / (TAU * kRim * kRim) * std::sqrt(kSteelE / (12 * kSteelRho * (1 - kSteelNu * kSteelNu)));
+  return f0 * n * (n * n - 1) / std::sqrt(n * n + 1.0);
+}
+
+double noteAzimuth(int key, int layout) {
+  const int pc = key % 12, place = layout == layout_::chromatic ? pc : (pc * 7) % 12; // 7 · 7 ≡ 1 (mod 12)
+  return TAU * place / 12;
+}
+
 int neighbours(int key, int layout, Neighbour *out) {
   int n = 0;
   const int step = layout == layout_::chromatic ? 1 : 7; // round the ring: by fifths, or by semitones
