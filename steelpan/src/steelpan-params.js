@@ -36,6 +36,8 @@ export const GROUPS = [
         hint: 'How strongly the steel between neighbouring notes ties their modes together. A mode of one note drives a neighbour’s mode at nearly the same frequency: the neighbour sings along.' },
       { id: 'skirt', label: 'Skirt length', min: 0.25, max: 3, def: 1, step: 0.01, log: true, fmt: (v) => `${v.toFixed(2)} × the band’s`,
         hint: 'The drum’s side wall, cut short on tenors (about 14 cm) and left whole on basses (86 cm). Shorter than a wavelength, the sound from the back of a note cancels the front’s: low partials are lost.' },
+      { id: 'wall', label: 'Skirt coupling', min: 0, max: 0.01, def: 0.003, step: 0.0001, fmt: (v) => (v === 0 ? 'off' : `${(v * 100).toFixed(2)} %`),
+        hint: 'How strongly the notes push on the drum’s rim and side wall, a steel ring with modes of its own (one at 830 Hz, as measured). A note’s partial close to one of them beats with it and loses its energy to it, and the wall hands it on to the other ringing notes it shares that mode with.' },
     ],
   },
   {

@@ -17,7 +17,7 @@
 namespace forte::steelpan {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { tuning, accuracy, aspect, rise, t60, damping, fullRange, layout, coupling, skirt, contact, along, across, roll, rollRate, letRing, mute, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { tuning, accuracy, aspect, rise, t60, damping, fullRange, layout, coupling, skirt, wall, contact, along, across, roll, rollRate, letRing, mute, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -34,6 +34,7 @@ inline const char *const kKeys_layout[] = {"fifths", "chromatic"};
 namespace layout_ { enum : int { fifths, chromatic }; }
 inline const FormatSegment kFormat_coupling[] = {{kNoLimit, "", " %", 100, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_skirt[] = {{kNoLimit, "", " × the band’s", 1, 0, 2, false, false, false, false}};
+inline const FormatSegment kFormat_wall[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " %", 100, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_contact[] = {{0.9999999999999999, "", " ms", 1, 0, 2, false, false, false, false}, {kNoLimit, "", " ms", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_along[] = {{kNoLimit, "", " % of the half-length", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_across[] = {{kNoLimit, "", " % of the half-width", 100, 0, 0, false, false, false, false}};
@@ -75,6 +76,7 @@ inline const ParamInfo kParams[p::count] = {
   {"layout", "Note layout", "Pan", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_layout, 2, nullptr, 0, kKeys_layout},
   {"coupling", "Note coupling", "Pan", ParamKind::continuous, 0, 0.01, 0.0015, 0.0001, false, false, nullptr, 0, kFormat_coupling, 1},
   {"skirt", "Skirt length", "Pan", ParamKind::continuous, 0.25, 3, 1, 0.01, true, false, nullptr, 0, kFormat_skirt, 1},
+  {"wall", "Skirt coupling", "Pan", ParamKind::continuous, 0, 0.01, 0.003, 0.0001, false, false, nullptr, 0, kFormat_wall, 2},
   {"contact", "Stick contact (at C4)", "Sticks", ParamKind::continuous, 0.2, 3, 0.7, 0, true, false, nullptr, 0, kFormat_contact, 2},
   {"along", "Strike point (centre → edge)", "Sticks", ParamKind::continuous, 0, 0.95, 0.35, 0.01, false, true, nullptr, 0, kFormat_along, 1},
   {"across", "Off the long axis", "Sticks", ParamKind::continuous, 0, 0.95, 0.2, 0.01, false, false, nullptr, 0, kFormat_across, 1},
