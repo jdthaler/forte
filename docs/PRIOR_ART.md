@@ -730,7 +730,14 @@ data):
   B. van der Pol and J. van der Mark, "Frequency demultiplication",
   *Nature* **120**, 363–364 (1927),
   [doi:10.1038/120363a0](https://doi.org/10.1038/120363a0) (the neon-lamp
-  relaxation oscillator of the Huygens Keyboard); N. H. Fletcher, "Mode
+  relaxation oscillator of the Huygens Keyboard and the Trautonium); O. Sala,
+  "Synchronizing system for electrical musical instruments",
+  [US 2,740,892](https://patents.google.com/patent/US2740892A/en) (1956), the
+  Mixtur-Trautonium's relaxation oscillators locked to subharmonics of the
+  played one, the instrument the Trautonium models, and after it Doepfer's
+  [Trautonium modules](https://doepfer.de/traut/traut_e.htm) and Moog's
+  [Subharmonicon](https://www.moogmusic.com/synthesizers/subharmonicon/)
+  (2020); N. H. Fletcher, "Mode
   locking in nonlinearly excited inharmonic musical oscillators",
   *J. Acoust. Soc. Am.* **64**(6), 1566–1569 (1978),
   [doi:10.1121/1.382139](https://doi.org/10.1121/1.382139); M. Abel,

@@ -1,6 +1,6 @@
 // steelpan-engine.h — the real-time part, on the engine contract (forte/engine.h). Every key is
 // a note area of one pan, alive while it sounds: its modes are exact two-pole resonators, driven
-// each sample by the dome's quadratic forces among the three tuned modes and by the steel's
+// each sample by the dome's quadratic forces among them (steelpan-model.h, noteTriples) and by the steel's
 // coupling to the neighbouring notes, which come alive with it (the pan's note layout). A note's
 // own slide (MPE) is its own roll: how hard its sticks strike again while its key is down.
 #pragma once
@@ -38,6 +38,8 @@ class SteelPanEngine : public Engine {
     NoteModes nm;
     int run = 0;                   // modes integrated: kTuned while it only rings along, all once struck
     std::array<double, kModes> a1{}, a2{}, b{}, w{}, out{}, y1{}, y2{}, F{};
+    std::array<Triple, kTriples> tri{}; // the dome's couplings among its modes
+    std::array<int, kModes + 1> triBelow{}; // how many of them lie among its first n modes
     bool active = false, struck = false, held = false, released = false, damped = false, hand = false;
     double vel = 0, press = 0, gl = 1, gr = 1, rollIn = 0;
     int age = 0;                   // samples since it came alive
