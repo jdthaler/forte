@@ -315,6 +315,36 @@
    "title": "Bass ff tension glide then none"
   }
  ],
+ "cuore": [
+  {
+   "file": "01-chords-at-ten-millikelvin.m4a",
+   "title": "Chords at ten millikelvin"
+  },
+  {
+   "file": "02-the-heat-sink-warms.m4a",
+   "title": "The heat sink warms"
+  },
+  {
+   "file": "03-low-keys-buzz-high-keys-round.m4a",
+   "title": "Low keys buzz high keys round"
+  },
+  {
+   "file": "04-big-pulses-saturate.m4a",
+   "title": "Big pulses saturate"
+  },
+  {
+   "file": "05-colder-then-warmer.m4a",
+   "title": "Colder then warmer"
+  },
+  {
+   "file": "06-cuoricino-small-crystal.m4a",
+   "title": "Cuoricino small crystal"
+  },
+  {
+   "file": "07-the-real-heater-clicks.m4a",
+   "title": "The real heater clicks"
+  }
+ ],
  "glass": [
   {
    "file": "01-adagio-in-c-held-chords.m4a",

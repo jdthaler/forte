@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>CUORE · Forte</title>
+  <meta name="description" content="Every key one of CUORE's tellurium dioxide crystals, ten thousandths of a degree above absolute zero under the Gran Sasso: its heater fires pulses of heat at the note's rate, sped up, and a germanium thermistor turns each into a voltage, rising as the electrons warm and fading as the crystal cools through its Teflon holders.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="CUORE · Forte">
+  <meta property="og:description" content="Every key one of CUORE's tellurium dioxide crystals, ten thousandths of a degree above absolute zero under the Gran Sasso: its heater fires pulses of heat at the note's rate, sped up, and a germanium thermistor turns each into a voltage, rising as the electrons warm and fading as the crystal cools through its Teflon holders.">
+  <meta property="og:url" content="https://forte.jthaler.net/cuore/">
+  <meta property="og:image" content="https://forte.jthaler.net/cuore/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The CUORE's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="cuore">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>CUORE</h1>
+      <span class="sub">every key a crystal at ten millikelvin, its heater fired at the note's rate, heard through its germanium thermistor</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="The pulses">
+          <div class="card-head"><h2>The pulses of <b id="focus-name">A4</b></h2><span class="muted" id="pulse-read"></span></div>
+          <canvas id="pulse"></canvas>
+          <div class="caption">The thermistor's voltage as the heater fires, in the crystal's own time, as CUORE's digitiser would record it: each pulse rises as the heat reaches the thermistor's electrons and the wires charge, and fades as it leaves through the Teflon holders. The sound is this, sped up. The dashed line is what a pulse would be if the thermistor answered in proportion: where the solid one falls short, the crystal has warmed so far that it no longer does. <span id="pulse-more"></span></div>
+        </div>
+        <div class="card" data-perform data-view="The bolometer">
+          <div class="card-head"><h2>The bolometer</h2><span class="muted" id="bolo-read"></span></div>
+          <canvas id="bolometer"></canvas>
+          <div class="caption">One crystal in its copper frame, held by Teflon clips, with the germanium thermistor and the heater glued to it, and the bias circuit out to the amplifier: each part glows as it warms above the heat sink. The thermistor's electrons sit above the crystal, warmed by the bias current.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the pulse train's harmonics</span></div>
+          <canvas id="spectrum"></canvas>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the pulse train's harmonics</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">Every key's pulses pass through the same filter, the bolometer's: its rise cuts the top and its fade the bottom, so the harmonics swell in one band whatever the note, like a voice's formant. Longer wires or a bigger crystal move it down; a warmer heat sink stretches the pulses' fall and lowers its bottom edge.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>sustain: hold <kbd>Space</kbd> (the heaters keep firing) <b id="hold" class="off">off</b></span>
+      <span>mod wheel: the heat sink's temperature</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/cuore-main.js"></script>
+</body>
+</html>

@@ -325,6 +325,13 @@ export const INSTRUMENTS = [
     physics: 'Exoplanet transits · Kepler\'s third law · limb darkening · photon-counting noise',
     accent: '#ff7b6b',
   },
+  {
+    id: 'cuore', name: 'CUORE', section: 'devices', ready: true, version: '0.1.0', trim: 11,
+    plugin: { code: 'Cuor', ready: true },
+    tagline: 'Every key one of CUORE\'s tellurium dioxide crystals, ten thousandths of a degree above absolute zero under the Gran Sasso: its heater fires pulses of heat at the note\'s rate, sped up, and a germanium thermistor turns each into a voltage, rising as the electrons warm and fading as the crystal cools through its Teflon holders.',
+    physics: 'Cryogenic calorimetry · Debye\'s T³ heat capacity · hopping conduction in NTD germanium · electrothermal feedback',
+    accent: '#7ab8ff',
+  },
 ];
 
 // The template (docs/template/), the starting point for new instruments: not listed, but it
