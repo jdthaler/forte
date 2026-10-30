@@ -533,7 +533,7 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
   body[data-instrument] .forte-mode button { min-height: 30px; }
   body[data-instrument] .forte-fold { width: 32px; height: 32px; }
   .forte-split { display: none; }
-  body[data-instrument] .forte-controls-bar { position: sticky; z-index: 15; top: 0; bottom: var(--footer-h, 0px); cursor: auto; touch-action: auto; }
+  body[data-instrument] .forte-controls-bar { position: sticky; z-index: 15; top: env(safe-area-inset-top, 0px); bottom: var(--footer-h, 0px); cursor: auto; touch-action: auto; }
 
   body[data-instrument] > header {
     position: relative; gap: 6px 10px;

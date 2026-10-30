@@ -86,7 +86,7 @@ a.forte-menu-item:hover { background: rgba(255, 255, 255, 0.06); }
 .forte-version:hover { color: var(--text, #ece8e1); }
 .forte-warning {
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-  padding: 8px 14px;
+  padding: max(8px, env(safe-area-inset-top)) 14px 8px;
   background: #3a2a10;
   color: #ffe2b0;
   border-bottom: 1px solid #7a5520;
