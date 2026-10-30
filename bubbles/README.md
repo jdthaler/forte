@@ -90,6 +90,25 @@ stiffness of its own, so in full
 186 Pa on the top key's bubble, 0.2 % of p₀, and raises its pitch by 1.2 ¢.
 Surface tension matters for bubbles below about 10 µm, not for these.
 
+**Vapour.** A bubble in water is not dry: water evaporates into it until
+the vapour reaches its saturation pressure, p_v = 2.34 kPa at 20 °C. As the
+wall moves that vapour condenses and evaporates rather than being
+squeezed, so it holds at p_v and is no spring at all; only the gas, at
+p_g = p_b − p_v, is. With **Vapour in the bubbles** on, p_g takes p_b's
+place in the stiffness, in the heat-flow loss and in the gas's thermal
+diffusivity:
+
+  ω₀² = [3κ(p₀ − p_v) + 2(3κ − 1)σ/R] / ρR²  (m = 1)
+
+which is Brennen's (1995) natural frequency for a bubble of gas and
+vapour. Every pitch falls by about p_v/2p_b: 20 ¢ at the defaults, 75 ¢
+under a quarter of an atmosphere, where the vapour is a larger share of
+what is inside. 90 % glycerol has about a third of water's vapour pressure
+(840 Pa by Raoult's law, an estimate) and pure glycerol practically none.
+As a bubble rises, its gas swells and its vapour stays at p_v. With
+**Keep in tune** the nozzles cut smaller bubbles to make up for it. Off by
+default, so the bubbles are dry gas as before.
+
 ### 4. Losses: heat, viscosity, radiation
 
 The damping b is the sum of three parts. As dimensionless damping
@@ -297,6 +316,21 @@ bubble's direct sound, ρR²ẍ/r, falling as 1/r from its nozzle. A centre
 nozzle is 46.5 cm from both; an end nozzle is 6.8 dB louder on its own
 side than on the other. Low notes are on the left because the row runs low to high.
 
+**The surface's echo.** The surface reflects sound as well as quietening
+the bubble: a hydrophone also hears the bubble's image, inverted, from
+above the surface. With **Surface echo at the hydrophones** on, each
+hydrophone at depth h hears a bubble at depth d twice: directly, over r,
+and by its image, over r′ = √(x² + b² + (h + d)²) (x along the row and b
+back from it), with gain −R_ref/r′ and (r′ − r)/c later. At the default
+30 cm that is 0.2–0.3 ms later at half the strength, so the two cancel
+where the delay is short compared with a period: the A3 bubble is 7 dB
+quieter and C4 6 dB, while near C7 they add (+3 dB) and the treble combs.
+In a 10 cm tank A3 is 22 dB down and C6 14 dB. Twenty metres down the echo
+comes 27 ms later at a tenth of the strength: a slap. As each bubble rises
+both paths follow it, so a bubble near the surface is cancelled almost
+entirely just before it bursts. Off by default: the direct sound only, and
+the keyboard stays even.
+
 ### 11. The engine
 
 * **Each bubble** is a rotating phasor u, multiplied every sample by
@@ -316,9 +350,15 @@ side than on the other. Low notes are on the left because the row runs low to hi
   it plays. A bubble is freed 80 dB below its peak, or 2 ms after it
   reaches the surface. Beyond 160 ringing, each new release fades the
   quietest bubble over 6 ms, never one younger than 12 ms.
+* **The echo**: each ringing bubble scatters its image, sample by sample,
+  into a delay line per hydrophone at its own delay (split between two
+  samples), and the hydrophones read the lines as the echoes arrive. Every
+  block the paths are recomputed from where the bubble is, and the gains
+  swept across the block. Off, the plain loop runs as before.
 * **Cost**: ten held keys at 48 kHz take under 1 % of a core at the default
   5 bubbles/s (about 15 ringing) and about 5 % at 40 /s each (130 ringing),
   as WebAssembly in Node on the shared cloud machine this was built on.
+  The surface's echo about doubles that.
 * A single forte bubble peaks at 0.16–0.21 (velocity 1) wherever it is on
   the keyboard; a four-key forte chord stays under 1 even though the first
   bubbles of a chord all kick together.
@@ -354,6 +394,12 @@ side than on the other. Low notes are on the left because the row runs low to hi
    high ones barely sound.
 7. **07-metronome-then-torrent**: one held key: even bubbles of one size,
    then 30 a second at random with a 6 % size spread.
+8. **08-dry-then-vapour-under-a-quarter-atmosphere**: the same phrase
+   under a quarter of an atmosphere, with dry bubbles and then with water
+   vapour in them: three quarters of a semitone flat.
+9. **09-surface-echo-off-then-on-then-20-m-down**: the same phrase heard
+   directly, then with the surface's echo (the bass thinner, the treble
+   combed), then 20 m down with the echo, a slap 27 ms after each note.
 
 On the page, the **tank** shows the nozzles and the bubbles rising from
 them to scale (drawn twice their size), coloured by pitch and glowing
@@ -393,19 +439,19 @@ tools/render-bubbles.mjs               node tools/render-bubbles.mjs → example
   the real ring frequency (accurate for light damping; in glycerol, Q ≈ 3 at
   the top, the true complex frequency would differ a little). Φ is kept from
   each bubble's birth as it rises.
-* **Water vapour** is left out: the bubbles are dry gas. If they were
-  saturated with vapour that condensed and evaporated freely, it would add
-  no stiffness and lower every pitch by about p_v/2p₀: 20 ¢ at 1 atm, 75 ¢
-  at a quarter atmosphere.
+* **Water vapour**, when it is on, condenses and evaporates freely: it
+  holds at its saturation pressure as the wall moves. The latent heat that
+  carries, which would cool and warm the wall a little and add to the
+  thermal loss, is left out.
 * **The surface's image** is the leading term in R/2d, capped at ¼. The
   tank's walls and floor are taken to be far away and absorbing, so there
   are no tank modes.
-* **The hydrophones hear the direct sound only.** The surface's reflection
-  would reach them 0.2 ms later, inverted: at the default 30 cm it would
-  take 6–13 dB off the bass and comb the top by about ±5 dB, and in a 10 cm
-  tank it would cut most of the keyboard by 8–30 dB. Leaving it to the
-  room keeps the keyboard even. The two hydrophones' 0.4 ms difference in
-  arrival time is left out too.
+* **The hydrophones hear the direct sound only** unless the surface's echo
+  is on, and then the surface is flat and calm (the ripples of bubbles
+  bursting are left out). Without the echo the direct path is taken from
+  the nozzle, and with it from where the bubble is. The direct sound's own
+  delay is left out, and with it the two hydrophones' 0.4 ms difference in
+  arrival time; only the echo's delay after it is kept.
 * **The kick** is a stand-in for the pinch-off: a pressure step, a set
   share of 2σ/R, over a set snap time. Real nozzles kick harder or softer
   depending on their shape and the gas flow, and the first bubble of each
