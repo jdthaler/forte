@@ -70,7 +70,7 @@ inline const ParamInfo kParams[p::count] = {
   {"aspect", "Note shape (length / width)", "Note areas", ParamKind::continuous, 1, 2.5, 1.3, 0.01, false, false, nullptr, 0, kFormat_aspect, 1},
   {"rise", "Dome rise (curvature)", "Note areas", ParamKind::continuous, 0, 10, 3, 0.1, false, false, nullptr, 0, kFormat_rise, 1},
   {"t60", "Ring time at C4", "Note areas", ParamKind::continuous, 0.2, 8, 1.6, 0, true, false, nullptr, 0, kFormat_t60, 2},
-  {"damping", "Damping vs frequency", "Note areas", ParamKind::continuous, 0, 2, 0.6, 0.01, false, false, nullptr, 0, kFormat_damping, 1},
+  {"damping", "Damping vs frequency", "Note areas", ParamKind::continuous, 0, 2, 0, 0.01, false, false, nullptr, 0, kFormat_damping, 1},
   {"fullRange", "Full range (A0–C8)", "Note areas", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"layout", "Note layout", "Pan", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_layout, 2, nullptr, 0, kKeys_layout},
   {"coupling", "Note coupling", "Pan", ParamKind::continuous, 0, 0.01, 0.0015, 0.0001, false, false, nullptr, 0, kFormat_coupling, 1},

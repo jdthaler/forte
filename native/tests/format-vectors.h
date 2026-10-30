@@ -491,7 +491,7 @@ inline const Case kC237[] = {{0, "0.0 × thickness"}, {1.7000000000000002, "1.7 
 inline const forte::FormatSegment kF238[] = {{0.9999999999999999, "", " s", 1, 0, 2, false, false, false, false}, {kNoLimit, "", " s", 1, 0, 1, false, false, false, false}};
 inline const Case kC238[] = {{0.2, "0.20 s"}, {0.3698622388594648, "0.37 s"}, {0.6839903786706788, "0.68 s"}, {1.264911064067352, "1.3 s"}, {2.3392141905702926, "2.3 s"}, {4.325934988480796, "4.3 s"}, {8, "8.0 s"}, {1.6, "1.6 s"}};
 inline const forte::FormatSegment kF239[] = {{kNoLimit, "σ ∝ f^", "", 1, 0, 2, false, false, false, false}};
-inline const Case kC239[] = {{0, "σ ∝ f^0.00"}, {0.33, "σ ∝ f^0.33"}, {0.67, "σ ∝ f^0.67"}, {1, "σ ∝ f^1.00"}, {1.33, "σ ∝ f^1.33"}, {1.67, "σ ∝ f^1.67"}, {2, "σ ∝ f^2.00"}, {0.6, "σ ∝ f^0.60"}};
+inline const Case kC239[] = {{0, "σ ∝ f^0.00"}, {0.33, "σ ∝ f^0.33"}, {0.67, "σ ∝ f^0.67"}, {1, "σ ∝ f^1.00"}, {1.33, "σ ∝ f^1.33"}, {1.67, "σ ∝ f^1.67"}, {2, "σ ∝ f^2.00"}};
 inline const forte::FormatSegment kF240[] = {{kNoLimit, "", " %", 100, 0, 2, false, false, false, false}};
 inline const Case kC240[] = {{0, "0.00 %"}, {0.0017000000000000001, "0.17 %"}, {0.0033, "0.33 %"}, {0.005, "0.50 %"}, {0.0067, "0.67 %"}, {0.0083, "0.83 %"}, {0.01, "1.00 %"}, {0.0015, "0.15 %"}};
 inline const forte::FormatSegment kF241[] = {{kNoLimit, "", " × the band’s", 1, 0, 2, false, false, false, false}};
@@ -2227,7 +2227,7 @@ inline const Vector kAll[] = {
   {"steelpan.aspect", {"aspect", "", "", forte::ParamKind::continuous, 1, 2.5, 1.3, 0.01, false, false, nullptr, 0, kF236, 1}, kC236, 8},
   {"steelpan.rise", {"rise", "", "", forte::ParamKind::continuous, 0, 10, 3, 0.1, false, false, nullptr, 0, kF237, 1}, kC237, 8},
   {"steelpan.t60", {"t60", "", "", forte::ParamKind::continuous, 0.2, 8, 1.6, 0, true, false, nullptr, 0, kF238, 2}, kC238, 8},
-  {"steelpan.damping", {"damping", "", "", forte::ParamKind::continuous, 0, 2, 0.6, 0.01, false, false, nullptr, 0, kF239, 1}, kC239, 8},
+  {"steelpan.damping", {"damping", "", "", forte::ParamKind::continuous, 0, 2, 0, 0.01, false, false, nullptr, 0, kF239, 1}, kC239, 7},
   {"steelpan.coupling", {"coupling", "", "", forte::ParamKind::continuous, 0, 0.01, 0.0015, 0.0001, false, false, nullptr, 0, kF240, 1}, kC240, 8},
   {"steelpan.skirt", {"skirt", "", "", forte::ParamKind::continuous, 0.25, 3, 1, 0.01, true, false, nullptr, 0, kF241, 1}, kC241, 8},
   {"steelpan.contact", {"contact", "", "", forte::ParamKind::continuous, 0.2, 3, 0.7, 0, true, false, nullptr, 0, kF242, 2}, kC242, 8},
