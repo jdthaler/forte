@@ -12,7 +12,7 @@ import { createChain } from '../../shared/chain.js';
 import { MotionView, SpectrumView, drawSection, FAMILY } from './viz.js';
 import { SpectrogramView } from '../../shared/views.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, touched, createSostenuto, pageMpe } from '../../shared/midi.js';
+import { startMIDI, resumeMIDI, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from '../../shared/midi.js';
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
@@ -261,6 +261,7 @@ function initMIDI() {
 }
 
 const notes = pageMpe({ post: () => {}, params: () => P }); // MPE: no note bends alone, and a member's bend is no one else's
+const ccs = controllersOf(INSTRUMENT), ccLast = {}; // the descriptor's faders and pad (and controllers)
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data;
   const cmd = st & 0xf0;
@@ -271,6 +272,7 @@ function onMIDI(ev) {
   else if (cmd === 0xb0 && d1 === 66) { for (const k of sost.set(d2 >= 64, sounding.keys())) if (!sounding.has(k)) release(k); } // sostenuto
   else if (cmd === 0xb0 && d1 === 67) setParam('unaCorda', d2 >= 64); // soft pedal
   else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) panic();
+  else if (cmd === 0xb0) { const set = controlled(ccs, ALL_PARAMS, P, d1, d2, ccLast); if (set) { setParam(...set); tellFader(d1, ALL_PARAMS.find((q) => q.id === set[0])); } }
 }
 
 // ---------------------------------------------------------------------------

@@ -16,6 +16,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: TESS keeps watching after the keys come up
   modWheel: 'impact',                   // CC1: the planet's path, from the star's centre to missing it
   mpe: { bend: 0, slide: false },       // MPE: a planet's year does not bend
+  faders: ['teff', 'starRadius', 'periodA4', 'planetRadius', 'impact'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/tess), built as WebAssembly
   wasm: { name: 'TessWasmEngine', module: new URL('./tess-wasm.js', import.meta.url).href, binary: new URL('../wasm/tess.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

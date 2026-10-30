@@ -19,6 +19,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'dephase',                  // CC1: dephasing, from its default up to its maximum
   mpe: { slide: true },                 // MPE: a note's slide is the noise on its own well (no bend)
+  faders: ['nbar', 'sigma', 'T1', 'ramseyDetune', 'dephase'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/quantum), built as WebAssembly. Each note's
   // packet (~1 ms) is computed off the audio thread, by the page's WebAssembly model, and sent with
   // the noteOn (the page's noteData)

@@ -191,7 +191,7 @@ inline const Preset kPresets[] = {
   {"Full drawbars, dry — compare tunings", kPreset8, 18},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::expression, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
-inline const Controller kControllers[] = {{1, p::leslie, Controller::values, 1, 2}, {11, p::expression}, {64, p::leslie, Controller::toggle, 1, 2}};
+inline const Controller kControllers[] = {{1, p::leslie, Controller::values, 1, 2}, {11, p::expression}, {64, p::leslie, Controller::toggle, 1, 2}, {107, p::drawbar1}, {109, p::drawbar3}, {111, p::drawbar4}, {113, p::drive}, {114, p::expression}};
 
 // The keyboard's tuning (forte/tuning.h): each key's frequency over equal temperament at A = 440 Hz.
 inline forte::Tuning tuningOf(const double *P) {
@@ -211,7 +211,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 18,
     .keyLo = 21, .keyHi = 108, .space = Space::none,
     .modWheel = -1, .modWheelMax = 0,
-    .controllers = kControllers, .controllerCount = 3,
+    .controllers = kControllers, .controllerCount = 8,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 1.8, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 2},
     .midiVelocity = midiVelocity, .create = create,
   };

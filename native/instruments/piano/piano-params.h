@@ -164,7 +164,7 @@ inline const Preset kPresets[] = {
   {"Thick, stiff wire (very inharmonic)", kPreset12, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::soundboard, p::maxFreq, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
-inline const Controller kControllers[] = {{67, p::unaCorda}};
+inline const Controller kControllers[] = {{67, p::unaCorda}, {107, p::damper}, {109, p::sympathy}, {111, p::soundboard}, {113, p::hardness}, {114, p::strikePos}};
 
 // The keyboard's tuning (forte/tuning.h): each key's frequency over equal temperament at A = 440 Hz.
 inline forte::Tuning tuningOf(const double *P) {
@@ -184,7 +184,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 19,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = -1, .modWheelMax = 0,
-    .controllers = kControllers, .controllerCount = 1,
+    .controllers = kControllers, .controllerCount = 6,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2.2, .roomGain = 0.55, .venue = p::venue, .tone = -1, .body = p::soundboard, .bodySeconds = 0.4, .bodyDry = 0.75, .bodyWet = 1.1, .limiterThreshold = -4, .limiterKnee = 4, .limiterRelease = 0.2, .trimDb = 3},
     .midiVelocity = midiVelocity, .create = create,
   };

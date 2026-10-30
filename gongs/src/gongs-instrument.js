@@ -16,6 +16,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'strike',                   // CC1: strike point, from its default (near the centre) out to 95 % of the radius
   mpe: { slide: true },                 // a note's own slide: where its mallet lands, at the strike (a plate cannot bend)
+  faders: ['mass', 'release', 'listen', 'hardness', 'strike'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/gongs), built as WebAssembly (it builds its
   // own coupling tables)
   wasm: { name: 'GongWasmEngine', module: new URL('./gongs-wasm.js', import.meta.url).href, binary: new URL('../wasm/gongs.wasm', import.meta.url).href },

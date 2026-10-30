@@ -14,6 +14,7 @@ export const INSTRUMENT = {
   keep: ['volume', 'room', 'venue', 'velocity', 'maxFreq', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                                // MIDI keys: A0–C8, the CP-80's 88 (the CP-70 has E1–E7)
   space: 'sustain',                                // Space and CC64: a damper pedal, sent to the engine
+  faders: ['bass', 'mid', 'treble', 'tremRate', 'tremDepth'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/grand), built as WebAssembly
   wasm: { name: 'GrandWasmEngine', module: new URL('./grand-wasm.js', import.meta.url).href, binary: new URL('../wasm/grand.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },
