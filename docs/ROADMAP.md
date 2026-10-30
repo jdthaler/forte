@@ -132,6 +132,7 @@ default in the existing presets, or would change what an existing knob means.
 | Clavicylinder | M | Done, for the next release: Chladni's iron bars pressed against a turning wet glass cylinder (1800), from his *Beyträge* (1821), with the cloth's stick–slip, regulation to the speaking threshold, and his faults and remedies as presets. |
 | Trautonium | M | Done, for the next release: Trautwein's neon-lamp relaxation oscillator on a resistance wire (1930), Sala's four dividers locked by the master's sync pulse (the Mixtur-Trautonium), fixed resonant circuits rung by every flash, one wire with slides or a manual per key, pressure, pitch bend and MPE. |
 | Hydraulis | M | Done, for the next release: Ctesibius's water organ, its wind the head of water under a bowl standing in a cistern, capped at the rim where the air bubbles out, filled by pumpers whose effort the mod wheel sets; slides with springs; the Pipe Organ's flue pipes on an ancient bore in four ranks as at Aquincum. |
+| CUORE | M | Done, for the next release: CUORE's TeO₂ bolometers at ten millikelvin, each key a crystal whose heater fires at its note's rate, sped up, read through the NTD thermistor with the collaboration's electrothermal model: the bolometer's rise and fall as a formant, saturation, the heat sink on the mod wheel. |
 | Hammered dulcimer or cimbalom | M | |
 | Theremin or ondes Martenot | M | Continuous pitch suits MPE. |
 | Kalimba (mbira) | S–M | Close to the tine piano. |

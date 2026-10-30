@@ -1,0 +1,8 @@
+/* The page's own palette and any layout beyond shared/instrument.css: the pale blue of a
+   cryostat's cold plates, and the copper of the frames the crystals hang in. */
+:root {
+  --accent: #7ab8ff;
+  --accent-2: #e8a26a;
+  --accent-ink: #06131f;
+}
+#pulse, #bolometer { height: 300px; }
