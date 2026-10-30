@@ -19,7 +19,7 @@
 //             computer keys' velocity, a pedal; then the pedal button) and the
 //             keys: as many as fit the width at the chosen key size.
 // A phone has no room to share: there the page scrolls, the views above the controls, and
-// the controls' bar sticks above the keys.
+// the controls' bar sticks above the keys; its chevron scrolls the controls up into view.
 // Explanations wait behind ⓘ buttons: a parameter's hint, a view's caption.
 // Discover shows the toggles and every explanation. Perform is for playing and for a
 // projector: the views turned on fill the screen with no toggles, no Controls panel
@@ -319,11 +319,50 @@ if (bars.views && bars.controls) {
 function fold(kind) {
   if (kind === 'controls' && performing()) { prefs.perform.controls = !prefs.perform.controls; save(); apply(); return; }
   const end = kind === 'views' ? 0 : 1;
+  if (kind === 'controls' && phoneQuery.matches) {
+    // a phone scrolls instead: controls out of sight below come up, rather than fold away unseen,
+    // and controls opened are scrolled to
+    if (controlsBelow()) { toControls(); return; }
+    if (split.views === end) { setShare(split.open); toControls(); return; }
+  }
   setShare(split.views === end ? split.open : end);
 }
 for (const kind of ['views', 'controls']) {
   const b = bars[kind]?.fold;
   b?.addEventListener('click', () => { fold(kind); b.blur(); });
+}
+// On a phone the controls' bar sticks above the keys with the controls out of sight below it
+// until the page scrolls them up: so long as it does, its chevron points up and brings them up.
+function controlsBelow() {
+  if (!bars.controls || !phoneQuery.matches || performing() || body.classList.contains('controls-folded')) return false;
+  const kb = footer?.getBoundingClientRect().top ?? innerHeight;
+  return sidebar.getBoundingClientRect().top > Math.min(kb, innerHeight) - 48; // less than a row of them shows
+}
+function toControls() {
+  const bar = bars.controls.bar, stuck = parseFloat(getComputedStyle(bar).top) || 0; // under the status bar
+  const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  scrollTo({ top: scrollY + sidebar.getBoundingClientRect().top - bar.offsetHeight - stuck, behavior: smooth ? 'smooth' : 'auto' });
+}
+// the fold buttons' labels, and which way they point
+function labelFolds() {
+  const v = share();
+  for (const [kind, folded, name] of [['views', v === 0, 'views'], ['controls', v === 1, 'controls']]) {
+    const b = bars[kind]?.fold;
+    if (!b) continue;
+    const below = kind === 'controls' && controlsBelow();
+    bars[kind].bar.classList.toggle('below', below);
+    b.setAttribute('aria-expanded', String(!folded));
+    b.title = kind === 'controls' && performing() ? (folded ? 'More controls' : 'Fewer controls: the views take the room')
+      : below ? 'Show the controls'
+      : folded ? `Show the ${name}` : `Hide the ${name}: the ${name === 'views' ? 'controls' : 'views'} take their room`;
+    b.setAttribute('aria-label', b.title);
+  }
+}
+if (bars.controls) {
+  let queued = false;
+  const later = () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; labelFolds(); }); } };
+  addEventListener('scroll', later, { passive: true });
+  addEventListener('resize', later);
 }
 
 // ---------------------------------------------------------------------------
@@ -575,19 +614,12 @@ function apply() {
   body.classList.toggle('views-folded', !!bars.views && v === 0);
   body.classList.toggle('controls-folded', !!bars.controls && v === 1);
   body.style.setProperty('--split-rows', `auto minmax(0, ${v}fr) auto minmax(0, ${1 - v}fr)`);
-  for (const [kind, folded, name] of [['views', v === 0, 'views'], ['controls', v === 1, 'controls']]) {
-    const b = bars[kind]?.fold;
-    if (!b) continue;
-    b.setAttribute('aria-expanded', String(!folded));
-    b.title = kind === 'controls' && performing() ? (folded ? 'More controls' : 'Fewer controls: the views take the room')
-      : folded ? `Show the ${name}` : `Hide the ${name}: the ${name === 'views' ? 'controls' : 'views'} take their room`;
-    b.setAttribute('aria-label', b.title);
-  }
   if (handle) {
     handle.setAttribute('aria-valuenow', String(Math.round(100 * split.views)));
     handle.setAttribute('aria-valuetext', `views ${Math.round(100 * split.views)} %, controls ${Math.round(100 * (1 - split.views))} %`);
   }
   arrange();
+  labelFolds(); // once laid out: on a phone, whether the controls are out of sight below
   for (const s of SIZES) body.classList.toggle(`kb-${s}`, prefs.kb === s);
   window.dispatchEvent(new Event('resize')); // let pages that size on resize refit
   document.dispatchEvent(new Event('forte-layout')); // for the wake lock, below
