@@ -46,7 +46,7 @@ let PipeEngine, M; // loaded when run, not when the tests import tuningHeader
 // sounding frequency of x near f over [a, b): phase advance of the demodulated signal, over 64
 // samples (unambiguous within ±375 Hz), then 512, then the whole span; the window at least four
 // periods (2048 samples down to 94 Hz)
-function freqAt(x, f, a, b) {
+export function freqAt(x, f, a, b) {
   const m = Math.max(2048, Math.ceil((4 * FS) / f)), ph = (s, fr) => { const w = (TAU * fr) / FS; let re = 0, im = 0; for (let i = s; i < s + m; i++) { const h = 0.5 - 0.5 * Math.cos((TAU * (i - s)) / m); re += h * x[i] * Math.cos(w * i); im -= h * x[i] * Math.sin(w * i); } return Math.atan2(im, re); };
   const wrap = (d) => d - TAU * Math.round(d / TAU);
   let fr = f;
