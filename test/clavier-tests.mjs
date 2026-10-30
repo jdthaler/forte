@@ -206,6 +206,21 @@ test('the strike leaves a sawtooth: n·|q_n| = 2g/π below the carry-time cutoff
   }
 });
 
+test('frame knock: the stud\'s force rings the frame under the pickups, a short knock (90 % of it within 30 ms) as loud on every key, growing with the strike speed (ff/pp within 1.5 dB of 20 log(v_ff/v_pp)); both pickups ride the frame, so A − B hears none', () => {
+  const knock = (key, vel, o = {}) => { const a = note(key, P({ ...o, knock: 0 }), vel, 0.3), b = note(key, P({ ...o, knock: 1 }), vel, 0.3); return b.map((v, i) => v - a[i]); };
+  const energy = (x, a = 0, b = x.length) => { let e = 0; for (let i = a; i < b; i++) e += x[i] * x[i]; return e; };
+  const level = {};
+  for (const key of [36, 60, 84]) {
+    const k = knock(key, 1), first = energy(k, 0, sec(0.035)) / energy(k); // (the key's flight is up to 5 ms)
+    assert.ok(first > 0.9, `${key}: ${(100 * first).toFixed(1)} % within 30 ms of the strike`);
+    level[key] = 10 * Math.log10(energy(k));
+  }
+  assert.ok(Math.max(...Object.values(level)) - Math.min(...Object.values(level)) < 1, `knock level by key ${JSON.stringify(level)}`);
+  const ratio = 10 * Math.log10(energy(knock(60, 1)) / energy(knock(60, 0.3))), want = 20 * Math.log10((0.3 + 3.7) / (0.3 + 3.7 * 0.3));
+  assert.ok(Math.abs(ratio - want) < 1.5, `ff/pp ${ratio.toFixed(2)} dB vs ${want.toFixed(2)} dB`);
+  const diff = knock(60, 1, { pickup: 'diff' });
+  assert.ok(Math.sqrt(energy(diff)) < 1e-6, `A − B: ${Math.sqrt(energy(diff)).toExponential(2)}`);
+});
 test('velocity: the carry time g/v low-passes the strike, so harder is brighter', () => {
   const hi = (x) => { const f0 = keyFreq(57); let s = 0; for (let n = 12; n <= 30; n++) s += tone(x, n * f0, sec(0.02), sec(0.12)) ** 2; return s; };
   const lo = (x) => tone(x, keyFreq(57), sec(0.02), sec(0.12)) ** 2;

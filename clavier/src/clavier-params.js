@@ -27,6 +27,7 @@ export const GROUPS = [
       { id: 'wrap', label: 'Tip half-width', min: 1, max: 10, def: 3, step: 0.1, fmt: mm, hint: 'Over this length the squeezed rubber bends the string round the anvil\'s edge. Narrower = more pitch bend per newton (ΔL = δ²/2a).' },
       { id: 'tipLoss', label: 'Tip damping', min: 0, max: 3, def: 0.8, step: 0.01, fmt: (v) => `${v.toFixed(2)} s/m`, hint: 'Hysteresis of the rubber (Hunt–Crossley). Low = the key rebounds off the string and can strike twice.' },
       { id: 'keyMass', label: 'Key mass at the tangent', min: 2, max: 40, def: 8, log: true, fmt: (v) => `${v.toFixed(1)} g`, hint: 'Heavier keys hit the anvil harder and bounce more slowly.' },
+      { id: 'knock', label: 'Frame knock', min: 0, max: 4, def: 1, step: 0.05, fmt: (v) => (v === 0 ? 'off' : `× ${v.toFixed(2)}`), hint: 'Each strike slams the string onto its steel stud, and the stud\'s rail and the case ring for a moment. The pickups sit on that frame, so they hear it move under all sixty strings: a short knock under every note, loudest against the quiet top octave, as recordings have it. The frame is an estimate (three modes, 0.5–3.3 kHz); this scales how much of it the pickups hear.' },
     ],
   },
   {

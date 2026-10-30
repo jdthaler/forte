@@ -43,6 +43,12 @@ ClavierEngine::ClavierEngine(double fs) : Engine(fs), pool(new Voice[POOL]) {
   shelf(false, 4000, 3, fs, shH.b0, shH.b1, shH.b2, shH.a1, shH.a2);
   dcR = std::exp((-2 * PI * 8) / fs);
   lpG = 1 - std::exp(-1 / (0.01 * fs));      // the volume pot, smoothed over 10 ms
+  // the frame: each mode a two-pole recursion stepped exactly, its static gain 1/(Mω²)
+  for (int j = 0; j < FRAME_MODES; j++) {
+    const double w = 2 * PI * FRAME_F[j], sg = w / (2 * FRAME_Q), r = std::exp(-sg * k), wd = std::sqrt(w * w - sg * sg);
+    fA1[j] = 2 * r * std::cos(wd * k); fA2[j] = r * r; fB[j] = (1 - fA1[j] + fA2[j]) / (FRAME_MASS * w * w);
+  }
+  for (int key = LO; key <= HI; key++) magSum += std::pow(gauge(key).d / 0.2286e-3, 2); // (as S.mag)
   byKey.fill(nullptr);
 }
 
@@ -104,6 +110,7 @@ void ClavierEngine::init(Voice &v, int key) {
   v.Pl = 0; v.Pu = 0; v.ul = 0; v.uu = 0;
   v.pressure = chanPressure; v.down = false; v.thrown = false; v.muted = false;
   v.dead = false; v.killing = false; v.fade = 1; v.peak = 0; v.quiet = 0; v.Fpeak = 0;
+  std::fill(v.fz, v.fz + FRAME_MODES, 0.0); std::fill(v.fz1, v.fz1 + FRAME_MODES, 0.0); v.Z = 0;
   setPickups(v);
   setMuteX(v);
 }
@@ -147,6 +154,9 @@ void ClavierEngine::render(Voice &v, double *out, int n) {
   const double kcGain = v.kcGain, wrapK = v.wrapK, dTnom = S.dTnom, Tt = S.T;
   const double lev = S.mag * OUT * fs * (GAP_REF / S.gap), gl = v.gl * lev, gu = v.gu * lev; // levels matched across gaps
   const double lamP = v.lam, xl = v.xl, xu = v.xu;
+  // the frame's motion, heard through every string's steel under the pickups (both pickups move with it)
+  const double knock = P[p::knock], kg = -knock * magSum * OUT * fs * (v.gl + v.gu);
+  double Zf = v.Z;
   // the wheel's press, and the key's own bend pressing as far again as the wheel would for it (the
   // key's force follows over 10 ms, as it follows the wheel)
   const double nb = expr.bendOf(v.key), wheel = nb == 1 ? bendNow : std::max(0.0, std::min(1.0, bendNow + (12 * fdlibm::log2(nb)) / kBendSemitones));
@@ -232,6 +242,12 @@ void ClavierEngine::render(Voice &v, double *out, int n) {
     const double nPl = lamP * fieldFlux(ul / lamP), nPu = -lamP * fieldFlux(-uu / lamP);
     double y = gl * (nPl - Pl) + gu * (nPu - Pu);
     Pl = nPl; Pu = nPu; v.ul = ul; v.uu = uu;
+    if (knock > 0) { // the frame, driven by the stud's force
+      double Zn = 0;
+      for (int j = 0; j < FRAME_MODES; j++) { const double x = fA1[j] * v.fz[j] - fA2[j] * v.fz1[j] + fB[j] * Fa; v.fz1[j] = v.fz[j]; v.fz[j] = x; Zn += x; }
+      y += kg * (Zn - Zf);
+      Zf = Zn;
+    }
     if (v.killing) { fade *= killDecay; y *= fade; }
     out[t] += y;
     const double a = y < 0 ? -y : y;
@@ -239,7 +255,7 @@ void ClavierEngine::render(Voice &v, double *out, int n) {
   }
   v.q = q; v.q1 = q1; v.r = r; v.r1 = r1; v.Q = Qn; v.Fr = Frp; v.Fa = Fap;
   v.s = s; v.s1 = s1; v.eta = eta; v.eta1 = eta1; v.C1 = C1; v.C0 = C0; v.um = um;
-  v.Flp = Fl; v.Pl = Pl; v.Pu = Pu; v.fade = fade;
+  v.Flp = Fl; v.Pl = Pl; v.Pu = Pu; v.fade = fade; v.Z = Zf;
   v.peak = peak;
   if (!(peak < 1e3) || !std::isfinite(s)) {
     v.dead = true;
