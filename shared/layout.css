@@ -107,8 +107,9 @@ body[data-instrument] .forte-toggles button[aria-pressed="true"] { color: var(--
 .forte-bar-tools { flex: none; display: flex; align-items: center; gap: 8px; margin-left: auto; min-width: 0; }
 .forte-bar-tools:empty { display: none; }
 /* the presets */
-body[data-instrument] .forte-bar .forte-presets { margin: 0; min-width: 0; }
-body[data-instrument] .forte-bar .forte-presets select { width: clamp(150px, 15vw, 240px); padding: 3px 8px; text-overflow: ellipsis; border-color: var(--accent); } /* outlined in the instrument's colour, to find it */
+body[data-instrument] :is(.forte-bar, .forte-kbtools) .forte-presets { margin: 0; min-width: 0; }
+body[data-instrument] :is(.forte-bar, .forte-kbtools) .forte-presets select { width: clamp(150px, 15vw, 240px); padding: 3px 8px; text-overflow: ellipsis; border-color: var(--accent); } /* outlined in the instrument's colour, to find it */
+body[data-instrument] .forte-kbtools .forte-presets select { width: clamp(120px, 11vw, 200px); } /* in Perform, beside the keys' tools */
 body[data-instrument] .forte-presets #reset { display: none; } /* "Default settings" in the menu presses it */
 /* fold: a chevron that points the way the panel goes */
 body[data-instrument] .forte-fold {
@@ -399,8 +400,11 @@ body[data-instrument] .kb-help { display: block; position: relative; margin: 0 0
 .forte-kbbar { display: flex; align-items: center; gap: 6px; }
 /* where the strip doesn't fit beside the rest, it takes a line of its own above it (layout.js
    measures the bar with nothing shrunk and the overview at 140px: .measure) */
-.forte-kbbar.stacked { flex-wrap: wrap; row-gap: 7px; }
-.forte-kbbar.stacked > .forte-perform { order: -1; flex: 1 1 100%; flex-wrap: wrap; }
+.forte-kbbar.stacked { flex-wrap: wrap; row-gap: 0; }
+.forte-kbbar.stacked > .forte-perform { order: -2; flex: 1 1 auto; flex-wrap: wrap; } /* in Perform the presets wrap below it before it wraps */
+.forte-kbbar.stacked > .forte-kbtools { order: -2; margin-left: auto; }
+.forte-kbbar.stacked > :is(.forte-perform, .forte-kbtools) { margin-bottom: 7px; }
+.forte-kbbar.stacked::after { content: ""; order: -1; flex: 0 0 100%; } /* the end of their line (or lines) */
 .forte-kbbar.measure > *, .forte-kbbar.measure > .forte-perform > * { flex-shrink: 0; }
 .forte-kbbar.measure > .forte-kbmap { flex: 0 0 140px; }
 body[data-instrument] .forte-kbbar button { padding: 3px 9px; white-space: nowrap; }
@@ -415,6 +419,11 @@ body[data-instrument] .forte-kbbar .forte-info { padding: 0; } /* a circle, not 
 .forte-kbsize { display: flex; gap: 2px; }
 .forte-kbbar > .forte-perform { margin-left: auto; } /* the strip and the pedal to the right */
 .forte-kbbar:not(:has(> .forte-perform:not(:empty))) > .forte-pedal { margin-left: auto; } /* no strip: the pedal on its own */
+/* in Perform, the presets and More controls (layout.js placeTools), and no controls' bar */
+.forte-kbtools { display: flex; align-items: center; gap: 6px; flex: none; }
+.forte-kbtools:empty { display: none; }
+.forte-kbtools .forte-fold[aria-expanded="false"] svg { transform: rotate(180deg); } /* the panel opens above */
+body.tools-below .forte-controls-bar { display: none; }
 body[data-instrument] .forte-kbsize button { width: 32px; padding: 3px 0; font-weight: 600; }
 .forte-pedal { min-width: 84px; }
 .forte-pedal.on, .forte-latch.on { background: var(--accent); color: var(--accent-ink, #111); border-color: transparent; }
@@ -520,7 +529,7 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
   body[data-instrument] .forte-toggles button { flex: none; }
   .forte-toggles-label { display: none; } /* the bar's place says it */
   body[data-instrument] .forte-toggles button { min-height: 30px; padding-block: 2px; }
-  body[data-instrument] .forte-bar .forte-presets select { width: clamp(118px, 34vw, 200px); min-height: 32px; padding-block: 2px; }
+  body[data-instrument] :is(.forte-bar, .forte-kbtools) .forte-presets select { width: clamp(118px, 34vw, 200px); min-height: 32px; padding-block: 2px; }
   body[data-instrument] .forte-mode button { min-height: 30px; }
   body[data-instrument] .forte-fold { width: 32px; height: 32px; }
   .forte-split { display: none; }
@@ -575,6 +584,7 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
   body[data-instrument] > footer { padding-block: 5px max(5px, env(safe-area-inset-bottom)); }
   .forte-bar { padding-block: 3px; }
   body.perform .forte-views-bar { position: absolute; z-index: 5; top: 6px; right: max(8px, env(safe-area-inset-right)); padding: 0; background: none; border: 0; }
+  body[data-instrument] .forte-kbtools .forte-presets select { width: 104px; } /* in Perform, on the keyboard bar's one line */
 }
 /* 16px text in dropdowns on phones, or iOS zooms the page in when one is tapped */
 @media (pointer: coarse) and (max-width: 600px), (pointer: coarse) and (max-width: 1050px) and (max-height: 500px) {
