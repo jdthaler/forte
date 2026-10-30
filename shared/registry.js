@@ -151,6 +151,14 @@ export const INSTRUMENTS = [
     accent: '#ffcf70',
   },
   {
+    id: 'trautonium', name: 'Trautonium', section: 'electric', ready: true, version: '0.1.0', trim: -4,
+    plugin: { code: 'Trau', ready: true },
+    after: 'Friedrich Trautwein’s Trautonium (1930) and Oskar Sala’s Mixtur-Trautonium',
+    tagline: 'A neon lamp flashing as its capacitor charges through a wire pressed onto a rail: the finger slides the pitch, lamps that fire on every n-th flash add the subharmonics, and every flash rings fixed resonant circuits like a voice’s formants.',
+    physics: 'Neon relaxation oscillator · pulse-synchronised frequency dividers · shock-excited resonant circuits',
+    accent: '#7ee0ff',
+  },
+  {
     id: 'bowed', name: 'Viola Organista', section: 'experimental', ready: true, version: '0.9.0', trim: 3,
     plugin: { code: 'Viol', ready: true },
     after: "Leonardo da Vinci's design (1488)",
