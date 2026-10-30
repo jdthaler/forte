@@ -519,6 +519,29 @@ test('decay: a held note’s partials die at the model’s rate, σ = air + wire
     }
   }
 });
+test('sideways motion: dragged sideways along the plectrum, the string swings sideways too when it lets go; drained κ times as fast, it outlasts the vertical swing (late on the fundamental dies at σ_S + κσ_B, within 15 %); off, or at Low Quality, none of it is heard', () => {
+  const m = 72, kap = 0.2, p = solo('back', { soundboard: false, kc: false, sympathy: 0 }), f = stringPartials(stringDesign(m, 'back', p), p).partials[0];
+  const W = Math.round(0.4 * FS), at = (x, t) => tone(x, f.f, Math.round(t * FS), Math.round(t * FS) + W);
+  const rate = (x, a, b) => Math.log(at(x, a) / at(x, b)) / (b - a);
+  const off = run({ ...p, side: 0 }, [[0, 'on', m, 0.7]], 8), on = run({ ...p, side: kap }, [[0, 'on', m, 0.7]], 8);
+  near(rate(off, 1.5, 3.5), f.sigma, 0.1, 'off: later, the vertical rate still');
+  near(rate(on, 0.3, 1.5), f.sigma, 0.1, 'on: early, the vertical rate');
+  near(rate(on, 5, 7.4), f.sigS + kap * f.sigB, 0.15, 'on: late, the sideways rate');
+  const tail = 20 * Math.log10(at(on, 6.5) / (at(on, 0.3) * Math.exp(-f.sigma * 6.2))); // re the vertical swing, by then
+  assert.ok(tail > 10, `late on, the sideways swing is ${tail.toFixed(1)} dB above the vertical`);
+  const early = 20 * Math.log10(at(on, 0.3) / at(off, 0.3));
+  assert.ok(Math.abs(early) < 1.5, `early on, the vertical swing is the note (${early.toFixed(2)} dB)`);
+  // Low Quality: no sideways partials
+  const low = (side) => {
+    const e = new HarpsichordEngine(FS);
+    e.setQuality('low'); e.setParams({ ...p, side });
+    const bl = 128, L = new Float32Array(bl), R = new Float32Array(bl), out = [];
+    e.noteOn(m, 0.7);
+    for (let b = 0; b < 375; b++) { e.process(L, R, bl); out.push(...L); }
+    return out;
+  };
+  assert.deepEqual(low(kap), low(0), 'Low: the same with and without');
+});
 test('stereo: above the board’s modal band each bridge point is heard mostly by the nearer microphone (bass left, treble right); the low modes ring the whole board; the bridge force alone is panned by key', () => {
   const hp = (x, f) => { // 2nd-order Butterworth high-pass
     const w = (2 * Math.PI * f) / FS, c = Math.cos(w), al = Math.sin(w) / Math.SQRT2, a0 = 1 + al, b0 = (1 + c) / 2 / a0, b1 = -(1 + c) / a0, a1 = (-2 * c) / a0, a2 = (1 - al) / a0;
