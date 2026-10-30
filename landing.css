@@ -88,7 +88,14 @@ main { max-width: 1180px; margin: 0 auto; padding: 4px max(24px, env(safe-area-i
 .card-link::after { content: ""; position: absolute; inset: 0; z-index: 1; }
 .card-link:focus-visible { outline: none; }
 .card:has(.card-link:focus-visible) { outline: 2px solid var(--c); outline-offset: 2px; }
-.card h3 .ver { float: right; margin-top: 3px; color: var(--muted); font: 11px ui-monospace, Menlo, monospace; font-weight: 400; }
+/* the version and, for an instrument with plugins, a quieter link to them, so Play, Listen and How it works keep one row */
+.card h3 .meta { float: right; display: flex; align-items: center; gap: 8px; margin-left: 8px; }
+.card h3 .ver { color: var(--muted); font: 11px ui-monospace, Menlo, monospace; font-weight: 400; }
+.card h3 .plug {
+  position: relative; z-index: 2; font: 600 12px system-ui, sans-serif; color: var(--muted); text-decoration: none;
+  padding: 3px 8px; border-radius: 6px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.03);
+}
+.card h3 .plug:hover, .card h3 .plug:focus-visible { color: var(--text); border-color: #4a4a58; }
 .card .after { color: var(--muted); font-size: 12.5px; margin-top: -3px; }
 .card p { margin: 2px 0 0; color: #cfcac0; font-size: 14px; flex: 1; }
 .card .tags { color: color-mix(in srgb, var(--c) 75%, white); font-size: 12px; letter-spacing: 0.2px; }

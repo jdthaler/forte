@@ -37,7 +37,7 @@ function card(inst) {
   const demo = (examples[inst.id] || [])[0];
   return `
     <article class="card ready" style="--c: ${inst.accent}">
-      <h3><a class="card-link" href="${inst.id}/">${inst.name}</a><span class="ver">v${inst.version}</span></h3>
+      <h3><a class="card-link" href="${inst.id}/">${inst.name}</a><span class="meta">${inst.plugin?.ready ? `<a class="plug" href="${inst.id}/#plugin" title="Download the ${inst.name} as a plugin for your DAW">↓ Plugin</a>` : ''}<span class="ver">v${inst.version}</span></span></h3>
       ${inst.after ? `<div class="after">after ${inst.after}</div>` : ''}
       <p>${inst.tagline}</p>
       <div class="tags">${inst.physics}</div>
@@ -45,7 +45,6 @@ function card(inst) {
         <a class="play" href="${inst.id}/" tabindex="-1" aria-hidden="true">Play <span>→</span></a>
         ${demo ? `<button type="button" data-src="examples/${inst.id}/${demo.file}" title="${attr(demo.title)}">▶ Listen</button>` : ''}
         <a href="${inst.id}/#about" title="The physics of the ${inst.name}">How it works</a>
-        ${inst.plugin?.ready ? `<a href="${inst.id}/#plugin" title="Download the ${inst.name} as a plugin for your DAW">Plugin</a>` : ''}
       </div>
     </article>`;
 }
