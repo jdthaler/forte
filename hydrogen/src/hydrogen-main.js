@@ -122,7 +122,7 @@ animate(() => {
   // the axis and the brightest lines' names
   ctx.fillStyle = css('--muted'); ctx.font = '10px system-ui, sans-serif';
   const ticks = log ? [100, 121.6, 200, 300, 400, 500, 656, 1000, 2000, 4000, 7000] : [400, 450, 500, 550, 600, 650, 700, 750];
-  for (const t of ticks) { const x = X(t); if (x > 8 && x < w - 20) ctx.fillText(`${t >= 1000 ? `${t / 1000} µm` : `${Math.round(t)}`}`, x - 8, h - 6); }
+  for (const t of ticks) { const x = X(t); if (x > 8 && x < w - 38) ctx.fillText(`${t >= 1000 ? `${t / 1000} µm` : `${Math.round(t)}`}`, x - 8, h - 6); }
   ctx.fillText('nm', w - 18, h - 6);
   const named = [...steady].sort((a, b) => b.rel - a.rel).slice(0, 10);
   let lastX = -1e9;
@@ -171,6 +171,7 @@ animate(() => {
     }
     ctx.lineWidth = 1;
   }
+  let label = Infinity; // the last label's y: the crowded upper levels are named only where there is room
   for (let n = 1; n <= N; n++) {
     for (let l = 0; l < Math.min(n, NL); l++) {
       const pop = levels && pmax > 0 && n > 1 ? Math.sqrt((levels[model.stateOf(n, l)] ?? 0) / pmax) : 0;
@@ -179,7 +180,7 @@ animate(() => {
       ctx.beginPath(); ctx.moveTo(X(l) - colW * 0.32, Y(n)); ctx.lineTo(X(l) + colW * 0.32, Y(n)); ctx.stroke();
     }
     ctx.lineWidth = 1;
-    if (n <= 5 || n === N) { ctx.fillStyle = css('--muted'); ctx.fillText(`n=${n}`, 2, Y(n) + 3); }
+    if ((n <= 5 || n === N) && label - Y(n) >= 11) { ctx.fillStyle = css('--muted'); ctx.fillText(`n=${n}`, 2, Y(n) + 3); label = Y(n); }
   }
 }, $('#levels'));
 
