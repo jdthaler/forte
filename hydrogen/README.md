@@ -192,6 +192,13 @@ between. A key's lamp is panned by its place on the keyboard.
   new step response and lights the next keys with it, while the sounding
   ones carry on.
 - Space keeps the lamps lit after their keys.
+- **The shutter** is not physics: when a lamp goes out (its key comes up,
+  or the pedal for a lamp it held), the spectrometer's shutter closes over
+  its light, 60 dB down in the *Shutter on release* time (1 s by default,
+  in real time, not the atoms'), on top of the atoms' own fade. All the
+  way up it stays open, and a lamp fades only as its levels empty: about
+  10 s at the default slow motion, the slowest levels as fast as the glow
+  drains them.
 
 ## What to listen for
 
@@ -240,7 +247,7 @@ tools/render-hydrogen.mjs                 node tools/render-hydrogen.mjs → exa
   left out: about 1 % of Hα in a nebula.
 * **The glow's drain** is one rate for every level, a stand-in for the
   atoms' leaving the glow and being quenched. It is what makes the light
-  fade after a key; it also shifts the line ratios from a nebula's (Hα/Hβ
+  fade after a key with the shutter open; it also shifts the line ratios from a nebula's (Hα/Hβ
   2.68 at the default 60 ns, rather than 2.83).
 * **No absorption but Case B's.** The gas is either thin to every line
   (Case A) or opaque to the Lyman lines and thin to the rest (Case B);
