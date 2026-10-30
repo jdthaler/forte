@@ -43,6 +43,10 @@ StarState starAt(double s, double M);
 Seismic seismic(const StarState &st);
 std::vector<Multiplet> multiplets(const Seismic &sz, double span = 4);
 double heardPitch(const std::vector<Multiplet> &ms);
+// How a star's linewidths grow with frequency, Γ ∝ (ν/ν_max)^α: α from the fit of Lund et al.
+// (2017) to Kepler's dwarfs and subgiants as Ball et al. (2018) give it, bilinear in T_eff and ν_max
+// (μHz), extrapolated beyond them (red giants, cool dwarfs) and held to [0, 5].
+double linewidthSlope(double T, double numax);
 StarState starForPitch(double nuTarget, double M);
 double legendre(int l, int m, double x);
 double Elm(int l, int m, double incl);
