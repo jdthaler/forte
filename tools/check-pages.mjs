@@ -7,7 +7,8 @@
 // group of controls off and on (and on the desktop, that what's turned on is still on after a
 // reload, that each bar's fold button folds its panel away and back, that the handle shares the
 // height, that every view shows in Perform, with the presets and More controls in the keyboard
-// bar instead of the controls' bar), and the front page's Listen buttons (one for
+// bar instead of the controls' bar, and the screen kept awake there once audio runs, and not in
+// Discover), and the front page's Listen buttons (one for
 // each instrument with a demo, and two in turn play).
 //
 // Usage: node tools/check-pages.mjs [--base <git ref>] [--json <file>] [filter]
@@ -199,10 +200,24 @@ async function remembered(tab) {
   return out;
 }
 
+// The Screen Wake Lock, counted: headless Chromium refuses the real one.
+const WAKE_LOCK = () => {
+  window.__wake = 0;
+  const request = async () => {
+    window.__wake++;
+    const lock = new EventTarget();
+    lock.released = false;
+    lock.release = async () => { if (!lock.released) { lock.released = true; window.__wake--; } };
+    return lock;
+  };
+  Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
+};
+
 async function checkPage(browser, url, page, size) {
   const { name, ios, ...device } = size;
   const ctx = await browser.newContext({ ...device, deviceScaleFactor: 1 });
   if (ios) await ctx.addInitScript(() => { delete Navigator.prototype.requestMIDIAccess; });
+  if (name === 'desktop') await ctx.addInitScript(WAKE_LOCK);
   const tab = await ctx.newPage();
   await tab.route('**/*.m4a', async (route) => {
     const res = await route.fetch();
@@ -230,6 +245,13 @@ async function checkPage(browser, url, page, size) {
     if (name === 'desktop' && counts.views) broken.push(...await remembered(tab));
     if (await click('#start')) {
       await tab.waitForTimeout(500); await sideways('audio started');
+      // (remembered() left the page in Perform)
+      if (name === 'desktop' && counts.views) {
+        const held = await tab.evaluate(() => window.__wake);
+        await click('.forte-mode button[data-mode="discover"]');
+        const after = await tab.evaluate(() => window.__wake);
+        if (held !== 1 || after !== 0) broken.push(`the screen is kept awake ${held} time(s) in Perform with audio running, ${after} in Discover (should be 1, then 0)`);
+      }
       // the Quality choice reaches the playing engine (shared/quality.js), and back
       const q = await tab.evaluate(() => { const s = document.querySelector('#quality'); if (!s) return false; for (const v of ['low', 'medium', 'high']) { s.value = v; s.dispatchEvent(new Event('change')); } return true; });
       if (q) await tab.waitForTimeout(250);

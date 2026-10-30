@@ -29,7 +29,7 @@
 // every page, and so is how the height is shared; everything else, what's turned on among
 // it, is remembered per instrument. In Perform the controls' bar gives the views its room: the
 // presets and More controls (its chevron) move to the keyboard bar's end, and back in Discover.
-// Also handles iOS audio quirks. Imported by
+// Also handles iOS audio quirks, and keeps the screen awake in Perform while audio runs. Imported by
 // shared/nav.js, so it runs before the page's own scripts. Other code can add its own
 // tools to either bar: barTools('views') or barTools('controls').
 
@@ -590,6 +590,7 @@ function apply() {
   arrange();
   for (const s of SIZES) body.classList.toggle(`kb-${s}`, prefs.kb === s);
   window.dispatchEvent(new Event('resize')); // let pages that size on resize refit
+  document.dispatchEvent(new Event('forte-layout')); // for the wake lock, below
 }
 // The page's script builds its controls after this module runs: place them once it has.
 // DOMContentLoaded and load are not enough, as a page that awaits its model (top-level
@@ -853,10 +854,28 @@ for (const name of ['AudioContext', 'webkitAudioContext']) {
       this.addEventListener('statechange', () => {
         if (this.state === 'closed') contexts.delete(this);
         if (this.state === 'running') setTimeout(() => warnLatency(this), 1500); // outputLatency settles once sound flows
+        keepAwake();
       });
     }
   };
 }
+
+// Perform keeps the screen awake while the audio runs (where the browser can: the Screen Wake
+// Lock API, Safari 16.4 on), so a phone or tablet on a stand doesn't dim mid-piece; Discover
+// lets it sleep. The browser lets go when the page is hidden: it's asked again on coming back.
+let wakeLock = null, asking = false;
+async function keepAwake() {
+  if (!navigator.wakeLock || asking) return;
+  const want = performing() && document.visibilityState === 'visible' && [...contexts].some((c) => c.state === 'running');
+  if (!want) { const l = wakeLock; wakeLock = null; l?.release().catch(() => {}); return; }
+  if (wakeLock && !wakeLock.released) return;
+  asking = true;
+  try { wakeLock = await navigator.wakeLock.request('screen'); } catch { wakeLock = null; } // refused (battery saver, a frame)
+  asking = false;
+  if (wakeLock) keepAwake(); // the mode or the audio may have changed meanwhile
+}
+document.addEventListener('forte-layout', keepAwake);
+document.addEventListener('visibilitychange', keepAwake);
 
 // Bluetooth headphones and speakers delay the sound 100–200 ms, more than everything else
 // together: say so once per visit when the browser reports that much (Safari reports only its
