@@ -90,6 +90,25 @@ class PianoEngine : public Engine {
     double kcGain = 0, Tt = 0, dT[3] = {0, 0, 0};
     int nu = 1, run[4][4] = {};
     bool stretched = false; // still stretched enough to matter (the strike sets it; the decay clears it)
+    // longitudinal modes (Bank & Sujbert 2005): the stretch is not uniform along the string, and
+    // its waves ring at k·fL. Mode k is driven by Σ c q_n q_{n+k} over pairs of one family's
+    // partials (their sum and difference frequencies: the phantom partials), from the unisons'
+    // summed amplitudes; the bridge feels 2kc·Σ (−1)^k (G_k − H_k), H_k the mode's response to
+    // G_k at unit gain below its resonance, as a force along the string
+    static constexpr int LONG_MODES = 8, LONG_PARTIALS = 24, LONG_SLOTS = 2 * LONG_PARTIALS;
+    static constexpr int LONG_PAIRS = 2 * LONG_MODES * LONG_PARTIALS; // both bending families
+    int nSlot = 0, nLong = 0;
+    std::array<std::array<int16_t, 3>, LONG_SLOTS> slotAt{}; // each slot's mode in every unison
+    std::array<double, LONG_SLOTS> slotQ{};
+    std::array<uint8_t, LONG_PAIRS> pairA{}, pairB{};
+    std::array<double, LONG_PAIRS> pairC{};
+    std::array<int, LONG_MODES + 1> pairsOf{};               // mode k's pairs: pairsOf[k] … pairsOf[k + 1]
+    struct LongMode { double a1, a2, b, sign, h0, h1; };
+    std::array<LongMode, LONG_MODES> lm{};
+    double longGain = 0; // bridge-velocity units per newton of ΔF (at Longitudinal coupling ×1)
+    bool longRinging = false; // the strike sets it; the decay clears it
+    void startLong(const PianoEngine &eng, const VoiceData &d);
+    double longStep(const double *qn);
     const double *w = nullptr, *bw = nullptr;
     double compN = 0, compU = 0, comp = 0, KU = 0, hK = 0;
     struct { double mass, K, p, alpha; } hammer{};
@@ -139,6 +158,9 @@ class PianoEngine : public Engine {
   static constexpr double SYM_FMAX = 4000; // Hz: none above
   Sympathetic sym;
   int symModes() const { return pick(SYM_MODES, 3, 0); }
+  // and the longitudinal modes from fewer partials (Medium) or none (Low)
+  int longPartials() const { return pick(Voice::LONG_PARTIALS, 12, 0); }
+  int longModes() const { return pick(Voice::LONG_MODES, 2, 0); }
   bool symReady(int key) const { return symVer[key] != 0; }
 
  private:
