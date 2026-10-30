@@ -128,6 +128,7 @@ default in the existing presets, or would change what an existing knob means.
 | Project 8 | M | Done, for the next release: an electron in a magnetic trap heard by its cyclotron radiation, as the Project 8 experiment hears it, chirping sharp as it radiates until it escapes, with the bounce, the gas, krypton and tritium. |
 | ABRACADABRA | M | Done, for the next release: the axion dark-matter search as a keyboard, each key a universe whose axion has its mass, heard through ABRACADABRA-10 cm's toroid, pickup and SQUID, the halo's waves swelling and fading over the coherence time. |
 | TESS | M | Done, for the next release: exoplanet transits as NASA's TESS sees them, every key a planet whose year is its note and the star's light its waveform, with limb darkening, Kepler's law, the impact parameter and TESS's photon noise. |
+| Hydrogen Lamp | M | Done, for the next release: hydrogen's spectrum as a keyboard, every line at its exact ratio to Hα on the key's note, with the radiative cascade in slow motion, a discharge, a nebula or a laser, Stark and Doppler widths, a redshift on the pitch bend and a what-if fine-structure constant. |
 | Clavicylinder | M | Done, for the next release: Chladni's iron bars pressed against a turning wet glass cylinder (1800), from his *Beyträge* (1821), with the cloth's stick–slip, regulation to the speaking threshold, and his faults and remedies as presets. |
 | Hammered dulcimer or cimbalom | M | |
 | Theremin or ondes Martenot | M | Continuous pitch suits MPE. |

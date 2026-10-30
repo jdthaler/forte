@@ -14,7 +14,7 @@
 // `plugin.ready` marks an instrument whose native port is built and released as plugins (it has
 // a native/instruments/<id>/ folder); the landing page lists those under Plugins.
 
-export const FORTE_VERSION = '0.39.1';
+export const FORTE_VERSION = '0.40.0';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
@@ -280,6 +280,13 @@ export const INSTRUMENTS = [
     tagline: 'Every key a young universe, its plasma ringing with the sound waves the microwave background shows: baryons make the odd harmonics louder, diffusion fades the high ones.',
     physics: 'Cosmology · acoustic oscillations of the photon–baryon fluid · recombination and Silk damping',
     accent: '#ff9a62',
+  },
+  {
+    id: 'hydrogen', name: 'Hydrogen Lamp', section: 'phenomena', ready: true, version: '0.1.0', trim: -0.5,
+    plugin: { code: 'Hydr', ready: true },
+    tagline: 'Every key a tube of glowing hydrogen, its spectral lines played at their exact ratios with the red Hα line on the note: the atoms cascade down the levels in slow motion, so the lines light one after another, each as wide as its levels\' lifetimes, the atoms\' heat and the ions\' fields make it.',
+    physics: 'Atomic physics · Einstein coefficients and the radiative cascade · recombination · Stark and Doppler broadening · fine structure',
+    accent: '#ff5a6e',
   },
   {
     id: 'project8', name: 'Project 8', section: 'devices', ready: true, version: '0.2.0', trim: -2,

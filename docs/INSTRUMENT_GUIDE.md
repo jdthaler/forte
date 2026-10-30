@@ -358,12 +358,14 @@ and say which in the footer help.
 - **Perform** is for playing and for a projector: the views that are on,
   filling the screen, with no toggles and no text in them. The views' bar
   is just Discover | Perform, over their corner, and the controls' bar
-  just the presets; the Controls panel waits behind its chevron, "More
-  controls" (at the share last chosen; on a phone, in place of the
-  views). The card's `.card-head`,
+  goes: the presets and its chevron, "More controls", move to the end of
+  the keyboard bar (not on a phone held sideways, where the bar has no
+  room). The Controls panel waits behind that chevron (at the share last
+  chosen; on a phone, in place of the views). The card's `.card-head`,
   `.caption`, `.legend`, `.readout`, `<dl>` and `<table>` are hidden, and
   `fillText` draws nothing on their canvases (a card with
-  `data-keep-text` keeps its text). Full screen appears. The mode is the
+  `data-keep-text` keeps its text). Full screen appears, and while an
+  AudioContext runs the page holds a screen wake lock. The mode is the
   same on every page; the rest is remembered per page.
 - On phones there is no room to share: the page scrolls above the
   controls and keys, which stay put, and the Controls panel follows the

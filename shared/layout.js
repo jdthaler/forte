@@ -23,11 +23,13 @@
 // Explanations wait behind ⓘ buttons: a parameter's hint, a view's caption.
 // Discover shows the toggles and every explanation. Perform is for playing and for a
 // projector: the views turned on fill the screen with no toggles, no Controls panel
-// until the controls' bar's chevron (More controls), and no text in them
+// until More controls, and no text in them
 // (no titles, readouts, captions, legends or tables, and nothing drawn by fillText on
 // their canvases; a card with data-keep-text keeps its own). The mode is the same on
 // every page, and so is how the height is shared; everything else, what's turned on among
-// it, is remembered per instrument. Also handles iOS audio quirks. Imported by
+// it, is remembered per instrument. In Perform the controls' bar gives the views its room: the
+// presets and More controls (its chevron) move to the keyboard bar's end, and back in Discover.
+// Also handles iOS audio quirks, and keeps the screen awake in Perform while audio runs. Imported by
 // shared/nav.js, so it runs before the page's own scripts. Other code can add its own
 // tools to either bar: barTools('views') or barTools('controls').
 
@@ -36,6 +38,7 @@ const STORE = `forte/${body.dataset.instrument || 'page'}/layout/v1`;
 const MODE = 'forte/mode/v1';
 const touch = matchMedia('(pointer: coarse)').matches;
 const phoneQuery = matchMedia('(max-width: 600px), (max-width: 1050px) and (max-height: 500px)'); // as shared/layout.css
+const sidewaysQuery = matchMedia('(max-width: 1050px) and (max-height: 500px)'); // a phone held sideways, as layout.css
 const SIZES = ['s', 'm', 'l', 'xl'];
 const KEY_W = { s: 22, m: 30, l: 42, xl: 56 }; // the narrowest a white key may be, px
 if (!navigator.requestMIDIAccess) body.classList.add('no-midi'); // Safari, and every browser on iPhone and iPad: no MIDI button (About Forte says where MIDI works)
@@ -515,6 +518,18 @@ if (presets) {
     e.target.blur();
   }, true);
 }
+// In Perform the presets and More controls join the keyboard bar (once it's built), and the
+// controls' bar goes, so the views have its room; in Discover they go back. Not on a phone held
+// sideways: its keyboard bar has no room, and its controls' bar scrolls with the panel, out of sight.
+let kbTools = null, restack = () => {};
+function placeTools() {
+  const perf = performing() && !!kbTools && !sidewaysQuery.matches;
+  if (presets && bars.controls) (perf ? kbTools : bars.controls.tools).appendChild(presets);
+  const f = bars.controls?.fold;
+  if (f) (perf ? kbTools : bars.controls.bar).appendChild(f);
+  body.classList.toggle('tools-below', perf && !!bars.controls);
+  restack();
+}
 if (header) {
   const status = header.querySelector('.status');
   // Full screen, for a projector or a stage (not on iPhone, which has no such thing for pages)
@@ -548,6 +563,7 @@ function apply() {
   placeControls();
   addDefaults();
   body.classList.toggle('perform', performing());
+  placeTools();
   document.documentElement.classList.toggle('perform', performing()); // for :root's colours (shared/layout.css)
   for (const b of modeBtns) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
   body.classList.toggle('no-views', !shown.length);
@@ -574,6 +590,7 @@ function apply() {
   arrange();
   for (const s of SIZES) body.classList.toggle(`kb-${s}`, prefs.kb === s);
   window.dispatchEvent(new Event('resize')); // let pages that size on resize refit
+  document.dispatchEvent(new Event('forte-layout')); // for the wake lock, below
 }
 // The page's script builds its controls after this module runs: place them once it has.
 // DOMContentLoaded and load are not enough, as a page that awaits its model (top-level
@@ -586,6 +603,7 @@ const unplaced = () => sidebar?.querySelector('.param:not([data-placed])')
 const lateControls = new MutationObserver(() => { if (unplaced()) apply(); });
 for (const t of [sidebar, document.querySelector('#preset')]) if (t) lateControls.observe(t, { childList: true, subtree: true });
 phoneQuery.addEventListener('change', apply);
+sidewaysQuery.addEventListener('change', placeTools);
 tall.addEventListener('change', arrange);
 apply();
 document.querySelector('#toast')?.setAttribute('role', 'status');
@@ -662,12 +680,12 @@ export function attachKeyboard(kb) {
     stack();
     show(first, false);
   }
-  // The strip shares the bar's line where it fits beside the rest, with room left for the
-  // overview; otherwise it takes a line of its own above it. A phone held sideways keeps one line.
-  const sideways = matchMedia('(max-width: 1050px) and (max-height: 500px)'); // as layout.css
+  // The strip (and in Perform the presets) shares the bar's line where it fits beside the rest,
+  // with room left for the overview; otherwise it takes a line of its own above it. A phone held
+  // sideways keeps one line.
   function stack() {
     bar.classList.remove('stacked');
-    if (strip.parentNode !== bar || !strip.childElementCount || sideways.matches || !bar.isConnected) return;
+    if (!(strip.parentNode === bar && strip.childElementCount) && !kbTools?.childElementCount || sidewaysQuery.matches || !bar.isConnected) return;
     bar.classList.add('measure');
     const over = bar.scrollWidth > bar.clientWidth + 1;
     bar.classList.remove('measure');
@@ -769,8 +787,12 @@ export function attachKeyboard(kb) {
       bar.append(pedal, latch);
     }
   }
+  // in Perform, the presets and More controls, at the end (placeTools)
+  kbTools = el('div', 'forte-kbtools');
+  bar.appendChild(kbTools);
   row.appendChild(bar);
-  stack();
+  restack = stack;
+  placeTools();
   new MutationObserver(stack).observe(strip, { childList: true }); // the page builds its controls later
   document.fonts?.ready.then(stack);
   // the range can change (a historical compass opened to every key): the window keeps its first key
@@ -832,10 +854,28 @@ for (const name of ['AudioContext', 'webkitAudioContext']) {
       this.addEventListener('statechange', () => {
         if (this.state === 'closed') contexts.delete(this);
         if (this.state === 'running') setTimeout(() => warnLatency(this), 1500); // outputLatency settles once sound flows
+        keepAwake();
       });
     }
   };
 }
+
+// Perform keeps the screen awake while the audio runs (where the browser can: the Screen Wake
+// Lock API, Safari 16.4 on), so a phone or tablet on a stand doesn't dim mid-piece; Discover
+// lets it sleep. The browser lets go when the page is hidden: it's asked again on coming back.
+let wakeLock = null, asking = false;
+async function keepAwake() {
+  if (!navigator.wakeLock || asking) return;
+  const want = performing() && document.visibilityState === 'visible' && [...contexts].some((c) => c.state === 'running');
+  if (!want) { const l = wakeLock; wakeLock = null; l?.release().catch(() => {}); return; }
+  if (wakeLock && !wakeLock.released) return;
+  asking = true;
+  try { wakeLock = await navigator.wakeLock.request('screen'); } catch { wakeLock = null; } // refused (battery saver, a frame)
+  asking = false;
+  if (wakeLock) keepAwake(); // the mode or the audio may have changed meanwhile
+}
+document.addEventListener('forte-layout', keepAwake);
+document.addEventListener('visibilitychange', keepAwake);
 
 // Bluetooth headphones and speakers delay the sound 100–200 ms, more than everything else
 // together: say so once per visit when the browser reports that much (Safari reports only its

@@ -705,6 +705,17 @@ data):
   We found no instrument or sonification built on such a signal before
   ABRACADABRA, which plays the experiment's flux, the halo's line and the
   SQUID's noise at each key's axion.
+* **Atomic spectra as sound.** Hydrogen's Balmer lines scaled down into
+  hearing are an old classroom demonstration, and data sonifications (the
+  Chandra X-ray Center's, NASA's and ESA's) play astronomical spectra as
+  chords or sweeps. We found no instrument that plays a spectrum from the
+  atom's own rates: the Hydrogen Lamp's line strengths are Einstein
+  coefficients and a radiative cascade (D. E. Osterbrock & G. J. Ferland,
+  *Astrophysics of Gaseous Nebulae and Active Galactic Nuclei*, 2006; P. J.
+  Storey & D. G. Hummer, *MNRAS* **272**, 41 (1995),
+  [doi:10.1093/mnras/272.1.41](https://doi.org/10.1093/mnras/272.1.41)),
+  played in slow motion so the cascade is heard, each line as wide as its
+  levels' lifetimes.
 * **Planets as sound.** SYSTEM Sounds (Matt Russo, Dan Tamayo and others,
   2017) sped TRAPPIST-1's planets up until their orbits were notes, a piano
   note struck once an orbit, and ESA's 2021 animation of TOI-178's resonant
