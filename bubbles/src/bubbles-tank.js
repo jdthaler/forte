@@ -17,12 +17,13 @@ export const GASES = {
 };
 
 // Liquids at 20 °C: density ρ (kg/m³), dynamic viscosity μ (Pa·s), surface tension σ (N/m), sound
-// speed c (m/s). Glycerol–water viscosities and densities are the standard tables (by mass); the
-// mixture's σ and c are interpolated by mass fraction between water and glycerol (estimates).
+// speed c (m/s), vapour pressure p_v (Pa). Glycerol–water viscosities and densities are the standard
+// tables (by mass); the mixture's σ and c are interpolated by mass fraction between water and
+// glycerol, and its p_v is Raoult's law (estimates).
 export const LIQUIDS = {
-  water: { name: 'water', rho: 998.2, mu: 1.002e-3, sigma: 0.0728, c: 1482 },
-  gly90: { name: '90 % glycerol', rho: 1234.7, mu: 0.219, sigma: 0.0643, c: 1876 },
-  glycerol: { name: 'glycerol', rho: 1261, mu: 1.41, sigma: 0.0634, c: 1920 },
+  water: { name: 'water', rho: 998.2, mu: 1.002e-3, sigma: 0.0728, c: 1482, pv: 2339 },
+  gly90: { name: '90 % glycerol', rho: 1234.7, mu: 0.219, sigma: 0.0643, c: 1876, pv: 840 },
+  glycerol: { name: 'glycerol', rho: 1261, mu: 1.41, sigma: 0.0634, c: 1920, pv: 0 },
 };
 
 export const gasOf = (P) => GASES[P.gas] || GASES.air;
