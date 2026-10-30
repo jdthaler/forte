@@ -101,12 +101,13 @@ FORTE_EXPORT PianoEngine::Voice *piano_last(PianoEngine *e) { return e->last; }
 FORTE_EXPORT int piano_voices(PianoEngine *e) { return e->nVoices; }
 FORTE_EXPORT PianoEngine::Voice *piano_voice_at(PianoEngine *e, int i) { return e->voices[i]; }
 // A voice's key, N, hammerOn, contactSamples, Fmax, killing, dead, eta, etaPrev, keyDown,
-// damped, peak, age, whether it is its key's (byKey).
+// damped, peak, age, whether it is its key's (byKey), its longitudinal modes and their pairs,
+// whether they still ring.
 FORTE_EXPORT void piano_voice(PianoEngine *e, PianoEngine::Voice *v, double *out) {
-  const double x[14] = {(double)v->key, (double)v->N, (double)v->hammerOn, (double)v->contactSamples, v->Fmax, (double)v->killing,
+  const double x[17] = {(double)v->key, (double)v->N, (double)v->hammerOn, (double)v->contactSamples, v->Fmax, (double)v->killing,
                         (double)(v->dead || !v->inUse), v->eta, v->etaPrev, (double)v->keyDown, (double)v->damped, v->peak, v->age,
-                        (double)(e->byKey[v->key] == v)};
-  std::copy_n(x, 14, out);
+                        (double)(e->byKey[v->key] == v), (double)v->lon.nMode, (double)v->lon.pairs(), (double)v->lon.ringing};
+  std::copy_n(x, 17, out);
 }
 // Its state q[n], q[n−1] and the order of its modes (perm[i]: index in the voice data), N each.
 FORTE_EXPORT double *piano_voice_q(PianoEngine::Voice *v, int which) { return which == 0 ? v->q : which == 1 ? v->q1 : v->perm; }

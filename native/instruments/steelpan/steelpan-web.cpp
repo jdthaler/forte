@@ -32,6 +32,8 @@ FORTE_EXPORT int steelpan_triples(int key, const double *P, double *out) {
   for (int q = 0; q < n; q++) { out[4 * q] = t[q].i; out[4 * q + 1] = t[q].j; out[4 * q + 2] = t[q].k; out[4 * q + 3] = t[q].c; }
   return n;
 }
+FORTE_EXPORT double steelpan_ring_freq(int n) { return ringFreq(n); }
+FORTE_EXPORT double steelpan_azimuth(int key, int layout) { return noteAzimuth(key, layout); }
 FORTE_EXPORT double steelpan_shape(int i, int j, double x, double y) { return shape(i, j, x, y); }
 FORTE_EXPORT double steelpan_plate_ratio(int i, int j, double r) { return plateRatio(i, j, r); }
 FORTE_EXPORT double steelpan_pulse(double f, double tau) { return pulseSpectrum(f, tau); }
@@ -55,6 +57,7 @@ FORTE_EXPORT double steelpan_amplitude(forte::Engine *e, int key, int p) {
   return s->note(key).active ? s->amplitude(s->note(key), p) : 0;
 }
 FORTE_EXPORT double steelpan_displacement(forte::Engine *e, int key, int p) { return static_cast<SteelPanEngine *>(e)->note(key).y1[p]; }
+FORTE_EXPORT double steelpan_wall_energy(forte::Engine *e) { return static_cast<SteelPanEngine *>(e)->wallEnergy(); }
 // the modes a note integrates (0 asleep)
 FORTE_EXPORT int steelpan_modes(forte::Engine *e, int key) { const auto &v = static_cast<SteelPanEngine *>(e)->note(key); return v.active ? v.run : 0; }
 }

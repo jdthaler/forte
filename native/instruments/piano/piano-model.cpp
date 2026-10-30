@@ -433,19 +433,26 @@ VoiceData buildVoiceData(const KeyModel &model, const double *P, uint64_t versio
   d.hasDamper = model.key <= 88;
   // the core stretches as one spring (the winding carries no load): ΔT = ½∫u_x² / ∫dx/EA
   const double E = MATERIALS[model.material].E;
-  double compliance = 0;
-  if (model.uniform) compliance = model.L / (E * model.sec.A);
+  const double rho = MATERIALS[model.material].rho;
+  double compliance = 0, mass = 0;
+  if (model.uniform) { compliance = model.L / (E * model.sec.A); mass = rho * model.sec.A * model.L; }
   else {
     const int Q = 64;
-    for (int j = 0; j < Q; j++) compliance += model.L / Q / (E * model.secAt((j + 0.5) * model.L / Q).A);
+    for (int j = 0; j < Q; j++) {
+      const double A = model.secAt((j + 0.5) * model.L / Q).A;
+      compliance += model.L / Q / (E * A); mass += rho * A * model.L / Q;
+    }
   }
   d.T = model.T; d.kc = 0.5 / compliance;
+  // its longitudinal waves: the core's stiffness against the whole string's mass, winding and all
+  mass += model.info.dMu * model.L;
+  d.fL = std::sqrt((model.L / compliance) / (mass / model.L)) / (2 * model.L);
   return d;
 }
 
 int packVoiceData(const VoiceData &d, double *out) {
   const double head[PACK_HEAD] = {(double)d.version, (double)d.key, (double)d.n, (double)d.unisons, d.hammer.mass, d.hammer.K, d.hammer.p, d.hammer.alpha,
-                                  d.outV, d.outH, d.hasDamper ? 1.0 : 0.0, d.T, d.kc};
+                                  d.outV, d.outH, d.hasDamper ? 1.0 : 0.0, d.T, d.kc, d.fL};
   std::memcpy(out, head, sizeof head);
   double *o = out + PACK_HEAD;
   const int n = d.n;
@@ -464,7 +471,7 @@ bool unpackVoiceData(const double *in, int count, VoiceData &d) {
   if (n < 0 || n > MAX_N || count < PACK_HEAD + PACK_ARRAYS * n) return false;
   d.version = (uint64_t)in[0]; d.key = (int)in[1]; d.n = n; d.unisons = std::min(3, std::max(1, (int)in[3]));
   d.hammer = {in[4], in[5], in[6], in[7]};
-  d.outV = in[8]; d.outH = in[9]; d.hasDamper = in[10] != 0; d.T = in[11]; d.kc = in[12];
+  d.outV = in[8]; d.outH = in[9]; d.hasDamper = in[10] != 0; d.T = in[11]; d.kc = in[12]; d.fL = in[13];
   const double *o = in + PACK_HEAD;
   for (std::vector<double> *a : {&d.freq, &d.sigma, &d.w, &d.cv, &d.ch, &d.ct, &d.g}) { a->assign(o, o + n); o += n; }
   d.famId.resize(n); d.uni.resize(n); d.idx.resize(n);

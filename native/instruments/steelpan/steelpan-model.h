@@ -23,6 +23,10 @@ constexpr double kHarden = 0.015; // the stretching (quartic) term, γ: a full s
 constexpr double kWindow = 0.03; // modes (of neighbours, or a note's own combination tones) closer than this (relative) are coupled
 constexpr double kSound = 343;   // m/s
 constexpr double kRim = 0.28;    // the drum's radius (m): a 55-gallon drum is 57 cm across
+constexpr double kWall = 1.2e-3; // the drum's wall (m): 18-gauge steel, the pan makers' choice
+constexpr double kSteelE = 200e9, kSteelRho = 7850, kSteelNu = 0.3; // Pa, kg/m³, Poisson's ratio
+constexpr int kRingOrders = 40;  // the skirt's ring modes n = 2 … 41 (to about 6 kHz), each a cos/sin pair
+constexpr double kRingLoss = 0.002; // their damping ratio ζ (steel, the bowl's joint)
 
 // Plate mode (i, j) — i half-waves along the note, j across — at (x, y) in [−1, 1]², peak 1.
 double shape(int i, int j, double x, double y);
@@ -73,6 +77,13 @@ int noteTriples(const NoteModes &nm, Triple *out);
 // may be given.
 void domeForces(const Triple *t, int nt, int n, const double *x, const double *w, double g, double *F);
 double domePotential(const Triple *t, int nt, int n, const double *x, const double *w, double g);
+
+// The skirt's n-th ring mode (Hz): the inextensional bending of a thin steel ring of the drum's
+// radius and wall, n waves round it (Rayleigh; Soedel, Vibrations of Shells and Plates, 2004):
+//   f_n = (h / 2πR²) √(E / 12ρ(1 − ν²)) · n(n² − 1) / √(n² + 1).
+double ringFreq(int n);
+// Where a key's note sits round the drum (rad): its place in its ring, by fifths or by semitones.
+double noteAzimuth(int key, int layout);
 
 struct Neighbour { int key; double weight; };
 // The notes beside a key on the pan: in its own ring (an octave, laid out in fourths and fifths

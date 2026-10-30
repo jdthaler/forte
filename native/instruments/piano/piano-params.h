@@ -17,7 +17,7 @@
 namespace forte::piano {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { material, shape, aspect, roll, taper, gauge, lengthScale, winding, unisons, unisonDetune, polDetune, kc, strikePos, offset, hardness, feltExp, hammerMass, hammerWidth, hysteresis, unaCorda, bridge, bridgeH, lossLow, lossHigh, torsionLoss, damper, sympathy, gainV, gainH, gainT, soundboard, room, venue, width, voicing, volume, maxFreq, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { material, shape, aspect, roll, taper, gauge, lengthScale, winding, unisons, unisonDetune, polDetune, kc, longi, strikePos, offset, hardness, feltExp, hammerMass, hammerWidth, hysteresis, unaCorda, bridge, bridgeH, lossLow, lossHigh, torsionLoss, damper, sympathy, gainV, gainH, gainT, soundboard, room, venue, width, voicing, volume, maxFreq, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -35,6 +35,7 @@ inline const FormatSegment kFormat_lengthScale[] = {{kNoLimit, "×", "", 1, 0, 2
 inline const FormatSegment kFormat_unisons[] = {{kNoLimit, "", "", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_unisonDetune[] = {{kNoLimit, "", " ¢", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_polDetune[] = {{kNoLimit, "", " ¢", 1, 0, 1, false, false, false, false}};
+inline const FormatSegment kFormat_longi[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "×", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_strikePos[] = {{kNoLimit, "", " L", 1, 0, 3, false, false, false, false}};
 inline const FormatSegment kFormat_offset[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_hardness[] = {{9.999999999999998, "×", "", 1, 0, 2, false, false, false, false}, {kNoLimit, "×", "", 1, 0, 1, false, false, false, false}};
@@ -93,6 +94,7 @@ inline const ParamInfo kParams[p::count] = {
   {"unisonDetune", "Unison detune", "String / ribbon", ParamKind::continuous, 0, 8, 0.8, 0.1, false, false, nullptr, 0, kFormat_unisonDetune, 1},
   {"polDetune", "Polarization detune", "String / ribbon", ParamKind::continuous, -5, 5, 0.3, 0.1, false, false, nullptr, 0, kFormat_polDetune, 1},
   {"kc", "Tension modulation (pitch glide)", "String / ribbon", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"longi", "Longitudinal modes (phantom partials)", "String / ribbon", ParamKind::continuous, 0, 4, 1, 0.05, false, false, nullptr, 0, kFormat_longi, 2},
   {"strikePos", "Strike position", "Hammer", ParamKind::continuous, 0.02, 0.5, 0.12, 0.001, false, false, nullptr, 0, kFormat_strikePos, 1},
   {"offset", "Strike offset across width", "Hammer", ParamKind::continuous, -1, 1, 0, 0.01, false, false, nullptr, 0, kFormat_offset, 1},
   {"hardness", "Felt hardness", "Hammer", ParamKind::continuous, 0.1, 10, 1, 0, true, false, nullptr, 0, kFormat_hardness, 2},

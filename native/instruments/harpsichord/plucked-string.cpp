@@ -11,6 +11,8 @@ namespace forte::harpsichord {
 
 using std::numbers::pi;
 
+constexpr double SIDE_DETUNE = 0.3; // ¢: the sideways partials sit a little sharp (the bridge's stiffer sideways; an estimate)
+
 void PluckedString::init(const StringDesign &S_, const Partials &parts, double fs_) {
   S = S_; N = parts.N; Na = N; fs = fs_; h = 1 / fs_;
   for (int i = 0; i < N; i++) {
@@ -30,6 +32,12 @@ void PluckedString::init(const StringDesign &S_, const Partials &parts, double f
   onRelease = nullptr; ctx = nullptr;
   feltK = feltR = feltPre = tongueK = thick = buffK = buffR = 0;
   peakF = 0; work = 0;
+  const double dz = std::pow(2.0, SIDE_DETUNE / 1200);
+  for (int i = 0; i < NZ_MAX; i++) {
+    za[i] = zb[i] = 0;
+    if (i < N) { Wz[i] = W[i] * dz; sigSz[i] = parts.sigS[i]; sigBz[i] = parts.sigB[i]; }
+  }
+  Nz = 0; kz = gz = 0; zFelt = false; zBuff = 0;
   setDamping(nullptr);
 }
 
@@ -43,6 +51,54 @@ void PluckedString::setDamping(const double *ex) {
   }
   for (int p = 0; p < MAXP; p++) if (x[p] >= 0) fillPoint(p);
   cDirty = true;
+  if (Nz) sideSteps(zFelt, zBuff);
+}
+
+void PluckedString::setSide(double kappa, int n) {
+  n = kappa > 0 ? std::min({n, N, NZ_MAX}) : 0;
+  if (n == Nz && kappa == kz) return;
+  for (int i = n; i < Nz; i++) za[i] = zb[i] = 0;
+  Nz = n; kz = kappa; gz = std::sqrt(std::max(kappa, 0.0));
+  if (Nz) sideSteps(zFelt, zBuff);
+}
+// The sideways partials' steps: their own loss, κ × the bridge's, the extra rate (a voice dying),
+// and the felt and the buff as point dashpots (σ = Rφ²/2, held below critical).
+void PluckedString::sideSteps(bool felt, double bg) {
+  zFelt = felt; zBuff = bg;
+  const double *PD = PHI[PT::DAMPER].data(), *PB = PHI[PT::BUFF].data();
+  const bool fd = felt && x[PT::DAMPER] >= 0, bd = bg > 1e-6 && x[PT::BUFF] >= 0;
+  for (int i = 0; i < Nz; i++) {
+    const double w0 = Wz[i];
+    double sg = sigSz[i] + kz * sigBz[i] + extra[i];
+    if (fd) sg += 0.5 * feltR * PD[i] * PD[i];
+    if (bd) sg += 0.5 * bg * buffR * PB[i] * PB[i];
+    sg = std::min(sg, 0.9 * w0);
+    const double r = std::exp(-sg * h), wd = std::sqrt(w0 * w0 - sg * sg);
+    Z1[i] = 2 * r * std::cos(wd * h); Z2[i] = r * r;
+  }
+}
+// n samples of the sideways partials: their push on the board (√κ × their bridge force) into seg,
+// their bridge signal into sym; returns its half-range.
+double PluckedString::side(int n, double *seg, int stride, const double *wts, int w0, int w1, double gain, double *sym, bool felt, double bg) {
+  if (felt != zFelt || std::fabs(bg - zBuff) > 1e-3) sideSteps(felt, bg);
+  const int Nn = Nz, s0 = w0 * stride, s1 = w1 * stride;
+  const double k0 = wts[w0] * gain * gz, k1 = wts[w1] * gain * gz, *bf = BF.data(), *sc = SC.data(), *a1 = Z1.data(), *a2 = Z2.data();
+  double *a = za.data(), *b = zb.data();
+  double ymin = std::numeric_limits<double>::infinity(), ymax = -ymin;
+  for (int t = 0; t < n; t++) {
+    double y = 0, z = 0;
+    for (int i = 0; i < Nn; i++) {
+      const double v = a1[i] * a[i] - a2[i] * b[i];
+      z += sc[i] * (v - a[i]);
+      b[i] = a[i]; a[i] = v; y += bf[i] * v;
+    }
+    if (sym) sym[t] += gz * z;
+    seg[s0 + t] += k0 * y;
+    if (s1 != s0) seg[s1 + t] += k1 * y;
+    if (y < ymin) ymin = y;
+    if (y > ymax) ymax = y;
+  }
+  return 0.5 * gz * (ymax - ymin);
 }
 
 void PluckedString::setPoint(int p, double xp) {
@@ -111,7 +167,11 @@ double PluckedString::render(int n, const double *lift, bool keyDown, const doub
   const bool buffOn = buffG[0] > 1e-6 || buffG[n - 1] > 1e-6;
   double lmax = 0;
   for (int t = 0; t < n; t++) if (lift[t] > lmax) lmax = lift[t];
-  if (!needsContacts(lmax, keyDown, buffOn)) return sym ? free<true>(n, seg, stride, w0, w1, wts, gain, sym) : free<false>(n, seg, stride, w0, w1, wts, gain, sym);
+  const double bgz = 0.5 * (buffG[0] + buffG[n - 1]);
+  if (!needsContacts(lmax, keyDown, buffOn)) {
+    const double r = sym ? free<true>(n, seg, stride, w0, w1, wts, gain, sym) : free<false>(n, seg, stride, w0, w1, wts, gain, sym);
+    return Nz ? r + side(n, seg, stride, wts, w0, w1, gain, sym, false, bgz) : r;
+  }
   if (cDirty) updateC();
   const int Nn = Na;
   const double *a1 = A1.data(), *a2 = A2.data(), *bf = BF.data(), *ep = EP.data(), *g = G.data();
@@ -121,6 +181,7 @@ double PluckedString::render(int n, const double *lift, bool keyDown, const doub
   const double k0 = wts[w0] * gain, k1 = wts[w1] * gain;
   double *qq = q(), *qq1 = q1();
   double ymin = std::numeric_limits<double>::infinity(), ymax = -ymin;
+  bool felt = false; // the damper felt touched the string this block
   for (int t = 0; t < n; t++) {
     const double L = lift[t], bg = buffG[t];
     const bool kcs = kcOn && stretched;
@@ -199,6 +260,7 @@ double PluckedString::render(int n, const double *lift, bool keyDown, const doub
         uOld[p] = uNow[p]; uNow[p] = u;
       }
       Fp[0] = act[0] ? Fc[0] : 0; Fp[1] = act[1] ? Fc[1] : 0; Fd = act[PT::DAMPER] ? Fc[PT::DAMPER] : 0;
+      if (Fd != 0) felt = true;
     } else {
       for (int i = 0; i < Nn; i++) y += bf[i] * qq1[i];
       Fp[0] = Fp[1] = 0; Fd = 0;
@@ -222,7 +284,8 @@ double PluckedString::render(int n, const double *lift, bool keyDown, const doub
   }
   flip = qq == qb.data();
   if (ran && most < 1e-5 * S.T) { stretched = false; dT = 0; }
-  return 0.5 * (ymax - ymin);
+  const double r = 0.5 * (ymax - ymin);
+  return Nz ? r + side(n, seg, stride, wts, w0, w1, gain, sym, felt, bgz) : r;
 }
 // Σ_{j≠p} C_pj F_j over the active points: what the other contacts add at point p.
 double PluckedString::cross(int p) const {
@@ -371,6 +434,11 @@ void PluckedString::letGo(int p, double F, double y) {
   Release &r = relInfo[p];
   phase[p] = Phase::above; act[p] = 0; Fc[p] = 0; released[p] = true;
   r.F = F; r.y = y; r.u = uf[p] + cross(p) + C[p * MAXP + p] * F; r.w = F * beamC(P, sp); r.s = sp; r.theta = std::atan(F * beamG(P, sp));
+  // the string, dragged Δz sideways at x, swings from there: its static shape under the force that holds it
+  if (Nz) {
+    const double Fz = (zOld[p] - P.s0) / staticCompliance(p), *PH = PHI[p].data();
+    for (int i = 0; i < Nz; i++) za[i] = zb[i] = (PH[i] * Fz) / (W[i] * W[i]);
+  }
   if (onRelease) onRelease(ctx, *this, p);
 }
 
@@ -389,8 +457,9 @@ void PluckedString::limit(int n) {
   if (n >= N) return;
   for (int i = n; i < N; i++) qa[i] = qb[i] = 0;
   N = Na = n; cDirty = true; hv.fill(0);
+  if (Nz > n) setSide(kz, n);
 }
 void PluckedString::wake() { if (Na != N) { Na = N; cDirty = true; hv.fill(0); } }
-void PluckedString::silence() { qa.fill(0); qb.fill(0); hv.fill(0); stretched = false; dT = 0; }
+void PluckedString::silence() { qa.fill(0); qb.fill(0); za.fill(0); zb.fill(0); hv.fill(0); stretched = false; dT = 0; }
 
 } // namespace forte::harpsichord

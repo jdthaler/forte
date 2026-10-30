@@ -47,6 +47,10 @@ const demos = [
   ['06-quick-neck-snap-then-slow', () => cat(play(P(), 2.6, notes(0.1, 0.2, [60, 67, 72, 79, 84, 91, 96, 103], 0.9)), play(P({ snap: 1 }), 2.6, notes(0.1, 0.2, [60, 67, 72, 79, 84, 91, 96, 103], 0.9)))],
   // one held key: even bubbles of one size, then a Poisson torrent with a 6 % size spread
   ['07-metronome-then-torrent', () => cat(play(P({ rate: 4, irregular: 0, spread: 0 }), 3, note(0.05, 74, 0.7, 2.6)), play(P({ rate: 30, irregular: 1, spread: 6 }), 3.5, note(0.05, 74, 0.7, 3.0)))],
+  // a quarter atmosphere, dry and then with water vapour in the bubbles: 75 ¢ flatter
+  ['08-dry-then-vapour-under-a-quarter-atmosphere', () => cat(play(P({ pressure: 0.25 }), 3.2, phrase()), play(P({ pressure: 0.25, vapour: true }), 3.2, phrase()))],
+  // the direct sound, then with the surface's echo (the bass cancelled, the treble combed), then 20 m down (a slap)
+  ['09-surface-echo-off-then-on-then-20-m-down', () => cat(play(P(), 3.2, phrase()), play(P({ echo: true }), 3.2, phrase()), play(P({ echo: true, depth: 20 }), 3.2, phrase()))],
 ];
 
 for (const [name, fn] of demos) saveExample(SLUG, name, await withRoom(fn(), 0.25, FS), FS);

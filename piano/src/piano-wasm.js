@@ -20,14 +20,14 @@ function messages(m) {
 const Base = wasmEngine(BUILD, { messages });
 
 // Voice data as the C++ takes it (piano-model.h, packVoiceData): version, key, n, unisons, the
-// hammer's mass, K, p, alpha, outV, outH, hasDamper, T, kc, then freq, sigma, w, cv, ch, ct, g,
+// hammer's mass, K, p, alpha, outV, outH, hasDamper, T, kc, fL, then freq, sigma, w, cv, ch, ct, g,
 // famId, uni, idx. A voice data object's version (a string, or a number) becomes a number.
-const HEAD = 13, ARRAYS = ['freq', 'sigma', 'w', 'cv', 'ch', 'ct', 'g', 'famId', 'uni', 'idx'];
+const HEAD = 14, ARRAYS = ['freq', 'sigma', 'w', 'cv', 'ch', 'ct', 'g', 'famId', 'uni', 'idx'];
 const versions = new Map();
 const versionId = (v) => { if (!versions.has(v)) versions.set(v, versions.size + 1); return versions.get(v); };
 export function packVoiceData(d) {
   const n = d.n, out = new Float64Array(HEAD + ARRAYS.length * n);
-  out.set([versionId(d.version), d.key, n, d.unisons, d.hammer.mass, d.hammer.K, d.hammer.p, d.hammer.alpha, d.outV, d.outH, d.hasDamper ? 1 : 0, d.T, d.kc]);
+  out.set([versionId(d.version), d.key, n, d.unisons, d.hammer.mass, d.hammer.K, d.hammer.p, d.hammer.alpha, d.outV, d.outH, d.hasDamper ? 1 : 0, d.T, d.kc, d.fL ?? 0]);
   ARRAYS.forEach((k, i) => out.set(d[k], HEAD + i * n));
   return out;
 }
@@ -38,13 +38,13 @@ export function unpackVoiceData(a) {
     freq: at(0).slice(), sigma: at(1).slice(), w: at(2).slice(), cv: at(3).slice(), ch: at(4).slice(), ct: at(5).slice(), g: at(6).slice(),
     famId: Uint8Array.from(at(7)), uni: Uint8Array.from(at(8)), idx: Uint16Array.from(at(9)),
     hammer: { mass: a[4], K: a[5], p: a[6], alpha: a[7] },
-    outV: a[8], outH: a[9], hasDamper: a[10] > 0, T: a[11], kc: a[12],
+    outV: a[8], outH: a[9], hasDamper: a[10] > 0, T: a[11], kc: a[12], fL: a[13],
   };
 }
 
 // A voice of the engine, read back: what the tests and the slow-motion view read (q and perm are views into the engine's memory, valid until it next runs).
-const VOICE = ['key', 'N', 'hammerOn', 'contactSamples', 'Fmax', 'killing', 'dead', 'eta', 'etaPrev', 'keyDown', 'damped', 'peak', 'age', 'own'];
-const FLAGS = new Set(['hammerOn', 'killing', 'dead', 'keyDown', 'damped', 'own']);
+const VOICE = ['key', 'N', 'hammerOn', 'contactSamples', 'Fmax', 'killing', 'dead', 'eta', 'etaPrev', 'keyDown', 'damped', 'peak', 'age', 'own', 'longModes', 'longPairs', 'longRinging'];
+const FLAGS = new Set(['hammerOn', 'killing', 'dead', 'keyDown', 'damped', 'own', 'longRinging']);
 class WasmVoice {
   constructor(engine, ptr) { this.engine = engine; this.ptr = ptr; }
   get state() {

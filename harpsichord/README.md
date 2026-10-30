@@ -190,6 +190,28 @@ below 10⁻⁵ T (a hundredth of a cent) the string runs linear again until it
 is plucked; while it glides it costs about 30 % more. *Tension modulation*
 under *Strings and soundboard* switches it off.
 
+**The sideways swing.** While the plectrum carries the string up, friction
+drags it out along the plectrum: by release it has moved about 0.44 mm
+sideways at the plucking point, against its lateral stiffness K_z, while it
+was lifted 2–3 mm. So when it lets go it swings sideways as well, from that
+triangle at rest. Its lowest sixteen partials are a second, uncoupled set of
+modes, started at qₙ = φₙ(x) Δz/C_s (C_s = Σφₙ²/ωₙ², the static compliance
+at x). The bridge gives far less sideways than up and down, only by rocking,
+so if its sideways conductance is κ times its vertical one the sideways
+partials drain into the board at σ_S + κσ_B. By the same lever they push on
+the board √κ times as hard as a vertical swing would. Where the board's
+share of a partial's loss is large (c², whose fundamental loses about as
+much to the board as to the air and wire), the sideways swing outlasts the
+vertical one: some 20 dB down at first, it takes over after three or four
+seconds and decays at about three fifths of the rate, a knee in the decay with
+a slow beat where the two cross (they sit 0.3 ¢ apart). That is the
+harpsichord's two-stage decay. The damper felt and the buff damp it as point
+dashpots (σ = Rφₙ²/2), so key up still stops the note. **Sideways motion**
+under *Strings and soundboard* is κ (20 %, 0 for off). Higher, the sideways
+swing is louder and shorter; at 100 % it is a second vertical swing, a few
+times quieter. It costs about 15 % more CPU at High (tested: the late
+fundamental decays at σ_S + κσ_B within 15 %).
+
 ### 5. Voicing
 
 The **Voicing** knob sets the plectrum's tip stiffness 1/c(ℓ) (2500 N/m by
@@ -459,11 +481,15 @@ tools/render-harpsichord.mjs               node tools/render-harpsichord.mjs →
   points, the plectrum's size and the board's size are reasonable choices,
   not one instrument's drawings. The ravalement compass is one of several
   used.
-* **One polarisation is heard.** The string's vertical motion (towards the
-  board) is integrated in full. Its sideways motion enters only during the
-  pluck, as a spring and the wave impedance resisting the slide. After
-  release the sideways vibration, which drives the bridge far less, is not
-  heard, and the energy stored in it is dropped.
+* **The sideways swing is simpler than the vertical.** The string's
+  vertical motion (towards the board) is integrated in full. Its sideways
+  motion enters the pluck as a spring and the wave impedance resisting the
+  slide; after release it is its lowest sixteen partials, started from rest
+  in their static shape, with no plectrum touching them (a re-pluck starts
+  them again), damped by the felt and the buff as dashpots, and stretching
+  the string not at all. The bridge's sideways conductance is one estimated
+  ratio κ for every partial and every key, its rocking lever √κ, and the
+  0.3 ¢ between the two swings an estimate too.
 * **The plectrum is massless and its slopes small.** It is a quasi-static
   Euler–Bernoulli cantilever with first-order foreshortening, under a
   vertical load, with Coulomb friction (one coefficient for sticking and
@@ -499,8 +525,9 @@ The Quality setting (in the controls, for phones and older computers) keeps High
 here. Medium fades the quietest released key once 12 sound (16 at High) and the quietest of all
 once 16 do (24), makes each string with fewer partials, none above 7 kHz (but always the first
 sixteen) and none past the 64th, stops a fading top partial sooner, and gives each held key's
-sympathetic strings only their three lowest partials. Low does so at 8 and 10 keys, stops at 5 kHz
-and the 40th partial, and turns the sympathetic strings off. A note keeps its pitch and its level
+sympathetic strings only their three lowest partials and each string's sideways swing its eight
+lowest. Low does so at 8 and 10 keys, stops at 5 kHz and the 40th partial, and turns the
+sympathetic strings and the sideways swing off. A note keeps its pitch and its level
 within about a decibel (where the plectrum lets go depends a little on every partial the string
 has); the lowest bass loses a little of its buzz at Low.
 

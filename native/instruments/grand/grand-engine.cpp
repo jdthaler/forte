@@ -11,6 +11,11 @@ namespace forte::grand {
 
 constexpr double OUT = 0.012;       // bridge force (N) → full-scale audio
 constexpr double KILL_SIGMA = 250;  // s⁻¹, fast fade for stolen / panicked / re-struck voices
+// longitudinal modes: none above LONG_FMAX (Hz); pairs summing below LONG_BELOW × a mode's
+// frequency left out; Q; the share of the longitudinal force the piezo and the board take up, set
+// so that a forte G1's strongest longitudinal component between 1 and 2 kHz is about as loud as
+// the partials beside it, as Bank & Sujbert (2005) show for a grand's
+constexpr double LONG_FMAX = 8000, LONG_BELOW = 0.25, LONG_Q = 60, LONG_SHARE = 0.05;
 constexpr double REPEAT = 0.06;     // s: the action needs this long to return the hammer for another blow
 constexpr double DROP = 1e-7;       // a top partial falling below this (output units, −140 dB) stops being integrated
 
@@ -67,6 +72,21 @@ void GrandEngine::Voice::start(const GrandEngine &eng, Data::Ref r, uint64_t ver
   hammerOn = false; peak = 0; quiet = 0; age = 0; struck = -INFINITY;
   eta = 0; etaPrev = 0; dPrev = -1; F = 0; FV = 0; FH = 0; Fmax = 0; contactSamples = 0; hammerSamples = 0; contact = false;
   setDamper(eng.P[p::damper]);
+  startLong(eng, d);
+}
+
+// The longitudinal modes this voice runs, from the partials it runs: each polarisation's partial
+// n (from 0) in string u is mode n·ns + u of it.
+void GrandEngine::Voice::startLong(const GrandEngine &eng, const KeyModel &d) {
+  const double L = d.S.L, fL = d.S.mu > 0 ? std::sqrt(2 * L * d.kc / d.S.mu) / (2 * L) : 0; // √(EA/μ)/2L, EA = 2L·kc
+  const int S = ns;
+  lon.build(d.kc > 0 ? eng.longPartials() : 0, eng.longModes(), fL, eng.fs, S, LONG_FMAX, LONG_BELOW, LONG_Q,
+            [&](int f, int n, int u) {
+              const int i = n * S + u;
+              return f == 0 ? (i < nVq ? i : -1) : (i < nHq ? nV + i : -1);
+            },
+            [&](int i) { return om[i]; }, [&](int i) { return gw[i]; });
+  lon.gain = LONG_SHARE * 2 * d.kc / S; // a force, as fv
 }
 
 // Per polarisation, over the active modes: Σ u², and the sums that tie the bridge to the output
@@ -123,6 +143,7 @@ void GrandEngine::Voice::strike(double v) {
   if (nVa < nVq || nHa < nHq) { nVa = nVq; nHa = nHq; bridgeSums(); }
   eta = uu - 1.5 * v * k; etaPrev = eta - v * k;
   dPrev = -1; hammerOn = true; stretched = true; hammerSamples = 0; contact = false;
+  lon.ringing = lon.nMode > 0;
   contactSamples = 0; Fmax = 0; v0 = v; struck = age;
   kOverM = (k * k) / hammer.mass;
   alphaK = hammer.alpha / k;
@@ -225,6 +246,8 @@ void GrandEngine::Voice::render(double *PL, double *PR, double *SEG, int n, Gran
   // δT is held below T/10: the first-order a₁ (slope θ sin θ, θ = ωk) then stays stable up to 0.45 fs
   const double *G = gw, *EP = ep, dTmax = 0.1 * Tt;
   const int S = ns;
+  const double lg = lon.ringing ? eng.P[p::longi] : 0;
+  double lMax = 0;
   for (int s = 0; s < n; s++) {
     if (hammerOn) {
       hammerStep(A1, A2, eng, kc);
@@ -260,9 +283,11 @@ void GrandEngine::Voice::render(double *PL, double *PR, double *SEG, int n, Gran
       sh = a * iH; fh = y - kH * sh;
       sbV[s] = sv; sbH[s] = sh;
     }
-    const double y = fv + gH * fh;
+    double yl = 0;
+    if (lg != 0) { yl = lg * lon.step(q); lMax = std::max(lMax, std::fabs(yl)); }
+    const double y = fv + yl + gH * fh;
     PL[s] += pl * y; PR[s] += pr * y;
-    sg[s] += fv;
+    sg[s] += fv + yl;
     const double ay = (y < 0 ? -y : y) * OUT;
     if (ay > pk) pk = ay;
   }
@@ -271,6 +296,8 @@ void GrandEngine::Voice::render(double *PL, double *PR, double *SEG, int n, Gran
   if (sh != 0) for (int i = nV; i < h1; i++) q[i] -= u[i] * sh;
   FV = fv; FH = fh;
   peak = pk; age += n;
+  // once the longitudinal force is 140 dB under full scale it only shrinks: stop it
+  if (lg != 0 && !hammerOn && lMax * OUT * trim < 1e-7) lon.quiet();
   if (!(pk < 1e3)) {
     dead = true;
     Message m;

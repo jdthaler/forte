@@ -17,7 +17,7 @@
 namespace forte::harpsichord {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { manual, coupler, front8, back8, four, lute, buff, material, stiff, overlap, stagger, xFront, xBack, xFour, xLute, detune, loss, damper, sympathy, fmax, kc, fullRange, soundboard, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { manual, coupler, front8, back8, four, lute, buff, material, stiff, overlap, stagger, xFront, xBack, xFour, xLute, detune, loss, damper, sympathy, fmax, kc, side, fullRange, soundboard, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -39,6 +39,7 @@ inline const FormatSegment kFormat_loss[] = {{kNoLimit, "× ", "", 1, 0, 2, fals
 inline const FormatSegment kFormat_damper[] = {{kNoLimit, "× ", " √(Tμ)", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_sympathy[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_fmax[] = {{kNoLimit, "", " kHz", 1, 0, 1, false, false, false, false}};
+inline const FormatSegment kFormat_side[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
 inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
@@ -85,6 +86,7 @@ inline const ParamInfo kParams[p::count] = {
   {"sympathy", "Sympathetic resonance", "Strings and soundboard", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_sympathy, 2},
   {"fmax", "Highest partial", "Strings and soundboard", ParamKind::continuous, 4, 16, 10, 0.5, false, false, nullptr, 0, kFormat_fmax, 1},
   {"kc", "Tension modulation (pitch glide)", "Strings and soundboard", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"side", "Sideways motion (two-stage decay)", "Strings and soundboard", ParamKind::continuous, 0, 1, 0.2, 0.01, false, false, nullptr, 0, kFormat_side, 2},
   {"fullRange", "Full range (A0–C8)", "Strings and soundboard", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"soundboard", "Soundboard", "Strings and soundboard", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_room, 1},

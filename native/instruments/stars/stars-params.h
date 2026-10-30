@@ -17,7 +17,7 @@
 namespace forte::stars {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { family, mass, speedup, spin, coreRatio, incl, driving, damping, flare, growth, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { family, mass, speedup, spin, coreRatio, incl, driving, damping, slope, flare, growth, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -31,6 +31,7 @@ inline const FormatSegment kFormat_coreRatio[] = {{kNoLimit, "× ", "", 1, 0, 1,
 inline const FormatSegment kFormat_incl[] = {{0, "", "° (pole-on)", 1, 0, 0, false, false, false, false}, {89.99999999999999, "", "°", 1, 0, 0, false, false, false, false}, {kNoLimit, "", "° (equator-on)", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_driving[] = {{0, "off: only the flare", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
 inline const FormatSegment kFormat_damping[] = {{0.9999999999999999, "× ", "", 1, 0, 2, false, false, false, false}, {kNoLimit, "× ", "", 1, 0, 1, false, false, false, false}};
+inline const FormatSegment kFormat_slope[] = {{0, "off: one linewidth per star", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "× ", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_flare[] = {{0, "none", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "× ", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_growth[] = {{kNoLimit, "", " s", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
@@ -66,6 +67,7 @@ inline const ParamInfo kParams[p::count] = {
   {"incl", "Inclination", "Rotation and view", ParamKind::continuous, 0, 90, 60, 1, false, false, nullptr, 0, kFormat_incl, 3},
   {"driving", "Convective driving", "Convection", ParamKind::continuous, 0, 2, 1, 0.01, false, true, nullptr, 0, kFormat_driving, 2},
   {"damping", "Damping (linewidths)", "Convection", ParamKind::continuous, 0.1, 10, 1, 0, true, false, nullptr, 0, kFormat_damping, 2},
+  {"slope", "Linewidth slope", "Convection", ParamKind::continuous, 0, 2, 1, 0.01, false, false, nullptr, 0, kFormat_slope, 2},
   {"flare", "Flare kick (× the modes’ rms)", "Convection", ParamKind::continuous, 0, 3, 0.7, 0.01, false, true, nullptr, 0, kFormat_flare, 2},
   {"growth", "δ Scuti growth time", "Convection", ParamKind::continuous, 0.05, 2, 0.25, 0, true, false, nullptr, 0, kFormat_growth, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_room, 1},

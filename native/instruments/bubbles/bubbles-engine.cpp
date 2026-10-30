@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <type_traits>
 
 #include "forte/dsp.h"
 
@@ -33,6 +34,11 @@ BubbleEngine::BubbleEngine(double fs, uint32_t seed, int pool, int soft) : Engin
   tuneVer.fill(-1); nomVer.fill(0);
   for (int i = 0; i < NK; i++) { double g[2]; hydrophoneGains(KEY_LO + i, g); gainL[i] = g[0]; gainR[i] = g[1]; }
   env = def;
+  // the echo's delay lines: the longest delay is 2 × 100 m of water, plus a block
+  int size = 1;
+  while (size < 0.14 * fs + 256) size *= 2;
+  for (auto &e : echo) e.assign(size, 0.0f);
+  echoMask = size - 1;
 }
 
 void BubbleEngine::configure(uint32_t seed, int size, int softLimit) {
@@ -133,7 +139,7 @@ bool BubbleEngine::release(Nozzle &z, int offset) {
   const Gas *gas = env.gas;
   // the bubble at its nozzle, under the tank's pressure as it is now
   Env renv;
-  renv.liq = liq; renv.gas = gas; renv.d = P[p::depth]; renv.p0 = pB + liq->rho * G * P[p::depth];
+  renv.liq = liq; renv.gas = gas; renv.d = P[p::depth]; renv.p0 = pB + liq->rho * G * P[p::depth]; renv.pv = env.pv;
   double R = radius(i), vel = z.vel;
   // the key's own bend: its nozzle releases the bubble that rings r × the note its own would ring
   // here and now (a bubble's note is set as it pinches off: those already rising keep theirs)
@@ -148,13 +154,15 @@ bool BubbleEngine::release(Nozzle &z, int offset) {
   const Acoustics a = acoustics(R, renv);
   Bubble &b = *slot;
   b.on = true; b.key = z.key; b.age = 0; b.start = offset; b.fade = 1; b.fadeStep = 0;
-  b.R0 = R; b.R = R; b.d0 = P[p::depth]; b.d = P[p::depth]; b.U = riseSpeed(R, *liq); b.pb0 = a.pb; b.phiRe = a.phiRe; b.phiIm = a.phiIm;
-  b.nSlow = slowExponent(R, *gas, a.pb);
+  b.R0 = R; b.R = R; b.d0 = P[p::depth]; b.d = P[p::depth]; b.U = riseSpeed(R, *liq); b.pg0 = a.pg; b.pv = renv.pv; b.phiRe = a.phiRe; b.phiIm = a.phiIm;
+  b.nSlow = slowExponent(R, *gas, a.pg);
   b.liq = liq; b.gas = gas; b.vel = vel; b.fd0 = a.fd;
   setRing(b, a);
   b.mr = std::exp(b.sr / fs) * std::cos(b.si / fs); b.mi = std::exp(b.sr / fs) * std::sin(b.si / fs);
   b.ur = 0; b.ui = 0; b.env = 0; b.peak = 0;
   b.gl = gainL[i]; b.gr = gainR[i];
+  b.eg[0] = b.eg[1] = 0;
+  if (P[p::echo]) { double g[2]; echoTargets(b, g, b.eg, b.et); } // (at the nozzle the direct gains are the same)
   // the kick: a pressure step Δp (a share of 2σ/R), ramped over the neck's snap time; the wall's
   // equilibrium moves by Δp/(ρRmω₀²) along a raised cosine, and the wall rings about it
   const double dp = kickPressure(R, *liq, vel);
@@ -199,9 +207,19 @@ bool BubbleEngine::glide(Bubble &b, int n) {
   const double d = b.d0 - riseDistance(t, b.U);
   if (d <= b.R) { startFade(b, BURST); return false; }
   double R;
-  ac = glideRing(b.R0, b.pb0, b.nSlow, {b.phiRe, b.phiIm}, *b.liq, *b.gas, d, pB, R);
+  ac = glideRing(b.R0, b.pg0, b.nSlow, {b.phiRe, b.phiIm}, *b.liq, *b.gas, d, pB, b.pv, R);
   b.R = R; b.d = d;
   return true;
+}
+
+// With the surface's echo, what each hydrophone (at nozzle depth h) hears of the bubble where it is
+// now: the direct path's gain, and the image's (inverted) gain and delay after the direct sound.
+void BubbleEngine::echoTargets(const Bubble &b, double gl[2], double eg[2], double et[2]) const {
+  const double x = nozzleX(b.key), h = P[p::depth];
+  for (int k = 0; k < 2; k++) {
+    const Paths r = surfacePaths(x - HYDRO_X[k], h, b.d);
+    gl[k] = R_REF / r.direct; eg[k] = -R_REF / r.image; et[k] = ((r.image - r.direct) / b.liq->c) * fs;
+  }
 }
 
 void BubbleEngine::render(Bubble &b, float *L, float *Rt, int n) {
@@ -219,31 +237,60 @@ void BubbleEngine::render(Bubble &b, float *L, float *Rt, int n) {
     dcr = (cr1 - cr) / steps; dci = (ci1 - ci) / steps;
     b.b = a.b; b.wd = a.omegaD; b.w0 = a.omega0; b.sr = sr1; b.si = si1; b.cr = cr1; b.ci = ci1;
   }
-  const double gl = b.gl, gr = b.gr, fstep = b.fadeStep;
+  double gl = b.gl, gr = b.gr;
+  const double fstep = b.fadeStep;
   const bool recording = rec == &b;
-  for (int i = i0; i < n; i++) {
-    if (b.rampLeft > 0) {
-      // The neck snapping: the equilibrium e moves out along a raised cosine, taken piecewise linear
-      // between samples. u is the wall's deviation from the particular solution e − 2bė/ω₀², which
-      // rings freely between samples; at each sample the slope of e changes by Δv, and u jumps by
-      // 2bΔv/ω₀² + i(1 − 2b²/ω₀²)Δv/ω_d. The output Re(s²u) is then exactly ẍ: no staircase.
-      const int k = b.rampK++, N = b.rampN;
-      const double v = k < N ? 0.5 * b.rampA * fs * (std::cos((std::numbers::pi * k) / N) - std::cos((std::numbers::pi * (k + 1)) / N)) : 0;
-      const double dv = v - b.rampV;
-      b.rampV = v;
-      ur += b.rampAl * dv; ui += b.rampBe * dv; b.rampLeft--;
-    }
-    const double y = (cr * ur - ci * ui) * fade;
-    L[i] = (float)(L[i] + gl * y); // a Float32Array's +=
-    Rt[i] = (float)(Rt[i] + gr * y);
-    if (recording && recPhase++ % recStride == 0 && waveCount < WAVE_N) wave[waveCount++] = (float)(y / OUT); // Pa at r_ref
-    const double nr = ur * mr - ui * mi;
-    ui = ur * mi + ui * mr; ur = nr;
-    const double tr = mr * dr - mi * di;
-    mi = mr * di + mi * dr; mr = tr;
-    cr += dcr; ci += dci;
-    if (fstep != 0) { fade -= fstep; if (fade <= 0) { fade = 0; break; } }
+  // the surface's echo: the gains swept to where the bubble is at the block's end (and out to
+  // nothing, back to the nozzle's direct gains, once it is switched off); each image scattered
+  // into its hydrophone's delay line at its delay, split between two samples
+  const bool echoOn = P[p::echo] != 0, echoing = echoOn || b.eg[0] != 0 || b.eg[1] != 0;
+  double dgl = 0, dgr = 0, e0 = b.eg[0], e1 = b.eg[1], de0 = 0, de1 = 0;
+  int t0 = 0, t1 = 0;
+  float f0 = 0, f1 = 0;
+  if (echoing) {
+    double g[2] = {gainL[b.key - KEY_LO], gainR[b.key - KEY_LO]}, eg[2] = {0, 0}, et[2] = {b.et[0], b.et[1]};
+    if (echoOn) echoTargets(b, g, eg, et);
+    dgl = (g[0] - gl) / steps; dgr = (g[1] - gr) / steps; de0 = (eg[0] - e0) / steps; de1 = (eg[1] - e1) / steps;
+    t0 = (int)b.et[0]; t1 = (int)b.et[1]; f0 = (float)(b.et[0] - t0); f1 = (float)(b.et[1] - t1);
+    b.gl = g[0]; b.gr = g[1]; b.eg[0] = eg[0]; b.eg[1] = eg[1]; b.et[0] = et[0]; b.et[1] = et[1];
   }
+  float *E0 = echo[0].data(), *E1 = echo[1].data();
+  const int mask = echoMask, w0 = echoPos;
+  // (one loop with the echo, one without: the plain one stays as tight as it was)
+  auto ring = [&](auto withEcho) {
+    for (int i = i0; i < n; i++) {
+      if (b.rampLeft > 0) {
+        // The neck snapping: the equilibrium e moves out along a raised cosine, taken piecewise linear
+        // between samples. u is the wall's deviation from the particular solution e − 2bė/ω₀², which
+        // rings freely between samples; at each sample the slope of e changes by Δv, and u jumps by
+        // 2bΔv/ω₀² + i(1 − 2b²/ω₀²)Δv/ω_d. The output Re(s²u) is then exactly ẍ: no staircase.
+        const int k = b.rampK++, N = b.rampN;
+        const double v = k < N ? 0.5 * b.rampA * fs * (std::cos((std::numbers::pi * k) / N) - std::cos((std::numbers::pi * (k + 1)) / N)) : 0;
+        const double dv = v - b.rampV;
+        b.rampV = v;
+        ur += b.rampAl * dv; ui += b.rampBe * dv; b.rampLeft--;
+      }
+      const double y = (cr * ur - ci * ui) * fade;
+      L[i] = (float)(L[i] + gl * y); // a Float32Array's +=
+      Rt[i] = (float)(Rt[i] + gr * y);
+      if constexpr (decltype(withEcho)::value) {
+        const float a = (float)(e0 * y), c = (float)(e1 * y);
+        const int j0 = (w0 + i + t0) & mask, j1 = (w0 + i + t1) & mask;
+        E0[j0] += a * (1 - f0); E0[(j0 + 1) & mask] += a * f0;
+        E1[j1] += c * (1 - f1); E1[(j1 + 1) & mask] += c * f1;
+        gl += dgl; gr += dgr; e0 += de0; e1 += de1;
+      }
+      if (recording && recPhase++ % recStride == 0 && waveCount < WAVE_N) wave[waveCount++] = (float)(y / OUT); // Pa at r_ref
+      const double nr = ur * mr - ui * mi;
+      ui = ur * mi + ui * mr; ur = nr;
+      const double tr = mr * dr - mi * di;
+      mi = mr * di + mi * dr; mr = tr;
+      cr += dcr; ci += dci;
+      if (fstep != 0) { fade -= fstep; if (fade <= 0) { fade = 0; break; } }
+    }
+  };
+  if (echoing) ring(std::true_type{});
+  else ring(std::false_type{});
   // renormalise the step to its exact value at the block's end
   const double e = std::exp(b.sr / fs);
   b.mr = e * std::cos(b.si / fs); b.mi = e * std::sin(b.si / fs);
@@ -298,6 +345,12 @@ void BubbleEngine::process(float *L, float *R, int n) {
     z.due -= n;
   }
   for (Bubble &b : pool) if (b.on) render(b, L, R, n);
+  // the hydrophones hear the surface's echo as it arrives
+  for (int k = 0; k < 2; k++) {
+    float *E = echo[k].data(), *out = k ? R : L;
+    for (int i = 0; i < n; i++) { float &e = E[(echoPos + i) & echoMask]; out[i] += e; e = 0; }
+  }
+  echoPos = (echoPos + n) & echoMask;
   frame += n;
   if (messages) postViews(n);
 }

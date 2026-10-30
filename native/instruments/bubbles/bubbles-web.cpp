@@ -8,43 +8,43 @@
 
 using namespace forte::bubbles;
 
-static Env envOf(double p0, double d, int liquid, int gas) {
+static Env envOf(double p0, double d, int liquid, int gas, double pv) {
   Env env;
-  env.p0 = p0; env.d = d; env.liq = &LIQUIDS[liquid]; env.gas = &GASES[gas];
+  env.p0 = p0; env.d = d; env.pv = pv; env.liq = &LIQUIDS[liquid]; env.gas = &GASES[gas];
   return env;
 }
 
 static void put(const Acoustics &a, double *out) {
-  const double v[18] = {a.omega0, a.b, a.omegaD, a.f0, a.fd, a.delta, a.dvis, a.dth, a.drad, a.kappa, a.phiRe, a.phiIm, a.chi, a.D, a.pb, a.m, a.radFactor, a.R};
-  for (int i = 0; i < 18; i++) out[i] = v[i];
+  const double v[19] = {a.omega0, a.b, a.omegaD, a.f0, a.fd, a.delta, a.dvis, a.dth, a.drad, a.kappa, a.phiRe, a.phiIm, a.chi, a.D, a.pb, a.m, a.radFactor, a.R, a.pg};
+  for (int i = 0; i < 19; i++) out[i] = v[i];
 }
 
 extern "C" {
 // One bubble's acoustics (acoustics) at liquid pressure p0, depth d, with the
-// liquid's and the gas's indices: omega0, b, omegaD, f0, fd, delta, dvis, dth, drad, kappa,
-// phiRe, phiIm, chi, D, pb, m, radFactor, R in out.
-FORTE_EXPORT void bubbles_acoustics(double R, double p0, double d, int liquid, int gas, double *out) {
-  put(acoustics(R, envOf(p0, d, liquid, gas)), out);
+// liquid's and the gas's indices and vapour at pv inside: omega0, b, omegaD, f0, fd, delta, dvis,
+// dth, drad, kappa, phiRe, phiIm, chi, D, pb, m, radFactor, R, pg in out.
+FORTE_EXPORT void bubbles_acoustics(double R, double p0, double d, int liquid, int gas, double pv, double *out) {
+  put(acoustics(R, envOf(p0, d, liquid, gas, pv)), out);
 }
 // The same in a liquid and a gas of the test's own: in = rho, mu, sigma, c, gamma, M, K, cp.
-FORTE_EXPORT void bubbles_acoustics_custom(double R, double p0, double d, const double *in, double *out) {
+FORTE_EXPORT void bubbles_acoustics_custom(double R, double p0, double d, double pv, const double *in, double *out) {
   const Liquid liq = {"custom", in[0], in[1], in[2], in[3]};
   const Gas gas = {"custom", in[4], in[5], in[6], in[7]};
   Env env;
-  env.p0 = p0; env.d = d; env.liq = &liq; env.gas = &gas;
+  env.p0 = p0; env.d = d; env.pv = pv; env.liq = &liq; env.gas = &gas;
   put(acoustics(R, env), out);
 }
 // The glide (glideRing), as the engine rings a bubble of radius R0 released at liquid pressure p0
-// and depth d0: its ring n times t[i] seconds later with the air above the liquid at pT[i]
-// (the bubble rises as riseDistance says; Φ and the swelling's exponent are the release's). Into
-// out: fd (Hz), then b (s⁻¹), n each.
-FORTE_EXPORT void bubbles_glide(double R0, double p0, double d0, int liquid, int gas, int n, const double *t, const double *pT, double *out) {
-  const Env env = envOf(p0, d0, liquid, gas);
+// and depth d0, with vapour at pv inside: its ring n times t[i] seconds later with the air above
+// the liquid at pT[i] (the bubble rises as riseDistance says; Φ and the swelling's exponent are the
+// release's). Into out: fd (Hz), then b (s⁻¹), n each.
+FORTE_EXPORT void bubbles_glide(double R0, double p0, double d0, int liquid, int gas, double pv, int n, const double *t, const double *pT, double *out) {
+  const Env env = envOf(p0, d0, liquid, gas, pv);
   const Acoustics a = acoustics(R0, env);
-  const double U = riseSpeed(R0, *env.liq), nSlow = slowExponent(R0, *env.gas, a.pb);
+  const double U = riseSpeed(R0, *env.liq), nSlow = slowExponent(R0, *env.gas, a.pg);
   for (int i = 0; i < n; i++) {
     double R;
-    const Acoustics g = glideRing(R0, a.pb, nSlow, {a.phiRe, a.phiIm}, *env.liq, *env.gas, d0 - riseDistance(t[i], U), pT[i], R);
+    const Acoustics g = glideRing(R0, a.pg, nSlow, {a.phiRe, a.phiIm}, *env.liq, *env.gas, d0 - riseDistance(t[i], U), pT[i], pv, R);
     out[i] = g.fd; out[n + i] = g.b;
   }
 }
