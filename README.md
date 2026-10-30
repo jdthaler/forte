@@ -39,6 +39,7 @@ The front page sorts them into five kinds, as here.
 | ✅ | [Reed Piano](reeds/) | Wurlitzer 200A | solder-tuned steel reeds, an electrostatic pickup whose capacitance comes from Laplace's equation, photocell tremolo |
 | ✅ | [Tangent Clavier](clavier/) | Hohner Clavinet D6 | tangent strikes and clamps the string on an anvil (Hertzian contacts), pressure bends the pitch, four pickup combinations, tone tabs, mute bar |
 | ✅ | [Sticky-Pad Piano](pianet/) | Hohner Pianet | reeds plucked by rate-dependent adhesion (fracture mechanics of the pad), magnetic or electrostatic pickup |
+| ✅ | [Trautonium](trautonium/) | Trautwein's Trautonium (1930), Sala's Mixtur-Trautonium (1952) | a neon lamp's relaxation sawtooth, its capacitor charged through a resistance wire (exact firing times, polyBLEP); four dividers, lamps ganged to the wire and fired by the master's sync pulse on every n-th flash, whose capture window gives where they divide true, slip or fire a flash early; four fixed resonant circuits rung by every flash (formants); one wire that slides between keys or a manual per key; finger pressure, a volume pedal, pitch bend and MPE |
 
 ### Experiments from history
 
