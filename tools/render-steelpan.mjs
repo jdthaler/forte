@@ -36,7 +36,7 @@ const demos = [
   // the same hard phrase on flat notes, then on high domes
   ['03-flat-notes-then-high-domes', () => {
     const ph = notes(0.1, 0.45, [64, 67, 72, 71, 67], 0.95, 0.4);
-    return cat(play(P({ rise: 0 }), 2.8, ph), play(P({ rise: 7 }), 2.8, ph));
+    return cat(play(P({ rise: 0 }), 2.8, ph), play(P({ rise: 6 }), 2.8, ph));
   }],
   // tuned to octave and twelfth, then the note areas as the hammer left them (untuned)
   ['04-tuned-then-untuned-as-sunk', () => {
