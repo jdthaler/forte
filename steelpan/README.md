@@ -9,7 +9,8 @@ bell. The dome's curvature couples the note's own modes, so a hard stroke
 pumps the octave out of the fundamental, the octave the double octave, and
 on up the note's harmonics: the tone blooms, brightens and wobbles. The steel
 between notes couples each note to its neighbours, which the fourths-and-fifths
-layout makes ring along in tune. The skirt decides which partials radiate. You
+layout makes ring along in tune. The skirt decides which partials radiate,
+and rings itself, taking the partials that fall on its own modes. You
 can flatten the domes, leave the notes untuned, lay the pan out chromatically,
 cut the skirt, or roll a held note with the mod wheel.
 
@@ -156,11 +157,14 @@ too hard goes sour). A stroke at 0.7 starts half as sharp.
 ### 5. Neighbours and the layout
 
 All the notes share one sheet of steel, so a note's motion pushes on its
-neighbours. Between each pair of tuned modes of two neighbouring notes
-that are within 3 % of each other, the engine puts a spring,
+neighbours. Between each pair of modes of two neighbouring notes that are
+within 3 % of each other, the engine puts a spring,
 V = κ w ωₐω_b xₐx_b, with κ the **Note coupling** (0.15 %) and w = 1 for
 side-by-side and radial neighbours, ½ for diagonal ones. Modes further
-apart hardly exchange energy, and they are left uncoupled.
+apart hardly exchange energy, and they are left uncoupled. A struck note
+couples all its modes, so the ladder reaches the neighbours too: C4's
+double octave is C5's octave, and sets it ringing. A neighbour only
+ringing along runs its tuned three.
 
 Each ring holds an octave, and the next ring in holds the octave above.
 Anthony Williams laid the ring out in fourths and fifths (his 1953
@@ -188,6 +192,27 @@ a smooth fit through the family, L = 0.86 m · (f₁/98 Hz)^(−1.4), between 14
 and 86 cm, and **Skirt length** scales it. Each mode's surface velocity is
 heard through that factor, as by a close microphone. The notes are spread
 across the stereo field by pitch.
+
+The skirt also rings. It is a cylinder of 18-gauge steel (1.2 mm, the pan
+makers' choice) 57 cm across, open at the bottom, and its lowest modes are a
+ring's inextensional bending, n waves round the drum (Rayleigh; Soedel
+2004):
+
+  f_n = (h / 2πR²) √(E / 12ρ(1 − ν²)) · n(n² − 1) / √(n² + 1),
+
+10 Hz for n = 2, 233 and 296 Hz for 8 and 9, and 832 Hz for n = 15: Hansen
+and Rossing (2005) found a skirt mode at 830 Hz, beside a G5 note. Forty of them, up
+to 6 kHz, each a pair (cos nθ and sin nθ round the drum), ring with a
+damping ratio of 0.002. Every note pushes on the rim where it sits (by
+fifths round the drum, 30° apart, or by semitones), and a note mode within
+3 % of a ring mode is tied to it by a spring k xₚ (cos nθ y_c + sin nθ
+y_s), k = **Skirt coupling** (0.3 %) · ωₚω_n. A partial in tune with the
+skirt beats with it and drains into it (G♯4's octave, at 831 Hz, dies
+sooner than its fundamental), and the skirt hands it on to the other
+ringing notes that share the mode. The skirt itself is silent: its bending
+waves are far shorter than the sound's (n = 15 has 12 cm waves against
+41 cm of air), so below about 10 kHz (the coincidence frequency of 1.2 mm
+steel) its lobes cancel each other and it radiates almost nothing.
 
 ### 7. Hands and rolls
 
@@ -243,6 +268,9 @@ The demos are in `examples/steelpan/`.
 6. **A rolled chord**, the roll swelling with the mod wheel.
 7. **A bass line with a tenor's skirt, then the whole drum.** The short
    skirt loses the fundamentals to the back of the notes.
+8. **The skirt takes a partial: G♯4 without it, then with it.** The note's
+   octave, at 831 Hz, falls on the skirt's 15th mode, beats with it and dies
+   sooner.
 
 ## Files
 
@@ -272,9 +300,12 @@ tools/render-steelpan.mjs                 node tools/render-steelpan.mjs → exa
   each note (and theirs are not quite those of a potential). The
   non-resonant quadratic terms (a note's 2f₁ in its own fundamental, a sum
   tone far from any mode, and the dome's slow sag) are left out.
-- **Neighbours couple only near resonance**, and only through their tuned
-  modes (a note's upper modes, the ladder's, stay its own). The steel between notes, the skirt's own modes (Hansen and
-  Rossing found one at 830 Hz, beside a G5 note) and the rest of the bowl are not modelled.
+- **Neighbours couple only near resonance**, and a neighbour that is only
+  ringing along runs only its tuned modes. The steel between notes and the
+  rest of the bowl are not modelled.
+- **The skirt is a ring.** Its modes are a free ring's, the same for every
+  key whatever the skirt's length, with no modes along it, and every note
+  pushes on it equally wherever it sits in the bowl.
 - **One pan for 88 keys.** The band's pans each cover part of the range
   with their own skirt, sink depth and note sizes. Here one layout and one
   set of knobs covers all of them, and the skirt follows the key.
@@ -289,11 +320,13 @@ tools/render-steelpan.mjs                 node tools/render-steelpan.mjs → exa
 The Quality setting (in the top bar, for phones and older computers) keeps
 High as described here. Medium and Low ring at most 8 and 6 of a note's
 modes (12 at High), dropping the highest untuned ones and any above 16 and
-12 kHz, and a note goes quiet a little sooner once it has rung out. The
-fundamental, octave and twelfth, the dome's ladder as far as the modes
-that are left (up to 6 f₁ at Medium, the double octave's pair at Low) and
-the neighbours singing along all stay; what goes is the top of the ladder
-and a little of the stick's metallic top.
+12 kHz, and a note goes quiet a little sooner once it has rung out. Only the
+tuned modes meet the neighbours' at Medium and Low, and at Low the skirt
+stays still. The fundamental, octave and twelfth, the dome's ladder as far
+as the modes that are left (up to 6 f₁ at Medium, the double octave's pair
+at Low) and the neighbours singing along all stay; what goes is the top of
+the ladder, the neighbours' share of it, and a little of the stick's
+metallic top.
 
 ## Prior art and references
 
@@ -349,6 +382,9 @@ and a little of the stick's metallic top.
 - P. Bryde & L. Mahadevan (2022). "Localization in musical steelpans."
   [arXiv:2212.14465](https://arxiv.org/abs/2212.14465). Why a note's
   modes stay in the note: the change of curvature at its edge.
+- W. Soedel (2004). *Vibrations of Shells and Plates*, 3rd ed. Marcel
+  Dekker. A ring's inextensional bending modes (after Lord Rayleigh,
+  *The Theory of Sound*, 1877), the skirt's.
 - A. W. Leissa (1969). *Vibration of Plates.* NASA SP-160. The simply
   supported rectangular plate.
 - H. Hertz (1882). "Über die Berührung fester elastischer Körper." *J.
