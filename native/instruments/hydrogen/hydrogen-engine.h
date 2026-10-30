@@ -5,7 +5,8 @@
 // many atoms with random phases: a tone whose amplitude and phase wander as a complex Gaussian
 // process as wide as the line (Ornstein–Uhlenbeck, so the line's shape is a Lorentzian of that
 // width), the width being its levels' decay rates in slow motion, the atoms' thermal Doppler shifts
-// and the Stark effect of the ions around them.
+// and the Stark effect of the ions around them. A released lamp's light also goes through a
+// shutter that closes over the Shutter time (real time, not the atoms'): not physics, an ending.
 #pragma once
 
 #include <array>
@@ -64,6 +65,7 @@ class HydrogenEngine : public Engine {
     double bendNow = 1, density = 0, fKey = 0;
     double peak = 0;            // the steady power its lines sum to (for when it has faded)
     double peakNorm = 0;        // the steady power its gain is normalised to
+    double shut = 1;            // the shutter's gain: 1 while lit, closing after the release
     std::array<Osc, MAX_OSC> osc;
   };
   void light(Voice &v, double velocity);

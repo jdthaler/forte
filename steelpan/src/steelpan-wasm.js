@@ -35,7 +35,7 @@ export const ready = () => SteelPanWasmEngine.ready();
 
 // The model, computed by the WebAssembly (steelpan-model.cpp): noteModes(key, P), a key's modes
 // [{ f, sigma, shape, rad, i, j }], the tuned three first; strike(key, P, v), a stroke's impulse
-// on each; shape(i, j, x, y); plateRatio(i, j, r); pulse(f, tau); contact(tau0, f1, v);
+// on each; triples(key, P), the dome's couplings among its modes [{ i, j, k, c }]; shape(i, j, x, y); plateRatio(i, j, r); pulse(f, tau); contact(tau0, f1, v);
 // skirt(key, scale); radiation(f, L); ringTime(key, t60); neighbours(key, layout) [{ key, weight }];
 // and the constants kAmp, kRise, kHarden, kWindow.
 export async function wasmModel() {
@@ -52,6 +52,10 @@ export async function wasmModel() {
     strike(key, P, v) {
       const out = put(P), n = x.steelpan_strike(key, s.at, v, out);
       return Array.from(new Float64Array(x.memory.buffer, out, n));
+    },
+    triples(key, P) {
+      const out = put(P), n = x.steelpan_triples(key, s.at, out), m = new Float64Array(x.memory.buffer, out, 4 * n);
+      return Array.from({ length: n }, (_, q) => ({ i: m[4 * q], j: m[4 * q + 1], k: m[4 * q + 2], c: m[4 * q + 3] }));
     },
     shape: (i, j, u, v) => x.steelpan_shape(i, j, u, v),
     plateRatio: (i, j, r) => x.steelpan_plate_ratio(i, j, r),

@@ -118,7 +118,8 @@ body[data-instrument] .forte-fold {
 }
 body[data-instrument] .forte-fold:hover { color: var(--text); }
 .forte-fold svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.15s; }
-.forte-views-bar .forte-fold[aria-expanded="true"] svg, .forte-controls-bar .forte-fold[aria-expanded="false"] svg { transform: rotate(180deg); }
+.forte-views-bar .forte-fold[aria-expanded="true"] svg, .forte-controls-bar .forte-fold[aria-expanded="false"] svg,
+.forte-controls-bar.below .forte-fold svg { transform: rotate(180deg); } /* on a phone, the controls out of sight below: up they come */
 /* a group's toggle stands in for folding it */
 #controls details.group[hidden] { display: none; }
 #controls details.group[data-key] > summary { cursor: default; }

@@ -9,7 +9,7 @@
 
 namespace forte::steelpan {
 
-constexpr double OUT = 0.6;
+constexpr double OUT = 0.19;
 constexpr double QUIET = 2e-6;    // a note below this (in thicknesses) and done ringing goes to sleep
 constexpr int GRACE = 2048;       // samples a note stays alive after it wakes, to be driven
 constexpr int POST = 512;         // samples between the views' messages
@@ -44,6 +44,11 @@ void SteelPanEngine::retune(Note &v) {
     v.a1[i] = c.a1; v.a2[i] = c.a2; v.b[i] = c.b;
     v.w[i] = TAU * m.f;
     v.out[i] = OUT * m.rad * fs / w1; // radiated ∝ surface velocity: the mode's ẏ, in units of ω₁
+  }
+  const int nt = noteTriples(v.nm, v.tri.data());
+  for (int n = 0, q = 0; n <= kModes; n++) {
+    while (q < nt && std::max(v.tri[q].j, v.tri[q].k) < n) q++;
+    v.triBelow[n] = q;
   }
   v.version = version;
 }
@@ -184,9 +189,8 @@ void SteelPanEngine::process(float *L, float *R, int n) {
     double l = 0, r = 0;
     for (int i : live) {
       Note &v = notes[i];
-      double Fn[kTuned]; // the dome's forces among the tuned modes
-      tunedForces(v.y1.data(), v.w.data(), g * v.w[0] * v.w[0], Fn);
-      for (int p = 0; p < kTuned; p++) v.F[p] += Fn[p];
+      // the dome's forces among the modes it runs
+      domeForces(v.tri.data(), v.triBelow[v.run], v.run, v.y1.data(), v.w.data(), g * v.w[0] * v.w[0], v.F.data());
       double out = 0;
       for (int p = 0; p < v.run; p++) {
         const double y = v.a1[p] * v.y1[p] - v.a2[p] * v.y2[p] + v.b[p] * v.F[p];

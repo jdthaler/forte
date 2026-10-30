@@ -81,18 +81,37 @@ NoteModes noteModes(int key, const double *P, double fmax) {
 
 double strikeGain(const Mode &m, double f1, double tau) { return kAmp * m.shape * pulseSpectrum(m.f, tau) * TAU * f1; }
 
-void tunedForces(const double *x, const double *w, double g, double *F) {
-  const double w0 = w[0], r1 = w[1] / w0, r2 = w[2] / w0;
-  const double Q = x[0] * x[0] + r1 * r1 * x[1] * x[1] + r2 * r2 * x[2] * x[2], h = kHarden * w0 * w0 * Q;
-  F[0] = -g * (2 * x[0] * x[1] + x[1] * x[2]) - h * x[0];
-  F[1] = -g * (x[0] * x[0] + x[0] * x[2] + 2 * x[1] * x[2]) - h * r1 * r1 * x[1];
-  F[2] = -g * (x[0] * x[1] + x[1] * x[1]) - h * r2 * r2 * x[2];
+int noteTriples(const NoteModes &nm, Triple *out) {
+  int n = 0;
+  const double f1 = nm.m[0].f, norm = 1 + 2 * std::numbers::sqrt2;
+  for (int i = 0; i < nm.count; i++) for (int j = i; j < nm.count; j++) for (int k = 0; k < nm.count; k++) {
+    const double fi = nm.m[i].f, fj = nm.m[j].f, fk = nm.m[k].f;
+    if (k == i || k == j || std::fabs(fi + fj - fk) >= kWindow * fk || n >= kTriples) continue;
+    const double ri = fi / f1, rj = fj / f1, rk = fk / f1;
+    out[n++] = {i, j, k, (std::sqrt(ri * rj) + std::sqrt(rj * rk) + std::sqrt(ri * rk)) / norm};
+  }
+  std::stable_sort(out, out + n, [](const Triple &a, const Triple &b) { return std::max(a.j, a.k) < std::max(b.j, b.k); });
+  return n;
 }
 
-double tunedPotential(const double *x, const double *w, double g) {
-  const double w0 = w[0], r1 = w[1] / w0, r2 = w[2] / w0;
-  const double Q = x[0] * x[0] + r1 * r1 * x[1] * x[1] + r2 * r2 * x[2] * x[2];
-  return g * (x[0] * x[0] * x[1] + x[0] * x[1] * x[2] + x[1] * x[1] * x[2]) + 0.25 * kHarden * w0 * w0 * Q * Q;
+void domeForces(const Triple *t, int nt, int n, const double *x, const double *w, double g, double *F) {
+  for (int q = 0; q < nt; q++) {
+    const Triple &u = t[q];
+    const double c = g * u.c, xi = x[u.i], xj = x[u.j], xk = x[u.k];
+    F[u.i] -= c * xj * xk; F[u.j] -= c * xi * xk; F[u.k] -= c * xi * xj; // i = j: 2c·xᵢxₖ on it
+  }
+  const double w0 = w[0];
+  double Q = 0;
+  for (int p = 0; p < n; p++) { const double r = w[p] / w0; Q += r * r * x[p] * x[p]; }
+  const double h = kHarden * w0 * w0 * Q;
+  for (int p = 0; p < n; p++) { const double r = w[p] / w0; F[p] -= h * r * r * x[p]; }
+}
+
+double domePotential(const Triple *t, int nt, int n, const double *x, const double *w, double g) {
+  double V = 0, Q = 0;
+  for (int q = 0; q < nt; q++) V += g * t[q].c * x[t[q].i] * x[t[q].j] * x[t[q].k];
+  for (int p = 0; p < n; p++) { const double r = w[p] / w[0]; Q += r * r * x[p] * x[p]; }
+  return V + 0.25 * kHarden * w[0] * w[0] * Q * Q;
 }
 
 int neighbours(int key, int layout, Neighbour *out) {

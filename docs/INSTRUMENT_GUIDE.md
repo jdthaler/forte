@@ -373,7 +373,10 @@ and say which in the footer help.
   the controls' bar (with the presets) sticks just above the controls and
   keys until it heads the Controls panel as it scrolls by. Turned
   sideways, it scrolls with the panel, and the keyboard bar keeps to one
-  line, its overview of the range shrunk to a thumbnail.
+  line, its overview of the range shrunk to a thumbnail. Either way, while
+  the controls are out of sight below, the bar's chevron points up and
+  scrolls them into view (opening them does too); once they show, it
+  folds them away.
 - While one finger holds a key, a tap with another finger works any
   button, stop or tab (browsers give such a tap no click; `layout.js`
   clicks for it).
