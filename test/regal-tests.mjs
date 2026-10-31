@@ -167,6 +167,17 @@ test('the voicer\'s retuning: every preset in tune (within 0.6 ¢), though the s
   console.log(`        (presets unretuned up to ${raw.toFixed(0)} ¢ off)`);
 });
 
+test('the voicer\'s ear hears each press alone: a key played again and again, each time before its reed falls silent, stays on its note (within 2 ¢ every press), with and without knobs moved together', () => {
+  for (const p of [P({ bellows: 'blower' }), P({ curve: 0.9, thickness: 1.3, q: 200, resLength: 0.7, bellows: 'blower' })]) {
+    const e = new RegalEngine(FS), key = 60, heard = [];
+    for (let i = 0; i < 6; i++) {
+      const { L } = run(p, [[0, 'on', key, 0.7], [0.7, 'off', key]], 0.85, { engine: e });
+      heard.push(cents(freqAt(L, keyFreq(key), 0.35 * FS, 0.69 * FS), keyFreq(key)));
+    }
+    for (const c of heard.slice(1)) assert.ok(Math.abs(c) < 2, `presses: ${heard.map((c) => c.toFixed(1)).join(', ')} ¢`);
+  }
+});
+
 test('the ranks: the 4′ sounds an octave up (breaking back past C8), the Sordun 16′ an octave down, each in tune in the engine (within 4 ¢)', () => {
   assert.ok(Math.abs(M.reed(96, 2, P()).f0 / (2 * keyFreq(96)) - 1) < 1e-9);
   assert.ok(Math.abs(M.reed(100, 2, P()).f0 / keyFreq(100) - 1) < 1e-9, 'the 4′ breaks back past C8');
