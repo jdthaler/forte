@@ -90,6 +90,8 @@ inline const PresetValue kPreset4[] = {{p::energy, 40}, {p::gain, 700}};
 inline const PresetValue kPreset5[] = {{p::side, 3}, {p::gain, 1500}};
 inline const PresetValue kPreset6[] = {{p::wire, 3000}};
 inline const PresetValue kPreset7[] = {{p::periodA4, 0.5}, {p::gain, 2500}};
+inline const PresetValue kPreset8[] = {{p::clamp, 80}};
+inline const PresetValue kPreset9[] = {{p::clamp, 1.5}};
 inline const Preset kPresets[] = {
   {"A CUORE crystal at 10 mK", nullptr, 0},
   {"The real heater: a pulse every 300 s on A4", kPreset1, 1},
@@ -99,6 +101,8 @@ inline const Preset kPresets[] = {
   {"Cuoricino's small crystal (3 cm)", kPreset5, 2},
   {"Long wires: a soft attack", kPreset6, 1},
   {"Piled up: a pulse every 0.5 s on A4", kPreset7, 2},
+  {"Firm holders: the heat drains fast, short pulses", kPreset8, 1},
+  {"Loose holders: the heat lingers", kPreset9, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::energy}, {109, p::periodA4}, {111, p::bias}, {113, p::clamp}, {114, p::tbase}};
@@ -117,7 +121,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Every key one of CUORE's tellurium dioxide crystals, ten thousandths of a degree above absolute zero under the Gran Sasso: its heater fires pulses of heat at the note's rate, sped up, and a germanium thermistor turns each into a voltage, rising as the electrons warm and fading as the crystal cools through its Teflon holders.", .auSubtype = "Cuor",
     .vst3Id = {0x53, 0x18, 0x60, 0xe8, 0x14, 0xce, 0xef, 0xce, 0xef, 0x4a, 0x64, 0xcd, 0x4e, 0xf8, 0xfb, 0x04},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 8,
+    .presets = kPresets, .presetCount = 10,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::tbase, .modWheelMax = 14,

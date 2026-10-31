@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Chladni Plate · Forte</title>
+  <meta name="description" content="Every key a square brass plate clamped at its centre and bowed at its edge, as Chladni bowed his: a finger on a nodal line picks the figure, and sand on the plate runs to the lines that stay still.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="Chladni Plate · Forte">
+  <meta property="og:description" content="Every key a square brass plate clamped at its centre and bowed at its edge, as Chladni bowed his: a finger on a nodal line picks the figure, and sand on the plate runs to the lines that stay still.">
+  <meta property="og:url" content="https://forte.jthaler.net/chladni/">
+  <meta property="og:image" content="https://forte.jthaler.net/chladni/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Chladni Plate's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="chladni">
+  <div class="forte-edge" aria-hidden="true"></div>
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Chladni Plate</h1>
+      <span class="sub">Chladni's bowed plates (1787): a finger on a nodal line picks the figure, and the sand draws it</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Plate">
+          <div class="card-head"><h2>Plate <b id="focus-name">A4</b> and its sand</h2><span class="muted" id="plate-read"></span></div>
+          <canvas id="plate"></canvas>
+          <div class="caption">The key's plate from above, clamped at its centre, with sand on it: wherever the plate shakes harder than gravity the grains hop about, and they come to rest on the nodal lines, which stay still. The bow is drawn down across the edge at the dark bar; the two circles are fingertips resting on the figure's nodal lines. Each key is its own plate, with its own sand; tap the plate twice to sprinkle it afresh.</div>
+        </div>
+        <div class="card" data-view="Figures">
+          <div class="card-head"><h2>Chladni's figures</h2><span class="muted" id="figures-read"></span></div>
+          <canvas id="figures"></canvas>
+          <div class="caption">The nodal lines of the ten figures on this plate, lowest first, with each one's pitch over the plate's lowest mode. The figure the keys are cut for is framed; the one sounding now is filled.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-perform>
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the plate's modes</span></div>
+          <canvas id="spectrum"></canvas>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">The bow's stick and slip lock the plate onto one mode and make true harmonics of it, unlike the plate's own overtones (the markers). Shift the bow along the edge or lift the finger and watch the note jump to another mode's line.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Mode table">
+          <div class="card-head"><h2>Modes of <b id="focus-name-2">A4</b></h2></div>
+          <table class="modes" id="modes"></table>
+        </div>
+        <div class="card" id="info-card">
+          <div class="card-head"><h2>Plate and bow</h2></div>
+          <dl id="info"></dl>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>bow force <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>a plate is bowed while its key is held</span>
+      <span>sustain (the hand off the plates): hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/chladni-main.js"></script>
+  <script type="module" src="src/chladni-tour.js"></script>
+</body>
+</html>

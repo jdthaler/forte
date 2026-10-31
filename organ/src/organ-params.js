@@ -173,4 +173,7 @@ export const PRESETS = [
   { name: 'Single wheel — 00 8000 000, dry', p: { drawbars: reg('008000000'), vib: 'off', leslieOn: false, drive: 0 } },
   { name: '2nd perc only — 00 8000 000, slow decay', p: { drawbars: reg('008000000'), percOn: true, percThird: false, percFast: false, vib: 'off', leslie: 'slow' } },
   { name: 'Full drawbars, dry — compare tunings', p: { drawbars: reg('888888888'), vib: 'off', leslieOn: false, drive: 0, room: 0.1 } },
+  { name: '50 Hz mains — 88 8000 000, a minor third flat', p: { drawbars: reg('888000000'), mains: 50, vib: 'C3', leslie: 'slow' } },
+  { name: 'Old B-3 — 88 8000 000, drifted capacitors, leaky wheels', p: { drawbars: reg('888000000'), drift: 40, leakage: -50, crosstalk: -35, vib: 'C3', leslie: 'slow' } },
+  { name: 'Key click — 88 8000 000, worn contacts', p: { drawbars: reg('888000000'), contactTime: 0, bounce: 1.5, spread: 3, vib: 'off', leslie: 'slow' } },
 ];

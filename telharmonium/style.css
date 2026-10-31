@@ -1,0 +1,9 @@
+/* The page's own palette and any layout beyond shared/instrument.css: brass and the green-gold of
+   the switchboards' enamel, under electric-lamp light. */
+:root {
+  --accent: #e9b860;
+  --accent-2: #7fd3a8;
+  --accent-ink: #1d1406;
+}
+
+#info { grid-template-columns: auto 1fr; }

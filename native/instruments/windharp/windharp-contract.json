@@ -34,6 +34,7 @@
     {"name":"Close harmonics: tuned on the 6th","values":{"n0":6}},
     {"name":"Low harmonics: tuned on the 2nd","values":{"n0":2}},
     {"name":"Heavy wound strings: high mass ratio","values":{"mass":6}},
-    {"name":"Lightly damped strings: loud, sticky lock-in","values":{"q":2000}}
+    {"name":"Lightly damped strings: loud, sticky lock-in","values":{"q":2000}},
+    {"name":"Slow, gentle gusts: the strings sway in and out","values":{"gust":0.03,"gustTime":4}}
   ]
 }

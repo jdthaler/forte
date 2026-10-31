@@ -1,0 +1,7 @@
+/* The page's own palette and any layout beyond shared/instrument.css: the gold of a brass plate,
+   and the pale sand on it. */
+:root {
+  --accent: #e0b65a;
+  --accent-2: #9fc4e8;
+  --accent-ink: #1b1403;
+}

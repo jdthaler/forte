@@ -51,6 +51,8 @@
     {"name":"Much set: slow to speak, loud and round","values":{"set":2.2}},
     {"name":"Loose slot: a leaky, duller reed","values":{"clearance":150}},
     {"name":"Big reed cells: darker and a little flatter","values":{"cell":4}},
-    {"name":"Little air mass: slow, dark speech","values":{"throat":0.3}}
+    {"name":"Little air mass: slow, dark speech","values":{"throat":0.3}},
+    {"name":"16′ and 8′: the bourdon under the note","values":{"bourdon":true}},
+    {"name":"Lossy reeds (Q 80): they need more wind to start","values":{"q":80}}
   ]
 }

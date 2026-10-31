@@ -67,7 +67,7 @@ requests.
   [doi:10.1121/1.390157](https://doi.org/10.1121/1.390157). A linear
   resonator coupled to a nonlinear excitation (bow, reed, jet) by a
   reflection function: the framework behind Forte's bowed and rubbed
-  instruments (Viola Organista, Glass Armonica, Clavicylinder, Hurdy-Gurdy).
+  instruments (Viola Organista, Glass Armonica, Clavicylinder, Hurdy-Gurdy, Chladni Plate).
 * **1983 — the plucked-string algorithm.** K. Karplus and A. Strong,
   "Digital synthesis of plucked-string and drum timbres", *Computer Music
   Journal* **7**(2), 43–55 (1983),
@@ -228,6 +228,22 @@ requests.
   water's bounce, the pumps, the bubbles at the rim) from those
   descriptions, with the Pipe Organ's flue pipes; its sources are in
   `hydraulis/README.md`.
+* **The Telharmonium.** T. Cahill, [US 580,035](https://patents.google.com/patent/US580035A/en)
+  (1897), and R. Weidenaar, *Magic Music from the Telharmonium* (Scarecrow
+  Press, 1995), the history and engineering the Telharmonium is built from;
+  the tonewheel organs ([Hammond, 1934](https://patents.google.com/patent/US1956350A/en))
+  are its descendants. We did not find an earlier physical model of it. Its
+  sources are in `telharmonium/README.md`.
+* **The regal.** Praetorius draws the regals and their resonators in
+  *Syntagma musicum II* (1619); Monteverdi scores one for Charon in
+  *L'Orfeo* (1607). The beating reed is G. R. Plitnik's ("Vibration
+  characteristics of pipe organ reed tongues…", *J. Acoust. Soc. Am.*
+  **107**(6), 3460–3473, 2000) and A. Miklós, J. Angster, S. Pitsch and
+  T. D. Rossing's (*J. Acoust. Soc. Am.* **113**, 1081–1091, 2003; **119**,
+  3121–3129, 2006). Modartt's [Organteq](https://www.modartt.com/organteq)
+  models reed pipes physically, and regals are sold as sample libraries.
+  The Regal plays its curved tongues, shallots, short resonators and wedge
+  bellows from those; its sources are in `regal/README.md`.
 
 ## 2. Techniques Forte uses, and where they come from
 
@@ -245,6 +261,13 @@ requests.
   gewisser Variationsprobleme der mathematischen Physik", *J. reine angew.
   Math.* **135**, 1–61 (1909),
   [doi:10.1515/crll.1909.135.1](https://doi.org/10.1515/crll.1909.135.1);
+  W. Ritz, "Theorie der Transversalschwingungen einer quadratischen Platte
+  mit freien Rändern", *Ann. Phys.* **333**, 737–786 (1909),
+  [doi:10.1002/andp.19093330403](https://doi.org/10.1002/andp.19093330403)
+  (the free square plate of Chladni's figures, solved in a Legendre basis as
+  the Chladni Plate does, and checked against A. W. Leissa, "The free
+  vibration of rectangular plates", *J. Sound Vib.* **31**, 257–293 (1973),
+  [doi:10.1016/S0022-460X(73)80371-2](https://doi.org/10.1016/S0022-460X(73)80371-2));
   R. Courant, "Variational methods for the solution of problems of
   equilibrium and vibrations", *Bull. Amer. Math. Soc.* **49**(1), 1–23
   (1943),
@@ -764,6 +787,17 @@ data):
   [doi:10.1088/1748-0221/6/08/P08007](https://doi.org/10.1088/1748-0221/6/08/P08007), each
   key's calibration heater firing at the note's rate. No earlier instrument made from these
   pulses is known to us.
+* **Trapped ions.** The Ion Chain plays the normal modes of a linear Coulomb crystal as
+  D. F. V. James computes them ("Quantum dynamics of cold trapped ions with application to
+  quantum computation", *Appl. Phys. B* **66**, 181–190 (1998),
+  [doi:10.1007/s003400050373](https://doi.org/10.1007/s003400050373)), in W. Paul's
+  radio-frequency trap (*Rev. Mod. Phys.* **62**, 531 (1990),
+  [doi:10.1103/RevModPhys.62.531](https://doi.org/10.1103/RevModPhys.62.531)), with the
+  linear–zigzag transition of J. P. Schiffer (*Phys. Rev. Lett.* **70**, 818 (1993),
+  [doi:10.1103/PhysRevLett.70.818](https://doi.org/10.1103/PhysRevLett.70.818)) and the
+  image-current detection and resistive cooling of D. J. Wineland and H. G. Dehmelt
+  (*J. Appl. Phys.* **46**, 919 (1975), [doi:10.1063/1.321602](https://doi.org/10.1063/1.321602)).
+  No earlier instrument made from these modes is known to us.
 * **Synchronisation and mode locking in musical oscillators.**
   B. van der Pol and J. van der Mark, "Frequency demultiplication",
   *Nature* **120**, 363–364 (1927),

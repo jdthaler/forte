@@ -22,7 +22,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | | Instrument | after | the physics |
 |---|---|---|---|
 | ✅ | [Ribbon Piano](piano/) | the concert grand | modal stiff strings, nonlinear felt hammers, a shared bridge; strings swappable for square/triangular bars and twisting ribbons |
-| ✅ | [Harpsichord](harpsichord/) | Flemish double-manual (Ruckers) | plectra as tapered cantilevers that catch, bend and slip off stiff strings (implicit contacts with friction); three choirs, coupler, buff and lute stops, a modal soundboard |
+| ✅ | [Harpsichord](harpsichord/) | Flemish double-manual (Ruckers); also their muselar and spinett virginals and a gut-strung lute-harpsichord | plectra as tapered cantilevers that catch, bend and slip off stiff strings (implicit contacts with friction); three choirs, coupler, buff and lute stops, a modal soundboard; virginals with both bridges on the board and a buzzing arpichordium; gut's bending losses |
 | ✅ | [Pipe Organ](pipes/) | Baroque organ | flue pipes as tubes in modal form driven by a delayed, amplified jet that splits on the labium (jet drive with vortex shedding; speaking windows from a linear analysis): chiff with the pallet's speed, overblowing with hysteresis; Principal, Octave, stopped Gedackt and Mixture; a wind chest that sags and breathes, tremulant |
 | ✅ | [Free-Reed Organ](harmonium/) | harmonium and accordion | brass reeds driven through their slots by the inertia of the air that feeds them (implicit reed–air coupling, thresholds from a linear analysis); musette, 16′ and 4′ ranks, reservoir and expression stop, cassotto |
 | ✅ | [Vibraphone](vibraphone/) | Deagan vibraharp (1927) | undercut bars tuned 1 : 4 : 10 by finite elements, each coupled to a stopped tube; motor-driven discs open and close the tubes (tremolo) |
@@ -31,6 +31,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Kalimba](kalimba/) | Hugh Tracey's kalimba and the mbira | spring-steel tines as clamped–supported–free beams (the length behind the bridge sets the overtones), plucked from their static deflection by a thumb that lets go slowly or fast; a box whose top and sound-hole air are two coupled oscillators (cover the hole for a wah); bottle caps that rattle once the top outruns gravity |
 | ✅ | [Steel Pan](steelpan/) | Trinidad steelpan (1940s) | note areas as plates tuned by hammering to octave and twelfth, whose domes couple their modes (a 1 : 2 : 3 internal resonance: the octave blooms on hard strokes); neighbours coupled through the steel in a fourths-and-fifths layout; the skirt's radiation; rolls |
 | ✅ | [Hydraulis](hydraulis/) | Ctesibius's water organ (3rd century BC), the organs of Dion and Aquincum | hand pumps push air through their valves into a bowl standing in water: the hydrostatic head is the wind, capped at the rim where it bubbles out (Minnaert bubbles), the water bouncing on the air shut in the bowl; slides whose holes open as overlapping circles, sprung back; the Pipe Organ's flue pipes on an ancient, nearly constant bore in four ranks, one open and three stopped |
+| ✅ | [Regal](regal/) | the Renaissance reed organ (Praetorius, 1619; Monteverdi's *Orfeo*) | brass tongues as curved cantilevers that roll shut on their shallots (Bernoulli jets, a penalty contact), each reed in its own boot, shallot and short resonator (Kelly–Lochbaum tubes: cylinders, funnels, capped balls); two weighted wedge bellows raised in turn, a tremulant; every reed retuned for its voicing |
 | ✅ | [Clavichord](clavichord/) | the German clavichord of C. P. E. Bach's day (18th century) | a brass tangent strikes the strings and stays on them as the end of the speaking length (a moving boundary driving every partial), held up by the finger's force against the strings' pull: pressure tuning and the Bebung from the stretch, the tangent's give tuned for; the listing damps the afterlengths and stops the string at key-up; double-fretted pairs where the higher tangent wins, 4′ strings in the bass, a modal soundboard |
 
 ### Electric instruments
@@ -44,6 +45,8 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Tangent Clavier](clavier/) | Hohner Clavinet D6 | tangent strikes and clamps the string on an anvil (Hertzian contacts), pressure bends the pitch, four pickup combinations, tone tabs, mute bar |
 | ✅ | [Sticky-Pad Piano](pianet/) | Hohner Pianet | reeds plucked by rate-dependent adhesion (fracture mechanics of the pad), magnetic or electrostatic pickup |
 | ✅ | [Trautonium](trautonium/) | Trautwein's Trautonium (1930), Sala's Mixtur-Trautonium (1952) | a neon lamp's relaxation sawtooth, its capacitor charged through a resistance wire (exact firing times, polyBLEP); four dividers, lamps ganged to the wire and fired by the master's sync pulse on every n-th flash, whose capture window gives where they divide true, slip or fire a flash early; four fixed resonant circuits rung by every flash (formants); one wire that slides between keys or a manual per key; finger pressure, a volume pedal, pitch bend and MPE |
+| ✅ | [Telharmonium](telharmonium/) | Cahill's Telharmonium (1906) | inductor alternators on twelve (or the eight built) geared pitch-shafts, each key's harmonics on its own shaft so shared alternators sound in phase; each winding's L/R and the relays' contacts (the switching thump); harmonic buses whose notes rob one another; the motor sagging under the load; the telegrapher's line solved exactly (city cable or open wire); a magnetic receiver pulled by the flux squared (growl, a phantom ground tone) and a paper horn; Pierce's just thirds and sevenths |
+| ✅ | [Magnetic Resonator Piano](resonator/) | Andrew McPherson's MRP (2009) | a grand's stiff strings and coupled unisons, an electromagnet over each note pulling ∝ i²/g² on a biased current, driven from one soundboard pickup through a band-pass, a phase-locked loop and a calibrated phase: notes grow out of silence, sustain, sing one harmonic or two at once; nodes under the coil, fifteen channels, hammers if you want them |
 
 ### Experiments from history
 
@@ -71,6 +74,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Whistlers](whistlers/) | lightning's VLF crack dispersed along the Earth's magnetic field into falling tones: every key the dipole field line whose whistler's nose is the note, the exact cold-plasma group delay integrated through Carpenter and Anderson's plasmasphere, plasmapause and trough; Eckersley's 1/√f below the nose and a rising branch to the duct's half-gyrofrequency cutoff above it; multi-path ducts, echo trains, one- and two-hop receivers, the crack's tweeks in the Earth–ionosphere waveguide, and dawn chorus on held keys |
 | ✅ | [Early Universe](universe/) | the photon–baryon plasma's sound waves, the acoustic peaks of the microwave background, as a key's harmonics: Ma & Bertschinger's equations from adiabatic initial conditions to recombination (Saha, then Peebles's three-level atom), free-streaming neutrinos, Silk damping; checked against Planck 2018's z*, r_s*, k_D and z_eq; a knob per cosmological parameter: baryons make the odd harmonics louder, dark matter sets the radiation driving, neutrinos, helium, the spectral tilt on the mod wheel; listen from the sky (Sachs–Wolfe and Doppler) or inside the plasma, and let the light stream away |
 | ✅ | [Hydrogen Lamp](hydrogen/) | a tube of glowing hydrogen as a keyboard: every key its spectrum, each line at its exact ratio with Hα on the note (Hβ 27/20 above, the Balmer series crowding up to a just minor seventh); Einstein coefficients from the exact wavefunctions for every level to n = 50, the radiative cascade solved in slow motion so the low lines light first and the high ones after, each as wide as its levels' lifetimes make it; a discharge (van Regemorter), a nebula's recombination (Storey & Hummer's Balmer decrement, Cases A and B) or a laser into one level; Stark broadening on the mod wheel to the Inglis–Teller limit, Doppler widths, pitch bend as a redshift, a spectrometer window (visible, ultraviolet, infrared), and a what-if fine-structure constant |
+| ✅ | [Chladni Plate](chladni/) | Chladni's bowed plates (1787): every key a square plate clamped at its centre, its Kirchhoff modes by Rayleigh–Ritz (Ritz's own method for Chladni's square), bowed at its edge by implicit stick–slip friction while two fingers on the figure's nodal lines damp its rivals; the force set from the figure's speaking threshold; sand on the plate gathers on the nodal lines as it plays |
 
 ### Devices built to study physics
 
@@ -83,6 +87,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [ABRACADABRA](abracadabra/) | the axion dark-matter search as a keyboard: every key a universe whose axion has the key's mass (its frequency in kHz the note in Hz), heard through ABRACADABRA-10 cm's toroid, pickup loop and SQUID; the Standard Halo Model's waves make each tone a millionth-wide line whose amplitude swells and fades over its coherence time; the coupling decides whether you hear it over the SQUID's noise; a cold stream, a hot halo, a meter-scale toroid |
 | ✅ | [TESS](tess/) | a planet crossing its star as NASA's Transiting Exoplanet Survey Satellite sees it: every key a planet whose year, sped up 38 million times, is its note, and the star's light the waveform; the limb-darkened disc's dip (ring by ring, Claret's TESS-band coefficients), Kepler's third law setting how much of its year it spends in front (low keys buzz, high keys are round); the impact parameter on the mod wheel; TESS's photon, read and zodiacal noise at the star's magnitude, velocity its brightness; π Mensae c, LHS 3844 b, TOI-700 d and WD 1856+534 b on A4 |
 | ✅ | [CUORE](cuore/) | a tellurium dioxide crystal at ten millikelvin, as the CUORE neutrinoless double beta decay search reads it: every key a crystal whose heater fires at the note's rate, sped up 1,320 times, and the germanium thermistor's voltage the waveform; the collaboration's electrothermal model (bias circuit, the thermistor's hot electrons, the crystal's Debye T³ heat capacity, the Teflon clips), so the bolometer's rise and fall are one formant over every key; electrothermal feedback; big pulses saturate the thermistor; the heat sink's temperature on the mod wheel |
+| ✅ | [Ion Chain](ionchain/) | a string of trapped ions, the crystal of a trapped-ion quantum computer: every key a Paul trap whose axial frequency is the note, slowed a thousand times; the crystal solved from the trap's pull against Coulomb's law (James 1998's equilibria), a line or past the transition a zigzag, and its normal modes (1, √3, √(29/5) … of the note); a laser pulse whose place, width, angle and length choose which modes ring (Kohn's theorem for a uniform push); two electrodes that hear the image current (Shockley–Ramo) and cool what they hear; the cooling laser on key-up, on every ion or only the end one; the radial pull on the mod wheel, through the zigzag while notes ring |
 
 ✅ playable · 🛠 in the workshop ([build briefs](docs/WORKSHOP.md)). Each instrument's README has its equations,
 numbers, sources, and a list of what is simplified. The same notes open on
@@ -140,6 +145,7 @@ is the mod wheel's control wherever the instrument has one.
 | Kalimba | Buzzers · Sound hole · Release | Pluck point | Hole covered |
 | Steel Pan | Roll speed · Hand mute · Off the long axis | Strike point | Roll |
 | Hydraulis | Open rank · Stopped rank · Stopped rank, octave above | Gurgle | Pumping effort |
+| Regal | Tremulant rate · Curve: tip off the shallot · Tongue Q (mechanical) | Resonator length | Wind pressure |
 | Clavichord | Bebung rate · Listing cloth · Unison spread | Finger pressure on the key | Bebung |
 | Electric Grand | Bass · Middle · Treble | Tremolo rate | Tremolo depth |
 | Tonewheel Organ | 16' drawbar · 8' drawbar · 4' drawbar | Tube drive | Expression pedal |
@@ -148,6 +154,8 @@ is the mod wheel's control wherever the instrument has one.
 | Tangent Clavier | Felt pressure · Key pressure · Treble loss | Upper pickup, from tailpiece | Amplifier gain |
 | Sticky-Pad Piano | Tack F₀ · Pole gap at C4 · Pad damping c_p | Tone | Amp drive |
 | Trautonium | Sync pulse · Circuit 1 resonance · Circuit 2 resonance | Circuit 2 tuning | Circuit 1 tuning |
+| Telharmonium | Manual II's 1st, 3rd and 5th harmonic stops | Distance down the line | Swell pedal |
+| Magnetic Resonator Piano | Drive (coil current) · Swell time · Hammer | Phase error | Brightness |
 | Viola Organista | Key pressure · Treadle unevenness · Rosin grain | Bow position β | Wheel speed |
 | Glass Armonica | Skin moisture · Treadle unevenness · Water in the bowls | Finger pressure | Treadle speed |
 | Clavicylinder | Foot’s push · Cloth wetness · Grip | Key pressure | Treadle speed |
@@ -171,6 +179,7 @@ is the mod wheel's control wherever the instrument has one.
 | Project 8 | Magnetic field · Energy · Receiver noise | Trap depth | Gas pressure |
 | ABRACADABRA | Stream speed · Stream · SQUID noise | Coupling to photons | Halo speed |
 | TESS | Temperature · Star radius · Orbit at A4 | Planet radius | Impact parameter |
+| Chladni Plate | Bow speed · Rosin · Ring time | Bow force (× threshold) | Bow shift along the edge |
 
 </details>
 
@@ -231,6 +240,13 @@ keyboard's bar stay where they are, the presets join them, and the
 chevron beside the presets (**More controls**) brings back the rest.
 Once the audio is on, Perform keeps the screen from dimming and locking
 (where the browser can: Chrome, Edge, and Safari from iOS 16.4).
+
+**▶ Tour**, at the start of the views' bar, is a guided tour of the
+instrument's physics: a card that walks through it a step at a time,
+each step showing the views that make it visible, setting the
+instrument up and playing a short phrase while it says what to listen
+for, and why. ▶ plays a step again; ✕ (or Esc) ends the tour and puts
+back your views and settings.
 
 **The keys** fill the width at the key size you choose (− +), like
 GarageBand's: a phone shows an octave or so, a laptop most of the range.

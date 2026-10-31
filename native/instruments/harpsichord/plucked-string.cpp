@@ -31,6 +31,7 @@ void PluckedString::init(const StringDesign &S_, const Partials &parts, double f
   released = {false, false}; relInfo = {};
   onRelease = nullptr; ctx = nullptr;
   feltK = feltR = feltPre = tongueK = thick = buffK = buffR = 0;
+  hookK = hookR = hookGap = 0; hookOn = false; twoEnds = false; nutW = {0, 0};
   peakF = 0; work = 0;
   const double dz = std::pow(2.0, SIDE_DETUNE / 1200);
   for (int i = 0; i < NZ_MAX; i++) {
@@ -66,7 +67,7 @@ void PluckedString::setSide(double kappa, int n) {
 void PluckedString::sideSteps(bool felt, double bg) {
   zFelt = felt; zBuff = bg;
   const double *PD = PHI[PT::DAMPER].data(), *PB = PHI[PT::BUFF].data();
-  const bool fd = felt && x[PT::DAMPER] >= 0, bd = bg > 1e-6 && x[PT::BUFF] >= 0;
+  const bool fd = felt && x[PT::DAMPER] >= 0, bd = bg > 1e-6 && x[PT::BUFF] >= 0 && !hooked();
   for (int i = 0; i < Nz; i++) {
     const double w0 = Wz[i];
     double sg = sigSz[i] + kz * sigBz[i] + extra[i];
@@ -83,6 +84,7 @@ double PluckedString::side(int n, double *seg, int stride, const double *wts, in
   if (felt != zFelt || std::fabs(bg - zBuff) > 1e-3) sideSteps(felt, bg);
   const int Nn = Nz, s0 = w0 * stride, s1 = w1 * stride;
   const double k0 = wts[w0] * gain * gz, k1 = wts[w1] * gain * gz, *bf = BF.data(), *sc = SC.data(), *a1 = Z1.data(), *a2 = Z2.data();
+  const double n0 = nutW[0] * gain * gz, n1 = nutW[1] * gain * gz;
   double *a = za.data(), *b = zb.data();
   double ymin = std::numeric_limits<double>::infinity(), ymax = -ymin;
   for (int t = 0; t < n; t++) {
@@ -95,10 +97,21 @@ double PluckedString::side(int n, double *seg, int stride, const double *wts, in
     if (sym) sym[t] += gz * z;
     seg[s0 + t] += k0 * y;
     if (s1 != s0) seg[s1 + t] += k1 * y;
+    if (twoEnds) nearEnd(y, a, Nn, seg, stride, t, n0, n1);
     if (y < ymin) ymin = y;
     if (y > ymax) ymax = y;
   }
   return 0.5 * gz * (ymax - ymin);
+}
+
+// The near bridge's force, y − 2Σ_even bₙqₙ (partial n = i + 1: the odd i), into segments 3 and 4.
+void PluckedString::nearEnd(double y, const double *qq, int Nn, double *seg, int stride, int t, double n0, double n1) const {
+  const double *bf = BF.data();
+  double ye = 0;
+  for (int i = 1; i < Nn; i += 2) ye += bf[i] * qq[i];
+  const double yn = y - 2 * ye;
+  seg[3 * stride + t] += n0 * yn;
+  seg[4 * stride + t] += n1 * yn;
 }
 
 void PluckedString::setPoint(int p, double xp) {
@@ -159,7 +172,7 @@ bool PluckedString::needsContacts(double liftMax, bool keyDown, bool buffOn) con
     if (ph == Phase::above && !keyDown) return true;
   }
   if (x[PT::DAMPER] >= 0 && liftMax < feltPre + 2e-3) return true;
-  return buffOn && x[PT::BUFF] >= 0;
+  return (buffOn || hooked()) && x[PT::BUFF] >= 0;
 }
 
 double PluckedString::render(int n, const double *lift, bool keyDown, const double *buffG, double *seg, int stride, const double *wts, int w0, int w1, double gain,
@@ -178,7 +191,8 @@ double PluckedString::render(int n, const double *lift, bool keyDown, const doub
   double most = 0;
   bool ran = false;
   const int s0 = w0 * stride, s1 = w1 * stride;
-  const double k0 = wts[w0] * gain, k1 = wts[w1] * gain;
+  const double k0 = wts[w0] * gain, k1 = wts[w1] * gain, n0 = nutW[0] * gain, n1 = nutW[1] * gain;
+  const bool hook = hooked();
   double *qq = q(), *qq1 = q1();
   double ymin = std::numeric_limits<double>::infinity(), ymax = -ymin;
   bool felt = false; // the damper felt touched the string this block
@@ -199,11 +213,12 @@ double PluckedString::render(int n, const double *lift, bool keyDown, const doub
         else if (ph == Phase::above && !keyDown) { al[p] = tongueK * (y - thick); be[p] = tongueK; cand = true; }
       } else if (p == PT::DAMPER) {
         if (L < feltPre + 2e-3) { al[p] = feltK * (L - feltPre); be[p] = feltK + feltR / (2 * h); cand = true; }
-      } else if (bg > 1e-6) { al[p] = 0; be[p] = bg * (buffK + buffR / (2 * h)); cand = true; }
+      } else if (hook) { al[p] = -hookK * hookGap; be[p] = hookK + hookR / (2 * h); cand = true; }
+      else if (bg > 1e-6) { al[p] = 0; be[p] = bg * (buffK + buffR / (2 * h)); cand = true; }
       if (!cand) { hv[p] = 0; continue; }
       if (!hv[p]) { uNow[p] = dispAtQ(p, qq, Nn); uOld[p] = dispAtQ(p, qq1, Nn); hv[p] = 1; }
       if (p == PT::DAMPER) al[p] += (feltR / (2 * h)) * uOld[p];
-      else if (p == PT::BUFF) al[p] += ((bg * buffR) / (2 * h)) * uOld[p];
+      else if (p == PT::BUFF) al[p] += ((hook ? hookR : bg * buffR) / (2 * h)) * uOld[p];
       act[p] = 1; idx[m++] = p;
     }
     // 2. the free step, with the free displacement at the candidates
@@ -265,6 +280,7 @@ double PluckedString::render(int n, const double *lift, bool keyDown, const doub
       for (int i = 0; i < Nn; i++) y += bf[i] * qq1[i];
       Fp[0] = Fp[1] = 0; Fd = 0;
     }
+    if (twoEnds) nearEnd(y, qq1, Nn, seg, stride, t, n0, n1);
     if (sym) {
       double z = 0;
       for (int i = 0; i < Nn; i++) z += SC[i] * (qq1[i] - qq[i]);
@@ -300,7 +316,7 @@ double PluckedString::free(int n, double *seg, int stride, int w0, int w1, const
   const int Nn = Na;
   const double *a1 = A1.data(), *a2 = A2.data(), *bf = BF.data();
   const int s0 = w0 * stride, s1 = w1 * stride;
-  const double k0 = wts[w0] * gain, k1 = wts[w1] * gain;
+  const double k0 = wts[w0] * gain, k1 = wts[w1] * gain, n0 = nutW[0] * gain, n1 = nutW[1] * gain;
   double *qq = q(), *qq1 = q1();
   double ymin = std::numeric_limits<double>::infinity(), ymax = -ymin;
   const bool kcs = kcOn && stretched;
@@ -327,6 +343,7 @@ double PluckedString::free(int n, double *seg, int stride, int w0, int w1, const
       }
     }
     if (SY) sym[t] += z;
+    if (twoEnds) nearEnd(y, qq1, Nn, seg, stride, t, n0, n1);
     std::swap(qq, qq1);
     seg[s0 + t] += k0 * y;
     if (s1 != s0) seg[s1 + t] += k1 * y;
@@ -375,6 +392,7 @@ void PluckedString::solve() {
       double bad = 0;
       if (p < 2) bad = phase[p] == Phase::under ? -F : F;
       else if (p == PT::DAMPER) bad = F;
+      else if (hooked()) bad = -F; // the hook pushes up, never pulls
       if (bad > wv) { wv = bad; worst = p; }
     }
     if (worst < 0) return;

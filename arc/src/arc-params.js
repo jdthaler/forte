@@ -79,4 +79,7 @@ export const PRESETS = [
   { name: 'A long arc (6 mm)', p: { gap: 6 } },
   { name: 'Several arcs (6 lamps)', p: { mode: 'poly', arcs: 6 } },
   { name: 'Simon\'s talking arc', p: { mode: 'talk' } },
+  { name: 'A short arc (1 mm): low voltage, a gentle curve', p: { gap: 1 } },
+  { name: 'A lossy coil: the notes grow slowly and quietly', p: { coilR: 1.5 } },
+  { name: 'Low current (1.5 A): the steepest curve', p: { current: 1.5 } },
 ];

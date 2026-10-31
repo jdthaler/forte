@@ -62,7 +62,7 @@ export const INSTRUMENTS = [
   {
     id: 'harpsichord', name: 'Harpsichord', section: 'traditional', ready: true, version: '0.8.0', trim: -2,
     plugin: { code: 'Hrps', ready: true },
-    after: 'the Flemish double-manual harpsichord (Ruckers, 1600s)',
+    after: 'the Flemish double-manual harpsichord and virginals (Ruckers, 1600s), and Bach’s gut-strung lute-harpsichord',
     tagline: 'A quill bends, slips off the string and plucks it; stops change where and how it plucks.',
     physics: 'Plectrum contact and release · plucked stiff strings',
     vibrates: 'strings', notes: 'ring',
@@ -141,6 +141,15 @@ export const INSTRUMENTS = [
     accent: '#c9a46a',
   },
   {
+    id: 'regal', name: 'Regal', section: 'traditional', ready: true, version: '0.1.0', trim: 2,
+    plugin: { code: 'Rega', ready: true },
+    after: 'the Renaissance reed organ of Praetorius and of Charon in Monteverdi’s Orfeo',
+    tagline: 'Brass tongues beat on their shallots under short resonators, blown from two hand-worked wedge bellows: the tongue sets the pitch, so the wind gives, sinks and shakes in every chord.',
+    physics: 'Beating reeds · short resonators · wedge bellows and a tremulant',
+    vibrates: 'air', notes: 'hold',
+    accent: '#d9a441',
+  },
+  {
     id: 'clavichord', name: 'Clavichord', section: 'traditional', ready: true, version: '0.1.0', trim: 3.5,
     vibrates: 'strings', notes: 'ring',
     plugin: { code: 'Clvd', ready: true },
@@ -211,6 +220,24 @@ export const INSTRUMENTS = [
     physics: 'Neon relaxation oscillator · pulse-synchronised frequency dividers · shock-excited resonant circuits',
     vibrates: 'circuits', notes: 'hold',
     accent: '#7ee0ff',
+  },
+  {
+    id: 'telharmonium', name: 'Telharmonium', section: 'electric', ready: true, version: '0.1.0', trim: -4.5,
+    plugin: { code: 'Telh', ready: true },
+    after: 'Thaddeus Cahill’s Telharmonium (1906), the electric music plant on Broadway',
+    tagline: 'Alternators on twelve geared shafts make every note and its harmonics, stops mix them on shared buses that rob one another, and telephone lines carry the music to receivers with paper horns.',
+    physics: 'Inductor alternators · relay switching transients · robbing buses · telegrapher’s line · magnetic receiver',
+    vibrates: 'circuits', notes: 'hold',
+    accent: '#e9b860',
+  },
+  {
+    id: 'resonator', name: 'Magnetic Resonator Piano', section: 'electric', ready: true, version: '0.1.0', trim: 6.5,
+    plugin: { code: 'Magn', ready: true },
+    after: 'Andrew McPherson’s Magnetic Resonator Piano (2009)',
+    tagline: 'An electromagnet over every string of a grand piano, fed from a pickup on the soundboard through a phase-locked loop: notes swell out of silence, sustain while the key is held, and sing a single harmonic.',
+    physics: 'Electromagnetic string actuation · phase-locked feedback · coupled unison strings',
+    vibrates: 'strings', notes: 'hold',
+    accent: '#e8b25c',
   },
   {
     id: 'bowed', name: 'Viola Organista', section: 'experimental', ready: true, version: '0.10.0', trim: 3,
@@ -409,6 +436,22 @@ export const INSTRUMENTS = [
     physics: 'Cryogenic calorimetry · Debye\'s T³ heat capacity · hopping conduction in NTD germanium · electrothermal feedback',
     vibrates: 'matter', notes: 'hold',
     accent: '#7ab8ff',
+  },
+  {
+    id: 'ionchain', name: 'Ion Chain', section: 'devices', ready: true, version: '0.1.0', trim: 1.5,
+    plugin: { code: 'Ionc', ready: true },
+    tagline: 'Every key a radio-frequency trap holding a string of ions, the crystal of a trapped-ion quantum computer: a laser pulse kicks them, they ring together in their normal modes (1, √3, √(29/5) … of the trap\'s frequency, more with every ion), and the trap\'s electrodes hear the current they drive.',
+    physics: 'Paul traps · Coulomb crystals and their normal modes · the linear–zigzag transition · image-current detection',
+    vibrates: 'matter', notes: 'hold',
+    accent: '#a98bff',
+  },
+  {
+    id: 'chladni', name: 'Chladni Plate', section: 'phenomena', ready: true, version: '0.1.0', trim: -3.5,
+    plugin: { code: 'Chla', ready: true },
+    tagline: 'Every key a square brass plate clamped at its centre and bowed at its edge, as Chladni bowed his: a finger on a nodal line picks the figure, and sand on the plate runs to the lines that stay still.',
+    physics: 'Kirchhoff plates · Rayleigh–Ritz modes · stick–slip bowing · Chladni figures',
+    vibrates: 'solids', notes: 'hold',
+    accent: '#e0b65a',
   },
 ];
 

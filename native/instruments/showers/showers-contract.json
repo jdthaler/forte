@@ -40,6 +40,9 @@
     {"name":"Narrow crystals: the shower spreads","values":{"width":0.5}},
     {"name":"Short crystal: the shower leaks","values":{"depth":9,"energy":500}},
     {"name":"Pile-up: the collisions keep coming","values":{"pileup":150}},
-    {"name":"Accelerometer: the harmonics alone","values":{"sensor":"accel"}}
+    {"name":"Accelerometer: the harmonics alone","values":{"sensor":"accel"}},
+    {"name":"A long crystal (50 X₀): nothing leaks","values":{"depth":50,"energy":3000}},
+    {"name":"A lossy crystal (Q 200): short notes","values":{"q":200}},
+    {"name":"Piezo at the middle: the even harmonics silent","values":{"piezo":0.5}}
   ]
 }

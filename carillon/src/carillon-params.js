@@ -72,4 +72,7 @@ export const PRESETS = [
   { name: 'Struck high on the waist', p: { strikeHeight: 0.33 } },
   { name: 'Across the town square (300 m)', p: { distance: 300, room: 0.3 } },
   { name: 'Under the tower (10 m)', p: { distance: 10, room: 0.08 } },
+  { name: 'Light clappers (1 kg): a thin, bright strike', p: { clapMass: 1 } },
+  { name: 'Hard baton strokes: a brighter, shorter contact', p: { speedMax: 3.8 } },
+  { name: 'Major-third bells, warbling', p: { profile: 'major', asym: 0.6, strikeAngle: 11.25 } },
 ];

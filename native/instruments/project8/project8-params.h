@@ -93,6 +93,8 @@ inline const PresetValue kPreset5[] = {{p::length, 60}, {p::depth, 3}};
 inline const PresetValue kPreset6[] = {{p::field, 3}};
 inline const PresetValue kPreset7[] = {{p::source, 2}, {p::energy, 300}, {p::receiver, 1}};
 inline const PresetValue kPreset8[] = {{p::gas, 1e-11}, {p::noise, 0}};
+inline const PresetValue kPreset9[] = {{p::depth, 0.02}};
+inline const PresetValue kPreset10[] = {{p::source, 1}, {p::receiver, 1}};
 inline const Preset kPresets[] = {
   {"Krypton-83m in a Phase II trap", nullptr, 0},
   {"Phase II's gas: tracks a fifth of a millisecond long", kPreset1, 1},
@@ -103,6 +105,8 @@ inline const Preset kPresets[] = {
   {"3 tesla: quick chirps", kPreset6, 1},
   {"Relativistic: 300 keV electrons", kPreset7, 3},
   {"Perfect vacuum, quiet amplifier", kPreset8, 2},
+  {"A shallow trap: hardly any vibrato", kPreset9, 1},
+  {"Tritium in the antenna ring: shifted harmonics", kPreset10, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::field}, {109, p::energy}, {111, p::noise}, {113, p::depth}, {114, p::gas}};
@@ -121,7 +125,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Every key a magnetic trap holding one electron, heard by its cyclotron radiation as the Project 8 neutrino-mass experiment hears it: a tone that chirps up as the electron cools, wavers as it bounces, and stops when it escapes.", .auSubtype = "Proj",
     .vst3Id = {0x26, 0xd5, 0x6e, 0xbc, 0x3a, 0x4c, 0xaf, 0xfd, 0xb5, 0x6b, 0xab, 0xbd, 0x32, 0x07, 0x2f, 0x4b},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 9,
+    .presets = kPresets, .presetCount = 11,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::gas, .modWheelMax = 0.000003,

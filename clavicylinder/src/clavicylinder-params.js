@@ -65,4 +65,6 @@ export const PRESETS = [
   { name: 'Cords on the wrong nodes (an overtone takes over)', p: { cords: -0.092 } },
   { name: 'Light flywheel (chords drag the cylinder)', p: { flywheel: 0.4 } },
   { name: 'Slow treadle', p: { speed: 0.4 } },
+  { name: 'One layer of cloth: the key’s knock shows', p: { layers: 1 } },
+  { name: 'Heavy flywheel: chords keep the speed', p: { flywheel: 10 } },
 ];

@@ -118,6 +118,9 @@ inline const PresetValue kPreset5[] = {{p::tipLoss, 0.1}, {p::tip, 0.45}, {p::pr
 inline const PresetValue kPreset6[] = {{p::tip, 0.6}, {p::wrap, 1.5}};
 inline const PresetValue kPreset7[] = {{p::yarn, 30}};
 inline const PresetValue kPreset8[] = {{p::stiff, 0}, {p::kc, 0}};
+inline const PresetValue kPreset9[] = {{p::pickup, 1}, {p::medium, 0}, {p::brilliant, 1}, {p::muteOn, 1}, {p::mute, 0.4}, {p::gain, 6}};
+inline const PresetValue kPreset10[] = {{p::field, 0.7}};
+inline const PresetValue kPreset11[] = {{p::tip, 0.08}};
 inline const Preset kPresets[] = {
   {"D6 · both pickups, medium + treble", nullptr, 0},
   {"Mellow · lower pickup, soft", kPreset1, 5},
@@ -128,6 +131,9 @@ inline const Preset kPresets[] = {
   {"Soft tips · wide vibrato", kPreset6, 2},
   {"No yarn · release rings a minor third down", kPreset7, 1},
   {"Ideal string · no stiffness, no glide", kPreset8, 2},
+  {"Funk · upper pickup, brilliant, muted", kPreset9, 6},
+  {"Growl · magnets close, loud notes double", kPreset10, 1},
+  {"Hard tips · little squeeze, little bend", kPreset11, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::mute}, {109, p::press}, {111, p::hf}, {113, p::xUpper}, {114, p::gain}};
@@ -146,7 +152,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "A rubber tangent pins the string to an anvil; two magnetic pickups comb-filter the twang.", .auSubtype = "Clav",
     .vst3Id = {0x4f, 0x9a, 0x44, 0xf9, 0xc0, 0x11, 0x48, 0xe1, 0x35, 0xbf, 0xc4, 0xc8, 0x5a, 0xbc, 0xc7, 0xf5},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 9,
+    .presets = kPresets, .presetCount = 12,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 29, .compassHi = 88, .compass = p::fullRange, .space = Space::sustain,
     .modWheel = -1, .modWheelMax = 0,

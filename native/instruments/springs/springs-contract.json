@@ -44,6 +44,7 @@
     {"name":"Steep helix: the chirps split","values":{"helix":15,"springs":1}},
     {"name":"Driven along the axis","values":{"drive":"axial"}},
     {"name":"Soft mallet: only the low echoes","values":{"mallet":2}},
-    {"name":"Slinky: falling whistles","values":{"family":"slinky","springs":1,"helix":6,"endLoss":0.02,"eta":0.00005,"mallet":0.5,"damper":2}}
+    {"name":"Slinky: falling whistles","values":{"family":"slinky","springs":1,"helix":6,"endLoss":0.02,"eta":0.00005,"mallet":0.5,"damper":2}},
+    {"name":"Thick wire: the chirps go up","values":{"wire":1.8,"springs":1}}
   ]
 }

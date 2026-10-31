@@ -35,6 +35,7 @@
     {"name":"A cold halo: long, slow swells","values":{"halo":40}},
     {"name":"A galaxy cluster's hot halo: a band of noise","values":{"halo":1200}},
     {"name":"A slow magnet: notes that charge up","values":{"ramp":1.5}},
-    {"name":"A noiseless SQUID: the axion alone","values":{"noise":0}}
+    {"name":"A noiseless SQUID: the axion alone","values":{"noise":0}},
+    {"name":"A fast stream (700 km/s): a second line, sharp of the halo","values":{"stream":0.4,"streamSpeed":700}}
   ]
 }
