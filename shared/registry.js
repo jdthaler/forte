@@ -204,6 +204,15 @@ export const INSTRUMENTS = [
     accent: '#7ee0ff',
   },
   {
+    id: 'telharmonium', name: 'Telharmonium', section: 'electric', ready: true, version: '0.1.0', trim: -4.5,
+    plugin: { code: 'Telh', ready: true },
+    after: 'Thaddeus Cahill’s Telharmonium (1906), the electric music plant on Broadway',
+    tagline: 'Alternators on twelve geared shafts make every note and its harmonics, stops mix them on shared buses that rob one another, and telephone lines carry the music to receivers with paper horns.',
+    physics: 'Inductor alternators · relay switching transients · robbing buses · telegrapher’s line · magnetic receiver',
+    vibrates: 'circuits', notes: 'hold',
+    accent: '#e9b860',
+  },
+  {
     id: 'ondes', name: 'Ondes Martenot', section: 'electric', ready: true, version: '0.1.0', trim: -4.5,
     plugin: { code: 'Onde', ready: true },
     vibrates: 'circuits', notes: 'hold',

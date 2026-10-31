@@ -1163,6 +1163,40 @@
    "title": "The skirt takes a partial"
   }
  ],
+ "telharmonium": [
+  {
+   "file": "01-a-tune-in-telharmonic-hall.m4a",
+   "title": "A tune in telharmonic hall"
+  },
+  {
+   "file": "02-the-stops-drawn-one-by-one.m4a",
+   "title": "The stops drawn one by one"
+  },
+  {
+   "file": "03-tempered-then-pierce-just.m4a",
+   "title": "Tempered then pierce just"
+  },
+  {
+   "file": "04-robbing-as-notes-are-added.m4a",
+   "title": "Robbing as notes are added"
+  },
+  {
+   "file": "05-hall-then-2km-25km-160km.m4a",
+   "title": "Hall then 2km 25km 160km"
+  },
+  {
+   "file": "06-the-motor-sags-under-a-chord.m4a",
+   "title": "The motor sags under a chord"
+  },
+  {
+   "file": "07-a-bass-with-no-ground-tone.m4a",
+   "title": "A bass with no ground tone"
+  },
+  {
+   "file": "08-the-relays-thumps.m4a",
+   "title": "The relays thumps"
+  }
+ ],
  "tess": [
   {
    "file": "01-hot-jupiter-chords.m4a",
