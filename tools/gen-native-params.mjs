@@ -33,6 +33,7 @@ const R = new URL('../', import.meta.url);
 
 const CPP_KEYWORDS = new Set('alignas alignof and asm auto bitand bitor bool break case catch char class compl concept const consteval constexpr constinit const_cast continue default delete do double dynamic_cast else enum explicit export extern false float for friend goto if inline int long mutable namespace new noexcept not nullptr operator or private protected public register reinterpret_cast requires return short signed sizeof static static_assert static_cast struct switch template this thread_local throw true try typedef typeid typename union unsigned using virtual void volatile wchar_t while xor count'.split(' '));
 const ident = (s) => (CPP_KEYWORDS.has(s) ? `${s}_` : s);
+const PLUGIN_IDS = ['preset', 'touch', 'quality', 'mpe']; // native/plugin/plugin.cpp's own, after the instrument's
 const isIdent = (s) => typeof s === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(s);
 
 export const portedSlugs = () => (existsSync(new URL('native/instruments/', R))
@@ -220,6 +221,8 @@ export async function generate(slug) {
   // plugin parameters after them; console.get(P) gives their values
   const consoleIds = new Set();
   for (const g of I.console?.groups ?? []) for (const p of g.params) { params.push({ ...p, group: g.title }); consoleIds.add(p.id); }
+  // the plugin's own parameters come after the instrument's, saved by these ids (plugin.cpp)
+  for (const p of params) if (PLUGIN_IDS.includes(p.id)) throw new Error(`${slug}.${p.id}: the plugin saves its own ${p.id} parameter under that id; name it otherwise`);
   const index = new Map(params.map((p, i) => [p.id, i]));
   const ns = cppNamespace(slug), report = [], out = [];
   const valueOf = (p, v) => {
