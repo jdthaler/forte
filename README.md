@@ -231,6 +231,13 @@ chevron beside the presets (**More controls**) brings back the rest.
 Once the audio is on, Perform keeps the screen from dimming and locking
 (where the browser can: Chrome, Edge, and Safari from iOS 16.4).
 
+**▶ Tour**, at the start of the views' bar, is a guided tour of the
+instrument's physics: a card that walks through it a step at a time,
+each step showing the views that make it visible, setting the
+instrument up and playing a short phrase while it says what to listen
+for, and why. ▶ plays a step again; ✕ (or Esc) ends the tour and puts
+back your views and settings.
+
 **The keys** fill the width at the key size you choose (− +), like
 GarageBand's: a phone shows an octave or so, a laptop most of the range.
 ◀ ▶ move an octave, and the overview of the whole range above them drags
