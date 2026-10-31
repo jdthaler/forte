@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
+#include <cstring>
 #include <memory>
 #include <thread>
 #include <vector>
@@ -331,10 +332,11 @@ TEST("engine: over 40 voices the quietest go, never a chord just struck; message
   CHECK(hammers >= 44);
 }
 
-TEST("plugin: MIDI velocity is the hammer's speed, 0.25 … 5 m/s; CC64 the damper pedal; the other controllers are the faders") {
+TEST("plugin: MIDI velocity is the hammer's speed, 0.25 … 5 m/s; CC64 the damper pedal; the mod wheel the vibrato's depth; the other controllers are the faders") {
   const InstrumentInfo &I = forte_instrument();
   CHECK(I.midiVelocity && std::fabs(I.midiVelocity(0) - 0.25) < 1e-12 && std::fabs(I.midiVelocity(1) - 5) < 1e-12);
-  CHECK(I.space == Space::sustain && I.controllerCount == 5 && I.controllers[0].cc == 107 && I.modWheel < 0);
+  CHECK(I.space == Space::sustain && I.controllerCount == 5 && I.controllers[0].cc == 107);
+  CHECK(I.modWheel >= 0 && !std::strcmp(I.params[I.modWheel].id, "tremDepth") && I.modWheelMax == 1);
   CHECK(I.keyLo == KEY_MIN && I.keyHi == KEY_MAX && I.chain.tone < 0);
 }
 

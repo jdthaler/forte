@@ -21,8 +21,17 @@
 //   controllersOf(I) is the descriptor's controllers with its `faders` among them, controlled(…)
 //   what one of them sets, ccValue(p, v) a controller across a parameter's whole range.
 //   A Seaboard plays as MPE from the start: startMIDI announces its zone for it.
+//   A foot controller (a Roland FC-300 as it comes) works on every page, in startMIDI:
+//   - SWITCHES: its general-purpose switches CC80, 81 and 82 are the sustain, sostenuto and soft
+//     pedals (CC64, 66, 67), so they do whatever those do on each instrument;
+//   - the volume (CC7) and expression (CC11) pedals turn the page's output down (pedalGain, which
+//     shared/chain.js applies after the limiter): full until a pedal moves, silent heel down;
+//     an instrument that maps CC11 itself (an organ's swell) keeps it;
+//   - a program change n plays the menu's preset n + 1 (pedal 1 the first preset, then your own
+//     after the instrument's): choosePreset.
 //   The plugins do the same (native/plugin/plugin.cpp: kTouchGamma, kSoftPedal, sostenutoPedal,
-//   kMpeId, controller; the faders reach them as the descriptor's controllers).
+//   kMpeId, controller, footSwitch, levels, programChange; the faders reach them as the
+//   descriptor's controllers).
 
 import { MODES, createMpe, bendRatio } from './mpe.js';
 
@@ -55,23 +64,78 @@ const mayPlay = () => !navigator.userActivation || navigator.userActivation.hasB
 // (shell.js is imported here only when needed: the tools import this module in Node)
 const needClick = () => import('./shell.js').then(({ toast }) => toast('MIDI is on: click the page once to let the browser make sound'));
 
-export function startMIDI({ onMIDI, status = () => {}, button = null }) {
+/**
+ * A foot controller's switches as the pedals Forte knows: CC80 (General Purpose 5) is the
+ * sustain pedal, CC81 the sostenuto, CC82 the soft pedal. A Roland FC-300 sends them from its
+ * CTL 1 and CTL 2 pedals and the toe switch of its EXP 1 pedal.
+ */
+export const SWITCHES = { 80: 64, 81: 66, 82: 67 };
+
+/**
+ * The volume (CC7) and expression (CC11) pedals: one gain on the output, (v/127)² for each
+ * (General MIDI's 40·log10), so both at the top (127, and before either moves) leave the
+ * instrument as it is and a pedal heel down silences it.
+ */
+const levels = { 7: 127, 11: 127 };
+const gainListeners = new Set();
+export const levelGain = (v7, v11) => (v7 / 127) ** 2 * (v11 / 127) ** 2;
+export const pedalGain = () => levelGain(levels[7], levels[11]);
+/** fn(gain) now and whenever a pedal moves; returns a function that stops it. */
+export function onPedalGain(fn) { gainListeners.add(fn); fn(pedalGain()); return () => gainListeners.delete(fn); }
+export function setLevel(cc, v) {
+  if (!(cc in levels)) return;
+  v = Math.min(127, Math.max(0, v | 0));
+  if (levels[cc] === v) return;
+  levels[cc] = v;
+  const g = pedalGain();
+  for (const fn of gainListeners) fn(g);
+}
+
+/**
+ * Program change n: the page's preset menu (#preset) plays its preset n + 1, counting the
+ * instrument's presets and then your own (shared/user-presets.js), as the menu lists them. A
+ * toast says which, or that there is no such preset.
+ */
+export function choosePreset(n) {
+  const sel = typeof document !== 'undefined' && document.querySelector('#preset');
+  if (!sel) return;
+  const presets = [...sel.options].filter((o) => o.value !== '' && (!o.value.startsWith('__') || o.value.startsWith('__user:')));
+  const o = presets[n];
+  import('./shell.js').then(({ toast }) => toast(o ? `Preset ${n + 1}: ${o.text}` : `No preset ${n + 1} here (there are ${presets.length})`), () => {});
+  if (!o) return;
+  sel.value = o.value;
+  sel.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+/**
+ * startMIDI({ onMIDI, status, button, controllers }): controllers is the page's map of the
+ * controllers its instrument takes (controllersOf): one it maps (an organ's CC11) is the
+ * instrument's and not the shared one's.
+ */
+export function startMIDI({ onMIDI, status = () => {}, button = null, controllers = {} }) {
   if (!navigator.requestMIDIAccess) { status('No Web MIDI in this browser (try Chrome, Edge or Firefox)'); return; }
   navigator.requestMIDIAccess().then((acc) => {
     try { localStorage.setItem(KEY, '1'); } catch { /* storage blocked */ }
-    const down = new Map(); // input id → { notes: Set('channel:key'), pedals: Set('channel:cc') }
+    const down = new Map(); // input id → { notes: Set('channel:key'), pedals: Set('channel:cc'), levels: Set(cc) }
     const send = (data) => onMIDI({ data });
+    const mine = (cc) => Object.hasOwn(controllers, cc); // the instrument's own
     const letGo = (id) => {
       const s = down.get(id);
       if (!s) return;
       for (const nk of s.notes) { const [ch, k] = nk.split(':').map(Number); send([0x80 | ch, k, 0]); }
       for (const pc of s.pedals) { const [ch, cc] = pc.split(':').map(Number); send([0xb0 | ch, cc, 0]); }
+      for (const cc of s.levels) setLevel(cc, 127); // a volume pedal unplugged heel down: full again
       down.delete(id);
     };
     const clean = (id, data) => {
+      // a foot controller's switches are the pedals (SWITCHES), unless the instrument maps them
+      if ((data[0] & 0xf0) === 0xb0 && SWITCHES[data[1]] && !mine(data[1])) data = [data[0], SWITCHES[data[1]], data[2]];
       const [st, d1, d2] = data, cmd = st & 0xf0, ch = st & 0x0f, nk = `${ch}:${d1}`;
       let s = down.get(id);
-      if (!s) down.set(id, (s = { notes: new Set(), pedals: new Set() }));
+      if (!s) down.set(id, (s = { notes: new Set(), pedals: new Set(), levels: new Set() }));
+      if (cmd === 0xc0) choosePreset(d1);
+      if (cmd === 0xb0 && (d1 === 7 || d1 === 11) && !mine(d1)) { setLevel(d1, d2); if (d2 < 127) s.levels.add(d1); else s.levels.delete(d1); }
+      if (cmd === 0xb0 && d1 === 121) { for (const cc of [7, 11]) if (!mine(cc)) setLevel(cc, 127); s.levels.clear(); } // Reset All Controllers
       if (cmd === 0x90 && d2 > 0 && !mayPlay()) { needClick(); return; }
       if (cmd === 0x90 && d2 > 0) { if (s.notes.has(nk)) send([0x80 | ch, d1, 0]); s.notes.add(nk); }
       else if (cmd === 0x80 || cmd === 0x90) { if (!s.notes.delete(nk)) return; }

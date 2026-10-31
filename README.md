@@ -184,6 +184,30 @@ is the mod wheel's control wherever the instrument has one.
 
 </details>
 
+**A foot controller:** a Roland FC-300 works as it comes from the factory
+(Standard mode, channel 1), and so does any pedal board sending the same
+messages, on the pages, in the plugins and in the Forte app:
+
+| On the FC-300 | It sends | In Forte |
+|---|---|---|
+| EXP 1 | CC7, volume | turns the instrument down (heel down: silent); full until it moves |
+| EXP 2 | CC1, the mod wheel | whatever the mod wheel moves (on the Electric Grand, Tine and Reed Pianos, the tremolo) |
+| CTL 1 | CC80 | the sustain pedal (or what Space is: hold, the Leslie) |
+| CTL 2 | CC81 | the sostenuto pedal |
+| EXP 1's toe switch | CC82 | the soft pedal (the Ribbon Piano's una corda, the Regal's tremulant) |
+| Number pedals 1–5 (▲, then 1–5, for 6–10) | program change | the instrument's presets in the menu's order (pedal 1 the first), then, on the pages, your own |
+
+An expression pedal set to CC11 does what EXP 1 does, except on the
+instruments with a swell of their own (the tonewheel organ, the
+Telharmonium, the Trautonium), where CC11 is the swell. EXP 2's toe
+switch (CC83) is left free. The FC-300's
+switches come set to latch: a press puts the pedal down, the next lifts it
+(set a switch's Mode to Momentary on the FC-300 to hold it down instead,
+which the Leslie's switch wants). The FC-300 has only a 5-pin MIDI OUT, so
+it reaches a computer through a USB MIDI interface (or a keyboard's MIDI
+IN that passes it on). In a DAW, the host may take program changes for
+itself (MainStage switches patches with them).
+
 **Latency:** play through wired headphones or speakers. Bluetooth ones
 delay every note by 100–200 ms, enough to make any instrument feel
 sluggish; a page warns you once when the browser reports that much (Safari
