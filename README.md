@@ -242,7 +242,7 @@ chevron beside the presets (**More controls**) brings back the rest.
 Once the audio is on, Perform keeps the screen from dimming and locking
 (where the browser can: Chrome, Edge, and Safari from iOS 16.4).
 
-**▶ Tour**, at the start of the views' bar, is a guided tour of the
+**Tour**, in the header beside How it works, is a guided tour of the
 instrument's physics: a card that walks through it a step at a time,
 each step showing the views that make it visible, setting the
 instrument up and playing a short phrase while it says what to listen

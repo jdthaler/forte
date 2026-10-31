@@ -594,16 +594,21 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
   body[data-instrument] select { font-size: 16px; }
 }
 
-/* a guided tour of the physics (shared/tour.js): Tour in the views' bar, and its card over the
+/* a guided tour of the physics (shared/tour.js): Tour in the header, and its card over the
    controls, just above the keys (on a phone, above the controls' bar; held sideways, beside the views) */
-body[data-instrument] .forte-tour-start {
-  display: inline-flex; align-items: center; gap: 6px; padding: 2px 11px 2px 9px;
-  border: 1px solid var(--accent); border-radius: 9px; background: transparent; color: var(--text);
+/* Tour sits in the header with How it works (shared/forte.css .forte-about), and keeps its word
+   where How it works shrinks to its icon: ▶ alone would read as play */
+body > header .forte-tour-start .forte-about-label { display: inline; }
+body > header .forte-tour-start { width: auto; border-radius: 999px; padding: 4px 10px 4px 5px; }
+.forte-tour-glyph { font: 700 7px/1 system-ui, sans-serif; padding-left: 1px; }
+body > header .forte-tour-start[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink, #111); border-color: var(--accent); }
+/* where How it works is just its icon, Tour is just its word: the header stays one row on a
+   tablet held upright, even beside the longest names */
+@media (max-width: 1249px) {
+  body > header .forte-tour-start { padding: 4px 9px; }
+  body > header .forte-tour-start .forte-tour-glyph { display: none; }
 }
-.forte-tour-glyph { font-size: 9px; color: var(--accent); }
-body[data-instrument] .forte-tour-start[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink, #111); }
-body[data-instrument] .forte-tour-start[aria-pressed="true"] .forte-tour-glyph { color: inherit; }
-body.perform .forte-tour-start:not([aria-pressed="true"]) { display: none; } /* a tour starts from Discover */
+@media (min-width: 601px) and (max-width: 1249px) { body[data-instrument] .brand { gap: 8px; } }
 .forte-tour {
   position: fixed; z-index: 30; right: 16px; bottom: calc(var(--footer-h, 170px) + 12px);
   width: min(470px, calc(100vw - 32px)); max-height: calc(100vh - var(--header-h, 50px) - var(--footer-h, 170px) - 36px);
@@ -639,5 +644,4 @@ body[data-instrument] #controls .param.forte-tour-mark { outline: 2px solid var(
   .forte-tour-title { font-size: 15px; }
   .forte-tour-text { font-size: 13px; overflow: visible; }
   body[data-instrument] .forte-tour-nav button { min-height: 36px; }
-  body[data-instrument] .forte-tour-start { min-height: 30px; padding-inline: 8px 10px; }
 }
