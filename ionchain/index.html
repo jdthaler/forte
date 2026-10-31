@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ion Chain · Forte</title>
+  <meta name="description" content="Every key a radio-frequency trap holding a string of ions, the crystal of a trapped-ion quantum computer: a laser pulse kicks them, they ring together in their normal modes (1, √3, √(29/5) … of the trap's frequency, more with every ion), and the trap's electrodes hear the current they drive.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="Ion Chain · Forte">
+  <meta property="og:description" content="Every key a radio-frequency trap holding a string of ions, the crystal of a trapped-ion quantum computer: a laser pulse kicks them, they ring together in their normal modes (1, √3, √(29/5) … of the trap's frequency, more with every ion), and the trap's electrodes hear the current they drive.">
+  <meta property="og:url" content="https://forte.jthaler.net/ionchain/">
+  <meta property="og:image" content="https://forte.jthaler.net/ionchain/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Ion Chain's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="ionchain">
+  <div class="forte-edge" aria-hidden="true"></div>
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Ion Chain</h1>
+      <span class="sub">a string of trapped ions, kicked by a laser and heard through the trap's electrodes: the normal modes of a Coulomb crystal</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Crystal">
+          <div class="card-head"><h2>The crystal of <b id="focus-name">C4</b></h2></div>
+          <canvas id="crystal"></canvas>
+          <div class="caption">The ions as a camera on the trap sees them, glowing in the cooling light, each smeared over its own motion (exaggerated): a kicked ion shakes its neighbours, since the chain rings only as a whole. The gold bars are the electrodes, when they are close enough to show; the violet line is the laser pulse. Weaken the radial pull (the mod wheel) and the line buckles into a zigzag.</div>
+        </div>
+        <div class="card" data-view="Modes">
+          <div class="card-head"><h2>Normal modes</h2><span class="muted">× the trap's frequency · bar: how loud</span></div>
+          <canvas id="modes"></canvas>
+          <div class="caption">Each mode's shape, swinging slowly at its own rate, lowest first: the centre of mass at ×1, the breathing mode at ×√3 = 1.732, then the rest of the modes along the axis (violet), and the radial modes (blue) just under the radial frequency. The bar is how loud it sounds now: the pulse's push on it times what the electrodes hear of it.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-perform>
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the crystal's modes, by how loud</span></div>
+          <canvas id="spectrum"></canvas>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">Not a harmonic series: 1, 1.732, 2.41, 3.05 … times the note, so a chord of ion chains rings like bells. Held, the lines the electrodes hear best fade first (they lose energy to its resistor); let go, the cooling laser stops them all.</div>
+        </div>
+      </div>
+      <div class="row single">
+        <div class="card" id="info-card" data-view="Trap">
+          <div class="card-head"><h2>The trap</h2></div>
+          <dl id="info"></dl>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>radial pull <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>cooling off: hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>MIDI: mod wheel = radial pull (toward the zigzag), pitch bend and MPE = the trap's axial frequency, CC64 keeps the cooling laser off</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/ionchain-main.js"></script>
+</body>
+</html>

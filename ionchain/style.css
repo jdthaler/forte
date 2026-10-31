@@ -1,0 +1,6 @@
+/* The page's own palette: the violet of calcium ions' fluorescence (397 nm) and the gold of the trap's electrodes. */
+:root {
+  --accent: #a98bff;
+  --accent-2: #6fc3ff;
+  --accent-ink: #120a2a;
+}
