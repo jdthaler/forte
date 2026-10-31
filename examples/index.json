@@ -277,6 +277,32 @@
    "title": "Glass plates"
   }
  ],
+ "clavichord": [
+  {
+   "file": "01-an-air-with-bebung-on-the-long-notes.m4a",
+   "title": "An air with bebung on the long notes"
+  },
+  {
+   "file": "02-pressing-harder-bends-the-note-up.m4a",
+   "title": "Pressing harder bends the note up"
+  },
+  {
+   "file": "03-bebung-none-then-deeper-then-faster.m4a",
+   "title": "Bebung none then deeper then faster"
+  },
+  {
+   "file": "04-fretted-trill-then-unfretted.m4a",
+   "title": "Fretted trill then unfretted"
+  },
+  {
+   "file": "05-listing-on-then-thinned-out.m4a",
+   "title": "Listing on then thinned out"
+  },
+  {
+   "file": "06-bass-without-then-with-4-foot-strings.m4a",
+   "title": "Bass without then with 4 foot strings"
+  }
+ ],
  "clavicylinder": [
   {
    "file": "01-chorale-in-f.m4a",
@@ -1031,6 +1057,32 @@
    "title": "Feed resistor 22 megohm then 1 megohm constant charge vs voltage"
   }
  ],
+ "regal": [
+  {
+   "file": "01-a-galliard-on-the-8-and-4-foot.m4a",
+   "title": "A galliard on the 8 and 4 foot"
+  },
+  {
+   "file": "02-cylinders-funnels-apples-and-bare-shallots.m4a",
+   "title": "Cylinders funnels apples and bare shallots"
+  },
+  {
+   "file": "03-the-wind-rises.m4a",
+   "title": "The wind rises"
+  },
+  {
+   "file": "04-brass-then-leathered-shallots.m4a",
+   "title": "Brass then leathered shallots"
+  },
+  {
+   "file": "05-the-tremulant.m4a",
+   "title": "The tremulant"
+  },
+  {
+   "file": "06-the-full-regal-and-a-bellows-change.m4a",
+   "title": "The full regal and a bellows change"
+  }
+ ],
  "resonator": [
   {
    "file": "01-chords-grown-from-silence.m4a",
@@ -1473,32 +1525,6 @@
   {
    "file": "06-slow-then-fast-shutters.m4a",
    "title": "Slow then fast shutters"
-  }
- ],
- "regal": [
-  {
-   "file": "01-a-galliard-on-the-8-and-4-foot.m4a",
-   "title": "A galliard on the 8 and 4 foot"
-  },
-  {
-   "file": "02-cylinders-funnels-apples-and-bare-shallots.m4a",
-   "title": "Cylinders funnels apples and bare shallots"
-  },
-  {
-   "file": "03-the-wind-rises.m4a",
-   "title": "The wind rises"
-  },
-  {
-   "file": "04-brass-then-leathered-shallots.m4a",
-   "title": "Brass then leathered shallots"
-  },
-  {
-   "file": "05-the-tremulant.m4a",
-   "title": "The tremulant"
-  },
-  {
-   "file": "06-the-full-regal-and-a-bellows-change.m4a",
-   "title": "The full regal and a bellows change"
   }
  ]
 }

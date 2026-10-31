@@ -150,6 +150,15 @@ export const INSTRUMENTS = [
     accent: '#d9a441',
   },
   {
+    id: 'clavichord', name: 'Clavichord', section: 'traditional', ready: true, version: '0.1.0', trim: 3.5,
+    vibrates: 'strings', notes: 'ring',
+    plugin: { code: 'Clvd', ready: true },
+    after: 'the German clavichord of C. P. E. Bach’s day (18th century)',
+    tagline: 'A brass tangent strikes the strings and stays on them, holding the note for as long as the finger does: press harder and it goes sharp, rock the finger and it sings with a vibrato.',
+    physics: 'Tangent-stopped strings · pressure tuning (Bebung) · fretting',
+    accent: '#d9b77e',
+  },
+  {
     id: 'grand', name: 'Electric Grand', section: 'electric', ready: true, version: '0.9.0', trim: 3.5,
     plugin: { code: 'EGrd', ready: true },
     after: 'the Yamaha CP-70',
