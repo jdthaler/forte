@@ -137,3 +137,6 @@
 ### CUORE (minor)
 - **A guided tour of its physics** in 5 steps: A thermometer for single decays; A formant from heat flow; Warmer, quieter, darker; Saturation; A smaller crystal.
 
+
+### Ion Chain (new)
+- **A guided tour of its physics** in 6 steps: One, two, three ions; A chain rings like a bell; Where the laser lands; A beam along the axis; What the electrodes hear; The zigzag.
