@@ -13,7 +13,9 @@ lands, the pickup's offset, how fast the black hole spins.
 
 ## Instruments
 
-The front page sorts them into five kinds, as here.
+The front page sorts them into five kinds, as here, and finds them by a search
+(name, origins, tagline or physics) and by filters: what sounds (strings, bars and
+bells, air, circuits, space, particles) and whether the notes ring out or sustain.
 
 ### Traditional instruments
 
