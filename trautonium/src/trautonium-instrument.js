@@ -20,6 +20,7 @@ export const INSTRUMENT = {
   // CC74 tunes its own first circuit; its pressure presses its wire harder
   mpe: { bend: 48, slide: true },
   controllers: { 11: 'swell' },          // MIDI CC11, the expression pedal: the 1930 instrument's volume pedal
+  faders: ['sync', 'q1', 'q2', 'f2', 'f1'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/trautonium), built as WebAssembly
   wasm: { name: 'TrautoniumWasmEngine', module: new URL('./trautonium-wasm.js', import.meta.url).href, binary: new URL('../wasm/trautonium.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

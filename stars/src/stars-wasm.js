@@ -32,13 +32,14 @@ function views(m, e) {
 
 const Base = wasmEngine(BUILD, { messages: views });
 
-// A star as the engine takes it (stars-engine.h, offer): key, K, δ Scuti?, N, then its modes.
-const ARRAYS = ['f', 'l', 'm', 'zeta', 'p', 'gamma', 'wEnv', 'wCore', 'asat', 'mult'];
+// A star as the engine takes it (stars-engine.h, offer): key, K, δ Scuti?, N, ν_max (μHz) and
+// T_eff (for how its linewidths grow), then its modes.
+const ARRAYS = ['f', 'l', 'm', 'zeta', 'p', 'gamma', 'wEnv', 'wCore', 'asat', 'mult'], HEAD = 6;
 function pack(d, out) {
   const N = d.N;
-  out[0] = d.key; out[1] = d.K; out[2] = d.family === 'dscuti' ? 1 : 0; out[3] = N;
-  ARRAYS.forEach((k, j) => { const a = d.modes[k]; for (let i = 0; i < N; i++) out[4 + j * N + i] = a[i]; });
-  return 4 + ARRAYS.length * N;
+  out[0] = d.key; out[1] = d.K; out[2] = d.family === 'dscuti' ? 1 : 0; out[3] = N; out[4] = d.sz?.numax ?? 0; out[5] = d.star?.T ?? 0;
+  ARRAYS.forEach((k, j) => { const a = d.modes[k]; for (let i = 0; i < N; i++) out[HEAD + j * N + i] = a[i]; });
+  return HEAD + ARRAYS.length * N;
 }
 
 // Engines the tests make and drop give their memory back.
@@ -72,7 +73,7 @@ export class StarWasmEngine extends Base {
   get P() { return this.params ?? null; }
   noteOn(key, velocity, data) {
     if (data && data.modes && data.N > 0 && data.N <= MAX_MODES && this.params && data.id === `${starId(this.params)}|${key}`) {
-      const x = Base.exports, s = scratch(x), n = pack(data, s.f64(4 + ARRAYS.length * data.N));
+      const x = Base.exports, s = scratch(x), n = pack(data, s.f64(HEAD + ARRAYS.length * data.N));
       x.stars_offer(this.e, s.at, n);
     }
     super.noteOn(key, velocity);

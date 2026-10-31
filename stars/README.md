@@ -136,8 +136,26 @@ way. Along the 1 M☉ track:
 | C7 | dwarf | 0.98 | 0.87 | 5515 | 0.6 | 4123 | 165.8 | 84.7 | 0.57 | 1.1 s | 248 |
 | C8 | dwarf | 0.54 | 0.50 | 3829 | 0.05 | 8238 | 281.4 | 143.7 | 0.05 | 11 s | 257 |
 
-"Lifetime" is 1/(πΓK), the radial modes' in the sound; "modes" counts the
-m components played. A **heavier track** (Mass, 0.9–1.8 M☉) puts a slightly
+"Lifetime" is 1/(πΓK), the radial modes' at ν_max in the sound; "modes"
+counts the m components played.
+
+Γ is the width at ν_max. Away from it the widths grow with frequency, as
+Kepler measured them: the upper modes of a star are damped harder than its
+lower ones. Lund et al. (2017) fitted the widths of their dwarfs and
+subgiants as ln Γ = α ln(ν/ν_max) + … (plus a dip near ν_max), with α
+bilinear in T_eff and ν_max; Ball et al. (2018) give the joint fit,
+
+  α = −3.710 + 1.073·10⁻³ T_eff + 1.883·10⁻⁴ ν_max (μHz),
+
+3.07 for the Sun. Each mode here has Γ (ν/ν_max)^α, α held to [0, 5]:
+about 1.5 on the red-giant branch (outside the fit, but red giants' widths
+are known to vary less with frequency), 2.3 at C5, 2.9 on C6 and the Sun,
+2.0 on C8. Across the Sun's played envelope (a factor of 2.1 in frequency)
+the widths span a factor of 10. **Linewidth slope** under *Convection*
+scales α (×1, 0 for one width per star). Since the upper modes die first, a
+released star's ring-down darkens as it fades, and while it is driven the
+upper modes breathe faster than the lower (tested: each mode rings down at
+πΓ(ν/ν_max)^α within 2 %). A **heavier track** (Mass, 0.9–1.8 M☉) puts a slightly
 denser comb on every key (Δν ∝ M^(−¼) at fixed ν_max: 10.8 μHz instead of
 11.7 on C2 at 1.5 M☉), and its upper keys are hot F-type dwarfs with broad,
 short-lived modes (6900 K and 5.4 μHz on C6).
@@ -460,9 +478,10 @@ tools/render-stars.mjs               node tools/render-stars.mjs → examples/st
   not a stellar-evolution code. Huber et al. (2011) tested the scaling
   relations from the main sequence to red giants, and T_eff enters ν_max
   only as its square root.
-- **One linewidth per star** (and per mixed mode). Real linewidths grow
-  steeply with frequency across the envelope; here every p mode of a star
-  has Γ₀.
+- **Linewidths are a power law.** Every p mode of a star has
+  Γ₀ (ν/ν_max)^α, α from Lund et al.'s fit to dwarfs and subgiants and
+  extrapolated beyond it, without the plateau (the "dip") their fit has
+  near ν_max, which makes the widths there flatter than the power law.
 - **Mode power is levelled across the keyboard.** Real red giants oscillate
   with amplitudes ten times the Sun's and more; every star here has the same
   mean power, with a gentle voicing.
@@ -620,6 +639,17 @@ the pattern sounds a little sparser, most of all in the red giants' dense mixed 
   *A&A* 537, A134.
   [doi:10.1051/0004-6361/201118496](https://doi.org/10.1051/0004-6361/201118496).
   Linewidths as a power law of T_eff (index about 13) over a lower bound.
+- M. N. Lund, V. Silva Aguirre, G. R. Davies et al. (2017). "Standing on
+  the shoulders of dwarfs: the Kepler asteroseismic LEGACY sample. I.
+  Oscillation mode parameters." *ApJ* 835, 172.
+  [doi:10.3847/1538-4357/835/2/172](https://doi.org/10.3847/1538-4357/835/2/172).
+  How the linewidths grow with frequency: a power law in ν/ν_max with a dip
+  near ν_max.
+- W. H. Ball, W. J. Chaplin, M. Schofield et al. (2018). "A synthetic sample
+  of short-cadence solar-like oscillators for TESS." *ApJS* 239, 34.
+  [doi:10.3847/1538-4365/aaedbc](https://doi.org/10.3847/1538-4365/aaedbc).
+  Lund et al.'s linewidth parameters as one fit, bilinear in T_eff and ν_max
+  (their Table 1): the slope α used here.
 - B. Mosser, Y. Elsworth, S. Hekker et al. (2012a). "Characterization of the
   power excess of solar-like oscillations in red giants with Kepler."
   *A&A* 537, A30.

@@ -17,7 +17,7 @@
 namespace forte::harpsichord {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { manual, coupler, front8, back8, four, lute, buff, material, stiff, overlap, stagger, xFront, xBack, xFour, xLute, detune, loss, damper, sympathy, fmax, kc, fullRange, soundboard, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { manual, coupler, front8, back8, four, lute, buff, material, stiff, overlap, stagger, xFront, xBack, xFour, xLute, detune, loss, damper, sympathy, fmax, kc, side, fullRange, soundboard, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -39,6 +39,7 @@ inline const FormatSegment kFormat_loss[] = {{kNoLimit, "× ", "", 1, 0, 2, fals
 inline const FormatSegment kFormat_damper[] = {{kNoLimit, "× ", " √(Tμ)", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_sympathy[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_fmax[] = {{kNoLimit, "", " kHz", 1, 0, 1, false, false, false, false}};
+inline const FormatSegment kFormat_side[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
 inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
@@ -85,6 +86,7 @@ inline const ParamInfo kParams[p::count] = {
   {"sympathy", "Sympathetic resonance", "Strings and soundboard", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_sympathy, 2},
   {"fmax", "Highest partial", "Strings and soundboard", ParamKind::continuous, 4, 16, 10, 0.5, false, false, nullptr, 0, kFormat_fmax, 1},
   {"kc", "Tension modulation (pitch glide)", "Strings and soundboard", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"side", "Sideways motion (two-stage decay)", "Strings and soundboard", ParamKind::continuous, 0, 1, 0.2, 0.01, false, false, nullptr, 0, kFormat_side, 2},
   {"fullRange", "Full range (A0–C8)", "Strings and soundboard", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"soundboard", "Soundboard", "Strings and soundboard", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_room, 1},
@@ -134,7 +136,7 @@ inline const Preset kPresets[] = {
   {"Without the soundboard (bridge force)", kPreset12, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
-inline const Controller kControllers[] = {{0, -1}};
+inline const Controller kControllers[] = {{107, p::front8}, {109, p::back8}, {111, p::four}, {113, p::xFront}, {114, p::xBack}};
 
 // The keyboard's tuning (forte/tuning.h): each key's frequency over equal temperament at A = 440 Hz.
 inline forte::Tuning tuningOf(const double *P) {
@@ -154,7 +156,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 29, .compassHi = 89, .compass = p::fullRange, .space = Space::hold,
     .modWheel = -1, .modWheelMax = 0,
-    .controllers = kControllers, .controllerCount = 0,
+    .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = -2},
     .midiVelocity = midiVelocity, .create = create,
   };

@@ -49,6 +49,13 @@ constexpr double POLE_WIDTH = 8e-3;            // m: magnetic aperture of a pick
 constexpr double F_MAX = 9000;                 // Hz: highest mode kept
 constexpr int N_MAX = 96, M_MAX = 8;           // speaking modes, yarn modes
 constexpr double GAP_REF = 0.5e-3;             // m: the gap at which levels are set (see the engine)
+// The frame under the anvils: the anvil rail and the case it is screwed to, as three modes driven
+// by the force on the stud. The pickups sit on it, so its motion under every string (all 60 of
+// them lie in the field) is heard as if the strings had moved the other way. Estimates: the D6's
+// frame is not measured.
+constexpr int FRAME_MODES = 3;
+inline constexpr double FRAME_F[FRAME_MODES] = {520, 1400, 3300}; // Hz
+constexpr double FRAME_Q = 12, FRAME_MASS = 3;                     // each mode's Q and modal mass (kg)
 
 inline double keyFreq(double k) { return 440 * std::pow(2.0, (k - 69) / 12); }
 

@@ -17,7 +17,7 @@
 namespace forte::bubbles {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { depth, pressure, keepInTune, gas, liquid, rate, irregular, spread, snap, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { depth, pressure, keepInTune, gas, liquid, vapour, rate, irregular, spread, snap, echo, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -63,10 +63,12 @@ inline const ParamInfo kParams[p::count] = {
   {"keepInTune", "Keep in tune (re-size the bubbles)", "Tank", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"gas", "Gas", "Gas and liquid", ParamKind::choice, 0, 3, 0, 1, false, false, kChoices_gas, 4, nullptr, 0, kKeys_gas},
   {"liquid", "Liquid", "Gas and liquid", ParamKind::choice, 0, 2, 0, 1, false, false, kChoices_liquid, 3, nullptr, 0, kKeys_liquid},
+  {"vapour", "Vapour in the bubbles", "Gas and liquid", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"rate", "Bubbles per second (held key)", "Nozzles", ParamKind::continuous, 0.5, 40, 5, 0, true, true, nullptr, 0, kFormat_rate, 2},
   {"irregular", "Irregularity", "Nozzles", ParamKind::continuous, 0, 1, 0.4, 0.01, false, true, nullptr, 0, kFormat_irregular, 3},
   {"spread", "Size spread", "Nozzles", ParamKind::continuous, 0, 15, 1.5, 0.1, false, false, nullptr, 0, kFormat_spread, 1},
   {"snap", "Neck snap time", "Nozzles", ParamKind::continuous, 0.01, 2, 0.05, 0, true, false, nullptr, 0, kFormat_snap, 2},
+  {"echo", "Surface echo at the hydrophones", "Output", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
@@ -97,6 +99,9 @@ inline const PresetValue kPreset8[] = {{p::depth, 20}, {p::keepInTune, 1}};
 inline const PresetValue kPreset9[] = {{p::rate, 30}, {p::irregular, 1}, {p::spread, 6}};
 inline const PresetValue kPreset10[] = {{p::snap, 1}};
 inline const PresetValue kPreset11[] = {{p::rate, 2.5}, {p::irregular, 0}, {p::spread, 0}};
+inline const PresetValue kPreset12[] = {{p::pressure, 0.25}, {p::vapour, 1}};
+inline const PresetValue kPreset13[] = {{p::echo, 1}};
+inline const PresetValue kPreset14[] = {{p::echo, 1}, {p::depth, 20}};
 inline const Preset kPresets[] = {
   {"Brook: air bubbles 30 cm down in water", nullptr, 0},
   {"Nozzles 20 m down: everything a major sixth up", kPreset1, 1},
@@ -110,9 +115,12 @@ inline const Preset kPresets[] = {
   {"Torrent: 30 bubbles a second, 6 % spread", kPreset9, 3},
   {"Slow pinch-off (1 ms): the treble hardly rings", kPreset10, 1},
   {"Metronome: even bubbles, all the same size", kPreset11, 3},
+  {"Water vapour, a quarter atmosphere: ¾ of a semitone flatter", kPreset12, 2},
+  {"Surface echo: the hydrophones hear the surface too", kPreset13, 1},
+  {"Surface echo 20 m down: a slap after every bubble", kPreset14, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
-inline const Controller kControllers[] = {{0, -1}};
+inline const Controller kControllers[] = {{107, p::spread}, {109, p::depth}, {111, p::pressure}, {113, p::irregular}, {114, p::rate}};
 
 // The keyboard's tuning (forte/tuning.h): each key's frequency over equal temperament at A = 440 Hz.
 inline forte::Tuning tuningOf(const double *P) {
@@ -128,11 +136,11 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Every note a bubble ringing at its Minnaert frequency; depth, gas and pressure retune it.", .auSubtype = "Bubl",
     .vst3Id = {0xa1, 0x7f, 0x90, 0x48, 0xe8, 0xde, 0x36, 0x79, 0xa0, 0x70, 0x8f, 0x25, 0xb7, 0x5b, 0xca, 0x19},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 12,
+    .presets = kPresets, .presetCount = 15,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 57, .keyHi = 108, .space = Space::hold,
     .modWheel = p::rate, .modWheelMax = 40,
-    .controllers = kControllers, .controllerCount = 0,
+    .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 1.5},
     .midiVelocity = midiVelocity, .create = create,
   };

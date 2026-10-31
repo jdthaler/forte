@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // the 200A's A1–C7, 33–96, until Full range opens the rest
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   mpe: { bend: 48 },                    // MPE: a note's own bend stiffens or softens its reed, ±48 semitones
+  faders: ['drive', 'hardness', 'strike', 'tremRate', 'tremDepth'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/reeds), built as WebAssembly
   wasm: { name: 'ReedWasmEngine', module: new URL('./reeds-wasm.js', import.meta.url).href, binary: new URL('../wasm/reeds.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

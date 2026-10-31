@@ -7,6 +7,7 @@
     {"id":"wrap","kind":"continuous","min":1,"max":10,"def":3,"step":0.1,"log":false},
     {"id":"tipLoss","kind":"continuous","min":0,"max":3,"def":0.8,"step":0.01,"log":false},
     {"id":"keyMass","kind":"continuous","min":2,"max":40,"def":8,"step":0,"log":true},
+    {"id":"knock","kind":"continuous","min":0,"max":4,"def":1,"step":0.05,"log":false},
     {"id":"t60","kind":"continuous","min":1,"max":40,"def":14,"step":0,"log":true},
     {"id":"hf","kind":"continuous","min":0,"max":8,"def":0.5,"step":0.05,"log":false},
     {"id":"stiff","kind":"continuous","min":0,"max":4,"def":1,"step":0.01,"log":false},

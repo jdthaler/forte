@@ -253,8 +253,16 @@ struct Plugin : Instance, MpeDecoder::Sink {
     set(i, v, out);
     if (P[i] != before) tell(i, out);
   }
-  // another controller the descriptor maps to a parameter: a toggle is on at 64 and above,
-  // any other parameter moves across its range; or a choice switched between two values
+  // a controller (0..127) across a parameter's whole range, as its slider moves it (shared/midi.js
+  // ccValue): in log(value) for a log one, a toggle on at 64 and above, a choice's options in turn
+  static double ccValue(const ParamInfo &p, int v) {
+    const double u = v <= 0 ? 0 : v >= 127 ? 1 : v / 127.0;
+    if (p.kind == ParamKind::toggle) return v >= 64 ? 1 : 0;
+    if (p.log && p.min > 0) return p.min * std::pow(p.max / p.min, u);
+    return p.min + (p.max - p.min) * u;
+  }
+  // another controller the descriptor maps to a parameter (its controllers, the faders and the
+  // pad among them) across its range (ccValue); or a choice switched between two values
   // (instrument.h, Controller)
   void controller(int cc, int v, const clap_output_events_t *out) {
     const bool press = v >= 64 && ccLast[cc & 127] < 64;
@@ -268,7 +276,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
         if (before != c.a && before != c.b) continue;
         if (c.mode == Controller::values) set(k, v >= 64 ? c.b : c.a, out);
         else if (press) set(k, before == c.a ? c.b : c.a, out);
-      } else set(k, p.kind == ParamKind::toggle ? (v >= 64 ? 1 : 0) : p.min + (p.max - p.min) * v / 127.0, out);
+      } else set(k, ccValue(p, v), out);
       if (P[k] != before) tell(k, out);
     }
   }

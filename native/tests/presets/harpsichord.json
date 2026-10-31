@@ -28,6 +28,7 @@
         "sympathy": 0.25,
         "fmax": 10,
         "kc": true,
+        "side": 0.2,
         "fullRange": false,
         "soundboard": true,
         "room": 0.25,

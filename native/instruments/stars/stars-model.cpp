@@ -36,6 +36,7 @@ static double deltaNu(double M, double R) { return SUN.dnu * std::sqrt(M / (R * 
 static double nuMax(double M, double R, double T) { return (SUN.numax * M) / (R * R) / std::sqrt(T / SUN.teff); }
 static double envWidth(double numax) { return 0.66 * fd::pow(numax, 0.88); }
 static double linewidth(double T) { return 0.05 + 0.95 * fd::pow(jsMin(T, 6600) / SUN.teff, 13); }
+double linewidthSlope(double T, double numax) { return jsMax(0, jsMin(5, -3.710 + 1.073e-3 * T + 1.883e-4 * numax)); }
 
 // ---- the zero-age main sequence: Tout, Pols, Eggleton & Han (1996) --------------------------------
 StarState zams(double M) {

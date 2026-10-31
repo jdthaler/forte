@@ -147,6 +147,14 @@
   {
    "file": "07-metronome-then-torrent.m4a",
    "title": "Metronome then torrent"
+  },
+  {
+   "file": "08-dry-then-vapour-under-a-quarter-atmosphere.m4a",
+   "title": "Dry then vapour under a quarter atmosphere"
+  },
+  {
+   "file": "09-surface-echo-off-then-on-then-20-m-down.m4a",
+   "title": "Surface echo off then on then 20 m down"
   }
  ],
  "carillon": [
@@ -305,6 +313,36 @@
   {
    "file": "08-bass-ff-tension-glide-then-none.m4a",
    "title": "Bass ff tension glide then none"
+  }
+ ],
+ "cuore": [
+  {
+   "file": "01-chords-at-ten-millikelvin.m4a",
+   "title": "Chords at ten millikelvin"
+  },
+  {
+   "file": "02-the-heat-sink-warms.m4a",
+   "title": "The heat sink warms"
+  },
+  {
+   "file": "03-low-keys-buzz-high-keys-round.m4a",
+   "title": "Low keys buzz high keys round"
+  },
+  {
+   "file": "04-big-pulses-saturate.m4a",
+   "title": "Big pulses saturate"
+  },
+  {
+   "file": "05-colder-then-warmer.m4a",
+   "title": "Colder then warmer"
+  },
+  {
+   "file": "06-cuoricino-small-crystal.m4a",
+   "title": "Cuoricino small crystal"
+  },
+  {
+   "file": "07-the-real-heater-clicks.m4a",
+   "title": "The real heater clicks"
   }
  ],
  "glass": [

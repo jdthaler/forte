@@ -21,6 +21,8 @@
 - Views: the wheel and strings from above, each string's motion and the chien; the chien's lift
   and the trompette's pull against the tirant; the crank's speed over the threshold, with each
   burst of buzz; the spectrum and the spectrogram.
+- A Seaboard RISE's faders move Coup strength, Wheel pressure and Bounce on the soundboard; its
+  XY pad the tirant (X) and the crank's speed (Y).
 - Twelve presets (sec and gras, bourrée and mazurka coups, drones in C), seven demos, and the
   plugins (AU code `Hrdy`).
 

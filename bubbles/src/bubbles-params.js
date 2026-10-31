@@ -28,6 +28,8 @@ export const GROUPS = [
       { id: 'liquid', label: 'Liquid', type: 'select', def: 'water',
         options: [['water', 'Water (1.0 mPa·s)'], ['gly90', '90 % glycerol (0.22 Pa·s)'], ['glycerol', 'Glycerol (1.41 Pa·s)']],
         hint: 'The liquid is the mass (ρ) and the viscous loss (μ). Glycerol is 1400 times as viscous as water: its loss, 4μ/ρωR², grows as the bubbles shrink, so the treble only thuds while the biggest bubbles still ring.' },
+      { id: 'vapour', label: 'Vapour in the bubbles', type: 'checkbox', def: false,
+        hint: 'Bubbles in water carry water vapour, 2.3 kPa of it at 20 °C. As the wall moves the vapour condenses and evaporates rather than being squeezed, so only the gas is a spring: every pitch drops by about p_v/2p₀, 20 ¢ at the defaults and 70 ¢ under a quarter of an atmosphere. (90 % glycerol has about a third as much vapour; pure glycerol hardly any.) Off: the bubbles are dry gas.' },
     ],
   },
   {
@@ -48,6 +50,8 @@ export const GROUPS = [
   {
     title: 'Output',
     params: [
+      { id: 'echo', label: 'Surface echo at the hydrophones', type: 'checkbox', def: false,
+        hint: 'The water’s surface reflects sound back down, inverted. On, each hydrophone hears every bubble twice: directly, and from its mirror image above the surface, a fraction of a millisecond later at the default depth. The two cancel in the bass (6–13 dB quieter at 30 cm, most of the keyboard in a 10 cm tank) and comb the treble; 20 m down the echo comes 27 ms later, a distinct slap. Off: the hydrophones hear the direct sound only, and the keyboard stays even.' },
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
@@ -71,4 +75,7 @@ export const PRESETS = [
   { name: 'Torrent: 30 bubbles a second, 6 % spread', p: { rate: 30, irregular: 1, spread: 6 } },
   { name: 'Slow pinch-off (1 ms): the treble hardly rings', p: { snap: 1 } },
   { name: 'Metronome: even bubbles, all the same size', p: { rate: 2.5, irregular: 0, spread: 0 } },
+  { name: 'Water vapour, a quarter atmosphere: ¾ of a semitone flatter', p: { pressure: 0.25, vapour: true } },
+  { name: 'Surface echo: the hydrophones hear the surface too', p: { echo: true } },
+  { name: 'Surface echo 20 m down: a slap after every bubble', p: { echo: true, depth: 20 } },
 ];

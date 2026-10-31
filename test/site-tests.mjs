@@ -11,7 +11,7 @@ import { ASSETS, notes } from '../tools/plugin-release.mjs';
 import { withTags, pictureOf } from '../tools/make-previews.mjs';
 import { readNotes, parseNote, plan, bump } from '../tools/release.mjs';
 import { compare, stateOf, contractPath, STATES } from '../tools/contract.mjs';
-import { TOUCH, SOFT_PEDAL, touch, touched, createSostenuto, wheelValue } from '../shared/midi.js';
+import { TOUCH, SOFT_PEDAL, touch, touched, createSostenuto, wheelValue, FADERS, controllersOf, controlled, ccValue } from '../shared/midi.js';
 import { LATEST, SYSTEMS, archive, downloads, withPlugins, parseRelease, releaseLine } from '../shared/plugins.js';
 
 let failures = 0;
@@ -120,6 +120,25 @@ test('the mod wheel at rest is the parameter\'s default, fully up its maximum', 
   const p = { min: 0, max: 10, def: 2 };
   assert.equal(wheelValue(p, 0), 2);
   assert.equal(wheelValue(p, 127), 10);
+});
+test('a Seaboard RISE\'s faders and pad: CC 107, 109, 111, 113, 114, across each control\'s whole range', () => {
+  assert.deepEqual(FADERS.map(([cc]) => cc), [107, 109, 111, 113, 114]);
+  const I = { faders: ['a', 'b', 'c', 'x', 'y'], controllers: { 11: 'y', 1: { param: 's', values: ['slow', 'fast'] }, 64: { param: 's', toggle: ['slow', 'fast'] } } };
+  const map = controllersOf(I);
+  assert.deepEqual([map[107], map[109], map[111], map[113], map[114], map[11]], ['a', 'b', 'c', 'x', 'y', 'y']);
+  const lin = { id: 'x', min: -1, max: 3, def: 0, step: 0.01 }, log = { id: 'y', min: 1, max: 100, def: 10, log: true };
+  assert.equal(ccValue(lin, 0), -1); assert.equal(ccValue(lin, 127), 3); assert.equal(ccValue(lin, 64), 1.02);
+  assert.equal(ccValue(log, 0), 1); assert.equal(ccValue(log, 127), 100); assert.ok(Math.abs(ccValue(log, 63.5) - 10) < 1e-9, 'a log control moves in log(value)');
+  assert.equal(ccValue({ type: 'checkbox' }, 63), false); assert.equal(ccValue({ type: 'checkbox' }, 64), true);
+  const sel = { type: 'select', options: [['a', 'A'], ['b', 'B'], ['c', 'C']] };
+  assert.deepEqual([0, 31, 32, 95, 96, 127].map((v) => ccValue(sel, v)), ['a', 'a', 'b', 'b', 'c', 'c']);
+  const last = {}, P = { s: 'slow' };
+  assert.deepEqual(controlled(map, [lin, log], P, 113, 127, last), ['x', 3]);
+  assert.equal(controlled(map, [lin, log], P, 20, 127, last), null, 'an unmapped controller sets nothing');
+  assert.deepEqual(controlled(map, [], P, 1, 100, last), ['s', 'fast']);
+  assert.deepEqual(controlled(map, [], P, 64, 127, last), ['s', 'fast'], 'a press flips the switch');
+  assert.equal(controlled(map, [], P, 64, 127, last), null, 'holding it down does not');
+  assert.equal(controlled(map, [], { s: 'bypass' }, 1, 100, last), null, 'a switch leaves another value alone');
 });
 
 console.log('registry');
@@ -369,6 +388,12 @@ for (const { id, dir } of described) {
     assert.ok(['sustain', 'hold', null].includes(I.space), `space ${I.space}`);
     const mw = typeof I.modWheel === 'string' ? I.modWheel : I.modWheel?.param;
     if (mw) assert.ok(params.has(mw), `modWheel ${mw}`);
+    // the faders and the pad (shared/midi.js FADERS): five of the controls a player moves, each
+    // its own, never the volume (a touch at the bottom would silence it), the room or the computer keys' velocity
+    const moved = I.console ? new Map([...params, ...I.console.groups.flatMap((g) => g.params).map((p) => [p.id, p])]) : params;
+    assert.ok(Array.isArray(I.faders) && I.faders.length === FADERS.length && new Set(I.faders).size === FADERS.length, `faders: ${FADERS.length} controls, each once`);
+    for (const f of I.faders) assert.ok(moved.has(f) && !['volume', 'room', 'venue', 'velocity'].includes(f), `fader ${f}`);
+    for (const f of I.faders.slice(3)) assert.ok(!moved.get(f).type, `the pad moves ${f}: a slider`);
     for (const k of ['volume', 'room', 'tone']) if (I.chain[k]) assert.ok(params.has(I.chain[k]), `chain.${k} ${I.chain[k]}`);
     if (I.chain.body) assert.ok(params.has(I.chain.body.param), `chain.body ${I.chain.body.param}`);
     assert.ok(params.has(I.chain.volume), 'chain.volume');

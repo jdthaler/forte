@@ -15,6 +15,7 @@ export const INSTRUMENT = {
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C8, 21–108
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // FF–f³, 29–89, until Full range opens the rest
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
+  faders: ['front8', 'back8', 'four', 'xFront', 'xBack'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/harpsichord), built as WebAssembly
   wasm: { name: 'HarpsichordWasmEngine', module: new URL('./harpsichord-wasm.js', import.meta.url).href, binary: new URL('../wasm/harpsichord.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

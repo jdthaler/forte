@@ -53,8 +53,8 @@ class StarEngine : public Engine {
   void slide(double value, int key) override { expr.setSlide(value, key); }
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
-  // A star its page built (the page's noteData, packed: key, K, δ Scuti?, N, then f, l, m,
-  // zeta, p, gamma, wEnv, wCore, asat, mult), for the next note on that key, played as the knobs'
+  // A star its page built (the page's noteData, packed: key, K, δ Scuti?, N, ν_max, T_eff, then f,
+  // l, m, zeta, p, gamma, wEnv, wCore, asat, mult), for the next note on that key, played as the knobs'
   // own star. Only without threads (WebAssembly): with them, the worker builds every star ahead.
   bool offer(const double *packed, int n);
   // Whether a key's star is built for the knobs as they are (asking for it if not): for the tests.
@@ -67,6 +67,8 @@ class StarEngine : public Engine {
     bool dscuti = false, inUse = false;
     double K = K0;
     std::array<double, MAX_MODES> F0{}, WE{}, WC{}, Pw{}, GAM{}, Z{}, AS{};
+    std::array<double, MAX_MODES> LNX{}; // ln(ν/ν_max) of each mode, and the star's α (linewidthSlope)
+    double alpha = 0;
     std::array<int, MAX_MODES> L{}, M{}, idx{};
     std::array<uint8_t, MAX_MODES> act{}, on{}; // sounding now; played at all (the Quality's trim)
     std::array<double, MAX_MODES> W{}, C{}, S{}, RHO{}, A1{}, A2{}, Y1{}, Y2{}, G{}, GT{}, AMP{}, ETA{};
@@ -109,7 +111,7 @@ class StarEngine : public Engine {
   std::array<double, p::count> P{};
   bool hasParams = false;
   // the knobs that glide (targets T and present values S)
-  enum { kSpin, kCore, kIncl, kDamping, kDriving, kFlare, kGrowth, kCount };
+  enum { kSpin, kCore, kIncl, kDamping, kDriving, kFlare, kGrowth, kSlope, kCount };
   std::array<double, kCount> S{}, T{};
   bool sustain = false, freqMoved = false, dampMoved = false, inclMoved = false;
   forte::NoteExpression expr{0}; // each key's slide (a star doesn't bend)

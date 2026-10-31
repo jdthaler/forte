@@ -46,22 +46,23 @@ Acoustics acoustics(double R, const Env &env) {
   const Liquid &liq = *env.liq;
   const Gas &gas = *env.gas;
   const double rho = liq.rho, sig = liq.sigma;
-  const double pb = env.p0 + (2 * sig) / R, D = diffusivity(gas, pb);
+  // the gas's share of the pressure inside (below p_v the liquid would boil: kept a tenth)
+  const double pb = env.p0 + (2 * sig) / R, pg = env.pv > 0 ? std::max(pb - env.pv, 0.1 * pb) : pb, D = diffusivity(gas, pg);
   const double d = std::max(env.d, R), s = 2 * d, rs = std::min(IMAGE_MAX, R / s);
   // iterate ω: Φ depends on χ = D/(ωR²), and the image term on k = ω/c
-  double w = std::sqrt((3 * gas.gamma * pb) / rho) / R, m = 1, re = 3 * gas.gamma, im = 0;
+  double w = std::sqrt((3 * gas.gamma * pg) / rho) / R, m = 1, re = 3 * gas.gamma, im = 0;
   for (int it = 0; it < 8; it++) {
     if (env.phiFixed) { re = env.phiKept.re; im = env.phiKept.im; }
     else { const Complex ph = phi(D / (w * R * R), gas.gamma); re = ph.re; im = ph.im; }
     m = 1 - rs * std::cos((w / liq.c) * s);
-    const double w2 = (pb * re - (2 * sig) / R) / (rho * R * R * m);
+    const double w2 = (pg * re - (2 * sig) / R) / (rho * R * R * m);
     const double wn = std::sqrt(std::max(w2, 1e-6));
     if (std::fabs(wn - w) < 1e-12 * w) { w = wn; break; }
     w = wn;
   }
   const double ks = (w / liq.c) * s, radFactor = 1 - std::sin(ks) / ks;
   const double bVis = (2 * liq.mu) / (rho * R * R * m);
-  const double bTh = (pb * im) / (2 * rho * w * R * R * m);
+  const double bTh = (pg * im) / (2 * rho * w * R * R * m);
   const double bRad = ((w * w * R) / (2 * liq.c)) * (radFactor / m);
   const double b = std::min(bVis + bTh + bRad, 0.95 * w); // never overdamped
   Acoustics a;
@@ -69,7 +70,7 @@ Acoustics acoustics(double R, const Env &env) {
   a.f0 = w / TAU; a.fd = a.omegaD / TAU;
   a.delta = (2 * b) / w; a.dvis = (2 * bVis) / w; a.dth = (2 * bTh) / w; a.drad = (2 * bRad) / w;
   a.kappa = re / 3; a.phiRe = re; a.phiIm = im; a.chi = D / (w * R * R); a.D = D;
-  a.pb = pb; a.m = m; a.radFactor = radFactor; a.R = R;
+  a.pb = pb; a.pg = pg; a.m = m; a.radFactor = radFactor; a.R = R;
   return a;
 }
 
@@ -79,6 +80,7 @@ Env nozzleEnv(const double *P) {
   env.gas = &GASES[std::clamp((int)P[p::gas], 0, (int)GASES.size() - 1)];
   env.d = P[p::depth];
   env.p0 = P[p::pressure] * P_ATM + env.liq->rho * G * P[p::depth]; // the air above the tank plus the water column
+  env.pv = P[p::vapour] ? env.liq->pv : 0;
   return env;
 }
 
@@ -116,10 +118,11 @@ double snapGain(double f, double tau) {
 
 double slowExponent(double R, const Gas &gas, double pb) { return phi(diffusivity(gas, pb) / (OMEGA_SLOW * R * R), gas.gamma).re / 3; }
 
-Acoustics glideRing(double R0, double pb0, double nSlow, Complex phiKept, const Liquid &liq, const Gas &gas, double d, double pT, double &R) {
+Acoustics glideRing(double R0, double pg0, double nSlow, Complex phiKept, const Liquid &liq, const Gas &gas, double d, double pT, double pv, double &R) {
   Env env;
-  env.liq = &liq; env.gas = &gas; env.d = d; env.p0 = pT + liq.rho * G * d;
-  R = R0 * std::pow(pb0 / (env.p0 + (2 * liq.sigma) / R0), 1 / (3 * nSlow)); // it swells as the pressure falls
+  env.liq = &liq; env.gas = &gas; env.d = d; env.p0 = pT + liq.rho * G * d; env.pv = pv;
+  const double pb = env.p0 + (2 * liq.sigma) / R0, pg = pv > 0 ? std::max(pb - pv, 0.1 * pb) : pb;
+  R = R0 * std::pow(pg0 / pg, 1 / (3 * nSlow)); // it swells as the pressure falls
   env.phiFixed = true; env.phiKept = phiKept;
   return acoustics(R, env);
 }

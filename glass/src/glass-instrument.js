@@ -22,6 +22,7 @@ export const INSTRUMENT = {
   // MPE: each note's own bend retunes its bowl alone, as the wheel retunes them all (±4 octaves).
   // No slide: the treadle turns one spindle for every bowl.
   mpe: { bend: 48 },
+  faders: ['wet', 'treadle', 'water', 'press', 'speed'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/glass), built as WebAssembly
   wasm: { name: 'ArmonicaWasmEngine', module: new URL('./glass-wasm.js', import.meta.url).href, binary: new URL('../wasm/glass.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

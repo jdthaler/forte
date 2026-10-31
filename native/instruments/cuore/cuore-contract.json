@@ -1,0 +1,41 @@
+{
+  "slug": "cuore",
+  "params": [
+    {"id":"energy","kind":"continuous","min":0.05,"max":50,"def":2.528,"step":0,"log":true},
+    {"id":"periodA4","kind":"continuous","min":0.05,"max":300,"def":3,"step":0,"log":true},
+    {"id":"tbase","kind":"continuous","min":7,"max":20,"def":10,"step":0.01,"log":false},
+    {"id":"clamp","kind":"continuous","min":1,"max":100,"def":10,"step":0,"log":true},
+    {"id":"side","kind":"continuous","min":1,"max":10,"def":5,"step":0.1,"log":false},
+    {"id":"bias","kind":"continuous","min":0.2,"max":30,"def":5,"step":0,"log":true},
+    {"id":"t0","kind":"continuous","min":2,"max":5,"def":3.4,"step":0.01,"log":false},
+    {"id":"wire","kind":"continuous","min":50,"max":5000,"def":500,"step":0,"log":true},
+    {"id":"gain","kind":"continuous","min":100,"max":100000,"def":5000,"step":0,"log":true},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.25,"step":0.01,"log":false},
+    {"id":"venue","kind":"choice","def":"room","options":["studio","room","recital","hall","cathedral"]},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false},
+    {"id":"pitch","kind":"choice","def":440,"options":[440,415,392,422.5,430,435,442,443,466]},
+    {"id":"temperament","kind":"choice","def":"equal","options":["equal","meantone","werckmeister","sixth","kirnberger","vallotti","young","pythagorean","just","custom"]},
+    {"id":"tuningRoot","kind":"choice","def":0,"options":[0,1,2,3,4,5,6,7,8,9,10,11]},
+    {"id":"cents1","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents2","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents3","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents4","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents5","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents6","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents7","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents8","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents9","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents10","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"A CUORE crystal at 10 mK","values":{}},
+    {"name":"The real heater: a pulse every 300 s on A4","values":{"periodA4":300}},
+    {"name":"Warmer: 12.5 mK, quieter and darker","values":{"tbase":12.5,"gain":40000}},
+    {"name":"Colder: 8 mK, hot electrons","values":{"tbase":8,"gain":1500}},
+    {"name":"Big pulses: the thermistor saturates","values":{"energy":40,"gain":700}},
+    {"name":"Cuoricino's small crystal (3 cm)","values":{"side":3,"gain":1500}},
+    {"name":"Long wires: a soft attack","values":{"wire":3000}},
+    {"name":"Piled up: a pulse every 0.5 s on A4","values":{"periodA4":0.5,"gain":2500}}
+  ]
+}

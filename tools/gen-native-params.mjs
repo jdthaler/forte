@@ -27,6 +27,7 @@ import { loadInstrument, paramsOf } from './headless.mjs';
 import { INSTRUMENTS, TEMPLATE, FORTE_VERSION, byId } from '../shared/registry.js';
 import { PAGE_ONLY } from '../shared/wasm.js'; // parameters only a page uses: the computer keys' velocity
 import { TUNING_KEEP as TUNING_IDS, CENTS } from '../shared/tuning.js';
+import { controllersOf } from '../shared/midi.js';
 
 const R = new URL('../', import.meta.url);
 
@@ -298,8 +299,9 @@ export async function generate(slug) {
   w('};');
   const keep = (I.keep || []).filter((id) => index.has(id));
   w(`inline const uint16_t kKeep[] = {${keep.length ? keep.map((id) => `p::${ident(id)}`).join(', ') : '0'}};`);
-  // a controller: a parameter's id, or a switch between two of a choice's values (instrument.h)
-  const ccs = Object.entries(I.controllers || {}).filter(([, c]) => index.has(typeof c === 'string' ? c : c.param));
+  // a controller: a parameter's id, or a switch between two of a choice's values (instrument.h);
+  // the faders and the pad among them (shared/midi.js controllersOf)
+  const ccs = Object.entries(controllersOf(I)).filter(([, c]) => index.has(typeof c === 'string' ? c : c.param));
   const controller = ([n, c]) => {
     if (typeof c === 'string') return `{${n}, p::${ident(c)}}`;
     const p = params[index.get(c.param)], [a, b] = (c.values ?? c.toggle).map((v) => valueOf(p, v));

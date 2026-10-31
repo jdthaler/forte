@@ -73,6 +73,7 @@ class ClavierEngine : public Engine {
     double Flp = 0, Fr = 0, Fa = 0, force = 0, Pl = 0, Pu = 0, ul = 0, uu = 0;
     double xl = 0, xu = 0, gl = 0, gu = 0, lam = 0, xm = 0, Pb = 0, Pg = 0;
     double pressure = 0, fade = 1, peak = 0, Fpeak = 0;
+    double fz[FRAME_MODES], fz1[FRAME_MODES], Z = 0; // the frame as this key's anvil drives it, and its last sum
     int quiet = 0;
     bool down = false, thrown = false, dead = false, killing = false, muted = false;
   };
@@ -99,6 +100,7 @@ class ClavierEngine : public Engine {
   double bendNow = 0, chanPressure = 0;
   NoteExpression expr{kBendSemitones}; // each key's own bend: as far as the wheel presses
   double k, lpF, lpFall, lpM, killDecay;
+  double fA1[FRAME_MODES], fA2[FRAME_MODES], fB[FRAME_MODES], magSum = 0; // the frame's steps; Σ every string's steel under the pickups
   ToneBiquad tone{};
   double tz1 = 0, tz2 = 0;
   struct Shelf { double b0, b1, b2, a1, a2, z1 = 0, z2 = 0; double run(double x); };

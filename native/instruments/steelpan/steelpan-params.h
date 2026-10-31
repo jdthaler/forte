@@ -123,7 +123,7 @@ inline const Preset kPresets[] = {
   {"Chromatic layout", kPreset8, 3},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
-inline const Controller kControllers[] = {{0, -1}};
+inline const Controller kControllers[] = {{107, p::rollRate}, {109, p::mute}, {111, p::across}, {113, p::along}, {114, p::roll}};
 
 // The keyboard's tuning (forte/tuning.h): each key's frequency over equal temperament at A = 440 Hz.
 inline forte::Tuning tuningOf(const double *P) {
@@ -143,7 +143,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 33, .compassHi = 90, .compass = p::fullRange, .space = Space::sustain,
     .modWheel = p::roll, .modWheelMax = 1,
-    .controllers = kControllers, .controllerCount = 0,
+    .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 2.5},
     .midiVelocity = midiVelocity, .create = create,
   };

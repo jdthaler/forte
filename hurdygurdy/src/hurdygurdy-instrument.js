@@ -15,6 +15,7 @@ export const INSTRUMENT = {
   range: RANGE,                         // MIDI keys: G4–G6, 67–91 (the open chanterelles and 24 tangents)
   space: 'sustain',                     // Space and CC64: the coup de poignet, held (the engine's setSustain)
   modWheel: 'crank',                    // CC1: the crank's speed
+  faders: ['coup', 'pressure', 'bounce', 'tirant', 'crank'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/hurdygurdy), built as WebAssembly
   wasm: { name: 'HurdyGurdyWasmEngine', module: new URL('./hurdygurdy-wasm.js', import.meta.url).href, binary: new URL('../wasm/hurdygurdy.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

@@ -29,6 +29,7 @@ export const INSTRUMENT = {
     64: { param: 'leslie', toggle: ['slow', 'fast'] }, // each press of a sustain pedal flips the Leslie
   },
   console: CONSOLE,                       // the drawbars and switches as plugin parameters
+  faders: ['drawbar1', 'drawbar3', 'drawbar4', 'drive', 'expression'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/organ), built as WebAssembly; it takes all
   // of P, the console included
   wasm: { name: 'OrganWasmEngine', module: new URL('./organ-wasm.js', import.meta.url).href, binary: new URL('../wasm/organ.wasm', import.meta.url).href },

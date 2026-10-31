@@ -20,6 +20,7 @@ export const INSTRUMENT = {
   // MPE: no bend (an iron bar rings at its own pitch) and no slide (one cylinder turns for every bar);
   // each note's pressure presses its key harder.
   mpe: { bend: 0 },
+  faders: ['treadle', 'wet', 'grip', 'press', 'speed'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/clavicylinder), built as WebAssembly
   wasm: { name: 'ClavicylinderWasmEngine', module: new URL('./clavicylinder-wasm.js', import.meta.url).href, binary: new URL('../wasm/clavicylinder.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue', body: { param: 'board', seconds: 0.3, dry: 0.6, wet: 1.1 } },
