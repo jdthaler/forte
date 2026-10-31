@@ -16,28 +16,43 @@ export const ROWS = {
   four: { string: 'four', manual: 'lower', name: '4′' },
   lute: { string: 'back', manual: 'upper', name: 'lute' },
 };
+// What is built (harpsichord-model.h, Build): the harpsichord, the two virginals, the lute-harpsichord.
+export const BUILDS = ['double', 'muselar', 'spinett', 'lauten'];
+export const isVirginal = (P) => P.build === 'muselar' || P.build === 'spinett';
+const winged = (P) => !isVirginal(P); // the wing-shaped ones: the harpsichord and the lute-harpsichord
 // Velocity 0..1 → jack speed: 8 cm/s (pp) … 80 cm/s (ff).
 export const jackSpeed = (vel) => 0.08 * 10 ** Math.min(1, Math.max(0, vel));
 
 export const GROUPS = [
   {
+    title: 'Instrument',
+    params: [
+      { id: 'build', label: 'Instrument', type: 'select', def: 'double',
+        options: [['double', 'Harpsichord (Flemish double, wire strings)'], ['muselar', 'Virginal: muselar (plucked near the middle)'], ['spinett', 'Virginal: spinett (plucked near one end)'], ['lauten', 'Lute-harpsichord (Lautenwerck: gut strings)']],
+        shortLabels: ['Harpsichord', 'Muselar', 'Spinett', 'Lute-harpsichord'],
+        hint: 'The same jacks, plectra and strings, built three ways. A virginal has one set of strings running across a box, both of its bridges on the soundboard, so each string drives the board at both ends: the muselar plucks them near the middle (round, flute-like), the spinett near one end (bright). The lute-harpsichord, Bach’s Lautenwerck, is a harpsichord strung in gut on a shorter scale, with a brass 4′: the gut’s own losses soak up the upper partials, so the tone is darker and dies sooner, like a lute’s.' },
+    ],
+  },
+  {
     title: 'Registration',
     params: [
-      { id: 'manual', label: 'Play on', perform: true, type: 'select', def: 'lower',
+      { id: 'manual', showIf: winged, label: 'Play on', perform: true, type: 'select', def: 'lower',
         options: [['lower', 'Lower manual (back 8′, 4′)'], ['upper', 'Upper manual (front 8′, lute)']],
         hint: 'A French double: the upper manual plucks the front 8′ strings nearest the nut; the lower plucks the back 8′ (rounder) and the 4′. The keys here play whichever you choose.' },
-      { id: 'coupler', face: 'lever', label: 'Coupler', perform: true, type: 'checkbox', def: true,
+      { id: 'coupler', showIf: winged, face: 'lever', label: 'Coupler', perform: true, type: 'checkbox', def: true,
         hint: 'The shove coupler: the lower manual’s keys lift the upper manual’s, so its jacks pluck as well. Two 8′s together, a little apart in pitch and plucking point.' },
-      { id: 'front8', face: 'lever', label: 'Front 8′ (upper manual)', perform: true, type: 'checkbox', def: true,
+      { id: 'front8', showIf: winged, face: 'lever', label: 'Front 8′ (upper manual)', perform: true, type: 'checkbox', def: true,
         hint: 'Plucks nearest the nut (40 mm from it at c²): bright and a little nasal.' },
-      { id: 'back8', face: 'lever', label: 'Back 8′ (lower manual)', perform: true, type: 'checkbox', def: true,
+      { id: 'back8', showIf: winged, face: 'lever', label: 'Back 8′ (lower manual)', perform: true, type: 'checkbox', def: true,
         hint: 'Plucks further from the nut (62 mm at c²): rounder.' },
-      { id: 'four', face: 'lever', label: '4′ (lower manual)', perform: true, type: 'checkbox', def: false,
+      { id: 'four', showIf: winged, face: 'lever', label: '4′ (lower manual)', perform: true, type: 'checkbox', def: false,
         hint: 'Its own strings, half as long, an octave up: adds brilliance.' },
-      { id: 'lute', face: 'lever', label: 'Lute row (upper manual)', perform: true, type: 'checkbox', def: false,
+      { id: 'lute', showIf: winged, face: 'lever', label: 'Lute row (upper manual)', perform: true, type: 'checkbox', def: false,
         hint: 'A row of jacks plucking the back 8′ strings 12 mm from the nut (at c²): thin and nasal, the fundamental weak. With the back 8′ also rising, the lute plucks those strings instead. An English and German addition, not on a Ruckers.' },
       { id: 'buff', face: 'lever', label: 'Buff stop (back 8′)', perform: true, type: 'checkbox', def: false,
-        hint: 'Leather pads pressed against the back 8′ strings 10 mm from the nut. They barely touch the fundamental and soak up the upper partials: a short, dull, pizzicato tone.' },
+        hint: 'Leather pads pressed against the back 8′ strings 10 mm from the nut (on a virginal, its one set of strings). They barely touch the fundamental and soak up the upper partials: a short, dull, pizzicato tone.' },
+      { id: 'hooks', face: 'lever', label: 'Arpichordium (bass hooks)', perform: true, type: 'checkbox', def: false, showIf: isVirginal,
+        hint: 'A muselar’s stop: a batten of lead hooks set just under the bass strings (up to e) by the bridge. The strings rattle against them as they swing: a buzzing, harp-like bass. Off, a muselar’s bass still grunts on fast repeated notes, as van Blankenburg complained (1739): its strings, plucked near the middle, swing widest where the plectrum comes back.' },
     ],
   },
   {
@@ -50,7 +65,7 @@ export const GROUPS = [
         hint: 'How stiff the voicer has left the plectra (this value at c²; slacker strings get weaker ones). Stiffer plectra carry the string further before it slips off: louder, and a heavier touch. Too stiff, and a plectrum lifts its string to the jack rail without letting go: no pluck.' },
       { id: 'overlap', label: 'Overlap past the string', min: 0.2, max: 1.0, def: 0.6, step: 0.05, fmt: (v) => `${v.toFixed(2)} mm`,
         hint: 'How far the plectrum reaches past the string. More overlap: the string slides further before it slips off, at a larger force.' },
-      { id: 'stagger', label: 'Stagger between rows', min: 0, max: 2, def: 0.5, step: 0.05, fmt: (v) => `${v.toFixed(2)} mm`,
+      { id: 'stagger', showIf: winged, label: 'Stagger between rows', min: 0, max: 2, def: 0.5, step: 0.05, fmt: (v) => `${v.toFixed(2)} mm`,
         hint: 'The rows are set at slightly different heights, so they pluck one after another (back 8′, front 8′, 4′) rather than all at once.' },
       { id: 'velocity', label: 'Velocity (computer keys)', min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => `${v.toFixed(2)} (jack ${(8 * 10 ** v).toFixed(0)} cm/s)`,
         hint: 'How fast the key lifts the jack. It changes the pluck little: the plectrum lets go where it lets go. Faster keys pluck sooner, a touch brighter, with a louder knock.' },
@@ -59,17 +74,19 @@ export const GROUPS = [
   {
     title: 'Plucking points (at c²)',
     params: [
-      { id: 'xFront', label: 'Front 8′ from the nut', min: 10, max: 180, def: 40, step: 1, fmt: mm,
+      { id: 'xFront', showIf: winged, label: 'Front 8′ from the nut', min: 10, max: 180, def: 40, step: 1, fmt: mm,
         hint: 'A partial whose node falls on the plucking point is not excited: plucked at 1/n of the string, partial n and its multiples are missing (the comb). Nearer the nut, more upper partials: brighter, thinner.' },
-      { id: 'xBack', label: 'Back 8′ from the nut', min: 10, max: 180, def: 62, step: 1, fmt: mm },
-      { id: 'xFour', label: '4′ from its nut', min: 10, max: 80, def: 45, step: 1, fmt: mm },
-      { id: 'xLute', label: 'Lute row from the nut', min: 4, max: 40, def: 12, step: 1, fmt: mm },
+      { id: 'xBack', showIf: winged, label: 'Back 8′ from the nut', min: 10, max: 180, def: 62, step: 1, fmt: mm },
+      { id: 'xFour', showIf: winged, label: '4′ from its nut', min: 10, max: 80, def: 45, step: 1, fmt: mm },
+      { id: 'jackLine', showIf: isVirginal, label: 'Jack line moved (virginal)', min: -120, max: 120, def: 0, step: 1, fmt: (v) => (v === 0 ? 'as built' : `${v > 0 ? '+' : '−'}${Math.abs(v).toFixed(0)} mm`),
+        hint: 'Slides the virginal’s row of jacks along its strings, every plucking point by the same distance: + towards the middle of the strings (rounder, the comb’s notches lower), − towards the nearer bridge (brighter). The muselar and the spinett are the same mechanism with the jacks in different places.' },
+      { id: 'xLute', showIf: winged, label: 'Lute row from the nut', min: 4, max: 40, def: 12, step: 1, fmt: mm },
     ],
   },
   {
     title: 'Strings and soundboard',
     params: [
-      { id: 'detune', label: 'Unison spread (front vs back 8′)', min: 0, max: 8, def: 1.5, step: 0.1, fmt: (v) => `${v.toFixed(1)} ¢`,
+      { id: 'detune', showIf: winged, label: 'Unison spread (front vs back 8′)', min: 0, max: 8, def: 1.5, step: 0.1, fmt: (v) => `${v.toFixed(1)} ¢`,
         hint: 'No two choirs are ever exactly in tune: a cent or two apart, they beat slowly. Applies to new notes.' },
       { id: 'loss', label: 'String losses (air and wire)', min: 0.25, max: 4, def: 1, log: true, fmt: (v) => `× ${v.toFixed(2)}`,
         hint: 'Scales the air’s drag on the wire and its internal friction. Applies to new notes.' },
@@ -116,4 +133,13 @@ export const PRESETS = [
   { name: 'Back 8′ plucked at the middle (c²): no even partials', p: { coupler: false, front8: false, xBack: 178 } },
   { name: 'Baroque pitch, ¼-comma meantone', p: { pitch: 415, temperament: 'meantone' } },
   { name: 'Without the soundboard (bridge force)', p: { soundboard: false } },
+  { name: 'Virginal: muselar, plucked near the middle', p: { build: 'muselar' } },
+  { name: 'Virginal: spinett, plucked near one end', p: { build: 'spinett' } },
+  { name: 'Muselar with the arpichordium: buzzing bass', p: { build: 'muselar', hooks: true } },
+  { name: 'Muselar with the buff: a pizzicato virginal', p: { build: 'muselar', buff: true } },
+  { name: 'Spinett, quill plectra, ¼-comma meantone', p: { build: 'spinett', material: 'quill', pitch: 415, temperament: 'meantone' } },
+  { name: 'Lute-harpsichord: two gut 8′s coupled', p: { build: 'lauten' } },
+  { name: 'Lute-harpsichord: gut and the brass 4′', p: { build: 'lauten', four: true } },
+  { name: 'Lute-harpsichord with the buff: like a theorbo', p: { build: 'lauten', coupler: false, front8: false, buff: true } },
+  { name: 'Lute-harpsichord: lute row on gut', p: { build: 'lauten', manual: 'upper', front8: false, lute: true } },
 ];

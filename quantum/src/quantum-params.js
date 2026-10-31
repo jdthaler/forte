@@ -80,4 +80,7 @@ export const PRESETS = [
   { name: 'Three levels: a chord of Bohr lines', p: { sigma: 0.6, detector: 'x' } },
   { name: 'Tight packet: bright, brief, many echoes', p: { sigma: 4 } },
   { name: 'Coherent restrike: Ramsey fringes', p: { ramsey: true } },
+  { name: 'Morse molecule near dissociation: bright and lopsided', p: { potential: 'morse', eta: 0.9 } },
+  { name: 'Long revivals: eight beats', p: { beats: 8 } },
+  { name: 'Velocity detector: softer overtones', p: { detector: 'v' } },
 ];

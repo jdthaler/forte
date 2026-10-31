@@ -106,6 +106,9 @@ inline const PresetValue kPreset5[] = {{p::speed, 0.12}, {p::treadle, 0.12}, {p:
 inline const PresetValue kPreset6[] = {{p::attack, 80}};
 inline const PresetValue kPreset7[] = {{p::lifted, 1}};
 inline const PresetValue kPreset8[] = {{p::memory, 0}};
+inline const PresetValue kPreset9[] = {{p::treadle, 0}};
+inline const PresetValue kPreset10[] = {{p::grain, 0.03}};
+inline const PresetValue kPreset11[] = {{p::mobility, 3}, {p::boardEta, 0.015}};
 inline const Preset kPresets[] = {
   {"Viola organista", nullptr, 0},
   {"Sul ponticello: wheel near the bridge", kPreset1, 2},
@@ -116,6 +119,9 @@ inline const Preset kPresets[] = {
   {"Lazy keys: slow attacks", kPreset6, 1},
   {"Dampers lifted: sympathetic strings", kPreset7, 1},
   {"Classic friction curve (no rosin lag)", kPreset8, 1},
+  {"Motor drive: no treadle swing", kPreset9, 1},
+  {"Coarse rosin: a grainy tone", kPreset10, 1},
+  {"Lively soundboard: louder, shorter notes", kPreset11, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::force}, {109, p::treadle}, {111, p::grain}, {113, p::beta}, {114, p::speed}};
@@ -134,7 +140,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Rosined wheels bow the strings while you hold the keys: stick–slip friction, from scratch.", .auSubtype = "Viol",
     .vst3Id = {0x8f, 0x96, 0xa7, 0x75, 0x8f, 0xce, 0x93, 0xf2, 0x83, 0xec, 0xa4, 0x57, 0x6e, 0xab, 0xc3, 0x2c},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 9,
+    .presets = kPresets, .presetCount = 12,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 98, .space = Space::hold,
     .modWheel = p::speed, .modWheelMax = 1,

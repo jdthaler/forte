@@ -57,4 +57,7 @@ export const PRESETS = [
   { name: 'Pressing hard (the skin squeals)', p: { press: 10 } },
   { name: 'Bowls half full of water', p: { water: 0.5 } },
   { name: 'Lead crystal (rings for ages)', p: { loss: 1e-4 } },
+  { name: 'Ridged fingertips: a breath of hiss', p: { rough: 0.08 } },
+  { name: 'An uneven foot: a big treadle swing', p: { treadle: 0.25 } },
+  { name: 'Lossy glass: the bowls stop soon after the finger', p: { loss: 0.002 } },
 ];

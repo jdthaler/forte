@@ -98,4 +98,7 @@ export const PRESETS = [
   { name: 'Low-impedance preamp (thin bass)', p: { rIn: 22 } },
   { name: 'Stage EQ: bright and scooped', p: { bass: 4, mid: -5, treble: 7 } },
   { name: 'Stereo tremolo', p: { tremDepth: 0.6, tremRate: 5.5 } },
+  { name: 'Hard, worn felt: a bright clank', p: { hardness: 4 } },
+  { name: 'Struck near the end: every partial bright', p: { strike: 0.03 } },
+  { name: 'Strong sympathetic resonance (hold the pedal)', p: { sympathy: 0.8 } },
 ];

@@ -88,6 +88,7 @@ inline const PresetValue kPreset4[] = {{p::halo, 40}};
 inline const PresetValue kPreset5[] = {{p::halo, 1200}};
 inline const PresetValue kPreset6[] = {{p::ramp, 1.5}};
 inline const PresetValue kPreset7[] = {{p::noise, 0}};
+inline const PresetValue kPreset8[] = {{p::stream, 0.4}, {p::streamSpeed, 700}};
 inline const Preset kPresets[] = {
   {"ABRACADABRA-10 cm and a strongly coupled axion", nullptr, 0},
   {"At the CAST limit: lost in the SQUID's noise", kPreset1, 1},
@@ -97,6 +98,7 @@ inline const Preset kPresets[] = {
   {"A galaxy cluster's hot halo: a band of noise", kPreset5, 1},
   {"A slow magnet: notes that charge up", kPreset6, 1},
   {"A noiseless SQUID: the axion alone", kPreset7, 1},
+  {"A fast stream (700 km/s): a second line, sharp of the halo", kPreset8, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::streamSpeed}, {109, p::stream}, {111, p::noise}, {113, p::coupling}, {114, p::halo}};
@@ -115,7 +117,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Every key a universe whose dark matter is an axion of that key's mass, heard as the ABRACADABRA experiment would hear it: a toroidal magnet turns the axion into a faint flux through a pickup loop, a tone that swells and fades as the halo's waves drift in and out of step, over the hiss of the SQUID.", .auSubtype = "Abra",
     .vst3Id = {0x20, 0x40, 0x96, 0xbe, 0x6f, 0x77, 0xac, 0xeb, 0x6f, 0x8e, 0x3b, 0xa8, 0x09, 0x7a, 0x76, 0x47},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 8,
+    .presets = kPresets, .presetCount = 9,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::halo, .modWheelMax = 2000,

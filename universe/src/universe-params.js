@@ -70,4 +70,7 @@ export const PRESETS = [
   { name: 'Inside the plasma: the light streams away', p: { listener: 'plasma' } },
   { name: 'Without the Doppler shift', p: { doppler: false } },
   { name: 'A slow universe: ten seconds to recombination', p: { recombination: 10 } },
+  { name: 'No neutrinos: an earlier equality', p: { neutrinos: 0 } },
+  { name: 'A red tilt (n_s = 0.9): the low harmonics loud', p: { tilt: 0.9 } },
+  { name: 'No helium: the plasma holds the light longer', p: { helium: 0 } },
 ];

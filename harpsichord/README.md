@@ -14,6 +14,14 @@ can voice the plectra, move every row's plucking point, change the
 registration as a player would, retune to A = 415 in meantone, and switch
 the soundboard off to hear what the strings alone push into the bridge.
 
+The same mechanism builds two relatives, chosen under **Instrument**: the
+**virginals** of the same Antwerp workshops, the muselar (plucked near the
+middle of its strings) and the spinett (near one end), with one choir of
+strings across a box whose soundboard carries both bridges, and the
+muselar's buzzing *arpichordium*; and the **lute-harpsichord**
+(*Lautenwerck*), the harpsichord strung in gut that Bach had built and
+owned two of. See [12. The virginals and the lute-harpsichord](#12-the-virginals-and-the-lute-harpsichord).
+
 Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/harpsichord/>
 (or locally, see the [main README](../README.md)).
 
@@ -406,7 +414,10 @@ panned by key: thin, without the board's resonances.
   damped, nothing touching it) costs nothing. Ten keys held with 8′ 8′
   coupled (20 strings) take 13 % of real time at 48 kHz in Node, and with
   the 4′ (30 strings) 17 %, on the shared cloud machine this was built on.
-  The buff on adds 7 points (its pads are contacts the whole time).
+  The buff on adds 7 points (its pads are contacts the whole time). A
+  virginal's ten keys (one string each) take about 11 %, and with the
+  arpichordium's hooks on the bass (contacts too) 18 %; the
+  lute-harpsichord's 8′ 8′ 4′ costs as the harpsichord's.
 - **Voices.** One voice per key holds that key's strings: pressing a key
   again plucks the same strings. A plectrum still above its string goes
   down past it first. At most 16 keys sound at once; beyond that the
@@ -425,6 +436,111 @@ panned by key: thin, without the board's resonances.
   whose strings aren't ready yet waits a few milliseconds for them; voices
   come from a fixed pool. Ten keys of 8′ 8′ 4′ (30 strings) take about 5 %
   of a core in C++.
+
+### 12. The virginals and the lute-harpsichord
+
+They are options of this instrument rather than instruments of their own
+because their mechanism is this one: the same keys, jacks and plectra, the
+same pluck, strings and dampers. What differs is what the strings are made
+of, where they are plucked and what they stand on, and those are all
+quantities this model already has.
+
+**The virginals.** A virginal has one choir of 8′ strings running across a
+rectangular case, from a bridge at one end to a bridge at the other, and
+*both* bridges stand on the soundboard (a harpsichord's nut sits on the
+solid wrest plank). So a string pushes on the board at both ends. At the
+far bridge (x = L) partial n pushes with bₙ = (−1)ⁿ⁺¹√(2/μL)(Tkₙ + EIkₙ³),
+as on the harpsichord; at the near one (x = 0) with |bₙ|, the odd partials
+in phase with the far end and the even ones against it:
+
+  F_near = Σ |bₙ| qₙ = F_far − 2 Σ_(n even) bₙ qₙ
+
+The engine adds that force into two more points on the board (where the
+harpsichord's 4′ bridge would be), and the string drains into the board at
+both: σ_B,n = (Re Y_far + Re Y_near) bₙ²/2ωₙ². The board itself is the
+virginal's own, 1.75 × 0.5 m (the harpsichord's 1.75 × 0.85 m), the same
+wood, with the strings along its length and their bridges at least 8 cm
+in from its ends. It radiates the bass more weakly than the bigger board
+(its lowest mode is higher), as small instruments do.
+
+Where the jacks stand along the strings is the difference between the two
+kinds the Ruckers built (O'Brien 1990): with the keyboard right of centre,
+the **muselar** plucks its strings "close to the middle"; with it left of
+centre, the **spinett** plucks them near one end, though further from the
+bridge than a harpsichord. Here the muselar plucks at β = 0.33 of the
+string in the bass rising to 0.46 at f³, and the spinett at 0.12 to 0.25:
+estimates drawn to those descriptions, not one instrument's measurements.
+*Jack line moved* slides the whole row along the strings. Plucked near the
+middle, a string's comb (section 6) notches near 2f₁, so the muselar's
+upper partials are weak and its fundamental strong: a round, flute-like
+tone (partials 2–6 push on the bridge some 10 dB below the spinett's and
+15–20 dB below the harpsichord's back 8′). The Dutch organist Quirinus van
+Blankenburg (1739) wrote that muselars "grunt in the bass like young
+pigs": strings plucked near the middle swing widest where the returning
+plectrum meets them, so fast repeated bass notes are hard to play.
+
+The **arpichordium** (or harpichordium) was a muselar's stop: a batten
+that set lead hooks lightly against the ends of the bass strings, to buzz.
+Here each hook is a one-sided stiff contact 10 mm from the near bridge,
+0.02 mm under the string at rest, on the keys up to e (E3):
+
+  F = −k(u + g) − R u̇ while u < −g (k = 3 × 10⁴ N/m, R = 0.2√(Tμ)), else 0
+
+solved implicitly with the string's other contacts (section 11). The string
+rattles against it while its swing there is larger than the gap, which
+keeps its spectrum bright (its rms frequency a second in is 2 to 4 times
+what it is without), and stops buzzing as the note dies. The hooks'
+stiffness, place and gap, and how far up the compass the batten reaches,
+are estimates.
+
+A virginal plays the same compass as the harpsichord here (FF–f³, and the
+full range); the Ruckers' virginals had four octaves, C/E–c³. Its one choir
+has no unison partner, so *Unison spread* does not apply, and the levers of
+the harpsichord's registration are hidden. The buff works on it as on the
+back 8′. The Ruckers' "mother and child" (a muselar with an ottavino, an
+octave-up virginal, set on top and played through it) is not modelled.
+
+**The lute-harpsichord.** The *Lautenwerck* or *Lautenclavicymbel* was a
+harpsichord strung with gut. None survives. Jakob Adlung (1768) wrote that
+its strings must all be gut, or there is no lute sound, their lengths
+following the lute's proportions. An editor's note in the same book (its
+editors were J. L. Albrecht and Bach's pupil J. F. Agricola) describes the
+one Zacharias Hildebrandt built to Bach's design around 1740 in Leipzig: a
+shorter scale than a harpsichord's, otherwise built like one, with two
+choirs of gut strings and an octave of brass; on one stop it sounded more
+like a theorbo than a lute, but with the lute stop and the octave together
+it could all but deceive professional lutenists. Bach's estate listed two
+(Henning 1982).
+
+So here the two 8′ choirs are gut and the 4′ stays brass. Gut is light and
+soft: ρ = 1320 kg/m³ and E = 6 GPa against iron's 7850 kg/m³ and 200 GPa
+(Woodhouse and Lynch-Aird 2019). The scale is shorter (c² at 300 mm
+against 355 mm) and its bass lengthens less, to about 1 m at FF (the
+lute's proportions, after Adlung), and each gut string is
+gauged for 0.7 times the tension of the wire string at its key:
+
+  μ = 0.7 T_wire / (2L f)²,  d = √(4μ/πρ)
+
+which gives 0.57 mm at c², 0.66 mm at c¹ and 1.95 mm at FF, the gauges of a
+lute's strings. Being thicker, a gut string feels more of the air's drag.
+Gut's own loss is not at the tension but in bending: its Young's modulus
+has a loss factor η_E ≈ 0.04, which drains a partial in proportion to its
+share of bending energy (Woodhouse and Lynch-Aird 2019):
+
+  σ_bend,n = π fₙ η_E λₙ,  λₙ = EIkₙ² / (T + EIkₙ²) ≈ Bn²
+
+That share grows as n², so the upper partials roll off while the low ones
+ring nearly as long as on wire: c¹'s 20th partial dies more than 2.5 times
+as fast on gut, its fundamental within a factor of two. Heard, the tone is darker
+and its brightness goes sooner (between 0.1 and 0.5 s the 8th–30th
+partials fall 4–19 dB more against the fundamental than on wire, at c, c¹
+and c²). Gut's
+small Young's modulus also stretches less under a pluck, so the tension
+glide of section 2 is two fifths of the wire's (+10 ¢ at c³ against +26 ¢),
+and its low tension asks less of the plectra (they are voiced to the
+string, section 5). The scale, the tension ratio and the bass's length are
+estimates: the note gives no numbers. The lute-harpsichord shares the
+harpsichord's board, as the note says it was built like one.
 
 ## What to listen for
 
@@ -452,6 +568,13 @@ panned by key: thin, without the board's resonances.
    beating.
 8. **08-soundboard-then-bridge-force-alone**: a phrase through the
    soundboard, then the bridge force alone: most of the sound is the board.
+9. **09-virginals-muselar-then-spinett**: the arpeggio on a muselar,
+   plucked near the middle (round and hollow), then on a spinett, plucked
+   near the end (brighter).
+10. **10-muselar-bass-then-arpichordium**: the muselar's bass, then with
+    the arpichordium's hooks rattling against it.
+11. **11-wire-then-gut-the-lute-harpsichord**: the Bach prelude's first
+    bars on the harpsichord's wire, then on the lute-harpsichord's gut.
 
 On the page, the **pluck** view replays the last key's pluck slowed down
 some hundred times. The jack rises; the plectrum, drawn to scale with its
@@ -470,7 +593,7 @@ harpsichord/src/harpsichord-params.js      parameters and presets (and the model
 harpsichord/src/harpsichord-main.js        page wiring and views
 harpsichord/src/harpsichord-wasm.js        the engine and model as WebAssembly (harpsichord/wasm/harpsichord.wasm), for the page and the tests
 native/instruments/harpsichord/            the physics in C++: model (scale, tuning, losses, registers, voicing, soundboard), plectrum (a cantilever; the quasi-static release), string (modal, with implicit point contacts), engine, generated tables, reference
-test/harpsichord-tests.mjs                 node test/harpsichord-tests.mjs (22 tests, ~30 s)
+test/harpsichord-tests.mjs                 node test/harpsichord-tests.mjs (30 tests, ~60 s)
 tools/render-harpsichord.mjs               node tools/render-harpsichord.mjs → examples/harpsichord/
 ```
 
@@ -506,6 +629,15 @@ tools/render-harpsichord.mjs               node tools/render-harpsichord.mjs →
   along is its lowest 16 partials below 4 kHz, with no plectrum, damper or
   buff touching it (under its damper it decays at a rate), and every string
   meets the bridge at one point, scaled by *Sympathetic resonance*.
+* **The virginals and the lute-harpsichord are drawn from descriptions.**
+  The virginals' plucking points, board, case and string lengths, the
+  arpichordium's hooks, and the lute-harpsichord's scale and gut gauges are
+  estimates fitted to what O'Brien, Adlung and the 1768 note describe; no
+  lute-harpsichord survives to measure. The virginal's two bridges are
+  driven as two points each with its own admittance, the board's coupling
+  between them left out of the string's loss (the engine's board does
+  couple them). Gut's losses are its bending loss and air; its sensitivity
+  to humidity is left out.
 * **The soundboard is an equivalent plate.** It is a rectangle with
   smeared-in stiffness and its edges simply supported, not the
   wing-shaped, ribbed board of a real instrument. Its stiffness is set by an
@@ -555,7 +687,31 @@ has); the lowest bass loses a little of its buzz at Low.
   Cambridge University Press.
   [doi:10.1017/9781316659359.003](https://doi.org/10.1017/9781316659359.003).
 
+**The virginals and the lute-harpsichord.**
+- J. Adlung (1768). *Musica mechanica organoedi*, ed. J. L. Albrecht and
+  J. F. Agricola, vol. 2, 133–139, with the editors' note on Bach's
+  lute-harpsichord (139). Birnstiel, Berlin. Translated and discussed by
+  the Greifenberger Institut für Musikinstrumentenkunde:
+  [Lautenclavier](https://www.greifenberger-institut.de/en/wissensvermittlung/besaitete-tasteninstrumente/kuriosa/lautenclavier.php).
+- U. Henning (1982). "The most beautiful among the claviers: Rudolf
+  Richter's reconstruction of a baroque lute-harpsichord." *Early Music*
+  10(4), 477–486. [doi:10.1093/earlyj/10.4.477](https://doi.org/10.1093/earlyj/10.4.477).
+- Q. G. van Blankenburg (1739). *Elementa musica*. The Hague. His remark
+  on the muselar's bass is widely quoted, e.g. in Wikipedia's
+  [Virginals](https://en.wikipedia.org/wiki/Virginals).
+- Modern lute-harpsichords by Willard Martin, Keith Hill and Steven Sorli,
+  among others, follow the 1768 account; none survives from the 18th
+  century.
+
 **The physics.**
+- J. Woodhouse & N. Lynch-Aird (2019). "Choosing strings for plucked
+  musical instruments." *Acta Acust. united Acust.* 105, 516–529.
+  [doi:10.3813/AAA.919333](https://doi.org/10.3813/AAA.919333). Gut's
+  density, modulus and loss factor, and the bending loss λη_E.
+- N. Lynch-Aird & J. Woodhouse (2018). "Comparison of mechanical
+  properties of natural gut and synthetic polymer harp strings."
+  *Materials* 11(11), 2160.
+  [doi:10.3390/ma11112160](https://doi.org/10.3390/ma11112160).
 - G. F. Carrier (1945). "On the non-linear vibration problem of the
   elastic string." *Q. Appl. Math.* 3(2), 157–165.
   [doi:10.1090/qam/12351](https://doi.org/10.1090/qam/12351). Tension

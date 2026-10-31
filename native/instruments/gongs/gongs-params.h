@@ -111,6 +111,9 @@ inline const PresetValue kPreset5[] = {{p::material, 1}, {p::thick, 0.005}, {p::
 inline const PresetValue kPreset6[] = {{p::bc, 1}, {p::strike, 0.2}};
 inline const PresetValue kPreset7[] = {{p::strike, 0}};
 inline const PresetValue kPreset8[] = {{p::asym, 0}};
+inline const PresetValue kPreset9[] = {{p::material, 2}};
+inline const PresetValue kPreset10[] = {{p::thick, 0.004}, {p::rise, 0}, {p::strike, 0.8}, {p::hardness, 2}, {p::speed, 4}};
+inline const PresetValue kPreset11[] = {{p::release, 30}};
 inline const Preset kPresets[] = {
   {"Bronze gong: bell when soft, crash when hard", nullptr, 0},
   {"Tam-tam: thin, big soft beater, off centre", kPreset1, 5},
@@ -121,6 +124,9 @@ inline const Preset kPresets[] = {
   {"Clamped rim (held, free to slide in its plane)", kPreset6, 2},
   {"Struck dead centre (no asymmetric modes)", kPreset7, 1},
   {"Perfectly round: the twins in tune, no shimmer", kPreset8, 1},
+  {"Aluminium gong: light, and quick to die", kPreset9, 1},
+  {"Wind gong: thin and flat, struck near the rim", kPreset10, 5},
+  {"A hand on the gong: choked on release", kPreset11, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::mass}, {109, p::release}, {111, p::listen}, {113, p::hardness}, {114, p::strike}};
@@ -139,7 +145,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Thin plates whose stiffness grows with amplitude: strike softly for a bell, hard for a crash.", .auSubtype = "Gong",
     .vst3Id = {0x19, 0x95, 0xa8, 0xd7, 0xba, 0xa4, 0x2d, 0x01, 0x17, 0x89, 0xce, 0x8b, 0xce, 0x9e, 0x0e, 0xf6},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 9,
+    .presets = kPresets, .presetCount = 12,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::strike, .modWheelMax = 0.95,

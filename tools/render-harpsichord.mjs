@@ -1,5 +1,6 @@
 // Render harpsichord demos, each isolating one physical effect, to examples/harpsichord/*.wav
-// Usage: node tools/render-harpsichord.mjs        (then node tools/encode-examples.mjs harpsichord)
+// Usage: node tools/render-harpsichord.mjs [name …]   (then node tools/encode-examples.mjs harpsichord)
+//        names: only the demos whose names start with one of them (e.g. 09 10)
 //
 // Name demos NN-what-you-hear; the landing page plays the first one.
 
@@ -64,6 +65,18 @@ const demos = [
   ['08-soundboard-then-bridge-force-alone', () => cat(
     play(P(), 2.6, notes(0.05, 0.25, [48, 52, 55, 60, 64, 67, 72], 0.7, 0.22)),
     play(P({ soundboard: false }), 2.6, notes(0.05, 0.25, [48, 52, 55, 60, 64, 67, 72], 0.7, 0.22)))],
+  // the virginals: the same phrase on a muselar (plucked near the middle: round, hollow) and a spinett (near the end: bright)
+  ['09-virginals-muselar-then-spinett', () => cat(
+    play(P({ build: 'muselar' }), 3.2, notes(0.05, 0.2, [...arp, 57], 0.7, 0.18)),
+    play(P({ build: 'spinett' }), 3.2, notes(0.05, 0.2, [...arp, 57], 0.7, 0.18)))],
+  // the muselar's bass, then with the arpichordium's hooks rattling against it
+  ['10-muselar-bass-then-arpichordium', () => cat(...[false, true].map((hooks) => play(P({ build: 'muselar', hooks }), 3.4, [
+    ...notes(0.05, 0.35, [36, 43, 48, 43], 0.75, 0.32), [1.5, 'on', 36, 0.75], [1.5, 'on', 43, 0.75], [1.5, 'on', 48, 0.75], [3.1, 'off', 36], [3.1, 'off', 43], [3.1, 'off', 48]])))],
+  // the Bach prelude on the harpsichord's wire, then on the lute-harpsichord's gut: darker, its upper partials gone sooner
+  ['11-wire-then-gut-the-lute-harpsichord', () => cat(
+    play(P(), 4.9, prelude(0.05, 0.13).filter(([t]) => t < 4.2)),
+    play(P({ build: 'lauten' }), 4.9, prelude(0.05, 0.13).filter(([t]) => t < 4.2)))],
 ];
 
-for (const [name, fn] of demos) saveExample(SLUG, name, await withRoom(fn(), DEFAULTS.room, FS), FS);
+const only = process.argv.slice(2);
+for (const [name, fn] of demos) if (!only.length || only.some((o) => name.startsWith(o))) saveExample(SLUG, name, await withRoom(fn(), DEFAULTS.room, FS), FS);

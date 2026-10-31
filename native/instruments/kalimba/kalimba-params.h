@@ -94,6 +94,9 @@ inline const PresetValue kPreset4[] = {{p::box, 25}, {p::hole, 90}, {p::thick, 2
 inline const PresetValue kPreset5[] = {{p::back, 0}};
 inline const PresetValue kPreset6[] = {{p::back, 1}};
 inline const PresetValue kPreset7[] = {{p::pluck, 0.71}};
+inline const PresetValue kPreset8[] = {{p::pluck, 0.4}};
+inline const PresetValue kPreset9[] = {{p::thick, 0.7}};
+inline const PresetValue kPreset10[] = {{p::buzz, 2}};
 inline const Preset kPresets[] = {
   {"Box kalimba", nullptr, 0},
   {"Thumbnail ping", kPreset1, 1},
@@ -103,6 +106,9 @@ inline const Preset kPresets[] = {
   {"Clamped at the bridge (6.27)", kPreset5, 1},
   {"Back as long as the front (9th harmonic)", kPreset6, 1},
   {"Plucked on the first overtone’s node", kPreset7, 1},
+  {"Plucked near the bridge: bright overtones", kPreset8, 1},
+  {"Thin tines: soft and quiet in the bass", kPreset9, 1},
+  {"Two bottle caps on a box kalimba", kPreset10, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::buzz}, {109, p::hole}, {111, p::thumb}, {113, p::pluck}, {114, p::cover}};
@@ -121,7 +127,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Steel tines clamped behind a bridge and plucked by the thumbs, over a wooden box whose sound hole a finger can cover.", .auSubtype = "Kali",
     .vst3Id = {0xd6, 0xef, 0x3b, 0xbb, 0x7c, 0x8e, 0x79, 0xda, 0x88, 0x49, 0x44, 0x46, 0x88, 0x05, 0xc6, 0x1e},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 8,
+    .presets = kPresets, .presetCount = 11,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 60, .compassHi = 88, .compass = p::fullRange, .space = Space::sustain,
     .modWheel = p::cover, .modWheelMax = 1,

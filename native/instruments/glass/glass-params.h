@@ -92,6 +92,9 @@ inline const PresetValue kPreset5[] = {{p::wet, 0.1}};
 inline const PresetValue kPreset6[] = {{p::press, 10}};
 inline const PresetValue kPreset7[] = {{p::water, 0.5}};
 inline const PresetValue kPreset8[] = {{p::loss, 0.0001}};
+inline const PresetValue kPreset9[] = {{p::rough, 0.08}};
+inline const PresetValue kPreset10[] = {{p::treadle, 0.25}};
+inline const PresetValue kPreset11[] = {{p::loss, 0.002}};
 inline const Preset kPresets[] = {
   {"Franklin's armonica", nullptr, 0},
   {"Perfect bowls, even treadle (no warble)", kPreset1, 2},
@@ -102,6 +105,9 @@ inline const Preset kPresets[] = {
   {"Pressing hard (the skin squeals)", kPreset6, 1},
   {"Bowls half full of water", kPreset7, 1},
   {"Lead crystal (rings for ages)", kPreset8, 1},
+  {"Ridged fingertips: a breath of hiss", kPreset9, 1},
+  {"An uneven foot: a big treadle swing", kPreset10, 1},
+  {"Lossy glass: the bowls stop soon after the finger", kPreset11, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::wet}, {109, p::treadle}, {111, p::water}, {113, p::press}, {114, p::speed}};
@@ -120,7 +126,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Wet fingers on spinning glass bowls: stick–slip friction drives the shell modes, and rotation makes the doublets warble.", .auSubtype = "Glas",
     .vst3Id = {0xe8, 0x61, 0xf8, 0x2c, 0xa6, 0x06, 0xc8, 0xca, 0x74, 0xcb, 0x17, 0x39, 0xf8, 0xa3, 0xcb, 0xee},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 9,
+    .presets = kPresets, .presetCount = 12,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 53, .compassHi = 93, .compass = p::fullRange, .space = Space::hold,
     .modWheel = p::speed, .modWheelMax = 1,

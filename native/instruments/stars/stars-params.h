@@ -99,6 +99,8 @@ inline const PresetValue kPreset7[] = {{p::driving, 0}, {p::flare, 2}};
 inline const PresetValue kPreset8[] = {{p::coreRatio, 25}, {p::spin, 2}};
 inline const PresetValue kPreset9[] = {{p::speedup, 350000}};
 inline const PresetValue kPreset10[] = {{p::family, 1}, {p::spin, 20}, {p::flare, 1}};
+inline const PresetValue kPreset11[] = {{p::mass, 0.9}};
+inline const PresetValue kPreset12[] = {{p::slope, 2}};
 inline const Preset kPresets[] = {
   {"The Sun’s track (1 M☉)", nullptr, 0},
   {"A heavier track (1.5 M☉): hot dwarfs, broad modes", kPreset1, 1},
@@ -111,6 +113,8 @@ inline const Preset kPresets[] = {
   {"Red giants with fast cores", kPreset8, 2},
   {"A smaller speed-up: younger stars on every key", kPreset9, 1},
   {"δ Scuti: self-excited modes", kPreset10, 3},
+  {"A lighter track (0.9 M☉)", kPreset11, 1},
+  {"Steep linewidths: the high modes blur", kPreset12, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::flare}, {109, p::incl}, {111, p::coreRatio}, {113, p::driving}, {114, p::spin}};
@@ -129,7 +133,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Every key a star whose oscillations are rung continuously by convection, from dwarfs like the Sun to red giants: combs of modes that breathe rather than strike.", .auSubtype = "Star",
     .vst3Id = {0xa6, 0x1a, 0x0b, 0x1f, 0xcc, 0xe5, 0x83, 0xb4, 0x0f, 0xb9, 0x13, 0xe4, 0x1d, 0xf9, 0x68, 0x3b},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 11,
+    .presets = kPresets, .presetCount = 13,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::spin, .modWheelMax = 30,

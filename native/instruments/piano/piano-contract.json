@@ -67,6 +67,9 @@
     {"name":"Carbon-fibre ribbon (soft in shear)","values":{"material":"carbon","shape":"ribbon","aspect":12,"offset":0.6,"gauge":2.2}},
     {"name":"Nylon strings","values":{"material":"nylon","gauge":2.4}},
     {"name":"Hammer at the middle (odd partials only)","values":{"strikePos":0.5}},
-    {"name":"Thick, stiff wire (very inharmonic)","values":{"gauge":2.2}}
+    {"name":"Thick, stiff wire (very inharmonic)","values":{"gauge":2.2}},
+    {"name":"Brass strings","values":{"material":"brass"}},
+    {"name":"Titanium strings","values":{"material":"titanium"}},
+    {"name":"Three strings a note, una corda","values":{"unisons":3,"unaCorda":true}}
   ]
 }

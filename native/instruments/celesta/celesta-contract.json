@@ -42,6 +42,9 @@
     {"name":"Thick bars, 5 mm","values":{"thick":5}},
     {"name":"Struck on the node: the fundamental drops out","values":{"strike":0.224}},
     {"name":"Struck off the edge: the bars twist","values":{"across":0.85,"hardness":600}},
-    {"name":"Pedal down: every note rings","values":{"pedalLock":true}}
+    {"name":"Pedal down: every note rings","values":{"pedalLock":true}},
+    {"name":"Soft felt, slow hammers: a hush","values":{"hardness":40,"speedMax":1.2}},
+    {"name":"Heavy hammers: more fundamental, less shimmer","values":{"mass":10}},
+    {"name":"Thin bars, 1.5 mm","values":{"thick":1.5}}
   ]
 }

@@ -118,7 +118,8 @@ class HarpsichordEngine : public Engine {
  private:
   friend struct Voice;
   // The soundboard: plate modes driven at the bridge points, heard as acceleration × each mode's
-  // weight at two microphones, plus the residual path of the modes above the bank.
+  // weight at two microphones, plus the residual path of the modes above the bank. One for the
+  // harpsichord (and the lute-harpsichord), one for the virginal: the build plays on its own.
   struct Board {
     int K = 0;
     std::array<double, BOARD::maxModes> e0{}, e1{}, a1{}, a2{}, ml{}, mr{};
@@ -128,7 +129,7 @@ class HarpsichordEngine : public Engine {
     std::array<double, 2 * NSEG> res{};
     double b0 = 0, b1 = 0, b2 = 0, ha1 = 0, ha2 = 0; // the residual's high-pass
     std::array<double, 8> hz{};
-    void init(double fs);
+    void init(double fs, int which); // which: boardModel's (0 the harpsichord's, 1 the virginal's)
     void run(const double *seg, double *L, double *R, int n);
     void clear() { e0.fill(0); e1.fill(0); lp.fill(0); hz.fill(0); }
   };
@@ -145,11 +146,11 @@ class HarpsichordEngine : public Engine {
   std::array<double, p::count> P{};
   Params mp;
   bool hasParams = false;
-  std::array<double, 4> physSig{};
+  std::array<double, 5> physSig{};
   Tuning physTuning;
   uint64_t version = 0;
   // the strings, built off the audio thread for each version of the physics knobs
-  struct Snapshot { std::atomic<double> ratio[12] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, detune{0}, loss{1}, fmax{10}; };
+  struct Snapshot { std::atomic<double> ratio[12] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, detune{0}, loss{1}, fmax{10}; std::atomic<int> build{0}; };
   std::array<Snapshot, 8> snapshots;
   Data data;
   int focus = 60;
@@ -161,13 +162,14 @@ class HarpsichordEngine : public Engine {
 
   std::array<double, NSEG * BLOCK> seg{};
   std::array<double, BLOCK> liftBuf{}, zeroBuf{}, buffBuf{}, bL{}, bR{};
-  Board board;
+  std::array<Board, 2> boards; // the harpsichord's and the virginal's (boardOf)
+  int boardOn = 0;
   double buff = 0, mix = 1, glide = 0;
   // the sympathetic strings: per key, held down and the version its groups were made from (0:
   // none); per group, its voices' bridge signals this block (a key may have an old voice fading)
   std::array<uint8_t, 128> down{};
   std::array<uint64_t, 128> symVer{};
-  std::array<double, 4> symSig{}; // the knobs a group's damping depends on, as it was made
+  std::array<double, 6> symSig{}; // the knobs a group's damping depends on, as it was made
   Quality symQuality = Quality::high; // and the Quality
   std::array<std::array<double, BLOCK>, 3 * 128> own{};
   std::array<int, 3 * 128> ownAt{};

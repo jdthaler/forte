@@ -28,6 +28,13 @@
 // on the board √κ times as hard (the rocking's lever): a quiet aftersound that outlasts the
 // vertical swing, the harpsichord's two-stage decay. The damper felt and the buff damp them as
 // point dashpots, σ = Rφ²/2. Linear and on their own: no contact touches them.
+//
+// A virginal's string (twoEnds) stands on the board at both ends: at x = L its force is Σ bₙqₙ, and at
+// x = 0 the same partials push in phase where n is odd and against it where n is even, Σ |bₙ|qₙ =
+// y − 2Σ_even bₙqₙ, added into the near bridge's two segments (3, 4) by nutW.
+//
+// The arpichordium's hook (hookOn) sits at the BUFF point, hookGap below the string: a one-sided
+// contact, F = −k(u + gap) − R u̇ while the string presses on it (F ≥ 0), which it rattles against.
 #pragma once
 
 #include <array>
@@ -45,7 +52,7 @@ namespace PT { enum : int { MAIN = 0, LUTE = 1, DAMPER = 2, BUFF = 3 }; }
 enum class Phase : uint8_t { off, under, above };
 
 // The wire (harpsichord-model.h: IRON, BRASS).
-struct Wire { const char *name; double E, rho, eta; };
+struct Wire { const char *name; double E, rho, eta, etaE = 0; }; // etaE: the modulus's loss factor, by the bending energy's share
 
 // One string's design (harpsichord-model.h, stringDesign).
 struct StringDesign {
@@ -124,6 +131,10 @@ class PluckedString {
   std::array<bool, 2> released{};
   std::array<Release, 2> relInfo{};
   double feltK = 0, feltR = 0, feltPre = 0, tongueK = 0, thick = 0, buffK = 0, buffR = 0;
+  double hookK = 0, hookR = 0, hookGap = 0; // the arpichordium's hook (hookK 0: none on this string)
+  bool hookOn = false;                      // its batten in (the engine's switch, per block)
+  bool twoEnds = false;                     // a virginal's: its near bridge on the board too
+  std::array<double, 2> nutW{};             // the near bridge's weights on segments 3 and 4
   double peakF = 0, work = 0;
   // the sideways polarisation (setSide): its partials' state and steps, and its damping state
   int Nz = 0;
@@ -145,6 +156,8 @@ class PluckedString {
   void ease(int p);
   void letGo(int p, double F, double y);
   void sideSteps(bool felt, double bg);
+  bool hooked() const { return hookOn && hookK > 0; }
+  void nearEnd(double y, const double *qq, int Nn, double *seg, int stride, int t, double n0, double n1) const;
   double side(int n, double *seg, int stride, const double *wts, int w0, int w1, double gain, double *sym, bool felt, double bg);
   struct { int p = 0; double y = 0, ufe = 0, Cpp = 0; bool tip = true; } sl; // scratch for the slide solve
 };

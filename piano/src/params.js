@@ -116,4 +116,7 @@ export const PRESETS = [
   { name: 'Nylon strings', p: { material: 'nylon', gauge: 2.4 } },
   { name: 'Hammer at the middle (odd partials only)', p: { strikePos: 0.5 } },
   { name: 'Thick, stiff wire (very inharmonic)', p: { gauge: 2.2 } },
+  { name: 'Brass strings', p: { material: 'brass' } },
+  { name: 'Titanium strings', p: { material: 'titanium' } },
+  { name: 'Three strings a note, una corda', p: { unisons: 3, unaCorda: true } },
 ];

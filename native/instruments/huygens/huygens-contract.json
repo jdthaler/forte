@@ -45,6 +45,7 @@
     {"name":"Badly tuned, rescued by coupling","values":{"mistune":25,"kick":0.06}},
     {"name":"Drifting resistors, held together","values":{"drift":12,"driftRate":0.4,"kick":0.05}},
     {"name":"Just-tuned in C, no coupling (compare)","values":{"tuning":"just","tonic":0,"kick":0}},
-    {"name":"Rail sag only (slow, weak coupling)","values":{"kick":0,"rSrc":150000}}
+    {"name":"Rail sag only (slow, weak coupling)","values":{"kick":0,"rSrc":150000}},
+    {"name":"High supply (380 V): straighter, brighter ramps","values":{"vNom":380}}
   ]
 }

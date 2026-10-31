@@ -36,6 +36,8 @@
     {"name":"Big pulses: the thermistor saturates","values":{"energy":40,"gain":700}},
     {"name":"Cuoricino's small crystal (3 cm)","values":{"side":3,"gain":1500}},
     {"name":"Long wires: a soft attack","values":{"wire":3000}},
-    {"name":"Piled up: a pulse every 0.5 s on A4","values":{"periodA4":0.5,"gain":2500}}
+    {"name":"Piled up: a pulse every 0.5 s on A4","values":{"periodA4":0.5,"gain":2500}},
+    {"name":"Firm holders: the heat drains fast, short pulses","values":{"clamp":80}},
+    {"name":"Loose holders: the heat lingers","values":{"clamp":1.5}}
   ]
 }

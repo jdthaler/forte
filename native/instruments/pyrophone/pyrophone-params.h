@@ -93,6 +93,8 @@ inline const PresetValue kPreset4[] = {{p::xf, 0.625}, {p::listen, 0.2}, {p::fla
 inline const PresetValue kPreset5[] = {{p::xf, 0.08}, {p::lag, 0.2}, {p::flame, 1.44}, {p::listen, 0.2}};
 inline const PresetValue kPreset6[] = {{p::drift, 30}, {p::warm, 3}};
 inline const PresetValue kPreset7[] = {{p::lag, 0.1}, {p::bore, 0.05}, {p::xf, 0.25}, {p::flame, 3.34}};
+inline const PresetValue kPreset8[] = {{p::listen, 0}};
+inline const PresetValue kPreset9[] = {{p::noise, 0.08}};
 inline const Preset kPresets[] = {
   {"Kastner's pyrophone (flames at ⅓)", nullptr, 0},
   {"Tubes that remember (key-up in the bistable band)", kPreset1, 1},
@@ -102,6 +104,8 @@ inline const Preset kPresets[] = {
   {"Flame low (8 %), quick flame: the octave takes over", kPreset5, 4},
   {"Cold glass: big warm-up drift", kPreset6, 2},
   {"Hot-wire Rijke tube (short lag, wide bore, at ¼)", kPreset7, 4},
+  {"Heard side-on: the octave cancels, a hollow tone", kPreset8, 1},
+  {"Turbulent flames: breathy", kPreset9, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::lag}, {109, p::noise}, {111, p::listen}, {113, p::xf}, {114, p::flame}};
@@ -120,7 +124,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Flames in glass tubes sing by themselves once they cross a threshold — and remember having sung.", .auSubtype = "Pyro",
     .vst3Id = {0x9e, 0xa6, 0xc7, 0x5b, 0xa8, 0x75, 0x1a, 0x16, 0x7c, 0x9b, 0x9d, 0xb6, 0x40, 0xb5, 0xf9, 0x7b},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 8,
+    .presets = kPresets, .presetCount = 10,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::hold,
     .modWheel = p::flame, .modWheelMax = 6,

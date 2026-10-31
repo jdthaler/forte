@@ -11,17 +11,21 @@ import assert from 'node:assert/strict';
 import { INSTRUMENT } from '../harpsichord/src/harpsichord-instrument.js';
 import { wasmModel } from '../harpsichord/src/harpsichord-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
-import { DEFAULTS, GROUPS, PRESETS, KEY_LO, KEY_HI, ROWS } from '../harpsichord/src/harpsichord-params.js';
+import { DEFAULTS, GROUPS, PRESETS, KEY_LO, KEY_HI, ROWS, BUILDS } from '../harpsichord/src/harpsichord-params.js';
 
 const HarpsichordEngine = await loadEngine(INSTRUMENT);
 const {
-  stringDesign, stringLength, stringPartials, isBrass, simulatePluck, pluckPoint, registration, beamC, beamG, beamPhi, bridgePoint, boardAdmittance,
+  stringDesign, stringLength, stringPartials, isBrass, simulatePluck, pluckPoint, registration, beamC, beamG, beamPhi, bridgePoint, nutPoint, boardAdmittance,
 } = await wasmModel();
 
 // What the checks compare against, stated here rather than read from the model: the wires'
 // elastic constants and densities (iron as soft steel; brass), c² = C5 (the scale's reference),
 // the Pythagorean comma, and the jacks' fall for a release velocity (harpsichord-model.h).
 const WIRE = { iron: { E: 2.0e11, rho: 7850 }, brass: { E: 1.0e11, rho: 8500 } };
+// Gut (Woodhouse & Lynch-Aird 2019, Table I): E = 6 GPa, ρ = 1320 kg/m³, the modulus's loss factor 0.04.
+const GUT = { E: 6.0e9, rho: 1320, etaE: 0.04 };
+// Air's drag on a thread of diameter d (the model's, harpsichord-model.cpp: Stokes's with a boundary layer).
+const airSigma = (S, f) => (2 * Math.PI * 1.8e-5 + 2 * Math.PI * S.d * Math.sqrt(Math.PI * 1.8e-5 * 1.2 * f)) / (2 * S.mu);
 const C2 = 72, PYTH_COMMA = 1200 * Math.log2(3 ** 12 / 2 ** 19);
 const fallSpeed = (r) => 0.035 * 10 ** r;
 // The 8′ target pitch of key m: the back 8′ string's fundamental without the tuner's spread.
@@ -112,6 +116,13 @@ function peak(x, f0, f1, a, b, fs = FS) {
 }
 const peakAbs = (x, a = 0, b = x.length) => { let p = 0; for (let i = a; i < b; i++) p = Math.max(p, Math.abs(x[i])); return p; };
 const rms = (x, a, b) => { let s = 0; for (let i = a; i < b; i++) s += x[i] * x[i]; return Math.sqrt(s / (b - a)); };
+// The power of partials n0–n1 of string S against its fundamental (dB), over 0.25 s from t.
+function band(x, S, t, n0, n1) {
+  const a = Math.round(t * FS), b = a + Math.round(0.25 * FS), p1 = tone(x, partialFreq(S, 1), a, b) ** 2;
+  let s = 0;
+  for (let n = n0; n <= n1; n++) { const f = partialFreq(S, n); if (f > 12000) break; s += tone(x, f, a, b) ** 2; }
+  return 10 * Math.log10(s / p1);
+}
 // Spectral centroid (Hz) of x[a, b) over the first 40 partials of string S (they are stretched: Bn²).
 function centroid(x, S, a, b, n = 40) {
   let s = 0, w = 0;
@@ -472,10 +483,14 @@ test('stability: seeded random combinations of extreme settings at 44.1 and 48 k
   let seed2 = 777, seed3 = 4242;
   const coin = () => { seed2 = (seed2 * 1103515245 + 12345) >>> 0; return seed2 / 4294967296 < 0.5; };
   const kap = () => { seed3 = (seed3 * 1103515245 + 12345) >>> 0; return seed3 / 4294967296 < 0.5 ? 0 : 1; };
-  const all = GROUPS.flatMap((g) => g.params).filter((p) => !['volume', 'room', 'venue', 'fullRange', 'kc', 'sympathy'].includes(p.id));
+  // and so do the instrument built and the arpichordium
+  let seed4 = 9001;
+  const rnd4 = () => { seed4 = (seed4 * 1103515245 + 12345) >>> 0; return seed4 / 4294967296; };
+  const built = () => ({ build: BUILDS[Math.floor(rnd4() * BUILDS.length)], hooks: rnd4() < 0.5 });
+  const all = GROUPS.flatMap((g) => g.params).filter((p) => !['volume', 'room', 'venue', 'fullRange', 'kc', 'sympathy', 'build', 'hooks'].includes(p.id));
   const pick = (p) => (p.type === 'select' ? p.options[Math.floor(rnd() * p.options.length)][0] : p.type === 'checkbox' ? rnd() < 0.5 : rnd() < 0.5 ? p.min : p.max);
   for (let trial = 0; trial < 10; trial++) {
-    const fs = trial % 2 ? 44100 : 48000, a = P({ ...Object.fromEntries(all.map((p) => [p.id, pick(p)])), kc: coin(), sympathy: kap() }), b = P({ ...Object.fromEntries(all.map((p) => [p.id, pick(p)])), kc: coin(), sympathy: kap() });
+    const fs = trial % 2 ? 44100 : 48000, a = P({ ...Object.fromEntries(all.map((p) => [p.id, pick(p)])), kc: coin(), sympathy: kap(), ...built() }), b = P({ ...Object.fromEntries(all.map((p) => [p.id, pick(p)])), kc: coin(), sympathy: kap(), ...built() });
     const keys = [KEY_LO, 45, 60, 73, KEY_HI];
     const ev = keys.flatMap((k, i) => [[0.01 * i, 'on', k, rnd()], [0.6, 'off', k, rnd()]]);
     ev.push([0.3, 'params', b], [0.35, 'on', 60, 1], [1.3, 'panic']);
@@ -561,6 +576,141 @@ test('presets use their own parameters, and each plays without NaN', () => {
     for (const id of Object.keys(pr.p)) assert.ok(ids.has(id), `${pr.name}: ${id}`);
     const x = run(P(pr.p), [[0, 'on', 60, 0.7], [0.02, 'on', 67, 0.7]], 0.3);
     assert.ok(x.every(Number.isFinite) && peakAbs(x) > 0.005, `${pr.name}: peak ${peakAbs(x)}`);
+  }
+});
+// ---- the virginals and the lute-harpsichord ------------------------------------------------
+const lauten = (o = {}) => P({ build: 'lauten', ...o });
+test('lute-harpsichord: its two 8′ choirs are gut (μ = ρπd²/4 with ρ = 1320 kg/m³, tuned so: T = 4L²f²μ − EIπ²/L²), on a shorter scale (c² 300 mm) at 0.7× the wire’s tension; the 4′ stays brass, as Albrecht describes', () => {
+  for (const m of [29, 41, 60, 72, 89]) for (const c of ['front', 'back']) {
+    const S = stringDesign(m, c, lauten()), W = stringDesign(m, c, P());
+    assert.equal(S.mat.name, 'gut', `${m} ${c}`);
+    near(S.mu, (GUT.rho * Math.PI * S.d ** 2) / 4, 1e-9, `${m} μ`);
+    near(S.EI, (GUT.E * Math.PI * S.d ** 4) / 64, 1e-9, `${m} EI`);
+    near(S.T, 4 * S.L ** 2 * S.f0 ** 2 * S.mu - (S.EI * Math.PI ** 2) / S.L ** 2, 1e-9, `${m} T`);
+    near(S.T, 0.7 * W.T, 0.01, `${m} tension against the harpsichord's`);
+    assert.ok(S.L < W.L, `${m}: shorter`);
+  }
+  near(stringDesign(C2, 'back', lauten()).L, 0.3, 1e-9, 'c² length');
+  // its bass lengthens less than the harpsichord's: FF over c² 3.3 against 4.6
+  const ratio = (p) => stringDesign(29, 'back', p).L / stringDesign(C2, 'back', p).L;
+  assert.ok(ratio(lauten()) < 0.75 * ratio(P()), `FF/c²: ${ratio(lauten()).toFixed(2)} against ${ratio(P()).toFixed(2)}`);
+  // the 4′ is the harpsichord's, brass in the bass (Albrecht's "octave of brass strings")
+  for (const m of [29, 40, 60, 89]) assert.deepEqual(stringDesign(m, 'four', lauten()), stringDesign(m, 'four', P()), `4′ ${m}`);
+  for (const m of [29, 40]) assert.equal(stringDesign(m, 'four', lauten()).mat.name, 'brass');
+});
+test('gut’s losses: a partial loses air’s drag plus η_E = 0.04 on its share of bending energy, λ = EIk²/(T + EIk²) (Woodhouse & Lynch-Aird 2019), so the upper partials roll off: c¹’s 20th decays over 2.5× faster on gut than on wire, its fundamental within 2×', () => {
+  for (const m of [41, 60, 72]) {
+    const p = lauten(), S = stringDesign(m, 'back', p), parts = stringPartials(S, p).partials;
+    for (const pt of parts.slice(0, 30)) {
+      const k = (pt.n * Math.PI) / S.L, b = S.EI * k * k, want = airSigma(S, pt.f) + Math.PI * pt.f * GUT.etaE * (b / (S.T + b));
+      near(pt.sigS, want, 1e-6, `${m} partial ${pt.n}`);
+    }
+  }
+  const g = stringPartials(stringDesign(60, 'back', lauten()), lauten()).partials, w = stringPartials(stringDesign(60, 'back', P()), P()).partials;
+  assert.ok(g[19].sigma > 2.5 * w[19].sigma, `20th: ${g[19].sigma.toFixed(1)} against ${w[19].sigma.toFixed(1)} s⁻¹`);
+  assert.ok(g[0].sigma < 2 * w[0].sigma, `1st: ${g[0].sigma.toFixed(2)} against ${w[0].sigma.toFixed(2)} s⁻¹`);
+  // heard (the bridge force): from 0.1 s to 0.5 s the 8th–30th partials fall against the fundamental at least 3 dB more on gut
+  const fall = (o, m) => { const p = solo('back', { soundboard: false, ...o }), S = stringDesign(m, 'back', p), x = run(p, [[0, 'on', m, 0.7]], 0.8); return band(x, S, 0.1, 8, 30) - band(x, S, 0.5, 8, 30); };
+  const falls = [48, 60, 72].map((m) => [fall({ build: 'lauten' }, m), fall({}, m)]);
+  console.log(`        (8th–30th partials against the fundamental, 0.1 → 0.5 s: ${falls.map(([g, w]) => `${(-g).toFixed(1)} dB on gut, ${(-w).toFixed(1)} on wire`).join('; ')}, at c, c¹, c²)`);
+  for (const [g, w] of falls) assert.ok(g > w + 3, `gut falls ${g.toFixed(1)} dB, wire ${w.toFixed(1)} dB`);
+});
+test('lute-harpsichord: in tune (±2 ¢, every third key FF–f³); gut stretches less than wire under a pluck (E·A smaller), so its tension glide is smaller', () => {
+  const p = solo('back', { build: 'lauten', soundboard: false, kc: false });
+  for (let m = KEY_LO; m <= KEY_HI; m += 3) {
+    const x = run(p, [[0, 'on', m, 0.7]], 0.6), f = keyPitch(m, p), got = peak(x, f * 2 ** (-12 / 1200), f * 2 ** (12 / 1200), Math.round(0.15 * FS), x.length);
+    assert.ok(Math.abs(cents(got, f)) < 2, `${m}: ${cents(got, f).toFixed(2)} ¢`);
+  }
+  const glide = (o) => { const q = solo('back', { soundboard: false, ...o }), f = keyPitch(84, q); const at = (kc) => { const x = run({ ...q, kc }, [[0, 'on', 84, 0.7]], 0.13); return peak(x, f * 2 ** (-40 / 1200), f * 2 ** (40 / 1200), Math.round(0.03 * FS), x.length); }; return cents(at(true), at(false)); };
+  const gw = glide({}), gg = glide({ build: 'lauten' });
+  console.log(`        (c³ just after the pluck: +${gg.toFixed(1)} ¢ on gut, +${gw.toFixed(1)} ¢ on wire)`);
+  assert.ok(gg < 0.6 * gw, `gut +${gg.toFixed(2)} ¢, wire +${gw.toFixed(2)} ¢`);
+});
+test('virginals: one row of jacks on one choir, whatever the levers say; the muselar plucks a third of the way along in the bass to nearly half in the treble, the spinett an eighth to a quarter, the jack line moves them all alike, and its notes sound in tune (±2 ¢)', () => {
+  for (const build of ['muselar', 'spinett']) {
+    for (const o of [{}, { manual: 'upper' }, { coupler: false, back8: false, four: true, lute: true }]) {
+      const r = registration(P({ build, ...o }));
+      assert.deepEqual(r.rows, ['back'], `${build} ${JSON.stringify(o)}`);
+      assert.deepEqual(r.lift, { front: false, back: true, four: false });
+    }
+    const beta = (m) => pluckPoint(m, 'back', P({ build })) / stringDesign(m, 'back', P({ build })).L;
+    const [lo, hi] = build === 'muselar' ? [[0.3, 0.37], [0.42, 0.5]] : [[0.1, 0.15], [0.2, 0.27]];
+    assert.ok(beta(KEY_LO) > lo[0] && beta(KEY_LO) < lo[1], `${build} FF: β ${beta(KEY_LO).toFixed(3)}`);
+    assert.ok(beta(KEY_HI) > hi[0] && beta(KEY_HI) < hi[1], `${build} f³: β ${beta(KEY_HI).toFixed(3)}`);
+    const p = P({ build, soundboard: false, kc: false });
+    for (let m = KEY_LO; m <= KEY_HI; m += 4) {
+      const x = run(p, [[0, 'on', m, 0.7]], 0.6), f = keyPitch(m, p), got = peak(x, f * 2 ** (-12 / 1200), f * 2 ** (12 / 1200), Math.round(0.15 * FS), x.length);
+      assert.ok(Math.abs(cents(got, f)) < 2, `${build} ${m}: ${cents(got, f).toFixed(2)} ¢`);
+    }
+  }
+  // its case holds strings up to 1.3 m: the bass is shorter than the harpsichord's
+  assert.ok(stringDesign(KEY_LO, 'back', P({ build: 'muselar' })).L < 1.3, 'FF fits the case');
+  // moving the jack line moves every plucking point by as much
+  for (const m of [41, 60, 72]) for (const d of [-40, 40]) {
+    const x0 = pluckPoint(m, 'back', P({ build: 'spinett' })), x1 = pluckPoint(m, 'back', P({ build: 'spinett', jackLine: d }));
+    near(x1 - x0, d * 1e-3, 1e-9, `${m} moved ${d} mm`);
+  }
+});
+test('virginals: plucked near the middle, the muselar’s c² pushes on its bridges with a strong fundamental and few upper partials (the comb notches at f₁/β, near 2f₁); the spinett, plucked near the end, is brighter, and so is the harpsichord’s back 8′', () => {
+  // the bridge force (the soundboard off): the board then colours each note its own way
+  // partials 2–6 against the fundamental, 0.1–0.35 s in, at c, c¹ and c²
+  const lv = (build, m) => { const p = solo('back', { build, soundboard: false }), x = run(p, [[0, 'on', m, 0.7]], 0.4); return band(x, stringDesign(m, 'back', p), 0.1, 2, 6); };
+  for (const m of [48, 60, C2]) {
+    const mu = lv('muselar', m), sp = lv('spinett', m), hd = lv('double', m);
+    console.log(`        (${m}: partials 2–6 at ${mu.toFixed(1)} dB on the muselar, ${sp.toFixed(1)} dB on the spinett, ${hd.toFixed(1)} dB on the harpsichord's back 8′)`);
+    assert.ok(sp > mu + 6 && hd > mu + 6, `${m}: muselar ${mu.toFixed(1)}, spinett ${sp.toFixed(1)}, harpsichord ${hd.toFixed(1)} dB`);
+  }
+  const S = stringDesign(C2, 'back', P({ build: 'muselar' }));
+  // the comb: a pluck at β leaves partial n with sin(nπβ)/n of the force, so the muselar’s 2nd partial (β ≈ 0.42) is weaker than the spinett’s
+  const beta = pluckPoint(C2, 'back', P({ build: 'muselar' })) / S.L;
+  assert.ok(beta > 0.38 && beta < 0.46, `β ${beta.toFixed(3)}`);
+});
+test('virginals: both bridges stand on the board, so a string drains into it at both ends, σ_b = (Re Y(bridge) + Re Y(nut))·(T + EIk²)/L for the fundamental; a held note’s partials die at the model’s rate (within 10 %)', () => {
+  for (const build of ['muselar', 'spinett']) for (const m of [48, 60, 72]) {
+    const p = P({ build, soundboard: false, side: 0 }), S = stringDesign(m, 'back', p), parts = stringPartials(S, p).partials; // (side: the vertical swing alone)
+    const [bx, by] = bridgePoint(m, 'back', build), [nx, ny] = nutPoint(m, build), f = parts[0].f;
+    const G = boardAdmittance(bx, by, f, 1)[0] + boardAdmittance(nx, ny, f, 1)[0];
+    near(parts[0].sigB, (G * (S.T + S.EI * (Math.PI / S.L) ** 2)) / S.L, 1e-9, `${build} ${m}: σ_b`);
+    near(Math.abs(nx - bx), S.L, 1e-9, `${build} ${m}: the bridges a string's length apart`);
+    const x = run(p, [[0, 'on', m, 0.7]], 2.2);
+    for (const n of [1, 3]) {
+      const fn = parts[n - 1].f, W = Math.round(0.4 * FS), a1 = tone(x, fn, Math.round(0.3 * FS), Math.round(0.3 * FS) + W), a2 = tone(x, fn, Math.round(1.7 * FS), Math.round(1.7 * FS) + W);
+      near(Math.log(a1 / a2) / 1.4, parts[n - 1].sigma, 0.1, `${build} ${m} partial ${n}`);
+    }
+  }
+});
+test('the arpichordium: on a virginal its hooks keep the bass buzzing (its rms frequency at 1 s over 1.5× without them) and leave keys above e alone, sample for sample; on the harpsichord it does nothing', () => {
+  const rmsFreq = (x, a, b) => { let e = 0, d = 0; for (let i = a + 1; i < b; i++) { e += x[i] * x[i]; d += (x[i] - x[i - 1]) ** 2; } return (Math.sqrt(d / e) * FS) / (2 * Math.PI); };
+  for (const m of [29, 36, 48]) {
+    const at = (hooks) => { const x = run(P({ build: 'muselar', hooks }), [[0, 'on', m, 0.7]], 1.3); return rmsFreq(x, FS, Math.round(1.25 * FS)); };
+    const off = at(false), on = at(true);
+    assert.ok(on > 1.5 * off, `${m}: ${on.toFixed(0)} Hz with the hooks, ${off.toFixed(0)} without`);
+  }
+  const same = (o, m) => { const a = run(P(o), [[0, 'on', m, 0.7]], 0.4), b = run(P({ ...o, hooks: true }), [[0, 'on', m, 0.7]], 0.4); return a.every((v, i) => v === b[i]); };
+  assert.ok(same({ build: 'muselar' }, 60), 'c¹ untouched');
+  assert.ok(same({}, 36) && same({ build: 'lauten' }, 36), 'no hooks on the harpsichord');
+  const x = run(P({ build: 'muselar', hooks: true }), [36, 41, 45, 48].map((m) => [0, 'on', m, 1]), 1.0);
+  assert.ok(x.every(Number.isFinite) && peakAbs(x) < 1, `chord: ${peakAbs(x).toFixed(3)}`);
+});
+test('switching the instrument: the default is the harpsichord, so a song saved before stays as it was; every build is in tune at A = 415 meantone, a forte note peaks at 0.1–0.5 (a virginal’s FF from 0.06: its small board radiates the bass weakly), and a change mid-note gives the next press new strings', () => {
+  assert.equal(DEFAULTS.build, 'double');
+  assert.equal(DEFAULTS.hooks, false);
+  for (const fs of [44100, 48000]) for (const build of BUILDS) for (const m of [29, 41, 53, 60, 72, 81, 89]) {
+    const x = run(P({ build }), [[0, 'on', m, 1]], 0.6, { fs }), pk = Math.max(peakAbs(x), peakAbs(x.R)), lo = m === 29 && build !== 'lauten' && build !== 'double' ? 0.06 : 0.1;
+    assert.ok(pk > lo && pk < 0.5, `${build} ${m} at ${fs}: ${pk.toFixed(3)}`);
+  }
+  for (const build of ['muselar', 'spinett', 'lauten']) for (const four of [false, true]) {
+    // (the lute-harpsichord's two gut 8′s and brass 4′ together peak a little over 1: the limiter's)
+    const ch = run(P({ build, four }), [41, 48, 53, 57, 60, 64, 67, 72].map((m) => [0, 'on', m, 1]), 1.0), pk = Math.max(peakAbs(ch), peakAbs(ch.R));
+    assert.ok(pk < (four ? 1.2 : 1), `${build} chord ${four ? '8 8 4' : '8 8'}: ${pk.toFixed(3)}`);
+  }
+  const ev = [[0, 'on', 60, 0.7], [0.3, 'params', P({ build: 'lauten' })], [0.4, 'on', 60, 0.7], [0.7, 'params', P({ build: 'spinett' })], [0.8, 'on', 64, 0.7]];
+  const x = run(P(), ev, 1.2);
+  assert.ok(x.every(Number.isFinite) && peakAbs(x, Math.round(0.8 * FS)) > 0.01, 'plays through the changes');
+  const pm = P({ pitch: 415, temperament: 'meantone', soundboard: false, kc: false, coupler: false, front8: false });
+  for (const build of ['muselar', 'lauten']) for (const m of [60, 64, 68]) {
+    const p = { ...pm, build }, xx = run(p, [[0, 'on', m, 0.7]], 0.6), f = keyPitch(m, p), got = peak(xx, f * 0.993, f * 1.007, 4800, xx.length);
+    assert.ok(Math.abs(cents(got, f)) < 2, `${build} meantone ${m}: ${cents(got, f).toFixed(2)} ¢`);
   }
 });
 test('CPU: 10 keys of 8′ 8′ 4′ coupled (30 strings) at 48 kHz in under 30 % of real time', () => {
