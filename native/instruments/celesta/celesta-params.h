@@ -97,6 +97,9 @@ inline const PresetValue kPreset6[] = {{p::thick, 5}};
 inline const PresetValue kPreset7[] = {{p::strike, 0.224}};
 inline const PresetValue kPreset8[] = {{p::across, 0.85}, {p::hardness, 600}};
 inline const PresetValue kPreset9[] = {{p::pedalLock, 1}};
+inline const PresetValue kPreset10[] = {{p::hardness, 40}, {p::speedMax, 1.2}};
+inline const PresetValue kPreset11[] = {{p::mass, 10}};
+inline const PresetValue kPreset12[] = {{p::thick, 1.5}};
 inline const Preset kPresets[] = {
   {"Celesta: felt hammers, steel bars, wooden boxes", nullptr, 0},
   {"Struck at the centre: the second mode silent", kPreset1, 1},
@@ -108,6 +111,9 @@ inline const Preset kPresets[] = {
   {"Struck on the node: the fundamental drops out", kPreset7, 1},
   {"Struck off the edge: the bars twist", kPreset8, 2},
   {"Pedal down: every note rings", kPreset9, 1},
+  {"Soft felt, slow hammers: a hush", kPreset10, 2},
+  {"Heavy hammers: more fundamental, less shimmer", kPreset11, 1},
+  {"Thin bars, 1.5 mm", kPreset12, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::across}, {109, p::damp}, {111, p::detune}, {113, p::strike}, {114, p::hardness}};
@@ -126,7 +132,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Felt hammers strike thin steel bars, each over a wooden box tuned to it: the bell-like sugar-plum sound.", .auSubtype = "Cele",
     .vst3Id = {0x2f, 0x8b, 0x95, 0xe7, 0xb9, 0xc6, 0x4c, 0xd0, 0x92, 0x2b, 0xfb, 0xaf, 0x24, 0xc1, 0x4b, 0xa4},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 10,
+    .presets = kPresets, .presetCount = 13,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 60, .compassHi = 108, .compass = p::fullRange, .space = Space::sustain,
     .modWheel = p::hardness, .modWheelMax = 10000,

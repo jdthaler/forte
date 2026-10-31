@@ -89,6 +89,7 @@ inline const PresetValue kPreset3[] = {{p::n0, 6}};
 inline const PresetValue kPreset4[] = {{p::n0, 2}};
 inline const PresetValue kPreset5[] = {{p::mass, 6}};
 inline const PresetValue kPreset6[] = {{p::q, 2000}};
+inline const PresetValue kPreset7[] = {{p::gust, 0.03}, {p::gustTime, 4}};
 inline const Preset kPresets[] = {
   {"Each key on its 3rd harmonic, steady wind", nullptr, 0},
   {"A gusty evening: strings flicker between harmonics", kPreset1, 2},
@@ -97,6 +98,7 @@ inline const Preset kPresets[] = {
   {"Low harmonics: tuned on the 2nd", kPreset4, 1},
   {"Heavy wound strings: high mass ratio", kPreset5, 1},
   {"Lightly damped strings: loud, sticky lock-in", kPreset6, 1},
+  {"Slow, gentle gusts: the strings sway in and out", kPreset7, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::gustTime}, {109, p::q}, {111, p::mass}, {113, p::gust}, {114, p::wind}};
@@ -115,7 +117,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Strings sung by the wind: the vortices they shed lock onto one of their harmonics, and hop up the series as the wind rises.", .auSubtype = "WHrp",
     .vst3Id = {0x7e, 0x1c, 0x2a, 0xe3, 0x7e, 0xf1, 0xfb, 0x28, 0x10, 0x3b, 0x42, 0xa4, 0x07, 0xff, 0x78, 0x87},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 7,
+    .presets = kPresets, .presetCount = 8,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 100, .space = Space::sustain,
     .modWheel = p::wind, .modWheelMax = 8,

@@ -76,4 +76,6 @@ export const PRESETS = [
   { name: 'Fine structure, 12 × the real α', p: { alphaScale: 12, slowmo: 3e8 } },
   { name: 'Quick and rough: less slow motion', p: { slowmo: 5e6 } },
   { name: 'Pure and slow: more slow motion', p: { slowmo: 3e8, glow: 30 } },
+  { name: 'A cool lamp (5,000 K): only the first lines', p: { temperature: 5000 } },
+  { name: 'A hot lamp (80,000 K): far up the series', p: { temperature: 80000 } },
 ];

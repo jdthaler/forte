@@ -43,6 +43,9 @@
     {"name":"Fixed n̄: chords revive in polyrhythm","values":{"lock":false,"nbar":60}},
     {"name":"Three levels: a chord of Bohr lines","values":{"sigma":0.6,"detector":"x"}},
     {"name":"Tight packet: bright, brief, many echoes","values":{"sigma":4}},
-    {"name":"Coherent restrike: Ramsey fringes","values":{"ramsey":true}}
+    {"name":"Coherent restrike: Ramsey fringes","values":{"ramsey":true}},
+    {"name":"Morse molecule near dissociation: bright and lopsided","values":{"potential":"morse","eta":0.9}},
+    {"name":"Long revivals: eight beats","values":{"beats":8}},
+    {"name":"Velocity detector: softer overtones","values":{"detector":"v"}}
   ]
 }

@@ -70,4 +70,7 @@ export const PRESETS = [
   { name: 'Clamped at the bridge (6.27)', p: { back: 0 } },
   { name: 'Back as long as the front (9th harmonic)', p: { back: 1 } },
   { name: 'Plucked on the first overtone’s node', p: { pluck: 0.71 } },
+  { name: 'Plucked near the bridge: bright overtones', p: { pluck: 0.4 } },
+  { name: 'Thin tines: soft and quiet in the bass', p: { thick: 0.7 } },
+  { name: 'Two bottle caps on a box kalimba', p: { buzz: 2 } },
 ];

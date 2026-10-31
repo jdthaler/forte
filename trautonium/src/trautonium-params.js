@@ -85,4 +85,6 @@ export const PRESETS = [
   { name: 'Weak sync: the dividers slip', p: { sync: 0.004, master: 0.8, sub1: 0.7, sub2: 0.55, sub3: 0.45, sub4: 0.35 } },
   { name: 'Strong sync: ÷10 and ÷16 fire a pulse early', p: { sync: 0.1, div1: 2, div2: 5, div3: 10, div4: 16, master: 0.6, sub1: 0.7, sub2: 0.7, sub3: 0.6, sub4: 0.5 } },
   { name: 'Supply near the strike voltage (rounded ramps)', p: { supply: 100 } },
+  { name: 'Vowel “ah” (700 Hz and 1.1 kHz)', p: { f1: 700, f2: 1100, q1: 10, q2: 10, g2: 0.8, dry: 0.15 } },
+  { name: 'All four circuits', p: { g3: 0.5, g4: 0.4 } },
 ];

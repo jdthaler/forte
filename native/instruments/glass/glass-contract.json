@@ -38,6 +38,9 @@
     {"name":"Dry fingers (no grip)","values":{"wet":0.1}},
     {"name":"Pressing hard (the skin squeals)","values":{"press":10}},
     {"name":"Bowls half full of water","values":{"water":0.5}},
-    {"name":"Lead crystal (rings for ages)","values":{"loss":0.0001}}
+    {"name":"Lead crystal (rings for ages)","values":{"loss":0.0001}},
+    {"name":"Ridged fingertips: a breath of hiss","values":{"rough":0.08}},
+    {"name":"An uneven foot: a big treadle swing","values":{"treadle":0.25}},
+    {"name":"Lossy glass: the bowls stop soon after the finger","values":{"loss":0.002}}
   ]
 }

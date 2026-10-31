@@ -101,6 +101,9 @@ inline const PresetValue kPreset3[] = {{p::chroma, 2}, {p::octupole, 12}, {p::ki
 inline const PresetValue kPreset4[] = {{p::bunch, 0.08}, {p::synch, 1.2}, {p::chroma, 8}};
 inline const PresetValue kPreset5[] = {{p::tune, 0.48}, {p::chroma, 12}};
 inline const PresetValue kPreset6[] = {{p::lifetime, 1.5}, {p::bunch, 0.012}, {p::damping, 0.6}};
+inline const PresetValue kPreset7[] = {{p::pickup, 1}};
+inline const PresetValue kPreset8[] = {{p::cutoff, 1500}};
+inline const PresetValue kPreset9[] = {{p::lifetime, 600}, {p::damping, 15}};
 inline const Preset kPresets[] = {
   {"Kicked beam, recohering", nullptr, 0},
   {"Clean injection: the bare bunch train", kPreset1, 2},
@@ -109,6 +112,9 @@ inline const Preset kPresets[] = {
   {"Long bunch, slow RF", kPreset4, 3},
   {"Near the half-integer", kPreset5, 2},
   {"Short lifetime: plucked beam", kPreset6, 3},
+  {"One button pickup on both channels", kPreset7, 1},
+  {"A slow pickup: the low harmonics weakened", kPreset8, 1},
+  {"A long-lived beam: slow damping, long notes", kPreset9, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::tune}, {109, p::octupole}, {111, p::spread}, {113, p::kick}, {114, p::chroma}};
@@ -127,7 +133,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Every key a particle accelerator's storage ring, heard through a beam pickup: kicked bunches whose oscillation fades and recoheres.", .auSubtype = "Stor",
     .vst3Id = {0xd7, 0xba, 0x48, 0x74, 0x09, 0x42, 0x23, 0x18, 0x27, 0x2b, 0x55, 0x6f, 0xa4, 0xcf, 0x4a, 0x55},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 7,
+    .presets = kPresets, .presetCount = 10,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::chroma, .modWheelMax = 60,

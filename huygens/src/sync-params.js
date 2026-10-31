@@ -80,4 +80,5 @@ export const PRESETS = [
   { name: 'Drifting resistors, held together', p: { drift: 12, driftRate: 0.4, kick: 0.05 } },
   { name: 'Just-tuned in C, no coupling (compare)', p: { tuning: 'just', tonic: 0, kick: 0 } },
   { name: 'Rail sag only (slow, weak coupling)', p: { kick: 0, rSrc: 150e3 } },
+  { name: 'High supply (380 V): straighter, brighter ramps', p: { vNom: 380 } },
 ];

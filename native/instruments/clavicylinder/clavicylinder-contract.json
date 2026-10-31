@@ -42,6 +42,8 @@
     {"name":"Posts all the way up","values":{"build":1}},
     {"name":"Cords on the wrong nodes (an overtone takes over)","values":{"cords":-0.092}},
     {"name":"Light flywheel (chords drag the cylinder)","values":{"flywheel":0.4}},
-    {"name":"Slow treadle","values":{"speed":0.4}}
+    {"name":"Slow treadle","values":{"speed":0.4}},
+    {"name":"One layer of cloth: the key’s knock shows","values":{"layers":1}},
+    {"name":"Heavy flywheel: chords keep the speed","values":{"flywheel":10}}
   ]
 }
