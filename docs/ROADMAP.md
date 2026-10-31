@@ -141,7 +141,8 @@ default in the existing presets, or would change what an existing knob means.
 | Chladni Plate | M | Done, for the next release: Chladni's bowed plates, every key a square plate clamped at its centre (Kirchhoff modes by Rayleigh–Ritz) and bowed at its edge by stick–slip friction, with fingers on the figure's nodal lines, ten figures, and a view of the sand gathering on them. |
 | Clavichord | M | Done, for the next release: a brass tangent that strikes the strings and stays on them, held up by the finger: pressure tuning, the Bebung (mod wheel, aftertouch, MPE), the listing and the key-up ring of the whole string, double-fretted pairs, 4′ strings in the bass. |
 | Hammered dulcimer or cimbalom | M | |
-| Theremin or ondes Martenot | M | Continuous pitch suits MPE. |
+| Ondes Martenot | M | Done, for the next release: two heterodyne oscillators pulling through Adler's equation, keyboard or ribbon, the intensity key from Quartier et al.'s measurements, the drawer's timbres, and the four diffuseurs (springs, tam-tam and palme strings from their physics). |
+| Theremin | M | Continuous pitch suits MPE; the ondes' heterodyne and pulling would carry over. |
 | Kalimba (mbira) | S–M | Close to the tine piano. |
 | Cristal Baschet or waterphone | M | Friction-driven rods, close to the glass armonica's bowing. |
 
