@@ -86,6 +86,10 @@ test('a contract breaks when a parameter, an option or a preset is removed, move
     assert.ok(with_(f).breaks.length, why);
   }
   assert.equal(stateOf(c, '0.1.0'), 'forte x 0.1.0\na 0.20000000000000001\nb 0\npreset 1\n');
+  // as the plugin saves them: a tiny value keeps its exponent, and one off its step lands on it
+  const tiny = { slug: 'y', params: [{ id: 'g', kind: 'continuous', min: 1e-11, max: 1e-5, def: 1e-10, log: true },
+    { id: 's', kind: 'continuous', min: 0, max: 90, def: 20, step: 0.5, log: false }], presets: [{ name: 'One', values: { s: 11.25 } }] };
+  assert.equal(stateOf(tiny, '0.1.0'), 'forte y 0.1.0\ng 1e-10\ns 11.5\npreset 1\n');
 });
 test('every ported instrument has a contract, and a saved state at its version for the plugin tests to load', () => {
   for (const i of ready.filter((x) => existsSync(new URL(`native/instruments/${x.id}/`, R)))) {
