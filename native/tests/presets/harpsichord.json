@@ -7,6 +7,7 @@
     {
       "name": "Baroque pitch, ¼-comma meantone",
       "values": {
+        "build": "double",
         "manual": "lower",
         "coupler": true,
         "front8": true,
@@ -14,6 +15,7 @@
         "four": false,
         "lute": false,
         "buff": false,
+        "hooks": false,
         "material": "delrin",
         "stiff": 2500,
         "overlap": 0.6,
@@ -21,6 +23,7 @@
         "xFront": 40,
         "xBack": 62,
         "xFour": 45,
+        "jackLine": 0,
         "xLute": 12,
         "detune": 1.5,
         "loss": 1,
