@@ -201,10 +201,25 @@ async function mount(t) {
     play();
   }
 
+  // the page's saved settings (forte/<id>/params/v1, or an older page's own key), kept as they
+  // were: a player who never changed a setting still has none saved after the tour, and so
+  // gets a later version's defaults
+  const STORED = /\/params\/v\d+$/;
+  function stored() {
+    try { return Object.fromEntries(Object.keys(localStorage).filter((k) => STORED.test(k)).map((k) => [k, localStorage.getItem(k)])); } catch { return {}; }
+  }
+  function restore(was) {
+    try {
+      for (const k of Object.keys(localStorage)) if (STORED.test(k) && !(k in was)) localStorage.removeItem(k);
+      for (const [k, v] of Object.entries(was)) localStorage.setItem(k, v);
+    } catch { /* storage blocked: nothing was saved either */ }
+  }
+
   function begin() {
     if (saved) return;
     saved = pageState.get?.() ?? {};
     saved.__preset = $('#preset')?.value ?? '';
+    saved.__stored = stored();
     $('#start')?.click(); // this click is the gesture that lets the audio start
     card.hidden = false;
     card.classList.remove('folded');
@@ -217,9 +232,10 @@ async function mount(t) {
     if (!saved) return;
     hush();
     mark([]);
-    const { __preset, ...was } = saved;
+    const { __preset, __stored, ...was } = saved;
     saved = null;
     if (pageState.set && Object.keys(was).length) apply(complete(pageState.params, was));
+    restore(__stored);
     const sel = $('#preset');
     if (sel) sel.value = __preset;
     tourLayout.show(null);
