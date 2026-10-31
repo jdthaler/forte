@@ -50,6 +50,22 @@ The **buff** stop presses pads of leather against the back strings near the nut.
 Coupled with both 8′s, each key plucks three strings at once: the brilliant *plenum* of the baroque continuo. A harpsichord gets louder only by adding strings, never by striking harder.`,
   },
   {
+    title: 'Virginals: one string, two bridges',
+    views: ['Pluck in slow motion', 'Comb filter and spectrum'],
+    preset: 'Virginal: spinett, plucked near one end',
+    play: [arp(0), { at: 2.6, set: { build: 'muselar' } }, arp(2.7), { at: 5.3, set: { hooks: true } }, chord('C2 G2 C3', { at: 5.4, dur: 2.5, vel: 0.8 })],
+    text: `A **virginal** has one choir of strings running across a box, with both bridges standing on the soundboard. The jacks sit in a row across the case, so where they pluck depends on the case. The **spinett** plucks close to one end, bright and nasal; the **muselar** plucks a third of the way to nearly halfway along, so the comb's first notches fall among the low partials, and it sounds round and flute-like.
+
+The muselar's **arpichordium** then lowers little hooks beside its bass strings. The swinging string strikes them, and the bass buzzes.`,
+  },
+  {
+    title: 'The lute-harpsichord: gut strings',
+    views: ['The scale', 'Spectrogram'],
+    preset: 'Lute-harpsichord: two gut 8′s coupled',
+    play: [arp(0), { at: 2.6, set: { build: 'double' } }, arp(2.7)],
+    text: `Bach owned a **lute-harpsichord** (*Lautenwerck*) strung in gut. Gut is light, so its strings are shorter and under less tension than wire, and it loses energy as it bends. Its high partials fade quickly, leaving the soft, rounded tone of a lute. The same arpeggio follows on the wire-strung double.`,
+  },
+  {
     title: 'Meantone thirds',
     views: ['Spectrogram'],
     preset: 'Baroque pitch, ¼-comma meantone',

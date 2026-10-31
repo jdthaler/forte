@@ -23,10 +23,10 @@ FORTE_EXPORT void harpsichord_registration(const double *P, double *out) {
   for (int i = 0; i < 4; i++) out[i] = r.rows[i];
   for (int i = 0; i < 3; i++) out[4 + i] = r.lift[i];
 }
-// stringDesign: L, d, A, mu, EI, T, B, f0, stress, c, Z, brass?
+// stringDesign: L, d, A, mu, EI, T, B, f0, stress, c, Z, its material (0 iron, 1 brass, 2 gut)
 FORTE_EXPORT void harpsichord_string_design(const double *P, int m, int choir, double *out) {
   const StringDesign S = stringDesign(m, choir, paramsOf(P));
-  const double v[12] = {S.L, S.d, S.A, S.mu, S.EI, S.T, S.B, S.f0, S.stress, S.c, S.Z, S.mat == &BRASS ? 1.0 : 0.0};
+  const double v[12] = {S.L, S.d, S.A, S.mu, S.EI, S.T, S.B, S.f0, S.stress, S.c, S.Z, S.mat == &BRASS ? 1.0 : S.mat == &GUT ? 2.0 : 0.0};
   for (int i = 0; i < 12; i++) out[i] = v[i];
 }
 FORTE_EXPORT double harpsichord_string_length(int m, int choir) { return stringLength(m, choir); }
@@ -57,7 +57,7 @@ FORTE_EXPORT int harpsichord_simulate(const double *P, double mu, double bridgeS
   const PluckTrace &t = sim->trace;
   const Plectrum &pl = t.pl;
   const double v[24] = {t.released, t.rel.F, t.rel.y, t.rel.u, t.rel.w, t.rel.s, t.rel.theta, pl.len, pl.overlap, pl.s0, pl.kTip, pl.EI0, pl.tau, pl.mu, pl.fore,
-                        (double)pl.material, t.S.d, t.S.mat == &BRASS ? 1.0 : 0.0, t.x, t.gap, t.energy, t.work, t.staticCompliance, t.Kz};
+                        (double)pl.material, t.S.d, t.S.mat == &BRASS ? 1.0 : t.S.mat == &GUT ? 2.0 : 0.0, t.x, t.gap, t.energy, t.work, t.staticCompliance, t.Kz};
   for (int i = 0; i < 24; i++) out[i] = v[i];
   const size_t n = t.t.size();
   trace.assign(8 * n, 0);
@@ -70,14 +70,18 @@ FORTE_EXPORT int harpsichord_simulate(const double *P, double mu, double bridgeS
 }
 FORTE_EXPORT const double *harpsichord_trace() { return trace.data(); }
 FORTE_EXPORT const double *harpsichord_modal() { return modal.data(); }
-// bridgePoint(m, choir): x, y on the board
-FORTE_EXPORT void harpsichord_bridge_point(int m, int choir, double *out) {
-  const auto b = bridgePoint(m, choir);
+// bridgePoint(m, choir) of a build (Build): x, y on its board; nutPoint: a virginal's near bridge
+FORTE_EXPORT void harpsichord_bridge_point(int m, int choir, int build, double *out) {
+  const auto b = bridgePoint(m, choir, build);
   out[0] = b[0]; out[1] = b[1];
 }
-// boardAdmittance(x, y, f): re, im (s/kg)
-FORTE_EXPORT void harpsichord_board_admittance(double x, double y, double f, double *out) {
-  const auto Y = boardAdmittance(x, y, f);
+FORTE_EXPORT void harpsichord_nut_point(int m, int build, double *out) {
+  const auto b = nutPoint(m, build);
+  out[0] = b[0]; out[1] = b[1];
+}
+// boardAdmittance(x, y, f) of a board (0 the harpsichord's, 1 the virginal's): re, im (s/kg)
+FORTE_EXPORT void harpsichord_board_admittance(double x, double y, double f, int board, double *out) {
+  const auto Y = boardAdmittance(x, y, f, nullptr, board);
   out[0] = Y[0]; out[1] = Y[1];
 }
 // The plectrum's bending (beamC, beamG, beamPhi) at s, for a plectrum of taper tau, EI0, len and foreshortening
