@@ -61,4 +61,7 @@ export const PRESETS = [
   { name: 'Light solder (long reeds, more bark)', p: { solder: 0.15 } },
   { name: 'Constant-voltage pickup (1 MΩ feed)', p: { rbias: 1 } },
   { name: 'Barking: tight gap, pushed preamp', p: { gap: 0.18, offset: 0.25, drive: 0.8, hardness: 2 } },
+  { name: 'Fast tremolo (9 Hz)', p: { tremDepth: 0.6, tremRate: 9 } },
+  { name: 'Soft felt hammers: a round attack', p: { hardness: 0.25 } },
+  { name: 'Struck near the clamp: a small, clean swing', p: { strike: 0.15 } },
 ];

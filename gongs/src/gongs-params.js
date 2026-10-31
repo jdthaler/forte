@@ -86,4 +86,7 @@ export const PRESETS = [
   { name: 'Clamped rim (held, free to slide in its plane)', p: { bc: 'clamped', strike: 0.2 } },
   { name: 'Struck dead centre (no asymmetric modes)', p: { strike: 0 } },
   { name: 'Perfectly round: the twins in tune, no shimmer', p: { asym: 0 } },
+  { name: 'Aluminium gong: light, and quick to die', p: { material: 'aluminium' } },
+  { name: 'Wind gong: thin and flat, struck near the rim', p: { thick: 0.004, rise: 0, strike: 0.8, hardness: 2, speed: 4 } },
+  { name: 'A hand on the gong: choked on release', p: { release: 30 } },
 ];

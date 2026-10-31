@@ -82,4 +82,5 @@ export const PRESETS = [
   { name: 'Driven along the axis', p: { drive: 'axial' } },
   { name: 'Soft mallet: only the low echoes', p: { mallet: 2 } },
   { name: 'Slinky: falling whistles', p: { family: 'slinky', springs: 1, helix: 6, endLoss: 0.02, eta: 5e-5, mallet: 0.5, damper: 2 } },
+  { name: 'Thick wire: the chirps go up', p: { wire: 1.8, springs: 1 } },
 ];

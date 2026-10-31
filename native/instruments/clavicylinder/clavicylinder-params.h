@@ -100,6 +100,8 @@ inline const PresetValue kPreset6[] = {{p::build, 1}};
 inline const PresetValue kPreset7[] = {{p::cords, -0.092}};
 inline const PresetValue kPreset8[] = {{p::flywheel, 0.4}};
 inline const PresetValue kPreset9[] = {{p::speed, 0.4}};
+inline const PresetValue kPreset10[] = {{p::layers, 1}};
+inline const PresetValue kPreset11[] = {{p::flywheel, 10}};
 inline const Preset kPresets[] = {
   {"Chladni’s clavicylinder (1800)", nullptr, 0},
   {"Light touch (slow to speak)", kPreset1, 1},
@@ -111,6 +113,8 @@ inline const Preset kPresets[] = {
   {"Cords on the wrong nodes (an overtone takes over)", kPreset7, 1},
   {"Light flywheel (chords drag the cylinder)", kPreset8, 1},
   {"Slow treadle", kPreset9, 1},
+  {"One layer of cloth: the key’s knock shows", kPreset10, 1},
+  {"Heavy flywheel: chords keep the speed", kPreset11, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::treadle}, {109, p::wet}, {111, p::grip}, {113, p::press}, {114, p::speed}};
@@ -129,7 +133,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Iron bars pressed by their keys against a turning wet glass cylinder: cloth sticks and slips on the glass and keeps each bar singing as long as the key is down.", .auSubtype = "Clcy",
     .vst3Id = {0x92, 0x39, 0x17, 0x6e, 0x0a, 0x54, 0x5e, 0x3d, 0x6b, 0x48, 0x13, 0xab, 0xcd, 0x37, 0x53, 0x09},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 10,
+    .presets = kPresets, .presetCount = 12,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 36, .compassHi = 89, .compass = p::fullRange, .space = Space::hold,
     .modWheel = p::speed, .modWheelMax = 2,

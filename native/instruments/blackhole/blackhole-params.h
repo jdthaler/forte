@@ -93,6 +93,9 @@ inline const PresetValue kPreset6[] = {{p::inclination, 90}};
 inline const PresetValue kPreset7[] = {{p::t0, 0}, {p::overtones, 1.5}};
 inline const PresetValue kPreset8[] = {{p::inspiral, 1}, {p::inspiralOct, 1.5}};
 inline const PresetValue kPreset9[] = {{p::retrograde, 0.7}, {p::massRatio, 3}};
+inline const PresetValue kPreset10[] = {{p::spinU, 0.1427}, {p::massRatio, 9}};
+inline const PresetValue kPreset11[] = {{p::inclination, 0}};
+inline const PresetValue kPreset12[] = {{p::inspiral, 1}, {p::inspiralOct, 3}};
 inline const Preset kPresets[] = {
   {"GW150914-like remnant (a = 0.69, q = 1.2)", nullptr, 0},
   {"Schwarzschild (a = 0): two cycles and gone", kPreset1, 1},
@@ -104,6 +107,9 @@ inline const Preset kPresets[] = {
   {"Early ringdown (t₀ = 0): overtone burst", kPreset7, 2},
   {"Inspiral + merger + ringdown (LIGO chirp)", kPreset8, 2},
   {"Counter-rotating modes too", kPreset9, 2},
+  {"GW190814-like: a lopsided merger (q = 9, a = 0.28)", kPreset10, 2},
+  {"Seen face-on (ι = 0°): circular polarisation", kPreset11, 1},
+  {"A long inspiral: three octaves of chirp", kPreset12, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::tone, p::stereo, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::massRatio}, {109, p::inclination}, {111, p::overtones}, {113, p::tone}, {114, p::spinU}};
@@ -122,7 +128,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Every key a Kerr black hole, ringing in quasinormal modes computed from the Teukolsky equation.", .auSubtype = "BHol",
     .vst3Id = {0x5f, 0xef, 0x66, 0x73, 0x53, 0x79, 0xc9, 0x85, 0x2f, 0x95, 0xda, 0x33, 0x4a, 0xc9, 0x74, 0x92},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 10,
+    .presets = kPresets, .presetCount = 13,
     .keep = kKeep, .keepCount = 19,
     .keyLo = 21, .keyHi = 108, .space = Space::none,
     .modWheel = p::spinU, .modWheelMax = 6,

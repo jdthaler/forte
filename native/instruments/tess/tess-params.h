@@ -89,6 +89,8 @@ inline const PresetValue kPreset4[] = {{p::tmag, 16.3}, {p::teff, 4710}, {p::sta
 inline const PresetValue kPreset5[] = {{p::planetRadius, 1}, {p::impact, 0}, {p::periodA4, 365.256}, {p::scale, 0.00012}};
 inline const PresetValue kPreset6[] = {{p::impact, 0.97}, {p::scale, 0.001}};
 inline const PresetValue kPreset7[] = {{p::noise, 0}};
+inline const PresetValue kPreset8[] = {{p::tmag, 13}};
+inline const PresetValue kPreset9[] = {{p::teff, 6800}, {p::starMass, 1.5}, {p::starRadius, 1.6}};
 inline const Preset kPresets[] = {
   {"A hot Jupiter round a Sun-like star", nullptr, 0},
   {"π Mensae c: TESS's first planet (on A4)", kPreset1, 8},
@@ -98,6 +100,8 @@ inline const Preset kPresets[] = {
   {"The Earth and the Sun (a year on A4)", kPreset5, 4},
   {"Grazing: short V-shaped dips", kPreset6, 2},
   {"A noiseless light curve", kPreset7, 1},
+  {"A faint star (magnitude 13): dips in the hiss", kPreset8, 1},
+  {"A hot star (6,800 K): flat-bottomed dips", kPreset9, 3},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::teff}, {109, p::starRadius}, {111, p::periodA4}, {113, p::planetRadius}, {114, p::impact}};
@@ -116,7 +120,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Every key a planet crossing its star, its light played as NASA's Transiting Exoplanet Survey Satellite records it, sped up until each year is a note: the dips are the waveform, the star's limb darkening rounds them, and the photon noise hisses under faint stars.", .auSubtype = "Tess",
     .vst3Id = {0x59, 0xff, 0x97, 0x08, 0x94, 0x2b, 0x1b, 0xe5, 0xc6, 0xf0, 0xc3, 0x9f, 0x61, 0xc4, 0xf8, 0xd4},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 8,
+    .presets = kPresets, .presetCount = 10,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::impact, .modWheelMax = 1.1,

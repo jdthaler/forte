@@ -102,6 +102,8 @@ inline const PresetValue kPreset11[] = {{p::rate, 2.5}, {p::irregular, 0}, {p::s
 inline const PresetValue kPreset12[] = {{p::pressure, 0.25}, {p::vapour, 1}};
 inline const PresetValue kPreset13[] = {{p::echo, 1}};
 inline const PresetValue kPreset14[] = {{p::echo, 1}, {p::depth, 20}};
+inline const PresetValue kPreset15[] = {{p::pressure, 4}};
+inline const PresetValue kPreset16[] = {{p::liquid, 1}};
 inline const Preset kPresets[] = {
   {"Brook: air bubbles 30 cm down in water", nullptr, 0},
   {"Nozzles 20 m down: everything a major sixth up", kPreset1, 1},
@@ -118,6 +120,8 @@ inline const Preset kPresets[] = {
   {"Water vapour, a quarter atmosphere: ¾ of a semitone flatter", kPreset12, 2},
   {"Surface echo: the hydrophones hear the surface too", kPreset13, 1},
   {"Surface echo 20 m down: a slap after every bubble", kPreset14, 2},
+  {"Pressurised tank (4 atm): about an octave up", kPreset15, 1},
+  {"90 % glycerol: thick, but the treble still rings", kPreset16, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::spread}, {109, p::depth}, {111, p::pressure}, {113, p::irregular}, {114, p::rate}};
@@ -136,7 +140,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Every note a bubble ringing at its Minnaert frequency; depth, gas and pressure retune it.", .auSubtype = "Bubl",
     .vst3Id = {0xa1, 0x7f, 0x90, 0x48, 0xe8, 0xde, 0x36, 0x79, 0xa0, 0x70, 0x8f, 0x25, 0xb7, 0x5b, 0xca, 0x19},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 15,
+    .presets = kPresets, .presetCount = 17,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 57, .keyHi = 108, .space = Space::hold,
     .modWheel = p::rate, .modWheelMax = 40,

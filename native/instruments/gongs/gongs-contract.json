@@ -45,6 +45,9 @@
     {"name":"Steel sheet struck near the rim","values":{"material":"steel","thick":0.005,"strike":0.75,"hardness":300}},
     {"name":"Clamped rim (held, free to slide in its plane)","values":{"bc":"clamped","strike":0.2}},
     {"name":"Struck dead centre (no asymmetric modes)","values":{"strike":0}},
-    {"name":"Perfectly round: the twins in tune, no shimmer","values":{"asym":0}}
+    {"name":"Perfectly round: the twins in tune, no shimmer","values":{"asym":0}},
+    {"name":"Aluminium gong: light, and quick to die","values":{"material":"aluminium"}},
+    {"name":"Wind gong: thin and flat, struck near the rim","values":{"thick":0.004,"rise":0,"strike":0.8,"hardness":2,"speed":4}},
+    {"name":"A hand on the gong: choked on release","values":{"release":30}}
   ]
 }

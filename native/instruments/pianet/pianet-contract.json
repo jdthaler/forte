@@ -43,6 +43,8 @@
     {"name":"Plate edge level with the reed (odd harmonics)","values":{"pickup":"es","offset":0,"plateGap":0.36}},
     {"name":"Heavy solder tips","values":{"tipMass":3}},
     {"name":"Limp foam: notes ring after release","values":{"padC":0.02,"padK":0.2}},
-    {"name":"Through a valve combo","values":{"amp":"combo","drive":0.55}}
+    {"name":"Through a valve combo","values":{"amp":"combo","drive":0.55}},
+    {"name":"Stiff foam: a louder middle and treble","values":{"padK":3}},
+    {"name":"Light solder tips: longer reeds, more overtones","values":{"tipMass":0.45}}
   ]
 }

@@ -104,6 +104,9 @@ inline const PresetValue kPreset6[] = {{p::lock, 0}, {p::nbar, 60}};
 inline const PresetValue kPreset7[] = {{p::sigma, 0.6}, {p::detector, 0}};
 inline const PresetValue kPreset8[] = {{p::sigma, 4}};
 inline const PresetValue kPreset9[] = {{p::ramsey, 1}};
+inline const PresetValue kPreset10[] = {{p::potential, 1}, {p::eta, 0.9}};
+inline const PresetValue kPreset11[] = {{p::beats, 8}};
+inline const PresetValue kPreset12[] = {{p::detector, 1}};
 inline const Preset kPresets[] = {
   {"Square well, revivals on the beat", nullptr, 0},
   {"Morse molecule: octave echoes at T_rev/4", kPreset1, 1},
@@ -115,6 +118,9 @@ inline const Preset kPresets[] = {
   {"Three levels: a chord of Bohr lines", kPreset7, 2},
   {"Tight packet: bright, brief, many echoes", kPreset8, 1},
   {"Coherent restrike: Ramsey fringes", kPreset9, 1},
+  {"Morse molecule near dissociation: bright and lopsided", kPreset10, 2},
+  {"Long revivals: eight beats", kPreset11, 1},
+  {"Velocity detector: softer overtones", kPreset12, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::nbar}, {109, p::sigma}, {111, p::T1}, {113, p::ramseyDetune}, {114, p::dephase}};
@@ -133,7 +139,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Each key a wavepacket in a potential well: notes that collapse, return an octave up as the packet splits, and revive on the beat.", .auSubtype = "Qntm",
     .vst3Id = {0xa2, 0xcc, 0xbe, 0xc0, 0xeb, 0x9e, 0xf6, 0x0e, 0xdb, 0xa8, 0xac, 0x90, 0x66, 0xba, 0x73, 0xf5},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 10,
+    .presets = kPresets, .presetCount = 13,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::dephase, .modWheelMax = 10,

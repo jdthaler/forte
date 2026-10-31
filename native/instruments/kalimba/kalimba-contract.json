@@ -39,6 +39,9 @@
     {"name":"Marimbula (bass box)","values":{"box":25,"hole":90,"thick":2.5,"t60":10,"fullRange":true}},
     {"name":"Clamped at the bridge (6.27)","values":{"back":0}},
     {"name":"Back as long as the front (9th harmonic)","values":{"back":1}},
-    {"name":"Plucked on the first overtone’s node","values":{"pluck":0.71}}
+    {"name":"Plucked on the first overtone’s node","values":{"pluck":0.71}},
+    {"name":"Plucked near the bridge: bright overtones","values":{"pluck":0.4}},
+    {"name":"Thin tines: soft and quiet in the bass","values":{"thick":0.7}},
+    {"name":"Two bottle caps on a box kalimba","values":{"buzz":2}}
   ]
 }

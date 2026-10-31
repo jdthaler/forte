@@ -69,4 +69,6 @@ export const PRESETS = [
   { name: '3 tesla: quick chirps', p: { field: 3 } },
   { name: 'Relativistic: 300 keV electrons', p: { source: 'energy', energy: 300, receiver: 'antennas' } },
   { name: 'Perfect vacuum, quiet amplifier', p: { gas: 1e-11, noise: 0 } },
+  { name: 'A shallow trap: hardly any vibrato', p: { depth: 0.02 } },
+  { name: 'Tritium in the antenna ring: shifted harmonics', p: { source: 'tritium', receiver: 'antennas' } },
 ];

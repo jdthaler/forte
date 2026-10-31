@@ -42,6 +42,8 @@
     {"name":"Real travel time: the crack, then the whistler","values":{"travel":true,"sferic":0.6}},
     {"name":"Thin plasma: quick whistlers","values":{"density":0.05}},
     {"name":"Dawn chorus","values":{"chorus":10,"sferic":0.1}},
-    {"name":"Distant storms: long tweeks","values":{"sferic":1,"distance":7000}}
+    {"name":"Distant storms: long tweeks","values":{"sferic":1,"distance":7000}},
+    {"name":"By day: a low ionosphere (70 km), higher tweeks","values":{"iono":70}},
+    {"name":"Dense plasma: slow, drawn-out whistlers","values":{"density":5}}
   ]
 }

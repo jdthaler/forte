@@ -38,6 +38,8 @@
     {"name":"Flame at ⅝: octave plus subharmonic (period doubling)","values":{"xf":0.625,"listen":0.2,"flame":2.72}},
     {"name":"Flame low (8 %), quick flame: the octave takes over","values":{"xf":0.08,"lag":0.2,"flame":1.44,"listen":0.2}},
     {"name":"Cold glass: big warm-up drift","values":{"drift":30,"warm":3}},
-    {"name":"Hot-wire Rijke tube (short lag, wide bore, at ¼)","values":{"lag":0.1,"bore":0.05,"xf":0.25,"flame":3.34}}
+    {"name":"Hot-wire Rijke tube (short lag, wide bore, at ¼)","values":{"lag":0.1,"bore":0.05,"xf":0.25,"flame":3.34}},
+    {"name":"Heard side-on: the octave cancels, a hollow tone","values":{"listen":0}},
+    {"name":"Turbulent flames: breathy","values":{"noise":0.08}}
   ]
 }

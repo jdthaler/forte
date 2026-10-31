@@ -40,6 +40,8 @@
     {"name":"A dense plasma: Stark-broadened lines","values":{"density":30000000000000000,"temperature":30000}},
     {"name":"Fine structure, 12 × the real α","values":{"alphaScale":12,"slowmo":300000000}},
     {"name":"Quick and rough: less slow motion","values":{"slowmo":5000000}},
-    {"name":"Pure and slow: more slow motion","values":{"slowmo":300000000,"glow":30}}
+    {"name":"Pure and slow: more slow motion","values":{"slowmo":300000000,"glow":30}},
+    {"name":"A cool lamp (5,000 K): only the first lines","values":{"temperature":5000}},
+    {"name":"A hot lamp (80,000 K): far up the series","values":{"temperature":80000}}
   ]
 }
