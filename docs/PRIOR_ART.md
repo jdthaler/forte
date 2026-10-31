@@ -755,6 +755,17 @@ data):
   [doi:10.1088/1748-0221/6/08/P08007](https://doi.org/10.1088/1748-0221/6/08/P08007), each
   key's calibration heater firing at the note's rate. No earlier instrument made from these
   pulses is known to us.
+* **Trapped ions.** The Ion Chain plays the normal modes of a linear Coulomb crystal as
+  D. F. V. James computes them ("Quantum dynamics of cold trapped ions with application to
+  quantum computation", *Appl. Phys. B* **66**, 181–190 (1998),
+  [doi:10.1007/s003400050373](https://doi.org/10.1007/s003400050373)), in W. Paul's
+  radio-frequency trap (*Rev. Mod. Phys.* **62**, 531 (1990),
+  [doi:10.1103/RevModPhys.62.531](https://doi.org/10.1103/RevModPhys.62.531)), with the
+  linear–zigzag transition of J. P. Schiffer (*Phys. Rev. Lett.* **70**, 818 (1993),
+  [doi:10.1103/PhysRevLett.70.818](https://doi.org/10.1103/PhysRevLett.70.818)) and the
+  image-current detection and resistive cooling of D. J. Wineland and H. G. Dehmelt
+  (*J. Appl. Phys.* **46**, 919 (1975), [doi:10.1063/1.321602](https://doi.org/10.1063/1.321602)).
+  No earlier instrument made from these modes is known to us.
 * **Synchronisation and mode locking in musical oscillators.**
   B. van der Pol and J. van der Mark, "Frequency demultiplication",
   *Nature* **120**, 363–364 (1927),
