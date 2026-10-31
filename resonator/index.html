@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Magnetic Resonator Piano · Forte</title>
+  <meta name="description" content="An electromagnet over every string of a grand piano, fed from a pickup on the soundboard through a phase-locked loop: notes swell out of silence, sustain while the key is held, and sing a single harmonic.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="Magnetic Resonator Piano · Forte">
+  <meta property="og:description" content="An electromagnet over every string of a grand piano, fed from a pickup on the soundboard through a phase-locked loop: notes swell out of silence, sustain while the key is held, and sing a single harmonic.">
+  <meta property="og:url" content="https://forte.jthaler.net/resonator/">
+  <meta property="og:image" content="https://forte.jthaler.net/resonator/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Magnetic Resonator Piano's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="resonator">
+  <div class="forte-edge" aria-hidden="true"></div>
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Magnetic Resonator Piano</h1>
+      <span class="sub">a grand piano whose strings are pulled by an electromagnet over each note, in step with their own motion: notes swell from silence, sustain as long as the key is down, or sing a harmonic alone</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Strings">
+          <div class="card-head"><h2>The strings of <b id="focus-name">C4</b> under the coil</h2><span class="muted" id="string-read"></span></div>
+          <canvas id="string"></canvas>
+          <div class="caption">The key's first string, its motion in slow motion and hugely exaggerated, from the engine's partials. The coil over it lights up with its current; the hammer strikes at the left, an eighth of the way along; the bridge is at the right. A partial whose node sits under the coil cannot be driven.</div>
+        </div>
+        <div class="card" data-perform data-view="Swell">
+          <div class="card-head"><h2>Swell and lock</h2><span class="muted" id="swell-read"></span></div>
+          <canvas id="swell"></canvas>
+          <div class="caption">The last eight seconds of the focused note: the coil current's peak (gold), the string's swing under the coil (blue, in dB) and how far the phase-locked loop has pulled its oscillator from the partial it drives (green, in cents). A bass string swells for seconds; a treble string within a fraction of one.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the string's partials</span></div>
+          <canvas id="spectrum"></canvas>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">A struck note thins from the top down. A driven note does the opposite: it grows from nothing, and holds its partials as long as the key is down. The partials sit a little sharp of the harmonics (the wire's stiffness), which is why a rich drive never quite locks its upper harmonics.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Coil">
+          <div class="card-head"><h2>What the coil can reach on <b id="focus-name-2">C4</b></h2></div>
+          <canvas id="coil"></canvas>
+          <div class="caption">For each partial: how strongly the coil pulls it (the string's shape under the coil, averaged over its 21 mm), and what the drive sends (outlined). The partial the loop drives is filled. A bar near zero is a partial with its node under the coil.</div>
+        </div>
+        <div class="card" id="info-card">
+          <div class="card-head"><h2>Strings, coil and loop</h2></div>
+          <dl id="info"></dl>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows; a note is driven while its key is held</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>drive <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>sustain (dampers up): hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>MIDI: aftertouch pushes more current, mod wheel = brightness</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/resonator-main.js"></script>
+</body>
+</html>
