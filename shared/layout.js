@@ -643,9 +643,10 @@ if (window.ResizeObserver) {
   // the views rearrange as their room changes shape (a drag of the handle, the window)
   if (stage) new ResizeObserver(() => { const c = cols; arrange(); if (cols !== c) window.dispatchEvent(new Event('resize')); }).observe(stage);
   // --footer-h: toasts sit just above the keyboard and its tools, however they wrap;
-  // --bar-h: on a phone the controls' bar sticks above them
+  // --bar-h: on a phone the controls' bar sticks above them; --header-h: and below the header
   if (footer) new ResizeObserver(() => body.style.setProperty('--footer-h', `${footer.offsetHeight}px`)).observe(footer);
   if (bars.controls) new ResizeObserver(() => body.style.setProperty('--bar-h', `${bars.controls.bar.offsetHeight}px`)).observe(bars.controls.bar);
+  if (header) new ResizeObserver(() => body.style.setProperty('--header-h', `${header.offsetHeight}px`)).observe(header);
 }
 
 // ---------------------------------------------------------------------------
