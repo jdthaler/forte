@@ -14,7 +14,7 @@
 // `plugin.ready` marks an instrument whose native port is built and released as plugins (it has
 // a native/instruments/<id>/ folder); the landing page lists those under Plugins.
 
-export const FORTE_VERSION = '0.41.0';
+export const FORTE_VERSION = '0.41.1';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
@@ -189,6 +189,14 @@ export const INSTRUMENTS = [
     tagline: 'Iron bars pressed by their keys against a turning wet glass cylinder: cloth sticks and slips on the glass and keeps each bar singing as long as the key is down.',
     physics: 'Free–free bars · friction · regulation',
     accent: '#9fd8c4',
+  },
+  {
+    id: 'hurdygurdy', name: 'Hurdy-Gurdy', section: 'experimental', ready: true, version: '0.1.0', trim: -2.5,
+    plugin: { code: 'Hrdy', ready: true },
+    after: 'the French vielle à roue (18th century), in G/C',
+    tagline: 'A cranked, rosined wheel bows the melody strings and the drones; turn it faster and the trompette lifts its loose bridge, the chien, which buzzes on the soundboard in time with the hand.',
+    physics: 'Friction · tangent-stopped strings · a buzzing bridge',
+    accent: '#e08a5f',
   },
   {
     id: 'pyrophone', name: 'Pyrophone', section: 'experimental', ready: true, version: '0.9.0', trim: -3.5,

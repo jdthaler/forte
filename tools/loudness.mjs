@@ -1,6 +1,7 @@
-// How loud is each instrument at its defaults? One held C4 at the computer keyboard's
-// default velocity, through the page's own dry chain (shared/chain.js: tone, body and
-// volume, the convolvers scaled as a ConvolverNode scales them). The figure is
+// How loud is each instrument at its defaults? One held C4 (or the key nearest it, on a keyboard
+// that stops short of C4) at the computer keyboard's default velocity, through the page's own dry
+// chain (shared/chain.js: tone, body and volume, the convolvers scaled as a ConvolverNode scales
+// them). The figure is
 // the loudest momentary (400 ms) K-weighted loudness in the first 2 s, in LUFS (BS.1770).
 // The registry's `trim` (dB) evens instruments out; test/level-tests.mjs keeps them even.
 //
@@ -44,7 +45,8 @@ export async function measureAll() {
   for (const { id } of INSTRUMENTS.filter((i) => i.ready)) {
     const I = await loadInstrument(id), P = defaultsOf(I);
     const pl = new Player(I, await loadEngine(I), FS, P);
-    const out = pl.render(SEC, [[0, 'on', KEY, P.velocity ?? I.keyVelocity ?? 0.75]]);
+    const key = Math.min(Math.max(KEY, I.range[0]), I.range[1]);
+    const out = pl.render(SEC, [[0, 'on', key, P.velocity ?? I.keyVelocity ?? 0.75]]);
     const [L, Rr] = applyChain({ ...I, id: '' }, out, P, FS, { room: false }); // trim: added by the caller
     rows.push({ id, ...measure([L, Rr]) });
   }
