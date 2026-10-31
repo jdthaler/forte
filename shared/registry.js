@@ -29,6 +29,26 @@ export const SECTIONS = [
     blurb: 'Keyboards made of the apparatus physicists build to study nature: an accelerator\'s storage ring and its RF cavities, a collider\'s calorimeter crystals, the trap that weighs the neutrino and the magnet that listens for dark matter, each heard through the pickups and antennas that read it out.' },
 ];
 
+// The front page's filters, besides the sections: each instrument names one option of each
+// (`vibrates` and `notes`), and the landing page builds its chips from this list.
+// `notes` is how a held note behaves: 'ring' if it dies away while the key is still down (struck,
+// plucked, kicked: a held middle C more than 10 dB down after five seconds at the defaults),
+// 'hold' if it lasts as long as the key (blown, bowed, driven).
+export const FILTERS = [
+  { id: 'vibrates', label: 'What sounds', options: [
+    { id: 'strings', label: 'Strings', title: 'Struck, plucked, bowed and wind-blown strings' },
+    { id: 'solids', label: 'Bars & bells', title: 'Bars, tines, reeds, springs, plates, glass and bells' },
+    { id: 'air', label: 'Air', title: 'Pipes, free reeds, flames and bubbles' },
+    { id: 'circuits', label: 'Circuits', title: 'Tonewheels, neon lamps, an electric arc, coupled oscillators and RF cavities' },
+    { id: 'space', label: 'Space', title: 'Black holes, stars, planets, the magnetosphere and the early universe' },
+    { id: 'matter', label: 'Particles', title: 'Atoms, electrons, particle beams, cold crystals and dark matter' },
+  ] },
+  { id: 'notes', label: 'Notes', options: [
+    { id: 'ring', label: 'Ring out', title: 'Struck or plucked: each note dies away, even while its key is held' },
+    { id: 'hold', label: 'Sustain', title: 'Blown, bowed or driven: each note lasts as long as its key is held' },
+  ] },
+];
+
 export const INSTRUMENTS = [
   {
     id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.11.0', trim: 3,
@@ -36,6 +56,7 @@ export const INSTRUMENTS = [
     after: 'the concert grand',
     tagline: 'Stiff strings, felt hammers and a shared bridge — then swap the strings for square bars, triangular bars or twisting ribbons.',
     physics: 'Modal strings · nonlinear hammers · torsion',
+    vibrates: 'strings', notes: 'ring',
     accent: '#5aa9ff',
   },
   {
@@ -44,6 +65,7 @@ export const INSTRUMENTS = [
     after: 'the Flemish double-manual harpsichord (Ruckers, 1600s)',
     tagline: 'A quill bends, slips off the string and plucks it; stops change where and how it plucks.',
     physics: 'Plectrum contact and release · plucked stiff strings',
+    vibrates: 'strings', notes: 'ring',
     accent: '#f4d39b',
   },
   {
@@ -52,6 +74,7 @@ export const INSTRUMENTS = [
     after: 'the Baroque pipe organ',
     tagline: 'Air jets flutter against the pipe mouths: each note starts with a chiff, overblows when pushed, and sags when the wind runs short.',
     physics: 'Jet–edge feedback · flue pipes · shared wind',
+    vibrates: 'air', notes: 'hold',
     accent: '#9fb4ff',
   },
   {
@@ -60,6 +83,7 @@ export const INSTRUMENTS = [
     after: 'the harmonium and the accordion',
     tagline: 'Brass reeds driven by the airflow they choke; paired reeds tuned a little apart give the musette shimmer.',
     physics: 'Self-excited free reeds · bellows pressure',
+    vibrates: 'air', notes: 'hold',
     accent: '#ff9fb0',
   },
   {
@@ -68,6 +92,7 @@ export const INSTRUMENTS = [
     after: 'the Deagan vibraharp (1927)',
     tagline: 'Undercut aluminium bars over tuned tubes, with motor-driven discs that open and close the resonators.',
     physics: 'Tuned bars · coupled resonators · rotating valves',
+    vibrates: 'solids', notes: 'ring',
     accent: '#5fd0c8',
   },
   {
@@ -76,6 +101,7 @@ export const INSTRUMENTS = [
     after: 'the Flemish carillon (Hemony bells, 1650s)',
     tagline: 'Bronze bells tuned partial by partial; the note you hear, the strike note, is a virtual pitch made by partials an octave and more above it.',
     physics: 'Bell modes by finite elements · Hertz clapper · virtual pitch',
+    vibrates: 'solids', notes: 'ring',
     accent: '#d9b45f',
   },
   {
@@ -84,6 +110,7 @@ export const INSTRUMENTS = [
     after: 'the Mustel celesta (Paris, 1886)',
     tagline: 'Felt hammers strike thin steel bars, each over a wooden box tuned to it: the bell-like sugar-plum sound.',
     physics: 'Timoshenko bars · bar–box air coupling · felt hammers',
+    vibrates: 'solids', notes: 'ring',
     accent: '#b9a4ff',
   },
   {
@@ -92,6 +119,7 @@ export const INSTRUMENTS = [
     after: 'the African mbira and Hugh Tracey’s kalimba (1950s)',
     tagline: 'Steel tines clamped behind a bridge and plucked by the thumbs, over a wooden box whose sound hole a finger can cover.',
     physics: 'Clamped–supported–free beams · Helmholtz box · rattling caps',
+    vibrates: 'solids', notes: 'ring',
     accent: '#d9a066',
   },
   {
@@ -100,6 +128,7 @@ export const INSTRUMENTS = [
     after: 'the Trinidad steelpan (1940s)',
     tagline: 'Domed note areas sunk into an oil drum, hammered until octave and twelfth ring true; struck hard, the dome pumps the octave out of the fundamental.',
     physics: 'Tuned shallow shells · 1 : 2 : 3 internal resonance · coupled notes',
+    vibrates: 'solids', notes: 'ring',
     accent: '#ffb347',
   },
   {
@@ -108,6 +137,7 @@ export const INSTRUMENTS = [
     after: "Ctesibius's water organ (3rd century BC), and the organs of Dion and Aquincum",
     tagline: 'The first keyboard: hand pumps fill a bowl standing in water, whose weight holds the wind steady, while the pump strokes and the water’s bounce still make it breathe.',
     physics: 'Hydrostatic wind regulator · water bouncing on the air · flue pipes on slides',
+    vibrates: 'air', notes: 'hold',
     accent: '#c9a46a',
   },
   {
@@ -116,6 +146,7 @@ export const INSTRUMENTS = [
     after: 'the Yamaha CP-70',
     tagline: 'A real piano action with no soundboard: piezo pickups under the bridge hear the strings directly.',
     physics: 'Bridge force · piezoelectric pickup',
+    vibrates: 'strings', notes: 'ring',
     accent: '#7fb2ff',
   },
   {
@@ -124,6 +155,7 @@ export const INSTRUMENTS = [
     after: 'the Hammond B-3 and Leslie',
     tagline: '91 spinning gear-driven wheels, bouncing key contacts, a scanner on an LC delay line and a rotating Doppler horn.',
     physics: 'Gear ratios · shared wheels · Doppler',
+    vibrates: 'circuits', notes: 'hold',
     accent: '#f0b35a',
   },
   {
@@ -132,6 +164,7 @@ export const INSTRUMENTS = [
     after: 'the Fender Rhodes',
     tagline: 'Each key an asymmetric tuning fork of steel tine and brass bar, heard through a nonlinear magnetic pickup.',
     physics: 'Coupled cantilevers · pickup nonlinearity',
+    vibrates: 'solids', notes: 'ring',
     accent: '#ef5a4a',
   },
   {
@@ -140,6 +173,7 @@ export const INSTRUMENTS = [
     after: 'the Wurlitzer 200A',
     tagline: 'Struck steel reeds tuned with solder, sensed as one plate of a charged capacitor.',
     physics: 'Cantilever reeds · electrostatic pickup',
+    vibrates: 'solids', notes: 'ring',
     accent: '#e8a0c8',
   },
   {
@@ -148,6 +182,7 @@ export const INSTRUMENTS = [
     after: 'the Hohner Clavinet',
     tagline: 'A rubber tangent pins the string to an anvil; two magnetic pickups comb-filter the twang.',
     physics: 'Impact on an anvil · pickup position',
+    vibrates: 'strings', notes: 'ring',
     accent: '#c6e36a',
   },
   {
@@ -156,6 +191,7 @@ export const INSTRUMENTS = [
     after: 'the Hohner Pianet',
     tagline: 'No hammers at all: tacky pads grab each reed and let it go.',
     physics: 'Adhesion and release · reed pickup',
+    vibrates: 'solids', notes: 'ring',
     accent: '#ffcf70',
   },
   {
@@ -164,6 +200,7 @@ export const INSTRUMENTS = [
     after: 'Friedrich Trautwein’s Trautonium (1930) and Oskar Sala’s Mixtur-Trautonium',
     tagline: 'A neon lamp flashing as its capacitor charges through a wire pressed onto a rail: the finger slides the pitch, lamps that fire on every n-th flash add the subharmonics, and every flash rings fixed resonant circuits like a voice’s formants.',
     physics: 'Neon relaxation oscillator · pulse-synchronised frequency dividers · shock-excited resonant circuits',
+    vibrates: 'circuits', notes: 'hold',
     accent: '#7ee0ff',
   },
   {
@@ -180,6 +217,7 @@ export const INSTRUMENTS = [
     after: "Leonardo da Vinci's design (1488)",
     tagline: 'Rosined wheels bow the strings while you hold the keys: stick–slip friction, from scratch.',
     physics: 'Friction · Helmholtz motion',
+    vibrates: 'strings', notes: 'hold',
     accent: '#d79a62',
   },
   {
@@ -188,6 +226,7 @@ export const INSTRUMENTS = [
     after: "Benjamin Franklin's armonica (1761)",
     tagline: 'Wet fingers on spinning glass bowls: stick–slip friction drives the shell modes, and rotation makes the doublets warble.',
     physics: 'Shell modes · friction · fluid loading',
+    vibrates: 'solids', notes: 'hold',
     accent: '#9fe7ff',
   },
   {
@@ -196,6 +235,7 @@ export const INSTRUMENTS = [
     after: "Ernst Chladni's clavicylinder (1800)",
     tagline: 'Iron bars pressed by their keys against a turning wet glass cylinder: cloth sticks and slips on the glass and keeps each bar singing as long as the key is down.',
     physics: 'Free–free bars · friction · regulation',
+    vibrates: 'solids', notes: 'hold',
     accent: '#9fd8c4',
   },
   {
@@ -204,6 +244,7 @@ export const INSTRUMENTS = [
     after: 'the French vielle à roue (18th century), in G/C',
     tagline: 'A cranked, rosined wheel bows the melody strings and the drones; turn it faster and the trompette lifts its loose bridge, the chien, which buzzes on the soundboard in time with the hand.',
     physics: 'Friction · tangent-stopped strings · a buzzing bridge',
+    vibrates: 'strings', notes: 'hold',
     accent: '#e08a5f',
   },
   {
@@ -212,6 +253,7 @@ export const INSTRUMENTS = [
     after: "Frédéric Kastner's flame organ (1873)",
     tagline: 'Flames in glass tubes sing by themselves once they cross a threshold — and remember having sung.',
     physics: 'Thermoacoustics · Hopf bifurcation',
+    vibrates: 'air', notes: 'hold',
     accent: '#ff7a45',
   },
   {
@@ -220,6 +262,7 @@ export const INSTRUMENTS = [
     after: "William Duddell's singing arc (1900)",
     tagline: 'An electric arc lamp that sings: its negative resistance drives an LC circuit, and the arc itself is the loudspeaker.',
     physics: 'Negative resistance · LC oscillator · plasma heating',
+    vibrates: 'circuits', notes: 'hold',
     accent: '#ffe36b',
   },
   {
@@ -227,6 +270,7 @@ export const INSTRUMENTS = [
     plugin: { code: 'Huyg', ready: true },
     tagline: 'Relaxation oscillators that pull each other into just intonation — Arnold tongues you can play.',
     physics: 'Pulse-coupled oscillators · mode locking',
+    vibrates: 'circuits', notes: 'hold',
     accent: '#ff8a3d',
   },
   {
@@ -234,6 +278,7 @@ export const INSTRUMENTS = [
     plugin: { code: 'Gong', ready: true },
     tagline: 'Thin plates whose stiffness grows with amplitude: strike softly for a bell, hard for a crash.',
     physics: 'Von Kármán plates · wave turbulence',
+    vibrates: 'solids', notes: 'ring',
     accent: '#e6c15a',
   },
   {
@@ -241,6 +286,7 @@ export const INSTRUMENTS = [
     plugin: { code: 'BHol', ready: true },
     tagline: 'Every key a Kerr black hole, ringing in quasinormal modes computed from the Teukolsky equation.',
     physics: 'General relativity · quasinormal modes',
+    vibrates: 'space', notes: 'ring',
     accent: '#b18cff',
   },
   {
@@ -248,6 +294,7 @@ export const INSTRUMENTS = [
     plugin: { code: 'Qntm', ready: true },
     tagline: 'Each key a wavepacket in a potential well: notes that collapse, return an octave up as the packet splits, and revive on the beat.',
     physics: 'Schrödinger equation · quantum revivals',
+    vibrates: 'matter', notes: 'ring',
     accent: '#73e2b8',
   },
   {
@@ -255,6 +302,7 @@ export const INSTRUMENTS = [
     plugin: { code: 'Bubl', ready: true },
     tagline: 'Every note a bubble ringing at its Minnaert frequency; depth, gas and pressure retune it.',
     physics: 'Bubble acoustics · Minnaert resonance',
+    vibrates: 'air', notes: 'hold',
     accent: '#6fb8ff',
   },
   {
@@ -262,6 +310,7 @@ export const INSTRUMENTS = [
     plugin: { code: 'Sprg', ready: true },
     tagline: 'Struck steel coils, each cut to sound its note; their waves travel at different speeds by pitch, so every echo arrives as a chirp.',
     physics: 'Helical rods (Wittrick) · dispersion · chirped echoes',
+    vibrates: 'solids', notes: 'ring',
     accent: '#c0c0d8',
   },
   {
@@ -269,6 +318,7 @@ export const INSTRUMENTS = [
     plugin: { code: 'Star', ready: true },
     tagline: 'Every key a star whose oscillations are rung continuously by convection, from dwarfs like the Sun to red giants: combs of modes that breathe rather than strike.',
     physics: 'Asteroseismology · stochastically driven modes',
+    vibrates: 'space', notes: 'hold',
     accent: '#ff6f91',
   },
   {
@@ -276,6 +326,7 @@ export const INSTRUMENTS = [
     plugin: { code: 'WHrp', ready: true },
     tagline: 'Strings sung by the wind: the vortices they shed lock onto one of their harmonics, and hop up the series as the wind rises.',
     physics: 'Vortex shedding · lock-in · wake oscillators',
+    vibrates: 'strings', notes: 'hold',
     accent: '#a8e6a1',
   },
   {
@@ -283,6 +334,7 @@ export const INSTRUMENTS = [
     plugin: { code: 'Stor', ready: true },
     tagline: 'Every key a particle accelerator\'s storage ring, heard through a beam pickup: kicked bunches whose oscillation fades and recoheres.',
     physics: 'Accelerator physics · betatron decoherence · synchrotron motion',
+    vibrates: 'matter', notes: 'hold',
     accent: '#6ec6ff',
   },
   {
@@ -290,6 +342,7 @@ export const INSTRUMENTS = [
     plugin: { code: 'Rfca', ready: true },
     tagline: 'Every key a superconducting accelerator cavity, rung by the bunch that crosses it: nine coupled cells that beat, higher-order modes for a bell\'s partials.',
     physics: 'RF cavities · coupled-cell passbands · beam loading',
+    vibrates: 'circuits', notes: 'ring',
     accent: '#9fb4ff',
   },
   {
@@ -297,6 +350,7 @@ export const INSTRUMENTS = [
     plugin: { code: 'Shwr', ready: true },
     tagline: 'Every key a crystal of a collider\'s calorimeter, rung by the heat of the particle shower inside it: deeper showers for higher energies, a darker note.',
     physics: 'Calorimetry · electromagnetic and hadronic showers · the thermo-acoustic effect',
+    vibrates: 'matter', notes: 'ring',
     accent: '#8fd4ff',
   },
   {
@@ -304,6 +358,7 @@ export const INSTRUMENTS = [
     plugin: { code: 'Whis', ready: true },
     tagline: 'Lightning\'s radio crack, drawn out along the Earth\'s magnetic field into falling tones: every key a field line, its whistler\'s nose the note.',
     physics: 'Magnetospheric physics · whistler-mode dispersion · the plasmasphere',
+    vibrates: 'space', notes: 'ring',
     accent: '#7dffb0',
   },
   {
@@ -311,6 +366,7 @@ export const INSTRUMENTS = [
     plugin: { code: 'Univ', ready: true },
     tagline: 'Every key a young universe, its plasma ringing with the sound waves the microwave background shows: baryons make the odd harmonics louder, diffusion fades the high ones.',
     physics: 'Cosmology · acoustic oscillations of the photon–baryon fluid · recombination and Silk damping',
+    vibrates: 'space', notes: 'hold',
     accent: '#ff9a62',
   },
   {
@@ -318,6 +374,7 @@ export const INSTRUMENTS = [
     plugin: { code: 'Hydr', ready: true },
     tagline: 'Every key a tube of glowing hydrogen, its spectral lines played at their exact ratios with the red Hα line on the note: the atoms cascade down the levels in slow motion, so the lines light one after another, each as wide as its levels\' lifetimes, the atoms\' heat and the ions\' fields make it.',
     physics: 'Atomic physics · Einstein coefficients and the radiative cascade · recombination · Stark and Doppler broadening · fine structure',
+    vibrates: 'matter', notes: 'hold',
     accent: '#ff5a6e',
   },
   {
@@ -325,6 +382,7 @@ export const INSTRUMENTS = [
     plugin: { code: 'Proj', ready: true },
     tagline: 'Every key a magnetic trap holding one electron, heard by its cyclotron radiation as the Project 8 neutrino-mass experiment hears it: a tone that chirps up as the electron cools, wavers as it bounces, and stops when it escapes.',
     physics: 'Cyclotron radiation emission spectroscopy · relativistic radiation reaction · magnetic bottles',
+    vibrates: 'matter', notes: 'hold',
     accent: '#c99bff',
   },
   {
@@ -332,6 +390,7 @@ export const INSTRUMENTS = [
     plugin: { code: 'Abra', ready: true },
     tagline: 'Every key a universe whose dark matter is an axion of that key\'s mass, heard as the ABRACADABRA experiment would hear it: a toroidal magnet turns the axion into a faint flux through a pickup loop, a tone that swells and fades as the halo\'s waves drift in and out of step, over the hiss of the SQUID.',
     physics: 'Axion electrodynamics · the Standard Halo Model · SQUID readout',
+    vibrates: 'matter', notes: 'hold',
     accent: '#7fd8c4',
   },
   {
@@ -339,6 +398,7 @@ export const INSTRUMENTS = [
     plugin: { code: 'Tess', ready: true },
     tagline: 'Every key a planet crossing its star, its light played as NASA\'s Transiting Exoplanet Survey Satellite records it, sped up until each year is a note: the dips are the waveform, the star\'s limb darkening rounds them, and the photon noise hisses under faint stars.',
     physics: 'Exoplanet transits · Kepler\'s third law · limb darkening · photon-counting noise',
+    vibrates: 'space', notes: 'hold',
     accent: '#ff7b6b',
   },
   {
@@ -346,6 +406,7 @@ export const INSTRUMENTS = [
     plugin: { code: 'Cuor', ready: true },
     tagline: 'Every key one of CUORE\'s tellurium dioxide crystals, ten thousandths of a degree above absolute zero under the Gran Sasso: its heater fires pulses of heat at the note\'s rate, sped up, and a germanium thermistor turns each into a voltage, rising as the electrons warm and fading as the crystal cools through its Teflon holders.',
     physics: 'Cryogenic calorimetry · Debye\'s T³ heat capacity · hopping conduction in NTD germanium · electrothermal feedback',
+    vibrates: 'matter', notes: 'hold',
     accent: '#7ab8ff',
   },
 ];

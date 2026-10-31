@@ -6,7 +6,8 @@ import { readFileSync, existsSync, readdirSync, mkdtempSync, mkdirSync, writeFil
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { INSTRUMENTS, SECTIONS, FORTE_VERSION, TEMPLATE } from '../shared/registry.js';
+import { INSTRUMENTS, SECTIONS, FILTERS, FORTE_VERSION, TEMPLATE } from '../shared/registry.js';
+import { words, hits, matches } from '../shared/search.js';
 import { ASSETS, notes } from '../tools/plugin-release.mjs';
 import { withTags, pictureOf } from '../tools/make-previews.mjs';
 import { readNotes, parseNote, plan, bump } from '../tools/release.mjs';
@@ -159,6 +160,33 @@ test('five sections, each with a tab name and at least one ready instrument; rea
     assert.ok(list.some((i) => i.ready), `${sec.id} has nothing to play`);
     assert.ok(list.findIndex((i) => !i.ready) === -1 || list.slice(list.findIndex((i) => !i.ready)).every((i) => !i.ready), `${sec.id}: a workshop instrument before a ready one`);
   }
+});
+test('every instrument has one option of each front-page filter, and every option has an instrument', () => {
+  for (const f of FILTERS) {
+    assert.ok(f.id && f.label && f.options.length > 1, f.id);
+    for (const o of f.options) assert.ok(o.id && o.label && o.title, `${f.id}.${o.id}`);
+    for (const i of INSTRUMENTS) {
+      assert.ok(f.options.some((o) => o.id === i[f.id]), `${i.id}: ${f.id} should be one of ${f.options.map((o) => `'${o.id}'`).join(', ')} (shared/registry.js, FILTERS), not ${JSON.stringify(i[f.id])}`);
+    }
+    for (const o of f.options) assert.ok(INSTRUMENTS.some((i) => i.ready && i[f.id] === o.id), `${f.id}.${o.id} has no instrument`);
+  }
+});
+test('the front page\'s search finds words by their start, without case or accents', () => {
+  const find = (q, chosen) => INSTRUMENTS.filter((i) => i.ready && matches(i, words(q), chosen)).map((i) => i.id);
+  assert.deepEqual(find('karman'), ['gongs'], 'Kármán');
+  assert.deepEqual(find('SCHRODINGER'), ['quantum'], 'Schrödinger');
+  assert.deepEqual(find('rhodes'), ['tines'], 'what it is after');
+  assert.ok(find('harp').includes('harpsichord') && find('harp').includes('windharp'), 'harp');
+  assert.ok(!find('chord').includes('harpsichord'), 'only at the start of a word');
+  assert.deepEqual(find('flame organ'), ['pyrophone'], 'every word');
+  assert.equal(find('').length, INSTRUMENTS.filter((i) => i.ready).length, 'nothing typed: everything');
+  assert.ok(find('phenomena').includes('blackhole'), 'its section');
+  const strings = find('', new Map([['vibrates', new Set(['strings'])]]));
+  assert.ok(strings.includes('piano') && !strings.includes('pipes'), 'a filter');
+  const either = find('', new Map([['vibrates', new Set(['strings', 'air'])], ['notes', new Set(['hold'])]]));
+  assert.ok(either.includes('pipes') && either.includes('bowed') && !either.includes('piano'), 'options of one filter add up; filters narrow');
+  assert.deepEqual(hits('Von Kármán plates', words('karman pl')), [[4, 10], [11, 13]], 'where to mark');
+  assert.deepEqual(hits('Bell modes', []), []);
 });
 test('every ready instrument has a page, a README and a test suite', () => {
   for (const i of ready) {
