@@ -57,6 +57,7 @@ replace the bar physics with yours.
 <slug>/src/<slug>-instrument.js  the descriptor: everything but the page (below)
 <slug>/src/<slug>-wasm.js     the engine and model, built from the C++ as WebAssembly (below)
 <slug>/src/<slug>-main.js     createShell({ ...INSTRUMENT, … }) + views
+<slug>/src/<slug>-tour.js     the guided tour of its physics (below)
 <slug>/wasm/<slug>.wasm       the C++ built as WebAssembly (committed)
 native/instruments/<slug>/    the physics, in C++: the model and the real-time engine
 <slug>/README.md
@@ -88,6 +89,7 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `midi.js` | Web MIDI for every page (the shell and the five older pages): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen next to Enable MIDI, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling; `pageMpe` decodes MPE for a page (below) and turns it into the engine's `noteBend`, `slide` and `pressure` messages. |
 | `mpe.js` | MPE (MIDI Polyphonic Expression), message for message as the plugins' `forte/mpe.h`: zones from the MPE Configuration Message, member channels' bend (±48 semitones unless RPN 0 says otherwise), pressure and CC74, the Auto/On/Off mode, and `bendRatio`, a note's bend along the keyboard's tuning. |
 | `focus.js` | who gets a key press: a control reached with Tab keeps the keys it uses (Space ticks a stop, arrows move a slider); one last touched with the mouse or a finger hands them back to the instrument. Every page's key handler asks `controlOwns(e)` first. |
+| `tour.js` | the guided tour of an instrument's physics: *▶ Tour* in the views' bar and the card that steps through `<slug>-tour.js` ("The guided tour", below) |
 | `notes.js`, `markdown.js` | **How it works**: the page's README in a dialog (button by the title, or a link to `…/#about`) |
 | `instrument.css`, `forte.css` | page layout; Forte nav and notes |
 
@@ -418,6 +420,48 @@ To fit in:
   (`data-space-mode="tap"` when Space toggles something) for the pedal
   button. The shell sets it from `space`.
 
+### The guided tour
+
+Every instrument has a tour of its physics: *▶ Tour*, at the start of the views' bar, opens a
+card that goes through it in a few steps. Each step shows the views it is about, sets the
+instrument up, plays a short phrase on the keys and says what to listen and look for, and why.
+Ending the tour (✕, *Done*, Escape or leaving the page) puts back the views, the preset and every
+setting the player had; the volume is never touched.
+
+The tour is `<slug>/src/<slug>-tour.js`, loaded by the page after its main script
+(`<script type="module" src="src/<slug>-tour.js"></script>`), and written with
+`shared/tour.js`, whose header lists a step's fields:
+
+```js
+import { tour, note, chord, run } from '../../shared/tour.js';
+
+export const TOUR = tour('gongs', [
+  {
+    title: 'Harder: the crash',
+    views: ['Spectrogram', 'Energy cascade'],
+    preset: 'Tam-tam: thin, big soft beater, off centre',
+    set: { strike: 0.3 },
+    play: [note('A3', { dur: 3, vel: 0.1 }), note('A3', { at: 3, dur: 5, vel: 1 }), { at: 8, set: { thick: 0.004 } }],
+    text: `What to listen for, in the notes' Markdown…`,
+  },
+]);
+```
+
+- Write three to eight steps, from the README's "What to listen for": one idea each, the first
+  the instrument at its plainest, then one effect at a time, each heard by contrast (soft then
+  hard, off then on: a `{ at, set }` partway through a step). End on something worth playing.
+- Keep the text to two short paragraphs (900 characters at most): the card is small, and on a
+  phone it pushes the views down. Name what to look for in which view.
+- A step starts from its `preset` (or the defaults) plus its `set`, by contract id
+  (`shared/presets.js`), so a page with its own controls (the organ's console) is set up the
+  same way. The controls in `set` are outlined while the step lasts.
+- Play within the keys the instrument has (a historical compass unless its checkbox is in
+  `set`), for 20 s at most a step; `{ at, pedal: true }` holds Space, on instruments with a pedal.
+
+`test/tour-tests.mjs` checks every tour against its instrument and page: the views, presets,
+parameters and their ranges, the keys and the lengths. `tools/new-instrument.mjs` copies the
+template's, which is to be rewritten for the new instrument.
+
 ### Tests
 
 Copy the pattern in `test/template-tests.mjs`. Each file is a plain Node
@@ -448,8 +492,9 @@ reports all failures; `node tools/test-all.mjs <name>` runs a subset.
 
 The page itself is checked by `node tools/check-pages.mjs <slug>`: in
 headless Chromium at phone, tablet and desktop sizes, no console errors, no
-sideways scrolling, and the perform controls, ⓘ buttons, "Default settings"
-and keys in place (CI's `pages` job runs it on every page).
+sideways scrolling, and the perform controls, ⓘ buttons, "Default settings",
+Tour and keys in place, and each tour taken from start to end on a computer and a phone (CI's
+`pages` job runs it on every page).
 
 ### The picture a shared link shows
 
