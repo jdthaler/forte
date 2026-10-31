@@ -94,6 +94,9 @@ inline const PresetValue kPreset7[] = {{p::tilt, 1}};
 inline const PresetValue kPreset8[] = {{p::listener, 1}};
 inline const PresetValue kPreset9[] = {{p::doppler, 0}};
 inline const PresetValue kPreset10[] = {{p::recombination, 10}};
+inline const PresetValue kPreset11[] = {{p::neutrinos, 0}};
+inline const PresetValue kPreset12[] = {{p::tilt, 0.9}};
+inline const PresetValue kPreset13[] = {{p::helium, 0}};
 inline const Preset kPresets[] = {
   {"Our universe (Planck 2018)", nullptr, 0},
   {"Hardly any baryons: odd and even alike", kPreset1, 1},
@@ -106,6 +109,9 @@ inline const Preset kPresets[] = {
   {"Inside the plasma: the light streams away", kPreset8, 1},
   {"Without the Doppler shift", kPreset9, 1},
   {"A slow universe: ten seconds to recombination", kPreset10, 1},
+  {"No neutrinos: an earlier equality", kPreset11, 1},
+  {"A red tilt (n_s = 0.9): the low harmonics loud", kPreset12, 1},
+  {"No helium: the plasma holds the light longer", kPreset13, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::darkMatter}, {109, p::recombination}, {111, p::neutrinos}, {113, p::baryons}, {114, p::tilt}};
@@ -124,7 +130,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Every key a young universe, its plasma ringing with the sound waves the microwave background shows: baryons make the odd harmonics louder, diffusion fades the high ones.", .auSubtype = "Univ",
     .vst3Id = {0x38, 0xa4, 0x22, 0x12, 0x30, 0xeb, 0x5c, 0x9c, 0xd2, 0xd6, 0xc5, 0xe5, 0x73, 0x9f, 0x1c, 0x64},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 11,
+    .presets = kPresets, .presetCount = 14,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::tilt, .modWheelMax = 1.3,

@@ -133,6 +133,9 @@ inline const PresetValue kPreset7[] = {{p::strike, 0.5}};
 inline const PresetValue kPreset8[] = {{p::rIn, 22}};
 inline const PresetValue kPreset9[] = {{p::bass, 4}, {p::mid, -5}, {p::treble, 7}};
 inline const PresetValue kPreset10[] = {{p::tremDepth, 0.6}, {p::tremRate, 5.5}};
+inline const PresetValue kPreset11[] = {{p::hardness, 4}};
+inline const PresetValue kPreset12[] = {{p::strike, 0.03}};
+inline const PresetValue kPreset13[] = {{p::sympathy, 0.8}};
 inline const Preset kPresets[] = {
   {"CP-70", nullptr, 0},
   {"Same strings on a soundboard, heard by microphones", kPreset1, 2},
@@ -145,6 +148,9 @@ inline const Preset kPresets[] = {
   {"Low-impedance preamp (thin bass)", kPreset8, 1},
   {"Stage EQ: bright and scooped", kPreset9, 3},
   {"Stereo tremolo", kPreset10, 2},
+  {"Hard, worn felt: a bright clank", kPreset11, 1},
+  {"Struck near the end: every partial bright", kPreset12, 1},
+  {"Strong sympathetic resonance (hold the pedal)", kPreset13, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::maxFreq, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::bass}, {109, p::mid}, {111, p::treble}, {113, p::tremRate}, {114, p::tremDepth}};
@@ -163,7 +169,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "A real piano action with no soundboard: piezo pickups under the bridge hear the strings directly.", .auSubtype = "EGrd",
     .vst3Id = {0x05, 0xb4, 0x87, 0xca, 0x60, 0x04, 0x56, 0x72, 0x51, 0x4d, 0x75, 0xd6, 0x99, 0xc4, 0x8d, 0x16},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 11,
+    .presets = kPresets, .presetCount = 14,
     .keep = kKeep, .keepCount = 18,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = -1, .modWheelMax = 0,

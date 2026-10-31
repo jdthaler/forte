@@ -67,4 +67,6 @@ export const PRESETS = [
   { name: 'Heavy solder tips', p: { tipMass: 3 } },
   { name: 'Limp foam: notes ring after release', p: { padC: 0.02, padK: 0.2 } },
   { name: 'Through a valve combo', p: { amp: 'combo', drive: 0.55 } },
+  { name: 'Stiff foam: a louder middle and treble', p: { padK: 3 } },
+  { name: 'Light solder tips: longer reeds, more overtones', p: { tipMass: 0.45 } },
 ];

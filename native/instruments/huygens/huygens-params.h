@@ -108,6 +108,7 @@ inline const PresetValue kPreset6[] = {{p::mistune, 25}, {p::kick, 0.06}};
 inline const PresetValue kPreset7[] = {{p::drift, 12}, {p::driftRate, 0.4}, {p::kick, 0.05}};
 inline const PresetValue kPreset8[] = {{p::tuning, 1}, {p::tonic, 0}, {p::kick, 0}};
 inline const PresetValue kPreset9[] = {{p::kick, 0}, {p::rSrc, 150000}};
+inline const PresetValue kPreset10[] = {{p::vNom, 380}};
 inline const Preset kPresets[] = {
   {"Default (5.5%): triads lock just in every voicing; bare semitones merge", nullptr, 0},
   {"Uncoupled: plain equal temperament", kPreset1, 1},
@@ -119,6 +120,7 @@ inline const Preset kPresets[] = {
   {"Drifting resistors, held together", kPreset7, 3},
   {"Just-tuned in C, no coupling (compare)", kPreset8, 3},
   {"Rail sag only (slow, weak coupling)", kPreset9, 2},
+  {"High supply (380 V): straighter, brighter ramps", kPreset10, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::tone, p::body, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::rSrc}, {109, p::mistune}, {111, p::body}, {113, p::tone}, {114, p::kick}};
@@ -137,7 +139,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Relaxation oscillators that pull each other into just intonation — Arnold tongues you can play.", .auSubtype = "Huyg",
     .vst3Id = {0xdd, 0x73, 0xc0, 0xe3, 0xf6, 0x2e, 0xde, 0xa6, 0x13, 0x1b, 0xe3, 0xc4, 0xe8, 0x15, 0x0a, 0x9c},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 10,
+    .presets = kPresets, .presetCount = 11,
     .keep = kKeep, .keepCount = 19,
     .keyLo = 21, .keyHi = 108, .space = Space::hold,
     .modWheel = p::kick, .modWheelMax = 0.15,

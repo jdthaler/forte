@@ -67,4 +67,6 @@ export const PRESETS = [
   { name: 'Cuoricino\'s small crystal (3 cm)', p: { side: 3, gain: 1500 } },
   { name: 'Long wires: a soft attack', p: { wire: 3000 } },
   { name: 'Piled up: a pulse every 0.5 s on A4', p: { periodA4: 0.5, gain: 2500 } },
+  { name: 'Firm holders: the heat drains fast, short pulses', p: { clamp: 80 } },
+  { name: 'Loose holders: the heat lingers', p: { clamp: 1.5 } },
 ];

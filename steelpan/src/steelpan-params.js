@@ -88,4 +88,7 @@ export const PRESETS = [
   { name: 'Flat notes (no dome)', p: { rise: 0 } },
   { name: 'Untuned, as sunk', p: { tuning: 'raw' } },
   { name: 'Chromatic layout', p: { layout: 'chromatic', letRing: true, coupling: 0.004 } },
+  { name: 'Struck at the centre: the octave from the dome alone', p: { along: 0 } },
+  { name: 'A rough tuning (15 ¢): the partials beat', p: { accuracy: 15 } },
+  { name: 'Cello pans: long skirts, warm and long', p: { skirt: 2.2, t60: 2.4, contact: 1, rise: 2.5 } },
 ];

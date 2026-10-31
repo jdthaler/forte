@@ -41,6 +41,8 @@
     {"name":"Struck, not driven: the flare alone","values":{"driving":0,"flare":2}},
     {"name":"Red giants with fast cores","values":{"coreRatio":25,"spin":2}},
     {"name":"A smaller speed-up: younger stars on every key","values":{"speedup":350000}},
-    {"name":"δ Scuti: self-excited modes","values":{"family":"dscuti","spin":20,"flare":1}}
+    {"name":"δ Scuti: self-excited modes","values":{"family":"dscuti","spin":20,"flare":1}},
+    {"name":"A lighter track (0.9 M☉)","values":{"mass":0.9}},
+    {"name":"Steep linewidths: the high modes blur","values":{"slope":2}}
   ]
 }

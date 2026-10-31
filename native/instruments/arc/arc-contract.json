@@ -42,6 +42,9 @@
     {"name":"Big coil, small capacitors (80 mH)","values":{"coil":80}},
     {"name":"A long arc (6 mm)","values":{"gap":6}},
     {"name":"Several arcs (6 lamps)","values":{"mode":"poly","arcs":6}},
-    {"name":"Simon's talking arc","values":{"mode":"talk"}}
+    {"name":"Simon's talking arc","values":{"mode":"talk"}},
+    {"name":"A short arc (1 mm): low voltage, a gentle curve","values":{"gap":1}},
+    {"name":"A lossy coil: the notes grow slowly and quietly","values":{"coilR":1.5}},
+    {"name":"Low current (1.5 A): the steepest curve","values":{"current":1.5}}
   ]
 }

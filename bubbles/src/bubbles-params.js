@@ -78,4 +78,6 @@ export const PRESETS = [
   { name: 'Water vapour, a quarter atmosphere: ¾ of a semitone flatter', p: { pressure: 0.25, vapour: true } },
   { name: 'Surface echo: the hydrophones hear the surface too', p: { echo: true } },
   { name: 'Surface echo 20 m down: a slap after every bubble', p: { echo: true, depth: 20 } },
+  { name: 'Pressurised tank (4 atm): about an octave up', p: { pressure: 4 } },
+  { name: '90 % glycerol: thick, but the treble still rings', p: { liquid: 'gly90' } },
 ];

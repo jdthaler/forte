@@ -36,6 +36,8 @@
     {"name":"WD 1856+534 b: a giant round a white dwarf (on A4)","values":{"tmag":16.3,"teff":4710,"starMass":0.518,"starRadius":0.0131,"planetRadius":10.4,"impact":0.865,"periodA4":1.40794,"scale":0.6}},
     {"name":"The Earth and the Sun (a year on A4)","values":{"planetRadius":1,"impact":0,"periodA4":365.256,"scale":0.00012}},
     {"name":"Grazing: short V-shaped dips","values":{"impact":0.97,"scale":0.001}},
-    {"name":"A noiseless light curve","values":{"noise":false}}
+    {"name":"A noiseless light curve","values":{"noise":false}},
+    {"name":"A faint star (magnitude 13): dips in the hiss","values":{"tmag":13}},
+    {"name":"A hot star (6,800 K): flat-bottomed dips","values":{"teff":6800,"starMass":1.5,"starRadius":1.6}}
   ]
 }

@@ -77,4 +77,7 @@ export const PRESETS = [
   { name: 'Early ringdown (t₀ = 0): overtone burst', p: { t0: 0, overtones: 1.5 } },
   { name: 'Inspiral + merger + ringdown (LIGO chirp)', p: { inspiral: true, inspiralOct: 1.5 } },
   { name: 'Counter-rotating modes too', p: { retrograde: 0.7, massRatio: 3 } },
+  { name: 'GW190814-like: a lopsided merger (q = 9, a = 0.28)', p: { spinU: 0.1427, massRatio: 9 } },
+  { name: 'Seen face-on (ι = 0°): circular polarisation', p: { inclination: 0 } },
+  { name: 'A long inspiral: three octaves of chirp', p: { inspiral: true, inspiralOct: 3 } },
 ];

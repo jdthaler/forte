@@ -138,6 +138,8 @@ inline const PresetValue kPreset8[] = {{p::master, 0}, {p::div1, 24}, {p::sub1, 
 inline const PresetValue kPreset9[] = {{p::sync, 0.004}, {p::master, 0.8}, {p::sub1, 0.7}, {p::sub2, 0.55}, {p::sub3, 0.45}, {p::sub4, 0.35}};
 inline const PresetValue kPreset10[] = {{p::sync, 0.1}, {p::div1, 2}, {p::div2, 5}, {p::div3, 10}, {p::div4, 16}, {p::master, 0.6}, {p::sub1, 0.7}, {p::sub2, 0.7}, {p::sub3, 0.6}, {p::sub4, 0.5}};
 inline const PresetValue kPreset11[] = {{p::supply, 100}};
+inline const PresetValue kPreset12[] = {{p::f1, 700}, {p::f2, 1100}, {p::q1, 10}, {p::q2, 10}, {p::g2, 0.8}, {p::dry, 0.15}};
+inline const PresetValue kPreset13[] = {{p::g3, 0.5}, {p::g4, 0.4}};
 inline const Preset kPresets[] = {
   {"Trautonium (Trautwein, 1930)", nullptr, 0},
   {"Mixtur: the undertones ÷2 ÷3 ÷4 ÷5", kPreset1, 5},
@@ -151,6 +153,8 @@ inline const Preset kPresets[] = {
   {"Weak sync: the dividers slip", kPreset9, 6},
   {"Strong sync: ÷10 and ÷16 fire a pulse early", kPreset10, 10},
   {"Supply near the strike voltage (rounded ramps)", kPreset11, 1},
+  {"Vowel “ah” (700 Hz and 1.1 kHz)", kPreset12, 6},
+  {"All four circuits", kPreset13, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::swell, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{11, p::swell}, {107, p::sync}, {109, p::q1}, {111, p::q2}, {113, p::f2}, {114, p::f1}};
@@ -169,7 +173,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "A neon lamp flashing as its capacitor charges through a wire pressed onto a rail: the finger slides the pitch, lamps that fire on every n-th flash add the subharmonics, and every flash rings fixed resonant circuits like a voice’s formants.", .auSubtype = "Trau",
     .vst3Id = {0x55, 0x20, 0x56, 0xdd, 0xac, 0x79, 0x4b, 0xcb, 0x7a, 0x60, 0x02, 0x07, 0x01, 0xa9, 0xeb, 0x4b},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 12,
+    .presets = kPresets, .presetCount = 14,
     .keep = kKeep, .keepCount = 18,
     .keyLo = 21, .keyHi = 108, .space = Space::hold,
     .modWheel = p::f1, .modWheelMax = 6000,

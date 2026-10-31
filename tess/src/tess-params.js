@@ -70,4 +70,6 @@ export const PRESETS = [
   { name: 'The Earth and the Sun (a year on A4)', p: { planetRadius: 1, impact: 0, periodA4: 365.256, scale: 1.2e-4 } },
   { name: 'Grazing: short V-shaped dips', p: { impact: 0.97, scale: 1e-3 } },
   { name: 'A noiseless light curve', p: { noise: false } },
+  { name: 'A faint star (magnitude 13): dips in the hiss', p: { tmag: 13 } },
+  { name: 'A hot star (6,800 K): flat-bottomed dips', p: { teff: 6800, starMass: 1.5, starRadius: 1.6 } },
 ];

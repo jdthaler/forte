@@ -74,4 +74,7 @@ export const PRESETS = [
   { name: 'Lazy keys: slow attacks', p: { attack: 80 } },
   { name: 'Dampers lifted: sympathetic strings', p: { lifted: true } },
   { name: 'Classic friction curve (no rosin lag)', p: { memory: 0 } },
+  { name: 'Motor drive: no treadle swing', p: { treadle: 0 } },
+  { name: 'Coarse rosin: a grainy tone', p: { grain: 0.03 } },
+  { name: 'Lively soundboard: louder, shorter notes', p: { mobility: 3, boardEta: 0.015 } },
 ];
