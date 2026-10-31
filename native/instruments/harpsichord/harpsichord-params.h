@@ -17,10 +17,13 @@
 namespace forte::harpsichord {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { manual, coupler, front8, back8, four, lute, buff, material, stiff, overlap, stagger, xFront, xBack, xFour, xLute, detune, loss, damper, sympathy, fmax, kc, side, fullRange, soundboard, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { build, manual, coupler, front8, back8, four, lute, buff, hooks, material, stiff, overlap, stagger, xFront, xBack, xFour, jackLine, xLute, detune, loss, damper, sympathy, fmax, kc, side, fullRange, soundboard, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
+inline const char *const kChoices_build[] = {"Harpsichord (Flemish double, wire strings)", "Virginal: muselar (plucked near the middle)", "Virginal: spinett (plucked near one end)", "Lute-harpsichord (Lautenwerck: gut strings)"};
+inline const char *const kKeys_build[] = {"double", "muselar", "spinett", "lauten"};
+namespace build_ { enum : int { double_, muselar, spinett, lauten }; }
 inline const char *const kChoices_manual[] = {"Lower manual (back 8′, 4′)", "Upper manual (front 8′, lute)"};
 inline const char *const kKeys_manual[] = {"lower", "upper"};
 namespace manual_ { enum : int { lower, upper }; }
@@ -33,6 +36,7 @@ inline const FormatSegment kFormat_stagger[] = {{kNoLimit, "", " mm", 1, 0, 2, f
 inline const FormatSegment kFormat_xFront[] = {{kNoLimit, "", " mm", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_xBack[] = {{kNoLimit, "", " mm", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_xFour[] = {{kNoLimit, "", " mm", 1, 0, 0, false, false, false, false}};
+inline const FormatSegment kFormat_jackLine[] = {{-0.5, "", " mm", 1, 0, 0, false, false, false, true}, {0, "as built", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " mm", 1, 0, 0, false, false, true, false}};
 inline const FormatSegment kFormat_xLute[] = {{9.999999999999998, "", " mm", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " mm", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_detune[] = {{kNoLimit, "", " ¢", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_loss[] = {{kNoLimit, "× ", "", 1, 0, 2, false, false, false, false}};
@@ -65,6 +69,7 @@ inline const FormatSegment kFormat_cents10[] = {{kNoLimit, "", " ¢", 1, 0, 2, f
 inline const FormatSegment kFormat_cents11[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
 
 inline const ParamInfo kParams[p::count] = {
+  {"build", "Instrument", "Instrument", ParamKind::choice, 0, 3, 0, 1, false, false, kChoices_build, 4, nullptr, 0, kKeys_build},
   {"manual", "Play on", "Registration", ParamKind::choice, 0, 1, 0, 1, false, true, kChoices_manual, 2, nullptr, 0, kKeys_manual},
   {"coupler", "Coupler", "Registration", ParamKind::toggle, 0, 1, 1, 1, false, true, nullptr, 0, nullptr, 0},
   {"front8", "Front 8′ (upper manual)", "Registration", ParamKind::toggle, 0, 1, 1, 1, false, true, nullptr, 0, nullptr, 0},
@@ -72,6 +77,7 @@ inline const ParamInfo kParams[p::count] = {
   {"four", "4′ (lower manual)", "Registration", ParamKind::toggle, 0, 1, 0, 1, false, true, nullptr, 0, nullptr, 0},
   {"lute", "Lute row (upper manual)", "Registration", ParamKind::toggle, 0, 1, 0, 1, false, true, nullptr, 0, nullptr, 0},
   {"buff", "Buff stop (back 8′)", "Registration", ParamKind::toggle, 0, 1, 0, 1, false, true, nullptr, 0, nullptr, 0},
+  {"hooks", "Arpichordium (bass hooks)", "Registration", ParamKind::toggle, 0, 1, 0, 1, false, true, nullptr, 0, nullptr, 0},
   {"material", "Plectrum", "Plectra", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_material, 2, nullptr, 0, kKeys_material},
   {"stiff", "Voicing: stiffness at the tip", "Plectra", ParamKind::continuous, 600, 5000, 2500, 0, true, false, nullptr, 0, kFormat_stiff, 1},
   {"overlap", "Overlap past the string", "Plectra", ParamKind::continuous, 0.2, 1, 0.6, 0.05, false, false, nullptr, 0, kFormat_overlap, 1},
@@ -79,6 +85,7 @@ inline const ParamInfo kParams[p::count] = {
   {"xFront", "Front 8′ from the nut", "Plucking points (at c²)", ParamKind::continuous, 10, 180, 40, 1, false, false, nullptr, 0, kFormat_xFront, 1},
   {"xBack", "Back 8′ from the nut", "Plucking points (at c²)", ParamKind::continuous, 10, 180, 62, 1, false, false, nullptr, 0, kFormat_xBack, 1},
   {"xFour", "4′ from its nut", "Plucking points (at c²)", ParamKind::continuous, 10, 80, 45, 1, false, false, nullptr, 0, kFormat_xFour, 1},
+  {"jackLine", "Jack line moved (virginal)", "Plucking points (at c²)", ParamKind::continuous, -120, 120, 0, 1, false, false, nullptr, 0, kFormat_jackLine, 3},
   {"xLute", "Lute row from the nut", "Plucking points (at c²)", ParamKind::continuous, 4, 40, 12, 1, false, false, nullptr, 0, kFormat_xLute, 2},
   {"detune", "Unison spread (front vs back 8′)", "Strings and soundboard", ParamKind::continuous, 0, 8, 1.5, 0.1, false, false, nullptr, 0, kFormat_detune, 1},
   {"loss", "String losses (air and wire)", "Strings and soundboard", ParamKind::continuous, 0.25, 4, 1, 0, true, false, nullptr, 0, kFormat_loss, 1},
@@ -120,6 +127,15 @@ inline const PresetValue kPreset9[] = {{p::stiff, 4000}, {p::overlap, 0.9}};
 inline const PresetValue kPreset10[] = {{p::coupler, 0}, {p::front8, 0}, {p::xBack, 178}};
 inline const PresetValue kPreset11[] = {{p::pitch, 1}, {p::temperament, 1}};
 inline const PresetValue kPreset12[] = {{p::soundboard, 0}};
+inline const PresetValue kPreset13[] = {{p::build, 1}};
+inline const PresetValue kPreset14[] = {{p::build, 2}};
+inline const PresetValue kPreset15[] = {{p::build, 1}, {p::hooks, 1}};
+inline const PresetValue kPreset16[] = {{p::build, 1}, {p::buff, 1}};
+inline const PresetValue kPreset17[] = {{p::build, 2}, {p::material, 1}, {p::pitch, 1}, {p::temperament, 1}};
+inline const PresetValue kPreset18[] = {{p::build, 3}};
+inline const PresetValue kPreset19[] = {{p::build, 3}, {p::four, 1}};
+inline const PresetValue kPreset20[] = {{p::build, 3}, {p::coupler, 0}, {p::front8, 0}, {p::buff, 1}};
+inline const PresetValue kPreset21[] = {{p::build, 3}, {p::manual, 1}, {p::front8, 0}, {p::lute, 1}};
 inline const Preset kPresets[] = {
   {"Two 8′s coupled (front and back)", nullptr, 0},
   {"Front 8′ alone: plucked near the nut, bright", kPreset1, 2},
@@ -134,6 +150,15 @@ inline const Preset kPresets[] = {
   {"Back 8′ plucked at the middle (c²): no even partials", kPreset10, 3},
   {"Baroque pitch, ¼-comma meantone", kPreset11, 2},
   {"Without the soundboard (bridge force)", kPreset12, 1},
+  {"Virginal: muselar, plucked near the middle", kPreset13, 1},
+  {"Virginal: spinett, plucked near one end", kPreset14, 1},
+  {"Muselar with the arpichordium: buzzing bass", kPreset15, 2},
+  {"Muselar with the buff: a pizzicato virginal", kPreset16, 2},
+  {"Spinett, quill plectra, ¼-comma meantone", kPreset17, 4},
+  {"Lute-harpsichord: two gut 8′s coupled", kPreset18, 1},
+  {"Lute-harpsichord: gut and the brass 4′", kPreset19, 2},
+  {"Lute-harpsichord with the buff: like a theorbo", kPreset20, 4},
+  {"Lute-harpsichord: lute row on gut", kPreset21, 4},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::front8}, {109, p::back8}, {111, p::four}, {113, p::xFront}, {114, p::xBack}};
@@ -152,7 +177,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "A quill bends, slips off the string and plucks it; stops change where and how it plucks.", .auSubtype = "Hrps",
     .vst3Id = {0x18, 0x59, 0x2d, 0x3a, 0x06, 0xd1, 0x15, 0xaa, 0xe2, 0x04, 0xb7, 0x13, 0x16, 0x1e, 0x91, 0xb3},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 13,
+    .presets = kPresets, .presetCount = 22,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 29, .compassHi = 89, .compass = p::fullRange, .space = Space::hold,
     .modWheel = -1, .modWheelMax = 0,

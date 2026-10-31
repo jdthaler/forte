@@ -41,7 +41,7 @@ export const INSTRUMENTS = [
   {
     id: 'harpsichord', name: 'Harpsichord', section: 'traditional', ready: true, version: '0.8.0', trim: -2,
     plugin: { code: 'Hrps', ready: true },
-    after: 'the Flemish double-manual harpsichord (Ruckers, 1600s)',
+    after: 'the Flemish double-manual harpsichord and virginals (Ruckers, 1600s), and Bach’s gut-strung lute-harpsichord',
     tagline: 'A quill bends, slips off the string and plucks it; stops change where and how it plucks.',
     physics: 'Plectrum contact and release · plucked stiff strings',
     accent: '#f4d39b',
