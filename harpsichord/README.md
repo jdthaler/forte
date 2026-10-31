@@ -414,7 +414,10 @@ panned by key: thin, without the board's resonances.
   damped, nothing touching it) costs nothing. Ten keys held with 8′ 8′
   coupled (20 strings) take 13 % of real time at 48 kHz in Node, and with
   the 4′ (30 strings) 17 %, on the shared cloud machine this was built on.
-  The buff on adds 7 points (its pads are contacts the whole time).
+  The buff on adds 7 points (its pads are contacts the whole time). A
+  virginal's ten keys (one string each) take about 11 %, and with the
+  arpichordium's hooks on the bass (contacts too) 18 %; the
+  lute-harpsichord's 8′ 8′ 4′ costs as the harpsichord's.
 - **Voices.** One voice per key holds that key's strings: pressing a key
   again plucks the same strings. A plectrum still above its string goes
   down past it first. At most 16 keys sound at once; beyond that the
