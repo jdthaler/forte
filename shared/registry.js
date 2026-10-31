@@ -141,6 +141,15 @@ export const INSTRUMENTS = [
     accent: '#c9a46a',
   },
   {
+    id: 'regal', name: 'Regal', section: 'traditional', ready: true, version: '0.1.0', trim: 2,
+    plugin: { code: 'Rega', ready: true },
+    after: 'the Renaissance reed organ of Praetorius and of Charon in Monteverdi’s Orfeo',
+    tagline: 'Brass tongues beat on their shallots under short resonators, blown from two hand-worked wedge bellows: the tongue sets the pitch, so the wind gives, sinks and shakes in every chord.',
+    physics: 'Beating reeds · short resonators · wedge bellows and a tremulant',
+    vibrates: 'air', notes: 'hold',
+    accent: '#d9a441',
+  },
+  {
     id: 'grand', name: 'Electric Grand', section: 'electric', ready: true, version: '0.9.0', trim: 3.5,
     plugin: { code: 'EGrd', ready: true },
     after: 'the Yamaha CP-70',

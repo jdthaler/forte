@@ -25,7 +25,7 @@ instruments/<slug>/                 a ported instrument: engine, model, generate
                                     windharp, blackhole, quantum, stars, springs, organ, ring, celesta, cavity, showers,
                                     whistlers, universe, project8, abracadabra, tess, clavicylinder,
                                     hydrogen, trautonium, hydraulis, cuore, hurdygurdy, ionchain, telharmonium,
-                                    resonator and ondes;
+                                    resonator, regal and ondes;
                                     docs/INSTRUMENT_GUIDE.md,
                                     "The native port")
 tests/                              native unit tests (CTest); tests/smoke, a test instrument
