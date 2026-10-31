@@ -1,0 +1,14 @@
+/* The page's own palette and any layout beyond shared/instrument.css: copper coils, steel strings. */
+:root {
+  --accent: #e8b25c;
+  --accent-2: #7fb8ff;
+  --accent-ink: #1d1203;
+}
+
+#views { grid-template-rows: minmax(240px, 1.1fr) minmax(200px, 1fr) auto; }
+#views .row:last-child { grid-template-columns: 1.3fr 1fr; }
+#info { grid-template-columns: auto 1fr; }
+@media (max-width: 1050px) {
+  #views { grid-template-rows: auto auto auto; }
+  #views .row:last-child { grid-template-columns: 1fr; }
+}

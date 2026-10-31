@@ -213,6 +213,15 @@ export const INSTRUMENTS = [
     accent: '#e9b860',
   },
   {
+    id: 'resonator', name: 'Magnetic Resonator Piano', section: 'electric', ready: true, version: '0.1.0', trim: 6.5,
+    plugin: { code: 'Magn', ready: true },
+    after: 'Andrew McPherson’s Magnetic Resonator Piano (2009)',
+    tagline: 'An electromagnet over every string of a grand piano, fed from a pickup on the soundboard through a phase-locked loop: notes swell out of silence, sustain while the key is held, and sing a single harmonic.',
+    physics: 'Electromagnetic string actuation · phase-locked feedback · coupled unison strings',
+    vibrates: 'strings', notes: 'hold',
+    accent: '#e8b25c',
+  },
+  {
     id: 'bowed', name: 'Viola Organista', section: 'experimental', ready: true, version: '0.10.0', trim: 3,
     plugin: { code: 'Viol', ready: true },
     after: "Leonardo da Vinci's design (1488)",

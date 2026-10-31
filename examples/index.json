@@ -997,6 +997,36 @@
    "title": "Feed resistor 22 megohm then 1 megohm constant charge vs voltage"
   }
  ],
+ "resonator": [
+  {
+   "file": "01-chords-grown-from-silence.m4a",
+   "title": "Chords grown from silence"
+  },
+  {
+   "file": "02-struck-then-sustained-by-the-coils.m4a",
+   "title": "Struck then sustained by the coils"
+  },
+  {
+   "file": "03-one-string-four-harmonics.m4a",
+   "title": "One string four harmonics"
+  },
+  {
+   "file": "04-the-bass-takes-seconds.m4a",
+   "title": "The bass takes seconds"
+  },
+  {
+   "file": "05-brightness-on-the-wheel.m4a",
+   "title": "Brightness on the wheel"
+  },
+  {
+   "file": "06-open-loop-then-locked.m4a",
+   "title": "Open loop then locked"
+  },
+  {
+   "file": "07-phase-turned-away.m4a",
+   "title": "Phase turned away"
+  }
+ ],
  "ring": [
   {
    "file": "01-kicked-chords-recohering.m4a",
