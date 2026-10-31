@@ -406,6 +406,7 @@ export const INSTRUMENTS = [
     plugin: { code: 'Ionc', ready: true },
     tagline: 'Every key a radio-frequency trap holding a string of ions, the crystal of a trapped-ion quantum computer: a laser pulse kicks them, they ring together in their normal modes (1, √3, √(29/5) … of the trap\'s frequency, more with every ion), and the trap\'s electrodes hear the current they drive.',
     physics: 'Paul traps · Coulomb crystals and their normal modes · the linear–zigzag transition · image-current detection',
+    vibrates: 'matter', notes: 'hold',
     accent: '#a98bff',
   },
 ];
