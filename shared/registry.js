@@ -402,6 +402,14 @@ export const INSTRUMENTS = [
     accent: '#7ab8ff',
   },
   {
+    id: 'ionchain', name: 'Ion Chain', section: 'devices', ready: true, version: '0.1.0', trim: 1.5,
+    plugin: { code: 'Ionc', ready: true },
+    tagline: 'Every key a radio-frequency trap holding a string of ions, the crystal of a trapped-ion quantum computer: a laser pulse kicks them, they ring together in their normal modes (1, √3, √(29/5) … of the trap\'s frequency, more with every ion), and the trap\'s electrodes hear the current they drive.',
+    physics: 'Paul traps · Coulomb crystals and their normal modes · the linear–zigzag transition · image-current detection',
+    vibrates: 'matter', notes: 'hold',
+    accent: '#a98bff',
+  },
+  {
     id: 'chladni', name: 'Chladni Plate', section: 'phenomena', ready: true, version: '0.1.0', trim: -3.5,
     plugin: { code: 'Chla', ready: true },
     tagline: 'Every key a square brass plate clamped at its centre and bowed at its edge, as Chladni bowed his: a finger on a nodal line picks the figure, and sand on the plate runs to the lines that stay still.',

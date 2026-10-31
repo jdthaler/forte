@@ -81,7 +81,7 @@ Every other idea only adds, and can come before or after 1.0.
 | Share a link with your settings | S | Done, for the next release: *Copy a link to these settings* in the Presets menu; the link carries the parameters that differ from the defaults. |
 | Works offline, installable on phones | S–M | A service worker; the manifest already exists. |
 | Demo songs played from MIDI files | M | A listen button per instrument, and drag and drop a `.mid` to play it. |
-| A guided tour of each instrument's physics | M | Steps through the views while it plays. |
+| A guided tour of each instrument's physics | M | Done, for the next release: *▶ Tour* in the views' bar, a few steps per instrument (`shared/tour.js`, `<slug>-tour.js`). |
 | Accessibility pass | M | Keyboard focus, screen-reader labels, reduced motion. |
 | Search and filter on the front page | S | |
 
@@ -134,6 +134,7 @@ default in the existing presets, or would change what an existing knob means.
 | Hydraulis | M | Done, for the next release: Ctesibius's water organ, its wind the head of water under a bowl standing in a cistern, capped at the rim where the air bubbles out, filled by pumpers whose effort the mod wheel sets; slides with springs; the Pipe Organ's flue pipes on an ancient bore in four ranks as at Aquincum. |
 | Hurdy-Gurdy | M | Done, for the next release: the vielle à roue's rosined wheel bowing two tangent-stopped chanterelles and four drones, the trompette's chien lifting off the soundboard once the wheel's drag beats the tirant (a buzz from a threshold worked out from the string), coups of the wrist on the crank from Space, the pedal, aftertouch, hard keys or a rhythm a turn. |
 | CUORE | M | Done, for the next release: CUORE's TeO₂ bolometers at ten millikelvin, each key a crystal whose heater fires at its note's rate, sped up, read through the NTD thermistor with the collaboration's electrothermal model: the bolometer's rise and fall as a formant, saturation, the heat sink on the mod wheel. |
+| Ion Chain | S–M | Done, for the next release: a Coulomb crystal of trapped ions in a Paul trap, kicked by a laser and heard through the image current in its electrodes; its normal modes (1, √3, √(29/5) … of the note, more with every ion), the linear–zigzag transition on the mod wheel, resistive and Doppler (or sympathetic) cooling. |
 | Chladni Plate | M | Done, for the next release: Chladni's bowed plates, every key a square plate clamped at its centre (Kirchhoff modes by Rayleigh–Ritz) and bowed at its edge by stick–slip friction, with fingers on the figure's nodal lines, ten figures, and a view of the sand gathering on them. |
 | Hammered dulcimer or cimbalom | M | |
 | Theremin or ondes Martenot | M | Continuous pitch suits MPE. |
