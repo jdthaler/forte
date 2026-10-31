@@ -21,6 +21,6 @@
   on the mod wheel, phase error, an open loop, bias, gap, coil position, swell time.
 - The page draws the string under the coil in slow motion, the swell and the loop's lock over
   eight seconds, what the coil can reach of each partial, a spectrum and a spectrogram. Seven
-  demos, ten presets.
+  demos, ten presets, and a guided tour in seven steps.
 - **Quality:** 16 and 8 partials a string instead of up to 32, and two strings a key at Low.
 - The plugins (AU, VST3, CLAP) and the Forte app play it too.
