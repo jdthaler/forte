@@ -436,6 +436,14 @@ export const INSTRUMENTS = [
     vibrates: 'matter', notes: 'hold',
     accent: '#a98bff',
   },
+  {
+    id: 'chladni', name: 'Chladni Plate', section: 'phenomena', ready: true, version: '0.1.0', trim: -3.5,
+    plugin: { code: 'Chla', ready: true },
+    tagline: 'Every key a square brass plate clamped at its centre and bowed at its edge, as Chladni bowed his: a finger on a nodal line picks the figure, and sand on the plate runs to the lines that stay still.',
+    physics: 'Kirchhoff plates · Rayleigh–Ritz modes · stick–slip bowing · Chladni figures',
+    vibrates: 'solids', notes: 'hold',
+    accent: '#e0b65a',
+  },
 ];
 
 // The template (docs/template/), the starting point for new instruments: not listed, but it
