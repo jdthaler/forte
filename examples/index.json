@@ -971,30 +971,34 @@
    "title": "Feed resistor 22 megohm then 1 megohm constant charge vs voltage"
   }
  ],
- "regal": [
+ "resonator": [
   {
-   "file": "01-a-galliard-on-the-8-and-4-foot.m4a",
-   "title": "A galliard on the 8 and 4 foot"
+   "file": "01-chords-grown-from-silence.m4a",
+   "title": "Chords grown from silence"
   },
   {
-   "file": "02-cylinders-funnels-apples-and-bare-shallots.m4a",
-   "title": "Cylinders funnels apples and bare shallots"
+   "file": "02-struck-then-sustained-by-the-coils.m4a",
+   "title": "Struck then sustained by the coils"
   },
   {
-   "file": "03-the-wind-rises.m4a",
-   "title": "The wind rises"
+   "file": "03-one-string-four-harmonics.m4a",
+   "title": "One string four harmonics"
   },
   {
-   "file": "04-brass-then-leathered-shallots.m4a",
-   "title": "Brass then leathered shallots"
+   "file": "04-the-bass-takes-seconds.m4a",
+   "title": "The bass takes seconds"
   },
   {
-   "file": "05-the-tremulant.m4a",
-   "title": "The tremulant"
+   "file": "05-brightness-on-the-wheel.m4a",
+   "title": "Brightness on the wheel"
   },
   {
-   "file": "06-the-full-regal-and-a-bellows-change.m4a",
-   "title": "The full regal and a bellows change"
+   "file": "06-open-loop-then-locked.m4a",
+   "title": "Open loop then locked"
+  },
+  {
+   "file": "07-phase-turned-away.m4a",
+   "title": "Phase turned away"
   }
  ],
  "ring": [
@@ -1409,6 +1413,32 @@
   {
    "file": "06-slow-then-fast-shutters.m4a",
    "title": "Slow then fast shutters"
+  }
+ ],
+ "regal": [
+  {
+   "file": "01-a-galliard-on-the-8-and-4-foot.m4a",
+   "title": "A galliard on the 8 and 4 foot"
+  },
+  {
+   "file": "02-cylinders-funnels-apples-and-bare-shallots.m4a",
+   "title": "Cylinders funnels apples and bare shallots"
+  },
+  {
+   "file": "03-the-wind-rises.m4a",
+   "title": "The wind rises"
+  },
+  {
+   "file": "04-brass-then-leathered-shallots.m4a",
+   "title": "Brass then leathered shallots"
+  },
+  {
+   "file": "05-the-tremulant.m4a",
+   "title": "The tremulant"
+  },
+  {
+   "file": "06-the-full-regal-and-a-bellows-change.m4a",
+   "title": "The full regal and a bellows change"
   }
  ]
 }
