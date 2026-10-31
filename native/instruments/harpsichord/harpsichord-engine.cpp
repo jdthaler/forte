@@ -130,6 +130,7 @@ void HarpsichordEngine::Voice::render(int n) {
     if (sleep[ch]) continue;
     const bool lifted = lifts[ch] && !killing;
     st.kcOn = e.P[p::kc] != 0;
+    st.hookOn = e.mp.hooks; // (only a virginal's bass strings have a hook)
     st.setSide(e.P[p::side], e.sideModes()); // (Quality: fewer sideways partials, none at Low)
     const double pk = st.render(n, lifted ? lb : e.zeroBuf.data(), keyDown && lifted, ch == BACK ? e.buffBuf.data() : e.zeroBuf.data(), e.seg.data(), BLOCK, w[ch].data(), w0[ch], w1[ch], 1,
                                sy ? sb[ch].data() + 1 : nullptr);
@@ -184,8 +185,8 @@ static double residualGain(const BoardModel &B, int s, int j) {
   return std::sqrt(e / cnt);
 }
 
-void HarpsichordEngine::Board::init(double fs) {
-  const BoardModel &B = boardModel();
+void HarpsichordEngine::Board::init(double fs, int which) {
+  const BoardModel &B = boardModel(which);
   const double k = 1 / fs;
   K = B.K;
   for (int i = 0; i < K; i++) {
@@ -248,6 +249,7 @@ HarpsichordEngine::HarpsichordEngine(double fs)
         Params q;
         for (int i = 0; i < 12; i++) q.tuning.r[i] = s.ratio[i].load(std::memory_order_relaxed);
         q.detune = s.detune.load(std::memory_order_relaxed); q.loss = s.loss.load(std::memory_order_relaxed); q.fmax = s.fmax.load(std::memory_order_relaxed);
+        q.build = s.build.load(std::memory_order_relaxed);
         auto d = std::make_unique<KeyStrings>();
         for (int c : CHOIRS) { d->S[c] = stringDesign(key, c, q); stringPartials(d->S[c], q, this->fs, d->parts[c]); }
         return d;
@@ -255,7 +257,7 @@ HarpsichordEngine::HarpsichordEngine(double fs)
       sym(3 * 128, SYM_MODES, BLOCK, fs, false) {
   sym.quiet = QUIET;
   unitTables(MATERIALS[0].taper); // the plectra's tables and the board, now rather than at the first note
-  board.init(fs);
+  boards[0].init(fs, 0); boards[1].init(fs, 1);
   glide = 1 - std::exp(-1 / (RAMP * fs));
 }
 
@@ -265,15 +267,18 @@ void HarpsichordEngine::setParams(const double *p) {
   mp = paramsOf(P.data());
   hasParams = true;
   // physics knobs: a change makes new strings for the next press (a new version of every key's)
-  const std::array<double, 4> sig = {P[p::detune], P[p::loss], P[p::damper], P[p::fmax]};
+  const std::array<double, 5> sig = {P[p::detune], P[p::loss], P[p::damper], P[p::fmax], (double)mp.build};
   if (first || sig != physSig || !(mp.tuning == physTuning)) {
     physSig = sig; physTuning = mp.tuning; version++;
     Snapshot &s = snapshots[version % snapshots.size()];
     for (int i = 0; i < 12; i++) s.ratio[i].store(mp.tuning.r[i], std::memory_order_relaxed);
     s.detune.store(mp.detune, std::memory_order_relaxed); s.loss.store(mp.loss, std::memory_order_relaxed); s.fmax.store(mp.fmax, std::memory_order_relaxed);
+    s.build.store(mp.build, std::memory_order_relaxed);
     data.prepare(version, KEY_MIN, KEY_MAX, focus);
   }
   if (first) { buff = mp.buff ? 1 : 0; mix = mp.soundboard ? 1 : 0; }
+  const int b = boardOf(mp.build);
+  if (b != boardOn) { boards[b].clear(); boardOn = b; } // the other board starts from rest (the strings still sounding move over to it)
 }
 
 void HarpsichordEngine::noteOn(int key, double velocity) {
@@ -414,6 +419,7 @@ void HarpsichordEngine::processBlock(float *L, float *R, int n) {
   }
   nVoices = j;
   // soundboard microphones, or the bridge force itself (soundboard off), crossfaded
+  Board &board = boards[boardOn];
   board.run(seg.data(), bL.data(), bR.data(), n);
   // after Panic, once the voices have faded, the board fades out over this block and rests
   if (boardHush) {
@@ -445,7 +451,7 @@ void HarpsichordEngine::processBlock(float *L, float *R, int n) {
 // faster by the felt's resistance R at its point, R φ²/2, up to ω/2 (beyond that a partial is no
 // longer one: the felt soaks up the wave as it arrives).
 void HarpsichordEngine::symSet(int key, const KeyStrings &d, uint64_t ver) {
-  const std::array<double, 4> sig = {P[p::damper], P[p::xFront], P[p::xBack], P[p::xFour]};
+  const std::array<double, 6> sig = {P[p::damper], P[p::xFront], P[p::xBack], P[p::xFour], (double)mp.build, P[p::jackLine]};
   if (quality == Quality::low) return; // (Quality: none at Low; symRun lets those made before fade)
   if (symVer[key] == ver && sig == symSig && quality == symQuality) return;
   if (sig != symSig || quality != symQuality) { symSig = sig; symQuality = quality; symVer.fill(0); }
