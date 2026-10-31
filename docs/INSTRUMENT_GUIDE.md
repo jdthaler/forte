@@ -83,7 +83,7 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `impulses.js` | the rooms: `roomIR` (the pages' original synthetic room) and the venues (`VENUES`: a studio and three halls built from their size, walls and air: image sources, then a tail decaying in each octave in Eyring's time) |
 | `tuning.js`, `tuning-ui.js` | the keyboard's tuning, the same on every instrument and in the plugins (`native/core` `tuning.h`): the pitch standard (A4), the temperament (equal, meantone, the well temperaments, Pythagorean, just, custom) on a root key, and a custom temperament's cents; `readScala` reads a Scala file (`.scl`) into them. `tuning-ui.js` is the pages' *Load a Scala file* button, which `user-presets.js` adds under Temperament. |
 | `quality.js` | the Quality setting (High, Medium, Low): how much of its physics the engine plays, for phones and older computers. One choice per browser, for every page, shown in the header beside the CPU readout (`qualityControl()`, one pill with it once the audio plays) and in no preset or link; `connectQuality(node)` sends it to the page's engine and suggests a lower setting when the audio drops out. |
-| `registry.js` | the instrument list behind the landing page and the menus |
+| `registry.js`, `search.js` | the instrument list behind the landing page and the menus, with the sections and the front page's filters (`FILTERS`); `search.js` is the front page's search over it (word starts, without case or accents) |
 | `presets.js`, `user-presets.js` | your own presets and shared links. `presets.js` is the format, the same in the plugins (`native/plugin/presets.cpp`): every parameter of the contract by id, in a versioned file or in a link's fragment. `user-presets.js` adds them to the Presets menu (save, link, a sheet to play, link, save to a file, delete and open files); the shell attaches it, and a page with its own state calls `attachPresets` with how to get and set its parameters by contract id (the organ's console is `CONSOLE.get` and `CONSOLE.put`). |
 | `midi.js` | Web MIDI for every page (the shell and the five older pages): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen next to Enable MIDI, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling; `pageMpe` decodes MPE for a page (below) and turns it into the engine's `noteBend`, `slide` and `pressure` messages. |
 | `mpe.js` | MPE (MIDI Polyphonic Expression), message for message as the plugins' `forte/mpe.h`: zones from the MPE Configuration Message, member channels' bend (±48 semitones unless RPN 0 says otherwise), pressure and CC74, the Auto/On/Off mode, and `bendRatio`, a note's bend along the keyboard's tuning. |
@@ -575,8 +575,11 @@ AU code from its descriptor (`plugin: { code }`, which then leaves the descripto
 in one of the five sections (`traditional`, `electric`, `experimental`,
 `phenomena` for physical phenomena, or `devices` for the apparatus physicists
 build to study them), after the other
-ready ones in it, with `version: '0.1.0'`, and add a note to `changes/` with a
-`### <Name> (new)` section, which becomes its `CHANGELOG.md` entry when it is released. The landing page and
+ready ones in it, with `version: '0.1.0'`, and with one option of each of the front page's
+filters (`FILTERS` in the registry): `vibrates` (what sounds: `strings`, `solids`, `air`,
+`circuits`, `space` or `matter`) and `notes` (`ring` if a held middle C at the defaults is more
+than 10 dB down after five seconds, `hold` if it lasts as long as the key). Then add a note to `changes/` with a
+`### <Name> (new)` section, which becomes its `CHANGELOG.md` entry when it is released. The landing page (its tabs, search and filters) and
 every menu pick it up, and `test/site-tests.mjs` checks that all of this
 agrees. Then make its picture and tags for shared links (`node tools/make-previews.mjs <slug>`,
 then `index`; see "The picture a shared link shows").
