@@ -219,6 +219,16 @@ requests.
   the tonewheel organs ([Hammond, 1934](https://patents.google.com/patent/US1956350A/en))
   are its descendants. We did not find an earlier physical model of it. Its
   sources are in `telharmonium/README.md`.
+* **The regal.** Praetorius draws the regals and their resonators in
+  *Syntagma musicum II* (1619); Monteverdi scores one for Charon in
+  *L'Orfeo* (1607). The beating reed is G. R. Plitnik's ("Vibration
+  characteristics of pipe organ reed tongues…", *J. Acoust. Soc. Am.*
+  **107**(6), 3460–3473, 2000) and A. Miklós, J. Angster, S. Pitsch and
+  T. D. Rossing's (*J. Acoust. Soc. Am.* **113**, 1081–1091, 2003; **119**,
+  3121–3129, 2006). Modartt's [Organteq](https://www.modartt.com/organteq)
+  models reed pipes physically, and regals are sold as sample libraries.
+  The Regal plays its curved tongues, shallots, short resonators and wedge
+  bellows from those; its sources are in `regal/README.md`.
 
 ## 2. Techniques Forte uses, and where they come from
 
