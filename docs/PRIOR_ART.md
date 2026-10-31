@@ -67,7 +67,7 @@ requests.
   [doi:10.1121/1.390157](https://doi.org/10.1121/1.390157). A linear
   resonator coupled to a nonlinear excitation (bow, reed, jet) by a
   reflection function: the framework behind Forte's bowed and rubbed
-  instruments (Viola Organista, Glass Armonica, Clavicylinder).
+  instruments (Viola Organista, Glass Armonica, Clavicylinder, Hurdy-Gurdy).
 * **1983 — the plucked-string algorithm.** K. Karplus and A. Strong,
   "Digital synthesis of plucked-string and drum timbres", *Computer Music
   Journal* **7**(2), 43–55 (1983),
@@ -241,6 +241,10 @@ requests.
   K. H. Hunt and F. R. E. Crossley, "Coefficient of restitution interpreted
   as damping in vibroimpact", *J. Appl. Mech.* **42**(2), 440–445 (1975),
   [doi:10.1115/1.3423596](https://doi.org/10.1115/1.3423596);
+  T. Schwager and T. Pöschel, "Coefficient of restitution and linear–dashpot
+  model revisited", *Granular Matter* **9**(6), 465–469 (2007),
+  [doi:10.1007/s10035-007-0065-z](https://doi.org/10.1007/s10035-007-0065-z)
+  (the Hurdy-Gurdy's chien on the soundboard);
   X. Boutillon, "Model for piano hammers: experimental determination and
   digital simulation", *J. Acoust. Soc. Am.* **83**(2), 746–754 (1988),
   [doi:10.1121/1.396117](https://doi.org/10.1121/1.396117);
@@ -277,7 +281,7 @@ requests.
   methods for Hamiltonian systems", *J. Comput. Phys.* **472**, 111697
   (2023),
   [doi:10.1016/j.jcp.2022.111697](https://doi.org/10.1016/j.jcp.2022.111697).
-* **Digital waveguides** (the Viola Organista's bowed strings): Smith
+* **Digital waveguides** (the Viola Organista's and the Hurdy-Gurdy's bowed strings): Smith
   (1987, 1992); *Physical Audio Signal Processing*.
 * **Fractional delay lines** (the Leslie's Doppler shift, the bowed
   strings' waveguides, the Pyrophone's flame delay): T. I. Laakso, V. Välimäki,

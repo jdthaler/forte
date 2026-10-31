@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Hurdy-Gurdy · Forte</title>
+  <meta name="description" content="A cranked, rosined wheel bows the melody strings and the drones; turn it faster and the trompette lifts its loose bridge, the chien, which buzzes on the soundboard in time with the hand.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="Hurdy-Gurdy · Forte">
+  <meta property="og:description" content="A cranked, rosined wheel bows the melody strings and the drones; turn it faster and the trompette lifts its loose bridge, the chien, which buzzes on the soundboard in time with the hand.">
+  <meta property="og:url" content="https://forte.jthaler.net/hurdygurdy/">
+  <meta property="og:image" content="https://forte.jthaler.net/hurdygurdy/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Hurdy-Gurdy's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="hurdygurdy" data-space="Coup">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Hurdy-Gurdy</h1>
+      <span class="sub">The vielle à roue: a rosined wheel, tangents, drones and the buzzing chien</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Wheel and strings">
+          <div class="card-head"><h2>Wheel and strings, <b id="focus-name">G4</b></h2><span class="muted" id="wheel-read"></span></div>
+          <canvas id="wheel"></canvas>
+          <div class="caption">The instrument from above, tail on the left: the wheel turning under the six strings, the chanterelles running through the keybox to the nut, and the drones out at the sides. The tangent of the highest key held stops the chanterelles (the dot): the wheel then sits further along the shorter string. A drone switched off is hooked away from the wheel. The trompette crosses the chien, drawn tilting as it lifts (much enlarged).</div>
+        </div>
+        <div class="card" data-perform data-view="Chien">
+          <div class="card-head"><h2>The chien</h2><span class="muted" id="chien-read"></span></div>
+          <canvas id="chien"></canvas>
+          <div class="caption">Below: the trompette's pull on the chien over the last 20 ms, a sawtooth once a period as the string sticks to the wheel and slips back, and the tirant's pull (dashed) holding the foot down. Above: the foot's lift off the soundboard. When the sawtooth's peak beats the tirant, the chien jumps and lands once a period, or rattles several times: the buzz.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Crank">
+          <div class="card-head"><h2>Crank speed</h2><span class="muted" id="crank-read"></span></div>
+          <canvas id="crank"></canvas>
+          <div class="caption">The wheel's speed over the last six seconds, in turns a second. Above the dashed line the trompette's pull beats the tirant and the chien buzzes (shaded where it did). Each coup of the wrist is a surge across the line: their rhythm is the buzz's.</div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · lines: the melody's harmonics, and the drones'</span></div>
+          <canvas id="spectrum"></canvas>
+          <div class="caption">The melody's harmonics sit over the drones'. Missing harmonics near every 1/β-th are where the wheel sits: they move down as the tangent shortens the string. A buzz fills the gaps with the chien's clatter at the trompette's period.</div>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">The drones run on as steady lines while the melody steps above them. Each coup is a band of broadband buzz across the top of the picture, in time with the hand.</div>
+        </div>
+      </div>
+      <div class="row single">
+        <div class="card" id="info-card" data-view="Strings">
+          <div class="card-head"><h2>Strings</h2></div>
+          <dl id="info"></dl>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows; the highest key held is the note, and the crank turns while one is down</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>crank <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>coup: <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>MIDI: mod wheel = crank speed, sustain pedal and aftertouch = coups, a hard key = a coup on its start, pitch bend pushes the tangents</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/hurdygurdy-main.js"></script>
+</body>
+</html>

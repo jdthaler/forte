@@ -363,6 +363,7 @@ const RANGE_LIMITS = {
   windharp: [21, 100], // above E7 no string sheds at its note in the reference wind (Re below 47)
   springs: [21, 96], // above C7 the spring's F_C is far above hearing: a few nearly harmonic modes, no chirp
   bowed: [21, 98], // above D7 the string, at C6's stress, no longer settles into Helmholtz motion at the voiced touch
+  hurdygurdy: [67, 91], // the tangents stop the open chanterelles (G4) and can only shorten them; above G6 they would reach the wheel
 };
 const described = [...ready.map((i) => ({ id: i.id, dir: i.id })), { id: 'template', dir: 'docs/template' }];
 for (const { id, dir } of described) {
