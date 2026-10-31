@@ -39,6 +39,9 @@
     {"name":"Scale-invariant ripples (n_s = 1)","values":{"tilt":1}},
     {"name":"Inside the plasma: the light streams away","values":{"listener":"plasma"}},
     {"name":"Without the Doppler shift","values":{"doppler":false}},
-    {"name":"A slow universe: ten seconds to recombination","values":{"recombination":10}}
+    {"name":"A slow universe: ten seconds to recombination","values":{"recombination":10}},
+    {"name":"No neutrinos: an earlier equality","values":{"neutrinos":0}},
+    {"name":"A red tilt (n_s = 0.9): the low harmonics loud","values":{"tilt":0.9}},
+    {"name":"No helium: the plasma holds the light longer","values":{"helium":0}}
   ]
 }

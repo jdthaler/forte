@@ -106,4 +106,6 @@ export const PRESETS = [
   { name: 'Soft felt hammers (early style)', p: { hardness: 0.25, hysteresis: 6e-4, hammerMass: 1.3 } },
   { name: 'Suitcase stereo vibrato', p: { tremDepth: 0.7, tremRate: 4.5 } },
   { name: 'Heavy tuning springs (stretched bell)', p: { springMass: 1.2, springPos: 0.95 } },
+  { name: 'Long cable: the top end rolled off', p: { cable: 5000 } },
+  { name: 'Amp pushed: tines into a breaking amp', p: { drive: 0.8 } },
 ];

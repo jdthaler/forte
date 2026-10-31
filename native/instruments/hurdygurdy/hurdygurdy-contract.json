@@ -57,6 +57,8 @@
     {"name":"Chanterelles alone","values":{"trompette":false,"mouche":false,"gros":false}},
     {"name":"Drones alone, turning","values":{"chanterelles":false,"keep":true}},
     {"name":"Slow crank: the top notes crunch","values":{"crank":0.35}},
-    {"name":"Wide unison: two chanterelles apart","values":{"unison":9}}
+    {"name":"Wide unison: two chanterelles apart","values":{"unison":9}},
+    {"name":"Four coups a turn","values":{"coups":"four"}},
+    {"name":"Cotton on the strings: a soft, wide grip","values":{"v0":0.4}}
   ]
 }

@@ -109,6 +109,9 @@ inline const PresetValue kPreset5[] = {{p::qhom, 100000000000}, {p::offset, 0.35
 inline const PresetValue kPreset6[] = {{p::temp, 4.2}};
 inline const PresetValue kPreset7[] = {{p::current, 1}, {p::quench, 1.2}, {p::lorentz, 0.5}, {p::recovery, 0.6}};
 inline const PresetValue kPreset8[] = {{p::lorentz, 30}, {p::mech, 5}};
+inline const PresetValue kPreset9[] = {{p::probe, 1}};
+inline const PresetValue kPreset10[] = {{p::bunch, 0.25}};
+inline const PresetValue kPreset11[] = {{p::offset, 0.5}};
 inline const Preset kPresets[] = {
   {"TESLA nine-cell at 2 K", nullptr, 0},
   {"A single pillbox cell", kPreset1, 1},
@@ -119,6 +122,9 @@ inline const Preset kPresets[] = {
   {"Warm: liquid helium at 4.2 K", kPreset6, 1},
   {"Beam loading to a quench", kPreset7, 4},
   {"Lorentz detuning, ringing walls", kPreset8, 2},
+  {"Read at the far end: the transmitted power alone", kPreset9, 1},
+  {"Long bunches: only the lowest modes", kPreset10, 1},
+  {"Far off the axis: the dipole band rings", kPreset11, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::bunch}, {109, p::spacing}, {111, p::lorentz}, {113, p::current}, {114, p::offset}};
@@ -137,7 +143,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Every key a superconducting accelerator cavity, rung by the bunch that crosses it: nine coupled cells that beat, higher-order modes for a bell's partials.", .auSubtype = "Rfca",
     .vst3Id = {0x56, 0x5a, 0xa0, 0x43, 0xa9, 0xfa, 0x3d, 0x18, 0x9a, 0x40, 0x34, 0x0f, 0x39, 0xdc, 0x2c, 0xa4},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 9,
+    .presets = kPresets, .presetCount = 12,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::offset, .modWheelMax = 0.6,

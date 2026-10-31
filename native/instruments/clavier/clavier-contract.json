@@ -53,6 +53,9 @@
     {"name":"Worn tips · bouncing, buzzing","values":{"tipLoss":0.1,"tip":0.45,"press":2.2,"keyMass":14}},
     {"name":"Soft tips · wide vibrato","values":{"tip":0.6,"wrap":1.5}},
     {"name":"No yarn · release rings a minor third down","values":{"yarn":30}},
-    {"name":"Ideal string · no stiffness, no glide","values":{"stiff":0,"kc":false}}
+    {"name":"Ideal string · no stiffness, no glide","values":{"stiff":0,"kc":false}},
+    {"name":"Funk · upper pickup, brilliant, muted","values":{"pickup":"upper","medium":false,"brilliant":true,"muteOn":true,"mute":0.4,"gain":6}},
+    {"name":"Growl · magnets close, loud notes double","values":{"field":0.7}},
+    {"name":"Hard tips · little squeeze, little bend","values":{"tip":0.08}}
   ]
 }

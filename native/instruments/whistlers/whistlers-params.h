@@ -101,6 +101,8 @@ inline const PresetValue kPreset6[] = {{p::travel, 1}, {p::sferic, 0.6}};
 inline const PresetValue kPreset7[] = {{p::density, 0.05}};
 inline const PresetValue kPreset8[] = {{p::chorus, 10}, {p::sferic, 0.1}};
 inline const PresetValue kPreset9[] = {{p::sferic, 1}, {p::distance, 7000}};
+inline const PresetValue kPreset10[] = {{p::iono, 70}};
+inline const PresetValue kPreset11[] = {{p::density, 5}};
 inline const Preset kPresets[] = {
   {"Whistlers at night (Kp 2)", nullptr, 0},
   {"Quiet week: the plasmasphere out to L = 6", kPreset1, 1},
@@ -112,6 +114,8 @@ inline const Preset kPresets[] = {
   {"Thin plasma: quick whistlers", kPreset7, 1},
   {"Dawn chorus", kPreset8, 2},
   {"Distant storms: long tweeks", kPreset9, 2},
+  {"By day: a low ionosphere (70 km), higher tweeks", kPreset10, 1},
+  {"Dense plasma: slow, drawn-out whistlers", kPreset11, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::ducts}, {109, p::echo}, {111, p::density}, {113, p::sferic}, {114, p::chorus}};
@@ -130,7 +134,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Lightning's radio crack, drawn out along the Earth's magnetic field into falling tones: every key a field line, its whistler's nose the note.", .auSubtype = "Whis",
     .vst3Id = {0x70, 0xb9, 0x5b, 0x48, 0x9d, 0x58, 0xaa, 0x03, 0x12, 0x9b, 0x7d, 0x12, 0xe0, 0xb0, 0xa0, 0x5d},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 10,
+    .presets = kPresets, .presetCount = 12,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::chorus, .modWheelMax = 20,

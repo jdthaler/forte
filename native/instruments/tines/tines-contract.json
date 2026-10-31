@@ -56,6 +56,8 @@
     {"name":"Detuned tone bar (+40 ¢)","values":{"barTune":40}},
     {"name":"Soft felt hammers (early style)","values":{"hardness":0.25,"hysteresis":0.0006,"hammerMass":1.3}},
     {"name":"Suitcase stereo vibrato","values":{"tremDepth":0.7,"tremRate":4.5}},
-    {"name":"Heavy tuning springs (stretched bell)","values":{"springMass":1.2,"springPos":0.95}}
+    {"name":"Heavy tuning springs (stretched bell)","values":{"springMass":1.2,"springPos":0.95}},
+    {"name":"Long cable: the top end rolled off","values":{"cable":5000}},
+    {"name":"Amp pushed: tines into a breaking amp","values":{"drive":0.8}}
   ]
 }

@@ -148,6 +148,9 @@ inline const PresetValue kPreset9[] = {{p::material, 5}, {p::shape, 3}, {p::aspe
 inline const PresetValue kPreset10[] = {{p::material, 4}, {p::gauge, 2.4}};
 inline const PresetValue kPreset11[] = {{p::strikePos, 0.5}};
 inline const PresetValue kPreset12[] = {{p::gauge, 2.2}};
+inline const PresetValue kPreset13[] = {{p::material, 1}};
+inline const PresetValue kPreset14[] = {{p::material, 3}};
+inline const PresetValue kPreset15[] = {{p::unisons, 3}, {p::unaCorda, 1}};
 inline const Preset kPresets[] = {
   {"Concert grand (steel wire)", nullptr, 0},
   {"Square bar", kPreset1, 1},
@@ -162,6 +165,9 @@ inline const Preset kPresets[] = {
   {"Nylon strings", kPreset10, 2},
   {"Hammer at the middle (odd partials only)", kPreset11, 1},
   {"Thick, stiff wire (very inharmonic)", kPreset12, 1},
+  {"Brass strings", kPreset13, 1},
+  {"Titanium strings", kPreset14, 1},
+  {"Three strings a note, una corda", kPreset15, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::soundboard, p::maxFreq, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{67, p::unaCorda}, {107, p::damper}, {109, p::sympathy}, {111, p::soundboard}, {113, p::hardness}, {114, p::strikePos}};
@@ -180,7 +186,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Stiff strings, felt hammers and a shared bridge — then swap the strings for square bars, triangular bars or twisting ribbons.", .auSubtype = "Ribn",
     .vst3Id = {0x5f, 0x2a, 0x6d, 0x7c, 0xcf, 0xff, 0x4c, 0xce, 0x17, 0xf2, 0x4e, 0xad, 0x64, 0xed, 0x0b, 0x4c},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 13,
+    .presets = kPresets, .presetCount = 16,
     .keep = kKeep, .keepCount = 19,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = -1, .modWheelMax = 0,

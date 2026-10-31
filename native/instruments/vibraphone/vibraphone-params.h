@@ -112,6 +112,9 @@ inline const PresetValue kPreset7[] = {{p::depth, 0}, {p::motor, 1}};
 inline const PresetValue kPreset8[] = {{p::hardness, 6000}, {p::strike, 0.06}, {p::motor, 1}};
 inline const PresetValue kPreset9[] = {{p::temp, 5}, {p::motor, 1}};
 inline const PresetValue kPreset10[] = {{p::motor, 2}};
+inline const PresetValue kPreset11[] = {{p::hardness, 150}, {p::mass, 16}};
+inline const PresetValue kPreset12[] = {{p::speed, 0.8}};
+inline const PresetValue kPreset13[] = {{p::across, 0.85}, {p::motor, 1}};
 inline const Preset kPresets[] = {
   {"Vibraphone: motor on, medium yarn mallets", nullptr, 0},
   {"Motor off, discs open: no tremolo", kPreset1, 1},
@@ -124,6 +127,9 @@ inline const Preset kPresets[] = {
   {"Hard cord mallets, struck near the end", kPreset8, 3},
   {"Cold hall (5 °C): tubes fall flat of their bars", kPreset9, 2},
   {"Motor off, discs closed: dry", kPreset10, 1},
+  {"Soft yarn mallets: dark and round", kPreset11, 2},
+  {"Slow motor: a lazy 1.6 Hz tremolo", kPreset12, 1},
+  {"Struck off the edge: the bars twist", kPreset13, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::hardness}, {109, p::gap}, {111, p::damp}, {113, p::strike}, {114, p::speed}};
@@ -142,7 +148,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Undercut aluminium bars over tuned tubes, with motor-driven discs that open and close the resonators.", .auSubtype = "Vibe",
     .vst3Id = {0xaa, 0x90, 0xa9, 0x67, 0xe2, 0xd3, 0x91, 0x72, 0xd1, 0x73, 0x43, 0xa7, 0xda, 0xf3, 0xaf, 0xeb},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 11,
+    .presets = kPresets, .presetCount = 14,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 53, .compassHi = 89, .compass = p::fullRange, .space = Space::sustain,
     .modWheel = p::speed, .modWheelMax = 6,

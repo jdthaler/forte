@@ -97,4 +97,7 @@ export const PRESETS = [
   { name: 'Hard cord mallets, struck near the end', p: { hardness: 6000, strike: 0.06, motor: 'open' } },
   { name: 'Cold hall (5 °C): tubes fall flat of their bars', p: { temp: 5, motor: 'open' } },
   { name: 'Motor off, discs closed: dry', p: { motor: 'closed' } },
+  { name: 'Soft yarn mallets: dark and round', p: { hardness: 150, mass: 16 } },
+  { name: 'Slow motor: a lazy 1.6 Hz tremolo', p: { speed: 0.8 } },
+  { name: 'Struck off the edge: the bars twist', p: { across: 0.85, motor: 'open' } },
 ];
