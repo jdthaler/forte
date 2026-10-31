@@ -67,13 +67,13 @@ inline const ParamInfo kParams[p::count] = {
   {"tremulant", "Tremulant", "Stops", ParamKind::toggle, 0, 1, 0, 1, false, true, nullptr, 0, nullptr, 0},
   {"tremRate", "Tremulant rate", "Stops", ParamKind::continuous, 3, 9, 5.5, 0.1, false, false, nullptr, 0, kFormat_tremRate, 1},
   {"resonator", "Resonators", "Resonators", ParamKind::choice, 0, 3, 0, 1, false, true, kChoices_resonator, 4, nullptr, 0, kKeys_resonator},
-  {"resLength", "Resonator length", "Resonators", ParamKind::continuous, 0.5, 2, 1, 0, true, false, nullptr, 0, kFormat_resLength, 2},
+  {"resLength", "Resonator length", "Resonators", ParamKind::continuous, 0.6, 1.7, 1, 0, true, false, nullptr, 0, kFormat_resLength, 2},
   {"pressure", "Wind pressure", "Wind", ParamKind::continuous, 400, 1000, 600, 0, true, true, nullptr, 0, kFormat_pressure, 1},
   {"bellows", "Bellows", "Wind", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_bellows, 2, nullptr, 0, kKeys_bellows},
-  {"curve", "Curve: tip off the shallot", "Tongues (voicing)", ParamKind::continuous, 0.2, 1.6, 0.6, 0.01, false, false, nullptr, 0, kFormat_curve, 1},
-  {"thickness", "Tongue thickness", "Tongues (voicing)", ParamKind::continuous, 0.6, 1.6, 1, 0.01, false, false, nullptr, 0, kFormat_thickness, 2},
+  {"curve", "Curve: tip off the shallot", "Tongues (voicing)", ParamKind::continuous, 0.3, 1.2, 0.6, 0.01, false, false, nullptr, 0, kFormat_curve, 1},
+  {"thickness", "Tongue thickness", "Tongues (voicing)", ParamKind::continuous, 0.7, 1.4, 1, 0.01, false, false, nullptr, 0, kFormat_thickness, 2},
   {"facing", "Shallot facing", "Tongues (voicing)", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_facing, 2, nullptr, 0, kKeys_facing},
-  {"q", "Tongue Q (mechanical)", "Tongues (voicing)", ParamKind::continuous, 20, 400, 120, 0, true, false, nullptr, 0, kFormat_q, 1},
+  {"q", "Tongue Q (mechanical)", "Tongues (voicing)", ParamKind::continuous, 30, 400, 120, 0, true, false, nullptr, 0, kFormat_q, 1},
   {"fullRange", "Full range (A0–C8)", "Tongues (voicing)", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, false, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
@@ -105,7 +105,7 @@ inline const PresetValue kPreset8[] = {{p::curve, 1.2}};
 inline const PresetValue kPreset9[] = {{p::curve, 0.3}};
 inline const PresetValue kPreset10[] = {{p::pressure, 950}};
 inline const PresetValue kPreset11[] = {{p::pressure, 450}};
-inline const PresetValue kPreset12[] = {{p::resLength, 1.8}};
+inline const PresetValue kPreset12[] = {{p::resLength, 1.6}};
 inline const PresetValue kPreset13[] = {{p::bellows, 1}};
 inline const Preset kPresets[] = {
   {"Regal 8′: short brass resonators", nullptr, 0},
@@ -137,7 +137,7 @@ inline forte::Tuning tuningOf(const double *P) {
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
     .slug = "regal", .name = "Regal", .version = FORTE_INSTRUMENT_VERSION,
-    .description = "", .auSubtype = "Rega",
+    .description = "Brass tongues beat on their shallots under short resonators, blown from two hand-worked wedge bellows: the tongue sets the pitch, so the wind gives, sinks and shakes in every chord.", .auSubtype = "Rega",
     .vst3Id = {0xc6, 0x5e, 0xe4, 0x24, 0xd7, 0xa2, 0x62, 0x27, 0x43, 0xea, 0x1f, 0x91, 0x63, 0x0f, 0x4d, 0xb8},
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 14,
@@ -145,7 +145,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keyLo = 21, .keyHi = 108, .compassLo = 36, .compassHi = 84, .compass = p::fullRange, .space = Space::hold,
     .modWheel = p::pressure, .modWheelMax = 1000,
     .controllers = kControllers, .controllerCount = 6,
-    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 0},
+    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 2},
     .midiVelocity = midiVelocity, .create = create,
   };
 }

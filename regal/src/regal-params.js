@@ -45,11 +45,11 @@ export const GROUPS = [
   {
     title: 'Wind',
     params: [
-      { id: 'pressure', label: 'Wind pressure', perform: true, min: 400, max: 1000, def: 600, log: true, fmt: pa,
+      { id: 'pressure', label: 'Wind pressure', perform: true, strip: true, min: 400, max: 1000, def: 600, log: true, fmt: pa,
         hint: 'The weight on the bellows. More wind: louder, brassier and quicker to speak, since the tongue slaps harder; less, and the treble stops first. A reed sounds sharper on more wind, and the reeds are retuned as the weight changes; the wind\'s own movements (a chord drawing it down, a bellows sinking, the tremulant) still move the pitch. Mod wheel up and aftertouch lean on the bellows (aftertouch up to a quarter more).' },
       { id: 'bellows', label: 'Bellows', type: 'select', def: 'hand', options: [['hand', 'Two wedge bellows, worked by hand'], ['blower', 'A steady blower and reservoir']],
         hint: 'A regal\'s two weighted wedge bellows, one sinking while the calcant raises the other: the wind gives a little as a chord comes in, rises as a bellows sinks, and shakes when the other takes over. Or a modern blower\'s steady wind.' },
-      { id: 'velocity', label: 'Velocity (computer keys)', strip: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => `${v.toFixed(2)} (pallet opens in ${(3 + 27 * (1 - v) ** 2).toFixed(0)} ms)`,
+      { id: 'velocity', label: 'Velocity (computer keys)', min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => `${v.toFixed(2)} (pallet opens in ${(3 + 27 * (1 - v) ** 2).toFixed(0)} ms)`,
         hint: 'How fast the key opens the pallet: a fast pallet slams the wind into the reed\'s boot and starts it sooner.' },
     ],
   },

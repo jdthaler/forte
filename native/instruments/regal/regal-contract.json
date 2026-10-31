@@ -7,13 +7,13 @@
     {"id":"tremulant","kind":"toggle","def":false},
     {"id":"tremRate","kind":"continuous","min":3,"max":9,"def":5.5,"step":0.1,"log":false},
     {"id":"resonator","kind":"choice","def":"regal","options":["regal","funnel","apple","none"]},
-    {"id":"resLength","kind":"continuous","min":0.5,"max":2,"def":1,"step":0,"log":true},
+    {"id":"resLength","kind":"continuous","min":0.6,"max":1.7,"def":1,"step":0,"log":true},
     {"id":"pressure","kind":"continuous","min":400,"max":1000,"def":600,"step":0,"log":true},
     {"id":"bellows","kind":"choice","def":"hand","options":["hand","blower"]},
-    {"id":"curve","kind":"continuous","min":0.2,"max":1.6,"def":0.6,"step":0.01,"log":false},
-    {"id":"thickness","kind":"continuous","min":0.6,"max":1.6,"def":1,"step":0.01,"log":false},
+    {"id":"curve","kind":"continuous","min":0.3,"max":1.2,"def":0.6,"step":0.01,"log":false},
+    {"id":"thickness","kind":"continuous","min":0.7,"max":1.4,"def":1,"step":0.01,"log":false},
     {"id":"facing","kind":"choice","def":"brass","options":["brass","leather"]},
-    {"id":"q","kind":"continuous","min":20,"max":400,"def":120,"step":0,"log":true},
+    {"id":"q","kind":"continuous","min":30,"max":400,"def":120,"step":0,"log":true},
     {"id":"fullRange","kind":"toggle","def":false},
     {"id":"room","kind":"continuous","min":0,"max":1,"def":0.3,"step":0.01,"log":false},
     {"id":"venue","kind":"choice","def":"room","options":["studio","room","recital","hall","cathedral"]},
@@ -46,7 +46,7 @@
     {"name":"Little curve: a thin, quiet buzz","values":{"curve":0.3}},
     {"name":"Strong wind: loud, brassy and sharp","values":{"pressure":950}},
     {"name":"Gentle wind: slow to speak, the treble shy","values":{"pressure":450}},
-    {"name":"Long resonators: darker, more nasal","values":{"resLength":1.8}},
+    {"name":"Long resonators: darker, more nasal","values":{"resLength":1.6}},
     {"name":"Steady blower: no bellows to sink or shake","values":{"bellows":"blower"}}
   ]
 }

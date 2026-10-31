@@ -12,8 +12,6 @@ export const KEY_LO = 36, KEY_HI = 84;    // C2–C6 (C–c³), 49 keys: a regal
 export const KEY_MIN = 21, KEY_MAX = 108; // with the full range open
 
 export const INSTRUMENT = {
-  // until it is in shared/registry.js: its plugin's name and AU code (move the code there)
-  plugin: { name: 'Regal', code: 'Rega' },
   id: 'regal',
   groups: GROUPS,
   presets: PRESETS,

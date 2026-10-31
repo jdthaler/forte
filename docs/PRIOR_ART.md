@@ -213,6 +213,16 @@ requests.
   water's bounce, the pumps, the bubbles at the rim) from those
   descriptions, with the Pipe Organ's flue pipes; its sources are in
   `hydraulis/README.md`.
+* **The regal.** Praetorius draws the regals and their resonators in
+  *Syntagma musicum II* (1619); Monteverdi scores one for Charon in
+  *L'Orfeo* (1607). The beating reed is G. R. Plitnik's ("Vibration
+  characteristics of pipe organ reed tongues…", *J. Acoust. Soc. Am.*
+  **107**(6), 3460–3473, 2000) and A. Miklós, J. Angster, S. Pitsch and
+  T. D. Rossing's (*J. Acoust. Soc. Am.* **113**, 1081–1091, 2003; **119**,
+  3121–3129, 2006). Modartt's [Organteq](https://www.modartt.com/organteq)
+  models reed pipes physically, and regals are sold as sample libraries.
+  The Regal plays its curved tongues, shallots, short resonators and wedge
+  bellows from those; its sources are in `regal/README.md`.
 
 ## 2. Techniques Forte uses, and where they come from
 
