@@ -4,7 +4,7 @@ energy 30
 field 0.95899999999999996
 depth 0.5
 length 10
-gas 1.0000000000000000e-1
+gas 1e-10
 receiver 1
 noise 0.10000000000000001
 room 0.25

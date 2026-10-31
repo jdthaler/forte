@@ -192,7 +192,9 @@ sounds from its note. One knob moved alone, as in every preset, is then in
 tune. Knobs moved together can leave a reed tens of cents off, since their
 effects do not simply add; so the engine listens to each reed while its
 key is held, and the next time the key is pressed with the same voicing
-the reed is retuned by what it heard (the voicer's ear).
+the reed is retuned by what it heard (the voicer's ear). It hears each
+press alone, from a quarter of a second after the key goes down until it
+is let go, so a note played again and again stays where it is.
 
 The weight on the bellows (**Wind pressure**, the mod wheel and key
 pressure) is retuned as it moves, so it changes the loudness and the
