@@ -19,6 +19,16 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 }
 body[data-instrument] .forte-edge { background-color: var(--panel, #151518); }
 
+/* Forte's mark: a forte, the f of a score's dynamics, as a bold italic serif f. Not the character
+   MUSICAL SYMBOL FORTE (U+1D191): Safari has no font with it and draws its stand-in, a staff of
+   horizontal lines. */
+.forte-mark, .forte-home::before, .forte-menu-home b::before {
+  display: inline-block; color: var(--accent, #f0b35a);
+  font: italic 700 1.2em/1 "Times New Roman", Times, "Liberation Serif", Georgia, serif;
+  padding-right: 0.08em; /* the f's tail leans out past its box */
+}
+.forte-home::before, .forte-menu-home b::before { margin-right: 0.3em; }
+
 [data-forte-nav] { display: flex; align-items: center; gap: 10px; }
 
 .forte-home {
@@ -31,7 +41,7 @@ body[data-instrument] .forte-edge { background-color: var(--panel, #151518); }
   border: 1px solid var(--line, #2b2833);
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
 }
-.forte-home::before { content: "𝆑 "; color: var(--accent, #f0b35a); font-weight: 400; }
+.forte-home::before { content: "f"; }
 .forte-home:hover { border-color: var(--accent, #f0b35a); }
 
 .forte-switch { position: relative; min-width: 0; }
@@ -44,7 +54,7 @@ body[data-instrument] .forte-edge { background-color: var(--panel, #151518); }
 }
 .forte-switch summary::-webkit-details-marker { display: none; }
 .forte-switch summary h1 { margin: 0; min-width: 0; }
-.forte-mark { color: var(--accent, #f0b35a); font-size: 15px; line-height: 1; }
+.forte-mark { font-size: 17px; }
 .forte-caret { color: var(--muted, #9a9284); font-size: 11px; }
 .forte-switch[open] summary, .forte-switch summary:hover { border-color: var(--accent, #f0b35a); }
 .forte-menu {
@@ -66,7 +76,7 @@ body[data-instrument] .forte-edge { background-color: var(--panel, #151518); }
   color: var(--text, #ece8e1); text-decoration: none; border-bottom: 1px solid var(--line, #2b2833);
 }
 .forte-menu-home b { font-weight: 700; font-size: 14px; }
-.forte-menu-home b::before { content: "𝆑 "; color: var(--accent, #f0b35a); font-weight: 400; }
+.forte-menu-home b::before { content: "f"; }
 .forte-menu-home span { color: var(--muted, #9a9284); font-size: 11.5px; }
 .forte-menu-home:hover { background: rgba(255, 255, 255, 0.06); }
 .forte-menu-sec { color: var(--muted, #9a9284); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.7px; margin: 8px 6px 4px; }
