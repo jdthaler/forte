@@ -46,7 +46,11 @@
   }
   .brand { display: flex; align-items: baseline; gap: 8px; min-width: 0; margin-right: auto; }
   .brand b { font-size: 15px; font-weight: 700; white-space: nowrap; }
-  .brand b::before { content: "𝆑 "; color: var(--accent); font-weight: 400; }
+  /* Forte's mark: a bold italic serif f (WebKit has no font with U+1D191 MUSICAL SYMBOL FORTE) */
+  .brand b::before {
+    content: "f"; display: inline-block; margin-right: 0.3em; padding-right: 0.08em; color: var(--accent);
+    font: italic 700 1.2em/1 "Times New Roman", Times, "Liberation Serif", Georgia, serif;
+  }
   .brand span { color: var(--muted); font: 11px ui-monospace, Menlo, monospace; }
   #preset { flex: 0 1 280px; min-width: 0; text-overflow: ellipsis; }
   .brand b { overflow: hidden; text-overflow: ellipsis; }
