@@ -16,6 +16,21 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-31 — Regal: repeated notes stay in tune; saved states written as the plugins save them
+
+### Forte 0.42.1
+- `tools/contract.mjs --save-states` writes a value as the plugins save it: a value off its step
+  on the step (the strike angle in the carillon’s *Major-third bells, warbling*, 11.25° on a 0.5° step, saves as
+  11.5°), and a tiny one with its whole exponent (Project 8's gas, 1e-10 mbar, had been written
+  as 1e-1). The two states 0.42.0 wrote are written again, so the plugins' saved-state test
+  passes and the 0.42.0 plugins can be built.
+
+### Regal 0.1.1
+- **A note played again and again no longer creeps sharp.** The voicer's ear, which hears each
+  reed while its key is held and retunes it on the next press, counted the silence since the last
+  press when a key came down again before its reed had fallen quiet, heard the note flat, and pushed
+  every following press sharper (by up to three semitones). It now listens to each press alone.
+
 ## 2026-10-31 — the Chladni Plate; Clavichord; search and filters on the front page; Ion Chain; a pinned header on phones, and no fade above it; more presets on most instruments; the Ondes Martenot; a guided tour of each instrument's physics; Regal; Magnetic Resonator Piano; the Telharmonium; virginals and the lute-harpsichord
 
 ### Forte 0.42.0
