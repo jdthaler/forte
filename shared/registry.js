@@ -14,7 +14,7 @@
 // `plugin.ready` marks an instrument whose native port is built and released as plugins (it has
 // a native/instruments/<id>/ folder); the landing page lists those under Plugins.
 
-export const FORTE_VERSION = '0.42.0';
+export const FORTE_VERSION = '0.42.1';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
@@ -141,7 +141,7 @@ export const INSTRUMENTS = [
     accent: '#c9a46a',
   },
   {
-    id: 'regal', name: 'Regal', section: 'traditional', ready: true, version: '0.1.0', trim: 2,
+    id: 'regal', name: 'Regal', section: 'traditional', ready: true, version: '0.1.1', trim: 2,
     plugin: { code: 'Rega', ready: true },
     after: 'the Renaissance reed organ of Praetorius and of Charon in Monteverdi’s Orfeo',
     tagline: 'Brass tongues beat on their shallots under short resonators, blown from two hand-worked wedge bellows: the tongue sets the pitch, so the wind gives, sinks and shakes in every chord.',
