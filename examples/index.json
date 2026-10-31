@@ -717,6 +717,40 @@
    "title": "Marimbula bass"
   }
  ],
+ "ondes": [
+  {
+   "file": "01-a-ribbon-melody-with-vibrato.m4a",
+   "title": "A ribbon melody with vibrato"
+  },
+  {
+   "file": "02-principal-springs-tam-tam-palme.m4a",
+   "title": "Principal springs tam tam palme"
+  },
+  {
+   "file": "03-the-drawer-o-c-g-g-n-8.m4a",
+   "title": "The drawer o c g g n 8"
+  },
+  {
+   "file": "04-low-notes-without-and-with-pulling.m4a",
+   "title": "Low notes without and with pulling"
+  },
+  {
+   "file": "05-the-intensity-key-pressed-and-let-off.m4a",
+   "title": "The intensity key pressed and let off"
+  },
+  {
+   "file": "06-chords-through-the-tam-tam.m4a",
+   "title": "Chords through the tam tam"
+  },
+  {
+   "file": "07-warming-up-thermal-drift.m4a",
+   "title": "Warming up thermal drift"
+  },
+  {
+   "file": "08-souffle-and-gambe-through-the-springs.m4a",
+   "title": "Souffle and gambe through the springs"
+  }
+ ],
  "organ": [
   {
    "file": "01-jazz-comping-perc-3rd-leslie-slow.m4a",
