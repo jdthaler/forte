@@ -17,7 +17,7 @@
 namespace forte::telharmonium {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { shafts, intonation, top, tooth, voicing, droop, flywheel, touch, split, tau, contact, robbing, a1, a2, a3, a4, a5, a6, a7, a8, m1, m2, m3, m4, m5, m6, m7, m8, cable, distance, receiver, magnet, horn, swell, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { shafts, intonation, top, tooth, voicing, droop, flywheel, keyTouch, split, tau, contact, robbing, a1, a2, a3, a4, a5, a6, a7, a8, m1, m2, m3, m4, m5, m6, m7, m8, cable, distance, receiver, magnet, horn, swell, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -32,7 +32,7 @@ inline const FormatSegment kFormat_tooth[] = {{kNoLimit, "", " %", 100, 0, 1, fa
 inline const FormatSegment kFormat_voicing[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_droop[] = {{kNoLimit, "", " ¢", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_flywheel[] = {{0.9999999999999999, "", " ms", 1000, 0, 0, false, false, false, false}, {kNoLimit, "", " s", 1, 0, 1, false, false, false, false}};
-inline const FormatSegment kFormat_touch[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
+inline const FormatSegment kFormat_keyTouch[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_split[] = {{kNoLimit, "", "", 1, 0, 0, false, false, false, true}};
 inline const FormatSegment kFormat_tau[] = {{kNoLimit, "", " ms", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_contact[] = {{0.049999999999999996, "instant", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " ms", 1, 0, 1, false, false, false, false}};
@@ -95,7 +95,7 @@ inline const ParamInfo kParams[p::count] = {
   {"voicing", "Field voicing", "Pitch-shafts", ParamKind::continuous, 0, 1, 0.9, 0.01, false, false, nullptr, 0, kFormat_voicing, 1},
   {"droop", "Motor's speed droop", "Pitch-shafts", ParamKind::continuous, 0, 60, 6, 0.1, false, false, nullptr, 0, kFormat_droop, 1},
   {"flywheel", "Flywheel time constant", "Pitch-shafts", ParamKind::continuous, 0.2, 30, 3, 0, true, false, nullptr, 0, kFormat_flywheel, 2},
-  {"touch", "Key touch", "Keys", ParamKind::continuous, 0, 1, 0.5, 0.01, false, false, nullptr, 0, kFormat_touch, 1},
+  {"keyTouch", "Key touch", "Keys", ParamKind::continuous, 0, 1, 0.5, 0.01, false, false, nullptr, 0, kFormat_keyTouch, 1},
   {"split", "Melody manual from", "Keys", ParamKind::continuous, 36, 96, 60, 1, false, false, nullptr, 0, kFormat_split, 1},
   {"tau", "Circuit time constant (L/R)", "Keys", ParamKind::continuous, 0.5, 40, 4, 0, true, false, nullptr, 0, kFormat_tau, 1},
   {"contact", "Relay contacts (closing time)", "Keys", ParamKind::continuous, 0, 20, 6, 0.1, false, false, nullptr, 0, kFormat_contact, 2},
@@ -141,7 +141,7 @@ inline const ParamInfo kParams[p::count] = {
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
 };
 
-inline const PresetValue kPreset1[] = {{p::shafts, 1}, {p::pitch, 5}, {p::touch, 0}};
+inline const PresetValue kPreset1[] = {{p::shafts, 1}, {p::pitch, 5}, {p::keyTouch, 0}};
 inline const PresetValue kPreset2[] = {{p::intonation, 1}};
 inline const PresetValue kPreset3[] = {{p::a1, 8}, {p::m1, 8}, {p::a2, 0}, {p::m2, 0}, {p::a3, 0}, {p::m3, 0}, {p::a4, 0}, {p::m4, 0}, {p::a5, 0}, {p::m5, 0}, {p::a6, 0}, {p::m6, 0}, {p::a7, 0}, {p::m7, 0}, {p::a8, 0}, {p::m8, 0}, {p::tooth, 0}};
 inline const PresetValue kPreset4[] = {{p::a1, 8}, {p::m1, 8}, {p::a2, 0}, {p::m2, 0}, {p::a3, 7}, {p::m3, 7}, {p::a4, 0}, {p::m4, 0}, {p::a5, 5}, {p::m5, 5}, {p::a6, 0}, {p::m6, 0}, {p::a7, 4}, {p::m7, 4}, {p::a8, 0}, {p::m8, 0}};
@@ -156,7 +156,7 @@ inline const PresetValue kPreset12[] = {{p::magnet, 20}, {p::split, 48}};
 inline const PresetValue kPreset13[] = {{p::receiver, 1}, {p::magnet, 1000}};
 inline const PresetValue kPreset14[] = {{p::horn, 0}};
 inline const PresetValue kPreset15[] = {{p::droop, 40}, {p::flywheel, 0.8}};
-inline const PresetValue kPreset16[] = {{p::tau, 25}, {p::touch, 0}};
+inline const PresetValue kPreset16[] = {{p::tau, 25}, {p::keyTouch, 0}};
 inline const Preset kPresets[] = {
   {"Telharmonic Hall, 1906: flute and oboe", nullptr, 0},
   {"As built: eight shafts at A = 435 Hz", kPreset1, 3},

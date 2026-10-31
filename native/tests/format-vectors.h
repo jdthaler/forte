@@ -2926,7 +2926,7 @@ inline const Vector kAll[] = {
   {"telharmonium.droop", {"droop", "", "", forte::ParamKind::continuous, 0, 60, 6, 0.1, false, false, nullptr, 0, kF539, 1}, kC539, 8},
   {"telharmonium.flywheel", {"flywheel", "", "", forte::ParamKind::continuous, 0.2, 30, 3, 0, true, false, nullptr, 0, kF540, 2}, kC540, 8},
   {"telharmonium.velocity", {"velocity", "", "", forte::ParamKind::continuous, 0.05, 1, 0.8, 0.01, false, false, nullptr, 0, kF541, 1}, kC541, 8},
-  {"telharmonium.touch", {"touch", "", "", forte::ParamKind::continuous, 0, 1, 0.5, 0.01, false, false, nullptr, 0, kF542, 1}, kC542, 7},
+  {"telharmonium.keyTouch", {"keyTouch", "", "", forte::ParamKind::continuous, 0, 1, 0.5, 0.01, false, false, nullptr, 0, kF542, 1}, kC542, 7},
   {"telharmonium.split", {"split", "", "", forte::ParamKind::continuous, 36, 96, 60, 1, false, false, nullptr, 0, kF543, 1}, kC543, 8},
   {"telharmonium.tau", {"tau", "", "", forte::ParamKind::continuous, 0.5, 40, 4, 0, true, false, nullptr, 0, kF544, 1}, kC544, 8},
   {"telharmonium.contact", {"contact", "", "", forte::ParamKind::continuous, 0, 20, 6, 0.1, false, false, nullptr, 0, kF545, 2}, kC545, 8},

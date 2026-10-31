@@ -6,7 +6,7 @@ tooth 0.02
 voicing 0.90000000000000002
 droop 6
 flywheel 3
-touch 0
+keyTouch 0
 split 60
 tau 25
 contact 6

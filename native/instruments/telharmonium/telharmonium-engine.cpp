@@ -58,7 +58,7 @@ void TelharmoniumEngine::setParams(const double *p) {
   top = P[p::top];
   tooth = P[p::tooth];
   toothNow = quality == Quality::low ? 0 : tooth; // Low: the alternators are pure sines
-  touch = P[p::touch];
+  touch = P[p::keyTouch];
   const double vo = P[p::voicing];
   const bool revoice = vo != voicingAmount;
   voicingAmount = vo;

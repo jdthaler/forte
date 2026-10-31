@@ -7,3 +7,6 @@
 - **Down the line:** each manual's music goes out on its own telephone line, the telegrapher's line solved exactly (city cable or open wire on poles, up to 250 km), to a receiver whose magnet pulls a clamped soft-iron diaphragm (Cahill's thin one near 1 kHz, or Arthur Cahill's near 300 Hz) with the square of the flux, so loud bass growls and harmonics without their ground tone bring it back, through a paper horn that resonates on every c/2L.
 - Pierce's intonation takes thirds and sevenths just from a held key's shaft; key touch, aftertouch and the swell pedal (CC11, the mod wheel).
 - The page draws the shafts and their alternators in use, every bus's current against a lone note's, the line's and the receiver's response under the focused key's harmonics, the key's alternator and harmonics, the spectrum and the spectrogram. Seventeen presets, eight demos, the plugin (AU code Telh).
+
+### Forte (patch)
+- `tools/gen-native-params.mjs` refuses an instrument parameter named `preset`, `touch`, `quality` or `mpe`, the ids the plugins save their own parameters under.

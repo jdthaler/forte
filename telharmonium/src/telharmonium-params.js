@@ -46,7 +46,7 @@ export const GROUPS = [
     title: 'Keys',
     params: [
       { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.8, step: 0.01, fmt: (v) => v.toFixed(2), hint: 'How fast the computer keys go down. It counts as far as the key touch lets it.' },
-      { id: 'touch', label: 'Key touch', min: 0, max: 1, def: 0.5, step: 0.01, fmt: pct,
+      { id: 'keyTouch', label: 'Key touch', min: 0, max: 1, def: 0.5, step: 0.01, fmt: pct,
         hint: 'How much a key\'s speed sets its loudness, through an induction coil in each key\'s circuit (the third Telharmonium\'s touch control, 1911). At 0 every key switches its alternators in at full strength, as the relays of 1906 did; aftertouch presses a key further in.' },
       { id: 'split', label: 'Melody manual from', min: 36, max: 96, def: 60, step: 1, fmt: (v) => noteName(v),
         hint: 'Keys from here up play Manual II, the melody: its own eight stops, its own line and its own receivers. The keys below play Manual I, the accompaniment. In New York the two went out on separate lines, which let each be louder and balanced on its own.' },
@@ -99,7 +99,7 @@ const both = (v) => Object.fromEntries(v.flatMap((x, i) => [[`a${i + 1}`, x], [`
 
 export const PRESETS = [
   { name: 'Telharmonic Hall, 1906: flute and oboe', p: {} },
-  { name: 'As built: eight shafts at A = 435 Hz', p: { shafts: 'eight', pitch: 435, touch: 0 } },
+  { name: 'As built: eight shafts at A = 435 Hz', p: { shafts: 'eight', pitch: 435, keyTouch: 0 } },
   { name: 'Pierce\'s just thirds and sevenths', p: { intonation: 'pierce' } },
   { name: 'Pure ground tone (sine alternators)', p: { ...both([8, 0, 0, 0, 0, 0, 0, 0]), tooth: 0 } },
   { name: 'Clarinet: the odd harmonics', p: both([8, 0, 7, 0, 5, 0, 4, 0]) },
@@ -114,5 +114,5 @@ export const PRESETS = [
   { name: 'Arthur Cahill\'s receiver (1911)', p: { receiver: 'arthur', magnet: 1000 } },
   { name: 'The bare receiver (no horn)', p: { horn: 0 } },
   { name: 'A struggling motor: big droop, light flywheel', p: { droop: 40, flywheel: 0.8 } },
-  { name: 'Heavy thumps: a long L/R', p: { tau: 25, touch: 0 } },
+  { name: 'Heavy thumps: a long L/R', p: { tau: 25, keyTouch: 0 } },
 ];

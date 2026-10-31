@@ -322,7 +322,7 @@ test('pitch bend: the field rheostat swings the motor ±2 semitones, through the
 
 test('touch: at 0 velocity changes nothing; at 1 the level is the velocity; aftertouch presses it to full', () => {
   const lvl = (touch, vel, after) => {
-    const e = engine(P({ ...PURE, touch }), { tap: 1 });
+    const e = engine(P({ ...PURE, keyTouch: touch }), { tap: 1 });
     e.noteOn(60, vel); if (after != null) e.handle({ type: 'pressure', value: after, key: 60 });
     const [, x] = run(e, 0.5); return tone(x, keyHz(60), 9600, x.length);
   };
