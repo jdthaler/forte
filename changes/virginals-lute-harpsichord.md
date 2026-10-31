@@ -11,3 +11,4 @@
   scale with a brass 4′: gut's bending loss (η_E ≈ 0.04) rolls off the upper partials, and it
   stretches less under a pluck. The harpsichord itself sounds as before.
 - Nine presets for them, at the end of the list, and three demos (09–11).
+- Its guided tour has two more stops: the virginals (with the arpichordium) and the lute-harpsichord.
