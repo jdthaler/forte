@@ -27,6 +27,7 @@
 namespace forte::regal {
 
 constexpr int TRACE = 128;      // points in the live trace of the focused reed
+constexpr double SIM_FS = 48000; // Hz: every reed steps at this rate (twice it from fOS up), read at the host's
 constexpr int POOL = 40;        // voices: 16 keys sounding, and those fading out
 constexpr int DL = 4096;        // floats of delay memory per reed (both directions, every segment)
 constexpr double MPE_BEND = 7;  // semitones a key's own bend reaches (its tuning wires)
@@ -60,19 +61,28 @@ class RegalEngine : public Engine {
   struct Sim {
     const Reed *R = nullptr;
     int os = 1;
-    double h = 0, m = 1, k = 1, k0 = 1, c = 0, S = 0, h0 = 0, bs = 0, Ls = 0, Ks = 0, zc = 0;
+    double h = 0, m = 1, k = 1, c = 0, S = 0, h0 = 0, bs = 0, Ls = 0, Ks = 0, zc = 0;
     double Ch = 0, Kp = 0, Z0 = 0, Zend = 0, beta = 0, eta = 0, noiseAmp = 0;
     int nseg = 0, lenR[MAX_SEG] = {}, lenL[MAX_SEG] = {}, offR[MAX_SEG] = {}, offL[MAX_SEG] = {}, posR[MAX_SEG] = {}, posL[MAX_SEG] = {};
     double rj[MAX_SEG] = {}, gl[MAX_SEG] = {};
     bool ap = false;
     // state
     double q = 0, v = 0, Pb = 0, pd = 0, U = 0, Uin = 0, lp = 0, Um = 0, out = 0, apx = 0, apy = 0;
-    double env = 0, energy = 0;
+    double env = 0, energy = 0, envK = 0.9999, Gl = 0, shutT = 0;
     uint32_t rng = 1;
     bool asleep = true;
     float buf[DL];
     void init(const Reed &model, double fs, double fOS, double kr, uint32_t seed);
-    void stiffen(double r) { k = k0 * r * r; }
+    // a bend of r: the whole reed, tongue, shallot and resonator, runs r times faster (as if each
+    // were cut r times smaller in time), stepped r times a sample and read between its last two steps
+    double rate = 1, ph = 0, prev = 0, y = 0, uIn = 0;
+    // its pitch, as it sounds in its own time with the pallet open (past its first 0.25 s): the
+    // tongue's crossings of half its curve, counted in steps
+    double nStep = 0, yc = 0, tFirst = -1, tLast = -1;
+    int nCross = 0;
+    double pitch() const { return nCross >= 8 && (tLast - tFirst) * h > 0.15 ? nCross / ((tLast - tFirst) * h) : 0; }
+    // one tick of its own rate: as many steps as are due, y its sound and uIn its draw on the chest
+    void tick(double Pw, double open);
     void reset();
     // one step with the chest at Pw and the pallet open by `open` (0..1)
     void step(double Pw, double open);
@@ -85,13 +95,21 @@ class RegalEngine : public Engine {
     std::array<Sim, NRANKS> sim;
     double mute[NRANKS] = {};
     double open = 0, openTo = 0, openRate = 0, fade = 1, env = 0, age = 0, gl = 0, gr = 0, nb = 1;
+    double learn[NRANKS] = {}; // the voicer's ear: what the key's reeds sounded off their retuning last time
     bool down = false, fading = false, dead = false, used = false;
   };
+  double rateOf(const Voice &v, int r) const; // a reed's rate: its bends and the voicer's retuning
+  // The voicer's ear: the table's retuning is measured one knob at a time, and knobs moved together
+  // can leave a reed off its note; each reed's pitch is heard while its key is held, and the next time
+  // the key is pressed (with the same voicing) the reed is run that much faster or slower.
+  double learned[NRANKS][128] = {};
+  Voicing learnedFor{};
+  void listen(Voice &v);
 
   // read by the tests: the voices in the order they started, the wind
   std::array<Voice *, POOL> voices{};
   int count = 0;
-  double Pbel = 0, Pw = 0, fill[2] = {1, 1}, draw = 0;
+  double Pbel = 0, Pw = 0, Pws = 0, fill[2] = {1, 1}, draw = 0;
   int active = 0;
 
  private:
@@ -132,6 +150,6 @@ class RegalEngine : public Engine {
 
 // The pitch a reed sounds alone in the engine at the default wind (Hz), measured over [t0, t1] s
 // of a held note at sample rate fs: the tuning tool's and the tests' measure.
-double measureReed(const Reed &R, double fs, double P0, double t0, double t1);
+double measureReed(const Reed &R, double fs, double P0, double t0, double t1, uint32_t seed = 12345);
 
 } // namespace forte::regal

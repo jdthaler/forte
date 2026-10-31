@@ -42,6 +42,15 @@ static std::array<double, 63> halfband(double beta = 8) {
 
 // ---- a reed in its tube --------------------------------------------------------------------
 
+void RegalEngine::Sim::tick(double Pw, double open) {
+  ph += rate;
+  double u = 0;
+  int n = 0;
+  while (ph >= 1) { ph -= 1; prev = out; step(Pw, open); u += Uin; n++; }
+  if (n) uIn = u / n;
+  y = prev + ph * (out - prev); // a step behind: between the last two
+}
+
 double RegalEngine::Sim::noise() { // xorshift32, uniform in ±0.5
   uint32_t s = rng;
   s ^= s << 13; s ^= s >> 17; s ^= s << 5;
@@ -52,14 +61,18 @@ double RegalEngine::Sim::noise() { // xorshift32, uniform in ±0.5
 void RegalEngine::Sim::init(const Reed &model, double fs, double fOSv, double kr, uint32_t seed) {
   R = &model;
   os = model.f0 >= fOSv ? 2 : 1;
-  h = 1 / (fs * os);
-  m = model.m; k0 = model.k; k = k0 * kr * kr; c = model.c; S = model.S; h0 = model.h0; bs = model.bs; Ls = model.Ls;
+  h = 1 / (SIM_FS * os); // whatever the host's rate: the reed's pitch does not depend on it
+  (void)fs;
+  m = model.m; k = model.k; c = model.c; S = model.S; h0 = model.h0; bs = model.bs; Ls = model.Ls;
   zc = model.zc;
   // the contact's stiffness, as far as the step can follow it (its frequency flat on the shallot
   // under ωh = 1.2)
-  const double wMax = 1.2 / h, KsMax = (wMax * wMax * m - k0) / 0.2357;
+  const double wMax = 1.2 / h, KsMax = (wMax * wMax * m - k) / 0.2357;
   Ks = std::min(model.Ks, std::max(KsMax, 0.0));
+  rate = kr;
   Ch = (model.Vb / (Air::rho * Air::c * Air::c)) / h;
+  envK = std::exp(-h / 0.03); // the level follower falls with a 30 ms time constant
+  Gl = (model.Vb / (Air::rho * Air::c * Air::c)) / 0.03; // the boot leaks: shut, it empties in 30 ms
   const double A0 = gapArea(0, h0, bs, Ls);
   Kp = CDP * PALLET * A0 * std::sqrt(2 / Air::rho);
   noiseAmp = NOISE;
@@ -108,6 +121,8 @@ void RegalEngine::Sim::init(const Reed &model, double fs, double fOSv, double kr
 
 void RegalEngine::Sim::reset() {
   q = v = Pb = pd = U = Uin = lp = Um = out = apx = apy = env = energy = 0;
+  ph = prev = y = uIn = shutT = 0;
+  nStep = yc = 0; tFirst = tLast = -1; nCross = 0;
   for (int i = 0; i < DL; i++) buf[i] = 0;
   for (int i = 0; i < nseg; i++) posR[i] = posL[i] = 0;
 }
@@ -146,12 +161,12 @@ void RegalEngine::Sim::step(double Pw, double open) {
   const double Ud = U + Ur;
   pd = 2 * aL[0] + Z0 * Ud;
   const double in0 = aL[0] + Z0 * Ud;
-  // the boot, implicitly through its pallet: Ch (P_b' − P_b) = U_in(P_w − P_b') − U − S v
+  // the boot, implicitly through its pallet and its leak: Ch (P_b' − P_b) = U_in(P_w − P_b') − U − S v − G_l P_b'
   {
-    const double Kpo = Kp * open, Rr = Ch * (Pw - Pb) + Ud;
+    const double Kpo = Kp * open, Rr = Ch * (Pw - Pb) + Ud + Gl * Pw, A = Ch + Gl;
     double D;
-    if (Rr >= 0) { const double s = (2 * Rr) / (Kpo + std::sqrt(Kpo * Kpo + 4 * Ch * Rr)); D = s * s; Uin = Kpo * s; }
-    else { const double s = (-2 * Rr) / (Kpo + std::sqrt(Kpo * Kpo - 4 * Ch * Rr)); D = -s * s; Uin = -Kpo * s; }
+    if (Rr >= 0) { const double s = (2 * Rr) / (Kpo + std::sqrt(Kpo * Kpo + 4 * A * Rr)); D = s * s; Uin = Kpo * s; }
+    else { const double s = (-2 * Rr) / (Kpo + std::sqrt(Kpo * Kpo - 4 * A * Rr)); D = -s * s; Uin = -Kpo * s; }
     Pb = Pw - D;
   }
   // the junctions, then the open end
@@ -177,8 +192,16 @@ void RegalEngine::Sim::step(double Pw, double open) {
     buf[offL[i] + posL[i]] = (float)inL[i]; if (++posL[i] == lenL[i]) posL[i] = 0;
   }
   const double ao = out < 0 ? -out : out;
-  env = ao > env ? ao : env * 0.9999;
+  env = ao > env ? ao : env * envK;
   energy = 0.5 * m * v * v + 0.5 * k * q * q;
+  // its pitch: crossings of half the curve, the pallet open, past the speech
+  const double yq = q - 0.5 * h0;
+  if (open >= 0.999 && nStep * h >= 0.25 && yc < 0 && yq >= 0) {
+    const double tc = nStep - yq / (yq - yc);
+    if (tFirst < 0) tFirst = tc; else { tLast = tc; nCross++; }
+  }
+  yc = yq;
+  nStep++;
 }
 
 // ---- the engine ----------------------------------------------------------------------------
@@ -200,7 +223,7 @@ void RegalEngine::setParams(const double *p) {
   on[0] = P[p::regal16] > 0.5; on[1] = P[p::regal8] > 0.5; on[2] = P[p::regal4] > 0.5;
   hand = (int)P[p::bellows] == bellows_::hand;
   P0 = P[p::pressure];
-  if (!started) { started = true; P0s = P0; Pbel = Pw = P0; ub = 0; fill[0] = fill[1] = 1; active = 0; }
+  if (!started) { started = true; P0s = P0; Pbel = Pw = Pws = P0; ub = 0; fill[0] = fill[1] = 1; active = 0; }
 }
 
 void RegalEngine::bend(double value) { bendTo = std::exp2((value * kBendSemitones) / 12); }
@@ -230,12 +253,27 @@ void RegalEngine::allNotesOff() {
   after = 0;
 }
 
+double RegalEngine::rateOf(const Voice &v, int r) const {
+  return (SIM_FS / fs) * bendNow * v.nb * std::exp2(-(voicingCents(v.model[r].f0, v.voicing, P0s * (1 + 0.25 * afterS)) + v.learn[r]) / 1200);
+}
+
+void RegalEngine::listen(Voice &v) {
+  if (!(v.voicing == learnedFor)) return;
+  for (int r = 0; r < NRANKS; r++) {
+    const double f = v.sim[r].pitch();
+    if (!(f > 0)) continue;
+    const double c = 1200 * std::log2(f / v.model[r].f0) - voicingCents(v.model[r].f0, v.voicing, P0s * (1 + 0.25 * afterS));
+    if (std::fabs(c) < 600) learned[r][v.key] = c;
+  }
+}
+
 void RegalEngine::start(Voice &v, double velocity) {
   v.voicing = voicing;
-  const double kr = bendNow * v.nb;
+  if (!(voicing == learnedFor)) { learnedFor = voicing; for (auto &row : learned) for (double &c : row) c = 0; }
   for (int r = 0; r < NRANKS; r++) {
+    v.learn[r] = learned[r][v.key];
     designKey(v.key, r, voicing, tuning, v.model[r]);
-    v.sim[r].init(v.model[r], fs, fOS, kr, seed * 7919u + (uint32_t)(++seq) * 104729u + (uint32_t)r);
+    v.sim[r].init(v.model[r], fs, fOS, rateOf(v, r), seed * 7919u + (uint32_t)(++seq) * 104729u + (uint32_t)r);
     v.sim[r].asleep = !on[r];
     v.mute[r] = on[r] ? 1 : 0;
   }
@@ -271,7 +309,10 @@ void RegalEngine::noteOn(int key, double velocity) {
       if (victim) victim->fading = true;
     }
   }
-  if (v->nb != expr.bendOf(key)) { v->nb = expr.bendOf(key); for (Sim &s : v->sim) s.stiffen(bendNow * v->nb); }
+  // a key pressed again while its reeds still sound: what the ear heard last time, at once
+  if (v->voicing == learnedFor) for (int r = 0; r < NRANKS; r++) v->learn[r] = learned[r][key];
+  v->nb = expr.bendOf(key);
+  for (int r = 0; r < NRANKS; r++) v->sim[r].rate = rateOf(*v, r);
   v->down = true; v->openTo = 1; v->openRate = 1 / (palletOpen(velocity) * fs);
   for (int r = 0; r < NRANKS; r++) if (v->mute[r] > 0 || on[r]) v->sim[r].asleep = false;
   focus = v;
@@ -282,6 +323,7 @@ void RegalEngine::noteOff(int key, double velocity) {
   press[key] = 0; updateAfter();
   Voice *v = byKey[key];
   if (!v) return;
+  if (v->down) listen(*v);
   v->down = false; v->openTo = 0; v->openRate = 1 / (palletClose(velocity) * fs);
 }
 
@@ -331,23 +373,24 @@ void RegalEngine::stepWind(double Uin) {
 
 void RegalEngine::process(float *L, float *R, int n) {
   if (!hasParams) { for (int i = 0; i < n; i++) L[i] = R[i] = 0; return; }
+  const double kPw = 1 - std::exp(-TAU * 20 / fs);
   const double mStep = 1 / (MUTE * fs), fadeK = std::exp(-1 / (FADE * fs)), h = 1 / fs;
-  // the pitch wheel glides the tongues' stiffness (their tuning wires)
-  if (bendNow != bendTo) {
-    bendNow = glideTo(bendNow, bendTo, n / fs, BEND_T);
-    for (int i = 0; i < count; i++) for (Sim &s : voices[i]->sim) if (s.R) s.stiffen(bendNow * voices[i]->nb);
-  }
-  for (int i = 0; i < count; i++) { // a key's own bend (MPE) glides the same way
+  // each reed's rate: the pitch wheel's bend and the key's own (MPE), gliding, and the voicer's
+  // retuning for its voicing and the weight on the bellows
+  if (bendNow != bendTo) bendNow = glideTo(bendNow, bendTo, n / fs, BEND_T);
+  for (int i = 0; i < count; i++) {
     Voice &v = *voices[i];
     const double to = expr.bendOf(v.key);
-    if (v.nb != to) { v.nb = glideTo(v.nb, to, n / fs, BEND_T); for (Sim &s : v.sim) if (s.R) s.stiffen(bendNow * v.nb); }
+    if (v.nb != to) v.nb = glideTo(v.nb, to, n / fs, BEND_T);
+    for (int r = 0; r < NRANKS; r++) if (!v.sim[r].asleep) v.sim[r].rate = rateOf(v, r);
   }
   const Voice *f = focus && !focus->dead ? focus : nullptr;
   int fr = -1;
   if (f) { for (int r : {1, 0, 2}) if (f->mute[r] > 0 && !f->sim[r].asleep) { fr = r; break; } }
   for (int i = 0; i < n; i++) {
     double Uin = 0, l0 = 0, l1 = 0, r0 = 0, r1 = 0;
-    const double Pc = Pw;
+    Pws += kPw * (Pw - Pws); // the chest's pressure as the boots feel it: its own fast ringing left out
+    const double Pc = Pws;
     for (int k = 0; k < count; k++) {
       Voice &v = *voices[k];
       if (v.dead) continue;
@@ -359,13 +402,14 @@ void RegalEngine::process(float *L, float *R, int n) {
         Sim &s = v.sim[r];
         if (s.asleep) continue;
         const double op = v.open * v.mute[r];
+        const double g = s.R->gain;
         if (s.os == 2) {
-          s.step(Pc, op); s0 += s.out; const double u = s.Uin;
+          s.tick(Pc, op); s0 += g * s.y; const double u = s.uIn;
           if (&v == f && r == fr) record(s, 0);
-          s.step(Pc, op); s1 += s.out; Uin += 0.5 * (u + s.Uin);
+          s.tick(Pc, op); s1 += g * s.y; Uin += 0.5 * (u + s.uIn);
           if (&v == f && r == fr) record(s, 1);
         } else {
-          s.step(Pc, op); s0 += s.out; s1 += s.out; Uin += s.Uin;
+          s.tick(Pc, op); s0 += g * s.y; s1 += g * s.y; Uin += s.uIn;
           if (&v == f && r == fr) record(s, 0);
         }
       }
@@ -391,7 +435,10 @@ void RegalEngine::process(float *L, float *R, int n) {
       Sim &s = v.sim[r];
       if (s.asleep) continue;
       const bool shut = v.open == 0 || v.mute[r] == 0;
-      if (shut && s.env * OUT < 1e-6 && s.energy < 1e-12 && std::fabs(s.Pb) < 0.05) { s.asleep = true; s.reset(); } else awake++;
+      s.shutT = shut ? s.shutT + n / fs : 0;
+      // quiet, or shut for 1.5 s (a tongue ringing on under −120 dB, or the last of the wind in its
+      // boot and tube, is let go)
+      if (shut && (s.env * OUT * s.R->gain < 1e-6 || s.shutT > 1.5)) { s.asleep = true; s.reset(); } else awake++;
     }
     if (!awake && !v.down && v.open == 0) v.dead = true;
   }
@@ -483,26 +530,24 @@ void RegalEngine::postView() {
 
 // ---- the tuning tool's and the tests' measure ----------------------------------------------
 
-double measureReed(const Reed &R, double fs, double P0, double t0, double t1) {
+double measureReed(const Reed &R, double fs, double P0, double t0, double t1, uint32_t seed) {
   static RegalEngine::Sim s; // big: not on the stack
-  s.init(R, fs, 250, 1, 12345);
+  s.init(R, fs, 250, 1, seed);
   s.asleep = false;
-  const int steps = s.os;
-  const double h = 1 / fs, openRate = h / 0.01;
+  (void)fs; // the reed runs at its own rate (SIM_FS), whatever the host's
+  const double openRate = s.h / 0.01;
   double open = 0, lastY = 0, first = -1, last = -1;
   int crossings = 0;
   const double mean = 0.5 * R.h0;
-  for (double t = 0; t < t1; t += h) {
+  for (double t = 0; t < t1; t += s.h) {
     open = std::min(1.0, open + openRate);
-    for (int k = 0; k < steps; k++) {
-      s.step(P0, open);
-      const double y = s.q - mean, tt = t + k * s.h;
-      if (tt >= t0 && lastY < 0 && y >= 0) {
-        const double tc = tt - s.h * y / (y - lastY); // linear interpolation of the crossing
-        if (first < 0) first = tc; else { last = tc; crossings++; }
-      }
-      lastY = y;
+    s.step(P0, open);
+    const double y = s.q - mean;
+    if (t >= t0 && lastY < 0 && y >= 0) {
+      const double tc = t - s.h * y / (y - lastY); // linear interpolation of the crossing
+      if (first < 0) first = tc; else { last = tc; crossings++; }
     }
+    lastY = y;
   }
   return crossings > 0 ? crossings / (last - first) : 0;
 }

@@ -7,6 +7,7 @@
 
 #include "forte/dsp.h"
 #include "regal-tuning.h"
+#include "regal-voicing.h"
 
 namespace forte::regal {
 
@@ -38,13 +39,13 @@ double endCorrection(const Tube &t) { return t.n ? 0.61 * std::sqrt(t.area[t.n -
 
 // The resonator for each shape, after the shallot (length ls, bore ds), for a reed sounding f0.
 static void resonator(Tube &t, int shape, double f0, double ds, double resLen) {
-  const double lam = Air::c / f0, As = PI * ds * ds / 4;
+  const double lam = Air::c / std::max(f0, F_WEIGHT), As = PI * ds * ds / 4; // below C2, C2's resonators (as its tongues)
   const auto cone = [&](double l, double d0, double d1, int steps) {
     for (int i = 0; i < steps; i++) { const double d = d0 + (d1 - d0) * (i + 0.5) / steps; t.add(l / steps, PI * d * d / 4); }
   };
   switch (shape) {
-    case REGAL: t.add(lam / 16 * resLen, 2.56 * As); break;                       // a cylinder 1.6 × the shallot's bore
-    case FUNNEL: cone(lam / 10 * resLen, 1.3 * ds, 4.5 * ds, 6); break; // a short, flaring cone
+    case REGAL: t.add(lam / 24 * resLen, 2.56 * As); break;                       // a cylinder 1.6 × the shallot's bore
+    case FUNNEL: cone(lam / 16 * resLen, 1.3 * ds, 4.5 * ds, 6); break; // a short, flaring cone
     case APPLE: {                                                       // a neck, a ball and a cap with holes
       const double D = 4.2 * ds;
       t.add(lam / 40 * resLen, 1.2 * As);
@@ -101,6 +102,14 @@ void design(double f0, double tune, const Voicing &v, Reed &R, double off) {
   R.zc = v.leather ? 0.9 : 0.15;
   R.Vb = std::clamp(20e-6 * (F_REF / f0), 0.5e-6, 400e-6);
   R.ds = R.b;
+  // the voicer's regulation: small reeds radiate far less than big ones (by 6–9 dB an octave, the
+  // funnels most), and a voicer opens the treble up; here a level per reed, so that the regal falls
+  // by about 2.5 dB an octave from bass to treble, each shape near the cylinders' level at C4
+  {
+    static constexpr double REG_EXP[NSHAPES] = {0.73, 1.06, 0.6, 0.74}, REG_TRIM[NSHAPES] = {1, 0.7, 1, 1.5};
+    const int sh = std::clamp(v.shape, 0, NSHAPES - 1);
+    R.gain = REG_TRIM[sh] * std::pow(std::clamp(f0, 20.0, 4200.0) / F_REF, REG_EXP[sh]);
+  }
   Tube &t = R.tube;
   t.add(1.2 * L, PI * R.ds * R.ds / 4); // the shallot
   resonator(t, v.shape, f0, R.ds, 1);
@@ -120,6 +129,33 @@ double tuneRatio(double f0, int shape) {
   return TUNE[s][i] * (1 - t) + TUNE[s][i + 1] * t;
 }
 
+// A knob's cents at x, for facing f, shape s and the note at u semitones up the grid (interpolated
+// in the knob's log and in u).
+static double knobCents(int knob, int f, int s, double x, double u) {
+  const int nx = VG_NX[knob], o = VG_OFF[knob];
+  const double *X = VG_X + o;
+  int j = 0;
+  double t = 0;
+  if (x <= X[0]) t = 0;
+  else if (x >= X[nx - 1]) { j = nx - 2; t = 1; }
+  else {
+    while (j < nx - 2 && x > X[j + 1]) j++;
+    t = std::log(x / X[j]) / std::log(X[j + 1] / X[j]);
+  }
+  const int i = std::clamp((int)u, 0, VG_N - 2);
+  const double w = std::clamp(u - i, 0.0, 1.0);
+  const int16_t *a = VG_C[f][s][o + j], *b = VG_C[f][s][o + j + 1];
+  const double ca = a[i] + (a[i + 1] - a[i]) * w, cb = b[i] + (b[i + 1] - b[i]) * w;
+  return 0.1 * (ca + (cb - ca) * t);
+}
+
+double voicingCents(double f0, const Voicing &v, double P0) {
+  const int s = std::clamp(v.shape, 0, NSHAPES - 1), f = v.leather ? 1 : 0;
+  const double u = 69 + 12 * std::log2(f0 / 440) - VG_LO;
+  return knobCents(VG_PRESSURE, f, s, P0, u) + knobCents(VG_CURVE, f, s, v.curve, u) + knobCents(VG_THICK, f, s, v.thick, u)
+       + knobCents(VG_Q, f, s, v.q, u) + knobCents(VG_RESLEN, f, s, v.resLen, u);
+}
+
 double tuneOffset(double f0, int shape) {
   const int n = std::clamp((int)std::lround(69 + 12 * std::log2(f0 / 440)) - TUNE_LO, 0, TUNE_N - 1);
   return TUNE_OFF[std::clamp(shape, 0, NSHAPES - 1)][n];
@@ -128,7 +164,7 @@ double tuneOffset(double f0, int shape) {
 double rankFreq(int key, int rank, const Tuning &tuning) {
   // the 4′ breaks back an octave where its reeds would sound past C8 (its top keys with the full range)
   const double oct = rank == 2 && key + 12 > 108 ? 0 : RANK_OCT[rank];
-  return keyFreq(key) * tuning.ratio(key) * std::exp2(oct);
+  return keyFreq(key + (int)(12 * oct)) * tuning.ratio(key); // (the same note on two ranks: the same reed, to the last bit)
 }
 
 void designKey(int key, int rank, const Voicing &v, const Tuning &tuning, Reed &out) {

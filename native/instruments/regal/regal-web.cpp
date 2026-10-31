@@ -28,7 +28,9 @@ static void flatten(const Reed &R, double *o) {
 
 static Reed scratchReed;
 
-constexpr double T0 = 0.4, T1 = 1.0; // s: the window the tuning measures the pitch over
+// s: the window the tuning measures the pitch over (the bass settles slowly)
+static double T0(double f0) { return f0 < 100 ? 0.8 : 0.4; }
+static double T1(double f0) { return f0 < 100 ? 1.6 : 1.0; }
 
 // The tuning ratio that cuts a tongue of voicing v (its resonator cut `off` harmonics from one of the
 // note's) to sound f0 at P0 and fs: scan the cut for the first crossing of the note, then close in by
@@ -36,7 +38,7 @@ constexpr double T0 = 0.4, T1 = 1.0; // s: the window the tuning measures the pi
 static double tuneFor(double f0, const Voicing &v, double fs, double P0, double off, double &err) {
   const auto cents = [&](double tune) {
     design(f0, tune, v, scratchReed, off);
-    const double f = measureReed(scratchReed, fs, P0, T0, T1);
+    const double f = measureReed(scratchReed, fs, P0, T0(f0), T1(f0));
     return f > 0 ? 1200 * std::log2(f / f0) : NAN;
   };
   double a = 0.8, ca = cents(a), best = 0, bestC = INFINITY;
@@ -91,11 +93,17 @@ FORTE_EXPORT double regal_gap_area(double q, double h0, double bs, double Ls) { 
 FORTE_EXPORT double regal_cantilever(double L, double h, double b, double M) { return cantileverFreq(L, h, b, M); }
 FORTE_EXPORT double regal_tune_ratio(double f0, int shape) { return tuneRatio(f0, shape); }
 FORTE_EXPORT double regal_tune_offset(double f0, int shape) { return tuneOffset(f0, shape); }
+// The voicer's retuning for a key's rank at parameters P, the bellows weighted to P0 (cents sharp).
+FORTE_EXPORT double regal_voicing_cents(int key, int rank, const double *P, double P0) {
+  designKey(key, rank, voicingOf(P), tuningOf(P), scratchReed);
+  return voicingCents(scratchReed.f0, voicingOf(P), P0);
+}
 FORTE_EXPORT double regal_bellows_pressure(double P0, double fill) { return bellowsPressure(P0, fill); }
 // The pitch a key's rank sounds alone (the reed in its tube, the chest held at P0), over [t0, t1] s.
-FORTE_EXPORT double regal_measure(int key, int rank, const double *P, double fs, double P0, double t0, double t1) {
+FORTE_EXPORT double regal_measure(int key, int rank, const double *P, double fs, double P0, double t0, double t1, unsigned seed) {
   designKey(key, rank, voicingOf(P), tuningOf(P), scratchReed);
-  return measureReed(scratchReed, fs, P0, t0, t1);
+  const double f0 = scratchReed.f0;
+  return measureReed(scratchReed, fs, P0, t0 < 0 ? T0(f0) : t0, t1 < 0 ? T1(f0) : t1, seed ? seed : 12345);
 }
 // The tuning tool: the ratio that cuts a tongue of shape `shape` (default voicing), its resonator cut
 // `off` harmonics from one of the note's, to sound f0 at P0 and fs; out[0] how many cents off it
@@ -109,7 +117,7 @@ FORTE_EXPORT double regal_tune(double f0, int shape, double fs, double P0, doubl
 FORTE_EXPORT double regal_measure_cut(double f0, int shape, double tune, double off, double fs, double P0) {
   Voicing v; v.shape = shape;
   design(f0, tune, v, scratchReed, off);
-  return measureReed(scratchReed, fs, P0, T0, T1);
+  return measureReed(scratchReed, fs, P0, T0(f0), T1(f0));
 }
 
 // The tests' hooks, on the engine of a handle (forte_engine).
@@ -117,6 +125,17 @@ FORTE_EXPORT void regal_configure(RegalEngine *e, unsigned seed, double fOS) { e
 // The wind: P_bellows, P_chest, fill 0, fill 1, active, draw (m³/s).
 FORTE_EXPORT void regal_wind(RegalEngine *e, double *out) {
   out[0] = e->Pbel; out[1] = e->Pw; out[2] = e->fill[0]; out[3] = e->fill[1]; out[4] = e->active; out[5] = e->draw;
+}
+// Voice i: key, down, pallet open, fading, then per rank: awake, level (output units), P_boot, q (mm).
+FORTE_EXPORT int regal_voice(RegalEngine *e, int i, double *out) {
+  if (i < 0 || i >= e->count) return 0;
+  const auto &v = *e->voices[i];
+  out[0] = v.key; out[1] = v.down; out[2] = v.open; out[3] = v.fading;
+  for (int r = 0; r < NRANKS; r++) {
+    const auto &s = v.sim[r];
+    out[4 + 4 * r] = !s.asleep; out[5 + 4 * r] = s.R ? s.env * 0.06 * s.R->gain : 0; out[6 + 4 * r] = s.Pb; out[7 + 4 * r] = 1e3 * s.q;
+  }
+  return 1;
 }
 // How many reeds are awake, and how many of them run at 2×.
 FORTE_EXPORT int regal_awake(RegalEngine *e, int twice) {

@@ -58,6 +58,7 @@ struct Reed {
   double Ks = 0, zc = 0;  // contact: the penalty stiffness along the tongue (N/m), its damping ratio
   double Vb = 0;          // the boot's volume (m³)
   double ds = 0;          // the shallot's bore (m)
+  double gain = 1;        // the voicer's regulation: its sound's level, so that the treble speaks out
   Tube tube;              // shallot + resonator
 };
 
@@ -74,6 +75,9 @@ void design(double f0, double tune, const Voicing &v, Reed &out, double off = -0
 // The tuning table: how far below its natural frequency a reed of shape s sounds at f0
 // (regal-tuning.h, made by tools/regal-tuning.mjs).
 double tuneRatio(double f0, int shape);
+// The voicer's retuning (regal-voicing.h): how many cents a reed of voicing v sounding f0, blown with
+// the bellows weighted to P0, sounds from its note; the engine runs it that much slower.
+double voicingCents(double f0, const Voicing &v, double P0);
 double tuneOffset(double f0, int shape);
 // Design for a key and rank, tuned: the key's frequency in the keyboard's tuning.
 void designKey(int key, int rank, const Voicing &v, const Tuning &tuning, Reed &out);
@@ -94,14 +98,14 @@ double firstPeak(const Tube &t, double fLo, double fHi);
 double endCorrection(const Tube &t);
 
 // The wind.
-constexpr double V_BELLOWS = 0.010;  // m³: each of the two wedge bellows, full
+constexpr double V_BELLOWS = 0.020;  // m³: each of the two wedge bellows, full
 constexpr double THETA_MAX = 0.25;   // rad: a full bellows' opening angle (14°)
 constexpr double A_BOARD = 0.15;     // m²: a bellows' top board (its weight W = P0 × A_BOARD)
 constexpr double BELLOWS_Z = 0.7;    // the board's motion on the wind's air: its damping ratio
-constexpr double RAISE_T = 1.5;      // s: the calcant raises an empty bellows in this
+constexpr double RAISE_T = 1.2;      // s: the calcant raises an empty bellows in this
 constexpr double V_CHEST = 0.002;    // m³: the windchest
 constexpr double G_TRUNK = 3e-4;     // m³/s per Pa: the trunk between bellows and chest
-constexpr double G_TREM = 0.35 * G_TRUNK; // the tremulant's vent, wide open
+constexpr double G_TREM = 0.12 * G_TRUNK; // the tremulant's vent, wide open
 constexpr double G = 9.81;
 // A wedge bellows' wind: the weight's moment falls with the board's angle, so P ∝ cos θ, with
 // the fill f ∈ [0, 1] (V ∝ sin θ) and P0 the pressure full (3 % more when it is down).

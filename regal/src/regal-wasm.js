@@ -30,7 +30,8 @@ function views(m, e) {
 const Base = wasmEngine(BUILD, { messages: views });
 
 // The engine, with the tests' hooks: new RegalWasmEngine(fs, { seed, fOS }), e.wind (the bellows,
-// the chest, the fills, the draw), e.awake() and e.awake(true) (reeds awake, and those at 2×).
+// the chest, the fills, the draw), e.awake() and e.awake(true) (reeds awake, and those at 2×),
+// e.voices().
 export class RegalWasmEngine extends Base {
   constructor(fs, { seed, fOS } = {}) {
     super(fs);
@@ -44,6 +45,15 @@ export class RegalWasmEngine extends Base {
     return { Pbellows: o[0], Pchest: o[1], fill: [o[2], o[3]], active: o[4], draw: o[5] };
   }
   awake(twice = false) { return Base.exports.regal_awake(this.e, twice ? 1 : 0); }
+  // the voices: { key, down, open, fading, ranks: [{ awake, level, Pb, q (mm) }] }
+  voices() {
+    const x = Base.exports, s = scratch(x), out = [];
+    for (let i = 0; x.regal_voice(this.e, i, s.at); i++) {
+      const o = s.f64(16);
+      out.push({ key: o[0], down: !!o[1], open: o[2], fading: !!o[3], ranks: [0, 1, 2].map((r) => ({ awake: !!o[4 + 4 * r], level: o[5 + 4 * r], Pb: o[6 + 4 * r], q: o[7 + 4 * r] })) });
+    }
+    return out;
+  }
 }
 export const ready = () => RegalWasmEngine.ready();
 
@@ -52,8 +62,12 @@ export const ready = () => RegalWasmEngine.ready();
 // impedance(key, rank, P, f, lossless), its tube's input impedance { mag, phase }; firstPeak(key, rank,
 // P, lo, hi); cylinder(len, area, f, lossless) and cylinderPeak(len, area, lo, hi); endCorrection(area);
 // contact(q, h0) { I, dI }; gapArea(q, h0, bs, Ls); cantilever(L, h, b, M); tuneRatio(f0, shape);
-// bellowsPressure(P0, fill); measure(key, rank, P, fs, P0, t0, t1), the pitch a reed sounds alone;
-// tune(f0, shape, fs, P0, off), the tuning tool's ratio { tune, err }; tuneOffset(f0, shape).
+// bellowsPressure(P0, fill); measure(key, rank, P, fs, P0, t0, t1, seed), the pitch a reed sounds alone
+// over [t0, t1] s (by default the tuning's window: 0.4–1 s, the bass 0.8–1.6 s)
+// (before the voicer's retuning); voicingCents(key, rank, P, P0), that retuning (the engine runs
+// the reed that many cents slower);
+// tune(f0, shape, fs, P0, off), the tuning tool's ratio { tune, err }; tuneOffset(f0, shape);
+// measureCut(f0, shape, tune, off, fs, P0), the pitch a reed cut so sounds.
 const HEAD = ['f0', 'fNat', 'L', 'b', 'h', 'M', 'm', 'k', 'S', 'c', 'h0', 'bs', 'Ls', 'Ks', 'zc', 'Vb', 'ds'];
 export async function wasmModel() {
   const x = await ready(), s = scratch(x), params = nativeParams(BUILD), at = 8 * params.length;
@@ -88,9 +102,11 @@ export async function wasmModel() {
     cantilever: (L, h, b, M) => x.regal_cantilever(L, h, b, M),
     tuneRatio: (f0, shape) => x.regal_tune_ratio(f0, shape),
     bellowsPressure: (P0, fill) => x.regal_bellows_pressure(P0, fill),
-    measure: (key, rank, P, fs, P0, t0 = 0.4, t1 = 1.0) => x.regal_measure(key, rank, setP(P), fs, P0, t0, t1),
+    measure: (key, rank, P, fs, P0, t0 = -1, t1 = -1, seed = 0) => x.regal_measure(key, rank, setP(P), fs, P0, t0, t1, seed),
+    voicingCents: (key, rank, P, P0) => x.regal_voicing_cents(key, rank, setP(P), P0),
     tune(f0, shape, fs, P0, off = -0.25) { const t = x.regal_tune(f0, shape, fs, P0, off, s.at); return { tune: t, err: s.f64(1)[0] }; },
     tuneOffset: (f0, shape) => x.regal_tune_offset(f0, shape),
+    measureCut: (f0, shape, tune, off, fs, P0) => x.regal_measure_cut(f0, shape, tune, off, fs, P0),
   };
 }
 
