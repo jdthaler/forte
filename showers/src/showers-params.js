@@ -75,4 +75,7 @@ export const PRESETS = [
   { name: 'Short crystal: the shower leaks', p: { depth: 9, energy: 500 } },
   { name: 'Pile-up: the collisions keep coming', p: { pileup: 150 } },
   { name: 'Accelerometer: the harmonics alone', p: { sensor: 'accel' } },
+  { name: 'A long crystal (50 X₀): nothing leaks', p: { depth: 50, energy: 3000 } },
+  { name: 'A lossy crystal (Q 200): short notes', p: { q: 200 } },
+  { name: 'Piezo at the middle: the even harmonics silent', p: { piezo: 0.5 } },
 ];

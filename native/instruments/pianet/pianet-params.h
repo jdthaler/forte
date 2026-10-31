@@ -105,6 +105,8 @@ inline const PresetValue kPreset6[] = {{p::pickup, 1}, {p::offset, 0}, {p::plate
 inline const PresetValue kPreset7[] = {{p::tipMass, 3}};
 inline const PresetValue kPreset8[] = {{p::padC, 0.02}, {p::padK, 0.2}};
 inline const PresetValue kPreset9[] = {{p::amp, 1}, {p::drive, 0.55}};
+inline const PresetValue kPreset10[] = {{p::padK, 3}};
+inline const PresetValue kPreset11[] = {{p::tipMass, 0.45}};
 inline const Preset kPresets[] = {
   {"Pianet T: silicone pads, magnetic pickups", nullptr, 0},
   {"Pianet N: leather pads, electrostatic pickup", kPreset1, 5},
@@ -116,6 +118,8 @@ inline const Preset kPresets[] = {
   {"Heavy solder tips", kPreset7, 1},
   {"Limp foam: notes ring after release", kPreset8, 2},
   {"Through a valve combo", kPreset9, 2},
+  {"Stiff foam: a louder middle and treble", kPreset10, 1},
+  {"Light solder tips: longer reeds, more overtones", kPreset11, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::tack}, {109, p::gap}, {111, p::padC}, {113, p::tone}, {114, p::drive}};
@@ -134,7 +138,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "No hammers at all: tacky pads grab each reed and let it go.", .auSubtype = "Pnet",
     .vst3Id = {0x6d, 0x47, 0xa1, 0x16, 0x3a, 0x5b, 0x06, 0x9a, 0xb8, 0x7c, 0x33, 0xf6, 0x6a, 0x4a, 0xa3, 0x80},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 10,
+    .presets = kPresets, .presetCount = 12,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 36, .compassHi = 96, .compass = p::fullRange, .space = Space::sustain,
     .modWheel = -1, .modWheelMax = 0,

@@ -111,6 +111,9 @@ inline const PresetValue kPreset5[] = {{p::contact, 0.3}, {p::rise, 8}};
 inline const PresetValue kPreset6[] = {{p::rise, 0}};
 inline const PresetValue kPreset7[] = {{p::tuning, 2}};
 inline const PresetValue kPreset8[] = {{p::layout, 1}, {p::letRing, 1}, {p::coupling, 0.004}};
+inline const PresetValue kPreset9[] = {{p::along, 0}};
+inline const PresetValue kPreset10[] = {{p::accuracy, 15}};
+inline const PresetValue kPreset11[] = {{p::skirt, 2.2}, {p::t60, 2.4}, {p::contact, 1}, {p::rise, 2.5}};
 inline const Preset kPresets[] = {
   {"Tenor pan", nullptr, 0},
   {"Double tenor (1 : 2 : 4)", kPreset1, 2},
@@ -121,6 +124,9 @@ inline const Preset kPresets[] = {
   {"Flat notes (no dome)", kPreset6, 1},
   {"Untuned, as sunk", kPreset7, 1},
   {"Chromatic layout", kPreset8, 3},
+  {"Struck at the centre: the octave from the dome alone", kPreset9, 1},
+  {"A rough tuning (15 ¢): the partials beat", kPreset10, 1},
+  {"Cello pans: long skirts, warm and long", kPreset11, 4},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::rollRate}, {109, p::mute}, {111, p::across}, {113, p::along}, {114, p::roll}};
@@ -139,7 +145,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Domed note areas sunk into an oil drum, hammered until octave and twelfth ring true; struck hard, the dome pumps the octave out of the fundamental.", .auSubtype = "Stee",
     .vst3Id = {0x17, 0xce, 0x86, 0x60, 0x0b, 0xe2, 0xb9, 0x19, 0xc6, 0xa6, 0xf3, 0xee, 0x37, 0xe9, 0x19, 0x53},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 9,
+    .presets = kPresets, .presetCount = 12,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 33, .compassHi = 90, .compass = p::fullRange, .space = Space::sustain,
     .modWheel = p::roll, .modWheelMax = 1,

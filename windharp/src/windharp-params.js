@@ -63,4 +63,5 @@ export const PRESETS = [
   { name: 'Low harmonics: tuned on the 2nd', p: { n0: 2 } },
   { name: 'Heavy wound strings: high mass ratio', p: { mass: 6 } },
   { name: 'Lightly damped strings: loud, sticky lock-in', p: { q: 2000 } },
+  { name: 'Slow, gentle gusts: the strings sway in and out', p: { gust: 0.03, gustTime: 4 } },
 ];

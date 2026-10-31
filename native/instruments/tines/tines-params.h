@@ -128,6 +128,8 @@ inline const PresetValue kPreset6[] = {{p::barTune, 40}};
 inline const PresetValue kPreset7[] = {{p::hardness, 0.25}, {p::hysteresis, 0.0006}, {p::hammerMass, 1.3}};
 inline const PresetValue kPreset8[] = {{p::tremDepth, 0.7}, {p::tremRate, 4.5}};
 inline const PresetValue kPreset9[] = {{p::springMass, 1.2}, {p::springPos, 0.95}};
+inline const PresetValue kPreset10[] = {{p::cable, 5000}};
+inline const PresetValue kPreset11[] = {{p::drive, 0.8}};
 inline const Preset kPresets[] = {
   {"Stage piano (default voicing)", nullptr, 0},
   {"Bark — pickups close, voiced off-centre", kPreset1, 3},
@@ -139,6 +141,8 @@ inline const Preset kPresets[] = {
   {"Soft felt hammers (early style)", kPreset7, 3},
   {"Suitcase stereo vibrato", kPreset8, 2},
   {"Heavy tuning springs (stretched bell)", kPreset9, 2},
+  {"Long cable: the top end rolled off", kPreset10, 1},
+  {"Amp pushed: tines into a breaking amp", kPreset11, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::drive}, {109, p::tone}, {111, p::hardness}, {113, p::tremRate}, {114, p::tremDepth}};
@@ -157,7 +161,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Each key an asymmetric tuning fork of steel tine and brass bar, heard through a nonlinear magnetic pickup.", .auSubtype = "Tine",
     .vst3Id = {0x1d, 0x97, 0xd5, 0xc7, 0xfa, 0xb5, 0x30, 0xc2, 0x4a, 0x63, 0xd6, 0x69, 0x60, 0x78, 0x21, 0xdc},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 10,
+    .presets = kPresets, .presetCount = 12,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = -1, .modWheelMax = 0,

@@ -40,6 +40,9 @@
     {"name":"Octupoles on: filaments for good","values":{"chroma":2,"octupole":12,"kick":3.5}},
     {"name":"Long bunch, slow RF","values":{"bunch":0.08,"synch":1.2,"chroma":8}},
     {"name":"Near the half-integer","values":{"tune":0.48,"chroma":12}},
-    {"name":"Short lifetime: plucked beam","values":{"lifetime":1.5,"bunch":0.012,"damping":0.6}}
+    {"name":"Short lifetime: plucked beam","values":{"lifetime":1.5,"bunch":0.012,"damping":0.6}},
+    {"name":"One button pickup on both channels","values":{"pickup":"single"}},
+    {"name":"A slow pickup: the low harmonics weakened","values":{"cutoff":1500}},
+    {"name":"A long-lived beam: slow damping, long notes","values":{"lifetime":600,"damping":15}}
   ]
 }

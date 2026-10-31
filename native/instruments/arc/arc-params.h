@@ -103,6 +103,9 @@ inline const PresetValue kPreset7[] = {{p::coil, 80}};
 inline const PresetValue kPreset8[] = {{p::gap, 6}};
 inline const PresetValue kPreset9[] = {{p::mode, 1}, {p::arcs, 6}};
 inline const PresetValue kPreset10[] = {{p::mode, 2}};
+inline const PresetValue kPreset11[] = {{p::gap, 1}};
+inline const PresetValue kPreset12[] = {{p::coilR, 1.5}};
+inline const PresetValue kPreset13[] = {{p::current, 1.5}};
 inline const Preset kPresets[] = {
   {"Duddell's singing arc", nullptr, 0},
   {"Singing and hissing (9 A)", kPreset1, 1},
@@ -115,6 +118,9 @@ inline const Preset kPresets[] = {
   {"A long arc (6 mm)", kPreset8, 1},
   {"Several arcs (6 lamps)", kPreset9, 2},
   {"Simon's talking arc", kPreset10, 1},
+  {"A short arc (1 mm): low voltage, a gentle curve", kPreset11, 1},
+  {"A lossy coil: the notes grow slowly and quietly", kPreset12, 1},
+  {"Low current (1.5 A): the steepest curve", kPreset13, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::dist, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::hiss}, {109, p::tau}, {111, p::dist}, {113, p::gap}, {114, p::current}};
@@ -133,7 +139,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "An electric arc lamp that sings: its negative resistance drives an LC circuit, and the arc itself is the loudspeaker.", .auSubtype = "SArc",
     .vst3Id = {0x88, 0xb1, 0x3a, 0xef, 0xe9, 0x19, 0x01, 0x40, 0xd6, 0xa7, 0x77, 0x03, 0x7d, 0xba, 0x14, 0x87},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 11,
+    .presets = kPresets, .presetCount = 14,
     .keep = kKeep, .keepCount = 18,
     .keyLo = 21, .keyHi = 108, .space = Space::hold,
     .modWheel = p::current, .modWheelMax = 20,

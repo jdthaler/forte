@@ -75,4 +75,6 @@ export const PRESETS = [
   { name: 'Red giants with fast cores', p: { coreRatio: 25, spin: 2 } },
   { name: 'A smaller speed-up: younger stars on every key', p: { speedup: 350000 } },
   { name: 'δ Scuti: self-excited modes', p: { family: 'dscuti', spin: 20, flare: 1 } },
+  { name: 'A lighter track (0.9 M☉)', p: { mass: 0.9 } },
+  { name: 'Steep linewidths: the high modes blur', p: { slope: 2 } },
 ];

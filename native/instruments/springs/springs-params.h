@@ -107,6 +107,7 @@ inline const PresetValue kPreset7[] = {{p::helix, 15}, {p::springs, 1}};
 inline const PresetValue kPreset8[] = {{p::drive, 1}};
 inline const PresetValue kPreset9[] = {{p::mallet, 2}};
 inline const PresetValue kPreset10[] = {{p::family, 1}, {p::springs, 1}, {p::helix, 6}, {p::endLoss, 0.02}, {p::eta, 0.00005}, {p::mallet, 0.5}, {p::damper, 2}};
+inline const PresetValue kPreset11[] = {{p::wire, 1.8}, {p::springs, 1}};
 inline const Preset kPresets[] = {
   {"Two springs per key", nullptr, 0},
   {"One spring: bare echoes", kPreset1, 1},
@@ -119,6 +120,7 @@ inline const Preset kPresets[] = {
   {"Driven along the axis", kPreset8, 1},
   {"Soft mallet: only the low echoes", kPreset9, 1},
   {"Slinky: falling whistles", kPreset10, 7},
+  {"Thick wire: the chirps go up", kPreset11, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::damper}, {109, p::spread}, {111, p::bead}, {113, p::oil}, {114, p::hand}};
@@ -137,7 +139,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Struck steel coils, each cut to sound its note; their waves travel at different speeds by pitch, so every echo arrives as a chirp.", .auSubtype = "Sprg",
     .vst3Id = {0x9d, 0xa0, 0x46, 0x59, 0x67, 0xd6, 0x89, 0x83, 0xcd, 0x17, 0x25, 0xdb, 0x81, 0xa6, 0x7e, 0xc2},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 11,
+    .presets = kPresets, .presetCount = 12,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 96, .space = Space::sustain,
     .modWheel = p::hand, .modWheelMax = 1,
