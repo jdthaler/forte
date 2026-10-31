@@ -8,7 +8,7 @@
 // reload, that each bar's fold button folds its panel away and back, that the handle shares the
 // height, that every view shows in Perform, with the presets and More controls in the keyboard
 // bar instead of the controls' bar, and the screen kept awake there once audio runs, and not in
-// Discover), the guided tour (Tour in the views' bar, each step showing its views, and every control
+// Discover), the guided tour (Tour in the header, each step showing its views, and every control
 // as it was once it ends; on the desktop and the phone), and the front page's Listen buttons (one for
 // each instrument with a demo, and two in turn play).
 //
@@ -95,7 +95,7 @@ const COUNT = () => {
     barPresets: [...document.querySelectorAll('.forte-controls-bar .forte-presets select')].filter((e) => e.checkVisibility()).length,
     listen: n('button[data-src]'),
     quality: [...document.querySelectorAll('header #quality')].filter((e) => e.checkVisibility()).length,
-    tour: [...document.querySelectorAll('.forte-views-bar .forte-tour-start')].filter((e) => e.checkVisibility()).length,
+    tour: [...document.querySelectorAll('body > header .forte-tour-start')].filter((e) => e.checkVisibility()).length,
   };
 };
 const WIDE = () => document.documentElement.scrollWidth - window.innerWidth;
@@ -308,7 +308,7 @@ function failures(r, instrument) {
   if (!c.mode) f.push('no Discover | Perform in the views\' bar');
   if (!c.barPresets) f.push('no presets in the controls\' bar');
   if (!c.quality) f.push('no Quality choice in the header');
-  if (!c.tour) f.push('no Tour in the views\' bar (a guided tour: shared/tour.js)');
+  if (!c.tour) f.push('no Tour in the header (a guided tour: shared/tour.js)');
   return f;
 }
 

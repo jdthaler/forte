@@ -89,7 +89,7 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `midi.js` | Web MIDI for every page (the shell and the five older pages): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen next to Enable MIDI, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling; `pageMpe` decodes MPE for a page (below) and turns it into the engine's `noteBend`, `slide` and `pressure` messages. |
 | `mpe.js` | MPE (MIDI Polyphonic Expression), message for message as the plugins' `forte/mpe.h`: zones from the MPE Configuration Message, member channels' bend (±48 semitones unless RPN 0 says otherwise), pressure and CC74, the Auto/On/Off mode, and `bendRatio`, a note's bend along the keyboard's tuning. |
 | `focus.js` | who gets a key press: a control reached with Tab keeps the keys it uses (Space ticks a stop, arrows move a slider); one last touched with the mouse or a finger hands them back to the instrument. Every page's key handler asks `controlOwns(e)` first. |
-| `tour.js` | the guided tour of an instrument's physics: *▶ Tour* in the views' bar and the card that steps through `<slug>-tour.js` ("The guided tour", below) |
+| `tour.js` | the guided tour of an instrument's physics: *Tour* in the header, before How it works, and the card that steps through `<slug>-tour.js` ("The guided tour", below) |
 | `notes.js`, `markdown.js` | **How it works**: the page's README in a dialog (button by the title, or a link to `…/#about`) |
 | `instrument.css`, `forte.css` | page layout; Forte nav and notes |
 
@@ -422,7 +422,7 @@ To fit in:
 
 ### The guided tour
 
-Every instrument has a tour of its physics: *▶ Tour*, at the start of the views' bar, opens a
+Every instrument has a tour of its physics: *Tour*, in the header just before How it works, opens a
 card that goes through it in a few steps. Each step shows the views it is about, sets the
 instrument up, plays a short phrase on the keys and says what to listen and look for, and why.
 Ending the tour (✕, *Done*, Escape or leaving the page) puts back the views, the preset and every

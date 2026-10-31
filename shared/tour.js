@@ -1,6 +1,6 @@
 // tour.js — a guided tour of an instrument's physics, on its page. A few steps, each showing the
 // views it is about, setting the instrument up and playing a phrase on the keys, while a card says
-// what to listen for and to look at, and why. Tour in the views' bar starts it; the card's Back
+// what to listen for and to look at, and why. Tour, in the header before How it works, starts it; the card's Back
 // and Next step through it, ▶ plays a step again, and ✕ (or Esc) ends it. The tour changes
 // nothing for good: the views go back to the ones the player turned on, and every setting but the
 // volume to what it was.
@@ -54,7 +54,7 @@ export const score = (step) => [step.play ?? []].flat(Infinity).filter(Boolean).
 // how long a step plays, s
 export const length = (step) => score(step).reduce((t, e) => Math.max(t, e.at + (e.dur ?? 0)), 0);
 
-// A tour: its instrument's id and its steps. In a browser, it also puts Tour in the page's views' bar.
+// A tour: its instrument's id and its steps. In a browser, it also puts Tour in the page's header.
 export function tour(id, steps) {
   const t = { id, steps };
   if (typeof document !== 'undefined') mount(t);
@@ -74,10 +74,14 @@ async function mount(t) {
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
   const btn = (text, title, cls) => { const b = el('button', cls, text); b.type = 'button'; if (title) { b.title = title; b.setAttribute('aria-label', title); } return b; };
 
-  const start = btn('Tour', 'A guided tour of the physics: it plays while it shows you what to listen for', 'forte-tour-start');
+  // Tour, in the header just before How it works (shared/notes.js), in its look
+  const start = btn('', 'A guided tour of the physics: it plays while it shows you what to listen for', 'forte-about forte-tour-start');
   start.setAttribute('aria-label', 'Tour: a guided tour of the physics');
-  start.prepend(Object.assign(el('span', 'forte-tour-glyph'), { ariaHidden: 'true', textContent: '▶' }));
-  tools.prepend(start);
+  start.append(Object.assign(el('span', 'forte-about-i forte-tour-glyph'), { ariaHidden: 'true', textContent: '▶' }), el('span', 'forte-about-label', 'Tour'));
+  const about = $('body > header .forte-about:not(.forte-get)'), h1 = $('body > header h1');
+  if (about) about.before(start);
+  else if (h1) h1.after(start);
+  else tools.prepend(start);
 
   // the card
   const card = el('section', 'forte-tour');

@@ -1,8 +1,8 @@
 # a guided tour of each instrument's physics
 
 ### Forte (minor)
-- **A guided tour of the physics on every instrument page:** *▶ Tour*, at the start of the
-  views' bar, opens a card that walks through the instrument a step at a time. Each step says
+- **A guided tour of the physics on every instrument page:** *Tour*, in the header just
+  before *How it works*, opens a card that walks through the instrument a step at a time. Each step says
   what to listen and look for, shows the views that make it visible, sets the instrument up
   (a preset, or a few parameters) with the controls it moves outlined, and plays a short
   phrase on the keys (*▶ Play* again, *◀ Back*, *Next ▶*). The card sits at the bottom right on
