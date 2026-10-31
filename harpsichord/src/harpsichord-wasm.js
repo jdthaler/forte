@@ -76,7 +76,7 @@ export const ready = () => HarpsichordWasmEngine.ready();
 // stringDesign, stringLength, isBrass, pluckPoint, stringPartials and simulatePluck; plectrum.cpp's
 // beamC, beamG and beamPhi), computed by the WebAssembly.
 const DESIGN = ['L', 'd', 'A', 'mu', 'EI', 'T', 'B', 'f0', 'stress', 'c', 'Z'];
-const MATERIAL = ['delrin', 'quill'];
+const MATERIAL = ['delrin', 'quill'], MATS = ['iron', 'brass', 'gut'], BUILDS = ['double', 'muselar', 'spinett', 'lauten'];
 export async function wasmModel() {
   const x = await ready(), s = scratch(x), params = nativeParams(BUILD), at = 8 * params.length;
   const setP = (P) => { s.f64(params.length).set(params.map((p) => nativeValue(p, P[p.id]))); return s.at; };
@@ -92,7 +92,7 @@ export async function wasmModel() {
       x.harpsichord_string_design(setP(P), m, choir(c), s.at + at);
       const a = s.f64(12, at), S = { key: m, choir: c };
       DESIGN.forEach((k, i) => { S[k] = a[i]; });
-      S.mat = { name: a[11] > 0 ? 'brass' : 'iron' };
+      S.mat = { name: MATS[a[11]] };
       return S;
     },
     stringLength: (m, c) => x.harpsichord_string_length(m, choir(c)),
@@ -118,12 +118,16 @@ export async function wasmModel() {
       const pl = { len: o[7], overlap: o[8], s0: o[9], kTip: o[10], EI0: o[11], tau: o[12], mu: o[13], fore: o[14], material: MATERIAL[o[15]] };
       const released = o[0] >= 0 ? o[0] : null, energy = o[20];
       return {
-        st: { energy: () => energy, work: o[21], staticCompliance: o[22], Kz: o[23], N, h, W, q, q1 }, pl, x: o[18], gap: o[19], S: { d: o[16], mat: { name: o[17] > 0 ? 'brass' : 'iron' } }, trace, released,
+        st: { energy: () => energy, work: o[21], staticCompliance: o[22], Kz: o[23], N, h, W, q, q1 }, pl, x: o[18], gap: o[19], S: { d: o[16], mat: { name: MATS[o[17]] } }, trace, released,
         rel: released === null ? null : { F: o[1], y: o[2], u: o[3], w: o[4], s: o[5], theta: o[6] },
       };
     },
-    bridgePoint(m, c) { x.harpsichord_bridge_point(m, choir(c), s.at + at); return Array.from(s.f64(2, at)); },
-    boardAdmittance(xx, y, f) { x.harpsichord_board_admittance(xx, y, f, s.at + at); return Array.from(s.f64(2, at)); },
+    // where key m's string of a choir meets its bridge on the board, for a build ('double', 'muselar',
+    // 'spinett', 'lauten'); a virginal's near bridge (nutPoint); the board's admittance (board 0 the
+    // harpsichord's, 1 the virginal's)
+    bridgePoint(m, c, build = 'double') { x.harpsichord_bridge_point(m, choir(c), BUILDS.indexOf(build), s.at + at); return Array.from(s.f64(2, at)); },
+    nutPoint(m, build) { x.harpsichord_nut_point(m, BUILDS.indexOf(build), s.at + at); return Array.from(s.f64(2, at)); },
+    boardAdmittance(xx, y, f, board = 0) { x.harpsichord_board_admittance(xx, y, f, board, s.at + at); return Array.from(s.f64(2, at)); },
     beamC: (pl, sAt) => beam(pl, sAt)[0],
     beamG: (pl, sAt) => beam(pl, sAt)[1],
     beamPhi: (pl, sAt) => beam(pl, sAt)[2],
