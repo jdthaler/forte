@@ -28,6 +28,7 @@
   <meta name="theme-color" content="#0b0b0e">
 </head>
 <body>
+  <div class="forte-edge" aria-hidden="true"></div>
   <header class="top">
     <canvas id="modes" aria-hidden="true"></canvas>
     <div class="top-inner">
@@ -44,7 +45,18 @@
     </div>
   </header>
 
-  <nav class="cats" id="cats" aria-label="Kinds of instrument"></nav>
+  <div class="cats" id="bar">
+    <div class="cats-inner">
+      <nav class="tabs" id="cats" aria-label="Kinds of instrument"></nav>
+      <div class="find" role="search">
+        <input type="search" id="q" placeholder="Search instruments" aria-label="Search instruments" aria-keyshortcuts="/" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+      </div>
+    </div>
+  </div>
+  <div class="filters-wrap">
+    <div class="filters" id="filters"></div>
+    <p class="found" id="found" aria-live="polite" hidden></p>
+  </div>
   <main id="instruments"></main>
 
   <footer class="foot">

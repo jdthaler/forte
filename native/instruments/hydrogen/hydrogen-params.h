@@ -98,6 +98,8 @@ inline const PresetValue kPreset7[] = {{p::density, 30000000000000000}, {p::temp
 inline const PresetValue kPreset8[] = {{p::alphaScale, 12}, {p::slowmo, 300000000}};
 inline const PresetValue kPreset9[] = {{p::slowmo, 5000000}};
 inline const PresetValue kPreset10[] = {{p::slowmo, 300000000}, {p::glow, 30}};
+inline const PresetValue kPreset11[] = {{p::temperature, 5000}};
+inline const PresetValue kPreset12[] = {{p::temperature, 80000}};
 inline const Preset kPresets[] = {
   {"A hydrogen lamp: the Balmer series", nullptr, 0},
   {"A nebula: Case B recombination", kPreset1, 4},
@@ -110,6 +112,8 @@ inline const Preset kPresets[] = {
   {"Fine structure, 12 × the real α", kPreset8, 2},
   {"Quick and rough: less slow motion", kPreset9, 1},
   {"Pure and slow: more slow motion", kPreset10, 2},
+  {"A cool lamp (5,000 K): only the first lines", kPreset11, 1},
+  {"A hot lamp (80,000 K): far up the series", kPreset12, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::shutter}, {109, p::glow}, {111, p::laserLevel}, {113, p::temperature}, {114, p::density}};
@@ -128,7 +132,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Every key a tube of glowing hydrogen, its spectral lines played at their exact ratios with the red Hα line on the note: the atoms cascade down the levels in slow motion, so the lines light one after another, each as wide as its levels' lifetimes, the atoms' heat and the ions' fields make it.", .auSubtype = "Hydr",
     .vst3Id = {0x7e, 0x82, 0xc5, 0x8d, 0x40, 0x0f, 0xb0, 0xd6, 0x00, 0x78, 0xce, 0x1d, 0xfa, 0x1c, 0x40, 0x47},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 11,
+    .presets = kPresets, .presetCount = 13,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::density, .modWheelMax = 1000000000000000000,

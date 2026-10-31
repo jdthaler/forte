@@ -126,6 +126,8 @@ inline const PresetValue kPreset8[] = {{p::trompette, 0}, {p::mouche, 0}, {p::gr
 inline const PresetValue kPreset9[] = {{p::chanterelles, 0}, {p::keep, 1}};
 inline const PresetValue kPreset10[] = {{p::crank, 0.35}};
 inline const PresetValue kPreset11[] = {{p::unison, 9}};
+inline const PresetValue kPreset12[] = {{p::coups, 4}};
+inline const PresetValue kPreset13[] = {{p::v0, 0.4}};
 inline const Preset kPresets[] = {
   {"Vielle à roue, drones in G", nullptr, 0},
   {"Drones in C: trompette C4, petit bourdon", kPreset1, 4},
@@ -139,6 +141,8 @@ inline const Preset kPresets[] = {
   {"Drones alone, turning", kPreset9, 2},
   {"Slow crank: the top notes crunch", kPreset10, 1},
   {"Wide unison: two chanterelles apart", kPreset11, 1},
+  {"Four coups a turn", kPreset12, 1},
+  {"Cotton on the strings: a soft, wide grip", kPreset13, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::coup}, {109, p::pressure}, {111, p::bounce}, {113, p::tirant}, {114, p::crank}};
@@ -157,7 +161,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "A cranked, rosined wheel bows the melody strings and the drones; turn it faster and the trompette lifts its loose bridge, the chien, which buzzes on the soundboard in time with the hand.", .auSubtype = "Hrdy",
     .vst3Id = {0x77, 0x34, 0x54, 0xc6, 0x84, 0xd9, 0x53, 0xc6, 0xce, 0x2c, 0x7c, 0xdc, 0x37, 0xbc, 0xcf, 0xf7},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 12,
+    .presets = kPresets, .presetCount = 14,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 67, .keyHi = 91, .space = Space::sustain,
     .modWheel = p::crank, .modWheelMax = 4,

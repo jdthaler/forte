@@ -1,6 +1,7 @@
 {
   "slug": "harpsichord",
   "params": [
+    {"id":"build","kind":"choice","def":"double","options":["double","muselar","spinett","lauten"]},
     {"id":"manual","kind":"choice","def":"lower","options":["lower","upper"]},
     {"id":"coupler","kind":"toggle","def":true},
     {"id":"front8","kind":"toggle","def":true},
@@ -8,6 +9,7 @@
     {"id":"four","kind":"toggle","def":false},
     {"id":"lute","kind":"toggle","def":false},
     {"id":"buff","kind":"toggle","def":false},
+    {"id":"hooks","kind":"toggle","def":false},
     {"id":"material","kind":"choice","def":"delrin","options":["delrin","quill"]},
     {"id":"stiff","kind":"continuous","min":600,"max":5000,"def":2500,"step":0,"log":true},
     {"id":"overlap","kind":"continuous","min":0.2,"max":1,"def":0.6,"step":0.05,"log":false},
@@ -15,6 +17,7 @@
     {"id":"xFront","kind":"continuous","min":10,"max":180,"def":40,"step":1,"log":false},
     {"id":"xBack","kind":"continuous","min":10,"max":180,"def":62,"step":1,"log":false},
     {"id":"xFour","kind":"continuous","min":10,"max":80,"def":45,"step":1,"log":false},
+    {"id":"jackLine","kind":"continuous","min":-120,"max":120,"def":0,"step":1,"log":false},
     {"id":"xLute","kind":"continuous","min":4,"max":40,"def":12,"step":1,"log":false},
     {"id":"detune","kind":"continuous","min":0,"max":8,"def":1.5,"step":0.1,"log":false},
     {"id":"loss","kind":"continuous","min":0.25,"max":4,"def":1,"step":0,"log":true},
@@ -56,6 +59,15 @@
     {"name":"Heavy voicing: stiff plectra, deep overlap","values":{"stiff":4000,"overlap":0.9}},
     {"name":"Back 8′ plucked at the middle (c²): no even partials","values":{"coupler":false,"front8":false,"xBack":178}},
     {"name":"Baroque pitch, ¼-comma meantone","values":{"pitch":415,"temperament":"meantone"}},
-    {"name":"Without the soundboard (bridge force)","values":{"soundboard":false}}
+    {"name":"Without the soundboard (bridge force)","values":{"soundboard":false}},
+    {"name":"Virginal: muselar, plucked near the middle","values":{"build":"muselar"}},
+    {"name":"Virginal: spinett, plucked near one end","values":{"build":"spinett"}},
+    {"name":"Muselar with the arpichordium: buzzing bass","values":{"build":"muselar","hooks":true}},
+    {"name":"Muselar with the buff: a pizzicato virginal","values":{"build":"muselar","buff":true}},
+    {"name":"Spinett, quill plectra, ¼-comma meantone","values":{"build":"spinett","material":"quill","pitch":415,"temperament":"meantone"}},
+    {"name":"Lute-harpsichord: two gut 8′s coupled","values":{"build":"lauten"}},
+    {"name":"Lute-harpsichord: gut and the brass 4′","values":{"build":"lauten","four":true}},
+    {"name":"Lute-harpsichord with the buff: like a theorbo","values":{"build":"lauten","coupler":false,"front8":false,"buff":true}},
+    {"name":"Lute-harpsichord: lute row on gut","values":{"build":"lauten","manual":"upper","front8":false,"lute":true}}
   ]
 }

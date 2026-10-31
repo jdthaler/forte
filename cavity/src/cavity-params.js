@@ -95,4 +95,7 @@ export const PRESETS = [
   { name: 'Warm: liquid helium at 4.2 K', p: { temp: 4.2 } },
   { name: 'Beam loading to a quench', p: { current: 1, quench: 1.2, lorentz: 0.5, recovery: 0.6 } },
   { name: 'Lorentz detuning, ringing walls', p: { lorentz: 30, mech: 5 } },
+  { name: 'Read at the far end: the transmitted power alone', p: { probe: 'far' } },
+  { name: 'Long bunches: only the lowest modes', p: { bunch: 0.25 } },
+  { name: 'Far off the axis: the dipole band rings', p: { offset: 0.5 } },
 ];

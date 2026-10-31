@@ -94,4 +94,6 @@ export const PRESETS = [
   { name: 'Loose slot: a leaky, duller reed', p: { clearance: 150 } },
   { name: 'Big reed cells: darker and a little flatter', p: { cell: 4 } },
   { name: 'Little air mass: slow, dark speech', p: { throat: 0.3 } },
+  { name: '16′ and 8′: the bourdon under the note', p: { bourdon: true } },
+  { name: 'Lossy reeds (Q 80): they need more wind to start', p: { q: 80 } },
 ];

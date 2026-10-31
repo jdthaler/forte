@@ -90,4 +90,6 @@ export const PRESETS = [
   { name: 'Thin plasma: quick whistlers', p: { density: 0.05 } },
   { name: 'Dawn chorus', p: { chorus: 10, sferic: 0.1 } },
   { name: 'Distant storms: long tweeks', p: { sferic: 1, distance: 7000 } },
+  { name: 'By day: a low ionosphere (70 km), higher tweeks', p: { iono: 70 } },
+  { name: 'Dense plasma: slow, drawn-out whistlers', p: { density: 5 } },
 ];

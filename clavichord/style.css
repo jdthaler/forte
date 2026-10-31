@@ -1,0 +1,12 @@
+/* The page's own palette and any layout beyond shared/instrument.css: brass on walnut. */
+:root {
+  --accent: #d9b77e;
+  --accent-2: #e07a5f;
+  --accent-ink: #1f1406;
+  --brass: #d9a441;
+  --iron: #9fb4c8;
+  --four: #7cc8ff;
+}
+#strings-info { font-size: 11px; font-variant-numeric: tabular-nums; color: var(--text); padding-top: 4px; min-height: 1.4em; }
+#strings-info span { white-space: nowrap; }
+#info { grid-template-columns: auto 1fr; }

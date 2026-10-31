@@ -49,6 +49,9 @@
     {"name":"Plain bars, 1 : 2.76 : 5.40","values":{"depth":0,"motor":"open"}},
     {"name":"Hard cord mallets, struck near the end","values":{"hardness":6000,"strike":0.06,"motor":"open"}},
     {"name":"Cold hall (5 °C): tubes fall flat of their bars","values":{"temp":5,"motor":"open"}},
-    {"name":"Motor off, discs closed: dry","values":{"motor":"closed"}}
+    {"name":"Motor off, discs closed: dry","values":{"motor":"closed"}},
+    {"name":"Soft yarn mallets: dark and round","values":{"hardness":150,"mass":16}},
+    {"name":"Slow motor: a lazy 1.6 Hz tremolo","values":{"speed":0.8}},
+    {"name":"Struck off the edge: the bars twist","values":{"across":0.85,"motor":"open"}}
   ]
 }

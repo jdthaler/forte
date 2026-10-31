@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Telharmonium · Forte</title>
+  <meta name="description" content="Alternators on twelve geared shafts make every note and its harmonics, stops mix them on shared buses that rob one another, and telephone lines carry the music to receivers with paper horns.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="Telharmonium · Forte">
+  <meta property="og:description" content="Alternators on twelve geared shafts make every note and its harmonics, stops mix them on shared buses that rob one another, and telephone lines carry the music to receivers with paper horns.">
+  <meta property="og:url" content="https://forte.jthaler.net/telharmonium/">
+  <meta property="og:image" content="https://forte.jthaler.net/telharmonium/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Telharmonium's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="telharmonium">
+  <div class="forte-edge" aria-hidden="true"></div>
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Telharmonium</h1>
+      <span class="sub">Cahill's electric music plant (1906): 145 alternators on geared shafts, harmonics mixed by stops, sent down telephone lines to receivers with paper horns</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Pitch-shafts">
+          <div class="card-head"><h2>Pitch-shafts</h2><span class="muted" id="shafts-read"></span></div>
+          <canvas id="shafts"></canvas>
+          <div class="caption">The twelve steel shafts, one a pitch class, all geared to one motor. Each drum is an alternator: its teeth sweep past the pole pieces, so it makes its shaft's turning rate times its teeth. A key lights its own alternator and the ones with 2, 3 … 8 times its teeth on the same shaft, its harmonics. Two keys an octave apart share drums. The motor's speed, and so every pitch, sags under a big chord.</div>
+        </div>
+        <div class="card" data-perform data-view="Harmonic buses">
+          <div class="card-head"><h2>Harmonic buses</h2><span class="muted">bars: a note's share now · ticks: a note alone</span></div>
+          <canvas id="buses"></canvas>
+          <div class="caption">Every key's n-th harmonic flows through bus n of its manual, one transformer coil behind its stop. The tick is what one note would put through it; the bar is the current that flows. Hold more keys and each one's share falls (robbing): the softer the stop, the more.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Line and receiver">
+          <div class="card-head"><h2>Line and receiver</h2><span class="muted">response · lines: the note's harmonics</span></div>
+          <canvas id="response"></canvas>
+          <div class="caption">How each frequency reaches the listener: the telephone line (dashed; flat in the hall), then the receiver's diaphragm and its horn (solid), with the alternators' voicing set against the 1906 receiver. A city cable takes the highs away with distance; the diaphragm rings near its resonance; the horn's resonances ripple the bass.</div>
+        </div>
+        <div class="card" id="info-card" data-view="Key and shaft">
+          <div class="card-head"><h2><b id="focus-name">C4</b></h2></div>
+          <dl id="info"></dl>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the key's harmonics that sound</span></div>
+          <canvas id="spectrum"></canvas>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">Every harmonic is a steady line from its own alternator, switched in and out by the relays: each note starts and stops with a puff. Under a big chord all the lines bend down together as the motor slows, and come back when it lets go. With a weak receiver magnet, loud bass chords grow lines between them (sum and difference tones).</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows; a note sounds while its key is held (its relay closed)</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>hold notes: <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>MIDI: velocity and aftertouch through the key touch, mod wheel and CC11 = swell pedal, pitch bend = the motor's field rheostat (the whole machine, as fast as its flywheel lets it)</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/telharmonium-main.js"></script>
+  <script type="module" src="src/telharmonium-tour.js"></script>
+</body>
+</html>

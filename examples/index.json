@@ -251,6 +251,58 @@
    "title": "Centre end and node strikes"
   }
  ],
+ "chladni": [
+  {
+   "file": "01-bowed-plates-tune.m4a",
+   "title": "Bowed plates tune"
+  },
+  {
+   "file": "02-finger-on-then-lifted.m4a",
+   "title": "Finger on then lifted"
+  },
+  {
+   "file": "03-bow-moved-along-the-edge.m4a",
+   "title": "Bow moved along the edge"
+  },
+  {
+   "file": "04-five-figures-on-one-key.m4a",
+   "title": "Five figures on one key"
+  },
+  {
+   "file": "05-light-bow-then-firm.m4a",
+   "title": "Light bow then firm"
+  },
+  {
+   "file": "06-glass-plates.m4a",
+   "title": "Glass plates"
+  }
+ ],
+ "clavichord": [
+  {
+   "file": "01-an-air-with-bebung-on-the-long-notes.m4a",
+   "title": "An air with bebung on the long notes"
+  },
+  {
+   "file": "02-pressing-harder-bends-the-note-up.m4a",
+   "title": "Pressing harder bends the note up"
+  },
+  {
+   "file": "03-bebung-none-then-deeper-then-faster.m4a",
+   "title": "Bebung none then deeper then faster"
+  },
+  {
+   "file": "04-fretted-trill-then-unfretted.m4a",
+   "title": "Fretted trill then unfretted"
+  },
+  {
+   "file": "05-listing-on-then-thinned-out.m4a",
+   "title": "Listing on then thinned out"
+  },
+  {
+   "file": "06-bass-without-then-with-4-foot-strings.m4a",
+   "title": "Bass without then with 4 foot strings"
+  }
+ ],
  "clavicylinder": [
   {
    "file": "01-chorale-in-f.m4a",
@@ -505,6 +557,18 @@
   {
    "file": "08-soundboard-then-bridge-force-alone.m4a",
    "title": "Soundboard then bridge force alone"
+  },
+  {
+   "file": "09-virginals-muselar-then-spinett.m4a",
+   "title": "Virginals muselar then spinett"
+  },
+  {
+   "file": "10-muselar-bass-then-arpichordium.m4a",
+   "title": "Muselar bass then arpichordium"
+  },
+  {
+   "file": "11-wire-then-gut-the-lute-harpsichord.m4a",
+   "title": "Wire then gut the lute harpsichord"
   }
  ],
  "hurdygurdy": [
@@ -619,6 +683,40 @@
    "title": "Quick then pure"
   }
  ],
+ "ionchain": [
+  {
+   "file": "01-a-chorale-of-ion-chains.m4a",
+   "title": "A chorale of ion chains"
+  },
+  {
+   "file": "02-one-two-three-five-twelve-ions.m4a",
+   "title": "One two three five twelve ions"
+  },
+  {
+   "file": "03-end-ion-then-centre-ion-kicked.m4a",
+   "title": "End ion then centre ion kicked"
+  },
+  {
+   "file": "04-electrodes-near-to-far.m4a",
+   "title": "Electrodes near to far"
+  },
+  {
+   "file": "05-into-the-zigzag-and-back.m4a",
+   "title": "Into the zigzag and back"
+  },
+  {
+   "file": "06-cooled-everywhere-then-through-one-ion.m4a",
+   "title": "Cooled everywhere then through one ion"
+  },
+  {
+   "file": "07-beam-along-the-axis-then-across.m4a",
+   "title": "Beam along the axis then across"
+  },
+  {
+   "file": "08-twenty-ions.m4a",
+   "title": "Twenty ions"
+  }
+ ],
  "kalimba": [
   {
    "file": "01-two-thumbs.m4a",
@@ -643,6 +741,40 @@
   {
    "file": "06-marimbula-bass.m4a",
    "title": "Marimbula bass"
+  }
+ ],
+ "ondes": [
+  {
+   "file": "01-a-ribbon-melody-with-vibrato.m4a",
+   "title": "A ribbon melody with vibrato"
+  },
+  {
+   "file": "02-principal-springs-tam-tam-palme.m4a",
+   "title": "Principal springs tam tam palme"
+  },
+  {
+   "file": "03-the-drawer-o-c-g-g-n-8.m4a",
+   "title": "The drawer o c g g n 8"
+  },
+  {
+   "file": "04-low-notes-without-and-with-pulling.m4a",
+   "title": "Low notes without and with pulling"
+  },
+  {
+   "file": "05-the-intensity-key-pressed-and-let-off.m4a",
+   "title": "The intensity key pressed and let off"
+  },
+  {
+   "file": "06-chords-through-the-tam-tam.m4a",
+   "title": "Chords through the tam tam"
+  },
+  {
+   "file": "07-warming-up-thermal-drift.m4a",
+   "title": "Warming up thermal drift"
+  },
+  {
+   "file": "08-souffle-and-gambe-through-the-springs.m4a",
+   "title": "Souffle and gambe through the springs"
   }
  ],
  "organ": [
@@ -925,6 +1057,62 @@
    "title": "Feed resistor 22 megohm then 1 megohm constant charge vs voltage"
   }
  ],
+ "regal": [
+  {
+   "file": "01-a-galliard-on-the-8-and-4-foot.m4a",
+   "title": "A galliard on the 8 and 4 foot"
+  },
+  {
+   "file": "02-cylinders-funnels-apples-and-bare-shallots.m4a",
+   "title": "Cylinders funnels apples and bare shallots"
+  },
+  {
+   "file": "03-the-wind-rises.m4a",
+   "title": "The wind rises"
+  },
+  {
+   "file": "04-brass-then-leathered-shallots.m4a",
+   "title": "Brass then leathered shallots"
+  },
+  {
+   "file": "05-the-tremulant.m4a",
+   "title": "The tremulant"
+  },
+  {
+   "file": "06-the-full-regal-and-a-bellows-change.m4a",
+   "title": "The full regal and a bellows change"
+  }
+ ],
+ "resonator": [
+  {
+   "file": "01-chords-grown-from-silence.m4a",
+   "title": "Chords grown from silence"
+  },
+  {
+   "file": "02-struck-then-sustained-by-the-coils.m4a",
+   "title": "Struck then sustained by the coils"
+  },
+  {
+   "file": "03-one-string-four-harmonics.m4a",
+   "title": "One string four harmonics"
+  },
+  {
+   "file": "04-the-bass-takes-seconds.m4a",
+   "title": "The bass takes seconds"
+  },
+  {
+   "file": "05-brightness-on-the-wheel.m4a",
+   "title": "Brightness on the wheel"
+  },
+  {
+   "file": "06-open-loop-then-locked.m4a",
+   "title": "Open loop then locked"
+  },
+  {
+   "file": "07-phase-turned-away.m4a",
+   "title": "Phase turned away"
+  }
+ ],
  "ring": [
   {
    "file": "01-kicked-chords-recohering.m4a",
@@ -1081,6 +1269,40 @@
   {
    "file": "08-the-skirt-takes-a-partial.m4a",
    "title": "The skirt takes a partial"
+  }
+ ],
+ "telharmonium": [
+  {
+   "file": "01-a-tune-in-telharmonic-hall.m4a",
+   "title": "A tune in telharmonic hall"
+  },
+  {
+   "file": "02-the-stops-drawn-one-by-one.m4a",
+   "title": "The stops drawn one by one"
+  },
+  {
+   "file": "03-tempered-then-pierce-just.m4a",
+   "title": "Tempered then pierce just"
+  },
+  {
+   "file": "04-robbing-as-notes-are-added.m4a",
+   "title": "Robbing as notes are added"
+  },
+  {
+   "file": "05-hall-then-2km-25km-160km.m4a",
+   "title": "Hall then 2km 25km 160km"
+  },
+  {
+   "file": "06-the-motor-sags-under-a-chord.m4a",
+   "title": "The motor sags under a chord"
+  },
+  {
+   "file": "07-a-bass-with-no-ground-tone.m4a",
+   "title": "A bass with no ground tone"
+  },
+  {
+   "file": "08-the-relays-thumps.m4a",
+   "title": "The relays thumps"
   }
  ],
  "tess": [

@@ -3,7 +3,7 @@
 import { createShell, noteName } from '../../shared/shell.js';
 import { SpectrogramView, fit, css, animate } from '../../shared/views.js';
 import { INSTRUMENT } from './harpsichord-instrument.js';
-import { KEY_LO, KEY_HI, ROWS, jackSpeed } from './harpsichord-params.js';
+import { KEY_LO, KEY_HI, ROWS, jackSpeed, isVirginal } from './harpsichord-params.js';
 import { wasmModel } from './harpsichord-wasm.js';
 
 // The views draw what the engine plays: its model, from the same C++, built as WebAssembly.
@@ -14,6 +14,10 @@ const t60 = (sigma) => Math.log(1000) / sigma;
 const $ = (s) => document.querySelector(s);
 const ROW_COL = { front: '#f4d39b', back: '#c98b5a', four: '#7cc8ff', lute: '#ff8fa3' };
 const ROW_NAME = { front: 'front 8′', back: 'back 8′', four: '4′', lute: 'lute' };
+// a virginal has one row, on its one choir
+const rowName = (row) => (row === 'back' && isVirginal(shell.P) ? '8′' : ROW_NAME[row]);
+const ALL_ROWS = () => (isVirginal(shell.P) ? ['back'] : ['front', 'back', 'four', 'lute']);
+const WIRE_COL = { iron: '#9fb4c8', brass: '#d9a441', gut: '#e8d2a6' };
 const spectro = new SpectrogramView($('#spectrogram'), { fLo: 30, fHi: 14000, dbTop: -30 });
 let focus = 60, vel = 0.7, analyser = null, fft = null, sim = null, simT0 = 0, engineInfo = null, simTimer = 0, combState = null;
 
@@ -44,7 +48,7 @@ function runSim() {
   const rel = r.rel, i0 = r.trace.F.findIndex((f) => f > 0);
   const tTouch = i0 >= 0 ? r.trace.t[i0] : 0;
   $('#pluck-key').textContent = noteName(focus);
-  $('#pluck-read').textContent = `${ROW_NAME[row]} · jack ${(100 * sim.V).toFixed(0)} cm/s`;
+  $('#pluck-read').textContent = `${rowName(row)} · jack ${(100 * sim.V).toFixed(0)} cm/s`;
   $('#pluck-info').innerHTML = rel
     ? [`<span>lets go after ${((r.released - tTouch) * 1000).toFixed(1)} ms</span>`, `<span>F = ${rel.F.toFixed(2)} N</span>`, `<span>string up ${(rel.u * 1e3).toFixed(2)} mm</span>`,
       `<span>plectrum bent ${(rel.w * 1e3).toFixed(2)} mm, ${(rel.theta * 180 / Math.PI).toFixed(0)}° at the string</span>`, `<span>slid ${((rel.s - r.pl.s0) * 1e3).toFixed(2)} mm to the tip</span>`,
@@ -66,7 +70,10 @@ animate(() => {
   // layout: the scene on the left and the time plot on the right (wide), or stacked
   const wide = w > 1.5 * h, sceneW = wide ? Math.min(w * 0.5, h * 1.25) : w, sceneH = wide ? h : Math.max(40, h * 0.6);
   // geometry: z (along the plectrum) → x, height → y; 1 mm = s px
-  const zMin = -1.6e-3, zMax = len + 1.4e-3, yMin = -1.8e-3, yMax = 5.2e-3;
+  // (a string plucked near its middle, as on a muselar, gives way further: the scene grows to hold it)
+  let yTop = 0;
+  for (let i = 0; i < n; i++) yTop = Math.max(yTop, tr.y[i], tr.u[i] + d);
+  const zMin = -1.6e-3, zMax = len + 1.4e-3, yMin = -1.8e-3, yMax = Math.max(5.2e-3, yTop + 1.2e-3);
   const s = Math.min((sceneW - 20) / (zMax - zMin), (sceneH - 12) / (yMax - yMin));
   const ox = 10 + (sceneW - 20 - s * (zMax - zMin)) / 2;
   const X = (z) => ox + (z - zMin) * s, Y = (y) => 6 + (yMax - y) * s;
@@ -96,7 +103,7 @@ animate(() => {
   const relI = sim.released !== null ? Math.round((sim.released - tr.t[0]) / (tr.t[1] - tr.t[0])) : n;
   const zS = k < relI ? tr.z[k] : pl.s0 + (tr.z[Math.max(0, relI - 1)] - pl.s0) * Math.exp(-(k - relI) / 6);
   const uS = tr.u[k], rS = Math.max(2.5, (d / 2) * s);
-  ctx.fillStyle = sim.S.mat.name === 'brass' ? '#d9a441' : '#9fb4c8';
+  ctx.fillStyle = WIRE_COL[sim.S.mat.name];
   ctx.beginPath(); ctx.arc(X(zS), Y(uS + d / 2), rS, 0, 2 * Math.PI); ctx.fill();
   ctx.fillStyle = css('--text');
   ctx.fillText(`${sim.S.mat.name} string, ${(d * 1e3).toFixed(2)} mm`, Math.min(X(zS) + rS + 4, w - 110), Y(uS + d / 2) - rS - 2);
@@ -139,7 +146,7 @@ function update() {
   scaleRows = [];
   for (let m = KEY_LO; m <= KEY_HI; m++) {
     const e = model.stringDesign(m, 'back', P), f = model.stringDesign(m, 'four', P);
-    scaleRows.push({ m, L8: e.L, L4: f.L, B8: e.B, B4: f.B, brass8: model.isBrass(m, 'back'), brass4: model.isBrass(m, 'four'), x: { front: model.pluckPoint(m, 'front', P), back: model.pluckPoint(m, 'back', P), four: model.pluckPoint(m, 'four', P), lute: model.pluckPoint(m, 'lute', P) } });
+    scaleRows.push({ m, L8: e.L, L4: f.L, B8: e.B, B4: f.B, mat8: e.mat.name, mat4: f.mat.name, x: { front: model.pluckPoint(m, 'front', P), back: model.pluckPoint(m, 'back', P), four: model.pluckPoint(m, 'four', P), lute: model.pluckPoint(m, 'lute', P) } });
   }
   const S = model.stringDesign(focus, 'back', P), parts = model.stringPartials(S, P).partials;
   $('#scale-read').textContent = `${noteName(focus)} 8′: ${(S.L * 1000).toFixed(0)} mm ${S.mat.name} ⌀${(S.d * 1000).toFixed(2)} · ${S.T.toFixed(0)} N · B ${S.B.toExponential(1)} · T₆₀ ${t60(parts[0].sigma).toFixed(1)} s`;
@@ -168,19 +175,20 @@ animate(() => {
   ctx.textAlign = 'center';
   for (let m = 36; m <= KEY_HI; m += 12) ctx.fillText(noteName(m), X(m), h - 5);
   ctx.textAlign = 'left';
-  // strings, coloured by metal
-  for (const [key, bk, w2] of [['L8', 'brass8', 3], ['L4', 'brass4', 2]]) {
+  // strings, coloured by what they are made of (a virginal has no 4′)
+  const virginal = isVirginal(shell.P);
+  for (const [key, mk, w2] of virginal ? [['L8', 'mat8', 3]] : [['L8', 'mat8', 3], ['L4', 'mat4', 2]]) {
     for (let i = 1; i < scaleRows.length; i++) {
       const a = scaleRows[i - 1], b = scaleRows[i];
-      ctx.strokeStyle = b[bk] ? '#d9a441' : '#9fb4c8'; ctx.lineWidth = w2;
+      ctx.strokeStyle = WIRE_COL[b[mk]]; ctx.lineWidth = w2;
       ctx.beginPath(); ctx.moveTo(X(a.m), Y(a[key])); ctx.lineTo(X(b.m), Y(b[key])); ctx.stroke();
     }
   }
   ctx.lineWidth = 1;
-  ctx.fillStyle = css('--muted'); ctx.fillText('8′', X(KEY_LO) + 2, Y(scaleRows[0].L8) - 5); ctx.fillText('4′', X(KEY_LO) + 2, Y(scaleRows[0].L4) + 12);
+  ctx.fillStyle = css('--muted'); ctx.fillText('8′', X(KEY_LO) + 2, Y(scaleRows[0].L8) - 5); if (!virginal) ctx.fillText('4′', X(KEY_LO) + 2, Y(scaleRows[0].L4) + 12);
   // plucking points (distance from the nut): engaged rows bold
   const rows = combState ? combState.reg.rows : [];
-  for (const row of ['front', 'back', 'four', 'lute']) {
+  for (const row of ALL_ROWS()) {
     ctx.strokeStyle = ROW_COL[row]; ctx.globalAlpha = rows.includes(row) ? 1 : 0.35; ctx.setLineDash(rows.includes(row) ? [] : [2, 3]);
     ctx.beginPath();
     scaleRows.forEach((r, i) => { const y = Y(r.x[row]); if (i) ctx.lineTo(X(r.m), y); else ctx.moveTo(X(r.m), y); });
@@ -188,14 +196,14 @@ animate(() => {
   }
   ctx.setLineDash([]); ctx.globalAlpha = 1;
   // name each row's curve where they do not collide
-  for (const [row, at, dy] of [['front', 0.18, 11], ['back', 0.3, -3], ['four', 0.62, -3], ['lute', 0.3, -3]]) {
+  for (const [row, at, dy] of [['front', 0.18, 11], ['back', 0.3, -3], ['four', 0.62, -3], ['lute', 0.3, -3]].filter(([r]) => ALL_ROWS().includes(r))) {
     const r = scaleRows[Math.round((scaleRows.length - 1) * at)];
-    ctx.fillStyle = ROW_COL[row]; ctx.globalAlpha = rows.includes(row) ? 1 : 0.5; ctx.fillText(ROW_NAME[row], X(r.m) + 2, Y(r.x[row]) + dy);
+    ctx.fillStyle = ROW_COL[row]; ctx.globalAlpha = rows.includes(row) ? 1 : 0.5; ctx.fillText(rowName(row), X(r.m) + 2, Y(r.x[row]) + dy);
   }
   ctx.globalAlpha = 1;
   // inharmonicity
   ctx.strokeStyle = '#d8a0ff';
-  for (const k of ['B8', 'B4']) { ctx.setLineDash(k === 'B4' ? [3, 3] : []); ctx.beginPath(); scaleRows.forEach((r, i) => { const y = YB(r[k]); if (i) ctx.lineTo(X(r.m), y); else ctx.moveTo(X(r.m), y); }); ctx.stroke(); }
+  for (const k of virginal ? ['B8'] : ['B8', 'B4']) { ctx.setLineDash(k === 'B4' ? [3, 3] : []); ctx.beginPath(); scaleRows.forEach((r, i) => { const y = YB(r[k]); if (i) ctx.lineTo(X(r.m), y); else ctx.moveTo(X(r.m), y); }); ctx.stroke(); }
   ctx.setLineDash([]);
   // focus key
   ctx.strokeStyle = css('--text'); ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.moveTo(X(focus), y0); ctx.lineTo(X(focus), y1); ctx.stroke(); ctx.globalAlpha = 1;
@@ -255,7 +263,7 @@ animate(() => {
     }
     ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
     ctx.fillStyle = col; ctx.textAlign = 'right';
-    ctx.fillText(`${ROW_NAME[row]}: β = x/L = ${beta.toFixed(3)} (1/${(1 / beta).toFixed(1)}), notches at ${(f1 / beta).toFixed(0)} Hz × k`, w - padR - 4, yLab);
+    ctx.fillText(`${rowName(row)}: β = x/L = ${beta.toFixed(3)} (1/${(1 / beta).toFixed(1)}), notches at ${(f1 / beta).toFixed(0)} Hz × k`, w - padR - 4, yLab);
     ctx.textAlign = 'left'; yLab += 12;
   }
   ctx.fillStyle = css('--muted');

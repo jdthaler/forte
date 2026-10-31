@@ -3,7 +3,8 @@
    the controls and the keyboard pinned to the bottom, and between them the views
    above the Controls panel, each headed by its bar and scrolling on its own, sharing
    the height as the handle on the controls' bar sets it. Phones are different (see
-   the end): the page scrolls and the keyboard sticks to the bottom.
+   the end): the page scrolls between the header, stuck to the top, and the keyboard, stuck
+   to the bottom.
    Body classes from shared/layout.js:
      perform          Perform mode: the views turned on fill the screen, with no text in them
      views-folded     the views folded away, leaving their bar (in Perform on a phone, More controls in their place)
@@ -13,8 +14,8 @@
      no-midi          a browser with no Web MIDI (Safari; every browser on iPhone and iPad): MIDI buttons and hints hidden
      kb-s … kb-xl     key size
    and --split-rows (the rows of <main>: the views' bar, the views, the controls' bar and the
-   controls, each panel with its share), --footer-h, the footer's height, and --bar-h, the
-   controls' bar's. */
+   controls, each panel with its share), --footer-h, the footer's height, --bar-h, the
+   controls' bar's, and --header-h, the header's. */
 
 body[data-instrument] {
   height: 100vh;
@@ -498,9 +499,10 @@ body.no-midi #midi-btn, body.no-midi #midi, body.no-midi #touch, body.no-midi #m
 body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h, calc(var(--kb-h, 115px) + 52px)) + 12px); max-width: min(90vw, 560px); }
 
 /* ---- phones (portrait, or landscape under 500px tall): no room to share, so the page
-   scrolls (and Safari can tuck its toolbars away): the header and the views' bar scroll away
-   with the views, the controls follow them, and the controls' bar sticks just above the keys,
-   which stick to the bottom, until it heads the controls as they scroll by. In Perform, More
+   scrolls (and Safari can tuck its toolbars away) under the header, which sticks to the top:
+   the views' bar scrolls away with the views, the controls follow them, and the controls' bar
+   sticks just above the keys, which stick to the bottom, until it heads the controls (below the
+   header) as they scroll by. In Perform, More
    controls takes the place of the views. The menus open below the header, inside the screen. */
 @media (max-width: 600px), (max-width: 1050px) and (max-height: 500px) {
   /* the velocity curve and MPE keep their choices from a bigger screen: the phone's header has no room */
@@ -534,10 +536,10 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
   body[data-instrument] .forte-mode button { min-height: 30px; }
   body[data-instrument] .forte-fold { width: 32px; height: 32px; }
   .forte-split { display: none; }
-  body[data-instrument] .forte-controls-bar { position: sticky; z-index: 15; top: env(safe-area-inset-top, 0px); bottom: var(--footer-h, 0px); cursor: auto; touch-action: auto; }
+  body[data-instrument] .forte-controls-bar { position: sticky; z-index: 15; top: var(--header-h, 0px); bottom: var(--footer-h, 0px); cursor: auto; touch-action: auto; }
 
   body[data-instrument] > header {
-    position: relative; gap: 6px 10px;
+    position: sticky; top: 0; z-index: 25; gap: 6px 10px;
     padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 6px max(10px, env(safe-area-inset-left));
   }
   body[data-instrument] .brand { flex: 1 1 8rem; gap: 6px; }
@@ -557,7 +559,7 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
     padding: 8px max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
   }
   /* Perform: each view fills the room above the keys (the page scrolls between them) */
-  body.perform:not(.no-views) #views .card { height: max(140px, calc(100svh - var(--footer-h, 320px) - var(--bar-h, 46px) - 20px)); }
+  body.perform:not(.no-views) #views .card { height: max(140px, calc(100svh - var(--header-h, 44px) - var(--footer-h, 320px) - var(--bar-h, 46px) - 20px)); }
   .forte-perform .param { flex: 1 1 auto; padding: 0 8px; }
   .forte-perform .param input[type=range] { flex: 1 1 auto; height: 26px; }
   .forte-pedal { min-width: 0; }
@@ -573,7 +575,7 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
   body[data-instrument] #keyboard { height: min(var(--kb-h, 115px), 24svh); } /* a third shorter than 36svh, for the views */
   /* the controls' bar heads the controls and scrolls with them: the views keep the room */
   body[data-instrument] .forte-controls-bar { position: relative; }
-  body.perform:not(.no-views) #views .card { height: max(140px, calc(100svh - var(--footer-h, 200px) - 20px)); }
+  body.perform:not(.no-views) #views .card { height: max(140px, calc(100svh - var(--header-h, 40px) - var(--footer-h, 200px) - 20px)); }
   /* one row: the name keeps its width and the CPU readout gives way */
   body[data-instrument] .brand { flex: 0 0.1 auto; }
   body[data-instrument] > header .status { flex: 0 1 auto; }
@@ -590,4 +592,56 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
 /* 16px text in dropdowns on phones, or iOS zooms the page in when one is tapped */
 @media (pointer: coarse) and (max-width: 600px), (pointer: coarse) and (max-width: 1050px) and (max-height: 500px) {
   body[data-instrument] select { font-size: 16px; }
+}
+
+/* a guided tour of the physics (shared/tour.js): Tour in the header, and its card over the
+   controls, just above the keys (on a phone, above the controls' bar; held sideways, beside the views) */
+/* Tour sits in the header with How it works (shared/forte.css .forte-about), and keeps its word
+   where How it works shrinks to its icon: ▶ alone would read as play */
+body > header .forte-tour-start .forte-about-label { display: inline; }
+body > header .forte-tour-start { width: auto; border-radius: 999px; padding: 4px 10px 4px 5px; }
+.forte-tour-glyph { font: 700 7px/1 system-ui, sans-serif; padding-left: 1px; }
+body > header .forte-tour-start[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink, #111); border-color: var(--accent); }
+/* where How it works is just its icon, Tour is just its word: the header stays one row on a
+   tablet held upright, even beside the longest names */
+@media (max-width: 1249px) {
+  body > header .forte-tour-start { padding: 4px 9px; }
+  body > header .forte-tour-start .forte-tour-glyph { display: none; }
+}
+@media (min-width: 601px) and (max-width: 1249px) { body[data-instrument] .brand { gap: 8px; } }
+.forte-tour {
+  position: fixed; z-index: 30; right: 16px; bottom: calc(var(--footer-h, 170px) + 12px);
+  width: min(470px, calc(100vw - 32px)); max-height: calc(100vh - var(--header-h, 50px) - var(--footer-h, 170px) - 36px);
+  display: flex; flex-direction: column; gap: 6px; padding: 10px 14px 12px;
+  border: 1px solid var(--accent); border-radius: 12px; background: color-mix(in srgb, var(--panel) 96%, transparent);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.6); color: var(--text);
+}
+.forte-tour[hidden] { display: none; }
+.forte-tour-head { display: flex; align-items: center; gap: 6px; }
+.forte-tour-kicker { flex: 1 1 auto; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); }
+body[data-instrument] .forte-tour :is(.forte-tour-fold, .forte-tour-close) {
+  flex: none; display: grid; place-items: center; width: 28px; height: 26px; min-height: 0; padding: 0;
+  border: 1px solid var(--line); border-radius: 7px; background: transparent; color: var(--muted);
+}
+.forte-tour-fold svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.15s; }
+.forte-tour.folded .forte-tour-fold svg { transform: rotate(180deg); }
+.forte-tour-title { margin: 0; font-size: 16px; font-weight: 650; line-height: 1.25; }
+.forte-tour-text { min-height: 0; overflow-y: auto; overscroll-behavior: contain; font-size: 13.5px; line-height: 1.5; color: color-mix(in srgb, var(--text) 88%, var(--muted)); }
+.forte-tour-text p { margin: 0 0 0.6em; }
+.forte-tour-text :is(ul, ol) { margin: 0 0 0.6em; padding-left: 1.3em; }
+.forte-tour-text pre { margin: 0 0 0.6em; white-space: pre-wrap; color: var(--text); }
+.forte-tour-text a { color: var(--accent-2); }
+.forte-tour.folded :is(.forte-tour-text) { display: none; }
+.forte-tour.folded .forte-tour-title { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.forte-tour-nav { display: flex; gap: 8px; }
+body[data-instrument] .forte-tour-nav button { flex: 1 1 0; min-width: 0; padding: 4px 8px; border-radius: 8px; white-space: nowrap; }
+body[data-instrument] .forte-tour-nav .forte-tour-next { background: var(--accent); color: var(--accent-ink, #111); border-color: transparent; font-weight: 600; }
+/* what a step changes, in the Controls panel */
+body[data-instrument] #controls .param.forte-tour-mark { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+/* a phone: at the top of the views, in the page's flow */
+@media (max-width: 600px), (max-width: 1050px) and (max-height: 500px) {
+  .forte-tour { position: static; width: auto; max-height: none; margin: 0 0 10px; padding: 8px 12px 10px; box-shadow: none; }
+  .forte-tour-title { font-size: 15px; }
+  .forte-tour-text { font-size: 13px; overflow: visible; }
+  body[data-instrument] .forte-tour-nav button { min-height: 36px; }
 }

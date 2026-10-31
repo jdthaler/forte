@@ -98,6 +98,9 @@ inline const PresetValue kPreset5[] = {{p::solder, 3}};
 inline const PresetValue kPreset6[] = {{p::solder, 0.15}};
 inline const PresetValue kPreset7[] = {{p::rbias, 1}};
 inline const PresetValue kPreset8[] = {{p::gap, 0.18}, {p::offset, 0.25}, {p::drive, 0.8}, {p::hardness, 2}};
+inline const PresetValue kPreset9[] = {{p::tremDepth, 0.6}, {p::tremRate, 9}};
+inline const PresetValue kPreset10[] = {{p::hardness, 0.25}};
+inline const PresetValue kPreset11[] = {{p::strike, 0.15}};
 inline const Preset kPresets[] = {
   {"200A as voiced", nullptr, 0},
   {"Tremolo through the speakers", kPreset1, 1},
@@ -108,6 +111,9 @@ inline const Preset kPresets[] = {
   {"Light solder (long reeds, more bark)", kPreset6, 1},
   {"Constant-voltage pickup (1 MΩ feed)", kPreset7, 1},
   {"Barking: tight gap, pushed preamp", kPreset8, 4},
+  {"Fast tremolo (9 Hz)", kPreset9, 2},
+  {"Soft felt hammers: a round attack", kPreset10, 1},
+  {"Struck near the clamp: a small, clean swing", kPreset11, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::drive}, {109, p::hardness}, {111, p::strike}, {113, p::tremRate}, {114, p::tremDepth}};
@@ -126,7 +132,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Struck steel reeds tuned with solder, sensed as one plate of a charged capacitor.", .auSubtype = "Reed",
     .vst3Id = {0xb4, 0x92, 0xc8, 0x0f, 0x45, 0x5f, 0x25, 0x27, 0x94, 0x34, 0xa2, 0x29, 0x43, 0x76, 0x8a, 0xf0},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 9,
+    .presets = kPresets, .presetCount = 12,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 33, .compassHi = 96, .compass = p::fullRange, .space = Space::sustain,
     .modWheel = -1, .modWheelMax = 0,

@@ -69,4 +69,5 @@ export const PRESETS = [
   { name: 'A galaxy cluster\'s hot halo: a band of noise', p: { halo: 1200 } },
   { name: 'A slow magnet: notes that charge up', p: { ramp: 1.5 } },
   { name: 'A noiseless SQUID: the axion alone', p: { noise: 0 } },
+  { name: 'A fast stream (700 km/s): a second line, sharp of the halo', p: { stream: 0.4, streamSpeed: 700 } },
 ];

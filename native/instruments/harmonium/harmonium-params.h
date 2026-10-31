@@ -108,6 +108,8 @@ inline const PresetValue kPreset11[] = {{p::set, 2.2}};
 inline const PresetValue kPreset12[] = {{p::clearance, 150}};
 inline const PresetValue kPreset13[] = {{p::cell, 4}};
 inline const PresetValue kPreset14[] = {{p::throat, 0.3}};
+inline const PresetValue kPreset15[] = {{p::bourdon, 1}};
+inline const PresetValue kPreset16[] = {{p::q, 80}};
 inline const Preset kPresets[] = {
   {"Harmonium 8′: one brass reed a key", nullptr, 0},
   {"Musette: three reeds 12 ¢ apart (accordion)", kPreset1, 1},
@@ -124,6 +126,8 @@ inline const Preset kPresets[] = {
   {"Loose slot: a leaky, duller reed", kPreset12, 1},
   {"Big reed cells: darker and a little flatter", kPreset13, 1},
   {"Little air mass: slow, dark speech", kPreset14, 1},
+  {"16′ and 8′: the bourdon under the note", kPreset15, 1},
+  {"Lossy reeds (Q 80): they need more wind to start", kPreset16, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::bourdon}, {109, p::principal}, {111, p::piccolo}, {113, p::pump}, {114, p::pressure}};
@@ -142,7 +146,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Brass reeds driven by the airflow they choke; paired reeds tuned a little apart give the musette shimmer.", .auSubtype = "Harm",
     .vst3Id = {0x65, 0xea, 0x91, 0x2c, 0xfa, 0x91, 0xc7, 0x5d, 0xe1, 0x93, 0xa5, 0xce, 0x34, 0x0e, 0x50, 0xdc},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 15,
+    .presets = kPresets, .presetCount = 17,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 36, .compassHi = 96, .compass = p::fullRange, .space = Space::hold,
     .modWheel = p::pressure, .modWheelMax = 2500,

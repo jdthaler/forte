@@ -6,6 +6,19 @@
 /* iOS Safari enlarges text when the phone turns to landscape unless told not to */
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
+/* iOS 26 and later fade the top of a home-screen app (and of Safari's page) into a haze under
+   the status bar, unless a solid bar is pinned to the top: then WebKit extends that bar's colour
+   instead. It takes the computed background-color of a fixed element at least 90% as wide as the
+   page and over 10px tall, hit 4px below the top. This is that bar (every page's first element),
+   the colour of the page's top but painting nothing. */
+.forte-edge {
+  position: fixed; z-index: 2147483647; top: 0; left: 0; right: 0; height: 12px;
+  pointer-events: none;
+  background-color: var(--bg, #0b0b0e);
+  -webkit-background-clip: text; background-clip: text;
+}
+body[data-instrument] .forte-edge { background-color: var(--panel, #151518); }
+
 [data-forte-nav] { display: flex; align-items: center; gap: 10px; }
 
 .forte-home {

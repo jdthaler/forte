@@ -67,7 +67,7 @@ requests.
   [doi:10.1121/1.390157](https://doi.org/10.1121/1.390157). A linear
   resonator coupled to a nonlinear excitation (bow, reed, jet) by a
   reflection function: the framework behind Forte's bowed and rubbed
-  instruments (Viola Organista, Glass Armonica, Clavicylinder, Hurdy-Gurdy).
+  instruments (Viola Organista, Glass Armonica, Clavicylinder, Hurdy-Gurdy, Chladni Plate).
 * **1983 — the plucked-string algorithm.** K. Karplus and A. Strong,
   "Digital synthesis of plucked-string and drum timbres", *Computer Music
   Journal* **7**(2), 43–55 (1983),
@@ -202,6 +202,21 @@ requests.
   guitar function", *J. Acoust. Soc. Am.* **68**(3), 758–766 (1980),
   [doi:10.1121/1.384814](https://doi.org/10.1121/1.384814). The top and the
   sound hole as two coupled oscillators, the Kalimba's box.
+* **The clavichord.** S. Thwaites and N. H. Fletcher, "Some notes on the
+  clavichord", *J. Acoust. Soc. Am.* **69**(5), 1476–1483 (1981);
+  C. d'Alessandro, "On the dynamics of the clavichord: from tangent motion
+  to sound", *J. Acoust. Soc. Am.* **128**(4), 2173–2181 (2010),
+  [doi:10.1121/1.3478783](https://doi.org/10.1121/1.3478783); and
+  J.-T. Jiolat, C. d'Alessandro, J.-L. Le Carrou and J. Antunes, "Toward a
+  physical model of the clavichord", *J. Acoust. Soc. Am.* **150**(4), 2350
+  (2021), [doi:10.1121/10.0006438](https://doi.org/10.1121/10.0006438), a
+  modal model with the tangent's intermittent contact. V. Välimäki,
+  M. Laurson and C. Erkut, "Commuted waveguide synthesis of the
+  clavichord", *Computer Music Journal* **27**(1), 71–82 (2003),
+  [doi:10.1162/01489260360613353](https://doi.org/10.1162/01489260360613353),
+  synthesised it with waveguides and a recorded body. The Clavichord
+  solves the tangent and the strings together, live; its sources are in
+  `clavichord/README.md`.
 * **The hydraulis.** Hero's *Pneumatica* I.42 and Vitruvius's *De
   architectura* X.8 describe it; W. Walcker-Mayer, *The Roman Organ of
   Aquincum* (1972), reconstructs the organ of AD 228, and the European
@@ -213,6 +228,22 @@ requests.
   water's bounce, the pumps, the bubbles at the rim) from those
   descriptions, with the Pipe Organ's flue pipes; its sources are in
   `hydraulis/README.md`.
+* **The Telharmonium.** T. Cahill, [US 580,035](https://patents.google.com/patent/US580035A/en)
+  (1897), and R. Weidenaar, *Magic Music from the Telharmonium* (Scarecrow
+  Press, 1995), the history and engineering the Telharmonium is built from;
+  the tonewheel organs ([Hammond, 1934](https://patents.google.com/patent/US1956350A/en))
+  are its descendants. We did not find an earlier physical model of it. Its
+  sources are in `telharmonium/README.md`.
+* **The regal.** Praetorius draws the regals and their resonators in
+  *Syntagma musicum II* (1619); Monteverdi scores one for Charon in
+  *L'Orfeo* (1607). The beating reed is G. R. Plitnik's ("Vibration
+  characteristics of pipe organ reed tongues…", *J. Acoust. Soc. Am.*
+  **107**(6), 3460–3473, 2000) and A. Miklós, J. Angster, S. Pitsch and
+  T. D. Rossing's (*J. Acoust. Soc. Am.* **113**, 1081–1091, 2003; **119**,
+  3121–3129, 2006). Modartt's [Organteq](https://www.modartt.com/organteq)
+  models reed pipes physically, and regals are sold as sample libraries.
+  The Regal plays its curved tongues, shallots, short resonators and wedge
+  bellows from those; its sources are in `regal/README.md`.
 
 ## 2. Techniques Forte uses, and where they come from
 
@@ -230,6 +261,13 @@ requests.
   gewisser Variationsprobleme der mathematischen Physik", *J. reine angew.
   Math.* **135**, 1–61 (1909),
   [doi:10.1515/crll.1909.135.1](https://doi.org/10.1515/crll.1909.135.1);
+  W. Ritz, "Theorie der Transversalschwingungen einer quadratischen Platte
+  mit freien Rändern", *Ann. Phys.* **333**, 737–786 (1909),
+  [doi:10.1002/andp.19093330403](https://doi.org/10.1002/andp.19093330403)
+  (the free square plate of Chladni's figures, solved in a Legendre basis as
+  the Chladni Plate does, and checked against A. W. Leissa, "The free
+  vibration of rectangular plates", *J. Sound Vib.* **31**, 257–293 (1973),
+  [doi:10.1016/S0022-460X(73)80371-2](https://doi.org/10.1016/S0022-460X(73)80371-2));
   R. Courant, "Variational methods for the solution of problems of
   equilibrium and vibrations", *Bull. Amer. Math. Soc.* **49**(1), 1–23
   (1943),
@@ -749,6 +787,17 @@ data):
   [doi:10.1088/1748-0221/6/08/P08007](https://doi.org/10.1088/1748-0221/6/08/P08007), each
   key's calibration heater firing at the note's rate. No earlier instrument made from these
   pulses is known to us.
+* **Trapped ions.** The Ion Chain plays the normal modes of a linear Coulomb crystal as
+  D. F. V. James computes them ("Quantum dynamics of cold trapped ions with application to
+  quantum computation", *Appl. Phys. B* **66**, 181–190 (1998),
+  [doi:10.1007/s003400050373](https://doi.org/10.1007/s003400050373)), in W. Paul's
+  radio-frequency trap (*Rev. Mod. Phys.* **62**, 531 (1990),
+  [doi:10.1103/RevModPhys.62.531](https://doi.org/10.1103/RevModPhys.62.531)), with the
+  linear–zigzag transition of J. P. Schiffer (*Phys. Rev. Lett.* **70**, 818 (1993),
+  [doi:10.1103/PhysRevLett.70.818](https://doi.org/10.1103/PhysRevLett.70.818)) and the
+  image-current detection and resistive cooling of D. J. Wineland and H. G. Dehmelt
+  (*J. Appl. Phys.* **46**, 919 (1975), [doi:10.1063/1.321602](https://doi.org/10.1063/1.321602)).
+  No earlier instrument made from these modes is known to us.
 * **Synchronisation and mode locking in musical oscillators.**
   B. van der Pol and J. van der Mark, "Frequency demultiplication",
   *Nature* **120**, 363–364 (1927),
@@ -760,7 +809,13 @@ data):
   played one, the instrument the Trautonium models, and after it Doepfer's
   [Trautonium modules](https://doepfer.de/traut/traut_e.htm) and Moog's
   [Subharmonicon](https://www.moogmusic.com/synthesizers/subharmonicon/)
-  (2020); N. H. Fletcher, "Mode
+  (2020); R. Adler, "A study of locking phenomena in oscillators",
+  *Proc. IRE* **34**(6), 351–357 (1946), reprinted in *Proc. IEEE* **61**(10),
+  1380–1385 (1973), [doi:10.1109/PROC.1973.9292](https://doi.org/10.1109/PROC.1973.9292)
+  (the two heterodyne oscillators of the Ondes Martenot pulling each other,
+  whose earlier models, Soniccouture's sampled
+  [Ondes](https://www.soniccouture.com/en/vintage/g27-ondes/) and XILS-lab's
+  Les Diffuseurs, leave the pulling out); N. H. Fletcher, "Mode
   locking in nonlinearly excited inharmonic musical oscillators",
   *J. Acoust. Soc. Am.* **64**(6), 1566–1569 (1978),
   [doi:10.1121/1.382139](https://doi.org/10.1121/1.382139); M. Abel,

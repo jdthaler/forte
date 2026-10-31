@@ -8,7 +8,8 @@
 // reload, that each bar's fold button folds its panel away and back, that the handle shares the
 // height, that every view shows in Perform, with the presets and More controls in the keyboard
 // bar instead of the controls' bar, and the screen kept awake there once audio runs, and not in
-// Discover), and the front page's Listen buttons (one for
+// Discover), the guided tour (Tour in the header, each step showing its views, and every control
+// as it was once it ends; on the desktop and the phone), and the front page's Listen buttons (one for
 // each instrument with a demo, and two in turn play).
 //
 // Usage: node tools/check-pages.mjs [--base <git ref>] [--json <file>] [filter]
@@ -94,6 +95,7 @@ const COUNT = () => {
     barPresets: [...document.querySelectorAll('.forte-controls-bar .forte-presets select')].filter((e) => e.checkVisibility()).length,
     listen: n('button[data-src]'),
     quality: [...document.querySelectorAll('header #quality')].filter((e) => e.checkVisibility()).length,
+    tour: [...document.querySelectorAll('body > header .forte-tour-start')].filter((e) => e.checkVisibility()).length,
   };
 };
 const WIDE = () => document.documentElement.scrollWidth - window.innerWidth;
@@ -200,6 +202,35 @@ async function remembered(tab) {
   return out;
 }
 
+// The guided tour (shared/tour.js), from Tour to Done: every step shows its card and at least one
+// view, the page doesn't scroll sideways, and once it ends every control is as it was.
+const CONTROLS = () => [...document.querySelectorAll('#controls [id^="p-"]')].map((e) => `${e.id}=${e.type === 'checkbox' ? e.checked : e.value}`).join(' ');
+async function guidedTour(tab) {
+  const out = [];
+  await tab.locator('.forte-mode button[data-mode="discover"]').click({ timeout: 2000 }).catch(() => {});
+  const before = await tab.evaluate(CONTROLS);
+  await tab.locator('.forte-tour-start').click({ timeout: 2000 });
+  for (let i = 0; i < 12; i++) {
+    await tab.waitForTimeout(400);
+    const s = await tab.evaluate(() => ({
+      card: !!document.querySelector('.forte-tour')?.checkVisibility(),
+      title: document.querySelector('.forte-tour-title')?.textContent,
+      views: [...document.querySelectorAll('.forte-stage > .card')].filter((c) => !c.hidden).length,
+      done: document.querySelector('.forte-tour-next')?.textContent === 'Done',
+    }));
+    if (!s.card) { out.push(`the tour's card is not shown at step ${i + 1}`); break; }
+    if (!s.views) out.push(`tour step "${s.title}" shows no view`);
+    if (await tab.evaluate(WIDE) > 0) out.push(`scrolls sideways at tour step "${s.title}"`);
+    await tab.locator('.forte-tour-next').click({ timeout: 2000 });
+    if (s.done) break;
+  }
+  await tab.waitForTimeout(300);
+  if (await tab.locator('.forte-tour').isVisible().catch(() => false)) out.push('Done doesn\'t end the tour');
+  const after = await tab.evaluate(CONTROLS);
+  if (after !== before) out.push('the tour leaves the controls changed');
+  return out;
+}
+
 // The Screen Wake Lock, counted: headless Chromium refuses the real one.
 const WAKE_LOCK = () => {
   window.__wake = 0;
@@ -256,6 +287,7 @@ async function checkPage(browser, url, page, size) {
       const q = await tab.evaluate(() => { const s = document.querySelector('#quality'); if (!s) return false; for (const v of ['low', 'medium', 'high']) { s.value = v; s.dispatchEvent(new Event('change')); } return true; });
       if (q) await tab.waitForTimeout(250);
     }
+    if ((name === 'desktop' || name === 'phone') && counts.tour) broken.push(...await guidedTour(tab));
     return { page: page || 'index', size: name, counts, errors, wide, broken };
   } catch (e) {
     return { page: page || 'index', size: name, counts: null, errors: [...errors, e.message], wide, broken };
@@ -276,6 +308,7 @@ function failures(r, instrument) {
   if (!c.mode) f.push('no Discover | Perform in the views\' bar');
   if (!c.barPresets) f.push('no presets in the controls\' bar');
   if (!c.quality) f.push('no Quality choice in the header');
+  if (!c.tour) f.push('no Tour in the header (a guided tour: shared/tour.js)');
   return f;
 }
 

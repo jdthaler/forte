@@ -99,6 +99,9 @@ inline const PresetValue kPreset7[] = {{p::width, 0.5}};
 inline const PresetValue kPreset8[] = {{p::depth, 9}, {p::energy, 500}};
 inline const PresetValue kPreset9[] = {{p::pileup, 150}};
 inline const PresetValue kPreset10[] = {{p::sensor, 1}};
+inline const PresetValue kPreset11[] = {{p::depth, 50}, {p::energy, 3000}};
+inline const PresetValue kPreset12[] = {{p::q, 200}};
+inline const PresetValue kPreset13[] = {{p::piezo, 0.5}};
 inline const Preset kPresets[] = {
   {"CMS crystal, 50 GeV electrons", nullptr, 0},
   {"Photons: each converts somewhere new", kPreset1, 1},
@@ -111,6 +114,9 @@ inline const Preset kPresets[] = {
   {"Short crystal: the shower leaks", kPreset8, 2},
   {"Pile-up: the collisions keep coming", kPreset9, 1},
   {"Accelerometer: the harmonics alone", kPreset10, 1},
+  {"A long crystal (50 X₀): nothing leaks", kPreset11, 2},
+  {"A lossy crystal (Q 200): short notes", kPreset12, 1},
+  {"Piezo at the middle: the even harmonics silent", kPreset13, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::pileup}, {109, p::piezo}, {111, p::q}, {113, p::energy}, {114, p::offset}};
@@ -129,7 +135,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Every key a crystal of a collider's calorimeter, rung by the heat of the particle shower inside it: deeper showers for higher energies, a darker note.", .auSubtype = "Shwr",
     .vst3Id = {0xeb, 0xa2, 0x6c, 0xcb, 0x29, 0xff, 0xb3, 0x9e, 0x84, 0x6d, 0x20, 0xed, 0x81, 0xf0, 0x14, 0xc6},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 11,
+    .presets = kPresets, .presetCount = 14,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::offset, .modWheelMax = 0.5,
