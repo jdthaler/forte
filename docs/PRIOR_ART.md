@@ -67,7 +67,7 @@ requests.
   [doi:10.1121/1.390157](https://doi.org/10.1121/1.390157). A linear
   resonator coupled to a nonlinear excitation (bow, reed, jet) by a
   reflection function: the framework behind Forte's bowed and rubbed
-  instruments (Viola Organista, Glass Armonica, Clavicylinder, Hurdy-Gurdy).
+  instruments (Viola Organista, Glass Armonica, Clavicylinder, Hurdy-Gurdy, Chladni Plate).
 * **1983 — the plucked-string algorithm.** K. Karplus and A. Strong,
   "Digital synthesis of plucked-string and drum timbres", *Computer Music
   Journal* **7**(2), 43–55 (1983),
@@ -230,6 +230,13 @@ requests.
   gewisser Variationsprobleme der mathematischen Physik", *J. reine angew.
   Math.* **135**, 1–61 (1909),
   [doi:10.1515/crll.1909.135.1](https://doi.org/10.1515/crll.1909.135.1);
+  W. Ritz, "Theorie der Transversalschwingungen einer quadratischen Platte
+  mit freien Rändern", *Ann. Phys.* **333**, 737–786 (1909),
+  [doi:10.1002/andp.19093330403](https://doi.org/10.1002/andp.19093330403)
+  (the free square plate of Chladni's figures, solved in a Legendre basis as
+  the Chladni Plate does, and checked against A. W. Leissa, "The free
+  vibration of rectangular plates", *J. Sound Vib.* **31**, 257–293 (1973),
+  [doi:10.1016/S0022-460X(73)80371-2](https://doi.org/10.1016/S0022-460X(73)80371-2));
   R. Courant, "Variational methods for the solution of problems of
   equilibrium and vibrations", *Bull. Amer. Math. Soc.* **49**(1), 1–23
   (1943),

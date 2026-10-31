@@ -70,6 +70,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Whistlers](whistlers/) | lightning's VLF crack dispersed along the Earth's magnetic field into falling tones: every key the dipole field line whose whistler's nose is the note, the exact cold-plasma group delay integrated through Carpenter and Anderson's plasmasphere, plasmapause and trough; Eckersley's 1/√f below the nose and a rising branch to the duct's half-gyrofrequency cutoff above it; multi-path ducts, echo trains, one- and two-hop receivers, the crack's tweeks in the Earth–ionosphere waveguide, and dawn chorus on held keys |
 | ✅ | [Early Universe](universe/) | the photon–baryon plasma's sound waves, the acoustic peaks of the microwave background, as a key's harmonics: Ma & Bertschinger's equations from adiabatic initial conditions to recombination (Saha, then Peebles's three-level atom), free-streaming neutrinos, Silk damping; checked against Planck 2018's z*, r_s*, k_D and z_eq; a knob per cosmological parameter: baryons make the odd harmonics louder, dark matter sets the radiation driving, neutrinos, helium, the spectral tilt on the mod wheel; listen from the sky (Sachs–Wolfe and Doppler) or inside the plasma, and let the light stream away |
 | ✅ | [Hydrogen Lamp](hydrogen/) | a tube of glowing hydrogen as a keyboard: every key its spectrum, each line at its exact ratio with Hα on the note (Hβ 27/20 above, the Balmer series crowding up to a just minor seventh); Einstein coefficients from the exact wavefunctions for every level to n = 50, the radiative cascade solved in slow motion so the low lines light first and the high ones after, each as wide as its levels' lifetimes make it; a discharge (van Regemorter), a nebula's recombination (Storey & Hummer's Balmer decrement, Cases A and B) or a laser into one level; Stark broadening on the mod wheel to the Inglis–Teller limit, Doppler widths, pitch bend as a redshift, a spectrometer window (visible, ultraviolet, infrared), and a what-if fine-structure constant |
+| ✅ | [Chladni Plate](chladni/) | Chladni's bowed plates (1787): every key a square plate clamped at its centre, its Kirchhoff modes by Rayleigh–Ritz (Ritz's own method for Chladni's square), bowed at its edge by implicit stick–slip friction while two fingers on the figure's nodal lines damp its rivals; the force set from the figure's speaking threshold; sand on the plate gathers on the nodal lines as it plays |
 
 ### Devices built to study physics
 
@@ -169,6 +170,7 @@ is the mod wheel's control wherever the instrument has one.
 | Project 8 | Magnetic field · Energy · Receiver noise | Trap depth | Gas pressure |
 | ABRACADABRA | Stream speed · Stream · SQUID noise | Coupling to photons | Halo speed |
 | TESS | Temperature · Star radius · Orbit at A4 | Planet radius | Impact parameter |
+| Chladni Plate | Bow speed · Rosin · Ring time | Bow force (× threshold) | Bow shift along the edge |
 
 </details>
 
