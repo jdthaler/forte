@@ -135,7 +135,8 @@ default in the existing presets, or would change what an existing knob means.
 | Hurdy-Gurdy | M | Done, for the next release: the vielle à roue's rosined wheel bowing two tangent-stopped chanterelles and four drones, the trompette's chien lifting off the soundboard once the wheel's drag beats the tirant (a buzz from a threshold worked out from the string), coups of the wrist on the crank from Space, the pedal, aftertouch, hard keys or a rhythm a turn. |
 | CUORE | M | Done, for the next release: CUORE's TeO₂ bolometers at ten millikelvin, each key a crystal whose heater fires at its note's rate, sped up, read through the NTD thermistor with the collaboration's electrothermal model: the bolometer's rise and fall as a formant, saturation, the heat sink on the mod wheel. |
 | Hammered dulcimer or cimbalom | M | |
-| Theremin or ondes Martenot | M | Continuous pitch suits MPE. |
+| Ondes Martenot | M | Done, for the next release: two heterodyne oscillators pulling through Adler's equation, keyboard or ribbon, the intensity key from Quartier et al.'s measurements, the drawer's timbres, and the four diffuseurs (springs, tam-tam and palme strings from their physics). |
+| Theremin | M | Continuous pitch suits MPE; the ondes' heterodyne and pulling would carry over. |
 | Kalimba (mbira) | S–M | Close to the tine piano. |
 | Cristal Baschet or waterphone | M | Friction-driven rods, close to the glass armonica's bowing. |
 

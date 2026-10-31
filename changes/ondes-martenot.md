@@ -1,0 +1,10 @@
+# the Ondes Martenot
+
+### Ondes Martenot (new)
+- **A new electric instrument: Maurice Martenot's ondes musicales (1928).** The note is the beat of two radio-frequency oscillators, stepped exactly each sample through Adler's equation (1946), so the oscillators pull on each other as they near: within the lock range the beat stops, and above it the low notes' harmonics fall only as rⁿ, r = (Δ − √(Δ² − K²))/K. Every key is trimmed so the pulled beat lands on its note.
+- **Keys or the ribbon:** an ondes for every key (chords), or the instrument as built, one tone whose ring slides evenly in semitones to each key pressed while another is held. The keyboard's side-to-side vibrato is on the mod wheel; pitch bend and MPE slide the note (±48 semitones), CC74 rocks its own key, pressure presses harder.
+- **The intensity key:** velocity and aftertouch press a bag of graphite and mica powder (0.3 to 9.6 N), and the level follows Quartier et al.'s measurements (2015): 45 dB SPL at 0.39 N to 95 dB at 9.6 N. It squeezes in and lets go fast, and its contact opens at the top.
+- **The drawer's timbres:** onde (the detector's envelope, with a balance from a pure sine to a full-wave rectified one), creux, petit gambe, gambe, nasillard (with its pulse width), octaviant and souffle, any of them at once, band-limited with polyBLEP and polyBLAMP where the beat's phase crosses their steps and corners.
+- **The four diffuseurs:** the principal loudspeaker; the Résonance's seven brass springs (their modes from the curved-rod dispersion relation, chirping below their 368 Hz transition); the Métallique's tam-tam (the free plate's modes, solved from Kirchhoff's frequency equation, driven at the voice coil, 40–75 cm across); and the Palme's 24 strings in two chromatic octaves from A3, rung through their bridge. Each stands at its own place across the stereo field.
+- **Thermal drift:** the oscillators wander by hertz as their valves warm, the same hertz on every note (off by default).
+- Quality: Medium plays 12 voices, four springs and the tam-tam's modes to 3 kHz; Low 6 voices, two springs and modes to 1.5 kHz.

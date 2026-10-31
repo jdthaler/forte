@@ -167,6 +167,14 @@ export const INSTRUMENTS = [
     accent: '#7ee0ff',
   },
   {
+    id: 'ondes', name: 'Ondes Martenot', section: 'electric', ready: true, version: '0.1.0', trim: -4.5,
+    plugin: { code: 'Onde', ready: true },
+    after: 'Maurice Martenot’s ondes musicales (1928), with its keyboard, ribbon and diffuseurs',
+    tagline: 'Two radio-frequency oscillators beating together, pulling on each other as they near: a keyboard and a ribbon for the pitch, a powder-filled key for the loudness, timbre switches, and loudspeakers with springs, a tam-tam and sympathetic strings.',
+    physics: 'Heterodyne oscillators with injection pulling (Adler) · powder-resistance intensity key · spring, tam-tam and string diffuseurs',
+    accent: '#ffc46b',
+  },
+  {
     id: 'bowed', name: 'Viola Organista', section: 'experimental', ready: true, version: '0.10.0', trim: 3,
     plugin: { code: 'Viol', ready: true },
     after: "Leonardo da Vinci's design (1488)",

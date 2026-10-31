@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ondes Martenot · Forte</title>
+  <meta name="description" content="Two radio-frequency oscillators beating together, pulling on each other as they near: a keyboard and a ribbon for the pitch, a powder-filled key for the loudness, timbre switches, and loudspeakers with springs, a tam-tam and sympathetic strings.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="Ondes Martenot · Forte">
+  <meta property="og:description" content="Two radio-frequency oscillators beating together, pulling on each other as they near: a keyboard and a ribbon for the pitch, a powder-filled key for the loudness, timbre switches, and loudspeakers with springs, a tam-tam and sympathetic strings.">
+  <meta property="og:url" content="https://forte.jthaler.net/ondes/">
+  <meta property="og:image" content="https://forte.jthaler.net/ondes/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Ondes Martenot's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="ondes">
+  <div class="forte-edge" aria-hidden="true"></div>
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Ondes Martenot</h1>
+      <span class="sub">Martenot's ondes musicales (1928): the beat of two oscillators, played from a keyboard or a ribbon, shaped by the drawer's timbres and sounded through the diffuseurs</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Beat">
+          <div class="card-head"><h2>The beat of <b id="focus-name">C4</b></h2><span class="muted" id="beat-read"></span></div>
+          <canvas id="beat"></canvas>
+          <div class="caption">Left, the phase φ between the two oscillators, going round once per cycle of the note; its speed, Δ − K sin φ, is drawn around the circle. The pull slows it on one side and hurries it on the other, so a strong pull at a low note lingers and snaps round. Right, one cycle of what the drawer's timbres make of it, slowed down.</div>
+        </div>
+        <div class="card" data-view="Diffuseurs">
+          <div class="card-head"><h2>Diffuseurs</h2><span class="muted">where each rings · bars: the note's harmonics</span></div>
+          <canvas id="diffuseurs"></canvas>
+          <div class="caption">Each loudspeaker that is on, as the lines it rings at: the springs' modes (below the transition F<sub>C</sub> they crowd toward it), the tam-tam's modes, denser the higher they go, and the palme's 24 strings, two chromatic octaves. A harmonic of the note that lands near a line sets it ringing.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-perform>
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the note's harmonics</span></div>
+          <canvas id="spectrum"></canvas>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">A slide along the ribbon bends every harmonic together. With the diffuseurs on, lines stay behind after each note: the tam-tam's halo, the springs' chirps, the palme's strings.</div>
+        </div>
+      </div>
+      <div class="row single">
+        <div class="card" id="info-card" data-view="Oscillators and key">
+          <div class="card-head"><h2>Oscillators and intensity key</h2></div>
+          <dl id="info"></dl>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows; a note sounds while its key is held</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>vibrato <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>hold notes: <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>MIDI: velocity presses the intensity key, aftertouch harder; mod wheel = keyboard vibrato; pitch bend and MPE slide the note</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/ondes-main.js"></script>
+</body>
+</html>

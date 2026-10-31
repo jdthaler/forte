@@ -760,7 +760,13 @@ data):
   played one, the instrument the Trautonium models, and after it Doepfer's
   [Trautonium modules](https://doepfer.de/traut/traut_e.htm) and Moog's
   [Subharmonicon](https://www.moogmusic.com/synthesizers/subharmonicon/)
-  (2020); N. H. Fletcher, "Mode
+  (2020); R. Adler, "A study of locking phenomena in oscillators",
+  *Proc. IRE* **34**(6), 351–357 (1946), reprinted in *Proc. IEEE* **61**(10),
+  1380–1385 (1973), [doi:10.1109/PROC.1973.9292](https://doi.org/10.1109/PROC.1973.9292)
+  (the two heterodyne oscillators of the Ondes Martenot pulling each other,
+  whose earlier models, Soniccouture's sampled
+  [Ondes](https://www.soniccouture.com/en/vintage/g27-ondes/) and XILS-lab's
+  Les Diffuseurs, leave the pulling out); N. H. Fletcher, "Mode
   locking in nonlinearly excited inharmonic musical oscillators",
   *J. Acoust. Soc. Am.* **64**(6), 1566–1569 (1978),
   [doi:10.1121/1.382139](https://doi.org/10.1121/1.382139); M. Abel,
