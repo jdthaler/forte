@@ -112,6 +112,14 @@ function makeBar(kind, label, aria, panel) {
 }
 const bars = {};
 export function barTools(kind) { return bars[kind]?.tools ?? null; }
+// What a guided tour (shared/tour.js) needs of the layout: the views by name, only some of them
+// shown for a while, the keys (to play them and bring them into sight) and whether audio runs.
+export const tourLayout = {
+  views: () => views.map(({ key, name }) => ({ key, name })),
+  show(keys) { touring = keys ? new Set(keys) : null; body.classList.toggle('touring', !!touring); apply(); },
+  keys: null, // { kb, reveal(lo, hi) }, once the page builds its keys (attachKeyboard)
+  audio: () => [...contexts].some((c) => c.state === 'running'),
+};
 
 // ---------------------------------------------------------------------------
 // views: a toggle for each view in the views' bar, and the views turned on, in a grid
@@ -125,13 +133,23 @@ shown = [...main, ...shown.filter((c) => !main.includes(c))]; // the main ones f
 const viewName = (c, i) => c.dataset.view || c.querySelector('h2')?.textContent.trim() || `View ${i + 1}`;
 const viewKey = (c, i) => c.id || viewName(c, i).toLowerCase().replace(/[^a-z0-9]+/g, '-');
 // the key once, from the page as written: a title changes (its note, its ⓘ), the key mustn't
-const views = shown.map((card, i) => { const key = viewKey(card, i); return { card, key, on: () => prefs.views[key] ?? main.includes(card) }; });
+// A guided tour (shared/tour.js) shows, for a while, only the views it is about (`touring`, their
+// keys), without changing which the player turned on.
+let touring = null;
+const views = shown.map((card, i) => {
+  const key = viewKey(card, i);
+  return { card, key, name: viewName(card, i), on: () => (touring ? touring.has(key) : prefs.views[key] ?? main.includes(card)) };
+});
 let stage = null, hint = null;
 if (viewsEl && shown.length && mainEl) {
   bars.views = makeBar('views', 'Views', 'Views to show', viewsEl);
   for (const v of views) {
     v.toggle = button(viewName(v.card, 0), 'Show or hide this view');
-    v.toggle.addEventListener('click', () => { prefs.views[v.key] = !v.on(); save(); apply(); v.toggle.blur(); });
+    v.toggle.addEventListener('click', () => {
+      if (touring) { if (!touring.delete(v.key)) touring.add(v.key); } // for this step of the tour only
+      else { prefs.views[v.key] = !v.on(); save(); }
+      apply(); v.toggle.blur();
+    });
     bars.views.row.appendChild(v.toggle);
   }
   stage = el('div', 'forte-stage');
@@ -247,6 +265,10 @@ for (const name of ['fillText', 'strokeText']) {
 // short of either end (on a phone, in place of the views).
 
 function share() {
+  const v = chosenShare();
+  return touring && v === 0 ? (performing() ? 1 : split.open) : v; // a tour shows its views, folded or not
+}
+function chosenShare() {
   if (!bars.controls) return 1;
   if (!bars.views) return 0;
   if (performing()) return !prefs.perform.controls ? 1 : phoneQuery.matches ? 0 : split.views > 0 && split.views < 1 ? split.views : split.open;
@@ -837,6 +859,15 @@ export function attachKeyboard(kb) {
     count = Math.min(count, whites.length);
     fit(true);
   });
+  // a tour brings the keys it plays into sight, keeping the window's size
+  tourLayout.keys = {
+    kb,
+    reveal(a, b) {
+      const i = whites.findIndex((m) => m >= a - 1), j = whites.findLastIndex((m) => m <= b + 1);
+      if (i < 0 || j < 0 || (i >= first && j < first + count)) return;
+      show((i + j + 1 - count) / 2, false);
+    },
+  };
   if (window.ResizeObserver) new ResizeObserver(() => fit()).observe(kbEl);
   else window.addEventListener('resize', () => fit());
   fit();
