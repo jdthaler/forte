@@ -340,6 +340,13 @@ export const INSTRUMENTS = [
     physics: 'Cryogenic calorimetry · Debye\'s T³ heat capacity · hopping conduction in NTD germanium · electrothermal feedback',
     accent: '#7ab8ff',
   },
+  {
+    id: 'ionchain', name: 'Ion Chain', section: 'devices', ready: true, version: '0.1.0', trim: 1.5,
+    plugin: { code: 'Ionc', ready: true },
+    tagline: 'Every key a radio-frequency trap holding a string of ions, the crystal of a trapped-ion quantum computer: a laser pulse kicks them, they ring together in their normal modes (1, √3, √(29/5) … of the trap\'s frequency, more with every ion), and the trap\'s electrodes hear the current they drive.',
+    physics: 'Paul traps · Coulomb crystals and their normal modes · the linear–zigzag transition · image-current detection',
+    accent: '#a98bff',
+  },
 ];
 
 // The template (docs/template/), the starting point for new instruments: not listed, but it
