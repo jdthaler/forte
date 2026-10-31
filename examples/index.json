@@ -251,6 +251,32 @@
    "title": "Centre end and node strikes"
   }
  ],
+ "chladni": [
+  {
+   "file": "01-bowed-plates-tune.m4a",
+   "title": "Bowed plates tune"
+  },
+  {
+   "file": "02-finger-on-then-lifted.m4a",
+   "title": "Finger on then lifted"
+  },
+  {
+   "file": "03-bow-moved-along-the-edge.m4a",
+   "title": "Bow moved along the edge"
+  },
+  {
+   "file": "04-five-figures-on-one-key.m4a",
+   "title": "Five figures on one key"
+  },
+  {
+   "file": "05-light-bow-then-firm.m4a",
+   "title": "Light bow then firm"
+  },
+  {
+   "file": "06-glass-plates.m4a",
+   "title": "Glass plates"
+  }
+ ],
  "clavicylinder": [
   {
    "file": "01-chorale-in-f.m4a",
