@@ -22,7 +22,7 @@ function views(m, e) {
   switch (m.type) {
     case 1: [s.q, s.U, s.pd, s.Pb][m.key].set(v.subarray(1), v[0]); return null; // a piece of a trace
     case 2: s.key = m.key; REED.forEach((k, i) => { s[k] = v[i] ?? 0; }); return s;
-    case 3: return { type: 'wind', ...Object.fromEntries(WIND.map((k, i) => [k, v[i]])) };
+    case 3: return { type: 'wind', fs: e.fs, ...Object.fromEntries(WIND.map((k, i) => [k, v[i]])) };
     default: return null;
   }
 }

@@ -294,10 +294,10 @@ void RegalEngine::stepWind(double Uin) {
   const double P0e = P0s * (1 + 0.25 * afterS);
   double Ut;
   if (hand) {
-    const double Cb = (0.5 * V_BELLOWS) / (Air::rho * Air::c * Air::c), Ma = P0e / (G * A_BOARD);
+    const double Cb = V_BELLOWS / (Air::rho * Air::c * Air::c), Ma = P0e / (G * A_BOARD);
     const double Rb = 2 * BELLOWS_Z * std::sqrt(Ma / Cb);
     const double Peq = bellowsPressure(P0e, fill[active]);
-    ub += (h / Ma) * (Peq - Pbel - Rb * ub);
+    ub += (h / Ma) * (Peq - Pbel - Rb * (ub - G_TRUNK * (Pbel - Pw))); // (the board's losses act on its motion against the wind it feeds)
     if (ub < 0 && fill[active] >= 1) ub = 0;
     Ut = G_TRUNK * (Pbel - Pw);
     Pbel += (h / Cb) * (ub - Ut);

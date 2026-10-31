@@ -23,7 +23,7 @@
     <div class="brand">
       <nav data-forte-nav></nav>
       <h1>Regal</h1>
-      <span class="sub">the starting point for a new instrument: struck free–free bars</span>
+      <span class="sub">the Renaissance reed organ: brass tongues slapping their shallots, short resonators, two bellows a calcant works by hand</span>
     </div>
     <div class="status">
       <button id="start" class="primary">Start audio</button>
@@ -45,25 +45,34 @@
 
     <section id="views">
       <div class="row">
-        <div class="card" data-perform>
-          <div class="card-head"><h2>Mode shapes and strike point</h2></div>
-          <canvas id="bar"></canvas>
-          <div class="caption">Bending modes of a free–free bar. Striking where a mode crosses zero (a node) leaves that mode silent.</div>
+        <div class="card" data-perform data-view="Tongue">
+          <div class="card-head"><h2>The tongue on its shallot <b id="tongue-key">C4</b></h2><span class="muted" id="tongue-read">play a key</span></div>
+          <canvas id="tongue"></canvas>
+          <div class="legend"><span><i style="background:var(--accent)"></i>tongue tip (mm)</span><span><i style="background:var(--accent-2)"></i>pressure in the shallot</span><span><i style="background:#9fe39f"></i>flow through the gap</span></div>
+          <div class="caption">One cycle of the last key's reed, slowed down a few hundred times, side on, its height drawn ten times its length's scale: the curved brass tongue rolls onto the shallot's flat face from its root to its tip, shutting the gap and the flow, and springs back. Below, the same cycle as traces: the flow stops dead each time the tongue lands, and the air in the shallot, still moving, pulls its pressure far below the wind's.</div>
         </div>
-        <div class="card" data-view="Mode table">
-          <div class="card-head"><h2>Modes of <b id="focus-name">C4</b></h2></div>
-          <table class="modes" id="modes"></table>
+        <div class="card" data-perform data-view="Resonator">
+          <div class="card-head"><h2>The resonator</h2><span class="muted" id="res-read"></span></div>
+          <canvas id="resonator"></canvas>
+          <div class="caption">Above: the shallot and its resonator, to scale. Below: what the tongue blows into, the tube's input impedance |Z| (log) from the note to its 16th harmonic, ticks at the harmonics. The resonator is a small fraction of a pipe's length, so its first peak lies above the note: the tongue sets the pitch, and the peaks lift the harmonics near them, the regal's nasal formants.</div>
         </div>
       </div>
-      <div class="row single">
-        <div class="card" data-perform>
-          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the model's modes</span></div>
+      <div class="row">
+        <div class="card" data-view="Bellows">
+          <div class="card-head"><h2>The bellows and the wind</h2><span class="muted" id="wind-read"></span></div>
+          <canvas id="wind"></canvas>
+          <div class="legend"><span><i style="background:var(--accent)"></i>chest (Pa)</span><span><i style="background:var(--accent-2)"></i>bellows</span><span><i style="background:#9fb4c8"></i>the weight's pressure</span></div>
+          <div class="caption">Two wedge bellows, weighted. One sinks as the reeds draw on it while the calcant raises the other; when the first is down the other takes over, its board settling onto the wind with a little shake. A sinking bellows' wind rises a few per cent (its weight's lever arm grows), and a chord coming in gives a dip as the board gathers speed. The tremulant's vent pulses it.</div>
+        </div>
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted" id="spec-read">live output · markers: the note's harmonics, brighter where the resonator lifts them</span></div>
           <canvas id="spectrum"></canvas>
+          <div class="caption">A beating reed shuts the flow off once a cycle, so every harmonic is there, falling slowly; the resonator's peaks lift the ones near them.</div>
         </div>
         <div class="card" data-view="Spectrogram">
-          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the model's modes</span></div>
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
           <canvas id="spectrogram"></canvas>
-          <div class="caption">The upper modes die first, so each note's stack of lines thins from the top down.</div>
+          <div class="caption">A regal speaks almost at once, the harmonics together. Watch them waver with the tremulant, and dip as a big chord sags the wind.</div>
         </div>
       </div>
     </section>
@@ -73,8 +82,9 @@
     <div class="kb-help">
       <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
       <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
-      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
-      <span>sustain: hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>velocity (pallet speed) <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>hold <kbd>Space</kbd> to keep keys down <b id="hold" class="off">off</b></span>
+      <span>mod wheel: more weight on the bellows · soft pedal: tremulant</span>
     </div>
     <div id="keyboard"></div>
   </footer>

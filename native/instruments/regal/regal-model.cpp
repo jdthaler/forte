@@ -196,8 +196,8 @@ double firstPeak(const Tube &t, double fLo, double fHi) {
 }
 
 double bellowsPressure(double P0, double fill) {
-  const double s = std::sin(THETA_MAX), th = std::asin(std::clamp(fill, 0.0, 1.0) * s), th0 = std::asin(0.5 * s);
-  return (P0 * std::cos(th)) / std::cos(th0);
+  const double th = std::asin(std::clamp(fill, 0.0, 1.0) * std::sin(THETA_MAX));
+  return (P0 * std::cos(th)) / std::cos(THETA_MAX);
 }
 
 } // namespace forte::regal

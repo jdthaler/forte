@@ -22,9 +22,9 @@ enum : int { regal8, regal4, regal16, tremulant, tremRate, resonator, resLength,
 
 constexpr double kNoLimit = INFINITY;
 inline const FormatSegment kFormat_tremRate[] = {{kNoLimit, "", " beats/s", 1, 0, 1, false, false, false, false}};
-inline const char *const kChoices_resonator[] = {"Short cylinders (Jungfernregal)", "Short funnels (Trichterregal)", "Capped balls with holes (Apfelregal)", "None: bare shallots", "Half-length cylinders (Krummhorn)", "Full-length cones (Trompete)"};
-inline const char *const kKeys_resonator[] = {"regal", "funnel", "apple", "none", "krummhorn", "trumpet"};
-namespace resonator_ { enum : int { regal, funnel, apple, none, krummhorn, trumpet }; }
+inline const char *const kChoices_resonator[] = {"Short cylinders (Jungfernregal)", "Short funnels (Trichterregal)", "Capped balls with holes (Apfelregal)", "None: bare shallots"};
+inline const char *const kKeys_resonator[] = {"regal", "funnel", "apple", "none"};
+namespace resonator_ { enum : int { regal, funnel, apple, none }; }
 inline const FormatSegment kFormat_resLength[] = {{0.9999999999999999, "× ", "", 1, 0, 2, false, false, false, false}, {kNoLimit, "× ", "", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_pressure[] = {{kNoLimit, "", " Pa", 1, 0, 0, false, false, false, false}};
 inline const char *const kChoices_bellows[] = {"Two wedge bellows, worked by hand", "A steady blower and reservoir"};
@@ -66,9 +66,9 @@ inline const ParamInfo kParams[p::count] = {
   {"regal16", "Sordun 16′ (an octave down)", "Stops", ParamKind::toggle, 0, 1, 0, 1, false, true, nullptr, 0, nullptr, 0},
   {"tremulant", "Tremulant", "Stops", ParamKind::toggle, 0, 1, 0, 1, false, true, nullptr, 0, nullptr, 0},
   {"tremRate", "Tremulant rate", "Stops", ParamKind::continuous, 3, 9, 5.5, 0.1, false, false, nullptr, 0, kFormat_tremRate, 1},
-  {"resonator", "Resonators", "Resonators", ParamKind::choice, 0, 5, 0, 1, false, true, kChoices_resonator, 6, nullptr, 0, kKeys_resonator},
+  {"resonator", "Resonators", "Resonators", ParamKind::choice, 0, 3, 0, 1, false, true, kChoices_resonator, 4, nullptr, 0, kKeys_resonator},
   {"resLength", "Resonator length", "Resonators", ParamKind::continuous, 0.5, 2, 1, 0, true, false, nullptr, 0, kFormat_resLength, 2},
-  {"pressure", "Wind pressure", "Wind", ParamKind::continuous, 200, 2000, 600, 0, true, true, nullptr, 0, kFormat_pressure, 1},
+  {"pressure", "Wind pressure", "Wind", ParamKind::continuous, 400, 1000, 600, 0, true, true, nullptr, 0, kFormat_pressure, 1},
   {"bellows", "Bellows", "Wind", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_bellows, 2, nullptr, 0, kKeys_bellows},
   {"curve", "Curve: tip off the shallot", "Tongues (voicing)", ParamKind::continuous, 0.2, 1.6, 0.6, 0.01, false, false, nullptr, 0, kFormat_curve, 1},
   {"thickness", "Tongue thickness", "Tongues (voicing)", ParamKind::continuous, 0.6, 1.6, 1, 0.01, false, false, nullptr, 0, kFormat_thickness, 2},
@@ -99,16 +99,14 @@ inline const PresetValue kPreset2[] = {{p::regal16, 1}, {p::regal4, 1}};
 inline const PresetValue kPreset3[] = {{p::resonator, 1}};
 inline const PresetValue kPreset4[] = {{p::resonator, 2}};
 inline const PresetValue kPreset5[] = {{p::resonator, 3}};
-inline const PresetValue kPreset6[] = {{p::resonator, 4}};
-inline const PresetValue kPreset7[] = {{p::resonator, 5}};
-inline const PresetValue kPreset8[] = {{p::tremulant, 1}};
-inline const PresetValue kPreset9[] = {{p::facing, 1}};
-inline const PresetValue kPreset10[] = {{p::curve, 1.2}};
-inline const PresetValue kPreset11[] = {{p::curve, 0.3}};
-inline const PresetValue kPreset12[] = {{p::pressure, 1300}};
-inline const PresetValue kPreset13[] = {{p::pressure, 300}};
-inline const PresetValue kPreset14[] = {{p::resLength, 1.8}};
-inline const PresetValue kPreset15[] = {{p::bellows, 1}};
+inline const PresetValue kPreset6[] = {{p::tremulant, 1}};
+inline const PresetValue kPreset7[] = {{p::facing, 1}};
+inline const PresetValue kPreset8[] = {{p::curve, 1.2}};
+inline const PresetValue kPreset9[] = {{p::curve, 0.3}};
+inline const PresetValue kPreset10[] = {{p::pressure, 950}};
+inline const PresetValue kPreset11[] = {{p::pressure, 450}};
+inline const PresetValue kPreset12[] = {{p::resLength, 1.8}};
+inline const PresetValue kPreset13[] = {{p::bellows, 1}};
 inline const Preset kPresets[] = {
   {"Regal 8′: short brass resonators", nullptr, 0},
   {"Charon’s regal: 8′ and 4′ (Monteverdi, Orfeo)", kPreset1, 1},
@@ -116,19 +114,17 @@ inline const Preset kPresets[] = {
   {"Funnel regal (Trichterregal): open and bright", kPreset3, 1},
   {"Apple regal (Apfelregal): capped and muffled", kPreset4, 1},
   {"Bare shallots: the tongues alone", kPreset5, 1},
-  {"Krummhorn: half-length cylinders, odd harmonics", kPreset6, 1},
-  {"Trompete: full-length cones", kPreset7, 1},
-  {"Tremulant: the wind pulses", kPreset8, 1},
-  {"Leathered shallots: soft and round", kPreset9, 1},
-  {"Much curve: loud and brassy", kPreset10, 1},
-  {"Little curve: a thin, quiet buzz", kPreset11, 1},
-  {"Strong wind: loud, brassy, a little flat", kPreset12, 1},
-  {"Gentle wind: slow to speak", kPreset13, 1},
-  {"Long resonators: darker, more nasal", kPreset14, 1},
-  {"Steady blower: no bellows to sink or shake", kPreset15, 1},
+  {"Tremulant: the wind pulses", kPreset6, 1},
+  {"Leathered shallots: soft and round", kPreset7, 1},
+  {"Much curve: loud and brassy", kPreset8, 1},
+  {"Little curve: a thin, quiet buzz", kPreset9, 1},
+  {"Strong wind: loud, brassy and sharp", kPreset10, 1},
+  {"Gentle wind: slow to speak, the treble shy", kPreset11, 1},
+  {"Long resonators: darker, more nasal", kPreset12, 1},
+  {"Steady blower: no bellows to sink or shake", kPreset13, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
-inline const Controller kControllers[] = {{67, p::tremulant, Controller::toggle, 0, 1}, {107, p::tremRate}, {109, p::curve}, {111, p::q}, {113, p::resLength}, {114, p::pressure}};
+inline const Controller kControllers[] = {{67, p::tremulant}, {107, p::tremRate}, {109, p::curve}, {111, p::q}, {113, p::resLength}, {114, p::pressure}};
 
 // The keyboard's tuning (forte/tuning.h): each key's frequency over equal temperament at A = 440 Hz.
 inline forte::Tuning tuningOf(const double *P) {
@@ -144,10 +140,10 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "", .auSubtype = "Rega",
     .vst3Id = {0xc6, 0x5e, 0xe4, 0x24, 0xd7, 0xa2, 0x62, 0x27, 0x43, 0xea, 0x1f, 0x91, 0x63, 0x0f, 0x4d, 0xb8},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 16,
+    .presets = kPresets, .presetCount = 14,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 36, .compassHi = 84, .compass = p::fullRange, .space = Space::hold,
-    .modWheel = p::pressure, .modWheelMax = 2000,
+    .modWheel = p::pressure, .modWheelMax = 1000,
     .controllers = kControllers, .controllerCount = 6,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 0},
     .midiVelocity = midiVelocity, .create = create,

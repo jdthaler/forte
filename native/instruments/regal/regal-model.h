@@ -95,16 +95,16 @@ double endCorrection(const Tube &t);
 
 // The wind.
 constexpr double V_BELLOWS = 0.010;  // m³: each of the two wedge bellows, full
-constexpr double THETA_MAX = 0.35;   // rad: a full bellows' opening angle (20°)
+constexpr double THETA_MAX = 0.25;   // rad: a full bellows' opening angle (14°)
 constexpr double A_BOARD = 0.15;     // m²: a bellows' top board (its weight W = P0 × A_BOARD)
-constexpr double BELLOWS_Z = 0.25;   // the board's motion on the wind's air: its damping ratio
+constexpr double BELLOWS_Z = 0.7;    // the board's motion on the wind's air: its damping ratio
 constexpr double RAISE_T = 1.5;      // s: the calcant raises an empty bellows in this
 constexpr double V_CHEST = 0.002;    // m³: the windchest
 constexpr double G_TRUNK = 3e-4;     // m³/s per Pa: the trunk between bellows and chest
-constexpr double G_TREM = 0.1 * G_TRUNK; // the tremulant's vent, wide open
+constexpr double G_TREM = 0.35 * G_TRUNK; // the tremulant's vent, wide open
 constexpr double G = 9.81;
 // A wedge bellows' wind: the weight's moment falls with the board's angle, so P ∝ cos θ, with
-// the fill f ∈ [0, 1] (V ∝ sin θ) and P0 the pressure at half full.
+// the fill f ∈ [0, 1] (V ∝ sin θ) and P0 the pressure full (3 % more when it is down).
 double bellowsPressure(double P0, double fill);
 
 } // namespace forte::regal

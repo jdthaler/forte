@@ -36,7 +36,7 @@ export const GROUPS = [
     title: 'Resonators',
     params: [
       { id: 'resonator', label: 'Resonators', face: 'selector', perform: true, type: 'select', def: 'regal', options: RESONATORS,
-        shortLabels: ['Cylinder', 'Funnel', 'Apple', 'None', 'Krumm­horn', 'Trompete'],
+        shortLabels: ['Cylinder', 'Funnel', 'Apple', 'None'],
         hint: 'What sits on each reed\'s shallot. A regal\'s resonators are a small fraction of a pipe\'s length, so the tongue sets the pitch and they only colour it, each with a formant of its own: a cylinder\'s nasal buzz, a funnel\'s open brightness, a capped ball\'s muffled hum, or the bare shallot\'s raw rasp. Each kind is retuned for its reeds.' },
       { id: 'resLength', label: 'Resonator length', min: 0.5, max: 2, def: 1, log: true, fmt: times,
         hint: 'Each resonator longer or shorter than the voicer cut it: its formant moves, longer darker and more nasal, shorter thinner and brighter, and the pitch shifts a little with it. Applies to new notes.' },
