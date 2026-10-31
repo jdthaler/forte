@@ -128,6 +128,20 @@ compliance to it. What comes out:
   at E6) the tangent can't hold the string on the anvil. It then rings
   against the lossy rubber and buzzes. Set *Key pressure* below 1 N, or try
   the *Worn tips* preset with a soft, bouncy tip.
+* **The knock goes into the frame.** The stud is screwed to a rail, and
+  every impact's 20–90 N rings that rail and the case under it. The pickups
+  are mounted on the same frame, and all sixty strings lie in their field,
+  so the frame moving under them is heard as if the strings had moved the
+  other way: a short knock under every note, the same on every key (it is
+  the frame, not the string), growing with the strike speed, and most
+  noticeable in the top octave, whose notes are quietest. The frame is
+  three modes at 520 Hz, 1.4 kHz and 3.3 kHz, Q 12, each of 3 kg modal mass,
+  driven by the stud's force: estimates, since the D6's frame is not
+  measured. At a forte strike its
+  first 20 ms are some 10 dB below the note's; both pickups ride the frame,
+  so the out-of-phase A − B setting cancels it. **Frame knock** under *Key
+  and tangent* scales it (×1, 0 for off; tested: the knock dies within
+  30 ms, is the same on every key and grows with the strike speed).
 
 **Key pressure → pitch.** The D6's tangent squeezes the string against the
 anvil "with greater or less strength according to the heaviness of key
@@ -321,8 +335,8 @@ tools/render-clavier.mjs               node tools/render-clavier.mjs → example
   variation in its response), and R_p = 10 kΩ is assumed.
 * **Losses are phenomenological.** σ₁ + h f². Gabrielli et al. report
   ripples in the partials' T60 and slow beating on some notes, which they
-  don't explain; neither is modelled. Nor is the knock of the tangent
-  through the frame, which shows up in recordings of the top octave.
+  don't explain; neither is modelled. The frame that carries the knock to
+  the pickups is three estimated modes, not a measured case.
 * **Tension modulation** acts on the speaking length only. The yarn side
   stays linear at the rest tension, and the update is linearised rather
   than energy-conserving.

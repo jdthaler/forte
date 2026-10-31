@@ -11,7 +11,7 @@ import { INSTRUMENT } from '../grand/src/grand-instrument.js';
 import { wasmModel } from '../grand/src/grand-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { DEFAULTS, GROUPS } from '../grand/src/grand-params.js';
-import { renderEngine } from '../tools/audio-util.mjs';
+import { renderEngine, fft } from '../tools/audio-util.mjs';
 import { keyFreq } from '../shared/dsp.js';
 
 const GrandEngine = await loadEngine(INSTRUMENT);
@@ -582,6 +582,49 @@ test('Quality: Medium and Low strike voices with fewer partials (none above 6 an
   }
   console.log(`        (pedalled chord: ${res.high.modes} → ${res.medium.modes} → ${res.low.modes} oscillators, ${res.high.sym} → ${res.medium.sym} → ${res.low.sym} sympathetic partials; notes within ${Math.max(...dB.map(Math.abs)).toFixed(2)} dB, ${Math.max(...dc.map(Math.abs)).toFixed(3)} ¢)`);
 });
+// magnitude spectrum of x[a … a + N) (Hann), N a power of two
+function spectrum(x, a, N) {
+  const re = new Float64Array(N), im = new Float64Array(N);
+  for (let i = 0; i < N; i++) re[i] = x[a + i] * (0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (N - 1)));
+  fft(re, im, false);
+  return Float64Array.from({ length: N / 2 }, (_, i) => Math.hypot(re[i], im[i]));
+}
+test('longitudinal modes: phantom partials between a forte G1\'s partials, near its own in 1–2 kHz (Bank & Sujbert), growing faster than the blow; none above 8 kHz; Medium 2 modes, Low none', () => {
+  const vel = (ms) => Math.log(ms / 0.25) / Math.log(24); // the hammer's speed (grand-model.h)
+  const play = (p, ms, sec = 0.5) => render(P(p), [[0, 'on', 31, vel(ms)]], sec);
+  const N = 16384, st = Math.round(0.03 * FS), df = FS / N;
+  const off = play({ longi: 0 }, 5), on = play({}, 5);
+  const diff = on.x.map((v, i) => v - off.x[i]);
+  const S = spectrum(off.x, st, N), D = spectrum(diff, st, N);
+  let iD = Math.round(1000 / df);
+  for (let i = iD; i < Math.round(2000 / df); i++) if (D[i] > D[iD]) iD = i;
+  let near = 0;
+  for (let i = iD - Math.round(150 / df); i <= iD + Math.round(150 / df); i++) near = Math.max(near, S[i]);
+  const rDb = 20 * Math.log10(D[iD] / near);
+  assert.ok(Math.abs(rDb) < 8, `G1 at 5 m/s: ${(iD * df).toFixed(0)} Hz at ${rDb.toFixed(1)} dB re its neighbours`);
+  // quadratic below the strong blows (where tension modulation pulls the partials off the
+  // longitudinal modes): twice the blow, about twice the share
+  const rms = (x) => Math.sqrt(x.reduce((a, v) => a + v * v, 0) / x.length);
+  const share = (ms) => { const a = play({ longi: 0 }, ms), b = play({}, ms); return rms(b.x.map((v, i) => v - a.x[i])) / rms(a.x); };
+  const grow = 20 * Math.log10(share(2) / share(1));
+  assert.ok(grow > 3 && grow < 12, `2 m/s against 1 m/s: the longitudinal share rises ${grow.toFixed(1)} dB`);
+  const v = new GrandEngine(FS);
+  v.setParams(P());
+  const top = v.noteOn(96, 0.8);
+  assert.equal(top.longModes, 0, 'C7 has no longitudinal mode below 8 kHz');
+  v.destroy();
+  const got = {};
+  for (const q of ['high', 'medium', 'low']) {
+    const e = new GrandEngine(FS);
+    e.setQuality(q); e.setParams(P());
+    const g = e.noteOn(31, 0.9);
+    got[q] = [g.longModes, g.longPairs];
+    e.destroy();
+  }
+  assert.ok(got.high[0] > 2 && got.medium[0] === 2 && got.low[0] === 0 && got.medium[1] < 0.5 * got.high[1] && got.low[1] === 0, `modes and pairs ${JSON.stringify(got)}`);
+  console.log(`        G1 forte: phantom at ${(iD * df).toFixed(0)} Hz, ${rDb.toFixed(1)} dB re its neighbours; ${got.high[0]} modes, ${got.high[1]} pairs; +${grow.toFixed(1)} dB for twice the blow`);
+});
+
 test('stability: every parameter at its min and max gives finite, bounded output', () => {
   const ps = GROUPS.flatMap((g) => g.params);
   const cases = [];

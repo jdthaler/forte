@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Trautonium · Forte</title>
+  <meta name="description" content="A neon lamp flashing as its capacitor charges through a wire pressed onto a rail: the finger slides the pitch, lamps that fire on every n-th flash add the subharmonics, and every flash rings fixed resonant circuits like a voice’s formants.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="Trautonium · Forte">
+  <meta property="og:description" content="A neon lamp flashing as its capacitor charges through a wire pressed onto a rail: the finger slides the pitch, lamps that fire on every n-th flash add the subharmonics, and every flash rings fixed resonant circuits like a voice’s formants.">
+  <meta property="og:url" content="https://forte.jthaler.net/trautonium/">
+  <meta property="og:image" content="https://forte.jthaler.net/trautonium/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Trautonium's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="trautonium">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Trautonium</h1>
+      <span class="sub">Trautwein's neon-lamp instrument (1930) and Sala's Mixtur-Trautonium: a wire for the pitch, dividers for the undertones, resonant circuits for the vowel</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Lamps">
+          <div class="card-head"><h2>Lamps of <b id="focus-name">C4</b></h2><span class="muted" id="lamps-read"></span></div>
+          <canvas id="lamps"></canvas>
+          <div class="caption">Each lamp's capacitor voltage over a few of the master's periods, from extinction (60 V) up toward striking (90 V). The master's every discharge kicks the dividers up by the sync pulse (the shaded band under the strike line): a divider inside the band fires with it and starts again in step, so it fires on every n-th flash. One that the kick can't reach in time fires on its own and slides past.</div>
+        </div>
+        <div class="card" data-view="Circuits">
+          <div class="card-head"><h2>Resonant circuits</h2><span class="muted">response · lines: the note's harmonics and subharmonics</span></div>
+          <canvas id="circuits"></canvas>
+          <div class="caption">The circuits stay where their capacitors tune them, whatever note is played. Each flash of a lamp rings them, so the harmonics that fall under a peak come out loud: move up the keyboard and different harmonics light up, as a voice keeps its vowel on every pitch.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-perform>
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the master's harmonics, and the dividers' notes</span></div>
+          <canvas id="spectrum"></canvas>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">A slide along the wire bends every harmonic together while the circuits' bands stay put. Dividers in step add lines below the note at f/2, f/3 …; a slipping divider sits a little flat of them.</div>
+        </div>
+      </div>
+      <div class="row single">
+        <div class="card" id="info-card" data-view="Wire and lamps">
+          <div class="card-head"><h2>Wire and lamps</h2></div>
+          <dl id="info"></dl>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows; a note sounds while its key is held</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>first circuit <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>hold notes: <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>MIDI: pitch bend and MPE slide the wire, aftertouch presses harder, mod wheel = first circuit, CC11 = volume pedal</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/trautonium-main.js"></script>
+</body>
+</html>

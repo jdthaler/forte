@@ -1,7 +1,8 @@
 // steelpan-engine.h — the real-time part, on the engine contract (forte/engine.h). Every key is
 // a note area of one pan, alive while it sounds: its modes are exact two-pole resonators, driven
-// each sample by the dome's quadratic forces among the three tuned modes and by the steel's
-// coupling to the neighbouring notes, which come alive with it (the pan's note layout). A note's
+// each sample by the dome's quadratic forces among them (steelpan-model.h, noteTriples) and by the steel's
+// coupling to the neighbouring notes, which come alive with it (the pan's note layout), and to
+// the skirt, a ring of steel whose modes every sounding note pushes on. A note's
 // own slide (MPE) is its own roll: how hard its sticks strike again while its key is down.
 #pragma once
 
@@ -38,6 +39,8 @@ class SteelPanEngine : public Engine {
     NoteModes nm;
     int run = 0;                   // modes integrated: kTuned while it only rings along, all once struck
     std::array<double, kModes> a1{}, a2{}, b{}, w{}, out{}, y1{}, y2{}, F{};
+    std::array<Triple, kTriples> tri{}; // the dome's couplings among its modes
+    std::array<int, kModes + 1> triBelow{}; // how many of them lie among its first n modes
     bool active = false, struck = false, held = false, released = false, damped = false, hand = false;
     double vel = 0, press = 0, gl = 1, gr = 1, rollIn = 0;
     int age = 0;                   // samples since it came alive
@@ -46,6 +49,8 @@ class SteelPanEngine : public Engine {
   const Note &note(int key) const { return notes[key - KEY_MIN]; }
   // The amplitude of a note's mode p (in thicknesses), from its last two samples.
   double amplitude(const Note &v, int p) const;
+  // The skirt's energy, Σ ½(ẏ² + ω²y²) over its modes (per unit mass, in thicknesses²/s²).
+  double wallEnergy() const;
 
  private:
   void retune(Note &v);
@@ -56,8 +61,20 @@ class SteelPanEngine : public Engine {
   void rebuildCouplings();
   void postViews();
   double rollOf(const Note &v) const; // how hard a held note is rolled (0: not)
+  void buildWall();
 
   struct Coupling { int a, p, b, q; double k; };
+  struct WallCoupling { int a, p, s; double k; }; // note a's mode p and the skirt's mode s
+  // The skirt's ring modes: n = 2 … kRingOrders + 1, each as cos nθ (2i) and sin nθ (2i + 1).
+  struct Wall {
+    static constexpr int N = 2 * kRingOrders;
+    std::array<double, N> a1{}, a2{}, b{}, w{}, y1{}, y2{}, F{};
+    std::array<bool, N> driven{};
+    std::array<int, N> on{}; // the modes integrated: those a note drives, or still ringing
+    int count = 0, nOn = 0;  // modes below the engine's top frequency; integrated
+  } wall;
+  void wakeWall(); // the skirt's modes to integrate, after a change of couplings or once a block
+  std::vector<WallCoupling> wallCouplings;
   std::array<double, p::count> P{};
   bool hasParams = false, sustain = false;
   int version = 0, focus = -1, sincePost = 0;

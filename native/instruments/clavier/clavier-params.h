@@ -17,7 +17,7 @@
 namespace forte::clavier {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { press, gap, tip, wrap, tipLoss, keyMass, t60, hf, stiff, kc, yarn, fullRange, pickup, xLower, xUpper, field, gain, soft, medium, treble, brilliant, muteOn, mute, muteX, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { press, gap, tip, wrap, tipLoss, keyMass, knock, t60, hf, stiff, kc, yarn, fullRange, pickup, xLower, xUpper, field, gain, soft, medium, treble, brilliant, muteOn, mute, muteX, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -27,6 +27,7 @@ inline const FormatSegment kFormat_tip[] = {{0.9999999999999999, "", " mm", 1, 0
 inline const FormatSegment kFormat_wrap[] = {{kNoLimit, "", " mm", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_tipLoss[] = {{kNoLimit, "", " s/m", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_keyMass[] = {{kNoLimit, "", " g", 1, 0, 1, false, false, false, false}};
+inline const FormatSegment kFormat_knock[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "× ", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_t60[] = {{kNoLimit, "", " s", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_hf[] = {{kNoLimit, "", " s⁻¹·(f/kHz)²", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_stiff[] = {{kNoLimit, "× ", "", 1, 0, 2, false, false, false, false}};
@@ -71,6 +72,7 @@ inline const ParamInfo kParams[p::count] = {
   {"wrap", "Tip half-width", "Key and tangent", ParamKind::continuous, 1, 10, 3, 0.1, false, false, nullptr, 0, kFormat_wrap, 1},
   {"tipLoss", "Tip damping", "Key and tangent", ParamKind::continuous, 0, 3, 0.8, 0.01, false, false, nullptr, 0, kFormat_tipLoss, 1},
   {"keyMass", "Key mass at the tangent", "Key and tangent", ParamKind::continuous, 2, 40, 8, 0, true, false, nullptr, 0, kFormat_keyMass, 1},
+  {"knock", "Frame knock", "Key and tangent", ParamKind::continuous, 0, 4, 1, 0.05, false, false, nullptr, 0, kFormat_knock, 2},
   {"t60", "Sustain (A2 fundamental)", "String", ParamKind::continuous, 1, 40, 14, 0, true, false, nullptr, 0, kFormat_t60, 1},
   {"hf", "Treble loss", "String", ParamKind::continuous, 0, 8, 0.5, 0.05, false, false, nullptr, 0, kFormat_hf, 1},
   {"stiff", "Bending stiffness", "String", ParamKind::continuous, 0, 4, 1, 0.01, false, false, nullptr, 0, kFormat_stiff, 1},
@@ -128,7 +130,7 @@ inline const Preset kPresets[] = {
   {"Ideal string · no stiffness, no glide", kPreset8, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
-inline const Controller kControllers[] = {{0, -1}};
+inline const Controller kControllers[] = {{107, p::mute}, {109, p::press}, {111, p::hf}, {113, p::xUpper}, {114, p::gain}};
 
 // The keyboard's tuning (forte/tuning.h): each key's frequency over equal temperament at A = 440 Hz.
 inline forte::Tuning tuningOf(const double *P) {
@@ -148,7 +150,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 29, .compassHi = 88, .compass = p::fullRange, .space = Space::sustain,
     .modWheel = -1, .modWheelMax = 0,
-    .controllers = kControllers, .controllerCount = 0,
+    .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 4.5},
     .midiVelocity = midiVelocity, .create = create,
   };

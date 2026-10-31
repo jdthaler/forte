@@ -33,6 +33,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/longitudinal.h"
 #include "forte/sympathetic.h"
 #include "piano-model.h"
 #include "piano-params.h"
@@ -90,6 +91,9 @@ class PianoEngine : public Engine {
     double kcGain = 0, Tt = 0, dT[3] = {0, 0, 0};
     int nu = 1, run[4][4] = {};
     bool stretched = false; // still stretched enough to matter (the strike sets it; the decay clears it)
+    // longitudinal modes (forte/longitudinal.h): the force along the string at the bridge
+    Longitudinal lon;
+    void startLong(const PianoEngine &eng, const VoiceData &d);
     const double *w = nullptr, *bw = nullptr;
     double compN = 0, compU = 0, comp = 0, KU = 0, hK = 0;
     struct { double mass, K, p, alpha; } hammer{};
@@ -139,6 +143,9 @@ class PianoEngine : public Engine {
   static constexpr double SYM_FMAX = 4000; // Hz: none above
   Sympathetic sym;
   int symModes() const { return pick(SYM_MODES, 3, 0); }
+  // and the longitudinal modes from fewer partials (Medium) or none (Low)
+  int longPartials() const { return pick(Longitudinal::PARTIALS, 12, 0); }
+  int longModes() const { return pick(Longitudinal::MODES, 2, 0); }
   bool symReady(int key) const { return symVer[key] != 0; }
 
  private:

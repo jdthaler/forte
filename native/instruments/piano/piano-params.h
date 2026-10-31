@@ -17,7 +17,7 @@
 namespace forte::piano {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { material, shape, aspect, roll, taper, gauge, lengthScale, winding, unisons, unisonDetune, polDetune, kc, strikePos, offset, hardness, feltExp, hammerMass, hammerWidth, hysteresis, unaCorda, bridge, bridgeH, lossLow, lossHigh, torsionLoss, damper, sympathy, gainV, gainH, gainT, soundboard, room, venue, width, voicing, volume, maxFreq, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { material, shape, aspect, roll, taper, gauge, lengthScale, winding, unisons, unisonDetune, polDetune, kc, longi, strikePos, offset, hardness, feltExp, hammerMass, hammerWidth, hysteresis, unaCorda, bridge, bridgeH, lossLow, lossHigh, torsionLoss, damper, sympathy, gainV, gainH, gainT, soundboard, room, venue, width, voicing, volume, maxFreq, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -35,6 +35,7 @@ inline const FormatSegment kFormat_lengthScale[] = {{kNoLimit, "×", "", 1, 0, 2
 inline const FormatSegment kFormat_unisons[] = {{kNoLimit, "", "", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_unisonDetune[] = {{kNoLimit, "", " ¢", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_polDetune[] = {{kNoLimit, "", " ¢", 1, 0, 1, false, false, false, false}};
+inline const FormatSegment kFormat_longi[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "×", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_strikePos[] = {{kNoLimit, "", " L", 1, 0, 3, false, false, false, false}};
 inline const FormatSegment kFormat_offset[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_hardness[] = {{9.999999999999998, "×", "", 1, 0, 2, false, false, false, false}, {kNoLimit, "×", "", 1, 0, 1, false, false, false, false}};
@@ -93,6 +94,7 @@ inline const ParamInfo kParams[p::count] = {
   {"unisonDetune", "Unison detune", "String / ribbon", ParamKind::continuous, 0, 8, 0.8, 0.1, false, false, nullptr, 0, kFormat_unisonDetune, 1},
   {"polDetune", "Polarization detune", "String / ribbon", ParamKind::continuous, -5, 5, 0.3, 0.1, false, false, nullptr, 0, kFormat_polDetune, 1},
   {"kc", "Tension modulation (pitch glide)", "String / ribbon", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"longi", "Longitudinal modes (phantom partials)", "String / ribbon", ParamKind::continuous, 0, 4, 1, 0.05, false, false, nullptr, 0, kFormat_longi, 2},
   {"strikePos", "Strike position", "Hammer", ParamKind::continuous, 0.02, 0.5, 0.12, 0.001, false, false, nullptr, 0, kFormat_strikePos, 1},
   {"offset", "Strike offset across width", "Hammer", ParamKind::continuous, -1, 1, 0, 0.01, false, false, nullptr, 0, kFormat_offset, 1},
   {"hardness", "Felt hardness", "Hammer", ParamKind::continuous, 0.1, 10, 1, 0, true, false, nullptr, 0, kFormat_hardness, 2},
@@ -162,7 +164,7 @@ inline const Preset kPresets[] = {
   {"Thick, stiff wire (very inharmonic)", kPreset12, 1},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::soundboard, p::maxFreq, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
-inline const Controller kControllers[] = {{67, p::unaCorda}};
+inline const Controller kControllers[] = {{67, p::unaCorda}, {107, p::damper}, {109, p::sympathy}, {111, p::soundboard}, {113, p::hardness}, {114, p::strikePos}};
 
 // The keyboard's tuning (forte/tuning.h): each key's frequency over equal temperament at A = 440 Hz.
 inline forte::Tuning tuningOf(const double *P) {
@@ -182,7 +184,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 19,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = -1, .modWheelMax = 0,
-    .controllers = kControllers, .controllerCount = 1,
+    .controllers = kControllers, .controllerCount = 6,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2.2, .roomGain = 0.55, .venue = p::venue, .tone = -1, .body = p::soundboard, .bodySeconds = 0.4, .bodyDry = 0.75, .bodyWet = 1.1, .limiterThreshold = -4, .limiterKnee = 4, .limiterRelease = 0.2, .trimDb = 3},
     .midiVelocity = midiVelocity, .create = create,
   };

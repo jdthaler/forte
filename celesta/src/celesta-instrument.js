@@ -20,6 +20,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine
   modWheel: 'hardness',                 // CC1: the hammers' felt, from its default up to wood or brass
   mpe: { slide: true },                 // a note's own slide: its hammer's felt, at the strike (a bar cannot bend)
+  faders: ['across', 'damp', 'detune', 'strike', 'hardness'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/celesta), built as WebAssembly
   wasm: { name: 'CelestaWasmEngine', module: new URL('./celesta-wasm.js', import.meta.url).href, binary: new URL('../wasm/celesta.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

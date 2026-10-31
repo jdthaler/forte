@@ -16,6 +16,275 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-30 — vapour in the bubbles, and the surface's echo; the Tangent Clavier's frame knock; CUORE; the Electric Grand's longitudinal modes; the harpsichord's sideways swing; Hydraulis; the Hydrogen Lamp's notes end sooner; the controls' chevron works on phones; the Ribbon Piano's longitudinal modes; a Seaboard RISE's faders and XY pad move every instrument; the stars' linewidths grow with frequency; the steel pan's harmonics climb; the steel pan's skirt rings; Trautonium
+
+### Forte 0.41.0
+- tools/pipes-tuning.mjs exports its pitch measurement for tools/hydraulis-tuning.mjs.
+- **The controls' open/close button does what it shows on a phone:** the controls sit below the
+  views, out of sight under the bar above the keys, so the chevron used to fold and unfold them
+  with nothing on screen changing. Now, while they are out of sight, it points up and scrolls them
+  into view; opening them scrolls to them; and once they are in view it folds them away.
+- **Faders and an XY pad:** a ROLI Seaboard RISE's three touch faders and its XY pad (CC 107,
+  109, 111, then 113 and 114 for X and Y, in its MIDI mode) move five of each instrument's
+  controls, on every page, in the plugins and in the Forte app; any controller sending those CCs
+  does the same. Each moves its control across the slider's whole range (in log(value) for a log
+  one, as the slider does; a stop from halfway up), and the first touch of each says on the page
+  which control it moves. README.md lists them.
+- **A Seaboard plays as MPE from the start:** when MIDI connects a Seaboard, the page announces
+  its MPE zone for it (channels 2–16, ±48 semitones, ROLI Dashboard's defaults), so MPE on Auto
+  decodes it even if it never sends the MPE Configuration Message. Off still ignores it.
+- The plugins' MIDI controllers on a log parameter move it in log(value), and on a choice step
+  through its options, as the pages do.
+- The descriptor's other controllers (the Trautonium's CC11) now reach the pages through the shell.
+
+### Ribbon Piano 0.11.0
+- **Longitudinal modes and phantom partials:** a string stretched by its own swing now pulls on the
+  bridge along its length too, and that pull rings in the string's longitudinal modes, about 15
+  times its pitch (A0's first at 378 Hz, G1's at 704 Hz). Pairs of partials drive them at the sums
+  of their frequencies, so a forte bass note grows extra partials between its overtones, as in
+  Bank & Sujbert's measured G1, louder the harder it is struck (four times the share for twice the
+  blow) and fading up the keyboard. **Longitudinal modes** (×1, off for none) sets how much the
+  board takes up. A passage costs about a fifth more CPU at High; Medium keeps the first two
+  modes, Low none. The demos are rendered again.
+- **A Seaboard RISE's faders and XY pad:** the faders move Damper strength, Sympathetic resonance, Soundboard body; the pad Felt hardness (X) and Strike position (Y).
+
+### Harpsichord 0.8.0
+- **Sideways motion, the two-stage decay:** the plectrum drags the string sideways as it slides
+  along it, so the string swings sideways too when it lets go. The bridge gives far less that way,
+  so that swing starts some 20 dB down but drains more slowly, and late in a note it takes over:
+  a knee in the decay, with a slow beat where the two swings cross. **Sideways motion** (20 %, 0
+  for off) under *Strings and soundboard*. About 15 % more CPU at High; Medium keeps eight
+  sideways partials, Low none. The demos are rendered again.
+- **A Seaboard RISE's faders and XY pad:** the faders move Front 8′, Back 8′, 4′; the pad Front 8′ from the nut (X) and Back 8′ from the nut (Y).
+
+### Pipe Organ 0.8.0
+- The flue pipe moves to its own files (native/instruments/pipes/pipes-flue.h), shared with the
+  Hydraulis. The sound is the same, to the bit.
+- **A Seaboard RISE's faders and XY pad:** the faders move Principal 8′, Octave 4′, Mixture III; the pad Wind: steady … flexible (X) and Wind pressure (Y).
+
+### Free-Reed Organ 0.9.0
+- **A Seaboard RISE's faders and XY pad:** the faders move 16′, 8′, 4′; the pad Pumping (X) and Bellows pressure (Y).
+
+### Vibraphone 0.9.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Mallet hardness, Bar–tube gap, Damper felt; the pad Strike point (X) and Shaft speed (Y).
+
+### Carillon 0.6.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Clapper face, Strike height, Clapper mass; the pad Listener round the bell (X) and Distance from the tower (Y).
+
+### Celesta 0.4.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Off the centre line, Damper felt, Box tuning; the pad Strike point (X) and Hammer felt (Y).
+
+### Kalimba 0.3.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Buzzers, Sound hole, Release; the pad Pluck point (X) and Hole covered (Y).
+
+### Steel Pan 0.3.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Roll speed, Hand mute, Off the long axis; the pad Strike point (X) and Roll (Y).
+- **A hard stroke climbs the note's harmonics:** the dome now couples every mode of a note to the
+  pairs whose sum tone it is (1 + 1 → 2, 1 + 2 → 3, 2 + 2 → 4, 3 + 3 → 6, ...), not just the
+  fundamental, octave and twelfth. A forte stroke pumps the octave, the octave the double octave,
+  and so on, and the energy swings back and forth: the bright, wobbling bloom of a real pan. The
+  coupling's strength, a stroke's size (a full stroke moves the note 1.2 thicknesses) and the
+  damping are set from measurements of a struck G3 note (Monteil, Thomas & Touzé 2015), which the
+  tests now follow.
+- **Damping vs frequency** defaults to 0: the octave and double octave ring as long as the
+  fundamental, as measured, instead of dying faster. A full stroke starts about fifteen cents
+  sharp and settles.
+- **The skirt rings:** the drum's side wall is now a ring of 18-gauge steel 57 cm across with
+  modes of its own (its 15th at 832 Hz, where Hansen & Rossing measured one), which every note
+  pushes on where it sits round the drum. A partial in tune with one beats with it and drains
+  into it (G♯4's octave), and the skirt hands it on to the other ringing notes that share it. It
+  radiates almost nothing itself. **Skirt coupling** (0.3 %, 0 for off) sets how strongly.
+- **Neighbours sing along with the whole ladder:** a struck note's upper modes now couple to its
+  neighbours' too (C4's double octave sets C5's octave ringing), not only its tuned three.
+- A demo, *The skirt takes a partial*. At Medium and Low only the tuned modes meet the
+  neighbours', and at Low the skirt stays still.
+
+### Hydraulis 0.1.0
+- New instrument, in the traditional section: the water organ of Ctesibius (3rd century BC), as
+  Hero and Vitruvius describe it and the organs of Dion and Aquincum show it. Two octaves, G3–G5,
+  with Full range for A0–C8.
+- **The wind:** pumpers push air through their pistons' valves into a bronze bowl standing upside
+  down in a cistern. The head of water between inside and outside is the wind, p = ρg·ΔV(1/A_in +
+  1/A_out), capped where the water inside reaches the rim and the air bubbles out, each bubble
+  ringing at its Minnaert frequency. The water under the rim bounces on the air shut in the bowl
+  and chest (about 2.6 Hz) when a key opens or a stroke starts. A pump gives more as the wind
+  sags, no faster than the pumpers' pace; tired pumpers let it sag under chords and the pipes
+  droop, eager ones overfill the bowl and it gurgles.
+- **The slides:** each key pushes a perforated slide whose holes open as two overlapping circles,
+  as fast as the velocity says, and a preloaded spring pulls it back.
+- **The pipes:** the Pipe Organ's flue pipes on an ancient, nearly constant bore, in four ranks
+  as at Aquincum: open, stopped, stopped an octave below and stopped an octave above, each with
+  its stopcock. Each pipe is cut to sound its note (tools/hydraulis-tuning.mjs).
+- Playing: the mod wheel and key pressure make the pumpers work harder; MPE bends; pumping effort
+  on the hardware strip.
+- Views: the cistern and the pumps as they move, the wind over the last eight seconds, the four
+  ranks lighting on their slides, the spectrum and the spectrogram.
+- Sixteen presets, six demos, and the plugins (AU code `Hdls`).
+- **A Seaboard RISE's faders and XY pad:** the faders move Open rank, Stopped rank, Stopped rank, octave above; the pad Gurgle (X) and Pumping effort (Y).
+
+### Electric Grand 0.9.0
+- **Longitudinal modes and phantom partials:** as on the Ribbon Piano, a string stretched by its
+  own swing pulls on the bridge along its length, and that pull rings in the string's
+  longitudinal modes, 14–18 times its pitch. The piezo hears it: hard bass notes grow partials
+  between their overtones, set so a forte G1's are about as loud as the partials beside them, as
+  in Bank & Sujbert's measured grand, fading up the keyboard. **Longitudinal modes** (×1, off for
+  none) under *Strings*. A passage costs about a fifth more CPU at High; Medium keeps the first two
+  modes, Low none. The demos are rendered again.
+- **A Seaboard RISE's faders and XY pad:** the faders move Bass, Middle, Treble; the pad Tremolo rate (X) and Tremolo depth (Y).
+
+### Tonewheel Organ 0.11.0
+- **A Seaboard RISE's faders and XY pad:** the faders move 16' drawbar, 8' drawbar, 4' drawbar; the pad Tube drive (X) and Expression pedal (Y).
+
+### Tine Piano 0.10.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Amp drive, Speaker top end, Tip hardness; the pad Stereo vibrato rate (X) and Stereo vibrato depth (Y).
+
+### Reed Piano 0.9.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Preamp drive, Hammer felt hardness, Strike point; the pad Tremolo rate (X) and Tremolo depth (Y).
+
+### Tangent Clavier 0.9.0
+- **Frame knock:** each strike slams the string onto its steel stud, and the rail and case ring
+  for a moment under the pickups, which hear that motion under all sixty strings: a short knock
+  under every note, most noticeable in the quiet top octave, as on recordings. The frame is an
+  estimate (three modes, 0.5–3.3 kHz). **Frame knock** (×1, 0 for off) under *Key and tangent*;
+  the out-of-phase pickup setting cancels it. No more CPU to speak of. The demos are rendered
+  again.
+- **A Seaboard RISE's faders and XY pad:** the faders move Felt pressure, Key pressure, Treble loss; the pad Upper pickup, from tailpiece (X) and Amplifier gain (Y).
+
+### Sticky-Pad Piano 0.9.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Tack F₀, Pole gap at C4, Pad damping c_p; the pad Tone (X) and Amp drive (Y).
+
+### Trautonium 0.1.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Sync pulse, Circuit 1 resonance, Circuit 2 resonance; the pad Circuit 2 tuning (X) and Circuit 1 tuning (Y).
+- New instrument, in the electric section: Friedrich Trautwein's Trautonium (1930) and Oskar
+  Sala's Mixtur-Trautonium (1952). A neon lamp across a capacitor charged through a resistance
+  wire: wherever the finger presses the wire sets the pitch.
+- **The lamp:** the capacitor charges toward the supply and the lamp dumps it from 90 V to 60 V,
+  its firing time solved within each sample from the charging curve (every key on pitch to
+  0.01 ¢), the sawtooth band-limited with polyBLEP. The supply voltage bows the ramp: near the
+  strike voltage a rounder tone.
+- **The dividers:** four more lamps a manual, each ganged to the wire to run a little slower than
+  f/n (÷1 to ÷24, as Sala's switches) and fired by the master's sync pulse, as the Huygens
+  Keyboard's lamps fire each other. The capture window gives where each divides true, slips flat
+  or fires a flash early (in closed form, and the tests hold the engine to it).
+- **The resonant circuits:** four, tuned in hertz and left there, each rung by every flash from
+  its instant (a damped sinusoid), so the harmonics under a peak stand out on every note: a vowel.
+  The mod wheel sweeps the first one (MPE: CC74, a note's own).
+- **Playing:** *Keys* (a manual per key) or *One wire*, a single tone that slides along the wire
+  to each key pressed while another is held, 1/f moving evenly as the finger does. Velocity and
+  aftertouch press the wire (the loudness, as on Sala's manuals), a volume pedal on CC11, pitch
+  bend, and MPE bends of up to four octaves.
+- Views: the lamps' capacitor voltages over the master's flashes, with the sync pulse's band and
+  each divider's kicks; the circuits' response under the note's harmonics; the spectrum and the
+  spectrogram.
+- Twelve presets, eight demos, and the plugins (AU code `Trau`).
+
+### Viola Organista 0.10.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Key pressure, Treadle unevenness, Rosin grain; the pad Bow position β (X) and Wheel speed (Y).
+
+### Glass Armonica 0.9.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Skin moisture, Treadle unevenness, Water in the bowls; the pad Finger pressure (X) and Treadle speed (Y).
+
+### Clavicylinder 0.2.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Foot’s push, Cloth wetness, Grip; the pad Key pressure (X) and Treadle speed (Y).
+
+### Pyrophone 0.9.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Flame lag τ, Flame turbulence, Listening point; the pad Flame position x_f / L (X) and Flame power K (Y).
+
+### Singing Arc 0.8.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Hissing, Column time constant τ, Listening distance; the pad Electrode gap (X) and Arc current (Y).
+
+### Huygens Keyboard 0.10.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Rail-sag coupling, Random mistuning, Resonant body; the pad Tone (X) and Pulse coupling (Y).
+
+### Gong Keyboard 0.9.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Mallet mass, Hand damping on release, Microphone distance; the pad Head stiffness (X) and Strike point (Y).
+
+### Black-Hole Keyboard 0.9.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Mass ratio q, Viewing inclination ι, Overtone strength; the pad Tone (X) and Spin (Y).
+
+### Quantum Keyboard 0.9.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Mean level n̄, Level spread σₙ, Lifetime T₁; the pad Pump detuning δ (X) and Pure dephasing rate Γ_φ (Y).
+
+### Bubble Organ 0.8.0
+- **Vapour in the bubbles** (under *Gas and liquid*, off by default): water vapour inside each
+  bubble condenses and evaporates as the wall moves, so only the gas is a spring (Brennen's
+  ω₀² = [3κ(p₀ − p_v) + 2(3κ−1)σ/R]/ρR²). Every pitch drops by about p_v/2p₀: 20 ¢ at the
+  defaults, 75 ¢ under a quarter of an atmosphere; glycerol has almost none.
+- **Surface echo at the hydrophones** (under *Output*, off by default): each hydrophone also hears
+  every bubble's inverted image above the surface, later and fainter, from where the bubble is as
+  it rises. Near the surface it cancels the bass (7 dB on A3 at 30 cm, 22 dB in a 10 cm tank) and
+  combs the treble; 20 m down it is a slap 27 ms after each bubble. About twice the CPU while on.
+- Three presets and two demos for them.
+- **A Seaboard RISE's faders and XY pad:** the faders move Size spread, Nozzle depth, Air pressure above the water; the pad Irregularity (X) and Bubbles per second (Y).
+
+### Spring Keyboard 0.6.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Damper, Length difference, Bead inertia; the pad Oil bath (X) and Hand on the spring (Y).
+
+### Star Keyboard 0.6.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Flare kick, Inclination, Core spins faster by; the pad Convective driving (X) and Rotation period (Y).
+- **Linewidths grow with frequency:** a star's upper modes are damped harder than its lower ones,
+  Γ ∝ (ν/ν_max)^α as Kepler measured it (α from Lund et al.'s fit: about 3 for the Sun, 1.5 for
+  red giants). So a released star darkens as it rings down, and while it is driven its upper
+  modes breathe faster. **Linewidth slope** (×1, 0 for one width per star) under *Convection*. No
+  more CPU. The demos are rendered again.
+
+### Wind Harp 0.7.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Gust time scale, String Q, String mass; the pad Gustiness (X) and Wind speed (Y).
+
+### Storage Ring 0.5.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Betatron tune, Amplitude detuning, Momentum spread; the pad Injection kick (X) and Chromaticity (Y).
+
+### RF Cavity Bells 0.4.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Bunch length, Bunch spacing, Lorentz-force detuning; the pad Beam current (X) and Beam offset (Y).
+
+### Collider Showers 0.3.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Pile-up, Piezo position, Crystal Q; the pad Particle energy (X) and Impact point (Y).
+
+### Whistlers 0.3.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Ducts, Echoes, Plasma density; the pad Sferic (X) and Chorus (Y).
+
+### Early Universe 0.2.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Dark matter density, Time to recombination, Neutrino species; the pad Baryon density (X) and Spectral tilt (Y).
+
+### Hydrogen Lamp 0.2.0
+- **A shutter on release:** when a key comes up (or the pedal, for a lamp it held), the
+  spectrometer's shutter closes over the lamp's light, 60 dB down in *Shutter on release*
+  (1 s by default, in Perform too). Not physics, an ending: the atoms' own fade took about 10 s
+  at the default slow motion. All the way up the shutter stays open and the lamp fades as before.
+- **A Seaboard RISE's faders and XY pad:** the faders move Shutter on release, Time in the glow, Laser level n; the pad Temperature (X) and Density (Y).
+
+### Project 8 0.3.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Magnetic field, Energy, Receiver noise; the pad Trap depth (X) and Gas pressure (Y).
+
+### ABRACADABRA 0.3.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Stream speed, Stream, SQUID noise; the pad Coupling to photons (X) and Halo speed (Y).
+
+### TESS 0.2.0
+- **A Seaboard RISE's faders and XY pad:** the faders move Temperature, Star radius, Orbit at A4; the pad Planet radius (X) and Impact parameter (Y).
+
+### CUORE 0.1.0
+- New instrument, in the devices section: the crystals of CUORE, the Cryogenic Underground
+  Observatory for Rare Events, the neutrinoless double beta decay search under the Gran Sasso.
+  Every key is a 5 cm cube of tellurium dioxide at 10 mK, read by a germanium thermistor; its
+  heater fires a pulse of heat at the key's rate, sped up (1,320 times at the defaults), and the
+  thermistor's voltage is the sound.
+- **The bolometer:** the CUORE collaboration's electrothermal model, stepped every sample (ROS2,
+  split where a pulse lands): the bias circuit (60 GΩ loads, the wires' 500 pF), the thermistor's
+  electrons (R₀ exp(√(T₀/T)), Joule heating, electron–phonon coupling), the crystal's Debye T³
+  heat capacity (2.2 nJ/K at 10 mK) and the Teflon clips to the copper. A 2,528 keV pulse is
+  370 µV, rising in 76 ms and falling in 316 ms, against CUORE's measured 55 and 220 ms.
+- **What you hear:** every key's pulses pass through the same bolometer, so its rise and fall are
+  one formant over the keyboard: low keys buzz, high keys pile up and round off. Big pulses
+  saturate the thermistor (mellower, not as much louder); the mod wheel warms the heat sink to
+  14 mK (twenty times quieter, slower pulses); 8 mK's hot electrons fall fast. Velocity is the
+  pulse's energy (2,528 keV at full, the decay's Q-value), aftertouch adds to it, and pitch bend
+  and MPE bend the heater's rate.
+- **Views:** the pulses in the crystal's own time, with the proportional answer dashed, and the
+  bolometer, each part glowing as it warms.
+- Presets: CUORE at 10 mK, its real heater (a pulse every 300 s on A4), warmer, colder, big
+  pulses, Cuoricino's 3 cm crystal, long wires, piled up.
+- Its plugins (CLAP, VST3, AU and standalone, AU code `Cuor`), with the others.
+
 ## 2026-10-30 — Hydrogen Lamp; no haze over the header in the iPhone home-screen app; Perform gives the views the presets' bar; Perform keeps the screen awake
 
 ### Forte 0.40.0

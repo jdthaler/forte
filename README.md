@@ -28,6 +28,7 @@ The front page sorts them into five kinds, as here.
 | ✅ | [Celesta](celesta/) | Mustel celesta (1886) | plain steel bars solved as Timoshenko beams, each coupled through the air in the gap to a stopped wooden box tuned to it; felt hammers (Hertzian, implicit), felt dampers and a damper pedal |
 | ✅ | [Kalimba](kalimba/) | Hugh Tracey's kalimba and the mbira | spring-steel tines as clamped–supported–free beams (the length behind the bridge sets the overtones), plucked from their static deflection by a thumb that lets go slowly or fast; a box whose top and sound-hole air are two coupled oscillators (cover the hole for a wah); bottle caps that rattle once the top outruns gravity |
 | ✅ | [Steel Pan](steelpan/) | Trinidad steelpan (1940s) | note areas as plates tuned by hammering to octave and twelfth, whose domes couple their modes (a 1 : 2 : 3 internal resonance: the octave blooms on hard strokes); neighbours coupled through the steel in a fourths-and-fifths layout; the skirt's radiation; rolls |
+| ✅ | [Hydraulis](hydraulis/) | Ctesibius's water organ (3rd century BC), the organs of Dion and Aquincum | hand pumps push air through their valves into a bowl standing in water: the hydrostatic head is the wind, capped at the rim where it bubbles out (Minnaert bubbles), the water bouncing on the air shut in the bowl; slides whose holes open as overlapping circles, sprung back; the Pipe Organ's flue pipes on an ancient, nearly constant bore in four ranks, one open and three stopped |
 
 ### Electric instruments
 
@@ -39,6 +40,7 @@ The front page sorts them into five kinds, as here.
 | ✅ | [Reed Piano](reeds/) | Wurlitzer 200A | solder-tuned steel reeds, an electrostatic pickup whose capacitance comes from Laplace's equation, photocell tremolo |
 | ✅ | [Tangent Clavier](clavier/) | Hohner Clavinet D6 | tangent strikes and clamps the string on an anvil (Hertzian contacts), pressure bends the pitch, four pickup combinations, tone tabs, mute bar |
 | ✅ | [Sticky-Pad Piano](pianet/) | Hohner Pianet | reeds plucked by rate-dependent adhesion (fracture mechanics of the pad), magnetic or electrostatic pickup |
+| ✅ | [Trautonium](trautonium/) | Trautwein's Trautonium (1930), Sala's Mixtur-Trautonium (1952) | a neon lamp's relaxation sawtooth, its capacitor charged through a resistance wire (exact firing times, polyBLEP); four dividers, lamps ganged to the wire and fired by the master's sync pulse on every n-th flash, whose capture window gives where they divide true, slip or fire a flash early; four fixed resonant circuits rung by every flash (formants); one wire that slides between keys or a manual per key; finger pressure, a volume pedal, pitch bend and MPE |
 
 ### Experiments from history
 
@@ -76,6 +78,7 @@ The front page sorts them into five kinds, as here.
 | ✅ | [Project 8](project8/) | an electron in a magnetic trap heard by its cyclotron radiation, as the Project 8 neutrino-mass experiment hears it (CRES): every key a trap, its note the electron's starting frequency; Larmor's power and the radiation reaction in Landau and Lifshitz's closed form make it chirp sharp as it cools until its pitch angle leaves the bottle; the bounce as a waveguide's Doppler vibrato or an antenna ring's Schott harmonics; collisions with the gas on the mod wheel, each a jump or the end; krypton-83m's line, tritium's β spectrum or any energy to 300 keV; Phase II's field, trap, waveguide and noise |
 | ✅ | [ABRACADABRA](abracadabra/) | the axion dark-matter search as a keyboard: every key a universe whose axion has the key's mass (its frequency in kHz the note in Hz), heard through ABRACADABRA-10 cm's toroid, pickup loop and SQUID; the Standard Halo Model's waves make each tone a millionth-wide line whose amplitude swells and fades over its coherence time; the coupling decides whether you hear it over the SQUID's noise; a cold stream, a hot halo, a meter-scale toroid |
 | ✅ | [TESS](tess/) | a planet crossing its star as NASA's Transiting Exoplanet Survey Satellite sees it: every key a planet whose year, sped up 38 million times, is its note, and the star's light the waveform; the limb-darkened disc's dip (ring by ring, Claret's TESS-band coefficients), Kepler's third law setting how much of its year it spends in front (low keys buzz, high keys are round); the impact parameter on the mod wheel; TESS's photon, read and zodiacal noise at the star's magnitude, velocity its brightness; π Mensae c, LHS 3844 b, TOI-700 d and WD 1856+534 b on A4 |
+| ✅ | [CUORE](cuore/) | a tellurium dioxide crystal at ten millikelvin, as the CUORE neutrinoless double beta decay search reads it: every key a crystal whose heater fires at the note's rate, sped up 1,320 times, and the germanium thermistor's voltage the waveform; the collaboration's electrothermal model (bias circuit, the thermistor's hot electrons, the crystal's Debye T³ heat capacity, the Teflon clips), so the bolometer's rise and fall are one formant over every key; electrothermal feedback; big pulses saturate the thermistor; the heat sink's temperature on the mod wheel |
 
 ✅ playable · 🛠 in the workshop ([build briefs](docs/WORKSHOP.md)). Each instrument's README has its equations,
 numbers, sources, and a list of what is simplified. The same notes open on
@@ -106,7 +109,64 @@ MIDI is on Auto, which turns MPE on when the controller announces it (its
 MPE Configuration Message) and leaves any other keyboard as it was; On
 reads channels 2–16 as MPE without the announcement, and Off never does.
 The plugins have the same choice as their MPE parameter, and also take
-CLAP's per-note expressions.
+CLAP's per-note expressions. A Seaboard plays as MPE from the moment MIDI
+connects it, since it may not announce itself.
+
+**Faders and an XY pad:** a ROLI Seaboard RISE's three touch faders and its
+XY pad (CC 107, 109 and 111, and 113 and 114 for X and Y, as it sends them
+in its MIDI mode: press its mode button until the faders' lights are white;
+in cyan they set the Seaboard's own Glide, Slide and Press sensitivity)
+move five of each instrument's controls, on the pages, in the plugins and
+in the Forte app, and any controller sending those CCs does the same. Each
+moves its control across the slider's whole range; a fader on a stop pulls
+it at halfway up. The first touch of each shows which control it moves. Pad Y
+is the mod wheel's control wherever the instrument has one.
+
+<details><summary>What the faders and the pad move</summary>
+
+| Instrument | Faders 1 · 2 · 3 | Pad X | Pad Y |
+|---|---|---|---|
+| Ribbon Piano | Damper strength · Sympathetic resonance · Soundboard body | Felt hardness | Strike position |
+| Harpsichord | Front 8′ · Back 8′ · 4′ | Front 8′ from the nut | Back 8′ from the nut |
+| Pipe Organ | Principal 8′ · Octave 4′ · Mixture III | Wind: steady … flexible | Wind pressure |
+| Free-Reed Organ | 16′ · 8′ · 4′ | Pumping | Bellows pressure |
+| Vibraphone | Mallet hardness · Bar–tube gap · Damper felt | Strike point | Shaft speed |
+| Carillon | Clapper face · Strike height · Clapper mass | Listener round the bell | Distance from the tower |
+| Celesta | Off the centre line · Damper felt · Box tuning | Strike point | Hammer felt |
+| Kalimba | Buzzers · Sound hole · Release | Pluck point | Hole covered |
+| Steel Pan | Roll speed · Hand mute · Off the long axis | Strike point | Roll |
+| Hydraulis | Open rank · Stopped rank · Stopped rank, octave above | Gurgle | Pumping effort |
+| Electric Grand | Bass · Middle · Treble | Tremolo rate | Tremolo depth |
+| Tonewheel Organ | 16' drawbar · 8' drawbar · 4' drawbar | Tube drive | Expression pedal |
+| Tine Piano | Amp drive · Speaker top end · Tip hardness | Stereo vibrato rate | Stereo vibrato depth |
+| Reed Piano | Preamp drive · Hammer felt hardness · Strike point | Tremolo rate | Tremolo depth |
+| Tangent Clavier | Felt pressure · Key pressure · Treble loss | Upper pickup, from tailpiece | Amplifier gain |
+| Sticky-Pad Piano | Tack F₀ · Pole gap at C4 · Pad damping c_p | Tone | Amp drive |
+| Trautonium | Sync pulse · Circuit 1 resonance · Circuit 2 resonance | Circuit 2 tuning | Circuit 1 tuning |
+| Viola Organista | Key pressure · Treadle unevenness · Rosin grain | Bow position β | Wheel speed |
+| Glass Armonica | Skin moisture · Treadle unevenness · Water in the bowls | Finger pressure | Treadle speed |
+| Clavicylinder | Foot’s push · Cloth wetness · Grip | Key pressure | Treadle speed |
+| Pyrophone | Flame lag τ · Flame turbulence · Listening point | Flame position x_f / L | Flame power K |
+| Singing Arc | Hissing · Column time constant τ · Listening distance | Electrode gap | Arc current |
+| Huygens Keyboard | Rail-sag coupling · Random mistuning · Resonant body | Tone | Pulse coupling |
+| Gong Keyboard | Mallet mass · Hand damping on release · Microphone distance | Head stiffness | Strike point |
+| Black-Hole Keyboard | Mass ratio q · Viewing inclination ι · Overtone strength | Tone | Spin |
+| Quantum Keyboard | Mean level n̄ · Level spread σₙ · Lifetime T₁ | Pump detuning δ | Pure dephasing rate Γ_φ |
+| Bubble Organ | Size spread · Nozzle depth · Air pressure above the water | Irregularity | Bubbles per second |
+| Spring Keyboard | Damper · Length difference · Bead inertia | Oil bath | Hand on the spring |
+| Star Keyboard | Flare kick · Inclination · Core spins faster by | Convective driving | Rotation period |
+| Wind Harp | Gust time scale · String Q · String mass | Gustiness | Wind speed |
+| Storage Ring | Betatron tune · Amplitude detuning · Momentum spread | Injection kick | Chromaticity |
+| RF Cavity Bells | Bunch length · Bunch spacing · Lorentz-force detuning | Beam current | Beam offset |
+| Collider Showers | Pile-up · Piezo position · Crystal Q | Particle energy | Impact point |
+| Whistlers | Ducts · Echoes · Plasma density | Sferic | Chorus |
+| Early Universe | Dark matter density · Time to recombination · Neutrino species | Baryon density | Spectral tilt |
+| Hydrogen Lamp | Shutter on release · Time in the glow · Laser level n | Temperature | Density |
+| Project 8 | Magnetic field · Energy · Receiver noise | Trap depth | Gas pressure |
+| ABRACADABRA | Stream speed · Stream · SQUID noise | Coupling to photons | Halo speed |
+| TESS | Temperature · Star radius · Orbit at A4 | Planet radius | Impact parameter |
+
+</details>
 
 **Latency:** play through wired headphones or speakers. Bluetooth ones
 delay every note by 100–200 ms, enough to make any instrument feel

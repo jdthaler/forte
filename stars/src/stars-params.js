@@ -41,6 +41,8 @@ export const GROUPS = [
         hint: 'How hard the turbulence near the surface kicks the modes (their heights). The modes answer over their own lifetimes; at zero only the flare rings them.' },
       { id: 'damping', label: 'Damping (linewidths)', min: 0.1, max: 10, def: 1, log: true, fmt: (v) => `× ${v < 1 ? v.toFixed(2) : v.toFixed(1)}`,
         hint: 'Multiplies every linewidth Γ: broader modes breathe faster and ring down sooner; narrow ones are near-steady tones.' },
+      { id: 'slope', label: 'Linewidth slope', min: 0, max: 2, def: 1, step: 0.01, fmt: (v) => (v === 0 ? 'off: one linewidth per star' : `× ${v.toFixed(2)}`), showIf: (P) => P.family === 'track',
+        hint: 'Real modes damp faster the higher they sit: Γ grows about as (ν/ν_max)^α across the envelope, α near 3 for the Sun and stars like it, about 1.5 for red giants (Kepler\'s measurements, fitted by Lund et al.). This scales α: higher, the star\'s upper modes breathe faster and die sooner, its lower ones linger; off, every mode of a star has one width.' },
       { id: 'flare', label: 'Flare kick (× the modes’ rms)', perform: true, min: 0, max: 3, def: 0.7, step: 0.01, fmt: (v) => (v === 0 ? 'none' : `× ${v.toFixed(2)}`),
         hint: 'A coherent kick to every mode at key-down (velocity sets its size), so the note starts at once: the wave packet echoes through the star at the large separation.' },
       { id: 'growth', label: 'δ Scuti growth time', min: 0.05, max: 2, def: 0.25, log: true, fmt: (v) => `${v.toFixed(2)} s`, showIf: (P) => P.family === 'dscuti',

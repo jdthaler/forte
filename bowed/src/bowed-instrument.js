@@ -16,6 +16,7 @@ export const INSTRUMENT = {
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
   modWheel: 'speed',                    // CC1: the treadle, the instrument's swell (Helmholtz amplitude ∝ v_B)
   mpe: { bend: 12 },                    // MPE: a key's own bend slides its bridge alone, an octave either way (one wheel bows every string: no slide)
+  faders: ['force', 'treadle', 'grain', 'beta', 'speed'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/bowed), built as WebAssembly
   wasm: { name: 'OrganistaWasmEngine', module: new URL('./bowed-wasm.js', import.meta.url).href, binary: new URL('../wasm/bowed.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

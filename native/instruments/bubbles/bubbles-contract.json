@@ -6,10 +6,12 @@
     {"id":"keepInTune","kind":"toggle","def":false},
     {"id":"gas","kind":"choice","def":"air","options":["air","helium","argon","sf6"]},
     {"id":"liquid","kind":"choice","def":"water","options":["water","gly90","glycerol"]},
+    {"id":"vapour","kind":"toggle","def":false},
     {"id":"rate","kind":"continuous","min":0.5,"max":40,"def":5,"step":0,"log":true},
     {"id":"irregular","kind":"continuous","min":0,"max":1,"def":0.4,"step":0.01,"log":false},
     {"id":"spread","kind":"continuous","min":0,"max":15,"def":1.5,"step":0.1,"log":false},
     {"id":"snap","kind":"continuous","min":0.01,"max":2,"def":0.05,"step":0,"log":true},
+    {"id":"echo","kind":"toggle","def":false},
     {"id":"room","kind":"continuous","min":0,"max":1,"def":0.25,"step":0.01,"log":false},
     {"id":"venue","kind":"choice","def":"room","options":["studio","room","recital","hall","cathedral"]},
     {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false},
@@ -40,6 +42,9 @@
     {"name":"20 m down, kept in tune: bigger bubbles, same notes","values":{"depth":20,"keepInTune":true}},
     {"name":"Torrent: 30 bubbles a second, 6 % spread","values":{"rate":30,"irregular":1,"spread":6}},
     {"name":"Slow pinch-off (1 ms): the treble hardly rings","values":{"snap":1}},
-    {"name":"Metronome: even bubbles, all the same size","values":{"rate":2.5,"irregular":0,"spread":0}}
+    {"name":"Metronome: even bubbles, all the same size","values":{"rate":2.5,"irregular":0,"spread":0}},
+    {"name":"Water vapour, a quarter atmosphere: ¾ of a semitone flatter","values":{"pressure":0.25,"vapour":true}},
+    {"name":"Surface echo: the hydrophones hear the surface too","values":{"echo":true}},
+    {"name":"Surface echo 20 m down: a slap after every bubble","values":{"echo":true,"depth":20}}
   ]
 }

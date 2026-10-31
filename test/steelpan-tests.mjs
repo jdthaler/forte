@@ -55,8 +55,8 @@ function tone(x, f, a, b, fs = FS) {
 }
 const rms = (x, a, b) => { let s = 0; for (let i = a; i < b; i++) s += x[i] * x[i]; return Math.sqrt(s / (b - a)); };
 
-// A clean note for the physics: linear unless asked, no neighbours, no tuner's errors.
-const LIN = { rise: 0, coupling: 0, accuracy: 0, letRing: true };
+// A clean note for the physics: linear unless asked, no neighbours or skirt, no tuner's errors.
+const LIN = { rise: 0, coupling: 0, wall: 0, accuracy: 0, letRing: true };
 
 console.log('physics');
 test('simply supported plate: ω ∝ (i/a)² + (j/b)², so at a/b = √2 modes (1,1), (2,1), (1,2) are 1 : 2 : 3', () => {
@@ -107,7 +107,8 @@ test('the keyboard\'s tuning moves each note, and the pan\'s own tuning stays ov
     assert.ok(Math.abs(cents(m[0].f, f1)) < 0.01 && Math.abs(m[1].f / m[0].f - 2) < 1e-12 && Math.abs(m[2].f / m[0].f - 3) < 1e-12, `${key}: 1 : 2 : 3`);
     m = M.noteModes(key, P({ accuracy: 0, tuning: 'double', ...o }));
     assert.ok(Math.abs(m[2].f / m[0].f - 4) < 1e-12, `${key}: 1 : 2 : 4`);
-    const x = render(key, P({ ...LIN, ...o }), 0.7, 0.6), a = 4800, b = 4800 + 16384;
+    // a soft stroke: the plate's stretching makes a hard one a few cents sharp
+    const x = render(key, P({ ...LIN, ...o }), 0.3, 0.6), a = 4800, b = 4800 + 16384;
     let lo = f1 * 2 ** (-10 / 1200), hi = f1 * 2 ** (10 / 1200); // the strongest frequency within ±10 ¢ (golden section)
     for (let it = 0; it < 40; it++) { const m1 = hi - 0.618 * (hi - lo), m2 = lo + 0.618 * (hi - lo); if (tone(x, m1, a, b) > tone(x, m2, a, b)) hi = m2; else lo = m1; }
     assert.ok(Math.abs(cents((lo + hi) / 2, f1)) < 0.5, `${key}: sounds ${cents((lo + hi) / 2, f1).toFixed(2)} ¢ from its tuned note`);
@@ -128,6 +129,14 @@ test('the skirt: a short one loses the low partials (front and back cancel), a l
   assert.ok(M.radiation(20000, L) > 0.99, 'large kd: everything');
   for (let f = 50; f < 5000; f *= 1.3) assert.ok(M.radiation(f * 1.3, L) > M.radiation(f, L));
 });
+test('the skirt: a ring of 18-gauge steel 57 cm across, whose n-th inextensional mode is (h/2πR²)√(E/12ρ(1 − ν²))·n(n² − 1)/√(n² + 1), and whose 15th is the 830 Hz Hansen & Rossing measured', () => {
+  const f0 = (1.2e-3 / (2 * Math.PI * 0.28 ** 2)) * Math.sqrt(200e9 / (12 * 7850 * (1 - 0.09)));
+  for (const n of [2, 3, 10, 41]) assert.ok(Math.abs(M.ringFreq(n) / (f0 * n * (n * n - 1) / Math.sqrt(n * n + 1)) - 1) < 1e-12, `n = ${n}`);
+  assert.ok(Math.abs(M.ringFreq(15) / 830 - 1) < 0.01, `n = 15: ${M.ringFreq(15).toFixed(1)} Hz`);
+  // round the drum: by fifths C, G, D, … 30° apart; chromatic C, C♯, D, …
+  assert.ok(Math.abs(M.azimuth(67, 'fifths') - Math.PI / 6) < 1e-12 && Math.abs(M.azimuth(62, 'fifths') - Math.PI / 3) < 1e-12);
+  assert.ok(Math.abs(M.azimuth(61, 'chromatic') - Math.PI / 6) < 1e-12 && M.azimuth(72, 'fifths') === 0);
+});
 test('fourths and fifths: C4\'s neighbours share its partials; chromatic neighbours share none', () => {
   const nb = M.neighbours(60, 'fifths').map((n) => n.key).sort((a, b) => a - b);
   assert.deepEqual(nb, [53, 55, 65, 67, 72, 48, 77, 79].sort((a, b) => a - b));
@@ -147,14 +156,14 @@ test('fourths and fifths: C4\'s neighbours share its partials; chromatic neighbo
 });
 
 console.log('the dome (nonlinear)');
-// The note's tuned modes, sample by sample (displacements in thicknesses), for a note struck at
-// the centre: the octave and the third partial get nothing from the stick.
-function trace(params, key, vel, sec) {
+// A note's modes, sample by sample (displacements in thicknesses), for a note struck at the
+// centre unless asked: the octave and the third partial get nothing from the stick there.
+function trace(params, key, vel, sec, modes = 3) {
   const e = new SteelPanEngine(FS);
   e.setParams(params);
   e.noteOn(key, vel);
-  const n = Math.round(sec * FS), x = [[], [], []], a = new Float32Array(1), b = new Float32Array(1);
-  for (let s = 0; s < n; s++) { for (let p = 0; p < 3; p++) x[p].push(e.displacement(key, p)); e.process(a, b, 1); }
+  const n = Math.round(sec * FS), x = Array.from({ length: modes }, () => []), a = new Float32Array(1), b = new Float32Array(1);
+  for (let s = 0; s < n; s++) { for (let p = 0; p < modes; p++) x[p].push(e.displacement(key, p)); e.process(a, b, 1); }
   return { x, e };
 }
 const CENTRE = { ...LIN, along: 0, across: 0, t60: 8, damping: 0 };
@@ -175,30 +184,76 @@ test('a 1 : 2 internal resonance: the octave grows as g a² t / 4ω₂ (the secu
     assert.ok(Math.abs(got / want - 1) < 0.05, `vel ${vel}: octave ${got.toExponential(3)}, theory ${want.toExponential(3)}`);
   }
 });
-test('the dome exchanges energy, it does not make it: Σ ½(ẋ² + ω²x²) + V conserved (times e^(2σt))', () => {
+test('the dome\'s ladder: every pair of a note\'s modes whose sum tone lands on a third is coupled to it (1 + 1 → 2, 1 + 2 → 3, 2 + 2 → 4, 3 + 3 → 6, ...), and only those', () => {
+  const key = 55, Q = P({ accuracy: 0 }), m = M.noteModes(key, Q), t = M.triples(key, Q), f1 = m[0].f;
+  const has = (i, j, k) => t.some((u) => u.i === Math.min(i, j) && u.j === Math.max(i, j) && u.k === k);
+  for (const u of t) assert.ok(Math.abs(m[u.i].f + m[u.j].f - m[u.k].f) < M.kWindow * m[u.k].f, `${u.i} + ${u.j} → ${u.k}`);
+  let n = 0;
+  for (let i = 0; i < m.length; i++) for (let j = i; j < m.length; j++) for (let k = 0; k < m.length; k++) if (k !== i && k !== j && Math.abs(m[i].f + m[j].f - m[k].f) < M.kWindow * m[k].f) n++;
+  assert.equal(t.length, n, 'every resonant triple, once');
+  const near = (r) => m.findIndex((q) => Math.abs(q.f / f1 - r) < 0.01);
+  assert.ok(has(0, 0, 1) && has(0, 1, 2) && has(1, 1, near(4)) && has(0, 2, near(4)) && has(2, 2, near(6.03)), 'the ladder 1, 2, 3, 4, 6');
+  assert.ok(!t.some((u) => u.i === 1 && u.j === 1 && u.k === 2), 'twelfth-tuned: 2 + 2 is not 3');
+  const d = M.triples(key, P({ accuracy: 0, tuning: 'double' }));
+  assert.ok(d.some((u) => u.i === 1 && u.j === 1 && u.k === 2), 'double-octave-tuned: 2 + 2 → 4 on the third partial');
+  // the stretching grows with the slopes: 1 for 1 + 1 → 2, (2 + 2√2·√2)/(1 + 2√2) = 2 for 2 + 2 → 4
+  assert.ok(Math.abs(t.find((u) => u.i === 0 && u.j === 0 && u.k === 1).c - 1) < 1e-12);
+  assert.ok(Math.abs(t.find((u) => u.i === 1 && u.j === 1 && u.k === near(4) && Math.abs(m[u.k].f / f1 - 4) < 1e-9).c - 2) < 1e-12);
+  for (let q = 1; q < t.length; q++) assert.ok(Math.max(t[q].j, t[q].k) >= Math.max(t[q - 1].j, t[q - 1].k), 'sorted by their highest mode');
+});
+test('the dome exchanges energy, it does not make it: Σ ½(ẋ² + ω²x²) + V over all twelve modes conserved (times e^(2σt))', () => {
   const params = P({ ...CENTRE, rise: 6, along: 0.3, across: 0.2 }), key = 60;
-  const { x } = trace(params, key, 1, 0.07);
-  const m = M.noteModes(key, params), w = m.slice(0, 3).map((q) => 2 * Math.PI * q.f), sigma = m[0].sigma;
+  const m = M.noteModes(key, params), n = m.length, t = M.triples(key, params);
+  const { x } = trace(params, key, 1, 0.07, n);
+  const w = m.map((q) => 2 * Math.PI * q.f), sigma = m[0].sigma, s = w.map((v) => Math.sin(v / FS) / v);
   const g = M.kRise * params.rise * w[0] * w[0], gam = M.kHarden;
-  const energy = (n) => {
-    const X = [0, 1, 2].map((p) => x[p][n]), V = [0, 1, 2].map((p) => ((x[p][n + 1] - x[p][n - 1]) * FS) / 2);
-    const Q = X[0] ** 2 + (w[1] / w[0]) ** 2 * X[1] ** 2 + (w[2] / w[0]) ** 2 * X[2] ** 2;
-    let E = g * (X[0] ** 2 * X[1] + X[0] * X[1] * X[2] + X[1] ** 2 * X[2]) + 0.25 * gam * w[0] ** 2 * Q * Q;
-    for (let p = 0; p < 3; p++) E += 0.5 * (V[p] ** 2 + w[p] ** 2 * X[p] ** 2);
-    return E * Math.exp((2 * sigma * n) / FS);
+  const energy = (k) => {
+    // a mode's velocity from its neighbouring samples, exact for a sinusoid
+    const X = x.map((y) => y[k]), V = x.map((y, p) => (y[k + 1] - y[k - 1]) / (2 * s[p]));
+    let Q = 0;
+    for (let p = 0; p < n; p++) Q += (w[p] / w[0]) ** 2 * X[p] ** 2;
+    let E = 0.25 * gam * w[0] ** 2 * Q * Q;
+    for (const u of t) E += g * u.c * X[u.i] * X[u.j] * X[u.k];
+    for (let p = 0; p < n; p++) E += 0.5 * (V[p] ** 2 + w[p] ** 2 * X[p] ** 2);
+    return E * Math.exp((2 * sigma * k) / FS);
   };
   // averaged over a period of the fundamental (the damping's ripple)
-  const per = Math.round(FS / keyFreq(key)), avg = (n) => { let s = 0; for (let i = 0; i < per; i++) s += energy(n + i); return s / per; };
-  const E0 = avg(10), share = (n, p) => 0.5 * w[p] ** 2 * Math.max(...x[p].slice(n, n + per).map((v) => v * v));
-  for (const n of [600, 1200, 2000, 2800]) assert.ok(Math.abs(avg(n) / E0 - 1) < 0.01, `t = ${(n / FS * 1000).toFixed(1)} ms: E/E0 = ${(avg(n) / E0).toFixed(4)}`);
-  assert.ok(share(2000, 1) > 2 * share(10, 1), 'and the octave really took energy from the fundamental');
+  const per = Math.round(FS / keyFreq(key)), avg = (k) => { let a = 0; for (let i = 0; i < per; i++) a += energy(k + i); return a / per; };
+  const E0 = avg(10), share = (k, p) => 0.5 * w[p] ** 2 * Math.max(...x[p].slice(k, k + per).map((v) => v * v));
+  for (const k of [600, 1200, 2000, 2800]) assert.ok(Math.abs(avg(k) / E0 - 1) < 0.002, `t = ${(k / FS * 1000).toFixed(1)} ms: E/E0 = ${(avg(k) / E0).toFixed(5)}`);
+  assert.ok(share(2000, 0) < 0.5 * share(10, 0), 'and the modes above really took energy from the fundamental');
 });
-test('the harder the stroke, the brighter: the octave\'s share of the sound grows with velocity (and only with a dome)', () => {
+test('the harder the stroke, the brighter, and the dome is what does it: the upper harmonics\' share of the sound, over a flat note\'s, grows with velocity', () => {
   const key = 60, f = keyFreq(key), a = Math.round(0.03 * FS), b = Math.round(0.15 * FS);
-  const share = (o, vel) => { const x = render(key, P({ ...CENTRE, ...o }), vel, 0.16); return dB(tone(x, 2 * f, a, b) / tone(x, f, a, b)); };
-  const domed = share({ rise: 3 }, 0.8) - share({ rise: 3 }, 0.1), flat = share({ rise: 0 }, 0.8) - share({ rise: 0 }, 0.1);
-  assert.ok(domed > 15, `domed: octave +${domed.toFixed(1)} dB relative to the fundamental`);
-  assert.ok(Math.abs(flat) < 1, `flat: ${flat.toFixed(2)} dB`);
+  const share = (o, vel) => {
+    const x = render(key, P({ ...CENTRE, ...o }), vel, 0.16);
+    let up = 0;
+    for (let h = 2; h <= 8; h++) up += tone(x, h * f, a, b) ** 2;
+    return dB(Math.sqrt(up) / tone(x, f, a, b));
+  };
+  // (flat, the stick alone: its shorter contact on a harder stroke brightens it a little too)
+  const dome = [0.1, 0.3, 0.5].map((vel) => share({ rise: 3 }, vel) - share({ rise: 0 }, vel));
+  assert.ok(dome[0] < dome[1] && dome[1] < dome[2] && dome[2] > 15, `the dome's harmonics over a flat note's: ${dome.map((d) => d.toFixed(1)).join(', ')} dB`);
+});
+test('as a struck G3 note measured (Monteil, Thomas & Touzé 2015): mezzo-piano (0.3 thickness), the octave lags and stays under the fundamental; forte (1.2), within 50 ms the octave overtakes it, the double octave rises to match it, and the fundamental comes back', () => {
+  const key = 55, params = P({ ...CENTRE, rise: 3, t60: 1.6 }), m = M.noteModes(key, params);
+  const four = m.map((q, p) => [q.f / m[0].f, p]).filter(([r]) => Math.abs(r - 4) < 0.05).map(([, p]) => p);
+  assert.equal(four.length, 2, 'the plate\'s pair at the double octave');
+  const amps = (vel) => {
+    const out = [];
+    play(params, 0.3, [[0, 'on', key, vel]], { watch: (e, t) => out.push({ t, a: m.map((_, p) => e.amplitude(key, p)) }) });
+    return out;
+  };
+  const mp = amps(0.25);
+  assert.ok(Math.abs(mp[0].a[0] - 0.3) < 0.05, `mezzo-piano: ${mp[0].a[0].toFixed(3)} thickness`);
+  assert.ok(mp[0].a[1] < 0.5 * Math.max(...mp.map((s) => s.a[1])), 'the octave grows after the stroke');
+  assert.ok(mp.filter((s) => s.t < 0.05).every((s) => s.a[1] < s.a[0]), 'and stays under the fundamental');
+  const f = amps(1), early = f.filter((s) => s.t < 0.05);
+  assert.ok(Math.abs(f[0].a[0] - 1.2) < 0.15, `forte: ${f[0].a[0].toFixed(3)} thickness`);
+  assert.ok(early.some((s) => s.a[1] > 1.5 * s.a[0]), 'the octave overtakes the fundamental');
+  assert.ok(early.some((s) => Math.hypot(s.a[four[0]], s.a[four[1]]) > s.a[0]), 'the double octave matches it');
+  const low = early.reduce((a, s) => Math.min(a, s.a[0]), Infinity);
+  assert.ok(Math.max(...f.filter((s) => s.t > 0.05).map((s) => s.a[0])) > 2 * low, 'and the energy comes back: the tone wobbles');
 });
 
 console.log('engine');
@@ -231,6 +286,23 @@ test('neighbours sing along in fourths and fifths, not when laid out chromatical
   const ring = (layout) => { let best = 0; play(P({ letRing: true, layout, coupling: 0.004 }), 0.5, [[0, 'on', 60, 0.8]], { watch: (e) => { for (const k of layout === 'fifths' ? [55, 67] : [59, 61]) for (let p = 0; p < 3; p++) best = Math.max(best, e.amplitude(k, p)); } }); return best; };
   assert.ok(dB(ring('fifths') / Math.max(ring('chromatic'), 1e-12)) > 30, `ring neighbours: fifths ${ring('fifths').toExponential(2)}, chromatic ${ring('chromatic').toExponential(2)}`);
 });
+test('neighbours sing along with the upper modes too: C4\'s double octave sets C5\'s octave ringing (no dome, so no tuned mode of C4 is near it and C5 cannot make it)', () => {
+  let best = 0;
+  play(P({ ...LIN, coupling: 0.004 }), 0.3, [[0, 'on', 60, 0.8]], { watch: (e) => { best = Math.max(best, e.amplitude(72, 1)); } });
+  assert.ok(best > 1e-3, `C5's octave: ${best.toExponential(2)} thickness`);
+});
+test('the skirt takes a partial in tune with one of its modes and leaves the others: G♯4\'s octave (831 Hz, the 15th ring mode at 832) dies sooner, its fundamental (415 Hz, between the 10th and 11th at 367 and 445) does not', () => {
+  const key = 68, m = M.noteModes(key, P(LIN)), near = (f) => [...Array(40)].some((_, i) => Math.abs(M.ringFreq(i + 2) - f) < M.kWindow * M.ringFreq(i + 2));
+  assert.ok(near(m[1].f) && !near(m[0].f), 'the octave is near a ring mode, the fundamental is not');
+  const at = (wall, p) => { let a = 0; play(P({ ...LIN, wall }), 0.4, [[0, 'on', key, 0.8]], { watch: (e, t) => { if (t <= 0.4) a = e.amplitude(key, p); } }); return a; };
+  const oct = dB(at(0.005, 1) / at(0, 1)), fund = dB(at(0.005, 0) / at(0, 0));
+  assert.ok(oct < -6, `the octave after 0.4 s: ${oct.toFixed(1)} dB with the skirt`);
+  assert.ok(Math.abs(fund) < 0.1, `the fundamental: ${fund.toFixed(2)} dB`);
+  const { e } = play(P({ letRing: true }), 0.3, [[0, 'on', key, 0.8]]);
+  assert.ok(e.wallEnergy() > 0, 'the skirt rings');
+  e.allNotesOff();
+  assert.equal(e.wallEnergy(), 0, 'and Panic stills it');
+});
 test('a hand on the note: key-up mutes it; Let notes ring and the sustain pedal keep it', () => {
   const key = 60, ev = [[0, 'on', key, 0.7], [0.2, 'off', key]], a = Math.round(0.21 * FS), b = Math.round(0.6 * FS), c = Math.round(0.7 * FS);
   const drop = (o, extra = []) => { const x = play(P(o), 0.7, [...ev, ...extra]).L; return dB(rms(x, b, c) / rms(x, a, a + 2400)); };
@@ -258,7 +330,7 @@ test('a note\'s own slide is its roll: a lone note slid to x is the note rolled 
     same(play(P({ letRing: true }), 1, [...ev, [0.3, 'slide', key, x]]).L, play(P({ letRing: true }), 1, [...ev, [0.3, 'params', 0, P({ letRing: true, roll: x })]]).L, `roll ${x}, slid`);
   }
   // two notes far apart, uncoupled: the chord is the rolled note and the struck one, apart
-  const Q = P({ letRing: true, coupling: 0 }), chord = play(Q, 1, [[0, 'slide', key, 0.6], ...ev, [0, 'on', 48, 0.7]]).L;
+  const Q = P({ letRing: true, coupling: 0, wall: 0 }), chord = play(Q, 1, [[0, 'slide', key, 0.6], ...ev, [0, 'on', 48, 0.7]]).L;
   const a = play({ ...Q, roll: 0.6 }, 1, ev).L, b = play(Q, 1, [[0, 'on', 48, 0.7]]).L;
   let d = 0, pk = 0;
   for (let i = 0; i < chord.length; i++) { d = Math.max(d, Math.abs(chord[i] - a[i] - b[i])); pk = Math.max(pk, Math.abs(chord[i])); }

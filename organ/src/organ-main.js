@@ -10,7 +10,7 @@ import { createChain } from '../../shared/chain.js';
 import { SpectrogramView } from '../../shared/views.js';
 import { GeneratorView, LeslieView, OutputView, drawScanner, BAR_COLORS, useModel } from './organ-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto, pageMpe } from '../../shared/midi.js';
+import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from '../../shared/midi.js';
 import { controlOwns, focusedByPointer } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
@@ -206,6 +206,15 @@ let lastSustain = false;
 const sost = createSostenuto(); // CC66
 let soft = false;               // CC67
 const notes = pageMpe({ post: () => {}, params: () => P }); // MPE: the generator turns every wheel, so no note bends alone, and a member's bend is no one else's
+// the faders and the pad (the descriptor's): a drawbar goes through the console's state
+const ccs = controllersOf(INSTRUMENT), ccLast = {}, consoleParams = CONSOLE.groups.flatMap((g) => g.params);
+function fader(cc, v) {
+  const set = controlled(ccs, [...ALL_PARAMS, ...consoleParams], { ...P, ...CONSOLE.get(P) }, cc, v, ccLast);
+  if (!set) return;
+  const [id, x] = set, drawn = consoleParams.find((q) => q.id === id);
+  setP(drawn ? CONSOLE.put({ ...CONSOLE.get(P), [id]: x }, P) : { [id]: x });
+  tellFader(cc, drawn ?? ALL_PARAMS.find((q) => q.id === id));
+}
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data, cmd = st & 0xf0;
   if (notes.midi(ev.data).own) return;
@@ -218,6 +227,7 @@ function onMIDI(ev) {
     else if (d1 === 66) { for (const k of sost.set(d2 >= 64, sounding.keys())) if (!sounding.has(k)) release(k); }
     else if (d1 === 67) soft = d2 >= 64;
     else if (d1 === 120 || d1 === 123) panic();
+    else fader(d1, d2);
   } else if (cmd === 0xe0) post({ type: 'bend', value: Math.max(-1, ((d2 << 7) + d1 - 8192) / 8191) }); // the generator's supply frequency
 }
 

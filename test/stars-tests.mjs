@@ -63,10 +63,10 @@ function run(params, events, sec, { fs = FS, stereo = false, tap, quality } = {}
   return Object.assign(x, { engine: e });
 }
 // A made-up star of given modes, accepted by the engine as the key's: [{ f (Hz), l, m, gamma (Hz), p, zeta, wEnv, wCore }]
-function custom(key, params, modes, { family = 'track', K = K0 } = {}) {
+function custom(key, params, modes, { family = 'track', K = K0, numax, T } = {}) {
   const N = modes.length, A = (T) => new T(N), md = { f: A(Float64Array), l: A(Int8Array), m: A(Int8Array), zeta: A(Float64Array), p: A(Float64Array), gamma: A(Float64Array), wEnv: A(Float64Array), wCore: A(Float64Array), asat: A(Float64Array), mult: A(Int32Array) };
   modes.forEach((x, i) => { md.f[i] = x.f; md.l[i] = x.l ?? 0; md.m[i] = x.m ?? 0; md.zeta[i] = x.zeta ?? 0; md.p[i] = x.p ?? 1; md.gamma[i] = x.gamma ?? 1; md.wEnv[i] = x.wEnv ?? 1; md.wCore[i] = x.wCore ?? 0; md.asat[i] = x.asat ?? 0; md.mult[i] = i; });
-  return { id: `${starId(params)}|${key}`, key, K, family, N, modes: md };
+  return { id: `${starId(params)}|${key}`, key, K, family, N, modes: md, ...(numax ? { sz: { numax }, star: { T } } : {}) };
 }
 // Averaged periodogram (Hann, 50 % overlap) of x[a, b): { f, S } with S in power per bin.
 function psd(x, a, b, seg, fs = FS) {
@@ -268,8 +268,8 @@ test('stochastic driving: one mode, rendered 240 s, has a Lorentzian power spect
   assert.ok(Math.abs(ms / expect - 1) < 0.08, `mean power ${ms.toExponential(3)} vs ${expect.toExponential(3)}`);
   console.log(`         Γ ${best.g.toFixed(3)} Hz (set 4), f₀ ${best.c.toFixed(3)} Hz, power ${(ms / expect).toFixed(3)} × the set value`);
 });
-test('key-up: the convection stops and each mode rings down at its own linewidth: one mode decays as e^(−πΓt) (within 1 %); a Sun-like star\'s whole note (all modes Γ₀) loses power as e^(−2πΓ₀t) (within 5 %); the pedal keeps it going; a red giant\'s g-dominated mixed modes outlast its radial modes', () => {
-  const p = P({ spin: 0, flare: 0 }), key = 72, G = 1.5;
+test('key-up: the convection stops and each mode rings down at its own linewidth: one mode decays as e^(−πΓt) (within 1 %); with the slope off, a Sun-like star\'s whole note (all modes Γ₀) loses power as e^(−2πΓ₀t) (within 5 %); the pedal keeps it going; a red giant\'s g-dominated mixed modes outlast its radial modes', () => {
+  const p = P({ spin: 0, flare: 0, slope: 0 }), key = 72, G = 1.5;
   const data = custom(key, p, [{ f: 700, gamma: G, p: 1 }]);
   const x = run(p, [[0, 'on', key, 1, data], [2, 'off', key]], 4.2);
   const env = envelope(x, 700, 0.01, 2.1 * FS, 3.1 * FS), t = env.map((_, i) => (i * 48) / FS), y = env.map((v) => Math.log(v));
@@ -287,6 +287,23 @@ test('key-up: the convection stops and each mode rings down at its own linewidth
   let radial = Infinity, gdom = 0;
   for (let i = 0; i < rg.N; i++) { if (md.l[i] === 0) radial = Math.min(radial, 1 / md.gamma[i]); if (md.zeta[i] > 0.8) gdom = Math.max(gdom, 1 / md.gamma[i]); }
   assert.ok(gdom > 4 * radial, `g-dominated lifetime ${gdom.toFixed(0)} vs radial ${radial.toFixed(0)} (in 1/Γ, s)`);
+});
+test('linewidths grow with frequency: a mode at ν rings down as e^(−πΓ(ν/ν_max)^(α·slope)t) (within 2 %), α = −3.710 + 1.073·10⁻³ T_eff + 1.883·10⁻⁴ ν_max (Lund et al. 2017, as Ball et al. 2018 give it); about 3 for the Sun, 1.5 on the red-giant branch; slope 0: one width', () => {
+  const key = 72, G = 0.5, T = 5777, numax = 700 / (K0 * 1e-6), alpha = -3.710 + 1.073e-3 * T + 1.883e-4 * numax;
+  for (const k of [0, 1, 2]) {
+    const p = P({ spin: 0, flare: 0, slope: k });
+    const data = custom(key, p, [{ f: 500, gamma: G, p: 0.5 }, { f: 1000, gamma: G, p: 0.5 }], { numax, T });
+    const x = run(p, [[0, 'on', key, 1, data], [2, 'off', key]], 3.6);
+    for (const f of [500, 1000]) {
+      const env = envelope(x, f, 0.01, Math.round(2.05 * FS), Math.round(2.45 * FS)), t = env.map((_, i) => (i * 48) / FS), eta = -slope(t, env.map((v) => Math.log(v)));
+      const want = Math.PI * G * (f / 700) ** (alpha * k);
+      assert.ok(Math.abs(eta / want - 1) < 0.02, `slope ${k}, ${f} Hz: η ${eta.toFixed(3)} vs ${want.toFixed(3)}`);
+    }
+  }
+  const sun = keyStar(91, P()), giant = keyStar(38, P());
+  assert.ok(Math.abs(sun.sz.numax - 3090) < 400 && Math.abs(-3.710 + 1.073e-3 * sun.star.T + 1.883e-4 * sun.sz.numax - 3.07) < 0.3, `the Sun: α ${(-3.710 + 1.073e-3 * sun.star.T + 1.883e-4 * sun.sz.numax).toFixed(2)}`);
+  const ag = -3.710 + 1.073e-3 * giant.star.T + 1.883e-4 * giant.sz.numax;
+  assert.ok(ag > 1 && ag < 2, `a red giant: α ${ag.toFixed(2)}`);
 });
 test('the engine plays the model\'s modes: a Sun-like star rendered 24 s (narrow lines) has the model\'s modes as its strongest peaks, each within 0.05 Hz of the model, and its l = 0 ridge on the model\'s radial frequencies', () => {
   const p = P({ spin: 0, damping: 0.25 }), key = 88, d = keyStar(key, p);

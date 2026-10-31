@@ -17,6 +17,7 @@ constexpr double BEND_T = 0.02;    // s: how fast a bend glides
 constexpr double MERGE_HZ = 0.02;  // a line's fine structure narrower than this is played as one tone
 constexpr double REACH = 1e-3;     // the spectrometer turns its gain up at most √(1/REACH) (30 dB)
 constexpr int REPORT = 1536;       // samples between the page's reports
+constexpr double SHUTTER_OPEN = 29.95; // s: the Shutter knob all the way up leaves it open
 
 // The spectrometer's window, by wavelength (nm), its edges soft over ±1.5 %.
 static double edge(double x, double at) { // 0 below at, 1 above, over ±1.5 % in ln λ
@@ -219,7 +220,7 @@ void HydrogenEngine::noteOn(int key, double velocity) {
   Voice &v = *slot;
   v.active = true; v.held = true; v.lit = true;
   v.key = key; v.age = clock++; v.glow = live;
-  v.t = 0; v.tOff = -1;
+  v.t = 0; v.tOff = -1; v.shut = 1;
   v.bendNow = wheel * expr.bendOf(key);
   v.peakNorm = 0;
   std::tie(v.gl, v.gr) = keyPan(key);
@@ -245,13 +246,15 @@ void HydrogenEngine::update(Voice &v) {
   if (b != v.bendNow) { v.bendNow = b; retune(v, b); v.density = -1; }
   widths(v);
   const double nyq = 0.48 * fs, on = g.rowAt(v.t), off = v.tOff >= 0 ? g.rowAt(v.t - v.tOff) : -1;
+  // the shutter: −60 dB in its time once the lamp is out, unless it is all the way open
+  if (!v.lit && P[p::shutter] < SHUTTER_OPEN) v.shut *= std::exp(-std::log(1000.0) * SUB / fs / P[p::shutter]);
   double sum = 0;
   for (int i = 0; i < v.count; i++) {
     Osc &o = v.osc[i];
     const double S = g.powerAtRow(o.kept, on) - g.powerAtRow(o.kept, off);
     const double Pw = std::max(0.0, S) * o.weight * o.win;
     sum += Pw;
-    const double amp = v.fKey * o.ratio * b < nyq ? v.gain * std::sqrt(Pw) : 0;
+    const double amp = v.fKey * o.ratio * b < nyq ? v.gain * v.shut * std::sqrt(Pw) : 0;
     const double s = std::sqrt(std::max(0.0, 1 - o.rho * o.rho) / 2);
     o.ar = o.rho * o.ar + s * rng.gauss();
     o.ai = o.rho * o.ai + s * rng.gauss();
@@ -261,7 +264,7 @@ void HydrogenEngine::update(Voice &v) {
     o.zr *= z; o.zi *= z;
   }
   // a released lamp is out when its light has fallen 60 dB, or its response has settled
-  if (!v.lit && (sum < 1e-6 * v.peak || v.t - v.tOff > g.end())) v.active = false;
+  if (!v.lit && (sum * v.shut * v.shut < 1e-6 * v.peak || v.t - v.tOff > g.end())) v.active = false;
 }
 
 void HydrogenEngine::report() {
@@ -281,7 +284,7 @@ void HydrogenEngine::report() {
     for (int s = 0; s < 28; s++) {
       double x = g.popAt(s, v.t);
       if (v.tOff >= 0) x -= g.popAt(s, v.t - v.tOff);
-      pops[s] += v.gain * v.gain * std::max(0.0, x);
+      pops[s] += v.gain * v.gain * v.shut * v.shut * std::max(0.0, x);
     }
   }
   Message m;

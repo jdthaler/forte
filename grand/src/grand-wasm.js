@@ -36,8 +36,8 @@ function unpackKey(x, at) {
 
 // A voice of the engine, read back: its state, its modes (q and q1, live views into the engine's
 // memory) and its key's model.
-const STATE = ['key', 'active', 'killing', 'dead', 'struck', 'contactSamples', 'Fmax', 'eta', 'etaPrev', 'FV', 'F', 'hammerOn', 'age', 'N', 'nV', 'ns', 'keyDown', 'damped', 'peak', 'FH', 'v0'];
-const FLAGS = new Set(['killing', 'dead', 'hammerOn', 'keyDown', 'damped']);
+const STATE = ['key', 'active', 'killing', 'dead', 'struck', 'contactSamples', 'Fmax', 'eta', 'etaPrev', 'FV', 'F', 'hammerOn', 'age', 'N', 'nV', 'ns', 'keyDown', 'damped', 'peak', 'FH', 'v0', 'longModes', 'longPairs', 'longRinging'];
+const FLAGS = new Set(['killing', 'dead', 'hammerOn', 'keyDown', 'damped', 'longRinging']);
 class WasmVoice {
   constructor(p) { this.p = p; }
   state(i) {

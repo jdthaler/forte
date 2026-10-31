@@ -147,6 +147,14 @@
   {
    "file": "07-metronome-then-torrent.m4a",
    "title": "Metronome then torrent"
+  },
+  {
+   "file": "08-dry-then-vapour-under-a-quarter-atmosphere.m4a",
+   "title": "Dry then vapour under a quarter atmosphere"
+  },
+  {
+   "file": "09-surface-echo-off-then-on-then-20-m-down.m4a",
+   "title": "Surface echo off then on then 20 m down"
   }
  ],
  "carillon": [
@@ -305,6 +313,36 @@
   {
    "file": "08-bass-ff-tension-glide-then-none.m4a",
    "title": "Bass ff tension glide then none"
+  }
+ ],
+ "cuore": [
+  {
+   "file": "01-chords-at-ten-millikelvin.m4a",
+   "title": "Chords at ten millikelvin"
+  },
+  {
+   "file": "02-the-heat-sink-warms.m4a",
+   "title": "The heat sink warms"
+  },
+  {
+   "file": "03-low-keys-buzz-high-keys-round.m4a",
+   "title": "Low keys buzz high keys round"
+  },
+  {
+   "file": "04-big-pulses-saturate.m4a",
+   "title": "Big pulses saturate"
+  },
+  {
+   "file": "05-colder-then-warmer.m4a",
+   "title": "Colder then warmer"
+  },
+  {
+   "file": "06-cuoricino-small-crystal.m4a",
+   "title": "Cuoricino small crystal"
+  },
+  {
+   "file": "07-the-real-heater-clicks.m4a",
+   "title": "The real heater clicks"
   }
  ],
  "glass": [
@@ -489,6 +527,32 @@
   {
    "file": "05-drifting-resistors-uncoupled-then-coupled.m4a",
    "title": "Drifting resistors uncoupled then coupled"
+  }
+ ],
+ "hydraulis": [
+  {
+   "file": "01-a-tune-in-the-mixolydian-mode-over-a-drone.m4a",
+   "title": "A tune in the mixolydian mode over a drone"
+  },
+  {
+   "file": "02-open-stopped-octave-below-and-octave-above-in-turn.m4a",
+   "title": "Open stopped octave below and octave above in turn"
+  },
+  {
+   "file": "03-tired-pumpers-the-wind-sags-then-they-pump-hard.m4a",
+   "title": "Tired pumpers the wind sags then they pump hard"
+  },
+  {
+   "file": "04-eager-pumpers-the-bowl-overflows-and-gurgles.m4a",
+   "title": "Eager pumpers the bowl overflows and gurgles"
+  },
+  {
+   "file": "05-quick-slides-then-slow-ones.m4a",
+   "title": "Quick slides then slow ones"
+  },
+  {
+   "file": "06-one-pump-then-two-in-turn.m4a",
+   "title": "One pump then two in turn"
   }
  ],
  "hydrogen": [
@@ -983,6 +1047,10 @@
   {
    "file": "07-bass-short-skirt-then-full-drum.m4a",
    "title": "Bass short skirt then full drum"
+  },
+  {
+   "file": "08-the-skirt-takes-a-partial.m4a",
+   "title": "The skirt takes a partial"
   }
  ],
  "tess": [
@@ -1047,6 +1115,40 @@
   {
    "file": "07-suitcase-stereo-vibrato.m4a",
    "title": "Suitcase stereo vibrato"
+  }
+ ],
+ "trautonium": [
+  {
+   "file": "01-a-slow-melody-on-one-wire.m4a",
+   "title": "A slow melody on one wire"
+  },
+  {
+   "file": "02-the-undertones-switched-in.m4a",
+   "title": "The undertones switched in"
+  },
+  {
+   "file": "03-bare-lamp-then-oo-then-ee.m4a",
+   "title": "Bare lamp then oo then ee"
+  },
+  {
+   "file": "04-sliding-under-fixed-formants.m4a",
+   "title": "Sliding under fixed formants"
+  },
+  {
+   "file": "05-sync-in-step-slipping-then-early.m4a",
+   "title": "Sync in step slipping then early"
+  },
+  {
+   "file": "06-wing-beats-from-24.m4a",
+   "title": "Wing beats from 24"
+  },
+  {
+   "file": "07-pressing-in-and-letting-off.m4a",
+   "title": "Pressing in and letting off"
+  },
+  {
+   "file": "08-subharmonic-bass.m4a",
+   "title": "Subharmonic bass"
   }
  ],
  "universe": [

@@ -9,11 +9,11 @@
 
 namespace forte::steelpan {
 
-constexpr double OUT = 0.6;
+constexpr double OUT = 0.19;
 constexpr double QUIET = 2e-6;    // a note below this (in thicknesses) and done ringing goes to sleep
 constexpr int GRACE = 2048;       // samples a note stays alive after it wakes, to be driven
 constexpr int POST = 512;         // samples between the views' messages
-constexpr size_t MAX_COUPLINGS = NKEYS * 8 * kTuned * kTuned;
+constexpr size_t MAX_COUPLINGS = NKEYS * 8 * 2 * kModes, MAX_WALL = NKEYS * kModes * 4;
 
 SteelPanEngine::SteelPanEngine(double fs) : Engine(fs), notes(NKEYS) {
   for (int k = 0; k < NKEYS; k++) {
@@ -22,6 +22,21 @@ SteelPanEngine::SteelPanEngine(double fs) : Engine(fs), notes(NKEYS) {
   }
   live.reserve(NKEYS);
   couplings.reserve(MAX_COUPLINGS);
+  wallCouplings.reserve(MAX_WALL);
+  buildWall();
+}
+
+// The skirt's ring modes, as exact two-pole resonators, up to the notes' top frequency.
+void SteelPanEngine::buildWall() {
+  const double top = std::min(18000.0, 0.45 * fs);
+  wall.count = 0;
+  for (int i = 0; i < kRingOrders; i++) {
+    const double f = ringFreq(i + 2);
+    if (f >= top) break;
+    const ModeCoeffs c = modeCoeffs(f, kRingLoss * TAU * f, fs);
+    for (int k = 2 * i; k < 2 * i + 2; k++) { wall.a1[k] = c.a1; wall.a2[k] = c.a2; wall.b[k] = c.b; wall.w[k] = TAU * f; }
+    wall.count = 2 * i + 2;
+  }
 }
 
 void SteelPanEngine::setParams(const double *p) {
@@ -44,6 +59,11 @@ void SteelPanEngine::retune(Note &v) {
     v.a1[i] = c.a1; v.a2[i] = c.a2; v.b[i] = c.b;
     v.w[i] = TAU * m.f;
     v.out[i] = OUT * m.rad * fs / w1; // radiated ∝ surface velocity: the mode's ẏ, in units of ω₁
+  }
+  const int nt = noteTriples(v.nm, v.tri.data());
+  for (int n = 0, q = 0; n <= kModes; n++) {
+    while (q < nt && std::max(v.tri[q].j, v.tri[q].k) < n) q++;
+    v.triBelow[n] = q;
   }
   v.version = version;
 }
@@ -68,6 +88,7 @@ void SteelPanEngine::strike(Note &v, double velocity) {
   const double top = pick<double>(INFINITY, 16000, 12000);
   int run = std::min(kTuned, v.nm.count);
   while (run < v.nm.count && run < most && v.nm.m[run].f < top) run++;
+  if (run > v.run) couplingsDirty = true; // its upper modes now meet the neighbours' and the skirt's
   v.run = std::max(v.run, run);
   const double f1 = v.nm.m[0].f, tau = contactTime(P[p::contact], f1, velocity);
   for (int i = 0; i < run; i++) v.y1[i] += v.b[i] * strikeGain(v.nm.m[i], f1, tau) * velocity * fs;
@@ -125,6 +146,8 @@ void SteelPanEngine::allNotesOff() {
   for (int i : live) { notes[i].active = false; notes[i].held = false; }
   live.clear();
   couplings.clear();
+  wallCouplings.clear();
+  wall.y1.fill(0); wall.y2.fill(0); wall.F.fill(0); wall.driven.fill(false); wall.nOn = 0;
   focus = -1;
 }
 
@@ -142,28 +165,63 @@ int SteelPanEngine::voiceCount() const {
   return n;
 }
 
-// The steel between neighbouring notes: a spring between each pair of their tuned modes that
-// are nearly in tune with each other (the others hardly exchange energy), V = k·xₐ·x_b with
-// k = coupling·weight·ωₐω_b.
+// The steel between neighbouring notes: a spring between each pair of their modes (all those they
+// run) that are nearly in tune with each other (the others hardly exchange energy), V = k·xₐ·x_b
+// with k = coupling·weight·ωₐω_b. And the skirt: a spring between each note mode and each ring
+// mode near it, V = k·xₚ·(cos nθ y_c + sin nθ y_s) with k = wall·ωₚω_n, θ where the note sits.
 void SteelPanEngine::rebuildCouplings() {
   couplings.clear();
+  wallCouplings.clear();
   couplingsDirty = false;
-  if (!(P[p::coupling] > 0)) return;
   Neighbour nb[8];
-  for (int ia : live) {
+  // Quality: at Medium and Low only the tuned modes meet the neighbours', and at Low the skirt is still
+  const int most = pick(kModes, kTuned, kTuned);
+  if (P[p::coupling] > 0) for (int ia : live) {
     const Note &a = notes[ia];
     for (int t = 0, n = neighbours(a.key, (int)P[p::layout], nb); t < n; t++) {
       if (nb[t].key < a.key) continue; // each pair once
       const int ib = nb[t].key - KEY_MIN;
       const Note &b = notes[ib];
       if (!b.active) continue;
-      for (int p = 0; p < kTuned; p++) for (int q = 0; q < kTuned; q++) {
+      for (int p = 0; p < std::min(a.run, most); p++) for (int q = 0; q < std::min(b.run, most); q++) {
         const double fa = a.nm.m[p].f, fb = b.nm.m[q].f;
         if (std::fabs(fa - fb) < kWindow * std::max(fa, fb) && couplings.size() < MAX_COUPLINGS)
           couplings.push_back({ia, p, ib, q, P[p::coupling] * nb[t].weight * a.w[p] * b.w[q]});
       }
     }
   }
+  if (P[p::wall] > 0 && pick(true, true, false)) for (int ia : live) {
+    const Note &a = notes[ia];
+    const double th = noteAzimuth(a.key, (int)P[p::layout]);
+    for (int p = 0; p < a.run; p++) for (int s = 0; s < wall.count; s += 2) {
+      const double fa = a.nm.m[p].f, fw = wall.w[s] / TAU, n = s / 2 + 2;
+      if (std::fabs(fa - fw) >= kWindow * fw || wallCouplings.size() + 2 > MAX_WALL) continue;
+      const double k = P[p::wall] * a.w[p] * wall.w[s];
+      wallCouplings.push_back({ia, p, s, k * std::cos(n * th)});
+      wallCouplings.push_back({ia, p, s + 1, k * std::sin(n * th)});
+    }
+  }
+  wakeWall();
+}
+
+void SteelPanEngine::wakeWall() {
+  wall.driven.fill(false);
+  for (const WallCoupling &c : wallCouplings) wall.driven[c.s] = true;
+  const double quiet = pick(QUIET, 2e-5, 1e-4);
+  wall.nOn = 0;
+  for (int k = 0; k < wall.count; k++) {
+    if (wall.driven[k] || std::fabs(wall.y1[k]) + std::fabs(wall.y2[k]) >= quiet) wall.on[wall.nOn++] = k;
+    else wall.y1[k] = wall.y2[k] = wall.F[k] = 0;
+  }
+}
+
+double SteelPanEngine::wallEnergy() const {
+  double e = 0;
+  for (int s = 0; s < wall.count; s++) { // ½ω²A², A from the last two samples (as amplitude())
+    const double th = wall.w[s] / fs, a2 = wall.y1[s] * wall.y1[s] + wall.y2[s] * wall.y2[s] - 2 * wall.y1[s] * wall.y2[s] * std::cos(th);
+    e += 0.5 * wall.w[s] * wall.w[s] * std::max(0.0, a2) / (std::sin(th) * std::sin(th));
+  }
+  return e;
 }
 
 double SteelPanEngine::amplitude(const Note &v, int p) const {
@@ -181,12 +239,22 @@ void SteelPanEngine::process(float *L, float *R, int n) {
       a.F[c.p] -= c.k * b.y1[c.q];
       b.F[c.q] -= c.k * a.y1[c.p];
     }
+    // the skirt: pushed by the notes and pushing back; it radiates nothing
+    for (const WallCoupling &c : wallCouplings) {
+      Note &a = notes[c.a];
+      a.F[c.p] -= c.k * wall.y1[c.s];
+      wall.F[c.s] -= c.k * a.y1[c.p];
+    }
+    for (int j = 0; j < wall.nOn; j++) {
+      const int k = wall.on[j];
+      const double y = wall.a1[k] * wall.y1[k] - wall.a2[k] * wall.y2[k] + wall.b[k] * wall.F[k];
+      wall.y2[k] = wall.y1[k]; wall.y1[k] = y; wall.F[k] = 0;
+    }
     double l = 0, r = 0;
     for (int i : live) {
       Note &v = notes[i];
-      double Fn[kTuned]; // the dome's forces among the tuned modes
-      tunedForces(v.y1.data(), v.w.data(), g * v.w[0] * v.w[0], Fn);
-      for (int p = 0; p < kTuned; p++) v.F[p] += Fn[p];
+      // the dome's forces among the modes it runs
+      domeForces(v.tri.data(), v.triBelow[v.run], v.run, v.y1.data(), v.w.data(), g * v.w[0] * v.w[0], v.F.data());
       double out = 0;
       for (int p = 0; p < v.run; p++) {
         const double y = v.a1[p] * v.y1[p] - v.a2[p] * v.y2[p] + v.b[p] * v.F[p];
@@ -224,6 +292,7 @@ void SteelPanEngine::process(float *L, float *R, int n) {
     } else k++;
   }
   if (changed) couplingsDirty = true;
+  if (wall.nOn > 0 && !couplingsDirty) wakeWall(); // its modes left ringing on their own sleep once quiet
   if ((sincePost += n) >= POST) { sincePost = 0; postViews(); }
 }
 

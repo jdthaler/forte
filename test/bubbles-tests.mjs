@@ -209,6 +209,20 @@ test('surface tension: ω₀² = [3κp₀ + 2(3κ−1)σ/R]/ρR², worth about +
   const R = 0.78e-3, a = acoustics(R, open()), c = cents(a.f0, Math.sqrt((3 * a.kappa * P_ATM) / (998.2 * R * R)) / (2 * Math.PI));
   assert.ok(c > 0.5 && c < 2, `${c.toFixed(2)} ¢`);
 });
+test('vapour: it condenses and evaporates rather than being squeezed, so only the gas is a spring, ω₀² = [3κ(p₀ − p_v) + 2(3κ−1)σ/R]/ρR² (Brennen 1995): water\'s 2.34 kPa takes 20 ¢ off at 1 atm and 75 ¢ at a quarter atmosphere; glycerol has none', () => {
+  for (const R of [0.8e-3, 5e-3]) {
+    const a = acoustics(R, open({ pv: 2339 })), k = a.kappa, s = 0.0728;
+    assert.ok(rel(a.omega0 ** 2, (3 * k * (P_ATM - 2339) + 2 * (3 * k - 1) * s / R) / (998.2 * R * R)) < 1e-9);
+    assert.ok(rel(a.pg, a.pb - 2339) < 1e-12);
+  }
+  const drop = (o, k = 69) => { const p = P(o), R = nominalRadius(k); return cents(acoustics(R, nozzleEnv(P({ ...o, vapour: true }))).fd, acoustics(R, nozzleEnv(p)).fd); };
+  const at1 = drop({}), atQ = drop({ pressure: 0.25 }), gly = drop({ liquid: 'glycerol' });
+  const pb = (o) => ambient(P(o)) + (2 * 0.0728) / nominalRadius(69), est = (o) => 1200 * Math.log2(Math.sqrt(1 - 2339 / pb(o)));
+  console.log(`         A4: ${at1.toFixed(1)} ¢ at 1 atm, ${atQ.toFixed(1)} ¢ at ¼ atm (p_v/2p_b: ${est({}).toFixed(1)}, ${est({ pressure: 0.25 }).toFixed(1)}); glycerol ${gly.toFixed(3)} ¢`);
+  assert.ok(Math.abs(at1 - est({})) < 1 && at1 < -18 && at1 > -22, `${at1.toFixed(2)} ¢`);
+  assert.ok(Math.abs(atQ - est({ pressure: 0.25 })) < 3 && atQ < -65 && atQ > -85, `${atQ.toFixed(2)} ¢`);
+  assert.equal(gly, 0);
+});
 test('pitch ∝ √p₀: with depth (p₀ = p_air + ρgh) and with the tank\'s pressure, to within the small change in κ', () => {
   assert.ok(rel(ambient(P({ depth: 10, pressure: 2 })), 2 * P_ATM + 998.2 * G * 10) < 1e-12);
   const liq = { ...LIQUIDS.water, sigma: 0 }, gas = { ...GASES.air, K: 1e-30 }; // adiabatic, tensionless: exact
@@ -325,6 +339,13 @@ test('keep in tune: under 20 m of water, helium, glycerol or a quarter atmospher
     }
   }
 });
+test('keep in tune with vapour: the nozzles cut smaller bubbles (less gas is a softer spring) and every key stays within 2 ¢, at 1 atm and at a quarter atmosphere', () => {
+  for (const o of [{ vapour: true }, { vapour: true, pressure: 0.25 }]) for (let k = KEY_LO; k <= KEY_HI; k += 4) {
+    const env = nozzleEnv(P(o)), f = acoustics(tunedRadius(k, o), env).fd;
+    assert.ok(Math.abs(cents(f, keyFreq(k))) < 2, `${JSON.stringify(o)} key ${k}: ${cents(f, keyFreq(k)).toFixed(2)} ¢`);
+    assert.ok(tunedRadius(k, o) < tunedRadius(k, { pressure: o.pressure ?? 1 }), 'smaller bubbles');
+  }
+});
 
 console.log('the engine');
 test('a single ping is the model\'s ring: frequency within 0.5 ¢ and decay rate b within 3 %, in water, helium and glycerol', () => {
@@ -337,6 +358,49 @@ test('a single ping is the model\'s ring: frequency within 0.5 ¢ and decay rate
     assert.ok(Math.abs(cents(f, fm)) < 0.5, `${JSON.stringify(o)} key ${k}: ${f.toFixed(3)} vs ${fm.toFixed(3)} Hz (${m.fd.toFixed(3)} at release)`);
     assert.ok(rel(b, bm) < 0.03, `${JSON.stringify(o)} key ${k}: b ${b.toFixed(2)} vs ${bm.toFixed(2)} /s (${m.b.toFixed(2)} at release)`);
   }
+});
+test('vapour in the engine: a ping rings at the model\'s lower pitch (within 0.5 ¢), and a held note follows the switch', () => {
+  for (const k of [60, 79, 96]) {
+    const p = P({ vapour: true, snap: 0.01 }), m = bubbleModel(nominalRadius(k), p);
+    const sec = Math.min(1.2, 4 / m.b), { L } = ping(k, p, 0.8, sec + 0.05), i0 = firstSample(L) + 4;
+    const span = Math.min(Math.round((2.3 / m.b) * FS), L.length - i0 - 1);
+    const f = zeroCrossFreq(L, i0, i0 + span), fm = meanGlide(m, 0, span / FS);
+    assert.ok(Math.abs(cents(f, fm)) < 0.5, `key ${k}: ${f.toFixed(3)} vs ${fm.toFixed(3)} Hz`);
+    assert.ok(cents(fm, bubbleModel(nominalRadius(k), P({ snap: 0.01 })).fd) < -15, `key ${k}: lower`);
+  }
+});
+test('the surface\'s echo: each hydrophone also hears the bubble\'s inverted image, R_ref/r′ strong and (r′ − r)/c later; it cancels the bass near the surface; off, the output is as it was', () => {
+  // 2 m down a ping's image arrives 2.7 ms after its direct sound: the difference between echo on and
+  // off is the direct sound, delayed, inverted and scaled (while the bubble has hardly risen)
+  const k = 60, p = P({ depth: 2, snap: 0.01 }), off = ping(k, p, 0.8, 0.1), on = ping(k, { ...p, echo: true }, 0.8, 0.1);
+  for (const [c, side] of [[0, 'L'], [1, 'R']]) {
+    const x = nozzleX(k) - HYDRO.x[c], r = Math.hypot(x, HYDRO.back), ri = Math.hypot(x, HYDRO.back, 4), lag = ((ri - r) / LIQUIDS.water.c) * FS;
+    const a = off[side], d = on[side].map((v, i) => v - a[i]), i0 = firstSample(a), n = Math.round(0.01 * FS);
+    const L0 = Math.floor(lag), fr = lag - L0, shifted = (i) => (1 - fr) * a[i - L0] + fr * a[i - L0 - 1];
+    let sxy = 0, sxx = 0, res = 0;
+    for (let i = i0 + L0 + 2; i < i0 + L0 + n; i++) { sxy += d[i] * shifted(i); sxx += shifted(i) ** 2; }
+    const g = sxy / sxx;
+    for (let i = i0 + L0 + 2; i < i0 + L0 + n; i++) res += (d[i] - g * shifted(i)) ** 2;
+    assert.ok(rel(g, -r / ri) < 0.02, `${side}: gain ${g.toFixed(4)} vs ${(-r / ri).toFixed(4)}`);
+    assert.ok(res / (g * g * sxx) < 1e-3, `${side}: residual ${(res / (g * g * sxx)).toExponential(2)} at lag ${lag.toFixed(2)}`);
+    for (let i = 0; i < i0 + L0 - 1; i++) assert.ok(Math.abs(d[i]) < 1e-6 * peakAbs(a), `${side}: nothing before the echo arrives (${i})`);
+  }
+  // near the surface it cancels the bass, and less the treble
+  const level = (o, kk) => { const { L, R } = ping(kk, P(o), 0.8, 0.3); return rmsDb([...L, ...R]); };
+  const cut = (o, kk) => level({ ...o, echo: true }, kk) - level(o, kk);
+  const a3 = cut({}, KEY_LO), c4 = cut({}, 60), c7 = cut({}, 96), a3s = cut({ depth: 0.1 }, KEY_LO), c6s = cut({ depth: 0.1 }, 84);
+  console.log(`         30 cm: A3 ${a3.toFixed(1)}, C4 ${c4.toFixed(1)}, C7 ${c7.toFixed(1)} dB; 10 cm: A3 ${a3s.toFixed(1)}, C6 ${c6s.toFixed(1)} dB`);
+  assert.ok(a3 < -5 && a3 > -14 && c4 < -4, `30 cm bass ${a3.toFixed(1)}, ${c4.toFixed(1)} dB`);
+  assert.ok(Math.abs(c7) < 6, `30 cm treble ${c7.toFixed(1)} dB`);
+  assert.ok(a3s < -8 && c6s < -6, `10 cm ${a3s.toFixed(1)}, ${c6s.toFixed(1)} dB`);
+  // switched on and off while a brook runs: no click, and off it is exactly the dry engine again
+  const ev = [[0, 'on', 72, 0.8], [0.3, 'params', P({ echo: true })], [0.6, 'params', P()], [1.5, 'off', 72]];
+  const sw = run(P(), ev, 2, { seed: 7 }), dry = run(P(), [[0, 'on', 72, 0.8], [1.5, 'off', 72]], 2, { seed: 7 });
+  const d2 = (a, b) => { let m = 0; for (let i = Math.max(2, Math.round(a * FS)); i < Math.round(b * FS); i++) m = Math.max(m, Math.abs(sw.L[i] - 2 * sw.L[i - 1] + sw.L[i - 2])); return m; };
+  const before = d2(0, 0.28);
+  for (const t of [0.3, 0.6]) assert.ok(d2(t - 0.01, t + 0.02) < 2 * before, `click as it switches at ${t} s`);
+  // once off, the hydrophones hear the dry engine again (the bubbles themselves never knew)
+  for (let i = Math.round(0.65 * FS); i < sw.L.length; i++) assert.ok(Math.abs(sw.L[i] - dry.L[i]) < 1e-7, `off again: the dry sound (${i})`);
 });
 test('the kick: every bubble starts at the same pressure, 2εσ/r (bigger bubbles move more volume, more slowly), linear in velocity', () => {
   const p0 = peakPressure(LIQUIDS.water, 0.8);
@@ -459,8 +523,8 @@ test('stability: seeded random combinations of extreme settings at 44.1 and 48 k
   for (let trial = 0; trial < 16; trial++) {
     const fs = trial % 2 ? 44100 : 48000, p = P();
     for (const q of sliders) { const r = rnd(); p[q.id] = r < 0.4 ? q.min : r < 0.8 ? q.max : q.def; }
-    p.gas = gases[trial % 4]; p.liquid = liquids[Math.floor(trial / 4) % 3]; p.keepInTune = trial % 3 === 0;
-    const q = { ...p, pressure: p.pressure > 1 ? 0.25 : 4, depth: p.depth > 1 ? 0.1 : 100, gas: gases[(trial + 1) % 4], liquid: liquids[(trial + 1) % 3] };
+    p.gas = gases[trial % 4]; p.liquid = liquids[Math.floor(trial / 4) % 3]; p.keepInTune = trial % 3 === 0; p.vapour = trial % 2 === 0; p.echo = trial % 4 < 2;
+    const q = { ...p, pressure: p.pressure > 1 ? 0.25 : 4, depth: p.depth > 1 ? 0.1 : 100, gas: gases[(trial + 1) % 4], liquid: liquids[(trial + 1) % 3], vapour: !p.vapour, echo: trial % 3 === 0 };
     const keys = [KEY_LO, 70, 88, KEY_HI];
     const { L, R, e } = run(p, [...keys.map((k) => [0, 'on', k, 1]), [0.4, 'params', q], [0.45, 'on', 70, 1], [0.8, 'params', p], ...keys.map((k) => [1, 'off', k])], 1.2, { fs });
     for (let i = 0; i < L.length; i++) assert.ok(Number.isFinite(L[i]) && Number.isFinite(R[i]), `trial ${trial}: NaN at ${i}`);
@@ -484,16 +548,16 @@ test('the tank\'s pressure, moved while a bubble rings, retunes it smoothly as t
   for (let i = 2; i < L.length; i++) { const d = Math.abs(L[i] - 2 * L[i - 1] + L[i - 2]) / (Math.abs(L[i - 1]) + 1e-3 * peakAbs(L)); if (i < 0.1 * FS && i > 0.01 * FS) before = Math.max(before, d); else if (i >= 0.1 * FS && i < 0.3 * FS) after = Math.max(after, d); }
   assert.ok(after < 4 * before, 'no click as the pressure moves');
 });
-test('CPU: ten held keys at 48 kHz in well under 30 % of real time (default rate, and 40 bubbles/s each)', () => {
-  for (const rate of [DEFAULTS.rate, 40]) {
-    const e = new BubbleEngine(FS); e.setParams(P({ rate }));
+test('CPU: ten held keys at 48 kHz in well under 30 % of real time (default rate, and 40 bubbles/s each, with and without the echo)', () => {
+  for (const [rate, echo] of [[DEFAULTS.rate, false], [40, false], [40, true]]) {
+    const e = new BubbleEngine(FS); e.setParams(P({ rate, echo }));
     for (let i = 0; i < 10; i++) e.noteOn(KEY_LO + 5 * i, 0.8);
     const bL = new Float32Array(128), bR = new Float32Array(128);
     for (let i = 0; i < Math.round((2 * FS) / 128); i++) e.process(bL, bR, 128); // let the brooks fill
     const n = Math.round((4 * FS) / 128), t0 = performance.now();
     for (let i = 0; i < n; i++) e.process(bL, bR, 128);
     const load = (performance.now() - t0) / 1000 / 4;
-    console.log(`         ${rate}/s: ${(100 * load).toFixed(1)} % of real time, ${e.voiceCount()} bubbles ringing`);
+    console.log(`         ${rate}/s${echo ? ' with the echo' : ''}: ${(100 * load).toFixed(1)} % of real time, ${e.voiceCount()} bubbles ringing`);
     assert.ok(load < 0.3, `${(100 * load).toFixed(1)} %`);
   }
 });

@@ -22,6 +22,7 @@ export const INSTRUMENT = {
   space: 'hold',                     // Space and CC64 latch the keys down; the host sends the noteOffs on release
   modWheel: 'current',               // CC1: the arc current, from its default up to its maximum
   mpe: { bend: 12 },                 // MPE: a key's own bend slides its arc's core (one arc: the newest key's); the current is the supply's
+  faders: ['hiss', 'tau', 'dist', 'gap', 'current'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/arc), built as WebAssembly. It cuts its own
   // bank (each key's on its first note), or plays the one the page offers with a note (arc-wasm.js)
   wasm: { name: 'ArcWasmEngine', module: new URL('./arc-wasm.js', import.meta.url).href, binary: new URL('../wasm/arc.wasm', import.meta.url).href },

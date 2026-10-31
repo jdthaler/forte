@@ -8,6 +8,7 @@ import { DEFAULTS } from '../piano/src/params.js';
 import { INSTRUMENT } from '../piano/src/piano-instrument.js';
 import { wasmModel } from '../piano/src/piano-wasm.js';
 import { loadEngine } from '../tools/engine.mjs';
+import { fft } from '../tools/audio-util.mjs';
 
 const PianoEngine = await loadEngine(INSTRUMENT);
 const { keyModel, sectionProps } = await wasmModel();
@@ -456,6 +457,62 @@ test('Quality: Medium and Low strike voices with fewer modes (none above 7 and 5
     }
   }
   console.log(`        pedalled chord: ${res.high.modes} → ${res.medium.modes} → ${res.low.modes} modes, ${res.high.sym} → ${res.medium.sym} → ${res.low.sym} sympathetic partials; notes within ${Math.max(...dB.map(Math.abs)).toFixed(2)} dB, ${Math.max(...dc.map(Math.abs)).toFixed(3)} ¢`);
+});
+
+// magnitude spectrum of x[a … a + N) (Hann), N a power of two
+function spectrum(x, a, N) {
+  const re = new Float64Array(N), im = new Float64Array(N);
+  for (let i = 0; i < N; i++) re[i] = x[a + i] * (0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (N - 1)));
+  fft(re, im, false);
+  return Float64Array.from({ length: N / 2 }, (_, i) => Math.hypot(re[i], im[i]));
+}
+test('longitudinal modes: at √(EA/T) ≈ 14–18 × the pitch; on, phantom partials between a forte G1\'s partials, near its own in 1–2 kHz (Bank & Sujbert), growing as the blow²; none above 8 kHz', () => {
+  for (const key of [21, 31, 45, 57, 69]) {
+    const { model: m, data: d } = keyModel(key, P(), FS);
+    const ratio = d.fL / d.freq[0];
+    assert.ok(ratio > 13 && ratio < 18, `key ${key}: fL ${d.fL.toFixed(0)} Hz, ${ratio.toFixed(1)} × f1`);
+    assert.ok(rel(d.fL, Math.sqrt((2 * m.L * d.kc) / m.info.mu) / (2 * m.L)) < 1e-9, `key ${key}: fL ≠ √(EA/μ)/2L`); // EA = 2L·kc
+  }
+  const N = 16384, st = Math.round(0.01 * FS), df = FS / N;
+  const phantom = (key, vel) => {
+    const off = render(key, P({ longi: 0 }), 0.5, vel), on = render(key, P(), 0.5, vel);
+    const diff = on.L.map((v, i) => v - off.L[i]);
+    return { off, on, diff, S: spectrum(off.L, st, N), D: spectrum(diff, st, N) };
+  };
+  const rms = (x) => Math.sqrt(x.reduce((s, v) => s + v * v, 0) / x.length);
+  const f = phantom(31, 5), soft = phantom(31, 2.5);
+  assert.ok(f.on.v.longModes >= 3 && f.on.v.longPairs > 40, `G1: ${f.on.v.longModes} longitudinal modes, ${f.on.v.longPairs} pairs`);
+  // the strongest longitudinal component between 1 and 2 kHz, against the strongest partial within 150 Hz of it
+  let iD = Math.round(1000 / df);
+  for (let i = iD; i < Math.round(2000 / df); i++) if (f.D[i] > f.D[iD]) iD = i;
+  let near = 0;
+  for (let i = iD - Math.round(150 / df); i <= iD + Math.round(150 / df); i++) near = Math.max(near, f.S[i]);
+  const rDb = 20 * Math.log10(f.D[iD] / near);
+  assert.ok(Math.abs(rDb) < 8, `G1 at 5 m/s: ${(iD * df).toFixed(0)} Hz at ${rDb.toFixed(1)} dB re its neighbours`);
+  // not on a partial: between two
+  const d31 = keyModel(31, P(), FS).data;
+  const gap = Math.min(...Array.from(d31.freq).map((x) => Math.abs(x - iD * df)));
+  assert.ok(gap > 2 * df, `${(iD * df).toFixed(0)} Hz is ${gap.toFixed(1)} Hz from a partial`);
+  // quadratic: twice the blow, about twice the share
+  const grow = 20 * Math.log10((rms(f.diff) / rms(f.off.L)) / (rms(soft.diff) / rms(soft.off.L)));
+  assert.ok(grow > 3 && grow < 10, `5 m/s against 2.5 m/s: the longitudinal share rises ${grow.toFixed(1)} dB`);
+  const top = render(84, P(), 0.05, 4);
+  assert.equal(top.v.longModes, 0, 'C7 has no longitudinal mode below 8 kHz');
+  console.log(`        G1 forte: phantom at ${(iD * df).toFixed(0)} Hz, ${rDb.toFixed(1)} dB re its neighbours; ${f.on.v.longModes} modes, ${f.on.v.longPairs} pairs; +${grow.toFixed(1)} dB for twice the blow`);
+});
+
+test('Quality: the longitudinal modes from 24 partials and up to 8 modes (High), 12 and 2 (Medium), none (Low)', () => {
+  const vd = keyModel(31, P(), FS).packed;
+  const got = {};
+  for (const q of ['high', 'medium', 'low']) {
+    const e = new PianoEngine(FS);
+    e.setQuality(q); e.setParams(P());
+    const v = e.noteOn(31, 4, vd);
+    got[q] = [v.longModes, v.longPairs];
+    e.destroy();
+  }
+  assert.ok(got.high[0] > 2 && got.medium[0] === 2 && got.low[0] === 0, `modes ${got.high[0]}, ${got.medium[0]}, ${got.low[0]}`);
+  assert.ok(got.medium[1] < 0.5 * got.high[1] && got.low[1] === 0, `pairs ${got.high[1]}, ${got.medium[1]}, ${got.low[1]}`);
 });
 
 test('every preset-ish extreme stays stable', () => {

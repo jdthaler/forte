@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'spin',                     // CC1: the star's rotation
   mpe: { slide: true },                 // MPE: a note's slide spins its own star (a star can't bend)
+  faders: ['flare', 'incl', 'coreRatio', 'driving', 'spin'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/stars), built as WebAssembly. The page
   // builds each key's star with its WebAssembly model and sends it with the note (noteData)
   wasm: { name: 'StarWasmEngine', module: new URL('./stars-wasm.js', import.meta.url).href, binary: new URL('../wasm/stars.wasm', import.meta.url).href },

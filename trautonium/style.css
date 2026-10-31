@@ -1,0 +1,12 @@
+/* The page's own palette and any layout beyond shared/instrument.css: the neon's cyan glow, the lamp's orange. */
+:root {
+  --accent: #7ee0ff;
+  --accent-2: #ff9a4a;
+  --accent-ink: #04161d;
+}
+
+#views { grid-template-rows: minmax(250px, 1.2fr) minmax(220px, 1fr) auto; }
+#info { grid-template-columns: auto 1fr; }
+@media (max-width: 1050px) {
+  #views { grid-template-rows: auto auto auto; }
+}

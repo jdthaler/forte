@@ -81,6 +81,8 @@ export const GROUPS = [
         hint: 'Partials above this are left out (and at most 90 per string). Lower it if the CPU pill runs hot. Applies to new notes.' },
       { id: 'kc', label: 'Tension modulation (pitch glide)', type: 'checkbox', def: true,
         hint: 'A firm pluck stretches the wire, so its tension and pitch rise a little, then settle as the note decays. Short treble strings stretch the most.' },
+      { id: 'side', label: 'Sideways motion (two-stage decay)', min: 0, max: 1, def: 0.2, step: 0.01, fmt: (v) => (v === 0 ? 'off' : `${(v * 100).toFixed(0)} %`),
+        hint: 'The plectrum drags the string sideways as it slides along it, so the string also swings sideways when it lets go. The bridge gives far less that way, only by rocking: this is how much, as a share of its give up and down. The sideways swing is quieter but drains more slowly, so it takes over as the note dies: the harpsichord\'s two-stage decay. Higher: a louder, shorter aftersound.' },
       { id: 'fullRange', label: 'Full range (A0–C8)', type: 'checkbox', def: false,
         hint: 'Opens the keys beyond the five-octave FF–f³ compass: the same scale of strings, carried on down to A0 and up to C8.' },
       { id: 'soundboard', label: 'Soundboard', type: 'checkbox', def: true,

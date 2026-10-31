@@ -18,6 +18,7 @@ export const INSTRUMENT = {
   space: 'hold',                           // Space and CC64 latch the keys down; the host sends the noteOffs on release
   modWheel: { param: 'pressure', max: 3000 }, // CC1: wind pressure, from its default up to 3000 Pa
   mpe: { bend: 12 },                       // MPE: a key's own bend warms or cools the air in its pipes alone, an octave either way (the wind is every key's: no slide)
+  faders: ['principal', 'octave', 'mixture', 'wind', 'pressure'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the physics in C++ (native/instruments/pipes), built as WebAssembly
   wasm: { name: 'PipeWasmEngine', module: new URL('./pipes-wasm.js', import.meta.url).href, binary: new URL('../wasm/pipes.wasm', import.meta.url).href },
   chain: { volume: 'volume', room: 'room', venue: 'venue' },

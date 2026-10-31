@@ -6,9 +6,11 @@ until its three lowest modes ring at the fundamental, the octave and the
 twelfth. Nothing here is sampled. Every key is a note area whose modes are
 integrated live, and three pieces of physics make it a pan rather than a
 bell. The dome's curvature couples the note's own modes, so a hard stroke
-pumps the octave out of the fundamental and the tone blooms. The steel
+pumps the octave out of the fundamental, the octave the double octave, and
+on up the note's harmonics: the tone blooms, brightens and wobbles. The steel
 between notes couples each note to its neighbours, which the fourths-and-fifths
-layout makes ring along in tune. The skirt decides which partials radiate. You
+layout makes ring along in tune. The skirt decides which partials radiate,
+and rings itself, taking the partials that fall on its own modes. You
 can flatten the domes, leave the notes untuned, lay the pan out chromatically,
 cut the skirt, or roll a held note with the mod wheel.
 
@@ -48,7 +50,11 @@ measured a tuned G3 note's first three at 198.9, 391.9 and 583.8 Hz,
 1 : 1.97 : 2.94.) Above
 them come nine more, (3,1), (2,2), (3,2) and so on up to 18 kHz. **Note
 shape** sets r (1.3 by default). At r = √2 the first three fall on
-1 : 2 : 3 by themselves, and (2,2) always sits on 4 × f₁.
+1 : 2 : 3 by themselves, and (2,2) always sits on 4 × f₁. At r = 1.3 the
+upper modes come in near pairs: (3,1) and (2,2) at 3.97 and 4.00 × f₁,
+(3,2) and (1,3) at 5.86 and 6.03, then (3,3) on 9 and (5,1) at 9.92. A
+G3 note measured by Monteil, Thomas & Touzé (2015) has the same: a pair
+at the double octave (788.8 and 799.1 Hz) and a mode at 1155 Hz, 5.85 × f₁.
 
 ### 2. The tuner
 
@@ -77,7 +83,7 @@ force is a half-sine pulse of length τ, whose spectrum
   |F(f)| ∝ |cos(πfτ) / (1 − (2fτ)²)|
 
 is flat below 1/τ and has its first zero at 1.5/τ, so a long contact
-reaches only the low modes. τ follows a Hertz contact: it goes as v^(−1/5)
+reaches only the low modes (what is above, the dome has to make). τ follows a Hertz contact: it goes as v^(−1/5)
 with the stick's speed (Hertz 1882), so a harder stroke is also a shorter,
 brighter one, and as f₁^(−1/2) across the pan, since higher notes are
 smaller and stiffer. **Stick contact** is τ at C4 for a full-velocity stroke
@@ -85,35 +91,51 @@ smaller and stiffer. **Stick contact** is τ at C4 for a full-velocity stroke
 by the mode's shape where the stick lands (**Strike point** along the note
 and **Off the long axis** across it). At the centre the octave and third
 partial have nodes, so the stick alone cannot excite them. The fundamental
-of a full-velocity stroke at the centre moves half a thickness.
+of a full-velocity stroke at the centre moves 1.2 thicknesses: on a struck
+G3 note about half a millimetre thick, Monteil et al. measured 0.65 mm for
+forte and 0.15 mm for mezzo-piano, 1.3 and 0.3 thicknesses.
 
-### 4. The dome: a 1 : 2 : 3 internal resonance
+### 4. The dome: a ladder of internal resonances
 
 A curved shell cannot bend without stretching, and stretching a dome
-couples its modes quadratically. With the tuned modes x₁, x₂, x₃
-measured in thicknesses, their equations are
+couples its modes quadratically. With the modes xₚ measured in
+thicknesses, their equations are
 
   ẍₚ + 2σₚẋₚ + ωₚ²xₚ = −∂V/∂xₚ + strike,
-  V = g (x₁²x₂ + x₁x₂x₃ + x₂²x₃) + (γω₁²/4) (Σ rₚ² xₚ²)²,
+  V = g Σ cᵢⱼₖ xᵢxⱼxₖ + (γω₁²/4) (Σ rₚ² xₚ²)²,
 
-with rₚ = ωₚ/ω₁. Each cubic term is resonant on a tuned note:
-x₁² drives x₂ at 2ω₁ = ω₂, x₁x₂ drives x₃ at ω₁ + ω₂ = ω₃, and
-x₂² drives x₃ at 2ω₂ when the third partial is a double octave. This
-is the kind of internal resonance that Monteil, Touzé, Thomas & Benacchio
-(2014) analysed, after Achong (1996) modelled pan notes as nonlinear
-oscillators. Measured on a real pan, such couplings switch on at
-amplitudes of about 1/25 of the thickness (Thomas, Monteil & Touzé 2014).
-The quartic term is the
-stretching that every plate has: it keeps the potential bounded and makes a
-fortissimo note a few cents sharp.
+with rₚ = ωₚ/ω₁. A cubic term only matters when it is resonant, when the
+sum tone of two modes falls on a third: fᵢ + fⱼ ≈ fₖ, within 3 %. The sum
+runs over every such triple among the note's twelve modes, and on a tuned
+note they make a ladder. x₁² drives the octave at 2ω₁ = ω₂, x₁x₂ drives the
+twelfth at ω₁ + ω₂ = ω₃, x₂² and x₁x₃ drive the pair at the double octave,
+x₂x₄ and x₃² the pair at 6f₁, and so on, so a hard stroke's energy climbs
+from the fundamental through the harmonics, and comes back down. (When the
+third partial is tuned to the double octave, x₂² drives it directly.)
+Measured on a real pan, such couplings switch on at amplitudes of about 1/25
+of the thickness, and in playing the energy is usually seen to pass among
+up to a dozen modes (Thomas, Monteil & Touzé 2014). Achong (1996) first
+modelled pan notes as nonlinear oscillators, and Monteil, Touzé, Thomas &
+Benacchio (2014) analysed these internal resonances.
 
 The coupling grows with the dome: g = 0.05 · **Dome rise** · ω₁², with the
-rise in thicknesses (3 by default). The factor 0.05 stands for the
-integrals of the mode shapes against the dome, which depend on how the
-real note is lopsided: a perfectly symmetric note would not couple its
-octave to its fundamental at all. It is a modelling choice, set so that
-the octave catches up with the fundamental in a few tens of milliseconds
-after a forte stroke at the centre.
+rise in thicknesses (3 by default). Each term's cᵢⱼₖ is the stretching the
+pair of modes does, which goes as their slopes, which on a plate go as √f:
+c = (√(rᵢrⱼ) + √(rⱼrₖ) + √(rᵢrₖ)) / (1 + 2√2), 1 for 1 + 1 → 2 and 2 for
+2 + 2 → 4. The factor 0.05 stands for the integrals of the mode shapes
+against the dome, which depend on how the real note is lopsided: a
+perfectly symmetric note would not couple its octave to its fundamental at
+all. It is set against the measurements. Monteil et al. (2015) fitted
+these terms to a G3 and an F3 note, and their coefficients (0.24 to 0.88
+in their units of millimetres and 1/ω₁², on notes half a millimetre thick)
+are 0.12 to 0.44 ω₁² per thickness, the larger ones higher up the ladder.
+Here, at the default rise, 1 + 1 → 2 is 0.15 ω₁² (0.3 on the fundamental)
+and 2 + 2 → 4 twice that. Struck at the centre as they struck it, the G3
+note does what theirs did: at mezzo-piano the octave grows a little after
+the stroke and stays under the fundamental; at forte the octave overtakes
+the fundamental within a few tens of milliseconds, the double octave rises
+to match it, and the energy swings back and forth, faster the harder the
+stroke (`test/steelpan-tests.mjs`).
 
 Struck at the centre, the octave starts from nothing and grows as the
 secular term of a forced oscillator,
@@ -123,18 +145,26 @@ secular term of a forced oscillator,
 for a fundamental of amplitude a, so four times faster for a stroke twice
 as hard. That is the pan's bloom: a soft note is nearly a pure decay of
 what the stick put in, and a hard one brightens after the stroke. Very
-hard, the energy goes into the octave and comes back, a slow wobble in the
-tone. With no dome the note is linear, and every stroke has the same
-colour at any loudness.
+hard, the energy goes up the ladder and comes back, a wobble in the tone.
+With no dome the note is linear, and every stroke has the same colour at
+any loudness.
+
+The quartic term is the stretching that every plate has: it keeps the
+potential bounded, and makes a full stroke start about fifteen cents sharp
+and settle within a tenth of a second (pannists know that a note struck
+too hard goes sour). A stroke at 0.7 starts half as sharp.
 
 ### 5. Neighbours and the layout
 
 All the notes share one sheet of steel, so a note's motion pushes on its
-neighbours. Between each pair of tuned modes of two neighbouring notes
-that are within 3 % of each other, the engine puts a spring,
+neighbours. Between each pair of modes of two neighbouring notes that are
+within 3 % of each other, the engine puts a spring,
 V = κ w ωₐω_b xₐx_b, with κ the **Note coupling** (0.15 %) and w = 1 for
 side-by-side and radial neighbours, ½ for diagonal ones. Modes further
-apart hardly exchange energy, and they are left uncoupled.
+apart hardly exchange energy, and they are left uncoupled. A struck note
+couples all its modes, so the ladder reaches the neighbours too: C4's
+double octave is C5's octave, and sets it ringing. A neighbour only
+ringing along runs its tuned three.
 
 Each ring holds an octave, and the next ring in holds the octave above.
 Anthony Williams laid the ring out in fourths and fifths (his 1953
@@ -163,6 +193,27 @@ and 86 cm, and **Skirt length** scales it. Each mode's surface velocity is
 heard through that factor, as by a close microphone. The notes are spread
 across the stereo field by pitch.
 
+The skirt also rings. It is a cylinder of 18-gauge steel (1.2 mm, the pan
+makers' choice) 57 cm across, open at the bottom, and its lowest modes are a
+ring's inextensional bending, n waves round the drum (Rayleigh; Soedel
+2004):
+
+  f_n = (h / 2πR²) √(E / 12ρ(1 − ν²)) · n(n² − 1) / √(n² + 1),
+
+10 Hz for n = 2, 233 and 296 Hz for 8 and 9, and 832 Hz for n = 15: Hansen
+and Rossing (2005) found a skirt mode at 830 Hz, beside a G5 note. Forty of them, up
+to 6 kHz, each a pair (cos nθ and sin nθ round the drum), ring with a
+damping ratio of 0.002. Every note pushes on the rim where it sits (by
+fifths round the drum, 30° apart, or by semitones), and a note mode within
+3 % of a ring mode is tied to it by a spring k xₚ (cos nθ y_c + sin nθ
+y_s), k = **Skirt coupling** (0.3 %) · ωₚω_n. A partial in tune with the
+skirt beats with it and drains into it (G♯4's octave, at 831 Hz, dies
+sooner than its fundamental), and the skirt hands it on to the other
+ringing notes that share the mode. The skirt itself is silent: its bending
+waves are far shorter than the sound's (n = 15 has 12 cm waves against
+41 cm of air), so below about 10 kHz (the coincidence frequency of 1.2 mm
+steel) its lobes cancel each other and it radiates almost nothing.
+
 ### 7. Hands and rolls
 
 Pannists let notes ring. Here letting go of a key lays a hand on the note
@@ -182,8 +233,15 @@ springs are computed from the current displacements and fed to the
 resonators as forces. A note that comes alive wakes its neighbours. Those
 run only their three tuned modes until they are struck, and every note
 goes to sleep once it has rung out. The fundamental rings for **Ring time
-at C4** (1.6 s), longer down the pan and shorter up it as 1/√f₁, and the
-other modes die faster as (f/f₁)^**Damping vs frequency** (0.6). A stroke
+at C4** (1.6 s), longer down the pan and shorter up it as 1/√f₁. (The
+measured G3 and F3 notes, with damping ratios of 0.0045 and 0.003, ring
+for 1.2 and 2.1 s.) The other modes decay as σ ∝ f^**Damping vs
+frequency**, 0 by default, all at the fundamental's rate: the energy the
+dome pumps up the ladder stays there. On the measured notes the octave
+decays two to five times slower than the fundamental and the double octave
+about as fast (their rates σ = ζω are 0.2 to 0.45 and 0.9 to 1.7 of its),
+and the upper modes' damping ratios (0.0009 to 0.0058) scatter about the
+fundamental's. A stroke
 is never cut off: a second stroke on a ringing note adds to it, as on the
 real pan. The page draws the pan around the last note played, every note
 glowing with its amplitude, and the amplitudes of that note's three tuned
@@ -196,9 +254,11 @@ The demos are in `examples/steelpan/`.
 1. **A calypso** on the tenor over a strummed double-second part, notes
    left to ring.
 2. **Soft to hard strokes** on one note. The soft ones are a plain
-   decay. The hard ones bloom, as the octave rises after the stroke.
+   decay. The hard ones bloom, as the octave rises after the stroke and
+   the double octave after it.
 3. **Flat notes, then high domes**, the same hard phrase twice. Flat, the
-   tone is fixed. Domed, it brightens and wobbles.
+   tone is fixed. Domed, the energy climbs the harmonics: it brightens and
+   wobbles.
 4. **Tuned, then untuned as sunk.** The untuned notes clang: their octave
    and twelfth are a semitone or more off.
 5. **Neighbours ring along: fifths, then chromatic.** C4 struck once and
@@ -208,6 +268,9 @@ The demos are in `examples/steelpan/`.
 6. **A rolled chord**, the roll swelling with the mod wheel.
 7. **A bass line with a tenor's skirt, then the whole drum.** The short
    skirt loses the fundamentals to the back of the notes.
+8. **The skirt takes a partial: G♯4 without it, then with it.** The note's
+   octave, at 831 Hz, falls on the skirt's 15th mode, beats with it and dies
+   sooner.
 
 ## Files
 
@@ -231,14 +294,18 @@ tools/render-steelpan.mjs                 node tools/render-steelpan.mjs → exa
 - **The tuner's work is given, not done.** The tuned modes are put on
   their targets. The model does not hammer the note, or say how its
   stiffness and curvature move them.
-- **One coupling constant for the dome.** The three cubic terms share one
-  coefficient. In a real note they differ, depend on the note's
-  asymmetry, and Monteil et al. fit them to each note. Other quadratic
-  terms (a note's 2f₁ in its own fundamental, and the dome's slow sag)
-  are left out.
-- **Neighbours couple only near resonance**, and only through their tuned
-  modes. The steel between notes, the skirt's own modes (Hansen and
-  Rossing found one at 830 Hz, beside a G5 note) and the rest of the bowl are not modelled.
+- **One coupling constant for the dome.** Every resonant triple shares one
+  coefficient, scaled only by the modes' slopes. In a real note they
+  differ, depend on the note's asymmetry, and Monteil et al. fit them to
+  each note (and theirs are not quite those of a potential). The
+  non-resonant quadratic terms (a note's 2f₁ in its own fundamental, a sum
+  tone far from any mode, and the dome's slow sag) are left out.
+- **Neighbours couple only near resonance**, and a neighbour that is only
+  ringing along runs only its tuned modes. The steel between notes and the
+  rest of the bowl are not modelled.
+- **The skirt is a ring.** Its modes are a free ring's, the same for every
+  key whatever the skirt's length, with no modes along it, and every note
+  pushes on it equally wherever it sits in the bowl.
 - **One pan for 88 keys.** The band's pans each cover part of the range
   with their own skirt, sink depth and note sizes. Here one layout and one
   set of knobs covers all of them, and the skirt follows the key.
@@ -250,13 +317,16 @@ tools/render-steelpan.mjs                 node tools/render-steelpan.mjs → exa
 
 ## Quality
 
-The Quality setting (in the controls, for phones and older computers) keeps
-High as described here. The pan is light already, so Medium and Low trim
-only a little: a stroke rings at most 8 of a note's modes at Medium and 6 at
-Low (12 at High), dropping the highest untuned ones and any above 16 and
-12 kHz, and a note goes quiet a little sooner once it has rung out. The
-fundamental, octave and twelfth, the dome's coupling and the neighbours
-singing along all stay; what goes is a little of the stick's metallic top.
+The Quality setting (in the top bar, for phones and older computers) keeps
+High as described here. Medium and Low ring at most 8 and 6 of a note's
+modes (12 at High), dropping the highest untuned ones and any above 16 and
+12 kHz, and a note goes quiet a little sooner once it has rung out. Only the
+tuned modes meet the neighbours' at Medium and Low, and at Low the skirt
+stays still. The fundamental, octave and twelfth, the dome's ladder as far
+as the modes that are left (up to 6 f₁ at Medium, the double octave's pair
+at Low) and the neighbours singing along all stay; what goes is the top of
+the ladder, the neighbours' share of it, and a little of the stick's
+metallic top.
 
 ## Prior art and references
 
@@ -289,6 +359,12 @@ singing along all stay; what goes is a little of the stick's metallic top.
 - U. J. Hansen & T. D. Rossing (2005). "The Caribbean steelpan, and some
   offsprings." *Forum Acusticum*, Budapest. Mode frequencies of a G3 note,
   coupling between the C4, G4 and G5 notes, and the skirt.
+- M. Monteil, O. Thomas & C. Touzé (2015). "Identification of mode
+  couplings in nonlinear vibrations of the steelpan." *Applied Acoustics*
+  89, 1–15. [doi:10.1016/j.apacoust.2014.08.008](https://doi.org/10.1016/j.apacoust.2014.08.008)
+  ([HAL hal-01084240](https://hal.science/hal-01084240)).
+  The modes, damping ratios and quadratic couplings of a G3 and an F3
+  note, and a G3 note struck mezzo-piano and forte.
 - O. Thomas, M. Monteil & C. Touzé (2014). "Complicated dynamics exhibited
   by thin shells displaying numerous internal resonances: application to
   the steelpan." *European Nonlinear Dynamics Conference (ENOC 2014)*,
@@ -306,6 +382,9 @@ singing along all stay; what goes is a little of the stick's metallic top.
 - P. Bryde & L. Mahadevan (2022). "Localization in musical steelpans."
   [arXiv:2212.14465](https://arxiv.org/abs/2212.14465). Why a note's
   modes stay in the note: the change of curvature at its edge.
+- W. Soedel (2004). *Vibrations of Shells and Plates*, 3rd ed. Marcel
+  Dekker. A ring's inextensional bending modes (after Lord Rayleigh,
+  *The Theory of Sound*, 1877), the skirt's.
 - A. W. Leissa (1969). *Vibration of Plates.* NASA SP-160. The simply
   supported rectangular plate.
 - H. Hertz (1882). "Über die Berührung fester elastischer Körper." *J.

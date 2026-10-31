@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // F3–F6, 53–89, until Full range opens the rest
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine
   modWheel: 'speed',                    // CC1: the motor's speed
+  faders: ['hardness', 'gap', 'damp', 'strike', 'speed'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/vibraphone), built as WebAssembly. The page
   // sends each note its bar's data, packed by the WebAssembly model (vibraphone-main.js), so the
   // audio thread needn't solve the bar; without it (in Node) the engine solves the bar itself.

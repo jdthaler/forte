@@ -12,6 +12,11 @@ constexpr double TWO_PI = 2 * PI;
 constexpr double OUT_SCALE = 24;  // bridge velocity → full-scale audio
 constexpr double SMOOTH_T = 0.01; // s: one-pole glide of live gains and pan (no zipper noise)
 constexpr double KILL_SIGMA = 250;
+// longitudinal modes: none above LONG_FMAX (Hz); pairs summing below LONG_BELOW × the mode's
+// frequency left out (≥ 24 dB down); the share of the longitudinal force the board takes up,
+// set so that a forte A1's strongest phantom partials stand about 15 dB under the partials beside
+// them (Conklin 1999; Bank & Sujbert 2005)
+constexpr double LONG_FMAX = 8000, LONG_BELOW = 0.25, LONG_SHARE = 0.4, LONG_Q = 150;
 
 // ---- a voice: one key's strings --------------------------------------------------------------
 
@@ -82,6 +87,25 @@ void PianoEngine::Voice::start(PianoEngine &eng, int key_, const VoiceData &d, i
   damperSigma = eng.P[p::damper];
   computeDamped();
   setPan(eng, true);
+  startLong(eng, d);
+}
+
+// The longitudinal modes this voice runs, from its kept partials (after start's arrays).
+void PianoEngine::Voice::startLong(const PianoEngine &eng, const VoiceData &d) {
+  // each bending family's partial n in every unison string
+  std::array<std::array<int16_t, 3>, Longitudinal::SLOTS> at;
+  for (auto &a : at) a.fill(-1);
+  for (int i = 0; i < N; i++) {
+    const int j = (int)perm[i], f = d.famId[j], n = d.idx[j];
+    if (f < 2 && n < Longitudinal::PARTIALS) at[f * Longitudinal::PARTIALS + n][d.uni[j]] = (int16_t)i;
+  }
+  lon.build(d.kc > 0 ? eng.longPartials() : 0, eng.longModes(), d.fL, 1 / k, nu, LONG_FMAX, LONG_BELOW, LONG_Q,
+            [&](int f, int n, int u) { return (int)at[f * Longitudinal::PARTIALS + n][u]; },
+            [&](int i) { return om[i]; }, [&](int i) { return gw[i]; });
+  // the unisons move nearly together: each string's share of the pairs is 1/ν² of the summed
+  // amplitudes', so ν strings give 1/ν; ΔF = 2kc·Σ(…), as a bridge velocity like nsv's
+  // (√G_v × force), a share LONG_SHARE of it taken by the board
+  lon.gain = LONG_SHARE * std::sqrt(BRIDGE_G * eng.P[p::bridge]) * 2 * d.kc / nu;
 }
 
 void PianoEngine::Voice::computeDamped() {
@@ -131,6 +155,7 @@ void PianoEngine::Voice::strike(double v, bool unaCorda) {
   dPrev = -1;
   hammerOn = true;
   stretched = true;
+  lon.ringing = lon.nMode > 0;
   hammerSamples = 0;
   contact = false;
   contactSamples = 0;
@@ -182,6 +207,8 @@ void PianoEngine::Voice::render(float *L, float *R, int n, PianoEngine &eng) {
   // δT is held below T/10: the first-order a₁ (slope θ sin θ, θ = ωk) then stays stable up to 0.45 fs
   const double kcG = kcGain, dTmax = 0.1 * Tt, dTmin = 1e-5 * Tt;
   if (!kc) dT[0] = dT[1] = dT[2] = 0;
+  const double lg = lon.ringing ? eng.P[p::longi] : 0;
+  double lMax = 0;
   for (int s = 0; s < n; s++) {
     double nsv = 0, nsh = 0, nst = 0;
     if (!hammerOn && kc) {
@@ -277,10 +304,12 @@ void PianoEngine::Voice::render(float *L, float *R, int n, PianoEngine &eng) {
         eng.post(m);
       }
     }
+    double yl = 0;
+    if (lg != 0) { yl = lg * lon.step(qb); lMax = std::max(lMax, std::fabs(yl)); }
     double *t = qa; qa = qb; qb = t;
     svl = nsv; shl = nsh;
     bv[s + 1] = nsv; bh[s + 1] = nsh;
-    const double y = oV * (GV[s] * nsv + GT[s] * nst) + oH * GH[s] * nsh;
+    const double y = oV * (GV[s] * (nsv + yl) + GT[s] * nst) + oH * GH[s] * nsh;
     if (moving) { pl += (tl - pl) * aS; pr += (tr - pr) * aS; }
     L[s] += pl * y;
     R[s] += pr * y;
@@ -289,6 +318,10 @@ void PianoEngine::Voice::render(float *L, float *R, int n, PianoEngine &eng) {
   }
   q = qa; q1 = qb;
   sv = svl; sh = shl;
+  // once the longitudinal force has fallen 140 dB under full scale it only shrinks: stop it
+  if (lg != 0 && !hammerOn && lMax * oV < 1e-7) {
+    lon.quiet();
+  }
   if (moving) {
     if (std::fabs(tl - pl) + std::fabs(tr - pr) < 1e-7) { pl = tl; pr = tr; panMoving = false; }
     panL = pl; panR = pr;

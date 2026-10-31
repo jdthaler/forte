@@ -28,12 +28,13 @@ inline constexpr std::array<Gas, 4> GASES = {{
   {"SF₆", 1.10, 0.14606, 0.0130, 665},
 }};
 // Liquids at 20 °C: density ρ (kg/m³), dynamic viscosity μ (Pa·s), surface tension σ (N/m),
-// sound speed c (m/s). In the order of the Liquid parameter's choices.
-struct Liquid { const char *name; double rho, mu, sigma, c; };
+// sound speed c (m/s), vapour pressure p_v (Pa; the 90 % glycerol's by Raoult's law, an estimate).
+// In the order of the Liquid parameter's choices.
+struct Liquid { const char *name; double rho, mu, sigma, c, pv = 0; };
 inline constexpr std::array<Liquid, 3> LIQUIDS = {{
-  {"water", 998.2, 1.002e-3, 0.0728, 1482},
-  {"90 % glycerol", 1234.7, 0.219, 0.0643, 1876},
-  {"glycerol", 1261, 1.41, 0.0634, 1920},
+  {"water", 998.2, 1.002e-3, 0.0728, 1482, 2339},
+  {"90 % glycerol", 1234.7, 0.219, 0.0643, 1876, 840},
+  {"glycerol", 1261, 1.41, 0.0634, 1920, 0},
 }};
 
 // The keyboard: A3–C8.
@@ -59,17 +60,19 @@ double riseSpeed(double R, const Liquid &liq);
 double riseDistance(double t, double U);
 
 // Where a bubble is: the liquid pressure at it (Pa), its depth below the free surface (m), the
-// liquid and gas, and optionally Φ kept as it was at release (for the glide).
+// vapour's partial pressure inside it (Pa; 0 for a dry bubble), the liquid and gas, and optionally
+// Φ kept as it was at release (for the glide).
 struct Env {
-  double p0 = 0, d = 0;
+  double p0 = 0, d = 0, pv = 0;
   const Liquid *liq = &LIQUIDS[0];
   const Gas *gas = &GASES[0];
   bool phiFixed = false;
   Complex phiKept{0, 0};
 };
-// One bubble's acoustics.
+// One bubble's acoustics. pb is the pressure inside, pg the gas's share of it (pb − p_v): the
+// vapour condenses and evaporates as the wall moves, so only the gas is a spring.
 struct Acoustics {
-  double omega0, b, omegaD, f0, fd, delta, dvis, dth, drad, kappa, phiRe, phiIm, chi, D, pb, m, radFactor, R;
+  double omega0, b, omegaD, f0, fd, delta, dvis, dth, drad, kappa, phiRe, phiIm, chi, D, pb, m, radFactor, R, pg;
 };
 constexpr double IMAGE_MAX = 0.25;
 Acoustics acoustics(double R, const Env &env);
@@ -94,9 +97,16 @@ double snapGain(double f, double tau);
 // The glide while it rises: the swelling's polytropic exponent at the slow rate OMEGA_SLOW.
 constexpr double OMEGA_SLOW = 2 * std::numbers::pi * 3;
 double slowExponent(double R, const Gas &gas, double pb);
-// A bubble released with radius R0, inner pressure pb0, Φ then (phiKept) and that exponent nSlow,
-// now at depth d under the air pressure pT above the liquid: it has swollen as p_b^(−1/3n) (its
-// radius into R) and rings with Φ kept as it was at release.
-Acoustics glideRing(double R0, double pb0, double nSlow, Complex phiKept, const Liquid &liq, const Gas &gas, double d, double pT, double &R);
+// A bubble released with radius R0, gas pressure pg0, Φ then (phiKept) and that exponent nSlow,
+// now at depth d under the air pressure pT above the liquid, with vapour at pv inside: its gas has
+// swollen as p_g^(−1/3n) (its radius into R) and it rings with Φ kept as it was at release.
+Acoustics glideRing(double R0, double pg0, double nSlow, Complex phiKept, const Liquid &liq, const Gas &gas, double d, double pT, double pv, double &R);
+
+// The free surface's echo at a hydrophone at nozzle depth h, from a bubble at depth d whose
+// nozzle is dx along the row from it: the paths' lengths, direct and by the inverted image.
+struct Paths { double direct, image; };
+inline Paths surfacePaths(double dx, double h, double d) {
+  return {std::sqrt(dx * dx + HYDRO_BACK * HYDRO_BACK + (h - d) * (h - d)), std::sqrt(dx * dx + HYDRO_BACK * HYDRO_BACK + (h + d) * (h + d))};
+}
 
 } // namespace forte::bubbles

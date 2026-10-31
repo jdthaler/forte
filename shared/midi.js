@@ -17,7 +17,12 @@
 //   scales the velocity of keys struck under CC67; createSostenuto() keeps the keys CC66 holds.
 //   mpeMode() is MPE's mode the player chose (shared/mpe.js: 'auto', 'on' or 'off'; every page
 //   shares it, from a menu beside the velocity curve's); pageMpe() decodes it for a page.
-//   The plugins do the same (native/plugin/plugin.cpp: kTouchGamma, kSoftPedal, sostenutoPedal, kMpeId).
+//   FADERS are a controller's five touch controls (a Seaboard RISE's three faders and XY pad):
+//   controllersOf(I) is the descriptor's controllers with its `faders` among them, controlled(…)
+//   what one of them sets, ccValue(p, v) a controller across a parameter's whole range.
+//   A Seaboard plays as MPE from the start: startMIDI announces its zone for it.
+//   The plugins do the same (native/plugin/plugin.cpp: kTouchGamma, kSoftPedal, sostenutoPedal,
+//   kMpeId, controller; the faders reach them as the descriptor's controllers).
 
 import { MODES, createMpe, bendRatio } from './mpe.js';
 
@@ -74,12 +79,20 @@ export function startMIDI({ onMIDI, status = () => {}, button = null }) {
       else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) { s.notes.clear(); s.pedals.clear(); }
       send(data);
     };
+    const seaboards = new Set();
     const bind = () => {
       const names = [];
       for (const inp of acc.inputs.values()) {
-        if (inp.state === 'disconnected') { letGo(inp.id); continue; }
+        if (inp.state === 'disconnected') { letGo(inp.id); seaboards.delete(inp.id); continue; }
         names.push(inp.name);
         inp.onmidimessage = (ev) => clean(inp.id, ev.data);
+        // A Seaboard sends MPE (notes on channels 2–16, each bending ±48 semitones, ROLI
+        // Dashboard's defaults) but may not say so: announce its lower zone of 15 for it, as the
+        // MPE Configuration Message would (MPE on Auto then decodes it; Off still ignores it)
+        if (/seaboard/i.test(inp.name ?? '') && !seaboards.has(inp.id)) {
+          seaboards.add(inp.id);
+          for (const [d1, d2] of [[101, 0], [100, 6], [6, 15], [101, 127], [100, 127]]) send([0xb0, d1, d2]);
+        }
       }
       for (const id of [...down.keys()]) if (!acc.inputs.has(id)) letGo(id);
       status(names.length ? `MIDI: ${names.join(', ')}` : 'MIDI: no devices');
@@ -191,6 +204,62 @@ export function pageMpe({ post, params, modWheel, groups = [] }) {
       return [{ type: 'noteBend', key, value: 1 }, { type: 'slide', key, value: NaN }];
     },
   };
+}
+
+/**
+ * A controller's five touch controls, as a Seaboard RISE sends them in its MIDI mode (white
+ * lights; ROLI Dashboard can move them to other CCs): three faders, then the XY pad's X and Y.
+ * An instrument's descriptor gives each a parameter in `faders` ([fader 1, 2, 3, X, Y]).
+ */
+export const FADERS = [[107, 'Fader 1'], [109, 'Fader 2'], [111, 'Fader 3'], [113, 'Pad X'], [114, 'Pad Y']];
+
+/** The MIDI controllers a descriptor maps (CC → a parameter's id, or a switch): its `controllers` and its `faders`. */
+export function controllersOf(I) {
+  const out = {};
+  (I.faders ?? []).forEach((id, i) => { if (id && FADERS[i]) out[FADERS[i][0]] = id; });
+  return { ...out, ...I.controllers };
+}
+
+/**
+ * A controller (0..127) across parameter p's whole range, as its slider moves it (in log(value)
+ * for a log one): a checkbox is on at 64 and above, a choice's options follow in turn.
+ */
+export function ccValue(p, v) {
+  const u = Math.min(1, Math.max(0, v / 127));
+  if (p.type === 'checkbox') return v >= 64;
+  if (p.type === 'select') return p.options[Math.round(u * (p.options.length - 1))][0];
+  let x = p.log ? p.min * (p.max / p.min) ** u : p.min + (p.max - p.min) * u;
+  if (p.step) x = Math.round(x / p.step) * p.step;
+  return Math.min(p.max, Math.max(p.min, x));
+}
+
+/**
+ * What controller cc at v sets, from the map controllersOf gives: [param id, value], or null.
+ * A switch ({ param, values: [a, b] }: b from 64 up; { param, toggle: [a, b] }: flipped by each
+ * press) leaves alone a parameter on neither of its values. `last` keeps each controller's last
+ * value (a press is a rise through 64); `P` the page's parameters; `params` their descriptions.
+ */
+export function controlled(map, params, P, cc, v, last) {
+  const before = last[cc] ?? 0, c = map[cc];
+  last[cc] = v;
+  if (c === undefined) return null;
+  if (typeof c === 'object') {
+    const [a, b] = c.values ?? c.toggle, now = P[c.param];
+    if (now !== a && now !== b) return null;
+    if (c.values) return [c.param, v >= 64 ? b : a];
+    return v >= 64 && before < 64 ? [c.param, now === a ? b : a] : null;
+  }
+  const p = params.find((q) => q.id === c);
+  return p ? [c, ccValue(p, v)] : null;
+}
+
+// The first time a fader or the pad moves a control, a toast says which
+const told = new Set();
+export function tellFader(cc, p) {
+  const f = FADERS.find(([n]) => n === cc);
+  if (!f || !p || told.has(cc)) return;
+  told.add(cc);
+  import('./shell.js').then(({ toast }) => toast(`${f[1]} (CC${cc}): ${p.label}`));
 }
 
 /** Turn MIDI on without a click when this site turned it on before and the browser still grants it. */

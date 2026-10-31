@@ -17,7 +17,7 @@
 namespace forte::steelpan {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { tuning, accuracy, aspect, rise, t60, damping, fullRange, layout, coupling, skirt, contact, along, across, roll, rollRate, letRing, mute, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { tuning, accuracy, aspect, rise, t60, damping, fullRange, layout, coupling, skirt, wall, contact, along, across, roll, rollRate, letRing, mute, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -34,6 +34,7 @@ inline const char *const kKeys_layout[] = {"fifths", "chromatic"};
 namespace layout_ { enum : int { fifths, chromatic }; }
 inline const FormatSegment kFormat_coupling[] = {{kNoLimit, "", " %", 100, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_skirt[] = {{kNoLimit, "", " × the band’s", 1, 0, 2, false, false, false, false}};
+inline const FormatSegment kFormat_wall[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " %", 100, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_contact[] = {{0.9999999999999999, "", " ms", 1, 0, 2, false, false, false, false}, {kNoLimit, "", " ms", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_along[] = {{kNoLimit, "", " % of the half-length", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_across[] = {{kNoLimit, "", " % of the half-width", 100, 0, 0, false, false, false, false}};
@@ -70,11 +71,12 @@ inline const ParamInfo kParams[p::count] = {
   {"aspect", "Note shape (length / width)", "Note areas", ParamKind::continuous, 1, 2.5, 1.3, 0.01, false, false, nullptr, 0, kFormat_aspect, 1},
   {"rise", "Dome rise (curvature)", "Note areas", ParamKind::continuous, 0, 10, 3, 0.1, false, false, nullptr, 0, kFormat_rise, 1},
   {"t60", "Ring time at C4", "Note areas", ParamKind::continuous, 0.2, 8, 1.6, 0, true, false, nullptr, 0, kFormat_t60, 2},
-  {"damping", "Damping vs frequency", "Note areas", ParamKind::continuous, 0, 2, 0.6, 0.01, false, false, nullptr, 0, kFormat_damping, 1},
+  {"damping", "Damping vs frequency", "Note areas", ParamKind::continuous, 0, 2, 0, 0.01, false, false, nullptr, 0, kFormat_damping, 1},
   {"fullRange", "Full range (A0–C8)", "Note areas", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"layout", "Note layout", "Pan", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_layout, 2, nullptr, 0, kKeys_layout},
   {"coupling", "Note coupling", "Pan", ParamKind::continuous, 0, 0.01, 0.0015, 0.0001, false, false, nullptr, 0, kFormat_coupling, 1},
   {"skirt", "Skirt length", "Pan", ParamKind::continuous, 0.25, 3, 1, 0.01, true, false, nullptr, 0, kFormat_skirt, 1},
+  {"wall", "Skirt coupling", "Pan", ParamKind::continuous, 0, 0.01, 0.003, 0.0001, false, false, nullptr, 0, kFormat_wall, 2},
   {"contact", "Stick contact (at C4)", "Sticks", ParamKind::continuous, 0.2, 3, 0.7, 0, true, false, nullptr, 0, kFormat_contact, 2},
   {"along", "Strike point (centre → edge)", "Sticks", ParamKind::continuous, 0, 0.95, 0.35, 0.01, false, true, nullptr, 0, kFormat_along, 1},
   {"across", "Off the long axis", "Sticks", ParamKind::continuous, 0, 0.95, 0.2, 0.01, false, false, nullptr, 0, kFormat_across, 1},
@@ -121,7 +123,7 @@ inline const Preset kPresets[] = {
   {"Chromatic layout", kPreset8, 3},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
-inline const Controller kControllers[] = {{0, -1}};
+inline const Controller kControllers[] = {{107, p::rollRate}, {109, p::mute}, {111, p::across}, {113, p::along}, {114, p::roll}};
 
 // The keyboard's tuning (forte/tuning.h): each key's frequency over equal temperament at A = 440 Hz.
 inline forte::Tuning tuningOf(const double *P) {
@@ -141,7 +143,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 33, .compassHi = 90, .compass = p::fullRange, .space = Space::sustain,
     .modWheel = p::roll, .modWheelMax = 1,
-    .controllers = kControllers, .controllerCount = 0,
+    .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 2.5},
     .midiVelocity = midiVelocity, .create = create,
   };

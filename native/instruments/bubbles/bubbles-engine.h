@@ -6,7 +6,9 @@
 //   its wall, run as a rotating phasor (exact for constant ω₀ and b)
 //   while it rises, its depth, size and the surface's image change ω₀ and b: recomputed every block,
 //   swept smoothly sample by sample
-//   output = the volume acceleration ρR²ẍ/r heard by two hydrophones
+//   output = the volume acceleration ρR²ẍ/r heard by two hydrophones; with the surface's echo,
+//   each also hears the bubble's inverted image above the surface, later and fainter (scattered into
+//   a delay line, one per hydrophone, at each bubble's own delay)
 //
 // One nozzle per key. Bubbles live in a fixed pool; beyond `soft` ringing bubbles the quietest old
 // one fades out. Nothing is allocated in process() (but for the tests' log).
@@ -66,7 +68,8 @@ class BubbleEngine : public Engine {
     double rampA = 0, rampV = 0, rampAl = 0, rampBe = 0;
     double env = 0, peak = 0;
     // the bubble at release, for its glide
-    double R0 = 0, R = 0, d0 = 0, d = 0, U = 0, pb0 = 0, phiRe = 0, phiIm = 0, nSlow = 1;
+    double R0 = 0, R = 0, d0 = 0, d = 0, U = 0, pg0 = 0, pv = 0, phiRe = 0, phiIm = 0, nSlow = 1;
+    double eg[2] = {0, 0}, et[2] = {0, 0}; // the surface's echo at each hydrophone: gain, delay (samples)
     const Liquid *liq = &LIQUIDS[0];
     const Gas *gas = &GASES[0];
     double b = 0, wd = 0, w0 = 0, fd0 = 0, vel = 0;
@@ -90,6 +93,7 @@ class BubbleEngine : public Engine {
   void startRecording(Bubble &b, const Acoustics &a);
   bool glide(Bubble &b, int n);
   void render(Bubble &b, float *L, float *R, int n);
+  void echoTargets(const Bubble &b, double gl[2], double eg[2], double et[2]) const;
   void postViews(int n);
 
   std::array<double, p::count> P{};
@@ -98,6 +102,8 @@ class BubbleEngine : public Engine {
   double spare;
   int soft;
   std::array<double, NK> Rnom{}, Rtune{}, gainL{}, gainR{};
+  std::vector<float> echo[2]; // the surface's echo, scattered ahead of the hydrophones' read point
+  int echoMask = 0, echoPos = 0;
   std::array<int, NK> tuneVer{}, nomVer{};
   int ver = 0, nomV = 0; // the conditions' version (Rtune), and the keyboard tuning's (Rnom)
   forte::Tuning tuning;  // the keyboard's (forte/tuning.h): each nozzle is cut for its key's tuned note

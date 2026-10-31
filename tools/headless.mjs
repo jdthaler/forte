@@ -8,7 +8,7 @@ import { loadEngine } from './engine.mjs';
 import { convolve, FS_SHIM, webAudioIR } from './audio-util.mjs';
 import { soundboardIR, venueIR, venueGain } from '../shared/impulses.js';
 import { chainGains, ROOM, TONE_Q } from '../shared/chain.js';
-import { wheelValue } from '../shared/midi.js';
+import { wheelValue, controllersOf, controlled } from '../shared/midi.js';
 import { bendRatio } from '../shared/mpe.js';
 import { byId } from '../shared/registry.js';
 
@@ -72,23 +72,15 @@ export class Player {
     const p = paramsOf(this.I).find((q) => q.id === mw.param);
     this.set(p.id, wheelValue(p, v, mw.max ?? p.max));
   }
-  // another controller (the descriptor's controllers: CC → parameter): a toggle is on at 64 and
-  // above; any other parameter moves across its range. Or a switch between two values of P's:
-  // { param, values: [below 64, at 64 and above] }, or { param, toggle: [a, b] } flipped by each
-  // press (a value other than those is left alone).
+  // another controller (the descriptor's controllers and faders, shared/midi.js controlled): a
+  // parameter across its range, or a switch between two of its values. A console's parameter (the
+  // organ's drawbars) goes through the console's own state.
   cc(n, v) {
-    const id = this.I.controllers?.[n];
-    if (!id) return;
-    if (typeof id === 'object') {
-      const last = (this.ccs ??= {})[n] ?? 0, [a, b] = id.values ?? id.toggle, now = this.P[id.param];
-      this.ccs[n] = v;
-      if (now !== a && now !== b) return;
-      if (id.values) this.set(id.param, v >= 64 ? b : a);
-      else if (v >= 64 && last < 64) this.set(id.param, now === a ? b : a);
-      return;
-    }
-    const p = paramsOf(this.I).find((q) => q.id === id);
-    this.set(id, p.type === 'checkbox' ? v >= 64 : p.min + ((p.max - p.min) * v) / 127);
+    const C = this.I.console, params = [...paramsOf(this.I), ...(C?.groups.flatMap((g) => g.params) ?? [])];
+    const set = controlled(controllersOf(this.I), params, { ...this.P, ...C?.get(this.P) }, n, v, (this.ccs ??= {}));
+    if (!set) return;
+    if (C && !paramsOf(this.I).some((p) => p.id === set[0])) this.setParams({ ...this.P, ...C.put({ ...C.get(this.P), [set[0]]: set[1] }, this.P) });
+    else this.set(...set);
   }
   pressure(value, key = null) { this.engine.handle?.({ type: 'pressure', value, key }); }
   bend(value) { this.engine.handle?.({ type: 'bend', value }); }

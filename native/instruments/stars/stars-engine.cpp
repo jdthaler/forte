@@ -52,10 +52,13 @@ static uint64_t versionOf(const double *P) {
 
 void StarEngine::Voice::start(StarEngine &eng, int key_, const Star &d, uint64_t id_) {
   key = key_; id = id_; dscuti = d.dscuti; N = d.N; K = d.K;
+  const bool slopes = !dscuti && d.sz.numax > 0; // (a made-up star with no ν_max: one width)
   for (int i = 0; i < N; i++) {
     F0[i] = d.f[i]; L[i] = d.l[i]; M[i] = d.m[i]; WE[i] = d.wEnv[i]; WC[i] = d.wCore[i]; Pw[i] = d.p[i]; GAM[i] = d.gamma[i]; Z[i] = d.zeta[i]; AS[i] = d.asat[i];
     W[i] = C[i] = S[i] = RHO[i] = A1[i] = A2[i] = Y1[i] = Y2[i] = G[i] = GT[i] = AMP[i] = ETA[i] = 0;
+    LNX[i] = slopes ? fd::log(d.f[i] / (d.sz.numax * 1e-6 * K)) : 0;
   }
+  alpha = slopes ? linewidthSlope(d.star.T, d.sz.numax) : 0;
   trim(eng);
   for (int i = 0; i < N; i++) act[i] = on[i];
   const double pp = 0.6 * std::max(-1.0, std::min(1.0, 2.0 * (key - PAN_LO) / (PAN_HI - PAN_LO) - 1)), a = ((pp + 1) * pi) / 4;
@@ -124,11 +127,13 @@ void StarEngine::Voice::freqs(const StarEngine &eng) {
   }
 }
 
-// damping per sample from the linewidth: amplitude rate η = πΓ (× the damping knob)
+// damping per sample from the linewidth: amplitude rate η = πΓ (× the damping knob), Γ growing
+// across the envelope as (ν/ν_max)^α (α × the slope knob)
 void StarEngine::Voice::coeffs(const StarEngine &eng) {
   if (dscuti) return; // set per block in render
+  const double a = alpha * eng.S[kSlope];
   for (int i = 0; i < N; i++) {
-    const double eta = pi * GAM[i] * eng.S[kDamping], r = fd::exp(-eta / eng.fs);
+    const double eta = pi * GAM[i] * eng.S[kDamping] * (a != 0 ? fd::exp(a * LNX[i]) : 1), r = fd::exp(-eta / eng.fs);
     ETA[i] = eta; RHO[i] = r; A1[i] = 2 * r * C[i]; A2[i] = r * r;
   }
 }
@@ -327,12 +332,12 @@ bool StarEngine::offer(const double *a, int n) {
   (void)a; (void)n;
   return false;
 #else
-  if (n < 4) return false;
+  if (n < 6) return false;
   const int key = (int)a[0], N = (int)a[3];
-  if (key < KEY_LO || key > KEY_HI || N < 1 || N > MAX_MODES || n < 4 + 10 * N) return false;
+  if (key < KEY_LO || key > KEY_HI || N < 1 || N > MAX_MODES || n < 6 + 10 * N) return false;
   Star &d = offered;
-  d.key = key; d.K = a[1]; d.dscuti = a[2] != 0; d.N = N;
-  const double *x = a + 4;
+  d.key = key; d.K = a[1]; d.dscuti = a[2] != 0; d.N = N; d.sz.numax = a[4]; d.star.T = a[5];
+  const double *x = a + 6;
   for (int i = 0; i < N; i++) {
     d.f[i] = x[i]; d.l[i] = (int8_t)x[N + i]; d.m[i] = (int8_t)x[2 * N + i]; d.zeta[i] = x[3 * N + i]; d.p[i] = x[4 * N + i];
     d.gamma[i] = x[5 * N + i]; d.wEnv[i] = x[6 * N + i]; d.wCore[i] = x[7 * N + i]; d.asat[i] = x[8 * N + i]; d.mult[i] = (int)x[9 * N + i];
@@ -346,7 +351,7 @@ void StarEngine::setParams(const double *np) {
   const bool first = !hasParams;
   for (int i = 0; i < p::count; i++) P[i] = np[i];
   hasParams = true;
-  T = {P[p::spin], P[p::coreRatio], P[p::incl], P[p::damping], P[p::driving], P[p::flare], P[p::growth]};
+  T = {P[p::spin], P[p::coreRatio], P[p::incl], P[p::damping], P[p::driving], P[p::flare], P[p::growth], P[p::slope]};
   // a new version of every key's star: built off the audio thread, nearest the last key first
   const uint64_t v = versionOf(P.data());
   if (first || v != version) {
@@ -488,7 +493,7 @@ void StarEngine::processBlock(float *L, float *R, int n) {
     if (S[id] == T[id]) continue;
     S[id] += a * (T[id] - S[id]);
     if (std::fabs(T[id] - S[id]) < 1e-6 * (std::fabs(T[id]) + 1e-6)) S[id] = T[id];
-    if (id == kSpin || id == kCore) freq = true; else if (id == kDamping) damp = true; else if (id == kIncl) incl = true;
+    if (id == kSpin || id == kCore) freq = true; else if (id == kDamping || id == kSlope) damp = true; else if (id == kIncl) incl = true;
   }
   if (incl) table();
   freqMoved = freq; dampMoved = damp; inclMoved = incl;

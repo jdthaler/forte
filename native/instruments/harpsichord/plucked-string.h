@@ -19,6 +19,15 @@
 // Sympathetic strings (forte/sympathetic.h): partial n meets the bridge through cₙ = ±√(2σ_B,ₙ), its
 // bridge loss σ_B = cₙ²/2; render adds the string's bridge signal Σ cₙ q̇ₙ (each step's change in q)
 // to sym, when given, for the engine's sympathetic strings.
+//
+// The sideways polarisation (setSide): while the plectrum carries the string up, friction drags it
+// along the plectrum, sideways by Δz at the plucking point, against its lateral stiffness. When it
+// lets go, the string swings sideways too, from that triangle at rest: its lowest partials, each
+// qₙ = φₙ(x) Δz/C_s (C_s = Σ φₙ²/ωₙ², the static compliance there). The bridge gives way sideways
+// only by rocking, so it drains them at κ times the vertical rate (σ = σ_S + κσ_B) and they push
+// on the board √κ times as hard (the rocking's lever): a quiet aftersound that outlasts the
+// vertical swing, the harpsichord's two-stage decay. The damper felt and the buff damp them as
+// point dashpots, σ = Rφ²/2. Linear and on their own: no contact touches them.
 #pragma once
 
 #include <array>
@@ -30,6 +39,7 @@ namespace forte::harpsichord {
 
 constexpr int MAXP = 4;   // contact points per string
 constexpr int N_MAX = 90; // partials per string at most
+constexpr int NZ_MAX = 16; // sideways partials at most
 namespace PT { enum : int { MAIN = 0, LUTE = 1, DAMPER = 2, BUFF = 3 }; }
 // a plectrum's state: its row disengaged, below the string, or above it (it has plucked)
 enum class Phase : uint8_t { off, under, above };
@@ -71,6 +81,9 @@ class PluckedString {
                 double *sym = nullptr);
   void dropTop(double thr);
   void limit(int n); // run only the first n partials from now on (the engine's Quality)
+  // the sideways polarisation: its bridge conductance, κ × the vertical one (0: off), and how many
+  // partials (at most NZ_MAX; the engine's Quality)
+  void setSide(double kappa, int n);
   void wake();
   void silence(); // q, q1 to zero, the contacts forgotten (asleep)
 
@@ -112,6 +125,12 @@ class PluckedString {
   std::array<Release, 2> relInfo{};
   double feltK = 0, feltR = 0, feltPre = 0, tongueK = 0, thick = 0, buffK = 0, buffR = 0;
   double peakF = 0, work = 0;
+  // the sideways polarisation (setSide): its partials' state and steps, and its damping state
+  int Nz = 0;
+  double kz = 0, gz = 0; // κ, √κ
+  std::array<double, NZ_MAX> za{}, zb{}, Z1{}, Z2{}, Wz{}, sigSz{}, sigBz{};
+  bool zFelt = false;                 // the felt damping them (as of the last block)
+  double zBuff = 0;                   // the buff's share, as of the last block
 
  private:
   void fillPoint(int p);
@@ -125,6 +144,8 @@ class PluckedString {
   double slideG(double s) const;
   void ease(int p);
   void letGo(int p, double F, double y);
+  void sideSteps(bool felt, double bg);
+  double side(int n, double *seg, int stride, const double *wts, int w0, int w1, double gain, double *sym, bool felt, double bg);
   struct { int p = 0; double y = 0, ufe = 0, Cpp = 0; bool tip = true; } sl; // scratch for the slide solve
 };
 

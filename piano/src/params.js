@@ -37,6 +37,9 @@ export const GROUPS = [
         hint: 'Extra detune of the 2nd bending axis (bridge anisotropy).' },
       { id: 'kc', label: 'Tension modulation (pitch glide)', kind: 'engine', type: 'checkbox', def: true,
         hint: 'A hard blow stretches the string, so its tension and pitch rise, then glide back as it decays.' },
+      { id: 'longi', label: 'Longitudinal modes (phantom partials)', kind: 'engine', min: 0, max: 4, step: 0.05, def: 1,
+        fmt: (v) => (v === 0 ? 'off' : `×${v.toFixed(2)}`),
+        hint: 'A string stretched by its own swing pulls on the bridge along its length, and that pull rings in the string\'s longitudinal modes, about 15 times its pitch. It sounds at the sums of the partials\' frequencies: phantom partials between the overtones, a metallic growl in the bass that grows with the square of the blow.' },
     ],
   },
   {

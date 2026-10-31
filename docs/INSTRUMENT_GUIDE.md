@@ -117,6 +117,8 @@ export const INSTRUMENT = {
                                         // press: true when a bend presses the key as the wheel does (the clavier)
   controllers: { 67: 'unaCorda' },      // other MIDI controllers → parameters (a toggle is on at 64);
                                         // { param, values: [a, b] } picks b from 64 up, { param, toggle: [a, b] } flips on each press
+  faders: ['hardness', 'mass', 'listen', 'strikeAngle', 'strike'], // a Seaboard RISE's faders 1–3 (CC 107, 109, 111), then
+                                        // its XY pad's X and Y (113, 114): five controls a player moves (shared/midi.js FADERS)
   console: { groups, defaults, get },   // state the page keeps beside its groups (the organ's drawbars): plugin parameters too
   wasm: { name: 'GongWasmEngine', module: new URL('./gongs-wasm.js', import.meta.url).href,
           binary: new URL('../wasm/gongs.wasm', import.meta.url).href }, // the engine (below)
@@ -141,6 +143,14 @@ parameters as `GROUPS` are, `defaults` the page's state and `get(P)` maps the pl
 parameters back to that state (the organ's nine drawbars to one array). The plugins list them
 after the groups' parameters and every preset sets all of them. A CC64 `toggle` controller on
 an instrument with no Space mode is played by the plugin window's Space bar.
+
+The `faders` are five controls worth moving while playing, the first three on a controller's
+faders and the last two on its XY pad (sliders, so the pad sweeps them; Y is the mod wheel's
+parameter when there is one): never `volume` (a fader touched at the bottom would silence the
+instrument), `room` or `velocity` (`test/site-tests.mjs` checks). Each moves its control across
+the slider's whole range, in log(value) for a log one; a checkbox is on from halfway up. The
+pages (`shared/shell.js`), the plugins (as more `controllers`) and `tools/headless.mjs` all
+take them from `controllersOf` in `shared/midi.js`; README.md lists them, so update its table.
 
 Page-only settings (`base`, `arrows`, `holdHint`, `noteData` and the `on…` hooks) stay in the
 page.
@@ -373,7 +383,10 @@ and say which in the footer help.
   the controls' bar (with the presets) sticks just above the controls and
   keys until it heads the Controls panel as it scrolls by. Turned
   sideways, it scrolls with the panel, and the keyboard bar keeps to one
-  line, its overview of the range shrunk to a thumbnail.
+  line, its overview of the range shrunk to a thumbnail. Either way, while
+  the controls are out of sight below, the bar's chevron points up and
+  scrolls them into view (opening them does too); once they show, it
+  folds them away.
 - While one finger holds a key, a tap with another finger works any
   button, stop or tab (browsers give such a tap no click; `layout.js`
   clicks for it).

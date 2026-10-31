@@ -202,6 +202,17 @@ requests.
   guitar function", *J. Acoust. Soc. Am.* **68**(3), 758–766 (1980),
   [doi:10.1121/1.384814](https://doi.org/10.1121/1.384814). The top and the
   sound hole as two coupled oscillators, the Kalimba's box.
+* **The hydraulis.** Hero's *Pneumatica* I.42 and Vitruvius's *De
+  architectura* X.8 describe it; W. Walcker-Mayer, *The Roman Organ of
+  Aquincum* (1972), reconstructs the organ of AD 228, and the European
+  Cultural Centre of Delphi's [reconstruction](https://eccd.gr/en/ancient-hydraulis/)
+  the Dion organ (1st century BC). Recordings of such reconstructions are
+  sold as sample libraries (for one,
+  [Rare Sound Essence's](https://pulse.audio/product/ancient-roman-pneumatic-organ-by-rare-sound-essence/)).
+  The Hydraulis plays its wind (the head of water under the bowl, the
+  water's bounce, the pumps, the bubbles at the rim) from those
+  descriptions, with the Pipe Organ's flue pipes; its sources are in
+  `hydraulis/README.md`.
 
 ## 2. Techniques Forte uses, and where they come from
 
@@ -726,11 +737,26 @@ data):
   and Kepler search for, is drawn, not played; TESS plays it as the
   waveform, each orbit one cycle, with the limb darkening and photon noise
   that shape what the satellite records.
+* **Particle detectors as instruments.** Collider Showers rings a calorimeter's crystals by
+  the heat a shower leaves (the thermo-acoustic effect); CUORE plays the heat itself, as a
+  cryogenic calorimeter reads it: the CUORE Collaboration's electro-thermal model of its
+  bolometers ([arXiv:2205.04549](https://arxiv.org/abs/2205.04549)) with the thermistor of
+  M. Carrettoni & M. Vignati, *JINST* **6**, P08007 (2011),
+  [doi:10.1088/1748-0221/6/08/P08007](https://doi.org/10.1088/1748-0221/6/08/P08007), each
+  key's calibration heater firing at the note's rate. No earlier instrument made from these
+  pulses is known to us.
 * **Synchronisation and mode locking in musical oscillators.**
   B. van der Pol and J. van der Mark, "Frequency demultiplication",
   *Nature* **120**, 363–364 (1927),
   [doi:10.1038/120363a0](https://doi.org/10.1038/120363a0) (the neon-lamp
-  relaxation oscillator of the Huygens Keyboard); N. H. Fletcher, "Mode
+  relaxation oscillator of the Huygens Keyboard and the Trautonium); O. Sala,
+  "Synchronizing system for electrical musical instruments",
+  [US 2,740,892](https://patents.google.com/patent/US2740892A/en) (1956), the
+  Mixtur-Trautonium's relaxation oscillators locked to subharmonics of the
+  played one, the instrument the Trautonium models, and after it Doepfer's
+  [Trautonium modules](https://doepfer.de/traut/traut_e.htm) and Moog's
+  [Subharmonicon](https://www.moogmusic.com/synthesizers/subharmonicon/)
+  (2020); N. H. Fletcher, "Mode
   locking in nonlinearly excited inharmonic musical oscillators",
   *J. Acoust. Soc. Am.* **64**(6), 1566–1569 (1978),
   [doi:10.1121/1.382139](https://doi.org/10.1121/1.382139); M. Abel,

@@ -33,6 +33,7 @@
 #include "forte/background.h"
 #include "forte/dsp.h"
 #include "forte/engine.h"
+#include "forte/longitudinal.h"
 #include "forte/sympathetic.h"
 #include "grand-model.h"
 #include "grand-params.h"
@@ -122,6 +123,9 @@ class GrandEngine : public Engine {
   int nTop() const { return pick(1 << 30, 80, 56); }
   bool keeps(const KeyModel &d, int i) const { return d.idx[i] < nTop() && (d.freq[i] < fTop() || d.idx[i] <= 8); } // (idx: partial n, from 1)
   int symModes() const { return pick(SYM_MODES, 3, 0); }
+  // and the longitudinal modes from fewer partials (Medium) or none (Low)
+  int longPartials() const { return pick(Longitudinal::PARTIALS, 12, 0); }
+  int longModes() const { return pick(Longitudinal::MODES, 2, 0); }
   bool symReady(int key) const { return symVer[key] != 0; }
 
   using Data = KeyData<Built>;
@@ -141,6 +145,10 @@ class GrandEngine : public Engine {
     const uint8_t *str = nullptr;
     double dT[3] = {0, 0, 0}, Tt = 0, kcGain = 0;
     bool stretched = false;
+    // longitudinal modes (forte/longitudinal.h): the force along the string at the bridge, which
+    // the piezo and the board hear with the vertical force
+    Longitudinal lon;
+    void startLong(const GrandEngine &eng, const KeyModel &d);
     double comp0 = 0, comp = 0, invV = 1, invH = 1, kapV = 0, kapH = 0, swV = 0, swH = 0, rhoV = 0, rhoH = 0;
     Hammer hammer;
     bool hasDamper = false;

@@ -17,7 +17,7 @@
 namespace forte::grand {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { hardness, strike, damper, sympathy, scale, stringing, detune, stiffness, stretch, loss, kc, maxFreq, mount, gFrame, boardH, tilt, hRatio, kH, listen, pickH, rIn, bass, mid, treble, tremDepth, tremRate, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { hardness, strike, damper, sympathy, scale, stringing, detune, stiffness, stretch, loss, kc, longi, maxFreq, mount, gFrame, boardH, tilt, hRatio, kH, listen, pickH, rIn, bass, mid, treble, tremDepth, tremRate, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -34,6 +34,7 @@ namespace stringing_ { enum : int { cp70, grand, single }; }
 inline const FormatSegment kFormat_detune[] = {{kNoLimit, "", " ¢", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_stiffness[] = {{0, "none (ideal string)", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "×", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_loss[] = {{kNoLimit, "×", "", 1, 0, 2, false, false, false, false}};
+inline const FormatSegment kFormat_longi[] = {{0, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "×", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_maxFreq[] = {{kNoLimit, "", " kHz", 0.001, 0, 1, false, false, false, false}};
 inline const char *const kChoices_mount[] = {"Iron frame, no soundboard (CP-70)", "A spruce soundboard (acoustic grand)"};
 inline const char *const kKeys_mount[] = {"frame", "board"};
@@ -87,6 +88,7 @@ inline const ParamInfo kParams[p::count] = {
   {"stretch", "Stretch tuning", "Strings", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"loss", "String losses", "Strings", ParamKind::continuous, 0.25, 4, 1, 0, true, false, nullptr, 0, kFormat_loss, 1},
   {"kc", "Tension modulation (pitch glide)", "Strings", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"longi", "Longitudinal modes (phantom partials)", "Strings", ParamKind::continuous, 0, 4, 1, 0.05, false, false, nullptr, 0, kFormat_longi, 2},
   {"maxFreq", "Highest partial", "Strings", ParamKind::continuous, 3000, 16000, 10000, 0, true, false, nullptr, 0, kFormat_maxFreq, 1},
   {"mount", "Bridge mounted on", "Bridge", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_mount, 2, nullptr, 0, kKeys_mount},
   {"gFrame", "Frame admittance", "Bridge", ParamKind::continuous, 0.000001, 0.003, 0.00005, 0, true, false, nullptr, 0, kFormat_gFrame, 7},
@@ -145,7 +147,7 @@ inline const Preset kPresets[] = {
   {"Stereo tremolo", kPreset10, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::maxFreq, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
-inline const Controller kControllers[] = {{0, -1}};
+inline const Controller kControllers[] = {{107, p::bass}, {109, p::mid}, {111, p::treble}, {113, p::tremRate}, {114, p::tremDepth}};
 
 // The keyboard's tuning (forte/tuning.h): each key's frequency over equal temperament at A = 440 Hz.
 inline forte::Tuning tuningOf(const double *P) {
@@ -165,7 +167,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 18,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = -1, .modWheelMax = 0,
-    .controllers = kControllers, .controllerCount = 0,
+    .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 3.5},
     .midiVelocity = midiVelocity, .create = create,
   };

@@ -53,7 +53,7 @@ import { createChain } from './chain.js';
 import { createKeyboard } from './keyboard.js';
 import { trimGain } from './registry.js';
 import { controlOwns, focusedByPointer } from './focus.js';
-import { startMIDI, resumeMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe } from './midi.js';
+import { startMIDI, resumeMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from './midi.js';
 import { attachPresets } from './user-presets.js';
 import { connectQuality, qualityControl } from './quality.js';
 import { dress, faceOf } from './faces.js';
@@ -289,6 +289,7 @@ export function createShell(cfg) {
   function initMIDI() {
     startMIDI({ onMIDI, status: (t) => { if ($('#midi')) $('#midi').textContent = t; }, button: $('#midi-btn') });
   }
+  const ccs = controllersOf(cfg), ccLast = {}; // the descriptor's controllers and faders
   function onMIDI(ev) {
     const [st, d1, d2] = ev.data, cmd = st & 0xf0;
     const { own: its, with: own } = notes.midi(ev.data);
@@ -306,6 +307,10 @@ export function createShell(cfg) {
         const p = ALL.find((q) => q.id === mw.param);
         shell.setParam(p.id, wheelValue(p, d2, mw.max ?? p.max));
       } else if (d1 === 120 || d1 === 123) shell.panic();
+      else {
+        const set = controlled(ccs, ALL, shell.P, d1, d2, ccLast);
+        if (set) { shell.setParam(...set); tellFader(d1, ALL.find((q) => q.id === set[0])); }
+      }
       cfg.onCC?.(d1, d2);
     } else if (cmd === 0xd0 || cmd === 0xa0) { // channel / polyphonic aftertouch
       const value = (cmd === 0xd0 ? d1 : d2) / 127, key = cmd === 0xa0 ? d1 : null;

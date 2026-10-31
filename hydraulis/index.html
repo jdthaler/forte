@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Hydraulis · Forte</title>
+  <meta name="description" content="The first keyboard: hand pumps fill a bowl standing in water, whose weight holds the wind steady, while the pump strokes and the water’s bounce still make it breathe.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="Hydraulis · Forte">
+  <meta property="og:description" content="The first keyboard: hand pumps fill a bowl standing in water, whose weight holds the wind steady, while the pump strokes and the water’s bounce still make it breathe.">
+  <meta property="og:url" content="https://forte.jthaler.net/hydraulis/">
+  <meta property="og:image" content="https://forte.jthaler.net/hydraulis/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Hydraulis's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="hydraulis">
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Hydraulis</h1>
+      <span class="sub">the first keyboard: hand pumps fill a bowl standing in water, whose weight holds the wind for the pipes</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Cistern and pumps">
+          <div class="card-head"><h2>The cistern and the pumps</h2><span class="muted" id="cistern-read">play a key</span></div>
+          <canvas id="cistern"></canvas>
+          <div class="caption">The pumpers push air into the bronze bowl (the pnigeus) standing upside down in the water. The air pushes the water down inside and up outside: the difference in height is the wind. When the water inside reaches the rim, air bubbles out under it, so the bowl holds the wind up to that and no more.</div>
+        </div>
+        <div class="card" data-view="The wind">
+          <div class="card-head"><h2>The wind</h2><span class="muted" id="wind-read"></span></div>
+          <canvas id="wind"></canvas>
+          <div class="legend"><span><i style="background:var(--accent)"></i>wind (Pa)</span><span><i style="background:#9fb4c8"></i>full: the water at the rim</span><span><i style="background:var(--accent-2)"></i>pumped in (L/s, right)</span><span><i style="background:#e58a6a"></i>drawn by the pipes</span></div>
+          <div class="caption">The last eight seconds. Each stroke lifts the wind, and the water under the rim bounces on the air after it; a chord draws it down; when the pumpers fall behind it sags until they catch up.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-perform data-view="Pipes">
+          <div class="card-head"><h2>The pipes on their slides <b id="pipe-key">G4</b></h2><span class="muted" id="pipe-read"></span></div>
+          <canvas id="pipes"></canvas>
+          <div class="readout" id="pipe-info"></div>
+          <div class="caption">The four ranks, one behind another, longest pipes at the left, drawn to scale. A key pushes its slide in under all four; the ranks whose stopcocks are open sound.</div>
+        </div>
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted" id="spec-read">live output · markers: the pipe’s modes</span></div>
+          <canvas id="spectrum"></canvas>
+          <div class="caption">Markers: the resonances of the last key’s pipe, every harmonic for an open pipe, only the odd ones for a stopped pipe.</div>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum’s markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">The jets speak their upper modes first, then settle; the pump strokes swell every line a little, slowly.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity (slide speed) <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>hold <kbd>Space</kbd> to keep keys down <b id="hold" class="off">off</b></span>
+      <span>mod wheel: harder pumping</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/hydraulis-main.js"></script>
+</body>
+</html>

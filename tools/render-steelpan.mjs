@@ -36,7 +36,7 @@ const demos = [
   // the same hard phrase on flat notes, then on high domes
   ['03-flat-notes-then-high-domes', () => {
     const ph = notes(0.1, 0.45, [64, 67, 72, 71, 67], 0.95, 0.4);
-    return cat(play(P({ rise: 0 }), 2.8, ph), play(P({ rise: 7 }), 2.8, ph));
+    return cat(play(P({ rise: 0 }), 2.8, ph), play(P({ rise: 6 }), 2.8, ph));
   }],
   // tuned to octave and twelfth, then the note areas as the hammer left them (untuned)
   ['04-tuned-then-untuned-as-sunk', () => {
@@ -57,6 +57,12 @@ const demos = [
   ['07-bass-short-skirt-then-full-drum', () => {
     const ph = notes(0.1, 0.5, [36, 40, 43, 41, 36], 0.85, 0.48);
     return cat(play(preset('Six bass', { skirt: 0.25 }), 3, ph), play(preset('Six bass'), 3, ph));
+  }],
+  // G♯4 struck three times, the skirt left out, then ringing (its octave, 831 Hz, is the skirt's
+  // 15th mode): the octave beats with the skirt and dies sooner
+  ['08-the-skirt-takes-a-partial', () => {
+    const ph = notes(0.1, 0.9, [68, 68, 68], 0.6, 0.85);
+    return cat(play(P({ letRing: true, wall: 0 }), 2.8, ph), play(P({ letRing: true }), 2.8, ph));
   }],
 ];
 
