@@ -16,6 +16,11 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-31 — Forte's f mark in Safari
+
+### Forte 0.42.2
+- **Forte's f mark shows in Safari:** the mark before each instrument's name, in the instrument menu, on the credits and missing pages and in the plugins' window was the character MUSICAL SYMBOL FORTE, which Safari (and the plugins' window on macOS) has no font for and drew as a stand-in of horizontal lines. It is now a bold italic serif f, which every browser has.
+
 ## 2026-10-31 — Regal: repeated notes stay in tune; saved states written as the plugins save them
 
 ### Forte 0.42.1
