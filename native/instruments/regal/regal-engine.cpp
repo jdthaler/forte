@@ -122,7 +122,7 @@ void RegalEngine::Sim::init(const Reed &model, double fs, double fOSv, double kr
 void RegalEngine::Sim::reset() {
   q = v = Pb = pd = U = Uin = lp = Um = out = apx = apy = env = energy = 0;
   ph = prev = y = uIn = shutT = 0;
-  nStep = yc = 0; tFirst = tLast = -1; nCross = 0;
+  nStep = nPress = yc = 0; tFirst = tLast = -1; nCross = 0;
   for (int i = 0; i < DL; i++) buf[i] = 0;
   for (int i = 0; i < nseg; i++) posR[i] = posL[i] = 0;
 }
@@ -196,7 +196,7 @@ void RegalEngine::Sim::step(double Pw, double open) {
   energy = 0.5 * m * v * v + 0.5 * k * q * q;
   // its pitch: crossings of half the curve, the pallet open, past the speech
   const double yq = q - 0.5 * h0;
-  if (open >= 0.999 && nStep * h >= 0.25 && yc < 0 && yq >= 0) {
+  if (open >= 0.999 && (nStep - nPress) * h >= 0.25 && yc < 0 && yq >= 0) {
     const double tc = nStep - yq / (yq - yc);
     if (tFirst < 0) tFirst = tc; else { tLast = tc; nCross++; }
   }
@@ -309,8 +309,11 @@ void RegalEngine::noteOn(int key, double velocity) {
       if (victim) victim->fading = true;
     }
   }
-  // a key pressed again while its reeds still sound: what the ear heard last time, at once
+  // a key pressed again while its reeds still sound: what the ear heard last time, at once, and the
+  // ear listens to this press alone (counting the silence since the last one would hear it flat and
+  // push the next press sharp)
   if (v->voicing == learnedFor) for (int r = 0; r < NRANKS; r++) v->learn[r] = learned[r][key];
+  for (int r = 0; r < NRANKS; r++) v->sim[r].hearFromNow();
   v->nb = expr.bendOf(key);
   for (int r = 0; r < NRANKS; r++) v->sim[r].rate = rateOf(*v, r);
   v->down = true; v->openTo = 1; v->openRate = 1 / (palletOpen(velocity) * fs);
