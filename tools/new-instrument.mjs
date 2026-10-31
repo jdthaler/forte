@@ -1,7 +1,7 @@
 // Start a new instrument from the template.
 // Usage: node tools/new-instrument.mjs <slug> <EngineName> "<Display Name>"
 //   e.g. node tools/new-instrument.mjs gongs Gong "Gong Keyboard"
-// Creates <slug>/ (page, style, src/<slug>-*.js, README), test/<slug>-tests.mjs,
+// Creates <slug>/ (page, style, src/<slug>-*.js with its guided tour, README), test/<slug>-tests.mjs,
 // tools/render-<slug>.mjs and the native port, native/instruments/<slug>/ (its C++ engine and
 // model, generated tables; a VST3 class id in native/ids.json and an AU code in the
 // descriptor); then you replace the bar physics with yours, in C++. The page, tests and tools
@@ -33,6 +33,7 @@ const common = (s) => s
   .replaceAll('template-', `${slug}-`)
   .replaceAll("id: 'template'", `id: '${slug}'`)
   .replaceAll("SLUG = 'template'", `SLUG = '${slug}'`)
+  .replaceAll("tour('template'", `tour('${slug}'`)
   .replaceAll('data-instrument="template"', `data-instrument="${slug}"`)
   .replaceAll('Template Bars', name);
 const write = (rel, text) => { const u = new URL(rel, R); mkdirSync(new URL('./', u), { recursive: true }); writeFileSync(u, text); console.log('  +', rel); };
