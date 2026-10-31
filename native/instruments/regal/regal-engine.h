@@ -76,10 +76,12 @@ class RegalEngine : public Engine {
     // a bend of r: the whole reed, tongue, shallot and resonator, runs r times faster (as if each
     // were cut r times smaller in time), stepped r times a sample and read between its last two steps
     double rate = 1, ph = 0, prev = 0, y = 0, uIn = 0;
-    // its pitch, as it sounds in its own time with the pallet open (past its first 0.25 s): the
+    // its pitch, as it sounds in its own time with the pallet open (past the first 0.25 s of this press): the
     // tongue's crossings of half its curve, counted in steps
-    double nStep = 0, yc = 0, tFirst = -1, tLast = -1;
+    double nStep = 0, nPress = 0, yc = 0, tFirst = -1, tLast = -1;
     int nCross = 0;
+    // start listening afresh (a key pressed again while its reed still sounds): only this press counts
+    void hearFromNow() { nPress = nStep; tFirst = tLast = -1; nCross = 0; }
     double pitch() const { return nCross >= 8 && (tLast - tFirst) * h > 0.15 ? nCross / ((tLast - tFirst) * h) : 0; }
     // one tick of its own rate: as many steps as are due, y its sound and uIn its draw on the chest
     void tick(double Pw, double open);
