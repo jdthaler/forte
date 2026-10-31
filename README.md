@@ -239,8 +239,8 @@ Armonica, Pyrophone, Gong Keyboard, Bubble Organ, Star Keyboard and Wind
 Harp), lean on a held key: slide the finger along it, either way, to
 press harder. The pedal button stands in for `Space`, and ⌨ lists the
 computer keys. On a
-phone the page scrolls above the keys, which stay put, with the
-controls' bar and its presets just above them; turn it sideways
+phone the page scrolls between the header and the keys, which stay put, with the
+controls' bar and its presets just above the keys; turn it sideways
 for wider keys. Use
 *Share → Add to Home Screen* to run Forte as a full-screen app.
 

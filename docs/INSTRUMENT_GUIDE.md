@@ -377,11 +377,12 @@ and say which in the footer help.
   `data-keep-text` keeps its text). Full screen appears, and while an
   AudioContext runs the page holds a screen wake lock. The mode is the
   same on every page; the rest is remembered per page.
-- On phones there is no room to share: the page scrolls above the
-  controls and keys, which stay put, and the Controls panel follows the
-  views; each bar's toggles slide sideways when they don't fit. Upright,
+- On phones there is no room to share: the page scrolls between the
+  header and the controls and keys, which stay put, and the Controls
+  panel follows the views; each bar's toggles slide sideways when they don't fit. Upright,
   the controls' bar (with the presets) sticks just above the controls and
-  keys until it heads the Controls panel as it scrolls by. Turned
+  keys until it heads the Controls panel, below the header, as it
+  scrolls by. Turned
   sideways, it scrolls with the panel, and the keyboard bar keeps to one
   line, its overview of the range shrunk to a thumbnail. Either way, while
   the controls are out of sight below, the bar's chevron points up and
