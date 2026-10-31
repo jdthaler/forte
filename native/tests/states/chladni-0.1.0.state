@@ -2,13 +2,13 @@ forte chladni 0.1.0
 figure 2
 shift 0
 finger 1
-force 2.5
+force 4
 speed 0.10000000000000001
 rosin 0.59999999999999998
 material 2
 thickness 0.80000000000000004
 hold 0
-ring 25
+ring 3
 hand 1.5
 room 0.29999999999999999
 venue 1
