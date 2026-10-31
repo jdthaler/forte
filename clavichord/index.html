@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Clavichord · Forte</title>
+  <meta name="description" content="A brass tangent strikes the strings and stays on them, holding the note for as long as the finger does: press harder and it goes sharp, rock the finger and it sings with a vibrato.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="Clavichord · Forte">
+  <meta property="og:description" content="A brass tangent strikes the strings and stays on them, holding the note for as long as the finger does: press harder and it goes sharp, rock the finger and it sings with a vibrato.">
+  <meta property="og:url" content="https://forte.jthaler.net/clavichord/">
+  <meta property="og:image" content="https://forte.jthaler.net/clavichord/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Clavichord's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="clavichord">
+  <div class="forte-edge" aria-hidden="true"></div>
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Clavichord</h1>
+      <span class="sub">a brass tangent strikes the strings and stays on them: press harder and the note goes sharp</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Strings and tangent">
+          <div class="card-head"><h2>The strings of <b id="focus-name">C4</b> on its tangent</h2><span class="muted" id="strings-read">play a key</span></div>
+          <canvas id="strings"></canvas>
+          <div class="readout" id="strings-info"></div>
+          <div class="caption">One string of the course from the side, bridge on the left, hitchpin on the right (heights hugely exaggerated, the vibration more so, in slow motion). The key’s brass tangent holds the string up while it is down: the speaking length runs from the bridge to it, the afterlength beyond is damped by the listing cloth. Let the key go and the whole string rings until the listing stops it.</div>
+        </div>
+        <div class="card" data-perform data-view="Pitch and pressure">
+          <div class="card-head"><h2>Pitch and pressure</h2><span class="muted" id="trace-read"></span></div>
+          <canvas id="trace"></canvas>
+          <div class="legend"><span><i style="background:var(--accent)"></i>pitch (¢ from the note)</span><span><i style="background:var(--accent-2)"></i>finger on the key (N)</span></div>
+          <div class="caption">The last five seconds of the sounding key: how hard the finger presses (aftertouch, the Bebung, the pressure control) and how far that bends the note. The tangent stretches the strings it holds up, so pressing harder is sharper, roughly ½·ΔT/T.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the speaking length’s partials</span></div>
+          <canvas id="spectrum"></canvas>
+          <div class="caption">Markers: the partials of the speaking length at the pressure set (brighter: louder at the bridge), the 4′ string’s in blue when it sounds, and the afterlength’s own pitches dimly. The tangent strikes at the very end of the speaking length, so every partial starts at once.</div>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum’s markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">A note holds, quietly, for as long as the key; lines wobble together with the Bebung. On a release the speaking length’s lines stop and the whole string’s flicker for a moment before the listing silences them.</div>
+        </div>
+        <div class="card" id="info-card" data-view="The course">
+          <div class="card-head"><h2>The course of <b id="focus-name-2">C4</b></h2></div>
+          <dl id="info"></dl>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows; a note sounds while its key is held</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>no dampers to lift: hold <kbd>Space</kbd> to keep keys down <b id="hold" class="off">off</b></span>
+      <span>MIDI: aftertouch presses the key harder, mod wheel = Bebung</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/clavichord-main.js"></script>
+</body>
+</html>

@@ -251,6 +251,32 @@
    "title": "Centre end and node strikes"
   }
  ],
+ "clavichord": [
+  {
+   "file": "01-an-air-with-bebung-on-the-long-notes.m4a",
+   "title": "An air with bebung on the long notes"
+  },
+  {
+   "file": "02-pressing-harder-bends-the-note-up.m4a",
+   "title": "Pressing harder bends the note up"
+  },
+  {
+   "file": "03-bebung-none-then-deeper-then-faster.m4a",
+   "title": "Bebung none then deeper then faster"
+  },
+  {
+   "file": "04-fretted-trill-then-unfretted.m4a",
+   "title": "Fretted trill then unfretted"
+  },
+  {
+   "file": "05-listing-on-then-thinned-out.m4a",
+   "title": "Listing on then thinned out"
+  },
+  {
+   "file": "06-bass-without-then-with-4-foot-strings.m4a",
+   "title": "Bass without then with 4 foot strings"
+  }
+ ],
  "clavicylinder": [
   {
    "file": "01-chorale-in-f.m4a",

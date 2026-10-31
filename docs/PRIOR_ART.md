@@ -202,6 +202,21 @@ requests.
   guitar function", *J. Acoust. Soc. Am.* **68**(3), 758–766 (1980),
   [doi:10.1121/1.384814](https://doi.org/10.1121/1.384814). The top and the
   sound hole as two coupled oscillators, the Kalimba's box.
+* **The clavichord.** S. Thwaites and N. H. Fletcher, "Some notes on the
+  clavichord", *J. Acoust. Soc. Am.* **69**(5), 1476–1483 (1981);
+  C. d'Alessandro, "On the dynamics of the clavichord: from tangent motion
+  to sound", *J. Acoust. Soc. Am.* **128**(4), 2173–2181 (2010),
+  [doi:10.1121/1.3478783](https://doi.org/10.1121/1.3478783); and
+  J.-T. Jiolat, C. d'Alessandro, J.-L. Le Carrou and J. Antunes, "Toward a
+  physical model of the clavichord", *J. Acoust. Soc. Am.* **150**(4), 2350
+  (2021), [doi:10.1121/10.0006438](https://doi.org/10.1121/10.0006438), a
+  modal model with the tangent's intermittent contact. V. Välimäki,
+  M. Laurson and C. Erkut, "Commuted waveguide synthesis of the
+  clavichord", *Computer Music Journal* **27**(1), 71–82 (2003),
+  [doi:10.1162/01489260360613353](https://doi.org/10.1162/01489260360613353),
+  synthesised it with waveguides and a recorded body. The Clavichord
+  solves the tangent and the strings together, live; its sources are in
+  `clavichord/README.md`.
 * **The hydraulis.** Hero's *Pneumatica* I.42 and Vitruvius's *De
   architectura* X.8 describe it; W. Walcker-Mayer, *The Roman Organ of
   Aquincum* (1972), reconstructs the organ of AD 228, and the European
