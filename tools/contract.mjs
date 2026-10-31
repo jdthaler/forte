@@ -78,11 +78,19 @@ export function changesBetween(base, head) {
 
 // The state the plugin saves (plugin.cpp's save): the header, each parameter's value by id, then
 // the Preset choice. Here: the last preset chosen, so the values are not the defaults.
+// A value off its step is saved on it, as params.cpp's constrain() rounds it (half away from zero).
 export function stateOf(contract, version) {
   const k = contract.presets.length, pr = contract.presets[k - 1];
-  const value = (p, v) => (p.kind === 'choice' ? p.options.indexOf(v) : p.kind === 'toggle' ? (v ? 1 : 0) : v);
+  const onStep = (p, v) => {
+    if (!p.step || v === p.def) return v;
+    const x = v / p.step, s = Math.sign(x) * Math.round(Math.abs(x)) * p.step;
+    return Math.abs(s - v) > 1e-9 * p.step ? s : v;
+  };
+  const value = (p, v) => (p.kind === 'choice' ? p.options.indexOf(v) : p.kind === 'toggle' ? (v ? 1 : 0) : onStep(p, v));
+  // 17 digits, with the mantissa's trailing zeros dropped (not the exponent's: 1e-10 is not 1e-1)
+  const text = (v) => v.toPrecision(17).replace(/\.?0+(?=e|$)/, '');
   const lines = [`forte ${contract.slug} ${version}`];
-  for (const p of contract.params) lines.push(`${p.id} ${value(p, pr && p.id in pr.values ? pr.values[p.id] : p.def).toPrecision(17).replace(/\.?0+$/, '')}`);
+  for (const p of contract.params) lines.push(`${p.id} ${text(value(p, pr && p.id in pr.values ? pr.values[p.id] : p.def))}`);
   if (k) lines.push(`preset ${k}`);
   return `${lines.join('\n')}\n`;
 }

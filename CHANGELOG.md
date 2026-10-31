@@ -16,6 +16,322 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-10-31 — the Chladni Plate; Clavichord; search and filters on the front page; Ion Chain; a pinned header on phones, and no fade above it; more presets on most instruments; the Ondes Martenot; a guided tour of each instrument's physics; Regal; Magnetic Resonator Piano; the Telharmonium; virginals and the lute-harpsichord
+
+### Forte 0.42.0
+- **Search the front page:** a search box in the bar with the tabs finds instruments by their name, what they are after, their tagline, their physics or their section, a word at a time, ignoring case and accents ("karman", "rhodes", "flame organ"), and marks what it matched in the cards. Each tab says how many it holds that match; `/` jumps to the box, Escape clears it, and Enter opens the only match.
+- **Filters:** chips under the bar narrow the cards by what sounds (strings, bars and bells, air, circuits, space, particles) and by whether the notes ring out or sustain while held, each saying how many it would show. The search and the filters are kept in the address, so a filtered list can be shared.
+- On a phone the search takes its own row and the tabs and the filters scroll sideways, and on a phone on its side the bar keeps to one row.
+- Every instrument in the registry names its filter options (`vibrates`, `notes`), and the site tests check them.
+- **No fade at the top of the home-screen app on iPhone:** iOS 26 and later still faded the top
+  of the page into a haze below a solid status bar, because nothing was pinned to the top of the
+  page. Every page now starts with an invisible bar pinned there, in the colour of its header,
+  and WebKit extends that colour under the status bar instead of drawing the haze.
+- **The header stays put on phones:** the instrument's name, Start audio, Quality and Panic stick
+  to the top of the screen while the views and controls scroll under them, and the Controls bar
+  sticks just below it.
+- **A guided tour of the physics on every instrument page:** *Tour*, in the header just
+  before *How it works*, opens a card that walks through the instrument a step at a time. Each step says
+  what to listen and look for, shows the views that make it visible, sets the instrument up
+  (a preset, or a few parameters) with the controls it moves outlined, and plays a short
+  phrase on the keys (*▶ Play* again, *◀ Back*, *Next ▶*). The card sits at the bottom right on
+  a tablet or a computer and folds to its title; on a phone it opens above the views, in the
+  page. Closing it (✕, *Done* or Escape) puts back the views, the preset and every setting
+  you had, and your volume is never touched.
+- **One file per instrument** (`<slug>/src/<slug>-tour.js`, written with `shared/tour.js`):
+  `tools/new-instrument.mjs` copies the template's, `test/tour-tests.mjs` checks every step's
+  views, presets, parameters and keys against the instrument, and `tools/check-pages.mjs`
+  takes each tour from start to end on a computer and a phone.
+- `tools/gen-native-params.mjs` refuses an instrument parameter named `preset`, `touch`, `quality` or `mpe`, the ids the plugins save their own parameters under.
+
+### Ribbon Piano 0.12.0
+- **Three new presets**, after the others: *Brass strings*, *Titanium strings*, *Three strings a note, una corda*.
+- **A guided tour of its physics** in 6 steps: A hammer meets the strings; Two decays, from the unison; Where the hammer strikes; Stiff wire: stretched partials; From strings to ribbons; Una corda.
+
+### Harpsichord 0.9.0
+- **A guided tour of its physics** in 6 steps: A quill slips off a string; Where it is plucked: the comb; Registers: two 8′ choirs; Lute and buff; The 4′ and the full harpsichord; Meantone thirds.
+- **Virginals and the lute-harpsichord:** a new *Instrument* choice builds the same jacks,
+  plectra and strings three more ways. The **muselar** and **spinett** virginals have one choir
+  across a rectangular case with both bridges on its soundboard, so each string drives the board
+  at both ends (its even partials in opposite phase at the two), plucked near the middle (round,
+  flute-like) or near one end (bright); *Jack line moved* slides their jacks along the strings.
+  The muselar's **arpichordium** sets lead hooks against the bass strings, which rattle on them.
+  The **lute-harpsichord** (Bach's *Lautenwerck*) strings the two 8′ choirs in gut on a shorter
+  scale with a brass 4′: gut's bending loss (η_E ≈ 0.04) rolls off the upper partials, and it
+  stretches less under a pluck. The harpsichord itself sounds as before.
+- Nine presets for them, at the end of the list, and three demos (09–11).
+- Its guided tour has two more stops: the virginals (with the arpichordium) and the lute-harpsichord.
+
+### Pipe Organ 0.9.0
+- **A guided tour of its physics** in 6 steps: A jet of air, steered; Chiff: the attack; Open and stopped pipes; Overblowing, with a memory; A wind that breathes; The plenum.
+
+### Free-Reed Organ 0.10.0
+- **Two new presets**, after the others: *16′ and 8′: the bourdon under the note*, *Lossy reeds (Q 80): they need more wind to start*.
+- **A guided tour of its physics** in 6 steps: A reed that swings through a slot; Why it swings by itself; Musette: reeds that beat; The wind decides the pitch; The bellows; The accordion’s cassotto.
+
+### Vibraphone 0.10.0
+- **Three new presets**, after the others: *Soft yarn mallets: dark and round*, *Slow motor: a lazy 1.6 Hz tremolo*, *Struck off the edge: the bars twist*.
+- **A guided tour of its physics** in 6 steps: A tuned bar; Tuned against plain bars; The resonator; Two oscillators, sharing air; The motor: vibrato that is really tremolo; Discs out of step.
+
+### Carillon 0.7.0
+- **Three new presets**, after the others: *Light clappers (1 kg): a thin, bright strike*, *Hard baton strokes: a brighter, shorter contact*, *Major-third bells, warbling*.
+- **A guided tour of its physics** in 5 steps: A bell and its partials; The strike note: a pitch that isn’t there; Minor and major third bells; Warble: a bell not quite round; Under the tower, across the square.
+
+### Celesta 0.5.0
+- **Three new presets**, after the others: *Soft felt, slow hammers: a hush*, *Heavy hammers: more fundamental, less shimmer*, *Thin bars, 1.5 mm*.
+- **A guided tour of its physics** in 5 steps: Steel bars over wooden boxes; Bar and box trade energy; Without its boxes; Where the hammer lands; The keyboard glockenspiel.
+
+### Kalimba 0.4.0
+- **Three new presets**, after the others: *Plucked near the bridge: bright overtones*, *Thin tines: soft and quiet in the bass*, *Two bottle caps on a box kalimba*.
+- **A guided tour of its physics** in 5 steps: A plucked steel tine; Behind the bridge; Nail or flesh; The box and its sound hole; Mbira with bottle caps.
+
+### Steel Pan 0.4.0
+- **Three new presets**, after the others: *Struck at the centre: the octave from the dome alone*, *A rough tuning (15 ¢): the partials beat*, *Cello pans: long skirts, warm and long*.
+- **A guided tour of its physics** in 5 steps: Notes hammered into a drum; The tuner’s harmonics; Hard strokes bloom; Flat notes, high domes; Neighbours ring along.
+
+### Hydraulis 0.2.0
+- **A guided tour of its physics** in 5 steps: Wind held up by water; The rim: a safety valve; Tired pumpers; The ranks; Slides, not keys.
+
+### Regal 0.1.0
+- New instrument, in the traditional section: the Renaissance reed organ, as Praetorius draws it
+  (1619) and Monteverdi scores it for Charon in *L'Orfeo*. Four octaves, C2–C6, with Full range
+  for A0–C8; Regal 8′, Regal 4′ and Sordun 16′ ranks, and a tremulant.
+- **The beating reed:** a brass tongue as a curved cantilever in one mode (Rayleigh's, within
+  1.5 % of the exact beam), rolling shut on its shallot from the root out (a penalty contact
+  along it, hard for bare brass and padded for a leathered shallot), driven by the Bernoulli jet
+  through the gap and fed from its own boot through the key's pallet.
+- **The resonators:** each reed's shallot and resonator as Kelly–Lochbaum tubes radiating from
+  the open end: short cylinders, funnels, capped balls with holes, or bare shallots, each cut a
+  quarter of a harmonic off one of the note's so that the tongue keeps its beat.
+- **The wind:** two weighted wedge bellows, one sinking (the wind rising about 3 % as it does)
+  while the calcant raises the other, the board bouncing on its air when a chord draws on it,
+  and the change from one to the other; a tremulant venting the trunk; or a steady blower.
+- **The pitch:** a regal's tongue sets its pitch, so the wind's movements move it. Each reed is
+  cut by a measured table (`tools/regal-tuning.mjs`) and retuned, by running it faster or slower,
+  for its voicing and the weight on the bellows; knobs moved together are put right by ear from
+  the second press of a key. Pitch bend and MPE (±7 semitones) run each key's reeds faster or
+  slower. Every reed steps at 48 kHz (96 kHz from 250 Hz), whatever the host's rate.
+- Views: the tongue on its shallot, one beat replayed slowly with its pressures and flow; the
+  resonator to scale with its impedance; the bellows and the wind; the spectrum and spectrogram.
+- Fourteen presets, six demos, a guided tour, and the plugins (AU code `Rega`).
+
+### Clavichord 0.1.0
+- **A new instrument: the Clavichord**, after the German clavichord of C. P. E. Bach's day, FF–f³ (A0–C8 with *Full range*), in Traditional. Nothing is sampled: the brass tangent strikes the strings and stays on them as the end of the speaking length, so every partial starts at once and the note lasts as long as the key is held.
+- **The finger holds the note.** The tangent rests where the strings' pull balances the finger's force; pressing harder stretches the strings and the note goes sharp (aftertouch, polyphonic or channel, and MPE pressure press harder). The Bebung, the finger rocking on the key, is on the mod wheel with its rate, or a note's own on MPE's slide.
+- **Key-up and the listing:** the tangent drops away, the whole string rings for a moment and the listing cloth stops it; thin the listing out and the afterlengths ring along at their own pitches.
+- **Double-fretted pairs** (C–C♯, E♭–E, F–F♯, G–G♯, B♭–B; D and A free): the higher tangent takes the strings, and when it lets go the lower one speaks again. **4′ strings in the bass**, as on Hass's large instruments.
+- The tuning allows for the tangent's give (the key and finger ride on the strings), solved for each string.
+- Views: the strings and tangent from the side with the engine's partials in slow motion, the finger's force and the pitch over the last five seconds, the spectrum with the partials marked, a spectrogram and the course's wire and tensions. Ten presets, six demos, a guided tour in six steps, the plugin (AU code Clvd).
+
+### Electric Grand 0.10.0
+- **Three new presets**, after the others: *Hard, worn felt: a bright clank*, *Struck near the end: every partial bright*, *Strong sympathetic resonance (hold the pedal)*.
+- **A guided tour of its physics** in 6 steps: Strings heard through the bridge; Why the piezo is bright; Frame or soundboard; Short bass strings; Two strings, two decays; The preamp’s tremolo.
+
+### Tonewheel Organ 0.12.0
+- **Three new presets**, after the others: *On 50 Hz mains — a minor third flat*, *Old B-3 — drifted capacitors, leaky wheels*, *Key click — 88 8000 000, worn contacts*.
+- **A guided tour of its physics** in 6 steps: Ninety-one spinning wheels; Drawbars: harmonics from shared wheels; Percussion; The scanner vibrato; The Leslie: Doppler, rotating; Tube drive.
+
+### Tine Piano 0.11.0
+- **Two new presets**, after the others: *Long cable: the top end rolled off*, *Amp pushed: tines into a breaking amp*.
+- **A guided tour of its physics** in 6 steps: A tuning fork with one thin prong; The bell of the attack; Harmonics made by the pickup; Voicing: where the tip sits; The tone bar; The Suitcase’s vibrato.
+
+### Reed Piano 0.10.0
+- **Three new presets**, after the others: *Fast tremolo (9 Hz)*, *Soft felt hammers: a round attack*, *Struck near the clamp: a small, clean swing*.
+- **A guided tour of its physics** in 5 steps: A struck steel reed; The bark comes from the pickup; Voicing: where the reed rides; Solder tips; Tremolo through the speakers.
+
+### Tangent Clavier 0.10.0
+- **Three new presets**, after the others: *Funk · upper pickup, brilliant, muted*, *Growl · magnets close, loud notes double*, *Hard tips · little squeeze, little bend*.
+- **A guided tour of its physics** in 5 steps: A string pinched by its key; Two pickups, a comb; Release: the thunk; Velocity: brighter, not louder; Stiff strings, and a glide.
+
+### Sticky-Pad Piano 0.10.0
+- **Two new presets**, after the others: *Stiff foam: a louder middle and treble*, *Light solder tips: longer reeds, more overtones*.
+- **A guided tour of its physics** in 5 steps: Plucked by sticking; Touch: how fast the bond breaks; Pads that age; Inharmonic reed, harmonic pickup; Pianet N: an electrostatic pickup.
+
+### Trautonium 0.2.0
+- **Two new presets**, after the others: *Vowel “ah” (700 Hz and 1.1 kHz)*, *All four circuits*.
+- **A guided tour of its physics** in 5 steps: A neon lamp that flashes; Formants: a voice that keeps its vowel; Undertones: the Mixtur; Weak sync: dividers that slip; One wire, sliding.
+
+### Telharmonium 0.1.0
+- **Thaddeus Cahill's Telharmonium (1906), the electric music plant on Broadway**, in the electric section: alternators on twelve pitch-shafts geared to one motor (or the eight built in 1906, whose missing keys played the just thirds of A, D, E and G), each key's harmonics the alternators with two to eight times its teeth on its own shaft, so keys that share an alternator share its wave, in phase.
+- **The circuits:** every winding is a circuit of one time constant L/R, so each relay's closing leaves an offset that decays (the thump that began every note), and its contacts slide home over a few milliseconds while the current follows them. Each manual's eight harmonic buses carry stops of induction coils, and the notes on a bus share its load: a chord robs its own notes, more so on soft stops.
+- **The motor** sags flat under the load with the flywheel's time constant and comes back as the notes let go; pitch bend turns its field rheostat.
+- **Down the line:** each manual's music goes out on its own telephone line, the telegrapher's line solved exactly (city cable or open wire on poles, up to 250 km), to a receiver whose magnet pulls a clamped soft-iron diaphragm (Cahill's thin one near 1 kHz, or Arthur Cahill's near 300 Hz) with the square of the flux, so loud bass growls and harmonics without their ground tone bring it back, through a paper horn that resonates on every c/2L.
+- Pierce's intonation takes thirds and sevenths just from a held key's shaft; key touch, aftertouch and the swell pedal (CC11, the mod wheel).
+- The page draws the shafts and their alternators in use, every bus's current against a lone note's, the line's and the receiver's response under the focused key's harmonics, the key's alternator and harmonics, the spectrum and the spectrogram. Seventeen presets, eight demos, the plugin (AU code Telh).
+
+### Magnetic Resonator Piano 0.1.0
+- New instrument: Andrew McPherson's Magnetic Resonator Piano (2009), a grand piano with an
+  electromagnet over the strings of every note, fed from one pickup on the soundboard through a
+  band-pass filter and a phase-locked loop, so each coil pulls its strings in step with their own
+  motion. Notes grow out of silence and sustain as long as the key is down, or sing one harmonic
+  alone; the hammers can strike too. All 88 keys.
+- **The strings:** a concert grand's stiff strings (the Ribbon Piano's scale), one to three a
+  key, each partial integrated exactly, the unisons coupled through a shared resistive bridge
+  (prompt sound and aftersound), felt hammers and dampers.
+- **The coil:** where McPherson hung them (a fifth of the length in the bass to a third in the
+  treble), 21 mm wide, pulling as i²/g² on a biased current that never goes negative, clipped at
+  the amplifier's rails and slowed by the coil's 3 kHz corner. A partial with its node under the
+  coil cannot be driven (the 5th at C2 and C3, the 4th at C4, the 3rd from C5, as McPherson
+  found); a coil set too close makes the string slap it.
+- **The loop:** the pickup a block late, a Q-50 band-pass on the driven partial, a phase-locked
+  loop and a second oscillator at the calibrated phase; filters a semitone either side hold the
+  loop when a neighbour is louder; fifteen channels, as the MRP had. Harmonic (any of the first
+  eight, or two or three partials at once), drive waveform (sine, rich, odd, noise), brightness
+  on the mod wheel, phase error, an open loop, bias, gap, coil position, swell time.
+- The page draws the string under the coil in slow motion, the swell and the loop's lock over
+  eight seconds, what the coil can reach of each partial, a spectrum and a spectrogram. Seven
+  demos, ten presets, and a guided tour in seven steps.
+- **Quality:** 16 and 8 partials a string instead of up to 32, and two strings a key at Low.
+- The plugins (AU, VST3, CLAP) and the Forte app play it too.
+
+### Ondes Martenot 0.1.0
+- **A new electric instrument: Maurice Martenot's ondes musicales (1928).** The note is the beat of two radio-frequency oscillators, stepped exactly each sample through Adler's equation (1946), so the oscillators pull on each other as they near: within the lock range the beat stops, and above it the low notes' harmonics fall only as rⁿ, r = (Δ − √(Δ² − K²))/K. Every key is trimmed so the pulled beat lands on its note.
+- **Keys or the ribbon:** an ondes for every key (chords), or the instrument as built, one tone whose ring slides evenly in semitones to each key pressed while another is held. The keyboard's side-to-side vibrato is on the mod wheel; pitch bend and MPE slide the note (±48 semitones), CC74 rocks its own key, pressure presses harder.
+- **The intensity key:** velocity and aftertouch press a bag of graphite and mica powder (0.3 to 9.6 N), and the level follows Quartier et al.'s measurements (2015): 45 dB SPL at 0.39 N to 95 dB at 9.6 N. It squeezes in and lets go fast, and its contact opens at the top.
+- **The drawer's timbres:** onde (the detector's envelope, with a balance from a pure sine to a full-wave rectified one), creux, petit gambe, gambe, nasillard (with its pulse width), octaviant and souffle, any of them at once, band-limited with polyBLEP and polyBLAMP where the beat's phase crosses their steps and corners.
+- **The four diffuseurs:** the principal loudspeaker; the Résonance's seven brass springs (their modes from the curved-rod dispersion relation, chirping below their 368 Hz transition); the Métallique's tam-tam (the free plate's modes, solved from Kirchhoff's frequency equation, driven at the voice coil, 40–75 cm across); and the Palme's 24 strings in two chromatic octaves from A3, rung through their bridge. Each stands at its own place across the stereo field.
+- **Thermal drift:** the oscillators wander by hertz as their valves warm, the same hertz on every note (off by default).
+- **A guided tour** in seven steps: the beat, the intensity key, pulling, the drawer, the ribbon, the diffuseurs, and all of them together.
+- Quality: Medium plays 12 voices, four springs and the tam-tam's modes to 3 kHz; Low 6 voices, two springs and modes to 1.5 kHz.
+
+### Viola Organista 0.11.0
+- **Three new presets**, after the others: *Motor drive: no treadle swing*, *Coarse rosin: a grainy tone*, *Lively soundboard: louder, shorter notes*.
+- **A guided tour of its physics** in 5 steps: Strings bowed by a wheel; Schelleng’s window; Where the wheel touches; The attack; Sympathetic strings.
+
+### Glass Armonica 0.10.0
+- **Three new presets**, after the others: *Ridged fingertips: a breath of hiss*, *An uneven foot: a big treadle swing*, *Lossy glass: the bowls stop soon after the finger*.
+- **A guided tour of its physics** in 6 steps: A wet finger on spinning glass; Why it warbles; The treadle’s speed; How hard to press; Water in the bowl; The free bowl turns its pattern.
+
+### Clavicylinder 0.3.0
+- **Two new presets**, after the others: *One layer of cloth: the key’s knock shows*, *Heavy flywheel: chords keep the speed*.
+- **A guided tour of its physics** in 4 steps: Iron bars rubbed by glass; A threshold, then a swell; Only the lowest mode; Cloth wet, cloth soaked.
+
+### Hurdy-Gurdy 0.2.0
+- **Two new presets**, after the others: *Four coups a turn*, *Cotton on the strings: a soft, wide grip*.
+- **A guided tour of its physics** in 5 steps: A wheel for a bow; The buzzing bridge; Coups: rhythm from the wrist; Sec and gras; Too slow for the top.
+
+### Pyrophone 0.10.0
+- **Two new presets**, after the others: *Heard side-on: the octave cancels, a hollow tone*, *Turbulent flames: breathy*.
+- **A guided tour of its physics** in 5 steps: Flames that sing; Born of an instability; Hysteresis: tubes that remember; Where the flame sits: Rayleigh’s map; Glass that warms.
+
+### Singing Arc 0.9.0
+- **Three new presets**, after the others: *A short arc (1 mm): low voltage, a gentle curve*, *A lossy coil: the notes grow slowly and quietly*, *Low current (1.5 A): the steepest curve*.
+- **A guided tour of its physics** in 6 steps: A lamp that sings; A loop, not a line; Too slow to sing high; Keys add capacitors; Singing and hissing; The talking arc.
+
+### Huygens Keyboard 0.11.0
+- **A new preset**, after the others: *High supply (380 V): straighter, brighter ramps*.
+- **A guided tour of its physics** in 5 steps: Oscillators that pull each other; Locked chords stop beating; Arnold tongues; Too strong: intervals collapse; Out of tune, played in tune.
+
+### Gong Keyboard 0.10.0
+- **Three new presets**, after the others: *Aluminium gong: light, and quick to die*, *Wind gong: thin and flat, struck near the rim*, *A hand on the gong: choked on release*.
+- **A guided tour of its physics** in 6 steps: A plate that rings; Harder: the crash; Opera gongs: pitch that glides; Where the mallet lands; Thick bells, thin crashes; A tam-tam roll.
+
+### Black-Hole Keyboard 0.10.0
+- **Three new presets**, after the others: *GW190814-like: a lopsided merger (q = 9, a = 0.28)*, *Seen face-on (ι = 0°): circular polarisation*, *A long inspiral: three octaves of chirp*.
+- **A guided tour of its physics** in 5 steps: A black hole rings; Two cycles and gone; Spin it up; How it was struck; Chirp, merger, ringdown.
+
+### Quantum Keyboard 0.10.0
+- **Three new presets**, after the others: *Morse molecule near dissociation: bright and lopsided*, *Long revivals: eight beats*, *Velocity detector: softer overtones*.
+- **A guided tour of its physics** in 5 steps: A wavepacket in a box; Revivals; The harmonic oscillator never dephases; Octave echoes: a molecule; Decoherence: no way back.
+
+### Bubble Organ 0.9.0
+- **Two new presets**, after the others: *Pressurised tank (4 atm): about an octave up*, *90 % glycerol: thick, but the treble still rings*.
+- **A guided tour of its physics** in 5 steps: A bubble is a spring and a mass; One frequency, no overtones; Deeper, the spring stiffens; Other gases; Rising to the surface.
+
+### Spring Keyboard 0.7.0
+- **A new preset**, after the others: *Thick wire: the chirps go up*.
+- **A guided tour of its physics** in 5 steps: A spring that echoes; Chirps: dispersion; Wider coils, lower chirps; Springs together: a wash; The Slinky.
+
+### Star Keyboard 0.7.0
+- **Two new presets**, after the others: *A lighter track (0.9 M☉)*, *Steep linewidths: the high modes blur*.
+- **A guided tour of its physics** in 5 steps: Stars that ring; Driven by convection; A comb of modes; Down the track: dwarfs to red giants; Rotation splits the modes.
+
+### Wind Harp 0.8.0
+- **A new preset**, after the others: *Slow, gentle gusts: the strings sway in and out*.
+- **A guided tour of its physics** in 5 steps: Strings played by the wind; Lock-in: wake and string agree; A rising wind climbs the harmonics; A gusty evening; Kircher’s harp.
+
+### Storage Ring 0.6.0
+- **Three new presets**, after the others: *One button pickup on both channels*, *A slow pickup: the low harmonics weakened*, *A long-lived beam: slow damping, long notes*.
+- **A guided tour of its physics** in 5 steps: A bunch going round; Betatron oscillation: sidebands; Decoherence and recoherence; Octupoles: filamentation for good; Near the half-integer.
+
+### RF Cavity Bells 0.5.0
+- **Three new presets**, after the others: *Read at the far end: the transmitted power alone*, *Long bunches: only the lowest modes*, *Far off the axis: the dipole band rings*.
+- **A guided tour of its physics** in 5 steps: A bell made of microwaves; Nine cells, nine modes: a passband; In step, out of step; Higher-order modes; Warmer than 2 K.
+
+### Collider Showers 0.4.0
+- **Three new presets**, after the others: *A long crystal (50 X₀): nothing leaks*, *A lossy crystal (Q 200): short notes*, *Piezo at the middle: the even harmonics silent*.
+- **A guided tour of its physics** in 5 steps: A crystal heated by a shower; Where the heat lands sets the tone; Electrons, photons, pions; Off the axis, and on the crack; Pile-up.
+
+### Whistlers 0.4.0
+- **Two new presets**, after the others: *By day: a low ionosphere (70 km), higher tweeks*, *Dense plasma: slow, drawn-out whistlers*.
+- **A guided tour of its physics** in 5 steps: Lightning heard from space; The nose; Echoes; The plasmapause; Dawn chorus.
+
+### Early Universe 0.3.0
+- **Three new presets**, after the others: *No neutrinos: an earlier equality*, *A red tilt (n_s = 0.9): the low harmonics loud*, *No helium: the plasma holds the light longer*.
+- **A guided tour of its physics** in 5 steps: Sound in the early universe; Harmonics: the acoustic peaks; Baryons load the odd harmonics; Silk damping; Dark matter’s wells.
+
+### Hydrogen Lamp 0.3.0
+- **Two new presets**, after the others: *A cool lamp (5,000 K): only the first lines*, *A hot lamp (80,000 K): far up the series*.
+- **A guided tour of its physics** in 5 steps: The light of hydrogen, as sound; The cascade; A lamp and a nebula; Other windows: Lyman and Paschen; Crowded by ions: Stark broadening.
+
+### Project 8 0.4.0
+- **Two new presets**, after the others: *A shallow trap: hardly any vibrato*, *Tritium in the antenna ring: shifted harmonics*.
+- **A guided tour of its physics** in 5 steps: An electron’s radio song; A magnetic bottle; Gas cuts the tracks; Tritium and the neutrino’s mass; Relativistic electrons.
+
+### ABRACADABRA 0.4.0
+- **A new preset**, after the others: *A fast stream (700 km/s): a second line, sharp of the halo*.
+- **A guided tour of its physics** in 5 steps: Listening for dark matter; A note that swells on its own; Buried in noise; The halo’s fingerprint; Where it sits.
+
+### TESS 0.3.0
+- **Two new presets**, after the others: *A faint star (magnitude 13): dips in the hiss*, *A hot star (6,800 K): flat-bottomed dips*.
+- **A guided tour of its physics** in 5 steps: A planet crossing its star; Kepler’s third law; Limb darkening and grazing; Photon noise; Real planets.
+
+### CUORE 0.2.0
+- **Two new presets**, after the others: *Firm holders: the heat drains fast, short pulses*, *Loose holders: the heat lingers*.
+- **A guided tour of its physics** in 5 steps: A thermometer for single decays; A formant from heat flow; Warmer, quieter, darker; Saturation; A smaller crystal.
+
+### Ion Chain 0.1.0
+- New instrument, in the devices section: a string of trapped ions, the crystal of a trapped-ion
+  quantum computer. Every key is a Paul trap whose axial frequency is the note (slowed a thousand
+  times: A4 is a trap at 440 kHz), holding 1 to 20 ions.
+- **The crystal:** solved from the trap's pull against the ions' Coulomb repulsion, a line or,
+  once the radial pull is weaker than the line's own push, a zigzag; its normal modes from the
+  Hessian, so a note's partials are 1, √3, √(29/5) … times the note, one more for every ion. The
+  tests hold it to James (1998)'s equilibria and modes and the closed forms for two and three ions.
+- **The kick:** a laser pulse across the chain, its place, width, angle and length choosing which
+  modes ring: an end ion rings them all, the centre ion only the odd ones, a beam along the axis
+  only the centre of mass (Kohn's theorem), and a long pulse only the low ones.
+- **The electrodes:** two, one a channel, hear the image current the ions drive (Shockley–Ramo):
+  far away only the centre of mass, close or beside the chain the other modes. Their resistor
+  cools the modes it hears while a key is held; letting go turns on the cooling laser, on every ion
+  or only the end one (sympathetic cooling). Space and the pedal keep it off.
+- **Playing:** the mod wheel weakens the radial pull through the linear–zigzag transition while
+  notes ring (their motion carried onto the new modes); pitch bend and MPE change the trap's
+  frequency.
+- Views: the crystal as a camera sees it, each ion smeared over its motion, with the electrodes
+  and the laser; every normal mode's shape and how loud it is; the spectrum, the spectrogram and
+  the trap's numbers.
+- Twelve presets, eight demos, and the plugins (AU code `Ionc`).
+- **A guided tour of its physics** in 6 steps: One, two, three ions; A chain rings like a bell; Where the laser lands; A beam along the axis; What the electrodes hear; The zigzag.
+
+### Chladni Plate 0.1.0
+- New instrument, in the phenomena section: Chladni's bowed plates (1787). Every key is a square
+  brass plate clamped at its centre, bowed at its edge while the key is held, with a fingertip
+  resting on one of the figure's nodal lines; sand on the plate runs off the parts that swing and
+  draws the figure.
+- **The plate:** Kirchhoff's thin plate solved by Rayleigh–Ritz in Legendre polynomials (four
+  symmetry blocks of 144), free or clamped at its centre by a stiff disc; the free square matches
+  Leissa's frequencies within 0.05 %. Every key's plate is cut so the chosen figure's mode sounds
+  its note (10.5 cm across at A4 for the diagonals in 1.5 mm brass), in brass, glass, steel or
+  aluminium.
+- **The bow:** stick and slip against up to 64 modes a plate, solved implicitly every sample. The
+  force is set as a multiple of the figure's speaking threshold from linear stability; velocity,
+  aftertouch and the bow's first bite press harder. Two fingers on the figure's nodal lines damp
+  its rivals. Lift them, move the bow along the edge (the mod wheel, or MPE slide) or press too
+  hard, and another mode takes the bow.
+- **The page:** the plate with its sand, the bow and the fingers; the ten figures' nodal lines;
+  the spectrum with the plate's modes; the mode table. Six demos, eleven presets.
+
 ## 2026-10-31 — Hurdy-Gurdy
 
 ### Forte 0.41.1
