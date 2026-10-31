@@ -44,6 +44,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Sticky-Pad Piano](pianet/) | Hohner Pianet | reeds plucked by rate-dependent adhesion (fracture mechanics of the pad), magnetic or electrostatic pickup |
 | ✅ | [Trautonium](trautonium/) | Trautwein's Trautonium (1930), Sala's Mixtur-Trautonium (1952) | a neon lamp's relaxation sawtooth, its capacitor charged through a resistance wire (exact firing times, polyBLEP); four dividers, lamps ganged to the wire and fired by the master's sync pulse on every n-th flash, whose capture window gives where they divide true, slip or fire a flash early; four fixed resonant circuits rung by every flash (formants); one wire that slides between keys or a manual per key; finger pressure, a volume pedal, pitch bend and MPE |
 | ✅ | [Telharmonium](telharmonium/) | Cahill's Telharmonium (1906) | inductor alternators on twelve (or the eight built) geared pitch-shafts, each key's harmonics on its own shaft so shared alternators sound in phase; each winding's L/R and the relays' contacts (the switching thump); harmonic buses whose notes rob one another; the motor sagging under the load; the telegrapher's line solved exactly (city cable or open wire); a magnetic receiver pulled by the flux squared (growl, a phantom ground tone) and a paper horn; Pierce's just thirds and sevenths |
+| ✅ | [Magnetic Resonator Piano](resonator/) | Andrew McPherson's MRP (2009) | a grand's stiff strings and coupled unisons, an electromagnet over each note pulling ∝ i²/g² on a biased current, driven from one soundboard pickup through a band-pass, a phase-locked loop and a calibrated phase: notes grow out of silence, sustain, sing one harmonic or two at once; nodes under the coil, fifteen channels, hammers if you want them |
 | ✅ | [Ondes Martenot](ondes/) | Martenot's ondes musicales (1928) | two radio-frequency oscillators beating, pulling on each other through Adler's equation (stepped exactly each sample as a Möbius map, each key trimmed so the pulled beat is its note); a keyboard or a ribbon sliding evenly in semitones, the keyboard's vibrato; an intensity key following measured force and level; the drawer's timbres band-limited where the phase crosses them; the diffuseurs: springs and a tam-tam from their modes, and the palme's 24 strings; drift, pitch bend and MPE |
 
 ### Experiments from history
@@ -150,6 +151,7 @@ is the mod wheel's control wherever the instrument has one.
 | Sticky-Pad Piano | Tack F₀ · Pole gap at C4 · Pad damping c_p | Tone | Amp drive |
 | Trautonium | Sync pulse · Circuit 1 resonance · Circuit 2 resonance | Circuit 2 tuning | Circuit 1 tuning |
 | Telharmonium | Manual II's 1st, 3rd and 5th harmonic stops | Distance down the line | Swell pedal |
+| Magnetic Resonator Piano | Drive (coil current) · Swell time · Hammer | Phase error | Brightness |
 | Viola Organista | Key pressure · Treadle unevenness · Rosin grain | Bow position β | Wheel speed |
 | Glass Armonica | Skin moisture · Treadle unevenness · Water in the bowls | Finger pressure | Treadle speed |
 | Clavicylinder | Foot’s push · Cloth wetness · Grip | Key pressure | Treadle speed |
