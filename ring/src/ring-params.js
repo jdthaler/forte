@@ -81,4 +81,7 @@ export const PRESETS = [
   { name: 'Long bunch, slow RF', p: { bunch: 0.08, synch: 1.2, chroma: 8 } },
   { name: 'Near the half-integer', p: { tune: 0.48, chroma: 12 } },
   { name: 'Short lifetime: plucked beam', p: { lifetime: 1.5, bunch: 0.012, damping: 0.6 } },
+  { name: 'One button pickup on both channels', p: { pickup: 'single' } },
+  { name: 'A slow pickup: the low harmonics weakened', p: { cutoff: 1500 } },
+  { name: 'A long-lived beam: slow damping, long notes', p: { lifetime: 600, damping: 15 } },
 ];

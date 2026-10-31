@@ -99,6 +99,9 @@ inline const PresetValue kPreset6[] = {{p::clapMass, 6}};
 inline const PresetValue kPreset7[] = {{p::strikeHeight, 0.33}};
 inline const PresetValue kPreset8[] = {{p::distance, 300}, {p::room, 0.3}};
 inline const PresetValue kPreset9[] = {{p::distance, 10}, {p::room, 0.08}};
+inline const PresetValue kPreset10[] = {{p::clapMass, 1}};
+inline const PresetValue kPreset11[] = {{p::speedMax, 3.8}};
+inline const PresetValue kPreset12[] = {{p::profile, 1}, {p::asym, 0.6}, {p::strikeAngle, 11.25}};
 inline const Preset kPresets[] = {
   {"Concert carillon: minor-third bells, iron clappers", nullptr, 0},
   {"Major-third bells (Eijsbouts–Eindhoven)", kPreset1, 1},
@@ -110,6 +113,9 @@ inline const Preset kPresets[] = {
   {"Struck high on the waist", kPreset7, 1},
   {"Across the town square (300 m)", kPreset8, 2},
   {"Under the tower (10 m)", kPreset9, 2},
+  {"Light clappers (1 kg): a thin, bright strike", kPreset10, 1},
+  {"Hard baton strokes: a brighter, shorter contact", kPreset11, 1},
+  {"Major-third bells, warbling", kPreset12, 3},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::hardness}, {109, p::strikeHeight}, {111, p::clapMass}, {113, p::around}, {114, p::distance}};
@@ -128,7 +134,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Bronze bells tuned partial by partial; the note you hear, the strike note, is a virtual pitch made by partials an octave and more above it.", .auSubtype = "Carl",
     .vst3Id = {0x97, 0xf5, 0x65, 0xa1, 0xf0, 0xb1, 0x1e, 0x35, 0x6c, 0x30, 0x27, 0xfa, 0xa9, 0x44, 0xda, 0xc1},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 10,
+    .presets = kPresets, .presetCount = 13,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 41, .keyHi = 108, .compassLo = 48, .compassHi = 96, .compass = p::fullRange, .space = Space::none,
     .modWheel = -1, .modWheelMax = 0,

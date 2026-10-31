@@ -113,4 +113,6 @@ export const PRESETS = [
   { name: 'Drones alone, turning', p: { chanterelles: false, keep: true } },
   { name: 'Slow crank: the top notes crunch', p: { crank: 0.35 } },
   { name: 'Wide unison: two chanterelles apart', p: { unison: 9 } },
+  { name: 'Four coups a turn', p: { coups: 'four' } },
+  { name: 'Cotton on the strings: a soft, wide grip', p: { v0: 0.4 } },
 ];

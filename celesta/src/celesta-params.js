@@ -79,4 +79,7 @@ export const PRESETS = [
   { name: 'Struck on the node: the fundamental drops out', p: { strike: 0.224 } },
   { name: 'Struck off the edge: the bars twist', p: { across: 0.85, hardness: 600 } },
   { name: 'Pedal down: every note rings', p: { pedalLock: true } },
+  { name: 'Soft felt, slow hammers: a hush', p: { hardness: 40, speedMax: 1.2 } },
+  { name: 'Heavy hammers: more fundamental, less shimmer', p: { mass: 10 } },
+  { name: 'Thin bars, 1.5 mm', p: { thick: 1.5 } },
 ];

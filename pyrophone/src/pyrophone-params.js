@@ -56,4 +56,6 @@ export const PRESETS = [
   { name: 'Flame low (8 %), quick flame: the octave takes over', p: { xf: 0.08, lag: 0.2, flame: 1.44, listen: 0.2 } },
   { name: 'Cold glass: big warm-up drift', p: { drift: 30, warm: 3 } },
   { name: 'Hot-wire Rijke tube (short lag, wide bore, at ¼)', p: { lag: 0.1, bore: 0.05, xf: 0.25, flame: 3.34 } },
+  { name: 'Heard side-on: the octave cancels, a hollow tone', p: { listen: 0 } },
+  { name: 'Turbulent flames: breathy', p: { noise: 0.08 } },
 ];

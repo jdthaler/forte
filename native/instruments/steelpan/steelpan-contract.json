@@ -46,6 +46,9 @@
     {"name":"Hard sticks, high domes","values":{"contact":0.3,"rise":8}},
     {"name":"Flat notes (no dome)","values":{"rise":0}},
     {"name":"Untuned, as sunk","values":{"tuning":"raw"}},
-    {"name":"Chromatic layout","values":{"layout":"chromatic","letRing":true,"coupling":0.004}}
+    {"name":"Chromatic layout","values":{"layout":"chromatic","letRing":true,"coupling":0.004}},
+    {"name":"Struck at the centre: the octave from the dome alone","values":{"along":0}},
+    {"name":"A rough tuning (15 ¢): the partials beat","values":{"accuracy":15}},
+    {"name":"Cello pans: long skirts, warm and long","values":{"skirt":2.2,"t60":2.4,"contact":1,"rise":2.5}}
   ]
 }

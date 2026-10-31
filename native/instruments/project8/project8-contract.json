@@ -36,6 +36,8 @@
     {"name":"A long trap: a slow bounce","values":{"length":60,"depth":3}},
     {"name":"3 tesla: quick chirps","values":{"field":3}},
     {"name":"Relativistic: 300 keV electrons","values":{"source":"energy","energy":300,"receiver":"antennas"}},
-    {"name":"Perfect vacuum, quiet amplifier","values":{"gas":1e-11,"noise":0}}
+    {"name":"Perfect vacuum, quiet amplifier","values":{"gas":1e-11,"noise":0}},
+    {"name":"A shallow trap: hardly any vibrato","values":{"depth":0.02}},
+    {"name":"Tritium in the antenna ring: shifted harmonics","values":{"source":"tritium","receiver":"antennas"}}
   ]
 }

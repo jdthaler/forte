@@ -179,6 +179,9 @@ inline const PresetValue kPreset5[] = {{p::drawbar1, 8}, {p::drawbar2, 0}, {p::d
 inline const PresetValue kPreset6[] = {{p::drive, 0}, {p::drawbar1, 0}, {p::drawbar2, 0}, {p::drawbar3, 8}, {p::drawbar4, 0}, {p::drawbar5, 0}, {p::drawbar6, 0}, {p::drawbar7, 0}, {p::drawbar8, 0}, {p::drawbar9, 0}, {p::percOn, 0}, {p::percSoft, 0}, {p::percFast, 1}, {p::percThird, 1}, {p::vib, 0}, {p::leslie, 0}, {p::motor, 1}};
 inline const PresetValue kPreset7[] = {{p::drawbar1, 0}, {p::drawbar2, 0}, {p::drawbar3, 8}, {p::drawbar4, 0}, {p::drawbar5, 0}, {p::drawbar6, 0}, {p::drawbar7, 0}, {p::drawbar8, 0}, {p::drawbar9, 0}, {p::percOn, 1}, {p::percSoft, 0}, {p::percFast, 0}, {p::percThird, 0}, {p::vib, 0}, {p::leslie, 1}, {p::motor, 1}};
 inline const PresetValue kPreset8[] = {{p::drive, 0}, {p::room, 0.1}, {p::drawbar1, 8}, {p::drawbar2, 8}, {p::drawbar3, 8}, {p::drawbar4, 8}, {p::drawbar5, 8}, {p::drawbar6, 8}, {p::drawbar7, 8}, {p::drawbar8, 8}, {p::drawbar9, 8}, {p::percOn, 0}, {p::percSoft, 0}, {p::percFast, 1}, {p::percThird, 1}, {p::vib, 0}, {p::leslie, 0}, {p::motor, 1}};
+inline const PresetValue kPreset9[] = {{p::mains, 50}, {p::drawbar1, 8}, {p::drawbar2, 8}, {p::drawbar3, 8}, {p::drawbar4, 0}, {p::drawbar5, 0}, {p::drawbar6, 0}, {p::drawbar7, 0}, {p::drawbar8, 0}, {p::drawbar9, 0}, {p::percOn, 0}, {p::percSoft, 0}, {p::percFast, 1}, {p::percThird, 1}, {p::vib, 6}, {p::leslie, 1}, {p::motor, 1}};
+inline const PresetValue kPreset10[] = {{p::drift, 40}, {p::leakage, -50}, {p::crosstalk, -35}, {p::drawbar1, 8}, {p::drawbar2, 8}, {p::drawbar3, 8}, {p::drawbar4, 0}, {p::drawbar5, 0}, {p::drawbar6, 0}, {p::drawbar7, 0}, {p::drawbar8, 0}, {p::drawbar9, 0}, {p::percOn, 0}, {p::percSoft, 0}, {p::percFast, 1}, {p::percThird, 1}, {p::vib, 6}, {p::leslie, 1}, {p::motor, 1}};
+inline const PresetValue kPreset11[] = {{p::contactTime, 0}, {p::bounce, 1.5}, {p::spread, 3}, {p::drawbar1, 8}, {p::drawbar2, 8}, {p::drawbar3, 8}, {p::drawbar4, 0}, {p::drawbar5, 0}, {p::drawbar6, 0}, {p::drawbar7, 0}, {p::drawbar8, 0}, {p::drawbar9, 0}, {p::percOn, 0}, {p::percSoft, 0}, {p::percFast, 1}, {p::percThird, 1}, {p::vib, 0}, {p::leslie, 1}, {p::motor, 1}};
 inline const Preset kPresets[] = {
   {"Jazz trio — 88 8000 000, 3rd perc fast", kPreset0, 16},
   {"Full organ — 88 8888 888, Leslie fast", kPreset1, 17},
@@ -189,6 +192,9 @@ inline const Preset kPresets[] = {
   {"Single wheel — 00 8000 000, dry", kPreset6, 17},
   {"2nd perc only — 00 8000 000, slow decay", kPreset7, 16},
   {"Full drawbars, dry — compare tunings", kPreset8, 18},
+  {"50 Hz mains — 88 8000 000, a minor third flat", kPreset9, 17},
+  {"Old B-3 — 88 8000 000, drifted capacitors, leaky wheels", kPreset10, 19},
+  {"Key click — 88 8000 000, worn contacts", kPreset11, 19},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::expression, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{1, p::leslie, Controller::values, 1, 2}, {11, p::expression}, {64, p::leslie, Controller::toggle, 1, 2}, {107, p::drawbar1}, {109, p::drawbar3}, {111, p::drawbar4}, {113, p::drive}, {114, p::expression}};
@@ -207,7 +213,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "91 spinning gear-driven wheels, bouncing key contacts, a scanner on an LC delay line and a rotating Doppler horn.", .auSubtype = "Tonw",
     .vst3Id = {0x43, 0xe5, 0xc5, 0x1c, 0xb9, 0x9f, 0x6a, 0xa1, 0x90, 0xef, 0x05, 0x66, 0x9a, 0xde, 0xb6, 0xab},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 9,
+    .presets = kPresets, .presetCount = 12,
     .keep = kKeep, .keepCount = 18,
     .keyLo = 21, .keyHi = 108, .space = Space::none,
     .modWheel = -1, .modWheelMax = 0,

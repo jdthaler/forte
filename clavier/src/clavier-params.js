@@ -92,4 +92,7 @@ export const PRESETS = [
   { name: 'Soft tips · wide vibrato', p: { tip: 0.6, wrap: 1.5 } },
   { name: 'No yarn · release rings a minor third down', p: { yarn: 30 } },
   { name: 'Ideal string · no stiffness, no glide', p: { stiff: 0, kc: false } },
+  { name: 'Funk · upper pickup, brilliant, muted', p: { pickup: 'upper', medium: false, brilliant: true, muteOn: true, mute: 0.4, gain: 6 } },
+  { name: 'Growl · magnets close, loud notes double', p: { field: 0.7 } },
+  { name: 'Hard tips · little squeeze, little bend', p: { tip: 0.08 } },
 ];

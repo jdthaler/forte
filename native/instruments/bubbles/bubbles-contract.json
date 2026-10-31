@@ -45,6 +45,8 @@
     {"name":"Metronome: even bubbles, all the same size","values":{"rate":2.5,"irregular":0,"spread":0}},
     {"name":"Water vapour, a quarter atmosphere: ¾ of a semitone flatter","values":{"pressure":0.25,"vapour":true}},
     {"name":"Surface echo: the hydrophones hear the surface too","values":{"echo":true}},
-    {"name":"Surface echo 20 m down: a slap after every bubble","values":{"echo":true,"depth":20}}
+    {"name":"Surface echo 20 m down: a slap after every bubble","values":{"echo":true,"depth":20}},
+    {"name":"Pressurised tank (4 atm): about an octave up","values":{"pressure":4}},
+    {"name":"90 % glycerol: thick, but the treble still rings","values":{"liquid":"gly90"}}
   ]
 }
