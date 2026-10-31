@@ -213,6 +213,12 @@ requests.
   water's bounce, the pumps, the bubbles at the rim) from those
   descriptions, with the Pipe Organ's flue pipes; its sources are in
   `hydraulis/README.md`.
+* **The Telharmonium.** T. Cahill, [US 580,035](https://patents.google.com/patent/US580035A/en)
+  (1897), and R. Weidenaar, *Magic Music from the Telharmonium* (Scarecrow
+  Press, 1995), the history and engineering the Telharmonium is built from;
+  the tonewheel organs ([Hammond, 1934](https://patents.google.com/patent/US1956350A/en))
+  are its descendants. We did not find an earlier physical model of it. Its
+  sources are in `telharmonium/README.md`.
 
 ## 2. Techniques Forte uses, and where they come from
 
