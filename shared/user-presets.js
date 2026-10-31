@@ -13,7 +13,7 @@
 //   attachPresets({ instrument: INSTRUMENT, get: () => P, set: (values) => …, toast })
 // get gives the page's parameters (for the organ, P with its console); values() turns them into
 // the preset's by contract id. set takes every parameter's value by contract id and applies them
-// as choosing a preset would. toast is the page's.
+// as choosing a preset would. toast is the page's. pageState (below) hands them to a guided tour.
 
 import { presetParams, presetFile, readPresetFile, linkHash, readLinkHash, complete, cleanName } from './presets.js';
 import { byId, INSTRUMENTS } from './registry.js';
@@ -25,10 +25,15 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const fileName = (s) => `${s.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '-').trim() || 'Forte preset'}.json`;
 const USER = '__user:';
 
+// The page's settings by contract id, for a guided tour (shared/tour.js), once attachPresets runs:
+// { instrument, params, get() → every parameter's value, set(values) as choosing a preset would }
+export const pageState = {};
+
 export function attachPresets({ instrument: I, get, set, values = (P) => P, toast = () => {} }) {
   const sel = document.querySelector('#preset');
   if (!sel) return null;
   const params = presetParams(I);
+  Object.assign(pageState, { instrument: I, params, get: () => complete(params, values(get())), set });
   const reg = byId(I.id);
   const name = reg?.name ?? I.name ?? I.id;
   const STORE = `forte/${I.id}/presets/v1`;

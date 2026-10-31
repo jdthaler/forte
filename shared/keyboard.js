@@ -12,6 +12,7 @@
 //               stays on it; a glissando is a slide across the keys.
 //   kb.set(key, on)  kb.focus(key)  kb.clearAll()  kb.labels(Map key → text)
 //   kb.setBounds(lo, hi)   a new range (an instrument's compass opened or closed)
+//   kb.press(key, f)  kb.release(key)   a key played by code (shared/tour.js), as by a finger
 
 import { attachKeyboard } from './layout.js';
 
@@ -115,6 +116,8 @@ export function createKeyboard(root, { lo, hi, onDown, onUp, onPressure }) {
     },
     onBounds(fn) { boundListeners.push(fn); }, // fn(lo, hi), after setBounds
     onKeys(fn) { keyListeners.push(fn); }, // fn(set of keys down), on every change
+    // a key pressed and let go by code (a guided tour, shared/tour.js), as a finger would
+    press, release,
   };
   build();
   attachKeyboard(kb);
