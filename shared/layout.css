@@ -396,6 +396,9 @@ body[data-instrument] #controls .param:not([data-face]) > input[type=checkbox]:f
 .forte-perform .param[data-pedal] > input[type=checkbox] { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
 .forte-perform .param[data-pedal] { position: relative; }
 .forte-perform .param[data-pedal] > label { display: inline-flex; align-items: center; gap: 6px; }
+/* its twin in the Controls panel (layout.js placePedal): the name, then the pedal and Latch */
+.forte-pedal-pair { display: flex; gap: 6px; margin-top: 6px; }
+body[data-instrument] .forte-pedal-pair button { padding: 4px 12px; white-space: nowrap; touch-action: none; }
 
 /* ---- the keyboard bar and the keys --------------------------------------------- */
 body[data-instrument] .kb-help { display: block; position: relative; margin: 0 0 7px; }

@@ -261,7 +261,12 @@ celesta's held pedal, the piano's una corda, the clavier's mute, the viola
 organista's lifted dampers, the kalimba's and steel pan's let-ring);
 `test/site-tests.mjs` allows three at most, `volume` among them. Every other
 control stays in its group in the Controls panel, which is never far from the
-keys. The strip's controls sit there in both modes, so they never
+keys, and a strip control stays there too: `shared/layout.js` leaves a twin of
+it in its group (ids ending `-panel`), and the two move together, whichever is
+moved, and whatever the page sets (presets, Reset, MIDI). The page never sees
+the twin. The pedal button and Latch have a twin as well, in the group with the
+dampers or pedals, else the keys, else the computer keys' velocity. The
+strip's controls sit there in both modes, so they never
 move; a checkbox there becomes a stop that lights up, and in Discover a
 control with a `hint` gets an ⓘ button that opens it (a tap, not a
 tooltip, so it works on a tablet). A tile shows its label, the
