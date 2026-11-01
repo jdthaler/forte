@@ -16,6 +16,44 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-11-01 — the Cellulophone; a foot controller on every instrument; the controls above the keys also in the Controls panel
+
+### Forte 0.43.0
+- **A foot controller works on every instrument, as a Roland FC-300 comes from the factory**, on
+  the pages, in the plugins and in the Forte app. A volume (CC7) or expression (CC11) pedal turns
+  the instrument down after its limiter, (v/127)² each as General MIDI has it, and gliding in
+  10 ms: full until it moves, silent heel down, full again when its device is unplugged or sends
+  Reset All Controllers; an instrument with a swell of its own (the tonewheel organ, the
+  Telharmonium, the Trautonium) keeps CC11 for it. CC80, 81 and 82 (the FC-300's CTL 1, CTL 2
+  and EXP 1's toe switch) are the sustain, sostenuto and soft pedals, so each does what those do
+  on the instrument (the organ's Leslie, the Ribbon Piano's una corda, the Regal's tremulant). A
+  program change plays a preset: the FC-300's pedal 1 the first in the menu, then on the pages
+  your own after the instrument's, with a toast naming it.
+- **Every control in the bar above the keys is in the Controls panel too:** the volume, the computer keys' velocity and the pedal-like controls (the vibraphone's held pedal, the piano's una corda, the regal's tremulant and wind pressure, …) appear again in their own group, and the Sustain or Hold pedal with its Latch in the group with the dampers or the keys. The two copies move together: drag either, or change it with a preset, Reset, a MIDI fader or the arrow keys, and both follow. On a phone the computer keys' velocity, which leaves the bar there, is back in the panel.
+
+### Electric Grand 0.11.0
+- **The mod wheel is the tremolo's depth** (off at rest, full depth fully up), so a foot
+  controller's second pedal or a keyboard's wheel brings the tremolo in.
+
+### Tine Piano 0.12.0
+- **The mod wheel is the stereo vibrato's depth** (off at rest, full depth fully up).
+
+### Reed Piano 0.11.0
+- **The mod wheel is the tremolo's depth** (off at rest, full depth fully up).
+
+### Cellulophone 0.1.0
+- **Pierre Toulon's photoelectric organ (Paris, 1927)**, from his patent (US 1,948,996): lamps shining
+  through discs of narrow slots on one motor, one disc an octave and one ring of slots a semitone,
+  rounded to whole slots, so that Toulon's 54-slot disc leaves its notes up to 12 ¢ out of tune
+  ("permanently out of tune", as Tom Rhea put it), with finer discs to choose. Screens drawn with
+  each wave in the windows (sine, flûte, clarinette, hautbois, trompe de chasse, violon, voix
+  humaine, or one for each octave), averaged over the slot's width; keys whose mirrors sweep a
+  round beam spot, pressed deeper for loudness (aftertouch) and pushed back to slide a slit into
+  the window (the mod wheel, or MPE slide one key at a time); the tremolo screen and the damping
+  arcs; lamps on batteries or the mains (a 100 Hz hum); a potassium cell or the slow, sublinear
+  selenium one; a valve amplifier and a cone or horn loudspeaker; pitch bend turning the motor.
+  Seventeen presets, a guided tour, and the plugin (AU code Cell).
+
 ## 2026-10-31 — Forte's f mark in Safari
 
 ### Forte 0.42.2
