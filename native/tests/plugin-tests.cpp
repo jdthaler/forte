@@ -257,6 +257,78 @@ TEST("plugin: the mod wheel moves its parameter from the default (at rest) to th
   in.run(128, 128, back);
   CHECK(std::fabs(in.value("Ring time") - 1) < 1e-9);
 }
+TEST("plugin: a foot controller: CC80 is the sustain pedal, CC81 the sostenuto, CC82 the soft pedal (a Roland FC-300's CTL 1, CTL 2, EXP 1's toe)") {
+  Instance in(48000);
+  Events ev;
+  ev.midi(0, 0xb0, 80, 127);           // CTL 1 down: the sustain pedal
+  ev.midi(10, 0x90, 64, 100);
+  ev.midi(4800, 0x80, 64, 0);          // released, but the pedal holds it
+  ev.midi(24000, 0xb0, 80, 0);         // CTL 1 up: the note ends
+  auto L = in.run(48000, 128, ev);
+  CHECK(peak(L, 9600, 12000) > 0.01);
+  CHECK(peak(L, 40000, 48000) < 1e-4);
+  auto level = [](int cc) {
+    Instance in(48000);
+    Events ev;
+    if (cc) ev.midi(1, 0xb0, (uint8_t)cc, 127);
+    ev.midi(10, 0x90, 60, 64);
+    return peak(in.run(4800, 128, ev));
+  };
+  CHECK_NEAR(level(82) / level(0), 0.6, 0.02); // the soft pedal
+  Instance s(48000);
+  Events sev;
+  sev.midi(0, 0x90, 60, 100);
+  sev.midi(100, 0xb0, 81, 127);        // CTL 2: the sostenuto catches 60
+  sev.midi(200, 0x80, 60, 0);
+  auto S = s.run(24000, 128, sev);
+  CHECK(peak(S, 14400, 19200) > 0.001);
+}
+TEST("plugin: the volume (CC7) and expression (CC11) pedals turn the output down, (v/127)² each, smoothly; full until they move") {
+  auto run = [](std::initializer_list<std::pair<int, int>> ccs) {
+    Instance in(48000);
+    Events ev;
+    for (auto [cc, v] : ccs) ev.midi(0, 0xb0, (uint8_t)cc, (uint8_t)v);
+    ev.midi(10, 0x90, 60, 100);
+    return in.run(9600, 128, ev);
+  };
+  const auto full = run({}), top = run({{7, 127}, {11, 127}}), half = run({{7, 64}}), both = run({{7, 64}, {11, 64}}), off = run({{11, 0}});
+  const double g = 64 / 127.0;
+  CHECK(peak(full) > 0.01);
+  CHECK(std::fabs(peak(top) - peak(full)) < 1e-9);         // both at the top: as without them
+  CHECK_NEAR(peak(half, 4800, 9600) / peak(full, 4800, 9600), g * g, 0.01);
+  CHECK_NEAR(peak(both, 4800, 9600) / peak(full, 4800, 9600), g * g * g * g, 0.01);
+  CHECK(peak(off, 4800, 9600) < 1e-4 * peak(full, 4800, 9600)); // heel down: silent (−80 dB within 0.1 s)
+  // a pedal moved while a note sounds glides to its level in about 10 ms, no click
+  Instance in(48000);
+  Events ev;
+  ev.midi(0, 0x90, 60, 100);
+  ev.midi(4800, 0xb0, 7, 0);
+  auto L = in.run(14400, 64, ev);
+  double jump = 0;
+  for (int i = 4800; i < 4900; i++) jump = std::max(jump, (double)std::fabs(L[i] - L[i - 1]));
+  CHECK(peak(L, 4790, 4800) > 0.01 && peak(L, 9600, 14400) < 1e-4 * peak(L, 4790, 4800)); // −80 dB 0.1 s on (a 10 ms glide)
+  CHECK(jump < 0.2);
+  Events reset;
+  reset.midi(0, 0xb0, 121, 0);         // Reset All Controllers: full again
+  reset.midi(10, 0x90, 64, 100);
+  CHECK(peak(in.run(4800, 128, reset)) > 0.01);
+}
+TEST("plugin: a program change n plays preset n + 1 and tells the host; past the presets, nothing") {
+  Instance in(48000);
+  Events ev;
+  ev.midi(0, 0xc0, 0, 0);              // a foot controller's pedal 1: the first preset
+  in.run(128, 128, ev);
+  CHECK(in.value("Preset") == 1);
+  CHECK(std::fabs(in.value("Ring time") - 6) < 1e-12);
+  bool told = false;
+  for (auto &e : ev.out) told |= e.param_id == in.id("Preset") && e.value == 1;
+  CHECK(told);
+  Events past;
+  past.param(0, in.id("Ring time"), 2);
+  past.midi(10, 0xc0, 5, 0);           // there is no sixth preset
+  in.run(128, 128, past);
+  CHECK(std::fabs(in.value("Ring time") - 2) < 1e-12);
+}
 TEST("plugin: a fader moves its parameter across the whole range, in log(value) for a log one; a toggle at 64") {
   Instance in(48000);
   auto fader = [&](int cc, int v) { Events ev; ev.midi(0, 0xb0, (uint8_t)cc, (uint8_t)v); in.run(128, 128, ev); };

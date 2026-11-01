@@ -2,7 +2,8 @@
 // (in its descriptor, <slug>/src/<slug>-instrument.js). Every page uses it; the native
 // plugins rebuild the same chain in C++.
 //
-//   node → [tone low-pass] → [body: dry + soundboard convolution] → master (+ room) → limiter → out
+//   node → [tone low-pass] → [body: dry + soundboard convolution] → master (+ room) → limiter → pedal → out
+//   (pedal: the volume and expression pedals, CC7 and CC11, shared/midi.js pedalGain)
 //
 // chain = {
 //   volume: id,            master gain = P[volume] × the registry's trim
@@ -17,6 +18,7 @@
 // }
 
 import { soundboardIR, venueIR, venueGain, venueOf, VENUES } from './impulses.js';
+import { onPedalGain } from './midi.js';
 
 export const LIMITER = { threshold: -3, knee: 3, ratio: 12, attack: 0.002, release: 0.15 };
 export const ROOM = { seconds: 2.0, gain: 0.6 };
@@ -96,7 +98,14 @@ export function createChain(ctx, node, chain, destination = ctx.destination) {
     };
     if (!chain.venue) useVenue(null); // else the first apply picks it
   }
-  master.connect(limiter).connect(destination);
+  // the volume and expression pedals last, as a volume pedal after an amplifier: they turn the
+  // whole sound down, the room's tail with it, and never push the limiter
+  const pedal = ctx.createGain();
+  master.connect(limiter).connect(pedal).connect(destination);
+  let first = true;
+  onPedalGain((g) => {
+    if (first) { pedal.gain.value = g; first = false; } else pedal.gain.setTargetAtTime(g, ctx.currentTime, 0.01);
+  });
   const apply = (P, trim = 1) => {
     if (chain.venue) useVenue(P[chain.venue]);
     const t = ctx.currentTime, g = chainGains(chain, P, trim);
@@ -105,5 +114,5 @@ export function createChain(ctx, node, chain, destination = ctx.destination) {
     if (roomGain) roomGain.gain.setTargetAtTime(g.room, t, 0.02);
     master.gain.setTargetAtTime(g.master, t, 0.02);
   };
-  return { tap, tone, dry, bodyGain, master, roomGain, limiter, apply };
+  return { tap, tone, dry, bodyGain, master, roomGain, limiter, pedal, apply };
 }

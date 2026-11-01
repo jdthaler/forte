@@ -12,7 +12,7 @@ import { ASSETS, notes } from '../tools/plugin-release.mjs';
 import { withTags, pictureOf } from '../tools/make-previews.mjs';
 import { readNotes, parseNote, plan, bump } from '../tools/release.mjs';
 import { compare, stateOf, contractPath, STATES } from '../tools/contract.mjs';
-import { TOUCH, SOFT_PEDAL, touch, touched, createSostenuto, wheelValue, FADERS, controllersOf, controlled, ccValue } from '../shared/midi.js';
+import { TOUCH, SOFT_PEDAL, touch, touched, createSostenuto, wheelValue, FADERS, controllersOf, controlled, ccValue, SWITCHES, levelGain, pedalGain, onPedalGain, startMIDI } from '../shared/midi.js';
 import { LATEST, SYSTEMS, archive, downloads, withPlugins, parseRelease, releaseLine } from '../shared/plugins.js';
 
 let failures = 0;
@@ -144,6 +144,48 @@ test('a Seaboard RISE\'s faders and pad: CC 107, 109, 111, 113, 114, across each
   assert.deepEqual(controlled(map, [], P, 64, 127, last), ['s', 'fast'], 'a press flips the switch');
   assert.equal(controlled(map, [], P, 64, 127, last), null, 'holding it down does not');
   assert.equal(controlled(map, [], { s: 'bypass' }, 1, 100, last), null, 'a switch leaves another value alone');
+});
+
+await test('a foot controller (a Roland FC-300 as it comes): its switches are the pedals, its volume and expression pedals turn the output down, a program change plays a preset', async () => {
+  assert.deepEqual(SWITCHES, { 80: 64, 81: 66, 82: 67 });
+  assert.equal(levelGain(127, 127), 1);
+  assert.equal(levelGain(0, 127), 0);
+  assert.ok(Math.abs(levelGain(64, 64) - (64 / 127) ** 4) < 1e-12, '(v/127)² each, General MIDI\'s 40·log10');
+  // a page: its preset menu (shared/user-presets.js and layout.js add theirs), one MIDI input
+  const picked = [];
+  const options = [['', 'Presets…'], ['__default', 'Default settings'], ['0', 'Bright'], ['1', 'Dark'], ['__user:0', 'Mine'], ['__save', 'Save these settings…']].map(([value, text]) => ({ value, text }));
+  const sel = { options, value: '', dispatchEvent: (e) => picked.push([e.type, sel.value]) };
+  const input = { id: 'fc', name: 'UM-ONE', state: 'connected', onmidimessage: null };
+  const acc = { inputs: new Map([['fc', input]]), onstatechange: null };
+  const was = { document: globalThis.document, navigator: globalThis.navigator };
+  Object.defineProperty(globalThis, 'document', { value: { querySelector: (q) => (q === '#preset' ? sel : null) }, configurable: true, writable: true });
+  Object.defineProperty(globalThis, 'navigator', { value: { requestMIDIAccess: async () => acc }, configurable: true, writable: true });
+  const got = [], gains = [];
+  const stop = onPedalGain((g) => gains.push(g));
+  try {
+    startMIDI({ onMIDI: (ev) => got.push([...ev.data]), controllers: controllersOf({ controllers: { 11: 'swell' } }) });
+    await new Promise((r) => setTimeout(r, 0));
+    const send = (...data) => input.onmidimessage({ data: Uint8Array.from(data) });
+    send(0xb0, 80, 127); send(0xb0, 81, 127); send(0xb0, 82, 127); send(0xb0, 83, 127);
+    assert.deepEqual(got.splice(0), [[0xb0, 64, 127], [0xb0, 66, 127], [0xb0, 67, 127], [0xb0, 83, 127]], 'CTL 1, CTL 2 and EXP 1\'s toe: the sustain, sostenuto and soft pedals');
+    send(0xb0, 7, 64);
+    assert.ok(Math.abs(pedalGain() - (64 / 127) ** 2) < 1e-12 && gains.at(-1) === pedalGain(), 'EXP 1, the volume pedal');
+    send(0xb0, 11, 0);
+    assert.ok(Math.abs(pedalGain() - (64 / 127) ** 2) < 1e-12, 'CC11 is the instrument\'s own here (an organ\'s swell)');
+    assert.deepEqual(got.splice(0), [[0xb0, 7, 64], [0xb0, 11, 0]], 'and both still reach the page');
+    send(0xc0, 0);
+    send(0xc0, 2);
+    send(0xc0, 9);
+    assert.deepEqual(picked, [['change', '0'], ['change', '__user:0']], 'pedal 1 the first preset, pedal 3 your own after the instrument\'s two, pedal 10 none');
+    input.state = 'disconnected';
+    acc.onstatechange();
+    assert.deepEqual(got.splice(0).filter(([st]) => st === 0xb0).map(([, cc, v]) => [cc, v]), [[64, 0], [66, 0], [67, 0]], 'unplugged: its pedals come up');
+    assert.equal(pedalGain(), 1, 'and the volume pedal is full again');
+  } finally {
+    stop();
+    Object.defineProperty(globalThis, 'document', { value: was.document, configurable: true, writable: true });
+    Object.defineProperty(globalThis, 'navigator', { value: was.navigator, configurable: true, writable: true });
+  }
 });
 
 console.log('registry');
