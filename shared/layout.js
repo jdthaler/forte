@@ -33,6 +33,9 @@
 // shared/nav.js, so it runs before the page's own scripts. Other code can add its own
 // tools to either bar: barTools('views') or barTools('controls').
 
+import { rotaryKnob } from './faces.js';
+import { focusedByPointer } from './focus.js';
+
 const body = document.body;
 const STORE = `forte/${body.dataset.instrument || 'page'}/layout/v1`;
 const MODE = 'forte/mode/v1';
@@ -425,6 +428,74 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeHint(
 window.addEventListener('resize', closeHint);
 document.addEventListener('scroll', closeHint, true);
 
+// Call fn after every assignment to el[prop] (a page setting a control's value itself, after a
+// preset or a MIDI fader), wrapping whatever setter it has: the element's own, if code here
+// already wrapped it, or its prototype's.
+function onAssign(el, prop, fn) {
+  let o = el, d;
+  while (o && !(d = Object.getOwnPropertyDescriptor(o, prop))) o = Object.getPrototypeOf(o);
+  if (!d?.set) return;
+  Object.defineProperty(el, prop, { configurable: true, get() { return d.get.call(this); }, set(x) { d.set.call(this, x); fn(); } });
+}
+
+// A control in the strip above the keys stays in its group in the Controls panel too: a twin,
+// left where the page built it, that moves with it both ways. The page keeps the one it built
+// (in the strip) and never sees the twin: the twin's moves are made on the page's control, as
+// if the player had made them there, and the page's own changes (presets, Reset, MIDI) show on
+// the twin as they happen. Its ids end in -panel.
+const TWIN = '-panel';
+function twin(p) {
+  const t = p.cloneNode(true);
+  t.removeAttribute('data-perform');
+  t.removeAttribute('title');
+  t.dataset.placed = '';
+  t.dataset.twin = '';
+  for (const n of t.querySelectorAll('[id]')) n.id += TWIN;
+  for (const l of t.querySelectorAll('label[for]')) l.htmlFor += TWIN;
+  const a = p.querySelector('input, select'), b = t.querySelector('input, select');
+  if (!a || !b) return null;
+  const range = a.type === 'range', check = a.type === 'checkbox';
+  const knob = t.querySelector('.forte-knob');
+  let turn = null;
+  if (knob) { // a knob's face needs its own hands (shared/faces.js)
+    const k = rotaryKnob(b, () => b.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })), 0, knob.classList.contains('forte-dial') ? 'dial' : 'knob');
+    knob.replaceWith(k.el); turn = k.show;
+  }
+  for (const f of t.querySelectorAll('.forte-selector, .forte-rockers')) { f.remove(); t.removeAttribute('data-face'); } // a plain dropdown
+  const valA = p.querySelector('.val'), valB = t.querySelector('.val');
+  // the page's control → the twin
+  const pull = () => {
+    if (check) b.checked = a.checked;
+    else b.value = a.value;
+    b.disabled = a.disabled;
+    if (range) {
+      b.style.setProperty('--fill', a.style.getPropertyValue('--fill') || `${+a.value / 10}%`);
+      const vt = a.getAttribute('aria-valuetext');
+      if (vt !== null) b.setAttribute('aria-valuetext', vt);
+      turn?.();
+    }
+    if (valA && valB && valB.textContent !== valA.textContent) valB.textContent = valA.textContent;
+    if (t.hidden !== p.hidden) t.hidden = p.hidden;
+  };
+  onAssign(a, check ? 'checked' : 'value', pull);
+  if (a.tagName === 'SELECT') onAssign(a, 'selectedIndex', pull);
+  for (const ev of ['input', 'change']) a.addEventListener(ev, pull);
+  new MutationObserver(pull).observe(p, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['hidden', 'disabled', 'style', 'aria-valuetext'] });
+  // the twin → the page's control, then its own event there
+  const push = (type) => () => {
+    if (check) a.checked = b.checked;
+    else a.value = b.value;
+    a.dispatchEvent(new Event(type, { bubbles: true }));
+    if (type === 'change' && focusedByPointer(b)) b.blur(); // the keys go back to the instrument
+  };
+  b.addEventListener('input', push('input'));
+  b.addEventListener('change', push('change'));
+  if (range) b.addEventListener('dblclick', () => a.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
+  if (range) b.addEventListener('input', () => b.style.setProperty('--fill', `${+b.value / 10}%`));
+  pull();
+  return t;
+}
+
 // A dropdown above the keys with a few short choices becomes a row of buttons: one tap.
 function shortLabels(texts) {
   for (const cut of [/\s*[(:,].*$/, /\s*\(.*$/, null]) {
@@ -451,8 +522,8 @@ function segment(p, label) {
   });
   const sync = () => btns.forEach((b, i) => b.setAttribute('aria-pressed', String(opts[i].selected)));
   // the page sets the dropdown's value itself (presets, Reset): follow it
-  const v = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
-  Object.defineProperty(sel, 'value', { configurable: true, get() { return v.get.call(this); }, set(x) { v.set.call(this, x); sync(); } });
+  onAssign(sel, 'value', sync);
+  onAssign(sel, 'selectedIndex', sync);
   sel.addEventListener('change', sync);
   seg.append(...btns);
   sel.hidden = true; sel.after(seg);
@@ -488,14 +559,46 @@ function pedalGlyph() {
   g.innerHTML = '<rect x="7" y="0" width="4" height="4" rx="1" fill="#55555e"/><path d="M5 3h8l2 13c.3 3-2.4 5-6 5s-6.3-2-6-5z"/>';
   return g;
 }
+// The pedal's twin in the Controls panel: its name, an ⓘ, the pedal and Latch.
+let pedalRow = null;
+function pedalParam(label, buttons) {
+  const p = el('div', 'param forte-pedal-param');
+  p.dataset.placed = '';
+  p.setAttribute('role', 'group');
+  const pedal = /^(Sustain|Hold)$/.test(label), name = pedal ? `${label} pedal` : label;
+  p.setAttribute('aria-label', name);
+  const head = el('div', 'forte-param-head'), info = infoButton(`About ${name}`);
+  head.append(el('span', 'forte-pedal-name', name), info);
+  const keys = el('div', 'forte-pedal-pair');
+  keys.append(...buttons);
+  const hint = el('div', 'hint', `${pedal ? `The ${label.toLowerCase()} pedal: the` : 'The'} same as holding the Space bar, or a MIDI sustain pedal (CC64). Press and hold it, or Latch it to keep it down until it is tapped again. It is the one above the keys too.`);
+  info.addEventListener('click', () => { info.setAttribute('aria-expanded', String(p.classList.toggle('hint-open'))); info.blur(); });
+  p.append(head, keys, hint);
+  return p;
+}
+// Its place: with the dampers or the pedals if the instrument has them, else with the keys (how
+// they are played), else with the computer keys' velocity, else in the first group.
+function placePedal() {
+  if (!pedalRow || pedalRow.isConnected || !sidebar) return;
+  const groups = [...sidebar.querySelectorAll('details.group')].filter((g) => g.querySelector('.param'));
+  const titled = (re) => groups.find((g) => re.test(g.querySelector('summary')?.textContent ?? ''));
+  const home = titled(/damp|pedal|mute|hands/i) ?? groups.find((g) => g.querySelector('.param[data-pedal]'))
+    ?? titled(/\bkeys?\b|touch|playing/i) ?? groups.find((g) => g.querySelector('[id^="p-velocity"]')) ?? groups[0];
+  if (!home) return;
+  const after = home.querySelector('.param[data-pedal]');
+  if (after) after.after(pedalRow); else home.appendChild(pedalRow);
+}
+
 // Above the keys a label drops its explanation, "(…)" or "= …": "Dome rise (curvature)" is
 // "Dome rise". The whole name stays the control's name, its tooltip and its ⓘ's title.
 const shortLabel = (t) => t.replace(/\s*\([^()]*\)\s*$/, '').replace(/\s+=\s.*$/, '').trim() || t;
 
 // Once the page has built its parameters: each gets its ⓘ, and the ones marked
-// data-perform move to the strip in the keyboard bar (the page keeps its references to them).
+// data-perform move to the strip in the keyboard bar (the page keeps its references to them),
+// leaving a twin in their place in the Controls panel.
 function placeControls() {
   if (!sidebar) return;
+  placePedal();
   const fresh = sidebar.querySelectorAll('.param:not([data-placed])');
   for (const p of fresh) {
     p.dataset.placed = '';
@@ -509,6 +612,12 @@ function placeControls() {
       else { const head = el('div', 'forte-param-head'); lab.before(head); head.append(lab, info); }
     }
     if (p.hasAttribute('data-perform')) {
+      const t = twin(p); // its twin stays in the panel, in its group
+      if (t) {
+        p.before(t);
+        const ti = t.querySelector('.forte-info');
+        ti?.addEventListener('click', () => { ti.setAttribute('aria-expanded', String(t.classList.toggle('hint-open'))); ti.blur(); });
+      }
       if (!p.title) p.title = label; // the whole name, when the tile cuts it short
       if (info) {
         info.setAttribute('aria-controls', bubble.id);
@@ -823,23 +932,36 @@ export function attachKeyboard(kb) {
       pedal.addEventListener('click', () => { space('keydown'); space('keyup'); });
       bar.appendChild(pedal);
     } else {
+      // two of them: above the keys, and in the Controls panel (placePedal), lit together
       let on = false, latched = false;
-      const latch = button('Latch', `Keep ${label.toLowerCase()} on until tapped again`);
-      latch.className = 'forte-latch';
+      const pedals = [], latches = [];
       // on or off for a screen reader too, as the toggles say
       const show = (b, v) => { b.classList.toggle('on', v); b.setAttribute('aria-pressed', String(v)); };
-      show(pedal, false); show(latch, false);
-      const set = (v) => { if (v === on) return; on = v; space(v ? 'keydown' : 'keyup'); show(pedal, v); };
-      const setLatch = (v) => { latched = v; show(latch, v); set(v); };
-      pedal.addEventListener('pointerdown', (e) => { e.preventDefault(); try { pedal.setPointerCapture(e.pointerId); } catch { /* gone */ } if (latched) setLatch(false); else set(true); });
-      for (const ev of ['pointerup', 'pointercancel']) pedal.addEventListener(ev, () => { if (!latched) set(false); });
-      latch.addEventListener('click', () => setLatch(!latched));
+      const showAll = () => { for (const b of pedals) show(b, on); for (const b of latches) show(b, latched); };
+      const set = (v) => { if (v === on) return; on = v; space(v ? 'keydown' : 'keyup'); showAll(); };
+      const setLatch = (v) => { latched = v; showAll(); set(v); };
+      const pair = (p) => {
+        const latch = button('Latch', `Keep ${label.toLowerCase()} on until tapped again`);
+        latch.className = 'forte-latch';
+        p.addEventListener('pointerdown', (e) => { e.preventDefault(); try { p.setPointerCapture(e.pointerId); } catch { /* gone */ } if (latched) setLatch(false); else set(true); });
+        for (const ev of ['pointerup', 'pointercancel']) p.addEventListener(ev, () => { if (!latched) set(false); });
+        latch.addEventListener('click', () => setLatch(!latched));
+        pedals.push(p); latches.push(latch);
+        return [p, latch];
+      };
       // the pedal follows the page: Space, a MIDI pedal and Panic light it or let it go too
       document.addEventListener('forte-sustain', (e) => {
-        on = e.detail; show(pedal, on);
-        if (!on && latched) { latched = false; show(latch, false); }
+        on = e.detail;
+        if (!on && latched) latched = false;
+        showAll();
       });
-      bar.append(pedal, latch);
+      bar.append(...pair(pedal));
+      const twinPedal = button(label, pedal.title);
+      twinPedal.className = 'forte-pedal';
+      if (pedal.firstChild?.nodeName === 'svg') twinPedal.prepend(pedalGlyph());
+      pedalRow = pedalParam(label, pair(twinPedal));
+      showAll();
+      placePedal();
     }
   }
   // in Perform, the presets and More controls, at the end (placeTools)
