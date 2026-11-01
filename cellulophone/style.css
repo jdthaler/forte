@@ -1,0 +1,9 @@
+/* The page's own palette and any layout beyond shared/instrument.css: the warm light of a tungsten
+   lamp through a photographic screen, and the blue of a potassium cell's glow. */
+:root {
+  --accent: #f0c46a;
+  --accent-2: #8fb8ff;
+  --accent-ink: #1e1505;
+}
+
+#info { grid-template-columns: auto 1fr; }

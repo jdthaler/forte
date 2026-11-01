@@ -249,6 +249,15 @@ export const INSTRUMENTS = [
     accent: '#ffc46b',
   },
   {
+    id: 'cellulophone', name: 'Cellulophone', section: 'electric', ready: true, version: '0.1.0', trim: -7,
+    plugin: { code: 'Cell', ready: true },
+    vibrates: 'circuits', notes: 'hold',
+    after: 'Pierre Toulon’s Cellulophone (Paris, 1927), the photoelectric organ',
+    tagline: 'A lamp shines through discs of slots turning on one motor, one disc an octave and one ring of slots a note; drawn screens in the windows shape the light into a flute, a clarinet or a horn, and a photocell turns it into sound.',
+    physics: 'Optical tone wheels with whole-slot tuning · screens as waveforms, averaged by the slot · photoelectric cells (potassium or selenium) · lamp flicker',
+    accent: '#f0c46a',
+  },
+  {
     id: 'bowed', name: 'Viola Organista', section: 'experimental', ready: true, version: '0.11.0', trim: 3,
     plugin: { code: 'Viol', ready: true },
     after: "Leonardo da Vinci's design (1488)",

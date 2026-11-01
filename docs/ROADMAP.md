@@ -143,6 +143,7 @@ default in the existing presets, or would change what an existing knob means.
 | Clavichord | M | Done, for the next release: a brass tangent that strikes the strings and stays on them, held up by the finger: pressure tuning, the Bebung (mod wheel, aftertouch, MPE), the listing and the key-up ring of the whole string, double-fretted pairs, 4′ strings in the bass. |
 | Hammered dulcimer or cimbalom | M | |
 | Ondes Martenot | M | Done, for the next release: two heterodyne oscillators pulling through Adler's equation, keyboard or ribbon, the intensity key from Quartier et al.'s measurements, the drawer's timbres, and the four diffuseurs (springs, tam-tam and palme strings from their physics). |
+| Cellulophone | M | Done, for the next release: Toulon's photoelectric organ (1927), lamps through discs of slots rounded to whole slots (a few cents out of tune), screens drawn with each wave and averaged by the slot, key mirrors, depth and push screens, the tremolo screen and damping arcs, mains flicker, potassium or selenium cells. |
 | Theremin | M | Continuous pitch suits MPE; the ondes' heterodyne and pulling would carry over. |
 | Kalimba (mbira) | S–M | Close to the tine piano. |
 | Cristal Baschet or waterphone | M | Friction-driven rods, close to the glass armonica's bowing. |

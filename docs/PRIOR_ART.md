@@ -234,6 +234,11 @@ requests.
   the tonewheel organs ([Hammond, 1934](https://patents.google.com/patent/US1956350A/en))
   are its descendants. We did not find an earlier physical model of it. Its
   sources are in `telharmonium/README.md`.
+* **The Cellulophone.** P. Toulon, [US 1,948,996](https://patents.google.com/patent/US1948996A/en)
+  (filed 1928), and T. Rhea's account of it in *Contemporary Keyboard* (1977,
+  [reprinted by the EMEAPP](https://emeapp.org/2026/08/17/electronic-perspectives-photoelectric-instruments-part-iii-the-cellulophone/)),
+  which the discs, screens, keys and cells are built from. We did not find an earlier
+  model of it. Its sources are in `cellulophone/README.md`.
 * **The regal.** Praetorius draws the regals and their resonators in
   *Syntagma musicum II* (1619); Monteverdi scores one for Charon in
   *L'Orfeo* (1607). The beating reed is G. R. Plitnik's ("Vibration
