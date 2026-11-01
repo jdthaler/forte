@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine
   midiVelocity: (v) => 0.25 * 20 ** v,  // MIDI velocity / 127 → hammer speed, 0.25 … 5 m/s
   mpe: { bend: 48 },                    // MPE: a note's own bend slides its fork's tuning spring, ±48 semitones
+  modWheel: 'tremDepth',                // MIDI CC1, the mod wheel (an FC-300's EXP 2): the tremolo, off at rest, full depth fully up
   faders: ['drive', 'tone', 'hardness', 'tremRate', 'tremDepth'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/tines), built as WebAssembly
   wasm: { name: 'TinesWasmEngine', module: new URL('./tines-wasm.js', import.meta.url).href, binary: new URL('../wasm/tines.wasm', import.meta.url).href },

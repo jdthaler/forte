@@ -48,6 +48,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Telharmonium](telharmonium/) | Cahill's Telharmonium (1906) | inductor alternators on twelve (or the eight built) geared pitch-shafts, each key's harmonics on its own shaft so shared alternators sound in phase; each winding's L/R and the relays' contacts (the switching thump); harmonic buses whose notes rob one another; the motor sagging under the load; the telegrapher's line solved exactly (city cable or open wire); a magnetic receiver pulled by the flux squared (growl, a phantom ground tone) and a paper horn; Pierce's just thirds and sevenths |
 | ✅ | [Magnetic Resonator Piano](resonator/) | Andrew McPherson's MRP (2009) | a grand's stiff strings and coupled unisons, an electromagnet over each note pulling ∝ i²/g² on a biased current, driven from one soundboard pickup through a band-pass, a phase-locked loop and a calibrated phase: notes grow out of silence, sustain, sing one harmonic or two at once; nodes under the coil, fifteen channels, hammers if you want them |
 | ✅ | [Ondes Martenot](ondes/) | Martenot's ondes musicales (1928) | two radio-frequency oscillators beating, pulling on each other through Adler's equation (stepped exactly each sample as a Möbius map, each key trimmed so the pulled beat is its note); a keyboard or a ribbon sliding evenly in semitones, the keyboard's vibrato; an intensity key following measured force and level; the drawer's timbres band-limited where the phase crosses them; the diffuseurs: springs and a tam-tam from their modes, and the palme's 24 strings; drift, pitch bend and MPE |
+| ✅ | [Cellulophone](cellulophone/) | Toulon's Cellulophone (1927) | a lamp's beam through discs of slots, one ring a semitone, rounded to whole slots (Toulon's 54-slot disc is a few cents out); screens drawn with each wave, averaged by the slot's width (its sinc); key mirrors sweeping a round spot; a depth screen and a push slit for touch, the tremolo screen and the damping arcs; lamps on the mains (a 100 Hz hum); potassium or selenium cells; a valve amplifier and loudspeaker |
 
 ### Experiments from history
 
@@ -156,6 +157,7 @@ is the mod wheel's control wherever the instrument has one.
 | Sticky-Pad Piano | Tack F₀ · Pole gap at C4 · Pad damping c_p | Tone | Amp drive |
 | Trautonium | Sync pulse · Circuit 1 resonance · Circuit 2 resonance | Circuit 2 tuning | Circuit 1 tuning |
 | Telharmonium | Manual II's 1st, 3rd and 5th harmonic stops | Distance down the line | Swell pedal |
+| Cellulophone | Tremolo screen · Damping arcs · Valve amplifier drive | Slot width | Key pushed back (timbre) |
 | Magnetic Resonator Piano | Drive (coil current) · Swell time · Hammer | Phase error | Brightness |
 | Viola Organista | Key pressure · Treadle unevenness · Rosin grain | Bow position β | Wheel speed |
 | Glass Armonica | Skin moisture · Treadle unevenness · Water in the bowls | Finger pressure | Treadle speed |
@@ -183,6 +185,30 @@ is the mod wheel's control wherever the instrument has one.
 | Chladni Plate | Bow speed · Rosin · Ring time | Bow force (× threshold) | Bow shift along the edge |
 
 </details>
+
+**A foot controller:** a Roland FC-300 works as it comes from the factory
+(Standard mode, channel 1), and so does any pedal board sending the same
+messages, on the pages, in the plugins and in the Forte app:
+
+| On the FC-300 | It sends | In Forte |
+|---|---|---|
+| EXP 1 | CC7, volume | turns the instrument down (heel down: silent); full until it moves |
+| EXP 2 | CC1, the mod wheel | whatever the mod wheel moves (on the Electric Grand, Tine and Reed Pianos, the tremolo) |
+| CTL 1 | CC80 | the sustain pedal (or what Space is: hold, the Leslie) |
+| CTL 2 | CC81 | the sostenuto pedal |
+| EXP 1's toe switch | CC82 | the soft pedal (the Ribbon Piano's una corda, the Regal's tremulant) |
+| Number pedals 1–5 (▲, then 1–5, for 6–10) | program change | the instrument's presets in the menu's order (pedal 1 the first), then, on the pages, your own |
+
+An expression pedal set to CC11 does what EXP 1 does, except on the
+instruments with a swell of their own (the tonewheel organ, the
+Telharmonium, the Trautonium), where CC11 is the swell. EXP 2's toe
+switch (CC83) is left free. The FC-300's
+switches come set to latch: a press puts the pedal down, the next lifts it
+(set a switch's Mode to Momentary on the FC-300 to hold it down instead,
+which the Leslie's switch wants). The FC-300 has only a 5-pin MIDI OUT, so
+it reaches a computer through a USB MIDI interface (or a keyboard's MIDI
+IN that passes it on). In a DAW, the host may take program changes for
+itself (MainStage switches patches with them).
 
 **Latency:** play through wired headphones or speakers. Bluetooth ones
 delay every note by 100–200 ms, enough to make any instrument feel

@@ -287,7 +287,7 @@ export function createShell(cfg) {
 
   // ---- MIDI ----------------------------------------------------------------------
   function initMIDI() {
-    startMIDI({ onMIDI, status: (t) => { if ($('#midi')) $('#midi').textContent = t; }, button: $('#midi-btn') });
+    startMIDI({ onMIDI, status: (t) => { if ($('#midi')) $('#midi').textContent = t; }, button: $('#midi-btn'), controllers: ccs });
   }
   const ccs = controllersOf(cfg), ccLast = {}; // the descriptor's controllers and faders
   function onMIDI(ev) {

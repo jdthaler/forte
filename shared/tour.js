@@ -149,7 +149,8 @@ async function mount(t) {
   // the controls a step changes, marked while it lasts
   function mark(ids) {
     for (const m of marked) m.classList.remove('forte-tour-mark');
-    marked = ids.map((id) => document.getElementById(`p-${id}`)?.closest('.param')).filter(Boolean);
+    // a control above the keys has a twin in the Controls panel (shared/layout.js): both
+    marked = ids.flatMap((id) => [`p-${id}`, `p-${id}-panel`]).map((id) => document.getElementById(id)?.closest('.param')).filter(Boolean);
     for (const m of marked) m.classList.add('forte-tour-mark');
   }
   // which of the page's views a step names (by its toggle's name, or its key)

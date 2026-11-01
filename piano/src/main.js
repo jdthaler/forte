@@ -257,7 +257,7 @@ function updateHelp() {
 
 const sost = createSostenuto(); // CC66
 function initMIDI() {
-  startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn') });
+  startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn'), controllers: ccs });
 }
 
 const notes = pageMpe({ post: () => {}, params: () => P }); // MPE: no note bends alone, and a member's bend is no one else's
