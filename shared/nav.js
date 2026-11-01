@@ -22,7 +22,7 @@ for (const slot of document.querySelectorAll('[data-forte-nav]')) {
   det.className = 'forte-switch';
   const sum = document.createElement('summary');
   sum.title = 'Forte: every instrument, and the home page';
-  sum.innerHTML = '<span class="forte-mark" aria-hidden="true">𝆑</span>';
+  sum.innerHTML = '<span class="forte-mark" aria-hidden="true">f</span>';
   if (title) sum.appendChild(title); else sum.append('Forte');
   sum.insertAdjacentHTML('beforeend', '<span class="forte-caret" aria-hidden="true">▾</span>');
   det.appendChild(sum);
