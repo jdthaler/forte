@@ -48,6 +48,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Telharmonium](telharmonium/) | Cahill's Telharmonium (1906) | inductor alternators on twelve (or the eight built) geared pitch-shafts, each key's harmonics on its own shaft so shared alternators sound in phase; each winding's L/R and the relays' contacts (the switching thump); harmonic buses whose notes rob one another; the motor sagging under the load; the telegrapher's line solved exactly (city cable or open wire); a magnetic receiver pulled by the flux squared (growl, a phantom ground tone) and a paper horn; Pierce's just thirds and sevenths |
 | ✅ | [Magnetic Resonator Piano](resonator/) | Andrew McPherson's MRP (2009) | a grand's stiff strings and coupled unisons, an electromagnet over each note pulling ∝ i²/g² on a biased current, driven from one soundboard pickup through a band-pass, a phase-locked loop and a calibrated phase: notes grow out of silence, sustain, sing one harmonic or two at once; nodes under the coil, fifteen channels, hammers if you want them |
 | ✅ | [Ondes Martenot](ondes/) | Martenot's ondes musicales (1928) | two radio-frequency oscillators beating, pulling on each other through Adler's equation (stepped exactly each sample as a Möbius map, each key trimmed so the pulled beat is its note); a keyboard or a ribbon sliding evenly in semitones, the keyboard's vibrato; an intensity key following measured force and level; the drawer's timbres band-limited where the phase crosses them; the diffuseurs: springs and a tam-tam from their modes, and the palme's 24 strings; drift, pitch bend and MPE |
+| ✅ | [Cellulophone](cellulophone/) | Toulon's Cellulophone (1927) | a lamp's beam through discs of slots, one ring a semitone, rounded to whole slots (Toulon's 54-slot disc is a few cents out); screens drawn with each wave, averaged by the slot's width (its sinc); key mirrors sweeping a round spot; a depth screen and a push slit for touch, the tremolo screen and the damping arcs; lamps on the mains (a 100 Hz hum); potassium or selenium cells; a valve amplifier and loudspeaker |
 
 ### Experiments from history
 
@@ -156,6 +157,7 @@ is the mod wheel's control wherever the instrument has one.
 | Sticky-Pad Piano | Tack F₀ · Pole gap at C4 · Pad damping c_p | Tone | Amp drive |
 | Trautonium | Sync pulse · Circuit 1 resonance · Circuit 2 resonance | Circuit 2 tuning | Circuit 1 tuning |
 | Telharmonium | Manual II's 1st, 3rd and 5th harmonic stops | Distance down the line | Swell pedal |
+| Cellulophone | Tremolo screen · Damping arcs · Valve amplifier drive | Slot width | Key pushed back (timbre) |
 | Magnetic Resonator Piano | Drive (coil current) · Swell time · Hammer | Phase error | Brightness |
 | Viola Organista | Key pressure · Treadle unevenness · Rosin grain | Bow position β | Wheel speed |
 | Glass Armonica | Skin moisture · Treadle unevenness · Water in the bowls | Finger pressure | Treadle speed |

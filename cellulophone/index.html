@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Cellulophone · Forte</title>
+  <meta name="description" content="A lamp shines through discs of slots turning on one motor, one disc an octave and one ring of slots a note; drawn screens in the windows shape the light into a flute, a clarinet or a horn, and a photocell turns it into sound.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="Cellulophone · Forte">
+  <meta property="og:description" content="A lamp shines through discs of slots turning on one motor, one disc an octave and one ring of slots a note; drawn screens in the windows shape the light into a flute, a clarinet or a horn, and a photocell turns it into sound.">
+  <meta property="og:url" content="https://forte.jthaler.net/cellulophone/">
+  <meta property="og:image" content="https://forte.jthaler.net/cellulophone/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Cellulophone's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="cellulophone">
+  <div class="forte-edge" aria-hidden="true"></div>
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Cellulophone</h1>
+      <span class="sub">Toulon's photoelectric organ (Paris, 1927): a lamp's beam chopped by turning discs of slots, shaped by drawn screens and read by a photocell</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Disc">
+          <div class="card-head"><h2>Disc of octave <b id="disc-oct">4</b></h2><span class="muted" id="disc-read"></span></div>
+          <canvas id="disc"></canvas>
+          <div class="caption">One disc an octave: twelve rings of slots, C innermost, B outermost, each with as many slots as its note needs at the disc's speed, rounded to whole slots. The windows sit in a line above the axle; a lit ring is a key whose mirror sends its light to the cell. Drawn turning a fortieth as fast.</div>
+        </div>
+        <div class="card" data-perform data-view="Window and screen">
+          <div class="card-head"><h2>Window and screen</h2><span class="muted" id="window-read"></span></div>
+          <canvas id="window"></canvas>
+          <div class="caption">Top: the screen in the window, clear where it lets light through, with a slot crossing it. Below: the light that reaches the cell over one slot pitch (the note's period), averaged over the slot's width; the dashed line is its mean, the steady light that the coupling capacitor takes away. Push the keys back (the mod wheel) to slide the slit in.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Disc tuning">
+          <div class="card-head"><h2>Disc tuning</h2><span class="muted" id="tuning-read"></span></div>
+          <canvas id="tuning"></canvas>
+          <div class="caption">Each ring's slots, and how far whole slots leave its note from the tuning: the motor is set so that A is exact, and every octave's disc turns at exactly twice the speed of the one below, so each note is off by the same cents in every octave.</div>
+        </div>
+        <div class="card" id="info-card" data-view="Key">
+          <div class="card-head"><h2><b id="focus-name">C4</b></h2></div>
+          <dl id="info"></dl>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the window's harmonics through the slot</span></div>
+          <canvas id="spectrum"></canvas>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">Every note is a steady stack of harmonics as long as its mirror is in the beam. Narrow slots keep the high ones; wide slots lose them. With the lamps on the mains, a 100 Hz line and sidebands come with every note; a worn disc fringes each line with faint sidebands at its turning rate.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows; a note sounds while its key is held (its mirror in the beam)</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>hold notes: <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>MIDI: velocity and aftertouch = how deep the key goes (the depth screen), mod wheel = keys pushed back (the timbre screen; MPE slide pushes one key), pitch bend = the motor's speed (every disc, as fast as their inertia lets it)</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/cellulophone-main.js"></script>
+  <script type="module" src="src/cellulophone-tour.js"></script>
+</body>
+</html>

@@ -165,6 +165,7 @@ const OWN = {
   quantum: 'the tempo lock keeps the revival time, which spaces the comb, on the beat',
   blackhole: 'at the default spin a note rings for a few milliseconds, all over before the spectrum starts',
   whistlers: 'a falling tone: its spectrum spreads below the note, by how much depending on the line, so its own suite measures the nose at the onset',
+  cellulophone: 'a ring has whole slots, so a retuned note moves to the nearest whole number of them, not by the cents asked: its own suite measures it',
 };
 
 console.log('the instruments');
