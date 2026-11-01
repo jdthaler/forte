@@ -54,6 +54,9 @@ constexpr uint32_t kMpeId = 0x7ffffffb;
 // The soft pedal (CC67): a key struck while it is down is struck this much slower, so it sounds
 // softer and, where the instrument's hammer or mallet is nonlinear, darker too.
 constexpr double kSoftPedal = 0.6;
+// A foot controller's switches (General Purpose 5–7) are the sustain, sostenuto and soft pedals: a
+// Roland FC-300 sends them from CTL 1, CTL 2 and EXP 1's toe switch (shared/midi.js SWITCHES).
+int footSwitch(int cc) { return cc == 80 ? 64 : cc == 81 ? 66 : cc == 82 ? 67 : cc; }
 constexpr uint32_t kEditorWidth = 920, kEditorHeight = 640, kEditorMinWidth = 600, kEditorMinHeight = 420; // points
 
 // what the editor asks of the audio thread
@@ -112,6 +115,10 @@ struct Plugin : Instance, MpeDecoder::Sink {
   bool caught[128]{};   // the keys sounding when the sostenuto pedal went down: they keep sounding
   bool sostHeld[128]{}; // let go while caught: the sostenuto holds them
   uint8_t ccLast[128]{}; // each controller's last value (a toggle flips on a press)
+  // the volume (CC7) and expression (CC11) pedals: one gain after the chain, (v/127)² each
+  // (shared/midi.js levelGain), full until a pedal moves; `level` follows it in 10 ms
+  int volumePedal = 127, expressionPedal = 127;
+  double level = 1, levelCoef = 0;
   // MPE, and the per-note expression a host sends: the keys the engine was given their own bend or
   // slide, so a note struck there without them starts plain
   MpeDecoder mpe;
@@ -238,6 +245,18 @@ struct Plugin : Instance, MpeDecoder::Sink {
     if (sustain) pedal(false);
     if (engine) engine->allNotesOff();
   }
+  double levelTarget() const { const double a = volumePedal / 127.0, b = expressionPedal / 127.0; return a * a * b * b; }
+  void levels(int cc, int v) {
+    v = std::clamp(v, 0, 127);
+    if (cc == 7) volumePedal = v; else if (cc == 11) expressionPedal = v;
+  }
+  // a program change n plays preset n + 1 (a foot controller's pedal 1 is the first preset; the
+  // Preset parameter's 0 is the defaults); one past the presets does nothing
+  void programChange(int n, const clap_output_events_t *out) {
+    if (!hasPresets || n < 0 || n >= I.presetCount) return;
+    set(presetAt, n + 1, out);
+    tell(presetAt, out);
+  }
   // the mod wheel's parameter at u (0..1): at rest its default, fully up its maximum (shared/midi.js)
   double wheelValue(double u) const {
     const ParamInfo &p = I.params[I.modWheel];
@@ -327,13 +346,18 @@ struct Plugin : Instance, MpeDecoder::Sink {
     if (cmd == 0x90 && d[2] > 0) noteOn(ch, d[1], d[2] / 127.0);
     else if (cmd == 0x80 || cmd == 0x90) noteOff(ch, d[1], cmd == 0x80 ? d[2] / 127.0 : -1);
     else if (cmd == 0xb0) {
-      if (d[1] == 64 && I.space != Space::none) pedal(d[2] >= 64);
-      else if (d[1] == 66 && !mapped(66)) sostenutoPedal(d[2] >= 64);
-      else if (d[1] == 67 && !mapped(67)) soft = d[2] >= 64;
-      else if (d[1] == 1 && I.modWheel >= 0) modWheel(d[2], out);
-      else if (d[1] == 120 || d[1] == 123) panic();
-      else controller(d[1], d[2], out);
-    } else if (cmd == 0xd0) { if (engine) engine->pressure(d[1] / 127.0, -1); }
+      const int cc = mapped(d[1]) ? d[1] : footSwitch(d[1]);
+      if (cc == 64 && I.space != Space::none) pedal(d[2] >= 64);
+      else if (cc == 66 && !mapped(66)) sostenutoPedal(d[2] >= 64);
+      else if (cc == 67 && !mapped(67)) soft = d[2] >= 64;
+      else if (cc == 1 && I.modWheel >= 0) modWheel(d[2], out);
+      else if ((cc == 7 || cc == 11) && !mapped(cc)) levels(cc, d[2]);
+      else if (cc == 120 || cc == 123) panic();
+      else {
+        if (cc == 121) { if (!mapped(7)) levels(7, 127); if (!mapped(11)) levels(11, 127); } // Reset All Controllers
+        controller(cc, d[2], out);
+      }
+    } else if (cmd == 0xc0) programChange(d[1], out); else if (cmd == 0xd0) { if (engine) engine->pressure(d[1] / 127.0, -1); }
     else if (cmd == 0xa0) { if (engine) engine->pressure(d[2] / 127.0, d[1]); }
     else if (cmd == 0xe0) {
       double b = ((d[2] << 7) + d[1] - 8192) / 8191.0;
@@ -426,6 +450,13 @@ struct Plugin : Instance, MpeDecoder::Sink {
     engine->process(L, R, (int)n);
     if (!guardBlock(L, R, (int)n)) engine->allNotesOff();
     chain.process(L, R, (int)n);
+    const double to = levelTarget();
+    if (level == to) { if (to != 1) for (uint32_t i = 0; i < n; i++) { L[i] = (float)(L[i] * to); R[i] = (float)(R[i] * to); } return; }
+    for (uint32_t i = 0; i < n; i++) {
+      level += (to - level) * levelCoef;
+      if (std::fabs(to - level) < 1e-6) level = to;
+      L[i] = (float)(L[i] * level); R[i] = (float)(R[i] * level);
+    }
   }
 
   // ---- the editor (editor.html) ---------------------------------------------------------------
@@ -948,6 +979,8 @@ bool pluginActivate(const clap_plugin_t *p, double fs, uint32_t, uint32_t) {
   s->engine.reset(s->I.create(fs));
   s->engine->setQuality(s->quality());
   s->chain.configure(s->I.chain, fs, s->P.data());
+  s->levelCoef = 1 - std::exp(-1 / (0.01 * fs)); // the pedals' gain follows in 10 ms
+  s->level = s->levelTarget();
   s->panic();
   if (s->I.space == Space::sustain) s->engine->setSustain(false);
   s->dirty = true;

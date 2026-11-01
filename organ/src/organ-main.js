@@ -200,7 +200,7 @@ function updateHelp() {
 
 // MIDI: notes, CC1 / CC64 → Leslie fast/slow, CC11 → expression
 function initMIDI() {
-  startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn') });
+  startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn'), controllers: ccs });
 }
 let lastSustain = false;
 const sost = createSostenuto(); // CC66
