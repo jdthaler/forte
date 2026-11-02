@@ -6,6 +6,7 @@ import { tunedFreq } from '../../shared/tuning.js';
 import { INSTRUMENT } from './abracadabra-instrument.js';
 import { sci } from './abracadabra-params.js';
 import { wasmModel } from './abracadabra-wasm.js';
+import { attachBacking } from '../../shared/backing.js';
 
 // The views draw what the engine plays: its model, from the same C++, built as WebAssembly.
 const model = await wasmModel();
@@ -33,7 +34,8 @@ const shell = createShell({
   ...INSTRUMENT,
   arrows: { param: 'velocity', step: 0.05 },
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
-  onNoteOn: (key) => { focus = key; update(); },
+  onNoteOn: (key) => { focus = key; update(); backing.noteOn(); },
+  onPanic: () => backing.stop(),
   onParam: () => { update(); resetSearch(search.key); },
   onMessage: (m) => {
     if (m.type === 'frame') frame = { at: now(), voices: m.voices };
@@ -43,6 +45,16 @@ const shell = createShell({
       search.re.push(...m.re); search.im.push(...m.im);
       while (search.re.length >= SEG) { accumulate(); search.re.splice(0, SEG / 2); search.im.splice(0, SEG / 2); }
     }
+  },
+});
+
+// PI Requests: a 1980s rhythm box, its own first beat the pulse-tube cooler of ABRACADABRA's
+// dilution refrigerator (shared/backing.js)
+const backing = attachBacking(shell, {
+  id: 'abracadabra',
+  styles: ['pulsetube'],
+  about: {
+    pulsetube: 'ABRACADABRA-10 cm hangs in a dilution refrigerator cooled by a pulse-tube cooler: a rotary valve lets helium at high pressure into the cold head and out again 1.4 times a second, and its thump is one of the experiment\'s main sources of vibration (Ouellet et al. 2019, the design paper). Here the cooler keeps the beat, a cycle a beat at 84 BPM: the valve\'s thunk, the gas\'s hiss in and its sigh out, the valve\'s motor ticking, and a hand clap on two and four.',
   },
 });
 
