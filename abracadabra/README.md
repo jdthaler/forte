@@ -180,6 +180,26 @@ heats each key's own. The axion's mass does not bend, so there is no pitch bend.
 - **A slow magnet** makes every note charge up, its timbre the field's of the
   moment.
 
+## PI Requests
+
+Asked for by the experiment's PI: the backing of a 1980s home keyboard, in its own group of
+controls. *Rhythm* picks a preset rhythm, *Start* starts it (or *Synchro*, which waits for your
+first key), *Fill in* plays a drum fill at the end of the bar, and with *Drums, bass and chords* a
+bass line and chord stabs follow the chord your left hand holds below middle C (one key for its
+major chord), keeping it after you let go.
+
+The first rhythm is ABRACADABRA's own: the **pulse tube**. The dilution refrigerator that cools
+the magnet is itself cooled by a pulse-tube cooler, whose rotary valve lets helium at high
+pressure into the cold head and out again 1.4 times a second, and its thump is one of the
+experiment's main sources of vibration (Ouellet et al. 2019). Here it keeps the beat at 84 BPM:
+the valve's thunk, the gas's hiss in and its sigh out, the valve's motor ticking, and a hand clap
+on two and four. The rest are the classics: Rock, Disco, 16 Beat, Swing, Slow Rock, Waltz, Bossa
+Nova and Samba.
+
+The rhythm box is the page's (`shared/backing.js`), drawn from Web Audio nodes like an analogue
+drum machine, and its settings stay in this browser, in no preset or link. The plugins have none:
+a DAW has its own drums.
+
 ## Files
 
 ```

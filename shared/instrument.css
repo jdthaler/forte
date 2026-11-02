@@ -127,6 +127,16 @@ input[type=checkbox] { accent-color: var(--accent); }
 .param select { width: 100%; margin-top: 3px; }
 .param > label { display: block; }
 
+/* PI Requests (shared/backing.js): the rhythm box's buttons, its tempo lamp and the chord it plays */
+.backing-transport { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.backing-transport button { padding: 4px 9px; }
+.backing-transport button.running { background: #24352a; color: #7ddc9a; border-color: transparent; }
+.backing-transport button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.backing-led { width: 9px; height: 9px; border-radius: 50%; background: #3a1414; margin-left: 4px; flex: none; }
+.backing-led.on { background: #ff6b6b; box-shadow: 0 0 6px #ff6b6b; }
+.backing-led.down { background: #ffd0d0; box-shadow: 0 0 8px #ff6b6b; }
+.backing-chord { color: var(--accent); font-variant-numeric: tabular-nums; min-width: 3em; }
+
 @media (max-width: 1050px) {
   main { grid-template-columns: 1fr; min-height: auto; }
   #controls { max-height: none; border-right: 0; border-bottom: 1px solid var(--line); }

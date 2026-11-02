@@ -5,6 +5,7 @@ import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/v
 import { tunedFreq } from '../../shared/tuning.js';
 import { INSTRUMENT } from './cuore-instrument.js';
 import { wasmModel } from './cuore-wasm.js';
+import { attachBacking } from '../../shared/backing.js';
 
 // The views draw what the engine plays: its model, from the same C++, built as WebAssembly.
 const model = await wasmModel();
@@ -19,10 +20,21 @@ const shell = createShell({
   ...INSTRUMENT,
   arrows: { param: 'velocity', step: 0.05 },
   onAudio: (a) => spectrum.setAnalyser(a.analyser),
-  onNoteOn: (key, vel) => { focus = key; focusVel = vel; update(); },
+  onNoteOn: (key, vel) => { focus = key; focusVel = vel; update(); backing.noteOn(); },
   onMessage: (m) => { if (m.type === 'frame') frame = m; },
-  onPanic: () => { frame = { crystals: [] }; },
+  onPanic: () => { frame = { crystals: [] }; backing.stop(); },
   onParam: () => update(),
+});
+
+// PI Requests: a 1980s rhythm box, with the backing tracks CUORE came with: the Mediterranean's
+// waves, which its crystals hear, and its cryostat's pulse-tube coolers (shared/backing.js)
+const backing = attachBacking(shell, {
+  id: 'cuore',
+  styles: ['sea', 'pulsetube'],
+  about: {
+    sea: 'CUORE\'s crystals hear the sea. Waves in the Tyrrhenian and the Adriatic, 50 to 100 km from the Gran Sasso, shake the mountain with microseisms, and the detectors\' noise near 0.6 Hz rises and falls with the waves\' height (the CUORE collaboration, 2024). Here a southern Italian tarantella in 6/8, on the tamburello, rides the swell: louder on each crest, with the surf beneath it.',
+    pulsetube: 'CUORE\'s cryostat is cooled by pulse-tube coolers, each letting helium at high pressure into its cold head and out again 1.4 times a second. Their shaking reaches the crystals, so CUORE times the coolers against one another to cancel as much of it as it can (D\'Addabbo et al. 2018). Here one keeps the beat, a cycle a beat at 84 BPM: the valve\'s thunk, the gas\'s hiss in and its sigh out, the valve\'s motor ticking, and a hand clap on two and four.',
+  },
 });
 
 const sig = (v, d = 3) => Number(v.toPrecision(d)).toLocaleString('en-US', { maximumSignificantDigits: d });
