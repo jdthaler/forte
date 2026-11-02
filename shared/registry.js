@@ -14,7 +14,7 @@
 // `plugin.ready` marks an instrument whose native port is built and released as plugins (it has
 // a native/instruments/<id>/ folder); the landing page lists those under Plugins.
 
-export const FORTE_VERSION = '0.43.0';
+export const FORTE_VERSION = '0.44.0';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
@@ -432,7 +432,7 @@ export const INSTRUMENTS = [
     accent: '#c99bff',
   },
   {
-    id: 'abracadabra', name: 'ABRACADABRA', section: 'devices', ready: true, version: '0.4.0', trim: 3,
+    id: 'abracadabra', name: 'ABRACADABRA', section: 'devices', ready: true, version: '0.5.0', trim: 3,
     plugin: { code: 'Abra', ready: true },
     tagline: 'Every key a universe whose dark matter is an axion of that key\'s mass, heard as the ABRACADABRA experiment would hear it: a toroidal magnet turns the axion into a faint flux through a pickup loop, a tone that swells and fades as the halo\'s waves drift in and out of step, over the hiss of the SQUID.',
     physics: 'Axion electrodynamics · the Standard Halo Model · SQUID readout',
@@ -448,7 +448,7 @@ export const INSTRUMENTS = [
     accent: '#ff7b6b',
   },
   {
-    id: 'cuore', name: 'CUORE', section: 'devices', ready: true, version: '0.2.0', trim: 11,
+    id: 'cuore', name: 'CUORE', section: 'devices', ready: true, version: '0.3.0', trim: 11,
     plugin: { code: 'Cuor', ready: true },
     tagline: 'Every key one of CUORE\'s tellurium dioxide crystals, ten thousandths of a degree above absolute zero under the Gran Sasso: its heater fires pulses of heat at the note\'s rate, sped up, and a germanium thermistor turns each into a voltage, rising as the electrons warm and fading as the crystal cools through its Teflon holders.',
     physics: 'Cryogenic calorimetry · Debye\'s T³ heat capacity · hopping conduction in NTD germanium · electrothermal feedback',
