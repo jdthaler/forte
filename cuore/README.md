@@ -140,6 +140,33 @@ only its neighbours), and a pulse lands between samples where it falls.
   speed-up is 132,000, the pulses are a few samples long, and the notes are
   clicks.
 
+## PI Requests
+
+Asked for by the experiment's PI: the backing of a 1980s home keyboard, in its own group of
+controls. *Rhythm* picks a preset rhythm, *Start* starts it (or *Synchro*, which waits for your
+first key), *Fill in* plays a drum fill at the end of the bar, and with *Drums, bass and chords* a
+bass line and chord stabs follow the chord your left hand holds below middle C (one key for its
+major chord), keeping it after you let go.
+
+The first two rhythms are CUORE's own backing tracks:
+
+- **Mediterranean weather.** CUORE's crystals hear the sea: waves in the Tyrrhenian and the
+  Adriatic, 50 to 100 km away, shake the Gran Sasso with microseisms, and the detectors' noise
+  near 0.6 Hz rises and falls with the waves' height (the CUORE collaboration, arXiv:2404.13602).
+  Here a southern Italian tarantella in 6/8, on the tamburello, rides the swell, with the surf
+  beneath it. *Sea state* sets the waves' height and the swell's period (Calm, 3 s, to Storm,
+  10 s; sea waves run at 0.1–0.4 Hz): the higher the sea the more the rhythm rises and falls, and
+  from Rough on a big crest brings a fill.
+- **Pulse tube.** The cryostat's pulse-tube coolers let helium at high pressure into their cold
+  heads and out again 1.4 times a second, and their shaking reaches the crystals, so CUORE times
+  them against one another to cancel what it can (D'Addabbo et al., arXiv:1712.02753). Here one
+  keeps the beat at 84 BPM.
+
+Then the classics: Rock, Disco, 16 Beat, Swing, Slow Rock, Waltz, Bossa Nova and Samba. The rhythm
+box is the page's (`shared/backing.js`), drawn from Web Audio nodes like an analogue drum machine,
+and its settings stay in this browser, in no preset or link. The plugins have none: a DAW has its
+own drums.
+
 ## Files
 
 ```
