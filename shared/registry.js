@@ -481,6 +481,14 @@ export const INSTRUMENTS = [
     accent: '#e0b65a',
   },
   {
+    id: 'birdsong', name: 'Birdsong', section: 'phenomena', ready: true, version: '0.1.0', trim: -2,
+    plugin: { code: 'Bird', ready: true },
+    tagline: 'Every key a songbird: air from its air sacs sets the labia of its syrinx swinging, one nonlinear oscillator whose pure Hopf whistles and buzzy saddle-node calls are a canary\'s and a zebra finch\'s, sung through its trachea and a mouth it tunes to the note.',
+    physics: 'Nonlinear dynamics · the normal form of the syrinx · Hopf and saddle-node bifurcations · the vocal tract',
+    vibrates: 'air', notes: 'hold',
+    accent: '#f4d438',
+  },
+  {
     id: 'pulsars', name: 'Pulsars', section: 'phenomena', ready: true, version: '0.1.0', trim: -0.5,
     plugin: { code: 'Puls', ready: true },
     tagline: 'Every key a spinning neutron star whose radio beam sweeps past the Earth at the note, as fast as the millisecond pulsars spin: the shape of the beam and where our sightline cuts it set the tone, and the Galaxy\'s plasma smears and sweeps each pulse on its way.',
