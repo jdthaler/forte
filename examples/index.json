@@ -967,6 +967,36 @@
    "title": "Cut up high then as voiced then low"
   }
  ],
+ "planets": [
+  {
+   "file": "01-moon-rings-a-tune.m4a",
+   "title": "Moon rings a tune"
+  },
+  {
+   "file": "02-earth-rings-a-tune.m4a",
+   "title": "Earth rings a tune"
+  },
+  {
+   "file": "03-spin-splits-the-tone.m4a",
+   "title": "Spin splits the tone"
+  },
+  {
+   "file": "04-explosion-heard-at-90-then-45-degrees.m4a",
+   "title": "Explosion heard at 90 then 45 degrees"
+  },
+  {
+   "file": "05-shallow-then-deep-quake.m4a",
+   "title": "Shallow then deep quake"
+  },
+  {
+   "file": "06-earth-mars-moon.m4a",
+   "title": "Earth mars moon"
+  },
+  {
+   "file": "07-twisting-modes-in-stereo.m4a",
+   "title": "Twisting modes in stereo"
+  }
+ ],
  "project8": [
   {
    "file": "01-krypton-chords-climbing.m4a",

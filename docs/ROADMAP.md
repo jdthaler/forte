@@ -144,6 +144,7 @@ default in the existing presets, or would change what an existing knob means.
 | Hammered dulcimer or cimbalom | M | |
 | Ondes Martenot | M | Done, for the next release: two heterodyne oscillators pulling through Adler's equation, keyboard or ribbon, the intensity key from Quartier et al.'s measurements, the drawer's timbres, and the four diffuseurs (springs, tam-tam and palme strings from their physics). |
 | Cellulophone | M | Done, for the next release: Toulon's photoelectric organ (1927), lamps through discs of slots rounded to whole slots (a few cents out of tune), screens drawn with each wave and averaged by the slot, key mirrors, depth and push screens, the tremolo screen and damping arcs, mains flicker, potassium or selenium cells. |
+| Ringing Planets | M | Done, for the next release: the free oscillations of the Earth (PREM), Mars and the Moon after a great quake, solved by spectral elements, with Q and its dispersion, the spin's splitting, a moment-tensor source at any depth and a station that can sit on a mode's nodes; ₀S₂ on the key. |
 | Theremin | M | Continuous pitch suits MPE; the ondes' heterodyne and pulling would carry over. |
 | Kalimba (mbira) | S–M | Close to the tine piano. |
 | Cristal Baschet or waterphone | M | Friction-driven rods, close to the glass armonica's bowing. |
