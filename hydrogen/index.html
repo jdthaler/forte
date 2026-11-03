@@ -59,12 +59,12 @@
         <div class="card" data-perform data-view="The spectroscope">
           <div class="card-head"><h2>The spectroscope</h2><span class="muted">the lines at their wavelengths</span></div>
           <canvas id="scope"></canvas>
-          <div class="caption">Faint: the lamp's steady lines through the window. Bright: the lines sounding now, as strong as they are heard. Each line is one transition from a level n down to a level m, and sounds at its frequency over Hα's, (1/m² − 1/n²) ÷ (5/36). <span id="scope-read"></span></div>
+          <div class="caption">Faint: the lamp's steady lines through the window. Bright: the lines sounding now, as strong as they are heard. Each line is one transition from a level n down to a level m, and sounds at its frequency over Hα's, (1/m² − 1/n²) ÷ (5/36); helium's over its yellow D₃ line's, from NIST's levels; molecular hydrogen's over its infrared 1–0 S(1) line's. <span id="scope-read"></span></div>
         </div>
         <div class="card" data-perform data-view="Energy levels">
-          <div class="card-head"><h2>Energy levels</h2><span class="muted">n ≤ 7, by angular momentum</span></div>
+          <div class="card-head"><h2>Energy levels</h2><span class="muted" id="levels-sub">by angular momentum</span></div>
           <canvas id="levels"></canvas>
-          <div class="caption">The levels of the atom (a Grotrian diagram), lit by how many atoms the lamps hold in each, with the lines heard drawn between the levels they join. An atom falls from level to level, l changing by one each time, until it reaches 1s; in slow motion you hear the cascade fill in after each key.</div>
+          <div class="caption">The levels of the atom (a Grotrian diagram), lit by how many atoms the lamps hold in each, with the lines heard drawn between the levels they join. An atom falls from level to level, l changing by one each time, until it reaches 1s; in slow motion you hear the cascade fill in after each key. Hydrogen's levels up to n = 7; helium's up to n = 5, the singlets and the triplets side by side (an atom hardly ever crosses between them), with the ground state 1¹S far below; molecular hydrogen's ground-state ladder of vibration (v) and rotation (J) below, and its excited electronic states far above.</div>
         </div>
       </div>
       <div class="row">

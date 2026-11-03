@@ -147,6 +147,7 @@ void HydrogenEngine::light(Voice &v, double velocity) {
     o.lambda = L.nm;
     o.nat = g.width[c.kept];
     o.stark = L.stark;
+    o.de = L.de; o.su = L.su; o.sl = L.sl; o.gu = L.gu; o.gl = L.gl;
     o.clock = g.clockOf[c.kept];
     v.osc[i] = o;
     v.peak += c.score;
@@ -184,7 +185,13 @@ void HydrogenEngine::widths(Voice &v) {
   for (int i = 0; i < v.count; i++) {
     Osc &o = v.osc[i];
     const double f = v.fKey * o.ratio * v.bendNow;
-    const double w = o.nat / (o.clock ? P[p::slowmo] * SLOW_CLOCK : P[p::slowmo]) + (dop + o.stark * F0) * f;
+    double w = o.nat / (o.clock ? P[p::slowmo] * SLOW_CLOCK : P[p::slowmo]);
+    if (o.de > 0) {
+      // each level's Stark width: linear where its neighbours are nearer than its shift, else quadratic
+      const double u = o.su * F0, l = o.sl * F0;
+      const double stark = (u * (o.gu > u ? u / o.gu : 1) + l * (o.gl > l ? l / o.gl : 1)) / o.de;
+      w += (dop + stark) * f;
+    } else w += (dop + o.stark * F0) * f;
     o.rho = std::exp(-PI * w * SUB / fs);
   }
 }
