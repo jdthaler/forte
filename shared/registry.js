@@ -24,7 +24,7 @@ export const SECTIONS = [
   { id: 'experimental', title: 'Experiments from history', short: 'Experimental',
     blurb: 'Inventions that came and went: strings bowed by wheels, singing glass, flames in tubes, an arc lamp that sings and a voice.' },
   { id: 'phenomena', title: 'Physical phenomena', short: 'Phenomena',
-    blurb: 'Keyboards made of phenomena rather than mechanisms: synchronising oscillators, nonlinear plates, black holes, wavefunctions, bubbles, chirping springs, stars, strings sung by the wind, lightning\'s whistlers and the early universe\'s sound, each played from the keys. Several have been modelled or sonified before; see the prior art and credits.' },
+    blurb: 'Keyboards made of phenomena rather than mechanisms: synchronising oscillators, nonlinear plates, black holes, wavefunctions, bubbles, chirping springs, stars, strings sung by the wind, lightning\'s whistlers, the early universe\'s sound and the ringing of whole planets, each played from the keys. Several have been modelled or sonified before; see the prior art and credits.' },
   { id: 'devices', title: 'Devices built to study physics', short: 'Devices',
     blurb: 'Keyboards made of the apparatus physicists build to study nature: an accelerator\'s storage ring and its RF cavities, a collider\'s calorimeter crystals, the trap that weighs the neutrino and the magnet that listens for dark matter, each heard through the pickups and antennas that read it out.' },
 ];
@@ -495,6 +495,15 @@ export const INSTRUMENTS = [
     physics: 'Nonlinear dynamics · the normal form of the syrinx · Hopf and saddle-node bifurcations · the vocal tract',
     vibrates: 'air', notes: 'hold',
     accent: '#f4d438',
+  },
+  {
+    id: 'planets', name: 'Ringing Planets', section: 'phenomena', ready: true, version: '0.1.0', trim: 12.5,
+    plugin: { code: 'Plnt', ready: true },
+    after: 'the free oscillations of the Earth',
+    tagline: 'Every key the whole Earth, Mars or Moon ringing after a great quake, sped up until its gravest tone, the hour-long football mode, is the note: hundreds of standing waves of the planet, each split by its spin into tones that beat.',
+    physics: 'Self-gravitating elastic spheres · spheroidal and toroidal normal modes · PREM · rotational splitting · moment tensors',
+    vibrates: 'space', notes: 'ring',
+    accent: '#5fb3a1',
   },
 ];
 
