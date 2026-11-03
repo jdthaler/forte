@@ -8,3 +8,6 @@ node_modules/
 
 # native builds (native/README.md)
 native/build/
+
+# downloaded tables (tools/hydrogen-gas-tables.mjs)
+tools/.gas-data/
