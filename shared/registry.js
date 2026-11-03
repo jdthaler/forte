@@ -481,6 +481,14 @@ export const INSTRUMENTS = [
     accent: '#e0b65a',
   },
   {
+    id: 'birdsong', name: 'Birdsong', section: 'phenomena', ready: true, version: '0.1.0', trim: -2,
+    plugin: { code: 'Bird', ready: true },
+    tagline: 'Every key a songbird: air from its air sacs sets the labia of its syrinx swinging, one nonlinear oscillator whose pure Hopf whistles and buzzy saddle-node calls are a canary\'s and a zebra finch\'s, sung through its trachea and a mouth it tunes to the note.',
+    physics: 'Nonlinear dynamics · the normal form of the syrinx · Hopf and saddle-node bifurcations · the vocal tract',
+    vibrates: 'air', notes: 'hold',
+    accent: '#f4d438',
+  },
+  {
     id: 'planets', name: 'Ringing Planets', section: 'phenomena', ready: true, version: '0.1.0', trim: 12.5,
     plugin: { code: 'Plnt', ready: true },
     after: 'the free oscillations of the Earth',

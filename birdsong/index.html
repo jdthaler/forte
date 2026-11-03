@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Birdsong · Forte</title>
+  <meta name="description" content="Every key a songbird: air from its air sacs sets the labia of its syrinx swinging, one nonlinear oscillator whose pure Hopf whistles and buzzy saddle-node calls are a canary's and a zebra finch's, sung through its trachea and a mouth it tunes to the note.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="Birdsong · Forte">
+  <meta property="og:description" content="Every key a songbird: air from its air sacs sets the labia of its syrinx swinging, one nonlinear oscillator whose pure Hopf whistles and buzzy saddle-node calls are a canary's and a zebra finch's, sung through its trachea and a mouth it tunes to the note.">
+  <meta property="og:url" content="https://forte.jthaler.net/birdsong/">
+  <meta property="og:image" content="https://forte.jthaler.net/birdsong/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Birdsong's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="birdsong">
+  <div class="forte-edge" aria-hidden="true"></div>
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Birdsong</h1>
+      <span class="sub">a songbird's syrinx: one nonlinear oscillator, after Mindlin</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Pressure and tension">
+          <div class="card-head"><h2>Pressure and tension</h2><span class="muted" id="plane-read"></span></div>
+          <canvas id="plane"></canvas>
+          <div class="caption">The normal form's two muscles: the labial tension across, the air sac pressure up (α downward). Above the line the labia swing; below it they rest. Right of the corner the line is a Hopf bifurcation (solid), where a swing grows from nothing into a pure tone; left of it a saddle-node (dashed), where the swing starts at full size and zero frequency, a click train that runs up into a buzz. The dot is the newest note now, with its gesture's path behind it; the ring is where its breath is headed.</div>
+        </div>
+        <div class="card" data-view="Labia">
+          <div class="card-head"><h2>Labia of <b id="focus-name">C4</b></h2><span class="muted" id="labia-read"></span></div>
+          <canvas id="labia"></canvas>
+          <div class="caption">The labia's phase portrait: their opening x across, their speed up. The loop is the limit cycle the model settles on at the note's full breath; the dots are the last swing the engine played. Near the Hopf line the loop is a small ellipse, a sine; near the saddle-node it is lopsided, crawling past the ghost of the vanished fixed points (the crosses) and snapping back, a pulse rich in harmonics.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Vocal tract">
+          <div class="card-head"><h2>Vocal tract</h2><span class="muted">response · stems: the note's harmonics out of the beak</span></div>
+          <canvas id="tract"></canvas>
+          <div class="caption">The trachea's quarter-wave resonances (c/4L, 3c/4L …) times the mouth's (the OEC's) single resonance, and the note's harmonics as they leave the beak: the labia's cycle (faint) filtered by the tract (bright). A mouth tuned to the note sits on the fundamental and leaves a whistle; a fixed one picks out whichever harmonics fall under it.</div>
+        </div>
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the note's harmonics</span></div>
+          <canvas id="spectrum"></canvas>
+        </div>
+      </div>
+      <div class="row single">
+        <div class="card" data-perform data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">How birdsong is read: time across, frequency up. A trill is a row of identical syllables; sweeps are slanted strokes; a saddle-node onset fans in from the bottom as its pitch runs up from zero, with a stack of harmonics a Hopf onset never has.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows; a bird sings while its key is held</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>syllable rate <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>hold notes: <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>MIDI: velocity and aftertouch are the breath, mod wheel = syllable rate, pitch bend and MPE retune the labia</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/birdsong-main.js"></script>
+  <script type="module" src="src/birdsong-tour.js"></script>
+</body>
+</html>
