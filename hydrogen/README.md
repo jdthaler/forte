@@ -18,7 +18,9 @@ recombination, or a laser into one level. A spectrometer's window chooses
 which lines reach the ear: the visible Balmer series, the ultraviolet Lyman
 series two octaves and a fourth up, or the infrared below. A Gas switch
 fills the lamp with helium instead: two electrons, singlets and triplets,
-and the yellow D₃ line on the key.
+and the yellow D₃ line on the key; or with molecular hydrogen, whose
+vibrating, rotating molecules sing in bands, with the infrared 1–0 S(1)
+line of starlit and shocked clouds on the key.
 
 Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/hydrogen/>
 (or locally, see the [main README](../README.md)).
@@ -253,6 +255,57 @@ a real tube, it empties only as the glow drains it.
   so helium's low lines, from levels well apart, stay sharp at densities
   that smear hydrogen's.
 
+### 10. Molecular hydrogen
+
+The third gas is H₂, and beside it the atoms any H₂ lamp holds. Two
+protons bound by two electrons can vibrate (v) and rotate (J), so each
+electronic state is a ladder of levels:
+
+- **The ground state X¹Σg⁺**: every bound level, 302 of them up to v = 14
+  and J = 31, and their electric-quadrupole lines (ΔJ = 0, ±2: the S, Q
+  and O branches), all from ExoMol's RACPPK list (Roueff et al. 2019).
+  They are slow: 1–0 S(1) at 2.1218 µm, the reference line on the key,
+  has A = 3.47 × 10⁻⁷ s⁻¹, and its upper level lives two weeks. Too slow to share a time grid with
+  the electronic bands, so the ground state is the lamp's **slow ladder**:
+  it runs on a second clock 10¹⁴ times faster than the atom's (and drains
+  at the glow's rate on that clock), fed by the fast levels' steady
+  cascade into it. At the default slow motion, X(1, 3) lives 0.35 s.
+- **B¹Σu⁺ and C¹Πu**, up to J′ = 12, from Abgrall et al.'s tables (MOLAT):
+  the Lyman and Werner bands into X, 85 to 172 nm, dropping each upper
+  level's lines under 10⁻³ of its strongest.
+- **d³Πu and a³Σg⁺** from their spectroscopic constants (Huber &
+  Herzberg): Morse vibrational wavefunctions for the Franck–Condon
+  factors, d's electronic rate set so that v′ = 0 lives 40 ns, and its
+  Λ-doubling: Π⁻ emits the Q lines, Π⁺ the P and R. The band between them
+  is Fulcher-α, the red and orange lines of a hydrogen tube (its Q1 0–0
+  at 601.83 nm, where d's energy is set). a³Σg⁺ empties into the
+  repulsive b³Σu⁺, whose continuum is left out.
+- **The atoms**: hydrogen up to n = 20, as the hydrogen lamp's. The *Atoms
+  among the molecules* parameter sets their share of the light.
+
+Each line is one transition, v′ J′ → v″ J″. The page names them by
+branch: the ground state's 1–0 S(1), the bands' B, C or d v′–v″ R, Q or P
+(J″). Ortho (odd J in X) and para hydrogen are separate species; the
+weights carry the nuclear spin's 3 : 1.
+
+How a key lights it, from X v = 0 at a rotational temperature:
+- **Discharge**: electrons into B and C with van Regemorter's rate and each
+  line's oscillator strength, and into d by exchange (as helium's
+  triplets), through the Franck–Condon factors from X v = 0. Exchange's
+  strength is set so that d is lit about a tenth as often as B and C
+  together at 2 × 10⁴ K, as the measured cross-sections near threshold
+  give. The atoms: hydrogen's discharge.
+- **Recombination**, for the molecule, is the glow of a cloud lit by
+  starlight (fluorescence): the far ultraviolet is absorbed in the Lyman
+  and Werner lines from X(0, J″) at the rate ∝ f λ of a field flat in
+  energy per frequency. The molecules fall back into high v and cascade
+  down: the infrared lines of v = 2, 3 and up are nearly as bright as
+  v = 1's (2–1 S(1)/1–0 S(1) ≈ 0.6). The atoms recombine.
+- **Laser**: one line, X(0, 0) → B(v′ = n − 2, J′ = 1).
+- **Heat**: thermal equilibrium, as for the atoms (2–1 S(1)/1–0 S(1) ≈ 0.08
+  at 2000 K, ortho three times para): the infrared spectrum of a shock.
+- **Case B** traps the lines into X v = 0, which the cold gas absorbs.
+
 ## What to listen for
 
 - **The cascade**: hold a key with the *Laser to 12p* preset and the lines
@@ -272,6 +325,9 @@ a real tube, it empties only as the glow drains it.
 - **Helium**: the *Helium* presets: D₃ on the key, a nebula's helium, a
   hot discharge where the singlets catch up, 1083 nm and 2058 nm in the
   infrared, and the triplets' fine structure.
+- **Molecular hydrogen**: the *starlit cloud* and *shock* presets through
+  the infrared, the same lines lit two ways; the Fulcher band in the
+  visible; the Lyman and Werner bands far up in the ultraviolet.
 - **Slow motion**: less of it and the lamp lights at once, with rough,
   wide lines; more and the lines are pure but take seconds to light
   (demo 08).
@@ -290,7 +346,8 @@ tools/hydrogen-native-table.mjs           node tools/hydrogen-native-table.mjs (
 native/instruments/hydrogen/hydrogen-gases.h   helium's (and H₂'s) levels and lines, made by:
 tools/hydrogen-gas-tables.mjs             node tools/hydrogen-gas-tables.mjs (downloads into tools/.gas-data/)
 native/instruments/hydrogen/hydrogen-helium.cpp   helium: its gas, its excitation, its fine structure
-test/hydrogen-tests.mjs                   node test/hydrogen-tests.mjs (35 tests, about 20 s)
+native/instruments/hydrogen/hydrogen-molecule.cpp   molecular hydrogen: its gas and its excitation
+test/hydrogen-tests.mjs                   node test/hydrogen-tests.mjs (43 tests, about 25 s)
 tools/render-hydrogen.mjs                 node tools/render-hydrogen.mjs → examples/hydrogen/
 ```
 
@@ -329,6 +386,17 @@ tools/render-hydrogen.mjs                 node tools/render-hydrogen.mjs → exa
 * **Helium's recombination is hydrogen's, shared by spin**: right at high n,
   where the outer electron barely sees the inner one, rougher for the low
   levels.
+
+* **H₂ is simplified more than the atoms.** Its excitation is from
+  X v = 0 only, at a fixed rotational temperature (400 K in a discharge,
+  200 K in a cloud); the collision strengths are rough; B and C's
+  continuum (the decays that break the molecule) and a³Σg⁺ → b³Σu⁺ are
+  left out; the ground state's levels drain at the glow's rate on the
+  slow clock, not by collisions that differ level by level; and the
+  molecule's lines carry no fine structure (its hyperfine and spin
+  splittings are far below a cent).
+* **A gas past hydrogen keeps its strongest 400 lines in each band**
+  (ultraviolet, visible, infrared), far more than any lamp plays.
 
 ## Quality
 
@@ -371,6 +439,23 @@ about ten lines, so only the *Every line* and infrared settings lose any.
   He I emissivities in the case B approximation", *MNRAS* 425, L28 (2012),
   [doi:10.1111/j.1745-3933.2012.01300.x](https://doi.org/10.1111/j.1745-3933.2012.01300.x):
   the nebular line ratios the tests check.
+
+* E. Roueff, H. Abgrall, P. Czachorowski, K. Pachucki, M. Puchalski & J.
+  Komasa, "The full infrared spectrum of molecular hydrogen", *A&A* 630,
+  A58 (2019), [doi:10.1051/0004-6361/201936249](https://doi.org/10.1051/0004-6361/201936249),
+  as served by ExoMol ([exomol.com](https://www.exomol.com)): the ground
+  state's levels and lines.
+* H. Abgrall, E. Roueff, F. Launay & J.-Y. Roncin, "The B¹Σu⁺ → X¹Σg⁺ and
+  C¹Πu → X¹Σg⁺ band systems of molecular hydrogen", *Can. J. Phys.* 72, 856
+  (1994), and the MOLAT database ([molat.obspm.fr](https://molat.obspm.fr)):
+  the Lyman and Werner bands.
+* K. P. Huber & G. Herzberg, *Constants of Diatomic Molecules* (Van
+  Nostrand, 1979): d³Πu's and a³Σg⁺'s constants.
+* L. Wolniewicz, I. Simbotin & A. Dalgarno, "Quadrupole transition
+  probabilities for the excited rovibrational states of H₂", *ApJS* 115,
+  293 (1998): the rates the tests check.
+* J. H. Black & E. F. van Dishoeck, "Fluorescent excitation of interstellar
+  H₂", *ApJ* 322, 412 (1987): the fluorescent spectrum.
 
 **The glow.**
 * H. van Regemorter, "Rate of Collisional Excitation in Stellar
