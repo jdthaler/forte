@@ -505,6 +505,14 @@ export const INSTRUMENTS = [
     vibrates: 'space', notes: 'ring',
     accent: '#5fb3a1',
   },
+  {
+    id: 'pulsars', name: 'Pulsars', section: 'phenomena', ready: true, version: '0.1.0', trim: -0.5,
+    plugin: { code: 'Puls', ready: true },
+    tagline: 'Every key a spinning neutron star whose radio beam sweeps past the Earth at the note, as fast as the millisecond pulsars spin: the shape of the beam and where our sightline cuts it set the tone, and the Galaxy\'s plasma smears and sweeps each pulse on its way.',
+    physics: 'Neutron stars · the rotating vector model · interstellar dispersion and scattering · dedispersion',
+    vibrates: 'space', notes: 'hold',
+    accent: '#7fc7ff',
+  },
 ];
 
 // The template (docs/template/), the starting point for new instruments: not listed, but it
