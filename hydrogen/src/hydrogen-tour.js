@@ -37,6 +37,15 @@ In a nebula, starlight has stripped the atoms bare and electrons are **recapture
 The spectroscope's window chooses which you hear, each still pitched against Hα on the key.`,
   },
   {
+    title: 'Helium: two electrons, two families',
+    views: ['The spectroscope', 'Energy levels'],
+    preset: 'Helium: the yellow D₃ line on the note',
+    play: [note('A3', { dur: 5 }), { at: 5, set: { excitation: 'recombination', temperature: 10000, caseB: true, density: 1000 } }, note('A3', { at: 5.1, dur: 4 })],
+    text: `Helium has two electrons, and their spins either cancel (**singlets**) or add (**triplets**). Light hardly ever flips a spin, so the two families barely talk: the Grotrian diagram is two ladders side by side. The yellow **D₃** line, found in the Sun in 1868 before helium was found on Earth, is on the key.
+
+From a nebula, the ratios of 447.1, 587.6 and 667.8 nm tell how much helium the gas holds: the measurement that weighs the helium made in the first minutes after the Big Bang.`,
+  },
+  {
     title: 'Crowded by ions: Stark broadening',
     views: ['Spectrum', 'Spectrogram'],
     preset: 'A dense plasma: Stark-broadened lines',
