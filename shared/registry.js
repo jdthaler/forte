@@ -159,6 +159,15 @@ export const INSTRUMENTS = [
     accent: '#d9b77e',
   },
   {
+    id: 'brass', name: 'Brass', section: 'traditional', ready: true, version: '0.1.0', trim: 2.5,
+    plugin: { code: 'Bras', ready: true },
+    after: 'the tenor trombone, the trumpet and the flugelhorn',
+    tagline: 'A player’s lips buzz into a mouthpiece and a bore of travelling waves: play loud and the wave steepens into a shock on its way down the tubing, which is where brass gets its blare.',
+    physics: 'Lip reed · bore and bell as travelling waves · nonlinear steepening into shocks',
+    vibrates: 'air', notes: 'hold',
+    accent: '#e8b23a',
+  },
+  {
     id: 'grand', name: 'Electric Grand', section: 'electric', ready: true, version: '0.11.0', trim: 3.5,
     plugin: { code: 'EGrd', ready: true },
     after: 'the Yamaha CP-70',

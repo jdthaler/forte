@@ -33,6 +33,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Hydraulis](hydraulis/) | Ctesibius's water organ (3rd century BC), the organs of Dion and Aquincum | hand pumps push air through their valves into a bowl standing in water: the hydrostatic head is the wind, capped at the rim where it bubbles out (Minnaert bubbles), the water bouncing on the air shut in the bowl; slides whose holes open as overlapping circles, sprung back; the Pipe Organ's flue pipes on an ancient, nearly constant bore in four ranks, one open and three stopped |
 | ✅ | [Regal](regal/) | the Renaissance reed organ (Praetorius, 1619; Monteverdi's *Orfeo*) | brass tongues as curved cantilevers that roll shut on their shallots (Bernoulli jets, a penalty contact), each reed in its own boot, shallot and short resonator (Kelly–Lochbaum tubes: cylinders, funnels, capped balls); two weighted wedge bellows raised in turn, a tremulant; every reed retuned for its voicing |
 | ✅ | [Clavichord](clavichord/) | the German clavichord of C. P. E. Bach's day (18th century) | a brass tangent strikes the strings and stays on them as the end of the speaking length (a moving boundary driving every partial), held up by the finger's force against the strings' pull: pressure tuning and the Bebung from the stretch, the tangent's give tuned for; the listing damps the afterlengths and stops the string at key-up; double-fretted pairs where the higher tangent wins, 4′ strings in the bass, a modal soundboard |
+| ✅ | [Brass](brass/) | the tenor trombone, the B♭ trumpet and the flugelhorn | an outward-striking lip (a mass on a spring) blowing Bernoulli flow into the mouthpiece's cup; the bore as travelling waves (Kelly–Lochbaum, fractional delays, wall losses) and a radiating bell; loud waves steepening into shocks in the narrow tubing (a delay read where the pressure carries each sample); a player who picks the partial and moves the slide or valves and the lips by ear; a plunger |
 
 ### Electric instruments
 
@@ -149,6 +150,7 @@ is the mod wheel's control wherever the instrument has one.
 | Hydraulis | Open rank · Stopped rank · Stopped rank, octave above | Gurgle | Pumping effort |
 | Regal | Tremulant rate · Curve: tip off the shallot · Tongue Q (mechanical) | Resonator length | Wind pressure |
 | Clavichord | Bebung rate · Listing cloth · Unison spread | Finger pressure on the key | Bebung |
+| Brass | Air nonlinearity (shock waves) · Lip tension · Tonguing | Breath | Plunger mute |
 | Electric Grand | Bass · Middle · Treble | Tremolo rate | Tremolo depth |
 | Tonewheel Organ | 16' drawbar · 8' drawbar · 4' drawbar | Tube drive | Expression pedal |
 | Tine Piano | Amp drive · Speaker top end · Tip hardness | Stereo vibrato rate | Stereo vibrato depth |

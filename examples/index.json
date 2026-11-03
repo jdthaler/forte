@@ -119,6 +119,24 @@
    "title": "Chord released with dampers then dampers lifted sympathetic ring"
   }
  ],
+ "brass": [
+  {
+   "file": "01-trombone-soft-and-loud.m4a",
+   "title": "Trombone soft and loud"
+  },
+  {
+   "file": "02-fortissimo-with-and-without-shocks.m4a",
+   "title": "Fortissimo with and without shocks"
+  },
+  {
+   "file": "03-trumpet-and-flugelhorn.m4a",
+   "title": "Trumpet and flugelhorn"
+  },
+  {
+   "file": "04-plunger-wah.m4a",
+   "title": "Plunger wah"
+  }
+ ],
  "bubbles": [
   {
    "file": "01-a-tune-over-two-brooks.m4a",

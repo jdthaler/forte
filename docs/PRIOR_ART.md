@@ -249,6 +249,16 @@ requests.
   models reed pipes physically, and regals are sold as sample libraries.
   The Regal plays its curved tongues, shallots, short resonators and wedge
   bellows from those; its sources are in `regal/README.md`.
+* **Brass.** The shock waves are A. Hirschberg, J. Gilbert, R. Msallam and
+  A. P. J. Wijnands's ("Shock waves in trombones", *J. Acoust. Soc. Am.*
+  **99**(3), 1754–1758, 1996), and their place in brass timbre A. Myers and
+  colleagues' (*J. Acoust. Soc. Am.* **131**, 678–688, 2012); R. Msallam
+  and colleagues synthesised loud trombone tones with them (*Acta Acustica*
+  **86**, 725–736, 2000). The lips are the outward-striking valve of
+  Elliott and Bowsher (1982) and Adachi and Sato (1996). Yamaha's VL1
+  (1994) played waveguide brass from a lip model. The Brass plays its lips,
+  bore, steepening and player from those; its sources are in
+  `brass/README.md`.
 
 ## 2. Techniques Forte uses, and where they come from
 
