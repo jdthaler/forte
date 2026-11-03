@@ -1,7 +1,7 @@
 # Hydrogen Lamp: its engine and model in C++, its plugins and its WebAssembly.
 include(hydrogen-info.cmake) # generated: FORTE_NAME, FORTE_VERSION, FORTE_AU_SUBTYPE
 
-add_library(forte_hydrogen STATIC hydrogen-model.cpp hydrogen-engine.cpp hydrogen-instrument.cpp)
+add_library(forte_hydrogen STATIC hydrogen-model.cpp hydrogen-helium.cpp hydrogen-engine.cpp hydrogen-instrument.cpp)
 target_include_directories(forte_hydrogen PUBLIC .)
 target_link_libraries(forte_hydrogen PUBLIC forte_core)
 
