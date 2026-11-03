@@ -747,6 +747,15 @@ data):
   **135**, 455 (1988)), M. Kahrs and F. Avanzini (DAFx 2001) and T. Smyth
   and J. O. Smith (DAFx 2002). Birdsong integrates the normal form for each
   key, tuned by the labia's rate. Its sources are in `birdsong/README.md`.
+* **The sounds of pulsars.** Pulsars have been played through loudspeakers
+  since their discovery (A. Hewish et al., *Nature* **217**, 709 (1968),
+  [doi:10.1038/217709a0](https://doi.org/10.1038/217709a0)): Jodrell Bank's
+  [The Sounds of Pulsars](https://www.jb.man.ac.uk/research/pulsar/Education/Sounds/sounds.html)
+  plays the Lovell and Parkes telescopes' recordings, the radio's intensity as
+  sound, and Gérard Grisey's *Le Noir de l'Étoile* (first performed 1991) sets
+  six percussionists against the Vela pulsar and PSR B0329+54, the latter
+  received live. Pulsars computes each pulse instead: the beam's geometry, the
+  plasma's dispersion and scattering, and the telescope's dedispersion.
 * **The sound of the Big Bang.** M. Whittle's *Big Bang Acoustics*
   (University of Virginia, from 2004) plays the microwave background's
   power spectrum as sound, and the first million years as a falling roar;

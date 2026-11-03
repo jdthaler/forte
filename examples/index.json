@@ -1065,6 +1065,36 @@
    "title": "Relativistic electrons"
   }
  ],
+ "pulsars": [
+  {
+   "file": "01-millisecond-pulsars-in-chords.m4a",
+   "title": "Millisecond pulsars in chords"
+  },
+  {
+   "file": "02-the-interpulse-an-octave-up.m4a",
+   "title": "The interpulse an octave up"
+  },
+  {
+   "file": "03-sightline-triple-to-single.m4a",
+   "title": "Sightline triple to single"
+  },
+  {
+   "file": "04-dispersion-smears-then-dedispersion.m4a",
+   "title": "Dispersion smears then dedispersion"
+  },
+  {
+   "file": "05-the-sweep-down-the-band.m4a",
+   "title": "The sweep down the band"
+  },
+  {
+   "file": "06-scattering-at-150-mhz-then-1400.m4a",
+   "title": "Scattering at 150 mhz then 1400"
+  },
+  {
+   "file": "07-single-pulses-smooth-then-flickering.m4a",
+   "title": "Single pulses smooth then flickering"
+  }
+ ],
  "pyrophone": [
   {
    "file": "01-chorale.m4a",
