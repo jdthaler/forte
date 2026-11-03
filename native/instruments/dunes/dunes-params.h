@@ -122,7 +122,7 @@ inline forte::Tuning tuningOf(const double *P) {
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
     .slug = "dunes", .name = "Singing Dunes", .version = FORTE_INSTRUMENT_VERSION,
-    .description = "Every key an avalanche down a desert dune's slip face, booming as the dunes of Morocco, Chile and Nevada do: the sheared grains fall into step, their note set by their size, or a buried layer rings as a waveguide. How dunes sing is still argued over, so it plays both.", .auSubtype = "Sing",
+    .description = "Every key an avalanche down a desert dune's slip face, booming as the dunes of Morocco, Chile and Nevada do: the sheared grains fall into step, their note set by their size, or a buried layer rings as a waveguide. How dunes sing is still argued over, so it plays both.", .auSubtype = "Dune",
     .vst3Id = {0x1b, 0x12, 0x53, 0xc1, 0x6f, 0x09, 0xcd, 0x22, 0x34, 0x8b, 0xf7, 0x68, 0x91, 0x95, 0xe4, 0x7c},
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 11,

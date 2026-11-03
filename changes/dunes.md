@@ -12,4 +12,4 @@
   over, so the other leading account plays too: a dry layer over firmer sand ringing as a
   waveguide (Vriend et al. 2007), each key a layer depth, with no threshold. Views of the slip
   face, the grains in step, the threshold and what sets the pitch (with the measured dunes);
-  eleven presets, a guided tour, and the plugin (AU code Sing).
+  eleven presets, a guided tour, and the plugin (AU code Dune).
