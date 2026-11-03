@@ -1,0 +1,7 @@
+/* The page's own palette and any layout beyond shared/instrument.css: the warm pink of the
+   folds and a throat's blue. */
+:root {
+  --accent: #f08a8a;
+  --accent-2: #8ab4f0;
+  --accent-ink: #2a0c0c;
+}
