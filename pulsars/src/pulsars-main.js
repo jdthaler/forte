@@ -25,7 +25,7 @@ const shell = createShell({
   onMessage: (m) => { if (m.type === 'pulsar') flashes.set(m.key, { ...m, at: performance.now() }); },
 });
 
-const fmtT = (t) => (t < 1e-3 ? `${(t * 1e6).toFixed(t < 1e-5 ? 1 : 0)} µs` : t < 1 ? `${(t * 1000).toFixed(t < 0.01 ? 2 : 1)} ms` : `${t.toFixed(2)} s`);
+const fmtT = (t) => (t < 1e-7 ? 'under 0.1 µs' : t < 1e-3 ? `${(t * 1e6).toFixed(t < 1e-5 ? 1 : 0)} µs` : t < 1 ? `${(t * 1000).toFixed(t < 0.01 ? 2 : 1)} ms` : `${t.toFixed(2)} s`);
 const fmtF = (f) => (f >= 1000 ? `${(f / 1000).toFixed(2)} kHz` : `${f.toFixed(f < 100 ? 1 : 0)} Hz`);
 const fmtMHz = (f) => (f >= 1000 ? `${(f / 1000).toFixed(2)} GHz` : `${f.toFixed(0)} MHz`);
 const DEG = 180 / Math.PI;
