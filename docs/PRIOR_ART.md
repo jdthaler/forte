@@ -804,6 +804,18 @@ data):
   and Kepler search for, is drawn, not played; TESS plays it as the
   waveform, each orbit one cycle, with the limb darkening and photon noise
   that shape what the satellite records.
+* **The Earth's free oscillations as sound.** Seismic records have long been
+  sped up into sound: SeismoDome (B. Holtzman and others, Lamont-Doherty,
+  from 2014) plays great quakes' records in a planetarium, and NASA did the
+  same with InSight's marsquakes. The Ringing Planets plays instead the
+  normal modes themselves, solved from PREM (A. M. Dziewonski & D. L.
+  Anderson, *Phys. Earth Planet. Inter.* **25**, 297 (1981),
+  [doi:10.1016/0031-9201(81)90046-7](https://doi.org/10.1016/0031-9201(81)90046-7))
+  and from models of Mars and the Moon, and rung by a moment tensor as
+  F. Gilbert (*Geophys. J. R. Astr. Soc.* **22**, 223 (1971),
+  [doi:10.1111/j.1365-246X.1971.tb03593.x](https://doi.org/10.1111/j.1365-246X.1971.tb03593.x))
+  rang them; MINEOS (G. Masters, J. Woodhouse and F. Gilbert; CIG) is the
+  standard code for the same modes.
 * **Particle detectors as instruments.** Collider Showers rings a calorimeter's crystals by
   the heat a shower leaves (the thermo-acoustic effect); CUORE plays the heat itself, as a
   cryogenic calorimeter reads it: the CUORE Collaboration's electro-thermal model of its
