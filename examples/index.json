@@ -67,6 +67,40 @@
    "title": "The talking arc"
   }
  ],
+ "birdsong": [
+  {
+   "file": "01-a-morning-in-the-garden.m4a",
+   "title": "A morning in the garden"
+  },
+  {
+   "file": "02-hopf-then-saddle-node-onsets.m4a",
+   "title": "Hopf then saddle node onsets"
+  },
+  {
+   "file": "03-born-at-zero-frequency.m4a",
+   "title": "Born at zero frequency"
+  },
+  {
+   "file": "04-canary-trills-faster-and-faster.m4a",
+   "title": "Canary trills faster and faster"
+  },
+  {
+   "file": "05-upsweeps-downsweeps-warble.m4a",
+   "title": "Upsweeps downsweeps warble"
+  },
+  {
+   "file": "06-fixed-mouth-then-tuned.m4a",
+   "title": "Fixed mouth then tuned"
+  },
+  {
+   "file": "07-pitch-rises-with-the-breath.m4a",
+   "title": "Pitch rises with the breath"
+  },
+  {
+   "file": "08-tension-across-the-corner.m4a",
+   "title": "Tension across the corner"
+  }
+ ],
  "blackhole": [
   {
    "file": "01-one-note-as-spin-rises-from-0-to-1-minus-1e-6.m4a",
