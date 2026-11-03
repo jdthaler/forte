@@ -498,6 +498,14 @@ export const INSTRUMENTS = [
     accent: '#5fb3a1',
   },
   {
+    id: 'pulsars', name: 'Pulsars', section: 'phenomena', ready: true, version: '0.1.0', trim: -0.5,
+    plugin: { code: 'Puls', ready: true },
+    tagline: 'Every key a spinning neutron star whose radio beam sweeps past the Earth at the note, as fast as the millisecond pulsars spin: the shape of the beam and where our sightline cuts it set the tone, and the Galaxy\'s plasma smears and sweeps each pulse on its way.',
+    physics: 'Neutron stars · the rotating vector model · interstellar dispersion and scattering · dedispersion',
+    vibrates: 'space', notes: 'hold',
+    accent: '#7fc7ff',
+  },
+  {
     id: 'dunes', name: 'Singing Dunes', section: 'phenomena', ready: true, version: '0.1.0', trim: -7,
     plugin: { code: 'Dune', ready: true },
     tagline: 'Every key an avalanche down a desert dune\'s slip face, booming as the dunes of Morocco, Chile and Nevada do: the sheared grains fall into step, their note set by their size, or a buried layer rings as a waveguide. How dunes sing is still argued over, so it plays both.',
