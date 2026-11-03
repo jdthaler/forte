@@ -481,6 +481,14 @@ export const INSTRUMENTS = [
     accent: '#e0b65a',
   },
   {
+    id: 'birdsong', name: 'Birdsong', section: 'phenomena', ready: true, version: '0.1.0', trim: -2,
+    plugin: { code: 'Bird', ready: true },
+    tagline: 'Every key a songbird: air from its air sacs sets the labia of its syrinx swinging, one nonlinear oscillator whose pure Hopf whistles and buzzy saddle-node calls are a canary\'s and a zebra finch\'s, sung through its trachea and a mouth it tunes to the note.',
+    physics: 'Nonlinear dynamics · the normal form of the syrinx · Hopf and saddle-node bifurcations · the vocal tract',
+    vibrates: 'air', notes: 'hold',
+    accent: '#f4d438',
+  },
+  {
     id: 'dunes', name: 'Singing Dunes', section: 'phenomena', ready: true, version: '0.1.0', trim: -7,
     plugin: { code: 'Dune', ready: true },
     tagline: 'Every key an avalanche down a desert dune\'s slip face, booming as the dunes of Morocco, Chile and Nevada do: the sheared grains fall into step, their note set by their size, or a buried layer rings as a waveguide. How dunes sing is still argued over, so it plays both.',
