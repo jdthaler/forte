@@ -513,6 +513,14 @@ export const INSTRUMENTS = [
     vibrates: 'space', notes: 'hold',
     accent: '#7fc7ff',
   },
+  {
+    id: 'dunes', name: 'Singing Dunes', section: 'phenomena', ready: true, version: '0.1.0', trim: -7,
+    plugin: { code: 'Dune', ready: true },
+    tagline: 'Every key an avalanche down a desert dune\'s slip face, booming as the dunes of Morocco, Chile and Nevada do: the sheared grains fall into step, their note set by their size, or a buried layer rings as a waveguide. How dunes sing is still argued over, so it plays both.',
+    physics: 'Granular flow · synchronisation (Kuramoto) · seismic waveguides',
+    vibrates: 'matter', notes: 'hold',
+    accent: '#e8a65c',
+  },
 ];
 
 // The template (docs/template/), the starting point for new instruments: not listed, but it

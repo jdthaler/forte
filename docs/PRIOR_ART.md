@@ -248,6 +248,14 @@ requests.
   [reprinted by the EMEAPP](https://emeapp.org/2026/08/17/electronic-perspectives-photoelectric-instruments-part-iii-the-cellulophone/)),
   which the discs, screens, keys and cells are built from. We did not find an earlier
   model of it. Its sources are in `cellulophone/README.md`.
+* **Singing dunes.** The shear law, the four dunes and the threshold are S. Douady et al.,
+  "Song of the dunes as a self-synchronized instrument", *Phys. Rev. Lett.* **97**, 018002 (2006),
+  [doi:10.1103/PhysRevLett.97.018002](https://doi.org/10.1103/PhysRevLett.97.018002), after
+  R. A. Bagnold (1966) and B. Andreotti (2004); the layer's waveguide is N. M. Vriend et al.,
+  "Solving the mystery of booming sand dunes", *Geophys. Res. Lett.* **34**, L16306 (2007),
+  [doi:10.1029/2007GL030276](https://doi.org/10.1029/2007GL030276); the patches fall into step
+  as Y. Kuramoto's oscillators do (1975). We did not find an earlier model of a booming dune made
+  to be played. Its sources are in `dunes/README.md`.
 * **The regal.** Praetorius draws the regals and their resonators in
   *Syntagma musicum II* (1619); Monteverdi scores one for Charon in
   *L'Orfeo* (1607). The beating reed is G. R. Plitnik's ("Vibration
