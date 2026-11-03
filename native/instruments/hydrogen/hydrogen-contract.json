@@ -1,7 +1,8 @@
 {
   "slug": "hydrogen",
   "params": [
-    {"id":"excitation","kind":"choice","def":"discharge","options":["discharge","recombination","laser"]},
+    {"id":"gas","kind":"choice","def":"hydrogen","options":["hydrogen","helium"]},
+    {"id":"excitation","kind":"choice","def":"discharge","options":["discharge","recombination","laser","thermal"]},
     {"id":"temperature","kind":"continuous","min":1000,"max":100000,"def":20000,"step":0,"log":true},
     {"id":"laserLevel","kind":"continuous","min":2,"max":30,"def":5,"step":1,"log":false},
     {"id":"caseB","kind":"toggle","def":false},
@@ -42,6 +43,12 @@
     {"name":"Quick and rough: less slow motion","values":{"slowmo":5000000}},
     {"name":"Pure and slow: more slow motion","values":{"slowmo":300000000,"glow":30}},
     {"name":"A cool lamp (5,000 K): only the first lines","values":{"temperature":5000}},
-    {"name":"A hot lamp (80,000 K): far up the series","values":{"temperature":80000}}
+    {"name":"A hot lamp (80,000 K): far up the series","values":{"temperature":80000}},
+    {"name":"Helium: the yellow D₃ line on the note","values":{"gas":"helium"}},
+    {"name":"Helium in a nebula: the lines that weigh the Big Bang's helium","values":{"gas":"helium","excitation":"recombination","temperature":10000,"caseB":true,"density":1000}},
+    {"name":"Helium, a hot discharge: the singlets catch up","values":{"gas":"helium","temperature":80000}},
+    {"name":"Helium's infrared: 1083 nm and 2058 nm","values":{"gas":"helium","window":"infrared"}},
+    {"name":"Helium's fine structure, 12 × the real α","values":{"gas":"helium","alphaScale":12,"slowmo":300000000}},
+    {"name":"Helium, laser to 3¹P","values":{"gas":"helium","excitation":"laser","laserLevel":3,"window":"all"}}
   ]
 }

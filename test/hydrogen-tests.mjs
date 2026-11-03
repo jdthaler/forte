@@ -207,6 +207,78 @@ test('Doppler broadening: Δλ/λ = √(8 ln 2 kT / m c²), 7.16 × 10⁻⁵ at 
   near(model.dopplerWidth(1e4), 7.16e-7 * Math.sqrt(1e4 / 1.00794), 2e-3, 'FWHM');
 });
 
+console.log('helium');
+// helium's lines by their terms: code (S·100 + n)·100 + L
+const he = model.gas('helium'), HE = (o = {}) => P({ gas: 'helium', ...o });
+const heState = (n, L, S) => he.states.findIndex((x) => x.code === (S * 100 + n) * 100 + L);
+const heLine = (u, l) => { const U = heState(...u), D = heState(...l); return he.lines.findIndex((x) => x.upper === U && x.lower === D); };
+const D3 = heLine([3, 2, 1], [2, 1, 1]), RED = heLine([3, 2, 0], [2, 1, 0]), BLUE = heLine([4, 2, 1], [2, 1, 1]), IR = heLine([2, 1, 1], [2, 0, 1]);
+test('helium\'s wavelengths are NIST\'s (vacuum): D₃ 587.73, 667.82 … 1083.3 nm; D₃ is the reference', () => {
+  // each line at its terms' centroids; NIST's strongest J line beside it
+  for (const [i, nm, what] of [[D3, 587.7243, 'D₃'], [RED, 667.9996, '667.8'], [BLUE, 447.2729, '447.1'], [IR, 1083.3306, '1083'],
+    [heLine([2, 1, 0], [1, 0, 0]), 58.4334, '58.4'], [heLine([3, 1, 0], [2, 0, 0]), 501.7077, '501.6']]) {
+    assert.ok(Math.abs(he.lines[i].nm - nm) < 0.012 * (nm / 500), `${what}: ${he.lines[i].nm.toFixed(4)} nm, NIST ${nm}`);
+  }
+  assert.equal(he.lines[D3].ratio, 1);
+});
+test('helium\'s lifetimes from NIST\'s rates: 2¹P 0.555 ns, 2³P 97.9 ns, 3³D 14.1 ns, 2³S 2.2 hours, 2¹S 19.5 ms', () => {
+  const tau = (n, L, S) => 1 / he.states[heState(n, L, S)].gamma;
+  near(tau(2, 1, 0), 1 / (1.7989e9 + 1.9746e6), 1e-3, 'τ(2¹P)');
+  near(tau(2, 1, 1), 1 / 1.0216e7, 1e-3, 'τ(2³P)');
+  near(tau(3, 2, 1), 1 / 7.07e7, 0.01, 'τ(3³D)');
+  near(tau(2, 0, 1), 1 / 1.272e-4, 1e-3, 'τ(2³S), by its magnetic-dipole line to 1¹S');
+  near(tau(2, 0, 0), 1 / (51.3 + 1.97e-3), 1e-3, 'τ(2¹S), by two photons');
+});
+test('above n = 10 the rates carry on along each series: n*³ f(1¹S → n¹P) and n*³ A(n³D → 2³P) level off', () => {
+  // the oscillator strength of a Rydberg series falls as n*⁻³; A as ν² f (the lower level fixed)
+  const IP = 198310.66637 / 109737.31568, nstar = (s) => 1 / Math.sqrt(IP - he.states[s].E);
+  // the 1¹P series: n*³ times its line's A over ν² is the oscillator strength's n*³ f, up to a constant
+  const f = (n) => {
+    const u = heState(n, 1, 0), i = heLine([n, 1, 0], [1, 0, 0]);
+    return { n, x: nstar(u) ** 3 * model.lineA('helium', i) / (1e7 / he.lines[i].nm) ** 2 };
+  };
+  const at = [8, 9, 10, 11, 12, 15, 20].map(f);
+  for (const { n, x } of at) near(x, at[2].x, 0.04, `n*³ f(1¹S → ${n}¹P), against 10¹P's`);
+});
+test('a nebula\'s helium (Case B, 10⁴ K): 447.1/587.6 0.37, 667.8/587.6 0.28 (Porter et al. 2012), three quarters of it triplets', () => {
+  const L = model.steadyLines(HE({ excitation: 'recombination', temperature: 10000, caseB: true, density: 100, glow: 1e12 }));
+  near(L[BLUE] / L[D3], 0.37, 0.15, '447.1/587.6');
+  near(L[RED] / L[D3], 0.28, 0.15, '667.8/587.6');
+  assert.equal(L[heLine([2, 1, 0], [1, 0, 0])], 0, 'Case B: no 58.4 nm');
+});
+test('a helium discharge: D₃ the brightest visible line; hotter, the singlets gain on the triplets (exchange falls off above threshold)', () => {
+  const vis = (L) => he.lines.map((l, i) => i).filter((i) => he.lines[i].nm > 380 && he.lines[i].nm < 750).sort((a, b) => L[b] - L[a]);
+  const L = model.steadyLines(HE()), cool = model.steadyLines(HE({ temperature: 5000 })), hot = model.steadyLines(HE({ temperature: 80000 }));
+  assert.equal(vis(L)[0], D3, `the brightest visible: ${he.lines[vis(L)[0]].nm.toFixed(1)} nm`);
+  const r = (x) => x[RED] / x[D3];
+  assert.ok(r(cool) < r(L) && r(L) < r(hot), `667.8/587.6: ${r(cool).toFixed(3)} at 5000 K, ${r(L).toFixed(3)} at 20 000 K, ${r(hot).toFixed(3)} at 80 000 K`);
+});
+test('helium\'s fine structure: D₃\'s six J lines at NIST\'s energies (3³D₁ → 2³P₀ 1.07 cm⁻¹ from the rest), apart as α²', () => {
+  const c = model.componentsLine(HE(), D3, 1), c12 = model.componentsLine(HE(), D3, 12);
+  assert.equal(c.length, 6);
+  near(c.reduce((s, x) => s + x.weight, 0), 1, 1e-9, 'Σ weights');
+  const sigma = 1e7 / he.lines[D3].nm, at = (cs, tj, tk) => cs.find((x) => x.tj === tj && x.tk === tk).ratio;
+  const split = (cs) => (at(cs, 6, 4) - at(cs, 2, 0)) * sigma; // cm⁻¹
+  near(split(c), 169087.82825 - 169086.76391 + (186101.54358 - 186101.59278), 0.01, '3³D₃→2³P₂ against 3³D₁→2³P₀ (cm⁻¹)');
+  near(split(c12) / split(c), 144, 1e-6, 'at 12 α');
+});
+test('helium\'s low lines broaden less than hydrogen\'s: their levels\' quadratic Stark effect', () => {
+  // Hβ and 447.1 nm, both from n = 4 to n = 2, in a dense plasma: the share of each line's power in
+  // the bin at its centre (the narrower the line, the more)
+  const k = 81, a = 0.5 * FS, b = 2.5 * FS, sharp = (x, f) => tone(x, f, a, b) ** 2 / band(x, f, 40, a, b);
+  const fH = keyFreq(k) * model.ratio(4, 2), fHe = keyFreq(k) * he.lines[BLUE].ratio;
+  const h = render(k, P({ density: 3e16 }), 0.8, 2.5), e = render(k, HE({ density: 3e16 }), 0.8, 2.5);
+  assert.ok(sharp(e, fHe) > 2 * sharp(h, fH), `helium ${sharp(e, fHe).toFixed(3)}, hydrogen ${sharp(h, fH).toFixed(3)}`);
+});
+test('D₃ sounds on the key\'s note, 667.8 nm at its ratio below', () => {
+  const k = 81, x = render(k, HE({ density: 100 }), 0.8, 2.5), f = keyFreq(k), a = 0.5 * FS, b = 2.5 * FS;
+  for (const [i, name] of [[D3, 'D₃'], [RED, '667.8']]) {
+    const g = f * he.lines[i].ratio, c = cents(centre(x, g, 10, a, b), g);
+    assert.ok(Math.abs(c) < 1.5, `${name} ${c.toFixed(2)} ¢`);
+  }
+  assert.ok(Math.abs(cents(f * he.lines[RED].ratio, f) - 1200 * Math.log2(587.73 / 668.0)) < 1, 'the red line\'s ratio');
+});
+
 console.log('engine');
 // The lines are as wide as their levels' lifetimes in slow motion (Hα and Hβ about 3.5 Hz, from 2p's
 // 1.6 ns): their centres are measured on high keys, where a hertz is a small share.
