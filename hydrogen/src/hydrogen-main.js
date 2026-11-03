@@ -40,12 +40,26 @@ function lineName(n, m) {
 // 2³P–3³D, else its wavelength.
 const LETTERS = 'SPDFGHIKLMNOQRTUV', SUPER = { 0: '¹', 1: '³' };
 const heLevel = (c) => `${Math.floor(c / 100) % 100}${SUPER[Math.floor(c / 10000)]}${LETTERS[c % 100]}`;
+// An H₂ level from its code (MOLECULE + state·10⁴ + v·100 + J: X, B, C⁺, C⁻, d⁺, d⁻, a), and a
+// line's name: the ground state's own lines by their branch, v′–v″ S(J″) (J′ = J″ + 2), Q (J′ = J″)
+// or O (J′ = J″ − 2); the bands into X and Fulcher's (d → a) as B, C or d v′–v″ and R (J′ = J″ + 1),
+// Q or P (J′ = J″ − 1); the atoms' as hydrogen's.
+const MOLECULE = 1e6, H2_STATES = ['X', 'B', 'C', 'C', 'd', 'd', 'a'];
+const h2Level = (c) => { const k = c - MOLECULE; return { state: Math.floor(k / 1e4), v: Math.floor(k / 100) % 100, J: k % 100 }; };
+function h2Name(g, l) {
+  const cu = g.states[l.upper].code, cl = g.states[l.lower].code;
+  if (cu < MOLECULE) return lineName(Math.floor(cu / 100), Math.floor(cl / 100));
+  const u = h2Level(cu), d = h2Level(cl), dJ = u.J - d.J;
+  if (u.state === 0) return `${u.v}–${d.v} ${{ 2: 'S', 0: 'Q', '-2': 'O' }[dJ]}(${d.J})`;
+  return `${H2_STATES[u.state]}${u.v}–${d.v} ${{ 1: 'R', 0: 'Q', '-1': 'P' }[dJ]}(${d.J})`;
+}
 // Each line of the gas: { nm, ratio, upper, lower } and its name, for the views.
 function gasLines(gas) {
   const g = model.gas(gas);
   if (!g.named) {
     g.named = g.lines.map((l, i) => {
       if (gas === 'hydrogen') { const { n, m } = model.levels(i); return lineName(n, m); }
+      if (gas === 'molecular') return h2Name(g, l);
       const u = heLevel(g.states[l.upper].code), d = heLevel(g.states[l.lower].code);
       if (u === '3³D' && d === '2³P') return 'D₃';
       return l.nm < 1000 ? l.nm.toFixed(1) : `${(l.nm / 1000).toFixed(2)} µm`;
@@ -56,10 +70,13 @@ function gasLines(gas) {
 
 // The window, by wavelength (nm), as the engine's (hydrogen-engine.cpp windowGain), for the views
 // (helium's resonance lines reach down to 50 nm).
+// (helium's resonance lines reach down to 50 nm, H₂'s rotational lines up to 28 µm).
 const BANDS = { visible: [375, 760, false], ultraviolet: [88, 400, true], infrared: [700, 8000, true], all: [88, 8000, true] };
 const bandOf = (P) => {
   const b = BANDS[P.window] ?? BANDS.all;
-  return P.gas === 'helium' && b[2] && b[0] < 100 ? [48, b[1], true] : b;
+  if (P.gas === 'helium' && b[2] && b[0] < 100) return [48, b[1], true];
+  if (P.gas === 'molecular' && b[2] && b[1] > 1000) return [b[0], 30000, true];
+  return b;
 };
 function inWindow(nm, w) {
   if (w === 'visible') return nm >= 380 && nm <= 750;
@@ -89,6 +106,8 @@ let steady = null; // the focus key's lines through the window, steady: [{ line,
 const REFERENCE = {
   hydrogen: { name: 'Hα', life: (g) => ['2p', g.states[model.stateOf(2, 1)].gamma] },
   helium: { name: 'D₃', life: (g) => ['2¹P', g.states.find((s) => s.code === 201).gamma] },
+  // the ground state's lines run on the slow clock, 10¹⁴ times faster than the rest (SLOW_CLOCK)
+  molecular: { name: '1–0 S(1)', life: (g) => ['X v=1, J=3', g.states.find((s) => s.code === MOLECULE + 103).gamma / 1e-14] },
 };
 
 function update() {
@@ -107,6 +126,7 @@ function update() {
   $('#focus-name').textContent = noteName(focus);
   const ref = REFERENCE[P.gas] ?? REFERENCE.hydrogen, [level, gamma] = ref.life(g);
   const scale = g.refHz / fKey, nm = 299792458 / g.refHz * 1e9;
+  $('#levels-sub').textContent = P.gas === 'molecular' ? 'by electronic state and rotation' : 'by angular momentum';
   $('#scope-read').textContent = `${ref.name} (${nm.toFixed(1)} nm, ${(g.refHz / 1e12).toFixed(1)} THz) on ${noteName(focus)} = ${fKey.toFixed(1)} Hz: frequencies ÷ ${scale.toExponential(2)}, time × ${P.slowmo.toExponential(1)} (${level} lives ${(P.slowmo / gamma * 1e3).toPrecision(2)} ms)`;
 }
 
@@ -145,16 +165,17 @@ animate(() => {
   }
   // the axis and the brightest lines' names
   ctx.fillStyle = css('--muted'); ctx.font = '10px system-ui, sans-serif';
-  const ticks = log ? (shell.P.gas === 'helium' ? [50, 58.4, 100, 200, 400, 588, 1083, 2000, 4000, 7000] : [100, 121.6, 200, 300, 400, 500, 656, 1000, 2000, 4000, 7000]) : [400, 450, 500, 550, 600, 650, 700, 750];
+  const TICKS = { helium: [50, 58.4, 100, 200, 400, 588, 1083, 2000, 4000, 7000], molecular: [100, 200, 400, 602, 1000, 2122, 5000, 10000, 28000] };
+  const ticks = log ? (TICKS[shell.P.gas] ?? [100, 121.6, 200, 300, 400, 500, 656, 1000, 2000, 4000, 7000]) : [400, 450, 500, 550, 600, 650, 700, 750];
   for (const t of ticks) { const x = X(t); if (x > 8 && x < w - 38) ctx.fillText(`${t >= 1000 ? `${t / 1000} µm` : `${Math.round(t)}`}`, x - 8, h - 6); }
   ctx.fillText('nm', w - 18, h - 6);
   const named = [...steady].sort((a, b) => b.rel - a.rel).slice(0, 10);
-  let lastX = -1e9;
+  let lastX = -1e9, lastW = 0;
   for (const l of named.sort((a, b) => a.nm - b.nm)) {
     const x = X(l.nm);
-    if (x < 0 || x > w || x - lastX < 26) continue;
+    if (x < 0 || x > w || x - lastX < Math.max(26, lastW + 6)) continue;
     ctx.fillText(l.name, x - 8, 12);
-    lastX = x;
+    lastX = x; lastW = ctx.measureText(l.name).width;
   }
 }, $('#scope'));
 
@@ -163,6 +184,7 @@ animate(() => {
 animate(() => {
   const { ctx, w, h } = fit($('#levels'));
   ctx.clearRect(0, 0, w, h);
+  if (shell.P.gas === 'molecular') { drawMolecule(ctx, w, h); return; }
   if (shell.P.gas !== 'hydrogen') { drawLevels(ctx, w, h); return; }
   const NL = 6, N = 7, x0 = 34, colW = (w - x0 - 10) / NL, y0 = h - 16, y1 = 18;
   const Y = (n) => y0 - ((1 - 1 / n) / (1 - 1 / 8)) * (y0 - y1); // by 1 − 1/n: the upper levels crowd less than in energy
@@ -249,6 +271,52 @@ function drawLevels(ctx, w, h) {
     ctx.lineWidth = 1;
     const c = g.states[s].code, n = Math.floor(c / 100) % 100;
     if (c % 100 === 0 && c < 10000 && label - Y(s) >= 11) { ctx.fillStyle = css('--muted'); ctx.fillText(n === 1 ? '1¹S' : `n=${n}`, 2, Y(s) + 3); label = Y(s); }
+  });
+}
+
+// H₂'s diagram: the ground state's ladder below (v = 0 … 4, J = 0 … 3, a column each J), and above,
+// on its own scale (the gap between is 90 000 cm⁻¹), the electronic states the lamp lights (B, C,
+// d, a: their lowest levels with J = 1), and the lines heard between the levels shown.
+function drawMolecule(ctx, w, h) {
+  const g = gasLines('molecular'), shown = g.display, slot = new Map(shown.map((s, i) => [s, i]));
+  const x0 = 34, cols = 9, colW = (w - x0 - 10) / cols, y0 = h - 12, y1 = 18, split = y1 + 0.42 * (y0 - y1);
+  const cm = (s) => g.states[s].E * 109737.316;
+  const COL = { 1: 5, 2: 6, 3: 6, 4: 7, 5: 7, 6: 8 };
+  const X = (s) => { const L = h2Level(g.states[s].code); return x0 + ((L.state === 0 ? L.J : COL[L.state]) + 0.5) * colW; };
+  const upper = shown.filter((s) => h2Level(g.states[s].code).state > 0).map(cm);
+  const uLo = Math.min(...upper) - 1500, uHi = Math.max(...upper) + 1500;
+  const Y = (s) => { const e = cm(s), L = h2Level(g.states[s].code); return L.state === 0 ? y0 - (e / 17000) * (y0 - split - 12) : split - 8 - ((e - uLo) / (uHi - uLo)) * (split - 8 - y1); };
+  ctx.font = '10px system-ui, sans-serif';
+  ctx.fillStyle = css('--muted');
+  for (let J = 0; J < 4; J++) ctx.fillText(`J=${J}`, x0 + (J + 0.5) * colW - 8, h - 1);
+  [['B', 5], ['C', 6], ['d', 7], ['a', 8]].forEach(([n, c]) => ctx.fillText(n, x0 + (c + 0.5) * colW - 3, 11));
+  ctx.fillText('X', x0 + 4.5 * colW - 3, split + 10);
+  ctx.strokeStyle = css('--grid'); ctx.setLineDash([3, 4]);
+  ctx.beginPath(); ctx.moveTo(x0, split); ctx.lineTo(w - 8, split); ctx.stroke(); ctx.setLineDash([]);
+  // each panel lit on its own scale (the ground state's slow levels hold far more molecules), and
+  // the lines heard on two scales too: the fast bands', and the ground state's own
+  const pmax = [0, 0], hmax = [0, 0], up = (s) => (h2Level(g.states[s].code).state > 0 ? 1 : 0);
+  if (levels) shown.forEach((s, i) => { if (g.states[s].E > 0) pmax[up(s)] = Math.max(pmax[up(s)], levels[i] ?? 0); });
+  for (const [line, p] of heard) if (g.lines[line]) hmax[up(g.lines[line].upper)] = Math.max(hmax[up(g.lines[line].upper)], p);
+  if (levels) {
+    for (const [line, p] of heard) {
+      const l = g.lines[line];
+      if (!l || !slot.has(l.upper) || !slot.has(l.lower)) continue;
+      const [r, gg, b] = colour(l.nm), a = Math.sqrt(p / hmax[up(l.upper)]);
+      ctx.strokeStyle = `rgba(${r},${gg},${b},${Math.min(1, 0.15 + 0.85 * a)})`;
+      ctx.lineWidth = 1 + 2 * a;
+      ctx.beginPath(); ctx.moveTo(X(l.upper), Y(l.upper)); ctx.lineTo(X(l.lower), Y(l.lower)); ctx.stroke();
+    }
+    ctx.lineWidth = 1;
+  }
+  shown.forEach((s, i) => {
+    const m = pmax[up(s)], pop = levels && m > 0 && g.states[s].E > 0 ? Math.sqrt((levels[i] ?? 0) / m) : 0;
+    ctx.strokeStyle = pop > 0.01 ? `rgba(255, 236, 170, ${0.35 + 0.65 * pop})` : css('--grid');
+    ctx.lineWidth = 2 + 3 * pop;
+    ctx.beginPath(); ctx.moveTo(X(s) - colW * 0.32, Y(s)); ctx.lineTo(X(s) + colW * 0.32, Y(s)); ctx.stroke();
+    ctx.lineWidth = 1;
+    const L = h2Level(g.states[s].code);
+    if (L.state === 0 && L.J === 0) { ctx.fillStyle = css('--muted'); ctx.fillText(`v=${L.v}`, 2, Y(s) + 3); }
   });
 }
 

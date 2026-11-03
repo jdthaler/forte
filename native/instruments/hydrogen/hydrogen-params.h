@@ -17,18 +17,19 @@
 namespace forte::hydrogen {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { gas, excitation, temperature, laserLevel, caseB, density, glow, window, slowmo, shutter, alphaScale, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { gas, excitation, temperature, laserLevel, atoms, caseB, density, glow, window, slowmo, shutter, alphaScale, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
 }
 
 constexpr double kNoLimit = INFINITY;
-inline const char *const kChoices_gas[] = {"Hydrogen atoms (H)", "Helium (He)"};
-inline const char *const kKeys_gas[] = {"hydrogen", "helium"};
-namespace gas_ { enum : int { hydrogen, helium }; }
+inline const char *const kChoices_gas[] = {"Hydrogen atoms (H)", "Helium (He)", "Molecular hydrogen (H₂)"};
+inline const char *const kKeys_gas[] = {"hydrogen", "helium", "molecular"};
+namespace gas_ { enum : int { hydrogen, helium, molecular }; }
 inline const char *const kChoices_excitation[] = {"Discharge (electrons strike the atoms)", "Recombination (a nebula)", "Laser (one level)", "Heat (collisions in a hot gas)"};
 inline const char *const kKeys_excitation[] = {"discharge", "recombination", "laser", "thermal"};
 namespace excitation_ { enum : int { discharge, recombination, laser, thermal }; }
 inline const FormatSegment kFormat_temperature[] = {{kNoLimit, "", " K", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_laserLevel[] = {{kNoLimit, "", "p", 1, 0, 0, false, false, false, false}};
+inline const FormatSegment kFormat_atoms[] = {{kNoLimit, "", " %", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_density[] = {{kNoLimit, "", " cm⁻³", 1, 0, 1, false, true, false, false, false, true}};
 inline const FormatSegment kFormat_glow[] = {{9.949999999999998, "", " ns", 1, 0, 1, false, false, false, false}, {999.4999999999999, "", " ns", 1, 0, 0, false, false, false, false}, {kNoLimit, "", " µs", 0.001, 0, 2, false, false, false, false}};
 inline const char *const kChoices_window[] = {"Visible (380–750 nm, what the eye sees)", "Ultraviolet (below 380 nm)", "Infrared (above 750 nm)", "Every line"};
@@ -62,10 +63,11 @@ inline const FormatSegment kFormat_cents10[] = {{kNoLimit, "", " ¢", 1, 0, 2, f
 inline const FormatSegment kFormat_cents11[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
 
 inline const ParamInfo kParams[p::count] = {
-  {"gas", "Gas", "The lamp", ParamKind::choice, 0, 1, 0, 1, false, true, kChoices_gas, 2, nullptr, 0, kKeys_gas},
+  {"gas", "Gas", "The lamp", ParamKind::choice, 0, 2, 0, 1, false, true, kChoices_gas, 3, nullptr, 0, kKeys_gas},
   {"excitation", "Excitation", "The lamp", ParamKind::choice, 0, 3, 0, 1, false, true, kChoices_excitation, 4, nullptr, 0, kKeys_excitation},
   {"temperature", "Temperature", "The lamp", ParamKind::continuous, 1000, 100000, 20000, 0, true, false, nullptr, 0, kFormat_temperature, 1},
   {"laserLevel", "Laser level n", "The lamp", ParamKind::continuous, 2, 30, 5, 1, false, false, nullptr, 0, kFormat_laserLevel, 1},
+  {"atoms", "Atoms among the molecules", "The lamp", ParamKind::continuous, 0, 100, 20, 1, false, false, nullptr, 0, kFormat_atoms, 1},
   {"caseB", "Lyman lines trapped (Case B)", "The lamp", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"density", "Density", "The lamp", ParamKind::continuous, 100, 1000000000000000000, 100000000, 0, true, true, nullptr, 0, kFormat_density, 1},
   {"glow", "Time in the glow", "The lamp", ParamKind::continuous, 5, 2000, 60, 0, true, false, nullptr, 0, kFormat_glow, 3},
@@ -110,6 +112,11 @@ inline const PresetValue kPreset15[] = {{p::gas, 1}, {p::temperature, 80000}};
 inline const PresetValue kPreset16[] = {{p::gas, 1}, {p::window, 2}};
 inline const PresetValue kPreset17[] = {{p::gas, 1}, {p::alphaScale, 12}, {p::slowmo, 300000000}};
 inline const PresetValue kPreset18[] = {{p::gas, 1}, {p::excitation, 2}, {p::laserLevel, 3}, {p::window, 3}};
+inline const PresetValue kPreset19[] = {{p::gas, 2}, {p::excitation, 1}, {p::caseB, 1}, {p::window, 2}, {p::atoms, 0}};
+inline const PresetValue kPreset20[] = {{p::gas, 2}, {p::excitation, 3}, {p::temperature, 2000}, {p::window, 2}, {p::atoms, 0}};
+inline const PresetValue kPreset21[] = {{p::gas, 2}, {p::window, 0}};
+inline const PresetValue kPreset22[] = {{p::gas, 2}, {p::window, 1}, {p::atoms, 0}};
+inline const PresetValue kPreset23[] = {{p::gas, 2}, {p::excitation, 2}, {p::laserLevel, 5}, {p::window, 3}};
 inline const Preset kPresets[] = {
   {"A hydrogen lamp: the Balmer series", nullptr, 0},
   {"A nebula: Case B recombination", kPreset1, 4},
@@ -130,6 +137,11 @@ inline const Preset kPresets[] = {
   {"Helium's infrared: 1083 nm and 2058 nm", kPreset16, 2},
   {"Helium's fine structure, 12 × the real α", kPreset17, 3},
   {"Helium, laser to 3¹P", kPreset18, 4},
+  {"Molecular hydrogen: a starlit cloud's infrared glow", kPreset19, 5},
+  {"Molecular hydrogen: a shock at 2000 K", kPreset20, 5},
+  {"Molecular hydrogen: the Fulcher band of a hydrogen tube", kPreset21, 2},
+  {"Molecular hydrogen: the Lyman and Werner bands", kPreset22, 3},
+  {"Molecular hydrogen, laser to B v′ = 3", kPreset23, 4},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::shutter}, {109, p::glow}, {111, p::laserLevel}, {113, p::temperature}, {114, p::density}};
@@ -148,7 +160,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Every key a tube of glowing hydrogen, its spectral lines played at their exact ratios with the red Hα line on the note: the atoms cascade down the levels in slow motion, so the lines light one after another, each as wide as its levels' lifetimes, the atoms' heat and the ions' fields make it.", .auSubtype = "Hydr",
     .vst3Id = {0x7e, 0x82, 0xc5, 0x8d, 0x40, 0x0f, 0xb0, 0xd6, 0x00, 0x78, 0xce, 0x1d, 0xfa, 0x1c, 0x40, 0x47},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 19,
+    .presets = kPresets, .presetCount = 24,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::density, .modWheelMax = 1000000000000000000,
