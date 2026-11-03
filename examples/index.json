@@ -1535,6 +1535,44 @@
    "title": "Centre end and node strikes"
   }
  ],
+ "voice": [
+  {
+   "file": "01-daisy-bell.m4a",
+   "title": "Daisy bell"
+  },
+  {
+   "file": "02-the-vowels-from-ah-to-oo-to-ee.m4a",
+   "title": "The vowels from ah to oo to ee"
+  },
+  {
+   "file": "03-a-chord-of-four-singers.m4a",
+   "title": "A chord of four singers"
+  },
+  {
+   "file": "04-soft-then-harder-breath.m4a",
+   "title": "Soft then harder breath"
+  },
+  {
+   "file": "05-breathy-whisper-then-pressed.m4a",
+   "title": "Breathy whisper then pressed"
+  },
+  {
+   "file": "06-the-singers-formant.m4a",
+   "title": "The singers formant"
+  },
+  {
+   "file": "07-a-sopranos-high-ee-jaw-shut-then-open.m4a",
+   "title": "A sopranos high ee jaw shut then open"
+  },
+  {
+   "file": "08-bass-to-child.m4a",
+   "title": "Bass to child"
+  },
+  {
+   "file": "09-daisy-bell-as-in-1961.m4a",
+   "title": "Daisy bell as in 1961"
+  }
+ ],
  "whistlers": [
   {
    "file": "01-a-night-of-whistlers.m4a",

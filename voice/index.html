@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Singing Voice · Forte</title>
+  <meta name="description" content="Breath sets two vocal folds flapping and a tube from the throat to the lips shapes their buzz into a vowel: the mod wheel moves the tongue and jaw from oo to ee, and every key is sung by its own singer, listening to their own pitch.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="Singing Voice · Forte">
+  <meta property="og:description" content="Breath sets two vocal folds flapping and a tube from the throat to the lips shapes their buzz into a vowel: the mod wheel moves the tongue and jaw from oo to ee, and every key is sung by its own singer, listening to their own pitch.">
+  <meta property="og:url" content="https://forte.jthaler.net/voice/">
+  <meta property="og:image" content="https://forte.jthaler.net/voice/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Singing Voice's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="voice">
+  <div class="forte-edge" aria-hidden="true"></div>
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Singing Voice</h1>
+      <span class="sub">a voice from a keyboard, as Bell Labs' Voder spoke in 1939, but grown from its physics: two masses for each vocal fold, set flapping by the breath, and a tube of changing width from the folds to the lips whose shape is the vowel</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Vocal folds">
+          <div class="card-head"><h2>Vocal folds, slowed down</h2><span class="muted" id="folds-read"></span></div>
+          <canvas id="folds"></canvas>
+          <div class="caption">The two folds in cross-section, each two masses on springs (the lower and the upper edge), as a stroboscope shows them: one cycle of <b id="focus-name">C4</b>, slowed to a second and a half. Air from the lungs below pushes them apart from the bottom up; they snap shut from the bottom up too, the upper edge lagging. Below, the flow of air through them over the same cycle: a pulse each time they open, cut off sharply as they shut, which is where the voice's harmonics come from.</div>
+        </div>
+        <div class="card" data-perform data-view="Vocal tract">
+          <div class="card-head"><h2>Vocal tract</h2><span class="muted" id="tract-read"></span></div>
+          <canvas id="tract"></canvas>
+          <div class="caption">The tube from the folds (left) to the lips (right), as wide as it is at each point: the larynx tube, the throat, the mouth. Its shape is the vowel: the mod wheel moves it from oo to ee. Below, how strongly it passes each frequency: its peaks are the formants, marked, and the note's harmonics are the ticks under them.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the formants</span></div>
+          <canvas id="spectrum"></canvas>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the formants</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">Every note is a stack of harmonics, the formants the bands where they are loudest. Sweep the vowel and the bands move while the harmonics stay; sing a scale on one vowel and the harmonics move under bands that stay. The vibrato waves every harmonic, the high ones the most.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Vowel chart">
+          <div class="card-head"><h2>Vowel chart</h2><span class="muted">F1 against F2</span></div>
+          <canvas id="chart"></canvas>
+          <div class="caption">Each vowel as its first two formants, on axes that run the way phoneticians draw them, so the chart is a map of the mouth: front vowels left, back ones right, open ones low. The grey letters are Peterson and Barney's averages for men (1952); the line is where the mod wheel goes; the dot is the tract now, after its length and the jaw.</div>
+        </div>
+        <div class="card" id="info-card" data-view="Singer">
+          <div class="card-head"><h2>The singer</h2></div>
+          <dl id="info"></dl>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>vowel <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>hold the keys: <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>mod wheel: the vowel · pressure: harder breath</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/voice-main.js"></script>
+  <script type="module" src="src/voice-tour.js"></script>
+</body>
+</html>
