@@ -13,6 +13,7 @@ import { loadEngine } from '../tools/engine.mjs';
 import { keyFreq } from '../shared/dsp.js';
 import { tunedFreq } from '../shared/tuning.js';
 import * as table from '../tools/hydrogen-native-table.mjs';
+import { airToVacuum } from '../tools/hydrogen-gas-tables.mjs';
 
 const HydrogenEngine = await loadEngine(INSTRUMENT);
 const model = await wasmModel();
@@ -279,6 +280,61 @@ test('D₃ sounds on the key\'s note, 667.8 nm at its ratio below', () => {
   assert.ok(Math.abs(cents(f * he.lines[RED].ratio, f) - 1200 * Math.log2(587.73 / 668.0)) < 1, 'the red line\'s ratio');
 });
 
+console.log('molecular hydrogen');
+// H₂'s levels by their codes: MOLECULE + state·10⁴ + v·100 + J (0 X, 1 B, 2 C⁺, 3 C⁻, 4 d⁺, 5 d⁻, 6 a)
+const h2 = model.gas('molecular'), H2 = (o = {}) => P({ gas: 'molecular', ...o });
+const h2State = (s, v, J) => h2.states.findIndex((x) => x.code === 1e6 + s * 1e4 + v * 100 + J);
+const h2Line = (u, l) => { const U = h2State(...u), D = h2State(...l); return h2.lines.findIndex((x) => x.upper === U && x.lower === D); };
+const S10 = h2Line([0, 1, 3], [0, 0, 1]), S21 = h2Line([0, 2, 3], [0, 1, 1]), FQ1 = h2Line([5, 0, 1], [6, 0, 1]);
+test('H₂\'s wavelengths (vacuum): 1–0 S(1) 2121.8 nm, 1–0 Q(1) 2406.6, 0–0 S(0) 28.22 µm; Lyman 0–0 R(0) 110.81, Werner 0–0 Q(1) 100.98; Fulcher Q1 601.83 and 612.18 (air)', () => {
+  for (const [i, nm, tol, what] of [[S10, 2121.834, 0.01, '1–0 S(1)'], [h2Line([0, 1, 1], [0, 0, 1]), 2406.59, 0.02, '1–0 Q(1)'], [h2Line([0, 0, 2], [0, 0, 0]), 28218.8, 0.5, '0–0 S(0)'],
+    [h2Line([1, 0, 1], [0, 0, 0]), 110.8127, 0.002, 'Lyman 0–0 R(0)'], [h2Line([3, 0, 1], [0, 0, 1]), 100.9770, 0.002, 'Werner 0–0 Q(1)'],
+    [FQ1, airToVacuum(601.83), 0.01, 'Fulcher Q1 0–0'], [h2Line([5, 1, 1], [6, 1, 1]), airToVacuum(612.18), 0.2, 'Fulcher Q1 1–1']]) {
+    assert.ok(Math.abs(h2.lines[i].nm - nm) < tol, `${what}: ${h2.lines[i].nm.toFixed(4)} nm, measured ${nm.toFixed(4)}`);
+  }
+  assert.equal(h2.lines[S10].ratio, 1, '1–0 S(1) is the reference');
+});
+test('H₂\'s rates: 1–0 S(1) 3.47 × 10⁻⁷ s⁻¹ and 0–0 S(0) 2.94 × 10⁻¹¹ (Wolniewicz et al. 1998), B v′ = 0 lives 0.54 ns, d v′ = 0 40 ns; the ground state on the slow clock', () => {
+  near(model.lineA('molecular', S10), 3.47e-7, 0.01, 'A(1–0 S(1))');
+  near(model.lineA('molecular', h2Line([0, 0, 2], [0, 0, 0])), 2.94e-11, 0.01, 'A(0–0 S(0))');
+  near(1 / h2.states[h2State(1, 0, 1)].gamma, 0.54e-9, 0.05, 'τ(B, v′ = 0, J′ = 1)');
+  near(1 / h2.states[h2State(5, 0, 1)].gamma, 40e-9, 1e-3, 'τ(d, v′ = 0)');
+  assert.equal(h2.lines[S10].clock, 1, 'the ground state\'s lines run on the slow clock');
+  assert.equal(h2.lines[FQ1].clock, 0, 'the electronic bands on the fast one');
+});
+test('fluorescence and heat tell apart in the infrared: 2–1 S(1)/1–0 S(1) about 0.55 in starlight (Black & van Dishoeck 1987), 0.08 at 2000 K', () => {
+  const r = (L) => L[S21] / L[S10];
+  const uv = r(model.steadyLines(H2({ excitation: 'recombination', caseB: true, atoms: 0 }))), hot = r(model.steadyLines(H2({ excitation: 'thermal', temperature: 2000, atoms: 0 })));
+  assert.ok(uv > 0.4 && uv < 0.8, `starlight: ${uv.toFixed(3)}`);
+  assert.ok(hot > 0.06 && hot < 0.11, `2000 K: ${hot.toFixed(3)}`);
+});
+test('heat holds the molecules in thermal equilibrium: ortho (odd J) three times para at 2000 K, the levels by their Boltzmann factors', () => {
+  const N = model.steadyPopulations(H2({ excitation: 'thermal', temperature: 2000, atoms: 0 }));
+  let o = 0, p = 0;
+  h2.states.forEach((x, i) => { if (x.code >= 1e6 && x.code < 1e6 + 1e4) ((x.code % 100) % 2 ? (o += N[i]) : (p += N[i])); });
+  near(o / p, 3, 0.01, 'ortho/para');
+  const a = h2State(0, 1, 3), b = h2State(0, 0, 1), kT = 0.6950348 * 2000 / 109737.316;
+  near(N[a] / N[b], (h2.states[a].weight / h2.states[b].weight) * Math.exp(-(h2.states[a].E - h2.states[b].E) / kT), 0.02, 'X(1, 3)/X(0, 1)');
+});
+test('a hydrogen tube: the Fulcher band\'s Q lines the brightest visible lines of the molecule, Q1 0–0 among them; the atoms\' share of the light as asked', () => {
+  const L = model.steadyLines(H2({ atoms: 0 }));
+  const vis = h2.lines.map((l, i) => i).filter((i) => h2.lines[i].nm > 380 && h2.lines[i].nm < 750).sort((a, b) => L[b] - L[a]).slice(0, 4);
+  for (const i of vis) assert.equal(Math.floor((h2.states[h2.lines[i].upper].code - 1e6) / 1e4), 5, `${h2.lines[i].nm.toFixed(1)} nm is not a Fulcher Q line`);
+  assert.ok(vis.includes(FQ1), 'Q1 0–0');
+  for (const atoms of [20, 50]) {
+    const M = model.steadyLines(H2({ atoms }));
+    let a = 0, all = 0;
+    M.forEach((x, i) => { all += x; if (i >= h2.atomLines) a += x; });
+    near(a / all, atoms / 100, 1e-6, `the atoms' share at ${atoms} %`);
+  }
+});
+test('H₂\'s glow keeps at most 400 lines a band, and 1–0 S(1) sounds on the key\'s note', () => {
+  assert.ok(model.glowKept(H2({ window: 'all' })) <= 1200, 'kept lines');
+  const k = 81, x = render(k, H2({ window: 'infrared', density: 100, excitation: 'thermal', temperature: 2000, atoms: 0 }), 0.8, 2.5), f = keyFreq(k), a = 0.5 * FS, b = 2.5 * FS;
+  const c = cents(centre(x, f, 10, a, b), f);
+  assert.ok(Math.abs(c) < 1.5, `1–0 S(1) ${c.toFixed(2)} ¢`);
+});
+
 console.log('engine');
 // The lines are as wide as their levels' lifetimes in slow motion (Hα and Hβ about 3.5 Hz, from 2p's
 // 1.6 ns): their centres are measured on high keys, where a hertz is a small share.
@@ -392,6 +448,16 @@ test('a lamp changed while keys sound: the sounding lamps carry on, the next key
 test('CPU: ten lamps through the open window (96 lines each) render three times faster than real time', () => {
   const e = new HydrogenEngine(FS), bL = new Float32Array(128), bR = new Float32Array(128);
   e.setParams(P({ window: 'all' }));
+  for (let i = 0; i < 10; i++) e.noteOn(36 + 5 * i, 0.7);
+  const t0 = performance.now();
+  for (let b = 0; b < 375 * 2; b++) e.process(bL, bR, 128);
+  const ms = performance.now() - t0;
+  assert.ok(ms < 667, `${ms.toFixed(0)} ms for 2 s`);
+});
+
+test('CPU: ten lamps of molecular hydrogen through the open window render three times faster than real time', () => {
+  const e = new HydrogenEngine(FS), bL = new Float32Array(128), bR = new Float32Array(128);
+  e.setParams(H2({ window: 'all' }));
   for (let i = 0; i < 10; i++) e.noteOn(36 + 5 * i, 0.7);
   const t0 = performance.now();
   for (let b = 0; b < 375 * 2; b++) e.process(bL, bR, 128);
