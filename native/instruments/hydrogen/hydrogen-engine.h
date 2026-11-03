@@ -55,6 +55,7 @@ class HydrogenEngine : public Engine {
     double ar = 1, ai = 0;      // the atoms' complex amplitude (mean |a|² = 1)
     double br = 0, bi = 0, dr = 0, di = 0; // its gain now, and its step a sample
     double rho = 1;             // the amplitude's correlation over SUB samples
+    int clock = 0;              // its glow's grid: 1 for the slow ladder's lines
   };
   struct Voice {
     bool active = false, held = false, lit = false;
