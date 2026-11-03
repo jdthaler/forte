@@ -2674,6 +2674,54 @@ inline const forte::FormatSegment kF1329[] = {{kNoLimit, "", " ¢", 1, 0, 2, fal
 inline const Case kC1329[] = {{-100, "−100.00 ¢"}, {-66.67, "−66.67 ¢"}, {-33.33, "−33.33 ¢"}, {0, "+0.00 ¢"}, {33.33, "+33.33 ¢"}, {66.67, "+66.67 ¢"}, {100, "+100.00 ¢"}};
 inline const forte::FormatSegment kF1330[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
 inline const Case kC1330[] = {{-100, "−100.00 ¢"}, {-66.67, "−66.67 ¢"}, {-33.33, "−33.33 ¢"}, {0, "+0.00 ¢"}, {33.33, "+33.33 ¢"}, {66.67, "+66.67 ¢"}, {100, "+100.00 ¢"}};
+inline const forte::FormatSegment kF1331[] = {{kNoLimit, "", "°", 1, 0, 1, false, false, false, false}};
+inline const Case kC1331[] = {{0, "0.0°"}, {15, "15.0°"}, {30, "30.0°"}, {45, "45.0°"}, {60, "60.0°"}, {75, "75.0°"}, {90, "90.0°"}};
+inline const forte::FormatSegment kF1332[] = {{kNoLimit, "", " % of the beam", 100, 0, 0, false, false, false, false}};
+inline const Case kC1332[] = {{0, "0 % of the beam"}, {0.22, "22 % of the beam"}, {0.43, "43 % of the beam"}, {0.65, "65 % of the beam"}, {0.87, "87 % of the beam"}, {1.08, "108 % of the beam"}, {1.3, "130 % of the beam"}, {0.3, "30 % of the beam"}};
+inline const forte::FormatSegment kF1333[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
+inline const Case kC1333[] = {{0, "0 %"}, {0.17, "17 %"}, {0.33, "33 %"}, {0.5, "50 %"}, {0.67, "67 %"}, {0.8300000000000001, "83 %"}, {1, "100 %"}, {0.4, "40 %"}};
+inline const forte::FormatSegment kF1334[] = {{kNoLimit, "", " km", 1, 0, 0, false, false, false, false}};
+inline const Case kC1334[] = {{20, "20 km"}, {43.08869380063768, "43 km"}, {92.83177667225557, "93 km"}, {200, "200 km"}, {430.8869380063767, "431 km"}, {928.3177667225559, "928 km"}, {2000, "2000 km"}};
+inline const forte::FormatSegment kF1335[] = {{kNoLimit, "modulation index ", "", 1, 0, 2, false, false, false, false}};
+inline const Case kC1335[] = {{0, "modulation index 0.00"}, {0.33, "modulation index 0.33"}, {0.67, "modulation index 0.67"}, {1, "modulation index 1.00"}, {1.33, "modulation index 1.33"}, {1.67, "modulation index 1.67"}, {2, "modulation index 2.00"}, {0.3, "modulation index 0.30"}};
+inline const forte::FormatSegment kF1336[] = {{kNoLimit, "", " pc/cm³", 1, 0, 1, false, false, false, false}};
+inline const Case kC1336[] = {{0.5, "0.5 pc/cm³"}, {1.774768329877785, "1.8 pc/cm³"}, {6.299605249474364, "6.3 pc/cm³"}, {22.360679774997898, "22.4 pc/cm³"}, {79.37005259840996, "79.4 pc/cm³"}, {281.72691138478416, "281.7 pc/cm³"}, {1000, "1000.0 pc/cm³"}, {20, "20.0 pc/cm³"}};
+inline const forte::FormatSegment kF1337[] = {{0.09999999999999999, "× ", "", 1, 0, 3, false, false, false, false}, {kNoLimit, "× ", "", 1, 0, 2, false, false, false, false}};
+inline const Case kC1337[] = {{0.01, "× 0.010"}, {0.04641588833612779, "× 0.046"}, {0.21544346900318836, "× 0.22"}, {1, "× 1.00"}, {4.6415888336127775, "× 4.64"}, {21.544346900318846, "× 21.54"}, {100, "× 100.00"}};
+inline const forte::FormatSegment kF1338[] = {{999.9999999999999, "", " MHz", 1, 0, 0, false, false, false, false}, {kNoLimit, "", " GHz", 0.001, 0, 2, false, false, false, false}};
+inline const Case kC1338[] = {{100, "100 MHz"}, {191.93831036664844, "192 MHz"}, {368.40314986403865, "368 MHz"}, {707.1067811865476, "707 MHz"}, {1357.208808297453, "1.36 GHz"}, {2605.003654793457, "2.61 GHz"}, {5000, "5.00 GHz"}, {1400, "1.40 GHz"}};
+inline const forte::FormatSegment kF1339[] = {{kNoLimit, "", " % of the frequency", 100, 0, 0, false, false, false, false}};
+inline const Case kC1339[] = {{0.01, "1 % of the frequency"}, {0.11, "11 % of the frequency"}, {0.21, "21 % of the frequency"}, {0.31, "31 % of the frequency"}, {0.4, "40 % of the frequency"}, {0.5, "50 % of the frequency"}, {0.6, "60 % of the frequency"}, {0.2, "20 % of the frequency"}};
+inline const forte::FormatSegment kF1340[] = {{kNoLimit, "", " channels", 1, 0, 0, false, false, false, false}};
+inline const Case kC1340[] = {{4, "4 channels"}, {13, "13 channels"}, {40, "40 channels"}, {128, "128 channels"}, {406, "406 channels"}, {1290, "1290 channels"}, {4096, "4096 channels"}, {256, "256 channels"}};
+inline const forte::FormatSegment kF1341[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
+inline const Case kC1341[] = {{0.05, "0.05"}, {0.21, "0.21"}, {0.37, "0.37"}, {0.53, "0.53"}, {0.68, "0.68"}, {0.84, "0.84"}, {1, "1.00"}, {0.7, "0.70"}};
+inline const forte::FormatSegment kF1342[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
+inline const Case kC1342[] = {{0, "0 %"}, {0.17, "17 %"}, {0.33, "33 %"}, {0.5, "50 %"}, {0.67, "67 %"}, {0.8300000000000001, "83 %"}, {1, "100 %"}, {0.2, "20 %"}};
+inline const forte::FormatSegment kF1343[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
+inline const Case kC1343[] = {{0, "-60.0 dB"}, {0.33, "-9.6 dB"}, {0.67, "-3.5 dB"}, {1, "0.0 dB"}, {1.33, "2.5 dB"}, {1.67, "4.5 dB"}, {2, "6.0 dB"}, {0.8, "-1.9 dB"}};
+inline const forte::FormatSegment kF1344[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const Case kC1344[] = {{-100, "−100.00 ¢"}, {-66.67, "−66.67 ¢"}, {-33.33, "−33.33 ¢"}, {0, "+0.00 ¢"}, {33.33, "+33.33 ¢"}, {66.67, "+66.67 ¢"}, {100, "+100.00 ¢"}};
+inline const forte::FormatSegment kF1345[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const Case kC1345[] = {{-100, "−100.00 ¢"}, {-66.67, "−66.67 ¢"}, {-33.33, "−33.33 ¢"}, {0, "+0.00 ¢"}, {33.33, "+33.33 ¢"}, {66.67, "+66.67 ¢"}, {100, "+100.00 ¢"}};
+inline const forte::FormatSegment kF1346[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const Case kC1346[] = {{-100, "−100.00 ¢"}, {-66.67, "−66.67 ¢"}, {-33.33, "−33.33 ¢"}, {0, "+0.00 ¢"}, {33.33, "+33.33 ¢"}, {66.67, "+66.67 ¢"}, {100, "+100.00 ¢"}};
+inline const forte::FormatSegment kF1347[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const Case kC1347[] = {{-100, "−100.00 ¢"}, {-66.67, "−66.67 ¢"}, {-33.33, "−33.33 ¢"}, {0, "+0.00 ¢"}, {33.33, "+33.33 ¢"}, {66.67, "+66.67 ¢"}, {100, "+100.00 ¢"}};
+inline const forte::FormatSegment kF1348[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const Case kC1348[] = {{-100, "−100.00 ¢"}, {-66.67, "−66.67 ¢"}, {-33.33, "−33.33 ¢"}, {0, "+0.00 ¢"}, {33.33, "+33.33 ¢"}, {66.67, "+66.67 ¢"}, {100, "+100.00 ¢"}};
+inline const forte::FormatSegment kF1349[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const Case kC1349[] = {{-100, "−100.00 ¢"}, {-66.67, "−66.67 ¢"}, {-33.33, "−33.33 ¢"}, {0, "+0.00 ¢"}, {33.33, "+33.33 ¢"}, {66.67, "+66.67 ¢"}, {100, "+100.00 ¢"}};
+inline const forte::FormatSegment kF1350[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const Case kC1350[] = {{-100, "−100.00 ¢"}, {-66.67, "−66.67 ¢"}, {-33.33, "−33.33 ¢"}, {0, "+0.00 ¢"}, {33.33, "+33.33 ¢"}, {66.67, "+66.67 ¢"}, {100, "+100.00 ¢"}};
+inline const forte::FormatSegment kF1351[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const Case kC1351[] = {{-100, "−100.00 ¢"}, {-66.67, "−66.67 ¢"}, {-33.33, "−33.33 ¢"}, {0, "+0.00 ¢"}, {33.33, "+33.33 ¢"}, {66.67, "+66.67 ¢"}, {100, "+100.00 ¢"}};
+inline const forte::FormatSegment kF1352[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const Case kC1352[] = {{-100, "−100.00 ¢"}, {-66.67, "−66.67 ¢"}, {-33.33, "−33.33 ¢"}, {0, "+0.00 ¢"}, {33.33, "+33.33 ¢"}, {66.67, "+66.67 ¢"}, {100, "+100.00 ¢"}};
+inline const forte::FormatSegment kF1353[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const Case kC1353[] = {{-100, "−100.00 ¢"}, {-66.67, "−66.67 ¢"}, {-33.33, "−33.33 ¢"}, {0, "+0.00 ¢"}, {33.33, "+33.33 ¢"}, {66.67, "+66.67 ¢"}, {100, "+100.00 ¢"}};
+inline const forte::FormatSegment kF1354[] = {{kNoLimit, "", " ¢", 1, 0, 2, false, false, true, true}};
+inline const Case kC1354[] = {{-100, "−100.00 ¢"}, {-66.67, "−66.67 ¢"}, {-33.33, "−33.33 ¢"}, {0, "+0.00 ¢"}, {33.33, "+33.33 ¢"}, {66.67, "+66.67 ¢"}, {100, "+100.00 ¢"}};
 
 inline const Vector kAll[] = {
   {"template.t60", {"t60", "", "", forte::ParamKind::continuous, 0.2, 20, 3, 0, true, false, nullptr, 0, kF0, 1}, kC0, 8},
@@ -4007,5 +4055,29 @@ inline const Vector kAll[] = {
   {"chladni.cents9", {"cents9", "", "", forte::ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kF1328, 1}, kC1328, 7},
   {"chladni.cents10", {"cents10", "", "", forte::ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kF1329, 1}, kC1329, 7},
   {"chladni.cents11", {"cents11", "", "", forte::ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kF1330, 1}, kC1330, 7},
+  {"pulsars.alpha", {"alpha", "", "", forte::ParamKind::continuous, 0, 90, 45, 0.5, false, false, nullptr, 0, kF1331, 1}, kC1331, 7},
+  {"pulsars.sightline", {"sightline", "", "", forte::ParamKind::continuous, 0, 1.3, 0.3, 0.01, false, false, nullptr, 0, kF1332, 1}, kC1332, 8},
+  {"pulsars.core", {"core", "", "", forte::ParamKind::continuous, 0, 1, 0.4, 0.01, false, false, nullptr, 0, kF1333, 1}, kC1333, 8},
+  {"pulsars.height", {"height", "", "", forte::ParamKind::continuous, 20, 2000, 200, 0, true, false, nullptr, 0, kF1334, 1}, kC1334, 7},
+  {"pulsars.jitter", {"jitter", "", "", forte::ParamKind::continuous, 0, 2, 0.3, 0.01, false, false, nullptr, 0, kF1335, 1}, kC1335, 8},
+  {"pulsars.dm", {"dm", "", "", forte::ParamKind::continuous, 0.5, 1000, 20, 0, true, false, nullptr, 0, kF1336, 1}, kC1336, 8},
+  {"pulsars.scatter", {"scatter", "", "", forte::ParamKind::continuous, 0.01, 100, 1, 0, true, false, nullptr, 0, kF1337, 2}, kC1337, 7},
+  {"pulsars.freq", {"freq", "", "", forte::ParamKind::continuous, 100, 5000, 1400, 0, true, false, nullptr, 0, kF1338, 2}, kC1338, 8},
+  {"pulsars.bandwidth", {"bandwidth", "", "", forte::ParamKind::continuous, 0.01, 0.6, 0.2, 0.01, false, false, nullptr, 0, kF1339, 1}, kC1339, 8},
+  {"pulsars.channels", {"channels", "", "", forte::ParamKind::continuous, 4, 4096, 256, 1, true, false, nullptr, 0, kF1340, 1}, kC1340, 8},
+  {"pulsars.velocity", {"velocity", "", "", forte::ParamKind::continuous, 0.05, 1, 0.7, 0.01, false, false, nullptr, 0, kF1341, 1}, kC1341, 8},
+  {"pulsars.room", {"room", "", "", forte::ParamKind::continuous, 0, 1, 0.2, 0.01, false, false, nullptr, 0, kF1342, 1}, kC1342, 8},
+  {"pulsars.volume", {"volume", "", "", forte::ParamKind::continuous, 0, 2, 0.8, 0.01, false, false, nullptr, 0, kF1343, 2}, kC1343, 8},
+  {"pulsars.cents1", {"cents1", "", "", forte::ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kF1344, 1}, kC1344, 7},
+  {"pulsars.cents2", {"cents2", "", "", forte::ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kF1345, 1}, kC1345, 7},
+  {"pulsars.cents3", {"cents3", "", "", forte::ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kF1346, 1}, kC1346, 7},
+  {"pulsars.cents4", {"cents4", "", "", forte::ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kF1347, 1}, kC1347, 7},
+  {"pulsars.cents5", {"cents5", "", "", forte::ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kF1348, 1}, kC1348, 7},
+  {"pulsars.cents6", {"cents6", "", "", forte::ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kF1349, 1}, kC1349, 7},
+  {"pulsars.cents7", {"cents7", "", "", forte::ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kF1350, 1}, kC1350, 7},
+  {"pulsars.cents8", {"cents8", "", "", forte::ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kF1351, 1}, kC1351, 7},
+  {"pulsars.cents9", {"cents9", "", "", forte::ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kF1352, 1}, kC1352, 7},
+  {"pulsars.cents10", {"cents10", "", "", forte::ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kF1353, 1}, kC1353, 7},
+  {"pulsars.cents11", {"cents11", "", "", forte::ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kF1354, 1}, kC1354, 7},
 };
 } // namespace vectors
