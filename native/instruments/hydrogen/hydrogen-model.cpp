@@ -155,7 +155,7 @@ double starkWidth(int n, int m, double N) {
   return STARK * F0 * (n * (n - 1) + m * (m - 1)) / (0.5 * (1.0 / (m * m) - 1.0 / (n * n)));
 }
 
-double dopplerWidth(double T) { return std::sqrt(8 * std::log(2.0) * KB_HARTREE * T / MH_C2); }
+double dopplerWidth(double T, double mass) { return std::sqrt(8 * std::log(2.0) * KB_HARTREE * T / (MH_C2 * mass)); }
 
 // Every A at once: for each pair of shells n > m the quadrature's nodes are shared, so the radial
 // functions of every l are evaluated once a node (y^l by multiplication, the normalisations once).
@@ -199,40 +199,70 @@ static void shellRates(int n, int m, std::vector<Transition> &out) {
     for (int k : {l - 1, l + 1}) {
       if (k < 0 || k >= m) continue;
       const double R = (k < l ? In[l] : Ip[l]) / beta;
-      out.push_back({(uint16_t)stateOf(n, l), (uint16_t)stateOf(m, k), (uint16_t)lineOf(n, m), (uint8_t)n, (uint8_t)l, (uint8_t)m, (uint8_t)k,
+      out.push_back({(uint32_t)stateOf(n, l), (uint32_t)stateOf(m, k), (uint32_t)lineOf(n, m), (uint8_t)n, (uint8_t)l, (uint8_t)m, (uint8_t)k,
                      c * (std::max(l, k) / (2.0 * l + 1)) * R * R, 1.0 / (m * m) - 1.0 / (n * n)});
     }
   }
 }
 
-const Atom &atom() {
-  static const Atom a = [] {
-    Atom a;
-    std::vector<Transition> all;
-    for (int n = 2; n <= NMAX; n++) for (int m = 1; m < n; m++) shellRates(n, m, all);
-    // grouped by the state they feed, from the ground state up
-    a.into.assign(STATES + 1, 0);
-    for (const Transition &t : all) a.into[t.to + 1]++;
-    for (int i = 0; i < STATES; i++) a.into[i + 1] += a.into[i];
-    a.tr.resize(all.size());
-    std::vector<int> fill(a.into.begin(), a.into.end() - 1);
-    for (const Transition &t : all) a.tr[fill[t.to]++] = t;
-    for (const Transition &t : a.tr) {
-      a.gamma[t.from] += t.A;
-      if (t.m > 1) a.gammaB[t.from] += t.A;
-    }
-    a.gamma[stateOf(2, 0)] += A_2S;
-    a.gammaB[stateOf(2, 0)] += A_2S;
-    a.lineStart.assign(LINES + 1, 0);
-    for (const Transition &t : a.tr) a.lineStart[t.line + 1]++;
-    for (int k = 0; k < LINES; k++) a.lineStart[k + 1] += a.lineStart[k];
-    a.byLine.resize(a.tr.size());
-    std::vector<int> at(a.lineStart.begin(), a.lineStart.end() - 1);
-    for (int i = 0; i < (int)a.tr.size(); i++) a.byLine[at[a.tr[i].line]++] = i;
-    return a;
-  }();
+// The transitions grouped by the state they feed, from the ground state up (in the order given
+// within each), the lines' transitions, and every state's decay rates.
+void Gas::index() {
+  std::vector<Transition> all = std::move(tr);
+  into.assign(states + 1, 0);
+  for (const Transition &t : all) into[t.to + 1]++;
+  for (int i = 0; i < states; i++) into[i + 1] += into[i];
+  tr.resize(all.size());
+  std::vector<int> fill(into.begin(), into.end() - 1);
+  for (const Transition &t : all) tr[fill[t.to]++] = t;
+  gamma.assign(states, 0);
+  gammaB.assign(states, 0);
+  for (const Transition &t : tr) {
+    gamma[t.from] += t.A;
+    if (!line[t.line].trapped) gammaB[t.from] += t.A;
+  }
+  for (int i = 0; i < states; i++) if (extra[i] > 0) { gamma[i] += extra[i]; gammaB[i] += extra[i]; }
+  lineStart.assign(lines + 1, 0);
+  for (const Transition &t : tr) lineStart[t.line + 1]++;
+  for (int k = 0; k < lines; k++) lineStart[k + 1] += lineStart[k];
+  byLine.resize(tr.size());
+  std::vector<int> at(lineStart.begin(), lineStart.end() - 1);
+  for (int i = 0; i < (int)tr.size(); i++) byLine[at[tr[i].line]++] = i;
+}
+
+// Hydrogen: every nl up to n = NMAX, every allowed nl → mk; a line is n → m.
+static Gas hydrogenGas() {
+  Gas a;
+  a.kind = GasKind::hydrogen;
+  a.states = STATES; a.lines = LINES; a.ground = 1; a.mass = 1;
+  a.refHz = lineHz(3, 2);
+  a.E.resize(STATES); a.g.resize(STATES); a.extra.assign(STATES, 0);
+  for (int n = 1; n <= NMAX; n++) for (int l = 0; l < n; l++) {
+    a.E[stateOf(n, l)] = MU * (1 - 1.0 / (n * n));
+    a.g[stateOf(n, l)] = 2 * (2 * l + 1);
+  }
+  a.extra[stateOf(2, 0)] = A_2S;
+  a.line.resize(LINES);
+  for (int n = 2; n <= NMAX; n++) for (int m = 1; m < n; m++) {
+    Line &L = a.line[lineOf(n, m)];
+    L.ratio = ratio(n, m);
+    L.nm = wavelengthNm(n, m);
+    L.stark = STARK * (n * (n - 1) + m * (m - 1)) / (0.5 * (1.0 / (m * m) - 1.0 / (n * n)));
+    L.upper = stateOf(n, 0); L.lower = stateOf(m, 0);
+    L.trapped = m == 1;
+  }
+  for (int n = 2; n <= NMAX; n++) for (int m = 1; m < n; m++) shellRates(n, m, a.tr);
+  a.index();
+  for (int s = 0; s < DISPLAY; s++) a.display.push_back(s); // every nl up to n = 7
   return a;
 }
+
+const Gas &gasOf(GasKind kind) {
+  static const Gas hydrogen = hydrogenGas();
+  (void)kind;
+  return hydrogen;
+}
+const Gas &atom() { return gasOf(GasKind::hydrogen); }
 
 Lamp lampOf(const double *P) {
   Lamp L;
@@ -244,8 +274,7 @@ Lamp lampOf(const double *P) {
   return L;
 }
 
-void pump(const Lamp &lamp, double *p) {
-  for (int i = 0; i < STATES; i++) p[i] = 0;
+static void hydrogenPump(const Lamp &lamp, double *p) {
   switch (lamp.excitation) {
     case Excitation::discharge: {
       // van Regemorter (1962): C(1s → np) ∝ f (E_H / ΔE) e^(−ΔE/kT), the dipole-allowed excitations
@@ -266,17 +295,23 @@ void pump(const Lamp &lamp, double *p) {
   }
 }
 
+void pump(const Lamp &lamp, double *p) {
+  const Gas &a = gasOf(lamp.gas);
+  for (int i = 0; i < a.states; i++) p[i] = 0;
+  hydrogenPump(lamp, p);
+}
+
 void drain(const Lamp &lamp, double *gamma) {
-  const Atom &a = atom();
-  for (int i = 0; i < STATES; i++) gamma[i] = (lamp.caseB ? a.gammaB[i] : a.gamma[i]) + 1 / lamp.glow;
+  const Gas &a = gasOf(lamp.gas);
+  for (int i = 0; i < a.states; i++) gamma[i] = (lamp.caseB ? a.gammaB[i] : a.gamma[i]) + (i < a.slowStates ? SLOW_CLOCK : 1) / lamp.glow;
 }
 
 void steady(const Lamp &lamp, double *N) {
-  const Atom &a = atom();
-  std::array<double, STATES> p, G;
+  const Gas &a = gasOf(lamp.gas);
+  std::vector<double> p(a.states), G(a.states);
   pump(lamp, p.data());
   drain(lamp, G.data());
-  for (int i = STATES - 1; i >= 0; i--) {
+  for (int i = a.states - 1; i >= 0; i--) {
     double s = p[i];
     for (int t = a.into[i]; t < a.into[i + 1]; t++) s += a.tr[t].A * N[a.tr[t].from];
     N[i] = s / G[i];
@@ -284,10 +319,10 @@ void steady(const Lamp &lamp, double *N) {
 }
 
 void linePowers(const Lamp &lamp, const double *N, double *L) {
-  const Atom &a = atom();
-  for (int k = 0; k < LINES; k++) L[k] = 0;
+  const Gas &a = gasOf(lamp.gas);
+  for (int k = 0; k < a.lines; k++) L[k] = 0;
   for (const Transition &t : a.tr) {
-    if (lamp.caseB && t.m == 1) continue;
+    if (lamp.caseB && a.line[t.line].trapped) continue;
     L[t.line] += t.A * N[t.from] * t.e;
   }
 }
@@ -312,9 +347,9 @@ static double angular(int l, int k, int tj, int tk) {
   return table[l][4 * (k > l) + 2 * (tj > 2 * l) + (tk > 2 * k)];
 }
 
-// Components by (j, j′), j′ = j or j ± 1: slot 3(j − ½) + (j′ − j + 1).
-int components(int line, const double *N, double alphaScale, Component *out) {
-  const Atom &a = atom();
+// Hydrogen's line n → m by (j, j′), j′ = j or j ± 1: slot 3(j − ½) + (j′ − j + 1); their ratios
+// times `scale` (the reference line's frequency over Hα's).
+static int hydrogenComponents(const Gas &a, int line, const double *N, double alphaScale, double scale, Component *out) {
   const Pair pr = lineLevels(line);
   double w[3 * NMAX] = {};
   for (int x = a.lineStart[line]; x < a.lineStart[line + 1]; x++) {
@@ -344,39 +379,59 @@ int components(int line, const double *N, double alphaScale, Component *out) {
     if (!(w[i] > 0)) continue;
     const int tj = 2 * (i / 3) + 1, tk = tj + 2 * (i % 3) - 2;
     const double dE = bohr + shift[pr.n][(tj - 1) / 2] - shift[pr.m][(tk - 1) / 2];
-    out[count++] = {tj, tk, dE / (0.5 * MU * HALPHA), w[i] / total};
+    out[count++] = {tj, tk, dE / (0.5 * MU * HALPHA) * scale, w[i] / total};
   }
   return count;
+}
+
+int components(GasKind gas, int line, const double *N, double alphaScale, Component *out) {
+  const Gas &a = gasOf(gas);
+  return hydrogenComponents(a, line, N, alphaScale, 1, out);
 }
 
 // The step response.
 
 Glow::Glow() {
-  table.reserve((size_t)ROWS * LINES);
-  pops.reserve((size_t)ROWS * DISPLAY);
-  kept.reserve(LINES); steadyPower.reserve(LINES); width.reserve(LINES); keptOf.reserve(LINES);
-  acc.reserve(LINES); compStart.reserve(LINES + 1); comps.reserve((size_t)LINES * 8);
+  // room for the largest gas, so that build() never allocates (it runs on the audio thread)
+  int lines = 0, states = 0, tr = 0;
+  for (int k = 0; k < GASES; k++) {
+    const Gas &a = gasOf((GasKind)k);
+    lines = std::max(lines, a.lines); states = std::max(states, a.states); tr = std::max(tr, (int)a.tr.size());
+  }
+  const int keep = std::min(lines, std::max(LINES, 3 * BAND_KEPT));
+  for (Grid &g : grids) {
+    g.table.reserve((size_t)ROWS * keep);
+    g.pops.reserve((size_t)ROWS * DISPLAY);
+    g.cols.reserve(keep); g.disp.reserve(DISPLAY);
+  }
+  kept.reserve(lines); clockOf.reserve(lines); steadyPower.reserve(lines); width.reserve(lines); keptOf.reserve(lines);
+  colOf.reserve(lines); dispCol.reserve(DISPLAY);
+  acc.reserve(lines); compStart.reserve(lines + 1); comps.reserve((size_t)keep * 8);
+  p.reserve(states); G.reserve(states); N.reserve(states); Nold.reserve(states); Nss.reserve(states);
 }
 
 void Glow::build(const Lamp &L) {
   lamp = L;
-  const Atom &a = atom();
+  gas = &gasOf(L.gas);
+  const Gas &a = *gas;
+  p.assign(a.states, 0); G.assign(a.states, 0); Nss.assign(a.states, 0);
   pump(lamp, p.data());
   drain(lamp, G.data());
   steady(lamp, Nss.data());
-  acc.assign(LINES, 0);
+  acc.assign(a.lines, 0);
   linePowers(lamp, Nss.data(), acc.data());
   const double top = *std::max_element(acc.begin(), acc.end());
-  kept.clear(); steadyPower.clear(); width.clear();
-  keptOf.assign(LINES, -1);
+  kept.clear(); steadyPower.clear(); width.clear(); clockOf.clear();
+  keptOf.assign(a.lines, -1);
   total = 0;
-  for (int k = 0; k < LINES; k++) {
+  for (int k = 0; k < a.lines; k++) {
     if (!(acc[k] > 1e-10 * top)) continue;
     keptOf[k] = (int)kept.size();
     kept.push_back(k);
     steadyPower.push_back(acc[k]);
     total += acc[k];
   }
+  for (size_t j = 0; j < kept.size(); j++) clockOf.push_back(a.line[kept[j]].upper < a.slowStates ? 1 : 0);
   // natural widths from the levels' radiative rates, weighted by each transition's steady power
   // (the glow's drain carries atoms away without broadening them)
   for (size_t j = 0; j < kept.size(); j++) {
@@ -390,17 +445,34 @@ void Glow::build(const Lamp &L) {
     width.push_back(s > 0 ? w / s / (2 * PI) : 0);
   }
   alphaScale = -1;
-  // the grid: linear over the fastest level's first four lives (a row every 0.06 of one), then
-  // geometric out to 25 lives of the slowest
-  double gmax = 0, gmin = INFINITY;
-  for (int i = 1; i < STATES; i++) { gmax = std::max(gmax, G[i]); gmin = std::min(gmin, G[i]); }
-  tauS = 4 / gmax;
-  h = std::log(1 + 25 / gmin / tauS) / (ROWS - 1);
-  table.assign((size_t)ROWS * kept.size(), 0.0f);
-  pops.assign((size_t)ROWS * DISPLAY, 0.0f);
-  N.fill(0);
-  t = 0;
-  computed = 1; // row 0: t = 0, nothing lit yet
+  // the grids: the fast levels', and the slow ladder's, if the gas has one
+  Grid &f = grids[0], &sl = grids[1];
+  f.on = true; f.lo = a.slowStates; f.hi = a.states; f.first = std::max(a.ground, a.slowStates);
+  sl.on = a.slowStates > 0; sl.lo = 0; sl.hi = a.slowStates; sl.first = 0;
+  // the slow ladder is fed by the fast levels' steady glow, as part of its pump
+  for (int i = 0; i < a.slowStates; i++)
+    for (int x = a.into[i]; x < a.into[i + 1]; x++) if ((int)a.tr[x].from >= a.slowStates) p[i] += a.tr[x].A * Nss[a.tr[x].from];
+  colOf.assign(kept.size(), 0);
+  dispCol.assign(a.display.size(), 0);
+  N.assign(a.states, 0);
+  Nold.assign(a.states, 0);
+  for (int c = 0; c < 2; c++) {
+    Grid &g = grids[c];
+    g.cols.clear(); g.disp.clear();
+    for (size_t j = 0; j < kept.size(); j++) if (clockOf[j] == c) { colOf[j] = (int)g.cols.size(); g.cols.push_back((int)j); }
+    for (size_t s = 0; s < a.display.size(); s++) if ((a.display[s] < a.slowStates ? 1 : 0) == c) { dispCol[s] = (int)g.disp.size(); g.disp.push_back((int)s); }
+    if (!g.on) { g.computed = 0; continue; }
+    // the grid: linear over the fastest level's first four lives (a row every 0.06 of one), then
+    // geometric out to 25 lives of the slowest
+    double gmax = 0, gmin = INFINITY;
+    for (int i = g.first; i < g.hi; i++) { gmax = std::max(gmax, G[i]); gmin = std::min(gmin, G[i]); }
+    g.tauS = 4 / gmax;
+    g.h = std::log(1 + 25 / gmin / g.tauS) / (ROWS - 1);
+    g.table.assign((size_t)ROWS * g.cols.size(), 0.0f);
+    g.pops.assign((size_t)ROWS * g.disp.size(), 0.0f);
+    g.t = 0;
+    g.computed = 1; // row 0: t = 0, nothing lit yet
+  }
   built = true;
 }
 
@@ -411,23 +483,25 @@ void Glow::tune(double scale) {
   Component c[MAX_COMPONENTS];
   for (size_t j = 0; j < kept.size(); j++) {
     compStart.push_back((int)comps.size());
-    const int n = components(kept[j], Nss.data(), scale, c);
+    const int n = components(lamp.gas, kept[j], Nss.data(), scale, c);
     for (int i = 0; i < n; i++) comps.push_back(c[i]);
   }
   compStart.push_back((int)comps.size());
 }
 
-double Glow::timeOf(int row) const { return tauS * std::expm1(h * row); }
+double Glow::timeOf(int row, int clock) const { const Grid &g = grids[clock]; return g.tauS * std::expm1(g.h * row); }
 
-// One step of the cascade, from the top state down: each level relaxes exactly toward its pump and
-// feed, with the feed averaged over the step from the levels above, which have already stepped.
-void Glow::step(double dt) {
-  const Atom &a = atom();
-  Nold = N;
-  for (int i = STATES - 1; i >= 1; i--) {
+// One step of a grid's cascade, from its top state down: each level relaxes exactly toward its
+// pump and feed, with the feed averaged over the step from the levels above, which have already
+// stepped. (The slow ladder's feed from the fast levels is in its pump.)
+void Glow::step(Grid &g, double dt) {
+  const Gas &a = *gas;
+  for (int i = g.lo; i < g.hi; i++) Nold[i] = N[i];
+  for (int i = g.hi - 1; i >= g.first; i--) {
     double feed = p[i];
     for (int k = a.into[i]; k < a.into[i + 1]; k++) {
       const Transition &x = a.tr[k];
+      if ((int)x.from >= g.hi) continue;
       feed += x.A * 0.5 * (Nold[x.from] + N[x.from]);
     }
     const double e = std::exp(-G[i] * dt);
@@ -435,30 +509,41 @@ void Glow::step(double dt) {
   }
 }
 
-void Glow::record(int row) {
-  const Atom &a = atom();
-  for (size_t j = 0; j < kept.size(); j++) acc[j] = 0;
+void Glow::record(Grid &g, int row) {
+  const Gas &a = *gas;
+  for (int j : g.cols) acc[j] = 0;
   for (const Transition &x : a.tr) {
+    if ((int)x.from < g.lo || (int)x.from >= g.hi) continue;
     const int j = keptOf[x.line];
     if (j >= 0) acc[j] += x.A * N[x.from] * x.e;
   }
-  float *r = &table[(size_t)row * kept.size()];
-  for (size_t j = 0; j < kept.size(); j++) r[j] = (float)acc[j];
-  float *q = &pops[(size_t)row * DISPLAY];
-  for (int i = 0; i < DISPLAY; i++) q[i] = (float)N[i];
+  float *r = &g.table[(size_t)row * g.cols.size()];
+  for (size_t c = 0; c < g.cols.size(); c++) r[c] = (float)acc[g.cols[c]];
+  float *q = &g.pops[(size_t)row * g.disp.size()];
+  for (size_t c = 0; c < g.disp.size(); c++) q[c] = (float)N[a.display[g.disp[c]]];
+}
+
+bool Glow::ensureGrid(Grid &g, double time, int &maxRows) {
+  const int c = &g == &grids[0] ? 0 : 1;
+  while (g.computed < ROWS && timeOf(g.computed - 1, c) < time && maxRows-- > 0) {
+    const double t1 = timeOf(g.computed, c);
+    const double dt = (t1 - g.t) / 2;
+    step(g, dt); step(g, dt);
+    g.t = t1;
+    record(g, g.computed);
+    g.computed++;
+  }
+  return g.computed == ROWS || timeOf(g.computed - 1, c) >= time;
 }
 
 bool Glow::ensure(double time, int maxRows) {
   if (!built) return false;
-  while (computed < ROWS && timeOf(computed - 1) < time && maxRows-- > 0) {
-    const double t1 = timeOf(computed);
-    const double dt = (t1 - t) / 2;
-    step(dt); step(dt);
-    t = t1;
-    record(computed);
-    computed++;
-  }
-  return computed == ROWS || timeOf(computed - 1) >= time;
+  return ensureGrid(grids[0], time, maxRows);
+}
+bool Glow::ensure(double time, double tSlow, int maxRows) {
+  if (!built) return false;
+  const bool done = ensureGrid(grids[0], time, maxRows);
+  return grids[1].on ? ensureGrid(grids[1], tSlow, maxRows) && done : done;
 }
 
 // a row's value at time t, linear between the rows (the last computed row past them)
@@ -470,16 +555,21 @@ static double lerpRows(const std::vector<float> &v, size_t width, int computed, 
   return r[0] + f * (r[width] - r[0]);
 }
 double Glow::powerAt(int j, double time) const {
+  const Grid &g = grids[clockOf[j]];
   if (!(time > 0)) return 0;
-  return lerpRows(table, kept.size(), computed, std::log1p(time / tauS) / h, j);
+  return lerpRows(g.table, g.cols.size(), g.computed, std::log1p(time / g.tauS) / g.h, colOf[j]);
 }
 double Glow::powerAtRow(int j, double row) const {
   if (!(row >= 0)) return 0;
-  return lerpRows(table, kept.size(), computed, row, j);
+  const Grid &g = grids[clockOf[j]];
+  return lerpRows(g.table, g.cols.size(), g.computed, row, colOf[j]);
 }
-double Glow::popAt(int s, double time) const {
-  if (!(time > 0)) return 0;
-  return lerpRows(pops, DISPLAY, computed, std::log1p(time / tauS) / h, s);
+double Glow::popAt(int s, double time, double tSlow) const {
+  const int c = gas->display[s] < gas->slowStates ? 1 : 0;
+  const Grid &g = grids[c];
+  const double t = c ? tSlow : time;
+  if (!(t > 0)) return 0;
+  return lerpRows(g.pops, g.disp.size(), g.computed, std::log1p(t / g.tauS) / g.h, dispCol[s]);
 }
 
 double Rng::uniform() {
