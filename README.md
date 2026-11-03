@@ -61,6 +61,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Hurdy-Gurdy](hurdygurdy/) | the French vielle à roue (18th century) | a cranked, rosined wheel bowing every string (implicit stick–slip, as the Viola Organista's): two chanterelles stopped by tangents tuned as the bowed notes sound, four drones on bridges of their own; the trompette's chien, a mass on a one-sided contact with the soundboard lifted by the string once the wheel's drag beats the tirant: a buzz from a threshold worked out from the string, set off by coups of the wrist on the crank |
 | ✅ | [Pyrophone](pyrophone/) | Frédéric Kastner (1873) | flame-driven Rijke tubes on a subcritical Hopf bifurcation: slow self-excited onsets, hysteresis, warm-up drift |
 | ✅ | [Singing Arc](arc/) | William Duddell (1900) | Ayrton's falling arc characteristic with a Mayr-type thermal column driving Duddell's tuned circuit: each note grows at the rate a linear analysis gives and sounds about 1 % below Kelvin's formula; a floor from the hot carbons holds the first kind, a higher re-strike voltage the second; capacitors in parallel on one arc, several lamps, hiss, Simon's talking arc; the arc radiates as a thermophone, ∝ dP/dt |
+| ✅ | [Singing Voice](voice/) | the human voice; Bell Labs' Voder (1939) | Ishizaka and Flanagan's two-mass vocal folds, set flapping by the breath (Bernoulli flow, contact, turbulent breath noise), into a 44-section Kelly–Lochbaum tract whose vowels are fitted to Peterson and Barney's formants, radiating from the lips; each singer tunes their folds' tension by ear and opens the jaw for high notes (formant tuning); the larynx tube's singer's formant |
 
 ### Physical phenomena
 
@@ -167,6 +168,7 @@ is the mod wheel's control wherever the instrument has one.
 | Hurdy-Gurdy | Coup strength · Wheel pressure (string height) · Bounce on the soundboard | Tirant (chien pressure) | Crank speed |
 | Pyrophone | Flame lag τ · Flame turbulence · Listening point | Flame position x_f / L | Flame power K |
 | Singing Arc | Hissing · Column time constant τ · Listening distance | Electrode gap | Arc current |
+| Singing Voice | Lung pressure · Folds apart at rest (breathiness) · Vibrato depth | Larynx tube (singer's formant) | Vowel |
 | Huygens Keyboard | Rail-sag coupling · Random mistuning · Resonant body | Tone | Pulse coupling |
 | Gong Keyboard | Mallet mass · Hand damping on release · Microphone distance | Head stiffness | Strike point |
 | Black-Hole Keyboard | Mass ratio q · Viewing inclination ι · Overtone strength | Tone | Spin |
