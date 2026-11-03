@@ -72,9 +72,11 @@ double dopplerWidth(double T, double mass = 1);
 
 // ---- a gas ----------------------------------------------------------------------------------
 
-enum class GasKind : int { hydrogen = 0, helium = 1 };
-constexpr int GASES = 2;
+enum class GasKind : int { hydrogen = 0, helium = 1, molecular = 2 };
+constexpr int GASES = 3;
 constexpr int HE_NMAX = 25;                       // helium's levels: n ≤ 25
+constexpr int ATOM_NMAX = 20;                     // the atoms beside H₂: n ≤ 20
+constexpr int MOLECULE = 1000000;                 // H₂'s codes: MOLECULE + state·10⁴ + v·100 + J
 
 // One transition: the states it joins, the line it belongs to, A (s⁻¹) and its energy (Rydbergs).
 // n, l, m, k: hydrogen's quantum numbers (its fine structure needs them), 0 for the other gases.
@@ -97,6 +99,7 @@ struct Line {
 struct Gas {
   GasKind kind = GasKind::hydrogen;
   int states = 0, lines = 0, slowStates = 0, ground = 0; // ground: states below it never step (the 1s)
+  int atomStates = 0, atomLines = 0; // H₂: the atoms beside the molecules, states and lines from these on
   double mass = 1;           // in hydrogen atoms (for the Doppler width)
   double refHz = 0;          // the reference line's frequency
   std::vector<double> E, g;  // each state's energy above the ground (Rydbergs) and weight
@@ -130,6 +133,7 @@ struct Lamp {
   int laserN = 5;
   bool caseB = false;
   double glow = 6e-8; // s: every level drains at least at 1/glow (the slow ladder's at 1/(glow/SLOW_CLOCK))
+  double atoms = 0.2; // H₂: the atoms' share of the light
   bool operator==(const Lamp &) const = default;
 };
 Lamp lampOf(const double *P);
@@ -161,6 +165,10 @@ double exchangeShape(double u);
 Gas heliumGas();
 void heliumPump(const Gas &a, const Lamp &lamp, double *p);
 int heliumComponents(const Gas &a, int line, double alphaScale, Component *out);
+Gas molecularGas(); // hydrogen-molecule.cpp
+void molecularPump(const Gas &a, const Lamp &lamp, double *p);
+void shareAtoms(const Gas &a, const Lamp &lamp, double *p);
+int hydrogenComponents(const Gas &a, int line, int hline, const double *N, double alphaScale, double scale, Component *out);
 
 // The glow's step response: the line powers a unit pump makes, switched on at t = 0, on a time
 // grid that is fine where the fast levels fill and coarse where only the slow ones change
@@ -171,7 +179,7 @@ int heliumComponents(const Gas &a, int line, double alphaScale, Component *out);
 class Glow {
  public:
   static constexpr int ROWS = 400;
-  static constexpr int BAND_KEPT = 800;   // past hydrogen's lines, at most this many kept a band (UV, visible, IR)
+  static constexpr int BAND_KEPT = 400;   // past hydrogen's lines, at most this many kept a band (UV, visible, IR)
   Glow();
   void build(const Lamp &lamp);           // the rates, the steady state and the kept lines; no rows yet
   void reset() { built = false; }
@@ -225,6 +233,7 @@ class Glow {
   std::vector<int> dispCol;               // per display state: its column in its grid's pops
   std::vector<double> p, G, N, Nold;
   std::vector<int> keptOf;                // line → its kept index, or −1
+  std::vector<int> order;                 // scratch: a band's lines
   std::vector<double> acc;
 };
 

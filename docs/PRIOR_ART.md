@@ -234,6 +234,15 @@ requests.
   the tonewheel organs ([Hammond, 1934](https://patents.google.com/patent/US1956350A/en))
   are its descendants. We did not find an earlier physical model of it. Its
   sources are in `telharmonium/README.md`.
+* **The voice.** H. Dudley, R. R. Riesz and S. S. A. Watkins, "A synthetic
+  speaker", *Journal of the Franklin Institute* 227, 739–764 (1939): the Voder,
+  the keyboard that spoke at the 1939 World's Fair. The Singing Voice is the
+  articulatory synthesis that followed it: Ishizaka and Flanagan's two-mass folds
+  (*Bell System Technical Journal* 51, 1233–1268, 1972) into Kelly and Lochbaum's
+  tube (above), as in P. R. Cook's SPASM and SINGER (Stanford, around 1990),
+  P. Birkholz's VocalTractLab and N. Thapen's Pink Trombone (below), whose tract
+  also has 44 sections. Its vowels are fitted to Peterson and Barney's formants
+  (1952); its sources are in `voice/README.md`.
 * **The Cellulophone.** P. Toulon, [US 1,948,996](https://patents.google.com/patent/US1948996A/en)
   (filed 1928), and T. Rhea's account of it in *Contemporary Keyboard* (1977,
   [reprinted by the EMEAPP](https://emeapp.org/2026/08/17/electronic-perspectives-photoelectric-instruments-part-iii-the-cellulophone/)),
