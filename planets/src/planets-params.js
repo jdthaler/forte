@@ -28,7 +28,7 @@ export const GROUPS = [
   {
     title: 'Planet',
     params: [
-      { id: 'planet', label: 'Planet', type: 'select', options: PLANET_OPTIONS, def: 'earth', perform: true, strip: true, face: 'rockers',
+      { id: 'planet', label: 'Planet', type: 'select', options: PLANET_OPTIONS, def: 'earth', perform: true, strip: true,
         hint: 'Earth is PREM, the reference Earth its free oscillations helped build. Mars and the Moon are models built from what InSight and Apollo measured: nobody has yet recorded either ring.' },
       { id: 'spin', label: 'Spin (× its own)', min: 0, max: 10, def: 1, step: 0.01, perform: true, fmt: (v) => `${v.toFixed(2)}×`,
         hint: 'The planet\'s rotation splits each tone into 2l + 1, which beat: the Earth\'s gravest, ₀S₂, into five a few per cent apart. 0 stops it; the Moon, turning once a month, hardly splits at all.' },
