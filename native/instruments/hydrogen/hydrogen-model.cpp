@@ -159,7 +159,7 @@ double dopplerWidth(double T, double mass) { return std::sqrt(8 * std::log(2.0) 
 
 // Every A at once: for each pair of shells n > m the quadrature's nodes are shared, so the radial
 // functions of every l are evaluated once a node (y^l by multiplication, the normalisations once).
-static void shellRates(int n, int m, std::vector<Transition> &out) {
+void hydrogenShell(int n, int m, std::vector<Transition> &out) {
   static const auto norm = [] { // N_nl
     std::array<std::array<double, NMAX>, NMAX + 1> t{};
     for (int n = 1; n <= NMAX; n++) for (int l = 0; l < n; l++) t[n][l] = std::exp(0.5 * (3 * std::log(2.0 / n) + lnFact(n - l - 1) - std::log(2.0 * n) - lnFact(n + l)));
@@ -236,10 +236,11 @@ static Gas hydrogenGas() {
   a.kind = GasKind::hydrogen;
   a.states = STATES; a.lines = LINES; a.ground = 1; a.mass = 1;
   a.refHz = lineHz(3, 2);
-  a.E.resize(STATES); a.g.resize(STATES); a.extra.assign(STATES, 0);
+  a.E.resize(STATES); a.g.resize(STATES); a.extra.assign(STATES, 0); a.code.resize(STATES);
   for (int n = 1; n <= NMAX; n++) for (int l = 0; l < n; l++) {
     a.E[stateOf(n, l)] = MU * (1 - 1.0 / (n * n));
     a.g[stateOf(n, l)] = 2 * (2 * l + 1);
+    a.code[stateOf(n, l)] = n * 100 + l;
   }
   a.extra[stateOf(2, 0)] = A_2S;
   a.line.resize(LINES);
@@ -251,7 +252,7 @@ static Gas hydrogenGas() {
     L.upper = stateOf(n, 0); L.lower = stateOf(m, 0);
     L.trapped = m == 1;
   }
-  for (int n = 2; n <= NMAX; n++) for (int m = 1; m < n; m++) shellRates(n, m, a.tr);
+  for (int n = 2; n <= NMAX; n++) for (int m = 1; m < n; m++) hydrogenShell(n, m, a.tr);
   a.index();
   for (int s = 0; s < DISPLAY; s++) a.display.push_back(s); // every nl up to n = 7
   return a;
@@ -259,13 +260,14 @@ static Gas hydrogenGas() {
 
 const Gas &gasOf(GasKind kind) {
   static const Gas hydrogen = hydrogenGas();
-  (void)kind;
+  if (kind == GasKind::helium) { static const Gas helium = heliumGas(); return helium; }
   return hydrogen;
 }
 const Gas &atom() { return gasOf(GasKind::hydrogen); }
 
 Lamp lampOf(const double *P) {
   Lamp L;
+  L.gas = (GasKind)std::clamp((int)P[p::gas], 0, GASES - 1);
   L.excitation = (Excitation)(int)P[p::excitation];
   L.T = P[p::temperature];
   L.laserN = std::clamp((int)std::lround(P[p::laserLevel]), 2, NMAX);
@@ -292,13 +294,31 @@ static void hydrogenPump(const Lamp &lamp, double *p) {
     case Excitation::laser:
       p[stateOf(lamp.laserN, 1)] = 1;
       break;
+    default:
+      break;
   }
 }
 
 void pump(const Lamp &lamp, double *p) {
   const Gas &a = gasOf(lamp.gas);
   for (int i = 0; i < a.states; i++) p[i] = 0;
-  hydrogenPump(lamp, p);
+  if (lamp.excitation == Excitation::thermal) {
+    // collisions with a hot gas hold every level at its Boltzmann share N = g e^(−E/kT): each is
+    // filled at the rate it empties, less what the levels above already feed it at that share
+    // (never below none: a level the cascade overfills sits a little above its share)
+    const double kT = KB_HARTREE * lamp.T, E0 = a.E[a.ground];
+    std::vector<double> G(a.states), N(a.states);
+    drain(lamp, G.data());
+    for (int i = a.ground; i < a.states; i++) N[i] = a.g[i] * std::exp(-(a.E[i] - E0) * 0.5 / kT);
+    for (int i = a.ground; i < a.states; i++) {
+      double feed = 0;
+      for (int x = a.into[i]; x < a.into[i + 1]; x++) feed += a.tr[x].A * N[a.tr[x].from];
+      p[i] = std::max(0.0, G[i] * N[i] - feed);
+    }
+    return;
+  }
+  if (lamp.gas == GasKind::helium) heliumPump(a, lamp, p);
+  else hydrogenPump(lamp, p);
 }
 
 void drain(const Lamp &lamp, double *gamma) {
@@ -386,8 +406,21 @@ static int hydrogenComponents(const Gas &a, int line, const double *N, double al
 
 int components(GasKind gas, int line, const double *N, double alphaScale, Component *out) {
   const Gas &a = gasOf(gas);
+  if (gas == GasKind::helium) return heliumComponents(a, line, alphaScale, out);
   return hydrogenComponents(a, line, N, alphaScale, 1, out);
 }
+
+// ∫₀^∞ e^(−s) f(s) ds by Gauss–Laguerre (24 points: both integrands are smooth and slow)
+template <class F> static double laguerreIntegral(F f) {
+  const Quadrature &q = laguerre(24);
+  double s = 0;
+  for (int i = 0; i < 24; i++) s += q.w[i] * f(q.x[i]);
+  return s;
+}
+// P(y) = max(0.2, 0.276 e^y E₁(y)), with e^y E₁(y) = ∫ e^(−s)/(y + s) ds (y ≥ 0.5 here: ΔE ≫ kT)
+double vanRegemorter(double y) { return std::max(0.2, 0.276 * laguerreIntegral([y](double x) { return 1 / (std::max(y, 0.5) + x); })); }
+// Ω(E) = Ω₀ (ΔE/E)² over the Maxwellian above threshold: ∫ e^(−s) / (1 + u s)² ds
+double exchangeShape(double u) { return laguerreIntegral([u](double x) { return 1 / ((1 + u * x) * (1 + u * x)); }); }
 
 // The step response.
 

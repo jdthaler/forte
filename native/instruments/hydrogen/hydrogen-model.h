@@ -72,8 +72,9 @@ double dopplerWidth(double T, double mass = 1);
 
 // ---- a gas ----------------------------------------------------------------------------------
 
-enum class GasKind : int { hydrogen = 0 };
-constexpr int GASES = 1;
+enum class GasKind : int { hydrogen = 0, helium = 1 };
+constexpr int GASES = 2;
+constexpr int HE_NMAX = 25;                       // helium's levels: n ≤ 25
 
 // One transition: the states it joins, the line it belongs to, A (s⁻¹) and its energy (Rydbergs).
 // n, l, m, k: hydrogen's quantum numbers (its fine structure needs them), 0 for the other gases.
@@ -83,6 +84,11 @@ struct Line {
   double ratio = 1;          // its frequency over the gas's reference line
   double nm = 0;             // vacuum wavelength
   double stark = 0;          // its Stark FWHM over its frequency, per unit Holtsmark field (atomic units)
+  // or, where de > 0 (helium), each level's linear Stark FWHM per unit field (su, sl: as hydrogen's
+  // at its n) and the gap to the levels its field mixes in (gu, gl), and the line's energy (all
+  // hartree): a level's share is its linear width where that is wider than the gap, its square
+  // over the gap (the quadratic Stark effect) where narrower
+  double de = 0, su = 0, sl = 0, gu = 0, gl = 0;
   int upper = 0, lower = 0;  // a state of each level it joins (hydrogen: the s states of n and m)
   bool trapped = false;      // it ends on the ground state: a thick gas absorbs it again (Case B)
 };
@@ -94,6 +100,7 @@ struct Gas {
   double mass = 1;           // in hydrogen atoms (for the Doppler width)
   double refHz = 0;          // the reference line's frequency
   std::vector<double> E, g;  // each state's energy above the ground (Rydbergs) and weight
+  std::vector<int32_t> code; // what the page calls it: hydrogen n·100 + l, helium (S·100 + n)·100 + L
   std::vector<double> extra; // its decay that makes no line (s⁻¹)
   std::vector<Transition> tr;           // grouped by `to`, highest first
   std::vector<int> into;                // tr[into[i] … into[i+1]) feed state i
@@ -101,6 +108,12 @@ struct Gas {
   std::vector<double> gamma, gammaB;    // each state's total decay: every line (Case A), the untrapped ones (B)
   std::vector<Line> line;
   std::vector<int> display;             // the states the page's diagram shows (at most DISPLAY)
+  // a line's fine-structure components where they come from a table (helium's J levels): 2J, 2J′,
+  // the offset of its energy from the line's (Rydbergs, at the real α) and gA; fs[fsStart[k] …
+  // fsStart[k+1]) for line k
+  struct FineLine { int8_t tj, tk; double offset, gA; };
+  std::vector<FineLine> fs;
+  std::vector<int> fsStart;
   void index();                         // into, byLine, lineStart, gamma, gammaB from tr and extra
 };
 const Gas &gasOf(GasKind kind);
@@ -109,7 +122,7 @@ constexpr int DISPLAY = 28;
 constexpr double SLOW_CLOCK = 1e-14;
 
 // How the gas glows (from the parameters, hydrogen-params.h).
-enum class Excitation : int { discharge = 0, recombination = 1, laser = 2 };
+enum class Excitation : int { discharge = 0, recombination = 1, laser = 2, thermal = 3 };
 struct Lamp {
   GasKind gas = GasKind::hydrogen;
   Excitation excitation = Excitation::discharge;
@@ -136,6 +149,18 @@ struct Component { int tj, tk; double ratio, weight; }; // 2j, 2j′
 int components(GasKind gas, int line, const double *N, double alphaScale, Component *out);
 inline int components(int line, const double *N, double alphaScale, Component *out) { return components(GasKind::hydrogen, line, N, alphaScale, out); }
 constexpr int MAX_COMPONENTS = 3 * NMAX;
+
+// The pieces the gases share: hydrogen's rates for every nl → mk between two shells; van
+// Regemorter's thermal average of a dipole excitation's Gaunt factor at y = ΔE/kT; the thermal
+// average of an exchange excitation whose cross-section falls as E⁻³ from threshold (its collision
+// strength as (ΔE/E)²), over its threshold value, at u = kT/ΔE.
+void hydrogenShell(int n, int m, std::vector<Transition> &out);
+double vanRegemorter(double y);
+double exchangeShape(double u);
+// The other gases (hydrogen-helium.cpp).
+Gas heliumGas();
+void heliumPump(const Gas &a, const Lamp &lamp, double *p);
+int heliumComponents(const Gas &a, int line, double alphaScale, Component *out);
 
 // The glow's step response: the line powers a unit pump makes, switched on at t = 0, on a time
 // grid that is fine where the fast levels fill and coarse where only the slow ones change
