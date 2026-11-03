@@ -35,20 +35,11 @@ static double windowGain(int window, double nm) {
   }
 }
 
-// the levels of every line, once
-static const Pair &pairOf(int line) {
-  static const auto table = [] {
-    std::vector<Pair> t(LINES);
-    for (int n = 2; n <= NMAX; n++) for (int m = 1; m < n; m++) t[lineOf(n, m)] = {n, m};
-    return t;
-  }();
-  return table[line];
-}
-
 HydrogenEngine::HydrogenEngine(double fs) : Engine(fs) {
   voices.resize(kMaxVoices + 8);
-  lineSum.assign(LINES, 0);
-  atom();
+  int lines = 0;
+  for (int k = 0; k < GASES; k++) lines = std::max(lines, gasOf((GasKind)k).lines);
+  lineSum.assign(lines, 0);
 }
 
 int HydrogenEngine::lampChanged() {
@@ -117,10 +108,10 @@ void HydrogenEngine::light(Voice &v, double velocity) {
   };
   double all = 0, seen = 0;
   for (size_t j = 0; j < g.kept.size(); j++) {
-    const Pair &pr = pairOf(g.kept[j]);
-    const double f = v.fKey * ratio(pr.n, pr.m) * b;
+    const Line &L = g.gas->line[g.kept[j]];
+    const double f = v.fKey * L.ratio * b;
     if (f < 16 || f > top) continue;
-    const double W = windowGain(window, wavelengthNm(pr.n, pr.m) / b);
+    const double W = windowGain(window, L.nm / b);
     all += g.steadyPower[j];
     seen += g.steadyPower[j] * W;
     if (!(W > 0)) continue;
@@ -141,7 +132,7 @@ void HydrogenEngine::light(Voice &v, double velocity) {
   for (int i = 0; i < nb; i++) {
     const Cand &c = best[i];
     const int line = g.kept[c.kept];
-    const Pair &pr = pairOf(line);
+    const Line &L = g.gas->line[line];
     Osc o;
     int same = -1;
     for (int k = 0; k < oldCount && same < 0; k++) if (old[k].line == line && std::fabs(old[k].ratio - c.ratio) < 1e-12) same = k;
@@ -153,9 +144,11 @@ void HydrogenEngine::light(Voice &v, double velocity) {
       o.br = o.bi = o.dr = o.di = 0;
     }
     o.kept = c.kept; o.line = line; o.weight = c.weight; o.ratio = c.ratio;
-    o.lambda = wavelengthNm(pr.n, pr.m);
+    o.lambda = L.nm;
     o.nat = g.width[c.kept];
-    o.stark = STARK * (pr.n * (pr.n - 1) + pr.m * (pr.m - 1)) / (0.5 * (1.0 / (pr.m * pr.m) - 1.0 / (pr.n * pr.n)));
+    o.stark = L.stark;
+    o.de = L.de; o.su = L.su; o.sl = L.sl; o.gu = L.gu; o.gl = L.gl;
+    o.clock = g.clockOf[c.kept];
     v.osc[i] = o;
     v.peak += c.score;
   }
@@ -187,11 +180,18 @@ void HydrogenEngine::widths(Voice &v) {
   const double d = expr.slideOr(v.key, P[p::density]);
   if (d == v.density) return;
   v.density = d;
-  const double F0 = 2.603 * std::pow(d * A0_CM * A0_CM * A0_CM, 2.0 / 3), dop = dopplerWidth(P[p::temperature]);
+  const Gas &a = *glows[v.glow].gas;
+  const double F0 = 2.603 * std::pow(d * A0_CM * A0_CM * A0_CM, 2.0 / 3), dop = dopplerWidth(P[p::temperature], a.mass);
   for (int i = 0; i < v.count; i++) {
     Osc &o = v.osc[i];
     const double f = v.fKey * o.ratio * v.bendNow;
-    const double w = o.nat / P[p::slowmo] + (dop + o.stark * F0) * f;
+    double w = o.nat / (o.clock ? P[p::slowmo] * SLOW_CLOCK : P[p::slowmo]);
+    if (o.de > 0) {
+      // each level's Stark width: linear where its neighbours are nearer than its shift, else quadratic
+      const double u = o.su * F0, l = o.sl * F0;
+      const double stark = (u * (o.gu > u ? u / o.gu : 1) + l * (o.gl > l ? l / o.gl : 1)) / o.de;
+      w += (dop + stark) * f;
+    } else w += (dop + o.stark * F0) * f;
     o.rho = std::exp(-PI * w * SUB / fs);
   }
 }
@@ -245,13 +245,17 @@ void HydrogenEngine::update(Voice &v) {
   const double b = glideTo(v.bendNow, wheel * expr.bendOf(v.key), SUB / fs, BEND_T);
   if (b != v.bendNow) { v.bendNow = b; retune(v, b); v.density = -1; }
   widths(v);
-  const double nyq = 0.48 * fs, on = g.rowAt(v.t), off = v.tOff >= 0 ? g.rowAt(v.t - v.tOff) : -1;
+  const double nyq = 0.48 * fs;
+  // each grid's row now, since the key and since its release (the slow ladder's clock runs
+  // 1/SLOW_CLOCK times faster)
+  double on[2] = {g.rowAt(v.t), -1}, off[2] = {v.tOff >= 0 ? g.rowAt(v.t - v.tOff) : -1, -1};
+  if (g.slow()) { on[1] = g.rowAt(v.t / SLOW_CLOCK, 1); off[1] = v.tOff >= 0 ? g.rowAt((v.t - v.tOff) / SLOW_CLOCK, 1) : -1; }
   // the shutter: −60 dB in its time once the lamp is out, unless it is all the way open
   if (!v.lit && P[p::shutter] < SHUTTER_OPEN) v.shut *= std::exp(-std::log(1000.0) * SUB / fs / P[p::shutter]);
   double sum = 0;
   for (int i = 0; i < v.count; i++) {
     Osc &o = v.osc[i];
-    const double S = g.powerAtRow(o.kept, on) - g.powerAtRow(o.kept, off);
+    const double S = g.powerAtRow(o.kept, on[o.clock]) - g.powerAtRow(o.kept, off[o.clock]);
     const double Pw = std::max(0.0, S) * o.weight * o.win;
     sum += Pw;
     const double amp = v.fKey * o.ratio * b < nyq ? v.gain * v.shut * std::sqrt(Pw) : 0;
@@ -264,26 +268,28 @@ void HydrogenEngine::update(Voice &v) {
     o.zr *= z; o.zi *= z;
   }
   // a released lamp is out when its light has fallen 60 dB, or its response has settled
-  if (!v.lit && (sum * v.shut * v.shut < 1e-6 * v.peak || v.t - v.tOff > g.end())) v.active = false;
+  const bool settled = v.t - v.tOff > g.end() && (!g.slow() || (v.t - v.tOff) / SLOW_CLOCK > g.end(1));
+  if (!v.lit && (sum * v.shut * v.shut < 1e-6 * v.peak || settled)) v.active = false;
 }
 
 void HydrogenEngine::report() {
   // the lines heard (each line's power summed over the voices), and the populations of the levels
-  // up to n = 7, for the page's views
+  // the page's diagram shows (hydrogen's: every nl up to n = 7), of the lamps of today's gas
   std::fill(lineSum.begin(), lineSum.end(), 0.0);
-  std::array<double, 28> pops{};
+  std::array<double, DISPLAY> pops{};
   bool any = false;
+  const Gas &a = *glows[live].gas;
   for (const Voice &v : voices) {
-    if (!v.active) continue;
+    if (!v.active || glows[v.glow].gas != &a) continue;
     any = true;
     for (int i = 0; i < v.count; i++) {
       const Osc &o = v.osc[i];
       lineSum[o.line] += (o.br * o.br + o.bi * o.bi) / (o.ar * o.ar + o.ai * o.ai + 1e-30);
     }
     const Glow &g = glows[v.glow];
-    for (int s = 0; s < 28; s++) {
-      double x = g.popAt(s, v.t);
-      if (v.tOff >= 0) x -= g.popAt(s, v.t - v.tOff);
+    for (int s = 0; s < (int)a.display.size(); s++) {
+      double x = g.popAt(s, v.t, v.t / SLOW_CLOCK);
+      if (v.tOff >= 0) x -= g.popAt(s, v.t - v.tOff, (v.t - v.tOff) / SLOW_CLOCK);
       pops[s] += v.gain * v.gain * v.shut * v.shut * std::max(0.0, x);
     }
   }
@@ -292,7 +298,7 @@ void HydrogenEngine::report() {
   // the 28 strongest lines, as (line, power) pairs in two messages
   std::array<int, 28> top{};
   int nt = 0;
-  for (int k = 0; k < LINES; k++) {
+  for (int k = 0; k < a.lines; k++) {
     if (!(lineSum[k] > 0)) continue;
     if (nt < 28) { top[nt++] = k; continue; }
     int w = 0;
@@ -307,8 +313,8 @@ void HydrogenEngine::report() {
     }
     post(m);
   }
-  m.type = 1; m.key = any ? 1 : 0; m.count = 28;
-  for (int s = 0; s < 28; s++) m.values[s] = (float)pops[s];
+  m.type = 1; m.key = any ? 1 : 0; m.count = DISPLAY;
+  for (int s = 0; s < DISPLAY; s++) m.values[s] = (float)pops[s];
   post(m);
 }
 
@@ -319,7 +325,7 @@ void HydrogenEngine::process(float *L, float *R, int n) {
   for (int gi = 0; gi < (int)glows.size(); gi++) {
     double age = 0;
     for (const Voice &v : voices) if (v.active && v.glow == gi) age = std::max(age, v.t + (SUB + n) / fs / P[p::slowmo]);
-    if (age > 0) glows[gi].ensure(age, 8);
+    if (age > 0) glows[gi].ensure(age, age / SLOW_CLOCK, 8);
   }
   double buf[SUB];
   int i = 0;
