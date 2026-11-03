@@ -139,7 +139,7 @@ inline forte::Tuning tuningOf(const double *P) {
 inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(double) = nullptr) {
   return InstrumentInfo{
     .slug = "nmr", .name = "NMR Spin Echo", .version = FORTE_INSTRUMENT_VERSION,
-    .description = "", .auSubtype = "Nmrs",
+    .description = "Every key a tube of liquid in an NMR magnet, its field set so the sample's lowest line is the note: a pulse tips the protons' spins, each chemical group rings at its own shift, so ethanol is a chord whose J couplings beat, the note fades as the spins drift out of step, and the pedal's π pulse calls them back as Hahn's echo.", .auSubtype = "Nmrs",
     .vst3Id = {0x8e, 0x4a, 0x4c, 0x7c, 0x64, 0xa3, 0x93, 0x7d, 0x8a, 0x58, 0xff, 0x52, 0xbb, 0x1d, 0xf5, 0x10},
     .params = kParams, .paramCount = p::count,
     .presets = kPresets, .presetCount = 15,
@@ -147,7 +147,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::shim, .modWheelMax = 500,
     .controllers = kControllers, .controllerCount = 5,
-    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 0},
+    .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 6.5},
     .midiVelocity = midiVelocity, .create = create,
   };
 }

@@ -8,13 +8,11 @@ import { TUNING_KEEP } from '../../shared/tuning.js';
 export { GROUPS, DEFAULTS, PRESETS };
 
 export const INSTRUMENT = {
-  // until it is in shared/registry.js: its plugin's name and AU code (move the code there)
-  plugin: { name: "NMR Spin Echo", code: 'Nmrs' },
   id: 'nmr',
   groups: GROUPS,
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
-  range: [21, 108],                     // MIDI keys: all 88, A0–C8 (past C6 the magnet is stronger than any built)
+  range: [21, 108],                     // MIDI keys: all 88, A0–C8 (past E6, ethanol needs a magnet stronger than any built)
   space: 'sustain',                     // Space and CC64: the pedal fires a π pulse at every sounding sample (held, an echo train)
   modWheel: { param: 'shim', max: 500 }, // CC1 spoils the shim: the field's spread, up to 500 ppb
   // MPE: each key is its own magnet, so a note's bend is its own field offset (every line by the

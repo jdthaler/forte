@@ -143,9 +143,10 @@ function shift(a, b, guess) {
   for (let it = 0; it < 30; it++) { const m1 = l + (r - l) / 3, m2 = r - (r - l) / 3; if (score(m1) < score(m2)) l = m1; else r = m2; }
   return (l + r) / 2;
 }
-// Instruments whose spectrum does not stretch with the pitch (test/tuning-tests.mjs OWN): their
-// own suites measure a note's bend
-const OWN = ['bubbles', 'stars', 'quantum', 'blackhole'];
+// Instruments whose spectrum does not stretch with the pitch (test/tuning-tests.mjs OWN), or whose
+// bend does not (the NMR keyboard's moves every line by the same hertz): their own suites measure
+// a note's bend
+const OWN = ['bubbles', 'stars', 'quantum', 'blackhole', 'nmr'];
 // Instruments whose physics pulls a bent note off its ratio, as it pulls the wheel's (their own
 // suites check a note's bend against the wheel's): cents allowed
 const LOOSE = { windharp: 8, arc: 12 }; // the wake pulls a string toward its shedding; the arc's lag pulls its coil

@@ -31,7 +31,7 @@
 namespace forte::nmr {
 
 constexpr double GAMMA_MHZ_T = 42.577478518; // the proton's γ/2π, MHz per tesla (CODATA 2018)
-constexpr double STRONGEST_T = 28.2;         // the strongest NMR magnet built (1.2 GHz, 2020)
+constexpr double STRONGEST_T = 30.5;         // the strongest NMR magnet built (Bruker's 1.3 GHz, 2025)
 constexpr double COIL_M = 0.018;             // the probe coil's length, over which a gradient spreads the field
 constexpr int MAX_GROUPS = 4, MAX_COUPLINGS = 6;
 constexpr int MAX_DIM = 32;                  // the largest block of states a sample needs

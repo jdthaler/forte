@@ -94,7 +94,7 @@ test('the key\'s magnet puts the sample\'s lowest line on the note: A4 is ethano
   assert.ok(Math.abs(k.fAnchor - 440) < 1e-9);
   const top = model.keySystem(108, P());
   assert.ok(top.B0 > model.STRONGEST_T, 'C8 needs a magnet past any built');
-  assert.ok(model.keySystem(84, P()).B0 < model.STRONGEST_T, 'C6 is within reach (1.2 GHz)');
+  assert.ok(model.keySystem(88, P()).B0 < model.STRONGEST_T && model.keySystem(89, P()).B0 > model.STRONGEST_T, 'E6 is within reach of the strongest (30.5 T), F6 not');
 });
 test('each group\'s lines carry its share of the protons (ethanol 3 : 2 : 1, ethyl acetate 3 : 3 : 2, 2-propanol 6 : 1), and every line adds to the start of the signal', () => {
   for (const [sample, want] of [['ethanol', [3, 2, 1]], ['ethylAcetate', [3, 3, 2]], ['propanol', [6, 1]], ['water', [1]]]) {
@@ -256,13 +256,19 @@ test('the receiver: closes when the key comes up (held), or keeps listening unti
   assert.ok(envAt(ring, 0.3) > 0.3 * envAt(ring, 0.19));
   assert.equal(held.e.voiceCount(), 0);
 });
-test('the pitch wheel moves the field: every line by the same number of hertz (ethanol\'s CH₂ moves as far as its CH₃, not by the same ratio)', () => {
+test('the pitch wheel, and a note\'s own bend (MPE), move the field: every line by the same number of hertz (ethanol\'s CH₂ moves as far as its CH₃, not by the same ratio)', () => {
   const o = P({ shim: 0.3, t2: 5, t1: 5 }), key = 57, f = keyFreq(key), up = f * (2 ** (2 / 12) - 1);
   const r = play(o, [{ at: 0, bend: 1 }, { at: 0.05, on: key }], 1.2);
   const a = 0.15 * FS, b = a + 32768;
   const fCH3 = peak(r.L, f + up, a, b), fCH2 = peak(r.L, f * 3.44 / 1.06 + up, a, b);
   assert.ok(Math.abs(fCH3 - (f + up)) < 0.3, `CH₃ ${fCH3} vs ${f + up}`);
   assert.ok(Math.abs(fCH2 - (f * 3.44 / 1.06 + up)) < 0.5, `CH₂ ${fCH2} vs ${f * 3.44 / 1.06 + up}`);
+  // a note's own bend (MPE) is its own magnet's offset, the same way: −2 semitones of its CH₃
+  const e = new NmrEngine(FS), down = f * (2 ** (-2 / 12) - 1);
+  e.handle({ type: 'noteBend', key, value: 2 ** (-2 / 12) });
+  const m = play(o, [{ at: 0, on: key }], 1.2, { engine: e });
+  const gCH3 = peak(m.L, f + down, a, b), gCH2 = peak(m.L, f * 3.44 / 1.06 + down, a, b);
+  assert.ok(Math.abs(gCH3 - (f + down)) < 0.3 && Math.abs(gCH2 - (f * 3.44 / 1.06 + down)) < 0.5, `bent note: CH₃ ${gCH3}, CH₂ ${gCH2}`);
 });
 test('output level is sane (peak 0.05 – 1 at full velocity), finite, and silent after release', () => {
   let pk = 0;

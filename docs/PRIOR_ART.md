@@ -803,6 +803,15 @@ data):
   image-current detection and resistive cooling of D. J. Wineland and H. G. Dehmelt
   (*J. Appl. Phys.* **46**, 919 (1975), [doi:10.1063/1.321602](https://doi.org/10.1063/1.321602)).
   No earlier instrument made from these modes is known to us.
+* **NMR.** The NMR Spin Echo plays the free precession of a liquid's protons, the spin echo
+  of E. L. Hahn (*Phys. Rev.* **80**, 580 (1950),
+  [doi:10.1103/PhysRev.80.580](https://doi.org/10.1103/PhysRev.80.580)) and the echo trains of
+  H. Y. Carr & E. M. Purcell (*Phys. Rev.* **94**, 630 (1954)) and S. Meiboom & D. Gill
+  (*Rev. Sci. Instrum.* **29**, 688 (1958)), with the shifts and couplings of H. E. Gottlieb,
+  V. Kotlyar & A. Nudelman (*J. Org. Chem.* **62**, 7512 (1997)). NMR data has been made into
+  music before: W. Bauer's "NMR music" (1996), and the OMICS sonification of S. Cacciatore
+  et al. (2015) and their musicNMR; Forte's differs in solving the spins live on every key, so
+  the echo answers the pedal. Sources in [nmr/README.md](../nmr/README.md).
 * **Synchronisation and mode locking in musical oscillators.**
   B. van der Pol and J. van der Mark, "Frequency demultiplication",
   *Nature* **120**, 363–364 (1927),

@@ -5,6 +5,17 @@
   <script src="../shared/boot.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>NMR Spin Echo · Forte</title>
+  <meta name="description" content="Every key a tube of liquid in an NMR magnet, its field set so the sample's lowest line is the note: a pulse tips the protons' spins, each chemical group rings at its own shift, so ethanol is a chord whose J couplings beat, the note fades as the spins drift out of step, and the pedal's π pulse calls them back as Hahn's echo.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="NMR Spin Echo · Forte">
+  <meta property="og:description" content="Every key a tube of liquid in an NMR magnet, its field set so the sample's lowest line is the note: a pulse tips the protons' spins, each chemical group rings at its own shift, so ethanol is a chord whose J couplings beat, the note fades as the spins drift out of step, and the pedal's π pulse calls them back as Hahn's echo.">
+  <meta property="og:url" content="https://forte.jthaler.net/nmr/">
+  <meta property="og:image" content="https://forte.jthaler.net/nmr/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The NMR Spin Echo's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="../shared/forte.css">
   <link rel="stylesheet" href="../shared/instrument.css">
   <link rel="stylesheet" href="style.css">
@@ -17,13 +28,13 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Forte">
 </head>
-<body data-instrument="nmr">
+<body data-instrument="nmr" data-space="π pulse">
   <div class="forte-edge" aria-hidden="true"></div>
   <header>
     <div class="brand">
       <nav data-forte-nav></nav>
       <h1>NMR Spin Echo</h1>
-      <span class="sub">the starting point for a new instrument: struck free–free bars</span>
+      <span class="sub">every key a tube of liquid in an NMR magnet: a pulse tips its protons' spins, the receiver hears them precess, and a π pulse calls them back as an echo</span>
     </div>
     <div class="status">
       <button id="start" class="primary">Start audio</button>
@@ -45,25 +56,42 @@
 
     <section id="views">
       <div class="row">
-        <div class="card" data-perform>
-          <div class="card-head"><h2>Mode shapes and strike point</h2></div>
-          <canvas id="bar"></canvas>
-          <div class="caption">Bending modes of a free–free bar. Striking where a mode crosses zero (a node) leaves that mode silent.</div>
+        <div class="card" data-perform data-view="Spins">
+          <div class="card-head"><h2>The spins of <b id="spins-key">C4</b></h2><span class="muted" id="spins-read"></span></div>
+          <canvas id="spins"></canvas>
+          <div class="caption">The sample's magnetisation in the plane the pulse tipped it into, seen turning with its line: each arrow is the spins in one slice of the field, a little faster or slower than the rest, so they fan out and their sum (the bright arrow, the note) shrinks. A π pulse (the pedal) flips the fan over, so the fast ones are behind and catch up: the arrows close again into the echo. The ring is what T₂ and diffusion leave, which no echo can pass.</div>
         </div>
-        <div class="card" data-view="Mode table">
-          <div class="card-head"><h2>Modes of <b id="focus-name">C4</b></h2></div>
-          <table class="modes" id="modes"></table>
+        <div class="card" data-perform data-view="Receiver">
+          <div class="card-head"><h2>The receiver</h2><span class="muted" id="rx-read">each note's signal against time · ticks: π pulses</span></div>
+          <canvas id="receiver"></canvas>
+          <div class="caption">Each sounding sample's signal, as a spectrometer records it, over the last few seconds: it starts at the pulse and fades as the spins dephase. The dashed line under each is what an echo could still bring back (T₂ and diffusion); a π pulse (a tick) turns the fade around, and the signal swells back to that line as the spins come back into step.</div>
         </div>
       </div>
-      <div class="row single">
-        <div class="card" data-perform>
-          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the model's modes</span></div>
+      <div class="row">
+        <div class="card" data-view="NMR spectrum">
+          <div class="card-head"><h2>NMR spectrum of <b id="nmr-key">C4</b></h2><span class="muted" id="nmr-read"></span></div>
+          <canvas id="nmrspec"></canvas>
+          <div class="caption">The spectrum a chemist would plot for this key's magnet: chemical shift in ppm, falling to the right, each line as wide as the field's spread and T₂ make it. Under it, the same lines in hertz: the notes you hear. On the low keys, weak magnets, J is no longer small beside the shifts' spacing, and the multiplets lean towards each other.</div>
+        </div>
+        <div class="card" data-view="Magnetisation">
+          <div class="card-head"><h2>Magnetisation along the field</h2><span class="muted">every key's sample · T₁ brings it back</span></div>
+          <canvas id="mz"></canvas>
+          <div class="caption">How much of each key's magnetisation points along the field, ready for its next pulse: full at rest, emptied by a 90° pulse (or partly, by a softer one), turned upside down by a π pulse, and growing back in T₁. A key struck again before it has grown back sounds quieter; struck while upside down, it sounds inverted.</div>
+        </div>
+        <div class="card" id="info-card" data-view="Key">
+          <div class="card-head"><h2>The magnet of <b id="focus-name">C4</b></h2></div>
+          <dl id="info"></dl>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the key's lines</span></div>
           <canvas id="spectrum"></canvas>
         </div>
         <div class="card" data-view="Spectrogram">
-          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the model's modes</span></div>
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the key's lines</span></div>
           <canvas id="spectrogram"></canvas>
-          <div class="caption">The upper modes die first, so each note's stack of lines thins from the top down.</div>
+          <div class="caption">Every note is a chord of its sample's chemical groups, struck at once and fading together; each echo lights the whole chord again. A multiplet's lines lie too close to part here: they are heard as a beat.</div>
         </div>
       </div>
     </section>
@@ -71,10 +99,11 @@
 
   <footer>
     <div class="kb-help">
-      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows; each key's receiver listens while it is held</span>
       <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
-      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
-      <span>sustain: hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>velocity (the pulse's angle) <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>π pulse: <kbd>Space</kbd> (held, with the echo train on: one every echo time) <b id="hold" class="off">off</b></span>
+      <span>MIDI: velocity = the pulse's angle, sustain pedal = π pulse, mod wheel = spoil the shim, pitch bend = the field (every line by the same hertz)</span>
     </div>
     <div id="keyboard"></div>
   </footer>
