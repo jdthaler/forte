@@ -727,6 +727,17 @@ data):
   Contralogic *Whistler* plugin imitates them with noise through resonant
   filters. Whistlers computes them: every key a field line, its whistler
   the cold-plasma group delay along it.
+* **Birdsong.** G. B. Mindlin's group models a songbird's syrinx as one
+  nonlinear oscillator and synthesizes songs from paths of pressure and
+  tension (T. Gardner et al., *Phys. Rev. Lett.* **87**, 208101 (2001),
+  [doi:10.1103/PhysRevLett.87.208101](https://doi.org/10.1103/PhysRevLett.87.208101);
+  the normal form with its trachea and mouth in A. Amador et al., *Nature*
+  **495**, 59 (2013), [doi:10.1038/nature11967](https://doi.org/10.1038/nature11967)),
+  and plays the synthetic songs back to birds. Earlier syntheses modelled
+  the syrinx's membranes and tract: N. H. Fletcher (*J. Theor. Biol.*
+  **135**, 455 (1988)), M. Kahrs and F. Avanzini (DAFx 2001) and T. Smyth
+  and J. O. Smith (DAFx 2002). Birdsong integrates the normal form for each
+  key, tuned by the labia's rate. Its sources are in `birdsong/README.md`.
 * **The sound of the Big Bang.** M. Whittle's *Big Bang Acoustics*
   (University of Virginia, from 2004) plays the microwave background's
   power spectrum as sound, and the first million years as a falling roar;
