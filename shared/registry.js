@@ -37,7 +37,7 @@ export const SECTIONS = [
 export const FILTERS = [
   { id: 'vibrates', label: 'What sounds', options: [
     { id: 'strings', label: 'Strings', title: 'Struck, plucked, bowed and wind-blown strings' },
-    { id: 'solids', label: 'Bars & bells', title: 'Bars, tines, reeds, springs, plates, glass and bells' },
+    { id: 'solids', label: 'Bars & bells', title: 'Bars, tines, reeds, springs, plates, drumheads, glass and bells' },
     { id: 'air', label: 'Air', title: 'Pipes, free reeds, flames and bubbles' },
     { id: 'circuits', label: 'Circuits', title: 'Tonewheels, neon lamps, an electric arc, coupled oscillators and RF cavities' },
     { id: 'space', label: 'Space', title: 'Black holes, stars, planets, the magnetosphere and the early universe' },
@@ -157,6 +157,14 @@ export const INSTRUMENTS = [
     tagline: 'A brass tangent strikes the strings and stays on them, holding the note for as long as the finger does: press harder and it goes sharp, rock the finger and it sings with a vibrato.',
     physics: 'Tangent-stopped strings · pressure tuning (Bebung) · fretting',
     accent: '#d9b77e',
+  },
+  {
+    id: 'drums', name: 'Timpani and Tabla', section: 'traditional', ready: true, version: '0.1.0', trim: 8,
+    plugin: { code: 'Drum', ready: true },
+    tagline: 'Every key a drumhead: a timpani whose kettle and air pull its Bessel modes into a near-harmonic series, or a tabla whose black syahi patch does the same, as Raman found. Press into the bayan to make it swoop.',
+    physics: 'Circular membranes · air loading and radiation · kettle air · loaded membranes (Raman) · felt and finger contact',
+    vibrates: 'solids', notes: 'ring',
+    accent: '#d9874a',
   },
   {
     id: 'grand', name: 'Electric Grand', section: 'electric', ready: true, version: '0.11.0', trim: 3.5,
