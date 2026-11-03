@@ -33,6 +33,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Hydraulis](hydraulis/) | Ctesibius's water organ (3rd century BC), the organs of Dion and Aquincum | hand pumps push air through their valves into a bowl standing in water: the hydrostatic head is the wind, capped at the rim where it bubbles out (Minnaert bubbles), the water bouncing on the air shut in the bowl; slides whose holes open as overlapping circles, sprung back; the Pipe Organ's flue pipes on an ancient, nearly constant bore in four ranks, one open and three stopped |
 | ✅ | [Regal](regal/) | the Renaissance reed organ (Praetorius, 1619; Monteverdi's *Orfeo*) | brass tongues as curved cantilevers that roll shut on their shallots (Bernoulli jets, a penalty contact), each reed in its own boot, shallot and short resonator (Kelly–Lochbaum tubes: cylinders, funnels, capped balls); two weighted wedge bellows raised in turn, a tremulant; every reed retuned for its voicing |
 | ✅ | [Clavichord](clavichord/) | the German clavichord of C. P. E. Bach's day (18th century) | a brass tangent strikes the strings and stays on them as the end of the speaking length (a moving boundary driving every partial), held up by the finger's force against the strings' pull: pressure tuning and the Bebung from the stretch, the tangent's give tuned for; the listing damps the afterlengths and stops the string at key-up; double-fretted pairs where the higher tangent wins, 4′ strings in the bass, a modal soundboard |
+| ✅ | [Timpani and Tabla](drums/) | orchestral pedal timpani and the tabla's dayan and bayan | circular membranes solved per azimuthal order (Rayleigh–Ritz on the Bessel modes) with the air on them as a mass and its radiation as their loss, the kettle's air as a spring (Christian et al.), the dayan's loaded syahi that puts nine modes on five harmonics (Raman); felt, wood and fingertip strokes, a resting finger, the heel pressing the bayan's head sharp, the pedal on the pitch-bend wheel |
 
 ### Electric instruments
 
@@ -153,6 +154,7 @@ is the mod wheel's control wherever the instrument has one.
 | Hydraulis | Open rank · Stopped rank · Stopped rank, octave above | Gurgle | Pumping effort |
 | Regal | Tremulant rate · Curve: tip off the shallot · Tongue Q (mechanical) | Resonator length | Wind pressure |
 | Clavichord | Bebung rate · Listing cloth · Unison spread | Finger pressure on the key | Bebung |
+| Timpani and Tabla | Air on the head · Listening angle · Heel push | Resting finger | Strike point |
 | Electric Grand | Bass · Middle · Treble | Tremolo rate | Tremolo depth |
 | Tonewheel Organ | 16' drawbar · 8' drawbar · 4' drawbar | Tube drive | Expression pedal |
 | Tine Piano | Amp drive · Speaker top end · Tip hardness | Stereo vibrato rate | Stereo vibrato depth |

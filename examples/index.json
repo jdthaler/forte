@@ -469,6 +469,36 @@
    "title": "The real heater clicks"
   }
  ],
+ "drums": [
+  {
+   "file": "01-timpani-with-a-roll-and-a-pedal-glide.m4a",
+   "title": "Timpani with a roll and a pedal glide"
+  },
+  {
+   "file": "02-a-cycle-of-teentaal-on-dayan-and-bayan.m4a",
+   "title": "A cycle of teentaal on dayan and bayan"
+  },
+  {
+   "file": "03-timpani-in-air-then-in-a-vacuum.m4a",
+   "title": "Timpani in air then in a vacuum"
+  },
+  {
+   "file": "04-struck-near-the-rim-then-at-the-centre.m4a",
+   "title": "Struck near the rim then at the centre"
+  },
+  {
+   "file": "05-felt-mallets-then-wooden.m4a",
+   "title": "Felt mallets then wooden"
+  },
+  {
+   "file": "06-dayan-with-its-syahi-then-without.m4a",
+   "title": "Dayan with its syahi then without"
+  },
+  {
+   "file": "07-bayan-ge-pressed-for-the-swoop.m4a",
+   "title": "Bayan ge pressed for the swoop"
+  }
+ ],
  "glass": [
   {
    "file": "01-adagio-in-c-held-chords.m4a",

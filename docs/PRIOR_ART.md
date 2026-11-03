@@ -258,6 +258,20 @@ requests.
   models reed pipes physically, and regals are sold as sample libraries.
   The Regal plays its curved tongues, shallots, short resonators and wedge
   bellows from those; its sources are in `regal/README.md`.
+* **The timpani and the tabla.** Rayleigh's *Theory of Sound* (1877–78) has
+  the kettledrum's fifth and octave; R. S. Christian, R. E. Davis, A. Tubis
+  et al., "Effects of air loading on timpani membrane vibrations", *J.
+  Acoust. Soc. Am.* **76**, 1336–1345 (1984), computed them from the air.
+  C. V. Raman, "The Indian musical drums" (1934), measured the tabla's
+  harmonics; B. S. Ramakrishna and M. M. Sondhi (1954) and G. Sathej and
+  R. Adhikari ([arXiv:0809.1320](https://arxiv.org/abs/0809.1320), 2008)
+  modelled its loaded head. L. Rhaouti, A. Chaigne and P. Joly (*J. Acoust.
+  Soc. Am.* **105**, 3545–3562, 1999) simulated a kettledrum by finite
+  elements in time, and S. Bilbao and C. J. Webb (AES, 2013) one with the
+  air of a whole room on graphics processors; Applied Acoustics Systems'
+  Chromaphone plays modelled membranes. The Timpani and Tabla solves each
+  key's loaded, air-loaded head as it is struck and plays its modes live;
+  its sources are in `drums/README.md`.
 
 ## 2. Techniques Forte uses, and where they come from
 
