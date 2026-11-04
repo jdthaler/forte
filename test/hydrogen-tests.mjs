@@ -13,6 +13,7 @@ import { loadEngine } from '../tools/engine.mjs';
 import { keyFreq } from '../shared/dsp.js';
 import { tunedFreq } from '../shared/tuning.js';
 import * as table from '../tools/hydrogen-native-table.mjs';
+import { airToVacuum } from '../tools/hydrogen-gas-tables.mjs';
 
 const HydrogenEngine = await loadEngine(INSTRUMENT);
 const model = await wasmModel();
@@ -207,6 +208,133 @@ test('Doppler broadening: Δλ/λ = √(8 ln 2 kT / m c²), 7.16 × 10⁻⁵ at 
   near(model.dopplerWidth(1e4), 7.16e-7 * Math.sqrt(1e4 / 1.00794), 2e-3, 'FWHM');
 });
 
+console.log('helium');
+// helium's lines by their terms: code (S·100 + n)·100 + L
+const he = model.gas('helium'), HE = (o = {}) => P({ gas: 'helium', ...o });
+const heState = (n, L, S) => he.states.findIndex((x) => x.code === (S * 100 + n) * 100 + L);
+const heLine = (u, l) => { const U = heState(...u), D = heState(...l); return he.lines.findIndex((x) => x.upper === U && x.lower === D); };
+const D3 = heLine([3, 2, 1], [2, 1, 1]), RED = heLine([3, 2, 0], [2, 1, 0]), BLUE = heLine([4, 2, 1], [2, 1, 1]), IR = heLine([2, 1, 1], [2, 0, 1]);
+test('helium\'s wavelengths are NIST\'s (vacuum): D₃ 587.73, 667.82 … 1083.3 nm; D₃ is the reference', () => {
+  // each line at its terms' centroids; NIST's strongest J line beside it
+  for (const [i, nm, what] of [[D3, 587.7243, 'D₃'], [RED, 667.9996, '667.8'], [BLUE, 447.2729, '447.1'], [IR, 1083.3306, '1083'],
+    [heLine([2, 1, 0], [1, 0, 0]), 58.4334, '58.4'], [heLine([3, 1, 0], [2, 0, 0]), 501.7077, '501.6']]) {
+    assert.ok(Math.abs(he.lines[i].nm - nm) < 0.012 * (nm / 500), `${what}: ${he.lines[i].nm.toFixed(4)} nm, NIST ${nm}`);
+  }
+  assert.equal(he.lines[D3].ratio, 1);
+});
+test('helium\'s lifetimes from NIST\'s rates: 2¹P 0.555 ns, 2³P 97.9 ns, 3³D 14.1 ns, 2³S 2.2 hours, 2¹S 19.5 ms', () => {
+  const tau = (n, L, S) => 1 / he.states[heState(n, L, S)].gamma;
+  near(tau(2, 1, 0), 1 / (1.7989e9 + 1.9746e6), 1e-3, 'τ(2¹P)');
+  near(tau(2, 1, 1), 1 / 1.0216e7, 1e-3, 'τ(2³P)');
+  near(tau(3, 2, 1), 1 / 7.07e7, 0.01, 'τ(3³D)');
+  near(tau(2, 0, 1), 1 / 1.272e-4, 1e-3, 'τ(2³S), by its magnetic-dipole line to 1¹S');
+  near(tau(2, 0, 0), 1 / (51.3 + 1.97e-3), 1e-3, 'τ(2¹S), by two photons');
+});
+test('above n = 10 the rates carry on along each series: n*³ f(1¹S → n¹P) and n*³ A(n³D → 2³P) level off', () => {
+  // the oscillator strength of a Rydberg series falls as n*⁻³; A as ν² f (the lower level fixed)
+  const IP = 198310.66637 / 109737.31568, nstar = (s) => 1 / Math.sqrt(IP - he.states[s].E);
+  // the 1¹P series: n*³ times its line's A over ν² is the oscillator strength's n*³ f, up to a constant
+  const f = (n) => {
+    const u = heState(n, 1, 0), i = heLine([n, 1, 0], [1, 0, 0]);
+    return { n, x: nstar(u) ** 3 * model.lineA('helium', i) / (1e7 / he.lines[i].nm) ** 2 };
+  };
+  const at = [8, 9, 10, 11, 12, 15, 20].map(f);
+  for (const { n, x } of at) near(x, at[2].x, 0.04, `n*³ f(1¹S → ${n}¹P), against 10¹P's`);
+});
+test('a nebula\'s helium (Case B, 10⁴ K): 447.1/587.6 0.37, 667.8/587.6 0.28 (Porter et al. 2012), three quarters of it triplets', () => {
+  const L = model.steadyLines(HE({ excitation: 'recombination', temperature: 10000, caseB: true, density: 100, glow: 1e12 }));
+  near(L[BLUE] / L[D3], 0.37, 0.15, '447.1/587.6');
+  near(L[RED] / L[D3], 0.28, 0.15, '667.8/587.6');
+  assert.equal(L[heLine([2, 1, 0], [1, 0, 0])], 0, 'Case B: no 58.4 nm');
+});
+test('a helium discharge: D₃ the brightest visible line; hotter, the singlets gain on the triplets (exchange falls off above threshold)', () => {
+  const vis = (L) => he.lines.map((l, i) => i).filter((i) => he.lines[i].nm > 380 && he.lines[i].nm < 750).sort((a, b) => L[b] - L[a]);
+  const L = model.steadyLines(HE()), cool = model.steadyLines(HE({ temperature: 5000 })), hot = model.steadyLines(HE({ temperature: 80000 }));
+  assert.equal(vis(L)[0], D3, `the brightest visible: ${he.lines[vis(L)[0]].nm.toFixed(1)} nm`);
+  const r = (x) => x[RED] / x[D3];
+  assert.ok(r(cool) < r(L) && r(L) < r(hot), `667.8/587.6: ${r(cool).toFixed(3)} at 5000 K, ${r(L).toFixed(3)} at 20 000 K, ${r(hot).toFixed(3)} at 80 000 K`);
+});
+test('helium\'s fine structure: D₃\'s six J lines at NIST\'s energies (3³D₁ → 2³P₀ 1.07 cm⁻¹ from the rest), apart as α²', () => {
+  const c = model.componentsLine(HE(), D3, 1), c12 = model.componentsLine(HE(), D3, 12);
+  assert.equal(c.length, 6);
+  near(c.reduce((s, x) => s + x.weight, 0), 1, 1e-9, 'Σ weights');
+  const sigma = 1e7 / he.lines[D3].nm, at = (cs, tj, tk) => cs.find((x) => x.tj === tj && x.tk === tk).ratio;
+  const split = (cs) => (at(cs, 6, 4) - at(cs, 2, 0)) * sigma; // cm⁻¹
+  near(split(c), 169087.82825 - 169086.76391 + (186101.54358 - 186101.59278), 0.01, '3³D₃→2³P₂ against 3³D₁→2³P₀ (cm⁻¹)');
+  near(split(c12) / split(c), 144, 1e-6, 'at 12 α');
+});
+test('helium\'s low lines broaden less than hydrogen\'s: their levels\' quadratic Stark effect', () => {
+  // Hβ and 447.1 nm, both from n = 4 to n = 2, in a dense plasma: the share of each line's power in
+  // the bin at its centre (the narrower the line, the more)
+  const k = 81, a = 0.5 * FS, b = 2.5 * FS, sharp = (x, f) => tone(x, f, a, b) ** 2 / band(x, f, 40, a, b);
+  const fH = keyFreq(k) * model.ratio(4, 2), fHe = keyFreq(k) * he.lines[BLUE].ratio;
+  const h = render(k, P({ density: 3e16 }), 0.8, 2.5), e = render(k, HE({ density: 3e16 }), 0.8, 2.5);
+  assert.ok(sharp(e, fHe) > 2 * sharp(h, fH), `helium ${sharp(e, fHe).toFixed(3)}, hydrogen ${sharp(h, fH).toFixed(3)}`);
+});
+test('D₃ sounds on the key\'s note, 667.8 nm at its ratio below', () => {
+  const k = 81, x = render(k, HE({ density: 100 }), 0.8, 2.5), f = keyFreq(k), a = 0.5 * FS, b = 2.5 * FS;
+  for (const [i, name] of [[D3, 'D₃'], [RED, '667.8']]) {
+    const g = f * he.lines[i].ratio, c = cents(centre(x, g, 10, a, b), g);
+    assert.ok(Math.abs(c) < 1.5, `${name} ${c.toFixed(2)} ¢`);
+  }
+  assert.ok(Math.abs(cents(f * he.lines[RED].ratio, f) - 1200 * Math.log2(587.73 / 668.0)) < 1, 'the red line\'s ratio');
+});
+
+console.log('molecular hydrogen');
+// H₂'s levels by their codes: MOLECULE + state·10⁴ + v·100 + J (0 X, 1 B, 2 C⁺, 3 C⁻, 4 d⁺, 5 d⁻, 6 a)
+const h2 = model.gas('molecular'), H2 = (o = {}) => P({ gas: 'molecular', ...o });
+const h2State = (s, v, J) => h2.states.findIndex((x) => x.code === 1e6 + s * 1e4 + v * 100 + J);
+const h2Line = (u, l) => { const U = h2State(...u), D = h2State(...l); return h2.lines.findIndex((x) => x.upper === U && x.lower === D); };
+const S10 = h2Line([0, 1, 3], [0, 0, 1]), S21 = h2Line([0, 2, 3], [0, 1, 1]), FQ1 = h2Line([5, 0, 1], [6, 0, 1]);
+test('H₂\'s wavelengths (vacuum): 1–0 S(1) 2121.8 nm, 1–0 Q(1) 2406.6, 0–0 S(0) 28.22 µm; Lyman 0–0 R(0) 110.81, Werner 0–0 Q(1) 100.98; Fulcher Q1 601.83 and 612.18 (air)', () => {
+  for (const [i, nm, tol, what] of [[S10, 2121.834, 0.01, '1–0 S(1)'], [h2Line([0, 1, 1], [0, 0, 1]), 2406.59, 0.02, '1–0 Q(1)'], [h2Line([0, 0, 2], [0, 0, 0]), 28218.8, 0.5, '0–0 S(0)'],
+    [h2Line([1, 0, 1], [0, 0, 0]), 110.8127, 0.002, 'Lyman 0–0 R(0)'], [h2Line([3, 0, 1], [0, 0, 1]), 100.9770, 0.002, 'Werner 0–0 Q(1)'],
+    [FQ1, airToVacuum(601.83), 0.01, 'Fulcher Q1 0–0'], [h2Line([5, 1, 1], [6, 1, 1]), airToVacuum(612.18), 0.2, 'Fulcher Q1 1–1']]) {
+    assert.ok(Math.abs(h2.lines[i].nm - nm) < tol, `${what}: ${h2.lines[i].nm.toFixed(4)} nm, measured ${nm.toFixed(4)}`);
+  }
+  assert.equal(h2.lines[S10].ratio, 1, '1–0 S(1) is the reference');
+});
+test('H₂\'s rates: 1–0 S(1) 3.47 × 10⁻⁷ s⁻¹ and 0–0 S(0) 2.94 × 10⁻¹¹ (Wolniewicz et al. 1998), B v′ = 0 lives 0.54 ns, d v′ = 0 40 ns; the ground state on the slow clock', () => {
+  near(model.lineA('molecular', S10), 3.47e-7, 0.01, 'A(1–0 S(1))');
+  near(model.lineA('molecular', h2Line([0, 0, 2], [0, 0, 0])), 2.94e-11, 0.01, 'A(0–0 S(0))');
+  near(1 / h2.states[h2State(1, 0, 1)].gamma, 0.54e-9, 0.05, 'τ(B, v′ = 0, J′ = 1)');
+  near(1 / h2.states[h2State(5, 0, 1)].gamma, 40e-9, 1e-3, 'τ(d, v′ = 0)');
+  assert.equal(h2.lines[S10].clock, 1, 'the ground state\'s lines run on the slow clock');
+  assert.equal(h2.lines[FQ1].clock, 0, 'the electronic bands on the fast one');
+});
+test('fluorescence and heat tell apart in the infrared: 2–1 S(1)/1–0 S(1) about 0.55 in starlight (Black & van Dishoeck 1987), 0.08 at 2000 K', () => {
+  const r = (L) => L[S21] / L[S10];
+  const uv = r(model.steadyLines(H2({ excitation: 'recombination', caseB: true, atoms: 0 }))), hot = r(model.steadyLines(H2({ excitation: 'thermal', temperature: 2000, atoms: 0 })));
+  assert.ok(uv > 0.4 && uv < 0.8, `starlight: ${uv.toFixed(3)}`);
+  assert.ok(hot > 0.06 && hot < 0.11, `2000 K: ${hot.toFixed(3)}`);
+});
+test('heat holds the molecules in thermal equilibrium: ortho (odd J) three times para at 2000 K, the levels by their Boltzmann factors', () => {
+  const N = model.steadyPopulations(H2({ excitation: 'thermal', temperature: 2000, atoms: 0 }));
+  let o = 0, p = 0;
+  h2.states.forEach((x, i) => { if (x.code >= 1e6 && x.code < 1e6 + 1e4) ((x.code % 100) % 2 ? (o += N[i]) : (p += N[i])); });
+  near(o / p, 3, 0.01, 'ortho/para');
+  const a = h2State(0, 1, 3), b = h2State(0, 0, 1), kT = 0.6950348 * 2000 / 109737.316;
+  near(N[a] / N[b], (h2.states[a].weight / h2.states[b].weight) * Math.exp(-(h2.states[a].E - h2.states[b].E) / kT), 0.02, 'X(1, 3)/X(0, 1)');
+});
+test('a hydrogen tube: the Fulcher band\'s Q lines the brightest visible lines of the molecule, Q1 0–0 among them; the atoms\' share of the light as asked', () => {
+  const L = model.steadyLines(H2({ atoms: 0 }));
+  const vis = h2.lines.map((l, i) => i).filter((i) => h2.lines[i].nm > 380 && h2.lines[i].nm < 750).sort((a, b) => L[b] - L[a]).slice(0, 4);
+  for (const i of vis) assert.equal(Math.floor((h2.states[h2.lines[i].upper].code - 1e6) / 1e4), 5, `${h2.lines[i].nm.toFixed(1)} nm is not a Fulcher Q line`);
+  assert.ok(vis.includes(FQ1), 'Q1 0–0');
+  for (const atoms of [20, 50]) {
+    const M = model.steadyLines(H2({ atoms }));
+    let a = 0, all = 0;
+    M.forEach((x, i) => { all += x; if (i >= h2.atomLines) a += x; });
+    near(a / all, atoms / 100, 1e-6, `the atoms' share at ${atoms} %`);
+  }
+});
+test('H₂\'s glow keeps at most 400 lines a band, and 1–0 S(1) sounds on the key\'s note', () => {
+  assert.ok(model.glowKept(H2({ window: 'all' })) <= 1200, 'kept lines');
+  const k = 81, x = render(k, H2({ window: 'infrared', density: 100, excitation: 'thermal', temperature: 2000, atoms: 0 }), 0.8, 2.5), f = keyFreq(k), a = 0.5 * FS, b = 2.5 * FS;
+  const c = cents(centre(x, f, 10, a, b), f);
+  assert.ok(Math.abs(c) < 1.5, `1–0 S(1) ${c.toFixed(2)} ¢`);
+});
+
 console.log('engine');
 // The lines are as wide as their levels' lifetimes in slow motion (Hα and Hβ about 3.5 Hz, from 2p's
 // 1.6 ns): their centres are measured on high keys, where a hertz is a small share.
@@ -320,6 +448,16 @@ test('a lamp changed while keys sound: the sounding lamps carry on, the next key
 test('CPU: ten lamps through the open window (96 lines each) render three times faster than real time', () => {
   const e = new HydrogenEngine(FS), bL = new Float32Array(128), bR = new Float32Array(128);
   e.setParams(P({ window: 'all' }));
+  for (let i = 0; i < 10; i++) e.noteOn(36 + 5 * i, 0.7);
+  const t0 = performance.now();
+  for (let b = 0; b < 375 * 2; b++) e.process(bL, bR, 128);
+  const ms = performance.now() - t0;
+  assert.ok(ms < 667, `${ms.toFixed(0)} ms for 2 s`);
+});
+
+test('CPU: ten lamps of molecular hydrogen through the open window render three times faster than real time', () => {
+  const e = new HydrogenEngine(FS), bL = new Float32Array(128), bR = new Float32Array(128);
+  e.setParams(H2({ window: 'all' }));
   for (let i = 0; i < 10; i++) e.noteOn(36 + 5 * i, 0.7);
   const t0 = performance.now();
   for (let b = 0; b < 375 * 2; b++) e.process(bL, bR, 128);

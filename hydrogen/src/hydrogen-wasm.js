@@ -35,6 +35,7 @@ export async function wasmModel() {
   const read = (at, n) => Array.from(new Float64Array(x.memory.buffer, at, n));
   const NMAX = x.hydrogen_nmax();
   const lineOf = (n, m) => ((n - 1) * (n - 2)) / 2 + (m - 1);
+  const GASES = GROUPS.flatMap((g) => g.params).find((p) => p.id === 'gas').options.map((o) => o[0]), gases = [];
   const levels = (line) => { let n = 2; while (lineOf(n + 1, 1) <= line) n++; return { n, m: line - lineOf(n, 1) + 1 }; };
   return {
     NMAX,
@@ -54,10 +55,10 @@ export async function wasmModel() {
     diracShift: (n, j, scale = 1) => x.hydrogen_dirac_shift(n, j, scale),
     starkWidth: (n, m, N) => x.hydrogen_stark_width(n, m, N),
     dopplerWidth: (T) => x.hydrogen_doppler_width(T),
-    // every line's steady power for P, indexed by lineOf(n, m)
-    steadyLines(P) { const p = put(P), at = out(); const k = x.hydrogen_steady_lines(p, at); return read(at, k); },
+    // every line's steady power for P, indexed by lineOf(n, m) (another gas's: by line index)
+    steadyLines(P) { const k = x.hydrogen_steady_lines(put(P)); return read(x.hydrogen_result(), k); },
     // every state's steady population for P, indexed by stateOf(n, l)
-    steadyPopulations(P) { const p = put(P), at = out(); const k = x.hydrogen_steady_populations(p, at); return read(at, k); },
+    steadyPopulations(P) { const k = x.hydrogen_steady_populations(put(P)); return read(x.hydrogen_result(), k); },
     // line (n, m)'s power at times ts (s, the atom's time) after the lamp is lit: { values, steady }
     step(P, n, m, ts) {
       const p = put(P), tAt = out(), at = tAt + 8 * ts.length;
@@ -66,7 +67,42 @@ export async function wasmModel() {
       return { values: read(at, ts.length), steady };
     },
     glowEnd(P) { return x.hydrogen_glow_end(put(P)); },
+    glowEndSlow(P) { return x.hydrogen_glow_end_slow(put(P)); },
+    glowKept(P) { return x.hydrogen_glow_kept(put(P)); },
     naturalWidth(P, n, m) { return x.hydrogen_natural_width(put(P), n, m); },
+    // the gases (index: the gas parameter's options), each line of one by its index: its ratio to the
+    // reference line, wavelength, upper and lower state, clock (1: the slow ladder) and Case B
+    GASES,
+    gas(name) {
+      const g = GASES.indexOf(name);
+      if (gases[g]) return gases[g];
+      const lines = [], states = [], at = out(), count = x.hydrogen_gas_lines(g), sCount = x.hydrogen_gas_states(g);
+      for (let i = 0; i < count; i++) {
+        x.hydrogen_gas_line(g, i, at);
+        const [ratio, nm, upper, lower, clock, trapped] = read(at, 6);
+        lines.push({ ratio, nm, upper, lower, clock, trapped: trapped > 0 });
+      }
+      for (let i = 0; i < sCount; i++) {
+        x.hydrogen_gas_state(g, i, at);
+        const [E, weight, code, gamma] = read(at, 4);
+        states.push({ E, weight, code, gamma });
+      }
+      const nd = x.hydrogen_gas_display(g, at), display = read(at, nd);
+      return (gases[g] = { name, lines, states, display, refHz: x.hydrogen_gas_ref_hz(g), atomStates: x.hydrogen_gas_atom_states(g), atomLines: x.hydrogen_gas_atom_lines(g) });
+    },
+    // the same as step, naturalWidth and components, by line index (for any gas)
+    stepLine(P, line, ts) {
+      const p = put(P), tAt = out(), at = tAt + 8 * ts.length;
+      new Float64Array(x.memory.buffer, tAt, ts.length).set(ts);
+      const steady = x.hydrogen_step_line(p, line, tAt, ts.length, at);
+      return { values: read(at, ts.length), steady };
+    },
+    lineA(gas, line) { return x.hydrogen_gas_line_a(GASES.indexOf(gas), line); },
+    naturalWidthLine(P, line) { return x.hydrogen_natural_width_line(put(P), line); },
+    componentsLine(P, line, scale = 1) {
+      const p = put(P), at = out(), k = x.hydrogen_components_line(p, line, scale, at), a = read(at, 4 * k);
+      return Array.from({ length: k }, (_, i) => ({ tj: a[4 * i], tk: a[4 * i + 1], ratio: a[4 * i + 2], weight: a[4 * i + 3] }));
+    },
     // line (n, m)'s fine-structure components for P at α × scale: [{ tj, tk, ratio, weight }]
     components(P, n, m, scale = 1) {
       const p = put(P), at = out(), k = x.hydrogen_components(p, n, m, scale, at), a = read(at, 4 * k);

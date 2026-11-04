@@ -1,0 +1,7 @@
+/* The page's own palette and any layout beyond shared/instrument.css: the copper of a timpani
+   kettle, and the blue-black of the tabla's syahi. */
+:root {
+  --accent: #d9874a;
+  --accent-2: #8fb3d9;
+  --accent-ink: #1e0d02;
+}

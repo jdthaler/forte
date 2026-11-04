@@ -16,6 +16,113 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-11-04 — Birdsong; the Timpani and Tabla; the Singing Dunes; the Hydrogen Lamp's physics for any gas; helium in the Hydrogen Lamp; molecular hydrogen in the Hydrogen Lamp; the Ringing Planets; Pulsars; the Singing Voice
+
+### Timpani and Tabla 0.1.0
+- **Forte's first membranes.** Every key is a drum: a pedal timpani, the tabla's dayan or its bayan,
+  each head solved for its key (its Bessel modes, the air riding on it and carrying its sound away,
+  the air in the kettle or the shell) and tightened until its principal sounds the note.
+- **The air makes the timpani musical:** its overtones land near a fifth and an octave above the
+  principal (Rayleigh; Christian et al. 1984). Take the air away and they fall back to the bare
+  Bessel ratios; take the kettle away and the thud drops.
+- **Raman's drum:** the dayan's black syahi, a loaded patch fitted to Raman's measurements, puts nine
+  modes on the first five harmonics; without it they scatter.
+- **Strokes:** felt, wooden and fingertip beaters with a stiffening contact; the strike point on the
+  mod wheel and MPE slide; a resting finger for the tabla's Na and Tin; closed strokes (Te, Ke).
+- **Tension:** the pitch-bend wheel is the timpani pedal; aftertouch and MPE pressure are the heel
+  pressing into the head (the bayan's swoop); a hard stroke starts sharp and glides down.
+- Views: the drumhead from above in slow motion, the overtones against the bare head's, spectrum,
+  spectrogram and the mode table. Thirteen presets, seven demos, a guided tour and the plugin (AU
+  code Drum).
+
+### Singing Voice 0.1.0
+- **A voice built from the body that makes it**, after Bell Labs' Voder (1939), the keyboard
+  that spoke: Ishizaka and Flanagan's two-mass vocal folds (1972), set flapping by the breath
+  (Bernoulli flow, contact, turbulent breath noise), into a 44-section Kelly–Lochbaum tract
+  (1962) radiating from the lips. Five vowels, oo, aw, ah, eh and ee, fitted to Peterson and
+  Barney's formants (1952), on the mod wheel (and MPE slide, one singer at a time). Each key is
+  its own singer, who tunes their folds' tension by ear and opens the jaw for high notes
+  (formant tuning, as sopranos do). Lung pressure (louder and brighter), folds held apart
+  (breathy, a whisper) or squeezed (pressed), chest or head voice, the tract's length (bass to
+  child), the larynx tube's singer's formant, vibrato and flutter. Twelve presets, a guided
+  tour ending with *Daisy Bell*, and the plugin (AU code Sing).
+
+### Hydrogen Lamp 0.4.0
+- **Its physics works for any gas:** the cascade, the glow's step response and the engine now take a gas's levels and lines from a table, with a second, faster clock for a ladder of slow levels, ready for helium and molecular hydrogen. Hydrogen sounds exactly as before, to the last bit.
+- **Helium:** a new Gas switch fills the lamp with helium, its levels and lines from NIST up to n = 25, with the yellow D₃ line on the key. Singlets and triplets cascade as two ladders; a discharge favours the triplets, more so when it is cool; a nebula gives the helium line ratios astronomers use to weigh the Big Bang's helium; the laser pumps the singlet P levels; α turned up splits the triplets' J levels; and helium's low lines stay sharp where hydrogen's are Stark-smeared. Six helium presets and a tour stop.
+- **Heat:** a fourth excitation, a hot gas whose collisions fill each level by its Boltzmann factor, for either gas.
+- **The views follow the gas:** the spectroscope names helium's lines, and the energy levels show its singlet and triplet ladders side by side.
+- **Molecular hydrogen:** a third gas, H₂, with the infrared 1–0 S(1) line on the key. Its ground state's 302 levels and slow quadrupole lines (ExoMol) run on a clock of their own, beside the Lyman and Werner bands (MOLAT) and the Fulcher band of a hydrogen tube. A discharge lights the Fulcher band and the atoms' Balmer lines; Recombination becomes a cloud lit by starlight, whose fluorescence lights the high vibrational levels; Heat is a shocked gas; the laser pumps one level of B. An *Atoms among the molecules* setting mixes in the atoms' lines. Five presets, a tour stop and a two-panel level diagram.
+- **Big gases keep their strongest lines:** helium and H₂ keep at most 400 lines in each band, which changes helium's quietest lines a little and nothing that sounds.
+
+### Birdsong 0.1.0
+- **A songbird's syrinx as a keyboard**, after Gabriel Mindlin's group: every key a bird whose
+  labia are the normal form of a flow-driven oscillator (Gardner et al. 2001, Sitt et al. 2010,
+  Amador et al. 2013), integrated with Runge–Kutta steps at twice the sample rate and tuned by the
+  labia's natural rate so that the limit cycle at the note's breath is the note. Above a labial
+  tension of ¼ a breath starts them through a Hopf bifurcation, a pure tone that grows from nothing;
+  below, through a saddle-node on the cycle, a note born at zero frequency, clicks running up into a
+  buzz rich in harmonics (Sitt et al. 2008). The pitch climbs with the air sac pressure (aftertouch
+  sharpens a held note); syllables repeat while a key is held: whistles, trills with a mini-breath
+  each, upsweeps, downsweeps and a warble, at a syllable rate on the mod wheel (MPE CC74 per note).
+  The sound goes up a trachea (a delay line with its quarter-wave resonances) and through a mouth,
+  the OEC, that follows the note as songbirds tune theirs (Riede et al. 2006), or stays fixed.
+  Views of the pressure–tension plane with its bifurcation lines, the labia's phase portrait and
+  the vocal tract; twelve presets, a guided tour, eight demos, and the plugin (AU code Bird).
+
+### Ringing Planets 0.1.0
+- New instrument, in the phenomena section: the free oscillations of the Earth, Mars and the Moon
+  after a great quake. Every key is a quake, and the planet's ringing is sped up until its
+  football mode ₀S₂ (54 minutes on Earth) is the key's note: a crack (the surface waves), then the
+  tones that ring on for days, a day passing in a tenth of a second at middle C.
+- **The modes:** spheroidal and toroidal normal modes of a layered, self-gravitating planet, solved
+  by spectral elements with the perturbed gravity eliminated exactly and liquid cores free to slip.
+  The Earth is PREM, within 0.6 % of the measured frequencies (₀S₂ 0.3093 mHz against 0.3095);
+  Mars and the Moon are models built from InSight's and Apollo's seismology, fitted to their masses
+  and moments of inertia. Each mode's Q comes from the rock's shear and bulk losses, with its
+  physical dispersion, and the spin splits each multiplet into 2l + 1 singlets that beat.
+- **The quake and the station:** a megathrust, strike-slip or normal fault or an explosion, at any
+  depth (deep quakes ring overtones), excites each singlet by its strain; the station's distance
+  and direction put some modes on their nodes (90° from an explosion every odd degree is silent).
+  Hear the ground's motion, a seismometer, a gravimeter, or the horizontal pair in stereo with the
+  twisting modes. Velocity is the magnitude; the mod wheel and MPE slide spin the planet.
+- **The page:** the planet ringing (its surface rising and falling, the quake and the station),
+  its inside, the spectrum and spectrogram with the loudest modes, a mode table, and a guided tour.
+  Seven demos, eleven presets, plugin code Plnt.
+
+### Pulsars 0.1.0
+- **Spinning neutron stars as a keyboard**: every key a pulsar turning at the note (millisecond
+  pulsars reach 716 Hz, a little above F5), heard as radio astronomers hear them, the telescope's
+  power pulse after pulse. The pulse is the star's beam as our sightline cuts it, from the
+  rotating vector model (Radhakrishnan & Cooke 1969): a core and a hollow cone (Rankin) as wide
+  as the open field lines at the emission height, capped by the light cylinder, so slow pulsars
+  have narrow, buzzy pulses and the fast ones wide, mellow ones. The magnetic inclination brings
+  in the other pole's interpulse (an octave up), and the sightline goes from a triple pulse to a
+  single grazing one.
+- **The Galaxy's plasma on the way**: dispersion delays each pulse by 4.15 ms × DM / f², and
+  scattering gives it a tail from Bhat et al.'s (2004) fit. The telescope's band is split into
+  its upper half (left) and lower half (right), and taken as it arrives (each pulse smeared over
+  the band's delays, a new note sweeping from left to right), through a filterbank (each channel's
+  delay taken out), or coherently dedispersed. The mod wheel is the dispersion measure, and MPE's
+  slide each pulsar's own; pulse-to-pulse jitter roughens the tone.
+- Views: the star and its beams (strobed), the pulse profile in each half of the band, phase
+  against frequency across the band, the spectrum and spectrogram; twelve presets, an eight-step
+  guided tour, seven demos, and the plugins.
+
+### Singing Dunes 0.1.0
+- **Avalanches down a desert dune's slip face, booming as the dunes of Morocco, Chile and Nevada
+  do.** Each key is a sand whose grains shear at the note, f = 0.4·√(g/d) (Douady et al. 2006,
+  after Bagnold): patches of grains are Kuramoto oscillators that the flowing layer's vibration
+  pulls into step once the avalanche runs past a threshold speed (Douady's 0.23 m/s for the
+  default sand), so a slow slide only rumbles and hisses, one just past it finds its step slowly,
+  and a fast one booms at once; the song breaks up as the avalanche stops. Sorting (Folk and
+  Ward's φ) and water raise the threshold; the collisions' length sets the harmonics; a
+  scattered avalanche sounds wide and a song in step centred. How dunes sing is still argued
+  over, so the other leading account plays too: a dry layer over firmer sand ringing as a
+  waveguide (Vriend et al. 2007), each key a layer depth, with no threshold. Views of the slip
+  face, the grains in step, the threshold and what sets the pitch (with the measured dunes);
+  eleven presets, a guided tour, and the plugin (AU code Dune).
+
 ## 2026-11-02 — PI Requests: 1980s rhythm backing on ABRACADABRA and CUORE
 
 ### Forte 0.44.0

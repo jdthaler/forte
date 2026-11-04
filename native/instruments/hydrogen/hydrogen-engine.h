@@ -51,10 +51,12 @@ class HydrogenEngine : public Engine {
     double win = 1;             // the window's gain at its (bent) wavelength
     double nat = 0;             // natural FWHM, Hz in the atom's time
     double stark = 0;           // Stark FWHM over frequency at unit density^(2/3)
+    double de = 0, su = 0, sl = 0, gu = 0, gl = 0; // or by level, linear or quadratic (Line)
     double zr = 1, zi = 0, cr = 1, ci = 0; // phasor, and its turn a sample
     double ar = 1, ai = 0;      // the atoms' complex amplitude (mean |a|² = 1)
     double br = 0, bi = 0, dr = 0, di = 0; // its gain now, and its step a sample
     double rho = 1;             // the amplitude's correlation over SUB samples
+    int clock = 0;              // its glow's grid: 1 for the slow ladder's lines
   };
   struct Voice {
     bool active = false, held = false, lit = false;

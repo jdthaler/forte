@@ -1,0 +1,6 @@
+/* The page's own palette and any layout beyond shared/instrument.css: a canary's yellow, the leaves' green. */
+:root {
+  --accent: #f4d438;
+  --accent-2: #74d38a;
+  --accent-ink: #1d1802;
+}
