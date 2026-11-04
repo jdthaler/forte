@@ -266,6 +266,16 @@ requests.
   models reed pipes physically, and regals are sold as sample libraries.
   The Regal plays its curved tongues, shallots, short resonators and wedge
   bellows from those; its sources are in `regal/README.md`.
+* **Brass.** The shock waves are A. Hirschberg, J. Gilbert, R. Msallam and
+  A. P. J. Wijnands's ("Shock waves in trombones", *J. Acoust. Soc. Am.*
+  **99**(3), 1754–1758, 1996), and their place in brass timbre A. Myers and
+  colleagues' (*J. Acoust. Soc. Am.* **131**, 678–688, 2012); R. Msallam
+  and colleagues synthesised loud trombone tones with them (*Acta Acustica*
+  **86**, 725–736, 2000). The lips are the outward-striking valve of
+  Elliott and Bowsher (1982) and Adachi and Sato (1996). Yamaha's VL1
+  (1994) played waveguide brass from a lip model. The Brass plays its lips,
+  bore, steepening and player from those; its sources are in
+  `brass/README.md`.
 * **The timpani and the tabla.** Rayleigh's *Theory of Sound* (1877–78) has
   the kettledrum's fifth and octave; R. S. Christian, R. E. Davis, A. Tubis
   et al., "Effects of air loading on timpani membrane vibrations", *J.
@@ -866,6 +876,15 @@ data):
   image-current detection and resistive cooling of D. J. Wineland and H. G. Dehmelt
   (*J. Appl. Phys.* **46**, 919 (1975), [doi:10.1063/1.321602](https://doi.org/10.1063/1.321602)).
   No earlier instrument made from these modes is known to us.
+* **NMR.** The NMR Spin Echo plays the free precession of a liquid's protons, the spin echo
+  of E. L. Hahn (*Phys. Rev.* **80**, 580 (1950),
+  [doi:10.1103/PhysRev.80.580](https://doi.org/10.1103/PhysRev.80.580)) and the echo trains of
+  H. Y. Carr & E. M. Purcell (*Phys. Rev.* **94**, 630 (1954)) and S. Meiboom & D. Gill
+  (*Rev. Sci. Instrum.* **29**, 688 (1958)), with the shifts and couplings of H. E. Gottlieb,
+  V. Kotlyar & A. Nudelman (*J. Org. Chem.* **62**, 7512 (1997)). NMR data has been made into
+  music before: W. Bauer's "NMR music" (1996), and the OMICS sonification of S. Cacciatore
+  et al. (2015) and their musicNMR; Forte's differs in solving the spins live on every key, so
+  the echo answers the pedal. Sources in [nmr/README.md](../nmr/README.md).
 * **Synchronisation and mode locking in musical oscillators.**
   B. van der Pol and J. van der Mark, "Frequency demultiplication",
   *Nature* **120**, 363–364 (1927),

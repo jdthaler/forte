@@ -26,7 +26,7 @@ instruments/<slug>/                 a ported instrument: engine, model, generate
                                     whistlers, universe, project8, abracadabra, tess, clavicylinder,
                                     hydrogen, trautonium, hydraulis, cuore, hurdygurdy, ionchain, telharmonium,
                                     resonator, regal, chladni, ondes, cellulophone, voice, birdsong,
-                                    clavichord, planets, pulsars, drums and dunes;
+                                    clavichord, planets, pulsars, drums, dunes, brass and nmr;
                                     docs/INSTRUMENT_GUIDE.md,
                                     "The native port")
 tests/                              native unit tests (CTest); tests/smoke, a test instrument

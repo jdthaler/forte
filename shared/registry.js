@@ -14,7 +14,7 @@
 // `plugin.ready` marks an instrument whose native port is built and released as plugins (it has
 // a native/instruments/<id>/ folder); the landing page lists those under Plugins.
 
-export const FORTE_VERSION = '0.44.0';
+export const FORTE_VERSION = '0.45.0';
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
@@ -157,6 +157,15 @@ export const INSTRUMENTS = [
     tagline: 'A brass tangent strikes the strings and stays on them, holding the note for as long as the finger does: press harder and it goes sharp, rock the finger and it sings with a vibrato.',
     physics: 'Tangent-stopped strings · pressure tuning (Bebung) · fretting',
     accent: '#d9b77e',
+  },
+  {
+    id: 'brass', name: 'Brass', section: 'traditional', ready: true, version: '0.1.0', trim: 2.5,
+    plugin: { code: 'Bras', ready: true },
+    after: 'the tenor trombone, the trumpet and the flugelhorn',
+    tagline: 'A player’s lips buzz into a mouthpiece and a bore of travelling waves: play loud and the wave steepens into a shock on its way down the tubing, which is where brass gets its blare.',
+    physics: 'Lip reed · bore and bell as travelling waves · nonlinear steepening into shocks',
+    vibrates: 'air', notes: 'hold',
+    accent: '#e8b23a',
   },
   {
     id: 'drums', name: 'Timpani and Tabla', section: 'traditional', ready: true, version: '0.1.0', trim: 8,
@@ -520,6 +529,14 @@ export const INSTRUMENTS = [
     physics: 'Granular flow · synchronisation (Kuramoto) · seismic waveguides',
     vibrates: 'matter', notes: 'hold',
     accent: '#e8a65c',
+  },
+  {
+    id: 'nmr', name: 'NMR Spin Echo', section: 'devices', ready: true, version: '0.1.0', trim: 6.5,
+    plugin: { code: 'Nmrs', ready: true },
+    tagline: 'Every key a tube of liquid in an NMR magnet, its field set so the sample\'s lowest line is the note: a pulse tips the protons\' spins, each chemical group rings at its own shift, so ethanol is a chord whose J couplings beat, the note fades as the spins drift out of step, and the pedal\'s π pulse calls them back as Hahn\'s echo.',
+    physics: 'Nuclear magnetic resonance · chemical shifts and J couplings, solved exactly · Hahn echoes and CPMG trains · T₁ and T₂',
+    vibrates: 'matter', notes: 'ring',
+    accent: '#6fc3ff',
   },
 ];
 
