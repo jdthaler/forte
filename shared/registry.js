@@ -433,7 +433,7 @@ export const INSTRUMENTS = [
     accent: '#ff9a62',
   },
   {
-    id: 'hydrogen', name: 'Hydrogen Lamp', section: 'phenomena', ready: true, version: '0.3.0', trim: -0.5,
+    id: 'hydrogen', name: 'Hydrogen Lamp', section: 'phenomena', ready: true, version: '0.4.0', trim: -0.5,
     plugin: { code: 'Hydr', ready: true },
     tagline: 'Every key a tube of glowing hydrogen, its spectral lines played at their exact ratios with the red Hα line on the note: the atoms cascade down the levels in slow motion, so the lines light one after another, each as wide as its levels\' lifetimes, the atoms\' heat and the ions\' fields make it.',
     physics: 'Atomic physics · Einstein coefficients and the radiative cascade · recombination · Stark and Doppler broadening · fine structure',
