@@ -1,0 +1,43 @@
+{
+  "slug": "brass",
+  "params": [
+    {"id":"horn","kind":"choice","def":"trombone","options":["trombone","trumpet","flugelhorn"]},
+    {"id":"shock","kind":"continuous","min":0,"max":2,"def":1,"step":0.01,"log":false},
+    {"id":"plunger","kind":"continuous","min":0,"max":1,"def":0,"step":0.01,"log":false},
+    {"id":"bellSize","kind":"continuous","min":0.6,"max":1.5,"def":1,"step":0.01,"log":false},
+    {"id":"breath","kind":"continuous","min":0.3,"max":2,"def":1,"step":0.01,"log":false},
+    {"id":"lipTension","kind":"continuous","min":-300,"max":300,"def":0,"step":1,"log":false},
+    {"id":"lipQ","kind":"continuous","min":3,"max":20,"def":10,"step":0.1,"log":true},
+    {"id":"tongue","kind":"continuous","min":2,"max":80,"def":12,"step":0,"log":true},
+    {"id":"room","kind":"continuous","min":0,"max":1,"def":0.3,"step":0.01,"log":false},
+    {"id":"venue","kind":"choice","def":"room","options":["studio","room","recital","hall","cathedral"]},
+    {"id":"volume","kind":"continuous","min":0,"max":2,"def":0.8,"step":0.01,"log":false},
+    {"id":"pitch","kind":"choice","def":440,"options":[440,415,392,422.5,430,435,442,443,466]},
+    {"id":"temperament","kind":"choice","def":"equal","options":["equal","meantone","werckmeister","sixth","kirnberger","vallotti","young","pythagorean","just","custom"]},
+    {"id":"tuningRoot","kind":"choice","def":0,"options":[0,1,2,3,4,5,6,7,8,9,10,11]},
+    {"id":"cents1","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents2","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents3","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents4","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents5","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents6","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents7","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents8","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents9","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents10","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false}
+  ],
+  "presets": [
+    {"name":"Tenor trombone","values":{}},
+    {"name":"Trombone fortissimo: shock waves","values":{"breath":1.8}},
+    {"name":"Trombone fortissimo in linear air: no shocks","values":{"breath":1.8,"shock":0}},
+    {"name":"Trumpet","values":{"horn":"trumpet"}},
+    {"name":"Trumpet, blazing","values":{"horn":"trumpet","breath":1.8}},
+    {"name":"Flugelhorn: the cone stays mellow","values":{"horn":"flugelhorn","breath":1.4}},
+    {"name":"Plunger half closed: wah","values":{"plunger":0.6}},
+    {"name":"Soft breath attacks","values":{"tongue":60,"breath":0.6}},
+    {"name":"Tight lips: bright and edgy","values":{"lipTension":150,"lipQ":5}},
+    {"name":"Narrow bell: dark and covered","values":{"bellSize":0.65}},
+    {"name":"Twice as nonlinear as air","values":{"shock":2,"breath":1.4}}
+  ]
+}
