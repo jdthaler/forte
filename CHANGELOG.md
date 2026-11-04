@@ -16,6 +16,40 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-11-04 — Brass; Forte's version moves with the front page's new instruments; the NMR Spin Echo
+
+### Forte 0.45.0
+- **Six new instruments on the front page:** Timpani and Tabla, Singing Voice, Birdsong, Ringing Planets, Pulsars and Singing Dunes, which went out on 4 November while Forte's own version stayed at 0.44.0.
+- **A new instrument now moves Forte's version too** (`tools/release.mjs`): it is new on the front page, so a release with a first release in it bumps Forte by at least a minor and names the new instruments under it.
+- New on the front page: Brass and NMR Spin Echo.
+
+### Brass 0.1.0
+- New instrument, in the traditional section: a tenor trombone, a B♭ trumpet and a flugelhorn,
+  blown by a player's lips, all 88 keys (past each horn's compass, the same horn built bigger or
+  smaller by octaves).
+- **The lips:** an outward-striking valve, a mass on a spring blown open by the mouth, with
+  Bernoulli flow into the mouthpiece's cup solved in closed form each sample; a tongued attack.
+- **The bore:** each horn's cylinders, cones and Bessel flare as travelling waves (Kelly–Lochbaum
+  junctions, fractional delays, the walls' losses), radiating from the bell; a plunger over it
+  (mod wheel, and each key's MPE slide).
+- **Shock waves:** in the narrow tubing a loud wave's crests travel faster than its troughs, so
+  at fortissimo the wave steepens into a shock before the bell (Hirschberg et al., 1996): the
+  blare of loud brass. **Air nonlinearity** turns it off (linear acoustics) or doubles it; the
+  steepening matches Fubini's solution within 1.5 %.
+- **The player:** picks the partial and the slide position or valves (C4 in third position, C4
+  on the trumpet 1+3), sets the slide on the bore's own impedance peak, and listens: the slide
+  and the lips follow the ear onto the note, and each key remembers. A measured regulation
+  evens the keys out.
+- Views: the waves along the unrolled horn, the lips, mouthpiece and the wave reaching the bell,
+  the impedance the lips play into, the spectrum and spectrogram.
+- Eleven presets, four demos, a guided tour, and the plugins (AU code `Bras`).
+
+### NMR Spin Echo 0.1.0
+- **A new instrument in Devices: an NMR spectrometer as a keyboard.** Every key is a tube of liquid in a magnet whose field puts the sample's lowest line on the note (A4 is 9.75 T, a 415 MHz magnet); its protons precess and the receiver, mixed down against the 0 ppm reference, plays their chemical shifts. Ethanol, ethanol with its OH exchanging, water, ethyl acetate and 2-propanol (Gottlieb, Kotlyar and Nudelman's shifts and couplings).
+- **The spins solved exactly.** Each molecule's Hamiltonian (chemical shifts and J couplings, composite spins for equivalent protons) is diagonalised for every key's field, so the multiplets beat at their couplings, and on the low keys (weak magnets) the spectra turn second order: lines lean and new ones appear. Past E6 ethanol needs a magnet stronger than the strongest built (30.5 T).
+- **Hahn's echo on the pedal.** Notes fade as the field's spread fans the spins out (Lorentzian, Gaussian or a gradient's sinc), and the pedal's π pulse brings every sounding note back as an echo, weaker by T₂; with the echo train on, holding the pedal fires a Carr–Purcell–Meiboom–Gill train. Diffusion in a gradient steals the later echoes; the J modulation a π pulse cannot refocus comes through.
+- **T₁ and the pulse angle.** Each key's magnetisation recovers with T₁, so repeated 90° strikes saturate and small tip angles keep sounding; the pedal's pulse inverts it. Quadrature stereo (real and imaginary channels), a receiver held open or left ringing, probe noise, the shim on the mod wheel, MPE bends as each note's own field offset, 15 presets, a guided tour, 8 demos and the plugins (AU code Nmrs).
+
 ## 2026-11-04 — Birdsong; the Timpani and Tabla; the Singing Dunes; the Hydrogen Lamp's physics for any gas; helium in the Hydrogen Lamp; molecular hydrogen in the Hydrogen Lamp; the Ringing Planets; Pulsars; the Singing Voice
 
 ### Timpani and Tabla 0.1.0
