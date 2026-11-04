@@ -22,9 +22,9 @@ export const SECTIONS = [
   { id: 'electric', title: 'Electric instruments', short: 'Electric',
     blurb: 'Pianos and organs that vibrate metal and listen to it with pickups: tonewheels, tines, reeds, strings and sticky pads, with their electronics modelled too.' },
   { id: 'experimental', title: 'Experiments from history', short: 'Experimental',
-    blurb: 'Inventions that came and went: strings bowed by wheels, singing glass, flames in tubes and an arc lamp that sings.' },
+    blurb: 'Inventions that came and went: strings bowed by wheels, singing glass, flames in tubes, an arc lamp that sings and a voice.' },
   { id: 'phenomena', title: 'Physical phenomena', short: 'Phenomena',
-    blurb: 'Keyboards made of phenomena rather than mechanisms: synchronising oscillators, nonlinear plates, black holes, wavefunctions, bubbles, chirping springs, stars, strings sung by the wind, lightning\'s whistlers and the early universe\'s sound, each played from the keys. Several have been modelled or sonified before; see the prior art and credits.' },
+    blurb: 'Keyboards made of phenomena rather than mechanisms: synchronising oscillators, nonlinear plates, black holes, wavefunctions, bubbles, chirping springs, stars, strings sung by the wind, lightning\'s whistlers, the early universe\'s sound and the ringing of whole planets, each played from the keys. Several have been modelled or sonified before; see the prior art and credits.' },
   { id: 'devices', title: 'Devices built to study physics', short: 'Devices',
     blurb: 'Keyboards made of the apparatus physicists build to study nature: an accelerator\'s storage ring and its RF cavities, a collider\'s calorimeter crystals, the trap that weighs the neutrino and the magnet that listens for dark matter, each heard through the pickups and antennas that read it out.' },
 ];
@@ -37,7 +37,7 @@ export const SECTIONS = [
 export const FILTERS = [
   { id: 'vibrates', label: 'What sounds', options: [
     { id: 'strings', label: 'Strings', title: 'Struck, plucked, bowed and wind-blown strings' },
-    { id: 'solids', label: 'Bars & bells', title: 'Bars, tines, reeds, springs, plates, glass and bells' },
+    { id: 'solids', label: 'Bars & bells', title: 'Bars, tines, reeds, springs, plates, drumheads, glass and bells' },
     { id: 'air', label: 'Air', title: 'Pipes, free reeds, flames and bubbles' },
     { id: 'circuits', label: 'Circuits', title: 'Tonewheels, neon lamps, an electric arc, coupled oscillators and RF cavities' },
     { id: 'space', label: 'Space', title: 'Black holes, stars, planets, the magnetosphere and the early universe' },
@@ -166,6 +166,14 @@ export const INSTRUMENTS = [
     physics: 'Lip reed · bore and bell as travelling waves · nonlinear steepening into shocks',
     vibrates: 'air', notes: 'hold',
     accent: '#e8b23a',
+  },
+  {
+    id: 'drums', name: 'Timpani and Tabla', section: 'traditional', ready: true, version: '0.1.0', trim: 8,
+    plugin: { code: 'Drum', ready: true },
+    tagline: 'Every key a drumhead: a timpani whose kettle and air pull its Bessel modes into a near-harmonic series, or a tabla whose black syahi patch does the same, as Raman found. Press into the bayan to make it swoop.',
+    physics: 'Circular membranes · air loading and radiation · kettle air · loaded membranes (Raman) · felt and finger contact',
+    vibrates: 'solids', notes: 'ring',
+    accent: '#d9874a',
   },
   {
     id: 'grand', name: 'Electric Grand', section: 'electric', ready: true, version: '0.11.0', trim: 3.5,
@@ -321,6 +329,15 @@ export const INSTRUMENTS = [
     accent: '#ffe36b',
   },
   {
+    id: 'voice', name: 'Singing Voice', section: 'experimental', ready: true, version: '0.1.0', trim: -1.5,
+    plugin: { code: 'Sing', ready: true },
+    vibrates: 'air', notes: 'hold',
+    after: 'the human voice, and Bell Labs’ Voder (1939), the keyboard that spoke',
+    tagline: 'Breath sets two vocal folds flapping and a tube from the throat to the lips shapes their buzz into a vowel: the mod wheel moves the tongue and jaw from oo to ee, and every key is sung by its own singer, listening to their own pitch.',
+    physics: 'Two-mass vocal folds · Kelly–Lochbaum vocal tract · lip radiation · breath noise',
+    accent: '#f08a8a',
+  },
+  {
     id: 'huygens', name: 'Huygens Keyboard', section: 'phenomena', ready: true, version: '0.11.0', trim: 9.5,
     plugin: { code: 'Huyg', ready: true },
     tagline: 'Relaxation oscillators that pull each other into just intonation — Arnold tongues you can play.',
@@ -425,7 +442,7 @@ export const INSTRUMENTS = [
     accent: '#ff9a62',
   },
   {
-    id: 'hydrogen', name: 'Hydrogen Lamp', section: 'phenomena', ready: true, version: '0.3.0', trim: -0.5,
+    id: 'hydrogen', name: 'Hydrogen Lamp', section: 'phenomena', ready: true, version: '0.4.0', trim: -0.5,
     plugin: { code: 'Hydr', ready: true },
     tagline: 'Every key a tube of glowing hydrogen, its spectral lines played at their exact ratios with the red Hα line on the note: the atoms cascade down the levels in slow motion, so the lines light one after another, each as wide as its levels\' lifetimes, the atoms\' heat and the ions\' fields make it.',
     physics: 'Atomic physics · Einstein coefficients and the radiative cascade · recombination · Stark and Doppler broadening · fine structure',
@@ -479,6 +496,39 @@ export const INSTRUMENTS = [
     physics: 'Kirchhoff plates · Rayleigh–Ritz modes · stick–slip bowing · Chladni figures',
     vibrates: 'solids', notes: 'hold',
     accent: '#e0b65a',
+  },
+  {
+    id: 'birdsong', name: 'Birdsong', section: 'phenomena', ready: true, version: '0.1.0', trim: -2,
+    plugin: { code: 'Bird', ready: true },
+    tagline: 'Every key a songbird: air from its air sacs sets the labia of its syrinx swinging, one nonlinear oscillator whose pure Hopf whistles and buzzy saddle-node calls are a canary\'s and a zebra finch\'s, sung through its trachea and a mouth it tunes to the note.',
+    physics: 'Nonlinear dynamics · the normal form of the syrinx · Hopf and saddle-node bifurcations · the vocal tract',
+    vibrates: 'air', notes: 'hold',
+    accent: '#f4d438',
+  },
+  {
+    id: 'planets', name: 'Ringing Planets', section: 'phenomena', ready: true, version: '0.1.0', trim: 12.5,
+    plugin: { code: 'Plnt', ready: true },
+    after: 'the free oscillations of the Earth',
+    tagline: 'Every key the whole Earth, Mars or Moon ringing after a great quake, sped up until its gravest tone, the hour-long football mode, is the note: hundreds of standing waves of the planet, each split by its spin into tones that beat.',
+    physics: 'Self-gravitating elastic spheres · spheroidal and toroidal normal modes · PREM · rotational splitting · moment tensors',
+    vibrates: 'space', notes: 'ring',
+    accent: '#5fb3a1',
+  },
+  {
+    id: 'pulsars', name: 'Pulsars', section: 'phenomena', ready: true, version: '0.1.0', trim: -0.5,
+    plugin: { code: 'Puls', ready: true },
+    tagline: 'Every key a spinning neutron star whose radio beam sweeps past the Earth at the note, as fast as the millisecond pulsars spin: the shape of the beam and where our sightline cuts it set the tone, and the Galaxy\'s plasma smears and sweeps each pulse on its way.',
+    physics: 'Neutron stars · the rotating vector model · interstellar dispersion and scattering · dedispersion',
+    vibrates: 'space', notes: 'hold',
+    accent: '#7fc7ff',
+  },
+  {
+    id: 'dunes', name: 'Singing Dunes', section: 'phenomena', ready: true, version: '0.1.0', trim: -7,
+    plugin: { code: 'Dune', ready: true },
+    tagline: 'Every key an avalanche down a desert dune\'s slip face, booming as the dunes of Morocco, Chile and Nevada do: the sheared grains fall into step, their note set by their size, or a buried layer rings as a waveguide. How dunes sing is still argued over, so it plays both.',
+    physics: 'Granular flow · synchronisation (Kuramoto) · seismic waveguides',
+    vibrates: 'matter', notes: 'hold',
+    accent: '#e8a65c',
   },
 ];
 

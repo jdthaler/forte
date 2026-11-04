@@ -37,6 +37,24 @@ In a nebula, starlight has stripped the atoms bare and electrons are **recapture
 The spectroscope's window chooses which you hear, each still pitched against Hα on the key.`,
   },
   {
+    title: 'Helium: two electrons, two families',
+    views: ['The spectroscope', 'Energy levels'],
+    preset: 'Helium: the yellow D₃ line on the note',
+    play: [note('A3', { dur: 5 }), { at: 5, set: { excitation: 'recombination', temperature: 10000, caseB: true, density: 1000 } }, note('A3', { at: 5.1, dur: 4 })],
+    text: `Helium has two electrons, and their spins either cancel (**singlets**) or add (**triplets**). Light hardly ever flips a spin, so the two families barely talk: the Grotrian diagram is two ladders side by side. The yellow **D₃** line, found in the Sun in 1868 before helium was found on Earth, is on the key.
+
+From a nebula, the ratios of 447.1, 587.6 and 667.8 nm tell how much helium the gas holds: the measurement that weighs the helium made in the first minutes after the Big Bang.`,
+  },
+  {
+    title: 'Molecular hydrogen: vibration and rotation',
+    views: ['The spectroscope', 'Energy levels'],
+    preset: 'Molecular hydrogen: a starlit cloud\'s infrared glow',
+    play: [note('A3', { dur: 5 }), { at: 5, set: { excitation: 'thermal', temperature: 2000 } }, note('A3', { at: 5.1, dur: 4 })],
+    text: `Two hydrogen atoms bound together can also **vibrate** (v) and **rotate** (J), so each electronic level becomes a ladder of hundreds. Its own infrared lines, from one rung of the ground state's ladder to another, are so weak that a molecule waits days to weeks to emit one: the lamp runs them on a clock of their own. Its 1–0 S(1) line, at 2.12 µm, is on the key.
+
+First a cloud lit by starlight: ultraviolet lifts the molecules high and they cascade down the ladder, so the high rungs glow too. Then a gas heated by a shock to 2000 K: only the bottom rungs are lit. Astronomers tell the two apart by exactly this, the 2–1 S(1) line against 1–0 S(1).`,
+  },
+  {
     title: 'Crowded by ions: Stark broadening',
     views: ['Spectrum', 'Spectrogram'],
     preset: 'A dense plasma: Stark-broadened lines',

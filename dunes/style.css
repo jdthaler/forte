@@ -1,0 +1,9 @@
+/* The page's own palette and any layout beyond shared/instrument.css: the ochre of desert sand in
+   low sun, and the blue of the sky over it. */
+:root {
+  --accent: #e8a65c;
+  --accent-2: #7fb8e0;
+  --accent-ink: #1f1206;
+}
+
+#info { grid-template-columns: auto 1fr; }
