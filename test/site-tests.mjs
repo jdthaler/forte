@@ -10,7 +10,7 @@ import { INSTRUMENTS, SECTIONS, FILTERS, FORTE_VERSION, TEMPLATE } from '../shar
 import { words, hits, matches } from '../shared/search.js';
 import { ASSETS, notes } from '../tools/plugin-release.mjs';
 import { withTags, pictureOf } from '../tools/make-previews.mjs';
-import { readNotes, parseNote, plan, bump } from '../tools/release.mjs';
+import { readNotes, parseNote, plan, bump, frontPage } from '../tools/release.mjs';
 import { compare, stateOf, contractPath, STATES } from '../tools/contract.mjs';
 import { TOUCH, SOFT_PEDAL, touch, touched, createSostenuto, wheelValue, FADERS, controllersOf, controlled, ccValue, SWITCHES, levelGain, pedalGain, onPedalGain, startMIDI } from '../shared/midi.js';
 import { LATEST, SYSTEMS, archive, downloads, withPlugins, parseRelease, releaseLine } from '../shared/plugins.js';
@@ -69,6 +69,12 @@ test('a note names Forte or an instrument, and patch, minor, major or new; a rel
   const p = plan([n, parseNote('y.md', '# another\n### Forte (patch)\n- three\n')], '2026-01-02');
   assert.equal(p.changes[0].to, bump(FORTE_VERSION, 'minor'));
   assert.ok(p.entry.startsWith(`## 2026-01-02 — a topic; another\n\n### Forte ${bump(FORTE_VERSION, 'minor')}\n- one\n- three\n`), p.entry);
+  // a new instrument moves Forte too, by a minor, and says so under Forte
+  const first = (name) => parseNote('w.md', `# first\n### ${name} (new)\n- first\n`);
+  assert.equal(frontPage([n]), null);
+  assert.deepEqual(frontPage([first('Gong Keyboard')]), { kind: 'minor', body: '- New on the front page: Gong Keyboard.' });
+  const three = INSTRUMENTS.filter((i) => i.ready).slice(0, 3).map((i) => i.name);
+  assert.equal(frontPage([n, ...three.slice().reverse().map(first)]).body, `- New on the front page: ${three[0]}, ${three[1]} and ${three[2]}.`);
 });
 
 console.log('saved songs (tools/contract.mjs)');
