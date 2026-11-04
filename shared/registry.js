@@ -159,6 +159,15 @@ export const INSTRUMENTS = [
     accent: '#d9b77e',
   },
   {
+    id: 'brass', name: 'Brass', section: 'traditional', ready: true, version: '0.1.0', trim: 2.5,
+    plugin: { code: 'Bras', ready: true },
+    after: 'the tenor trombone, the trumpet and the flugelhorn',
+    tagline: 'A player’s lips buzz into a mouthpiece and a bore of travelling waves: play loud and the wave steepens into a shock on its way down the tubing, which is where brass gets its blare.',
+    physics: 'Lip reed · bore and bell as travelling waves · nonlinear steepening into shocks',
+    vibrates: 'air', notes: 'hold',
+    accent: '#e8b23a',
+  },
+  {
     id: 'drums', name: 'Timpani and Tabla', section: 'traditional', ready: true, version: '0.1.0', trim: 8,
     plugin: { code: 'Drum', ready: true },
     tagline: 'Every key a drumhead: a timpani whose kettle and air pull its Bessel modes into a near-harmonic series, or a tabla whose black syahi patch does the same, as Raman found. Press into the bayan to make it swoop.',
