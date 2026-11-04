@@ -22,7 +22,9 @@ any name (say, the branch's topic: `black-hole-spin.md`), saying what it changes
 - The kind is `minor` (something new, or a change to the sound or the parameters), `patch` (a fix
   that changes neither), `major` (a change that breaks songs saved with the plugins: see below) or
   `new` (an instrument's first release: give it `ready: true` and its first version, usually
-  `0.1.0`, in `shared/registry.js`). `major` takes 0.x to 1.0.0.
+  `0.1.0`, in `shared/registry.js`). `major` takes 0.x to 1.0.0. A `new` instrument is new on
+  the front page too, so the release moves Forte by at least a minor and adds a line naming it
+  under Forte's version: a note needs no Forte section for that.
 - From 1.0 on, an instrument whose contract breaks needs `major`: removing, renaming or rescaling
   a parameter, changing its default, moving or removing a choice's option or a preset, or changing
   a preset's values (`tools/contract.mjs`, `node tools/contract.mjs` lists them). Below 1.0 the

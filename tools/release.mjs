@@ -74,6 +74,15 @@ export function bump(version, kind) {
   return kind === 'major' ? `${x + 1}.0.0` : kind === 'minor' ? `${x}.${y + 1}.0` : kind === 'patch' ? `${x}.${y}.${z + 1}` : version;
 }
 
+// A new instrument is new on the front page too, so Forte moves by at least a minor, saying which.
+export function frontPage(notes) {
+  const order = INSTRUMENTS.map((i) => i.name);
+  const fresh = order.filter((name) => notes.some((n) => n.sections.some((s) => s.name === name && s.kind === 'new')));
+  if (!fresh.length) return null;
+  const names = fresh.length > 1 ? `${fresh.slice(0, -1).join(', ')} and ${fresh.at(-1)}` : fresh[0];
+  return { kind: 'minor', body: `- New on the front page: ${names}.` };
+}
+
 // The release: every component's new version, and its CHANGELOG.md entry.
 export function plan(notes, date = new Date().toISOString().slice(0, 10)) {
   if (!notes.length) throw new Error('changes/ has no notes: nothing to release');
@@ -81,6 +90,11 @@ export function plan(notes, date = new Date().toISOString().slice(0, 10)) {
   for (const n of notes) for (const s of n.sections) {
     const e = by.get(s.name) ?? { name: s.name, kinds: [], bodies: [] };
     e.kinds.push(s.kind); e.bodies.push(s.body); by.set(s.name, e);
+  }
+  const front = frontPage(notes);
+  if (front) {
+    const e = by.get('Forte') ?? { name: 'Forte', kinds: [], bodies: [] };
+    e.kinds.push(front.kind); e.bodies.push(front.body); by.set('Forte', e);
   }
   const changes = order.filter((name) => by.has(name)).map((name) => {
     const e = by.get(name), c = known.get(name);
