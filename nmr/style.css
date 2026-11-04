@@ -1,0 +1,9 @@
+/* The page's own palette and any layout beyond shared/instrument.css: the cool blue of a
+   superconducting magnet's dewar and the amber of a spectrometer's trace. */
+:root {
+  --accent: #6fc3ff;
+  --accent-2: #ffb85c;
+  --accent-ink: #04131f;
+}
+
+#info { grid-template-columns: auto 1fr; }

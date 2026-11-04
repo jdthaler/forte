@@ -530,6 +530,14 @@ export const INSTRUMENTS = [
     vibrates: 'matter', notes: 'hold',
     accent: '#e8a65c',
   },
+  {
+    id: 'nmr', name: 'NMR Spin Echo', section: 'devices', ready: true, version: '0.1.0', trim: 6.5,
+    plugin: { code: 'Nmrs', ready: true },
+    tagline: 'Every key a tube of liquid in an NMR magnet, its field set so the sample\'s lowest line is the note: a pulse tips the protons\' spins, each chemical group rings at its own shift, so ethanol is a chord whose J couplings beat, the note fades as the spins drift out of step, and the pedal\'s π pulse calls them back as Hahn\'s echo.',
+    physics: 'Nuclear magnetic resonance · chemical shifts and J couplings, solved exactly · Hahn echoes and CPMG trains · T₁ and T₂',
+    vibrates: 'matter', notes: 'ring',
+    accent: '#6fc3ff',
+  },
 ];
 
 // The template (docs/template/), the starting point for new instruments: not listed, but it

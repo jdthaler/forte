@@ -901,6 +901,40 @@
    "title": "Marimbula bass"
   }
  ],
+ "nmr": [
+  {
+   "file": "01-ethanol-chords-with-an-echo-train.m4a",
+   "title": "Ethanol chords with an echo train"
+  },
+  {
+   "file": "02-water-then-ethanol-then-ethyl-acetate.m4a",
+   "title": "Water then ethanol then ethyl acetate"
+  },
+  {
+   "file": "03-hahns-echo-pulse-at-0.4-then-0.8-s.m4a",
+   "title": "Hahns echo pulse at 0.4 then 0.8 s"
+  },
+  {
+   "file": "04-the-couplings-beat.m4a",
+   "title": "The couplings beat"
+  },
+  {
+   "file": "05-an-echo-train-on-water.m4a",
+   "title": "An echo train on water"
+  },
+  {
+   "file": "06-saturation-90-degree-then-25-degree-pulses.m4a",
+   "title": "Saturation 90 degree then 25 degree pulses"
+  },
+  {
+   "file": "07-weak-magnets-lean-then-strong-ones.m4a",
+   "title": "Weak magnets lean then strong ones"
+  },
+  {
+   "file": "08-a-gradient-and-diffusion.m4a",
+   "title": "A gradient and diffusion"
+  }
+ ],
  "ondes": [
   {
    "file": "01-a-ribbon-melody-with-vibrato.m4a",
