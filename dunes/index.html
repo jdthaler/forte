@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Singing Dunes · Forte</title>
+  <meta name="description" content="Every key an avalanche down a desert dune's slip face, booming as the dunes of Morocco, Chile and Nevada do: the sheared grains fall into step, their note set by their size, or a buried layer rings as a waveguide. How dunes sing is still argued over, so it plays both.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="Singing Dunes · Forte">
+  <meta property="og:description" content="Every key an avalanche down a desert dune's slip face, booming as the dunes of Morocco, Chile and Nevada do: the sheared grains fall into step, their note set by their size, or a buried layer rings as a waveguide. How dunes sing is still argued over, so it plays both.">
+  <meta property="og:url" content="https://forte.jthaler.net/dunes/">
+  <meta property="og:image" content="https://forte.jthaler.net/dunes/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Singing Dunes's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="dunes">
+  <div class="forte-edge" aria-hidden="true"></div>
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Singing Dunes</h1>
+      <span class="sub">avalanches down a desert dune's slip face, booming at the note their grains set as they fall into step, or a buried layer rings as a waveguide</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Slip face">
+          <div class="card-head"><h2>Slip face</h2><span class="muted" id="face-read"></span></div>
+          <canvas id="face"></canvas>
+          <div class="caption">The dune in section, the wind from the left: its steep lee side, the slip face, stands at sand's angle of repose, and each key sends an avalanche down it. The grains drawn slide at the avalanche's speed, slowed a hundredfold, and the face shakes with the song. In the layer's theory, the dashed line is the firmer sand under the dry layer, and the rays bounce in the layer between.</div>
+        </div>
+        <div class="card" data-perform data-view="Grains in step">
+          <div class="card-head"><h2>Grains in step</h2><span class="muted" id="sync-read"></span></div>
+          <canvas id="circle"></canvas>
+          <div class="caption">Each dot is a patch of sheared grains, placed round the circle by where it is in its cycle of pushes, with the circle turning at the note. Scattered, they push at random and the avalanche only rumbles; bunched, they push together and the dune sings. The arrow is their mean (Kuramoto's order parameter R): its length is how much of the song is in step.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Threshold">
+          <div class="card-head"><h2>Falling into step</h2><span class="muted" id="order-read"></span></div>
+          <canvas id="order"></canvas>
+          <div class="caption">The last six seconds of the focused avalanche: R, how much of it is in step (filled), and the coupling over its threshold (line), with the threshold dashed. The grains fall into step only once the line climbs past it, the harder the faster; as the avalanche stops, the line falls back and the song breaks up.</div>
+        </div>
+        <div class="card" data-view="What sets the pitch">
+          <div class="card-head"><h2>What sets the pitch</h2><span class="muted" id="law-read"></span></div>
+          <canvas id="law"></canvas>
+          <div class="caption">The grains' theory: the note against the grain size, f = 0.4·√(g/d), with the four dunes Douady and his colleagues measured (their grains, and the note each sang, ± its spread), and the sand classes along the bottom. The layer's theory: the note against the dry layer's depth, with the depths and notes Vriend's team found at Dumont Dunes. The ring is the key just played.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" id="info-card" data-view="Key">
+          <div class="card-head"><h2><b id="focus-name">A2</b></h2></div>
+          <dl id="info"></dl>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the note and its harmonics</span></div>
+          <canvas id="spectrum"></canvas>
+        </div>
+      </div>
+      <div class="row single">
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">A song in step is a stack of sharp lines, wavering a little as the avalanche surges; below the threshold the same band is a blur, and the hiss of the sliding sand fills the top. A layered dune's lines are as wide as its layer leaks.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows; an avalanche runs while its key is held, and comes to rest after</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>hold notes: <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>MIDI: velocity = the avalanche's speed, mod wheel and aftertouch = push more sand (MPE slide pushes one key); no pitch bend: the grains set the note</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/dunes-main.js"></script>
+  <script type="module" src="src/dunes-tour.js"></script>
+</body>
+</html>

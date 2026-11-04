@@ -67,6 +67,40 @@
    "title": "The talking arc"
   }
  ],
+ "birdsong": [
+  {
+   "file": "01-a-morning-in-the-garden.m4a",
+   "title": "A morning in the garden"
+  },
+  {
+   "file": "02-hopf-then-saddle-node-onsets.m4a",
+   "title": "Hopf then saddle node onsets"
+  },
+  {
+   "file": "03-born-at-zero-frequency.m4a",
+   "title": "Born at zero frequency"
+  },
+  {
+   "file": "04-canary-trills-faster-and-faster.m4a",
+   "title": "Canary trills faster and faster"
+  },
+  {
+   "file": "05-upsweeps-downsweeps-warble.m4a",
+   "title": "Upsweeps downsweeps warble"
+  },
+  {
+   "file": "06-fixed-mouth-then-tuned.m4a",
+   "title": "Fixed mouth then tuned"
+  },
+  {
+   "file": "07-pitch-rises-with-the-breath.m4a",
+   "title": "Pitch rises with the breath"
+  },
+  {
+   "file": "08-tension-across-the-corner.m4a",
+   "title": "Tension across the corner"
+  }
+ ],
  "blackhole": [
   {
    "file": "01-one-note-as-spin-rises-from-0-to-1-minus-1e-6.m4a",
@@ -433,6 +467,74 @@
   {
    "file": "07-the-real-heater-clicks.m4a",
    "title": "The real heater clicks"
+  }
+ ],
+ "drums": [
+  {
+   "file": "01-timpani-with-a-roll-and-a-pedal-glide.m4a",
+   "title": "Timpani with a roll and a pedal glide"
+  },
+  {
+   "file": "02-a-cycle-of-teentaal-on-dayan-and-bayan.m4a",
+   "title": "A cycle of teentaal on dayan and bayan"
+  },
+  {
+   "file": "03-timpani-in-air-then-in-a-vacuum.m4a",
+   "title": "Timpani in air then in a vacuum"
+  },
+  {
+   "file": "04-struck-near-the-rim-then-at-the-centre.m4a",
+   "title": "Struck near the rim then at the centre"
+  },
+  {
+   "file": "05-felt-mallets-then-wooden.m4a",
+   "title": "Felt mallets then wooden"
+  },
+  {
+   "file": "06-dayan-with-its-syahi-then-without.m4a",
+   "title": "Dayan with its syahi then without"
+  },
+  {
+   "file": "07-bayan-ge-pressed-for-the-swoop.m4a",
+   "title": "Bayan ge pressed for the swoop"
+  }
+ ],
+ "dunes": [
+  {
+   "file": "01-a-face-letting-go.m4a",
+   "title": "A face letting go"
+  },
+  {
+   "file": "02-below-at-and-past-the-threshold.m4a",
+   "title": "Below at and past the threshold"
+  },
+  {
+   "file": "03-coarse-to-fine-sand.m4a",
+   "title": "Coarse to fine sand"
+  },
+  {
+   "file": "04-worse-and-worse-sorted.m4a",
+   "title": "Worse and worse sorted"
+  },
+  {
+   "file": "05-the-sand-gets-damp.m4a",
+   "title": "The sand gets damp"
+  },
+  {
+   "file": "06-pushing-more-sand-down.m4a",
+   "title": "Pushing more sand down"
+  },
+  {
+   "file": "07-long-usual-and-short-collisions.m4a",
+   "title": "Long usual and short collisions"
+  },
+  {
+   "file": "08-the-layered-dune-then-a-leaky-one.m4a",
+   "title": "The layered dune then a leaky one"
+  },
+  {
+   "file": "09-coming-to-rest.m4a",
+   "title": "Coming to rest"
   }
  ],
  "glass": [
@@ -1001,6 +1103,36 @@
    "title": "Cut up high then as voiced then low"
   }
  ],
+ "planets": [
+  {
+   "file": "01-moon-rings-a-tune.m4a",
+   "title": "Moon rings a tune"
+  },
+  {
+   "file": "02-earth-rings-a-tune.m4a",
+   "title": "Earth rings a tune"
+  },
+  {
+   "file": "03-spin-splits-the-tone.m4a",
+   "title": "Spin splits the tone"
+  },
+  {
+   "file": "04-explosion-heard-at-90-then-45-degrees.m4a",
+   "title": "Explosion heard at 90 then 45 degrees"
+  },
+  {
+   "file": "05-shallow-then-deep-quake.m4a",
+   "title": "Shallow then deep quake"
+  },
+  {
+   "file": "06-earth-mars-moon.m4a",
+   "title": "Earth mars moon"
+  },
+  {
+   "file": "07-twisting-modes-in-stereo.m4a",
+   "title": "Twisting modes in stereo"
+  }
+ ],
  "project8": [
   {
    "file": "01-krypton-chords-climbing.m4a",
@@ -1033,6 +1165,36 @@
   {
    "file": "08-relativistic-electrons.m4a",
    "title": "Relativistic electrons"
+  }
+ ],
+ "pulsars": [
+  {
+   "file": "01-millisecond-pulsars-in-chords.m4a",
+   "title": "Millisecond pulsars in chords"
+  },
+  {
+   "file": "02-the-interpulse-an-octave-up.m4a",
+   "title": "The interpulse an octave up"
+  },
+  {
+   "file": "03-sightline-triple-to-single.m4a",
+   "title": "Sightline triple to single"
+  },
+  {
+   "file": "04-dispersion-smears-then-dedispersion.m4a",
+   "title": "Dispersion smears then dedispersion"
+  },
+  {
+   "file": "05-the-sweep-down-the-band.m4a",
+   "title": "The sweep down the band"
+  },
+  {
+   "file": "06-scattering-at-150-mhz-then-1400.m4a",
+   "title": "Scattering at 150 mhz then 1400"
+  },
+  {
+   "file": "07-single-pulses-smooth-then-flickering.m4a",
+   "title": "Single pulses smooth then flickering"
   }
  ],
  "pyrophone": [
@@ -1537,6 +1699,44 @@
   {
    "file": "08-centre-end-and-node-strikes.m4a",
    "title": "Centre end and node strikes"
+  }
+ ],
+ "voice": [
+  {
+   "file": "01-daisy-bell.m4a",
+   "title": "Daisy bell"
+  },
+  {
+   "file": "02-the-vowels-from-ah-to-oo-to-ee.m4a",
+   "title": "The vowels from ah to oo to ee"
+  },
+  {
+   "file": "03-a-chord-of-four-singers.m4a",
+   "title": "A chord of four singers"
+  },
+  {
+   "file": "04-soft-then-harder-breath.m4a",
+   "title": "Soft then harder breath"
+  },
+  {
+   "file": "05-breathy-whisper-then-pressed.m4a",
+   "title": "Breathy whisper then pressed"
+  },
+  {
+   "file": "06-the-singers-formant.m4a",
+   "title": "The singers formant"
+  },
+  {
+   "file": "07-a-sopranos-high-ee-jaw-shut-then-open.m4a",
+   "title": "A sopranos high ee jaw shut then open"
+  },
+  {
+   "file": "08-bass-to-child.m4a",
+   "title": "Bass to child"
+  },
+  {
+   "file": "09-daisy-bell-as-in-1961.m4a",
+   "title": "Daisy bell as in 1961"
   }
  ],
  "whistlers": [

@@ -261,6 +261,7 @@ static Gas hydrogenGas() {
 const Gas &gasOf(GasKind kind) {
   static const Gas hydrogen = hydrogenGas();
   if (kind == GasKind::helium) { static const Gas helium = heliumGas(); return helium; }
+  if (kind == GasKind::molecular) { static const Gas molecular = molecularGas(); return molecular; }
   return hydrogen;
 }
 const Gas &atom() { return gasOf(GasKind::hydrogen); }
@@ -273,6 +274,7 @@ Lamp lampOf(const double *P) {
   L.laserN = std::clamp((int)std::lround(P[p::laserLevel]), 2, NMAX);
   L.caseB = P[p::caseB] > 0.5;
   L.glow = P[p::glow] * 1e-9;
+  L.atoms = P[p::atoms] / 100;
   return L;
 }
 
@@ -315,9 +317,11 @@ void pump(const Lamp &lamp, double *p) {
       for (int x = a.into[i]; x < a.into[i + 1]; x++) feed += a.tr[x].A * N[a.tr[x].from];
       p[i] = std::max(0.0, G[i] * N[i] - feed);
     }
+    if (lamp.gas == GasKind::molecular) shareAtoms(a, lamp, p);
     return;
   }
   if (lamp.gas == GasKind::helium) heliumPump(a, lamp, p);
+  else if (lamp.gas == GasKind::molecular) molecularPump(a, lamp, p);
   else hydrogenPump(lamp, p);
 }
 
@@ -369,8 +373,8 @@ static double angular(int l, int k, int tj, int tk) {
 
 // Hydrogen's line n → m by (j, j′), j′ = j or j ± 1: slot 3(j − ½) + (j′ − j + 1); their ratios
 // times `scale` (the reference line's frequency over Hα's).
-static int hydrogenComponents(const Gas &a, int line, const double *N, double alphaScale, double scale, Component *out) {
-  const Pair pr = lineLevels(line);
+int hydrogenComponents(const Gas &a, int line, int hline, const double *N, double alphaScale, double scale, Component *out) {
+  const Pair pr = lineLevels(hline);
   double w[3 * NMAX] = {};
   for (int x = a.lineStart[line]; x < a.lineStart[line + 1]; x++) {
     const Transition &t = a.tr[a.byLine[x]];
@@ -407,7 +411,13 @@ static int hydrogenComponents(const Gas &a, int line, const double *N, double al
 int components(GasKind gas, int line, const double *N, double alphaScale, Component *out) {
   const Gas &a = gasOf(gas);
   if (gas == GasKind::helium) return heliumComponents(a, line, alphaScale, out);
-  return hydrogenComponents(a, line, N, alphaScale, 1, out);
+  if (gas == GasKind::molecular) {
+    // the atoms' lines as hydrogen's; the molecule's are one tone each (no fine structure here)
+    if (line >= a.atomLines) return hydrogenComponents(a, line, line - a.atomLines, N, alphaScale, a.line[line].ratio / ratio(lineLevels(line - a.atomLines).n, lineLevels(line - a.atomLines).m), out);
+    out[0] = {0, 0, a.line[line].ratio, 1};
+    return 1;
+  }
+  return hydrogenComponents(a, line, line, N, alphaScale, 1, out);
 }
 
 // ∫₀^∞ e^(−s) f(s) ds by Gauss–Laguerre (24 points: both integrands are smooth and slow)
@@ -437,7 +447,7 @@ Glow::Glow() {
     g.pops.reserve((size_t)ROWS * DISPLAY);
     g.cols.reserve(keep); g.disp.reserve(DISPLAY);
   }
-  kept.reserve(lines); clockOf.reserve(lines); steadyPower.reserve(lines); width.reserve(lines); keptOf.reserve(lines);
+  kept.reserve(lines); order.reserve(lines); clockOf.reserve(lines); steadyPower.reserve(lines); width.reserve(lines); keptOf.reserve(lines);
   colOf.reserve(lines); dispCol.reserve(DISPLAY);
   acc.reserve(lines); compStart.reserve(lines + 1); comps.reserve((size_t)keep * 8);
   p.reserve(states); G.reserve(states); N.reserve(states); Nold.reserve(states); Nss.reserve(states);
@@ -457,6 +467,20 @@ void Glow::build(const Lamp &L) {
   kept.clear(); steadyPower.clear(); width.clear(); clockOf.clear();
   keptOf.assign(a.lines, -1);
   total = 0;
+  // past hydrogen's few lines, each band (ultraviolet, visible, infrared) keeps its strongest
+  // BAND_KEPT: the quieter ones are far below anything the engine plays
+  if (a.kind != GasKind::hydrogen) {
+    for (int band = 0; band < 3; band++) {
+      order.clear();
+      for (int k = 0; k < a.lines; k++) {
+        const double nm = a.line[k].nm;
+        if (acc[k] > 1e-10 * top && (nm < 380 ? 0 : nm <= 750 ? 1 : 2) == band) order.push_back(k);
+      }
+      if ((int)order.size() <= BAND_KEPT) continue;
+      std::nth_element(order.begin(), order.begin() + BAND_KEPT, order.end(), [&](int x, int y) { return acc[x] > acc[y]; });
+      for (size_t i = BAND_KEPT; i < order.size(); i++) acc[order[i]] = 0;
+    }
+  }
   for (int k = 0; k < a.lines; k++) {
     if (!(acc[k] > 1e-10 * top)) continue;
     keptOf[k] = (int)kept.size();

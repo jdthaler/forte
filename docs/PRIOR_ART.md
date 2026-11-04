@@ -234,11 +234,28 @@ requests.
   the tonewheel organs ([Hammond, 1934](https://patents.google.com/patent/US1956350A/en))
   are its descendants. We did not find an earlier physical model of it. Its
   sources are in `telharmonium/README.md`.
+* **The voice.** H. Dudley, R. R. Riesz and S. S. A. Watkins, "A synthetic
+  speaker", *Journal of the Franklin Institute* 227, 739–764 (1939): the Voder,
+  the keyboard that spoke at the 1939 World's Fair. The Singing Voice is the
+  articulatory synthesis that followed it: Ishizaka and Flanagan's two-mass folds
+  (*Bell System Technical Journal* 51, 1233–1268, 1972) into Kelly and Lochbaum's
+  tube (above), as in P. R. Cook's SPASM and SINGER (Stanford, around 1990),
+  P. Birkholz's VocalTractLab and N. Thapen's Pink Trombone (below), whose tract
+  also has 44 sections. Its vowels are fitted to Peterson and Barney's formants
+  (1952); its sources are in `voice/README.md`.
 * **The Cellulophone.** P. Toulon, [US 1,948,996](https://patents.google.com/patent/US1948996A/en)
   (filed 1928), and T. Rhea's account of it in *Contemporary Keyboard* (1977,
   [reprinted by the EMEAPP](https://emeapp.org/2026/08/17/electronic-perspectives-photoelectric-instruments-part-iii-the-cellulophone/)),
   which the discs, screens, keys and cells are built from. We did not find an earlier
   model of it. Its sources are in `cellulophone/README.md`.
+* **Singing dunes.** The shear law, the four dunes and the threshold are S. Douady et al.,
+  "Song of the dunes as a self-synchronized instrument", *Phys. Rev. Lett.* **97**, 018002 (2006),
+  [doi:10.1103/PhysRevLett.97.018002](https://doi.org/10.1103/PhysRevLett.97.018002), after
+  R. A. Bagnold (1966) and B. Andreotti (2004); the layer's waveguide is N. M. Vriend et al.,
+  "Solving the mystery of booming sand dunes", *Geophys. Res. Lett.* **34**, L16306 (2007),
+  [doi:10.1029/2007GL030276](https://doi.org/10.1029/2007GL030276); the patches fall into step
+  as Y. Kuramoto's oscillators do (1975). We did not find an earlier model of a booming dune made
+  to be played. Its sources are in `dunes/README.md`.
 * **The regal.** Praetorius draws the regals and their resonators in
   *Syntagma musicum II* (1619); Monteverdi scores one for Charon in
   *L'Orfeo* (1607). The beating reed is G. R. Plitnik's ("Vibration
@@ -249,6 +266,20 @@ requests.
   models reed pipes physically, and regals are sold as sample libraries.
   The Regal plays its curved tongues, shallots, short resonators and wedge
   bellows from those; its sources are in `regal/README.md`.
+* **The timpani and the tabla.** Rayleigh's *Theory of Sound* (1877–78) has
+  the kettledrum's fifth and octave; R. S. Christian, R. E. Davis, A. Tubis
+  et al., "Effects of air loading on timpani membrane vibrations", *J.
+  Acoust. Soc. Am.* **76**, 1336–1345 (1984), computed them from the air.
+  C. V. Raman, "The Indian musical drums" (1934), measured the tabla's
+  harmonics; B. S. Ramakrishna and M. M. Sondhi (1954) and G. Sathej and
+  R. Adhikari ([arXiv:0809.1320](https://arxiv.org/abs/0809.1320), 2008)
+  modelled its loaded head. L. Rhaouti, A. Chaigne and P. Joly (*J. Acoust.
+  Soc. Am.* **105**, 3545–3562, 1999) simulated a kettledrum by finite
+  elements in time, and S. Bilbao and C. J. Webb (AES, 2013) one with the
+  air of a whole room on graphics processors; Applied Acoustics Systems'
+  Chromaphone plays modelled membranes. The Timpani and Tabla solves each
+  key's loaded, air-loaded head as it is struck and plays its modes live;
+  its sources are in `drums/README.md`.
 
 ## 2. Techniques Forte uses, and where they come from
 
@@ -727,6 +758,26 @@ data):
   Contralogic *Whistler* plugin imitates them with noise through resonant
   filters. Whistlers computes them: every key a field line, its whistler
   the cold-plasma group delay along it.
+* **Birdsong.** G. B. Mindlin's group models a songbird's syrinx as one
+  nonlinear oscillator and synthesizes songs from paths of pressure and
+  tension (T. Gardner et al., *Phys. Rev. Lett.* **87**, 208101 (2001),
+  [doi:10.1103/PhysRevLett.87.208101](https://doi.org/10.1103/PhysRevLett.87.208101);
+  the normal form with its trachea and mouth in A. Amador et al., *Nature*
+  **495**, 59 (2013), [doi:10.1038/nature11967](https://doi.org/10.1038/nature11967)),
+  and plays the synthetic songs back to birds. Earlier syntheses modelled
+  the syrinx's membranes and tract: N. H. Fletcher (*J. Theor. Biol.*
+  **135**, 455 (1988)), M. Kahrs and F. Avanzini (DAFx 2001) and T. Smyth
+  and J. O. Smith (DAFx 2002). Birdsong integrates the normal form for each
+  key, tuned by the labia's rate. Its sources are in `birdsong/README.md`.
+* **The sounds of pulsars.** Pulsars have been played through loudspeakers
+  since their discovery (A. Hewish et al., *Nature* **217**, 709 (1968),
+  [doi:10.1038/217709a0](https://doi.org/10.1038/217709a0)): Jodrell Bank's
+  [The Sounds of Pulsars](https://www.jb.man.ac.uk/research/pulsar/Education/Sounds/sounds.html)
+  plays the Lovell and Parkes telescopes' recordings, the radio's intensity as
+  sound, and Gérard Grisey's *Le Noir de l'Étoile* (first performed 1991) sets
+  six percussionists against the Vela pulsar and PSR B0329+54, the latter
+  received live. Pulsars computes each pulse instead: the beam's geometry, the
+  plasma's dispersion and scattering, and the telescope's dedispersion.
 * **The sound of the Big Bang.** M. Whittle's *Big Bang Acoustics*
   (University of Virginia, from 2004) plays the microwave background's
   power spectrum as sound, and the first million years as a falling roar;
@@ -784,6 +835,18 @@ data):
   and Kepler search for, is drawn, not played; TESS plays it as the
   waveform, each orbit one cycle, with the limb darkening and photon noise
   that shape what the satellite records.
+* **The Earth's free oscillations as sound.** Seismic records have long been
+  sped up into sound: SeismoDome (B. Holtzman and others, Lamont-Doherty,
+  from 2014) plays great quakes' records in a planetarium, and NASA did the
+  same with InSight's marsquakes. The Ringing Planets plays instead the
+  normal modes themselves, solved from PREM (A. M. Dziewonski & D. L.
+  Anderson, *Phys. Earth Planet. Inter.* **25**, 297 (1981),
+  [doi:10.1016/0031-9201(81)90046-7](https://doi.org/10.1016/0031-9201(81)90046-7))
+  and from models of Mars and the Moon, and rung by a moment tensor as
+  F. Gilbert (*Geophys. J. R. Astr. Soc.* **22**, 223 (1971),
+  [doi:10.1111/j.1365-246X.1971.tb03593.x](https://doi.org/10.1111/j.1365-246X.1971.tb03593.x))
+  rang them; MINEOS (G. Masters, J. Woodhouse and F. Gilbert; CIG) is the
+  standard code for the same modes.
 * **Particle detectors as instruments.** Collider Showers rings a calorimeter's crystals by
   the heat a shower leaves (the thermo-acoustic effect); CUORE plays the heat itself, as a
   cryogenic calorimeter reads it: the CUORE Collaboration's electro-thermal model of its

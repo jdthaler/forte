@@ -55,6 +55,9 @@ FORTE_EXPORT int hydrogen_gas_display(int gas, double *out) {
   return (int)a.display.size();
 }
 FORTE_EXPORT double hydrogen_gas_ref_hz(int gas) { return gasOf((GasKind)gas).refHz; }
+// H₂: where the atoms beside the molecules start, among its states and among its lines
+FORTE_EXPORT int hydrogen_gas_atom_states(int gas) { return gasOf((GasKind)gas).atomStates; }
+FORTE_EXPORT int hydrogen_gas_atom_lines(int gas) { return gasOf((GasKind)gas).atomLines; }
 // A line's rate: the sum of its transitions' A (s⁻¹; helium's: a term's average over its J levels).
 FORTE_EXPORT double hydrogen_gas_line_a(int gas, int line) {
   const Gas &a = gasOf((GasKind)gas);
@@ -103,6 +106,8 @@ FORTE_EXPORT double hydrogen_step_line(const double *P, int line, const double *
 FORTE_EXPORT double hydrogen_step(const double *P, int n, int m, const double *t, int count, double *out) { return hydrogen_step_line(P, lineOf(n, m), t, count, out); }
 // The glow's time grid's end (s): past it the step response is its steady value.
 FORTE_EXPORT double hydrogen_glow_end(const double *P) { return glowOf(P).end(); }
+// How many lines the glow for P keeps (every line it can play).
+FORTE_EXPORT int hydrogen_glow_kept(const double *P) { return (int)glowOf(P).kept.size(); }
 FORTE_EXPORT double hydrogen_glow_end_slow(const double *P) { Glow &g = glowOf(P); return g.slow() ? g.end(1) : 0; }
 // Line (n, m)'s natural FWHM in the glow for P (Hz, the atom's time).
 FORTE_EXPORT double hydrogen_natural_width_line(const double *P, int line) {

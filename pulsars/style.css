@@ -1,0 +1,9 @@
+/* The page's own palette: the radio beam's blue, the lower half of the band amber. */
+:root {
+  --accent: #7fc7ff;
+  --accent-2: #ffb470;
+  --accent-ink: #04121f;
+}
+#beam { height: 300px; }
+#profile { height: 260px; }
+#sweep { height: 240px; }

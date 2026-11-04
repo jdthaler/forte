@@ -1,10 +1,11 @@
 {
   "slug": "hydrogen",
   "params": [
-    {"id":"gas","kind":"choice","def":"hydrogen","options":["hydrogen","helium"]},
+    {"id":"gas","kind":"choice","def":"hydrogen","options":["hydrogen","helium","molecular"]},
     {"id":"excitation","kind":"choice","def":"discharge","options":["discharge","recombination","laser","thermal"]},
     {"id":"temperature","kind":"continuous","min":1000,"max":100000,"def":20000,"step":0,"log":true},
     {"id":"laserLevel","kind":"continuous","min":2,"max":30,"def":5,"step":1,"log":false},
+    {"id":"atoms","kind":"continuous","min":0,"max":100,"def":20,"step":1,"log":false},
     {"id":"caseB","kind":"toggle","def":false},
     {"id":"density","kind":"continuous","min":100,"max":1000000000000000000,"def":100000000,"step":0,"log":true},
     {"id":"glow","kind":"continuous","min":5,"max":2000,"def":60,"step":0,"log":true},
@@ -49,6 +50,11 @@
     {"name":"Helium, a hot discharge: the singlets catch up","values":{"gas":"helium","temperature":80000}},
     {"name":"Helium's infrared: 1083 nm and 2058 nm","values":{"gas":"helium","window":"infrared"}},
     {"name":"Helium's fine structure, 12 × the real α","values":{"gas":"helium","alphaScale":12,"slowmo":300000000}},
-    {"name":"Helium, laser to 3¹P","values":{"gas":"helium","excitation":"laser","laserLevel":3,"window":"all"}}
+    {"name":"Helium, laser to 3¹P","values":{"gas":"helium","excitation":"laser","laserLevel":3,"window":"all"}},
+    {"name":"Molecular hydrogen: a starlit cloud's infrared glow","values":{"gas":"molecular","excitation":"recombination","caseB":true,"window":"infrared","atoms":0}},
+    {"name":"Molecular hydrogen: a shock at 2000 K","values":{"gas":"molecular","excitation":"thermal","temperature":2000,"window":"infrared","atoms":0}},
+    {"name":"Molecular hydrogen: the Fulcher band of a hydrogen tube","values":{"gas":"molecular","window":"visible"}},
+    {"name":"Molecular hydrogen: the Lyman and Werner bands","values":{"gas":"molecular","window":"ultraviolet","atoms":0}},
+    {"name":"Molecular hydrogen, laser to B v′ = 3","values":{"gas":"molecular","excitation":"laser","laserLevel":5,"window":"all"}}
   ]
 }

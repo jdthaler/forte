@@ -68,6 +68,7 @@ export async function wasmModel() {
     },
     glowEnd(P) { return x.hydrogen_glow_end(put(P)); },
     glowEndSlow(P) { return x.hydrogen_glow_end_slow(put(P)); },
+    glowKept(P) { return x.hydrogen_glow_kept(put(P)); },
     naturalWidth(P, n, m) { return x.hydrogen_natural_width(put(P), n, m); },
     // the gases (index: the gas parameter's options), each line of one by its index: its ratio to the
     // reference line, wavelength, upper and lower state, clock (1: the slow ladder) and Case B
@@ -87,7 +88,7 @@ export async function wasmModel() {
         states.push({ E, weight, code, gamma });
       }
       const nd = x.hydrogen_gas_display(g, at), display = read(at, nd);
-      return (gases[g] = { name, lines, states, display, refHz: x.hydrogen_gas_ref_hz(g) });
+      return (gases[g] = { name, lines, states, display, refHz: x.hydrogen_gas_ref_hz(g), atomStates: x.hydrogen_gas_atom_states(g), atomLines: x.hydrogen_gas_atom_lines(g) });
     },
     // the same as step, naturalWidth and components, by line index (for any gas)
     stepLine(P, line, ts) {

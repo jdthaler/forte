@@ -33,6 +33,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Hydraulis](hydraulis/) | Ctesibius's water organ (3rd century BC), the organs of Dion and Aquincum | hand pumps push air through their valves into a bowl standing in water: the hydrostatic head is the wind, capped at the rim where it bubbles out (Minnaert bubbles), the water bouncing on the air shut in the bowl; slides whose holes open as overlapping circles, sprung back; the Pipe Organ's flue pipes on an ancient, nearly constant bore in four ranks, one open and three stopped |
 | ✅ | [Regal](regal/) | the Renaissance reed organ (Praetorius, 1619; Monteverdi's *Orfeo*) | brass tongues as curved cantilevers that roll shut on their shallots (Bernoulli jets, a penalty contact), each reed in its own boot, shallot and short resonator (Kelly–Lochbaum tubes: cylinders, funnels, capped balls); two weighted wedge bellows raised in turn, a tremulant; every reed retuned for its voicing |
 | ✅ | [Clavichord](clavichord/) | the German clavichord of C. P. E. Bach's day (18th century) | a brass tangent strikes the strings and stays on them as the end of the speaking length (a moving boundary driving every partial), held up by the finger's force against the strings' pull: pressure tuning and the Bebung from the stretch, the tangent's give tuned for; the listing damps the afterlengths and stops the string at key-up; double-fretted pairs where the higher tangent wins, 4′ strings in the bass, a modal soundboard |
+| ✅ | [Timpani and Tabla](drums/) | orchestral pedal timpani and the tabla's dayan and bayan | circular membranes solved per azimuthal order (Rayleigh–Ritz on the Bessel modes) with the air on them as a mass and its radiation as their loss, the kettle's air as a spring (Christian et al.), the dayan's loaded syahi that puts nine modes on five harmonics (Raman); felt, wood and fingertip strokes, a resting finger, the heel pressing the bayan's head sharp, the pedal on the pitch-bend wheel |
 
 ### Electric instruments
 
@@ -60,6 +61,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Hurdy-Gurdy](hurdygurdy/) | the French vielle à roue (18th century) | a cranked, rosined wheel bowing every string (implicit stick–slip, as the Viola Organista's): two chanterelles stopped by tangents tuned as the bowed notes sound, four drones on bridges of their own; the trompette's chien, a mass on a one-sided contact with the soundboard lifted by the string once the wheel's drag beats the tirant: a buzz from a threshold worked out from the string, set off by coups of the wrist on the crank |
 | ✅ | [Pyrophone](pyrophone/) | Frédéric Kastner (1873) | flame-driven Rijke tubes on a subcritical Hopf bifurcation: slow self-excited onsets, hysteresis, warm-up drift |
 | ✅ | [Singing Arc](arc/) | William Duddell (1900) | Ayrton's falling arc characteristic with a Mayr-type thermal column driving Duddell's tuned circuit: each note grows at the rate a linear analysis gives and sounds about 1 % below Kelvin's formula; a floor from the hot carbons holds the first kind, a higher re-strike voltage the second; capacitors in parallel on one arc, several lamps, hiss, Simon's talking arc; the arc radiates as a thermophone, ∝ dP/dt |
+| ✅ | [Singing Voice](voice/) | the human voice; Bell Labs' Voder (1939) | Ishizaka and Flanagan's two-mass vocal folds, set flapping by the breath (Bernoulli flow, contact, turbulent breath noise), into a 44-section Kelly–Lochbaum tract whose vowels are fitted to Peterson and Barney's formants, radiating from the lips; each singer tunes their folds' tension by ear and opens the jaw for high notes (formant tuning); the larynx tube's singer's formant |
 
 ### Physical phenomena
 
@@ -77,6 +79,10 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Early Universe](universe/) | the photon–baryon plasma's sound waves, the acoustic peaks of the microwave background, as a key's harmonics: Ma & Bertschinger's equations from adiabatic initial conditions to recombination (Saha, then Peebles's three-level atom), free-streaming neutrinos, Silk damping; checked against Planck 2018's z*, r_s*, k_D and z_eq; a knob per cosmological parameter: baryons make the odd harmonics louder, dark matter sets the radiation driving, neutrinos, helium, the spectral tilt on the mod wheel; listen from the sky (Sachs–Wolfe and Doppler) or inside the plasma, and let the light stream away |
 | ✅ | [Hydrogen Lamp](hydrogen/) | a tube of glowing hydrogen as a keyboard: every key its spectrum, each line at its exact ratio with Hα on the note (Hβ 27/20 above, the Balmer series crowding up to a just minor seventh); Einstein coefficients from the exact wavefunctions for every level to n = 50, the radiative cascade solved in slow motion so the low lines light first and the high ones after, each as wide as its levels' lifetimes make it; a discharge (van Regemorter), a nebula's recombination (Storey & Hummer's Balmer decrement, Cases A and B) or a laser into one level; Stark broadening on the mod wheel to the Inglis–Teller limit, Doppler widths, pitch bend as a redshift, a spectrometer window (visible, ultraviolet, infrared), and a what-if fine-structure constant |
 | ✅ | [Chladni Plate](chladni/) | Chladni's bowed plates (1787): every key a square plate clamped at its centre, its Kirchhoff modes by Rayleigh–Ritz (Ritz's own method for Chladni's square), bowed at its edge by implicit stick–slip friction while two fingers on the figure's nodal lines damp its rivals; the force set from the figure's speaking threshold; sand on the plate gathers on the nodal lines as it plays |
+| ✅ | [Birdsong](birdsong/) | a songbird's syrinx after Mindlin's group: every key a bird whose labia are the normal form of a flow-driven oscillator, tuned by their natural rate; a breath past a Hopf onset (a pure tone growing from nothing) or a saddle-node on the cycle (born at zero frequency, a buzz rich in harmonics); pitch rising with the pressure; trills of mini-breaths, sweeps of tension; a trachea's quarter-wave resonances and a mouth (the OEC) tuned to the note |
+| ✅ | [Ringing Planets](planets/) | the free oscillations of the Earth, Mars and the Moon after a great quake: every key the planet's spheroidal and toroidal normal modes, solved by spectral elements from PREM (within 0.6 % of the measured modes) and from InSight's and Apollo's models, sped up until the football mode ₀S₂ is the note; Q from the rock's shear and bulk losses with its physical dispersion, the spin's Coriolis splitting into beating singlets, a megathrust, strike-slip, normal fault or explosion at any depth exciting each singlet by its strain, the station's distance and direction putting some modes on nodes; heard as the ground's motion, a seismometer, a gravimeter or the horizontal pair in stereo |
+| ✅ | [Pulsars](pulsars/) | spinning neutron stars, every key a pulsar turning at the note: the beam's core and cone from the rotating vector model, as wide as the open field lines at the emission height and capped by the light cylinder, an interpulse from the other pole; on the way here dispersion (4.15 ms × DM / f²) and Bhat et al.'s scattering tails, the band's upper and lower halves in stereo, undedispersed, through a filterbank or coherently dedispersed |
+| ✅ | [Singing Dunes](dunes/) | avalanches down a dune's slip face, each key a sand whose grains shear at the note (f = 0.4·√(g/d), Douady 2006): patches of grains as Kuramoto oscillators pulled into step by the flowing layer above a threshold speed, so a slow slide rumbles and a fast one booms; sorting and water raise the threshold; or, the other theory, a dry layer ringing as a waveguide (Vriend 2007) |
 
 ### Devices built to study physics
 
@@ -150,6 +156,7 @@ is the mod wheel's control wherever the instrument has one.
 | Hydraulis | Open rank · Stopped rank · Stopped rank, octave above | Gurgle | Pumping effort |
 | Regal | Tremulant rate · Curve: tip off the shallot · Tongue Q (mechanical) | Resonator length | Wind pressure |
 | Clavichord | Bebung rate · Listing cloth · Unison spread | Finger pressure on the key | Bebung |
+| Timpani and Tabla | Air on the head · Listening angle · Heel push | Resting finger | Strike point |
 | Electric Grand | Bass · Middle · Treble | Tremolo rate | Tremolo depth |
 | Tonewheel Organ | 16' drawbar · 8' drawbar · 4' drawbar | Tube drive | Expression pedal |
 | Tine Piano | Amp drive · Speaker top end · Tip hardness | Stereo vibrato rate | Stereo vibrato depth |
@@ -166,6 +173,7 @@ is the mod wheel's control wherever the instrument has one.
 | Hurdy-Gurdy | Coup strength · Wheel pressure (string height) · Bounce on the soundboard | Tirant (chien pressure) | Crank speed |
 | Pyrophone | Flame lag τ · Flame turbulence · Listening point | Flame position x_f / L | Flame power K |
 | Singing Arc | Hissing · Column time constant τ · Listening distance | Electrode gap | Arc current |
+| Singing Voice | Lung pressure · Folds apart at rest (breathiness) · Vibrato depth | Larynx tube (singer's formant) | Vowel |
 | Huygens Keyboard | Rail-sag coupling · Random mistuning · Resonant body | Tone | Pulse coupling |
 | Gong Keyboard | Mallet mass · Hand damping on release · Microphone distance | Head stiffness | Strike point |
 | Black-Hole Keyboard | Mass ratio q · Viewing inclination ι · Overtone strength | Tone | Spin |
@@ -184,6 +192,10 @@ is the mod wheel's control wherever the instrument has one.
 | ABRACADABRA | Stream speed · Stream · SQUID noise | Coupling to photons | Halo speed |
 | TESS | Temperature · Star radius · Orbit at A4 | Planet radius | Impact parameter |
 | Chladni Plate | Bow speed · Rosin · Ring time | Bow force (× threshold) | Bow shift along the edge |
+| Birdsong | Air sac pressure · Tension sweep · Trachea length | Labial tension | Syllable rate |
+| Ringing Planets | Depth · Distance · Direction from the quake | Attenuation | Spin |
+| Pulsars | Magnetic inclination · Sightline · Pulse-to-pulse jitter | Observing frequency | Dispersion measure |
+| Singing Dunes | Sorting · Water in the sand · Avalanche speed | Collision length | Push |
 | NMR Spin Echo | Pulse angle · T₂ · Receiver noise | Echo time | Field inhomogeneity (shim) |
 
 </details>
