@@ -12,7 +12,7 @@ import { MotionView, PickupView, SpectrumView, MODE_COLORS, modeKind } from './r
 import { SpectrogramView } from '../../shared/views.js';
 import { createKeyboard } from '../../shared/keyboard.js';
 import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto, pageMpe, controllersOf, controlled, tellFader, wheelValue } from '../../shared/midi.js';
-import { controlOwns } from '../../shared/focus.js';
+import { controlOwns, unfocus } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
 import { connectQuality, qualityControl } from '../../shared/quality.js';
@@ -233,7 +233,7 @@ function buildControls() {
         input = document.createElement('select');
         input.id = `p-${p.id}`;
         for (const [k, name] of p.options) input.add(new Option(name, k));
-        input.addEventListener('change', () => { setParam(p.id, p.options[input.selectedIndex][0]); input.blur(); });
+        input.addEventListener('change', () => { setParam(p.id, p.options[input.selectedIndex][0]); unfocus(input); });
       } else {
         wrap.innerHTML = `<div class="row"><label for="p-${p.id}">${p.label}</label><span class="val"></span></div>`;
         input = document.createElement('input');
@@ -256,7 +256,7 @@ function buildControls() {
     if (ps.value === '') return;
     const keep = Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]]));
     setAll({ ...DEFAULTS, ...keep, ...PRESETS[+ps.value].p });
-    ps.blur();
+    unfocus(ps);
   });
   $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }); $('#preset').value = ''; });
 }
@@ -392,12 +392,12 @@ function toast(msg) {
   const t = $('#toast'); t.textContent = msg; t.hidden = false;
   clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3500);
 }
-$('#start').addEventListener('click', (e) => { startAudio(); e.currentTarget.blur(); });
-$('#midi-btn').addEventListener('click', (e) => { initMIDI(); e.currentTarget.blur(); });
+$('#start').addEventListener('click', (e) => { startAudio(); unfocus(e.currentTarget); });
+$('#midi-btn').addEventListener('click', (e) => { initMIDI(); unfocus(e.currentTarget); });
 resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
-$('#panic').addEventListener('click', (e) => { panic(); e.currentTarget.blur(); });
-$('#replay').addEventListener('click', (e) => { motion.replay(); e.currentTarget.blur(); });
-$('#speed').addEventListener('change', (e) => { motion.speed = +e.target.value; motion.replay(); e.target.blur(); });
+$('#panic').addEventListener('click', (e) => { panic(); unfocus(e.currentTarget); });
+$('#replay').addEventListener('click', (e) => { motion.replay(); unfocus(e.currentTarget); });
+$('#speed').addEventListener('change', (e) => { motion.speed = +e.target.value; motion.replay(); unfocus(e.target); });
 
 buildControls();
 for (const id of controls.keys()) refreshControl(id);

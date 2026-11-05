@@ -5,6 +5,7 @@ import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/v
 import { strikeSpeed, STRENGTH, REST_GAP, PRESS_MAX } from './clavier-params.js';
 import { INSTRUMENT } from './clavier-instrument.js';
 import { wasmModel } from './clavier-wasm.js';
+import { unfocus } from '../../shared/focus.js';
 
 // The views draw what the engine plays: its model, from the same C++, built as WebAssembly; the
 // slow motion runs the engine itself.
@@ -119,8 +120,8 @@ $('#comb-legend').innerHTML = `<span><i style="background:${css('--accent')}"></
 // replay the string's shape slowly.
 
 let sim = null, simT0 = performance.now(), speed = 0.005, simWant = false, simQueued = false;
-$('#speed').addEventListener('change', (e) => { speed = +e.target.value; simT0 = performance.now(); e.target.blur(); });
-$('#replay').addEventListener('click', (e) => { simT0 = performance.now(); e.currentTarget.blur(); });
+$('#speed').addEventListener('change', (e) => { speed = +e.target.value; simT0 = performance.now(); unfocus(e.target); });
+$('#replay').addEventListener('click', (e) => { simT0 = performance.now(); unfocus(e.currentTarget); });
 
 // The simulation costs up to ~20 ms (a bass note), so it runs only while the
 // view is on screen, and then when the main thread is idle (the view's own
