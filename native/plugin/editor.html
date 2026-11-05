@@ -972,7 +972,13 @@ function siteForte(slug) {
     const from = (p, t) => (p.type === 'select' ? p.options[Math.round(t)][0] : p.type === 'checkbox' ? t > 0.5 : p.log ? p.min * (p.max / p.min) ** t : p.min + (p.max - p.min) * t);
     list.forEach((p, i) => { params[i].def = along(p, p.def); });
     e.setParams(P);
-    const sent = list.map(() => NaN), keys = new Map(), heard = [], raw = [];
+    const sent = list.map(() => NaN), keys = new Map(), heard = [], raw = [], rawData = [];
+    // what the plugin copies out of the engine for its views (native/instruments/<slug>/<slug>-views.cpp),
+    // laid out as there, here taken from what the page's translator reads of the engine's memory
+    const ATTACH = {
+      huygens: { listen: (on) => x.huygens_listen(e.e, on ? 1 : 0), data: (s) => [s.fires.length, s.osc.length, s.t, s.hold, ...s.fires, ...s.osc] },
+      springs: { data: (s) => s.data },
+    }[slug];
     let pedal = false, viewsOn = false;
     const L = new Float32Array(128), R = new Float32Array(128);
     let t0 = performance.now(), done = 0;
@@ -983,11 +989,17 @@ function siteForte(slug) {
         if (viewsOn) for (let i = 0; i < 128; i++) heard.push(0.5 * (L[i] + R[i]));
         for (let m; (m = x.forte_message(e.h));) {
           const v = new DataView(x.memory.buffer, m, 128), n = v.getUint16(4, true);
-          if (viewsOn) raw.push([v.getUint16(0, true), v.getInt16(2, true), ...new Float32Array(x.memory.buffer, m + 8, n)]);
+          if (!viewsOn) continue;
+          const r = [v.getUint16(0, true), v.getInt16(2, true), ...new Float32Array(x.memory.buffer, m + 8, n)];
+          const pm = ATTACH ? E.translate?.({ type: r[0], key: r[1], values: Float32Array.from(r.slice(2)) }, e) : null;
+          if (pm) rawData.push([raw.length, f64(ATTACH.data(pm))]);
+          raw.push(r);
         }
       }
     }, 10);
-    const b64 = (a) => { const b = new Uint8Array(Float32Array.from(a).buffer); let t = ''; for (let i = 0; i < b.length; i += 0x8000) t += String.fromCharCode(...b.subarray(i, i + 0x8000)); return btoa(t); };
+    const bytes = (b) => { let t = ''; for (let i = 0; i < b.length; i += 0x8000) t += String.fromCharCode(...b.subarray(i, i + 0x8000)); return btoa(t); };
+    const b64 = (a) => bytes(new Uint8Array(Float32Array.from(a).buffer));
+    function f64(a) { return bytes(new Uint8Array(Float64Array.from(a).buffer)); }
     const text = (p, v) => (p.type === 'select' ? p.options.find((o) => o[0] === v)?.[1] ?? '' : p.type === 'checkbox' ? (v ? 'on' : 'off') : p.fmt ? p.fmt(v) : String(v));
     return async (m, ...a) => {
       if (m === 'describe') return { slug, name: I.name || slug, version: 'site', accent: getComputedStyle(document.documentElement).getPropertyValue('--accent'), keyLo: I.range?.[0] ?? 21, keyHi: I.range?.[1] ?? 108, space: I.space || '', presets: -1, page: `${slug}/index.html`, params };
@@ -995,12 +1007,12 @@ function siteForte(slug) {
       if (m === 'note') { if (a[1] > 0) { keys.set(a[0], a[1]); e.noteOn(a[0], a[1]); } else { keys.delete(a[0]); e.noteOff(a[0], -1); } return null; }
       if (m === 'pedal') { pedal = !!a[0]; e.setSustain?.(pedal); return null; }
       if (m === 'panic') { keys.clear(); e.allNotesOff?.(); return null; }
-      if (m === 'views') { viewsOn = !!a[0]; heard.length = raw.length = 0; return { fs }; }
+      if (m === 'views') { viewsOn = !!a[0]; heard.length = raw.length = rawData.length = 0; ATTACH?.listen?.(viewsOn); return { fs }; }
       if (m === 'poll') {
         const p = [];
         list.forEach((q, i) => { const v = native(q, P[q.id]); if (v !== sent[i]) { sent[i] = v; p.push([i, along(q, P[q.id]), text(q, P[q.id]), v]); } });
         const r = { p, keys: [...keys.keys()], vel: [...keys.values()], pedal };
-        if (viewsOn) { r.m = raw.splice(0); r.s = b64(heard.splice(0)); }
+        if (viewsOn) { r.m = raw.splice(0); r.md = rawData.splice(0); r.s = b64(heard.splice(0)); }
         return r;
       }
       if (m === 'presets' || m === 'scalas') return { folder: '', list: [] };

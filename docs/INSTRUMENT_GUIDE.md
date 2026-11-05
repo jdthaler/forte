@@ -612,7 +612,10 @@ to 30 float32 values); its `<slug>-wasm.js` turns them back into the page's mess
 several into one where a message is bigger (`wasmEngine(I, { messages(m, engine) })`, which
 returns null until it has one). The class keeps that function as `translate`, so the plugin's
 window turns the plugin's messages into the same ones for its views (`shared/in-plugin.js`); a
-translator that reads the engine's memory there gets nothing. A test suite that reaches into its engine (the bubble organ's
+translator that reads the engine's memory finds that data in the message's `data` instead (as
+float64s, in the order it chooses), which the plugin copies out of the engine with the message:
+the instrument's `native/instruments/<id>/<id>-views.cpp`, given to `forte_add_plugin` as
+`VIEWS` (`native/plugin/site.h`; Huygens's and the springs' are the examples). A test suite that reaches into its engine (the bubble organ's
 log, pool and constructor options) gets that through exports that take
 `forte_engine(handle)`: see `bubbles/src/bubbles-wasm.js`. Messages carry float32, so a page
 that compares a value from one with its own parameter maps it back (the carillon's wrapper

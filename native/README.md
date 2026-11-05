@@ -156,7 +156,10 @@ clap-wrapper builds the VST3, AU v2 and standalone from the CLAP. Each plugin:
   into a gzipped tar linked in, `site.h`) and serves them to the web view from memory
   (`editor.cpp`), with the window's own page at `/`. While the views show, `poll` also brings
   the engine's messages (`m`) and its sound before the chain (`s`, base64 float32), and the
-  host's notes come with their velocities (`vel`).
+  host's notes come with their velocities (`vel`). An instrument whose page's translator reads
+  the engine's memory gives `forte_add_plugin` a `VIEWS` source (`<slug>-views.cpp`, the plugins'
+  only) whose `forte::Views` copies that data out on the audio thread with its message, and
+  turns on what the engine keeps for its views (`site.h`); it comes in `poll`'s `md`.
 
 Identifiers: CLAP `net.jthaler.forte.<slug>`, vendor Forte, AU manufacturer `Frte` with the
 instrument's subtype from the registry (`plugin.code`), VST3 class id from `ids.json`.

@@ -12,7 +12,7 @@ namespace forte {
 
 // accent: the window's colour, "#rrggbb" (the instrument's page's), or "" for Forte's; site: its
 // page, for the window's views (site.h), or null for none
-bool entryInit(const InstrumentInfo &info, const char *accent = "", const Site *site = nullptr);
+bool entryInit(const InstrumentInfo &info, const char *accent = "", const Site *site = nullptr, const Views *views = nullptr);
 const void *entryFactory(const char *id);
 
 // The Forte app: every instrument in one plugin (net.jthaler.forte.suite), switched from the
@@ -22,6 +22,7 @@ struct SuiteEntry {
   const InstrumentInfo &(*info)();
   const char *accent;
   const Site *site; // its page (site.h), or null
+  const Views *views; // what its views read beyond its messages (site.h), or null
 };
 bool entrySuite(const SuiteEntry *instruments, int count, const char *version);
 
