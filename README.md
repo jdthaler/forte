@@ -37,6 +37,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Timpani and Tabla](drums/) | orchestral pedal timpani and the tabla's dayan and bayan | circular membranes solved per azimuthal order (Rayleigh–Ritz on the Bessel modes) with the air on them as a mass and its radiation as their loss, the kettle's air as a spring (Christian et al.), the dayan's loaded syahi that puts nine modes on five harmonics (Raman); felt, wood and fingertip strokes, a resting finger, the heel pressing the bayan's head sharp, the pedal on the pitch-bend wheel |
 | ✅ | [Marimba and Xylophone](marimba/) | the five-octave concert marimba (Yamaha, Keiko Abe, 1984) and the orchestral xylophone (Deagan) | rosewood bars solved as Timoshenko beams and undercut by finite elements to 1 : 4 : 10 (marimba) or 1 : 3 (xylophone); a stopped tube under each bar whose two resonances share the gap's air with bar modes 1 and 2 (the twelfth speaks through an off-centre tube); wood, cord and radiation losses; yarn to plastic mallets (power-law contact), rolls |
 | ✅ | [Gamelan](gamelan/) | the gamelan of Java and Bali: gangsa, saron, bonang, kempul and gong ageng | thick bronze bars as Timoshenko beams that bend and twist (Huang's frequency equation), a gangsa's bar and its bamboo tube as two coupled oscillators; bossed gongs ringing the modes measured by laser vibrometry (Perrin et al.; Krueger et al.), whose curved face makes the note's second harmonic beat with the second round mode (a gong ageng's ombak); pélog and sléndro on the white and black keys; Balinese pairs tuned a few hertz apart that beat (ombak); the player's damping hand |
+| ✅ | [Cimbalom](cimbalom/) | Schunda's concert cimbalom (Budapest, 1874) and the hammered dulcimer | hand-held hammers thrown at the strings, a light head on a flexible stick (Hunt–Crossley contact with cotton, leather or bare wood faces); courses of stiff strings slightly out of tune, coupled at the bridge (Weinreich's two-stage decay and beats); the dulcimer's strings divided 2 : 3 by its treble bridge, both sides ringing; a damper bar and sympathetic strings; a hand tremolo; a modal soundboard |
 
 ### Electric instruments
 
@@ -164,6 +165,7 @@ is the mod wheel's control wherever the instrument has one.
 | Timpani and Tabla | Air on the head · Listening angle · Heel push | Resting finger | Strike point |
 | Marimba and Xylophone | Mallet hardness · Bar–tube gap · Roll speed | Strike point | Roll |
 | Gamelan | Mallet softness · Strike point (bars) · Strike point (gongs) | Off the long axis | Paired tuning (ombak) |
+| Cimbalom | Hammer mass · Sympathetic strings · Unison spread | Tremolo | Strike point |
 | Electric Grand | Bass · Middle · Treble | Tremolo rate | Tremolo depth |
 | Tonewheel Organ | 16' drawbar · 8' drawbar · 4' drawbar | Tube drive | Expression pedal |
 | Tine Piano | Amp drive · Speaker top end · Tip hardness | Stereo vibrato rate | Stereo vibrato depth |

@@ -330,6 +330,17 @@ requests.
   beams (T. C. Huang's equation, 1961), couples them to their tubes, rings
   the measured gongs with their faces' nonlinearity, and pairs the
   instruments; its sources are in `gamelan/README.md`.
+* **The cimbalom and the hammered dulcimer.** D. R. Peterson, T. D. Rossing
+  and G. H. Canfield described the hammered dulcimer's strings, bridges
+  and hammers (*J. Acoust. Soc. Am.* **95**, 3002, 1994; Peterson, **120**,
+  3119, 2006); G. Weinreich explained the coupled unisons' beats and
+  two-stage decay ("Coupled piano strings", *J. Acoust. Soc. Am.* **62**,
+  1474–1484, 1977); the hammer is K. H. Hunt and F. R. E. Crossley's
+  contact (1975) as A. Chaigne and A. Askenfelt used it for the piano
+  (1994). Modartt sells a physically modelled cimbalom for Pianoteq
+  (2009). The Cimbalom plays its thrown hammers, coupled courses, divided
+  dulcimer strings, dampers and sympathetic strings from those; its
+  sources are in `cimbalom/README.md`.
 
 ## 2. Techniques Forte uses, and where they come from
 
@@ -551,7 +562,7 @@ Wikipedia.
     harpsichords ([harpsichord](https://www.modartt.com/harpsichord));
     vibraphones ([vibes](https://www.modartt.com/vibes)); celesta,
     glockenspiel and toy piano ([Celeste](https://www.modartt.com/celeste));
-    tubular bells, church bells and carillons
+    a cimbalom (2009); tubular bells, church bells and carillons
     ([free instruments](https://www.modartt.com/pianoteq_free)); and, in
     2026, the Champagne Flute, a physical model of champagne glasses.
     [Pianoteq](https://www.modartt.com/pianoteq) ·
