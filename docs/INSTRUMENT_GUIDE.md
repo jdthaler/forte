@@ -234,7 +234,8 @@ Rules of thumb:
 ```
 
 `type: 'select'` with `options: [[value, label], …]`, or `type: 'checkbox'`.
-`showIf: (P) => …` hides a control when it is irrelevant. End `GROUPS` with `TUNING_GROUP`
+`showIf: (P) => …` hides a control when it is irrelevant; a group whose controls can all be
+hidden says so, and its `empty: '…'` says how to bring them back (the arc's Talking arc). End `GROUPS` with `TUNING_GROUP`
 (`shared/tuning.js`: pitch, temperament, its root and the custom cents) and keep its ids
 (`...TUNING_KEEP` in `keep`), and make the model's pitch target each key's equal-tempered
 frequency times `tuningOf(P).ratio(key)` (the generated `<slug>-params.h`; see The native port).

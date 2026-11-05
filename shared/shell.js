@@ -13,12 +13,13 @@
 // Config: the instrument's descriptor (<slug>/src/<slug>-instrument.js: id, groups, presets, keep,
 // range, space, modWheel, wasm, noteData, chain), spread in, plus the page's own:
 //   id            instrument slug (localStorage key)
-//   groups        parameter groups: [{ title, open?, params: [{ id, label, min, max, def, step?, log?,
+//   groups        parameter groups: [{ title, open?, empty?, params: [{ id, label, min, max, def, step?, log?,
 //                 fmt?, hint?, type?: 'select' | 'checkbox', options?: [[value, name]…], showIf?(P),
 //                 perform?, strip? }] }]   perform: true marks a control you'd play with (the plugins'
 //                 window shows those first); strip: true puts it in the page's strip right above the
 //                 keys, which keeps to the few that matter mid-phrase (volume, the computer keys'
-//                 velocity, a pedal): the rest stay in the Controls panel, in their groups
+//                 velocity, a pedal): the rest stay in the Controls panel, in their groups; empty: what
+//                 the group says while showIf hides every one of its controls
 //   presets       [{ name, p: { …overrides } }]   (and your own, and links: shared/user-presets.js)
 //   keep          param ids kept when switching presets (e.g. ['volume', 'room'])
 //   range         [lowest MIDI key, highest MIDI key]   (default [36, 96])
@@ -331,6 +332,7 @@ export function createShell(cfg) {
     if (p.step) v = Math.round(v / p.step) * p.step;
     return Math.min(p.max, Math.max(p.min, v));
   };
+  const groupNotes = [];
   for (const g of cfg.groups) {
     const det = document.createElement('details');
     det.className = 'group'; det.open = g.open !== false;
@@ -369,6 +371,12 @@ export function createShell(cfg) {
       det.appendChild(wrap);
       controls.set(p.id, { p, input, val, wrap, face });
     }
+    // a group whose every control is hidden by the others' settings says so, not just its title
+    const none = document.createElement('p');
+    none.className = 'muted group-empty'; none.hidden = true;
+    none.textContent = g.empty ?? 'Nothing to set here with the other settings as they are.';
+    det.appendChild(none);
+    groupNotes.push([none, g.params.map((p) => p.id)]);
     $('#groups').appendChild(det);
   }
   qualityControl(); // the device's Quality, after the instrument's groups
@@ -396,7 +404,10 @@ export function createShell(cfg) {
     }
     if (shell.base + 11 < LO || shell.base > HI - 12) shiftOctave(Math.min(Math.ceil(LO / 12) * 12, Math.max(LO, HI - 12)) - shell.base);
   };
-  const refreshVisibility = () => { for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(shell.P) : false; };
+  const refreshVisibility = () => {
+    for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(shell.P) : false;
+    for (const [note, ids] of groupNotes) note.hidden = ids.some((id) => !controls.get(id)?.wrap.hidden);
+  };
   shell.setParam = (id, v, dragging = false) => {
     if (shell.P[id] === v) return;
     shell.P[id] = v;
