@@ -63,7 +63,7 @@ Every other idea only adds, and can come before or after 1.0.
 | Foot controller (a Roland FC-300) | S–M | Done, for the next release: on every page and plugin, the volume (CC7) and expression (CC11) pedals turn the instrument down, CC80, 81 and 82 are the sustain, sostenuto and soft pedals, and a program change plays a preset; the Electric Grand, Tine and Reed Pianos put their tremolo on the mod wheel (the FC-300's EXP 2). Not yet tried on a real FC-300. A MIDI learn, for pedals set to other CCs, is not done. |
 | Alternative tunings and temperaments | M | Done, for the next release: a Tuning group on every page and plugin: nine pitch standards (A = 392 to 466 Hz), equal, meantone (¼ and ⅙ comma), Werckmeister III, Kirnberger III, Vallotti, Young, Pythagorean and just on any root, and a custom temperament a Scala file can fill. Equal at 440 Hz, the default, sounds as before. |
 | Transpose and octave controls on every page and plugin | S | |
-| Split and layer two instruments | M | Most useful in the Forte app and on the site. |
+| Split and layer two instruments | M | In the Forte app, for the next release: **+** beside the Instrument menu layers a second instrument or splits the keys with it. The site next. |
 
 ### Sound
 
@@ -83,7 +83,7 @@ Every other idea only adds, and can come before or after 1.0.
 | Works offline, installable on phones | S–M | A service worker; the manifest already exists. |
 | Demo songs played from MIDI files | M | A listen button per instrument, and drag and drop a `.mid` to play it. |
 | A guided tour of each instrument's physics | M | Done, for the next release: *Tour* in the header, a few steps per instrument (`shared/tour.js`, `<slug>-tour.js`). |
-| Accessibility pass | M | Keyboard focus, screen-reader labels, reduced motion. |
+| Accessibility pass | M | Done, for the next release: every control named for screen readers (symbol buttons, the views' canvases, sliders' values as shown, hints read after a control's name), keyboard focus kept after Enter or Space, a focus ring everywhere, and with Reduce Motion the views step four times a second and nothing slides. The page checks fail on an unnamed control. |
 | Search and filter on the front page | S | |
 
 ### The plugins and the app

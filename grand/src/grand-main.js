@@ -10,6 +10,7 @@ import { SpectrumView, SpectrogramView, fit, css, animate } from '../../shared/v
 import { INSTRUMENT } from './grand-instrument.js';
 import { wasmModel } from './grand-wasm.js';
 import { tuningRatio } from '../../shared/tuning.js';
+import { unfocus } from '../../shared/focus.js';
 
 const model = await wasmModel();
 const MODE_BUDGET = 4000; // the engine's default oscillator budget (grand-engine.h)
@@ -142,8 +143,8 @@ function update() {
 
 // ---- slow motion ------------------------------------------------------------
 let speed = 0.005;
-$('#speed').addEventListener('change', (e) => { speed = +e.target.value; t0 = performance.now(); e.target.blur(); });
-$('#replay').addEventListener('click', (e) => { t0 = performance.now(); e.currentTarget.blur(); });
+$('#speed').addEventListener('change', (e) => { speed = +e.target.value; t0 = performance.now(); unfocus(e.target); });
+$('#replay').addEventListener('click', (e) => { t0 = performance.now(); unfocus(e.currentTarget); });
 
 const motionCanvas = $('#motion'), weightsCanvas = $('#weights');
 animate(() => {
