@@ -246,6 +246,43 @@ TEST("plugin: the Preset parameter applies a preset, keeping the kept parameters
   for (auto &e : ev.out) told |= e.param_id == in.id("Ring time") && e.value == 6;
   CHECK(told);
 }
+TEST("plugin: Morph takes every parameter part way from one preset to another, keeps the kept ones and tells the host") {
+  Instance in(48000);
+  CHECK(in.value("Morph from") == 0 && in.value("Morph to") == 1 && in.value("Morph") == 0); // Default settings to the first preset
+  Events ev;
+  ev.param(0, in.id("Volume"), 1.5);
+  ev.param(10, in.id("Morph"), 0.5);   // Ring time 1 s to "Long ring"'s 6 s, a log parameter: by equal ratios
+  in.run(256, 128, ev);
+  CHECK(std::fabs(in.value("Ring time") - std::sqrt(6.0)) < 1e-9);
+  CHECK(std::fabs(in.value("Volume") - 1.5) < 1e-12); // kept
+  bool told = false;
+  for (auto &e : ev.out) told |= e.param_id == in.id("Ring time") && std::fabs(e.value - std::sqrt(6.0)) < 1e-9;
+  CHECK(told);
+  Events end;
+  end.param(0, in.id("Morph"), 1);     // all the way: the preset itself, and the Preset menu names it
+  in.run(128, 128, end);
+  CHECK(std::fabs(in.value("Ring time") - 6) < 1e-12 && in.value("Preset") == 1);
+  Events back;
+  back.param(0, in.id("Morph"), 0);
+  in.run(128, 128, back);
+  CHECK(std::fabs(in.value("Ring time") - 1) < 1e-12 && in.value("Preset") == 0);
+  // choosing a preset: where Morph ends puts it at 100 %; any other is where it starts now, at 0 %
+  Events to;
+  to.param(0, in.id("Preset"), 1);
+  in.run(128, 128, to);
+  CHECK(in.value("Morph") == 1 && in.value("Morph from") == 0);
+  Events from;
+  from.param(0, in.id("Morph to"), 0);
+  from.param(1, in.id("Preset"), 1);
+  in.run(128, 128, from);
+  CHECK(in.value("Morph from") == 1 && in.value("Morph") == 0 && std::fabs(in.value("Ring time") - 6) < 1e-12);
+  char text[64];
+  CHECK(in.params->value_to_text(in.p, in.id("Morph"), 0.4, text, sizeof text) && std::string(text) == "40 %");
+  CHECK(in.params->value_to_text(in.p, in.id("Morph to"), 1, text, sizeof text) && std::string(text) == "Long ring");
+  clap_param_info_t info{};
+  for (uint32_t i = 0; i < in.params->count(in.p); i++) if (in.params->get_info(in.p, i, &info) && info.id == in.id("Morph")) break;
+  CHECK(info.flags & CLAP_PARAM_IS_AUTOMATABLE);
+}
 TEST("plugin: the mod wheel moves its parameter from the default (at rest) to the maximum") {
   Instance in(48000);
   Events ev;
@@ -348,6 +385,7 @@ TEST("plugin: state saved and loaded into a new instance, by parameter id") {
   {
     Instance a(48000);
     Events ev;
+    ev.param(0, a.id("Morph"), 0.25);    // then a value moved by hand after it
     ev.param(0, a.id("Ring time"), 3.5);
     ev.param(0, a.id("Volume"), 0.25);
     ev.param(0, a.id("Quality"), 1);
@@ -367,6 +405,7 @@ TEST("plugin: state saved and loaded into a new instance, by parameter id") {
   CHECK(std::fabs(b.value("Ring time") - 3.5) < 1e-12);
   CHECK(std::fabs(b.value("Volume") - 0.25) < 1e-12);
   CHECK(b.value("Quality") == 1); // the project keeps its Quality
+  CHECK(b.value("Morph") == 0.25 && std::fabs(b.value("Ring time") - 3.5) < 1e-12); // Morph as it was, without moving the values saved after it
 }
 TEST("plugin: values read as the page shows them, and typed values are understood") {
   Instance in(48000);

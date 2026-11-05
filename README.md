@@ -274,6 +274,13 @@ these settings* makes a link that opens the page playing them, to send
 to someone. *Your presets and files…* lists yours, and saves them to a
 file or opens one: the plugins read and write the same files.
 
+**Morph**, the last group of controls, slides from one preset to another:
+pick *From* and *To* (Default settings, the instrument's presets or your
+own) and move the slider. Every setting the two give goes part of the way,
+a number smoothly and a choice or a switch halfway across; volume, the room
+and the tuning stay as you have them. Choosing a preset from the Presets
+menu makes it the one you morph from.
+
 **Tuning**, among the controls, is the same on every instrument: the
 **pitch** standard (A = 440 Hz, or 415 for baroque pitch, 392, 422.5, 430,
 435, 442, 443 or 466), the **temperament** (equal, ¼- and ⅙-comma
@@ -353,6 +360,10 @@ Linux), and *Open the presets folder* shows it, so a file saved on the site can 
 Scala files for the custom temperament go in the `Tunings` folder beside the instruments' (on a
 Mac, `~/Library/Audio/Presets/Forte/Tunings`): the menu under Temperament lists them and opens the
 folder.
+
+**Morph** is in every plugin too, as three parameters kept with the project: *Morph from* and
+*Morph to* (the instrument's presets) and *Morph*, the slider, which a DAW can automate to sweep
+from one preset to the other.
 
 **Quality** (in the CPU group) is in every plugin too, kept with the project and in no preset.
 A VST3 or CLAP host that bounces or freezes a track offline gets High whatever it says; the AU
