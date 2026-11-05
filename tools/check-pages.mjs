@@ -19,6 +19,7 @@
 //   --base main  also open the same pages from <ref> (a git worktree, served on a second port)
 //                and list every count that differs: what a change meant to leave alone shouldn't
 //   --json f     write every page's counts to f
+//   --timeout s  fail a page view that takes longer than s seconds (300): one that hangs
 // Needs Playwright (the cloud sessions have it installed globally; CI installs it).
 // Exits 1 when a check fails; differences from --base are reported, not failed.
 
@@ -33,6 +34,7 @@ const args = process.argv.slice(2);
 const opt = (name) => { const i = args.indexOf(name); return i < 0 ? null : args.splice(i, 2)[1]; };
 const base = opt('--base');
 const jsonOut = opt('--json');
+const timeoutS = Number(opt('--timeout') ?? 300);
 const filter = args[0] || '';
 const ROOT = resolve(new URL('..', import.meta.url).pathname);
 const DEMOS = JSON.parse(await readFile(join(ROOT, 'examples/index.json'), 'utf8'));
@@ -271,9 +273,34 @@ const WAKE_LOCK = () => {
   Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
 };
 
+// How long one page view may take. A view takes half a minute or so, two at most on a machine
+// loaded far past its cores; one that hangs (a call into a page whose renderer never answers waits for ever) fails by
+// name, with the step it was at, and its context is closed so the other views carry on.
+const VIEW_TIMEOUT = timeoutS * 1000;
+const later = (ms) => new Promise((ok) => setTimeout(ok, ms).unref());
+
 async function checkPage(browser, url, page, size) {
+  const at = { step: 'opening a context', ctx: null }, t0 = performance.now();
+  let timer;
+  const hung = new Promise((ok) => { timer = setTimeout(() => ok('hung'), VIEW_TIMEOUT); });
+  const view = viewPage(browser, url, page, size, at);
+  try {
+    const r = await Promise.race([view, hung]);
+    if (r !== 'hung') return { ...r, ms: Math.round(performance.now() - t0) };
+    view.catch(() => {}); // it fails once its context is closed below
+    const { errors, wide, broken } = at;
+    return { page: page || 'index', size: size.name, counts: null, errors: [...(errors ?? []), `timed out after ${VIEW_TIMEOUT / 1000} s while ${at.step}`],
+      wide: [...(wide ?? [])], broken: [...(broken ?? [])], ms: Math.round(performance.now() - t0), timedOut: at.step };
+  } finally {
+    clearTimeout(timer);
+    // closing a context whose renderer hangs can hang too: give it a while, then leave it
+    if (at.ctx) await Promise.race([at.ctx.close().catch(() => {}), later(15_000)]);
+  }
+}
+
+async function viewPage(browser, url, page, size, at) {
   const { name, ios, ...device } = size;
-  const ctx = await browser.newContext({ ...device, deviceScaleFactor: 1 });
+  const ctx = at.ctx = await browser.newContext({ ...device, deviceScaleFactor: 1 });
   if (ios) await ctx.addInitScript(() => { delete Navigator.prototype.requestMIDIAccess; });
   if (name === 'desktop') await ctx.addInitScript(WAKE_LOCK);
   const tab = await ctx.newPage();
@@ -281,7 +308,8 @@ async function checkPage(browser, url, page, size) {
     const res = await route.fetch();
     await route.fulfill(res.ok() ? { status: 200, contentType: 'audio/wav', body: WAV } : { response: res });
   });
-  const errors = [], wide = [], broken = [];
+  const errors = at.errors = [], wide = at.wide = [], broken = at.broken = [];
+  const step = (s) => { at.step = s; };
   tab.on('pageerror', (e) => errors.push(e.message));
   tab.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   tab.on('response', (r) => { if (r.status() >= 400) errors.push(`${r.status()} ${r.url().replace(url, '')}`); });
@@ -292,34 +320,46 @@ async function checkPage(browser, url, page, size) {
     return false;
   };
   try {
+    step('loading the page');
     await tab.goto(url + page, { waitUntil: 'networkidle', timeout: 30000 });
     await tab.waitForTimeout(500);
+    step('counting what the page shows');
     await sideways('loaded');
     const counts = await tab.evaluate(COUNT);
+    step('reading the accessibility tree');
     if (name === 'desktop' || name === 'phone') broken.push(...await accessible(ctx, tab));
+    step('playing Listen');
     if (!page) broken.push(...await listen(tab));
+    step('opening the menu and Controls');
     if (await click('details.forte-switch > summary')) { await sideways('menu open'); await click('details.forte-switch > summary'); }
     if (await click('.forte-more')) { await sideways('Controls open'); await tab.keyboard.press('Escape'); await click('.forte-more'); }
+    step('turning the views and controls off and on');
     if (await toggles(tab, broken)) { await tab.waitForTimeout(250); await sideways('every view on'); }
+    step('reloading, folding and Perform');
     if (name === 'desktop' && counts.views) broken.push(...await remembered(tab));
+    step('starting audio');
     if (await click('#start')) {
       await tab.waitForTimeout(500); await sideways('audio started');
       // (remembered() left the page in Perform)
       if (name === 'desktop' && counts.views) {
+        step('checking the wake lock');
         const held = await tab.evaluate(() => window.__wake);
         await click('.forte-mode button[data-mode="discover"]');
         const after = await tab.evaluate(() => window.__wake);
         if (held !== 1 || after !== 0) broken.push(`the screen is kept awake ${held} time(s) in Perform with audio running, ${after} in Discover (should be 1, then 0)`);
       }
       // the Quality choice reaches the playing engine (shared/quality.js), and back
+      step('changing Quality while audio plays');
       const q = await tab.evaluate(() => { const s = document.querySelector('#quality'); if (!s) return false; for (const v of ['low', 'medium', 'high']) { s.value = v; s.dispatchEvent(new Event('change')); } return true; });
       if (q) await tab.waitForTimeout(250);
     }
+    step('taking the guided tour');
     if ((name === 'desktop' || name === 'phone') && counts.tour) broken.push(...await guidedTour(tab));
+    step('done');
     return { page: page || 'index', size: name, counts, errors, wide, broken };
   } catch (e) {
-    return { page: page || 'index', size: name, counts: null, errors: [...errors, e.message], wide, broken };
-  } finally { await ctx.close(); }
+    return { page: page || 'index', size: name, counts: null, errors: [...errors, `${e.message.split('\n')[0]} (while ${at.step})`], wide, broken };
+  }
 }
 
 // The checks: what every instrument page must have, whatever else a change does to it.
@@ -349,11 +389,15 @@ async function run(root, label) {
   await Promise.all(Array.from({ length: width }, async () => {
     while (jobs.length) { const [p, s] = jobs.shift(); out.push(await checkPage(browser, url, p, s)); }
   }));
-  await browser.close();
+  // (a context left open by a view that hung can keep the browser from closing)
+  await Promise.race([browser.close().catch(() => {}), later(30_000)]);
   server.close();
   const key = (r) => `${r.page} ${r.size}`;
   out.sort((a, b) => key(a).localeCompare(key(b)));
+  const slowest = out.reduce((a, b) => (b.ms > a.ms ? b : a));
   if (label) console.log(`${label}: ${out.length} page views`);
+  for (const r of out.filter((r) => r.timedOut)) console.log(`HUNG  ${r.page} ${r.size}${label ? ` (${label.trim()})` : ''}: timed out after ${VIEW_TIMEOUT / 1000} s while ${r.timedOut}`);
+  console.log(`  the slowest page view took ${(slowest.ms / 1000).toFixed(0)} s (${slowest.page} ${slowest.size})`);
   return out;
 }
 
