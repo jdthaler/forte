@@ -185,6 +185,15 @@ export const INSTRUMENTS = [
     accent: '#c8784a',
   },
   {
+    id: 'gamelan', name: 'Gamelan', section: 'traditional', ready: true, version: '0.1.0', trim: 2,
+    plugin: { code: 'Gmln', ready: true },
+    after: 'the gamelan of Java and Bali',
+    tagline: 'Bronze bars over bamboo tubes and bossed gongs, in pélog and sléndro; in Bali every bar has a partner tuned a few hertz away, so each note shimmers as the pair beats.',
+    physics: 'Timoshenko bars · tube resonators · bossed gongs whose curvature beats · paired tuning (ombak)',
+    vibrates: 'solids', notes: 'ring',
+    accent: '#e0a43c',
+  },
+  {
     id: 'grand', name: 'Electric Grand', section: 'electric', ready: true, version: '0.11.0', trim: 3.5,
     plugin: { code: 'EGrd', ready: true },
     after: 'the Yamaha CP-70',

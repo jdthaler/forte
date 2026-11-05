@@ -305,6 +305,22 @@ requests.
   The Marimba and Xylophone tunes every bar's cut by finite elements for
   its instrument and keeps the tube's second resonance, which a centred
   mouth cannot hear; its sources are in `marimba/README.md`.
+* **The gamelan.** W. Surjodiningrat, P. J. Sudarjana and A. Susanto
+  measured the sarons of Central Java's gamelans (1972; 2nd edn, Gadjah Mada
+  University Press, 1993), and M. Hood redefined sléndro and pélog from them
+  (*Selected Reports* **1**, 1966). R. Perrin and colleagues mapped a small
+  gamelan gong's normal modes (*J. Acoust. Soc. Am.* **136**, 1942–1950,
+  2014); B. Krueger, K. L. Gee and D. Grimshaw found a Balinese gong ageng's
+  ombak in its nonlinear second harmonic beating with its second round mode
+  (*J. Acoust. Soc. Am.* **128**, EL8–EL13, 2010), and M. Jones and the same
+  colleagues measured the bars of a gamelan semara dana (*J. Acoust. Soc.
+  Am.* **127**, EL197–EL202, 2010); W. A. Sethares and M. Vitale studied
+  ombak and octave stretching (*J. Math. Music* **16**, 2022). Earlier
+  syntheses summed decaying partials (the AES's "Modeling the Woodstock
+  Gamelan for Synthesis", 1999). The Gamelan solves its bars as Timoshenko
+  beams (T. C. Huang's equation, 1961), couples them to their tubes, rings
+  the measured gongs with their faces' nonlinearity, and pairs the
+  instruments; its sources are in `gamelan/README.md`.
 
 ## 2. Techniques Forte uses, and where they come from
 
