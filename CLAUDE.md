@@ -30,6 +30,9 @@ Read first:
   (`native/README.md`; the `wasm` preset needs Emscripten).
 - `node tools/release.mjs --dry-run` shows what the next release would
   bump and the changelog entry it would write.
+- `node tools/check-offline.mjs` opens every page offline from the service
+  worker's copy (`sw.js`, `tools/offline.mjs`), starts its audio, and
+  tries a release; the `pages` job runs it.
 - `CI=1 npm test` is what GitHub Actions runs: it skips the CPU-timing
   tests. They are calibrated on a desktop machine and fail on slow or
   shared ones, so when one fails, run the same test on `main` before
@@ -109,8 +112,9 @@ Only when the owner asks for a release:
    entry at the top of `CHANGELOG.md`, bumps each version named once by
    the largest kind its notes give (Forte in `package.json` and
    `FORTE_VERSION` together), regenerates the plugins'
-   `<slug>-info.cmake`, and deletes the notes. Nothing else needs
-   rebuilding: the `.wasm` files carry no version.
+   `<slug>-info.cmake`, deletes the notes, and last writes the service
+   worker's list of the released site into `sw.js` (`tools/offline.mjs`).
+   Nothing else needs rebuilding: the `.wasm` files carry no version.
 2. Commit with every version bumped in the title, e.g.
    `Release Forte 0.31.0, Gong Keyboard 0.4.1`, and open a pull request
    into `live` whose body is the new changelog entry.
@@ -119,7 +123,9 @@ Only when the owner asks for a release:
    green, since the release changes only versions and saved states (on
    Linux only otherwise). So it is green in minutes, as long as the page
    checks take, and the site waits on nothing slower. Whatever fails
-   is fixed on `main` first, then the release branch merges `main` in.
+   is fixed on `main` first, then the release branch merges `main` in and
+   runs `node tools/offline.mjs` again (`tests` fails a pull request into
+   `live` whose `sw.js` doesn't list the site as it is).
 4. Merge it with a merge commit when the owner asks. GitHub Pages
    publishes `live` at once. The plugins follow: the push to `live` runs
    `native` in full (macOS, Windows, auval and the release archives, the
