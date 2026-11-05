@@ -342,6 +342,10 @@ Forte app, one standalone that plays any of them from its Instrument menu, or tw
 **+** beside the menu layers a second instrument with the first, or splits the keyboard between
 them.
 
+A plugin's window also shows the instrument's views from its page: press **Views**, beside
+the pedal, and they draw what the plugin plays, whether the notes come from the DAW, a MIDI
+keyboard or the window's keys.
+
 In a plugin's window the Presets menu has your own presets too: *Save these settings…* writes
 one as a file in a presets folder for that instrument (`~/Library/Audio/Presets/Forte/<id>` on a
 Mac, `%APPDATA%\Forte\Presets\<id>` on Windows, `~/.local/share/forte/presets/<id>` on

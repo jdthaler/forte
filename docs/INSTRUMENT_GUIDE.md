@@ -74,6 +74,7 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | file | what |
 |---|---|
 | `shell.js` | everything common to instrument pages: audio graph (room, volume, tone, limiter, analyser), computer keyboard and on-screen keys, MIDI (notes, velocity through the touch curve, CC64, CC66 sostenuto, CC67 soft pedal, CC1, pitch bend), parameter sidebar with presets and local storage, octave shift, toasts. See the header for the config. |
+| `in-plugin.js` | the page inside a plugin's window (its *Views* pane, `native/plugin/editor.html`): with `?plugin` in a frame of that window, the page shows only its views, and they draw what the plugin plays. `pluginAudio` stands in for the audio graph: its analyser reads the plugin's sound as Web Audio's would, and its node's port hears the engine's messages, translated by the engine class's `translate` (`wasm.js`). `shell.js` uses it by itself; the five pages with their own controls call `follow()` with how to set their parameters and play their keys. |
 | `worklet.js` | the generic AudioWorklet processor. It runs your engine's WebAssembly from the bytes the page sends, through its class's `globalThis` name. It also registers `forte-limiter`, the chain's limiter, so a page adds it before building the chain. |
 | `wasm.js` | loads an instrument's WebAssembly in a page, the worklet or Node, and wraps it in a class with the engine contract (`wasmEngine`) |
 | `chain.js` | the output chain after the engine, built from the descriptor's `chain`: tone low-pass, body or soundboard, room, volume × trim, limiter. Every page uses it; the plugins rebuild it in C++. |
@@ -609,7 +610,9 @@ use it; their engines say where their voices' bridge signals come from.
 An engine that posts to its page posts `Message`s in C++ (`Engine::post`: a type, a key and up
 to 30 float32 values); its `<slug>-wasm.js` turns them back into the page's messages, gathering
 several into one where a message is bigger (`wasmEngine(I, { messages(m, engine) })`, which
-returns null until it has one). A test suite that reaches into its engine (the bubble organ's
+returns null until it has one). The class keeps that function as `translate`, so the plugin's
+window turns the plugin's messages into the same ones for its views (`shared/in-plugin.js`); a
+translator that reads the engine's memory there gets nothing. A test suite that reaches into its engine (the bubble organ's
 log, pool and constructor options) gets that through exports that take
 `forte_engine(handle)`: see `bubbles/src/bubbles-wasm.js`. Messages carry float32, so a page
 that compares a value from one with its own parameter maps it back (the carillon's wrapper

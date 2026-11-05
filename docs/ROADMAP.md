@@ -90,7 +90,7 @@ Every other idea only adds, and can come before or after 1.0.
 
 | Idea | Size | Notes |
 |------|------|-------|
-| The site's views in the plugin window | M | `docs/PLUGINS.md`, step 6. |
+| The site's views in the plugin window | M | Done, for the next release: the window's *Views* pane shows the page's own views (`docs/PLUGINS.md`, step 6). |
 | Each page's own control layout in the plugin window | S–M | Hints, `showIf`, grouping. |
 | MIDI device picker in the Mac app | S | A clap-wrapper patch. |
 | Windows installer (.msi or Inno Setup) | M | |

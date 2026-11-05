@@ -660,3 +660,17 @@ body[data-instrument] #controls .param.forte-tour-mark { outline: 2px solid var(
   .forte-tour-text { font-size: 13px; overflow: visible; }
   body[data-instrument] .forte-tour-nav button { min-height: 36px; }
 }
+
+/* ---- in a plugin's window (shared/in-plugin.js): the views alone, under their bar, filling the
+   frame; the window has the header, the controls and the keys (native/plugin/editor.html), and
+   folds the views away itself. Always the desktop's layout: the phones' rules above are dropped. */
+html.in-plugin body[data-instrument] { grid-template-rows: minmax(0, 1fr); }
+html.in-plugin body[data-instrument] > :is(header, footer),
+html.in-plugin .forte-edge,
+html.in-plugin .forte-controls-bar,
+html.in-plugin body[data-instrument] #controls,
+html.in-plugin .forte-views-bar :is(.forte-fold, .forte-mode),
+html.in-plugin .forte-tour-start { display: none; }
+html.in-plugin body[data-instrument] > main { grid-template-rows: auto minmax(0, 1fr); }
+html.in-plugin .forte-views-bar { padding-right: 10px; }
+html.in-plugin .forte-stage { grid-template-rows: repeat(var(--rows, 1), minmax(0, 1fr)); } /* the views fit the frame, as in Perform */
