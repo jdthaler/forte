@@ -347,15 +347,19 @@ TEST("two parts: a note held through a swap ends; Panic, the pedal and Quality r
   app.call("[\"panic\"]");
   app.run(512);
   CHECK(app.keys().empty() && app.keys("other").empty());
-  // Quality set where the window shows the second is the first's too (the host's)
-  const uint32_t mpe = app.params->count(app.p) - 1, quality = mpe - 1;
-  clap_param_info_t info;
+  // Quality and Octave set where the window shows the second are the first's too (the host's)
+  const uint32_t quality = app.params->count(app.p) - 4, octave = quality + 3; // then MPE, Transpose, Octave
+  clap_param_info_t info, oInfo;
   app.params->get_info(app.p, quality, &info);
+  CHECK(app.params->get_info(app.p, octave, &oInfo) && !std::strcmp(oInfo.name, "Octave"));
   auto d = app.describe();
   app.call("[\"set\", " + std::to_string(paramAt(d, "quality")) + ", 2]");
+  app.call("[\"set\", " + std::to_string(paramAt(d, "midiOctave")) + ", 5]"); // and Octave +1, the controller's
   app.run(512);
-  double v = -1;
+  double v = -1, o = -1;
   CHECK(app.params->get_value(app.p, info.id, &v) && v == 2);
+  CHECK(app.params->get_value(app.p, oInfo.id, &o) && o == 5);
+  app.call("[\"set\", " + std::to_string(paramAt(d, "midiOctave")) + ", 4]");
   // a program change plays the shown part's preset: the tine piano's first
   const int presets = d["presets"].get<int>();
   App::Ev pc{-1, false};

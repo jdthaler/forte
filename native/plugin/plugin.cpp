@@ -1140,8 +1140,7 @@ struct Suite : Instance {
 
   // ---- the parts (main thread) ----------------------------------------------------------------------
   // instrument k, ready to play: Quality is the computer's and MPE, Transpose and Octave the
-  // controller's (MPE's mode and the zones it announced), so it takes them from the first; a
-  // second's Transpose and Octave can then differ (an octave up in a layer)
+  // controller's (MPE's mode and the zones it announced), so it takes them from the first
   std::unique_ptr<Plugin> make(int k) {
     std::unique_ptr<Plugin> p(new Plugin(host, list[k].info(), clap.desc, list[k].accent));
     if (const Plugin *c = part[0].get()) {
@@ -1350,9 +1349,9 @@ struct Suite : Instance {
       return {};
     }
     Value r = f->call(args);
-    if (m == "set" && o) { // Quality and MPE belong to the computer and the controller: both parts
+    if (m == "set" && o) { // Quality, and MPE, Transpose and Octave, belong to the computer and the controller: both parts
       const int i = (int)num(1);
-      const int j = i == f->qualityAt ? o->qualityAt : i == f->mpeAt ? o->mpeAt : -1;
+      const int j = i == f->qualityAt ? o->qualityAt : i == f->mpeAt ? o->mpeAt : i == f->transposeAt ? o->transposeAt : i == f->octaveAt ? o->octaveAt : -1;
       if (j >= 0) { Value s = createEmptyArray(); s.addArrayElement(std::string("set")); s.addArrayElement(j); s.addArrayElement(num(2)); o->call(s); }
     }
     if (m == "poll" && o && r.isObject()) r.addMember("other", o->keysValue());

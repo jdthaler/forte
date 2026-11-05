@@ -133,7 +133,7 @@ clap-wrapper builds the VST3, AU v2 and standalone from the CLAP. Each plugin:
   choices after Quality, as in the pages' MIDI menu: they move the MIDI keys
   (notes, CLAP's note events, poly pressure and note expressions), each note-off going where its
   note-on went (`moveOn`); the window's own keys play what they show. The Forte app keeps the
-  three across instruments, as the controller's;
+  three across instruments and sets them for both parts of a layer or split, as the controller's;
 - saves its state as text (`forte <slug> <version>`, then `<id> <value>` per line), so a
   project survives parameters being added;
 - plays through the output chain, with flush-to-zero, a NaN guard, and engine blocks of at
