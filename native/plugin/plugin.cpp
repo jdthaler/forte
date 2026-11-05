@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <cstring>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
@@ -27,6 +28,7 @@
 #include "forte/chain.h"
 #include "forte/denormals.h"
 #include "forte/guard.h"
+#include "forte/limiter.h"
 #include "forte/mpe.h"
 #include "forte/queue.h"
 #include "forte/tuning.h"
@@ -599,14 +601,11 @@ struct Plugin : Instance, MpeDecoder::Sink {
       c.addArrayElement(i); c.addArrayElement(along(i, v)); c.addArrayElement(text(i, v)); c.addArrayElement(v);
       changed.addArrayElement(c);
     }
-    Value keys = createEmptyArray(), vel = createEmptyArray();
-    for (int k = 0; k < 128; k++) if (keysDown[k >> 6].load(std::memory_order_relaxed) >> (k & 63) & 1) {
-      keys.addArrayElement(k);
-      vel.addArrayElement((double)struck[k].load(std::memory_order_relaxed));
-    }
+    Value vel = createEmptyArray(); // each key's velocity, in keys' order
+    for (int k = 0; k < 128; k++) if (keysDown[k >> 6].load(std::memory_order_relaxed) >> (k & 63) & 1) vel.addArrayElement((double)struck[k].load(std::memory_order_relaxed));
     Value r = createObject("");
     r.addMember("p", changed);
-    r.addMember("keys", keys);
+    r.addMember("keys", keysValue());
     r.addMember("vel", vel);
     r.addMember("pedal", pedalDown.load(std::memory_order_relaxed));
     if (viewsOn.load()) {
@@ -626,6 +625,12 @@ struct Plugin : Instance, MpeDecoder::Sink {
   }
   const Site *page() const override { return site; }
   void closed() override { viewsOn = false; }
+  // the keys sounding, as poll() gives them
+  choc::value::Value keysValue() const {
+    choc::value::Value keys = choc::value::createEmptyArray();
+    for (int k = 0; k < 128; k++) if (keysDown[k >> 6].load(std::memory_order_relaxed) >> (k & 63) & 1) keys.addArrayElement(k);
+    return keys;
+  }
   choc::value::Value call(const choc::value::ValueView &args) override {
     using namespace choc::value;
     if (!args.isArray() || args.size() == 0 || !args[0].isString()) return {};
@@ -1060,84 +1065,276 @@ const void *pluginGetExtension(const clap_plugin_t *, const char *id) {
 }
 void pluginOnMainThread(const clap_plugin_t *) {}
 
-// ---- the Forte app: every instrument in one plugin -----------------------------------------------
+// ---- the Forte app: every instrument in one plugin, one or two at a time -------------------------
 //
-// A Suite holds one instrument's Plugin at a time and passes the host's calls to it; its window
-// is the Suite's, with an Instrument menu (describe's "instruments", and choose(slug)). A new
-// instrument is made and activated on the main thread, then handed to the audio thread, which
-// takes it at the start of its next block and lets the one before go; the main thread deletes
-// that one once it has.
+// A Suite plays one instrument's Plugin, or two: a second layered with the first (both play every
+// key) or split from it (the second below the split point, the first from there up). It passes
+// the host's calls on: the host sees the first's parameters, and the window shows one part's
+// controls at a time, its focus, under the Instrument menus (describe's "instruments" and
+// "parts"; choose, second, focus, arrange and swap). A new instrument is made and activated on the
+// main thread, which then publishes the parts as a Rig; the audio thread takes the latest Rig at
+// the start of its next block, and the main thread deletes what it let go of once it has.
 
 struct Suite : Instance {
+  enum Mode { layer, split };
+  struct Rig { Plugin *part[2]; uint64_t gen; };
+
   const SuiteEntry *list;
   const int count;
-  std::vector<int> order;           // the instruments by name, as the menu lists them
-  std::unique_ptr<Plugin> cur;      // the one the window and the host's main thread see
-  Plugin *live = nullptr;           // the one the audio thread plays (cur, once it has taken it)
-  std::atomic<Plugin *> next{nullptr}; // cur, until the audio thread takes it
-  std::unique_ptr<Plugin> old;      // the one before cur, until the audio thread has let go of it
+  std::vector<int> order;            // the instruments by name, as the menus list them
+  std::unique_ptr<Plugin> part[2];   // the first instrument, and the second or none (main thread)
+  int focus = 0;                     // the part whose controls the window shows
+  std::atomic<int> focused{0};       // the same, for the audio thread: a program change plays its preset
+  std::atomic<int> mode{layer};      // how two parts share the keys
+  std::atomic<int> splitKey{60};     // split: the second plays the keys below it, the first the rest
+  // the hand-off: every change publishes a Rig and the audio thread takes the latest (audio());
+  // a part let go of is deleted on the main thread once the audio thread has taken a Rig without it
+  std::vector<std::unique_ptr<Rig>> rigs;
+  std::vector<std::pair<uint64_t, std::unique_ptr<Plugin>>> retired; // a part, and the first Rig without it
+  std::atomic<Rig *> next{nullptr};
+  std::atomic<uint64_t> taken{0};    // the Rig the audio thread plays
+  uint64_t gen = 0;
+  Rig *live = nullptr;               // the audio thread's
   bool active = false;
   double fs = 48000;
   uint32_t minFrames = 1, maxFrames = 4096;
   std::atomic<bool> processing{false};
+  // the audio thread's: which parts each held note went to (bit k: part k), the events each part
+  // gets, the second's sound before it joins the first's, and a limiter on the two together
+  uint8_t routed[16][128]{};
+  std::vector<const clap_event_header_t *> events[2];
+  std::vector<float> spareL, spareR;
+  Limiter sum;
+  uint8_t uiRouted[128]{};           // the same for the window's keys (main thread)
 
   Suite(const clap_host_t *h, const clap_plugin_descriptor_t *desc, const SuiteEntry *entries, int n) : Instance(h, desc), list(entries), count(n) {
     for (int k = 0; k < count; k++) order.push_back(k);
     std::sort(order.begin(), order.end(), [&](int a, int b) { return std::strcmp(list[a].info().name, list[b].info().name) < 0; });
+    events[0].reserve(2048); events[1].reserve(2048);
   }
   int find(const std::string &slug) const {
     for (int k = 0; k < count; k++) if (slug == list[k].info().slug) return k;
     return -1;
   }
-  // main thread: switch to instrument k (false while the last switch is still in flight)
-  bool choose(int k) {
-    collect();
-    if (k < 0 || k >= count || old) return false;
-    if (cur && &cur->I == &list[k].info()) return true;
+
+  // ---- the parts (main thread) ----------------------------------------------------------------------
+  // instrument k, ready to play: Quality is the computer's and MPE the controller's (its mode and
+  // the zones it announced), so it takes them from the first
+  std::unique_ptr<Plugin> make(int k) {
     std::unique_ptr<Plugin> p(new Plugin(host, list[k].info(), clap.desc, list[k].accent, list[k].site));
-    if (cur) { p->P[p->qualityAt] = cur->shown[cur->qualityAt].load(); p->shown[p->qualityAt] = p->P[p->qualityAt]; p->offline = cur->offline; } // the computer's, not the instrument's
-    if (cur) { // and the controller's: its MPE mode and the zones it announced
-      p->P[p->mpeAt] = cur->shown[cur->mpeAt].load(); p->shown[p->mpeAt] = p->P[p->mpeAt];
-      p->mpeMode(); p->mpe.adoptZones(cur->mpe);
+    if (const Plugin *c = part[0].get()) {
+      p->P[p->qualityAt] = c->shown[c->qualityAt].load(); p->shown[p->qualityAt] = p->P[p->qualityAt]; p->offline = c->offline;
+      p->P[p->mpeAt] = c->shown[c->mpeAt].load(); p->shown[p->mpeAt] = p->P[p->mpeAt];
+      p->mpeMode(); p->mpe.adoptZones(c->mpe);
     }
     p->hostParams = (const clap_host_params_t *)host->get_extension(host, CLAP_EXT_PARAMS);
-    if (!active) { cur = std::move(p); live = cur.get(); }
-    else {
-      pluginActivate(&p->clap, fs, minFrames, maxFrames);
-      p->processing = processing.load();
-      old = std::move(cur);
-      cur = std::move(p);
-      next.store(cur.get(), std::memory_order_release);
-    }
-    // every parameter is another: a host may reread them all only while not active
+    if (active) { pluginActivate(&p->clap, fs, minFrames, maxFrames); p->processing = processing.load(); }
+    return p;
+  }
+  void retire(std::unique_ptr<Plugin> p) { if (p) retired.emplace_back(gen + 1, std::move(p)); } // before publish()
+  void publish() {
+    auto r = std::make_unique<Rig>(Rig{{part[0].get(), part[1].get()}, ++gen});
+    if (!active) { next.store(nullptr); live = r.get(); taken.store(gen); }
+    else next.store(r.get(), std::memory_order_release);
+    rigs.push_back(std::move(r));
+    collect();
+  }
+  // what the audio thread has let go of
+  void collect() {
+    const uint64_t t = taken.load(std::memory_order_acquire);
+    std::erase_if(retired, [&](const auto &e) { return e.first <= t; });
+    std::erase_if(rigs, [&](const auto &r) { return r->gen < t; });
+  }
+  void idle() override { collect(); }
+  // the host must reread the first's parameters: every one is another
+  void rescanHost() {
     if (auto hp = (const clap_host_params_t *)host->get_extension(host, CLAP_EXT_PARAMS))
       hp->rescan(host, active ? CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT | CLAP_PARAM_RESCAN_INFO : CLAP_PARAM_RESCAN_ALL);
+  }
+  // the part the window shows becomes instrument k
+  bool choose(int k) {
+    collect();
+    if (k < 0 || k >= count) return false;
+    if (part[focus] && &part[focus]->I == &list[k].info()) return true;
+    std::unique_ptr<Plugin> p = make(k);
+    retire(std::move(part[focus]));
+    part[focus] = std::move(p);
+    publish();
+    if (focus == 0) rescanHost();
     return true;
   }
-  // audio thread (or the main thread while not processing): the instrument to play
-  Plugin *audio() {
-    if (Plugin *n = next.exchange(nullptr, std::memory_order_acq_rel)) {
+  // part k goes, and the other plays alone (as the first)
+  bool drop(int k) {
+    if (!part[1] || (k != 0 && k != 1)) return false;
+    if (k == 0) swap();
+    return second(-1);
+  }
+  // the second becomes instrument k (−1: none); the window then shows its controls
+  bool second(int k) {
+    collect();
+    if (k >= count) return false;
+    if (k < 0 ? !part[1] : part[1] && &part[1]->I == &list[k].info()) return true;
+    std::unique_ptr<Plugin> p = k < 0 ? nullptr : make(k);
+    retire(std::move(part[1]));
+    part[1] = std::move(p);
+    focus = part[1] ? 1 : 0; focused = focus;
+    if (!part[1]) std::memset(uiRouted, 0, sizeof uiRouted);
+    publish();
+    return true;
+  }
+  // the two change places (split: sides); the window keeps showing the same instrument
+  bool swap() {
+    collect();
+    if (!part[1]) return false;
+    std::swap(part[0], part[1]);
+    for (uint8_t &m : uiRouted) m = (uint8_t)((m & 1) << 1 | (m >> 1 & 1));
+    focus = 1 - focus; focused = focus;
+    publish();
+    rescanHost();
+    return true;
+  }
+  // the parts a key strikes (bit k: part k), on either thread
+  uint8_t route(bool two, int key) const {
+    if (!two) return 1;
+    if (mode.load(std::memory_order_relaxed) == layer) return 3;
+    return key >= splitKey.load(std::memory_order_relaxed) ? 1 : 2;
+  }
+
+  // ---- audio --------------------------------------------------------------------------------------
+  // the audio thread (or the main thread while not processing): the parts to play, the latest Rig;
+  // a held note stays with the instrument it went to, wherever that is now
+  Rig *audio() {
+    if (Rig *n = next.exchange(nullptr, std::memory_order_acq_rel)) {
+      if (Rig *was = live)
+        for (auto &row : routed) for (uint8_t &m : row) {
+          if (!m) continue;
+          uint8_t to = 0;
+          for (int b = 0; b < 2; b++) if (m >> b & 1) for (int j = 0; j < 2; j++) if (n->part[j] && n->part[j] == was->part[b]) to |= (uint8_t)(1 << j);
+          m = to;
+        }
       live = n;
-      live->processing = processing.load();
-      host->request_callback(host); // to delete the one before (collect)
+      for (Plugin *p : n->part) if (p) p->processing = processing.load();
+      if (!n->part[1]) sum.reset();
+      taken.store(n->gen, std::memory_order_release);
+      host->request_callback(host); // to delete what it let go of (collect)
     }
     return live;
   }
-  // main thread: the one before, once the audio thread has let go of it
-  void collect() { if (old && !next.load(std::memory_order_acquire)) old.reset(); }
-  void idle() override { collect(); }
-  const Site *page() const override { return cur ? cur->site : nullptr; }
-  void closed() override { if (cur) cur->closed(); }
+  const Site *page() const override { return part[focus] ? part[focus]->site : nullptr; } // the window shows the focused part
+  void closed() override { for (auto &p : part) if (p) p->closed(); }
+  // which parts an event goes to: a note to the parts its key strikes (its end where it began), a
+  // program change to the part the window shows, the host's parameters to the first, the rest to both
+  uint8_t parts(const Rig *r, const clap_event_header_t *h) {
+    if (h->space_id != CLAP_CORE_EVENT_SPACE_ID) return 0;
+    int ch = 0, key = -1, on = -1;
+    switch (h->type) {
+      case CLAP_EVENT_NOTE_ON: case CLAP_EVENT_NOTE_OFF: case CLAP_EVENT_NOTE_CHOKE: {
+        auto e = (const clap_event_note_t *)h;
+        ch = e->channel < 0 ? 0 : e->channel & 15; key = e->key; on = h->type == CLAP_EVENT_NOTE_ON;
+        break;
+      }
+      case CLAP_EVENT_MIDI: {
+        const uint8_t *d = ((const clap_event_midi_t *)h)->data;
+        const int cmd = d[0] & 0xf0;
+        ch = d[0] & 0x0f;
+        if (cmd == 0x90 || cmd == 0x80) { key = d[1]; on = cmd == 0x90 && d[2] > 0; }
+        else if (cmd == 0xc0) return (uint8_t)(1 << focused.load(std::memory_order_relaxed));
+        break;
+      }
+      case CLAP_EVENT_PARAM_VALUE: case CLAP_EVENT_PARAM_MOD: case CLAP_EVENT_PARAM_GESTURE_BEGIN: case CLAP_EVENT_PARAM_GESTURE_END: return 1;
+      default: break;
+    }
+    if (on < 0 || key < 0 || key > 127) return 3;
+    if (on) return routed[ch][key] = route(true, key);
+    const uint8_t m = routed[ch][key] ? routed[ch][key] : 3;
+    routed[ch][key] = 0;
+    return m;
+  }
+  clap_process_status process(const clap_process_t *proc) {
+    Rig *r = audio();
+    Plugin *a = r->part[0], *b = r->part[1];
+    if (!b) return a->process(proc);
+    for (auto &e : events) e.clear();
+    const clap_input_events_t *in = proc->in_events;
+    for (uint32_t k = 0, n = in ? in->size(in) : 0; k < n; k++) {
+      const clap_event_header_t *h = in->get(in, k);
+      const uint8_t to = parts(r, h);
+      for (int j = 0; j < 2; j++) if (to >> j & 1 && events[j].size() < events[j].capacity()) events[j].push_back(h);
+    }
+    auto size = [](const clap_input_events_t *l) { return (uint32_t)((const std::vector<const clap_event_header_t *> *)l->ctx)->size(); };
+    auto get = [](const clap_input_events_t *l, uint32_t i) { return (*(const std::vector<const clap_event_header_t *> *)l->ctx)[i]; };
+    const clap_input_events_t ins[2] = {{&events[0], size, get}, {&events[1], size, get}};
+    const uint32_t n = proc->frames_count;
+    if (n > spareL.size()) { spareL.resize(n); spareR.resize(n); } // only for a host that sends more than it said
+    clap_process_t pa = *proc;
+    pa.in_events = &ins[0];
+    a->process(&pa);
+    float *ch[2] = {spareL.data(), spareR.data()};
+    clap_audio_buffer_t buf{ch, nullptr, 2, 0, 0};
+    clap_process_t pb = *proc;
+    pb.in_events = &ins[1]; pb.out_events = nullptr; // the host knows only the first's parameters
+    pb.audio_outputs = &buf; pb.audio_outputs_count = 1;
+    b->process(&pb);
+    if (proc->audio_outputs_count > 0 && proc->audio_outputs[0].data32) {
+      float *L = proc->audio_outputs[0].data32[0], *R = proc->audio_outputs[0].channel_count > 1 ? proc->audio_outputs[0].data32[1] : nullptr;
+      if (R) for (uint32_t i = 0; i < n; i++) { L[i] += spareL[i]; R[i] += spareR[i]; }
+      else for (uint32_t i = 0; i < n; i++) { L[i] += 0.5f * (spareL[i] + spareR[i]); spareR[i] = L[i]; }
+      sum.process(L, R ? R : spareR.data(), (int)n);
+    }
+    return CLAP_PROCESS_CONTINUE;
+  }
 
-  // the instrument's calls, and the menu: describe() also lists the instruments ({slug, name}
-  // by name), choose(slug) switches to one (the window then reloads)
+  // ---- the window: the menus, and the part it shows ------------------------------------------------
+  //   choose(slug)        the instrument of the part the window shows
+  //   second(slug)        the second ("": none); the window then shows its controls
+  //   drop(k)             part k goes, the other plays alone
+  //   focus(k)            the part whose controls, presets and pedal the window shows (0 or 1)
+  //   arrange(mode, key)  "layer" or "split", and the split point (the second plays below it)
+  //   swap()              the two change places
+  // The window starts again after each but arrange. describe() adds "instruments" (every one,
+  // {slug, name} by name), "parts" ({slug, name, accent, keyLo, keyHi} each), "focus", "mode" and
+  // "split"; poll() adds "other", the other part's keys. The keys, the pedal and Panic play both.
   choc::value::Value call(const choc::value::ValueView &args) override {
     using namespace choc::value;
     collect();
     if (!args.isArray() || args.size() == 0 || !args[0].isString()) return {};
     const std::string m(args[0].getString());
-    if (m == "choose") return createBool(args.size() > 1 && args[1].isString() && choose(find(std::string(args[1].getString()))));
-    Value r = cur->call(args);
+    auto text = [&](uint32_t k) { return args.size() > k && args[k].isString() ? std::string(args[k].getString()) : std::string(); };
+    auto num = [&](uint32_t k) { return args.size() > k && (args[k].isFloat() || args[k].isInt()) ? args[k].get<double>() : 0.0; };
+    if (m == "choose") return createBool(choose(find(text(1))));
+    if (m == "second") { const std::string s = text(1); return createBool(s.empty() ? second(-1) : find(s) >= 0 && second(find(s))); }
+    if (m == "focus") { const int k = (int)num(1); if (k != 0 && !(k == 1 && part[1])) return createBool(false); focus = k; focused = k; return createBool(true); }
+    if (m == "arrange") {
+      mode = text(1) == "split" ? split : layer;
+      if (args.size() > 2) splitKey = std::clamp((int)std::lround(num(2)), 1, 127);
+      return createBool(true);
+    }
+    if (m == "swap") return createBool(swap());
+    if (m == "drop") return createBool(drop((int)num(1)));
+    Plugin *f = part[focus].get(), *o = part[1 - focus].get();
+    if (m == "note" || m == "pressure") {
+      const int key = (int)num(1);
+      if (key < 0 || key > 127) return {};
+      uint8_t to = uiRouted[key];
+      if (m == "note" && num(2) > 0) to = uiRouted[key] = route(part[1] != nullptr, key);
+      else if (m == "note") uiRouted[key] = 0;
+      if (!to) to = m == "note" ? 3 : (uint8_t)(1 << focus);
+      for (int j = 0; j < 2; j++) if (to >> j & 1 && part[j]) part[j]->call(args);
+      return {};
+    }
+    if (m == "pedal" || m == "panic") {
+      if (m == "panic") std::memset(uiRouted, 0, sizeof uiRouted);
+      for (auto &p : part) if (p) p->call(args);
+      return {};
+    }
+    if (m == "views" && o) o->closed(); // the views are the focused part's
+    Value r = f->call(args);
+    if (m == "set" && o) { // Quality and MPE belong to the computer and the controller: both parts
+      const int i = (int)num(1);
+      const int j = i == f->qualityAt ? o->qualityAt : i == f->mpeAt ? o->mpeAt : -1;
+      if (j >= 0) { Value s = createEmptyArray(); s.addArrayElement(std::string("set")); s.addArrayElement(j); s.addArrayElement(num(2)); o->call(s); }
+    }
+    if (m == "poll" && o && r.isObject()) r.addMember("other", o->keysValue());
     if (m == "describe") {
       Value all = createEmptyArray();
       for (int k : order) {
@@ -1147,32 +1344,41 @@ struct Suite : Instance {
         all.addArrayElement(e);
       }
       r.addMember("instruments", all);
+      Value ps = createEmptyArray();
+      for (auto &p : part) if (p) {
+        Value e = createObject("");
+        e.addMember("slug", std::string(p->I.slug));
+        e.addMember("name", std::string(p->I.name));
+        e.addMember("accent", p->accent);
+        e.addMember("keyLo", p->I.keyLo);
+        e.addMember("keyHi", p->I.keyHi);
+        ps.addArrayElement(e);
+      }
+      r.addMember("parts", ps);
+      r.addMember("focus", focus);
+      r.addMember("mode", std::string(mode == split ? "split" : "layer"));
+      r.addMember("split", splitKey.load());
     }
     return r;
   }
 
-  // ---- state: "forte-suite <slug>" then the instrument's own ------------------------------------
-  bool save(const clap_ostream_t *s) {
-    const std::string t = std::string("forte-suite ") + cur->I.slug + "\n";
+  // ---- state: "forte-suite <slug>" then the first's own, and with a second, "forte-layer <slug>
+  // <layer|split> <split point> <focus>" then the second's own ---------------------------------------
+  static bool write(const clap_ostream_t *s, const std::string &t) {
     for (const char *p = t.data(), *end = p + t.size(); p < end;) {
       int64_t w = s->write(s, p, (uint64_t)(end - p));
       if (w <= 0) return false;
       p += w;
     }
-    return cur->save(s);
+    return true;
   }
-  bool load(const clap_istream_t *s) {
+  static std::string saved(Plugin &p) {
     std::string t;
-    char buf[4096];
-    for (int64_t r; (r = s->read(s, buf, sizeof buf)) > 0;) t.append(buf, (size_t)r);
-    if (t.compare(0, 12, "forte-suite ") == 0) {
-      const size_t eol = t.find('\n');
-      if (eol == std::string::npos || !choose(find(t.substr(12, eol - 12)))) return false;
-      t.erase(0, eol + 1);
-    } else if (t.compare(0, 6, "forte ") == 0) { // an instrument's own plugin's state
-      const size_t sp = t.find_first_of(" \n", 6);
-      if (!choose(find(t.substr(6, sp == std::string::npos ? std::string::npos : sp - 6)))) return false;
-    } else return false;
+    clap_ostream_t os{&t, [](const clap_ostream_t *s, const void *b, uint64_t n) -> int64_t { ((std::string *)s->ctx)->append((const char *)b, (size_t)n); return (int64_t)n; }};
+    p.save(&os);
+    return t;
+  }
+  static bool loadText(Plugin &p, const std::string &t) {
     struct Reader { clap_istream_t s; const std::string *t; size_t at; } r{{}, &t, 0};
     r.s.ctx = &r;
     r.s.read = [](const clap_istream_t *is, void *out, uint64_t n) -> int64_t {
@@ -1182,12 +1388,49 @@ struct Suite : Instance {
       rd->at += k;
       return (int64_t)k;
     };
-    return cur->load(&r.s);
+    return p.load(&r.s);
+  }
+  bool save(const clap_ostream_t *s) {
+    std::string t = std::string("forte-suite ") + part[0]->I.slug + "\n" + saved(*part[0]);
+    if (part[1]) {
+      if (!t.empty() && t.back() != '\n') t += '\n';
+      t += std::string("forte-layer ") + part[1]->I.slug + (mode == split ? " split " : " layer ") + std::to_string(splitKey.load()) + " " + std::to_string(focus) + "\n" + saved(*part[1]);
+    }
+    return write(s, t);
+  }
+  bool load(const clap_istream_t *s) {
+    std::string t;
+    char buf[4096];
+    for (int64_t r; (r = s->read(s, buf, sizeof buf)) > 0;) t.append(buf, (size_t)r);
+    std::string layered;
+    if (t.compare(0, 12, "forte-suite ") == 0) {
+      const size_t eol = t.find('\n');
+      if (eol == std::string::npos || !choose(find(t.substr(12, eol - 12)))) return false;
+      t.erase(0, eol + 1);
+      const size_t at = t.find("\nforte-layer ");
+      if (at != std::string::npos) { layered = t.substr(at + 1); t.erase(at + 1); }
+    } else if (t.compare(0, 6, "forte ") == 0) { // an instrument's own plugin's state
+      const size_t sp = t.find_first_of(" \n", 6);
+      if (!choose(find(t.substr(6, sp == std::string::npos ? std::string::npos : sp - 6)))) return false;
+    } else return false;
+    if (!loadText(*part[0], t)) return false;
+    if (layered.empty()) { second(-1); return true; }
+    // forte-layer <slug> <mode> <split> <focus>, then the second's state
+    const size_t eol = layered.find('\n');
+    std::istringstream line(layered.substr(12, eol == std::string::npos ? std::string::npos : eol - 12));
+    std::string slug, how;
+    int key = 60, f = 1;
+    line >> slug >> how >> key >> f;
+    if (find(slug) < 0 || !second(find(slug))) { second(-1); return true; } // an instrument this app doesn't have: the first alone
+    mode = how == "split" ? split : layer;
+    splitKey = std::clamp(key, 1, 127);
+    focus = f == 0 ? 0 : 1; focused = focus;
+    return eol == std::string::npos || loadText(*part[1], layered.substr(eol + 1));
   }
 };
 
 Suite *suite(const clap_plugin_t *p) { return static_cast<Suite *>(instance(p)); }
-const clap_plugin_t *inner(const clap_plugin_t *p) { return &suite(p)->cur->clap; }
+const clap_plugin_t *inner(const clap_plugin_t *p) { return &suite(p)->part[0]->clap; }
 
 bool suiteInit(const clap_plugin_t *p) {
   Suite *s = suite(p);
@@ -1197,20 +1440,36 @@ bool suiteInit(const clap_plugin_t *p) {
 bool suiteActivate(const clap_plugin_t *p, double fs, uint32_t minFrames, uint32_t maxFrames) {
   Suite *s = suite(p);
   s->fs = fs; s->minFrames = minFrames; s->maxFrames = maxFrames;
+  s->spareL.assign(maxFrames, 0); s->spareR.assign(maxFrames, 0);
+  // the two parts together: each has its limiter, so this only catches what they add up to
+  s->sum.set(-1, 0, 20, 0.001, 0.1, fs);
+  s->sum.makeup = 1;
+  std::memset(s->routed, 0, sizeof s->routed);
   s->active = pluginActivate(inner(p), fs, minFrames, maxFrames);
+  if (s->active && s->part[1]) pluginActivate(&s->part[1]->clap, fs, minFrames, maxFrames);
   return s->active;
 }
 void suiteDeactivate(const clap_plugin_t *p) {
   Suite *s = suite(p);
   s->audio();
-  s->old.reset();
-  pluginDeactivate(inner(p));
+  s->collect();
+  for (auto &q : s->part) if (q) pluginDeactivate(&q->clap);
   s->active = false;
 }
-bool suiteStartProcessing(const clap_plugin_t *p) { Suite *s = suite(p); s->processing = true; s->audio()->processing = true; return true; }
-void suiteStopProcessing(const clap_plugin_t *p) { Suite *s = suite(p); s->processing = false; s->audio()->processing = false; }
-void suiteReset(const clap_plugin_t *p) { pluginReset(&suite(p)->audio()->clap); }
-clap_process_status suiteProcess(const clap_plugin_t *p, const clap_process_t *proc) { return suite(p)->audio()->process(proc); }
+void suiteProcessing(const clap_plugin_t *p, bool on) {
+  Suite *s = suite(p);
+  s->processing = on;
+  for (Plugin *q : s->audio()->part) if (q) q->processing = on;
+}
+bool suiteStartProcessing(const clap_plugin_t *p) { suiteProcessing(p, true); return true; }
+void suiteStopProcessing(const clap_plugin_t *p) { suiteProcessing(p, false); }
+void suiteReset(const clap_plugin_t *p) {
+  Suite *s = suite(p);
+  for (Plugin *q : s->audio()->part) if (q) pluginReset(&q->clap);
+  std::memset(s->routed, 0, sizeof s->routed);
+  s->sum.reset();
+}
+clap_process_status suiteProcess(const clap_plugin_t *p, const clap_process_t *proc) { return suite(p)->process(proc); }
 void suiteOnMainThread(const clap_plugin_t *p) { suite(p)->collect(); }
 
 const clap_plugin_params_t suiteParams{
@@ -1219,12 +1478,23 @@ const clap_plugin_params_t suiteParams{
     [](const clap_plugin_t *p, clap_id id, double *v) { return paramsGetValue(inner(p), id, v); },
     [](const clap_plugin_t *p, clap_id id, double v, char *out, uint32_t size) { return paramsValueToText(inner(p), id, v, out, size); },
     [](const clap_plugin_t *p, clap_id id, const char *text, double *v) { return paramsTextToValue(inner(p), id, text, v); },
-    [](const clap_plugin_t *p, const clap_input_events_t *in, const clap_output_events_t *out) { paramsFlush(&suite(p)->audio()->clap, in, out); }};
+    [](const clap_plugin_t *p, const clap_input_events_t *in, const clap_output_events_t *out) {
+      Suite::Rig *r = suite(p)->audio();
+      paramsFlush(&r->part[0]->clap, in, out);
+      if (Plugin *b = r->part[1]) { // the window's changes to the second, which the host doesn't see
+        if (!b->processing.load()) b->takePending();
+        b->takeUi(nullptr);
+        b->publishKeys();
+      }
+    }};
 const clap_plugin_state_t suiteState{
     [](const clap_plugin_t *p, const clap_ostream_t *s) { return suite(p)->save(s); },
     [](const clap_plugin_t *p, const clap_istream_t *s) { return suite(p)->load(s); }};
 
-const clap_plugin_render_t suiteRender{renderHardRealtime, [](const clap_plugin_t *p, clap_plugin_render_mode mode) { return renderSet(inner(p), mode); }};
+const clap_plugin_render_t suiteRender{renderHardRealtime, [](const clap_plugin_t *p, clap_plugin_render_mode mode) {
+  for (auto &q : suite(p)->part) if (q) renderSet(&q->clap, mode);
+  return true;
+}};
 
 const void *suiteGetExtension(const clap_plugin_t *p, const char *id) {
   if (!std::strcmp(id, CLAP_EXT_PARAMS)) return &suiteParams;

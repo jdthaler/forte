@@ -162,12 +162,23 @@ the template, picked from the Instrument menu at the top of its window (`editor.
 shows the menu in a browser). `forte_add_suite()` (`cmake/forte.cmake`) builds it after the
 instruments from what `forte_add_plugin()` recorded, so a new port joins it with no change: each
 instrument's `<slug>-instrument.cpp` is compiled again with `forte_instrument` renamed
-`forte_instrument_<slug>`, and a generated table lists them. In `plugin.cpp` a `Suite` holds one
-instrument's `Plugin` at a time and passes the host's calls to it: a new one is made and
-activated on the main thread and handed to the audio thread, which takes it at its next block,
-and the one before is deleted once it has. Its id is `net.jthaler.forte.suite`, its version
-Forte's, and its state `forte-suite <slug>` then the instrument's own, so the app reopens on
-the last instrument. It is only a standalone: a DAW keeps a plugin's parameters while it is
+`forte_instrument_<slug>`, and a generated table lists them.
+
+It plays one instrument, or two: **+** beside the Instrument menu layers a second with the first
+(both play every key) or splits the keys between them (the second below the split point, the
+first from there up). The bar under the header picks Layer or Split and the split point, swaps
+the two, shows one's controls and presets at a time (the Instrument menu changes that one) and
+takes one away. In `plugin.cpp` a `Suite` holds the instruments' `Plugin`s and passes the host's
+calls on: the host sees the first's parameters; a note goes to the parts its key strikes and its
+end goes where it began; the pedals, the wheels, aftertouch and Panic reach both; a program change
+goes to the part the window shows; Quality and MPE are set on both. The second plays into a
+buffer of its own, added to the first's, and a limiter at −1 dB (no makeup gain) catches what the
+two add up to. A new instrument is made and activated on the main thread, which publishes the
+parts as a `Rig`; the audio thread takes the latest at its next block, and the main thread deletes
+what it let go of once it has. Its id is `net.jthaler.forte.suite`, its version Forte's, and its
+state `forte-suite <slug>` then the first instrument's own, then, with a second, `forte-layer
+<slug> <layer|split> <split point> <part shown>` and the second's own, so the app reopens as it
+was. It is only a standalone: a DAW keeps a plugin's parameters while it is
 active, and these change with the instrument. The release ships it in the archives with every
 instrument (`Forte-plugins-<system>` and `Forte-plugins-app-<system>`), and alone in
 `Forte-app-<system>`.
