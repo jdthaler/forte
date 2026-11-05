@@ -10,12 +10,13 @@ import { TUNING_KEEP } from '../../shared/tuning.js';
 const BUILD = { id: 'springs', name: 'SpringWasmEngine', groups: GROUPS, binary: () => new URL('../wasm/springs.wasm', import.meta.url).href };
 
 // The C++ engine's messages (springs-engine.h, msg) into the page's: 'echo' (the strike's first
-// moments, which the engine keeps in its capture) and 'error'.
+// moments, which the engine keeps in its capture) and 'error'. In the plugin's window the plugin
+// has read the capture already, into the message's data (native/instruments/springs/springs-views.cpp).
 function views(m, e) {
   if (m.type === 2) return { type: 'error', message: `spring ${m.key}: numerical failure` };
   if (m.type !== 1) return null;
-  const x = Base.exports, n = m.values[0];
-  const data = new Float32Array(x.memory.buffer, x.springs_capture(e.e), n).slice();
+  const n = m.values[0];
+  const data = m.data ? Float32Array.from(m.data) : new Float32Array(Base.exports.memory.buffer, Base.exports.springs_capture(e.e), n).slice();
   return { type: 'echo', key: m.key, fs: e.fs, data, n, vel: m.values[1] };
 }
 

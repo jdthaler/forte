@@ -2,8 +2,16 @@
 
 #include "editor.h"
 
+#include <cstdio>
 #include <cstdlib>
+#include <cstring>
+#include <iterator>
+#include <map>
+#include <memory>
+#include <sstream>
 #include <string>
+
+#include "choc/containers/choc_zlib.h" // (before X11's headers, whose macros it can't take)
 
 #if defined(_WIN32) && !defined(NOMINMAX)
 #define NOMINMAX
@@ -19,17 +27,95 @@
 
 #include "editor-html.h" // generated from editor.html (cmake/embed.cmake)
 
+extern const forte::Site forte_site_shared; // shared/ (cmake/forte.cmake, forte_site)
+
 namespace forte {
 namespace {
 
-choc::ui::WebView::Options options() {
+// A site's archive (site.h) as its files: "/path" → bytes. A gzipped tar (pax or ustar).
+using Files = std::map<std::string, std::string, std::less<>>;
+Files unpack(const Site &site) {
+  Files files;
+  // the gzip header (RFC 1952), then raw deflate: choc's inflater reads that, not gzip itself
+  const unsigned char *d = site.data;
+  if (site.size < 18 || d[0] != 0x1f || d[1] != 0x8b || d[2] != 8) return files;
+  size_t at = 10;
+  if (d[3] & 4) at += 2 + (d[10] | d[11] << 8);                     // FEXTRA
+  for (int flag : {8, 16}) if (d[3] & flag) { while (at < site.size && d[at]) at++; at++; } // FNAME, FCOMMENT
+  if (d[3] & 2) at += 2;                                             // FHCRC
+  if (at >= site.size) return files;
+  std::string tar;
+  try {
+    auto in = std::make_shared<std::istringstream>(std::string((const char *)d + at, site.size - at));
+    choc::zlib::InflaterStream z(in, choc::zlib::InflaterStream::FormatType::deflate);
+    char buf[65536];
+    while (z.read(buf, sizeof buf), z.gcount() > 0) tar.append(buf, (size_t)z.gcount());
+  } catch (...) { return files; }
+  std::string longName; // a pax header's path, for the entry after it
+  for (at = 0; at + 512 <= tar.size();) {
+    const char *h = tar.data() + at;
+    if (!h[0]) break; // the end
+    const std::string name(h, strnlen(h, 100)), prefix(h + 345, strnlen(h + 345, 155));
+    const size_t size = std::strtoull(std::string(h + 124, 12).c_str(), nullptr, 8);
+    const char type = h[156];
+    at += 512;
+    if (at + size > tar.size()) break;
+    if (type == 'x') { // "<length> key=value\n" records
+      const std::string rec = tar.substr(at, size);
+      for (size_t r = 0; r < rec.size();) {
+        const size_t sp = rec.find(' ', r), len = std::strtoull(rec.c_str() + r, nullptr, 10);
+        if (sp == std::string::npos || len == 0) break;
+        const std::string kv = rec.substr(sp + 1, len - (sp + 1 - r) - 1);
+        if (kv.compare(0, 5, "path=") == 0) longName = kv.substr(5);
+        r += len;
+      }
+    } else if (type == '0' || type == 0) {
+      files["/" + (!longName.empty() ? longName : prefix.empty() ? name : prefix + "/" + name)] = tar.substr(at, size);
+      longName.clear();
+    } else longName.clear();
+    at += (size + 511) / 512 * 512;
+  }
+  return files;
+}
+const char *mimeType(std::string_view path) {
+  const auto ends = [&](const char *e) { const size_t n = std::strlen(e); return path.size() >= n && path.substr(path.size() - n) == e; };
+  if (ends(".html")) return "text/html";
+  if (ends(".js")) return "text/javascript";
+  if (ends(".css")) return "text/css";
+  if (ends(".wasm")) return "application/wasm";
+  if (ends(".json")) return "application/json";
+  return "application/octet-stream";
+}
+
+// The window's page (editor.html), and the site's files: shared/ and the instrument's page,
+// unpacked when first asked for.
+struct Server {
+  Editor::Page page;
+  std::map<const Site *, Files> unpacked;
+  const Files &files(const Site *s) {
+    auto it = unpacked.find(s);
+    if (it == unpacked.end()) it = unpacked.emplace(s, unpack(*s)).first;
+    return it->second;
+  }
+  std::optional<choc::ui::WebView::Options::Resource> fetch(std::string path) {
+    using Resource = choc::ui::WebView::Options::Resource;
+    path = path.substr(0, path.find_first_of("?#"));
+    if (std::getenv("FORTE_EDITOR_DEBUG")) std::fprintf(stderr, "fetch %s\n", path.c_str());
+    if (path == "/" || path == "/index.html") return Resource(std::string_view((const char *)kEditorHtml, kEditorHtmlSize), "text/html");
+    for (const Site *s : {&forte_site_shared, page ? page() : nullptr}) {
+      if (!s) continue;
+      const Files &f = files(s);
+      if (auto it = f.find(path); it != f.end()) return Resource(it->second, mimeType(path));
+    }
+    return {};
+  }
+};
+
+choc::ui::WebView::Options options(std::shared_ptr<Server> server) {
   choc::ui::WebView::Options o;
   o.acceptsFirstMouseClick = true; // the first click on a key plays it
   o.enableDebugMode = std::getenv("FORTE_EDITOR_DEBUG") != nullptr;
-  o.fetchResource = [](const std::string &path) -> std::optional<choc::ui::WebView::Options::Resource> {
-    if (path != "/" && path != "/index.html") return {};
-    return choc::ui::WebView::Options::Resource(std::string_view((const char *)kEditorHtml, kEditorHtmlSize), "text/html");
-  };
+  o.fetchResource = [server](const std::string &path) { return server->fetch(path); };
   o.shouldAllowRequest = [](const choc::ui::WebView::Options::Request &) { return false; }; // the page goes nowhere
   return o;
 }
@@ -37,7 +123,7 @@ choc::ui::WebView::Options options() {
 struct WebEditor : Editor {
   choc::ui::WebView view;
   uint32_t width = 0, height = 0;
-  explicit WebEditor(Call call) : view(options()) {
+  WebEditor(Call call, Page page) : view(options(std::make_shared<Server>(Server{std::move(page), {}}))) {
     view.bind("forte", [call](const choc::value::ValueView &args) { return call(args); });
   }
   bool ok() const { return view.loadedOK(); }
@@ -93,7 +179,7 @@ using PlatformEditor = WinEditor;
 // into the host's, as JUCE's XEmbedComponent does. GTK is pumped from the host's timer (idle).
 struct LinuxEditor : WebEditor {
   GtkWidget *plug = nullptr;
-  explicit LinuxEditor(Call call) : WebEditor(std::move(call)) {
+  LinuxEditor(Call call, Page page) : WebEditor(std::move(call), std::move(page)) {
     if (!ok()) return;
     plug = gtk_plug_new(0);
     gtk_container_add(GTK_CONTAINER(plug), GTK_WIDGET(view.getViewHandle()));
@@ -151,12 +237,12 @@ const char *Editor::api() {
 #endif
 }
 
-std::unique_ptr<Editor> Editor::create(Call call) {
+std::unique_ptr<Editor> Editor::create(Call call, Page page) {
 #if defined(__linux__)
   // a GtkPlug needs X11, also under Wayland (where the host's window is XWayland's)
   if (!gdk_display_get_default()) gdk_set_allowed_backends("x11");
 #endif
-  auto e = std::make_unique<PlatformEditor>(std::move(call));
+  auto e = std::make_unique<PlatformEditor>(std::move(call), std::move(page));
   if (!e->ok()) return nullptr;
   return e;
 }

@@ -39,6 +39,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Gamelan](gamelan/) | the gamelan of Java and Bali: gangsa, saron, bonang, kempul and gong ageng | thick bronze bars as Timoshenko beams that bend and twist (Huang's frequency equation), a gangsa's bar and its bamboo tube as two coupled oscillators; bossed gongs ringing the modes measured by laser vibrometry (Perrin et al.; Krueger et al.), whose curved face makes the note's second harmonic beat with the second round mode (a gong ageng's ombak); pélog and sléndro on the white and black keys; Balinese pairs tuned a few hertz apart that beat (ombak); the player's damping hand |
 | ✅ | [Cimbalom](cimbalom/) | Schunda's concert cimbalom (Budapest, 1874) and the hammered dulcimer | hand-held hammers thrown at the strings, a light head on a flexible stick (Hunt–Crossley contact with cotton, leather or bare wood faces); courses of stiff strings slightly out of tune, coupled at the bridge (Weinreich's two-stage decay and beats); the dulcimer's strings divided 2 : 3 by its treble bridge, both sides ringing; a damper bar and sympathetic strings; a hand tremolo; a modal soundboard |
 | ✅ | [Musical Saw](saw/) | the singing saw of vaudeville and folk players (Mussehl's, 1920s) | a tapered steel blade bent into an S, as a thin shallow shell (Donnell): bending a curved sheet stretches it, so the curvature raises the band edge on either side of the inflection and traps a mode there (Shankar, Bryde and Mahadevan, 2022), solved across the width and along it; the trap tunnels to the hands (WKB, Gamow's rate) when the bend is loose, and a J with no inflection traps nothing; the player slides the S along the taper for each note, bowed on the edge (implicit stick–slip, its threshold from the trapped mode) or struck with felt; the knee's vibrato, and one saw sliding from note to note |
+| ✅ | [Tubular Bells](tubular/) | orchestral chimes | brass tubes as free Timoshenko beams with the cap at the struck end as a mass, each cut so that modes 4, 5 and 6 sound the strike note, a virtual pitch no mode plays; a Hertzian mallet, the air taking the high modes (a line of dipoles above coincidence), heard at two microphones in front of the frame; the damper bar and its pedal |
 
 ### Electric instruments
 
@@ -178,6 +179,7 @@ is the mod wheel's control wherever the instrument has one.
 | Gamelan | Mallet softness · Strike point (bars) · Strike point (gongs) | Off the long axis | Paired tuning (ombak) |
 | Cimbalom | Hammer mass · Sympathetic strings · Unison spread | Tremolo | Strike point |
 | Musical Saw | How tight the S · Bow pressure · Where it is played | Bow speed | Vibrato (the knee shakes) |
+| Tubular Bells | Damper felt · Mallet mass · Mallet speed | Strike point | Mallet face |
 | Electric Grand | Bass · Middle · Treble | Tremolo rate | Tremolo depth |
 | Tonewheel Organ | 16' drawbar · 8' drawbar · 4' drawbar | Tube drive | Expression pedal |
 | Tine Piano | Amp drive · Speaker top end · Tip hardness | Stereo vibrato rate | Stereo vibrato depth |
@@ -272,6 +274,13 @@ these settings* makes a link that opens the page playing them, to send
 to someone. *Your presets and files…* lists yours, and saves them to a
 file or opens one: the plugins read and write the same files.
 
+**Morph**, the last group of controls, slides from one preset to another:
+pick *From* and *To* (Default settings, the instrument's presets or your
+own) and move the slider. Every setting the two give goes part of the way,
+a number smoothly and a choice or a switch halfway across; volume, the room
+and the tuning stay as you have them. Choosing a preset from the Presets
+menu makes it the one you morph from.
+
 **Tuning**, among the controls, is the same on every instrument: the
 **pitch** standard (A = 440 Hz, or 415 for baroque pitch, 392, 422.5, 430,
 435, 442, 443 or 466), the **temperament** (equal, ¼- and ⅙-comma
@@ -341,6 +350,10 @@ Forte app, one standalone that plays any of them from its Instrument menu, or tw
 **+** beside the menu layers a second instrument with the first, or splits the keyboard between
 them.
 
+A plugin's window also shows the instrument's views from its page: press **Views**, beside
+the pedal, and they draw what the plugin plays, whether the notes come from the DAW, a MIDI
+keyboard or the window's keys.
+
 In a plugin's window the Presets menu has your own presets too: *Save these settings…* writes
 one as a file in a presets folder for that instrument (`~/Library/Audio/Presets/Forte/<id>` on a
 Mac, `%APPDATA%\Forte\Presets\<id>` on Windows, `~/.local/share/forte/presets/<id>` on
@@ -348,6 +361,10 @@ Linux), and *Open the presets folder* shows it, so a file saved on the site can 
 Scala files for the custom temperament go in the `Tunings` folder beside the instruments' (on a
 Mac, `~/Library/Audio/Presets/Forte/Tunings`): the menu under Temperament lists them and opens the
 folder.
+
+**Morph** is in every plugin too, as three parameters kept with the project: *Morph from* and
+*Morph to* (the instrument's presets) and *Morph*, the slider, which a DAW can automate to sweep
+from one preset to the other.
 
 **Quality** (in the CPU group) is in every plugin too, kept with the project and in no preset.
 A VST3 or CLAP host that bounces or freezes a track offline gets High whatever it says; the AU

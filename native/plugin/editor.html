@@ -7,8 +7,13 @@
      them and their folder; under Temperament, Scala files from the Tunings folder (presets.h)
      set the custom temperament. In the Forte app a second instrument can be layered with the first or
      split from it (plugin.cpp, Suite): the bar under the header says how they share the keys and
-     whose controls the window shows. Opened as a file, it plays a made-up instrument, to work on it
-     in a browser (?suite: as the Forte app). -->
+     whose controls the window shows. Above the controls, the instrument's views (the shown part's):
+     its own page from the site, served from the plugin (editor.h), in a frame that shows only them
+     (shared/in-plugin.js), fed by the plugin's sound and its engine's messages; the Views button
+     folds them away, and the handle under them shares the height with the controls. Opened as a
+     file, it plays a made-up instrument, to work on it in a browser (?suite: as the Forte app);
+     served with the site (npm run serve) as native/plugin/editor.html?instrument=<slug>, that
+     instrument's WebAssembly engine, views and all. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -82,7 +87,19 @@
   #split-at[hidden] { display: none; }
   .tools { display: flex; gap: 8px; align-items: center; color: var(--muted); }
 
-  main { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 14px; }
+  main { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 12px 14px; }
+  /* the views: the instrument's page, showing only them, above the controls; the handle on the
+     controls' top edge shares the height (as the site's pages do) */
+  #views-pane { flex: 0.6 1 0; min-height: 0; display: flex; background: var(--bg); border-bottom: 1px solid var(--line); }
+  #views-pane[hidden], #views-grip[hidden] { display: none; }
+  #views-pane iframe { flex: 1; width: 100%; height: 100%; border: 0; background: var(--bg); color-scheme: dark; }
+  #views-grip { position: relative; z-index: 4; height: 0; }
+  #views-grip::before { content: ""; position: absolute; left: 50%; top: -9px; width: 72px; height: 18px; transform: translateX(-50%); cursor: row-resize; }
+  #views-grip::after { content: ""; position: absolute; left: 50%; top: -3px; width: 44px; height: 5px; transform: translateX(-50%); border-radius: 3px; background: #55555f; pointer-events: none; }
+  #views-grip:hover::after, #views-grip.dragging::after, #views-grip:focus-visible::after { background: var(--accent); }
+  #views-grip:focus-visible { outline: none; }
+  body.sharing, body.sharing * { cursor: row-resize !important; }
+  body.sharing iframe { pointer-events: none; }
   #groups { columns: 250px; column-gap: 12px; }
   .group {
     break-inside: avoid; -webkit-column-break-inside: avoid; display: inline-block; width: 100%;
@@ -161,6 +178,7 @@
   <div class="brand"><b id="name">Forte</b><select id="instrument" title="Instrument" hidden></select><select id="second" title="Layer or split a second instrument with this one" hidden></select><span id="version"></span></div>
   <select id="preset" title="Preset" hidden></select>
   <div class="tools">
+    <button id="views-btn" hidden aria-pressed="false" title="Show or hide the instrument's views: what its physics is doing as it plays">Views</button>
     <button id="pedal" hidden title="The Space bar, or the sustain pedal (CC64)">Sustain</button>
     <button id="panic" title="Let go of every note">Panic</button>
   </div>
@@ -175,6 +193,8 @@
   <span class="label">Controls</span>
   <div class="seg" id="focus" role="group" aria-label="Whose controls are shown"></div>
 </nav>
+<section id="views-pane" hidden></section>
+<div id="views-grip" hidden tabindex="0" role="separator" aria-orientation="horizontal" aria-label="Share the height between the views and the controls" title="Drag to share the height between the views and the controls (double-click: as it was)"></div>
 <main><div id="groups"></div></main>
 <div id="save" hidden>
   <form>
@@ -745,7 +765,9 @@ async function poll() {
   try {
     const r = await forte('poll');
     if (r) {
-      for (const [i, x, text] of r.p) show(i, x, text);
+      for (const [i, x, text, v] of r.p) { show(i, x, text); texts[i] = text; naturals[i] = v; }
+      last = r;
+      for (const f of listeners) try { f(r); } catch { /* the views' trouble, not the window's */ }
       const next = new Set(r.keys), nextOthers = new Set(r.other ?? []);
       const changed = new Set([...next, ...remote, ...nextOthers, ...others].filter((k) => next.has(k) !== remote.has(k) || nextOthers.has(k) !== others.has(k)));
       // a MIDI key struck while the split waits for one
@@ -758,6 +780,77 @@ async function poll() {
   setTimeout(poll, 40);
 }
 
+// ---- the views: the instrument's page (served by the plugin) in a frame, showing only its views
+// (shared/in-plugin.js), which hear every poll: the parameters, the keys, the engine's messages and
+// its sound. Folded away, the frame is emptied and the plugin stops sending them.
+const texts = [], naturals = [];
+let last = null, listeners = [];
+const pane = $('#views-pane'), grip = $('#views-grip'), viewsBtn = $('#views-btn');
+const prefs = (() => { try { return JSON.parse(localStorage.getItem('forte/plugin-window/v1') || '{}') || {}; } catch { return {}; } })();
+const keep = () => { try { localStorage.setItem('forte/plugin-window/v1', JSON.stringify(prefs)); } catch { /* storage unavailable */ } };
+const SHARE = 0.6; // the views' share of the height they and the controls have, at first
+let share = Number.isFinite(prefs.share) && prefs.share > 0 && prefs.share <= 1 ? prefs.share : SHARE;
+function layoutViews() {
+  pane.style.flex = `${share} 1 0`;
+  $('main').style.flex = `${1 - share} 1 0`;
+  grip.setAttribute('aria-valuenow', String(Math.round(100 * share)));
+}
+async function showViews(on) {
+  viewsBtn.setAttribute('aria-pressed', String(on));
+  pane.hidden = grip.hidden = !on;
+  prefs.views = on; keep();
+  listeners = [];
+  pane.replaceChildren();
+  if (!on) { $('main').style.flex = ''; forte('views', 0); return; }
+  const r = await forte('views', 1);
+  window.forteViews = {
+    describe: D, fs: r?.fs || 48000,
+    // f hears every poll from now on, and at once what it missed: every value, the keys sounding
+    listen(f) {
+      listeners.push(f);
+      f({ p: D.params.map((_, i) => [i, values[i], texts[i] ?? '', naturals[i]]).filter((e) => e[3] !== undefined), keys: last?.keys ?? [], vel: last?.vel ?? [], pedal: !!last?.pedal });
+    },
+  };
+  const frame = document.createElement('iframe');
+  frame.title = `${D.name}: the views`;
+  frame.src = `/${D.page}?plugin`;
+  pane.append(frame);
+  layoutViews();
+}
+function setupViews() {
+  if (!D.page) return;
+  viewsBtn.hidden = false;
+  viewsBtn.addEventListener('click', (e) => { showViews(viewsBtn.getAttribute('aria-pressed') !== 'true'); e.currentTarget.blur(); });
+  // the handle: drag it, or move it with the arrows; a double click goes back to the usual share
+  let drag = null;
+  grip.addEventListener('pointerdown', (e) => {
+    if (e.button > 0) return;
+    e.preventDefault();
+    try { grip.setPointerCapture(e.pointerId); } catch { /* gone */ }
+    const top = pane.getBoundingClientRect().top, bottom = $('main').getBoundingClientRect().bottom;
+    drag = { id: e.pointerId, top, total: bottom - top };
+    grip.classList.add('dragging'); document.body.classList.add('sharing');
+  });
+  grip.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id || drag.total <= 0) return;
+    share = clamp((e.clientY - drag.top) / drag.total, 0.15, 1);
+    layoutViews();
+  });
+  for (const ev of ['pointerup', 'pointercancel']) grip.addEventListener(ev, (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    drag = null; grip.classList.remove('dragging'); document.body.classList.remove('sharing');
+    prefs.share = share; keep();
+  });
+  grip.addEventListener('dblclick', () => { share = SHARE; prefs.share = share; keep(); layoutViews(); });
+  grip.addEventListener('keydown', (e) => {
+    const to = { ArrowUp: share - 0.05, ArrowDown: share + 0.05 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault(); e.stopPropagation();
+    share = clamp(Math.round(to * 20) / 20, 0.15, 1); prefs.share = share; keep(); layoutViews();
+  });
+  showViews(prefs.views !== false); // shown at first
+}
+
 (async () => {
   D = await forte('describe');
   values = D.params.map((p) => p.def);
@@ -766,11 +859,15 @@ async function poll() {
   base = 48 >= LO && 48 <= HI - 12 ? 48 : Math.min(Math.ceil(LO / 12) * 12, Math.max(LO, HI - 12));
   build();
   layoutKeys();
+  setupViews();
   poll();
 })();
 
-// A made-up instrument for working on this page in a browser.
+// A made-up instrument for working on this page in a browser; or, served with the site and asked
+// for one (?instrument=<slug>), that instrument: its WebAssembly engine, playing silently for its views.
 function mockForte() {
+  const slug = new URLSearchParams(location.search).get('instrument');
+  if (slug && location.protocol.startsWith('http')) return siteForte(slug);
   const params = [
     { id: 'strike', label: 'Strike position', group: 'Hammer', kind: 'continuous', perform: true, def: 0.3, choices: [] },
     { id: 'hardness', label: 'Hardness', group: 'Hammer', kind: 'continuous', perform: false, def: 0.5, choices: [] },
@@ -855,6 +952,74 @@ function mockForte() {
     }
     return null;
   };
+}
+function siteForte(slug) {
+  let ready = null;
+  const load = async () => {
+    const { INSTRUMENT: I } = await import(`/${slug}/src/${slug}-instrument.js`);
+    const { nativeParams } = await import('/shared/wasm.js');
+    const E = (await import(I.wasm.module))[I.wasm.name];
+    await E.ready();
+    const fs = 48000, e = new E(fs), x = E.exports, list = nativeParams(I);
+    const params = list.map((p) => ({
+      id: p.id, label: p.label, group: (I.groups.find((g) => g.params.includes(p)) || {}).title || 'Sound',
+      kind: p.type === 'select' ? 'choice' : p.type === 'checkbox' ? 'toggle' : 'continuous', perform: !!p.perform,
+      def: 0, choices: p.type === 'select' ? p.options.map((o) => o[1]) : [],
+    }));
+    const P = Object.fromEntries(list.map((p) => [p.id, p.def]));
+    const native = (p, v) => (p.type === 'select' ? Math.max(0, p.options.findIndex((o) => o[0] === v)) : p.type === 'checkbox' ? (v ? 1 : 0) : v);
+    const along = (p, v) => (p.type === 'select' || p.type === 'checkbox' ? native(p, v) : p.log ? Math.log(v / p.min) / Math.log(p.max / p.min) : (v - p.min) / (p.max - p.min));
+    const from = (p, t) => (p.type === 'select' ? p.options[Math.round(t)][0] : p.type === 'checkbox' ? t > 0.5 : p.log ? p.min * (p.max / p.min) ** t : p.min + (p.max - p.min) * t);
+    list.forEach((p, i) => { params[i].def = along(p, p.def); });
+    e.setParams(P);
+    const sent = list.map(() => NaN), keys = new Map(), heard = [], raw = [], rawData = [];
+    // what the plugin copies out of the engine for its views (native/instruments/<slug>/<slug>-views.cpp),
+    // laid out as there, here taken from what the page's translator reads of the engine's memory
+    const ATTACH = {
+      huygens: { listen: (on) => x.huygens_listen(e.e, on ? 1 : 0), data: (s) => [s.fires.length, s.osc.length, s.t, s.hold, ...s.fires, ...s.osc] },
+      springs: { data: (s) => s.data },
+    }[slug];
+    let pedal = false, viewsOn = false;
+    const L = new Float32Array(128), R = new Float32Array(128);
+    let t0 = performance.now(), done = 0;
+    setInterval(() => { // play what the time since asks for
+      const due = Math.floor(((performance.now() - t0) * fs) / 1000);
+      for (; done + 128 <= due; done += 128) {
+        e.process(L, R, 128);
+        if (viewsOn) for (let i = 0; i < 128; i++) heard.push(0.5 * (L[i] + R[i]));
+        for (let m; (m = x.forte_message(e.h));) {
+          const v = new DataView(x.memory.buffer, m, 128), n = v.getUint16(4, true);
+          if (!viewsOn) continue;
+          const r = [v.getUint16(0, true), v.getInt16(2, true), ...new Float32Array(x.memory.buffer, m + 8, n)];
+          const pm = ATTACH ? E.translate?.({ type: r[0], key: r[1], values: Float32Array.from(r.slice(2)) }, e) : null;
+          if (pm) rawData.push([raw.length, f64(ATTACH.data(pm))]);
+          raw.push(r);
+        }
+      }
+    }, 10);
+    const bytes = (b) => { let t = ''; for (let i = 0; i < b.length; i += 0x8000) t += String.fromCharCode(...b.subarray(i, i + 0x8000)); return btoa(t); };
+    const b64 = (a) => bytes(new Uint8Array(Float32Array.from(a).buffer));
+    function f64(a) { return bytes(new Uint8Array(Float64Array.from(a).buffer)); }
+    const text = (p, v) => (p.type === 'select' ? p.options.find((o) => o[0] === v)?.[1] ?? '' : p.type === 'checkbox' ? (v ? 'on' : 'off') : p.fmt ? p.fmt(v) : String(v));
+    return async (m, ...a) => {
+      if (m === 'describe') return { slug, name: I.name || slug, version: 'site', accent: getComputedStyle(document.documentElement).getPropertyValue('--accent'), keyLo: I.range?.[0] ?? 21, keyHi: I.range?.[1] ?? 108, space: I.space || '', presets: -1, page: `${slug}/index.html`, params };
+      if (m === 'set') { const p = list[a[0]]; P[p.id] = from(p, a[1]); e.setParams(P); return { x: along(p, P[p.id]), text: text(p, P[p.id]) }; }
+      if (m === 'note') { if (a[1] > 0) { keys.set(a[0], a[1]); e.noteOn(a[0], a[1]); } else { keys.delete(a[0]); e.noteOff(a[0], -1); } return null; }
+      if (m === 'pedal') { pedal = !!a[0]; e.setSustain?.(pedal); return null; }
+      if (m === 'panic') { keys.clear(); e.allNotesOff?.(); return null; }
+      if (m === 'views') { viewsOn = !!a[0]; heard.length = raw.length = rawData.length = 0; ATTACH?.listen?.(viewsOn); return { fs }; }
+      if (m === 'poll') {
+        const p = [];
+        list.forEach((q, i) => { const v = native(q, P[q.id]); if (v !== sent[i]) { sent[i] = v; p.push([i, along(q, P[q.id]), text(q, P[q.id]), v]); } });
+        const r = { p, keys: [...keys.keys()], vel: [...keys.values()], pedal };
+        if (viewsOn) { r.m = raw.splice(0); r.md = rawData.splice(0); r.s = b64(heard.splice(0)); }
+        return r;
+      }
+      if (m === 'presets' || m === 'scalas') return { folder: '', list: [] };
+      return null;
+    };
+  };
+  return async (...args) => (await (ready ??= load()))(...args);
 }
 </script>
 </body>

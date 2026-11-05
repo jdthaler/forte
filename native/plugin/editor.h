@@ -2,7 +2,9 @@
 // on Windows, WebKitGTK on Linux) showing editor.html, the instrument's controls and a
 // playable keyboard, embedded in the window the host or the standalone app gives it. The page
 // calls the plugin through one function, window.forte(method, …args), answered by `call` on
-// the main thread (plugin.cpp says what the methods are).
+// the main thread (plugin.cpp says what the methods are). It also serves the site's files the
+// views above the controls need (site.h): shared/ and the instrument's page, at their paths
+// from the site's root ("/gongs/index.html").
 #pragma once
 
 #include <cstdint>
@@ -12,18 +14,20 @@
 #include <clap/clap.h>
 
 #include "choc/containers/choc_Value.h"
+#include "site.h"
 
 namespace forte {
 
 class Editor {
  public:
   using Call = std::function<choc::value::Value(const choc::value::ValueView &args)>;
+  using Page = std::function<const Site *()>; // the instrument's page, now (the Forte app's changes)
 
   // CLAP_WINDOW_API_COCOA, _WIN32 or _X11: the one this platform embeds in
   static const char *api();
   // nullptr if the system has no web view (Windows without the WebView2 runtime, or Linux with
   // no display)
-  static std::unique_ptr<Editor> create(Call call);
+  static std::unique_ptr<Editor> create(Call call, Page page = {});
   virtual ~Editor() = default;
 
   virtual bool setParent(const clap_window_t *window) = 0;

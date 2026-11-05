@@ -212,6 +212,15 @@ export const INSTRUMENTS = [
     accent: '#9cc8e8',
   },
   {
+    id: 'tubular', name: 'Tubular Bells', section: 'traditional', ready: true, version: '0.1.0', trim: 7.5,
+    plugin: { code: 'Tubu', ready: true },
+    after: 'orchestral chimes',
+    tagline: 'Brass tubes hung from a frame and struck on their caps. The pitch you hear is played by no mode of the tube: it is the note whose harmonics modes 4, 5 and 6 nearly are, an octave below the fourth.',
+    physics: 'Timoshenko tubes with a capped end · Hertzian mallet · line-dipole radiation · virtual pitch',
+    vibrates: 'solids', notes: 'ring',
+    accent: '#e8cf7a',
+  },
+  {
     id: 'grand', name: 'Electric Grand', section: 'electric', ready: true, version: '0.11.0', trim: 3.5,
     plugin: { code: 'EGrd', ready: true },
     after: 'the Yamaha CP-70',

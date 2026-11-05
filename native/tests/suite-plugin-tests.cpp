@@ -19,6 +19,7 @@
 
 #include "check.h"
 #include "choc/text/choc_JSON.h"
+#include "choc/memory/choc_Base64.h"
 #include "forte/tuning.h"
 #include "plugin.h"
 
@@ -50,6 +51,11 @@ struct App {
   ~App() { if (processing) { p->stop_processing(p); p->deactivate(p); } p->destroy(p); }
   std::string call(const std::string &json) { return bridge->call(p, json.c_str()); }
   std::string slug() { const std::string d = call("[\"describe\"]"); size_t a = d.find("\"slug\": \"") + 9; return d.substr(a, d.find('"', a) - a); }
+  // a parameter's index, by the name the host sees (−1: none)
+  int index(const char *name) {
+    for (uint32_t i = 0; i < params->count(p); i++) { clap_param_info_t info{}; if (params->get_info(p, i, &info) && !std::strcmp(info.name, name)) return (int)i; }
+    return -1;
+  }
   int number(const std::string &d, const char *key) { size_t a = d.find(std::string("\"") + key + "\": "); return a == std::string::npos ? -1 : std::atoi(d.c_str() + a + std::strlen(key) + 4); }
   // n frames of audio, with a note-on of key at the start if key >= 0
   double run(int n, int key = -1) {
@@ -164,6 +170,7 @@ TEST("suite: switches instrument while the audio runs: its parameters, its keys,
   app.call("[\"poll\"]"); // (the window's calls let the ones before go)
   const std::string d = app.call("[\"describe\"]");
   CHECK(d.find("\"name\": \"Tonewheel Organ\"") != std::string::npos && d.find("\"Drawbar") != std::string::npos);
+  CHECK(d.find("\"page\": \"organ/index.html\"") != std::string::npos); // the window's views show the organ's page
   const int lo = app.number(d, "keyLo"), hi = app.number(d, "keyHi");
   CHECK(app.run(24000, (lo + hi) / 2) > 0.001);
   // and on to another, which plays too
@@ -171,12 +178,64 @@ TEST("suite: switches instrument while the audio runs: its parameters, its keys,
   app.run(512);
   const std::string v = app.call("[\"describe\"]");
   CHECK(v.find("\"name\": \"Vibraphone\"") != std::string::npos);
+  CHECK(v.find("\"page\": \"vibraphone/index.html\"") != std::string::npos);
   CHECK(app.run(24000, (app.number(v, "keyLo") + app.number(v, "keyHi")) / 2) > 0.001);
+}
+
+TEST("suite: the views get what their pages read from the engine's memory: Huygens's lamp firings, the springs' echo") {
+  App app;
+  for (const char *slug : {"huygens", "springs", "gongs"}) {
+    CHECK(app.call(std::string("[\"choose\", \"") + slug + "\"]") == "true");
+    app.run(512);
+    app.call("[\"poll\"]");
+    CHECK(app.call("[\"views\", 1]").find("\"fs\": 48000") != std::string::npos);
+    app.call("[\"poll\"]");
+    app.run(48000, 57); // a second of A3
+    const auto r = choc::json::parse(app.call("[\"poll\"]"));
+    const bool own = std::string(slug) != "gongs"; // (the gongs' messages carry all they say)
+    CHECK(r["m"].size() > 0);
+    CHECK(r.hasObjectMember("md") == own);
+    if (own) {
+      const auto md = r["md"];
+      CHECK(md.size() > 0);
+      for (uint32_t i = 0; i < md.size(); i++) {
+        const int at = md[i][0].getWithDefault<int>(-1);
+        CHECK(at >= 0 && at < (int)r["m"].size() && r["m"][at][0].getWithDefault<int>(0) == 1); // with msg::state, msg::echo
+        std::vector<char> bytes;
+        CHECK(choc::base64::decode(md[i][1].getString(), [&](uint8_t b) { bytes.push_back((char)b); }));
+        const size_t n = bytes.size() / sizeof(double);
+        std::vector<double> d(n);
+        std::memcpy(d.data(), bytes.data(), n * sizeof(double));
+        if (std::string(slug) == "huygens") { // [firings, oscillators, t, hold, …]
+          CHECK(n >= 4 && n == (size_t)(4 + d[0] + d[1]));
+          CHECK(d[2] > 0 && d[2] <= 48000 + 512 * 2);
+        } else { // the echo's samples, as many as the message says
+          CHECK(n > 0 && (double)n == r["m"][at][2].getWithDefault<double>(-1));
+          double peak = 0;
+          for (double y : d) peak = std::max(peak, std::fabs(y));
+          CHECK(peak > 1e-6);
+        }
+      }
+      // and Huygens's lamps fired: the firings since the last came along
+      if (std::string(slug) == "huygens") {
+        double fired = 0;
+        for (uint32_t i = 0; i < md.size(); i++) {
+          std::vector<char> bytes;
+          choc::base64::decode(md[i][1].getString(), [&](uint8_t b) { bytes.push_back((char)b); });
+          double nf;
+          std::memcpy(&nf, bytes.data(), sizeof nf);
+          fired += nf;
+        }
+        CHECK(fired > 0);
+      }
+    }
+    app.call("[\"views\", 0]");
+  }
 }
 
 TEST("suite: Quality belongs to the computer and MPE, Transpose and Octave to the controller: a new instrument keeps them") {
   App app;
-  const uint32_t octave = app.params->count(app.p) - 1, transpose = octave - 1, mpe = octave - 2, last = octave - 3; // Quality, after the velocity curve, then MPE, Transpose, Octave
+  const uint32_t last = app.index("Quality"), mpe = app.index("MPE"), transpose = app.index("Transpose"), octave = app.index("Octave"); // after the velocity curve
   clap_param_info_t info, mpeInfo, tInfo, oInfo;
   CHECK(app.params->get_info(app.p, last, &info) && !std::strcmp(info.name, "Quality"));
   CHECK(app.params->get_info(app.p, mpe, &mpeInfo) && !std::strcmp(mpeInfo.name, "MPE"));
@@ -348,7 +407,7 @@ TEST("two parts: a note held through a swap ends; Panic, the pedal and Quality r
   app.run(512);
   CHECK(app.keys().empty() && app.keys("other").empty());
   // Quality and Octave set where the window shows the second are the first's too (the host's)
-  const uint32_t quality = app.params->count(app.p) - 4, octave = quality + 3; // then MPE, Transpose, Octave
+  const uint32_t quality = app.index("Quality"), octave = app.index("Octave");
   clap_param_info_t info, oInfo;
   app.params->get_info(app.p, quality, &info);
   CHECK(app.params->get_info(app.p, octave, &oInfo) && !std::strcmp(oInfo.name, "Octave"));
@@ -469,13 +528,14 @@ std::filesystem::path presetsHome() {
 #endif
   return dir;
 }
-// every value the host sees but the Preset choice and the velocity curve
+// every value the host sees but the Preset choice, the velocity curve and Morph's (which follow the
+// Preset menu)
 std::vector<double> values(App &app) {
   std::vector<double> v;
   for (uint32_t i = 0; i < app.params->count(app.p); i++) {
     clap_param_info_t info{};
     app.params->get_info(app.p, i, &info);
-    if (info.id == 0x7ffffffe || info.id == 0x7ffffffd) continue;
+    if (info.id == 0x7ffffffe || info.id == 0x7ffffffd || (info.id >= 0x7ffffff6 && info.id <= 0x7ffffff8)) continue;
     double x = NAN;
     app.params->get_value(app.p, info.id, &x);
     v.push_back(x);
