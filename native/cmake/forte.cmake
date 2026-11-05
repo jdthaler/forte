@@ -4,14 +4,46 @@ set(FORTE_PLUGIN_DIR ${CMAKE_CURRENT_LIST_DIR}/../plugin)
 set(FORTE_WEB_DIR ${CMAKE_CURRENT_LIST_DIR}/../web)
 set(FORTE_ICON_DIR ${CMAKE_CURRENT_LIST_DIR}/../icons) # the standalones' icons (tools/make-icons.py)
 
-# forte_add_plugin(<slug> NAME <name> VERSION <x.y.z> AU_SUBTYPE <code> INSTRUMENT <library> [ACCENT <#rrggbb>])
+# forte_add_plugin(<slug> NAME <name> VERSION <x.y.z> AU_SUBTYPE <code> INSTRUMENT <library> [ACCENT <#rrggbb>] [VIEWS <source>])
 #
 # <library> holds the instrument's engine and its InstrumentInfo (it defines
-# forte_instrument()). ACCENT, the window's colour, defaults to FORTE_ACCENT (<slug>-info.cmake). Makes forte_<slug>_clap, _vst3, _auv2 (macOS) and _standalone (with
+# forte_instrument()). VIEWS, the plugins' own (not the WebAssembly's), defines forte_views:
+# what the window's views read from the engine beyond its messages (plugin/site.h). ACCENT, the window's colour, defaults to FORTE_ACCENT (<slug>-info.cmake). Makes forte_<slug>_clap, _vst3, _auv2 (macOS) and _standalone (with
 # native/icons/<slug>.icns and .ico as its icon on macOS and Windows) into ${CMAKE_BINARY_DIR}/plugins, and forte_<slug>_all to build them all. Plugin ids:
 # net.jthaler.forte.<slug> (CLAP, bundles), AU manufacturer Frte (docs/PLUGINS.md).
+# forte_site(<name> <path>…)
+#
+# The site's files a plugin's window serves (plugin/site.h, editor.h): every page, style,
+# script, WebAssembly and data file under each <path> (folders of the repository: shared, or an
+# instrument's), packed into a forte::Site named forte_site_<name> in the library
+# forte_site_<name>. Without the window (FORTE_EDITOR off), nothing.
+function(forte_site name)
+  if (NOT FORTE_EDITOR)
+    return()
+  endif()
+  set(files "")
+  foreach(path ${ARGN})
+    file(GLOB_RECURSE found LIST_DIRECTORIES false CONFIGURE_DEPENDS RELATIVE ${FORTE_ROOT}
+      ${FORTE_ROOT}/${path}/*.html ${FORTE_ROOT}/${path}/*.css ${FORTE_ROOT}/${path}/*.js ${FORTE_ROOT}/${path}/*.wasm ${FORTE_ROOT}/${path}/*.json)
+    list(APPEND files ${found})
+  endforeach()
+  list(SORT files)
+  set(dir ${CMAKE_BINARY_DIR}/generated/site)
+  set(list ${dir}/forte_site_${name}.txt)
+  string(REPLACE ";" "\n" lines "${files}")
+  file(GENERATE OUTPUT ${list} CONTENT "${lines}\n")
+  set(src ${dir}/forte_site_${name}.cpp)
+  list(TRANSFORM files PREPEND ${FORTE_ROOT}/ OUTPUT_VARIABLE deps)
+  add_custom_command(OUTPUT ${src}
+    COMMAND ${CMAKE_COMMAND} -DOUT=${src} -DNAME=forte_site_${name} -DFILES=${list} -P ${FORTE_PLUGIN_DIR}/../cmake/site.cmake
+    WORKING_DIRECTORY ${FORTE_ROOT}
+    DEPENDS ${deps} ${list} ${FORTE_PLUGIN_DIR}/../cmake/site.cmake VERBATIM)
+  add_library(forte_site_${name} STATIC ${src})
+  target_include_directories(forte_site_${name} PRIVATE ${FORTE_PLUGIN_DIR})
+endfunction()
+
 function(forte_add_plugin slug)
-  cmake_parse_arguments(A "" "NAME;VERSION;AU_SUBTYPE;INSTRUMENT;ACCENT" "" ${ARGN})
+  cmake_parse_arguments(A "" "NAME;VERSION;AU_SUBTYPE;INSTRUMENT;ACCENT;VIEWS" "" ${ARGN})
   if (NOT A_ACCENT)
     set(A_ACCENT "${FORTE_ACCENT}")
   endif()
@@ -23,6 +55,16 @@ function(forte_add_plugin slug)
   target_link_libraries(${impl} PUBLIC forte_plugin ${A_INSTRUMENT})
   string(REPLACE "#" "" rgb "${A_ACCENT}") # (a # can't go through a compiler's command line)
   target_compile_definitions(${impl} PRIVATE "FORTE_ACCENT_RGB=\"${rgb}\"")
+  # the instrument's page, for its window's views (plugin/site.h); the template's is in docs/
+  if (FORTE_EDITOR AND EXISTS ${FORTE_ROOT}/${slug}/index.html)
+    forte_site(${slug} ${slug})
+    target_link_libraries(${impl} PUBLIC forte_site_${slug})
+    target_compile_definitions(${impl} PRIVATE "FORTE_SITE=forte_site_${slug}")
+  endif()
+  if (A_VIEWS)
+    target_sources(${impl} PRIVATE ${A_VIEWS})
+    target_compile_definitions(${impl} PRIVATE "FORTE_VIEWS=forte_views")
+  endif()
   # the standalone's icon, its waves in the instrument's colour, where tools/make-icons.py drew one
   set(icons "")
   if (EXISTS ${FORTE_ICON_DIR}/${slug}.icns)
@@ -53,7 +95,19 @@ function(forte_add_plugin slug)
     add_library(${entry} STATIC ${CMAKE_CURRENT_SOURCE_DIR}/${slug}-instrument.cpp)
     target_link_libraries(${entry} PUBLIC ${A_INSTRUMENT})
     target_compile_definitions(${entry} PRIVATE "forte_instrument=forte_instrument_${slug}" "FORTE_INSTRUMENT_VERSION=\"${A_VERSION}\"")
-    set_property(GLOBAL APPEND PROPERTY FORTE_SUITE "${slug}|${rgb}")
+    set(site nullptr)
+    if (TARGET forte_site_${slug})
+      target_link_libraries(${entry} PUBLIC forte_site_${slug})
+      set(site &forte_site_${slug})
+    endif()
+    set(views nullptr)
+    if (A_VIEWS)
+      target_sources(${entry} PRIVATE ${A_VIEWS})
+      target_link_libraries(${entry} PUBLIC forte_plugin) # (site.h)
+      target_compile_definitions(${entry} PRIVATE "forte_views=forte_views_${slug}")
+      set(views &forte_views_${slug})
+    endif()
+    set_property(GLOBAL APPEND PROPERTY FORTE_SUITE "${slug}|${rgb}|${site}|${views}")
   endif()
 endfunction()
 
@@ -75,8 +129,16 @@ function(forte_add_suite)
     string(REPLACE "|" ";" row "${row}")
     list(GET row 0 slug)
     list(GET row 1 rgb)
+    list(GET row 2 site)
+    list(GET row 3 views)
     string(APPEND decls "const forte::InstrumentInfo &forte_instrument_${slug}();\n")
-    string(APPEND rows "  {forte_instrument_${slug}, \"#${rgb}\"},\n")
+    if (NOT site STREQUAL "nullptr")
+      string(APPEND decls "extern const forte::Site forte_site_${slug};\n")
+    endif()
+    if (NOT views STREQUAL "nullptr")
+      string(APPEND decls "extern const forte::Views forte_views_${slug};\n")
+    endif()
+    string(APPEND rows "  {forte_instrument_${slug}, \"#${rgb}\", ${site}, ${views}},\n")
     list(APPEND libs forte_${slug}_suite_entry)
   endforeach()
   set(src ${CMAKE_BINARY_DIR}/generated/suite-entry.cpp)
