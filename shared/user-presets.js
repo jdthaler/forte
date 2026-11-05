@@ -15,6 +15,7 @@
 // the preset's by contract id. set takes every parameter's value by contract id and applies them
 // as choosing a preset would. toast is the page's. pageState (below) hands them to a guided tour.
 
+import { unfocus } from './focus.js';
 import { presetParams, presetFile, readPresetFile, linkHash, readLinkHash, complete, cleanName } from './presets.js';
 import { byId, INSTRUMENTS } from './registry.js';
 import { sheet, show } from './notes.js';
@@ -81,7 +82,7 @@ export function attachPresets({ instrument: I, get, set, values = (P) => P, toas
     if (e.target !== sel || !sel.value.startsWith('__') || sel.value === '__default') return;
     e.stopImmediatePropagation();
     const v = sel.value;
-    sel.blur();
+    unfocus(sel);
     if (v.startsWith(USER)) { play(mine[+v.slice(USER.length)]); return; }
     sel.value = before;
     if (v === '__save') openSheet({ save: true });

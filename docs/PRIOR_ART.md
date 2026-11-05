@@ -290,6 +290,37 @@ requests.
   Chromaphone plays modelled membranes. The Timpani and Tabla solves each
   key's loaded, air-loaded head as it is struck and plays its modes live;
   its sources are in `drums/README.md`.
+* **The marimba and the xylophone.** F. Orduña-Bustamante (*J. Acoust.
+  Soc. Am.* **90**, 2935–2941, 1991) and J. Petrolito and K. A. Legge
+  (*J. Acoust. Soc. Am.* **102**, 2432–2437, 1997) shaped undercuts for
+  harmonic overtones; I. Bork (*Applied Acoustics* **46**, 103–127, 1995)
+  tuned xylophone bars and their tubes; B. H. Suits (*Am. J. Phys.* **69**,
+  743–750, 2001) and D. Beaton and G. Scavone (*J. Acoust. Soc. Am.*
+  **149**, 3758–3768, 2021) solved the bars by finite elements. A. Chaigne
+  and V. Doutaut (*J. Acoust. Soc. Am.* **101**, 539–557, 1997) simulated a
+  struck xylophone bar in time, and with its tube (1998); F. Soares,
+  V. Debut and J. Antunes coupled several bar modes to several tube modes
+  (*J. Sound Vib.* **548**, 117528, 2023). Applied Acoustics Systems'
+  Chromaphone and Modartt's Pianoteq Xylo play modelled marimba bars.
+  The Marimba and Xylophone tunes every bar's cut by finite elements for
+  its instrument and keeps the tube's second resonance, which a centred
+  mouth cannot hear; its sources are in `marimba/README.md`.
+* **The gamelan.** W. Surjodiningrat, P. J. Sudarjana and A. Susanto
+  measured the sarons of Central Java's gamelans (1972; 2nd edn, Gadjah Mada
+  University Press, 1993), and M. Hood redefined sléndro and pélog from them
+  (*Selected Reports* **1**, 1966). R. Perrin and colleagues mapped a small
+  gamelan gong's normal modes (*J. Acoust. Soc. Am.* **136**, 1942–1950,
+  2014); B. Krueger, K. L. Gee and D. Grimshaw found a Balinese gong ageng's
+  ombak in its nonlinear second harmonic beating with its second round mode
+  (*J. Acoust. Soc. Am.* **128**, EL8–EL13, 2010), and M. Jones and the same
+  colleagues measured the bars of a gamelan semara dana (*J. Acoust. Soc.
+  Am.* **127**, EL197–EL202, 2010); W. A. Sethares and M. Vitale studied
+  ombak and octave stretching (*J. Math. Music* **16**, 2022). Earlier
+  syntheses summed decaying partials (the AES's "Modeling the Woodstock
+  Gamelan for Synthesis", 1999). The Gamelan solves its bars as Timoshenko
+  beams (T. C. Huang's equation, 1961), couples them to their tubes, rings
+  the measured gongs with their faces' nonlinearity, and pairs the
+  instruments; its sources are in `gamelan/README.md`.
 
 ## 2. Techniques Forte uses, and where they come from
 

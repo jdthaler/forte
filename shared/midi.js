@@ -33,6 +33,7 @@
 //   kMpeId, controller, footSwitch, levels, programChange; the faders reach them as the
 //   descriptor's controllers).
 
+import { unfocus } from './focus.js';
 import { MODES, createMpe, bendRatio } from './mpe.js';
 
 const KEY = 'forte/midi/v1';
@@ -200,7 +201,7 @@ function touchMenu() {
   el.setAttribute('aria-label', 'Velocity curve');
   TOUCH.forEach((t, i) => el.add(new Option(`Touch: ${t.name.toLowerCase()}`, i)));
   el.value = String(touchIndex);
-  el.addEventListener('change', () => { setTouch(+el.value); el.blur(); });
+  el.addEventListener('change', () => { setTouch(+el.value); unfocus(el); });
   pill.after(el);
 }
 
@@ -214,7 +215,7 @@ function mpeMenu() {
   el.setAttribute('aria-label', 'MPE');
   for (const [id, name] of MODES) el.add(new Option(`MPE: ${name.toLowerCase()}`, id));
   el.value = mpe;
-  el.addEventListener('change', () => { setMpeMode(el.value); el.blur(); });
+  el.addEventListener('change', () => { setMpeMode(el.value); unfocus(el); });
   after.after(el);
 }
 

@@ -53,14 +53,11 @@
 import { createChain } from './chain.js';
 import { createKeyboard } from './keyboard.js';
 import { trimGain } from './registry.js';
-import { controlOwns, focusedByPointer } from './focus.js';
+import { controlOwns, unfocus } from './focus.js';
 import { startMIDI, resumeMIDI, pageMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from './midi.js';
 import { attachPresets } from './user-presets.js';
 import { connectQuality, qualityControl } from './quality.js';
 import { dress, faceOf } from './faces.js';
-// after a change, a control picked with the pointer lets go of the focus (the keys go back to the
-// instrument); one reached with Tab keeps it, so the next Space or arrow works it again
-const unfocus = (el) => { if (focusedByPointer(el)) el.blur(); };
 
 const $ = (s) => document.querySelector(s);
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -439,10 +436,10 @@ export function createShell(cfg) {
   $('#reset')?.addEventListener('click', () => { shell.setAll({ ...DEFAULTS }); if ($('#preset')) $('#preset').value = ''; });
   // your own presets and shared links, in the same menu (shared/user-presets.js)
   shell.presets = attachPresets({ instrument: cfg, get: () => shell.P, set: (v) => shell.setAll({ ...shell.P, ...v }), toast });
-  $('#start')?.addEventListener('click', (e) => { shell.startAudio(); e.currentTarget.blur(); });
-  $('#midi-btn')?.addEventListener('click', (e) => { initMIDI(); e.currentTarget.blur(); });
+  $('#start')?.addEventListener('click', (e) => { shell.startAudio(); unfocus(e.currentTarget); });
+  $('#midi-btn')?.addEventListener('click', (e) => { initMIDI(); unfocus(e.currentTarget); });
   resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
-  $('#panic')?.addEventListener('click', (e) => { shell.panic(); e.currentTarget.blur(); });
+  $('#panic')?.addEventListener('click', (e) => { shell.panic(); unfocus(e.currentTarget); });
 
   for (const id of controls.keys()) refresh(id);
   refreshVisibility();

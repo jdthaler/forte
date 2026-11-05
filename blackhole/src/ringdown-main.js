@@ -6,11 +6,11 @@ import { INSTRUMENT, GROUPS, DEFAULTS, PRESETS } from './blackhole-instrument.js
 import { ALL_PARAMS, fmtSpin, noteName, KEY_LO, KEY_HI, spinFromU } from './ringdown-params.js';
 import { wasmModel } from './blackhole-wasm.js';
 import { createChain } from '../../shared/chain.js';
-import { SpectrogramView } from '../../shared/views.js';
+import { SpectrogramView, animate } from '../../shared/views.js';
 import { drawPlane, drawKerr, WaveView, Lazy } from './ringdown-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
 import { startMIDI, resumeMIDI, pageMIDI, wheelValue, pageMpe, touched, SOFT_PEDAL, createSostenuto, controllersOf, controlled, tellFader } from '../../shared/midi.js';
-import { controlOwns } from '../../shared/focus.js';
+import { controlOwns, unfocus } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
@@ -170,7 +170,7 @@ function buildControls() {
         wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;
         input = document.createElement('select'); input.id = `p-${p.id}`;
         for (const [k, name] of p.options) input.add(new Option(name, k));
-        input.addEventListener('change', () => { setParam(p.id, typeof p.def === 'number' ? +input.value : input.value); input.blur(); });
+        input.addEventListener('change', () => { setParam(p.id, typeof p.def === 'number' ? +input.value : input.value); unfocus(input); });
         wrap.appendChild(input);
       } else if (p.type === 'checkbox') {
         wrap.classList.add('check');
@@ -200,7 +200,7 @@ function buildControls() {
   ps.addEventListener('change', () => {
     if (ps.value === '') return;
     setAll({ ...DEFAULTS, ...Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]])), ...PRESETS[+ps.value].p });
-    ps.blur();
+    unfocus(ps);
   });
   $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }); $('#preset').value = ''; });
 }
@@ -279,7 +279,6 @@ const lvl = (m) => Math.hypot(m.cpr, m.cpi) + Math.hypot(m.cxr, m.cxi);
 plane.draw = () => drawPlane(plane.cv, model.bank, spinFromU(P.spinU), focusVoice.modes.map((m) => ({ l: m.l, m: m.m, n: m.n, level: lvl(m) })));
 kerr.draw = () => drawKerr(kerr.cv, spinFromU(P.spinU), P.inclination);
 function frame() {
-  requestAnimationFrame(frame);
   if (focusDue) renderFocus();
   if (focusVoice) { plane.frame(); kerr.frame(); }
   wave.frame();
@@ -287,13 +286,13 @@ function frame() {
 
 let toastTimer = 0;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3500); }
-$('#start').addEventListener('click', (e) => { startAudio(); e.currentTarget.blur(); });
-$('#midi-btn').addEventListener('click', (e) => { initMIDI(); e.currentTarget.blur(); });
+$('#start').addEventListener('click', (e) => { startAudio(); unfocus(e.currentTarget); });
+$('#midi-btn').addEventListener('click', (e) => { initMIDI(); unfocus(e.currentTarget); });
 resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
-$('#panic').addEventListener('click', (e) => { down.clear(); sost.clear(); soft = false; post({ type: 'panic' }); e.currentTarget.blur(); });
+$('#panic').addEventListener('click', (e) => { down.clear(); sost.clear(); soft = false; post({ type: 'panic' }); unfocus(e.currentTarget); });
 for (const b of document.querySelectorAll('.tab')) b.addEventListener('click', () => {
   document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x === b));
-  wave.mode = b.dataset.mode; wave.touch(); b.blur();
+  wave.mode = b.dataset.mode; wave.touch(); unfocus(b);
 });
 
 buildControls();
@@ -302,6 +301,6 @@ refreshVisibility();
 keyboardView.labels(keyLabels());
 updateHelp();
 setFocus(60, 1);
-requestAnimationFrame(frame);
+animate(frame);
 attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v) => setAll({ ...P, ...v }), toast }); // your own presets and links
 qualityControl(); // the device's Quality, after the controls

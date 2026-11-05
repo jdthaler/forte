@@ -555,6 +555,40 @@
    "title": "Coming to rest"
   }
  ],
+ "gamelan": [
+  {
+   "file": "01-a-gangsa-pair-in-pelog.m4a",
+   "title": "A gangsa pair in pelog"
+  },
+  {
+   "file": "02-one-bar-then-the-pair.m4a",
+   "title": "One bar then the pair"
+  },
+  {
+   "file": "03-the-same-beat-low-to-high.m4a",
+   "title": "The same beat low to high"
+  },
+  {
+   "file": "04-the-damping-hand-then-ringing.m4a",
+   "title": "The damping hand then ringing"
+  },
+  {
+   "file": "05-saron-centre-then-off-axis.m4a",
+   "title": "Saron centre then off axis"
+  },
+  {
+   "file": "06-gong-ageng-throbs-then-a-flat-one.m4a",
+   "title": "Gong ageng throbs then a flat one"
+  },
+  {
+   "file": "07-the-whole-gamelan.m4a",
+   "title": "The whole gamelan"
+  },
+  {
+   "file": "08-paired-bonang-boss-then-face.m4a",
+   "title": "Paired bonang boss then face"
+  }
+ ],
  "glass": [
   {
    "file": "01-adagio-in-c-held-chords.m4a",
@@ -899,6 +933,40 @@
   {
    "file": "06-marimbula-bass.m4a",
    "title": "Marimbula bass"
+  }
+ ],
+ "marimba": [
+  {
+   "file": "01-rolled-chorale.m4a",
+   "title": "Rolled chorale"
+  },
+  {
+   "file": "02-xylophone-then-marimba-bars.m4a",
+   "title": "Xylophone then marimba bars"
+  },
+  {
+   "file": "03-with-resonators-then-without.m4a",
+   "title": "With resonators then without"
+  },
+  {
+   "file": "04-xylophone-tubes-centred-then-off-centre.m4a",
+   "title": "Xylophone tubes centred then off centre"
+  },
+  {
+   "file": "05-soft-yarn-then-hard-plastic-mallets.m4a",
+   "title": "Soft yarn then hard plastic mallets"
+  },
+  {
+   "file": "06-tuned-bars-then-plain-bars.m4a",
+   "title": "Tuned bars then plain bars"
+  },
+  {
+   "file": "07-tube-close-bar-and-tube-beat.m4a",
+   "title": "Tube close bar and tube beat"
+  },
+  {
+   "file": "08-roll-swells.m4a",
+   "title": "Roll swells"
   }
  ],
  "nmr": [
