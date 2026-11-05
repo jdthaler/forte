@@ -31,6 +31,7 @@ const Base = wasmEngine(BUILD);
 const VOICE = ['key', 'killing', 'dead', 'sounded', 'keyDown', 'pending', 'vDown', 'lift', 'peak', 'own'];
 const FLAGS = new Set(['killing', 'dead', 'sounded', 'keyDown', 'pending', 'own']);
 export class HarpsichordWasmEngine extends Base {
+  static translate = views; // the page's messages (shared/wasm.js)
   constructor(fs) {
     super(fs);
     this.e = Base.exports.forte_engine(this.h);

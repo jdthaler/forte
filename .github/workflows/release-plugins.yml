@@ -7,7 +7,8 @@ name: release-plugins
 #
 # It runs by itself after every green `native` run on live, and publishes only when what the
 # plugins are built from changed since the latest release (tools/plugin-release.mjs --manifest:
-# each instrument's version and the native/ tree), so a new port reaches the downloads when
+# each instrument's version, Forte's and the native/ tree; the plugins carry the pages and
+# shared/ for their windows' views), so a new port reaches the downloads when
 # main is released to live (CLAUDE.md). The site is live by then: its downloads say which
 # release they are until this one is out (shared/plugins.js). It can also be started from the Actions tab on live,
 # which always publishes.

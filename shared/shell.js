@@ -58,6 +58,7 @@ import { startMIDI, resumeMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto
 import { attachPresets } from './user-presets.js';
 import { connectQuality, qualityControl } from './quality.js';
 import { dress, faceOf } from './faces.js';
+import { host, pluginAudio, pageValue, keysFrom } from './in-plugin.js';
 // after a change, a control picked with the pointer lets go of the focus (the keys go back to the
 // instrument); one reached with Tab keeps it, so the next Space or arrow works it again
 const unfocus = (el) => { if (focusedByPointer(el)) el.blur(); };
@@ -113,6 +114,16 @@ export function createShell(cfg) {
     if (shell.audio) { if (shell.audio.ctx.state !== 'running') shell.audio.ctx.resume(); return Promise.resolve(shell.audio); }
     if (starting) return starting;
     let ctx = null;
+    if (host) { // in the plugin's window: the plugin plays, and the views hear it (shared/in-plugin.js)
+      starting = (async () => {
+        const audio = await pluginAudio(cfg.wasm, (u) => shell.fromPlugin(u));
+        audio.node.port.onmessage = (e) => { if (e.data.type !== 'stats' && e.data.type !== 'error') cfg.onMessage?.(e.data); };
+        shell.audio = audio;
+        cfg.onAudio?.(audio);
+        return audio;
+      })();
+      return starting;
+    }
     starting = (async () => {
       ctx = new AudioContext({ latencyHint: 'interactive' });
       if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
@@ -168,7 +179,7 @@ export function createShell(cfg) {
   const paramsMessage = () => ({ type: 'params', P: { ...shell.P } });
   const sendParams = () => shell.post(paramsMessage());
   shell.sendParams = sendParams;
-  shell.post = (m) => { if (shell.audio) shell.audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
+  shell.post = (m) => { if (host) return; if (shell.audio) shell.audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
   shell.applyMix = () => { if (shell.audio) shell.audio.chain.apply(shell.P, trimGain(cfg.id)); };
 
   // ---- notes ---------------------------------------------------------------
@@ -440,12 +451,42 @@ export function createShell(cfg) {
   shell.presets = attachPresets({ instrument: cfg, get: () => shell.P, set: (v) => shell.setAll({ ...shell.P, ...v }), toast });
   $('#start')?.addEventListener('click', (e) => { shell.startAudio(); e.currentTarget.blur(); });
   $('#midi-btn')?.addEventListener('click', (e) => { initMIDI(); e.currentTarget.blur(); });
-  resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
+  if (!host) resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click (in a plugin, the host has the MIDI)
   $('#panic')?.addEventListener('click', (e) => { shell.panic(); e.currentTarget.blur(); });
+
+  // ---- in the plugin's window (shared/in-plugin.js): its values, keys and pedal ----------------
+  // The plugin's parameters, by its index: the page's own (a console's or the plugin's own, such as
+  // the velocity curve, are not)
+  const pluginParams = host ? host.describe.params.map((q) => ALL.find((p) => p.id === q.id) ?? null) : [];
+  const pluginKeys = keysFrom({
+    on: (key, vel) => { shell.keys.set(key, true); cfg.onNoteOn?.(key, vel); },
+    off: (key) => { shell.keys.set(key, false); cfg.onNoteOff?.(key); },
+    pedal: (on) => { shell.sustain = on; cfg.onSustain?.(on); document.dispatchEvent(new CustomEvent('forte-sustain', { detail: on })); },
+  });
+  shell.fromPlugin = (u) => {
+    const changed = [];
+    for (const [i, , , v] of u.p || []) {
+      const p = pluginParams[i];
+      if (!p || v === undefined) continue;
+      const value = pageValue(p, v);
+      if (shell.P[p.id] === value) continue;
+      shell.P[p.id] = value;
+      if (p.id === cfg.compass?.param) rebound();
+      refresh(p.id);
+      changed.push(p);
+    }
+    if (changed.length) {
+      refreshVisibility(); updateHelp();
+      if (changed.length === 1) cfg.onParam?.(changed[0].id, shell.P[changed[0].id], shell.P, changed[0], false);
+      else cfg.onParam?.('*', null, shell.P, null, false);
+    }
+    pluginKeys(u);
+  };
 
   for (const id of controls.keys()) refresh(id);
   refreshVisibility();
   shell.keys.labels(labels());
   updateHelp();
+  if (host) shell.startAudio();
   return shell;
 }

@@ -107,6 +107,7 @@ TEST("suite: switches instrument while the audio runs: its parameters, its keys,
   app.call("[\"poll\"]"); // (the window's calls let the one before go)
   const std::string d = app.call("[\"describe\"]");
   CHECK(d.find("\"name\": \"Tonewheel Organ\"") != std::string::npos && d.find("\"Drawbar") != std::string::npos);
+  CHECK(d.find("\"page\": \"organ/index.html\"") != std::string::npos); // the window's views show the organ's page
   const int lo = app.number(d, "keyLo"), hi = app.number(d, "keyHi");
   CHECK(app.run(24000, (lo + hi) / 2) > 0.001);
   // and on to another, which plays too
@@ -114,6 +115,7 @@ TEST("suite: switches instrument while the audio runs: its parameters, its keys,
   app.run(512);
   const std::string v = app.call("[\"describe\"]");
   CHECK(v.find("\"name\": \"Vibraphone\"") != std::string::npos);
+  CHECK(v.find("\"page\": \"vibraphone/index.html\"") != std::string::npos);
   CHECK(app.run(24000, (app.number(v, "keyLo") + app.number(v, "keyHi")) / 2) > 0.001);
 }
 

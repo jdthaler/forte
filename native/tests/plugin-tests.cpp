@@ -377,6 +377,28 @@ TEST("plugin: values read as the page shows them, and typed values are understoo
   CHECK(in.params->value_to_text(in.p, in.id("Preset"), 1, text, sizeof text) && std::string(text) == "Long ring");
 }
 
+TEST("plugin: while the window shows the views, its polls bring the engine's sound") {
+  Instance in(48000);
+  auto bridge = (const forte::EditorBridge *)in.p->get_extension(in.p, forte::kEditorBridge);
+  auto call = [&](const char *json) { return bridge->call(in.p, json); };
+  CHECK(call("[\"describe\"]").find("\"page\"") == std::string::npos); // the smoke test has no page
+  Events none;
+  call("[\"note\", 69, 0.8]");
+  in.run(1280, 128, none);
+  CHECK(call("[\"poll\"]").find("\"s\"") == std::string::npos); // nothing while they don't show
+  CHECK(call("[\"views\", 1]").find("\"fs\": 48000") != std::string::npos);
+  call("[\"poll\"]");
+  in.run(1280, 128, none);
+  const std::string polled = call("[\"poll\"]");
+  const size_t at = polled.find("\"s\": \"");
+  CHECK(at != std::string::npos && polled.find("\"m\": [") != std::string::npos);
+  const size_t end = polled.find('"', at + 6);
+  CHECK(end - (at + 6) == (1280 * 4 + 2) / 3 * 4); // 1280 float32s, base64
+  CHECK(call("[\"views\", 0]").find("\"fs\"") != std::string::npos);
+  in.run(1280, 128, none);
+  CHECK(call("[\"poll\"]").find("\"s\"") == std::string::npos);
+}
+
 TEST("plugin: the editor's calls set parameters, play notes and show what the host changed") {
   Instance in(48000);
   auto bridge = (const forte::EditorBridge *)in.p->get_extension(in.p, forte::kEditorBridge);
@@ -386,7 +408,7 @@ TEST("plugin: the editor's calls set parameters, play notes and show what the ho
   CHECK(d.find("\"name\": \"Forte Smoke Test\"") != std::string::npos);
   CHECK(d.find("\"Long ring\"") != std::string::npos && d.find("\"presets\": 3") != std::string::npos);
   CHECK(d.find("\"space\": \"sustain\"") != std::string::npos);
-  CHECK(call("[\"poll\"]").find("[1, 0.4, \"-1.9 dB\"]") != std::string::npos); // every value once
+  CHECK(call("[\"poll\"]").find("[1, 0.4, \"-1.9 dB\", ") != std::string::npos); // every value once (and the engine's value)
   CHECK(call("[\"poll\"]").find("\"p\": []") != std::string::npos);            // then only changes
 
   // a slider half way along: Ring time is a log parameter, 0.1 … 10 s
@@ -410,8 +432,8 @@ TEST("plugin: the editor's calls set parameters, play notes and show what the ho
   auto L = in.run(4800, 128, preset);
   CHECK(peak(L) > 0.01);
   const std::string polled = call("[\"poll\"]");
-  CHECK(polled.find("\"keys\": [69]") != std::string::npos);
-  CHECK(polled.find("[3, 1, \"Long ring\"]") != std::string::npos && polled.find("\"6.00 s\"") != std::string::npos);
+  CHECK(polled.find("\"keys\": [69]") != std::string::npos && polled.find("\"vel\": [0.8") != std::string::npos);
+  CHECK(polled.find("[3, 1, \"Long ring\", 1]") != std::string::npos && polled.find("\"6.00 s\"") != std::string::npos);
   call("[\"note\", 69, 0]");
   call("[\"panic\"]");
   Events none;
