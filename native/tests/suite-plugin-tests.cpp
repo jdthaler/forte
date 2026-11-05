@@ -174,20 +174,26 @@ TEST("suite: switches instrument while the audio runs: its parameters, its keys,
   CHECK(app.run(24000, (app.number(v, "keyLo") + app.number(v, "keyHi")) / 2) > 0.001);
 }
 
-TEST("suite: Quality belongs to the computer and MPE to the controller: a new instrument keeps them") {
+TEST("suite: Quality belongs to the computer and MPE, Transpose and Octave to the controller: a new instrument keeps them") {
   App app;
-  const uint32_t mpe = app.params->count(app.p) - 1, last = mpe - 1; // Quality, after the velocity curve, then MPE
-  clap_param_info_t info, mpeInfo;
+  const uint32_t octave = app.params->count(app.p) - 1, transpose = octave - 1, mpe = octave - 2, last = octave - 3; // Quality, after the velocity curve, then MPE, Transpose, Octave
+  clap_param_info_t info, mpeInfo, tInfo, oInfo;
   CHECK(app.params->get_info(app.p, last, &info) && !std::strcmp(info.name, "Quality"));
   CHECK(app.params->get_info(app.p, mpe, &mpeInfo) && !std::strcmp(mpeInfo.name, "MPE"));
+  CHECK(app.params->get_info(app.p, transpose, &tInfo) && !std::strcmp(tInfo.name, "Transpose"));
+  CHECK(app.params->get_info(app.p, octave, &oInfo) && !std::strcmp(oInfo.name, "Octave"));
   app.call("[\"set\", " + std::to_string(last) + ", 2]"); // Low
   app.call("[\"set\", " + std::to_string(mpe) + ", 1]");  // On
+  app.call("[\"set\", " + std::to_string(transpose) + ", 15]"); // +3
+  app.call("[\"set\", " + std::to_string(octave) + ", 3]");     // −1
   app.run(512);
   CHECK(app.call("[\"choose\", \"celesta\"]") == "true");
   app.run(512);
-  double v = -1, m = -1;
+  double v = -1, m = -1, t = -1, o = -1;
   CHECK(app.params->get_value(app.p, info.id, &v) && v == 2);
   CHECK(app.params->get_value(app.p, mpeInfo.id, &m) && m == 1);
+  CHECK(app.params->get_value(app.p, tInfo.id, &t) && t == 15);
+  CHECK(app.params->get_value(app.p, oInfo.id, &o) && o == 3);
   CHECK(app.run(24000, 72) > 0.001);
 }
 
@@ -341,15 +347,19 @@ TEST("two parts: a note held through a swap ends; Panic, the pedal and Quality r
   app.call("[\"panic\"]");
   app.run(512);
   CHECK(app.keys().empty() && app.keys("other").empty());
-  // Quality set where the window shows the second is the first's too (the host's)
-  const uint32_t mpe = app.params->count(app.p) - 1, quality = mpe - 1;
-  clap_param_info_t info;
+  // Quality and Octave set where the window shows the second are the first's too (the host's)
+  const uint32_t quality = app.params->count(app.p) - 4, octave = quality + 3; // then MPE, Transpose, Octave
+  clap_param_info_t info, oInfo;
   app.params->get_info(app.p, quality, &info);
+  CHECK(app.params->get_info(app.p, octave, &oInfo) && !std::strcmp(oInfo.name, "Octave"));
   auto d = app.describe();
   app.call("[\"set\", " + std::to_string(paramAt(d, "quality")) + ", 2]");
+  app.call("[\"set\", " + std::to_string(paramAt(d, "midiOctave")) + ", 5]"); // and Octave +1, the controller's
   app.run(512);
-  double v = -1;
+  double v = -1, o = -1;
   CHECK(app.params->get_value(app.p, info.id, &v) && v == 2);
+  CHECK(app.params->get_value(app.p, oInfo.id, &o) && o == 5);
+  app.call("[\"set\", " + std::to_string(paramAt(d, "midiOctave")) + ", 4]");
   // a program change plays the shown part's preset: the tine piano's first
   const int presets = d["presets"].get<int>();
   App::Ev pc{-1, false};
