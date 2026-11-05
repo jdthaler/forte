@@ -82,7 +82,8 @@ case "$preset" in
     cp native/icons/forte.ico "$root/Forte-plugins/"
     node tools/windows-installer.mjs "Forte plugins" > "$root/Forte-plugins/forte.iss"
     iscc=${ISCC:-"/c/Program Files (x86)/Inno Setup 6/ISCC.exe"}
-    "$iscc" /Qp "/O$(cygpath -w "$PWD/dist")" "$(cygpath -w "$root/Forte-plugins/forte.iss")" ;;
+    # (Git Bash would turn ISCC's /Qp and /O switches into paths without MSYS2_ARG_CONV_EXCL)
+    MSYS2_ARG_CONV_EXCL='*' "$iscc" /Qp "/O$(cygpath -w "$PWD/dist")" "$(cygpath -w "$root/Forte-plugins/forte.iss")" ;;
   linux) tools/package-linux.sh "$root/Forte-plugins/Forte plugins" ;;
 esac
 ls -l dist
