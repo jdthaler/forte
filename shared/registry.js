@@ -203,6 +203,15 @@ export const INSTRUMENTS = [
     accent: '#e0955a',
   },
   {
+    id: 'saw', name: 'Musical Saw', section: 'traditional', ready: true, version: '0.1.0', trim: 0,
+    plugin: { code: 'Musi', ready: true },
+    after: 'the singing saw of vaudeville and folk players',
+    tagline: 'A steel blade bent into an S and bowed on its edge: the note is a wave trapped where the bend turns over, so it rings on untouched by the hands, and bending the blade slides it.',
+    physics: 'Curved thin shell · a mode trapped at the inflection · tunnelling to the hands · bow stick and slip',
+    vibrates: 'solids', notes: 'hold',
+    accent: '#9cc8e8',
+  },
+  {
     id: 'tubular', name: 'Tubular Bells', section: 'traditional', ready: true, version: '0.1.0', trim: 7.5,
     plugin: { code: 'Tubu', ready: true },
     after: 'orchestral chimes',
