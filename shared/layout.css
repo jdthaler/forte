@@ -53,9 +53,22 @@ body[data-instrument] #start.running,
 body[data-instrument] #start:not(.running) ~ :is(#cpu, #voices),
 body[data-instrument] #start:not(.running) ~ .forte-load > :is(#cpu, #voices) { display: none; }
 .pill[hidden] { display: none; }
-/* the velocity curve and MPE beside the MIDI status (shared/midi.js touchMenu, mpeMenu): menus
-   drawn as pills */
-body[data-instrument] :is(#touch, #mpe) { color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; font: inherit; min-width: 0; }
+/* the MIDI status opens the MIDI settings once MIDI is on (shared/midi.js midiMenu): the velocity
+   curve, MPE, Octave and Transpose; it says how far the keys are moved, in the accent, while they are */
+.forte-midi-pill { cursor: pointer; white-space: nowrap; }
+.forte-midi-pill::after { content: ' ▾'; }
+.forte-midi-pill[data-shift] { color: var(--accent); border-color: var(--accent); }
+.forte-midi-pill[data-shift]::after { content: ' · ' attr(data-shift) ' ▾'; }
+.forte-midi-pill:hover, .forte-midi-pill[aria-expanded="true"] { color: var(--text); border-color: var(--accent); }
+.forte-midi-menu {
+  position: fixed; z-index: 60; display: grid; grid-template-columns: auto auto; gap: 8px 12px; align-items: center;
+  padding: 12px 14px; background: var(--card, #161b22); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+.forte-midi-menu[hidden] { display: none; }
+.forte-midi-menu label { display: contents; }
+.forte-midi-menu label > span { color: var(--muted); }
+.forte-midi-menu select { min-width: 0; }
 /* Quality beside the CPU readout (shared/quality.js), in one pill: "Quality High" until the audio
    starts, then "CPU 12 % | High" (the peak and the voices in its tooltip) */
 body[data-instrument] .forte-load {
@@ -464,8 +477,7 @@ body.perform .brand .sub,
 body.perform .forte-about,
 body.perform .forte-info,
 body.perform #midi,
-body.perform #touch,
-body.perform #mpe,
+body.perform #midi-menu,
 body.perform #cpu:not(.hot),
 body.perform .forte-load:not(:has(.hot)),
 body.perform .forte-toggles,
@@ -498,7 +510,7 @@ body.perform #views .card:not([data-keep-text]) canvas { flex: 1 1 0; height: au
 }
 
 /* every browser on iPhone and iPad lacks Web MIDI: no MIDI button or status */
-body.no-midi #midi-btn, body.no-midi #midi, body.no-midi #touch, body.no-midi #mpe { display: none; }
+body.no-midi :is(#midi-btn, #midi, #midi-menu) { display: none; }
 
 /* toasts: announced, never in the way of the keys */
 body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h, calc(var(--kb-h, 115px) + 52px)) + 12px); max-width: min(90vw, 560px); }
@@ -510,8 +522,6 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
    header) as they scroll by. In Perform, More
    controls takes the place of the views. The menus open below the header, inside the screen. */
 @media (max-width: 600px), (max-width: 1050px) and (max-height: 500px) {
-  /* the velocity curve and MPE keep their choices from a bigger screen: the phone's header has no room */
-  body[data-instrument] #touch, body[data-instrument] #mpe { display: none; }
   html:has(> body[data-instrument]) { overscroll-behavior-y: none; } /* no pull-to-refresh mid-phrase */
   body[data-instrument] { height: auto; min-height: 100vh; min-height: 100svh; overflow: visible; }
   body[data-instrument], body.no-views > main { grid-template-columns: minmax(0, 1fr); } /* never wider than the screen */

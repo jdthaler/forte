@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Tubular Bells · Forte</title>
+  <meta name="description" content="Brass tubes hung from a frame and struck on their caps. The pitch you hear is played by no mode of the tube: it is the note whose harmonics modes 4, 5 and 6 nearly are, an octave below the fourth.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="Tubular Bells · Forte">
+  <meta property="og:description" content="Brass tubes hung from a frame and struck on their caps. The pitch you hear is played by no mode of the tube: it is the note whose harmonics modes 4, 5 and 6 nearly are, an octave below the fourth.">
+  <meta property="og:url" content="https://forte.jthaler.net/tubular/">
+  <meta property="og:image" content="https://forte.jthaler.net/tubular/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Tubular Bells's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="tubular">
+  <div class="forte-edge" aria-hidden="true"></div>
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Tubular Bells</h1>
+      <span class="sub">brass tubes hung from a frame, struck on their caps: a pitch no mode plays</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Tubes">
+          <div class="card-head"><h2>The tubes <b id="tube-key">C4</b></h2><span class="muted" id="tube-read"></span></div>
+          <canvas id="frame"></canvas>
+          <div class="caption">The tubes hanging from the frame, to scale, the struck one bending with its first eight modes at their live amplitudes, exaggerated and slowed down. ▶ mallet, ▬ the damper bar (dark when it presses).</div>
+        </div>
+        <div class="card" data-perform data-view="Strike note">
+          <div class="card-head"><h2>The strike note</h2><span class="muted" id="ladder-read">strike a key</span></div>
+          <canvas id="ladder"></canvas>
+          <div class="caption">Each mode of the struck tube on a scale of the strike note’s harmonics (the grey lines), its bar as tall as it is loud now. Modes 4, 5 and 6 (gold) lie near the 2nd, 3rd and 4th harmonics of a note that no mode plays: the ear hears that note, an octave below mode 4.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" id="info-card" data-view="Mode table">
+          <div class="card-head"><h2>Modes of <b id="focus-name">C4</b></h2><span class="muted" id="focus-size"></span></div>
+          <table class="modes" id="modes"></table>
+        </div>
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the tube’s modes (gold: 4–6), dashed: the strike note</span></div>
+          <canvas id="spectrum"></canvas>
+          <div class="caption">No line at the strike note itself (the dashed marker): the pitch you hear is the one modes 4, 5 and 6 imply. The low modes, below the strike note, barely reach the air.</div>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">The high modes radiate their energy away in a second or two, a clang that fades into the long hum of modes 4–6; the damper bar stops them all at once.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>damper pedal (lifts the bar): hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>mod wheel: mallet face</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/tubular-main.js"></script>
+  <script type="module" src="src/tubular-tour.js"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+// tubular-instrument.js — the instrument without its page: everything a host needs
+// to play it. The page (tubular-main.js), the Node tools and tests, and the native
+// plugins (tools/gen-native-params.mjs) all start here. No DOM, no Web Audio.
+
+import { GROUPS, DEFAULTS, PRESETS } from './tubular-params.js';
+import { TUNING_KEEP } from '../../shared/tuning.js';
+
+export { GROUPS, DEFAULTS, PRESETS };
+
+// tubular-model.h: KEY_LO–KEY_HI, the orchestral set of 18 tubes; KEY_MIN–KEY_MAX, every key with Full range
+export const KEY_LO = 60, KEY_HI = 77, KEY_MIN = 21, KEY_MAX = 108;
+
+export const INSTRUMENT = {
+  id: 'tubular',
+  groups: GROUPS,
+  presets: PRESETS,
+  keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
+  range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C8, 21–108
+  compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // C4–F5, 60–77, until Full range opens the rest
+  space: 'sustain',                     // Space and CC64: the damper pedal, which lifts the frame's damper bar
+  modWheel: 'hardness',                 // CC1: the mallet's face, from its default up to brass
+  mpe: { slide: true },                 // a note's own slide: its mallet's face, at the strike (a tube cannot bend)
+  faders: ['damp', 'mass', 'speedMax', 'strike', 'hardness'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
+  // the engine: the physics in C++ (native/instruments/tubular), built as WebAssembly
+  wasm: { name: 'TubularWasmEngine', module: new URL('./tubular-wasm.js', import.meta.url).href, binary: new URL('../wasm/tubular.wasm', import.meta.url).href },
+  chain: { volume: 'volume', room: 'room', venue: 'venue' },
+};

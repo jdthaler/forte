@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Marimba and Xylophone · Forte</title>
+  <meta name="description" content="Rosewood bars, undercut so their partials land on a chord (1 : 4 : 10 for the marimba, a twelfth for the xylophone), over stopped tubes that drink the sound out of them. Roll a held note to sustain it.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="Marimba and Xylophone · Forte">
+  <meta property="og:description" content="Rosewood bars, undercut so their partials land on a chord (1 : 4 : 10 for the marimba, a twelfth for the xylophone), over stopped tubes that drink the sound out of them. Roll a held note to sustain it.">
+  <meta property="og:url" content="https://forte.jthaler.net/marimba/">
+  <meta property="og:image" content="https://forte.jthaler.net/marimba/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Marimba and Xylophone's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="marimba">
+  <div class="forte-edge" aria-hidden="true"></div>
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Marimba and Xylophone</h1>
+      <span class="sub">rosewood bars undercut so their partials land on a chord, over stopped tubes</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Bar and modes">
+          <div class="card-head"><h2>The bar <b id="bar-key">C4</b></h2><span class="muted" id="bar-read"></span></div>
+          <canvas id="bar"></canvas>
+          <div class="caption">The struck bar to scale (thickness ×2) and its first three bending modes, moving with their live amplitudes, slowed down. The arch cut underneath is what tunes them: 1 : 4 : 10 on the marimba, 1 : 3 on the xylophone. ○ cords at mode 1’s nodes, ▼ mallet, ⌒ tube mouth.</div>
+        </div>
+        <div class="card" id="info-card" data-view="Mode table">
+          <div class="card-head"><h2>Modes of <b id="focus-name">C4</b></h2><span class="muted" id="focus-size"></span></div>
+          <table class="modes" id="modes"></table>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-perform data-view="Resonator">
+          <div class="card-head"><h2>Resonator</h2><span class="muted" id="tube-read">strike a key</span></div>
+          <canvas id="tube"></canvas>
+          <div class="legend"><span><i style="background:var(--accent)"></i>bar</span><span><i style="background:var(--accent-2)"></i>tube</span></div>
+          <div class="caption">Left: the tube under the struck bar and its air: a quarter wave at the bar’s pitch (largest at the closed bottom, a node at the mouth) and, three times higher, three quarters of one. Right: the energy in bar and tube over the last 4 s, as the tube draws the fundamental out of the bar.</div>
+        </div>
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: bending (gold), torsion (blue), tube (teal)</span></div>
+          <canvas id="spectrum"></canvas>
+          <div class="caption">A marimba bar’s partials land on the harmonic grid at 4 and 10 × f₁, a xylophone bar’s at 3 × f₁ (and near 6); a plain bar’s at 2.76 and 5.40 do not.</div>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the spectrum's markers</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">Wood loses energy fast, and the more so the higher the partial: the upper lines vanish within a tenth of a second and leave the fundamental, which the tube keeps up a little longer. A roll restrikes the bar a dozen times a second.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>hold the keys down (they keep rolling): hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>mod wheel: roll · aftertouch rolls a held key</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/marimba-main.js"></script>
+  <script type="module" src="src/marimba-tour.js"></script>
+</body>
+</html>
