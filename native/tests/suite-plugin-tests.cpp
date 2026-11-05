@@ -50,6 +50,11 @@ struct App {
   ~App() { if (processing) { p->stop_processing(p); p->deactivate(p); } p->destroy(p); }
   std::string call(const std::string &json) { return bridge->call(p, json.c_str()); }
   std::string slug() { const std::string d = call("[\"describe\"]"); size_t a = d.find("\"slug\": \"") + 9; return d.substr(a, d.find('"', a) - a); }
+  // a parameter's index, by the name the host sees (−1: none)
+  int index(const char *name) {
+    for (uint32_t i = 0; i < params->count(p); i++) { clap_param_info_t info{}; if (params->get_info(p, i, &info) && !std::strcmp(info.name, name)) return (int)i; }
+    return -1;
+  }
   int number(const std::string &d, const char *key) { size_t a = d.find(std::string("\"") + key + "\": "); return a == std::string::npos ? -1 : std::atoi(d.c_str() + a + std::strlen(key) + 4); }
   // n frames of audio, with a note-on of key at the start if key >= 0
   double run(int n, int key = -1) {
@@ -176,7 +181,7 @@ TEST("suite: switches instrument while the audio runs: its parameters, its keys,
 
 TEST("suite: Quality belongs to the computer and MPE to the controller: a new instrument keeps them") {
   App app;
-  const uint32_t mpe = app.params->count(app.p) - 1, last = mpe - 1; // Quality, after the velocity curve, then MPE
+  const uint32_t last = app.index("Quality"), mpe = app.index("MPE"); // after the velocity curve
   clap_param_info_t info, mpeInfo;
   CHECK(app.params->get_info(app.p, last, &info) && !std::strcmp(info.name, "Quality"));
   CHECK(app.params->get_info(app.p, mpe, &mpeInfo) && !std::strcmp(mpeInfo.name, "MPE"));
@@ -342,7 +347,7 @@ TEST("two parts: a note held through a swap ends; Panic, the pedal and Quality r
   app.run(512);
   CHECK(app.keys().empty() && app.keys("other").empty());
   // Quality set where the window shows the second is the first's too (the host's)
-  const uint32_t mpe = app.params->count(app.p) - 1, quality = mpe - 1;
+  const uint32_t quality = app.index("Quality");
   clap_param_info_t info;
   app.params->get_info(app.p, quality, &info);
   auto d = app.describe();
@@ -459,13 +464,14 @@ std::filesystem::path presetsHome() {
 #endif
   return dir;
 }
-// every value the host sees but the Preset choice and the velocity curve
+// every value the host sees but the Preset choice, the velocity curve and Morph's (which follow the
+// Preset menu)
 std::vector<double> values(App &app) {
   std::vector<double> v;
   for (uint32_t i = 0; i < app.params->count(app.p); i++) {
     clap_param_info_t info{};
     app.params->get_info(app.p, i, &info);
-    if (info.id == 0x7ffffffe || info.id == 0x7ffffffd) continue;
+    if (info.id == 0x7ffffffe || info.id == 0x7ffffffd || (info.id >= 0x7ffffff8 && info.id <= 0x7ffffffa)) continue;
     double x = NAN;
     app.params->get_value(app.p, info.id, &x);
     v.push_back(x);
