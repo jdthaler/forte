@@ -10,7 +10,7 @@ import { createChain } from '../../shared/chain.js';
 import { SpectrogramView } from '../../shared/views.js';
 import { GeneratorView, LeslieView, OutputView, drawScanner, BAR_COLORS, useModel } from './organ-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from '../../shared/midi.js';
+import { startMIDI, resumeMIDI, pageMIDI, touched, SOFT_PEDAL, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from '../../shared/midi.js';
 import { controlOwns, focusedByPointer } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
@@ -208,6 +208,7 @@ let soft = false;               // CC67
 const notes = pageMpe({ post: () => {}, params: () => P }); // MPE: the generator turns every wheel, so no note bends alone, and a member's bend is no one else's
 // the faders and the pad (the descriptor's): a drawbar goes through the console's state
 const ccs = controllersOf(INSTRUMENT), ccLast = {}, consoleParams = CONSOLE.groups.flatMap((g) => g.params);
+pageMIDI({ onMIDI, controllers: ccs }); // a song played from a MIDI file (shared/songs.js) plays it as a keyboard would
 function fader(cc, v) {
   const set = controlled(ccs, [...ALL_PARAMS, ...consoleParams], { ...P, ...CONSOLE.get(P) }, cc, v, ccLast);
   if (!set) return;

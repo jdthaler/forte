@@ -12,7 +12,7 @@ import { createChain } from '../../shared/chain.js';
 import { MotionView, SpectrumView, drawSection, FAMILY } from './viz.js';
 import { SpectrogramView } from '../../shared/views.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from '../../shared/midi.js';
+import { startMIDI, resumeMIDI, pageMIDI, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from '../../shared/midi.js';
 import { controlOwns } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
@@ -262,6 +262,7 @@ function initMIDI() {
 
 const notes = pageMpe({ post: () => {}, params: () => P }); // MPE: no note bends alone, and a member's bend is no one else's
 const ccs = controllersOf(INSTRUMENT), ccLast = {}; // the descriptor's faders and pad (and controllers)
+pageMIDI({ onMIDI, controllers: ccs }); // a song played from a MIDI file (shared/songs.js) plays it as a keyboard would
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data;
   const cmd = st & 0xf0;

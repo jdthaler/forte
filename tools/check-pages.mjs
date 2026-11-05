@@ -9,7 +9,8 @@
 // height, that every view shows in Perform, with the presets and More controls in the keyboard
 // bar instead of the controls' bar, and the screen kept awake there once audio runs, and not in
 // Discover), the guided tour (Tour in the header, each step showing its views, and every control
-// as it was once it ends; on the desktop and the phone), and the front page's Listen buttons (one for
+// as it was once it ends; on the desktop and the phone), Songs (♪ in the header; a song plays its
+// keys and stops when closed; on the desktop and the phone), and the front page's Listen buttons (one for
 // each instrument with a demo, and two in turn play).
 //
 // Usage: node tools/check-pages.mjs [--base <git ref>] [--json <file>] [filter]
@@ -60,7 +61,7 @@ const SIZES = [
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.wasm': 'application/wasm', '.svg': 'image/svg+xml', '.png': 'image/png',
-  '.jpg': 'image/jpeg', '.m4a': 'audio/mp4', '.webmanifest': 'application/manifest+json', '.txt': 'text/plain' };
+  '.jpg': 'image/jpeg', '.m4a': 'audio/mp4', '.mid': 'audio/midi', '.webmanifest': 'application/manifest+json', '.txt': 'text/plain' };
 
 // A static server for one checkout, on a free port of localhost (a secure context, so the
 // AudioWorklet runs).
@@ -96,6 +97,7 @@ const COUNT = () => {
     listen: n('button[data-src]'),
     quality: [...document.querySelectorAll('header #quality')].filter((e) => e.checkVisibility()).length,
     tour: [...document.querySelectorAll('body > header .forte-tour-start')].filter((e) => e.checkVisibility()).length,
+    songs: [...document.querySelectorAll('body > header .forte-songs-start')].filter((e) => e.checkVisibility()).length,
   };
 };
 const WIDE = () => document.documentElement.scrollWidth - window.innerWidth;
@@ -231,6 +233,26 @@ async function guidedTour(tab) {
   return out;
 }
 
+// Songs (shared/songs.js): ♪ opens the card, a song of Forte's plays (its keys go down), the page
+// doesn't scroll sideways, and closing the card stops it with no key left down.
+const DOWN = () => document.querySelectorAll('#keyboard .down').length;
+async function songs(tab) {
+  const out = [];
+  await tab.locator('.forte-songs-start').click({ timeout: 2000 });
+  const song = tab.locator('.forte-songs-song').first();
+  await song.waitFor({ timeout: 5000 }).catch(() => {});
+  if (!(await song.count())) return ['Songs lists no songs'];
+  await song.click({ timeout: 2000 });
+  const played = await tab.waitForFunction(DOWN, null, { timeout: 6000 }).then(() => true, () => false);
+  if (!played) out.push('a song from Songs plays no keys');
+  if (await tab.evaluate(WIDE) > 0) out.push('scrolls sideways with Songs open');
+  await tab.locator('.forte-songs-close').click({ timeout: 2000 });
+  await tab.waitForTimeout(300);
+  if (await tab.locator('.forte-songs').isVisible().catch(() => false)) out.push('✕ doesn\'t close Songs');
+  if (await tab.evaluate(DOWN)) out.push('closing Songs leaves keys down');
+  return out;
+}
+
 // The Screen Wake Lock, counted: headless Chromium refuses the real one.
 const WAKE_LOCK = () => {
   window.__wake = 0;
@@ -288,6 +310,7 @@ async function checkPage(browser, url, page, size) {
       if (q) await tab.waitForTimeout(250);
     }
     if ((name === 'desktop' || name === 'phone') && counts.tour) broken.push(...await guidedTour(tab));
+    if ((name === 'desktop' || name === 'phone') && counts.songs) broken.push(...await songs(tab));
     return { page: page || 'index', size: name, counts, errors, wide, broken };
   } catch (e) {
     return { page: page || 'index', size: name, counts: null, errors: [...errors, e.message], wide, broken };
@@ -309,6 +332,7 @@ function failures(r, instrument) {
   if (!c.barPresets) f.push('no presets in the controls\' bar');
   if (!c.quality) f.push('no Quality choice in the header');
   if (!c.tour) f.push('no Tour in the header (a guided tour: shared/tour.js)');
+  if (!c.songs) f.push('no ♪ Songs in the header (shared/songs.js)');
   return f;
 }
 
