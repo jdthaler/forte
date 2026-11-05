@@ -80,7 +80,7 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `limiter.js` | the limiter at the end of the chain: Web Audio's compressor curve and makeup gain without its 6 ms look-ahead, as the plugins' `limiter.cpp`, so a page adds no delay to a key |
 | `dsp.js` | `modeCoeffs` (exact two-pole modal resonator), `Biquad`, `OnePole`, `DCBlock`, `Delay` (fractional), `keyPan`, `keyFreq`, `sigmaFromT60` |
 | `linalg.js` | `symEig`, `genEig` (generalised symmetric), `cholesky` |
-| `views.js` | `fit`, `css`, `animate`, `SpectrumView` (live spectrum + model markers), `SpectrogramView` (scrolling spectrogram, the markers as ticks), `ScopeView` |
+| `views.js` | `fit`, `css`, `animate` (every view's loop: four times a second with Reduce Motion on), `SpectrumView` (live spectrum + model markers), `SpectrogramView` (scrolling spectrogram, the markers as ticks), `ScopeView` |
 | `impulses.js` | the rooms: `roomIR` (the pages' original synthetic room) and the venues (`VENUES`: a studio and three halls built from their size, walls and air: image sources, then a tail decaying in each octave in Eyring's time) |
 | `tuning.js`, `tuning-ui.js` | the keyboard's tuning, the same on every instrument and in the plugins (`native/core` `tuning.h`): the pitch standard (A4), the temperament (equal, meantone, the well temperaments, Pythagorean, just, custom) on a root key, and a custom temperament's cents; `readScala` reads a Scala file (`.scl`) into them. `tuning-ui.js` is the pages' *Load a Scala file* button, which `user-presets.js` adds under Temperament. |
 | `quality.js` | the Quality setting (High, Medium, Low): how much of its physics the engine plays, for phones and older computers. One choice per browser, for every page, shown in the header beside the CPU readout (`qualityControl()`, one pill with it once the audio plays) and in no preset or link; `connectQuality(node)` sends it to the page's engine and suggests a lower setting when the audio drops out. |
@@ -89,7 +89,7 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `morph.js` | Morph, the last group of controls on every page: *From* and *To* (Default settings, the instrument's presets, your own) and a slider between them; `presets.js` `morph` is the blend (a number in a straight line, or by equal ratios on a log control, on its step; a choice or a switch halfway), and the page's `keep` stays as it is. `user-presets.js` attaches it. Choosing a preset makes it From. The plugins have the same as three parameters, Morph from, Morph to and Morph (`native/plugin/plugin.cpp`), so a song can automate it. |
 | `midi.js` | Web MIDI for every page (the shell and the five older pages): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen next to Enable MIDI, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling; `pageMpe` decodes MPE for a page (below) and turns it into the engine's `noteBend`, `slide` and `pressure` messages. A foot controller is `startMIDI`'s too, so every page has it: `SWITCHES` turns CC80, 81 and 82 into CC64, 66 and 67, the volume (CC7) and expression (CC11) pedals set `pedalGain`, which `chain.js` applies after the limiter, and a program change plays a preset from `#preset` (`choosePreset`); a page passes its `controllers` (`controllersOf`) so that a CC its instrument maps (an organ's CC11) stays the instrument's. The plugins do the same (`native/plugin/plugin.cpp`). |
 | `mpe.js` | MPE (MIDI Polyphonic Expression), message for message as the plugins' `forte/mpe.h`: zones from the MPE Configuration Message, member channels' bend (±48 semitones unless RPN 0 says otherwise), pressure and CC74, the Auto/On/Off mode, and `bendRatio`, a note's bend along the keyboard's tuning. |
-| `focus.js` | who gets a key press: a control reached with Tab keeps the keys it uses (Space ticks a stop, arrows move a slider); one last touched with the mouse or a finger hands them back to the instrument. Every page's key handler asks `controlOwns(e)` first. |
+| `focus.js` | who gets a key press: a control reached with Tab keeps the keys it uses (Space ticks a stop, arrows move a slider); one last touched with the mouse or a finger hands them back to the instrument. Every page's key handler asks `controlOwns(e)` first. After a click or a change, `unfocus(el)` lets go of the focus only if the pointer gave it: a control reached with Tab keeps it, so Tab goes on to the next one and a screen reader keeps its place. |
 | `tour.js` | the guided tour of an instrument's physics: *Tour* in the header, before How it works, and the card that steps through `<slug>-tour.js` ("The guided tour", below) |
 | `backing.js` | **PI Requests**: a 1980s home keyboard's rhythm box and auto-accompaniment (preset rhythms, Start, Synchro, Fill in, tempo, bass and chords from the left hand's chord below middle C), in a group of its own after the instrument's. Page only: Web Audio nodes into the output's limiter, settings kept in the browser, in no preset or link, nothing in the plugins. A page calls `attachBacking(shell, { id, styles, about })` and passes its `onNoteOn` and `onPanic` on (`noteOn()`, `stop()`); ABRACADABRA and CUORE have it, with their experiments' own rhythms (the pulse tube, the Mediterranean). |
 | `notes.js`, `markdown.js` | **How it works**: the page's README in a dialog (button by the title, or a link to `…/#about`) |
@@ -414,8 +414,18 @@ To fit in:
 - Keep controls out of the views. A custom control surface (drawbars, a
   console) is a `.card` with `data-control`; it heads the Controls
   panel. Only small things fit the keyboard bar.
-- Start every animation loop with `requestAnimationFrame` and skip
-  hidden canvases. `animate(draw, canvas)` does both.
+- Draw every view through `animate(draw, canvas)` (`shared/views.js`),
+  never a `requestAnimationFrame` loop of the page's own
+  (`test/site-tests.mjs` checks): it skips hidden canvases, and with the
+  system's Reduce Motion on it draws four times a second instead of every
+  frame, so the views step rather than scroll and swing. A `draw(t)` that
+  integrates over the time since its last frame should cap that step (most
+  cap it at 0.1 s).
+- A view's canvas is named for screen readers by its view and described
+  by its caption (`shared/layout.js`). A canvas elsewhere, in a control
+  surface, needs `role="img"` and an `aria-label` of its own; a button
+  drawn with a symbol needs an `aria-label`. `tools/check-pages.mjs` fails
+  on any control a screen reader can't name.
 - Make drawing code survive a tiny canvas.
 - Write the README in the Markdown that `shared/markdown.js` renders for
   the notes: headings, paragraphs, lists, pipe tables, fenced code, inline

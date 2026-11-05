@@ -1,6 +1,7 @@
 // rhodes-viz.js — slow-motion mechanism, pickup transfer, spectrum.
 
 import { barShape } from './tine.js';
+import { animate } from '../../shared/views.js';
 
 function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 function fit(cv) {
@@ -27,8 +28,7 @@ export class MotionView {
     this.D = null;
     this.speed = 0.005;
     this.t0 = performance.now();
-    const loop = () => { requestAnimationFrame(loop); if (this.cv.offsetParent) this.draw(); }; // skip while hidden
-    requestAnimationFrame(loop);
+    animate(() => this.draw(), this.cv); // skipped while hidden (shared/views.js)
   }
 
   // sim: { frames: [Float64Array], eta: Float64Array, dt, model, P, title }
@@ -149,8 +149,7 @@ export class PickupView {
   constructor(canvas) {
     this.cv = canvas;
     this.D = null;
-    const loop = () => { requestAnimationFrame(loop); if (this.cv.offsetParent) this.draw(); }; // skip while hidden
-    requestAnimationFrame(loop);
+    animate(() => this.draw(), this.cv); // skipped while hidden (shared/views.js)
   }
   set(d) { this.D = d; } // d.flux(Y, w): the model's flux curve
   draw() {
@@ -207,8 +206,7 @@ export class PickupView {
 export class SpectrumView {
   constructor(canvas) {
     this.cv = canvas; this.analyser = null; this.modes = null; this.f0 = 0;
-    const loop = () => { requestAnimationFrame(loop); if (this.cv.offsetParent) this.draw(); }; // skip while hidden
-    requestAnimationFrame(loop);
+    animate(() => this.draw(), this.cv); // skipped while hidden (shared/views.js)
   }
   setAnalyser(a) { this.analyser = a; this.fft = new Float32Array(a.frequencyBinCount); }
   set(f0, modes) { this.f0 = f0; this.modes = modes; }
