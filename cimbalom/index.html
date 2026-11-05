@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Cimbalom · Forte</title>
+  <meta name="description" content="Courses of four strings struck by hammers thrown from the player’s hands: their slight mistuning makes each note bloom and fade in two stages, and on the dulcimer the bridge splits each string into two notes a fifth apart.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="Cimbalom · Forte">
+  <meta property="og:description" content="Courses of four strings struck by hammers thrown from the player’s hands: their slight mistuning makes each note bloom and fade in two stages, and on the dulcimer the bridge splits each string into two notes a fifth apart.">
+  <meta property="og:url" content="https://forte.jthaler.net/cimbalom/">
+  <meta property="og:image" content="https://forte.jthaler.net/cimbalom/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Cimbalom's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="cimbalom">
+  <div class="forte-edge" aria-hidden="true"></div>
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Cimbalom</h1>
+      <span class="sub">courses of strings struck by hand-held hammers: the concert cimbalom and the hammered dulcimer</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Strings and hammer">
+          <div class="card-head"><h2>The strings of <b id="course-key">C4</b></h2><span class="muted" id="course-read">play a key</span></div>
+          <canvas id="strings"></canvas>
+          <div class="legend"><span><i style="background:var(--accent)"></i>the struck side</span><span><i style="background:var(--accent-2)"></i>the far side of the bridge</span><span><i style="background:#e8e2d0"></i>the hammer's head</span></div>
+          <div class="caption">One string of the last key's course as it moves now, its swing magnified, between its bridges, and the hammer where it lands. On the hammered dulcimer the treble bridge divides the string 2 : 3 and the far side rings along, a fifth away. The bar under the string turns red while the dampers are on it.</div>
+        </div>
+        <div class="card" data-perform data-view="Decay">
+          <div class="card-head"><h2>How the note dies away</h2><span class="muted" id="decay-read"></span></div>
+          <canvas id="decay"></canvas>
+          <div class="caption">The last key's force on the bridge, in decibels, over the last eight seconds. Its strings start in step and drain into the bridge together, fast; as their small mistuning pulls them apart they stop driving it together, and the sound falls slower or beats. Perfect unisons give one straight line; a wide spread gives beats.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Hammer contact">
+          <div class="card-head"><h2>The last stroke</h2><span class="muted" id="contact-read"></span></div>
+          <canvas id="contact"></canvas>
+          <div class="caption">The force between the hammer and the strings, against time. Cotton stays on a millisecond or more and rises gently, so it leaves the upper partials out; bare wood jumps at once. A light hammer is thrown back early, often by the wave that returns from the near bridge, and a whippy stick can drive the head back for a second blow.</div>
+        </div>
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the struck side's partials, and the far side's</span></div>
+          <canvas id="spectrum"></canvas>
+          <div class="caption">The partials are stretched a little by the wire's stiffness. Strike at the middle and the even ones vanish; near the bridge the fundamental weakens. On the dulcimer the far side's partials (the second colour) ring where they meet the struck side's.</div>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the struck side's partials</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">The upper partials die first. With the dampers off (or the pedal down) every other course rings along, a haze of lines around each note.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>damper pedal: hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>mod wheel: where the hammers land · aftertouch: the tremolo's strokes</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/cimbalom-main.js"></script>
+  <script type="module" src="src/cimbalom-tour.js"></script>
+</body>
+</html>
