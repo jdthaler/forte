@@ -110,6 +110,7 @@ Instance *instance(const clap_plugin_t *p) { return (Instance *)p->plugin_data; 
 struct Plugin : Instance, MpeDecoder::Sink {
   const InstrumentInfo &I;
   const Site *const site;    // its page, for the window's views (or null)
+  const Views *const views;  // what they read beyond the engine's messages (or null)
   const std::string accent;  // the window's colour
   const bool hasPresets;
   const int nParams;        // the instrument's parameters, then Preset if it has presets, the velocity curve, Quality, MPE, Transpose and Octave
@@ -155,14 +156,22 @@ struct Plugin : Instance, MpeDecoder::Sink {
   std::atomic<bool> pedalDown{false};
   std::atomic<float> struck[128]{}; // each key's last velocity, as the engine got it (the descriptor's midiVelocity's units)
   // the views (the instrument's page in the window, editor.html): while they show, the engine's
-  // messages (Engine::post) and its sound before the chain, as the page's analyser hears it
+  // messages (Engine::post), each with the data its views read from the engine (site.h, Views),
+  // and its sound before the chain, as the page's analyser hears it. The engine posts into fresh
+  // on the audio thread, which hands each message on with its data at the end of the block.
+  struct Posted { Message m; int n = 0; }; // n: how many of attached are its
+  static constexpr size_t kPosted = 4096, kAttached = 1 << 17;
   std::atomic<bool> viewsOn{false};
-  SpscQueue<Message> messages{4096};
+  SpscQueue<Message> fresh{1024};
+  SpscQueue<Posted> messages{kPosted};
+  SpscQueue<double> attached{kAttached};
+  std::atomic<size_t> postedIn{0}, postedOut{0}, attachedIn{0}, attachedOut{0};
+  std::vector<double> attaching = std::vector<double>(kAttached / 2);
   SpscQueue<float> heard{1 << 16};
   double fs = 48000;
 
-  Plugin(const clap_host_t *h, const InstrumentInfo &info, const clap_plugin_descriptor_t *desc, const std::string &colour, const Site *page = nullptr)
-      : Instance(h, desc), I(info), site(page), accent(colour.size() < 2 ? "#f0b35a" : colour), hasPresets(info.presetCount > 0),
+  Plugin(const clap_host_t *h, const InstrumentInfo &info, const clap_plugin_descriptor_t *desc, const std::string &colour, const Site *page = nullptr, const Views *watch = nullptr)
+      : Instance(h, desc), I(info), site(page), views(watch), accent(colour.size() < 2 ? "#f0b35a" : colour), hasPresets(info.presetCount > 0),
         nParams(info.paramCount + (hasPresets ? 6 : 5)), presetAt(hasPresets ? info.paramCount : -1), touchAt(nParams - 5), qualityAt(nParams - 4), mpeAt(nParams - 3),
         transposeAt(nParams - 2), octaveAt(nParams - 1) {
     std::memset(moved, -1, sizeof moved);
@@ -493,7 +502,11 @@ struct Plugin : Instance, MpeDecoder::Sink {
     takePending();
     takeUi(proc->out_events);
     const uint32_t n = proc->frames_count;
-    if (engine) engine->messages = viewsOn.load(std::memory_order_relaxed) ? &messages : nullptr; // posting costs nothing unwatched
+    const bool watched = viewsOn.load(std::memory_order_relaxed);
+    if (engine) { // posting costs nothing unwatched
+      engine->messages = watched ? &fresh : nullptr;
+      if (views && views->listen) views->listen(*engine, watched);
+    }
     float *L = nullptr, *R = nullptr;
     if (proc->audio_outputs_count > 0 && proc->audio_outputs[0].data32) {
       L = proc->audio_outputs[0].data32[0];
@@ -519,12 +532,36 @@ struct Plugin : Instance, MpeDecoder::Sink {
     publishKeys();
     return CLAP_PROCESS_CONTINUE;
   }
+  // audio thread: the engine's messages of this block to the window, each with its data while the
+  // engine's buffers are still as the message left them (a message is dropped when the window
+  // falls behind, its data when there's no room for it)
+  void handOn() {
+    for (Message m; fresh.pop(m);) {
+      // (counted, so that a message and its data go together or not at all)
+      if (postedIn.load(std::memory_order_relaxed) - postedOut.load(std::memory_order_acquire) >= kPosted) continue; // the window's behind
+      Posted x{m, 0};
+      if (views && views->attach) {
+        const size_t room = kAttached - (attachedIn.load(std::memory_order_relaxed) - attachedOut.load(std::memory_order_acquire));
+        const int k = views->attach(*engine, m, attaching.data(), (int)std::min(room, attaching.size()));
+        if (k > 0 && (size_t)k <= room) {
+          for (int i = 0; i < k; i++) attached.push(attaching[i]);
+          attachedIn.fetch_add((size_t)k, std::memory_order_release);
+          x.n = k;
+        }
+      }
+      messages.push(x);
+      postedIn.fetch_add(1, std::memory_order_release);
+    }
+  }
   // the engine, a guard (a NaN stops the notes rather than the instrument, shared/guard.js), the chain
   void render(float *L, float *R, uint32_t n) {
     if (!engine) { std::memset(L, 0, n * sizeof *L); std::memset(R, 0, n * sizeof *R); return; }
     engine->process(L, R, (int)n);
     if (!guardBlock(L, R, (int)n)) engine->allNotesOff();
-    if (viewsOn.load(std::memory_order_relaxed)) for (uint32_t i = 0; i < n; i++) heard.push(0.5f * (L[i] + R[i]));
+    if (viewsOn.load(std::memory_order_relaxed)) {
+      for (uint32_t i = 0; i < n; i++) heard.push(0.5f * (L[i] + R[i]));
+      handOn();
+    }
     chain.process(L, R, (int)n);
     const double to = levelTarget();
     if (level == to) { if (to != 1) for (uint32_t i = 0; i < n; i++) { L[i] = (float)(L[i] * to); R[i] = (float)(R[i] * to); } return; }
@@ -577,7 +614,8 @@ struct Plugin : Instance, MpeDecoder::Sink {
   //   poll()              { p: [[index, x, text, value]…] the values changed since (value: as the
   //                       engine has it, a choice's index, a toggle's 0 or 1), keys: [down…],
   //                       vel: [each one's velocity…], pedal }, and while the views show,
-  //                       m: [[type, key, values…]…] the engine's messages since and s: its sound
+  //                       m: [[type, key, values…]…] the engine's messages since, md: [[i, data]…]
+  //                       the data of m[i] (site.h, Views: base64 of float64s), and s: its sound
   //                       since (mono, before the chain: base64 of float32s)
   //   views(on)           the views shown or not; { fs }, the sample rate
   //   set(i, x)           a parameter: x along a slider (0..1), a choice's index, a toggle's 0/1
@@ -670,19 +708,37 @@ struct Plugin : Instance, MpeDecoder::Sink {
     r.addMember("vel", vel);
     r.addMember("pedal", pedalDown.load(std::memory_order_relaxed));
     if (viewsOn.load()) {
-      Value ms = createEmptyArray();
-      for (Message m; messages.pop(m);) {
+      Value ms = createEmptyArray(), md = createEmptyArray();
+      std::vector<double> data;
+      for (Posted x; take(x, data);) {
+        const Message &m = x.m;
         Value a = createEmptyArray();
         a.addArrayElement((int)m.type); a.addArrayElement((int)m.key);
         for (int k = 0; k < m.count && k < 30; k++) a.addArrayElement((double)m.values[k]);
+        if (x.n) {
+          Value d = createEmptyArray();
+          d.addArrayElement((int)ms.size());
+          d.addArrayElement(choc::base64::encodeToString(data.data(), data.size() * sizeof(double)));
+          md.addArrayElement(d);
+        }
         ms.addArrayElement(a);
       }
       r.addMember("m", ms);
+      if (md.size()) r.addMember("md", md);
       std::vector<float> x;
       for (float y; heard.pop(y);) x.push_back(y);
       r.addMember("s", choc::base64::encodeToString(x.data(), x.size() * sizeof(float)));
     }
     return r;
+  }
+  // main thread: the next message for the window, with its data
+  bool take(Posted &x, std::vector<double> &data) {
+    if (!messages.pop(x)) return false;
+    postedOut.fetch_add(1, std::memory_order_release);
+    data.resize((size_t)x.n);
+    for (int i = 0; i < x.n; i++) attached.pop(data[(size_t)i]);
+    attachedOut.fetch_add((size_t)x.n, std::memory_order_release);
+    return true;
   }
   const Site *page() const override { return site; }
   void closed() override { viewsOn = false; }
@@ -702,7 +758,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
     if (m == "poll") return poll();
     if (m == "views") {
       const bool on = num(1) > 0;
-      if (on && !viewsOn.load()) { Message x; float y; while (messages.pop(x)) {} while (heard.pop(y)) {} } // nothing stale
+      if (on && !viewsOn.load()) { Posted x; std::vector<double> d; float y; while (take(x, d)) {} while (heard.pop(y)) {} } // nothing stale
       viewsOn = on;
       Value r = createObject("");
       r.addMember("fs", fs);
@@ -1192,7 +1248,7 @@ struct Suite : Instance {
   // instrument k, ready to play: Quality is the computer's and MPE, Transpose and Octave the
   // controller's (MPE's mode and the zones it announced), so it takes them from the first
   std::unique_ptr<Plugin> make(int k) {
-    std::unique_ptr<Plugin> p(new Plugin(host, list[k].info(), clap.desc, list[k].accent, list[k].site));
+    std::unique_ptr<Plugin> p(new Plugin(host, list[k].info(), clap.desc, list[k].accent, list[k].site, list[k].views));
     if (const Plugin *c = part[0].get()) {
       p->P[p->qualityAt] = c->shown[c->qualityAt].load(); p->shown[p->qualityAt] = p->P[p->qualityAt]; p->offline = c->offline;
       p->P[p->mpeAt] = c->shown[c->mpeAt].load(); p->shown[p->mpeAt] = p->P[p->mpeAt];
@@ -1585,12 +1641,13 @@ struct Factory {
   int suiteCount = 0;
   std::string id, version, accent;
   const Site *site = nullptr;
+  const Views *views = nullptr;
   const char *features[4] = {CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_SYNTHESIZER, CLAP_PLUGIN_FEATURE_STEREO, nullptr};
   clap_plugin_descriptor_t desc{};
   clap_plugin_info_as_vst3_t vst3{};
-  void init(const InstrumentInfo &info, const char *colour, const Site *page) {
+  void init(const InstrumentInfo &info, const char *colour, const Site *page, const Views *watch) {
     I = &info;
-    site = page;
+    site = page; views = watch;
     accent = colour ? colour : "";
     id = std::string("net.jthaler.forte.") + info.slug;
     version = info.version;
@@ -1621,7 +1678,7 @@ const clap_plugin_t *factoryCreate(const clap_plugin_factory_t *, const clap_hos
     return &s->clap;
   }
   if (!factory.I) return nullptr;
-  Plugin *s = new Plugin(host, *factory.I, &factory.desc, factory.accent, factory.site);
+  Plugin *s = new Plugin(host, *factory.I, &factory.desc, factory.accent, factory.site, factory.views);
   s->clap.init = pluginInit; s->clap.destroy = pluginDestroy;
   s->clap.activate = pluginActivate; s->clap.deactivate = pluginDeactivate;
   s->clap.start_processing = pluginStartProcessing; s->clap.stop_processing = pluginStopProcessing;
@@ -1636,7 +1693,7 @@ const clap_plugin_factory_as_vst3_t vst3Factory{"Forte", "https://forte.jthaler.
 
 } // namespace
 
-bool entryInit(const InstrumentInfo &info, const char *accent, const Site *site) { factory.init(info, accent, site); return true; }
+bool entryInit(const InstrumentInfo &info, const char *accent, const Site *site, const Views *views) { factory.init(info, accent, site, views); return true; }
 bool entrySuite(const SuiteEntry *instruments, int count, const char *version) { factory.initSuite(instruments, count, version); return count > 0; }
 
 const void *entryFactory(const char *id) {

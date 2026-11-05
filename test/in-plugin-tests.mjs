@@ -124,5 +124,20 @@ await test('every engine class gives the window its messages', async () => {
   assert.deepEqual(none, []);
 });
 
+// Where a translator reads the engine's memory, the plugin sends that data with the message
+// (native/instruments/<id>/<id>-views.cpp), and the translator reads it from there instead.
+await test('the translators that read the engine\'s memory read the plugin\'s data instead', async () => {
+  const H = (await import(new URL('../huygens/src/huygens-wasm.js', import.meta.url).href)).HuygensWasmEngine;
+  const fires = [60, 2, 0.5, 0.75], osc = [1, 2, 3];
+  const h = H.translate({ type: 1, key: -1, values: new Float32Array(0), data: Float64Array.from([fires.length, osc.length, 4800, 0.25, ...fires, ...osc]) }, { fs: 48000 });
+  assert.equal(h.type, 'state'); assert.equal(h.t, 4800); assert.equal(h.hold, 0.25); assert.equal(h.fs, 48000);
+  assert.deepEqual([...h.fires], fires); assert.deepEqual([...h.osc], osc);
+  const S = (await import(new URL('../springs/src/springs-wasm.js', import.meta.url).href)).SpringWasmEngine;
+  const echo = [0.1, -0.2, 0.3];
+  const e = S.translate({ type: 1, key: 57, values: Float32Array.from([3, 0.8]), data: Float64Array.from(echo) }, { fs: 48000 });
+  assert.equal(e.type, 'echo'); assert.equal(e.key, 57); assert.equal(e.n, 3);
+  assert.deepEqual([...e.data], echo.map(Math.fround));
+});
+
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }
 console.log('\nall in-plugin tests passed');

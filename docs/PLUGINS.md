@@ -460,9 +460,10 @@ themselves too (`native/install.cmd`, `install.ps1`).
   comes from the network. While the pane is open the plugin's polls bring the engine's messages
   (`Engine::post`, which the page's `<slug>-wasm.js` translates as its worklet would) and its
   sound before the output chain, which a stand-in for Web Audio's `AnalyserNode` reads. The
-  parameters, keys and pedal are the plugin's, whoever moves them. Two messages read the engine's
-  memory and so stay out of the window: Huygens's oscillator state and the springs' echo.
-  Still to come: each page's own layout of its controls (`showIf`, hints).
+  parameters, keys and pedal are the plugin's, whoever moves them. Where a page's translator
+  reads the engine's memory (Huygens's lamp firings, the springs' echo), the plugin copies that
+  data out on the audio thread and sends it with the message (`native/plugin/site.h`, `Views`;
+  `<slug>-views.cpp`). Still to come: each page's own layout of its controls (`showIf`, hints).
 - MIDI Polyphonic Expression: done, for the next release. `forte/mpe.h` decodes MPE zones
   (Auto, the default, waits for the MPE Configuration Message; On and Off in the plugin's MPE
   parameter); CLAP note expressions (tuning, brightness, pressure) reach the same per-note

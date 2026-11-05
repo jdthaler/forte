@@ -4,7 +4,8 @@
 //   - the parameters, the keys sounding and the pedal, as the plugin has them (the host's
 //     automation, its presets, MIDI and the window's own controls all move them);
 //   - the engine's messages (Engine::post), turned into the page's as its WebAssembly module
-//     turns them (wasm.js: the engine class's `translate`);
+//     turns them (wasm.js: the engine class's `translate`), with the data a translator would read
+//     from the engine's memory in the message's `data`;
 //   - the engine's sound, before the output chain, as the page's analyser hears it: a stand-in
 //     for the Web Audio graph (AnalyserNode and its context) that the views read.
 // The page plays nothing itself: the window plays the keys, and the plugin the notes.
@@ -13,8 +14,10 @@
 //   describe        the plugin's describe(): its parameters, in its order
 //   fs              the plugin's sample rate
 //   listen(f)       f(update) after each of the window's polls: { p: [[index, x, text, value]…],
-//                   keys: [key…], vel: [velocity…], pedal, m: [[type, key, values…]…], s: the sound
-//                   since the last poll, as base64 float32 }
+//                   keys: [key…], vel: [velocity…], pedal, m: [[type, key, values…]…], md: [[i,
+//                   m[i]'s data, as base64 float64]…] (what a translator would read from the
+//                   engine's memory: native/plugin/site.h, Views), s: the sound since the last
+//                   poll, as base64 float32 }
 
 export const host = (() => {
   try { return window.parent !== window ? window.parent.forteViews ?? null : null; } catch { return null; } // another origin's frame: not ours
@@ -40,10 +43,15 @@ if (inPlugin) {
 const RING = 1 << 17; // samples kept: the longest analyser (32768) and then some
 const ring = new Float32Array(RING);
 let written = 0, head = 0, headAt = 0, fs = host?.fs || 48000;
-export function hear(b64) {
-  if (!b64) return;
+function bytesOf(b64) {
   const bin = atob(b64), bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+const f64 = (b64) => { const b = bytesOf(b64); return new Float64Array(b.buffer, 0, b.length >> 3); };
+export function hear(b64) {
+  if (!b64) return;
+  const bytes = bytesOf(b64);
   const x = new Float32Array(bytes.buffer, 0, bytes.length >> 2);
   for (let i = 0; i < x.length; i++) ring[(written + i) % RING] = x[i];
   written += x.length;
@@ -156,11 +164,12 @@ export async function pluginAudio(wasm, onUpdate) {
     onUpdate?.(u);
     const port = audio.node.port;
     if (!translate || !u.m?.length || !port.onmessage) return;
-    for (const [type, key, ...values] of u.m) {
+    const data = new Map((u.md || []).map(([i, b64]) => [i, f64(b64)]));
+    u.m.forEach(([type, key, ...values], i) => {
       let m = null;
-      try { m = translate({ type, key, values: Float32Array.from(values) }, state); } catch { continue; } // one that reads the engine's memory (it isn't here)
+      try { m = translate({ type, key, values: Float32Array.from(values), data: data.get(i) }, state); } catch { return; } // one that reads the engine's memory (it isn't here)
       if (m) port.onmessage({ data: m });
-    }
+    });
   });
   return audio;
 }
