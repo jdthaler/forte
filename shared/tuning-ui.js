@@ -5,6 +5,7 @@
 //
 //   attachScala({ set: (values) => …, toast })   set takes the parameters a Scala file sets, by id
 
+import { unfocus } from './focus.js';
 import { readScala, scalaValues } from './tuning.js';
 
 export function attachScala({ set, toast = () => {} }) {
@@ -25,7 +26,7 @@ export function attachScala({ set, toast = () => {} }) {
       return true;
     } catch (e) { toast(e.message); return false; }
   };
-  btn.addEventListener('click', () => { file.value = ''; file.click(); btn.blur(); });
+  btn.addEventListener('click', () => { file.value = ''; file.click(); unfocus(btn); });
   file.addEventListener('change', async () => { const f = file.files?.[0]; if (f) load(await f.text(), f.name); });
   box.append(btn, file);
   wrap.after(box);
