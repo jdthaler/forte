@@ -58,6 +58,7 @@ import { startMIDI, resumeMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto
 import { attachPresets } from './user-presets.js';
 import { connectQuality, qualityControl } from './quality.js';
 import { dress, faceOf } from './faces.js';
+import { computerKey } from './taps.js'; // a second instrument's share of the computer keys (shared/layer.js)
 // after a change, a control picked with the pointer lets go of the focus (the keys go back to the
 // instrument); one reached with Tab keeps it, so the next Space or arrow works it again
 const unfocus = (el) => { if (focusedByPointer(el)) el.blur(); };
@@ -254,21 +255,21 @@ export function createShell(cfg) {
     e.preventDefault();
     if (e.repeat || held.has(e.code)) return;
     held.set(e.code, key);
-    down(key, kbVel());
+    if (computerKey(key, true)) down(key, kbVel());
   });
   window.addEventListener('keyup', (e) => {
     if (e.code === 'Space' && cfg.space && !controlOwns(e)) { if (e.isTrusted) spaceHeld = false; setSustain(false); return; }
     const key = held.get(e.code);
-    if (key !== undefined) { held.delete(e.code); up(key); }
+    if (key !== undefined) { held.delete(e.code); if (computerKey(key, false)) up(key); }
   });
   // Losing focus means no keyup will come: release held keys and a held Space bar.
-  const letGo = () => { for (const k of held.values()) up(k); held.clear(); if (spaceHeld) { spaceHeld = false; setSustain(false); } };
+  const letGo = () => { for (const k of held.values()) if (computerKey(k, false)) up(k); held.clear(); if (spaceHeld) { spaceHeld = false; setSustain(false); } };
   window.addEventListener('blur', letGo);
   document.addEventListener('visibilitychange', () => { if (document.hidden) letGo(); });
   function shiftOctave(d) {
     const nb = shell.base + d;
     if (nb + 11 < LO || nb > HI - 12) return; // never a whole row of computer keys out of range
-    for (const k of held.values()) up(k);
+    for (const k of held.values()) if (computerKey(k, false)) up(k);
     held.clear(); shell.base = nb; shell.keys.labels(labels()); updateHelp();
   }
   function updateHelp() {

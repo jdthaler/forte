@@ -16,6 +16,7 @@ import { attachPresets } from '../../shared/user-presets.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
 import { connectQuality, qualityControl } from '../../shared/quality.js';
 import { dress, faceOf } from '../../shared/faces.js';
+import { computerKey } from '../../shared/taps.js'; // a second instrument's share of the computer keys (shared/layer.js)
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'blackhole-keyboard/params/v1';
@@ -116,10 +117,10 @@ window.addEventListener('keydown', (e) => {
   e.preventDefault();
   if (e.repeat || held.has(e.code)) return;
   held.set(e.code, key);
-  noteOn(key);
+  if (computerKey(key, true)) noteOn(key);
 });
-window.addEventListener('keyup', (e) => { const key = held.get(e.code); if (key !== undefined) { held.delete(e.code); noteOff(key); } });
-window.addEventListener('blur', () => { for (const k of held.values()) noteOff(k); held.clear(); });
+window.addEventListener('keyup', (e) => { const key = held.get(e.code); if (key !== undefined) { held.delete(e.code); if (computerKey(key, false)) noteOff(key); } });
+window.addEventListener('blur', () => { for (const k of held.values()) if (computerKey(k, false)) noteOff(k); held.clear(); });
 function shiftOctave(d) { const nb = base + d; if (nb + 11 < KEY_LO || nb > KEY_HI - 12) return; /* never a whole row of computer keys out of range */ base = nb; keyboardView.labels(keyLabels()); updateHelp(); }
 function updateHelp() {
   $('#oct').textContent = `${noteName(Math.max(KEY_LO, base))}–${noteName(Math.min(KEY_HI, base + 31))}`;

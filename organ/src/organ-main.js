@@ -17,6 +17,7 @@ import { attachPresets } from '../../shared/user-presets.js';
 import { tuningRatio } from '../../shared/tuning.js';
 import { connectQuality, qualityControl } from '../../shared/quality.js';
 import { dress, faceOf, rotarySelector } from '../../shared/faces.js';
+import { computerKey } from '../../shared/taps.js'; // a second instrument's share of the computer keys (shared/layer.js)
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'tonewheel-organ/params/v1';
@@ -170,18 +171,18 @@ window.addEventListener('keydown', (e) => {
   e.preventDefault();
   if (e.repeat || held.has(e.code)) return;
   held.set(e.code, key);
-  keyDown(key);
+  if (computerKey(key, true)) keyDown(key);
 });
 window.addEventListener('keyup', (e) => {
   const key = held.get(e.code);
-  if (key !== undefined) { held.delete(e.code); keyUp(key); }
+  if (key !== undefined) { held.delete(e.code); if (computerKey(key, false)) keyUp(key); }
 });
-window.addEventListener('blur', () => { for (const k of held.values()) keyUp(k); held.clear(); });
+window.addEventListener('blur', () => { for (const k of held.values()) if (computerKey(k, false)) keyUp(k); held.clear(); });
 
 function shiftOctave(d) {
   const nb = base + d;
   if (nb + 11 < KEY_MIN || nb > KEY_MAX - 12) return; // never a whole row of computer keys out of range
-  for (const k of held.values()) keyUp(k);
+  for (const k of held.values()) if (computerKey(k, false)) keyUp(k);
   held.clear();
   base = nb;
   keyboardView.labels(keyLabels());

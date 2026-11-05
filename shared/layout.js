@@ -35,6 +35,7 @@
 
 import { rotaryKnob } from './faces.js';
 import { focusedByPointer } from './focus.js';
+import { attachLayer } from './layer.js';
 
 const body = document.body;
 const STORE = `forte/${body.dataset.instrument || 'page'}/layout/v1`;
@@ -815,6 +816,9 @@ export function attachKeyboard(kb) {
     bar.appendChild(kbtn);
     row.appendChild(pop);
   }
+  // a second instrument, layered or split (shared/layer.js)
+  const layer = attachLayer(kb);
+  if (layer) { bar.appendChild(layer.button); row.appendChild(layer.pop); }
 
   // The window onto the range: as many white keys as fit at the chosen width, moved
   // an octave at a time with ◀ ▶ or anywhere by dragging the overview.

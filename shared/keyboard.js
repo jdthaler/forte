@@ -13,8 +13,13 @@
 //   kb.set(key, on)  kb.focus(key)  kb.clearAll()  kb.labels(Map key → text)
 //   kb.setBounds(lo, hi)   a new range (an instrument's compass opened or closed)
 //   kb.press(key, f)  kb.release(key)   a key played by code (shared/tour.js), as by a finger
+//   kb.extend([lo, hi] | null)  keys beyond the range, for a second instrument (shared/layer.js)
+//   kb.setOther(key, on)   a key the second instrument sounds, lit in its colour (--layer-accent)
+//   kb.mark(fn | null, edge)    which instrument each key plays, fn(key) → 'own' | 'other' (a split),
+//                               and the first key of the upper one
 
 import { attachKeyboard } from './layout.js';
+import { keyTap } from './taps.js';
 
 const BLACK = new Set([1, 3, 6, 8, 10]);
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -23,7 +28,8 @@ const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 
 export function createKeyboard(root, { lo, hi, onDown, onUp, onPressure }) {
   let wLo = lo, wHi = hi, focusKey = null, labelMap = new Map();
-  const isDown = new Set(), els = new Map(), listeners = [], keyListeners = [], boundListeners = [];
+  let own = [lo, hi], extra = null, marks = null, edge = null; // the page's range, a second's, the split
+  const isDown = new Set(), others = new Set(), els = new Map(), listeners = [], keyListeners = [], boundListeners = [];
   const keysChanged = () => { for (const fn of keyListeners) fn(isDown); };
 
   function build() {
@@ -44,17 +50,34 @@ export function createKeyboard(root, { lo, hi, onDown, onUp, onPressure }) {
       const lbl = document.createElement('span'); lbl.className = 'k-label'; lbl.textContent = labelMap.get(m) ?? '';
       el.appendChild(lbl);
       el.classList.toggle('mapped', labelMap.has(m));
-      el.classList.toggle('down', isDown.has(m));
       el.classList.toggle('focus', m === focusKey);
+      if (marks) { el.classList.add(`part-${marks(m)}`); el.classList.toggle('edge', m === edge); }
+      paint(m, el);
       root.appendChild(el); els.set(m, el);
     }
     for (const fn of listeners) fn(wLo, wHi);
   }
 
+  function paint(m, el = els.get(m)) {
+    if (!el) return;
+    el.classList.toggle('down', isDown.has(m) || others.has(m));
+    el.classList.toggle('other', others.has(m) && !isDown.has(m));
+  }
+  // the keys that play: the page's range, and a second instrument's
+  function rebound() {
+    const a = extra ? Math.min(own[0], extra[0]) : own[0], b = extra ? Math.max(own[1], extra[1]) : own[1];
+    if (a === lo && b === hi) return;
+    lo = a; hi = b;
+    wLo = clamp(wLo, lo, hi); wHi = clamp(wHi, wLo, hi);
+    build();
+    for (const fn of boundListeners) fn(lo, hi);
+  }
+
   // ---- pointers: each finger is independent; a key sounds while any finger is on it
   const fingers = new Map(), count = new Map();
-  const press = (key, f) => { const n = (count.get(key) || 0) + 1; count.set(key, n); if (n === 1) onDown(key, f); };
-  const release = (key) => { const n = (count.get(key) || 0) - 1; if (n > 0) { count.set(key, n); return; } count.delete(key); onUp(key); };
+  // (a second instrument, shared/layer.js, takes its share of the keys first)
+  const press = (key, f) => { const n = (count.get(key) || 0) + 1; count.set(key, n); if (n === 1 && keyTap(key, true, 'screen', f)) onDown(key, f); };
+  const release = (key) => { const n = (count.get(key) || 0) - 1; if (n > 0) { count.set(key, n); return; } count.delete(key); if (keyTap(key, false, 'screen')) onUp(key); };
   const depth = (e, el) => {
     if (e.pointerType === 'pen' && e.pressure > 0) return clamp(e.pressure, 0, 1);
     const r = el.getBoundingClientRect();
@@ -93,9 +116,10 @@ export function createKeyboard(root, { lo, hi, onDown, onUp, onPressure }) {
   root.addEventListener('contextmenu', (e) => e.preventDefault());
 
   const kb = {
-    set(m, on) { if (on) isDown.add(m); else isDown.delete(m); els.get(m)?.classList.toggle('down', on); keysChanged(); },
+    set(m, on) { if (on) isDown.add(m); else isDown.delete(m); paint(m); keysChanged(); },
+    setOther(m, on) { if (on) others.add(m); else others.delete(m); paint(m); },
     focus(m) { focusKey = m; for (const [k, el] of els) el.classList.toggle('focus', k === m); },
-    clearAll() { isDown.clear(); for (const el of els.values()) el.classList.remove('down'); keysChanged(); },
+    clearAll() { isDown.clear(); for (const [m, el] of els) paint(m, el); keysChanged(); },
     labels(map) { labelMap = map; for (const [m, el] of els) { el.querySelector('.k-label').textContent = map.get(m) ?? ''; el.classList.toggle('mapped', map.has(m)); } },
     // the window onto the range (used by shared/layout.js)
     range: () => [wLo, wHi],
@@ -107,13 +131,9 @@ export function createKeyboard(root, { lo, hi, onDown, onUp, onPressure }) {
       wLo = a; wHi = b; build();
     },
     onWindow(fn) { listeners.push(fn); },
-    setBounds(a, b) {
-      if (a === lo && b === hi) return;
-      lo = a; hi = b;
-      wLo = clamp(wLo, lo, hi); wHi = clamp(wHi, wLo, hi);
-      build();
-      for (const fn of boundListeners) fn(lo, hi);
-    },
+    setBounds(a, b) { own = [a, b]; rebound(); },
+    extend(range) { extra = range; rebound(); },
+    mark(fn, at = null) { marks = fn; edge = at; build(); },
     onBounds(fn) { boundListeners.push(fn); }, // fn(lo, hi), after setBounds
     onKeys(fn) { keyListeners.push(fn); }, // fn(set of keys down), on every change
     // a key pressed and let go by code (a guided tour, shared/tour.js), as a finger would
