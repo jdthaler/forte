@@ -404,6 +404,15 @@ Done (Forte 0.13.0; per instrument and automatic in 0.17.0):
    (the download in place, nothing installed) and `make unquarantine` (clears the Mac's
    quarantine where the plugins are, or in a folder named with `APP_DIR=`…), each also for one
    format (`make install-au`, `make check-app`, `make unquarantine-app`…), which the workflow runs on every instrument's archive before keeping it.
+   Beside them, from the folder packed as every instrument's: Windows' installer,
+   `Forte-plugins-windows-setup.exe` (`tools/windows-installer.mjs` writes its Inno Setup script;
+   its components are the formats and the instruments), and Linux's packages,
+   `Forte-plugins-linux.deb` and `.rpm` (`tools/package-linux.sh`; the version is Forte's with
+   the commit's time as its release, so every plugin release upgrades). The workflow installs
+   each on a clean system and checks it with the download's own `install.cmd verify` or
+   `install.sh verify`: the installer on the Windows runner (everything, then one instrument's
+   CLAP alone, each uninstalled after), the packages in Debian 13, Ubuntu 24.04 and Fedora 42
+   containers (`tools/test-linux-packages.sh`).
 2. The `release-plugins` workflow runs after every green `native` run on `live` (pull requests,
    a release's into `live` too, build and validate on Linux only, so the site goes live as soon
    as a release merges; `live` itself and a run started by hand add macOS, Windows, auval and

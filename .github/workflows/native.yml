@@ -193,6 +193,15 @@ jobs:
         if: env.FULL == 'true'
         with:
           node-version: 22
+      - name: What packs the installer and the Linux packages
+        if: env.FULL == 'true' && runner.os != 'macOS'
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then .github/scripts/apt-install.sh rpm # rpmbuild; dpkg-deb came with the system
+          else
+            iscc="/c/Program Files (x86)/Inno Setup 6/ISCC.exe"
+            [ -f "$iscc" ] || choco install innosetup -y --no-progress
+            [ -f "$iscc" ] || { echo "::error::no Inno Setup at $iscc"; exit 1; }
+          fi
       - name: Package the plugins for a release
         if: env.FULL == 'true'
         run: tools/package-plugins.sh ${{ matrix.preset }}
@@ -245,6 +254,9 @@ jobs:
           apps=$( (ls -d *.app 2>/dev/null; find . -maxdepth 1 -type f -perm -u+x ! -name '*.*') | wc -l | tr -d ' ')
           [ "$apps" = 1 ] || { echo "::error::the Forte app's archive holds $apps apps"; exit 1; }
           make check-app
+      - name: The .deb and the .rpm install, work and uninstall on Debian, Ubuntu and Fedora
+        if: env.FULL == 'true' && runner.os == 'Linux'
+        run: tools/test-linux-packages.sh "native/build/pkg/Forte-plugins/Forte plugins"
       - name: The download's install.cmd installs and verifies every plugin
         if: env.FULL == 'true' && runner.os == 'Windows'
         shell: pwsh
@@ -270,6 +282,44 @@ jobs:
           Run install app
           Run verify app
           Run uninstall app
+      - name: The installer installs every plugin, one instrument's alone, and uninstalls
+        if: env.FULL == 'true' && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $setup = Join-Path $env:GITHUB_WORKSPACE 'dist\Forte-plugins-windows-setup.exe'
+          $app = Join-Path $env:ProgramFiles 'Forte'
+          $vst3 = Join-Path $env:CommonProgramFiles 'VST3'; $clap = Join-Path $env:CommonProgramFiles 'CLAP'
+          $menu = Join-Path ([Environment]::GetFolderPath('CommonPrograms')) 'Forte'
+          function Setup([string[]]$a) {
+            $p = Start-Process $setup -ArgumentList (@('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$env:RUNNER_TEMP\setup.log") + $a) -Wait -PassThru
+            if ($p.ExitCode -ne 0) { Get-Content "$env:RUNNER_TEMP\setup.log" -Tail 40; throw "setup $a exited $($p.ExitCode)" }
+          }
+          function Unsetup {
+            $p = Start-Process (Join-Path $app 'unins000.exe') -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
+            if ($p.ExitCode -ne 0) { throw "the uninstaller exited $($p.ExitCode)" }
+            Start-Sleep 5 # it finishes removing itself from a copy in TEMP
+          }
+          # which of the download's plugins and apps are installed
+          $dl = Join-Path $env:RUNNER_TEMP 'try\Forte plugins'
+          function Installed { foreach ($p in Get-ChildItem $dl | Where-Object Name -match '\.(vst3|clap|exe)$') { foreach ($d in $vst3, $clap, $app) { $t = Join-Path $d $p.Name; if (Test-Path -LiteralPath $t) { $t } } } }
+          # everything: the download's own install.cmd verify finds each plugin and app installed, and this build's
+          Setup @()
+          Set-Location $dl
+          $env:APP_DIR = $app
+          .\install.cmd verify; if ($LASTEXITCODE -ne 0) { throw 'install.cmd verify failed after the installer' }
+          $n = (Get-ChildItem *.exe).Count; $lnk = (Get-ChildItem $menu -Filter *.lnk).Count
+          if ($lnk -ne $n) { throw "the Start menu has $lnk shortcuts for $n apps" }
+          if (-not (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' | Where-Object DisplayName -eq 'Forte plugins')) { throw 'Forte is not in Installed apps' }
+          Unsetup
+          if (Installed) { throw "the uninstaller left $(Installed)" }
+          if (Test-Path $menu) { throw 'the uninstaller left the Start menu folder' }
+          # one instrument's CLAP alone
+          Setup @('/COMPONENTS="clap,instruments\gongs"')
+          $got = @(Installed)
+          if ($got.Count -ne 1 -or $got[0] -ne (Join-Path $clap 'Gong Keyboard.clap')) { throw "installing the Gong Keyboard's CLAP alone installed: $got" }
+          Unsetup
+          if (Installed) { throw "the uninstaller left $(Installed)" }
+          Write-Host 'The installer installs, verifies and uninstalls.'
       - uses: actions/upload-artifact@v4
         if: env.FULL == 'true'
         with:

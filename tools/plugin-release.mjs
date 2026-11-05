@@ -6,7 +6,8 @@
 //        node tools/plugin-release.mjs --tag        prints the default tag, plugins-v<Forte version>
 //        node tools/plugin-release.mjs --plugins    prints "<id><TAB><name>" for each instrument
 //                                                   with plugins (tools/package-plugins.sh)
-//        node tools/plugin-release.mjs --files      prints every archive a release must hold
+//        node tools/plugin-release.mjs --files      prints every archive (and installer and package)
+//                                                   a release must hold
 //        node tools/plugin-release.mjs --manifest   prints what a release holds: each instrument's
 //                                                   version and the native/ tree it was built from
 
@@ -14,7 +15,7 @@ import { readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { FORTE_VERSION } from '../shared/registry.js';
-import { APP, SYSTEMS, archive, withPlugins } from '../shared/plugins.js';
+import { APP, PACKAGES, SYSTEMS, archive, withPlugins } from '../shared/plugins.js';
 
 export const ASSETS = Object.fromEntries(SYSTEMS.map(([name, suffix]) => [name, archive(null, suffix)]));
 export const FORMATS = { macOS: 'AU, VST3, CLAP, standalone (Apple silicon and Intel, macOS 10.15 or later)', Windows: 'VST3, CLAP, standalone (64-bit)', Linux: 'VST3, CLAP, standalone (x86-64)' };
@@ -59,6 +60,8 @@ export function notes() {
     '',
     `The Forte app alone, every instrument in one standalone app: ${SYSTEMS.map(([, suffix]) => `\`${archive(APP, suffix)}\``).join(', ')}.`,
     '',
+    `What installs itself, with every instrument in every format: on Windows, an installer, \`${archive(null, PACKAGES.Windows[0][1])}\` (it lets you pick the formats and instruments, and uninstalls from Settings, Apps); on Linux, packages that install the plugins for every user, with the libraries they need: \`${archive(null, 'linux.deb')}\` for Debian, Ubuntu and Mint (\`sudo apt install ./${archive(null, 'linux.deb')}\`) and \`${archive(null, 'linux.rpm')}\` for Fedora (\`sudo dnf install ./${archive(null, 'linux.rpm')}\`).`,
+    '',
     `Each archive also comes one format at a time: \`${archive('<instrument>', '<system>', '<format>')}\` and \`${archive(null, '<system>', '<format>')}\`, where the format is au (macOS only), vst3, clap or app (the standalone), for example \`${archive('gongs', 'macos.zip', 'au')}\`.`,
     '',
     unwrap(install).replace(/^## /gm, '### '),
@@ -71,6 +74,7 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) { // (a plain file:
     : arg === '--plugins' ? released().map((i) => `${i.id}\t${i.name}`).join('\n')
     : arg === '--manifest' ? manifest()
     : arg === '--files' ? [...[null, ...released().map((i) => i.id)].flatMap((id) => SYSTEMS.flatMap(([, suffix, formats]) => [archive(id, suffix), ...formats.map((f) => archive(id, suffix, f))])),
-      ...SYSTEMS.map(([, suffix]) => archive(APP, suffix))].join('\n')
+      ...SYSTEMS.map(([, suffix]) => archive(APP, suffix)),
+      ...Object.values(PACKAGES).flat().map(([, suffix]) => archive(null, suffix))].join('\n')
     : notes());
 }

@@ -19,6 +19,31 @@ or one at a time from an instrument's page (↓ Plugin): in each system's box, A
 and the AU, VST3, CLAP and app links just that one. They are free and unsigned: macOS and Windows will
 warn about them until you allow them, as below.
 
+## The quickest way (Windows and Linux)
+
+All Plugins also has downloads that install themselves, with every instrument in every format:
+
+- **Windows:** **Installer** (`Forte-plugins-windows-setup.exe`). Run it: SmartScreen warns
+  that it is unsigned, so choose **More info ▸ Run anyway**, and Windows asks once for
+  administrator rights. Its Components page installs everything, or just the Forte app, or the
+  formats and instruments you tick. The VST3s and CLAPs go in the folders every DAW looks in,
+  the standalone apps in `C:\Program Files\Forte` with a Start menu shortcut each. Running a
+  newer one updates them; uninstall from **Settings ▸ Apps ▸ Installed apps ▸ Forte plugins**.
+  From a terminal, `Forte-plugins-windows-setup.exe /VERYSILENT` installs without asking, and
+  `/COMPONENTS="clap,instruments\gongs"` picks what (each instrument by its page's address:
+  `gongs` for forte.jthaler.net/gongs/).
+- **Debian, Ubuntu, Mint:** **.deb** (`Forte-plugins-linux.deb`), for Debian 13, Ubuntu 24.04
+  and Mint 22 or later: `sudo apt install ./Forte-plugins-linux.deb`.
+- **Fedora:** **.rpm** (`Forte-plugins-linux.rpm`), for Fedora 40 or later:
+  `sudo dnf install ./Forte-plugins-linux.rpm`.
+
+The Linux packages fetch the libraries the plugins need (WebKitGTK for their window, ALSA and
+JACK for the apps), and put the plugins where every host and every user finds them:
+`/usr/lib/vst3`, `/usr/lib/clap`, the standalone apps in `/usr/lib/forte`, and the Forte app
+in the app menu and as `forte`. Installing a newer package updates them; `sudo apt remove
+forte-plugins` (or `sudo dnf remove forte-plugins`) removes them. Use the package or the
+archive's `make install` below, not both, or a DAW lists every plugin twice.
+
 ## The quick way (macOS and Linux)
 
 Unzip or unpack the download, then in Terminal, in the folder it made (type `cd `, drag the
@@ -70,7 +95,7 @@ and choose **Reset & Rescan Selection**.
 
 ## Windows
 
-Unzip the download (right-click it, **Extract All…**), open the folder it made and double-click
+The installer (above) is the easiest. With a zip instead (one instrument, or one format), unzip the download (right-click it, **Extract All…**), open the folder it made and double-click
 **install.cmd**. It copies the VST3s and CLAPs to the folders every DAW looks in (Windows asks
 once for administrator rights for them) and the standalone apps to your own
 `%LOCALAPPDATA%\Programs\Forte`, with a Start menu shortcut each, and clears the "downloaded from
@@ -93,7 +118,7 @@ By hand instead:
 
 ## Linux
 
-Unpack the download (`tar -xzf Forte-plugins-linux.tar.gz`), then:
+On Debian, Ubuntu, Mint and Fedora the packages (above) are the easiest. Otherwise, unpack the download (`tar -xzf Forte-plugins-linux.tar.gz`), then:
 
 - VST3: copy each `.vst3` to `~/.vst3`.
 - CLAP: copy each `.clap` to `~/.clap`.

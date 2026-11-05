@@ -209,6 +209,7 @@ a.forte-menu-item:hover { background: rgba(255, 255, 255, 0.06); }
 .forte-plugin-get .button span { color: var(--muted, #9a9284); font: 500 11.5px ui-monospace, Menlo, monospace; }
 /* a system's box: All | AU · VST3 · CLAP · app */
 .forte-plugin-get .forte-plugin-sys span { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 7px; }
+.forte-plugin-get .forte-plugin-sys .forte-plugin-group { flex-wrap: nowrap; }
 .forte-plugin-sys a { color: var(--accent, #f0b35a); text-decoration: none; }
 .forte-plugin-sys a:hover { text-decoration: underline; }
 .forte-plugin-sys i { font-style: normal; }
