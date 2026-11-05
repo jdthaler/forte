@@ -16,7 +16,7 @@
 - Its page follows the plugin in the plugin window's Views.
 
 ### Huygens Keyboard (patch)
-- Its page follows the plugin in the plugin window's Views. The view of the oscillators' phases reads the engine's memory, so it stays still there.
+- Its page follows the plugin in the plugin window's Views.
 
 ### Black-Hole Keyboard (patch)
 - Its page follows the plugin in the plugin window's Views.

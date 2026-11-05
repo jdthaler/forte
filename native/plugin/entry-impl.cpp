@@ -1,6 +1,6 @@
 // entry-impl.cpp — the CLAP entry's functions for one instrument: its InstrumentInfo (from the
 // instrument's library, forte_instrument()), its colour (FORTE_ACCENT_RGB, from forte_add_plugin)
-// and its page for the window's views (FORTE_SITE, site.h) handed to the shared plugin (plugin.cpp).
+// and its page for the window's views (FORTE_SITE and FORTE_VIEWS, site.h) handed to the shared plugin (plugin.cpp).
 
 #include "plugin.h"
 
@@ -19,6 +19,13 @@ extern const forte::Site FORTE_SITE;
 #define FORTE_SITE_PTR nullptr
 #endif
 
-bool forte_entry_init(const char *) { return forte::entryInit(forte_instrument(), FORTE_ACCENT, FORTE_SITE_PTR); }
+#ifdef FORTE_VIEWS
+extern const forte::Views FORTE_VIEWS;
+#define FORTE_VIEWS_PTR &FORTE_VIEWS
+#else
+#define FORTE_VIEWS_PTR nullptr
+#endif
+
+bool forte_entry_init(const char *) { return forte::entryInit(forte_instrument(), FORTE_ACCENT, FORTE_SITE_PTR, FORTE_VIEWS_PTR); }
 void forte_entry_deinit() {}
 const void *forte_entry_get_factory(const char *id) { return forte::entryFactory(id); }
