@@ -35,6 +35,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Clavichord](clavichord/) | the German clavichord of C. P. E. Bach's day (18th century) | a brass tangent strikes the strings and stays on them as the end of the speaking length (a moving boundary driving every partial), held up by the finger's force against the strings' pull: pressure tuning and the Bebung from the stretch, the tangent's give tuned for; the listing damps the afterlengths and stops the string at key-up; double-fretted pairs where the higher tangent wins, 4′ strings in the bass, a modal soundboard |
 | ✅ | [Brass](brass/) | the tenor trombone, the B♭ trumpet and the flugelhorn | an outward-striking lip (a mass on a spring) blowing Bernoulli flow into the mouthpiece's cup; the bore as travelling waves (Kelly–Lochbaum, fractional delays, wall losses) and a radiating bell; loud waves steepening into shocks in the narrow tubing (a delay read where the pressure carries each sample); a player who picks the partial and moves the slide or valves and the lips by ear; a plunger |
 | ✅ | [Timpani and Tabla](drums/) | orchestral pedal timpani and the tabla's dayan and bayan | circular membranes solved per azimuthal order (Rayleigh–Ritz on the Bessel modes) with the air on them as a mass and its radiation as their loss, the kettle's air as a spring (Christian et al.), the dayan's loaded syahi that puts nine modes on five harmonics (Raman); felt, wood and fingertip strokes, a resting finger, the heel pressing the bayan's head sharp, the pedal on the pitch-bend wheel |
+| ✅ | [Cimbalom](cimbalom/) | Schunda's concert cimbalom (Budapest, 1874) and the hammered dulcimer | hand-held hammers thrown at the strings, a light head on a flexible stick (Hunt–Crossley contact with cotton, leather or bare wood faces); courses of stiff strings slightly out of tune, coupled at the bridge (Weinreich's two-stage decay and beats); the dulcimer's strings divided 2 : 3 by its treble bridge, both sides ringing; a damper bar and sympathetic strings; a hand tremolo; a modal soundboard |
 
 ### Electric instruments
 
@@ -159,6 +160,7 @@ is the mod wheel's control wherever the instrument has one.
 | Clavichord | Bebung rate · Listing cloth · Unison spread | Finger pressure on the key | Bebung |
 | Brass | Air nonlinearity (shock waves) · Lip tension · Tonguing | Breath | Plunger mute |
 | Timpani and Tabla | Air on the head · Listening angle · Heel push | Resting finger | Strike point |
+| Cimbalom | Hammer mass · Sympathetic strings · Unison spread | Tremolo | Strike point |
 | Electric Grand | Bass · Middle · Treble | Tremolo rate | Tremolo depth |
 | Tonewheel Organ | 16' drawbar · 8' drawbar · 4' drawbar | Tube drive | Expression pedal |
 | Tine Piano | Amp drive · Speaker top end · Tip hardness | Stereo vibrato rate | Stereo vibrato depth |
