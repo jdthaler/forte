@@ -154,6 +154,6 @@ default in the existing presets, or would change what an existing knob means.
 | Singing dunes | M | Done, for the next release: avalanches down a dune's slip face, booming at the grains' shear rate (Douady 2006) once the flowing layer pulls them into step (Kuramoto), with a threshold speed, sorting and water; or a dry layer ringing as a waveguide (Vriend 2007), since how dunes sing is still argued over. |
 | Theremin | M | Continuous pitch suits MPE; the ondes' heterodyne and pulling would carry over. |
 | Kalimba (mbira) | S–M | Close to the tine piano. |
-| Cristal Baschet or waterphone | M | Friction-driven rods, close to the glass armonica's bowing. |
+| Cristal Baschet | M | Done, for the next release: glass rods stroked by wet fingers (Couineaux's measured friction), each bending its steel stem, the note, worked out by beam finite elements and tuned by playing; a threshold pressure, a rough limit, strokes back and forth; the collector, fibreglass cones, a cut-steel flame and whiskers ringing in sympathy (Couineaux 2025). The waterphone is still open. |
 
 New ideas go in these tables, with a line in the pull request that adds them.

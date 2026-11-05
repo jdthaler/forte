@@ -63,6 +63,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Pyrophone](pyrophone/) | Frédéric Kastner (1873) | flame-driven Rijke tubes on a subcritical Hopf bifurcation: slow self-excited onsets, hysteresis, warm-up drift |
 | ✅ | [Singing Arc](arc/) | William Duddell (1900) | Ayrton's falling arc characteristic with a Mayr-type thermal column driving Duddell's tuned circuit: each note grows at the rate a linear analysis gives and sounds about 1 % below Kelvin's formula; a floor from the hot carbons holds the first kind, a higher re-strike voltage the second; capacitors in parallel on one arc, several lamps, hiss, Simon's talking arc; the arc radiates as a thermophone, ∝ dP/dt |
 | ✅ | [Singing Voice](voice/) | the human voice; Bell Labs' Voder (1939) | Ishizaka and Flanagan's two-mass vocal folds, set flapping by the breath (Bernoulli flow, contact, turbulent breath noise), into a 44-section Kelly–Lochbaum tract whose vowels are fitted to Peterson and Barney's formants, radiating from the lips; each singer tunes their folds' tension by ear and opens the jaw for high notes (formant tuning); the larynx tube's singer's formant |
+| ✅ | [Cristal Baschet](cristal/) | Bernard and François Baschet (Paris, 1952) | glass rods stroked by wet fingers (Couineaux, Ablitzer and Gautier's measured finger-on-glass friction, solved in closed form each sample), each clamped on a steel stem whose bending mode is the note (Euler–Bernoulli beam elements, the rod's mass and rocking): a threshold pressure from the stability analysis, Schelleng's rough limit, strokes back and forth; the stems' pull on a heavy collector, fibreglass cones as pistons, a cut-steel flame's bending modes, and steel whiskers ringing in sympathy and swaying (Couineaux 2025) |
 
 ### Physical phenomena
 
@@ -176,6 +177,7 @@ is the mod wheel's control wherever the instrument has one.
 | Pyrophone | Flame lag τ · Flame turbulence · Listening point | Flame position x_f / L | Flame power K |
 | Singing Arc | Hissing · Column time constant τ · Listening distance | Electrode gap | Arc current |
 | Singing Voice | Lung pressure · Folds apart at rest (breathiness) · Vibrato depth | Larynx tube (singer's formant) | Vowel |
+| Cristal Baschet | Finger wetness · Rod's place on the stem · Whisker sway | Finger pressure | Stroke speed |
 | Huygens Keyboard | Rail-sag coupling · Random mistuning · Resonant body | Tone | Pulse coupling |
 | Gong Keyboard | Mallet mass · Hand damping on release · Microphone distance | Head stiffness | Strike point |
 | Black-Hole Keyboard | Mass ratio q · Viewing inclination ι · Overtone strength | Tone | Spin |
