@@ -6,7 +6,7 @@ target_include_directories(forte_springs PUBLIC .)
 target_link_libraries(forte_springs PUBLIC forte_core)
 
 if (FORTE_PLUGINS)
-  forte_add_plugin(springs NAME "${FORTE_NAME}" VERSION ${FORTE_VERSION} AU_SUBTYPE ${FORTE_AU_SUBTYPE} INSTRUMENT forte_springs)
+  forte_add_plugin(springs NAME "${FORTE_NAME}" VERSION ${FORTE_VERSION} AU_SUBTYPE ${FORTE_AU_SUBTYPE} INSTRUMENT forte_springs VIEWS ${CMAKE_CURRENT_SOURCE_DIR}/springs-views.cpp)
 endif()
 if (EMSCRIPTEN)
   forte_add_wasm(springs INSTRUMENT forte_springs SOURCES springs-web.cpp OUT ${FORTE_ROOT}/springs/wasm/springs.wasm)

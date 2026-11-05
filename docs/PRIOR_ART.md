@@ -285,6 +285,18 @@ requests.
   (1994) played waveguide brass from a lip model. The Brass plays its lips,
   bore, steepening and player from those; its sources are in
   `brass/README.md`.
+* **The musical saw.** Why it rings: S. Shankar, P. Bryde and L. Mahadevan,
+  "Geometric control of topological dynamics in a singing saw", *Proc.
+  Natl. Acad. Sci. USA* **119**(17), e2117241119 (2022), who found the
+  mode trapped at the S's inflection and measured a Q of about 10 for a J
+  against 150 for an S. J. F. M. Scott and J. Woodhouse found the localised
+  mode asymptotically (*Phil. Trans. R. Soc. A* **339**, 587–625, 1992), and
+  R. Worland measured trapped modes in saws (*J. Acoust. Soc. Am.* **139**,
+  2011, 2016; **145**, 1750, 2019); the shell equations are L. H. Donnell's
+  (NACA Report 479, 1933). Saws are sold as sample libraries; we know of no
+  earlier synthesis that plays one from its trapped mode. The Musical Saw
+  plays its trapped modes, their tunnelling and the bow from those; its
+  sources are in `saw/README.md`.
 * **The timpani and the tabla.** Rayleigh's *Theory of Sound* (1877–78) has
   the kettledrum's fifth and octave; R. S. Christian, R. E. Davis, A. Tubis
   et al., "Effects of air loading on timpani membrane vibrations", *J.
@@ -341,6 +353,16 @@ requests.
   (2009). The Cimbalom plays its thrown hammers, coupled courses, divided
   dulcimer strings, dampers and sympathetic strings from those; its
   sources are in `cimbalom/README.md`.
+* **Tubular bells.** Harry Harrington of Coventry patented tubular bells
+  (UK, 1884; US Patent 389,841, 1888) as a cheaper peal than cast bells.
+  T. D. Rossing (*Science of Percussion Instruments*, 2000) and N. H.
+  Fletcher and T. D. Rossing (*The Physics of Musical Instruments*, 1998)
+  explain the strike note, the virtual pitch of modes 4–6 near 2 : 3 : 4;
+  S. P. Timoshenko (1921) and G. R. Cowper (1966) gave the beam with shear;
+  E. Terhardt (1974) the virtual pitch. Sampled chimes are General MIDI's
+  program 15, and Pianoteq's free instruments include tubular bells (below).
+  The Tubular Bells solves each capped tube as it is cut and plays its modes
+  live; its sources are in `tubular/README.md`.
 
 ## 2. Techniques Forte uses, and where they come from
 
