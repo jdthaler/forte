@@ -54,7 +54,8 @@ constexpr uint32_t kMpeId = 0x7ffffffb;
 // Octave (±4) and Transpose (±12 semitones) move the MIDI keys, as the pages' menus do
 // (shared/midi.js keyShift): a note-off, a note's pressure and its expressions go where its
 // note-on went (moveOn, moved), so a note held while they change ends as it began. The window's
-// own keys play what they show. Every plugin has them; the Forte app keeps them, as the controller's.
+// own keys play what they show. Every plugin has them, saved as midiTranspose and midiOctave (the
+// pipe organ's and the clavichord's own octave is a stop); the Forte app keeps them, as the controller's.
 constexpr uint32_t kTransposeId = 0x7ffffffa, kOctaveId = 0x7ffffff9;
 constexpr int kSemitones = 12, kOctaves = 4; // each choice's index is the shift + this
 #define FORTE_MINUS "\xe2\x88\x92" // U+2212, as UTF-8 bytes (MSVC turns \u escapes into CP1252)
@@ -790,8 +791,8 @@ struct Plugin : Instance, MpeDecoder::Sink {
         else if (id == "touch") v[touchAt] = constrain(touchParam(), x);
         else if (id == "quality") v[qualityAt] = constrain(qualityParam(), x);
         else if (id == "mpe") v[mpeAt] = constrain(mpeParam(), x);
-        else if (id == "transpose") v[transposeAt] = constrain(transposeParam(), x);
-        else if (id == "octave") v[octaveAt] = constrain(octaveParam(), x);
+        else if (id == "midiTranspose") v[transposeAt] = constrain(transposeParam(), x);
+        else if (id == "midiOctave") v[octaveAt] = constrain(octaveParam(), x);
         else for (int i = 0; i < I.paramCount; i++) if (id == I.params[i].id) { v[i] = constrain(I.params[i], x); break; }
       }
       at = eol;
@@ -823,10 +824,10 @@ struct Plugin : Instance, MpeDecoder::Sink {
     return ParamInfo{"mpe", "MPE", "MIDI", ParamKind::choice, 0, mpe::kModes - 1, mpe::autoDetect, 1, false, false, mpe::kModeNames, mpe::kModes, {}};
   }
   ParamInfo transposeParam() const {
-    return ParamInfo{"transpose", "Transpose", "MIDI", ParamKind::choice, 0, 2 * kSemitones, kSemitones, 1, false, false, kTransposeChoices, 2 * kSemitones + 1, {}};
+    return ParamInfo{"midiTranspose", "Transpose", "MIDI", ParamKind::choice, 0, 2 * kSemitones, kSemitones, 1, false, false, kTransposeChoices, 2 * kSemitones + 1, {}};
   }
   ParamInfo octaveParam() const {
-    return ParamInfo{"octave", "Octave", "MIDI", ParamKind::choice, 0, 2 * kOctaves, kOctaves, 1, false, false, kOctaveChoices, 2 * kOctaves + 1, {}};
+    return ParamInfo{"midiOctave", "Octave", "MIDI", ParamKind::choice, 0, 2 * kOctaves, kOctaves, 1, false, false, kOctaveChoices, 2 * kOctaves + 1, {}};
   }
   ParamInfo qualityParam() const {
     return ParamInfo{"quality", "Quality", "CPU", ParamKind::choice, 0, 2, 0, 1, false, false, kQualityChoices, 3, {}};

@@ -129,7 +129,7 @@ clap-wrapper builds the VST3, AU v2 and standalone from the CLAP. Each plugin:
   it, presets don't, and a host rendering offline (CLAP's render extension, which clap-wrapper's
   VST3 passes on and its AU v2 does not) gets High;
 - has an MPE choice (Auto, On, Off) and Transpose (−12 to +12 semitones) and Octave (−4 to +4)
-  choices after Quality, as the pages' menus beside the MIDI status: they move the MIDI keys
+  choices after Quality, as in the pages' MIDI menu: they move the MIDI keys
   (notes, CLAP's note events, poly pressure and note expressions), each note-off going where its
   note-on went (`moveOn`); the window's own keys play what they show. The Forte app keeps the
   three across instruments, as the controller's;

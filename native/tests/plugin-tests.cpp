@@ -557,7 +557,7 @@ TEST("plugin: Octave and Transpose move the MIDI keys, not the window's; a note 
   std::string saved;
   clap_ostream_t os{&saved, [](const clap_ostream_t *s, const void *b, uint64_t n) -> int64_t { ((std::string *)s->ctx)->append((const char *)b, n); return (int64_t)n; }};
   CHECK(in.state->save(in.p, &os));
-  CHECK(saved.find("\ntranspose 14\n") != std::string::npos && saved.find("\noctave 4\n") != std::string::npos);
+  CHECK(saved.find("\nmidiTranspose 14\n") != std::string::npos && saved.find("\nmidiOctave 4\n") != std::string::npos);
   Instance again(48000);
   struct Reader { std::string s; size_t at = 0; } r{saved};
   clap_istream_t is{&r, [](const clap_istream_t *s, void *b, uint64_t n) -> int64_t {

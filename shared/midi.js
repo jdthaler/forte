@@ -12,13 +12,13 @@
 //     MIDI turned on by resumeMIDI comes before any click).
 //   wheelValue(p, cc, max?) maps the mod wheel onto a parameter: at rest (0) its default, fully up
 //   its maximum, so a wheel at rest never drags the instrument to the bottom of its range.
-//   touch() is the velocity curve the player chose (every page shares it, from the menu startMIDI
-//   puts beside the #midi status), touched(v) a MIDI velocity (0..1) through it; SOFT_PEDAL
+//   touch() is the velocity curve the player chose (every page shares it, from the menu the #midi
+//   status opens once startMIDI turns MIDI on: midiMenu), touched(v) a MIDI velocity (0..1) through it; SOFT_PEDAL
 //   scales the velocity of keys struck under CC67; createSostenuto() keeps the keys CC66 holds.
 //   mpeMode() is MPE's mode the player chose (shared/mpe.js: 'auto', 'on' or 'off'; every page
-//   shares it, from a menu beside the velocity curve's); pageMpe() decodes it for a page.
+//   shares it, from the same menu); pageMpe() decodes it for a page.
 //   keyShift() is how far the MIDI keys are moved: the player's Octave (±4) and Transpose (±12
-//   semitones), from two menus after MPE's, which every page shares (setShift). startMIDI moves
+//   semitones), from the same menu, which every page shares (setShift). startMIDI moves
 //   each note as it comes in, and its note-off and poly pressure by as much as its note-on was
 //   moved, so a note held while the menus change ends as it began. The on-screen and computer
 //   keys play what they show (the ◀ ▶ buttons and arrow keys move the computer keys).
@@ -78,8 +78,7 @@ export const shiftOf = () => ({ ...shift });
 export function setShift({ octave = shift.octave, transpose = shift.transpose } = {}) {
   shift.octave = within(octave, OCTAVES); shift.transpose = within(transpose, SEMITONES);
   try { localStorage.setItem(SHIFT_KEY, JSON.stringify(shift)); } catch { /* storage blocked */ }
-  if (typeof document === 'undefined') return;
-  for (const el of document.querySelectorAll?.('#octave, #transpose') ?? []) el.classList.toggle('shifted', shift[el.id] !== 0);
+  showShift();
 }
 // "+2", "0", "−1" (a minus sign, not a hyphen)
 export const signed = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0');
@@ -209,59 +208,69 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
     bind();
     acc.onstatechange = bind;
     if (button) button.hidden = true;
-    touchMenu();
-    mpeMenu();
-    shiftMenus();
-    if (keyShift()) import('./shell.js').then(({ toast }) => toast(`MIDI keys play ${shiftText()} (Octave and Transpose, beside MPE)`), () => {});
+    midiMenu();
+    if (keyShift()) import('./shell.js').then(({ toast }) => toast(`MIDI keys play ${shiftText()}: Octave and Transpose are in the MIDI menu`), () => {});
   }, () => status('MIDI: permission denied'));
 }
 
-// The velocity curve's menu, beside the MIDI status once MIDI is on.
-function touchMenu() {
+// The MIDI settings, in a menu the MIDI status opens once MIDI is on: the velocity curve, MPE,
+// Octave and Transpose. The status says how far the keys are moved, in the accent, while they are.
+function midiMenu() {
   const pill = document.querySelector('#midi');
-  if (!pill || document.querySelector('#touch')) return;
-  const el = document.createElement('select');
-  el.id = 'touch';
-  el.title = 'Velocity curve: how hard a MIDI key has to be struck. Soft makes a light touch louder, Hard asks for a firmer one.';
-  el.setAttribute('aria-label', 'Velocity curve');
-  TOUCH.forEach((t, i) => el.add(new Option(`Touch: ${t.name.toLowerCase()}`, i)));
-  el.value = String(touchIndex);
-  el.addEventListener('change', () => { setTouch(+el.value); el.blur(); });
-  pill.after(el);
-}
-
-// MPE's menu, after the velocity curve's.
-function mpeMenu() {
-  const after = document.querySelector('#touch') ?? document.querySelector('#midi');
-  if (!after || document.querySelector('#mpe')) return;
-  const el = document.createElement('select');
-  el.id = 'mpe';
-  el.title = 'MPE: a controller that gives each note a MIDI channel of its own, so each finger bends, slides and presses its own note. Auto turns it on when the controller says it sends MPE.';
-  el.setAttribute('aria-label', 'MPE');
-  for (const [id, name] of MODES) el.add(new Option(`MPE: ${name.toLowerCase()}`, id));
-  el.value = mpe;
-  el.addEventListener('change', () => { setMpeMode(el.value); el.blur(); });
-  after.after(el);
-}
-
-// Octave's and Transpose's menus, after MPE's: drawn as pills, marked while either moves the keys
-function shiftMenus() {
-  let after = document.querySelector('#mpe') ?? document.querySelector('#touch') ?? document.querySelector('#midi');
-  if (!after || document.querySelector('#octave')) return;
-  for (const [id, n, name, title] of [
-    ['octave', OCTAVES, 'Octave', 'Octave: plays the MIDI keys up to four octaves higher or lower (a small keyboard reaches all 88 keys). The keys on the screen and the computer keys play what they show.'],
-    ['transpose', SEMITONES, 'Transpose', 'Transpose: plays the MIDI keys up to twelve semitones higher or lower, so a piece fingered in one key sounds in another. The keys on the screen and the computer keys play what they show.'],
+  if (!pill || document.querySelector('#midi-menu')) return;
+  const menu = document.createElement('div');
+  menu.id = 'midi-menu'; menu.className = 'forte-midi-menu'; menu.hidden = true;
+  menu.setAttribute('role', 'group'); menu.setAttribute('aria-label', 'MIDI settings');
+  const steps = (n) => Array.from({ length: 2 * n + 1 }, (_, i) => [i - n, signed(i - n)]);
+  for (const [id, name, title, options, value, set] of [
+    ['touch', 'Touch', 'The velocity curve: how hard a MIDI key has to be struck. Soft makes a light touch louder, Hard asks for a firmer one.',
+      TOUCH.map((t, i) => [i, t.name]), touchIndex, (v) => setTouch(+v)],
+    ['mpe', 'MPE', 'MPE: a controller that gives each note a MIDI channel of its own, so each finger bends, slides and presses its own note. Auto turns it on when the controller says it sends MPE.',
+      MODES, mpe, setMpeMode],
+    ['octave', 'Octave', 'Plays the MIDI keys up to four octaves higher or lower, so a small keyboard reaches all 88 keys. The keys on the screen and the computer keys play what they show.',
+      steps(OCTAVES), shift.octave, (v) => setShift({ octave: +v })],
+    ['transpose', 'Transpose', 'Plays the MIDI keys up to twelve semitones higher or lower, so a piece fingered in one key sounds in another. The keys on the screen and the computer keys play what they show.',
+      steps(SEMITONES).map(([v, t]) => [v, v ? `${t} semitone${Math.abs(v) > 1 ? 's' : ''}` : t]), shift.transpose, (v) => setShift({ transpose: +v })],
   ]) {
+    const row = document.createElement('label');
+    row.title = title;
     const el = document.createElement('select');
-    el.id = id; el.title = title;
-    el.setAttribute('aria-label', name);
-    for (let v = -n; v <= n; v++) el.add(new Option(`${name}: ${signed(v)}`, v));
-    el.value = String(shift[id]);
-    el.classList.toggle('shifted', shift[id] !== 0);
-    el.addEventListener('change', () => { setShift({ [id]: +el.value }); el.blur(); });
-    after.after(el);
-    after = el;
+    el.id = id;
+    for (const [v, text] of options) el.add(new Option(text, v));
+    el.value = String(value);
+    el.addEventListener('change', () => { set(el.value); el.blur(); });
+    row.append(Object.assign(document.createElement('span'), { textContent: name }), el);
+    menu.append(row);
   }
+  pill.after(menu);
+  pill.classList.add('forte-midi-pill');
+  pill.setAttribute('role', 'button'); pill.tabIndex = 0;
+  pill.setAttribute('aria-haspopup', 'true'); pill.setAttribute('aria-controls', menu.id); pill.setAttribute('aria-expanded', 'false');
+  pill.title = 'MIDI settings: touch, MPE, octave and transpose';
+  const open = (on) => {
+    menu.hidden = !on;
+    pill.setAttribute('aria-expanded', String(on));
+    if (!on) return;
+    // below the pill, inside the window
+    const r = pill.getBoundingClientRect(), w = menu.offsetWidth;
+    menu.style.top = `${Math.round(r.bottom + 6)}px`;
+    menu.style.left = `${Math.round(Math.max(8, Math.min(r.left, innerWidth - w - 8)))}px`;
+  };
+  pill.addEventListener('click', () => open(menu.hidden));
+  pill.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); open(menu.hidden); } });
+  document.addEventListener('pointerdown', (e) => { if (!menu.hidden && !menu.contains(e.target) && !pill.contains(e.target)) open(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) { open(false); pill.focus(); } });
+  window.addEventListener('resize', () => open(false));
+  window.addEventListener('scroll', () => open(false), { passive: true }); // a phone's page: it would float away from the status
+  showShift();
+}
+// the MIDI status says how far the keys are moved, while they are
+function showShift() {
+  const pill = typeof document !== 'undefined' && document.querySelector?.('#midi');
+  if (!pill) return;
+  const { octave: o, transpose: t } = shift;
+  const text = [o && `Octave ${signed(o)}`, t && `Transpose ${signed(t)}`].filter(Boolean).join(', ');
+  if (text) pill.dataset.shift = text; else delete pill.dataset.shift;
 }
 
 /**
