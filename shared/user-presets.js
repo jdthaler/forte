@@ -8,17 +8,21 @@
 //   Your presets and files…    the list (play, link, save to a file, delete), and opening a
 //                              preset file, which the plugins' Presets menu reads and writes too
 // Opening a link made that way applies its settings and takes them off the address. It also puts
-// the Scala file button under the Temperament control (shared/tuning-ui.js).
+// the Scala file button under the Temperament control (shared/tuning-ui.js), and Morph, a slider
+// from one preset to another, last in the Controls panel (shared/morph.js).
 //
-//   attachPresets({ instrument: INSTRUMENT, get: () => P, set: (values) => …, toast })
+//   attachPresets({ instrument: INSTRUMENT, get: () => P, set: (values) => …, defaults: DEFAULTS, toast })
 // get gives the page's parameters (for the organ, P with its console); values() turns them into
 // the preset's by contract id. set takes every parameter's value by contract id and applies them
-// as choosing a preset would. toast is the page's. pageState (below) hands them to a guided tour.
+// as choosing a preset would. defaults is the page's P before a preset's own values (a factory
+// preset is { ...defaults, ...preset.p }); without it, the parameters' defaults. toast is the
+// page's. pageState (below) hands them to a guided tour.
 
 import { presetParams, presetFile, readPresetFile, linkHash, readLinkHash, complete, cleanName } from './presets.js';
 import { byId, INSTRUMENTS } from './registry.js';
 import { sheet, show } from './notes.js';
 import { attachScala } from './tuning-ui.js';
+import { attachMorph } from './morph.js';
 
 const NAMES = Object.fromEntries(INSTRUMENTS.map((i) => [i.id, i.name]));
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -29,7 +33,7 @@ const USER = '__user:';
 // { instrument, params, get() → every parameter's value, set(values) as choosing a preset would }
 export const pageState = {};
 
-export function attachPresets({ instrument: I, get, set, values = (P) => P, toast = () => {} }) {
+export function attachPresets({ instrument: I, get, set, values = (P) => P, defaults = null, toast = () => {} }) {
   const sel = document.querySelector('#preset');
   if (!sel) return null;
   const params = presetParams(I);
@@ -58,11 +62,13 @@ export function attachPresets({ instrument: I, get, set, values = (P) => P, toas
   const yours = group('Your presets'), actions = group('Save and share');
   actions.append(new Option('Save these settings…', '__save'), new Option('Copy a link to these settings', '__link'), new Option('Your presets and files…', '__mine'));
   sel.append(actions);
+  let morphing = null; // Morph (shared/morph.js), once the menu is ready
   function menu() { // "Your presets" only while there are some (an empty group still shows its name)
     const v = sel.value;
     yours.replaceChildren(...mine.map((pr, i) => new Option(pr.name, USER + i)));
     if (mine.length) sel.insertBefore(yours, actions); else yours.remove();
     sel.value = [...sel.options].some((o) => o.value === v) ? v : '';
+    morphing?.refresh();
   }
   menu();
   // the menu's value before a pick, so an action leaves it as it was (a page empties it when a
@@ -95,6 +101,7 @@ export function attachPresets({ instrument: I, get, set, values = (P) => P, toas
     const k = mine.indexOf(pr);
     sel.value = shown && k >= 0 ? USER + k : '';
     before = sel.value;
+    if (k >= 0) morphing?.picked(`u:${pr.name}`);
   }
 
   // ---- links ---------------------------------------------------------------------------------------
@@ -238,6 +245,21 @@ export function attachPresets({ instrument: I, get, set, values = (P) => P, toas
     show(d, null);
     if (save) { input.focus(); input.select(); }
   }
+
+  // ---- Morph: a slider from one preset to another (shared/morph.js) --------------------------------
+  const base = defaults ?? Object.fromEntries(params.map((p) => [p.id, p.def]));
+  const factory = (I.presets ?? []).map((pr) => ({ name: pr.name, values: complete(params, values({ ...base, ...pr.p })) }));
+  morphing = attachMorph({
+    instrument: I, params, factory, mine: () => mine, now, set, keep: I.keep,
+    shown: (key) => { // the Presets menu names the preset the morph rests on, or none
+      const k = key?.startsWith('u:') ? find(key.slice(2)) : -1;
+      sel.value = key === 'default' ? '__default' : key?.startsWith('f:') ? key.slice(2) : k >= 0 ? USER + k : '';
+      before = sel.value;
+    },
+  });
+  // the instrument's presets and Default settings chosen from the menu (yours go through play)
+  document.addEventListener('change', (e) => { if (e.target === sel && /^\d+$/.test(sel.value)) morphing.picked(`f:${sel.value}`); }, true);
+  document.querySelector('#reset')?.addEventListener('click', () => morphing.picked('default'));
 
   // a Scala file sets the custom temperament (shared/tuning-ui.js), as a preset would
   const scala = attachScala({ set: (v) => set({ ...now(), ...v }), toast });

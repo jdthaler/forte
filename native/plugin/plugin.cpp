@@ -51,6 +51,11 @@ constexpr uint32_t kQualityId = 0x7ffffffc;
 const char *const kQualityChoices[] = {"High", "Medium", "Low"};
 // MPE (forte/mpe.h): Auto (from the controller's configuration message), On or Off. Every plugin has it.
 constexpr uint32_t kMpeId = 0x7ffffffb;
+// Morph (shared/morph.js): Morph from and Morph to name two presets (0 the defaults, k the k-th),
+// and Morph (0..1) is how far the sound is from one to the other, each parameter part way
+// (morph(), as shared/presets.js morph). A song can automate Morph. Every plugin with presets has them.
+constexpr uint32_t kMorphFromId = 0x7ffffffa, kMorphToId = 0x7ffffff9, kMorphId = 0x7ffffff8;
+const FormatSegment kMorphFormat[] = {{INFINITY, "", " %", 100, 0, 0, false, false, false, false}};
 // The soft pedal (CC67): a key struck while it is down is struck this much slower, so it sounds
 // softer and, where the instrument's hammer or mallet is nonlinear, darker too.
 constexpr double kSoftPedal = 0.6;
@@ -92,8 +97,11 @@ struct Plugin : Instance, MpeDecoder::Sink {
   const InstrumentInfo &I;
   const std::string accent;  // the window's colour
   const bool hasPresets;
-  const int nParams;        // the instrument's parameters, then Preset if it has presets, the velocity curve, Quality and MPE
-  const int presetAt, touchAt, qualityAt, mpeAt; // their indices (presetAt −1 without presets)
+  const int nParams;        // the instrument's parameters, then Preset if it has presets, the velocity curve,
+                            // Quality and MPE, then Morph from, Morph to and Morph if it has presets
+  const int presetAt, touchAt, qualityAt, mpeAt, fromAt, toAt, morphAt; // their indices (−1: none, without presets)
+  std::vector<const char *> presetNames; // "Default settings", then the presets' names: Morph from's and Morph to's choices
+  std::vector<double> morphA, morphB;  // the two presets' values while morphing (audio thread)
   std::vector<uint32_t> ids; // hashed parameter ids, by index
 
   std::unique_ptr<Engine> engine;
@@ -135,12 +143,18 @@ struct Plugin : Instance, MpeDecoder::Sink {
 
   Plugin(const clap_host_t *h, const InstrumentInfo &info, const clap_plugin_descriptor_t *desc, const std::string &colour)
       : Instance(h, desc), I(info), accent(colour.size() < 2 ? "#f0b35a" : colour), hasPresets(info.presetCount > 0),
-        nParams(info.paramCount + (hasPresets ? 4 : 3)), presetAt(hasPresets ? info.paramCount : -1), touchAt(nParams - 3), qualityAt(nParams - 2), mpeAt(nParams - 1) {
+        nParams(info.paramCount + (hasPresets ? 7 : 3)), presetAt(hasPresets ? info.paramCount : -1), touchAt(info.paramCount + (hasPresets ? 1 : 0)),
+        qualityAt(touchAt + 1), mpeAt(touchAt + 2), fromAt(hasPresets ? mpeAt + 1 : -1), toAt(hasPresets ? mpeAt + 2 : -1), morphAt(hasPresets ? mpeAt + 3 : -1) {
     for (int i = 0; i < I.paramCount; i++) ids.push_back(paramHash(I.params[i].id));
     if (hasPresets) ids.push_back(kPresetId);
     ids.push_back(kTouchId);
     ids.push_back(kQualityId);
     ids.push_back(kMpeId);
+    if (hasPresets) { ids.push_back(kMorphFromId); ids.push_back(kMorphToId); ids.push_back(kMorphId); }
+    presetNames.push_back("Default settings");
+    for (int k = 0; k < I.presetCount; k++) presetNames.push_back(I.presets[k].name);
+    morphA.resize(I.paramCount);
+    morphB.resize(I.paramCount);
     const char *tuningIds[3] = {"pitch", "temperament", "tuningRoot"};
     for (int k = 0; k < 3 + kCustomCents; k++) tuningAt[k] = paramIndex(k < 3 ? tuningIds[k] : ("cents" + std::to_string(k - 2)).c_str());
     P.resize(nParams);
@@ -151,6 +165,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
     P[touchAt] = 1;
     P[qualityAt] = 0;
     P[mpeAt] = mpe::autoDetect;
+    if (hasPresets) { P[fromAt] = 0; P[toAt] = 1; P[morphAt] = 0; }
     for (int i = 0; i < nParams; i++) shown[i] = P[i];
     sent.assign(nParams, NAN);
   }
@@ -162,7 +177,9 @@ struct Plugin : Instance, MpeDecoder::Sink {
 
   // ---- parameters ---------------------------------------------------------------------------
   // Set parameter i (audio thread, or main thread while not processing). A change of Preset
-  // applies it: the defaults, then the kept parameters, then the preset's values (shell.js).
+  // applies it: the defaults, then the kept parameters, then the preset's values (shell.js); and
+  // it is where Morph starts now, unless it is where Morph ends (shared/morph.js). A change of
+  // Morph, Morph from or Morph to applies the morph.
   void set(int i, double v, const clap_output_events_t *out) {
     if (i == touchAt) { P[i] = constrain(touchParam(), v); shown[i] = P[i]; return; }
     if (i == mpeAt) { P[i] = constrain(mpeParam(), v); shown[i] = P[i]; mpeMode(); return; }
@@ -170,22 +187,58 @@ struct Plugin : Instance, MpeDecoder::Sink {
     if (i == presetAt) {
       int k = (int)std::lround(v);
       k = k < 0 ? 0 : k > I.presetCount ? I.presetCount : k;
-      std::vector<double> next(I.paramCount);
-      for (int j = 0; j < I.paramCount; j++) next[j] = I.params[j].def;
-      for (int j = 0; j < I.keepCount; j++) next[I.keep[j]] = P[I.keep[j]];
-      if (k > 0) for (int j = 0; j < I.presets[k - 1].count; j++) {
-        const PresetValue &pv = I.presets[k - 1].values[j];
-        next[pv.param] = constrain(I.params[pv.param], pv.value);
-      }
-      for (int j = 0; j < I.paramCount; j++) if (next[j] != P[j]) { P[j] = next[j]; shown[j] = P[j]; tell(j, out); }
+      presetValues(k, morphA);
+      for (int j = 0; j < I.paramCount; j++) if (morphA[j] != P[j]) { P[j] = morphA[j]; shown[j] = P[j]; tell(j, out); }
       P[i] = k; shown[i] = k;
+      if (k == (int)P[toAt] && k != (int)P[fromAt]) put(morphAt, 1, out);
+      else { put(fromAt, k, out); put(morphAt, 0, out); }
       dirty = true;
+      return;
+    }
+    if (i == fromAt || i == toAt || i == morphAt) {
+      v = constrain(infoOf(i), v);
+      if (v == P[i]) return;
+      P[i] = v; shown[i] = v;
+      morph(out);
       return;
     }
     v = constrain(I.params[i], v);
     if (v == P[i]) return;
     P[i] = v; shown[i] = v;
     dirty = true;
+  }
+  // preset k's values (0: the defaults), the kept parameters as they are
+  void presetValues(int k, std::vector<double> &next) const {
+    for (int j = 0; j < I.paramCount; j++) next[j] = I.params[j].def;
+    for (int j = 0; j < I.keepCount; j++) next[I.keep[j]] = P[I.keep[j]];
+    if (k > 0) for (int j = 0; j < I.presets[k - 1].count; j++) {
+      const PresetValue &pv = I.presets[k - 1].values[j];
+      next[pv.param] = constrain(I.params[pv.param], pv.value);
+    }
+  }
+  // Morph: every parameter part way from Morph from's preset to Morph to's (shared/presets.js
+  // morph): a number in a straight line, or by equal ratios where its control is logarithmic, on
+  // its step; a choice or a toggle halfway. At either end the Preset menu names that preset.
+  void morph(const clap_output_events_t *out) {
+    const double t = P[morphAt];
+    const int a = (int)P[fromAt], b = (int)P[toAt];
+    presetValues(a, morphA);
+    presetValues(b, morphB);
+    for (int j = 0; j < I.paramCount; j++) {
+      const ParamInfo &p = I.params[j];
+      const double x = morphA[j], y = morphB[j];
+      double v = t <= 0 || x == y ? x : t >= 1 ? y : p.kind != ParamKind::continuous ? (t < 0.5 ? x : y)
+               : constrain(p, p.log && x > 0 && y > 0 ? x * std::pow(y / x, t) : x + (y - x) * t);
+      if (v != P[j]) { P[j] = v; shown[j] = v; tell(j, out); }
+    }
+    if (t <= 0 || t >= 1) put(presetAt, t <= 0 ? a : b, out);
+    dirty = true;
+  }
+  // parameter i set by the plugin itself, as it is, and the host told
+  void put(int i, double v, const clap_output_events_t *out) {
+    if (i < 0 || P[i] == v) return;
+    P[i] = v; shown[i] = v;
+    tell(i, out);
   }
   // tell the host that the plugin moved parameter i itself
   void tell(int i, const clap_output_events_t *out) {
@@ -511,7 +564,12 @@ struct Plugin : Instance, MpeDecoder::Sink {
   //   loadScala(file)     one of them sets the custom temperament: { ok, name, error }
   //   showScalas()        opens that folder
   int paramIndex(const char *id) const { for (int i = 0; i < I.paramCount; i++) if (!std::strcmp(I.params[i].id, id)) return i; return -1; }
-  ParamInfo infoOf(int i) const { return i < I.paramCount ? I.params[i] : i == presetAt ? presetParam() : i == touchAt ? touchParam() : i == qualityAt ? qualityParam() : mpeParam(); }
+  ParamInfo infoOf(int i) const {
+    return i < I.paramCount ? I.params[i] : i == presetAt ? presetParam() : i == touchAt ? touchParam() : i == qualityAt ? qualityParam() : i == mpeAt ? mpeParam() : morphParam(i);
+  }
+  const char *idOf(int i) const {
+    return i < I.paramCount ? I.params[i].id : i == presetAt ? "preset" : i == touchAt ? "touch" : i == qualityAt ? "quality" : i == mpeAt ? "mpe" : i == fromAt ? "morphFrom" : i == toAt ? "morphTo" : "morph";
+  }
   double along(int i, double v) const { const ParamInfo p = infoOf(i); return p.kind == ParamKind::continuous ? toNormalized(p, v) : v; }
   std::string text(int i, double v) const {
     if (i == presetAt) { int k = (int)std::lround(v); return k <= 0 ? "Default settings" : k <= I.presetCount ? I.presets[k - 1].name : "?"; }
@@ -605,7 +663,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
       r.addMember("text", text(i, v));
       return r;
     }
-    if (m == "gesture") { const int i = index(1); if (i >= 0 && i < I.paramCount) toAudio({num(2) > 0 ? UiEvent::begin : UiEvent::end, (int16_t)i, 0}); return {}; }
+    if (m == "gesture") { const int i = index(1); if (i >= 0 && (i < I.paramCount || i == morphAt)) toAudio({num(2) > 0 ? UiEvent::begin : UiEvent::end, (int16_t)i, 0}); return {}; }
     if (m == "note") {
       const int key = (int)num(1);
       const double vel = num(2);
@@ -694,7 +752,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
     char buf[64];
     for (int i = 0; i < nParams; i++) {
       std::snprintf(buf, sizeof buf, " %.17g\n", shown[i].load());
-      t += (i < I.paramCount ? I.params[i].id : i == presetAt ? "preset" : i == touchAt ? "touch" : i == qualityAt ? "quality" : "mpe") + std::string(buf);
+      t += idOf(i) + std::string(buf);
     }
     const char *p = t.data();
     size_t left = t.size();
@@ -716,6 +774,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
     v[touchAt] = 1;
     v[qualityAt] = 0;
     v[mpeAt] = mpe::autoDetect;
+    if (hasPresets) { v[fromAt] = 0; v[toAt] = 1; v[morphAt] = 0; }
     size_t at = t.find('\n');
     while (at != std::string::npos && at + 1 < t.size()) {
       size_t eol = t.find('\n', at + 1);
@@ -728,6 +787,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
         else if (id == "touch") v[touchAt] = constrain(touchParam(), x);
         else if (id == "quality") v[qualityAt] = constrain(qualityParam(), x);
         else if (id == "mpe") v[mpeAt] = constrain(mpeParam(), x);
+        else if (hasPresets && (id == "morphFrom" || id == "morphTo" || id == "morph")) { const int i = id == "morph" ? morphAt : id == "morphTo" ? toAt : fromAt; v[i] = constrain(infoOf(i), x); }
         else for (int i = 0; i < I.paramCount; i++) if (id == I.params[i].id) { v[i] = constrain(I.params[i], x); break; }
       }
       at = eol;
@@ -765,6 +825,12 @@ struct Plugin : Instance, MpeDecoder::Sink {
   Quality quality() const { return offline ? Quality::high : (Quality)(int)P[qualityAt]; }
   ParamInfo presetParam() const {
     return ParamInfo{"preset", "Preset", "", ParamKind::choice, 0, (double)I.presetCount, 0, 1, false, false, nullptr, I.presetCount + 1, {}};
+  }
+  ParamInfo morphParam(int i) const {
+    if (i == morphAt) return ParamInfo{"morph", "Morph", "Morph", ParamKind::continuous, 0, 1, 0, 0, false, false, nullptr, 0, kMorphFormat, 1};
+    const bool from = i == fromAt;
+    return ParamInfo{from ? "morphFrom" : "morphTo", from ? "Morph from" : "Morph to", "Morph", ParamKind::choice, 0, (double)I.presetCount, from ? 0.0 : 1.0, 1, false, false,
+                     presetNames.data(), (int)presetNames.size(), nullptr, 0};
   }
 };
 

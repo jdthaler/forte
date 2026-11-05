@@ -547,5 +547,5 @@ refreshFocus();
 updateHelp();
 requestAnimationFrame(frame);
 // your own presets and links: the console's state goes in as its parameters (organ-params.js)
-attachPresets({ instrument: INSTRUMENT, get: () => P, values: (p) => ({ ...p, ...CONSOLE.get(p) }), set: (v) => replaceP({ ...P, ...Object.fromEntries(ALL_PARAMS.map((p) => [p.id, v[p.id]])), ...CONSOLE.put(v, P) }), toast });
+attachPresets({ instrument: INSTRUMENT, get: () => P, values: (p) => ({ ...p, ...CONSOLE.get(p) }), set: (v) => replaceP({ ...P, ...Object.fromEntries(ALL_PARAMS.map((p) => [p.id, v[p.id]])), ...CONSOLE.put(v, P) }), defaults: DEFAULTS, toast });
 qualityControl(); // the device's Quality, after the controls
