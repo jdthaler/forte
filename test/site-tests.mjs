@@ -12,7 +12,7 @@ import { ASSETS, notes } from '../tools/plugin-release.mjs';
 import { withTags, pictureOf } from '../tools/make-previews.mjs';
 import { readNotes, parseNote, plan, bump, frontPage } from '../tools/release.mjs';
 import { compare, stateOf, contractPath, STATES } from '../tools/contract.mjs';
-import { TOUCH, SOFT_PEDAL, touch, touched, createSostenuto, wheelValue, FADERS, controllersOf, controlled, ccValue, SWITCHES, levelGain, pedalGain, onPedalGain, startMIDI } from '../shared/midi.js';
+import { TOUCH, SOFT_PEDAL, touch, touched, createSostenuto, wheelValue, FADERS, controllersOf, controlled, ccValue, SWITCHES, levelGain, pedalGain, onPedalGain, startMIDI, keyShift, setShift, shiftOf, signed, OCTAVES, SEMITONES } from '../shared/midi.js';
 import { LATEST, SYSTEMS, archive, downloads, downloadLinks, withPlugins, parseRelease, releaseLine } from '../shared/plugins.js';
 import { script as installerScript, SETUP, APP_ID } from '../tools/windows-installer.mjs';
 
@@ -190,6 +190,46 @@ await test('a foot controller (a Roland FC-300 as it comes): its switches are th
     assert.equal(pedalGain(), 1, 'and the volume pedal is full again');
   } finally {
     stop();
+    Object.defineProperty(globalThis, 'document', { value: was.document, configurable: true, writable: true });
+    Object.defineProperty(globalThis, 'navigator', { value: was.navigator, configurable: true, writable: true });
+  }
+});
+
+await test('Octave and Transpose move the MIDI keys: a note-off and poly pressure go where their note-on went, past 0…127 nowhere', async () => {
+  assert.equal(OCTAVES, 4); assert.equal(SEMITONES, 12);
+  assert.equal(keyShift(), 0, 'nothing moves until the player says so');
+  assert.deepEqual([signed(2), signed(0), signed(-3)], ['+2', '0', '−3']);
+  const input = { id: 'kb', name: 'Roland', state: 'connected', onmidimessage: null };
+  const acc = { inputs: new Map([['kb', input]]), onstatechange: null };
+  const was = { document: globalThis.document, navigator: globalThis.navigator };
+  Object.defineProperty(globalThis, 'document', { value: { querySelector: () => null, querySelectorAll: () => [] }, configurable: true, writable: true });
+  Object.defineProperty(globalThis, 'navigator', { value: { requestMIDIAccess: async () => acc }, configurable: true, writable: true });
+  const got = [];
+  try {
+    startMIDI({ onMIDI: (ev) => got.push([...ev.data]) });
+    await new Promise((r) => setTimeout(r, 0));
+    const send = (...data) => input.onmidimessage({ data: Uint8Array.from(data) });
+    setShift({ transpose: 2 });
+    assert.equal(keyShift(), 2);
+    send(0x90, 60, 100); send(0xa0, 60, 50);
+    setShift({ octave: -1, transpose: 2 });
+    assert.deepEqual(shiftOf(), { octave: -1, transpose: 2 });
+    assert.equal(keyShift(), -10);
+    send(0x90, 64, 90);
+    send(0x80, 60, 30); send(0x90, 64, 0);
+    assert.deepEqual(got.splice(0), [[0x90, 62, 100], [0xa0, 62, 50], [0x90, 54, 90], [0x80, 62, 30], [0x90, 54, 0]], 'each note ends where it began, however the menus moved since');
+    setShift({ octave: 4, transpose: 12 });
+    send(0x90, 100, 80); send(0xa0, 100, 1); send(0x80, 100, 0);
+    assert.deepEqual(got.splice(0), [], 'past G9: nothing, and nothing of it after');
+    setShift({ octave: 9, transpose: -40 });
+    assert.deepEqual(shiftOf(), { octave: 0, transpose: 0 }, 'out of range: none');
+    setShift({ octave: 1 });
+    send(0x91, 60, 100);
+    input.state = 'disconnected';
+    acc.onstatechange();
+    assert.deepEqual(got.splice(0), [[0x91, 72, 100], [0x81, 72, 0]], 'unplugged: its notes let go where they play');
+  } finally {
+    setShift({ octave: 0, transpose: 0 });
     Object.defineProperty(globalThis, 'document', { value: was.document, configurable: true, writable: true });
     Object.defineProperty(globalThis, 'navigator', { value: was.navigator, configurable: true, writable: true });
   }

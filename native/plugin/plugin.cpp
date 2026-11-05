@@ -53,6 +53,20 @@ constexpr uint32_t kQualityId = 0x7ffffffc;
 const char *const kQualityChoices[] = {"High", "Medium", "Low"};
 // MPE (forte/mpe.h): Auto (from the controller's configuration message), On or Off. Every plugin has it.
 constexpr uint32_t kMpeId = 0x7ffffffb;
+// Octave (±4) and Transpose (±12 semitones) move the MIDI keys, as the pages' menus do
+// (shared/midi.js keyShift): a note-off, a note's pressure and its expressions go where its
+// note-on went (moveOn, moved), so a note held while they change ends as it began. The window's
+// own keys play what they show. Every plugin has them, saved as midiTranspose and midiOctave (the
+// pipe organ's and the clavichord's own octave is a stop); the Forte app keeps them, as the controller's.
+constexpr uint32_t kTransposeId = 0x7ffffffa, kOctaveId = 0x7ffffff9;
+constexpr int kSemitones = 12, kOctaves = 4; // each choice's index is the shift + this
+#define FORTE_MINUS "\xe2\x88\x92" // U+2212, as UTF-8 bytes (MSVC turns \u escapes into CP1252)
+const char *const kTransposeChoices[] = {FORTE_MINUS "12", FORTE_MINUS "11", FORTE_MINUS "10", FORTE_MINUS "9", FORTE_MINUS "8", FORTE_MINUS "7", FORTE_MINUS "6",
+                                         FORTE_MINUS "5", FORTE_MINUS "4", FORTE_MINUS "3", FORTE_MINUS "2", FORTE_MINUS "1", "0", "+1", "+2", "+3",
+                                         "+4", "+5", "+6", "+7", "+8", "+9", "+10", "+11", "+12"};
+const char *const kOctaveChoices[] = {FORTE_MINUS "4", FORTE_MINUS "3", FORTE_MINUS "2", FORTE_MINUS "1", "0", "+1", "+2", "+3", "+4"};
+#undef FORTE_MINUS
+static_assert(sizeof kTransposeChoices / sizeof *kTransposeChoices == 2 * kSemitones + 1 && sizeof kOctaveChoices / sizeof *kOctaveChoices == 2 * kOctaves + 1);
 // The soft pedal (CC67): a key struck while it is down is struck this much slower, so it sounds
 // softer and, where the instrument's hammer or mallet is nonlinear, darker too.
 constexpr double kSoftPedal = 0.6;
@@ -94,8 +108,8 @@ struct Plugin : Instance, MpeDecoder::Sink {
   const InstrumentInfo &I;
   const std::string accent;  // the window's colour
   const bool hasPresets;
-  const int nParams;        // the instrument's parameters, then Preset if it has presets, the velocity curve, Quality and MPE
-  const int presetAt, touchAt, qualityAt, mpeAt; // their indices (presetAt −1 without presets)
+  const int nParams;        // the instrument's parameters, then Preset if it has presets, the velocity curve, Quality, MPE, Transpose and Octave
+  const int presetAt, touchAt, qualityAt, mpeAt, transposeAt, octaveAt; // their indices (presetAt −1 without presets)
   std::vector<uint32_t> ids; // hashed parameter ids, by index
 
   std::unique_ptr<Engine> engine;
@@ -110,6 +124,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
 
   // notes as the shell counts them: how many channels hold each key, and the keys latched by Hold
   uint8_t held[16][128]{};
+  int8_t moved[16][128];  // the key each channel's MIDI key plays, as Octave and Transpose moved its note-on (−1: none)
   uint8_t sounding[128]{};
   bool latched[128]{};
   bool sustain = false;
@@ -137,12 +152,16 @@ struct Plugin : Instance, MpeDecoder::Sink {
 
   Plugin(const clap_host_t *h, const InstrumentInfo &info, const clap_plugin_descriptor_t *desc, const std::string &colour)
       : Instance(h, desc), I(info), accent(colour.size() < 2 ? "#f0b35a" : colour), hasPresets(info.presetCount > 0),
-        nParams(info.paramCount + (hasPresets ? 4 : 3)), presetAt(hasPresets ? info.paramCount : -1), touchAt(nParams - 3), qualityAt(nParams - 2), mpeAt(nParams - 1) {
+        nParams(info.paramCount + (hasPresets ? 6 : 5)), presetAt(hasPresets ? info.paramCount : -1), touchAt(nParams - 5), qualityAt(nParams - 4), mpeAt(nParams - 3),
+        transposeAt(nParams - 2), octaveAt(nParams - 1) {
+    std::memset(moved, -1, sizeof moved);
     for (int i = 0; i < I.paramCount; i++) ids.push_back(paramHash(I.params[i].id));
     if (hasPresets) ids.push_back(kPresetId);
     ids.push_back(kTouchId);
     ids.push_back(kQualityId);
     ids.push_back(kMpeId);
+    ids.push_back(kTransposeId);
+    ids.push_back(kOctaveId);
     const char *tuningIds[3] = {"pitch", "temperament", "tuningRoot"};
     for (int k = 0; k < 3 + kCustomCents; k++) tuningAt[k] = paramIndex(k < 3 ? tuningIds[k] : ("cents" + std::to_string(k - 2)).c_str());
     P.resize(nParams);
@@ -153,6 +172,8 @@ struct Plugin : Instance, MpeDecoder::Sink {
     P[touchAt] = 1;
     P[qualityAt] = 0;
     P[mpeAt] = mpe::autoDetect;
+    P[transposeAt] = kSemitones;
+    P[octaveAt] = kOctaves;
     for (int i = 0; i < nParams; i++) shown[i] = P[i];
     sent.assign(nParams, NAN);
   }
@@ -169,6 +190,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
     if (i == touchAt) { P[i] = constrain(touchParam(), v); shown[i] = P[i]; return; }
     if (i == mpeAt) { P[i] = constrain(mpeParam(), v); shown[i] = P[i]; mpeMode(); return; }
     if (i == qualityAt) { P[i] = constrain(qualityParam(), v); shown[i] = P[i]; dirty = true; return; }
+    if (i == transposeAt || i == octaveAt) { P[i] = constrain(infoOf(i), v); shown[i] = P[i]; return; }
     if (i == presetAt) {
       int k = (int)std::lround(v);
       k = k < 0 ? 0 : k > I.presetCount ? I.presetCount : k;
@@ -243,6 +265,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
   void panic() {
     std::memset(held, 0, sizeof held); std::memset(sounding, 0, sizeof sounding); std::memset(latched, 0, sizeof latched);
     std::memset(caught, 0, sizeof caught); std::memset(sostHeld, 0, sizeof sostHeld);
+    std::memset(moved, -1, sizeof moved);
     sostenuto = false; soft = false;
     if (sustain) pedal(false);
     if (engine) engine->allNotesOff();
@@ -342,9 +365,38 @@ struct Plugin : Instance, MpeDecoder::Sink {
     tuning = tuningAt[0] >= 0 && tuningAt[1] >= 0 && tuningAt[2] >= 0 ? makeTuning(P[tuningAt[0]], P[tuningAt[1]], P[tuningAt[2]], custom) : Tuning{};
   }
 
-  void midi(const uint8_t *d, const clap_output_events_t *out) {
+  // ---- Octave and Transpose: where a MIDI key plays ------------------------------------------------
+  int keyShift() const { return 12 * ((int)P[octaveAt] - kOctaves) + (int)P[transposeAt] - kSemitones; }
+  // a note-on for MIDI key `key` on channel ch: the key it plays (−1: moved past MIDI's 0…127),
+  // remembered for its note-off; one still sounding there from before lets go first
+  int moveOn(int ch, int key) {
+    if (key < 0 || key > 127) return -1;
+    if (moved[ch][key] >= 0) noteOff(ch, moved[ch][key], -1);
+    const int k = key + keyShift();
+    return moved[ch][key] = (int8_t)(k >= 0 && k <= 127 ? k : -1);
+  }
+  // its note-off: where its note-on went, and then nowhere
+  int moveOff(int ch, int key) {
+    if (key < 0 || key > 127) return -1;
+    const int k = moved[ch][key];
+    moved[ch][key] = -1;
+    return k;
+  }
+  // its pressure and expressions: where its note-on went (one not down: where one would go now)
+  int at(int ch, int key) const {
+    if (key < 0 || key > 127) return -1;
+    if (moved[ch][key] >= 0) return moved[ch][key];
+    const int k = key + keyShift();
+    return k >= 0 && k <= 127 ? k : -1;
+  }
+
+  void midi(const uint8_t *m, const clap_output_events_t *out) {
+    int cmd = m[0] & 0xf0, ch = m[0] & 0x0f;
+    uint8_t d[3] = {m[0], m[1], m[2]};
+    if (cmd == 0x90 && d[2] > 0) { const int k = moveOn(ch, d[1]); if (k < 0) return; d[1] = (uint8_t)k; }
+    else if (cmd == 0x80 || cmd == 0x90) { const int k = moveOff(ch, d[1]); if (k < 0) return; d[1] = (uint8_t)k; }
+    else if (cmd == 0xa0) { const int k = at(ch, d[1]); if (k < 0) return; d[1] = (uint8_t)k; }
     if (mpe.midi(d, *this)) return; // a member channel's bend, pressure or slide: its note's
-    int cmd = d[0] & 0xf0, ch = d[0] & 0x0f;
     if (cmd == 0x90 && d[2] > 0) noteOn(ch, d[1], d[2] / 127.0);
     else if (cmd == 0x80 || cmd == 0x90) noteOff(ch, d[1], cmd == 0x80 ? d[2] / 127.0 : -1);
     else if (cmd == 0xb0) {
@@ -371,13 +423,19 @@ struct Plugin : Instance, MpeDecoder::Sink {
     switch (h->type) {
       case CLAP_EVENT_NOTE_ON: {
         auto e = (const clap_event_note_t *)h;
-        const int ch = e->channel < 0 ? 0 : e->channel & 15;
-        if (e->key >= 0 && e->key < 128) { const uint8_t d[3] = {(uint8_t)(0x90 | ch), (uint8_t)e->key, 127}; mpe.midi(d, *this); } // an MPE member's: its bend and slide
-        noteOn(ch, e->key, e->velocity);
+        const int ch = e->channel < 0 ? 0 : e->channel & 15, key = moveOn(ch, e->key);
+        if (key < 0) break;
+        const uint8_t d[3] = {(uint8_t)(0x90 | ch), (uint8_t)key, 127};
+        mpe.midi(d, *this); // an MPE member's: its bend and slide
+        noteOn(ch, key, e->velocity);
         break;
       }
-      case CLAP_EVENT_NOTE_OFF: { auto e = (const clap_event_note_t *)h; noteOff(e->channel < 0 ? 0 : e->channel, e->key, e->velocity); break; }
-      case CLAP_EVENT_NOTE_CHOKE: { auto e = (const clap_event_note_t *)h; noteOff(e->channel < 0 ? 0 : e->channel, e->key, -1); break; }
+      case CLAP_EVENT_NOTE_OFF: case CLAP_EVENT_NOTE_CHOKE: {
+        auto e = (const clap_event_note_t *)h;
+        const int ch = e->channel < 0 ? 0 : e->channel & 15;
+        noteOff(ch, moveOff(ch, e->key), h->type == CLAP_EVENT_NOTE_OFF ? e->velocity : -1);
+        break;
+      }
       case CLAP_EVENT_NOTE_EXPRESSION: {
         // One note's (Bitwig, and VST3 hosts' note expressions), or a channel's (key −1: the AU
         // wrapper's pitch bend, ±2 semitones, and channel pressure), which go on as that MIDI.
@@ -392,9 +450,10 @@ struct Plugin : Instance, MpeDecoder::Sink {
             const uint8_t d[3] = {(uint8_t)(0xd0 | ch), (uint8_t)std::clamp((int)std::lround(e->value * 127), 0, 127), 0};
             midi(d, out);
           }
-        } else if (e->expression_id == CLAP_NOTE_EXPRESSION_PRESSURE) notePressure(e->key, e->value);
-        else if (e->expression_id == CLAP_NOTE_EXPRESSION_TUNING) noteBend(e->key, e->value);
-        else if (e->expression_id == CLAP_NOTE_EXPRESSION_BRIGHTNESS) noteSlide(e->key, std::clamp(e->value, 0.0, 1.0));
+        } else if (const int key = at(ch, e->key); key < 0) break;
+        else if (e->expression_id == CLAP_NOTE_EXPRESSION_PRESSURE) notePressure(key, e->value);
+        else if (e->expression_id == CLAP_NOTE_EXPRESSION_TUNING) noteBend(key, e->value);
+        else if (e->expression_id == CLAP_NOTE_EXPRESSION_BRIGHTNESS) noteSlide(key, std::clamp(e->value, 0.0, 1.0));
         break;
       }
       case CLAP_EVENT_PARAM_VALUE: {
@@ -513,7 +572,9 @@ struct Plugin : Instance, MpeDecoder::Sink {
   //   loadScala(file)     one of them sets the custom temperament: { ok, name, error }
   //   showScalas()        opens that folder
   int paramIndex(const char *id) const { for (int i = 0; i < I.paramCount; i++) if (!std::strcmp(I.params[i].id, id)) return i; return -1; }
-  ParamInfo infoOf(int i) const { return i < I.paramCount ? I.params[i] : i == presetAt ? presetParam() : i == touchAt ? touchParam() : i == qualityAt ? qualityParam() : mpeParam(); }
+  ParamInfo infoOf(int i) const {
+    return i < I.paramCount ? I.params[i] : i == presetAt ? presetParam() : i == touchAt ? touchParam() : i == qualityAt ? qualityParam() : i == mpeAt ? mpeParam() : i == transposeAt ? transposeParam() : octaveParam();
+  }
   double along(int i, double v) const { const ParamInfo p = infoOf(i); return p.kind == ParamKind::continuous ? toNormalized(p, v) : v; }
   std::string text(int i, double v) const {
     if (i == presetAt) { int k = (int)std::lround(v); return k <= 0 ? "Default settings" : k <= I.presetCount ? I.presets[k - 1].name : "?"; }
@@ -700,7 +761,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
     char buf[64];
     for (int i = 0; i < nParams; i++) {
       std::snprintf(buf, sizeof buf, " %.17g\n", shown[i].load());
-      t += (i < I.paramCount ? I.params[i].id : i == presetAt ? "preset" : i == touchAt ? "touch" : i == qualityAt ? "quality" : "mpe") + std::string(buf);
+      t += (i < I.paramCount ? I.params[i].id : infoOf(i).id) + std::string(buf);
     }
     const char *p = t.data();
     size_t left = t.size();
@@ -722,6 +783,8 @@ struct Plugin : Instance, MpeDecoder::Sink {
     v[touchAt] = 1;
     v[qualityAt] = 0;
     v[mpeAt] = mpe::autoDetect;
+    v[transposeAt] = kSemitones;
+    v[octaveAt] = kOctaves;
     size_t at = t.find('\n');
     while (at != std::string::npos && at + 1 < t.size()) {
       size_t eol = t.find('\n', at + 1);
@@ -734,6 +797,8 @@ struct Plugin : Instance, MpeDecoder::Sink {
         else if (id == "touch") v[touchAt] = constrain(touchParam(), x);
         else if (id == "quality") v[qualityAt] = constrain(qualityParam(), x);
         else if (id == "mpe") v[mpeAt] = constrain(mpeParam(), x);
+        else if (id == "midiTranspose") v[transposeAt] = constrain(transposeParam(), x);
+        else if (id == "midiOctave") v[octaveAt] = constrain(octaveParam(), x);
         else for (int i = 0; i < I.paramCount; i++) if (id == I.params[i].id) { v[i] = constrain(I.params[i], x); break; }
       }
       at = eol;
@@ -763,6 +828,12 @@ struct Plugin : Instance, MpeDecoder::Sink {
   }
   ParamInfo mpeParam() const {
     return ParamInfo{"mpe", "MPE", "MIDI", ParamKind::choice, 0, mpe::kModes - 1, mpe::autoDetect, 1, false, false, mpe::kModeNames, mpe::kModes, {}};
+  }
+  ParamInfo transposeParam() const {
+    return ParamInfo{"midiTranspose", "Transpose", "MIDI", ParamKind::choice, 0, 2 * kSemitones, kSemitones, 1, false, false, kTransposeChoices, 2 * kSemitones + 1, {}};
+  }
+  ParamInfo octaveParam() const {
+    return ParamInfo{"midiOctave", "Octave", "MIDI", ParamKind::choice, 0, 2 * kOctaves, kOctaves, 1, false, false, kOctaveChoices, 2 * kOctaves + 1, {}};
   }
   ParamInfo qualityParam() const {
     return ParamInfo{"quality", "Quality", "CPU", ParamKind::choice, 0, 2, 0, 1, false, false, kQualityChoices, 3, {}};
@@ -1068,14 +1139,16 @@ struct Suite : Instance {
   }
 
   // ---- the parts (main thread) ----------------------------------------------------------------------
-  // instrument k, ready to play: Quality is the computer's and MPE the controller's (its mode and
-  // the zones it announced), so it takes them from the first
+  // instrument k, ready to play: Quality is the computer's and MPE, Transpose and Octave the
+  // controller's (MPE's mode and the zones it announced), so it takes them from the first
   std::unique_ptr<Plugin> make(int k) {
     std::unique_ptr<Plugin> p(new Plugin(host, list[k].info(), clap.desc, list[k].accent));
     if (const Plugin *c = part[0].get()) {
       p->P[p->qualityAt] = c->shown[c->qualityAt].load(); p->shown[p->qualityAt] = p->P[p->qualityAt]; p->offline = c->offline;
       p->P[p->mpeAt] = c->shown[c->mpeAt].load(); p->shown[p->mpeAt] = p->P[p->mpeAt];
       p->mpeMode(); p->mpe.adoptZones(c->mpe);
+      p->P[p->transposeAt] = c->shown[c->transposeAt].load(); p->shown[p->transposeAt] = p->P[p->transposeAt]; // and how far it moves the keys
+      p->P[p->octaveAt] = c->shown[c->octaveAt].load(); p->shown[p->octaveAt] = p->P[p->octaveAt];
     }
     p->hostParams = (const clap_host_params_t *)host->get_extension(host, CLAP_EXT_PARAMS);
     if (active) { pluginActivate(&p->clap, fs, minFrames, maxFrames); p->processing = processing.load(); }
@@ -1276,9 +1349,9 @@ struct Suite : Instance {
       return {};
     }
     Value r = f->call(args);
-    if (m == "set" && o) { // Quality and MPE belong to the computer and the controller: both parts
+    if (m == "set" && o) { // Quality, and MPE, Transpose and Octave, belong to the computer and the controller: both parts
       const int i = (int)num(1);
-      const int j = i == f->qualityAt ? o->qualityAt : i == f->mpeAt ? o->mpeAt : -1;
+      const int j = i == f->qualityAt ? o->qualityAt : i == f->mpeAt ? o->mpeAt : i == f->transposeAt ? o->transposeAt : i == f->octaveAt ? o->octaveAt : -1;
       if (j >= 0) { Value s = createEmptyArray(); s.addArrayElement(std::string("set")); s.addArrayElement(j); s.addArrayElement(num(2)); o->call(s); }
     }
     if (m == "poll" && o && r.isObject()) r.addMember("other", o->keysValue());
