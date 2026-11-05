@@ -71,7 +71,7 @@ Every other idea only adds, and can come before or after 1.0.
 |------|------|-------|
 | Save your own presets | M | Done, for the next release: in the Presets menu on every page (kept in the browser, saved to and opened from a file) and in the plugins' window (files in a presets folder per instrument, the same format). |
 | A choice of rooms (reverb) | M | Done, for the next release: a Venue choice on every page and plugin (Studio, Room, Recital hall, Concert hall, Cathedral), Room, the original, the default. |
-| Morph between two presets | S–M | |
+| Morph between two presets | S–M | Done, for the next release: a Morph group on every page (From, To and a slider; numbers glide, choices and switches change halfway, volume, room and tuning stay) and Morph from, Morph to and Morph in every plugin, so a song can automate the sweep. |
 | Quality or CPU setting | S–M | Done, for the next release: a Quality choice (High, Medium, Low) on every page and plugin. High sounds exactly as before; Medium and Low play fewer voices, partials or modes and lighten or drop the sympathetic strings, at about 60 % and a third of High's cost on the heavy instruments. A device's setting: in no preset or link, and the page suggests it when the audio drops out. |
 
 ### The site
