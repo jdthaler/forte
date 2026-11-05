@@ -324,7 +324,9 @@ together from **All Plugins** on the front page, or one instrument from **↓ Pl
 [native/INSTALL.md](native/INSTALL.md): on macOS and Linux, `make install` and `make verify` in
 the unpacked folder do it all. They are unsigned, so a Mac needs one Terminal command (`xattr`,
 which `make install` runs) before it loads them. The download with every instrument also has the
-Forte app, one standalone that plays any of them from its Instrument menu.
+Forte app, one standalone that plays any of them from its Instrument menu, or two at once:
+**+** beside the menu layers a second instrument with the first, or splits the keyboard between
+them.
 
 In a plugin's window the Presets menu has your own presets too: *Save these settings…* writes
 one as a file in a presets folder for that instrument (`~/Library/Audio/Presets/Forte/<id>` on a
