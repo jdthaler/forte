@@ -106,7 +106,7 @@ function build() {
     if (!a) return;
     e.preventDefault();
     if (a.getAttribute('href') === '#plugin') openPlugin();
-    else body.querySelector(a.getAttribute('href'))?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    else body.querySelector(a.getAttribute('href'))?.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   });
 }
 

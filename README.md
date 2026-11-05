@@ -35,6 +35,10 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Clavichord](clavichord/) | the German clavichord of C. P. E. Bach's day (18th century) | a brass tangent strikes the strings and stays on them as the end of the speaking length (a moving boundary driving every partial), held up by the finger's force against the strings' pull: pressure tuning and the Bebung from the stretch, the tangent's give tuned for; the listing damps the afterlengths and stops the string at key-up; double-fretted pairs where the higher tangent wins, 4′ strings in the bass, a modal soundboard |
 | ✅ | [Brass](brass/) | the tenor trombone, the B♭ trumpet and the flugelhorn | an outward-striking lip (a mass on a spring) blowing Bernoulli flow into the mouthpiece's cup; the bore as travelling waves (Kelly–Lochbaum, fractional delays, wall losses) and a radiating bell; loud waves steepening into shocks in the narrow tubing (a delay read where the pressure carries each sample); a player who picks the partial and moves the slide or valves and the lips by ear; a plunger |
 | ✅ | [Timpani and Tabla](drums/) | orchestral pedal timpani and the tabla's dayan and bayan | circular membranes solved per azimuthal order (Rayleigh–Ritz on the Bessel modes) with the air on them as a mass and its radiation as their loss, the kettle's air as a spring (Christian et al.), the dayan's loaded syahi that puts nine modes on five harmonics (Raman); felt, wood and fingertip strokes, a resting finger, the heel pressing the bayan's head sharp, the pedal on the pitch-bend wheel |
+| ✅ | [Marimba and Xylophone](marimba/) | the five-octave concert marimba (Yamaha, Keiko Abe, 1984) and the orchestral xylophone (Deagan) | rosewood bars solved as Timoshenko beams and undercut by finite elements to 1 : 4 : 10 (marimba) or 1 : 3 (xylophone); a stopped tube under each bar whose two resonances share the gap's air with bar modes 1 and 2 (the twelfth speaks through an off-centre tube); wood, cord and radiation losses; yarn to plastic mallets (power-law contact), rolls |
+| ✅ | [Gamelan](gamelan/) | the gamelan of Java and Bali: gangsa, saron, bonang, kempul and gong ageng | thick bronze bars as Timoshenko beams that bend and twist (Huang's frequency equation), a gangsa's bar and its bamboo tube as two coupled oscillators; bossed gongs ringing the modes measured by laser vibrometry (Perrin et al.; Krueger et al.), whose curved face makes the note's second harmonic beat with the second round mode (a gong ageng's ombak); pélog and sléndro on the white and black keys; Balinese pairs tuned a few hertz apart that beat (ombak); the player's damping hand |
+| ✅ | [Cimbalom](cimbalom/) | Schunda's concert cimbalom (Budapest, 1874) and the hammered dulcimer | hand-held hammers thrown at the strings, a light head on a flexible stick (Hunt–Crossley contact with cotton, leather or bare wood faces); courses of stiff strings slightly out of tune, coupled at the bridge (Weinreich's two-stage decay and beats); the dulcimer's strings divided 2 : 3 by its treble bridge, both sides ringing; a damper bar and sympathetic strings; a hand tremolo; a modal soundboard |
+| ✅ | [Musical Saw](saw/) | the singing saw of vaudeville and folk players (Mussehl's, 1920s) | a tapered steel blade bent into an S, as a thin shallow shell (Donnell): bending a curved sheet stretches it, so the curvature raises the band edge on either side of the inflection and traps a mode there (Shankar, Bryde and Mahadevan, 2022), solved across the width and along it; the trap tunnels to the hands (WKB, Gamow's rate) when the bend is loose, and a J with no inflection traps nothing; the player slides the S along the taper for each note, bowed on the edge (implicit stick–slip, its threshold from the trapped mode) or struck with felt; the knee's vibrato, and one saw sliding from note to note |
 
 ### Electric instruments
 
@@ -159,6 +163,10 @@ is the mod wheel's control wherever the instrument has one.
 | Clavichord | Bebung rate · Listing cloth · Unison spread | Finger pressure on the key | Bebung |
 | Brass | Air nonlinearity (shock waves) · Lip tension · Tonguing | Breath | Plunger mute |
 | Timpani and Tabla | Air on the head · Listening angle · Heel push | Resting finger | Strike point |
+| Marimba and Xylophone | Mallet hardness · Bar–tube gap · Roll speed | Strike point | Roll |
+| Gamelan | Mallet softness · Strike point (bars) · Strike point (gongs) | Off the long axis | Paired tuning (ombak) |
+| Cimbalom | Hammer mass · Sympathetic strings · Unison spread | Tremolo | Strike point |
+| Musical Saw | How tight the S · Bow pressure · Where it is played | Bow speed | Vibrato (the knee shakes) |
 | Electric Grand | Bass · Middle · Treble | Tremolo rate | Tremolo depth |
 | Tonewheel Organ | 16' drawbar · 8' drawbar · 4' drawbar | Tube drive | Expression pedal |
 | Tine Piano | Amp drive · Speaker top end · Tip hardness | Stereo vibrato rate | Stereo vibrato depth |
@@ -318,7 +326,9 @@ together from **All Plugins** on the front page, or one instrument from **↓ Pl
 Debian, Ubuntu, Mint and Fedora, its **.deb** or **.rpm** package; otherwise, on macOS and
 Linux, `make install` and `make verify` in the unpacked folder. They are unsigned, so a Mac needs one Terminal command (`xattr`,
 which `make install` runs) before it loads them. The download with every instrument also has the
-Forte app, one standalone that plays any of them from its Instrument menu.
+Forte app, one standalone that plays any of them from its Instrument menu, or two at once:
+**+** beside the menu layers a second instrument with the first, or splits the keyboard between
+them.
 
 In a plugin's window the Presets menu has your own presets too: *Save these settings…* writes
 one as a file in a presets folder for that instrument (`~/Library/Audio/Presets/Forte/<id>` on a
