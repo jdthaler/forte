@@ -29,6 +29,11 @@ if (typeof document !== 'undefined') {
 /** Was this element focused, or last touched, by the mouse or a finger (not by Tab)? */
 export const focusedByPointer = (el) => byPointer.has(el);
 
+/** After a click or a change: a control used with the pointer lets go of the focus (the keys go
+ *  back to the instrument); one reached with Tab keeps it, so Tab goes on to the next control
+ *  and a screen reader stays where it was, rather than starting again at the top of the page. */
+export function unfocus(el) { if (el && focusedByPointer(el)) el.blur(); }
+
 const SPACE_TAKERS = 'input[type=checkbox], input[type=radio], button, summary, select, [role=button], [role=switch], [role=tab]';
 const ARROW_TAKERS = 'input[type=range], select, [role=slider]';
 const ARROWS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown']);

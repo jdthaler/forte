@@ -83,7 +83,7 @@ Every other idea only adds, and can come before or after 1.0.
 | Works offline, installable on phones | S–M | A service worker; the manifest already exists. |
 | Demo songs played from MIDI files | M | A listen button per instrument, and drag and drop a `.mid` to play it. |
 | A guided tour of each instrument's physics | M | Done, for the next release: *Tour* in the header, a few steps per instrument (`shared/tour.js`, `<slug>-tour.js`). |
-| Accessibility pass | M | Keyboard focus, screen-reader labels, reduced motion. |
+| Accessibility pass | M | Done, for the next release: every control named for screen readers (symbol buttons, the views' canvases, sliders' values as shown, hints read after a control's name), keyboard focus kept after Enter or Space, a focus ring everywhere, and with Reduce Motion the views step four times a second and nothing slides. The page checks fail on an unnamed control. |
 | Search and filter on the front page | S | |
 
 ### The plugins and the app
@@ -144,6 +144,7 @@ default in the existing presets, or would change what an existing knob means.
 | Clavichord | M | Done, for the next release: a brass tangent that strikes the strings and stays on them, held up by the finger: pressure tuning, the Bebung (mod wheel, aftertouch, MPE), the listing and the key-up ring of the whole string, double-fretted pairs, 4′ strings in the bass. |
 | Brass | M | Done, for the next release: a trombone, a trumpet and a flugelhorn blown by a player's lips, the bore as travelling waves, loud notes steepening into shock waves in the narrow tubing (Hirschberg et al., 1996), with the air's nonlinearity on a knob, a player's ear on the slide and lips, the flugelhorn's mellow cone, and a plunger. |
 | Drums (timpani and tabla) | M | Done, for the next release: the Timpani and Tabla, Forte's first membranes. The air on a timpani head and in its kettle pulls its Bessel modes near a fifth and an octave above the principal; the dayan's syahi puts nine modes on five harmonics (Raman); the bayan's heel bends it (aftertouch, MPE pressure), the pitch-bend wheel is the pedal. |
+| Gamelan (gendèr or saron) | M | Done, for the next release: the Gamelan, Javanese and Balinese bronze: Timoshenko bars that bend and twist over bamboo tubes (gangsa) or on a trough (saron), bonang kettles and hanging gongs ringing their measured modes, a gong ageng's own throb from its curved face, pélog and sléndro on the white and black keys, Balinese pairs tuned a few hertz apart (ombak, on the mod wheel and MPE), and the damping hand. |
 | Hammered dulcimer or cimbalom | M | |
 | Ondes Martenot | M | Done, for the next release: two heterodyne oscillators pulling through Adler's equation, keyboard or ribbon, the intensity key from Quartier et al.'s measurements, the drawer's timbres, and the four diffuseurs (springs, tam-tam and palme strings from their physics). |
 | Cellulophone | M | Done, for the next release: Toulon's photoelectric organ (1927), lamps through discs of slots rounded to whole slots (a few cents out of tune), screens drawn with each wave and averaged by the slot, key mirrors, depth and push screens, the tremolo screen and damping arcs, mains flicker, potassium or selenium cells. |

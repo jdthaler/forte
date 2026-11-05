@@ -38,6 +38,7 @@
 //   kMpeId, kTransposeId, kOctaveId, moveOn, controller, footSwitch, levels, programChange; the
 //   faders reach them as the descriptor's controllers).
 
+import { unfocus } from './focus.js';
 import { MODES, createMpe, bendRatio } from './mpe.js';
 
 const KEY = 'forte/midi/v1';
@@ -238,7 +239,7 @@ function midiMenu() {
     el.id = id;
     for (const [v, text] of options) el.add(new Option(text, v));
     el.value = String(value);
-    el.addEventListener('change', () => { set(el.value); el.blur(); });
+    el.addEventListener('change', () => { set(el.value); unfocus(el); });
     row.append(Object.assign(document.createElement('span'), { textContent: name }), el);
     menu.append(row);
   }
