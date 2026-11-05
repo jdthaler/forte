@@ -1,0 +1,8 @@
+/* The page's own palette and any layout beyond shared/instrument.css. */
+:root {
+  --accent: #e0b44c;
+  --accent-2: #7cb8ff;
+  --accent-ink: #2a1c00;
+}
+#modes tr.strike td { color: var(--accent); }
+#modes td.note { color: var(--muted); font-size: 11px; padding-top: 6px; text-align: left; white-space: normal; }
