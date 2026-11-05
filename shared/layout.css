@@ -133,6 +133,7 @@ body[data-instrument] .forte-fold:hover { color: var(--text); }
 }
 .forte-split::before { content: ""; display: block; width: 44px; height: 5px; margin: 6px auto 0; border-radius: 3px; background: color-mix(in srgb, var(--muted) 55%, transparent); }
 .forte-split:hover::before, .forte-split:focus-visible::before, body.sharing .forte-split::before { background: var(--accent); }
+.forte-split:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 6px; }
 body:not(.perform) .forte-controls-bar:has(> .forte-split) { cursor: row-resize; touch-action: none; }
 .forte-controls-bar :is(button, select) { cursor: pointer; }
 body.sharing, body.sharing * { cursor: row-resize !important; user-select: none; -webkit-user-select: none; }

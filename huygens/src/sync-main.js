@@ -8,12 +8,12 @@ import { keyFreq, noteName, nearestRatio, intervalName, KEY_LO, KEY_HI } from '.
 import { TUNING_KEEP, tuningRatio } from '../../shared/tuning.js';
 import { wasmModel } from './huygens-wasm.js';
 import { createChain } from '../../shared/chain.js';
-import { SpectrumView, SpectrogramView } from '../../shared/views.js';
+import { SpectrumView, SpectrogramView, animate } from '../../shared/views.js';
 import { StairView, RasterView } from './sync-viz.js';
 import { FiringLog } from './lock-analysis.js';
 import { createKeyboard } from '../../shared/keyboard.js';
 import { startMIDI, resumeMIDI, wheelValue, pageMpe, createSostenuto, controllersOf, controlled, tellFader } from '../../shared/midi.js';
-import { controlOwns } from '../../shared/focus.js';
+import { controlOwns, unfocus } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
 import { connectQuality, qualityControl } from '../../shared/quality.js';
@@ -224,7 +224,7 @@ function buildControls() {
         wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;
         input = document.createElement('select'); input.id = `p-${p.id}`;
         for (const [k, name] of p.options) input.add(new Option(name, k));
-        input.addEventListener('change', () => { setParam(p.id, typeof p.def === 'number' ? +input.value : input.value); input.blur(); });
+        input.addEventListener('change', () => { setParam(p.id, typeof p.def === 'number' ? +input.value : input.value); unfocus(input); });
         wrap.appendChild(input);
       } else if (p.type === 'checkbox') {
         wrap.classList.add('check');
@@ -254,7 +254,7 @@ function buildControls() {
   ps.addEventListener('change', () => {
     if (ps.value === '') return;
     setAll({ ...DEFAULTS, ...Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]])), ...PRESETS[+ps.value].p });
-    ps.blur();
+    unfocus(ps);
   });
   $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }); $('#preset').value = ''; });
 }
@@ -358,14 +358,14 @@ function updateTables(an, hold) {
 }
 
 // views redraw only when something changed (and only while visible)
-function frame() { requestAnimationFrame(frame); stair.frame(); raster.frame(); }
+function frame() { stair.frame(); raster.frame(); }
 
 let toastTimer = 0;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3500); }
-$('#start').addEventListener('click', (e) => { startAudio(); e.currentTarget.blur(); });
-$('#midi-btn').addEventListener('click', (e) => { initMIDI(); e.currentTarget.blur(); });
+$('#start').addEventListener('click', (e) => { startAudio(); unfocus(e.currentTarget); });
+$('#midi-btn').addEventListener('click', (e) => { initMIDI(); unfocus(e.currentTarget); });
 resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
-$('#panic').addEventListener('click', (e) => { panic(); e.currentTarget.blur(); });
+$('#panic').addEventListener('click', (e) => { panic(); unfocus(e.currentTarget); });
 
 buildControls();
 for (const id of controls.keys()) refreshControl(id);
@@ -374,6 +374,6 @@ keyboardView.labels(keyLabels());
 updateHelp();
 updateTables({ notes: [], pairs: [] }, 0);
 recomputeStair(true);
-requestAnimationFrame(frame);
+animate(frame);
 attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v) => setAll({ ...P, ...v }), toast }); // your own presets and links
 qualityControl(); // the device's Quality, after the controls

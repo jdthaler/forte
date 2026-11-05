@@ -55,6 +55,10 @@ export function createKeyboard(root, { lo, hi, onDown, onUp, onPressure }) {
       paint(m, el);
       root.appendChild(el); els.set(m, el);
     }
+    // to a screen reader the keys are one picture, not a list of letters: they answer a finger or
+    // the mouse, and the computer keys and MIDI play the same notes
+    root.setAttribute('role', 'img');
+    root.setAttribute('aria-label', `Keys from ${noteName(wLo)} to ${noteName(wHi)}: play them with the computer keyboard (⌨ says which keys), MIDI, a finger or the mouse`);
     for (const fn of listeners) fn(wLo, wHi);
   }
 

@@ -13,7 +13,7 @@ import { MotionView, SpectrumView, drawSection, FAMILY } from './viz.js';
 import { SpectrogramView } from '../../shared/views.js';
 import { createKeyboard } from '../../shared/keyboard.js';
 import { startMIDI, resumeMIDI, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from '../../shared/midi.js';
-import { controlOwns } from '../../shared/focus.js';
+import { controlOwns, unfocus } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
 import { attachScala } from '../../shared/tuning-ui.js';
@@ -314,7 +314,7 @@ function buildControls() {
         input.id = `p-${p.id}`;
         for (const [k, name] of p.options) input.add(new Option(name, k));
         // the option's own value (the tuning's choices are numbers: A = 415 Hz, the root)
-        input.addEventListener('change', () => { setParam(p.id, p.options[input.selectedIndex][0]); input.blur(); });
+        input.addEventListener('change', () => { setParam(p.id, p.options[input.selectedIndex][0]); unfocus(input); });
         wrap.appendChild(input);
       } else if (p.type === 'checkbox') {
         wrap.classList.add('check');
@@ -356,7 +356,7 @@ function buildControls() {
     if (ps.value === '') return;
     const keep = Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]]));
     setAll({ ...DEFAULTS, ...keep, ...PRESETS[+ps.value].p });
-    ps.blur();
+    unfocus(ps);
   });
   $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }); $('#preset').value = ''; });
 }
@@ -563,12 +563,12 @@ function toast(msg) {
   toastTimer = setTimeout(() => { t.hidden = true; }, 3500);
 }
 
-$('#start').addEventListener('click', (e) => { startAudio(); e.currentTarget.blur(); });
-$('#midi-btn').addEventListener('click', (e) => { initMIDI(); e.currentTarget.blur(); });
+$('#start').addEventListener('click', (e) => { startAudio(); unfocus(e.currentTarget); });
+$('#midi-btn').addEventListener('click', (e) => { initMIDI(); unfocus(e.currentTarget); });
 resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
-$('#panic').addEventListener('click', (e) => { panic(); e.currentTarget.blur(); });
-$('#replay').addEventListener('click', (e) => { motion.replay(); e.currentTarget.blur(); });
-$('#speed').addEventListener('change', (e) => { motion.speed = +e.target.value; motion.replay(); e.target.blur(); });
+$('#panic').addEventListener('click', (e) => { panic(); unfocus(e.currentTarget); });
+$('#replay').addEventListener('click', (e) => { motion.replay(); unfocus(e.currentTarget); });
+$('#speed').addEventListener('change', (e) => { motion.speed = +e.target.value; motion.replay(); unfocus(e.target); });
 const CAPTIONS = {
   spectrum: 'Stems: partials just after the strike (dB re. loudest). Grey: live output. Faint lines: exact harmonics n·f₀.',
   inharm: 'Deviation of partial n from n × that family’s own fundamental, in cents (stiffness stretches; taper bends).',
@@ -579,7 +579,7 @@ function setSpecMode(mode) {
   $('#spec-caption').textContent = CAPTIONS[mode];
 }
 for (const b of document.querySelectorAll('.tab')) {
-  b.addEventListener('click', () => { setSpecMode(b.dataset.mode); b.blur(); });
+  b.addEventListener('click', () => { setSpecMode(b.dataset.mode); unfocus(b); });
 }
 setSpecMode('spectrum');
 window.addEventListener('resize', () => drawSection($('#section'), keyData(focusKey).model, P));
