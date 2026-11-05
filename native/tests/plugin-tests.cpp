@@ -504,4 +504,67 @@ TEST("plugin: CLAP's note expressions bend and slide one note; the AU wrapper's 
   CHECK(c5 > 5 * e5);
 }
 
+TEST("plugin: Octave and Transpose move the MIDI keys, not the window's; a note held while they change ends where it began; saved") {
+  Instance in(48000);
+  char text[64];
+  CHECK(in.value("Transpose") == 12 && in.value("Octave") == 4); // the indices of 0
+  CHECK(in.params->value_to_text(in.p, in.id("Transpose"), 14, text, sizeof text) && std::string(text) == "+2");
+  CHECK(in.params->value_to_text(in.p, in.id("Octave"), 0, text, sizeof text) && std::string(text) == "\xe2\x88\x92" "4");
+  double v = -1;
+  CHECK(in.params->text_to_value(in.p, in.id("Transpose"), "+2", &v) && v == 14);
+  clap_param_info_t info;
+  for (uint32_t i = 0; i < in.params->count(in.p); i++) if (in.params->get_info(in.p, i, &info) && info.id == in.id("Octave")) break;
+  CHECK(!(info.flags & CLAP_PARAM_IS_AUTOMATABLE) && std::string(info.module) == "MIDI");
+
+  Events ev;
+  ev.param(0, in.id("Transpose"), 14);   // +2
+  ev.midi(10, 0x90, 60, 100);            // C4 plays D4
+  ev.param(4800, in.id("Transpose"), 12); // back to 0 while it is held
+  ev.midi(9600, 0x80, 60, 0);            // and its note-off ends D4
+  auto L = in.run(48000, 128, ev);
+  CHECK(loudest(L, {kC4, up(kC4, 2)}, 2400, 4800) == 1);
+  CHECK(loudest(L, {kC4, up(kC4, 2)}, 6000, 9600) == 1);
+  CHECK(peak(L, 40000, 48000) < 1e-4);
+
+  Events both;
+  both.param(0, in.id("Octave"), 3);     // −1
+  both.param(0, in.id("Transpose"), 16); // +4
+  both.note(10, true, 0, 60, 0.8);       // a CLAP note: C4 plays G♯3
+  both.note(4800, false, 0, 60, 0);
+  L = in.run(9600, 128, both);
+  CHECK(loudest(L, {kC4, up(kC4, -8)}, 2400, 4800) == 1);
+
+  // the window's keys play what they show
+  auto bridge = (const forte::EditorBridge *)in.p->get_extension(in.p, forte::kEditorBridge);
+  bridge->call(in.p, "[\"panic\"]");
+  bridge->call(in.p, "[\"note\", 60, 0.8]");
+  Events none;
+  L = in.run(9600, 128, none);
+  CHECK(loudest(L, {kC4, up(kC4, -8)}, 4800, 9600) == 0);
+  bridge->call(in.p, "[\"note\", 60, 0]");
+
+  // an MPE member's bend follows its moved note
+  Events mpe;
+  mpe.param(0, in.id("Octave"), 4); mpe.param(0, in.id("Transpose"), 14); // +2
+  mpe.mcm(0, 0, 15);
+  mpe.midi(0, 0x90, 127, 100);           // past G9: nowhere to play, and its note-off is dropped too
+  mpe.midi(10, 0x80, 127, 0);
+  mpe.midi(100, 0x91, 60, 100);          // C4 on channel 2 plays D4
+  mpe.bend(200, 1, -1.0 / 48);           // down a semitone: C♯4
+  L = in.run(9600, 128, mpe);
+  CHECK(loudest(L, {up(kC4, 2), up(kC4, 1)}, 4800, 9600) == 1);
+
+  std::string saved;
+  clap_ostream_t os{&saved, [](const clap_ostream_t *s, const void *b, uint64_t n) -> int64_t { ((std::string *)s->ctx)->append((const char *)b, n); return (int64_t)n; }};
+  CHECK(in.state->save(in.p, &os));
+  CHECK(saved.find("\nmidiTranspose 14\n") != std::string::npos && saved.find("\nmidiOctave 4\n") != std::string::npos);
+  Instance again(48000);
+  struct Reader { std::string s; size_t at = 0; } r{saved};
+  clap_istream_t is{&r, [](const clap_istream_t *s, void *b, uint64_t n) -> int64_t {
+    auto *r = (Reader *)s->ctx; const size_t k = std::min<size_t>(n, r->s.size() - r->at);
+    std::memcpy(b, r->s.data() + r->at, k); r->at += k; return (int64_t)k; }};
+  CHECK(again.state->load(again.p, &is));
+  CHECK(again.value("Transpose") == 14 && again.value("Octave") == 4);
+}
+
 int main() { return check::run(); }

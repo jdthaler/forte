@@ -123,12 +123,23 @@ sostenuto and soft pedals, aftertouch and, where it means something, the
 mod wheel and pitch bend. Once MIDI is on, every other instrument page
 turns it on by itself.
 
+**The MIDI menu:** once MIDI is on, its status opens a menu with the
+velocity curve (Touch), MPE (below), Octave and Transpose. Octave and
+Transpose move the MIDI keys up to four octaves and twelve semitones either
+way, so a 25-key controller reaches all 88 keys, or a piece fingered in C
+sounds in D. Every page keeps what you set there, and while the keys are
+moved the status says so, in the instrument's colour. A note held while you change them ends where it
+began. The keys on the screen and the computer keys play what they show
+(`←`/`→` move the computer keys). The plugins have the same two as their
+Transpose and Octave parameters, which the Forte app keeps when you change
+instrument.
+
 **MPE:** a controller that gives each note a channel of its own (a ROLI
 Seaboard, a LinnStrument, an Expressive E Osmose) bends, slides and presses
 each note alone, wherever the instrument can: a reed, a pipe, a string or a
 bow bends; a struck bar or bell keeps its pitch, but its slide (CC74) still
-moves what the mod wheel moves, for that note. The MPE menu beside Enable
-MIDI is on Auto, which turns MPE on when the controller announces it (its
+moves what the mod wheel moves, for that note. MPE in the MIDI menu is on
+Auto, which turns MPE on when the controller announces it (its
 MPE Configuration Message) and leaves any other keyboard as it was; On
 reads channels 2–16 as MPE without the announcement, and Off never does.
 The plugins have the same choice as their MPE parameter, and also take

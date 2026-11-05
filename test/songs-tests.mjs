@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { parseMIDI, writeMIDI, playable, fit, transpose } from '../shared/midifile.js';
-import { createInput } from '../shared/midi.js';
+import { createInput, setShift } from '../shared/midi.js';
 import { INSTRUMENTS } from '../shared/registry.js';
 import { SONGS, songFile } from '../tools/make-songs.mjs';
 
@@ -98,6 +98,17 @@ await test('a song\'s messages are cleaned as a keyboard\'s: a re-strike lets go
   input.take([0x80, 64, 0]);
   input.letGo();
   assert.deepEqual(sent, [[0x90, 60, 90], [0x80, 60, 0], [0x90, 60, 70], [0xb0, 64, 127], [0x90, 64, 80], [0x80, 64, 0], [0x80, 60, 0], [0xb0, 64, 0]]);
+});
+
+await test('a song doesn\'t follow the player\'s Octave and Transpose (it fits itself); a device does', () => {
+  setShift({ octave: -2, transpose: 3 });
+  try {
+    const song = [], device = [];
+    const a = createInput((d) => song.push([...d])), b = createInput((d) => device.push([...d]), {}, { shift: true });
+    for (const i of [a, b]) { i.take([0x90, 60, 90]); i.take([0x80, 60, 0]); }
+    assert.deepEqual(song, [[0x90, 60, 90], [0x80, 60, 0]]);
+    assert.deepEqual(device, [[0x90, 39, 90], [0x80, 39, 0]]);
+  } finally { setShift({ octave: 0, transpose: 0 }); }
 });
 
 const index = JSON.parse(readFileSync(new URL('songs/index.json', R), 'utf8'));
