@@ -176,13 +176,22 @@ export const INSTRUMENTS = [
     accent: '#d9874a',
   },
   {
+    id: 'gamelan', name: 'Gamelan', section: 'traditional', ready: true, version: '0.1.0', trim: 2,
+    plugin: { code: 'Gmln', ready: true },
+    after: 'the gamelan of Java and Bali',
+    tagline: 'Bronze bars over bamboo tubes and bossed gongs, in pélog and sléndro; in Bali every bar has a partner tuned a few hertz away, so each note shimmers as the pair beats.',
+    physics: 'Timoshenko bars · tube resonators · bossed gongs whose curvature beats · paired tuning (ombak)',
+    vibrates: 'solids', notes: 'ring',
+    accent: '#e0a43c',
+  },
+  {
     id: 'tubular', name: 'Tubular Bells', section: 'traditional', ready: true, version: '0.1.0', trim: 7.5,
     plugin: { code: 'Tubu', ready: true },
     after: 'orchestral chimes',
     tagline: 'Brass tubes hung from a frame and struck on their caps. The pitch you hear is played by no mode of the tube: it is the note whose harmonics modes 4, 5 and 6 nearly are, an octave below the fourth.',
     physics: 'Timoshenko tubes with a capped end · Hertzian mallet · line-dipole radiation · virtual pitch',
     vibrates: 'solids', notes: 'ring',
-    accent: '#e0b44c',
+    accent: '#e8cf7a',
   },
   {
     id: 'grand', name: 'Electric Grand', section: 'electric', ready: true, version: '0.11.0', trim: 3.5,

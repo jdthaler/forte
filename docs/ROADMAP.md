@@ -63,7 +63,7 @@ Every other idea only adds, and can come before or after 1.0.
 | Foot controller (a Roland FC-300) | S–M | Done, for the next release: on every page and plugin, the volume (CC7) and expression (CC11) pedals turn the instrument down, CC80, 81 and 82 are the sustain, sostenuto and soft pedals, and a program change plays a preset; the Electric Grand, Tine and Reed Pianos put their tremolo on the mod wheel (the FC-300's EXP 2). Not yet tried on a real FC-300. A MIDI learn, for pedals set to other CCs, is not done. |
 | Alternative tunings and temperaments | M | Done, for the next release: a Tuning group on every page and plugin: nine pitch standards (A = 392 to 466 Hz), equal, meantone (¼ and ⅙ comma), Werckmeister III, Kirnberger III, Vallotti, Young, Pythagorean and just on any root, and a custom temperament a Scala file can fill. Equal at 440 Hz, the default, sounds as before. |
 | Transpose and octave controls on every page and plugin | S | |
-| Split and layer two instruments | M | Most useful in the Forte app and on the site. |
+| Split and layer two instruments | M | In the Forte app, for the next release: **+** beside the Instrument menu layers a second instrument or splits the keys with it. The site next. |
 
 ### Sound
 
@@ -83,7 +83,7 @@ Every other idea only adds, and can come before or after 1.0.
 | Works offline, installable on phones | S–M | A service worker; the manifest already exists. |
 | Demo songs played from MIDI files | M | A listen button per instrument, and drag and drop a `.mid` to play it. |
 | A guided tour of each instrument's physics | M | Done, for the next release: *Tour* in the header, a few steps per instrument (`shared/tour.js`, `<slug>-tour.js`). |
-| Accessibility pass | M | Keyboard focus, screen-reader labels, reduced motion. |
+| Accessibility pass | M | Done, for the next release: every control named for screen readers (symbol buttons, the views' canvases, sliders' values as shown, hints read after a control's name), keyboard focus kept after Enter or Space, a focus ring everywhere, and with Reduce Motion the views step four times a second and nothing slides. The page checks fail on an unnamed control. |
 | Search and filter on the front page | S | |
 
 ### The plugins and the app
@@ -144,6 +144,7 @@ default in the existing presets, or would change what an existing knob means.
 | Clavichord | M | Done, for the next release: a brass tangent that strikes the strings and stays on them, held up by the finger: pressure tuning, the Bebung (mod wheel, aftertouch, MPE), the listing and the key-up ring of the whole string, double-fretted pairs, 4′ strings in the bass. |
 | Brass | M | Done, for the next release: a trombone, a trumpet and a flugelhorn blown by a player's lips, the bore as travelling waves, loud notes steepening into shock waves in the narrow tubing (Hirschberg et al., 1996), with the air's nonlinearity on a knob, a player's ear on the slide and lips, the flugelhorn's mellow cone, and a plunger. |
 | Drums (timpani and tabla) | M | Done, for the next release: the Timpani and Tabla, Forte's first membranes. The air on a timpani head and in its kettle pulls its Bessel modes near a fifth and an octave above the principal; the dayan's syahi puts nine modes on five harmonics (Raman); the bayan's heel bends it (aftertouch, MPE pressure), the pitch-bend wheel is the pedal. |
+| Gamelan (gendèr or saron) | M | Done, for the next release: the Gamelan, Javanese and Balinese bronze: Timoshenko bars that bend and twist over bamboo tubes (gangsa) or on a trough (saron), bonang kettles and hanging gongs ringing their measured modes, a gong ageng's own throb from its curved face, pélog and sléndro on the white and black keys, Balinese pairs tuned a few hertz apart (ombak, on the mod wheel and MPE), and the damping hand. |
 | Tubular bells | M | Done, for the next release: the Tubular Bells, orchestral chimes: capped brass tubes as Timoshenko beams, each cut so that modes 4–6 sit near 2 : 3 : 4 of the strike note (a virtual pitch an octave below mode 4), a rawhide mallet's Hertzian contact, radiation that takes the high modes in a second or two, a damper bar and its pedal; brass, aluminium or steel, any section and cap. |
 | Hammered dulcimer or cimbalom | M | |
 | Ondes Martenot | M | Done, for the next release: two heterodyne oscillators pulling through Adler's equation, keyboard or ribbon, the intensity key from Quartier et al.'s measurements, the drawer's timbres, and the four diffuseurs (springs, tam-tam and palme strings from their physics). |

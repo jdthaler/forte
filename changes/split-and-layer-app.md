@@ -1,0 +1,4 @@
+# split and layer two instruments in the Forte app
+
+### Forte (minor)
+- **Two instruments at once in the Forte app:** **+** beside the Instrument menu layers a second instrument with the first, so both play every key, or splits the keyboard between them, the second below the split point (any key from C1 to C7, or the next one you press). A bar under the header switches between Layer and Split, swaps the two, and picks whose controls and presets the window shows; × takes one away. The keyboard marks each one's keys in its colour, and the app reopens with both, as they were. Each keeps its own settings, Volume included, so the balance is theirs; the pedals, the wheels and Panic reach both, a program change the one shown, Quality and MPE are the computer's and the controller's, and a gentle limiter keeps the two together under full scale. A host sees the first instrument's parameters.

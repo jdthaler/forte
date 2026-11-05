@@ -2,4 +2,4 @@
 set(FORTE_NAME "Tubular Bells")
 set(FORTE_VERSION "0.1.0")
 set(FORTE_AU_SUBTYPE "Tubu")
-set(FORTE_ACCENT "#e0b44c")
+set(FORTE_ACCENT "#e8cf7a")
