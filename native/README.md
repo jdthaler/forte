@@ -27,7 +27,7 @@ instruments/<slug>/                 a ported instrument: engine, model, generate
                                     hydrogen, trautonium, hydraulis, cuore, hurdygurdy, ionchain, telharmonium,
                                     resonator, regal, chladni, ondes, cellulophone, voice, birdsong,
                                     clavichord, planets, pulsars, drums, dunes, brass, nmr, gamelan,
-                                    marimba, cimbalom and saw;
+                                    marimba, cimbalom, saw and tubular;
                                     docs/INSTRUMENT_GUIDE.md,
                                     "The native port")
 tests/                              native unit tests (CTest); tests/smoke, a test instrument
@@ -129,6 +129,11 @@ clap-wrapper builds the VST3, AU v2 and standalone from the CLAP. Each plugin:
   curve: the engine plays less physics at Medium and Low for a slow computer. The project keeps
   it, presets don't, and a host rendering offline (CLAP's render extension, which clap-wrapper's
   VST3 passes on and its AU v2 does not) gets High;
+- has an MPE choice (Auto, On, Off) and Transpose (−12 to +12 semitones) and Octave (−4 to +4)
+  choices after Quality, as in the pages' MIDI menu: they move the MIDI keys
+  (notes, CLAP's note events, poly pressure and note expressions), each note-off going where its
+  note-on went (`moveOn`); the window's own keys play what they show. The Forte app keeps the
+  three across instruments and sets them for both parts of a layer or split, as the controller's;
 - saves its state as text (`forte <slug> <version>`, then `<id> <value>` per line), so a
   project survives parameters being added;
 - plays through the output chain, with flush-to-zero, a NaN guard, and engine blocks of at
@@ -142,7 +147,19 @@ clap-wrapper builds the VST3, AU v2 and standalone from the CLAP. Each plugin:
   macOS, WebView2 on Windows (part of Windows 10 and 11), WebKitGTK in an X11 window on Linux.
   The page calls the plugin through `window.forte(method, …)`; the tests make the same calls
   without a window. Open `editor.html` in a browser to work on it: it plays a made-up
-  instrument there. `-DFORTE_EDITOR=OFF` builds the plugins without it.
+  instrument there, or a real one silently with `?instrument=<slug>` from `npm run serve`
+  (the WebAssembly engine on a timer, its messages and sound sent as the plugin's).
+  `-DFORTE_EDITOR=OFF` builds the plugins without it.
+- shows the site's views in that window (its *Views* button): the instrument's page, in a frame
+  above the controls, with only its views (`shared/in-plugin.js`). Each plugin carries its
+  folder and `shared/` (`forte_site()` in `cmake/forte.cmake` packs them with `cmake/site.cmake`
+  into a gzipped tar linked in, `site.h`) and serves them to the web view from memory
+  (`editor.cpp`), with the window's own page at `/`. While the views show, `poll` also brings
+  the engine's messages (`m`) and its sound before the chain (`s`, base64 float32), and the
+  host's notes come with their velocities (`vel`). An instrument whose page's translator reads
+  the engine's memory gives `forte_add_plugin` a `VIEWS` source (`<slug>-views.cpp`, the plugins'
+  only) whose `forte::Views` copies that data out on the audio thread with its message, and
+  turns on what the engine keeps for its views (`site.h`); it comes in `poll`'s `md`.
 
 Identifiers: CLAP `net.jthaler.forte.<slug>`, vendor Forte, AU manufacturer `Frte` with the
 instrument's subtype from the registry (`plugin.code`), VST3 class id from `ids.json`.
