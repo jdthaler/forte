@@ -33,6 +33,8 @@ jobs:
   # every count that differs from its base, in the job's summary.
   pages:
     runs-on: ubuntu-24.04
+    # about 20 minutes; a browser that hangs fails the job in an hour, not GitHub's six
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
