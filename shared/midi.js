@@ -12,11 +12,16 @@
 //     MIDI turned on by resumeMIDI comes before any click).
 //   wheelValue(p, cc, max?) maps the mod wheel onto a parameter: at rest (0) its default, fully up
 //   its maximum, so a wheel at rest never drags the instrument to the bottom of its range.
-//   touch() is the velocity curve the player chose (every page shares it, from the menu startMIDI
-//   puts beside the #midi status), touched(v) a MIDI velocity (0..1) through it; SOFT_PEDAL
+//   touch() is the velocity curve the player chose (every page shares it, from the menu the #midi
+//   status opens once startMIDI turns MIDI on: midiMenu), touched(v) a MIDI velocity (0..1) through it; SOFT_PEDAL
 //   scales the velocity of keys struck under CC67; createSostenuto() keeps the keys CC66 holds.
 //   mpeMode() is MPE's mode the player chose (shared/mpe.js: 'auto', 'on' or 'off'; every page
-//   shares it, from a menu beside the velocity curve's); pageMpe() decodes it for a page.
+//   shares it, from the same menu); pageMpe() decodes it for a page.
+//   keyShift() is how far the MIDI keys are moved: the player's Octave (±4) and Transpose (±12
+//   semitones), from the same menu, which every page shares (setShift). startMIDI moves
+//   each note as it comes in, and its note-off and poly pressure by as much as its note-on was
+//   moved, so a note held while the menus change ends as it began. The on-screen and computer
+//   keys play what they show (the ◀ ▶ buttons and arrow keys move the computer keys).
 //   FADERS are a controller's five touch controls (a Seaboard RISE's three faders and XY pad):
 //   controllersOf(I) is the descriptor's controllers with its `faders` among them, controlled(…)
 //   what one of them sets, ccValue(p, v) a controller across a parameter's whole range.
@@ -30,8 +35,8 @@
 //   - a program change n plays the menu's preset n + 1 (pedal 1 the first preset, then your own
 //     after the instrument's): choosePreset.
 //   The plugins do the same (native/plugin/plugin.cpp: kTouchGamma, kSoftPedal, sostenutoPedal,
-//   kMpeId, controller, footSwitch, levels, programChange; the faders reach them as the
-//   descriptor's controllers).
+//   kMpeId, kTransposeId, kOctaveId, moveOn, controller, footSwitch, levels, programChange; the
+//   faders reach them as the descriptor's controllers).
 
 import { unfocus } from './focus.js';
 import { MODES, createMpe, bendRatio } from './mpe.js';
@@ -40,6 +45,7 @@ import { midiTap } from './taps.js';
 const KEY = 'forte/midi/v1';
 const TOUCH_KEY = 'forte/touch/v1';
 const MPE_KEY = 'forte/mpe/v1';
+const SHIFT_KEY = 'forte/shift/v1';
 
 // The velocity curve: v^γ. Soft makes a light touch louder, Hard asks for a firmer one.
 export const TOUCH = [{ name: 'Soft', gamma: 0.6 }, { name: 'Normal', gamma: 1 }, { name: 'Hard', gamma: 1.6 }];
@@ -61,6 +67,30 @@ export function setMpeMode(m) {
   mpe = m;
   try { localStorage.setItem(MPE_KEY, m); } catch { /* storage blocked */ }
 }
+// Octave and Transpose: how far the MIDI keys are moved, an octave and a semitone at a time
+export const OCTAVES = 4, SEMITONES = 12;
+const shift = { octave: 0, transpose: 0 };
+const within = (v, n) => (Number.isInteger(v) && Math.abs(v) <= n ? v : 0);
+try {
+  const s = JSON.parse(localStorage.getItem(SHIFT_KEY) || 'null');
+  if (s) { shift.octave = within(s.octave, OCTAVES); shift.transpose = within(s.transpose, SEMITONES); }
+} catch { /* storage blocked, corrupt, or Node */ }
+export const keyShift = () => 12 * shift.octave + shift.transpose;
+export const shiftOf = () => ({ ...shift });
+export function setShift({ octave = shift.octave, transpose = shift.transpose } = {}) {
+  shift.octave = within(octave, OCTAVES); shift.transpose = within(transpose, SEMITONES);
+  try { localStorage.setItem(SHIFT_KEY, JSON.stringify(shift)); } catch { /* storage blocked */ }
+  showShift();
+}
+// "+2", "0", "−1" (a minus sign, not a hyphen)
+export const signed = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0');
+const shiftText = () => {
+  const { octave: o, transpose: t } = shift, parts = [];
+  if (o) parts.push(`${Math.abs(o)} octave${Math.abs(o) > 1 ? 's' : ''} ${o > 0 ? 'up' : 'down'}`);
+  if (t) parts.push(`${Math.abs(t)} semitone${Math.abs(t) > 1 ? 's' : ''} ${t > 0 ? 'up' : 'down'}`);
+  return parts.join(' and ');
+};
+
 // Without the User Activation API (older browsers), let the notes through as before.
 const mayPlay = () => !navigator.userActivation || navigator.userActivation.hasBeenActive;
 // (shell.js is imported here only when needed: the tools import this module in Node)
@@ -118,13 +148,15 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
   if (!navigator.requestMIDIAccess) { status('No Web MIDI in this browser (try Chrome, Edge or Firefox)'); return; }
   navigator.requestMIDIAccess().then((acc) => {
     try { localStorage.setItem(KEY, '1'); } catch { /* storage blocked */ }
-    const down = new Map(); // input id → { notes: Set('channel:key'), pedals: Set('channel:cc'), levels: Set(cc) }
+    // input id → { notes: Map('channel:key' → the key it plays, −1 when moved past MIDI's 0…127),
+    //              pedals: Set('channel:cc'), levels: Set(cc) }
+    const down = new Map();
     const send = (data) => { if (midiTap(data)) onMIDI({ data }); }; // a second instrument (shared/layer.js) takes its share first
     const mine = (cc) => Object.hasOwn(controllers, cc); // the instrument's own
     const letGo = (id) => {
       const s = down.get(id);
       if (!s) return;
-      for (const nk of s.notes) { const [ch, k] = nk.split(':').map(Number); send([0x80 | ch, k, 0]); }
+      for (const [nk, k] of s.notes) if (k >= 0) send([0x80 | +nk.split(':')[0], k, 0]);
       for (const pc of s.pedals) { const [ch, cc] = pc.split(':').map(Number); send([0xb0 | ch, cc, 0]); }
       for (const cc of s.levels) setLevel(cc, 127); // a volume pedal unplugged heel down: full again
       down.delete(id);
@@ -134,13 +166,25 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
       if ((data[0] & 0xf0) === 0xb0 && SWITCHES[data[1]] && !mine(data[1])) data = [data[0], SWITCHES[data[1]], data[2]];
       const [st, d1, d2] = data, cmd = st & 0xf0, ch = st & 0x0f, nk = `${ch}:${d1}`;
       let s = down.get(id);
-      if (!s) down.set(id, (s = { notes: new Set(), pedals: new Set(), levels: new Set() }));
+      if (!s) down.set(id, (s = { notes: new Map(), pedals: new Set(), levels: new Set() }));
+      // a note-off (and its poly pressure) goes where its note-on went
+      const off = (status, vel) => { const k = s.notes.get(nk); s.notes.delete(nk); if (k >= 0) send([status, k, vel]); };
       if (cmd === 0xc0) choosePreset(d1);
       if (cmd === 0xb0 && (d1 === 7 || d1 === 11) && !mine(d1)) { setLevel(d1, d2); if (d2 < 127) s.levels.add(d1); else s.levels.delete(d1); }
       if (cmd === 0xb0 && d1 === 121) { for (const cc of [7, 11]) if (!mine(cc)) setLevel(cc, 127); s.levels.clear(); } // Reset All Controllers
       if (cmd === 0x90 && d2 > 0 && !mayPlay()) { needClick(); return; }
-      if (cmd === 0x90 && d2 > 0) { if (s.notes.has(nk)) send([0x80 | ch, d1, 0]); s.notes.add(nk); }
-      else if (cmd === 0x80 || cmd === 0x90) { if (!s.notes.delete(nk)) return; }
+      if (cmd === 0x90 && d2 > 0) {
+        if (s.notes.has(nk)) off(0x80 | ch, 0);
+        const k = d1 + keyShift();
+        s.notes.set(nk, k >= 0 && k <= 127 ? k : -1);
+        if (k < 0 || k > 127) return;
+        data = [st, k, d2];
+      } else if (cmd === 0x80 || cmd === 0x90) { if (s.notes.has(nk)) off(st, d2); return; }
+      else if (cmd === 0xa0) {
+        const k = s.notes.has(nk) ? s.notes.get(nk) : d1 + keyShift();
+        if (k < 0 || k > 127) return;
+        data = [st, k, d2];
+      }
       else if (cmd === 0xb0 && (d1 === 64 || d1 === 66 || d1 === 67)) { if (d2 >= 64) s.pedals.add(`${ch}:${d1}`); else s.pedals.delete(`${ch}:${d1}`); }
       else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) { s.notes.clear(); s.pedals.clear(); }
       send(data);
@@ -166,37 +210,69 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
     bind();
     acc.onstatechange = bind;
     if (button) button.hidden = true;
-    touchMenu();
-    mpeMenu();
+    midiMenu();
+    if (keyShift()) import('./shell.js').then(({ toast }) => toast(`MIDI keys play ${shiftText()}: Octave and Transpose are in the MIDI menu`), () => {});
   }, () => status('MIDI: permission denied'));
 }
 
-// The velocity curve's menu, beside the MIDI status once MIDI is on.
-function touchMenu() {
+// The MIDI settings, in a menu the MIDI status opens once MIDI is on: the velocity curve, MPE,
+// Octave and Transpose. The status says how far the keys are moved, in the accent, while they are.
+function midiMenu() {
   const pill = document.querySelector('#midi');
-  if (!pill || document.querySelector('#touch')) return;
-  const el = document.createElement('select');
-  el.id = 'touch';
-  el.title = 'Velocity curve: how hard a MIDI key has to be struck. Soft makes a light touch louder, Hard asks for a firmer one.';
-  el.setAttribute('aria-label', 'Velocity curve');
-  TOUCH.forEach((t, i) => el.add(new Option(`Touch: ${t.name.toLowerCase()}`, i)));
-  el.value = String(touchIndex);
-  el.addEventListener('change', () => { setTouch(+el.value); unfocus(el); });
-  pill.after(el);
+  if (!pill || document.querySelector('#midi-menu')) return;
+  const menu = document.createElement('div');
+  menu.id = 'midi-menu'; menu.className = 'forte-midi-menu'; menu.hidden = true;
+  menu.setAttribute('role', 'group'); menu.setAttribute('aria-label', 'MIDI settings');
+  const steps = (n) => Array.from({ length: 2 * n + 1 }, (_, i) => [i - n, signed(i - n)]);
+  for (const [id, name, title, options, value, set] of [
+    ['touch', 'Touch', 'The velocity curve: how hard a MIDI key has to be struck. Soft makes a light touch louder, Hard asks for a firmer one.',
+      TOUCH.map((t, i) => [i, t.name]), touchIndex, (v) => setTouch(+v)],
+    ['mpe', 'MPE', 'MPE: a controller that gives each note a MIDI channel of its own, so each finger bends, slides and presses its own note. Auto turns it on when the controller says it sends MPE.',
+      MODES, mpe, setMpeMode],
+    ['octave', 'Octave', 'Plays the MIDI keys up to four octaves higher or lower, so a small keyboard reaches all 88 keys. The keys on the screen and the computer keys play what they show.',
+      steps(OCTAVES), shift.octave, (v) => setShift({ octave: +v })],
+    ['transpose', 'Transpose', 'Plays the MIDI keys up to twelve semitones higher or lower, so a piece fingered in one key sounds in another. The keys on the screen and the computer keys play what they show.',
+      steps(SEMITONES).map(([v, t]) => [v, v ? `${t} semitone${Math.abs(v) > 1 ? 's' : ''}` : t]), shift.transpose, (v) => setShift({ transpose: +v })],
+  ]) {
+    const row = document.createElement('label');
+    row.title = title;
+    const el = document.createElement('select');
+    el.id = id;
+    for (const [v, text] of options) el.add(new Option(text, v));
+    el.value = String(value);
+    el.addEventListener('change', () => { set(el.value); unfocus(el); });
+    row.append(Object.assign(document.createElement('span'), { textContent: name }), el);
+    menu.append(row);
+  }
+  pill.after(menu);
+  pill.classList.add('forte-midi-pill');
+  pill.setAttribute('role', 'button'); pill.tabIndex = 0;
+  pill.setAttribute('aria-haspopup', 'true'); pill.setAttribute('aria-controls', menu.id); pill.setAttribute('aria-expanded', 'false');
+  pill.title = 'MIDI settings: touch, MPE, octave and transpose';
+  const open = (on) => {
+    menu.hidden = !on;
+    pill.setAttribute('aria-expanded', String(on));
+    if (!on) return;
+    // below the pill, inside the window
+    const r = pill.getBoundingClientRect(), w = menu.offsetWidth;
+    menu.style.top = `${Math.round(r.bottom + 6)}px`;
+    menu.style.left = `${Math.round(Math.max(8, Math.min(r.left, innerWidth - w - 8)))}px`;
+  };
+  pill.addEventListener('click', () => open(menu.hidden));
+  pill.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); open(menu.hidden); } });
+  document.addEventListener('pointerdown', (e) => { if (!menu.hidden && !menu.contains(e.target) && !pill.contains(e.target)) open(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) { open(false); pill.focus(); } });
+  window.addEventListener('resize', () => open(false));
+  window.addEventListener('scroll', () => open(false), { passive: true }); // a phone's page: it would float away from the status
+  showShift();
 }
-
-// MPE's menu, after the velocity curve's.
-function mpeMenu() {
-  const after = document.querySelector('#touch') ?? document.querySelector('#midi');
-  if (!after || document.querySelector('#mpe')) return;
-  const el = document.createElement('select');
-  el.id = 'mpe';
-  el.title = 'MPE: a controller that gives each note a MIDI channel of its own, so each finger bends, slides and presses its own note. Auto turns it on when the controller says it sends MPE.';
-  el.setAttribute('aria-label', 'MPE');
-  for (const [id, name] of MODES) el.add(new Option(`MPE: ${name.toLowerCase()}`, id));
-  el.value = mpe;
-  el.addEventListener('change', () => { setMpeMode(el.value); unfocus(el); });
-  after.after(el);
+// the MIDI status says how far the keys are moved, while they are
+function showShift() {
+  const pill = typeof document !== 'undefined' && document.querySelector?.('#midi');
+  if (!pill) return;
+  const { octave: o, transpose: t } = shift;
+  const text = [o && `Octave ${signed(o)}`, t && `Transpose ${signed(t)}`].filter(Boolean).join(', ');
+  if (text) pill.dataset.shift = text; else delete pill.dataset.shift;
 }
 
 /**

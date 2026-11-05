@@ -367,6 +367,36 @@
    "title": "Glass plates"
   }
  ],
+ "cimbalom": [
+  {
+   "file": "01-a-czardas-phrase-and-tremolo.m4a",
+   "title": "A czardas phrase and tremolo"
+  },
+  {
+   "file": "02-cotton-leather-bare-wood.m4a",
+   "title": "Cotton leather bare wood"
+  },
+  {
+   "file": "03-unisons-in-tune-then-mistuned.m4a",
+   "title": "Unisons in tune then mistuned"
+  },
+  {
+   "file": "04-middle-then-near-the-bridge.m4a",
+   "title": "Middle then near the bridge"
+  },
+  {
+   "file": "05-hammered-dulcimer-reel.m4a",
+   "title": "Hammered dulcimer reel"
+  },
+  {
+   "file": "06-dampers-then-the-pedal-up.m4a",
+   "title": "Dampers then the pedal up"
+  },
+  {
+   "file": "07-tremolo.m4a",
+   "title": "Tremolo"
+  }
+ ],
  "clavichord": [
   {
    "file": "01-an-air-with-bebung-on-the-long-notes.m4a",
@@ -1463,6 +1493,40 @@
    "title": "Short lifetime plucked"
   }
  ],
+ "saw": [
+  {
+   "file": "01-a-slow-tune-sliding-on-one-saw.m4a",
+   "title": "A slow tune sliding on one saw"
+  },
+  {
+   "file": "02-a-saw-for-every-key-bowed-chords.m4a",
+   "title": "A saw for every key bowed chords"
+  },
+  {
+   "file": "03-struck-with-a-felt-mallet.m4a",
+   "title": "Struck with a felt mallet"
+  },
+  {
+   "file": "04-bent-into-an-s-then-a-j.m4a",
+   "title": "Bent into an s then a j"
+  },
+  {
+   "file": "05-a-tight-bend-then-a-loose-one.m4a",
+   "title": "A tight bend then a loose one"
+  },
+  {
+   "file": "06-on-the-sweet-spot-then-5-cm-off.m4a",
+   "title": "On the sweet spot then 5 cm off"
+  },
+  {
+   "file": "07-a-still-knee-then-a-shaking-one.m4a",
+   "title": "A still knee then a shaking one"
+  },
+  {
+   "file": "08-pressing-harder-until-the-bow-bites.m4a",
+   "title": "Pressing harder until the bow bites"
+  }
+ ],
  "showers": [
   {
    "file": "01-cms-crystals-with-the-pedal.m4a",
@@ -1721,6 +1785,40 @@
   {
    "file": "08-subharmonic-bass.m4a",
    "title": "Subharmonic bass"
+  }
+ ],
+ "tubular": [
+  {
+   "file": "01-westminster-quarters-and-the-hour.m4a",
+   "title": "Westminster quarters and the hour"
+  },
+  {
+   "file": "02-the-clang-fades-the-strike-note-hums.m4a",
+   "title": "The clang fades the strike note hums"
+  },
+  {
+   "file": "03-rawhide-leather-then-brass-mallets.m4a",
+   "title": "Rawhide leather then brass mallets"
+  },
+  {
+   "file": "04-damper-bar-then-pedal-down.m4a",
+   "title": "Damper bar then pedal down"
+  },
+  {
+   "file": "05-open-tube-then-heavy-cap.m4a",
+   "title": "Open tube then heavy cap"
+  },
+  {
+   "file": "06-brass-then-aluminium-tubes.m4a",
+   "title": "Brass then aluminium tubes"
+  },
+  {
+   "file": "07-on-the-cap-then-a-third-down.m4a",
+   "title": "On the cap then a third down"
+  },
+  {
+   "file": "08-close-up-then-far-off.m4a",
+   "title": "Close up then far off"
   }
  ],
  "universe": [

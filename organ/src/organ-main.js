@@ -18,6 +18,7 @@ import { tuningRatio } from '../../shared/tuning.js';
 import { connectQuality, qualityControl } from '../../shared/quality.js';
 import { dress, faceOf, rotarySelector } from '../../shared/faces.js';
 import { computerKey } from '../../shared/taps.js'; // a second instrument's share of the computer keys (shared/layer.js)
+import { host, follow } from '../../shared/in-plugin.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'tonewheel-organ/params/v1';
@@ -54,6 +55,25 @@ let audio = null, starting = null, live = false; // live: the context has resume
 function startAudio() {
   if (live) { if (audio.ctx.state !== 'running') audio.ctx.resume(); return Promise.resolve(audio); }
   if (starting) return starting;
+  if (host) { // in the plugin's window: the plugin plays, and the page shows what it plays (shared/in-plugin.js)
+    const consoleIds = new Set(CONSOLE.groups.flatMap((g) => g.params.map((p) => p.id)));
+    starting = follow({
+      wasm: INSTRUMENT.wasm, params: [...ALL_PARAMS, ...CONSOLE.groups.flatMap((g) => g.params)],
+      P: () => ({ ...P, ...CONSOLE.get(P) }),
+      set: (c) => {
+        const plain = Object.fromEntries(Object.entries(c).filter(([k]) => !consoleIds.has(k)));
+        const desk = Object.keys(c).some((k) => consoleIds.has(k)) ? CONSOLE.put({ ...CONSOLE.get(P), ...c }, P) : {};
+        setP({ ...plain, ...desk });
+      },
+      on: (key, velocity) => keyDown(key, velocity), off: keyUp, message: onWorklet,
+    }).then((a) => {
+      a.analyser.smoothingTimeConstant = 0.6;
+      audio = a; live = true; fs = a.ctx.sampleRate;
+      output.setAnalyser(a.analyser); spectro.setAnalyser(a.analyser);
+      return a;
+    });
+    return starting;
+  }
   starting = (async () => {
     const ctx = new AudioContext({ latencyHint: 'interactive' });
     if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
@@ -534,7 +554,7 @@ function toast(msg) {
 
 $('#start').addEventListener('click', (e) => { startAudio(); unfocus(e.currentTarget); });
 $('#midi-btn').addEventListener('click', (e) => { initMIDI(); unfocus(e.currentTarget); });
-resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
+if (host) startAudio(); else resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
 $('#panic').addEventListener('click', (e) => { panic(); unfocus(e.currentTarget); });
 
 buildControls();

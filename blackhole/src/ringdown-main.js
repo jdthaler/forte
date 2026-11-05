@@ -17,6 +17,7 @@ import { TUNING_KEEP } from '../../shared/tuning.js';
 import { connectQuality, qualityControl } from '../../shared/quality.js';
 import { dress, faceOf } from '../../shared/faces.js';
 import { computerKey } from '../../shared/taps.js'; // a second instrument's share of the computer keys (shared/layer.js)
+import { host, follow } from '../../shared/in-plugin.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'blackhole-keyboard/params/v1';
@@ -42,6 +43,11 @@ let audio = null, starting = null, live = false; // live: the context has resume
 function startAudio() {
   if (live) { if (audio.ctx.state !== 'running') audio.ctx.resume(); return Promise.resolve(audio); }
   if (starting) return starting;
+  if (host) { // in the plugin's window: the plugin plays, and the views follow it (shared/in-plugin.js)
+    starting = follow({ wasm: INSTRUMENT.wasm, params: ALL_PARAMS, P: () => P, set: fromPlugin, on: (key, vel) => noteOn(key, vel), off: noteOff, message: onEngine })
+      .then((a) => { audio = a; live = true; fs = a.ctx.sampleRate; const an = a.ctx.createAnalyser(); an.fftSize = 2048; an.smoothingTimeConstant = 0; spectro.setAnalyser(an); return a; });
+    return starting;
+  }
   starting = (async () => {
     const ctx = new AudioContext({ latencyHint: 'interactive' });
     if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
@@ -53,10 +59,7 @@ function startAudio() {
       numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { wasm: { name: INSTRUMENT.wasm.name, bytes } },
     });
     const chain = createChain(ctx, node, INSTRUMENT.chain); // tone → master (+ room) → limiter
-    node.port.onmessage = (e) => {
-      if (e.data.type === 'voices') $('#voices').textContent = `${e.data.voices} ringing`; // the engine's, every 48 blocks
-      else if (e.data.type === 'error') toast(e.data.message);
-    };
+    node.port.onmessage = (e) => onEngine(e.data);
     fs = ctx.sampleRate; // voices are cached per sample rate (voiceFor)
     const analyser = ctx.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0;
     chain.tap.connect(analyser); spectro.setAnalyser(analyser);
@@ -72,6 +75,10 @@ function startAudio() {
   })();
   starting.catch((err) => { toast(`Audio failed to start: ${err.message}`); starting = null; });
   return starting;
+}
+function onEngine(m) {
+  if (m.type === 'voices') $('#voices').textContent = `${m.voices} ringing`; // the engine's, every 48 blocks
+  else if (m.type === 'error') toast(m.message);
 }
 const post = (m) => { if (live) audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
 function applyMix() { if (audio) audio.chain.apply(P, trimGain('blackhole')); } // trim: level-matched across instruments
@@ -212,6 +219,8 @@ function refreshControl(id, dragging = false) {
   else { if (!dragging) c.input.value = toSlider(c.p, P[id]); c.val.textContent = c.p.fmt ? c.p.fmt(P[id]) : String(P[id]); c.face?.show(); }
 }
 function refreshVisibility() { for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(P) : false; }
+// the plugin's values (shared/in-plugin.js): one as a control moving it, several as a preset
+function fromPlugin(c) { const ids = Object.keys(c); if (ids.length === 1) setParam(ids[0], c[ids[0]]); else setAll({ ...P, ...c }); }
 function setAll(np) {
   P = np;
   for (const id of controls.keys()) refreshControl(id);
@@ -288,7 +297,8 @@ let toastTimer = 0;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3500); }
 $('#start').addEventListener('click', (e) => { startAudio(); unfocus(e.currentTarget); });
 $('#midi-btn').addEventListener('click', (e) => { initMIDI(); unfocus(e.currentTarget); });
-resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
+if (host) startAudio(); // in a plugin's window: its sound, at once (the host has the MIDI)
+else resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
 $('#panic').addEventListener('click', (e) => { down.clear(); sost.clear(); soft = false; post({ type: 'panic' }); unfocus(e.currentTarget); });
 for (const b of document.querySelectorAll('.tab')) b.addEventListener('click', () => {
   document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x === b));

@@ -36,13 +36,15 @@
 import { rotaryKnob } from './faces.js';
 import { focusedByPointer, unfocus } from './focus.js';
 import { attachLayer } from './layer.js';
+import { inPlugin } from './in-plugin.js';
 
 const body = document.body;
 const STORE = `forte/${body.dataset.instrument || 'page'}/layout/v1`;
 const MODE = 'forte/mode/v1';
 const touch = matchMedia('(pointer: coarse)').matches;
-const phoneQuery = matchMedia('(max-width: 600px), (max-width: 1050px) and (max-height: 500px)'); // as shared/layout.css
-const sidewaysQuery = matchMedia('(max-width: 1050px) and (max-height: 500px)'); // a phone held sideways, as layout.css
+// (in a plugin's window, never: it is a desktop's, however short the views' frame; shared/in-plugin.js)
+const phoneQuery = matchMedia(inPlugin ? 'not all' : '(max-width: 600px), (max-width: 1050px) and (max-height: 500px)'); // as shared/layout.css
+const sidewaysQuery = matchMedia(inPlugin ? 'not all' : '(max-width: 1050px) and (max-height: 500px)'); // a phone held sideways, as layout.css
 const SIZES = ['s', 'm', 'l', 'xl'];
 const KEY_W = { s: 22, m: 30, l: 42, xl: 56 }; // the narrowest a white key may be, px
 if (!navigator.requestMIDIAccess) body.classList.add('no-midi'); // Safari, and every browser on iPhone and iPad: no MIDI button (About Forte says where MIDI works)
@@ -60,7 +62,7 @@ const prefs = (() => {
   };
 })();
 const save = () => { try { localStorage.setItem(STORE, JSON.stringify(prefs)); } catch { /* storage unavailable */ } };
-let mode = (() => { try { return localStorage.getItem(MODE) === 'perform' ? 'perform' : 'discover'; } catch { return 'discover'; } })();
+let mode = (() => { try { return !inPlugin && localStorage.getItem(MODE) === 'perform' ? 'perform' : 'discover'; } catch { return 'discover'; } })();
 const performing = () => mode === 'perform';
 // The views' share of the height the views and the controls have between them, on every page:
 // 0 folds the views away, 1 the controls; `open` is the share to go back to from either.
@@ -294,7 +296,7 @@ function share() {
   return touring && v === 0 ? (performing() ? 1 : split.open) : v; // a tour shows its views, folded or not
 }
 function chosenShare() {
-  if (!bars.controls) return 1;
+  if (!bars.controls || inPlugin) return 1; // in a plugin's window, the views alone: the window has the controls
   if (!bars.views) return 0;
   if (performing()) return !prefs.perform.controls ? 1 : phoneQuery.matches ? 0 : split.views > 0 && split.views < 1 ? split.views : split.open;
   return groups.length ? split.views : 1;
@@ -859,7 +861,7 @@ export function attachKeyboard(kb) {
     row.appendChild(pop);
   }
   // a second instrument, layered or split (shared/layer.js)
-  const layer = attachLayer(kb);
+  const layer = inPlugin ? null : attachLayer(kb); // not in a plugin's window: the page plays nothing there
   if (layer) { bar.appendChild(layer.button); row.appendChild(layer.pop); }
 
   // The window onto the range: as many white keys as fit at the chosen width, moved
