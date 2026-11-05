@@ -9,8 +9,10 @@
 // height, that every view shows in Perform, with the presets and More controls in the keyboard
 // bar instead of the controls' bar, and the screen kept awake there once audio runs, and not in
 // Discover), the guided tour (Tour in the header, each step showing its views, and every control
-// as it was once it ends; on the desktop and the phone), and the front page's Listen buttons (one for
-// each instrument with a demo, and two in turn play).
+// as it was once it ends; on the desktop and the phone), what a screen reader finds (every control
+// named in words, the views' canvases named, sliders' values said as shown; on the desktop and the
+// phone), and the front page's Listen buttons (one for each instrument with a demo, and two in turn
+// play).
 //
 // Usage: node tools/check-pages.mjs [--base <git ref>] [--json <file>] [filter]
 //   filter       only the pages whose path contains it (gongs, index, credits, template)
@@ -231,6 +233,31 @@ async function guidedTour(tab) {
   return out;
 }
 
+// What a screen reader finds, from Chromium's accessibility tree: every control named in words
+// (not ◀ or ⌨), every view's canvas named, every slider's value said as the page shows it.
+const CONTROL_ROLES = new Set(['button', 'checkbox', 'slider', 'combobox', 'link', 'textbox', 'searchbox', 'radio', 'switch', 'tab', 'menuitem', 'spinbutton', 'DisclosureTriangle']);
+async function accessible(ctx, tab) {
+  const out = [], cdp = await ctx.newCDPSession(tab);
+  const { nodes } = await cdp.send('Accessibility.getFullAXTree');
+  const bad = new Map();
+  for (const n of nodes) {
+    if (n.ignored || !CONTROL_ROLES.has(n.role?.value)) continue;
+    const name = (n.name?.value ?? '').trim();
+    if (/[\p{L}\p{N}]/u.test(name)) continue;
+    const k = `${n.role.value} "${name}"`;
+    bad.set(k, (bad.get(k) ?? 0) + 1);
+  }
+  for (const [k, c] of bad) out.push(`a ${k} has no name a screen reader can say${c > 1 ? ` (${c} of them)` : ''}`);
+  const dom = await tab.evaluate(() => ({
+    canvases: [...document.querySelectorAll('#views canvas')].filter((c) => !c.getAttribute('aria-label') && c.getAttribute('aria-hidden') !== 'true').length,
+    sliders: [...document.querySelectorAll('.param input[type=range]')].filter((i) => i.closest('.param').querySelector('.val') && !i.getAttribute('aria-valuetext')).map((i) => i.id),
+  }));
+  if (dom.canvases) out.push(`${dom.canvases} view canvas(es) without a name`);
+  if (dom.sliders.length) out.push(`sliders without their value as text: ${dom.sliders.slice(0, 4).join(', ')}${dom.sliders.length > 4 ? ', …' : ''}`);
+  await cdp.detach();
+  return out;
+}
+
 // The Screen Wake Lock, counted: headless Chromium refuses the real one.
 const WAKE_LOCK = () => {
   window.__wake = 0;
@@ -269,6 +296,7 @@ async function checkPage(browser, url, page, size) {
     await tab.waitForTimeout(500);
     await sideways('loaded');
     const counts = await tab.evaluate(COUNT);
+    if (name === 'desktop' || name === 'phone') broken.push(...await accessible(ctx, tab));
     if (!page) broken.push(...await listen(tab));
     if (await click('details.forte-switch > summary')) { await sideways('menu open'); await click('details.forte-switch > summary'); }
     if (await click('.forte-more')) { await sideways('Controls open'); await tab.keyboard.press('Escape'); await click('.forte-more'); }

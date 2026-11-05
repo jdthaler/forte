@@ -256,6 +256,14 @@ test('every ready instrument and the front page have a picture and the tags a sh
     assert.equal(html, withTags(html, i), `${page}: its tags are up to date (node tools/make-previews.mjs --tags)`);
   }
 });
+test('every page\'s views animate through shared/views.js (so Reduce Motion slows them all)', () => {
+  // animate(draw, canvas) draws a few times a second, not every frame, with Reduce Motion on; a
+  // loop of the page's own would keep moving
+  const dirs = [...ready.map((i) => `${i.id}/src`), 'docs/template/src'].filter((d) => has(`${d}/`));
+  for (const d of dirs) for (const f of readdirSync(new URL(`${d}/`, R)).filter((n) => n.endsWith('.js'))) {
+    assert.ok(!/requestAnimationFrame\(/.test(read(`${d}/${f}`)), `${d}/${f} runs its own requestAnimationFrame loop: use animate() from shared/views.js`);
+  }
+});
 test('every demo in examples/index.json exists', () => {
   const index = JSON.parse(read('examples/index.json'));
   for (const [id, list] of Object.entries(index)) for (const d of list) assert.ok(has(`examples/${id}/${d.file}`), `${id}/${d.file}`);

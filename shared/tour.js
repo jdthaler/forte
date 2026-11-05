@@ -30,6 +30,8 @@
 //           chord and run (below) make them.
 // test/tour-tests.mjs checks every tour against its page: views, presets, parameters and keys.
 
+import { unfocus } from './focus.js';
+
 const NOTE = /^([A-Ga-g])([#♯b♭]?)(-?\d)$/;
 const STEPS = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 };
 // a key's MIDI number, from a number or a name ('C4' is 60, middle C)
@@ -250,11 +252,11 @@ async function mount(t) {
     at = -1;
   }
 
-  start.addEventListener('click', () => { if (saved) end(); else begin(); start.blur(); });
+  start.addEventListener('click', () => { if (saved) end(); else begin(); unfocus(start); });
   close.addEventListener('click', () => { end(); start.focus({ preventScroll: true }); });
   back.addEventListener('click', () => go(at - 1));
   next.addEventListener('click', () => { if (at === t.steps.length - 1) end(); else go(at + 1); });
-  again.addEventListener('click', () => { if (playing) hush(); else play(); again.blur(); });
+  again.addEventListener('click', () => { if (playing) hush(); else play(); unfocus(again); });
   fold.addEventListener('click', () => {
     const f = card.classList.toggle('folded');
     fold.title = f ? 'Show the tour' : 'Fold the tour away to see the views';
