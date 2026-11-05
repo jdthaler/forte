@@ -1,6 +1,8 @@
 // bar.h — a vibraphone bar by finite elements (vibraphone/src/bar.js in C++): Timoshenko bending
 // and Saint-Venant torsion of a bar whose thickness varies along its length (the undercut), and
 // the optimiser that shapes the undercut so that the first three bending modes sit at 1 : 4 : 10.
+// The bar is aluminium unless told otherwise: the Marimba and Xylophone (native/instruments/marimba)
+// solves its wooden bars here too, with the wood's moduli (Elastic).
 //
 // Only half the bar is meshed (it is symmetric). The banded stiffness and mass matrices
 // (half-bandwidth 3) give each eigenvalue by Sturm-sequence bisection and each eigenvector by
@@ -17,6 +19,11 @@ struct Material { double E, rho, nu; };
 inline constexpr Material AL = {69e9, 2700, 0.33}; // aluminium alloy (6061-like)
 inline constexpr double G_AL = AL.E / (2 * (1 + AL.nu));
 inline constexpr double KAPPA = (10 * (1 + AL.nu)) / (12 + 11 * AL.nu); // Cowper's shear coefficient, rectangle
+// What the elements need of a material along the bar: Young's modulus E, the shear modulus G (an
+// isotropic metal's E/2(1 + ν); a wood's own, far smaller, across the grain), the density and the
+// shear coefficient. Aluminium by default.
+struct Elastic { double E, G, rho, kappa; };
+inline constexpr Elastic ALUMINIUM = {AL.E, G_AL, AL.rho, KAPPA};
 
 // Free–free Euler–Bernoulli beam: cos βL cosh βL = 1 (the ratios 1 : 2.756 : 5.404 : 8.933 : 13.34).
 inline constexpr double BETA_L[5] = {4.730040745, 7.853204624, 10.99560784, 14.13716549, 17.27875966};
@@ -31,16 +38,16 @@ std::vector<double> halfMesh(const Cut &cut, double L, int fine = 3);
 // Banded matrices: row i holds A[i][i..i+3].
 struct ElementBending { std::array<double, 16> kb; double phi, l, h; };
 struct Bending { std::vector<double> K, M; int n; std::vector<ElementBending> Kb; };
-Bending assembleBending(const std::vector<double> &nodes, const Cut &cut, double b, bool shear = true);
+Bending assembleBending(const std::vector<double> &nodes, const Cut &cut, double b, bool shear = true, const Elastic &mat = ALUMINIUM);
 struct Torsion { std::vector<double> K, M; int n; };
-Torsion assembleTorsion(const std::vector<double> &nodes, const Cut &cut, double b);
+Torsion assembleTorsion(const std::vector<double> &nodes, const Cut &cut, double b, const Elastic &mat = ALUMINIUM);
 
 // The idx-th (1-based) eigenvalue of K x = λ M x, and (with x) its M-normalised eigenvector.
 double bandEig(const std::vector<double> &k, const std::vector<double> &m, int N, int idx, std::vector<double> *x = nullptr,
                double tol = 1e-13, double guess = 1e4);
 
 // Frequencies (Hz) of bending modes 1, 2, 3 only: what the optimiser needs.
-std::array<double, 3> bendingFreqs3(const Cut &cut, double L, double b, int fine = 3);
+std::array<double, 3> bendingFreqs3(const Cut &cut, double L, double b, int fine = 3, const Elastic &mat = ALUMINIUM);
 
 // Everything about one bar: bending modes 1–5 and torsion modes 1–2, shapes at nx points along
 // the whole bar (x from 0 at one end to L), unit modal mass, and the share of each bending
@@ -62,13 +69,13 @@ struct BarModes {
   std::vector<TorsMode> tors;
   double mass;
 };
-BarModes barModes(const Cut &cut, double L, double b, int nx = 97, int fine = 3, int nBend = 5, int nTors = 2);
+BarModes barModes(const Cut &cut, double L, double b, int nx = 97, int fine = 3, int nBend = 5, int nTors = 2, const Elastic &mat = ALUMINIUM);
 
 // Shape the undercut of a bar of thickness h0 and width b so that bending modes 1, 2, 3 sit at
 // f1 : r2·f1 : r3·f1 (Newton's method with a finite-difference Jacobian, as tools/vibraphone-bars.mjs
 // runs it). start: {A = a/(L/2), D = d/h0, L}.
 struct Tuned { double L, A, D, cf; Cut cut; std::array<double, 3> residualCents; int iterations; };
 Tuned tuneUndercut(double f1, double b, double h0, double cf, std::array<double, 3> start = {0.6, 0.6, 0.3},
-                   double r2 = 4, double r3 = 10, int fine = 3, int maxIter = 40);
+                   double r2 = 4, double r3 = 10, int fine = 3, int maxIter = 40, const Elastic &mat = ALUMINIUM);
 
 } // namespace forte::vibraphone

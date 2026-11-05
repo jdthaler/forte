@@ -176,6 +176,15 @@ export const INSTRUMENTS = [
     accent: '#d9874a',
   },
   {
+    id: 'marimba', name: 'Marimba and Xylophone', section: 'traditional', ready: true, version: '0.1.0', trim: 4.5,
+    plugin: { code: 'Mrmb', ready: true },
+    after: 'the concert marimba and the orchestral xylophone',
+    tagline: 'Rosewood bars, undercut so their partials land on a chord (1 : 4 : 10 for the marimba, a twelfth for the xylophone), over stopped tubes that drink the sound out of them. Roll a held note to sustain it.',
+    physics: 'Undercut wooden bars by finite elements · quarter-wave resonators and their second mode · mallet contact',
+    vibrates: 'solids', notes: 'ring',
+    accent: '#c8784a',
+  },
+  {
     id: 'grand', name: 'Electric Grand', section: 'electric', ready: true, version: '0.11.0', trim: 3.5,
     plugin: { code: 'EGrd', ready: true },
     after: 'the Yamaha CP-70',

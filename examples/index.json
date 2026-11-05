@@ -901,6 +901,40 @@
    "title": "Marimbula bass"
   }
  ],
+ "marimba": [
+  {
+   "file": "01-rolled-chorale.m4a",
+   "title": "Rolled chorale"
+  },
+  {
+   "file": "02-xylophone-then-marimba-bars.m4a",
+   "title": "Xylophone then marimba bars"
+  },
+  {
+   "file": "03-with-resonators-then-without.m4a",
+   "title": "With resonators then without"
+  },
+  {
+   "file": "04-xylophone-tubes-centred-then-off-centre.m4a",
+   "title": "Xylophone tubes centred then off centre"
+  },
+  {
+   "file": "05-soft-yarn-then-hard-plastic-mallets.m4a",
+   "title": "Soft yarn then hard plastic mallets"
+  },
+  {
+   "file": "06-tuned-bars-then-plain-bars.m4a",
+   "title": "Tuned bars then plain bars"
+  },
+  {
+   "file": "07-tube-close-bar-and-tube-beat.m4a",
+   "title": "Tube close bar and tube beat"
+  },
+  {
+   "file": "08-roll-swells.m4a",
+   "title": "Roll swells"
+  }
+ ],
  "nmr": [
   {
    "file": "01-ethanol-chords-with-an-echo-train.m4a",
