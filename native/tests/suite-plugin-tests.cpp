@@ -117,20 +117,26 @@ TEST("suite: switches instrument while the audio runs: its parameters, its keys,
   CHECK(app.run(24000, (app.number(v, "keyLo") + app.number(v, "keyHi")) / 2) > 0.001);
 }
 
-TEST("suite: Quality belongs to the computer and MPE to the controller: a new instrument keeps them") {
+TEST("suite: Quality belongs to the computer and MPE, Transpose and Octave to the controller: a new instrument keeps them") {
   App app;
-  const uint32_t mpe = app.params->count(app.p) - 1, last = mpe - 1; // Quality, after the velocity curve, then MPE
-  clap_param_info_t info, mpeInfo;
+  const uint32_t octave = app.params->count(app.p) - 1, transpose = octave - 1, mpe = octave - 2, last = octave - 3; // Quality, after the velocity curve, then MPE, Transpose, Octave
+  clap_param_info_t info, mpeInfo, tInfo, oInfo;
   CHECK(app.params->get_info(app.p, last, &info) && !std::strcmp(info.name, "Quality"));
   CHECK(app.params->get_info(app.p, mpe, &mpeInfo) && !std::strcmp(mpeInfo.name, "MPE"));
+  CHECK(app.params->get_info(app.p, transpose, &tInfo) && !std::strcmp(tInfo.name, "Transpose"));
+  CHECK(app.params->get_info(app.p, octave, &oInfo) && !std::strcmp(oInfo.name, "Octave"));
   app.call("[\"set\", " + std::to_string(last) + ", 2]"); // Low
   app.call("[\"set\", " + std::to_string(mpe) + ", 1]");  // On
+  app.call("[\"set\", " + std::to_string(transpose) + ", 15]"); // +3
+  app.call("[\"set\", " + std::to_string(octave) + ", 3]");     // −1
   app.run(512);
   CHECK(app.call("[\"choose\", \"celesta\"]") == "true");
   app.run(512);
-  double v = -1, m = -1;
+  double v = -1, m = -1, t = -1, o = -1;
   CHECK(app.params->get_value(app.p, info.id, &v) && v == 2);
   CHECK(app.params->get_value(app.p, mpeInfo.id, &m) && m == 1);
+  CHECK(app.params->get_value(app.p, tInfo.id, &t) && t == 15);
+  CHECK(app.params->get_value(app.p, oInfo.id, &o) && o == 3);
   CHECK(app.run(24000, 72) > 0.001);
 }
 

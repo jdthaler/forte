@@ -53,9 +53,10 @@ body[data-instrument] #start.running,
 body[data-instrument] #start:not(.running) ~ :is(#cpu, #voices),
 body[data-instrument] #start:not(.running) ~ .forte-load > :is(#cpu, #voices) { display: none; }
 .pill[hidden] { display: none; }
-/* the velocity curve and MPE beside the MIDI status (shared/midi.js touchMenu, mpeMenu): menus
-   drawn as pills */
-body[data-instrument] :is(#touch, #mpe) { color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; font: inherit; min-width: 0; }
+/* the velocity curve, MPE, Octave and Transpose beside the MIDI status (shared/midi.js touchMenu,
+   mpeMenu, shiftMenus): menus drawn as pills; Octave or Transpose in the accent while it moves the keys */
+body[data-instrument] :is(#touch, #mpe, #octave, #transpose) { color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; font: inherit; min-width: 0; }
+body[data-instrument] :is(#octave, #transpose).shifted { color: var(--accent); border-color: var(--accent); }
 /* Quality beside the CPU readout (shared/quality.js), in one pill: "Quality High" until the audio
    starts, then "CPU 12 % | High" (the peak and the voices in its tooltip) */
 body[data-instrument] .forte-load {
@@ -465,6 +466,8 @@ body.perform .forte-info,
 body.perform #midi,
 body.perform #touch,
 body.perform #mpe,
+body.perform #octave,
+body.perform #transpose,
 body.perform #cpu:not(.hot),
 body.perform .forte-load:not(:has(.hot)),
 body.perform .forte-toggles,
@@ -497,7 +500,7 @@ body.perform #views .card:not([data-keep-text]) canvas { flex: 1 1 0; height: au
 }
 
 /* every browser on iPhone and iPad lacks Web MIDI: no MIDI button or status */
-body.no-midi #midi-btn, body.no-midi #midi, body.no-midi #touch, body.no-midi #mpe { display: none; }
+body.no-midi #midi-btn, body.no-midi #midi, body.no-midi :is(#touch, #mpe, #octave, #transpose) { display: none; }
 
 /* toasts: announced, never in the way of the keys */
 body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h, calc(var(--kb-h, 115px) + 52px)) + 12px); max-width: min(90vw, 560px); }
@@ -509,8 +512,9 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
    header) as they scroll by. In Perform, More
    controls takes the place of the views. The menus open below the header, inside the screen. */
 @media (max-width: 600px), (max-width: 1050px) and (max-height: 500px) {
-  /* the velocity curve and MPE keep their choices from a bigger screen: the phone's header has no room */
-  body[data-instrument] #touch, body[data-instrument] #mpe { display: none; }
+  /* the velocity curve, MPE, Octave and Transpose keep their choices from a bigger screen: the
+     phone's header has no room */
+  body[data-instrument] :is(#touch, #mpe, #octave, #transpose) { display: none; }
   html:has(> body[data-instrument]) { overscroll-behavior-y: none; } /* no pull-to-refresh mid-phrase */
   body[data-instrument] { height: auto; min-height: 100vh; min-height: 100svh; overflow: visible; }
   body[data-instrument], body.no-views > main { grid-template-columns: minmax(0, 1fr); } /* never wider than the screen */
