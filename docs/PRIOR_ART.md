@@ -344,6 +344,16 @@ requests.
   (2009). The Cimbalom plays its thrown hammers, coupled courses, divided
   dulcimer strings, dampers and sympathetic strings from those; its
   sources are in `cimbalom/README.md`.
+* **Tubular bells.** Harry Harrington of Coventry patented tubular bells
+  (UK, 1884; US Patent 389,841, 1888) as a cheaper peal than cast bells.
+  T. D. Rossing (*Science of Percussion Instruments*, 2000) and N. H.
+  Fletcher and T. D. Rossing (*The Physics of Musical Instruments*, 1998)
+  explain the strike note, the virtual pitch of modes 4–6 near 2 : 3 : 4;
+  S. P. Timoshenko (1921) and G. R. Cowper (1966) gave the beam with shear;
+  E. Terhardt (1974) the virtual pitch. Sampled chimes are General MIDI's
+  program 15, and Pianoteq's free instruments include tubular bells (below).
+  The Tubular Bells solves each capped tube as it is cut and plays its modes
+  live; its sources are in `tubular/README.md`.
 
 ## 2. Techniques Forte uses, and where they come from
 

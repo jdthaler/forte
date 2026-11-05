@@ -39,6 +39,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Gamelan](gamelan/) | the gamelan of Java and Bali: gangsa, saron, bonang, kempul and gong ageng | thick bronze bars as Timoshenko beams that bend and twist (Huang's frequency equation), a gangsa's bar and its bamboo tube as two coupled oscillators; bossed gongs ringing the modes measured by laser vibrometry (Perrin et al.; Krueger et al.), whose curved face makes the note's second harmonic beat with the second round mode (a gong ageng's ombak); pélog and sléndro on the white and black keys; Balinese pairs tuned a few hertz apart that beat (ombak); the player's damping hand |
 | ✅ | [Cimbalom](cimbalom/) | Schunda's concert cimbalom (Budapest, 1874) and the hammered dulcimer | hand-held hammers thrown at the strings, a light head on a flexible stick (Hunt–Crossley contact with cotton, leather or bare wood faces); courses of stiff strings slightly out of tune, coupled at the bridge (Weinreich's two-stage decay and beats); the dulcimer's strings divided 2 : 3 by its treble bridge, both sides ringing; a damper bar and sympathetic strings; a hand tremolo; a modal soundboard |
 | ✅ | [Musical Saw](saw/) | the singing saw of vaudeville and folk players (Mussehl's, 1920s) | a tapered steel blade bent into an S, as a thin shallow shell (Donnell): bending a curved sheet stretches it, so the curvature raises the band edge on either side of the inflection and traps a mode there (Shankar, Bryde and Mahadevan, 2022), solved across the width and along it; the trap tunnels to the hands (WKB, Gamow's rate) when the bend is loose, and a J with no inflection traps nothing; the player slides the S along the taper for each note, bowed on the edge (implicit stick–slip, its threshold from the trapped mode) or struck with felt; the knee's vibrato, and one saw sliding from note to note |
+| ✅ | [Tubular Bells](tubular/) | orchestral chimes | brass tubes as free Timoshenko beams with the cap at the struck end as a mass, each cut so that modes 4, 5 and 6 sound the strike note, a virtual pitch no mode plays; a Hertzian mallet, the air taking the high modes (a line of dipoles above coincidence), heard at two microphones in front of the frame; the damper bar and its pedal |
 
 ### Electric instruments
 
@@ -178,6 +179,7 @@ is the mod wheel's control wherever the instrument has one.
 | Gamelan | Mallet softness · Strike point (bars) · Strike point (gongs) | Off the long axis | Paired tuning (ombak) |
 | Cimbalom | Hammer mass · Sympathetic strings · Unison spread | Tremolo | Strike point |
 | Musical Saw | How tight the S · Bow pressure · Where it is played | Bow speed | Vibrato (the knee shakes) |
+| Tubular Bells | Damper felt · Mallet mass · Mallet speed | Strike point | Mallet face |
 | Electric Grand | Bass · Middle · Treble | Tremolo rate | Tremolo depth |
 | Tonewheel Organ | 16' drawbar · 8' drawbar · 4' drawbar | Tube drive | Expression pedal |
 | Tine Piano | Amp drive · Speaker top end · Tip hardness | Stereo vibrato rate | Stereo vibrato depth |
