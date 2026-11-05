@@ -18,8 +18,21 @@ export function fit(cv) {
 
 // Call draw() every animation frame (the browser pauses this in hidden tabs),
 // skipping frames while `canvas` is hidden (a folded or unselected view tab, Perform).
+// With the system's Reduce Motion on, a few times a second instead: the views still follow
+// what's played, a step at a time, without scrolling or swinging smoothly. Every page's
+// views draw through this (or call `stepped`).
+export const STEP_MS = 250;
+const reduce = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+/** Should a frame at time t (ms) be drawn, the last having been drawn at `last`? */
+export const stepped = (t, last) => !reduce.matches || !(t - last < STEP_MS);
 export function animate(draw, canvas = null) {
-  const loop = (t) => { requestAnimationFrame(loop); if (!canvas || canvas.offsetParent !== null) draw(t); };
+  let last = -Infinity;
+  const loop = (t) => {
+    requestAnimationFrame(loop);
+    if (canvas && canvas.offsetParent === null) return;
+    if (!stepped(t, last)) return;
+    last = t; draw(t);
+  };
   requestAnimationFrame(loop);
 }
 

@@ -267,3 +267,15 @@ a.forte-menu-item:hover { background: rgba(255, 255, 255, 0.06); }
   .forte-notes-bar h2 { font-size: 20px; }
   .forte-notes-body { padding: 0 max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
 }
+
+/* Accessibility, on every page. A control reached with Tab shows a ring in the page's colour
+   (:where, so a control drawing its own focus keeps it). With the system's Reduce Motion on,
+   nothing slides, springs or fades: changes happen at once (the views redraw a few times a
+   second, shared/views.js). */
+:where(button, select, summary, a[href], input, [tabindex]):focus-visible { outline: 2px solid var(--accent, #f0b35a); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important; scroll-behavior: auto !important;
+  }
+}
