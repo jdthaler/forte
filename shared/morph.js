@@ -10,7 +10,7 @@
 // A plugin has the same three as parameters (native/plugin/plugin.cpp), so a song can automate it.
 
 import { morph } from './presets.js';
-import { focusedByPointer } from './focus.js';
+import { unfocus } from './focus.js';
 
 const DEFAULT = 'default';
 
@@ -89,8 +89,6 @@ export function attachMorph({ instrument: I, params, factory, mine, now, set, ke
   }
   const soon = () => { if (!frame) frame = requestAnimationFrame(apply); };
 
-  // after a change, a control picked with the pointer hands the keys back to the instrument
-  const unfocus = (el) => { if (focusedByPointer(el)) el.blur(); };
   slider.addEventListener('input', () => { state.t = +slider.value / 1000; show(); save(); soon(); });
   slider.addEventListener('dblclick', () => { state.t = 0; show(); save(); soon(); });
   slider.addEventListener('change', () => unfocus(slider));
