@@ -1,0 +1,8 @@
+/* The page's own palette and any layout beyond shared/instrument.css: blued steel and rosin. */
+:root {
+  --accent: #9cc8e8;
+  --accent-2: #e8b45c;
+  --accent-ink: #08131c;
+}
+
+#info { grid-template-columns: auto 1fr; }
