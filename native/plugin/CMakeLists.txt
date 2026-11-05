@@ -14,7 +14,9 @@ if (FORTE_EDITOR)
     COMMAND ${CMAKE_COMMAND} -DIN=${CMAKE_CURRENT_SOURCE_DIR}/editor.html -DOUT=${html} -DNAME=kEditorHtml
             -P ${CMAKE_CURRENT_SOURCE_DIR}/../cmake/embed.cmake
     DEPENDS editor.html ../cmake/embed.cmake VERBATIM)
+  forte_site(shared shared) # what every page shares (the instrument's own: forte_add_plugin)
   add_library(forte_editor STATIC editor.cpp ${html})
+  target_link_libraries(forte_editor PRIVATE forte_site_shared)
   target_include_directories(forte_editor PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
   target_include_directories(forte_editor SYSTEM PUBLIC ${choc_SOURCE_DIR})
   target_link_libraries(forte_editor PUBLIC clap)

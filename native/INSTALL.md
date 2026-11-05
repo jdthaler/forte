@@ -4,7 +4,9 @@ Each instrument comes in every format its system has: CLAP, VST3 and a standalon
 macOS, Windows and Linux, and an Audio Unit (AU) on macOS. They are instruments: put one on
 an instrument or MIDI track. Each has a window with the instrument's controls, its presets and
 a keyboard you can play with the mouse or the computer's keys (Z…/ and Q…], as on the website),
-so the standalone apps play without a MIDI keyboard. The plugins are built from the same C++ as the instruments on
+so the standalone apps play without a MIDI keyboard. Its **Views** button, beside the pedal,
+opens the instrument's views from its page on the website above the controls, drawing what the
+plugin plays; drag the bar between them to share the window. The plugins are built from the same C++ as the instruments on
 <https://forte.jthaler.net>, and sound the same.
 
 The download with every instrument also has the Forte app: one standalone with all of them,

@@ -19,6 +19,7 @@
 
 #include "check.h"
 #include "choc/text/choc_JSON.h"
+#include "choc/memory/choc_Base64.h"
 #include "forte/tuning.h"
 #include "plugin.h"
 
@@ -164,6 +165,7 @@ TEST("suite: switches instrument while the audio runs: its parameters, its keys,
   app.call("[\"poll\"]"); // (the window's calls let the ones before go)
   const std::string d = app.call("[\"describe\"]");
   CHECK(d.find("\"name\": \"Tonewheel Organ\"") != std::string::npos && d.find("\"Drawbar") != std::string::npos);
+  CHECK(d.find("\"page\": \"organ/index.html\"") != std::string::npos); // the window's views show the organ's page
   const int lo = app.number(d, "keyLo"), hi = app.number(d, "keyHi");
   CHECK(app.run(24000, (lo + hi) / 2) > 0.001);
   // and on to another, which plays too
@@ -171,7 +173,59 @@ TEST("suite: switches instrument while the audio runs: its parameters, its keys,
   app.run(512);
   const std::string v = app.call("[\"describe\"]");
   CHECK(v.find("\"name\": \"Vibraphone\"") != std::string::npos);
+  CHECK(v.find("\"page\": \"vibraphone/index.html\"") != std::string::npos);
   CHECK(app.run(24000, (app.number(v, "keyLo") + app.number(v, "keyHi")) / 2) > 0.001);
+}
+
+TEST("suite: the views get what their pages read from the engine's memory: Huygens's lamp firings, the springs' echo") {
+  App app;
+  for (const char *slug : {"huygens", "springs", "gongs"}) {
+    CHECK(app.call(std::string("[\"choose\", \"") + slug + "\"]") == "true");
+    app.run(512);
+    app.call("[\"poll\"]");
+    CHECK(app.call("[\"views\", 1]").find("\"fs\": 48000") != std::string::npos);
+    app.call("[\"poll\"]");
+    app.run(48000, 57); // a second of A3
+    const auto r = choc::json::parse(app.call("[\"poll\"]"));
+    const bool own = std::string(slug) != "gongs"; // (the gongs' messages carry all they say)
+    CHECK(r["m"].size() > 0);
+    CHECK(r.hasObjectMember("md") == own);
+    if (own) {
+      const auto md = r["md"];
+      CHECK(md.size() > 0);
+      for (uint32_t i = 0; i < md.size(); i++) {
+        const int at = md[i][0].getWithDefault<int>(-1);
+        CHECK(at >= 0 && at < (int)r["m"].size() && r["m"][at][0].getWithDefault<int>(0) == 1); // with msg::state, msg::echo
+        std::vector<char> bytes;
+        CHECK(choc::base64::decode(md[i][1].getString(), [&](uint8_t b) { bytes.push_back((char)b); }));
+        const size_t n = bytes.size() / sizeof(double);
+        std::vector<double> d(n);
+        std::memcpy(d.data(), bytes.data(), n * sizeof(double));
+        if (std::string(slug) == "huygens") { // [firings, oscillators, t, hold, …]
+          CHECK(n >= 4 && n == (size_t)(4 + d[0] + d[1]));
+          CHECK(d[2] > 0 && d[2] <= 48000 + 512 * 2);
+        } else { // the echo's samples, as many as the message says
+          CHECK(n > 0 && (double)n == r["m"][at][2].getWithDefault<double>(-1));
+          double peak = 0;
+          for (double y : d) peak = std::max(peak, std::fabs(y));
+          CHECK(peak > 1e-6);
+        }
+      }
+      // and Huygens's lamps fired: the firings since the last came along
+      if (std::string(slug) == "huygens") {
+        double fired = 0;
+        for (uint32_t i = 0; i < md.size(); i++) {
+          std::vector<char> bytes;
+          choc::base64::decode(md[i][1].getString(), [&](uint8_t b) { bytes.push_back((char)b); });
+          double nf;
+          std::memcpy(&nf, bytes.data(), sizeof nf);
+          fired += nf;
+        }
+        CHECK(fired > 0);
+      }
+    }
+    app.call("[\"views\", 0]");
+  }
 }
 
 TEST("suite: Quality belongs to the computer and MPE, Transpose and Octave to the controller: a new instrument keeps them") {

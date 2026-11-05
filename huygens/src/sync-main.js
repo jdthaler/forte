@@ -18,6 +18,7 @@ import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
 import { connectQuality, qualityControl } from '../../shared/quality.js';
 import { dress, faceOf } from '../../shared/faces.js';
+import { host, follow } from '../../shared/in-plugin.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'huygens-keyboard/params/v1';
@@ -45,6 +46,11 @@ let audio = null, starting = null, live = false; // live: the context has resume
 function startAudio() {
   if (live) { if (audio.ctx.state !== 'running') audio.ctx.resume(); return Promise.resolve(audio); }
   if (starting) return starting;
+  if (host) { // in the plugin's window: the plugin plays, and the views follow it (shared/in-plugin.js)
+    starting = follow({ wasm: INSTRUMENT.wasm, params: ALL_PARAMS, P: () => P, set: fromPlugin, on: (key) => noteOn(key), off: noteOff, pedal: setHold, message: onWorklet })
+      .then((a) => { audio = a; live = true; spectrum.setAnalyser(a.analyser); return a; });
+    return starting;
+  }
   starting = (async () => {
     const ctx = new AudioContext({ latencyHint: 'interactive' });
     if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
@@ -268,6 +274,8 @@ function refreshControl(id, dragging = false) {
 }
 function refreshVisibility() { for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(P) : false; }
 function retuneSounding() { post({ type: 'retune', list: activeKeys().map((k) => [k, tunedFreq(k, P)]) }); refreshMarks(); }
+// the plugin's values (shared/in-plugin.js): one as a control moving it, several as a preset
+function fromPlugin(c) { const ids = Object.keys(c); if (ids.length === 1) setParam(ids[0], c[ids[0]]); else setAll({ ...P, ...c }); }
 function setAll(np) {
   P = np;
   for (const id of controls.keys()) refreshControl(id);
@@ -364,7 +372,8 @@ let toastTimer = 0;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3500); }
 $('#start').addEventListener('click', (e) => { startAudio(); unfocus(e.currentTarget); });
 $('#midi-btn').addEventListener('click', (e) => { initMIDI(); unfocus(e.currentTarget); });
-resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
+if (host) startAudio(); // in a plugin's window: its sound, at once (the host has the MIDI)
+else resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
 $('#panic').addEventListener('click', (e) => { panic(); unfocus(e.currentTarget); });
 
 buildControls();

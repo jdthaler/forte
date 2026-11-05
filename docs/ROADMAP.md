@@ -90,7 +90,7 @@ Every other idea only adds, and can come before or after 1.0.
 
 | Idea | Size | Notes |
 |------|------|-------|
-| The site's views in the plugin window | M | `docs/PLUGINS.md`, step 6. |
+| The site's views in the plugin window | M | Done, for the next release: the window's *Views* pane shows the page's own views (`docs/PLUGINS.md`, step 6). |
 | Each page's own control layout in the plugin window | S–M | Hints, `showIf`, grouping. |
 | MIDI device picker in the Mac app | S | A clap-wrapper patch. |
 | Windows installer (.msi or Inno Setup) | M | |
@@ -147,6 +147,7 @@ default in the existing presets, or would change what an existing knob means.
 | Marimba and xylophone | S–M | Done, for the next release: the Marimba and Xylophone, rosewood bars undercut by finite elements to 1 : 4 : 10 or 1 : 3 over stopped tubes whose second resonance meets the xylophone's twelfth once the mouth is off centre, wood losses, yarn to plastic mallets and rolls on the mod wheel, aftertouch and MPE slide. |
 | Gamelan (gendèr or saron) | M | Done, for the next release: the Gamelan, Javanese and Balinese bronze: Timoshenko bars that bend and twist over bamboo tubes (gangsa) or on a trough (saron), bonang kettles and hanging gongs ringing their measured modes, a gong ageng's own throb from its curved face, pélog and sléndro on the white and black keys, Balinese pairs tuned a few hertz apart (ombak, on the mod wheel and MPE), and the damping hand. |
 | Musical saw | M | Done, for the next release: a tapered steel blade bent into an S, its note a mode trapped where the curvature turns over (Shankar, Bryde and Mahadevan, 2022) and tunnelling to the hands when the bend is loose; a J traps nothing. Bowed by stick–slip on the edge or struck with felt, the sweet spot at the inflection, the knee's vibrato, and one saw sliding from note to note. |
+| Tubular bells | M | Done, for the next release: the Tubular Bells, orchestral chimes: capped brass tubes as Timoshenko beams, each cut so that modes 4–6 sit near 2 : 3 : 4 of the strike note (a virtual pitch an octave below mode 4), a rawhide mallet's Hertzian contact, radiation that takes the high modes in a second or two, a damper bar and its pedal; brass, aluminium or steel, any section and cap. |
 | Hammered dulcimer or cimbalom | M | Done, for the next release: the Cimbalom, Schunda's concert cimbalom and the hammered dulcimer. Hammers thrown at courses of strings (cotton, leather or bare wood, on a whippy stick), unisons coupled at the bridge (Weinreich's beats and two-stage decay), the dulcimer's strings divided 2 : 3 so both sides ring, a damper bar (lifted by the keys, the pedal, or never), sympathetic strings and a hand tremolo. |
 | Ondes Martenot | M | Done, for the next release: two heterodyne oscillators pulling through Adler's equation, keyboard or ribbon, the intensity key from Quartier et al.'s measurements, the drawer's timbres, and the four diffuseurs (springs, tam-tam and palme strings from their physics). |
 | Cellulophone | M | Done, for the next release: Toulon's photoelectric organ (1927), lamps through discs of slots rounded to whole slots (a few cents out of tune), screens drawn with each wave and averaged by the slot, key mirrors, depth and push screens, the tremolo screen and damping arcs, mains flicker, potassium or selenium cells. |

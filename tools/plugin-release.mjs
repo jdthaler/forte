@@ -21,10 +21,11 @@ export const FORMATS = { macOS: 'AU, VST3, CLAP, standalone (Apple silicon and I
 export const released = withPlugins;
 
 // A release is published only when this changes (the release-plugins workflow compares it with
-// the latest release's manifest.txt): a new or changed instrument, or any change under native/.
+// the latest release's manifest.txt): a new or changed instrument, any change under native/, or
+// a new Forte version, since each plugin's window carries its page and shared/ for the views.
 export function manifest() {
   const tree = execSync('git rev-parse HEAD:native', { cwd: new URL('..', import.meta.url) }).toString().trim();
-  return [`native ${tree}`, ...released().map((i) => `${i.id} ${i.version}`)].join('\n');
+  return [`native ${tree}`, `forte ${FORTE_VERSION}`, ...released().map((i) => `${i.id} ${i.version}`)].join('\n');
 }
 
 // GitHub shows each line break in a release's notes, so paragraphs and list items wrapped in

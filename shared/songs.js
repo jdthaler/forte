@@ -15,6 +15,7 @@
 import { parseMIDI, playable, fit, transpose } from './midifile.js';
 import { createInput, pageMIDI } from './midi.js';
 import { tourLayout } from './layout.js';
+import { inPlugin } from './in-plugin.js';
 
 const $ = (s) => document.querySelector(s);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
@@ -25,7 +26,8 @@ const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5];
 const MIDI_FILE = /\.(mid|midi|smf|kar|rmi)$/i;
 
 const root = document.body.dataset.root ?? '../';
-if (document.body.dataset.instrument && $('#keyboard')) mount();
+// not in a plugin's window, where the plugin plays the notes (shared/in-plugin.js)
+if (document.body.dataset.instrument && $('#keyboard') && !inPlugin) mount();
 
 function mount() {
   const instrument = $('body > header h1')?.textContent.trim() || 'instrument';
