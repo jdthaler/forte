@@ -73,6 +73,7 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 
 | file | what |
 |---|---|
+| `boot.js` | the first script in every page's `<head>`, a classic one: it offers a reload when a page loaded a mix of two releases' files, and registers the service worker, `sw.js` at the root, which keeps a copy of the released site for working offline (on https only, so not on `localhost`). The copy is every page and everything a page loads: a page, its scripts, styles, WebAssembly, data and README, the icons; not the demos or the link pictures. Its list is `tools/offline.mjs`'s, by file type, so a new instrument needs nothing; a page that loads a new kind of file (a font, say) needs it added there, and `test/offline-tests.mjs` says so. `node tools/check-offline.mjs` opens every page offline. |
 | `shell.js` | everything common to instrument pages: audio graph (room, volume, tone, limiter, analyser), computer keyboard and on-screen keys, MIDI (notes, velocity through the touch curve, CC64, CC66 sostenuto, CC67 soft pedal, CC1, pitch bend), parameter sidebar with presets and local storage, octave shift, toasts. See the header for the config. |
 | `worklet.js` | the generic AudioWorklet processor. It runs your engine's WebAssembly from the bytes the page sends, through its class's `globalThis` name. It also registers `forte-limiter`, the chain's limiter, so a page adds it before building the chain. |
 | `wasm.js` | loads an instrument's WebAssembly in a page, the worklet or Node, and wraps it in a class with the engine contract (`wasmEngine`) |

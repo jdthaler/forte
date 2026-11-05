@@ -100,6 +100,8 @@ function render() {
 }
 player.addEventListener('pause', () => { if (playing) { playing.classList.remove('on'); playing.textContent = '▶ Listen'; playing = null; } });
 player.addEventListener('ended', () => player.dispatchEvent(new Event('pause')));
+// a demo that can't be had (offline: the demos aren't kept, sw.js) lets its button go back
+player.addEventListener('error', () => player.dispatchEvent(new Event('pause')));
 
 function renderTabs(counts, cur) {
   const on = filtering();

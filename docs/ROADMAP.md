@@ -80,7 +80,7 @@ Every other idea only adds, and can come before or after 1.0.
 |------|------|-------|
 | Record and download what you play (WAV) | S–M | Decided against (2026-10-19): not wanted. |
 | Share a link with your settings | S | Done, for the next release: *Copy a link to these settings* in the Presets menu; the link carries the parameters that differ from the defaults. |
-| Works offline, installable on phones | S–M | A service worker; the manifest already exists. |
+| Works offline, installable on phones | S–M | Done, for the next release: a service worker (`sw.js`) keeps a copy of the released site, about 5 MB, and serves every page and its WebAssembly from it, online or not; the demos stay online only. A release downloads only the files that changed and takes over on the way to the next page. |
 | Demo songs played from MIDI files | M | A listen button per instrument, and drag and drop a `.mid` to play it. |
 | A guided tour of each instrument's physics | M | Done, for the next release: *Tour* in the header, a few steps per instrument (`shared/tour.js`, `<slug>-tour.js`). |
 | Accessibility pass | M | Keyboard focus, screen-reader labels, reduced motion. |

@@ -4,7 +4,8 @@
 // naming what it changes and whether that is a major, minor or patch change. Releasing gathers the
 // notes into one CHANGELOG.md entry, bumps each version named once (the largest change wins),
 // regenerates the plugins' <slug>-info.cmake that carry those versions, saves what each new
-// version's plugin saves (native/tests/states/, tools/contract.mjs), and deletes the notes.
+// version's plugin saves (native/tests/states/, tools/contract.mjs), deletes the notes, and writes
+// the service worker's list of the released site (sw.js, tools/offline.mjs).
 //
 // Usage: node tools/release.mjs              make the release commit's changes (on a branch off main)
 //        node tools/release.mjs --dry-run    print what it would do
@@ -14,13 +15,15 @@
 //                                            no version changes, a note when the site changes and
 //                                            a major one for an instrument from 1.0 on whose
 //                                            contract breaks (tools/contract.mjs); into live, no
-//                                            notes left (the release has been made)
+//                                            notes left (the release has been made) and sw.js's
+//                                            offline list the site's (tools/offline.mjs)
 
 import { readFileSync, writeFileSync, readdirSync, unlinkSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { INSTRUMENTS, FORTE_VERSION, TEMPLATE } from '../shared/registry.js';
 import { changesBetween } from './contract.mjs';
+import { offlineFiles, withFiles, filesIn, differences } from './offline.mjs';
 
 const R = new URL('..', import.meta.url);
 const read = (f) => readFileSync(new URL(f, R), 'utf8');
@@ -138,7 +141,12 @@ export function apply({ changes, entry }, notes) {
   if (slugs.length) execFileSync(process.execPath, [new URL('tools/gen-native-params.mjs', R).pathname, ...slugs], { cwd: R, stdio: 'inherit' });
   // what each new version's plugin saves, for later releases to load (tools/contract.mjs)
   execFileSync(process.execPath, [new URL('tools/contract.mjs', R).pathname, '--save-states'], { cwd: R, stdio: 'inherit' });
+  // last, once every file the site serves is as released: the service worker's offline copy (sw.js)
+  writeFileSync(new URL('sw.js', R), withFiles(read('sw.js'), offlineFiles(R)));
 }
+
+// What sw.js's offline list lacks of the checkout (tools/offline.mjs): nothing, once released.
+export const offlineStale = () => differences(filesIn(read('sw.js')), offlineFiles(R));
 
 // Paths whose changes need no note: the documentation, CI, and the notes themselves.
 const UNVERSIONED = [/^[^/]+\.md$/, /^docs\/[^/]+\.md$/, /^native\/[^/]+\.md$/, /^\.github\//, /^\.claude\//, /^changes\//, /^\.gitignore$/];
@@ -163,6 +171,8 @@ export function checkPr(base, head = 'HEAD', warnings = []) {
   const notes = git('ls-tree', '--name-only', `${head}:changes`).split('\n').filter((f) => f.endsWith('.md') && f !== 'README.md');
   if (target === 'live') {
     if (notes.length) errors.push(`changes/ still has notes (${notes.join(', ')}): make the release first (node tools/release.mjs on a branch off main)`);
+    const stale = offlineStale();
+    if (stale.length) errors.push(`sw.js's offline list isn't the site's (${stale.slice(0, 5).join(', ')}${stale.length > 5 ? ', …' : ''}): run node tools/offline.mjs after merging main into the release, and commit sw.js`);
   } else {
     const before = versionsAt(git('merge-base', base, head).trim()), after = versionsAt(head);
     for (const [name, v] of Object.entries(after)) {
@@ -204,7 +214,7 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     } else {
       const notes = readNotes(), p = plan(notes);
       for (const c of p.changes) console.log(`${c.name} ${c.from === c.to ? `${c.to} (first release)` : `${c.from} → ${c.to}`}`);
-      if (args.includes('--dry-run')) console.log(`\n${p.entry}`);
+      if (args.includes('--dry-run')) console.log(`\n${p.entry}\nsw.js: its offline list takes the ${offlineStale().length} files changed since it was written, and those the bumps change`);
       else apply(p, notes);
     }
   } catch (e) {

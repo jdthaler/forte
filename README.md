@@ -307,6 +307,13 @@ controls' bar and its presets just above the keys; turn it sideways
 for wider keys. Use
 *Share → Add to Home Screen* to run Forte as a full-screen app.
 
+Forte works offline. On the first visit the browser keeps a copy of the
+whole site in the background (about 5 MB to download), so from then on
+every instrument opens and plays without a network: on a plane, say, or
+from the home-screen app. Only the front page's demos need a connection. A
+new release downloads in the background too, just the files that changed,
+and takes over the next time you move from one page to another.
+
 ## Plugins
 
 Every instrument (all 25) also comes as a plugin for a DAW: AU,

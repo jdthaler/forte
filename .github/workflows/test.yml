@@ -60,6 +60,9 @@ jobs:
         run: |
           set -o pipefail
           node tools/check-pages.mjs ${{ github.event_name == 'pull_request' && format('--base origin/{0}', github.base_ref) || '' }} | tee "$RUNNER_TEMP/pages.txt"
+      # every page offline from the service worker's copy, its audio started, and a release (sw.js)
+      - name: Every page offline
+        run: node tools/check-offline.mjs
       - name: Summary
         if: always()
         run: |
