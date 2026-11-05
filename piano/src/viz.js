@@ -1,6 +1,7 @@
 // viz.js — canvases: slow-motion string, partial spectrum, cross-section.
 
 import { shapeMatrix } from './materials.js';
+import { animate } from '../../shared/views.js';
 
 export const FAMILY = [
   { name: 'bending, axis 1', short: 'axis 1', color: '#5aa9ff' },
@@ -31,8 +32,7 @@ export class MotionView {
     this.speed = 1 / 300;
     this.t0 = performance.now();
     this.paused = false;
-    const loop = () => { requestAnimationFrame(loop); if (this.cv.offsetParent) this.draw(); }; // skip while hidden
-    requestAnimationFrame(loop);
+    animate(() => this.draw(), this.cv); // skipped while hidden (shared/views.js)
   }
 
   // sim: { frames: [Float64Array], eta: Float64Array, dt, model, data, P }
@@ -219,8 +219,7 @@ export class SpectrumView {
     this.partials = null;
     this.analyser = null;
     this.fft = null;
-    const loop = () => { requestAnimationFrame(loop); if (this.cv.offsetParent) this.draw(); }; // skip while hidden
-    requestAnimationFrame(loop);
+    animate(() => this.draw(), this.cv); // skipped while hidden (shared/views.js)
   }
 
   setAnalyser(a) { this.analyser = a; this.fft = new Float32Array(a.frequencyBinCount); }

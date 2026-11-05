@@ -83,7 +83,7 @@ Every other idea only adds, and can come before or after 1.0.
 | Works offline, installable on phones | S–M | Done, for the next release: a service worker (`sw.js`) keeps a copy of the released site, about 5 MB, and serves every page and its WebAssembly from it, online or not; the demos stay online only. A release downloads only the files that changed and takes over on the way to the next page. |
 | Demo songs played from MIDI files | M | A listen button per instrument, and drag and drop a `.mid` to play it. |
 | A guided tour of each instrument's physics | M | Done, for the next release: *Tour* in the header, a few steps per instrument (`shared/tour.js`, `<slug>-tour.js`). |
-| Accessibility pass | M | Keyboard focus, screen-reader labels, reduced motion. |
+| Accessibility pass | M | Done, for the next release: every control named for screen readers (symbol buttons, the views' canvases, sliders' values as shown, hints read after a control's name), keyboard focus kept after Enter or Space, a focus ring everywhere, and with Reduce Motion the views step four times a second and nothing slides. The page checks fail on an unnamed control. |
 | Search and filter on the front page | S | |
 
 ### The plugins and the app
