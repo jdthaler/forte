@@ -299,6 +299,21 @@ requests.
   Chromaphone plays modelled membranes. The Timpani and Tabla solves each
   key's loaded, air-loaded head as it is struck and plays its modes live;
   its sources are in `drums/README.md`.
+* **The marimba and the xylophone.** F. Orduña-Bustamante (*J. Acoust.
+  Soc. Am.* **90**, 2935–2941, 1991) and J. Petrolito and K. A. Legge
+  (*J. Acoust. Soc. Am.* **102**, 2432–2437, 1997) shaped undercuts for
+  harmonic overtones; I. Bork (*Applied Acoustics* **46**, 103–127, 1995)
+  tuned xylophone bars and their tubes; B. H. Suits (*Am. J. Phys.* **69**,
+  743–750, 2001) and D. Beaton and G. Scavone (*J. Acoust. Soc. Am.*
+  **149**, 3758–3768, 2021) solved the bars by finite elements. A. Chaigne
+  and V. Doutaut (*J. Acoust. Soc. Am.* **101**, 539–557, 1997) simulated a
+  struck xylophone bar in time, and with its tube (1998); F. Soares,
+  V. Debut and J. Antunes coupled several bar modes to several tube modes
+  (*J. Sound Vib.* **548**, 117528, 2023). Applied Acoustics Systems'
+  Chromaphone and Modartt's Pianoteq Xylo play modelled marimba bars.
+  The Marimba and Xylophone tunes every bar's cut by finite elements for
+  its instrument and keeps the tube's second resonance, which a centred
+  mouth cannot hear; its sources are in `marimba/README.md`.
 * **The gamelan.** W. Surjodiningrat, P. J. Sudarjana and A. Susanto
   measured the sarons of Central Java's gamelans (1972; 2nd edn, Gadjah Mada
   University Press, 1993), and M. Hood redefined sléndro and pélog from them

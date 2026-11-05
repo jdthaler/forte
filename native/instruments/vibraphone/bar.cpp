@@ -72,22 +72,22 @@ static void shapes(double xi, double l, double phi, Shapes &o) {
 
 // Bending: banded K, M of the half bar, and the per-element bending stiffness blocks (for
 // strain-energy bookkeeping). shear = false gives Euler–Bernoulli (φ = 0, no rotary inertia).
-Bending assembleBending(const std::vector<double> &nodes, const Cut &cut, double b, bool shear) {
-  const double E = AL.E, rho = AL.rho;
+Bending assembleBending(const std::vector<double> &nodes, const Cut &cut, double b, bool shear, const Elastic &mat) {
+  const double E = mat.E, rho = mat.rho;
   const int nn = (int)nodes.size(), n = 2 * nn;
   Bending B{std::vector<double>(n * 4), std::vector<double>(n * 4), n, {}};
   B.Kb.reserve(nn);
   Shapes SH;
   for (int e = 0; e < nn - 1; e++) {
     const double x0 = nodes[e], l = nodes[e + 1] - x0, hm = thickness(cut, x0 + l / 2);
-    const double phi = shear ? (12 * E * (b * std::pow(hm, 3) / 12)) / (KAPPA * G_AL * b * hm * l * l) : 0;
+    const double phi = shear ? (12 * E * (b * std::pow(hm, 3) / 12)) / (mat.kappa * mat.G * b * hm * l * l) : 0;
     double kb[16] = {}, ks[16] = {}, me[16] = {};
     for (int g = 0; g < 5; g++) {
       const double xi = GX[g], h = thickness(cut, x0 + xi * l), A = b * h, I = (b * std::pow(h, 3)) / 12, w = GW[g] * l;
       shapes(xi, l, phi, SH);
       for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) {
         kb[i * 4 + j] += w * E * I * SH.dNt[i] * SH.dNt[j];
-        if (shear) ks[i * 4 + j] += w * KAPPA * G_AL * A * (SH.dNw[i] - SH.Nt[i]) * (SH.dNw[j] - SH.Nt[j]);
+        if (shear) ks[i * 4 + j] += w * mat.kappa * mat.G * A * (SH.dNw[i] - SH.Nt[i]) * (SH.dNw[j] - SH.Nt[j]);
         me[i * 4 + j] += w * rho * (A * SH.Nw[i] * SH.Nw[j] + (shear ? I * SH.Nt[i] * SH.Nt[j] : 0));
       }
     }
@@ -103,16 +103,16 @@ Bending assembleBending(const std::vector<double> &nodes, const Cut &cut, double
 }
 
 // Torsion (Saint-Venant, linear elements): GJ θ″ and the polar inertia ρ(bh³ + hb³)/12.
-Torsion assembleTorsion(const std::vector<double> &nodes, const Cut &cut, double b) {
+Torsion assembleTorsion(const std::vector<double> &nodes, const Cut &cut, double b, const Elastic &mat) {
   const int nn = (int)nodes.size();
   Torsion T{std::vector<double>(nn * 4), std::vector<double>(nn * 4), nn};
-  const double rho = AL.rho;
+  const double rho = mat.rho;
   for (int e = 0; e < nn - 1; e++) {
     const double x0 = nodes[e], l = nodes[e + 1] - x0;
     double k = 0, m11 = 0, m12 = 0, m22 = 0;
     for (int g = 0; g < 5; g++) {
       const double xi = GX[g], h = thickness(cut, x0 + xi * l), w = GW[g] * l;
-      k += (w * G_AL * torsionJ(b, h)) / (l * l);
+      k += (w * mat.G * torsionJ(b, h)) / (l * l);
       const double ip = (rho * (b * std::pow(h, 3) + h * std::pow(b, 3))) / 12;
       m11 += w * ip * std::pow(1 - xi, 2); m12 += w * ip * (1 - xi) * xi; m22 += w * ip * xi * xi;
     }
@@ -193,9 +193,9 @@ double bandEig(const std::vector<double> &kv, const std::vector<double> &mv, int
   return lambda;
 }
 
-std::array<double, 3> bendingFreqs3(const Cut &cut, double L, double b, int fine) {
+std::array<double, 3> bendingFreqs3(const Cut &cut, double L, double b, int fine, const Elastic &mat) {
   const std::vector<double> nodes = halfMesh(cut, L, fine);
-  const Bending B = assembleBending(nodes, cut, b);
+  const Bending B = assembleBending(nodes, cut, b, true, mat);
   const int n = B.n, N = n - 1;
   const auto ks = dropDof(B.K, n, 1), ms = dropDof(B.M, n, 1), ka = dropDof(B.K, n, 0), ma = dropDof(B.M, n, 0);
   auto f = [&](const std::vector<double> &k, const std::vector<double> &m, int i) { return std::sqrt(bandEig(k, m, N, i)) / (2 * pi); };
@@ -223,9 +223,9 @@ static std::vector<double> bendingShape(const std::vector<double> &nodes, const 
   return out;
 }
 
-BarModes barModes(const Cut &cut, double L, double b, int nx, int fine, int nBend, int nTors) {
+BarModes barModes(const Cut &cut, double L, double b, int nx, int fine, int nBend, int nTors, const Elastic &mat) {
   const std::vector<double> nodes = halfMesh(cut, L, fine);
-  const Bending B = assembleBending(nodes, cut, b);
+  const Bending B = assembleBending(nodes, cut, b, true, mat);
   const int n = B.n, N = n - 1, ne = (int)nodes.size() - 1;
   std::vector<double> xs(nx);
   for (int i = 0; i < nx; i++) xs[i] = ((double)i / (nx - 1)) * L - L / 2;
@@ -262,7 +262,7 @@ BarModes barModes(const Cut &cut, double L, double b, int nx, int fine, int nBen
     out.bend.push_back(std::move(md));
   }
   // torsion
-  const Torsion T = assembleTorsion(nodes, cut, b);
+  const Torsion T = assembleTorsion(nodes, cut, b, mat);
   struct TSet { int drop; bool sym; int idx; };
   const TSet tsets[2] = {{0, false, 1}, {-1, true, 2}};
   for (int i = 0; i < nTors; i++) {
@@ -287,7 +287,7 @@ BarModes barModes(const Cut &cut, double L, double b, int nx, int fine, int nBen
   double mass = 0;
   for (int e = 0; e < ne; e++) {
     const double l = nodes[e + 1] - nodes[e];
-    for (int g = 0; g < 5; g++) mass += 2 * GW[g] * l * AL.rho * b * thickness(cut, nodes[e] + GX[g] * l);
+    for (int g = 0; g < 5; g++) mass += 2 * GW[g] * l * mat.rho * b * thickness(cut, nodes[e] + GX[g] * l);
   }
   out.mass = mass;
   out.xs.resize(nx);
@@ -309,13 +309,13 @@ static std::array<double, 3> solve3(std::array<std::array<double, 3>, 3> A, std:
   return x;
 }
 
-Tuned tuneUndercut(double f1, double b, double h0, double cf, std::array<double, 3> start, double r2, double r3, int fine, int maxIter) {
+Tuned tuneUndercut(double f1, double b, double h0, double cf, std::array<double, 3> start, double r2, double r3, int fine, int maxIter, const Elastic &mat) {
   // unknowns u = [A = a/(L/2), D = d/h0, ln L]
   using V = std::array<double, 3>;
   V u = {start[0], start[1], std::log(start[2])};
   auto res = [&](const V &v) -> V {
     const double L = std::exp(v[2]), a = (v[0] * L) / 2;
-    const auto f = bendingFreqs3({h0, a, cf * a, v[1] * h0}, L, b, fine);
+    const auto f = bendingFreqs3({h0, a, cf * a, v[1] * h0}, L, b, fine, mat);
     return {std::log(f[1] / f[0] / r2), std::log(f[2] / f[0] / r3), std::log(f[0] / f1)};
   };
   auto norm = [](const V &x) { return std::hypot(x[0], x[1], x[2]); };
