@@ -194,6 +194,15 @@ export const INSTRUMENTS = [
     accent: '#e0a43c',
   },
   {
+    id: 'cimbalom', name: 'Cimbalom', section: 'traditional', ready: true, version: '0.1.0', trim: 7,
+    plugin: { code: 'Cimb', ready: true },
+    after: 'Schunda’s concert cimbalom (Budapest, 1874) and the hammered dulcimer',
+    tagline: 'Courses of four strings struck by hammers thrown from the player’s hands: their slight mistuning makes each note bloom and fade in two stages, and on the dulcimer the bridge splits each string into two notes a fifth apart.',
+    physics: 'Hand-held hammers · unison strings coupled at the bridge (Weinreich) · divided strings · damper bar and sympathetic strings',
+    vibrates: 'strings', notes: 'ring',
+    accent: '#e0955a',
+  },
+  {
     id: 'tubular', name: 'Tubular Bells', section: 'traditional', ready: true, version: '0.1.0', trim: 7.5,
     plugin: { code: 'Tubu', ready: true },
     after: 'orchestral chimes',
