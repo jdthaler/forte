@@ -42,6 +42,7 @@ export const GROUPS = [
   },
   {
     title: 'Talking arc',
+    empty: 'Set Arcs (in The circuit) to Talking arc to speak into the arc through a microphone.',
     params: [
       { id: 'voice', label: 'Microphone level', face: 'knob', min: 0, max: 6, def: 2, step: 0.05, fmt: (v) => `${f2(v)} V`, showIf: (P) => P.mode === 'talk',
         hint: 'The EMF the microphone transformer puts into the arc circuit. The arc turns the current it drives into sound; too little arc current and the arc howls on its own.' },

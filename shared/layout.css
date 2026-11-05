@@ -182,7 +182,7 @@ details.group:not(:has(.param)) { display: none; } /* every control in it is in 
 .forte-perform .param .val { order: 2; flex: none; min-width: 3.5em; font-size: 11.5px; text-align: right; }
 .forte-perform .param select { order: 1; width: auto; margin: 0; padding: 2px 6px; }
 .forte-perform .forte-info { order: -1; }
-.forte-perform .param.check { cursor: pointer; }
+.forte-perform .param.check { cursor: pointer; flex-wrap: nowrap; } /* never its name under its box */
 .forte-perform .param.check > label { cursor: pointer; }
 .forte-perform .param.check:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 70%, transparent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
 .forte-perform .param.check:has(input:checked) > label { color: var(--text); }
@@ -412,6 +412,7 @@ body[data-instrument] .kb-help { display: block; position: relative; margin: 0 0
 .forte-kbbar.stacked::after { content: ""; order: -1; flex: 0 0 100%; } /* the end of their line (or lines) */
 .forte-kbbar.measure > *, .forte-kbbar.measure > .forte-perform > * { flex-shrink: 0; }
 .forte-kbbar.measure > .forte-kbmap { flex: 0 0 140px; }
+.forte-kbbar.tight > .forte-kbstep { display: none; } /* a phone held sideways, short of room: the overview alone */
 body[data-instrument] .forte-kbbar button { padding: 3px 9px; white-space: nowrap; }
 body[data-instrument] .forte-kbbar .forte-info { padding: 0; } /* a circle, not a button's padding */
 .forte-kbbar button:disabled { opacity: 0.35; cursor: default; }

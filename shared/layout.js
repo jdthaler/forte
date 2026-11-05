@@ -602,7 +602,9 @@ function placeControls() {
   const fresh = sidebar.querySelectorAll('.param:not([data-placed])');
   for (const p of fresh) {
     p.dataset.placed = '';
-    const lab = p.querySelector('label'), label = lab?.textContent ?? '', hint = p.querySelector('.hint')?.textContent;
+    // (a face's label is short, perhaps hyphenated: its control's accessible name is the whole one)
+    const lab = p.querySelector('label'), hint = p.querySelector('.hint')?.textContent;
+    const label = (p.dataset.face && p.querySelector('input, select')?.getAttribute('aria-label')) || (lab?.textContent ?? '').replace(/\u00ad/g, '');
     const row = lab?.closest('.row');
     let info = null;
     if (hint && lab) {
@@ -622,6 +624,12 @@ function placeControls() {
       if (info) {
         info.setAttribute('aria-controls', bubble.id);
         info.addEventListener('click', () => { openHint(info, p, label, hint); info.blur(); });
+      }
+      // a switch drawn as the instrument has it (a regal's drawknob) is too big for the bar: there
+      // it is a plain checkbox, named as the parameter is; its twin in the panel keeps the face
+      if (p.dataset.face && p.classList.contains('check') && lab) {
+        p.removeAttribute('data-face');
+        lab.textContent = label;
       }
       segment(p, label);
       const short = shortLabel(label);
@@ -846,10 +854,16 @@ export function attachKeyboard(kb) {
   }
   // The strip (and in Perform the presets) shares the bar's line where it fits beside the rest,
   // with room left for the overview; otherwise it takes a line of its own above it. A phone held
-  // sideways keeps one line.
+  // sideways keeps one line: where that squeezes something (a pedal button cut short), the overview
+  // gives up its ◀ ▶ (it still scrolls the keys when dragged or tapped).
   function stack() {
-    bar.classList.remove('stacked');
-    if (!(strip.parentNode === bar && strip.childElementCount) && !kbTools?.childElementCount || sidewaysQuery.matches || !bar.isConnected) return;
+    bar.classList.remove('stacked', 'tight');
+    if (!(strip.parentNode === bar && strip.childElementCount) && !kbTools?.childElementCount || !bar.isConnected) return;
+    if (sidewaysQuery.matches) {
+      const squeezed = (e) => e.scrollWidth > e.clientWidth + 1;
+      bar.classList.toggle('tight', [...bar.children, ...strip.children].some(squeezed));
+      return;
+    }
     bar.classList.add('measure');
     const over = bar.scrollWidth > bar.clientWidth + 1;
     bar.classList.remove('measure');
