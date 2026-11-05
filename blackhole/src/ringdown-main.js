@@ -311,5 +311,5 @@ keyboardView.labels(keyLabels());
 updateHelp();
 setFocus(60, 1);
 animate(frame);
-attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v) => setAll({ ...P, ...v }), toast }); // your own presets and links
+attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v) => setAll({ ...P, ...v }), defaults: DEFAULTS, toast }); // your own presets and links
 qualityControl(); // the device's Quality, after the controls
