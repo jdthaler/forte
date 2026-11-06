@@ -842,6 +842,23 @@ body.rise-folded .forte-rise-body { display: none; }
 .forte-rise-val { font-size: 11px; text-align: right; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .forte-rise-what { grid-column: 2 / -1; font-size: 10.5px; line-height: 1.3; color: var(--muted); }
 .forte-rise-note { margin: 0; font-size: 10.5px; line-height: 1.35; color: var(--muted); }
+/* On the RISE: its own settings, read over SysEx, a button to set it up for Forte, its sensitivities */
+.forte-rise-own { display: grid; gap: 7px; padding-top: 8px; border-top: 1px solid var(--line); }
+.forte-rise-own h3 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; }
+.forte-rise-status { margin: 0; font-size: 10.5px; line-height: 1.35; color: var(--muted); }
+.forte-rise-status:empty { display: none; }
+.forte-rise-status.off { color: var(--text); }
+.forte-rise-settings { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 8px; font-size: 11px; line-height: 1.3; }
+.forte-rise-settings dt { color: var(--muted); }
+.forte-rise-settings dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.forte-rise-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.forte-rise-buttons button { font-size: 11.5px; padding: 4px 9px; }
+.forte-rise-buttons button.armed { border-color: var(--accent); color: var(--accent); }
+.forte-rise-sens summary { cursor: pointer; font-size: 11.5px; color: var(--muted); }
+.forte-rise-sens[open] summary { color: var(--text); margin-bottom: 2px; }
+.forte-rise-srow { display: grid; grid-template-columns: 46px minmax(0, 1fr) 26px; align-items: center; column-gap: 7px; font-size: 11px; }
+.forte-rise-srow output { text-align: right; font-variant-numeric: tabular-nums; color: var(--accent); }
+.forte-rise-snote { margin: 2px 0 0; font-size: 10.5px; color: var(--muted); }
 html.in-plugin .forte-rise { display: none; }
 
 /* phones: the page scrolls, and the RISE follows the controls */
