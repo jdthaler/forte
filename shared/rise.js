@@ -13,9 +13,14 @@
 // send CC 107, 109 and 111 and the pad 113 (X) and 114 (Y), in its MIDI mode only (white lights).
 // In its expression mode (cyan lights) the faders set the RISE's own Glide, Slide and Press
 // sensitivity and send nothing, so the panel can only say which mode it was last seen in.
+//
+// Below them, "On the RISE": its own settings, read over SysEx (shared/rise-sysex.js) once the
+// browser allows it, with a button that sets it up as Forte expects and its five sensitivities.
+// It writes only when one of those is pressed or moved.
 
-import { createMpe, MEMBER_BEND } from './mpe.js';
-import { FADERS, controllersOf, ccValue, mpeMode } from './midi.js';
+import { createMpe, MEMBER_BEND, slideFrom } from './mpe.js';
+import { FADERS, controllersOf, ccValue, mpeMode, signed } from './midi.js';
+import { IDENTIFY, parse, differences, forForte, set as setting, PARAMS } from './rise-sysex.js';
 
 export const KEYS = 25;                 // a RISE 25's keywave: two octaves, C to C
 export const DIMENSIONS = [
@@ -32,13 +37,15 @@ const FLASH = 0.6; // s: Strike and Lift stay lit this long
  * the last value of each dimension and when it came, and the layout it sends in.
  */
 export function riseModel({ now = () => performance.now() / 1000 } = {}) {
-  const fingers = new Map(); // channel → { key, strike, glide (semitones), slide (0..1, NaN: none yet), press, t }
+  const fingers = new Map(); // channel → { key, strike, glide (semitones), slide (0..1 on the key, NaN: none yet), land, slid, press, t }
   const cc = {};             // the faders' and the pad's last values (0..127), by CC
   const last = { strike: NaN, glide: NaN, slide: NaN, press: NaN, lift: NaN };
   const when = { strike: -Infinity, glide: -Infinity, slide: -Infinity, press: -Infinity, lift: -Infinity };
   let channels = new Set(), single = false, faderMode = null; // 'midi' once a fader or the pad sends
   let master = { glide: 0, press: 0 };                       // channel 1's, every note's
   const set = (d, v) => { last[d] = v; when[d] = now(); };
+  // where the finger is on the key, and how far it has slid from where it landed (what the instrument hears, shared/mpe.js)
+  const slid = (f, u) => { if (Number.isNaN(f.land)) f.land = u; f.slide = u; f.slid = slideFrom(f.land, u) || 0; set('slide', f.slid); };
   const finger = (key) => { for (const f of fingers.values()) if (f.key === key) return f; return null; };
   const at = {}; // each member channel's CC74: where its finger is on the key (the instrument hears how far it slid, shared/mpe.js slideFrom)
   // each note's own bend and pressure, as a RISE in MPE sends them (a lower zone of 15)
@@ -59,7 +66,7 @@ export function riseModel({ now = () => performance.now() / 1000 } = {}) {
       if (d === 'strike' || d === 'lift') return now() - when[d] < FLASH;
       for (const f of fingers.values()) {
         if (d === 'glide' && Math.abs(f.glide + master.glide) > 0.05) return true;
-        if (d === 'slide' && f.slide > 0.01) return true;
+        if (d === 'slide' && f.slid > 0.01) return true;
         if (d === 'press' && f.press + master.press > 0.01) return true;
       }
       return false;
@@ -68,9 +75,10 @@ export function riseModel({ now = () => performance.now() / 1000 } = {}) {
     newest() { let n = null; for (const f of fingers.values()) if (!n || f.t > n.t) n = f; return n; },
     midi(data) {
       const [st, d1 = 0, d2 = 0] = data, cmd = st & 0xf0, ch = st & 0x0f;
+      if (st >= 0xf0) return; // SysEx, clock and the rest: no finger's
       if (cmd === 0x90 && d2 > 0) {
         channels.add(ch); single = ch === 0;
-        fingers.set(ch, { key: d1, strike: d2 / 127, glide: single ? master.glide : 0, slide: at[ch] ?? NaN, press: 0, t: now() });
+        fingers.set(ch, { key: d1, strike: d2 / 127, glide: single ? master.glide : 0, slide: at[ch] ?? NaN, land: at[ch] ?? NaN, slid: 0, press: 0, t: now() });
         set('strike', d2 / 127);
         mpe.midi(data); // its channel's bend and slide, which came first, are this note's (the sink above)
         return;
@@ -87,10 +95,10 @@ export function riseModel({ now = () => performance.now() / 1000 } = {}) {
         if (cmd === 0xe0) { master = { ...master, glide: (((d2 << 7) | d1) - 8192) / 8192 * (single ? MEMBER_BEND : 2) }; set('glide', master.glide); return; }
         if (cmd === 0xd0) { master = { ...master, press: d1 / 127 }; set('press', d1 / 127); return; }
         if (cmd === 0xa0) { const f = finger(d1); if (f) { f.press = d2 / 127; set('press', f.press); } return; }
-        if (cmd === 0xb0 && d1 === 74) { for (const f of fingers.values()) f.slide = d2 / 127; set('slide', d2 / 127); return; }
+        if (cmd === 0xb0 && d1 === 74) { for (const f of fingers.values()) slid(f, d2 / 127); return; }
       }
       if (cmd === 0xa0) { const f = finger(d1); if (f) { f.press = d2 / 127; set('press', f.press); } return; }
-      if (cmd === 0xb0 && d1 === 74) { at[ch] = d2 / 127; const f = fingers.get(ch); if (f) { f.slide = at[ch]; set('slide', f.slide); } }
+      if (cmd === 0xb0 && d1 === 74) { at[ch] = d2 / 127; const f = fingers.get(ch); if (f) slid(f, at[ch]); }
       mpe.midi(data);
     },
   };
@@ -99,6 +107,7 @@ export function riseModel({ now = () => performance.now() / 1000 } = {}) {
 // ---- the panel --------------------------------------------------------------------------------------
 
 const STORE = 'forte/rise/v1';
+const ANSWER = 1500; // ms: how long the RISE has to answer an identify
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
 const CHEVRON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8 10 12.5"/></svg>';
 const BLACK = [1, 3, 6, 8, 10];
@@ -112,7 +121,7 @@ function meanings(I, params) {
   out.strike = 'how loud, as a key\'s velocity';
   out.glide = !I ? '' : press && bend ? `presses the key as the wheel does, up to ${bend} semitones`
     : bend ? `bends the note alone, up to ±${bend} semitones` : 'nothing here: each note keeps its own pitch';
-  out.slide = !I ? '' : slide && wp ? `${wp.label}, for that note alone` : 'nothing here';
+  out.slide = !I ? '' : slide && wp ? `${wp.label}, for that note alone, as far as the finger slides from where it landed` : 'nothing here';
   out.press = !I ? '' : I.aftertouch ? I.aftertouch : 'nothing here';
   out.lift = 'how fast the note is let go';
   if (mpeMode() === 'off') out.glide = out.slide = out.press = 'MPE is off in the MIDI menu: every note moves together';
@@ -186,7 +195,8 @@ export function risePanel() {
   });
   dims.append(...rows.map((x) => x.r));
   const note = el('p', 'forte-rise-note');
-  body.append(slab, dims, note);
+  const own = settingsSection(() => [...inputs.values()][0] ?? '');
+  body.append(slab, dims, note, own.element);
   aside.append(head, body);
 
   const setFolded = (on) => {
@@ -278,7 +288,7 @@ export function risePanel() {
       x.r.classList.toggle('on', lit);
       let v = model.last[x.id];
       if (n && x.id === 'glide') v = n.glide + m.glide;
-      else if (n && x.id === 'slide') v = n.slide;
+      else if (n && x.id === 'slide') v = n.slid;
       else if (n && x.id === 'press') v = Math.min(1, n.press + m.press);
       else if (n && x.id === 'strike') v = n.strike;
       if (x.id === 'glide') { // from the middle, either way
@@ -290,7 +300,7 @@ export function risePanel() {
     const names = [...inputs.values()];
     title.textContent = names.length === 1 ? names[0].replace(/^ROLI\s+/i, '') : 'Seaboard RISE';
     const on = mpeMode() !== 'off';
-    note.textContent = model.single ? 'Its notes come on channel 1: it isn\'t sending MPE, so every note glides and presses together. In ROLI Dashboard, set MIDI Mode to MPE.'
+    note.textContent = model.single ? 'Its notes come on channel 1: it isn\'t sending MPE, so every note glides and presses together. Set it to MPE under On the RISE below (or in ROLI Dashboard).'
       : !on ? 'MPE is off in the MIDI menu: turn it to Auto, and each finger bends, slides and presses its own note.'
       : `MPE: each finger its own channel${model.channels ? ` (${model.channels} so far)` : ''}, each glide up to ±${MEMBER_BEND} semitones.`;
     // keep drawing while something fades (Strike, Lift) or a finger is down
@@ -319,8 +329,137 @@ export function risePanel() {
       if (connected) inputs.set(id, nm || 'Seaboard'); else inputs.delete(id);
       if (!connected) model.midi([0xb0, 123, 0]);
       if (inputs.size !== had || connected) show();
+      own.connected(inputs.size > 0, connected);
     },
     midi(id, data) { if (!inputs.has(id)) return; model.midi(data); request(); },
   };
   return panel;
+}
+
+// ---- the RISE's own settings, over SysEx (shared/rise-sysex.js) --------------------------------------
+//
+// Reading asks the browser for SysEx (its own permission, "control and reprogram your MIDI devices"),
+// on a button the first time and by itself once granted. Nothing is written but by a button or a
+// slider here: Set up for Forte (after a second press to confirm) and the five sensitivities.
+
+let link = null; // the SysEx MIDI access, asked for once
+async function ports(name) {
+  link ??= navigator.requestMIDIAccess({ sysex: true }).catch((e) => { link = null; throw e; });
+  const acc = await link;
+  const pick = (all) => { const ps = [...all.values()].filter((p) => p.state !== 'disconnected'); return ps.find((p) => p.name === name) ?? ps.find((p) => /seaboard/i.test(p.name ?? '')); };
+  const out = pick(acc.outputs), inp = pick(acc.inputs);
+  if (!out || !inp) throw new Error('no port');
+  return { out, inp };
+}
+/** The RISE's settings (rise-sysex.js parse), or a rejection: 'denied', 'no port', 'no answer'. */
+async function identify(name) {
+  let p;
+  try { p = await ports(name); } catch (e) { throw new Error(e?.name === 'SecurityError' || e?.name === 'NotAllowedError' ? 'denied' : e?.message || 'no port'); }
+  const { out, inp } = p;
+  await inp.open?.();
+  return new Promise((resolve, reject) => {
+    const done = (s) => { clearTimeout(timer); inp.removeEventListener('midimessage', on); if (s) resolve(s); else reject(new Error('no answer')); };
+    const on = (ev) => { const s = parse(ev.data); if (s) done(s); };
+    const timer = setTimeout(() => done(null), ANSWER);
+    inp.addEventListener('midimessage', on);
+    out.send(IDENTIFY);
+  });
+}
+async function write(name, msgs) {
+  const { out } = await ports(name);
+  for (const m of msgs) out.send(m);
+}
+const granted = async () => {
+  try { return (await navigator.permissions.query({ name: 'midi', sysex: true })).state === 'granted'; } catch { return false; }
+};
+
+const SENS = [['strike', 'Strike'], ['glide', 'Glide'], ['slide', 'Slide'], ['pressSens', 'Press', 'press'], ['lift', 'Lift']];
+function settingsSection(nameOf) {
+  const box = el('section', 'forte-rise-own');
+  box.setAttribute('aria-label', 'The RISE\'s own settings');
+  const h = el('h3', '', 'On the RISE');
+  const status = el('p', 'forte-rise-status'); status.setAttribute('aria-live', 'polite');
+  const list = el('dl', 'forte-rise-settings'); list.hidden = true;
+  const buttons = el('div', 'forte-rise-buttons');
+  const readB = el('button', '', 'Read its settings'); readB.type = 'button';
+  readB.title = 'Ask the RISE for its settings (the browser asks first to let this page talk SysEx to it)';
+  const forteB = el('button', '', 'Set up for Forte'); forteB.type = 'button'; forteB.hidden = true;
+  buttons.append(readB, forteB);
+  const sens = el('details', 'forte-rise-sens'); sens.hidden = true;
+  const sum = el('summary', '', 'Sensitivity'); sens.append(sum);
+  const sliders = SENS.map(([key, label, param = key]) => {
+    const row = el('label', 'forte-rise-srow');
+    const input = el('input'); input.type = 'range'; input.min = '0'; input.max = '127'; input.step = '1';
+    const val = el('output', '', '');
+    row.append(el('span', '', label), input, val);
+    sens.append(row);
+    let timer = 0;
+    const fill = () => { input.style.setProperty('--fill', `${(+input.value / 127) * 100}%`); val.textContent = input.value; };
+    const send = () => { clearTimeout(timer); timer = 0; write(nameOf(), setting(param, +input.value)).catch(() => say('The RISE isn\'t there to write to.')); if (state) state[key] = +input.value; };
+    input.addEventListener('input', () => { fill(); clearTimeout(timer); timer = setTimeout(send, 120); });
+    input.addEventListener('change', send);
+    return { key, input, fill };
+  });
+  const sensNote = el('p', 'forte-rise-snote', 'Each moves the RISE at once, and it keeps it.');
+  sens.append(sensNote);
+  box.append(h, status, list, buttons, sens);
+
+  let state = null, busy = false, armed = 0;
+  const say = (t) => { status.textContent = t; };
+  const row = (k, v) => { list.append(el('dt', '', k), el('dd', '', v)); };
+  function show(s) {
+    state = s;
+    list.replaceChildren();
+    row('MIDI mode', s.mode === 'mpe' ? `MPE, ${s.upper ? 'upper' : 'lower'} zone of ${s.members}, bend ±${s.bend}`
+      : s.mode === 'single' ? `Single Channel, channel ${s.channel}, bend ±${s.bend}` : `Multi Channel, bend ±${s.bend}`);
+    row('Press', s.press === 'channel' ? 'channel pressure' : 'polyphonic aftertouch');
+    row('Slide', `CC ${s.slideCc}, ${s.slideMode === 0 ? 'absolute' : s.slideMode === 1 ? 'relative' : 'relative, both ways'}`);
+    row('Faders, pad', `CC ${s.faders.slice(0, 3).join(', ')} · ${s.faders.slice(3).join(', ')}`);
+    row('Octave', `${signed(s.octave)}${s.transpose ? `, transposed ${signed(s.transpose)}` : ''}`);
+    row('Firmware', `${s.firmware || '?'}${s.battery ? ` · battery ${s.battery} of 7` : ''}`);
+    list.hidden = false;
+    const off = differences(s);
+    say(off.length ? `Not as Forte expects: ${off.join('; ')}.` : 'Set up as Forte expects.');
+    status.classList.toggle('off', off.length > 0);
+    forteB.hidden = off.length === 0; disarm();
+    for (const x of sliders) { x.input.value = String(s[x.key]); x.fill(); }
+    sens.hidden = false;
+    readB.textContent = 'Read again';
+  }
+  async function read({ quiet = false } = {}) {
+    if (busy) return;
+    busy = true; readB.disabled = forteB.disabled = true;
+    if (!quiet) say('Asking the RISE…');
+    try { show(await identify(nameOf())); }
+    catch (e) {
+      const why = e?.message;
+      if (!quiet || state) say(why === 'denied' ? 'The browser didn\'t let this page talk SysEx to the RISE. Allow MIDI device control for this site, then read again.'
+        : why === 'no port' ? 'No way to send to the RISE: its MIDI output isn\'t there.'
+        : 'The RISE didn\'t answer. An original RISE or a RISE 2 should: is it on its USB cable, not Bluetooth?');
+    } finally { busy = false; readB.disabled = forteB.disabled = false; }
+  }
+  const disarm = () => { clearTimeout(armed); armed = 0; forteB.textContent = 'Set up for Forte'; forteB.classList.remove('armed'); };
+  readB.addEventListener('click', () => read());
+  forteB.addEventListener('click', async () => {
+    if (!armed) { // a second press writes: the RISE keeps these until ROLI Dashboard (or this) changes them
+      forteB.textContent = 'Write to the RISE'; forteB.classList.add('armed');
+      say('This sets MPE on 15 channels at ±48, Slide on CC74 (absolute), Press as channel pressure, and the faders and pad on CC 107, 109, 111, 113 and 114. The RISE keeps them. Press again to write.');
+      armed = setTimeout(() => { disarm(); if (state) show(state); }, 8000);
+      return;
+    }
+    disarm();
+    try { await write(nameOf(), forForte()); } catch { say('The RISE isn\'t there to write to.'); return; }
+    say('Written. Reading it back…');
+    setTimeout(() => read(), 400);
+  });
+  return {
+    element: box,
+    /** a Seaboard came or went: read it by itself if the browser already allows SysEx */
+    async connected(any, arrived) {
+      if (!any) { state = null; list.hidden = sens.hidden = forteB.hidden = true; readB.textContent = 'Read its settings'; say(''); disarm(); return; }
+      if (!arrived || state) return;
+      say('Its own settings (MIDI mode, Slide, sensitivity) can be read and set from here.');
+      if (await granted()) read({ quiet: true });
+    },
+  };
 }

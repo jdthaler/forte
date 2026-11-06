@@ -172,6 +172,7 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
       down.delete(id);
     };
     const clean = (id, data) => {
+      if (data[0] === 0xf0) return; // SysEx: a RISE's settings, which shared/rise.js reads itself
       // a foot controller's switches are the pedals (SWITCHES), unless the instrument maps them
       if ((data[0] & 0xf0) === 0xb0 && SWITCHES[data[1]] && !mine(data[1])) data = [data[0], SWITCHES[data[1]], data[2]];
       const [st, d1, d2] = data, cmd = st & 0xf0, ch = st & 0x0f, nk = `${ch}:${d1}`;
