@@ -158,6 +158,16 @@ moves its control across the slider's whole range; a fader on a stop pulls
 it at halfway up. The first touch of each shows which control it moves. Pad Y
 is the mod wheel's control wherever the instrument has one.
 
+**Expression:** every instrument's Expression group has a switch for each
+of the five ways a key is played beyond which key it is, as a Seaboard names
+them: Strike (how hard it goes down), Glide (a note's own pitch bend), Slide
+(its own CC74), Press (aftertouch and MPE pressure) and Lift (how fast it
+comes up). Each is on until you or a preset turns it off: Strike off plays
+every note as hard as the computer keys, Lift off lets every note go at the
+instrument's own speed, and Glide, Slide and Press off are ignored (the pitch
+and mod wheels stay). A page shows the switches its instrument answers to,
+and so do the plugins.
+
 **The RISE's panel:** while a Seaboard is plugged in, each page draws it at
 the left: its faders and pad with the controls they move and where they are,
 its keywave with a dot for each finger (across: the key and its Glide; up:

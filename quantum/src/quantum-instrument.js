@@ -4,6 +4,7 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './quantum-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -12,7 +13,7 @@ export const fMax = (fs) => Math.min(20000, 0.45 * fs);
 
 export const INSTRUMENT = {
   id: 'quantum',
-  groups: GROUPS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                     // MIDI keys: A0–C8

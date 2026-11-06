@@ -58,6 +58,7 @@ import { startMIDI, resumeMIDI, pageMIDI, wheelValue, SOFT_PEDAL, touched, creat
 import { attachPresets } from './user-presets.js';
 import { connectQuality, qualityControl } from './quality.js';
 import { dress, faceOf } from './faces.js';
+import { EXPRESSION_IDS, responds } from './expression.js'; // the Expression switches
 import { computerKey } from './taps.js'; // a second instrument's share of the computer keys (shared/layer.js)
 import { host, pluginAudio, pageValue, keysFrom } from './in-plugin.js';
 
@@ -131,7 +132,7 @@ export function createShell(cfg) {
       await ctx.audioWorklet.addModule(new URL('./worklet.js', import.meta.url)); // forte-processor, and the chain's limiter
       const node = new AudioWorkletNode(ctx, 'forte-processor', {
         numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
-        processorOptions: { wasm: { name: cfg.wasm.name, bytes } },
+        processorOptions: { wasm: { name: cfg.wasm.name, bytes }, keyVelocity: cfg.keyVelocity },
       });
       const chain = createChain(ctx, node, cfg.chain || {});
       const analyser = ctx.createAnalyser(); analyser.fftSize = 8192; analyser.smoothingTimeConstant = 0.55;
@@ -350,6 +351,7 @@ export function createShell(cfg) {
     det.innerHTML = `<summary>${g.title}</summary>`;
     // faces first, side by side, then the rest (the page's order, not the parameters')
     for (const p of [...g.params].sort((a, b) => !!faceOf(b) - !!faceOf(a))) {
+      if (EXPRESSION_IDS.includes(p.id) && !responds(cfg, p.id)) continue; // a switch for what this instrument doesn't answer to (yet)
       const wrap = document.createElement('div');
       wrap.className = 'param';
       if (p.strip) wrap.dataset.perform = ''; // in the strip above the keys (shared/layout.js)

@@ -4,15 +4,17 @@
 
 import { GROUPS, DEFAULTS, PRESETS, KEY_LO, KEY_HI, KEY_MIN, KEY_MAX } from './harpsichord-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 export const INSTRUMENT = {
   id: 'harpsichord',
-  groups: GROUPS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C8, 21–108
+  lift: 'how fast the jack falls back: a slow lift lets the damper settle softly', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // FF–f³, 29–89, until Full range opens the rest
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
   faders: ['front8', 'back8', 'four', 'xFront', 'xBack'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

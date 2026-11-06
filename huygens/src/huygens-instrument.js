@@ -5,18 +5,20 @@
 import { GROUPS, DEFAULTS, PRESETS } from './sync-params.js';
 import { KEY_LO, KEY_HI } from './tuning.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 export const INSTRUMENT = {
   id: 'huygens',
-  groups: GROUPS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'tone', 'body', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_LO, KEY_HI],                  // MIDI keys: A0–C8, 21–108
   space: 'hold',                            // Space and CC64 latch the keys
   modWheel: 'kick',                         // CC1: the pulse coupling, from its default up
   mpe: { bend: 48 },                        // MPE: a note's bend turns its lamp's resistor (the coupling is every lamp's: no slide)
+  strike: false, // velocity does nothing: a lamp flashes as its own circuit sets, whatever the key (shared/expression.js)
   faders: ['rSrc', 'mistune', 'body', 'tone', 'kick'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/huygens), built as WebAssembly. It tunes each
   // key itself (tuning, tonic, mistuning), or plays the frequency a note brings (huygens-wasm.js)

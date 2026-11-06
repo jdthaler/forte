@@ -17,7 +17,7 @@
 namespace forte::harpsichord {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { build, manual, coupler, front8, back8, four, lute, buff, hooks, material, stiff, overlap, stagger, xFront, xBack, xFour, jackLine, xLute, detune, loss, damper, sympathy, fmax, kc, side, fullRange, soundboard, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { build, manual, coupler, front8, back8, four, lute, buff, hooks, material, stiff, overlap, stagger, xFront, xBack, xFour, jackLine, xLute, detune, loss, damper, sympathy, fmax, kc, side, fullRange, soundboard, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -113,6 +113,8 @@ inline const ParamInfo kParams[p::count] = {
   {"cents9", "Major 6th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents9, 1},
   {"cents10", "Minor 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents10, 1},
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
+  {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
 inline const PresetValue kPreset1[] = {{p::manual, 1}, {p::back8, 0}};

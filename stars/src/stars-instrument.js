@@ -4,13 +4,14 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './stars-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 export const KEY_LO = 21, KEY_HI = 108; // A0–C8
 
 export const INSTRUMENT = {
   id: 'stars',
-  groups: GROUPS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_LO, KEY_HI],              // MIDI keys: A0–C8

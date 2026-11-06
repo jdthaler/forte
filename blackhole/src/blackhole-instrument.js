@@ -4,12 +4,13 @@
 
 import { GROUPS, DEFAULTS, PRESETS, KEY_LO, KEY_HI } from './ringdown-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 export const INSTRUMENT = {
   id: 'blackhole',
-  groups: GROUPS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'tone', 'stereo', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_LO, KEY_HI],                    // MIDI keys: A0–C8, 21–108

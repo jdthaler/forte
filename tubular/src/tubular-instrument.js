@@ -4,6 +4,7 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './tubular-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -12,7 +13,7 @@ export const KEY_LO = 60, KEY_HI = 77, KEY_MIN = 21, KEY_MAX = 108;
 
 export const INSTRUMENT = {
   id: 'tubular',
-  groups: GROUPS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C8, 21–108

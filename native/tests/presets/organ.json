@@ -74,7 +74,8 @@
         "percThird": true,
         "vib": "off",
         "leslie": "bypass",
-        "motor": true
+        "motor": true,
+        "strikeOn": true
       }
     }
   ]

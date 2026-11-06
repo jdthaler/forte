@@ -4,6 +4,7 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './hydraulis-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -12,7 +13,7 @@ export const KEY_MIN = 21, KEY_MAX = 108; // A0–C8, with the full range open
 
 export const INSTRUMENT = {
   id: 'hydraulis',
-  groups: GROUPS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],               // MIDI keys: all 88, A0–C8
