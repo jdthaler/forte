@@ -1,4 +1,0 @@
-# split and layer two instruments on the site
-
-### Forte (minor)
-- **Two instruments at once on every page:** **+ Layer** in the keyboard bar, beside ⌨, adds a second instrument, as in the Forte app: layered with the page's, so both play every key, or split from it, the second below the split point (any key from C1 to C7, or the next one you press). Its panel picks the second, Layer or Split, its preset and its volume, and links to its page; the second plays with the settings from its own page, and its preset and volume here are its settings there too. The keys show which one plays each key in its colour, with a line at the split. The computer keys, the keys on screen and MIDI all reach it; the pedals, the wheels, aftertouch, pitch bend, MPE and Panic reach both, and a program change only the page's. A gentle limiter keeps the two together under full scale. Each page remembers its second until you choose "No second instrument".

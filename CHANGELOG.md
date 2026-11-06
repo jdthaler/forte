@@ -16,6 +16,330 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-11-06 — screen readers, keyboard focus and Reduce Motion; Cimbalom; the cristal Baschet; the Gamelan; the gong plays the same from a Seaboard as from the computer keys; a Windows installer and Linux packages; the Marimba and Xylophone; songs from MIDI files; the site works offline; a hung page view fails the page check by name; the Pipe Organ answers a Seaboard's Press; Huygens and the springs in the plugin window's views; the site's views in the plugin window; Morph between two presets; a Seaboard RISE's panel at the left of every page; a Seaboard RISE's own settings, read and set from its panel; the Musical Saw; a Seaboard's resting finger leaves the notes alone; site review fixes; split and layer two instruments in the Forte app; split and layer two instruments on the site; the page check splits its pages and reuses its base's counts; transpose and octave; Tubular Bells
+
+### Forte 0.46.0
+- **A screen reader names everything:** the symbol buttons in the keyboard bar (⌨, − +, ◀ ▶) say what they do; each view's picture is named by its view and described by its caption; a slider says its value as the page shows it (10.0 ‰, not 523) on every page; a control's ⓘ explanation is read after its name; the bubble above the keys is read out as it opens; the keys are one named picture, not a list of letters; the MIDI pill announces a device; and on the front page each Listen, Plugin and How it works names its instrument.
+- **Keyboard focus stays where it was:** a button or menu used from the keyboard (Tab, then Enter or Space) keeps the focus, so Tab goes on to the next control and a screen reader keeps its place, instead of starting again at the top. The pointer still hands the keys back to the instrument. A group's title in the Controls panel is no longer a Tab stop that does nothing.
+- **A focus ring on every control** reached with Tab, in the instrument's colour, including the handle between the views and the controls.
+- **Reduce Motion:** with the system's setting on, every view draws four times a second instead of every frame, so it steps rather than scrolls and swings, and nothing in the page slides, springs or scrolls smoothly.
+- `tools/check-pages.mjs` fails on a control a screen reader can't name, a view's canvas without a name or a slider without its value as text; `test/site-tests.mjs` on a view with an animation loop of its own.
+- **A Windows installer:** All Plugins' Windows box has *Installer*,
+  `Forte-plugins-windows-setup.exe`, with every instrument in every format. Its Components page
+  installs everything, the Forte app alone, or the formats and instruments you tick; the VST3s
+  and CLAPs go where every DAW looks, the apps in `C:\Program Files\Forte` with Start menu
+  shortcuts, and it uninstalls from Settings. Unsigned, so SmartScreen asks once.
+- **Linux packages:** All Plugins' Linux box has *.deb* (Debian 13, Ubuntu 24.04, Mint 22 and
+  later) and *.rpm* (Fedora 40 and later), with every instrument in `/usr/lib/vst3`,
+  `/usr/lib/clap` and `/usr/lib/forte`, the Forte app in the app menu and as `forte`, and the
+  libraries they need. A newer package upgrades the one before.
+- The `native` workflow builds both on its full runs and installs, verifies and uninstalls each
+  on a clean system (Windows; Debian, Ubuntu and Fedora containers) before a release keeps them.
+- The download boxes wrap between their groups (All, the formats, the Forte app, the
+  installers), never in the middle of one, so a phone no longer leaves a bar at a line's end.
+- **♪ Songs, on every page:** a song played live on the instrument, its keys going down as it plays. Six public-domain pieces of Forte's own (Bach's Prelude in C, the opening of Für Elise, Petzold's Minuet in G, Greensleeves, the Ode to Joy and Amazing Grace, as MIDI files in `songs/`), or any MIDI file of yours: *Open a MIDI file…*, or drop a `.mid` on the page. ▶ Play / ■ Stop, where it is (drag to move) and its speed, 50 to 150 %.
+- A song plays as a MIDI keyboard does, through the velocity curve, the pedals, pitch bend and the mod wheel; of a General MIDI file the page leaves out the program changes, volume and drums. A song that would mostly fall beyond the instrument's keys moves by whole octaves to fit them, and the card says so.
+- The songs are kept with the site for offline use.
+- **Forte works offline:** on the first visit the browser keeps a copy of the whole site in the background (about 5 MB), so every instrument then opens and plays without a network, the iPhone's home-screen app above all. A service worker (`sw.js`) serves each page and everything it loads (scripts, styles, WebAssembly, READMEs, icons) from the copy, online or not, so a page never mixes files from two releases; the front page's demos and the link pictures stay online only.
+- A new release downloads in the background, only the files that changed, each checked against the release's list, and takes over on the way to the next page when no other Forte tab shows the old one (or once every Forte page is closed). A home-screen app left open looks for one when it comes back after an hour.
+- Offline, an address the site doesn't have shows the site's 404 page, and a demo's ▶ Listen button goes back when it can't play.
+- `tools/release.mjs` writes the service worker's list (`tools/offline.mjs`) as the release's last step, and a pull request into `live` fails when it isn't the site's; `tools/check-offline.mjs` (in the `pages` job) opens every page offline, starts its audio and tries a release.
+- `tools/check-pages.mjs` gives each page view 300 s (`--timeout` changes it). A view that hangs, as a few did on GitHub's runners and held the `pages` job for hours, is listed by name (`HUNG  kalimba/ phone: timed out after 300 s while opening the instrument menu (running …)`) with the step it was at and the JavaScript the page was running, paused in the debugger. Its browser context is closed, the other views carry on, and the view is opened once more in a new context: a page that hangs twice fails.
+- A click in the page check waits up to 10 s for its target, not 2 s, so a busy runner no longer fails a toggle that works. Each pass also says how long its slowest page view took.
+- **The plugin window's views get what a page reads from its engine's memory:** an instrument's plugin copies that data out with the engine's message (`native/plugin/site.h`, `Views`), so its views draw it as the page does.
+- **The plugin window shows the instrument's views:** its new **Views** button, beside the pedal, opens a pane above the controls with the views from the instrument's page (the modes, the waveforms, the spectrum and spectrogram), drawing what the plugin plays: the DAW's notes and automation, a MIDI keyboard, the window's own keys and controls. Drag the bar between the pane and the controls to share the window, or double-click it to go back to the usual share; the window remembers both. The window opens larger (1000 × 760).
+- Each plugin carries its page and the site's shared code and serves them to its window itself, so the views need no network; the downloads grow by about 300 KB a plugin. While the views show, the plugin sends the window the engine's messages and its sound (before the room and the limiter); with them hidden it sends nothing more than before.
+- A plugin release is published when Forte's version moves too, since the plugins now carry `shared/`.
+- `editor.html?instrument=<slug>`, served by `npm run serve`, is the plugin window with a real instrument's engine playing silently, for working on the window in a browser.
+- **Morph, on every instrument page and in every plugin:** one slider that takes the sound from one preset to another. A Morph group, last in the Controls panel, has *From* and *To* (Default settings, the instrument's presets or your own) and the *Morph* slider: at 0 % the sound is From, at 100 % it is To, and between every setting the two give moves part of the way, a number smoothly (by equal ratios where its control is logarithmic) and a choice or a switch halfway across. Volume, the room and the tuning stay as you have them, as they do when you choose a preset.
+- Choosing a preset from the Presets menu makes it the one you morph from, with the slider back at 0 %; choosing the one you morph to puts the slider at 100 %. At either end the Presets menu names that preset.
+- The page keeps From, To and the slider in the browser, per instrument; they are in no preset or link.
+- **In the plugins and the Forte app** Morph from, Morph to and Morph are parameters of their own, saved with the song: a DAW can automate Morph to sweep between two presets. The plugin's own presets (files) are not among the choices, only the instrument's.
+- **The RISE's panel:** while a Seaboard is plugged in, each instrument page draws it at the left, as PhuzzBox draws its pedal: its three faders and its XY pad, with the controls they move on that instrument and where they are; whether it's in MIDI mode (white lights) or hasn't sent a fader yet (cyan: its own sensitivity); its keywave, a dot for each finger across where it glides, up where it slides, as big as it presses; and its five dimensions, Strike, Glide, Slide, Press and Lift, each lit while it comes in, with the newest finger's value and what it does here. It says when the RISE isn't sending MPE, or MPE is off in the MIDI menu. The chevron folds it to a rail (remembered); on a phone it follows the controls.
+- Each instrument's descriptor says what pressing into a held key does (`aftertouch`), and `test/mpe-tests.mjs` checks that the engine does something with pressure exactly when it says so.
+- **The RISE's own settings:** the RISE's panel reads its settings over SysEx, once the browser allows it (a button the first time, then by itself): its MIDI mode and bend range, how it sends Press and Slide, its faders' and pad's CCs, its octave and transpose, its firmware and battery, and what differs from what Forte expects. **Set up for Forte** (pressed twice) writes MPE on a lower zone of 15 at ±48, Slide on CC74 (absolute), Press as channel pressure and the faders and pad on CC 107, 109, 111, 113 and 114, then reads it back; five **Sensitivity** sliders set its Strike, Glide, Slide, Press and Lift. The RISE keeps them, as it keeps what ROLI Dashboard writes. Nothing is written but by those. The protocol is GRAB's (github.com/demixme/GRAB, MIT), confirmed there on the original RISE 25 and 49 and the RISE 2.
+- The RISE's panel shows Slide as the instruments now hear it: how far each finger has slid from where it landed (its dot still sits where it is on the key).
+- **A note's slide is from where its finger landed:** MPE's CC74 (and a plugin host's per-note
+  brightness) now moves a note's mod-wheel control by how far the finger has slid from where it
+  landed, towards either end of the key, instead of by where it is on the key. A Seaboard sends
+  each note's position as it lands, so a finger resting mid-key put every note's control halfway
+  to its top (nearly silencing Quantum, NMR, Project 8 and the Spring Reverb, rolling the Marimba
+  and the Steel Pan). Now a note plays as the computer keys play it until the finger slides.
+- **A drawn switch in the bar above the keys is a plain checkbox there:** the Regal's tremulant drawknob was cut in half on a desktop and took a row of its own on a phone; its twin in the Controls panel keeps the drawknob. Its ⓘ reads "About Tremulant", without the hyphen the knob's legend needs.
+- **A group whose controls are all hidden says why:** instead of a bare heading, it says how to bring them back (a descriptor's group can give the words as `empty`).
+- **A phone held sideways, short of room in the keyboard bar, drops the overview's ◀ ▶** (the overview still scrolls the keys when dragged or tapped), so a pedal button is no longer cut short; a checkbox in the bar keeps its name beside its box.
+- The front page's description names the science instruments too, and About says which keyboard rows are the black keys.
+- **Two instruments at once in the Forte app:** **+** beside the Instrument menu layers a second instrument with the first, so both play every key, or splits the keyboard between them, the second below the split point (any key from C1 to C7, or the next one you press). A bar under the header switches between Layer and Split, swaps the two, and picks whose controls and presets the window shows; × takes one away. The keyboard marks each one's keys in its colour, and the app reopens with both, as they were. Each keeps its own settings, Volume included, so the balance is theirs; the pedals, the wheels and Panic reach both, a program change the one shown, Quality and MPE are the computer's and the controller's, and a gentle limiter keeps the two together under full scale. A host sees the first instrument's parameters.
+- **Two instruments at once on every page:** **+ Layer** in the keyboard bar, beside ⌨, adds a second instrument, as in the Forte app: layered with the page's, so both play every key, or split from it, the second below the split point (any key from C1 to C7, or the next one you press). Its panel picks the second, Layer or Split, its preset and its volume, and links to its page; the second plays with the settings from its own page, and its preset and volume here are its settings there too. The keys show which one plays each key in its colour, with a line at the split. The computer keys, the keys on screen and MIDI all reach it; the pedals, the wheels, aftertouch, pitch bend, MPE and Panic reach both, and a program change only the page's. A gentle limiter keeps the two together under full scale. Each page remembers its second until you choose "No second instrument".
+- `tools/check-pages.mjs --shard k/n` checks every nth page from the kth, so CI checks the pages on two machines at once.
+- `--base-json a.json,b.json` with `--base <ref>` compares with the counts a run on `<ref>` wrote with `--json`, and opens only the pages of `<ref>`'s that they have no counts for (a new page, or a file not written yet). Each run on `main` and `live` keeps its counts, so a pull request's page check opens each page once, not twice.
+- **Octave and Transpose for MIDI keyboards, on every page and in every plugin:** they move the MIDI keys up to four octaves and twelve semitones either way, so a 25-key controller reaches all 88 keys, or a piece fingered in one key sounds in another. A note held while they change ends where it began, as do its poly pressure and its MPE bend and slide; a note moved past MIDI's 0–127 plays nothing. The keys on the screen and the computer keys play what they show. The plugins have them as Transpose and Octave parameters (in the window's MIDI group, saved with the project, after MPE), moving CLAP's note events and note expressions too, and the Forte app keeps them when the instrument changes and gives both instruments of a layer or split the same (the split point stays on the keyboard's own key).
+- **The MIDI menu:** once MIDI is on, the MIDI status opens one menu with Touch (the velocity curve), MPE, Octave and Transpose, in place of the Touch and MPE pills beside it, so the header keeps to one line in a 900-pixel window and a phone can reach them too. Every page shares the four; while the keys are moved the status says how far, in the instrument's colour, and turning MIDI on says so in a toast.
+- New on the front page: Marimba and Xylophone, Gamelan, Cimbalom, Musical Saw, Tubular Bells and Cristal Baschet.
+
+### Ribbon Piano 0.13.0
+- Keyboard focus is kept after Enter or Space, its views follow Reduce Motion, and its sliders say their values as shown.
+- Its page follows the plugin in the plugin window's Views.
+- **Your own presets and links** in the Presets menu, as on every other page (it was the one page without them), and with them Morph and the tour's presets.
+
+### Harpsichord 0.9.1
+- Its engine's messages reach the plugin window's views.
+
+### Pipe Organ 0.10.0
+- **Aftertouch leans on the bellows:** pressing into a held key (polyphonic aftertouch, MPE pressure such as a Seaboard RISE's Press, or channel pressure) raises the wind the bellows' weights set, up to double and no further than 6000 Pa, as on the Free-Reed Organ. The wind is every key's, so the hardest-pressed key sets it, and it falls back when that key lets go: the pipes grow louder and brighter, and overblow if you lean hard on a high wind.
+- The Seaboard RISE's panel says what Press (aftertouch) does here: leans on the bellows: more wind, up to double.
+
+### Free-Reed Organ 0.10.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: more wind, up to double.
+
+### Vibraphone 0.10.1
+- The bars' finite elements take the material they solve (aluminium, as before), so the Marimba and
+  Xylophone's wooden bars share them. The sound is unchanged.
+
+### Steel Pan 0.5.0
+- **Pressure no longer rolls a note:** a Seaboard sends pressure from any finger at rest, which set
+  every held note rolling. The mod wheel and a note's own MPE slide still roll.
+
+### Hydraulis 0.2.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: the pumpers work harder, and the wind rises.
+
+### Regal 0.1.2
+- The Seaboard RISE's panel says what Press (aftertouch) does here: more weight on the bellows.
+
+### Clavichord 0.1.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: the tangent presses harder: the note goes sharp.
+
+### Brass 0.1.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: blows harder, up to half as hard again.
+
+### Timpani and Tabla 0.2.0
+- The Seaboard RISE's panel says what Press (aftertouch) does here: pressed firmly, the heel goes into the head: the pitch rises.
+- **The heel comes only with a firm press:** pressure below half does nothing, and the heel goes in
+  from there to full pressure, so a finger resting on a Seaboard no longer mutes every held drum.
+  Leaning in still swoops the bayan.
+
+### Marimba and Xylophone 0.1.0
+- **Rosewood bars, cut to a chord.** Every key is a bar solved by finite elements (the vibraphone's
+  Timoshenko beam, with the wood's stiffness, density and soft shear), its arch cut shaped until
+  the marimba's first three modes sit at 1 : 4 : 10, or the xylophone's thicker bar's first two at
+  1 : 3 (its third falls near 6). Instrument switches between them; Undercut depth takes the cut
+  away down to a plain bar's clang.
+- **Wood loses fast:** the rosewood's internal friction (anchored on Aramaki et al.'s measured
+  rosewood bars) gives a short note whose upper partials die first; a knob from dry to ringing wood.
+- **The resonators:** a stopped tube under each bar, cut to a quarter wave of its note (1.2 m at C2),
+  coupled to the bar through the air in the gap; and the tube's second resonance, three times higher,
+  on the xylophone's twelfth. A centred mouth sits under mode 2's node and gets nothing from it: move
+  it off centre and the twelfth speaks through the tube.
+- **Mallets and the roll:** a stiffening mallet head from soft yarn to hard plastic; held notes roll
+  (the two mallets in turn) on the mod wheel, on aftertouch for one key and on MPE slide; Space holds
+  the keys down. A marimba has no dampers, so letting go of a key only ends its roll.
+- Views: the bar to scale with its modes in slow motion, the tube's two standing waves and the energy
+  in bar and tube, spectrum, spectrogram and the mode table. Fifteen presets, demos, a guided tour and
+  the plugin (AU code Mrmb).
+- **Pressure no longer rolls a note:** a Seaboard sends pressure from any finger at rest, which set
+  every held note rolling. The mod wheel and a note's own MPE slide still roll.
+
+### Gamelan 0.1.0
+- **New instrument: the Gamelan**, the bronze orchestras of Java and Bali, from their physics. A gangsa's bars hang over bamboo tubes, a saron's lie on a trough: thick bronze bars solved as Timoshenko beams (Huang's frequency equation), cut to their notes, that bend and, struck off their axis, twist; a gangsa's bar and its tube are two oscillators sharing the air, so its note is louder and shorter. A bonang's kettles and the hanging kempul and gong ageng ring the modes measured on real gongs (Perrin et al. 2014; Krueger, Gee and Grimshaw 2010), boss or face; a gong ageng's curved face makes its note's second harmonic, which beats against its second round mode a little below: the great gong's slow throb, on a knob.
+- **Pélog and sléndro**: pélog's seven notes on the white keys (nine-equal steps), sléndro's five on the black (240 ¢), the two sharing pélog 6; or the keyboard's twelve. The keyboard's tuning moves either.
+- **Ombak**: in Bali every metallophone has a partner tuned a few hertz away, so each note beats; the beat is the same number of hertz in every register. On the mod wheel, and each MPE note's slide is its own pair's.
+- **The damping hand**: each stroke stops the player's last bar (a chord rings on), or key-up does, or nothing; Space lifts it. **The whole gamelan** gives each octave its own instrument and player: gong ageng, kempul, slenthem, demung, saron, peking.
+- Eight demos, a guided tour, 15 presets, and its plugins (AU `Gmln`).
+
+### Cimbalom 0.1.0
+- New instrument, in the traditional section: Schunda's concert cimbalom (Budapest, 1874) and,
+  under **Instrument**, the hammered dulcimer, all 88 keys.
+- **The hammers:** thrown, not pressed: a light head on a flexible stick, free while it touches
+  the strings, with a cotton, leather or bare wood face (Hunt–Crossley contact, solved each
+  sample); a whippy stick lets the head strike alone and come back. The strike point is the mod
+  wheel and each key's MPE slide.
+- **The strings:** courses of four steel strings (three copper-wound in the bass; two on the
+  dulcimer), each a stiff string's stretched partials, slightly out of tune with each other.
+  They share the bridge and drive each other through it (Weinreich): in step they drain four
+  times as fast, out of step the note beats and lingers.
+- **The dulcimer's divided strings:** its treble bridge splits each string 2 : 3, so the side
+  not struck sounds a fifth away and rings along where their partials meet.
+- **Dampers:** a felt bar that held keys lift (or, as on the real cimbalom, only the pedal, or
+  none at all, as on the dulcimer); with it up the other courses ring along as sympathetic
+  strings.
+- **Tremolo:** hold a key and the hammers keep striking it at **Tremolo** rate, aftertouch
+  setting how hard.
+- **The soundboard:** a plate's modes under the bridges, radiating the strings' force.
+- Views: the course's string and hammer, the decay, each stroke's contact force, the spectrum
+  and spectrogram.
+- Twelve presets, seven demos, a guided tour, and the plugins (AU code `Cimb`).
+- The Seaboard RISE's panel says what Press (aftertouch) does here: how hard the tremolo strikes (with the tremolo on).
+
+### Musical Saw 0.1.0
+- The Seaboard RISE's panel says what Press (aftertouch) does here: the bow presses harder.
+- New instrument, in the traditional section: a tapered steel saw blade, its handle held between
+  the knees and its tip in the fingers, bent into an S and bowed on its back edge or struck with
+  a felt mallet, all 88 keys (past the blade's compass, the same saw built bigger or smaller).
+- **Why it sings:** bending a curved sheet stretches it, so the curved blade on either side of
+  the S's inflection is stiffer to waves that vary across it, and a mode is trapped where the
+  curvature turns over, away from the hands (Shankar, Bryde and Mahadevan, 2022). The blade is a
+  thin shallow shell (Donnell); its trapped modes are solved across the width (a free–free beam)
+  and along it (a table of the one-dimensional problem, checked against its harmonic limit and a
+  variational bound). Five modes are played.
+- **The bend plays the note:** the blade narrows toward the tip, so the player slides the S
+  along it for each note up; **How tight the S** squeezes the mode and raises it, **Blade
+  thickness** moves every note toward the handle.
+- **The leak:** a loose bend lets the mode tunnel through the curved blade to the hands
+  (WKB transmission times the bounce rate, Gamow's), and the note dies in a moment. **Bent into a
+  J**, with no inflection, nothing is trapped: a dull clunk (Q about 10 against 150).
+- **The bow:** rosin's friction on the edge, stick and slip solved implicitly each sample, its
+  threshold worked out from the trapped mode's losses; **Bow pressure** as a multiple of it,
+  **Bow speed**, and **Where it is played** from the sweet spot at the inflection: 5 cm off, the
+  note falls silent, or on high notes jumps to the second trapped mode. Velocity and aftertouch
+  press harder; pressing too hard, it bites. **A felt mallet** rings it instead.
+- **Playing:** the knee's vibrato fading in (mod wheel), pitch bend, MPE (each note's bend,
+  slide and pressure), and **One saw**, the instrument as played: one note that slides to each
+  key pressed while another is held. A key let go lifts the bow and lays a hand on the blade;
+  the pedal holds the hand off.
+- Views: the saw from the side and from above, with the trapped mode where it is; the trap (the
+  band edge along the blade, the note and the hands); the key's numbers; spectrum and
+  spectrogram.
+- Ten presets, eight demos, a guided tour, and the plugins (AU code `Musi`).
+
+### Tubular Bells 0.1.0
+- New instrument, in the traditional section: orchestral chimes, brass tubes 1½ inches across hung
+  from a frame and struck on their caps with a rawhide mallet. The orchestra's C4–F5 by default,
+  or all 88 keys (Full range (A0–C8): every key a tube cut to its pitch).
+- **The tubes:** free Timoshenko beams (bending, shear and rotary inertia, Cowper's shear
+  coefficient for a thin-walled tube), the cap at the struck end a point mass with its rotary
+  inertia. Every tube is solved as it is cut, for the metal (brass, aluminium or steel), the
+  diameter, the wall and the cap, and up to 48 modes play live.
+- **The strike note:** each tube is cut so that mode 4 sounds an octave above its key; modes 4, 5
+  and 6 then lie near 2 : 3 : 4, and the ear hears the missing fundamental, a pitch no mode
+  plays. The Strike note view puts every mode on that note's harmonics.
+- **The air:** each mode radiates as a line of dipoles along the tube; below coincidence (a few
+  hundred hertz) the air flows round it, above it the high modes lose their energy in a second or
+  two while the strike note hums on. Two microphones in front of the frame hear each mode with
+  its own gain and phase, the low tubes on the left and the high ones on the right, the farther
+  one a little later; Listening distance moves them.
+- **The mallet:** a Hertzian contact of about a millisecond (rawhide), from a leather-wrapped
+  face that leaves the strike note alone to brass that rings every mode; the strike point moves
+  down the tube, where modes with their nodes there drop out. The mod wheel and MPE slide set the
+  face, per note with MPE.
+- **The damper bar:** felt on every tube whose key is up, lifted by the sustain pedal (or the
+  Pedal held down switch).
+- Views of the frame (the struck tube bending, the mallet, the bar), the strike note, the mode
+  table, the spectrum and the spectrogram; twelve presets, eight demos and a guided tour.
+
+### Electric Grand 0.11.1
+- Replay and the motion's speed keep keyboard focus after Enter or Space.
+
+### Tonewheel Organ 0.12.1
+- Keyboard focus is kept after Enter or Space, its views follow Reduce Motion, its sliders say their values as shown, and the vibrato scanner is a named picture.
+- Its page follows the plugin in the plugin window's Views, the console's drawbars and switches included.
+
+### Tine Piano 0.12.1
+- Keyboard focus is kept after Enter or Space, its views follow Reduce Motion, and its sliders say their values as shown.
+- Its page follows the plugin in the plugin window's Views.
+
+### Reed Piano 0.11.1
+- Replay keeps keyboard focus after Enter or Space.
+
+### Tangent Clavier 0.10.1
+- Replay and the motion's speed keep keyboard focus after Enter or Space.
+- The Seaboard RISE's panel says what Press (aftertouch) does here: the tangent presses harder: the pitch rises.
+
+### Trautonium 0.2.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: presses the wire harder onto the rail: louder.
+
+### Telharmonium 0.1.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: presses the key further in: louder.
+
+### Magnetic Resonator Piano 0.1.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: more current in the electromagnet.
+
+### Ondes Martenot 0.1.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: presses the intensity key harder: louder.
+
+### Cellulophone 0.1.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: the key goes deeper: more light, louder.
+
+### Viola Organista 0.11.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: presses the string harder onto the wheel.
+
+### Glass Armonica 0.10.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: the finger presses harder on the glass.
+
+### Clavicylinder 0.3.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: the key presses harder on the cylinder.
+
+### Hurdy-Gurdy 0.2.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: the hand leans into the crank (every string).
+
+### Pyrophone 0.10.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: parts the flames further.
+
+### Singing Arc 0.9.1
+- The Talking arc group says to choose Talking arc under Arcs, rather than showing an empty heading.
+
+### Singing Voice 0.1.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: the lungs push harder.
+
+### Cristal Baschet 0.1.0
+- **A new instrument: the Baschets' cristal (Paris, 1952).** Glass rods stroked by wet fingers, each clamped on a steel stem whose bending mode is the note: the stems are Euler–Bernoulli beam elements carrying the rod's mass and rocking, each cut so its speaking mode is the key's note and then tuned by playing it, as a maker does.
+- **The finger** grips and slips on the glass by the friction Couineaux, Ablitzer and Gautier fitted to fingers on glass (2023), solved in closed form each sample: the note speaks above a threshold pressure the stability analysis gives, grows from nothing just over it, turns rough past Schelleng's limit, and goes quiet with dry fingers. Strokes go back and forth (20 cm each way), toward you (lifting and landing again) or on and on; the stroke's speed is the loudness.
+- **The radiators:** the stems pull on a heavy collector whose fibreglass cones radiate as pistons, a cut-steel flame adds its bending modes, and 24 steel whiskers ring in sympathy where one meets a harmonic and sway slowly through them (Couineaux 2025).
+- Views of the resonator bending and the stick and slip at the finger, a table of each stem's modes and thresholds, 14 presets, a guided tour, eight demos, and the plugins (AU code Cris).
+- MIDI: velocity and the mod wheel (or a key's MPE slide) set the stroke's speed, aftertouch presses harder, Space or the sustain pedal keeps the fingers stroking; a Seaboard RISE's faders move the wetness, the rods' place on their stems and the whiskers' sway, and its XY pad the pressure and speed.
+- The Seaboard RISE's panel says what Press (aftertouch) does here: the wet fingers press harder on the rods, up to twice.
+
+### Huygens Keyboard 0.11.1
+- Keyboard focus is kept after Enter or Space, its views follow Reduce Motion, and its sliders say their values as shown.
+- **The lamp firings and what the chord is actually playing move in the plugin window's Views**, as on the page.
+- Its page follows the plugin in the plugin window's Views.
+
+### Gong Keyboard 0.11.0
+- **Pressure no longer chokes the gong:** aftertouch put a hand on the gong, so a Seaboard, which
+  sends pressure from any finger resting on a key, choked every held note within a second (and a
+  channel's pressure damped gongs the sustain pedal was holding). Pressure now does nothing, as on
+  Tubular Bells and the Gamelan: the gong rings while the key is held and the hand goes on when it
+  is let go, from a Seaboard, a keyboard with aftertouch or the screen alike.
+
+### Black-Hole Keyboard 0.10.1
+- Keyboard focus is kept after Enter or Space, its views follow Reduce Motion, and its sliders say their values as shown.
+- Its page follows the plugin in the plugin window's Views.
+
+### Bubble Organ 0.9.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: more gas through the nozzle: more bubbles.
+
+### Spring Keyboard 0.7.1
+- **The echoes of the last strike show in the plugin window's Views**, as on the page.
+
+### Star Keyboard 0.7.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: drives the star harder, up to twice.
+
+### Wind Harp 0.8.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: the wind blows harder.
+
+### Storage Ring 0.6.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: more RF voltage.
+
+### RF Cavity Bells 0.5.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: more beam current.
+
+### Collider Showers 0.4.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: more pile-up.
+
+### Whistlers 0.4.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: more chorus.
+
+### CUORE 0.3.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: more heat in each pulse.
+
+### Chladni Plate 0.1.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: the bow presses harder.
+
+### Birdsong 0.1.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: a harder breath, which sharpens the note.
+
+### Singing Dunes 0.1.1
+- The Seaboard RISE's panel says what Press (aftertouch) does here: pushes more sand down the face.
+
 ## 2026-11-04 — Brass; Forte's version moves with the front page's new instruments; the NMR Spin Echo
 
 ### Forte 0.45.0
