@@ -87,6 +87,7 @@ class HydraulisEngine : public Engine {
   void pressure(double value, int key) override; // leaning on a key: the pumpers work harder
   void bend(double value) override;              // the air warms or cools: every pipe's sound and jets ×r
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
+  void slide(double value, int key) override; // how far one key's slide goes in
   int voiceCount() const override;
   bool ready(int key) { return bool(data.get(key, version)); }
   void process(float *L, float *R, int n) override;
@@ -106,6 +107,7 @@ class HydraulisEngine : public Engine {
     std::array<Pipe, RANKS> pipes{};
     double s = 0, sv = 0, open = 0; // the slide: how far in (a share of its travel), its speed, and the holes' open share
     double s0 = 0, pushT = 0, pushDur = 0; // a push: where it started, how long it has gone, how long it takes
+    double depth = 1; // how far in a held key holds it (the travel knob, or the key's own slide)
     bool pushing = false, down = false, fading = false, dead = false, inUse = false;
     double retK = 1; // the finger's hold on the slide's return: its spring's pull × this (a lift's, forte/lift.h)
     double fade = 1, env = 0, age = 0, gl = 0, gr = 0, nb = 1;
@@ -122,6 +124,7 @@ class HydraulisEngine : public Engine {
   std::array<Voice *, POOL> voices{};
   int nVoices = 0;
   std::array<Voice *, 128> byKey{};
+  double travelOf(int key) const { return std::clamp(expr.slideOr(key, P[p::travel]), 0.05, 1.0); }
   std::array<double, NOISE_N> noise{};
   // the wind: the air's pressure, the water pushed out from under the bowl and its flow, and the
   // flows of the last sample

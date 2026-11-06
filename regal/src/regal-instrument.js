@@ -21,7 +21,7 @@ export const INSTRUMENT = {
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // C2–C6 until Full range opens the rest
   space: 'hold',                        // Space and CC64 latch the keys down (an organ has no damper)
   modWheel: 'pressure',                 // CC1: the weight on the bellows, from its default up to its maximum
-  mpe: { bend: 7 },                     // MPE: a key's own bend runs its reeds faster or slower (the wind is every key's: no slide)
+  mpe: { bend: 7, slide: { param: 'pallet', max: 0.03 } }, // MPE: a key's own bend runs its reeds faster or slower; its slide holds its pallet part open
   aftertouch: 'more weight on the bellows', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'how fast its pallet closes', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   controllers: { 67: 'tremulant' },     // the soft pedal: the tremulant while it is down

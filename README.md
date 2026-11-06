@@ -179,7 +179,10 @@ Piano, Electric Grand, Harpsichord, Vibraphone, Carillon, Kalimba, Tine and
 Reed pianos), the wheel along
 the Viola Organista's string, the felt onto the Tangent Clavier's, the
 chanterelles' pressure on the Hurdy-Gurdy's wheel, the finger down the Glass
-Armonica's bowl from its rim, the glass along the Clavicylinder's bar.
+Armonica's bowl from its rim, the glass along the Clavicylinder's bar. On
+the Pipe Organ, Free-Reed Organ, Regal and Hydraulis it is a key held part
+way: its pallet (the Hydraulis's slide) part open, so less wind and a
+softer, flatter note.
 Glide on the struck and plucked strings is a finger pressing a note's
 strings behind the bridge, up to a semitone sharp (the Ribbon Piano,
 Electric Grand, Harpsichord and Cimbalom), the Hurdy-Gurdy's tangent pushed

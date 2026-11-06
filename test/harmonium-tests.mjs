@@ -441,13 +441,17 @@ test('aliasing: a 2×-integrated C7 and a 1×-integrated G4 keep every inharmoni
   }
 });
 test('stability: seeded random combinations of extreme settings at 44.1 and 48 kHz, changed mid-note, with full aftertouch: no NaN, bounded, dying away after release', () => {
-  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'venue', 'fullRange', ...TUNING_KEEP].includes(q.id));
+  const sliders = GROUPS.flatMap((g) => g.params).filter((q) => !['volume', 'room', 'venue', 'fullRange', 'pallet', ...TUNING_KEEP].includes(q.id));
   let seed = 4242, worst = { pk: 0 };
   const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
   // the keyboard's tuning drawn apart, from its own sequence, so that the other parameters' combinations stay the ones they were
   let tseed = 777;
   const trnd = () => ((tseed = (tseed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
-  const tune = (p) => { for (const q of TUNING_PARAMS) { if (trnd() < 0.5) continue; p[q.id] = q.options ? q.options[Math.floor(trnd() * q.options.length)][0] : trnd() < 0.5 ? q.min : q.max; } return p; };
+  // the pallet's opening (a key held part way) drawn apart too, from a third sequence
+  let aseed = 999;
+  const arnd = () => ((aseed = (aseed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  const PALLET = GROUPS.flatMap((g) => g.params).find((q) => q.id === 'pallet');
+  const tune = (p) => { if (arnd() < 0.5) p.pallet = arnd() < 0.5 ? PALLET.min : PALLET.max; for (const q of TUNING_PARAMS) { if (trnd() < 0.5) continue; p[q.id] = q.options ? q.options[Math.floor(trnd() * q.options.length)][0] : trnd() < 0.5 ? q.min : q.max; } return p; };
   const pick = () => {
     const p = P();
     for (const q of sliders) {
@@ -472,16 +476,29 @@ test('stability: seeded random combinations of extreme settings at 44.1 and 48 k
   assert.ok(worst.pk < 4, `${worst.fs}: peak ${worst.pk.toFixed(2)} with ${JSON.stringify(worst.p1)} → ${JSON.stringify(worst.p2)}`);
   console.log(`        loudest of 12: ${worst.pk.toFixed(2)}`);
 });
-test(`MPE: a key's own bend reaches the WebAssembly as far as the descriptor's ±${INSTRUMENT.mpe.bend} semitones: C4 bent so far sounds there (within 12 ¢: the throat and cell keep their tuning), a bend past it lands at it, a bend of 1 changes nothing, and there is no slide (the wind is every key's)`, () => {
-  const max = INSTRUMENT.mpe.bend, bent = (st) => run(P(), [[0, 'msg', { type: 'noteBend', key: 60, value: 2 ** (st / 12) }], [0, 'msg', { type: 'slide', key: 60, value: 3000 }], [0, 'on', 60, 0.7]], 1);
+test(`MPE: a key's own bend reaches the WebAssembly as far as the descriptor's ±${INSTRUMENT.mpe.bend} semitones: C4 bent so far sounds there (within 12 ¢: the throat and cell keep their tuning), a bend past it lands at it, a bend of 1 changes nothing`, () => {
+  const max = INSTRUMENT.mpe.bend, bent = (st) => run(P(), [[0, 'msg', { type: 'noteBend', key: 60, value: 2 ** (st / 12) }], [0, 'on', 60, 0.7]], 1);
   const plain = hold(60, P(), 1);
-  assert.ok(INSTRUMENT.mpe.slide === undefined);
-  assert.deepEqual(bent(0).L, plain.L);
+    assert.deepEqual(bent(0).L, plain.L);
   for (const s of [1, -1]) {
     const r = bent(s * max), want = keyFreq(60) * 2 ** ((s * max) / 12), f = freqAt(r.L, want, 0.5 * FS, FS);
     assert.ok(Math.abs(cents(f, want)) < 12, `${s * max}: ${cents(f, want).toFixed(1)} ¢`);
     assert.deepEqual(bent(2 * s * max).L, r.L);
   }
+});
+test(`Slide: a key held part way opens its pallet only so far (the Pallet knob for every key, or a key's own slide down to ${INSTRUMENT.mpe.slide.max}): C4 held so is quieter and a little flat, a slide of 1 is the plain note, and a held key follows its slide`, () => {
+  const lo = INSTRUMENT.mpe.slide.max;
+  assert.equal(INSTRUMENT.mpe.slide.param, 'pallet');
+  const slid = (v) => run(P(), [[0, 'msg', { type: 'slide', key: 60, value: v }], [0, 'on', 60, 0.7]], 1);
+  const plain = hold(60, P(), 1), part = slid(lo), knob = hold(60, P({ pallet: lo }), 1);
+  assert.deepEqual(slid(1).L, plain.L);
+  assert.deepEqual(knob.L, part.L, 'the knob and the slide are the same opening');
+  const a = rms(plain.L, 0.5 * FS, FS), b = rms(part.L, 0.5 * FS, FS), dB = 20 * Math.log10(b / a);
+  assert.ok(dB < -4 && dB > -30, `${dB.toFixed(1)} dB`);
+  const want = keyFreq(60), f = freqAt(part.L, want, 0.5 * FS, FS);
+  assert.ok(cents(f, want) < 0 && cents(f, want) > -30, `${cents(f, want).toFixed(1)} ¢: starved, the reed sags a little flat`);
+  const moved = run(P(), [[0, 'on', 60, 0.7], [0.3, 'msg', { type: 'slide', key: 60, value: lo }]], 1);
+  assert.ok(rms(moved.L, 0.7 * FS, FS) < 0.8 * a, 'held, then slid');
 });
 test('presets use their own parameters, and each speaks without NaN', () => {
   for (const pr of PRESETS) {

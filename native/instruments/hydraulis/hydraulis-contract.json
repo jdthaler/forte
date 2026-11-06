@@ -11,6 +11,7 @@
     {"id":"cistern","kind":"continuous","min":0.4,"max":2.5,"def":1,"step":0,"log":true},
     {"id":"gurgle","kind":"continuous","min":0,"max":2,"def":1,"step":0.01,"log":false},
     {"id":"push","kind":"continuous","min":2,"max":60,"def":10,"step":0,"log":true},
+    {"id":"travel","kind":"continuous","min":0.05,"max":1,"def":1,"step":0.01,"log":false},
     {"id":"spring","kind":"continuous","min":4,"max":80,"def":15,"step":0,"log":true},
     {"id":"bore","kind":"continuous","min":0.05,"max":0.9,"def":0.21,"step":0.01,"log":false},
     {"id":"cutup","kind":"continuous","min":0.5,"max":2,"def":1,"step":0,"log":true},
@@ -37,6 +38,7 @@
     {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
     {"id":"strikeOn","kind":"toggle","def":true},
     {"id":"glideOn","kind":"toggle","def":true},
+    {"id":"slideOn","kind":"toggle","def":true},
     {"id":"pressOn","kind":"toggle","def":true},
     {"id":"liftOn","kind":"toggle","def":true}
   ],
