@@ -415,7 +415,7 @@ await test('performance: 24 oscillators', () => {
 });
 
 console.log('MPE');
-// A note's bend turns its own lamp's timing resistor (R/r); the coupling is every lamp's (no slide).
+// A note's bend turns its own lamp's timing resistor (R/r).
 // Events [t, fn(engine)] in 128-sample blocks; the left channel and the engine.
 function play(eng, events, sec, fs = FS) {
   const e = new HuygensEngine(fs);
@@ -471,6 +471,20 @@ await test('bend sweeps of ±48 semitones on chords, sent every block, stay fini
     const { e } = play({ kick: 0 }, [[0, bend(108, 16)], [0, lamp(108)]], 0.5, fs), [o] = e.report(0.2);
     assert.ok(Math.abs(c(o.f / (fs / 4))) < 0.01, `${fs}: C8 bent four octaves plays ${o.f.toFixed(1)} Hz`);
   }
+});
+
+await test(`Slide: a note's own coupling, how hard the others' firings kick its lamp (the Pulse coupling knob's, or up to ${INSTRUMENT.mpe.slide.max}): a tritone that locks to 7:5 at the knob's 5.5 % is pulled to 3:2 with its upper lamp slid fully; Press: its keyer opens further, up to twice as loud (6 dB), its firings untouched`, () => {
+  assert.equal(INSTRUMENT.mpe.slide.param, 'kick');
+  const pair = (ev) => { const { e } = play({}, [...ev, [0, lamp(60)], [0, lamp(66)]], 2.5), [a, b] = e.report(1.0); return c(b.f / a.f); };
+  assert.ok(Math.abs(pair([]) - c(7 / 5)) < 0.01, `as it is: ${pair([]).toFixed(2)} ¢`);
+  const slid = pair([[0, (e) => e.handle({ type: 'slide', key: 66, value: INSTRUMENT.mpe.slide.max })]]);
+  assert.ok(Math.abs(slid - c(3 / 2)) < 0.01, `slid: ${slid.toFixed(2)} ¢`);
+  const one = (p) => play({ kick: 0 }, [[0, lamp(48)], [0, (e) => e.handle({ type: 'pressure', key: 48, value: p })]], 2.0);
+  const db = (x) => { let s = 0; for (let i = FS; i < 2 * FS; i++) s += x[i] * x[i]; return 10 * Math.log10(s / FS); };
+  const plain = one(0), pressed = one(1);
+  assert.ok(Math.abs(db(pressed.out) - db(plain.out) - 6.02) < 0.3, `${(db(pressed.out) - db(plain.out)).toFixed(2)} dB`);
+  assert.deepEqual(Array.from(pressed.e.report(1.0), (o) => o.f), Array.from(plain.e.report(1.0), (o) => o.f), 'the same firings');
+  assert.ok(same(one(0).out, plain.out));
 });
 
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');

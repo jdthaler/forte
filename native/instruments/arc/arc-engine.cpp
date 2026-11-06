@@ -305,6 +305,7 @@ void ArcEngine::setParams(const double *np) {
   for (int i = 0; i < p::count; i++) P[i] = np[i];
   hasParams = true;
   target = {P[p::current], P[p::gap], P[p::tau], P[p::restrike], P[p::coil] * 1e-3 / (bendRatio * bendRatio), P[p::coilR], P[p::dist], P[p::hiss], P[p::voice]};
+  live();
   const ArcParams a = arcParams(P.data());
   if (first) {
     sm = target;
@@ -382,8 +383,28 @@ bool ArcEngine::ready(int key) {
   return false;
 }
 
+// Slide and Press: the electrode gap and the arc current, which every arc shares (one supply, one
+// rheostat), from the newest held key: its slide moves the electrodes apart or together, its press
+// turns the rheostat down for up to twice the knob's current. Both glide as the knobs do.
+void ArcEngine::live() {
+  const int k = newest.key();
+  const double x = std::max(k >= 0 && k < 128 ? press[k] : 0.0, chanPress);
+  target.I0 = x > 0 ? std::min(20.0, P[p::current] * (1 + x)) : P[p::current];
+  target.l = std::clamp(ex.slideOr(k, P[p::gap]), 0.5, 8.0);
+}
+void ArcEngine::slide(double value, int key) { ex.setSlide(value, key); if (hasParams) live(); }
+void ArcEngine::pressure(double value, int key) {
+  const double x = std::clamp(value == value ? value : 0.0, 0.0, 1.0);
+  if (key < 0) chanPress = x;
+  else if (key < 128) press[key] = x;
+  if (hasParams) live();
+}
+
 void ArcEngine::noteOn(int key, double) {
   if (!hasParams || key < 0 || key > 127) return;
+  newest.down(key);
+  press[key] = 0;
+  live();
   if (mode == mode_::talk) {
     int i = 0; while (i < nStack && stack[i] != key) i++;
     if (i < nStack) { for (int j = i; j + 1 < nStack; j++) stack[j] = stack[j + 1]; nStack--; }
@@ -426,6 +447,9 @@ void ArcEngine::noteOn(int key, double) {
 // usual speed for the slowest); a fast one snaps them open (four times).
 void ArcEngine::noteOff(int key, double velocity) {
   if (!hasParams) return;
+  newest.up(key);
+  if (key >= 0 && key < 128) press[key] = 0;
+  live();
   if (mode == mode_::talk) {
     int i = 0; while (i < nStack && stack[i] != key) i++;
     if (i < nStack) { for (int j = i; j + 1 < nStack; j++) stack[j] = stack[j + 1]; nStack--; }
@@ -442,6 +466,7 @@ void ArcEngine::noteOff(int key, double velocity) {
   }
 }
 void ArcEngine::allNotesOff() {
+  newest.clear();
   if (mode == mode_::talk) { singer.on = false; nStack = 0; return; }
   for (Arc &a : arcs) { a.releaseAll(); a.released = time; }
 }

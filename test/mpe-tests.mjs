@@ -210,8 +210,8 @@ for (const slug of slugs) {
     if (!slide) assert.ok(!differs(slid[0], plain[0]), 'an instrument whose notes have no slide ignores it');
     else { // slid as far as it goes before its note: it sounds otherwise
       const P = { ...D, ...SLIDE_WITH[slug] }, playAt = (ev) => new Player(I, Engine, FS, P).render(0.6, [...keys.flatMap((k) => [[0.01, 'on', k, 0.7], [0.45, 'off', k]]), ...ev]);
-      const base = playAt([]), far = playAt([[0, 'slide', keys[0], 1]]);
-      assert.ok(differs(far[0], base[0]) || differs(far[1], base[1]), `a note slid fully (${sl.param} ${wheelValue(slP, 127, sl.max ?? slP.max)}) sounds otherwise`);
+      const base = playAt([]), far = playAt(keys.map((k) => [0, 'slide', k, 1])); // every key: an arc follows only its newest
+      assert.ok(differs(far[0], base[0]) || differs(far[1], base[1]), `its notes slid fully (${sl.param} ${wheelValue(slP, 127, sl.max ?? slP.max)}) sounds otherwise`);
     }
   });
   if (bend && press) {

@@ -58,7 +58,7 @@ await test('a page shows the switches its instrument answers to', async () => {
   assert.deepEqual(await shown('pipes'), ['strikeOn', 'glideOn', 'slideOn', 'pressOn', 'liftOn']); // its slide, a key held part way
   assert.deepEqual(await shown('piano'), ['strikeOn', 'glideOn', 'slideOn', 'pressOn', 'liftOn']); // its bend, a finger on the strings behind the bridge
   assert.deepEqual(await shown('clavier'), ['strikeOn', 'glideOn', 'slideOn', 'pressOn', 'liftOn']); // its bend presses the key, its slide lays its felt on
-  assert.deepEqual(await shown('arc'), ['glideOn', 'liftOn']);                                // velocity does nothing
+  assert.deepEqual(await shown('arc'), ['glideOn', 'slideOn', 'pressOn', 'liftOn']);         // velocity does nothing
   assert.deepEqual(await shown('brass'), ['strikeOn', 'glideOn', 'slideOn', 'pressOn', 'liftOn']);
   for (const r of INSTRUMENTS) assert.ok((await shown(r.id)).includes('liftOn'), `${r.id}: Lift, at least`); // test/lift-tests.mjs
 });

@@ -31,6 +31,7 @@ void Osc::start(NeonEngine &eng, int k, double f, double phase, bool settled) {
   C = eng.p.cap;
   driftCents = 0;
   bend = eng.bendOf(k, f); bentAt = INT64_MIN / 2; // a bend starts there
+  loud = 1; couple = eng.p.kick;
   retune(f, eng.p);
   // initial phase: random (a real key), or given (0 = just fired) for analysis
   const Neon &p = eng.p;
@@ -208,11 +209,22 @@ Osc *NeonEngine::slot() {
   return nullptr;
 }
 
+// Press: the key's keyer, pressed further open as hard as it is pressed, up to twice the gain
+// (channel pressure: every key's): a stronger flash, the lamp's note and timing untouched. It
+// glides as a bend does.
+void NeonEngine::pressure(double value, int key) {
+  const double x = std::clamp(value == value ? value : 0.0, 0.0, 1.0);
+  if (key < 0) chanPress = x;
+  else if (key < 128) press[key] = x;
+}
+double NeonEngine::loudOf(int key) const { return 1 + std::max(key >= 0 && key < 128 ? press[key] : 0.0, chanPress); }
+
 void NeonEngine::noteOn(int key, double) {
   const bool had = offered;
   offered = false;
   last = nullptr;
   if (key < 0 || key > 127) return;
+  press[key] = 0;
   const double f = had && !std::isnan(offF) ? offF : keyTarget(key);
   Osc *o = byKey[key];
   if (o && !o->dead) {
@@ -293,11 +305,15 @@ void NeonEngine::process(float *L, float *R, int n) {
     Osc &o = *osc[j];
     const double to = bendOf(o.key, o.fTarget);
     if (o.bend != to) { o.bend = glideTo(o.bend, to, n * k, BEND_T); o.retune(o.fTarget, p); o.bentAt = t; }
+    o.loud = glideTo(o.loud, loudOf(o.key), n * k, BEND_T);
+    o.couple = std::clamp(expr.slideOr(o.key, p.kick), 0.0, 0.15);
   }
   for (int j = 0; j < nos; j++) osc[j]->applyDrift(*this, n * k);
   const double vSet = supplySetpoint(n * k);
   const double g = 0.004 * p.master;
-  const double kick = p.kick * (p.vStrike - p.vExt);
+  const double span = p.vStrike - p.vExt;
+  bool kicks = false;
+  for (int j = 0; j < nos; j++) kicks |= osc[j]->couple > 0;
   for (int i = 0; i < n; i++) {
     double l = 0, r = 0, I = 0, Gl = 0;
     const double v = vr;
@@ -305,7 +321,7 @@ void NeonEngine::process(float *L, float *R, int n) {
     // Pulse coupling through the shared cathode resistor: when a lamp fires, its discharge
     // current briefly lifts the voltage across every other lamp by `kick`. Any lamp that close
     // to striking fires in the same instant (and may set off others); the rest are untouched.
-    if (kick > 0 && nos > 1) {
+    if (kicks && nos > 1) {
       int no = 0;
       for (int j = 0; j < nos; j++) if (osc[j]->fireAt >= 0) no = insertByTime(order, no, osc[j]);
       for (int e = 0; e < no; e++) {
@@ -315,7 +331,7 @@ void NeonEngine::process(float *L, float *R, int n) {
           Osc *o = osc[j];
           if (o == src || o->power < 0.5) continue;
           if (o->fireAt >= 0 && o->fireAt <= x) continue;
-          if (o->voltageAt(x, k) + kick >= p.vStrike) {
+          if (o->voltageAt(x, k) + o->couple * span >= p.vStrike) {
             if (o->fireAt >= 0) {
               int at = -1;
               for (int m = e + 1; m < no; m++) if (order[m] == o) { at = m; break; }
@@ -331,7 +347,7 @@ void NeonEngine::process(float *L, float *R, int n) {
       Osc *o = osc[j];
       const double s = o->finish(*this, (double)t);
       I += o->I; Gl += o->G * o->power; // the supply each lamp charges from is the rail times its power
-      l += o->panL * s; r += o->panR * s;
+      l += o->panL * s * o->loud; r += o->panR * s * o->loud;
     }
     // rail: source (with optional regulator cancelling the average sag), its reservoir, and the
     // keys' load. The load is a conductance Gl (each lamp's charging current moving with the

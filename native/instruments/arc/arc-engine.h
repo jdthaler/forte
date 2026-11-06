@@ -94,6 +94,9 @@ class ArcEngine : public Engine {
   void bend(double value) override; // the coil's iron core slides: L by 1/r², the note by r (talk: the voice's pitch)
   // MPE: a key's own bend slides the core of the arc that sings it (one arc: the newest key's)
   void noteBend(double ratio, int key) override { ex.setBend(ratio, key); }
+  // and its slide sets the electrode gap, its press the arc current: the newest held key's (one supply)
+  void slide(double value, int key) override;
+  void pressure(double value, int key) override;
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -121,6 +124,10 @@ class ArcEngine : public Engine {
 
  private:
   void setup(double seed, bool quiet, int os);
+  void live(); // the gap and the current: the knobs', or the newest key's slide and press
+  NewestKey newest;
+  std::array<double, 128> press{};
+  double chanPress = 0;
   void reconfigure(int mode, int nArcs);
   double capOf(int key);
   void block(float *L, float *R, int s0, int n);
