@@ -48,6 +48,18 @@ Bolometer::State Bolometer::deriv(const State &y, double *sub, double *dia, doub
   return {((Vb - V) * (1 / RL) - V * iR) * iCp, (J - Pec) * iCe, (Pec - Pct) * iCc, (Pct - Pts) * iCt};
 }
 
+// The electrons' own rate in the Jacobian, as the step takes it. Warmer electrons lower R and, at
+// the voltage C_p holds for now, take more Joule heat: ∂f/∂T_e = (J |d ln R/dT| − G_e)/C_e, which is
+// positive (the electrothermal feedback outruns the coupling to the crystal) when the bias pushes
+// hard, as just after Doping or the bias jumps with a key held, or near a high T₀ or a long wire's
+// unstable rest. A growth rate that large over the step puts 1 − γh∂f/∂T_e near zero or below, and
+// the step heads the wrong way, faster each time: the electrons cool while they should run away,
+// and the state leaves every physical range. Past γh∂f/∂T_e = 1/2 the step takes the growth
+// as 1/(2γh) instead: ROS2 is second order with any Jacobian (a W-method), and this one keeps
+// every pivot of (I − γhJ) at least 1/2, so the step follows the runaway, if more slowly than it
+// is, and the safe steps' halving catches up.
+static double runaway(double dTe, double gh) { return std::min(dTe, 0.5 / gh); }
+
 // ROS2 (Verwer et al. 1999): (I − γhJ) k₁ = f(y), (I − γhJ) k₂ = f(y + h k₁) − 2k₁,
 // y ← y + h (3k₁ + k₂)/2, γ = 1 + 1/√2: second order with any J, and L-stable.
 void Bolometer::step(State &y, double h) const {
@@ -56,6 +68,7 @@ void Bolometer::step(State &y, double h) const {
   const State f0 = deriv(y, sub, dia, sup);
   // (I − γhJ), factored once (Thomas): e the pivots' inverses, m the multipliers
   const double gh = G * h;
+  dia[1] = runaway(dia[1], gh);
   double e[4], m[4], c[4];
   for (int i = 0; i < 4; i++) c[i] = -gh * sup[i];
   e[0] = 1 / (1 - gh * dia[0]);
@@ -92,6 +105,7 @@ void Bolometer::stepMany(State *const *ys, int n, double h) const {
     State k1[4], k2[4], y1[4];
     for (int l = 0; l < 4; l++) k1[l] = deriv(*y[l], sub[l], dia[l], sup[l]);
     for (int l = 0; l < 4; l++) {
+      dia[l][1] = runaway(dia[l][1], gh);
       for (int i = 0; i < 4; i++) c[l][i] = -gh * sup[l][i];
       e[l][0] = 1 / (1 - gh * dia[l][0]);
       m[l][0] = 0;
@@ -122,17 +136,31 @@ void Bolometer::stepMany(State *const *ys, int n, double h) const {
 // divider), no node colder than the sink or the coldest was, and none warmer than the warmest
 // was by more than the bias could heat the electrons in the step (a step the linearisation cannot
 // follow overshoots).
+static double hottest(const Bolometer::State &from) { return std::max({from[1], from[2], from[3]}) + 0.002; }
+static double coldest(const Bolometer::State &from, double Ts) { return 0.999 * std::min({Ts, from[1], from[2], from[3]}); }
+
 bool Bolometer::sane(const State &from, const State &y) const {
-  const double hot = std::max({from[1], from[2], from[3]}) + 0.002, cold = 0.999 * std::min({Ts, from[1], from[2], from[3]});
+  const double hot = hottest(from), cold = coldest(from, Ts);
   return y[0] >= 0 && y[0] <= Vb && y[1] >= cold && y[2] >= cold && y[3] >= cold && y[1] < hot && y[2] < hot && y[3] < hot;
 }
 
+// Into that range: what a step that is still out of it after every halving keeps. (Out of it, the
+// next step starts from a state no thermistor reaches, a few hundred millikelvin warm at a volt
+// across a few ohms, say, whose Joule heat runs every node away to infinity and the sound to NaN.)
+void Bolometer::confine(const State &from, State &y) const {
+  const double hot = hottest(from), cold = coldest(from, Ts);
+  y[0] = y[0] > 0 ? std::min(y[0], Vb) : 0; // (written so that a NaN goes to a bound too)
+  for (int i = 1; i < 4; i++) y[i] = y[i] > cold ? std::min(y[i], hot) : cold;
+}
+
 // A step too long for a pulse that warms the crystal far (a small crystal, a big pulse, a large
-// speed-up) can leave the linearisation it is built on: then two of half the length, and so on.
+// speed-up) can leave the linearisation it is built on: then two of half the length, and so on,
+// and the shortest is kept in the physical range.
 void Bolometer::safeStep(State &y, double h, int depth) const {
   const State before = y;
   step(y, h);
-  if (sane(before, y) || depth == 0) return;
+  if (sane(before, y)) return;
+  if (depth == 0) { confine(before, y); return; }
   y = before;
   safeStep(y, h / 2, depth - 1);
   safeStep(y, h / 2, depth - 1);

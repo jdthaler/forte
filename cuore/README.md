@@ -110,6 +110,20 @@ most 15 ms of the crystal's time, by ROS2, a second-order L-stable Rosenbrock
 method (Verwer et al. 1999) whose Jacobian is tridiagonal (each node touches
 only its neighbours), and a pulse lands between samples where it falls.
 
+Two things keep the steps honest when the network is pushed far from rest.
+At a high T₀, a cold sink, long wires or a strong bias, or just after Doping
+or the bias moves with a key held, the electrothermal feedback can win: the
+voltage C_p holds for the moment heats warmer electrons more, faster than
+they pass the heat to the crystal, and they run away until the capacitor
+drains (a real bolometer's electrothermal instability). Taken as stiff decay,
+that growth turns a step around, cooling the electrons while they should run
+away; so where the growth over a step passes 1/(2γh), the step takes it as
+1/(2γh) (ROS2 stays second order with any Jacobian), and follows the runaway,
+if more slowly. And a step that leaves the physical range (the voltage
+outside 0 to the bias, a node colder than the sink or the coldest node, or
+2 mK warmer than the hottest) is taken again in halves, down to 1/64 of it;
+the shortest that still leaves it is brought back to its edge.
+
 ### 5. Playing
 
 - **Velocity** is the pulse's energy, the Pulse energy control (2,528 keV at

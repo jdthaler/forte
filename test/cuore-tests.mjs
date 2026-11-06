@@ -242,6 +242,27 @@ test('every preset, and the extremes, on every octave: finite, and a chord stays
   for (const v of x) pk = Math.max(pk, Math.abs(v));
   assert.ok(pk > 0.05 && pk < 1, `peak ${pk}`);
 });
+// Moved with a key held, Doping changes the thermistor under a crystal at the old rest: 45 times the
+// resistance at 4.93 K, so C_p charges, the Joule heat outgrows the coupling to the crystal, and
+// the electrons run away until the capacitor drains. A step that took that growth as stiff decay
+// cooled them instead, and the note went to NaN (found by fuzzing).
+test('a held key rides Doping moved a long way, 3.4 to 4.93 K and back: finite, then as a key struck there', () => {
+  for (const [from, to] of [[3.4, 4.93], [4.93, 3.4], [2, 5]]) {
+    const x = render(93, P({ t0: from }), 0.9, 1.2, { events: [[0.05, (e) => e.setParams(P({ t0: to }))]] });
+    assert.ok(x.every(Number.isFinite), `${from} → ${to} K: NaN`);
+    const fresh = render(93, P({ t0: to }), 0.9, 1.2), a = Math.round(0.7 * FS), d = 20 * Math.log10(rms(x, a) / rms(fresh, a));
+    assert.ok(Math.abs(d) < 1, `${from} → ${to} K: ${d.toFixed(2)} dB from a key struck at ${to} K`);
+  }
+});
+// A big pulse in a 1 cm crystal, at the longest heater period (a sample is seconds of the crystal's
+// time): the shortest step the halving reaches still overshoots, and is kept in the physical range.
+test('a 1 cm crystal, 55 MeV pulses and the longest period: finite on every key', () => {
+  const e = new CuoreEngine(44100), bL = new Float32Array(128), bR = new Float32Array(128);
+  e.setParams(P({ side: 1.06, energy: 36.8, periodA4: 300 }));
+  e.handle({ type: 'pressure', key: -1, value: 0.67 }); // 36.8 MeV × 0.9 × 1.67: 55 MeV
+  for (const k of [21, 60, 92, 97, 104, 108]) e.noteOn(k, 0.9);
+  for (let b = 0; b < 1500; b++) { e.process(bL, bR, 128); assert.ok(bL.every(Number.isFinite) && bR.every(Number.isFinite), `NaN at block ${b}`); }
+});
 test('CPU: ten crystals render 5 times faster than real time', () => {
   const e = new CuoreEngine(FS), bL = new Float32Array(128), bR = new Float32Array(128);
   e.setParams(P());
