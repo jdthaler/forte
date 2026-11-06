@@ -22,7 +22,7 @@
 //                and list every count that differs: what a change meant to leave alone shouldn't
 //   --base-json a.json,b.json
 //                with --base, compare with the counts an earlier run on <ref> wrote with --json
-//                (CI keeps main's) instead of opening <ref>'s pages, when every file is there
+//                (CI keeps main's), opening only the pages of <ref>'s that they don't have
 //   --json f     write every page's counts to f
 //   --shard k/n  only every nth page, from the kth (1 ≤ k ≤ n): CI checks the pages on n machines
 //   --timeout s  fail a page view that takes longer than s seconds (300): one that hangs
@@ -435,10 +435,10 @@ function failures(r, instrument) {
   return f;
 }
 
-async function run(root, label) {
+async function run(root, label, pages = PAGES) {
   const { server, url } = await serve(root);
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
-  const jobs = PAGES.flatMap((p) => SIZES.map((s) => [p, s]));
+  const jobs = pages.flatMap((p) => SIZES.map((s) => [p, s]));
   const out = [], hung = [];
   const width = Math.min(jobs.length, Math.max(4, availableParallelism() * 2));
   // A view that hangs is opened once more, in a new context: on GitHub's runners about one view in
@@ -476,21 +476,19 @@ for (const r of results) {
 console.log(`${results.length - failed}/${results.length} page views passed (${PAGES.length} pages × ${SIZES.length} sizes${shardN > 1 ? `, shard ${shardK}/${shardN}` : ''}) in ${((performance.now() - t0) / 1000).toFixed(0)} s`);
 if (jsonOut) await writeFile(jsonOut, JSON.stringify(results, null, 1));
 
-// The base's counts: from the files an earlier run on it wrote, when every one is there (a page
-// this run checks that they don't list, such as a new one, is left out, as when it's opened),
-// otherwise from opening its pages.
+// The base's counts: from the files an earlier run on it wrote (those that are there), and for
+// any page they don't have, such as one from a file not written yet, from opening the base's.
 async function baseCounts() {
   const files = baseJson ? baseJson.split(',').filter(Boolean) : [];
-  const saved = await Promise.all(files.map((f) => readFile(f, 'utf8').then(JSON.parse, () => null)));
-  if (files.length && saved.every(Boolean)) {
-    console.log(`\n${base}: the counts its own run wrote (${files.join(', ')})`);
-    return saved.flat();
-  }
-  if (files.length) console.log(`\n${base}: no counts saved for it (${files.filter((_, i) => !saved[i]).join(', ')}); opening its pages`);
+  const saved = (await Promise.all(files.map((f) => readFile(f, 'utf8').then(JSON.parse, () => null)))).filter(Boolean).flat();
+  const have = new Set(saved.map((r) => `${r.page} ${r.size}`));
+  const missing = PAGES.filter((p) => SIZES.some((s) => !have.has(`${p || 'index'} ${s.name}`)));
+  if (files.length) console.log(`\n${base}: ${PAGES.length - missing.length} pages' counts from its own run${missing.length ? `; opening ${missing.length} pages it has none for` : ''}`);
+  if (!missing.length) return saved;
   const dir = await mkdtemp(join(tmpdir(), 'forte-base-'));
   execFileSync('git', ['-C', ROOT, 'worktree', 'add', '--detach', dir, base], { stdio: 'ignore' });
   try {
-    return await run(dir, `\n${base}`);
+    return [...saved, ...await run(dir, `\n${base}`, missing)];
   } finally {
     execFileSync('git', ['-C', ROOT, 'worktree', 'remove', '--force', dir], { stdio: 'ignore' });
     await rm(dir, { recursive: true, force: true });

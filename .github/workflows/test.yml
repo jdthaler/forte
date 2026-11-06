@@ -6,9 +6,12 @@ on:
     branches: [main, live]
   pull_request:
 
-# A newer push to a pull request replaces its run still going; every run on main and live finishes.
+# A newer push to a pull request replaces its run still going. Every push to main and live gets
+# its own run, at once and to the end: not waiting for the one before (merges come minutes apart),
+# and not dropped while it waits, so each of main's commits saves the page counts that pull
+# requests merging into it compare with.
 concurrency:
-  group: tests-${{ github.event_name }}-${{ github.ref }}
+  group: tests-${{ github.event_name }}-${{ github.ref }}${{ github.event_name == 'push' && format('-{0}', github.sha) || '' }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/live' }}
 
 jobs:
@@ -108,7 +111,7 @@ jobs:
       - name: Summary
         if: always()
         run: |
-          { echo '### Pages (${{ matrix.shard }}/2)'; echo '```'; grep -E '^(FAIL|DIFF|HUNG|  )|passed|differ|counts the same|counts its own run|no counts saved' "$RUNNER_TEMP/pages.txt" | head -200; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo '### Pages (${{ matrix.shard }}/2)'; echo '```'; grep -E '^(FAIL|DIFF|HUNG|  )|passed|differ|counts the same|counts from its own run' "$RUNNER_TEMP/pages.txt" | head -200; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
   # the required check: green when both halves of the pages are
   pages:
