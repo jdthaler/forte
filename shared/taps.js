@@ -10,7 +10,7 @@ export function tap(kind, fn) { taps[kind] = fn; }
 // key the second instrument plays alone, in a split).
 export const midiTap = (data) => taps.midi?.(data) ?? true;
 
-// A key down (on) or up, from 'screen' (value: how far down the key it was struck, 0..1) or 'keys'
+// A key down (on) or up; `from` is 'screen' (value: how far down the key it was struck, 0..1) or 'keys'
 // (the computer's): true when the page's instrument plays it, or let go of it.
 export const keyTap = (key, on, from, value) => taps.key?.(key, on, from, value) ?? true;
 
