@@ -94,14 +94,14 @@ void ColliderShowersEngine::kick(Voice &v, const Kicks &k, double scale, double 
 }
 
 // A particle of `energy` GeV at `velocity` landing on key's crystal: it and its neighbours take
-// their shares.
-void ColliderShowersEngine::deposit(int key, const Deposit &d, double energy, double velocity, Particle kind) {
+// their shares, as it lands `offset` off the crystal's axis.
+void ColliderShowersEngine::deposit(int key, const Deposit &d, double energy, double velocity, Particle kind, double offset) {
   const double slender = slenderness(P[p::depth], P[p::width]);
   const Kicks k = kicksOf(d, slender);
   for (int j = -2; j <= 2; j++) {
     const int kk = key + j;
     if (kk < FIRST || kk > LAST) continue;
-    const Share s = crystalShare(P[p::offset], P[p::width], j);
+    const Share s = crystalShare(offset, P[p::width], j);
     if (j != 0 && s.e < MIN_SHARE) continue;
     Voice *v = nullptr;
     for (Voice &x : voices) if (x.key == kk && !x.stolen) { v = &x; break; }
@@ -123,6 +123,9 @@ void ColliderShowersEngine::deposit(int key, const Deposit &d, double energy, do
   }
 }
 
+// Where key's particle lands off the axis: the knob's, or the note's own slide.
+double ColliderShowersEngine::impact(int key) const { return std::clamp(expr.slideOr(key, P[p::offset]), 0.0, 0.5); }
+
 void ColliderShowersEngine::noteOn(int key, double velocity) {
   if (!hasParams || key < FIRST || key > LAST) return;
   Voice *v = voiceFor(key);
@@ -134,7 +137,7 @@ void ColliderShowersEngine::noteOn(int key, double velocity) {
   const double E = velocity * P[p::energy];
   Deposit d;
   shower(d, kind, E, P[p::depth], rng);
-  deposit(key, d, E, velocity, kind);
+  deposit(key, d, E, velocity, kind, impact(key));
 }
 
 // Lift: a fast lift is a pile-up: a second, smaller shower (up to 0.4 × the first's energy) lands
@@ -148,7 +151,7 @@ void ColliderShowersEngine::noteOff(int key, double velocity) {
     const double vel = 0.4 * t * was, E = vel * P[p::energy];
     Deposit d;
     shower(d, kind, E, P[p::depth], rng);
-    deposit(key, d, E, vel, kind);
+    deposit(key, d, E, vel, kind, impact(key));
   }
 }
 

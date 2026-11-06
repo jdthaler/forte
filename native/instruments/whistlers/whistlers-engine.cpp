@@ -40,7 +40,8 @@ const KeyLines &WhistlersEngine::linesOf(int key) {
   KeyLines &k = lines[std::clamp(key, FIRST, LAST) - FIRST];
   const double f = keyFreq(key) * tuningOf(P.data()).ratio(key);
   const int ducts = std::clamp((int)std::lround(P[p::ducts]), 1, MAX_DUCTS);
-  const double dens = P[p::density], lpp = P[p::plasmapause], spread = P[p::spread];
+  // (a note's slide: its own line's plasma density, as the knob would set it there)
+  const double dens = std::clamp(expr.slideOr(key, P[p::density]), 0.01, 10.0), lpp = P[p::plasmapause], spread = P[p::spread];
   if (k.valid && k.f == f && k.density == dens && k.lpp == lpp && (ducts == 1 || k.spread == spread) && k.ducts >= ducts) return k;
   // the key's own line, whose nose is its note; the others' a step of `spread` farther out and
   // nearer in, alternately (they keep what was built for the ones they share)

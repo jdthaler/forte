@@ -354,6 +354,19 @@ test('voices: finished crystals are dropped, and fast playing never runs past th
   const [A, , e2] = render(P({ width: 0.5 }), 1.2, ev);
   assert.ok(e2.voiceCount() <= 64 && A.every(Number.isFinite));
 });
+test('Slide: a note\'s slide before its strike is where its particle lands off the axis, sample for sample as the Impact point knob there; its neighbours share it as they would', () => {
+  const run = (o, slides = []) => {
+    const e = new Engine(FS); e.setParams(P(o));
+    for (const [key, value] of slides) e.handle({ type: 'slide', key, value });
+    e.noteOn(60, 0.8);
+    const n = FS, L = new Float32Array(n), R = new Float32Array(n), b = new Float32Array(128), c = new Float32Array(128);
+    for (let s = 0; s < n; s += 128) { e.process(b, c, 128); L.set(b.subarray(0, Math.min(128, n - s)), s); R.set(c.subarray(0, Math.min(128, n - s)), s); }
+    return { L, R };
+  };
+  assert.deepEqual(run({}, [[60, 0.4]]), run({ offset: 0.4 }), 'slid to 0.4 as the knob at 0.4');
+  assert.notDeepEqual(run({}, [[60, 0.4]]), run({}), 'and not as on the axis');
+  assert.deepEqual(run({}, [[61, 0.4]]), run({}), 'another key\'s slide');
+});
 test('Quality: Medium and Low let 20 and 12 crystals ring at once (High 32); a single note sounds the same at every quality', () => {
   const ev = Array.from({ length: 40 }, (_, i) => [0.02 * i, (x) => { x.noteOn(30 + 2 * i, 0.8); x.noteOff(30 + 2 * i); }]); // the pedal holds them
   const one = (q) => render(P(), 0.5, [[0, (x) => { x.setQuality(q); x.noteOn(60, 0.8); }]])[0];

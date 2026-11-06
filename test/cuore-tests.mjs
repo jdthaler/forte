@@ -263,6 +263,28 @@ test('a 1 cm crystal, 55 MeV pulses and the longest period: finite on every key'
   for (const k of [21, 60, 92, 97, 104, 108]) e.noteOn(k, 0.9);
   for (let b = 0; b < 1500; b++) { e.process(bL, bR, 128); assert.ok(bL.every(Number.isFinite) && bR.every(Number.isFinite), `NaN at block ${b}`); }
 });
+test('Slide: a note\'s slide before its strike is its own thermistor\'s bias, sample for sample as the knob there; a key beside it keeps the knob\'s', () => {
+  const run = (o, slides = []) => {
+    const e = new CuoreEngine(FS); e.setParams(P(o));
+    for (const [key, value] of slides) e.handle({ type: 'slide', key, value });
+    e.noteOn(60, 0.8); e.noteOn(67, 0.8);
+    const n = Math.round(1.5 * FS), L = new Float32Array(n), R = new Float32Array(n), b = new Float32Array(128), c = new Float32Array(128);
+    for (let s = 0; s < n; s += 128) { e.process(b, c, 128); L.set(b.subarray(0, Math.min(128, n - s)), s); R.set(c.subarray(0, Math.min(128, n - s)), s); }
+    return { L, R };
+  };
+  const solo = (o, slides = []) => {
+    const e = new CuoreEngine(FS); e.setParams(P(o));
+    for (const [key, value] of slides) e.handle({ type: 'slide', key, value });
+    e.noteOn(60, 0.8);
+    const n = Math.round(1.5 * FS), L = new Float32Array(n), b = new Float32Array(128), c = new Float32Array(128);
+    for (let s = 0; s < n; s += 128) { e.process(b, c, 128); L.set(b.subarray(0, Math.min(128, n - s)), s); }
+    return L;
+  };
+  assert.deepEqual(solo({}, [[60, 12]]), solo({ bias: 12 }), 'slid to 12 V as the knob at 12 V');
+  assert.notDeepEqual(solo({}, [[60, 12]]), solo({}), 'and not as at 5 V');
+  assert.deepEqual(run({}, [[61, 12]]), run({}), 'another key\'s slide');
+  assert.deepEqual(solo({}, [[60, DEFAULTS.bias]]), solo({}), 'slid to the knob\'s own bias');
+});
 test('CPU: ten crystals render 5 times faster than real time', () => {
   const e = new CuoreEngine(FS), bL = new Float32Array(128), bR = new Float32Array(128);
   e.setParams(P());

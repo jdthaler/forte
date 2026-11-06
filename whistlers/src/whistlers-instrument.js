@@ -16,7 +16,9 @@ export const INSTRUMENT = {
   range: [21, 108],                     // MIDI keys: all 88, A0–C8
   space: 'sustain',                     // Space and CC64: keeps the receivers open
   modWheel: { param: 'chorus', max: 20 }, // CC1: chorus on the held keys' field lines
-  mpe: { bend: 2 },                     // MPE: a note's own bend moves it to a field line farther in or out
+  // MPE: a note's own bend moves it to a field line farther in or out; its slide, before the
+  // stroke, is its own line's plasma density (up to ten times the knob's default)
+  mpe: { bend: 2, slide: { param: 'density', max: 10 } },
   glide: 'the field line\'s L-shell: the nose higher or lower', // what a note's own bend does
   aftertouch: 'more chorus', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'a slow lift lets the whistler fade slowly; a fast one sends an echo hopping back from the other hemisphere', // what a slow or a fast release does (release velocity: a Seaboard's Lift)

@@ -39,6 +39,7 @@ class WhistlersEngine : public Engine {
   void setSustain(bool on) override { sustain = on; }
   void pressure(double value, int key) override;
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // a field line farther in or out: the nose higher or lower
+  void slide(double value, int key) override { expr.setSlide(value, key); }    // its own line's plasma density, at the strike
   void allNotesOff() override { voices.clear(); }
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;

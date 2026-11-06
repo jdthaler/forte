@@ -198,7 +198,11 @@ Universe's amplitude and TESS's planet grow with it; Project 8's trap
 deepens, so its electron stays longer; on the NMR Spin Echo a firm press
 runs the key's own echo train; on Ringing Planets it sets off aftershocks,
 and on the Black-Hole Keyboard it drops matter in, each clump ringing the
-hole again. TESS's Slide is a note's own path across its star.
+hole again. On the Ion Chain a held key's laser pushes its ions, so a firm
+press keeps them ringing. Slide, set before a strike, is TESS's planet's
+path across its star, CUORE's own thermistor bias, where a Collider Showers
+particle lands, and a Whistlers line's plasma density; on the Wind Harp it
+is how gusty the wind is at that key's strings.
 Glide on the struck and plucked strings is a finger pressing a note's
 strings behind the bridge, up to a semitone sharp (the Ribbon Piano,
 Electric Grand, Harpsichord and Cimbalom), the Hurdy-Gurdy's tangent pushed
