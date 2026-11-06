@@ -721,13 +721,6 @@ void GongEngine::noteOff(int key, double) {
     if (v.key == key && !v.released) { v.released = true; if (!sustain) { v.damped = true; v.setDamping(); } }
   }
 }
-void GongEngine::pressure(double value, int key) {
-  if (!hasP) return;
-  for (int i = 0; i < nv; i++) {
-    Voice &v = *order[i];
-    if (key < 0 || v.key == key) { v.extra = 6.91 / P[p::release] + 40 * value; v.damped = v.released || value > 0.02; v.setDamping(); }
-  }
-}
 void GongEngine::allNotesOff() {
   npending = 0;
   for (int i = 0; i < nv; i++) { order[i]->killing = true; order[i]->setDamping(); }

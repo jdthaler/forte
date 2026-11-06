@@ -60,7 +60,7 @@ function potential(S, x, Nv = S.N) {
 }
 
 // Render through the engine in 128-sample blocks, like the AudioWorklet. events: [t, 'on'|'off', key, vel],
-// [t, 'msg', message] or [t, 'params', P]
+// [t, 'msg', message], [t, 'params', P] or [t, 'sustain', on]
 function render(params, sec, events, post, quality) {
   const e = new GongEngine(FS);
   if (post) e.post = post;
@@ -70,7 +70,7 @@ function render(params, sec, events, post, quality) {
   const ev = events.map(([t, ty, k, v]) => ({ s: Math.round(t * FS), ty, k, v })).sort((a, b) => a.s - b.s);
   let j = 0;
   for (let s = 0; s < n; s += 128) {
-    while (j < ev.length && ev[j].s <= s) { const q = ev[j++]; if (q.ty === 'on') e.noteOn(q.k, q.v); else if (q.ty === 'msg') e.handle(q.k); else if (q.ty === 'params') e.setParams(q.k); else e.noteOff(q.k); }
+    while (j < ev.length && ev[j].s <= s) { const q = ev[j++]; if (q.ty === 'on') e.noteOn(q.k, q.v); else if (q.ty === 'msg') e.handle(q.k); else if (q.ty === 'params') e.setParams(q.k); else if (q.ty === 'sustain') e.setSustain(q.k); else e.noteOff(q.k); }
     e.process(bl, br, 128);
     for (let i = 0; i < 128 && s + i < n; i++) { L[s + i] = bl[i]; R[s + i] = br[i]; }
   }
@@ -362,6 +362,15 @@ test('a note\'s own slide is its strike point: a lone gong slid to x is the gong
   // and back to none (NaN): bit-identical
   same(render(P(), 0.2, [[0, 'msg', slide(key, 0.7)], [0, 'msg', slide(key, NaN)], [0, 'on', key, 0.5], [0.05, 'msg', slide(64, 0.3)], [0.05, 'msg', slide(64, NaN)], [0.1, 'on', 64, 0.5]]).L,
     render(P(), 0.2, [[0, 'on', key, 0.5], [0.1, 'on', 64, 0.5]]).L, 'slid and back');
+});
+test('pressure changes nothing: a Seaboard\'s fingers at rest (per key and on the channel, pedal up or down) play as the computer keys, bit for bit', () => {
+  const key = 57, press = (value, k = -1) => ({ type: 'pressure', value, key: k });
+  for (const pedal of [false, true]) {
+    const ev = (msgs) => [...(pedal ? [[0, 'sustain', true]] : []), [0, 'on', key, 0.6], [0, 'on', 64, 0.6], ...msgs, [0.4, 'off', key], [0.4, 'off', 64]];
+    const plain = render(P(), 0.8, ev([])).L;
+    same(render(P(), 0.8, ev([[0.01, 'msg', press(0.3, key)], [0.05, 'msg', press(0.6, key)], [0.39, 'msg', press(0, key)], [0.02, 'msg', press(0.5, 64)]])).L, plain, `per key${pedal ? ', pedal down' : ''}`);
+    same(render(P(), 0.8, ev([[0.01, 'msg', press(0.2)], [0.2, 'msg', press(1)], [0.5, 'msg', press(0)]])).L, plain, `the channel${pedal ? ', pedal down' : ''}`);
+  }
 });
 test('stability: each note\'s own strike point swept centre to rim every block, on chords struck ff again and again, at 44.1, 48 and 96 kHz', () => {
   // the chord's peak, against the same chord struck at the centre and at the rim by the knob

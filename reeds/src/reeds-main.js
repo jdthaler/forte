@@ -5,6 +5,7 @@ import { SpectrumView, SpectrogramView, css } from '../../shared/views.js';
 import { INSTRUMENT } from './reeds-instrument.js';
 import { MotionView, PickupView } from './reeds-views.js';
 import { wasmModel } from './reeds-wasm.js';
+import { unfocus } from '../../shared/focus.js';
 
 const $ = (s) => document.querySelector(s);
 const FS = 48000; // the views' rate
@@ -72,6 +73,6 @@ function update(retrace) {
   $('#motion-read').textContent = `${noteName(focus)} · velocity ${lastVel.toFixed(2)}`;
 }
 
-$('#replay').addEventListener('click', (e) => { motion.replay(); e.currentTarget.blur(); });
+$('#replay').addEventListener('click', (e) => { motion.replay(); unfocus(e.currentTarget); });
 shell.keys.focus(focus);
 update(true);

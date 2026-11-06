@@ -13,12 +13,13 @@
 // Config: the instrument's descriptor (<slug>/src/<slug>-instrument.js: id, groups, presets, keep,
 // range, space, modWheel, wasm, noteData, chain), spread in, plus the page's own:
 //   id            instrument slug (localStorage key)
-//   groups        parameter groups: [{ title, open?, params: [{ id, label, min, max, def, step?, log?,
+//   groups        parameter groups: [{ title, open?, empty?, params: [{ id, label, min, max, def, step?, log?,
 //                 fmt?, hint?, type?: 'select' | 'checkbox', options?: [[value, name]…], showIf?(P),
 //                 perform?, strip? }] }]   perform: true marks a control you'd play with (the plugins'
 //                 window shows those first); strip: true puts it in the page's strip right above the
 //                 keys, which keeps to the few that matter mid-phrase (volume, the computer keys'
-//                 velocity, a pedal): the rest stay in the Controls panel, in their groups
+//                 velocity, a pedal): the rest stay in the Controls panel, in their groups; empty: what
+//                 the group says while showIf hides every one of its controls
 //   presets       [{ name, p: { …overrides } }]   (and your own, and links: shared/user-presets.js)
 //   keep          param ids kept when switching presets (e.g. ['volume', 'room'])
 //   range         [lowest MIDI key, highest MIDI key]   (default [36, 96])
@@ -52,14 +53,13 @@
 import { createChain } from './chain.js';
 import { createKeyboard } from './keyboard.js';
 import { trimGain } from './registry.js';
-import { controlOwns, focusedByPointer } from './focus.js';
-import { startMIDI, resumeMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from './midi.js';
+import { controlOwns, unfocus } from './focus.js';
+import { startMIDI, resumeMIDI, pageMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from './midi.js';
 import { attachPresets } from './user-presets.js';
 import { connectQuality, qualityControl } from './quality.js';
 import { dress, faceOf } from './faces.js';
-// after a change, a control picked with the pointer lets go of the focus (the keys go back to the
-// instrument); one reached with Tab keeps it, so the next Space or arrow works it again
-const unfocus = (el) => { if (focusedByPointer(el)) el.blur(); };
+import { computerKey } from './taps.js'; // a second instrument's share of the computer keys (shared/layer.js)
+import { host, pluginAudio, pageValue, keysFrom } from './in-plugin.js';
 
 const $ = (s) => document.querySelector(s);
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -112,6 +112,16 @@ export function createShell(cfg) {
     if (shell.audio) { if (shell.audio.ctx.state !== 'running') shell.audio.ctx.resume(); return Promise.resolve(shell.audio); }
     if (starting) return starting;
     let ctx = null;
+    if (host) { // in the plugin's window: the plugin plays, and the views hear it (shared/in-plugin.js)
+      starting = (async () => {
+        const audio = await pluginAudio(cfg.wasm, (u) => shell.fromPlugin(u));
+        audio.node.port.onmessage = (e) => { if (e.data.type !== 'stats' && e.data.type !== 'error') cfg.onMessage?.(e.data); };
+        shell.audio = audio;
+        cfg.onAudio?.(audio);
+        return audio;
+      })();
+      return starting;
+    }
     starting = (async () => {
       ctx = new AudioContext({ latencyHint: 'interactive' });
       if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
@@ -167,7 +177,7 @@ export function createShell(cfg) {
   const paramsMessage = () => ({ type: 'params', P: { ...shell.P } });
   const sendParams = () => shell.post(paramsMessage());
   shell.sendParams = sendParams;
-  shell.post = (m) => { if (shell.audio) shell.audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
+  shell.post = (m) => { if (host) return; if (shell.audio) shell.audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
   shell.applyMix = () => { if (shell.audio) shell.audio.chain.apply(shell.P, trimGain(cfg.id)); };
 
   // ---- notes ---------------------------------------------------------------
@@ -253,21 +263,21 @@ export function createShell(cfg) {
     e.preventDefault();
     if (e.repeat || held.has(e.code)) return;
     held.set(e.code, key);
-    down(key, kbVel());
+    if (computerKey(key, true)) down(key, kbVel());
   });
   window.addEventListener('keyup', (e) => {
     if (e.code === 'Space' && cfg.space && !controlOwns(e)) { if (e.isTrusted) spaceHeld = false; setSustain(false); return; }
     const key = held.get(e.code);
-    if (key !== undefined) { held.delete(e.code); up(key); }
+    if (key !== undefined) { held.delete(e.code); if (computerKey(key, false)) up(key); }
   });
   // Losing focus means no keyup will come: release held keys and a held Space bar.
-  const letGo = () => { for (const k of held.values()) up(k); held.clear(); if (spaceHeld) { spaceHeld = false; setSustain(false); } };
+  const letGo = () => { for (const k of held.values()) if (computerKey(k, false)) up(k); held.clear(); if (spaceHeld) { spaceHeld = false; setSustain(false); } };
   window.addEventListener('blur', letGo);
   document.addEventListener('visibilitychange', () => { if (document.hidden) letGo(); });
   function shiftOctave(d) {
     const nb = shell.base + d;
     if (nb + 11 < LO || nb > HI - 12) return; // never a whole row of computer keys out of range
-    for (const k of held.values()) up(k);
+    for (const k of held.values()) if (computerKey(k, false)) up(k);
     held.clear(); shell.base = nb; shell.keys.labels(labels()); updateHelp();
   }
   function updateHelp() {
@@ -290,6 +300,7 @@ export function createShell(cfg) {
     startMIDI({ onMIDI, status: (t) => { if ($('#midi')) $('#midi').textContent = t; }, button: $('#midi-btn'), controllers: ccs });
   }
   const ccs = controllersOf(cfg), ccLast = {}; // the descriptor's controllers and faders
+  pageMIDI({ onMIDI, controllers: ccs }); // a song played from a MIDI file (shared/songs.js) plays it as a keyboard would
   function onMIDI(ev) {
     const [st, d1, d2] = ev.data, cmd = st & 0xf0;
     const { own: its, with: own } = notes.midi(ev.data);
@@ -331,6 +342,7 @@ export function createShell(cfg) {
     if (p.step) v = Math.round(v / p.step) * p.step;
     return Math.min(p.max, Math.max(p.min, v));
   };
+  const groupNotes = [];
   for (const g of cfg.groups) {
     const det = document.createElement('details');
     det.className = 'group'; det.open = g.open !== false;
@@ -369,6 +381,12 @@ export function createShell(cfg) {
       det.appendChild(wrap);
       controls.set(p.id, { p, input, val, wrap, face });
     }
+    // a group whose every control is hidden by the others' settings says so, not just its title
+    const none = document.createElement('p');
+    none.className = 'muted group-empty'; none.hidden = true;
+    none.textContent = g.empty ?? 'Nothing to set here with the other settings as they are.';
+    det.appendChild(none);
+    groupNotes.push([none, g.params.map((p) => p.id)]);
     $('#groups').appendChild(det);
   }
   qualityControl(); // the device's Quality, after the instrument's groups
@@ -396,7 +414,10 @@ export function createShell(cfg) {
     }
     if (shell.base + 11 < LO || shell.base > HI - 12) shiftOctave(Math.min(Math.ceil(LO / 12) * 12, Math.max(LO, HI - 12)) - shell.base);
   };
-  const refreshVisibility = () => { for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(shell.P) : false; };
+  const refreshVisibility = () => {
+    for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(shell.P) : false;
+    for (const [note, ids] of groupNotes) note.hidden = ids.some((id) => !controls.get(id)?.wrap.hidden);
+  };
   shell.setParam = (id, v, dragging = false) => {
     if (shell.P[id] === v) return;
     shell.P[id] = v;
@@ -426,15 +447,45 @@ export function createShell(cfg) {
   }
   $('#reset')?.addEventListener('click', () => { shell.setAll({ ...DEFAULTS }); if ($('#preset')) $('#preset').value = ''; });
   // your own presets and shared links, in the same menu (shared/user-presets.js)
-  shell.presets = attachPresets({ instrument: cfg, get: () => shell.P, set: (v) => shell.setAll({ ...shell.P, ...v }), toast });
-  $('#start')?.addEventListener('click', (e) => { shell.startAudio(); e.currentTarget.blur(); });
-  $('#midi-btn')?.addEventListener('click', (e) => { initMIDI(); e.currentTarget.blur(); });
-  resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
-  $('#panic')?.addEventListener('click', (e) => { shell.panic(); e.currentTarget.blur(); });
+  shell.presets = attachPresets({ instrument: cfg, get: () => shell.P, set: (v) => shell.setAll({ ...shell.P, ...v }), defaults: DEFAULTS, toast });
+  $('#start')?.addEventListener('click', (e) => { shell.startAudio(); unfocus(e.currentTarget); });
+  $('#midi-btn')?.addEventListener('click', (e) => { initMIDI(); unfocus(e.currentTarget); });
+  if (!host) resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click (in a plugin, the host has the MIDI)
+  $('#panic')?.addEventListener('click', (e) => { shell.panic(); unfocus(e.currentTarget); });
+
+  // ---- in the plugin's window (shared/in-plugin.js): its values, keys and pedal ----------------
+  // The plugin's parameters, by its index: the page's own (a console's or the plugin's own, such as
+  // the velocity curve, are not)
+  const pluginParams = host ? host.describe.params.map((q) => ALL.find((p) => p.id === q.id) ?? null) : [];
+  const pluginKeys = keysFrom({
+    on: (key, vel) => { shell.keys.set(key, true); cfg.onNoteOn?.(key, vel); },
+    off: (key) => { shell.keys.set(key, false); cfg.onNoteOff?.(key); },
+    pedal: (on) => { shell.sustain = on; cfg.onSustain?.(on); document.dispatchEvent(new CustomEvent('forte-sustain', { detail: on })); },
+  });
+  shell.fromPlugin = (u) => {
+    const changed = [];
+    for (const [i, , , v] of u.p || []) {
+      const p = pluginParams[i];
+      if (!p || v === undefined) continue;
+      const value = pageValue(p, v);
+      if (shell.P[p.id] === value) continue;
+      shell.P[p.id] = value;
+      if (p.id === cfg.compass?.param) rebound();
+      refresh(p.id);
+      changed.push(p);
+    }
+    if (changed.length) {
+      refreshVisibility(); updateHelp();
+      if (changed.length === 1) cfg.onParam?.(changed[0].id, shell.P[changed[0].id], shell.P, changed[0], false);
+      else cfg.onParam?.('*', null, shell.P, null, false);
+    }
+    pluginKeys(u);
+  };
 
   for (const id of controls.keys()) refresh(id);
   refreshVisibility();
   shell.keys.labels(labels());
   updateHelp();
+  if (host) shell.startAudio();
   return shell;
 }

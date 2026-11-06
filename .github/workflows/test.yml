@@ -6,9 +6,12 @@ on:
     branches: [main, live]
   pull_request:
 
-# A newer push to a pull request replaces its run still going; every run on main and live finishes.
+# A newer push to a pull request replaces its run still going. Every push to main and live gets
+# its own run, at once and to the end: not waiting for the one before (merges come minutes apart),
+# and not dropped while it waits, so each of main's commits saves the page counts that pull
+# requests merging into it compare with.
 concurrency:
-  group: tests-${{ github.event_name }}-${{ github.ref }}
+  group: tests-${{ github.event_name }}-${{ github.ref }}${{ github.event_name == 'push' && format('-{0}', github.sha) || '' }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/live' }}
 
 jobs:
@@ -30,9 +33,20 @@ jobs:
 
   # Every page at the phone, tablet and desktop sizes in headless Chromium (tools/check-pages.mjs):
   # no errors, nothing scrolling sideways, the controls in their places. On a pull request, also
-  # every count that differs from its base, in the job's summary.
-  pages:
+  # every count that differs from its base, in the job's summary. The pages are split over two
+  # machines, and a pull request compares with the counts its base's own run saved (each run on
+  # main and live saves them) instead of opening the base's pages again; only when that run hasn't
+  # finished yet (main has just moved) does it open them. The `pages` job below is the required
+  # check, green when both halves are.
+  pages-shard:
+    name: pages (${{ matrix.shard }}/2)
     runs-on: ubuntu-24.04
+    # about 7 minutes; a browser that hangs fails the job in an hour, not GitHub's six
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -56,11 +70,55 @@ jobs:
           [ -n "$deps" ] || { echo "::error::playwright install-deps --dry-run named no packages"; exit 1; }
           .github/scripts/apt-install.sh --no-install-recommends $deps
           timeout 300 npx playwright install chromium || timeout 300 npx playwright install chromium
+      # the commit a pull request merges into (its merge commit's first parent), and its run's counts
+      - name: The base
+        if: github.event_name == 'pull_request'
+        run: echo "BASE_SHA=$(git rev-parse HEAD^1)" >> "$GITHUB_ENV"
+      - name: The base's counts (first half)
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@v4
+        with:
+          path: pages-counts/1.json
+          key: pages-counts-${{ env.BASE_SHA }}-1
+      - name: The base's counts (second half)
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@v4
+        with:
+          path: pages-counts/2.json
+          key: pages-counts-${{ env.BASE_SHA }}-2
       - name: Check every page
         run: |
           set -o pipefail
-          node tools/check-pages.mjs ${{ github.event_name == 'pull_request' && format('--base origin/{0}', github.base_ref) || '' }} | tee "$RUNNER_TEMP/pages.txt"
+          mkdir -p pages-counts
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            compare="--base $BASE_SHA --base-json pages-counts/1.json,pages-counts/2.json"
+          else
+            compare="--json pages-counts/${{ matrix.shard }}.json"
+          fi
+          node tools/check-pages.mjs --shard ${{ matrix.shard }}/2 $compare | tee "$RUNNER_TEMP/pages.txt"
+      # main's and live's counts, for the pull requests into them (even when a check failed: the
+      # counts are what the page shows)
+      - name: Keep the counts for the pull requests
+        if: always() && github.event_name == 'push' && hashFiles(format('pages-counts/{0}.json', matrix.shard)) != ''
+        uses: actions/cache/save@v4
+        with:
+          path: pages-counts/${{ matrix.shard }}.json
+          key: pages-counts-${{ github.sha }}-${{ matrix.shard }}
+      # every page offline from the service worker's copy, its audio started, and a release (sw.js)
+      - name: Every page offline
+        if: matrix.shard == 1
+        run: node tools/check-offline.mjs
       - name: Summary
         if: always()
         run: |
-          { echo '### Pages'; echo '```'; grep -E '^(FAIL|DIFF|  )|passed|differ|counts the same' "$RUNNER_TEMP/pages.txt" | head -200; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo '### Pages (${{ matrix.shard }}/2)'; echo '```'; grep -E '^(FAIL|DIFF|HUNG|  )|passed|differ|counts the same|counts from its own run' "$RUNNER_TEMP/pages.txt" | head -200; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+  # the required check: green when both halves of the pages are
+  pages:
+    needs: pages-shard
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Both halves passed
+        run: |
+          [ "${{ needs.pages-shard.result }}" = success ] || { echo "::error::The page checks ${{ needs.pages-shard.result }} (see pages (1/2) and pages (2/2))"; exit 1; }

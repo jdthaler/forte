@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Musical Saw · Forte</title>
+  <meta name="description" content="A steel blade bent into an S and bowed on its edge: the note is a wave trapped where the bend turns over, so it rings on untouched by the hands, and bending the blade slides it.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="Musical Saw · Forte">
+  <meta property="og:description" content="A steel blade bent into an S and bowed on its edge: the note is a wave trapped where the bend turns over, so it rings on untouched by the hands, and bending the blade slides it.">
+  <meta property="og:url" content="https://forte.jthaler.net/saw/">
+  <meta property="og:image" content="https://forte.jthaler.net/saw/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Musical Saw's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="saw">
+  <div class="forte-edge" aria-hidden="true"></div>
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Musical Saw</h1>
+      <span class="sub">a steel blade bent into an S, bowed on its edge: the note is a wave trapped where the bend turns over, and bending the blade moves it</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="The saw">
+          <div class="card-head"><h2>The saw</h2><span class="muted" id="saw-read"></span></div>
+          <canvas id="saw"></canvas>
+          <div class="caption">Above, the blade from the side, its handle held between the knees and its tip in the fingers, bent into an S (drawn four times deeper than it is). Below, the blade from above, tapering from heel to toe, with the trapped mode glowing where the curvature turns over: two stripes along the blade, moving in opposite senses, with still lines between them. Bowed, the bow crosses the smooth edge; struck, the mallet lands on the face.</div>
+        </div>
+        <div class="card" data-view="The trap">
+          <div class="card-head"><h2>The trap</h2><span class="muted" id="trap-read"></span></div>
+          <canvas id="trap"></canvas>
+          <div class="caption">Along the blade, from the handle (left) to the tip: the lowest frequency a wave with the note's shape across the blade can have at each place (the band edge, the line), which the curvature raises on either side of the inflection, and the note (across). Where the note lies under the line the wave cannot run, only fade; it is caught in the dip between, and its shape (filled) sits there. A loose bend makes the dip shallow and the mode spreads to the hands; a J has no dip at all.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" id="info-card" data-view="Key">
+          <div class="card-head"><h2><b id="focus-name">A4</b></h2></div>
+          <dl id="info"></dl>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the trapped modes</span></div>
+          <canvas id="spectrum"></canvas>
+        </div>
+      </div>
+      <div class="row single">
+        <div class="card" data-perform data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the trapped modes</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">A bowed saw is nearly one line: the trapped mode alone, swelling as the bow builds it up and wavering with the knee's vibrato. Bowed too far off the sweet spot, it fades away or jumps to a line above, the second trapped mode; struck hard, the higher modes flash and die.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows; the bow draws while a key is held</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>let it ring (hand off the blade): hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+      <span>MIDI: velocity = how hard the bow presses or the mallet falls, mod wheel = the knee's vibrato, aftertouch = press the bow harder, pitch bend = bend the blade (MPE bends one note)</span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/saw-main.js"></script>
+  <script type="module" src="src/saw-tour.js"></script>
+</body>
+</html>

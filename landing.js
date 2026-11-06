@@ -60,14 +60,14 @@ function card(inst) {
   const demo = (examples[inst.id] || [])[0];
   return `
     <article class="card ready" style="--c: ${inst.accent}" data-id="${inst.id}">
-      <h3><a class="card-link" href="${inst.id}/" data-f="name">${attr(inst.name)}</a><span class="meta">${inst.plugin?.ready ? `<a class="plug" href="${inst.id}/#plugin" title="Download the ${attr(inst.name)} as a plugin for your DAW">↓ Plugin</a>` : ''}<span class="ver">v${inst.version}</span></span></h3>
+      <h3><a class="card-link" href="${inst.id}/" data-f="name">${attr(inst.name)}</a><span class="meta">${inst.plugin?.ready ? `<a class="plug" href="${inst.id}/#plugin" title="Download the ${attr(inst.name)} as a plugin for your DAW" aria-label="${attr(inst.name)} plugin">↓ Plugin</a>` : ''}<span class="ver">v${inst.version}</span></span></h3>
       ${inst.after ? `<div class="after">after <span data-f="after">${attr(inst.after)}</span></div>` : ''}
       <p data-f="tagline">${attr(inst.tagline)}</p>
       <div class="tags" data-f="physics">${attr(inst.physics)}</div>
       <div class="actions">
         <a class="play" href="${inst.id}/" tabindex="-1" aria-hidden="true">Play <span>→</span></a>
-        ${demo ? `<button type="button" data-src="examples/${inst.id}/${demo.file}" title="${attr(demo.title)}">▶ Listen</button>` : ''}
-        <a href="${inst.id}/#about" title="The physics of the ${attr(inst.name)}">How it works</a>
+        ${demo ? `<button type="button" data-src="examples/${inst.id}/${demo.file}" data-name="${attr(inst.name)}" title="${attr(demo.title)}" aria-label="Listen to ${attr(inst.name)}">▶ Listen</button>` : ''}
+        <a href="${inst.id}/#about" title="The physics of the ${attr(inst.name)}" aria-label="How it works: ${attr(inst.name)}">How it works</a>
       </div>
     </article>`;
 }
@@ -89,17 +89,25 @@ function render() {
   for (const b of main.querySelectorAll('button[data-src]')) {
     b.addEventListener('click', () => {
       if (playing === b) { player.pause(); return; }
-      if (playing) { playing.classList.remove('on'); playing.textContent = '▶ Listen'; }
+      if (playing) listening(playing, false);
       player.src = b.dataset.src;
       player.play().catch(() => {});
       playing = b;
-      b.classList.add('on'); b.textContent = '■ Stop';
+      listening(b, true);
     });
   }
   apply();
 }
-player.addEventListener('pause', () => { if (playing) { playing.classList.remove('on'); playing.textContent = '▶ Listen'; playing = null; } });
+// a Listen button says what it plays, and what it stops, to a screen reader too
+function listening(b, on) {
+  b.classList.toggle('on', on);
+  b.textContent = on ? '■ Stop' : '▶ Listen';
+  b.setAttribute('aria-label', `${on ? 'Stop' : 'Listen to'} ${b.dataset.name}`);
+}
+player.addEventListener('pause', () => { if (playing) { listening(playing, false); playing = null; } });
 player.addEventListener('ended', () => player.dispatchEvent(new Event('pause')));
+// a demo that can't be had (offline: the demos aren't kept, sw.js) lets its button go back
+player.addEventListener('error', () => player.dispatchEvent(new Event('pause')));
 
 function renderTabs(counts, cur) {
   const on = filtering();
@@ -295,7 +303,7 @@ cbody.addEventListener('click', (e) => {
   const a = e.target.closest('a[href^="#c-"]');
   if (!a) return;
   e.preventDefault();
-  cbody.querySelector(a.getAttribute('href'))?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  cbody.querySelector(a.getAttribute('href'))?.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 });
 
 $('#forte-version').textContent = FORTE_VERSION;

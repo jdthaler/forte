@@ -105,3 +105,21 @@ export function readLinkHash(hash, params) {
   }
   return { name: cleanName(q.get('_n')), values: complete(params, given) };
 }
+
+// ---- morphing ------------------------------------------------------------------------------------
+// The values a fraction t (0 to 1) of the way from one preset's values to another's, both complete
+// (by contract id). A number goes in a straight line, or by equal ratios on a parameter whose
+// slider is logarithmic, and keeps to its step; a choice or a switch changes halfway. At 0 and 1
+// they are the presets' own values. The plugins morph the same way (native/plugin/plugin.cpp).
+export function morph(params, a, b, t) {
+  t = Math.min(1, Math.max(0, Number(t) || 0));
+  return Object.fromEntries(params.map((p) => {
+    const x = a[p.id], y = b[p.id];
+    if (t === 0 || x === y) return [p.id, x];
+    if (t === 1) return [p.id, y];
+    if (p.type === 'select' || p.type === 'checkbox' || typeof x !== 'number' || typeof y !== 'number') return [p.id, t < 0.5 ? x : y];
+    let v = p.log && x > 0 && y > 0 ? x * (y / x) ** t : x + (y - x) * t;
+    if (p.step) v = Math.round(v / p.step) * p.step;
+    return [p.id, Math.min(p.max, Math.max(p.min, v))];
+  }));
+}

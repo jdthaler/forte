@@ -209,6 +209,7 @@ a.forte-menu-item:hover { background: rgba(255, 255, 255, 0.06); }
 .forte-plugin-get .button span { color: var(--muted, #9a9284); font: 500 11.5px ui-monospace, Menlo, monospace; }
 /* a system's box: All | AU · VST3 · CLAP · app */
 .forte-plugin-get .forte-plugin-sys span { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 7px; }
+.forte-plugin-get .forte-plugin-sys .forte-plugin-group { flex-wrap: nowrap; }
 .forte-plugin-sys a { color: var(--accent, #f0b35a); text-decoration: none; }
 .forte-plugin-sys a:hover { text-decoration: underline; }
 .forte-plugin-sys i { font-style: normal; }
@@ -266,4 +267,16 @@ a.forte-menu-item:hover { background: rgba(255, 255, 255, 0.06); }
   .forte-notes-bar { padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 8px max(16px, env(safe-area-inset-left)); }
   .forte-notes-bar h2 { font-size: 20px; }
   .forte-notes-body { padding: 0 max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+}
+
+/* Accessibility, on every page. A control reached with Tab shows a ring in the page's colour
+   (:where, so a control drawing its own focus keeps it). With the system's Reduce Motion on,
+   nothing slides, springs or fades: changes happen at once (the views redraw a few times a
+   second, shared/views.js). */
+:where(button, select, summary, a[href], input, [tabindex]):focus-visible { outline: 2px solid var(--accent, #f0b35a); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important; scroll-behavior: auto !important;
+  }
 }

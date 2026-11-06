@@ -18,6 +18,8 @@
 //
 // The pure parts (the rhythms, chordOf, voicing, stepLength) are exported for test/backing-tests.mjs.
 
+import { unfocus } from './focus.js';
+
 // ---- the rhythms ------------------------------------------------------------------------------
 // A rhythm is steps of a bar: `bar` steps to a bar, `beat` to a beat, `bpm` beats a minute.
 // Each drum track is a string of steps ('.' rest, 'o' soft, 'x' a hit, 'X' an accent), repeated
@@ -25,6 +27,7 @@
 // (or a flat one), 8 the octave. chords: x a stab, L held to the next. fill: the drums of the
 // bar's end when Fill in is pressed (its first hit to the bar's end). swing: the share of a pair
 // of steps the first takes.
+
 export const STYLES = {
   pulsetube: {
     name: 'Pulse tube', bpm: 84, bar: 16, beat: 4,
@@ -398,7 +401,7 @@ export function attachBacking(shell, { id, styles = ['pulsetube'], about = {}, s
     syncBtn.setAttribute('aria-pressed', String(armed));
     chordRead.textContent = S.accomp === 'full' && chord ? chordName(chord) : '';
   }
-  const blur = (e) => e.currentTarget.blur(); // the keys go back to the instrument
+  const blur = (e) => unfocus(e.currentTarget); // the keys go back to the instrument
   styleSel.addEventListener('change', (e) => { S.style = styleSel.value; S.tempo = style().bpm; step %= lengthOf(style()); fill = false; save(); show(); blur(e); });
   tempo.input.addEventListener('input', () => { S.tempo = +tempo.input.value; save(); show(); });
   tempo.input.addEventListener('change', blur);

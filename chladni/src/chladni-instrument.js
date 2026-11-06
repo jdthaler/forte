@@ -18,6 +18,7 @@ export const INSTRUMENT = {
   // MPE: no bend (a plate rings at its own pitch); CC74 moves one note's bow along its edge, and
   // each note's pressure presses its bow harder.
   mpe: { bend: 0, slide: true },
+  aftertouch: 'the bow presses harder', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   faders: ['speed', 'rosin', 'ring', 'force', 'shift'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/chladni), built as WebAssembly
   wasm: { name: 'ChladniPlateWasmEngine', module: new URL('./chladni-wasm.js', import.meta.url).href, binary: new URL('../wasm/chladni.wasm', import.meta.url).href },

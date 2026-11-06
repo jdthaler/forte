@@ -7,7 +7,7 @@ target_include_directories(forte_huygens PUBLIC .)
 target_link_libraries(forte_huygens PUBLIC forte_core)
 
 if (FORTE_PLUGINS)
-  forte_add_plugin(huygens NAME "${FORTE_NAME}" VERSION ${FORTE_VERSION} AU_SUBTYPE ${FORTE_AU_SUBTYPE} INSTRUMENT forte_huygens)
+  forte_add_plugin(huygens NAME "${FORTE_NAME}" VERSION ${FORTE_VERSION} AU_SUBTYPE ${FORTE_AU_SUBTYPE} INSTRUMENT forte_huygens VIEWS ${CMAKE_CURRENT_SOURCE_DIR}/huygens-views.cpp)
 endif()
 if (EMSCRIPTEN)
   forte_add_wasm(huygens INSTRUMENT forte_huygens SOURCES huygens-web.cpp OUT ${FORTE_ROOT}/huygens/wasm/huygens.wasm)

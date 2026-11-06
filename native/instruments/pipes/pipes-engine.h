@@ -94,6 +94,7 @@ class PipeEngine : public Engine {
   void allNotesOff() override;
   void bend(double value) override; // the organ's air warms or cools: every pipe's sound and jets ×r
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the air in one key's pipes alone
+  void pressure(double value, int key) override; // aftertouch: a hand leans on the bellows (up to double the wind)
   int voiceCount() const override;
   // whether key's pipes are built for the parameters as they are (the tests wait for it)
   bool ready(int key) { return bool(data.get(key, version)); }
@@ -173,6 +174,10 @@ class PipeEngine : public Engine {
   double stiff = -1, trem = 0, tremPh = 0, nz = 0;
   double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
   NoteExpression expr{MPE_BEND};  // each key's own bend
+  // aftertouch: every key's (MPE, poly) and the channel's; the bellows feel the hardest
+  std::array<double, 128> press{};
+  double after = 0;
+  void updateAfter();
   // the decimator
   std::array<double, FIR_N> fir{};
   std::array<double, 2 * FIR_N> histL{}, histR{};

@@ -30,6 +30,9 @@ Read first:
   (`native/README.md`; the `wasm` preset needs Emscripten).
 - `node tools/release.mjs --dry-run` shows what the next release would
   bump and the changelog entry it would write.
+- `node tools/check-offline.mjs` opens every page offline from the service
+  worker's copy (`sw.js`, `tools/offline.mjs`), starts its audio, and
+  tries a release; the `pages` job runs it.
 - `CI=1 npm test` is what GitHub Actions runs: it skips the CPU-timing
   tests. They are calibrated on a desktop machine and fail on slow or
   shared ones, so when one fails, run the same test on `main` before
@@ -47,7 +50,9 @@ Read first:
      (with the menus, Controls and the views open, and audio started) and
      fails on console errors, sideways scrolling, perform controls, ⓘ
      buttons, "Default settings" or keys gone missing, or front-page Listen
-     buttons that are missing or don't play; it lists every
+     buttons that are missing or don't play, and on a page view that hangs
+     twice (over 300 s; each hang is listed with the step it was at and the
+     JavaScript the page was running); it lists every
      count that differs from `main`, and each one should be one the change
      meant. The `pages` job in CI runs the same against the pull request's
      base. A filter checks fewer pages: `node tools/check-pages.mjs gongs`.
@@ -90,10 +95,14 @@ Read first:
    it at once; version numbers and new saved states don't count, so a
    release's pull request passes it at once too. Fix a failure at its
    root; never skip or weaken a test to get green.
-7. **Before the merge**, if `main` has moved since CI ran, merge it into
-   the branch and let CI run again, so what was checked is what lands
-   (two threads changing `shared/` can each pass alone and break
-   together).
+7. **Before the merge**, merge `main` into the branch and let CI run
+   again only when it conflicts, or when `main` has moved since CI ran
+   and both its new commits and the branch change `shared/` (two threads
+   changing `shared/` can each pass alone and break together). Otherwise
+   merge as it is: `main` doesn't require a branch to be up to date, CI
+   ran on the branch merged into `main` as it was, and `main`'s own run
+   after the merge checks the two together. When that run fails, the
+   thread whose merge broke it fixes it on a new branch at once.
 8. **Merge** with a merge commit (not squash or rebase) once CI is green
    on the pull request's latest commit and nothing conflicts, without
    waiting to be asked: merging into `main` publishes nothing, and the
@@ -109,8 +118,9 @@ Only when the owner asks for a release:
    entry at the top of `CHANGELOG.md`, bumps each version named once by
    the largest kind its notes give (Forte in `package.json` and
    `FORTE_VERSION` together), regenerates the plugins'
-   `<slug>-info.cmake`, and deletes the notes. Nothing else needs
-   rebuilding: the `.wasm` files carry no version.
+   `<slug>-info.cmake`, deletes the notes, and last writes the service
+   worker's list of the released site into `sw.js` (`tools/offline.mjs`).
+   Nothing else needs rebuilding: the `.wasm` files carry no version.
 2. Commit with every version bumped in the title, e.g.
    `Release Forte 0.31.0, Gong Keyboard 0.4.1`, and open a pull request
    into `live` whose body is the new changelog entry.
@@ -119,7 +129,9 @@ Only when the owner asks for a release:
    green, since the release changes only versions and saved states (on
    Linux only otherwise). So it is green in minutes, as long as the page
    checks take, and the site waits on nothing slower. Whatever fails
-   is fixed on `main` first, then the release branch merges `main` in.
+   is fixed on `main` first, then the release branch merges `main` in and
+   runs `node tools/offline.mjs` again (`tests` fails a pull request into
+   `live` whose `sw.js` doesn't list the site as it is).
 4. Merge it with a merge commit when the owner asks. GitHub Pages
    publishes `live` at once. The plugins follow: the push to `live` runs
    `native` in full (macOS, Windows, auval and the release archives, the

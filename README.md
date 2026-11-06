@@ -35,6 +35,11 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Clavichord](clavichord/) | the German clavichord of C. P. E. Bach's day (18th century) | a brass tangent strikes the strings and stays on them as the end of the speaking length (a moving boundary driving every partial), held up by the finger's force against the strings' pull: pressure tuning and the Bebung from the stretch, the tangent's give tuned for; the listing damps the afterlengths and stops the string at key-up; double-fretted pairs where the higher tangent wins, 4′ strings in the bass, a modal soundboard |
 | ✅ | [Brass](brass/) | the tenor trombone, the B♭ trumpet and the flugelhorn | an outward-striking lip (a mass on a spring) blowing Bernoulli flow into the mouthpiece's cup; the bore as travelling waves (Kelly–Lochbaum, fractional delays, wall losses) and a radiating bell; loud waves steepening into shocks in the narrow tubing (a delay read where the pressure carries each sample); a player who picks the partial and moves the slide or valves and the lips by ear; a plunger |
 | ✅ | [Timpani and Tabla](drums/) | orchestral pedal timpani and the tabla's dayan and bayan | circular membranes solved per azimuthal order (Rayleigh–Ritz on the Bessel modes) with the air on them as a mass and its radiation as their loss, the kettle's air as a spring (Christian et al.), the dayan's loaded syahi that puts nine modes on five harmonics (Raman); felt, wood and fingertip strokes, a resting finger, the heel pressing the bayan's head sharp, the pedal on the pitch-bend wheel |
+| ✅ | [Marimba and Xylophone](marimba/) | the five-octave concert marimba (Yamaha, Keiko Abe, 1984) and the orchestral xylophone (Deagan) | rosewood bars solved as Timoshenko beams and undercut by finite elements to 1 : 4 : 10 (marimba) or 1 : 3 (xylophone); a stopped tube under each bar whose two resonances share the gap's air with bar modes 1 and 2 (the twelfth speaks through an off-centre tube); wood, cord and radiation losses; yarn to plastic mallets (power-law contact), rolls |
+| ✅ | [Gamelan](gamelan/) | the gamelan of Java and Bali: gangsa, saron, bonang, kempul and gong ageng | thick bronze bars as Timoshenko beams that bend and twist (Huang's frequency equation), a gangsa's bar and its bamboo tube as two coupled oscillators; bossed gongs ringing the modes measured by laser vibrometry (Perrin et al.; Krueger et al.), whose curved face makes the note's second harmonic beat with the second round mode (a gong ageng's ombak); pélog and sléndro on the white and black keys; Balinese pairs tuned a few hertz apart that beat (ombak); the player's damping hand |
+| ✅ | [Cimbalom](cimbalom/) | Schunda's concert cimbalom (Budapest, 1874) and the hammered dulcimer | hand-held hammers thrown at the strings, a light head on a flexible stick (Hunt–Crossley contact with cotton, leather or bare wood faces); courses of stiff strings slightly out of tune, coupled at the bridge (Weinreich's two-stage decay and beats); the dulcimer's strings divided 2 : 3 by its treble bridge, both sides ringing; a damper bar and sympathetic strings; a hand tremolo; a modal soundboard |
+| ✅ | [Musical Saw](saw/) | the singing saw of vaudeville and folk players (Mussehl's, 1920s) | a tapered steel blade bent into an S, as a thin shallow shell (Donnell): bending a curved sheet stretches it, so the curvature raises the band edge on either side of the inflection and traps a mode there (Shankar, Bryde and Mahadevan, 2022), solved across the width and along it; the trap tunnels to the hands (WKB, Gamow's rate) when the bend is loose, and a J with no inflection traps nothing; the player slides the S along the taper for each note, bowed on the edge (implicit stick–slip, its threshold from the trapped mode) or struck with felt; the knee's vibrato, and one saw sliding from note to note |
+| ✅ | [Tubular Bells](tubular/) | orchestral chimes | brass tubes as free Timoshenko beams with the cap at the struck end as a mass, each cut so that modes 4, 5 and 6 sound the strike note, a virtual pitch no mode plays; a Hertzian mallet, the air taking the high modes (a line of dipoles above coincidence), heard at two microphones in front of the frame; the damper bar and its pedal |
 
 ### Electric instruments
 
@@ -63,6 +68,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Pyrophone](pyrophone/) | Frédéric Kastner (1873) | flame-driven Rijke tubes on a subcritical Hopf bifurcation: slow self-excited onsets, hysteresis, warm-up drift |
 | ✅ | [Singing Arc](arc/) | William Duddell (1900) | Ayrton's falling arc characteristic with a Mayr-type thermal column driving Duddell's tuned circuit: each note grows at the rate a linear analysis gives and sounds about 1 % below Kelvin's formula; a floor from the hot carbons holds the first kind, a higher re-strike voltage the second; capacitors in parallel on one arc, several lamps, hiss, Simon's talking arc; the arc radiates as a thermophone, ∝ dP/dt |
 | ✅ | [Singing Voice](voice/) | the human voice; Bell Labs' Voder (1939) | Ishizaka and Flanagan's two-mass vocal folds, set flapping by the breath (Bernoulli flow, contact, turbulent breath noise), into a 44-section Kelly–Lochbaum tract whose vowels are fitted to Peterson and Barney's formants, radiating from the lips; each singer tunes their folds' tension by ear and opens the jaw for high notes (formant tuning); the larynx tube's singer's formant |
+| ✅ | [Cristal Baschet](cristal/) | Bernard and François Baschet (Paris, 1952) | glass rods stroked by wet fingers (Couineaux, Ablitzer and Gautier's measured finger-on-glass friction, solved in closed form each sample), each clamped on a steel stem whose bending mode is the note (Euler–Bernoulli beam elements, the rod's mass and rocking): a threshold pressure from the stability analysis, Schelleng's rough limit, strokes back and forth; the stems' pull on a heavy collector, fibreglass cones as pistons, a cut-steel flame's bending modes, and steel whiskers ringing in sympathy and swaying (Couineaux 2025) |
 
 ### Physical phenomena
 
@@ -119,12 +125,23 @@ sostenuto and soft pedals, aftertouch and, where it means something, the
 mod wheel and pitch bend. Once MIDI is on, every other instrument page
 turns it on by itself.
 
+**The MIDI menu:** once MIDI is on, its status opens a menu with the
+velocity curve (Touch), MPE (below), Octave and Transpose. Octave and
+Transpose move the MIDI keys up to four octaves and twelve semitones either
+way, so a 25-key controller reaches all 88 keys, or a piece fingered in C
+sounds in D. Every page keeps what you set there, and while the keys are
+moved the status says so, in the instrument's colour. A note held while you change them ends where it
+began. The keys on the screen and the computer keys play what they show
+(`←`/`→` move the computer keys). The plugins have the same two as their
+Transpose and Octave parameters, which the Forte app keeps when you change
+instrument.
+
 **MPE:** a controller that gives each note a channel of its own (a ROLI
 Seaboard, a LinnStrument, an Expressive E Osmose) bends, slides and presses
 each note alone, wherever the instrument can: a reed, a pipe, a string or a
 bow bends; a struck bar or bell keeps its pitch, but its slide (CC74) still
-moves what the mod wheel moves, for that note. The MPE menu beside Enable
-MIDI is on Auto, which turns MPE on when the controller announces it (its
+moves what the mod wheel moves, for that note. MPE in the MIDI menu is on
+Auto, which turns MPE on when the controller announces it (its
 MPE Configuration Message) and leaves any other keyboard as it was; On
 reads channels 2–16 as MPE without the announcement, and Off never does.
 The plugins have the same choice as their MPE parameter, and also take
@@ -140,6 +157,28 @@ in the Forte app, and any controller sending those CCs does the same. Each
 moves its control across the slider's whole range; a fader on a stop pulls
 it at halfway up. The first touch of each shows which control it moves. Pad Y
 is the mod wheel's control wherever the instrument has one.
+
+**The RISE's panel:** while a Seaboard is plugged in, each page draws it at
+the left: its faders and pad with the controls they move and where they are,
+its keywave with a dot for each finger (across: the key and its Glide; up:
+its Slide; size: its Press), and its five dimensions (Strike, Glide, Slide,
+Press and Lift), each lit as it comes in, with what it does on that
+instrument. Press (the note's own pressure, as any aftertouch) does something
+on most instruments that hold their notes, and nothing on the struck and
+plucked ones, which can't change a note once it sounds. The chevron folds the
+panel to a rail. (Pages only: the plugins' window doesn't show it.)
+
+**The RISE's own settings:** under *On the RISE*, the panel reads the RISE's
+settings over SysEx (the browser asks once to let the page "control and
+reprogram" MIDI devices): its MIDI mode, bend range, how it sends Press and
+Slide, its faders' CCs, octave and firmware, and says what differs from what
+Forte expects. *Set up for Forte* (press it twice) writes MPE on 15 channels
+at ±48, Slide on CC74, Press as channel pressure and the faders on their
+usual CCs; the *Sensitivity* sliders set its Strike, Glide, Slide, Press and
+Lift. The RISE keeps what's written, as when ROLI Dashboard writes it, and
+nothing is written unless one of those is pressed or moved. The protocol is
+the one [GRAB](https://github.com/demixme/GRAB) decoded, on the original RISE
+and the RISE 2; Chrome and Edge only (Safari has no Web MIDI).
 
 <details><summary>What the faders and the pad move</summary>
 
@@ -159,6 +198,11 @@ is the mod wheel's control wherever the instrument has one.
 | Clavichord | Bebung rate · Listing cloth · Unison spread | Finger pressure on the key | Bebung |
 | Brass | Air nonlinearity (shock waves) · Lip tension · Tonguing | Breath | Plunger mute |
 | Timpani and Tabla | Air on the head · Listening angle · Heel push | Resting finger | Strike point |
+| Marimba and Xylophone | Mallet hardness · Bar–tube gap · Roll speed | Strike point | Roll |
+| Gamelan | Mallet softness · Strike point (bars) · Strike point (gongs) | Off the long axis | Paired tuning (ombak) |
+| Cimbalom | Hammer mass · Sympathetic strings · Unison spread | Tremolo | Strike point |
+| Musical Saw | How tight the S · Bow pressure · Where it is played | Bow speed | Vibrato (the knee shakes) |
+| Tubular Bells | Damper felt · Mallet mass · Mallet speed | Strike point | Mallet face |
 | Electric Grand | Bass · Middle · Treble | Tremolo rate | Tremolo depth |
 | Tonewheel Organ | 16' drawbar · 8' drawbar · 4' drawbar | Tube drive | Expression pedal |
 | Tine Piano | Amp drive · Speaker top end · Tip hardness | Stereo vibrato rate | Stereo vibrato depth |
@@ -176,6 +220,7 @@ is the mod wheel's control wherever the instrument has one.
 | Pyrophone | Flame lag τ · Flame turbulence · Listening point | Flame position x_f / L | Flame power K |
 | Singing Arc | Hissing · Column time constant τ · Listening distance | Electrode gap | Arc current |
 | Singing Voice | Lung pressure · Folds apart at rest (breathiness) · Vibrato depth | Larynx tube (singer's formant) | Vowel |
+| Cristal Baschet | Finger wetness · Rod's place on the stem · Whisker sway | Finger pressure | Stroke speed |
 | Huygens Keyboard | Rail-sag coupling · Random mistuning · Resonant body | Tone | Pulse coupling |
 | Gong Keyboard | Mallet mass · Hand damping on release · Microphone distance | Head stiffness | Strike point |
 | Black-Hole Keyboard | Mass ratio q · Viewing inclination ι · Overtone strength | Tone | Spin |
@@ -253,6 +298,13 @@ these settings* makes a link that opens the page playing them, to send
 to someone. *Your presets and files…* lists yours, and saves them to a
 file or opens one: the plugins read and write the same files.
 
+**Morph**, the last group of controls, slides from one preset to another:
+pick *From* and *To* (Default settings, the instrument's presets or your
+own) and move the slider. Every setting the two give goes part of the way,
+a number smoothly and a choice or a switch halfway across; volume, the room
+and the tuning stay as you have them. Choosing a preset from the Presets
+menu makes it the one you morph from.
+
 **Tuning**, among the controls, is the same on every instrument: the
 **pitch** standard (A = 440 Hz, or 415 for baroque pitch, 392, 422.5, 430,
 435, 442, 443 or 466), the **temperament** (equal, ¼- and ⅙-comma
@@ -291,6 +343,20 @@ instrument up and playing a short phrase while it says what to listen
 for, and why. ▶ plays a step again; ✕ (or Esc) ends the tour and puts
 back your views and settings.
 
+**♪ Songs**, in the header after Tour, plays a song on the instrument,
+live: six public-domain pieces of Forte's own (Bach's Prelude in C,
+the opening of Für Elise, Petzold's Minuet in G, Greensleeves, the Ode
+to Joy and Amazing Grace, in [`songs/`](songs/), which you can download
+and play in a DAW too), or any MIDI file of yours: **Open a MIDI file…**,
+or drop a `.mid` anywhere on the page. The keys go down as it plays, at
+the speed you choose (50 to 150 %), and it plays through the same path
+as a MIDI keyboard, so the velocity curve, the pedals, pitch bend and
+the mod wheel work as they do from one. Of a General MIDI file, the page
+plays the notes, pedals, wheel, bend and pressure, and leaves out the
+program changes, volume and drums; a song whose notes would mostly fall
+beyond the instrument's keys moves by whole octaves to fit them. Panic,
+✕ or Esc stops it.
+
 **The keys** fill the width at the key size you choose (− +), like
 GarageBand's: a phone shows an octave or so, a laptop most of the range.
 ◀ ▶ move an octave, and the overview of the whole range above them drags
@@ -301,11 +367,22 @@ aftertouch (Viola Organista, Tangent Clavier, Free-Reed Organ, Glass
 Armonica, Pyrophone, Gong Keyboard, Bubble Organ, Star Keyboard and Wind
 Harp), lean on a held key: slide the finger along it, either way, to
 press harder. The pedal button stands in for `Space`, and ⌨ lists the
-computer keys. On a
+computer keys. **+ Layer**, beside ⌨, adds a second instrument: layered
+with the page's (both play every key) or split from it (the second plays
+the keys below the split point, any key you choose or press), with its
+own preset and volume, as in the Forte app. Each page remembers its
+second. On a
 phone the page scrolls between the header and the keys, which stay put, with the
 controls' bar and its presets just above the keys; turn it sideways
 for wider keys. Use
 *Share → Add to Home Screen* to run Forte as a full-screen app.
+
+Forte works offline. On the first visit the browser keeps a copy of the
+whole site in the background (about 5 MB to download), so from then on
+every instrument opens and plays without a network: on a plane, say, or
+from the home-screen app. Only the front page's demos need a connection. A
+new release downloads in the background too, just the files that changed,
+and takes over the next time you move from one page to another.
 
 ## Plugins
 
@@ -314,10 +391,17 @@ VST3 and CLAP, and a standalone app, for macOS, Windows and Linux. Download ever
 together from **All Plugins** on the front page, or one instrument from **↓ Plugin** next to
 **How it works** on its page, in every format or one format alone (just the AU, say); both are also in the
 [latest release](https://github.com/jdthaler/forte/releases/latest). Then follow
-[native/INSTALL.md](native/INSTALL.md): on macOS and Linux, `make install` and `make verify` in
-the unpacked folder do it all. They are unsigned, so a Mac needs one Terminal command (`xattr`,
+[native/INSTALL.md](native/INSTALL.md): on Windows, All Plugins' **Installer** does it all; on
+Debian, Ubuntu, Mint and Fedora, its **.deb** or **.rpm** package; otherwise, on macOS and
+Linux, `make install` and `make verify` in the unpacked folder. They are unsigned, so a Mac needs one Terminal command (`xattr`,
 which `make install` runs) before it loads them. The download with every instrument also has the
-Forte app, one standalone that plays any of them from its Instrument menu.
+Forte app, one standalone that plays any of them from its Instrument menu, or two at once:
+**+** beside the menu layers a second instrument with the first, or splits the keyboard between
+them.
+
+A plugin's window also shows the instrument's views from its page: press **Views**, beside
+the pedal, and they draw what the plugin plays, whether the notes come from the DAW, a MIDI
+keyboard or the window's keys.
 
 In a plugin's window the Presets menu has your own presets too: *Save these settings…* writes
 one as a file in a presets folder for that instrument (`~/Library/Audio/Presets/Forte/<id>` on a
@@ -326,6 +410,10 @@ Linux), and *Open the presets folder* shows it, so a file saved on the site can 
 Scala files for the custom temperament go in the `Tunings` folder beside the instruments' (on a
 Mac, `~/Library/Audio/Presets/Forte/Tunings`): the menu under Temperament lists them and opens the
 folder.
+
+**Morph** is in every plugin too, as three parameters kept with the project: *Morph from* and
+*Morph to* (the instrument's presets) and *Morph*, the slider, which a DAW can automate to sweep
+from one preset to the other.
 
 **Quality** (in the CPU group) is in every plugin too, kept with the project and in no preset.
 A VST3 or CLAP host that bounces or freezes a track offline gets High whatever it says; the AU

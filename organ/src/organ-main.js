@@ -7,16 +7,18 @@ import { INSTRUMENT } from './organ-instrument.js';
 import { DRAWBARS, NUM_WHEELS, KEY_MIN, KEY_MAX, PC_NAMES } from './tonewheels.js';
 import { wasmModel } from './organ-wasm.js';
 import { createChain } from '../../shared/chain.js';
-import { SpectrogramView } from '../../shared/views.js';
+import { SpectrogramView, animate } from '../../shared/views.js';
 import { GeneratorView, LeslieView, OutputView, drawScanner, BAR_COLORS, useModel } from './organ-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from '../../shared/midi.js';
-import { controlOwns, focusedByPointer } from '../../shared/focus.js';
+import { startMIDI, resumeMIDI, pageMIDI, touched, SOFT_PEDAL, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from '../../shared/midi.js';
+import { controlOwns, focusedByPointer, unfocus } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
 import { tuningRatio } from '../../shared/tuning.js';
 import { connectQuality, qualityControl } from '../../shared/quality.js';
 import { dress, faceOf, rotarySelector } from '../../shared/faces.js';
+import { computerKey } from '../../shared/taps.js'; // a second instrument's share of the computer keys (shared/layer.js)
+import { host, follow } from '../../shared/in-plugin.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'tonewheel-organ/params/v1';
@@ -53,6 +55,25 @@ let audio = null, starting = null, live = false; // live: the context has resume
 function startAudio() {
   if (live) { if (audio.ctx.state !== 'running') audio.ctx.resume(); return Promise.resolve(audio); }
   if (starting) return starting;
+  if (host) { // in the plugin's window: the plugin plays, and the page shows what it plays (shared/in-plugin.js)
+    const consoleIds = new Set(CONSOLE.groups.flatMap((g) => g.params.map((p) => p.id)));
+    starting = follow({
+      wasm: INSTRUMENT.wasm, params: [...ALL_PARAMS, ...CONSOLE.groups.flatMap((g) => g.params)],
+      P: () => ({ ...P, ...CONSOLE.get(P) }),
+      set: (c) => {
+        const plain = Object.fromEntries(Object.entries(c).filter(([k]) => !consoleIds.has(k)));
+        const desk = Object.keys(c).some((k) => consoleIds.has(k)) ? CONSOLE.put({ ...CONSOLE.get(P), ...c }, P) : {};
+        setP({ ...plain, ...desk });
+      },
+      on: (key, velocity) => keyDown(key, velocity), off: keyUp, message: onWorklet,
+    }).then((a) => {
+      a.analyser.smoothingTimeConstant = 0.6;
+      audio = a; live = true; fs = a.ctx.sampleRate;
+      output.setAnalyser(a.analyser); spectro.setAnalyser(a.analyser);
+      return a;
+    });
+    return starting;
+  }
   starting = (async () => {
     const ctx = new AudioContext({ latencyHint: 'interactive' });
     if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
@@ -170,18 +191,18 @@ window.addEventListener('keydown', (e) => {
   e.preventDefault();
   if (e.repeat || held.has(e.code)) return;
   held.set(e.code, key);
-  keyDown(key);
+  if (computerKey(key, true)) keyDown(key);
 });
 window.addEventListener('keyup', (e) => {
   const key = held.get(e.code);
-  if (key !== undefined) { held.delete(e.code); keyUp(key); }
+  if (key !== undefined) { held.delete(e.code); if (computerKey(key, false)) keyUp(key); }
 });
-window.addEventListener('blur', () => { for (const k of held.values()) keyUp(k); held.clear(); });
+window.addEventListener('blur', () => { for (const k of held.values()) if (computerKey(k, false)) keyUp(k); held.clear(); });
 
 function shiftOctave(d) {
   const nb = base + d;
   if (nb + 11 < KEY_MIN || nb > KEY_MAX - 12) return; // never a whole row of computer keys out of range
-  for (const k of held.values()) keyUp(k);
+  for (const k of held.values()) if (computerKey(k, false)) keyUp(k);
   held.clear();
   base = nb;
   keyboardView.labels(keyLabels());
@@ -208,6 +229,7 @@ let soft = false;               // CC67
 const notes = pageMpe({ post: () => {}, params: () => P }); // MPE: the generator turns every wheel, so no note bends alone, and a member's bend is no one else's
 // the faders and the pad (the descriptor's): a drawbar goes through the console's state
 const ccs = controllersOf(INSTRUMENT), ccLast = {}, consoleParams = CONSOLE.groups.flatMap((g) => g.params);
+pageMIDI({ onMIDI, controllers: ccs }); // a song played from a MIDI file (shared/songs.js) plays it as a keyboard would
 function fader(cc, v) {
   const set = controlled(ccs, [...ALL_PARAMS, ...consoleParams], { ...P, ...CONSOLE.get(P) }, cc, v, ccLast);
   if (!set) return;
@@ -297,11 +319,11 @@ $('#registration').addEventListener('change', (e) => {
   const digits = e.target.value.replace(/[^0-8]/g, '');
   if (digits.length === 9) setP({ drawbars: digits.split('').map(Number) });
   else e.target.value = regString(P.drawbars);
-  e.target.blur();
+  unfocus(e.target);
 });
 
 for (const b of document.querySelectorAll('#perc button')) {
-  b.addEventListener('click', () => { setP({ [b.dataset.k]: !P[b.dataset.k] }); b.blur(); });
+  b.addEventListener('click', () => { setP({ [b.dataset.k]: !P[b.dataset.k] }); unfocus(b); });
 }
 // The B-3's vibrato: a six-position knob, and its tab that turns it on; off, the knob keeps its place.
 const VIB = ['V1', 'C1', 'V2', 'C2', 'V3', 'C3'];
@@ -315,13 +337,13 @@ $('#vib').addEventListener('keydown', (e) => {
   vibAt = VIB[Math.max(0, Math.min(5, VIB.indexOf(vibAt) + step))];
   setP({ vib: vibAt });
 });
-$('#vib-on').addEventListener('click', (e) => { setP({ vib: P.vib === 'off' ? vibAt : 'off' }); e.currentTarget.blur(); });
+$('#vib-on').addEventListener('click', (e) => { setP({ vib: P.vib === 'off' ? vibAt : 'off' }); unfocus(e.currentTarget); });
 // The Leslie's half-moon (slow, stop, fast), and a tab that bypasses the cabinet.
 for (const b of document.querySelectorAll('#leslie button')) {
-  b.addEventListener('click', () => { setP({ leslieOn: true, leslie: b.dataset.v }); b.blur(); });
+  b.addEventListener('click', () => { setP({ leslieOn: true, leslie: b.dataset.v }); unfocus(b); });
 }
-$('#leslie-on').addEventListener('click', (e) => { setP({ leslieOn: !P.leslieOn }); e.currentTarget.blur(); });
-$('#motor').addEventListener('click', (e) => { setP({ motor: !P.motor }); e.currentTarget.blur(); });
+$('#leslie-on').addEventListener('click', (e) => { setP({ leslieOn: !P.leslieOn }); unfocus(e.currentTarget); });
+$('#motor').addEventListener('click', (e) => { setP({ motor: !P.motor }); unfocus(e.currentTarget); });
 
 function refreshConsole() {
   P.drawbars.forEach((v, d) => {
@@ -372,7 +394,7 @@ function buildControls() {
         input = document.createElement('select');
         input.id = `p-${p.id}`;
         for (const [k, name] of p.options) input.add(new Option(name, k));
-        input.addEventListener('change', () => { setP({ [p.id]: typeof p.def === 'number' ? +input.value : input.value }); input.blur(); }); // (the tuning's pitch and root are numbers)
+        input.addEventListener('change', () => { setP({ [p.id]: typeof p.def === 'number' ? +input.value : input.value }); unfocus(input); }); // (the tuning's pitch and root are numbers)
         wrap.appendChild(input);
       } else {
         wrap.innerHTML = `<div class="row"><label for="p-${p.id}">${p.label}</label><span class="val"></span></div>`;
@@ -406,7 +428,7 @@ function buildControls() {
     if (ps.value === '') return;
     const keep = Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]])); // and the motor back on (DEFAULTS)
     replaceP({ ...DEFAULTS, ...keep, ...PRESETS[+ps.value].p });
-    ps.blur();
+    unfocus(ps);
   });
   $('#reset').addEventListener('click', () => { replaceP({ ...DEFAULTS }); $('#preset').value = ''; });
 }
@@ -514,7 +536,6 @@ function refreshFocus() {
 }
 
 function frame() {
-  requestAnimationFrame(frame);
   const shown = (cv) => cv.offsetParent !== null; // views can be hidden from the Views menu
   if (shown(genView.cv)) genView.draw();
   if (shown(leslieView.cv)) leslieView.draw(P);
@@ -532,10 +553,10 @@ function toast(msg) {
   toastTimer = setTimeout(() => { t.hidden = true; }, 3500);
 }
 
-$('#start').addEventListener('click', (e) => { startAudio(); e.currentTarget.blur(); });
-$('#midi-btn').addEventListener('click', (e) => { initMIDI(); e.currentTarget.blur(); });
-resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
-$('#panic').addEventListener('click', (e) => { panic(); e.currentTarget.blur(); });
+$('#start').addEventListener('click', (e) => { startAudio(); unfocus(e.currentTarget); });
+$('#midi-btn').addEventListener('click', (e) => { initMIDI(); unfocus(e.currentTarget); });
+if (host) startAudio(); else resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
+$('#panic').addEventListener('click', (e) => { panic(); unfocus(e.currentTarget); });
 
 buildControls();
 for (const id of controls.keys()) refreshControl(id);
@@ -545,7 +566,7 @@ refreshConsole();
 refreshGenerator();
 refreshFocus();
 updateHelp();
-requestAnimationFrame(frame);
+animate(frame);
 // your own presets and links: the console's state goes in as its parameters (organ-params.js)
-attachPresets({ instrument: INSTRUMENT, get: () => P, values: (p) => ({ ...p, ...CONSOLE.get(p) }), set: (v) => replaceP({ ...P, ...Object.fromEntries(ALL_PARAMS.map((p) => [p.id, v[p.id]])), ...CONSOLE.put(v, P) }), toast });
+attachPresets({ instrument: INSTRUMENT, get: () => P, values: (p) => ({ ...p, ...CONSOLE.get(p) }), set: (v) => replaceP({ ...P, ...Object.fromEntries(ALL_PARAMS.map((p) => [p.id, v[p.id]])), ...CONSOLE.put(v, P) }), defaults: DEFAULTS, toast });
 qualityControl(); // the device's Quality, after the controls

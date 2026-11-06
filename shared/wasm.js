@@ -80,6 +80,10 @@ export function wasmEngine(I, { messages } = {}) {
     static get exports() { return x; }
     // It takes all the parameters and computes per-note data itself.
     static fullParams = true;
+    // A posted Message ({ type, key, values }) as the page's message, or null: for a page whose
+    // engine runs elsewhere (a plugin's, shared/in-plugin.js), with a state object of its own
+    // ({ fs }) in place of the engine.
+    static translate = messages ?? null;
 
     constructor(fs) {
       if (!x) throw new Error(`${I.id}: the WebAssembly is not loaded (await ready() or load(bytes))`);

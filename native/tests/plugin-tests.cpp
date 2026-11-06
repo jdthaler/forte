@@ -246,6 +246,43 @@ TEST("plugin: the Preset parameter applies a preset, keeping the kept parameters
   for (auto &e : ev.out) told |= e.param_id == in.id("Ring time") && e.value == 6;
   CHECK(told);
 }
+TEST("plugin: Morph takes every parameter part way from one preset to another, keeps the kept ones and tells the host") {
+  Instance in(48000);
+  CHECK(in.value("Morph from") == 0 && in.value("Morph to") == 1 && in.value("Morph") == 0); // Default settings to the first preset
+  Events ev;
+  ev.param(0, in.id("Volume"), 1.5);
+  ev.param(10, in.id("Morph"), 0.5);   // Ring time 1 s to "Long ring"'s 6 s, a log parameter: by equal ratios
+  in.run(256, 128, ev);
+  CHECK(std::fabs(in.value("Ring time") - std::sqrt(6.0)) < 1e-9);
+  CHECK(std::fabs(in.value("Volume") - 1.5) < 1e-12); // kept
+  bool told = false;
+  for (auto &e : ev.out) told |= e.param_id == in.id("Ring time") && std::fabs(e.value - std::sqrt(6.0)) < 1e-9;
+  CHECK(told);
+  Events end;
+  end.param(0, in.id("Morph"), 1);     // all the way: the preset itself, and the Preset menu names it
+  in.run(128, 128, end);
+  CHECK(std::fabs(in.value("Ring time") - 6) < 1e-12 && in.value("Preset") == 1);
+  Events back;
+  back.param(0, in.id("Morph"), 0);
+  in.run(128, 128, back);
+  CHECK(std::fabs(in.value("Ring time") - 1) < 1e-12 && in.value("Preset") == 0);
+  // choosing a preset: where Morph ends puts it at 100 %; any other is where it starts now, at 0 %
+  Events to;
+  to.param(0, in.id("Preset"), 1);
+  in.run(128, 128, to);
+  CHECK(in.value("Morph") == 1 && in.value("Morph from") == 0);
+  Events from;
+  from.param(0, in.id("Morph to"), 0);
+  from.param(1, in.id("Preset"), 1);
+  in.run(128, 128, from);
+  CHECK(in.value("Morph from") == 1 && in.value("Morph") == 0 && std::fabs(in.value("Ring time") - 6) < 1e-12);
+  char text[64];
+  CHECK(in.params->value_to_text(in.p, in.id("Morph"), 0.4, text, sizeof text) && std::string(text) == "40 %");
+  CHECK(in.params->value_to_text(in.p, in.id("Morph to"), 1, text, sizeof text) && std::string(text) == "Long ring");
+  clap_param_info_t info{};
+  for (uint32_t i = 0; i < in.params->count(in.p); i++) if (in.params->get_info(in.p, i, &info) && info.id == in.id("Morph")) break;
+  CHECK(info.flags & CLAP_PARAM_IS_AUTOMATABLE);
+}
 TEST("plugin: the mod wheel moves its parameter from the default (at rest) to the maximum") {
   Instance in(48000);
   Events ev;
@@ -348,6 +385,7 @@ TEST("plugin: state saved and loaded into a new instance, by parameter id") {
   {
     Instance a(48000);
     Events ev;
+    ev.param(0, a.id("Morph"), 0.25);    // then a value moved by hand after it
     ev.param(0, a.id("Ring time"), 3.5);
     ev.param(0, a.id("Volume"), 0.25);
     ev.param(0, a.id("Quality"), 1);
@@ -367,6 +405,7 @@ TEST("plugin: state saved and loaded into a new instance, by parameter id") {
   CHECK(std::fabs(b.value("Ring time") - 3.5) < 1e-12);
   CHECK(std::fabs(b.value("Volume") - 0.25) < 1e-12);
   CHECK(b.value("Quality") == 1); // the project keeps its Quality
+  CHECK(b.value("Morph") == 0.25 && std::fabs(b.value("Ring time") - 3.5) < 1e-12); // Morph as it was, without moving the values saved after it
 }
 TEST("plugin: values read as the page shows them, and typed values are understood") {
   Instance in(48000);
@@ -375,6 +414,28 @@ TEST("plugin: values read as the page shows them, and typed values are understoo
   double v = 0;
   CHECK(in.params->text_to_value(in.p, in.id("Ring time"), "4 s", &v) && std::fabs(v - 4) < 1e-12);
   CHECK(in.params->value_to_text(in.p, in.id("Preset"), 1, text, sizeof text) && std::string(text) == "Long ring");
+}
+
+TEST("plugin: while the window shows the views, its polls bring the engine's sound") {
+  Instance in(48000);
+  auto bridge = (const forte::EditorBridge *)in.p->get_extension(in.p, forte::kEditorBridge);
+  auto call = [&](const char *json) { return bridge->call(in.p, json); };
+  CHECK(call("[\"describe\"]").find("\"page\"") == std::string::npos); // the smoke test has no page
+  Events none;
+  call("[\"note\", 69, 0.8]");
+  in.run(1280, 128, none);
+  CHECK(call("[\"poll\"]").find("\"s\"") == std::string::npos); // nothing while they don't show
+  CHECK(call("[\"views\", 1]").find("\"fs\": 48000") != std::string::npos);
+  call("[\"poll\"]");
+  in.run(1280, 128, none);
+  const std::string polled = call("[\"poll\"]");
+  const size_t at = polled.find("\"s\": \"");
+  CHECK(at != std::string::npos && polled.find("\"m\": [") != std::string::npos);
+  const size_t end = polled.find('"', at + 6);
+  CHECK(end - (at + 6) == (1280 * 4 + 2) / 3 * 4); // 1280 float32s, base64
+  CHECK(call("[\"views\", 0]").find("\"fs\"") != std::string::npos);
+  in.run(1280, 128, none);
+  CHECK(call("[\"poll\"]").find("\"s\"") == std::string::npos);
 }
 
 TEST("plugin: the editor's calls set parameters, play notes and show what the host changed") {
@@ -386,7 +447,7 @@ TEST("plugin: the editor's calls set parameters, play notes and show what the ho
   CHECK(d.find("\"name\": \"Forte Smoke Test\"") != std::string::npos);
   CHECK(d.find("\"Long ring\"") != std::string::npos && d.find("\"presets\": 3") != std::string::npos);
   CHECK(d.find("\"space\": \"sustain\"") != std::string::npos);
-  CHECK(call("[\"poll\"]").find("[1, 0.4, \"-1.9 dB\"]") != std::string::npos); // every value once
+  CHECK(call("[\"poll\"]").find("[1, 0.4, \"-1.9 dB\", ") != std::string::npos); // every value once (and the engine's value)
   CHECK(call("[\"poll\"]").find("\"p\": []") != std::string::npos);            // then only changes
 
   // a slider half way along: Ring time is a log parameter, 0.1 … 10 s
@@ -410,8 +471,8 @@ TEST("plugin: the editor's calls set parameters, play notes and show what the ho
   auto L = in.run(4800, 128, preset);
   CHECK(peak(L) > 0.01);
   const std::string polled = call("[\"poll\"]");
-  CHECK(polled.find("\"keys\": [69]") != std::string::npos);
-  CHECK(polled.find("[3, 1, \"Long ring\"]") != std::string::npos && polled.find("\"6.00 s\"") != std::string::npos);
+  CHECK(polled.find("\"keys\": [69]") != std::string::npos && polled.find("\"vel\": [0.8") != std::string::npos);
+  CHECK(polled.find("[3, 1, \"Long ring\", 1]") != std::string::npos && polled.find("\"6.00 s\"") != std::string::npos);
   call("[\"note\", 69, 0]");
   call("[\"panic\"]");
   Events none;
@@ -494,14 +555,78 @@ TEST("plugin: CLAP's note expressions bend and slide one note; the AU wrapper's 
   L = in.run(9600, 128, au);
   CHECK(loudest(L, {kC4, up(kC4, 1)}, 4800, 9600) == 1);
   CHECK(loudest(L, {up(kE4, -2), up(kE4, -1)}, 4800, 9600) == 1);
-  // a slide shortens one note's ring: fully up, the wheel's top (10 s) from the default 1 s
+  // a slide shortens one note's ring: from where it began (0) fully up, the wheel's top (10 s) from the default 1 s
   Events slide;
   slide.note(0, true, 0, 72, 0.8);
+  slide.expression(0, CLAP_NOTE_EXPRESSION_BRIGHTNESS, 0, 72, 0);
   slide.expression(0, CLAP_NOTE_EXPRESSION_BRIGHTNESS, 0, 72, 1);
   slide.note(0, true, 0, 76, 0.8);
   L = in.run(48000, 128, slide);
   const double c5 = tone(L, up(kC4, 13), 48000, 36000, 48000), e5 = tone(L, up(kE4, 13), 48000, 36000, 48000);
   CHECK(c5 > 5 * e5);
+}
+
+TEST("plugin: Octave and Transpose move the MIDI keys, not the window's; a note held while they change ends where it began; saved") {
+  Instance in(48000);
+  char text[64];
+  CHECK(in.value("Transpose") == 12 && in.value("Octave") == 4); // the indices of 0
+  CHECK(in.params->value_to_text(in.p, in.id("Transpose"), 14, text, sizeof text) && std::string(text) == "+2");
+  CHECK(in.params->value_to_text(in.p, in.id("Octave"), 0, text, sizeof text) && std::string(text) == "\xe2\x88\x92" "4");
+  double v = -1;
+  CHECK(in.params->text_to_value(in.p, in.id("Transpose"), "+2", &v) && v == 14);
+  clap_param_info_t info;
+  for (uint32_t i = 0; i < in.params->count(in.p); i++) if (in.params->get_info(in.p, i, &info) && info.id == in.id("Octave")) break;
+  CHECK(!(info.flags & CLAP_PARAM_IS_AUTOMATABLE) && std::string(info.module) == "MIDI");
+
+  Events ev;
+  ev.param(0, in.id("Transpose"), 14);   // +2
+  ev.midi(10, 0x90, 60, 100);            // C4 plays D4
+  ev.param(4800, in.id("Transpose"), 12); // back to 0 while it is held
+  ev.midi(9600, 0x80, 60, 0);            // and its note-off ends D4
+  auto L = in.run(48000, 128, ev);
+  CHECK(loudest(L, {kC4, up(kC4, 2)}, 2400, 4800) == 1);
+  CHECK(loudest(L, {kC4, up(kC4, 2)}, 6000, 9600) == 1);
+  CHECK(peak(L, 40000, 48000) < 1e-4);
+
+  Events both;
+  both.param(0, in.id("Octave"), 3);     // −1
+  both.param(0, in.id("Transpose"), 16); // +4
+  both.note(10, true, 0, 60, 0.8);       // a CLAP note: C4 plays G♯3
+  both.note(4800, false, 0, 60, 0);
+  L = in.run(9600, 128, both);
+  CHECK(loudest(L, {kC4, up(kC4, -8)}, 2400, 4800) == 1);
+
+  // the window's keys play what they show
+  auto bridge = (const forte::EditorBridge *)in.p->get_extension(in.p, forte::kEditorBridge);
+  bridge->call(in.p, "[\"panic\"]");
+  bridge->call(in.p, "[\"note\", 60, 0.8]");
+  Events none;
+  L = in.run(9600, 128, none);
+  CHECK(loudest(L, {kC4, up(kC4, -8)}, 4800, 9600) == 0);
+  bridge->call(in.p, "[\"note\", 60, 0]");
+
+  // an MPE member's bend follows its moved note
+  Events mpe;
+  mpe.param(0, in.id("Octave"), 4); mpe.param(0, in.id("Transpose"), 14); // +2
+  mpe.mcm(0, 0, 15);
+  mpe.midi(0, 0x90, 127, 100);           // past G9: nowhere to play, and its note-off is dropped too
+  mpe.midi(10, 0x80, 127, 0);
+  mpe.midi(100, 0x91, 60, 100);          // C4 on channel 2 plays D4
+  mpe.bend(200, 1, -1.0 / 48);           // down a semitone: C♯4
+  L = in.run(9600, 128, mpe);
+  CHECK(loudest(L, {up(kC4, 2), up(kC4, 1)}, 4800, 9600) == 1);
+
+  std::string saved;
+  clap_ostream_t os{&saved, [](const clap_ostream_t *s, const void *b, uint64_t n) -> int64_t { ((std::string *)s->ctx)->append((const char *)b, n); return (int64_t)n; }};
+  CHECK(in.state->save(in.p, &os));
+  CHECK(saved.find("\nmidiTranspose 14\n") != std::string::npos && saved.find("\nmidiOctave 4\n") != std::string::npos);
+  Instance again(48000);
+  struct Reader { std::string s; size_t at = 0; } r{saved};
+  clap_istream_t is{&r, [](const clap_istream_t *s, void *b, uint64_t n) -> int64_t {
+    auto *r = (Reader *)s->ctx; const size_t k = std::min<size_t>(n, r->s.size() - r->at);
+    std::memcpy(b, r->s.data() + r->at, k); r->at += k; return (int64_t)k; }};
+  CHECK(again.state->load(again.p, &is));
+  CHECK(again.value("Transpose") == 14 && again.value("Octave") == 4);
 }
 
 int main() { return check::run(); }
