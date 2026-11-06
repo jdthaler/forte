@@ -2,7 +2,7 @@
 // to play it. The page (rhodes-main.js), the Node tools and tests, and the native
 // plugins (tools/gen-native-params.mjs) all start here. No DOM, no Web Audio.
 
-import { GROUPS, DEFAULTS, PRESETS } from './rhodes-params.js';
+import { GROUPS, DEFAULTS, PRESETS, hammerSpeed } from './rhodes-params.js';
 import { KEY_MIN, KEY_MAX } from './tine.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
 import { EXPRESSION } from '../../shared/expression.js';
@@ -16,7 +16,7 @@ export const INSTRUMENT = {
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: 88, A0–C8 (the 73-key models: E1–E7)
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine
-  midiVelocity: (v) => 0.25 * 20 ** v,  // MIDI velocity / 127 → hammer speed, 0.25 … 5 m/s
+  midiVelocity: hammerSpeed,            // MIDI velocity / 127 → hammer speed, 0.25 … 5 m/s
   mpe: { bend: 48 },                    // MPE: a note's own bend slides its fork's tuning spring, ±48 semitones
   lift: 'how fast the damper falls: a slow lift leaves a longer tail, a fast one stops the tine sooner', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   modWheel: 'tremDepth',                // MIDI CC1, the mod wheel (an FC-300's EXP 2): the tremolo, off at rest, full depth fully up
