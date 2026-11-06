@@ -1,249 +1,45 @@
-// ringdown-main.js — the page: UI, audio graph, keyboard / MIDI, views. The instrument
-// itself (parameters, engine, chain) is blackhole-instrument.js. The worklet runs the
-// WebAssembly build (blackhole-wasm.js), and the views call its model.
+// ringdown-main.js — the page: wires the shell (shared/shell.js) to the engine and draws the
+// views. The instrument itself (parameters, engine, chain) is blackhole-instrument.js. The
+// worklet runs the WebAssembly build (blackhole-wasm.js), and the views call its model.
 
-import { INSTRUMENT, DEFAULTS as OWN_DEFAULTS, PRESETS } from './blackhole-instrument.js';
-import { EXPRESSION, EXPRESSION_DEFAULTS, EXPRESSION_IDS, responds } from '../../shared/expression.js';
-// the descriptor's groups end with the Expression switches (shared/expression.js)
-const GROUPS = INSTRUMENT.groups, ALL_PARAMS = [...OWN_PARAMS, ...EXPRESSION.params], DEFAULTS = { ...OWN_DEFAULTS, ...EXPRESSION_DEFAULTS };
-import { ALL_PARAMS as OWN_PARAMS, fmtSpin, noteName, KEY_LO, KEY_HI, spinFromU } from './ringdown-params.js';
+import { createShell, noteName } from '../../shared/shell.js';
+import { INSTRUMENT } from './blackhole-instrument.js';
+import { fmtSpin, spinFromU } from './ringdown-params.js';
 import { wasmModel } from './blackhole-wasm.js';
-import { createChain } from '../../shared/chain.js';
 import { SpectrogramView, animate } from '../../shared/views.js';
 import { drawPlane, drawKerr, WaveView, Lazy } from './ringdown-viz.js';
-import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, pageMIDI, wheelValue, pageMpe, touched, SOFT_PEDAL, createSostenuto, controllersOf, controlled, tellFader } from '../../shared/midi.js';
-import { controlOwns, unfocus } from '../../shared/focus.js';
-import { trimGain } from '../../shared/registry.js';
-import { attachPresets } from '../../shared/user-presets.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
-import { connectQuality, qualityControl } from '../../shared/quality.js';
-import { dress, faceOf } from '../../shared/faces.js';
-import { computerKey } from '../../shared/taps.js'; // a second instrument's share of the computer keys (shared/layer.js)
-import { host, follow } from '../../shared/in-plugin.js';
+import { unfocus } from '../../shared/focus.js';
+import { paramsStore } from '../../shared/layer.js';
 
 const $ = (s) => document.querySelector(s);
-const STORE = 'blackhole-keyboard/params/v1';
-function load() { try { const s = JSON.parse(localStorage.getItem(STORE) || 'null'); return s ? { ...DEFAULTS, ...s } : { ...DEFAULTS }; } catch { return { ...DEFAULTS }; } }
-function save() { try { localStorage.setItem(STORE, JSON.stringify(P)); } catch { /* unavailable */ } }
-
-let P = load(), fs = 48000, base = 48, focusKey = 60, lastVel = 1;
-const held = new Map();
-// all the parameters: the engine builds each key's voice from them as the note starts
-const paramsMessage = (swap = false) => ({ type: 'params', P: { ...P }, ...(swap && { swap }) }); // swap: a preset's change, faded across (shared/worklet.js)
 
 // The WebAssembly model (blackhole-wasm.js): the QNM bank, each key's voice and its strain, the
 // same C++ the engine plays.
 const model = await wasmModel();
-const voiceOf = (key) => model.voiceFor(key, P, fs);
+const fs = () => shell?.audio?.ctx.sampleRate || 48000; // voices are cached per sample rate (voiceFor)
+const voiceOf = (key) => model.voiceFor(key, shell.P, fs());
 // a short window: a ringdown is over in a few dozen cycles
 const spectro = new SpectrogramView($('#spectrogram'), { fLo: 40, fHi: 12000, secs: 4 });
 
-// ---------------------------------------------------------------------------
-// audio
-
-let audio = null, starting = null, live = false; // live: the context has resumed; until then notes queue in order
-function startAudio() {
-  if (live) { if (audio.ctx.state !== 'running') audio.ctx.resume(); return Promise.resolve(audio); }
-  if (starting) return starting;
-  if (host) { // in the plugin's window: the plugin plays, and the views follow it (shared/in-plugin.js)
-    starting = follow({ wasm: INSTRUMENT.wasm, params: ALL_PARAMS, P: () => P, set: fromPlugin, on: (key, vel) => noteOn(key, vel), off: noteOff, message: onEngine })
-      .then((a) => { audio = a; live = true; fs = a.ctx.sampleRate; const an = a.ctx.createAnalyser(); an.fftSize = 2048; an.smoothingTimeConstant = 0; spectro.setAnalyser(an); return a; });
-    return starting;
-  }
-  starting = (async () => {
-    const ctx = new AudioContext({ latencyHint: 'interactive' });
-    if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
-    // the WebAssembly build: its bytes go to the worklet, which compiles them
-    const bytes = await (await fetch(INSTRUMENT.wasm.binary)).arrayBuffer();
-    await ctx.audioWorklet.addModule(INSTRUMENT.wasm.module);
-    await ctx.audioWorklet.addModule(new URL('../../shared/worklet.js', import.meta.url));
-    const node = new AudioWorkletNode(ctx, 'forte-processor', {
-      numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { wasm: { name: INSTRUMENT.wasm.name, bytes }, keyVelocity: INSTRUMENT.keyVelocity },
-    });
-    const chain = createChain(ctx, node, INSTRUMENT.chain); // tone → master (+ room) → limiter
-    node.port.onmessage = (e) => onEngine(e.data);
-    fs = ctx.sampleRate; // voices are cached per sample rate (voiceFor)
-    const analyser = ctx.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0;
-    chain.tap.connect(analyser); spectro.setAnalyser(analyser);
-    audio = { ctx, node, chain };
-    applyMix();
-    node.port.postMessage(paramsMessage());
-    connectQuality(node, { toast }); // the device's Quality (shared/quality.js)
-    if (ctx.state !== 'running') await ctx.resume();
-    live = true;
-    $('#start').textContent = `Audio on · ${(fs / 1000).toFixed(1)} kHz`;
-    $('#start').classList.add('running');
-    return audio;
-  })();
-  starting.catch((err) => { toast(`Audio failed to start: ${err.message}`); starting = null; });
-  return starting;
-}
-function onEngine(m) {
-  if (m.type === 'voices') $('#voices').textContent = `${m.voices} ringing`; // the engine's, every 48 blocks
-  else if (m.type === 'error') toast(m.message);
-}
-const post = (m) => { if (live) audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
-function applyMix() { if (audio) audio.chain.apply(P, trimGain('blackhole')); } // trim: level-matched across instruments
-
-// ---------------------------------------------------------------------------
-// keys
-
-async function noteOn(key, vel = INSTRUMENT.keyVelocity, own) { // computer keys: keyVelocity (1); own: an MPE note's own (midi.js pageMpe)
-  if (key < KEY_LO || key > KEY_HI) return;
-  down.add(key); sost.strike(key);
-  keyboardView.set(key, true);
-  const a = await startAudio();
-  for (const m of notes.strike(key, own)) a.node.port.postMessage(m);
-  a.node.port.postMessage({ type: 'noteOn', key, velocity: vel }); // the engine builds the voice the views show
-  setFocus(key, vel);
-}
-function noteOff(key) { down.delete(key); if (!sost.holds(key)) release(key); }
-function release(key) { keyboardView.set(key, false); post({ type: 'noteOff', key }); }
-const down = new Set(), sost = createSostenuto(); // the keys down; CC66
-let soft = false;                                 // CC67
-
-const LOW = ['KeyZ', 'KeyS', 'KeyX', 'KeyD', 'KeyC', 'KeyV', 'KeyG', 'KeyB', 'KeyH', 'KeyN', 'KeyJ', 'KeyM', 'Comma', 'KeyL', 'Period', 'Semicolon', 'Slash'];
-const LOW_LBL = ['z', 's', 'x', 'd', 'c', 'v', 'g', 'b', 'h', 'n', 'j', 'm', ',', 'l', '.', ';', '/'];
-const HIGH = ['KeyQ', 'Digit2', 'KeyW', 'Digit3', 'KeyE', 'KeyR', 'Digit5', 'KeyT', 'Digit6', 'KeyY', 'Digit7', 'KeyU', 'KeyI', 'Digit9', 'KeyO', 'Digit0', 'KeyP', 'BracketLeft', 'Equal', 'BracketRight'];
-const HIGH_LBL = ['q', '2', 'w', '3', 'e', 'r', '5', 't', '6', 'y', '7', 'u', 'i', '9', 'o', '0', 'p', '[', '=', ']'];
-function codeToKey(code) { let i = LOW.indexOf(code); if (i >= 0) return base + i; i = HIGH.indexOf(code); return i >= 0 ? base + 12 + i : null; }
-function keyLabels() { const m = new Map(); LOW_LBL.forEach((l, i) => m.set(base + i, l)); HIGH_LBL.forEach((l, i) => { if (!m.has(base + 12 + i)) m.set(base + 12 + i, l); }); return m; }
-const typing = (t) => t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !['range', 'checkbox'].includes(t.type)));
-
-window.addEventListener('keydown', (e) => {
-  if (e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
-  // a focused <select> would swallow note keys (or type-ahead into a preset): hand them back
-  if (controlOwns(e)) return; // a control reached with Tab keeps its own keys (shared/focus.js)
-  if (e.target?.tagName === 'SELECT') { if (e.code === 'Space' || e.code.startsWith('Arrow') || codeToKey(e.code) !== null) e.target.blur(); else return; }
-  if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight')) { e.preventDefault(); shiftOctave(e.code === 'ArrowLeft' ? -12 : 12); return; }
-  if ((e.code === 'ArrowUp' || e.code === 'ArrowDown')) {
-    e.preventDefault();
-    setParam('spinU', Math.round(Math.min(6, Math.max(0, P.spinU + (e.code === 'ArrowUp' ? 0.25 : -0.25))) * 1000) / 1000);
-    return;
-  }
-  const key = codeToKey(e.code);
-  if (key === null) return;
-  e.preventDefault();
-  if (e.repeat || held.has(e.code)) return;
-  held.set(e.code, key);
-  if (computerKey(key, true)) noteOn(key);
+let focusKey = 60, focusTimer = 0;
+const shell = createShell({
+  ...INSTRUMENT,
+  store: paramsStore('blackhole'), // the page's own name for its settings, from before the shell
+  arrows: { param: 'spinU', step: 0.25 },
+  onAudio: (a) => {
+    const an = a.ctx.createAnalyser(); an.fftSize = 2048; an.smoothingTimeConstant = 0;
+    a.chain.tap.connect(an); spectro.setAnalyser(an);
+  },
+  onMessage: (m) => { if (m.type === 'voices') $('#voices').textContent = `${m.voices} ringing`; }, // the engine's, every 48 blocks
+  onNoteOn: (key) => setFocus(key),
+  // the model's parameters (and the tuning) change every key's voice: voiceFor recomputes
+  onParam: (id, v, P, p) => {
+    if (id === '*') setFocus(focusKey);
+    else if (p.kind === 'model' || TUNING_KEEP.includes(id)) { clearTimeout(focusTimer); focusTimer = setTimeout(() => setFocus(focusKey), 60); }
+  },
 });
-window.addEventListener('keyup', (e) => { const key = held.get(e.code); if (key !== undefined) { held.delete(e.code); if (computerKey(key, false)) noteOff(key); } });
-window.addEventListener('blur', () => { for (const k of held.values()) if (computerKey(k, false)) noteOff(k); held.clear(); });
-function shiftOctave(d) { const nb = base + d; if (nb + 11 < KEY_LO || nb > KEY_HI - 12) return; /* never a whole row of computer keys out of range */ base = nb; keyboardView.labels(keyLabels()); updateHelp(); }
-function updateHelp() {
-  $('#oct').textContent = `${noteName(Math.max(KEY_LO, base))}–${noteName(Math.min(KEY_HI, base + 31))}`;
-  $('#spin-read').textContent = fmtSpin(P.spinU);
-}
-
-function initMIDI() {
-  startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn'), controllers: ccs });
-}
-const notes = pageMpe({ post, params: () => P, modWheel: INSTRUMENT.modWheel, groups: GROUPS }); // MPE: each note's own
-const ccs = controllersOf(INSTRUMENT), ccLast = {}; // the descriptor's faders and pad (and controllers)
-pageMIDI({ onMIDI, controllers: ccs }); // a song played from a MIDI file (shared/songs.js) plays it as a keyboard would
-function onMIDI(ev) {
-  const [st, d1, d2] = ev.data, cmd = st & 0xf0, mpe = notes.midi(ev.data);
-  if (mpe.own) return;
-  if (cmd === 0x90 && d2 > 0) noteOn(d1, INSTRUMENT.midiVelocity(touched(d2 / 127) * (soft ? SOFT_PEDAL : 1)), mpe.with);
-  else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) noteOff(d1);
-  else if (cmd === 0xb0 && d1 === 1) setParam(INSTRUMENT.modWheel, wheelValue(ALL_PARAMS.find((q) => q.id === INSTRUMENT.modWheel), d2)); // at rest: the default spin
-  else if (cmd === 0xb0 && d1 === 66) { for (const k of sost.set(d2 >= 64, down)) if (!down.has(k)) release(k); }
-  else if (cmd === 0xb0 && d1 === 67) soft = d2 >= 64;
-  else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) { down.clear(); sost.clear(); soft = false; post({ type: 'panic' }); }
-  else if (cmd === 0xb0) { const set = controlled(ccs, ALL_PARAMS, P, d1, d2, ccLast); if (set) { setParam(...set); tellFader(d1, ALL_PARAMS.find((q) => q.id === set[0])); } }
-}
-
-const keyboardView = createKeyboard($('#keyboard'), { lo: KEY_LO, hi: KEY_HI, onDown: (k, f) => noteOn(k, 0.3 + 0.7 * f), onUp: noteOff });
-
-// ---------------------------------------------------------------------------
-// parameters
-
-const controls = new Map();
-const toSlider = (p, v) => (p.log ? (1000 * Math.log(v / p.min)) / Math.log(p.max / p.min) : (1000 * (v - p.min)) / (p.max - p.min));
-function fromSlider(p, t) {
-  let v = p.log ? p.min * (p.max / p.min) ** (t / 1000) : p.min + ((p.max - p.min) * t) / 1000;
-  if (p.step) v = Math.round(v / p.step) * p.step;
-  return Math.min(p.max, Math.max(p.min, v));
-}
-function buildControls() {
-  for (const g of GROUPS) {
-    const det = document.createElement('details');
-    det.className = 'group'; det.open = g.open ?? true; // (the tuning's starts closed)
-    det.innerHTML = `<summary>${g.title}</summary>`;
-    for (const p of [...g.params].sort((a, b) => !!faceOf(b) - !!faceOf(a))) { // faces first (shared/faces.js)
-      if (EXPRESSION_IDS.includes(p.id) && !responds(INSTRUMENT, p.id)) continue; // a switch for what this instrument doesn't answer to (yet)
-      const wrap = document.createElement('div');
-      wrap.className = 'param';
-      if (p.strip) wrap.dataset.perform = ''; // in the strip above the keys (shared/layout.js)
-      let input, val = null;
-      if (p.type === 'select') { // the keyboard's tuning: its pitch, temperament and root
-        wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;
-        input = document.createElement('select'); input.id = `p-${p.id}`;
-        for (const [k, name] of p.options) input.add(new Option(name, k));
-        input.addEventListener('change', () => { setParam(p.id, typeof p.def === 'number' ? +input.value : input.value); unfocus(input); });
-        wrap.appendChild(input);
-      } else if (p.type === 'checkbox') {
-        wrap.classList.add('check');
-        input = document.createElement('input'); input.type = 'checkbox'; input.id = `p-${p.id}`;
-        input.addEventListener('change', () => setParam(p.id, input.checked));
-        const lab = document.createElement('label'); lab.htmlFor = input.id; lab.textContent = p.label;
-        wrap.append(input, lab);
-      } else {
-        wrap.innerHTML = `<div class="row"><label for="p-${p.id}">${p.label}</label><span class="val"></span></div>`;
-        val = wrap.querySelector('.val');
-        input = document.createElement('input');
-        input.type = 'range'; input.min = 0; input.max = 1000; input.step = 1; input.id = `p-${p.id}`;
-        input.addEventListener('input', () => setParam(p.id, fromSlider(p, +input.value), true));
-        input.addEventListener('dblclick', () => setParam(p.id, p.def));
-        wrap.appendChild(input);
-      }
-      if (p.hint) { const h = document.createElement('div'); h.className = 'hint'; h.textContent = p.hint; wrap.appendChild(h); }
-      det.appendChild(wrap);
-      const face = dress(wrap, p, input, { reset: () => setParam(p.id, p.def), toSlider });
-      controls.set(p.id, { p, input, val, wrap, face });
-    }
-    $('#groups').appendChild(det);
-  }
-  const ps = $('#preset');
-  ps.add(new Option('Presets…', ''));
-  PRESETS.forEach((pr, i) => ps.add(new Option(pr.name, i)));
-  ps.addEventListener('change', () => {
-    if (ps.value === '') return;
-    setAll({ ...DEFAULTS, ...Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]])), ...PRESETS[+ps.value].p }, { swap: true });
-    unfocus(ps);
-  });
-  $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }, { swap: true }); $('#preset').value = ''; });
-}
-function refreshControl(id, dragging = false) {
-  const c = controls.get(id);
-  if (!c) return;
-  if (c.p.type === 'select') { c.input.value = P[id]; c.face?.show(); }
-  else if (c.p.type === 'checkbox') c.input.checked = !!P[id];
-  else { if (!dragging) c.input.value = toSlider(c.p, P[id]); c.val.textContent = c.p.fmt ? c.p.fmt(P[id]) : String(P[id]); c.face?.show(); }
-}
-function refreshVisibility() { for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(P) : false; }
-// the plugin's values (shared/in-plugin.js): one as a control moving it, several as a preset
-function fromPlugin(c) { const ids = Object.keys(c); if (ids.length === 1) setParam(ids[0], c[ids[0]]); else setAll({ ...P, ...c }); }
-function setAll(np, { swap = false } = {}) {
-  P = np;
-  for (const id of controls.keys()) refreshControl(id);
-  refreshVisibility(); post(paramsMessage(swap)); applyMix(); updateHelp(); save();
-  setFocus(focusKey, lastVel);
-  if (swap) document.dispatchEvent(new CustomEvent('forte-preset', { detail: { ...P } })); // a preset: the RISE's panel shows its faders (shared/rise.js)
-}
-let focusTimer = 0;
-function setParam(id, v, dragging = false) {
-  const p = ALL_PARAMS.find((q) => q.id === id);
-  if (P[id] === v) return;
-  P[id] = v;
-  refreshControl(id, dragging); refreshVisibility(); save(); updateHelp();
-  $('#preset').value = '';
-  if (p.kind === 'mix') applyMix();
-  else post(paramsMessage());
-  if (p.kind === 'model' || TUNING_KEEP.includes(id)) { clearTimeout(focusTimer); focusTimer = setTimeout(() => setFocus(focusKey, lastVel), 60); } // voiceFor recomputes
-}
+const P = () => shell.P;
 
 // ---------------------------------------------------------------------------
 // focus key: views
@@ -253,8 +49,8 @@ const plane = new Lazy($('#plane')), kerr = new Lazy($('#kerr'));
 let focusVoice = null, focusDue = false;
 // Views follow the last key played. A chord's keys arrive together, so the
 // work is done once, on the next animation frame.
-function setFocus(key, vel) {
-  focusKey = key; lastVel = vel; focusDue = true;
+function setFocus(key) {
+  focusKey = key; focusDue = true;
 }
 function renderFocus() {
   focusDue = false;
@@ -262,7 +58,7 @@ function renderFocus() {
   focusVoice = v;
   // the strain in closed form, at about two points per pixel
   const n = Math.max(400, Math.min(4000, 2 * Math.round(wave.cv.clientWidth || 600)));
-  wave.set({ ...model.strainCurve(v, n), fs, modes: v.modes });
+  wave.set({ ...model.strainCurve(v, n), fs: fs(), modes: v.modes });
   showInfo(v);
   plane.touch(); kerr.touch();
 }
@@ -270,10 +66,10 @@ function renderFocus() {
 function showInfo(v) {
   const i = v.info, m220 = v.modes.find((m) => m.l === 2 && m.m === 2 && m.n === 0);
   $('#bh-title').textContent = `The black hole under ${noteName(v.key)}`;
-  $('#plane-read').textContent = `${fmtSpin(P.spinU)} · q = ${P.massRatio.toFixed(2)} · ι = ${P.inclination.toFixed(0)}°`;
+  $('#plane-read').textContent = `${fmtSpin(P().spinU)} · q = ${P().massRatio.toFixed(2)} · ι = ${P().inclination.toFixed(0)}°`;
   const rows = [
     ['Mass', `${i.Msun.toFixed(1)} M☉`],
-    ['Spin', fmtSpin(P.spinU)],
+    ['Spin', fmtSpin(P().spinU)],
     ['Horizon radius r₊', `${i.rPlusKm.toFixed(0)} km`],
     ['Horizon spins at', `${i.OmegaH.toFixed(1)} Hz (Ω_H / 2π)`],
     ['Fundamental (2,2,0)', m220 ? `${m220.f.toFixed(2)} Hz · τ = ${(m220.tau * 1000).toFixed(2)} ms · Q = ${m220.Q.toFixed(1)}` : '—'],
@@ -291,32 +87,18 @@ function showInfo(v) {
 
 // Views redraw only when something changed, and only while visible.
 const lvl = (m) => Math.hypot(m.cpr, m.cpi) + Math.hypot(m.cxr, m.cxi);
-plane.draw = () => drawPlane(plane.cv, model.bank, spinFromU(P.spinU), focusVoice.modes.map((m) => ({ l: m.l, m: m.m, n: m.n, level: lvl(m) })));
-kerr.draw = () => drawKerr(kerr.cv, spinFromU(P.spinU), P.inclination);
+plane.draw = () => drawPlane(plane.cv, model.bank, spinFromU(P().spinU), focusVoice.modes.map((m) => ({ l: m.l, m: m.m, n: m.n, level: lvl(m) })));
+kerr.draw = () => drawKerr(kerr.cv, spinFromU(P().spinU), P().inclination);
 function frame() {
   if (focusDue) renderFocus();
   if (focusVoice) { plane.frame(); kerr.frame(); }
   wave.frame();
 }
 
-let toastTimer = 0;
-function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3500); }
-$('#start').addEventListener('click', (e) => { startAudio(); unfocus(e.currentTarget); });
-$('#midi-btn').addEventListener('click', (e) => { initMIDI(); unfocus(e.currentTarget); });
-if (host) startAudio(); // in a plugin's window: its sound, at once (the host has the MIDI)
-else resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
-$('#panic').addEventListener('click', (e) => { down.clear(); sost.clear(); soft = false; post({ type: 'panic' }); unfocus(e.currentTarget); });
 for (const b of document.querySelectorAll('.tab')) b.addEventListener('click', () => {
   document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x === b));
   wave.mode = b.dataset.mode; wave.touch(); unfocus(b);
 });
 
-buildControls();
-for (const id of controls.keys()) refreshControl(id);
-refreshVisibility();
-keyboardView.labels(keyLabels());
-updateHelp();
-setFocus(60, 1);
+setFocus(60);
 animate(frame);
-attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v, o) => setAll({ ...P, ...v }, o), defaults: DEFAULTS, toast }); // your own presets and links
-qualityControl(); // the device's Quality, after the controls

@@ -1206,8 +1206,8 @@ inline const forte::FormatSegment kF595[] = {{kNoLimit, "×", "", 1, 0, 2, false
 inline const Case kC595[] = {{0.3, "×0.30"}, {0.4403397802866209, "×0.44"}, {0.6463304070095651, "×0.65"}, {0.9486832980505138, "×0.95"}, {1.3924766500838335, "×1.39"}, {2.043876207173884, "×2.04"}, {3, "×3.00"}, {1, "×1.00"}};
 inline const forte::FormatSegment kF596[] = {{kNoLimit, "", " µs", 1000000, 0, 0, false, false, false, false}};
 inline const Case kC596[] = {{0, "0 µs"}, {0.00017, "170 µs"}, {0.00033000000000000005, "330 µs"}, {0.0005, "500 µs"}, {0.00067, "670 µs"}, {0.0008300000000000001, "830 µs"}, {0.001, "1000 µs"}, {0.0002, "200 µs"}};
-inline const forte::FormatSegment kF597[] = {{kNoLimit, "", " m/s", 1, 0, 2, false, false, false, false}};
-inline const Case kC597[] = {{0.2, "0.20 m/s"}, {1, "1.00 m/s"}, {1.8, "1.80 m/s"}, {2.6, "2.60 m/s"}, {3.4000000000000004, "3.40 m/s"}, {4.2, "4.20 m/s"}, {5, "5.00 m/s"}};
+inline const forte::FormatSegment kF597[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, true}};
+inline const Case kC597[] = {{0.25, "0.25"}, {0.41000000000000003, "0.41"}, {0.68, "0.68"}, {1.12, "1.12"}, {1.84, "1.84"}, {3.0300000000000002, "3.03"}, {5, "5.00"}, {1.8, "1.80"}};
 inline const forte::FormatSegment kF598[] = {{kNoLimit, "", " mm", 1, 0, 2, false, false, false, false}};
 inline const Case kC598[] = {{0.4, "0.40 mm"}, {1.1500000000000001, "1.15 mm"}, {1.9500000000000002, "1.95 mm"}, {2.7, "2.70 mm"}, {3.45, "3.45 mm"}, {4.25, "4.25 mm"}, {5, "5.00 mm"}, {1.2, "1.20 mm"}};
 inline const forte::FormatSegment kF599[] = {{-0.005, "", " w", 1, 0, 2, false, false, false, false}, {0.004999999999999999, "centred", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " w", 1, 0, 2, false, false, true, false}};
@@ -3937,7 +3937,7 @@ inline const Vector kAll[] = {
   {"tines.tipExp", {"tipExp", "", "", forte::ParamKind::continuous, -0.5, 1, 0, 0.05, false, false, nullptr, 0, kF594, 1}, kC594, 7},
   {"tines.hammerMass", {"hammerMass", "", "", forte::ParamKind::continuous, 0.3, 3, 1, 0, true, false, nullptr, 0, kF595, 1}, kC595, 8},
   {"tines.hysteresis", {"hysteresis", "", "", forte::ParamKind::continuous, 0, 0.001, 0.0002, 0.00001, false, false, nullptr, 0, kF596, 1}, kC596, 8},
-  {"tines.velocity", {"velocity", "", "", forte::ParamKind::continuous, 0.2, 5, 1.8, 0.05, false, false, nullptr, 0, kF597, 1}, kC597, 7},
+  {"tines.velocity", {"velocity", "", "", forte::ParamKind::continuous, 0.25, 5, 1.8, 0.01, true, false, nullptr, 0, kF597, 1}, kC597, 8},
   {"tines.gap", {"gap", "", "", forte::ParamKind::continuous, 0.4, 5, 1.2, 0.05, false, false, nullptr, 0, kF598, 1}, kC598, 8},
   {"tines.offset", {"offset", "", "", forte::ParamKind::continuous, -1.2, 1.2, 0.4, 0.01, false, false, nullptr, 0, kF599, 3}, kC599, 7},
   {"tines.poleRadius", {"poleRadius", "", "", forte::ParamKind::continuous, 0.3, 4, 1, 0.05, false, false, nullptr, 0, kF600, 1}, kC600, 8},

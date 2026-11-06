@@ -31,6 +31,11 @@
 //                 (shared/wasm.js), run by shared/worklet.js (the engine contract is there)
 //   chain         the output chain (shared/chain.js): { volume, room?, tone?, body?, … }
 //                 node → [tone low-pass] → [body] → master (+ room reverb) → limiter → speakers; analyser before the body
+//   midiVelocity(v)  a note's velocity (0..1, after the velocity curve) in the engine's units, for an
+//                 engine that wants its own (MIDI and the on-screen keys; shared/layer.js does the same)
+//   keyVelocity   the velocity the computer keys play when there is no `velocity` parameter (0.75)
+//   store         the localStorage key for the settings, for a page older than the shell that kept
+//                 its own (shared/layer.js paramsStore); otherwise forte/<id>/params/v1
 //   noteData(key, vel, P, fs)  extra data attached to each noteOn message: what the page offers the
 //                 engine so the audio thread needn't build it (e.g. a key's model, from its WebAssembly model)
 //   space         'sustain' (Space / CC64 = damper pedal, sent to the engine) | 'hold' (keys latch
@@ -86,7 +91,7 @@ export function createShell(cfg) {
   let LO, HI; // the keys that play now: the compass, or the whole range once it is opened
   const ALL = cfg.groups.flatMap((g) => g.params);
   const DEFAULTS = Object.fromEntries(ALL.map((p) => [p.id, p.def]));
-  const STORE = `forte/${cfg.id}/params/v1`;
+  const STORE = cfg.store ?? `forte/${cfg.id}/params/v1`;
   // Stored settings may be from an older version: keep only known ids, with valid values.
   const valid = (p, v) => {
     if (p.type === 'select') return p.options.some(([k]) => k === v) ? v : p.def;
@@ -240,7 +245,8 @@ export function createShell(cfg) {
   const labels = () => { const m = new Map(); LOW_LBL.forEach((l, i) => m.set(shell.base + i, l)); HIGH_LBL.forEach((l, i) => { if (!m.has(shell.base + 12 + i)) m.set(shell.base + 12 + i, l); }); return m; };
   const typing = (t) => t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !['range', 'checkbox'].includes(t.type)));
   let spaceHeld = false; // the real Space bar (the on-screen pedal sends synthetic events)
-  const kbVel = () => (shell.P.velocity !== undefined ? shell.P.velocity : 0.75);
+  const kbVel = () => shell.P.velocity ?? cfg.keyVelocity ?? 0.75;
+  const engineVelocity = (v) => (cfg.midiVelocity ? cfg.midiVelocity(v) : v);
   window.addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
     // a control reached with Tab keeps its own keys (Space ticks a stop, arrows move a slider);
@@ -293,7 +299,7 @@ export function createShell(cfg) {
   // ---- on-screen keyboard (multi-touch; shared/keyboard.js) ----------------------
   if (cfg.space && !document.body.dataset.space) document.body.dataset.space = cfg.space === 'hold' ? 'Hold' : 'Sustain';
   shell.keys = createKeyboard($('#keyboard'), {
-    lo: LO, hi: HI, onDown: (k, f) => down(k, 0.2 + 0.8 * f), onUp: up,
+    lo: LO, hi: HI, onDown: (k, f) => down(k, engineVelocity(0.2 + 0.8 * f)), onUp: up,
     onPressure: (key, value) => { shell.post({ type: 'pressure', value, key }); cfg.onPressure?.(value, key); }, // as MIDI poly aftertouch
   });
 
@@ -307,12 +313,12 @@ export function createShell(cfg) {
     const [st, d1, d2] = ev.data, cmd = st & 0xf0;
     const { own: its, with: own } = notes.midi(ev.data);
     if (its) return;
-    if (cmd === 0x90 && d2 > 0) down(d1, touched(d2 / 127) * (soft ? SOFT_PEDAL : 1), own); // the velocity curve, the soft pedal
+    if (cmd === 0x90 && d2 > 0) down(d1, engineVelocity(touched(d2 / 127) * (soft ? SOFT_PEDAL : 1)), own); // the velocity curve, the soft pedal
     else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) up(d1, cmd === 0x80 ? d2 / 127 : undefined);
     else if (cmd === 0xb0) {
       if (d1 === 64 && cfg.space) setSustain(d2 >= 64);
-      else if (d1 === 66) setSostenuto(d2 >= 64);
-      else if (d1 === 67) soft = d2 >= 64;
+      else if (d1 === 66 && !(66 in ccs)) setSostenuto(d2 >= 64);
+      else if (d1 === 67 && !(67 in ccs)) soft = d2 >= 64; // unless the descriptor gives it a parameter (the Regal's tremulant), as the plugins do
       else if (d1 === 1 && cfg.modWheel) {
         // The wheel rests at 0, so rest = the parameter's default and full = its maximum
         // (a resting wheel must not drag the instrument to the bottom of its range).
