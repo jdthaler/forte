@@ -20,6 +20,7 @@ static constexpr double GAIN_T = 0.02;     // s: a key's pressure and the swell 
 static constexpr double HP_HZ = 16;        // the transformers' magnetising inductance passes nothing slower
 static constexpr double CHORD = 0.04;      // s: keys struck within this of one another make one chord (Pierce)
 static constexpr double PAN_NEAR = 0.891, PAN_FAR = 0.454; // the two manuals' receivers, to either side
+static constexpr double LN2 = 0.6931471805599453;
 
 static double frac(double x) { return x - std::floor(x); }
 
@@ -305,6 +306,7 @@ void TelharmoniumEngine::noteOn(int key, double velocity) {
   k.on = true; k.key = key; k.born = t;
   k.vel = std::clamp(velocity, 0.0, 1.0); k.after = 0;
   k.manual = key >= split ? 1 : 0;
+  newest.down(key);
   start(k);
   // Pierce: a chord's keys arrive one after another; a key struck just before its root moves to it
   if (pierce)
@@ -329,6 +331,7 @@ void TelharmoniumEngine::noteOn(int key, double velocity) {
 // softer click), a fast one over half.
 void TelharmoniumEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
+  newest.up(key);
   for (Key &k : keys) if (k.on && k.key == key) {
     open(k, liftScale(velocity));
     Message m;
@@ -339,6 +342,7 @@ void TelharmoniumEngine::noteOff(int key, double velocity) {
 
 void TelharmoniumEngine::allNotesOff() {
   for (Key &k : keys) if (k.on) open(k);
+  newest.clear();
 }
 
 void TelharmoniumEngine::pressure(double value, int key) { // aftertouch: one key (poly) or every held key (channel, −1)
@@ -465,8 +469,9 @@ void TelharmoniumEngine::process(float *L, float *R, int n) {
   for (int at = 0; at < n; at += CHUNK) {
     const int m = std::min(CHUNK, n - at);
     const double dt = m / fs;
-    // the motor: its speed droops with the load and follows the field rheostat, through the flywheel
-    const double target = bendCents - droop * load;
+    // the motor: its speed droops with the load and follows the field rheostat (the wheel, and the
+    // newest held key's own bend), through the flywheel
+    const double target = bendCents + 1200 / LN2 * fdlibm::log(expr.bendOf(newest.key())) - droop * load;
     cents = glideTo(cents, target, dt, flywheel);
     speed = fdlibm::pow(2.0, cents / 1200);
     swellNow = glideTo(swellNow, swell, dt, GAIN_T);

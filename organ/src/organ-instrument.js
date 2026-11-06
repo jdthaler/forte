@@ -30,6 +30,8 @@ export const INSTRUMENT = {
     11: 'expression',                                  // MIDI CC11, the expression pedal, across its range
     64: { param: 'leslie', toggle: ['slow', 'fast'] }, // each press of a sustain pedal flips the Leslie
   },
+  mpe: { bend: 2 },                       // MPE: the newest held key's own bend turns the motor (one motor: the whole organ)
+  glide: 'the motor\'s speed: the newest note\'s bend, the whole organ with it', // what a note's own bend does
   console: CONSOLE,                       // the drawbars and switches as plugin parameters
   faders: ['drawbar1', 'drawbar3', 'drawbar4', 'drive', 'expression'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/organ), built as WebAssembly; it takes all

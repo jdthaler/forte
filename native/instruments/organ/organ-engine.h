@@ -18,6 +18,7 @@
 #include <cstdint>
 
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "forte/lift.h"
 #include "organ-model.h"
 #include "organ-params.h"
@@ -97,6 +98,7 @@ class OrganEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void allNotesOff() override;
   void bend(double value) override; // the supply frequency: the whole organ, ±2 semitones
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the newest key's: the supply's too
   int voiceCount() const override { return nLive; }
   void process(float *L, float *R, int n) override;
   // the same in double precision (the tests' render)
@@ -147,6 +149,8 @@ class OrganEngine : public Engine {
   Key *keyArr[NUM_KEYS] = {};
   int nArr = 0, nLive = 0;
   int held = 0;
+  NoteExpression expr{kBendSemitones}; // each key's own bend (MPE): the newest held key's turns the motor
+  NewestKey newest;
   double num[10] = {}, den[10] = {};
 
   // derived from the parameters

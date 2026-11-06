@@ -252,6 +252,7 @@ void OrganEngine::noteOn(int key, double velocity) {
   if (held == 0) percEnv = 1; // single trigger: re-arms only when all keys are up
   held++;
   k.down = true;
+  newest.down(key);
   schedule(k, true, 0.5 + velocity);
 }
 
@@ -264,6 +265,7 @@ void OrganEngine::noteOff(int key, double velocity) {
   if (!k.live || !k.down) return;
   k.down = false;
   held = std::max(0, held - 1);
+  newest.up(key);
   const double s = liftScale(velocity);
   schedule(k, false, 1.2 / (s * s));
 }
@@ -301,8 +303,9 @@ template <class T> void OrganEngine::render(T *L, T *R, int n) {
   if (p.motor) speed += (1 - speed) * (1 - fd::exp(-dtb / p.spinUp));
   else speed = std::max(0.0, speed - (speed / p.inertia + 0.012) * dtb);
   // pitch bend: the supply's frequency, which the synchronous motor follows within ~30 ms (a
-  // variable-frequency drive; the coasting shaft has no supply to follow)
-  supply += ((p.motor ? bendTo : 1) - supply) * (1 - fd::exp(-dtb / SUPPLY_TAU));
+  // variable-frequency drive; the coasting shaft has no supply to follow), and the newest held key's
+  // own bend with it (MPE: one motor, so one key's)
+  supply += ((p.motor ? bendTo * expr.bendOf(newest.key()) : 1) - supply) * (1 - fd::exp(-dtb / SUPPLY_TAU));
   if (std::fabs(supply - 1) < 1e-12) supply = 1;
   shaft = speed * supply;
   updateRotations();

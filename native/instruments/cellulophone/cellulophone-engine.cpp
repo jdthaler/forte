@@ -18,6 +18,7 @@ using fdlibm::tanh;
 
 static constexpr double OUT = 8;            // the hall's level: a forte note peaks around 0.3
 static constexpr double GLIDE_T = 0.02;     // s: a key's depth and push glide this fast
+static constexpr double LN2 = 0.6931471805599453;
 static constexpr double FLYWHEEL = 0.25;    // s: the discs follow the motor's speed this slowly
 static constexpr double HUNT_HZ = 0.8;      // the motor's hunting, about once a second
 static constexpr double STEAL_T = 0.005;    // s: a voice Medium or Low lets go fades this fast
@@ -144,6 +145,7 @@ void CellulophoneEngine::noteOn(int key, double velocity) {
   v.key = key;
   if (fresh) start(v);
   v.held = true; v.dying = false;
+  newest.down(key);
   v.vel = std::clamp(velocity, 0.0, 1.0);
   v.depth = 1 - touch + touch * v.vel; v.depth += (1 - v.depth) * v.after;
   v.push = expr.slideOr(key, push);
@@ -174,6 +176,7 @@ void CellulophoneEngine::noteOn(int key, double velocity) {
 void CellulophoneEngine::noteOff(int key, double velocity) {
   if (key < 21 || key > 108) return;
   Voice &v = voices[key - 21];
+  newest.up(key);
   if (!v.on) return;
   v.held = false;
   if (const double s = liftScale(velocity); s != 1 && !v.dying) v.fall = 1 / (mirrorT * s * s * fs);
@@ -181,6 +184,7 @@ void CellulophoneEngine::noteOff(int key, double velocity) {
 
 void CellulophoneEngine::allNotesOff() {
   for (Voice &v : voices) v.on = v.held = false;
+  newest.clear();
   for (int o = 0; o < OCTAVES; o++) selFast[o] = selSlow[o] = 0;
 }
 
@@ -207,8 +211,10 @@ int CellulophoneEngine::voiceCount() const {
 
 void CellulophoneEngine::process(float *L, float *R, int n) {
   if (!hasP) { for (int i = 0; i < n; i++) L[i] = R[i] = 0; return; }
-  // the motor, once a block: the discs follow the wheel through their inertia, and hunt about it
-  bendNow = glideTo(bendNow, bendCents, n / fs, FLYWHEEL);
+  // the motor, once a block: the discs follow the wheel and the newest held key's own bend (its
+  // rheostat reaches two semitones either way in all) through their inertia, and hunt about it
+  const double to = std::clamp(bendCents + 1200 / LN2 * fdlibm::log(expr.bendOf(newest.key())), -100 * kBendSemitones, 100 * kBendSemitones);
+  bendNow = glideTo(bendNow, to, n / fs, FLYWHEEL);
   huntPhase += HUNT_HZ * n / fs; huntPhase -= std::floor(huntPhase);
   cents = bendNow + hunt * sin(TAU * huntPhase);
   const double speed = pow(2.0, cents / 1200);

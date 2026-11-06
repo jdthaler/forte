@@ -173,15 +173,19 @@ function shift(a, b, guess) {
 const OWN = ['bubbles', 'stars', 'quantum', 'blackhole', 'nmr', 'resonator'];
 // Instruments whose physics pulls a bent note off its ratio, as it pulls the wheel's (their own
 // suites check a note's bend against the wheel's): cents allowed
-const LOOSE = { windharp: 8, arc: 12 }; // the wake pulls a string toward its shedding; the arc's lag pulls its coil
+const LOOSE = { windharp: 8, arc: 12, cellulophone: 10, telharmonium: 10 }; // the wake pulls a string toward its shedding; the arc's lag pulls its coil;
+// the discs and the shafts reach a struck note's bend through their inertia (one motor: the newest key's)
 
 // Instruments whose pressure takes a while to be heard (the hydraulis's pumps), or is heard only
 // with a control on (the cimbalom's tremolo)
 const PRESS_SLOW = ['hydraulis'], PRESS_WITH = { cimbalom: { roll: 12 } };
-// Instruments whose note's bend is measured with the strings that don't bend silent (the hurdy-gurdy's drones)
-const BEND_WITH = { hurdygurdy: { trompette: false, mouche: false, gros: false }, vibraphone: { tubes: false }, marimba: { tubes: false } }; // (and the bars' tubes, which stay on the note)
+// Instruments whose note's bend is measured with the strings that don't bend silent (the hurdy-gurdy's drones),
+// or the Telharmonium's flywheel at its lightest
+const BEND_WITH = { hurdygurdy: { trompette: false, mouche: false, gros: false }, vibraphone: { tubes: false }, marimba: { tubes: false }, telharmonium: { flywheel: 0.2 } }; // (and the bars' tubes, which stay on the note)
 // Instruments whose note's bend is heard only past a certain reach (the resonator piano's: another harmonic)
 const BEND_FAR = { resonator: 4 };
+// Instruments whose one motor turns every note: it follows the newest held key's own bend
+const ONE_MOTOR = ['organ', 'telharmonium', 'cellulophone'];
 // Instruments whose slide is heard only with a control set (the birdsong's syllable rate: a whistle has none)
 const SLIDE_WITH = { birdsong: { syllable: 'trill' } };
 
@@ -229,6 +233,13 @@ for (const slug of slugs) {
       const base = one(0);
       near(shift(base, one(0.35), up), up, LOOSE[slug] ?? 3, '+35 ¢');
       near(shift(base, one(-2), down), down, LOOSE[slug] ?? 3, '−2 semitones');
+    });
+  }
+  if (ONE_MOTOR.includes(slug)) {
+    await test(`${slug}: one motor turns every note: an older held key's bend changes nothing, the newest key's moves them all`, () => {
+      const older = play([[0.2, 'noteBend', keys[0], 2]]), newest = play([[0.2, 'noteBend', keys[2], 2]]);
+      assert.ok(!differs(older[0], plain[0]) && !differs(older[1], plain[1]), 'an older key\'s bend');
+      assert.ok(differs(newest[0], plain[0]), 'the newest key\'s bend');
     });
   }
   // Press (aftertouch, MPE pressure): the descriptor says what it does (the RISE's panel, shared/rise.js
