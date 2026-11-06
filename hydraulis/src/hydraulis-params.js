@@ -46,7 +46,7 @@ export const GROUPS = [
         hint: 'How long a key takes to push its perforated slide across, until its holes line up under the pipes. The holes open as two circles sliding over each other, so a slow push lets the jets swell in; a quick one makes them speak at once, with a chiff. Velocity scales it (twice as fast per +0.3).' },
       { id: 'spring', label: 'Return spring', min: 4, max: 80, def: 15, log: true, fmt: (v) => `shuts in ${v < 10 ? v.toFixed(1) : v.toFixed(0)} ms`,
         hint: 'The spring that pulls the slide back when the key comes up (strips of horn in Hero, iron in Vitruvius). Stiff: the note stops short. Soft: the holes close lazily and the note dies away as its wind is cut.' },
-      { id: 'velocity', label: 'Velocity (computer keys)', min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => `${v.toFixed(2)} (slide in ${(2 ** ((0.7 - v) / 0.3)).toFixed(2)} × its time)`, // ×2 per −0.3, as the engine's pushTime
+      { id: 'velocity', label: 'Velocity (computer keys)', min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => `${v.toFixed(2)} · slide in ${(2 ** ((0.7 - v) / 0.3)).toFixed(2)} × its time`, // ×2 per −0.3, as the engine's pushTime
         hint: 'Velocity only sets how fast the slide is pushed, which shapes the attack, not the level.' },
     ],
   },

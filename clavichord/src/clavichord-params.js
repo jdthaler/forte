@@ -24,7 +24,7 @@ export const GROUPS = [
         hint: 'How fast the finger rocks.' },
       { id: 'mass', label: 'Key and finger (mass at the tangent)', min: 4, max: 40, def: 12, log: true, fmt: (v) => `${v.toFixed(0)} g`,
         hint: 'What the tangent carries into the strings: the key and the finger on it. A heavier stroke pushes the strings further before the finger’s pressure holds them, so its notes start sharper and settle.' },
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.6, step: 0.01, fmt: (v) => `${v.toFixed(2)} (tangent ${(4 * 10 ** v).toFixed(0)} cm/s)`,
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.6, step: 0.01, fmt: (v) => `${v.toFixed(2)} · tangent ${(4 * 10 ** v).toFixed(0)} cm/s`,
         hint: 'How fast the tangent meets the strings. Faster is louder and brighter: the tangent is brass, so it starts every partial at once.' },
     ],
   },

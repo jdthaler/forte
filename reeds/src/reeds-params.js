@@ -17,7 +17,7 @@ export const GROUPS = [
       { id: 'hardness', label: 'Hammer felt hardness', min: 0.1, max: 10, def: 1, log: true, fmt: (v) => `× ${v.toFixed(2)}`, hint: 'Harder felt: shorter contact, brighter attack, more overtone. Applies to new notes.' },
       { id: 'fullRange', label: 'Full range (A0–C8)', type: 'checkbox', def: false,
         hint: 'Opens the keys beyond the 200A\'s A1–C7: the same reeds, the solder graded on past them (heavier below, almost none at C8) and each cut to pitch, struck by A1\'s or C7\'s hammer.' },
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.6, step: 0.01, fmt: (v) => `${v.toFixed(2)}  (${(HAMMER_VMAX * v).toFixed(1)} m/s)` },
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.6, step: 0.01, fmt: (v) => `${v.toFixed(2)} · hammer ${(HAMMER_VMAX * v).toFixed(1)} m/s` },
     ],
   },
   {
