@@ -180,7 +180,8 @@ struck, plucked or bowed note is played: the hammer, quill, mallet, clapper
 or thumb along the string, bar, bell, tine or reed as it strikes (the Ribbon
 Piano, Electric Grand, Harpsichord, Vibraphone, Carillon, Kalimba, Tine and
 Reed pianos), the wheel along
-the Viola Organista's string, the felt onto the Tangent Clavier's, the
+the Viola Organista's string, the pad along the Sticky-Pad Piano's reed
+where it grabs it, the felt onto the Tangent Clavier's, the
 chanterelles' pressure on the Hurdy-Gurdy's wheel, the finger down the Glass
 Armonica's bowl from its rim, the glass along the Clavicylinder's bar. On
 the Pipe Organ, Free-Reed Organ, Regal and Hydraulis it is a key held part
@@ -192,10 +193,12 @@ slide sets how many of its harmonics its relay draws, from all eight down
 to the ground tone alone. Press on the Tonewheel Organ opens the swell
 pedal the rest of the way, from the newest held note. The Singing Arc's
 newest note sets its electrode gap with Slide and its current with Press
-(up to twice the knob's, a louder arc); on the Huygens Keyboard a note's
+(up to twice the knob's, a louder arc), and its Strike is how hard the key
+closes the contact: a soft key's note swells in later, a hard one jolts the
+circuit and sounds at once. On the Huygens Keyboard a note's
 Slide sets how hard the other lamps' firings kick its own (fully, a tritone
-is pulled into a fifth), and Press opens its keyer further, a stronger
-flash. On the physics instruments Press shapes the held note: a pulsar's
+is pulled into a fifth), Press opens its keyer further, a stronger
+flash, and Strike is how fast the key brings its lamp's supply on. On the physics instruments Press shapes the held note: a pulsar's
 beam, ABRACADABRA's magnet, the Hydrogen Lamp's current, the Early
 Universe's amplitude and TESS's planet grow with it; Project 8's trap
 deepens, so its electron stays longer; on the NMR Spin Echo a firm press

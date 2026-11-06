@@ -16,7 +16,7 @@ Play it at <https://forte.jthaler.net/huygens/> (or locally — see the
 | hold `Space` | latch notes, to build chords on a computer keyboard |
 | `↑` `↓` | coupling strength |
 | `←` `→` | octave |
-| MIDI | notes; **mod wheel = coupling**; sustain pedal = latch |
+| MIDI | notes (velocity: how fast the key's supply comes on); **mod wheel = coupling**; sustain pedal = latch |
 
 ## What each key is
 
@@ -29,7 +29,11 @@ resistor sets its pitch. Firing times are solved analytically inside each
 sample, so tuning and locking are exact to a hundredth of a cent. The output
 is band-limited with polyBLEP.
 
-A key powers its lamp up and keys its output, like an organ keyer. On release
+A key powers its lamp up and keys its output, like an organ keyer, over the
+Key attack time (4 ms). Velocity is how hard the key closes the circuit: the
+softest key brings the supply on over eight times the attack, so the lamp first
+strikes later and the note eases in, the hardest in an eighth of it, at once;
+the computer keys' 0.75 over the attack itself. On release
 the output fades while the lamp keeps running, and the lamp is switched off
 once it is silent. The output passes through a coupling capacitor (a 15 Hz
 high-pass), so a note stops without a thump.

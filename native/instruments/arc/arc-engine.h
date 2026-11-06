@@ -57,11 +57,12 @@ struct Arc {
   int tKey[MAXE] = {}; double tC[MAXE] = {}, tV[MAXE] = {}, tI[MAXE] = {}, tR[MAXE] = {}, tY[MAXE] = {}, tW[MAXE] = {};
   int8_t tDir[MAXE] = {}; int nT = 0;
   double tS[MAXE] = {}; // how fast an opening contact parts, × the usual (a lift's: forte/lift.h)
+  double tK[MAXE] = {}; // how fast a closing contact closes, × the usual (a soft strike's)
   double capV[128], capT[128] = {};
   double CB = 0, vB = 0, ic = 0, is = 0, X = 1, u = 0, ia = 0, P = 0, uDC = 0, Imean = 0;
   uint32_t seed = 1; double nf = 0;
   double gl, gr;
-  double onset = 0, released = 0; int pendKey = NONE; double pendC = 0, pendAt = 0;
+  double onset = 0, released = 0; int pendKey = NONE; double pendC = 0, pendAt = 0, pendVel = 0.75;
   double stP = 0, stI2 = 0, stOut = 0, stN = 0, stUmax = 0;
   float trail[2 * TRAIL] = {}; int ti = 0, tcount = 0, dec = 1;
   int bendKey = NONE; double lb = 1; // the key whose own bend (MPE) slides this arc's core, and L's factor 1/r²
@@ -72,7 +73,7 @@ struct Arc {
   bool held() const;
   bool has(int key) const;
   bool holds(int key) const;
-  void engage(int key, double C);
+  void engage(int key, double C, double velocity = 0.75); // velocity: the strike's (closeSpeed, kickOf)
   void release(int key, double speed = 1);
   void releaseAll();
   int lead() const; // the newest key it holds

@@ -119,7 +119,7 @@ function meanings(I, params) {
   const out = {};
   const { bend = 0, slide = false, press = false } = I?.mpe ?? {};
   const wp = I && params.find((p) => p.id === slideOf(I)?.param); // what a slide moves (shared/expression.js)
-  out.strike = I?.strike === false ? 'nothing here' : 'how loud, as a key\'s velocity';
+  out.strike = I?.strike === false ? 'nothing here' : typeof I?.strike === 'string' ? I.strike : 'how loud, as a key\'s velocity';
   out.glide = !I ? '' : bend && I.glide ? I.glide : press && bend ? `presses the key as the wheel does, up to ${bend} semitones`
     : bend ? `bends the note alone, up to ±${bend} semitones` : 'nothing here: each note keeps its own pitch';
   out.slide = !I ? '' : slide && wp ? `${wp.label}, for that note alone, as far as the finger slides from where it landed` : 'nothing here';

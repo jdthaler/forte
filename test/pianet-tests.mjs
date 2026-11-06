@@ -99,7 +99,7 @@ const cents = (a, b) => 1200 * Math.log2(a / b);
 const dB = (a, b) => 20 * Math.log10(a / b);
 
 // Render through the engine in 128-sample blocks.
-// events: [[t, 'on', key, vel] | [t, 'off', key] | [t, 'sus', on] | [t, 'params', P]]
+// events: [[t, 'on', key, vel] | [t, 'off', key] | [t, 'sus', on] | [t, 'params', P] | [t, 'msg', message]]
 function render(params, sec, events, msgs = [], fs = FS) {
   const e = new PianetEngine(fs);
   e.setParams(params);
@@ -110,7 +110,7 @@ function render(params, sec, events, msgs = [], fs = FS) {
   for (let s = 0; s < n; s += bl) {
     while (j < ev.length && ev[j][0] <= s) {
       const [, type, a, b] = ev[j++];
-      if (type === 'on') e.noteOn(a, b); else if (type === 'off') e.noteOff(a); else if (type === 'params') e.setParams(a); else e.setSustain(a);
+      if (type === 'on') e.noteOn(a, b); else if (type === 'off') e.noteOff(a); else if (type === 'params') e.setParams(a); else if (type === 'msg') e.handle(a); else e.setSustain(a);
     }
     e.process(bL, bR, bl);
     L.set(bL.subarray(0, Math.min(bl, n - s)), s);
@@ -365,8 +365,9 @@ test('every parameter at its limits: finite, bounded, silent after release', () 
     worst = Math.max(worst, pk);
     assert.ok(pk < 2.5, `${JSON.stringify(o)}: peak ${pk.toFixed(2)}`); // four ff notes; the defaults give ≈ 1
     const tail = peak(L.subarray(L.length - 4800));
-    // limp foam is meant to let released notes ring on (its hint); everything else falls silent
-    assert.ok(tail < (o.padC <= 0.02 ? 0.1 * pk : 3e-3), `${JSON.stringify(o)}: tail ${tail.toExponential(1)}`);
+    // limp foam is meant to let released notes ring on (its hint), the more so landing near the
+    // clamp, where the pad holds the reed's swing less (the grab's hint); everything else falls silent
+    assert.ok(tail < (o.padC <= 0.02 ? (o.grab < 0.6 ? 0.2 : 0.1) * pk : 3e-3), `${JSON.stringify(o)}: tail ${tail.toExponential(1)}`);
     assert.ok(e.voiceCount() <= 4);
   }
   console.log(`        ${cases.length} cases, loudest 4-note chord peak ${worst.toFixed(2)}`);
@@ -451,6 +452,27 @@ test('Quality: Medium and Low let fewer notes ring under the pedal; a note keeps
       level[q + key] = rms(L, 0, L.length);
       assert.ok(Math.abs(dB(level[q + key], level['high' + key])) < 1.5, `${q} ${key}: ${dB(level[q + key], level['high' + key]).toFixed(2)} dB from High`);
     }
+  }
+});
+test(`Slide: a note's own slide moves where its pad grabs the reed (from the knob's ${DEFAULTS.grab} to ${INSTRUMENT.mpe.slide.max} of the length, toward the clamp), sample for sample as the knob set there; another key's pad stays; toward the clamp the note is quieter and thinner`, () => {
+  assert.equal(INSTRUMENT.mpe.slide.param, 'grab');
+  const at = INSTRUMENT.mpe.slide.max;
+  const play = (o, slides = []) => render(P(o), 0.8, [...slides.map(([key, value]) => [0, 'msg', { type: 'slide', key, value }]), [0.001, 'on', 60, 0.7], [0.001, 'on', 67, 0.7]]).L;
+  const knob = play({ grab: at }), plain = play({});
+  const slid = play({}, [[60, at]]), both = play({}, [[60, at], [67, at]]);
+  assert.deepEqual(both, knob, 'both keys slid: as the knob there');
+  assert.notDeepEqual(slid, plain);
+  assert.notDeepEqual(slid, knob);
+  // one key alone: its slide is the knob's for it, the other key as it was
+  const one = (key, o, slides) => render(P(o), 0.8, [...slides.map(([k, value]) => [0, 'msg', { type: 'slide', key: k, value }]), [0.001, 'on', key, 0.7]]).L;
+  assert.deepEqual(one(60, {}, [[60, at]]), one(60, { grab: at }, []), 'C4 slid: as the knob there');
+  assert.deepEqual(one(67, {}, [[60, at]]), one(67, {}, []), 'G4: C4\'s slide does nothing to it');
+  // toward the clamp: quieter, and brighter for its level (the second mode sounds)
+  for (const key of [48, 60]) {
+    const a = note(key, P(), 0.7, 0.6), b = note(key, P({ grab: 0.5 }), 0.7, 0.6);
+    const bright = (x) => { let s = 0, d = 0; for (let i = 2400; i < x.length; i++) { s += x[i] * x[i]; d += (x[i] - x[i - 1]) ** 2; } return Math.sqrt(d / s); };
+    assert.ok(dB(rms(b, 2400, b.length), rms(a, 2400, a.length)) < -3, `${key}: ${dB(rms(b, 2400, b.length), rms(a, 2400, a.length)).toFixed(1)} dB`);
+    assert.ok(bright(b) > 1.15 * bright(a), `${key}: brightness × ${(bright(b) / bright(a)).toFixed(2)}`);
   }
 });
 test('CPU: 10 voices render well inside real time', () => {
