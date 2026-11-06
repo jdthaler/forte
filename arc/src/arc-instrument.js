@@ -25,7 +25,7 @@ export const INSTRUMENT = {
   mpe: { bend: 12, slide: { param: 'gap', max: 6 } }, // MPE: a key's own bend slides its arc's core (one arc: the newest key's); the newest key's slide sets the electrode gap, its press the current (one supply)
   aftertouch: 'the arc current, from the newest note: up to twice the knob\'s, a louder arc', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'how fast the key\'s contacts part: a slow lift lets the spark die away in a long hiss, a fast one snaps them open', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
-  strike: false, // velocity does nothing: one arc, struck at its own current whatever the key (shared/expression.js)
+  strike: 'how hard the key closes its contact: a soft key eases it shut and the note swells in later, a hard one jolts the circuit and it sounds at once', // what velocity does, where it isn't how loud (shared/rise.js)
   faders: ['hiss', 'tau', 'dist', 'gap', 'current'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/arc), built as WebAssembly. It cuts its own
   // bank (each key's on its first note), or plays the one the page offers with a note (arc-wasm.js)

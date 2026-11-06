@@ -487,5 +487,18 @@ await test(`Slide: a note's own coupling, how hard the others' firings kick its 
   assert.ok(same(one(0).out, plain.out));
 });
 
+await test('Strike: how hard the key closes its circuit, as how fast its lamp\'s supply comes on and its keyer opens: the softest key over eight times the attack, the hardest in an eighth of it (sample for sample as the knob set there), the first flash coming sooner the harder the key; at the computer keys\' 0.75 it plays as it always did', () => {
+  const at = (v, P = {}) => play({ kick: 0, ...P }, [[0, (e) => e.noteOn(60, v, { f: keyFreq(60) })]], 0.3).out;
+  const A = DEFAULTS.attack;
+  assert.ok(same(at(0), at(0.75, { attack: 8 * A })), 'the softest: as eight times the attack');
+  assert.ok(same(at(1), at(0.75, { attack: A / 8 })), 'the hardest: as an eighth of it');
+  assert.ok(same(at(NaN), at(0.75)), 'no velocity: as 0.75');
+  // when the note first reaches half its steady peak
+  const rise = (x) => { let pk = 0; for (let i = 0.2 * FS; i < 0.3 * FS; i++) pk = Math.max(pk, Math.abs(x[i])); let i = 0; while (Math.abs(x[i]) < 0.5 * pk) i++; return i / FS; };
+  const t = [0, 0.4, 0.75, 1].map((v) => rise(at(v))), ms = t.map((x) => (1000 * x).toFixed(1)).join(', ');
+  for (let i = 1; i < t.length; i++) assert.ok(t[i] <= t[i - 1], `onsets ${ms} ms at velocity 0, 0.4, 0.75, 1`);
+  assert.ok(t[0] > t[3], `onsets ${ms} ms`);
+});
+
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');
 process.exit(failures ? 1 : 0);

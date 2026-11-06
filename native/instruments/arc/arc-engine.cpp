@@ -24,6 +24,24 @@ static constexpr double STEAL_WAIT = 0.014;  // s: a stolen arc's new capacitor 
 static constexpr double POST_EVERY = 0.025;  // s, view updates
 static constexpr double SMOOTH = 0.03;       // s, parameter glides
 
+// Strike: how hard the key closes its contact. A soft key closes it slowly, its time constant
+// growing evenly with softness to 300 times the usual at the softest (≈ 15 ms), so the contact
+// passes the arc's threshold later and the note swells in up to ≈ 0.1 s later. A hard one closes
+// it with a jolt that knocks the capacitor's charge off the arc's voltage (at the hardest by a
+// hundredth of it): a kick the arc's own instability grows into the note at once, where a gentle
+// close leaves it to grow from the column's flicker. The computer keys' 0.75 closes it as it
+// always did.
+static constexpr double STRIKE_MID = 0.75, CLOSE_SLOWEST = 300, KICK_MAX = 0.01;
+static double strikeOf(double v) { return v == v ? std::clamp(v, 0.0, 1.0) : STRIKE_MID; }
+static double closeSpeed(double velocity) {
+  const double v = strikeOf(velocity);
+  return v < STRIKE_MID ? 1 / (1 + (CLOSE_SLOWEST - 1) * (STRIKE_MID - v) / STRIKE_MID) : 1;
+}
+static double kickOf(double velocity) {
+  const double v = strikeOf(velocity), x = v > STRIKE_MID ? (v - STRIKE_MID) / (1 - STRIKE_MID) : 0;
+  return KICK_MAX * x * x;
+}
+
 // JavaScript's ToUint32 and ToInt32 of a number
 static uint32_t toUint32(double x) {
   if (!std::isfinite(x)) return 0;
@@ -69,18 +87,20 @@ bool Arc::holds(int key) const {
 }
 
 // A key closes its contact: the capacitor (resting at the arc's voltage through the leak) joins.
-void Arc::engage(int key, double C) {
+void Arc::engage(int key, double C, double velocity) {
   // the arc sings this key now: its own bend (MPE) slides the core at once
   if (key >= 0 && key < 128) { const double r = eng->ex.bendOf(key); bendKey = key; lb = 1 / (r * r); }
   for (int k = 0; k < nM; k++) if (mKey[k] == key) return;
-  for (int k = 0; k < nT; k++) if (tKey[k] == key) { tDir[k] = 1; return; } // re-press while it was opening
+  for (int k = 0; k < nT; k++) if (tKey[k] == key) { tDir[k] = 1; tK[k] = closeSpeed(velocity); return; } // re-press while it was opening
   if (nT >= MAXE || nM + nT >= MAXE) return;
   const ArcEngine &e = *eng;
   const int k = nT++;
   double v = uDC;
   if (key >= 0 && key < 128 && !std::isnan(capV[key])) v = uDC + (capV[key] - uDC) * fdlibm::exp(-(e.time - capT[key]) / (e.fs * R_LEAK * C));
+  const double kick = kickOf(velocity);
+  if (kick > 0) v -= kick * uDC; // a hard strike's jolt
   if (nM == 0 && nT == 1) { ic = 0; vB = v; } // the branch was open: it starts here
-  tKey[k] = key; tC[k] = C; tV[k] = v; tI[k] = 0; tR[k] = R_LEAK; tDir[k] = 1; tS[k] = 1;
+  tKey[k] = key; tC[k] = C; tV[k] = v; tI[k] = 0; tR[k] = R_LEAK; tDir[k] = 1; tS[k] = 1; tK[k] = closeSpeed(velocity);
 }
 // A key opens its contact: a closed capacitor is split off the bank at the bank's voltage,
 // carrying its share of the bank's current.
@@ -94,7 +114,7 @@ void Arc::release(int key, double speed) {
     const double share = CB > 0 ? ((ic - sumI) * C) / CB : 0;
     nM--; mKey[k] = mKey[nM]; mC[k] = mC[nM];
     CB -= C; if (CB < 1e-15 || nM == 0) CB = 0;
-    if (nT < MAXE) { const int t = nT++; tKey[t] = key; tC[t] = C; tV[t] = vB; tI[t] = share; tR[t] = (2 * eng->h) / C; tDir[t] = -1; tS[t] = speed; }
+    if (nT < MAXE) { const int t = nT++; tKey[t] = key; tC[t] = C; tV[t] = vB; tI[t] = share; tR[t] = (2 * eng->h) / C; tDir[t] = -1; tS[t] = speed; tK[t] = 1; }
     return;
   }
 }
@@ -111,7 +131,7 @@ int Arc::lead() const {
 void Arc::removeT(int k) {
   const int j = --nT;
   tKey[k] = tKey[j]; tC[k] = tC[j]; tV[k] = tV[j]; tI[k] = tI[j];
-  tR[k] = tR[j]; tDir[k] = tDir[j]; tY[k] = tY[j]; tW[k] = tW[j]; tS[k] = tS[j];
+  tR[k] = tR[j]; tDir[k] = tDir[j]; tY[k] = tY[j]; tW[k] = tW[j]; tS[k] = tS[j]; tK[k] = tK[j];
 }
 
 // n samples at the base rate; adds the oversampled pressure into eng.osL/osR.
@@ -150,7 +170,7 @@ void Arc::run(int n, const double *emf) {
         double sumY = 0, sumYw = 0, sumI = 0;
         for (int k = 0; k < nT; k++) {
           const double C = tC[k];
-          double r = tDir[k] > 0 ? tR[k] * kClose : tR[k] + dOpen * tS[k];
+          double r = tDir[k] > 0 ? tR[k] * (tK[k] == 1 ? kClose : fdlibm::exp(-(h * tK[k]) / T_CLOSE)) : tR[k] + dOpen * tS[k];
           if (r > R_LEAK) r = R_LEAK;
           tR[k] = r;
           const double Y = 1 / (r + h2 / C), w = tV[k] + (h2 / C) * tI[k];
@@ -400,7 +420,7 @@ void ArcEngine::pressure(double value, int key) {
   if (hasParams) live();
 }
 
-void ArcEngine::noteOn(int key, double) {
+void ArcEngine::noteOn(int key, double velocity) {
   if (!hasParams || key < 0 || key > 127) return;
   newest.down(key);
   press[key] = 0;
@@ -415,7 +435,7 @@ void ArcEngine::noteOn(int key, double) {
     return;
   }
   const double C = warped(capOf(key));
-  if (mode == mode_::mono) { Arc &a = arcs[0]; if (!a.held()) a.onset = time; a.engage(key, C); focus = 0; return; }
+  if (mode == mode_::mono) { Arc &a = arcs[0]; if (!a.held()) a.onset = time; a.engage(key, C, velocity); focus = 0; return; }
   // several arcs: the arc that already has this key (re-press), else a free one, else steal
   Arc *a = nullptr;
   for (int k = 0; k < nArcs; k++) if (arcs[k].has(key)) { a = &arcs[k]; break; }
@@ -434,13 +454,13 @@ void ArcEngine::noteOn(int key, double) {
     if (!best) return; // every arc has only just started: drop the note rather than cut one off
     // the old note fades as its contact opens; the new capacitor goes in once it has
     best->releaseAll(); best->released = time; best->onset = time;
-    best->pendKey = key; best->pendC = C; best->pendAt = time + jround(STEAL_WAIT * fs);
+    best->pendKey = key; best->pendC = C; best->pendVel = velocity; best->pendAt = time + jround(STEAL_WAIT * fs);
     focus = best->index;
     return;
   }
   if (!a->held()) a->onset = time;
   if (a->pendKey == key) return;
-  a->engage(key, C); focus = a->index;
+  a->engage(key, C, velocity); focus = a->index;
 }
 // Lift: how fast the key's contacts part. A slow lift draws them apart gently, so the spark
 // across them, and the arc's current through it, dies away in a longer hiss (a quarter of the
@@ -511,7 +531,7 @@ void ArcEngine::block(float *L, float *R, int s0, int n) {
     emf[s] = talk ? sm.voice * singer.next() : 0;
   }
   std::fill(osL.begin(), osL.begin() + n * OS, 0.0); std::fill(osR.begin(), osR.begin() + n * OS, 0.0);
-  for (Arc &a : arcs) if (a.pendKey != NONE && time >= a.pendAt) { const int key = a.pendKey; a.pendKey = NONE; a.engage(key, a.pendC); }
+  for (Arc &a : arcs) if (a.pendKey != NONE && time >= a.pendAt) { const int key = a.pendKey; a.pendKey = NONE; a.engage(key, a.pendC, a.pendVel); }
   for (int a = 0; a < MAXA; a++) {
     Arc &arc = arcs[a];
     if (a < nArcs || arc.active()) {
