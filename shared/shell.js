@@ -434,6 +434,7 @@ export function createShell(cfg) {
     if (cfg.compass) rebound();
     refreshVisibility(); save(); updateHelp(); shell.applyMix(); sendParams(swap);
     cfg.onParam?.('*', null, shell.P, null, false);
+    if (swap) document.dispatchEvent(new CustomEvent('forte-preset', { detail: { ...shell.P } })); // a preset: the RISE's panel shows its faders (shared/rise.js)
   };
   if ($('#preset')) {
     const ps = $('#preset');

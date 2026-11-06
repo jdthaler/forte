@@ -477,6 +477,7 @@ function replaceP(newP, { swap = false } = {}) {
   refreshVisibility();
   sendParams(swap); applyMix();
   refreshConsole(); refreshGenerator(); refreshFocus(); refreshActivity(); updateHelp(); save();
+  if (swap) document.dispatchEvent(new CustomEvent('forte-preset', { detail: { ...P } })); // a preset: the RISE's panel shows its faders (shared/rise.js)
 }
 
 // ---------------------------------------------------------------------------

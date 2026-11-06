@@ -172,11 +172,13 @@ panel to a rail. (Pages only: the plugins' window doesn't show it.)
 settings over SysEx (the browser asks once to let the page "control and
 reprogram" MIDI devices): its MIDI mode, bend range, how it sends Press and
 Slide, its faders' CCs, octave and firmware, and says what differs from what
-Forte expects. *Set up for Forte* (press it twice) writes MPE on 15 channels
+Forte expects, and keeps them up to date (it reads them every two seconds, so the
+keywave follows the octave buttons). A preset sets the RISE's fader lights to its values.
+*Set up for Forte* (press it twice) writes MPE on 15 channels
 at ±48, Slide on CC74, Press as channel pressure and the faders on their
 usual CCs; the *Sensitivity* sliders set its Strike, Glide, Slide, Press and
 Lift. The RISE keeps what's written, as when ROLI Dashboard writes it, and
-nothing is written unless one of those is pressed or moved. The protocol is
+apart from the fader lights nothing is written unless one of those is pressed or moved. The protocol is
 the one [GRAB](https://github.com/demixme/GRAB) decoded, on the original RISE
 and the RISE 2; Chrome and Edge only (Safari has no Web MIDI).
 

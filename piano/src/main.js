@@ -396,6 +396,7 @@ function setAll(newP, { swap = false } = {}) {
   updateHelp();
   saveParams();
   modelChanged();
+  if (swap) document.dispatchEvent(new CustomEvent('forte-preset', { detail: { ...P } })); // a preset: the RISE's panel shows its faders (shared/rise.js)
 }
 
 function setParam(id, v, opts = {}) {

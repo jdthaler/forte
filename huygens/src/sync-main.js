@@ -282,6 +282,7 @@ function setAll(np, { swap = false } = {}) {
   for (const id of controls.keys()) refreshControl(id);
   refreshVisibility(); post(paramsMessage(swap)); applyMix(); retuneSounding(); updateHelp(); save();
   recomputeStair(true);
+  if (swap) document.dispatchEvent(new CustomEvent('forte-preset', { detail: { ...P } })); // a preset: the RISE's panel shows its faders (shared/rise.js)
 }
 function setParam(id, v, dragging = false) {
   const p = ALL_PARAMS.find((q) => q.id === id);

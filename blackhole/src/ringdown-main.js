@@ -227,6 +227,7 @@ function setAll(np, { swap = false } = {}) {
   for (const id of controls.keys()) refreshControl(id);
   refreshVisibility(); post(paramsMessage(swap)); applyMix(); updateHelp(); save();
   setFocus(focusKey, lastVel);
+  if (swap) document.dispatchEvent(new CustomEvent('forte-preset', { detail: { ...P } })); // a preset: the RISE's panel shows its faders (shared/rise.js)
 }
 let focusTimer = 0;
 function setParam(id, v, dragging = false) {
