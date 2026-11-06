@@ -56,6 +56,7 @@ class ArmonicaEngine : public Engine {
   void pressure(double value, int key) override; // aftertouch: the finger presses harder
   void bend(double value) override;              // every bowl's modes ×r (no real armonica bends)
   void noteBend(double ratio, int key) override; // one bowl's modes ×r, on top of the wheel's
+  void slide(double value, int key) override { expr.setSlide(value, key); } // where its finger rubs, as it sings
   int voiceCount() const override { return count; }
   // the tests: whether the key's bowl for the current parameters is built (asks for it if not)
   bool ready(int key) { return bool(bowls.get(key, version)); }
@@ -69,6 +70,7 @@ class ArmonicaEngine : public Engine {
     int quiet = 0;
     double pl = 0, pr = 0;
     double bent = 1; // the ratio its modes are tuned to
+    double rub = 0, rim = 1; // where its finger rubs (degrees below the rim: the knob's, or its own slide), and the wall's radius there (× the rim's)
     double nb = 1;   // its own bend (MPE), where its glide is
     uint64_t version = 0; // of the bowl it was built from
     Bowl b;
@@ -78,6 +80,7 @@ class ArmonicaEngine : public Engine {
     std::array<double, MODES> a1c{}, a2c{}, bc{}, a1s{}, a2s{}, bs{}, buc{}, bus{};
     std::array<double, MODES> nd{}, cpsi{}, spsi{}, g{}, gain{}, cmL{}, smL{}, cmR{}, smR{}, gcL{}, gsL{}, gcR{}, gsR{};
     std::array<double, MODES> cx{}, sx{}, dc{}, ds{}, bet{}, bes{}, det{};
+    std::array<double, MODES> sh{}, nf{}; // each family's motion under the finger (× the rim's: rubShape), and n × that
     std::array<int, MODES> n{};
   };
 
@@ -92,6 +95,7 @@ class ArmonicaEngine : public Engine {
   void start(Voice &v, int key);
   void build(Voice &v, const Bowl &b, uint64_t version);
   void tune(Voice &v, double r);
+  void rubAt(Voice &v, double deg); // the finger to deg below the rim (tune follows)
   double force(const Voice &v) const;
   void run(float *L, float *R, int n);
   void report();
@@ -102,7 +106,7 @@ class ArmonicaEngine : public Engine {
   Friction fr{};
   double theta = 0, Wbar = 0, pressureAll = 0;
   double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
-  NoteExpression expr{48};        // each key's own bend
+  NoteExpression expr{48};        // each key's own bend, and slide: where its finger rubs
   double C[N_MAX + 1][128] = {}, S[N_MAX + 1][128] = {};
   int32_t rng = 22222;
   int focus = -1, tick = 0;

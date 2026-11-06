@@ -177,7 +177,8 @@ or thumb along the string, bar, bell, tine or reed as it strikes (the Ribbon
 Piano, Electric Grand, Harpsichord, Vibraphone, Carillon, Kalimba, Tine and
 Reed pianos), the wheel along
 the Viola Organista's string, the felt onto the Tangent Clavier's, the
-chanterelles' pressure on the Hurdy-Gurdy's wheel.
+chanterelles' pressure on the Hurdy-Gurdy's wheel, the finger down the Glass
+Armonica's bowl from its rim, the glass along the Clavicylinder's bar.
 
 **The RISE's panel:** while a Seaboard is plugged in, each page draws it at
 the left: its faders and pad with the controls they move and where they are,

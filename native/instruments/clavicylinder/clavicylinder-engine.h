@@ -22,6 +22,7 @@
 #include "clavicylinder-model.h"
 #include "clavicylinder-params.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "forte/lift.h"
 
 namespace forte::clavicylinder {
@@ -49,6 +50,7 @@ class ClavicylinderEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void allNotesOff() override { count = 0; }
   void pressure(double value, int key) override; // aftertouch: the key presses harder
+  void slide(double value, int key) override { expr.setSlide(value, key); } // where the glass touches the bar, at its next touch
   int voiceCount() const override { return count; }
   void process(float *L, float *R, int n) override;
 
@@ -87,6 +89,7 @@ class ClavicylinderEngine : public Engine {
   void report();
 
   std::array<double, p::count> P{};
+  NoteExpression expr{0}; // each key's own slide (no bend: a bar is cut to its pitch)
   bool hasParams = false;
   const double k;
   double pressureAll = 0, inertia = 0;
