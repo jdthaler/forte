@@ -2,10 +2,14 @@
 // DynamicsCompressorNode (threshold −3 dB, knee 3 dB, ratio 12, attack 2 ms, release 150 ms),
 // without its 6 ms look-ahead, so the pages add no delay to a key. The same code as the
 // plugins' native/core/src/limiter.cpp. A fast transient may overshoot the threshold for the
-// attack time. shared/worklet.js runs it as the 'forte-limiter' processor (shared/chain.js).
+// attack time, but not the CEILING: a peak that would pass it takes the gain down at once, and the
+// gain comes back over the release (with no look-ahead the curve's 2 ms attack let a spiky wave, a
+// brass shock or a hard mallet's first milliseconds, out several dB over full scale, to be clipped
+// by the sound card). shared/worklet.js runs it as the 'forte-limiter' processor (shared/chain.js).
 
 const dbToLinear = (db) => 10 ** (db / 20);
 const linearToDb = (x) => 20 * Math.log10(x);
+export const CEILING = 0.95; // −0.45 dB re full scale: no sample leaves louder
 
 export class Limiter {
   // makeup: false leaves levels below the threshold as they are (a limiter that only catches peaks)
@@ -25,7 +29,7 @@ export class Limiter {
     this.makeup = makeup ? (1 / this.curve(1)) ** 0.6 : 1;
     this.attackCoef = 1 - Math.exp(-1 / (Math.max(attack, 1e-4) * fs));
     this.releaseCoef = 1 - Math.exp(-1 / (Math.max(release, 1e-3) * fs));
-    this.gain = 1;
+    this.gain = 1; this.ceiling = 1;
   }
 
   kneeCurve(x) {
@@ -42,15 +46,18 @@ export class Limiter {
   // in place; L and R are linked (one gain for both)
   process(L, R, n) {
     const t = this.linearThreshold, a = this.attackCoef, r = this.releaseCoef, m = this.makeup;
-    let gain = this.gain;
+    let gain = this.gain, c = this.ceiling;
     for (let i = 0; i < n; i++) {
       const x = Math.max(Math.abs(L[i]), Math.abs(R[i]));
       const target = x > t ? this.curve(x) / x : 1;
       gain += (target - gain) * (target < gain ? a : r);
-      const g = gain * m;
+      c += (1 - c) * r;
+      const y = x * gain * m;
+      if (y * c > CEILING) c = CEILING / y;
+      const g = gain * m * c;
       L[i] *= g;
       R[i] *= g;
     }
-    this.gain = gain;
+    this.gain = gain; this.ceiling = c;
   }
 }
