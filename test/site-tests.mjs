@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { INSTRUMENTS, SECTIONS, FILTERS, FORTE_VERSION, TEMPLATE } from '../shared/registry.js';
-import { words, hits, matches } from '../shared/search.js';
+import { words, hits, matches, correct } from '../shared/search.js';
 import { ASSETS, notes } from '../tools/plugin-release.mjs';
 import { withTags, pictureOf } from '../tools/make-previews.mjs';
 import { readNotes, parseNote, plan, bump, frontPage } from '../tools/release.mjs';
@@ -280,6 +280,20 @@ test('the front page\'s search finds words by their start, without case or accen
   assert.ok(either.includes('pipes') && either.includes('bowed') && !either.includes('piano'), 'options of one filter add up; filters narrow');
   assert.deepEqual(hits('Von Kármán plates', words('karman pl')), [[4, 10], [11, 13]], 'where to mark');
   assert.deepEqual(hits('Bell modes', []), []);
+});
+test('the front page\'s search forgives a slip in a longer word, but only when the word finds nothing as it is', () => {
+  const list = INSTRUMENTS.filter((i) => i.ready);
+  const find = (q) => list.filter((i) => matches(i, correct(words(q), list))).map((i) => i.id);
+  assert.deepEqual(find('harpsicord'), ['harpsichord'], 'a letter missing');
+  assert.deepEqual(find('vibrophone'), ['vibraphone'], 'a letter wrong');
+  assert.deepEqual(find('schroedinger'), ['quantum'], 'a letter extra');
+  assert.deepEqual(find('karmen'), ['gongs'], 'a short word, one letter');
+  assert.ok(find('tubluar').includes('tubular'), 'two letters swapped');
+  assert.deepEqual(find('xyzzy'), [], 'nothing near: nothing');
+  assert.deepEqual(find('theremin'), [], 'eight letters: one slip only');
+  assert.deepEqual(correct(words('organ glas'), list), ['organ', 'glas'], 'words that find something stay as they are');
+  assert.deepEqual(correct(words('ogn'), list), ['ogn'], 'under four letters: as typed');
+  assert.deepEqual(hits('Harpsichord', correct(words('harpsicord'), list)), [[0, 11]], 'the word it was taken for is marked');
 });
 test('every ready instrument has a page, a README and a test suite', () => {
   for (const i of ready) {
