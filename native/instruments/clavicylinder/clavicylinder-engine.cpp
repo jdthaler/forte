@@ -41,7 +41,11 @@ void ClavicylinderEngine::start(Voice &v, int key) {
   v = Voice{};
   v.key = key;
   v.after = pressureAll;
-  v.b = bar(key, P.data(), fs);
+  if (const double m = expr.slideOr(key, NAN); m == m) { // its own slide: where the glass touches the bar
+    std::array<double, p::count> Pk = P;
+    Pk[p::contact] = m;
+    v.b = bar(key, Pk.data(), fs);
+  } else v.b = bar(key, P.data(), fs);
   v.N = std::min(v.b.count, MODES_Q[(int)quality]);
   v.pad = pad(P[p::wet], layersOf(P.data(), v.b.post), v.b.L);
   v.fr = friction(P[p::wet], P[p::grip], v.b.L);

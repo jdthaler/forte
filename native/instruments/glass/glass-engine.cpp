@@ -16,6 +16,7 @@ constexpr double RIDGE = 4.5e-4;   // fingerprint ridge spacing (m)
 constexpr int MAX_VOICES = 36;     // beyond this, the quietest bowl nobody is touching is let go
 constexpr int REPORT_BLOCKS = 12;  // the page's state every few blocks
 constexpr double BEND_T = 0.02;    // s: the pitch wheel's glide
+constexpr double RUB_GLIDE = 0.03; // s: the finger moving along the wall (the knob, or a note's own slide)
 constexpr double F_TOP = 0.45;     // × fs: a family bent past this stays there (unheard, and its two-pole still a resonator)
 // The Quality: families played (n = 2 … 1 + this; n ≥ 4 ring 25–30 dB under the note), bowls
 // sounding at once before the quietest untouched one is let go (a touched bowl only past
@@ -82,6 +83,15 @@ void ArmonicaEngine::build(Voice &v, const Bowl &b, uint64_t ver) {
     v.cmR[i] = std::cos(m.n * MIC[1]); v.smR[i] = std::sin(m.n * MIC[1]);
     v.gcL[i] = v.gain[i] * v.cmL[i]; v.gsL[i] = v.gain[i] * v.smL[i]; v.gcR[i] = v.gain[i] * v.cmR[i]; v.gsR[i] = v.gain[i] * v.smR[i];
   }
+  rubAt(v, expr.slideOr(v.key, P[p::rub]));
+}
+
+// The finger deg below the rim: each family moves rubShape × its rim motion under it (in its
+// force on the bowl and in the speed it feels), and the wall turns sin θ as fast there.
+void ArmonicaEngine::rubAt(Voice &v, double deg) {
+  const double below = deg * (std::numbers::pi / 180);
+  v.rub = deg; v.rim = below == 0 ? 1 : std::cos(below);
+  for (int i = 0; i < v.N; i++) { v.sh[i] = rubShape(v.n[i], below); v.nf[i] = v.nd[i] * v.sh[i]; }
   tune(v, bendNow * v.nb);
 }
 
@@ -94,8 +104,8 @@ void ArmonicaEngine::tune(Voice &v, double r) {
   for (int i = 0; i < v.N; i++) {
     const Mode &m = v.b.modes[i];
     const ModeCoeffs c1 = modeCoeffs(std::min(m.f1 * r, top), m.sigma, fs), c2 = modeCoeffs(std::min(m.f2 * r, top), m.sigma, fs);
-    v.a1c[i] = c1.a1; v.a2c[i] = c1.a2; v.buc[i] = c1.b; v.bc[i] = c1.b / m.M; // per unit mass; per newton
-    v.a1s[i] = c2.a1; v.a2s[i] = c2.a2; v.bus[i] = c2.b; v.bs[i] = c2.b / m.M;
+    v.a1c[i] = c1.a1; v.a2c[i] = c1.a2; v.buc[i] = c1.b; v.bc[i] = c1.b / m.M * v.sh[i]; // per unit mass; per newton at the finger
+    v.a1s[i] = c2.a1; v.a2s[i] = c2.a2; v.bus[i] = c2.b; v.bs[i] = c2.b / m.M * v.sh[i];
   }
   v.bent = r;
 }
@@ -197,7 +207,7 @@ void ArmonicaEngine::run(float *L, float *R, int n) {
     const double *G = v.gain.data();
     double *DET = v.det.data();
     for (int j = 0; j < NM; j++) { const double gw = (v.g[j] * W) / k; BET[j] = v.buc[j] * gw; BES[j] = v.bus[j] * gw; DET[j] = 1 / (1 + BET[j] * BES[j]); }
-    const double Nt = force(v), Vrim = W * v.b.a;
+    const double Nt = force(v), Vrim = W * v.b.a * v.rim;
     const bool tr = focus == v.key;
     const double gr = 1 - std::exp((-TAU * Vrim) / (RIDGE * fsd));
     double pk = 0;
@@ -221,8 +231,8 @@ void ArmonicaEngine::run(float *L, float *R, int n) {
           const double ec = -bc[j] * sx, es = -bs[j] * cx;
           const double dc = (ec + BET[j] * es) * det, ds = (es - BES[j] * ec) * det;
           DC[j] = dc; DS[j] = ds;
-          vfree -= sx * (pc - qc1[j]) + cx * (ps - qs1[j]);
-          Yg -= sx * dc + cx * ds;
+          vfree -= v.sh[j] * (sx * (pc - qc1[j]) + cx * (ps - qs1[j]));
+          Yg -= v.sh[j] * (sx * dc + cx * ds);
         }
       }
       double F = 0;
@@ -262,7 +272,7 @@ void ArmonicaEngine::run(float *L, float *R, int n) {
       double wd = 0, oL = 0, oR = 0;
       if constexpr (!LEAN) for (int j = 0; j < NM; j++) {
         const double dqc = qc[j] - qc1[j], dqs = qs[j] - qs1[j], cx = CX[j], sx = SX[j];
-        wd += nn[j] * (sx * dqs - cx * dqc);
+        wd += v.nf[j] * (sx * dqs - cx * dqc);
         // at azimuth α the radial motion of the cos/sin modes is −n cos(nα − χ), −n sin(nα − χ)
         oL -= G[j] * ((v.cmL[j] * cx + v.smL[j] * sx) * dqc + (v.smL[j] * cx - v.cmL[j] * sx) * dqs);
         oR -= G[j] * ((v.cmR[j] * cx + v.smR[j] * sx) * dqc + (v.smR[j] * cx - v.cmR[j] * sx) * dqs);
@@ -270,7 +280,7 @@ void ArmonicaEngine::run(float *L, float *R, int n) {
       else for (int j = 0; j < NM; j++) { // the same sums, gathered: cos and sin (nα − χ) from those of χ
         const double dqc = qc[j] - qc1[j], dqs = qs[j] - qs1[j], cx = CX[j], sx = SX[j];
         const double pq = cx * dqc - sx * dqs, qq = sx * dqc + cx * dqs;
-        wd -= nn[j] * pq;
+        wd -= v.nf[j] * pq;
         oL -= v.gcL[j] * pq + v.gsL[j] * qq;
         oR -= v.gcR[j] * pq + v.gsR[j] * qq;
       }
@@ -288,6 +298,7 @@ void ArmonicaEngine::run(float *L, float *R, int n) {
   for (int vi = 0; vi < count; vi++) {
     Voice &v = *voices[vi];
     if (v.dead || !v.built) continue;
+    if (const double to = expr.slideOr(v.key, P[p::rub]); v.rub != to) rubAt(v, glideTo(v.rub, to, n / fs, RUB_GLIDE)); // the finger slides along the wall
     if (quality == Quality::high) play(v, std::false_type{});
     else play(v, std::true_type{});
   }

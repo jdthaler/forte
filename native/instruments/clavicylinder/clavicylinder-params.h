@@ -17,7 +17,7 @@
 namespace forte::clavicylinder {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { press, speed, flywheel, treadle, wet, layers, grip, thick, t60, cords, build, board, fullRange, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, pressOn, liftOn, count };
+enum : int { press, speed, flywheel, treadle, wet, layers, grip, thick, t60, cords, contact, build, board, fullRange, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, slideOn, pressOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -31,6 +31,7 @@ inline const FormatSegment kFormat_grip[] = {{-0.005, "soaped ", " %", -100, 0, 
 inline const FormatSegment kFormat_thick[] = {{kNoLimit, "", " mm", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_t60[] = {{kNoLimit, "", " s", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_cords[] = {{-0.001, "", " % of the length outward", 100, 0, 1, false, false, false, false}, {0.0009999999999999998, "on the nodes", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " % of the length inward", 100, 0, 1, false, false, false, false}};
+inline const FormatSegment kFormat_contact[] = {{0.0009999999999999998, "where Chladni set it", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " % of the length toward the node", 100, 0, 1, false, false, false, false}};
 inline const char *const kChoices_build[] = {"Chladni’s: posts in the bass, bent ends above E4", "Posts all the way up", "Bent ends all the way down"};
 inline const char *const kKeys_build[] = {"0", "1", "2"};
 inline const FormatSegment kFormat_board[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
@@ -69,6 +70,7 @@ inline const ParamInfo kParams[p::count] = {
   {"thick", "Bar thickness", "Bars", ParamKind::continuous, 1.2, 4, 2.3, 0.05, false, false, nullptr, 0, kFormat_thick, 1},
   {"t60", "Ring after release (middle C)", "Bars", ParamKind::continuous, 0.5, 30, 4, 0, true, false, nullptr, 0, kFormat_t60, 1},
   {"cords", "Cords off the nodes", "Bars", ParamKind::continuous, -0.1, 0.06, 0, 0.002, false, false, nullptr, 0, kFormat_cords, 3},
+  {"contact", "Where the glass touches the bar", "Bars", ParamKind::continuous, 0, 0.12, 0, 0.002, false, false, nullptr, 0, kFormat_contact, 2},
   {"build", "Rubbed point", "Bars", ParamKind::choice, 0, 2, 0, 1, false, false, kChoices_build, 3, nullptr, 0, kKeys_build},
   {"board", "Soundboard (thin fir)", "Bars", ParamKind::continuous, 0, 1, 0.6, 0.01, false, false, nullptr, 0, kFormat_board, 1},
   {"fullRange", "Full range (A0–C8)", "Bars", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
@@ -90,6 +92,7 @@ inline const ParamInfo kParams[p::count] = {
   {"cents10", "Minor 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents10, 1},
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
   {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"pressOn", "Press: pressing into a held key", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
@@ -140,7 +143,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 36, .compassHi = 89, .compass = p::fullRange, .space = Space::hold,
     .modWheel = p::speed, .modWheelMax = 2,
-    .slide = p::speed, .slideMax = 2,
+    .slide = p::contact, .slideMax = 0.1,
     .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .body = p::board, .bodySeconds = 0.3, .bodyDry = 0.6, .bodyWet = 1.1, .trimDb = 2},
     .midiVelocity = midiVelocity, .create = create,
