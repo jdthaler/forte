@@ -25,7 +25,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/arc/>
 | `←` `→` | octave |
 | `↑` `↓` | arc current |
 | `Space` | hold: keys stay down while Space is held |
-| MIDI | notes, sustain pedal (= hold), **mod wheel = arc current**. Velocity does nothing: a key only closes a contact, as on Duddell's keyboard |
+| MIDI | notes, sustain pedal (= hold), **mod wheel = arc current**. velocity = how hard the key closes its contact (a soft key's note swells in later, a hard one's sounds at once) |
 
 ## The physics
 
@@ -231,13 +231,20 @@ only just started, the new note is dropped rather than cutting one off.
 through a 2 kΩ leak (the key's back contact). So a key switches it in
 without a jolt, and the note grows out of the arc's own flicker at the linear
 rate, reaching half its final level in about 90 ms on every key. The contact
-closes in about half a millisecond. On release the contacts part and a small
+closes in about half a millisecond. That is a key played at the computer
+keys' velocity (0.75); velocity is how hard the key closes it. A softer key
+closes it more slowly, its time constant growing evenly with softness to 300
+times as long (15 ms) at the softest, so the contact's resistance passes the
+arc's threshold later and the note reaches half its level in about 180 ms. A
+harder key closes it with a jolt that knocks the capacitor's charge off the
+arc's voltage, by up to 1 % (0.6 V) at the hardest, growing as the square of
+how far past 0.75 the key goes: the arc's own instability grows that kick
+into the note, which reaches half its level in 30–65 ms. On release the contacts part and a small
 spark absorbs the coil's energy, its resistance growing with their
 separation by 4 Ω a millisecond, and the note fades by 40 dB in 8–11 ms,
 without a click: the coil's current and the arc's cannot jump. Once the spark
 reaches 50 Ω it goes out at the next zero of its current, as an AC spark
 does, so the released capacitor leaves the circuit before the next note.
-Velocity has no physical meaning on this keyboard and is ignored.
 
 ### 9. Hissing
 

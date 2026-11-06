@@ -16,6 +16,15 @@ using fdlibm::pow;
 using fdlibm::sin;
 
 static constexpr double PI = 3.141592653589793, TWO_PI = 2 * PI, SQRT2 = 1.4142135623730951;
+// Strike: how hard the key closes its circuit, as how fast the lamp's supply comes on (and its
+// keyer opens): a soft key over up to eight times the attack, so the lamp first strikes later
+// and the note eases in; a hard one in an eighth of it, at once, with a click. The computer keys'
+// 0.75 as it always was.
+static constexpr double STRIKE_MID = 0.75, STRIKE_RANGE = 8;
+static double strikeScale(double velocity) {
+  const double v = velocity == velocity ? std::clamp(velocity, 0.0, 1.0) : STRIKE_MID;
+  return v < STRIKE_MID ? pow(STRIKE_RANGE, (STRIKE_MID - v) / STRIKE_MID) : pow(STRIKE_RANGE, (STRIKE_MID - v) / (1 - STRIKE_MID));
+}
 static constexpr double BEND_T = 0.02;   // s: a note's bend glides with this time constant
 static constexpr double BEND_TOP = 0.25; // a bent lamp plays at most fs/4: the polyBLEP corrects one reset at a time
 static constexpr double SERVO_WIN = 0.12; // s: the pitch servo's window on each lamp
@@ -77,8 +86,9 @@ void Osc::applyDrift(NeonEngine &eng, double dt) {
 void Osc::plan(double vr, const NeonEngine &eng) {
   const double k = eng.k, vs = eng.p.vStrike;
   if (keyDown) {
-    gate += (1 - gate) * eng.attackAlpha;
-    power += (1 - power) * eng.attackAlpha;
+    const double a = atkA ? atkA : eng.attackAlpha;
+    gate += (1 - gate) * a;
+    power += (1 - power) * a;
   } else gate -= gate * (relA ? relA : eng.releaseAlpha);
   supply = vr * power;
   V0 = V;
@@ -219,16 +229,17 @@ void NeonEngine::pressure(double value, int key) {
 }
 double NeonEngine::loudOf(int key) const { return 1 + std::max(key >= 0 && key < 128 ? press[key] : 0.0, chanPress); }
 
-void NeonEngine::noteOn(int key, double) {
+void NeonEngine::noteOn(int key, double velocity) {
   const bool had = offered;
   offered = false;
   last = nullptr;
   if (key < 0 || key > 127) return;
   press[key] = 0;
   const double f = had && !std::isnan(offF) ? offF : keyTarget(key);
+  const double s = strikeScale(velocity), atk = s == 1 ? 0 : 1 - exp(-k / std::max(1e-4, p.attack * s));
   Osc *o = byKey[key];
   if (o && !o->dead) {
-    o->keyDown = true;
+    o->keyDown = true; o->atkA = atk;
     const double b = bendOf(key, f); // a bend starts there
     const bool bent = b != o->bend;
     if (bent) { o->bend = b; o->bentAt = t; }
@@ -241,6 +252,7 @@ void NeonEngine::noteOn(int key, double) {
   if (!o) return;
   o->used = true;
   o->start(*this, key, f, had ? offPhase : NAN, had && offSettled);
+  o->atkA = atk;
   osc[nos++] = o; byKey[key] = o;
   if (nos > p.maxOsc) {
     Osc *victim = osc[0];

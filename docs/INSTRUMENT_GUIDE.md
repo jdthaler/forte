@@ -141,7 +141,7 @@ export const INSTRUMENT = {
                                         // Seaboard's Lift); every engine answers it (native/core/include/
                                         // forte/lift.h: liftScale stretches a release, liftPast drives
                                         // what only a fast lift does; none, −1, and 0.5 play as before)
-  strike: false,                        // only when velocity changes nothing (the Singing Arc, the Huygens Keyboard)
+  strike: 'how fast the key closes its contact', // only when velocity isn't how loud (the Singing Arc, the Huygens Keyboard): what it is; false when it changes nothing
   controllers: { 67: 'unaCorda' },      // other MIDI controllers → parameters (a toggle is on at 64);
                                         // { param, values: [a, b] } picks b from 64 up, { param, toggle: [a, b] } flips on each press
   faders: ['hardness', 'mass', 'listen', 'strikeAngle', 'strike'], // a Seaboard RISE's faders 1–3 (CC 107, 109, 111), then

@@ -41,7 +41,7 @@ const rel = (a, b) => Math.abs(a / b - 1);
 const tables = new Map();
 const table = (p) => { const k = JSON.stringify(p); if (!tables.has(k)) tables.set(k, keyCaps(p)); return tables.get(k); };
 
-// Run the engine through events ([t, 'on', key] | [t, 'off', key] | [t, 'params', P] | [t, 'kick', amps]),
+// Run the engine through events ([t, 'on', key, velocity = 0.75] | [t, 'off', key] | [t, 'params', P] | [t, 'kick', amps]),
 // in 128-sample blocks; tap(engine, t) after every block.
 function run(params, events, sec, { fs = FS, seed = 1, opts = {}, tap, bl = 128 } = {}) {
   const e = new ArcEngine(fs, seed, opts);
@@ -51,8 +51,8 @@ function run(params, events, sec, { fs = FS, seed = 1, opts = {}, tap, bl = 128 
   let j = 0;
   for (let s = 0; s < n; s += bl) {
     while (j < ev.length && ev[j][0] <= s) {
-      const [, type, a] = ev[j++];
-      if (type === 'on') e.noteOn(a, 0.8); else if (type === 'off') e.noteOff(a); else if (type === 'params') e.setParams(a); else if (type === 'kick') e.kick(a); else if (type === 'msg') e.handle(a);
+      const [, type, a, b = 0.75] = ev[j++];
+      if (type === 'on') e.noteOn(a, b); else if (type === 'off') e.noteOff(a); else if (type === 'params') e.setParams(a); else if (type === 'kick') e.kick(a); else if (type === 'msg') e.handle(a);
     }
     e.process(bL, bR, bl);
     for (let i = 0; i < bl && s + i < n; i++) { L[s + i] = bL[i]; R[s + i] = bR[i]; }
@@ -442,6 +442,22 @@ test(`Slide and Press: the newest held key's slide sets the electrode gap (to ${
   near(level(play([{ type: 'pressure', key: 60, value: 1 }])), hot, 'pressed: as twice the current');
   near(level(play([{ type: 'pressure', key: -1, value: 1 }])), hot, 'channel pressure');
   assert.ok(hot > 1.4 * level(plain), 'a louder arc');
+});
+
+test('Strike: how hard the key closes its contact. A soft key eases it shut and the note comes later; a hard one jolts the circuit and it sounds at once; at the computer keys\' 0.75 it plays as it always did', () => {
+  // when the note first reaches half its steady level
+  const onset = (key, v) => {
+    const { L } = run(P(), [[0, 'on', key, v]], 0.6), full = rms(L, 0.4 * FS, 0.6 * FS);
+    let i = 0;
+    while (i < 0.4 * FS && rms(L, i, i + 240) < 0.5 * full) i += 240;
+    return i / FS;
+  };
+  for (const key of [48, 60, 72]) {
+    const t = [0, 0.4, 0.75, 0.9, 1].map((v) => onset(key, v)), ms = t.map((x) => Math.round(1000 * x)).join(', ');
+    for (let i = 1; i < t.length; i++) assert.ok(t[i] < t[i - 1], `${noteName(key)}: onsets ${ms} ms at velocity 0, 0.4, 0.75, 0.9, 1`);
+    assert.ok(t[0] > t[2] + 0.06 && t[4] < t[2] - 0.03, `${noteName(key)}: onsets ${ms} ms`);
+  }
+  assert.deepEqual(run(P(), [[0, 'on', 60, NaN]], 0.3).L, run(P(), [[0, 'on', 60, 0.75]], 0.3).L, 'no velocity: as 0.75');
 });
 
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');
