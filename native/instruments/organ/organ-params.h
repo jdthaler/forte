@@ -17,7 +17,7 @@
 namespace forte::organ {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { tuning, mains, inertia, spinUp, levels, relief, drift, crosstalk, leakage, loading, spread, bounce, contactTime, percFastTau, percSlowTau, percLevel, sections, sectionDelay, scanRate, hornSlow, hornFast, drumSlow, drumFast, hornAccel, hornDecel, drumAccel, drumDecel, hornRadius, micDist, micSpread, crossover, balance, reflections, drive, expression, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, drawbar1, drawbar2, drawbar3, drawbar4, drawbar5, drawbar6, drawbar7, drawbar8, drawbar9, percOn, percSoft, percFast, percThird, vib, leslie, motor, count };
+enum : int { tuning, mains, inertia, spinUp, levels, relief, drift, crosstalk, leakage, loading, spread, bounce, contactTime, percFastTau, percSlowTau, percLevel, sections, sectionDelay, scanRate, hornSlow, hornFast, drumSlow, drumFast, hornAccel, hornDecel, drumAccel, drumDecel, hornRadius, micDist, micSpread, crossover, balance, reflections, drive, expression, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, drawbar1, drawbar2, drawbar3, drawbar4, drawbar5, drawbar6, drawbar7, drawbar8, drawbar9, percOn, percSoft, percFast, percThird, vib, leslie, motor, strikeOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -168,6 +168,7 @@ inline const ParamInfo kParams[p::count] = {
   {"vib", "Vibrato / chorus", "Console", ParamKind::choice, 0, 6, 6, 1, false, true, kChoices_vib, 7, nullptr, 0, kKeys_vib},
   {"leslie", "Leslie", "Console", ParamKind::choice, 0, 3, 1, 1, false, true, kChoices_leslie, 4, nullptr, 0, kKeys_leslie},
   {"motor", "Motor", "Console", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
 inline const PresetValue kPreset0[] = {{p::drawbar1, 8}, {p::drawbar2, 8}, {p::drawbar3, 8}, {p::drawbar4, 0}, {p::drawbar5, 0}, {p::drawbar6, 0}, {p::drawbar7, 0}, {p::drawbar8, 0}, {p::drawbar9, 0}, {p::percOn, 1}, {p::percSoft, 0}, {p::percFast, 1}, {p::percThird, 1}, {p::vib, 6}, {p::leslie, 1}, {p::motor, 1}};

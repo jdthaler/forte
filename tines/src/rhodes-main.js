@@ -3,8 +3,11 @@
 // The worklet runs the engine, the C++ built as WebAssembly (tines-wasm.js); the page builds each
 // key's modes with the same build's model, sends them with the note, and draws them.
 
-import { ALL_PARAMS } from './rhodes-params.js';
-import { INSTRUMENT, GROUPS, DEFAULTS, PRESETS } from './tines-instrument.js';
+import { ALL_PARAMS as OWN_PARAMS } from './rhodes-params.js';
+import { INSTRUMENT, DEFAULTS as OWN_DEFAULTS, PRESETS } from './tines-instrument.js';
+import { EXPRESSION, EXPRESSION_DEFAULTS, EXPRESSION_IDS, responds } from '../../shared/expression.js';
+// the descriptor's groups end with the Expression switches (shared/expression.js)
+const GROUPS = INSTRUMENT.groups, ALL_PARAMS = [...OWN_PARAMS, ...EXPRESSION.params], DEFAULTS = { ...OWN_DEFAULTS, ...EXPRESSION_DEFAULTS };
 import { noteName } from './tine.js';
 import { TinesWasmEngine, wasmModel } from './tines-wasm.js'; // the slow-motion view runs its own engine
 import { createChain } from '../../shared/chain.js';
@@ -232,6 +235,7 @@ function buildControls() {
     det.open = ['tine', 'bar', 'pickup'].includes(g.id);
     det.innerHTML = `<summary>${g.title}</summary>`;
     for (const p of [...g.params].sort((a, b) => !!faceOf(b) - !!faceOf(a))) { // faces first (shared/faces.js)
+      if (EXPRESSION_IDS.includes(p.id) && !responds(INSTRUMENT, p.id)) continue; // a switch for what this instrument doesn't answer to (yet)
       const wrap = document.createElement('div');
       wrap.className = 'param';
       if (p.strip) wrap.dataset.perform = ''; // in the strip above the keys (shared/layout.js)
@@ -242,6 +246,12 @@ function buildControls() {
         input.id = `p-${p.id}`;
         for (const [k, name] of p.options) input.add(new Option(name, k));
         input.addEventListener('change', () => { setParam(p.id, p.options[input.selectedIndex][0]); unfocus(input); });
+      } else if (p.type === 'checkbox') { // the Expression switches
+        wrap.classList.add('check');
+        input = document.createElement('input');
+        input.type = 'checkbox'; input.id = `p-${p.id}`;
+        input.addEventListener('change', () => { setParam(p.id, input.checked); unfocus(input); });
+        wrap.append(Object.assign(document.createElement('label'), { htmlFor: input.id, textContent: p.label }));
       } else {
         wrap.innerHTML = `<div class="row"><label for="p-${p.id}">${p.label}</label><span class="val"></span></div>`;
         input = document.createElement('input');
@@ -249,7 +259,7 @@ function buildControls() {
         input.addEventListener('input', () => setParam(p.id, fromSlider(p, +input.value), true));
         input.addEventListener('dblclick', () => setParam(p.id, p.def));
       }
-      wrap.appendChild(input);
+      if (p.type === 'checkbox') wrap.prepend(input); else wrap.appendChild(input);
       const face = dress(wrap, p, input, { reset: () => setParam(p.id, p.def), toSlider });
       if (p.hint) { const h = document.createElement('div'); h.className = 'hint'; h.textContent = p.hint; wrap.appendChild(h); }
       det.appendChild(wrap);
@@ -272,6 +282,7 @@ function refreshControl(id, dragging = false) {
   const c = controls.get(id);
   if (!c) return;
   if (c.p.type === 'select') { c.input.value = P[id]; c.face?.show(); return; }
+  if (c.p.type === 'checkbox') { c.input.checked = !!P[id]; return; }
   if (!dragging) c.input.value = toSlider(c.p, P[id]);
   c.face?.show();
   c.val.textContent = c.p.fmt ? c.p.fmt(P[id]) : String(P[id]);

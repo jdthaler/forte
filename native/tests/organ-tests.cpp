@@ -134,8 +134,8 @@ TEST("organ: the console's parameters: drawbars, percussion, vibrato, the Leslie
   // a preset sets the whole console (gen-native-params: the defaults, then the preset's)
   for (const Preset &pr : kPresets) {
     int console = 0;
-    for (int j = 0; j < pr.count; j++) if (pr.values[j].param >= p::drawbar1) console++;
-    CHECK(console == p::count - p::drawbar1);
+    for (int j = 0; j < pr.count; j++) if (pr.values[j].param >= p::drawbar1 && pr.values[j].param < p::strikeOn) console++;
+    CHECK(console == p::strikeOn - p::drawbar1); // (the Expression switch comes after the console: shared/expression.js)
   }
 }
 

@@ -20,6 +20,7 @@ import { touched, SOFT_PEDAL, wheelValue, pageMpe, controllersOf, controlled } f
 import { connectQuality } from './quality.js';
 import { complete } from './presets.js';
 import { tap } from './taps.js';
+import { withExpression } from './expression.js';
 
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
 const noteName = (m) => NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
@@ -60,7 +61,7 @@ onAudioContext((c) => { ctx = c; if (second && !second.node) wake(second); });
 async function load(id) {
   const { INSTRUMENT: I } = await import(new URL(`../${id}/src/${id}-instrument.js`, import.meta.url).href);
   await I.load?.();
-  const params = [...I.groups, ...(I.console?.groups ?? [])].flatMap((g) => g.params);
+  const params = [...withExpression(I.groups), ...(I.console?.groups ?? [])].flatMap((g) => g.params); // with its Expression switches (shared/expression.js)
   let stored = null;
   try { stored = JSON.parse(localStorage.getItem(paramsStore(id)) || 'null'); } catch { /* none */ }
   const P = { ...structuredClone(I.console?.defaults ?? {}), ...complete(params, stored ?? {}) };
@@ -81,7 +82,7 @@ async function wake(s) {
     if (second !== s) return; // taken away meanwhile
     const node = new AudioWorkletNode(ctx, 'forte-processor', {
       numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
-      processorOptions: { wasm: { name: s.I.wasm.name, bytes } },
+      processorOptions: { wasm: { name: s.I.wasm.name, bytes }, keyVelocity: s.I.keyVelocity },
     });
     node.port.onmessage = (e) => { if (e.data?.type === 'error') toast(`${byId(s.id).name}: ${e.data.message}`); };
     s.chain = createChain(ctx, node, s.I.chain || {});

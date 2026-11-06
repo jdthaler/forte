@@ -4,6 +4,7 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './springs-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 export const KEY_LO = 36, KEY_HI = 84; // C2–C6: the span the pan is drawn on
@@ -11,13 +12,14 @@ export const KEY_MIN = 21, KEY_MAX = 96; // A0–C7: what it plays (springs-mode
 
 export const INSTRUMENT = {
   id: 'springs',
-  groups: GROUPS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C7
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'hand',                     // CC1: a hand on the springs
   mpe: { slide: true },                 // MPE: a note's slide, a hand on its own springs (no bend)
+  lift: 'how fast the damper grips the springs', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['damper', 'spread', 'bead', 'oil', 'hand'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/springs), built as WebAssembly. The page
   // builds each key's springs with its WebAssembly model and sends them with the note (noteData)
