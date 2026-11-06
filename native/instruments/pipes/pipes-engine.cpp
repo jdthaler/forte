@@ -14,6 +14,7 @@ constexpr double BEND_T = 0.02;  // s: the pitch wheel's glide
 constexpr double YOUNG = 0.05;   // s: a key this young is never stolen
 constexpr double SLIDER = 0.04;  // s: a stop's slider travels over this
 constexpr double GLIDE = 0.02;   // s: live knobs (pressure, tremulant) glide
+constexpr double PRESSURE_MAX = 6000; // Pa: the wind knob's top, which aftertouch stops at too
 constexpr double NOISE = 2e-3;   // turbulence: velocity fluctuations at the flue of NOISE × U_j × the knob
 constexpr int POST_BLOCKS = 6;
 constexpr int RANK_ORDER[RANKS] = {0, 2, 1, 3, 4, 5}; // the pipe the views show: the first drawn of P8, G8, O4, mixture
@@ -261,6 +262,7 @@ void PipeEngine::retryPending() {
 
 void PipeEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
+  press[key] = 0; updateAfter();
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) { pending[i].off = true; pending[i].offVelocity = velocity; }
   Voice *v = byKey[key];
   if (!v) return;
@@ -269,6 +271,7 @@ void PipeEngine::noteOff(int key, double velocity) {
 
 void PipeEngine::allNotesOff() {
   nPending = 0;
+  press.fill(0); after = 0;
   for (int i = 0; i < nVoices; i++) { Voice *v = voices[i]; v->fading = true; v->down = false; v->aTarget = 0; }
 }
 
@@ -278,6 +281,16 @@ int PipeEngine::voiceCountNow() const {
   return n;
 }
 int PipeEngine::voiceCount() const { return voiceCountNow(); }
+
+// Leaning on a key leans on the bellows: the weights' pressure (the knob's) times up to two, as the
+// Free-Reed Organ's wind, and no further than the knob goes. The wind is every key's, so the
+// hardest-pressed key sets it; channel pressure (key −1) is every key's at once.
+void PipeEngine::pressure(double value, int key) {
+  const double x = std::clamp(value == value ? value : 0.0, 0.0, 1.0);
+  if (key < 0) { press.fill(0); after = x; }
+  else if (key < 128) { press[key] = x; updateAfter(); }
+}
+void PipeEngine::updateAfter() { double a = 0; for (double x : press) a = std::max(a, x); after = a; }
 
 void PipeEngine::bend(double value) {
   bendTo = std::pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12);
@@ -329,7 +342,7 @@ void PipeEngine::processBlock(float *L, float *R, int n) {
   double pset = Pset, pr = Pr, qt = Qt, pc = Pc, tr = trem, ph = tremPh, nzs = nz;
   bool any4 = false; // a 4× pipe sounded in this block, last at sample last4
   int last4 = 0;
-  const double Ptarget = P[p::pressure];
+  const double Ptarget = std::min(P[p::pressure] * (1 + after), PRESSURE_MAX); // the weights, and a hand on the bellows
   Voice *f = focus && !focus->dead ? focus : nullptr;
   const int shown = f ? shownRank(*f) : -1;
   double qdraw = Qdraw;
