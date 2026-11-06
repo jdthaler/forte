@@ -52,6 +52,6 @@ But mode 2 rocks the bar about its centre, where the mouth sits: one half pushes
     play: [chord('F3 C4 A4', { dur: 3 }), chord('G3 B3 G4', { at: 3, dur: 3 }), chord('C3 E4 G4 C5', { at: 6, dur: 4.5 })],
     text: `Wood loses energy a hundred times faster than the vibraphone's aluminium, so a marimba note is gone in a second or two and no pedal can hold it. A marimbist **rolls** instead: the two mallets strike in turn a dozen times a second while the note is held.
 
-The mod wheel sets the roll, and leaning on a key rolls that note alone.`,
+The mod wheel sets the roll, and a note’s own MPE slide rolls that note alone.`,
   },
 ]);

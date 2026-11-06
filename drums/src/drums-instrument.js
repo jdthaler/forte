@@ -18,7 +18,7 @@ export const INSTRUMENT = {
   // MPE: a note's bend is its head's tension (the timpani pedal, the bayan's heel), CC74 moves its
   // strike point, and its pressure is the heel pressing into the head.
   mpe: { bend: 12, slide: true },
-  aftertouch: 'the heel presses into the head: the pitch rises', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  aftertouch: 'pressed firmly, the heel goes into the head: the pitch rises', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   faders: ['air', 'mic', 'push', 'restAt', 'strike'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/drums), built as WebAssembly
   wasm: { name: 'DrumWasmEngine', module: new URL('./drums-wasm.js', import.meta.url).href, binary: new URL('../wasm/drums.wasm', import.meta.url).href },

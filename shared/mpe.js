@@ -8,6 +8,10 @@
 // on a member changes that for the zone. What a master sends (its bend, pressure, controllers) is
 // every note's, as plain MIDI is: the instrument's wheel bends by ±2 semitones.
 //
+// A note's slide (CC74) is how far its finger has moved from where it landed, towards either end of
+// the key: 0 where it landed (none: the instrument's own setting), 1 at the key's end. So a finger
+// resting mid-key on a Seaboard leaves the note as the computer keys play it (slideFrom).
+//
 // The mode: auto (the default) plays plain MIDI until a controller sends the configuration
 // message, so an ordinary keyboard plays as ever; on plays as if the lower zone had 15 members
 // until one says otherwise; off never decodes MPE.
@@ -17,6 +21,7 @@
 //                    member's note-on first hands over the key's bend and slide, then returns false
 //   mpe.mode = 'auto' | 'on' | 'off';   mpe.active();   mpe.members(0 | 1);   mpe.reset()
 //   bendRatio(P, key, semitones)  a note's bend as a frequency ratio along the keyboard's tuning
+//   slideFrom(land, u)  a slide u (0..1) from where the finger landed: NaN (none) at the landing
 
 import { tuningCents } from './tuning.js';
 
@@ -24,7 +29,14 @@ export const MODES = [['auto', 'Auto'], ['on', 'On'], ['off', 'Off']];
 export const MEMBER_BEND = 48; // semitones: a member's bend, until RPN 0 says otherwise
 export const MAX_BEND = 96;    // semitones: no note bends further
 
-const channel = (key = -1) => ({ key, bend: 0, slide: NaN, rpnMsb: 127, rpnLsb: 127, dataMsb: -1 });
+const channel = (key = -1) => ({ key, bend: 0, slide: NaN, land: NaN, rpnMsb: 127, rpnLsb: 127, dataMsb: -1 });
+
+// How far a slide u (0..1) has moved from where the finger landed, towards either end of the key:
+// NaN (none) where it landed or before it landed, 1 at either end. As forte/mpe.h slideFrom.
+export function slideFrom(land, u) {
+  if (Number.isNaN(land) || Number.isNaN(u) || u === land) return NaN;
+  return u > land ? (u - land) / (1 - land) : (land - u) / land;
+}
 
 export function createMpe(sink) {
   let mode = 'auto';
@@ -75,7 +87,10 @@ export function createMpe(sink) {
         }
         if (d1 === 74 && zone >= 0) {
           C.slide = d2 / 127;
-          if (C.key >= 0) sink.noteSlide(C.key, C.slide);
+          if (C.key >= 0) {
+            if (Number.isNaN(C.land)) C.land = C.slide; // the first since the note-on: where it landed
+            sink.noteSlide(C.key, slideFrom(C.land, C.slide));
+          }
           return true;
         }
         return false;
@@ -83,10 +98,12 @@ export function createMpe(sink) {
       if (zone < 0) return false;
       if (cmd === 0x90 && d2 > 0) {
         C.key = d1;
+        C.land = C.slide; // the CC74 sent just before it (NaN: the next one)
         sink.noteBend(C.key, C.bend * range[zone]);
-        sink.noteSlide(C.key, C.slide);
+        sink.noteSlide(C.key, slideFrom(C.land, C.slide));
         return false;
       }
+      if ((cmd === 0x80 || cmd === 0x90) && d1 === C.key) { C.slide = NaN; C.land = NaN; return false; } // its note let go: the next lands afresh
       if (cmd === 0xe0) {
         C.bend = Math.max(-1, ((d2 << 7) + d1 - 8192) / 8191);
         if (C.key >= 0) sink.noteBend(C.key, C.bend * range[zone]);

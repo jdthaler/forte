@@ -63,7 +63,10 @@ bool MpeDecoder::midi(const uint8_t *d, Sink &sink) {
     }
     if (d[1] == 74 && zone >= 0) {
       C.slide = d[2] / 127.0;
-      if (C.key >= 0) sink.noteSlide(C.key, C.slide);
+      if (C.key >= 0) {
+        if (!(C.land == C.land)) C.land = C.slide; // the first since the note-on: where it landed
+        sink.noteSlide(C.key, slideFrom(C.land, C.slide));
+      }
       return true;
     }
     return false;
@@ -71,10 +74,12 @@ bool MpeDecoder::midi(const uint8_t *d, Sink &sink) {
   if (zone < 0) return false;
   if (cmd == 0x90 && d[2] > 0) {
     C.key = d[1];
+    C.land = C.slide; // the CC74 sent just before it (NaN: the next one)
     sink.noteBend(C.key, C.bend * range_[zone]);
-    sink.noteSlide(C.key, C.slide);
+    sink.noteSlide(C.key, slideFrom(C.land, C.slide));
     return false;
   }
+  if ((cmd == 0x80 || cmd == 0x90) && d[1] == C.key) { C.slide = NAN; C.land = NAN; return false; } // its note let go: the next lands afresh
   if (cmd == 0xe0) {
     C.bend = ((d[2] << 7) + d[1] - 8192) / 8191.0;
     if (C.bend < -1) C.bend = -1;

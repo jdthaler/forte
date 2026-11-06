@@ -10,9 +10,6 @@
 ### Free-Reed Organ (patch)
 - The Seaboard RISE's panel says what Press (aftertouch) does here: more wind, up to double.
 
-### Steel Pan (patch)
-- The Seaboard RISE's panel says what Press (aftertouch) does here: rolls the note: the sticks strike again and again.
-
 ### Hydraulis (patch)
 - The Seaboard RISE's panel says what Press (aftertouch) does here: the pumpers work harder, and the wind rises.
 
@@ -26,10 +23,7 @@
 - The Seaboard RISE's panel says what Press (aftertouch) does here: blows harder, up to half as hard again.
 
 ### Timpani and Tabla (patch)
-- The Seaboard RISE's panel says what Press (aftertouch) does here: the heel presses into the head: the pitch rises.
-
-### Marimba and Xylophone (patch)
-- The Seaboard RISE's panel says what Press (aftertouch) does here: rolls the note: the mallets strike again and again.
+- The Seaboard RISE's panel says what Press (aftertouch) does here: pressed firmly, the heel goes into the head: the pitch rises.
 
 ### Cimbalom (patch)
 - The Seaboard RISE's panel says what Press (aftertouch) does here: how hard the tremolo strikes (with the tremolo on).
@@ -72,9 +66,6 @@
 
 ### Singing Voice (patch)
 - The Seaboard RISE's panel says what Press (aftertouch) does here: the lungs push harder.
-
-### Gong Keyboard (patch)
-- The Seaboard RISE's panel says what Press (aftertouch) does here: a hand pressed against the gong damps it.
 
 ### Bubble Organ (patch)
 - The Seaboard RISE's panel says what Press (aftertouch) does here: more gas through the nozzle: more bubbles.

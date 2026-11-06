@@ -201,7 +201,10 @@ an Osmose) bends, slides and presses each note alone. `shared/mpe.js` and the pl
   (`bendRatio`, so a slide onto the next key lands on its tuned pitch), on top of the
   instrument's wheel bend;
 * `slide(value, key)`: the note's own value of the mod wheel's parameter, in its units, as the
-  wheel would set it (NaN: the parameter's own again);
+  wheel would set it (NaN: the parameter's own again). The slide is how far the finger has moved
+  from where it landed, towards either end of the key (`slideFrom`; a host's per-note brightness
+  likewise from its first value), so a finger resting mid-key leaves the note as the computer
+  keys play it;
 * `pressure(value, key)`, which per-key pressure already was.
 
 Either may come before the key's `noteOn`: keep them per key (`forte/expression.h`
