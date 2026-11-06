@@ -17,7 +17,7 @@
 namespace forte::piano {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { material, shape, aspect, roll, taper, gauge, lengthScale, winding, unisons, unisonDetune, polDetune, kc, longi, strikePos, offset, hardness, feltExp, hammerMass, hammerWidth, hysteresis, unaCorda, bridge, bridgeH, lossLow, lossHigh, torsionLoss, damper, sympathy, gainV, gainH, gainT, soundboard, room, venue, width, voicing, volume, maxFreq, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, slideOn, liftOn, count };
+enum : int { material, shape, aspect, roll, taper, gauge, lengthScale, winding, unisons, unisonDetune, polDetune, kc, longi, strikePos, offset, hardness, feltExp, hammerMass, hammerWidth, hysteresis, unaCorda, bridge, bridgeH, lossLow, lossHigh, torsionLoss, damper, sympathy, gainV, gainH, gainT, soundboard, room, venue, width, voicing, volume, maxFreq, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, slideOn, pressOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -136,6 +136,7 @@ inline const ParamInfo kParams[p::count] = {
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
   {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"pressOn", "Press: pressing into a held key", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 

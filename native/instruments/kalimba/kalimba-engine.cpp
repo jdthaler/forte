@@ -171,7 +171,7 @@ void KalimbaEngine::setSustain(bool on) {
   if (!on && P[p::ring] < 0.5) for (Voice &v : voices) if (v.released) v.damped = true;
 }
 
-void KalimbaEngine::allNotesOff() { voices.clear(); body.reset(); }
+void KalimbaEngine::allNotesOff() { voices.clear(); body.reset(); presses.clear(); }
 
 void KalimbaEngine::noteOn(int key, double velocity) {
   if (!hasParams) return;
@@ -229,6 +229,8 @@ void KalimbaEngine::process(float *L, float *R, int n) {
     if (std::fabs(cover - builtCover) > 1e-4 || cover == coverTarget) rebuildBody();
   }
   const double finger = std::exp(-std::log(1000.0) / (FINGER_T60 * fs)), grab = std::exp(-std::log(1000.0) / (GRAB_T60 * fs));
+  for (Voice &v : voices) // Press: a fingertip resting on the tine, as hard as its key is pressed
+    if (v.press.follow(v.released ? 0 : presses.of(v.key), n, fs)) v.pf = v.press.on() ? std::exp(v.press.p * std::log(finger)) : 1;
   for (int i = 0; i < n; i++) {
     double F[PLATE_MODES] = {};
     for (Voice &v : voices) {
@@ -241,6 +243,7 @@ void KalimbaEngine::process(float *L, float *R, int n) {
       if (v.grabbed) v.level *= grab;
       else if (v.damped) v.level *= v.fing ? v.fing : finger;
       else if (v.touch > 0) { v.touch--; v.level *= finger; }
+      else if (v.press.on()) v.level *= v.pf;
       s *= v.level;
       for (int j = 0; j < PLATE_MODES; j++) F[j] += s * v.w[j];
     }

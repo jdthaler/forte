@@ -43,6 +43,7 @@
         "cents11": 0,
         "strikeOn": true,
         "slideOn": true,
+        "pressOn": true,
         "liftOn": true
       }
     }

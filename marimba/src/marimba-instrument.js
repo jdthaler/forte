@@ -24,6 +24,7 @@ export const INSTRUMENT = {
   space: 'hold',                        // Space and CC64 hold the keys down: a marimba has no dampers, and held notes keep rolling
   modWheel: 'roll',                     // CC1: the roll
   mpe: { bend: 0, slide: true },        // a note's own slide: its own roll (a struck bar rings at its own pitch)
+  aftertouch: 'a firm press holds the mallet into the bar: the dead stroke', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'a fast lift lets the mallet rest on the bar a moment, damping it', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['hardness', 'gap', 'rollRate', 'strike', 'roll'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/marimba), built as WebAssembly. The page

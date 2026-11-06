@@ -19,6 +19,7 @@ constexpr double FADE = 1.0 / 480; // per-sample fade for retired voices (5 ms a
 constexpr double GLIDE = 0.015;    // s: the pickup follows its knobs through two such lags (critically damped)
 constexpr double XFADE = 0.02;     // s: switching the valve combo in or out crossfades over this
 constexpr double DUCK = 0.01;      // s: a pickup switch fades out over this, then back in
+constexpr double HAND = 25;       // 1/s: the most a hand on the reed adds to its loss (Press)
 constexpr double RETACK = 0.95;    // a re-pressed key fires once its dropped pad has re-tacked this much of its disc …
 constexpr double RETACK_MAX = 0.15; // s … or after this long at most
 constexpr double BEND_T = 0.02;    // s: the pitch wheel's glide, and a note's own bend's
@@ -175,6 +176,7 @@ void PianetEngine::setSustain(bool on) {
 
 void PianetEngine::allNotesOff() {
   nPending = 0;
+  presses.clear();
   for (int i = 0; i < nVoices; i++) voices[i]->retire();
   byKey.fill(nullptr);
 }
@@ -240,6 +242,7 @@ void PianetEngine::processBlock(float *L, float *R, int n) {
     if (v.pending && ((p.hv == 0 && p.F <= 0 && p.a >= RETACK * PAD.a0) || (v.wait += n2) > waitMax)) {
       v.pending = false; p.press(v.pressVel); v.sleep = false; v.quiet = 0;
     }
+    if (v.hand.follow(p.down ? presses.of(v.key) : 0, n, fs)) { p.muted(HAND * v.hand.p); v.sleep = false; }
     const bool gliding = v.g != v.gT || v.g1 != v.gT || v.ye != v.yeT || v.ye1 != v.yeT;
     if (v.sleep && !gliding) { if (es) for (int s = 0; s < n2; s++) dCs[s] += v.dC; continue; }
     if (gliding) glide(v, n2, es);

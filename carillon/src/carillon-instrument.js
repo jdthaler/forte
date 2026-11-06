@@ -18,6 +18,7 @@ export const INSTRUMENT = {
   range: [41, 108],
   lift: 'a fast lift lets go of the wire so sharply that the clapper swings back for a grace stroke', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   mpe: { bend: 0, slide: { param: 'strikeHeight', max: 0.3 } }, // MPE: a note's own slide raises where its clapper strikes, from the soundbow up the waist
+  aftertouch: 'a firm press holds the clapper against the bell, muting it', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   compass: { keys: [48, 96], param: 'fullRange' }, // C3–C7, a four-octave concert carillon, until Full range opens the rest
   space: null,                          // a carillon has no dampers: no pedal to offer
   faders: ['hardness', 'strikeHeight', 'clapMass', 'around', 'distance'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

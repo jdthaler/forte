@@ -21,6 +21,7 @@
 #include "forte/background.h"
 #include "forte/engine.h"
 #include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 #include "marimba-model.h"
 #include "marimba-params.h"
@@ -48,6 +49,7 @@ class MarimbaEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void allNotesOff() override;
   void slide(double value, int key) override { expr.setSlide(value, key); } // the key's own roll
+  void pressure(double value, int key) override { presses.set(value, key); } // the mallet pressed into the bar: the dead stroke
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // A bar its page's model built already (packVoiceData; the page's noteData), for the next
@@ -81,6 +83,7 @@ class MarimbaEngine : public Engine {
     bool held = false, hand = false;     // the key is down; which mallet strikes next in a roll
     double vel = 0, rollIn = 0; // the first stroke's velocity, samples to the next stroke
     double fade = 1;
+    Press press;     // the mallet pressed into the bar while its key is held: the dead stroke (forte/press.h)
     LiftTouch touch; // a mallet resting on the bar a moment after a fast lift (forte/lift.h)
     bool fading = false, dead = false;
     double age = 0;
@@ -136,6 +139,7 @@ class MarimbaEngine : public Engine {
   int blocks = 0;
   int malletMax;
   uint32_t rng = 0x2545F491u;
+  Presses presses; // each key's pressure and the channel's
   NoteExpression expr{0}; // each key's own roll (no bend: a struck bar rings at its own pitch)
   Message barMsg; // kept between posts
 };

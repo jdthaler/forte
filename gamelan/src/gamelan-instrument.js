@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: lifts the damping hand
   modWheel: 'ombak',                    // CC1: the pairs' beat
   mpe: { bend: 0, slide: true },        // MPE: a bar or a gong cannot bend; CC74 is a note's own pair's beat
+  aftertouch: 'a firm press damps the bar with the other hand', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'the damping hand: on release, a slow lift lets it settle gently (a longer tail) and a fast one stops the bar; damping at the next stroke, a fast lift damps at once', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['mallet', 'along', 'gongStrike', 'across', 'ombak'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/gamelan), built as WebAssembly

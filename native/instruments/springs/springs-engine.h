@@ -21,6 +21,7 @@
 #include "forte/background.h"
 #include "forte/engine.h"
 #include "forte/expression.h"
+#include "forte/press.h"
 #include "springs-model.h"
 #include "springs-params.h"
 
@@ -51,6 +52,7 @@ class SpringEngine : public Engine {
   void allNotesOff() override;
   // a note's slide: a hand on that key's own springs, gliding in as the knob's does
   void slide(double value, int key) override { expr.setSlide(value, key); }
+  void pressure(double value, int key) override { presses.set(value, key); } // a firm press: the hammer held into the coil, muting it
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // A key's springs its page's model built already (packKeySprings), for the next note on that
@@ -128,6 +130,7 @@ class SpringEngine : public Engine {
   std::array<double, kCount> S{}, T{};
   bool sustain = false, lossMoved = false;
   double dampSigma = 0;
+  forte::Presses presses; // each key's pressure and the channel's
   forte::NoteExpression expr{0}; // each key's slide (the springs don't bend)
   double handOf(int key) const; // the hand on a key's springs (σ): the knob's, or the key's slide
   uint64_t version = 0;

@@ -21,6 +21,7 @@
 #include "forte/engine.h"
 #include "forte/expression.h"
 #include "forte/lift.h"
+#include "forte/press.h"
 #include "vibraphone-model.h"
 #include "vibraphone-params.h"
 
@@ -47,6 +48,7 @@ class VibraphoneEngine : public Engine {
   void noteOff(int key, double velocity) override;
   // a note's own slide: where its mallet lands along the bar (strike), at its next stroke
   void slide(double value, int key) override { own.setSlide(value, key); }
+  void pressure(double value, int key) override { presses.set(value, key); } // the mallet held against the bar, damping it while its key is held
   void setSustain(bool on) override { sustain = on; }
   void allNotesOff() override;
   int voiceCount() const override { return nVoices; }
@@ -113,6 +115,7 @@ class VibraphoneEngine : public Engine {
 
   std::array<double, p::count> P{};
 
+  Presses presses; // each key's pressure and the channel's (forte/press.h)
   NoteExpression own{0}; // each key's own slide (forte/expression.h)
   bool hasParams = false;
   // the knobs that glide: gap (m), detune, temp, cd, tubes, twist, shaft2

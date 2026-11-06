@@ -21,6 +21,7 @@
 #include "forte/background.h"
 #include "forte/engine.h"
 #include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 #include "tubular-model.h"
 #include "tubular-params.h"
@@ -48,6 +49,7 @@ class TubularEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override { sustain = on; }
   void slide(double value, int key) override { expr.setSlide(value, key); } // the key's mallet face, at its next strike
+  void pressure(double value, int key) override { presses.set(value, key); } // a hand on the tube, damping it while its key is held
   void allNotesOff() override;
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
@@ -111,6 +113,7 @@ class TubularEngine : public Engine {
   std::array<double, p::count> P{};
   bool hasParams = false;
   bool sustain = false;
+  Presses presses; // each key's pressure and the channel's (forte/press.h)
   NoteExpression expr{0}; // each key's own mallet face (no bend: a tube is cut to its pitch)
   // the tubes' version: a new one when what cuts them changes (the metal, the section, the cap, the
   // microphones' distance, the tuning); its snapshot (a ring, read by the builder) holds those

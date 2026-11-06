@@ -13,6 +13,7 @@ using std::numbers::pi;
 
 constexpr double OUT = 0.02;        // output units per m³/s² of volume acceleration
 constexpr int MAX_VOICES = 16;      // bars sounding at once; the quietest older one fades out beyond this
+constexpr double DEAD = 40;          // 1/s: the most the mallet pressed into the bar takes (Press)
 constexpr double FADE = 0.03;       // s: a stolen voice fades out over this
 constexpr double YOUNG = 0.05;      // s: a voice this young is never stolen
 constexpr double MALLET_MAX = 0.03; // s: the longest a mallet may stay in flight
@@ -151,9 +152,10 @@ void MarimbaEngine::Voice::render(float *L, float *Rt, int n, MarimbaEngine &eng
   Pair &A = pair[0], &B = pair[1];
   const bool bOn = B.on;
   double fade_ = fade;
+  const double pf = press.factor(DEAD, fs);
   for (int s = 0; s < n; s++) {
-    if (touch.on()) { // a mallet resting on the bar
-      const double t = touch.step();
+    if (touch.on() || pf != 1) { // a mallet resting on the bar, or pressed into it
+      const double t = (touch.on() ? touch.step() : 1) * pf;
       for (int i = PAIRS; i < N; i++) { q[i] *= t; q1[i] *= t; }
       A.q *= t; A.v *= t; B.q *= t; B.v *= t;
     }
@@ -345,10 +347,11 @@ void MarimbaEngine::noteOff(int key, double velocity) {
 void MarimbaEngine::allNotesOff() {
   nPending = 0;
   for (int i = 0; i < nVoices; i++) { voices[i]->fading = true; voices[i]->held = false; }
+  presses.clear();
 }
 
-// The roll: the wheel's, or the key's own slide. Pressure does nothing: a Seaboard sends it from any
-// finger at rest, which would roll every note.
+// The roll: the wheel's, or the key's own slide. Pressure does not roll: a Seaboard sends it from
+// any finger at rest, which would roll every note (a firm press is the dead stroke instead).
 double MarimbaEngine::rollOf(const Voice &v) const { return expr.slideOr(v.key, P[p::roll]); }
 
 // Held keys roll: the mallets strike in turn, at the roll's share of the first stroke, the strokes
@@ -383,6 +386,7 @@ void MarimbaEngine::process(float *L, float *R, int n) {
   for (int i = 0; i < nVoices; i++) {
     Voice *v = voices[i];
     if (moving) v->tube(*this);
+    v->press.follow(v->held && !v->fading ? presses.of(v->key) : 0, n, fs);
     v->render(L, R, n, *this);
   }
   int j = 0;

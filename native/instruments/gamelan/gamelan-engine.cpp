@@ -44,7 +44,7 @@ void GamelanEngine::tune(Voice &v, double beat) {
     const double r = u.f1 / v.d.f1;
     for (int i = 0; i < v.count; i++) {
       const Mode &m = v.d.m[i];
-      const ModeCoeffs c = modeCoeffs(m.f * r, m.sigma + (v.damped ? hand / v.liftK : 0), fs);
+      const ModeCoeffs c = modeCoeffs(m.f * r, m.sigma + (v.damped ? hand / v.liftK : v.press.on() ? hand * v.press.p : 0), fs);
       u.m[i].a1 = c.a1; u.m[i].a2 = c.a2; u.m[i].b = c.b; u.m[i].w = TAU * m.f * r; u.m[i].out = m.out;
     }
     if (v.d.hasTube) {
@@ -158,6 +158,7 @@ void GamelanEngine::process(float *L, float *R, int n) {
   for (int i = 0; i < n; i++) L[i] = R[i] = 0;
   for (Voice &v : voices) {
     if (v.d.pairs) { const double b = beatOf(v.key); if (b != v.beat) tune(v, b); }
+    if (v.press.follow(v.held ? presses.of(v.key) : 0, n, fs) && !v.damped) tune(v, v.beat);
     const int count = v.count;
     const bool tube = v.d.hasTube, nl = v.d.G > 0 && v.d.round2 >= 0 && v.d.round2 < count;
     const int k2 = v.d.round2;

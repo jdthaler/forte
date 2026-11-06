@@ -29,7 +29,7 @@ void HarpsichordEngine::Voice::start(HarpsichordEngine &e, int k, Data::Ref r) {
   eng = &e; inUse = true; key = k; version = e.version; ref = r;
   e.data.acquire(r);
   has.fill(false); lifts.fill(false); sleep.fill(false); quiet.fill(0); nList = 0;
-  lift = 0; V = 0.3; vDown = fallSpeed(DEFAULT_RELEASE); keyDown = false; pending = false;
+  lift = 0; V = 0.3; vDown = fallSpeed(DEFAULT_RELEASE); keyDown = false; pending = false; hand = Press{};
   top = ACTION::top + rowGap(ROW_FOUR, e.mp);
   knockT = -1; knockAmp = 0; knockN = std::max(2, (int)std::floor(ACTION::knock * e.fs + 0.5));
   killing = false; dead = false; sounded = false; peak = 0; age = 0;
@@ -126,6 +126,11 @@ void HarpsichordEngine::Voice::render(int n) {
   const bool sy = e.P[p::sympathy] > 0 && e.quality != Quality::low; // (Quality: no sympathetic strings at Low)
   for (auto &b : sb) { b[0] = b[sbn]; std::fill(b.begin() + 1, b.begin() + 1 + n, 0.0); }
   sbn = n;
+  // Press: the hand's buff, gliding across the block, on every choir; the stop's on the back 8′ too
+  const double h0 = hand.p;
+  hand.follow(keyDown && !killing ? e.presses.of(key) : 0, n, e.fs);
+  const bool held = h0 > 0 || hand.p > 0;
+  if (held) for (int t = 0; t < n; t++) { const double ht = h0 + (hand.p - h0) * (t + 1) / n; e.handBuf[t] = std::max(ht, e.buffBuf[t]); }
   for (int i = 0; i < nList; i++) {
     const int ch = list[i];
     PluckedString &st = strings[ch];
@@ -134,7 +139,7 @@ void HarpsichordEngine::Voice::render(int n) {
     st.kcOn = e.P[p::kc] != 0;
     st.hookOn = e.mp.hooks; // (only a virginal's bass strings have a hook)
     st.setSide(e.P[p::side], e.sideModes()); // (Quality: fewer sideways partials, none at Low)
-    const double pk = st.render(n, lifted ? lb : e.zeroBuf.data(), keyDown && lifted, ch == BACK ? e.buffBuf.data() : e.zeroBuf.data(), e.seg.data(), BLOCK, w[ch].data(), w0[ch], w1[ch], 1,
+    const double pk = st.render(n, lifted ? lb : e.zeroBuf.data(), keyDown && lifted, held ? e.handBuf.data() : ch == BACK ? e.buffBuf.data() : e.zeroBuf.data(), e.seg.data(), BLOCK, w[ch].data(), w0[ch], w1[ch], 1,
                                sy ? sb[ch].data() + 1 : nullptr);
     if (pk > pk0) pk0 = pk;
     if (!(pk < 1e4) || !std::isfinite(st.q()[0])) {
@@ -342,6 +347,7 @@ void HarpsichordEngine::noteOff(int key, double relVel) {
 }
 
 void HarpsichordEngine::allNotesOff() {
+  presses.clear();
   nPending = 0;
   for (int i = 0; i < nVoices; i++) voices[i]->kill();
   byKey.fill(nullptr);

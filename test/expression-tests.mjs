@@ -56,7 +56,7 @@ await test('every instrument has the five switches, all on; its plugin and its s
 await test('a page shows the switches its instrument answers to', async () => {
   const shown = async (id) => { const I = await loadInstrument(id); return EXPRESSION_IDS.filter((s) => responds(I, s)); };
   assert.deepEqual(await shown('pipes'), ['strikeOn', 'glideOn', 'pressOn', 'liftOn']);       // its wind is every key's: no slide
-  assert.deepEqual(await shown('piano'), ['strikeOn', 'slideOn', 'liftOn']);
+  assert.deepEqual(await shown('piano'), ['strikeOn', 'slideOn', 'pressOn', 'liftOn']);
   assert.deepEqual(await shown('clavier'), ['strikeOn', 'glideOn', 'slideOn', 'pressOn', 'liftOn']); // its bend presses the key, its slide lays its felt on
   assert.deepEqual(await shown('arc'), ['glideOn', 'liftOn']);                                // velocity does nothing
   assert.deepEqual(await shown('brass'), ['strikeOn', 'glideOn', 'slideOn', 'pressOn', 'liftOn']);
