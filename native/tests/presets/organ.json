@@ -20,6 +20,7 @@
         "spread": 1.2,
         "bounce": 0.5,
         "contactTime": 20,
+        "travel": 1,
         "percFastTau": 0.15,
         "percSlowTau": 0.6,
         "percLevel": 1,
@@ -77,6 +78,8 @@
         "motor": true,
         "strikeOn": true,
         "glideOn": true,
+        "slideOn": true,
+        "pressOn": true,
         "liftOn": true
       }
     }

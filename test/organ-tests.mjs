@@ -349,5 +349,51 @@ test('real-time budget: 10 keys, full drawbars, chorus, drive, Leslie', () => {
   assert.ok(ms < 0.5 * audio);
 });
 
+test(`Slide: a key held part way closes only the contacts its travel reaches, the first so many of its nine (the Key travel knob for every key, a key's own slide down to ${INSTRUMENT.mpe.slide.max}): each drawbar alone sounds on just that many, a slide matches the knob, a held key follows it, and all the way down is the plain key`, () => {
+  assert.equal(INSTRUMENT.mpe.slide.param, 'travel');
+  const one = (d, o = {}, msgs = []) => {
+    const e = engine(P({ ...DRY, drawbars: Array.from({ length: 9 }, (_, i) => (i === d ? 8 : 0)), ...o }));
+    for (const m of msgs) e.handle(m);
+    e.noteOn(60, 0.8);
+    return run(e, 0.3).L;
+  };
+  const sounds = (x) => rms(x, 0.15 * FS, 0.3 * FS) > 1e-3;
+  for (const n of [1, 3, 5, 9]) {
+    const on = [];
+    for (let d = 0; d < 9; d++) on.push(sounds(one(d, { travel: n / 9 })));
+    assert.equal(on.filter(Boolean).length, n, `travel ${n}/9: ${on.map(Number).join('')}`);
+  }
+  for (let d = 0; d < 9; d++) {
+    assert.deepEqual(one(d, {}, [{ type: 'slide', key: 60, value: 1 }]), one(d), 'slid all the way down: the plain key');
+    assert.deepEqual(one(d, {}, [{ type: 'slide', key: 60, value: 0.5 }]), one(d, { travel: 0.5 }), 'the slide and the knob');
+  }
+  // held, then let up part way: a drawbar it no longer reaches goes quiet
+  const d = [...Array(9).keys()].find((i) => !sounds(one(i, { travel: 1 / 9 })));
+  const e = engine(P({ ...DRY, drawbars: Array.from({ length: 9 }, (_, i) => (i === d ? 8 : 0)) }));
+  e.noteOn(60, 0.8);
+  const x = run(e, 0.6, (t) => { if (t >= 0.3 && t < 0.3 + 128 / FS) e.handle({ type: 'slide', key: 60, value: 1 / 9 }); }).L;
+  assert.ok(rms(x, 0.1 * FS, 0.3 * FS) > 1e-3 && rms(x, 0.45 * FS, 0.6 * FS) < 1e-4, 'held, then let up');
+});
+
+test('Press: the newest held key\'s press opens the swell pedal the rest of the way (channel pressure, every key\'s); an older key\'s does not, and none leaves the organ as it was', () => {
+  const play = (msgs, o = {}) => {
+    const e = engine(P({ ...DRY, expression: 0.5, ...o }));
+    e.noteOn(55, 0.8); e.noteOn(60, 0.8);
+    for (const m of msgs) e.handle(m);
+    return run(e, 0.8).L;
+  };
+  const level = (x) => rms(x, 0.5 * FS, 0.8 * FS);
+  const plain = play([]), open = play([], { expression: 1 });
+  assert.deepEqual(play([{ type: 'pressure', key: 60, value: 0 }]), plain);
+  assert.ok(level(open) > 3 * level(plain));
+  for (const m of [{ type: 'pressure', key: 60, value: 1 }, { type: 'pressure', key: -1, value: 1 }]) {
+    const r = level(play([m])) / level(open);
+    assert.ok(Math.abs(r - 1) < 0.02, `${JSON.stringify(m)}: ${r.toFixed(3)} of the pedal full open`);
+  }
+  assert.deepEqual(play([{ type: 'pressure', key: 55, value: 1 }]), plain, 'an older key');
+  const half = level(play([{ type: 'pressure', key: 60, value: 0.5 }]));
+  assert.ok(half > 1.3 * level(plain) && half < 0.8 * level(open), 'part way');
+});
+
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');
 process.exit(failures ? 1 : 0);

@@ -47,6 +47,8 @@ export const GROUPS = [
       { id: 'bounce', label: 'Contact bounce', kind: 'engine', min: 0, max: 2, step: 0.01, def: 0.5, fmt: (v) => v.toFixed(2) },
       { id: 'contactTime', label: 'Contact softness', kind: 'engine', min: 0, max: 3000, step: 1, def: 20, fmt: (v) => `${v.toFixed(0)} µs`,
         hint: 'How gradually a contact makes. 0 = hardest click; ~1 ms = click filter.' },
+      { id: 'travel', label: 'Key travel: how far it goes down', kind: 'engine', min: 0.1, max: 1, step: 0.01, def: 1, fmt: (v) => `${Math.round(v * 9)} of 9 contacts`,
+        hint: 'How far a key goes down. Its nine contacts touch their busbars at different points of the travel, so a key held part way closes only the first few: some of the drawbars\' pitches sound and the rest stay silent, a different few on each key. Organists half-press keys for this. A note\'s own slide does it to one key. Applies to the keys as they go down, and to the held ones.' },
     ],
   },
   {

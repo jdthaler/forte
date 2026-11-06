@@ -12,6 +12,7 @@
     {"id":"split","kind":"continuous","min":36,"max":96,"def":60,"step":1,"log":false},
     {"id":"tau","kind":"continuous","min":0.5,"max":40,"def":4,"step":0,"log":true},
     {"id":"contact","kind":"continuous","min":0,"max":20,"def":6,"step":0.1,"log":false},
+    {"id":"draws","kind":"continuous","min":1,"max":8,"def":8,"step":1,"log":false},
     {"id":"robbing","kind":"continuous","min":0,"max":1,"def":0.15,"step":0.01,"log":false},
     {"id":"a1","kind":"continuous","min":0,"max":8,"def":8,"step":1,"log":false},
     {"id":"a2","kind":"continuous","min":0,"max":8,"def":5,"step":1,"log":false},
@@ -54,6 +55,7 @@
     {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
     {"id":"strikeOn","kind":"toggle","def":true},
     {"id":"glideOn","kind":"toggle","def":true},
+    {"id":"slideOn","kind":"toggle","def":true},
     {"id":"pressOn","kind":"toggle","def":true},
     {"id":"liftOn","kind":"toggle","def":true}
   ],

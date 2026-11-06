@@ -67,7 +67,7 @@ Params paramsOf(const double *P) {
   for (int d = 0; d < 9; d++) q.drawbars[d] = (int)P[p::drawbar1 + d];
   q.motor = P[p::motor] > 0;
   q.inertia = P[p::inertia]; q.spinUp = P[p::spinUp]; q.loading = P[p::loading];
-  q.spread = P[p::spread]; q.bounce = P[p::bounce]; q.contactTime = P[p::contactTime];
+  q.spread = P[p::spread]; q.bounce = P[p::bounce]; q.contactTime = P[p::contactTime]; q.travel = P[p::travel];
   q.percOn = P[p::percOn] > 0; q.percSoft = P[p::percSoft] > 0; q.percFast = P[p::percFast] > 0; q.percThird = P[p::percThird] > 0;
   q.percFastTau = P[p::percFastTau]; q.percSlowTau = P[p::percSlowTau]; q.percLevel = P[p::percLevel];
   q.vib = (int)P[p::vib];
@@ -109,6 +109,7 @@ void OrganEngine::apply(const Params &next) {
   p = next;
   if (p.sections != prevSections) { std::fill(I, I + 64, 0.0); std::fill(V, V + 65, 0.0); }
   updateDerived();
+  for (int i = 0; i < nArr; i++) { Key &k = *keyArr[i]; if (k.down) { k.reach = reachOf(k.key); contacts(k); } } // the held keys follow the travel knob
   // the generator: built on the first call, rebuilt when a parameter it depends on changes
   const double of[7] = {(double)p.tuning, (double)p.levels, p.mains, p.relief, p.drift, p.crosstalk, p.leakage};
   if (!haveGen || !std::equal(of, of + 7, genOf) || !(p.keyboard == genKeyboard)) {
@@ -164,11 +165,11 @@ void OrganEngine::updateDerived() {
     if (!p.percSoft) for (int d = 0; d < 9; d++) dbg[d] *= 0.708;
   }
   percGain = p.percOn ? p.percLevel * (p.percSoft ? 0.5 : 1) : 0;
-  expGain = fd::pow(10, ((p.expression - 1) * 40) / 20);
   const double os = 2, h = dt / os;
   lcTau = std::max(p.sectionDelay * 1e-6, 1.25 * h);
   lcN = (int)std::max(2.0, std::min(60.0, jsRound(p.sections)));
   lcK = h / lcTau;
+  swell();
   liveTargets();
 }
 
@@ -242,7 +243,8 @@ void OrganEngine::noteOn(int key, double velocity) {
   if (!k.live) {
     // each key's contacts have their own fixed geometry
     Rng kr(1000 + key);
-    for (int d = 0; d < 9; d++) { k.order[d] = kr(); k.g[d] = 0; k.tgt[d] = 0; }
+    for (int d = 0; d < 9; d++) { k.order[d] = kr(); k.g[d] = 0; k.tgt[d] = 0; k.sw[d] = 0; }
+    for (int d = 0; d < 9; d++) { int r = 0; for (int e = 0; e < 9; e++) r += k.order[e] < k.order[d] || (k.order[e] == k.order[d] && e < d); k.rank[d] = (uint8_t)r; }
     k.down = false; k.nev = 0; k.evi = 0; k.osc = false;
     if (haveGen && gen.harmonic) initKeyOsc(k);
     k.live = true; nLive++;
@@ -253,6 +255,10 @@ void OrganEngine::noteOn(int key, double velocity) {
   held++;
   k.down = true;
   newest.down(key);
+  press[key] = 0;
+  k.reach = reachOf(key);
+  contacts(k);
+  swell();
   schedule(k, true, 0.5 + velocity);
 }
 
@@ -266,8 +272,45 @@ void OrganEngine::noteOff(int key, double velocity) {
   k.down = false;
   held = std::max(0, held - 1);
   newest.up(key);
+  press[key] = 0;
+  swell();
   const double s = liftScale(velocity);
   schedule(k, false, 1.2 / (s * s));
+}
+
+// Slide: how far a key goes down. Its nine contacts touch their busbars at different points of
+// the travel (their order, the key's own geometry), so a key held part way closes only the first
+// few of them; the knob sets every key's, a key's own slide its own.
+int OrganEngine::reachOf(int key) const {
+  const double t = std::clamp(expr.slideOr(key, p.travel), 0.1, 1.0);
+  return (int)std::floor(t * 9 + 0.5);
+}
+void OrganEngine::contacts(Key &k) { for (int d = 0; d < 9; d++) k.tgt[d] = k.sw[d] && k.rank[d] < k.reach; }
+void OrganEngine::slide(double value, int key) {
+  expr.setSlide(value, key);
+  const int idx = key - KEY_MIN;
+  if (idx < 0 || idx > NUM_KEYS - 1) return;
+  Key &k = keys[idx];
+  if (k.live && k.down) { k.reach = reachOf(key); contacts(k); }
+}
+
+// Press: the swell pedal, from the newest held key. Its press opens the swell from where the pedal
+// is the rest of the way (channel pressure: every key's); the vane's share glides as the pedal's.
+void OrganEngine::pressure(double value, int key) {
+  const double x = std::clamp(value == value ? value : 0.0, 0.0, 1.0);
+  if (key < 0) chanPress = x;
+  else if (key < 128) press[key] = x;
+  swell();
+}
+void OrganEngine::swell() {
+  const int k = newest.key();
+  const double x = std::max(k >= 0 && k < 128 ? press[k] : 0.0, chanPress);
+  const double e = p.expression + (1 - p.expression) * x;
+  const double g = fd::pow(10, ((e - 1) * 40) / 20);
+  if (g == expGain) return;
+  expGain = g;
+  liveTargets();
+  if (nArr || peak > 1e-3) gliding = true;
 }
 
 void OrganEngine::bend(double value) { bendTo = fd::pow(2.0, std::max(-1.0, std::min(1.0, value)) * kBendSemitones / 12); }
@@ -371,7 +414,7 @@ template <class T> void OrganEngine::render(T *L, T *R, int n) {
     for (int d = 0; d < 10; d++) { num[d] = 0; den[d] = 0; }
     for (int j = 0; j < nArr; j++) {
       Key &k = *keyArr[j];
-      while (k.evi < k.nev && k.ev[k.evi].t <= now) { const ContactEvent &e = k.ev[k.evi++]; k.tgt[e.d] = e.s; }
+      while (k.evi < k.nev && k.ev[k.evi].t <= now) { const ContactEvent &e = k.ev[k.evi++]; k.sw[e.d] = e.s; k.tgt[e.d] = e.s && k.rank[e.d] < k.reach; }
       if (harmonic && k.osc) {
         for (int d = 0; d < 9; d++) {
           const double c = k.hc[d], si = k.hs[d];

@@ -15,6 +15,7 @@
 // keys live in a fixed array. Every 768 samples it posts its state for the page's views.
 #pragma once
 
+#include <array>
 #include <cstdint>
 
 #include "forte/engine.h"
@@ -42,7 +43,7 @@ struct Params {
   int drawbars[9] = {8, 8, 8, 0, 0, 0, 0, 0, 0};
   bool motor = true;
   double inertia = 6, spinUp = 1.2, loading = 0.25;
-  double spread = 1.2, bounce = 0.5, contactTime = 20;
+  double spread = 1.2, bounce = 0.5, contactTime = 20, travel = 1;
   bool percOn = false, percSoft = false, percFast = true, percThird = true;
   double percFastTau = 0.15, percSlowTau = 0.6, percLevel = 1;
   int vib = 6; // off, V1, V2, V3, C1, C2, C3
@@ -81,6 +82,8 @@ struct Key {
   double g[9] = {};
   uint8_t tgt[9] = {};
   double order[9] = {};
+  uint8_t sw[9] = {}, rank[9] = {}; // each spring's own state (the schedule's), and its place in the travel
+  int reach = 9;                    // how many of its contacts the key's travel reaches
   bool down = false;
   ContactEvent ev[MAX_EVENTS];
   int nev = 0, evi = 0;
@@ -99,6 +102,8 @@ class OrganEngine : public Engine {
   void allNotesOff() override;
   void bend(double value) override; // the supply frequency: the whole organ, ±2 semitones
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the newest key's: the supply's too
+  void slide(double value, int key) override;    // how far one key goes down: how many of its contacts close
+  void pressure(double value, int key) override; // the swell pedal, from the newest key's press
   int voiceCount() const override { return nLive; }
   void process(float *L, float *R, int n) override;
   // the same in double precision (the tests' render)
@@ -131,6 +136,9 @@ class OrganEngine : public Engine {
   void schedule(Key &k, bool closing, double keySpeed);
   void tick(int n);
   void postState();
+  int reachOf(int key) const;
+  void contacts(Key &k);
+  void swell();
 
   const double dt;
   Rng rand{7};
@@ -151,6 +159,8 @@ class OrganEngine : public Engine {
   int held = 0;
   NoteExpression expr{kBendSemitones}; // each key's own bend (MPE): the newest held key's turns the motor
   NewestKey newest;
+  std::array<double, 128> press{}; // each key's own pressure (MPE), and the channel's
+  double chanPress = 0;
   double num[10] = {}, den[10] = {};
 
   // derived from the parameters
