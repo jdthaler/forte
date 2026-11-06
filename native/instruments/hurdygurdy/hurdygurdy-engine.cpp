@@ -82,6 +82,7 @@ void HurdyGurdyEngine::setParams(const double *P) {
     const bool on = Pm.on[s->id] && !(s->id == CH2 && applied == Quality::low); // Low: one chanterelle
     s->FT = on ? wheelForce(s->id, Pm) : 0;
   }
+  melodyForce();
   if (Pm.boardEta != etaBody) buildBody(Pm.boardEta);
 }
 
@@ -100,6 +101,17 @@ void HurdyGurdyEngine::buildBody(double eta) {
   bowed::setFilter(hp[0], Biquad::hp, F_BODY, 0.5412, fs); bowed::setFilter(hp[1], Biquad::hp, F_BODY, 1.3066, fs);
 }
 
+// The chanterelles bear on the wheel as hard as the melody key's own slide says (a pressure, as
+// Wheel pressure's), or as the strings are set.
+void HurdyGurdyEngine::melodyForce() {
+  if (!hasParams) return;
+  const double own = expr.slideOr(melody, Pm.pressure), f = own == Pm.pressure ? 1 : own / Pm.pressure;
+  for (int id = CH1; id <= CH2; id++) {
+    const bool on = Pm.on[id] && !(id == CH2 && applied == Quality::low);
+    S[id]->FT = on ? wheelForce(id, Pm) * f : 0;
+  }
+}
+
 int HurdyGurdyEngine::topKey() const {
   for (int k = KEY_TOP; k > KEY_OPEN; k--) if (held[k]) return k;
   return KEY_OPEN;
@@ -109,7 +121,7 @@ void HurdyGurdyEngine::noteOn(int key, double velocity) {
   if (!hasParams || key < KEY_OPEN || key > KEY_TOP) return;
   if (!held[key]) { held.set(key); nHeld++; }
   const int top = topKey();
-  if (top != melody) { melody = top; sagR = 1; restop(); }
+  if (top != melody) { melody = top; sagR = 1; restop(); melodyForce(); }
   // a key struck hard: the wrist gives the crank a coup as the tangent lands
   if (velocity > 0.55) { shotA = std::min(1.0, (velocity - 0.55) / 0.45); shotAt = t; }
 }
@@ -126,7 +138,7 @@ void HurdyGurdyEngine::noteOff(int key, double velocity) {
     if (top != melody) {
       const double s = liftScale(velocity);
       if (key == melody && s > 1) { sagR = (sagR * stopLength(top, Pm)) / stopLength(melody, Pm); sagT = 0.12 * (s - 1); }
-      melody = top; restop();
+      melody = top; restop(); melodyForce();
     }
   }
 }
@@ -138,7 +150,7 @@ void HurdyGurdyEngine::allNotesOff() { // Panic: the crank, every string and the
   chien = Chien{};
   q1.fill(0); q2.fill(0); bodyE = 0;
   hp[0].reset(); hp[1].reset(); mass.y = 0; dl.fill(0);
-  if (melody != KEY_OPEN && hasParams) { melody = KEY_OPEN; restop(); }
+  if (melody != KEY_OPEN && hasParams) { melody = KEY_OPEN; restop(); melodyForce(); }
 }
 
 void HurdyGurdyEngine::pressure(double value, int) { after = std::clamp(value, 0.0, 1.0); }
@@ -165,7 +177,7 @@ void HurdyGurdyEngine::run(float *Lo, float *Ro, int n) {
   if (!hasParams) { for (int i = 0; i < n; i++) Lo[i] = Ro[i] = 0; t += n; return; }
   running = nHeld > 0 || Pm.keep || pedal;
   // the hand has stopped the wheel: the last tangent lets go
-  if (!running && drive == 0 && rate < 0.01 && melody != KEY_OPEN) { melody = KEY_OPEN; restop(); }
+  if (!running && drive == 0 && rate < 0.01 && melody != KEY_OPEN) { melody = KEY_OPEN; restop(); melodyForce(); }
   // the strings the wheel is bowing join the loop (and those it has left, once quiet, go: retire)
   const double slow = std::clamp(1 - rate / (0.1 * Pm.crank), 0.0, 1.0); // 1: the wheel has (nearly) stopped
   for (auto &s : S) {

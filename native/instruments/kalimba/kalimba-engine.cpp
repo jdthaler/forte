@@ -186,7 +186,9 @@ void KalimbaEngine::noteOn(int key, double velocity) {
   Voice v;
   v.key = key;
   v.floor = pick(1e-5, 1e-4, 1e-3);
-  const KeyModes km = keyModes(key, P.data());
+  std::array<double, p::count> Pk = P; // the tine plucked where its own slide says, or where the thumbs pluck
+  Pk[p::pluck] = own.slideOr(key, P[p::pluck]);
+  const KeyModes km = keyModes(key, Pk.data());
   const double k = 1 / fs;
   double F0 = 0;
   for (int i = 0; i < km.count; i++) {

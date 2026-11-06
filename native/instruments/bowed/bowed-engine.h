@@ -56,6 +56,8 @@ class OrganistaEngine : public Engine {
   void pressure(double value, int key) override; // aftertouch: the finger presses harder
   void bend(double value) override;              // the strings' bridges slide: every sounding length ÷r, the notes ×r
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // one key's bridge alone
+  // a note's own slide: where the wheel bows its string (β), at once
+  void slide(double value, int key) override;
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -79,6 +81,7 @@ class OrganistaEngine : public Engine {
   void run(float *L, float *R, int n);
   void buildBody(double eta);
   bool damped(const Key &s) const { return !s.down && !Pm.lifted; }
+  Params own(int key) const; // the instrument's parameters at a key's own bow position (its slide)
   // With the dampers lifted, the 49 strings of C2–C6 (the board is drawn on them) ring in sympathy;
   // the strings past them join only when played, and leave the loop once they are silent. Medium
   // keeps the sympathy of the 24 below C4 (each runs at the output rate), Low none: a string

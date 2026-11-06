@@ -260,6 +260,28 @@ TEST("plugin: MIDI velocity is the hammer's speed, 0.25 … 6 m/s; CC67 is the s
   CHECK(I.midiVelocity && std::fabs(I.midiVelocity(0) - 0.25) < 1e-12 && std::fabs(I.midiVelocity(1) - 6) < 1e-12);
   CHECK(I.controllerCount == 6 && I.controllers[0].cc == 67 && I.controllers[0].param == p::unaCorda && I.controllers[1].cc == 107);
   CHECK(I.space == Space::sustain && I.chain.body == p::soundboard);
+  CHECK(I.modWheel < 0 && I.slide == p::strikePos && std::fabs(I.slideMax - 0.04) < 1e-12); // a note's own slide moves its hammer
+}
+
+TEST("slide: a note's own strike position shapes its blow from its next strike; none, or the instrument's own, strikes as before") {
+  const double fs = 48000;
+  auto P = defaults();
+  auto render = [&](double slide) {
+    auto ep = std::make_unique<PianoEngine>(fs);
+    PianoEngine &e = *ep;
+    e.setParams(P.data());
+    e.slide(slide, 60);
+    e.noteOn(60, 2.5);
+    CHECK(until(e, 1));
+    std::vector<float> L(4800), R(4800);
+    e.process(L.data(), R.data(), 4800);
+    return L;
+  };
+  const auto plain = render(NAN), same = render(P[p::strikePos]), moved = render(0.04);
+  bool equal = true, differ = false;
+  for (size_t i = 0; i < plain.size(); i++) { equal &= plain[i] == same[i]; differ |= plain[i] != moved[i]; }
+  CHECK(equal);
+  CHECK(differ);
 }
 
 TEST("CPU: ten notes at 48 kHz take a small part of a core") {

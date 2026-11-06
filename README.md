@@ -171,7 +171,12 @@ note go gently (a damper settling, a reed closing, a field falling away), up
 to twice as long as usual, and a fast one as much sooner, with what only a
 quick hand does (a mallet's touch on a bar, a grace stroke on a bell). A
 key let go with no release velocity (the computer keys, a keyboard that
-sends none) or a middling one plays as it always did.
+sends none) or a middling one plays as it always did. Slide moves where a
+struck, plucked or bowed note is played: the hammer, quill, mallet, clapper
+or thumb along the string, bar, bell or tine as it strikes (the Ribbon Piano,
+Electric Grand, Harpsichord, Vibraphone, Carillon, Kalimba), the wheel along
+the Viola Organista's string, the felt onto the Tangent Clavier's, the
+chanterelles' pressure on the Hurdy-Gurdy's wheel.
 
 **The RISE's panel:** while a Seaboard is plugged in, each page draws it at
 the left: its faders and pad with the controls they move and where they are,

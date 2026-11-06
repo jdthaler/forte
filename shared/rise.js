@@ -21,6 +21,7 @@
 import { createMpe, MEMBER_BEND, slideFrom } from './mpe.js';
 import { FADERS, controllersOf, ccValue, mpeMode, signed } from './midi.js';
 import { IDENTIFY, parse, differences, forForte, faderLights, set as setting, PARAMS } from './rise-sysex.js';
+import { slideOf } from './expression.js';
 
 export const KEYS = 25;                 // a RISE 25's keywave: two octaves, C to C
 export const DIMENSIONS = [
@@ -117,8 +118,7 @@ const BLACK = [1, 3, 6, 8, 10];
 function meanings(I, params) {
   const out = {};
   const { bend = 0, slide = false, press = false } = I?.mpe ?? {};
-  const wheel = I?.modWheel && (typeof I.modWheel === 'string' ? I.modWheel : I.modWheel.param);
-  const wp = params.find((p) => p.id === wheel);
+  const wp = I && params.find((p) => p.id === slideOf(I)?.param); // what a slide moves (shared/expression.js)
   out.strike = I?.strike === false ? 'nothing here' : 'how loud, as a key\'s velocity';
   out.glide = !I ? '' : press && bend ? `presses the key as the wheel does, up to ${bend} semitones`
     : bend ? `bends the note alone, up to ±${bend} semitones` : 'nothing here: each note keeps its own pitch';

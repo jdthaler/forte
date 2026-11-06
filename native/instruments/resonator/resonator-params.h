@@ -145,6 +145,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::bright, .modWheelMax = 1,
+    .slide = p::bright, .slideMax = 1,
     .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .body = p::soundboard, .bodySeconds = 0.4, .bodyDry = 0.75, .bodyWet = 1.1, .trimDb = 6.5},
     .midiVelocity = midiVelocity, .create = create,

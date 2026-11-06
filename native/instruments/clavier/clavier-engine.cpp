@@ -108,7 +108,7 @@ void ClavierEngine::init(Voice &v, int key) {
   v.C1 = 0; v.C0 = 0; v.um = 0; v.Q = 0;
   v.Flp = 0; v.Fr = 0; v.Fa = 0; v.force = 0;
   v.Pl = 0; v.Pu = 0; v.ul = 0; v.uu = 0;
-  v.pressure = chanPressure; v.down = false; v.thrown = false; v.muted = false;
+  v.pressure = chanPressure; v.down = false; v.thrown = false; v.muted = false; v.ownMute = 0;
   v.dead = false; v.killing = false; v.fade = 1; v.peak = 0; v.quiet = 0; v.Fpeak = 0;
   std::fill(v.fz, v.fz + FRAME_MODES, 0.0); std::fill(v.fz1, v.fz1 + FRAME_MODES, 0.0); v.Z = 0;
   setPickups(v);
@@ -146,8 +146,9 @@ void ClavierEngine::render(Voice &v, double *out, int n) {
   const double *B1 = v.B1, *B2 = v.B2, *by = v.by;
   const double Kr = v.Kr, lr = P[p::tipLoss], Mt = P[p::keyMass] * 1e-3, gap = S.gap, L = S.L;
   const double mass = v.mass, Cy = v.Cy, Cb = v.Cb;
-  const double muteK = MUTE_K * muteLevel, muteR = MUTE_R * muteLevel;
-  const bool muted = muteLevel > 1e-4;
+  const double ml = std::max(muteLevel, v.ownMute); // the bar's felt, or its own (a slide)
+  const double muteK = MUTE_K * ml, muteR = MUTE_R * ml;
+  const bool muted = ml > 1e-4;
   const double G = muteK + muteR / k, Pb = v.Pb, Pg = v.Pg, xm = v.xm;
   const double den = 1 + G * Pg, lamM = xm - Pb / k2;
   const bool kc = P[p::kc] != 0;
@@ -345,6 +346,13 @@ void ClavierEngine::block(float *L, float *R, int n) {
   const bool on = P[p::muteOn] != 0 || space;
   muteLevel += lpM * ((on ? P[p::mute] : 0) - muteLevel);
   if (muteLevel < 1e-4 && !on) muteLevel = 0;
+  // a note's own felt: its slide, from the felt pressure's default (none) to its maximum (the felt pressure)
+  const ParamInfo &mp = kParams[p::mute];
+  for (int i = 0; i < nVoices; i++) {
+    Voice &v = *voices[i];
+    const double s = expr.slideOr(v.key, mp.def), u = std::clamp((s - mp.def) / (mp.max - mp.def), 0.0, 1.0);
+    if (u > 0 || v.ownMute > 0) { v.ownMute += lpM * (u * P[p::mute] - v.ownMute); if (v.ownMute < 1e-4 && u == 0) v.ownMute = 0; }
+  }
   for (int i = 0; i < nVoices; i++) render(*voices[i], x, n);
   int j = 0;
   for (int i = 0; i < nVoices; i++) {

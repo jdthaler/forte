@@ -11,8 +11,8 @@
 //
 // A page shows only the switches its instrument answers to (responds): Strike unless its
 // descriptor says `strike: false`, Glide where `mpe.bend` is more than 0, Slide where
-// `mpe.slide` (with a mod wheel to slide), Press where it has `aftertouch` or `mpe.press`, and
-// Lift where it has `lift` (what a slow or a fast release does).
+// `mpe.slide` (with a parameter to slide: slideOf), Press where it has `aftertouch` or `mpe.press`,
+// and Lift where it has `lift` (what a slow or a fast release does).
 
 export const EXPRESSION_IDS = ['strikeOn', 'glideOn', 'slideOn', 'pressOn', 'liftOn'];
 
@@ -36,11 +36,22 @@ export function responds(I, id) {
   switch (id) {
     case 'strikeOn': return I.strike !== false;
     case 'glideOn': return (I.mpe?.bend ?? 0) > 0;
-    case 'slideOn': return !!I.mpe?.slide && !!I.modWheel;
+    case 'slideOn': return !!I.mpe?.slide && !!slideOf(I);
     case 'pressOn': return !!I.aftertouch || !!I.mpe?.press;
     case 'liftOn': return !!I.lift;
     default: return true;
   }
+}
+
+/**
+ * The parameter a note's own slide (CC74) sets for that note alone, as { param, max? }: the one the
+ * descriptor's `mpe.slide` names (a parameter's id, or { param, max }), else its mod wheel's
+ * (`mpe.slide: true`); null for none. At rest (where the finger landed) the parameter's own value,
+ * at either end of the key `max` (the parameter's maximum unless given), as the wheel would set it.
+ */
+export function slideOf(I) {
+  const s = I.mpe?.slide, w = typeof s === 'string' || (s && typeof s === 'object') ? s : I.modWheel;
+  return w ? (typeof w === 'string' ? { param: w } : w) : null;
 }
 
 /** The switches instrument I doesn't answer to (yet): its pages hide them, and its plugin and saved presets leave them out. */

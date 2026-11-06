@@ -44,6 +44,8 @@ void HarpsichordEngine::Voice::press(double vel) {
   const Registration reg = registration(P);
   const int m = key;
   V = jackSpeed(vel);
+  const double f = eng->pluckScale(m); // its own slide moves every quill along the string
+  auto at = [&](int row) { const double x = pluckPoint(m, row, P); return f == 1 ? x : std::clamp(x * f, 0.002, 0.5 * stringLength(m, ROW_STRING[row], P.build)); };
   for (int ch : CHOIRS) {
     const bool any = ch == BACK ? reg.rows[ROW_BACK] || reg.rows[ROW_LUTE] : reg.rows[ch]; // (front and 4′: their row's index is the choir's)
     lifts[ch] = reg.lift[ch];
@@ -65,7 +67,7 @@ void HarpsichordEngine::Voice::press(double vel) {
       const int row = rows[i], p = row == ROW_LUTE ? PT::LUTE : PT::MAIN;
       const bool on = reg.rows[row];
       const double gap = rowGap(row, P);
-      if (on) { const Plectrum pl = plectrumFor(m, row, P); st.armPlectrum(p, &pl, pluckPoint(m, row, P), gap, true, lift - gap > 0); }
+      if (on) { const Plectrum pl = plectrumFor(m, row, P); st.armPlectrum(p, &pl, at(row), gap, true, lift - gap > 0); }
       else st.armPlectrum(p, nullptr, 0, gap, false, lift - gap > 0);
     }
     st.onRelease = &HarpsichordEngine::onRelease; st.ctx = this;

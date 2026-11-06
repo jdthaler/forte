@@ -93,6 +93,7 @@ export class PianoWasmEngine extends Base {
   handle(m) {
     if (m.type === 'offer') this.offer(m.data);
     else if (m.type === 'offering') Base.exports.piano_offering(this.e);
+    else super.handle(m); // pressure, bends and a note's own slide
   }
   noteOn(key, velocity, data) {
     if (data) this.offer(data);

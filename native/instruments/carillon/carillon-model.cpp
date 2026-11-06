@@ -140,10 +140,10 @@ double distanceGain(double f, double r) {
 }
 
 // ---- every mode of one bell, ready to play ----------------------------------------------------------------
-int bellModes(const Bell &b, const double *P, BellMode *out) {
+int bellModes(const Bell &b, const double *P, BellMode *out, double strikeAt) {
   const Rib &rib = *b.rib;
   const double D = b.D, rhoB = BRONZE.rho, sw = 1 / std::sqrt(rhoB * std::pow(D, 3));
-  const double h = P[p::strikeHeight];
+  const double h = strikeAt == strikeAt ? strikeAt : P[p::strikeHeight];
   int n = 0;
   for (int j = 0; j < rib.modeCount; j++) {
     const TableMode &m = rib.modes[j];

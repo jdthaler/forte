@@ -15,6 +15,7 @@ export const INSTRUMENT = {
   keep: ['volume', 'room', 'venue', 'soundboard', 'velocity', 'maxFreq', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],      // MIDI keys: A0–C8
   lift: 'how fast the damper falls: a slow lift leaves a longer tail, a fast one stops the string sooner', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
+  mpe: { bend: 0, slide: { param: 'strikePos', max: 0.04 } }, // MPE: a note's own slide moves its hammer towards the agraffe, at the strike (a struck string keeps its pitch)
   space: 'sustain',      // Space and CC64: the damper pedal, sent to the engine
   controllers: { 67: 'unaCorda' }, // MIDI CC67, the soft pedal: on at 64 and above
   // noteOn's velocity is the hammer's speed in m/s; MIDI velocity / 127 → 0.25 … 6 m/s

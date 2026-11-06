@@ -20,7 +20,7 @@ import { touched, SOFT_PEDAL, wheelValue, pageMpe, controllersOf, controlled } f
 import { connectQuality } from './quality.js';
 import { complete } from './presets.js';
 import { tap } from './taps.js';
-import { withExpression } from './expression.js';
+import { withExpression, slideOf } from './expression.js';
 
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
 const noteName = (m) => NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
@@ -68,7 +68,7 @@ async function load(id) {
   // a console's own state as the page keeps it (the organ's drawbars), when it was saved
   if (stored && I.console) for (const k of Object.keys(I.console.defaults ?? {})) if (Object.hasOwn(stored, k)) P[k] = stored[k];
   const s = { id, I, P, params, node: null, chain: null, queue: [], sounding: new Map(), latched: new Set(), sustain: false, soft: false, ccLast: {}, held: new Map() };
-  s.mpe = pageMpe({ post: (m) => post(s, m), params: () => s.P, modWheel: I.modWheel, groups: I.groups });
+  s.mpe = pageMpe({ post: (m) => post(s, m), params: () => s.P, slide: slideOf(I), groups: I.groups });
   s.ccs = controllersOf(I);
   return s;
 }

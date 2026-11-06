@@ -20,6 +20,7 @@
 #include "carillon-model.h"
 #include "carillon-params.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "forte/lift.h"
 
 namespace forte::carillon {
@@ -46,6 +47,8 @@ class CarillonEngine : public Engine {
   void setParams(const double *P) override;
   void noteOn(int key, double velocity) override;
   void noteOff(int key, double velocity) override;
+  // a note's own slide: how high on the bell its clapper strikes (strikeHeight), at its next stroke
+  void slide(double value, int key) override { own.setSlide(value, key); }
   void setSustain(bool on) override { sustain = on; } // a carillon has no dampers: nothing to lift
   void allNotesOff() override;
   int voiceCount() const override { return nVoices; }
@@ -100,6 +103,7 @@ class CarillonEngine : public Engine {
 
   std::unique_ptr<Voice[]> pool;
   std::array<double, p::count> P{};
+  NoteExpression own{0}; // each key's own slide (forte/expression.h)
   bool hasParams = false, sustain = false;
   Tuning tuning; // the keyboard's: a bell hung at a key is cast for its pitch
   double S_asym = 0, S_distance = 0, T_asym = 0, T_distance = 0; // gliding values and their targets

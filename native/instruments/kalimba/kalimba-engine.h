@@ -5,6 +5,7 @@
 #include <array>
 #include <vector>
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "forte/lift.h"
 #include "kalimba-model.h"
 #include "kalimba-params.h"
@@ -45,6 +46,8 @@ class KalimbaEngine : public Engine {
   void setParams(const double *P) override;
   void noteOn(int key, double velocity) override;
   void noteOff(int key, double velocity) override;
+  // a note's own slide: where the thumb pushes its tine down (pluck), at its next pluck
+  void slide(double value, int key) override { own.setSlide(value, key); }
   void setSustain(bool on) override;
   void allNotesOff() override;
   int voiceCount() const override { return (int)voices.size(); }
@@ -65,6 +68,7 @@ class KalimbaEngine : public Engine {
   };
   void rebuildBody();
   std::array<double, p::count> P{};
+  NoteExpression own{0}; // each key's own slide (forte/expression.h)
   bool hasParams = false, sustain = false;
   double cover = -1, coverTarget = 0, builtBox = -1, builtHole = -1, builtCover = -1;
   int builtCaps = -1;
