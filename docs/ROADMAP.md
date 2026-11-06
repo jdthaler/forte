@@ -24,6 +24,10 @@ while that is still free.
   `reference.json` keeps each preset's sound.
 - **Windows downloads that install themselves** (`install.cmd`, `install.ps1`), matching
   `make install` on macOS and Linux.
+- **A Windows installer and Linux packages** (ships with the next release):
+  `Forte-plugins-windows-setup.exe`, `Forte-plugins-linux.deb` and `Forte-plugins-linux.rpm`
+  on All Plugins, each with every instrument; the `native` workflow installs, verifies and
+  uninstalls each on a clean system before a release keeps it.
 
 ## Decided
 
@@ -42,7 +46,7 @@ while that is still free.
    - Logic or MainStage on a Mac: some AUs, the organ's Leslie button in the plugin window,
      and saving, closing and reopening a project;
    - the Forte app with a MIDI keyboard;
-   - a Windows PC: `install.cmd`, one VST3 in a DAW, and the app.
+   - a Windows PC: the installer and `install.cmd`, one VST3 in a DAW, and the app.
 4. Fix what the release candidate turns up, update the docs for a 1.0 reader (README's
    *Versions*, `native/INSTALL.md`), then release 1.0.0 with no new features in it.
 
@@ -93,8 +97,8 @@ Every other idea only adds, and can come before or after 1.0.
 | The site's views in the plugin window | M | Done, for the next release: the window's *Views* pane shows the page's own views (`docs/PLUGINS.md`, step 6). |
 | Each page's own control layout in the plugin window | S–M | Hints, `showIf`, grouping. |
 | MIDI device picker in the Mac app | S | A clap-wrapper patch. |
-| Windows installer (.msi or Inno Setup) | M | |
-| Linux packages (Flatpak or .deb) | M | |
+| Windows installer (.msi or Inno Setup) | M | Done, for the next release: `Forte-plugins-windows-setup.exe` (Inno Setup), every instrument, the formats and instruments picked on its Components page, uninstalled from Settings. Unsigned. |
+| Linux packages (Flatpak or .deb) | M | Done, for the next release: `Forte-plugins-linux.deb` (Debian 13, Ubuntu 24.04, Mint 22 and later) and `.rpm` (Fedora 40 and later), every instrument for every user, with the libraries they need. No Flatpak: a Flatpak can't hold plugins for the DAWs outside it. |
 | iPad AUv3 | L | Needs the Apple Developer Program. |
 
 ### Physics

@@ -391,8 +391,9 @@ VST3 and CLAP, and a standalone app, for macOS, Windows and Linux. Download ever
 together from **All Plugins** on the front page, or one instrument from **↓ Plugin** next to
 **How it works** on its page, in every format or one format alone (just the AU, say); both are also in the
 [latest release](https://github.com/jdthaler/forte/releases/latest). Then follow
-[native/INSTALL.md](native/INSTALL.md): on macOS and Linux, `make install` and `make verify` in
-the unpacked folder do it all. They are unsigned, so a Mac needs one Terminal command (`xattr`,
+[native/INSTALL.md](native/INSTALL.md): on Windows, All Plugins' **Installer** does it all; on
+Debian, Ubuntu, Mint and Fedora, its **.deb** or **.rpm** package; otherwise, on macOS and
+Linux, `make install` and `make verify` in the unpacked folder. They are unsigned, so a Mac needs one Terminal command (`xattr`,
 which `make install` runs) before it loads them. The download with every instrument also has the
 Forte app, one standalone that plays any of them from its Instrument menu, or two at once:
 **+** beside the menu layers a second instrument with the first, or splits the keyboard between

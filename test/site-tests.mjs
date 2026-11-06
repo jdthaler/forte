@@ -13,7 +13,8 @@ import { withTags, pictureOf } from '../tools/make-previews.mjs';
 import { readNotes, parseNote, plan, bump, frontPage } from '../tools/release.mjs';
 import { compare, stateOf, contractPath, STATES } from '../tools/contract.mjs';
 import { TOUCH, SOFT_PEDAL, touch, touched, createSostenuto, wheelValue, FADERS, controllersOf, controlled, ccValue, SWITCHES, levelGain, pedalGain, onPedalGain, startMIDI, keyShift, setShift, shiftOf, signed, OCTAVES, SEMITONES } from '../shared/midi.js';
-import { LATEST, SYSTEMS, archive, downloads, withPlugins, parseRelease, releaseLine } from '../shared/plugins.js';
+import { LATEST, SYSTEMS, archive, downloads, downloadLinks, withPlugins, parseRelease, releaseLine } from '../shared/plugins.js';
+import { script as installerScript, SETUP, APP_ID } from '../tools/windows-installer.mjs';
 
 let failures = 0;
 function test(name, fn) { // returns a promise for an async test
@@ -354,6 +355,20 @@ test('the release\'s archives are the ones CI packages and the pages link to', (
   assert.deepEqual(downloads().map((d) => d.app.file), ['Forte-app-macos.zip', 'Forte-app-windows.zip', 'Forte-app-linux.tar.gz']);
   assert.ok(downloads('gongs').every((d) => d.app === null), 'an instrument\'s page offers no Forte app');
   assert.ok(sh.includes('pack Forte-app "Forte app" app Forte'), 'package-plugins.sh packs the Forte app alone');
+  // and what installs itself, beside every instrument's: Windows' installer, Linux's .deb and .rpm
+  assert.deepEqual(downloads().map((d) => d.packages.map((k) => k.file)), [[], ['Forte-plugins-windows-setup.exe'], ['Forte-plugins-linux.deb', 'Forte-plugins-linux.rpm']]);
+  assert.ok(downloads('gongs').every((d) => d.packages.length === 0), 'an instrument\'s page offers no installer or package');
+  assert.ok(downloadLinks().includes(`${LATEST}Forte-plugins-windows-setup.exe`) && downloadLinks().includes(`${LATEST}Forte-plugins-linux.deb`), 'All Plugins links the installer and the packages');
+  assert.ok(sh.includes('node tools/windows-installer.mjs "Forte plugins"') && sh.includes('tools/package-linux.sh "$root/Forte-plugins/Forte plugins"'), 'package-plugins.sh makes the installer and the packages');
+  const linux = read('tools/package-linux.sh');
+  for (const f of ['Forte-plugins-linux.deb', 'Forte-plugins-linux.rpm']) assert.ok(linux.includes(`$out/${f}`), `package-linux.sh writes ${f}`);
+  const iss = installerScript('Forte plugins');
+  assert.ok(iss.includes(`OutputBaseFilename=${SETUP}`) && `${SETUP}.exe` === archive(null, 'windows-setup.exe'), 'the installer is named as All Plugins links it');
+  assert.ok(iss.includes(`AppId=${APP_ID.replace('{', '{{')}`), 'the installer keeps its AppId, so a newer one upgrades');
+  for (const i of withPlugins()) for (const line of [`Name: "instruments\\${i.id}"; Description: "${i.name}"`, `"Forte plugins\\${i.name}.vst3\\*"`, `"Forte plugins\\${i.name}.clap"`, `"Forte plugins\\${i.name}.exe"`])
+    assert.ok(iss.includes(line), `the installer has ${line}`);
+  const ci = read('.github/workflows/native.yml');
+  assert.ok(ci.includes('tools/test-linux-packages.sh') && ci.includes("Setup @('/COMPONENTS="), 'native.yml tries the packages and the installer');
   // every standalone app has its icon, drawn by tools/make-icons.py (forte.cmake passes them on)
   for (const id of ['forte', ...withPlugins().map((i) => i.id)]) for (const ext of ['icns', 'ico'])
     assert.ok(existsSync(new URL(`../native/icons/${id}.${ext}`, import.meta.url)), `native/icons/${id}.${ext} exists (python3 tools/make-icons.py)`);

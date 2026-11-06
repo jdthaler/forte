@@ -7,7 +7,8 @@
 # clap or app), each with native/INSTALL.md, Forte's LICENSE (as LICENSE.txt) and the notices
 # of the code compiled into the plugins (THIRD-PARTY-NOTICES.md), and on macOS and Linux native/install.sh with its
 # Makefile (make install, make verify), on Windows native/install.cmd with install.ps1
-# (install.cmd install, verify…). The template's plugins are left out. The archives keep the
+# (install.cmd install, verify…). Then what installs itself: Forte-plugins-windows-setup.exe
+# on Windows, Forte-plugins-linux.deb and .rpm on Linux. The template's plugins are left out. The archives keep the
 # bundles' executable bits and macOS's signatures. Run from the repository's root after building:
 #
 #   tools/package-plugins.sh <linux|macos|windows>     writes dist/
@@ -72,4 +73,17 @@ for f in "${formats[@]}"; do
 done
 # and the Forte app alone
 pack Forte-app "Forte app" app Forte
+
+# What installs itself: on Windows an installer (tools/windows-installer.mjs, compiled with
+# Inno Setup), on Linux a .deb and an .rpm (tools/package-linux.sh), each with every instrument
+# in every format, from the folder packed as Forte-plugins-<system>
+case "$preset" in
+  windows)
+    cp native/icons/forte.ico "$root/Forte-plugins/"
+    node tools/windows-installer.mjs "Forte plugins" > "$root/Forte-plugins/forte.iss"
+    iscc=${ISCC:-"/c/Program Files (x86)/Inno Setup 6/ISCC.exe"}
+    # (Git Bash would turn ISCC's /Qp and /O switches into paths without MSYS2_ARG_CONV_EXCL)
+    MSYS2_ARG_CONV_EXCL='*' "$iscc" /Qp "/O$(cygpath -w "$PWD/dist")" "$(cygpath -w "$root/Forte-plugins/forte.iss")" ;;
+  linux) tools/package-linux.sh "$root/Forte-plugins/Forte plugins" ;;
+esac
 ls -l dist

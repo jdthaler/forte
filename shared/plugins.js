@@ -29,17 +29,31 @@ export const withPlugins = () => INSTRUMENTS.filter((i) => i.ready && i.plugin?.
 // Forte-app-<system> holds just the Forte app, every instrument in one standalone.
 export const archive = (id, suffix, format) => `Forte-${id ?? 'plugins'}-${format ? `${format}-` : ''}${suffix}`;
 export const APP = 'app'; // archive(APP, suffix): the Forte app alone
+// What installs itself, every instrument in every format, offered beside every instrument's
+// archive: Windows' installer (tools/windows-installer.mjs) and Linux's packages
+// (tools/package-linux.sh), as [name, archive(null, suffix), what it is] by system.
+export const PACKAGES = {
+  Windows: [['Installer', 'windows-setup.exe', 'an installer, with every instrument (pick the formats and instruments as it installs)']],
+  Linux: [['.deb', 'linux.deb', 'a package for Debian, Ubuntu and Mint'], ['.rpm', 'linux.rpm', 'a package for Fedora']],
+};
 export const downloads = (id) => SYSTEMS.map(([name, suffix, formats]) => ({
   name, formats: formats.map((f) => FORMATS[f]).join(' · '), file: archive(id, suffix), url: LATEST + archive(id, suffix),
   each: formats.map((f) => ({ format: f, name: FORMATS[f], file: archive(id, suffix, f), url: LATEST + archive(id, suffix, f) })),
   app: id ? null : { file: archive(APP, suffix), url: LATEST + archive(APP, suffix) },
+  packages: id ? [] : (PACKAGES[name] ?? []).map(([label, sfx, what]) => ({ name: label, what, file: archive(null, sfx), url: LATEST + archive(null, sfx) })),
 }));
 // The downloads for an instrument (or, with no id, every instrument): a box per system with
 // "All | AU · VST3 · CLAP · app", All being the archive with every format; with every
-// instrument, also "| Forte app", the one app with all of them and nothing else.
-export const downloadLinks = (id) => downloads(id).map((d) => `<div class="button forte-plugin-sys">${d.name}<span>
-  <a href="${d.url}" title="${d.name}: every format">All</a><i>|</i>${d.each.map((e) => `<a href="${e.url}" title="${d.name}: just the ${e.format === 'app' ? 'standalone app' : `${e.name} plugin`}">${e.name}</a>`).join('<i>·</i>')}${d.app ? `<i>|</i><a href="${d.app.url}" title="${d.name}: just the Forte app, every instrument in one">Forte app</a>` : ''}
-</span></div>`).join('');
+// instrument, also "| Forte app", the one app with all of them and nothing else, and
+// "| Installer" (Windows) or "| .deb · .rpm" (Linux).
+export const downloadLinks = (id) => downloads(id).map((d) => {
+  // each group (with the bar before it) wraps to the next line as one, never mid-group
+  const group = (links, bar = true) => `<span class="forte-plugin-group">${bar ? '<i>|</i>' : ''}${links.join('<i>·</i>')}</span>`;
+  const link = (url, title, text) => `<a href="${url}" title="${title}">${text}</a>`;
+  return `<div class="button forte-plugin-sys">${d.name}<span>
+  ${group([link(d.url, `${d.name}: every format`, 'All')], false)}${group(d.each.map((e) => link(e.url, `${d.name}: just the ${e.format === 'app' ? 'standalone app' : `${e.name} plugin`}`, e.name)))}${d.app ? group([link(d.app.url, `${d.name}: just the Forte app, every instrument in one`, 'Forte app')]) : ''}${d.packages.length ? group(d.packages.map((k) => link(k.url, `${d.name}: ${k.what}`, k.name))) : ''}
+</span></div>`;
+}).join('');
 
 // What a plugin release holds, from its notes (tools/plugin-release.mjs): the Forte version it was
 // built with, and each instrument's version from its table, by id.
