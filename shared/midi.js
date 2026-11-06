@@ -158,48 +158,11 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
   if (!navigator.requestMIDIAccess) { status('No Web MIDI in this browser (try Chrome, Edge or Firefox)'); return; }
   navigator.requestMIDIAccess().then((acc) => {
     try { localStorage.setItem(KEY, '1'); } catch { /* storage blocked */ }
-    // input id → { notes: Map('channel:key' → the key it plays, −1 when moved past MIDI's 0…127),
-    //              pedals: Set('channel:cc'), levels: Set(cc) }
-    const down = new Map();
+    const inputs = new Map(); // input id → its createInput
     const send = (data) => { if (midiTap(data)) onMIDI({ data }); }; // a second instrument (shared/layer.js) takes its share first
-    const mine = (cc) => Object.hasOwn(controllers, cc); // the instrument's own
-    const letGo = (id) => {
-      const s = down.get(id);
-      if (!s) return;
-      for (const [nk, k] of s.notes) if (k >= 0) send([0x80 | +nk.split(':')[0], k, 0]);
-      for (const pc of s.pedals) { const [ch, cc] = pc.split(':').map(Number); send([0xb0 | ch, cc, 0]); }
-      for (const cc of s.levels) setLevel(cc, 127); // a volume pedal unplugged heel down: full again
-      down.delete(id);
-    };
-    const clean = (id, data) => {
-      if (data[0] === 0xf0) return; // SysEx: a RISE's settings, which shared/rise.js reads itself
-      // a foot controller's switches are the pedals (SWITCHES), unless the instrument maps them
-      if ((data[0] & 0xf0) === 0xb0 && SWITCHES[data[1]] && !mine(data[1])) data = [data[0], SWITCHES[data[1]], data[2]];
-      const [st, d1, d2] = data, cmd = st & 0xf0, ch = st & 0x0f, nk = `${ch}:${d1}`;
-      let s = down.get(id);
-      if (!s) down.set(id, (s = { notes: new Map(), pedals: new Set(), levels: new Set() }));
-      // a note-off (and its poly pressure) goes where its note-on went
-      const off = (status, vel) => { const k = s.notes.get(nk); s.notes.delete(nk); if (k >= 0) send([status, k, vel]); };
-      if (cmd === 0xc0) choosePreset(d1);
-      if (cmd === 0xb0 && (d1 === 7 || d1 === 11) && !mine(d1)) { setLevel(d1, d2); if (d2 < 127) s.levels.add(d1); else s.levels.delete(d1); }
-      if (cmd === 0xb0 && d1 === 121) { for (const cc of [7, 11]) if (!mine(cc)) setLevel(cc, 127); s.levels.clear(); } // Reset All Controllers
-      if (cmd === 0x90 && d2 > 0 && !mayPlay()) { needClick(); return; }
-      if (cmd === 0x90 && d2 > 0) {
-        if (s.notes.has(nk)) off(0x80 | ch, 0);
-        const k = d1 + keyShift();
-        s.notes.set(nk, k >= 0 && k <= 127 ? k : -1);
-        if (k < 0 || k > 127) return;
-        data = [st, k, d2];
-      } else if (cmd === 0x80 || cmd === 0x90) { if (s.notes.has(nk)) off(st, d2); return; }
-      else if (cmd === 0xa0) {
-        const k = s.notes.has(nk) ? s.notes.get(nk) : d1 + keyShift();
-        if (k < 0 || k > 127) return;
-        data = [st, k, d2];
-      }
-      else if (cmd === 0xb0 && (d1 === 64 || d1 === 66 || d1 === 67)) { if (d2 >= 64) s.pedals.add(`${ch}:${d1}`); else s.pedals.delete(`${ch}:${d1}`); }
-      else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) { s.notes.clear(); s.pedals.clear(); }
-      send(data);
-    };
+    const letGo = (id) => { inputs.get(id)?.letGo(); inputs.delete(id); };
+    // a device's keys follow Octave and Transpose (shift)
+    const input = (id) => { let i = inputs.get(id); if (!i) inputs.set(id, (i = createInput(send, controllers, { shift: true }))); return i; };
     const seaboards = new Set();
     const bind = () => {
       const names = [];
@@ -207,7 +170,7 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
         if (inp.state === 'disconnected') { letGo(inp.id); if (seaboards.delete(inp.id)) rise((r) => r.input(inp.id, inp.name, false)); continue; }
         names.push(inp.name);
         const board = /seaboard/i.test(inp.name ?? '');
-        inp.onmidimessage = (ev) => { if (board) rise((r) => r.midi(inp.id, ev.data)); clean(inp.id, ev.data); };
+        inp.onmidimessage = (ev) => { if (board) rise((r) => r.midi(inp.id, ev.data)); input(inp.id).take(ev.data); };
         // A Seaboard sends MPE (notes on channels 2–16, each bending ±48 semitones, ROLI
         // Dashboard's defaults) but may not say so: announce its lower zone of 15 for it, as the
         // MPE Configuration Message would (MPE on Auto then decodes it; Off still ignores it)
@@ -217,7 +180,7 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
           for (const [d1, d2] of [[101, 0], [100, 6], [6, 15], [101, 127], [100, 127]]) send([0xb0, d1, d2]);
         }
       }
-      for (const id of [...down.keys()]) if (!acc.inputs.has(id)) letGo(id);
+      for (const id of [...inputs.keys()]) if (!acc.inputs.has(id)) letGo(id);
       for (const id of [...seaboards]) if (!acc.inputs.has(id)) { seaboards.delete(id); rise((r) => r.input(id, '', false)); }
       status(names.length ? `MIDI: ${names.join(', ')}` : 'MIDI: no devices');
     };
@@ -228,6 +191,66 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
     if (keyShift()) import('./shell.js').then(({ toast }) => toast(`MIDI keys play ${shiftText()}: Octave and Transpose are in the MIDI menu`), () => {});
   }, () => status('MIDI: permission denied'));
 }
+
+/**
+ * One source of MIDI (a device, or a song played from a file: shared/songs.js), its messages
+ * cleaned on the way to send(data) as startMIDI says: a re-strike lets the note go first, a
+ * note-off for a note that isn't down is dropped, a foot controller's switches are the pedals,
+ * its volume and expression pedals the page's output level, a program change a preset. With
+ * shift (a device's), the keys move by the player's Octave and Transpose (keyShift); a note-off
+ * and its poly pressure go where its note-on went. A song has fitted itself to the keys already.
+ *   const input = createInput(send, controllers, { shift })
+ *   input.take(data)   one message
+ *   input.letGo()      the source went away: its notes and pedals let go, its levels full again
+ */
+export function createInput(send, controllers = {}, { shift = false } = {}) {
+  // notes: 'channel:key' → the key it plays (−1 when moved past MIDI's 0…127); pedals: 'channel:cc'; held: cc
+  const notes = new Map(), pedals = new Set(), held = new Set();
+  const mine = (cc) => Object.hasOwn(controllers, cc); // the instrument's own
+  const moved = () => (shift ? keyShift() : 0);
+  return {
+    take(data) {
+      if (data[0] === 0xf0) return; // SysEx: a RISE's settings, which shared/rise.js reads itself
+      // a foot controller's switches are the pedals (SWITCHES), unless the instrument maps them
+      if ((data[0] & 0xf0) === 0xb0 && SWITCHES[data[1]] && !mine(data[1])) data = [data[0], SWITCHES[data[1]], data[2]];
+      const [st, d1, d2] = data, cmd = st & 0xf0, ch = st & 0x0f, nk = `${ch}:${d1}`;
+      const off = (status, vel) => { const k = notes.get(nk); notes.delete(nk); if (k >= 0) send([status, k, vel]); };
+      if (cmd === 0xc0) choosePreset(d1);
+      if (cmd === 0xb0 && (d1 === 7 || d1 === 11) && !mine(d1)) { setLevel(d1, d2); if (d2 < 127) held.add(d1); else held.delete(d1); }
+      if (cmd === 0xb0 && d1 === 121) { for (const cc of [7, 11]) if (!mine(cc)) setLevel(cc, 127); held.clear(); } // Reset All Controllers
+      if (cmd === 0x90 && d2 > 0 && !mayPlay()) { needClick(); return; }
+      if (cmd === 0x90 && d2 > 0) {
+        if (notes.has(nk)) off(0x80 | ch, 0);
+        const k = d1 + moved();
+        notes.set(nk, k >= 0 && k <= 127 ? k : -1);
+        if (k < 0 || k > 127) return;
+        data = [st, k, d2];
+      } else if (cmd === 0x80 || cmd === 0x90) { if (notes.has(nk)) off(st, d2); return; }
+      else if (cmd === 0xa0) {
+        const k = notes.has(nk) ? notes.get(nk) : d1 + moved();
+        if (k < 0 || k > 127) return;
+        data = [st, k, d2];
+      }
+      else if (cmd === 0xb0 && (d1 === 64 || d1 === 66 || d1 === 67)) { if (d2 >= 64) pedals.add(`${ch}:${d1}`); else pedals.delete(`${ch}:${d1}`); }
+      else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) { notes.clear(); pedals.clear(); }
+      send(data);
+    },
+    letGo() {
+      for (const [nk, k] of notes) if (k >= 0) send([0x80 | +nk.split(':')[0], k, 0]);
+      for (const pc of pedals) { const [ch, cc] = pc.split(':').map(Number); send([0xb0 | ch, cc, 0]); }
+      for (const cc of held) setLevel(cc, 127); // a volume pedal unplugged heel down: full again
+      notes.clear(); pedals.clear(); held.clear();
+    },
+  };
+}
+
+/**
+ * The page's own MIDI handler, for what plays it besides a device: every page gives it once,
+ * as it builds itself (shared/shell.js, and the pages with their own MIDI), whether or not MIDI
+ * is turned on. pageMIDI() alone returns it ({ onMIDI, controllers }), or null on a page without.
+ */
+let page = null;
+export function pageMIDI(handler) { if (handler) page = handler; return page; }
 
 // The MIDI settings, in a menu the MIDI status opens once MIDI is on: the velocity curve, MPE,
 // Octave and Transpose. The status says how far the keys are moved, in the accent, while they are.

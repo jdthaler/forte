@@ -9,7 +9,7 @@ import { createChain } from '../../shared/chain.js';
 import { SpectrogramView, animate } from '../../shared/views.js';
 import { drawPlane, drawKerr, WaveView, Lazy } from './ringdown-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, wheelValue, pageMpe, touched, SOFT_PEDAL, createSostenuto, controllersOf, controlled, tellFader } from '../../shared/midi.js';
+import { startMIDI, resumeMIDI, pageMIDI, wheelValue, pageMpe, touched, SOFT_PEDAL, createSostenuto, controllersOf, controlled, tellFader } from '../../shared/midi.js';
 import { controlOwns, unfocus } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
@@ -139,6 +139,7 @@ function initMIDI() {
 }
 const notes = pageMpe({ post, params: () => P, modWheel: INSTRUMENT.modWheel, groups: GROUPS }); // MPE: each note's own
 const ccs = controllersOf(INSTRUMENT), ccLast = {}; // the descriptor's faders and pad (and controllers)
+pageMIDI({ onMIDI, controllers: ccs }); // a song played from a MIDI file (shared/songs.js) plays it as a keyboard would
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data, cmd = st & 0xf0, mpe = notes.midi(ev.data);
   if (mpe.own) return;

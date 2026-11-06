@@ -2,7 +2,7 @@
 // with a hash of what it holds.
 //
 // sw.js keeps every page and everything a page loads (its scripts, styles, WebAssembly, data,
-// README and the icons): about 11 MB, 5 MB as GitHub Pages sends it. The demos (examples/*.m4a)
+// README, the icons and the songs' MIDI files): about 11 MB, 5 MB as GitHub Pages sends it. The demos (examples/*.m4a)
 // and the pictures a shared link shows (preview.jpg) stay online only. The list in sw.js is the
 // site as it was released: tools/release.mjs writes it as the release's last step, and a pull
 // request into live fails (tools/release.mjs --check-pr) when it isn't the site's. On main it is
@@ -20,7 +20,7 @@ import { pathToFileURL } from 'node:url';
 const R = new URL('..', import.meta.url);
 
 // What the site serves that a page can load: the files git has or would add (not what it ignores).
-const KEEP = /\.(html|js|css|wasm|json|webmanifest|png|svg)$|(^|\/)README\.md$|^docs\/PRIOR_ART\.md$/;
+const KEEP = /\.(html|js|css|wasm|json|webmanifest|png|svg|mid)$|(^|\/)README\.md$|^docs\/PRIOR_ART\.md$/;
 const SKIP = /^(native|test|tools|changes|docs\/template)\/|^\.|^(package\.json|sw\.js)$|^README\.md$/;
 export const kept = (path) => KEEP.test(path) && !SKIP.test(path);
 

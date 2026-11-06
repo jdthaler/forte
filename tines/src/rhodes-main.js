@@ -11,7 +11,7 @@ import { createChain } from '../../shared/chain.js';
 import { MotionView, PickupView, SpectrumView, MODE_COLORS, modeKind } from './rhodes-viz.js';
 import { SpectrogramView } from '../../shared/views.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, touched, SOFT_PEDAL, createSostenuto, pageMpe, controllersOf, controlled, tellFader, wheelValue } from '../../shared/midi.js';
+import { startMIDI, resumeMIDI, pageMIDI, touched, SOFT_PEDAL, createSostenuto, pageMpe, controllersOf, controlled, tellFader, wheelValue } from '../../shared/midi.js';
 import { controlOwns, unfocus } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
@@ -195,6 +195,7 @@ function initMIDI() {
   startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn'), controllers: ccs });
 }
 const ccs = controllersOf(INSTRUMENT), ccLast = {}; // the descriptor's faders and pad (and controllers)
+pageMIDI({ onMIDI, controllers: ccs }); // a song played from a MIDI file (shared/songs.js) plays it as a keyboard would
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data, cmd = st & 0xf0, mpe = notes.midi(ev.data);
   if (mpe.own) return;
