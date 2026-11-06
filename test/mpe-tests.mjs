@@ -172,6 +172,10 @@ const OWN = ['bubbles', 'stars', 'quantum', 'blackhole', 'nmr'];
 // suites check a note's bend against the wheel's): cents allowed
 const LOOSE = { windharp: 8, arc: 12 }; // the wake pulls a string toward its shedding; the arc's lag pulls its coil
 
+// Instruments whose pressure takes a while to be heard (the hydraulis's pumps), or is heard only
+// with a control on (the cimbalom's tremolo)
+const PRESS_SLOW = ['hydraulis'], PRESS_WITH = { cimbalom: { roll: 12 } };
+
 console.log('the instruments');
 for (const slug of slugs) {
   const I = await loadInstrument(slug), Engine = await loadEngine(I), D = defaultsOf(I);
@@ -206,6 +210,16 @@ for (const slug of slugs) {
       near(shift(base, one(-2), -200), -200, LOOSE[slug] ?? 3, '−2 semitones');
     });
   }
+  // Press (aftertouch, MPE pressure): the descriptor says what it does (the RISE's panel, shared/rise.js
+  // shows it), and an instrument that says nothing ignores it bit for bit
+  await test(`${slug}: ${I.aftertouch ? `pressing a held key ${I.aftertouch}` : 'pressing a held key does nothing'}, on one key and on the channel`, () => {
+    if (I.aftertouch !== undefined) assert.ok(typeof I.aftertouch === 'string' && I.aftertouch.length > 3 && I.aftertouch.length < 80 && !/[.]$/.test(I.aftertouch), 'aftertouch: a short phrase, no full stop');
+    const sec = PRESS_SLOW.includes(slug) ? 3 : 0.6, held = (events) => new Player(I, Engine, FS, { ...D, ...PRESS_WITH[slug] }).render(sec, [...keys.map((k) => [0.01, 'on', k, 0.7]), ...events]);
+    const still = held([]), one = held(keys.map((k) => [0.1, 'pressure', 1, k])), all = held([[0.1, 'pressure', 1]]);
+    const moved = (x) => differs(x[0], still[0]) || differs(x[1], still[1]);
+    if (!I.aftertouch) assert.ok(!moved(one) && !moved(all), 'an instrument whose descriptor says nothing ignores pressure');
+    else assert.ok(moved(one) && moved(all), 'pressure changes the sound');
+  });
   await test(`${slug}: bends of ±96 semitones and slides from 0 to 1, swept on a chord every block, stay finite and bounded at 44.1, 48 and 96 kHz`, () => {
     for (const fs of [44100, 48000, 96000]) {
       const sweep = [];

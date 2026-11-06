@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'spin',                     // CC1: the star's rotation
   mpe: { slide: true },                 // MPE: a note's slide spins its own star (a star can't bend)
+  aftertouch: 'drives the star harder, up to twice', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   faders: ['flare', 'incl', 'coreRatio', 'driving', 'spin'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/stars), built as WebAssembly. The page
   // builds each key's star with its WebAssembly model and sends it with the note (noteData)

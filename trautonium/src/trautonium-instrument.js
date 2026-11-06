@@ -19,6 +19,7 @@ export const INSTRUMENT = {
   // MPE: a finger rolls and slides along the wire, so a note bends as far as a ribbon (four octaves);
   // CC74 tunes its own first circuit; its pressure presses its wire harder
   mpe: { bend: 48, slide: true },
+  aftertouch: 'presses the wire harder onto the rail: louder', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   controllers: { 11: 'swell' },          // MIDI CC11, the expression pedal: the 1930 instrument's volume pedal
   faders: ['sync', 'q1', 'q2', 'f2', 'f1'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/trautonium), built as WebAssembly
