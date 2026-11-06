@@ -42,6 +42,7 @@
 
 import { unfocus } from './focus.js';
 import { MODES, createMpe, bendRatio } from './mpe.js';
+import { midiTap } from './taps.js';
 
 const KEY = 'forte/midi/v1';
 const TOUCH_KEY = 'forte/touch/v1';
@@ -160,7 +161,7 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
     // input id → { notes: Map('channel:key' → the key it plays, −1 when moved past MIDI's 0…127),
     //              pedals: Set('channel:cc'), levels: Set(cc) }
     const down = new Map();
-    const send = (data) => onMIDI({ data });
+    const send = (data) => { if (midiTap(data)) onMIDI({ data }); }; // a second instrument (shared/layer.js) takes its share first
     const mine = (cc) => Object.hasOwn(controllers, cc); // the instrument's own
     const letGo = (id) => {
       const s = down.get(id);

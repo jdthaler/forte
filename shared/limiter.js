@@ -8,7 +8,8 @@ const dbToLinear = (db) => 10 ** (db / 20);
 const linearToDb = (x) => 20 * Math.log10(x);
 
 export class Limiter {
-  constructor({ threshold = -3, knee = 3, ratio = 12, attack = 0.002, release = 0.15 } = {}, fs = 48000) {
+  // makeup: false leaves levels below the threshold as they are (a limiter that only catches peaks)
+  constructor({ threshold = -3, knee = 3, ratio = 12, attack = 0.002, release = 0.15, makeup = true } = {}, fs = 48000) {
     this.ratio = ratio;
     this.linearThreshold = dbToLinear(threshold);
     this.kneeEnd = dbToLinear(threshold + knee);
@@ -21,7 +22,7 @@ export class Limiter {
     for (let i = 0; i < 60; i++) { const mid = Math.sqrt(lo * hi); if (slopeAt(mid) > 1 / ratio) lo = mid; else hi = mid; }
     this.k = Math.sqrt(lo * hi);
     this.kneeEndOut = this.kneeCurve(this.kneeEnd);
-    this.makeup = (1 / this.curve(1)) ** 0.6;
+    this.makeup = makeup ? (1 / this.curve(1)) ** 0.6 : 1;
     this.attackCoef = 1 - Math.exp(-1 / (Math.max(attack, 1e-4) * fs));
     this.releaseCoef = 1 - Math.exp(-1 / (Math.max(release, 1e-3) * fs));
     this.gain = 1;
