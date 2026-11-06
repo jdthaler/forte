@@ -201,7 +201,6 @@ void CavityBellsEngine::process(float *L, float *R, int n) {
     // with the cavity's tuner, and a key's own bend with its own; the Lorentz detuning moves the
     // cavity alone)
     const double q = TRAIN * v.charge * current, Tb = (P[p::spacing] * fs) / (c.fpi * (bendNow * v.nb));
-    if (!train) v.toNext = Tb;
     // the block in pieces between the bunches' arrivals
     int i0 = 0;
     while (i0 < n) {
@@ -224,6 +223,10 @@ void CavityBellsEngine::process(float *L, float *R, int n) {
       v.toNext -= i1 - i0;
       i0 = i1;
     }
+    // with no train the oscillator's buckets still pass, every Tb from the strike on, so pressure
+    // (or the beam current) starts a train in step with the field the strike left, as a train
+    // from the strike would be; the next bucket, within Tb (a train never starts a bunch overdue)
+    if (!train && v.toNext < 0) v.toNext = std::max(0.0, Tb + std::fmod(v.toNext, Tb));
     if (!train && energy < (v.damped || v.stolen ? std::max(SILENT_DAMPED, v.silent) : v.silent)) v.charge = 0; // finished
   }
   if (focus >= 0 && (sinceReport += n) >= fs / REPORT_HZ) {

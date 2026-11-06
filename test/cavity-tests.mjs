@@ -277,6 +277,25 @@ test('key pressure adds beam current', () => {
   note(60, params, 3, 0.6, [[0.01, (e) => e.handle({ type: 'pressure', value: 1, key: 60 })]], (m) => { if (m.type === 'cells') b = m; });
   assert.ok(b.peak > 3 * a.peak, `pressed ${b.peak.toFixed(3)} vs ${a.peak.toFixed(3)}`);
 });
+// (a held key's train used to start with its first bunch long overdue when pressure, or the Beam
+// current knob, started it after the strike: on keys whose bunches come less than a block apart,
+// G6 and up at the default spacing, that wrote before the output and crashed the WebAssembly)
+test('key pressure starts the train on the high keys too: every key from G6 up, pressed after the strike, plays on', () => {
+  const params = P({ ...QUIET, current: 0 });
+  for (const key of [91, 96, 100, 104, 108]) {
+    let a = null, b = null;
+    note(key, params, 0.5, 0.6, [], (m) => { if (m.type === 'cells') a = m; });
+    const [L, R, e] = note(key, params, 0.5, 0.6, [[0.01, (e) => e.handle({ type: 'pressure', value: 1, key })]], (m) => { if (m.type === 'cells') b = m; });
+    assert.ok(L.every(Number.isFinite) && R.every(Number.isFinite), `key ${key}: not finite`);
+    assert.ok(b.peak > 3 * a.peak, `key ${key}: pressed ${b.peak.toFixed(3)} vs ${a.peak.toFixed(3)}`);
+    assert.equal(e.voiceCount(), 1, `key ${key}`);
+  }
+  // and the train keeps step with the strike's field, as the master oscillator's buckets do, so
+  // the build-up does not hang on the block the pressure arrives in
+  const built = (t) => { let b = null; note(60, params, 1, 0.6, [[t, (e) => e.handle({ type: 'pressure', value: 1, key: 60 })]], (m) => { if (m.type === 'cells') b = m; }); return b.peak; };
+  const peaks = [0.1, 0.1027, 0.1053, 0.108].map(built), lo = Math.min(...peaks), hi = Math.max(...peaks);
+  assert.ok(hi < 1.05 * lo, `peaks ${peaks.map((x) => x.toFixed(3))}`);
+});
 test('Lorentz detuning: a hard strike starts flat by K·E² and rises to pitch', () => {
   const params = P({ lorentz: 30, mech: 80, offset: 0, qhom: 1e6 }), key = 69, f = keyFreq(key);
   const [L] = note(key, params, 3, 1), W = 8192;
