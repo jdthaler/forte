@@ -43,7 +43,10 @@ void Limiter::process(float *L, float *R, int n) {
     const double x = std::max(std::fabs((double)L[i]), std::fabs((double)R[i]));
     const double target = x > linearThreshold ? curve(x) / x : 1;
     gain += (target - gain) * (target < gain ? attackCoef : releaseCoef);
-    const double g = gain * makeup;
+    ceiling += (1 - ceiling) * releaseCoef;
+    const double y = x * gain * makeup;
+    if (y * ceiling > kCeiling) ceiling = kCeiling / y;
+    const double g = gain * makeup * ceiling;
     L[i] = (float)(L[i] * g);
     R[i] = (float)(R[i] * g);
   }
