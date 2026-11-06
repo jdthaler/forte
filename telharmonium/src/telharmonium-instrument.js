@@ -20,7 +20,8 @@ export const INSTRUMENT = {
   // MPE: every alternator on a shaft turns with the motor, so no note bends alone (pitch bend turns
   // the motor's field rheostat: the whole machine); the swell is every key's (no slide); a note's
   // pressure presses its own key further in
-  mpe: { bend: 0, slide: false },
+  mpe: { bend: 2, slide: false },
+  glide: 'the shafts\' speed: the newest note\'s bend, through the flywheel', // what a note's own bend does
   aftertouch: 'presses the key further in: louder', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'how fast the relay opens: a slow lift parts its contacts gently, a softer click; a fast one sharply', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['m1', 'm3', 'm5', 'distance', 'swell'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

@@ -53,6 +53,7 @@ class CellulophoneEngine : public Engine {
   void pressure(double value, int key) override;
   void bend(double value) override;
   void slide(double value, int key) override;
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the newest key's: the motor's speed
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -82,7 +83,8 @@ class CellulophoneEngine : public Engine {
   int screen = 1, cell = 0, speaker = 0;
   double drive = 0.15;
   double bendCents = 0, bendNow = 0;
-  NoteExpression expr{0};
+  NoteExpression expr{kBendSemitones}; // each key's own push (slide) and bend: the newest held key's sets the motor's speed
+  NewestKey newest;
   std::array<Voice, kKeys> voices;
   int64_t t = 0;
   // the selenium cells: each octave's fast and slow parts

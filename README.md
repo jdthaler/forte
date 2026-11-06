@@ -191,7 +191,10 @@ or a clamp tightened on the Chladni Plate (a semitone sharp), a hand on the
 Steel Pan's rim (a quarter tone), a hand or finger on the Celesta, Gamelan,
 Cristal Baschet, Clavicylinder and Gong Keyboard (a few cents), the
 Carillon's and Tubular Bells' swing (a Doppler shift), and a hand
-stretching the Spring Keyboard's coil (two semitones).
+stretching the Spring Keyboard's coil (two semitones). The Tonewheel
+Organ, Telharmonium and Cellulophone have one motor that turns every note:
+Glide moves its speed (two semitones either way) from the newest held
+note, and the others follow it.
 
 **The RISE's panel:** while a Seaboard is plugged in, each page draws it at
 the left: its faders and pad with the controls they move and where they are,

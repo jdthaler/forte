@@ -76,6 +76,7 @@
         "leslie": "bypass",
         "motor": true,
         "strikeOn": true,
+        "glideOn": true,
         "liftOn": true
       }
     }

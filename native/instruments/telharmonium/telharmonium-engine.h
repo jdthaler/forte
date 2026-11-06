@@ -25,6 +25,7 @@
 
 #include "forte/convolver.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "forte/lift.h"
 #include "forte/tuning.h"
 #include "telharmonium-model.h"
@@ -79,6 +80,7 @@ class TelharmoniumEngine : public Engine {
   void allNotesOff() override;
   void pressure(double value, int key) override;
   void bend(double value) override;
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the newest key's: the shafts' speed
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -122,6 +124,8 @@ class TelharmoniumEngine : public Engine {
   int split = 60;
   bool eight = false, pierce = false;
   double speed = 1, bendCents = 0, droop = 0, flywheel = 3;
+  forte::NoteExpression expr{kBendSemitones}; // each key's own bend (MPE): the newest held key's sets the motor's rheostat
+  forte::NewestKey newest;
   double swell = 1, swellNow = 1;
   int64_t t = 0;
   // the output chain, per manual
