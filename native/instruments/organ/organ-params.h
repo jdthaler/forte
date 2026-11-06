@@ -17,7 +17,7 @@
 namespace forte::organ {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { tuning, mains, inertia, spinUp, levels, relief, drift, crosstalk, leakage, loading, spread, bounce, contactTime, percFastTau, percSlowTau, percLevel, sections, sectionDelay, scanRate, hornSlow, hornFast, drumSlow, drumFast, hornAccel, hornDecel, drumAccel, drumDecel, hornRadius, micDist, micSpread, crossover, balance, reflections, drive, expression, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, drawbar1, drawbar2, drawbar3, drawbar4, drawbar5, drawbar6, drawbar7, drawbar8, drawbar9, percOn, percSoft, percFast, percThird, vib, leslie, motor, strikeOn, glideOn, liftOn, count };
+enum : int { tuning, mains, inertia, spinUp, levels, relief, drift, crosstalk, leakage, loading, spread, bounce, contactTime, travel, percFastTau, percSlowTau, percLevel, sections, sectionDelay, scanRate, hornSlow, hornFast, drumSlow, drumFast, hornAccel, hornDecel, drumAccel, drumDecel, hornRadius, micDist, micSpread, crossover, balance, reflections, drive, expression, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, drawbar1, drawbar2, drawbar3, drawbar4, drawbar5, drawbar6, drawbar7, drawbar8, drawbar9, percOn, percSoft, percFast, percThird, vib, leslie, motor, strikeOn, glideOn, slideOn, pressOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -38,6 +38,7 @@ inline const FormatSegment kFormat_loading[] = {{kNoLimit, "", "", 1, 0, 2, fals
 inline const FormatSegment kFormat_spread[] = {{kNoLimit, "", " ms", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_bounce[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_contactTime[] = {{kNoLimit, "", " µs", 1, 0, 0, false, false, false, false}};
+inline const FormatSegment kFormat_travel[] = {{kNoLimit, "", " of 9 contacts", 8.998248128682903, 0.007007485268360057, 0, false, false, false, false}};
 inline const FormatSegment kFormat_percFastTau[] = {{kNoLimit, "", " s", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_percSlowTau[] = {{kNoLimit, "", " s", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_percLevel[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
@@ -113,6 +114,7 @@ inline const ParamInfo kParams[p::count] = {
   {"spread", "Contact timing spread", "Key contacts", ParamKind::continuous, 0, 6, 1.2, 0.05, false, false, nullptr, 0, kFormat_spread, 1},
   {"bounce", "Contact bounce", "Key contacts", ParamKind::continuous, 0, 2, 0.5, 0.01, false, false, nullptr, 0, kFormat_bounce, 1},
   {"contactTime", "Contact softness", "Key contacts", ParamKind::continuous, 0, 3000, 20, 1, false, false, nullptr, 0, kFormat_contactTime, 1},
+  {"travel", "Key travel: how far it goes down", "Key contacts", ParamKind::continuous, 0.1, 1, 1, 0.01, false, false, nullptr, 0, kFormat_travel, 1},
   {"percFastTau", "Fast decay τ", "Percussion", ParamKind::continuous, 0.03, 0.6, 0.15, 0, true, false, nullptr, 0, kFormat_percFastTau, 1},
   {"percSlowTau", "Slow decay τ", "Percussion", ParamKind::continuous, 0.2, 3, 0.6, 0, true, false, nullptr, 0, kFormat_percSlowTau, 1},
   {"percLevel", "Percussion level", "Percussion", ParamKind::continuous, 0, 2.5, 1, 0.01, false, false, nullptr, 0, kFormat_percLevel, 1},
@@ -170,6 +172,8 @@ inline const ParamInfo kParams[p::count] = {
   {"motor", "Motor", "Console", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"glideOn", "Glide: a note’s own pitch bend", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"pressOn", "Press: pressing into a held key", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
@@ -220,7 +224,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 18,
     .keyLo = 21, .keyHi = 108, .space = Space::none,
     .modWheel = -1, .modWheelMax = 0,
-    .slide = -1, .slideMax = 0,
+    .slide = p::travel, .slideMax = 0.5,
     .controllers = kControllers, .controllerCount = 8,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 1.8, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 2},
     .midiVelocity = midiVelocity, .create = create,

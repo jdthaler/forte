@@ -17,7 +17,7 @@
 namespace forte::telharmonium {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { shafts, intonation, top, tooth, voicing, droop, flywheel, keyTouch, split, tau, contact, robbing, a1, a2, a3, a4, a5, a6, a7, a8, m1, m2, m3, m4, m5, m6, m7, m8, cable, distance, receiver, magnet, horn, swell, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, pressOn, liftOn, count };
+enum : int { shafts, intonation, top, tooth, voicing, droop, flywheel, keyTouch, split, tau, contact, draws, robbing, a1, a2, a3, a4, a5, a6, a7, a8, m1, m2, m3, m4, m5, m6, m7, m8, cable, distance, receiver, magnet, horn, swell, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, pressOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -36,6 +36,7 @@ inline const FormatSegment kFormat_keyTouch[] = {{kNoLimit, "", " %", 100, 0, 0,
 inline const FormatSegment kFormat_split[] = {{kNoLimit, "", "", 1, 0, 0, false, false, false, true}};
 inline const FormatSegment kFormat_tau[] = {{kNoLimit, "", " ms", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_contact[] = {{0.049999999999999996, "instant", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " ms", 1, 0, 1, false, false, false, false}};
+inline const FormatSegment kFormat_draws[] = {{1.4999999999999998, "the ground tone alone", "", 1, 1, -1, false, false, false, false}, {2.4999999999999996, "the ", "nd (octave)", 1, 0, 0, false, false, false, false}, {3.4999999999999996, "the ", "rd (twelfth)", 1, 0, 0, false, false, false, false}, {4.499999999999999, "the ", "th (fifteenth)", 1, 0, 0, false, false, false, false}, {5.499999999999999, "the ", "th (seventeenth)", 1, 0, 0, false, false, false, false}, {6.499999999999999, "the ", "th (nineteenth)", 1, 0, 0, false, false, false, false}, {7.499999999999999, "the ", "th (flat twenty-first)", 1, 0, 0, false, false, false, false}, {kNoLimit, "the ", "th (twenty-second)", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_robbing[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_a1[] = {{0.49999999999999994, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " of 8", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_a2[] = {{0.49999999999999994, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " of 8", 1, 0, 0, false, false, false, false}};
@@ -99,6 +100,7 @@ inline const ParamInfo kParams[p::count] = {
   {"split", "Melody manual from", "Keys", ParamKind::continuous, 36, 96, 60, 1, false, false, nullptr, 0, kFormat_split, 1},
   {"tau", "Circuit time constant (L/R)", "Keys", ParamKind::continuous, 0.5, 40, 4, 0, true, false, nullptr, 0, kFormat_tau, 1},
   {"contact", "Relay contacts (closing time)", "Keys", ParamKind::continuous, 0, 20, 6, 0.1, false, false, nullptr, 0, kFormat_contact, 2},
+  {"draws", "Relay draws: harmonics up to", "Keys", ParamKind::continuous, 1, 8, 8, 1, false, false, nullptr, 0, kFormat_draws, 8},
   {"robbing", "Bus load (robbing)", "Keys", ParamKind::continuous, 0, 1, 0.15, 0.01, false, false, nullptr, 0, kFormat_robbing, 1},
   {"a1", "1st harmonic (ground tone)", "Manual I stops (accompaniment)", ParamKind::continuous, 0, 8, 8, 1, false, false, nullptr, 0, kFormat_a1, 2},
   {"a2", "2nd harmonic (octave)", "Manual I stops (accompaniment)", ParamKind::continuous, 0, 8, 5, 1, false, false, nullptr, 0, kFormat_a2, 2},
@@ -141,6 +143,7 @@ inline const ParamInfo kParams[p::count] = {
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
   {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"glideOn", "Glide: a note’s own pitch bend", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"pressOn", "Press: pressing into a held key", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
@@ -201,7 +204,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 18,
     .keyLo = 21, .keyHi = 108, .space = Space::hold,
     .modWheel = p::swell, .modWheelMax = 1,
-    .slide = p::swell, .slideMax = 1,
+    .slide = p::draws, .slideMax = 1,
     .controllers = kControllers, .controllerCount = 6,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = -4.5},
     .midiVelocity = midiVelocity, .create = create,
