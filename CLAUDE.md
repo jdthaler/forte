@@ -95,10 +95,14 @@ Read first:
    it at once; version numbers and new saved states don't count, so a
    release's pull request passes it at once too. Fix a failure at its
    root; never skip or weaken a test to get green.
-7. **Before the merge**, if `main` has moved since CI ran, merge it into
-   the branch and let CI run again, so what was checked is what lands
-   (two threads changing `shared/` can each pass alone and break
-   together).
+7. **Before the merge**, merge `main` into the branch and let CI run
+   again only when it conflicts, or when `main` has moved since CI ran
+   and both its new commits and the branch change `shared/` (two threads
+   changing `shared/` can each pass alone and break together). Otherwise
+   merge as it is: `main` doesn't require a branch to be up to date, CI
+   ran on the branch merged into `main` as it was, and `main`'s own run
+   after the merge checks the two together. When that run fails, the
+   thread whose merge broke it fixes it on a new branch at once.
 8. **Merge** with a merge commit (not squash or rebase) once CI is green
    on the pull request's latest commit and nothing conflicts, without
    waiting to be asked: merging into `main` publishes nothing, and the
