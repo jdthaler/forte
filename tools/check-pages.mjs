@@ -113,6 +113,9 @@ const WAV = (() => {
   b.writeUInt16LE(2, 32); b.writeUInt16LE(16, 34); b.write('data', 36); b.writeUInt32LE(2 * n, 40);
   return b;
 })();
+// How long a click may wait for its target to be ready: seconds, on a runner busy with eight pages.
+const CLICK = { timeout: 10_000 };
+
 // Listen on two cards in turn: each should say ■ Stop and play its own demo.
 async function listen(tab) {
   const out = [], buttons = tab.locator('button[data-src]');
@@ -120,7 +123,7 @@ async function listen(tab) {
     const b = buttons.nth(i);
     if (!(await b.count())) break;
     await b.scrollIntoViewIfNeeded();
-    await b.click({ timeout: 2000 });
+    await b.click(CLICK);
     // the first demo can take a moment to start on a busy machine
     await tab.waitForFunction(() => document.querySelector('#player').currentTime > 0, null, { timeout: 5000 }).catch(() => {});
     const s = await tab.evaluate(() => { const a = document.querySelector('#player'); return { src: a.src, paused: a.paused, t: a.currentTime }; });
@@ -148,7 +151,7 @@ async function toggles(tab, broken) {
       if (!(await b.isVisible())) { broken.push(`the "${name}" toggle is hidden`); continue; }
       for (const want of [true, false, true]) { // on (if it was off), off, and on again
         if ((await tab.evaluate(TOGGLES, row))[i] === want) continue;
-        await b.click({ timeout: 2000 }).catch(() => {});
+        await b.click(CLICK).catch(() => {});
         if ((await tab.evaluate(TOGGLES, row))[i] !== want || (await tab.evaluate(SHOWN, items))[i] !== want) broken.push(`the "${name}" toggle doesn't turn its ${what} ${want ? 'on' : 'off'}`);
       }
     }
@@ -168,13 +171,13 @@ async function remembered(tab) {
   const HEIGHTS = () => [document.querySelector('#views'), document.querySelector('#controls')].map((e) => e.offsetHeight);
   for (const [i, kind] of ['views', 'controls'].entries()) {
     const fold = tab.locator(`.forte-${kind}-bar .forte-fold`);
-    await fold.click({ timeout: 2000 }).catch(() => {});
+    await fold.click(CLICK).catch(() => {});
     await tab.waitForTimeout(150);
     const h = await tab.evaluate(HEIGHTS);
     if (h[i] !== 0 || !(h[1 - i] > 0)) out.push(`folding the ${kind} leaves them ${h[i]}px and the others ${h[1 - i]}px`);
     if (!(await tab.evaluate(SHOWN, ROWS[1 - i][1])).every(Boolean)) out.push(`the ${ROWS[1 - i][2]} turned on are not all shown with the ${kind} folded away`);
     if (await tab.evaluate(WIDE) > 0) out.push(`scrolls sideways with the ${kind} folded away`);
-    await fold.click({ timeout: 2000 }).catch(() => {});
+    await fold.click(CLICK).catch(() => {});
     await tab.waitForTimeout(150);
     if ((await tab.evaluate(HEIGHTS)).some((x) => !(x > 0))) out.push(`the ${kind}' fold button doesn't bring them back`);
   }
@@ -189,7 +192,7 @@ async function remembered(tab) {
     if (!(after[0] > before[0] + 30 && after[1] < before[1] - 30)) out.push(`dragging the handle 60px down takes the views from ${before[0]} to ${after[0]}px and the controls from ${before[1]} to ${after[1]}px`);
     await tab.mouse.move(x, y + 60); await tab.mouse.down(); await tab.mouse.move(x, y, { steps: 4 }); await tab.mouse.up();
   }
-  await tab.locator('.forte-mode button[data-mode="perform"]').click({ timeout: 2000 }).catch(() => {});
+  await tab.locator('.forte-mode button[data-mode="perform"]').click(CLICK).catch(() => {});
   await tab.waitForTimeout(250);
   if (!(await tab.evaluate(SHOWN, ROWS[0][1])).every(Boolean)) out.push('Perform does not show every view turned on');
   // and gives the views the controls' bar's room: the presets and More controls are in the keyboard bar
@@ -199,10 +202,10 @@ async function remembered(tab) {
   }));
   if (!tools.presets || tools.bar) out.push(`Perform: the presets are ${tools.presets ? '' : 'not '}in the keyboard bar, and the controls' bar is ${tools.bar ? 'still shown' : 'gone'}`);
   const more = tab.locator('.forte-kbbar .forte-fold');
-  await more.click({ timeout: 2000 }).catch(() => {});
+  await more.click(CLICK).catch(() => {});
   await tab.waitForTimeout(150);
   if (!((await tab.evaluate(HEIGHTS))[1] > 0)) out.push('Perform: More controls in the keyboard bar doesn\'t open the controls');
-  await more.click({ timeout: 2000 }).catch(() => {});
+  await more.click(CLICK).catch(() => {});
   return out;
 }
 
@@ -211,9 +214,9 @@ async function remembered(tab) {
 const CONTROLS = () => [...document.querySelectorAll('#controls [id^="p-"]')].map((e) => `${e.id}=${e.type === 'checkbox' ? e.checked : e.value}`).join(' ');
 async function guidedTour(tab) {
   const out = [];
-  await tab.locator('.forte-mode button[data-mode="discover"]').click({ timeout: 2000 }).catch(() => {});
+  await tab.locator('.forte-mode button[data-mode="discover"]').click(CLICK).catch(() => {});
   const before = await tab.evaluate(CONTROLS);
-  await tab.locator('.forte-tour-start').click({ timeout: 2000 });
+  await tab.locator('.forte-tour-start').click(CLICK);
   for (let i = 0; i < 12; i++) {
     await tab.waitForTimeout(400);
     const s = await tab.evaluate(() => ({
@@ -225,7 +228,7 @@ async function guidedTour(tab) {
     if (!s.card) { out.push(`the tour's card is not shown at step ${i + 1}`); break; }
     if (!s.views) out.push(`tour step "${s.title}" shows no view`);
     if (await tab.evaluate(WIDE) > 0) out.push(`scrolls sideways at tour step "${s.title}"`);
-    await tab.locator('.forte-tour-next').click({ timeout: 2000 });
+    await tab.locator('.forte-tour-next').click(CLICK);
     if (s.done) break;
   }
   await tab.waitForTimeout(300);
@@ -288,8 +291,8 @@ async function checkPage(browser, url, page, size) {
     const r = await Promise.race([view, hung]);
     if (r !== 'hung') return { ...r, ms: Math.round(performance.now() - t0) };
     view.catch(() => {}); // it fails once its context is closed below
-    const { errors, wide, broken } = at;
-    return { page: page || 'index', size: size.name, counts: null, errors: [...(errors ?? []), `timed out after ${VIEW_TIMEOUT / 1000} s while ${at.step}`],
+    const { errors, wide, broken } = at, where = await Promise.race([stuckIn(at, url), later(15_000).then(() => 'the page doesn\'t answer the debugger')]);
+    return { page: page || 'index', size: size.name, counts: null, errors: [...(errors ?? []), `timed out after ${VIEW_TIMEOUT / 1000} s while ${at.step} (${where})`],
       wide: [...(wide ?? [])], broken: [...(broken ?? [])], ms: Math.round(performance.now() - t0), timedOut: at.step };
   } finally {
     clearTimeout(timer);
@@ -298,12 +301,29 @@ async function checkPage(browser, url, page, size) {
   }
 }
 
+// Where a page that stopped answering is: the JavaScript it is running, paused by the debugger (which
+// interrupts even a loop that never ends; it has to be attached before), or that it runs none.
+async function stuckIn(at, url) {
+  if (!at.debug) return 'no page yet';
+  try {
+    const paused = new Promise((ok) => at.debug.once('Debugger.paused', ok));
+    await at.debug.send('Debugger.pause');
+    const p = await Promise.race([paused, later(5_000).then(() => null)]);
+    if (!p) return 'running no JavaScript';
+    return `running ${p.callFrames.slice(0, 5).map((f) => `${f.functionName || '(anonymous)'} ${(f.url || at.scripts.get(f.location.scriptId) || '').replace(url, '')}:${f.location.lineNumber + 1}`).join(' < ')}`;
+  } catch (e) { return `the debugger: ${e.message.split('\n')[0]}`; }
+}
+
 async function viewPage(browser, url, page, size, at) {
   const { name, ios, ...device } = size;
   const ctx = at.ctx = await browser.newContext({ ...device, deviceScaleFactor: 1 });
   if (ios) await ctx.addInitScript(() => { delete Navigator.prototype.requestMIDIAccess; });
   if (name === 'desktop') await ctx.addInitScript(WAKE_LOCK);
   const tab = await ctx.newPage();
+  at.debug = await ctx.newCDPSession(tab); // for stuckIn()
+  at.scripts = new Map();
+  at.debug.on('Debugger.scriptParsed', (e) => at.scripts.set(e.scriptId, e.url));
+  await at.debug.send('Debugger.enable');
   await tab.route('**/*.m4a', async (route) => {
     const res = await route.fetch();
     await route.fulfill(res.ok() ? { status: 200, contentType: 'audio/wav', body: WAV } : { response: res });
@@ -316,7 +336,7 @@ async function viewPage(browser, url, page, size, at) {
   const sideways = async (state) => { const w = await tab.evaluate(WIDE); if (w > 0) wide.push(`${state} (+${w}px)`); };
   const click = async (sel) => {
     const el = tab.locator(sel).first();
-    if (await el.isVisible().catch(() => false)) { await el.click({ timeout: 2000 }).catch(() => {}); await tab.waitForTimeout(250); return true; }
+    if (await el.isVisible().catch(() => false)) { await el.click(CLICK).catch(() => {}); await tab.waitForTimeout(250); return true; }
     return false;
   };
   try {
@@ -330,8 +350,9 @@ async function viewPage(browser, url, page, size, at) {
     if (name === 'desktop' || name === 'phone') broken.push(...await accessible(ctx, tab));
     step('playing Listen');
     if (!page) broken.push(...await listen(tab));
-    step('opening the menu and Controls');
-    if (await click('details.forte-switch > summary')) { await sideways('menu open'); await click('details.forte-switch > summary'); }
+    step('opening the instrument menu');
+    if (await click('details.forte-switch > summary')) { step('measuring the open menu'); await sideways('menu open'); step('closing the menu'); await click('details.forte-switch > summary'); }
+    step('opening Controls');
     if (await click('.forte-more')) { await sideways('Controls open'); await tab.keyboard.press('Escape'); await click('.forte-more'); }
     step('turning the views and controls off and on');
     if (await toggles(tab, broken)) { await tab.waitForTimeout(250); await sideways('every view on'); }
@@ -384,10 +405,19 @@ async function run(root, label) {
   const { server, url } = await serve(root);
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   const jobs = PAGES.flatMap((p) => SIZES.map((s) => [p, s]));
-  const out = [];
+  const out = [], hung = [];
   const width = Math.min(jobs.length, Math.max(4, availableParallelism() * 2));
+  // A view that hangs is opened once more, in a new context: on GitHub's runners about one view in
+  // 400 stops answering at a step as plain as opening the instrument menu, a different page each run,
+  // and none has in thousands of views elsewhere with the same Chromium. A page that hangs twice
+  // fails; either way the hang is listed, with what the page was running.
   await Promise.all(Array.from({ length: width }, async () => {
-    while (jobs.length) { const [p, s] = jobs.shift(); out.push(await checkPage(browser, url, p, s)); }
+    while (jobs.length) {
+      const [p, s] = jobs.shift();
+      let r = await checkPage(browser, url, p, s);
+      if (r.timedOut) { hung.push(r); r = await checkPage(browser, url, p, s); }
+      out.push(r);
+    }
   }));
   // (a context left open by a view that hung can keep the browser from closing)
   await Promise.race([browser.close().catch(() => {}), later(30_000)]);
@@ -396,7 +426,7 @@ async function run(root, label) {
   out.sort((a, b) => key(a).localeCompare(key(b)));
   const slowest = out.reduce((a, b) => (b.ms > a.ms ? b : a));
   if (label) console.log(`${label}: ${out.length} page views`);
-  for (const r of out.filter((r) => r.timedOut)) console.log(`HUNG  ${r.page} ${r.size}${label ? ` (${label.trim()})` : ''}: timed out after ${VIEW_TIMEOUT / 1000} s while ${r.timedOut}`);
+  for (const r of hung) console.log(`HUNG  ${r.page} ${r.size}${label ? ` (${label.trim()})` : ''}: ${r.errors.at(-1)}; ${out.find((o) => o.page === r.page && o.size === r.size).timedOut ? 'hung again' : 'passed when opened again'}`);
   console.log(`  the slowest page view took ${(slowest.ms / 1000).toFixed(0)} s (${slowest.page} ${slowest.size})`);
   return out;
 }
