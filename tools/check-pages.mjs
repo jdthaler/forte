@@ -17,7 +17,7 @@
 //
 // Usage: node tools/check-pages.mjs [--base <git ref>] [--base-json <files>] [--json <file>]
 //                                    [--shard k/n] [filter]
-//   filter       only the pages whose path contains it (gongs, index, credits, template)
+//   filter       only the pages whose path contains it (gongs, index, credits, combine, template)
 //   --base main  also open the same pages from <ref> (a git worktree, served on a second port)
 //                and list every count that differs: what a change meant to leave alone shouldn't
 //   --base-json a.json,b.json
@@ -56,7 +56,7 @@ async function playwright() {
 }
 const { chromium, devices } = await playwright();
 
-const PAGES = ['', 'credits/', 'docs/template/', ...INSTRUMENTS.filter((i) => i.ready).map((i) => `${i.id}/`)]
+const PAGES = ['', 'credits/', 'combine/', 'docs/template/', ...INSTRUMENTS.filter((i) => i.ready).map((i) => `${i.id}/`)]
   .filter((p) => (p || 'index').includes(filter))
   .filter((_, i) => i % shardN === shardK - 1);
 
@@ -416,12 +416,13 @@ async function viewPage(browser, url, page, size, at) {
   }
 }
 
-// The checks: what every instrument page must have, whatever else a change does to it.
-function failures(r, instrument) {
+// The checks: what every instrument page must have, whatever else a change does to it, and the
+// Combinations page the same but a tour.
+function failures(r, instrument, combine = false) {
   const f = [...r.errors.map((e) => `error: ${e}`), ...r.wide.map((w) => `scrolls sideways: ${w}`), ...r.broken];
   const c = r.counts;
   if (c && r.page === 'index' && c.listen !== LISTEN) f.push(`${c.listen} Listen buttons, not ${LISTEN} (one for each instrument with a demo)`);
-  if (!c || !instrument) return f;
+  if (!c || !(instrument || combine)) return f;
   if (!c.keys) f.push('no keys');
   if (!c.info) f.push('no ⓘ buttons');
   if (!c.defaultSettings) f.push('no "Default settings" among the presets');
@@ -430,7 +431,7 @@ function failures(r, instrument) {
   if (!c.mode) f.push('no Discover | Perform in the views\' bar');
   if (!c.barPresets) f.push('no presets in the controls\' bar');
   if (!c.quality) f.push('no Quality choice in the header');
-  if (!c.tour) f.push('no Tour in the header (a guided tour: shared/tour.js)');
+  if (!c.tour && !combine) f.push('no Tour in the header (a guided tour: shared/tour.js)');
   if (!c.songs) f.push('no ♪ Songs in the header (shared/songs.js)');
   return f;
 }
@@ -470,7 +471,7 @@ const results = await run(ROOT);
 let failed = 0;
 for (const r of results) {
   const instrument = INSTRUMENTS.some((i) => `${i.id}/` === r.page) || r.page === 'docs/template/';
-  const f = failures(r, instrument);
+  const f = failures(r, instrument, r.page === 'combine/');
   if (f.length) { failed++; console.log(`FAIL  ${r.page} ${r.size}`); for (const l of f.slice(0, 8)) console.log(`      ${l}`); }
 }
 console.log(`${results.length - failed}/${results.length} page views passed (${PAGES.length} pages × ${SIZES.length} sizes${shardN > 1 ? `, shard ${shardK}/${shardN}` : ''}) in ${((performance.now() - t0) / 1000).toFixed(0)} s`);

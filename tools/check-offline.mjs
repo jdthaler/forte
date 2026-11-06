@@ -23,7 +23,7 @@ import { offlineFiles, withFiles, hashOf } from './offline.mjs';
 const filter = process.argv[2] || '';
 const ROOT = resolve(new URL('..', import.meta.url).pathname);
 const TO = `${INSTRUMENTS.find((i) => i.ready).id}/`; // the page the release test moves to
-const PAGES = ['', 'credits/', ...INSTRUMENTS.filter((i) => i.ready && i.id.includes(filter)).map((i) => `${i.id}/`)];
+const PAGES = ['', 'credits/', 'combine/', ...INSTRUMENTS.filter((i) => i.ready && i.id.includes(filter)).map((i) => `${i.id}/`)];
 
 async function playwright() {
   try { return await import('playwright'); } catch { /* not local: try the global install */ }

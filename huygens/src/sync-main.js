@@ -10,7 +10,7 @@ import { wasmModel } from './huygens-wasm.js';
 import { SpectrumView, SpectrogramView, animate } from '../../shared/views.js';
 import { StairView, RasterView } from './sync-viz.js';
 import { FiringLog } from './lock-analysis.js';
-import { paramsStore } from '../../shared/layer.js';
+import { paramsStore } from '../../shared/registry.js';
 
 const $ = (s) => document.querySelector(s);
 const log = new FiringLog(3); // the last 3 s of every sounding lamp's firings

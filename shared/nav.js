@@ -34,6 +34,13 @@ for (const slot of document.querySelectorAll('[data-forte-nav]')) {
   home.href = root;
   home.innerHTML = '<b>Forte</b><span>All instruments, and about the project</span>';
   menu.appendChild(home);
+  // the page that plays several of them at once
+  const combine = document.createElement('a');
+  combine.className = `forte-menu-home forte-menu-combine${here === 'combine' ? ' current' : ''}`;
+  combine.href = `${root}combine/`;
+  if (here === 'combine') combine.setAttribute('aria-current', 'page');
+  combine.innerHTML = '<b>Combinations</b><span>Several instruments at once: layered, or split across the keys</span>';
+  menu.appendChild(combine);
   for (const sec of SECTIONS) {
     const h = document.createElement('div');
     h.className = 'forte-menu-sec';

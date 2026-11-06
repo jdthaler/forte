@@ -11,7 +11,7 @@ import { MotionView, SpectrumView, drawSection, FAMILY } from './viz.js';
 import { SpectrogramView } from '../../shared/views.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
 import { unfocus } from '../../shared/focus.js';
-import { paramsStore } from '../../shared/layer.js';
+import { paramsStore } from '../../shared/registry.js';
 
 const $ = (s) => document.querySelector(s);
 const [KEY_LO, KEY_HI] = INSTRUMENT.range;

@@ -14,7 +14,6 @@
 
 import { parseMIDI, playable, fit, transpose } from './midifile.js';
 import { createInput, pageMIDI } from './midi.js';
-import { midiTap } from './taps.js';
 import { tourLayout } from './layout.js';
 import { inPlugin } from './in-plugin.js';
 
@@ -48,7 +47,8 @@ function mount() {
   card.setAttribute('aria-labelledby', 'forte-songs-title');
   card.hidden = true;
   const head = el('div', 'forte-songs-head');
-  const kicker = el('span', 'forte-songs-kicker', `Songs · played live on the ${instrument}`);
+  // (a page of several instruments names them itself: data-songs-on)
+  const kicker = el('span', 'forte-songs-kicker', `Songs · played live on ${document.body.dataset.songsOn ?? `the ${instrument}`}`);
   const fold = btn('', 'Fold the songs away to see the views', 'forte-songs-fold');
   fold.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 6 8 10.5 12.5 6"/></svg>';
   fold.setAttribute('aria-expanded', 'true');
@@ -152,8 +152,7 @@ function mount() {
     $('#start')?.click();
     for (let i = 0; i < 80 && !tourLayout.audio(); i++) await new Promise((r) => setTimeout(r, 100));
     if (!playing) return;
-    // as a device's: a second instrument (shared/layer.js) takes its share first
-    input = createInput((data) => { if (midiTap(data)) page.onMIDI({ data }); }, page.controllers);
+    input = createInput((data) => page.onMIDI({ data }), page.controllers);
     if (pos >= song.duration) pos = 0;
     t0 = performance.now() - (pos / rate) * 1000;
     next = song.events.findIndex((e) => e.t >= pos);

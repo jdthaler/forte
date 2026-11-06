@@ -42,7 +42,6 @@
 
 import { unfocus } from './focus.js';
 import { MODES, createMpe, bendRatio } from './mpe.js';
-import { midiTap } from './taps.js';
 
 const KEY = 'forte/midi/v1';
 const TOUCH_KEY = 'forte/touch/v1';
@@ -159,7 +158,7 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
   navigator.requestMIDIAccess().then((acc) => {
     try { localStorage.setItem(KEY, '1'); } catch { /* storage blocked */ }
     const inputs = new Map(); // input id → its createInput
-    const send = (data) => { if (midiTap(data)) onMIDI({ data }); }; // a second instrument (shared/layer.js) takes its share first
+    const send = (data) => onMIDI({ data });
     const letGo = (id) => { inputs.get(id)?.letGo(); inputs.delete(id); };
     // a device's keys follow Octave and Transpose (shift)
     const input = (id) => { let i = inputs.get(id); if (!i) inputs.set(id, (i = createInput(send, controllers, { shift: true }))); return i; };
