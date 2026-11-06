@@ -31,6 +31,23 @@ struct Presses {
   }
   // how hard key k is pressed: its own pressure or the channel's, whichever is the more
   double of(int k) const { const double v = k >= 0 && k < 128 ? key[k] : 0; return v > channel ? v : channel; }
+  void reset(int k) { if (k >= 0 && k < 128) key[k] = 0; } // a new note's own pressure starts at none
+  void clear() { key.fill(0); channel = 0; }
+};
+
+// The note's own pressure as it comes (no threshold), for the engines whose Press shapes a held
+// note rather than damping it (a louder beam, a stronger field): each key's and the channel's
+// (key −1), the larger counting. With nothing pressed of() is exactly 0.
+struct Pressures {
+  std::array<double, 128> key{};
+  double channel = 0;
+  void set(double value, int k) {
+    const double v = value > 0 ? (value < 1 ? value : 1) : 0; // (NaN: none)
+    if (k < 0) channel = v;
+    else if (k < 128) key[k] = v;
+  }
+  double of(int k) const { const double v = k >= 0 && k < 128 ? key[k] : 0; return v > channel ? v : channel; }
+  void reset(int k) { if (k >= 0 && k < 128) key[k] = 0; } // a new note's own pressure starts at none
   void clear() { key.fill(0); channel = 0; }
 };
 

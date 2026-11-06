@@ -18,6 +18,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: the notes keep sounding after the keys are up
   modWheel: 'tilt',                     // CC1: the primordial spectrum's tilt
   mpe: { bend: 2 },                     // MPE: a note's own bend is its plasma's sound speed
+  aftertouch: 'its primordial amplitude, up to twice: every wave larger', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   glide: 'the plasma\'s sound speed: every acoustic wave faster or slower', // what a note's own bend does
   faders: ['darkMatter', 'recombination', 'neutrinos', 'baryons', 'tilt'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/universe), built as WebAssembly

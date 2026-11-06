@@ -177,7 +177,7 @@ void HydrogenEngine::retune(Voice &v, double b) {
 // Each line's width (Hz) in the sound: its levels' decay in slow motion, and the atoms' Doppler
 // shifts and the ions' Stark fields in proportion to its frequency.
 void HydrogenEngine::widths(Voice &v) {
-  const double d = expr.slideOr(v.key, P[p::density]);
+  const double d = expr.slideOr(v.key, P[p::density]) * v.current; // more current, more ions: their Stark fields broaden the lines
   if (d == v.density) return;
   v.density = d;
   const Gas &a = *glows[v.glow].gas;
@@ -218,7 +218,7 @@ void HydrogenEngine::noteOn(int key, double velocity) {
   if (oldest && on >= pick(kMaxVoices, 16, 8)) { oldest->active = false; if (!slot) slot = oldest; }
   if (!slot) return;
   Voice &v = *slot;
-  v.active = true; v.held = true; v.lit = true;
+  v.active = true; v.held = true; v.lit = true; v.current = 1; press.reset(key);
   v.key = key; v.age = clock++; v.glow = live;
   v.t = 0; v.tOff = -1; v.shut = 1; v.liftK = 1;
   v.bendNow = wheel * expr.bendOf(key);
@@ -247,6 +247,9 @@ void HydrogenEngine::update(Voice &v) {
   v.t += SUB / fs / P[p::slowmo];
   const double b = glideTo(v.bendNow, wheel * expr.bendOf(v.key), SUB / fs, BEND_T);
   if (b != v.bendNow) { v.bendNow = b; retune(v, b); v.density = -1; }
+  // Press: the lamp's discharge current, up to four times: as many more excitations (each line's
+  // power with it) and ions
+  v.current = glideTo(v.current, 1 + 3 * press.of(v.key), SUB / fs, PRESS_GLIDE);
   widths(v);
   const double nyq = 0.48 * fs;
   // each grid's row now, since the key and since its release (the slow ladder's clock runs
@@ -261,7 +264,7 @@ void HydrogenEngine::update(Voice &v) {
     const double S = g.powerAtRow(o.kept, on[o.clock]) - g.powerAtRow(o.kept, off[o.clock]);
     const double Pw = std::max(0.0, S) * o.weight * o.win;
     sum += Pw;
-    const double amp = v.fKey * o.ratio * b < nyq ? v.gain * v.shut * std::sqrt(Pw) : 0;
+    const double amp = v.fKey * o.ratio * b < nyq ? v.gain * v.shut * std::sqrt(Pw * v.current) : 0;
     const double s = std::sqrt(std::max(0.0, 1 - o.rho * o.rho) / 2);
     o.ar = o.rho * o.ar + s * rng.gauss();
     o.ai = o.rho * o.ai + s * rng.gauss();

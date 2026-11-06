@@ -27,7 +27,8 @@ const P = (o = {}) => ({ ...DEFAULTS, noise: -100, ...o });
 const TAU = 2 * Math.PI;
 
 // Play a script through the engine in 128-sample blocks, as the AudioWorklet does: events
-// [{ at (s), on: key, vel } | { at, off: key } | { at, pedal: bool } | { at, bend }], for sec seconds.
+// [{ at (s), on: key, vel } | { at, off: key } | { at, pedal: bool } | { at, bend } | { at, press, key }],
+// for sec seconds.
 function play(params, events, sec, { quality, engine } = {}) {
   const e = engine ?? new NmrEngine(FS);
   if (quality) e.setQuality(quality);
@@ -42,6 +43,7 @@ function play(params, events, sec, { quality, engine } = {}) {
       if (x.off !== undefined) e.noteOff(x.off);
       if (x.pedal !== undefined) e.setSustain(x.pedal);
       if (x.bend !== undefined) e.handle?.({ type: 'bend', value: x.bend });
+      if (x.press !== undefined) e.handle({ type: 'pressure', key: x.key ?? -1, value: x.press });
     }
     e.process(bL, bR, bl);
     const m = Math.min(bl, n - s);
@@ -210,6 +212,21 @@ test('an echo train (CPMG): with the pedal held, π pulses every echo time bring
     assert.ok(Math.abs(got / want - 1) < 0.04, `echo ${n} at ${t.toFixed(2)} s: ${got.toFixed(4)} vs ${want.toFixed(4)}`);
   }
   assert.ok(r.e.pulses >= 5);
+});
+test('Press: a firm press into a held key runs its own echo train, π pulses on its sample alone every echo time, up to four times as often; a resting finger none', () => {
+  const sp = onBlock(0.32), o = P({ sample: 'water', shim: 400, t2: 1, t1: 5, spacing: sp, acquire: 'ring' });
+  const run = (press, sec = 1) => play(o, [{ at: 0, on: 60 }, { at: 0, on: 64 }, ...(press === undefined ? [] : [{ at: 0.05, press, key: 60 }])], sec);
+  const plain = run(), resting = run(0.45), full = run(1), half = run(0.75);
+  assert.equal(plain.e.pulses, 0);
+  assert.equal(resting.e.pulses, 0, 'a finger at rest');
+  // at once, then every sp / (1 + 3x) over the 0.95 s left: x = 1 at full, ½ at 0.75
+  assert.ok(Math.abs(full.e.pulses - (1 + Math.floor(0.95 / (sp / 4)))) <= 1, `full: ${full.e.pulses}`);
+  assert.ok(Math.abs(half.e.pulses - (1 + Math.floor(0.95 / (sp / 2.5)))) <= 1, `half: ${half.e.pulses}`);
+  // its own sample's magnetisation turned over each time; the other key's left alone
+  assert.ok(Math.abs(full.e.mz(60) - plain.e.mz(60)) > 0.01, `key 60: ${full.e.mz(60)} vs ${plain.e.mz(60)}`);
+  assert.equal(full.e.mz(64), plain.e.mz(64), 'key 64');
+  // and the echoes keep the dephased note sounding, as the pedal's train does
+  assert.ok(envAt(full, 0.6) > 3 * envAt(plain, 0.6), `${envAt(full, 0.6)} vs ${envAt(plain, 0.6)}`);
 });
 test('diffusion in a gradient steals the echo: exp(−⅔ γ²G² D τ³), γG = 2πΔν/L (Hahn 1950; Carr and Purcell 1954)', () => {
   const shim = 2000, t2 = 20, key = 96, tau = onBlock(0.15), o = P({ sample: 'water', profile: 'gradient', shim, t2, t1: 30, acquire: 'ring' });

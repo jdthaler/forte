@@ -27,7 +27,7 @@ const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const TAU = 2 * Math.PI;
 
 // One note through the engine, in 128-sample blocks as in the AudioWorklet.
-function render(key, params, vel, sec, { quality, off, sustain, before } = {}) {
+function render(key, params, vel, sec, { quality, off, sustain, before, at = [] } = {}) {
   const e = new PlanetEngine(FS);
   if (quality) e.setQuality(quality);
   e.setParams(params);
@@ -37,6 +37,7 @@ function render(key, params, vel, sec, { quality, off, sustain, before } = {}) {
   const n = Math.round(sec * FS), L = new Float32Array(n), R = new Float32Array(n), bl = 128, bL = new Float32Array(bl), bR = new Float32Array(bl);
   for (let s = 0; s < n; s += bl) {
     if (off !== undefined && s === Math.round(off * FS / bl) * bl) e.noteOff(key);
+    for (const [t, fn] of at) if (s === Math.round(t * FS / bl) * bl) fn(e);
     e.process(bL, bR, bl); L.set(bL.subarray(0, Math.min(bl, n - s)), s); R.set(bR.subarray(0, Math.min(bl, n - s)), s);
   }
   return { L, R, e };
@@ -219,6 +220,20 @@ test('MPE: a note\'s bend speeds its own time-lapse (an octave up), and the whee
   const f = tunedFreq(P(), 48);
   const { L } = render(48, P({ spin: 0 }), 1, 1.4, { sustain: true, before: (e) => e.handle({ type: 'noteBend', key: 48, value: 2 }) });
   assert.ok(Math.abs(cents(peak(L, 2 * f, Math.round(0.2 * FS), Math.round(1.4 * FS)), 2 * f)) < 1);
+});
+test('Press: aftershocks. A firm press rings the planet again at once and every 0.4 s while held, the harder the larger (Båth: 1.2 magnitudes below the main shock at the lightest)', () => {
+  const press = (value) => [[1, (e) => e.handle({ type: 'pressure', key: 48, value })]];
+  const plain = render(48, P(), 0.8, 2.6), full = render(48, P(), 0.8, 2.6, { at: press(1) }), half = render(48, P(), 0.8, 2.6, { at: press(0.75) });
+  const resting = render(48, P(), 0.8, 2.6, { at: press(0.45) });
+  assert.deepEqual(resting.L, plain.L, 'a finger at rest');
+  const t = (s) => Math.round(s * FS), level = (x, a) => rms(x.L, t(a), t(a + 0.3));
+  assert.deepEqual(full.L.subarray(0, t(0.99)), plain.L.subarray(0, t(0.99)), 'nothing before the press');
+  assert.ok(level(full, 1) > 1.5 * level(plain, 1), `rung again: ${(level(full, 1) / level(plain, 1)).toFixed(2)}×`);
+  assert.ok(level(half, 1) > level(plain, 1) && level(half, 1) < level(full, 1), 'a lighter press, a smaller aftershock');
+  // and again while it stays pressed: each 0.4 s the ringing grows back
+  assert.ok(level(full, 2.2) > 1.5 * level(plain, 2.2), `still: ${(level(full, 2.2) / level(plain, 2.2)).toFixed(2)}×`);
+  const channel = render(48, P(), 0.8, 2.6, { at: [[1, (e) => e.handle({ type: 'pressure', key: -1, value: 1 })]] });
+  assert.deepEqual(channel.L, full.L, 'the channel\'s pressure as the key\'s');
 });
 test('Quality: Medium and Low play fewer modes, at the same pitch', () => {
   const n = (q) => { const { e } = render(60, P({ spin: 0 }), 1, 0.01, { quality: q }); return e.oscillators(0); };

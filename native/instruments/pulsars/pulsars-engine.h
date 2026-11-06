@@ -14,6 +14,7 @@
 #include "forte/engine.h"
 #include "forte/lift.h"
 #include "forte/expression.h"
+#include "forte/press.h"
 #include "pulsars-model.h"
 #include "pulsars-params.h"
 
@@ -32,6 +33,7 @@ class PulsarsEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void slide(double value, int key) override;
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // its binary orbit: a Doppler shift
+  void pressure(double value, int key) override { press.set(value, key); }   // its beam's brightness, up to twice
   void allNotesOff() override;
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
@@ -53,6 +55,7 @@ class PulsarsEngine : public Engine {
     Tables tab[2];
     bool held = true, stolen = false;
     double lg = 1, lgStep = 0;              // a lift's fade (forte/lift.h): the gain, and its step a sample
+    double br = 1;                          // its beam's brightness (Press: up to twice)
   };
   void fill(Voice &v, int which);            // (re)build one of the voice's tables from its setup
   void startXf(Voice &v);
@@ -60,6 +63,7 @@ class PulsarsEngine : public Engine {
   void run(Voice &v, float *L, float *R, int n);
   int freeSlot();
   std::array<double, p::count> P{};
+  Pressures press; // each key's pressure (MPE), and the channel's
   bool hasParams = false;
   NoteExpression expr{0.1}; // each key's DM (slide) and its Doppler factor (bend: ±10 ¢, an orbit at a few thousand km/s)
   Rng rng;

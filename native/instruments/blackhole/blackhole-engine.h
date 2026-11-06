@@ -21,6 +21,7 @@
 #include "forte/engine.h"
 #include "forte/lift.h"
 #include "forte/expression.h"
+#include "forte/press.h"
 
 namespace forte::blackhole {
 
@@ -70,6 +71,8 @@ class RingdownEngine : public Engine {
   void slide(double value, int key) override { expr.setSlide(value, key); }
   // a note's bend: the remnant's recoil, toward us or away: a Doppler shift of the whole wave
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
+  // a note's press: matter falling into its black hole, each clump ringing it again
+  void pressure(double value, int key) override { press.set(value, key); }
   int voiceCount() const override { return nv; }
   void process(float *L, float *R, int n) override;
 
@@ -92,6 +95,8 @@ class RingdownEngine : public Engine {
 
  private:
   Voice *slot();
+  void strike(int key, double velocity, bool ringOnly);
+  void clump(int key, double x);
   const KeyVoice &voiceFor(int key);
 
   Voice pool[kPool];
@@ -107,6 +112,9 @@ class RingdownEngine : public Engine {
   KeyVoice offer_;
   bool hasOffer = false;
   double struck[128] = {}; // each key's last velocity, for a fast lift's second merger (forte/lift.h)
+  forte::Presses press;
+  bool down[128] = {};      // each key held
+  double infall[128] = {};  // until the next clump falls in while it is pressed, s (Press)
   forte::NoteExpression expr{0.3}; // each key's slide (its spin) and bend (its recoil: ±30 ¢, a kick of about 5000 km/s)
   KeyVoice spun;                 // a key's voice at its slide's spin
   Angular spunAngular;           // and its angular functions (kept apart from the keys' own)

@@ -483,6 +483,29 @@ test('slide sweeps across the whole range, sent every block while chords are str
     assert.ok(pk > 0.01 && pk < 1.25 * top, `${fs} Hz, inspiral ${inspiral}: peak ${pk.toFixed(2)}, ${top.toFixed(2)} at the fastest spin`);
   }
 });
+test('Press: matter falling in. A firm press drops a clump into a held key\'s black hole at once and every 0.15 s; one whose ringing has died away rings anew, as its merger did, a third as loud at the firmest; a resting finger, or a key let go, nothing', () => {
+  const p = { ...DEFAULTS, inspiral: false }, s0 = 188 * 128, at = s0 / 48000, every = Math.ceil(0.15 * 48000 / 128) * 128;
+  const press = (key, value) => (e) => e.handle({ type: 'pressure', key, value });
+  const plain = ring(p, [[0, strike(57)]], 1.2), [L] = plain;
+  assert.ok(L.subarray(s0).every((v) => v === 0), 'the merger\'s ringing has died away');
+  const [F] = ring(p, [[0, strike(57)], [at, press(57, 1)], [0.9, (e) => e.noteOff(57)]], 1.2);
+  let peak = 0, err = 0;
+  for (let i = 0; i < every; i++) { peak = Math.max(peak, Math.abs(L[i])); err = Math.max(err, Math.abs(F[s0 + i] - L[i] / 3)); }
+  assert.ok(err < 1e-4 * peak, `the first clump: the merger's ringing at a third (off by ${(err / peak).toExponential(1)})`);
+  let next = 0; for (let i = 0; i < every; i++) next = Math.max(next, Math.abs(F[s0 + every + i]));
+  assert.ok(Math.abs(next / (peak / 3) - 1) < 0.02, `and the next, 0.15 s on: ${(next / peak).toFixed(4)}`); // (over the room's tail of the first)
+  assert.ok(F.subarray(Math.round(0.95 * 48000)).every((v) => v === 0), 'none once the key is let go');
+  const [H] = ring(p, [[0, strike(57)], [at, press(57, 0.75)]], 0.8);
+  let hp = 0; for (let i = s0; i < s0 + every; i++) hp = Math.max(hp, Math.abs(H[i]));
+  assert.ok(Math.abs(hp / (peak / 6) - 1) < 1e-3, `half as firm, half the clump: ${(hp / peak).toFixed(4)}`);
+  assert.ok(same(ring(p, [[0, strike(57)], [at, press(57, 0.45)]], 1.2), plain), 'a finger at rest');
+  assert.ok(same(ring(p, [[0, strike(57)], [0.2, (e) => e.noteOff(57)], [at, press(57, 1)]], 1.2), ring(p, [[0, strike(57)], [0.2, (e) => e.noteOff(57)]], 1.2)), 'a key let go');
+  const [C] = ring(p, [[0, strike(57)], [at, press(-1, 1)], [0.9, (e) => e.noteOff(57)]], 1.2);
+  assert.ok(C.every((v, i) => v === F[i]), 'the channel\'s pressure as the key\'s');
+  // with the inspiral, a press while it spirals in waits for the merger, and changes nothing before it
+  const q = { ...DEFAULTS, inspiral: true }, early = ring(q, [[0, strike(57)], [0.003, press(57, 1)]], 0.3), was = ring(q, [[0, strike(57)]], 0.3);
+  assert.ok(early[0].subarray(0, 4800).every((v, i) => v === was[0][i]), 'the inspiral as it was');
+});
 test('CPU: a strike with its own spin builds its black hole (the modes and their spheroidal harmonics) in well under a block', () => {
   const e = new RingdownEngine(48000); e.setParams({ ...DEFAULTS, retrograde: 1 });
   const t0 = performance.now();

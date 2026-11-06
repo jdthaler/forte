@@ -234,7 +234,11 @@ an Osmose) bends, slides and presses each note alone. `shared/mpe.js` and the pl
   keeps each key's and the channel's, counting only a press past half way (`PRESS_FROM`: a
   Seaboard sends some from a finger at rest) and the rest as none to full; each held note's
   `Press` glides there over 10 ms and adds its loss (`loss` weighs it by frequency, the upper
-  partials first). Unpressed, a note plays bit for bit as before.
+  partials first). Unpressed, a note plays bit for bit as before. An engine whose press shapes
+  a held note rather than damping it (a brighter beam, a stronger field, a deeper trap) keeps
+  `Pressures` instead, the pressure as it comes, and glides toward `1 + k·p` over `PRESS_GLIDE`;
+  one whose press sets something off (an echo train, aftershocks, matter falling in) uses
+  `Presses`, so a finger at rest fires nothing. Both `reset(key)` on a new note.
 
 Either may come before the key's `noteOn`: keep them per key (`forte/expression.h`
 `NoteExpression`) and start the note there; glide a sounding note toward them as the wheel

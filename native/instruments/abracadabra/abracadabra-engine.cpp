@@ -124,6 +124,7 @@ void AbracadabraEngine::noteOn(int key, double velocity) {
   Voice &v = voices[key - FIRST];
   KeyField &k = fields[key - FIRST];
   v.held = true; v.vel = std::clamp(velocity, 0.0, 1.0); v.order = ++order; v.liftK = 1;
+  press.reset(key);
   if (v.active) { v.closing = false; return; } // the magnet charges again from where it is
   // past kMaxVoices (fewer at Medium and Low Quality), the let-go voice with the least field (or
   // else the oldest) fades out
@@ -202,7 +203,10 @@ void AbracadabraEngine::play(Voice &v, float *L, float *R, int n) {
   v.bent = glideTo(v.bent, expr.bendOf(v.key), n / fs, BEND_T);
   const double w = TAU * f * v.bent / fs, cw = fdlibm::cos(w), sw = fdlibm::sin(w);
   const double relK = 1 - fdlibm::exp(-1 / (v.relT * fs));
-  const double amp = std::sqrt(2.0) * sig;
+  // Press: the key's own magnet charged further, up to twice the field: the axion's flux with it
+  // (the readout's gain stays the knob's, so the signal stands further above the SQUID's noise)
+  v.boost = glideTo(v.boost, 1 + press.of(v.key), n / fs, PRESS_GLIDE);
+  const double amp = std::sqrt(2.0) * sig * v.boost;
   const bool focused = v.key == focus;
   for (int i = 0; i < n; i++) {
     if (v.pos >= v.b) { step(v, k, s, fa); v.pos = 0; }

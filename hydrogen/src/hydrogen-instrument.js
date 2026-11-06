@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: the lamps stay lit after the keys come up
   modWheel: 'density',                  // CC1: the ions' density, which Stark-broadens the lines
   mpe: { bend: 48, slide: true },       // MPE: each lamp's own redshift, and with CC74 its own density
+  aftertouch: 'its discharge current, up to four times: brighter, broader lines', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'the afterglow when the discharge stops: a slow lift draws it out, a fast one cuts it short', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['shutter', 'glow', 'laserLevel', 'temperature', 'density'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/hydrogen), built as WebAssembly

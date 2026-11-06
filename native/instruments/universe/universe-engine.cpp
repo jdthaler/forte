@@ -139,6 +139,7 @@ void EarlyUniverseEngine::amplitudes(Voice &v, double *e, double *q) const {
 
 void EarlyUniverseEngine::noteOn(int key, double velocity) {
   if (!hasParams || key < 0 || key > 127) return;
+  press.reset(key);
   Data::Ref r = data.get(0, version);
   if (r) {
     if (r.entry != latest.entry) { data.acquire(r); data.release(latest); latest = r; }
@@ -218,7 +219,9 @@ void EarlyUniverseEngine::process(float *L, float *R, int n) {
     // the plasma's sound speed (a note's own bend): every wave faster or slower, those it takes past
     // the band's top silent
     if (const double to = expr.bendOf(v.key); v.bent != to) { v.bent = glideTo(v.bent, to, n / fs, BEND_T); retune(v); }
-    for (int m = 0; m < v.count; m++) w[m] = (m + 1) * v.f * v.bent < 0.48 * fs ? OUT * v.velocity * std::pow(m + 1.0, tilt) : 0;
+    // Press: a larger primordial amplitude, up to twice: every wave the larger with it (linear)
+    v.amp = glideTo(v.amp, 1 + press.of(v.key), n / fs, PRESS_GLIDE);
+    for (int m = 0; m < v.count; m++) w[m] = (m + 1) * v.f * v.bent < 0.48 * fs ? OUT * v.velocity * v.amp * std::pow(m + 1.0, tilt) : 0;
     for (int i0 = 0; i0 < n; i0 += BLOCK) {
       const int len = std::min(BLOCK, n - i0);
       // the clock: conformal time up to recombination, then (inside the plasma, or once let go)

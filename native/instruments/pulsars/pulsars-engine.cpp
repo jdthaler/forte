@@ -72,6 +72,7 @@ void PulsarsEngine::startXf(Voice &v) {
 
 void PulsarsEngine::noteOn(int key, double velocity) {
   if (!hasParams || key < FIRST || key > LAST) return;
+  press.reset(key);
   // the same key again: the pulsar switches back on, as it is
   for (Voice &x : voices) {
     if (x.key != key || x.stolen) continue;
@@ -160,6 +161,8 @@ void PulsarsEngine::run(Voice &v, float *L, float *R, int n) {
   const double m = P[p::jitter];
   // its binary orbit, toward us or away: the pulses come faster or slower (a note's own bend)
   v.bent = glideTo(v.bent, expr.bendOf(v.key), n * dt, BEND_T);
+  // Press: a brighter beam, up to twice as bright, gliding (a held pulsar's own pressure)
+  v.br = glideTo(v.br, 1 + press.of(v.key), n * dt, PRESS_GLIDE);
   const double inc = v.inc * v.bent;
   for (int i = 0; i < n; i++) {
     // the share of each sub-band the pulses reach: in from the top of the band as the pulsar
@@ -210,7 +213,7 @@ void PulsarsEngine::run(Voice &v, float *L, float *R, int n) {
     // the power less its long-run mean (the receiver's baseline): a bright pulse rises above it,
     // a faint one leaves a dip
     if (v.lgStep != 0) { v.lg += v.lgStep; if (v.lg <= 0) { v.lg = 0; v.lgStep = 0; if (v.tOff < 0) v.tOff = v.t; } }
-    const double g = OUT * v.vel * v.lg;
+    const double g = OUT * v.vel * v.lg * v.br;
     L[i] = (float)(L[i] + g * v.envL * (a * yl + (a - 1) * dl));
     R[i] = (float)(R[i] + g * v.envR * (a * yr + (a - 1) * dr));
     v.t += dt;
