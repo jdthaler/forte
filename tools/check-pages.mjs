@@ -254,15 +254,15 @@ async function guidedTour(tab) {
 const DOWN = () => document.querySelectorAll('#keyboard .down').length;
 async function songs(tab) {
   const out = [];
-  await tab.locator('.forte-songs-start').click({ timeout: 2000 });
+  await tab.locator('.forte-songs-start').click(CLICK);
   const song = tab.locator('.forte-songs-song').first();
   await song.waitFor({ timeout: 5000 }).catch(() => {});
   if (!(await song.count())) return ['Songs lists no songs'];
-  await song.click({ timeout: 2000 });
+  await song.click(CLICK);
   const played = await tab.waitForFunction(DOWN, null, { timeout: 6000 }).then(() => true, () => false);
   if (!played) out.push('a song from Songs plays no keys');
   if (await tab.evaluate(WIDE) > 0) out.push('scrolls sideways with Songs open');
-  await tab.locator('.forte-songs-close').click({ timeout: 2000 });
+  await tab.locator('.forte-songs-close').click(CLICK);
   await tab.waitForTimeout(300);
   if (await tab.locator('.forte-songs').isVisible().catch(() => false)) out.push('✕ doesn\'t close Songs');
   if (await tab.evaluate(DOWN)) out.push('closing Songs leaves keys down');
