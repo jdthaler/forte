@@ -15,7 +15,8 @@ export const INSTRUMENT = {
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                     // MIDI keys: all 88, A0–C8
   lift: 'a fast lift brushes the thumb back over the tine; with the tines damped on release, a slow lift lets the fingertip settle gently', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
-  mpe: { bend: 0, slide: { param: 'pluck', max: 0.5 } }, // MPE: a note's own slide moves the thumb from the tip towards the bridge, at the pluck
+  mpe: { bend: 1, way: 'up', slide: { param: 'pluck', max: 0.5 } }, // MPE: a note's own bend presses its tine on the bridge (up only, a semitone at most); its slide moves the thumb from the tip towards the bridge, at the pluck
+  glide: 'a fingernail pressing the tine on the bridge: up to a semitone sharp', // what a note's own bend does
   aftertouch: 'a firm press rests a finger on the tine, damping it', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   compass: { keys: [60, 88], param: 'fullRange' }, // C4–E6, a 17-tine kalimba's span, until Full range opens the rest
   space: 'sustain',                     // Space and CC64: holds fingers off released tines (when they don't ring anyway)

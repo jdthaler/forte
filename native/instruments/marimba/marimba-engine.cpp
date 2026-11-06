@@ -13,6 +13,7 @@ using std::numbers::pi;
 
 constexpr double OUT = 0.02;        // output units per m³/s² of volume acceleration
 constexpr int MAX_VOICES = 16;      // bars sounding at once; the quietest older one fades out beyond this
+constexpr double BEND_T = 0.02;      // s: a note's own bend glides as the instruments that bend glide theirs
 constexpr double DEAD = 40;          // 1/s: the most the mallet pressed into the bar takes (Press)
 constexpr double FADE = 0.03;       // s: a stolen voice fades out over this
 constexpr double YOUNG = 0.05;      // s: a voice this young is never stolen
@@ -36,6 +37,7 @@ void MarimbaEngine::Voice::start(MarimbaEngine &eng, Data::Ref r, uint64_t ver) 
   // −60 dB under its loudest instead of −90
   top = eng.pick(NYQUIST * eng.fs, std::min(NYQUIST * eng.fs, 16000.0), std::min(NYQUIST * eng.fs, 12000.0));
   floor = eng.pick(1e-9, 1e-7, 1e-6);
+  bent = eng.expr.bendOf(key); // bent before it was struck
   coefs(eng);
 }
 
@@ -54,7 +56,7 @@ static void pairMatrix(MarimbaEngine::Pair &p, double h) {
 void MarimbaEngine::Voice::coefs(const MarimbaEngine &eng) {
   const double k = 1 / eng.fs;
   for (int i = 0; i < N; i++) {
-    const double f = d->f[i], om = TAU * f, s = d->sigFixed[i] + pi * f * eng.P[p::eta];
+    const double f = d->f[i] * bent, om = TAU * f, s = d->sigFixed[i] + pi * f * eng.P[p::eta];
     cut[i] = f >= top;
     if (i < PAIRS) {
       Pair &pr = pair[i];
@@ -386,6 +388,7 @@ void MarimbaEngine::process(float *L, float *R, int n) {
   for (int i = 0; i < nVoices; i++) {
     Voice *v = voices[i];
     if (moving) v->tube(*this);
+    if (const double to = expr.bendOf(v->key); v->bent != to) { v->bent = glideTo(v->bent, to, n / fs, BEND_T); v->coefs(*this); } // Glide: the mallet dragged along the bar
     v->press.follow(v->held && !v->fading ? presses.of(v->key) : 0, n, fs);
     v->render(L, R, n, *this);
   }

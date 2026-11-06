@@ -48,6 +48,8 @@ class VibraphoneEngine : public Engine {
   void noteOff(int key, double velocity) override;
   // a note's own slide: where its mallet lands along the bar (strike), at its next stroke
   void slide(double value, int key) override { own.setSlide(value, key); }
+  // Glide: a hard mallet pressed on the bar and dragged along it: up to a semitone flat
+  void noteBend(double ratio, int key) override { own.setBend(ratio, key); }
   void pressure(double value, int key) override { presses.set(value, key); } // the mallet held against the bar, damping it while its key is held
   void setSustain(bool on) override { sustain = on; }
   void allNotesOff() override;
@@ -80,6 +82,7 @@ class VibraphoneEngine : public Engine {
     double Fmax = 0, lastContactMs = 0;
     bool released = false;
     double damp = 0, dampSet = -1;
+    double bent = 1; // its modes × this (a note's own bend)
     double touch = 0, touchLeft = 0; // a mallet resting on the bar after a fast lift: how hard, for how many more samples (forte/lift.h)
     double fade = 1;
     bool fading = false, dead = false;
@@ -116,7 +119,7 @@ class VibraphoneEngine : public Engine {
   std::array<double, p::count> P{};
 
   Presses presses; // each key's pressure and the channel's (forte/press.h)
-  NoteExpression own{0}; // each key's own slide (forte/expression.h)
+  NoteExpression own{1, 0}; // each key's own slide, and its bend (down only, a semitone at most; forte/expression.h)
   bool hasParams = false;
   // the knobs that glide: gap (m), detune, temp, cd, tubes, twist, shaft2
   enum { gGap, gDetune, gTemp, gCd, gTubes, gTwist, gShaft2, gCount };

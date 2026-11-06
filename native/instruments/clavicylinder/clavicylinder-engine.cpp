@@ -9,6 +9,7 @@
 
 namespace forte::clavicylinder {
 
+constexpr double BEND_T = 0.02;      // s: a note's own bend glides as the instruments that bend glide theirs
 constexpr double OUT = 2.0;         // the output's scale: the cords' velocity to the key, as heard
 constexpr double LAND = 0.006, LIFT = 0.006; // s: the key's travel onto the glass, and off it
 constexpr double KNOCK = 3e-3;      // N·s: the bar's knock on the glass from a key struck at full velocity
@@ -50,9 +51,10 @@ void ClavicylinderEngine::start(Voice &v, int key) {
   v.pad = pad(P[p::wet], layersOf(P.data(), v.b.post), v.b.L);
   v.fr = friction(P[p::wet], P[p::grip], v.b.L);
   v.Yb = 0;
+  v.bent = expr.bendOf(key); // bent before it was touched
   for (int i = 0; i < v.N; i++) {
     const BarMode &m = v.b.modes[i];
-    const ModeCoeffs c = modeCoeffs(m.f, m.sigma, fs);
+    const ModeCoeffs c = modeCoeffs(m.f * v.bent, m.sigma, fs);
     v.a1[i] = c.a1; v.a2[i] = c.a2; v.bf[i] = c.b / v.b.m; // per newton
     v.c[i] = m.c; v.cn[i] = m.cn; v.e[i] = m.e;
     v.Yb += (m.c * m.c * v.bf[i]) / k;
@@ -131,6 +133,10 @@ void ClavicylinderEngine::run(float *L, float *R, int n) {
   for (int vi = 0; vi < count; vi++) {
     Voice &v = *voices[vi];
     if (v.dead) continue;
+    if (const double to = expr.bendOf(v.key); v.bent != to) { // Glide: the bar pressed off its centre
+      v.bent = glideTo(v.bent, to, n * k, BEND_T);
+      for (int i = 0; i < v.N; i++) { const ModeCoeffs c = modeCoeffs(v.b.modes[i].f * v.bent, v.b.modes[i].sigma, fs); v.a1[i] = c.a1; v.a2[i] = c.a2; }
+    }
     const int NM = v.N;
     double *q = v.q.data(), *q1 = v.q1.data();
     const double *a1 = v.a1.data(), *a2 = v.a2.data(), *bf = v.bf.data(), *c = v.c.data(), *cn = v.cn.data(), *e = v.e.data();

@@ -139,9 +139,9 @@ instrument.
 **MPE:** a controller that gives each note a channel of its own (a ROLI
 Seaboard, a LinnStrument, an Expressive E Osmose) bends, slides and presses
 each note alone, wherever the instrument can: a reed, a pipe, a string or a
-bow bends; a struck string bends only as far as a finger pressing it behind
-the bridge takes it (a semitone sharp at most), and its slide (CC74) moves
-what the mod wheel moves, for that note. MPE in the MIDI menu is on
+bow bends; a struck string, bar or bell bends only as far as a hand on it
+takes it (a semitone at most, a few cents for most bars), and its slide
+(CC74) moves what the mod wheel moves, for that note. MPE in the MIDI menu is on
 Auto, which turns MPE on when the controller announces it (its
 MPE Configuration Message) and leaves any other keyboard as it was; On
 reads channels 2–16 as MPE without the announcement, and Off never does.
@@ -184,7 +184,14 @@ Glide on the struck and plucked strings is a finger pressing a note's
 strings behind the bridge, up to a semitone sharp (the Ribbon Piano,
 Electric Grand, Harpsichord and Cimbalom), the Hurdy-Gurdy's tangent pushed
 harder, the Clavichord's finger rocking onto its key as Press does, and the
-Magnetic Resonator Piano's drive moving up the string's harmonics.
+Magnetic Resonator Piano's drive moving up the string's harmonics. On the
+bars and bells it is a hard mallet dragged along the bar (a semitone flat:
+the Vibraphone, Marimba and Xylophone), a fingernail on the Kalimba's tine
+or a clamp tightened on the Chladni Plate (a semitone sharp), a hand on the
+Steel Pan's rim (a quarter tone), a hand or finger on the Celesta, Gamelan,
+Cristal Baschet, Clavicylinder and Gong Keyboard (a few cents), the
+Carillon's and Tubular Bells' swing (a Doppler shift), and a hand
+stretching the Spring Keyboard's coil (two semitones).
 
 **The RISE's panel:** while a Seaboard is plugged in, each page draws it at
 the left: its faders and pad with the controls they move and where they are,

@@ -26,6 +26,8 @@
 
 namespace forte::celesta {
 
+inline constexpr double GLIDE_CENTS = 10; // the most a finger resting on a bar lowers it
+
 // What the engine posts for the page (celesta/src/celesta-wasm.js turns them into its 'cel'
 // and 'error' messages).
 namespace msg {
@@ -46,6 +48,8 @@ class CelestaEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override { sustain = on; }
   void slide(double value, int key) override { expr.setSlide(value, key); } // the key's hammer felt, at its next strike
+  // Glide: a finger resting on the bar, loading it: a few cents flat, and duller
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
   void pressure(double value, int key) override { presses.set(value, key); } // a felt pressed on the bar, damping it while its key is held
   void allNotesOff() override;
   int voiceCount() const override { return nVoices; }
@@ -70,6 +74,7 @@ class CelestaEngine : public Engine {
     double Fmax = 0, lastContactMs = 0;
     bool released = false;
     double damp = 0, dampSet = -1;
+    double bent = 1; // its modes × this (a note's own bend: a finger on the bar)
     double liftK = 1; // how many times longer than usual its damper takes to stop it (forte/lift.h)
     double fade = 1;
     bool fading = false, dead = false;
@@ -108,7 +113,7 @@ class CelestaEngine : public Engine {
   std::array<double, gCount> S{}, T{};
   bool sustain = false;
   Presses presses; // each key's pressure and the channel's (forte/press.h)
-  NoteExpression expr{0}; // each key's own felt (no bend: a bar is cut to its pitch)
+  NoteExpression expr{GLIDE_CENTS / 100, 0}; // each key's own felt, and its bend (down only, a few cents)
   forte::Tuning tuning; // the keyboard's (forte/tuning.h)
   // each key's bar, built for the thickness in built[] (0: not yet) and the ratio in builtRatio[]
   std::unique_ptr<std::array<Bar, KEY_MAX - KEY_MIN + 1>> bars;

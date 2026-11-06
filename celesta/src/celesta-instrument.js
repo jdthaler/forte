@@ -20,7 +20,8 @@ export const INSTRUMENT = {
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // C4–C8, 60–108, until Full range opens the rest
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine
   modWheel: 'hardness',                 // CC1: the hammers' felt, from its default up to wood or brass
-  mpe: { slide: true },                 // a note's own slide: its hammer's felt, at the strike (a bar cannot bend)
+  mpe: { bend: 0.1, way: 'down', slide: true }, // a note's own bend, a finger resting on its bar (down only, ten cents at most); its slide, its hammer's felt, at the strike
+  glide: 'a finger resting on the bar: a few cents flat, and duller', // what a note's own bend does
   aftertouch: 'a firm press presses the felt damper onto the bar', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'how fast its felt damper falls: a slow lift leaves a longer tail, a fast one stops the bar sooner', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['across', 'damp', 'detune', 'strike', 'hardness'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

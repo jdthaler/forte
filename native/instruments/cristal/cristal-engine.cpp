@@ -11,6 +11,7 @@ namespace forte::cristal {
 constexpr int MAX_VOICES = 36;     // beyond this, the quietest rod nobody is stroking is let go (else the oldest)
 constexpr int REPORT_BLOCKS = 12;  // the page's state every few blocks
 constexpr double RIDGE = 4.5e-4;   // fingerprint ridge spacing (m)
+constexpr double BEND_T = 0.02;    // s: a note's own bend glides as the instruments that bend glide theirs
 constexpr double LAND = 0.012;     // s: the finger's force comes and goes this fast
 constexpr double T_TURN = 0.08;    // s: the finger turns round at a stroke's end
 constexpr double T_RETURN = 0.15;  // s: lifted, back to the rod's far end
@@ -112,6 +113,7 @@ void CristalEngine::start(Voice &v, int key) {
   v = Voice{};
   v.key = key;
   v.cap = STEM_MODES[(int)quality];
+  v.bent = expr.bendOf(key); // bent before it was touched
   v.Nreg = regulation(key);
   v.after = pressureAll;
   // where the stem stands along the collector, from the big cone's end to the small one's
@@ -127,7 +129,7 @@ void CristalEngine::build(Voice &v, const Stem &s, uint64_t ver) {
   double Y = 0;
   for (int i = 0; i < N; i++) {
     const Mode &m = s.modes[i];
-    const ModeCoeffs c = modeCoeffs(std::min(m.f, 0.45 * fs), m.zeta * TAU * m.f, fs);
+    const ModeCoeffs c = modeCoeffs(std::min(m.f * v.bent, 0.45 * fs), m.zeta * TAU * m.f, fs);
     v.a1[i] = c.a1; v.a2[i] = c.a2; v.b[i] = c.b; v.tip[i] = m.tip; v.col[i] = m.col;
     Y += m.tip * m.tip * c.b;
   }
@@ -203,6 +205,10 @@ void CristalEngine::run(float *L, float *R, int n) {
   for (int vi = 0; vi < count; vi++) {
     Voice &v = *voices[vi];
     if (v.dead || !v.built) continue;
+    if (const double to = expr.bendOf(v.key); v.bent != to) { // Glide: a finger on the rod's tip
+      v.bent = glideTo(v.bent, to, n * k, BEND_T);
+      for (int i = 0; i < v.N; i++) { const Mode &m = v.s.modes[i]; const ModeCoeffs c = modeCoeffs(std::min(m.f * v.bent, 0.45 * fs), m.zeta * TAU * m.f, fs); v.a1[i] = c.a1; v.a2[i] = c.a2; }
+    }
     const int NM = v.N;
     double *q = v.q.data(), *q1 = v.q1.data();
     const double *a1 = v.a1.data(), *a2 = v.a2.data(), *b = v.b.data(), *tip = v.tip.data(), *col = v.col.data();

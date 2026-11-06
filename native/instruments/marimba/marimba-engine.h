@@ -49,6 +49,8 @@ class MarimbaEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void allNotesOff() override;
   void slide(double value, int key) override { expr.setSlide(value, key); } // the key's own roll
+  // Glide: a hard mallet pressed on the bar and dragged along it: up to a semitone flat
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
   void pressure(double value, int key) override { presses.set(value, key); } // the mallet pressed into the bar: the dead stroke
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
@@ -88,6 +90,7 @@ class MarimbaEngine : public Engine {
     bool fading = false, dead = false;
     double age = 0;
     double E = 0, Emax = 0, Eb = 0, Et = 0;
+    double bent = 1; // its modes × this (a note's own bend)
     double top = 0, floor = 0; // Quality's, when the bar was struck: its highest mode (Hz), and where it is let go (× its most energy)
     double gl = 0, gr = 0;
     Mallet mal{};
@@ -140,7 +143,7 @@ class MarimbaEngine : public Engine {
   int malletMax;
   uint32_t rng = 0x2545F491u;
   Presses presses; // each key's pressure and the channel's
-  NoteExpression expr{0}; // each key's own roll (no bend: a struck bar rings at its own pitch)
+  NoteExpression expr{1, 0}; // each key's own roll, and its bend (down only, a semitone at most)
   Message barMsg; // kept between posts
 };
 

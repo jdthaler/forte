@@ -27,6 +27,8 @@ class SteelPanEngine : public Engine {
   void setSustain(bool on) override;
   void allNotesOff() override;
   void slide(double value, int key) override { expr.setSlide(value, key); } // the key's own roll
+  // Glide: a hand pressing the note's rim, stiffening its edge: up to a quarter tone sharp
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
   void pressure(double value, int key) override { presses.set(value, key); } // the stick held into the note, muting it
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
@@ -46,6 +48,7 @@ class SteelPanEngine : public Engine {
     bool active = false, struck = false, held = false, released = false, damped = false, hand = false;
     double vel = 0, gl = 1, gr = 1, rollIn = 0;
     double liftK = 1; // how many times longer than usual the hand takes to still it (forte/lift.h)
+    double bent = 1;  // its modes × this (a note's own bend)
     Press press;      // the stick held into it while its key is down (forte/press.h)
     int touch = 0;    // samples the stick still rests on it after a fast lift (the notes let ring)
     int age = 0;                   // samples since it came alive
@@ -86,7 +89,7 @@ class SteelPanEngine : public Engine {
   int version = 0, focus = -1, sincePost = 0;
   double g = 0;
   Presses presses; // each key's pressure and the channel's
-  NoteExpression expr{0}; // each key's own roll (no bend: a note area is hammered to its pitch)
+  NoteExpression expr{0, 0.5}; // each key's own roll, and its bend (up only, a quarter tone at most)
   std::vector<Note> notes;      // one per key, A0–C8
   std::vector<int> live;        // indices of the active notes (reserved: never reallocates)
   std::vector<Coupling> couplings;
