@@ -917,6 +917,16 @@ export function attachKeyboard(kb) {
     const over = bar.scrollWidth > bar.clientWidth + 1;
     bar.classList.remove('measure');
     bar.classList.toggle('stacked', over);
+    // a phone held upright: when what's left wraps onto a second line, ◀ ▶ go (the overview
+    // still pans) if that brings it back to one, leaving the views a line more
+    if (over && phoneQuery.matches && wraps()) {
+      bar.classList.add('tight');
+      if (wraps()) bar.classList.remove('tight');
+    }
+  }
+  function wraps() {
+    const tops = [...bar.children].filter((e) => e !== strip && e !== kbTools && e.offsetWidth).map((e) => e.getBoundingClientRect().top);
+    return Math.max(...tops) - Math.min(...tops) > 20; // the overview sits lower than the buttons beside it
   }
   prev.addEventListener('click', () => { show(first - 7); unfocus(prev); });
   next.addEventListener('click', () => { show(first + 7); unfocus(next); });
