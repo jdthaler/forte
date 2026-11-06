@@ -1,5 +1,0 @@
-# Combinations, a page for playing instruments together
-
-### Forte (minor)
-- **Combinations, a page of its own for playing several instruments at once:** up to four, each on the keys you give it (the same keys layer them, keys apart split the keyboard, three or four splits and layers at once), with its own octave, preset, level and on/off, and its name linking to its own page. An instrument comes on as you left it on its page, and its Presets menu can take those settings again. Eight combinations to start from (the piano and strings, an organ's bass under an electric grand, a gong below a gamelan, timpani, marimba and glass armonica across three splits, and more), which a MIDI program change picks too. Its views: a lane for each instrument across the whole keyboard with its notes as they sound, and the spectrum and spectrogram of the sum. Songs play on it, its CPU pill adds up every instrument, and everything goes through one more limiter on the sum. On the front page and in every page's menu.
-- **+ Layer is gone from the instrument pages:** the Combinations page does what it did, and more. The Forte app keeps its **+** beside the Instrument menu.
