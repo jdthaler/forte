@@ -1,0 +1,10 @@
+/* The page's own palette and any layout beyond shared/instrument.css: the pale green of a glass
+   rod's edge, and the warm steel of the flame. */
+:root {
+  --accent: #a8e6cf;
+  --accent-2: #e8b86a;
+  --accent-ink: #06190f;
+}
+
+#info { grid-template-columns: auto 1fr; }
+#modes td:first-child, #modes th:first-child { text-align: left; }
