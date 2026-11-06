@@ -256,6 +256,15 @@ requests.
   [doi:10.1029/2007GL030276](https://doi.org/10.1029/2007GL030276); the patches fall into step
   as Y. Kuramoto's oscillators do (1975). We did not find an earlier model of a booming dune made
   to be played. Its sources are in `dunes/README.md`.
+* **The cristal Baschet.** The resonator, the finger's friction on glass and its threshold are
+  A. Couineaux, F. Ablitzer and F. Gautier, "Minimal physical model of the cristal Baschet",
+  *Acta Acustica* **7**, 49 (2023), [doi:10.1051/aacus/2023041](https://doi.org/10.1051/aacus/2023041),
+  and the whiskers theirs too, "Sound enrichment of the cristal Baschet by the whiskers",
+  *Acta Acustica* **9**, 49 (2025), [doi:10.1051/aacus/2025024](https://doi.org/10.1051/aacus/2025024);
+  the rough limit and the collector follow F. Gautier et al., "Acoustics of the Cristal Baschet"
+  (ISMA 2010), and the instrument F. Baschet's [US 3,167,994](https://patents.google.com/patent/US3167994A/en).
+  Couineaux et al. simulate one resonator; we did not find an earlier playable synthesis of the
+  whole instrument from its physics. Its sources are in `cristal/README.md`.
 * **The regal.** Praetorius draws the regals and their resonators in
   *Syntagma musicum II* (1619); Monteverdi scores one for Charon in
   *L'Orfeo* (1607). The beating reed is G. R. Plitnik's ("Vibration

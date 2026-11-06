@@ -383,6 +383,15 @@ export const INSTRUMENTS = [
     accent: '#f08a8a',
   },
   {
+    id: 'cristal', name: 'Cristal Baschet', section: 'experimental', ready: true, version: '0.1.0', trim: 0,
+    plugin: { code: 'Cris', ready: true },
+    after: 'Bernard and François Baschet’s cristal (Paris, 1952)',
+    tagline: 'Wet fingers stroke glass rods, and stick–slip friction bends the steel stem each rod is clamped on at its note; the stems’ collector carries it to fibreglass cones, a cut-steel flame and long steel whiskers that ring in sympathy.',
+    physics: 'Stick–slip friction · beam modes of a loaded stem · piston radiators · sympathetic whiskers',
+    vibrates: 'solids', notes: 'hold',
+    accent: '#a8e6cf',
+  },
+  {
     id: 'huygens', name: 'Huygens Keyboard', section: 'phenomena', ready: true, version: '0.11.0', trim: 9.5,
     plugin: { code: 'Huyg', ready: true },
     tagline: 'Relaxation oscillators that pull each other into just intonation — Arnold tongues you can play.',
