@@ -158,6 +158,16 @@ moves its control across the slider's whole range; a fader on a stop pulls
 it at halfway up. The first touch of each shows which control it moves. Pad Y
 is the mod wheel's control wherever the instrument has one.
 
+**The RISE's panel:** while a Seaboard is plugged in, each page draws it at
+the left: its faders and pad with the controls they move and where they are,
+its keywave with a dot for each finger (across: the key and its Glide; up:
+its Slide; size: its Press), and its five dimensions (Strike, Glide, Slide,
+Press and Lift), each lit as it comes in, with what it does on that
+instrument. Press (the note's own pressure, as any aftertouch) does something
+on most instruments that hold their notes, and nothing on the struck and
+plucked ones, which can't change a note once it sounds. The chevron folds the
+panel to a rail. (Pages only: the plugins' window doesn't show it.)
+
 <details><summary>What the faders and the pad move</summary>
 
 | Instrument | Faders 1 · 2 · 3 | Pad X | Pad Y |

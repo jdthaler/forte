@@ -18,6 +18,7 @@ export const INSTRUMENT = {
   // MPE: a note bends as the player bends the blade, four octaves; CC74 shakes its own vibrato;
   // its pressure presses the bow harder
   mpe: { bend: 48, slide: true },
+  aftertouch: 'the bow presses harder', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   faders: ['bend', 'force', 'place', 'speed', 'vibrato'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/saw), built as WebAssembly
   wasm: { name: 'SawWasmEngine', module: new URL('./saw-wasm.js', import.meta.url).href, binary: new URL('../wasm/saw.wasm', import.meta.url).href },

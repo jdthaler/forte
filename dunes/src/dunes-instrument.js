@@ -18,6 +18,7 @@ export const INSTRUMENT = {
   // MPE: a grain's shear rate is set by its size and gravity, so no note bends; each key's avalanche is
   // pushed on its own (CC74 is that key's push) and pressed (its pressure)
   mpe: { bend: 0, slide: true },
+  aftertouch: 'pushes more sand down the face', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   faders: ['sorting', 'damp', 'speed', 'contact', 'push'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/dunes), built as WebAssembly
   wasm: { name: 'DunesWasmEngine', module: new URL('./dunes-wasm.js', import.meta.url).href, binary: new URL('../wasm/dunes.wasm', import.meta.url).href },
