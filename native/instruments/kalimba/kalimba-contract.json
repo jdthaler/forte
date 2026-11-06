@@ -37,16 +37,16 @@
     {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [
-    {"name":"Box kalimba","values":{}},
-    {"name":"Thumbnail ping","values":{"thumb":0.08}},
-    {"name":"Soft thumb, hole half covered","values":{"thumb":2.5,"cover":0.5}},
-    {"name":"Mbira with bottle caps","values":{"buzz":5,"box":6,"hole":90,"thick":1.4,"t60":8}},
-    {"name":"Marimbula (bass box)","values":{"box":25,"hole":90,"thick":2.5,"t60":10,"fullRange":true}},
-    {"name":"Clamped at the bridge (6.27)","values":{"back":0}},
-    {"name":"Back as long as the front (9th harmonic)","values":{"back":1}},
-    {"name":"Plucked on the first overtone’s node","values":{"pluck":0.71}},
-    {"name":"Plucked near the bridge: bright overtones","values":{"pluck":0.4}},
-    {"name":"Thin tines: soft and quiet in the bass","values":{"thick":0.7}},
-    {"name":"Two bottle caps on a box kalimba","values":{"buzz":2}}
+    {"name":"Box kalimba","values":{"glideOn":false,"liftOn":false}},
+    {"name":"Thumbnail ping","values":{"glideOn":false,"liftOn":false,"thumb":0.08}},
+    {"name":"Soft thumb, hole half covered","values":{"glideOn":false,"liftOn":false,"thumb":2.5,"cover":0.5}},
+    {"name":"Mbira with bottle caps","values":{"glideOn":false,"liftOn":false,"buzz":5,"box":6,"hole":90,"thick":1.4,"t60":8}},
+    {"name":"Marimbula (bass box)","values":{"glideOn":false,"liftOn":false,"box":25,"hole":90,"thick":2.5,"t60":10,"fullRange":true}},
+    {"name":"Clamped at the bridge (6.27)","values":{"glideOn":false,"liftOn":false,"back":0}},
+    {"name":"Back as long as the front (9th harmonic)","values":{"glideOn":false,"liftOn":false,"back":1}},
+    {"name":"Plucked on the first overtone’s node","values":{"glideOn":false,"liftOn":false,"pluck":0.71}},
+    {"name":"Plucked near the bridge: bright overtones","values":{"glideOn":false,"liftOn":false,"pluck":0.4}},
+    {"name":"Thin tines: soft and quiet in the bass","values":{"glideOn":false,"liftOn":false,"thick":0.7}},
+    {"name":"Two bottle caps on a box kalimba","values":{"glideOn":false,"liftOn":false,"buzz":2}}
   ]
 }

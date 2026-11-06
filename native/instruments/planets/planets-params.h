@@ -100,28 +100,29 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::sensor, 2}, {p::mwTop, 9.3}, {p::rupture, 1.5}};
-inline const PresetValue kPreset2[] = {{p::mech, 2}, {p::depth, 640}, {p::lat, -13.8}, {p::strike, 300}, {p::mwTop, 9}, {p::distance, 80}, {p::azimuth, 20}};
-inline const PresetValue kPreset3[] = {{p::distance, 179}, {p::azimuth, 0}, {p::mwTop, 8.6}};
-inline const PresetValue kPreset4[] = {{p::mech, 3}, {p::distance, 90}, {p::depth, 10}};
-inline const PresetValue kPreset5[] = {{p::sensor, 3}, {p::mech, 1}, {p::strike, 0}, {p::azimuth, 30}, {p::depth, 15}, {p::mwTop, 8.8}};
-inline const PresetValue kPreset6[] = {{p::spin, 0}};
-inline const PresetValue kPreset7[] = {{p::spin, 8}, {p::lat, 60}};
-inline const PresetValue kPreset8[] = {{p::planet, 1}, {p::depth, 40}, {p::distance, 70}};
-inline const PresetValue kPreset9[] = {{p::planet, 2}, {p::mech, 2}, {p::depth, 900}, {p::distance, 90}, {p::mwTop, 8.5}};
-inline const PresetValue kPreset10[] = {{p::planet, 2}, {p::mech, 3}, {p::depth, 0}, {p::distance, 40}};
+inline const PresetValue kPreset0[] = {{p::liftOn, 0}};
+inline const PresetValue kPreset1[] = {{p::liftOn, 0}, {p::sensor, 2}, {p::mwTop, 9.3}, {p::rupture, 1.5}};
+inline const PresetValue kPreset2[] = {{p::liftOn, 0}, {p::mech, 2}, {p::depth, 640}, {p::lat, -13.8}, {p::strike, 300}, {p::mwTop, 9}, {p::distance, 80}, {p::azimuth, 20}};
+inline const PresetValue kPreset3[] = {{p::liftOn, 0}, {p::distance, 179}, {p::azimuth, 0}, {p::mwTop, 8.6}};
+inline const PresetValue kPreset4[] = {{p::liftOn, 0}, {p::mech, 3}, {p::distance, 90}, {p::depth, 10}};
+inline const PresetValue kPreset5[] = {{p::liftOn, 0}, {p::sensor, 3}, {p::mech, 1}, {p::strike, 0}, {p::azimuth, 30}, {p::depth, 15}, {p::mwTop, 8.8}};
+inline const PresetValue kPreset6[] = {{p::liftOn, 0}, {p::spin, 0}};
+inline const PresetValue kPreset7[] = {{p::liftOn, 0}, {p::spin, 8}, {p::lat, 60}};
+inline const PresetValue kPreset8[] = {{p::liftOn, 0}, {p::planet, 1}, {p::depth, 40}, {p::distance, 70}};
+inline const PresetValue kPreset9[] = {{p::liftOn, 0}, {p::planet, 2}, {p::mech, 2}, {p::depth, 900}, {p::distance, 90}, {p::mwTop, 8.5}};
+inline const PresetValue kPreset10[] = {{p::liftOn, 0}, {p::planet, 2}, {p::mech, 3}, {p::depth, 0}, {p::distance, 40}};
 inline const Preset kPresets[] = {
-  {"Earth: a great megathrust quake", nullptr, 0},
-  {"Earth: heard on a gravimeter", kPreset1, 3},
-  {"Earth: a deep quake 640 km down (like Bolivia, 1994)", kPreset2, 7},
-  {"Earth: at the antipode, every wave comes back", kPreset3, 3},
-  {"Earth: an explosion heard 90° away (odd degrees silent)", kPreset4, 3},
-  {"Earth: twisting modes, heard sideways", kPreset5, 6},
-  {"Earth, not turning: one tone each", kPreset6, 1},
-  {"Earth spun up eight times", kPreset7, 2},
-  {"Mars: a great marsquake", kPreset8, 3},
-  {"Moon: a deep moonquake (900 km)", kPreset9, 5},
-  {"Moon: a meteorite strikes", kPreset10, 4},
+  {"Earth: a great megathrust quake", kPreset0, 1},
+  {"Earth: heard on a gravimeter", kPreset1, 4},
+  {"Earth: a deep quake 640 km down (like Bolivia, 1994)", kPreset2, 8},
+  {"Earth: at the antipode, every wave comes back", kPreset3, 4},
+  {"Earth: an explosion heard 90° away (odd degrees silent)", kPreset4, 4},
+  {"Earth: twisting modes, heard sideways", kPreset5, 7},
+  {"Earth, not turning: one tone each", kPreset6, 2},
+  {"Earth spun up eight times", kPreset7, 3},
+  {"Mars: a great marsquake", kPreset8, 4},
+  {"Moon: a deep moonquake (900 km)", kPreset9, 6},
+  {"Moon: a meteorite strikes", kPreset10, 5},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::depth}, {109, p::distance}, {111, p::azimuth}, {113, p::atten}, {114, p::spin}};

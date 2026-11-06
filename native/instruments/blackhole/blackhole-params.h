@@ -89,32 +89,33 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::spinU, 0}};
-inline const PresetValue kPreset2[] = {{p::spinU, 2}};
-inline const PresetValue kPreset3[] = {{p::spinU, 4}, {p::t0, 10}, {p::overtones, 0.4}};
-inline const PresetValue kPreset4[] = {{p::spinU, 6}, {p::t0, 10}, {p::overtones, 0.4}, {p::releaseMute, 1}};
-inline const PresetValue kPreset5[] = {{p::massRatio, 8}};
-inline const PresetValue kPreset6[] = {{p::inclination, 90}};
-inline const PresetValue kPreset7[] = {{p::t0, 0}, {p::overtones, 1.5}};
-inline const PresetValue kPreset8[] = {{p::inspiral, 1}, {p::inspiralOct, 1.5}};
-inline const PresetValue kPreset9[] = {{p::retrograde, 0.7}, {p::massRatio, 3}};
-inline const PresetValue kPreset10[] = {{p::spinU, 0.1427}, {p::massRatio, 9}};
-inline const PresetValue kPreset11[] = {{p::inclination, 0}};
-inline const PresetValue kPreset12[] = {{p::inspiral, 1}, {p::inspiralOct, 3}};
+inline const PresetValue kPreset0[] = {{p::liftOn, 0}};
+inline const PresetValue kPreset1[] = {{p::liftOn, 0}, {p::spinU, 0}};
+inline const PresetValue kPreset2[] = {{p::liftOn, 0}, {p::spinU, 2}};
+inline const PresetValue kPreset3[] = {{p::liftOn, 0}, {p::spinU, 4}, {p::t0, 10}, {p::overtones, 0.4}};
+inline const PresetValue kPreset4[] = {{p::liftOn, 0}, {p::spinU, 6}, {p::t0, 10}, {p::overtones, 0.4}, {p::releaseMute, 1}};
+inline const PresetValue kPreset5[] = {{p::liftOn, 0}, {p::massRatio, 8}};
+inline const PresetValue kPreset6[] = {{p::liftOn, 0}, {p::inclination, 90}};
+inline const PresetValue kPreset7[] = {{p::liftOn, 0}, {p::t0, 0}, {p::overtones, 1.5}};
+inline const PresetValue kPreset8[] = {{p::liftOn, 0}, {p::inspiral, 1}, {p::inspiralOct, 1.5}};
+inline const PresetValue kPreset9[] = {{p::liftOn, 0}, {p::retrograde, 0.7}, {p::massRatio, 3}};
+inline const PresetValue kPreset10[] = {{p::liftOn, 0}, {p::spinU, 0.1427}, {p::massRatio, 9}};
+inline const PresetValue kPreset11[] = {{p::liftOn, 0}, {p::inclination, 0}};
+inline const PresetValue kPreset12[] = {{p::liftOn, 0}, {p::inspiral, 1}, {p::inspiralOct, 3}};
 inline const Preset kPresets[] = {
-  {"GW150914-like remnant (a = 0.69, q = 1.2)", nullptr, 0},
-  {"Schwarzschild (a = 0): two cycles and gone", kPreset1, 1},
-  {"Rapid spin (a = 0.99)", kPreset2, 1},
-  {"Near-extremal (a = 1 − 10⁻⁴): a harmonic bell", kPreset3, 3},
-  {"Extremal edge (a = 1 − 10⁻⁶): rings for a second", kPreset4, 4},
-  {"Lopsided merger (q = 8): odd modes appear", kPreset5, 1},
-  {"Seen edge-on (ι = 90°): linear polarisation", kPreset6, 1},
-  {"Early ringdown (t₀ = 0): overtone burst", kPreset7, 2},
-  {"Inspiral + merger + ringdown (LIGO chirp)", kPreset8, 2},
-  {"Counter-rotating modes too", kPreset9, 2},
-  {"GW190814-like: a lopsided merger (q = 9, a = 0.28)", kPreset10, 2},
-  {"Seen face-on (ι = 0°): circular polarisation", kPreset11, 1},
-  {"A long inspiral: three octaves of chirp", kPreset12, 2},
+  {"GW150914-like remnant (a = 0.69, q = 1.2)", kPreset0, 1},
+  {"Schwarzschild (a = 0): two cycles and gone", kPreset1, 2},
+  {"Rapid spin (a = 0.99)", kPreset2, 2},
+  {"Near-extremal (a = 1 − 10⁻⁴): a harmonic bell", kPreset3, 4},
+  {"Extremal edge (a = 1 − 10⁻⁶): rings for a second", kPreset4, 5},
+  {"Lopsided merger (q = 8): odd modes appear", kPreset5, 2},
+  {"Seen edge-on (ι = 90°): linear polarisation", kPreset6, 2},
+  {"Early ringdown (t₀ = 0): overtone burst", kPreset7, 3},
+  {"Inspiral + merger + ringdown (LIGO chirp)", kPreset8, 3},
+  {"Counter-rotating modes too", kPreset9, 3},
+  {"GW190814-like: a lopsided merger (q = 9, a = 0.28)", kPreset10, 3},
+  {"Seen face-on (ι = 0°): circular polarisation", kPreset11, 2},
+  {"A long inspiral: three octaves of chirp", kPreset12, 3},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::tone, p::stereo, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::massRatio}, {109, p::inclination}, {111, p::overtones}, {113, p::tone}, {114, p::spinU}};

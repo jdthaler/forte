@@ -99,36 +99,37 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::sample, 2}};
-inline const PresetValue kPreset2[] = {{p::sample, 2}, {p::shim, 20}, {p::t2, 3}, {p::t1, 3}};
-inline const PresetValue kPreset3[] = {{p::train, 1}, {p::shim, 20}, {p::t2, 3}, {p::t1, 3}};
-inline const PresetValue kPreset4[] = {{p::sample, 1}};
-inline const PresetValue kPreset5[] = {{p::sample, 3}};
-inline const PresetValue kPreset6[] = {{p::sample, 4}};
-inline const PresetValue kPreset7[] = {{p::shim, 0.3}, {p::t2, 4}, {p::t1, 5}, {p::acquire, 1}};
-inline const PresetValue kPreset8[] = {{p::shim, 200}, {p::sample, 1}};
-inline const PresetValue kPreset9[] = {{p::profile, 2}, {p::shim, 30}, {p::t2, 3}};
-inline const PresetValue kPreset10[] = {{p::sample, 2}, {p::profile, 2}, {p::shim, 1500}, {p::t2, 3}, {p::t1, 3}, {p::acquire, 1}};
-inline const PresetValue kPreset11[] = {{p::flip, 30}, {p::t1, 3}};
-inline const PresetValue kPreset12[] = {{p::flip, 90}, {p::t1, 10}, {p::t2, 2}};
-inline const PresetValue kPreset13[] = {{p::t2, 0.08}, {p::t1, 0.3}};
-inline const PresetValue kPreset14[] = {{p::noise, -32}, {p::shim, 20}, {p::t2, 3}};
+inline const PresetValue kPreset0[] = {{p::liftOn, 0}};
+inline const PresetValue kPreset1[] = {{p::liftOn, 0}, {p::sample, 2}};
+inline const PresetValue kPreset2[] = {{p::liftOn, 0}, {p::sample, 2}, {p::shim, 20}, {p::t2, 3}, {p::t1, 3}};
+inline const PresetValue kPreset3[] = {{p::liftOn, 0}, {p::train, 1}, {p::shim, 20}, {p::t2, 3}, {p::t1, 3}};
+inline const PresetValue kPreset4[] = {{p::liftOn, 0}, {p::sample, 1}};
+inline const PresetValue kPreset5[] = {{p::liftOn, 0}, {p::sample, 3}};
+inline const PresetValue kPreset6[] = {{p::liftOn, 0}, {p::sample, 4}};
+inline const PresetValue kPreset7[] = {{p::liftOn, 0}, {p::shim, 0.3}, {p::t2, 4}, {p::t1, 5}, {p::acquire, 1}};
+inline const PresetValue kPreset8[] = {{p::liftOn, 0}, {p::shim, 200}, {p::sample, 1}};
+inline const PresetValue kPreset9[] = {{p::liftOn, 0}, {p::profile, 2}, {p::shim, 30}, {p::t2, 3}};
+inline const PresetValue kPreset10[] = {{p::liftOn, 0}, {p::sample, 2}, {p::profile, 2}, {p::shim, 1500}, {p::t2, 3}, {p::t1, 3}, {p::acquire, 1}};
+inline const PresetValue kPreset11[] = {{p::liftOn, 0}, {p::flip, 30}, {p::t1, 3}};
+inline const PresetValue kPreset12[] = {{p::liftOn, 0}, {p::flip, 90}, {p::t1, 10}, {p::t2, 2}};
+inline const PresetValue kPreset13[] = {{p::liftOn, 0}, {p::t2, 0.08}, {p::t1, 0.3}};
+inline const PresetValue kPreset14[] = {{p::liftOn, 0}, {p::noise, -32}, {p::shim, 20}, {p::t2, 3}};
 inline const Preset kPresets[] = {
-  {"Ethanol: a chord of three groups", nullptr, 0},
-  {"Water: one line", kPreset1, 1},
-  {"Hahn's echo: hold a key, press the pedal", kPreset2, 4},
-  {"Echo train: hold the pedal", kPreset3, 4},
-  {"Ethanol with its OH exchanging", kPreset4, 1},
-  {"Ethyl acetate: a triplet, a singlet and a quartet", kPreset5, 1},
-  {"2-Propanol: a doublet and a septet", kPreset6, 1},
-  {"Perfect shim: the couplings beat", kPreset7, 4},
-  {"Early NMR: lines without their fine structure", kPreset8, 2},
-  {"A gradient: sinc fades", kPreset9, 3},
-  {"Diffusion steals late echoes", kPreset10, 6},
-  {"Small tip angles: repeat notes freely", kPreset11, 2},
-  {"Saturated: long T₁, full pulses", kPreset12, 3},
-  {"Viscous: short T₂", kPreset13, 2},
-  {"Noisy probe: dilute sample", kPreset14, 3},
+  {"Ethanol: a chord of three groups", kPreset0, 1},
+  {"Water: one line", kPreset1, 2},
+  {"Hahn's echo: hold a key, press the pedal", kPreset2, 5},
+  {"Echo train: hold the pedal", kPreset3, 5},
+  {"Ethanol with its OH exchanging", kPreset4, 2},
+  {"Ethyl acetate: a triplet, a singlet and a quartet", kPreset5, 2},
+  {"2-Propanol: a doublet and a septet", kPreset6, 2},
+  {"Perfect shim: the couplings beat", kPreset7, 5},
+  {"Early NMR: lines without their fine structure", kPreset8, 3},
+  {"A gradient: sinc fades", kPreset9, 4},
+  {"Diffusion steals late echoes", kPreset10, 7},
+  {"Small tip angles: repeat notes freely", kPreset11, 3},
+  {"Saturated: long T₁, full pulses", kPreset12, 4},
+  {"Viscous: short T₂", kPreset13, 3},
+  {"Noisy probe: dilute sample", kPreset14, 4},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::flip}, {109, p::t2}, {111, p::noise}, {113, p::spacing}, {114, p::shim}};

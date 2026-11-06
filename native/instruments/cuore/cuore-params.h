@@ -88,26 +88,27 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::periodA4, 300}};
-inline const PresetValue kPreset2[] = {{p::tbase, 12.5}, {p::gain, 40000}};
-inline const PresetValue kPreset3[] = {{p::tbase, 8}, {p::gain, 1500}};
-inline const PresetValue kPreset4[] = {{p::energy, 40}, {p::gain, 700}};
-inline const PresetValue kPreset5[] = {{p::side, 3}, {p::gain, 1500}};
-inline const PresetValue kPreset6[] = {{p::wire, 3000}};
-inline const PresetValue kPreset7[] = {{p::periodA4, 0.5}, {p::gain, 2500}};
-inline const PresetValue kPreset8[] = {{p::clamp, 80}};
-inline const PresetValue kPreset9[] = {{p::clamp, 1.5}};
+inline const PresetValue kPreset0[] = {{p::liftOn, 0}};
+inline const PresetValue kPreset1[] = {{p::liftOn, 0}, {p::periodA4, 300}};
+inline const PresetValue kPreset2[] = {{p::liftOn, 0}, {p::tbase, 12.5}, {p::gain, 40000}};
+inline const PresetValue kPreset3[] = {{p::liftOn, 0}, {p::tbase, 8}, {p::gain, 1500}};
+inline const PresetValue kPreset4[] = {{p::liftOn, 0}, {p::energy, 40}, {p::gain, 700}};
+inline const PresetValue kPreset5[] = {{p::liftOn, 0}, {p::side, 3}, {p::gain, 1500}};
+inline const PresetValue kPreset6[] = {{p::liftOn, 0}, {p::wire, 3000}};
+inline const PresetValue kPreset7[] = {{p::liftOn, 0}, {p::periodA4, 0.5}, {p::gain, 2500}};
+inline const PresetValue kPreset8[] = {{p::liftOn, 0}, {p::clamp, 80}};
+inline const PresetValue kPreset9[] = {{p::liftOn, 0}, {p::clamp, 1.5}};
 inline const Preset kPresets[] = {
-  {"A CUORE crystal at 10 mK", nullptr, 0},
-  {"The real heater: a pulse every 300 s on A4", kPreset1, 1},
-  {"Warmer: 12.5 mK, quieter and darker", kPreset2, 2},
-  {"Colder: 8 mK, hot electrons", kPreset3, 2},
-  {"Big pulses: the thermistor saturates", kPreset4, 2},
-  {"Cuoricino's small crystal (3 cm)", kPreset5, 2},
-  {"Long wires: a soft attack", kPreset6, 1},
-  {"Piled up: a pulse every 0.5 s on A4", kPreset7, 2},
-  {"Firm holders: the heat drains fast, short pulses", kPreset8, 1},
-  {"Loose holders: the heat lingers", kPreset9, 1},
+  {"A CUORE crystal at 10 mK", kPreset0, 1},
+  {"The real heater: a pulse every 300 s on A4", kPreset1, 2},
+  {"Warmer: 12.5 mK, quieter and darker", kPreset2, 3},
+  {"Colder: 8 mK, hot electrons", kPreset3, 3},
+  {"Big pulses: the thermistor saturates", kPreset4, 3},
+  {"Cuoricino's small crystal (3 cm)", kPreset5, 3},
+  {"Long wires: a soft attack", kPreset6, 2},
+  {"Piled up: a pulse every 0.5 s on A4", kPreset7, 3},
+  {"Firm holders: the heat drains fast, short pulses", kPreset8, 2},
+  {"Loose holders: the heat lingers", kPreset9, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::energy}, {109, p::periodA4}, {111, p::bias}, {113, p::clamp}, {114, p::tbase}};

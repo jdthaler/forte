@@ -94,28 +94,29 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::figure, 1}};
-inline const PresetValue kPreset2[] = {{p::figure, 8}};
-inline const PresetValue kPreset3[] = {{p::figure, 6}};
-inline const PresetValue kPreset4[] = {{p::material, 1}, {p::thickness, 2.5}, {p::ring, 4}};
-inline const PresetValue kPreset5[] = {{p::hold, 1}};
-inline const PresetValue kPreset6[] = {{p::finger, 0}};
-inline const PresetValue kPreset7[] = {{p::shift, 0.7}};
-inline const PresetValue kPreset8[] = {{p::force, 12}};
-inline const PresetValue kPreset9[] = {{p::force, 1.3}, {p::speed, 0.05}};
-inline const PresetValue kPreset10[] = {{p::material, 2}, {p::thickness, 0.8}, {p::ring, 3}, {p::hand, 1.5}, {p::force, 4}};
+inline const PresetValue kPreset0[] = {{p::glideOn, 0}};
+inline const PresetValue kPreset1[] = {{p::glideOn, 0}, {p::figure, 1}};
+inline const PresetValue kPreset2[] = {{p::glideOn, 0}, {p::figure, 8}};
+inline const PresetValue kPreset3[] = {{p::glideOn, 0}, {p::figure, 6}};
+inline const PresetValue kPreset4[] = {{p::glideOn, 0}, {p::material, 1}, {p::thickness, 2.5}, {p::ring, 4}};
+inline const PresetValue kPreset5[] = {{p::glideOn, 0}, {p::hold, 1}};
+inline const PresetValue kPreset6[] = {{p::glideOn, 0}, {p::finger, 0}};
+inline const PresetValue kPreset7[] = {{p::glideOn, 0}, {p::shift, 0.7}};
+inline const PresetValue kPreset8[] = {{p::glideOn, 0}, {p::force, 12}};
+inline const PresetValue kPreset9[] = {{p::glideOn, 0}, {p::force, 1.3}, {p::speed, 0.05}};
+inline const PresetValue kPreset10[] = {{p::glideOn, 0}, {p::material, 2}, {p::thickness, 0.8}, {p::ring, 3}, {p::hand, 1.5}, {p::force, 4}};
 inline const Preset kPresets[] = {
-  {"Brass plate, the diagonals", nullptr, 0},
-  {"The cross", kPreset1, 1},
-  {"A ring", kPreset2, 1},
-  {"The star", kPreset3, 1},
-  {"Glass plate (Chladni’s)", kPreset4, 3},
-  {"Free plate, held at a node", kPreset5, 1},
-  {"Finger lifted (modes fight)", kPreset6, 1},
-  {"Bow wandering off the figure", kPreset7, 1},
-  {"Heavy bow (rasp and jumps)", kPreset8, 1},
-  {"Light, slow bow", kPreset9, 2},
-  {"Thin steel, ringing", kPreset10, 5},
+  {"Brass plate, the diagonals", kPreset0, 1},
+  {"The cross", kPreset1, 2},
+  {"A ring", kPreset2, 2},
+  {"The star", kPreset3, 2},
+  {"Glass plate (Chladni’s)", kPreset4, 4},
+  {"Free plate, held at a node", kPreset5, 2},
+  {"Finger lifted (modes fight)", kPreset6, 2},
+  {"Bow wandering off the figure", kPreset7, 2},
+  {"Heavy bow (rasp and jumps)", kPreset8, 2},
+  {"Light, slow bow", kPreset9, 3},
+  {"Thin steel, ringing", kPreset10, 6},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::speed}, {109, p::rosin}, {111, p::ring}, {113, p::force}, {114, p::shift}};

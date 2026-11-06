@@ -108,40 +108,41 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::screen, 0}};
-inline const PresetValue kPreset2[] = {{p::screen, 2}};
-inline const PresetValue kPreset3[] = {{p::screen, 3}};
-inline const PresetValue kPreset4[] = {{p::screen, 4}, {p::tremolo, 0.6}, {p::tremRate, 9}};
-inline const PresetValue kPreset5[] = {{p::screen, 5}};
-inline const PresetValue kPreset6[] = {{p::screen, 6}, {p::tremolo, 0.3}, {p::tremRate, 6}};
-inline const PresetValue kPreset7[] = {{p::screen, 7}};
-inline const PresetValue kPreset8[] = {{p::screen, 5}, {p::damping, 2.5}, {p::mirror, 3}};
-inline const PresetValue kPreset9[] = {{p::disc, 2}};
-inline const PresetValue kPreset10[] = {{p::screen, 3}, {p::slot, 0.025}};
-inline const PresetValue kPreset11[] = {{p::screen, 3}, {p::slot, 0.3}};
-inline const PresetValue kPreset12[] = {{p::lamp, 1}};
-inline const PresetValue kPreset13[] = {{p::cell, 1}};
-inline const PresetValue kPreset14[] = {{p::wear, 0.03}, {p::hunt, 8}};
-inline const PresetValue kPreset15[] = {{p::screen, 4}, {p::speaker, 1}, {p::drive, 0.7}};
-inline const PresetValue kPreset16[] = {{p::speaker, 2}};
+inline const PresetValue kPreset0[] = {{p::glideOn, 0}};
+inline const PresetValue kPreset1[] = {{p::glideOn, 0}, {p::screen, 0}};
+inline const PresetValue kPreset2[] = {{p::glideOn, 0}, {p::screen, 2}};
+inline const PresetValue kPreset3[] = {{p::glideOn, 0}, {p::screen, 3}};
+inline const PresetValue kPreset4[] = {{p::glideOn, 0}, {p::screen, 4}, {p::tremolo, 0.6}, {p::tremRate, 9}};
+inline const PresetValue kPreset5[] = {{p::glideOn, 0}, {p::screen, 5}};
+inline const PresetValue kPreset6[] = {{p::glideOn, 0}, {p::screen, 6}, {p::tremolo, 0.3}, {p::tremRate, 6}};
+inline const PresetValue kPreset7[] = {{p::glideOn, 0}, {p::screen, 7}};
+inline const PresetValue kPreset8[] = {{p::glideOn, 0}, {p::screen, 5}, {p::damping, 2.5}, {p::mirror, 3}};
+inline const PresetValue kPreset9[] = {{p::glideOn, 0}, {p::disc, 2}};
+inline const PresetValue kPreset10[] = {{p::glideOn, 0}, {p::screen, 3}, {p::slot, 0.025}};
+inline const PresetValue kPreset11[] = {{p::glideOn, 0}, {p::screen, 3}, {p::slot, 0.3}};
+inline const PresetValue kPreset12[] = {{p::glideOn, 0}, {p::lamp, 1}};
+inline const PresetValue kPreset13[] = {{p::glideOn, 0}, {p::cell, 1}};
+inline const PresetValue kPreset14[] = {{p::glideOn, 0}, {p::wear, 0.03}, {p::hunt, 8}};
+inline const PresetValue kPreset15[] = {{p::glideOn, 0}, {p::screen, 4}, {p::speaker, 1}, {p::drive, 0.7}};
+inline const PresetValue kPreset16[] = {{p::glideOn, 0}, {p::speaker, 2}};
 inline const Preset kPresets[] = {
-  {"Flûte, as built: the 54-slot disc", nullptr, 0},
-  {"A pure sine screen", kPreset1, 1},
-  {"Clarinette: the odd harmonics", kPreset2, 1},
-  {"Hautbois", kPreset3, 1},
-  {"Trompe de chasse with its tremolo", kPreset4, 3},
-  {"Violon", kPreset5, 1},
-  {"Voix humaine, slow tremolo", kPreset6, 3},
-  {"Eight timbres: a screen for each octave", kPreset7, 1},
-  {"Piano: the damping arcs", kPreset8, 3},
-  {"In tune: a disc sixteen times as fine", kPreset9, 1},
-  {"Narrow slots: bright and faint", kPreset10, 2},
-  {"Wide slots: dull and loud", kPreset11, 2},
-  {"Lamps on the Paris mains: a 100 Hz hum", kPreset12, 1},
-  {"A selenium cell (the one Toulon ruled out)", kPreset13, 1},
-  {"A worn disc on a hunting motor", kPreset14, 2},
-  {"Horn loudspeaker, driven hard", kPreset15, 3},
-  {"No loudspeaker: the amplifier's output", kPreset16, 1},
+  {"Flûte, as built: the 54-slot disc", kPreset0, 1},
+  {"A pure sine screen", kPreset1, 2},
+  {"Clarinette: the odd harmonics", kPreset2, 2},
+  {"Hautbois", kPreset3, 2},
+  {"Trompe de chasse with its tremolo", kPreset4, 4},
+  {"Violon", kPreset5, 2},
+  {"Voix humaine, slow tremolo", kPreset6, 4},
+  {"Eight timbres: a screen for each octave", kPreset7, 2},
+  {"Piano: the damping arcs", kPreset8, 4},
+  {"In tune: a disc sixteen times as fine", kPreset9, 2},
+  {"Narrow slots: bright and faint", kPreset10, 3},
+  {"Wide slots: dull and loud", kPreset11, 3},
+  {"Lamps on the Paris mains: a 100 Hz hum", kPreset12, 2},
+  {"A selenium cell (the one Toulon ruled out)", kPreset13, 2},
+  {"A worn disc on a hunting motor", kPreset14, 3},
+  {"Horn loudspeaker, driven hard", kPreset15, 4},
+  {"No loudspeaker: the amplifier's output", kPreset16, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::tremolo}, {109, p::damping}, {111, p::drive}, {113, p::slot}, {114, p::push}};

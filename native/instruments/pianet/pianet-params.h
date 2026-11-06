@@ -100,30 +100,31 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::pickup, 1}, {p::tack, 0.3}, {p::rate, 0.5}, {p::padC, 0.35}, {p::tone, 9000}};
-inline const PresetValue kPreset2[] = {{p::tack, 0.03}};
-inline const PresetValue kPreset3[] = {{p::tack, 0.4}, {p::rate, 1}, {p::gap, 2}};
-inline const PresetValue kPreset4[] = {{p::rate, 0.1}};
-inline const PresetValue kPreset5[] = {{p::gap, 0.4}};
-inline const PresetValue kPreset6[] = {{p::pickup, 1}, {p::offset, 0}, {p::plateGap, 0.36}};
-inline const PresetValue kPreset7[] = {{p::tipMass, 3}};
-inline const PresetValue kPreset8[] = {{p::padC, 0.02}, {p::padK, 0.2}};
-inline const PresetValue kPreset9[] = {{p::amp, 1}, {p::drive, 0.55}};
-inline const PresetValue kPreset10[] = {{p::padK, 3}};
-inline const PresetValue kPreset11[] = {{p::tipMass, 0.45}};
+inline const PresetValue kPreset0[] = {{p::pressOn, 0}};
+inline const PresetValue kPreset1[] = {{p::pressOn, 0}, {p::pickup, 1}, {p::tack, 0.3}, {p::rate, 0.5}, {p::padC, 0.35}, {p::tone, 9000}};
+inline const PresetValue kPreset2[] = {{p::pressOn, 0}, {p::tack, 0.03}};
+inline const PresetValue kPreset3[] = {{p::pressOn, 0}, {p::tack, 0.4}, {p::rate, 1}, {p::gap, 2}};
+inline const PresetValue kPreset4[] = {{p::pressOn, 0}, {p::rate, 0.1}};
+inline const PresetValue kPreset5[] = {{p::pressOn, 0}, {p::gap, 0.4}};
+inline const PresetValue kPreset6[] = {{p::pressOn, 0}, {p::pickup, 1}, {p::offset, 0}, {p::plateGap, 0.36}};
+inline const PresetValue kPreset7[] = {{p::pressOn, 0}, {p::tipMass, 3}};
+inline const PresetValue kPreset8[] = {{p::pressOn, 0}, {p::padC, 0.02}, {p::padK, 0.2}};
+inline const PresetValue kPreset9[] = {{p::pressOn, 0}, {p::amp, 1}, {p::drive, 0.55}};
+inline const PresetValue kPreset10[] = {{p::pressOn, 0}, {p::padK, 3}};
+inline const PresetValue kPreset11[] = {{p::pressOn, 0}, {p::tipMass, 0.45}};
 inline const Preset kPresets[] = {
-  {"Pianet T: silicone pads, magnetic pickups", nullptr, 0},
-  {"Pianet N: leather pads, electrostatic pickup", kPreset1, 5},
-  {"Aged pads: the tack has gone", kPreset2, 1},
-  {"Very tacky, rate-sensitive pads (poles set back)", kPreset3, 3},
-  {"Rate-blind pads: little touch response", kPreset4, 1},
-  {"Poles set close: louder, bass reeds clack", kPreset5, 1},
-  {"Plate edge level with the reed (odd harmonics)", kPreset6, 3},
-  {"Heavy solder tips", kPreset7, 1},
-  {"Limp foam: notes ring after release", kPreset8, 2},
-  {"Through a valve combo", kPreset9, 2},
-  {"Stiff foam: a louder middle and treble", kPreset10, 1},
-  {"Light solder tips: longer reeds, more overtones", kPreset11, 1},
+  {"Pianet T: silicone pads, magnetic pickups", kPreset0, 1},
+  {"Pianet N: leather pads, electrostatic pickup", kPreset1, 6},
+  {"Aged pads: the tack has gone", kPreset2, 2},
+  {"Very tacky, rate-sensitive pads (poles set back)", kPreset3, 4},
+  {"Rate-blind pads: little touch response", kPreset4, 2},
+  {"Poles set close: louder, bass reeds clack", kPreset5, 2},
+  {"Plate edge level with the reed (odd harmonics)", kPreset6, 4},
+  {"Heavy solder tips", kPreset7, 2},
+  {"Limp foam: notes ring after release", kPreset8, 3},
+  {"Through a valve combo", kPreset9, 3},
+  {"Stiff foam: a louder middle and treble", kPreset10, 2},
+  {"Light solder tips: longer reeds, more overtones", kPreset11, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::tack}, {109, p::gap}, {111, p::padC}, {113, p::tone}, {114, p::drive}};

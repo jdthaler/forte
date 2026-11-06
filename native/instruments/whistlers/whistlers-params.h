@@ -97,30 +97,31 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::plasmapause, 6}};
-inline const PresetValue kPreset2[] = {{p::plasmapause, 3}};
-inline const PresetValue kPreset3[] = {{p::ducts, 5}};
-inline const PresetValue kPreset4[] = {{p::echo, 0.8}};
-inline const PresetValue kPreset5[] = {{p::receiver, 1}, {p::echo, 0.6}};
-inline const PresetValue kPreset6[] = {{p::travel, 1}, {p::sferic, 0.6}};
-inline const PresetValue kPreset7[] = {{p::density, 0.05}};
-inline const PresetValue kPreset8[] = {{p::chorus, 10}, {p::sferic, 0.1}};
-inline const PresetValue kPreset9[] = {{p::sferic, 1}, {p::distance, 7000}};
-inline const PresetValue kPreset10[] = {{p::iono, 70}};
-inline const PresetValue kPreset11[] = {{p::density, 5}};
+inline const PresetValue kPreset0[] = {{p::liftOn, 0}};
+inline const PresetValue kPreset1[] = {{p::liftOn, 0}, {p::plasmapause, 6}};
+inline const PresetValue kPreset2[] = {{p::liftOn, 0}, {p::plasmapause, 3}};
+inline const PresetValue kPreset3[] = {{p::liftOn, 0}, {p::ducts, 5}};
+inline const PresetValue kPreset4[] = {{p::liftOn, 0}, {p::echo, 0.8}};
+inline const PresetValue kPreset5[] = {{p::liftOn, 0}, {p::receiver, 1}, {p::echo, 0.6}};
+inline const PresetValue kPreset6[] = {{p::liftOn, 0}, {p::travel, 1}, {p::sferic, 0.6}};
+inline const PresetValue kPreset7[] = {{p::liftOn, 0}, {p::density, 0.05}};
+inline const PresetValue kPreset8[] = {{p::liftOn, 0}, {p::chorus, 10}, {p::sferic, 0.1}};
+inline const PresetValue kPreset9[] = {{p::liftOn, 0}, {p::sferic, 1}, {p::distance, 7000}};
+inline const PresetValue kPreset10[] = {{p::liftOn, 0}, {p::iono, 70}};
+inline const PresetValue kPreset11[] = {{p::liftOn, 0}, {p::density, 5}};
 inline const Preset kPresets[] = {
-  {"Whistlers at night (Kp 2)", nullptr, 0},
-  {"Quiet week: the plasmasphere out to L = 6", kPreset1, 1},
-  {"Magnetic storm: the plasmapause at L = 3", kPreset2, 1},
-  {"Multi-path: five ducts", kPreset3, 1},
-  {"Echo train", kPreset4, 1},
-  {"Near the lightning: two-hop whistlers", kPreset5, 2},
-  {"Real travel time: the crack, then the whistler", kPreset6, 2},
-  {"Thin plasma: quick whistlers", kPreset7, 1},
-  {"Dawn chorus", kPreset8, 2},
-  {"Distant storms: long tweeks", kPreset9, 2},
-  {"By day: a low ionosphere (70 km), higher tweeks", kPreset10, 1},
-  {"Dense plasma: slow, drawn-out whistlers", kPreset11, 1},
+  {"Whistlers at night (Kp 2)", kPreset0, 1},
+  {"Quiet week: the plasmasphere out to L = 6", kPreset1, 2},
+  {"Magnetic storm: the plasmapause at L = 3", kPreset2, 2},
+  {"Multi-path: five ducts", kPreset3, 2},
+  {"Echo train", kPreset4, 2},
+  {"Near the lightning: two-hop whistlers", kPreset5, 3},
+  {"Real travel time: the crack, then the whistler", kPreset6, 3},
+  {"Thin plasma: quick whistlers", kPreset7, 2},
+  {"Dawn chorus", kPreset8, 3},
+  {"Distant storms: long tweeks", kPreset9, 3},
+  {"By day: a low ionosphere (70 km), higher tweeks", kPreset10, 2},
+  {"Dense plasma: slow, drawn-out whistlers", kPreset11, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::ducts}, {109, p::echo}, {111, p::density}, {113, p::sferic}, {114, p::chorus}};

@@ -36,17 +36,17 @@
     {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [
-    {"name":"Millisecond pulsars at 1.4 GHz","values":{}},
-    {"name":"Orthogonal rotator: main pulse and interpulse","values":{"alpha":89,"sightline":0.15}},
-    {"name":"Nearly aligned: the beam never leaves us","values":{"alpha":6,"sightline":0.5}},
-    {"name":"Grazing the cone: one narrow pulse","values":{"sightline":0.92,"height":60}},
-    {"name":"Through the core: a triple pulse","values":{"sightline":0,"core":0.5,"height":60}},
-    {"name":"No dedispersion: the pulses smear and sweep","values":{"dedisp":"none","dm":1.5}},
-    {"name":"Coherent dedispersion: sharp across the Galaxy","values":{"dedisp":"coherent","dm":150,"freq":3000}},
-    {"name":"LOFAR at 150 MHz: scattering tails","values":{"freq":150,"dm":35,"dedisp":"coherent","bandwidth":0.3}},
-    {"name":"Deep in the Galaxy: DM 400 at 3 GHz","values":{"dm":400,"freq":3000}},
-    {"name":"Flickering single pulses","values":{"jitter":1.4}},
-    {"name":"Low in the beam: sharp, buzzy pulses","values":{"height":30,"sightline":0.5}},
-    {"name":"PSR B1937+21 (DM 71): the first millisecond pulsar","values":{"dm":71,"alpha":87,"sightline":0.2}}
+    {"name":"Millisecond pulsars at 1.4 GHz","values":{"liftOn":false}},
+    {"name":"Orthogonal rotator: main pulse and interpulse","values":{"liftOn":false,"alpha":89,"sightline":0.15}},
+    {"name":"Nearly aligned: the beam never leaves us","values":{"liftOn":false,"alpha":6,"sightline":0.5}},
+    {"name":"Grazing the cone: one narrow pulse","values":{"liftOn":false,"sightline":0.92,"height":60}},
+    {"name":"Through the core: a triple pulse","values":{"liftOn":false,"sightline":0,"core":0.5,"height":60}},
+    {"name":"No dedispersion: the pulses smear and sweep","values":{"liftOn":false,"dedisp":"none","dm":1.5}},
+    {"name":"Coherent dedispersion: sharp across the Galaxy","values":{"liftOn":false,"dedisp":"coherent","dm":150,"freq":3000}},
+    {"name":"LOFAR at 150 MHz: scattering tails","values":{"liftOn":false,"freq":150,"dm":35,"dedisp":"coherent","bandwidth":0.3}},
+    {"name":"Deep in the Galaxy: DM 400 at 3 GHz","values":{"liftOn":false,"dm":400,"freq":3000}},
+    {"name":"Flickering single pulses","values":{"liftOn":false,"jitter":1.4}},
+    {"name":"Low in the beam: sharp, buzzy pulses","values":{"liftOn":false,"height":30,"sightline":0.5}},
+    {"name":"PSR B1937+21 (DM 71): the first millisecond pulsar","values":{"liftOn":false,"dm":71,"alpha":87,"sightline":0.2}}
   ]
 }

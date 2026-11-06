@@ -95,32 +95,33 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::profile, 1}};
-inline const PresetValue kPreset2[] = {{p::asym, 0.6}, {p::strikeAngle, 11.25}};
-inline const PresetValue kPreset3[] = {{p::asym, 0.6}, {p::strikeAngle, 0}};
-inline const PresetValue kPreset4[] = {{p::historic, 1}};
-inline const PresetValue kPreset5[] = {{p::hardness, 4}};
-inline const PresetValue kPreset6[] = {{p::clapMass, 6}};
-inline const PresetValue kPreset7[] = {{p::strikeHeight, 0.33}};
-inline const PresetValue kPreset8[] = {{p::distance, 300}, {p::room, 0.3}};
-inline const PresetValue kPreset9[] = {{p::distance, 10}, {p::room, 0.08}};
-inline const PresetValue kPreset10[] = {{p::clapMass, 1}};
-inline const PresetValue kPreset11[] = {{p::speedMax, 3.8}};
-inline const PresetValue kPreset12[] = {{p::profile, 1}, {p::asym, 0.6}, {p::strikeAngle, 11.25}};
+inline const PresetValue kPreset0[] = {{p::glideOn, 0}, {p::liftOn, 0}};
+inline const PresetValue kPreset1[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::profile, 1}};
+inline const PresetValue kPreset2[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::asym, 0.6}, {p::strikeAngle, 11.25}};
+inline const PresetValue kPreset3[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::asym, 0.6}, {p::strikeAngle, 0}};
+inline const PresetValue kPreset4[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::historic, 1}};
+inline const PresetValue kPreset5[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::hardness, 4}};
+inline const PresetValue kPreset6[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::clapMass, 6}};
+inline const PresetValue kPreset7[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::strikeHeight, 0.33}};
+inline const PresetValue kPreset8[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::distance, 300}, {p::room, 0.3}};
+inline const PresetValue kPreset9[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::distance, 10}, {p::room, 0.08}};
+inline const PresetValue kPreset10[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::clapMass, 1}};
+inline const PresetValue kPreset11[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::speedMax, 3.8}};
+inline const PresetValue kPreset12[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::profile, 1}, {p::asym, 0.6}, {p::strikeAngle, 11.25}};
 inline const Preset kPresets[] = {
-  {"Concert carillon: minor-third bells, iron clappers", nullptr, 0},
-  {"Major-third bells (Eijsbouts–Eindhoven)", kPreset1, 1},
-  {"Warbling bells: uneven walls, struck between the nominal’s axes", kPreset2, 2},
-  {"The same bells struck on an axis: no warble", kPreset3, 2},
-  {"Historic bells, never tuned", kPreset4, 1},
-  {"Soft clapper inserts", kPreset5, 1},
-  {"Heavy clappers", kPreset6, 1},
-  {"Struck high on the waist", kPreset7, 1},
-  {"Across the town square (300 m)", kPreset8, 2},
-  {"Under the tower (10 m)", kPreset9, 2},
-  {"Light clappers (1 kg): a thin, bright strike", kPreset10, 1},
-  {"Hard baton strokes: a brighter, shorter contact", kPreset11, 1},
-  {"Major-third bells, warbling", kPreset12, 3},
+  {"Concert carillon: minor-third bells, iron clappers", kPreset0, 2},
+  {"Major-third bells (Eijsbouts–Eindhoven)", kPreset1, 3},
+  {"Warbling bells: uneven walls, struck between the nominal’s axes", kPreset2, 4},
+  {"The same bells struck on an axis: no warble", kPreset3, 4},
+  {"Historic bells, never tuned", kPreset4, 3},
+  {"Soft clapper inserts", kPreset5, 3},
+  {"Heavy clappers", kPreset6, 3},
+  {"Struck high on the waist", kPreset7, 3},
+  {"Across the town square (300 m)", kPreset8, 4},
+  {"Under the tower (10 m)", kPreset9, 4},
+  {"Light clappers (1 kg): a thin, bright strike", kPreset10, 3},
+  {"Hard baton strokes: a brighter, shorter contact", kPreset11, 3},
+  {"Major-third bells, warbling", kPreset12, 5},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::hardness}, {109, p::strikeHeight}, {111, p::clapMass}, {113, p::around}, {114, p::distance}};

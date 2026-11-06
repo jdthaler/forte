@@ -98,30 +98,31 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::press, 0.25}};
-inline const PresetValue kPreset2[] = {{p::press, 4}};
-inline const PresetValue kPreset3[] = {{p::wet, 0.95}};
-inline const PresetValue kPreset4[] = {{p::grip, -0.7}};
-inline const PresetValue kPreset5[] = {{p::grip, 0.8}};
-inline const PresetValue kPreset6[] = {{p::build, 1}};
-inline const PresetValue kPreset7[] = {{p::cords, -0.092}};
-inline const PresetValue kPreset8[] = {{p::flywheel, 0.4}};
-inline const PresetValue kPreset9[] = {{p::speed, 0.4}};
-inline const PresetValue kPreset10[] = {{p::layers, 1}};
-inline const PresetValue kPreset11[] = {{p::flywheel, 10}};
+inline const PresetValue kPreset0[] = {{p::glideOn, 0}};
+inline const PresetValue kPreset1[] = {{p::glideOn, 0}, {p::press, 0.25}};
+inline const PresetValue kPreset2[] = {{p::glideOn, 0}, {p::press, 4}};
+inline const PresetValue kPreset3[] = {{p::glideOn, 0}, {p::wet, 0.95}};
+inline const PresetValue kPreset4[] = {{p::glideOn, 0}, {p::grip, -0.7}};
+inline const PresetValue kPreset5[] = {{p::glideOn, 0}, {p::grip, 0.8}};
+inline const PresetValue kPreset6[] = {{p::glideOn, 0}, {p::build, 1}};
+inline const PresetValue kPreset7[] = {{p::glideOn, 0}, {p::cords, -0.092}};
+inline const PresetValue kPreset8[] = {{p::glideOn, 0}, {p::flywheel, 0.4}};
+inline const PresetValue kPreset9[] = {{p::glideOn, 0}, {p::speed, 0.4}};
+inline const PresetValue kPreset10[] = {{p::glideOn, 0}, {p::layers, 1}};
+inline const PresetValue kPreset11[] = {{p::glideOn, 0}, {p::flywheel, 10}};
 inline const Preset kPresets[] = {
-  {"Chladni’s clavicylinder (1800)", nullptr, 0},
-  {"Light touch (slow to speak)", kPreset1, 1},
-  {"Pressing hard (louder, harsher)", kPreset2, 1},
-  {"Cloth soaked (dull; the treble fails)", kPreset3, 1},
-  {"Soaped strips (softer tone)", kPreset4, 1},
-  {"Pumice on the glass (cutting)", kPreset5, 1},
-  {"Posts all the way up", kPreset6, 1},
-  {"Cords on the wrong nodes (an overtone takes over)", kPreset7, 1},
-  {"Light flywheel (chords drag the cylinder)", kPreset8, 1},
-  {"Slow treadle", kPreset9, 1},
-  {"One layer of cloth: the key’s knock shows", kPreset10, 1},
-  {"Heavy flywheel: chords keep the speed", kPreset11, 1},
+  {"Chladni’s clavicylinder (1800)", kPreset0, 1},
+  {"Light touch (slow to speak)", kPreset1, 2},
+  {"Pressing hard (louder, harsher)", kPreset2, 2},
+  {"Cloth soaked (dull; the treble fails)", kPreset3, 2},
+  {"Soaped strips (softer tone)", kPreset4, 2},
+  {"Pumice on the glass (cutting)", kPreset5, 2},
+  {"Posts all the way up", kPreset6, 2},
+  {"Cords on the wrong nodes (an overtone takes over)", kPreset7, 2},
+  {"Light flywheel (chords drag the cylinder)", kPreset8, 2},
+  {"Slow treadle", kPreset9, 2},
+  {"One layer of cloth: the key’s knock shows", kPreset10, 2},
+  {"Heavy flywheel: chords keep the speed", kPreset11, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::treadle}, {109, p::wet}, {111, p::grip}, {113, p::press}, {114, p::speed}};

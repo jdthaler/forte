@@ -87,26 +87,27 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::tmag, 5.1}, {p::teff, 6037}, {p::starMass, 1.094}, {p::starRadius, 1.1}, {p::planetRadius, 2.042}, {p::impact, 0.58}, {p::periodA4, 6.2679}, {p::scale, 0.0004}};
-inline const PresetValue kPreset2[] = {{p::tmag, 11.9}, {p::teff, 3036}, {p::starMass, 0.151}, {p::starRadius, 0.189}, {p::planetRadius, 1.323}, {p::impact, 0.175}, {p::periodA4, 0.46293}, {p::scale, 0.006}};
-inline const PresetValue kPreset3[] = {{p::tmag, 10.9}, {p::teff, 3480}, {p::starMass, 0.416}, {p::starRadius, 0.42}, {p::planetRadius, 1.19}, {p::impact, 0.39}, {p::periodA4, 37.426}, {p::scale, 0.001}};
-inline const PresetValue kPreset4[] = {{p::tmag, 16.3}, {p::teff, 4710}, {p::starMass, 0.518}, {p::starRadius, 0.0131}, {p::planetRadius, 10.4}, {p::impact, 0.865}, {p::periodA4, 1.40794}, {p::scale, 0.6}};
-inline const PresetValue kPreset5[] = {{p::planetRadius, 1}, {p::impact, 0}, {p::periodA4, 365.256}, {p::scale, 0.00012}};
-inline const PresetValue kPreset6[] = {{p::impact, 0.97}, {p::scale, 0.001}};
-inline const PresetValue kPreset7[] = {{p::noise, 0}};
-inline const PresetValue kPreset8[] = {{p::tmag, 13}};
-inline const PresetValue kPreset9[] = {{p::teff, 6800}, {p::starMass, 1.5}, {p::starRadius, 1.6}};
+inline const PresetValue kPreset0[] = {{p::glideOn, 0}, {p::liftOn, 0}};
+inline const PresetValue kPreset1[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::tmag, 5.1}, {p::teff, 6037}, {p::starMass, 1.094}, {p::starRadius, 1.1}, {p::planetRadius, 2.042}, {p::impact, 0.58}, {p::periodA4, 6.2679}, {p::scale, 0.0004}};
+inline const PresetValue kPreset2[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::tmag, 11.9}, {p::teff, 3036}, {p::starMass, 0.151}, {p::starRadius, 0.189}, {p::planetRadius, 1.323}, {p::impact, 0.175}, {p::periodA4, 0.46293}, {p::scale, 0.006}};
+inline const PresetValue kPreset3[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::tmag, 10.9}, {p::teff, 3480}, {p::starMass, 0.416}, {p::starRadius, 0.42}, {p::planetRadius, 1.19}, {p::impact, 0.39}, {p::periodA4, 37.426}, {p::scale, 0.001}};
+inline const PresetValue kPreset4[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::tmag, 16.3}, {p::teff, 4710}, {p::starMass, 0.518}, {p::starRadius, 0.0131}, {p::planetRadius, 10.4}, {p::impact, 0.865}, {p::periodA4, 1.40794}, {p::scale, 0.6}};
+inline const PresetValue kPreset5[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::planetRadius, 1}, {p::impact, 0}, {p::periodA4, 365.256}, {p::scale, 0.00012}};
+inline const PresetValue kPreset6[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::impact, 0.97}, {p::scale, 0.001}};
+inline const PresetValue kPreset7[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::noise, 0}};
+inline const PresetValue kPreset8[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::tmag, 13}};
+inline const PresetValue kPreset9[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::teff, 6800}, {p::starMass, 1.5}, {p::starRadius, 1.6}};
 inline const Preset kPresets[] = {
-  {"A hot Jupiter round a Sun-like star", nullptr, 0},
-  {"π Mensae c: TESS's first planet (on A4)", kPreset1, 8},
-  {"LHS 3844 b: a hot rock round an M dwarf (on A4)", kPreset2, 8},
-  {"TOI-700 d: an Earth in the habitable zone (on A4)", kPreset3, 8},
-  {"WD 1856+534 b: a giant round a white dwarf (on A4)", kPreset4, 8},
-  {"The Earth and the Sun (a year on A4)", kPreset5, 4},
-  {"Grazing: short V-shaped dips", kPreset6, 2},
-  {"A noiseless light curve", kPreset7, 1},
-  {"A faint star (magnitude 13): dips in the hiss", kPreset8, 1},
-  {"A hot star (6,800 K): flat-bottomed dips", kPreset9, 3},
+  {"A hot Jupiter round a Sun-like star", kPreset0, 2},
+  {"π Mensae c: TESS's first planet (on A4)", kPreset1, 10},
+  {"LHS 3844 b: a hot rock round an M dwarf (on A4)", kPreset2, 10},
+  {"TOI-700 d: an Earth in the habitable zone (on A4)", kPreset3, 10},
+  {"WD 1856+534 b: a giant round a white dwarf (on A4)", kPreset4, 10},
+  {"The Earth and the Sun (a year on A4)", kPreset5, 6},
+  {"Grazing: short V-shaped dips", kPreset6, 4},
+  {"A noiseless light curve", kPreset7, 3},
+  {"A faint star (magnitude 13): dips in the hiss", kPreset8, 3},
+  {"A hot star (6,800 K): flat-bottomed dips", kPreset9, 5},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::teff}, {109, p::starRadius}, {111, p::periodA4}, {113, p::planetRadius}, {114, p::impact}};

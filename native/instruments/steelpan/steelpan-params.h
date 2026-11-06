@@ -108,30 +108,31 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::tuning, 1}, {p::aspect, 1.2}};
-inline const PresetValue kPreset2[] = {{p::t60, 3}, {p::contact, 1.4}, {p::rise, 2.5}, {p::along, 0.3}};
-inline const PresetValue kPreset3[] = {{p::letRing, 1}, {p::coupling, 0.004}};
-inline const PresetValue kPreset4[] = {{p::roll, 0.6}, {p::letRing, 1}};
-inline const PresetValue kPreset5[] = {{p::contact, 0.3}, {p::rise, 8}};
-inline const PresetValue kPreset6[] = {{p::rise, 0}};
-inline const PresetValue kPreset7[] = {{p::tuning, 2}};
-inline const PresetValue kPreset8[] = {{p::layout, 1}, {p::letRing, 1}, {p::coupling, 0.004}};
-inline const PresetValue kPreset9[] = {{p::along, 0}};
-inline const PresetValue kPreset10[] = {{p::accuracy, 15}};
-inline const PresetValue kPreset11[] = {{p::skirt, 2.2}, {p::t60, 2.4}, {p::contact, 1}, {p::rise, 2.5}};
+inline const PresetValue kPreset0[] = {{p::glideOn, 0}, {p::liftOn, 0}};
+inline const PresetValue kPreset1[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::tuning, 1}, {p::aspect, 1.2}};
+inline const PresetValue kPreset2[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::t60, 3}, {p::contact, 1.4}, {p::rise, 2.5}, {p::along, 0.3}};
+inline const PresetValue kPreset3[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::letRing, 1}, {p::coupling, 0.004}};
+inline const PresetValue kPreset4[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::roll, 0.6}, {p::letRing, 1}};
+inline const PresetValue kPreset5[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::contact, 0.3}, {p::rise, 8}};
+inline const PresetValue kPreset6[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::rise, 0}};
+inline const PresetValue kPreset7[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::tuning, 2}};
+inline const PresetValue kPreset8[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::layout, 1}, {p::letRing, 1}, {p::coupling, 0.004}};
+inline const PresetValue kPreset9[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::along, 0}};
+inline const PresetValue kPreset10[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::accuracy, 15}};
+inline const PresetValue kPreset11[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::skirt, 2.2}, {p::t60, 2.4}, {p::contact, 1}, {p::rise, 2.5}};
 inline const Preset kPresets[] = {
-  {"Tenor pan", nullptr, 0},
-  {"Double tenor (1 : 2 : 4)", kPreset1, 2},
-  {"Six bass", kPreset2, 4},
-  {"Let it ring", kPreset3, 2},
-  {"Rolled", kPreset4, 2},
-  {"Hard sticks, high domes", kPreset5, 2},
-  {"Flat notes (no dome)", kPreset6, 1},
-  {"Untuned, as sunk", kPreset7, 1},
-  {"Chromatic layout", kPreset8, 3},
-  {"Struck at the centre: the octave from the dome alone", kPreset9, 1},
-  {"A rough tuning (15 ¢): the partials beat", kPreset10, 1},
-  {"Cello pans: long skirts, warm and long", kPreset11, 4},
+  {"Tenor pan", kPreset0, 2},
+  {"Double tenor (1 : 2 : 4)", kPreset1, 4},
+  {"Six bass", kPreset2, 6},
+  {"Let it ring", kPreset3, 4},
+  {"Rolled", kPreset4, 4},
+  {"Hard sticks, high domes", kPreset5, 4},
+  {"Flat notes (no dome)", kPreset6, 3},
+  {"Untuned, as sunk", kPreset7, 3},
+  {"Chromatic layout", kPreset8, 5},
+  {"Struck at the centre: the octave from the dome alone", kPreset9, 3},
+  {"A rough tuning (15 ¢): the partials beat", kPreset10, 3},
+  {"Cello pans: long skirts, warm and long", kPreset11, 6},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::rollRate}, {109, p::mute}, {111, p::across}, {113, p::along}, {114, p::roll}};

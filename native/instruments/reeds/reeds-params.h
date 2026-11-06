@@ -95,30 +95,31 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::tremDepth, 0.65}};
-inline const PresetValue kPreset2[] = {{p::output, 1}, {p::drive, 0.1}};
-inline const PresetValue kPreset3[] = {{p::offset, 0}};
-inline const PresetValue kPreset4[] = {{p::offset, 1.2}};
-inline const PresetValue kPreset5[] = {{p::solder, 3}};
-inline const PresetValue kPreset6[] = {{p::solder, 0.15}};
-inline const PresetValue kPreset7[] = {{p::rbias, 1}};
-inline const PresetValue kPreset8[] = {{p::gap, 0.18}, {p::offset, 0.25}, {p::drive, 0.8}, {p::hardness, 2}};
-inline const PresetValue kPreset9[] = {{p::tremDepth, 0.6}, {p::tremRate, 9}};
-inline const PresetValue kPreset10[] = {{p::hardness, 0.25}};
-inline const PresetValue kPreset11[] = {{p::strike, 0.15}};
+inline const PresetValue kPreset0[] = {{p::pressOn, 0}};
+inline const PresetValue kPreset1[] = {{p::pressOn, 0}, {p::tremDepth, 0.65}};
+inline const PresetValue kPreset2[] = {{p::pressOn, 0}, {p::output, 1}, {p::drive, 0.1}};
+inline const PresetValue kPreset3[] = {{p::pressOn, 0}, {p::offset, 0}};
+inline const PresetValue kPreset4[] = {{p::pressOn, 0}, {p::offset, 1.2}};
+inline const PresetValue kPreset5[] = {{p::pressOn, 0}, {p::solder, 3}};
+inline const PresetValue kPreset6[] = {{p::pressOn, 0}, {p::solder, 0.15}};
+inline const PresetValue kPreset7[] = {{p::pressOn, 0}, {p::rbias, 1}};
+inline const PresetValue kPreset8[] = {{p::pressOn, 0}, {p::gap, 0.18}, {p::offset, 0.25}, {p::drive, 0.8}, {p::hardness, 2}};
+inline const PresetValue kPreset9[] = {{p::pressOn, 0}, {p::tremDepth, 0.6}, {p::tremRate, 9}};
+inline const PresetValue kPreset10[] = {{p::pressOn, 0}, {p::hardness, 0.25}};
+inline const PresetValue kPreset11[] = {{p::pressOn, 0}, {p::strike, 0.15}};
 inline const Preset kPresets[] = {
-  {"200A as voiced", nullptr, 0},
-  {"Tremolo through the speakers", kPreset1, 1},
-  {"Direct out, clean", kPreset2, 2},
-  {"Reed centred in the slot (octave)", kPreset3, 1},
-  {"Reed riding high (thin, clean)", kPreset4, 1},
-  {"Heavy solder (short reeds, sweet, short sustain)", kPreset5, 1},
-  {"Light solder (long reeds, more bark)", kPreset6, 1},
-  {"Constant-voltage pickup (1 MΩ feed)", kPreset7, 1},
-  {"Barking: tight gap, pushed preamp", kPreset8, 4},
-  {"Fast tremolo (9 Hz)", kPreset9, 2},
-  {"Soft felt hammers: a round attack", kPreset10, 1},
-  {"Struck near the clamp: a small, clean swing", kPreset11, 1},
+  {"200A as voiced", kPreset0, 1},
+  {"Tremolo through the speakers", kPreset1, 2},
+  {"Direct out, clean", kPreset2, 3},
+  {"Reed centred in the slot (octave)", kPreset3, 2},
+  {"Reed riding high (thin, clean)", kPreset4, 2},
+  {"Heavy solder (short reeds, sweet, short sustain)", kPreset5, 2},
+  {"Light solder (long reeds, more bark)", kPreset6, 2},
+  {"Constant-voltage pickup (1 MΩ feed)", kPreset7, 2},
+  {"Barking: tight gap, pushed preamp", kPreset8, 5},
+  {"Fast tremolo (9 Hz)", kPreset9, 3},
+  {"Soft felt hammers: a round attack", kPreset10, 2},
+  {"Struck near the clamp: a small, clean swing", kPreset11, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::drive}, {109, p::hardness}, {111, p::strike}, {113, p::tremRate}, {114, p::tremDepth}};

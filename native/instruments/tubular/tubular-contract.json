@@ -38,17 +38,17 @@
     {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [
-    {"name":"Orchestral chimes: brass tubes, rawhide mallet","values":{}},
-    {"name":"Pedal down: every tube rings","values":{"pedalLock":true}},
-    {"name":"Plastic mallet: a brighter clang","values":{"hardness":9000,"mass":160}},
-    {"name":"Leather-wrapped mallet: the strike note alone","values":{"hardness":150,"mass":300}},
-    {"name":"No cap: an open tube","values":{"cap":0}},
-    {"name":"Heavy cap: the overtones lifted","values":{"cap":400}},
-    {"name":"Struck a third of the way down","values":{"strike":0.33}},
-    {"name":"Aluminium tubes","values":{"material":"aluminium"}},
-    {"name":"Wide tubes, 2½ inches","values":{"diameter":63.5,"wall":2}},
-    {"name":"Thin walls, 0.8 mm","values":{"wall":0.8}},
-    {"name":"Close up: the player’s ears","values":{"distance":0.8}},
-    {"name":"Far off: twelve metres away","values":{"distance":12}}
+    {"name":"Orchestral chimes: brass tubes, rawhide mallet","values":{"glideOn":false}},
+    {"name":"Pedal down: every tube rings","values":{"glideOn":false,"pedalLock":true}},
+    {"name":"Plastic mallet: a brighter clang","values":{"glideOn":false,"hardness":9000,"mass":160}},
+    {"name":"Leather-wrapped mallet: the strike note alone","values":{"glideOn":false,"hardness":150,"mass":300}},
+    {"name":"No cap: an open tube","values":{"glideOn":false,"cap":0}},
+    {"name":"Heavy cap: the overtones lifted","values":{"glideOn":false,"cap":400}},
+    {"name":"Struck a third of the way down","values":{"glideOn":false,"strike":0.33}},
+    {"name":"Aluminium tubes","values":{"glideOn":false,"material":"aluminium"}},
+    {"name":"Wide tubes, 2½ inches","values":{"glideOn":false,"diameter":63.5,"wall":2}},
+    {"name":"Thin walls, 0.8 mm","values":{"glideOn":false,"wall":0.8}},
+    {"name":"Close up: the player’s ears","values":{"glideOn":false,"distance":0.8}},
+    {"name":"Far off: twelve metres away","values":{"glideOn":false,"distance":12}}
   ]
 }

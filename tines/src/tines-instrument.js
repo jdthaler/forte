@@ -5,14 +5,14 @@
 import { GROUPS, DEFAULTS, PRESETS, hammerSpeed } from './rhodes-params.js';
 import { KEY_MIN, KEY_MAX } from './tine.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
-import { EXPRESSION } from '../../shared/expression.js';
+import { EXPRESSION, offInPresets } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 export const INSTRUMENT = {
   id: 'tines',
   groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
-  presets: PRESETS,
+  presets: offInPresets(PRESETS, ['press']), // its presets turn off what makes little sense on it (shared/expression.js)
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: 88, A0–C8 (the 73-key models: E1–E7)
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine

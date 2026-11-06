@@ -120,34 +120,35 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::tromNote, 0}, {p::petit, 1}, {p::gros, 0}, {p::tirant, 2.4}};
-inline const PresetValue kPreset2[] = {{p::coups, 2}};
-inline const PresetValue kPreset3[] = {{p::coups, 3}, {p::crank, 1.1}};
-inline const PresetValue kPreset4[] = {{p::crank, 2.2}};
-inline const PresetValue kPreset5[] = {{p::tirant, 3.2}, {p::coup, 1}, {p::coups, 2}};
-inline const PresetValue kPreset6[] = {{p::tirant, 2.1}, {p::crank, 1}, {p::coups, 2}, {p::coup, 0.3}};
-inline const PresetValue kPreset7[] = {{p::chienMass, 0.0005}, {p::bounce, 0.75}, {p::coups, 1}};
-inline const PresetValue kPreset8[] = {{p::trompette, 0}, {p::mouche, 0}, {p::gros, 0}};
-inline const PresetValue kPreset9[] = {{p::chanterelles, 0}, {p::keep, 1}};
-inline const PresetValue kPreset10[] = {{p::crank, 0.35}};
-inline const PresetValue kPreset11[] = {{p::unison, 9}};
-inline const PresetValue kPreset12[] = {{p::coups, 4}};
-inline const PresetValue kPreset13[] = {{p::v0, 0.4}};
+inline const PresetValue kPreset0[] = {{p::liftOn, 0}};
+inline const PresetValue kPreset1[] = {{p::liftOn, 0}, {p::tromNote, 0}, {p::petit, 1}, {p::gros, 0}, {p::tirant, 2.4}};
+inline const PresetValue kPreset2[] = {{p::liftOn, 0}, {p::coups, 2}};
+inline const PresetValue kPreset3[] = {{p::liftOn, 0}, {p::coups, 3}, {p::crank, 1.1}};
+inline const PresetValue kPreset4[] = {{p::liftOn, 0}, {p::crank, 2.2}};
+inline const PresetValue kPreset5[] = {{p::liftOn, 0}, {p::tirant, 3.2}, {p::coup, 1}, {p::coups, 2}};
+inline const PresetValue kPreset6[] = {{p::liftOn, 0}, {p::tirant, 2.1}, {p::crank, 1}, {p::coups, 2}, {p::coup, 0.3}};
+inline const PresetValue kPreset7[] = {{p::liftOn, 0}, {p::chienMass, 0.0005}, {p::bounce, 0.75}, {p::coups, 1}};
+inline const PresetValue kPreset8[] = {{p::liftOn, 0}, {p::trompette, 0}, {p::mouche, 0}, {p::gros, 0}};
+inline const PresetValue kPreset9[] = {{p::liftOn, 0}, {p::chanterelles, 0}, {p::keep, 1}};
+inline const PresetValue kPreset10[] = {{p::liftOn, 0}, {p::crank, 0.35}};
+inline const PresetValue kPreset11[] = {{p::liftOn, 0}, {p::unison, 9}};
+inline const PresetValue kPreset12[] = {{p::liftOn, 0}, {p::coups, 4}};
+inline const PresetValue kPreset13[] = {{p::liftOn, 0}, {p::v0, 0.4}};
 inline const Preset kPresets[] = {
-  {"Vielle à roue, drones in G", nullptr, 0},
-  {"Drones in C: trompette C4, petit bourdon", kPreset1, 4},
-  {"Bourrée: two coups a turn", kPreset2, 1},
-  {"Mazurka: three coups a turn", kPreset3, 2},
-  {"Une traînée: crank fast, a long buzz", kPreset4, 1},
-  {"Sec: a tight tirant, hard coups", kPreset5, 3},
-  {"Gras: a loose tirant buzzes at a touch", kPreset6, 4},
-  {"Rattling chien: light and bouncy", kPreset7, 3},
-  {"Chanterelles alone", kPreset8, 3},
-  {"Drones alone, turning", kPreset9, 2},
-  {"Slow crank: the top notes crunch", kPreset10, 1},
-  {"Wide unison: two chanterelles apart", kPreset11, 1},
-  {"Four coups a turn", kPreset12, 1},
-  {"Cotton on the strings: a soft, wide grip", kPreset13, 1},
+  {"Vielle à roue, drones in G", kPreset0, 1},
+  {"Drones in C: trompette C4, petit bourdon", kPreset1, 5},
+  {"Bourrée: two coups a turn", kPreset2, 2},
+  {"Mazurka: three coups a turn", kPreset3, 3},
+  {"Une traînée: crank fast, a long buzz", kPreset4, 2},
+  {"Sec: a tight tirant, hard coups", kPreset5, 4},
+  {"Gras: a loose tirant buzzes at a touch", kPreset6, 5},
+  {"Rattling chien: light and bouncy", kPreset7, 4},
+  {"Chanterelles alone", kPreset8, 4},
+  {"Drones alone, turning", kPreset9, 3},
+  {"Slow crank: the top notes crunch", kPreset10, 2},
+  {"Wide unison: two chanterelles apart", kPreset11, 2},
+  {"Four coups a turn", kPreset12, 2},
+  {"Cotton on the strings: a soft, wide grip", kPreset13, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::coup}, {109, p::pressure}, {111, p::bounce}, {113, p::tirant}, {114, p::crank}};

@@ -54,6 +54,14 @@ export function slideOf(I) {
   return w ? (typeof w === 'string' ? { param: w } : w) : null;
 }
 
+/**
+ * An instrument's presets with the dimensions that make little sense on it turned off in each
+ * (`dims` from 'strike', 'glide', 'slide', 'press', 'lift'): the approved table's "Off in presets"
+ * column. The defaults keep every switch on, and a preset that sets a switch itself keeps its own.
+ */
+export const offInPresets = (presets, dims) =>
+  presets.map((pr) => ({ ...pr, p: { ...Object.fromEntries(dims.map((d) => [`${d}On`, false])), ...pr.p } }));
+
 /** The switches instrument I doesn't answer to (yet): its pages hide them, and its plugin and saved presets leave them out. */
 export const unanswered = (I) => EXPRESSION_IDS.filter((id) => !responds(I, id));
 

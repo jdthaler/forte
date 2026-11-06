@@ -108,30 +108,31 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::thick, 0.004}, {p::mass, 0.15}, {p::hardness, 1}, {p::strike, 0.3}, {p::speed, 4}};
-inline const PresetValue kPreset2[] = {{p::rise, 2.5}, {p::strike, 0.03}};
-inline const PresetValue kPreset3[] = {{p::rise, 0}, {p::strike, 0.03}, {p::speed, 5.5}};
-inline const PresetValue kPreset4[] = {{p::thick, 0.03}, {p::hardness, 20}};
-inline const PresetValue kPreset5[] = {{p::material, 1}, {p::thick, 0.005}, {p::strike, 0.75}, {p::hardness, 300}};
-inline const PresetValue kPreset6[] = {{p::bc, 1}, {p::strike, 0.2}};
-inline const PresetValue kPreset7[] = {{p::strike, 0}};
-inline const PresetValue kPreset8[] = {{p::asym, 0}};
-inline const PresetValue kPreset9[] = {{p::material, 2}};
-inline const PresetValue kPreset10[] = {{p::thick, 0.004}, {p::rise, 0}, {p::strike, 0.8}, {p::hardness, 2}, {p::speed, 4}};
-inline const PresetValue kPreset11[] = {{p::release, 30}};
+inline const PresetValue kPreset0[] = {{p::glideOn, 0}};
+inline const PresetValue kPreset1[] = {{p::glideOn, 0}, {p::thick, 0.004}, {p::mass, 0.15}, {p::hardness, 1}, {p::strike, 0.3}, {p::speed, 4}};
+inline const PresetValue kPreset2[] = {{p::glideOn, 0}, {p::rise, 2.5}, {p::strike, 0.03}};
+inline const PresetValue kPreset3[] = {{p::glideOn, 0}, {p::rise, 0}, {p::strike, 0.03}, {p::speed, 5.5}};
+inline const PresetValue kPreset4[] = {{p::glideOn, 0}, {p::thick, 0.03}, {p::hardness, 20}};
+inline const PresetValue kPreset5[] = {{p::glideOn, 0}, {p::material, 1}, {p::thick, 0.005}, {p::strike, 0.75}, {p::hardness, 300}};
+inline const PresetValue kPreset6[] = {{p::glideOn, 0}, {p::bc, 1}, {p::strike, 0.2}};
+inline const PresetValue kPreset7[] = {{p::glideOn, 0}, {p::strike, 0}};
+inline const PresetValue kPreset8[] = {{p::glideOn, 0}, {p::asym, 0}};
+inline const PresetValue kPreset9[] = {{p::glideOn, 0}, {p::material, 2}};
+inline const PresetValue kPreset10[] = {{p::glideOn, 0}, {p::thick, 0.004}, {p::rise, 0}, {p::strike, 0.8}, {p::hardness, 2}, {p::speed, 4}};
+inline const PresetValue kPreset11[] = {{p::glideOn, 0}, {p::release, 30}};
 inline const Preset kPresets[] = {
-  {"Bronze gong: bell when soft, crash when hard", nullptr, 0},
-  {"Tam-tam: thin, big soft beater, off centre", kPreset1, 5},
-  {"Opera gong, pitch bends up (2.5 h dome, centre)", kPreset2, 2},
-  {"Opera gong, pitch bends down (flat, centre)", kPreset3, 3},
-  {"Thick bronze: stays linear (a bell plate)", kPreset4, 2},
-  {"Steel sheet struck near the rim", kPreset5, 4},
-  {"Clamped rim (held, free to slide in its plane)", kPreset6, 2},
-  {"Struck dead centre (no asymmetric modes)", kPreset7, 1},
-  {"Perfectly round: the twins in tune, no shimmer", kPreset8, 1},
-  {"Aluminium gong: light, and quick to die", kPreset9, 1},
-  {"Wind gong: thin and flat, struck near the rim", kPreset10, 5},
-  {"A hand on the gong: choked on release", kPreset11, 1},
+  {"Bronze gong: bell when soft, crash when hard", kPreset0, 1},
+  {"Tam-tam: thin, big soft beater, off centre", kPreset1, 6},
+  {"Opera gong, pitch bends up (2.5 h dome, centre)", kPreset2, 3},
+  {"Opera gong, pitch bends down (flat, centre)", kPreset3, 4},
+  {"Thick bronze: stays linear (a bell plate)", kPreset4, 3},
+  {"Steel sheet struck near the rim", kPreset5, 5},
+  {"Clamped rim (held, free to slide in its plane)", kPreset6, 3},
+  {"Struck dead centre (no asymmetric modes)", kPreset7, 2},
+  {"Perfectly round: the twins in tune, no shimmer", kPreset8, 2},
+  {"Aluminium gong: light, and quick to die", kPreset9, 2},
+  {"Wind gong: thin and flat, struck near the rim", kPreset10, 6},
+  {"A hand on the gong: choked on release", kPreset11, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::mass}, {109, p::release}, {111, p::listen}, {113, p::hardness}, {114, p::strike}};

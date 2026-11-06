@@ -4,7 +4,7 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './celesta-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
-import { EXPRESSION } from '../../shared/expression.js';
+import { EXPRESSION, offInPresets } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -14,7 +14,7 @@ export const KEY_LO = 60, KEY_HI = 108, KEY_MIN = 21, KEY_MAX = 108;
 export const INSTRUMENT = {
   id: 'celesta',
   groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
-  presets: PRESETS,
+  presets: offInPresets(PRESETS, ['glide']), // its presets turn off what makes little sense on it (shared/expression.js)
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C8, 21–108
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // C4–C8, 60–108, until Full range opens the rest
