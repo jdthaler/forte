@@ -108,6 +108,7 @@ class BrassEngine : public Engine {
   void listen(Voice &v);
   void postView();
   void record(const Voice &v);
+  void compress(float *L, float *R, int n);
   double hornOf() const;
 
   std::array<double, p::count> P{};
@@ -123,6 +124,9 @@ class BrassEngine : public Engine {
   // views
   Voice *focus = nullptr;
   int blocks = 0;
+  // the compressor (brass-engine.cpp): its held peak, the samples left to hold it, its gain
+  double peak = 0, compGain = 1;
+  int peakHold = 0;
   struct Trace { float pc[TRACE] = {}, h[TRACE] = {}, pb[TRACE] = {}, rad[TRACE] = {}; int n = 0, cnt = 0, dec = 4; double dt = 1.0 / 12000; bool armed = true; } trace;
 };
 
