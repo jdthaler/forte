@@ -213,9 +213,16 @@ RegalEngine::RegalEngine(double fs, uint32_t s) : Engine(fs) {
 
 void RegalEngine::configure(uint32_t s, double f) { seed = s ? s : 1; fOS = f; }
 
+void RegalEngine::slide(double value, int key) {
+  expr.setSlide(value, key);
+  if (key < 0 || key > 127) return;
+  if (Voice *v = byKey[key]; v && v->down && !v->fading && !v->dead) v->openTo = palletOf(key);
+}
+
 void RegalEngine::setParams(const double *p) {
   for (int i = 0; i < p::count; i++) P[i] = p[i];
   hasParams = true;
+  for (int i = 0; i < count; i++) { Voice &v = *voices[i]; if (v.down && !v.fading && !v.dead) v.openTo = palletOf(v.key); } // the held keys' pallets follow the knob
   voicing.curve = P[p::curve]; voicing.thick = P[p::thickness]; voicing.q = P[p::q];
   voicing.leather = (int)P[p::facing] == facing_::leather;
   voicing.shape = (int)P[p::resonator]; voicing.resLen = P[p::resLength];
@@ -316,7 +323,7 @@ void RegalEngine::noteOn(int key, double velocity) {
   for (int r = 0; r < NRANKS; r++) v->sim[r].hearFromNow();
   v->nb = expr.bendOf(key);
   for (int r = 0; r < NRANKS; r++) v->sim[r].rate = rateOf(*v, r);
-  v->down = true; v->openTo = 1; v->openRate = 1 / (palletOpen(velocity) * fs);
+  v->down = true; v->openTo = palletOf(key); v->openRate = 1 / (palletOpen(velocity) * fs);
   for (int r = 0; r < NRANKS; r++) if (v->mute[r] > 0 || on[r]) v->sim[r].asleep = false;
   focus = v;
 }

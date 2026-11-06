@@ -108,6 +108,12 @@ double HarmoniumEngine::Reed::energy() const { // mechanical energy about rest, 
   return 0.5 * (k1 * d1 * d1 + m1 * st[S_V1] * st[S_V1] + k2 * st[S_Q2] * st[S_Q2] + m2 * st[S_V2] * st[S_V2]);
 }
 
+void HarmoniumEngine::slide(double value, int key) {
+  expr.setSlide(value, key);
+  if (key < 0 || key > 127) return;
+  if (Voice *v = byKey[key]; v && v->down && !v->fading) v->s[V_AT] = palletOf(key);
+}
+
 // One step (of this reed's own length h), with st[S_AIN] the reed's share of the pallet opening,
 // io[0] the reservoir pressure and io[1] the cassotto's. Leaves in st[S_DW] the rate of change
 // of the flow leaving downstream, d/dt (U_g + Σ Sₙ vₙ): the reed's sound.
@@ -221,6 +227,7 @@ double HarmoniumEngine::rand() {
 void HarmoniumEngine::setParams(const double *p) {
   for (int i = 0; i < p::count; i++) P[i] = p[i];
   hasParams = true;
+  for (int i = 0; i < count; i++) { Voice &v = *voices[i]; if (v.down && !v.fading) v.s[V_AT] = palletOf(v.key); } // the held keys' pallets follow the knob
   const double dk[6] = {P[p::set], P[p::clearance], P[p::q], P[p::throat], P[p::cell], P[p::detune]};
   bool changed = version == 0;
   for (int i = 0; i < 6; i++) if (dk[i] != designKey[i]) changed = true;
@@ -300,7 +307,7 @@ void HarmoniumEngine::noteOn(int key, double velocity) {
     v->nb = expr.bendOf(key);
     for (Reed &r : v->reeds) if (r.R) r.stiffen(bendNow * v->nb);
   }
-  v->down = true; v->s[V_AT] = 1; v->s[V_AR] = 1 / (palletOpen(velocity) * fs); v->vel = velocity;
+  v->down = true; v->s[V_AT] = palletOf(key); v->s[V_AR] = 1 / (palletOpen(velocity) * fs); v->vel = velocity;
   if (!v->pending) {
     for (int r = 0; r < NRANKS; r++) if (v->mute[r] > 0) v->reeds[r].asleep = false;
     if (P[p::percussion] && v->mute[1] > 0) {

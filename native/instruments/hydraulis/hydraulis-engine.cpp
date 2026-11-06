@@ -148,10 +148,17 @@ bool HydraulisEngine::useModels(const double *packed, int n) {
   return true;
 }
 
+void HydraulisEngine::slide(double value, int key) {
+  expr.setSlide(value, key);
+  if (key < 0 || key > 127) return;
+  if (Voice *v = byKey[key]; v && v->down && !v->fading) v->depth = travelOf(key);
+}
+
 void HydraulisEngine::setParams(const double *v) {
   for (int i = 0; i < p::count; i++) P[i] = v[i];
   const bool first = !hasParams;
   hasParams = true;
+  for (int i = 0; i < nVoices; i++) { Voice *u = voices[i]; if (u->down && !u->fading) u->depth = travelOf(u->key); } // the held keys follow the knob
   const Tuning t = tuningOf(P.data()); // the keyboard's: a change of it cuts new pipes for the next notes
   Design d;
   d.bore = P[p::bore]; d.voicing = {P[p::cutup], P[p::gain], P[p::offset]};
@@ -240,7 +247,8 @@ bool HydraulisEngine::startKey(int key, double velocity, const KeyModels *models
   }
   v->nb = expr.bendOf(key);
   // the finger pushes the slide in, from wherever its spring has brought it back to
-  v->down = true; v->pushing = true; v->retK = 1; v->s0 = v->s; v->pushT = 0; v->pushDur = pushTime(velocity, P[p::push]) * std::max(0.05, 1 - v->s);
+  v->depth = travelOf(key);
+  v->down = true; v->pushing = true; v->retK = 1; v->s0 = v->s; v->pushT = 0; v->pushDur = pushTime(velocity, P[p::push]) * std::max(0.05, std::fabs(v->depth - v->s));
   for (int r = 0; r < RANKS; r++) if (cock[r] > 0) v->pipes[r].asleep = false;
   focusKey = key;
   return true;
@@ -277,7 +285,7 @@ void HydraulisEngine::noteOff(int key, double velocity) {
   if (!v) return;
   if (v->pushing) { // let go mid-push: the slide keeps the speed the finger gave it
     const double u = std::min(1.0, v->pushT / v->pushDur);
-    v->sv = (1 - v->s0) * (PI / (2 * v->pushDur)) * std::sin(PI * u);
+    v->sv = (v->depth - v->s0) * (PI / (2 * v->pushDur)) * std::sin(PI * u);
   }
   const double r = liftScale(velocity);
   v->down = false; v->pushing = false; v->retK = 1 / (r * r);
@@ -433,9 +441,12 @@ void HydraulisEngine::processBlock(float *L, float *R, int n) {
       if (v->pushing) {
         v->pushT += h;
         const double u = std::min(1.0, v->pushT / v->pushDur);
-        s = v->s0 + (1 - v->s0) * 0.5 * (1 - std::cos(PI * u));
-        if (u >= 1) { v->pushing = false; s = 1; }
+        s = v->s0 + (v->depth - v->s0) * 0.5 * (1 - std::cos(PI * u));
+        if (u >= 1) { v->pushing = false; s = v->depth; }
         v->sv = 0;
+      } else if (v->down && s != v->depth) { // held, and moved to another depth: the finger takes it there at its push speed
+        const double step = h / (P[p::push] / 1000);
+        s = v->depth > s ? std::min(v->depth, s + step) : std::max(v->depth, s - step);
       } else if (!v->down && (s > 0 || v->sv != 0)) {
         v->sv -= w2 * v->retK * (s + 1) * h;
         s += v->sv * h;

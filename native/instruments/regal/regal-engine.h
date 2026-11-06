@@ -16,6 +16,7 @@
 // come from a fixed pool, each reed with its own delay memory; nothing is allocated in process().
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 
@@ -53,6 +54,7 @@ class RegalEngine : public Engine {
   void allNotesOff() override;
   void bend(double value) override;
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
+  void slide(double value, int key) override; // how far one key's pallet opens
   void pressure(double value, int key) override;
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
@@ -147,6 +149,7 @@ class RegalEngine : public Engine {
   struct Trace { std::array<double, TRACE> q{}, U{}, pd{}, Pb{}; int w = 0, dec = 1, cnt = 0, n = 0; double dt = 0, qAmp = 0; } trace;
   double lastQ = 0, lastCross = 0, period = 0, tSim = 0;
   std::array<Voice *, 128> byKey{};
+  double palletOf(int key) const { return std::clamp(expr.slideOr(key, P[p::pallet]), 0.01, 1.0); } // the knob's, or the key's own slide
   std::array<Voice, POOL> pool;
 };
 

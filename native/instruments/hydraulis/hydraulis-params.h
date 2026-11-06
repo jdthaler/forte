@@ -17,7 +17,7 @@
 namespace forte::hydraulis {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { open, stopped, low, high, effort, pumps, rim, cistern, gurgle, push, spring, bore, cutup, gain, offset, noise, fullRange, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, pressOn, liftOn, count };
+enum : int { open, stopped, low, high, effort, pumps, rim, cistern, gurgle, push, travel, spring, bore, cutup, gain, offset, noise, fullRange, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, pressOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -29,6 +29,7 @@ inline const FormatSegment kFormat_rim[] = {{kNoLimit, "", " Pa", 1, 0, 0, false
 inline const FormatSegment kFormat_cistern[] = {{0.9999999999999999, "× ", "", 1, 0, 2, false, false, false, false}, {kNoLimit, "× ", "", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_gurgle[] = {{0.9999999999999999, "× ", "", 1, 0, 2, false, false, false, false}, {kNoLimit, "× ", "", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_push[] = {{9.999999999999998, "", " ms at velocity 0.7", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " ms at velocity 0.7", 1, 0, 0, false, false, false, false}};
+inline const FormatSegment kFormat_travel[] = {{kNoLimit, "", " % of its travel", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_spring[] = {{9.999999999999998, "shuts in ", " ms", 1, 0, 1, false, false, false, false}, {kNoLimit, "shuts in ", " ms", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_bore[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, true}};
 inline const FormatSegment kFormat_cutup[] = {{0.9999999999999999, "× ", "", 1, 0, 2, false, false, false, false}, {kNoLimit, "× ", "", 1, 0, 1, false, false, false, false}};
@@ -70,6 +71,7 @@ inline const ParamInfo kParams[p::count] = {
   {"cistern", "Cistern size", "Pumps and water", ParamKind::continuous, 0.4, 2.5, 1, 0, true, false, nullptr, 0, kFormat_cistern, 2},
   {"gurgle", "Gurgle (air bubbling under the rim)", "Pumps and water", ParamKind::continuous, 0, 2, 1, 0.01, false, false, nullptr, 0, kFormat_gurgle, 2},
   {"push", "Slide: push time", "Keys", ParamKind::continuous, 2, 60, 10, 0, true, false, nullptr, 0, kFormat_push, 2},
+  {"travel", "Slide: how far it goes in", "Keys", ParamKind::continuous, 0.05, 1, 1, 0.01, false, false, nullptr, 0, kFormat_travel, 1},
   {"spring", "Return spring", "Keys", ParamKind::continuous, 4, 80, 15, 0, true, false, nullptr, 0, kFormat_spring, 2},
   {"bore", "Bore scaling", "Pipes", ParamKind::continuous, 0.05, 0.9, 0.21, 0.01, false, false, nullptr, 0, kFormat_bore, 1},
   {"cutup", "Mouth cut-up", "Pipes", ParamKind::continuous, 0.5, 2, 1, 0, true, false, nullptr, 0, kFormat_cutup, 2},
@@ -96,6 +98,7 @@ inline const ParamInfo kParams[p::count] = {
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
   {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"glideOn", "Glide: a note’s own pitch bend", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"pressOn", "Press: pressing into a held key", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
@@ -154,7 +157,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 55, .compassHi = 79, .compass = p::fullRange, .space = Space::hold,
     .modWheel = p::effort, .modWheelMax = 1,
-    .slide = p::effort, .slideMax = 1,
+    .slide = p::travel, .slideMax = 0.5,
     .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 11.5},
     .midiVelocity = midiVelocity, .create = create,

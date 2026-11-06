@@ -18,7 +18,7 @@ export const INSTRUMENT = {
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // C2–C7, 36–96, until Full range opens the rest
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
   modWheel: 'pressure',                 // CC1: wind pressure, from its default up to its maximum
-  mpe: { bend: 12 },                    // MPE: a key's own bend stiffens its tongues alone, an octave either way (the wind is every key's: no slide)
+  mpe: { bend: 12, slide: { param: 'pallet', max: 0.4 } }, // MPE: a key's own bend stiffens its tongues alone, an octave either way; its slide holds its pallet part open
   aftertouch: 'more wind, up to double', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'how fast its pallet closes: a slow lift lets the reeds die away', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['bourdon', 'principal', 'piccolo', 'pump', 'pressure'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

@@ -65,6 +65,7 @@ class HarmoniumEngine : public Engine {
   void allNotesOff() override;
   void bend(double value) override; // every tongue's stiffness ×r², its note ×r
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // one key's tongues, the same way
+  void slide(double value, int key) override; // how far one key's pallet opens
   void pressure(double value, int key) override; // aftertouch: more wind (up to double)
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
@@ -133,7 +134,7 @@ class HarmoniumEngine : public Engine {
   bool hasParams = false;
   double fOS = 440;
   double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
-  NoteExpression expr{MPE_BEND};  // each key's own bend
+  NoteExpression expr{MPE_BEND};  // each key's own bend, and its slide (its pallet's opening)
   bool trackAll = false;
   uint32_t rng = 1;
   const double h;
@@ -153,6 +154,7 @@ class HarmoniumEngine : public Engine {
   Voice *focus = nullptr;
   int blocks = 0;
   std::array<Voice *, 128> byKey{};
+  double palletOf(int key) const { return std::clamp(expr.slideOr(key, P[p::pallet]), 0.01, 1.0); } // the knob's, or the key's own slide
   std::array<Voice, POOL> pool{};
   struct Trace { std::array<double, TRACE * 8> y{}, U{}, A{}, dp{}; int w = 0, dec = 1, cnt = 0; } trace;
   std::array<double, ENV> envBuf{};
