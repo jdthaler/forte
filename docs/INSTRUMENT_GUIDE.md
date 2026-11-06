@@ -91,7 +91,6 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `presets.js`, `user-presets.js` | your own presets and shared links. `presets.js` is the format, the same in the plugins (`native/plugin/presets.cpp`): every parameter of the contract by id, in a versioned file or in a link's fragment. `user-presets.js` adds them to the Presets menu (save, link, a sheet to play, link, save to a file, delete and open files); the shell attaches it, and a page with its own state calls `attachPresets` with how to get and set its parameters by contract id (the organ's console is `CONSOLE.get` and `CONSOLE.put`) and its `DEFAULTS`. |
 | `morph.js` | Morph, the last group of controls on every page: *From* and *To* (Default settings, the instrument's presets, your own) and a slider between them; `presets.js` `morph` is the blend (a number in a straight line, or by equal ratios on a log control, on its step; a choice or a switch halfway), and the page's `keep` stays as it is. `user-presets.js` attaches it. Choosing a preset makes it From. The plugins have the same as three parameters, Morph from, Morph to and Morph (`native/plugin/plugin.cpp`), so a song can automate it. |
 | `midi.js` | Web MIDI for every page (through the shell): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen in the MIDI menu, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling; `createInput` is one source's cleaning (a device's, which follows Octave and Transpose, or a song's, which doesn't), and `pageMIDI` the page's handler, for the songs (`songs.js`); `pageMpe` decodes MPE for a page (below) and turns it into the engine's `noteBend`, `slide` and `pressure` messages; Octave and Transpose (`keyShift`, `setShift`; the MIDI status opens a menu with them, the velocity curve and MPE: `midiMenu`) move every MIDI key as `startMIDI` cleans it, a note-off and poly pressure going where their note-on went, so a page's own MIDI handling gets them for nothing. A foot controller is `startMIDI`'s too, so every page has it: `SWITCHES` turns CC80, 81 and 82 into CC64, 66 and 67, the volume (CC7) and expression (CC11) pedals set `pedalGain`, which `chain.js` applies after the limiter, and a program change plays a preset from `#preset` (`choosePreset`); a page passes its `controllers` (`controllersOf`) so that a CC its instrument maps (an organ's CC11) stays the instrument's. The plugins do the same (`native/plugin/plugin.cpp`). |
-| `layer.js`, `taps.js` | **+ Layer** in the keyboard bar: a second instrument on any page, layered with the page's or split from it below a key, as in the Forte app (`native/plugin/plugin.cpp`, `Suite`). It hosts the second from its descriptor alone, in an AudioWorkletNode and output chain of its own on the page's audio context, and `limitTogether` (`chain.js`) puts both chains through one more limiter. `taps.js` is where it takes its share of each note before the page sees it: `midiTap` in `midi.js`, `keyTap` in `keyboard.js`, and `computerKey`, which every page's computer-key handler calls before its own note-on and note-off and skips the note when it returns false. A page with keys of its own needs that call, and nothing else. |
 | `rise.js` | a Seaboard RISE's panel, at the left of the page while one is plugged in (`midi.js` opens it and hands it that input's messages): `riseModel` reads each finger's Strike, Glide, Slide, Press and Lift, the faders and the pad; `risePanel` draws them with what each moves or does here (`faders`, `mpe`, `modWheel`, `aftertouch` from the descriptor), and under *On the RISE* its own settings, read and written over SysEx. |
 | `rise-sysex.js` | the RISE's settings over SysEx, as ROLI Dashboard reads and writes them (the protocol [GRAB](https://github.com/demixme/GRAB) decoded): the identify message and its reply parsed, one setting's `3D` message, the MIDI-mode, Press, octave and transpose RPNs and NRPNs, and `forForte()`, what *Set up for Forte* sends. Bytes only: `rise.js` does the sending. |
 | `mpe.js` | MPE (MIDI Polyphonic Expression), message for message as the plugins' `forte/mpe.h`: zones from the MPE Configuration Message, member channels' bend (±48 semitones unless RPN 0 says otherwise), pressure and CC74, the Auto/On/Off mode, and `bendRatio`, a note's bend along the keyboard's tuning. |
@@ -105,8 +104,14 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 Every page uses the shell. The five oldest (the Ribbon Piano, Tonewheel Organ, Tine Piano, and
 Black-Hole and Huygens Keyboards) predate it and moved onto it later; the organ's drawbars and
 switches are its `console`, which the shell keeps in P and shows to the plugin, presets and
-faders as parameters. A page that moves keeps its own name for its saved settings (`store`, from `layer.js`
+faders as parameters. A page that moves keeps its own name for its saved settings (`store`, from `registry.js`
 `paramsStore`). New instruments use the shell.
+
+The **Combinations** page (`combine/`, its README) plays several instruments at once from one
+keyboard, layered or split. It hosts each from its descriptor alone, as the Forte app does: the
+engine in an AudioWorkletNode of its own, its output chain into the page's mix and one more
+limiter (`chain.js` `SUM_LIMITER`), its settings read from its own page's (`paramsStore`). So an
+instrument needs nothing for it but a descriptor that plays without its page.
 
 ### The descriptor
 
@@ -417,9 +422,7 @@ and say which in the footer help.
   size and the pedal button, which presses Space. Where they don't fit on
   one line (a phone held upright, a tablet, a narrow window) the strip
   takes a line of its own above the rest. The page's footer hints
-  (`.kb-help`: computer keys, MIDI, readouts) go behind ⌨, and **+ Layer**
-  after it adds a second instrument (`layer.js`, above); the keys it plays
-  are framed in its colour, and a split's point is a line between two keys.
+  (`.kb-help`: computer keys, MIDI, readouts) go behind ⌨.
 - **Perform** is for playing and for a projector: the views that are on,
   filling the screen, with no toggles and no text in them. The views' bar
   is just Discover | Perform, over their corner, and the controls' bar

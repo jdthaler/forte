@@ -12,7 +12,7 @@ import { GeneratorView, LeslieView, OutputView, drawScanner, BAR_COLORS, useMode
 import { controlOwns, focusedByPointer, unfocus } from '../../shared/focus.js';
 import { tuningRatio } from '../../shared/tuning.js';
 import { rotarySelector } from '../../shared/faces.js';
-import { paramsStore } from '../../shared/layer.js';
+import { paramsStore } from '../../shared/registry.js';
 
 const $ = (s) => document.querySelector(s);
 const NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];

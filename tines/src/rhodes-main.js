@@ -10,7 +10,7 @@ import { TinesWasmEngine, wasmModel } from './tines-wasm.js'; // the slow-motion
 import { MotionView, PickupView, SpectrumView, MODE_COLORS, modeKind } from './rhodes-viz.js';
 import { SpectrogramView } from '../../shared/views.js';
 import { unfocus } from '../../shared/focus.js';
-import { paramsStore } from '../../shared/layer.js';
+import { paramsStore } from '../../shared/registry.js';
 
 const $ = (s) => document.querySelector(s);
 const [KEY_LO, KEY_HI] = INSTRUMENT.range;

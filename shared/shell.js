@@ -32,10 +32,10 @@
 //   chain         the output chain (shared/chain.js): { volume, room?, tone?, body?, … }
 //                 node → [tone low-pass] → [body] → master (+ room reverb) → limiter → speakers; analyser before the body
 //   midiVelocity(v)  a note's velocity (0..1, after the velocity curve) in the engine's units, for an
-//                 engine that wants its own (MIDI and the on-screen keys; shared/layer.js does the same)
+//                 engine that wants its own (MIDI and the on-screen keys; the Combinations page does the same)
 //   keyVelocity   the velocity the computer keys play when there is no `velocity` parameter (0.75)
 //   store         the localStorage key for the settings, for a page older than the shell that kept
-//                 its own (shared/layer.js paramsStore); otherwise forte/<id>/params/v1
+//                 its own (registry.js paramsStore); otherwise forte/<id>/params/v1
 //   console       { groups, defaults, get(P), put(values, P) }: state the page keeps in P in its own
 //                 shape (the organ's drawbars and switches, organ-params.js), and as plugin parameters
 //                 (its groups) through get and put: saved, in presets and links, the plugin's window
@@ -68,7 +68,6 @@ import { attachPresets } from './user-presets.js';
 import { connectQuality, qualityControl } from './quality.js';
 import { dress, faceOf } from './faces.js';
 import { EXPRESSION_IDS, responds, slideOf } from './expression.js'; // the Expression switches
-import { computerKey } from './taps.js'; // a second instrument's share of the computer keys (shared/layer.js)
 import { host, pluginAudio, pageValue, keysFrom } from './in-plugin.js';
 
 const $ = (s) => document.querySelector(s);
@@ -280,21 +279,21 @@ export function createShell(cfg) {
     e.preventDefault();
     if (e.repeat || held.has(e.code)) return;
     held.set(e.code, key);
-    if (computerKey(key, true)) down(key, kbVel());
+    down(key, kbVel());
   });
   window.addEventListener('keyup', (e) => {
     if (e.code === 'Space' && cfg.space && !controlOwns(e)) { if (e.isTrusted) spaceHeld = false; setSustain(false); return; }
     const key = held.get(e.code);
-    if (key !== undefined) { held.delete(e.code); if (computerKey(key, false)) up(key); }
+    if (key !== undefined) { held.delete(e.code); up(key); }
   });
   // Losing focus means no keyup will come: release held keys and a held Space bar.
-  const letGo = () => { for (const k of held.values()) if (computerKey(k, false)) up(k); held.clear(); if (spaceHeld) { spaceHeld = false; setSustain(false); } };
+  const letGo = () => { for (const k of held.values()) up(k); held.clear(); if (spaceHeld) { spaceHeld = false; setSustain(false); } };
   window.addEventListener('blur', letGo);
   document.addEventListener('visibilitychange', () => { if (document.hidden) letGo(); });
   function shiftOctave(d) {
     const nb = shell.base + d;
     if (nb + 11 < LO || nb > HI - 12) return; // never a whole row of computer keys out of range
-    for (const k of held.values()) if (computerKey(k, false)) up(k);
+    for (const k of held.values()) up(k);
     held.clear(); shell.base = nb; shell.keys.labels(labels()); updateHelp();
   }
   function updateHelp() {

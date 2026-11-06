@@ -715,34 +715,10 @@ body[data-instrument] .forte-songs-open { padding: 4px 10px; border-radius: 8px;
   .forte-songs-list { overflow: visible; grid-template-columns: 1fr 1fr; }
   body[data-instrument] .forte-songs :is(.forte-songs-play, .forte-songs-open, .forte-songs-speed) { min-height: 36px; }
 }
-/* a second instrument (shared/layer.js): its button in the keyboard bar, its panel, and its keys
-   lit in its colour; in a split, a line under each key in the colour of the instrument it plays */
-.forte-layer { display: inline-flex; align-items: center; gap: 6px; max-width: 150px; flex: none; white-space: nowrap; }
-.forte-layer.on { border-color: var(--layer-accent); }
-.forte-layer-name { overflow: hidden; text-overflow: ellipsis; }
-.forte-layer-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
-.forte-layer-pop { width: min(360px, calc(100vw - 24px)); color: var(--text); }
-.forte-layer-pop select { width: 100%; }
-.forte-layer-row { display: flex; align-items: center; gap: 8px; }
-.forte-layer-more { display: flex; flex-direction: column; gap: 8px; }
-.forte-layer-more[hidden], .forte-layer-at[hidden], .forte-layer-pop [hidden] { display: none; }
-.forte-layer-at { display: flex; align-items: center; gap: 6px; color: var(--muted); flex: 1; }
-.forte-layer-at select { flex: 1; }
-.forte-layer-volume input { flex: 1; }
-.forte-layer-volume .val { color: var(--accent); font-variant-numeric: tabular-nums; min-width: 4.5em; text-align: right; }
-.forte-layer-note { margin: 0; color: var(--muted); font-size: 12px; }
-.forte-layer-link { font-size: 12px; }
-.forte-layer-modes button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink, #111); border-color: transparent; }
-#keyboard .wk.down.other { background: var(--layer-down); }
-#keyboard .bk.down.other { background: var(--layer-accent); }
-#keyboard .wk.part-own::after, #keyboard .wk.part-other::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; }
-#keyboard .wk.part-own::after { background: var(--accent); }
-#keyboard .wk.part-other::after { background: var(--layer-accent); }
-#keyboard .wk.edge, #keyboard .bk.edge { box-shadow: inset 3px 0 0 var(--accent-2); }
-.forte-layer-label { flex: none; width: 4.8em; color: var(--muted); }
-.forte-layer-row select { flex: 1; min-width: 0; }
-/* above the keys, it scrolls when the screen is short (a phone held sideways) */
-.forte-layer-pop { max-height: calc(100vh - var(--footer-h, 170px) - var(--header-h, 0px) - 16px); max-height: calc(100svh - var(--footer-h, 170px) - var(--header-h, 0px) - 16px); overflow: auto; }
+/* the Combinations page's instruments on each key (keyboard.js zones): a band along the key's front
+   edge, a row of stripes for each instrument, coloured where it plays */
+#keyboard .zoned::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: var(--zone-h); background: var(--zones); pointer-events: none; }
+#keyboard .bk.zoned::after { left: 2px; right: 2px; bottom: 3px; border-radius: 1px; }
 /* ---- in a plugin's window (shared/in-plugin.js): the views alone, under their bar, filling the
    frame; the window has the header, the controls and the keys (native/plugin/editor.html), and
    folds the views away itself. Always the desktop's layout: the phones' rules above are dropped. */

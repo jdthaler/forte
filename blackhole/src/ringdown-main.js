@@ -10,7 +10,7 @@ import { SpectrogramView, animate } from '../../shared/views.js';
 import { drawPlane, drawKerr, WaveView, Lazy } from './ringdown-viz.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
 import { unfocus } from '../../shared/focus.js';
-import { paramsStore } from '../../shared/layer.js';
+import { paramsStore } from '../../shared/registry.js';
 
 const $ = (s) => document.querySelector(s);
 

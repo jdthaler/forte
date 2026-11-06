@@ -1,0 +1,30 @@
+/* The Combinations page: Forte's own colours, and the instruments as cards, each in its own colour
+   (--part, from the registry), side by side where they fit. */
+:root {
+  --accent: #e6c58a;
+  --accent-2: #8fb8ff;
+  --accent-ink: #1b1403;
+}
+.combine-group { grid-column: 1 / -1; }
+.combine-says { margin: 2px 0 8px; font-size: 12px; }
+.combine-parts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 10px; }
+.combine-part { border: 1px solid var(--line, #2a2a30); border-left: 4px solid var(--part); border-radius: 10px; padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 7px; background: color-mix(in srgb, var(--part) 6%, transparent); min-width: 0; }
+.combine-part.off { opacity: 0.6; }
+.combine-part-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.combine-part-head a { font-weight: 700; color: var(--text); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.combine-part-head a:hover { text-decoration: underline; }
+.combine-part-head .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--part); flex: none; }
+.combine-part-head .spacer { flex: 1; }
+.combine-part-head button { padding: 2px 8px; font-size: 12px; line-height: 1.4; flex: none; }
+.combine-part-head .combine-on[aria-pressed="true"] { background: var(--part); color: #111; border-color: transparent; }
+.combine-row { display: flex; align-items: center; gap: 6px; font-size: 12.5px; min-width: 0; }
+.combine-row > span { flex: none; width: 4.2em; color: var(--muted); }
+.combine-row select { flex: 1 1 0; min-width: 0; }
+.combine-row .to { width: auto; }
+.combine-part .param { margin: 0; }
+.combine-part .loading { color: var(--muted); font-size: 12px; margin: 0; }
+.combine-add { margin-top: 12px; max-width: 360px; }
+.combine-add select { width: 100%; }
+.combine-empty { border: 1px dashed var(--line, #2a2a30); border-radius: 10px; padding: 14px; color: var(--muted); font-size: 13px; text-align: center; }
+/* the keys view: a lane for each instrument across the whole keyboard */
+#lanes { width: 100%; height: 190px; display: block; }
