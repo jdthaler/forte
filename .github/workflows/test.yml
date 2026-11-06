@@ -6,9 +6,12 @@ on:
     branches: [main, live]
   pull_request:
 
-# A newer push to a pull request replaces its run still going; every run on main and live finishes.
+# A newer push to a pull request replaces its run still going. Every push to main and live gets
+# its own run, at once and to the end: not waiting for the one before (merges come minutes apart),
+# and not dropped while it waits, so each of main's commits saves the page counts that pull
+# requests merging into it compare with.
 concurrency:
-  group: tests-${{ github.event_name }}-${{ github.ref }}
+  group: tests-${{ github.event_name }}-${{ github.ref }}${{ github.event_name == 'push' && format('-{0}', github.sha) || '' }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/live' }}
 
 jobs:
