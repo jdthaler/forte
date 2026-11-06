@@ -674,3 +674,100 @@ html.in-plugin .forte-tour-start { display: none; }
 html.in-plugin body[data-instrument] > main { grid-template-rows: auto minmax(0, 1fr); }
 html.in-plugin .forte-views-bar { padding-right: 10px; }
 html.in-plugin .forte-stage { grid-template-rows: repeat(var(--rows, 1), minmax(0, 1fr)); } /* the views fit the frame, as in Perform */
+
+/* ---- a Seaboard RISE plugged in (shared/rise.js): the instrument drawn at the left, the height
+   of the page (as PhuzzBox draws its pedal on a board): its faders and pad with what they move,
+   its keywave with a dot for each finger (across: the key and its glide; up: its slide; size and
+   glow: its press), then the five dimensions of its touch, each lit while it comes in. Folded,
+   it leaves a rail. ------------------------------------------------------------------------- */
+body[data-instrument].rise > main { grid-template-columns: clamp(236px, 21vw, 300px) minmax(0, 1fr); }
+body[data-instrument].rise.rise-folded > main { grid-template-columns: 40px minmax(0, 1fr); }
+body[data-instrument].rise > main > :not(.forte-rise), body[data-instrument].rise :is(#views, #controls) { grid-column: 2; }
+.forte-rise {
+  grid-column: 1; grid-row: 1 / -1; min-height: 0; min-width: 0; overflow-y: auto; overscroll-behavior: contain;
+  display: flex; flex-direction: column; gap: 10px; padding: 10px 10px 14px; border-right: 1px solid var(--line);
+  background: repeating-linear-gradient(45deg, rgb(255 255 255 / 0.018) 0 2px, transparent 2px 5px), repeating-linear-gradient(-45deg, rgb(0 0 0 / 0.25) 0 2px, transparent 2px 5px), #111113;
+}
+.forte-rise-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.forte-rise-head b { flex: 1 1 auto; min-width: 0; font-size: 13px; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.forte-rise .forte-fold svg { transform: none; }
+body.rise-folded .forte-rise { padding: 8px 4px; align-items: center; cursor: pointer; }
+body.rise-folded .forte-rise-head { flex-direction: column-reverse; gap: 10px; }
+body.rise-folded .forte-rise-head b { writing-mode: vertical-rl; transform: rotate(180deg); overflow: visible; color: var(--muted); }
+body.rise-folded .forte-rise .forte-fold svg { transform: rotate(180deg); }
+body.rise-folded .forte-rise-body { display: none; }
+.forte-rise-body { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+
+/* the instrument: a black slab, its side panel above its keywave */
+.forte-rise-slab {
+  display: flex; flex-direction: column; gap: 10px; padding: 10px; border-radius: 12px;
+  background: linear-gradient(180deg, #232327, #131316); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 6px 18px rgb(0 0 0 / 0.55);
+}
+.forte-rise-side { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 12px; align-items: start; }
+.forte-rise-faders { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; justify-items: center; }
+.forte-rise-fader { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+/* a touch fader: a column of lights, lit from the bottom to its value */
+.forte-rise-track { position: relative; width: 12px; height: 84px; border-radius: 6px; background: #09090b; box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.9); overflow: hidden; }
+.forte-rise-track i {
+  position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--v, 0) * 100%);
+  background: repeating-linear-gradient(0deg, #f4f4f6 0 3px, transparent 3px 6px); opacity: 0.25; transition: height 60ms linear;
+}
+.forte-rise-fader.known .forte-rise-track i { opacity: 1; box-shadow: 0 0 6px rgb(255 255 255 / 0.5); }
+.forte-rise-fnum { font-size: 10px; font-weight: 600; color: var(--muted); }
+.forte-rise-pad { position: relative; width: 100%; max-width: 104px; justify-self: center; aspect-ratio: 1; border-radius: 6px; background: #09090b; box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.9); }
+.forte-rise-pad i {
+  position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%;
+  left: calc(var(--x, 0.5) * 100%); top: calc((1 - var(--y, 0.5)) * 100%); background: #f4f4f6; opacity: 0.25;
+}
+.forte-rise-pad.known i { opacity: 1; box-shadow: 0 0 8px rgb(255 255 255 / 0.7); }
+/* what each moves here: its number (or X, Y), the control, where it is */
+.forte-rise-legend { grid-column: 1 / -1; display: grid; gap: 3px; }
+.forte-rise-lrow { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; column-gap: 6px; align-items: baseline; font-size: 11px; line-height: 1.25; }
+.forte-rise-lrow > b { font-size: 10px; color: var(--muted); text-align: center; }
+.forte-rise-llabel { color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.forte-rise-lrow.none .forte-rise-llabel { color: var(--muted); }
+.forte-rise-lval { color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; max-width: 9em; overflow: hidden; text-overflow: ellipsis; }
+.forte-rise-modeline { grid-column: 1 / -1; display: flex; align-items: flex-start; gap: 7px; font-size: 10.5px; line-height: 1.3; color: var(--muted); }
+/* the mode button's light: white in MIDI mode, cyan (its expression mode) until a fader is seen */
+.forte-rise-led { flex: none; width: 9px; height: 9px; margin-top: 2px; border-radius: 50%; background: #3fd0e0; box-shadow: 0 0 6px #3fd0e0; }
+.forte-rise-led.white { background: #f4f4f6; box-shadow: 0 0 6px #fff; }
+/* the keywave: 25 soft keys, black keys a shade darker, each finger a dot */
+.forte-rise-wave { position: relative; height: 74px; border-radius: 8px; overflow: hidden; background: #0c0c0e; }
+.forte-rise-keys { position: absolute; inset: 0 0 14px; display: grid; grid-template-columns: repeat(25, minmax(0, 1fr)); gap: 1px; }
+.forte-rise-keys span { border-radius: 3px; background: linear-gradient(180deg, #3a3a40, #2a2a2f); }
+.forte-rise-keys span.b { background: linear-gradient(180deg, #232327, #18181b); margin-bottom: 14px; }
+.forte-rise-dots { position: absolute; inset: 0 0 14px; pointer-events: none; }
+.forte-rise-dots i {
+  position: absolute; left: calc(var(--x) * 100%); top: calc((1 - var(--y)) * 100%);
+  width: calc(8px + var(--p, 0) * 14px); height: calc(8px + var(--p, 0) * 14px); transform: translate(-50%, -50%); border-radius: 50%;
+  background: var(--accent); opacity: calc(0.55 + 0.45 * var(--s, 1)); box-shadow: 0 0 calc(4px + var(--p, 0) * 14px) var(--accent);
+}
+.forte-rise-range { position: absolute; left: 6px; right: 6px; bottom: 1px; font-size: 9.5px; color: var(--muted); text-align: right; }
+
+/* the five dimensions: a light, the name, a meter, the newest finger's value, what it does here */
+.forte-rise-dims { display: grid; gap: 7px; }
+.forte-rise-dim { display: grid; grid-template-columns: 9px 46px minmax(0, 1fr) 46px; align-items: center; column-gap: 7px; row-gap: 1px; }
+.forte-rise-dim > b { font-size: 12px; font-weight: 600; color: var(--muted); }
+.forte-rise-dot { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--muted); opacity: 0.6; }
+.forte-rise-dim.on .forte-rise-dot { background: var(--accent); border-color: var(--accent); opacity: 1; box-shadow: 0 0 6px var(--accent); }
+.forte-rise-dim.on > b { color: var(--text); }
+.forte-rise-meter { position: relative; height: 6px; border-radius: 3px; background: #09090b; box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.8); overflow: hidden; }
+.forte-rise-meter i { position: absolute; top: 0; bottom: 0; left: 0; width: calc(var(--v, 0) * 100%); background: var(--accent); opacity: 0.45; }
+.forte-rise-dim.on .forte-rise-meter i { opacity: 1; }
+/* Glide bends either way, from the middle */
+.forte-rise-meter.signed::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--line); }
+.forte-rise-meter.signed i { left: calc(var(--from, 0.5) * 100%); width: calc(var(--w, 0) * 100%); }
+.forte-rise-val { font-size: 11px; text-align: right; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.forte-rise-what { grid-column: 2 / -1; font-size: 10.5px; line-height: 1.3; color: var(--muted); }
+.forte-rise-note { margin: 0; font-size: 10.5px; line-height: 1.35; color: var(--muted); }
+html.in-plugin .forte-rise { display: none; }
+
+/* phones: the page scrolls, and the RISE follows the controls */
+@media (max-width: 600px), (max-width: 1050px) and (max-height: 500px) {
+  body[data-instrument].rise > main, body[data-instrument].rise.rise-folded > main { grid-template-columns: minmax(0, 1fr); }
+  body[data-instrument].rise > main > :not(.forte-rise), body[data-instrument].rise :is(#views, #controls) { grid-column: 1; }
+  .forte-rise { grid-row: 5; border-right: 0; border-top: 1px solid var(--line); overflow: visible; }
+  body.rise-folded .forte-rise { align-items: stretch; }
+  body.rise-folded .forte-rise-head { flex-direction: row; }
+  body.rise-folded .forte-rise-head b { writing-mode: horizontal-tb; transform: none; }
+}

@@ -19,6 +19,7 @@ export const INSTRUMENT = {
   // MPE: no bend (the only way to bend a clavichord's note is to press it, and pressure does
   // that); the slide sets the note's own Bebung, its pressure how hard its key is held.
   mpe: { bend: 0, slide: true },
+  aftertouch: 'the tangent presses harder: the note goes sharp', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   faders: ['rate', 'listing', 'detune', 'press', 'bebung'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/clavichord), built as WebAssembly
   wasm: { name: 'ClavichordWasmEngine', module: new URL('./clavichord-wasm.js', import.meta.url).href, binary: new URL('../wasm/clavichord.wasm', import.meta.url).href },

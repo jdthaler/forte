@@ -25,7 +25,9 @@
 //   FADERS are a controller's five touch controls (a Seaboard RISE's three faders and XY pad):
 //   controllersOf(I) is the descriptor's controllers with its `faders` among them, controlled(…)
 //   what one of them sets, ccValue(p, v) a controller across a parameter's whole range.
-//   A Seaboard plays as MPE from the start: startMIDI announces its zone for it.
+//   A Seaboard plays as MPE from the start: startMIDI announces its zone for it, and shows its
+//   panel at the left of the page while it is plugged in (shared/rise.js: its faders, its pad and
+//   each finger's Strike, Glide, Slide, Press and Lift, with what each does on the instrument).
 //   A foot controller (a Roland FC-300 as it comes) works on every page, in startMIDI:
 //   - SWITCHES: its general-purpose switches CC80, 81 and 82 are the sustain, sostenuto and soft
 //     pedals (CC64, 66, 67), so they do whatever those do on each instrument;
@@ -138,6 +140,14 @@ export function choosePreset(n) {
   sel.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
+// A Seaboard's panel (shared/rise.js), loaded the first time one connects; fn(panel) once it is
+// there, each in the order it came (a message is drawn after the connection that brought it)
+let risen = null;
+function rise(fn) {
+  risen ??= import('./rise.js').then((m) => m.risePanel());
+  risen.then(fn, () => {});
+}
+
 /**
  * startMIDI({ onMIDI, status, button, controllers }): controllers is the page's map of the
  * controllers its instrument takes (controllersOf): one it maps (an organ's CC11) is the
@@ -192,18 +202,21 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
     const bind = () => {
       const names = [];
       for (const inp of acc.inputs.values()) {
-        if (inp.state === 'disconnected') { letGo(inp.id); seaboards.delete(inp.id); continue; }
+        if (inp.state === 'disconnected') { letGo(inp.id); if (seaboards.delete(inp.id)) rise((r) => r.input(inp.id, inp.name, false)); continue; }
         names.push(inp.name);
-        inp.onmidimessage = (ev) => clean(inp.id, ev.data);
+        const board = /seaboard/i.test(inp.name ?? '');
+        inp.onmidimessage = (ev) => { if (board) rise((r) => r.midi(inp.id, ev.data)); clean(inp.id, ev.data); };
         // A Seaboard sends MPE (notes on channels 2–16, each bending ±48 semitones, ROLI
         // Dashboard's defaults) but may not say so: announce its lower zone of 15 for it, as the
         // MPE Configuration Message would (MPE on Auto then decodes it; Off still ignores it)
-        if (/seaboard/i.test(inp.name ?? '') && !seaboards.has(inp.id)) {
+        if (board && !seaboards.has(inp.id)) {
           seaboards.add(inp.id);
+          rise((r) => r.input(inp.id, inp.name, true)); // its panel at the left of the page (shared/rise.js)
           for (const [d1, d2] of [[101, 0], [100, 6], [6, 15], [101, 127], [100, 127]]) send([0xb0, d1, d2]);
         }
       }
       for (const id of [...down.keys()]) if (!acc.inputs.has(id)) letGo(id);
+      for (const id of [...seaboards]) if (!acc.inputs.has(id)) { seaboards.delete(id); rise((r) => r.input(id, '', false)); }
       status(names.length ? `MIDI: ${names.join(', ')}` : 'MIDI: no devices');
     };
     bind();

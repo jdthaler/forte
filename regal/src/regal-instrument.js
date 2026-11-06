@@ -21,6 +21,7 @@ export const INSTRUMENT = {
   space: 'hold',                        // Space and CC64 latch the keys down (an organ has no damper)
   modWheel: 'pressure',                 // CC1: the weight on the bellows, from its default up to its maximum
   mpe: { bend: 7 },                     // MPE: a key's own bend runs its reeds faster or slower (the wind is every key's: no slide)
+  aftertouch: 'more weight on the bellows', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   controllers: { 67: 'tremulant' },     // the soft pedal: the tremulant while it is down
   faders: ['tremRate', 'curve', 'q', 'resLength', 'pressure'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/regal), built as WebAssembly
