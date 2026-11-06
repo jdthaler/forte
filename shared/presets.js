@@ -6,9 +6,9 @@
 // tools/contract.mjs): by parameter id, a number, a choice's option key, or a toggle's true or
 // false. The contract promises from 1.0 that these ids, ranges and options keep meaning the same
 // sound, so a preset saved today keeps working; an id an instrument no longer has is ignored and
-// a parameter a preset doesn't name takes its default. The parameters are nativeParams(I)
+// a parameter a preset doesn't name takes its default. The parameters are pluginParams(I)
 // (shared/wasm.js): the descriptor's, less the page-only ones (the computer keys' velocity), then
-// its console's (the organ's drawbars and switches).
+// its console's (the organ's drawbars and switches), then the Expression switches it answers to.
 //
 // A preset file (.json), one preset or many:
 //   { "forte": "presets", "format": 1, "instrument": "gongs", "instrumentVersion": "0.4.1",
@@ -21,11 +21,11 @@
 // _v is FORMAT, _n the preset's name (optional). Opening it gives every other parameter its
 // default. Numbers keep six significant figures; a toggle is 1 or 0.
 
-import { nativeParams } from './wasm.js';
+import { pluginParams } from './wasm.js';
 
 export const FORMAT = 1;
 export const KIND = 'presets';
-export const presetParams = (I) => nativeParams(I);
+export const presetParams = (I) => pluginParams(I);
 
 // a value as the contract has it, or the parameter's default when it isn't one of its values
 export function valid(p, v) {

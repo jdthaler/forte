@@ -24,7 +24,14 @@ alignas(16) unsigned char scratch[1 << 16]; // for the model functions' argument
 } // namespace
 
 extern "C" {
-FORTE_EXPORT int forte_param_count() { return forte_instrument().paramCount; }
+// the parameters a page sets: all but the Expression switches at the end, which the page's worklet
+// applies itself (shared/expression.js, shared/wasm.js nativeParams); the engine ignores them
+FORTE_EXPORT int forte_param_count() {
+  const forte::InstrumentInfo &I = forte_instrument();
+  int n = I.paramCount;
+  while (n > 0 && !std::strcmp(I.params[n - 1].group, "Expression")) n--;
+  return n;
+}
 FORTE_EXPORT const char *forte_param_id(int i) { return forte_instrument().params[i].id; }
 FORTE_EXPORT void *forte_scratch() { return scratch; }
 FORTE_EXPORT int forte_scratch_size() { return (int)sizeof scratch; }

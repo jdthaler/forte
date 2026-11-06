@@ -119,12 +119,12 @@ function meanings(I, params) {
   const { bend = 0, slide = false, press = false } = I?.mpe ?? {};
   const wheel = I?.modWheel && (typeof I.modWheel === 'string' ? I.modWheel : I.modWheel.param);
   const wp = params.find((p) => p.id === wheel);
-  out.strike = 'how loud, as a key\'s velocity';
+  out.strike = I?.strike === false ? 'nothing here' : 'how loud, as a key\'s velocity';
   out.glide = !I ? '' : press && bend ? `presses the key as the wheel does, up to ${bend} semitones`
     : bend ? `bends the note alone, up to ±${bend} semitones` : 'nothing here: each note keeps its own pitch';
   out.slide = !I ? '' : slide && wp ? `${wp.label}, for that note alone, as far as the finger slides from where it landed` : 'nothing here';
   out.press = !I ? '' : I.aftertouch ? I.aftertouch : 'nothing here';
-  out.lift = 'how fast the note is let go';
+  out.lift = !I ? '' : I.lift ? I.lift : 'nothing here: every note is let go alike'; // (the descriptor's lift, shared/expression.js)
   if (mpeMode() === 'off') out.glide = out.slide = out.press = 'MPE is off in the MIDI menu: every note moves together';
   return out;
 }

@@ -2,8 +2,11 @@
 // The instrument itself (parameters, engine, chain) is huygens-instrument.js.
 // The worklet runs the WebAssembly build (huygens-wasm.js), and the views call its model.
 
-import { INSTRUMENT, GROUPS, DEFAULTS, PRESETS } from './huygens-instrument.js';
-import { ALL_PARAMS } from './sync-params.js';
+import { INSTRUMENT, DEFAULTS as OWN_DEFAULTS, PRESETS } from './huygens-instrument.js';
+import { EXPRESSION, EXPRESSION_DEFAULTS, EXPRESSION_IDS, responds } from '../../shared/expression.js';
+// the descriptor's groups end with the Expression switches (shared/expression.js)
+const GROUPS = INSTRUMENT.groups, ALL_PARAMS = [...OWN_PARAMS, ...EXPRESSION.params], DEFAULTS = { ...OWN_DEFAULTS, ...EXPRESSION_DEFAULTS };
+import { ALL_PARAMS as OWN_PARAMS } from './sync-params.js';
 import { keyFreq, noteName, nearestRatio, intervalName, KEY_LO, KEY_HI } from './tuning.js';
 import { TUNING_KEEP, tuningRatio } from '../../shared/tuning.js';
 import { wasmModel } from './huygens-wasm.js';
@@ -220,9 +223,10 @@ function fromSlider(p, t) {
 function buildControls() {
   for (const g of GROUPS) {
     const det = document.createElement('details');
-    det.className = 'group'; det.open = g.id !== 'sound';
+    det.className = 'group'; det.open = g.id !== 'sound' && g.open !== false;
     det.innerHTML = `<summary>${g.title}</summary>`;
     for (const p of [...g.params].sort((a, b) => !!faceOf(b) - !!faceOf(a))) { // faces first (shared/faces.js)
+      if (EXPRESSION_IDS.includes(p.id) && !responds(INSTRUMENT, p.id)) continue; // a switch for what this instrument doesn't answer to (yet)
       const wrap = document.createElement('div');
       wrap.className = 'param';
       if (p.strip) wrap.dataset.perform = ''; // in the strip above the keys (shared/layout.js)

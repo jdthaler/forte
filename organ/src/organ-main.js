@@ -2,8 +2,11 @@
 // The worklet runs the engine, the C++ built as WebAssembly (organ-wasm.js), and the views call
 // its model.
 
-import { GROUPS, ALL_PARAMS, DEFAULTS, PRESETS, CONSOLE } from './organ-params.js';
+import { ALL_PARAMS as OWN_PARAMS, DEFAULTS as OWN_DEFAULTS, PRESETS, CONSOLE } from './organ-params.js';
 import { INSTRUMENT } from './organ-instrument.js';
+import { EXPRESSION, EXPRESSION_DEFAULTS, EXPRESSION_IDS, responds } from '../../shared/expression.js';
+// the descriptor's groups end with the Expression switches (shared/expression.js)
+const GROUPS = INSTRUMENT.groups, ALL_PARAMS = [...OWN_PARAMS, ...EXPRESSION.params], DEFAULTS = { ...OWN_DEFAULTS, ...EXPRESSION_DEFAULTS };
 import { DRAWBARS, NUM_WHEELS, KEY_MIN, KEY_MAX, PC_NAMES } from './tonewheels.js';
 import { wasmModel } from './organ-wasm.js';
 import { createChain } from '../../shared/chain.js';
@@ -385,6 +388,7 @@ function buildControls() {
     det.open = ['gen', 'keys'].includes(g.id);
     det.innerHTML = `<summary>${g.title}</summary>`;
     for (const p of [...g.params].sort((a, b) => !!faceOf(b) - !!faceOf(a))) { // faces first (shared/faces.js)
+      if (EXPRESSION_IDS.includes(p.id) && !responds(INSTRUMENT, p.id)) continue; // a switch for what this instrument doesn't answer to (yet)
       const wrap = document.createElement('div');
       wrap.className = 'param';
       if (p.strip) wrap.dataset.perform = ''; // in the strip above the keys (shared/layout.js)
@@ -396,6 +400,12 @@ function buildControls() {
         for (const [k, name] of p.options) input.add(new Option(name, k));
         input.addEventListener('change', () => { setP({ [p.id]: typeof p.def === 'number' ? +input.value : input.value }); unfocus(input); }); // (the tuning's pitch and root are numbers)
         wrap.appendChild(input);
+      } else if (p.type === 'checkbox') { // the Expression switches
+        wrap.classList.add('check');
+        input = document.createElement('input');
+        input.type = 'checkbox'; input.id = `p-${p.id}`;
+        input.addEventListener('change', () => { setP({ [p.id]: input.checked }); unfocus(input); });
+        wrap.append(input, Object.assign(document.createElement('label'), { htmlFor: input.id, textContent: p.label }));
       } else {
         wrap.innerHTML = `<div class="row"><label for="p-${p.id}">${p.label}</label><span class="val"></span></div>`;
         val = wrap.querySelector('.val');
@@ -441,6 +451,7 @@ function refreshControl(id, fromSliderDrag = false) {
   if (!c) return;
   const v = P[id];
   if (c.p.type === 'select') { c.input.value = v; c.face?.show(); }
+  else if (c.p.type === 'checkbox') c.input.checked = !!v;
   else {
     if (!fromSliderDrag) c.input.value = toSlider(c.p, v);
     c.val.textContent = c.p.fmt ? c.p.fmt(v) : String(v);

@@ -1,6 +1,7 @@
 // smoke.cpp — a test instrument for the shared plugin (tests/plugin-tests.cpp): struck sines,
 // a pedal, a mod wheel, two faders, two parameters, a compass, a preset, and one voice at Low quality; the pitch
-// wheel and each note's own bend and slide (its ring time) move a sounding sine at once. It proved
+// wheel and each note's own bend and slide (its ring time) move a sounding sine at once, pressure doubles a
+// note's level, and its release velocity sets how fast it is damped. The Expression switches end its parameters. It proved
 // the plugin pipeline in CI until the template was ported; it is not built as a plugin.
 
 #include <cmath>
@@ -14,13 +15,18 @@ namespace {
 
 using namespace forte;
 
-enum { kDecay, kVolume, kFullRange, kCount };
+enum { kDecay, kVolume, kFullRange, kStrikeOn, kGlideOn, kSlideOn, kPressOn, kLiftOn, kCount };
 const FormatSegment kSeconds[] = {{INFINITY, "", " s", 1, 0, 2, false, false, false, false}};
 const FormatSegment kDb[] = {{0.0005, "", " dB", 0, -60, 1, false, false, false, false}, {INFINITY, "", " dB", 20, 0, 1, true, false, false, false}};
 const ParamInfo kParams[kCount] = {
   {"decay", "Ring time", "Tone", ParamKind::continuous, 0.1, 10, 1, 0, true, true, nullptr, 0, kSeconds, 1},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kDb, 2},
   {"fullRange", "Full range", "Keys", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
+  {"strikeOn", "Strike", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"glideOn", "Glide", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"slideOn", "Slide", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"pressOn", "Press", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"liftOn", "Lift", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 const PresetValue kLong[] = {{kDecay, 6}};
 const Preset kPresets[] = {{"Long ring", kLong, 1}};
@@ -38,22 +44,23 @@ class SmokeEngine : public Engine {
   void bend(double v) override { wheel = std::pow(2.0, v * kBendSemitones / 12); for (auto &x : voices) tune(x); }
   void noteBend(double r, int key) override { expr.setBend(r, key); for (auto &x : voices) if (x.key == key) tune(x); }
   void slide(double v, int key) override { expr.setSlide(v, key); for (auto &x : voices) if (x.key == key && !x.off) tune(x); }
-  void noteOff(int key, double) override { for (auto &v : voices) if (v.key == key) { v.off = true; if (!sustain) damp(v); } }
+  void noteOff(int key, double velocity) override { for (auto &v : voices) if (v.key == key) { v.off = true; v.lift = velocity; if (!sustain) damp(v); } }
+  void pressure(double value, int key) override { for (auto &v : voices) if (v.key == key || key < 0) v.press = 1 + value; }
   void setSustain(bool on) override { sustain = on; if (!on) for (auto &v : voices) if (v.off) damp(v); }
   void allNotesOff() override { voices.clear(); }
   int voiceCount() const override { return (int)voices.size(); }
   void process(float *L, float *R, int n) override {
     for (int i = 0; i < n; i++) {
       double s = 0;
-      for (auto &v : voices) { s += v.a * std::sin(v.ph); v.ph += v.w; v.a *= v.r; }
+      for (auto &v : voices) { s += v.a * v.press * std::sin(v.ph); v.ph += v.w; v.a *= v.r; }
       L[i] = R[i] = (float)s;
     }
     std::erase_if(voices, [](const Voice &v) { return v.a < 1e-5; });
   }
 
  private:
-  struct Voice { double w0, ph, a, r; int key; bool off = false; double w = 0; };
-  void damp(Voice &v) { v.r = std::exp(-6.9 / (0.1 * fs)); }
+  struct Voice { double w0, ph, a, r; int key; bool off = false; double w = 0, press = 1, lift = -1; };
+  void damp(Voice &v) { v.r = std::exp(-6.9 / ((v.lift < 0 ? 0.1 : 0.4 - 0.35 * v.lift) * fs)); } // a fast lift damps it at once, a slow one lets it ring
   void tune(Voice &v) { v.w = v.w0 * wheel * expr.bendOf(v.key); if (!v.off) v.r = std::exp(-6.9 / (expr.slideOr(v.key, decay) * fs)); }
   std::vector<Voice> voices;
   NoteExpression expr{48};

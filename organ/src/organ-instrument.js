@@ -13,12 +13,13 @@
 import { GROUPS, DEFAULTS, PRESETS, CONSOLE_DEFAULTS, CONSOLE } from './organ-params.js';
 import { KEY_MIN, KEY_MAX } from './tonewheels.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS, CONSOLE_DEFAULTS, CONSOLE };
 
 export const INSTRUMENT = {
   id: 'organ',
-  groups: GROUPS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'expression', ...TUNING_KEEP], // kept when a preset is chosen; the console, motor on, comes from DEFAULTS
   range: [KEY_MIN, KEY_MAX],              // A0–C8: past the 61-key manual (36–96) the wheels fold back an octave where a drawbar runs out

@@ -68,7 +68,8 @@
     {"id":"percThird","kind":"toggle","def":true},
     {"id":"vib","kind":"choice","def":"C3","options":["off","V1","V2","V3","C1","C2","C3"]},
     {"id":"leslie","kind":"choice","def":"slow","options":["bypass","slow","fast","stop"]},
-    {"id":"motor","kind":"toggle","def":true}
+    {"id":"motor","kind":"toggle","def":true},
+    {"id":"strikeOn","kind":"toggle","def":true}
   ],
   "presets": [
     {"name":"Jazz trio — 88 8000 000, 3rd perc fast","values":{"drawbar1":8,"drawbar2":8,"drawbar3":8,"drawbar4":0,"drawbar5":0,"drawbar6":0,"drawbar7":0,"drawbar8":0,"drawbar9":0,"percOn":true,"percSoft":false,"percFast":true,"percThird":true,"vib":"C3","leslie":"slow","motor":true}},

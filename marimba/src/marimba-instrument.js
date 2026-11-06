@@ -4,6 +4,7 @@
 
 import { GROUPS, DEFAULTS, PRESETS, KINDS } from './marimba-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS, KINDS };
 
@@ -16,7 +17,7 @@ export const TARGETS = { marimba: [1, 4, 10], xylophone: [1, 3] };
 
 export const INSTRUMENT = {
   id: 'marimba',
-  groups: GROUPS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: all 88, A0–C8

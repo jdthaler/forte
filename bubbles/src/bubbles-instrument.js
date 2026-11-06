@@ -5,12 +5,13 @@
 import { GROUPS, DEFAULTS, PRESETS } from './bubbles-params.js';
 import { KEY_LO, KEY_HI } from './bubbles-tank.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 export const INSTRUMENT = {
   id: 'bubbles',
-  groups: GROUPS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_LO, KEY_HI],              // MIDI keys: A3–C8, 57–108

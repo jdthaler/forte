@@ -77,6 +77,7 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `shell.js` | everything common to instrument pages: audio graph (room, volume, tone, limiter, analyser), computer keyboard and on-screen keys, MIDI (notes, velocity through the touch curve, CC64, CC66 sostenuto, CC67 soft pedal, CC1, pitch bend), parameter sidebar with presets and local storage, octave shift, toasts. See the header for the config. |
 | `in-plugin.js` | the page inside a plugin's window (its *Views* pane, `native/plugin/editor.html`): with `?plugin` in a frame of that window, the page shows only its views, and they draw what the plugin plays. `pluginAudio` stands in for the audio graph: its analyser reads the plugin's sound as Web Audio's would, and its node's port hears the engine's messages, translated by the engine class's `translate` (`wasm.js`). `shell.js` uses it by itself; the five pages with their own controls call `follow()` with how to set their parameters and play their keys. |
 | `worklet.js` | the generic AudioWorklet processor. It runs your engine's WebAssembly from the bytes the page sends, through its class's `globalThis` name. It also registers `forte-limiter`, the chain's limiter, so a page adds it before building the chain. |
+| `expression.js` | the Expression group every descriptor ends its `groups` with: switches for Strike (velocity), Glide (a note's own bend), Slide (its own CC74), Press (pressure) and Lift (release velocity), all on by default, which presets and players can turn off. A page shows those its instrument answers to (`responds`: `strike`, `mpe`, `modWheel`, `aftertouch` and `lift` from the descriptor); the worklet applies them (`createGate`: off, Strike gives every note the computer keys' velocity, Lift a release with none, Glide, Slide and Press nothing, and a switch turned off lets go of the bend, slide or pressure it let through). They are not the engine's parameters (`nativeParams` leaves them out, and the WebAssembly's stop before them); the plugins have those the instrument answers to as its last parameters (`pluginParams`, `gen-native-params.mjs`), applied in `native/plugin/plugin.cpp`, and saved presets carry them. |
 | `wasm.js` | loads an instrument's WebAssembly in a page, the worklet or Node, and wraps it in a class with the engine contract (`wasmEngine`) |
 | `chain.js` | the output chain after the engine, built from the descriptor's `chain`: tone low-pass, body or soundboard, room, volume × trim, limiter. Every page uses it; the plugins rebuild it in C++. |
 | `limiter.js` | the limiter at the end of the chain: Web Audio's compressor curve and makeup gain without its 6 ms look-ahead, as the plugins' `limiter.cpp`, so a page adds no delay to a key |
@@ -116,7 +117,7 @@ browser globals when it is imported.
 ```js
 export const INSTRUMENT = {
   id: 'gongs',
-  groups: GROUPS, presets: PRESETS,
+  groups: [...GROUPS, EXPRESSION], presets: PRESETS, // the Expression switches last (shared/expression.js)
   keep: ['volume', 'room', 'venue', 'velocity'], // kept when a preset is chosen
   range: [21, 108],                     // the MIDI keys it plays: all 88 (A0–C8), unless the physics stops short
   compass: { keys: [36, 84], param: 'fullRange' }, // a historical compass: only these play until the checkbox opens the range
@@ -128,6 +129,9 @@ export const INSTRUMENT = {
   aftertouch: 'a hand pressed against the gong damps it', // what pressing into a held key does (any aftertouch, MPE
                                         // pressure: a Seaboard's Press), as the RISE's panel says it; leave it out when
                                         // the engine ignores pressure (test/mpe-tests.mjs checks both ways)
+  lift: 'a slow lift lets the damper settle softly', // what a slow or a fast release does (release velocity: a
+                                        // Seaboard's Lift); leave it out when the engine ignores it
+  strike: false,                        // only when velocity changes nothing (the Singing Arc, the Huygens Keyboard)
   controllers: { 67: 'unaCorda' },      // other MIDI controllers → parameters (a toggle is on at 64);
                                         // { param, values: [a, b] } picks b from 64 up, { param, toggle: [a, b] } flips on each press
   faders: ['hardness', 'mass', 'listen', 'strikeAngle', 'strike'], // a Seaboard RISE's faders 1–3 (CC 107, 109, 111), then

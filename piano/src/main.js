@@ -4,8 +4,11 @@
 // and the voice data each note offers the engine, come from its model, built
 // the same way, on this thread.
 
-import { ALL_PARAMS } from './params.js';
-import { INSTRUMENT, GROUPS, DEFAULTS, PRESETS } from './piano-instrument.js';
+import { ALL_PARAMS as OWN_PARAMS } from './params.js';
+import { INSTRUMENT, DEFAULTS as OWN_DEFAULTS, PRESETS } from './piano-instrument.js';
+import { EXPRESSION, EXPRESSION_DEFAULTS, EXPRESSION_IDS, responds } from '../../shared/expression.js';
+// the descriptor's groups end with the Expression switches (shared/expression.js)
+const GROUPS = INSTRUMENT.groups, ALL_PARAMS = [...OWN_PARAMS, ...EXPRESSION.params], DEFAULTS = { ...OWN_DEFAULTS, ...EXPRESSION_DEFAULTS };
 import { noteName, MATERIALS, NMAX_MODES } from './materials.js';
 import { PianoWasmEngine, wasmModel } from './piano-wasm.js'; // (the slow-motion view runs its own engine)
 import { createChain } from '../../shared/chain.js';
@@ -308,9 +311,10 @@ function buildControls() {
   for (const g of GROUPS) {
     const det = document.createElement('details');
     det.className = 'group';
-    det.open = g.id !== 'output';
+    det.open = g.id !== 'output' && g.open !== false;
     det.innerHTML = `<summary>${g.title}</summary>`;
     for (const p of [...g.params].sort((a, b) => !!faceOf(b) - !!faceOf(a))) { // faces first (shared/faces.js)
+      if (EXPRESSION_IDS.includes(p.id) && !responds(INSTRUMENT, p.id)) continue; // a switch for what this instrument doesn't answer to (yet)
       const wrap = document.createElement('div');
       wrap.className = 'param';
       if (p.strip) wrap.dataset.perform = ''; // in the strip above the keys (shared/layout.js)

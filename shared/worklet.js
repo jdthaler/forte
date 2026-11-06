@@ -20,9 +20,13 @@
 //   voiceCount?()                 shown in the CPU pill
 //   stats?()                      more fields for the page's stats message (e.g. { modes })
 //   engine.post(msg)              set by this wrapper: send a message to the page
+// The page's Expression switches (P.strikeOn … P.liftOn, shared/expression.js) are applied here,
+// before the engine sees a note: processorOptions.keyVelocity is a note's velocity with Strike off
+// when P has no `velocity` (the computer keys').
 
 import { runGuarded } from './guard.js';
 import { Limiter } from './limiter.js';
+import { createGate } from './expression.js';
 
 // a preset's change (swap): out in 6 ms, the new parameters, back in 12 ms (a raised cosine each way)
 const SWAP_OUT = 0.006, SWAP_IN = 0.012;
@@ -44,6 +48,7 @@ class ForteProcessor extends AudioWorkletProcessor {
     this.blocks = 0;
     this.spare = new Float32Array(128);
     this.swap = null; // a preset's change under way: { P (to take at the bottom), at (0..1 of the fade), out }
+    this.gate = createGate(o.keyVelocity); // the Expression switches
   }
 
   // a preset: fade out, take its parameters, fade in (a later preset during the fade replaces it)
@@ -63,9 +68,12 @@ class ForteProcessor extends AudioWorkletProcessor {
     else this.swap = null;
   }
 
-  handle(m) {
+  handle(msg) {
     const e = this.engine;
     try {
+      if (msg.type === 'params') this.gate.params(msg.P, (r) => this.handle(r)); // a switch turned off lets go first
+      const m = this.gate.message(msg);
+      if (!m) return;
       switch (m.type) {
         case 'noteOn': e.noteOn(m.key, m.velocity, m.data); break;
         case 'noteOff': e.noteOff(m.key, m.velocity); break;
@@ -76,7 +84,7 @@ class ForteProcessor extends AudioWorkletProcessor {
         default: e.handle?.(m);
       }
     } catch (err) {
-      this.port.postMessage({ type: 'error', message: err.message, key: m.key });
+      this.port.postMessage({ type: 'error', message: err.message, key: msg.key });
     }
   }
 
