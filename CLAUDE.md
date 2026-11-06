@@ -50,7 +50,9 @@ Read first:
      (with the menus, Controls and the views open, and audio started) and
      fails on console errors, sideways scrolling, perform controls, ⓘ
      buttons, "Default settings" or keys gone missing, or front-page Listen
-     buttons that are missing or don't play; it lists every
+     buttons that are missing or don't play, and on a page view that hangs
+     twice (over 300 s; each hang is listed with the step it was at and the
+     JavaScript the page was running); it lists every
      count that differs from `main`, and each one should be one the change
      meant. The `pages` job in CI runs the same against the pull request's
      base. A filter checks fewer pages: `node tools/check-pages.mjs gongs`.
