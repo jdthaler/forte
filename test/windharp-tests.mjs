@@ -589,6 +589,19 @@ test('presets use their own parameters, and each speaks without NaN', () => {
     assert.ok(pk > 0.005, `${pr.name}: ${pk}`);
   }
 });
+test('Slide: a key\'s own gustiness, the same gusts felt as strongly as its slide says, sample for sample as the Gustiness knob there; a key beside it keeps the knob\'s', () => {
+  const run = (o, slides = [], keys = [60]) => {
+    const e = new WindHarpEngine(FS, 1); e.setParams(P(o)); e.Uw = P(o).wind;
+    for (const [key, value] of slides) e.handle({ type: 'slide', key, value });
+    for (const k of keys) e.noteOn(k, 1);
+    const n = 2 * FS, L = new Float32Array(n), b = new Float32Array(128), c = new Float32Array(128);
+    for (let s = 0; s < n; s += 128) { e.process(b, c, 128); L.set(b.subarray(0, Math.min(128, n - s)), s); }
+    return L;
+  };
+  assert.deepEqual(run({ gust: 0 }, [[60, 0.2]]), run({ gust: 0.2 }), 'slid to 0.2 as the knob at 0.2');
+  assert.notDeepEqual(run({ gust: 0 }, [[60, 0.2]]), run({ gust: 0 }), 'and not as with none');
+  assert.deepEqual(run({ gust: 0 }, [[61, 0.2]]), run({ gust: 0 }), 'another key\'s slide');
+});
 test('Quality: Medium and Low let fewer shut keys ring at once (8, 6) and retire a shut string sooner (about 90 and 70 dB down), never a held or pedalled one; a held string plays exactly as at High', () => {
   const play = (quality, events, sec) => {
     const e = new WindHarpEngine(FS, 1); e.setQuality(quality); e.setParams(P()); e.Uw = DEFAULTS.wind;

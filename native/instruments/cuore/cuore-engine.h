@@ -28,6 +28,8 @@ class CuoreEngine : public Engine {
   void pressure(double value, int key) override;
   void bend(double value) override;
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
+  // a note's slide: its own thermistor's bias, set as its crystal starts (the sink stays shared)
+  void slide(double value, int key) override { expr.setSlide(value, key); }
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
   // what the tests read: the substeps a sample takes, and the most crystals that sound at once
@@ -45,7 +47,14 @@ class CuoreEngine : public Engine {
     double inc = 0, E = 0; // this block's: the heater's phase a sample, and its pulse (J)
     double fade = 0, fadeLeft = 0, cut = 1, g = 1; // a lift's (forte/lift.h): a slow one's fading pulses (s), a fast one's cut (its gain's factor a sample, and the gain)
     Bolometer::State y{};
+    bool own = false;      // its own bias (a slide before its strike): its bolometer and rest
+    double bias = 0;
+    Bolometer bolo;
+    Bolometer::State rest{};
   };
+  const Bolometer &boloOf(const Voice &v) const { return v.own ? v.bolo : bolo; }
+  const Bolometer::State &restOf(const Voice &v) const { return v.own ? v.rest : rest; }
+  void bias(Voice &v); // its bolometer at its own bias, the other knobs as they are
   std::array<double, p::count> P{};
   bool hasParams = false, sustain = false;
   Bolometer bolo;

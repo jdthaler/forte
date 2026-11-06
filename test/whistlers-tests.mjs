@@ -293,6 +293,19 @@ test('every preset plays, finite and under the limiter\'s reach', () => {
     assert.ok(pk < 1.5, `${pr.name}: ${pk}`);
   }
 });
+test('Slide: a note\'s slide before its stroke is its own line\'s plasma density, sample for sample as the knob there; a key beside it keeps the knob\'s', () => {
+  const run = (o, slides = []) => {
+    const e = new Engine(FS); e.setParams(P(o));
+    for (const [key, value] of slides) e.handle({ type: 'slide', key, value });
+    e.noteOn(60, 0.8);
+    const n = 2 * FS, L = new Float32Array(n), b = new Float32Array(128), c = new Float32Array(128);
+    for (let s = 0; s < n; s += 128) { e.process(b, c, 128); L.set(b.subarray(0, Math.min(128, n - s)), s); }
+    return L;
+  };
+  assert.deepEqual(run({}, [[60, 4]]), run({ density: 4 }), 'slid to 4 as the knob at 4');
+  assert.notDeepEqual(run({}, [[60, 4]]), run({}), 'and not as at the knob\'s');
+  assert.deepEqual(run({}, [[61, 4]]), run({}), 'another key\'s slide');
+});
 test('Quality: Medium and Low hear 16 and 10 strokes at once (High 24), fewer ducts and echoes; one plain note is the same at every quality', () => {
   const one = (q) => render(P(), 0.5, [[0, (x) => { x.setQuality(q); x.noteOn(84, 0.8); }]])[0];
   const high = one('high');

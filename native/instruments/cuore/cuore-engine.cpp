@@ -20,8 +20,16 @@ void CuoreEngine::setParams(const double *p) {
   hasParams = true;
   bolo.set(P.data());
   rest = bolo.equilibrium();
+  for (Voice &v : voices) if (v.active && v.own) bias(v);
   speedup = P[p::periodA4] * 440;
   dtReal = speedup / fs;
+}
+
+void CuoreEngine::bias(Voice &v) {
+  std::array<double, p::count> Q = P;
+  Q[p::bias] = v.bias;
+  v.bolo.set(Q.data());
+  v.rest = v.bolo.equilibrium();
 }
 
 int CuoreEngine::voiceCount() const {
@@ -57,7 +65,11 @@ void CuoreEngine::noteOn(int key, double velocity) {
     }
     if (oldest && live >= maxVoices()) { oldest->held = false; oldest->sinceEnd = 0; }
     if (!slot) for (Voice &v : voices) if (!slot || v.age < slot->age) slot = &v; // every crystal in use: the oldest goes
-    slot->y = rest;
+    // a slide before the strike: this crystal's own bias, its thermistor at rest there
+    const double b = expr.slideOr(key, NAN);
+    slot->own = b == b && b != P[p::bias];
+    if (slot->own) { slot->bias = std::clamp(b, 0.2, 30.0); bias(*slot); }
+    slot->y = restOf(*slot);
     slot->press = 0;
     slot->bendNow = wheel * expr.bendOf(key);
     std::tie(slot->gl, slot->gr) = keyPan(key);
@@ -114,14 +126,16 @@ void CuoreEngine::process(float *L, float *R, int n) {
     for (int j = 0; j < count; j++) {
       Voice &v = *on[j];
       if (!v.active) continue;
+      const Bolometer &b = boloOf(v);
       if (v.firing && v.phase + v.inc >= 1) {
         const double at = std::clamp((1 - v.phase) / v.inc, 0.0, 1.0); // where in the sample it lands
-        if (at > 0) bolo.steps(v.y, at * dtReal, std::max(1, (int)std::ceil(at * sub)));
-        bolo.kick(v.y, v.E);
-        if (at < 1) bolo.afterKick(v.y, (1 - at) * dtReal, std::max(1, (int)std::ceil((1 - at) * sub)));
+        if (at > 0) b.steps(v.y, at * dtReal, std::max(1, (int)std::ceil(at * sub)));
+        b.kick(v.y, v.E);
+        if (at < 1) b.afterKick(v.y, (1 - at) * dtReal, std::max(1, (int)std::ceil((1 - at) * sub)));
         v.phase += v.inc - 1;
       } else {
-        plain[k++] = &v.y;
+        if (v.own) { Bolometer::State *one[1] = {&v.y}; for (int s = 0; s < sub; s++) b.stepMany(one, 1, dtReal / sub); } // on its own bolometer
+        else plain[k++] = &v.y;
         if (v.firing) v.phase += v.inc;
       }
     }
@@ -130,7 +144,7 @@ void CuoreEngine::process(float *L, float *R, int n) {
       Voice &v = *on[j];
       if (!v.active) continue;
       // the thermistor's voltage falls as it warms: the pulse, amplified, on the digitiser's scale
-      const double y = std::clamp(scale * (rest[0] - v.y[0]), -1.0, 1.0) * v.g;
+      const double y = std::clamp(scale * (restOf(v)[0] - v.y[0]), -1.0, 1.0) * v.g;
       if (v.cut != 1) v.g *= v.cut;
       L[i] += (float)(v.gl * y);
       R[i] += (float)(v.gr * y);

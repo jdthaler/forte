@@ -32,6 +32,7 @@ class ColliderShowersEngine : public Engine {
   void setSustain(bool on) override;
   void pressure(double value, int key) override;
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the crystal's temperature: its speed of sound
+  void slide(double value, int key) override { expr.setSlide(value, key); }    // where its particle lands, off the axis
   void allNotesOff() override { voices.clear(); }
   int voiceCount() const override { return (int)voices.size(); }
   void process(float *L, float *R, int n) override;
@@ -54,11 +55,12 @@ class ColliderShowersEngine : public Engine {
   Voice *voiceFor(int key);
   void build(Voice &v);
   void kick(Voice &v, const Kicks &k, double scale, double xbar, double frac);
-  void deposit(int key, const Deposit &d, double energy, double velocity, Particle kind);
+  double impact(int key) const;
+  void deposit(int key, const Deposit &d, double energy, double velocity, Particle kind, double offset);
   void report(const Voice &v);
   std::array<double, p::count> P{};
   bool hasParams = false, sustain = false;
-  forte::NoteExpression expr{0.5}; // each key's own bend: its crystal's speed of sound, a few per cent
+  forte::NoteExpression expr{0.5}; // each key's own bend (its crystal's speed of sound, a few per cent) and slide (its impact point)
   double struck[128] = {}; // each key's last velocity, for a fast lift's pile-up (forte/lift.h)
   int focus = -1, sinceReport = 0, sinceHit = 0;
   Rng rng;

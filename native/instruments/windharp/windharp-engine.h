@@ -71,6 +71,7 @@ class WindHarpEngine : public Engine {
   void pressure(double value, int key) override; // aftertouch: the wind blows harder
   void bend(double value) override;              // every string's tension ×r²
   void noteBend(double ratio, int key) override; // one key's strings' tension ×r², on top of the wheel's
+  void slide(double value, int key) override { expr.setSlide(value, key); } // one key's own gustiness
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -100,6 +101,7 @@ class WindHarpEngine : public Engine {
     int ns = 0, key = 0, version = 0;
     bool used = false, held = false, pedal = false, fading = false, dead = false;
     double x = 0, target = 0, rate = 0, fade = 1, age = 0, env = 0, press = 0, pressS = 0;
+    double gust = NAN; // its own gustiness (a slide), gliding; NaN: the knob's
     double pb = 0, gl = 0, gr = 0, liftPrev = 0;
     double nb = 1; // its own bend (MPE), where its glide is
     void open(double velocity);
@@ -110,6 +112,7 @@ class WindHarpEngine : public Engine {
 
   // read and written by the tests (through the WebAssembly's hooks)
   double wind(int n);       // the wind at the end of a block of n samples
+  double windOf(double I) const; // the wind this block at gustiness I
   Voice *voices[POOL] = {}; // the voices in the order they started
   int nv = 0;
   Voice pool[POOL];
@@ -140,6 +143,7 @@ class WindHarpEngine : public Engine {
   int version = 0;
   uint32_t randState = 1;
   double g1 = 0, g2 = 0, Ug = 0, chanPress = 0, chanS = 0;
+  bool slidGusts = false; // a sounding key's own gustiness keeps the gusts going
   Biquad bp[5];
   double shelf[3] = {}, shelfZ[2] = {};
   Voice *focus = nullptr;
