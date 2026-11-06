@@ -16,7 +16,7 @@ import { startMIDI, resumeMIDI, touched, createSostenuto, pageMpe, controllersOf
 import { controlOwns, unfocus } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
-import { attachScala } from '../../shared/tuning-ui.js';
+import { attachPresets } from '../../shared/user-presets.js';
 import { connectQuality, qualityControl } from '../../shared/quality.js';
 import { dress, faceOf } from '../../shared/faces.js';
 import { computerKey } from '../../shared/taps.js'; // a second instrument's share of the computer keys (shared/layer.js)
@@ -596,7 +596,7 @@ window.addEventListener('resize', () => drawSection($('#section'), keyData(focus
 buildControls();
 for (const id of controls.keys()) refreshControl(id);
 refreshVisibility();
-attachScala({ set: (v) => setAll({ ...P, ...v }), toast }); // (this page has no user presets to attach it)
+attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v) => setAll({ ...P, ...v }), defaults: DEFAULTS, toast }); // your own presets and links, Morph and the Scala button
 qualityControl(); // the device's Quality, after the controls
 updateHelp();
 keyboardView.labels(keyLabels());

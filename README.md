@@ -68,6 +68,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Pyrophone](pyrophone/) | Frédéric Kastner (1873) | flame-driven Rijke tubes on a subcritical Hopf bifurcation: slow self-excited onsets, hysteresis, warm-up drift |
 | ✅ | [Singing Arc](arc/) | William Duddell (1900) | Ayrton's falling arc characteristic with a Mayr-type thermal column driving Duddell's tuned circuit: each note grows at the rate a linear analysis gives and sounds about 1 % below Kelvin's formula; a floor from the hot carbons holds the first kind, a higher re-strike voltage the second; capacitors in parallel on one arc, several lamps, hiss, Simon's talking arc; the arc radiates as a thermophone, ∝ dP/dt |
 | ✅ | [Singing Voice](voice/) | the human voice; Bell Labs' Voder (1939) | Ishizaka and Flanagan's two-mass vocal folds, set flapping by the breath (Bernoulli flow, contact, turbulent breath noise), into a 44-section Kelly–Lochbaum tract whose vowels are fitted to Peterson and Barney's formants, radiating from the lips; each singer tunes their folds' tension by ear and opens the jaw for high notes (formant tuning); the larynx tube's singer's formant |
+| ✅ | [Cristal Baschet](cristal/) | Bernard and François Baschet (Paris, 1952) | glass rods stroked by wet fingers (Couineaux, Ablitzer and Gautier's measured finger-on-glass friction, solved in closed form each sample), each clamped on a steel stem whose bending mode is the note (Euler–Bernoulli beam elements, the rod's mass and rocking): a threshold pressure from the stability analysis, Schelleng's rough limit, strokes back and forth; the stems' pull on a heavy collector, fibreglass cones as pistons, a cut-steel flame's bending modes, and steel whiskers ringing in sympathy and swaying (Couineaux 2025) |
 
 ### Physical phenomena
 
@@ -197,6 +198,7 @@ is the mod wheel's control wherever the instrument has one.
 | Pyrophone | Flame lag τ · Flame turbulence · Listening point | Flame position x_f / L | Flame power K |
 | Singing Arc | Hissing · Column time constant τ · Listening distance | Electrode gap | Arc current |
 | Singing Voice | Lung pressure · Folds apart at rest (breathiness) · Vibrato depth | Larynx tube (singer's formant) | Vowel |
+| Cristal Baschet | Finger wetness · Rod's place on the stem · Whisker sway | Finger pressure | Stroke speed |
 | Huygens Keyboard | Rail-sag coupling · Random mistuning · Resonant body | Tone | Pulse coupling |
 | Gong Keyboard | Mallet mass · Hand damping on release · Microphone distance | Head stiffness | Strike point |
 | Black-Hole Keyboard | Mass ratio q · Viewing inclination ι · Overtone strength | Tone | Spin |
@@ -274,6 +276,13 @@ these settings* makes a link that opens the page playing them, to send
 to someone. *Your presets and files…* lists yours, and saves them to a
 file or opens one: the plugins read and write the same files.
 
+**Morph**, the last group of controls, slides from one preset to another:
+pick *From* and *To* (Default settings, the instrument's presets or your
+own) and move the slider. Every setting the two give goes part of the way,
+a number smoothly and a choice or a switch halfway across; volume, the room
+and the tuning stay as you have them. Choosing a preset from the Presets
+menu makes it the one you morph from.
+
 **Tuning**, among the controls, is the same on every instrument: the
 **pitch** standard (A = 440 Hz, or 415 for baroque pitch, 392, 422.5, 430,
 435, 442, 443 or 466), the **temperament** (equal, ¼- and ⅙-comma
@@ -332,6 +341,13 @@ controls' bar and its presets just above the keys; turn it sideways
 for wider keys. Use
 *Share → Add to Home Screen* to run Forte as a full-screen app.
 
+Forte works offline. On the first visit the browser keeps a copy of the
+whole site in the background (about 5 MB to download), so from then on
+every instrument opens and plays without a network: on a plane, say, or
+from the home-screen app. Only the front page's demos need a connection. A
+new release downloads in the background too, just the files that changed,
+and takes over the next time you move from one page to another.
+
 ## Plugins
 
 Every instrument (all 25) also comes as a plugin for a DAW: AU,
@@ -357,6 +373,10 @@ Linux), and *Open the presets folder* shows it, so a file saved on the site can 
 Scala files for the custom temperament go in the `Tunings` folder beside the instruments' (on a
 Mac, `~/Library/Audio/Presets/Forte/Tunings`): the menu under Temperament lists them and opens the
 folder.
+
+**Morph** is in every plugin too, as three parameters kept with the project: *Morph from* and
+*Morph to* (the instrument's presets) and *Morph*, the slider, which a DAW can automate to sweep
+from one preset to the other.
 
 **Quality** (in the CPU group) is in every plugin too, kept with the project and in no preset.
 A VST3 or CLAP host that bounces or freezes a track offline gets High whatever it says; the AU
