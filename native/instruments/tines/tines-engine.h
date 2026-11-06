@@ -56,6 +56,8 @@ class TinesEngine : public Engine {
   void allNotesOff() override;
   void bend(double value) override; // the tuning springs slide: every fork's stiffness ×r², its notes ×r
   void noteBend(double ratio, int key) override; // one fork's spring slides: its stiffness ×r², on top of the wheel's
+  // a note's own slide: where its hammer strikes (strike), from its next strike
+  void slide(double value, int key) override { expr.setSlide(value, key); }
   void pressure(double value, int key) override { presses.set(value, key); } // a finger on the tone bar: a darker, shorter note
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
@@ -84,7 +86,7 @@ class TinesEngine : public Engine {
     uint64_t version = 0;
     bool inUse = false;
     double k = 0;
-    std::array<double, MAX_MODES> q{}, q1{}, a1{}, a2{}, a1d{}, a2d{}, a1p{}, a2p{}, w{}, bw{}, pk{}, om{}, sig{}, dw{}, om0{};
+    std::array<double, MAX_MODES> q{}, q1{}, a1{}, a2{}, a1d{}, a2d{}, a1p{}, a2p{}, w{}, w0{}, bw{}, pk{}, om{}, sig{}, dw{}, om0{};
     // om0: the modes unbent; bend: the ratio om is tuned to, the wheel's × the note's own (own, gliding to its key's)
     double comp = 0, bend = 1, own = 1;
     Hammer hammer{};
@@ -107,6 +109,10 @@ class TinesEngine : public Engine {
     void updateDamping(const TinesEngine &eng) { damped = killing || (!keyDown && !eng.sustain && hasDamper); }
     Press press; // a finger on the tone bar (forte/press.h): a1p, a2p while it is pressed
     void setPressed();
+    // a note's own slide: where its hammer strikes (mm from the clamp; NaN: the knob's, as built)
+    std::array<double, STRIKES * MAX_MODES> ws{};
+    double aimed = NAN;
+    void aim(double mm);
     void kill() { killing = true; setDamper(damperSigma); damped = true; }
     void strike(double v);
     double contactForce(double dFree);

@@ -83,10 +83,22 @@ struct Mode { int n; double f, ratio, bare, sigma, sigSteel, sigClamp, w, pk, da
 struct Info { int key; double f0, L, h, b, mReed, M, J, blobSide, ratio, xh, xd, xp; Hammer hammer; double kPick; };
 // What the engine's voice takes (keyModel(…).voice; the page's noteData). Fixed
 // size: the audio thread copies it without allocating.
+// A note's own slide strikes its reed elsewhere: each mode's shape at the hammer is kept at STRIKES
+// points from STRIKE_LO to STRIKE_HI of the reed's length (the strike knob's range), for the
+// engine to read between (strikeWeight).
+constexpr int STRIKES = 9;
+constexpr double STRIKE_LO = 0.1, STRIKE_HI = 0.9;
+inline double strikeWeight(const double *ws, double at) {
+  double x = (at - STRIKE_LO) / (STRIKE_HI - STRIKE_LO) * (STRIKES - 1);
+  x = x < 0 ? 0 : x > STRIKES - 1 ? STRIKES - 1 : x;
+  const int g = x >= STRIKES - 1 ? STRIKES - 2 : (int)x;
+  return ws[g] + (x - g) * (ws[g + 1] - ws[g]);
+}
 struct VoiceData {
   uint64_t version = 0;
   int key = 0, n = 0;
   std::array<double, MAX_MODES> freq{}, sigma{}, w{}, pk{}, dampW{};
+  std::array<double, STRIKES * MAX_MODES> ws{}; // mode i's shape at strike point g: ws[i * STRIKES + g]
   Hammer hammer{};
 };
 struct KeyModel {
@@ -103,7 +115,7 @@ KeyModel keyModel(int m, double solder, double strike, double hardness, double f
 // tuning's ratios, unless all 1), hashed below 2⁵² (so it rides in a double).
 uint64_t reedVersion(double solder, double strike, double hardness, double fs, const Tuning &tuning = Tuning());
 // voice data packed into doubles (version, key, n, the hammer's mass, K, p, alpha, then freq,
-// sigma, w, pk, dampW): what the page's WebAssembly model sends with a note
+// sigma, w, pk, dampW, then ws, STRIKES × n): what the page's WebAssembly model sends with a note
 int packVoiceData(const VoiceData &d, double *out);
 bool unpackVoiceData(const double *in, int n, VoiceData &d);
 

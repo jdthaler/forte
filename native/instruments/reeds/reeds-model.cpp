@@ -168,6 +168,8 @@ KeyModel keyModel(int m, double solder, double strike, double hardness, double f
   for (int i = 0; i < v.n; i++) {
     const Mode &md = k.modes[i];
     v.freq[i] = md.f; v.sigma[i] = md.sigma; v.w[i] = md.w; v.pk[i] = md.pk; v.dampW[i] = md.dampW;
+    for (int g = 0; g < STRIKES; g++)
+      v.ws[(size_t)i * STRIKES + g] = reed.shape(md.n, clamp(STRIKE_LO + (STRIKE_HI - STRIKE_LO) * g / (STRIKES - 1), 0.05, 0.95) * L);
   }
   return k;
 }
@@ -190,18 +192,20 @@ int packVoiceData(const VoiceData &d, double *out) {
   int n = 0;
   for (double v : {(double)d.version, (double)d.key, (double)d.n, d.hammer.mass, d.hammer.K, d.hammer.p, d.hammer.alpha}) out[n++] = v;
   for (const auto *a : {&d.freq, &d.sigma, &d.w, &d.pk, &d.dampW}) for (int i = 0; i < d.n; i++) out[n++] = (*a)[i];
+  for (int i = 0; i < STRIKES * d.n; i++) out[n++] = d.ws[i];
   return n;
 }
 
 bool unpackVoiceData(const double *in, int n, VoiceData &d) {
   if (n < 7) return false;
   const int N = (int)in[2];
-  if (!(N >= 0 && N <= MAX_MODES && n == 7 + 5 * N)) return false;
+  if (!(N >= 0 && N <= MAX_MODES && n == 7 + (5 + STRIKES) * N)) return false;
   d = VoiceData{};
   d.version = (uint64_t)in[0]; d.key = (int)in[1]; d.n = N;
   d.hammer = {in[3], in[4], in[5], in[6]};
   const double *m = in + 7;
   for (auto *a : {&d.freq, &d.sigma, &d.w, &d.pk, &d.dampW}) for (int i = 0; i < N; i++) (*a)[i] = *m++;
+  for (int i = 0; i < STRIKES * N; i++) d.ws[i] = *m++;
   return true;
 }
 

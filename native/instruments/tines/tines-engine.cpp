@@ -48,7 +48,8 @@ void TinesEngine::Voice::start(TinesEngine &eng, int key_, const VoiceData &d) {
     if (d.freq[j] > fTop) continue;
     const int i = N++;
     om0[i] = TAU * d.freq[j]; sig[i] = d.sigma[j]; dw[i] = d.dampW[j];
-    w[i] = d.w[j]; pk[i] = d.pk[j];
+    w[i] = w0[i] = d.w[j]; pk[i] = d.pk[j];
+    for (int g = 0; g < STRIKES; g++) ws[(size_t)i * STRIKES + g] = d.ws[(size_t)j * STRIKES + g];
   }
   Nall = N;
   own = eng.expr.bendOf(key);
@@ -94,6 +95,15 @@ void TinesEngine::Voice::setDamper(double sd) {
   }
   damperSigma = sd;
   if (press.on()) setPressed();
+}
+
+// Strike the tine mm from the clamp from now on (NaN: where the data was built for), its modes
+// weighted at that point.
+void TinesEngine::Voice::aim(double mm) {
+  if (mm == aimed || (mm != mm && aimed != aimed)) return;
+  aimed = mm;
+  for (int i = 0; i < Nall; i++) w[i] = mm == mm ? strikeWeight(&ws[(size_t)i * STRIKES], mm) : w0[i];
+  tune(bend);
 }
 
 // A finger on the tone bar: the fork loses FINGER/s at most, mostly in its upper modes
@@ -373,6 +383,7 @@ void TinesEngine::strikeKey(int key, double velocity, const VoiceData &d) {
     voices[nVoices++] = v; byKey[key] = v;
   }
   if (v->own != expr.bendOf(key)) { v->own = expr.bendOf(key); v->tune(bendNow * v->own); v->setDamper(v->damperSigma); } // struck again: at the key's own bend
+  v->aim(expr.slideOr(key, NAN)); // its own slide: where the hammer strikes
   v->keyDown = true; v->updateDamping(*this); v->strike(velocity);
   trimVoices(v);
   last = v;

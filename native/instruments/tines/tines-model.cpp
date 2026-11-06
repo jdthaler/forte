@@ -157,6 +157,14 @@ KeyModel computeKey(int m, const double *P, double fs) {
   std::vector<double> phiH, phiTip, phiD;
   for (int j = 0; j < nq; j++) { phiH.push_back(tine.shape(j, xh)); phiTip.push_back(tine.shape(j, L)); phiD.push_back(tine.shape(j, xd)); }
 
+  // the strike points a note's own slide reads between (STRIKES)
+  std::vector<double> phiS((size_t)STRIKES * nq);
+  for (int g = 0; g < STRIKES; g++) {
+    const double xg = clamp((STRIKE_LO + (STRIKE_HI - STRIKE_LO) * g / (STRIKES - 1)) * 1e-3, 0.02 * L, 0.6 * L);
+    for (int j = 0; j < nq; j++) phiS[(size_t)g * nq + j] = tine.shape(j, xg);
+  }
+  std::vector<std::array<double, STRIKES>> wsOf;
+
   std::vector<Mode> modes;
   for (int k = 0; k < n; k++) {
     const double om = std::sqrt(std::max(lambda[k], 0.0));
@@ -172,9 +180,16 @@ KeyModel computeKey(int m, const double *P, double fs) {
     // rough energy split (ignores the inertial cross terms)
     const double barE = std::pow(col(ip), 2), blockE = Mm(0, 0) * std::pow(col(iu), 2), tot = tineE + barE + blockE;
     modes.push_back({k, om / (2 * PI), sig, w, pk, std::pow(wd / phiD[0], 2), tineE / tot, barE / tot, blockE / tot});
+    std::array<double, STRIKES> wg{};
+    for (int g = 0; g < STRIKES; g++) {
+      wg[g] = col(iu);
+      for (int j = 0; j < nq; j++) wg[g] += phiS[(size_t)g * nq + j] * col(1 + j);
+    }
+    wsOf.push_back(wg);
   }
   // keep audible modes
-  for (const Mode &md : modes) if (md.f < 0.45 * 2 * fs && md.f > 5) km.modes.push_back(md);
+  std::vector<std::array<double, STRIKES>> wsKept;
+  for (size_t i = 0; i < modes.size(); i++) if (modes[i].f < 0.45 * 2 * fs && modes[i].f > 5) { km.modes.push_back(modes[i]); wsKept.push_back(wsOf[i]); }
 
   const HammerTip hd = hammerDefaults(m);
   const Pickup pu = pickupFor(m, P);
@@ -195,6 +210,7 @@ KeyModel computeKey(int m, const double *P, double fs) {
   for (int i = 0; i < v.n; i++) {
     const Mode &md = km.modes[i];
     v.freq[i] = md.f; v.sigma[i] = md.sigma; v.dampW[i] = md.dampW; v.w[i] = md.w; v.pk[i] = md.pk;
+    for (int g = 0; g < STRIKES; g++) v.ws[(size_t)i * STRIKES + g] = wsKept[i][g];
   }
   v.hammer = {hd.mass * P[p::hammerMass], hd.K * P[p::hardness], hd.p + P[p::tipExp], P[p::hysteresis]};
   v.pickup = pu;
@@ -236,13 +252,14 @@ int packVoiceData(const VoiceData &d, double *out) {
   double *o = out + PACK_HEAD;
   const int n = d.n;
   for (const std::array<double, MAX_MODES> *a : {&d.freq, &d.sigma, &d.dampW, &d.w, &d.pk}) { std::copy_n(a->begin(), n, o); o += n; }
-  return PACK_HEAD + 5 * n;
+  std::copy_n(d.ws.begin(), STRIKES * n, o);
+  return PACK_HEAD + (5 + STRIKES) * n;
 }
 
 bool unpackVoiceData(const double *in, int count, VoiceData &d) {
   if (count < PACK_HEAD) return false;
   const int n = (int)in[2];
-  if (n < 0 || n > MAX_MODES || count < PACK_HEAD + 5 * n) return false;
+  if (n < 0 || n > MAX_MODES || count < PACK_HEAD + (5 + STRIKES) * n) return false;
   d = VoiceData{};
   d.version = (uint64_t)in[0]; d.key = (int)in[1]; d.n = n;
   d.hammer = {in[3], in[4], in[5], in[6]};
@@ -250,6 +267,7 @@ bool unpackVoiceData(const double *in, int count, VoiceData &d) {
   d.hasDamper = in[11] != 0;
   const double *o = in + PACK_HEAD;
   for (std::array<double, MAX_MODES> *a : {&d.freq, &d.sigma, &d.dampW, &d.w, &d.pk}) { std::copy_n(o, n, a->begin()); o += n; }
+  std::copy_n(o, STRIKES * n, d.ws.begin());
   return true;
 }
 

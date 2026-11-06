@@ -173,8 +173,9 @@ quick hand does (a mallet's touch on a bar, a grace stroke on a bell). A
 key let go with no release velocity (the computer keys, a keyboard that
 sends none) or a middling one plays as it always did. Slide moves where a
 struck, plucked or bowed note is played: the hammer, quill, mallet, clapper
-or thumb along the string, bar, bell or tine as it strikes (the Ribbon Piano,
-Electric Grand, Harpsichord, Vibraphone, Carillon, Kalimba), the wheel along
+or thumb along the string, bar, bell, tine or reed as it strikes (the Ribbon
+Piano, Electric Grand, Harpsichord, Vibraphone, Carillon, Kalimba, Tine and
+Reed pianos), the wheel along
 the Viola Organista's string, the felt onto the Tangent Clavier's, the
 chanterelles' pressure on the Hurdy-Gurdy's wheel.
 

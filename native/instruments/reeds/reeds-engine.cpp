@@ -38,7 +38,8 @@ void ReedEngine::Voice::start(const ReedEngine &eng, int key_, const VoiceData &
     if (d.freq[j] > fTop && N) continue;
     const int i = N++;
     om0[i] = TAU * d.freq[j]; sig[i] = d.sigma[j]; dw[i] = d.dampW[j];
-    w[i] = d.w[j]; pk[i] = d.pk[j];
+    w[i] = w0[i] = d.w[j]; pk[i] = d.pk[j];
+    for (int g = 0; g < STRIKES; g++) ws[(size_t)i * STRIKES + g] = d.ws[(size_t)j * STRIKES + g];
   }
   Nall = N;
   own = eng.expr.bendOf(key);
@@ -80,6 +81,15 @@ void ReedEngine::Voice::setDamper(double sd) {
     a1d[i] = 2 * r * std::cos(od * k); a2d[i] = r * r;
   }
   if (press.on()) setPressed();
+}
+
+// Strike the reed at `at` of its length from now on (NaN: where the data was built for), its
+// modes weighted at that point.
+void ReedEngine::Voice::aim(double at) {
+  if (at == aimed || (at != at && aimed != aimed)) return;
+  aimed = at;
+  for (int i = 0; i < Nall; i++) w[i] = at == at ? strikeWeight(&ws[(size_t)i * STRIKES], at) : w0[i];
+  tune(bend);
 }
 
 // A finger on the reed's tip: every mode loses up to FINGER/s, the upper ones a little more
@@ -413,6 +423,7 @@ void ReedEngine::strikeKey(int key, double velocity, const VoiceData &d) {
     byKey[key] = v;
   }
   if (v->own != expr.bendOf(key)) { v->own = expr.bendOf(key); v->tune(bendNow * v->own); v->setDamper(damperSigma); } // struck again: at the key's own bend
+  v->aim(expr.slideOr(key, NAN)); // its own slide: where the hammer strikes
   v->keyDown = true; v->updateDamping(*this);
   v->strike(hammerSpeed(velocity));
   if (nVoices > pick(maxVoices, 20, 10)) { // Quality: Medium and Low let fewer reeds sound at once

@@ -70,10 +70,17 @@ struct Hammer { double mass, K, p, alpha; };
 
 // The voice data the engine plays (the page's noteData): fixed size, so a key's data never
 // allocates. version: the 'model' parameters' values and the sample rate (modelVersion).
+// A note's own slide strikes its tine elsewhere: each mode's weight at the hammer is kept at
+// STRIKES points from STRIKE_LO to STRIKE_HI mm from the clamp (the strike knob's range), for the
+// engine to read between (strikeWeight).
+constexpr int STRIKES = 9;
+constexpr double STRIKE_LO = 2, STRIKE_HI = 40;
+
 struct VoiceData {
   uint64_t version = 0;
   int key = 0, n = 0;
   std::array<double, MAX_MODES> freq{}, sigma{}, dampW{}, w{}, pk{};
+  std::array<double, STRIKES * MAX_MODES> ws{}; // mode i's weight at strike point g: ws[i * STRIKES + g]
   Hammer hammer{};
   Pickup pickup{};
   bool hasDamper = true;
@@ -102,9 +109,16 @@ uint64_t modelVersion(const double *P, double fs);
 
 // A key's voice data as plain numbers, to hand from a page's model to its engine:
 // version, key, n, the hammer's mass, K, p, alpha, the pickup's gap, wid, yoff, gain, hasDamper,
-// then freq, sigma, dampW, w, pk (n each).
+// then freq, sigma, dampW, w, pk (n each), then ws (STRIKES × n).
 constexpr int PACK_HEAD = 13;
-constexpr int PACK_MAX = PACK_HEAD + 5 * MAX_MODES;
+constexpr int PACK_MAX = PACK_HEAD + (5 + STRIKES) * MAX_MODES;
+// A mode's weight at the hammer struck mm from the clamp, from its STRIKES points.
+inline double strikeWeight(const double *ws, double mm) {
+  double x = (mm - STRIKE_LO) / (STRIKE_HI - STRIKE_LO) * (STRIKES - 1);
+  x = x < 0 ? 0 : x > STRIKES - 1 ? STRIKES - 1 : x;
+  const int g = x >= STRIKES - 1 ? STRIKES - 2 : (int)x;
+  return ws[g] + (x - g) * (ws[g + 1] - ws[g]);
+}
 int packVoiceData(const VoiceData &d, double *out);
 bool unpackVoiceData(const double *in, int n, VoiceData &d);
 
