@@ -20,7 +20,6 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: keeps the hands off the notes after key-up
   modWheel: 'roll',                     // CC1: the roll
   mpe: { slide: true },                 // a note's own slide: its own roll (a note area cannot bend)
-  aftertouch: 'rolls the note: the sticks strike again and again', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   faders: ['rollRate', 'mute', 'across', 'along', 'roll'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/steelpan), built as WebAssembly
   wasm: { name: 'SteelPanWasmEngine', module: new URL('./steelpan-wasm.js', import.meta.url).href, binary: new URL('../wasm/steelpan.wasm', import.meta.url).href },
