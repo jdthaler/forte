@@ -122,7 +122,7 @@ void SteelPanEngine::noteOn(int key, double velocity) {
     if (!u.struck) damp(u, false); // free to ring along again
   }
   damp(v, false);
-  v.held = true; v.released = false; v.vel = velocity; v.press = 0; v.hand = false;
+  v.held = true; v.released = false; v.vel = velocity; v.hand = false;
   v.rollIn = fs / P[p::rollRate];
   strike(v, velocity);
   focus = key;
@@ -131,7 +131,7 @@ void SteelPanEngine::noteOn(int key, double velocity) {
 void SteelPanEngine::noteOff(int key, double) {
   if (key < KEY_MIN || key > KEY_MAX) return;
   Note &v = notes[key - KEY_MIN];
-  v.held = false; v.press = 0;
+  v.held = false;
   if (!v.active || P[p::letRing] > 0.5) return;
   v.released = true;
   if (!sustain) mute(v);
@@ -151,13 +151,9 @@ void SteelPanEngine::allNotesOff() {
   focus = -1;
 }
 
-void SteelPanEngine::pressure(double value, int key) {
-  if (key < 0) channelPress = value;
-  else if (key >= KEY_MIN && key <= KEY_MAX && notes[key - KEY_MIN].held) notes[key - KEY_MIN].press = value;
-}
-
-// The roll: the wheel's (or the key's own slide), or leaning on the keys, whichever is more.
-double SteelPanEngine::rollOf(const Note &v) const { return std::max(std::max(expr.slideOr(v.key, P[p::roll]), channelPress), v.press); }
+// The roll: the wheel's, or the key's own slide. Pressure does nothing: a Seaboard sends it from any
+// finger at rest, which would roll every note.
+double SteelPanEngine::rollOf(const Note &v) const { return expr.slideOr(v.key, P[p::roll]); }
 
 int SteelPanEngine::voiceCount() const {
   int n = 0;

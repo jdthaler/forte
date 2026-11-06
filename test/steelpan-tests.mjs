@@ -310,18 +310,19 @@ test('a hand on the note: key-up mutes it; Let notes ring and the sustain pedal 
   assert.ok(drop({ letRing: true }) > -25, `let ring: ${drop({ letRing: true }).toFixed(1)} dB`);
   assert.ok(drop({}, [[0, 'sustain', 0, true]]) > -25, 'sustain pedal');
 });
-test('a roll: while the key is down the sticks keep striking; leaning on the key (aftertouch) rolls it too', () => {
+const same = (x, y, what) => { for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) assert.fail(`${what}: sample ${i} differs`); };
+test('a roll: while the key is down the sticks keep striking; pressure (a Seaboard\'s finger at rest) rolls nothing, bit for bit', () => {
   const key = 64, ev = [[0, 'on', key, 0.7]], early = (x) => rms(x, 0, 4800), late = (x) => rms(x, Math.round(1.4 * FS), Math.round(1.5 * FS));
   const still = play(P({ letRing: true }), 1.5, ev).L, rolled = play(P({ letRing: true, roll: 0.6 }), 1.5, ev).L;
   const pressed = play(P({ letRing: true }), 1.5, [...ev, [0.05, 'pressure', key, 0.6]]).L;
   assert.ok(dB(late(still) / early(still)) < -30, `no roll: ${dB(late(still) / early(still)).toFixed(1)} dB after 1.4 s`);
   assert.ok(dB(late(rolled) / early(rolled)) > -12, `roll: ${dB(late(rolled) / early(rolled)).toFixed(1)} dB`);
-  assert.ok(dB(late(pressed) / early(pressed)) > -12, `aftertouch: ${dB(late(pressed) / early(pressed)).toFixed(1)} dB`);
+  same(pressed, still, 'pressure on the key');
+  same(play(P({ letRing: true }), 1.5, [...ev, [0.05, 'pressure', -1, 0.6]]).L, still, 'pressure on the channel');
   const released = play(P({ letRing: true, roll: 0.6 }), 1.5, [...ev, [0.5, 'off', key]]).L;
   assert.ok(dB(late(released) / early(released)) < -20, 'and stops with the key');
 });
 // A note's own slide (MPE) is its own roll.
-const same = (x, y, what) => { for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) assert.fail(`${what}: sample ${i} differs`); };
 test('a note\'s own slide is its roll: a lone note slid to x is the note rolled at x, bit for bit, and the note beside it is not rolled', () => {
   const key = 64, ev = [[0, 'on', key, 0.7]];
   for (const x of [0.3, 1]) {
