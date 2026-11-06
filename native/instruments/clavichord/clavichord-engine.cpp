@@ -79,7 +79,8 @@ void ClavichordEngine::design(Voice &v) {
 
 double ClavichordEngine::fingerTarget(const Voice &v) const {
   const int key = v.keys[std::max(0, v.active)];
-  const double pr = std::max(afterAll, after[key]);
+  // pressed (aftertouch), or rocked onto it (a note's own bend, the semitones it asks of a full press)
+  const double nb = expr.bendOf(key), pr = std::max(afterAll, nb == 1 ? after[key] : std::max(after[key], (12 * fdlibm::log2(nb)) / GLIDE_REACH));
   const double b = std::isnan(slides[key]) ? mp.bebung : slides[key];
   const double ramp = std::min(1.0, v.bebAge / BEB_IN);
   return mp.press * (1 + ACTION::after * pr) * (1 + ACTION::bebung * b * ramp * std::sin(v.beb));

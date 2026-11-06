@@ -17,9 +17,11 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine
   // CC1: the drive's brightness (McPherson played the MRP's timbre on a wheel)
   modWheel: 'bright',
-  // MPE: no bend (a piano string rings at its own pitch, and the loop locks to it), but each note's
-  // own brightness on CC74 and its own pressure, which presses the key harder: more current.
-  mpe: { bend: 0, slide: true },
+  // MPE: a piano string rings at its own pitch, so a note's own bend moves its loop up (or back down)
+  // the string's harmonics, to the one nearest, as the MRP's own pitch bend did; each note's own
+  // brightness on CC74 and its own pressure, which presses the key harder: more current.
+  mpe: { bend: 36, slide: true },
+  glide: 'the drive moves up the string\'s harmonics: the nearest one sings', // what a note's own bend does
   aftertouch: 'more current in the electromagnet', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'how fast the drive ramps down and the damper falls: a slow lift lets the string sing on, a fast one stops it sooner', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['drive', 'attack', 'hammer', 'phase', 'bright'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

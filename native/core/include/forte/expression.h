@@ -14,7 +14,9 @@ struct NoteExpression {
   double slide[128]; // the mod wheel's parameter (NaN: the parameter's own)
   double lo, hi;     // the ratios the instrument bends between
 
-  explicit NoteExpression(double maxSemitones) : lo(fdlibm::pow(2.0, -maxSemitones / 12)), hi(fdlibm::pow(2.0, maxSemitones / 12)) {
+  explicit NoteExpression(double maxSemitones) : NoteExpression(maxSemitones, maxSemitones) {}
+  // a reach of its own each way (semitones; 0: none that way), for a note that bends only up or down
+  NoteExpression(double down, double up) : lo(fdlibm::pow(2.0, -down / 12)), hi(fdlibm::pow(2.0, up / 12)) {
     for (int k = 0; k < 128; k++) { bend[k] = 1; slide[k] = NAN; }
   }
   void setBend(double r, int key) {

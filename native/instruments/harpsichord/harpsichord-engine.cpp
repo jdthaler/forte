@@ -16,6 +16,7 @@ constexpr double DRY = 0.05;            // bridge force (N) → output, with the
 // keys sounding at once: beyond maxVoices() (16 at High) the quietest released one fades, beyond
 // hardVoices() (24) the quietest sounding one too (harpsichord-engine.h)
 constexpr double KILL_SIGMA = 200;      // s⁻¹: a stolen or retuned voice dies away this fast
+constexpr double BEND_T = 0.02;         // s: a note's own bend glides as the instruments that bend glide theirs
 constexpr double QUIET = 4e-6;          // N: a string whose bridge force stays below this is put to sleep
 constexpr double DROP = 1e-6;           // N: top partials below this stop being integrated
 constexpr double RAMP = 0.02;           // s: the buff's leather and the soundboard switch glide over this
@@ -30,6 +31,7 @@ void HarpsichordEngine::Voice::start(HarpsichordEngine &e, int k, Data::Ref r) {
   e.data.acquire(r);
   has.fill(false); lifts.fill(false); sleep.fill(false); quiet.fill(0); nList = 0;
   lift = 0; V = 0.3; vDown = fallSpeed(DEFAULT_RELEASE); keyDown = false; pending = false; hand = Press{};
+  bent = e.expr.bendOf(k); // bent before it was struck
   top = ACTION::top + rowGap(ROW_FOUR, e.mp);
   knockT = -1; knockAmp = 0; knockN = std::max(2, (int)std::floor(ACTION::knock * e.fs + 0.5));
   killing = false; dead = false; sounded = false; peak = 0; age = 0;
@@ -54,6 +56,7 @@ void HarpsichordEngine::Voice::press(double vel) {
     if (!has[ch]) {
       buildString(st, m, ch, P, ref.data->S[ch], ref.data->parts[ch], eng->fs);
       st.limit(eng->kept(ref.data->parts[ch])); // (Quality: fewer partials)
+      st.retune(bent);
       has[ch] = true;
       w[ch] = segmentWeights(m, ch);
       w0[ch] = -1; w1[ch] = -1;
@@ -126,6 +129,11 @@ void HarpsichordEngine::Voice::render(int n) {
   const bool sy = e.P[p::sympathy] > 0 && e.quality != Quality::low; // (Quality: no sympathetic strings at Low)
   for (auto &b : sb) { b[0] = b[sbn]; std::fill(b.begin() + 1, b.begin() + 1 + n, 0.0); }
   sbn = n;
+  // Glide: a finger on the strings' back length, retuning them as the bend glides
+  if (const double to = e.expr.bendOf(key); bent != to) {
+    bent = glideTo(bent, to, n / e.fs, BEND_T);
+    for (int i = 0; i < nList; i++) strings[list[i]].retune(bent);
+  }
   // Press: the hand's buff, gliding across the block, on every choir; the stop's on the back 8′ too
   const double h0 = hand.p;
   hand.follow(keyDown && !killing ? e.presses.of(key) : 0, n, e.fs);

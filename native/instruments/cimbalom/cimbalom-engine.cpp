@@ -13,6 +13,7 @@ using std::numbers::pi;
 // the microphones' pressure, as heard: the dulcimer's lighter, smaller board radiates more for the
 // same force, so it is heard from a little further off to match the cimbalom
 constexpr double OUT_BOARD[2] = {0.005, 0.0025};
+constexpr double BEND_T = 0.02;     // s: a note's own bend glides as the instruments that bend glide theirs
 constexpr double KAPPA = 0.5;       // the sympathetic strings' share of the bridge's motion at full Sympathy
 constexpr int REPORT_BLOCKS = 4;    // the page's state every few blocks
 constexpr double QUIET = 3e-6;      // N: a course whose bridge force stays under this (20 blocks) has stopped
@@ -111,7 +112,8 @@ void CimbalomEngine::build(Voice &v) {
     }
   }
   v.nOsc = o;
-  v.liftK = 1;
+  v.liftK = 1; v.bent = 1;
+  if (expr.bendOf(v.key) != 1) retune(v, expr.bendOf(v.key)); // bent before it was struck
   v.ver = version; v.built = quality;
   v.S = 0; v.fade = 1; v.fadeStep = 0; v.peak = 0; v.level = 0; v.age = 0; v.quiet = 0; v.strokes = 0;
   v.w = segmentWeights(C.place);
@@ -163,7 +165,18 @@ void CimbalomEngine::damper(Voice &v, double scale) {
   if (scale == v.liftK) return;
   v.liftK = scale;
   double bd = 0;
-  for (int o = 0; o < v.nOsc; o++) coef(v.wq[o], v.sq[o] + SIGMA_DAMPER / scale, 1 / fs, v.D1[o], v.D2[o], bd);
+  for (int o = 0; o < v.nOsc; o++) coef(v.wq[o] * v.bent, v.sq[o] + SIGMA_DAMPER / scale, 1 / fs, v.D1[o], v.D2[o], bd);
+}
+
+// The course tightened (or let go) to sound × r: every partial's recursions, struck and far side,
+// at its frequency × r (the input gains as built).
+void CimbalomEngine::retune(Voice &v, double r) {
+  v.bent = r;
+  double b = 0;
+  for (int o = 0; o < v.nOsc; o++) {
+    coef(v.wq[o] * r, v.sq[o], 1 / fs, v.A1[o], v.A2[o], b);
+    coef(v.wq[o] * r, v.sq[o] + SIGMA_DAMPER / v.liftK, 1 / fs, v.D1[o], v.D2[o], b);
+  }
 }
 
 // Lift: with the dampers on the keys, how fast the felt falls back on the course as the key
@@ -189,6 +202,7 @@ void CimbalomEngine::slide(double value, int key) { if (key >= 0 && key < 128) s
 // Adds the bridge force into the board's segments and the bridge signal into Sall.
 void CimbalomEngine::render(Voice &v, int n, double *sg) {
   const double k = 1 / fs;
+  if (const double to = expr.bendOf(v.key); v.bent != to) retune(v, glideTo(v.bent, to, n * k, BEND_T)); // Glide
   Hammer &h = v.h;
   const bool histOn = v.key == focus && !historyDone;
   double blockPeak = 0;

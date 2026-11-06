@@ -111,13 +111,22 @@ void ResonatorEngine::setDamper(Voice &v) {
 
 // The loops for the Harmonic choice, each on its partial: its band-pass and guards, its PLL's
 // gains, and the phase that puts the push in step with the string's velocity.
+// The partial nearest h0 × r (in pitch) of the np a string has: the one a note's own bend drives.
+int ResonatorEngine::harmonicFor(int h0, double r, int np) const {
+  if (r == 1) return h0;
+  const double x = h0 * r;
+  const int a = std::max(1, (int)std::floor(x)), b = a + 1;
+  const int h = std::fabs(std::log(x / a)) <= std::fabs(std::log(b / x)) ? a : b;
+  return std::clamp(h, 1, std::max(1, np));
+}
+
 void ResonatorEngine::loopsFor(Voice &v) {
   const Loops ls = loopsOf((int)P[p::harmonic]);
-  v.nLoops = ls.n;
+  v.nLoops = ls.n; v.loopR = expr.bendOf(v.key);
   for (int j = 0; j < ls.n; j++) {
     Loop &l = v.loops[j];
     l = Loop{};
-    l.h = ls.h[j];
+    l.h = harmonicFor(ls.h[j], expr.bendOf(v.key), v.np); // (a note's own bend: another harmonic)
     l.fc = std::min(v.s.partial(l.h), 0.45 * fs);
     l.w0 = (TAU * l.fc) / fs;
     l.bp.set(Biquad::bp, l.fc, Q_BP, fs);
@@ -235,6 +244,16 @@ void ResonatorEngine::process(float *L, float *R, int n) {
 void ResonatorEngine::run(float *L, float *R, int n) {
   for (int i = 0; i < n; i++) { L[i] = R[i] = 0; heard[i] = 0; }
   if (!hasParams) { for (int i = 0; i < n; i++) ring[(pos + i) & (RING - 1)] = 0; pos = (pos + n) & (RING - 1); return; }
+  // Glide: a driven note bent onto another harmonic: its loops move there
+  for (int i = 0; i < count; i++) {
+    Voice &v = *voices[i];
+    const double r = expr.bendOf(v.key);
+    if (!v.driven || r == v.loopR) continue;
+    const Loops ls = loopsOf((int)P[p::harmonic]);
+    bool moved = ls.n != v.nLoops;
+    for (int j = 0; j < ls.n && !moved; j++) moved = v.loops[j].h != harmonicFor(ls.h[j], r, v.np);
+    if (moved) loopsFor(v); else v.loopR = r;
+  }
   const int wave = (int)P[p::wave];
   const bool open = (int)P[p::loop] == loop_::open, noise = wave == wave_::noise, guard = P[p::guard] != 0;
   const double phaseErr = (P[p::phase] * PI) / 180, bias = P[p::bias];

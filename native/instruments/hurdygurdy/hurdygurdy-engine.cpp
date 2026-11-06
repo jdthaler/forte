@@ -57,11 +57,12 @@ void HurdyGurdyEngine::applyQuality() {
 
 void HurdyGurdyEngine::redesign(Str &s) {
   const StringDesign d = stringDesign(s.id, Pm);
-  const double Ls = s.id <= CH2 ? stopLength(melody, Pm) / (bendR * sagR) : d.L;
+  const double Ls = s.id <= CH2 ? stopLength(melody, Pm) / (bendR * sagR * own) : d.L;
   s.design(d, loopDesign(d, Ls, Pm, s.fs));
 }
 
 void HurdyGurdyEngine::restop() {
+  if (ownKey != melody) { ownKey = melody; own = melody != KEY_OPEN ? expr.bendOf(melody) : 1; } // a new tangent lands at its key's bend
   for (int i = CH1; i <= CH2; i++) redesign(*S[i]);
 }
 
@@ -163,7 +164,9 @@ void HurdyGurdyEngine::process(float *L, float *R, int n) {
   if (quality != applied) applyQuality();
   for (int at = 0; at < n; at += 128) {
     const int m = std::min(128, n - at);
-    if (hasParams && (bendR != bendTo || sagR != 1)) { // the pitch wheel glides, and a slow lift's sag; the chanterelles are restopped each block
+    const double ownTo = melody != KEY_OPEN ? expr.bendOf(melody) : 1;
+    if (hasParams && (bendR != bendTo || sagR != 1 || own != ownTo)) { // the pitch wheel glides, the melody's own bend, and a slow lift's sag; the chanterelles are restopped each block
+      own = glideTo(own, ownTo, m / fs, BEND_T);
       bendR += (bendTo - bendR) * (1 - fdlibm::exp(-m / (BEND_T * fs)));
       if (std::fabs(bendR - bendTo) < 1e-9) bendR = bendTo;
       if (sagR != 1) { sagR += (1 - sagR) * (1 - fdlibm::exp(-m / (sagT * fs))); if (std::fabs(sagR - 1) < 1e-6) sagR = 1; }

@@ -33,6 +33,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "forte/lift.h"
 #include "forte/press.h"
 #include "forte/longitudinal.h"
@@ -64,6 +65,8 @@ class PianoEngine : public Engine {
   void noteOff(int key, double velocity) override;
   // a note's own slide: where its hammer strikes (strikePos), from its next strike
   void slide(double value, int key) override { if (key >= 0 && key < 128) slid[key] = value; }
+  // Glide: a finger pressing a note's strings behind the bridge, tightening them: up to a semitone sharp
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
   // Press: a palm resting on a held note's strings by the bridge: it shortens and darkens
   void pressure(double value, int key) override { presses.set(value, key); }
   void setSustain(bool on) override;
@@ -122,6 +125,8 @@ class PianoEngine : public Engine {
 
     void start(PianoEngine &eng, int key, const VoiceData &d, int at);
     double aimed = 0; // the strike position its blow is shaped for
+    double bent = 1;  // its frequencies × this (a note's own bend, engine.h noteBend)
+    void retune(double r);
     void aim(const VoiceData &d, double beta, double beta0);
     void setDamperSigma(double sd) { damperSigma = sd; computeDamped(); }
     void computeDamped();
@@ -175,6 +180,7 @@ class PianoEngine : public Engine {
   std::array<double, p::count> P{};
   std::array<double, 128> slid = nanKeys(); // each key's own strike position (NaN: P's)
   Presses presses;                          // each key's pressure and the channel's
+  NoteExpression expr{0, 1};                // each key's own bend: up only, a semitone at most
   static std::array<double, 128> nanKeys() { std::array<double, 128> a; a.fill(NAN); return a; }
   bool hasParams = false;
   bool sustain = false;

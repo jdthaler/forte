@@ -153,6 +153,17 @@ test('the Harmonic choice: the string sings that partial alone; the coil on its 
   const d = dB(tone(x, s.partial(1), sec(3), sec(4))) - dB(tone(x, s.partial(2), sec(3), sec(4)));
   assert.ok(Math.abs(d) < 10, `two loops: partials 1 and 2 within 10 dB (${d.toFixed(1)})`);
 });
+test('Glide: a note\'s own bend moves its loop to the harmonic nearest the bent pitch, as the MRP\'s pitch bend did; back unbent, to the fundamental again', () => {
+  const s = M.strings(48, P()), bend = (e, r) => e.handle({ type: 'noteBend', key: 48, value: r });
+  const at = (x, n, a, b) => dB(tone(x, s.partial(n), sec(a), sec(b)));
+  const up = play(P({ wave: 'sine', attack: 0.01 }), 4, [[0, (e) => { bend(e, 2 ** (13 / 12)); e.noteOn(48, 0.8); }]]).x; // a semitone past the octave: still the 2nd
+  assert.ok(at(up, 2, 3, 4) - at(up, 1, 3, 4) > 20, `bent +13: the 2nd partial ${at(up, 2, 3, 4).toFixed(1)} dB, the fundamental ${at(up, 1, 3, 4).toFixed(1)} dB`);
+  // (at C5, whose notes swell in quickly: its coil sits on the 3rd partial's node, so to the octave)
+  const t = M.strings(72, P()), atT = (x, n, a, b) => dB(tone(x, t.partial(n), sec(a), sec(b)));
+  const glide = play(P({ wave: 'sine', attack: 0.01 }), 6, [[0, (e) => e.noteOn(72, 0.8)], [2, (e) => e.handle({ type: 'noteBend', key: 72, value: 2 })], [4, (e) => e.handle({ type: 'noteBend', key: 72, value: 1 })]]).x;
+  assert.ok(atT(glide, 2, 3.5, 4) - atT(glide, 1, 3.5, 4) > 10, `bent an octave while it sings: the 2nd ${atT(glide, 2, 3.5, 4).toFixed(1)} dB, the fundamental ${atT(glide, 1, 3.5, 4).toFixed(1)} dB`);
+  assert.ok(atT(glide, 1, 5.5, 6) - atT(glide, 2, 5.5, 6) > 10, `and back: the fundamental ${atT(glide, 1, 5.5, 6).toFixed(1)} dB, the 2nd ${atT(glide, 2, 5.5, 6).toFixed(1)} dB`);
+});
 test('the loop finds stretched partials that an open loop at the tuned pitch misses (the 2nd at C6)', () => {
   const lv = (loop) => rms(note(84, P({ loop, harmonic: '2', wave: 'sine', attack: 0.01, unison: 0 }), 3).x, sec(2), sec(3));
   assert.ok(dB(lv('pll')) - dB(lv('open')) > 6, `locked ${dB(lv('pll')).toFixed(1)} dB, open ${dB(lv('open')).toFixed(1)} dB`);

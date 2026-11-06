@@ -88,6 +88,7 @@ class PluckedString {
                 double *sym = nullptr);
   void dropTop(double thr);
   void limit(int n); // run only the first n partials from now on (the engine's Quality)
+  void retune(double r); // every partial at its built frequency × r (a finger tightening the string)
   // the sideways polarisation: its bridge conductance, κ × the vertical one (0: off), and how many
   // partials (at most NZ_MAX; the engine's Quality)
   void setSide(double kappa, int n);
@@ -109,6 +110,7 @@ class PluckedString {
   bool kcOn = false;                   // tension modulation (the engine's switch)
   bool stretched = false;              // plucked, and not yet back to linear
   double kc = 0, dT = 0;               // stretch stiffness EA/2L; the tension's rise
+  double tuned = 1;                    // its partials × this (retune)
   // q (this step) and q1 (the last) swap roles each sample
   bool flip = false;
   double *q() { return flip ? qb.data() : qa.data(); }
