@@ -311,7 +311,7 @@ void MarimbaEngine::strikeKey(int key, double velocity, Data::Ref r) {
     v->tube(*this);
     voices[nVoices++] = v; byKey[key] = v;
   }
-  v->held = true; v->vel = velocity; v->press = 0; v->hand = false; v->strokes = 0;
+  v->held = true; v->vel = velocity; v->hand = false; v->strokes = 0;
   v->rollIn = fs / P[p::rollRate];
   v->strike(*this, velocity);
   focus = v;
@@ -333,7 +333,7 @@ void MarimbaEngine::strikeKey(int key, double velocity, Data::Ref r) {
 void MarimbaEngine::noteOff(int key, double) {
   if (key < 0 || key > 127) return;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
-  if (Voice *v = byKey[key]) { v->held = false; v->press = 0; }
+  if (Voice *v = byKey[key]) v->held = false;
 }
 
 void MarimbaEngine::allNotesOff() {
@@ -341,13 +341,9 @@ void MarimbaEngine::allNotesOff() {
   for (int i = 0; i < nVoices; i++) { voices[i]->fading = true; voices[i]->held = false; }
 }
 
-void MarimbaEngine::pressure(double value, int key) {
-  if (key < 0) channelPress = value;
-  else if (key <= 127 && byKey[key] && byKey[key]->held) byKey[key]->press = value;
-}
-
-// The roll: the wheel's (or the key's own slide), or leaning on the keys, whichever is more.
-double MarimbaEngine::rollOf(const Voice &v) const { return std::max(std::max(expr.slideOr(v.key, P[p::roll]), channelPress), v.press); }
+// The roll: the wheel's, or the key's own slide. Pressure does nothing: a Seaboard sends it from any
+// finger at rest, which would roll every note.
+double MarimbaEngine::rollOf(const Voice &v) const { return expr.slideOr(v.key, P[p::roll]); }
 
 // Held keys roll: the mallets strike in turn, at the roll's share of the first stroke, the strokes
 // a little uneven (±3 % in time), as a player's are.

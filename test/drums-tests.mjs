@@ -172,6 +172,16 @@ test('the heel: pressing in raises every mode by √(1 + E·h·δ²/2a²T)', () 
   assert.ok(Math.abs(cents(got, f * want)) < 4, `${cents(got, f)} ¢ vs ${cents(want, 1)} ¢`);
   assert.ok(cents(want, 1) > 150, 'a loose bayan bends by more than a semitone');
 });
+test('the heel comes only with a firm press: pressure up to half (a Seaboard\'s finger at rest) leaves the drum bit for bit as it was; a firm one puts the heel in', () => {
+  const press = (value, key) => ({ at: 0.02, fn: (e) => e.handle({ type: 'pressure', value, key }) });
+  const plain = render(P(), 0.8, [hit(48, 0.6)]).L;
+  for (const [v, key] of [[0.2, 48], [0.5, 48], [0.4, undefined]]) {
+    const x = render(P(), 0.8, [hit(48, 0.6), press(v, key)]).L;
+    for (let i = 0; i < x.length; i++) if (x[i] !== plain[i]) assert.fail(`pressure ${v}${key === undefined ? ' on the channel' : ''}: sample ${i} differs`);
+  }
+  const firm = render(P(), 0.8, [hit(48, 0.6), press(0.75, 48)]).L;
+  assert.ok(firm.some((x, i) => x !== plain[i]), 'a firm press (¾) puts the heel in');
+});
 test('a hard stroke starts sharp and glides down as the head’s stretch relaxes', () => {
   const k = M.keyDrum(43, P({ drum: 2 })), f = find(k, 0, 1).f;
   const { L } = render(P({ drum: 2, beater: 3, push: 0 }), 1.2, [hit(43, 1)]);

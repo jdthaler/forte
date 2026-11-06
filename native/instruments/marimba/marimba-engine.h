@@ -46,7 +46,6 @@ class MarimbaEngine : public Engine {
   void noteOn(int key, double velocity) override;
   void noteOff(int key, double velocity) override;
   void allNotesOff() override;
-  void pressure(double value, int key) override;
   void slide(double value, int key) override { expr.setSlide(value, key); } // the key's own roll
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
@@ -79,7 +78,7 @@ class MarimbaEngine : public Engine {
     int inFlight = 0, contactSamples = 0, strokes = 0; // strokes: since the key went down (the tests count a roll's)
     double Fmax = 0, lastContactMs = 0;
     bool held = false, hand = false;     // the key is down; which mallet strikes next in a roll
-    double vel = 0, press = 0, rollIn = 0; // the first stroke's velocity, the key's own pressure, samples to the next stroke
+    double vel = 0, rollIn = 0; // the first stroke's velocity, samples to the next stroke
     double fade = 1;
     bool fading = false, dead = false;
     double age = 0;
@@ -134,7 +133,6 @@ class MarimbaEngine : public Engine {
   int nPending = 0;
   int blocks = 0;
   int malletMax;
-  double channelPress = 0;
   uint32_t rng = 0x2545F491u;
   NoteExpression expr{0}; // each key's own roll (no bend: a struck bar rings at its own pitch)
   Message barMsg; // kept between posts
