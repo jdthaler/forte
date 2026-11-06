@@ -82,8 +82,8 @@ inline const forte::FormatSegment kF33[] = {{kNoLimit, "×", "", 1, 0, 2, false,
 inline const Case kC33[] = {{0.1, "×0.10"}, {0.1762734383267615, "×0.18"}, {0.31072325059538586, "×0.31"}, {0.5477225575051662, "×0.55"}, {0.9654893846056297, "×0.97"}, {1.701901334924234, "×1.70"}, {3, "×3.00"}, {1, "×1.00"}};
 inline const forte::FormatSegment kF34[] = {{kNoLimit, "", " µs", 1000000, 0, 0, false, false, false, false}};
 inline const Case kC34[] = {{0, "0 µs"}, {0.000067, "67 µs"}, {0.000133, "133 µs"}, {0.00019999999999999998, "200 µs"}, {0.000267, "267 µs"}, {0.00033299999999999996, "333 µs"}, {0.00039999999999999996, "400 µs"}, {0.00005, "50 µs"}};
-inline const forte::FormatSegment kF35[] = {{kNoLimit, "", " m/s", 1, 0, 2, false, false, false, false}};
-inline const Case kC35[] = {{0.2, "0.20 m/s"}, {1.1500000000000001, "1.15 m/s"}, {2.15, "2.15 m/s"}, {3.1, "3.10 m/s"}, {4.05, "4.05 m/s"}, {5.050000000000001, "5.05 m/s"}, {6, "6.00 m/s"}, {2.5, "2.50 m/s"}};
+inline const forte::FormatSegment kF35[] = {{0.3599869438843708, "", "", 0.7242437685327582, 0.43635655637936416, 2, true, false, false, false}, {0.36030003264253746, "", "", 0, 0.11, 2, false, false, false, false}, {0.44971698478948885, "", "", 0.7242437685327582, 0.43635655637936416, 2, true, false, false, false}, {0.45006898745804963, "", "", 0, 0.18, 2, false, false, false, false}, {0.5799617293886615, "", "", 0.7242437685327582, 0.43635655637936416, 2, true, false, false, false}, {0.5803580164820433, "", "", 1, 0, 2, false, false, false, false, true, false}, {0.6798872000514153, "", "", 0.7242437685327582, 0.43635655637936416, 2, true, false, false, false}, {0.6803095222739303, "", "", 0, 0.31, 2, false, false, false, false}, {4.579660614067691, "", "", 0.7242437685327582, 0.43635655637936416, 2, true, false, false, false}, {4.619999999999999, "", "", 0, 0.92, 2, false, false, false, false}, {kNoLimit, "", "", 0.7242437685327582, 0.43635655637936416, 2, true, false, false, false}};
+inline const Case kC35[] = {{0.25, "0.00"}, {0.42, "0.16"}, {0.72, "0.33"}, {1.22, "0.50"}, {2.08, "0.67"}, {3.5300000000000002, "0.83"}, {6, "1.00"}, {2.5, "0.72"}};
 inline const forte::FormatSegment kF36[] = {{9.999999999999998, "×", "", 1, 0, 2, false, false, false, false}, {kNoLimit, "×", "", 1, 0, 1, false, false, false, false}};
 inline const Case kC36[] = {{0.1, "×0.10"}, {0.2154434690031884, "×0.22"}, {0.46415888336127786, "×0.46"}, {1, "×1.00"}, {2.154434690031884, "×2.15"}, {4.641588833612779, "×4.64"}, {10, "×10.0"}};
 inline const forte::FormatSegment kF37[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
@@ -3375,7 +3375,7 @@ inline const Vector kAll[] = {
   {"piano.hammerMass", {"hammerMass", "", "", forte::ParamKind::continuous, 0.25, 4, 1, 0, true, false, nullptr, 0, kF32, 1}, kC32, 7},
   {"piano.hammerWidth", {"hammerWidth", "", "", forte::ParamKind::continuous, 0.1, 3, 1, 0, true, false, nullptr, 0, kF33, 1}, kC33, 8},
   {"piano.hysteresis", {"hysteresis", "", "", forte::ParamKind::continuous, 0, 0.0004, 0.00005, 0.000001, false, false, nullptr, 0, kF34, 1}, kC34, 8},
-  {"piano.velocity", {"velocity", "", "", forte::ParamKind::continuous, 0.2, 6, 2.5, 0.05, false, false, nullptr, 0, kF35, 1}, kC35, 8},
+  {"piano.velocity", {"velocity", "", "", forte::ParamKind::continuous, 0.25, 6, 2.5, 0.01, true, false, nullptr, 0, kF35, 11}, kC35, 8},
   {"piano.bridge", {"bridge", "", "", forte::ParamKind::continuous, 0.1, 10, 1, 0, true, false, nullptr, 0, kF36, 2}, kC36, 7},
   {"piano.bridgeH", {"bridgeH", "", "", forte::ParamKind::continuous, 0, 1, 0.3, 0.01, false, false, nullptr, 0, kF37, 1}, kC37, 8},
   {"piano.lossLow", {"lossLow", "", "", forte::ParamKind::continuous, 0.1, 10, 1, 0, true, false, nullptr, 0, kF38, 2}, kC38, 7},
