@@ -180,7 +180,8 @@ struck, plucked or bowed note is played: the hammer, quill, mallet, clapper
 or thumb along the string, bar, bell, tine or reed as it strikes (the Ribbon
 Piano, Electric Grand, Harpsichord, Vibraphone, Carillon, Kalimba, Tine and
 Reed pianos), the wheel along
-the Viola Organista's string, the felt onto the Tangent Clavier's, the
+the Viola Organista's string, the pad along the Sticky-Pad Piano's reed
+where it grabs it, the felt onto the Tangent Clavier's, the
 chanterelles' pressure on the Hurdy-Gurdy's wheel, the finger down the Glass
 Armonica's bowl from its rim, the glass along the Clavicylinder's bar. On
 the Pipe Organ, Free-Reed Organ, Regal and Hydraulis it is a key held part

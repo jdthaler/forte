@@ -19,7 +19,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/pianet/>
 | `←` `→` | octave |
 | `↑` `↓` | velocity (key speed at the pad, 3–40 cm/s) |
 | `Space` | sustain: a catch keeps lifted pads up |
-| MIDI | notes, velocity, sustain pedal (CC64) |
+| MIDI | notes, velocity, sustain pedal (CC64); MPE slide = where the pad grabs the reed |
 
 The real Pianet spans F1–F6. Here it spans C2–C7 like the other Forte
 keyboards. No Pianet had more than 61 keys; *Full range* (under Reed) opens
@@ -82,7 +82,9 @@ and internal friction, and σ_air = 0.4 s⁻¹ lumps air drag and radiation.
 The rear of the key carries a holder. Foam connects it to the tacky face:
 a Kelvin–Voigt element (spring k_p = 0.6 N/mm in parallel with a dashpot
 c_p = 0.25 N·s/m), with the face itself taken as massless. At rest the pad
-presses on the reed 80 % of the way to the tip with 20 mN, bonded over a
+presses on the reed 80 % of the way to the tip (the *Where the pad grabs
+the reed* knob, 50–95 %; a note's own slide moves it toward the clamp, to
+55 %) with 20 mN, bonded over a
 3 × 3 mm patch (equal-area disc, a₀ = 1.69 mm). A key stroke lifts the
 holder at a constant speed: 3 cm/s (pp) to 40 cm/s (ff), up to 5 mm. On
 release it comes back at 25 cm/s. The foam force acts on every reed mode
