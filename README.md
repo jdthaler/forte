@@ -343,6 +343,20 @@ instrument up and playing a short phrase while it says what to listen
 for, and why. ▶ plays a step again; ✕ (or Esc) ends the tour and puts
 back your views and settings.
 
+**♪ Songs**, in the header after Tour, plays a song on the instrument,
+live: six public-domain pieces of Forte's own (Bach's Prelude in C,
+the opening of Für Elise, Petzold's Minuet in G, Greensleeves, the Ode
+to Joy and Amazing Grace, in [`songs/`](songs/), which you can download
+and play in a DAW too), or any MIDI file of yours: **Open a MIDI file…**,
+or drop a `.mid` anywhere on the page. The keys go down as it plays, at
+the speed you choose (50 to 150 %), and it plays through the same path
+as a MIDI keyboard, so the velocity curve, the pedals, pitch bend and
+the mod wheel work as they do from one. Of a General MIDI file, the page
+plays the notes, pedals, wheel, bend and pressure, and leaves out the
+program changes, volume and drums; a song whose notes would mostly fall
+beyond the instrument's keys moves by whole octaves to fit them. Panic,
+✕ or Esc stops it.
+
 **The keys** fill the width at the key size you choose (− +), like
 GarageBand's: a phone shows an octave or so, a laptop most of the range.
 ◀ ▶ move an octave, and the overview of the whole range above them drags

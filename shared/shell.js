@@ -54,7 +54,7 @@ import { createChain } from './chain.js';
 import { createKeyboard } from './keyboard.js';
 import { trimGain } from './registry.js';
 import { controlOwns, unfocus } from './focus.js';
-import { startMIDI, resumeMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from './midi.js';
+import { startMIDI, resumeMIDI, pageMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from './midi.js';
 import { attachPresets } from './user-presets.js';
 import { connectQuality, qualityControl } from './quality.js';
 import { dress, faceOf } from './faces.js';
@@ -300,6 +300,7 @@ export function createShell(cfg) {
     startMIDI({ onMIDI, status: (t) => { if ($('#midi')) $('#midi').textContent = t; }, button: $('#midi-btn'), controllers: ccs });
   }
   const ccs = controllersOf(cfg), ccLast = {}; // the descriptor's controllers and faders
+  pageMIDI({ onMIDI, controllers: ccs }); // a song played from a MIDI file (shared/songs.js) plays it as a keyboard would
   function onMIDI(ev) {
     const [st, d1, d2] = ev.data, cmd = st & 0xf0;
     const { own: its, with: own } = notes.midi(ev.data);
