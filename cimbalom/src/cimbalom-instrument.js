@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   modWheel: 'strike',                   // CC1: where the hammers land
   // MPE: no bend (a struck string rings at its own pitch); the slide moves the note's own strike point.
   mpe: { bend: 0, slide: true },
+  aftertouch: 'how hard the tremolo strikes (with the tremolo on)', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   faders: ['mass', 'sympathy', 'detune', 'roll', 'strike'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/cimbalom), built as WebAssembly
   wasm: { name: 'CimbalomWasmEngine', module: new URL('./cimbalom-wasm.js', import.meta.url).href, binary: new URL('../wasm/cimbalom.wasm', import.meta.url).href },

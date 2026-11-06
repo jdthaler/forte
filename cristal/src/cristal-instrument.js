@@ -20,6 +20,7 @@ export const INSTRUMENT = {
   // MPE: a stem rings at its own bending mode, so no note bends; each finger strokes at its own
   // speed (CC74, the wheel's parameter) and presses on its own (pressure)
   mpe: { bend: 0, slide: true },
+  aftertouch: 'the wet fingers press harder on the rods, up to twice', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   faders: ['wet', 'height', 'sway', 'press', 'stroke'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/cristal), built as WebAssembly
   wasm: { name: 'CristalWasmEngine', module: new URL('./cristal-wasm.js', import.meta.url).href, binary: new URL('../wasm/cristal.wasm', import.meta.url).href },
