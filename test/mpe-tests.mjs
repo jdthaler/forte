@@ -6,7 +6,7 @@
 // Run: node test/mpe-tests.mjs [slug…]
 
 import assert from 'node:assert/strict';
-import { createMpe, bendRatio, MEMBER_BEND } from '../shared/mpe.js';
+import { createMpe, bendRatio, slideFrom, MEMBER_BEND } from '../shared/mpe.js';
 import { tunedFreq } from '../shared/tuning.js';
 import { INSTRUMENTS } from '../shared/registry.js';
 import { loadInstrument, defaultsOf, Player } from '../tools/headless.mjs';
@@ -51,10 +51,11 @@ await test('Auto is plain MIDI until the configuration message (RPN 6 on channel
   near(b[2], 5, 0.01, 'bend');
   assert.ok(Number.isNaN(s[2]), 'no slide yet');
   assert.equal(bend(3, -7), true, 'its channel\'s bend is the note\'s');
+  assert.equal(mpe.midi([0xb3, 74, 64]), true, 'its first slide is where the finger landed');
   assert.equal(mpe.midi([0xb3, 74, 127]), true);
   assert.equal(mpe.midi([0xd3, 64, 0]), true);
-  const [b2, s2, p2] = take();
-  near(b2[2], -7, 0.01, 'bend'); assert.deepEqual(s2, ['slide', 62, 1]); assert.deepEqual(p2, ['pressure', 62, 64 / 127]);
+  const [b2, s1, s2, p2] = take();
+  near(b2[2], -7, 0.01, 'bend'); assert.ok(Number.isNaN(s1[2]), 'landed: none'); assert.deepEqual(s2, ['slide', 62, 1]); assert.deepEqual(p2, ['pressure', 62, 64 / 127]);
   assert.equal(bend(0, 1), false, 'the master\'s bend is every note\'s');
   assert.equal(mpe.midi([0xd0, 30, 0]), false, 'and its pressure');
   assert.equal(mpe.midi([0xb3, 64, 127]), false, 'a member\'s pedal is the instrument\'s');
@@ -64,6 +65,26 @@ await test('Auto is plain MIDI until the configuration message (RPN 6 on channel
   mcm(0, 0);
   assert.equal(mpe.active(), false, 'RPN 6 of 0 ends the zone');
   assert.equal(bend(3, 2), false);
+});
+await test('a slide is from where the finger landed (a Seaboard\'s CC74 just before its note-on), towards either end of the key: none there, 1 at an end; a new note lands afresh', () => {
+  const { mpe, take, cc, mcm } = decoder();
+  mcm(0, 15);
+  const slides = () => take().filter(([t]) => t === 'slide').map(([, , v]) => v);
+  cc(1, 74, 64); mpe.midi([0x91, 60, 100]);
+  assert.ok(Number.isNaN(slides()[0]), 'struck mid-key: the instrument\'s own setting');
+  for (const [v, want] of [[96, 32 / 63], [127, 1], [64, NaN], [32, 0.5], [0, 1]]) {
+    cc(1, 74, v);
+    const [got] = slides();
+    if (Number.isNaN(want)) assert.ok(Number.isNaN(got), `back at ${v}: none`); else near(got, want, 1e-12, `slid to ${v}`);
+  }
+  mpe.midi([0x81, 60, 0]);
+  mpe.midi([0x91, 62, 100]);
+  assert.ok(Number.isNaN(slides()[0]), 'the next note on the channel, with no CC74 before it: none');
+  cc(1, 74, 20);
+  assert.ok(Number.isNaN(slides()[0]), 'its first CC74 is where it landed');
+  cc(1, 74, 10);
+  near(slides()[0], 0.5, 1e-12, 'then it slides from there');
+  assert.ok(Number.isNaN(slideFrom(NaN, 0.3)) && Number.isNaN(slideFrom(0.3, 0.3)) && slideFrom(0, 1) === 1 && slideFrom(1, 0) === 1);
 });
 await test('the upper zone (RPN 6 on channel 16) takes channels 15 down; two zones share the fourteen between their masters', () => {
   const { mpe, mcm } = decoder();

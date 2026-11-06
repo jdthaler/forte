@@ -48,7 +48,7 @@ export const GROUPS = [
       { id: 'speedMax', label: 'Mallet speed at full velocity', min: 0.5, max: 5, def: 3, step: 0.1, fmt: (v) => `${v.toFixed(1)} m/s`,
         hint: 'The head’s speed for velocity 1. Faster strikes squash the head further and stiffen the contact: louder and brighter, not just louder.' },
       { id: 'roll', label: 'Roll', perform: true, strip: true, min: 0, max: 1, def: 0, step: 0.01, fmt: (v) => (v === 0 ? 'off' : `${(v * 100).toFixed(0)} % of the stroke`),
-        hint: 'A bar can’t be made to sustain, so a marimbist rolls: held notes are struck again and again, the two mallets in turn, at this fraction of the first stroke. The mod wheel sets it, and leaning on a key (aftertouch) rolls that note.' },
+        hint: 'A bar can’t be made to sustain, so a marimbist rolls: held notes are struck again and again, the two mallets in turn, at this fraction of the first stroke. The mod wheel sets it, and a note’s own MPE slide rolls that note.' },
       { id: 'rollRate', label: 'Roll speed', min: 4, max: 24, def: 12, step: 0.5, fmt: (v) => `${v.toFixed(1)} strokes/s`,
         hint: 'Strokes per second, both mallets together. Marimbists roll slower in the bass, where a bar rings longer.' },
       { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.6, step: 0.01, fmt: (v) => v.toFixed(2) },

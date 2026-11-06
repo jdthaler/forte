@@ -45,10 +45,11 @@ export function riseModel({ now = () => performance.now() / 1000 } = {}) {
   let master = { glide: 0, press: 0 };                       // channel 1's, every note's
   const set = (d, v) => { last[d] = v; when[d] = now(); };
   const finger = (key) => { for (const f of fingers.values()) if (f.key === key) return f; return null; };
-  // each note's own bend, slide and pressure, as a RISE in MPE sends them (a lower zone of 15)
+  const at = {}; // each member channel's CC74: where its finger is on the key (the instrument hears how far it slid, shared/mpe.js slideFrom)
+  // each note's own bend and pressure, as a RISE in MPE sends them (a lower zone of 15)
   const mpe = createMpe({
     noteBend: (key, semis) => { const f = finger(key); if (f) { f.glide = semis; set('glide', semis); } },
-    noteSlide: (key, u) => { const f = finger(key); if (f && !Number.isNaN(u)) { f.slide = u; set('slide', u); } },
+    noteSlide: () => {},
     notePressure: (key, v) => { const f = finger(key); if (f) { f.press = v; set('press', v); } },
   });
   mpe.mode = 'on';
@@ -75,7 +76,7 @@ export function riseModel({ now = () => performance.now() / 1000 } = {}) {
       if (st >= 0xf0) return; // SysEx, clock and the rest: no finger's
       if (cmd === 0x90 && d2 > 0) {
         channels.add(ch); single = ch === 0;
-        fingers.set(ch, { key: d1, strike: d2 / 127, glide: single ? master.glide : 0, slide: NaN, press: 0, t: now() });
+        fingers.set(ch, { key: d1, strike: d2 / 127, glide: single ? master.glide : 0, slide: at[ch] ?? NaN, press: 0, t: now() });
         set('strike', d2 / 127);
         mpe.midi(data); // its channel's bend and slide, which came first, are this note's (the sink above)
         return;
@@ -95,6 +96,7 @@ export function riseModel({ now = () => performance.now() / 1000 } = {}) {
         if (cmd === 0xb0 && d1 === 74) { for (const f of fingers.values()) f.slide = d2 / 127; set('slide', d2 / 127); return; }
       }
       if (cmd === 0xa0) { const f = finger(d1); if (f) { f.press = d2 / 127; set('press', f.press); } return; }
+      if (cmd === 0xb0 && d1 === 74) { at[ch] = d2 / 127; const f = fingers.get(ch); if (f) { f.slide = at[ch]; set('slide', f.slide); } }
       mpe.midi(data);
     },
   };

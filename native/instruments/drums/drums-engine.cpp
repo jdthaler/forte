@@ -16,6 +16,7 @@ constexpr double V_MIN = 0.3, V_MAX = 4; // m/s: the beater's speed at velocity 
 constexpr double C_REST = 1.5;        // N·s/m: a finger resting lightly on the head
 constexpr double C_STAY = 10;         // N·s/m: fingers (or a mallet) left pressed after a closed stroke
 constexpr double C_HEEL = 4;          // N·s/m: the heel pressing in, at full pressure
+constexpr double HEEL_FROM = 0.5;     // pressure below this does nothing (a Seaboard's finger at rest); the heel goes in over the rest
 constexpr double HEEL_AT = 0.7;       // where the heel presses, as a fraction of the radius, opposite the strike
 constexpr double GLIDE = 0.015;       // s: the pedal's and the heel's glide
 constexpr double FADE = 0.03;         // s: a drum let go of to make room for another stops in about this
@@ -239,7 +240,7 @@ void DrumEngine::setSustain(bool on) {
 }
 
 void DrumEngine::pressure(double value, int key) {
-  value = std::clamp(value, 0.0, 1.0);
+  value = std::clamp((value - HEEL_FROM) / (1 - HEEL_FROM), 0.0, 1.0); // only a firm press: the heel, from none to full
   if (key < 0) { pressAll = value; for (double &k : keyPress) k = -1; }
   else if (key < 128) keyPress[key] = value;
 }

@@ -555,9 +555,10 @@ TEST("plugin: CLAP's note expressions bend and slide one note; the AU wrapper's 
   L = in.run(9600, 128, au);
   CHECK(loudest(L, {kC4, up(kC4, 1)}, 4800, 9600) == 1);
   CHECK(loudest(L, {up(kE4, -2), up(kE4, -1)}, 4800, 9600) == 1);
-  // a slide shortens one note's ring: fully up, the wheel's top (10 s) from the default 1 s
+  // a slide shortens one note's ring: from where it began (0) fully up, the wheel's top (10 s) from the default 1 s
   Events slide;
   slide.note(0, true, 0, 72, 0.8);
+  slide.expression(0, CLAP_NOTE_EXPRESSION_BRIGHTNESS, 0, 72, 0);
   slide.expression(0, CLAP_NOTE_EXPRESSION_BRIGHTNESS, 0, 72, 1);
   slide.note(0, true, 0, 76, 0.8);
   L = in.run(48000, 128, slide);

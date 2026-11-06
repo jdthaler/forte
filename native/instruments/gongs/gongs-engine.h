@@ -11,7 +11,8 @@
 // The coupling tables (gongs-model.h, buildShell: a few milliseconds per change of Dome rise,
 // Coupling terms or Rim) are built on a worker thread and handed over without locks (Shells); a
 // note struck before its tables are ready waits for them. A note's own slide (MPE) is where its
-// mallet lands, taken as it strikes. Voices live in a fixed pool, and
+// mallet lands, taken as it strikes. Pressure (aftertouch) does nothing: a Seaboard sends it from
+// any finger at rest, and a hand on the gong is the key's release. Voices live in a fixed pool, and
 // nothing is allocated in process() (but for the tests' trace of a voice's steps).
 #pragma once
 
@@ -175,7 +176,6 @@ class GongEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override;
   void allNotesOff() override;
-  void pressure(double value, int key) override; // aftertouch: a hand pressed against the gong
   void slide(double value, int key) override { expr.setSlide(value, key); } // the key's strike point, at its next strike
   int voiceCount() const override { return nv; }
   void process(float *L, float *R, int n) override;

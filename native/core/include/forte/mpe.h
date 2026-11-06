@@ -8,11 +8,16 @@
 // on a member changes that for the zone. What a master sends (its bend, pressure, controllers) is
 // every note's, as plain MIDI is: the instrument's wheel bends by kBendSemitones.
 //
+// A note's slide (CC74) is how far its finger has moved from where it landed, towards either end of
+// the key: 0 where it landed (none: the instrument's own setting), 1 at the key's end. So a finger
+// resting mid-key on a Seaboard leaves the note as the computer keys play it (slideFrom).
+//
 // The mode: auto (the default) plays plain MIDI until a controller sends the configuration
 // message, so an ordinary keyboard plays as ever; on plays as if the lower zone had 15 members
 // until one says otherwise; off never decodes MPE.
 #pragma once
 
+#include <cmath>
 #include <cstdint>
 
 #include "forte/tuning.h"
@@ -32,7 +37,7 @@ class MpeDecoder {
   // What a note's own channel sends, for that note (its key).
   struct Sink {
     virtual void noteBend(int key, double semitones) = 0;
-    virtual void noteSlide(int key, double value) = 0;    // CC74 / 127; NaN: none yet
+    virtual void noteSlide(int key, double value) = 0;    // CC74 / 127 from where it landed (slideFrom); NaN: none
     virtual void notePressure(int key, double value) = 0; // channel pressure / 127
     virtual ~Sink() = default;
   };
@@ -61,6 +66,7 @@ class MpeDecoder {
     int key = -1;      // the note it last played
     double bend = 0;   // −1 … 1
     double slide = 0;  // 0 … 1, NaN: none yet
+    double land = NAN; // the slide where the finger landed, NaN: not yet
     int rpnMsb = 127, rpnLsb = 127; // the RPN data entry goes to (127: none)
     int dataMsb = -1;
   };
@@ -76,5 +82,12 @@ class MpeDecoder {
 // (between keys the cents in between, as a glide), so a slide to the next key lands on its tuned
 // pitch; 2^(semitones/12) in equal temperament.
 double bendRatio(const Tuning &t, int key, double semitones);
+
+// How far a slide u (0..1) has moved from where the finger landed, towards either end of the key:
+// NaN (none) where it landed or before it landed, 1 at either end. As shared/mpe.js slideFrom.
+inline double slideFrom(double land, double u) {
+  if (!(land == land) || !(u == u) || u == land) return NAN;
+  return u > land ? (u - land) / (1 - land) : (land - u) / land;
+}
 
 } // namespace forte
