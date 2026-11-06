@@ -17,7 +17,8 @@ export const INSTRUMENT = {
   range: [KEY_LO, KEY_HI],                  // MIDI keys: A0–C8, 21–108
   space: 'hold',                            // Space and CC64 latch the keys
   modWheel: 'kick',                         // CC1: the pulse coupling, from its default up
-  mpe: { bend: 48 },                        // MPE: a note's bend turns its lamp's resistor (the coupling is every lamp's: no slide)
+  mpe: { bend: 48, slide: { param: 'kick', max: 0.15 } }, // MPE: a note's bend turns its lamp's resistor; its slide, how hard the others' firings kick its lamp
+  aftertouch: 'opens its keyer further: a stronger flash, up to twice as loud', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'how fast the key\'s supply falls: a slow lift lets the lamp flash on more and more slowly as it fades, a fast one cuts it', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   strike: false, // velocity does nothing: a lamp flashes as its own circuit sets, whatever the key (shared/expression.js)
   faders: ['rSrc', 'mistune', 'body', 'tone', 'kick'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

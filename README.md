@@ -187,7 +187,12 @@ only the first few of its nine contacts, so some of the drawbars' pitches
 are missing, a different few on each key; on the Telharmonium a note's
 slide sets how many of its harmonics its relay draws, from all eight down
 to the ground tone alone. Press on the Tonewheel Organ opens the swell
-pedal the rest of the way, from the newest held note.
+pedal the rest of the way, from the newest held note. The Singing Arc's
+newest note sets its electrode gap with Slide and its current with Press
+(up to twice the knob's, a louder arc); on the Huygens Keyboard a note's
+Slide sets how hard the other lamps' firings kick its own (fully, a tritone
+is pulled into a fifth), and Press opens its keyer further, a stronger
+flash.
 Glide on the struck and plucked strings is a finger pressing a note's
 strings behind the bridge, up to a semitone sharp (the Ribbon Piano,
 Electric Grand, Harpsichord and Cimbalom), the Hurdy-Gurdy's tangent pushed
