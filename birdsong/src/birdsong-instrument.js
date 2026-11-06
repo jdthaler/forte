@@ -19,6 +19,7 @@ export const INSTRUMENT = {
   // MPE: a note bends as the labial muscles retune it (two octaves); CC74 sets its own syllable rate;
   // its pressure is a harder breath
   mpe: { bend: 24, slide: true },
+  aftertouch: 'a harder breath, which sharpens the note', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   faders: ['drive', 'sweep', 'trachea', 'tension', 'rate'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/birdsong), built as WebAssembly
   wasm: { name: 'BirdsongWasmEngine', module: new URL('./birdsong-wasm.js', import.meta.url).href, binary: new URL('../wasm/birdsong.wasm', import.meta.url).href },
