@@ -15,11 +15,16 @@
 // and the phone), and the front page's Listen buttons (one for each instrument with a demo, and two
 // in turn play).
 //
-// Usage: node tools/check-pages.mjs [--base <git ref>] [--json <file>] [filter]
+// Usage: node tools/check-pages.mjs [--base <git ref>] [--base-json <files>] [--json <file>]
+//                                    [--shard k/n] [filter]
 //   filter       only the pages whose path contains it (gongs, index, credits, template)
 //   --base main  also open the same pages from <ref> (a git worktree, served on a second port)
 //                and list every count that differs: what a change meant to leave alone shouldn't
+//   --base-json a.json,b.json
+//                with --base, compare with the counts an earlier run on <ref> wrote with --json
+//                (CI keeps main's) instead of opening <ref>'s pages, when every file is there
 //   --json f     write every page's counts to f
+//   --shard k/n  only every nth page, from the kth (1 ≤ k ≤ n): CI checks the pages on n machines
 //   --timeout s  fail a page view that takes longer than s seconds (300): one that hangs
 // Needs Playwright (the cloud sessions have it installed globally; CI installs it).
 // Exits 1 when a check fails; differences from --base are reported, not failed.
@@ -34,7 +39,10 @@ import { INSTRUMENTS } from '../shared/registry.js';
 const args = process.argv.slice(2);
 const opt = (name) => { const i = args.indexOf(name); return i < 0 ? null : args.splice(i, 2)[1]; };
 const base = opt('--base');
+const baseJson = opt('--base-json');
 const jsonOut = opt('--json');
+const [shardK, shardN] = (opt('--shard') ?? '1/1').split('/').map(Number);
+if (!(shardN >= 1 && shardK >= 1 && shardK <= shardN)) throw new Error('--shard wants k/n, with 1 ≤ k ≤ n');
 const timeoutS = Number(opt('--timeout') ?? 300);
 const filter = args[0] || '';
 const ROOT = resolve(new URL('..', import.meta.url).pathname);
@@ -49,7 +57,8 @@ async function playwright() {
 const { chromium, devices } = await playwright();
 
 const PAGES = ['', 'credits/', 'docs/template/', ...INSTRUMENTS.filter((i) => i.ready).map((i) => `${i.id}/`)]
-  .filter((p) => (p || 'index').includes(filter));
+  .filter((p) => (p || 'index').includes(filter))
+  .filter((_, i) => i % shardN === shardK - 1);
 
 // CLAUDE.md's sizes: an iPhone with touch and without Web MIDI (no iOS browser has it), an iPad
 // both ways, a desktop and a narrow desktop window.
@@ -464,25 +473,39 @@ for (const r of results) {
   const f = failures(r, instrument);
   if (f.length) { failed++; console.log(`FAIL  ${r.page} ${r.size}`); for (const l of f.slice(0, 8)) console.log(`      ${l}`); }
 }
-console.log(`${results.length - failed}/${results.length} page views passed (${PAGES.length} pages × ${SIZES.length} sizes) in ${((performance.now() - t0) / 1000).toFixed(0)} s`);
+console.log(`${results.length - failed}/${results.length} page views passed (${PAGES.length} pages × ${SIZES.length} sizes${shardN > 1 ? `, shard ${shardK}/${shardN}` : ''}) in ${((performance.now() - t0) / 1000).toFixed(0)} s`);
 if (jsonOut) await writeFile(jsonOut, JSON.stringify(results, null, 1));
 
-if (base) {
+// The base's counts: from the files an earlier run on it wrote, when every one is there (a page
+// this run checks that they don't list, such as a new one, is left out, as when it's opened),
+// otherwise from opening its pages.
+async function baseCounts() {
+  const files = baseJson ? baseJson.split(',').filter(Boolean) : [];
+  const saved = await Promise.all(files.map((f) => readFile(f, 'utf8').then(JSON.parse, () => null)));
+  if (files.length && saved.every(Boolean)) {
+    console.log(`\n${base}: the counts its own run wrote (${files.join(', ')})`);
+    return saved.flat();
+  }
+  if (files.length) console.log(`\n${base}: no counts saved for it (${files.filter((_, i) => !saved[i]).join(', ')}); opening its pages`);
   const dir = await mkdtemp(join(tmpdir(), 'forte-base-'));
   execFileSync('git', ['-C', ROOT, 'worktree', 'add', '--detach', dir, base], { stdio: 'ignore' });
   try {
-    const before = new Map((await run(dir, `\n${base}`)).map((r) => [`${r.page} ${r.size}`, r]));
-    let differ = 0;
-    for (const r of results) {
-      const b = before.get(`${r.page} ${r.size}`);
-      if (!b?.counts || !r.counts) continue;
-      const d = Object.keys(r.counts).filter((k) => r.counts[k] !== b.counts[k]).map((k) => `${k} ${b.counts[k]} → ${r.counts[k]}`);
-      if (d.length) { differ++; console.log(`DIFF  ${r.page} ${r.size}: ${d.join(', ')}`); }
-    }
-    console.log(differ ? `${differ} page views differ from ${base}` : `every page view counts the same as ${base}`);
+    return await run(dir, `\n${base}`);
   } finally {
     execFileSync('git', ['-C', ROOT, 'worktree', 'remove', '--force', dir], { stdio: 'ignore' });
     await rm(dir, { recursive: true, force: true });
   }
+}
+
+if (base) {
+  const before = new Map((await baseCounts()).map((r) => [`${r.page} ${r.size}`, r]));
+  let differ = 0;
+  for (const r of results) {
+    const b = before.get(`${r.page} ${r.size}`);
+    if (!b?.counts || !r.counts) continue;
+    const d = Object.keys(r.counts).filter((k) => r.counts[k] !== b.counts[k]).map((k) => `${k} ${b.counts[k]} → ${r.counts[k]}`);
+    if (d.length) { differ++; console.log(`DIFF  ${r.page} ${r.size}: ${d.join(', ')}`); }
+  }
+  console.log(differ ? `${differ} page views differ from ${base}` : `every page view counts the same as ${base}`);
 }
 process.exit(failed ? 1 : 0);

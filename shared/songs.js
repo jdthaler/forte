@@ -14,6 +14,7 @@
 
 import { parseMIDI, playable, fit, transpose } from './midifile.js';
 import { createInput, pageMIDI } from './midi.js';
+import { midiTap } from './taps.js';
 import { tourLayout } from './layout.js';
 import { inPlugin } from './in-plugin.js';
 
@@ -151,7 +152,8 @@ function mount() {
     $('#start')?.click();
     for (let i = 0; i < 80 && !tourLayout.audio(); i++) await new Promise((r) => setTimeout(r, 100));
     if (!playing) return;
-    input = createInput((data) => page.onMIDI({ data }), page.controllers);
+    // as a device's: a second instrument (shared/layer.js) takes its share first
+    input = createInput((data) => { if (midiTap(data)) page.onMIDI({ data }); }, page.controllers);
     if (pos >= song.duration) pos = 0;
     t0 = performance.now() - (pos / rate) * 1000;
     next = song.events.findIndex((e) => e.t >= pos);

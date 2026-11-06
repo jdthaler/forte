@@ -82,7 +82,8 @@ mode follows it as √T:
 
 * the **pedal** (pitch bend, ± the pedal's range; or one note's own bend, MPE): T × b², so the
   principal moves by b;
-* the **heel** (aftertouch or MPE pressure) pushing in by δ: a cone of depth δ stretches the head by
+* the **heel** (aftertouch or MPE pressure, from half pressure up: below that a finger resting on a
+  Seaboard would mute every drum) pushing in by δ: a cone of depth δ stretches the head by
   δ²/2a², and its tension rises by E·h·δ²/2a²(1 − ν);
 * the head's **own swing**: its mean square slope stretches it too, by ½∫|∇w|² dA / πa², so a hard
   stroke starts a little sharp and glides down as it dies.
@@ -109,7 +110,7 @@ high, as a set of timpani stands in an orchestra.
 * **Strokes.** *Na* (rim, a finger resting on the syahi's edge) kills the fundamental and leaves the
   2nd harmonic ringing; *Tun* (the centre) is mostly the fundamental; *Te* (the centre, the fingers
   staying) is a dry slap.
-* **The bayan's swoop.** Lean into a held key (aftertouch, or a Seaboard's pressure): the heel
+* **The bayan's swoop.** Lean firmly into a held key (aftertouch, or a Seaboard's pressure, past half): the heel
   stretches the skin and the whole drum slides up. A loose head bends furthest.
 * **The pedal.** The pitch-bend wheel changes the tension of every sounding drum, the timpani
   glissando.

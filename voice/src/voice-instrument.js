@@ -19,6 +19,7 @@ export const INSTRUMENT = {
   // MPE: a note slides as far as the controller bends it, as a singer's can, CC74 moves that note's own vowel,
   // and its pressure pushes that singer's lungs harder
   mpe: { bend: 48, slide: true },
+  aftertouch: 'the lungs push harder', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   faders: ['pressure', 'gap', 'vibrato', 'larynx', 'vowel'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/voice), built as WebAssembly
   wasm: { name: 'VoiceWasmEngine', module: new URL('./voice-wasm.js', import.meta.url).href, binary: new URL('../wasm/voice.wasm', import.meta.url).href },

@@ -90,6 +90,8 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `presets.js`, `user-presets.js` | your own presets and shared links. `presets.js` is the format, the same in the plugins (`native/plugin/presets.cpp`): every parameter of the contract by id, in a versioned file or in a link's fragment. `user-presets.js` adds them to the Presets menu (save, link, a sheet to play, link, save to a file, delete and open files); the shell attaches it, and a page with its own state calls `attachPresets` with how to get and set its parameters by contract id (the organ's console is `CONSOLE.get` and `CONSOLE.put`) and its `DEFAULTS`. |
 | `morph.js` | Morph, the last group of controls on every page: *From* and *To* (Default settings, the instrument's presets, your own) and a slider between them; `presets.js` `morph` is the blend (a number in a straight line, or by equal ratios on a log control, on its step; a choice or a switch halfway), and the page's `keep` stays as it is. `user-presets.js` attaches it. Choosing a preset makes it From. The plugins have the same as three parameters, Morph from, Morph to and Morph (`native/plugin/plugin.cpp`), so a song can automate it. |
 | `midi.js` | Web MIDI for every page (the shell and the five older pages): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen in the MIDI menu, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling; `createInput` is one source's cleaning (a device's, which follows Octave and Transpose, or a song's, which doesn't), and `pageMIDI` the page's handler, for the songs (`songs.js`); `pageMpe` decodes MPE for a page (below) and turns it into the engine's `noteBend`, `slide` and `pressure` messages; Octave and Transpose (`keyShift`, `setShift`; the MIDI status opens a menu with them, the velocity curve and MPE: `midiMenu`) move every MIDI key as `startMIDI` cleans it, a note-off and poly pressure going where their note-on went, so a page's own MIDI handling gets them for nothing. A foot controller is `startMIDI`'s too, so every page has it: `SWITCHES` turns CC80, 81 and 82 into CC64, 66 and 67, the volume (CC7) and expression (CC11) pedals set `pedalGain`, which `chain.js` applies after the limiter, and a program change plays a preset from `#preset` (`choosePreset`); a page passes its `controllers` (`controllersOf`) so that a CC its instrument maps (an organ's CC11) stays the instrument's. The plugins do the same (`native/plugin/plugin.cpp`). |
+| `layer.js`, `taps.js` | **+ Layer** in the keyboard bar: a second instrument on any page, layered with the page's or split from it below a key, as in the Forte app (`native/plugin/plugin.cpp`, `Suite`). It hosts the second from its descriptor alone, in an AudioWorkletNode and output chain of its own on the page's audio context, and `limitTogether` (`chain.js`) puts both chains through one more limiter. `taps.js` is where it takes its share of each note before the page sees it: `midiTap` in `midi.js`, `keyTap` in `keyboard.js`, and `computerKey`, which every page's computer-key handler calls before its own note-on and note-off and skips the note when it returns false. A page with keys of its own needs that call, and nothing else. |
+| `rise.js` | a Seaboard RISE's panel, at the left of the page while one is plugged in (`midi.js` opens it and hands it that input's messages): `riseModel` reads each finger's Strike, Glide, Slide, Press and Lift, the faders and the pad; `risePanel` draws them with what each moves or does here (`faders`, `mpe`, `modWheel`, `aftertouch` from the descriptor). |
 | `mpe.js` | MPE (MIDI Polyphonic Expression), message for message as the plugins' `forte/mpe.h`: zones from the MPE Configuration Message, member channels' bend (±48 semitones unless RPN 0 says otherwise), pressure and CC74, the Auto/On/Off mode, and `bendRatio`, a note's bend along the keyboard's tuning. |
 | `focus.js` | who gets a key press: a control reached with Tab keeps the keys it uses (Space ticks a stop, arrows move a slider); one last touched with the mouse or a finger hands them back to the instrument. Every page's key handler asks `controlOwns(e)` first. After a click or a change, `unfocus(el)` lets go of the focus only if the pointer gave it: a control reached with Tab keeps it, so Tab goes on to the next one and a screen reader keeps its place. |
 | `songs.js`, `midifile.js` | **♪ Songs**: a song from a MIDI file played live on the page's instrument (Forte's own, in `songs/`, written by `tools/make-songs.mjs`, or a `.mid` opened or dropped on the page). `midifile.js` reads and writes Standard MIDI Files and chooses what a page plays of one (`playable`, `fit`); `songs.js` plays it through `midi.js` `createInput` into the handler the page gave `pageMIDI`, so it plays exactly as a MIDI keyboard would. `nav.js` brings it to every page; a page with its own MIDI handling calls `pageMIDI({ onMIDI, controllers })` once as it builds itself, as `shell.js` does |
@@ -122,6 +124,9 @@ export const INSTRUMENT = {
   mpe: { bend: 48, slide: true },       // MPE: how far one note bends (semitones, up to 96; 0: none), and
                                         // whether CC74 slides the mod wheel's parameter for that note alone;
                                         // press: true when a bend presses the key as the wheel does (the clavier)
+  aftertouch: 'a hand pressed against the gong damps it', // what pressing into a held key does (any aftertouch, MPE
+                                        // pressure: a Seaboard's Press), as the RISE's panel says it; leave it out when
+                                        // the engine ignores pressure (test/mpe-tests.mjs checks both ways)
   controllers: { 67: 'unaCorda' },      // other MIDI controllers → parameters (a toggle is on at 64);
                                         // { param, values: [a, b] } picks b from 64 up, { param, toggle: [a, b] } flips on each press
   faders: ['hardness', 'mass', 'listen', 'strikeAngle', 'strike'], // a Seaboard RISE's faders 1–3 (CC 107, 109, 111), then
@@ -198,7 +203,10 @@ an Osmose) bends, slides and presses each note alone. `shared/mpe.js` and the pl
   (`bendRatio`, so a slide onto the next key lands on its tuned pitch), on top of the
   instrument's wheel bend;
 * `slide(value, key)`: the note's own value of the mod wheel's parameter, in its units, as the
-  wheel would set it (NaN: the parameter's own again);
+  wheel would set it (NaN: the parameter's own again). The slide is how far the finger has moved
+  from where it landed, towards either end of the key (`slideFrom`; a host's per-note brightness
+  likewise from its first value), so a finger resting mid-key leaves the note as the computer
+  keys play it;
 * `pressure(value, key)`, which per-key pressure already was.
 
 Either may come before the key's `noteOn`: keep them per key (`forte/expression.h`
@@ -377,7 +385,9 @@ and say which in the footer help.
   size and the pedal button, which presses Space. Where they don't fit on
   one line (a phone held upright, a tablet, a narrow window) the strip
   takes a line of its own above the rest. The page's footer hints
-  (`.kb-help`: computer keys, MIDI, readouts) go behind ⌨.
+  (`.kb-help`: computer keys, MIDI, readouts) go behind ⌨, and **+ Layer**
+  after it adds a second instrument (`layer.js`, above); the keys it plays
+  are framed in its colour, and a split's point is a line between two keys.
 - **Perform** is for playing and for a projector: the views that are on,
   filling the screen, with no toggles and no text in them. The views' bar
   is just Discover | Perform, over their corner, and the controls' bar

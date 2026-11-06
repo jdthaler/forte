@@ -19,6 +19,7 @@ import { TUNING_KEEP } from '../../shared/tuning.js';
 import { attachPresets } from '../../shared/user-presets.js';
 import { connectQuality, qualityControl } from '../../shared/quality.js';
 import { dress, faceOf } from '../../shared/faces.js';
+import { computerKey } from '../../shared/taps.js'; // a second instrument's share of the computer keys (shared/layer.js)
 import { host, follow } from '../../shared/in-plugin.js';
 
 const $ = (s) => document.querySelector(s);
@@ -223,20 +224,20 @@ window.addEventListener('keydown', (e) => {
   e.preventDefault();
   if (e.repeat || held.has(e.code)) return;
   held.set(e.code, key);
-  noteOn(key, P.velocity);
+  if (computerKey(key, true)) noteOn(key, P.velocity);
 });
 
 window.addEventListener('keyup', (e) => {
   if (e.code === 'Space' && !controlOwns(e)) { if (e.isTrusted) spaceHeld = false; setSustain(false); return; }
   const key = held.get(e.code);
-  if (key !== undefined) { held.delete(e.code); noteOff(key); }
+  if (key !== undefined) { held.delete(e.code); if (computerKey(key, false)) noteOff(key); }
 });
 
 // Losing focus means no keyup will come: release held keys and a held Space bar
 // (the on-screen pedal sends synthetic events and keeps its own state).
 let spaceHeld = false;
 function letGo() {
-  for (const key of held.values()) noteOff(key);
+  for (const key of held.values()) if (computerKey(key, false)) noteOff(key);
   held.clear();
   if (spaceHeld) { spaceHeld = false; setSustain(false); }
 }
@@ -246,7 +247,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) letGo
 function shiftOctave(d) {
   const nb = base + d;
   if (nb < KEY_LO - 3 || nb + 31 > KEY_HI + 12) return;
-  for (const key of held.values()) noteOff(key);
+  for (const key of held.values()) if (computerKey(key, false)) noteOff(key);
   held.clear();
   base = nb;
   updateHelp();

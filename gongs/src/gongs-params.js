@@ -44,7 +44,7 @@ export const GROUPS = [
         hint: 'Impact speed for velocity 1 (it goes as velocity²). The deflection in thicknesses, and so the nonlinearity, scales with it.' },
       { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.6, step: 0.01, fmt: (v) => v.toFixed(2) },
       { id: 'release', label: 'Hand damping on release', min: 0.1, max: 30, def: 2.5, log: true, fmt: (v) => `T₆₀ ${v.toFixed(1)} s`,
-        hint: 'A hand on the gong when the key is let go (Space or the pedal holds it off). MIDI aftertouch presses harder.' },
+        hint: 'A hand on the gong when the key is let go (Space or the pedal holds it off).' },
     ],
   },
   {

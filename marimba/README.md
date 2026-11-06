@@ -22,7 +22,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/marimba/>
 | `←` `→` | octave |
 | `↑` `↓` | velocity (the mallet's speed, up to 3 m/s by default) |
 | `Space` | holds the keys down: held notes keep rolling (a marimba has no dampers) |
-| MIDI | notes, velocity, CC64 (holds the keys); **mod wheel = roll**; aftertouch rolls the key leaned on; MPE slide rolls one note |
+| MIDI | notes, velocity, CC64 (holds the keys); **mod wheel = roll**; MPE slide rolls one note; aftertouch does nothing (a Seaboard presses from any finger at rest) |
 
 ## The physics
 

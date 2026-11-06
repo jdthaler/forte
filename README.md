@@ -158,6 +158,16 @@ moves its control across the slider's whole range; a fader on a stop pulls
 it at halfway up. The first touch of each shows which control it moves. Pad Y
 is the mod wheel's control wherever the instrument has one.
 
+**The RISE's panel:** while a Seaboard is plugged in, each page draws it at
+the left: its faders and pad with the controls they move and where they are,
+its keywave with a dot for each finger (across: the key and its Glide; up:
+its Slide; size: its Press), and its five dimensions (Strike, Glide, Slide,
+Press and Lift), each lit as it comes in, with what it does on that
+instrument. Press (the note's own pressure, as any aftertouch) does something
+on most instruments that hold their notes, and nothing on the struck and
+plucked ones, which can't change a note once it sounds. The chevron folds the
+panel to a rail. (Pages only: the plugins' window doesn't show it.)
+
 <details><summary>What the faders and the pad move</summary>
 
 | Instrument | Faders 1 · 2 · 3 | Pad X | Pad Y |
@@ -345,7 +355,11 @@ aftertouch (Viola Organista, Tangent Clavier, Free-Reed Organ, Glass
 Armonica, Pyrophone, Gong Keyboard, Bubble Organ, Star Keyboard and Wind
 Harp), lean on a held key: slide the finger along it, either way, to
 press harder. The pedal button stands in for `Space`, and ⌨ lists the
-computer keys. On a
+computer keys. **+ Layer**, beside ⌨, adds a second instrument: layered
+with the page's (both play every key) or split from it (the second plays
+the keys below the split point, any key you choose or press), with its
+own preset and volume, as in the Forte app. Each page remembers its
+second. On a
 phone the page scrolls between the header and the keys, which stay put, with the
 controls' bar and its presets just above the keys; turn it sideways
 for wider keys. Use

@@ -187,12 +187,15 @@ test('the roll: a held key is struck again at the roll speed and keeps sounding;
   const n = e.voices[0].strokes;
   assert.ok(n >= 12 && n <= 13, `${n} strokes in a second`);
 });
-test('leaning on a key (aftertouch) or its own MPE slide rolls it alone', () => {
-  for (const msg of [{ type: 'pressure', value: 0.7, key: 60 }, { type: 'slide', value: 0.7, key: 60 }]) {
-    const r = run(P(), 2, [[0, (e) => { e.noteOn(60, 0.6); e.noteOn(67, 0.6); }], [0.05, (e) => e.handle(msg)]]).L;
-    const f = keyFreq(60), g = keyFreq(67);
-    assert.ok(dB(tone(r, f, 1.5 * FS, 1.9 * FS) / tone(r, f, 0, 0.3 * FS)) > -15, `${msg.type}: C4 rolls`);
-    assert.ok(dB(tone(r, g, 1.5 * FS, 1.9 * FS) / tone(r, g, 0, 0.3 * FS)) < -30, `${msg.type}: G4 does not`);
+test('a key\'s own MPE slide rolls it alone; pressure (a Seaboard\'s finger at rest, per key or on the channel) rolls nothing, bit for bit', () => {
+  const r = run(P(), 2, [[0, (e) => { e.noteOn(60, 0.6); e.noteOn(67, 0.6); }], [0.05, (e) => e.handle({ type: 'slide', value: 0.7, key: 60 })]]).L;
+  const f = keyFreq(60), g = keyFreq(67);
+  assert.ok(dB(tone(r, f, 1.5 * FS, 1.9 * FS) / tone(r, f, 0, 0.3 * FS)) > -15, 'slide: C4 rolls');
+  assert.ok(dB(tone(r, g, 1.5 * FS, 1.9 * FS) / tone(r, g, 0, 0.3 * FS)) < -30, 'slide: G4 does not');
+  const on = [0, (e) => { e.noteOn(60, 0.6); e.noteOn(67, 0.6); }], plain = run(P(), 1, [on]).L;
+  for (const key of [60, -1]) {
+    const x = run(P(), 1, [on, [0.05, (e) => e.handle({ type: 'pressure', value: 0.3, key })], [0.3, (e) => e.handle({ type: 'pressure', value: 1, key })]]).L;
+    for (let i = 0; i < x.length; i++) if (x[i] !== plain[i]) assert.fail(`pressure on ${key < 0 ? 'the channel' : 'the key'}: sample ${i} differs`);
   }
 });
 test('the page’s bar data (noteData) plays exactly as the bar the engine builds itself', () => {
