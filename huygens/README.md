@@ -161,7 +161,13 @@ no resonator, so they lock over musical intervals.
 * **Resistor drift**: every oscillator wanders; locked chords wander together.
 * **Rail-sag coupling**: coupling through the shared supply's resistance,
   which is slow and weak. It barely locks anything, a good contrast with the
-  pulses.
+  pulses. The rail is a 2 nF reservoir behind that resistance, loaded by every
+  key's resistor, and each sample it is solved with that load: it relaxes to
+  where source and keys balance, with time constant C_rail/(1/R_src + ΣG), so
+  a big chord bent high (many small resistors) cannot make it ring. A
+  regulator raises the source by the sag the averaged load would cause, so the
+  rail averages the supply's setpoint and the pitch hold has nothing slow to
+  fight.
 * **Supply and lamp voltages**: change the ramp's curvature, and with it δ for
   a given kick. The tongue map stretches along the coupling axis; in terms of
   δ it is unchanged.

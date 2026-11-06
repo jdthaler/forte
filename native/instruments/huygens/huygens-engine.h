@@ -5,8 +5,9 @@
 //   fires at V_s and dumps it to V_e; firing times solved exactly within each sample
 //   a firing kicks every other lamp by K: one within K of striking fires in the same instant
 //   (and may set off others); the rest are left exactly as they were
-//   optional rail sag (source resistance and reservoir), drift of each resistor, and a slow
-//   supply servo that holds the average pitch
+//   optional rail sag (source resistance and reservoir, loaded by every key's resistor and
+//   integrated with that load in, so it is stable however hard it is loaded), drift of each
+//   resistor, and a slow supply servo that holds the average pitch
 //   output: each sawtooth band-limited with polyBLEP, keyed, through a 15 Hz coupling capacitor
 //
 // With V8's fdlibm for exp, log, pow, sin and cos and a seeded generator for the random phases
@@ -60,6 +61,7 @@ struct Osc {
   double fires[256] = {};
   int64_t nf = 0, sent = 0;
   double prevOut = 0, hx = 0, hy = 0, I = 0;
+  double G = 0;                  // dI/dS this sample: how the current drawn moves with the supply
   double drift = 0, driftCents = 0;
   double panL = 0, panR = 0;
   double supply = 0, V0 = 0, fireAt = -1;
@@ -137,7 +139,7 @@ class NeonEngine : public Engine {
   std::array<Osc, kPool> pool;
   Osc *byKey[128] = {};
   Osc *order[kPool] = {};
-  double vr, Ilp = 0;
+  double vr, Ilp = 0, Glp = 0; // the rail, and the regulator's averages of its load
   int tuning = 0, tonic = 0;
   double mistune = 0;
   forte::NoteExpression expr{48}; // each key's bend
