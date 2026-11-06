@@ -75,7 +75,8 @@ void VibraphoneEngine::Voice::tube(const VibraphoneEngine &eng) {
 void VibraphoneEngine::Voice::strike(const VibraphoneEngine &eng, double velocity) {
   const double *P = eng.P.data();
   const int nx = d->nx;
-  const double u = std::min(nx - 1 - 1e-9, std::max(0.0, P[p::strike] * (nx - 1))), j = std::floor(u), fr = u - j;
+  const double at = eng.own.slideOr(key, P[p::strike]); // its own slide, or the mallets' point
+  const double u = std::min(nx - 1 - 1e-9, std::max(0.0, at * (nx - 1))), j = std::floor(u), fr = u - j;
   const int jj = (int)j;
   const double yb = P[p::across] * (d->b / 2);
   coefs(eng);

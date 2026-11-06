@@ -17,7 +17,7 @@
 namespace forte::harpsichord {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { build, manual, coupler, front8, back8, four, lute, buff, hooks, material, stiff, overlap, stagger, xFront, xBack, xFour, jackLine, xLute, detune, loss, damper, sympathy, fmax, kc, side, fullRange, soundboard, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, liftOn, count };
+enum : int { build, manual, coupler, front8, back8, four, lute, buff, hooks, material, stiff, overlap, stagger, xFront, xBack, xFour, jackLine, xLute, detune, loss, damper, sympathy, fmax, kc, side, fullRange, soundboard, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, slideOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -114,6 +114,7 @@ inline const ParamInfo kParams[p::count] = {
   {"cents10", "Minor 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents10, 1},
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
   {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
@@ -183,6 +184,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 29, .compassHi = 89, .compass = p::fullRange, .space = Space::hold,
     .modWheel = -1, .modWheelMax = 0,
+    .slide = p::xFront, .slideMax = 15,
     .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = -2},
     .midiVelocity = midiVelocity, .create = create,

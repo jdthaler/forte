@@ -380,10 +380,11 @@ struct Plugin : Instance, MpeDecoder::Sink {
     set(presetAt, n + 1, out);
     tell(presetAt, out);
   }
-  // the mod wheel's parameter at u (0..1): at rest its default, fully up its maximum (shared/midi.js)
-  double wheelValue(double u) const {
-    const ParamInfo &p = I.params[I.modWheel];
-    const double top = I.modWheelMax;
+  // the mod wheel's parameter at u (0..1): at rest its default, fully up its maximum (shared/midi.js);
+  // or a slide's (its parameter's at either end of the key: slideMax)
+  double wheelValue(double u, int at = -1, double max = NAN) const {
+    const ParamInfo &p = I.params[at < 0 ? I.modWheel : at];
+    const double top = at < 0 ? I.modWheelMax : max;
     if (u <= 0) return p.def;
     return constrain(p, p.log ? p.def * std::pow(top / p.def, u) : p.def + (top - p.def) * u);
   }
@@ -442,11 +443,12 @@ struct Plugin : Instance, MpeDecoder::Sink {
     expressed[key] = true;
     engine->noteBend(bendRatio(tuning, key, semitones), key);
   }
-  // its slide 0..1 (NaN: none) is its own mod wheel
+  // its slide 0..1 (NaN: none) sets its own value of the slide's parameter (the mod wheel's, or
+  // the one its descriptor names: shared/expression.js slideOf)
   void noteSlide(int key, double value) override {
-    if (key < 0 || key > 127 || !engine || I.modWheel < 0 || (!on(kSlide) && value == value)) return;
+    if (key < 0 || key > 127 || !engine || I.slide < 0 || (!on(kSlide) && value == value)) return;
     expressed[key] = true;
-    engine->slide(value == value ? wheelValue(value) : NAN, key);
+    engine->slide(value == value ? wheelValue(value, I.slide, I.slideMax) : NAN, key);
   }
   void notePressure(int key, double value) override { pressure(value, key); }
   // aftertouch (key −1: the channel's), unless Press is off

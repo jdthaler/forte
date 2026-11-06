@@ -61,6 +61,8 @@ class PianoEngine : public Engine {
   void setParams(const double *P) override;
   void noteOn(int key, double velocity) override; // velocity: the hammer's speed in m/s
   void noteOff(int key, double velocity) override;
+  // a note's own slide: where its hammer strikes (strikePos), from its next strike
+  void slide(double value, int key) override { if (key >= 0 && key < 128) slid[key] = value; }
   void setSustain(bool on) override;
   void allNotesOff() override;
   int voiceCount() const override { return nVoices; }
@@ -113,6 +115,8 @@ class PianoEngine : public Engine {
     int bn = 0;
 
     void start(PianoEngine &eng, int key, const VoiceData &d, int at);
+    double aimed = 0; // the strike position its blow is shaped for
+    void aim(const VoiceData &d, double beta, double beta0);
     void setDamperSigma(double sd) { damperSigma = sd; computeDamped(); }
     void computeDamped();
     void lifted(double scale) { if (scale != liftK) { liftK = scale; computeDamped(); } }
@@ -163,6 +167,8 @@ class PianoEngine : public Engine {
   void symRun(float *L, float *R, int n, const double *GV, const double *GH);
 
   std::array<double, p::count> P{};
+  std::array<double, 128> slid = nanKeys(); // each key's own strike position (NaN: P's)
+  static std::array<double, 128> nanKeys() { std::array<double, 128> a; a.fill(NAN); return a; }
   bool hasParams = false;
   bool sustain = false;
   const double k;

@@ -57,6 +57,9 @@ class ClavierEngine : public Engine {
   void pressure(double value, int key) override;
   void bend(double value) override; // the wheel presses every held key harder (up only)
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // that key pressed harder
+  // a note's own slide: the mute bar's felt on its strings alone, from none where the finger landed
+  // to the felt's full pressure at either end (the slide's value is the felt pressure's, from its default)
+  void slide(double value, int key) override { expr.setSlide(value, key); }
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
 
@@ -78,6 +81,7 @@ class ClavierEngine : public Engine {
     double fz[FRAME_MODES], fz1[FRAME_MODES], Z = 0; // the frame as this key's anvil drives it, and its last sum
     int quiet = 0;
     bool down = false, thrown = false, dead = false, killing = false, muted = false;
+    double ownMute = 0; // its own felt's engagement (its slide), as muteLevel
   };
 
   // read (and the tests' state written) through the WebAssembly's hooks: the voices in the order

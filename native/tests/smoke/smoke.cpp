@@ -73,7 +73,7 @@ const InstrumentInfo kInfo = {
   .slug = "smoke", .name = "Forte Smoke Test", .version = "0.0.1", .description = "CI-only: proves the plugin pipeline.", .auSubtype = "Smok",
   .vst3Id = {0x46, 0x6f, 0x72, 0x74, 0x65, 0x53, 0x6d, 0x6f, 0x6b, 0x65, 0x54, 0x65, 0x73, 0x74, 0x00, 0x01},
   .params = kParams, .paramCount = kCount, .presets = kPresets, .presetCount = 1, .keep = kKeep, .keepCount = 1,
-  .keyLo = 21, .keyHi = 108, .compassLo = 36, .compassHi = 96, .compass = kFullRange, .space = Space::sustain, .modWheel = kDecay, .modWheelMax = 10,
+  .keyLo = 21, .keyHi = 108, .compassLo = 36, .compassHi = 96, .compass = kFullRange, .space = Space::sustain, .modWheel = kDecay, .modWheelMax = 10, .slide = kDecay, .slideMax = 10,
   .controllers = kFaders, .controllerCount = 2,
   .chain = {.volume = kVolume},
   .create = [](double fs) -> Engine * { return new SmokeEngine(fs); },

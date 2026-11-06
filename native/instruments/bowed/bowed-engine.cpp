@@ -71,7 +71,7 @@ void OrganistaEngine::setParams(const double *P) {
   Fr = friction(Pm);
   vBt = Pm.speed; if (first) vB = Pm.speed; // the wheel follows the treadle through the flywheel
   for (auto &s : S) {
-    s->design(loopDesign(s->key, Pm, s->fs));
+    s->design(loopDesign(s->key, own(s->key), s->fs));
     if (bendNow * s->nb != 1) s->bend(bendNow * s->nb);
     s->setDamper(damped(*s), 6.91 / Pm.damper);
   }
@@ -121,6 +121,22 @@ void OrganistaEngine::activate(Key &s) {
   if (s.active) return;
   s.clear(); s.active = true; s.idle = 0;
   act[nAct++] = &s;
+}
+
+// The parameters a key's string is designed from: the instrument's, at its own bow position (its slide).
+Params OrganistaEngine::own(int key) const {
+  Params q = Pm;
+  q.beta = expr.slideOr(key, Pm.beta);
+  return q;
+}
+void OrganistaEngine::slide(double value, int key) {
+  const double was = expr.slideOr(key, Pm.beta);
+  expr.setSlide(value, key);
+  Key *s = string(key);
+  if (!s || !hasParams || expr.slideOr(key, Pm.beta) == was) return;
+  s->design(loopDesign(key, own(key), s->fs)); // the wheel meets the string elsewhere: its delays split anew
+  if (bendNow * s->nb != 1) s->bend(bendNow * s->nb);
+  s->setDamper(damped(*s), 6.91 / Pm.damper);
 }
 
 void OrganistaEngine::noteOn(int key, double velocity) {

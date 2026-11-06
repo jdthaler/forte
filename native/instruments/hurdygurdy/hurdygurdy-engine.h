@@ -23,6 +23,7 @@
 #include <memory>
 
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "forte/lift.h"
 #include "hurdygurdy-model.h"
 #include "hurdygurdy-params.h"
@@ -55,6 +56,9 @@ class HurdyGurdyEngine : public Engine {
   void allNotesOff() override;
   void pressure(double value, int key) override;    // aftertouch: the hand leans into the crank
   void bend(double value) override;                 // the tangents push the chanterelles: their notes × r
+  // a note's own slide: how hard the chanterelles bear on the wheel while it is the melody (their
+  // pressure, from Wheel pressure)
+  void slide(double value, int key) override { expr.setSlide(value, key); melodyForce(); }
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -79,6 +83,8 @@ class HurdyGurdyEngine : public Engine {
  private:
   void run(float *L, float *R, int n);
   void restop();          // the chanterelles to the melody's length (and the bend)
+  void melodyForce();     // the chanterelles' force on the wheel, at the melody's own slide
+  NoteExpression expr{0}; // each key's own slide (no note bends alone: the tangents bend every one)
   void redesign(Str &s);  // a string's loop at its length now
   void applyQuality();
   void buildBody(double eta);

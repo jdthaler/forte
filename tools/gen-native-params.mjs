@@ -26,7 +26,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { loadInstrument, paramsOf } from './headless.mjs';
 import { INSTRUMENTS, TEMPLATE, FORTE_VERSION, byId } from '../shared/registry.js';
 import { PAGE_ONLY } from '../shared/wasm.js'; // parameters only a page uses: the computer keys' velocity
-import { EXPRESSION, EXPRESSION_IDS, unanswered } from '../shared/expression.js'; // the Expression switches: last, those it answers to
+import { EXPRESSION, EXPRESSION_IDS, unanswered, slideOf } from '../shared/expression.js'; // the Expression switches: last, those it answers to
 import { TUNING_KEEP as TUNING_IDS, CENTS } from '../shared/tuning.js';
 import { controllersOf } from '../shared/midi.js';
 
@@ -327,6 +327,8 @@ export async function generate(slug) {
   const ch = I.chain || {}, at = (id) => (id && index.has(id) ? `p::${ident(id)}` : '-1');
   const mw = typeof I.modWheel === 'string' ? { param: I.modWheel } : I.modWheel;
   const mwParam = mw ? params[index.get(mw.param)] : null;
+  const sl = slideOf(I), slParam = sl ? params[index.get(sl.param)] : null; // what a note's own slide moves
+  if (sl && !slParam) throw new Error(`${slug}: its slide's parameter ${sl.param} is not one of its parameters`);
   const [lo, hi] = I.range || [36, 96];
   w('// The plugin\'s description. The port supplies its engine, and midiVelocity when the');
   w(`// descriptor maps MIDI velocity itself (${I.midiVelocity ? 'this one does' : 'this one does not'}).`);
@@ -341,6 +343,7 @@ export async function generate(slug) {
   const compass = I.compass ? ` .compassLo = ${I.compass.keys[0]}, .compassHi = ${I.compass.keys[1]}, .compass = p::${ident(I.compass.param)},` : '';
   w(`    .keyLo = ${lo}, .keyHi = ${hi},${compass} .space = Space::${I.space ?? 'none'},`);
   w(`    .modWheel = ${mw ? at(mw.param) : -1}, .modWheelMax = ${mwParam ? num(valueOf(mwParam, mw.max ?? mwParam.max)) : 0},`);
+  w(`    .slide = ${sl ? at(sl.param) : -1}, .slideMax = ${slParam ? num(valueOf(slParam, sl.max ?? slParam.max)) : 0},`);
   w(`    .controllers = kControllers, .controllerCount = ${ccs.length},`);
   const body = ch.body ? ` .body = ${at(ch.body.param)}, .bodySeconds = ${num(ch.body.seconds)}, .bodyDry = ${num(ch.body.dry)}, .bodyWet = ${num(ch.body.wet)},` : '';
   const L = ch.limiter || {};
