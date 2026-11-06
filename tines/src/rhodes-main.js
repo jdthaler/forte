@@ -33,7 +33,7 @@ let P = load();
 let fs = 48000, base = 48, focusKey = 60, lastVel = 1.8, sustain = false;
 // sent: key → the version of the voice data the engine holds (it keeps the last sent; resent when it changes)
 const sent = new Map(), held = new Map(), sounding = new Map();
-const paramsMessage = () => ({ type: 'params', P: { ...P } });
+const paramsMessage = (swap = false) => ({ type: 'params', P: { ...P }, ...(swap && { swap }) }); // swap: a preset's change, faded across (shared/worklet.js)
 
 // The model (tines-wasm.js): a key's model, plus its voice data packed for the engine (its
 // version first); it caches the latest version of each key.
@@ -263,10 +263,10 @@ function buildControls() {
   ps.addEventListener('change', () => {
     if (ps.value === '') return;
     const keep = Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]]));
-    setAll({ ...DEFAULTS, ...keep, ...PRESETS[+ps.value].p });
+    setAll({ ...DEFAULTS, ...keep, ...PRESETS[+ps.value].p }, { swap: true });
     unfocus(ps);
   });
-  $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }); $('#preset').value = ''; });
+  $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }, { swap: true }); $('#preset').value = ''; });
 }
 function refreshControl(id, dragging = false) {
   const c = controls.get(id);
@@ -280,12 +280,13 @@ function refreshControl(id, dragging = false) {
 function refreshVisibility() {
   for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(P) : false;
 }
-function setAll(np) {
+function setAll(np, { swap = false } = {}) {
   P = np;
   for (const id of controls.keys()) refreshControl(id);
   refreshVisibility();
-  post(paramsMessage()); applyMix(); updateHelp(); save();
+  post(paramsMessage(swap)); applyMix(); updateHelp(); save();
   modelChanged();
+  if (swap) document.dispatchEvent(new CustomEvent('forte-preset', { detail: { ...P } })); // a preset: the RISE's panel shows its faders (shared/rise.js)
 }
 let mcTimer = 0;
 function setParam(id, v, dragging = false) {
@@ -417,5 +418,5 @@ updateHelp();
 keyboardView.labels(keyLabels());
 setFocus(60, P.velocity);
 precompute();
-attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v) => setAll({ ...P, ...v }), defaults: DEFAULTS, toast }); // your own presets and links
+attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v, o) => setAll({ ...P, ...v }, o), defaults: DEFAULTS, toast }); // your own presets and links
 qualityControl(); // the device's Quality, after the controls

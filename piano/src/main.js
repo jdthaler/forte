@@ -51,7 +51,7 @@ const sounding = new Map();    // MIDI key → number of sources holding it
 // The model (piano-wasm.js): { model, data, packed } per key, the latest version of each cached.
 const wasm = await wasmModel();
 const keyData = (key) => wasm.keyModel(key, P, fs);
-const paramsMessage = () => ({ type: 'params', P: { ...P } });
+const paramsMessage = (swap = false) => ({ type: 'params', P: { ...P }, ...(swap && { swap }) }); // swap: a preset's change, faded across (shared/worklet.js)
 // What a note offers the engine: its key's voice data, packed by the model here, so that the
 // audio thread need not build it.
 const noteData = (key) => keyData(key).packed;
@@ -362,10 +362,10 @@ function buildControls() {
   ps.addEventListener('change', () => {
     if (ps.value === '') return;
     const keep = Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]]));
-    setAll({ ...DEFAULTS, ...keep, ...PRESETS[+ps.value].p });
+    setAll({ ...DEFAULTS, ...keep, ...PRESETS[+ps.value].p }, { swap: true });
     unfocus(ps);
   });
-  $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }); $('#preset').value = ''; });
+  $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }, { swap: true }); $('#preset').value = ''; });
 }
 
 function refreshControl(id) {
@@ -387,15 +387,16 @@ function refreshVisibility() {
 
 // the plugin's values (shared/in-plugin.js): one as a control moving it, several as a preset
 function fromPlugin(c) { const ids = Object.keys(c); if (ids.length === 1) setParam(ids[0], c[ids[0]]); else setAll({ ...P, ...c }); }
-function setAll(newP) {
+function setAll(newP, { swap = false } = {}) {
   P = newP;
   for (const id of controls.keys()) refreshControl(id);
   refreshVisibility();
-  if (audio) audio.node.port.postMessage(paramsMessage());
+  if (audio) audio.node.port.postMessage(paramsMessage(swap));
   applyMix();
   updateHelp();
   saveParams();
   modelChanged();
+  if (swap) document.dispatchEvent(new CustomEvent('forte-preset', { detail: { ...P } })); // a preset: the RISE's panel shows its faders (shared/rise.js)
 }
 
 function setParam(id, v, opts = {}) {
@@ -597,7 +598,7 @@ window.addEventListener('resize', () => drawSection($('#section'), keyData(focus
 buildControls();
 for (const id of controls.keys()) refreshControl(id);
 refreshVisibility();
-attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v) => setAll({ ...P, ...v }), defaults: DEFAULTS, toast }); // your own presets and links, Morph and the Scala button
+attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v, o) => setAll({ ...P, ...v }, o), defaults: DEFAULTS, toast }); // your own presets and links, Morph and the Scala button
 qualityControl(); // the device's Quality, after the controls
 updateHelp();
 keyboardView.labels(keyLabels());

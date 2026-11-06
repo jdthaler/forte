@@ -84,7 +84,7 @@ constexpr uint32_t kEditorWidth = 1000, kEditorHeight = 760, kEditorMinWidth = 6
 
 // what the editor asks of the audio thread
 struct UiEvent {
-  enum Type : uint8_t { param, begin, end, on, off, pedal, pressure, panic } type;
+  enum Type : uint8_t { param, begin, end, on, off, pedal, pressure, panic, swap } type; // swap: a preset's values follow (fade across them)
   int16_t i; // a parameter or a key
   double v;
 };
@@ -150,6 +150,11 @@ struct Plugin : Instance, MpeDecoder::Sink {
   // (shared/midi.js levelGain), full until a pedal moves; `level` follows it in 10 ms
   int volumePedal = 127, expressionPedal = 127;
   double level = 1, levelCoef = 0;
+  // a preset's change, faded across so it doesn't click (shared/worklet.js): the engine's sound fades
+  // out in 6 ms while its new parameters wait (dirty), takes them at the bottom, and fades back in
+  // in 12 ms, a raised cosine each way. state: 0 none, 1 out, 2 in; at: 0..1 of the fade
+  struct { int state = 0; double at = 0; } swap;
+  static constexpr double kSwapOut = 0.006, kSwapIn = 0.012;
   // MPE, and the per-note expression a host sends: the keys the engine was given their own bend or
   // slide, so a note struck there without them starts plain
   MpeDecoder mpe;
@@ -234,6 +239,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
       int k = (int)std::lround(v);
       k = k < 0 ? 0 : k > I.presetCount ? I.presetCount : k;
       presetValues(k, morphA);
+      swapIn();
       for (int j = 0; j < I.paramCount; j++) if (morphA[j] != P[j]) { P[j] = morphA[j]; shown[j] = P[j]; tell(j, out); }
       P[i] = k; shown[i] = k;
       if (k == (int)P[toAt] && k != (int)P[fromAt]) put(morphAt, 1, out);
@@ -584,7 +590,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
       }
       uint32_t end = pos + kBlock < n ? pos + kBlock : n;
       if (next < count) { uint32_t t = in->get(in, next)->time; if (t < end) end = t; }
-      if (dirty && engine) { engine->setQuality(quality()); engine->setParams(P.data()); chain.setParams(P.data()); retune(); dirty = false; }
+      if (dirty && engine && swap.state != 1) { engine->setQuality(quality()); engine->setParams(P.data()); chain.setParams(P.data()); retune(); dirty = false; }
       if (L) render(L + pos, R ? R + pos : spare, end - pos);
       pos = end;
     }
@@ -613,11 +619,26 @@ struct Plugin : Instance, MpeDecoder::Sink {
       postedIn.fetch_add(1, std::memory_order_release);
     }
   }
+  // a preset's change: fade out (from where a fade in has got to), and the parameters wait for the bottom
+  void swapIn() { if (swap.state == 1) return; swap.at = swap.state == 2 ? 1 - swap.at : 0; swap.state = 1; }
+  void fadeSwap(float *L, float *R, uint32_t n) {
+    const bool down = swap.state == 1;
+    const double step = 1 / ((down ? kSwapOut : kSwapIn) * fs);
+    for (uint32_t i = 0; i < n; i++) {
+      const double g = swap.at >= 1 ? (down ? 0 : 1) : 0.5 - 0.5 * std::cos(3.14159265358979323846 * (down ? 1 - swap.at : swap.at));
+      L[i] = (float)(L[i] * g); R[i] = (float)(R[i] * g);
+      swap.at = std::min(1.0, swap.at + step);
+    }
+    if (swap.at < 1) return;
+    if (down) { swap.state = 2; swap.at = 0; } // at the bottom: the next block takes the parameters (dirty), then up
+    else swap.state = 0;
+  }
   // the engine, a guard (a NaN stops the notes rather than the instrument, shared/guard.js), the chain
   void render(float *L, float *R, uint32_t n) {
     if (!engine) { std::memset(L, 0, n * sizeof *L); std::memset(R, 0, n * sizeof *R); return; }
     engine->process(L, R, (int)n);
     if (!guardBlock(L, R, (int)n)) engine->allNotesOff();
+    if (swap.state) fadeSwap(L, R, n);
     if (viewsOn.load(std::memory_order_relaxed)) {
       for (uint32_t i = 0; i < n; i++) heard.push(0.5f * (L[i] + R[i]));
       handOn();
@@ -646,6 +667,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
         break;
       case UiEvent::pressure: if (engine) engine->pressure(e.v, e.i); break;
       case UiEvent::panic: panic(); break;
+      case UiEvent::swap: swapIn(); break;
     }
   }
   void gesture(int i, bool begin, const clap_output_events_t *out) {
@@ -864,7 +886,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
       std::vector<double> v;
       std::string error;
       const bool ok = readPreset(I, text(1), (int)num(2), v, error);
-      if (ok) for (int i = 0; i < I.paramCount; i++) { shown[i] = v[i]; sent[i] = NAN; toAudio({UiEvent::param, (int16_t)i, v[i]}); }
+      if (ok) { toAudio({UiEvent::swap, 0, 0}); for (int i = 0; i < I.paramCount; i++) { shown[i] = v[i]; sent[i] = NAN; toAudio({UiEvent::param, (int16_t)i, v[i]}); } }
       Value r = createObject("");
       r.addMember("ok", ok);
       r.addMember("error", error);
@@ -1233,6 +1255,7 @@ bool pluginActivate(const clap_plugin_t *p, double fs, uint32_t, uint32_t) {
   s->chain.configure(s->I.chain, fs, s->P.data());
   s->levelCoef = 1 - std::exp(-1 / (0.01 * fs)); // the pedals' gain follows in 10 ms
   s->level = s->levelTarget();
+  s->swap = {};
   s->panic();
   if (s->I.space == Space::sustain) s->engine->setSustain(false);
   s->dirty = true;

@@ -31,7 +31,7 @@ const fileName = (s) => `${s.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '-').trim() 
 const USER = '__user:';
 
 // The page's settings by contract id, for a guided tour (shared/tour.js), once attachPresets runs:
-// { instrument, params, get() → every parameter's value, set(values) as choosing a preset would }
+// { instrument, params, get() → every parameter's value, set(values, { swap }) as choosing a preset would (swap: fade across it) }
 export const pageState = {};
 
 export function attachPresets({ instrument: I, get, set, values = (P) => P, defaults = null, toast = () => {} }) {
@@ -98,7 +98,7 @@ export function attachPresets({ instrument: I, get, set, values = (P) => P, defa
 
   function play(pr, shown = true) {
     if (!pr) return;
-    set(complete(params, pr.values));
+    set(complete(params, pr.values), { swap: true });
     const k = mine.indexOf(pr);
     sel.value = shown && k >= 0 ? USER + k : '';
     before = sel.value;
@@ -118,7 +118,7 @@ export function attachPresets({ instrument: I, get, set, values = (P) => P, defa
     const got = readLinkHash(location.hash, params);
     if (!got) return;
     history.replaceState(null, '', location.pathname + location.search);
-    set(got.values);
+    set(got.values, { swap: true });
     sel.value = ''; before = '';
     toast(`Playing ${got.name ? `“${got.name}”` : 'the settings from the link'}. To keep them, save them from the Presets menu.`);
   }

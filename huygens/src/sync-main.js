@@ -34,7 +34,7 @@ const held = new Map(), sounding = new Map(), latched = new Set();
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 40, fHi: 16000 });
 new SpectrogramView($('#spectrogram'), { spectrum });
 
-const paramsMessage = () => ({ type: 'params', P: { ...P } });
+const paramsMessage = (swap = false) => ({ type: 'params', P: { ...P }, ...(swap && { swap }) }); // swap: a preset's change, faded across (shared/worklet.js)
 
 // The WebAssembly model (huygens-wasm.js): each key's design frequency (the lock map's theory and
 // engine are its too, staircase.js in its worker)
@@ -260,10 +260,10 @@ function buildControls() {
   PRESETS.forEach((pr, i) => ps.add(new Option(pr.name, i)));
   ps.addEventListener('change', () => {
     if (ps.value === '') return;
-    setAll({ ...DEFAULTS, ...Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]])), ...PRESETS[+ps.value].p });
+    setAll({ ...DEFAULTS, ...Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]])), ...PRESETS[+ps.value].p }, { swap: true });
     unfocus(ps);
   });
-  $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }); $('#preset').value = ''; });
+  $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }, { swap: true }); $('#preset').value = ''; });
 }
 function refreshControl(id, dragging = false) {
   const c = controls.get(id);
@@ -277,11 +277,12 @@ function refreshVisibility() { for (const { p, wrap } of controls.values()) wrap
 function retuneSounding() { post({ type: 'retune', list: activeKeys().map((k) => [k, tunedFreq(k, P)]) }); refreshMarks(); }
 // the plugin's values (shared/in-plugin.js): one as a control moving it, several as a preset
 function fromPlugin(c) { const ids = Object.keys(c); if (ids.length === 1) setParam(ids[0], c[ids[0]]); else setAll({ ...P, ...c }); }
-function setAll(np) {
+function setAll(np, { swap = false } = {}) {
   P = np;
   for (const id of controls.keys()) refreshControl(id);
-  refreshVisibility(); post(paramsMessage()); applyMix(); retuneSounding(); updateHelp(); save();
+  refreshVisibility(); post(paramsMessage(swap)); applyMix(); retuneSounding(); updateHelp(); save();
   recomputeStair(true);
+  if (swap) document.dispatchEvent(new CustomEvent('forte-preset', { detail: { ...P } })); // a preset: the RISE's panel shows its faders (shared/rise.js)
 }
 function setParam(id, v, dragging = false) {
   const p = ALL_PARAMS.find((q) => q.id === id);
@@ -385,5 +386,5 @@ updateHelp();
 updateTables({ notes: [], pairs: [] }, 0);
 recomputeStair(true);
 animate(frame);
-attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v) => setAll({ ...P, ...v }), defaults: DEFAULTS, toast }); // your own presets and links
+attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v, o) => setAll({ ...P, ...v }, o), defaults: DEFAULTS, toast }); // your own presets and links
 qualityControl(); // the device's Quality, after the controls

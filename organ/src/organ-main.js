@@ -108,8 +108,8 @@ function startAudio() {
 
 const post = (m) => { if (live) audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
 // all the parameters, the console included
-const paramsMessage = () => ({ type: 'params', P: { ...P, drawbars: [...P.drawbars] } });
-function sendParams() { post(paramsMessage()); }
+const paramsMessage = (swap = false) => ({ type: 'params', P: { ...P, drawbars: [...P.drawbars] }, ...(swap && { swap }) }); // swap: a preset's change, faded across (shared/worklet.js)
+function sendParams(swap) { post(paramsMessage(swap)); }
 function applyMix() { if (audio) audio.chain.apply(P, trimGain(INSTRUMENT.id)); } // volume level-matched across instruments
 
 function onWorklet(m) {
@@ -427,10 +427,10 @@ function buildControls() {
   ps.addEventListener('change', () => {
     if (ps.value === '') return;
     const keep = Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]])); // and the motor back on (DEFAULTS)
-    replaceP({ ...DEFAULTS, ...keep, ...PRESETS[+ps.value].p });
+    replaceP({ ...DEFAULTS, ...keep, ...PRESETS[+ps.value].p }, { swap: true });
     unfocus(ps);
   });
-  $('#reset').addEventListener('click', () => { replaceP({ ...DEFAULTS }); $('#preset').value = ''; });
+  $('#reset').addEventListener('click', () => { replaceP({ ...DEFAULTS }, { swap: true }); $('#preset').value = ''; });
 }
 
 // a control that applies only to some settings (the tuning's root and custom cents) shows only then
@@ -471,12 +471,13 @@ function setP(changes, fromSliderDrag = false) {
   $('#preset').value = '';
 }
 
-function replaceP(newP) {
+function replaceP(newP, { swap = false } = {}) {
   P = { ...newP, drawbars: [...newP.drawbars] };
   for (const id of controls.keys()) refreshControl(id);
   refreshVisibility();
-  sendParams(); applyMix();
+  sendParams(swap); applyMix();
   refreshConsole(); refreshGenerator(); refreshFocus(); refreshActivity(); updateHelp(); save();
+  if (swap) document.dispatchEvent(new CustomEvent('forte-preset', { detail: { ...P } })); // a preset: the RISE's panel shows its faders (shared/rise.js)
 }
 
 // ---------------------------------------------------------------------------
@@ -568,5 +569,5 @@ refreshFocus();
 updateHelp();
 animate(frame);
 // your own presets and links: the console's state goes in as its parameters (organ-params.js)
-attachPresets({ instrument: INSTRUMENT, get: () => P, values: (p) => ({ ...p, ...CONSOLE.get(p) }), set: (v) => replaceP({ ...P, ...Object.fromEntries(ALL_PARAMS.map((p) => [p.id, v[p.id]])), ...CONSOLE.put(v, P) }), defaults: DEFAULTS, toast });
+attachPresets({ instrument: INSTRUMENT, get: () => P, values: (p) => ({ ...p, ...CONSOLE.get(p) }), set: (v, o) => replaceP({ ...P, ...Object.fromEntries(ALL_PARAMS.map((p) => [p.id, v[p.id]])), ...CONSOLE.put(v, P) }, o), defaults: DEFAULTS, toast });
 qualityControl(); // the device's Quality, after the controls

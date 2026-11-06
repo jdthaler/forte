@@ -108,9 +108,9 @@ function drop(s) {
   }
   if (ctx) limitTogether(ctx, false);
 }
-function setParams(s, P, keep = true) {
+function setParams(s, P, keep = true, swap = false) {
   s.P = P;
-  post(s, { type: 'params', P: { ...P } });
+  post(s, { type: 'params', P: { ...P }, ...(swap && { swap }) }); // swap: a preset's change, faded across (shared/worklet.js)
   if (s.chain) s.chain.apply(P, trimGain(s.id));
   if (keep) { try { localStorage.setItem(paramsStore(s.id), JSON.stringify(P)); } catch { /* blocked */ } }
 }
@@ -360,7 +360,7 @@ export function attachLayer(keyboard) {
     const I = second.I, keep = Object.fromEntries((I.keep ?? []).map((k) => [k, second.P[k]]));
     const defaults = { ...structuredClone(I.console?.defaults ?? {}), ...Object.fromEntries(second.params.map((p) => [p.id, p.def])) };
     const chosen = preset.value;
-    setParams(second, { ...defaults, ...keep, ...I.presets[+chosen].p });
+    setParams(second, { ...defaults, ...keep, ...I.presets[+chosen].p }, true, true);
     shown();
     preset.value = chosen;
   });
