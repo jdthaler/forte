@@ -79,6 +79,9 @@ struct KeyReed {
 };
 // ratio: the keyboard's tuning's for the key (forte/tuning.h), the reed cut to keyFreq(m)·ratio
 KeyReed keyReed(int m, double tipMass, double loss, double fs = 96000, double ratio = 1);
+// The same reed with its pad x (a fraction of the length) along it, not REED.xPad: the modes'
+// shapes there, the stiffness the pad meets and the tip's deflection per the pad's.
+KeyReed padAt(const KeyReed &kr, double x);
 
 // ---- pickups -----------------------------------------------------------------------------------
 inline double voicing(int m) { return std::sqrt(261.63 / keyFreq(m)); }

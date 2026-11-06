@@ -26,18 +26,20 @@ constexpr double BEND_T = 0.02;    // s: the pitch wheel's glide, and a note's o
 
 // ---- a voice: one key's mechanism and its pickup -------------------------------------------
 
-void PianetEngine::Voice::start(PianetEngine &eng, int k, Data::Ref r) {
+void PianetEngine::Voice::start(PianetEngine &eng, int k, Data::Ref r, double x) {
   *this = Voice{};
   inUse = true;
-  key = k; version = eng.version; ref = r;
+  key = k; version = eng.version; ref = r; grab = x;
+  if (x != REED.xPad) at = padAt(*r.data, x);
+  const KeyReed &kr = x != REED.xPad ? at : *r.data;
   eng.data.acquire(r);
   own = eng.expr.bendOf(k);
   // Quality: Low leaves out the reed's modes above 12 kHz; Medium and Low let a reed rest once
   // its ringing is 70 / 60 dB below its loudest
   const double fTop = eng.Engine::pick<double>(INFINITY, INFINITY, 12000);
   int nMax = 0;
-  while (nMax < r.data->N && r.data->modes[nMax].f <= fTop) nMax++;
-  p = Pluck(*r.data, eng.pad(), eng.fs2, eng.bendNow * own, std::max(nMax, 1));
+  while (nMax < kr.N && kr.modes[nMax].f <= fTop) nMax++;
+  p = Pluck(kr, eng.pad(), eng.fs2, eng.bendNow * own, std::max(nMax, 1));
   rel = eng.Engine::pick(0.0, 1e-7, 1e-6);
   pol = key % 2 ? -1 : 1;
   setPickup(eng, true);
@@ -107,18 +109,20 @@ void PianetEngine::noteOn(int key, double velocity) {
   if (!hasParams || key < 0 || key > 127) return;
   lastKey = key;
   Voice *v = byKey[key];
-  if (v && v->version == version) { startNote(key, velocity, v); return; }
+  // where its pad grabs the reed: the knob's, or its own slide (a pad moved is a new note's)
+  const double grab = std::clamp(expr.slideOr(key, P[p::grab]), 0.5, 0.95);
+  if (v && v->version == version && v->grab == grab) { startNote(key, velocity, v); return; }
   const Data::Ref r = data.get(key, version);
   if (!r) { // the reed is being built (a millisecond or so): the note waits for it
     for (int i = 0; i < nPending; i++) if (pending[i].key == key) { pending[i] = {key, velocity, false}; return; }
     if (nPending < (int)pending.size()) pending[nPending++] = {key, velocity, false};
     return;
   }
-  if (v) v->retire(); // its reed was re-cut: the old one fades out
+  if (v) v->retire(); // its reed was re-cut, or its pad moved: the old one fades out
   Voice *fresh = nullptr;
   for (Voice &u : pool) if (!u.inUse) { fresh = &u; break; }
   if (!fresh) { byKey[key] = nullptr; return; } // every voice busy (beyond anything the stealing below lets happen)
-  fresh->start(*this, key, r);
+  fresh->start(*this, key, r, grab);
   voices[nVoices++] = fresh; byKey[key] = fresh;
   if (nVoices > Engine::pick(MAX_VOICES, 16, 10)) { // Quality: Medium and Low let fewer notes sound at once
     Voice *victim = nullptr;

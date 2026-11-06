@@ -136,6 +136,16 @@ KeyReed keyReed(int m, double tipMass, double loss, double fs, double ratio) {
   return kr;
 }
 
+KeyReed padAt(const KeyReed &kr, double x) {
+  KeyReed o = kr;
+  for (int n = 0; n < o.N; n++) o.modes[n].phiC = o.nrm * o.unit.shape(n, x);
+  double cc = 0, ct = 0;
+  for (int n = 0; n < o.N; n++) { const ReedMode &md = o.modes[n]; const double w2 = pow(TWO_PI * md.f, 2); cc += pow(md.phiC, 2) / w2; ct += (md.phiC * md.phiT) / w2; }
+  for (int n = 0; n < o.N; n++) { ReedMode &md = o.modes[n]; md.release = md.phiC / pow(TWO_PI * md.f, 2) / cc; }
+  o.xc = x * o.L; o.kc = 1 / cc; o.tipGain = ct / cc;
+  return o;
+}
+
 // ---- pickups -----------------------------------------------------------------------------------
 double voicingT(int m) { const double r = 261.63 / keyFreq(m); return r >= 1 ? std::sqrt(r) : std::sqrt(std::sqrt(r)); }
 double emH2(double Y, double g) { const double e = Y / (EM_ELL + g); return (2 * (1 - std::sqrt(1 - e * e))) / e; }

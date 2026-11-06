@@ -17,7 +17,7 @@
 namespace forte::pianet {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { tack, rate, padK, padC, tipMass, loss, fullRange, pickup, gap, plateGap, offset, tone, amp, drive, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, pressOn, liftOn, count };
+enum : int { tack, rate, padK, padC, grab, tipMass, loss, fullRange, pickup, gap, plateGap, offset, tone, amp, drive, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, pressOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -25,6 +25,7 @@ inline const FormatSegment kFormat_tack[] = {{0.09999999999999999, "", " mN", 10
 inline const FormatSegment kFormat_rate[] = {{kNoLimit, "G ∝ 1 + (v/v₀)^", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_padK[] = {{kNoLimit, "", " N/mm", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_padC[] = {{kNoLimit, "", " N·s/m", 1, 0, 2, false, false, false, false}};
+inline const FormatSegment kFormat_grab[] = {{kNoLimit, "", " % of the way to the tip", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_tipMass[] = {{kNoLimit, "× ", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_loss[] = {{kNoLimit, "", " × 10⁻³", 1000, 0, 2, false, false, false, false}};
 inline const char *const kChoices_pickup[] = {"Electromagnetic (Pianet T)", "Electrostatic (Pianet N)"};
@@ -67,6 +68,7 @@ inline const ParamInfo kParams[p::count] = {
   {"rate", "Rate exponent n", "Pad and bond", ParamKind::continuous, 0.1, 1, 0.6, 0.01, false, false, nullptr, 0, kFormat_rate, 1},
   {"padK", "Pad stiffness k_p", "Pad and bond", ParamKind::continuous, 0.1, 5, 0.6, 0, true, false, nullptr, 0, kFormat_padK, 1},
   {"padC", "Pad damping c_p", "Pad and bond", ParamKind::continuous, 0.01, 2, 0.25, 0, true, false, nullptr, 0, kFormat_padC, 1},
+  {"grab", "Where the pad grabs the reed", "Pad and bond", ParamKind::continuous, 0.5, 0.95, 0.8, 0.01, false, false, nullptr, 0, kFormat_grab, 1},
   {"tipMass", "Solder tip mass", "Reed", ParamKind::continuous, 0.1, 4, 1, 0, true, false, nullptr, 0, kFormat_tipMass, 1},
   {"loss", "Reed loss η", "Reed", ParamKind::continuous, 0.0002, 0.02, 0.0012, 0, true, false, nullptr, 0, kFormat_loss, 1},
   {"fullRange", "Full range (A0–C8)", "Reed", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
@@ -96,6 +98,7 @@ inline const ParamInfo kParams[p::count] = {
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
   {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"glideOn", "Glide: a note’s own pitch bend", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"pressOn", "Press: pressing into a held key", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
@@ -147,7 +150,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 36, .compassHi = 96, .compass = p::fullRange, .space = Space::sustain,
     .modWheel = -1, .modWheelMax = 0,
-    .slide = -1, .slideMax = 0,
+    .slide = p::grab, .slideMax = 0.55,
     .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = -4.5},
     .midiVelocity = midiVelocity, .create = create,
