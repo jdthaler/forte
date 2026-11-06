@@ -20,8 +20,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/gongs/>
 | `←` `→` | octave |
 | `↑` `↓` | velocity (the mallet's speed goes as velocity²) |
 | `Space` | sustain: keeps your hand off the gongs after key-up |
-| MIDI | notes, velocity, sustain pedal (CC64); **mod wheel = strike point**; aftertouch = a hand pressed on the gong |
-| Touch | lean on a held key (slide the finger along it, either way, or press harder with an Apple Pencil) = aftertouch: a hand pressed on the gong |
+| MIDI | notes, velocity, sustain pedal (CC64); **mod wheel = strike point**; aftertouch does nothing, so a Seaboard, which presses from any finger at rest, plays as the computer keys (the hand goes on the gong when the key is let go) |
 
 ## The physics
 
@@ -331,7 +330,7 @@ them itself when the setting changes.
 **In C++**: the engine and model are C++ (`native/instruments/gongs`), run as
 WebAssembly on this page and as plugins (CLAP, VST3, AU and a standalone app),
 where CC64 is the sustain pedal, the mod wheel moves the strike point out
-towards the rim, and aftertouch presses a hand on the gong. It was ported from
+towards the rim, and aftertouch does nothing. It was ported from
 the first, JavaScript version: wherever the motion is not chaotic the two played
 the same to float rounding (5×10⁻⁸ of the peak); in a crash, the last bit (V8's
 and the C++'s `exp`, `sin` and eigenvectors) grows into a different crash within
