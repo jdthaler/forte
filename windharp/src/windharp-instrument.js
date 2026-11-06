@@ -21,6 +21,7 @@ export const INSTRUMENT = {
   // bent out of its band a string moves to the harmonic the wake picks). No slide:
   // one wind blows through every shutter.
   mpe: { bend: 12 },
+  aftertouch: 'the wind blows harder', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   faders: ['gustTime', 'q', 'mass', 'gust', 'wind'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/windharp), built as WebAssembly
   wasm: { name: 'WindHarpWasmEngine', module: new URL('./windharp-wasm.js', import.meta.url).href, binary: new URL('../wasm/windharp.wasm', import.meta.url).href },

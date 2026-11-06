@@ -7,12 +7,14 @@
 #include "plugin.h"
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
@@ -22,10 +24,12 @@
 #include <clapwrapper/vst3.h>
 
 #include "choc/containers/choc_Value.h"
+#include "choc/memory/choc_Base64.h"
 #include "choc/text/choc_JSON.h"
 #include "forte/chain.h"
 #include "forte/denormals.h"
 #include "forte/guard.h"
+#include "forte/limiter.h"
 #include "forte/mpe.h"
 #include "forte/queue.h"
 #include "forte/tuning.h"
@@ -51,17 +55,36 @@ constexpr uint32_t kQualityId = 0x7ffffffc;
 const char *const kQualityChoices[] = {"High", "Medium", "Low"};
 // MPE (forte/mpe.h): Auto (from the controller's configuration message), On or Off. Every plugin has it.
 constexpr uint32_t kMpeId = 0x7ffffffb;
+// Octave (±4) and Transpose (±12 semitones) move the MIDI keys, as the pages' menus do
+// (shared/midi.js keyShift): a note-off, a note's pressure and its expressions go where its
+// note-on went (moveOn, moved), so a note held while they change ends as it began. The window's
+// own keys play what they show. Every plugin has them, saved as midiTranspose and midiOctave (the
+// pipe organ's and the clavichord's own octave is a stop); the Forte app keeps them, as the controller's.
+constexpr uint32_t kTransposeId = 0x7ffffffa, kOctaveId = 0x7ffffff9;
+constexpr int kSemitones = 12, kOctaves = 4; // each choice's index is the shift + this
+#define FORTE_MINUS "\xe2\x88\x92" // U+2212, as UTF-8 bytes (MSVC turns \u escapes into CP1252)
+const char *const kTransposeChoices[] = {FORTE_MINUS "12", FORTE_MINUS "11", FORTE_MINUS "10", FORTE_MINUS "9", FORTE_MINUS "8", FORTE_MINUS "7", FORTE_MINUS "6",
+                                         FORTE_MINUS "5", FORTE_MINUS "4", FORTE_MINUS "3", FORTE_MINUS "2", FORTE_MINUS "1", "0", "+1", "+2", "+3",
+                                         "+4", "+5", "+6", "+7", "+8", "+9", "+10", "+11", "+12"};
+const char *const kOctaveChoices[] = {FORTE_MINUS "4", FORTE_MINUS "3", FORTE_MINUS "2", FORTE_MINUS "1", "0", "+1", "+2", "+3", "+4"};
+#undef FORTE_MINUS
+static_assert(sizeof kTransposeChoices / sizeof *kTransposeChoices == 2 * kSemitones + 1 && sizeof kOctaveChoices / sizeof *kOctaveChoices == 2 * kOctaves + 1);
+// Morph (shared/morph.js): Morph from and Morph to name two presets (0 the defaults, k the k-th),
+// and Morph (0..1) is how far the sound is from one to the other, each parameter part way
+// (morph(), as shared/presets.js morph). A song can automate Morph. Every plugin with presets has them.
+constexpr uint32_t kMorphFromId = 0x7ffffff8, kMorphToId = 0x7ffffff7, kMorphId = 0x7ffffff6;
+const FormatSegment kMorphFormat[] = {{INFINITY, "", " %", 100, 0, 0, false, false, false, false}};
 // The soft pedal (CC67): a key struck while it is down is struck this much slower, so it sounds
 // softer and, where the instrument's hammer or mallet is nonlinear, darker too.
 constexpr double kSoftPedal = 0.6;
 // A foot controller's switches (General Purpose 5–7) are the sustain, sostenuto and soft pedals: a
 // Roland FC-300 sends them from CTL 1, CTL 2 and EXP 1's toe switch (shared/midi.js SWITCHES).
 int footSwitch(int cc) { return cc == 80 ? 64 : cc == 81 ? 66 : cc == 82 ? 67 : cc; }
-constexpr uint32_t kEditorWidth = 920, kEditorHeight = 640, kEditorMinWidth = 600, kEditorMinHeight = 420; // points
+constexpr uint32_t kEditorWidth = 1000, kEditorHeight = 760, kEditorMinWidth = 600, kEditorMinHeight = 420; // points
 
 // what the editor asks of the audio thread
 struct UiEvent {
-  enum Type : uint8_t { param, begin, end, on, off, pedal, pressure, panic } type;
+  enum Type : uint8_t { param, begin, end, on, off, pedal, pressure, panic, swap } type; // swap: a preset's values follow (fade across them)
   int16_t i; // a parameter or a key
   double v;
 };
@@ -84,16 +107,23 @@ struct Instance {
   // the editor's calls, window.forte(method, …args) (Plugin::call says what they are)
   virtual choc::value::Value call(const choc::value::ValueView &args) = 0;
   virtual void idle() {} // on the main thread, every 16 ms while the window is open
+  virtual const Site *page() const = 0; // the instrument's page now, for the window's views (site.h)
+  virtual void closed() {}              // the window is gone: nobody watches the views
 };
 
 Instance *instance(const clap_plugin_t *p) { return (Instance *)p->plugin_data; }
 
 struct Plugin : Instance, MpeDecoder::Sink {
   const InstrumentInfo &I;
+  const Site *const site;    // its page, for the window's views (or null)
+  const Views *const views;  // what they read beyond the engine's messages (or null)
   const std::string accent;  // the window's colour
   const bool hasPresets;
-  const int nParams;        // the instrument's parameters, then Preset if it has presets, the velocity curve, Quality and MPE
-  const int presetAt, touchAt, qualityAt, mpeAt; // their indices (presetAt −1 without presets)
+  const int nParams;        // the instrument's parameters, then Preset if it has presets, the velocity curve, Quality, MPE,
+                            // Transpose and Octave, then Morph from, Morph to and Morph if it has presets
+  const int presetAt, touchAt, qualityAt, mpeAt, transposeAt, octaveAt, fromAt, toAt, morphAt; // their indices (−1: none, without presets)
+  std::vector<const char *> presetNames; // "Default settings", then the presets' names: Morph from's and Morph to's choices
+  std::vector<double> morphA, morphB;  // the two presets' values while morphing (audio thread)
   std::vector<uint32_t> ids; // hashed parameter ids, by index
 
   std::unique_ptr<Engine> engine;
@@ -108,6 +138,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
 
   // notes as the shell counts them: how many channels hold each key, and the keys latched by Hold
   uint8_t held[16][128]{};
+  int8_t moved[16][128];  // the key each channel's MIDI key plays, as Octave and Transpose moved its note-on (−1: none)
   uint8_t sounding[128]{};
   bool latched[128]{};
   bool sustain = false;
@@ -119,12 +150,18 @@ struct Plugin : Instance, MpeDecoder::Sink {
   // (shared/midi.js levelGain), full until a pedal moves; `level` follows it in 10 ms
   int volumePedal = 127, expressionPedal = 127;
   double level = 1, levelCoef = 0;
+  // a preset's change, faded across so it doesn't click (shared/worklet.js): the engine's sound fades
+  // out in 6 ms while its new parameters wait (dirty), takes them at the bottom, and fades back in
+  // in 12 ms, a raised cosine each way. state: 0 none, 1 out, 2 in; at: 0..1 of the fade
+  struct { int state = 0; double at = 0; } swap;
+  static constexpr double kSwapOut = 0.006, kSwapIn = 0.012;
   // MPE, and the per-note expression a host sends: the keys the engine was given their own bend or
   // slide, so a note struck there without them starts plain
   MpeDecoder mpe;
   Tuning tuning;         // the parameters' (a note's bend follows it)
   int tuningAt[3 + kCustomCents];
   bool expressed[128]{};
+  std::array<double, 128> landed = [] { std::array<double, 128> a; a.fill(NAN); return a; }(); // a host's per-note brightness where the note began (NaN: not yet): its slide is from there
 
   // the editor: its events for the audio thread, what it shows, the keys sounding for it
   const clap_host_params_t *hostParams = nullptr;
@@ -132,15 +169,40 @@ struct Plugin : Instance, MpeDecoder::Sink {
   std::vector<double> sent;          // each value as the editor last saw it (NaN: never)
   std::atomic<uint64_t> keysDown[2]{};
   std::atomic<bool> pedalDown{false};
+  std::atomic<float> struck[128]{}; // each key's last velocity, as the engine got it (the descriptor's midiVelocity's units)
+  // the views (the instrument's page in the window, editor.html): while they show, the engine's
+  // messages (Engine::post), each with the data its views read from the engine (site.h, Views),
+  // and its sound before the chain, as the page's analyser hears it. The engine posts into fresh
+  // on the audio thread, which hands each message on with its data at the end of the block.
+  struct Posted { Message m; int n = 0; }; // n: how many of attached are its
+  static constexpr size_t kPosted = 4096, kAttached = 1 << 17;
+  std::atomic<bool> viewsOn{false};
+  SpscQueue<Message> fresh{1024};
+  SpscQueue<Posted> messages{kPosted};
+  SpscQueue<double> attached{kAttached};
+  std::atomic<size_t> postedIn{0}, postedOut{0}, attachedIn{0}, attachedOut{0};
+  std::vector<double> attaching = std::vector<double>(kAttached / 2);
+  SpscQueue<float> heard{1 << 16};
+  double fs = 48000;
 
-  Plugin(const clap_host_t *h, const InstrumentInfo &info, const clap_plugin_descriptor_t *desc, const std::string &colour)
-      : Instance(h, desc), I(info), accent(colour.size() < 2 ? "#f0b35a" : colour), hasPresets(info.presetCount > 0),
-        nParams(info.paramCount + (hasPresets ? 4 : 3)), presetAt(hasPresets ? info.paramCount : -1), touchAt(nParams - 3), qualityAt(nParams - 2), mpeAt(nParams - 1) {
+  Plugin(const clap_host_t *h, const InstrumentInfo &info, const clap_plugin_descriptor_t *desc, const std::string &colour, const Site *page = nullptr, const Views *watch = nullptr)
+      : Instance(h, desc), I(info), site(page), views(watch), accent(colour.size() < 2 ? "#f0b35a" : colour), hasPresets(info.presetCount > 0),
+        nParams(info.paramCount + (hasPresets ? 9 : 5)), presetAt(hasPresets ? info.paramCount : -1), touchAt(info.paramCount + (hasPresets ? 1 : 0)),
+        qualityAt(touchAt + 1), mpeAt(touchAt + 2), transposeAt(touchAt + 3), octaveAt(touchAt + 4),
+        fromAt(hasPresets ? touchAt + 5 : -1), toAt(hasPresets ? touchAt + 6 : -1), morphAt(hasPresets ? touchAt + 7 : -1) {
+    std::memset(moved, -1, sizeof moved);
     for (int i = 0; i < I.paramCount; i++) ids.push_back(paramHash(I.params[i].id));
     if (hasPresets) ids.push_back(kPresetId);
     ids.push_back(kTouchId);
     ids.push_back(kQualityId);
     ids.push_back(kMpeId);
+    ids.push_back(kTransposeId);
+    ids.push_back(kOctaveId);
+    if (hasPresets) { ids.push_back(kMorphFromId); ids.push_back(kMorphToId); ids.push_back(kMorphId); }
+    presetNames.push_back("Default settings");
+    for (int k = 0; k < I.presetCount; k++) presetNames.push_back(I.presets[k].name);
+    morphA.resize(I.paramCount);
+    morphB.resize(I.paramCount);
     const char *tuningIds[3] = {"pitch", "temperament", "tuningRoot"};
     for (int k = 0; k < 3 + kCustomCents; k++) tuningAt[k] = paramIndex(k < 3 ? tuningIds[k] : ("cents" + std::to_string(k - 2)).c_str());
     P.resize(nParams);
@@ -151,6 +213,9 @@ struct Plugin : Instance, MpeDecoder::Sink {
     P[touchAt] = 1;
     P[qualityAt] = 0;
     P[mpeAt] = mpe::autoDetect;
+    P[transposeAt] = kSemitones;
+    P[octaveAt] = kOctaves;
+    if (hasPresets) { P[fromAt] = 0; P[toAt] = 1; P[morphAt] = 0; }
     for (int i = 0; i < nParams; i++) shown[i] = P[i];
     sent.assign(nParams, NAN);
   }
@@ -162,30 +227,70 @@ struct Plugin : Instance, MpeDecoder::Sink {
 
   // ---- parameters ---------------------------------------------------------------------------
   // Set parameter i (audio thread, or main thread while not processing). A change of Preset
-  // applies it: the defaults, then the kept parameters, then the preset's values (shell.js).
+  // applies it: the defaults, then the kept parameters, then the preset's values (shell.js); and
+  // it is where Morph starts now, unless it is where Morph ends (shared/morph.js). A change of
+  // Morph, Morph from or Morph to applies the morph.
   void set(int i, double v, const clap_output_events_t *out) {
     if (i == touchAt) { P[i] = constrain(touchParam(), v); shown[i] = P[i]; return; }
     if (i == mpeAt) { P[i] = constrain(mpeParam(), v); shown[i] = P[i]; mpeMode(); return; }
     if (i == qualityAt) { P[i] = constrain(qualityParam(), v); shown[i] = P[i]; dirty = true; return; }
+    if (i == transposeAt || i == octaveAt) { P[i] = constrain(infoOf(i), v); shown[i] = P[i]; return; }
     if (i == presetAt) {
       int k = (int)std::lround(v);
       k = k < 0 ? 0 : k > I.presetCount ? I.presetCount : k;
-      std::vector<double> next(I.paramCount);
-      for (int j = 0; j < I.paramCount; j++) next[j] = I.params[j].def;
-      for (int j = 0; j < I.keepCount; j++) next[I.keep[j]] = P[I.keep[j]];
-      if (k > 0) for (int j = 0; j < I.presets[k - 1].count; j++) {
-        const PresetValue &pv = I.presets[k - 1].values[j];
-        next[pv.param] = constrain(I.params[pv.param], pv.value);
-      }
-      for (int j = 0; j < I.paramCount; j++) if (next[j] != P[j]) { P[j] = next[j]; shown[j] = P[j]; tell(j, out); }
+      presetValues(k, morphA);
+      swapIn();
+      for (int j = 0; j < I.paramCount; j++) if (morphA[j] != P[j]) { P[j] = morphA[j]; shown[j] = P[j]; tell(j, out); }
       P[i] = k; shown[i] = k;
+      if (k == (int)P[toAt] && k != (int)P[fromAt]) put(morphAt, 1, out);
+      else { put(fromAt, k, out); put(morphAt, 0, out); }
       dirty = true;
+      return;
+    }
+    if (i == fromAt || i == toAt || i == morphAt) {
+      v = constrain(infoOf(i), v);
+      if (v == P[i]) return;
+      P[i] = v; shown[i] = v;
+      morph(out);
       return;
     }
     v = constrain(I.params[i], v);
     if (v == P[i]) return;
     P[i] = v; shown[i] = v;
     dirty = true;
+  }
+  // preset k's values (0: the defaults), the kept parameters as they are
+  void presetValues(int k, std::vector<double> &next) const {
+    for (int j = 0; j < I.paramCount; j++) next[j] = I.params[j].def;
+    for (int j = 0; j < I.keepCount; j++) next[I.keep[j]] = P[I.keep[j]];
+    if (k > 0) for (int j = 0; j < I.presets[k - 1].count; j++) {
+      const PresetValue &pv = I.presets[k - 1].values[j];
+      next[pv.param] = constrain(I.params[pv.param], pv.value);
+    }
+  }
+  // Morph: every parameter part way from Morph from's preset to Morph to's (shared/presets.js
+  // morph): a number in a straight line, or by equal ratios where its control is logarithmic, on
+  // its step; a choice or a toggle halfway. At either end the Preset menu names that preset.
+  void morph(const clap_output_events_t *out) {
+    const double t = P[morphAt];
+    const int a = (int)P[fromAt], b = (int)P[toAt];
+    presetValues(a, morphA);
+    presetValues(b, morphB);
+    for (int j = 0; j < I.paramCount; j++) {
+      const ParamInfo &p = I.params[j];
+      const double x = morphA[j], y = morphB[j];
+      double v = t <= 0 || x == y ? x : t >= 1 ? y : p.kind != ParamKind::continuous ? (t < 0.5 ? x : y)
+               : constrain(p, p.log && x > 0 && y > 0 ? x * std::pow(y / x, t) : x + (y - x) * t);
+      if (v != P[j]) { P[j] = v; shown[j] = v; tell(j, out); }
+    }
+    if (t <= 0 || t >= 1) put(presetAt, t <= 0 ? a : b, out);
+    dirty = true;
+  }
+  // parameter i set by the plugin itself, as it is, and the host told
+  void put(int i, double v, const clap_output_events_t *out) {
+    if (i < 0 || P[i] == v) return;
+    P[i] = v; shown[i] = v;
+    tell(i, out);
   }
   // tell the host that the plugin moved parameter i itself
   void tell(int i, const clap_output_events_t *out) {
@@ -206,7 +311,9 @@ struct Plugin : Instance, MpeDecoder::Sink {
     if (held[ch][key]) noteOff(ch, key, -1); // struck again before its note-off: let it go first
     held[ch][key] = 1; sounding[key]++; latched[key] = false; sostHeld[key] = false;
     if (!mpe.isMember(ch)) plain(key); // an MPE member's note came with its own (MpeDecoder::midi)
-    if (engine) engine->noteOn(key, I.midiVelocity ? I.midiVelocity(vel) : vel);
+    if (I.midiVelocity) vel = I.midiVelocity(vel);
+    struck[key].store((float)vel, std::memory_order_relaxed);
+    if (engine) engine->noteOn(key, vel);
   }
   void noteOff(int ch, int key, double vel) {
     if (key < 0 || key > 127 || ch < 0 || ch > 15 || !held[ch][key]) return; // not down on this channel
@@ -241,6 +348,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
   void panic() {
     std::memset(held, 0, sizeof held); std::memset(sounding, 0, sizeof sounding); std::memset(latched, 0, sizeof latched);
     std::memset(caught, 0, sizeof caught); std::memset(sostHeld, 0, sizeof sostHeld);
+    std::memset(moved, -1, sizeof moved);
     sostenuto = false; soft = false;
     if (sustain) pedal(false);
     if (engine) engine->allNotesOff();
@@ -340,9 +448,38 @@ struct Plugin : Instance, MpeDecoder::Sink {
     tuning = tuningAt[0] >= 0 && tuningAt[1] >= 0 && tuningAt[2] >= 0 ? makeTuning(P[tuningAt[0]], P[tuningAt[1]], P[tuningAt[2]], custom) : Tuning{};
   }
 
-  void midi(const uint8_t *d, const clap_output_events_t *out) {
+  // ---- Octave and Transpose: where a MIDI key plays ------------------------------------------------
+  int keyShift() const { return 12 * ((int)P[octaveAt] - kOctaves) + (int)P[transposeAt] - kSemitones; }
+  // a note-on for MIDI key `key` on channel ch: the key it plays (−1: moved past MIDI's 0…127),
+  // remembered for its note-off; one still sounding there from before lets go first
+  int moveOn(int ch, int key) {
+    if (key < 0 || key > 127) return -1;
+    if (moved[ch][key] >= 0) noteOff(ch, moved[ch][key], -1);
+    const int k = key + keyShift();
+    return moved[ch][key] = (int8_t)(k >= 0 && k <= 127 ? k : -1);
+  }
+  // its note-off: where its note-on went, and then nowhere
+  int moveOff(int ch, int key) {
+    if (key < 0 || key > 127) return -1;
+    const int k = moved[ch][key];
+    moved[ch][key] = -1;
+    return k;
+  }
+  // its pressure and expressions: where its note-on went (one not down: where one would go now)
+  int at(int ch, int key) const {
+    if (key < 0 || key > 127) return -1;
+    if (moved[ch][key] >= 0) return moved[ch][key];
+    const int k = key + keyShift();
+    return k >= 0 && k <= 127 ? k : -1;
+  }
+
+  void midi(const uint8_t *m, const clap_output_events_t *out) {
+    int cmd = m[0] & 0xf0, ch = m[0] & 0x0f;
+    uint8_t d[3] = {m[0], m[1], m[2]};
+    if (cmd == 0x90 && d[2] > 0) { const int k = moveOn(ch, d[1]); if (k < 0) return; d[1] = (uint8_t)k; }
+    else if (cmd == 0x80 || cmd == 0x90) { const int k = moveOff(ch, d[1]); if (k < 0) return; d[1] = (uint8_t)k; }
+    else if (cmd == 0xa0) { const int k = at(ch, d[1]); if (k < 0) return; d[1] = (uint8_t)k; }
     if (mpe.midi(d, *this)) return; // a member channel's bend, pressure or slide: its note's
-    int cmd = d[0] & 0xf0, ch = d[0] & 0x0f;
     if (cmd == 0x90 && d[2] > 0) noteOn(ch, d[1], d[2] / 127.0);
     else if (cmd == 0x80 || cmd == 0x90) noteOff(ch, d[1], cmd == 0x80 ? d[2] / 127.0 : -1);
     else if (cmd == 0xb0) {
@@ -369,13 +506,20 @@ struct Plugin : Instance, MpeDecoder::Sink {
     switch (h->type) {
       case CLAP_EVENT_NOTE_ON: {
         auto e = (const clap_event_note_t *)h;
-        const int ch = e->channel < 0 ? 0 : e->channel & 15;
-        if (e->key >= 0 && e->key < 128) { const uint8_t d[3] = {(uint8_t)(0x90 | ch), (uint8_t)e->key, 127}; mpe.midi(d, *this); } // an MPE member's: its bend and slide
-        noteOn(ch, e->key, e->velocity);
+        const int ch = e->channel < 0 ? 0 : e->channel & 15, key = moveOn(ch, e->key);
+        if (key < 0) break;
+        const uint8_t d[3] = {(uint8_t)(0x90 | ch), (uint8_t)key, 127};
+        mpe.midi(d, *this); // an MPE member's: its bend and slide
+        landed[key] = NAN;
+        noteOn(ch, key, e->velocity);
         break;
       }
-      case CLAP_EVENT_NOTE_OFF: { auto e = (const clap_event_note_t *)h; noteOff(e->channel < 0 ? 0 : e->channel, e->key, e->velocity); break; }
-      case CLAP_EVENT_NOTE_CHOKE: { auto e = (const clap_event_note_t *)h; noteOff(e->channel < 0 ? 0 : e->channel, e->key, -1); break; }
+      case CLAP_EVENT_NOTE_OFF: case CLAP_EVENT_NOTE_CHOKE: {
+        auto e = (const clap_event_note_t *)h;
+        const int ch = e->channel < 0 ? 0 : e->channel & 15;
+        noteOff(ch, moveOff(ch, e->key), h->type == CLAP_EVENT_NOTE_OFF ? e->velocity : -1);
+        break;
+      }
       case CLAP_EVENT_NOTE_EXPRESSION: {
         // One note's (Bitwig, and VST3 hosts' note expressions), or a channel's (key −1: the AU
         // wrapper's pitch bend, ±2 semitones, and channel pressure), which go on as that MIDI.
@@ -390,9 +534,14 @@ struct Plugin : Instance, MpeDecoder::Sink {
             const uint8_t d[3] = {(uint8_t)(0xd0 | ch), (uint8_t)std::clamp((int)std::lround(e->value * 127), 0, 127), 0};
             midi(d, out);
           }
-        } else if (e->expression_id == CLAP_NOTE_EXPRESSION_PRESSURE) notePressure(e->key, e->value);
-        else if (e->expression_id == CLAP_NOTE_EXPRESSION_TUNING) noteBend(e->key, e->value);
-        else if (e->expression_id == CLAP_NOTE_EXPRESSION_BRIGHTNESS) noteSlide(e->key, std::clamp(e->value, 0.0, 1.0));
+        } else if (const int key = at(ch, e->key); key < 0) break;
+        else if (e->expression_id == CLAP_NOTE_EXPRESSION_PRESSURE) notePressure(key, e->value);
+        else if (e->expression_id == CLAP_NOTE_EXPRESSION_TUNING) noteBend(key, e->value);
+        else if (e->expression_id == CLAP_NOTE_EXPRESSION_BRIGHTNESS) { // as MPE's CC74: from where the note began
+          const double u = std::clamp(e->value, 0.0, 1.0);
+          if (!(landed[key] == landed[key])) landed[key] = u;
+          noteSlide(key, slideFrom(landed[key], u));
+        }
         break;
       }
       case CLAP_EVENT_PARAM_VALUE: {
@@ -419,6 +568,11 @@ struct Plugin : Instance, MpeDecoder::Sink {
     takePending();
     takeUi(proc->out_events);
     const uint32_t n = proc->frames_count;
+    const bool watched = viewsOn.load(std::memory_order_relaxed);
+    if (engine) { // posting costs nothing unwatched
+      engine->messages = watched ? &fresh : nullptr;
+      if (views && views->listen) views->listen(*engine, watched);
+    }
     float *L = nullptr, *R = nullptr;
     if (proc->audio_outputs_count > 0 && proc->audio_outputs[0].data32) {
       L = proc->audio_outputs[0].data32[0];
@@ -436,7 +590,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
       }
       uint32_t end = pos + kBlock < n ? pos + kBlock : n;
       if (next < count) { uint32_t t = in->get(in, next)->time; if (t < end) end = t; }
-      if (dirty && engine) { engine->setQuality(quality()); engine->setParams(P.data()); chain.setParams(P.data()); retune(); dirty = false; }
+      if (dirty && engine && swap.state != 1) { engine->setQuality(quality()); engine->setParams(P.data()); chain.setParams(P.data()); retune(); dirty = false; }
       if (L) render(L + pos, R ? R + pos : spare, end - pos);
       pos = end;
     }
@@ -444,11 +598,51 @@ struct Plugin : Instance, MpeDecoder::Sink {
     publishKeys();
     return CLAP_PROCESS_CONTINUE;
   }
+  // audio thread: the engine's messages of this block to the window, each with its data while the
+  // engine's buffers are still as the message left them (a message is dropped when the window
+  // falls behind, its data when there's no room for it)
+  void handOn() {
+    for (Message m; fresh.pop(m);) {
+      // (counted, so that a message and its data go together or not at all)
+      if (postedIn.load(std::memory_order_relaxed) - postedOut.load(std::memory_order_acquire) >= kPosted) continue; // the window's behind
+      Posted x{m, 0};
+      if (views && views->attach) {
+        const size_t room = kAttached - (attachedIn.load(std::memory_order_relaxed) - attachedOut.load(std::memory_order_acquire));
+        const int k = views->attach(*engine, m, attaching.data(), (int)std::min(room, attaching.size()));
+        if (k > 0 && (size_t)k <= room) {
+          for (int i = 0; i < k; i++) attached.push(attaching[i]);
+          attachedIn.fetch_add((size_t)k, std::memory_order_release);
+          x.n = k;
+        }
+      }
+      messages.push(x);
+      postedIn.fetch_add(1, std::memory_order_release);
+    }
+  }
+  // a preset's change: fade out (from where a fade in has got to), and the parameters wait for the bottom
+  void swapIn() { if (swap.state == 1) return; swap.at = swap.state == 2 ? 1 - swap.at : 0; swap.state = 1; }
+  void fadeSwap(float *L, float *R, uint32_t n) {
+    const bool down = swap.state == 1;
+    const double step = 1 / ((down ? kSwapOut : kSwapIn) * fs);
+    for (uint32_t i = 0; i < n; i++) {
+      const double g = swap.at >= 1 ? (down ? 0 : 1) : 0.5 - 0.5 * std::cos(3.14159265358979323846 * (down ? 1 - swap.at : swap.at));
+      L[i] = (float)(L[i] * g); R[i] = (float)(R[i] * g);
+      swap.at = std::min(1.0, swap.at + step);
+    }
+    if (swap.at < 1) return;
+    if (down) { swap.state = 2; swap.at = 0; } // at the bottom: the next block takes the parameters (dirty), then up
+    else swap.state = 0;
+  }
   // the engine, a guard (a NaN stops the notes rather than the instrument, shared/guard.js), the chain
   void render(float *L, float *R, uint32_t n) {
     if (!engine) { std::memset(L, 0, n * sizeof *L); std::memset(R, 0, n * sizeof *R); return; }
     engine->process(L, R, (int)n);
     if (!guardBlock(L, R, (int)n)) engine->allNotesOff();
+    if (swap.state) fadeSwap(L, R, n);
+    if (viewsOn.load(std::memory_order_relaxed)) {
+      for (uint32_t i = 0; i < n; i++) heard.push(0.5f * (L[i] + R[i]));
+      handOn();
+    }
     chain.process(L, R, (int)n);
     const double to = levelTarget();
     if (level == to) { if (to != 1) for (uint32_t i = 0; i < n; i++) { L[i] = (float)(L[i] * to); R[i] = (float)(R[i] * to); } return; }
@@ -473,6 +667,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
         break;
       case UiEvent::pressure: if (engine) engine->pressure(e.v, e.i); break;
       case UiEvent::panic: panic(); break;
+      case UiEvent::swap: swapIn(); break;
     }
   }
   void gesture(int i, bool begin, const clap_output_events_t *out) {
@@ -496,8 +691,15 @@ struct Plugin : Instance, MpeDecoder::Sink {
   }
 
   // The editor's calls, window.forte(method, …args), on the main thread:
-  //   describe()          the instrument: name, keys, pedal, parameters (and Preset), presets
-  //   poll()              { p: [[index, x, text]…] the values changed since, keys: [down…], pedal }
+  //   describe()          the instrument: name, keys, pedal, parameters (and Preset), presets, and
+  //                       page: its page's path for the views ("gongs/index.html"), if it has one
+  //   poll()              { p: [[index, x, text, value]…] the values changed since (value: as the
+  //                       engine has it, a choice's index, a toggle's 0 or 1), keys: [down…],
+  //                       vel: [each one's velocity…], pedal }, and while the views show,
+  //                       m: [[type, key, values…]…] the engine's messages since, md: [[i, data]…]
+  //                       the data of m[i] (site.h, Views: base64 of float64s), and s: its sound
+  //                       since (mono, before the chain: base64 of float32s)
+  //   views(on)           the views shown or not; { fs }, the sample rate
   //   set(i, x)           a parameter: x along a slider (0..1), a choice's index, a toggle's 0/1
   //   gesture(i, on)      a slider grabbed or let go (the host records automation between)
   //   note(key, vel)      a key: vel 0..1 as MIDI velocity / 127, 0 to let go
@@ -511,7 +713,10 @@ struct Plugin : Instance, MpeDecoder::Sink {
   //   loadScala(file)     one of them sets the custom temperament: { ok, name, error }
   //   showScalas()        opens that folder
   int paramIndex(const char *id) const { for (int i = 0; i < I.paramCount; i++) if (!std::strcmp(I.params[i].id, id)) return i; return -1; }
-  ParamInfo infoOf(int i) const { return i < I.paramCount ? I.params[i] : i == presetAt ? presetParam() : i == touchAt ? touchParam() : i == qualityAt ? qualityParam() : mpeParam(); }
+  ParamInfo infoOf(int i) const {
+    return i < I.paramCount ? I.params[i] : i == presetAt ? presetParam() : i == touchAt ? touchParam() : i == qualityAt ? qualityParam() : i == mpeAt ? mpeParam()
+         : i == transposeAt ? transposeParam() : i == octaveAt ? octaveParam() : morphParam(i);
+  }
   double along(int i, double v) const { const ParamInfo p = infoOf(i); return p.kind == ParamKind::continuous ? toNormalized(p, v) : v; }
   std::string text(int i, double v) const {
     if (i == presetAt) { int k = (int)std::lround(v); return k <= 0 ? "Default settings" : k <= I.presetCount ? I.presets[k - 1].name : "?"; }
@@ -563,6 +768,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
     }
     d.addMember("presets", presetAt); // the Preset parameter's index
     d.addMember("params", params);
+    if (site) d.addMember("page", std::string(I.slug) + "/index.html");
     sent.assign(nParams, NAN); // the next poll sends every value
     return d;
   }
@@ -574,16 +780,56 @@ struct Plugin : Instance, MpeDecoder::Sink {
       if (v == sent[i]) continue;
       sent[i] = v;
       Value c = createEmptyArray();
-      c.addArrayElement(i); c.addArrayElement(along(i, v)); c.addArrayElement(text(i, v));
+      c.addArrayElement(i); c.addArrayElement(along(i, v)); c.addArrayElement(text(i, v)); c.addArrayElement(v);
       changed.addArrayElement(c);
     }
-    Value keys = createEmptyArray();
-    for (int k = 0; k < 128; k++) if (keysDown[k >> 6].load(std::memory_order_relaxed) >> (k & 63) & 1) keys.addArrayElement(k);
+    Value vel = createEmptyArray(); // each key's velocity, in keys' order
+    for (int k = 0; k < 128; k++) if (keysDown[k >> 6].load(std::memory_order_relaxed) >> (k & 63) & 1) vel.addArrayElement((double)struck[k].load(std::memory_order_relaxed));
     Value r = createObject("");
     r.addMember("p", changed);
-    r.addMember("keys", keys);
+    r.addMember("keys", keysValue());
+    r.addMember("vel", vel);
     r.addMember("pedal", pedalDown.load(std::memory_order_relaxed));
+    if (viewsOn.load()) {
+      Value ms = createEmptyArray(), md = createEmptyArray();
+      std::vector<double> data;
+      for (Posted x; take(x, data);) {
+        const Message &m = x.m;
+        Value a = createEmptyArray();
+        a.addArrayElement((int)m.type); a.addArrayElement((int)m.key);
+        for (int k = 0; k < m.count && k < 30; k++) a.addArrayElement((double)m.values[k]);
+        if (x.n) {
+          Value d = createEmptyArray();
+          d.addArrayElement((int)ms.size());
+          d.addArrayElement(choc::base64::encodeToString(data.data(), data.size() * sizeof(double)));
+          md.addArrayElement(d);
+        }
+        ms.addArrayElement(a);
+      }
+      r.addMember("m", ms);
+      if (md.size()) r.addMember("md", md);
+      std::vector<float> x;
+      for (float y; heard.pop(y);) x.push_back(y);
+      r.addMember("s", choc::base64::encodeToString(x.data(), x.size() * sizeof(float)));
+    }
     return r;
+  }
+  // main thread: the next message for the window, with its data
+  bool take(Posted &x, std::vector<double> &data) {
+    if (!messages.pop(x)) return false;
+    postedOut.fetch_add(1, std::memory_order_release);
+    data.resize((size_t)x.n);
+    for (int i = 0; i < x.n; i++) attached.pop(data[(size_t)i]);
+    attachedOut.fetch_add((size_t)x.n, std::memory_order_release);
+    return true;
+  }
+  const Site *page() const override { return site; }
+  void closed() override { viewsOn = false; }
+  // the keys sounding, as poll() gives them
+  choc::value::Value keysValue() const {
+    choc::value::Value keys = choc::value::createEmptyArray();
+    for (int k = 0; k < 128; k++) if (keysDown[k >> 6].load(std::memory_order_relaxed) >> (k & 63) & 1) keys.addArrayElement(k);
+    return keys;
   }
   choc::value::Value call(const choc::value::ValueView &args) override {
     using namespace choc::value;
@@ -593,6 +839,14 @@ struct Plugin : Instance, MpeDecoder::Sink {
     auto index = [&](uint32_t k) { const int i = (int)num(k); return i >= 0 && i < nParams ? i : -1; };
     if (m == "describe") return describe();
     if (m == "poll") return poll();
+    if (m == "views") {
+      const bool on = num(1) > 0;
+      if (on && !viewsOn.load()) { Posted x; std::vector<double> d; float y; while (take(x, d)) {} while (heard.pop(y)) {} } // nothing stale
+      viewsOn = on;
+      Value r = createObject("");
+      r.addMember("fs", fs);
+      return r;
+    }
     if (m == "set") {
       const int i = index(1);
       if (i < 0) return {};
@@ -605,7 +859,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
       r.addMember("text", text(i, v));
       return r;
     }
-    if (m == "gesture") { const int i = index(1); if (i >= 0 && i < I.paramCount) toAudio({num(2) > 0 ? UiEvent::begin : UiEvent::end, (int16_t)i, 0}); return {}; }
+    if (m == "gesture") { const int i = index(1); if (i >= 0 && (i < I.paramCount || i == morphAt)) toAudio({num(2) > 0 ? UiEvent::begin : UiEvent::end, (int16_t)i, 0}); return {}; }
     if (m == "note") {
       const int key = (int)num(1);
       const double vel = num(2);
@@ -632,7 +886,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
       std::vector<double> v;
       std::string error;
       const bool ok = readPreset(I, text(1), (int)num(2), v, error);
-      if (ok) for (int i = 0; i < I.paramCount; i++) { shown[i] = v[i]; sent[i] = NAN; toAudio({UiEvent::param, (int16_t)i, v[i]}); }
+      if (ok) { toAudio({UiEvent::swap, 0, 0}); for (int i = 0; i < I.paramCount; i++) { shown[i] = v[i]; sent[i] = NAN; toAudio({UiEvent::param, (int16_t)i, v[i]}); } }
       Value r = createObject("");
       r.addMember("ok", ok);
       r.addMember("error", error);
@@ -694,7 +948,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
     char buf[64];
     for (int i = 0; i < nParams; i++) {
       std::snprintf(buf, sizeof buf, " %.17g\n", shown[i].load());
-      t += (i < I.paramCount ? I.params[i].id : i == presetAt ? "preset" : i == touchAt ? "touch" : i == qualityAt ? "quality" : "mpe") + std::string(buf);
+      t += (i < I.paramCount ? I.params[i].id : infoOf(i).id) + std::string(buf);
     }
     const char *p = t.data();
     size_t left = t.size();
@@ -716,6 +970,9 @@ struct Plugin : Instance, MpeDecoder::Sink {
     v[touchAt] = 1;
     v[qualityAt] = 0;
     v[mpeAt] = mpe::autoDetect;
+    v[transposeAt] = kSemitones;
+    v[octaveAt] = kOctaves;
+    if (hasPresets) { v[fromAt] = 0; v[toAt] = 1; v[morphAt] = 0; }
     size_t at = t.find('\n');
     while (at != std::string::npos && at + 1 < t.size()) {
       size_t eol = t.find('\n', at + 1);
@@ -728,6 +985,9 @@ struct Plugin : Instance, MpeDecoder::Sink {
         else if (id == "touch") v[touchAt] = constrain(touchParam(), x);
         else if (id == "quality") v[qualityAt] = constrain(qualityParam(), x);
         else if (id == "mpe") v[mpeAt] = constrain(mpeParam(), x);
+        else if (id == "midiTranspose") v[transposeAt] = constrain(transposeParam(), x);
+        else if (id == "midiOctave") v[octaveAt] = constrain(octaveParam(), x);
+        else if (hasPresets && (id == "morphFrom" || id == "morphTo" || id == "morph")) { const int i = id == "morph" ? morphAt : id == "morphTo" ? toAt : fromAt; v[i] = constrain(infoOf(i), x); }
         else for (int i = 0; i < I.paramCount; i++) if (id == I.params[i].id) { v[i] = constrain(I.params[i], x); break; }
       }
       at = eol;
@@ -758,6 +1018,12 @@ struct Plugin : Instance, MpeDecoder::Sink {
   ParamInfo mpeParam() const {
     return ParamInfo{"mpe", "MPE", "MIDI", ParamKind::choice, 0, mpe::kModes - 1, mpe::autoDetect, 1, false, false, mpe::kModeNames, mpe::kModes, {}};
   }
+  ParamInfo transposeParam() const {
+    return ParamInfo{"midiTranspose", "Transpose", "MIDI", ParamKind::choice, 0, 2 * kSemitones, kSemitones, 1, false, false, kTransposeChoices, 2 * kSemitones + 1, {}};
+  }
+  ParamInfo octaveParam() const {
+    return ParamInfo{"midiOctave", "Octave", "MIDI", ParamKind::choice, 0, 2 * kOctaves, kOctaves, 1, false, false, kOctaveChoices, 2 * kOctaves + 1, {}};
+  }
   ParamInfo qualityParam() const {
     return ParamInfo{"quality", "Quality", "CPU", ParamKind::choice, 0, 2, 0, 1, false, false, kQualityChoices, 3, {}};
   }
@@ -765,6 +1031,12 @@ struct Plugin : Instance, MpeDecoder::Sink {
   Quality quality() const { return offline ? Quality::high : (Quality)(int)P[qualityAt]; }
   ParamInfo presetParam() const {
     return ParamInfo{"preset", "Preset", "", ParamKind::choice, 0, (double)I.presetCount, 0, 1, false, false, nullptr, I.presetCount + 1, {}};
+  }
+  ParamInfo morphParam(int i) const {
+    if (i == morphAt) return ParamInfo{"morph", "Morph", "Morph", ParamKind::continuous, 0, 1, 0, 0, false, false, nullptr, 0, kMorphFormat, 1};
+    const bool from = i == fromAt;
+    return ParamInfo{from ? "morphFrom" : "morphTo", from ? "Morph from" : "Morph to", "Morph", ParamKind::choice, 0, (double)I.presetCount, from ? 0.0 : 1.0, 1, false, false,
+                     presetNames.data(), (int)presetNames.size(), nullptr, 0};
   }
 };
 
@@ -896,7 +1168,7 @@ bool guiGetPreferredApi(const clap_plugin_t *, const char **api, bool *floating)
 bool guiCreate(const clap_plugin_t *p, const char *api, bool floating) {
   Instance *s = instance(p);
   if (floating || std::strcmp(api, Editor::api()) || s->editor) return false;
-  s->editor = Editor::create([s](const choc::value::ValueView &args) { return s->call(args); });
+  s->editor = Editor::create([s](const choc::value::ValueView &args) { return s->call(args); }, [s] { return s->page(); });
   if (!s->editor) return false;
   if (s->hostTimer && s->timer == CLAP_INVALID_ID) s->hostTimer->register_timer(s->host, 16, &s->timer);
   return true;
@@ -906,6 +1178,7 @@ void guiDestroy(const clap_plugin_t *p) {
   if (s->hostTimer && s->timer != CLAP_INVALID_ID) s->hostTimer->unregister_timer(s->host, s->timer);
   s->timer = CLAP_INVALID_ID;
   s->editor.reset();
+  s->closed();
 }
 bool guiSetScale(const clap_plugin_t *p, double scale) {
 #ifdef __APPLE__
@@ -975,12 +1248,14 @@ void pluginDestroy(const clap_plugin_t *p) {
 }
 bool pluginActivate(const clap_plugin_t *p, double fs, uint32_t, uint32_t) {
   Plugin *s = self(p);
+  s->fs = fs;
   // a new engine at the host's rate (any, 44.1–192 kHz), and the chain's impulse responses for it
   s->engine.reset(s->I.create(fs));
   s->engine->setQuality(s->quality());
   s->chain.configure(s->I.chain, fs, s->P.data());
   s->levelCoef = 1 - std::exp(-1 / (0.01 * fs)); // the pedals' gain follows in 10 ms
   s->level = s->levelTarget();
+  s->swap = {};
   s->panic();
   if (s->I.space == Space::sustain) s->engine->setSustain(false);
   s->dirty = true;
@@ -1009,82 +1284,278 @@ const void *pluginGetExtension(const clap_plugin_t *, const char *id) {
 }
 void pluginOnMainThread(const clap_plugin_t *) {}
 
-// ---- the Forte app: every instrument in one plugin -----------------------------------------------
+// ---- the Forte app: every instrument in one plugin, one or two at a time -------------------------
 //
-// A Suite holds one instrument's Plugin at a time and passes the host's calls to it; its window
-// is the Suite's, with an Instrument menu (describe's "instruments", and choose(slug)). A new
-// instrument is made and activated on the main thread, then handed to the audio thread, which
-// takes it at the start of its next block and lets the one before go; the main thread deletes
-// that one once it has.
+// A Suite plays one instrument's Plugin, or two: a second layered with the first (both play every
+// key) or split from it (the second below the split point, the first from there up). It passes
+// the host's calls on: the host sees the first's parameters, and the window shows one part's
+// controls at a time, its focus, under the Instrument menus (describe's "instruments" and
+// "parts"; choose, second, focus, arrange and swap). A new instrument is made and activated on the
+// main thread, which then publishes the parts as a Rig; the audio thread takes the latest Rig at
+// the start of its next block, and the main thread deletes what it let go of once it has.
 
 struct Suite : Instance {
+  enum Mode { layer, split };
+  struct Rig { Plugin *part[2]; uint64_t gen; };
+
   const SuiteEntry *list;
   const int count;
-  std::vector<int> order;           // the instruments by name, as the menu lists them
-  std::unique_ptr<Plugin> cur;      // the one the window and the host's main thread see
-  Plugin *live = nullptr;           // the one the audio thread plays (cur, once it has taken it)
-  std::atomic<Plugin *> next{nullptr}; // cur, until the audio thread takes it
-  std::unique_ptr<Plugin> old;      // the one before cur, until the audio thread has let go of it
+  std::vector<int> order;            // the instruments by name, as the menus list them
+  std::unique_ptr<Plugin> part[2];   // the first instrument, and the second or none (main thread)
+  int focus = 0;                     // the part whose controls the window shows
+  std::atomic<int> focused{0};       // the same, for the audio thread: a program change plays its preset
+  std::atomic<int> mode{layer};      // how two parts share the keys
+  std::atomic<int> splitKey{60};     // split: the second plays the keys below it, the first the rest
+  // the hand-off: every change publishes a Rig and the audio thread takes the latest (audio());
+  // a part let go of is deleted on the main thread once the audio thread has taken a Rig without it
+  std::vector<std::unique_ptr<Rig>> rigs;
+  std::vector<std::pair<uint64_t, std::unique_ptr<Plugin>>> retired; // a part, and the first Rig without it
+  std::atomic<Rig *> next{nullptr};
+  std::atomic<uint64_t> taken{0};    // the Rig the audio thread plays
+  uint64_t gen = 0;
+  Rig *live = nullptr;               // the audio thread's
   bool active = false;
   double fs = 48000;
   uint32_t minFrames = 1, maxFrames = 4096;
   std::atomic<bool> processing{false};
+  // the audio thread's: which parts each held note went to (bit k: part k), the events each part
+  // gets, the second's sound before it joins the first's, and a limiter on the two together
+  uint8_t routed[16][128]{};
+  std::vector<const clap_event_header_t *> events[2];
+  std::vector<float> spareL, spareR;
+  Limiter sum;
+  uint8_t uiRouted[128]{};           // the same for the window's keys (main thread)
 
   Suite(const clap_host_t *h, const clap_plugin_descriptor_t *desc, const SuiteEntry *entries, int n) : Instance(h, desc), list(entries), count(n) {
     for (int k = 0; k < count; k++) order.push_back(k);
     std::sort(order.begin(), order.end(), [&](int a, int b) { return std::strcmp(list[a].info().name, list[b].info().name) < 0; });
+    events[0].reserve(2048); events[1].reserve(2048);
   }
   int find(const std::string &slug) const {
     for (int k = 0; k < count; k++) if (slug == list[k].info().slug) return k;
     return -1;
   }
-  // main thread: switch to instrument k (false while the last switch is still in flight)
-  bool choose(int k) {
-    collect();
-    if (k < 0 || k >= count || old) return false;
-    if (cur && &cur->I == &list[k].info()) return true;
-    std::unique_ptr<Plugin> p(new Plugin(host, list[k].info(), clap.desc, list[k].accent));
-    if (cur) { p->P[p->qualityAt] = cur->shown[cur->qualityAt].load(); p->shown[p->qualityAt] = p->P[p->qualityAt]; p->offline = cur->offline; } // the computer's, not the instrument's
-    if (cur) { // and the controller's: its MPE mode and the zones it announced
-      p->P[p->mpeAt] = cur->shown[cur->mpeAt].load(); p->shown[p->mpeAt] = p->P[p->mpeAt];
-      p->mpeMode(); p->mpe.adoptZones(cur->mpe);
+
+  // ---- the parts (main thread) ----------------------------------------------------------------------
+  // instrument k, ready to play: Quality is the computer's and MPE, Transpose and Octave the
+  // controller's (MPE's mode and the zones it announced), so it takes them from the first
+  std::unique_ptr<Plugin> make(int k) {
+    std::unique_ptr<Plugin> p(new Plugin(host, list[k].info(), clap.desc, list[k].accent, list[k].site, list[k].views));
+    if (const Plugin *c = part[0].get()) {
+      p->P[p->qualityAt] = c->shown[c->qualityAt].load(); p->shown[p->qualityAt] = p->P[p->qualityAt]; p->offline = c->offline;
+      p->P[p->mpeAt] = c->shown[c->mpeAt].load(); p->shown[p->mpeAt] = p->P[p->mpeAt];
+      p->mpeMode(); p->mpe.adoptZones(c->mpe);
+      p->P[p->transposeAt] = c->shown[c->transposeAt].load(); p->shown[p->transposeAt] = p->P[p->transposeAt]; // and how far it moves the keys
+      p->P[p->octaveAt] = c->shown[c->octaveAt].load(); p->shown[p->octaveAt] = p->P[p->octaveAt];
     }
     p->hostParams = (const clap_host_params_t *)host->get_extension(host, CLAP_EXT_PARAMS);
-    if (!active) { cur = std::move(p); live = cur.get(); }
-    else {
-      pluginActivate(&p->clap, fs, minFrames, maxFrames);
-      p->processing = processing.load();
-      old = std::move(cur);
-      cur = std::move(p);
-      next.store(cur.get(), std::memory_order_release);
-    }
-    // every parameter is another: a host may reread them all only while not active
+    if (active) { pluginActivate(&p->clap, fs, minFrames, maxFrames); p->processing = processing.load(); }
+    return p;
+  }
+  void retire(std::unique_ptr<Plugin> p) { if (p) retired.emplace_back(gen + 1, std::move(p)); } // before publish()
+  void publish() {
+    auto r = std::make_unique<Rig>(Rig{{part[0].get(), part[1].get()}, ++gen});
+    if (!active) { next.store(nullptr); live = r.get(); taken.store(gen); }
+    else next.store(r.get(), std::memory_order_release);
+    rigs.push_back(std::move(r));
+    collect();
+  }
+  // what the audio thread has let go of
+  void collect() {
+    const uint64_t t = taken.load(std::memory_order_acquire);
+    std::erase_if(retired, [&](const auto &e) { return e.first <= t; });
+    std::erase_if(rigs, [&](const auto &r) { return r->gen < t; });
+  }
+  void idle() override { collect(); }
+  // the host must reread the first's parameters: every one is another
+  void rescanHost() {
     if (auto hp = (const clap_host_params_t *)host->get_extension(host, CLAP_EXT_PARAMS))
       hp->rescan(host, active ? CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT | CLAP_PARAM_RESCAN_INFO : CLAP_PARAM_RESCAN_ALL);
+  }
+  // the part the window shows becomes instrument k
+  bool choose(int k) {
+    collect();
+    if (k < 0 || k >= count) return false;
+    if (part[focus] && &part[focus]->I == &list[k].info()) return true;
+    std::unique_ptr<Plugin> p = make(k);
+    retire(std::move(part[focus]));
+    part[focus] = std::move(p);
+    publish();
+    if (focus == 0) rescanHost();
     return true;
   }
-  // audio thread (or the main thread while not processing): the instrument to play
-  Plugin *audio() {
-    if (Plugin *n = next.exchange(nullptr, std::memory_order_acq_rel)) {
+  // part k goes, and the other plays alone (as the first)
+  bool drop(int k) {
+    if (!part[1] || (k != 0 && k != 1)) return false;
+    if (k == 0) swap();
+    return second(-1);
+  }
+  // the second becomes instrument k (−1: none); the window then shows its controls
+  bool second(int k) {
+    collect();
+    if (k >= count) return false;
+    if (k < 0 ? !part[1] : part[1] && &part[1]->I == &list[k].info()) return true;
+    std::unique_ptr<Plugin> p = k < 0 ? nullptr : make(k);
+    retire(std::move(part[1]));
+    part[1] = std::move(p);
+    focus = part[1] ? 1 : 0; focused = focus;
+    if (!part[1]) std::memset(uiRouted, 0, sizeof uiRouted);
+    publish();
+    return true;
+  }
+  // the two change places (split: sides); the window keeps showing the same instrument
+  bool swap() {
+    collect();
+    if (!part[1]) return false;
+    std::swap(part[0], part[1]);
+    for (uint8_t &m : uiRouted) m = (uint8_t)((m & 1) << 1 | (m >> 1 & 1));
+    focus = 1 - focus; focused = focus;
+    publish();
+    rescanHost();
+    return true;
+  }
+  // the parts a key strikes (bit k: part k), on either thread
+  uint8_t route(bool two, int key) const {
+    if (!two) return 1;
+    if (mode.load(std::memory_order_relaxed) == layer) return 3;
+    return key >= splitKey.load(std::memory_order_relaxed) ? 1 : 2;
+  }
+
+  // ---- audio --------------------------------------------------------------------------------------
+  // the audio thread (or the main thread while not processing): the parts to play, the latest Rig;
+  // a held note stays with the instrument it went to, wherever that is now
+  Rig *audio() {
+    if (Rig *n = next.exchange(nullptr, std::memory_order_acq_rel)) {
+      if (Rig *was = live)
+        for (auto &row : routed) for (uint8_t &m : row) {
+          if (!m) continue;
+          uint8_t to = 0;
+          for (int b = 0; b < 2; b++) if (m >> b & 1) for (int j = 0; j < 2; j++) if (n->part[j] && n->part[j] == was->part[b]) to |= (uint8_t)(1 << j);
+          m = to;
+        }
       live = n;
-      live->processing = processing.load();
-      host->request_callback(host); // to delete the one before (collect)
+      for (Plugin *p : n->part) if (p) p->processing = processing.load();
+      if (!n->part[1]) sum.reset();
+      taken.store(n->gen, std::memory_order_release);
+      host->request_callback(host); // to delete what it let go of (collect)
     }
     return live;
   }
-  // main thread: the one before, once the audio thread has let go of it
-  void collect() { if (old && !next.load(std::memory_order_acquire)) old.reset(); }
-  void idle() override { collect(); }
+  const Site *page() const override { return part[focus] ? part[focus]->site : nullptr; } // the window shows the focused part
+  void closed() override { for (auto &p : part) if (p) p->closed(); }
+  // which parts an event goes to: a note to the parts its key strikes (its end where it began), a
+  // program change to the part the window shows, the host's parameters to the first, the rest to both
+  uint8_t parts(const Rig *r, const clap_event_header_t *h) {
+    if (h->space_id != CLAP_CORE_EVENT_SPACE_ID) return 0;
+    int ch = 0, key = -1, on = -1;
+    switch (h->type) {
+      case CLAP_EVENT_NOTE_ON: case CLAP_EVENT_NOTE_OFF: case CLAP_EVENT_NOTE_CHOKE: {
+        auto e = (const clap_event_note_t *)h;
+        ch = e->channel < 0 ? 0 : e->channel & 15; key = e->key; on = h->type == CLAP_EVENT_NOTE_ON;
+        break;
+      }
+      case CLAP_EVENT_MIDI: {
+        const uint8_t *d = ((const clap_event_midi_t *)h)->data;
+        const int cmd = d[0] & 0xf0;
+        ch = d[0] & 0x0f;
+        if (cmd == 0x90 || cmd == 0x80) { key = d[1]; on = cmd == 0x90 && d[2] > 0; }
+        else if (cmd == 0xc0) return (uint8_t)(1 << focused.load(std::memory_order_relaxed));
+        break;
+      }
+      case CLAP_EVENT_PARAM_VALUE: case CLAP_EVENT_PARAM_MOD: case CLAP_EVENT_PARAM_GESTURE_BEGIN: case CLAP_EVENT_PARAM_GESTURE_END: return 1;
+      default: break;
+    }
+    if (on < 0 || key < 0 || key > 127) return 3;
+    if (on) return routed[ch][key] = route(true, key);
+    const uint8_t m = routed[ch][key] ? routed[ch][key] : 3;
+    routed[ch][key] = 0;
+    return m;
+  }
+  clap_process_status process(const clap_process_t *proc) {
+    Rig *r = audio();
+    Plugin *a = r->part[0], *b = r->part[1];
+    if (!b) return a->process(proc);
+    for (auto &e : events) e.clear();
+    const clap_input_events_t *in = proc->in_events;
+    for (uint32_t k = 0, n = in ? in->size(in) : 0; k < n; k++) {
+      const clap_event_header_t *h = in->get(in, k);
+      const uint8_t to = parts(r, h);
+      for (int j = 0; j < 2; j++) if (to >> j & 1 && events[j].size() < events[j].capacity()) events[j].push_back(h);
+    }
+    auto size = [](const clap_input_events_t *l) { return (uint32_t)((const std::vector<const clap_event_header_t *> *)l->ctx)->size(); };
+    auto get = [](const clap_input_events_t *l, uint32_t i) { return (*(const std::vector<const clap_event_header_t *> *)l->ctx)[i]; };
+    const clap_input_events_t ins[2] = {{&events[0], size, get}, {&events[1], size, get}};
+    const uint32_t n = proc->frames_count;
+    if (n > spareL.size()) { spareL.resize(n); spareR.resize(n); } // only for a host that sends more than it said
+    clap_process_t pa = *proc;
+    pa.in_events = &ins[0];
+    a->process(&pa);
+    float *ch[2] = {spareL.data(), spareR.data()};
+    clap_audio_buffer_t buf{ch, nullptr, 2, 0, 0};
+    clap_process_t pb = *proc;
+    pb.in_events = &ins[1]; pb.out_events = nullptr; // the host knows only the first's parameters
+    pb.audio_outputs = &buf; pb.audio_outputs_count = 1;
+    b->process(&pb);
+    if (proc->audio_outputs_count > 0 && proc->audio_outputs[0].data32) {
+      float *L = proc->audio_outputs[0].data32[0], *R = proc->audio_outputs[0].channel_count > 1 ? proc->audio_outputs[0].data32[1] : nullptr;
+      if (R) for (uint32_t i = 0; i < n; i++) { L[i] += spareL[i]; R[i] += spareR[i]; }
+      else for (uint32_t i = 0; i < n; i++) { L[i] += 0.5f * (spareL[i] + spareR[i]); spareR[i] = L[i]; }
+      sum.process(L, R ? R : spareR.data(), (int)n);
+    }
+    return CLAP_PROCESS_CONTINUE;
+  }
 
-  // the instrument's calls, and the menu: describe() also lists the instruments ({slug, name}
-  // by name), choose(slug) switches to one (the window then reloads)
+  // ---- the window: the menus, and the part it shows ------------------------------------------------
+  //   choose(slug)        the instrument of the part the window shows
+  //   second(slug)        the second ("": none); the window then shows its controls
+  //   drop(k)             part k goes, the other plays alone
+  //   focus(k)            the part whose controls, presets and pedal the window shows (0 or 1)
+  //   arrange(mode, key)  "layer" or "split", and the split point (the second plays below it)
+  //   swap()              the two change places
+  // The window starts again after each but arrange. describe() adds "instruments" (every one,
+  // {slug, name} by name), "parts" ({slug, name, accent, keyLo, keyHi} each), "focus", "mode" and
+  // "split"; poll() adds "other", the other part's keys. The keys, the pedal and Panic play both.
   choc::value::Value call(const choc::value::ValueView &args) override {
     using namespace choc::value;
     collect();
     if (!args.isArray() || args.size() == 0 || !args[0].isString()) return {};
     const std::string m(args[0].getString());
-    if (m == "choose") return createBool(args.size() > 1 && args[1].isString() && choose(find(std::string(args[1].getString()))));
-    Value r = cur->call(args);
+    auto text = [&](uint32_t k) { return args.size() > k && args[k].isString() ? std::string(args[k].getString()) : std::string(); };
+    auto num = [&](uint32_t k) { return args.size() > k && (args[k].isFloat() || args[k].isInt()) ? args[k].get<double>() : 0.0; };
+    if (m == "choose") return createBool(choose(find(text(1))));
+    if (m == "second") { const std::string s = text(1); return createBool(s.empty() ? second(-1) : find(s) >= 0 && second(find(s))); }
+    if (m == "focus") { const int k = (int)num(1); if (k != 0 && !(k == 1 && part[1])) return createBool(false); focus = k; focused = k; return createBool(true); }
+    if (m == "arrange") {
+      mode = text(1) == "split" ? split : layer;
+      if (args.size() > 2) splitKey = std::clamp((int)std::lround(num(2)), 1, 127);
+      return createBool(true);
+    }
+    if (m == "swap") return createBool(swap());
+    if (m == "drop") return createBool(drop((int)num(1)));
+    Plugin *f = part[focus].get(), *o = part[1 - focus].get();
+    if (m == "note" || m == "pressure") {
+      const int key = (int)num(1);
+      if (key < 0 || key > 127) return {};
+      uint8_t to = uiRouted[key];
+      if (m == "note" && num(2) > 0) to = uiRouted[key] = route(part[1] != nullptr, key);
+      else if (m == "note") uiRouted[key] = 0;
+      if (!to) to = m == "note" ? 3 : (uint8_t)(1 << focus);
+      for (int j = 0; j < 2; j++) if (to >> j & 1 && part[j]) part[j]->call(args);
+      return {};
+    }
+    if (m == "pedal" || m == "panic") {
+      if (m == "panic") std::memset(uiRouted, 0, sizeof uiRouted);
+      for (auto &p : part) if (p) p->call(args);
+      return {};
+    }
+    if (m == "views" && o) o->closed(); // the views are the focused part's
+    Value r = f->call(args);
+    if (m == "set" && o) { // Quality, and MPE, Transpose and Octave, belong to the computer and the controller: both parts
+      const int i = (int)num(1);
+      const int j = i == f->qualityAt ? o->qualityAt : i == f->mpeAt ? o->mpeAt : i == f->transposeAt ? o->transposeAt : i == f->octaveAt ? o->octaveAt : -1;
+      if (j >= 0) { Value s = createEmptyArray(); s.addArrayElement(std::string("set")); s.addArrayElement(j); s.addArrayElement(num(2)); o->call(s); }
+    }
+    if (m == "poll" && o && r.isObject()) r.addMember("other", o->keysValue());
     if (m == "describe") {
       Value all = createEmptyArray();
       for (int k : order) {
@@ -1094,32 +1565,41 @@ struct Suite : Instance {
         all.addArrayElement(e);
       }
       r.addMember("instruments", all);
+      Value ps = createEmptyArray();
+      for (auto &p : part) if (p) {
+        Value e = createObject("");
+        e.addMember("slug", std::string(p->I.slug));
+        e.addMember("name", std::string(p->I.name));
+        e.addMember("accent", p->accent);
+        e.addMember("keyLo", p->I.keyLo);
+        e.addMember("keyHi", p->I.keyHi);
+        ps.addArrayElement(e);
+      }
+      r.addMember("parts", ps);
+      r.addMember("focus", focus);
+      r.addMember("mode", std::string(mode == split ? "split" : "layer"));
+      r.addMember("split", splitKey.load());
     }
     return r;
   }
 
-  // ---- state: "forte-suite <slug>" then the instrument's own ------------------------------------
-  bool save(const clap_ostream_t *s) {
-    const std::string t = std::string("forte-suite ") + cur->I.slug + "\n";
+  // ---- state: "forte-suite <slug>" then the first's own, and with a second, "forte-layer <slug>
+  // <layer|split> <split point> <focus>" then the second's own ---------------------------------------
+  static bool write(const clap_ostream_t *s, const std::string &t) {
     for (const char *p = t.data(), *end = p + t.size(); p < end;) {
       int64_t w = s->write(s, p, (uint64_t)(end - p));
       if (w <= 0) return false;
       p += w;
     }
-    return cur->save(s);
+    return true;
   }
-  bool load(const clap_istream_t *s) {
+  static std::string saved(Plugin &p) {
     std::string t;
-    char buf[4096];
-    for (int64_t r; (r = s->read(s, buf, sizeof buf)) > 0;) t.append(buf, (size_t)r);
-    if (t.compare(0, 12, "forte-suite ") == 0) {
-      const size_t eol = t.find('\n');
-      if (eol == std::string::npos || !choose(find(t.substr(12, eol - 12)))) return false;
-      t.erase(0, eol + 1);
-    } else if (t.compare(0, 6, "forte ") == 0) { // an instrument's own plugin's state
-      const size_t sp = t.find_first_of(" \n", 6);
-      if (!choose(find(t.substr(6, sp == std::string::npos ? std::string::npos : sp - 6)))) return false;
-    } else return false;
+    clap_ostream_t os{&t, [](const clap_ostream_t *s, const void *b, uint64_t n) -> int64_t { ((std::string *)s->ctx)->append((const char *)b, (size_t)n); return (int64_t)n; }};
+    p.save(&os);
+    return t;
+  }
+  static bool loadText(Plugin &p, const std::string &t) {
     struct Reader { clap_istream_t s; const std::string *t; size_t at; } r{{}, &t, 0};
     r.s.ctx = &r;
     r.s.read = [](const clap_istream_t *is, void *out, uint64_t n) -> int64_t {
@@ -1129,12 +1609,49 @@ struct Suite : Instance {
       rd->at += k;
       return (int64_t)k;
     };
-    return cur->load(&r.s);
+    return p.load(&r.s);
+  }
+  bool save(const clap_ostream_t *s) {
+    std::string t = std::string("forte-suite ") + part[0]->I.slug + "\n" + saved(*part[0]);
+    if (part[1]) {
+      if (!t.empty() && t.back() != '\n') t += '\n';
+      t += std::string("forte-layer ") + part[1]->I.slug + (mode == split ? " split " : " layer ") + std::to_string(splitKey.load()) + " " + std::to_string(focus) + "\n" + saved(*part[1]);
+    }
+    return write(s, t);
+  }
+  bool load(const clap_istream_t *s) {
+    std::string t;
+    char buf[4096];
+    for (int64_t r; (r = s->read(s, buf, sizeof buf)) > 0;) t.append(buf, (size_t)r);
+    std::string layered;
+    if (t.compare(0, 12, "forte-suite ") == 0) {
+      const size_t eol = t.find('\n');
+      if (eol == std::string::npos || !choose(find(t.substr(12, eol - 12)))) return false;
+      t.erase(0, eol + 1);
+      const size_t at = t.find("\nforte-layer ");
+      if (at != std::string::npos) { layered = t.substr(at + 1); t.erase(at + 1); }
+    } else if (t.compare(0, 6, "forte ") == 0) { // an instrument's own plugin's state
+      const size_t sp = t.find_first_of(" \n", 6);
+      if (!choose(find(t.substr(6, sp == std::string::npos ? std::string::npos : sp - 6)))) return false;
+    } else return false;
+    if (!loadText(*part[0], t)) return false;
+    if (layered.empty()) { second(-1); return true; }
+    // forte-layer <slug> <mode> <split> <focus>, then the second's state
+    const size_t eol = layered.find('\n');
+    std::istringstream line(layered.substr(12, eol == std::string::npos ? std::string::npos : eol - 12));
+    std::string slug, how;
+    int key = 60, f = 1;
+    line >> slug >> how >> key >> f;
+    if (find(slug) < 0 || !second(find(slug))) { second(-1); return true; } // an instrument this app doesn't have: the first alone
+    mode = how == "split" ? split : layer;
+    splitKey = std::clamp(key, 1, 127);
+    focus = f == 0 ? 0 : 1; focused = focus;
+    return eol == std::string::npos || loadText(*part[1], layered.substr(eol + 1));
   }
 };
 
 Suite *suite(const clap_plugin_t *p) { return static_cast<Suite *>(instance(p)); }
-const clap_plugin_t *inner(const clap_plugin_t *p) { return &suite(p)->cur->clap; }
+const clap_plugin_t *inner(const clap_plugin_t *p) { return &suite(p)->part[0]->clap; }
 
 bool suiteInit(const clap_plugin_t *p) {
   Suite *s = suite(p);
@@ -1144,20 +1661,36 @@ bool suiteInit(const clap_plugin_t *p) {
 bool suiteActivate(const clap_plugin_t *p, double fs, uint32_t minFrames, uint32_t maxFrames) {
   Suite *s = suite(p);
   s->fs = fs; s->minFrames = minFrames; s->maxFrames = maxFrames;
+  s->spareL.assign(maxFrames, 0); s->spareR.assign(maxFrames, 0);
+  // the two parts together: each has its limiter, so this only catches what they add up to
+  s->sum.set(-1, 0, 20, 0.001, 0.1, fs);
+  s->sum.makeup = 1;
+  std::memset(s->routed, 0, sizeof s->routed);
   s->active = pluginActivate(inner(p), fs, minFrames, maxFrames);
+  if (s->active && s->part[1]) pluginActivate(&s->part[1]->clap, fs, minFrames, maxFrames);
   return s->active;
 }
 void suiteDeactivate(const clap_plugin_t *p) {
   Suite *s = suite(p);
   s->audio();
-  s->old.reset();
-  pluginDeactivate(inner(p));
+  s->collect();
+  for (auto &q : s->part) if (q) pluginDeactivate(&q->clap);
   s->active = false;
 }
-bool suiteStartProcessing(const clap_plugin_t *p) { Suite *s = suite(p); s->processing = true; s->audio()->processing = true; return true; }
-void suiteStopProcessing(const clap_plugin_t *p) { Suite *s = suite(p); s->processing = false; s->audio()->processing = false; }
-void suiteReset(const clap_plugin_t *p) { pluginReset(&suite(p)->audio()->clap); }
-clap_process_status suiteProcess(const clap_plugin_t *p, const clap_process_t *proc) { return suite(p)->audio()->process(proc); }
+void suiteProcessing(const clap_plugin_t *p, bool on) {
+  Suite *s = suite(p);
+  s->processing = on;
+  for (Plugin *q : s->audio()->part) if (q) q->processing = on;
+}
+bool suiteStartProcessing(const clap_plugin_t *p) { suiteProcessing(p, true); return true; }
+void suiteStopProcessing(const clap_plugin_t *p) { suiteProcessing(p, false); }
+void suiteReset(const clap_plugin_t *p) {
+  Suite *s = suite(p);
+  for (Plugin *q : s->audio()->part) if (q) pluginReset(&q->clap);
+  std::memset(s->routed, 0, sizeof s->routed);
+  s->sum.reset();
+}
+clap_process_status suiteProcess(const clap_plugin_t *p, const clap_process_t *proc) { return suite(p)->process(proc); }
 void suiteOnMainThread(const clap_plugin_t *p) { suite(p)->collect(); }
 
 const clap_plugin_params_t suiteParams{
@@ -1166,12 +1699,23 @@ const clap_plugin_params_t suiteParams{
     [](const clap_plugin_t *p, clap_id id, double *v) { return paramsGetValue(inner(p), id, v); },
     [](const clap_plugin_t *p, clap_id id, double v, char *out, uint32_t size) { return paramsValueToText(inner(p), id, v, out, size); },
     [](const clap_plugin_t *p, clap_id id, const char *text, double *v) { return paramsTextToValue(inner(p), id, text, v); },
-    [](const clap_plugin_t *p, const clap_input_events_t *in, const clap_output_events_t *out) { paramsFlush(&suite(p)->audio()->clap, in, out); }};
+    [](const clap_plugin_t *p, const clap_input_events_t *in, const clap_output_events_t *out) {
+      Suite::Rig *r = suite(p)->audio();
+      paramsFlush(&r->part[0]->clap, in, out);
+      if (Plugin *b = r->part[1]) { // the window's changes to the second, which the host doesn't see
+        if (!b->processing.load()) b->takePending();
+        b->takeUi(nullptr);
+        b->publishKeys();
+      }
+    }};
 const clap_plugin_state_t suiteState{
     [](const clap_plugin_t *p, const clap_ostream_t *s) { return suite(p)->save(s); },
     [](const clap_plugin_t *p, const clap_istream_t *s) { return suite(p)->load(s); }};
 
-const clap_plugin_render_t suiteRender{renderHardRealtime, [](const clap_plugin_t *p, clap_plugin_render_mode mode) { return renderSet(inner(p), mode); }};
+const clap_plugin_render_t suiteRender{renderHardRealtime, [](const clap_plugin_t *p, clap_plugin_render_mode mode) {
+  for (auto &q : suite(p)->part) if (q) renderSet(&q->clap, mode);
+  return true;
+}};
 
 const void *suiteGetExtension(const clap_plugin_t *p, const char *id) {
   if (!std::strcmp(id, CLAP_EXT_PARAMS)) return &suiteParams;
@@ -1188,11 +1732,14 @@ struct Factory {
   const SuiteEntry *suite = nullptr; // the Forte app's instruments, instead of I
   int suiteCount = 0;
   std::string id, version, accent;
+  const Site *site = nullptr;
+  const Views *views = nullptr;
   const char *features[4] = {CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_SYNTHESIZER, CLAP_PLUGIN_FEATURE_STEREO, nullptr};
   clap_plugin_descriptor_t desc{};
   clap_plugin_info_as_vst3_t vst3{};
-  void init(const InstrumentInfo &info, const char *colour) {
+  void init(const InstrumentInfo &info, const char *colour, const Site *page, const Views *watch) {
     I = &info;
+    site = page; views = watch;
     accent = colour ? colour : "";
     id = std::string("net.jthaler.forte.") + info.slug;
     version = info.version;
@@ -1223,7 +1770,7 @@ const clap_plugin_t *factoryCreate(const clap_plugin_factory_t *, const clap_hos
     return &s->clap;
   }
   if (!factory.I) return nullptr;
-  Plugin *s = new Plugin(host, *factory.I, &factory.desc, factory.accent);
+  Plugin *s = new Plugin(host, *factory.I, &factory.desc, factory.accent, factory.site, factory.views);
   s->clap.init = pluginInit; s->clap.destroy = pluginDestroy;
   s->clap.activate = pluginActivate; s->clap.deactivate = pluginDeactivate;
   s->clap.start_processing = pluginStartProcessing; s->clap.stop_processing = pluginStopProcessing;
@@ -1238,7 +1785,7 @@ const clap_plugin_factory_as_vst3_t vst3Factory{"Forte", "https://forte.jthaler.
 
 } // namespace
 
-bool entryInit(const InstrumentInfo &info, const char *accent) { factory.init(info, accent); return true; }
+bool entryInit(const InstrumentInfo &info, const char *accent, const Site *site, const Views *views) { factory.init(info, accent, site, views); return true; }
 bool entrySuite(const SuiteEntry *instruments, int count, const char *version) { factory.initSuite(instruments, count, version); return count > 0; }
 
 const void *entryFactory(const char *id) {

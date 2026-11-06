@@ -9,6 +9,7 @@
 //                                    dropouts, suggest a lower setting (once a visit)
 //   qualityControl()                 the choice, in the header beside the CPU readout (#cpu, or #voices)
 
+import { unfocus } from './focus.js';
 import { QUALITY_LEVELS } from './wasm.js';
 
 export const QUALITIES = [['high', 'High'], ['medium', 'Medium'], ['low', 'Low']];
@@ -70,7 +71,7 @@ export function qualityControl() {
   sel.setAttribute('aria-label', 'Quality');
   for (const [id, name] of QUALITIES) sel.add(new Option(name, id));
   sel.value = level;
-  sel.addEventListener('change', () => { setQuality(sel.value); sel.blur(); });
+  sel.addEventListener('change', () => { setQuality(sel.value); unfocus(sel); });
   listeners.add((q) => { sel.value = q; });
   wrap.append(sel);
   const pill = document.createElement('span'); // the readout and the choice, one pill

@@ -5,8 +5,15 @@
      goes through window.forte(method, …args) (plugin.cpp, "The editor's calls"). The Presets menu
      has the instrument's presets, then your own (files in the site's format, presets.h), saving
      them and their folder; under Temperament, Scala files from the Tunings folder (presets.h)
-     set the custom temperament. Opened as a file, it plays a made-up instrument, to work on it in a
-     browser. -->
+     set the custom temperament. In the Forte app a second instrument can be layered with the first or
+     split from it (plugin.cpp, Suite): the bar under the header says how they share the keys and
+     whose controls the window shows. Above the controls, the instrument's views (the shown part's):
+     its own page from the site, served from the plugin (editor.h), in a frame that shows only them
+     (shared/in-plugin.js), fed by the plugin's sound and its engine's messages; the Views button
+     folds them away, and the handle under them shares the height with the controls. Opened as a
+     file, it plays a made-up instrument, to work on it in a browser (?suite: as the Forte app);
+     served with the site (npm run serve) as native/plugin/editor.html?instrument=<slug>, that
+     instrument's WebAssembly engine, views and all. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -55,11 +62,44 @@
   #preset { flex: 0 1 280px; min-width: 0; text-overflow: ellipsis; }
   .brand b { overflow: hidden; text-overflow: ellipsis; }
   /* the Forte app: the instrument's name is a menu of them all */
-  #instrument { align-self: center; min-width: 0; font-weight: 700; font-size: 14px; }
+  #instrument { align-self: center; min-width: 140px; max-width: 260px; font-weight: 700; font-size: 14px; text-overflow: ellipsis; }
   .suite .brand b { flex: none; }
+  /* a second instrument: "+", a menu of them all */
+  #second { align-self: center; flex: none; width: 32px; padding: 4px 0; text-align: center; text-align-last: center; background-image: none; font-weight: 700; }
+  /* two instruments: how they share the keys, and whose controls are below */
+  #parts {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 14px;
+    background: var(--panel); border-bottom: 1px solid var(--line); color: var(--muted);
+  }
+  #parts[hidden] { display: none; }
+  #parts .grow { flex: 1; }
+  .seg { display: inline-flex; }
+  .seg button { border-radius: 0; margin-left: -1px; display: inline-flex; align-items: center; gap: 6px; }
+  .seg button:first-child { border-radius: 7px 0 0 7px; margin-left: 0; }
+  .seg button:last-child { border-radius: 0 7px 7px 0; }
+  .seg button[aria-pressed="true"] { position: relative; z-index: 1; }
+  #focus button[aria-pressed="true"] { background: #2a2a31; color: var(--text); border-color: var(--accent); }
+  #focus button i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  #focus button small { color: var(--muted); font-size: 11px; }
+  #focus .x { color: var(--muted); padding: 0 2px; margin-right: -4px; border-radius: 4px; }
+  #focus .x:hover { color: var(--text); background: #3a3a44; }
+  @media (max-width: 760px) { #parts .label { display: none; } }
+  #split-at[hidden] { display: none; }
   .tools { display: flex; gap: 8px; align-items: center; color: var(--muted); }
 
-  main { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 14px; }
+  main { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 12px 14px; }
+  /* the views: the instrument's page, showing only them, above the controls; the handle on the
+     controls' top edge shares the height (as the site's pages do) */
+  #views-pane { flex: 0.6 1 0; min-height: 0; display: flex; background: var(--bg); border-bottom: 1px solid var(--line); }
+  #views-pane[hidden], #views-grip[hidden] { display: none; }
+  #views-pane iframe { flex: 1; width: 100%; height: 100%; border: 0; background: var(--bg); color-scheme: dark; }
+  #views-grip { position: relative; z-index: 4; height: 0; }
+  #views-grip::before { content: ""; position: absolute; left: 50%; top: -9px; width: 72px; height: 18px; transform: translateX(-50%); cursor: row-resize; }
+  #views-grip::after { content: ""; position: absolute; left: 50%; top: -3px; width: 44px; height: 5px; transform: translateX(-50%); border-radius: 3px; background: #55555f; pointer-events: none; }
+  #views-grip:hover::after, #views-grip.dragging::after, #views-grip:focus-visible::after { background: var(--accent); }
+  #views-grip:focus-visible { outline: none; }
+  body.sharing, body.sharing * { cursor: row-resize !important; }
+  body.sharing iframe { pointer-events: none; }
   #groups { columns: 250px; column-gap: 12px; }
   .group {
     break-inside: avoid; -webkit-column-break-inside: avoid; display: inline-block; width: 100%;
@@ -102,6 +142,13 @@
   .bk.mapped { background: #26262c; }
   .wk.down { background: var(--key-down); }
   .bk.down { background: var(--accent); color: #000; }
+  /* split: which instrument each key plays, and the first key of the upper one */
+  .wk.part0::after, .wk.part1::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; }
+  .wk.part0::after { background: var(--part0); }
+  .wk.part1::after { background: var(--part1); }
+  .wk.edge, .bk.edge { box-shadow: inset 3px 0 0 var(--accent-2); }
+  .wk.down.other { background: var(--other-down); }
+  .bk.down.other { background: var(--other); }
   .wk .c-label { position: absolute; bottom: 18px; color: #8a8a85; font-size: 9px; }
   .k-label { pointer-events: none; }
 
@@ -128,13 +175,26 @@
 </head>
 <body>
 <header>
-  <div class="brand"><b id="name">Forte</b><select id="instrument" title="Instrument" hidden></select><span id="version"></span></div>
+  <div class="brand"><b id="name">Forte</b><select id="instrument" title="Instrument" hidden></select><select id="second" title="Layer or split a second instrument with this one" hidden></select><span id="version"></span></div>
   <select id="preset" title="Preset" hidden></select>
   <div class="tools">
+    <button id="views-btn" hidden aria-pressed="false" title="Show or hide the instrument's views: what its physics is doing as it plays">Views</button>
     <button id="pedal" hidden title="The Space bar, or the sustain pedal (CC64)">Sustain</button>
     <button id="panic" title="Let go of every note">Panic</button>
   </div>
 </header>
+<nav id="parts" hidden>
+  <div class="seg" role="group" aria-label="How the two instruments share the keys">
+    <button data-mode="layer" title="Both instruments play every key">Layer</button><button data-mode="split" title="The second instrument plays the keys below the split, the first the rest">Split</button>
+  </div>
+  <label id="split-at" hidden>at <select id="split" title="The first key the upper instrument plays"></select></label>
+  <button id="swap" title="The two instruments change places">⇄ Swap</button>
+  <span class="grow"></span>
+  <span class="label">Controls</span>
+  <div class="seg" id="focus" role="group" aria-label="Whose controls are shown"></div>
+</nav>
+<section id="views-pane" hidden></section>
+<div id="views-grip" hidden tabindex="0" role="separator" aria-orientation="horizontal" aria-label="Share the height between the views and the controls" title="Drag to share the height between the views and the controls (double-click: as it was)"></div>
 <main><div id="groups"></div></main>
 <div id="save" hidden>
   <form>
@@ -255,22 +315,23 @@ function build() {
   document.title = D.name;
   $('#name').textContent = D.name;
   $('#version').textContent = D.version;
+  document.documentElement.style.setProperty('--accent', D.accent);
+  document.documentElement.style.setProperty('--key-down', lighter(D.accent, 0.55));
   if (D.instruments) { // the Forte app: a menu of every instrument, and the window starts again on another
     document.body.classList.add('suite');
     $('#name').textContent = 'Forte';
     const el = $('#instrument');
-    for (const { slug, name } of D.instruments) { const o = document.createElement('option'); o.value = slug; o.textContent = name; el.appendChild(o); }
-    el.value = D.slug;
+    for (const { slug, name } of D.instruments) el.appendChild(option(name, slug));
     el.hidden = false;
+    el.value = D.slug;
     el.addEventListener('change', async () => {
       el.blur();
       panic();
       if (await forte('choose', el.value)) location.reload();
       else el.value = D.slug;
     });
+    buildParts();
   }
-  document.documentElement.style.setProperty('--accent', D.accent);
-  document.documentElement.style.setProperty('--key-down', lighter(D.accent, 0.55));
   const groups = new Map();
   D.params.forEach((p, i) => {
     if (i === D.presets) return;
@@ -306,6 +367,97 @@ function build() {
     b.addEventListener('pointerdown', (e) => { e.preventDefault(); setPedal(!pedal); });
     $('#space-help').innerHTML = `, <kbd>Space</kbd> ${D.space === 'hold' ? 'holds' : 'sustains'}`;
   }
+}
+
+// ---- the Forte app's second instrument: layered with the first or split from it (plugin.cpp, Suite) --
+// "+" beside the Instrument menu adds one. Then the bar under the header says how the two share the
+// keys (Layer, or Split at a key: the second below it), swaps them, and picks whose controls,
+// presets and pedal are below (the Instrument menu changes that one; × takes one away). The
+// keyboard shows each one's keys in its colour.
+let mode = 'layer', splitKey = 60, focus = 0, learning = false;
+const two = () => (D.parts?.length ?? 0) > 1;
+// the part key m plays: in a split, by its side; layered (or alone), the one shown
+const partOf = (m) => (two() && mode === 'split' ? (m >= splitKey ? 0 : 1) : focus);
+function buildParts() {
+  const sel = $('#second'), parts = D.parts ?? [];
+  focus = D.focus ?? 0; mode = D.mode ?? 'layer'; splitKey = D.split ?? 60;
+  if (!parts[1]) {
+    const plus = option('+', '');
+    plus.hidden = true;
+    const add = document.createElement('optgroup');
+    add.label = 'Layer or split with';
+    for (const { slug, name } of D.instruments) add.appendChild(option(name, slug));
+    sel.append(plus, add);
+    sel.value = '';
+    sel.hidden = false;
+    sel.addEventListener('change', async () => {
+      sel.blur();
+      panic();
+      if (sel.value && await forte('second', sel.value)) location.reload();
+      else sel.value = '';
+    });
+    return;
+  }
+  // each part in its instrument's colour; two alike, the second in Forte's blue (or its amber)
+  const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) || 0);
+  const apart = (a, b) => Math.hypot(...rgb(a).map((x, i) => x - rgb(b)[i])) > 90;
+  const colours = parts.map((p) => p.accent);
+  if (!apart(colours[0], colours[1])) colours[1] = apart(colours[0], '#7cb8ff') ? '#7cb8ff' : '#f0b35a';
+  parts.forEach((p, k) => { p.accent = colours[k]; });
+  const root = document.documentElement.style;
+  parts.forEach((p, k) => root.setProperty(`--part${k}`, p.accent));
+  root.setProperty('--accent', parts[focus].accent);
+  root.setProperty('--key-down', lighter(parts[focus].accent, 0.55));
+  const other = parts[1 - focus].accent;
+  root.setProperty('--other', other);
+  root.setProperty('--other-down', lighter(other, 0.55));
+  $('#parts').hidden = false;
+  for (const b of $('#parts').querySelectorAll('[data-mode]')) b.addEventListener('click', () => { b.blur(); arrange(b.dataset.mode, splitKey); });
+  const split = $('#split');
+  for (let m = 24; m <= 96; m++) split.appendChild(option(noteName(m), m));
+  split.appendChild(option('Press a key…', 'learn'));
+  split.addEventListener('change', () => {
+    split.blur();
+    if (split.value !== 'learn') { arrange('split', +split.value); return; }
+    learning = true;
+    toast('Press the key the upper instrument starts on');
+  });
+  $('#swap').addEventListener('click', async (e) => { e.currentTarget.blur(); panic(); if (await forte('swap')) location.reload(); });
+  parts.forEach((p, k) => {
+    const b = document.createElement('button');
+    const dot = document.createElement('i');
+    dot.style.background = p.accent;
+    const where = document.createElement('small');
+    where.dataset.where = k;
+    const x = document.createElement('span');
+    x.className = 'x'; x.textContent = '×'; x.title = `Take the ${p.name} away`;
+    b.append(dot, p.name, where, x);
+    b.setAttribute('aria-pressed', String(k === focus));
+    b.title = `The ${p.name}’s controls and presets`;
+    b.addEventListener('click', async (e) => {
+      b.blur();
+      if (e.target === x) { panic(); if (await forte('drop', k)) location.reload(); return; }
+      if (k !== focus && await forte('focus', k)) location.reload();
+    });
+    $('#focus').appendChild(b);
+  });
+  arranged();
+}
+async function arrange(m, key) {
+  learning = false;
+  if (!(await forte('arrange', m, key))) return;
+  mode = m; splitKey = key;
+  arranged();
+  paintAll();
+}
+// the bar and the keyboard as the two now share the keys
+function arranged() {
+  for (const b of $('#parts').querySelectorAll('[data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
+  $('#split-at').hidden = mode !== 'split';
+  $('#split').value = String(splitKey);
+  $('#swap').title = mode === 'split' ? 'The two instruments change sides' : 'The two instruments change places (the host sees the first one’s controls)';
+  for (const w of $('#parts').querySelectorAll('[data-where]')) w.textContent = mode === 'split' ? (+w.dataset.where === 0 ? `from ${noteName(splitKey)}` : `below ${noteName(splitKey)}`) : '';
+  if (D) rebound();
 }
 
 // ---- presets: the instrument's (its Preset parameter), then your own, then saving them -----------
@@ -439,8 +591,9 @@ function toast(text) {
 
 // ---- notes --------------------------------------------------------------------------------------
 const local = new Map(); // key → how many hands (pointer fingers, computer keys) hold it here
-let remote = new Set(), pedal = false, pedalHere = false;
+let remote = new Set(), others = new Set(), pedal = false, pedalHere = false;
 function down(key, vel) {
+  if (learning && two()) { arrange('split', clamp(key, 24, 96)); return; }
   if (key < LO || key > HI) return;
   const n = (local.get(key) || 0) + 1;
   local.set(key, n);
@@ -461,8 +614,14 @@ function panic() { local.clear(); held.clear(); forte('panic'); pedal = pedalHer
 const kbRoot = $('#keyboard');
 let wLo = 48, wHi = 84, base = 48;
 const els = new Map();
-const isDown = (m) => local.has(m) || remote.has(m);
-function paintKey(m) { els.get(m)?.classList.toggle('down', isDown(m)); }
+const isDown = (m) => local.has(m) || remote.has(m) || others.has(m);
+// held down, in the colour of the part it plays (the other part's: .other)
+function paintKey(m) {
+  const el = els.get(m);
+  if (!el) return;
+  el.classList.toggle('down', isDown(m));
+  el.classList.toggle('other', !remote.has(m) && (others.has(m) || (local.has(m) && partOf(m) !== focus)));
+}
 function paintAll() { for (const m of els.keys()) paintKey(m); }
 function labels() {
   const map = new Map();
@@ -490,10 +649,11 @@ function buildKeys() {
     lbl.className = 'k-label'; lbl.textContent = map.get(m) ?? '';
     el.appendChild(lbl);
     el.classList.toggle('mapped', map.has(m));
-    el.classList.toggle('down', isDown(m));
+    if (two() && mode === 'split') { el.classList.add(`part${partOf(m)}`); el.classList.toggle('edge', m === splitKey); }
     kbRoot.appendChild(el); els.set(m, el);
+    paintKey(m);
   }
-  $('#range').textContent = `${noteName(wLo)}–${noteName(wHi)}`;
+  $('#range').textContent = `${noteName(wLo)}–${noteName(wHi)}${two() && mode === 'split' ? ` · split at ${noteName(splitKey)}` : ''}`;
   $('#down').disabled = wLo <= LO; $('#up').disabled = wHi >= HI;
 }
 // as many keys as fit at about 24 px a white key, starting on a C, around the computer's keys
@@ -508,7 +668,10 @@ function layoutKeys() {
   buildKeys();
 }
 // the keys that play: a historical compass (D.compass: lo, hi and its toggle) or every key
-function bounds() { [LO, HI] = D.compass && !(values[D.compass[2]] > 0.5) ? D.compass : [D.keyLo, D.keyHi]; }
+function bounds() {
+  [LO, HI] = D.compass && !(values[D.compass[2]] > 0.5) ? D.compass : [D.keyLo, D.keyHi];
+  if (two()) { const o = D.parts[1 - (D.focus ?? 0)]; LO = Math.min(LO, o.keyLo); HI = Math.max(HI, o.keyHi); } // and the other part's keys
+}
 function rebound() {
   bounds();
   if (base + 11 < LO || base > HI - 12) base = Math.min(Math.ceil(LO / 12) * 12, Math.max(LO, HI - 12));
@@ -602,15 +765,90 @@ async function poll() {
   try {
     const r = await forte('poll');
     if (r) {
-      for (const [i, x, text] of r.p) show(i, x, text);
-      const next = new Set(r.keys);
-      const changed = [...next].filter((k) => !remote.has(k)).concat([...remote].filter((k) => !next.has(k)));
-      remote = next;
+      for (const [i, x, text, v] of r.p) { show(i, x, text); texts[i] = text; naturals[i] = v; }
+      last = r;
+      for (const f of listeners) try { f(r); } catch { /* the views' trouble, not the window's */ }
+      const next = new Set(r.keys), nextOthers = new Set(r.other ?? []);
+      const changed = new Set([...next, ...remote, ...nextOthers, ...others].filter((k) => next.has(k) !== remote.has(k) || nextOthers.has(k) !== others.has(k)));
+      // a MIDI key struck while the split waits for one
+      if (learning) { const k = [...changed].find((m) => (next.has(m) || nextOthers.has(m)) && !local.has(m)); if (k !== undefined) arrange('split', clamp(k, 24, 96)); }
+      remote = next; others = nextOthers;
       for (const k of changed) paintKey(k);
       if (D.space && D.space !== 'switch' && r.pedal !== pedal) { pedal = r.pedal; $('#pedal').setAttribute('aria-pressed', String(pedal)); }
     }
   } catch { /* the plugin went away */ }
   setTimeout(poll, 40);
+}
+
+// ---- the views: the instrument's page (served by the plugin) in a frame, showing only its views
+// (shared/in-plugin.js), which hear every poll: the parameters, the keys, the engine's messages and
+// its sound. Folded away, the frame is emptied and the plugin stops sending them.
+const texts = [], naturals = [];
+let last = null, listeners = [];
+const pane = $('#views-pane'), grip = $('#views-grip'), viewsBtn = $('#views-btn');
+const prefs = (() => { try { return JSON.parse(localStorage.getItem('forte/plugin-window/v1') || '{}') || {}; } catch { return {}; } })();
+const keep = () => { try { localStorage.setItem('forte/plugin-window/v1', JSON.stringify(prefs)); } catch { /* storage unavailable */ } };
+const SHARE = 0.6; // the views' share of the height they and the controls have, at first
+let share = Number.isFinite(prefs.share) && prefs.share > 0 && prefs.share <= 1 ? prefs.share : SHARE;
+function layoutViews() {
+  pane.style.flex = `${share} 1 0`;
+  $('main').style.flex = `${1 - share} 1 0`;
+  grip.setAttribute('aria-valuenow', String(Math.round(100 * share)));
+}
+async function showViews(on) {
+  viewsBtn.setAttribute('aria-pressed', String(on));
+  pane.hidden = grip.hidden = !on;
+  prefs.views = on; keep();
+  listeners = [];
+  pane.replaceChildren();
+  if (!on) { $('main').style.flex = ''; forte('views', 0); return; }
+  const r = await forte('views', 1);
+  window.forteViews = {
+    describe: D, fs: r?.fs || 48000,
+    // f hears every poll from now on, and at once what it missed: every value, the keys sounding
+    listen(f) {
+      listeners.push(f);
+      f({ p: D.params.map((_, i) => [i, values[i], texts[i] ?? '', naturals[i]]).filter((e) => e[3] !== undefined), keys: last?.keys ?? [], vel: last?.vel ?? [], pedal: !!last?.pedal });
+    },
+  };
+  const frame = document.createElement('iframe');
+  frame.title = `${D.name}: the views`;
+  frame.src = `/${D.page}?plugin`;
+  pane.append(frame);
+  layoutViews();
+}
+function setupViews() {
+  if (!D.page) return;
+  viewsBtn.hidden = false;
+  viewsBtn.addEventListener('click', (e) => { showViews(viewsBtn.getAttribute('aria-pressed') !== 'true'); e.currentTarget.blur(); });
+  // the handle: drag it, or move it with the arrows; a double click goes back to the usual share
+  let drag = null;
+  grip.addEventListener('pointerdown', (e) => {
+    if (e.button > 0) return;
+    e.preventDefault();
+    try { grip.setPointerCapture(e.pointerId); } catch { /* gone */ }
+    const top = pane.getBoundingClientRect().top, bottom = $('main').getBoundingClientRect().bottom;
+    drag = { id: e.pointerId, top, total: bottom - top };
+    grip.classList.add('dragging'); document.body.classList.add('sharing');
+  });
+  grip.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id || drag.total <= 0) return;
+    share = clamp((e.clientY - drag.top) / drag.total, 0.15, 1);
+    layoutViews();
+  });
+  for (const ev of ['pointerup', 'pointercancel']) grip.addEventListener(ev, (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    drag = null; grip.classList.remove('dragging'); document.body.classList.remove('sharing');
+    prefs.share = share; keep();
+  });
+  grip.addEventListener('dblclick', () => { share = SHARE; prefs.share = share; keep(); layoutViews(); });
+  grip.addEventListener('keydown', (e) => {
+    const to = { ArrowUp: share - 0.05, ArrowDown: share + 0.05 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault(); e.stopPropagation();
+    share = clamp(Math.round(to * 20) / 20, 0.15, 1); prefs.share = share; keep(); layoutViews();
+  });
+  showViews(prefs.views !== false); // shown at first
 }
 
 (async () => {
@@ -621,11 +859,15 @@ async function poll() {
   base = 48 >= LO && 48 <= HI - 12 ? 48 : Math.min(Math.ceil(LO / 12) * 12, Math.max(LO, HI - 12));
   build();
   layoutKeys();
+  setupViews();
   poll();
 })();
 
-// A made-up instrument for working on this page in a browser.
+// A made-up instrument for working on this page in a browser; or, served with the site and asked
+// for one (?instrument=<slug>), that instrument: its WebAssembly engine, playing silently for its views.
 function mockForte() {
+  const slug = new URLSearchParams(location.search).get('instrument');
+  if (slug && location.protocol.startsWith('http')) return siteForte(slug);
   const params = [
     { id: 'strike', label: 'Strike position', group: 'Hammer', kind: 'continuous', perform: true, def: 0.3, choices: [] },
     { id: 'hardness', label: 'Hardness', group: 'Hammer', kind: 'continuous', perform: false, def: 0.5, choices: [] },
@@ -649,13 +891,37 @@ function mockForte() {
   let pedal = false;
   const text = (i) => (params[i].kind === 'choice' ? params[i].choices[v[i]] : params[i].kind === 'toggle' ? (v[i] ? 'on' : 'off') : `${(100 * v[i]).toFixed(1)} %`);
   const sent = v.map(() => NaN);
+  // ?suite: as the Forte app shows it, with its Instrument menus; its parts outlast a reload
+  const INSTRUMENTS = [
+    { slug: 'mock', name: 'Practice Bars', accent: '#5fd0c8', keyLo: 21, keyHi: 108 },
+    { slug: 'drums', name: 'Practice Drums', accent: '#e08a5a', keyLo: 36, keyHi: 84 },
+    { slug: 'pipes', name: 'Practice Pipes', accent: '#b58cf0', keyLo: 36, keyHi: 96 },
+  ];
+  let suite = { parts: ['mock'], focus: 0, mode: 'layer', split: 60 };
+  try { suite = JSON.parse(sessionStorage.getItem('forte-mock-suite')) || suite; } catch { /* none */ }
+  const keep = () => { try { sessionStorage.setItem('forte-mock-suite', JSON.stringify(suite)); } catch { /* none */ } };
+  const known = (slug) => INSTRUMENTS.some((x) => x.slug === slug);
   return async (m, ...a) => {
     if (m === 'describe') {
-      const d = { slug: 'mock', name: 'Practice Bars', version: '0.0.0', accent: '#5fd0c8', keyLo: 21, keyHi: 108, compass: [53, 89, 4], space: 'sustain', presets: P, params };
-      // ?suite: as the Forte app shows it, with its Instrument menu
-      if (location.search.includes('suite')) d.instruments = [{ slug: 'drums', name: 'Practice Drums' }, { slug: 'mock', name: 'Practice Bars' }];
+      const shown = INSTRUMENTS.find((x) => x.slug === suite.parts[suite.focus]);
+      const d = { slug: shown.slug, name: shown.name, version: '0.0.0', accent: shown.accent, keyLo: shown.keyLo, keyHi: shown.keyHi, compass: shown.slug === 'mock' ? [53, 89, 4] : undefined, space: 'sustain', presets: P, params };
+      if (location.search.includes('suite')) {
+        d.instruments = INSTRUMENTS.map(({ slug, name }) => ({ slug, name })).sort((x, y) => x.name.localeCompare(y.name));
+        d.parts = suite.parts.map((slug) => INSTRUMENTS.find((x) => x.slug === slug));
+        Object.assign(d, { focus: suite.focus, mode: suite.mode, split: suite.split });
+      }
       return d;
     }
+    if (m === 'choose') { if (!known(a[0])) return false; suite.parts[0] = a[0]; keep(); return true; }
+    if (m === 'second') {
+      if (a[0] && !known(a[0])) return false;
+      suite.parts = a[0] ? [suite.parts[0], a[0]] : [suite.parts[0]];
+      suite.focus = a[0] ? 1 : 0; keep(); return true;
+    }
+    if (m === 'focus') { if (!suite.parts[a[0]]) return false; suite.focus = a[0]; keep(); return true; }
+    if (m === 'arrange') { suite.mode = a[0]; suite.split = a[1] ?? suite.split; keep(); return true; }
+    if (m === 'swap') { if (suite.parts.length < 2) return false; suite.parts.reverse(); suite.focus = 1 - suite.focus; keep(); return true; }
+    if (m === 'drop') { if (suite.parts.length < 2) return false; suite.parts.splice(a[0], 1); suite.focus = 0; keep(); return true; }
     if (m === 'set') { v[a[0]] = a[1]; sent[a[0]] = a[1]; return { x: a[1], text: text(a[0]) }; }
     if (m === 'note') { if (a[1] > 0) keys.add(a[0]); else keys.delete(a[0]); }
     // your own presets: in memory
@@ -679,10 +945,81 @@ function mockForte() {
     if (m === 'poll') {
       const p = [];
       v.forEach((x, i) => { if (x !== sent[i]) { sent[i] = x; p.push([i, x, text(i)]); } });
-      return { p, keys: [...keys], pedal };
+      if (suite.parts.length < 2) return { p, keys: [...keys], pedal };
+      const side = (k) => (suite.mode === 'split' ? (k >= suite.split ? 0 : 1) : -1); // −1: both
+      const of = (part) => [...keys].filter((k) => side(k) < 0 || side(k) === part);
+      return { p, keys: of(suite.focus), other: of(1 - suite.focus), pedal };
     }
     return null;
   };
+}
+function siteForte(slug) {
+  let ready = null;
+  const load = async () => {
+    const { INSTRUMENT: I } = await import(`/${slug}/src/${slug}-instrument.js`);
+    const { nativeParams } = await import('/shared/wasm.js');
+    const E = (await import(I.wasm.module))[I.wasm.name];
+    await E.ready();
+    const fs = 48000, e = new E(fs), x = E.exports, list = nativeParams(I);
+    const params = list.map((p) => ({
+      id: p.id, label: p.label, group: (I.groups.find((g) => g.params.includes(p)) || {}).title || 'Sound',
+      kind: p.type === 'select' ? 'choice' : p.type === 'checkbox' ? 'toggle' : 'continuous', perform: !!p.perform,
+      def: 0, choices: p.type === 'select' ? p.options.map((o) => o[1]) : [],
+    }));
+    const P = Object.fromEntries(list.map((p) => [p.id, p.def]));
+    const native = (p, v) => (p.type === 'select' ? Math.max(0, p.options.findIndex((o) => o[0] === v)) : p.type === 'checkbox' ? (v ? 1 : 0) : v);
+    const along = (p, v) => (p.type === 'select' || p.type === 'checkbox' ? native(p, v) : p.log ? Math.log(v / p.min) / Math.log(p.max / p.min) : (v - p.min) / (p.max - p.min));
+    const from = (p, t) => (p.type === 'select' ? p.options[Math.round(t)][0] : p.type === 'checkbox' ? t > 0.5 : p.log ? p.min * (p.max / p.min) ** t : p.min + (p.max - p.min) * t);
+    list.forEach((p, i) => { params[i].def = along(p, p.def); });
+    e.setParams(P);
+    const sent = list.map(() => NaN), keys = new Map(), heard = [], raw = [], rawData = [];
+    // what the plugin copies out of the engine for its views (native/instruments/<slug>/<slug>-views.cpp),
+    // laid out as there, here taken from what the page's translator reads of the engine's memory
+    const ATTACH = {
+      huygens: { listen: (on) => x.huygens_listen(e.e, on ? 1 : 0), data: (s) => [s.fires.length, s.osc.length, s.t, s.hold, ...s.fires, ...s.osc] },
+      springs: { data: (s) => s.data },
+    }[slug];
+    let pedal = false, viewsOn = false;
+    const L = new Float32Array(128), R = new Float32Array(128);
+    let t0 = performance.now(), done = 0;
+    setInterval(() => { // play what the time since asks for
+      const due = Math.floor(((performance.now() - t0) * fs) / 1000);
+      for (; done + 128 <= due; done += 128) {
+        e.process(L, R, 128);
+        if (viewsOn) for (let i = 0; i < 128; i++) heard.push(0.5 * (L[i] + R[i]));
+        for (let m; (m = x.forte_message(e.h));) {
+          const v = new DataView(x.memory.buffer, m, 128), n = v.getUint16(4, true);
+          if (!viewsOn) continue;
+          const r = [v.getUint16(0, true), v.getInt16(2, true), ...new Float32Array(x.memory.buffer, m + 8, n)];
+          const pm = ATTACH ? E.translate?.({ type: r[0], key: r[1], values: Float32Array.from(r.slice(2)) }, e) : null;
+          if (pm) rawData.push([raw.length, f64(ATTACH.data(pm))]);
+          raw.push(r);
+        }
+      }
+    }, 10);
+    const bytes = (b) => { let t = ''; for (let i = 0; i < b.length; i += 0x8000) t += String.fromCharCode(...b.subarray(i, i + 0x8000)); return btoa(t); };
+    const b64 = (a) => bytes(new Uint8Array(Float32Array.from(a).buffer));
+    function f64(a) { return bytes(new Uint8Array(Float64Array.from(a).buffer)); }
+    const text = (p, v) => (p.type === 'select' ? p.options.find((o) => o[0] === v)?.[1] ?? '' : p.type === 'checkbox' ? (v ? 'on' : 'off') : p.fmt ? p.fmt(v) : String(v));
+    return async (m, ...a) => {
+      if (m === 'describe') return { slug, name: I.name || slug, version: 'site', accent: getComputedStyle(document.documentElement).getPropertyValue('--accent'), keyLo: I.range?.[0] ?? 21, keyHi: I.range?.[1] ?? 108, space: I.space || '', presets: -1, page: `${slug}/index.html`, params };
+      if (m === 'set') { const p = list[a[0]]; P[p.id] = from(p, a[1]); e.setParams(P); return { x: along(p, P[p.id]), text: text(p, P[p.id]) }; }
+      if (m === 'note') { if (a[1] > 0) { keys.set(a[0], a[1]); e.noteOn(a[0], a[1]); } else { keys.delete(a[0]); e.noteOff(a[0], -1); } return null; }
+      if (m === 'pedal') { pedal = !!a[0]; e.setSustain?.(pedal); return null; }
+      if (m === 'panic') { keys.clear(); e.allNotesOff?.(); return null; }
+      if (m === 'views') { viewsOn = !!a[0]; heard.length = raw.length = rawData.length = 0; ATTACH?.listen?.(viewsOn); return { fs }; }
+      if (m === 'poll') {
+        const p = [];
+        list.forEach((q, i) => { const v = native(q, P[q.id]); if (v !== sent[i]) { sent[i] = v; p.push([i, along(q, P[q.id]), text(q, P[q.id]), v]); } });
+        const r = { p, keys: [...keys.keys()], vel: [...keys.values()], pedal };
+        if (viewsOn) { r.m = raw.splice(0); r.md = rawData.splice(0); r.s = b64(heard.splice(0)); }
+        return r;
+      }
+      if (m === 'presets' || m === 'scalas') return { folder: '', list: [] };
+      return null;
+    };
+  };
+  return async (...args) => (await (ready ??= load()))(...args);
 }
 </script>
 </body>

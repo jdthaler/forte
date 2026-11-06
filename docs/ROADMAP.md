@@ -24,6 +24,10 @@ while that is still free.
   `reference.json` keeps each preset's sound.
 - **Windows downloads that install themselves** (`install.cmd`, `install.ps1`), matching
   `make install` on macOS and Linux.
+- **A Windows installer and Linux packages** (ships with the next release):
+  `Forte-plugins-windows-setup.exe`, `Forte-plugins-linux.deb` and `Forte-plugins-linux.rpm`
+  on All Plugins, each with every instrument; the `native` workflow installs, verifies and
+  uninstalls each on a clean system before a release keeps it.
 
 ## Decided
 
@@ -42,7 +46,7 @@ while that is still free.
    - Logic or MainStage on a Mac: some AUs, the organ's Leslie button in the plugin window,
      and saving, closing and reopening a project;
    - the Forte app with a MIDI keyboard;
-   - a Windows PC: `install.cmd`, one VST3 in a DAW, and the app.
+   - a Windows PC: the installer and `install.cmd`, one VST3 in a DAW, and the app.
 4. Fix what the release candidate turns up, update the docs for a 1.0 reader (README's
    *Versions*, `native/INSTALL.md`), then release 1.0.0 with no new features in it.
 
@@ -62,8 +66,8 @@ Every other idea only adds, and can come before or after 1.0.
 | MPE (per-note pitch bend and slide) | M | Done, for the next release: an MPE menu (Auto, On, Off) on every page and an MPE plugin parameter; CLAP note expressions too. Fourteen instruments bend one note by something physical (a reed, a pipe, a string, a bowl, a lamp, a cavity), and eleven slide (CC74) what their mod wheel moves for one note. The struck strings, bars and bells keep their pitch, as the real ones do, and the tonewheel organ turns every wheel on one shaft; the vibraphone (one motor) and kalimba (one hand on the hole) have no per-note slide. Not yet tried on a real MPE controller. |
 | Foot controller (a Roland FC-300) | S–M | Done, for the next release: on every page and plugin, the volume (CC7) and expression (CC11) pedals turn the instrument down, CC80, 81 and 82 are the sustain, sostenuto and soft pedals, and a program change plays a preset; the Electric Grand, Tine and Reed Pianos put their tremolo on the mod wheel (the FC-300's EXP 2). Not yet tried on a real FC-300. A MIDI learn, for pedals set to other CCs, is not done. |
 | Alternative tunings and temperaments | M | Done, for the next release: a Tuning group on every page and plugin: nine pitch standards (A = 392 to 466 Hz), equal, meantone (¼ and ⅙ comma), Werckmeister III, Kirnberger III, Vallotti, Young, Pythagorean and just on any root, and a custom temperament a Scala file can fill. Equal at 440 Hz, the default, sounds as before. |
-| Transpose and octave controls on every page and plugin | S | |
-| Split and layer two instruments | M | Most useful in the Forte app and on the site. |
+| Transpose and octave controls on every page and plugin | S | Done, for the next release: Octave (±4) and Transpose (±12 semitones) on every page, in the menu the MIDI status opens (with Touch and MPE), kept across instruments, and Transpose and Octave parameters in every plugin, kept by the Forte app. They move the MIDI keys; the keys on the screen and the computer keys play what they show. |
+| Split and layer two instruments | M | Done, for the next release: in the Forte app, **+** beside the Instrument menu layers a second instrument or splits the keys with it; on every page, **+ Layer** in the keyboard bar does the same. |
 
 ### Sound
 
@@ -71,7 +75,7 @@ Every other idea only adds, and can come before or after 1.0.
 |------|------|-------|
 | Save your own presets | M | Done, for the next release: in the Presets menu on every page (kept in the browser, saved to and opened from a file) and in the plugins' window (files in a presets folder per instrument, the same format). |
 | A choice of rooms (reverb) | M | Done, for the next release: a Venue choice on every page and plugin (Studio, Room, Recital hall, Concert hall, Cathedral), Room, the original, the default. |
-| Morph between two presets | S–M | |
+| Morph between two presets | S–M | Done, for the next release: a Morph group on every page (From, To and a slider; numbers glide, choices and switches change halfway, volume, room and tuning stay) and Morph from, Morph to and Morph in every plugin, so a song can automate the sweep. |
 | Quality or CPU setting | S–M | Done, for the next release: a Quality choice (High, Medium, Low) on every page and plugin. High sounds exactly as before; Medium and Low play fewer voices, partials or modes and lighten or drop the sympathetic strings, at about 60 % and a third of High's cost on the heavy instruments. A device's setting: in no preset or link, and the page suggests it when the audio drops out. |
 
 ### The site
@@ -80,21 +84,21 @@ Every other idea only adds, and can come before or after 1.0.
 |------|------|-------|
 | Record and download what you play (WAV) | S–M | Decided against (2026-10-19): not wanted. |
 | Share a link with your settings | S | Done, for the next release: *Copy a link to these settings* in the Presets menu; the link carries the parameters that differ from the defaults. |
-| Works offline, installable on phones | S–M | A service worker; the manifest already exists. |
-| Demo songs played from MIDI files | M | A listen button per instrument, and drag and drop a `.mid` to play it. |
+| Works offline, installable on phones | S–M | Done, for the next release: a service worker (`sw.js`) keeps a copy of the released site, about 5 MB, and serves every page and its WebAssembly from it, online or not; the demos stay online only. A release downloads only the files that changed and takes over on the way to the next page. |
+| Demo songs played from MIDI files | M | Done, for the next release: ♪ *Songs* in every page's header plays six public-domain pieces (`songs/`) or a `.mid` of your own, opened or dropped on the page, live on the instrument, its keys going down as it plays (`shared/songs.js`). The front page's Listen buttons still play the recorded demos. |
 | A guided tour of each instrument's physics | M | Done, for the next release: *Tour* in the header, a few steps per instrument (`shared/tour.js`, `<slug>-tour.js`). |
-| Accessibility pass | M | Keyboard focus, screen-reader labels, reduced motion. |
+| Accessibility pass | M | Done, for the next release: every control named for screen readers (symbol buttons, the views' canvases, sliders' values as shown, hints read after a control's name), keyboard focus kept after Enter or Space, a focus ring everywhere, and with Reduce Motion the views step four times a second and nothing slides. The page checks fail on an unnamed control. |
 | Search and filter on the front page | S | |
 
 ### The plugins and the app
 
 | Idea | Size | Notes |
 |------|------|-------|
-| The site's views in the plugin window | M | `docs/PLUGINS.md`, step 6. |
+| The site's views in the plugin window | M | Done, for the next release: the window's *Views* pane shows the page's own views (`docs/PLUGINS.md`, step 6). |
 | Each page's own control layout in the plugin window | S–M | Hints, `showIf`, grouping. |
 | MIDI device picker in the Mac app | S | A clap-wrapper patch. |
-| Windows installer (.msi or Inno Setup) | M | |
-| Linux packages (Flatpak or .deb) | M | |
+| Windows installer (.msi or Inno Setup) | M | Done, for the next release: `Forte-plugins-windows-setup.exe` (Inno Setup), every instrument, the formats and instruments picked on its Components page, uninstalled from Settings. Unsigned. |
+| Linux packages (Flatpak or .deb) | M | Done, for the next release: `Forte-plugins-linux.deb` (Debian 13, Ubuntu 24.04, Mint 22 and later) and `.rpm` (Fedora 40 and later), every instrument for every user, with the libraries they need. No Flatpak: a Flatpak can't hold plugins for the DAWs outside it. |
 | iPad AUv3 | L | Needs the Apple Developer Program. |
 
 ### Physics
@@ -144,7 +148,11 @@ default in the existing presets, or would change what an existing knob means.
 | Clavichord | M | Done, for the next release: a brass tangent that strikes the strings and stays on them, held up by the finger: pressure tuning, the Bebung (mod wheel, aftertouch, MPE), the listing and the key-up ring of the whole string, double-fretted pairs, 4′ strings in the bass. |
 | Brass | M | Done, for the next release: a trombone, a trumpet and a flugelhorn blown by a player's lips, the bore as travelling waves, loud notes steepening into shock waves in the narrow tubing (Hirschberg et al., 1996), with the air's nonlinearity on a knob, a player's ear on the slide and lips, the flugelhorn's mellow cone, and a plunger. |
 | Drums (timpani and tabla) | M | Done, for the next release: the Timpani and Tabla, Forte's first membranes. The air on a timpani head and in its kettle pulls its Bessel modes near a fifth and an octave above the principal; the dayan's syahi puts nine modes on five harmonics (Raman); the bayan's heel bends it (aftertouch, MPE pressure), the pitch-bend wheel is the pedal. |
-| Hammered dulcimer or cimbalom | M | |
+| Marimba and xylophone | S–M | Done, for the next release: the Marimba and Xylophone, rosewood bars undercut by finite elements to 1 : 4 : 10 or 1 : 3 over stopped tubes whose second resonance meets the xylophone's twelfth once the mouth is off centre, wood losses, yarn to plastic mallets and rolls on the mod wheel, aftertouch and MPE slide. |
+| Gamelan (gendèr or saron) | M | Done, for the next release: the Gamelan, Javanese and Balinese bronze: Timoshenko bars that bend and twist over bamboo tubes (gangsa) or on a trough (saron), bonang kettles and hanging gongs ringing their measured modes, a gong ageng's own throb from its curved face, pélog and sléndro on the white and black keys, Balinese pairs tuned a few hertz apart (ombak, on the mod wheel and MPE), and the damping hand. |
+| Musical saw | M | Done, for the next release: a tapered steel blade bent into an S, its note a mode trapped where the curvature turns over (Shankar, Bryde and Mahadevan, 2022) and tunnelling to the hands when the bend is loose; a J traps nothing. Bowed by stick–slip on the edge or struck with felt, the sweet spot at the inflection, the knee's vibrato, and one saw sliding from note to note. |
+| Tubular bells | M | Done, for the next release: the Tubular Bells, orchestral chimes: capped brass tubes as Timoshenko beams, each cut so that modes 4–6 sit near 2 : 3 : 4 of the strike note (a virtual pitch an octave below mode 4), a rawhide mallet's Hertzian contact, radiation that takes the high modes in a second or two, a damper bar and its pedal; brass, aluminium or steel, any section and cap. |
+| Hammered dulcimer or cimbalom | M | Done, for the next release: the Cimbalom, Schunda's concert cimbalom and the hammered dulcimer. Hammers thrown at courses of strings (cotton, leather or bare wood, on a whippy stick), unisons coupled at the bridge (Weinreich's beats and two-stage decay), the dulcimer's strings divided 2 : 3 so both sides ring, a damper bar (lifted by the keys, the pedal, or never), sympathetic strings and a hand tremolo. |
 | Ondes Martenot | M | Done, for the next release: two heterodyne oscillators pulling through Adler's equation, keyboard or ribbon, the intensity key from Quartier et al.'s measurements, the drawer's timbres, and the four diffuseurs (springs, tam-tam and palme strings from their physics). |
 | Cellulophone | M | Done, for the next release: Toulon's photoelectric organ (1927), lamps through discs of slots rounded to whole slots (a few cents out of tune), screens drawn with each wave and averaged by the slot, key mirrors, depth and push screens, the tremolo screen and damping arcs, mains flicker, potassium or selenium cells. |
 | Birdsong | M | Done, for the next release: Mindlin's normal form of a songbird's syrinx, every key tuned by the labia's rate; Hopf and saddle-node onsets, pitch from the breath, trills of mini-breaths and tension sweeps, the trachea's delay line and a mouth tuned to the note (Riede et al. 2006). |
@@ -154,6 +162,6 @@ default in the existing presets, or would change what an existing knob means.
 | Singing dunes | M | Done, for the next release: avalanches down a dune's slip face, booming at the grains' shear rate (Douady 2006) once the flowing layer pulls them into step (Kuramoto), with a threshold speed, sorting and water; or a dry layer ringing as a waveguide (Vriend 2007), since how dunes sing is still argued over. |
 | Theremin | M | Continuous pitch suits MPE; the ondes' heterodyne and pulling would carry over. |
 | Kalimba (mbira) | S–M | Close to the tine piano. |
-| Cristal Baschet or waterphone | M | Friction-driven rods, close to the glass armonica's bowing. |
+| Cristal Baschet | M | Done, for the next release: glass rods stroked by wet fingers (Couineaux's measured friction), each bending its steel stem, the note, worked out by beam finite elements and tuned by playing; a threshold pressure, a rough limit, strokes back and forth; the collector, fibreglass cones, a cut-steel flame and whiskers ringing in sympathy (Couineaux 2025). The waterphone is still open. |
 
 New ideas go in these tables, with a line in the pull request that adds them.

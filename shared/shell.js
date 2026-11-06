@@ -53,14 +53,13 @@
 import { createChain } from './chain.js';
 import { createKeyboard } from './keyboard.js';
 import { trimGain } from './registry.js';
-import { controlOwns, focusedByPointer } from './focus.js';
-import { startMIDI, resumeMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from './midi.js';
+import { controlOwns, unfocus } from './focus.js';
+import { startMIDI, resumeMIDI, pageMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from './midi.js';
 import { attachPresets } from './user-presets.js';
 import { connectQuality, qualityControl } from './quality.js';
 import { dress, faceOf } from './faces.js';
-// after a change, a control picked with the pointer lets go of the focus (the keys go back to the
-// instrument); one reached with Tab keeps it, so the next Space or arrow works it again
-const unfocus = (el) => { if (focusedByPointer(el)) el.blur(); };
+import { computerKey } from './taps.js'; // a second instrument's share of the computer keys (shared/layer.js)
+import { host, pluginAudio, pageValue, keysFrom } from './in-plugin.js';
 
 const $ = (s) => document.querySelector(s);
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -113,6 +112,16 @@ export function createShell(cfg) {
     if (shell.audio) { if (shell.audio.ctx.state !== 'running') shell.audio.ctx.resume(); return Promise.resolve(shell.audio); }
     if (starting) return starting;
     let ctx = null;
+    if (host) { // in the plugin's window: the plugin plays, and the views hear it (shared/in-plugin.js)
+      starting = (async () => {
+        const audio = await pluginAudio(cfg.wasm, (u) => shell.fromPlugin(u));
+        audio.node.port.onmessage = (e) => { if (e.data.type !== 'stats' && e.data.type !== 'error') cfg.onMessage?.(e.data); };
+        shell.audio = audio;
+        cfg.onAudio?.(audio);
+        return audio;
+      })();
+      return starting;
+    }
     starting = (async () => {
       ctx = new AudioContext({ latencyHint: 'interactive' });
       if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
@@ -165,10 +174,11 @@ export function createShell(cfg) {
     starting.catch((err) => { toast(`Audio failed to start: ${err.message}`); ctx?.close?.().catch(() => {}); starting = null; });
     return starting;
   };
-  const paramsMessage = () => ({ type: 'params', P: { ...shell.P } });
-  const sendParams = () => shell.post(paramsMessage());
+  // swap: a preset's change, which the processor fades across so it doesn't click (shared/worklet.js)
+  const paramsMessage = (swap = false) => ({ type: 'params', P: { ...shell.P }, ...(swap && { swap }) });
+  const sendParams = (swap) => shell.post(paramsMessage(swap));
   shell.sendParams = sendParams;
-  shell.post = (m) => { if (shell.audio) shell.audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
+  shell.post = (m) => { if (host) return; if (shell.audio) shell.audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
   shell.applyMix = () => { if (shell.audio) shell.audio.chain.apply(shell.P, trimGain(cfg.id)); };
 
   // ---- notes ---------------------------------------------------------------
@@ -254,21 +264,21 @@ export function createShell(cfg) {
     e.preventDefault();
     if (e.repeat || held.has(e.code)) return;
     held.set(e.code, key);
-    down(key, kbVel());
+    if (computerKey(key, true)) down(key, kbVel());
   });
   window.addEventListener('keyup', (e) => {
     if (e.code === 'Space' && cfg.space && !controlOwns(e)) { if (e.isTrusted) spaceHeld = false; setSustain(false); return; }
     const key = held.get(e.code);
-    if (key !== undefined) { held.delete(e.code); up(key); }
+    if (key !== undefined) { held.delete(e.code); if (computerKey(key, false)) up(key); }
   });
   // Losing focus means no keyup will come: release held keys and a held Space bar.
-  const letGo = () => { for (const k of held.values()) up(k); held.clear(); if (spaceHeld) { spaceHeld = false; setSustain(false); } };
+  const letGo = () => { for (const k of held.values()) if (computerKey(k, false)) up(k); held.clear(); if (spaceHeld) { spaceHeld = false; setSustain(false); } };
   window.addEventListener('blur', letGo);
   document.addEventListener('visibilitychange', () => { if (document.hidden) letGo(); });
   function shiftOctave(d) {
     const nb = shell.base + d;
     if (nb + 11 < LO || nb > HI - 12) return; // never a whole row of computer keys out of range
-    for (const k of held.values()) up(k);
+    for (const k of held.values()) if (computerKey(k, false)) up(k);
     held.clear(); shell.base = nb; shell.keys.labels(labels()); updateHelp();
   }
   function updateHelp() {
@@ -291,6 +301,7 @@ export function createShell(cfg) {
     startMIDI({ onMIDI, status: (t) => { if ($('#midi')) $('#midi').textContent = t; }, button: $('#midi-btn'), controllers: ccs });
   }
   const ccs = controllersOf(cfg), ccLast = {}; // the descriptor's controllers and faders
+  pageMIDI({ onMIDI, controllers: ccs }); // a song played from a MIDI file (shared/songs.js) plays it as a keyboard would
   function onMIDI(ev) {
     const [st, d1, d2] = ev.data, cmd = st & 0xf0;
     const { own: its, with: own } = notes.midi(ev.data);
@@ -417,12 +428,13 @@ export function createShell(cfg) {
     shell.applyMix(); sendParams();
     cfg.onParam?.(id, v, shell.P, ALL.find((q) => q.id === id), dragging);
   };
-  shell.setAll = (np) => {
+  shell.setAll = (np, { swap = false } = {}) => {
     shell.P = { ...DEFAULTS, ...np };
     for (const id of controls.keys()) refresh(id);
     if (cfg.compass) rebound();
-    refreshVisibility(); save(); updateHelp(); shell.applyMix(); sendParams();
+    refreshVisibility(); save(); updateHelp(); shell.applyMix(); sendParams(swap);
     cfg.onParam?.('*', null, shell.P, null, false);
+    if (swap) document.dispatchEvent(new CustomEvent('forte-preset', { detail: { ...shell.P } })); // a preset: the RISE's panel shows its faders (shared/rise.js)
   };
   if ($('#preset')) {
     const ps = $('#preset');
@@ -431,21 +443,51 @@ export function createShell(cfg) {
     ps.addEventListener('change', () => {
       if (ps.value === '') return;
       const keep = Object.fromEntries((cfg.keep || []).map((k) => [k, shell.P[k]]));
-      shell.setAll({ ...DEFAULTS, ...keep, ...cfg.presets[+ps.value].p });
+      shell.setAll({ ...DEFAULTS, ...keep, ...cfg.presets[+ps.value].p }, { swap: true });
       unfocus(ps);
     });
   }
-  $('#reset')?.addEventListener('click', () => { shell.setAll({ ...DEFAULTS }); if ($('#preset')) $('#preset').value = ''; });
+  $('#reset')?.addEventListener('click', () => { shell.setAll({ ...DEFAULTS }, { swap: true }); if ($('#preset')) $('#preset').value = ''; });
   // your own presets and shared links, in the same menu (shared/user-presets.js)
-  shell.presets = attachPresets({ instrument: cfg, get: () => shell.P, set: (v) => shell.setAll({ ...shell.P, ...v }), toast });
-  $('#start')?.addEventListener('click', (e) => { shell.startAudio(); e.currentTarget.blur(); });
-  $('#midi-btn')?.addEventListener('click', (e) => { initMIDI(); e.currentTarget.blur(); });
-  resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
-  $('#panic')?.addEventListener('click', (e) => { shell.panic(); e.currentTarget.blur(); });
+  shell.presets = attachPresets({ instrument: cfg, get: () => shell.P, set: (v, o) => shell.setAll({ ...shell.P, ...v }, o), defaults: DEFAULTS, toast });
+  $('#start')?.addEventListener('click', (e) => { shell.startAudio(); unfocus(e.currentTarget); });
+  $('#midi-btn')?.addEventListener('click', (e) => { initMIDI(); unfocus(e.currentTarget); });
+  if (!host) resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click (in a plugin, the host has the MIDI)
+  $('#panic')?.addEventListener('click', (e) => { shell.panic(); unfocus(e.currentTarget); });
+
+  // ---- in the plugin's window (shared/in-plugin.js): its values, keys and pedal ----------------
+  // The plugin's parameters, by its index: the page's own (a console's or the plugin's own, such as
+  // the velocity curve, are not)
+  const pluginParams = host ? host.describe.params.map((q) => ALL.find((p) => p.id === q.id) ?? null) : [];
+  const pluginKeys = keysFrom({
+    on: (key, vel) => { shell.keys.set(key, true); cfg.onNoteOn?.(key, vel); },
+    off: (key) => { shell.keys.set(key, false); cfg.onNoteOff?.(key); },
+    pedal: (on) => { shell.sustain = on; cfg.onSustain?.(on); document.dispatchEvent(new CustomEvent('forte-sustain', { detail: on })); },
+  });
+  shell.fromPlugin = (u) => {
+    const changed = [];
+    for (const [i, , , v] of u.p || []) {
+      const p = pluginParams[i];
+      if (!p || v === undefined) continue;
+      const value = pageValue(p, v);
+      if (shell.P[p.id] === value) continue;
+      shell.P[p.id] = value;
+      if (p.id === cfg.compass?.param) rebound();
+      refresh(p.id);
+      changed.push(p);
+    }
+    if (changed.length) {
+      refreshVisibility(); updateHelp();
+      if (changed.length === 1) cfg.onParam?.(changed[0].id, shell.P[changed[0].id], shell.P, changed[0], false);
+      else cfg.onParam?.('*', null, shell.P, null, false);
+    }
+    pluginKeys(u);
+  };
 
   for (const id of controls.keys()) refresh(id);
   refreshVisibility();
   shell.keys.labels(labels());
   updateHelp();
+  if (host) shell.startAudio();
   return shell;
 }

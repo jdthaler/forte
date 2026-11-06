@@ -12,13 +12,15 @@ import { createChain } from '../../shared/chain.js';
 import { MotionView, SpectrumView, drawSection, FAMILY } from './viz.js';
 import { SpectrogramView } from '../../shared/views.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from '../../shared/midi.js';
-import { controlOwns } from '../../shared/focus.js';
+import { startMIDI, resumeMIDI, pageMIDI, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from '../../shared/midi.js';
+import { controlOwns, unfocus } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
-import { attachScala } from '../../shared/tuning-ui.js';
+import { attachPresets } from '../../shared/user-presets.js';
 import { connectQuality, qualityControl } from '../../shared/quality.js';
 import { dress, faceOf } from '../../shared/faces.js';
+import { computerKey } from '../../shared/taps.js'; // a second instrument's share of the computer keys (shared/layer.js)
+import { host, follow } from '../../shared/in-plugin.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'ribbon-piano/params/v1';
@@ -49,7 +51,7 @@ const sounding = new Map();    // MIDI key → number of sources holding it
 // The model (piano-wasm.js): { model, data, packed } per key, the latest version of each cached.
 const wasm = await wasmModel();
 const keyData = (key) => wasm.keyModel(key, P, fs);
-const paramsMessage = () => ({ type: 'params', P: { ...P } });
+const paramsMessage = (swap = false) => ({ type: 'params', P: { ...P }, ...(swap && { swap }) }); // swap: a preset's change, faded across (shared/worklet.js)
 // What a note offers the engine: its key's voice data, packed by the model here, so that the
 // audio thread need not build it.
 const noteData = (key) => keyData(key).packed;
@@ -65,6 +67,11 @@ function startAudio() {
     return Promise.resolve(audio);
   }
   if (audioStarting) return audioStarting;
+  if (host) { // in the plugin's window: the plugin plays, and the views follow it (shared/in-plugin.js)
+    audioStarting = follow({ wasm: INSTRUMENT.wasm, params: ALL_PARAMS, P: () => P, set: fromPlugin, on: noteOn, off: noteOff, pedal: setSustain, message: onWorklet })
+      .then((a) => { audio = a; live = true; fs = a.ctx.sampleRate; spectrum.setAnalyser(a.analyser); spectro.setAnalyser(a.analyser); return a; });
+    return audioStarting;
+  }
   audioStarting = (async () => {
     const ctx = new AudioContext({ latencyHint: 'interactive' });
     if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
@@ -217,20 +224,20 @@ window.addEventListener('keydown', (e) => {
   e.preventDefault();
   if (e.repeat || held.has(e.code)) return;
   held.set(e.code, key);
-  noteOn(key, P.velocity);
+  if (computerKey(key, true)) noteOn(key, P.velocity);
 });
 
 window.addEventListener('keyup', (e) => {
   if (e.code === 'Space' && !controlOwns(e)) { if (e.isTrusted) spaceHeld = false; setSustain(false); return; }
   const key = held.get(e.code);
-  if (key !== undefined) { held.delete(e.code); noteOff(key); }
+  if (key !== undefined) { held.delete(e.code); if (computerKey(key, false)) noteOff(key); }
 });
 
 // Losing focus means no keyup will come: release held keys and a held Space bar
 // (the on-screen pedal sends synthetic events and keeps its own state).
 let spaceHeld = false;
 function letGo() {
-  for (const key of held.values()) noteOff(key);
+  for (const key of held.values()) if (computerKey(key, false)) noteOff(key);
   held.clear();
   if (spaceHeld) { spaceHeld = false; setSustain(false); }
 }
@@ -240,7 +247,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) letGo
 function shiftOctave(d) {
   const nb = base + d;
   if (nb < KEY_LO - 3 || nb + 31 > KEY_HI + 12) return;
-  for (const key of held.values()) noteOff(key);
+  for (const key of held.values()) if (computerKey(key, false)) noteOff(key);
   held.clear();
   base = nb;
   updateHelp();
@@ -262,6 +269,7 @@ function initMIDI() {
 
 const notes = pageMpe({ post: () => {}, params: () => P }); // MPE: no note bends alone, and a member's bend is no one else's
 const ccs = controllersOf(INSTRUMENT), ccLast = {}; // the descriptor's faders and pad (and controllers)
+pageMIDI({ onMIDI, controllers: ccs }); // a song played from a MIDI file (shared/songs.js) plays it as a keyboard would
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data;
   const cmd = st & 0xf0;
@@ -313,7 +321,7 @@ function buildControls() {
         input.id = `p-${p.id}`;
         for (const [k, name] of p.options) input.add(new Option(name, k));
         // the option's own value (the tuning's choices are numbers: A = 415 Hz, the root)
-        input.addEventListener('change', () => { setParam(p.id, p.options[input.selectedIndex][0]); input.blur(); });
+        input.addEventListener('change', () => { setParam(p.id, p.options[input.selectedIndex][0]); unfocus(input); });
         wrap.appendChild(input);
       } else if (p.type === 'checkbox') {
         wrap.classList.add('check');
@@ -354,10 +362,10 @@ function buildControls() {
   ps.addEventListener('change', () => {
     if (ps.value === '') return;
     const keep = Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]]));
-    setAll({ ...DEFAULTS, ...keep, ...PRESETS[+ps.value].p });
-    ps.blur();
+    setAll({ ...DEFAULTS, ...keep, ...PRESETS[+ps.value].p }, { swap: true });
+    unfocus(ps);
   });
-  $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }); $('#preset').value = ''; });
+  $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }, { swap: true }); $('#preset').value = ''; });
 }
 
 function refreshControl(id) {
@@ -377,15 +385,18 @@ function refreshVisibility() {
   for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(P) : false;
 }
 
-function setAll(newP) {
+// the plugin's values (shared/in-plugin.js): one as a control moving it, several as a preset
+function fromPlugin(c) { const ids = Object.keys(c); if (ids.length === 1) setParam(ids[0], c[ids[0]]); else setAll({ ...P, ...c }); }
+function setAll(newP, { swap = false } = {}) {
   P = newP;
   for (const id of controls.keys()) refreshControl(id);
   refreshVisibility();
-  if (audio) audio.node.port.postMessage(paramsMessage());
+  if (audio) audio.node.port.postMessage(paramsMessage(swap));
   applyMix();
   updateHelp();
   saveParams();
   modelChanged();
+  if (swap) document.dispatchEvent(new CustomEvent('forte-preset', { detail: { ...P } })); // a preset: the RISE's panel shows its faders (shared/rise.js)
 }
 
 function setParam(id, v, opts = {}) {
@@ -562,12 +573,13 @@ function toast(msg) {
   toastTimer = setTimeout(() => { t.hidden = true; }, 3500);
 }
 
-$('#start').addEventListener('click', (e) => { startAudio(); e.currentTarget.blur(); });
-$('#midi-btn').addEventListener('click', (e) => { initMIDI(); e.currentTarget.blur(); });
-resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
-$('#panic').addEventListener('click', (e) => { panic(); e.currentTarget.blur(); });
-$('#replay').addEventListener('click', (e) => { motion.replay(); e.currentTarget.blur(); });
-$('#speed').addEventListener('change', (e) => { motion.speed = +e.target.value; motion.replay(); e.target.blur(); });
+$('#start').addEventListener('click', (e) => { startAudio(); unfocus(e.currentTarget); });
+$('#midi-btn').addEventListener('click', (e) => { initMIDI(); unfocus(e.currentTarget); });
+if (host) startAudio(); // in a plugin's window: its sound, at once (the host has the MIDI)
+else resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
+$('#panic').addEventListener('click', (e) => { panic(); unfocus(e.currentTarget); });
+$('#replay').addEventListener('click', (e) => { motion.replay(); unfocus(e.currentTarget); });
+$('#speed').addEventListener('change', (e) => { motion.speed = +e.target.value; motion.replay(); unfocus(e.target); });
 const CAPTIONS = {
   spectrum: 'Stems: partials just after the strike (dB re. loudest). Grey: live output. Faint lines: exact harmonics n·f₀.',
   inharm: 'Deviation of partial n from n × that family’s own fundamental, in cents (stiffness stretches; taper bends).',
@@ -578,7 +590,7 @@ function setSpecMode(mode) {
   $('#spec-caption').textContent = CAPTIONS[mode];
 }
 for (const b of document.querySelectorAll('.tab')) {
-  b.addEventListener('click', () => { setSpecMode(b.dataset.mode); b.blur(); });
+  b.addEventListener('click', () => { setSpecMode(b.dataset.mode); unfocus(b); });
 }
 setSpecMode('spectrum');
 window.addEventListener('resize', () => drawSection($('#section'), keyData(focusKey).model, P));
@@ -586,7 +598,7 @@ window.addEventListener('resize', () => drawSection($('#section'), keyData(focus
 buildControls();
 for (const id of controls.keys()) refreshControl(id);
 refreshVisibility();
-attachScala({ set: (v) => setAll({ ...P, ...v }), toast }); // (this page has no user presets to attach it)
+attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v, o) => setAll({ ...P, ...v }, o), defaults: DEFAULTS, toast }); // your own presets and links, Morph and the Scala button
 qualityControl(); // the device's Quality, after the controls
 updateHelp();
 keyboardView.labels(keyLabels());

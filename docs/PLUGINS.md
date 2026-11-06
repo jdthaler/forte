@@ -36,7 +36,7 @@ land.
 | Repository | **This repo, under `native/`** | The C++ sits next to the site it feeds; one CI, one changelog, one pull request per port. Dependencies pinned. |
 | Built WebAssembly | **Committed**, like the demo `.m4a` files | The site keeps needing no build step to serve or to run locally. CI rebuilds with a pinned Emscripten and fails if the committed files are stale. |
 | Pilot | **The template, then the Bubble Organ** | The template proves the pipeline on trivial physics and becomes the native starting point for new instruments; the bubble organ exercises dropdowns, presets, the hold pedal and the mod wheel. |
-| Plugin UI | **The DAW's generic panel** in phase 1, then **a web view** (Forte 0.21.0) | No custom window to build or maintain while the physics is ported. Since Forte 0.21.0 every format has a window: the instrument's controls and a playable keyboard in a web view (`native/plugin/editor.html`), so the standalone apps can be played without a MIDI keyboard. The site's views can join it later. |
+| Plugin UI | **The DAW's generic panel** in phase 1, then **a web view** (Forte 0.21.0) | No custom window to build or maintain while the physics is ported. Since Forte 0.21.0 every format has a window: the instrument's controls and a playable keyboard in a web view (`native/plugin/editor.html`), so the standalone apps can be played without a MIDI keyboard. Since the release after Forte 0.45.0 its *Views* pane shows the instrument's page's own views, fed by the plugin. |
 
 **The framework, changed.** The plan first chose iPlug2. Checked at the start (iPlug2 master,
 August 2026), it has no Linux support at all: its README lists macOS, iOS, Windows and the web,
@@ -404,6 +404,15 @@ Done (Forte 0.13.0; per instrument and automatic in 0.17.0):
    (the download in place, nothing installed) and `make unquarantine` (clears the Mac's
    quarantine where the plugins are, or in a folder named with `APP_DIR=`…), each also for one
    format (`make install-au`, `make check-app`, `make unquarantine-app`…), which the workflow runs on every instrument's archive before keeping it.
+   Beside them, from the folder packed as every instrument's: Windows' installer,
+   `Forte-plugins-windows-setup.exe` (`tools/windows-installer.mjs` writes its Inno Setup script;
+   its components are the formats and the instruments), and Linux's packages,
+   `Forte-plugins-linux.deb` and `.rpm` (`tools/package-linux.sh`; the version is Forte's with
+   the commit's time as its release, so every plugin release upgrades). The workflow installs
+   each on a clean system and checks it with the download's own `install.cmd verify` or
+   `install.sh verify`: the installer on the Windows runner (everything, then one instrument's
+   CLAP alone, each uninstalled after), the packages in Debian 13, Ubuntu 24.04 and Fedora 42
+   containers (`tools/test-linux-packages.sh`).
 2. The `release-plugins` workflow runs after every green `native` run on `live` (pull requests,
    a release's into `live` too, build and validate on Linux only, so the site goes live as soon
    as a release merges; `live` itself and a run started by hand add macOS, Windows, auval and
@@ -453,8 +462,17 @@ themselves too (`native/install.cmd`, `install.ps1`).
 
 ### 6. Later
 - The plugin window (Forte 0.21.0: `native/plugin/editor.h`, `editor.html`) shows the controls
-  and a keyboard. Still to come: the site's views (the modes, the waveforms), fed from the
-  engine's messages, and each page's own layout of its controls (`showIf`, hints).
+  and a keyboard. The site's views (the modes, the waveforms): done, for the next release. The
+  window's *Views* button opens a pane above the controls with the instrument's own page in it
+  (`shared/in-plugin.js`), showing only its views. Each plugin carries its page and `shared/`
+  (`native/cmake/site.cmake`, about 300 KB) and serves them to its web view itself, so nothing
+  comes from the network. While the pane is open the plugin's polls bring the engine's messages
+  (`Engine::post`, which the page's `<slug>-wasm.js` translates as its worklet would) and its
+  sound before the output chain, which a stand-in for Web Audio's `AnalyserNode` reads. The
+  parameters, keys and pedal are the plugin's, whoever moves them. Where a page's translator
+  reads the engine's memory (Huygens's lamp firings, the springs' echo), the plugin copies that
+  data out on the audio thread and sends it with the message (`native/plugin/site.h`, `Views`;
+  `<slug>-views.cpp`). Still to come: each page's own layout of its controls (`showIf`, hints).
 - MIDI Polyphonic Expression: done, for the next release. `forte/mpe.h` decodes MPE zones
   (Auto, the default, waits for the MPE Configuration Message; On and Off in the plugin's MPE
   parameter); CLAP note expressions (tuning, brightness, pressure) reach the same per-note

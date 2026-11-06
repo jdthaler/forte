@@ -6,16 +6,18 @@ import { INSTRUMENT, GROUPS, DEFAULTS, PRESETS } from './blackhole-instrument.js
 import { ALL_PARAMS, fmtSpin, noteName, KEY_LO, KEY_HI, spinFromU } from './ringdown-params.js';
 import { wasmModel } from './blackhole-wasm.js';
 import { createChain } from '../../shared/chain.js';
-import { SpectrogramView } from '../../shared/views.js';
+import { SpectrogramView, animate } from '../../shared/views.js';
 import { drawPlane, drawKerr, WaveView, Lazy } from './ringdown-viz.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, wheelValue, pageMpe, touched, SOFT_PEDAL, createSostenuto, controllersOf, controlled, tellFader } from '../../shared/midi.js';
-import { controlOwns } from '../../shared/focus.js';
+import { startMIDI, resumeMIDI, pageMIDI, wheelValue, pageMpe, touched, SOFT_PEDAL, createSostenuto, controllersOf, controlled, tellFader } from '../../shared/midi.js';
+import { controlOwns, unfocus } from '../../shared/focus.js';
 import { trimGain } from '../../shared/registry.js';
 import { attachPresets } from '../../shared/user-presets.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
 import { connectQuality, qualityControl } from '../../shared/quality.js';
 import { dress, faceOf } from '../../shared/faces.js';
+import { computerKey } from '../../shared/taps.js'; // a second instrument's share of the computer keys (shared/layer.js)
+import { host, follow } from '../../shared/in-plugin.js';
 
 const $ = (s) => document.querySelector(s);
 const STORE = 'blackhole-keyboard/params/v1';
@@ -25,7 +27,7 @@ function save() { try { localStorage.setItem(STORE, JSON.stringify(P)); } catch 
 let P = load(), fs = 48000, base = 48, focusKey = 60, lastVel = 1;
 const held = new Map();
 // all the parameters: the engine builds each key's voice from them as the note starts
-const paramsMessage = () => ({ type: 'params', P: { ...P } });
+const paramsMessage = (swap = false) => ({ type: 'params', P: { ...P }, ...(swap && { swap }) }); // swap: a preset's change, faded across (shared/worklet.js)
 
 // The WebAssembly model (blackhole-wasm.js): the QNM bank, each key's voice and its strain, the
 // same C++ the engine plays.
@@ -41,6 +43,11 @@ let audio = null, starting = null, live = false; // live: the context has resume
 function startAudio() {
   if (live) { if (audio.ctx.state !== 'running') audio.ctx.resume(); return Promise.resolve(audio); }
   if (starting) return starting;
+  if (host) { // in the plugin's window: the plugin plays, and the views follow it (shared/in-plugin.js)
+    starting = follow({ wasm: INSTRUMENT.wasm, params: ALL_PARAMS, P: () => P, set: fromPlugin, on: (key, vel) => noteOn(key, vel), off: noteOff, message: onEngine })
+      .then((a) => { audio = a; live = true; fs = a.ctx.sampleRate; const an = a.ctx.createAnalyser(); an.fftSize = 2048; an.smoothingTimeConstant = 0; spectro.setAnalyser(an); return a; });
+    return starting;
+  }
   starting = (async () => {
     const ctx = new AudioContext({ latencyHint: 'interactive' });
     if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
@@ -52,10 +59,7 @@ function startAudio() {
       numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { wasm: { name: INSTRUMENT.wasm.name, bytes } },
     });
     const chain = createChain(ctx, node, INSTRUMENT.chain); // tone → master (+ room) → limiter
-    node.port.onmessage = (e) => {
-      if (e.data.type === 'voices') $('#voices').textContent = `${e.data.voices} ringing`; // the engine's, every 48 blocks
-      else if (e.data.type === 'error') toast(e.data.message);
-    };
+    node.port.onmessage = (e) => onEngine(e.data);
     fs = ctx.sampleRate; // voices are cached per sample rate (voiceFor)
     const analyser = ctx.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0;
     chain.tap.connect(analyser); spectro.setAnalyser(analyser);
@@ -71,6 +75,10 @@ function startAudio() {
   })();
   starting.catch((err) => { toast(`Audio failed to start: ${err.message}`); starting = null; });
   return starting;
+}
+function onEngine(m) {
+  if (m.type === 'voices') $('#voices').textContent = `${m.voices} ringing`; // the engine's, every 48 blocks
+  else if (m.type === 'error') toast(m.message);
 }
 const post = (m) => { if (live) audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
 function applyMix() { if (audio) audio.chain.apply(P, trimGain('blackhole')); } // trim: level-matched across instruments
@@ -116,10 +124,10 @@ window.addEventListener('keydown', (e) => {
   e.preventDefault();
   if (e.repeat || held.has(e.code)) return;
   held.set(e.code, key);
-  noteOn(key);
+  if (computerKey(key, true)) noteOn(key);
 });
-window.addEventListener('keyup', (e) => { const key = held.get(e.code); if (key !== undefined) { held.delete(e.code); noteOff(key); } });
-window.addEventListener('blur', () => { for (const k of held.values()) noteOff(k); held.clear(); });
+window.addEventListener('keyup', (e) => { const key = held.get(e.code); if (key !== undefined) { held.delete(e.code); if (computerKey(key, false)) noteOff(key); } });
+window.addEventListener('blur', () => { for (const k of held.values()) if (computerKey(k, false)) noteOff(k); held.clear(); });
 function shiftOctave(d) { const nb = base + d; if (nb + 11 < KEY_LO || nb > KEY_HI - 12) return; /* never a whole row of computer keys out of range */ base = nb; keyboardView.labels(keyLabels()); updateHelp(); }
 function updateHelp() {
   $('#oct').textContent = `${noteName(Math.max(KEY_LO, base))}–${noteName(Math.min(KEY_HI, base + 31))}`;
@@ -131,6 +139,7 @@ function initMIDI() {
 }
 const notes = pageMpe({ post, params: () => P, modWheel: INSTRUMENT.modWheel, groups: GROUPS }); // MPE: each note's own
 const ccs = controllersOf(INSTRUMENT), ccLast = {}; // the descriptor's faders and pad (and controllers)
+pageMIDI({ onMIDI, controllers: ccs }); // a song played from a MIDI file (shared/songs.js) plays it as a keyboard would
 function onMIDI(ev) {
   const [st, d1, d2] = ev.data, cmd = st & 0xf0, mpe = notes.midi(ev.data);
   if (mpe.own) return;
@@ -169,7 +178,7 @@ function buildControls() {
         wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;
         input = document.createElement('select'); input.id = `p-${p.id}`;
         for (const [k, name] of p.options) input.add(new Option(name, k));
-        input.addEventListener('change', () => { setParam(p.id, typeof p.def === 'number' ? +input.value : input.value); input.blur(); });
+        input.addEventListener('change', () => { setParam(p.id, typeof p.def === 'number' ? +input.value : input.value); unfocus(input); });
         wrap.appendChild(input);
       } else if (p.type === 'checkbox') {
         wrap.classList.add('check');
@@ -198,10 +207,10 @@ function buildControls() {
   PRESETS.forEach((pr, i) => ps.add(new Option(pr.name, i)));
   ps.addEventListener('change', () => {
     if (ps.value === '') return;
-    setAll({ ...DEFAULTS, ...Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]])), ...PRESETS[+ps.value].p });
-    ps.blur();
+    setAll({ ...DEFAULTS, ...Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]])), ...PRESETS[+ps.value].p }, { swap: true });
+    unfocus(ps);
   });
-  $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }); $('#preset').value = ''; });
+  $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }, { swap: true }); $('#preset').value = ''; });
 }
 function refreshControl(id, dragging = false) {
   const c = controls.get(id);
@@ -211,11 +220,14 @@ function refreshControl(id, dragging = false) {
   else { if (!dragging) c.input.value = toSlider(c.p, P[id]); c.val.textContent = c.p.fmt ? c.p.fmt(P[id]) : String(P[id]); c.face?.show(); }
 }
 function refreshVisibility() { for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(P) : false; }
-function setAll(np) {
+// the plugin's values (shared/in-plugin.js): one as a control moving it, several as a preset
+function fromPlugin(c) { const ids = Object.keys(c); if (ids.length === 1) setParam(ids[0], c[ids[0]]); else setAll({ ...P, ...c }); }
+function setAll(np, { swap = false } = {}) {
   P = np;
   for (const id of controls.keys()) refreshControl(id);
-  refreshVisibility(); post(paramsMessage()); applyMix(); updateHelp(); save();
+  refreshVisibility(); post(paramsMessage(swap)); applyMix(); updateHelp(); save();
   setFocus(focusKey, lastVel);
+  if (swap) document.dispatchEvent(new CustomEvent('forte-preset', { detail: { ...P } })); // a preset: the RISE's panel shows its faders (shared/rise.js)
 }
 let focusTimer = 0;
 function setParam(id, v, dragging = false) {
@@ -278,7 +290,6 @@ const lvl = (m) => Math.hypot(m.cpr, m.cpi) + Math.hypot(m.cxr, m.cxi);
 plane.draw = () => drawPlane(plane.cv, model.bank, spinFromU(P.spinU), focusVoice.modes.map((m) => ({ l: m.l, m: m.m, n: m.n, level: lvl(m) })));
 kerr.draw = () => drawKerr(kerr.cv, spinFromU(P.spinU), P.inclination);
 function frame() {
-  requestAnimationFrame(frame);
   if (focusDue) renderFocus();
   if (focusVoice) { plane.frame(); kerr.frame(); }
   wave.frame();
@@ -286,13 +297,14 @@ function frame() {
 
 let toastTimer = 0;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3500); }
-$('#start').addEventListener('click', (e) => { startAudio(); e.currentTarget.blur(); });
-$('#midi-btn').addEventListener('click', (e) => { initMIDI(); e.currentTarget.blur(); });
-resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
-$('#panic').addEventListener('click', (e) => { down.clear(); sost.clear(); soft = false; post({ type: 'panic' }); e.currentTarget.blur(); });
+$('#start').addEventListener('click', (e) => { startAudio(); unfocus(e.currentTarget); });
+$('#midi-btn').addEventListener('click', (e) => { initMIDI(); unfocus(e.currentTarget); });
+if (host) startAudio(); // in a plugin's window: its sound, at once (the host has the MIDI)
+else resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
+$('#panic').addEventListener('click', (e) => { down.clear(); sost.clear(); soft = false; post({ type: 'panic' }); unfocus(e.currentTarget); });
 for (const b of document.querySelectorAll('.tab')) b.addEventListener('click', () => {
   document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x === b));
-  wave.mode = b.dataset.mode; wave.touch(); b.blur();
+  wave.mode = b.dataset.mode; wave.touch(); unfocus(b);
 });
 
 buildControls();
@@ -301,6 +313,6 @@ refreshVisibility();
 keyboardView.labels(keyLabels());
 updateHelp();
 setFocus(60, 1);
-requestAnimationFrame(frame);
-attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v) => setAll({ ...P, ...v }), toast }); // your own presets and links
+animate(frame);
+attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v, o) => setAll({ ...P, ...v }, o), defaults: DEFAULTS, toast }); // your own presets and links
 qualityControl(); // the device's Quality, after the controls

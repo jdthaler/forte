@@ -11,9 +11,14 @@ const BUILD = { id: 'huygens', name: 'HuygensWasmEngine', groups: GROUPS, binary
 
 // The C++ engine's one message (huygens-engine.h, msg::state) says the page's state is due: the
 // firings, which need double precision, are read back from the engine into the page's 'state'
-// message ({ t, fs, hold, osc, fires }).
+// message ({ t, fs, hold, osc, fires }). In the plugin's window the plugin has read them already,
+// in the same order, into the message's data (native/instruments/huygens/huygens-views.cpp).
 function messages(m, e) {
   if (m.type !== 1) return null;
+  if (m.data) {
+    const [nf, no, t, hold] = m.data;
+    return { type: 'state', t, fs: e.fs, hold, fires: m.data.slice(4, 4 + nf), osc: m.data.slice(4 + nf, 4 + nf + no) };
+  }
   const x = Base.exports, s = scratch(x);
   x.huygens_state(e.e, s.at);
   const [nf, no, t, hold] = s.f64(4);

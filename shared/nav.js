@@ -1,7 +1,7 @@
 // nav.js — the Forte header on every instrument page: the instrument's name is
 // also the menu (Forte's home page, and every instrument by kind), built from the
-// registry. It also brings in the page layout (layout.js) and How it works
-// (notes.js), which shows the version.
+// registry. It also brings in the page layout (layout.js), How it works
+// (notes.js), which shows the version, and Songs (songs.js).
 //
 // Usage on an instrument page:
 //   <body data-instrument="organ">
@@ -12,6 +12,7 @@
 import { INSTRUMENTS, SECTIONS, FORTE_VERSION } from './registry.js';
 import './layout.js';
 import './notes.js';
+import './songs.js';
 
 const here = document.body.dataset.instrument || '';
 const root = document.body.dataset.root ?? '../';

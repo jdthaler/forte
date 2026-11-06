@@ -34,14 +34,17 @@
 // tools to either bar: barTools('views') or barTools('controls').
 
 import { rotaryKnob } from './faces.js';
-import { focusedByPointer } from './focus.js';
+import { focusedByPointer, unfocus } from './focus.js';
+import { attachLayer } from './layer.js';
+import { inPlugin } from './in-plugin.js';
 
 const body = document.body;
 const STORE = `forte/${body.dataset.instrument || 'page'}/layout/v1`;
 const MODE = 'forte/mode/v1';
 const touch = matchMedia('(pointer: coarse)').matches;
-const phoneQuery = matchMedia('(max-width: 600px), (max-width: 1050px) and (max-height: 500px)'); // as shared/layout.css
-const sidewaysQuery = matchMedia('(max-width: 1050px) and (max-height: 500px)'); // a phone held sideways, as layout.css
+// (in a plugin's window, never: it is a desktop's, however short the views' frame; shared/in-plugin.js)
+const phoneQuery = matchMedia(inPlugin ? 'not all' : '(max-width: 600px), (max-width: 1050px) and (max-height: 500px)'); // as shared/layout.css
+const sidewaysQuery = matchMedia(inPlugin ? 'not all' : '(max-width: 1050px) and (max-height: 500px)'); // a phone held sideways, as layout.css
 const SIZES = ['s', 'm', 'l', 'xl'];
 const KEY_W = { s: 22, m: 30, l: 42, xl: 56 }; // the narrowest a white key may be, px
 if (!navigator.requestMIDIAccess) body.classList.add('no-midi'); // Safari, and every browser on iPhone and iPad: no MIDI button (About Forte says where MIDI works)
@@ -59,7 +62,7 @@ const prefs = (() => {
   };
 })();
 const save = () => { try { localStorage.setItem(STORE, JSON.stringify(prefs)); } catch { /* storage unavailable */ } };
-let mode = (() => { try { return localStorage.getItem(MODE) === 'perform' ? 'perform' : 'discover'; } catch { return 'discover'; } })();
+let mode = (() => { try { return !inPlugin && localStorage.getItem(MODE) === 'perform' ? 'perform' : 'discover'; } catch { return 'discover'; } })();
 const performing = () => mode === 'perform';
 // The views' share of the height the views and the controls have between them, on every page:
 // 0 folds the views away, 1 the controls; `open` is the share to go back to from either.
@@ -76,7 +79,12 @@ const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B�
 const noteName = (m) => NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
-function button(text, title) { const b = el('button', '', text); b.type = 'button'; if (title) b.title = title; return b; }
+// (a button drawn with a symbol, ◀ ⌨ +, is named by its title: a screen reader can't say a glyph)
+function button(text, title) {
+  const b = el('button', '', text); b.type = 'button';
+  if (title) { b.title = title; if (!/[\p{L}\p{N}]/u.test(text)) b.setAttribute('aria-label', title); }
+  return b;
+}
 function infoButton(label) {
   const b = button('i');
   b.className = 'forte-info';
@@ -143,6 +151,18 @@ const views = shown.map((card, i) => {
   const key = viewKey(card, i);
   return { card, key, name: viewName(card, i), on: () => (touring ? touring.has(key) : prefs.views[key] ?? main.includes(card)) };
 });
+// A view's canvas is a picture to a screen reader: named by its view and described by its
+// caption (which waits behind the view's ⓘ).
+for (const { card, key, name } of views) {
+  const cvs = [...card.querySelectorAll('canvas')].filter((cv) => !cv.hasAttribute('aria-label') && cv.getAttribute('aria-hidden') !== 'true');
+  const cap = card.querySelector('.caption');
+  if (cap && !cap.id) cap.id = `forte-caption-${key}`;
+  cvs.forEach((cv, i) => {
+    cv.setAttribute('role', 'img');
+    cv.setAttribute('aria-label', cvs.length > 1 ? `${name}, ${i + 1} of ${cvs.length}` : name);
+    if (cap) cv.setAttribute('aria-describedby', cap.id);
+  });
+}
 let stage = null, hint = null;
 if (viewsEl && shown.length && mainEl) {
   bars.views = makeBar('views', 'Views', 'Views to show', viewsEl);
@@ -151,7 +171,7 @@ if (viewsEl && shown.length && mainEl) {
     v.toggle.addEventListener('click', () => {
       if (touring) { if (!touring.delete(v.key)) touring.add(v.key); } // for this step of the tour only
       else { prefs.views[v.key] = !v.on(); save(); }
-      apply(); v.toggle.blur();
+      apply(); unfocus(v.toggle);
     });
     bars.views.row.appendChild(v.toggle);
   }
@@ -228,8 +248,12 @@ function addGroups() {
     const sum = det.querySelector('summary'), name = (surface ? det.dataset.view : sum?.textContent.trim()) || `Controls ${groups.length + 1}`;
     const key = det.dataset.key = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     sum?.addEventListener('click', (e) => e.preventDefault());
+    // its title opens nothing (the toggle in the bar does): no stop for Tab, and it names the group
+    if (sum) sum.tabIndex = -1;
+    det.setAttribute('role', 'group');
+    det.setAttribute('aria-label', name);
     const g = { det, key, on: () => prefs.groups[key] ?? true, toggle: button(name, 'Show or hide these controls') };
-    g.toggle.addEventListener('click', () => { prefs.groups[key] = !g.on(); save(); apply(); g.toggle.blur(); });
+    g.toggle.addEventListener('click', () => { prefs.groups[key] = !g.on(); save(); apply(); unfocus(g.toggle); });
     bars.controls.row.appendChild(g.toggle);
     groups.push(g);
   }
@@ -245,7 +269,7 @@ for (const c of shown) {
   const h2 = c.querySelector('.card-head h2') || c.querySelector('h2');
   if (!h2 || !c.querySelector('.caption')) continue;
   const b = infoButton(`What ${viewName(c, 0)} shows`);
-  b.addEventListener('click', () => { b.setAttribute('aria-expanded', String(c.classList.toggle('notes-open'))); b.blur(); });
+  b.addEventListener('click', () => { b.setAttribute('aria-expanded', String(c.classList.toggle('notes-open'))); unfocus(b); });
   h2.appendChild(b);
   c.classList.add('has-notes');
 }
@@ -272,7 +296,7 @@ function share() {
   return touring && v === 0 ? (performing() ? 1 : split.open) : v; // a tour shows its views, folded or not
 }
 function chosenShare() {
-  if (!bars.controls) return 1;
+  if (!bars.controls || inPlugin) return 1; // in a plugin's window, the views alone: the window has the controls
   if (!bars.views) return 0;
   if (performing()) return !prefs.perform.controls ? 1 : phoneQuery.matches ? 0 : split.views > 0 && split.views < 1 ? split.views : split.open;
   return groups.length ? split.views : 1;
@@ -354,7 +378,7 @@ function fold(kind) {
 }
 for (const kind of ['views', 'controls']) {
   const b = bars[kind]?.fold;
-  b?.addEventListener('click', () => { fold(kind); b.blur(); });
+  b?.addEventListener('click', () => { fold(kind); unfocus(b); });
 }
 // On a phone the controls' bar sticks above the keys with the controls out of sight below it
 // until the page scrolls them up: so long as it does, its chevron points up and brings them up.
@@ -404,6 +428,7 @@ if (footer && sidebar) footer.prepend(strip);
 const bubble = el('div', 'forte-hint-pop');
 bubble.id = 'forte-hint-pop';
 bubble.setAttribute('role', 'note');
+bubble.setAttribute('aria-live', 'polite'); // read out as it opens: it sits at the end of the page
 bubble.hidden = true;
 let bubbleFor = null;
 function closeHint() {
@@ -451,6 +476,7 @@ function twin(p) {
   t.dataset.placed = '';
   t.dataset.twin = '';
   for (const n of t.querySelectorAll('[id]')) n.id += TWIN;
+  for (const n of t.querySelectorAll('[aria-describedby]')) n.setAttribute('aria-describedby', n.getAttribute('aria-describedby') + TWIN);
   for (const l of t.querySelectorAll('label[for]')) l.htmlFor += TWIN;
   const a = p.querySelector('input, select'), b = t.querySelector('input, select');
   if (!a || !b) return null;
@@ -516,7 +542,7 @@ function segment(p, label) {
     const b = button(names[i], o.text);
     b.addEventListener('click', () => {
       if (sel.value !== o.value) { sel.value = o.value; sel.dispatchEvent(new Event('change', { bubbles: true })); }
-      b.blur();
+      unfocus(b);
     });
     return b;
   });
@@ -572,7 +598,7 @@ function pedalParam(label, buttons) {
   const keys = el('div', 'forte-pedal-pair');
   keys.append(...buttons);
   const hint = el('div', 'hint', `${pedal ? `The ${label.toLowerCase()} pedal: the` : 'The'} same as holding the Space bar, or a MIDI sustain pedal (CC64). Press and hold it, or Latch it to keep it down until it is tapped again. It is the one above the keys too.`);
-  info.addEventListener('click', () => { info.setAttribute('aria-expanded', String(p.classList.toggle('hint-open'))); info.blur(); });
+  info.addEventListener('click', () => { info.setAttribute('aria-expanded', String(p.classList.toggle('hint-open'))); unfocus(info); });
   p.append(head, keys, hint);
   return p;
 }
@@ -589,6 +615,23 @@ function placePedal() {
   if (after) after.after(pedalRow); else home.appendChild(pedalRow);
 }
 
+// What a screen reader says of a control: a slider's value as the page shows it (10.0 ‰, not 523),
+// and its hint, read after its name.
+let hints = 0;
+function speak(p) {
+  const c = p.querySelector('input, select'), val = p.querySelector('.val'), hint = p.querySelector('.hint');
+  if (!c) return;
+  if (c.type === 'range' && val) {
+    const say = () => { const t = val.textContent.trim(); if (t && c.getAttribute('aria-valuetext') !== t) c.setAttribute('aria-valuetext', t); };
+    new MutationObserver(say).observe(val, { childList: true, characterData: true, subtree: true });
+    say();
+  }
+  if (hint && !c.hasAttribute('aria-describedby')) {
+    if (!hint.id) hint.id = `forte-hint-${++hints}`;
+    c.setAttribute('aria-describedby', hint.id);
+  }
+}
+
 // Above the keys a label drops its explanation, "(…)" or "= …": "Dome rise (curvature)" is
 // "Dome rise". The whole name stays the control's name, its tooltip and its ⓘ's title.
 const shortLabel = (t) => t.replace(/\s*\([^()]*\)\s*$/, '').replace(/\s+=\s.*$/, '').trim() || t;
@@ -602,6 +645,7 @@ function placeControls() {
   const fresh = sidebar.querySelectorAll('.param:not([data-placed])');
   for (const p of fresh) {
     p.dataset.placed = '';
+    speak(p);
     // (a face's label is short, perhaps hyphenated: its control's accessible name is the whole one)
     const lab = p.querySelector('label'), hint = p.querySelector('.hint')?.textContent;
     const label = (p.dataset.face && p.querySelector('input, select')?.getAttribute('aria-label')) || (lab?.textContent ?? '').replace(/\u00ad/g, '');
@@ -618,12 +662,12 @@ function placeControls() {
       if (t) {
         p.before(t);
         const ti = t.querySelector('.forte-info');
-        ti?.addEventListener('click', () => { ti.setAttribute('aria-expanded', String(t.classList.toggle('hint-open'))); ti.blur(); });
+        ti?.addEventListener('click', () => { ti.setAttribute('aria-expanded', String(t.classList.toggle('hint-open'))); unfocus(ti); });
       }
       if (!p.title) p.title = label; // the whole name, when the tile cuts it short
       if (info) {
         info.setAttribute('aria-controls', bubble.id);
-        info.addEventListener('click', () => { openHint(info, p, label, hint); info.blur(); });
+        info.addEventListener('click', () => { openHint(info, p, label, hint); unfocus(info); });
       }
       // a switch drawn as the instrument has it (a regal's drawknob) is too big for the bar: there
       // it is a plain checkbox, named as the parameter is; its twin in the panel keeps the face
@@ -643,7 +687,7 @@ function placeControls() {
       if (p.querySelector('#p-velocity')) p.classList.add('keys-only');
       strip.appendChild(p);
     } else if (info) {
-      info.addEventListener('click', () => { info.setAttribute('aria-expanded', String(p.classList.toggle('hint-open'))); info.blur(); });
+      info.addEventListener('click', () => { info.setAttribute('aria-expanded', String(p.classList.toggle('hint-open'))); unfocus(info); });
     }
   }
 }
@@ -677,7 +721,7 @@ function setMode(m) {
   ]) {
     const b = button(text, title);
     b.dataset.mode = m;
-    b.addEventListener('click', () => { setMode(m); b.blur(); });
+    b.addEventListener('click', () => { setMode(m); unfocus(b); });
     seg.appendChild(b); modeBtns.push(b);
   }
   if (bars.views) bars.views.tools.appendChild(seg);
@@ -693,7 +737,7 @@ if (presets) {
     e.stopPropagation();
     e.target.value = '';
     presets.querySelector('#reset')?.click();
-    e.target.blur();
+    unfocus(e.target);
   }, true);
 }
 // In Perform the presets and More controls join the keyboard bar (once it's built), and the
@@ -719,7 +763,7 @@ if (header) {
     fs.addEventListener('click', () => {
       if (isFull()) (d.exitFullscreen || d.webkitExitFullscreen).call(d);
       else Promise.resolve((root.requestFullscreen || root.webkitRequestFullscreen).call(root)).catch(() => {});
-      fs.blur();
+      unfocus(fs);
     });
     const label = () => { fs.textContent = isFull() ? 'Leave full screen' : 'Full screen'; };
     d.addEventListener('fullscreenchange', label);
@@ -778,6 +822,7 @@ sidewaysQuery.addEventListener('change', placeTools);
 tall.addEventListener('change', arrange);
 apply();
 document.querySelector('#toast')?.setAttribute('role', 'status');
+document.querySelector('#midi')?.setAttribute('role', 'status'); // MIDI on, a device connected
 if (window.ResizeObserver) {
   // the views rearrange as their room changes shape (a drag of the handle, the window)
   if (stage) new ResizeObserver(() => { const c = cols; arrange(); if (cols !== c) window.dispatchEvent(new Event('resize')); }).observe(stage);
@@ -809,12 +854,15 @@ export function attachKeyboard(kb) {
     kbtn.setAttribute('aria-expanded', 'false');
     kbtn.setAttribute('aria-controls', pop.id);
     const show = (on) => { pop.hidden = !on; kbtn.setAttribute('aria-expanded', String(on)); };
-    kbtn.addEventListener('click', () => { show(pop.hidden); kbtn.blur(); });
+    kbtn.addEventListener('click', () => { show(pop.hidden); unfocus(kbtn); });
     document.addEventListener('pointerdown', (e) => { if (!pop.hidden && !pop.contains(e.target) && !kbtn.contains(e.target)) show(false); }, true);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') show(false); });
     bar.appendChild(kbtn);
     row.appendChild(pop);
   }
+  // a second instrument, layered or split (shared/layer.js)
+  const layer = inPlugin ? null : attachLayer(kb); // not in a plugin's window: the page plays nothing there
+  if (layer) { bar.appendChild(layer.button); row.appendChild(layer.pop); }
 
   // The window onto the range: as many white keys as fit at the chosen width, moved
   // an octave at a time with ◀ ▶ or anywhere by dragging the overview.
@@ -828,6 +876,7 @@ export function attachKeyboard(kb) {
   map.setAttribute('aria-label', 'Which keys are shown');
   map.tabIndex = 0;
   const cv = el('canvas');
+  cv.setAttribute('aria-hidden', 'true'); // the slider says what it shows
   map.appendChild(cv);
   const show = (f, remember = true) => {
     first = clamp(Math.round(f), 0, whites.length - count);
@@ -869,8 +918,8 @@ export function attachKeyboard(kb) {
     bar.classList.remove('measure');
     bar.classList.toggle('stacked', over);
   }
-  prev.addEventListener('click', () => { show(first - 7); prev.blur(); });
-  next.addEventListener('click', () => { show(first + 7); next.blur(); });
+  prev.addEventListener('click', () => { show(first - 7); unfocus(prev); });
+  next.addEventListener('click', () => { show(first + 7); unfocus(next); });
   map.addEventListener('keydown', (e) => {
     const d = { ArrowLeft: -1, ArrowRight: 1, PageDown: -7, PageUp: 7 }[e.key];
     if (d) { e.preventDefault(); e.stopPropagation(); show(first + d); }
@@ -924,8 +973,8 @@ export function attachKeyboard(kb) {
     prefs.kb = SIZES[clamp(SIZES.indexOf(prefs.kb) + d, 0, SIZES.length - 1)];
     save(); apply(); fit(true); zoomed();
   };
-  smaller.addEventListener('click', () => { zoom(-1); smaller.blur(); });
-  larger.addEventListener('click', () => { zoom(1); larger.blur(); });
+  smaller.addEventListener('click', () => { zoom(-1); unfocus(smaller); });
+  larger.addEventListener('click', () => { zoom(1); unfocus(larger); });
   zoomed();
   const sizes = el('div', 'forte-kbsize');
   sizes.setAttribute('role', 'group');

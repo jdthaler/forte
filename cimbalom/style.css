@@ -1,0 +1,6 @@
+/* The page's own palette and any layout beyond shared/instrument.css: a walnut case and steel strings. */
+:root {
+  --accent: #e0955a;
+  --accent-2: #8cc8dc;
+  --accent-ink: #1e1006;
+}

@@ -489,6 +489,25 @@ test('tremulant: its valve pulses the chest’s pressure at its rate (within 2 %
     assert.ok(depth > 0.01 && depth < 0.2, `±${(depth * 100).toFixed(1)} %`);
   }
 });
+test('aftertouch leans on the bellows: the hardest-pressed key (or the channel) sets the weights up to double the wind, capped at 6000 Pa; key up lets it back; louder', () => {
+  const Pset = [];
+  const pk = (key, value) => ({ type: 'pressure', key, value });
+  const r = run(P({ noise: 0 }), [[0, 'on', 60, 0.7], [0, 'on', 64, 0.7], [0.6, 'msg', pk(60, 0.5)], [0.6, 'msg', pk(64, 1)], [1.2, 'msg', pk(64, 0)],
+    [1.8, 'off', 60], [2.4, 'msg', pk(null, 1)], [3.0, 'off', 64]], 3.6, { tap: (e, t) => Pset.push([t, e.Pset]) });
+  const at = (t) => Pset.find(([u]) => u >= t)[1];
+  assert.ok(rel(at(0.55), 700) < 1e-6, `before: ${at(0.55)}`);
+  assert.ok(rel(at(1.15), 1400) < 0.01, `full press on one key: ${at(1.15).toFixed(1)} Pa`);
+  assert.ok(rel(at(1.75), 1050) < 0.01, `the other key's half: ${at(1.75).toFixed(1)} Pa`);
+  assert.ok(rel(at(2.35), 700) < 0.01, `its key up: ${at(2.35).toFixed(1)} Pa`);
+  assert.ok(rel(at(2.95), 1400) < 0.01, `channel pressure: ${at(2.95).toFixed(1)} Pa`);
+  assert.ok(rel(at(3.55), 700) < 0.01, `every key up: ${at(3.55).toFixed(1)} Pa`);
+  const louder = 20 * Math.log10(rms(r.L, Math.round(0.9 * FS), Math.round(1.15 * FS)) / rms(r.L, Math.round(0.3 * FS), Math.round(0.55 * FS)));
+  console.log(`        double the wind: ${louder.toFixed(1)} dB louder`);
+  assert.ok(louder > 1, `louder with more wind: ${louder.toFixed(1)} dB`);
+  const hi = [];
+  run(P({ pressure: 4000, noise: 0 }), [[0, 'on', 60, 0.7], [0.1, 'msg', pk(60, 1)]], 0.6, { tap: (e) => hi.push(e.Pset) });
+  assert.ok(rel(hi[hi.length - 1], 6000) < 0.01, `capped: ${hi[hi.length - 1].toFixed(1)} Pa`);
+});
 // One pipe alone on the Principal's slot of a key, voiced and cut as the organ has it: its sound.
 function onePipe(k, r, sec, { fs = FS, p = {} } = {}) {
   const f = pipeFreq(k, r), st = RANKS[r].stopped, R = pipeModel(f, st, P(p), { tune: tuning(f, st) });

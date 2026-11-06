@@ -12,8 +12,9 @@ import { ASSETS, notes } from '../tools/plugin-release.mjs';
 import { withTags, pictureOf } from '../tools/make-previews.mjs';
 import { readNotes, parseNote, plan, bump, frontPage } from '../tools/release.mjs';
 import { compare, stateOf, contractPath, STATES } from '../tools/contract.mjs';
-import { TOUCH, SOFT_PEDAL, touch, touched, createSostenuto, wheelValue, FADERS, controllersOf, controlled, ccValue, SWITCHES, levelGain, pedalGain, onPedalGain, startMIDI } from '../shared/midi.js';
-import { LATEST, SYSTEMS, archive, downloads, withPlugins, parseRelease, releaseLine } from '../shared/plugins.js';
+import { TOUCH, SOFT_PEDAL, touch, touched, createSostenuto, wheelValue, FADERS, controllersOf, controlled, ccValue, SWITCHES, levelGain, pedalGain, onPedalGain, startMIDI, keyShift, setShift, shiftOf, signed, OCTAVES, SEMITONES } from '../shared/midi.js';
+import { LATEST, SYSTEMS, archive, downloads, downloadLinks, withPlugins, parseRelease, releaseLine } from '../shared/plugins.js';
+import { script as installerScript, SETUP, APP_ID } from '../tools/windows-installer.mjs';
 
 let failures = 0;
 function test(name, fn) { // returns a promise for an async test
@@ -194,6 +195,46 @@ await test('a foot controller (a Roland FC-300 as it comes): its switches are th
   }
 });
 
+await test('Octave and Transpose move the MIDI keys: a note-off and poly pressure go where their note-on went, past 0…127 nowhere', async () => {
+  assert.equal(OCTAVES, 4); assert.equal(SEMITONES, 12);
+  assert.equal(keyShift(), 0, 'nothing moves until the player says so');
+  assert.deepEqual([signed(2), signed(0), signed(-3)], ['+2', '0', '−3']);
+  const input = { id: 'kb', name: 'Roland', state: 'connected', onmidimessage: null };
+  const acc = { inputs: new Map([['kb', input]]), onstatechange: null };
+  const was = { document: globalThis.document, navigator: globalThis.navigator };
+  Object.defineProperty(globalThis, 'document', { value: { querySelector: () => null, querySelectorAll: () => [] }, configurable: true, writable: true });
+  Object.defineProperty(globalThis, 'navigator', { value: { requestMIDIAccess: async () => acc }, configurable: true, writable: true });
+  const got = [];
+  try {
+    startMIDI({ onMIDI: (ev) => got.push([...ev.data]) });
+    await new Promise((r) => setTimeout(r, 0));
+    const send = (...data) => input.onmidimessage({ data: Uint8Array.from(data) });
+    setShift({ transpose: 2 });
+    assert.equal(keyShift(), 2);
+    send(0x90, 60, 100); send(0xa0, 60, 50);
+    setShift({ octave: -1, transpose: 2 });
+    assert.deepEqual(shiftOf(), { octave: -1, transpose: 2 });
+    assert.equal(keyShift(), -10);
+    send(0x90, 64, 90);
+    send(0x80, 60, 30); send(0x90, 64, 0);
+    assert.deepEqual(got.splice(0), [[0x90, 62, 100], [0xa0, 62, 50], [0x90, 54, 90], [0x80, 62, 30], [0x90, 54, 0]], 'each note ends where it began, however the menus moved since');
+    setShift({ octave: 4, transpose: 12 });
+    send(0x90, 100, 80); send(0xa0, 100, 1); send(0x80, 100, 0);
+    assert.deepEqual(got.splice(0), [], 'past G9: nothing, and nothing of it after');
+    setShift({ octave: 9, transpose: -40 });
+    assert.deepEqual(shiftOf(), { octave: 0, transpose: 0 }, 'out of range: none');
+    setShift({ octave: 1 });
+    send(0x91, 60, 100);
+    input.state = 'disconnected';
+    acc.onstatechange();
+    assert.deepEqual(got.splice(0), [[0x91, 72, 100], [0x81, 72, 0]], 'unplugged: its notes let go where they play');
+  } finally {
+    setShift({ octave: 0, transpose: 0 });
+    Object.defineProperty(globalThis, 'document', { value: was.document, configurable: true, writable: true });
+    Object.defineProperty(globalThis, 'navigator', { value: was.navigator, configurable: true, writable: true });
+  }
+});
+
 console.log('registry');
 test('ids are unique slugs; sections and accents are valid', () => {
   assert.equal(new Set(INSTRUMENTS.map((i) => i.id)).size, INSTRUMENTS.length);
@@ -256,6 +297,14 @@ test('every ready instrument and the front page have a picture and the tags a sh
     assert.equal(html, withTags(html, i), `${page}: its tags are up to date (node tools/make-previews.mjs --tags)`);
   }
 });
+test('every page\'s views animate through shared/views.js (so Reduce Motion slows them all)', () => {
+  // animate(draw, canvas) draws a few times a second, not every frame, with Reduce Motion on; a
+  // loop of the page's own would keep moving
+  const dirs = [...ready.map((i) => `${i.id}/src`), 'docs/template/src'].filter((d) => has(`${d}/`));
+  for (const d of dirs) for (const f of readdirSync(new URL(`${d}/`, R)).filter((n) => n.endsWith('.js'))) {
+    assert.ok(!/requestAnimationFrame\(/.test(read(`${d}/${f}`)), `${d}/${f} runs its own requestAnimationFrame loop: use animate() from shared/views.js`);
+  }
+});
 test('every demo in examples/index.json exists', () => {
   const index = JSON.parse(read('examples/index.json'));
   for (const [id, list] of Object.entries(index)) for (const d of list) assert.ok(has(`examples/${id}/${d.file}`), `${id}/${d.file}`);
@@ -306,6 +355,20 @@ test('the release\'s archives are the ones CI packages and the pages link to', (
   assert.deepEqual(downloads().map((d) => d.app.file), ['Forte-app-macos.zip', 'Forte-app-windows.zip', 'Forte-app-linux.tar.gz']);
   assert.ok(downloads('gongs').every((d) => d.app === null), 'an instrument\'s page offers no Forte app');
   assert.ok(sh.includes('pack Forte-app "Forte app" app Forte'), 'package-plugins.sh packs the Forte app alone');
+  // and what installs itself, beside every instrument's: Windows' installer, Linux's .deb and .rpm
+  assert.deepEqual(downloads().map((d) => d.packages.map((k) => k.file)), [[], ['Forte-plugins-windows-setup.exe'], ['Forte-plugins-linux.deb', 'Forte-plugins-linux.rpm']]);
+  assert.ok(downloads('gongs').every((d) => d.packages.length === 0), 'an instrument\'s page offers no installer or package');
+  assert.ok(downloadLinks().includes(`${LATEST}Forte-plugins-windows-setup.exe`) && downloadLinks().includes(`${LATEST}Forte-plugins-linux.deb`), 'All Plugins links the installer and the packages');
+  assert.ok(sh.includes('node tools/windows-installer.mjs "Forte plugins"') && sh.includes('tools/package-linux.sh "$root/Forte-plugins/Forte plugins"'), 'package-plugins.sh makes the installer and the packages');
+  const linux = read('tools/package-linux.sh');
+  for (const f of ['Forte-plugins-linux.deb', 'Forte-plugins-linux.rpm']) assert.ok(linux.includes(`$out/${f}`), `package-linux.sh writes ${f}`);
+  const iss = installerScript('Forte plugins');
+  assert.ok(iss.includes(`OutputBaseFilename=${SETUP}`) && `${SETUP}.exe` === archive(null, 'windows-setup.exe'), 'the installer is named as All Plugins links it');
+  assert.ok(iss.includes(`AppId=${APP_ID.replace('{', '{{')}`), 'the installer keeps its AppId, so a newer one upgrades');
+  for (const i of withPlugins()) for (const line of [`Name: "instruments\\${i.id}"; Description: "${i.name}"`, `"Forte plugins\\${i.name}.vst3\\*"`, `"Forte plugins\\${i.name}.clap"`, `"Forte plugins\\${i.name}.exe"`])
+    assert.ok(iss.includes(line), `the installer has ${line}`);
+  const ci = read('.github/workflows/native.yml');
+  assert.ok(ci.includes('tools/test-linux-packages.sh') && ci.includes("Setup @('/COMPONENTS="), 'native.yml tries the packages and the installer');
   // every standalone app has its icon, drawn by tools/make-icons.py (forte.cmake passes them on)
   for (const id of ['forte', ...withPlugins().map((i) => i.id)]) for (const ext of ['icns', 'ico'])
     assert.ok(existsSync(new URL(`../native/icons/${id}.${ext}`, import.meta.url)), `native/icons/${id}.${ext} exists (python3 tools/make-icons.py)`);

@@ -58,8 +58,33 @@ function createLimiter(ctx, L) {
   }
 }
 
+// Every chain built to a context's speakers, for shared/layer.js: a second instrument plays on
+// the page's context, and while it does the two go out through one more limiter, at −1 dB with no
+// makeup gain, which only catches what they add up to.
+const chains = []; // { ctx, out (the chain's last node), to (where it goes now) }
+const contextListeners = new Set();
+let together = null; // { ctx, node }: that limiter
+// fn(ctx) once the page has an audio context (now, if it has one)
+export function onAudioContext(fn) {
+  if (chains.length) fn(chains[0].ctx); else contextListeners.add(fn);
+}
+export function limitTogether(ctx, on) {
+  if (on && !together) {
+    together = { ctx, node: createLimiter(ctx, { ...LIMITER, threshold: -1, knee: 0, ratio: 20, attack: 0.001, release: 0.1, makeup: false }) };
+    together.node.connect(ctx.destination);
+  }
+  if (!together || together.ctx !== ctx) return;
+  for (const c of chains) {
+    if (c.ctx !== ctx) continue;
+    const to = on ? together.node : ctx.destination;
+    if (c.to === to) continue;
+    c.out.disconnect(c.to); c.out.connect(to); c.to = to;
+  }
+}
+
 // Build the chain on `ctx` after `node`. Returns the nodes, `tap` (the signal before the
-// body and room, for an analyser) and apply(P, trim), which ramps the gains (20 ms).
+// body and room, for an analyser), apply(P, trim), which ramps the gains (20 ms), and dispose(),
+// which takes it off the speakers.
 export function createChain(ctx, node, chain, destination = ctx.destination) {
   let tap = node, tone = null;
   if (chain.tone) { tone = ctx.createBiquadFilter(); tone.type = 'lowpass'; tone.Q.value = TONE_Q; node.connect(tone); tap = tone; }
@@ -101,9 +126,15 @@ export function createChain(ctx, node, chain, destination = ctx.destination) {
   // the volume and expression pedals last, as a volume pedal after an amplifier: they turn the
   // whole sound down, the room's tail with it, and never push the limiter
   const pedal = ctx.createGain();
-  master.connect(limiter).connect(pedal).connect(destination);
+  const out = { ctx, out: pedal, to: destination };
+  if (destination === ctx.destination) {
+    if (together?.ctx === ctx && chains.some((c) => c.ctx === ctx && c.to === together.node)) out.to = together.node;
+    chains.push(out);
+    if (chains.length === 1) { for (const fn of contextListeners) fn(ctx); contextListeners.clear(); }
+  }
+  master.connect(limiter).connect(pedal).connect(out.to);
   let first = true;
-  onPedalGain((g) => {
+  const unpedal = onPedalGain((g) => {
     if (first) { pedal.gain.value = g; first = false; } else pedal.gain.setTargetAtTime(g, ctx.currentTime, 0.01);
   });
   const apply = (P, trim = 1) => {
@@ -114,5 +145,11 @@ export function createChain(ctx, node, chain, destination = ctx.destination) {
     if (roomGain) roomGain.gain.setTargetAtTime(g.room, t, 0.02);
     master.gain.setTargetAtTime(g.master, t, 0.02);
   };
-  return { tap, tone, dry, bodyGain, master, roomGain, limiter, pedal, apply };
+  const dispose = () => {
+    unpedal();
+    try { pedal.disconnect(); } catch { /* already */ }
+    const i = chains.indexOf(out);
+    if (i >= 0) chains.splice(i, 1);
+  };
+  return { tap, tone, dry, bodyGain, master, roomGain, limiter, pedal, apply, dispose };
 }

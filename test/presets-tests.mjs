@@ -5,7 +5,7 @@
 
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
-import { FORMAT, presetParams, presetFile, readPresetFile, linkHash, readLinkHash, complete, pick, valid } from '../shared/presets.js';
+import { FORMAT, presetParams, presetFile, readPresetFile, linkHash, readLinkHash, complete, pick, valid, morph } from '../shared/presets.js';
 import { INSTRUMENTS, byId } from '../shared/registry.js';
 import { loadInstrument, withPreset } from '../tools/headless.mjs';
 
@@ -130,6 +130,40 @@ await test('the organ\'s console goes into a preset as its parameters and comes 
       assert.deepEqual(back[key], P[key], `${I.presets[k].name}: ${key}`);
     }
   }
+});
+
+await test('a morph is each preset at its ends, and between them every value is one the parameter can take', () => {
+  for (const [id, I] of all) {
+    const ps = presetParams(I), n = I.presets.length;
+    const pairs = [[-1, 0], [0, n - 1], [n - 1, Math.floor(n / 2)]].filter(([a, b]) => b >= 0 && a !== b);
+    for (const [i, j] of pairs) {
+      const a = i < 0 ? complete(ps, {}) : factory(I, i), b = factory(I, j);
+      assert.deepEqual(morph(ps, a, b, 0), a, `${id}: at 0, the first`);
+      assert.deepEqual(morph(ps, a, b, 1), b, `${id}: at 1, the second`);
+      for (const t of [0.01, 0.25, 0.49, 0.5, 0.75, 0.99]) {
+        const m = morph(ps, a, b, t);
+        for (const p of ps) {
+          const v = m[p.id], x = a[p.id], y = b[p.id];
+          assert.ok(close(valid(p, v), v), `${id}.${p.id} at ${t}: ${v} is a value it takes`);
+          if (typeof x === 'number' && p.type !== 'select') assert.ok(v >= Math.min(x, y) - (p.step ?? 0) && v <= Math.max(x, y) + (p.step ?? 0), `${id}.${p.id} at ${t}: ${v} lies between ${x} and ${y}`);
+          else assert.equal(v, t < 0.5 ? x : y, `${id}.${p.id} at ${t}: a choice or a switch changes halfway`);
+        }
+      }
+    }
+  }
+});
+
+await test('a morph glides a number in a straight line, a logarithmic one by equal ratios, keeps to a step and changes a choice halfway', () => {
+  const ps = [
+    { id: 'lin', min: 0, max: 10, def: 0 }, { id: 'log', min: 1, max: 1000, def: 1, log: true },
+    { id: 'step', min: 0, max: 10, def: 0, step: 1 }, { id: 'pick', type: 'select', options: [['a', 'A'], ['b', 'B']], def: 'a' },
+    { id: 'on', type: 'checkbox', def: false },
+  ];
+  const a = { lin: 2, log: 10, step: 0, pick: 'a', on: false }, b = { lin: 6, log: 1000, step: 3, pick: 'b', on: true };
+  assert.deepEqual(morph(ps, a, b, 0.5), { lin: 4, log: 100, step: 2, pick: 'b', on: true });
+  assert.deepEqual(morph(ps, a, b, 0.25), { lin: 3, log: 10 * 100 ** 0.25, step: 1, pick: 'a', on: false });
+  assert.deepEqual(morph(ps, a, b, -1), a, 'below 0 is 0');
+  assert.deepEqual(morph(ps, a, b, 7), b, 'above 1 is 1');
 });
 
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }

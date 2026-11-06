@@ -256,6 +256,15 @@ requests.
   [doi:10.1029/2007GL030276](https://doi.org/10.1029/2007GL030276); the patches fall into step
   as Y. Kuramoto's oscillators do (1975). We did not find an earlier model of a booming dune made
   to be played. Its sources are in `dunes/README.md`.
+* **The cristal Baschet.** The resonator, the finger's friction on glass and its threshold are
+  A. Couineaux, F. Ablitzer and F. Gautier, "Minimal physical model of the cristal Baschet",
+  *Acta Acustica* **7**, 49 (2023), [doi:10.1051/aacus/2023041](https://doi.org/10.1051/aacus/2023041),
+  and the whiskers theirs too, "Sound enrichment of the cristal Baschet by the whiskers",
+  *Acta Acustica* **9**, 49 (2025), [doi:10.1051/aacus/2025024](https://doi.org/10.1051/aacus/2025024);
+  the rough limit and the collector follow F. Gautier et al., "Acoustics of the Cristal Baschet"
+  (ISMA 2010), and the instrument F. Baschet's [US 3,167,994](https://patents.google.com/patent/US3167994A/en).
+  Couineaux et al. simulate one resonator; we did not find an earlier playable synthesis of the
+  whole instrument from its physics. Its sources are in `cristal/README.md`.
 * **The regal.** Praetorius draws the regals and their resonators in
   *Syntagma musicum II* (1619); Monteverdi scores one for Charon in
   *L'Orfeo* (1607). The beating reed is G. R. Plitnik's ("Vibration
@@ -276,6 +285,18 @@ requests.
   (1994) played waveguide brass from a lip model. The Brass plays its lips,
   bore, steepening and player from those; its sources are in
   `brass/README.md`.
+* **The musical saw.** Why it rings: S. Shankar, P. Bryde and L. Mahadevan,
+  "Geometric control of topological dynamics in a singing saw", *Proc.
+  Natl. Acad. Sci. USA* **119**(17), e2117241119 (2022), who found the
+  mode trapped at the S's inflection and measured a Q of about 10 for a J
+  against 150 for an S. J. F. M. Scott and J. Woodhouse found the localised
+  mode asymptotically (*Phil. Trans. R. Soc. A* **339**, 587–625, 1992), and
+  R. Worland measured trapped modes in saws (*J. Acoust. Soc. Am.* **139**,
+  2011, 2016; **145**, 1750, 2019); the shell equations are L. H. Donnell's
+  (NACA Report 479, 1933). Saws are sold as sample libraries; we know of no
+  earlier synthesis that plays one from its trapped mode. The Musical Saw
+  plays its trapped modes, their tunnelling and the bow from those; its
+  sources are in `saw/README.md`.
 * **The timpani and the tabla.** Rayleigh's *Theory of Sound* (1877–78) has
   the kettledrum's fifth and octave; R. S. Christian, R. E. Davis, A. Tubis
   et al., "Effects of air loading on timpani membrane vibrations", *J.
@@ -290,6 +311,58 @@ requests.
   Chromaphone plays modelled membranes. The Timpani and Tabla solves each
   key's loaded, air-loaded head as it is struck and plays its modes live;
   its sources are in `drums/README.md`.
+* **The marimba and the xylophone.** F. Orduña-Bustamante (*J. Acoust.
+  Soc. Am.* **90**, 2935–2941, 1991) and J. Petrolito and K. A. Legge
+  (*J. Acoust. Soc. Am.* **102**, 2432–2437, 1997) shaped undercuts for
+  harmonic overtones; I. Bork (*Applied Acoustics* **46**, 103–127, 1995)
+  tuned xylophone bars and their tubes; B. H. Suits (*Am. J. Phys.* **69**,
+  743–750, 2001) and D. Beaton and G. Scavone (*J. Acoust. Soc. Am.*
+  **149**, 3758–3768, 2021) solved the bars by finite elements. A. Chaigne
+  and V. Doutaut (*J. Acoust. Soc. Am.* **101**, 539–557, 1997) simulated a
+  struck xylophone bar in time, and with its tube (1998); F. Soares,
+  V. Debut and J. Antunes coupled several bar modes to several tube modes
+  (*J. Sound Vib.* **548**, 117528, 2023). Applied Acoustics Systems'
+  Chromaphone and Modartt's Pianoteq Xylo play modelled marimba bars.
+  The Marimba and Xylophone tunes every bar's cut by finite elements for
+  its instrument and keeps the tube's second resonance, which a centred
+  mouth cannot hear; its sources are in `marimba/README.md`.
+* **The gamelan.** W. Surjodiningrat, P. J. Sudarjana and A. Susanto
+  measured the sarons of Central Java's gamelans (1972; 2nd edn, Gadjah Mada
+  University Press, 1993), and M. Hood redefined sléndro and pélog from them
+  (*Selected Reports* **1**, 1966). R. Perrin and colleagues mapped a small
+  gamelan gong's normal modes (*J. Acoust. Soc. Am.* **136**, 1942–1950,
+  2014); B. Krueger, K. L. Gee and D. Grimshaw found a Balinese gong ageng's
+  ombak in its nonlinear second harmonic beating with its second round mode
+  (*J. Acoust. Soc. Am.* **128**, EL8–EL13, 2010), and M. Jones and the same
+  colleagues measured the bars of a gamelan semara dana (*J. Acoust. Soc.
+  Am.* **127**, EL197–EL202, 2010); W. A. Sethares and M. Vitale studied
+  ombak and octave stretching (*J. Math. Music* **16**, 2022). Earlier
+  syntheses summed decaying partials (the AES's "Modeling the Woodstock
+  Gamelan for Synthesis", 1999). The Gamelan solves its bars as Timoshenko
+  beams (T. C. Huang's equation, 1961), couples them to their tubes, rings
+  the measured gongs with their faces' nonlinearity, and pairs the
+  instruments; its sources are in `gamelan/README.md`.
+* **The cimbalom and the hammered dulcimer.** D. R. Peterson, T. D. Rossing
+  and G. H. Canfield described the hammered dulcimer's strings, bridges
+  and hammers (*J. Acoust. Soc. Am.* **95**, 3002, 1994; Peterson, **120**,
+  3119, 2006); G. Weinreich explained the coupled unisons' beats and
+  two-stage decay ("Coupled piano strings", *J. Acoust. Soc. Am.* **62**,
+  1474–1484, 1977); the hammer is K. H. Hunt and F. R. E. Crossley's
+  contact (1975) as A. Chaigne and A. Askenfelt used it for the piano
+  (1994). Modartt sells a physically modelled cimbalom for Pianoteq
+  (2009). The Cimbalom plays its thrown hammers, coupled courses, divided
+  dulcimer strings, dampers and sympathetic strings from those; its
+  sources are in `cimbalom/README.md`.
+* **Tubular bells.** Harry Harrington of Coventry patented tubular bells
+  (UK, 1884; US Patent 389,841, 1888) as a cheaper peal than cast bells.
+  T. D. Rossing (*Science of Percussion Instruments*, 2000) and N. H.
+  Fletcher and T. D. Rossing (*The Physics of Musical Instruments*, 1998)
+  explain the strike note, the virtual pitch of modes 4–6 near 2 : 3 : 4;
+  S. P. Timoshenko (1921) and G. R. Cowper (1966) gave the beam with shear;
+  E. Terhardt (1974) the virtual pitch. Sampled chimes are General MIDI's
+  program 15, and Pianoteq's free instruments include tubular bells (below).
+  The Tubular Bells solves each capped tube as it is cut and plays its modes
+  live; its sources are in `tubular/README.md`.
 
 ## 2. Techniques Forte uses, and where they come from
 
@@ -511,7 +584,7 @@ Wikipedia.
     harpsichords ([harpsichord](https://www.modartt.com/harpsichord));
     vibraphones ([vibes](https://www.modartt.com/vibes)); celesta,
     glockenspiel and toy piano ([Celeste](https://www.modartt.com/celeste));
-    tubular bells, church bells and carillons
+    a cimbalom (2009); tubular bells, church bells and carillons
     ([free instruments](https://www.modartt.com/pianoteq_free)); and, in
     2026, the Champagne Flute, a physical model of champagne glasses.
     [Pianoteq](https://www.modartt.com/pianoteq) ·

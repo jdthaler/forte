@@ -26,7 +26,8 @@ instruments/<slug>/                 a ported instrument: engine, model, generate
                                     whistlers, universe, project8, abracadabra, tess, clavicylinder,
                                     hydrogen, trautonium, hydraulis, cuore, hurdygurdy, ionchain, telharmonium,
                                     resonator, regal, chladni, ondes, cellulophone, voice, birdsong,
-                                    clavichord, planets, pulsars, drums, dunes, brass and nmr;
+                                    clavichord, planets, pulsars, drums, dunes, brass, nmr, gamelan,
+                                    marimba, cimbalom, saw, tubular and cristal;
                                     docs/INSTRUMENT_GUIDE.md,
                                     "The native port")
 tests/                              native unit tests (CTest); tests/smoke, a test instrument
@@ -128,6 +129,11 @@ clap-wrapper builds the VST3, AU v2 and standalone from the CLAP. Each plugin:
   curve: the engine plays less physics at Medium and Low for a slow computer. The project keeps
   it, presets don't, and a host rendering offline (CLAP's render extension, which clap-wrapper's
   VST3 passes on and its AU v2 does not) gets High;
+- has an MPE choice (Auto, On, Off) and Transpose (−12 to +12 semitones) and Octave (−4 to +4)
+  choices after Quality, as in the pages' MIDI menu: they move the MIDI keys
+  (notes, CLAP's note events, poly pressure and note expressions), each note-off going where its
+  note-on went (`moveOn`); the window's own keys play what they show. The Forte app keeps the
+  three across instruments and sets them for both parts of a layer or split, as the controller's;
 - saves its state as text (`forte <slug> <version>`, then `<id> <value>` per line), so a
   project survives parameters being added;
 - plays through the output chain, with flush-to-zero, a NaN guard, and engine blocks of at
@@ -141,7 +147,19 @@ clap-wrapper builds the VST3, AU v2 and standalone from the CLAP. Each plugin:
   macOS, WebView2 on Windows (part of Windows 10 and 11), WebKitGTK in an X11 window on Linux.
   The page calls the plugin through `window.forte(method, …)`; the tests make the same calls
   without a window. Open `editor.html` in a browser to work on it: it plays a made-up
-  instrument there. `-DFORTE_EDITOR=OFF` builds the plugins without it.
+  instrument there, or a real one silently with `?instrument=<slug>` from `npm run serve`
+  (the WebAssembly engine on a timer, its messages and sound sent as the plugin's).
+  `-DFORTE_EDITOR=OFF` builds the plugins without it.
+- shows the site's views in that window (its *Views* button): the instrument's page, in a frame
+  above the controls, with only its views (`shared/in-plugin.js`). Each plugin carries its
+  folder and `shared/` (`forte_site()` in `cmake/forte.cmake` packs them with `cmake/site.cmake`
+  into a gzipped tar linked in, `site.h`) and serves them to the web view from memory
+  (`editor.cpp`), with the window's own page at `/`. While the views show, `poll` also brings
+  the engine's messages (`m`) and its sound before the chain (`s`, base64 float32), and the
+  host's notes come with their velocities (`vel`). An instrument whose page's translator reads
+  the engine's memory gives `forte_add_plugin` a `VIEWS` source (`<slug>-views.cpp`, the plugins'
+  only) whose `forte::Views` copies that data out on the audio thread with its message, and
+  turns on what the engine keeps for its views (`site.h`); it comes in `poll`'s `md`.
 
 Identifiers: CLAP `net.jthaler.forte.<slug>`, vendor Forte, AU manufacturer `Frte` with the
 instrument's subtype from the registry (`plugin.code`), VST3 class id from `ids.json`.
@@ -153,12 +171,23 @@ the template, picked from the Instrument menu at the top of its window (`editor.
 shows the menu in a browser). `forte_add_suite()` (`cmake/forte.cmake`) builds it after the
 instruments from what `forte_add_plugin()` recorded, so a new port joins it with no change: each
 instrument's `<slug>-instrument.cpp` is compiled again with `forte_instrument` renamed
-`forte_instrument_<slug>`, and a generated table lists them. In `plugin.cpp` a `Suite` holds one
-instrument's `Plugin` at a time and passes the host's calls to it: a new one is made and
-activated on the main thread and handed to the audio thread, which takes it at its next block,
-and the one before is deleted once it has. Its id is `net.jthaler.forte.suite`, its version
-Forte's, and its state `forte-suite <slug>` then the instrument's own, so the app reopens on
-the last instrument. It is only a standalone: a DAW keeps a plugin's parameters while it is
+`forte_instrument_<slug>`, and a generated table lists them.
+
+It plays one instrument, or two: **+** beside the Instrument menu layers a second with the first
+(both play every key) or splits the keys between them (the second below the split point, the
+first from there up). The bar under the header picks Layer or Split and the split point, swaps
+the two, shows one's controls and presets at a time (the Instrument menu changes that one) and
+takes one away. In `plugin.cpp` a `Suite` holds the instruments' `Plugin`s and passes the host's
+calls on: the host sees the first's parameters; a note goes to the parts its key strikes and its
+end goes where it began; the pedals, the wheels, aftertouch and Panic reach both; a program change
+goes to the part the window shows; Quality and MPE are set on both. The second plays into a
+buffer of its own, added to the first's, and a limiter at −1 dB (no makeup gain) catches what the
+two add up to. A new instrument is made and activated on the main thread, which publishes the
+parts as a `Rig`; the audio thread takes the latest at its next block, and the main thread deletes
+what it let go of once it has. Its id is `net.jthaler.forte.suite`, its version Forte's, and its
+state `forte-suite <slug>` then the first instrument's own, then, with a second, `forte-layer
+<slug> <layer|split> <split point> <part shown>` and the second's own, so the app reopens as it
+was. It is only a standalone: a DAW keeps a plugin's parameters while it is
 active, and these change with the instrument. The release ships it in the archives with every
 instrument (`Forte-plugins-<system>` and `Forte-plugins-app-<system>`), and alone in
 `Forte-app-<system>`.

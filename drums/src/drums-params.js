@@ -68,7 +68,7 @@ export const GROUPS = [
       { id: 'hand', label: 'Hand damping', min: 0.02, max: 2, def: 0.15, log: true, fmt: (v) => `${(v * 1000).toFixed(0)} ms`,
         hint: 'How quickly a hand laid on the head stops it.' },
       { id: 'push', label: 'Heel push (aftertouch)', perform: true, min: 0, max: 20, def: 8, step: 0.1, fmt: (v) => `${v.toFixed(1)} mm`,
-        hint: 'How far the heel of the hand presses into the head at full aftertouch (or MPE pressure). Pressing stretches the head, so its tension and every mode rise: the bayan’s swooping “ghe”. It works on every drum, most on a loose one.' },
+        hint: 'How far the heel of the hand presses into the head at full aftertouch (or MPE pressure); it starts at half pressure, so a finger resting on a Seaboard leaves the drum alone. Pressing stretches the head, so its tension and every mode rise: the bayan’s swooping “ghe”. It works on every drum, most on a loose one.' },
       { id: 'pedal', label: 'Pedal range (pitch bend)', min: 0, max: 7, def: 2, step: 0.5, fmt: (v) => `±${v.toFixed(1)} semitones`,
         hint: 'The timpani’s pedal, on the pitch-bend wheel: it changes the head’s tension while it rings, the timpani glissando. The range is of the principal mode.' },
     ],

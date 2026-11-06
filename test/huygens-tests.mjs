@@ -376,6 +376,21 @@ await test('finite output and sane level across settings', () => {
     assert.ok(r.finite && r.pk < 5, JSON.stringify(eng));
   }
 });
+await test('rail sag under a heavy load (a big chord, every key bent up 40 semitones, as an MPE glide does, on the strongest sag): the rail settles where source and load balance, so it keeps playing, and the regulator and pitch hold keep each key on its bent pitch', () => {
+  const e = new HuygensEngine(FS);
+  e.setParams({ ...DEFAULTS, kick: 0, rSrc: 200e3 });
+  const keys = [48, 52, 55, 60, 64, 67, 72, 76, 79, 84, 88, 91, 96, 100, 103, 108];
+  for (const k of keys) e.noteOn(k, 1);
+  for (const k of keys) e.handle({ type: 'noteBend', key: k, value: 10 }); // each up ×10, or to fs/4
+  const L = new Float32Array(128), R = new Float32Array(128);
+  let pk = 0;
+  for (let s = 0; s < 4 * FS; s += 128) {
+    e.process(L, R, 128);
+    for (const v of L) { assert.ok(Number.isFinite(v), `non-finite output at ${(s / FS).toFixed(2)} s`); if (s > 3.5 * FS) pk = Math.max(pk, Math.abs(v)); }
+  }
+  assert.ok(pk > 0.05 && pk < 5, `level in the last half second: ${pk}`);
+  for (const o of e.report(0.5)) assert.ok(Math.abs(c(o.f / o.fTarget)) < 5, `key ${o.key}: ${c(o.f / o.fTarget).toFixed(1)} ¢ from its bent pitch`);
+});
 await test('Quality: nothing to trim (every lamp kicks every other, so leaving one out would move where they lock): Medium and Low play 24 coupled lamps exactly as High', () => {
   const render = (quality) => {
     const e = new HuygensEngine(FS); e.setQuality(quality); e.setParams({ kick: 0.08 });
