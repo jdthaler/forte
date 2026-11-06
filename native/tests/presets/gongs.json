@@ -15,7 +15,7 @@
         "thermal": 1,
         "radiation": 1,
         "asym": 0.5,
-        "hardness": 4,
+        "hardness": 20,
         "mass": 0.06,
         "strike": 0.1,
         "strikeAngle": 20,

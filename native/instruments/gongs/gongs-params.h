@@ -106,7 +106,7 @@ inline const ParamInfo kParams[p::count] = {
 inline const PresetValue kPreset1[] = {{p::thick, 0.004}, {p::mass, 0.15}, {p::hardness, 1}, {p::strike, 0.3}, {p::speed, 4}};
 inline const PresetValue kPreset2[] = {{p::rise, 2.5}, {p::strike, 0.03}};
 inline const PresetValue kPreset3[] = {{p::rise, 0}, {p::strike, 0.03}, {p::speed, 5.5}};
-inline const PresetValue kPreset4[] = {{p::thick, 0.03}};
+inline const PresetValue kPreset4[] = {{p::thick, 0.03}, {p::hardness, 20}};
 inline const PresetValue kPreset5[] = {{p::material, 1}, {p::thick, 0.005}, {p::strike, 0.75}, {p::hardness, 300}};
 inline const PresetValue kPreset6[] = {{p::bc, 1}, {p::strike, 0.2}};
 inline const PresetValue kPreset7[] = {{p::strike, 0}};
@@ -119,7 +119,7 @@ inline const Preset kPresets[] = {
   {"Tam-tam: thin, big soft beater, off centre", kPreset1, 5},
   {"Opera gong, pitch bends up (2.5 h dome, centre)", kPreset2, 2},
   {"Opera gong, pitch bends down (flat, centre)", kPreset3, 3},
-  {"Thick bronze: stays linear (a bell plate)", kPreset4, 1},
+  {"Thick bronze: stays linear (a bell plate)", kPreset4, 2},
   {"Steel sheet struck near the rim", kPreset5, 4},
   {"Clamped rim (held, free to slide in its plane)", kPreset6, 2},
   {"Struck dead centre (no asymmetric modes)", kPreset7, 1},

@@ -6,6 +6,7 @@
 // The registry's `trim` (dB) evens instruments out; test/level-tests.mjs keeps them even.
 //
 // Usage: node tools/loudness.mjs        (prints the table and the trims that would hit TARGET)
+//        node tools/loudness.mjs presets [ids]   (every factory preset against its defaults)
 
 export const TARGET = -23; // LUFS, momentary max of one mf C4
 const FS = 48000, SEC = 2.5, KEY = 60;
@@ -20,12 +21,12 @@ function biquad(x, b, a) {
 }
 // BS.1770 K-weighting at 48 kHz: high shelf, then high-pass
 const kWeight = (x) => biquad(biquad(x, [1.53512485958697, -2.69169618940638, 1.19839281085285], [1, -1.69065929318241, 0.73248077421585]), [1, -2, 1], [1, -1.99004745483398, 0.99007225036621]);
-function measure([L, Rr]) {
+export function measure([L, Rr], upTo = 2) {
   let pk = 0;
   for (let i = 0; i < L.length; i++) pk = Math.max(pk, Math.abs(L[i]), Math.abs(Rr[i]));
   const kL = kWeight(L), kR = kWeight(Rr), W = Math.round(0.4 * FS), hop = Math.round(0.1 * FS);
   let m = -Infinity;
-  for (let s = 0; s + W <= 2 * FS; s += hop) {
+  for (let s = 0; s + W <= Math.min(upTo * FS, L.length); s += hop) {
     let e = 0;
     for (let i = s; i < s + W; i++) e += kL[i] * kL[i] + kR[i] * kR[i];
     m = Math.max(m, -0.691 + 10 * Math.log10(e / W + 1e-30));
@@ -53,8 +54,47 @@ export async function measureAll() {
   return rows;
 }
 
+// How loud is each factory preset next to its instrument's defaults? One note at each of KEYS
+// (clamped to the instrument's range), each at the computer keys' velocity for the preset, through
+// the same dry chain; a preset's figure is its loudest key, in LU against the defaults at that key.
+// A first pass listens to 1.2 s; a preset that seems quiet is heard again for 4 s, since a
+// bowed or blown note may take its time to speak.
+export const PRESET_KEYS = [60, 67, 72, 79, 84];
+export async function measurePresets({ only } = {}) {
+  const rows = [];
+  const { INSTRUMENTS } = await mod('shared/registry.js');
+  const { loadInstrument, Player, applyChain, defaultsOf, withPreset } = await mod('tools/headless.mjs');
+  const { loadEngine } = await mod('tools/engine.mjs');
+  for (const { id } of INSTRUMENTS.filter((i) => i.ready && (!only?.length || only.includes(i.id)))) {
+    const I = await loadInstrument(id), Engine = await loadEngine(I);
+    if (!I.presets?.length) continue;
+    const keys = [...new Set(PRESET_KEYS.map((k) => Math.min(Math.max(k, I.range[0]), I.range[1])))];
+    const levels = (P, sec) => keys.map((key) => {
+      const pl = new Player(I, Engine, FS, P);
+      const out = pl.render(sec, [[0, 'on', key, P.velocity ?? I.keyVelocity ?? 0.75]]);
+      pl.engine.destroy?.(); // a WebAssembly engine's memory is its own until it is let go
+      return measure(applyChain({ ...I, id: '' }, out, P, FS, { room: false }), sec).lufs;
+    });
+    const best = (a, b) => Math.max(...a.map((x, j) => x - b[j]));
+    const def = { 1.2: levels(defaultsOf(I), 1.2) };
+    I.presets.forEach((pr, k) => {
+      const P = withPreset(I, k);
+      let lu = best(levels(P, 1.2), def[1.2]);
+      if (lu < PRESET_FLOOR) { def[4] ??= levels(defaultsOf(I), 4); lu = best(levels(P, 4), def[4]); }
+      rows.push({ id, name: pr.name, lu });
+    });
+  }
+  return rows;
+}
+// no factory preset should be this much quieter than its defaults (LU, at its loudest key)
+export const PRESET_FLOOR = -25;
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const { byId } = await mod('shared/registry.js');
+  if (process.argv[2] === 'presets') {
+    for (const r of (await measurePresets({ only: process.argv.slice(3) })).sort((a, b) => a.lu - b.lu)) console.log(`${r.lu.toFixed(1).padStart(6)} LU  ${r.id.padEnd(12)} ${r.name}`);
+    process.exit(0);
+  }
   const rows = await measureAll();
   rows.sort((a, b) => b.lufs - a.lufs);
   console.log('instrument   LUFS (raw)   peak dBFS   trim now   LUFS trimmed   trim for target');

@@ -44,7 +44,7 @@ Near the rim the modes with nodal diameters join in, among them the (2,0), which
     views: ['Spectrogram', 'Energy cascade'],
     preset: 'Thick bronze: stays linear (a bell plate)',
     play: [note('A3', { dur: 3.5, vel: 0.5 }), { at: 3.5, set: { thick: 0.004 } }, note('A3', { at: 3.6, dur: 4.5, vel: 0.5 })],
-    text: `What matters is the vibration's size **relative to the thickness**. The same strike on a plate whose thickness is 3 % of its radius moves it a small fraction of that thickness: it stays linear, a bell plate.
+    text: `What matters is the vibration's size **relative to the thickness**. The same strike on a plate whose thickness is 3 % of its radius moves it a small fraction of that thickness: it stays linear, a bell plate. (The mallet's head is harder than usual here, or so heavy a plate would hardly stir.)
 
 On a plate seven times thinner the same strike is several thicknesses deep, and the cascade switches on. Tam-tams are thin for exactly this reason.`,
   },

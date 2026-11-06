@@ -53,7 +53,7 @@ export const PRESETS = [
   { name: 'Lazy treadle (slow warble)', p: { speed: 0.25 } },
   { name: 'Fast treadle (big bowls struggle)', p: { speed: 1.2 } },
   { name: 'Badly blown bowls (deep warble)', p: { split: 30 } },
-  { name: 'Dry fingers (no grip)', p: { wet: 0.1 } },
+  { name: 'Dry fingers (no grip)', p: { wet: 0.1, press: 20 } },
   { name: 'Pressing hard (the skin squeals)', p: { press: 10 } },
   { name: 'Bowls half full of water', p: { water: 0.5 } },
   { name: 'Lead crystal (rings for ages)', p: { loss: 1e-4 } },
