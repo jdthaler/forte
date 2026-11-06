@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: keep recording after the key comes up
   modWheel: 'spin',                     // CC1 spins the planet up (or stops it)
   mpe: { bend: 48, slide: true },       // a note's bend changes its own time-lapse; CC74 its own spin
+  lift: 'how the recording stops: a slow lift fades the ringing, a fast one cuts it', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['depth', 'distance', 'azimuth', 'atten', 'spin'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/planets), built as WebAssembly
   wasm: { name: 'PlanetWasmEngine', module: new URL('./planets-wasm.js', import.meta.url).href, binary: new URL('../wasm/planets.wasm', import.meta.url).href },

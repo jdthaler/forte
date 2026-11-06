@@ -162,7 +162,7 @@ void CarillonEngine::strike(Voice &v, double velocity) {
   const Clapper c = clapperOf(v.bell, P.data());
   v.clap = c; v.Cm = C; v.hm = (h * h) / c.m;
   cl.x = u - 1.5 * speed * h; cl.x1 = cl.x - speed * h; cl.d1 = -1; cl.d2 = -1; cl.on = true; cl.n = 0; cl.contact = 0; cl.Fmax = 0; cl.v = speed;
-  v.fading = false; v.fade = 1; v.age = 0; v.released = false;
+  v.fading = false; v.fade = 1; v.age = 0; v.released = false; v.graceIn = 0;
 }
 
 // Hertz force for a compression D at the next step: the discrete gradient of V = (2/5) K δ^(5/2)
@@ -336,8 +336,13 @@ void CarillonEngine::noteOn(int key, double velocity) {
   }
 }
 
-void CarillonEngine::noteOff(int key, double) { // the clapper falls back; the bell rings on
-  if (key >= KEY_MIN && key <= KEY_MAX && byKey[key - KEY_MIN] >= 0) pool[byKey[key - KEY_MIN]].released = true;
+// The clapper falls back; the bell rings on. A fast lift lets go of the wire so sharply that the
+// clapper swings back against the bell 70 ms later: a grace stroke, up to a quarter of full force.
+void CarillonEngine::noteOff(int key, double velocity) {
+  if (!(key >= KEY_MIN && key <= KEY_MAX && byKey[key - KEY_MIN] >= 0)) return;
+  Voice &v = pool[byKey[key - KEY_MIN]];
+  v.released = true;
+  if (const double t = liftPast(velocity); t > 0 && !v.fading) { v.grace = 0.25 * t; v.graceIn = (int)(0.07 * fs); }
 }
 
 void CarillonEngine::allNotesOff() { for (int i = 0; i < nVoices; i++) pool[order[i]].fading = true; }
@@ -360,6 +365,7 @@ void CarillonEngine::block(float *L, float *R, int n) {
   for (int i = 0; i < nVoices; i++) {
     Voice &v = pool[order[i]];
     if (moved) { if (v.eps != S_asym) coefs(v, false); gains(v, false); }
+    if (v.graceIn > 0 && (v.graceIn -= n) <= 0 && !v.fading && !v.cl.on) { strike(v, v.grace); v.released = true; }
     render(v, L, R, n);
   }
   int j = 0;

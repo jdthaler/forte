@@ -21,6 +21,7 @@ export const INSTRUMENT = {
   // own brightness on CC74 and its own pressure, which presses the key harder: more current.
   mpe: { bend: 0, slide: true },
   aftertouch: 'more current in the electromagnet', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'how fast the drive ramps down and the damper falls: a slow lift lets the string sing on, a fast one stops it sooner', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['drive', 'attack', 'hammer', 'phase', 'bright'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/resonator), built as WebAssembly
   wasm: { name: 'ResonatorWasmEngine', module: new URL('./resonator-wasm.js', import.meta.url).href, binary: new URL('../wasm/resonator.wasm', import.meta.url).href },

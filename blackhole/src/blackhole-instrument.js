@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   space: null,                                // a ringdown has no damper; nothing to hold
   modWheel: 'spinU',                          // CC1: the spin, from its default up to 1 − 10⁻⁶
   mpe: { slide: true },                       // MPE: a note's slide is its own hole's spin, at the merger (no bend)
+  lift: 'a fast lift sets off a second, smaller merger: a black hole of half the mass rings down an octave up', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   midiVelocity: (v) => v ** 1.5,              // MIDI velocity / 127 → the engine's
   keyVelocity: 1,                             // the velocity the computer keys play (no velocity parameter)
   faders: ['massRatio', 'inclination', 'overtones', 'tone', 'spinU'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

@@ -20,6 +20,7 @@
 #include <cstdint>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "forte/tuning.h"
 #include "birdsong-model.h"
@@ -40,6 +41,7 @@ struct Voice {
   int key = 0;
   int64_t born = 0;
   double vel = 0, after = 0;
+  double liftK = 1; // how many times longer than usual the air sacs take to empty (forte/lift.h)
   double env = 0, aIn = 0, aOut = 0; // the breath, 0..1, and its rise and fall a step
   double phase = 0, rate = 8;        // the syllable: where in it, and how many a second
   double d = 0, flow = 1;            // its drive at full breath (the velocity's), and √(d/drive)

@@ -19,6 +19,7 @@
 #include "blackhole-model.h"
 #include "blackhole-params.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 
 namespace forte::blackhole {
@@ -99,6 +100,7 @@ class RingdownEngine : public Engine {
   KeyVoice other;               // a key outside the range
   KeyVoice offer_;
   bool hasOffer = false;
+  double struck[128] = {}; // each key's last velocity, for a fast lift's second merger (forte/lift.h)
   forte::NoteExpression expr{0}; // each key's slide (a black hole doesn't bend)
   KeyVoice spun;                 // a key's voice at its slide's spin
   Angular spunAngular;           // and its angular functions (kept apart from the keys' own)

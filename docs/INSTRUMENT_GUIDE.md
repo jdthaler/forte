@@ -130,7 +130,9 @@ export const INSTRUMENT = {
                                         // pressure: a Seaboard's Press), as the RISE's panel says it; leave it out when
                                         // the engine ignores pressure (test/mpe-tests.mjs checks both ways)
   lift: 'a slow lift lets the damper settle softly', // what a slow or a fast release does (release velocity: a
-                                        // Seaboard's Lift); leave it out when the engine ignores it
+                                        // Seaboard's Lift); every engine answers it (native/core/include/
+                                        // forte/lift.h: liftScale stretches a release, liftPast drives
+                                        // what only a fast lift does; none, −1, and 0.5 play as before)
   strike: false,                        // only when velocity changes nothing (the Singing Arc, the Huygens Keyboard)
   controllers: { 67: 'unaCorda' },      // other MIDI controllers → parameters (a toggle is on at 64);
                                         // { param, values: [a, b] } picks b from 64 up, { param, toggle: [a, b] } flips on each press

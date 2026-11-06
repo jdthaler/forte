@@ -17,7 +17,7 @@
 namespace forte::planets {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { planet, spin, atten, mech, strike, depth, mwTop, rupture, distance, azimuth, lat, sensor, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, count };
+enum : int { planet, spin, atten, mech, strike, depth, mwTop, rupture, distance, azimuth, lat, sensor, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -96,6 +96,7 @@ inline const ParamInfo kParams[p::count] = {
   {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"glideOn", "Glide: a note’s own pitch bend", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
   {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
 inline const PresetValue kPreset1[] = {{p::sensor, 2}, {p::mwTop, 9.3}, {p::rupture, 1.5}};

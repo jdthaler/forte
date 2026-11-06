@@ -10,6 +10,7 @@
 
 #include "forte/dsp.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "cuore-model.h"
 #include "cuore-params.h"
@@ -42,6 +43,7 @@ class CuoreEngine : public Engine {
     bool firing = false;
     double vel = 0, press = 0, phase = 0, bendNow = 1, gl = 0, gr = 0, sinceEnd = 0;
     double inc = 0, E = 0; // this block's: the heater's phase a sample, and its pulse (J)
+    double fade = 0, fadeLeft = 0, cut = 1, g = 1; // a lift's (forte/lift.h): a slow one's fading pulses (s), a fast one's cut (its gain's factor a sample, and the gain)
     Bolometer::State y{};
   };
   std::array<double, p::count> P{};

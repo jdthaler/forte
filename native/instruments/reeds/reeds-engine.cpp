@@ -44,6 +44,7 @@ void ReedEngine::Voice::start(const ReedEngine &eng, int key_, const VoiceData &
   tune(eng.bendNow * own);
   hits = 0;
   hammer = d.hammer;
+  liftK = 1;
   setDamper(eng.damperSigma);
 }
 
@@ -72,7 +73,7 @@ void ReedEngine::Voice::stopFor(int n) {
 
 void ReedEngine::Voice::setDamper(double sd) {
   for (int i = 0; i < Nall; i++) {
-    const double s = sig[i] + (killing ? KILL : sd * dw[i]), o = om[i];
+    const double s = sig[i] + (killing ? KILL : sd * dw[i] / liftK), o = om[i];
     const double r = std::exp(-s * k), od = std::sqrt(std::max(o * o - s * s, 1e-6));
     a1d[i] = 2 * r * std::cos(od * k); a2d[i] = r * r;
   }
@@ -333,7 +334,11 @@ bool ReedEngine::offer(const double *packed, int n) {
 
 void ReedEngine::setSustain(bool on) {
   sustain = on;
-  for (int i = 0; i < nVoices; i++) voices[i]->updateDamping(*this);
+  for (int i = 0; i < nVoices; i++) {
+    Voice &v = *voices[i];
+    if (!on && v.liftK != 1) { v.liftK = 1; v.setDamper(damperSigma); } // the pedal's dampers fall as they always did
+    v.updateDamping(*this);
+  }
 }
 
 void ReedEngine::noteOn(int key, double velocity) {
@@ -404,10 +409,15 @@ void ReedEngine::strikeKey(int key, double velocity, const VoiceData &d) {
   }
 }
 
-void ReedEngine::noteOff(int key, double) {
+void ReedEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
-  if (Voice *v = byKey[key]) { v->keyDown = false; v->updateDamping(*this); }
+  // how fast the damper falls: a slow lift leaves a longer tail, a fast one a shorter (forte/lift.h)
+  if (Voice *v = byKey[key]) {
+    v->keyDown = false;
+    if (const double s = liftScale(velocity); s != v->liftK) { v->liftK = s; v->setDamper(damperSigma); }
+    v->updateDamping(*this);
+  }
 }
 
 void ReedEngine::allNotesOff() {

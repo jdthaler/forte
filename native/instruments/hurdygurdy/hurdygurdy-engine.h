@@ -23,6 +23,7 @@
 #include <memory>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "hurdygurdy-model.h"
 #include "hurdygurdy-params.h"
 #include "hurdygurdy-string.h"
@@ -90,6 +91,7 @@ class HurdyGurdyEngine : public Engine {
   int nHeld = 0;
   bool pedal = false;
   double after = 0, shotA = 0, bendR = 1, bendTo = 1;
+  double sagR = 1, sagT = 0; // a slow lift: the tangent sags off the string, its pitch gliding to the next stop over sagT s (forte/lift.h)
   int64_t shotAt = -1;
   double kB[NBRIDGE] = {}, kself[NSTR] = {}, zeta = 0;
   double hand = 0, flyK = 0; // the wheel's lag behind the hand

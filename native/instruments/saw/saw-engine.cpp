@@ -56,7 +56,7 @@ int SawEngine::voiceCount() const {
 
 // The modes' steps for their ω and σ now (and the hand's loss), and the edge's response to the bow.
 static void coefficients(Voice &v, double T) {
-  const double hand = v.stolen ? 1 / STEAL_T : v.hand ? std::log(1000.0) / HAND_T60 : 0;
+  const double hand = v.stolen ? 1 / STEAL_T : v.hand ? std::log(1000.0) / (HAND_T60 * v.ringK) : 0;
   v.Y = 0; v.Yd = 0;
   for (int j = 0; j < v.M; j++) {
     const double s = v.pl.sigma[j] + hand, w = v.w[j], e = exp(-s * T);
@@ -108,7 +108,7 @@ void SawEngine::retune(Voice &v, double f) {
 
 void SawEngine::excite(Voice &v, double velocity) {
   v.vel = std::clamp(velocity, 0.0, 1.0);
-  v.held = true; v.hand = false; v.quiet = 0;
+  v.held = true; v.hand = false; v.quiet = 0; v.ringK = 1;
   v.age = 0;
   if ((int)P[p::excite] == excite_::bow) v.bite = BITE * v.vel;
   else {
@@ -177,9 +177,12 @@ void SawEngine::noteOn(int key, double velocity) {
   if (live > pick(kMaxVoices, 10, 6)) steal(v); // Quality: fewer saws at once
 }
 
-void SawEngine::noteOff(int key, double) {
+// Lift: how the bow leaves the blade. A fast lift springs it clear and the trapped note rings on
+// (the hand settles lightly: up to four times as long), a slow one drags it off, damping the blade.
+void SawEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
-  auto letGo = [&](Voice &v) { v.held = false; if (!sustain) { v.hand = true; coefficients(v, 1 / fs); } };
+  const double s = liftScale(velocity);
+  auto letGo = [&](Voice &v) { v.held = false; if (!sustain) { v.hand = true; v.ringK = 1 / (s * s); coefficients(v, 1 / fs); } };
   if (mono) {
     int j = 0;
     for (int i = 0; i < held; i++) if (stack[i] != key) stack[j++] = stack[i];
@@ -197,7 +200,7 @@ void SawEngine::noteOff(int key, double) {
 
 void SawEngine::setSustain(bool on) {
   sustain = on;
-  if (!on) for (Voice &v : voices) if (v.alive && !v.held && !v.hand) { v.hand = true; coefficients(v, 1 / fs); }
+  if (!on) for (Voice &v : voices) if (v.alive && !v.held && !v.hand) { v.hand = true; v.ringK = 1; coefficients(v, 1 / fs); }
 }
 
 void SawEngine::allNotesOff() {

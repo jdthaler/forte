@@ -85,6 +85,7 @@ void PianoEngine::Voice::start(PianoEngine &eng, int key_, const VoiceData &d, i
   outH = d.outH * OUT_SCALE;
   hasDamper = d.hasDamper;
   damperSigma = eng.P[p::damper];
+  liftK = 1;
   computeDamped();
   setPan(eng, true);
   startLong(eng, d);
@@ -109,7 +110,7 @@ void PianoEngine::Voice::startLong(const PianoEngine &eng, const VoiceData &d) {
 }
 
 void PianoEngine::Voice::computeDamped() {
-  const double extra = killing ? KILL_SIGMA : damperSigma;
+  const double extra = killing ? KILL_SIGMA : damperSigma / liftK; // a slow lift lowers the damper gently
   for (int i = 0; i < N; i++) {
     const double s = sig[i] + extra, o = om[i];
     const double r = std::exp(-s * k);
@@ -496,16 +497,17 @@ void PianoEngine::strikeKey(int key, double velocity, const VoiceData &d) {
   last = v;
 }
 
-void PianoEngine::noteOff(int key, double) {
+void PianoEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
   down[key] = 0;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
-  if (Voice *v = byKey[key]) { v->keyDown = false; v->updateDamping(*this); }
+  // how fast the damper falls: a slow lift leaves a longer tail, a fast one a shorter
+  if (Voice *v = byKey[key]) { v->keyDown = false; v->lifted(liftScale(velocity)); v->updateDamping(*this); }
 }
 
 void PianoEngine::setSustain(bool on) {
   sustain = on;
-  for (int i = 0; i < nVoices; i++) voices[i]->updateDamping(*this);
+  for (int i = 0; i < nVoices; i++) { if (!on) voices[i]->lifted(1); voices[i]->updateDamping(*this); } // the pedal's dampers fall as they always did
 }
 
 void PianoEngine::allNotesOff() {

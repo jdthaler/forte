@@ -156,13 +156,13 @@ void PianetEngine::retryPending() {
   }
 }
 
-void PianetEngine::noteOff(int key, double) {
+void PianetEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
   Voice *v = byKey[key];
   if (!v) return;
   if (sustain) v->held = true;
-  else { v->pending = false; v->p.lift(); v->sleep = false; }
+  else { v->pending = false; v->p.lift(liftScale(velocity)); v->sleep = false; } // the pad's return: a fast lift slaps it back, with a small knock
 }
 
 void PianetEngine::setSustain(bool on) {

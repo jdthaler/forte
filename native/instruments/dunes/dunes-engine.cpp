@@ -145,12 +145,15 @@ void DunesEngine::noteOn(int key, double velocity) {
   }
 }
 
-void DunesEngine::noteOff(int key, double) {
+// Lift: how fast the flow drains when the push stops: a slow lift lets it run on, to rest in up to
+// four times the stopping time, a fast one stops it in a quarter of it.
+void DunesEngine::noteOff(int key, double velocity) {
   if (key < 21 || key > 108) return;
   Voice &v = voices[key - 21];
   if (!v.on || !v.held) return;
+  const double s = liftScale(velocity);
   v.held = false; v.target = 0;
-  v.brake = std::max(v.U, 0.01) / stopT; // friction: a constant deceleration, to rest in the stopping time
+  v.brake = std::max(v.U, 0.01) / (stopT * s * s); // friction: a constant deceleration, to rest in the stopping time
 }
 
 void DunesEngine::allNotesOff() {

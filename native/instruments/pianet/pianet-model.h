@@ -114,7 +114,7 @@ class Pluck {
   void setPad(const PadParams &P);
   double tip() const;
   void press(double vel);
-  void lift();
+  void lift(double scale = 1); // scale: how many times longer than usual the pad takes to come back (forte/lift.h)
   double step();
   double energy() const;
 

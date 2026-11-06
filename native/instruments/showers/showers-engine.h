@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "showers-model.h"
 #include "showers-params.h"
 
@@ -54,6 +55,7 @@ class ColliderShowersEngine : public Engine {
   void report(const Voice &v);
   std::array<double, p::count> P{};
   bool hasParams = false, sustain = false;
+  double struck[128] = {}; // each key's last velocity, for a fast lift's pile-up (forte/lift.h)
   int focus = -1, sinceReport = 0, sinceHit = 0;
   Rng rng;
   std::vector<Voice> voices; // reserved (twice kMaxVoices, for the stolen ones fading out): never reallocates

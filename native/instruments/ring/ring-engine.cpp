@@ -23,7 +23,7 @@ constexpr double SLIDE_T = 0.02;    // s: and a key's slide (its chromaticity)
 void StorageRingEngine::Voice::inject(double velocity, const double *P) {
   charge = velocity; Z = P[p::kick];
   theta = 0; phiS = 0; phiB = 0; logX = 0; logS = 0;
-  released = false; scraped = false;
+  released = false; scraped = false; liftK = 1;
 }
 
 // Queue the next turn's pulse, then go one turn on. The chromaticity is P's, or glides a turn at a
@@ -50,7 +50,7 @@ void StorageRingEngine::Voice::schedule(const double *P, const forte::Tuning &tu
   pk[i] = 1 / (2 * sig * sig);
   pr[i] = REACH * sig;
   if (count < SLOTS) count++; else head = (head + 1) % SLOTS;
-  const double tau = scraped ? P[p::scrape] : P[p::lifetime];
+  const double tau = scraped ? P[p::scrape] * liftK : P[p::lifetime];
   charge *= std::exp(-1 / (r.frev * tau));
   theta += 2 * TAU * r.mu;
   phiS += TAU * r.Qs;
@@ -71,7 +71,7 @@ void StorageRingEngine::setParams(const double *p) {
 
 void StorageRingEngine::setSustain(bool on) {
   sustain = on;
-  if (!on) for (Voice &v : voices) if (v.released) v.scraped = true;
+  if (!on) for (Voice &v : voices) if (v.released && !v.scraped) { v.scraped = true; v.liftK = 1; }
 }
 
 void StorageRingEngine::noteOn(int key, double velocity) {
@@ -98,8 +98,11 @@ void StorageRingEngine::noteOn(int key, double velocity) {
   if ((int)voices.size() > kMaxVoices) voices.erase(voices.begin()); // the oldest goes
 }
 
-void StorageRingEngine::noteOff(int key, double) {
-  for (Voice &v : voices) if (v.key == key && !v.released) { v.released = true; if (!sustain) v.scraped = true; }
+// Lift: how the beam is dumped: a slow lift scrapes it away over up to four times the usual, a
+// fast one fires the abort kicker (a quarter of it).
+void StorageRingEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity);
+  for (Voice &v : voices) if (v.key == key && !v.released) { v.released = true; if (!sustain) { v.scraped = true; v.liftK = s * s; } }
 }
 
 void StorageRingEngine::pressure(double value, int key) {

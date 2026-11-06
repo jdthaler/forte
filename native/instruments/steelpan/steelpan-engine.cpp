@@ -13,6 +13,7 @@ constexpr double OUT = 0.19;
 constexpr double QUIET = 2e-6;    // a note below this (in thicknesses) and done ringing goes to sleep
 constexpr int GRACE = 2048;       // samples a note stays alive after it wakes, to be driven
 constexpr int POST = 512;         // samples between the views' messages
+constexpr double STICK_T60 = 0.15; // s: a stick resting on a note after a fast lift
 constexpr size_t MAX_COUPLINGS = NKEYS * 8 * 2 * kModes, MAX_WALL = NKEYS * kModes * 4;
 
 SteelPanEngine::SteelPanEngine(double fs) : Engine(fs), notes(NKEYS) {
@@ -51,7 +52,7 @@ void SteelPanEngine::setParams(const double *p) {
 // The note's modes and their resonators, with the hand's damping if it is on the note.
 void SteelPanEngine::retune(Note &v) {
   v.nm = noteModes(v.key, P.data(), std::min(18000.0, 0.45 * fs));
-  const double w1 = TAU * v.nm.m[0].f, mute = v.damped ? sigmaFromT60(P[p::mute]) : 0;
+  const double w1 = TAU * v.nm.m[0].f, mute = v.damped ? sigmaFromT60(v.touch > 0 ? STICK_T60 : P[p::mute] * v.liftK) : 0;
   for (int i = 0; i < kModes; i++) {
     if (i >= v.nm.count) { v.a1[i] = v.a2[i] = v.b[i] = v.out[i] = 0; v.w[i] = 1; continue; }
     const Mode &m = v.nm.m[i];
@@ -121,6 +122,7 @@ void SteelPanEngine::noteOn(int key, double velocity) {
     activate(u);
     if (!u.struck) damp(u, false); // free to ring along again
   }
+  v.touch = 0; v.liftK = 1;
   damp(v, false);
   v.held = true; v.released = false; v.vel = velocity; v.hand = false;
   v.rollIn = fs / P[p::rollRate];
@@ -128,18 +130,25 @@ void SteelPanEngine::noteOn(int key, double velocity) {
   focus = key;
 }
 
-void SteelPanEngine::noteOff(int key, double) {
+// Lift: the hand muting on release lands gently on a slow lift (a longer tail) and firmly on a fast
+// one; with the notes let ring, a fast lift rests the stick on the note a moment, damping it.
+void SteelPanEngine::noteOff(int key, double velocity) {
   if (key < KEY_MIN || key > KEY_MAX) return;
   Note &v = notes[key - KEY_MIN];
   v.held = false;
-  if (!v.active || P[p::letRing] > 0.5) return;
+  if (!v.active) return;
+  if (P[p::letRing] > 0.5) {
+    if (const double t = liftPast(velocity); t > 0 && !v.damped) { v.touch = (int)(0.06 * t * fs); damp(v, true); }
+    return;
+  }
   v.released = true;
+  v.liftK = liftScale(velocity);
   if (!sustain) mute(v);
 }
 
 void SteelPanEngine::setSustain(bool on) {
   sustain = on;
-  if (!on) for (int i : live) if (notes[i].released && !notes[i].damped) mute(notes[i]);
+  if (!on) for (int i : live) if (notes[i].released && !notes[i].damped) { notes[i].liftK = 1; mute(notes[i]); }
 }
 
 void SteelPanEngine::allNotesOff() {
@@ -229,6 +238,7 @@ double SteelPanEngine::amplitude(const Note &v, int p) const {
 void SteelPanEngine::process(float *L, float *R, int n) {
   for (int i = 0; i < n; i++) L[i] = R[i] = 0;
   if (couplingsDirty) rebuildCouplings();
+  for (int i : live) if (Note &v = notes[i]; v.touch > 0 && (v.touch -= n) <= 0) { v.touch = 0; damp(v, false); } // the stick lifts off
   for (int s = 0; s < n; s++) {
     for (const Coupling &c : couplings) {
       Note &a = notes[c.a], &b = notes[c.b];

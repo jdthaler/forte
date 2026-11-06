@@ -75,7 +75,8 @@
         "vib": "off",
         "leslie": "bypass",
         "motor": true,
-        "strikeOn": true
+        "strikeOn": true,
+        "liftOn": true
       }
     }
   ]

@@ -20,6 +20,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "marimba-model.h"
 #include "marimba-params.h"
@@ -80,6 +81,7 @@ class MarimbaEngine : public Engine {
     bool held = false, hand = false;     // the key is down; which mallet strikes next in a roll
     double vel = 0, rollIn = 0; // the first stroke's velocity, samples to the next stroke
     double fade = 1;
+    LiftTouch touch; // a mallet resting on the bar a moment after a fast lift (forte/lift.h)
     bool fading = false, dead = false;
     double age = 0;
     double E = 0, Emax = 0, Eb = 0, Et = 0;

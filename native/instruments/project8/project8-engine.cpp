@@ -142,11 +142,16 @@ void Project8Engine::noteOn(int key, double velocity) {
   start(voices.back(), key, velocity);
 }
 
-void Project8Engine::noteOff(int key, double) {
+// Lift: how the trap opens: a slow lift lowers its walls gently, the electron's signal fading over
+// up to 0.3 s as it drifts out; a fast one throws it open, the electron lost at once.
+void Project8Engine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity);
   for (Voice &v : voices) {
     if (v.key != key || !v.held || v.stolen) continue;
     v.held = false;
-    if (!sustain) end(v, kReleased); // the trap opens
+    if (sustain) continue;
+    if (s != 1) v.escT = s > 1 ? ESC_T + 0.3 * (s - 1) : ESC_T * s * s;
+    end(v, kReleased); // the trap opens
   }
 }
 
@@ -203,7 +208,7 @@ void Project8Engine::play(Voice &v, float *L, float *R, int n) {
   std::array<double, MAX_HARMONICS> a1{};
   int nh = 1;
   if (v.trapped || v.env > SILENT) amplitudes(v, a1, nh, std::fabs(w));
-  if (!v.trapped) v.env *= std::exp(-dt / ESC_T);
+  if (!v.trapped) v.env *= std::exp(-dt / (v.escT ? v.escT : ESC_T));
   if (v.stolen) v.rel *= std::exp(-dt / STEAL_T);
   else if (!v.held && !sustain) v.rel *= std::exp(-dt / REL_T);
   const double g0 = OUT * v.vel;

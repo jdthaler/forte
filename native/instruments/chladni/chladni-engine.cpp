@@ -48,7 +48,7 @@ void ChladniPlateEngine::coefficients(Voice &v) {
   const int d = (finger ? 1 : 0) | (v.hand ? 2 : 0);
   if (d == v.damp) return;
   v.damp = d;
-  const double hand = v.hand ? std::log(1000.0) / P[p::hand] : 0;
+  const double hand = v.hand ? std::log(1000.0) / (P[p::hand] * v.ringK) : 0;
   for (int j = 0; j < v.M; j++) {
     const double sf = finger ? (FINGER * v.fin[j]) / (2 * v.kp.mass) : 0;
     const ModeCoeffs c = modeCoeffs(v.kp.f[j], v.kp.sigma[j] + sf + hand, fs);
@@ -121,21 +121,24 @@ void ChladniPlateEngine::noteOn(int key, double velocity) {
     }
   }
   if (fresh) start(*v, key, ref);
-  v->touch = true; v->vel = velocity; v->hand = false;
+  v->touch = true; v->vel = velocity; v->hand = false; v->ringK = 1;
   v->bite = BITE * velocity; // the bow set on the edge bites: pressed harder for its first strokes
   coefficients(*v);
   focus = key;
 }
 
-void ChladniPlateEngine::noteOff(int key, double) {
+// Lift: how the bow leaves the plate. A fast lift springs it clear and the plate rings on (the
+// hand settles lightly: up to four times as long), a slow one drags it off, damping it.
+void ChladniPlateEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity);
   for (int i = 0; i < npending; i++) if (pending[i].key == key) { pending[i] = pending[--npending]; return; }
   for (int i = 0; i < count; i++)
-    if (voices[i]->key == key) { voices[i]->touch = false; if (!sustain) { voices[i]->hand = true; coefficients(*voices[i]); } }
+    if (voices[i]->key == key) { voices[i]->touch = false; if (!sustain) { voices[i]->hand = true; voices[i]->ringK = 1 / (s * s); coefficients(*voices[i]); } }
 }
 
 void ChladniPlateEngine::setSustain(bool on) {
   sustain = on;
-  if (!on) for (int i = 0; i < count; i++) if (!voices[i]->touch) { voices[i]->hand = true; coefficients(*voices[i]); }
+  if (!on) for (int i = 0; i < count; i++) if (!voices[i]->touch && !voices[i]->hand) { voices[i]->hand = true; voices[i]->ringK = 1; coefficients(*voices[i]); }
 }
 
 void ChladniPlateEngine::kill(Voice &v) {

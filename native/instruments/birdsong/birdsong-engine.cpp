@@ -62,7 +62,7 @@ void BirdsongEngine::setParams(const double *p) {
   for (Voice &v : voices) if (v.alive) {
     v.stale = true; // retuned a voice a chunk (each may need its limit cycle found)
     v.aIn = 1 - exp(-1 / (fi * P[p::inhale] * (1.5 - v.vel)));
-    v.aOut = 1 - exp(-1 / (fi * (v.stolen ? STEAL_T : P[p::exhale])));
+    v.aOut = 1 - exp(-1 / (fi * (v.stolen ? STEAL_T : P[p::exhale] * v.liftK)));
   }
 }
 
@@ -125,6 +125,7 @@ void BirdsongEngine::start(Voice &v, int key, double velocity) {
   v.foTo = track ? v.fSung : foFixed; v.fo = 0;
   oec(v);
   v.aIn = 1 - exp(-1 / (fi * P[p::inhale] * (1.5 - v.vel)));
+  v.liftK = 1;
   v.aOut = 1 - exp(-1 / (fi * P[p::exhale]));
 }
 
@@ -145,6 +146,7 @@ void BirdsongEngine::noteOn(int key, double velocity) {
   for (Voice &v : voices) if (v.alive && !v.stolen && v.key == key) { // sung again while it sounds
     v.held = true; v.vel = std::clamp(velocity, 0.0, 1.0); v.phase = 0;
     v.aIn = 1 - exp(-1 / (fi * P[p::inhale] * (1.5 - v.vel)));
+    v.liftK = 1;
     v.aOut = 1 - exp(-1 / (fi * P[p::exhale]));
     tune(v);
     newest = &v;
@@ -163,9 +165,15 @@ void BirdsongEngine::noteOn(int key, double velocity) {
   if (live > pick(kMaxVoices, 12, 6)) steal(v); // Quality: fewer birds at once
 }
 
-void BirdsongEngine::noteOff(int key, double) {
+// Lift: how fast the air sacs empty: a slow lift lets the song fall away (up to four times the
+// usual), a fast one clips it (a quarter of it).
+void BirdsongEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
-  for (Voice &v : voices) if (v.alive && v.held && v.key == key) v.held = false;
+  const double s = liftScale(velocity);
+  for (Voice &v : voices) if (v.alive && v.held && v.key == key) {
+    v.held = false;
+    if (s * s != v.liftK) { v.liftK = s * s; v.aOut = 1 - exp(-1 / (fi * P[p::exhale] * v.liftK)); }
+  }
 }
 
 void BirdsongEngine::allNotesOff() {

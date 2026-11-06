@@ -27,6 +27,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "hydraulis-model.h"
 #include "hydraulis-params.h"
@@ -106,6 +107,7 @@ class HydraulisEngine : public Engine {
     double s = 0, sv = 0, open = 0; // the slide: how far in (a share of its travel), its speed, and the holes' open share
     double s0 = 0, pushT = 0, pushDur = 0; // a push: where it started, how long it has gone, how long it takes
     bool pushing = false, down = false, fading = false, dead = false, inUse = false;
+    double retK = 1; // the finger's hold on the slide's return: its spring's pull × this (a lift's, forte/lift.h)
     double fade = 1, env = 0, age = 0, gl = 0, gr = 0, nb = 1;
     std::array<Pipe *, RANKS> list{};
     int nList = 0;

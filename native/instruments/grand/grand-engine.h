@@ -33,6 +33,7 @@
 #include "forte/background.h"
 #include "forte/dsp.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/longitudinal.h"
 #include "forte/sympathetic.h"
 #include "grand-model.h"
@@ -169,7 +170,9 @@ class GrandEngine : public Engine {
     bool quietTop(int i1);
     void dropTop();
     void coef(double *A1, double *A2, bool kill, double sd) const;
-    void setDamper(double sd) { coef(a1d, a2d, killing, sd); damperSigma = sd; }
+    void setDamper(double sd) { coef(a1d, a2d, killing, sd / liftK); damperSigma = sd; }
+    double liftK = 1; // how many times longer than usual its damper takes
+    void lifted(double scale) { if (scale != liftK) { liftK = scale; setDamper(damperSigma); } }
     void updateDamping(const GrandEngine &eng) { damped = killing || (!keyDown && !eng.sustain && hasDamper); }
     void kill() { if (killing) return; killing = true; setDamper(damperSigma); damped = true; }
     void strike(double v);

@@ -9,6 +9,7 @@
 
 #include "forte/dsp.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/fft.h"
 #include "tess-model.h"
 #include "tess-params.h"
@@ -34,7 +35,7 @@ class TessEngine : public Engine {
  private:
   static constexpr int kMaxVoices = 48;
   struct Voice {
-    bool active = false, held = false, ending = false;
+    bool active = false, held = false, ending = false, fadeOut = false; // fadeOut: a slow lift's, which fades through the dips (forte/lift.h)
     int key = 0, H = 1, cur = 0, built = -1;
     uint64_t age = 0;
     double vel = 0, gl = 0, gr = 0, phase = 0, inc = 0;
@@ -43,7 +44,7 @@ class TessEngine : public Engine {
     float *table[2] = {nullptr, nullptr};
   };
   void build(Voice &v, float *into);
-  void end(Voice &v);
+  void end(Voice &v, double velocity = -1);
   std::array<double, p::count> P{};
   bool hasParams = false, sustain = false;
   int version = 0, next = 0;

@@ -19,6 +19,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "vibraphone-model.h"
 #include "vibraphone-params.h"
 
@@ -74,6 +75,7 @@ class VibraphoneEngine : public Engine {
     double Fmax = 0, lastContactMs = 0;
     bool released = false;
     double damp = 0, dampSet = -1;
+    double touch = 0, touchLeft = 0; // a mallet resting on the bar after a fast lift: how hard, for how many more samples (forte/lift.h)
     double fade = 1;
     bool fading = false, dead = false;
     double age = 0;

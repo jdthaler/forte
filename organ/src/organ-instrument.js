@@ -23,6 +23,7 @@ export const INSTRUMENT = {
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'expression', ...TUNING_KEEP], // kept when a preset is chosen; the console, motor on, comes from DEFAULTS
   range: [KEY_MIN, KEY_MAX],              // A0–C8: past the 61-key manual (36–96) the wheels fold back an octave where a drawbar runs out
+  lift: 'the key\'s speed coming up: a slow lift opens its nine contacts one by one, each with its click; a fast one nearly together', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   space: null,                            // Space and CC64 switch the Leslie fast/slow (the page), not a pedal
   controllers: {
     1: { param: 'leslie', values: ['slow', 'fast'] },  // the mod wheel: Leslie fast from halfway up

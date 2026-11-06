@@ -25,6 +25,7 @@
 #include "forte/background.h"
 #include "forte/dsp.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "cristal-model.h"
 #include "cristal-params.h"
@@ -64,6 +65,7 @@ class CristalEngine : public Engine {
     int key = 0;
     double Nreg = 0, after = 0, vel = 0;
     bool touch = false, stick = false, dead = false, built = false;
+    double lamOff = 0; // how fast the fingers leave the rod after this lift, a sample (0: as usual; forte/lift.h)
     double Nn = 0, Nlift = 0, nz = 0, peak = 0, uf = 0, v = 0, F = 0;
     double pos = 0, t = 0; // along the stroke (m); time into a turn or a return (s)
     double firm = 0;       // how much harder than it holds the finger still presses, after landing

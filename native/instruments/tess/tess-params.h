@@ -17,7 +17,7 @@
 namespace forte::tess {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { tmag, teff, starMass, starRadius, planetRadius, impact, periodA4, scale, noise, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, count };
+enum : int { tmag, teff, starMass, starRadius, planetRadius, impact, periodA4, scale, noise, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -81,6 +81,7 @@ inline const ParamInfo kParams[p::count] = {
   {"cents10", "Minor 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents10, 1},
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
   {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
 inline const PresetValue kPreset1[] = {{p::tmag, 5.1}, {p::teff, 6037}, {p::starMass, 1.094}, {p::starRadius, 1.1}, {p::planetRadius, 2.042}, {p::impact, 0.58}, {p::periodA4, 6.2679}, {p::scale, 0.0004}};

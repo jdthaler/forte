@@ -20,6 +20,7 @@
 #include <cstdint>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "forte/tuning.h"
 #include "trautonium-model.h"
@@ -47,6 +48,7 @@ struct Voice {
   int key = 0;
   int64_t born = 0;
   double vel = 0, after = 0, p = 0, aPress = 0, aLift = 0;
+  double liftK = 1; // how many times longer than usual its finger takes to let go (forte/lift.h)
   bool stolen = false;
   double u = 0, uTo = 0, uRate = 0; // the wire: 1/f of the finger's place (f ∝ 1/R), sliding to uTo at uRate per second
   double bend = 1;                  // its own bend (MPE), gliding
@@ -86,7 +88,7 @@ class TrautoniumEngine : public Engine {
   void tune(Voice &v);
   void circuits(Voice &v);
   void start(Voice &v, int key, double velocity);
-  void lift(Voice &v) { v.held = false; }
+  void lift(Voice &v, double velocity = -1);
   void steal(const Voice *keep);
   double baseFreq(int key) const { return keyTarget[key & 127]; }
   void sample(Voice &v, double &out);

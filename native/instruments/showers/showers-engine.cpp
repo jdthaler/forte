@@ -126,6 +126,7 @@ void ColliderShowersEngine::noteOn(int key, double velocity) {
   Voice *v = voiceFor(key);
   v->held = true; v->damped = false;
   v->toNext = 0;
+  struck[key] = velocity;
   focus = key;
   const Particle kind = (Particle)(int)P[p::particle];
   const double E = velocity * P[p::energy];
@@ -134,8 +135,19 @@ void ColliderShowersEngine::noteOn(int key, double velocity) {
   deposit(key, d, E, velocity, kind);
 }
 
-void ColliderShowersEngine::noteOff(int key, double) {
+// Lift: a fast lift is a pile-up: a second, smaller shower (up to 0.4 × the first's energy) lands
+// in the crystal as the key comes up.
+void ColliderShowersEngine::noteOff(int key, double velocity) {
   for (Voice &v : voices) if (v.key == key && v.held) { v.held = false; v.damped = !sustain; }
+  if (!hasParams || key < FIRST || key > LAST) return;
+  if (const double t = liftPast(velocity), was = struck[key]; t > 0 && was > 0) {
+    struck[key] = 0;
+    const Particle kind = (Particle)(int)P[p::particle];
+    const double vel = 0.4 * t * was, E = vel * P[p::energy];
+    Deposit d;
+    shower(d, kind, E, P[p::depth], rng);
+    deposit(key, d, E, vel, kind);
+  }
 }
 
 void ColliderShowersEngine::pressure(double value, int key) {

@@ -20,6 +20,7 @@
 #include "carillon-model.h"
 #include "carillon-params.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 
 namespace forte::carillon {
 
@@ -70,6 +71,7 @@ class CarillonEngine : public Engine {
     double gl = 0, gr = 0, eps = 0, age = 0, fade = 1, peak = 0, level = 0;
     double fMax = 0, floor = 0; // Quality's, when the bell was hung: its highest mode (Hz), and where a mode is pruned (× the loudest)
     bool fading = false, dead = false, released = false;
+    double grace = 0; int graceIn = 0; // a fast lift's grace stroke: its velocity, and the samples until it lands (forte/lift.h)
     Clapper clap{};
     double Cm = 0, hm = 0, fd0 = 0, fV0 = 0;
     Clap cl;

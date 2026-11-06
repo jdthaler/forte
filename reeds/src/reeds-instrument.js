@@ -18,6 +18,7 @@ export const INSTRUMENT = {
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // the 200A's A1–C7, 33–96, until Full range opens the rest
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   mpe: { bend: 48 },                    // MPE: a note's own bend stiffens or softens its reed, ±48 semitones
+  lift: 'how fast the damper falls: a slow lift leaves a longer tail, a fast one stops the reed sooner', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   modWheel: 'tremDepth',                // MIDI CC1, the mod wheel (an FC-300's EXP 2): the tremolo, off at rest, full depth fully up
   faders: ['drive', 'hardness', 'strike', 'tremRate', 'tremDepth'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/reeds), built as WebAssembly

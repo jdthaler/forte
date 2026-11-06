@@ -74,7 +74,7 @@ void PulsarsEngine::noteOn(int key, double velocity) {
   // the same key again: the pulsar switches back on, as it is
   for (Voice &x : voices) {
     if (x.key != key || x.stolen) continue;
-    x.vel = velocity; x.held = true; x.tOff = -1; x.t = 0;
+    x.vel = velocity; x.held = true; x.tOff = -1; x.t = 0; x.lg = 1; x.lgStep = 0;
     return;
   }
   // past kMaxVoices (fewer at Medium and Low Quality), the oldest let-go pulsar (or else the
@@ -130,8 +130,16 @@ void PulsarsEngine::noteOn(int key, double velocity) {
   post(m);
 }
 
-void PulsarsEngine::noteOff(int key, double) {
-  for (Voice &v : voices) if (v.key == key && v.held && !v.stolen) { v.held = false; v.tOff = v.t; }
+// Lift: a slow lift fades the pulse train out over up to 0.6 s before the pulsar switches off; a
+// fast one cuts it, within 30 ms, the dispersed tail too.
+void PulsarsEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity);
+  for (Voice &v : voices) if (v.key == key && v.held && !v.stolen) {
+    v.held = false;
+    if (s > 1) { v.lgStep = -1 / (0.6 * (s - 1) * fs); continue; } // switches off once faded
+    v.tOff = v.t;
+    if (liftPast(velocity) > 0) v.lgStep = -1 / (0.03 * fs);
+  }
 }
 
 int PulsarsEngine::harmonicsOf(int key) const {
@@ -156,7 +164,7 @@ void PulsarsEngine::run(Voice &v, float *L, float *R, int n) {
     else {
       tl = sweep ? arrived(s, 0, v.t) : (v.t >= 0 ? 1 : 0);
       tr = sweep ? arrived(s, 1, v.t) : tl;
-      if (!v.held) {
+      if (!v.held && v.tOff >= 0) {
         const double u = v.t - v.tOff;
         tl = std::min(tl, 1 - (sweep ? arrived(s, 0, u) : 1.0));
         tr = std::min(tr, 1 - (sweep ? arrived(s, 1, u) : 1.0));
@@ -196,7 +204,8 @@ void PulsarsEngine::run(Voice &v, float *L, float *R, int n) {
     }
     // the power less its long-run mean (the receiver's baseline): a bright pulse rises above it,
     // a faint one leaves a dip
-    const double g = OUT * v.vel;
+    if (v.lgStep != 0) { v.lg += v.lgStep; if (v.lg <= 0) { v.lg = 0; v.lgStep = 0; if (v.tOff < 0) v.tOff = v.t; } }
+    const double g = OUT * v.vel * v.lg;
     L[i] = (float)(L[i] + g * v.envL * (a * yl + (a - 1) * dl));
     R[i] = (float)(R[i] + g * v.envR * (a * yr + (a - 1) * dr));
     v.t += dt;

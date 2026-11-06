@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "cavity-model.h"
 #include "cavity-params.h"
@@ -52,6 +53,7 @@ class CavityBellsEngine : public Engine {
     double quenchLeft = 0;      // s still normal-conducting after a quench
     double peak = 0;            // the highest cell field, in a full-velocity bunch's
     bool held = true, released = false, damped = false, quenched = false, stolen = false;
+    double liftK = 1; // how many times longer than usual its release takes after this lift (forte/lift.h)
     void kick(double q, double frac);
   };
   void retune(Voice &v, int count);

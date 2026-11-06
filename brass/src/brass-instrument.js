@@ -19,6 +19,7 @@ export const INSTRUMENT = {
   modWheel: 'plunger',                  // CC1: the plunger mute over the bell (wah)
   mpe: { bend: 12, slide: true },       // MPE: a note's own bend moves its slide (and the lips with it); CC74 its own plunger
   aftertouch: 'blows harder, up to half as hard again', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'how the breath stops: a slow lift tapers the note, a fast one is a tongue stop', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['shock', 'lipTension', 'tongue', 'breath', 'plunger'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/brass), built as WebAssembly
   wasm: { name: 'BrassWasmEngine', module: new URL('./brass-wasm.js', import.meta.url).href, binary: new URL('../wasm/brass.wasm', import.meta.url).href },

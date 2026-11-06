@@ -136,11 +136,14 @@ void OrganistaEngine::noteOn(int key, double velocity) {
   focus = key;
 }
 
-void OrganistaEngine::noteOff(int key, double) {
+// Lift: how fast the key lifts the string off the wheel, 15 ms as a rule: from 60 ms for the
+// slowest lift (the bow pressure fading, the tone thinning as it goes) to 4 ms for the fastest.
+void OrganistaEngine::noteOff(int key, double velocity) {
   Key *s = string(key);
   if (!s || !s->down) return;
   s->down = false; s->FT = 0;
-  s->dn = std::max(s->FN, 1e-6) / (0.015 * fs); // the key lifts the string off the wheel in 15 ms
+  const double t = liftScale(velocity);
+  s->dn = std::max(s->FN, 1e-6) / (0.015 * t * t * fs);
 }
 
 void OrganistaEngine::allNotesOff() { // Panic: every string and the board to rest

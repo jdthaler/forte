@@ -220,18 +220,21 @@ void HydrogenEngine::noteOn(int key, double velocity) {
   Voice &v = *slot;
   v.active = true; v.held = true; v.lit = true;
   v.key = key; v.age = clock++; v.glow = live;
-  v.t = 0; v.tOff = -1; v.shut = 1;
+  v.t = 0; v.tOff = -1; v.shut = 1; v.liftK = 1;
   v.bendNow = wheel * expr.bendOf(key);
   v.peakNorm = 0;
   std::tie(v.gl, v.gr) = keyPan(key);
   light(v, velocity);
 }
 
-void HydrogenEngine::noteOff(int key, double) {
+// Lift: the afterglow when the discharge stops: a slow lift draws it out (up to four times as
+// long), a fast one cuts it short (a quarter).
+void HydrogenEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity);
   for (Voice &v : voices) {
     if (v.active && v.key == key && v.held) {
       v.held = false;
-      if (!sustain && v.lit) { v.lit = false; v.tOff = v.t; }
+      if (!sustain && v.lit) { v.lit = false; v.tOff = v.t; v.liftK = s * s; }
     }
   }
 }
@@ -248,8 +251,8 @@ void HydrogenEngine::update(Voice &v) {
   const double nyq = 0.48 * fs;
   // each grid's row now, since the key and since its release (the slow ladder's clock runs
   // 1/SLOW_CLOCK times faster)
-  double on[2] = {g.rowAt(v.t), -1}, off[2] = {v.tOff >= 0 ? g.rowAt(v.t - v.tOff) : -1, -1};
-  if (g.slow()) { on[1] = g.rowAt(v.t / SLOW_CLOCK, 1); off[1] = v.tOff >= 0 ? g.rowAt((v.t - v.tOff) / SLOW_CLOCK, 1) : -1; }
+  double on[2] = {g.rowAt(v.t), -1}, off[2] = {v.tOff >= 0 ? g.rowAt((v.t - v.tOff) / v.liftK) : -1, -1};
+  if (g.slow()) { on[1] = g.rowAt(v.t / SLOW_CLOCK, 1); off[1] = v.tOff >= 0 ? g.rowAt((v.t - v.tOff) / v.liftK / SLOW_CLOCK, 1) : -1; }
   // the shutter: −60 dB in its time once the lamp is out, unless it is all the way open
   if (!v.lit && P[p::shutter] < SHUTTER_OPEN) v.shut *= std::exp(-std::log(1000.0) * SUB / fs / P[p::shutter]);
   double sum = 0;
@@ -268,7 +271,7 @@ void HydrogenEngine::update(Voice &v) {
     o.zr *= z; o.zi *= z;
   }
   // a released lamp is out when its light has fallen 60 dB, or its response has settled
-  const bool settled = v.t - v.tOff > g.end() && (!g.slow() || (v.t - v.tOff) / SLOW_CLOCK > g.end(1));
+  const bool settled = (v.t - v.tOff) / v.liftK > g.end() && (!g.slow() || (v.t - v.tOff) / v.liftK / SLOW_CLOCK > g.end(1));
   if (!v.lit && (sum * v.shut * v.shut < 1e-6 * v.peak || settled)) v.active = false;
 }
 

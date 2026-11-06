@@ -19,6 +19,7 @@
 #include <cstdint>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "forte/impulses.h"
 #include "huygens-model.h"
@@ -56,6 +57,7 @@ struct Osc {
   int key = 0;
   double fTarget = 0, C = 0, R = 0, tau = 0, V = 0;
   double gate = 0, power = 0;
+  double relA = 0; // its own release rate after a lift that wasn't middling (0: the usual; forte/lift.h)
   bool keyDown = false, dead = false;
   bool used = false;           // in the engine's list (the pool's slots)
   double fires[256] = {};

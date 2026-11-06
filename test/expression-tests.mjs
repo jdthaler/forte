@@ -56,11 +56,11 @@ await test('every instrument has the five switches, all on; its plugin and its s
 await test('a page shows the switches its instrument answers to', async () => {
   const shown = async (id) => { const I = await loadInstrument(id); return EXPRESSION_IDS.filter((s) => responds(I, s)); };
   assert.deepEqual(await shown('pipes'), ['strikeOn', 'glideOn', 'pressOn', 'liftOn']);       // its wind is every key's: no slide
-  assert.deepEqual(await shown('piano'), ['strikeOn']);
-  assert.deepEqual(await shown('clavier'), ['strikeOn', 'glideOn', 'pressOn']);                // its bend presses the key
-  assert.deepEqual(await shown('arc'), ['glideOn']);                                          // velocity does nothing
-  assert.deepEqual(await shown('brass'), ['strikeOn', 'glideOn', 'slideOn', 'pressOn']);
-  for (const r of INSTRUMENTS) assert.ok((await shown(r.id)).length, `${r.id}: at least one`);
+  assert.deepEqual(await shown('piano'), ['strikeOn', 'liftOn']);
+  assert.deepEqual(await shown('clavier'), ['strikeOn', 'glideOn', 'pressOn', 'liftOn']);      // its bend presses the key
+  assert.deepEqual(await shown('arc'), ['glideOn', 'liftOn']);                                // velocity does nothing
+  assert.deepEqual(await shown('brass'), ['strikeOn', 'glideOn', 'slideOn', 'pressOn', 'liftOn']);
+  for (const r of INSTRUMENTS) assert.ok((await shown(r.id)).includes('liftOn'), `${r.id}: Lift, at least`); // test/lift-tests.mjs
 });
 
 await test('on, everything goes through as it came', () => {

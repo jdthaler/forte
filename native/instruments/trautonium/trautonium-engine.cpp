@@ -52,7 +52,7 @@ void TrautoniumEngine::setParams(const double *p) {
     if (!wire) v.u = v.uTo = 1 / baseFreq(v.key); // retuned at once (One wire's finger stays where it is)
     tune(v); circuits(v);
     v.aPress = 1 - exp(-1 / (fs * P[p::press] * (1.5 - v.vel)));
-    v.aLift = 1 - exp(-1 / (fs * (v.stolen ? STEAL_T : P[p::lift])));
+    v.aLift = 1 - exp(-1 / (fs * (v.stolen ? STEAL_T : P[p::lift] * v.liftK)));
   }
 }
 
@@ -101,6 +101,7 @@ void TrautoniumEngine::start(Voice &v, int key, double velocity) {
   v.hx = x0; v.hy = 0; v.fPrev = 0; // the coupling capacitor starts charged to the mixture's rest: no thump
   tune(v); circuits(v);
   v.aPress = 1 - exp(-1 / (fs * P[p::press] * (1.5 - v.vel)));
+  v.liftK = 1;
   v.aLift = 1 - exp(-1 / (fs * P[p::lift]));
 }
 
@@ -160,7 +161,17 @@ void TrautoniumEngine::noteOn(int key, double velocity) {
   if (live > pick(kMaxVoices, 12, 6)) steal(v); // Quality: fewer manuals sounding at once
 }
 
-void TrautoniumEngine::noteOff(int key, double) {
+// Lift: how fast the finger lets go of the wire: a slow lift lets the pressure ease off over up to
+// twice the finger's lift time, and as the wire leaves the rail the resistance rises, so the pitch
+// slides up (up to 6 %, a semitone); a fast one lets go in half the time, on its pitch.
+void TrautoniumEngine::lift(Voice &v, double velocity) {
+  v.held = false;
+  const double s = liftScale(velocity);
+  if (s != v.liftK) { v.liftK = s; v.aLift = 1 - exp(-1 / (fs * (v.stolen ? STEAL_T : P[p::lift] * v.liftK))); }
+  if (v.liftK > 1) { v.uTo = v.u / (1 + 0.06 * (v.liftK - 1)); v.uRate = std::fabs(v.uTo - v.u) / (3 * P[p::lift] * v.liftK); }
+}
+
+void TrautoniumEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
   if (wire) {
     int j = 0;
@@ -170,11 +181,11 @@ void TrautoniumEngine::noteOff(int key, double) {
       if (held > 0) { // back to the key still down
         v.key = stack[held - 1]; v.uTo = 1 / baseFreq(v.key);
         v.uRate = std::fabs(v.uTo - v.u) / P[p::glide];
-      } else lift(v);
+      } else lift(v, velocity);
     }
     return;
   }
-  for (Voice &v : voices) if (v.alive && v.held && v.key == key) lift(v);
+  for (Voice &v : voices) if (v.alive && v.held && v.key == key) lift(v, velocity);
 }
 
 void TrautoniumEngine::allNotesOff() {

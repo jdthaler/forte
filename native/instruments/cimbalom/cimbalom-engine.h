@@ -25,6 +25,7 @@
 #include "cimbalom-model.h"
 #include "cimbalom-params.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/sympathetic.h"
 
 namespace forte::cimbalom {
@@ -95,6 +96,8 @@ class CimbalomEngine : public Engine {
     Hammer h;
     // per oscillator (string j's partials, then its far side's, string after string)
     std::array<double, OSC> q{}, q1{}, A1{}, A2{}, D1{}, D2{}, bg{}, bc{}, cK{}, bpsi{}, psiy{}, beta{}, tmp{};
+    std::array<double, OSC> wq{}, sq{}; // each partial's ω and own loss, for the damper's recursions
+    double liftK = 1;                   // how many times longer than usual the damper takes (forte/lift.h)
     std::array<double, BLOCK> Sblock{}; // its bridge signal this block (the sympathetic strings take it out of their own)
   };
 
@@ -125,6 +128,7 @@ class CimbalomEngine : public Engine {
 
   Voice *allocate(int key);
   void build(Voice &v);
+  void damper(Voice &v, double scale); // the damper's recursions, at `scale` times its usual time
   void launch(Voice &v, double speed);
   void render(Voice &v, int n, double *seg);
   void symRefresh();

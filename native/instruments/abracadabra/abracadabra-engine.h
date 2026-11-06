@@ -7,6 +7,7 @@
 #include <array>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "abracadabra-model.h"
 #include "abracadabra-params.h"
@@ -48,6 +49,7 @@ class AbracadabraEngine : public Engine {
   };
   struct Voice {
     bool active = false, held = false, closing = false;
+    double liftK = 1; // how many times longer than usual the magnet takes to ramp down after this lift (forte/lift.h)
     int key = 0, halo = MAX_WAVES, stream = STREAM_WAVES;
     uint32_t order = 0;
     double vel = 0, frac = 0, rel = 0, relT = 0.005, gain = 0;

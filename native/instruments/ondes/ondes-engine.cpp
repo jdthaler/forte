@@ -111,7 +111,7 @@ void OndesEngine::setParams(const double *p) {
   for (Voice &v : voices) if (v.alive) {
     if (!ribbon && retune) v.u = v.uTo = std::log2(keyTarget[v.key]);
     v.aPress = 1 - exp(-1 / (fs * P[p::press]));
-    v.aLift = 1 - exp(-1 / (fs * (v.stolen ? STEAL_T : P[p::lift])));
+    v.aLift = 1 - exp(-1 / (fs * (v.stolen ? STEAL_T : P[p::lift] * v.liftK)));
   }
 }
 
@@ -183,6 +183,7 @@ void OndesEngine::start(Voice &v, int key, double velocity) {
   v.zr = 1; v.zi = 0; v.prev = 0;
   v.b0 = v.b1 = v.b2 = 0;
   v.aPress = 1 - exp(-1 / (fs * P[p::press]));
+  v.liftK = 1;
   v.aLift = 1 - exp(-1 / (fs * P[p::lift]));
   update(v, 0, 0);
 }
@@ -240,7 +241,17 @@ void OndesEngine::noteOn(int key, double velocity) {
   if (live > pick(kMaxVoices, 12, 6)) steal(v); // Quality: fewer voices at once
 }
 
-void OndesEngine::noteOff(int key, double) {
+// Lift: how the intensity key lets go: a slow lift fades the note over up to four times the
+// release, a fast one cuts it in a quarter of it.
+void OndesEngine::letGo(Voice &v, double velocity) {
+  v.held = false;
+  const double s = liftScale(velocity);
+  if (s * s == v.liftK) return;
+  v.liftK = s * s;
+  v.aLift = 1 - exp(-1 / (fs * (v.stolen ? STEAL_T : P[p::lift] * v.liftK)));
+}
+
+void OndesEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
   if (ribbon) {
     int j = 0;
@@ -250,11 +261,11 @@ void OndesEngine::noteOff(int key, double) {
       if (held > 0) { // back to the key still down
         v.key = stack[held - 1]; v.uTo = std::log2(keyTarget[v.key]);
         v.uRate = std::fabs(v.uTo - v.u) / P[p::glide];
-      } else v.held = false;
+      } else letGo(v, velocity);
     }
     return;
   }
-  for (Voice &v : voices) if (v.alive && v.held && v.key == key) v.held = false;
+  for (Voice &v : voices) if (v.alive && v.held && v.key == key) letGo(v, velocity);
 }
 
 void OndesEngine::allNotesOff() {

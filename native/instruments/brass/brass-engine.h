@@ -21,6 +21,7 @@
 #include <cstdint>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "brass-model.h"
 #include "brass-params.h"
@@ -86,6 +87,7 @@ class BrassEngine : public Engine {
     int crossings = 0;
     double yAmp = 0, yMax = 0, yMin = 0;
     bool down = false, active = false, low = false;
+    double liftK = 1; // how many times longer than usual the breath takes to stop (forte/lift.h)
   };
   std::array<Voice, POOL> pool;
   // the ear's memory: each key's trim the last time it played (with the plan it had)

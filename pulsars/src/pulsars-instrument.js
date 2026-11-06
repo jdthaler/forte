@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   space: 'hold',                        // Space and CC64 latch the keys down: a pulsar keeps spinning; the host sends the noteOffs on release
   modWheel: { param: 'dm', max: 400 },  // CC1: the electrons on the way, from the DM set up to 400 pc/cm³
   mpe: { bend: 0, slide: true },        // MPE: a spin cannot bend; CC74 is each pulsar's own DM, its own distance
+  lift: 'a slow lift fades the pulse train out before the pulsar switches off; a fast one cuts it, the dispersed tail too', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['alpha', 'sightline', 'jitter', 'freq', 'dm'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/pulsars), built as WebAssembly
   wasm: { name: 'PulsarsWasmEngine', module: new URL('./pulsars-wasm.js', import.meta.url).href, binary: new URL('../wasm/pulsars.wasm', import.meta.url).href },

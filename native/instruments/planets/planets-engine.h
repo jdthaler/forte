@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "planets-model.h"
 #include "planets-params.h"
@@ -42,6 +43,7 @@ class PlanetEngine : public Engine {
   struct Voice {
     int key = -1;
     bool on = false, released = false, damped = false, stereo = false;
+    double fall = 0; // its fade a sample after this lift (0: as usual; forte/lift.h)
     double K = 1, spin = 1, level = 1;
     double Kc = 0, spinC = -1; int nC = 0; // what the oscillators' turns were made for
     int count = 0;

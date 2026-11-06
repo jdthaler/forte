@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: keeps the receivers open
   modWheel: { param: 'chorus', max: 20 }, // CC1: chorus on the held keys' field lines
   aftertouch: 'more chorus', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'a slow lift lets the whistler fade slowly; a fast one sends an echo hopping back from the other hemisphere', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['ducts', 'echo', 'density', 'sferic', 'chorus'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/whistlers), built as WebAssembly
   wasm: { name: 'WhistlersWasmEngine', module: new URL('./whistlers-wasm.js', import.meta.url).href, binary: new URL('../wasm/whistlers.wasm', import.meta.url).href },

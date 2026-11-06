@@ -23,6 +23,7 @@
 
 #include "forte/background.h" // FORTE_THREADS
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "forte/queue.h"
 #include "gongs-model.h"
@@ -142,6 +143,7 @@ class Voice {
   View *full = &views[0], *lite = &views[1], *cs = &views[0];
   double vScale = 0;
   double extra = 0;
+  double liftK = 1; // how many times longer than usual the hand takes to still it (forte/lift.h)
   bool released = false, damped = false, killing = false, dead = false;
   int m = 1;
   double h = 0, calm = 0;

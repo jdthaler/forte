@@ -70,7 +70,7 @@ bool QuantumEngine::Voice::start(const QuantumEngine &eng, int k, double vel, co
   // across C2–C7, the keyboard it was first drawn on; the keys beyond sit at its ends
   const double pan = std::max(-1.0, std::min(1.0, (2.0 * (k - 36)) / (96 - 36) - 1)) * 0.6, a = ((pan + 1) * pi) / 4;
   gl = fd::cos(a); gr = fd::sin(a); // keyPan(key)
-  released = quench = stolen = dead = false;
+  released = quench = stolen = dead = false; liftK = 1;
   coh = folded = false; lam = 0; gain = 1; dcB = dcC = 0;
   s0 = 0; s1 = S; active = NP; // the states rotated, and the pairs summed (see trim)
   const double x = eng.expr.slideOr(k, NAN); // a slide starts there
@@ -116,7 +116,7 @@ void QuantumEngine::Voice::trim(double tau) {
 }
 
 void QuantumEngine::Voice::rates(const QuantumEngine &eng) { // T₁ (or the release quench) and T_φ, applied live
-  const double fs = eng.fs, T1 = stolen ? 0.005 : quench ? eng.P[p::release] : eng.P[p::T1];
+  const double fs = eng.fs, T1 = stolen ? 0.005 : quench ? eng.P[p::release] * liftK : eng.P[p::T1];
   r1 = fd::exp(-1 / (fs * T1));
   if (!slid) deph = eng.P[p::dephase];
   const double Gp = std::max(0.0, truthy(deph) ? deph : 0); // Γ_φ = 1/T_φ
@@ -473,13 +473,16 @@ void QuantumEngine::drop(Voice *v) {
   nVoices = j;
 }
 
-void QuantumEngine::noteOff(int key, double) {
+// Lift: the measurement that ends the note: a fast lift collapses the state (its quench in up to a
+// quarter of the usual time), a slow one lets it decohere slowly (up to four times).
+void QuantumEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity);
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
   for (int i = 0; i < nVoices; i++) {
     Voice *v = voices[i];
     if (v->key == key && !v->released) {
       v->released = true;
-      if (!sustain) { v->quench = true; v->rates(*this); }
+      if (!sustain) { v->quench = true; v->liftK = s * s; v->rates(*this); }
     }
   }
 }

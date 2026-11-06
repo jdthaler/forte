@@ -14,6 +14,7 @@ export const INSTRUMENT = {
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                     // MIDI keys: all 88, A0–C8
+  lift: 'when recombination comes: a fast lift freezes the sound at once, a slow one lets it stream away', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   space: 'sustain',                     // Space and CC64: the notes keep sounding after the keys are up
   modWheel: 'tilt',                     // CC1: the primordial spectrum's tilt
   faders: ['darkMatter', 'recombination', 'neutrinos', 'baryons', 'tilt'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

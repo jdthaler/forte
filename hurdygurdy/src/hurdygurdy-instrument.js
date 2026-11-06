@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: the coup de poignet, held (the engine's setSustain)
   modWheel: 'crank',                    // CC1: the crank's speed
   aftertouch: 'the hand leans into the crank (every string)', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'a slow lift lets the tangent sag off the string: the pitch slides down to the next stop or the open string', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['coup', 'pressure', 'bounce', 'tirant', 'crank'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/hurdygurdy), built as WebAssembly
   wasm: { name: 'HurdyGurdyWasmEngine', module: new URL('./hurdygurdy-wasm.js', import.meta.url).href, binary: new URL('../wasm/hurdygurdy.wasm', import.meta.url).href },

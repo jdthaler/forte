@@ -21,6 +21,7 @@ export const INSTRUMENT = {
   // rocks its own key; its pressure presses the intensity key harder
   mpe: { bend: 48, slide: true },
   aftertouch: 'presses the intensity key harder: louder', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'how the intensity key lets go: a slow lift fades the note, a fast one cuts it', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['pull', 'octave', 'souffle', 'balance', 'vibrato'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/ondes), built as WebAssembly
   wasm: { name: 'OndesWasmEngine', module: new URL('./ondes-wasm.js', import.meta.url).href, binary: new URL('../wasm/ondes.wasm', import.meta.url).href },

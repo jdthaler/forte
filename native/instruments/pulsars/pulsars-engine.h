@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "pulsars-model.h"
 #include "pulsars-params.h"
@@ -50,6 +51,7 @@ class PulsarsEngine : public Engine {
     int xf = 0, cur = 0;                    // crossfade samples left; the table playing (0 or 1)
     Tables tab[2];
     bool held = true, stolen = false;
+    double lg = 1, lgStep = 0;              // a lift's fade (forte/lift.h): the gain, and its step a sample
   };
   void fill(Voice &v, int which);            // (re)build one of the voice's tables from its setup
   void startXf(Voice &v);

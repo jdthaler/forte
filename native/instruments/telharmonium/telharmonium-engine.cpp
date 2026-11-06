@@ -246,7 +246,7 @@ void TelharmoniumEngine::drop(Key &k) {
 
 // The relay opens: each winding's contacts part over the contact time, its current followed step by
 // step as their engagement falls; at once, it leaves with its current.
-void TelharmoniumEngine::open(Key &k) {
+void TelharmoniumEngine::open(Key &k, double scale) {
   k.on = false;
   if (contact <= 0) { drop(k); return; }
   for (int i = 0; i < k.count; i++) {
@@ -256,7 +256,7 @@ void TelharmoniumEngine::open(Key &k) {
       C[s.bus] -= c;
       s.y = steady(s, k) + c;
       s.uPrev = emf(s, k);
-      s.at = 0; s.len = contact;
+      s.at = 0; s.len = scale == 1 ? contact : std::max(1, (int)std::lround(contact * scale));
     } else if (s.dir == 1) { // still closing: it opens from where it got to
       s.at = s.len - s.at;
     }
@@ -325,10 +325,12 @@ void TelharmoniumEngine::noteOn(int key, double velocity) {
   }
 }
 
-void TelharmoniumEngine::noteOff(int key, double) {
+// Lift: how fast the relay opens: a slow lift parts its contacts over twice the contact time (a
+// softer click), a fast one over half.
+void TelharmoniumEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
   for (Key &k : keys) if (k.on && k.key == key) {
-    open(k);
+    open(k, liftScale(velocity));
     Message m;
     m.type = msg::note; m.key = (int16_t)key; m.values[0] = 0; m.count = 1;
     post(m);

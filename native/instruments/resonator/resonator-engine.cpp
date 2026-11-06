@@ -195,18 +195,32 @@ void ResonatorEngine::noteOn(int key, double velocity) {
   focus = key;
 }
 
-void ResonatorEngine::noteOff(int key, double) {
+void ResonatorEngine::lifted(Voice &v, double scale) {
+  if (scale == v.liftK) return;
+  v.liftK = scale;
+  for (int u = 0; u < v.nu; u++) for (int j = 0; j < v.np; j++) {
+    const int i = u * v.np + j;
+    const ModeCoeffs d = modeCoeffs(v.s.p[j].f[u], v.s.p[j].sigma + DAMPER / scale, fs);
+    v.a1d[i] = d.a1; v.a2d[i] = d.a2;
+  }
+  if (v.damped) { v.damped = false; setDamper(v); }
+}
+
+// Lift: how fast the drive ramps down and the damper falls: a slow lift lets the string sing on
+// as both let go gently, a fast one stops it sooner.
+void ResonatorEngine::noteOff(int key, double velocity) {
   for (int i = 0; i < count; i++) {
     Voice &v = *voices[i];
     if (v.key != key) continue;
     v.keyDown = false; v.driven = false;
+    lifted(v, sustain ? 1 : liftScale(velocity));
     setDamper(v);
   }
 }
 
 void ResonatorEngine::setSustain(bool on) {
   sustain = on;
-  for (int i = 0; i < count; i++) setDamper(*voices[i]);
+  for (int i = 0; i < count; i++) { if (!on) lifted(*voices[i], 1); setDamper(*voices[i]); } // the pedal's dampers fall as they always did
 }
 
 void ResonatorEngine::allNotesOff() {
@@ -239,11 +253,12 @@ void ResonatorEngine::run(float *L, float *R, int n) {
     const double Fk = F_REF / v.s.nuFull; // each string's share of the pull (a string the Quality leaves out takes its share away)
     double pk = 0, uaPk = 0;
     const bool active = v.driven || v.env > 0 || v.current > 1e-6;
+    const double fallV = v.liftK == 1 ? fall : 1 - std::exp(-k / (RELEASE * v.liftK));
     for (int i = 0; i < n; i++) {
       double Fc[MAX_UNI] = {0, 0, 0};
       if (active) {
         // the drive: its envelope, then the loops on the pickup, a block late
-        v.env = v.driven ? std::min(1.0, v.env + rise) : (v.env > 1e-5 ? v.env * (1 - fall) : 0);
+        v.env = v.driven ? std::min(1.0, v.env + rise) : (v.env > 1e-5 ? v.env * (1 - fallV) : 0);
         const double x = ring[(pos + i - D) & (RING - 1)];
         double s = 0;
         if (noise) {

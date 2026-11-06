@@ -68,13 +68,22 @@ void BubbleEngine::noteOn(int key, double velocity) {
   Nozzle &z = nozzles[key - KEY_LO];
   // every press owes one bubble, released in the next block even if the key is already up again
   // (a quick tap); a held key struck again releases its next bubble now: the same nozzle, never a second
-  z.held = true; z.owed = true; z.vel = std::max(0.0, std::min(1.0, velocity)); z.first = true;
+  z.held = true; z.owed = true; z.vel = std::max(0.0, std::min(1.0, velocity)); z.first = true; z.shut = 0; z.last = 0;
 }
 
-void BubbleEngine::noteOff(int key, double) { if (key >= KEY_LO && key <= KEY_HI) nozzles[key - KEY_LO].held = false; }
+// Lift: how fast the nozzle shuts. A slow lift closes it over up to 150 ms, still letting bubbles
+// go; a fast one snaps it shut, pinching off a last small bubble (up to 0.6 × the radius, higher).
+void BubbleEngine::noteOff(int key, double velocity) {
+  if (!(key >= KEY_LO && key <= KEY_HI)) return;
+  Nozzle &z = nozzles[key - KEY_LO];
+  z.held = false;
+  const double s = liftScale(velocity), t = liftPast(velocity);
+  if (s > 1) z.shut = (int)(0.15 * (s - 1) * fs);
+  if (t > 0 && !z.owed) { z.owed = true; z.last = 1 - 0.4 * t; }
+}
 
 void BubbleEngine::allNotesOff() {
-  for (Nozzle &z : nozzles) { z.held = false; z.owed = false; z.press = 0; }
+  for (Nozzle &z : nozzles) { z.held = false; z.owed = false; z.press = 0; z.shut = 0; z.last = 0; }
   for (Bubble &b : pool) if (b.on) startFade(b, FADE);
 }
 
@@ -144,6 +153,7 @@ bool BubbleEngine::release(Nozzle &z, int offset) {
   // the key's own bend: its nozzle releases the bubble that rings r × the note its own would ring
   // here and now (a bubble's note is set as it pinches off: those already rising keep theirs)
   if (const double r = expr.bendOf(z.key); r != 1) R = tuneRadius(acoustics(R, renv).fd * r, renv);
+  if (z.last > 0) { R *= z.last; vel *= z.last; z.last = 0; } // a fast lift's last bubble
   const bool first = z.first;
   if (!first) {
     R *= 1 + (P[p::spread] / 100) * gauss();
@@ -337,7 +347,8 @@ void BubbleEngine::process(float *L, float *R, int n) {
       if (!release(z, 0)) continue; // pool full: next block
       z.owed = false; z.due = interval(z);
     }
-    if (!z.held) continue;
+    if (!z.held && z.shut <= 0) continue;
+    if (!z.held) z.shut -= n; // shutting slowly
     while (z.due < n) {
       if (!release(z, std::max(0, (int)std::floor(z.due)))) { z.due = n; break; } // pool full: try again next block
       z.due += interval(z);

@@ -92,7 +92,7 @@ void TubularEngine::Voice::strike(const TubularEngine &eng, double velocity) {
   eta = uc - 1.5 * v * h; etaPrev = eta - v * h;
   dPrev = -1; dPrev2 = -1; malletOn = true; contact = false; inFlight = 0;
   contactSamples = 0; Fmax = 0;
-  released = false; fading = false; fade = 1; age = 0;
+  released = false; fading = false; fade = 1; age = 0; liftK = 1;
 }
 
 // The face's force for a compression D at the next step: the discrete gradient of
@@ -280,10 +280,11 @@ void TubularEngine::strikeKey(int key, double velocity, Data::Ref r) {
   }
 }
 
-void TubularEngine::noteOff(int key, double) {
+void TubularEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
-  if (Voice *v = byKey[key]) v->released = true;
+  // how fast its damper falls: a slow lift leaves a longer tail (with the pedal down, the pedal's lets it fall later)
+  if (Voice *v = byKey[key]) { v->released = true; v->liftK = sustain || P[p::pedalLock] != 0 ? 1 : liftScale(velocity); }
 }
 
 void TubularEngine::allNotesOff() {
@@ -305,8 +306,8 @@ void TubularEngine::processBlock(float *L, float *R, int n) {
   for (int i = 0; i < nVoices; i++) {
     Voice *v = voices[i];
     // the damper bar: on every tube not held by a key, unless the pedal is down
-    const double want = v->released && !sustain && !lock ? 1 : 0;
-    if (v->damp != want) v->damp = want > v->damp ? std::min(1.0, v->damp + dStep) : std::max(0.0, v->damp - dStep);
+    const double want = v->released && !sustain && !lock ? 1 / v->liftK : 0; // a slow lift lowers it gently
+    if (v->damp != want) v->damp = want > v->damp ? std::min(want, v->damp + dStep) : std::max(want, v->damp - dStep);
     if (v->damp != v->dampSet) v->coefs(*this);
     v->render(L, R, n, *this);
   }
@@ -339,7 +340,7 @@ void TubularEngine::postFocus() {
     a[i] = (float)(std::sqrt(std::max(0.0, qa * qa - 2 * c * qa * qb + qb * qb)) / std::sin(om * k));
   }
   a[VIEW_MODES] = (float)v->E; a[VIEW_MODES + 1] = (float)v->lastContactMs; a[VIEW_MODES + 2] = (float)v->Fmax;
-  a[VIEW_MODES + 3] = (float)v->damp; a[VIEW_MODES + 4] = (float)(v->malletOn ? 1 : 0);
+  a[VIEW_MODES + 3] = (float)std::min(1.0, v->damp); a[VIEW_MODES + 4] = (float)(v->malletOn ? 1 : 0);
   post(m);
 }
 

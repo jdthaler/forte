@@ -192,7 +192,7 @@ void Pluck::setPad(const PadParams &P) {
 
 double Pluck::tip() const { double s = 0; for (int i = 0; i < N; i++) s += PT[i] * q[i]; return s; }
 void Pluck::press(double vel) { V = keySpeed(vel); hv = V; hT = hRest + PAD.travel; down = true; t = 0; released = false; }
-void Pluck::lift() { hv = -PAD.vRet; hT = hRest; down = false; }
+void Pluck::lift(double scale) { hv = -PAD.vRet / scale; hT = hRest; down = false; } // a fast lift slaps the pad back onto the reed
 
 double Pluck::step() {
   if (hv != 0) {

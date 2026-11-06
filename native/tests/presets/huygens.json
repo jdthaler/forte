@@ -40,7 +40,8 @@
         "cents9": 0,
         "cents10": 0,
         "cents11": 0,
-        "glideOn": true
+        "glideOn": true,
+        "liftOn": true
       }
     }
   ]

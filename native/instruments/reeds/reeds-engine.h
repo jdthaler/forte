@@ -22,6 +22,7 @@
 #include "forte/background.h"
 #include "forte/dsp.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "reeds-model.h"
 #include "reeds-params.h"
@@ -58,6 +59,7 @@ class ReedEngine : public Engine {
     bool inUse = false;
     double k = 0;
     int os = OS, hMax = 0; // this voice's oversampling (Medium and Low play their reeds at the output rate), the hammer's longest flight
+    double liftK = 1; // how many times longer than usual its damper takes (forte/lift.h)
     double prune = 0, deathRel = 0, loudest = 0; // Medium, Low: a mode / the voice ends this far below the loudest
     std::array<double, MAX_MODES> q{}, q1{}, a1{}, a2{}, a1d{}, a2d{}, w{}, bw{}, pk{}, bp{}, om{}, sig{}, dw{}, om0{};
     // om0: the modes unbent; bend: the ratio om is tuned to, the wheel's × the note's own (own, gliding to its key's)

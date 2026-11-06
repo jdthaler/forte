@@ -77,7 +77,7 @@ void ClavicylinderEngine::noteOn(int key, double velocity) {
       if (q) q->dead = true;
     }
   }
-  v->touch = true; v->vel = velocity;
+  v->touch = true; v->vel = velocity; v->lamOff = 0;
   // The bar meets the glass at the speed the key went down: a knock, a pulse of normal force
   // lasting longer through more cloth. It sounds the modes that move toward the glass, and
   // its friction gives the note its first push: a firm key speaks at once, a gentle one swells.
@@ -87,8 +87,11 @@ void ClavicylinderEngine::noteOn(int key, double velocity) {
   focus = key;
 }
 
-void ClavicylinderEngine::noteOff(int key, double) {
-  for (int i = 0; i < count; i++) if (voices[i]->key == key) voices[i]->touch = false;
+// Lift: how fast the bar's cloth leaves the glass: a slow lift drags it off (over up to four times
+// the usual), quieting the bar as it goes; a fast one snaps it away and leaves it ringing.
+void ClavicylinderEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity), lam = s == 1 ? 0 : 1 - std::exp(-k / (LIFT * s * s));
+  for (int i = 0; i < count; i++) if (voices[i]->key == key) { voices[i]->touch = false; voices[i]->lamOff = lam; }
 }
 
 // The cloth's force on the glass (N): the slider (at middle C) through the key's regulation,
@@ -136,7 +139,7 @@ void ClavicylinderEngine::run(float *L, float *R, int n) {
     const bool tr = focus == v.key;
     double pk = 0, sticks = 0, fsum = 0;
     for (int i = 0; i < n; i++) {
-      v.Nn += (Nt - v.Nn) * (v.touch ? lamOn : lamOff);
+      v.Nn += (Nt - v.Nn) * (v.touch ? lamOn : v.lamOff ? v.lamOff : lamOff);
       if (!v.touch && v.Nn < 1e-4) v.Nn = 0;
       // the knock: the glass pushes the bar back across the rub, and presses the cloth harder
       const double kn = v.knock;

@@ -122,7 +122,7 @@ void AbracadabraEngine::noteOn(int key, double velocity) {
   if (!hasParams || key < FIRST || key >= FIRST + KEYS) return;
   Voice &v = voices[key - FIRST];
   KeyField &k = fields[key - FIRST];
-  v.held = true; v.vel = std::clamp(velocity, 0.0, 1.0); v.order = ++order;
+  v.held = true; v.vel = std::clamp(velocity, 0.0, 1.0); v.order = ++order; v.liftK = 1;
   if (v.active) { v.closing = false; return; } // the magnet charges again from where it is
   // past kMaxVoices (fewer at Medium and Low Quality), the let-go voice with the least field (or
   // else the oldest) fades out
@@ -139,7 +139,7 @@ void AbracadabraEngine::noteOn(int key, double velocity) {
   }
   if (live >= pick(kMaxVoices, 16, 10) && victim) { victim->closing = true; victim->relT = STEAL_T; } // Quality: fewer keys at once
   v = Voice{};
-  v.active = true; v.held = true; v.key = key; v.vel = std::clamp(velocity, 0.0, 1.0); v.order = order;
+  v.active = true; v.held = true; v.key = key; v.vel = std::clamp(velocity, 0.0, 1.0); v.order = order; v.liftK = 1;
   v.halo = pick(MAX_WAVES, 32, 16); v.stream = pick(STREAM_WAVES, 8, 4); // Quality: fewer waves in the field
   v.rel = 1; v.relT = REL_T;
   std::tie(v.gl, v.gr) = keyPan(key);
@@ -171,9 +171,11 @@ void AbracadabraEngine::noteOn(int key, double velocity) {
   if (focus != key) { focus = key; baseN = 0; baseK = 0; baseR = baseI = 0; }
 }
 
-void AbracadabraEngine::noteOff(int key, double) {
+void AbracadabraEngine::noteOff(int key, double velocity) {
   if (key < FIRST || key >= FIRST + KEYS) return;
-  voices[key - FIRST].held = false;
+  // Lift: how fast the magnet ramps down: a slow lift over up to four times the ramp, a fast one in a quarter of it
+  const double s = liftScale(velocity);
+  voices[key - FIRST].held = false; voices[key - FIRST].liftK = s * s;
 }
 
 void AbracadabraEngine::setSustain(bool on) { sustain = on; }
@@ -190,7 +192,7 @@ void AbracadabraEngine::play(Voice &v, float *L, float *R, int n) {
   v.gain = v.gain == 0 ? want : glideTo(v.gain, want, n / fs, GAIN_T);
   // the magnet: charging toward the key's velocity, or discharging once the key (and the pedal) let go
   const double target = (v.held || sustain) && !v.closing ? v.vel : 0;
-  const double rate = 1 / (std::max(P[p::ramp], 1e-4) * fs);
+  const double rate = 1 / (std::max(P[p::ramp], 1e-4) * (v.held || sustain ? 1 : v.liftK) * fs);
   // the channel: a band-pass around the note, Q 8 (RBJ, 0 dB at its centre), fed white noise of
   // one-sided density noise² per Hz
   const double w0 = TAU * std::min(f, 0.45 * fs) / fs, al = fdlibm::sin(w0) / (2 * CHANNEL_Q), a0 = 1 + al;

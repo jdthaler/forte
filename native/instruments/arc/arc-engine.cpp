@@ -80,13 +80,13 @@ void Arc::engage(int key, double C) {
   double v = uDC;
   if (key >= 0 && key < 128 && !std::isnan(capV[key])) v = uDC + (capV[key] - uDC) * fdlibm::exp(-(e.time - capT[key]) / (e.fs * R_LEAK * C));
   if (nM == 0 && nT == 1) { ic = 0; vB = v; } // the branch was open: it starts here
-  tKey[k] = key; tC[k] = C; tV[k] = v; tI[k] = 0; tR[k] = R_LEAK; tDir[k] = 1;
+  tKey[k] = key; tC[k] = C; tV[k] = v; tI[k] = 0; tR[k] = R_LEAK; tDir[k] = 1; tS[k] = 1;
 }
 // A key opens its contact: a closed capacitor is split off the bank at the bank's voltage,
 // carrying its share of the bank's current.
-void Arc::release(int key) {
+void Arc::release(int key, double speed) {
   if (pendKey == key) { pendKey = NONE; return; }
-  for (int k = 0; k < nT; k++) if (tKey[k] == key && tDir[k] > 0) { tDir[k] = -1; tR[k] = std::max(tR[k], (2 * eng->h) / tC[k]); return; }
+  for (int k = 0; k < nT; k++) if (tKey[k] == key && tDir[k] > 0) { tDir[k] = -1; tS[k] = speed; tR[k] = std::max(tR[k], (2 * eng->h) / tC[k]); return; }
   for (int k = 0; k < nM; k++) if (mKey[k] == key) {
     const double C = mC[k];
     double sumI = 0;
@@ -94,14 +94,14 @@ void Arc::release(int key) {
     const double share = CB > 0 ? ((ic - sumI) * C) / CB : 0;
     nM--; mKey[k] = mKey[nM]; mC[k] = mC[nM];
     CB -= C; if (CB < 1e-15 || nM == 0) CB = 0;
-    if (nT < MAXE) { const int t = nT++; tKey[t] = key; tC[t] = C; tV[t] = vB; tI[t] = share; tR[t] = (2 * eng->h) / C; tDir[t] = -1; }
+    if (nT < MAXE) { const int t = nT++; tKey[t] = key; tC[t] = C; tV[t] = vB; tI[t] = share; tR[t] = (2 * eng->h) / C; tDir[t] = -1; tS[t] = speed; }
     return;
   }
 }
 void Arc::releaseAll() {
   pendKey = NONE;
   for (int guard = MAXE; nM > 0 && guard > 0; guard--) release(mKey[nM - 1]);
-  for (int k = 0; k < nT; k++) if (tDir[k] > 0) { tDir[k] = -1; tR[k] = std::max(tR[k], (2 * eng->h) / tC[k]); }
+  for (int k = 0; k < nT; k++) if (tDir[k] > 0) { tDir[k] = -1; tS[k] = 1; tR[k] = std::max(tR[k], (2 * eng->h) / tC[k]); }
 }
 int Arc::lead() const {
   if (pendKey != NONE) return pendKey;
@@ -111,7 +111,7 @@ int Arc::lead() const {
 void Arc::removeT(int k) {
   const int j = --nT;
   tKey[k] = tKey[j]; tC[k] = tC[j]; tV[k] = tV[j]; tI[k] = tI[j];
-  tR[k] = tR[j]; tDir[k] = tDir[j]; tY[k] = tY[j]; tW[k] = tW[j];
+  tR[k] = tR[j]; tDir[k] = tDir[j]; tY[k] = tY[j]; tW[k] = tW[j]; tS[k] = tS[j];
 }
 
 // n samples at the base rate; adds the oversampled pressure into eng.osL/osR.
@@ -150,7 +150,7 @@ void Arc::run(int n, const double *emf) {
         double sumY = 0, sumYw = 0, sumI = 0;
         for (int k = 0; k < nT; k++) {
           const double C = tC[k];
-          double r = tDir[k] > 0 ? tR[k] * kClose : tR[k] + dOpen;
+          double r = tDir[k] > 0 ? tR[k] * kClose : tR[k] + dOpen * tS[k];
           if (r > R_LEAK) r = R_LEAK;
           tR[k] = r;
           const double Y = 1 / (r + h2 / C), w = tV[k] + (h2 / C) * tI[k];
@@ -421,7 +421,10 @@ void ArcEngine::noteOn(int key, double) {
   if (a->pendKey == key) return;
   a->engage(key, C); focus = a->index;
 }
-void ArcEngine::noteOff(int key, double) {
+// Lift: how fast the key's contacts part. A slow lift draws them apart gently, so the spark
+// across them, and the arc's current through it, dies away in a longer hiss (a quarter of the
+// usual speed for the slowest); a fast one snaps them open (four times).
+void ArcEngine::noteOff(int key, double velocity) {
   if (!hasParams) return;
   if (mode == mode_::talk) {
     int i = 0; while (i < nStack && stack[i] != key) i++;
@@ -432,7 +435,8 @@ void ArcEngine::noteOff(int key, double) {
   for (int k = 0; k < nArcs; k++) {
     Arc &a = arcs[k];
     if (!a.holds(key)) continue;
-    a.release(key);
+    const double s = liftScale(velocity);
+    a.release(key, 1 / (s * s));
     if (!a.held()) a.released = time;
     else if (a.bendKey == key) a.bendKey = a.lead(); // the core glides to the bend of the key still held
   }

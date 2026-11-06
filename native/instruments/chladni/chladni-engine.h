@@ -23,6 +23,7 @@
 #include "chladni-params.h"
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 
 namespace forte::chladni {
@@ -56,6 +57,7 @@ class ChladniPlateEngine : public Engine {
   struct Voice {
     int key = 0;
     bool touch = false, dead = false, hand = false, stick = false;
+    double ringK = 1; // how many times longer than usual it rings on under the hand after this lift (forte/lift.h)
     double vel = 0, after = 0, bite = 0;
     double N = 0, V = 0;       // the bow's force on the edge (N) and its speed (m/s)
     double shift = 0, s = 0;   // the bow's shift along the edge, glided, and its place on the path

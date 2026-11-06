@@ -57,7 +57,7 @@ void HurdyGurdyEngine::applyQuality() {
 
 void HurdyGurdyEngine::redesign(Str &s) {
   const StringDesign d = stringDesign(s.id, Pm);
-  const double Ls = s.id <= CH2 ? stopLength(melody, Pm) / bendR : d.L;
+  const double Ls = s.id <= CH2 ? stopLength(melody, Pm) / (bendR * sagR) : d.L;
   s.design(d, loopDesign(d, Ls, Pm, s.fs));
 }
 
@@ -109,24 +109,30 @@ void HurdyGurdyEngine::noteOn(int key, double velocity) {
   if (!hasParams || key < KEY_OPEN || key > KEY_TOP) return;
   if (!held[key]) { held.set(key); nHeld++; }
   const int top = topKey();
-  if (top != melody) { melody = top; restop(); }
+  if (top != melody) { melody = top; sagR = 1; restop(); }
   // a key struck hard: the wrist gives the crank a coup as the tangent lands
   if (velocity > 0.55) { shotA = std::min(1.0, (velocity - 0.55) / 0.45); shotAt = t; }
 }
 
-void HurdyGurdyEngine::noteOff(int key, double) {
+// Lift: a slow lift lets the tangent sag off the string, so the pitch slides down to the next stop
+// (or the open string) over up to 120 ms, as a player's slurred release; any other leaves at once.
+void HurdyGurdyEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127 || !held[key]) return;
   held.reset(key); nHeld--;
   // the next highest tangent, or open; with none held and the crank stopping, the last stays down
   // until the wheel has stopped (run)
   if (nHeld > 0 || Pm.keep || pedal) {
     const int top = topKey();
-    if (top != melody) { melody = top; restop(); }
+    if (top != melody) {
+      const double s = liftScale(velocity);
+      if (key == melody && s > 1) { sagR = (sagR * stopLength(top, Pm)) / stopLength(melody, Pm); sagT = 0.12 * (s - 1); }
+      melody = top; restop();
+    }
   }
 }
 
 void HurdyGurdyEngine::allNotesOff() { // Panic: the crank, every string and the board to rest
-  held.reset(); nHeld = 0; pedal = false; after = 0; shotAt = -1;
+  held.reset(); nHeld = 0; pedal = false; after = 0; shotAt = -1; sagR = 1;
   rate = 0; drive = 0; vB = 0; surge = 0;
   for (auto &s : S) { s->clear(); s->active = false; s->FN = 0; s->idle = 0; }
   chien = Chien{};
@@ -145,9 +151,10 @@ void HurdyGurdyEngine::process(float *L, float *R, int n) {
   if (quality != applied) applyQuality();
   for (int at = 0; at < n; at += 128) {
     const int m = std::min(128, n - at);
-    if (hasParams && bendR != bendTo) { // the pitch wheel glides; the chanterelles are restopped each block
+    if (hasParams && (bendR != bendTo || sagR != 1)) { // the pitch wheel glides, and a slow lift's sag; the chanterelles are restopped each block
       bendR += (bendTo - bendR) * (1 - fdlibm::exp(-m / (BEND_T * fs)));
       if (std::fabs(bendR - bendTo) < 1e-9) bendR = bendTo;
+      if (sagR != 1) { sagR += (1 - sagR) * (1 - fdlibm::exp(-m / (sagT * fs))); if (std::fabs(sagR - 1) < 1e-6) sagR = 1; }
       restop();
     }
     run(L + at, R + at, m);
