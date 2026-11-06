@@ -9,6 +9,7 @@ namespace {
 // Sound pressure (Pa at 1 m) to the engine's output, and a cap's click (Pa at 1 m) per m/s
 // it lands at.
 constexpr double OUT = 0.5;
+constexpr double BEND_T = 0.02; // s: a note's own bend glides as the instruments that bend glide theirs
 constexpr double CAP_PA = 0.8;
 constexpr double FINGER_T60 = 0.3, GRAB_T60 = 0.008; // a fingertip on a tine; the thumb catching it to pluck again
 
@@ -191,12 +192,15 @@ void KalimbaEngine::noteOn(int key, double velocity) {
   const KeyModes km = keyModes(key, Pk.data());
   const double k = 1 / fs;
   double F0 = 0;
+  v.bent = own.bendOf(key); // bent before it was plucked
   for (int i = 0; i < km.count; i++) {
     const Mode &m = km.m[i];
-    const ModeCoeffs c = modeCoeffs(m.f, m.sigma, fs);
+    const double f = m.f * v.bent;
+    const ModeCoeffs c = modeCoeffs(f, m.sigma, fs);
     const double A = m.amp * velocity;
     // released from rest: A e^(−σt) cos ωt, so y[0] = A and y[−1] = A cos(ωk) / r
-    v.modes[i] = {c.a1, c.a2, A, A * std::cos(TAU * m.f * k) * std::exp(m.sigma * k)};
+    v.modes[i] = {c.a1, c.a2, A, A * std::cos(TAU * f * k) * std::exp(m.sigma * k)};
+    v.f[i] = m.f; v.sg[i] = m.sigma;
     F0 += A; v.start += std::fabs(A);
   }
   v.count = km.count;
@@ -229,8 +233,13 @@ void KalimbaEngine::process(float *L, float *R, int n) {
     if (std::fabs(cover - builtCover) > 1e-4 || cover == coverTarget) rebuildBody();
   }
   const double finger = std::exp(-std::log(1000.0) / (FINGER_T60 * fs)), grab = std::exp(-std::log(1000.0) / (GRAB_T60 * fs));
-  for (Voice &v : voices) // Press: a fingertip resting on the tine, as hard as its key is pressed
+  for (Voice &v : voices) { // Press: a fingertip resting on the tine, as hard as its key is pressed
     if (v.press.follow(v.released ? 0 : presses.of(v.key), n, fs)) v.pf = v.press.on() ? std::exp(v.press.p * std::log(finger)) : 1;
+    if (const double to = own.bendOf(v.key); v.bent != to) { // Glide: a fingernail on the tine at the bridge
+      v.bent = glideTo(v.bent, to, n / fs, BEND_T);
+      for (int m = 0; m < v.count; m++) { const ModeCoeffs c = modeCoeffs(v.f[m] * v.bent, v.sg[m], fs); v.modes[m].a1 = c.a1; v.modes[m].a2 = c.a2; }
+    }
+  }
   for (int i = 0; i < n; i++) {
     double F[PLATE_MODES] = {};
     for (Voice &v : voices) {

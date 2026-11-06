@@ -16,7 +16,8 @@ export const INSTRUMENT = {
   range: [21, 108],                     // MIDI keys: A0–C8
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'strike',                   // CC1: strike point, from its default (near the centre) out to 95 % of the radius
-  mpe: { slide: true },                 // a note's own slide: where its mallet lands, at the strike (a plate cannot bend)
+  mpe: { bend: 0.1, way: 'up', slide: true }, // a note's own bend, a hand pressing its rim (up only, ten cents at most); its slide, where its mallet lands, at the strike
+  glide: 'a hand pressing the rim, stiffening the plate: a few cents sharp', // what a note's own bend does
   aftertouch: 'a firm press holds the mallet against the plate, muting it', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'the hand damping the plate on release: a slow lift lands gently (a longer tail), a fast one firmly', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['mass', 'release', 'listen', 'hardness', 'strike'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

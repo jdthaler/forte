@@ -10,6 +10,7 @@
 namespace forte::steelpan {
 
 constexpr double OUT = 0.19;
+constexpr double BEND_T = 0.02;   // s: a note's own bend glides as the instruments that bend glide theirs
 constexpr double QUIET = 2e-6;    // a note below this (in thicknesses) and done ringing goes to sleep
 constexpr int GRACE = 2048;       // samples a note stays alive after it wakes, to be driven
 constexpr int POST = 512;         // samples between the views' messages
@@ -67,9 +68,9 @@ void SteelPanEngine::coefs(Note &v) {
   for (int i = 0; i < kModes; i++) {
     if (i >= v.nm.count) { v.a1[i] = v.a2[i] = v.b[i] = v.out[i] = 0; v.w[i] = 1; continue; }
     const Mode &m = v.nm.m[i];
-    const ModeCoeffs c = modeCoeffs(m.f, m.sigma + mute, fs);
+    const ModeCoeffs c = modeCoeffs(m.f * v.bent, m.sigma + mute, fs);
     v.a1[i] = c.a1; v.a2[i] = c.a2; v.b[i] = c.b;
-    v.w[i] = TAU * m.f;
+    v.w[i] = TAU * m.f * v.bent;
     v.out[i] = OUT * m.rad * fs / w1; // radiated ∝ surface velocity: the mode's ẏ, in units of ω₁
   }
 }
@@ -78,6 +79,7 @@ void SteelPanEngine::activate(Note &v) {
   if (v.active) return;
   v.y1.fill(0); v.y2.fill(0); v.F.fill(0);
   v.active = true; v.struck = false; v.damped = false; v.released = false; v.age = 0; v.press = Press{};
+  v.bent = expr.bendOf(v.key); // bent before it rang
   v.run = kTuned;
   retune(v);
   live.push_back(int(&v - notes.data()));
@@ -255,7 +257,9 @@ void SteelPanEngine::process(float *L, float *R, int n) {
       for (int j = 0, m = neighbours(v.key, (int)P[p::layout], nb); j < m; j++)
         if (const Note &u = notes[nb[j].key - KEY_MIN]; u.active && u.held) want = std::max(want, presses.of(u.key));
     }
-    if (v.press.follow(want, n, fs) && !v.damped) coefs(v);
+    const double to = expr.bendOf(v.key), was = v.bent; // Glide: a hand on the note's rim
+    if (was != to) v.bent = glideTo(was, to, n / fs, BEND_T);
+    if ((v.press.follow(want, n, fs) && !v.damped) || v.bent != was) coefs(v);
   }
   for (int s = 0; s < n; s++) {
     for (const Coupling &c : couplings) {

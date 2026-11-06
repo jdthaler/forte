@@ -179,7 +179,7 @@ const LOOSE = { windharp: 8, arc: 12 }; // the wake pulls a string toward its sh
 // with a control on (the cimbalom's tremolo)
 const PRESS_SLOW = ['hydraulis'], PRESS_WITH = { cimbalom: { roll: 12 } };
 // Instruments whose note's bend is measured with the strings that don't bend silent (the hurdy-gurdy's drones)
-const BEND_WITH = { hurdygurdy: { trompette: false, mouche: false, gros: false } };
+const BEND_WITH = { hurdygurdy: { trompette: false, mouche: false, gros: false }, vibraphone: { tubes: false }, marimba: { tubes: false } }; // (and the bars' tubes, which stay on the note)
 // Instruments whose note's bend is heard only past a certain reach (the resonator piano's: another harmonic)
 const BEND_FAR = { resonator: 4 };
 // Instruments whose slide is heard only with a control set (the birdsong's syllable rate: a whistle has none)

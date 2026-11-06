@@ -20,7 +20,8 @@ export const INSTRUMENT = {
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // A1–F♯6 until Full range opens the rest
   space: 'sustain',                     // Space and CC64: keeps the hands off the notes after key-up
   modWheel: 'roll',                     // CC1: the roll
-  mpe: { slide: true },                 // a note's own slide: its own roll (a note area cannot bend)
+  mpe: { bend: 0.5, way: 'up', slide: true }, // a note's own bend, a hand pressing its rim (up only, a quarter tone at most); its slide, its own roll
+  glide: 'a hand pressing the note\'s rim: up to a quarter tone sharp', // what a note's own bend does
   aftertouch: 'a firm press holds the stick into the note, muting it', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'the hand muting on release: a slow lift lands gently (a longer tail), a fast one firmly; with the notes let ring, a fast lift rests the stick on the note a moment', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['rollRate', 'mute', 'across', 'along', 'roll'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

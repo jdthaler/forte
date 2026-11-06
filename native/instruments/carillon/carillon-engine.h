@@ -50,6 +50,8 @@ class CarillonEngine : public Engine {
   void noteOff(int key, double velocity) override;
   // a note's own slide: how high on the bell its clapper strikes (strikeHeight), at its next stroke
   void slide(double value, int key) override { own.setSlide(value, key); }
+  // Glide: the bell swinging toward the listener or away: a Doppler shift of a few tens of cents
+  void noteBend(double ratio, int key) override { own.setBend(ratio, key); }
   void pressure(double value, int key) override { presses.set(value, key); } // the clapper held against the bell, muting it
   void setSustain(bool on) override { sustain = on; } // a carillon has no dampers: nothing to lift
   void allNotesOff() override;
@@ -77,6 +79,7 @@ class CarillonEngine : public Engine {
     double fMax = 0, floor = 0; // Quality's, when the bell was hung: its highest mode (Hz), and where a mode is pruned (× the loudest)
     bool fading = false, dead = false, released = false;
     Press press; // the clapper held against it while its key is down (forte/press.h)
+    double bent = 1; // its sound × this (a note's own bend: the bell swinging)
     double grace = 0; int graceIn = 0; // a fast lift's grace stroke: its velocity, and the samples until it lands (forte/lift.h)
     Clapper clap{};
     double Cm = 0, hm = 0, fd0 = 0, fV0 = 0;
@@ -107,7 +110,7 @@ class CarillonEngine : public Engine {
   std::unique_ptr<Voice[]> pool;
   std::array<double, p::count> P{};
   Presses presses; // each key's pressure and the channel's
-  NoteExpression own{0}; // each key's own slide (forte/expression.h)
+  NoteExpression own{0.3}; // each key's own slide, and its bend (thirty cents either way; forte/expression.h)
   bool hasParams = false, sustain = false;
   Tuning tuning; // the keyboard's: a bell hung at a key is cast for its pitch
   double S_asym = 0, S_distance = 0, T_asym = 0, T_distance = 0; // gliding values and their targets

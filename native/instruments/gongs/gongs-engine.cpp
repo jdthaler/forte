@@ -30,6 +30,7 @@ constexpr double SLACK = 1e-6, LAG = 0.05, BLEED = 1e-3;
 constexpr double FIT_PERIODS = 1.5; // the linear tail's statistics average over this many periods
 constexpr double CLIP = 2;          // the output is soft-clipped above CLIP (towards 2·CLIP)
 constexpr int POST_SAMPLES = 12 * 128; // view messages every 12 blocks of 128
+constexpr double BEND_T = 0.02; // s: a note's own bend glides as the instruments that bend glide theirs
 constexpr double MALLET = 6.91 / 0.4; // 1/s: the mallet held against the plate (Press), at full pressure: T60 0.4 s
 constexpr int BLOCK = 128;          // the blocks the bookkeeping is counted in (the page's)
 
@@ -164,7 +165,7 @@ void View::set(const Pack &pack, int N, int NS) {
 void Voice::init(GongEngine &e, int key_, const double *P_, const Shell &S_) {
   eng = &e;
   keyGong(g, key_, P_, e.fs, S_);
-  S = &S_; key = key_; N = g.Nv; R = g.R; k = g.k;
+  S = &S_; key = key_; N = g.Nv; R = g.R; k = g.k; bent = 1;
   std::copy(P_, P_ + p::count, P.begin());
   for (Modes *a : {&x, &x1, &xs, &gv, &a0, &a1, &phi, &mL, &mR, &wd, &sg, &m1, &m2, &zt, &zT, &zn, &yp, &tm, &tdw, &toff, &te0, &tw}) a->fill(0);
   for (Coef &c : cf) { c.A.fill(0); c.B.fill(0); c.iD.fill(0); c.WD.fill(0); c.iW.fill(0); }
@@ -705,6 +706,7 @@ void GongEngine::start(int key, double velocity) {
   if (!v) v = add(key, *S);
   v->P = P; v->extra = 6.91 / P[p::release]; v->setOutput(P.data());
   v->P[p::strike] = expr.slideOr(key, P[p::strike]); // the key's own strike point, or the knob's
+  if (v->bent != expr.bendOf(key)) v->bend(expr.bendOf(key)); // bent before it was struck
   v->strike(std::max(0.01, std::min(1.0, velocity)), v->P.data());
   focus = v;
   int live = 0;
@@ -790,6 +792,7 @@ void GongEngine::process(float *L, float *R, int n) {
   for (int i = 0; i < nv; i++) {
     Voice &v = *order[i];
     if (v.press.follow(v.released || v.killing ? 0 : presses.of(v.key), n, fs) && !v.damped && !v.killing) v.setDamping();
+    if (const double to = expr.bendOf(v.key); v.bent != to && !v.killing) v.bend(glideTo(v.bent, to, n / fs, BEND_T)); // Glide: a hand on the rim
     const int b = v.R == 1 ? 0 : v.R == 2 ? 1 : v.R == 4 ? 2 : 3;
     if (inputs[b] > 0) v.render(buses[b].inL.data(), buses[b].inR.data(), inputs[b], *this);
     active[b] = true;

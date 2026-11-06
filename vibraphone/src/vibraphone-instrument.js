@@ -16,7 +16,8 @@ export const INSTRUMENT = {
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C8, 21–108
   lift: 'a fast lift lets the mallet rest on the bar a moment, damping it even with the pedal down', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
-  mpe: { bend: 0, slide: { param: 'strike', max: 0.05 } }, // MPE: a note's own slide moves its mallet from the centre towards the bar's end, at the stroke
+  mpe: { bend: 1, way: 'down', slide: { param: 'strike', max: 0.05 } }, // MPE: a note's own bend drags a hard mallet along its bar (down only, a semitone at most); its slide moves its mallet from the centre towards the bar's end, at the stroke
+  glide: 'a hard mallet pressed and dragged on the bar: up to a semitone flat', // what a note's own bend does
   aftertouch: 'a firm press holds the mallet into the bar: the dead stroke', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // F3–F6, 53–89, until Full range opens the rest
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine

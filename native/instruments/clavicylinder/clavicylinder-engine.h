@@ -51,6 +51,8 @@ class ClavicylinderEngine : public Engine {
   void allNotesOff() override { count = 0; }
   void pressure(double value, int key) override; // aftertouch: the key presses harder
   void slide(double value, int key) override { expr.setSlide(value, key); } // where the glass touches the bar, at its next touch
+  // Glide: the bar pressed off its centre on the cylinder, loading its cloth: a few cents
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
   int voiceCount() const override { return count; }
   void process(float *L, float *R, int n) override;
 
@@ -59,6 +61,7 @@ class ClavicylinderEngine : public Engine {
     bool touch = false, dead = false, stick = false;
     double lamOff = 0; // how fast the cloth leaves the glass after this lift, a sample (0: as usual; forte/lift.h)
     double vel = 0, after = 0;
+    double bent = 1; // its modes × this (a note's own bend)
     double Nn = 0;           // the cloth's normal force on the glass (N)
     double x = 0, u = 0;     // the pad: displacement and velocity along the rub
     double slip = 0, F = 0;  // slip speed and friction force (on the pad, along the rub)
@@ -89,7 +92,7 @@ class ClavicylinderEngine : public Engine {
   void report();
 
   std::array<double, p::count> P{};
-  NoteExpression expr{0}; // each key's own slide (no bend: a bar is cut to its pitch)
+  NoteExpression expr{0.1}; // each key's own slide, and its bend (ten cents either way)
   bool hasParams = false;
   const double k;
   double pressureAll = 0, inertia = 0;
