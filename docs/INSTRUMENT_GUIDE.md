@@ -129,7 +129,11 @@ export const INSTRUMENT = {
                                         // whether CC74 slides the mod wheel's parameter for that note alone
                                         // (or names its own: slide: 'strikePos' or { param, max }, as the
                                         // Ribbon Piano's hammer; shared/expression.js slideOf);
-                                        // press: true when a bend presses the key as the wheel does (the clavier)
+                                        // press: true when a bend presses the key as the wheel does (the clavier);
+                                        // way: 'up' or 'down' when a note bends only that way (a finger
+                                        // pressing a string behind the bridge only sharpens it)
+  glide: 'a finger pressing the string behind the bridge: up to a semitone sharp', // what a note's own
+                                        // bend does, when it isn't simply a bend (the RISE's panel says it)
   aftertouch: 'a hand pressed against the gong damps it', // what pressing into a held key does (any aftertouch, MPE
                                         // pressure: a Seaboard's Press), as the RISE's panel says it; leave it out when
                                         // the engine ignores pressure (test/mpe-tests.mjs checks both ways)
@@ -235,8 +239,9 @@ an Osmose) bends, slides and presses each note alone. `shared/mpe.js` and the pl
 Either may come before the key's `noteOn`: keep them per key (`forte/expression.h`
 `NoteExpression`) and start the note there; glide a sounding note toward them as the wheel
 glides (`glideTo`). Bend only what the physics can bend (a string's tension, a reed's or
-pipe's pitch, a bow's speed): a struck bar or a bell rings at its own pitch, so its descriptor
-says `bend: 0`. A plain note on a key that had its own expression starts without it. Ordinary
+pipe's pitch, a bow's speed), and only as far: a finger pressing a struck string behind its
+bridge raises it a semitone at most (`mpe: { bend: 1, way: 'up' }`, `NoteExpression(down, up)`),
+a hand on a bar lowers it a few cents. A plain note on a key that had its own expression starts without it. Ordinary
 MIDI never sends these, so an instrument without them plays as before; `test/mpe-tests.mjs`
 checks every instrument against its descriptor.
 

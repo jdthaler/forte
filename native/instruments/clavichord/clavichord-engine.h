@@ -26,8 +26,13 @@
 #include "clavichord-model.h"
 #include "clavichord-params.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 
 namespace forte::clavichord {
+
+// semitones: a note's own bend that rocks the finger onto its key as hard as full aftertouch (which
+// raises it by tens of cents, more in the treble)
+inline constexpr double GLIDE_REACH = 1;
 
 // What the engine posts for the page (clavichord/src/clavichord-wasm.js turns them into its
 // 'state' message), every few blocks, the state last.
@@ -52,6 +57,8 @@ class ClavichordEngine : public Engine {
   void allNotesOff() override;
   void pressure(double value, int key) override; // aftertouch: the finger presses harder
   void slide(double value, int key) override;    // MPE: the note's own Bebung
+  // Glide: the finger rocking harder onto the key, as Press does: its tangent raises the strings' tension
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
 
@@ -140,6 +147,7 @@ class ClavichordEngine : public Engine {
   std::array<Voice, POOL> pool{};
   std::array<double, 128> after{}, slides{};
   double afterAll = 0;
+  NoteExpression expr{0, GLIDE_REACH}; // each key's own bend: up only, as far as a full press
   std::array<double, NSEG * BLOCK> seg{};
   std::array<double, BLOCK> bL{}, bR{}, dir{};
   double dcx = 0, dcy = 0;

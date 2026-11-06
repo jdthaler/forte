@@ -12,6 +12,7 @@ constexpr double TWO_PI = 2 * PI;
 constexpr double OUT_SCALE = 24;  // bridge velocity → full-scale audio
 constexpr double SMOOTH_T = 0.01; // s: one-pole glide of live gains and pan (no zipper noise)
 constexpr double KILL_SIGMA = 250;
+constexpr double BEND_T = 0.02; // s: a note's own bend glides as the instruments that bend glide theirs
 // Press: a palm on the strings by the bridge, fully pressed, adds PALM·g(f) to a partial's decay
 // rate (1/s), g = (0.15 + x²)/(1 + x²), x = f/PALM_F: the treble partials go in a fifth of a second,
 // the fundamental rings on for a second or so
@@ -136,7 +137,7 @@ void PianoEngine::Voice::startLong(const PianoEngine &eng, const VoiceData &d) {
 void PianoEngine::Voice::computeDamped() {
   const double extra = killing ? KILL_SIGMA : damperSigma / liftK; // a slow lift lowers the damper gently
   for (int i = 0; i < N; i++) {
-    const double s = sig[i] + extra, o = om[i];
+    const double s = sig[i] + extra, o = om[i] * bent;
     const double r = std::exp(-s * k);
     const double od = std::sqrt(std::max(o * o - s * s, 1e-6));
     a1d[i] = 2 * r * std::cos(od * k);
@@ -148,12 +149,24 @@ void PianoEngine::Voice::computeDamped() {
 // under no damper's felt).
 void PianoEngine::Voice::computePressed() {
   for (int i = 0; i < N; i++) {
-    const double x = om[i] / (TWO_PI * PALM_F), s = sig[i] + PALM * press.p * (0.15 + x * x) / (1 + x * x), o = om[i];
+    const double o = om[i] * bent, x = o / (TWO_PI * PALM_F), s = sig[i] + PALM * press.p * (0.15 + x * x) / (1 + x * x);
     const double r = std::exp(-s * k);
     const double od = std::sqrt(std::max(o * o - s * s, 1e-6));
     a1p[i] = 2 * r * std::cos(od * k);
     a2p[i] = r * r;
   }
+}
+
+// Its strings tightened (or let go) to sound × r: each mode's recursion at its frequency × r, its
+// loss as it was.
+void PianoEngine::Voice::retune(double r) {
+  bent = r;
+  for (int i = 0; i < N; i++) {
+    const double o = om[i] * r, e = std::exp(-sig[i] * k);
+    a1[i] = 2 * e * std::cos(std::sqrt(std::max(o * o - sig[i] * sig[i], 1e-6)) * k);
+  }
+  computeDamped();
+  if (press.on()) computePressed();
 }
 
 // A new voice starts at its pan; a width change glides there (see render).
@@ -523,6 +536,7 @@ void PianoEngine::strikeKey(int key, double velocity, const VoiceData &d) {
     if (at < 0) return; // every voice or the whole arena busy (beyond anything the budget lets happen)
     v = slot;
     v->start(*this, key, d, at);
+    if (expr.bendOf(key) != 1) v->retune(expr.bendOf(key)); // bent before it was struck
     voices[nVoices++] = v;
     byKey[key] = v;
   }
@@ -615,6 +629,7 @@ void PianoEngine::process(float *L, float *R, int n) {
       Voice &v = *voices[i];
       if (v.dead) continue;
       if (v.press.follow(v.keyDown ? presses.of(v.key) : 0, m, fs)) v.computePressed(); // Press: a palm, while the key is held
+      if (const double to = expr.bendOf(v.key); v.bent != to) v.retune(glideTo(v.bent, to, m / fs, BEND_T)); // Glide
       v.render(L + off, R + off, m, *this);
     }
     symRun(L + off, R + off, m, gV.data(), gH.data());

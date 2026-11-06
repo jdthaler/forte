@@ -139,8 +139,9 @@ instrument.
 **MPE:** a controller that gives each note a channel of its own (a ROLI
 Seaboard, a LinnStrument, an Expressive E Osmose) bends, slides and presses
 each note alone, wherever the instrument can: a reed, a pipe, a string or a
-bow bends; a struck bar or bell keeps its pitch, but its slide (CC74) still
-moves what the mod wheel moves, for that note. MPE in the MIDI menu is on
+bow bends; a struck string bends only as far as a finger pressing it behind
+the bridge takes it (a semitone sharp at most), and its slide (CC74) moves
+what the mod wheel moves, for that note. MPE in the MIDI menu is on
 Auto, which turns MPE on when the controller announces it (its
 MPE Configuration Message) and leaves any other keyboard as it was; On
 reads channels 2–16 as MPE without the announcement, and Off never does.
@@ -179,6 +180,11 @@ Reed pianos), the wheel along
 the Viola Organista's string, the felt onto the Tangent Clavier's, the
 chanterelles' pressure on the Hurdy-Gurdy's wheel, the finger down the Glass
 Armonica's bowl from its rim, the glass along the Clavicylinder's bar.
+Glide on the struck and plucked strings is a finger pressing a note's
+strings behind the bridge, up to a semitone sharp (the Ribbon Piano,
+Electric Grand, Harpsichord and Cimbalom), the Hurdy-Gurdy's tangent pushed
+harder, the Clavichord's finger rocking onto its key as Press does, and the
+Magnetic Resonator Piano's drive moving up the string's harmonics.
 
 **The RISE's panel:** while a Seaboard is plugged in, each page draws it at
 the left: its faders and pad with the controls they move and where they are,

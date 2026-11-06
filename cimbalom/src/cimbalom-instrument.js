@@ -16,8 +16,10 @@ export const INSTRUMENT = {
   range: [21, 108],                     // MIDI keys: all 88, A0–C8 (the scale carried on past each instrument's compass)
   space: 'sustain',                     // Space and CC64: the damper pedal, which lifts the cimbalom's damper bar
   modWheel: 'strike',                   // CC1: where the hammers land
-  // MPE: no bend (a struck string rings at its own pitch); the slide moves the note's own strike point.
-  mpe: { bend: 0, slide: true },
+  // MPE: a note's own bend tightens its course (up only, a semitone at most); the slide moves the
+  // note's own strike point.
+  mpe: { bend: 1, way: 'up', slide: true },
+  glide: 'a finger pressing the course behind the bridge: up to a semitone sharp', // what a note's own bend does
   aftertouch: 'how hard the tremolo strikes (with the tremolo on)', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'with the dampers on the keys, how fast the felt falls back on the course: a slow lift leaves a longer tail, a fast one stops it sooner', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['mass', 'sympathy', 'detune', 'roll', 'strike'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

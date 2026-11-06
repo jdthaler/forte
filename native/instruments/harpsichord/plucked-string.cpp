@@ -19,7 +19,7 @@ void PluckedString::init(const StringDesign &S_, const Partials &parts, double f
     W[i] = 2 * pi * parts.f[i]; K[i] = parts.k[i]; BF[i] = parts.b[i]; sigBase[i] = parts.sigma[i]; G[i] = (K[i] * K[i]) / S.mu;
     SC[i] = (parts.b[i] < 0 ? -1 : 1) * std::sqrt(2 * parts.sigB[i]) * fs_;
   }
-  kc = (S.mat->E * S.A) / (2 * S.L); dT = 0; stretched = false; kcOn = false;
+  kc = (S.mat->E * S.A) / (2 * S.L); dT = 0; stretched = false; kcOn = false; tuned = 1;
   for (int i = 0; i < N_MAX; i++) { qa[i] = qb[i] = 0; extra[i] = 0; }
   flip = false;
   nrm = std::sqrt(2 / (S.mu * S.L));
@@ -53,6 +53,15 @@ void PluckedString::setDamping(const double *ex) {
   for (int p = 0; p < MAXP; p++) if (x[p] >= 0) fillPoint(p);
   cDirty = true;
   if (Nz) sideSteps(zFelt, zBuff);
+}
+
+void PluckedString::retune(double r) {
+  if (r == tuned) return;
+  const double m = r / tuned;
+  for (int i = 0; i < N; i++) W[i] *= m;
+  for (int i = 0; i < NZ_MAX && i < N; i++) Wz[i] *= m;
+  tuned = r;
+  setDamping(extra.data());
 }
 
 void PluckedString::setSide(double kappa, int n) {

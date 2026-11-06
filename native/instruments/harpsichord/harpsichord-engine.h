@@ -27,6 +27,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "forte/press.h"
 #include "forte/sympathetic.h"
 #include "harpsichord-model.h"
@@ -61,6 +62,8 @@ class HarpsichordEngine : public Engine {
   // a note's own slide: where its quills pluck (the front 8′'s point, xFront; every row's moves
   // with it), from its next press
   void slide(double value, int key) override { if (key >= 0 && key < 128) slid[key] = value; }
+  // Glide: a finger pressing a note's strings on their back length, tightening them: up to a semitone sharp
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
   // Press: a buff held in the hand against a held note's strings, the buff stop's leather on every
   // choir it plays: a lute's dry, short tone
   void pressure(double value, int key) override { presses.set(value, key); }
@@ -101,6 +104,7 @@ class HarpsichordEngine : public Engine {
     std::array<int, 3> list{};                 // the strings in the order they were made
     int nList = 0;
     double lift = 0, V = 0.3, vDown = 0, top = 0;
+    double bent = 1; // its strings × this (a note's own bend)
     bool keyDown = false, pending = false;
     int knockT = -1, knockN = 2;
     double knockAmp = 0;
@@ -176,6 +180,7 @@ class HarpsichordEngine : public Engine {
   std::array<double, BLOCK> liftBuf{}, zeroBuf{}, buffBuf{}, bL{}, bR{};
   std::array<double, BLOCK> handBuf{}; // a voice's buff: the stop's, or its hand's (Press), whichever is the more
   Presses presses;
+  NoteExpression expr{0, 1}; // each key's own bend: up only, a semitone at most
   std::array<Board, 2> boards; // the harpsichord's and the virginal's (boardOf)
   int boardOn = 0;
   double buff = 0, mix = 1, glide = 0;
