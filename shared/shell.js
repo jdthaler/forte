@@ -317,8 +317,8 @@ export function createShell(cfg) {
     else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) up(d1, cmd === 0x80 ? d2 / 127 : undefined);
     else if (cmd === 0xb0) {
       if (d1 === 64 && cfg.space) setSustain(d2 >= 64);
-      else if (d1 === 66) setSostenuto(d2 >= 64);
-      else if (d1 === 67) soft = d2 >= 64;
+      else if (d1 === 66 && !(66 in ccs)) setSostenuto(d2 >= 64);
+      else if (d1 === 67 && !(67 in ccs)) soft = d2 >= 64; // unless the descriptor gives it a parameter (the Regal's tremulant), as the plugins do
       else if (d1 === 1 && cfg.modWheel) {
         // The wheel rests at 0, so rest = the parameter's default and full = its maximum
         // (a resting wheel must not drag the instrument to the bottom of its range).
