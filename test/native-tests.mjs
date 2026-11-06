@@ -9,7 +9,7 @@ import { INSTRUMENTS } from '../shared/registry.js';
 import { generate, portedSlugs, inferFormat, formatBy } from '../tools/gen-native-params.mjs';
 import { GROUPS as BLACKHOLE_GROUPS } from '../blackhole/src/ringdown-params.js';
 import { loadInstrument } from '../tools/headless.mjs';
-import { Limiter } from '../shared/limiter.js';
+import { Limiter, CEILING } from '../shared/limiter.js';
 import { LIMITER } from '../shared/chain.js';
 import { loadEngine } from '../tools/engine.mjs';
 import { scripts, play, summarise, compare, referenceFile, toleranceFor } from '../tools/render-reference.mjs';
@@ -61,6 +61,16 @@ await test("Web Audio's curve and makeup gain; below the threshold, a constant g
   assert.ok(Math.abs(L[1] / (0.3 * Math.sin(0.05)) - l.makeup) < 1e-6, 'the first samples come out at once');
   const a = new Float32Array(1), b = new Float32Array(1);
   for (let i = 0; i < 6000; i++) { a[0] = b[0] = 3; l.process(a, b, 1); if (i > 2000) assert.ok(a[0] < 1.05 * l.makeup); } // a loud input settles
+});
+await test('no sample leaves louder than the ceiling, even a spike the 2 ms attack would let through; the gain then comes back', () => {
+  const l = new Limiter(LIMITER, 48000), n = 48000, L = new Float32Array(n), R = new Float32Array(n);
+  // a quiet tone with a train of sharp spikes, a shock front's shape, 6 dB over full scale, for 50 ms
+  for (let i = 0; i < n; i++) L[i] = R[i] = 0.1 * Math.sin(i * 0.05) + (i < 2400 && i % 120 < 3 ? 2 : 0);
+  l.process(L, R, n);
+  let pk = 0;
+  for (let i = 0; i < n; i++) pk = Math.max(pk, Math.abs(L[i]), Math.abs(R[i]));
+  assert.ok(pk <= CEILING + 1e-6, `peak ${pk}`);
+  assert.ok(Math.abs(L[n - 1] / (0.1 * Math.sin((n - 1) * 0.05)) - l.makeup) < 0.02, 'the gain has come back within a second');
 });
 await test("the worklet's 'forte-limiter' processor limits both channels, and upmixes mono", async () => {
   const procs = {};
