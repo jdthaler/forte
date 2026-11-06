@@ -92,11 +92,11 @@ inline const ParamInfo kParams[p::count] = {
 
 inline const PresetValue kPreset1[] = {{p::strike, 0.5}};
 inline const PresetValue kPreset2[] = {{p::hardness, 6000}, {p::mass, 3}, {p::boxes, 0}, {p::thick, 3.5}, {p::strike, 0.3}};
-inline const PresetValue kPreset3[] = {{p::boxes, 0}};
+inline const PresetValue kPreset3[] = {{p::boxes, 0}, {p::hardness, 2500}, {p::speedMax, 5}};
 inline const PresetValue kPreset4[] = {{p::gap, 2.5}};
 inline const PresetValue kPreset5[] = {{p::detune, 100}};
 inline const PresetValue kPreset6[] = {{p::thick, 5}};
-inline const PresetValue kPreset7[] = {{p::strike, 0.224}};
+inline const PresetValue kPreset7[] = {{p::strike, 0.224}, {p::hardness, 2500}, {p::speedMax, 5}};
 inline const PresetValue kPreset8[] = {{p::across, 0.85}, {p::hardness, 600}};
 inline const PresetValue kPreset9[] = {{p::pedalLock, 1}};
 inline const PresetValue kPreset10[] = {{p::hardness, 40}, {p::speedMax, 1.2}};
@@ -106,11 +106,11 @@ inline const Preset kPresets[] = {
   {"Celesta: felt hammers, steel bars, wooden boxes", nullptr, 0},
   {"Struck at the centre: the second mode silent", kPreset1, 1},
   {"Keyboard glockenspiel: brass hammers, no boxes", kPreset2, 5},
-  {"No resonators: the bars alone", kPreset3, 1},
+  {"No resonators: the bars alone", kPreset3, 3},
   {"Boxes pressed close: bar and box trade energy", kPreset4, 1},
   {"Boxes a semitone sharp", kPreset5, 1},
   {"Thick bars, 5 mm", kPreset6, 1},
-  {"Struck on the node: the fundamental drops out", kPreset7, 1},
+  {"Struck on the node: the fundamental drops out", kPreset7, 3},
   {"Struck off the edge: the bars twist", kPreset8, 2},
   {"Pedal down: every note rings", kPreset9, 1},
   {"Soft felt, slow hammers: a hush", kPreset10, 2},

@@ -81,7 +81,7 @@ export const PRESETS = [
   { name: 'Tam-tam: thin, big soft beater, off centre', p: { thick: 0.004, mass: 0.15, hardness: 1, strike: 0.3, speed: 4 } },
   { name: 'Opera gong, pitch bends up (2.5 h dome, centre)', p: { rise: 2.5, strike: 0.03 } },
   { name: 'Opera gong, pitch bends down (flat, centre)', p: { rise: 0, strike: 0.03, speed: 5.5 } },
-  { name: 'Thick bronze: stays linear (a bell plate)', p: { thick: 0.03 } },
+  { name: 'Thick bronze: stays linear (a bell plate)', p: { thick: 0.03, hardness: 20 } },
   { name: 'Steel sheet struck near the rim', p: { material: 'steel', thick: 0.005, strike: 0.75, hardness: 300 } },
   { name: 'Clamped rim (held, free to slide in its plane)', p: { bc: 'clamped', strike: 0.2 } },
   { name: 'Struck dead centre (no asymmetric modes)', p: { strike: 0 } },

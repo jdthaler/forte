@@ -38,7 +38,7 @@
     {"name":"Lazy treadle (slow warble)","values":{"speed":0.25}},
     {"name":"Fast treadle (big bowls struggle)","values":{"speed":1.2}},
     {"name":"Badly blown bowls (deep warble)","values":{"split":30}},
-    {"name":"Dry fingers (no grip)","values":{"wet":0.1}},
+    {"name":"Dry fingers (no grip)","values":{"wet":0.1,"press":20}},
     {"name":"Pressing hard (the skin squeals)","values":{"press":10}},
     {"name":"Bowls half full of water","values":{"water":0.5}},
     {"name":"Lead crystal (rings for ages)","values":{"loss":0.0001}},

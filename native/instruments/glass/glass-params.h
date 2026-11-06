@@ -91,7 +91,7 @@ inline const PresetValue kPreset1[] = {{p::split, 0}, {p::treadle, 0}};
 inline const PresetValue kPreset2[] = {{p::speed, 0.25}};
 inline const PresetValue kPreset3[] = {{p::speed, 1.2}};
 inline const PresetValue kPreset4[] = {{p::split, 30}};
-inline const PresetValue kPreset5[] = {{p::wet, 0.1}};
+inline const PresetValue kPreset5[] = {{p::wet, 0.1}, {p::press, 20}};
 inline const PresetValue kPreset6[] = {{p::press, 10}};
 inline const PresetValue kPreset7[] = {{p::water, 0.5}};
 inline const PresetValue kPreset8[] = {{p::loss, 0.0001}};
@@ -104,7 +104,7 @@ inline const Preset kPresets[] = {
   {"Lazy treadle (slow warble)", kPreset2, 1},
   {"Fast treadle (big bowls struggle)", kPreset3, 1},
   {"Badly blown bowls (deep warble)", kPreset4, 1},
-  {"Dry fingers (no grip)", kPreset5, 1},
+  {"Dry fingers (no grip)", kPreset5, 2},
   {"Pressing hard (the skin squeals)", kPreset6, 1},
   {"Bowls half full of water", kPreset7, 1},
   {"Lead crystal (rings for ages)", kPreset8, 1},
