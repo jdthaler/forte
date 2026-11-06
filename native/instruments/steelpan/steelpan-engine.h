@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "steelpan-model.h"
 #include "steelpan-params.h"
@@ -42,6 +43,8 @@ class SteelPanEngine : public Engine {
     std::array<int, kModes + 1> triBelow{}; // how many of them lie among its first n modes
     bool active = false, struck = false, held = false, released = false, damped = false, hand = false;
     double vel = 0, gl = 1, gr = 1, rollIn = 0;
+    double liftK = 1; // how many times longer than usual the hand takes to still it (forte/lift.h)
+    int touch = 0;    // samples the stick still rests on it after a fast lift (the notes let ring)
     int age = 0;                   // samples since it came alive
     int version = -1;              // the parameters its coefficients were made from
   };

@@ -11,6 +11,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "universe-model.h"
 #include "universe-params.h"
 
@@ -57,6 +58,7 @@ class EarlyUniverseEngine : public Engine {
     double attack = 0;      // samples into the note (its first 2 ms are a ramp)
     double fade = 1;        // a stolen voice fades out
     bool held = true, released = false, streaming = false, stolen = false, done = false;
+    double liftK = 1; // how many times longer than usual its light takes to stream away after this lift (forte/lift.h)
   };
   void startStreaming(Voice &v);
   void amplitudes(Voice &v, double *e, double *q) const;

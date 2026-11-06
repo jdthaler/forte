@@ -33,6 +33,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/longitudinal.h"
 #include "forte/sympathetic.h"
 #include "piano-model.h"
@@ -103,6 +104,7 @@ class PianoEngine : public Engine {
     bool keyDown = true, damped = false, killing = false, dead = false, hammerOn = false, contact = false;
     int contactSamples = 0, hammerSamples = 0, quiet = 0;
     double Fmax = 0, peak = 0, age = 0, damperSigma = 0;
+    double liftK = 1; // how many times longer than usual its damper takes (forte/lift.h)
     double panL = 0, panR = 0, tPanL = 0, tPanR = 0;
     bool panMoving = false;
     double eta = 0, etaPrev = 0, dPrev = -1, kOverM = 0, alphaK = 0;
@@ -113,6 +115,7 @@ class PianoEngine : public Engine {
     void start(PianoEngine &eng, int key, const VoiceData &d, int at);
     void setDamperSigma(double sd) { damperSigma = sd; computeDamped(); }
     void computeDamped();
+    void lifted(double scale) { if (scale != liftK) { liftK = scale; computeDamped(); } }
     void setPan(const PianoEngine &eng, bool snap = false);
     void updateDamping(const PianoEngine &eng);
     void kill();

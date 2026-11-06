@@ -27,6 +27,7 @@
 #include "clavier-model.h"
 #include "clavier-params.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 
 namespace forte::clavier {
@@ -73,6 +74,7 @@ class ClavierEngine : public Engine {
     double Flp = 0, Fr = 0, Fa = 0, force = 0, Pl = 0, Pu = 0, ul = 0, uu = 0;
     double xl = 0, xu = 0, gl = 0, gu = 0, lam = 0, xm = 0, Pb = 0, Pg = 0;
     double pressure = 0, fade = 1, peak = 0, Fpeak = 0;
+    double ret = RETURN_FORCE; // the finger lifting with the return spring: four times its force for the fastest lift (forte/lift.h)
     double fz[FRAME_MODES], fz1[FRAME_MODES], Z = 0; // the frame as this key's anvil drives it, and its last sum
     int quiet = 0;
     bool down = false, thrown = false, dead = false, killing = false, muted = false;

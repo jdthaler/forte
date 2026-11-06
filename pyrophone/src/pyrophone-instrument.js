@@ -18,6 +18,7 @@ export const INSTRUMENT = {
   modWheel: 'flame',                    // CC1: the flame power, from its default up to its maximum
   mpe: { bend: 48, slide: true },       // MPE: a key's own bend heats its tube's gas alone; its slide is its own flames' power
   aftertouch: 'parts the flames further', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'how fast the parted flames close up: a slow lift lets the tone fade as they rejoin, a fast one stops it', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['lag', 'noise', 'listen', 'xf', 'flame'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/pyrophone), built as WebAssembly. It builds
   // each tube's tuning table itself, or takes the one the page offers ({ type: 'tune' }, pyrophone-wasm.js)

@@ -30,6 +30,7 @@
 
 #include "forte/dsp.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "resonator-model.h"
 #include "resonator-params.h"
@@ -81,6 +82,7 @@ class ResonatorEngine : public Engine {
     int key = 0;
     bool keyDown = false, driven = false, damped = false, hammerOn = false, contact = false;
     double vel = 0, press = 0, bright = 0;
+    double liftK = 1; // how many times longer than usual its drive and damper take to stop it (forte/lift.h)
     double env = 0, current = 0, Inote = 0; // the drive's envelope, the coil's current (A), the note's signal current (A)
     uint64_t order = 0;     // when it was given its channel
     int nLoops = 1, N = 0, np = 0, nu = 1, quiet = 0;
@@ -107,6 +109,7 @@ class ResonatorEngine : public Engine {
  private:
   void build(Voice &v, int key);
   void setDamper(Voice &v);
+  void lifted(Voice &v, double scale); // the damper's recursions for a lift `scale` times as long as usual
   void drive(Voice &v, double velocity);
   void loopsFor(Voice &v);
   void run(float *L, float *R, int n);

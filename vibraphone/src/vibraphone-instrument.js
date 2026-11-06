@@ -15,6 +15,7 @@ export const INSTRUMENT = {
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C8, 21–108
+  lift: 'a fast lift lets the mallet rest on the bar a moment, damping it even with the pedal down', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // F3–F6, 53–89, until Full range opens the rest
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine
   modWheel: 'speed',                    // CC1: the motor's speed

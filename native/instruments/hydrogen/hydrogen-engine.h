@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "hydrogen-model.h"
 #include "hydrogen-params.h"
@@ -64,6 +65,7 @@ class HydrogenEngine : public Engine {
     uint64_t age = 0;
     double gain = 0, gl = 0, gr = 0;
     double t = 0, tOff = -1;    // the atom's time since the key (s), and at its release
+    double liftK = 1;           // how many times longer than usual its afterglow lasts after this lift (forte/lift.h)
     double bendNow = 1, density = 0, fKey = 0;
     double peak = 0;            // the steady power its lines sum to (for when it has faded)
     double peakNorm = 0;        // the steady power its gain is normalised to

@@ -97,7 +97,7 @@ void WhistlersEngine::start(Voice &v, int key, double velocity) {
   v.lp1 = v.lp2 = 0;
   for (Element &e : v.el) e.live = false;
   v.toNext = 0;
-  v.env = 1; v.held = true; v.stolen = false; v.done = false;
+  v.env = 1; v.held = true; v.stolen = false; v.done = false; v.echo = false; v.liftK = 1;
   v.press = v.pressTarget = 0;
   // what the page draws
   Message m;
@@ -130,8 +130,20 @@ void WhistlersEngine::noteOn(int key, double velocity) {
   start(voices.back(), key, velocity);
 }
 
-void WhistlersEngine::noteOff(int key, double) {
-  for (Voice &v : voices) if (v.key == key && v.held) v.held = false;
+// Lift: a slow lift lets the whistler fade over up to four times the release; a fast one sends an
+// echo hopping back from the other hemisphere: the same stroke, two hops further along the line (so
+// more dispersed, and later), up to 0.4 as strong, which rings out by itself.
+void WhistlersEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity), t = liftPast(velocity);
+  double vel = 0;
+  for (Voice &v : voices) if (v.key == key && v.held) { v.held = false; v.liftK = s * s; if (!v.stolen) vel = v.vel; }
+  if (t > 0 && vel > 0 && hasParams) {
+    noteOn(key, 0.4 * t * vel);
+    Voice &e = voices.back();
+    for (int i = 0; i < e.ncomp; i++) e.comps[i].hop += 2;
+    e.ntweek = 0; e.clicked = true; // the stroke's crack was the first's
+    e.held = false; e.echo = true;
+  }
 }
 
 void WhistlersEngine::pressure(double value, int key) {
@@ -163,7 +175,7 @@ void WhistlersEngine::play(Voice &v, float *L, float *R, int n) {
   const double dt = n / fs;
   // the receiver: open while the key or the pedal holds it, then fading
   if (v.stolen) v.env *= std::exp(-dt / STEAL_T);
-  else if (!v.held && !sustain) v.env *= std::exp(-dt / P[p::release]);
+  else if (!v.held && !sustain && !v.echo) v.env *= std::exp(-dt / (P[p::release] * v.liftK));
   v.press += (v.pressTarget - v.press) * (1 - std::exp(-dt / PRESS_T));
   const double out = OUT * v.vel * v.scale;
   const double T0 = v.clock, T1 = T0 + dt;

@@ -166,7 +166,12 @@ comes up). Each is on until you or a preset turns it off: Strike off plays
 every note as hard as the computer keys, Lift off lets every note go at the
 instrument's own speed, and Glide, Slide and Press off are ignored (the pitch
 and mod wheels stay). A page shows the switches its instrument answers to,
-and so do the plugins.
+and so do the plugins. Every instrument answers to Lift: a slow lift lets a
+note go gently (a damper settling, a reed closing, a field falling away), up
+to twice as long as usual, and a fast one as much sooner, with what only a
+quick hand does (a mallet's touch on a bar, a grace stroke on a bell). A
+key let go with no release velocity (the computer keys, a keyboard that
+sends none) or a middling one plays as it always did.
 
 **The RISE's panel:** while a Seaboard is plugged in, each page draws it at
 the left: its faders and pad with the controls they move and where they are,

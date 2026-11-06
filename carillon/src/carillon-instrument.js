@@ -16,6 +16,7 @@ export const INSTRUMENT = {
   // MIDI keys: F2–C8 at sounding pitch. Below F2 a bell would outweigh the largest carillon bourdons
   // ever cast (about 20 t), so the range stops there.
   range: [41, 108],
+  lift: 'a fast lift lets go of the wire so sharply that the clapper swings back for a grace stroke', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   compass: { keys: [48, 96], param: 'fullRange' }, // C3–C7, a four-octave concert carillon, until Full range opens the rest
   space: null,                          // a carillon has no dampers: no pedal to offer
   faders: ['hardness', 'strikeHeight', 'clapMass', 'around', 'distance'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

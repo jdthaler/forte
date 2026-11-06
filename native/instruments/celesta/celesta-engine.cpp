@@ -82,7 +82,7 @@ void CelestaEngine::Voice::strike(const CelestaEngine &eng, double velocity) {
   eta = uc - 1.5 * v * h; etaPrev = eta - v * h;
   dPrev = -1; dPrev2 = -1; hammerOn = true; contact = false; inFlight = 0;
   contactSamples = 0; Fmax = 0;
-  released = false; fading = false; fade = 1; age = 0;
+  released = false; fading = false; fade = 1; age = 0; liftK = 1;
 }
 
 // Felt force for a compression D at the next step: the discrete gradient of V = Kδ^(p+1)/(p+1)
@@ -245,9 +245,10 @@ void CelestaEngine::noteOn(int key, double velocity) {
   }
 }
 
-void CelestaEngine::noteOff(int key, double) {
+void CelestaEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
-  if (Voice *v = byKey[key]) v->released = true;
+  // how fast its damper falls: a slow lift leaves a longer tail (with the pedal down, the pedal's lets it fall later)
+  if (Voice *v = byKey[key]) { v->released = true; v->liftK = sustain || P[p::pedalLock] != 0 ? 1 : liftScale(velocity); }
 }
 
 void CelestaEngine::allNotesOff() {
@@ -279,8 +280,8 @@ void CelestaEngine::processBlock(float *L, float *R, int n) {
   for (int i = 0; i < nVoices; i++) {
     Voice *v = voices[i];
     // the damper felt: on every bar not held by a key, unless the pedal is down
-    const double want = v->released && !sustain && !lock ? 1 : 0;
-    if (v->damp != want) v->damp = want > v->damp ? std::min(1.0, v->damp + dStep) : std::max(0.0, v->damp - dStep);
+    const double want = v->released && !sustain && !lock ? 1 / v->liftK : 0; // a slow lift lowers it gently
+    if (v->damp != want) v->damp = want > v->damp ? std::min(want, v->damp + dStep) : std::max(want, v->damp - dStep);
     if (v->damp != v->dampSet) v->coefs(*this);
     if (moving || v->fresh) v->box(*this);
     v->render(L, R, n, *this);
@@ -317,7 +318,7 @@ void CelestaEngine::postFocus() {
   a[9] = (float)std::sqrt(v->X * v->X + (v->vx * v->vx * v->M22) / v->Ka);
   a[10] = (float)v->lastContactMs; a[11] = (float)v->Fmax;
   a[12] = (float)(-v->M12 / std::sqrt(v->M11 * v->M22)); a[13] = (float)(std::sqrt(v->Ka / v->M22) / TAU);
-  a[14] = (float)v->damp; a[15] = (float)(v->hammerOn ? 1 : 0);
+  a[14] = (float)std::min(1.0, v->damp); a[15] = (float)(v->hammerOn ? 1 : 0);
   post(m);
 }
 

@@ -103,6 +103,7 @@ void CimbalomEngine::build(Voice &v) {
       double b = 0, bd = 0;
       coef(TAU * q.f, q.sigma, k, v.A1[o], v.A2[o], b);
       coef(TAU * q.f, q.sigma + SIGMA_DAMPER, k, v.D1[o], v.D2[o], bd);
+      v.wq[o] = TAU * q.f; v.sq[o] = q.sigma;
       const double c = std::sqrt(2 * q.sigB);
       v.bg[o] = b; v.bc[o] = b * c; v.cK[o] = c * fs; v.beta[o] = q.beta;
       v.bpsi[o] = b * q.psi / C.strings; v.psiy[o] = q.psi / C.strings;
@@ -110,6 +111,7 @@ void CimbalomEngine::build(Voice &v) {
     }
   }
   v.nOsc = o;
+  v.liftK = 1;
   v.ver = version; v.built = quality;
   v.S = 0; v.fade = 1; v.fadeStep = 0; v.peak = 0; v.level = 0; v.age = 0; v.quiet = 0; v.strokes = 0;
   v.w = segmentWeights(C.place);
@@ -157,10 +159,19 @@ void CimbalomEngine::noteOn(int key, double velocity) {
   launch(*v, hammerSpeed(velocity));
 }
 
-void CimbalomEngine::noteOff(int key, double) {
+void CimbalomEngine::damper(Voice &v, double scale) {
+  if (scale == v.liftK) return;
+  v.liftK = scale;
+  double bd = 0;
+  for (int o = 0; o < v.nOsc; o++) coef(v.wq[o], v.sq[o] + SIGMA_DAMPER / scale, 1 / fs, v.D1[o], v.D2[o], bd);
+}
+
+// Lift: with the dampers on the keys, how fast the felt falls back on the course as the key
+// comes up: a slow lift lets it settle gently, a longer tail, a fast one stops it sooner.
+void CimbalomEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
   down[key] = 0;
-  for (int i = 0; i < nVoices; i++) if (voices[i]->key == key) voices[i]->down = false;
+  for (int i = 0; i < nVoices; i++) if (voices[i]->key == key) { voices[i]->down = false; damper(*voices[i], sustain || mp.dampers != dampers_::keys ? 1 : liftScale(velocity)); }
 }
 
 void CimbalomEngine::allNotesOff() {

@@ -174,7 +174,7 @@ void Voice::init(GongEngine &e, int key_, const double *P_, const Shell &S_) {
   full = &views[0]; lite = &views[1]; cs = full;
   vScale = g.h * g.w0; // m/s per unit of dx̄/dt̄
   setOutput(P_);
-  extra = 0; released = damped = killing = dead = false;
+  extra = 0; liftK = 1; released = damped = killing = dead = false;
   m = 1; h = k; calm = 0; adapt = true; tail = false; n1 = n2 = lam = tf = 0; fitting = wantFit = odd = armed = false;
   A = cf[0].A.data(); B = cf[0].B.data(); iD = cf[0].iD.data(); WD = cf[0].WD.data(); iW = cf[0].iW.data();
   nl = false; psi = 0; eps0 = 1.5; V = Vprev = V3 = V4 = defect = 0;
@@ -200,7 +200,7 @@ void Voice::setOutput(const double *P_) {
 // The exact damped recursion for steps k, k/2, k/4 and k/8 in the energy form, and the energy
 // weights W = sinc²(Ωh).
 void Voice::setDamping() {
-  const double ex = killing ? 300 : damped ? extra : 0, E0 = nl ? energyD() : 0;
+  const double ex = killing ? 300 : damped ? extra / liftK : 0, E0 = nl ? energyD() : 0;
   for (int i = 0; i < N; i++) {
     const double Om = S->Om[i], s = (g.sigma[i] + ex) / g.w0;
     sg[i] = s; wd[i] = std::sqrt(std::max(Om * Om - s * s, 1e-9));
@@ -654,7 +654,7 @@ void GongEngine::setParams(const double *p_) {
 
 void GongEngine::setSustain(bool on) {
   sustain = on;
-  if (!on) for (int i = 0; i < nv; i++) { Voice &v = *order[i]; if (v.released && !v.damped) { v.damped = true; v.setDamping(); } }
+  if (!on) for (int i = 0; i < nv; i++) { Voice &v = *order[i]; if (v.released && !v.damped) { v.damped = true; v.liftK = 1; v.setDamping(); } }
 }
 
 Voice *GongEngine::add(int key, const Shell &S) {
@@ -714,11 +714,13 @@ void GongEngine::start(int key, double velocity) {
     if (victim) { victim->killing = true; victim->setDamping(); }
   }
 }
-void GongEngine::noteOff(int key, double) {
+// Lift: the hand that damps the plate on release lands gently on a slow lift (a longer tail) and
+// firmly on a fast one.
+void GongEngine::noteOff(int key, double velocity) {
   for (int i = 0; i < npending; i++) if (pending[i].key == key) pending[i].released = true;
   for (int i = 0; i < nv; i++) {
     Voice &v = *order[i];
-    if (v.key == key && !v.released) { v.released = true; if (!sustain) { v.damped = true; v.setDamping(); } }
+    if (v.key == key && !v.released) { v.released = true; if (!sustain) { v.damped = true; v.liftK = liftScale(velocity); v.setDamping(); } }
   }
 }
 void GongEngine::allNotesOff() {

@@ -25,6 +25,7 @@
 
 #include "forte/convolver.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/tuning.h"
 #include "telharmonium-model.h"
 #include "telharmonium-params.h"
@@ -92,7 +93,7 @@ class TelharmoniumEngine : public Engine {
  private:
   static constexpr int CHUNK = 32;
   void start(Key &k);
-  void open(Key &k);          // the relay opens: its contacts part over the contact time
+  void open(Key &k, double scale = 1); // the relay opens: its contacts part over the contact time (× scale: a lift's, forte/lift.h)
   void drop(Key &k);          // its windings leave at once
   void dropSource(Key &k, int i);
   void settle(Source &s, const Key &k, int64_t now);

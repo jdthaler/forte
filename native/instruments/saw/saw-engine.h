@@ -18,6 +18,7 @@
 #include <cstdint>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "forte/tuning.h"
 #include "saw-model.h"
@@ -35,6 +36,7 @@ enum : uint16_t {
 
 struct Voice {
   bool alive = false, held = false, hand = false, stolen = false;
+  double ringK = 1; // how many times longer than usual the blade rings on under the hand after this lift (forte/lift.h)
   int key = 0;
   int64_t born = 0;
   double vel = 0, after = 0, bite = 0, age = 0;

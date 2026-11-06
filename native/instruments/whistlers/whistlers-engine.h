@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "whistlers-model.h"
 #include "whistlers-params.h"
 
@@ -69,6 +70,7 @@ class WhistlersEngine : public Engine {
     bool clicked = false;
     double press = 0, pressTarget = 0, toNext = 0;
     bool held = true, stolen = false, done = false;
+    bool echo = false; double liftK = 1; // a lift's (forte/lift.h): a fast one's echo, which rings out; how many times longer than usual the release takes
   };
   void start(Voice &v, int key, double velocity);
   void evalComp(const Voice &v, const Comp &c, double T, double &f, double &a) const;

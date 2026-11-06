@@ -22,6 +22,7 @@
 
 #include "forte/dsp.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "forte/tuning.h"
 #include "cellulophone-model.h"

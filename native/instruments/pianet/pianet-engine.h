@@ -17,6 +17,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "pianet-model.h"
 #include "pianet-params.h"

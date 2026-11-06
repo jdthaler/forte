@@ -148,6 +148,7 @@ void RingdownEngine::noteOn(int key, double velocity) {
   const double u = expr.slideOr(key, NAN);
   if (u == u) { ModelParams m = model; m.spinU = std::max(0.0, u); keyVoice(key, m, fs, spun, &spunAngular); }
   const KeyVoice &d = u == u ? spun : hasOffer ? offer_ : voiceFor(key);
+  if (key >= 0 && key < 128) struck[key] = velocity;
   hasOffer = false;
   // over the limit: fade out the quietest voice that is not already going
   int live = 0;
@@ -169,8 +170,18 @@ void RingdownEngine::noteOn(int key, double velocity) {
   }
 }
 
-void RingdownEngine::noteOff(int key, double) {
+// Lift: a fast lift sets off a second, smaller merger: a black hole of half the mass rings down an
+// octave up, up to half as hard as the key's last.
+void RingdownEngine::noteOff(int key, double velocity) {
   for (int i = 0; i < nv; i++) if (voices[i]->key == key) voices[i]->keyDown = false;
+  if (key < 0 || key > 127) return;
+  if (const double t = liftPast(velocity), vel = struck[key]; t > 0 && vel > 0) {
+    struck[key] = 0;
+    const int n = nv;
+    noteOn(std::min(key + 12, KEY_HI), 0.5 * t * vel);
+    struck[std::min(key + 12, KEY_HI)] = 0;
+    if (nv > n) voices[nv - 1]->keyDown = false; // nothing holds it
+  }
 }
 
 void RingdownEngine::allNotesOff() {

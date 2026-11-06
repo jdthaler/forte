@@ -14,6 +14,7 @@ export const INSTRUMENT = {
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'soundboard', 'velocity', 'maxFreq', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],      // MIDI keys: A0–C8
+  lift: 'how fast the damper falls: a slow lift leaves a longer tail, a fast one stops the string sooner', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   space: 'sustain',      // Space and CC64: the damper pedal, sent to the engine
   controllers: { 67: 'unaCorda' }, // MIDI CC67, the soft pedal: on at 64 and above
   // noteOn's velocity is the hammer's speed in m/s; MIDI velocity / 127 → 0.25 … 6 m/s

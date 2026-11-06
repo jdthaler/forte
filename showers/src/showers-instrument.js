@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: keeps the dampers off the crystals
   modWheel: 'offset',                   // CC1: the impact point, from its default out to the crack
   aftertouch: 'more pile-up', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'a fast lift is a pile-up: a second, smaller shower lands in the crystal', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['pileup', 'piezo', 'q', 'energy', 'offset'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/showers), built as WebAssembly
   wasm: { name: 'ColliderShowersWasmEngine', module: new URL('./showers-wasm.js', import.meta.url).href, binary: new URL('../wasm/showers.wasm', import.meta.url).href },

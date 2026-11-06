@@ -22,6 +22,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "tines-model.h"
 #include "tines-params.h"
@@ -92,6 +93,8 @@ class TinesEngine : public Engine {
     bool keyDown = true, damped = false, killing = false, dead = false, hammerOn = false, contact = false;
     int contactSamples = 0, hammerSamples = 0, quiet = 0;
     double Fmax = 0, peak = 0, age = 0, yMin = 0, yMax = 0, damperSigma = 0;
+    double liftK = 1; // how many times longer than usual its damper takes
+    void lifted(double scale) { if (scale != liftK) { liftK = scale; setDamper(damperSigma); } }
     double eta = 0, etaPrev = 0, dPrev = -1, kOverM = 0, alphaK = 0;
 
     void start(TinesEngine &eng, int key, const VoiceData &d);

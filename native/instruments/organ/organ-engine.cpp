@@ -255,14 +255,17 @@ void OrganEngine::noteOn(int key, double velocity) {
   schedule(k, true, 0.5 + velocity);
 }
 
-void OrganEngine::noteOff(int key, double) {
+// Lift: the key's speed coming up, which spreads its nine contacts' opening: a slow lift opens them
+// one by one (up to four times as far apart, each with its click), a fast one nearly together.
+void OrganEngine::noteOff(int key, double velocity) {
   const int idx = key - KEY_MIN;
   if (idx < 0 || idx > NUM_KEYS - 1) return;
   Key &k = keys[idx];
   if (!k.live || !k.down) return;
   k.down = false;
   held = std::max(0, held - 1);
-  schedule(k, false, 1.2);
+  const double s = liftScale(velocity);
+  schedule(k, false, 1.2 / (s * s));
 }
 
 void OrganEngine::bend(double value) { bendTo = fd::pow(2.0, std::max(-1.0, std::min(1.0, value)) * kBendSemitones / 12); }

@@ -124,10 +124,13 @@ void ArmonicaEngine::noteOn(int key, double velocity) {
   focus = key;
 }
 
-void ArmonicaEngine::noteOff(int key, double) {
+// Lift: how fast the finger leaves the glass: a slow lift drags off it (over up to four times the
+// usual), damping the bowl as it goes; a fast one leaves it ringing.
+void ArmonicaEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity);
   for (int i = 0; i < count; i++) {
     Voice &v = *voices[i];
-    if (v.key == key && v.touch) { v.touch = false; v.Nlift = (v.Nn * k) / SKIN.lift; }
+    if (v.key == key && v.touch) { v.touch = false; v.Nlift = (v.Nn * k) / (SKIN.lift * s * s); }
   }
 }
 

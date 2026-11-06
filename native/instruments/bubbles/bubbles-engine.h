@@ -21,6 +21,7 @@
 #include "bubbles-model.h"
 #include "bubbles-params.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "forte/impulses.h"
 
@@ -74,7 +75,10 @@ class BubbleEngine : public Engine {
     const Gas *gas = &GASES[0];
     double b = 0, wd = 0, w0 = 0, fd0 = 0, vel = 0;
   };
-  struct Nozzle { int key = 0; bool held = false, owed = false, first = true; double vel = 0, due = 0, press = 0; int released = 0; };
+  struct Nozzle {
+    int key = 0; bool held = false, owed = false, first = true; double vel = 0, due = 0, press = 0; int released = 0;
+    int shut = 0; double last = 0; // a lift's (forte/lift.h): samples a slowly shutting nozzle still lets bubbles go; a fast one's last bubble, × the radius
+  };
   struct LogEntry { int key; int64_t frame; double R, vel; bool first; };
 
   // read by the tests (through the WebAssembly's hooks)

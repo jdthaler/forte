@@ -18,6 +18,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: sent to the engine, which reads it as the mute bar
   mpe: { bend: 2, press: true },        // a note's own bend presses its key as the wheel does: up to 2 semitones, tens of cents
   aftertouch: 'the tangent presses harder: the pitch rises', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'how fast the tangent leaves the string: a fast lift pulls it off sharply, with its thwack; a slow one eases it off', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['mute', 'press', 'hf', 'xUpper', 'gain'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/clavier), built as WebAssembly
   wasm: { name: 'ClavierWasmEngine', module: new URL('./clavier-wasm.js', import.meta.url).href, binary: new URL('../wasm/clavier.wasm', import.meta.url).href },

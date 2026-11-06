@@ -14,6 +14,7 @@ export const INSTRUMENT = {
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                     // MIDI keys: all 88, A0–C8
+  lift: 'a fast lift brushes the thumb back over the tine; with the tines damped on release, a slow lift lets the fingertip settle gently', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   compass: { keys: [60, 88], param: 'fullRange' }, // C4–E6, a 17-tine kalimba's span, until Full range opens the rest
   space: 'sustain',                     // Space and CC64: holds fingers off released tines (when they don't ring anyway)
   modWheel: 'cover',                    // CC1: a finger over the sound hole, from open to shut (the wah)

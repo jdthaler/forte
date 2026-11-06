@@ -21,6 +21,7 @@ export const INSTRUMENT = {
   // its pressure is a harder breath
   mpe: { bend: 24, slide: true },
   aftertouch: 'a harder breath, which sharpens the note', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'how fast the air sacs empty: a slow lift lets the song fall away, a fast one clips it', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['drive', 'sweep', 'trachea', 'tension', 'rate'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/birdsong), built as WebAssembly
   wasm: { name: 'BirdsongWasmEngine', module: new URL('./birdsong-wasm.js', import.meta.url).href, binary: new URL('../wasm/birdsong.wasm', import.meta.url).href },

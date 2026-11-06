@@ -24,6 +24,7 @@
 
 #include "forte/dsp.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "forte/tuning.h"
 #include "ondes-model.h"
@@ -40,6 +41,7 @@ struct Voice {
   bool alive = false, held = false, stolen = false;
   int key = 0;
   int64_t born = 0;
+  double liftK = 1; // how many times longer than usual the intensity key takes to let go (forte/lift.h)
   double vel = 0, after = 0, F = 0, aPress = 0, aLift = 0; // the intensity key's force (N), and how fast it follows
   double g0 = 0, g1 = 0;            // its gain at the chunk's start and end
   double u = 0, uTo = 0, uRate = 0; // log₂ of the note's frequency: the ribbon slides it to uTo at uRate per second
@@ -120,6 +122,7 @@ class OndesEngine : public Engine {
 
  private:
   void update(Voice &v, double dt, int m);
+  void letGo(Voice &v, double velocity);
   void start(Voice &v, int key, double velocity);
   void steal(const Voice *keep);
   void detector();

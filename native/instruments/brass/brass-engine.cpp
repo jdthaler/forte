@@ -87,7 +87,7 @@ void BrassEngine::start(Voice &v, double velocity) {
   v.bendNow = expr.bendOf(v.key) * bendNow;
   v.plunger = v.plungerTo = expr.slideOr(v.key, P[p::plunger]);
   std::tie(v.gl, v.gr) = keyPan(v.key, 0.4);
-  v.active = true; v.down = true;
+  v.active = true; v.down = true; v.liftK = 1;
   retune(v, true);
 }
 
@@ -169,9 +169,12 @@ void BrassEngine::noteOn(int key, double velocity) {
   focus = &nv;
 }
 
-void BrassEngine::noteOff(int key, double) {
+// Lift: how the breath stops: a slow lift tapers the note (the mouth pressure falls over up to four
+// times the usual), a fast one is a tongue stop (a quarter of it).
+void BrassEngine::noteOff(int key, double velocity) {
   for (Voice &v : pool) if (v.active && v.key == key && v.down) {
-    v.down = false;
+    const double s = liftScale(velocity);
+    v.down = false; v.liftK = s * s;
     if (v.crossings > 12) { learned[key] = v.trim; learnedLip[key] = v.lipTrim; learnedPlan[key] = v.plan; learnedVersion[key] = planVersion; }
   }
 }
@@ -317,7 +320,7 @@ void BrassEngine::process(float *Lb, float *Rb, int n) {
     v.plungerTo = expr.slideOr(v.key, P[p::plunger]);
     v.plunger = glideTo(v.plunger, v.plungerTo, dt, 0.02);
     retune(v, false);
-    const double kRel = 1 - std::exp(-1 / (v.fsV * RELEASE)), kFol = 1 - std::exp(-1 / (v.fsV * 0.03));
+    const double kRel = 1 - std::exp(-1 / (v.fsV * RELEASE * v.liftK)), kFol = 1 - std::exp(-1 / (v.fsV * 0.03));
     const double gain = v.gain / v.os;
     for (int i = 0; i < n; i++) {
       double l = 0, r = 0;

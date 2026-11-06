@@ -206,10 +206,15 @@ void KalimbaEngine::noteOn(int key, double velocity) {
   voices.push_back(v);
 }
 
-void KalimbaEngine::noteOff(int key, double) {
+// Lift: with the tines let ring, a fast lift brushes the thumb back over the tine for a moment;
+// damped on release, a slow lift lets the fingertip settle gently (a longer tail), a fast one firmly.
+void KalimbaEngine::noteOff(int key, double velocity) {
   for (Voice &v : voices) if (v.key == key && !v.released && !v.grabbed) {
     v.released = true;
-    if (!sustain && P[p::ring] < 0.5) v.damped = true;
+    if (!sustain && P[p::ring] < 0.5) {
+      v.damped = true;
+      if (const double k = liftScale(velocity); k != 1) v.fing = std::exp(-std::log(1000.0) / (FINGER_T60 * k * fs));
+    } else if (const double t = liftPast(velocity); t > 0) v.touch = (int)(0.04 * t * fs); // up to −12 dB
   }
 }
 
@@ -232,7 +237,8 @@ void KalimbaEngine::process(float *L, float *R, int n) {
         r.y2 = r.y1; r.y1 = y; s += y;
       }
       if (v.grabbed) v.level *= grab;
-      else if (v.damped) v.level *= finger;
+      else if (v.damped) v.level *= v.fing ? v.fing : finger;
+      else if (v.touch > 0) { v.touch--; v.level *= finger; }
       s *= v.level;
       for (int j = 0; j < PLATE_MODES; j++) F[j] += s * v.w[j];
     }

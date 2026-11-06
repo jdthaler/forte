@@ -42,7 +42,8 @@
         "cents10": 0,
         "cents11": 0,
         "strikeOn": true,
-        "slideOn": true
+        "slideOn": true,
+        "liftOn": true
       }
     }
   ]

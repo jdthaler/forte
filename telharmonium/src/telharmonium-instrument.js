@@ -22,6 +22,7 @@ export const INSTRUMENT = {
   // pressure presses its own key further in
   mpe: { bend: 0, slide: false },
   aftertouch: 'presses the key further in: louder', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'how fast the relay opens: a slow lift parts its contacts gently, a softer click; a fast one sharply', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['m1', 'm3', 'm5', 'distance', 'swell'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/telharmonium), built as WebAssembly
   wasm: { name: 'TelharmoniumWasmEngine', module: new URL('./telharmonium-wasm.js', import.meta.url).href, binary: new URL('../wasm/telharmonium.wasm', import.meta.url).href },

@@ -71,6 +71,7 @@ void GrandEngine::Voice::start(const GrandEngine &eng, Data::Ref r, uint64_t ver
   keyDown = true; damped = false; killing = false; dead = false;
   hammerOn = false; peak = 0; quiet = 0; age = 0; struck = -INFINITY;
   eta = 0; etaPrev = 0; dPrev = -1; F = 0; FV = 0; FH = 0; Fmax = 0; contactSamples = 0; hammerSamples = 0; contact = false;
+  liftK = 1;
   setDamper(eng.P[p::damper]);
   startLong(eng, d);
 }
@@ -543,16 +544,17 @@ void GrandEngine::retryPending() {
   }
 }
 
-void GrandEngine::noteOff(int key, double) {
+void GrandEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
   down[key] = 0;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
-  if (Voice *v = byKey[key]) { v->keyDown = false; v->updateDamping(*this); }
+  // how fast the damper falls: a slow lift leaves a longer tail, a fast one a shorter (forte/lift.h)
+  if (Voice *v = byKey[key]) { v->keyDown = false; v->lifted(liftScale(velocity)); v->updateDamping(*this); }
 }
 
 void GrandEngine::setSustain(bool on) {
   sustain = on;
-  for (int i = 0; i < nVoices; i++) voices[i]->updateDamping(*this);
+  for (int i = 0; i < nVoices; i++) { if (!on) voices[i]->lifted(1); voices[i]->updateDamping(*this); } // the pedal's dampers fall as they always did
 }
 
 void GrandEngine::allNotesOff() {

@@ -160,13 +160,16 @@ void CristalEngine::noteOn(int key, double velocity) {
       if (q) q->dead = true;
     }
   }
-  v->touch = true; v->vel = velocity;
+  v->touch = true; v->vel = velocity; v->lamOff = 0;
   v->phase = 0; v->pos = 0; v->dir = 1; v->t = 0; v->firm = LAND_PRESS; // a new stroke, from the rod's far end, landing firmly
   focus = key;
 }
 
-void CristalEngine::noteOff(int key, double) {
-  for (int i = 0; i < count; i++) if (voices[i]->key == key) voices[i]->touch = false;
+// Lift: how fast the wet fingers leave the rods: a slow lift drags them off (over up to four times
+// the usual), quieting the rods as they go; a fast one leaves them ringing.
+void CristalEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity), lamOff = s == 1 ? 0 : 1 - std::exp(-k / (LAND * s * s));
+  for (int i = 0; i < count; i++) if (voices[i]->key == key) { voices[i]->touch = false; voices[i]->lamOff = lamOff; }
 }
 
 void CristalEngine::allNotesOff() { count = 0; }
@@ -225,7 +228,7 @@ void CristalEngine::run(float *L, float *R, int n) {
         if (v.t >= T_RETURN) { v.phase = 0; v.pos = 0; v.firm = LAND_PRESS; }
       }
       v.firm *= ease;
-      v.Nn += ((on ? Nhold + Nfirm * v.firm : 0) - v.Nn) * lam;
+      v.Nn += ((on ? Nhold + Nfirm * v.firm : 0) - v.Nn) * (!v.touch && v.lamOff ? v.lamOff : lam);
       if (!on && v.Nn < 1e-6 * v.Nreg) v.Nn = 0;
       const double Nf = v.Nn;
       // the modes, free; the rod's velocity without friction this sample

@@ -22,6 +22,7 @@ export const INSTRUMENT = {
   modWheel: 'effort',                      // CC1: the pumpers' effort
   mpe: { bend: 12 },                       // MPE: a key's own bend warms or cools the air in its pipes alone (the wind is every key's: no slide)
   aftertouch: 'the pumpers work harder, and the wind rises', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'how the finger lets the slide go back: a slow lift holds it against its spring, closing the pipe gently; a fast one flicks it home', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['open', 'stopped', 'high', 'gurgle', 'effort'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/hydraulis), built as WebAssembly
   wasm: { name: 'HydraulisWasmEngine', module: new URL('./hydraulis-wasm.js', import.meta.url).href, binary: new URL('../wasm/hydraulis.wasm', import.meta.url).href },

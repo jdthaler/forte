@@ -21,6 +21,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: the damper pedal, which lifts the frame's damper bar
   modWheel: 'hardness',                 // CC1: the mallet's face, from its default up to brass
   mpe: { slide: true },                 // a note's own slide: its mallet's face, at the strike (a tube cannot bend)
+  lift: 'how fast the damper bar falls: a slow lift leaves a longer tail, a fast one stops the tube sooner', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['damp', 'mass', 'speedMax', 'strike', 'hardness'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/tubular), built as WebAssembly
   wasm: { name: 'TubularWasmEngine', module: new URL('./tubular-wasm.js', import.meta.url).href, binary: new URL('../wasm/tubular.wasm', import.meta.url).href },

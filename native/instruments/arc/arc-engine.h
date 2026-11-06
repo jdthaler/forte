@@ -27,6 +27,7 @@
 #include "arc-voice.h"
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 
 namespace forte::arc {
@@ -55,6 +56,7 @@ struct Arc {
   int mKey[MAXE] = {}; double mC[MAXE] = {}; int nM = 0;
   int tKey[MAXE] = {}; double tC[MAXE] = {}, tV[MAXE] = {}, tI[MAXE] = {}, tR[MAXE] = {}, tY[MAXE] = {}, tW[MAXE] = {};
   int8_t tDir[MAXE] = {}; int nT = 0;
+  double tS[MAXE] = {}; // how fast an opening contact parts, × the usual (a lift's: forte/lift.h)
   double capV[128], capT[128] = {};
   double CB = 0, vB = 0, ic = 0, is = 0, X = 1, u = 0, ia = 0, P = 0, uDC = 0, Imean = 0;
   uint32_t seed = 1; double nf = 0;
@@ -71,7 +73,7 @@ struct Arc {
   bool has(int key) const;
   bool holds(int key) const;
   void engage(int key, double C);
-  void release(int key);
+  void release(int key, double speed = 1);
   void releaseAll();
   int lead() const; // the newest key it holds
   void run(int n, const double *emf);

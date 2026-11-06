@@ -240,7 +240,7 @@ bool HydraulisEngine::startKey(int key, double velocity, const KeyModels *models
   }
   v->nb = expr.bendOf(key);
   // the finger pushes the slide in, from wherever its spring has brought it back to
-  v->down = true; v->pushing = true; v->s0 = v->s; v->pushT = 0; v->pushDur = pushTime(velocity, P[p::push]) * std::max(0.05, 1 - v->s);
+  v->down = true; v->pushing = true; v->retK = 1; v->s0 = v->s; v->pushT = 0; v->pushDur = pushTime(velocity, P[p::push]) * std::max(0.05, 1 - v->s);
   for (int r = 0; r < RANKS; r++) if (cock[r] > 0) v->pipes[r].asleep = false;
   focusKey = key;
   return true;
@@ -267,8 +267,9 @@ void HydraulisEngine::retryPending() {
   nPending = j;
 }
 
+// Lift: the finger lets the slide go back at its own pace: a slow lift holds it against its spring
+// (back in up to twice the time, the pipe closing gently), a fast one flicks it home in half.
 void HydraulisEngine::noteOff(int key, double velocity) {
-  (void)velocity;
   if (key < 0 || key > 127) return;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) { pending[i].off = true; pending[i].offVelocity = velocity; }
   leanKey[key] = 0;
@@ -278,7 +279,8 @@ void HydraulisEngine::noteOff(int key, double velocity) {
     const double u = std::min(1.0, v->pushT / v->pushDur);
     v->sv = (1 - v->s0) * (PI / (2 * v->pushDur)) * std::sin(PI * u);
   }
-  v->down = false; v->pushing = false;
+  const double r = liftScale(velocity);
+  v->down = false; v->pushing = false; v->retK = 1 / (r * r);
 }
 
 void HydraulisEngine::allNotesOff() {
@@ -435,7 +437,7 @@ void HydraulisEngine::processBlock(float *L, float *R, int n) {
         if (u >= 1) { v->pushing = false; s = 1; }
         v->sv = 0;
       } else if (!v->down && (s > 0 || v->sv != 0)) {
-        v->sv -= w2 * (s + 1) * h;
+        v->sv -= w2 * v->retK * (s + 1) * h;
         s += v->sv * h;
         if (s <= 0) { s = 0; v->sv = v->sv < 0 ? -BOUNCE * v->sv : v->sv; if (v->sv < 0.1) v->sv = 0; }
       }

@@ -92,7 +92,7 @@ void NmrEngine::noteOn(int key, double velocity) {
   const double theta = std::clamp(velocity, 0.0, 1.0) * P[p::flip] * std::numbers::pi / 180;
   const double before = recovered(key);
   mz[key] = before * std::cos(theta); mzT[key] = clock;
-  v->on = true; v->held = true; v->fading = false; v->receiving = true;
+  v->on = true; v->held = true; v->fading = false; v->receiving = true; v->closeT = 0;
   v->key = key;
   v->amp = OUT * std::sin(theta) * before;
   v->age = v->t0 = v->S = v->D = v->phi = v->gate = 0;
@@ -140,11 +140,15 @@ void NmrEngine::noteOn(int key, double velocity) {
   post(m);
 }
 
-void NmrEngine::noteOff(int key, double) {
+// Lift: how the receiver closes. A slow lift fades the echoes out (over up to 0.3 s), a fast one
+// cuts them; open until gone, a lift that isn't middling closes it too.
+void NmrEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity);
   for (Voice &v : voices) {
     if (!v.on || v.key != key || !v.held || v.fading) continue;
     v.held = false;
-    if ((int)P[p::acquire] == acquire_::held) v.receiving = false; // the receiver closes
+    if (s != 1) { v.receiving = false; v.closeT = s > 1 ? REL_T + 0.3 * (s - 1) : REL_T * s * s; }
+    else if ((int)P[p::acquire] == acquire_::held) v.receiving = false; // the receiver closes
   }
 }
 
@@ -197,7 +201,7 @@ void NmrEngine::play(Voice &v, float *L, float *R, int n) {
   const double e0 = envelope(v.age, S0, v.D), e1 = envelope(v.age + dt, S1, D1);
   const double bound = std::fabs(v.amp) * std::exp(-(v.age + dt) / t2 - Dk * D1); // what an echo could bring back
   // the receiver: opening, closing, or fading for a newer pulse
-  const double closeStep = v.fading ? std::exp(-1 / (fs * FADE_T)) : !v.receiving ? std::exp(-1 / (fs * REL_T)) : 1;
+  const double closeStep = v.fading ? std::exp(-1 / (fs * FADE_T)) : !v.receiving ? std::exp(-1 / (fs * (v.closeT ? v.closeT : REL_T))) : 1;
   const double gateStep = 1 / (fs * GATE_T);
   const double noise = P[p::noise] <= -100 ? 0 : std::pow(10.0, P[p::noise] / 20) * OUT;
   const bool quad = (int)P[p::channels] == channels_::quadrature;

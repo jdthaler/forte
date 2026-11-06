@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "gamelan-model.h"
 #include "gamelan-params.h"
@@ -47,6 +48,7 @@ class GamelanEngine : public Engine {
     int subs = 1, count = 0;          // partners sounding; modes each
     double beat = 0, vel = 0;         // the pair's beat now (Hz)
     bool held = false, released = false, damped = false;
+    double liftK = 1; // how many times longer than usual the hand takes to stop it (forte/lift.h)
     int age = 0;                      // samples since its last stroke
   };
   const Voice *voice(int key) const { for (const Voice &v : voices) if (v.key == key) return &v; return nullptr; }

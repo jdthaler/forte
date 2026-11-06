@@ -20,6 +20,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "tubular-model.h"
 #include "tubular-params.h"
@@ -77,6 +78,7 @@ class TubularEngine : public Engine {
     double Fmax = 0, lastContactMs = 0;
     bool released = false;
     double damp = 0, dampSet = -1;
+    double liftK = 1; // how many times longer than usual its damper takes to stop it (forte/lift.h)
     double fade = 1;
     bool fading = false, dead = false;
     double age = 0;

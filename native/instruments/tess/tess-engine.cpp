@@ -64,9 +64,13 @@ void TessEngine::build(Voice &v, float *into) {
   v.built = version;
 }
 
-void TessEngine::end(Voice &v) {
+// A let-go planet's note ends when the light is steady again. Lift (forte/lift.h): a fast lift
+// cuts the light curve at once; a slow one fades it out over up to 0.6 s, through its dips.
+void TessEngine::end(Voice &v, double velocity) {
   v.ending = true;
-  if (v.quietFrom < 0) v.envStep = -1 / (FADE_OUT * fs);
+  const double s = liftScale(velocity);
+  if (s > 1) { v.fadeOut = true; v.envStep = -1 / (std::max(FADE_OUT, 0.6 * (s - 1)) * fs); }
+  else if (v.quietFrom < 0 || liftPast(velocity) > 0) v.envStep = -1 / (FADE_OUT * fs);
 }
 
 int TessEngine::voiceCount() const {
@@ -106,7 +110,7 @@ void TessEngine::noteOn(int key, double velocity) {
     for (Voice &v : voices) if (!slot || v.age < slot->age) slot = &v;
   }
   Voice &v = *slot;
-  v.active = true; v.held = true; v.ending = false;
+  v.active = true; v.held = true; v.ending = false; v.fadeOut = false;
   v.key = key; v.vel = velocity; v.age = clock++; v.cur = 0;
   std::tie(v.gl, v.gr) = keyPan(key);
   build(v, v.table[0]);
@@ -115,9 +119,9 @@ void TessEngine::noteOn(int key, double velocity) {
   else { v.phase = 0.5; v.env = 0; v.envStep = 1 / (FADE_IN * fs); }
 }
 
-void TessEngine::noteOff(int key, double) {
+void TessEngine::noteOff(int key, double velocity) {
   for (Voice &v : voices) {
-    if (v.active && v.key == key && v.held && !v.ending) { v.held = false; if (!sustain) end(v); }
+    if (v.active && v.key == key && v.held && !v.ending) { v.held = false; if (!sustain) end(v, velocity); }
   }
 }
 
@@ -150,7 +154,7 @@ void TessEngine::process(float *L, float *R, int n) {
       v.phase += v.inc;
       if (v.phase >= 1) v.phase -= 1;
       // a let-go planet's note ends when the light is steady again, after the dip it was in
-      if (v.ending && v.quietFrom >= 0 && v.phase >= v.quietFrom && v.phase <= v.quietTo) { v.active = false; break; }
+      if (v.ending && !v.fadeOut && v.quietFrom >= 0 && v.phase >= v.quietFrom && v.phase <= v.quietTo) { v.active = false; break; }
     }
     if (u) v.cur = 1 - v.cur;
   }

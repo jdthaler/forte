@@ -5,6 +5,7 @@
 #include <array>
 #include <vector>
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "kalimba-model.h"
 #include "kalimba-params.h"
 namespace forte::kalimba {
@@ -59,6 +60,8 @@ class KalimbaEngine : public Engine {
     double level = 1, start = 0;         // start: Σ|force| at release, for when it has died away
     double floor = 1e-5;                 // …this far under it (Quality's, when it was plucked)
     bool released = false, damped = false, grabbed = false;
+    double fing = 0;   // the fingertip's damping per sample after this lift (0: the usual; forte/lift.h)
+    int touch = 0;     // samples the thumb still rests on the tine after a fast lift
   };
   void rebuildBody();
   std::array<double, p::count> P{};

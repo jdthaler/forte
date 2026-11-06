@@ -18,6 +18,7 @@
 #include <cstdint>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "organ-model.h"
 #include "organ-params.h"
 

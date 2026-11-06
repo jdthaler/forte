@@ -185,10 +185,13 @@ void EarlyUniverseEngine::noteOn(int key, double velocity) {
   sinceReport = (int)(fs / REPORT_HZ);
 }
 
-void EarlyUniverseEngine::noteOff(int key, double) {
+// Lift: when recombination comes: a fast lift freezes the sound at once (its light streams away in a
+// quarter of the usual time), a slow one lets it stream away over up to four times as long.
+void EarlyUniverseEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity);
   for (Voice &v : voices) if (v.key == key && v.held) {
     v.held = false;
-    if (!sustain) { v.released = true; if (!v.streaming) startStreaming(v); }
+    if (!sustain) { v.released = true; v.liftK = s * s; if (!v.streaming) startStreaming(v); }
   }
 }
 
@@ -213,7 +216,7 @@ void EarlyUniverseEngine::process(float *L, float *R, int n) {
         if (v.u >= 1) { v.u = 1; if (plasma) startStreaming(v); }
       } else {
         // k₁ Δτ: by the cosmic clock while the key is held, by the release's once it is let go
-        v.x1 += len * (v.released ? free : U.k1 * U.tauStar * cosmic);
+        v.x1 += len * (v.released ? free / v.liftK : U.k1 * U.tauStar * cosmic);
         if (v.x1 >= FADE_TO) v.done = true;
       }
       amplitudes(v, e1.data(), q1.data());

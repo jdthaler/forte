@@ -14,6 +14,7 @@ export const INSTRUMENT = {
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', 'maxFreq', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                                // MIDI keys: A0–C8, the CP-80's 88 (the CP-70 has E1–E7)
+  lift: 'how fast the damper falls: a slow lift leaves a longer tail, a fast one stops the strings sooner', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   space: 'sustain',                                // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'tremDepth',                // MIDI CC1, the mod wheel (an FC-300's EXP 2): the tremolo, off at rest, full depth fully up
   faders: ['bass', 'mid', 'treble', 'tremRate', 'tremDepth'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

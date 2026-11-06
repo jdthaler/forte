@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'strike',                   // CC1: strike point, from its default (near the centre) out to 95 % of the radius
   mpe: { slide: true },                 // a note's own slide: where its mallet lands, at the strike (a plate cannot bend)
+  lift: 'the hand damping the plate on release: a slow lift lands gently (a longer tail), a fast one firmly', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['mass', 'release', 'listen', 'hardness', 'strike'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/gongs), built as WebAssembly (it builds its
   // own coupling tables)

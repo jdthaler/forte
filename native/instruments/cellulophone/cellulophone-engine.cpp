@@ -169,10 +169,14 @@ void CellulophoneEngine::noteOn(int key, double velocity) {
   }
 }
 
-void CellulophoneEngine::noteOff(int key, double) {
+// Lift: how fast the key's mirror tilts back out of the beam: a slow lift fades the note over up to
+// four times the mirror's travel, a fast one cuts it in a quarter of it.
+void CellulophoneEngine::noteOff(int key, double velocity) {
   if (key < 21 || key > 108) return;
   Voice &v = voices[key - 21];
-  if (v.on) v.held = false;
+  if (!v.on) return;
+  v.held = false;
+  if (const double s = liftScale(velocity); s != 1 && !v.dying) v.fall = 1 / (mirrorT * s * s * fs);
 }
 
 void CellulophoneEngine::allNotesOff() {

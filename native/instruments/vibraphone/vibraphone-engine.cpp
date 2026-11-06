@@ -96,7 +96,7 @@ void VibraphoneEngine::Voice::strike(const VibraphoneEngine &eng, double velocit
   eta = uc - 1.5 * v * h; etaPrev = eta - v * h;
   dPrev = -1; dPrev2 = -1; malletOn = true; contact = false; inFlight = 0;
   contactSamples = 0; Fmax = 0;
-  released = false; fading = false; fade = 1; age = 0;
+  released = false; fading = false; fade = 1; age = 0; touchLeft = 0;
 }
 
 // Head force for a compression D at the next step: the discrete gradient of V = Kδ^(p+1)/(p+1)
@@ -301,10 +301,14 @@ void VibraphoneEngine::strikeKey(int key, double velocity, Data::Ref r) {
   }
 }
 
-void VibraphoneEngine::noteOff(int key, double) {
+void VibraphoneEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
-  if (Voice *v = byKey[key]) v->released = true;
+  // a fast lift touches the bar with the mallet for 0.1 s, damping it even with the pedal down
+  if (Voice *v = byKey[key]) {
+    v->released = true;
+    if (const double t = liftPast(velocity); t > 0) { v->touch = t; v->touchLeft = 0.1 * fs; }
+  }
 }
 
 void VibraphoneEngine::allNotesOff() {
@@ -363,8 +367,9 @@ void VibraphoneEngine::processBlock(float *L, float *R, int n) {
   for (int i = 0; i < nVoices; i++) {
     Voice *v = voices[i];
     // the damper felt: on every bar not held by a key, unless the pedal is down
-    const double want = v->released && !sustain && !lock ? 1 : 0;
-    if (v->damp != want) v->damp = want > v->damp ? std::min(1.0, v->damp + dStep) : std::max(0.0, v->damp - dStep);
+    double want = v->released && !sustain && !lock ? 1 : 0;
+    if (v->touchLeft > 0) { want += v->touch; v->touchLeft -= n; } // and a mallet's touch after a fast lift
+    if (v->damp != want) v->damp = want > v->damp ? std::min(want, v->damp + dStep) : std::max(want, v->damp - dStep);
     if (v->damp != v->dampSet) v->coefs(*this);
     if (moving || v->fresh) v->tube(*this);
     v->render(L, R, n, *this);

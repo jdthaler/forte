@@ -20,6 +20,7 @@ export const INSTRUMENT = {
   // strike point, and its pressure is the heel pressing into the head.
   mpe: { bend: 12, slide: true },
   aftertouch: 'pressed firmly, the heel goes into the head: the pitch rises', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'the hand damping the head: a slow lift lets it ring on, a fast one stops it (with the heads let ring, only a fast lift brings the hand down)', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['air', 'mic', 'push', 'restAt', 'strike'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/drums), built as WebAssembly
   wasm: { name: 'DrumWasmEngine', module: new URL('./drums-wasm.js', import.meta.url).href, binary: new URL('../wasm/drums.wasm', import.meta.url).href },

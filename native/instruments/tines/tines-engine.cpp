@@ -61,7 +61,7 @@ void TinesEngine::Voice::start(TinesEngine &eng, int key_, const VoiceData &d) {
   hasDamper = d.hasDamper;
   keyDown = true; damped = false; killing = false; dead = false;
   hammerOn = false; contactSamples = 0; Fmax = 0; peak = 0; quiet = 0; age = 0;
-  yMin = 0; yMax = 0;
+  yMin = 0; yMax = 0; liftK = 1;
   setDamper(eng.P[p::damper]);
 }
 
@@ -86,7 +86,7 @@ void TinesEngine::Voice::retargetPickup(const Pickup &pu) {
 
 void TinesEngine::Voice::setDamper(double sd) {
   for (int i = 0; i < Nall; i++) {
-    const double s = sig[i] + (killing ? 300 : sd * dw[i]), o = om[i];
+    const double s = sig[i] + (killing ? 300 : sd * dw[i] / liftK), o = om[i];
     const double r = std::exp(-s * k), od = std::sqrt(std::max(o * o - s * s, 1e-6));
     a1d[i] = 2 * r * std::cos(od * k); a2d[i] = r * r;
   }
@@ -385,15 +385,16 @@ void TinesEngine::trimVoices(const Voice *keep) {
   }
 }
 
-void TinesEngine::noteOff(int key, double) {
+void TinesEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
-  if (Voice *v = byKey[key]) { v->keyDown = false; v->updateDamping(*this); }
+  // how fast the damper falls: a slow lift leaves a longer tail, a fast one a shorter (forte/lift.h)
+  if (Voice *v = byKey[key]) { v->keyDown = false; v->lifted(liftScale(velocity)); v->updateDamping(*this); }
 }
 
 void TinesEngine::setSustain(bool on) {
   sustain = on;
-  for (int i = 0; i < nVoices; i++) voices[i]->updateDamping(*this);
+  for (int i = 0; i < nVoices; i++) { if (!on) voices[i]->lifted(1); voices[i]->updateDamping(*this); } // the pedal's dampers fall as they always did
 }
 
 void TinesEngine::bend(double value) {

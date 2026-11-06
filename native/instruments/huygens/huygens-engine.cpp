@@ -38,7 +38,7 @@ void Osc::start(NeonEngine &eng, int k, double f, double phase, bool settled) {
   V = p.vNom - (p.vNom - p.vExt) * exp(-ph * log((p.vNom - p.vExt) / (p.vNom - p.vStrike)));
   gate = settled ? 1 : 0;  // output keyer
   power = settled ? 1 : 0; // supply connection
-  keyDown = true; dead = false;
+  keyDown = true; dead = false; relA = 0;
   nf = 0; sent = 0;
   prevOut = 0; // one-sample delay for the polyBLEP
   hx = 0; hy = 0; // coupling-capacitor high-pass state
@@ -78,7 +78,7 @@ void Osc::plan(double vr, const NeonEngine &eng) {
   if (keyDown) {
     gate += (1 - gate) * eng.attackAlpha;
     power += (1 - power) * eng.attackAlpha;
-  } else gate -= gate * eng.releaseAlpha;
+  } else gate -= gate * (relA ? relA : eng.releaseAlpha);
   supply = vr * power;
   V0 = V;
   fireAt = -1;
@@ -238,9 +238,15 @@ void NeonEngine::noteOn(int key, double) {
   last = o;
 }
 
-void NeonEngine::noteOff(int key, double) {
+// Lift: how fast the key's supply falls: a slow lift over up to four times the release, the lamp
+// flashing on more slowly as it goes, a fast one in a quarter of it.
+void NeonEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
-  if (Osc *o = byKey[key]) o->keyDown = false;
+  if (Osc *o = byKey[key]) {
+    const double s = liftScale(velocity);
+    o->keyDown = false;
+    o->relA = s == 1 ? 0 : 1 - exp(-k / std::max(1e-4, p.release * s * s));
+  }
 }
 
 void NeonEngine::allNotesOff() { for (int i = 0; i < nos; i++) osc[i]->keyDown = false; }

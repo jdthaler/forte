@@ -27,6 +27,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "quantum-model.h"
 #include "quantum-params.h"
@@ -77,6 +78,7 @@ class QuantumEngine : public Engine {
     double deph = 0; bool slid = false; // the dephasing rate it decoheres at (P's, or its slide's), and whether a slide moves it
     int64_t count = 0, rampEnd = 0, dcEnd = 0;
     bool released = false, quench = false, stolen = false, dead = false;
+    double liftK = 1; // how many times longer than usual its release takes after this lift (forte/lift.h)
     int first = 0;       // the packet's first state this voice uses (state s is the packet's first + s)
     double gdt = 0, lam = 0; // Γ_φ/fs now, and ∫Γ_φ dt since the pulse's centre
     // A coherent restrike (cohere): Rₙ = Rr + i·Ri, and |Rₙ + 1|, the state's amplitude once the

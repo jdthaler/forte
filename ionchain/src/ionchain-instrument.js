@@ -19,6 +19,7 @@ export const INSTRUMENT = {
   modWheel: { param: 'aniso', max: 0.6 },
   // MPE: a note's own bend is its trap's endcap voltage (the axial frequency, every mode with it)
   mpe: { bend: 12 },
+  lift: 'the cooling laser: a fast lift cools the ions at once, a slow one gently, letting them ring on', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['beam', 'angle', 'distance', 'pulse', 'aniso'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/ionchain), built as WebAssembly
   wasm: { name: 'IonChainWasmEngine', module: new URL('./ionchain-wasm.js', import.meta.url).href, binary: new URL('../wasm/ionchain.wasm', import.meta.url).href },

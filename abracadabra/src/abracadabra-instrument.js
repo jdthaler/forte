@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: keep the magnets charged after the keys come up
   modWheel: { param: 'halo', max: 2000 }, // CC1: a hotter halo, up to a galaxy cluster's
   mpe: { bend: 0, slide: true },        // MPE: an axion's mass does not bend; CC74 heats its own halo
+  lift: 'how fast the magnet ramps down: a slow lift over up to four times the ramp, a fast one in a quarter of it', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['streamSpeed', 'stream', 'noise', 'coupling', 'halo'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/abracadabra), built as WebAssembly
   wasm: { name: 'AbracadabraWasmEngine', module: new URL('./abracadabra-wasm.js', import.meta.url).href, binary: new URL('../wasm/abracadabra.wasm', import.meta.url).href },

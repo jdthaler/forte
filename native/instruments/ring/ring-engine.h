@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "ring-model.h"
 #include "ring-params.h"
@@ -39,6 +40,7 @@ class StorageRingEngine : public Engine {
     double chroma = 0; bool slid = false; // the chromaticity it runs at, and whether a slide moves it
     double charge = 0, Z = 0, theta = 0, phiS = 0, phiB = 0, logX = 0, logS = 0;
     bool released = false, scraped = false;
+    double liftK = 1; // how many times longer than usual its release takes after this lift (forte/lift.h)
     double hl0 = 0, hl1 = 0, hr0 = 0, hr1 = 0; // the buttons' high-pass states
     void inject(double velocity, const double *P);
     void schedule(const double *P, const forte::Tuning &tuning, double fs, double slide);

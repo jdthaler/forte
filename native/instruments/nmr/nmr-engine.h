@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "nmr-model.h"
 #include "nmr-params.h"
@@ -47,6 +48,7 @@ class NmrEngine : public Engine {
   static constexpr int kPool = 32;
   struct Voice {
     bool on = false, held = true, fading = false, receiving = true;
+    double closeT = 0; // how fast the receiver closes after this lift, s (0: as usual; forte/lift.h)
     int key = 0, nl = 0;
     double amp = 0, age = 0, t0 = 0, S = 0, D = 0, phi = 0, gate = 0, rel = 1, bendNow = 1, peak = 0;
     double nyL = 0, nyR = 0; // the noise's low-pass

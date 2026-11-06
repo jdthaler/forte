@@ -113,7 +113,7 @@ void MarimbaEngine::Voice::strike(const MarimbaEngine &eng, double velocity) {
   for (int i = PAIRS; i < N; i++) uc += ws[i] * q[i];
   eta = uc - 1.5 * v * h; etaPrev = eta - v * h;
   dPrev = -1; dPrev2 = -1; malletOn = true; contact = false; inFlight = 0;
-  contactSamples = 0; Fmax = 0;
+  contactSamples = 0; Fmax = 0; touch.stop();
   fading = false; fade = 1; age = 0;
 }
 
@@ -152,6 +152,11 @@ void MarimbaEngine::Voice::render(float *L, float *Rt, int n, MarimbaEngine &eng
   const bool bOn = B.on;
   double fade_ = fade;
   for (int s = 0; s < n; s++) {
+    if (touch.on()) { // a mallet resting on the bar
+      const double t = touch.step();
+      for (int i = PAIRS; i < N; i++) { q[i] *= t; q1[i] *= t; }
+      A.q *= t; A.v *= t; B.q *= t; B.v *= t;
+    }
     // each pair's midpoint velocities without the mallet
     double vmA, vxA, vmB = 0, vxB = 0;
     {
@@ -329,11 +334,12 @@ void MarimbaEngine::strikeKey(int key, double velocity, Data::Ref r) {
   }
 }
 
-// A marimba has no dampers: letting go of a key only ends its roll.
-void MarimbaEngine::noteOff(int key, double) {
+// A marimba has no dampers: letting go of a key ends its roll, and a fast lift is a mallet's touch
+// on the bar, which damps it (−28 dB at the fastest, over 80 ms).
+void MarimbaEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
-  if (Voice *v = byKey[key]) v->held = false;
+  if (Voice *v = byKey[key]) { v->held = false; if (!v->malletOn) v->touch.start(velocity, 40, 0.08, fs); }
 }
 
 void MarimbaEngine::allNotesOff() {

@@ -25,6 +25,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "glass-model.h"
 #include "glass-params.h"

@@ -67,7 +67,7 @@ void PlanetEngine::envelope(const Voice &v, const Osc &o, double *eL, double *eR
 
 void PlanetEngine::start(Voice &v, int key, double velocity) {
   if (dirty) { respond(P.data(), resp); dirty = false; }
-  v.key = key; v.on = true; v.released = false; v.damped = false; v.level = 1;
+  v.key = key; v.on = true; v.released = false; v.damped = false; v.level = 1; v.fall = 0;
   v.stereo = resp.stereo;
   v.K = speedup(key, P.data());
   v.spin = expr.slideOr(key, P[p::spin]);
@@ -125,8 +125,14 @@ void PlanetEngine::noteOn(int key, double velocity) {
   }
 }
 
-void PlanetEngine::noteOff(int key, double) {
-  for (Voice &v : voices) if (v.on && v.key == key && !v.released) { v.released = true; if (!sustain) v.damped = true; }
+// Lift: how the recording stops: a slow lift fades the ringing over up to four times the usual,
+// a fast one cuts it in a quarter of it.
+void PlanetEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity);
+  for (Voice &v : voices) if (v.on && v.key == key && !v.released) {
+    v.released = true;
+    if (!sustain) { v.damped = true; v.fall = s == 1 ? 0 : fd::exp(-1 / (fs * RELEASE * s * s)); }
+  }
 }
 
 void PlanetEngine::process(float *L, float *R, int n) {
@@ -184,7 +190,7 @@ void PlanetEngine::process(float *L, float *R, int n) {
     }
     double lv = v.level;
     for (int i = 0; i < n; i++) {
-      if (v.damped) lv *= fall;
+      if (v.damped) lv *= v.fall ? v.fall : fall;
       L[i] = (float)(L[i] + lv * bl[i]);
       R[i] = (float)(R[i] + lv * (v.stereo ? br[i] : bl[i]));
     }

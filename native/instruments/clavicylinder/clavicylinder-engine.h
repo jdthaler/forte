@@ -22,6 +22,7 @@
 #include "clavicylinder-model.h"
 #include "clavicylinder-params.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 
 namespace forte::clavicylinder {
 
@@ -54,6 +55,7 @@ class ClavicylinderEngine : public Engine {
   struct Voice {
     int key = 0;
     bool touch = false, dead = false, stick = false;
+    double lamOff = 0; // how fast the cloth leaves the glass after this lift, a sample (0: as usual; forte/lift.h)
     double vel = 0, after = 0;
     double Nn = 0;           // the cloth's normal force on the glass (N)
     double x = 0, u = 0;     // the pad: displacement and velocity along the rub
