@@ -83,7 +83,7 @@ int CarillonEngine::newVoice(int key) {
   v.nAct = 0;
   keyPan(key, v.gl, v.gr);
   v.eps = 0; v.age = 0; v.fade = 1; v.fading = false; v.dead = false;
-  v.peak = 0; v.level = 0; v.released = false;
+  v.peak = 0; v.level = 0; v.released = false; v.press = Press{};
   v.clap = {}; v.Cm = v.hm = v.fd0 = v.fV0 = 0;
   v.cl = Clap{};
   coefs(v, true);
@@ -91,6 +91,9 @@ int CarillonEngine::newVoice(int key) {
   order[nVoices++] = slot;
   return slot;
 }
+
+// The clapper held against the bell (Press): a mode loses up to CLAPPER/s, the low hum and prime 40% of that
+constexpr double CLAPPER = 12, CLAPPER_F = 800;
 
 // Frequencies (with the doublet split at the current asymmetry) and damping → two-pole coefficients.
 void CarillonEngine::coefs(Voice &v, bool first) {
@@ -108,7 +111,7 @@ void CarillonEngine::coefs(Voice &v, bool first) {
     const int member = v.mem[r], m = md.m;
     const double re = eps + v.HRE[r], im = v.HIM[r], e = std::sqrt(re * re + im * im);
     const double fac = m > 0 ? (member == 0 ? 1 - (e * md.kappa) / 4 : 1 + (e * md.kappa) / 4) : 1; // doubletSplit()
-    const double f = md.f * fac, w = TAU * f, sig = md.sigma, rr = std::exp(-sig * h);
+    const double f = md.f * fac, w = TAU * f, sig = md.sigma + (v.press.on() ? v.press.loss(f, CLAPPER, CLAPPER_F, 0.4) : 0), rr = std::exp(-sig * h);
     // the pair's orientation is set when the bell is hung (a ringing doublet keeps its axes)
     if (first) v.ANG[r] = e > 0 && m > 0 ? std::atan2(im, re) / (2 * m) : 0;
     v.W[r] = w; v.SIG[r] = sig;
@@ -345,7 +348,7 @@ void CarillonEngine::noteOff(int key, double velocity) {
   if (const double t = liftPast(velocity); t > 0 && !v.fading) { v.grace = 0.25 * t; v.graceIn = (int)(0.07 * fs); }
 }
 
-void CarillonEngine::allNotesOff() { for (int i = 0; i < nVoices; i++) pool[order[i]].fading = true; }
+void CarillonEngine::allNotesOff() { presses.clear(); for (int i = 0; i < nVoices; i++) pool[order[i]].fading = true; }
 
 void CarillonEngine::process(float *L, float *R, int n) {
   for (int at = 0; at < n; at += BLOCK_MAX) block(L + at, R + at, std::min(BLOCK_MAX, n - at));
@@ -365,6 +368,7 @@ void CarillonEngine::block(float *L, float *R, int n) {
   for (int i = 0; i < nVoices; i++) {
     Voice &v = pool[order[i]];
     if (moved) { if (v.eps != S_asym) coefs(v, false); gains(v, false); }
+    if (v.press.follow(v.released || v.fading ? 0 : presses.of(v.key), n, fs)) coefs(v, false);
     if (v.graceIn > 0 && (v.graceIn -= n) <= 0 && !v.fading && !v.cl.on) { strike(v, v.grace); v.released = true; }
     render(v, L, R, n);
   }

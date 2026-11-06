@@ -21,6 +21,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine
   modWheel: 'hardness',                 // CC1: the hammers' felt, from its default up to wood or brass
   mpe: { slide: true },                 // a note's own slide: its hammer's felt, at the strike (a bar cannot bend)
+  aftertouch: 'a firm press presses the felt damper onto the bar', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'how fast its felt damper falls: a slow lift leaves a longer tail, a fast one stops the bar sooner', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['across', 'damp', 'detune', 'strike', 'hardness'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/celesta), built as WebAssembly

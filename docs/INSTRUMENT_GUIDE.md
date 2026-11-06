@@ -223,7 +223,12 @@ an Osmose) bends, slides and presses each note alone. `shared/mpe.js` and the pl
   from where it landed, towards either end of the key (`slideFrom`; a host's per-note brightness
   likewise from its first value), so a finger resting mid-key leaves the note as the computer
   keys play it;
-* `pressure(value, key)`, which per-key pressure already was.
+* `pressure(value, key)`, which per-key pressure already was. The struck and plucked engines
+  take it as a hand, palm, mallet or felt held against what rings (`forte/press.h`): `Presses`
+  keeps each key's and the channel's, counting only a press past half way (`PRESS_FROM`: a
+  Seaboard sends some from a finger at rest) and the rest as none to full; each held note's
+  `Press` glides there over 10 ms and adds its loss (`loss` weighs it by frequency, the upper
+  partials first). Unpressed, a note plays bit for bit as before.
 
 Either may come before the key's `noteOn`: keep them per key (`forte/expression.h`
 `NoteExpression`) and start the note there; glide a sounding note toward them as the wheel

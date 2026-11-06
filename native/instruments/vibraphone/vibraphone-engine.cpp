@@ -313,6 +313,7 @@ void VibraphoneEngine::noteOff(int key, double velocity) {
 }
 
 void VibraphoneEngine::allNotesOff() {
+  presses.clear();
   nPending = 0;
   for (int i = 0; i < nVoices; i++) voices[i]->fading = true;
 }
@@ -370,6 +371,7 @@ void VibraphoneEngine::processBlock(float *L, float *R, int n) {
     // the damper felt: on every bar not held by a key, unless the pedal is down
     double want = v->released && !sustain && !lock ? 1 : 0;
     if (v->touchLeft > 0) { want += v->touch; v->touchLeft -= n; } // and a mallet's touch after a fast lift
+    if (!v->released) want = std::max(want, presses.of(v->key)); // Press: damped as hard as the key is pressed
     if (v->damp != want) v->damp = want > v->damp ? std::min(want, v->damp + dStep) : std::max(want, v->damp - dStep);
     if (v->damp != v->dampSet) v->coefs(*this);
     if (moving || v->fresh) v->tube(*this);

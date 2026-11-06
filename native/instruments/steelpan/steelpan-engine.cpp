@@ -52,15 +52,7 @@ void SteelPanEngine::setParams(const double *p) {
 // The note's modes and their resonators, with the hand's damping if it is on the note.
 void SteelPanEngine::retune(Note &v) {
   v.nm = noteModes(v.key, P.data(), std::min(18000.0, 0.45 * fs));
-  const double w1 = TAU * v.nm.m[0].f, mute = v.damped ? sigmaFromT60(v.touch > 0 ? STICK_T60 : P[p::mute] * v.liftK) : 0;
-  for (int i = 0; i < kModes; i++) {
-    if (i >= v.nm.count) { v.a1[i] = v.a2[i] = v.b[i] = v.out[i] = 0; v.w[i] = 1; continue; }
-    const Mode &m = v.nm.m[i];
-    const ModeCoeffs c = modeCoeffs(m.f, m.sigma + mute, fs);
-    v.a1[i] = c.a1; v.a2[i] = c.a2; v.b[i] = c.b;
-    v.w[i] = TAU * m.f;
-    v.out[i] = OUT * m.rad * fs / w1; // radiated ∝ surface velocity: the mode's ẏ, in units of ω₁
-  }
+  coefs(v);
   const int nt = noteTriples(v.nm, v.tri.data());
   for (int n = 0, q = 0; n <= kModes; n++) {
     while (q < nt && std::max(v.tri[q].j, v.tri[q].k) < n) q++;
@@ -69,10 +61,23 @@ void SteelPanEngine::retune(Note &v) {
   v.version = version;
 }
 
+void SteelPanEngine::coefs(Note &v) {
+  const double w1 = TAU * v.nm.m[0].f;
+  const double mute = v.damped ? sigmaFromT60(v.touch > 0 ? STICK_T60 : P[p::mute] * v.liftK) : v.press.on() ? sigmaFromT60(STICK_T60) * v.press.p : 0;
+  for (int i = 0; i < kModes; i++) {
+    if (i >= v.nm.count) { v.a1[i] = v.a2[i] = v.b[i] = v.out[i] = 0; v.w[i] = 1; continue; }
+    const Mode &m = v.nm.m[i];
+    const ModeCoeffs c = modeCoeffs(m.f, m.sigma + mute, fs);
+    v.a1[i] = c.a1; v.a2[i] = c.a2; v.b[i] = c.b;
+    v.w[i] = TAU * m.f;
+    v.out[i] = OUT * m.rad * fs / w1; // radiated ∝ surface velocity: the mode's ẏ, in units of ω₁
+  }
+}
+
 void SteelPanEngine::activate(Note &v) {
   if (v.active) return;
   v.y1.fill(0); v.y2.fill(0); v.F.fill(0);
-  v.active = true; v.struck = false; v.damped = false; v.released = false; v.age = 0;
+  v.active = true; v.struck = false; v.damped = false; v.released = false; v.age = 0; v.press = Press{};
   v.run = kTuned;
   retune(v);
   live.push_back(int(&v - notes.data()));
@@ -152,6 +157,7 @@ void SteelPanEngine::setSustain(bool on) {
 }
 
 void SteelPanEngine::allNotesOff() {
+  presses.clear();
   for (int i : live) { notes[i].active = false; notes[i].held = false; }
   live.clear();
   couplings.clear();
@@ -239,6 +245,18 @@ void SteelPanEngine::process(float *L, float *R, int n) {
   for (int i = 0; i < n; i++) L[i] = R[i] = 0;
   if (couplingsDirty) rebuildCouplings();
   for (int i : live) if (Note &v = notes[i]; v.touch > 0 && (v.touch -= n) <= 0) { v.touch = 0; damp(v, false); } // the stick lifts off
+  // Press: the stick held into a note, as hard as its key is pressed, stills it and the notes beside
+  // it that were only ringing along (as a hand laid on it does)
+  for (int i : live) {
+    Note &v = notes[i];
+    double want = v.held ? presses.of(v.key) : 0;
+    if (!v.struck && !v.held) {
+      Neighbour nb[8];
+      for (int j = 0, m = neighbours(v.key, (int)P[p::layout], nb); j < m; j++)
+        if (const Note &u = notes[nb[j].key - KEY_MIN]; u.active && u.held) want = std::max(want, presses.of(u.key));
+    }
+    if (v.press.follow(want, n, fs) && !v.damped) coefs(v);
+  }
   for (int s = 0; s < n; s++) {
     for (const Coupling &c : couplings) {
       Note &a = notes[c.a], &b = notes[c.b];

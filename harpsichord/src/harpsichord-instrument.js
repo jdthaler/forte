@@ -16,6 +16,7 @@ export const INSTRUMENT = {
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C8, 21–108
   lift: 'how fast the jack falls back: a slow lift lets the damper settle softly', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   mpe: { bend: 0, slide: { param: 'xFront', max: 15 } }, // MPE: a note's own slide moves its quills towards the nut, nasal as the lute row, at the pluck
+  aftertouch: 'a firm press lays the buff on the strings: a lute sound', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // FF–f³, 29–89, until Full range opens the rest
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
   faders: ['front8', 'back8', 'four', 'xFront', 'xBack'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

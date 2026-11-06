@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 
 namespace forte::reeds {
 
@@ -45,6 +46,7 @@ void ReedEngine::Voice::start(const ReedEngine &eng, int key_, const VoiceData &
   hits = 0;
   hammer = d.hammer;
   liftK = 1;
+  press = Press{};
   setDamper(eng.damperSigma);
 }
 
@@ -76,6 +78,17 @@ void ReedEngine::Voice::setDamper(double sd) {
     const double s = sig[i] + (killing ? KILL : sd * dw[i] / liftK), o = om[i];
     const double r = std::exp(-s * k), od = std::sqrt(std::max(o * o - s * s, 1e-6));
     a1d[i] = 2 * r * std::cos(od * k); a2d[i] = r * r;
+  }
+  if (press.on()) setPressed();
+}
+
+// A finger on the reed's tip: every mode loses up to FINGER/s, the upper ones a little more
+constexpr double FINGER = 30, FINGER_F = 2000;
+void ReedEngine::Voice::setPressed() {
+  for (int i = 0; i < Nall; i++) {
+    const double o = om[i], s = sig[i] + press.loss(o * (0.5 / std::numbers::pi), FINGER, FINGER_F, 0.6);
+    const double r = std::exp(-s * k), od = std::sqrt(std::max(o * o - s * s, 1e-6));
+    a1p[i] = 2 * r * std::cos(od * k); a2p[i] = r * r;
   }
 }
 
@@ -134,7 +147,8 @@ double ReedEngine::Voice::felt(double D) const {
 void ReedEngine::Voice::render(double *buf, int n, const ReedEngine &eng) {
   double *Q = q.data(), *Q1 = q1.data();
   const double *PK = pk.data(), *BP = bp.data();
-  const double *A1 = damped ? a1d.data() : a1.data(), *A2 = damped ? a2d.data() : a2.data();
+  const bool pr = !damped && press.on();
+  const double *A1 = damped ? a1d.data() : pr ? a1p.data() : a1.data(), *A2 = damped ? a2d.data() : pr ? a2p.data() : a2.data();
   const double *c = eng.capA, *cB = eng.capB, ty0 = SLOT_Y.min, idy = 1 / SLOT_Y.step, xmax = XMAX;
   const bool bl = eng.blend, two = eng.twoTables;
   const double inv = 1.0 / n, kF = eng.kF, yS = STOP.y, kS = STOP.K, sDen = stopDen, cS = cStop;
@@ -422,6 +436,7 @@ void ReedEngine::noteOff(int key, double velocity) {
 
 void ReedEngine::allNotesOff() {
   nPending = 0;
+  presses.clear();
   for (int i = 0; i < nVoices; i++) voices[i]->kill(*this);
 }
 
@@ -462,6 +477,7 @@ void ReedEngine::processBlock(float *L, float *R, int n) {
     Voice &v = *voices[i];
     v.own = glideTo(v.own, expr.bendOf(v.key), n / fs, GLIDE);
     if (v.bend != bendNow * v.own) { v.tune(bendNow * v.own); v.setDamper(damperSigma); }
+    if (v.press.follow(v.keyDown ? presses.of(v.key) : 0, n, fs)) v.setPressed();
   }
   if (hasParams) {
     bool low = false; // Medium's and Low's reeds, at the output rate: summed apart, then each sample held twice

@@ -209,8 +209,9 @@ void SpringEngine::Voice::render(float *L, float *R, int n, SpringEngine &eng) {
   for (int s = 0; s < n; s++) {
     if (pulseAt < pulseN) { force[s] = pulse[pulseAt++]; pushing = true; } else force[s] = 0;
   }
-  // the hand and the damper (once the key is up, unless the pedal holds it off): extra damping, gliding in
-  const double target = eng.handOf(key) + (released && !eng.sustain ? eng.dampSigma : 0);
+  // the hand and the damper (once the key is up, unless the pedal holds it off), or the hammer held
+  // into the coil as hard as the key is pressed (Press): extra damping, gliding in
+  const double target = eng.handOf(key) + (released ? (!eng.sustain ? eng.dampSigma : 0) : eng.presses.of(key) * eng.dampSigma);
   if (target != extra || eng.lossMoved) {
     const double tg = target > extra && released ? dampGlide : GLIDE;
     extra += (1 - fd::exp(-n / (tg * eng.fs))) * (target - extra);
@@ -425,6 +426,7 @@ void SpringEngine::noteOff(int key, double velocity) {
 
 void SpringEngine::allNotesOff() {
   nPending = 0;
+  presses.clear();
   for (int i = 0; i < nVoices; i++) voices[i]->fading = true;
 }
 

@@ -34,6 +34,7 @@
 #include "forte/dsp.h"
 #include "forte/engine.h"
 #include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/longitudinal.h"
 #include "forte/sympathetic.h"
 #include "grand-model.h"
@@ -105,6 +106,8 @@ class GrandEngine : public Engine {
   void noteOff(int key, double velocity) override;
   // a note's own slide: where its hammer strikes (strike), from its next blow
   void slide(double value, int key) override { if (key >= 0 && key < 128) slid[key] = value; }
+  // Press: a palm muting a held note's strings by the bridge: it shortens and darkens
+  void pressure(double value, int key) override { presses.set(value, key); }
   void setSustain(bool on) override;
   void allNotesOff() override;
   int voiceCount() const override { return nVoices; }
@@ -142,6 +145,12 @@ class GrandEngine : public Engine {
     const Built *b = nullptr;
     double *q = nullptr, *q1 = nullptr, *a1d = nullptr, *a2d = nullptr; // the voice's own (the pool's)
     double *hO = nullptr, *bhO = nullptr; // its own h and bh, for a strike off the key's (a slide)
+    // Press (forte/press.h): a palm on the strings while the key is held. Its recursion takes the
+    // damped one's arrays (a held key's damper is up), which the damper's take back at once when
+    // it falls (palmIn: a1d, a2d hold the palm's)
+    Press press;
+    bool palmIn = false;
+    void coefPalm(double *A1, double *A2, double p) const;
     double aimed = 0;                     // the strike position h and bh are for
     void aim(const GrandEngine &eng, double strike);
     const double *a1 = nullptr, *a2 = nullptr, *h = nullptr, *bh = nullptr, *u = nullptr, *beta = nullptr, *bf = nullptr, *om = nullptr, *sig = nullptr, *dmp = nullptr;
@@ -175,7 +184,7 @@ class GrandEngine : public Engine {
     bool quietTop(int i1);
     void dropTop();
     void coef(double *A1, double *A2, bool kill, double sd) const;
-    void setDamper(double sd) { coef(a1d, a2d, killing, sd / liftK); damperSigma = sd; }
+    void setDamper(double sd) { coef(a1d, a2d, killing, sd / liftK); damperSigma = sd; palmIn = false; }
     double liftK = 1; // how many times longer than usual its damper takes
     void lifted(double scale) { if (scale != liftK) { liftK = scale; setDamper(damperSigma); } }
     void updateDamping(const GrandEngine &eng) { damped = killing || (!keyDown && !eng.sustain && hasDamper); }
@@ -219,6 +228,7 @@ class GrandEngine : public Engine {
 
   std::array<double, p::count> P{};
   std::array<double, 128> slid = nanKeys(); // each key's own strike position (NaN: P's)
+  Presses presses;                          // each key's pressure and the channel's
   static std::array<double, 128> nanKeys() { std::array<double, 128> a; a.fill(NAN); return a; }
   bool hasParams = false, sustain = false;
   std::array<double, p::count> phys{}; // the physics parameters the key models were built for

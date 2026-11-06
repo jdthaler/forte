@@ -27,6 +27,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/press.h"
 #include "forte/sympathetic.h"
 #include "harpsichord-model.h"
 #include "harpsichord-params.h"
@@ -60,6 +61,9 @@ class HarpsichordEngine : public Engine {
   // a note's own slide: where its quills pluck (the front 8′'s point, xFront; every row's moves
   // with it), from its next press
   void slide(double value, int key) override { if (key >= 0 && key < 128) slid[key] = value; }
+  // Press: a buff held in the hand against a held note's strings, the buff stop's leather on every
+  // choir it plays: a lute's dry, short tone
+  void pressure(double value, int key) override { presses.set(value, key); }
   // how far along a key's own slide moves its plucking points (1: where the rows have them)
   double pluckScale(int key) const { const double s = slid[key]; return s == s && s > 0 && P[p::xFront] > 0 ? s / P[p::xFront] : 1; }
   void allNotesOff() override;
@@ -106,6 +110,7 @@ class HarpsichordEngine : public Engine {
     // each string's bridge signal Σ c Δq/h: [0] the last block's last step, [t + 1] step t's
     std::array<std::array<double, BLOCK + 1>, 3> sb{};
     int sbn = 0;
+    Press hand; // Press: a hand-held buff on its strings, as hard as the key is pressed
 
     void start(HarpsichordEngine &e, int k, Data::Ref r);
     void press(double vel);
@@ -169,6 +174,8 @@ class HarpsichordEngine : public Engine {
 
   std::array<double, NSEG * BLOCK> seg{};
   std::array<double, BLOCK> liftBuf{}, zeroBuf{}, buffBuf{}, bL{}, bR{};
+  std::array<double, BLOCK> handBuf{}; // a voice's buff: the stop's, or its hand's (Press), whichever is the more
+  Presses presses;
   std::array<Board, 2> boards; // the harpsichord's and the virginal's (boardOf)
   int boardOn = 0;
   double buff = 0, mix = 1, glide = 0;

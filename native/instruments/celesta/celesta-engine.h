@@ -21,6 +21,7 @@
 #include "celesta-params.h"
 #include "forte/engine.h"
 #include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 
 namespace forte::celesta {
@@ -45,6 +46,7 @@ class CelestaEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override { sustain = on; }
   void slide(double value, int key) override { expr.setSlide(value, key); } // the key's hammer felt, at its next strike
+  void pressure(double value, int key) override { presses.set(value, key); } // a felt pressed on the bar, damping it while its key is held
   void allNotesOff() override;
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
@@ -105,6 +107,7 @@ class CelestaEngine : public Engine {
   enum { gGap, gDetune, gBoxes, gCount };
   std::array<double, gCount> S{}, T{};
   bool sustain = false;
+  Presses presses; // each key's pressure and the channel's (forte/press.h)
   NoteExpression expr{0}; // each key's own felt (no bend: a bar is cut to its pitch)
   forte::Tuning tuning; // the keyboard's (forte/tuning.h)
   // each key's bar, built for the thickness in built[] (0: not yet) and the ratio in builtRatio[]

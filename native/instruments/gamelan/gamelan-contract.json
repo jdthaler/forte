@@ -36,6 +36,7 @@
     {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
     {"id":"strikeOn","kind":"toggle","def":true},
     {"id":"slideOn","kind":"toggle","def":true},
+    {"id":"pressOn","kind":"toggle","def":true},
     {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [

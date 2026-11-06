@@ -11,6 +11,9 @@ namespace forte::grand {
 
 constexpr double OUT = 0.012;       // bridge force (N) → full-scale audio
 constexpr double KILL_SIGMA = 250;  // s⁻¹, fast fade for stolen / panicked / re-struck voices
+// Press: a palm on the strings by the bridge, fully pressed, adds PALM·g(f) to a partial's decay
+// rate (1/s), g = (0.15 + x²)/(1 + x²), x = f/PALM_F (as the Ribbon Piano's)
+constexpr double PALM = 35, PALM_F = 1500;
 // longitudinal modes: none above LONG_FMAX (Hz); pairs summing below LONG_BELOW × a mode's
 // frequency left out; Q; the share of the longitudinal force the piezo and the board take up, set
 // so that a forte G1's strongest longitudinal component between 1 and 2 kHz is about as loud as
@@ -72,7 +75,7 @@ void GrandEngine::Voice::start(const GrandEngine &eng, Data::Ref r, uint64_t ver
   keyDown = true; damped = false; killing = false; dead = false;
   hammerOn = false; peak = 0; quiet = 0; age = 0; struck = -INFINITY;
   eta = 0; etaPrev = 0; dPrev = -1; F = 0; FV = 0; FH = 0; Fmax = 0; contactSamples = 0; hammerSamples = 0; contact = false;
-  liftK = 1;
+  liftK = 1; press = Press{};
   setDamper(eng.P[p::damper]);
   startLong(eng, d);
 }
@@ -149,6 +152,15 @@ void GrandEngine::Voice::dropTop() {
 void GrandEngine::Voice::coef(double *A1, double *A2, bool kill, double sd) const {
   for (int i = 0; i < N; i++) {
     const double s = sig[i] + (kill ? KILL_SIGMA : sd * dmp[i]), w = om[i], bt = beta[i];
+    const double aa = std::exp(-2 * s * k), R2 = (aa - bt) / (1 + bt), R = std::sqrt(R2), st = -std::log(R) / k;
+    A1[i] = 2 * R * (1 + bt) * std::cos(std::sqrt(std::max(w * w - st * st, 1e-6)) * k); A2[i] = aa;
+  }
+}
+
+// The recursion with a palm on the strings as hard as p (Voice::coef's, with the palm's loss).
+void GrandEngine::Voice::coefPalm(double *A1, double *A2, double p) const {
+  for (int i = 0; i < N; i++) {
+    const double w = om[i], x = w / (TAU * PALM_F), s = sig[i] + PALM * p * (0.15 + x * x) / (1 + x * x), bt = beta[i];
     const double aa = std::exp(-2 * s * k), R2 = (aa - bt) / (1 + bt), R = std::sqrt(R2), st = -std::log(R) / k;
     A1[i] = 2 * R * (1 + bt) * std::cos(std::sqrt(std::max(w * w - st * st, 1e-6)) * k); A2[i] = aa;
   }
@@ -250,7 +262,7 @@ inline void kcRun(const KcRun &r, int i0, int i1, double sCorr, double &a, doubl
 // Add this voice's piezo signal (panned) and its vertical bridge force (for the board).
 void GrandEngine::Voice::render(double *PL, double *PR, double *SEG, int n, GrandEngine &eng) {
   const int h1 = nV + nHa, nva = nVa;
-  const double *A1 = damped ? a1d : a1, *A2 = damped ? a2d : a2;
+  const double *A1 = damped || palmIn ? a1d : a1, *A2 = damped || palmIn ? a2d : a2;
   const double gH = eng.P[p::pickH], pl = panL * trim * OUT, pr = panR * trim * OUT;
   double *sg = SEG + seg * BLOCK;
   const double iV = invV, iH = invH, kV = kapV, kH = kapH;
@@ -578,6 +590,7 @@ void GrandEngine::setSustain(bool on) {
 
 void GrandEngine::allNotesOff() {
   nPending = 0;
+  presses.clear();
   down.fill(0);
   for (int key = 0; key < 128; key++) sym.clear(key);
   symHush = true;
@@ -619,7 +632,13 @@ void GrandEngine::run(float *L, float *R, int n) {
   std::fill(PL, PL + n, 0.0); std::fill(PR, PR + n, 0.0);
   for (int s = 0; s < SEGMENTS; s++) std::fill(SEG + s * BLOCK, SEG + s * BLOCK + n, 0.0);
   if (hasParams) {
-    for (int i = 0; i < nVoices; i++) voices[i]->render(PL, PR, SEG, n, *this);
+    for (int i = 0; i < nVoices; i++) {
+      Voice &v = *voices[i];
+      const bool moved = v.press.follow(v.keyDown && !v.killing ? presses.of(v.key) : 0, n, fs);
+      if (v.damped || !v.press.on()) { if (v.palmIn) v.setDamper(v.damperSigma); } // the damper's recursion back
+      else if (moved || !v.palmIn) { v.coefPalm(v.a1d, v.a2d, v.press.p); v.palmIn = true; }
+      v.render(PL, PR, SEG, n, *this);
+    }
     symRun(PL, PR, SEG, n);
   }
   BoardSlot *b = board;

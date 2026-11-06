@@ -115,6 +115,9 @@ class Pluck {
   double tip() const;
   void press(double vel);
   void lift(double scale = 1); // scale: how many times longer than usual the pad takes to come back (forte/lift.h)
+  // a hand muting the reed by the pickup: every mode loses up to sigma/s more, the upper ones the
+  // most (Press, forte/press.h); 0: none
+  void muted(double sigma) { hand = sigma; coeffs(bend); den = 1 / (1 + Bk * C); }
   double step();
   double energy() const;
 
@@ -126,6 +129,7 @@ class Pluck {
   double stop = INFINITY, Ks = 3e5, stopDen = 1, Ct = 0;
   int hits = 0;
   double bend = 1; // the ratio the modes are tuned to
+  double hand = 0; // 1/s: the hand's loss at most (muted)
   double F0 = 0, n = 0, kp = 0, cp = 0, Bk = 0, Ck = 0, den = 0, relax = 0;
   double yc = 0, ycRest = 0, e = 0, hRest = 0, h = 0, hv = 0, hT = 0;
   double a = 0, F = 0, v = 0, yRest = 0, y = 0, V = 0, t = 0;

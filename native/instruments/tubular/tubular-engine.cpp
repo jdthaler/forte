@@ -288,6 +288,7 @@ void TubularEngine::noteOff(int key, double velocity) {
 }
 
 void TubularEngine::allNotesOff() {
+  presses.clear();
   nPending = 0;
   for (int i = 0; i < nVoices; i++) voices[i]->fading = true;
 }
@@ -306,7 +307,8 @@ void TubularEngine::processBlock(float *L, float *R, int n) {
   for (int i = 0; i < nVoices; i++) {
     Voice *v = voices[i];
     // the damper bar: on every tube not held by a key, unless the pedal is down
-    const double want = v->released && !sustain && !lock ? 1 / v->liftK : 0; // a slow lift lowers it gently
+    double want = v->released && !sustain && !lock ? 1 / v->liftK : 0; // a slow lift lowers it gently
+    if (!v->released) want = std::max(want, presses.of(v->key)); // Press: damped as hard as the key is pressed
     if (v->damp != want) v->damp = want > v->damp ? std::min(want, v->damp + dStep) : std::max(want, v->damp - dStep);
     if (v->damp != v->dampSet) v->coefs(*this);
     v->render(L, R, n, *this);
