@@ -7,6 +7,7 @@
 #include "plugin.h"
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -155,6 +156,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
   Tuning tuning;         // the parameters' (a note's bend follows it)
   int tuningAt[3 + kCustomCents];
   bool expressed[128]{};
+  std::array<double, 128> landed = [] { std::array<double, 128> a; a.fill(NAN); return a; }(); // a host's per-note brightness where the note began (NaN: not yet): its slide is from there
 
   // the editor: its events for the audio thread, what it shows, the keys sounding for it
   const clap_host_params_t *hostParams = nullptr;
@@ -502,6 +504,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
         if (key < 0) break;
         const uint8_t d[3] = {(uint8_t)(0x90 | ch), (uint8_t)key, 127};
         mpe.midi(d, *this); // an MPE member's: its bend and slide
+        landed[key] = NAN;
         noteOn(ch, key, e->velocity);
         break;
       }
@@ -528,7 +531,11 @@ struct Plugin : Instance, MpeDecoder::Sink {
         } else if (const int key = at(ch, e->key); key < 0) break;
         else if (e->expression_id == CLAP_NOTE_EXPRESSION_PRESSURE) notePressure(key, e->value);
         else if (e->expression_id == CLAP_NOTE_EXPRESSION_TUNING) noteBend(key, e->value);
-        else if (e->expression_id == CLAP_NOTE_EXPRESSION_BRIGHTNESS) noteSlide(key, std::clamp(e->value, 0.0, 1.0));
+        else if (e->expression_id == CLAP_NOTE_EXPRESSION_BRIGHTNESS) { // as MPE's CC74: from where the note began
+          const double u = std::clamp(e->value, 0.0, 1.0);
+          if (!(landed[key] == landed[key])) landed[key] = u;
+          noteSlide(key, slideFrom(landed[key], u));
+        }
         break;
       }
       case CLAP_EVENT_PARAM_VALUE: {

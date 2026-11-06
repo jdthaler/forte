@@ -23,8 +23,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/steelpan/>
 | `←` `→` | octave |
 | `↑` `↓` | velocity |
 | `Space` | sustain: keeps your hands off the notes after key-up |
-| MIDI | notes, velocity, sustain pedal (CC64); **mod wheel = roll**; aftertouch rolls the note you lean on |
-| Touch | lean on a held key (slide the finger along it, or press harder with an Apple Pencil) = aftertouch: a roll |
+| MIDI | notes, velocity, sustain pedal (CC64); **mod wheel = roll**; MPE slide rolls one note; aftertouch does nothing (a Seaboard presses from any finger at rest) |
 
 ## The physics
 
@@ -222,7 +221,7 @@ ringing along with it. **Let notes ring** or Space (the sustain pedal) keeps
 the hands off. A long note on a pan is a roll: both sticks strike again and
 again. While a key is held, **Roll** (the mod wheel) restrikes it at that
 fraction of its first stroke, **Roll speed** times a second, alternating
-hands a little unevenly. Aftertouch rolls the note you lean on.
+hands a little unevenly. A note's own MPE slide rolls it alone.
 
 ### 8. The engine
 

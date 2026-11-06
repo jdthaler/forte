@@ -24,7 +24,6 @@ class SteelPanEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override;
   void allNotesOff() override;
-  void pressure(double value, int key) override;
   void slide(double value, int key) override { expr.setSlide(value, key); } // the key's own roll
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
@@ -42,7 +41,7 @@ class SteelPanEngine : public Engine {
     std::array<Triple, kTriples> tri{}; // the dome's couplings among its modes
     std::array<int, kModes + 1> triBelow{}; // how many of them lie among its first n modes
     bool active = false, struck = false, held = false, released = false, damped = false, hand = false;
-    double vel = 0, press = 0, gl = 1, gr = 1, rollIn = 0;
+    double vel = 0, gl = 1, gr = 1, rollIn = 0;
     int age = 0;                   // samples since it came alive
     int version = -1;              // the parameters its coefficients were made from
   };
@@ -78,7 +77,7 @@ class SteelPanEngine : public Engine {
   std::array<double, p::count> P{};
   bool hasParams = false, sustain = false;
   int version = 0, focus = -1, sincePost = 0;
-  double channelPress = 0, g = 0;
+  double g = 0;
   NoteExpression expr{0}; // each key's own roll (no bend: a note area is hammered to its pitch)
   std::vector<Note> notes;      // one per key, A0–C8
   std::vector<int> live;        // indices of the active notes (reserved: never reallocates)

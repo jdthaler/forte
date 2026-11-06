@@ -50,7 +50,7 @@ export const GROUPS = [
       { id: 'across', label: 'Off the long axis', min: 0, max: 0.95, def: 0.2, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} % of the half-width`,
         hint: 'On the long axis, the third partial (its node runs along it) stays silent.' },
       { id: 'roll', label: 'Roll', perform: true, min: 0, max: 1, def: 0, step: 0.01, fmt: (v) => (v === 0 ? 'off' : `${(v * 100).toFixed(0)} % of the stroke`),
-        hint: 'Held notes are rolled: the two sticks strike again and again, at this fraction of the first stroke. The mod wheel sets it, and leaning on a key (aftertouch) rolls that note.' },
+        hint: 'Held notes are rolled: the two sticks strike again and again, at this fraction of the first stroke. The mod wheel sets it, and a note’s own MPE slide rolls that note.' },
       { id: 'rollRate', label: 'Roll speed', min: 4, max: 24, def: 12, step: 0.5, fmt: (v) => `${v.toFixed(1)} strokes/s`,
         hint: 'Strokes per second, both sticks together.' },
       { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2) },
