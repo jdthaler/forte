@@ -31,7 +31,7 @@ test('MPE: a finger\'s bend and slide before its note are its own; then its glid
   assert.equal(f.key, 60); near(f.strike, 100 / 127, 1e-9, 'strike'); near(f.slide, 64 / 127, 1e-9, 'slide at the strike');
   assert.ok(m.lit('strike'), 'Strike lights as the finger lands');
   m.midi(bend(1, 1.5)); m.midi([0xb1, 74, 100]); m.midi([0xd1, 90]);
-  near(f.glide, 1.5, 0.01, 'glide'); near(f.slide, 100 / 127, 1e-9, 'slide'); near(f.press, 90 / 127, 1e-9, 'press');
+  near(f.glide, 1.5, 0.01, 'glide'); near(f.slide, 100 / 127, 1e-9, 'slide'); near(f.slid, 36 / 63, 1e-9, 'slid from where it landed'); near(m.last.slide, 36 / 63, 1e-9, 'the Slide row: how far it slid'); near(f.press, 90 / 127, 1e-9, 'press');
   assert.ok(m.lit('glide') && m.lit('slide') && m.lit('press'));
   c.at(1);
   assert.ok(!m.lit('strike'), 'Strike goes out');

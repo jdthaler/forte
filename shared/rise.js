@@ -18,7 +18,7 @@
 // browser allows it, with a button that sets it up as Forte expects and its five sensitivities.
 // It writes only when one of those is pressed or moved.
 
-import { createMpe, MEMBER_BEND } from './mpe.js';
+import { createMpe, MEMBER_BEND, slideFrom } from './mpe.js';
 import { FADERS, controllersOf, ccValue, mpeMode, signed } from './midi.js';
 import { IDENTIFY, parse, differences, forForte, set as setting, PARAMS } from './rise-sysex.js';
 
@@ -37,13 +37,15 @@ const FLASH = 0.6; // s: Strike and Lift stay lit this long
  * the last value of each dimension and when it came, and the layout it sends in.
  */
 export function riseModel({ now = () => performance.now() / 1000 } = {}) {
-  const fingers = new Map(); // channel → { key, strike, glide (semitones), slide (0..1, NaN: none yet), press, t }
+  const fingers = new Map(); // channel → { key, strike, glide (semitones), slide (0..1 on the key, NaN: none yet), land, slid, press, t }
   const cc = {};             // the faders' and the pad's last values (0..127), by CC
   const last = { strike: NaN, glide: NaN, slide: NaN, press: NaN, lift: NaN };
   const when = { strike: -Infinity, glide: -Infinity, slide: -Infinity, press: -Infinity, lift: -Infinity };
   let channels = new Set(), single = false, faderMode = null; // 'midi' once a fader or the pad sends
   let master = { glide: 0, press: 0 };                       // channel 1's, every note's
   const set = (d, v) => { last[d] = v; when[d] = now(); };
+  // where the finger is on the key, and how far it has slid from where it landed (what the instrument hears, shared/mpe.js)
+  const slid = (f, u) => { if (Number.isNaN(f.land)) f.land = u; f.slide = u; f.slid = slideFrom(f.land, u) || 0; set('slide', f.slid); };
   const finger = (key) => { for (const f of fingers.values()) if (f.key === key) return f; return null; };
   const at = {}; // each member channel's CC74: where its finger is on the key (the instrument hears how far it slid, shared/mpe.js slideFrom)
   // each note's own bend and pressure, as a RISE in MPE sends them (a lower zone of 15)
@@ -64,7 +66,7 @@ export function riseModel({ now = () => performance.now() / 1000 } = {}) {
       if (d === 'strike' || d === 'lift') return now() - when[d] < FLASH;
       for (const f of fingers.values()) {
         if (d === 'glide' && Math.abs(f.glide + master.glide) > 0.05) return true;
-        if (d === 'slide' && f.slide > 0.01) return true;
+        if (d === 'slide' && f.slid > 0.01) return true;
         if (d === 'press' && f.press + master.press > 0.01) return true;
       }
       return false;
@@ -76,7 +78,7 @@ export function riseModel({ now = () => performance.now() / 1000 } = {}) {
       if (st >= 0xf0) return; // SysEx, clock and the rest: no finger's
       if (cmd === 0x90 && d2 > 0) {
         channels.add(ch); single = ch === 0;
-        fingers.set(ch, { key: d1, strike: d2 / 127, glide: single ? master.glide : 0, slide: at[ch] ?? NaN, press: 0, t: now() });
+        fingers.set(ch, { key: d1, strike: d2 / 127, glide: single ? master.glide : 0, slide: at[ch] ?? NaN, land: at[ch] ?? NaN, slid: 0, press: 0, t: now() });
         set('strike', d2 / 127);
         mpe.midi(data); // its channel's bend and slide, which came first, are this note's (the sink above)
         return;
@@ -93,10 +95,10 @@ export function riseModel({ now = () => performance.now() / 1000 } = {}) {
         if (cmd === 0xe0) { master = { ...master, glide: (((d2 << 7) | d1) - 8192) / 8192 * (single ? MEMBER_BEND : 2) }; set('glide', master.glide); return; }
         if (cmd === 0xd0) { master = { ...master, press: d1 / 127 }; set('press', d1 / 127); return; }
         if (cmd === 0xa0) { const f = finger(d1); if (f) { f.press = d2 / 127; set('press', f.press); } return; }
-        if (cmd === 0xb0 && d1 === 74) { for (const f of fingers.values()) f.slide = d2 / 127; set('slide', d2 / 127); return; }
+        if (cmd === 0xb0 && d1 === 74) { for (const f of fingers.values()) slid(f, d2 / 127); return; }
       }
       if (cmd === 0xa0) { const f = finger(d1); if (f) { f.press = d2 / 127; set('press', f.press); } return; }
-      if (cmd === 0xb0 && d1 === 74) { at[ch] = d2 / 127; const f = fingers.get(ch); if (f) { f.slide = at[ch]; set('slide', f.slide); } }
+      if (cmd === 0xb0 && d1 === 74) { at[ch] = d2 / 127; const f = fingers.get(ch); if (f) slid(f, at[ch]); }
       mpe.midi(data);
     },
   };
@@ -119,7 +121,7 @@ function meanings(I, params) {
   out.strike = 'how loud, as a key\'s velocity';
   out.glide = !I ? '' : press && bend ? `presses the key as the wheel does, up to ${bend} semitones`
     : bend ? `bends the note alone, up to ±${bend} semitones` : 'nothing here: each note keeps its own pitch';
-  out.slide = !I ? '' : slide && wp ? `${wp.label}, for that note alone` : 'nothing here';
+  out.slide = !I ? '' : slide && wp ? `${wp.label}, for that note alone, as far as the finger slides from where it landed` : 'nothing here';
   out.press = !I ? '' : I.aftertouch ? I.aftertouch : 'nothing here';
   out.lift = 'how fast the note is let go';
   if (mpeMode() === 'off') out.glide = out.slide = out.press = 'MPE is off in the MIDI menu: every note moves together';
@@ -286,7 +288,7 @@ export function risePanel() {
       x.r.classList.toggle('on', lit);
       let v = model.last[x.id];
       if (n && x.id === 'glide') v = n.glide + m.glide;
-      else if (n && x.id === 'slide') v = n.slide;
+      else if (n && x.id === 'slide') v = n.slid;
       else if (n && x.id === 'press') v = Math.min(1, n.press + m.press);
       else if (n && x.id === 'strike') v = n.strike;
       if (x.id === 'glide') { // from the middle, either way
