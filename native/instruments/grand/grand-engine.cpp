@@ -62,6 +62,7 @@ void GrandEngine::Voice::start(const GrandEngine &eng, Data::Ref r, uint64_t ver
     nHq = i - nV;
   }
   nVa = nVq; nHa = nHq;
+  aimed = eng.P[p::strike];
   bridgeSums();
   hammer = d.hammer; seg = d.seg; hasDamper = d.hasDamper;
   const auto [pl, pr] = keyPan(key, 0.5, KEY_LO, KEY_HI);
@@ -74,6 +75,22 @@ void GrandEngine::Voice::start(const GrandEngine &eng, Data::Ref r, uint64_t ver
   liftK = 1;
   setDamper(eng.P[p::damper]);
   startLong(eng, d);
+}
+
+// Strike at `strike` of the string (a note's own slide) rather than where the key's data has it:
+// each mode's share of the blow and the compliance under the hammer, from there.
+void GrandEngine::Voice::aim(const GrandEngine &eng, double strike) {
+  aimed = strike;
+  if (strike == eng.P[p::strike]) { h = b->h.data(); bh = b->bh.data(); comp0 = b->comp0; bridgeSums(); return; }
+  strikeWeights(b->d, strike, eng.P[p::tilt], hO);
+  double c = 0;
+  for (int i = 0; i < N; i++) {
+    const double r = std::exp(-sig[i] * k), od = std::sqrt(std::max(om[i] * om[i] - sig[i] * sig[i], 1e-6));
+    const double bi = (k * r * std::sin(od * k)) / od; // impulse-invariant input gain
+    bhO[i] = bi * hO[i]; c += bi * hO[i] * hO[i];
+  }
+  h = hO; bh = bhO; comp0 = c;
+  bridgeSums();
 }
 
 // The longitudinal modes this voice runs, from the partials it runs: each polarisation's partial
@@ -355,12 +372,12 @@ void GrandEngine::BoardSlot::run(const double *SEG, double *ML, double *MR, int 
 
 GrandEngine::GrandEngine(double fs)
     : Engine(fs), hammerMax((int)std::round(0.08 * fs)), repeat((int)std::round(REPEAT * fs)),
-      sym(128, 2 * SYM_MODES, BLOCK, fs, false), store(new double[(size_t)POOL * 4 * CAP]()),
+      sym(128, 2 * SYM_MODES, BLOCK, fs, false), store(new double[(size_t)POOL * 6 * CAP]()),
       data([this](int key, uint64_t version) { return build(key, version); }) {
   for (int i = 0; i < POOL; i++) {
     Voice &v = pool[i];
-    double *s = store.get() + (size_t)i * 4 * CAP;
-    v.q = s; v.q1 = s + CAP; v.a1d = s + 2 * CAP; v.a2d = s + 3 * CAP;
+    double *s = store.get() + (size_t)i * 6 * CAP;
+    v.q = s; v.q1 = s + CAP; v.a1d = s + 2 * CAP; v.a2d = s + 3 * CAP; v.hO = s + 4 * CAP; v.bhO = s + 5 * CAP;
   }
 }
 
@@ -526,6 +543,8 @@ void GrandEngine::noteOn(int key, double velocity) {
     voices[nVoices++] = v; byKey[key] = v;
   }
   v->keyDown = true; v->updateDamping(*this);
+  const double at = slid[key] == slid[key] ? slid[key] : P[p::strike]; // its own slide, at the blow
+  if (at != v->aimed) v->aim(*this, at);
   v->strike(hammerSpeed(velocity));
   enforceBudget(v);
 }

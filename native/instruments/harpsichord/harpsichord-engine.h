@@ -57,6 +57,11 @@ class HarpsichordEngine : public Engine {
   void setParams(const double *P) override;
   void noteOn(int key, double velocity) override;
   void noteOff(int key, double velocity) override;
+  // a note's own slide: where its quills pluck (the front 8′'s point, xFront; every row's moves
+  // with it), from its next press
+  void slide(double value, int key) override { if (key >= 0 && key < 128) slid[key] = value; }
+  // how far along a key's own slide moves its plucking points (1: where the rows have them)
+  double pluckScale(int key) const { const double s = slid[key]; return s == s && s > 0 && P[p::xFront] > 0 ? s / P[p::xFront] : 1; }
   void allNotesOff() override;
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
@@ -144,6 +149,8 @@ class HarpsichordEngine : public Engine {
   static void onRelease(void *ctx, PluckedString &st, int p);
 
   std::array<double, p::count> P{};
+  std::array<double, 128> slid = nanKeys(); // each key's own front 8′ plucking point (NaN: P's)
+  static std::array<double, 128> nanKeys() { std::array<double, 128> a; a.fill(NAN); return a; }
   Params mp;
   bool hasParams = false;
   std::array<double, 5> physSig{};

@@ -63,7 +63,7 @@ import { startMIDI, resumeMIDI, pageMIDI, wheelValue, SOFT_PEDAL, touched, creat
 import { attachPresets } from './user-presets.js';
 import { connectQuality, qualityControl } from './quality.js';
 import { dress, faceOf } from './faces.js';
-import { EXPRESSION_IDS, responds } from './expression.js'; // the Expression switches
+import { EXPRESSION_IDS, responds, slideOf } from './expression.js'; // the Expression switches
 import { computerKey } from './taps.js'; // a second instrument's share of the computer keys (shared/layer.js)
 import { host, pluginAudio, pageValue, keysFrom } from './in-plugin.js';
 
@@ -189,7 +189,7 @@ export function createShell(cfg) {
 
   // ---- notes ---------------------------------------------------------------
   // MPE: a member channel's bend, slide and pressure are its note's (a note-on's go with it)
-  const notes = pageMpe({ post: (m) => shell.post(m), params: () => shell.P, modWheel: cfg.modWheel, groups: cfg.groups });
+  const notes = pageMpe({ post: (m) => shell.post(m), params: () => shell.P, slide: slideOf(cfg), groups: cfg.groups });
   shell.mpe = notes.mpe;
   // an instrument that speaks only while held says so the first time a key is let go too soon
   const pressedAt = new Map();

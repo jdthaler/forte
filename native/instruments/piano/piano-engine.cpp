@@ -43,7 +43,6 @@ void PianoEngine::Voice::start(PianoEngine &eng, int key_, const VoiceData &d, i
   }
   e0 = ends[0]; e1 = ends[1]; e2 = ends[2];
 
-  double cmp = 0, cmpU = 0;
   for (int i = 0; i < N; i++) {
     const int j = (int)perm[i];
     const double w0 = TWO_PI * d.freq[j];
@@ -59,14 +58,6 @@ void PianoEngine::Voice::start(PianoEngine &eng, int key_, const VoiceData &d, i
     a1[i] = 2 * r * std::cos(od * k);
     a2[i] = r * r;
     const double b = (k * r * std::sin(od * k)) / od; // impulse-invariant input gain
-    wN[i] = d.w[j];
-    bwN[i] = b * d.w[j];
-    cmp += b * d.w[j] * d.w[j];
-    // una corda: the last string of the unison is missed, the others share the blow
-    const double wu = nu > 1 && d.uni[j] == nu - 1 ? 0 : d.w[j] * una;
-    wU[i] = wu;
-    bwU[i] = b * wu;
-    cmpU += b * wu * wu;
     fbv[i] = b * d.cv[j];
     fbh[i] = b * d.ch[j];
     cvk[i] = d.cv[j] / k;
@@ -76,11 +67,11 @@ void PianoEngine::Voice::start(PianoEngine &eng, int key_, const VoiceData &d, i
     gw[i] = d.g[j]; eps[i] = b * d.g[j]; us[i] = d.uni[j];
   }
   kcGain = d.kc; Tt = d.T; this->nu = nu;
-  compN = cmp; compU = cmpU;
+  aim(d, eng.P[p::strikePos], eng.P[p::strikePos]);
   hammer = {d.hammer.mass, d.hammer.K, d.hammer.p, d.hammer.alpha};
   // the felt touches one string fewer, so its contact stiffness drops by (ν−1)/ν
   KU = d.hammer.K / una;
-  w = wN; bw = bwN; comp = cmp; hK = d.hammer.K;
+  w = wN; bw = bwN; comp = compN; hK = d.hammer.K;
   outV = d.outV * OUT_SCALE;
   outH = d.outH * OUT_SCALE;
   hasDamper = d.hasDamper;
@@ -89,6 +80,35 @@ void PianoEngine::Voice::start(PianoEngine &eng, int key_, const VoiceData &d, i
   computeDamped();
   setPan(eng, true);
   startLong(eng, d);
+}
+
+// Where the hammer strikes, β of the string's length, for a voice whose data was built for β0 (a note's
+// own slide moves it, engine.h slide): each partial n's share of the blow goes as its shape there,
+// sin(nπβ) (the hammer's width as it was), from the data's own at β0. A partial whose node was at β0
+// is taken from its shape a little off it.
+void PianoEngine::Voice::aim(const VoiceData &d, double beta, double beta0) {
+  const double una = nu > 1 ? (double)nu / (nu - 1) : 1;
+  double cmp = 0, cmpU = 0;
+  for (int i = 0; i < N; i++) {
+    const int j = (int)perm[i];
+    double wj = d.w[j];
+    if (beta != beta0) {
+      const double n = d.idx[j] + 1, s0 = std::sin(n * PI * beta0), s1 = std::sin(n * PI * beta);
+      wj *= s1 / (std::fabs(s0) < 0.05 ? std::copysign(0.05, s0) : s0);
+    }
+    const double r = std::exp(-sig[i] * k), od = std::sqrt(std::max(om[i] * om[i] - sig[i] * sig[i], 1e-6));
+    const double b = (k * r * std::sin(od * k)) / od; // impulse-invariant input gain
+    wN[i] = wj;
+    bwN[i] = b * wj;
+    cmp += b * wj * wj;
+    // una corda: the last string of the unison is missed, the others share the blow
+    const double wu = nu > 1 && d.uni[j] == nu - 1 ? 0 : wj * una;
+    wU[i] = wu;
+    bwU[i] = b * wu;
+    cmpU += b * wu * wu;
+  }
+  compN = cmp; compU = cmpU;
+  aimed = beta;
 }
 
 // The longitudinal modes this voice runs, from its kept partials (after start's arrays).
@@ -492,6 +512,8 @@ void PianoEngine::strikeKey(int key, double velocity, const VoiceData &d) {
   }
   v->keyDown = true;
   v->updateDamping(*this);
+  const double beta = slid[key] == slid[key] ? slid[key] : P[p::strikePos]; // its own slide, at the strike
+  if (beta != v->aimed) v->aim(d, beta, P[p::strikePos]);
   v->strike(velocity, P[p::unaCorda] != 0);
   enforceBudget(v);
   last = v;

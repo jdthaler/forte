@@ -375,6 +375,18 @@ KeyModel keyModel(int m, const ModelParams &P, const BoardModel *board, double f
   return d;
 }
 
+void strikeWeights(const KeyModel &d, double strike, double tilt, double *w) {
+  const HammerDefaults hd = hammerDefaults(d.key);
+  const double beta = clamp(strike, 0.02, 0.5), xh = beta * d.S.L;
+  const double wH = std::min({hd.width, 2 * xh, 0.5 * d.S.L});
+  const double alpha = (tilt * PI) / 180, ca = std::cos(alpha), sa = std::sin(alpha);
+  const double nrm = std::sqrt(2 / (d.S.mu * d.S.L));
+  for (int i = 0; i < d.n; i++) {
+    const double k = (d.idx[i] * PI) / d.S.L;
+    w[i] = ((i >= d.nV ? sa : ca) * (nrm * std::sin(k * xh) * hannFT(k, wH))) / d.ns;
+  }
+}
+
 DecayRates decayRates(const Partial &p, int ns) {
   const double prompt = p.sigInt + ns * p.bridgeV;
   const double after = std::min(prompt, ns > 1 ? p.sigInt : p.sigInt + p.bridgeH);

@@ -134,6 +134,9 @@ struct KeyModel {
   std::vector<uint16_t> idx;
 };
 KeyModel keyModel(int m, const ModelParams &P, const BoardModel *board = nullptr, double fs = 48000);
+// Each mode's share of the hammer's blow (KeyModel::w) for a strike at `strike` of the string's
+// length (a note's own slide), the felt tilted by `tilt` degrees, as keyModel computes it.
+void strikeWeights(const KeyModel &d, double strike, double tilt, double *w);
 
 struct DecayRates { double prompt, after; };
 DecayRates decayRates(const Partial &p, int ns);

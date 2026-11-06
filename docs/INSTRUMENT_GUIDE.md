@@ -77,7 +77,7 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `shell.js` | everything common to instrument pages: audio graph (room, volume, tone, limiter, analyser), computer keyboard and on-screen keys, MIDI (notes, velocity through the touch curve, CC64, CC66 sostenuto, CC67 soft pedal, CC1, pitch bend), parameter sidebar with presets and local storage, octave shift, toasts. See the header for the config. |
 | `in-plugin.js` | the page inside a plugin's window (its *Views* pane, `native/plugin/editor.html`): with `?plugin` in a frame of that window, the page shows only its views, and they draw what the plugin plays. `pluginAudio` stands in for the audio graph: its analyser reads the plugin's sound as Web Audio's would, and its node's port hears the engine's messages, translated by the engine class's `translate` (`wasm.js`). `shell.js` uses it by itself; the five pages with their own controls call `follow()` with how to set their parameters and play their keys. |
 | `worklet.js` | the generic AudioWorklet processor. It runs your engine's WebAssembly from the bytes the page sends, through its class's `globalThis` name. It also registers `forte-limiter`, the chain's limiter, so a page adds it before building the chain. |
-| `expression.js` | the Expression group every descriptor ends its `groups` with: switches for Strike (velocity), Glide (a note's own bend), Slide (its own CC74), Press (pressure) and Lift (release velocity), all on by default, which presets and players can turn off. A page shows those its instrument answers to (`responds`: `strike`, `mpe`, `modWheel`, `aftertouch` and `lift` from the descriptor); the worklet applies them (`createGate`: off, Strike gives every note the computer keys' velocity, Lift a release with none, Glide, Slide and Press nothing, and a switch turned off lets go of the bend, slide or pressure it let through). They are not the engine's parameters (`nativeParams` leaves them out, and the WebAssembly's stop before them); the plugins have those the instrument answers to as its last parameters (`pluginParams`, `gen-native-params.mjs`), applied in `native/plugin/plugin.cpp`, and saved presets carry them. |
+| `expression.js` | the Expression group every descriptor ends its `groups` with: switches for Strike (velocity), Glide (a note's own bend), Slide (its own CC74), Press (pressure) and Lift (release velocity), all on by default, which presets and players can turn off. A page shows those its instrument answers to (`responds`: `strike`, `mpe`, `modWheel`, `aftertouch` and `lift` from the descriptor; `slideOf`: the parameter a slide moves); the worklet applies them (`createGate`: off, Strike gives every note the computer keys' velocity, Lift a release with none, Glide, Slide and Press nothing, and a switch turned off lets go of the bend, slide or pressure it let through). They are not the engine's parameters (`nativeParams` leaves them out, and the WebAssembly's stop before them); the plugins have those the instrument answers to as its last parameters (`pluginParams`, `gen-native-params.mjs`), applied in `native/plugin/plugin.cpp`, and saved presets carry them. |
 | `wasm.js` | loads an instrument's WebAssembly in a page, the worklet or Node, and wraps it in a class with the engine contract (`wasmEngine`) |
 | `chain.js` | the output chain after the engine, built from the descriptor's `chain`: tone low-pass, body or soundboard, room, volume × trim, limiter. Every page uses it; the plugins rebuild it in C++. |
 | `limiter.js` | the limiter at the end of the chain: Web Audio's compressor curve and makeup gain without its 6 ms look-ahead, as the plugins' `limiter.cpp`, so a page adds no delay to a key |
@@ -126,7 +126,9 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: 'sustain' (a damper, sent to the engine), 'hold' (keys latch) or null
   modWheel: 'strike',                   // CC1 (or { param, max })
   mpe: { bend: 48, slide: true },       // MPE: how far one note bends (semitones, up to 96; 0: none), and
-                                        // whether CC74 slides the mod wheel's parameter for that note alone;
+                                        // whether CC74 slides the mod wheel's parameter for that note alone
+                                        // (or names its own: slide: 'strikePos' or { param, max }, as the
+                                        // Ribbon Piano's hammer; shared/expression.js slideOf);
                                         // press: true when a bend presses the key as the wheel does (the clavier)
   aftertouch: 'a hand pressed against the gong damps it', // what pressing into a held key does (any aftertouch, MPE
                                         // pressure: a Seaboard's Press), as the RISE's panel says it; leave it out when
@@ -217,8 +219,9 @@ an Osmose) bends, slides and presses each note alone. `shared/mpe.js` and the pl
 * `noteBend(ratio, key)`: the note's frequency × `ratio`, already along the keyboard's tuning
   (`bendRatio`, so a slide onto the next key lands on its tuned pitch), on top of the
   instrument's wheel bend;
-* `slide(value, key)`: the note's own value of the mod wheel's parameter, in its units, as the
-  wheel would set it (NaN: the parameter's own again). The slide is how far the finger has moved
+* `slide(value, key)`: the note's own value of the slide's parameter (the mod wheel's, or the one
+  `mpe.slide` names: `slideOf`), in its units, as the wheel would set it, from its default where
+  the finger landed to `max` at either end of the key (NaN: the parameter's own again). The slide is how far the finger has moved
   from where it landed, towards either end of the key (`slideFrom`; a host's per-note brightness
   likewise from its first value), so a finger resting mid-key leaves the note as the computer
   keys play it;

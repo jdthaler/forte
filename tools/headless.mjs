@@ -11,6 +11,7 @@ import { chainGains, ROOM, TONE_Q } from '../shared/chain.js';
 import { wheelValue, controllersOf, controlled } from '../shared/midi.js';
 import { bendRatio } from '../shared/mpe.js';
 import { byId } from '../shared/registry.js';
+import { slideOf } from '../shared/expression.js';
 
 const R = new URL('../', import.meta.url);
 
@@ -87,9 +88,9 @@ export class Player {
   // one note's own (MPE, as shared/shell.js sends it): its bend in semitones along the tuning, and
   // its slide 0..1 (NaN: none) as its own mod wheel
   noteBend(key, semitones) { this.engine.handle?.({ type: 'noteBend', key, value: bendRatio(this.P, key, semitones) }); }
-  slide(key, u) {
-    if (!this.I.modWheel) return;
-    const mw = typeof this.I.modWheel === 'string' ? { param: this.I.modWheel } : this.I.modWheel;
+  slide(key, u) { // as the page's (shared/midi.js pageMpe): what the slide moves (shared/expression.js slideOf)
+    const mw = slideOf(this.I);
+    if (!mw) return;
     const p = paramsOf(this.I).find((q) => q.id === mw.param);
     this.engine.handle?.({ type: 'slide', key, value: Number.isNaN(u) ? NaN : wheelValue(p, u * 127, mw.max ?? p.max) });
   }

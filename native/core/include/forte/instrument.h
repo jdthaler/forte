@@ -59,6 +59,8 @@ struct InstrumentInfo {
   Space space;
   int modWheel = -1;       // CC1 drives this parameter: at rest its default, fully up modWheelMax
   double modWheelMax = 0;
+  int slide = -1;          // a note's own slide (MPE CC74) sets this parameter for it alone (engine.h
+  double slideMax = 0;     // slide): where the finger landed its own value, at either end slideMax
   const Controller *controllers = nullptr;
   int controllerCount = 0;
   Chain chain;

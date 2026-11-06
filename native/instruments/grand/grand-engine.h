@@ -103,6 +103,8 @@ class GrandEngine : public Engine {
   void setParams(const double *P) override;
   void noteOn(int key, double velocity) override;
   void noteOff(int key, double velocity) override;
+  // a note's own slide: where its hammer strikes (strike), from its next blow
+  void slide(double value, int key) override { if (key >= 0 && key < 128) slid[key] = value; }
   void setSustain(bool on) override;
   void allNotesOff() override;
   int voiceCount() const override { return nVoices; }
@@ -139,6 +141,9 @@ class GrandEngine : public Engine {
     Data::Ref ref;
     const Built *b = nullptr;
     double *q = nullptr, *q1 = nullptr, *a1d = nullptr, *a2d = nullptr; // the voice's own (the pool's)
+    double *hO = nullptr, *bhO = nullptr; // its own h and bh, for a strike off the key's (a slide)
+    double aimed = 0;                     // the strike position h and bh are for
+    void aim(const GrandEngine &eng, double strike);
     const double *a1 = nullptr, *a2 = nullptr, *h = nullptr, *bh = nullptr, *u = nullptr, *beta = nullptr, *bf = nullptr, *om = nullptr, *sig = nullptr, *dmp = nullptr;
     // tension modulation: stretch weights, a1's change per newton, each mode's string; each
     // string's δT, its tension and stretch stiffness; still stretched enough to matter
@@ -213,6 +218,8 @@ class GrandEngine : public Engine {
   static uint64_t boardVersion(double h) { return std::bit_cast<uint64_t>(h + 0.0); } // the board's id: its thickness (−0 is 0)
 
   std::array<double, p::count> P{};
+  std::array<double, 128> slid = nanKeys(); // each key's own strike position (NaN: P's)
+  static std::array<double, 128> nanKeys() { std::array<double, 128> a; a.fill(NAN); return a; }
   bool hasParams = false, sustain = false;
   std::array<double, p::count> phys{}; // the physics parameters the key models were built for
   uint64_t version = 0;

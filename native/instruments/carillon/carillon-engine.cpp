@@ -144,7 +144,7 @@ void CarillonEngine::gains(Voice &v, bool now) {
 // cos/sin m(α − ψ) for the two members of a doublet (α the strike's azimuth).
 void CarillonEngine::strike(Voice &v, double velocity) {
   const double h = 1 / fs, alpha = (P[p::strikeAngle] * PI) / 180;
-  bellModes(v.bell, P.data(), modesNow); // strike height may have moved
+  bellModes(v.bell, P.data(), modesNow, own.slideOr(v.key, P[p::strikeHeight])); // strike height may have moved (or be its own: a slide)
   double C = 0, u = 0;
   for (int r = 0; r < v.N; r++) {
     const BellMode &md = modesNow[v.src[r]];

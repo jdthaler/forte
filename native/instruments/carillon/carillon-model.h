@@ -87,7 +87,7 @@ struct BellMode {
   double f, sigma, sigRad, sigInt, eff, reach, rad, kappa;
 };
 inline bool isMounting(const TableMode &m) { return m.m <= 1 && m.k == 0; }
-int bellModes(const Bell &b, const double *P, BellMode *out); // returns how many
+int bellModes(const Bell &b, const double *P, BellMode *out, double strikeAt = NAN); // returns how many (strikeAt: a height other than P's)
 
 // Doublets: the asymmetry of harmonic 2m (the knob's ε at ψ = 0 plus a historic bell's own), and
 // the pair's frequency factors (cos, sin members).
