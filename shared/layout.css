@@ -426,7 +426,7 @@ body[data-instrument] .kb-help { display: block; position: relative; margin: 0 0
 .forte-kbbar.stacked::after { content: ""; order: -1; flex: 0 0 100%; } /* the end of their line (or lines) */
 .forte-kbbar.measure > *, .forte-kbbar.measure > .forte-perform > * { flex-shrink: 0; }
 .forte-kbbar.measure > .forte-kbmap { flex: 0 0 140px; }
-.forte-kbbar.tight > .forte-kbstep { display: none; } /* a phone held sideways, short of room: the overview alone */
+.forte-kbbar.tight > .forte-kbstep { display: none; } /* a phone short of room: the overview alone (layout.js stack) */
 body[data-instrument] .forte-kbbar button { padding: 3px 9px; white-space: nowrap; }
 body[data-instrument] .forte-kbbar .forte-info { padding: 0; } /* a circle, not a button's padding */
 .forte-kbbar button:disabled { opacity: 0.35; cursor: default; }
