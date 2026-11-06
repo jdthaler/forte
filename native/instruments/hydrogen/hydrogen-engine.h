@@ -15,6 +15,7 @@
 #include "forte/engine.h"
 #include "forte/lift.h"
 #include "forte/expression.h"
+#include "forte/press.h"
 #include "hydrogen-model.h"
 #include "hydrogen-params.h"
 
@@ -31,6 +32,7 @@ class HydrogenEngine : public Engine {
   void bend(double value) override;
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
   void slide(double value, int key) override { expr.setSlide(value, key); }
+  void pressure(double value, int key) override { press.set(value, key); } // its lamp's discharge current, up to four times
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
   // what the tests read
@@ -67,6 +69,7 @@ class HydrogenEngine : public Engine {
     double t = 0, tOff = -1;    // the atom's time since the key (s), and at its release
     double liftK = 1;           // how many times longer than usual its afterglow lasts after this lift (forte/lift.h)
     double bendNow = 1, density = 0, fKey = 0;
+    double current = 1;         // its discharge current over the usual (Press: up to four times)
     double peak = 0;            // the steady power its lines sum to (for when it has faded)
     double peakNorm = 0;        // the steady power its gain is normalised to
     double shut = 1;            // the shutter's gain: 1 while lit, closing after the release
@@ -81,6 +84,7 @@ class HydrogenEngine : public Engine {
   std::array<double, p::count> P{};
   bool hasParams = false, sustain = false;
   double wheel = 1;
+  Pressures press; // each key's pressure (MPE), and the channel's
   int live = 0;
   uint64_t clock = 0;
   int sub = 0;                  // samples until the next update

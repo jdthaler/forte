@@ -29,6 +29,7 @@
     {"id":"strikeOn","kind":"toggle","def":true},
     {"id":"glideOn","kind":"toggle","def":true},
     {"id":"slideOn","kind":"toggle","def":true},
+    {"id":"pressOn","kind":"toggle","def":true},
     {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [

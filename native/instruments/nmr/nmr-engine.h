@@ -14,6 +14,7 @@
 #include "forte/engine.h"
 #include "forte/lift.h"
 #include "forte/expression.h"
+#include "forte/press.h"
 #include "nmr-model.h"
 #include "nmr-params.h"
 
@@ -35,6 +36,7 @@ class NmrEngine : public Engine {
   void bend(double value) override;
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
   void slide(double value, int key) override { expr.setSlide(value, key); }
+  void pressure(double value, int key) override { press.set(value, key); }
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -48,6 +50,7 @@ class NmrEngine : public Engine {
   static constexpr int kPool = 32;
   struct Voice {
     bool on = false, held = true, fading = false, receiving = true;
+    double echo = 0;   // until its next π pulse while its key is pressed, s (Press)
     double closeT = 0; // how fast the receiver closes after this lift, s (0: as usual; forte/lift.h)
     int key = 0, nl = 0;
     double amp = 0, age = 0, t0 = 0, S = 0, D = 0, phi = 0, gate = 0, rel = 1, bendNow = 1, peak = 0;
@@ -59,7 +62,7 @@ class NmrEngine : public Engine {
   };
   const KeySystem &system(int key);
   void lines(Voice &v);
-  void pulse();
+  void pulse(int only = -1); // only: that key's sample (−1: every one)
   void play(Voice &v, float *L, float *R, int n);
   void frame();
   double recovered(int key) const;
@@ -72,6 +75,7 @@ class NmrEngine : public Engine {
   std::array<double, 128> sysF0{}, mz{}, mzT{};
   std::array<std::complex<double>, MAX_ELEMS> scratch{};
   NoteExpression expr{48};
+  Presses press;
   std::vector<Voice> voices; // kPool of them, on or not: never reallocates
 };
 

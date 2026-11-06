@@ -192,7 +192,13 @@ newest note sets its electrode gap with Slide and its current with Press
 (up to twice the knob's, a louder arc); on the Huygens Keyboard a note's
 Slide sets how hard the other lamps' firings kick its own (fully, a tritone
 is pulled into a fifth), and Press opens its keyer further, a stronger
-flash.
+flash. On the physics instruments Press shapes the held note: a pulsar's
+beam, ABRACADABRA's magnet, the Hydrogen Lamp's current, the Early
+Universe's amplitude and TESS's planet grow with it; Project 8's trap
+deepens, so its electron stays longer; on the NMR Spin Echo a firm press
+runs the key's own echo train; on Ringing Planets it sets off aftershocks,
+and on the Black-Hole Keyboard it drops matter in, each clump ringing the
+hole again. TESS's Slide is a note's own path across its star.
 Glide on the struck and plucked strings is a finger pressing a note's
 strings behind the bridge, up to a semitone sharp (the Ribbon Piano,
 Electric Grand, Harpsichord and Cimbalom), the Hurdy-Gurdy's tangent pushed

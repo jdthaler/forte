@@ -70,6 +70,7 @@ void NmrEngine::lines(Voice &v) {
 
 void NmrEngine::noteOn(int key, double velocity) {
   if (!hasParams || key < FIRST || key > LAST) return;
+  press.reset(key);
   // a new pulse on a key spoils what its sample still had in the transverse plane
   for (Voice &x : voices) if (x.on && x.key == key && !x.fading) x.fading = true;
   // past the voices Quality allows, the quietest let-go voice (else the oldest) fades out
@@ -155,6 +156,7 @@ void NmrEngine::noteOff(int key, double velocity) {
 void NmrEngine::allNotesOff() {
   for (Voice &v : voices) v.on = false;
   pedal = pending = false;
+  press.clear();
 }
 
 void NmrEngine::setSustain(bool on) {
@@ -165,12 +167,12 @@ void NmrEngine::setSustain(bool on) {
 // A π pulse about y on every sample still sounding: each one's coherences are carried across
 // (ρ' = R ρ Rᵀ, order +1 to −1), the phases its spins gathered from the field are negated, and its
 // magnetisation along the field turned upside down.
-void NmrEngine::pulse() {
+void NmrEngine::pulse(int only) {
   pulses++;
   Message m;
   m.type = kPulse; m.count = 0;
   for (Voice &v : voices) {
-    if (!v.on || v.fading || !v.receiving || !sys[v.key]) continue;
+    if (!v.on || v.fading || !v.receiving || !sys[v.key] || (only >= 0 && v.key != only)) continue;
     const KeySystem &k = *sys[v.key];
     const double dt = v.age - v.t0;
     for (int e = 0; e < k.elems; e++) scratch[e] = v.x[e] * std::polar(1.0, k.elem[e].w * dt);
@@ -283,6 +285,15 @@ void NmrEngine::process(float *L, float *R, int n) {
     if (pending) { pending = false; pulse(); }
     else if (pedal && P[p::train] > 0.5) {
       if (toPulse <= 0) { pulse(); toPulse += P[p::spacing]; if (toPulse <= 0) toPulse = P[p::spacing]; }
+    }
+    // Press: a firm press into a held key runs its own echo train, a π pulse on its sample at once
+    // and then every echo time, up to four times as often the harder it is pressed
+    for (Voice &v : voices) {
+      if (!v.on || v.fading || !v.held || !v.receiving) continue;
+      const double x = press.of(v.key);
+      if (x <= 0) { v.echo = 0; continue; }
+      if (v.echo <= 0) { pulse(v.key); v.echo += P[p::spacing] / (1 + 3 * x); if (v.echo <= 0) v.echo = P[p::spacing]; }
+      v.echo -= m / fs;
     }
     wheel = glideTo(wheel, wheelTarget, m / fs, BEND_T);
     for (Voice &v : voices) if (v.on) play(v, L + i0, R + i0, m);

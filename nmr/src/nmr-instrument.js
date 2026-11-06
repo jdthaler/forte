@@ -19,6 +19,7 @@ export const INSTRUMENT = {
   // MPE: each key is its own magnet, so a note's bend is its own field offset (every line by the
   // same hertz) and CC74 its own shim
   mpe: { bend: 48, slide: true },
+  aftertouch: 'its own echo train: π pulses on its sample, faster the harder it is pressed', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'how the receiver closes: a slow lift fades the echoes out, a fast one cuts them', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['flip', 't2', 'noise', 'spacing', 'shim'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/nmr), built as WebAssembly

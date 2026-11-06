@@ -13,6 +13,7 @@
 #include "forte/engine.h"
 #include "forte/expression.h"
 #include "forte/lift.h"
+#include "forte/press.h"
 #include "universe-model.h"
 #include "universe-params.h"
 
@@ -33,6 +34,7 @@ class EarlyUniverseEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override;
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the plasma's sound speed: every wave faster or slower
+  void pressure(double value, int key) override { press.set(value, key); }   // its primordial amplitude, up to twice
   void allNotesOff() override;
   int voiceCount() const override { return (int)voices.size(); }
   void process(float *L, float *R, int n) override;
@@ -52,6 +54,7 @@ class EarlyUniverseEngine : public Engine {
     double bent = 1;        // the plasma's sound speed, over its own (a note's own bend)
     double gl = 1, gr = 1;  // its place across the keyboard
     double velocity = 0;
+    double amp = 1;         // its primordial amplitude over the usual (Press: up to twice)
     int count = 0;          // harmonics played
     std::array<double, MAX_HARMONICS> c{}, s{}, rc{}, rs{}; // each harmonic's phasor, and its turn a sample
     std::array<double, MAX_HARMONICS> e{}, q{};            // the amplitudes now: cos and sin parts
@@ -71,6 +74,7 @@ class EarlyUniverseEngine : public Engine {
 
   std::array<double, p::count> P{};
   bool hasParams = false, sustain = false;
+  forte::Pressures press; // each key's pressure (MPE), and the channel's
   forte::NoteExpression expr{2}; // each key's own bend: its plasma's sound speed, ±2 semitones
   int focus = -1, sinceReport = 0;
   uint64_t version = 0;

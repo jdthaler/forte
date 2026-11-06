@@ -38,8 +38,14 @@ void TessEngine::setParams(const double *p) {
 
 // The voice's year as a table: the band-limited light curve (its harmonics up to the top of
 // hearing, or less at lower Quality), from the Fourier series by an inverse FFT.
+double TessEngine::impactOf(int key) const { return std::clamp(expr.slideOr(key, P[p::impact]), 0.0, 1.1); }
+
 void TessEngine::build(Voice &v, float *into) {
-  const Orbit o = orbitOf(v.key, P.data());
+  // the key's own path across the star (a note's own slide), or the knob's
+  v.impact = impactOf(v.key);
+  std::array<double, p::count> Q = P;
+  Q[p::impact] = v.impact;
+  const Orbit o = orbitOf(v.key, Q.data());
   const double top = std::min(pick(20000.0, 12000.0, 8000.0), 0.45 * fs);
   const int H = std::clamp((int)(top / o.freq), 1, MAX_H);
   harmonics(o, occ, H, coef.data());
@@ -92,6 +98,7 @@ void TessEngine::setSustain(bool on) {
 
 void TessEngine::noteOn(int key, double velocity) {
   if (!hasParams) return;
+  press.reset(key);
   for (Voice &v : voices) {
     if (v.active && v.key == key && !v.ending) { // the same planet, its star brighter or fainter now
       v.vel = velocity; v.held = true;
@@ -134,7 +141,7 @@ void TessEngine::process(float *L, float *R, int n) {
   Voice *fading = nullptr;
   for (int j = 0; j < kMaxVoices && !fading; j++) {
     Voice &v = voices[(next + j) % kMaxVoices];
-    if (v.active && v.built != version) { build(v, v.table[1 - v.cur]); fading = &v; next = (next + j + 1) % kMaxVoices; }
+    if (v.active && (v.built != version || v.impact != impactOf(v.key))) { build(v, v.table[1 - v.cur]); fading = &v; next = (next + j + 1) % kMaxVoices; }
   }
   for (Voice &v : voices) {
     if (!v.active) continue;
@@ -142,6 +149,8 @@ void TessEngine::process(float *L, float *R, int n) {
     // a second planet's tug: the transits come early or late (transit-timing variations)
     v.bent = glideTo(v.bent, expr.bendOf(v.key), n / fs, BEND_T);
     const double inc = v.inc * v.bent;
+    // Press: a bigger planet, up to twice as deep a transit (its radius √2 times)
+    v.depth = glideTo(v.depth, 1 + press.of(v.key), n / fs, PRESS_GLIDE);
     for (int i = 0; i < n; i++) {
       const double x = v.phase * TABLE;
       const int j = (int)x;
@@ -153,7 +162,7 @@ void TessEngine::process(float *L, float *R, int n) {
         if (v.env >= 1) { v.env = 1; v.envStep = 0; }
         if (v.env <= 0) { v.active = false; break; }
       }
-      const double y = -v.gain * v.env * (s + (v.sigma > 0 ? v.sigma * rng.gauss() : 0)); // the light falls in a transit
+      const double y = -v.gain * v.env * (s * v.depth + (v.sigma > 0 ? v.sigma * rng.gauss() : 0)); // the light falls in a transit
       L[i] = (float)(L[i] + v.gl * y);
       R[i] = (float)(R[i] + v.gr * y);
       v.phase += inc;

@@ -9,6 +9,7 @@
 #include "forte/engine.h"
 #include "forte/lift.h"
 #include "forte/expression.h"
+#include "forte/press.h"
 #include "abracadabra-model.h"
 #include "abracadabra-params.h"
 
@@ -30,6 +31,7 @@ class AbracadabraEngine : public Engine {
   void setSustain(bool on) override;
   void allNotesOff() override;
   void slide(double value, int key) override { expr.setSlide(value, key); }
+  void pressure(double value, int key) override { press.set(value, key); } // its own magnet's field, up to twice
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the Earth's speed through the halo: a Doppler shift
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
@@ -58,6 +60,7 @@ class AbracadabraEngine : public Engine {
     double z0r = 0, z0i = 0, z1r = 0, z1i = 0; int pos = 0, b = 32; // the field at the step's ends
     double cr = 1, ci = 0;            // the carrier, e^{iωt}
     double bent = 1;                  // its Doppler factor (a note's own bend)
+    double boost = 1;                 // its magnet's field over the knob's (Press: up to twice)
     double nx1 = 0, nx2 = 0, ny1 = 0, ny2 = 0; // the channel's band-pass
   };
   double faOf(int key) const;   // the key's axion frequency (Hz): SCALE × its tuned note
@@ -72,6 +75,7 @@ class AbracadabraEngine : public Engine {
   double now = 0, toFrame = 0;
   uint32_t order = 0;
   Rng rng;
+  Pressures press; // each key's pressure (MPE), and the channel's
   NoteExpression expr{0.1}; // each key's slide (its halo's heat) and its bend (a Doppler shift, ±10 ¢)
   std::array<KeyField, KEYS> fields;
   std::array<Voice, KEYS> voices;

@@ -11,6 +11,7 @@
 #include "forte/engine.h"
 #include "forte/lift.h"
 #include "forte/expression.h"
+#include "forte/press.h"
 #include "project8-model.h"
 #include "project8-params.h"
 
@@ -35,6 +36,7 @@ class Project8Engine : public Engine {
   void bend(double value) override;
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
   void slide(double value, int key) override { expr.setSlide(value, key); }
+  void pressure(double value, int key) override { press.set(value, key); }
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -46,6 +48,7 @@ class Project8Engine : public Engine {
     Electron e;
     Trap trap;
     bool trapped = true, held = true, stolen = false, done = false;
+    double delta0 = 0, deep = 1; // the trap's depth from the knobs, and how far the key's press deepens it
     double escT = 0; // how long its signal takes to end once the trap opens on this lift, s (0: as usual; forte/lift.h)
     double Kref = 0, scale = 1, fRef = 0, aRef = 1, age = 0, optical = 0, bendNow = 1;
     double psi = 0, dop = 0, zr = 1, zi = 0;
@@ -63,6 +66,7 @@ class Project8Engine : public Engine {
   double wheel = 1, wheelTarget = 1, toFrame = 0;
   Rng rng;
   NoteExpression expr{24};
+  Pressures press;
   std::vector<Voice> voices; // reserved (twice kMaxVoices, for the stolen ones fading out): never reallocates
 };
 

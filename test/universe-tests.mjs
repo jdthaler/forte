@@ -276,6 +276,23 @@ test('voices: a key struck again lets its old note go, and fast playing never ru
   const [, , e] = render(P({ recombination: 1 }), 1.5, [...ev, ...Array.from({ length: 30 }, (_, i) => [0.05 * i, (x) => { most = Math.max(most, x.voiceCount()); }])]);
   assert.ok(most <= 64 && e.voiceCount() <= 33, `most ${most}, at the end ${e.voiceCount()}`);
 });
+test('Press: a held note\'s primordial amplitude grows with its key\'s press, up to twice: every wave twice as large; before the press, or with none, as it was', () => {
+  // the key held, its press from the block at 0.5 s (188 blocks), measured from 0.6 s on
+  const run = (press, key = 60) => {
+    const e = new Engine(FS); e.setParams(DEFAULTS); e.noteOn(60, 0.8);
+    const n = 3 * FS, L = new Float32Array(n), b = new Float32Array(128), c = new Float32Array(128);
+    for (let s = 0; s < n; s += 128) { if (press !== undefined && s === 128 * 188) e.handle({ type: 'pressure', key, value: press }); e.process(b, c, 128); L.set(b.subarray(0, Math.min(128, n - s)), s); }
+    return L;
+  };
+  const level = (x) => { let s = 0; for (let i = 0.6 * FS; i < 2.9 * FS; i++) s += x[i] * x[i]; return Math.sqrt(s); };
+  const plain = run(), full = run(1), half = run(0.5);
+  assert.deepEqual(full.subarray(0, 128 * 188), plain.subarray(0, 128 * 188), 'before the press');
+  assert.deepEqual(run(0), plain, 'a press of none');
+  assert.ok(Math.abs(level(full) / level(plain) / 2.0 - 1) < 0.005, `pressed fully: ${(level(full) / level(plain)).toFixed(3)}×`);
+  assert.ok(Math.abs(level(half) / level(plain) / 1.5 - 1) < 0.005, `pressed halfway: ${(level(half) / level(plain)).toFixed(3)}×`);
+  assert.deepEqual(run(1, -1), full, 'the channel\'s pressure as the key\'s');
+  assert.deepEqual(run(1, 61), plain, 'another key\'s');
+});
 test('Quality: Medium plays 16 harmonics and 20 voices, Low 10 and 12 (High 24 and 32); the harmonics it keeps sound the same', () => {
   const f = keyFreq(40), at = (q) => note(40, FAST, 1.2, 0.8, [], q)[0];
   const H = at('high'), Me = at('medium'), Lo = at('low');

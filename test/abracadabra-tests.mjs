@@ -297,6 +297,23 @@ test('no NaNs, all notes off, and every key from A0 to C8 plays', () => {
   assert.equal(e.voiceCount(), 0);
   for (const k of [21, 108]) { const [A] = note(k, P({ noise: 0 }), 0.6); assert.ok(rms(A, 0.2 * FS, 0.6 * FS) > 1e-3, `${k}`); }
 });
+test('Press: a held key\'s magnet field strengthens with its press, up to twice: its signal twice as strong, the noise as it was', () => {
+  // the key held, its press from the block at 0.5 s (188 blocks), measured from 0.6 s on
+  const run = (press, key = 60) => {
+    const e = new Engine(FS); e.setParams(DEFAULTS); e.noteOn(60, 0.8);
+    const n = 3 * FS, L = new Float32Array(n), b = new Float32Array(128), c = new Float32Array(128);
+    for (let s = 0; s < n; s += 128) { if (press !== undefined && s === 128 * 188) e.handle({ type: 'pressure', key, value: press }); e.process(b, c, 128); L.set(b.subarray(0, Math.min(128, n - s)), s); }
+    return L;
+  };
+  const level = (x) => { let s = 0; for (let i = 0.6 * FS; i < 2.9 * FS; i++) s += x[i] * x[i]; return Math.sqrt(s); };
+  const plain = run(), full = run(1), half = run(0.5);
+  assert.deepEqual(full.subarray(0, 128 * 188), plain.subarray(0, 128 * 188), 'before the press');
+  assert.deepEqual(run(0), plain, 'a press of none');
+  assert.ok(Math.abs(level(full) / level(plain) / 1.963 - 1) < 0.01, `pressed fully: ${(level(full) / level(plain)).toFixed(3)}×`);
+  assert.ok(Math.abs(level(half) / level(plain) / 1.479 - 1) < 0.01, `pressed halfway: ${(level(half) / level(plain)).toFixed(3)}×`);
+  assert.deepEqual(run(1, -1), full, 'the channel\'s pressure as the key\'s');
+  assert.deepEqual(run(1, 61), plain, 'another key\'s');
+});
 test('Quality: Medium and Low hear 16 and 10 keys at once (High 24); a note keeps its level', () => {
   for (const [q, cap] of [['high', 24], ['medium', 16], ['low', 10]]) {
     const [, , e] = render(P(), 0.3, [[0, (x) => x.setQuality(q)], ...Array.from({ length: 30 }, (_, i) => [0.005 * i, (x) => x.noteOn(30 + 2 * i, 0.8)])]);

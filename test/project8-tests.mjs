@@ -228,6 +228,34 @@ test('the note fades as the radiated field, ∝ u⊥ (the waveguide\'s carrier):
   const a = (t) => tone(x, peak(x, 430, 460, (t - 0.1) * FS, (t + 0.1) * FS), (t - 0.1) * FS, (t + 0.1) * FS);
   near(a(T) / a(0.5), u(T) / u(0.5), 0.01, 'amplitude ratio');
 });
+test('Press: a firm press deepens the key\'s trap up to four times, so its electron radiates out only when cot²θ reaches 4 ΔB / B₀; a press of none leaves it as it was', () => {
+  const p = P({ noise: 0 }), delta = M.trap(p, K.KR_K).delta;
+  const run = (i, press) => {
+    const msgs = [];
+    render(p, 14, [[0, (x) => { for (let k = 0; k < i; k++) x.noteOn(30, 0.5), x.noteOff(30); x.noteOn(64, 0.8); }], ...(press ? [[0.01, press]] : [])], (m) => msgs.push(m));
+    return { birth: msgs.filter((m) => m.type === 'birth').at(-1), end: msgs.find((m) => m.type === 'end' && m.key === 64), cols: msgs.filter((m) => m.type === 'collision' && m.key === 64) };
+  };
+  const escape = (b, d) => {
+    const cot2 = (t) => { const e = M.cool(b.K, b.cos, p.field, t, 32); return (e.cos * e.cos) / (1 - e.cos * e.cos); };
+    let lo = 0, hi = 14;
+    for (let k = 0; k < 50; k++) { const m = (lo + hi) / 2; if (cot2(m) < d) lo = m; else hi = m; }
+    return lo;
+  };
+  let found = 0;
+  for (let i = 0; i < 12 && found < 2; i++) {
+    const plain = run(i), key = run(i, (x) => x.handle({ type: 'pressure', key: 64, value: 1 })), chan = run(i, (x) => x.handle({ type: 'pressure', key: -1, value: 1 }));
+    if (!key.end || plain.cols.length || key.cols.length) continue; // outlasts the render, or met the gas
+    found++;
+    assert.deepEqual(key.birth, plain.birth, 'the same electron');
+    near(plain.end.age, escape(plain.birth, delta), 2 * 128 / FS, `note ${i}, not pressed`);
+    near(key.end.age, escape(key.birth, 4 * delta), 2 * 128 / FS, `note ${i}, pressed`);
+    assert.ok(key.end.age > plain.end.age + 0.5, `it stays longer: ${key.end.age.toFixed(2)} vs ${plain.end.age.toFixed(2)} s`);
+    assert.equal(chan.end.age, key.end.age, 'the channel\'s pressure as the key\'s');
+    const none = run(i, (x) => x.handle({ type: 'pressure', key: 64, value: 0 }));
+    assert.equal(none.end.age, plain.end.age, 'a press of none');
+  }
+  assert.equal(found, 2, 'two escapes');
+});
 test('an electron radiates itself out of the trap: its note ends when cot²θ reaches ΔB / B₀, as the model has it, and with no gas that takes 2τ on average', () => {
   const p = P({ noise: 0 });
   let found = 0;
