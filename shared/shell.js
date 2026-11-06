@@ -174,8 +174,9 @@ export function createShell(cfg) {
     starting.catch((err) => { toast(`Audio failed to start: ${err.message}`); ctx?.close?.().catch(() => {}); starting = null; });
     return starting;
   };
-  const paramsMessage = () => ({ type: 'params', P: { ...shell.P } });
-  const sendParams = () => shell.post(paramsMessage());
+  // swap: a preset's change, which the processor fades across so it doesn't click (shared/worklet.js)
+  const paramsMessage = (swap = false) => ({ type: 'params', P: { ...shell.P }, ...(swap && { swap }) });
+  const sendParams = (swap) => shell.post(paramsMessage(swap));
   shell.sendParams = sendParams;
   shell.post = (m) => { if (host) return; if (shell.audio) shell.audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
   shell.applyMix = () => { if (shell.audio) shell.audio.chain.apply(shell.P, trimGain(cfg.id)); };
@@ -427,11 +428,11 @@ export function createShell(cfg) {
     shell.applyMix(); sendParams();
     cfg.onParam?.(id, v, shell.P, ALL.find((q) => q.id === id), dragging);
   };
-  shell.setAll = (np) => {
+  shell.setAll = (np, { swap = false } = {}) => {
     shell.P = { ...DEFAULTS, ...np };
     for (const id of controls.keys()) refresh(id);
     if (cfg.compass) rebound();
-    refreshVisibility(); save(); updateHelp(); shell.applyMix(); sendParams();
+    refreshVisibility(); save(); updateHelp(); shell.applyMix(); sendParams(swap);
     cfg.onParam?.('*', null, shell.P, null, false);
   };
   if ($('#preset')) {
@@ -441,13 +442,13 @@ export function createShell(cfg) {
     ps.addEventListener('change', () => {
       if (ps.value === '') return;
       const keep = Object.fromEntries((cfg.keep || []).map((k) => [k, shell.P[k]]));
-      shell.setAll({ ...DEFAULTS, ...keep, ...cfg.presets[+ps.value].p });
+      shell.setAll({ ...DEFAULTS, ...keep, ...cfg.presets[+ps.value].p }, { swap: true });
       unfocus(ps);
     });
   }
-  $('#reset')?.addEventListener('click', () => { shell.setAll({ ...DEFAULTS }); if ($('#preset')) $('#preset').value = ''; });
+  $('#reset')?.addEventListener('click', () => { shell.setAll({ ...DEFAULTS }, { swap: true }); if ($('#preset')) $('#preset').value = ''; });
   // your own presets and shared links, in the same menu (shared/user-presets.js)
-  shell.presets = attachPresets({ instrument: cfg, get: () => shell.P, set: (v) => shell.setAll({ ...shell.P, ...v }), defaults: DEFAULTS, toast });
+  shell.presets = attachPresets({ instrument: cfg, get: () => shell.P, set: (v, o) => shell.setAll({ ...shell.P, ...v }, o), defaults: DEFAULTS, toast });
   $('#start')?.addEventListener('click', (e) => { shell.startAudio(); unfocus(e.currentTarget); });
   $('#midi-btn')?.addEventListener('click', (e) => { initMIDI(); unfocus(e.currentTarget); });
   if (!host) resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click (in a plugin, the host has the MIDI)

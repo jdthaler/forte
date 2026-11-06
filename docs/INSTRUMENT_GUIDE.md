@@ -192,6 +192,12 @@ export class GongWasmEngine {
 globalThis.GongWasmEngine = GongWasmEngine;
 ```
 
+A preset's change reaches the worklet as `{ type: 'params', P, swap: true }` (the shell's
+`setAll(P, { swap: true })`; a page with its own `setAll` passes it too): the wrapper fades the
+sound out over 6 ms, calls `setParams` at the bottom and fades back in over 12 ms, so a preset
+that switches the sound at once doesn't click. The plugins do the same for their Preset
+parameter and your own presets (`native/plugin/plugin.cpp`, `fadeSwap`).
+
 `this.post(msg)` (set by the worklet wrapper) sends data back to the page,
 for example to drive a live view: the C++ engine posts `Message`s, which the wrapper turns
 into the page's (see The native port).

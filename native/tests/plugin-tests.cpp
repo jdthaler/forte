@@ -246,6 +246,22 @@ TEST("plugin: the Preset parameter applies a preset, keeping the kept parameters
   for (auto &e : ev.out) told |= e.param_id == in.id("Ring time") && e.value == 6;
   CHECK(told);
 }
+TEST("plugin: a preset's change fades the sound out in 6 ms and back in 12 ms, so it doesn't click (shared/worklet.js)") {
+  Instance in(48000);
+  Events ev;
+  ev.midi(0, 0x90, 60, 100);
+  ev.param(4800, in.id("Preset"), 1);
+  auto L = in.run(9600, 64, ev);
+  CHECK(std::fabs(in.value("Ring time") - 6) < 1e-12); // the host hears of it at once
+  const double playing = peak(L, 4600, 4800);
+  CHECK(playing > 0.01);
+  CHECK(peak(L, 4800 + 280, 4800 + 300) < 0.02 * playing); // at the bottom, 6 ms on
+  CHECK(peak(L, 4800 + 900, 4800 + 1100) > 0.5 * playing); // back up by 18 ms
+  double jump = 0, usual = 0;
+  for (int i = 4700; i < 4800; i++) usual = std::max(usual, (double)std::fabs(L[i] - L[i - 1]));
+  for (int i = 4800; i < 6000; i++) jump = std::max(jump, (double)std::fabs(L[i] - L[i - 1]));
+  CHECK(jump < 1.5 * usual);
+}
 TEST("plugin: Morph takes every parameter part way from one preset to another, keeps the kept ones and tells the host") {
   Instance in(48000);
   CHECK(in.value("Morph from") == 0 && in.value("Morph to") == 1 && in.value("Morph") == 0); // Default settings to the first preset

@@ -27,7 +27,7 @@ function save() { try { localStorage.setItem(STORE, JSON.stringify(P)); } catch 
 let P = load(), fs = 48000, base = 48, focusKey = 60, lastVel = 1;
 const held = new Map();
 // all the parameters: the engine builds each key's voice from them as the note starts
-const paramsMessage = () => ({ type: 'params', P: { ...P } });
+const paramsMessage = (swap = false) => ({ type: 'params', P: { ...P }, ...(swap && { swap }) }); // swap: a preset's change, faded across (shared/worklet.js)
 
 // The WebAssembly model (blackhole-wasm.js): the QNM bank, each key's voice and its strain, the
 // same C++ the engine plays.
@@ -207,10 +207,10 @@ function buildControls() {
   PRESETS.forEach((pr, i) => ps.add(new Option(pr.name, i)));
   ps.addEventListener('change', () => {
     if (ps.value === '') return;
-    setAll({ ...DEFAULTS, ...Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]])), ...PRESETS[+ps.value].p });
+    setAll({ ...DEFAULTS, ...Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]])), ...PRESETS[+ps.value].p }, { swap: true });
     unfocus(ps);
   });
-  $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }); $('#preset').value = ''; });
+  $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }, { swap: true }); $('#preset').value = ''; });
 }
 function refreshControl(id, dragging = false) {
   const c = controls.get(id);
@@ -222,10 +222,10 @@ function refreshControl(id, dragging = false) {
 function refreshVisibility() { for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(P) : false; }
 // the plugin's values (shared/in-plugin.js): one as a control moving it, several as a preset
 function fromPlugin(c) { const ids = Object.keys(c); if (ids.length === 1) setParam(ids[0], c[ids[0]]); else setAll({ ...P, ...c }); }
-function setAll(np) {
+function setAll(np, { swap = false } = {}) {
   P = np;
   for (const id of controls.keys()) refreshControl(id);
-  refreshVisibility(); post(paramsMessage()); applyMix(); updateHelp(); save();
+  refreshVisibility(); post(paramsMessage(swap)); applyMix(); updateHelp(); save();
   setFocus(focusKey, lastVel);
 }
 let focusTimer = 0;
@@ -313,5 +313,5 @@ keyboardView.labels(keyLabels());
 updateHelp();
 setFocus(60, 1);
 animate(frame);
-attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v) => setAll({ ...P, ...v }), defaults: DEFAULTS, toast }); // your own presets and links
+attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v, o) => setAll({ ...P, ...v }, o), defaults: DEFAULTS, toast }); // your own presets and links
 qualityControl(); // the device's Quality, after the controls
