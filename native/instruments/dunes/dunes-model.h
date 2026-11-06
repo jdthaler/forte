@@ -79,6 +79,7 @@ struct Population {
   uint32_t seed = 1;
   void size(int count) { phase.resize(count); w.resize(count); cs.resize(count); sn.resize(count); } // before playing: init never allocates up to this
   void init(int count, double f0, double spread, double fs, uint32_t seed);
+  void tune(double f0, double fs); // the layer's resonance at f0 (init sets it; a bend moves it)
   // One sample at coupling kdt (turns per unit field) and noise ndt (turns, for a unit-variance kick);
   // with a pulse table, the patches' pushes are summed into a (even patches) and b (odd ones).
   void step(double kdt, double ndt, const float *pulse, double &a, double &b);

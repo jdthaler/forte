@@ -17,6 +17,7 @@ constexpr double SILENT = 1e-11;    // a voice whose reading's energy falls belo
 constexpr double MODE_SILENT = 1e-16;
 constexpr double STEAL_T = 0.004;   // s: a stolen voice's amplitudes fade with this time constant
 constexpr double MIN_SHARE = 2e-4;  // a neighbour holding less of the shower than this is left alone
+constexpr double BEND_T = 0.02;    // s: a note's own bend glides this fast
 constexpr int FIRST = 21, LAST = 108; // the keys there are crystals for
 constexpr double PREAMP_HZ = 20;    // the piezo preamp's high-pass, through which the static strain fades
 
@@ -69,6 +70,7 @@ ColliderShowersEngine::Voice *ColliderShowersEngine::voiceFor(int key) {
   Voice &v = voices.back();
   v.key = key;
   v.damped = !sustain;
+  v.bent = expr.bendOf(key);
   build(v);
   return &v;
 }
@@ -163,14 +165,15 @@ void ColliderShowersEngine::process(float *L, float *R, int n) {
   for (Voice &v : voices) {
     const Crystal &c = v.c;
     v.press += (v.pressTarget - v.press) * (1 - std::exp(-dt / PRESS_T));
+    v.bent = glideTo(v.bent, expr.bendOf(v.key), dt, BEND_T); // the crystal's temperature: its modes all a little faster or slower
     // each mode's turn and decay this block
     double level = 0;
     for (int j = 0; j < c.count; j++) {
       const Mode &m = c.modes[j];
       const double sig = m.sigma + (v.damped ? (std::numbers::pi * m.f) / Qd : 0) + (v.stolen ? 1 / STEAL_T : 0);
       const double g = std::exp(-sig / fs);
-      v.rr[j] = g * std::cos(v.w[j]);
-      v.ri[j] = g * std::sin(v.w[j]);
+      v.rr[j] = g * std::cos(v.w[j] * v.bent);
+      v.ri[j] = g * std::sin(v.w[j] * v.bent);
       const double e = v.ar[j] * v.ar[j] + v.ai[j] * v.ai[j];
       level += e * m.hear * m.hear;
       if (e * m.hear * m.hear < MODE_SILENT && e < MODE_SILENT) { v.ar[j] = v.ai[j] = 0; v.on[j] = false; }

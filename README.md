@@ -194,7 +194,13 @@ Carillon's and Tubular Bells' swing (a Doppler shift), and a hand
 stretching the Spring Keyboard's coil (two semitones). The Tonewheel
 Organ, Telharmonium and Cellulophone have one motor that turns every note:
 Glide moves its speed (two semitones either way) from the newest held
-note, and the others follow it.
+note, and the others follow it. On the physics instruments it is what
+moves each one's pitch: a Doppler shift (the Pulsars' and the Star
+Keyboard's binary orbits, the Black-Hole Keyboard's recoil, ABRACADABRA's
+Earth through the halo), TESS's transit-timing variations, the Early
+Universe's sound speed, the Singing Dunes' shear, the Collider Showers'
+crystal temperature, the Whistlers' L-shell, the Quantum Keyboard's well
+squeezed, and the Storage Ring's tune (its sidebands move; its pitch can't).
 
 **The RISE's panel:** while a Seaboard is plugged in, each page draws it at
 the left: its faders and pad with the controls they move and where they are,

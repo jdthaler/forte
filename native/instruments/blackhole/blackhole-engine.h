@@ -43,6 +43,8 @@ struct Voice {
   double cpr[MAX_MODES], cpi[MAX_MODES], cxr[MAX_MODES], cxi[MAX_MODES];
   bool ring = false, stolen = false, dead = false;
   double fade = 1, level = 0, rise = 0, riseStep = 0;
+  // the remnant's recoil toward us or away (a note's own bend): every frequency and rate × bent
+  double bent = 1, f0 = 0, mf[MAX_MODES], mg[MAX_MODES];
   // the inspiral (hasChirp): the model's chirp, and its state
   bool hasChirp = false;
   Chirp c;
@@ -51,6 +53,7 @@ struct Voice {
 
   void start(const RingdownEngine &eng, int key, const KeyVoice &d, double vel);
   void startRing(double phase);
+  void retune(const RingdownEngine &eng); // the modes' turns, the bridge and the rise at bent
   void render(float *L, float *R, int n, const RingdownEngine &eng);
 };
 
@@ -65,6 +68,8 @@ class RingdownEngine : public Engine {
   void allNotesOff() override;
   // a note's slide: its own black hole's spin, set at the merger (a ringdown's spin is fixed)
   void slide(double value, int key) override { expr.setSlide(value, key); }
+  // a note's bend: the remnant's recoil, toward us or away: a Doppler shift of the whole wave
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
   int voiceCount() const override { return nv; }
   void process(float *L, float *R, int n) override;
 
@@ -79,6 +84,7 @@ class RingdownEngine : public Engine {
   double k, stealStep, muteStep;
   bool stereo = true, releaseMute = false;
   double master = 1;
+  double bendOf(int key) const { return expr.bendOf(key); }
 
   // the voices playing, oldest first (read by the tests through the WebAssembly's hooks)
   Voice *voices[kPool] = {};
@@ -101,7 +107,7 @@ class RingdownEngine : public Engine {
   KeyVoice offer_;
   bool hasOffer = false;
   double struck[128] = {}; // each key's last velocity, for a fast lift's second merger (forte/lift.h)
-  forte::NoteExpression expr{0}; // each key's slide (a black hole doesn't bend)
+  forte::NoteExpression expr{0.3}; // each key's slide (its spin) and bend (its recoil: ±30 ¢, a kick of about 5000 km/s)
   KeyVoice spun;                 // a key's voice at its slide's spin
   Angular spunAngular;           // and its angular functions (kept apart from the keys' own)
   int sinceVoices = 0;

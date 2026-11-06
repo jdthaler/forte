@@ -13,6 +13,7 @@ constexpr double OUT = 0.08;         // a pulsar at full velocity whose sightlin
 constexpr double STEAL_T = 0.005;    // s: a stolen voice fades with this time constant
 constexpr double SILENT = 1e-5;      // a switched-off pulsar this faint is gone
 constexpr double BRIGHTEST = 5;   // no single pulse brighter than this many times the average (the log-normal's far tail cut)
+constexpr double BEND_T = 0.02;   // s: a note's own bend glides this fast
 constexpr int FIRST = 21, LAST = 108;
 
 PulsarsEngine::PulsarsEngine(double fs) : Engine(fs), rng(0x50a5a75u) {
@@ -110,6 +111,7 @@ void PulsarsEngine::noteOn(int key, double velocity) {
   v.cur = 0;
   fill(v, 0);
   v.inc = v.setup.f / fs;
+  v.bent = expr.bendOf(key);
   v.phase = 0.5; // between pulses
   v.aPrev = v.aNext = 1;
   // each sub-band's switch: as fast as its scattering tail lets it, and never a click
@@ -156,6 +158,9 @@ void PulsarsEngine::run(Voice &v, float *L, float *R, int n) {
   const Setup &s = v.setup;
   const bool sweep = s.dedisp == kNone && s.dm > 0;
   const double m = P[p::jitter];
+  // its binary orbit, toward us or away: the pulses come faster or slower (a note's own bend)
+  v.bent = glideTo(v.bent, expr.bendOf(v.key), n * dt, BEND_T);
+  const double inc = v.inc * v.bent;
   for (int i = 0; i < n; i++) {
     // the share of each sub-band the pulses reach: in from the top of the band as the pulsar
     // switches on, out the same way as it switches off
@@ -174,7 +179,7 @@ void PulsarsEngine::run(Voice &v, float *L, float *R, int n) {
     v.envR += (tr - v.envR) * (v.stolen ? ks : v.kR);
     // a new turn: the next pulse's brightness, log-normal with the modulation index, less as the
     // smear averages several pulses together
-    v.phase += v.inc;
+    v.phase += inc;
     if (v.phase >= 1) {
       v.phase -= 1;
       v.aPrev = v.aNext;

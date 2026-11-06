@@ -16,7 +16,8 @@ export const INSTRUMENT = {
   range: [21, 108],                     // MIDI keys: A0–C8
   space: 'sustain',                     // Space and CC64: keeps released beams stored (the scrapers stay open)
   modWheel: 'chroma',                   // CC1: the chromaticity, from its default up
-  mpe: { slide: true },                 // MPE: a note's slide is its own ring's chromaticity (a ring can't bend)
+  mpe: { bend: 12, slide: true },       // MPE: a note's slide is its own ring's chromaticity; its bend its tune (its pitch, f_rev, can't bend)
+  glide: 'the beam\'s energy ramped: its tune, and the sidebands, move', // what a note's own bend does
   aftertouch: 'more RF voltage', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'how the beam is dumped: a slow lift scrapes it away gently, a fast one fires the abort kicker', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['tune', 'octupole', 'spread', 'kick', 'chroma'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

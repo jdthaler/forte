@@ -17,6 +17,7 @@ static constexpr double OUT = 0.25;      // the hall's level: a forte avalanche 
 static constexpr double RISE_T = 0.12;   // s: an avalanche gets going this fast
 static constexpr double PUSH_T = 0.1;    // s: pushing more sand changes its speed this fast
 static constexpr double STEAL_T = 0.02;  // s: a voice Medium or Low lets go comes to rest this fast
+static constexpr double BEND_T = 0.02;  // s: a note's own bend glides this fast
 static constexpr double U_REF = 1;       // m/s: the speed whose song is at full level
 static constexpr double U_END = 0.002;   // m/s: an avalanche this slow has stopped
 static constexpr double LAYER_LEVEL = 0.5; // the rattle in the layer, against the song in step
@@ -80,13 +81,14 @@ void DunesEngine::setTarget(Voice &v) {
 
 // The grains' frequencies for the key's sand, and the waveguide's modes for its layer; phases kept.
 void DunesEngine::retune(Voice &v) {
-  v.f0 = keyFreq(v.key) * keyboard.ratio(v.key);
+  v.f0 = keyFreq(v.key) * keyboard.ratio(v.key) * v.bent;
   const double room = 0.45 * fs / (v.f0 * (1 + 2.5 * spread));
   v.mip = MIPS - 1;
   for (int m = 0; m < MIPS; m++) if ((H_MAX >> m) <= room) { v.mip = m; break; }
   if (v.layer == theory_::grains) {
     Population &pop = v.pop;
     for (int j = 0; j < pop.n; j++) pop.w[j] = v.f0 * (1 + spread * invNormal((j + 0.5) / pop.n)) / fs;
+    pop.tune(v.f0, fs);
   } else {
     const double H = layerDepth(v.f0);
     double norm = 0;
@@ -122,7 +124,7 @@ void DunesEngine::noteOn(int key, double velocity) {
   if (!hasP || key < 21 || key > 108) return;
   Voice &v = voices[key - 21];
   v.key = key;
-  if (!v.on) { v.U = 0; v.after = 0; start(v); }
+  if (!v.on) { v.U = 0; v.after = 0; v.bent = expr.bendOf(key); start(v); }
   v.on = v.held = true; v.dying = false;
   v.vel = std::clamp(velocity, 0.0, 1.0);
   v.push = std::clamp(expr.slideOr(key, push), 0.0, 1.0);
@@ -190,6 +192,8 @@ void DunesEngine::process(float *L, float *R, int n) {
   double flow0 = 0;
   for (Voice &v : voices) {
     if (!v.on) continue;
+    // the shear rate (a note's own bend): the grains' boom and the layer's modes follow it
+    if (const double to = expr.bendOf(v.key); v.bent != to) { v.bent = glideTo(v.bent, to, dt, BEND_T); retune(v); }
     // the avalanche's speed over this block: running up, pushed, or braking to rest
     const double U0 = v.U;
     if (v.held) v.U = glideTo(v.U, v.target, dt, v.target > v.U && v.U < 0.5 * v.target ? RISE_T : PUSH_T);

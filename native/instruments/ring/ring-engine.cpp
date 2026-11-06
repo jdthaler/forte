@@ -27,8 +27,9 @@ void StorageRingEngine::Voice::inject(double velocity, const double *P) {
 }
 
 // Queue the next turn's pulse, then go one turn on. The chromaticity is P's, or glides a turn at a
-// time toward the key's slide (and back to P's once the slide is gone).
-void StorageRingEngine::Voice::schedule(const double *P, const forte::Tuning &tuning, double fs, double slide) {
+// time toward the key's slide (and back to P's once the slide is gone); the tune is P's × the key's
+// bend, gliding the same way (kept off the integer resonances, between 0.05 and 0.95).
+void StorageRingEngine::Voice::schedule(const double *P, const forte::Tuning &tuning, double fs, double slide, double bend) {
   const bool own = slide == slide;
   if (own) slid = true;
   if (!slid) chroma = P[p::chroma];
@@ -54,7 +55,8 @@ void StorageRingEngine::Voice::schedule(const double *P, const forte::Tuning &tu
   charge *= std::exp(-1 / (r.frev * tau));
   theta += 2 * TAU * r.mu;
   phiS += TAU * r.Qs;
-  phiB += TAU * P[p::tune];
+  bent = glideTo(bent, bend, T / fs, SLIDE_T);
+  phiB += TAU * std::clamp(P[p::tune] * bent, 0.05, 0.95);
   logX -= 1 / (r.frev * P[p::damping]);
   logS -= 2 / (r.frev * P[p::damping]);
   press += (pressTarget - press) * (1 - std::exp(-1 / (r.frev * PRESS_TIME)));
@@ -88,6 +90,7 @@ void StorageRingEngine::noteOn(int key, double velocity) {
   }
   v->inject(velocity, P.data());
   v->chroma = expr.slideOr(key, P[p::chroma]); v->slid = false; // a slide starts there
+  v->bent = expr.bendOf(key); // and a bend
   // Quality: past 24 beams stored at Medium and 12 at Low, the oldest still stored is scraped away
   // (as when its key is let go)
   if (quality != Quality::high) {
@@ -118,7 +121,7 @@ void StorageRingEngine::process(float *L, float *R, int n) {
     const double dg = mode == 2 ? DELTA / (P[p::size] * std::max(v.Z, 1.0)) : 1;
     for (int i = 0; i < n; i++) {
       const double t = v.t;
-      while (t >= v.next - AHEAD * v.T) v.schedule(P.data(), tuning, fs, expr.slideOr(v.key, NAN));
+      while (t >= v.next - AHEAD * v.T) v.schedule(P.data(), tuning, fs, expr.slideOr(v.key, NAN), expr.bendOf(v.key));
       while (v.count && t > v.pt[v.head] + v.pr[v.head]) { v.head = (v.head + 1) % SLOTS; v.count--; } // pulses gone by
       double s = 0, dsum = 0;
       for (int j = 0, k = v.head; j < v.count; j++, k = (k + 1) % SLOTS) {

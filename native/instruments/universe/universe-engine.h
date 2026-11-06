@@ -11,6 +11,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "forte/lift.h"
 #include "universe-model.h"
 #include "universe-params.h"
@@ -31,6 +32,7 @@ class EarlyUniverseEngine : public Engine {
   void noteOn(int key, double velocity) override;
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override;
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the plasma's sound speed: every wave faster or slower
   void allNotesOff() override;
   int voiceCount() const override { return (int)voices.size(); }
   void process(float *L, float *R, int n) override;
@@ -47,6 +49,7 @@ class EarlyUniverseEngine : public Engine {
     int key = 0;
     Data::Ref uni;          // its universe
     double f = 0;           // the fundamental (Hz)
+    double bent = 1;        // the plasma's sound speed, over its own (a note's own bend)
     double gl = 1, gr = 1;  // its place across the keyboard
     double velocity = 0;
     int count = 0;          // harmonics played
@@ -63,10 +66,12 @@ class EarlyUniverseEngine : public Engine {
   void startStreaming(Voice &v);
   void amplitudes(Voice &v, double *e, double *q) const;
   void report(const Voice &v);
+  void retune(Voice &v) const; // each wave's turn a sample, at the voice's sound speed
   uint64_t versionOf(const double *P) const;
 
   std::array<double, p::count> P{};
   bool hasParams = false, sustain = false;
+  forte::NoteExpression expr{2}; // each key's own bend: its plasma's sound speed, ±2 semitones
   int focus = -1, sinceReport = 0;
   uint64_t version = 0;
   // the cosmology of the version the worker builds (it checks the version before and after)

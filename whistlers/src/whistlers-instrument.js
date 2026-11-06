@@ -16,6 +16,8 @@ export const INSTRUMENT = {
   range: [21, 108],                     // MIDI keys: all 88, A0–C8
   space: 'sustain',                     // Space and CC64: keeps the receivers open
   modWheel: { param: 'chorus', max: 20 }, // CC1: chorus on the held keys' field lines
+  mpe: { bend: 2 },                     // MPE: a note's own bend moves it to a field line farther in or out
+  glide: 'the field line\'s L-shell: the nose higher or lower', // what a note's own bend does
   aftertouch: 'more chorus', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'a slow lift lets the whistler fade slowly; a fast one sends an echo hopping back from the other hemisphere', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['ducts', 'echo', 'density', 'sferic', 'chorus'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

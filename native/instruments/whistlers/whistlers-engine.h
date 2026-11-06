@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "forte/engine.h"
+#include "forte/expression.h"
 #include "forte/lift.h"
 #include "whistlers-model.h"
 #include "whistlers-params.h"
@@ -37,6 +38,7 @@ class WhistlersEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override { sustain = on; }
   void pressure(double value, int key) override;
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // a field line farther in or out: the nose higher or lower
   void allNotesOff() override { voices.clear(); }
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
@@ -69,6 +71,7 @@ class WhistlersEngine : public Engine {
     double click = 0, lp1 = 0, lp2 = 0; // the crack's click: its impulse, through a band-pass
     bool clicked = false;
     double press = 0, pressTarget = 0, toNext = 0;
+    double bent = 1; // its line's nose over the key's own: an L-shell a little farther in or out (a note's own bend)
     bool held = true, stolen = false, done = false;
     bool echo = false; double liftK = 1; // a lift's (forte/lift.h): a fast one's echo, which rings out; how many times longer than usual the release takes
   };
@@ -77,6 +80,7 @@ class WhistlersEngine : public Engine {
   void play(Voice &v, float *L, float *R, int n);
   std::array<double, p::count> P{};
   bool hasParams = false, sustain = false;
+  forte::NoteExpression expr{2}; // each key's own bend: its L-shell, the nose ±2 semitones
   Rng rng;
   std::vector<KeyLines> lines;  // the 88 keys'
   std::vector<Voice> voices;    // reserved (twice kMaxVoices, for the stolen ones fading out): never reallocates

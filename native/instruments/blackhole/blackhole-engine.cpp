@@ -11,6 +11,7 @@ namespace forte::blackhole {
 
 namespace fd = forte::fdlibm;
 static constexpr double PI = 3.141592653589793, TAU = 2 * PI;
+static constexpr double BEND_T = 0.02;           // s: a note's own bend glides this fast
 static constexpr double STEAL_TAU = 0.0015;      // a stolen voice fades out with this time constant (gone in ~10 ms)
 static constexpr int VOICES_EVERY = 48 * 128;    // samples between voice counts for the page
 
@@ -20,10 +21,10 @@ void Voice::start(const RingdownEngine &eng, int key_, const KeyVoice &d, double
   n = d.count;
   for (int i = 0; i < n; i++) {
     const Mode &md = d.modes[i];
-    const double r = fd::exp(-md.gamma * k), th = -TAU * md.f * k;
-    rr[i] = r * fd::cos(th); ri[i] = r * fd::sin(th);
+    mf[i] = md.f; mg[i] = md.gamma;
     cpr[i] = md.cpr; cpi[i] = md.cpi; cxr[i] = md.cxr; cxi[i] = md.cxi;
   }
+  bent = eng.bendOf(key); f0 = d.info.f0;
   ring = false;
   fade = 1;
   stolen = false;
@@ -31,15 +32,25 @@ void Voice::start(const RingdownEngine &eng, int key_, const KeyVoice &d, double
   // the strain rises through the merger peak rather than jumping: a raised-cosine rise over half
   // a (2,2,0) cycle removes the onset click
   rise = d.hasChirp ? 1 : 0;
-  riseStep = 2 * d.info.f0 * k;
   dead = false;
   hasChirp = d.hasChirp;
   if (hasChirp) {
     c = d.chirp;
     t = 0; phi = 0; f = c.fStart; stage = 1; A = 0; xfade = 1;
     if (std::isnan(c.tc)) c.tc = (5.0 / 256) * fd::pow(c.Mc, -5.0 / 3) * fd::pow(PI * c.fStart, -8.0 / 3);
-    bridge = fd::exp(-k / c.tauB);
-  } else startRing(0);
+  }
+  retune(eng);
+  if (!hasChirp) startRing(0);
+}
+
+void Voice::retune(const RingdownEngine &eng) {
+  const double k = eng.k * bent;
+  for (int i = 0; i < n; i++) {
+    const double r = fd::exp(-mg[i] * k), th = -TAU * mf[i] * k;
+    rr[i] = r * fd::cos(th); ri[i] = r * fd::sin(th);
+  }
+  riseStep = 2 * f0 * k;
+  if (hasChirp) bridge = fd::exp(-k / c.tauB);
 }
 
 void Voice::startRing(double phase) {
@@ -48,7 +59,9 @@ void Voice::startRing(double phase) {
 }
 
 void Voice::render(float *L, float *R, int ns, const RingdownEngine &eng) {
-  const double k = eng.k, g = eng.master * 0.35 * vel;
+  // the remnant's recoil (a note's own bend): the whole wave Doppler-shifted, its time too
+  if (const double to = eng.bendOf(key); bent != to) { bent = glideTo(bent, to, ns * eng.k, BEND_T); retune(eng); }
+  const double k = eng.k * bent, g = eng.master * 0.35 * vel;
   const bool mono = !eng.stereo;
   const double fadeStep = stolen ? eng.stealStep : !keyDown && eng.releaseMute ? eng.muteStep : 1;
   double peak = 0;
