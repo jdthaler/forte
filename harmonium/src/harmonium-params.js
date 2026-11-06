@@ -35,7 +35,7 @@ export const GROUPS = [
         hint: 'Shuts off the reservoir, so the pressure follows the bellows within milliseconds (the harmonium’s expression stop, and how an accordion always works): a big chord’s sag is immediate, and the pumping is heard.' },
       { id: 'pump', label: 'Pumping', min: 0, max: 3, def: 0, step: 0.05, fmt: (v) => (v ? `${v.toFixed(2)} strokes/s per foot` : 'steady (a blower)'),
         hint: 'Two feeders worked alternately by the feet. Each stroke delivers unevenly, so the wind swells twice per stroke: smoothed by the reservoir, heard through the expression stop.' },
-      { id: 'velocity', label: 'Velocity (computer keys)', min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => `${v.toFixed(2)} (pallet opens in ${(3 + 27 * (1 - v) ** 2).toFixed(0)} ms)`,
+      { id: 'velocity', label: 'Velocity (computer keys)', min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => `${v.toFixed(2)} · pallet opens in ${(3 + 27 * (1 - v) ** 2).toFixed(0)} ms`,
         hint: 'How fast the key opens the pallet. A fast pallet slams the wind into the reed’s cell, which kicks the reed and starts it sooner; the loudness is the wind’s.' },
     ],
   },
