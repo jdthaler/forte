@@ -80,7 +80,7 @@ Every other idea only adds, and can come before or after 1.0.
 |------|------|-------|
 | Record and download what you play (WAV) | S–M | Decided against (2026-10-19): not wanted. |
 | Share a link with your settings | S | Done, for the next release: *Copy a link to these settings* in the Presets menu; the link carries the parameters that differ from the defaults. |
-| Works offline, installable on phones | S–M | A service worker; the manifest already exists. |
+| Works offline, installable on phones | S–M | Done, for the next release: a service worker (`sw.js`) keeps a copy of the released site, about 5 MB, and serves every page and its WebAssembly from it, online or not; the demos stay online only. A release downloads only the files that changed and takes over on the way to the next page. |
 | Demo songs played from MIDI files | M | Done, for the next release: ♪ *Songs* in every page's header plays six public-domain pieces (`songs/`) or a `.mid` of your own, opened or dropped on the page, live on the instrument, its keys going down as it plays (`shared/songs.js`). The front page's Listen buttons still play the recorded demos. |
 | A guided tour of each instrument's physics | M | Done, for the next release: *Tour* in the header, a few steps per instrument (`shared/tour.js`, `<slug>-tour.js`). |
 | Accessibility pass | M | Done, for the next release: every control named for screen readers (symbol buttons, the views' canvases, sliders' values as shown, hints read after a control's name), keyboard focus kept after Enter or Space, a focus ring everywhere, and with Reduce Motion the views step four times a second and nothing slides. The page checks fail on an unnamed control. |
@@ -158,6 +158,6 @@ default in the existing presets, or would change what an existing knob means.
 | Singing dunes | M | Done, for the next release: avalanches down a dune's slip face, booming at the grains' shear rate (Douady 2006) once the flowing layer pulls them into step (Kuramoto), with a threshold speed, sorting and water; or a dry layer ringing as a waveguide (Vriend 2007), since how dunes sing is still argued over. |
 | Theremin | M | Continuous pitch suits MPE; the ondes' heterodyne and pulling would carry over. |
 | Kalimba (mbira) | S–M | Close to the tine piano. |
-| Cristal Baschet or waterphone | M | Friction-driven rods, close to the glass armonica's bowing. |
+| Cristal Baschet | M | Done, for the next release: glass rods stroked by wet fingers (Couineaux's measured friction), each bending its steel stem, the note, worked out by beam finite elements and tuned by playing; a threshold pressure, a rough limit, strokes back and forth; the collector, fibreglass cones, a cut-steel flame and whiskers ringing in sympathy (Couineaux 2025). The waterphone is still open. |
 
 New ideas go in these tables, with a line in the pull request that adds them.

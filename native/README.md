@@ -27,7 +27,7 @@ instruments/<slug>/                 a ported instrument: engine, model, generate
                                     hydrogen, trautonium, hydraulis, cuore, hurdygurdy, ionchain, telharmonium,
                                     resonator, regal, chladni, ondes, cellulophone, voice, birdsong,
                                     clavichord, planets, pulsars, drums, dunes, brass, nmr, gamelan,
-                                    marimba, cimbalom, saw and tubular;
+                                    marimba, cimbalom, saw, tubular and cristal;
                                     docs/INSTRUMENT_GUIDE.md,
                                     "The native port")
 tests/                              native unit tests (CTest); tests/smoke, a test instrument

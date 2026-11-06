@@ -9,6 +9,7 @@ import { parseMIDI, writeMIDI, playable, fit, transpose } from '../shared/midifi
 import { createInput, setShift } from '../shared/midi.js';
 import { INSTRUMENTS } from '../shared/registry.js';
 import { SONGS, songFile } from '../tools/make-songs.mjs';
+import { kept } from '../tools/offline.mjs';
 
 let failures = 0;
 async function test(name, fn) {
@@ -115,6 +116,7 @@ const index = JSON.parse(readFileSync(new URL('songs/index.json', R), 'utf8'));
 await test('Forte\'s songs: songs/index.json lists every .mid there, each as tools/make-songs.mjs writes it', () => {
   const files = readdirSync(new URL('songs/', R)).filter((f) => f.endsWith('.mid')).sort();
   assert.deepEqual(index.map((s) => s.file).sort(), files);
+  for (const f of ['songs/index.json', ...files.map((f) => `songs/${f}`)]) assert.ok(kept(f), `${f} isn't kept for offline (tools/offline.mjs)`);
   assert.deepEqual(index, SONGS.map(({ file, title, by }) => ({ file, title, by })), 'songs/index.json is out of date: node tools/make-songs.mjs');
   for (const s of SONGS) {
     assert.deepEqual([...readFileSync(new URL(`songs/${s.file}`, R))], [...songFile(s)], `songs/${s.file} is out of date: node tools/make-songs.mjs`);
