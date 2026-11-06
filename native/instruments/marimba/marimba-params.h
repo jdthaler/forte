@@ -99,36 +99,37 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::kind, 1}, {p::hardness, 12000}, {p::mass, 12}, {p::strike, 0.45}};
-inline const PresetValue kPreset2[] = {{p::roll, 0.55}, {p::rollRate, 10}, {p::hardness, 200}};
-inline const PresetValue kPreset3[] = {{p::hardness, 80}, {p::mass, 20}};
-inline const PresetValue kPreset4[] = {{p::hardness, 12000}, {p::mass, 12}};
-inline const PresetValue kPreset5[] = {{p::kind, 1}};
-inline const PresetValue kPreset6[] = {{p::kind, 1}, {p::hardness, 12000}, {p::mass, 12}, {p::offset, 0.2}, {p::strike, 0.15}};
-inline const PresetValue kPreset7[] = {{p::tubes, 0}};
-inline const PresetValue kPreset8[] = {{p::gap, 6}};
-inline const PresetValue kPreset9[] = {{p::detune, 100}};
-inline const PresetValue kPreset10[] = {{p::depth, 0}};
-inline const PresetValue kPreset11[] = {{p::strike, 0.22}, {p::hardness, 1500}};
-inline const PresetValue kPreset12[] = {{p::across, 0.85}, {p::hardness, 1500}};
-inline const PresetValue kPreset13[] = {{p::eta, 0.025}};
-inline const PresetValue kPreset14[] = {{p::eta, 0.0012}};
+inline const PresetValue kPreset0[] = {{p::glideOn, 0}, {p::liftOn, 0}};
+inline const PresetValue kPreset1[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::kind, 1}, {p::hardness, 12000}, {p::mass, 12}, {p::strike, 0.45}};
+inline const PresetValue kPreset2[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::roll, 0.55}, {p::rollRate, 10}, {p::hardness, 200}};
+inline const PresetValue kPreset3[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::hardness, 80}, {p::mass, 20}};
+inline const PresetValue kPreset4[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::hardness, 12000}, {p::mass, 12}};
+inline const PresetValue kPreset5[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::kind, 1}};
+inline const PresetValue kPreset6[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::kind, 1}, {p::hardness, 12000}, {p::mass, 12}, {p::offset, 0.2}, {p::strike, 0.15}};
+inline const PresetValue kPreset7[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::tubes, 0}};
+inline const PresetValue kPreset8[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::gap, 6}};
+inline const PresetValue kPreset9[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::detune, 100}};
+inline const PresetValue kPreset10[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::depth, 0}};
+inline const PresetValue kPreset11[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::strike, 0.22}, {p::hardness, 1500}};
+inline const PresetValue kPreset12[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::across, 0.85}, {p::hardness, 1500}};
+inline const PresetValue kPreset13[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::eta, 0.025}};
+inline const PresetValue kPreset14[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::eta, 0.0012}};
 inline const Preset kPresets[] = {
-  {"Marimba: medium yarn mallets", nullptr, 0},
-  {"Xylophone: hard plastic mallets", kPreset1, 4},
-  {"Marimba rolled: a chorale", kPreset2, 3},
-  {"Soft yarn: dark and round", kPreset3, 2},
-  {"Marimba with xylophone mallets", kPreset4, 2},
-  {"Xylophone with yarn mallets", kPreset5, 1},
-  {"Xylophone, tubes off centre: the twelfth sings", kPreset6, 5},
-  {"No resonators: the bars alone", kPreset7, 1},
-  {"Tubes pressed close: bar and tube trade energy", kPreset8, 1},
-  {"Tubes a semitone sharp", kPreset9, 1},
-  {"Plain bars, 1 : 2.76 : 5.40", kPreset10, 1},
-  {"Struck at the node: the fundamental drops out", kPreset11, 2},
-  {"Struck off the edge: the bars twist", kPreset12, 2},
-  {"Dry wood: a dead, lossy bar", kPreset13, 1},
-  {"A ringing bar: low-loss wood", kPreset14, 1},
+  {"Marimba: medium yarn mallets", kPreset0, 2},
+  {"Xylophone: hard plastic mallets", kPreset1, 6},
+  {"Marimba rolled: a chorale", kPreset2, 5},
+  {"Soft yarn: dark and round", kPreset3, 4},
+  {"Marimba with xylophone mallets", kPreset4, 4},
+  {"Xylophone with yarn mallets", kPreset5, 3},
+  {"Xylophone, tubes off centre: the twelfth sings", kPreset6, 7},
+  {"No resonators: the bars alone", kPreset7, 3},
+  {"Tubes pressed close: bar and tube trade energy", kPreset8, 3},
+  {"Tubes a semitone sharp", kPreset9, 3},
+  {"Plain bars, 1 : 2.76 : 5.40", kPreset10, 3},
+  {"Struck at the node: the fundamental drops out", kPreset11, 4},
+  {"Struck off the edge: the bars twist", kPreset12, 4},
+  {"Dry wood: a dead, lossy bar", kPreset13, 3},
+  {"A ringing bar: low-loss wood", kPreset14, 3},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::hardness}, {109, p::gap}, {111, p::rollRate}, {113, p::strike}, {114, p::roll}};

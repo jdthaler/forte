@@ -35,19 +35,19 @@
     {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [
-    {"name":"The Baschets' cristal","values":{}},
-    {"name":"A light touch: the note takes its time","values":{"press":2.5}},
-    {"name":"Pressing too hard: the tone crackles","values":{"press":120}},
-    {"name":"Dry fingers: no grip","values":{"wet":0.2}},
-    {"name":"Slow strokes: soft and pure","values":{"stroke":0.04}},
-    {"name":"Fast strokes: loud and bright","values":{"stroke":0.25}},
-    {"name":"Strokes toward you, lifting between","values":{"strokes":"down"}},
-    {"name":"One endless stroke","values":{"strokes":"endless"}},
-    {"name":"Rods low on their stems: two modes argue","values":{"height":0.3}},
-    {"name":"Lossy stems: the rods stop with the finger","values":{"loss":0.006}},
-    {"name":"The bare collector: no radiators, no whiskers","values":{"radiator":"bare","whiskers":0}},
-    {"name":"Cones only, no whiskers","values":{"radiator":"cones","whiskers":0}},
-    {"name":"The flame alone","values":{"radiator":"flame"}},
-    {"name":"Swaying whiskers: a sparkle in the highs","values":{"sway":1}}
+    {"name":"The Baschets' cristal","values":{"glideOn":false}},
+    {"name":"A light touch: the note takes its time","values":{"glideOn":false,"press":2.5}},
+    {"name":"Pressing too hard: the tone crackles","values":{"glideOn":false,"press":120}},
+    {"name":"Dry fingers: no grip","values":{"glideOn":false,"wet":0.2}},
+    {"name":"Slow strokes: soft and pure","values":{"glideOn":false,"stroke":0.04}},
+    {"name":"Fast strokes: loud and bright","values":{"glideOn":false,"stroke":0.25}},
+    {"name":"Strokes toward you, lifting between","values":{"glideOn":false,"strokes":"down"}},
+    {"name":"One endless stroke","values":{"glideOn":false,"strokes":"endless"}},
+    {"name":"Rods low on their stems: two modes argue","values":{"glideOn":false,"height":0.3}},
+    {"name":"Lossy stems: the rods stop with the finger","values":{"glideOn":false,"loss":0.006}},
+    {"name":"The bare collector: no radiators, no whiskers","values":{"glideOn":false,"radiator":"bare","whiskers":0}},
+    {"name":"Cones only, no whiskers","values":{"glideOn":false,"radiator":"cones","whiskers":0}},
+    {"name":"The flame alone","values":{"glideOn":false,"radiator":"flame"}},
+    {"name":"Swaying whiskers: a sparkle in the highs","values":{"glideOn":false,"sway":1}}
   ]
 }

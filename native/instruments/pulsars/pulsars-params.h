@@ -94,30 +94,31 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::alpha, 89}, {p::sightline, 0.15}};
-inline const PresetValue kPreset2[] = {{p::alpha, 6}, {p::sightline, 0.5}};
-inline const PresetValue kPreset3[] = {{p::sightline, 0.92}, {p::height, 60}};
-inline const PresetValue kPreset4[] = {{p::sightline, 0}, {p::core, 0.5}, {p::height, 60}};
-inline const PresetValue kPreset5[] = {{p::dedisp, 0}, {p::dm, 1.5}};
-inline const PresetValue kPreset6[] = {{p::dedisp, 2}, {p::dm, 150}, {p::freq, 3000}};
-inline const PresetValue kPreset7[] = {{p::freq, 150}, {p::dm, 35}, {p::dedisp, 2}, {p::bandwidth, 0.3}};
-inline const PresetValue kPreset8[] = {{p::dm, 400}, {p::freq, 3000}};
-inline const PresetValue kPreset9[] = {{p::jitter, 1.4}};
-inline const PresetValue kPreset10[] = {{p::height, 30}, {p::sightline, 0.5}};
-inline const PresetValue kPreset11[] = {{p::dm, 71}, {p::alpha, 87}, {p::sightline, 0.2}};
+inline const PresetValue kPreset0[] = {{p::liftOn, 0}};
+inline const PresetValue kPreset1[] = {{p::liftOn, 0}, {p::alpha, 89}, {p::sightline, 0.15}};
+inline const PresetValue kPreset2[] = {{p::liftOn, 0}, {p::alpha, 6}, {p::sightline, 0.5}};
+inline const PresetValue kPreset3[] = {{p::liftOn, 0}, {p::sightline, 0.92}, {p::height, 60}};
+inline const PresetValue kPreset4[] = {{p::liftOn, 0}, {p::sightline, 0}, {p::core, 0.5}, {p::height, 60}};
+inline const PresetValue kPreset5[] = {{p::liftOn, 0}, {p::dedisp, 0}, {p::dm, 1.5}};
+inline const PresetValue kPreset6[] = {{p::liftOn, 0}, {p::dedisp, 2}, {p::dm, 150}, {p::freq, 3000}};
+inline const PresetValue kPreset7[] = {{p::liftOn, 0}, {p::freq, 150}, {p::dm, 35}, {p::dedisp, 2}, {p::bandwidth, 0.3}};
+inline const PresetValue kPreset8[] = {{p::liftOn, 0}, {p::dm, 400}, {p::freq, 3000}};
+inline const PresetValue kPreset9[] = {{p::liftOn, 0}, {p::jitter, 1.4}};
+inline const PresetValue kPreset10[] = {{p::liftOn, 0}, {p::height, 30}, {p::sightline, 0.5}};
+inline const PresetValue kPreset11[] = {{p::liftOn, 0}, {p::dm, 71}, {p::alpha, 87}, {p::sightline, 0.2}};
 inline const Preset kPresets[] = {
-  {"Millisecond pulsars at 1.4 GHz", nullptr, 0},
-  {"Orthogonal rotator: main pulse and interpulse", kPreset1, 2},
-  {"Nearly aligned: the beam never leaves us", kPreset2, 2},
-  {"Grazing the cone: one narrow pulse", kPreset3, 2},
-  {"Through the core: a triple pulse", kPreset4, 3},
-  {"No dedispersion: the pulses smear and sweep", kPreset5, 2},
-  {"Coherent dedispersion: sharp across the Galaxy", kPreset6, 3},
-  {"LOFAR at 150 MHz: scattering tails", kPreset7, 4},
-  {"Deep in the Galaxy: DM 400 at 3 GHz", kPreset8, 2},
-  {"Flickering single pulses", kPreset9, 1},
-  {"Low in the beam: sharp, buzzy pulses", kPreset10, 2},
-  {"PSR B1937+21 (DM 71): the first millisecond pulsar", kPreset11, 3},
+  {"Millisecond pulsars at 1.4 GHz", kPreset0, 1},
+  {"Orthogonal rotator: main pulse and interpulse", kPreset1, 3},
+  {"Nearly aligned: the beam never leaves us", kPreset2, 3},
+  {"Grazing the cone: one narrow pulse", kPreset3, 3},
+  {"Through the core: a triple pulse", kPreset4, 4},
+  {"No dedispersion: the pulses smear and sweep", kPreset5, 3},
+  {"Coherent dedispersion: sharp across the Galaxy", kPreset6, 4},
+  {"LOFAR at 150 MHz: scattering tails", kPreset7, 5},
+  {"Deep in the Galaxy: DM 400 at 3 GHz", kPreset8, 3},
+  {"Flickering single pulses", kPreset9, 2},
+  {"Low in the beam: sharp, buzzy pulses", kPreset10, 3},
+  {"PSR B1937+21 (DM 71): the first millisecond pulsar", kPreset11, 4},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::alpha}, {109, p::sightline}, {111, p::jitter}, {113, p::freq}, {114, p::dm}};

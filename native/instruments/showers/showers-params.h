@@ -94,34 +94,35 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::particle, 1}};
-inline const PresetValue kPreset2[] = {{p::particle, 2}, {p::energy, 100}};
-inline const PresetValue kPreset3[] = {{p::energy, 2}};
-inline const PresetValue kPreset4[] = {{p::energy, 3000}};
-inline const PresetValue kPreset5[] = {{p::offset, 0.25}};
-inline const PresetValue kPreset6[] = {{p::offset, 0.5}};
-inline const PresetValue kPreset7[] = {{p::width, 0.5}};
-inline const PresetValue kPreset8[] = {{p::depth, 9}, {p::energy, 500}};
-inline const PresetValue kPreset9[] = {{p::pileup, 150}};
-inline const PresetValue kPreset10[] = {{p::sensor, 1}};
-inline const PresetValue kPreset11[] = {{p::depth, 50}, {p::energy, 3000}};
-inline const PresetValue kPreset12[] = {{p::q, 200}};
-inline const PresetValue kPreset13[] = {{p::piezo, 0.5}};
+inline const PresetValue kPreset0[] = {{p::liftOn, 0}};
+inline const PresetValue kPreset1[] = {{p::liftOn, 0}, {p::particle, 1}};
+inline const PresetValue kPreset2[] = {{p::liftOn, 0}, {p::particle, 2}, {p::energy, 100}};
+inline const PresetValue kPreset3[] = {{p::liftOn, 0}, {p::energy, 2}};
+inline const PresetValue kPreset4[] = {{p::liftOn, 0}, {p::energy, 3000}};
+inline const PresetValue kPreset5[] = {{p::liftOn, 0}, {p::offset, 0.25}};
+inline const PresetValue kPreset6[] = {{p::liftOn, 0}, {p::offset, 0.5}};
+inline const PresetValue kPreset7[] = {{p::liftOn, 0}, {p::width, 0.5}};
+inline const PresetValue kPreset8[] = {{p::liftOn, 0}, {p::depth, 9}, {p::energy, 500}};
+inline const PresetValue kPreset9[] = {{p::liftOn, 0}, {p::pileup, 150}};
+inline const PresetValue kPreset10[] = {{p::liftOn, 0}, {p::sensor, 1}};
+inline const PresetValue kPreset11[] = {{p::liftOn, 0}, {p::depth, 50}, {p::energy, 3000}};
+inline const PresetValue kPreset12[] = {{p::liftOn, 0}, {p::q, 200}};
+inline const PresetValue kPreset13[] = {{p::liftOn, 0}, {p::piezo, 0.5}};
 inline const Preset kPresets[] = {
-  {"CMS crystal, 50 GeV electrons", nullptr, 0},
-  {"Photons: each converts somewhere new", kPreset1, 1},
-  {"Pions: no two showers alike", kPreset2, 2},
-  {"Low energy: shallow and bright", kPreset3, 1},
-  {"TeV electrons: deep and hollow", kPreset4, 1},
-  {"Off the axis: the crystal bends", kPreset5, 1},
-  {"On the crack: two crystals share", kPreset6, 1},
-  {"Narrow crystals: the shower spreads", kPreset7, 1},
-  {"Short crystal: the shower leaks", kPreset8, 2},
-  {"Pile-up: the collisions keep coming", kPreset9, 1},
-  {"Accelerometer: the harmonics alone", kPreset10, 1},
-  {"A long crystal (50 X₀): nothing leaks", kPreset11, 2},
-  {"A lossy crystal (Q 200): short notes", kPreset12, 1},
-  {"Piezo at the middle: the even harmonics silent", kPreset13, 1},
+  {"CMS crystal, 50 GeV electrons", kPreset0, 1},
+  {"Photons: each converts somewhere new", kPreset1, 2},
+  {"Pions: no two showers alike", kPreset2, 3},
+  {"Low energy: shallow and bright", kPreset3, 2},
+  {"TeV electrons: deep and hollow", kPreset4, 2},
+  {"Off the axis: the crystal bends", kPreset5, 2},
+  {"On the crack: two crystals share", kPreset6, 2},
+  {"Narrow crystals: the shower spreads", kPreset7, 2},
+  {"Short crystal: the shower leaks", kPreset8, 3},
+  {"Pile-up: the collisions keep coming", kPreset9, 2},
+  {"Accelerometer: the harmonics alone", kPreset10, 2},
+  {"A long crystal (50 X₀): nothing leaks", kPreset11, 3},
+  {"A lossy crystal (Q 200): short notes", kPreset12, 2},
+  {"Piezo at the middle: the even harmonics silent", kPreset13, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::pileup}, {109, p::piezo}, {111, p::q}, {113, p::energy}, {114, p::offset}};

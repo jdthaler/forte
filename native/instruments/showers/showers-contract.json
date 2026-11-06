@@ -35,19 +35,19 @@
     {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [
-    {"name":"CMS crystal, 50 GeV electrons","values":{}},
-    {"name":"Photons: each converts somewhere new","values":{"particle":"photon"}},
-    {"name":"Pions: no two showers alike","values":{"particle":"pion","energy":100}},
-    {"name":"Low energy: shallow and bright","values":{"energy":2}},
-    {"name":"TeV electrons: deep and hollow","values":{"energy":3000}},
-    {"name":"Off the axis: the crystal bends","values":{"offset":0.25}},
-    {"name":"On the crack: two crystals share","values":{"offset":0.5}},
-    {"name":"Narrow crystals: the shower spreads","values":{"width":0.5}},
-    {"name":"Short crystal: the shower leaks","values":{"depth":9,"energy":500}},
-    {"name":"Pile-up: the collisions keep coming","values":{"pileup":150}},
-    {"name":"Accelerometer: the harmonics alone","values":{"sensor":"accel"}},
-    {"name":"A long crystal (50 X₀): nothing leaks","values":{"depth":50,"energy":3000}},
-    {"name":"A lossy crystal (Q 200): short notes","values":{"q":200}},
-    {"name":"Piezo at the middle: the even harmonics silent","values":{"piezo":0.5}}
+    {"name":"CMS crystal, 50 GeV electrons","values":{"liftOn":false}},
+    {"name":"Photons: each converts somewhere new","values":{"liftOn":false,"particle":"photon"}},
+    {"name":"Pions: no two showers alike","values":{"liftOn":false,"particle":"pion","energy":100}},
+    {"name":"Low energy: shallow and bright","values":{"liftOn":false,"energy":2}},
+    {"name":"TeV electrons: deep and hollow","values":{"liftOn":false,"energy":3000}},
+    {"name":"Off the axis: the crystal bends","values":{"liftOn":false,"offset":0.25}},
+    {"name":"On the crack: two crystals share","values":{"liftOn":false,"offset":0.5}},
+    {"name":"Narrow crystals: the shower spreads","values":{"liftOn":false,"width":0.5}},
+    {"name":"Short crystal: the shower leaks","values":{"liftOn":false,"depth":9,"energy":500}},
+    {"name":"Pile-up: the collisions keep coming","values":{"liftOn":false,"pileup":150}},
+    {"name":"Accelerometer: the harmonics alone","values":{"liftOn":false,"sensor":"accel"}},
+    {"name":"A long crystal (50 X₀): nothing leaks","values":{"liftOn":false,"depth":50,"energy":3000}},
+    {"name":"A lossy crystal (Q 200): short notes","values":{"liftOn":false,"q":200}},
+    {"name":"Piezo at the middle: the even harmonics silent","values":{"liftOn":false,"piezo":0.5}}
   ]
 }

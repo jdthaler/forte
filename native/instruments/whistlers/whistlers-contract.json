@@ -38,17 +38,17 @@
     {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [
-    {"name":"Whistlers at night (Kp 2)","values":{}},
-    {"name":"Quiet week: the plasmasphere out to L = 6","values":{"plasmapause":6}},
-    {"name":"Magnetic storm: the plasmapause at L = 3","values":{"plasmapause":3}},
-    {"name":"Multi-path: five ducts","values":{"ducts":5}},
-    {"name":"Echo train","values":{"echo":0.8}},
-    {"name":"Near the lightning: two-hop whistlers","values":{"receiver":"source","echo":0.6}},
-    {"name":"Real travel time: the crack, then the whistler","values":{"travel":true,"sferic":0.6}},
-    {"name":"Thin plasma: quick whistlers","values":{"density":0.05}},
-    {"name":"Dawn chorus","values":{"chorus":10,"sferic":0.1}},
-    {"name":"Distant storms: long tweeks","values":{"sferic":1,"distance":7000}},
-    {"name":"By day: a low ionosphere (70 km), higher tweeks","values":{"iono":70}},
-    {"name":"Dense plasma: slow, drawn-out whistlers","values":{"density":5}}
+    {"name":"Whistlers at night (Kp 2)","values":{"liftOn":false}},
+    {"name":"Quiet week: the plasmasphere out to L = 6","values":{"liftOn":false,"plasmapause":6}},
+    {"name":"Magnetic storm: the plasmapause at L = 3","values":{"liftOn":false,"plasmapause":3}},
+    {"name":"Multi-path: five ducts","values":{"liftOn":false,"ducts":5}},
+    {"name":"Echo train","values":{"liftOn":false,"echo":0.8}},
+    {"name":"Near the lightning: two-hop whistlers","values":{"liftOn":false,"receiver":"source","echo":0.6}},
+    {"name":"Real travel time: the crack, then the whistler","values":{"liftOn":false,"travel":true,"sferic":0.6}},
+    {"name":"Thin plasma: quick whistlers","values":{"liftOn":false,"density":0.05}},
+    {"name":"Dawn chorus","values":{"liftOn":false,"chorus":10,"sferic":0.1}},
+    {"name":"Distant storms: long tweeks","values":{"liftOn":false,"sferic":1,"distance":7000}},
+    {"name":"By day: a low ionosphere (70 km), higher tweeks","values":{"liftOn":false,"iono":70}},
+    {"name":"Dense plasma: slow, drawn-out whistlers","values":{"liftOn":false,"density":5}}
   ]
 }

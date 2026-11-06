@@ -5,14 +5,14 @@
 import { GROUPS, DEFAULTS, PRESETS } from './reeds-params.js';
 import { KEY_LO, KEY_HI, KEY_MIN, KEY_MAX } from './reeds-data.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
-import { EXPRESSION } from '../../shared/expression.js';
+import { EXPRESSION, offInPresets } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 export const INSTRUMENT = {
   id: 'reeds',
   groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
-  presets: PRESETS,
+  presets: offInPresets(PRESETS, ['press']), // its presets turn off what makes little sense on it (shared/expression.js)
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C8, 21–108
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // the 200A's A1–C7, 33–96, until Full range opens the rest

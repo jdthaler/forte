@@ -39,17 +39,17 @@
     {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [
-    {"name":"Chladni’s clavicylinder (1800)","values":{}},
-    {"name":"Light touch (slow to speak)","values":{"press":0.25}},
-    {"name":"Pressing hard (louder, harsher)","values":{"press":4}},
-    {"name":"Cloth soaked (dull; the treble fails)","values":{"wet":0.95}},
-    {"name":"Soaped strips (softer tone)","values":{"grip":-0.7}},
-    {"name":"Pumice on the glass (cutting)","values":{"grip":0.8}},
-    {"name":"Posts all the way up","values":{"build":1}},
-    {"name":"Cords on the wrong nodes (an overtone takes over)","values":{"cords":-0.092}},
-    {"name":"Light flywheel (chords drag the cylinder)","values":{"flywheel":0.4}},
-    {"name":"Slow treadle","values":{"speed":0.4}},
-    {"name":"One layer of cloth: the key’s knock shows","values":{"layers":1}},
-    {"name":"Heavy flywheel: chords keep the speed","values":{"flywheel":10}}
+    {"name":"Chladni’s clavicylinder (1800)","values":{"glideOn":false}},
+    {"name":"Light touch (slow to speak)","values":{"glideOn":false,"press":0.25}},
+    {"name":"Pressing hard (louder, harsher)","values":{"glideOn":false,"press":4}},
+    {"name":"Cloth soaked (dull; the treble fails)","values":{"glideOn":false,"wet":0.95}},
+    {"name":"Soaped strips (softer tone)","values":{"glideOn":false,"grip":-0.7}},
+    {"name":"Pumice on the glass (cutting)","values":{"glideOn":false,"grip":0.8}},
+    {"name":"Posts all the way up","values":{"glideOn":false,"build":1}},
+    {"name":"Cords on the wrong nodes (an overtone takes over)","values":{"glideOn":false,"cords":-0.092}},
+    {"name":"Light flywheel (chords drag the cylinder)","values":{"glideOn":false,"flywheel":0.4}},
+    {"name":"Slow treadle","values":{"glideOn":false,"speed":0.4}},
+    {"name":"One layer of cloth: the key’s knock shows","values":{"glideOn":false,"layers":1}},
+    {"name":"Heavy flywheel: chords keep the speed","values":{"glideOn":false,"flywheel":10}}
   ]
 }

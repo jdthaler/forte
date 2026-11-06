@@ -52,17 +52,17 @@
     {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [
-    {"name":"Stage piano (default voicing)","values":{}},
-    {"name":"Bark — pickups close, voiced off-centre","values":{"gap":0.6,"offset":0.55,"drive":0.35}},
-    {"name":"Mellow — pickups pulled back","values":{"gap":2.8,"offset":0.3,"tone":4000}},
-    {"name":"Centred tine — the octave trick","values":{"offset":0}},
-    {"name":"Bell — strike right at the clamp","values":{"strike":3,"hfLoss":0.4}},
-    {"name":"No tone bar — bare tine on its mount","values":{"barMass":0.01}},
-    {"name":"Detuned tone bar (+40 ¢)","values":{"barTune":40}},
-    {"name":"Soft felt hammers (early style)","values":{"hardness":0.25,"hysteresis":0.0006,"hammerMass":1.3}},
-    {"name":"Suitcase stereo vibrato","values":{"tremDepth":0.7,"tremRate":4.5}},
-    {"name":"Heavy tuning springs (stretched bell)","values":{"springMass":1.2,"springPos":0.95}},
-    {"name":"Long cable: the top end rolled off","values":{"cable":5000}},
-    {"name":"Amp pushed: tines into a breaking amp","values":{"drive":0.8}}
+    {"name":"Stage piano (default voicing)","values":{"pressOn":false}},
+    {"name":"Bark — pickups close, voiced off-centre","values":{"pressOn":false,"gap":0.6,"offset":0.55,"drive":0.35}},
+    {"name":"Mellow — pickups pulled back","values":{"pressOn":false,"gap":2.8,"offset":0.3,"tone":4000}},
+    {"name":"Centred tine — the octave trick","values":{"pressOn":false,"offset":0}},
+    {"name":"Bell — strike right at the clamp","values":{"pressOn":false,"strike":3,"hfLoss":0.4}},
+    {"name":"No tone bar — bare tine on its mount","values":{"pressOn":false,"barMass":0.01}},
+    {"name":"Detuned tone bar (+40 ¢)","values":{"pressOn":false,"barTune":40}},
+    {"name":"Soft felt hammers (early style)","values":{"pressOn":false,"hardness":0.25,"hysteresis":0.0006,"hammerMass":1.3}},
+    {"name":"Suitcase stereo vibrato","values":{"pressOn":false,"tremDepth":0.7,"tremRate":4.5}},
+    {"name":"Heavy tuning springs (stretched bell)","values":{"pressOn":false,"springMass":1.2,"springPos":0.95}},
+    {"name":"Long cable: the top end rolled off","values":{"pressOn":false,"cable":5000}},
+    {"name":"Amp pushed: tines into a breaking amp","values":{"pressOn":false,"drive":0.8}}
   ]
 }

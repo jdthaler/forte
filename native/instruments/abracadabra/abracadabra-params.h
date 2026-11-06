@@ -86,24 +86,25 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::coupling, 6.6e-11}};
-inline const PresetValue kPreset2[] = {{p::coupling, 6.6e-11}, {p::size, 100}, {p::field, 5}};
-inline const PresetValue kPreset3[] = {{p::stream, 0.3}};
-inline const PresetValue kPreset4[] = {{p::halo, 40}};
-inline const PresetValue kPreset5[] = {{p::halo, 1200}};
-inline const PresetValue kPreset6[] = {{p::ramp, 1.5}};
-inline const PresetValue kPreset7[] = {{p::noise, 0}};
-inline const PresetValue kPreset8[] = {{p::stream, 0.4}, {p::streamSpeed, 700}};
+inline const PresetValue kPreset0[] = {{p::glideOn, 0}, {p::liftOn, 0}};
+inline const PresetValue kPreset1[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::coupling, 6.6e-11}};
+inline const PresetValue kPreset2[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::coupling, 6.6e-11}, {p::size, 100}, {p::field, 5}};
+inline const PresetValue kPreset3[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::stream, 0.3}};
+inline const PresetValue kPreset4[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::halo, 40}};
+inline const PresetValue kPreset5[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::halo, 1200}};
+inline const PresetValue kPreset6[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::ramp, 1.5}};
+inline const PresetValue kPreset7[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::noise, 0}};
+inline const PresetValue kPreset8[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::stream, 0.4}, {p::streamSpeed, 700}};
 inline const Preset kPresets[] = {
-  {"ABRACADABRA-10 cm and a strongly coupled axion", nullptr, 0},
-  {"At the CAST limit: lost in the SQUID's noise", kPreset1, 1},
-  {"A meter-scale toroid at 5 T hears it", kPreset2, 3},
-  {"A cold stream beside the halo: beats", kPreset3, 1},
-  {"A cold halo: long, slow swells", kPreset4, 1},
-  {"A galaxy cluster's hot halo: a band of noise", kPreset5, 1},
-  {"A slow magnet: notes that charge up", kPreset6, 1},
-  {"A noiseless SQUID: the axion alone", kPreset7, 1},
-  {"A fast stream (700 km/s): a second line, sharp of the halo", kPreset8, 2},
+  {"ABRACADABRA-10 cm and a strongly coupled axion", kPreset0, 2},
+  {"At the CAST limit: lost in the SQUID's noise", kPreset1, 3},
+  {"A meter-scale toroid at 5 T hears it", kPreset2, 5},
+  {"A cold stream beside the halo: beats", kPreset3, 3},
+  {"A cold halo: long, slow swells", kPreset4, 3},
+  {"A galaxy cluster's hot halo: a band of noise", kPreset5, 3},
+  {"A slow magnet: notes that charge up", kPreset6, 3},
+  {"A noiseless SQUID: the axion alone", kPreset7, 3},
+  {"A fast stream (700 km/s): a second line, sharp of the halo", kPreset8, 4},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::streamSpeed}, {109, p::stream}, {111, p::noise}, {113, p::coupling}, {114, p::halo}};

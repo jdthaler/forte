@@ -63,6 +63,56 @@ await test('a page shows the switches its instrument answers to', async () => {
   for (const r of INSTRUMENTS) assert.ok((await shown(r.id)).includes('liftOn'), `${r.id}: Lift, at least`); // test/lift-tests.mjs
 });
 
+// The approved table's "Off in presets" column: what each instrument's presets turn off, as making
+// little sense on it (a struck string's or bar's bend, a damping hand on a piano, a lift on a
+// phenomenon whose release is the recording's). Every other instrument's presets leave all on.
+const OFF_IN_PRESETS = {
+  piano: ['glide', 'press'],
+  grand: ['glide', 'press'],
+  harpsichord: ['glide', 'press'],
+  cimbalom: ['glide'],
+  hurdygurdy: ['lift'],
+  vibraphone: ['glide', 'lift'],
+  carillon: ['glide', 'lift'],
+  celesta: ['glide'],
+  kalimba: ['glide', 'lift'],
+  steelpan: ['glide', 'lift'],
+  marimba: ['glide', 'lift'],
+  gamelan: ['glide'],
+  tubular: ['glide'],
+  clavicylinder: ['glide'],
+  cristal: ['glide'],
+  gongs: ['glide'],
+  chladni: ['glide'],
+  organ: ['glide', 'press'],
+  tines: ['press'],
+  reeds: ['press'],
+  pianet: ['press'],
+  telharmonium: ['glide'],
+  cellulophone: ['glide'],
+  blackhole: ['lift'],
+  showers: ['lift'],
+  whistlers: ['lift'],
+  project8: ['lift'],
+  abracadabra: ['glide', 'lift'],
+  tess: ['glide', 'lift'],
+  cuore: ['lift'],
+  planets: ['lift'],
+  pulsars: ['lift'],
+  nmr: ['lift'],
+};
+await test('presets turn off what makes little sense on their instrument, the table\'s "Off in presets" column; the defaults keep every switch on', async () => {
+  for (const r of INSTRUMENTS) {
+    const I = await loadInstrument(r.id), off = (OFF_IN_PRESETS[r.id] ?? []).map((d) => `${d}On`);
+    for (const id of off) assert.ok(responds(I, id), `${r.id}: answers to ${id}`);
+    for (const pr of I.presets ?? []) {
+      const set = EXPRESSION_IDS.filter((id) => id in pr.p);
+      assert.deepEqual(set, EXPRESSION_IDS.filter((id) => off.includes(id)), `${r.id} "${pr.name}": the switches it sets`);
+      for (const id of set) assert.equal(pr.p[id], false, `${r.id} "${pr.name}".${id}`);
+    }
+  }
+});
+
 await test('on, everything goes through as it came', () => {
   const { send, got } = processor();
   send({ type: 'params', P: { ...ON } });

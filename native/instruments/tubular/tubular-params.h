@@ -96,30 +96,31 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::pedalLock, 1}};
-inline const PresetValue kPreset2[] = {{p::hardness, 9000}, {p::mass, 160}};
-inline const PresetValue kPreset3[] = {{p::hardness, 150}, {p::mass, 300}};
-inline const PresetValue kPreset4[] = {{p::cap, 0}};
-inline const PresetValue kPreset5[] = {{p::cap, 400}};
-inline const PresetValue kPreset6[] = {{p::strike, 0.33}};
-inline const PresetValue kPreset7[] = {{p::material, 1}};
-inline const PresetValue kPreset8[] = {{p::diameter, 63.5}, {p::wall, 2}};
-inline const PresetValue kPreset9[] = {{p::wall, 0.8}};
-inline const PresetValue kPreset10[] = {{p::distance, 0.8}};
-inline const PresetValue kPreset11[] = {{p::distance, 12}};
+inline const PresetValue kPreset0[] = {{p::glideOn, 0}};
+inline const PresetValue kPreset1[] = {{p::glideOn, 0}, {p::pedalLock, 1}};
+inline const PresetValue kPreset2[] = {{p::glideOn, 0}, {p::hardness, 9000}, {p::mass, 160}};
+inline const PresetValue kPreset3[] = {{p::glideOn, 0}, {p::hardness, 150}, {p::mass, 300}};
+inline const PresetValue kPreset4[] = {{p::glideOn, 0}, {p::cap, 0}};
+inline const PresetValue kPreset5[] = {{p::glideOn, 0}, {p::cap, 400}};
+inline const PresetValue kPreset6[] = {{p::glideOn, 0}, {p::strike, 0.33}};
+inline const PresetValue kPreset7[] = {{p::glideOn, 0}, {p::material, 1}};
+inline const PresetValue kPreset8[] = {{p::glideOn, 0}, {p::diameter, 63.5}, {p::wall, 2}};
+inline const PresetValue kPreset9[] = {{p::glideOn, 0}, {p::wall, 0.8}};
+inline const PresetValue kPreset10[] = {{p::glideOn, 0}, {p::distance, 0.8}};
+inline const PresetValue kPreset11[] = {{p::glideOn, 0}, {p::distance, 12}};
 inline const Preset kPresets[] = {
-  {"Orchestral chimes: brass tubes, rawhide mallet", nullptr, 0},
-  {"Pedal down: every tube rings", kPreset1, 1},
-  {"Plastic mallet: a brighter clang", kPreset2, 2},
-  {"Leather-wrapped mallet: the strike note alone", kPreset3, 2},
-  {"No cap: an open tube", kPreset4, 1},
-  {"Heavy cap: the overtones lifted", kPreset5, 1},
-  {"Struck a third of the way down", kPreset6, 1},
-  {"Aluminium tubes", kPreset7, 1},
-  {"Wide tubes, 2½ inches", kPreset8, 2},
-  {"Thin walls, 0.8 mm", kPreset9, 1},
-  {"Close up: the player’s ears", kPreset10, 1},
-  {"Far off: twelve metres away", kPreset11, 1},
+  {"Orchestral chimes: brass tubes, rawhide mallet", kPreset0, 1},
+  {"Pedal down: every tube rings", kPreset1, 2},
+  {"Plastic mallet: a brighter clang", kPreset2, 3},
+  {"Leather-wrapped mallet: the strike note alone", kPreset3, 3},
+  {"No cap: an open tube", kPreset4, 2},
+  {"Heavy cap: the overtones lifted", kPreset5, 2},
+  {"Struck a third of the way down", kPreset6, 2},
+  {"Aluminium tubes", kPreset7, 2},
+  {"Wide tubes, 2½ inches", kPreset8, 3},
+  {"Thin walls, 0.8 mm", kPreset9, 2},
+  {"Close up: the player’s ears", kPreset10, 2},
+  {"Far off: twelve metres away", kPreset11, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::damp}, {109, p::mass}, {111, p::speedMax}, {113, p::strike}, {114, p::hardness}};

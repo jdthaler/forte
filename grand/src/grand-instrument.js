@@ -4,14 +4,14 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './grand-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
-import { EXPRESSION } from '../../shared/expression.js';
+import { EXPRESSION, offInPresets } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 export const INSTRUMENT = {
   id: 'grand',
   groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
-  presets: PRESETS,
+  presets: offInPresets(PRESETS, ['glide', 'press']), // its presets turn off what makes little sense on it (shared/expression.js)
   keep: ['volume', 'room', 'venue', 'velocity', 'maxFreq', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                                // MIDI keys: A0–C8, the CP-80's 88 (the CP-70 has E1–E7)
   lift: 'how fast the damper falls: a slow lift leaves a longer tail, a fast one stops the strings sooner', // what a slow or a fast release does (release velocity: a Seaboard's Lift)

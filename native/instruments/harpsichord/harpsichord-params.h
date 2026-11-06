@@ -120,50 +120,51 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::manual, 1}, {p::back8, 0}};
-inline const PresetValue kPreset2[] = {{p::coupler, 0}, {p::front8, 0}};
-inline const PresetValue kPreset3[] = {{p::four, 1}};
-inline const PresetValue kPreset4[] = {{p::coupler, 0}, {p::back8, 0}, {p::front8, 0}, {p::four, 1}};
-inline const PresetValue kPreset5[] = {{p::manual, 1}, {p::front8, 0}, {p::lute, 1}};
-inline const PresetValue kPreset6[] = {{p::coupler, 0}, {p::front8, 0}, {p::buff, 1}};
-inline const PresetValue kPreset7[] = {{p::material, 1}};
-inline const PresetValue kPreset8[] = {{p::stiff, 1000}, {p::overlap, 0.35}};
-inline const PresetValue kPreset9[] = {{p::stiff, 4000}, {p::overlap, 0.9}};
-inline const PresetValue kPreset10[] = {{p::coupler, 0}, {p::front8, 0}, {p::xBack, 178}};
-inline const PresetValue kPreset11[] = {{p::pitch, 1}, {p::temperament, 1}};
-inline const PresetValue kPreset12[] = {{p::soundboard, 0}};
-inline const PresetValue kPreset13[] = {{p::build, 1}};
-inline const PresetValue kPreset14[] = {{p::build, 2}};
-inline const PresetValue kPreset15[] = {{p::build, 1}, {p::hooks, 1}};
-inline const PresetValue kPreset16[] = {{p::build, 1}, {p::buff, 1}};
-inline const PresetValue kPreset17[] = {{p::build, 2}, {p::material, 1}, {p::pitch, 1}, {p::temperament, 1}};
-inline const PresetValue kPreset18[] = {{p::build, 3}};
-inline const PresetValue kPreset19[] = {{p::build, 3}, {p::four, 1}};
-inline const PresetValue kPreset20[] = {{p::build, 3}, {p::coupler, 0}, {p::front8, 0}, {p::buff, 1}};
-inline const PresetValue kPreset21[] = {{p::build, 3}, {p::manual, 1}, {p::front8, 0}, {p::lute, 1}};
+inline const PresetValue kPreset0[] = {{p::glideOn, 0}, {p::pressOn, 0}};
+inline const PresetValue kPreset1[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::manual, 1}, {p::back8, 0}};
+inline const PresetValue kPreset2[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::coupler, 0}, {p::front8, 0}};
+inline const PresetValue kPreset3[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::four, 1}};
+inline const PresetValue kPreset4[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::coupler, 0}, {p::back8, 0}, {p::front8, 0}, {p::four, 1}};
+inline const PresetValue kPreset5[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::manual, 1}, {p::front8, 0}, {p::lute, 1}};
+inline const PresetValue kPreset6[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::coupler, 0}, {p::front8, 0}, {p::buff, 1}};
+inline const PresetValue kPreset7[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::material, 1}};
+inline const PresetValue kPreset8[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::stiff, 1000}, {p::overlap, 0.35}};
+inline const PresetValue kPreset9[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::stiff, 4000}, {p::overlap, 0.9}};
+inline const PresetValue kPreset10[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::coupler, 0}, {p::front8, 0}, {p::xBack, 178}};
+inline const PresetValue kPreset11[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::pitch, 1}, {p::temperament, 1}};
+inline const PresetValue kPreset12[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::soundboard, 0}};
+inline const PresetValue kPreset13[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::build, 1}};
+inline const PresetValue kPreset14[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::build, 2}};
+inline const PresetValue kPreset15[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::build, 1}, {p::hooks, 1}};
+inline const PresetValue kPreset16[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::build, 1}, {p::buff, 1}};
+inline const PresetValue kPreset17[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::build, 2}, {p::material, 1}, {p::pitch, 1}, {p::temperament, 1}};
+inline const PresetValue kPreset18[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::build, 3}};
+inline const PresetValue kPreset19[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::build, 3}, {p::four, 1}};
+inline const PresetValue kPreset20[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::build, 3}, {p::coupler, 0}, {p::front8, 0}, {p::buff, 1}};
+inline const PresetValue kPreset21[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::build, 3}, {p::manual, 1}, {p::front8, 0}, {p::lute, 1}};
 inline const Preset kPresets[] = {
-  {"Two 8′s coupled (front and back)", nullptr, 0},
-  {"Front 8′ alone: plucked near the nut, bright", kPreset1, 2},
-  {"Back 8′ alone: plucked further in, round", kPreset2, 2},
-  {"Full: 8′ 8′ 4′ coupled", kPreset3, 1},
-  {"4′ alone: its own strings, an octave up", kPreset4, 4},
-  {"Lute row: plucked 12 mm from the nut", kPreset5, 3},
-  {"Buff stop: leather on the back 8′", kPreset6, 3},
-  {"Quill plectra", kPreset7, 1},
-  {"Light voicing: soft plectra, little overlap", kPreset8, 2},
-  {"Heavy voicing: stiff plectra, deep overlap", kPreset9, 2},
-  {"Back 8′ plucked at the middle (c²): no even partials", kPreset10, 3},
-  {"Baroque pitch, ¼-comma meantone", kPreset11, 2},
-  {"Without the soundboard (bridge force)", kPreset12, 1},
-  {"Virginal: muselar, plucked near the middle", kPreset13, 1},
-  {"Virginal: spinett, plucked near one end", kPreset14, 1},
-  {"Muselar with the arpichordium: buzzing bass", kPreset15, 2},
-  {"Muselar with the buff: a pizzicato virginal", kPreset16, 2},
-  {"Spinett, quill plectra, ¼-comma meantone", kPreset17, 4},
-  {"Lute-harpsichord: two gut 8′s coupled", kPreset18, 1},
-  {"Lute-harpsichord: gut and the brass 4′", kPreset19, 2},
-  {"Lute-harpsichord with the buff: like a theorbo", kPreset20, 4},
-  {"Lute-harpsichord: lute row on gut", kPreset21, 4},
+  {"Two 8′s coupled (front and back)", kPreset0, 2},
+  {"Front 8′ alone: plucked near the nut, bright", kPreset1, 4},
+  {"Back 8′ alone: plucked further in, round", kPreset2, 4},
+  {"Full: 8′ 8′ 4′ coupled", kPreset3, 3},
+  {"4′ alone: its own strings, an octave up", kPreset4, 6},
+  {"Lute row: plucked 12 mm from the nut", kPreset5, 5},
+  {"Buff stop: leather on the back 8′", kPreset6, 5},
+  {"Quill plectra", kPreset7, 3},
+  {"Light voicing: soft plectra, little overlap", kPreset8, 4},
+  {"Heavy voicing: stiff plectra, deep overlap", kPreset9, 4},
+  {"Back 8′ plucked at the middle (c²): no even partials", kPreset10, 5},
+  {"Baroque pitch, ¼-comma meantone", kPreset11, 4},
+  {"Without the soundboard (bridge force)", kPreset12, 3},
+  {"Virginal: muselar, plucked near the middle", kPreset13, 3},
+  {"Virginal: spinett, plucked near one end", kPreset14, 3},
+  {"Muselar with the arpichordium: buzzing bass", kPreset15, 4},
+  {"Muselar with the buff: a pizzicato virginal", kPreset16, 4},
+  {"Spinett, quill plectra, ¼-comma meantone", kPreset17, 6},
+  {"Lute-harpsichord: two gut 8′s coupled", kPreset18, 3},
+  {"Lute-harpsichord: gut and the brass 4′", kPreset19, 4},
+  {"Lute-harpsichord with the buff: like a theorbo", kPreset20, 6},
+  {"Lute-harpsichord: lute row on gut", kPreset21, 6},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::front8}, {109, p::back8}, {111, p::four}, {113, p::xFront}, {114, p::xBack}};

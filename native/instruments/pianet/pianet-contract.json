@@ -38,17 +38,17 @@
     {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [
-    {"name":"Pianet T: silicone pads, magnetic pickups","values":{}},
-    {"name":"Pianet N: leather pads, electrostatic pickup","values":{"pickup":"es","tack":0.3,"rate":0.5,"padC":0.35,"tone":9000}},
-    {"name":"Aged pads: the tack has gone","values":{"tack":0.03}},
-    {"name":"Very tacky, rate-sensitive pads (poles set back)","values":{"tack":0.4,"rate":1,"gap":2}},
-    {"name":"Rate-blind pads: little touch response","values":{"rate":0.1}},
-    {"name":"Poles set close: louder, bass reeds clack","values":{"gap":0.4}},
-    {"name":"Plate edge level with the reed (odd harmonics)","values":{"pickup":"es","offset":0,"plateGap":0.36}},
-    {"name":"Heavy solder tips","values":{"tipMass":3}},
-    {"name":"Limp foam: notes ring after release","values":{"padC":0.02,"padK":0.2}},
-    {"name":"Through a valve combo","values":{"amp":"combo","drive":0.55}},
-    {"name":"Stiff foam: a louder middle and treble","values":{"padK":3}},
-    {"name":"Light solder tips: longer reeds, more overtones","values":{"tipMass":0.45}}
+    {"name":"Pianet T: silicone pads, magnetic pickups","values":{"pressOn":false}},
+    {"name":"Pianet N: leather pads, electrostatic pickup","values":{"pressOn":false,"pickup":"es","tack":0.3,"rate":0.5,"padC":0.35,"tone":9000}},
+    {"name":"Aged pads: the tack has gone","values":{"pressOn":false,"tack":0.03}},
+    {"name":"Very tacky, rate-sensitive pads (poles set back)","values":{"pressOn":false,"tack":0.4,"rate":1,"gap":2}},
+    {"name":"Rate-blind pads: little touch response","values":{"pressOn":false,"rate":0.1}},
+    {"name":"Poles set close: louder, bass reeds clack","values":{"pressOn":false,"gap":0.4}},
+    {"name":"Plate edge level with the reed (odd harmonics)","values":{"pressOn":false,"pickup":"es","offset":0,"plateGap":0.36}},
+    {"name":"Heavy solder tips","values":{"pressOn":false,"tipMass":3}},
+    {"name":"Limp foam: notes ring after release","values":{"pressOn":false,"padC":0.02,"padK":0.2}},
+    {"name":"Through a valve combo","values":{"pressOn":false,"amp":"combo","drive":0.55}},
+    {"name":"Stiff foam: a louder middle and treble","values":{"pressOn":false,"padK":3}},
+    {"name":"Light solder tips: longer reeds, more overtones","values":{"pressOn":false,"tipMass":0.45}}
   ]
 }

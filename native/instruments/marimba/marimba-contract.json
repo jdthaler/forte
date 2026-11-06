@@ -39,20 +39,20 @@
     {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [
-    {"name":"Marimba: medium yarn mallets","values":{}},
-    {"name":"Xylophone: hard plastic mallets","values":{"kind":"xylophone","hardness":12000,"mass":12,"strike":0.45}},
-    {"name":"Marimba rolled: a chorale","values":{"roll":0.55,"rollRate":10,"hardness":200}},
-    {"name":"Soft yarn: dark and round","values":{"hardness":80,"mass":20}},
-    {"name":"Marimba with xylophone mallets","values":{"hardness":12000,"mass":12}},
-    {"name":"Xylophone with yarn mallets","values":{"kind":"xylophone"}},
-    {"name":"Xylophone, tubes off centre: the twelfth sings","values":{"kind":"xylophone","hardness":12000,"mass":12,"offset":0.2,"strike":0.15}},
-    {"name":"No resonators: the bars alone","values":{"tubes":false}},
-    {"name":"Tubes pressed close: bar and tube trade energy","values":{"gap":6}},
-    {"name":"Tubes a semitone sharp","values":{"detune":100}},
-    {"name":"Plain bars, 1 : 2.76 : 5.40","values":{"depth":0}},
-    {"name":"Struck at the node: the fundamental drops out","values":{"strike":0.22,"hardness":1500}},
-    {"name":"Struck off the edge: the bars twist","values":{"across":0.85,"hardness":1500}},
-    {"name":"Dry wood: a dead, lossy bar","values":{"eta":0.025}},
-    {"name":"A ringing bar: low-loss wood","values":{"eta":0.0012}}
+    {"name":"Marimba: medium yarn mallets","values":{"glideOn":false,"liftOn":false}},
+    {"name":"Xylophone: hard plastic mallets","values":{"glideOn":false,"liftOn":false,"kind":"xylophone","hardness":12000,"mass":12,"strike":0.45}},
+    {"name":"Marimba rolled: a chorale","values":{"glideOn":false,"liftOn":false,"roll":0.55,"rollRate":10,"hardness":200}},
+    {"name":"Soft yarn: dark and round","values":{"glideOn":false,"liftOn":false,"hardness":80,"mass":20}},
+    {"name":"Marimba with xylophone mallets","values":{"glideOn":false,"liftOn":false,"hardness":12000,"mass":12}},
+    {"name":"Xylophone with yarn mallets","values":{"glideOn":false,"liftOn":false,"kind":"xylophone"}},
+    {"name":"Xylophone, tubes off centre: the twelfth sings","values":{"glideOn":false,"liftOn":false,"kind":"xylophone","hardness":12000,"mass":12,"offset":0.2,"strike":0.15}},
+    {"name":"No resonators: the bars alone","values":{"glideOn":false,"liftOn":false,"tubes":false}},
+    {"name":"Tubes pressed close: bar and tube trade energy","values":{"glideOn":false,"liftOn":false,"gap":6}},
+    {"name":"Tubes a semitone sharp","values":{"glideOn":false,"liftOn":false,"detune":100}},
+    {"name":"Plain bars, 1 : 2.76 : 5.40","values":{"glideOn":false,"liftOn":false,"depth":0}},
+    {"name":"Struck at the node: the fundamental drops out","values":{"glideOn":false,"liftOn":false,"strike":0.22,"hardness":1500}},
+    {"name":"Struck off the edge: the bars twist","values":{"glideOn":false,"liftOn":false,"across":0.85,"hardness":1500}},
+    {"name":"Dry wood: a dead, lossy bar","values":{"glideOn":false,"liftOn":false,"eta":0.025}},
+    {"name":"A ringing bar: low-loss wood","values":{"glideOn":false,"liftOn":false,"eta":0.0012}}
   ]
 }

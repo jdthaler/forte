@@ -141,38 +141,39 @@ inline const ParamInfo kParams[p::count] = {
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::shape, 1}};
-inline const PresetValue kPreset2[] = {{p::shape, 2}};
-inline const PresetValue kPreset3[] = {{p::shape, 3}, {p::aspect, 12}};
-inline const PresetValue kPreset4[] = {{p::shape, 3}, {p::aspect, 12}, {p::offset, 0.8}};
-inline const PresetValue kPreset5[] = {{p::shape, 3}, {p::aspect, 12}, {p::roll, 30}};
-inline const PresetValue kPreset6[] = {{p::shape, 3}, {p::aspect, 12}, {p::roll, 90}};
-inline const PresetValue kPreset7[] = {{p::shape, 3}, {p::aspect, 40}, {p::offset, 0.6}};
-inline const PresetValue kPreset8[] = {{p::shape, 3}, {p::aspect, 12}, {p::taper, 0.9}, {p::offset, 0.4}};
-inline const PresetValue kPreset9[] = {{p::material, 5}, {p::shape, 3}, {p::aspect, 12}, {p::offset, 0.6}, {p::gauge, 2.2}};
-inline const PresetValue kPreset10[] = {{p::material, 4}, {p::gauge, 2.4}};
-inline const PresetValue kPreset11[] = {{p::strikePos, 0.5}};
-inline const PresetValue kPreset12[] = {{p::gauge, 2.2}};
-inline const PresetValue kPreset13[] = {{p::material, 1}};
-inline const PresetValue kPreset14[] = {{p::material, 3}};
-inline const PresetValue kPreset15[] = {{p::unisons, 3}, {p::unaCorda, 1}};
+inline const PresetValue kPreset0[] = {{p::glideOn, 0}, {p::pressOn, 0}};
+inline const PresetValue kPreset1[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::shape, 1}};
+inline const PresetValue kPreset2[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::shape, 2}};
+inline const PresetValue kPreset3[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::shape, 3}, {p::aspect, 12}};
+inline const PresetValue kPreset4[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::shape, 3}, {p::aspect, 12}, {p::offset, 0.8}};
+inline const PresetValue kPreset5[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::shape, 3}, {p::aspect, 12}, {p::roll, 30}};
+inline const PresetValue kPreset6[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::shape, 3}, {p::aspect, 12}, {p::roll, 90}};
+inline const PresetValue kPreset7[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::shape, 3}, {p::aspect, 40}, {p::offset, 0.6}};
+inline const PresetValue kPreset8[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::shape, 3}, {p::aspect, 12}, {p::taper, 0.9}, {p::offset, 0.4}};
+inline const PresetValue kPreset9[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::material, 5}, {p::shape, 3}, {p::aspect, 12}, {p::offset, 0.6}, {p::gauge, 2.2}};
+inline const PresetValue kPreset10[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::material, 4}, {p::gauge, 2.4}};
+inline const PresetValue kPreset11[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::strikePos, 0.5}};
+inline const PresetValue kPreset12[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::gauge, 2.2}};
+inline const PresetValue kPreset13[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::material, 1}};
+inline const PresetValue kPreset14[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::material, 3}};
+inline const PresetValue kPreset15[] = {{p::glideOn, 0}, {p::pressOn, 0}, {p::unisons, 3}, {p::unaCorda, 1}};
 inline const Preset kPresets[] = {
-  {"Concert grand (steel wire)", nullptr, 0},
-  {"Square bar", kPreset1, 1},
-  {"Triangular bar", kPreset2, 1},
-  {"Ribbon, face-on", kPreset3, 2},
-  {"Ribbon, twisted by an off-centre strike", kPreset4, 3},
-  {"Ribbon, rolled 30° (both bending axes)", kPreset5, 3},
-  {"Ribbon, edge-on (hard axis)", kPreset6, 3},
-  {"Thin ribbon 40:1 (torsion ≈ transverse)", kPreset7, 3},
-  {"Triangular (tapered) ribbon", kPreset8, 4},
-  {"Carbon-fibre ribbon (soft in shear)", kPreset9, 5},
-  {"Nylon strings", kPreset10, 2},
-  {"Hammer at the middle (odd partials only)", kPreset11, 1},
-  {"Thick, stiff wire (very inharmonic)", kPreset12, 1},
-  {"Brass strings", kPreset13, 1},
-  {"Titanium strings", kPreset14, 1},
-  {"Three strings a note, una corda", kPreset15, 2},
+  {"Concert grand (steel wire)", kPreset0, 2},
+  {"Square bar", kPreset1, 3},
+  {"Triangular bar", kPreset2, 3},
+  {"Ribbon, face-on", kPreset3, 4},
+  {"Ribbon, twisted by an off-centre strike", kPreset4, 5},
+  {"Ribbon, rolled 30° (both bending axes)", kPreset5, 5},
+  {"Ribbon, edge-on (hard axis)", kPreset6, 5},
+  {"Thin ribbon 40:1 (torsion ≈ transverse)", kPreset7, 5},
+  {"Triangular (tapered) ribbon", kPreset8, 6},
+  {"Carbon-fibre ribbon (soft in shear)", kPreset9, 7},
+  {"Nylon strings", kPreset10, 4},
+  {"Hammer at the middle (odd partials only)", kPreset11, 3},
+  {"Thick, stiff wire (very inharmonic)", kPreset12, 3},
+  {"Brass strings", kPreset13, 3},
+  {"Titanium strings", kPreset14, 3},
+  {"Three strings a note, una corda", kPreset15, 4},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::soundboard, p::maxFreq, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{67, p::unaCorda}, {107, p::damper}, {109, p::sympathy}, {111, p::soundboard}, {113, p::hardness}, {114, p::strikePos}};

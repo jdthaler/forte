@@ -5,14 +5,14 @@
 import { GROUPS, DEFAULTS, PRESETS } from './vibraphone-params.js';
 import { KEY_LO, KEY_HI, KEY_MIN, KEY_MAX } from './bar.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
-import { EXPRESSION } from '../../shared/expression.js';
+import { EXPRESSION, offInPresets } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 export const INSTRUMENT = {
   id: 'vibraphone',
   groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
-  presets: PRESETS,
+  presets: offInPresets(PRESETS, ['glide', 'lift']), // its presets turn off what makes little sense on it (shared/expression.js)
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C8, 21–108
   lift: 'a fast lift lets the mallet rest on the bar a moment, damping it even with the pedal down', // what a slow or a fast release does (release velocity: a Seaboard's Lift)

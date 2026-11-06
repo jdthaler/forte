@@ -4,14 +4,14 @@
 
 import { GROUPS, DEFAULTS, PRESETS, RANGE } from './hurdygurdy-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
-import { EXPRESSION } from '../../shared/expression.js';
+import { EXPRESSION, offInPresets } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 export const INSTRUMENT = {
   id: 'hurdygurdy',
   groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
-  presets: PRESETS,
+  presets: offInPresets(PRESETS, ['lift']), // its presets turn off what makes little sense on it (shared/expression.js)
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: RANGE,                         // MIDI keys: G4–G6, 67–91 (the open chanterelles and 24 tangents)
   space: 'sustain',                     // Space and CC64: the coup de poignet, held (the engine's setSustain)

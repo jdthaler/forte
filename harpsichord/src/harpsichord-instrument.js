@@ -4,14 +4,14 @@
 
 import { GROUPS, DEFAULTS, PRESETS, KEY_LO, KEY_HI, KEY_MIN, KEY_MAX } from './harpsichord-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
-import { EXPRESSION } from '../../shared/expression.js';
+import { EXPRESSION, offInPresets } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 export const INSTRUMENT = {
   id: 'harpsichord',
   groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
-  presets: PRESETS,
+  presets: offInPresets(PRESETS, ['glide', 'press']), // its presets turn off what makes little sense on it (shared/expression.js)
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C8, 21–108
   lift: 'how fast the jack falls back: a slow lift lets the damper settle softly', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
