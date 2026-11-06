@@ -363,6 +363,180 @@ requests.
   program 15, and Pianoteq's free instruments include tubular bells (below).
   The Tubular Bells solves each capped tube as it is cut and plays its modes
   live; its sources are in `tubular/README.md`.
+* **The harpsichord.** N. H. Fletcher, "Analysis of the design and
+  performance of harpsichords", *Acustica* **37**(3), 139–147 (1977), and
+  N. H. Fletcher and T. D. Rossing (*The Physics of Musical Instruments*,
+  ch. 11, 1998) give the pluck, the scaling and the soundboard; F. Hubbard,
+  *Three Centuries of Harpsichord Making* (Harvard, 1965), and
+  E. L. Kottick, *A History of the Harpsichord* (Indiana, 2003), the
+  instruments. V. Välimäki, H. Penttinen, J. Knif, M. Laurson and C. Erkut,
+  "Sound synthesis of the harpsichord using a computationally efficient
+  physical model", *EURASIP J. Appl. Signal Process.* **2004**(7), 934–948,
+  [doi:10.1155/S111086570440211X](https://doi.org/10.1155/S111086570440211X),
+  modelled it with commuted waveguides, and H. Penttinen (*Proc. DAFx-06*)
+  added its velocity dependence. The Harpsichord bends a quill until it
+  slips off the string; its sources are in `harpsichord/README.md`.
+* **The free-reed organ.** A. O. St Hilaire, T. A. Wilson and
+  G. S. Beavers, "Aerodynamic excitation of the harmonium reed",
+  *J. Fluid Mech.* **49**(4), 803–816 (1971),
+  [doi:10.1017/S0022112071002374](https://doi.org/10.1017/S0022112071002374),
+  found what drives the reed; A. Z. Tarnopolsky, N. H. Fletcher and
+  J. C. S. Lai, "Oscillating reed valves — an experimental study",
+  *J. Acoust. Soc. Am.* **108**(1), 400–406 (2000),
+  [doi:10.1121/1.429473](https://doi.org/10.1121/1.429473), and D. Ricot,
+  R. Caussé and N. Misdariis, "Aerodynamic excitation and sound production
+  of blown-closed free reeds without acoustic coupling: the example of the
+  accordion reed", *J. Acoust. Soc. Am.* **117**(4), 2279–2290 (2005),
+  [doi:10.1121/1.1852546](https://doi.org/10.1121/1.1852546), measured it.
+  The Free-Reed Organ's reeds choke the airflow that drives them; its
+  sources are in `harmonium/README.md`.
+* **The vibraphone.** The undercut bar is F. Orduña-Bustamante,
+  "Nonuniform beams with harmonically related overtones for use in
+  percussion instruments", *J. Acoust. Soc. Am.* **90**(6), 2935–2941
+  (1991), [doi:10.1121/1.401768](https://doi.org/10.1121/1.401768), and
+  J. Petrolito and K. A. Legge, "Optimal undercuts for the tuning of
+  percussive beams", *J. Acoust. Soc. Am.* **102**(4), 2432–2437 (1997),
+  [doi:10.1121/1.419625](https://doi.org/10.1121/1.419625); the bar and
+  its tube together, F. Soares, V. Debut and J. Antunes, "The
+  bar-resonator interaction in mallet percussion instruments", *J. Sound
+  Vib.* **548**, 117528 (2023),
+  [doi:10.1016/j.jsv.2022.117528](https://doi.org/10.1016/j.jsv.2022.117528),
+  after A. Chaigne and V. Doutaut's xylophone (the marimba's, above). The patents of
+  J. C. Deagan, H. E. Winterhoff and H. A. Bower (1919–1933) record how the
+  instrument and its motor were made. Its sources are in
+  `vibraphone/README.md`.
+* **The carillon.** Lord Rayleigh, "On bells", *Phil. Mag.* **29**(176),
+  1–17 (1890),
+  [doi:10.1080/14786449008619901](https://doi.org/10.1080/14786449008619901);
+  R. Perrin, T. Charnley and J. dePont, "Normal modes of the modern English
+  church bell", *J. Sound Vib.* **90**(1), 29–49 (1983),
+  [doi:10.1016/0022-460X(83)90401-7](https://doi.org/10.1016/0022-460X%2883%2990401-7);
+  A. Lehr, "Partial groups in the bell sound", *J. Acoust. Soc. Am.*
+  **79**(6), 2000–2011 (1986),
+  [doi:10.1121/1.393208](https://doi.org/10.1121/1.393208); and the
+  major-third bell of A. Schoofs, F. van Asperen, P. Maas and A. Lehr,
+  *Music Perception* **4**(3), 245–254 (1987),
+  [doi:10.2307/40285368](https://doi.org/10.2307/40285368). The Carillon
+  tunes its bells partial by partial; its sources are in
+  `carillon/README.md`.
+* **The celesta.** J. Holland, J. Blades and A. B. Acker, "Celesta",
+  *Grove Music Online* (2018),
+  [doi:10.1093/omo/9781561592630.013.3000000242](https://doi.org/10.1093/omo/9781561592630.013.3000000242),
+  is the instrument; S. P. Timoshenko (1921) and G. R. Cowper (1966) the
+  bar with shear; A. Stulov's felt (§2) its hammers. The Celesta couples
+  each bar to its tuned box through the air between them; its sources are
+  in `celesta/README.md`.
+* **The steel pan.** T. D. Rossing, U. J. Hansen and D. S. Hampton,
+  "Vibrational mode shapes in Caribbean steelpans. I. Tenor and double
+  second", *J. Acoust. Soc. Am.* **108**(2), 803–812 (2000),
+  [doi:10.1121/1.429613](https://doi.org/10.1121/1.429613); A. Achong,
+  "The steelpan as a system of non-linear mode-localized oscillators, I",
+  *J. Sound Vib.* **197**(4), 471–487 (1996),
+  [doi:10.1006/jsvi.1996.0543](https://doi.org/10.1006/jsvi.1996.0543);
+  and M. Monteil, O. Thomas and C. Touzé, "Identification of mode couplings
+  in nonlinear vibrations of the steelpan", *Applied Acoustics* **89**,
+  1–15 (2015),
+  [doi:10.1016/j.apacoust.2014.08.008](https://doi.org/10.1016/j.apacoust.2014.08.008),
+  who measured the couplings that pump the octave out of the
+  fundamental. Its sources are in `steelpan/README.md`.
+* **The electric grand.** S. Katayama and K. Murakami,
+  [US 4,189,969](https://patents.google.com/patent/US4189969A/en) (Nippon
+  Gakki, 1980), the piezoelectric pickup under each string of Yamaha's
+  CP-70 and CP-80; B. Bank and L. Sujbert, "Generation of longitudinal
+  vibrations in piano strings: from physics to sound synthesis",
+  *J. Acoust. Soc. Am.* **117**, 2268–2278 (2005),
+  [doi:10.1121/1.1868212](https://doi.org/10.1121/1.1868212), its phantom
+  partials. Its strings and hammers follow the piano literature above;
+  its sources are in `grand/README.md`.
+* **The tine piano.** H. B. Rhodes's patents
+  ([US 2,972,922](https://patents.google.com/patent/US2972922A/en), 1961,
+  and with C. L. Fender
+  [US 3,644,656](https://patents.google.com/patent/US3644656A/en), 1972);
+  N. G. Horton and T. R. Moore, "Modeling the magnetic pickup of an
+  electric guitar", *Am. J. Phys.* **77**(2), 144–150 (2009),
+  [doi:10.1119/1.2990663](https://doi.org/10.1119/1.2990663), for the
+  pickup; F. Pfeifle and M. Münster, "Tone production of the Wurlitzer and
+  Rhodes e-pianos" (Springer, 2017),
+  [doi:10.1007/978-3-319-47292-8_3](https://doi.org/10.1007/978-3-319-47292-8_3),
+  and A. Falaize and T. Hélie's port-Hamiltonian Rhodes, *J. Sound Vib.*
+  **390**, 289–309 (2017),
+  [doi:10.1016/j.jsv.2016.11.008](https://doi.org/10.1016/j.jsv.2016.11.008),
+  for earlier models. Its sources are in `tines/README.md`.
+* **The tangent clavier.** E. Zacharias,
+  [US 3,447,410](https://patents.google.com/patent/US3447410A/en) (Hohner,
+  1969), the tangent that pins the string to an anvil, and L. Gabrielli,
+  V. Välimäki and S. Bilbao, "Real-time emulation of the Clavinet",
+  *Proc. ICMC 2011*, 249–252, an earlier waveguide model. Its pickups
+  follow Horton and Moore (under the tine piano, above); its sources are
+  in `clavier/README.md`.
+* **The sticky-pad piano.** R. Bierl and E. Zacharias,
+  [US 3,423,514](https://patents.google.com/patent/US3423514A/en) (Hohner,
+  1969), the adhesive pad that drags a reed until it lets go;
+  K. Kendall, "The adhesion and surface energy of elastic solids",
+  *J. Phys. D* **4**(8), 1186–1195 (1971),
+  [doi:10.1088/0022-3727/4/8/320](https://doi.org/10.1088/0022-3727/4/8/320),
+  and D. Maugis and M. Barquins, "Fracture mechanics and the adherence of
+  viscoelastic bodies", *J. Phys. D* **11**(14), 1989–2023 (1978),
+  [doi:10.1088/0022-3727/11/14/011](https://doi.org/10.1088/0022-3727/11/14/011),
+  how the pad lets go. Its sources are in `pianet/README.md`.
+* **The magnetic resonator piano.** A. McPherson, "The Magnetic Resonator
+  Piano: electronic augmentation of an acoustic grand piano", *Journal of
+  New Music Research* **39**(3), 189–202 (2010),
+  [doi:10.1080/09298211003695587](https://doi.org/10.1080/09298211003695587),
+  and "Techniques and circuits for electromagnetic instrument actuation",
+  *Proc. NIME 2012*, 131–136, are the instrument the Magnetic Resonator
+  Piano models: its coils, its pickup, its phase-locked loop. Before it,
+  G. S. Heet's EBow (US 4,075,921, 1978) and E. Berdahl, S. Backer and
+  J. O. Smith's electromagnetically prepared piano (*Proc. ICMC 2005*).
+  Its sources are in `resonator/README.md`.
+* **The singing arc.** H. Th. Simon, "Akustische Erscheinungen am
+  electrischen Flammenbogen", *Ann. Phys.* **300**(2), 233–239 (1898),
+  [doi:10.1002/andp.18983000204](https://doi.org/10.1002/andp.18983000204),
+  the talking arc, and W. Duddell, "On rapid variations in the current
+  through the direct-current arc", *J. IEE* **30**(148), 232–267 (1901),
+  [doi:10.1049/jiee-1.1901.0007](https://doi.org/10.1049/jiee-1.1901.0007),
+  the singing arc, which Duddell played from a keyboard. Its sources are in
+  `arc/README.md`.
+* **The bubble organ.** M. Minnaert, "On musical air-bubbles and the
+  sounds of running water", *Phil. Mag.* **16**(104), 235–248 (1933),
+  [doi:10.1080/14786443309462277](https://doi.org/10.1080/14786443309462277);
+  T. G. Leighton, *The Acoustic Bubble* (Academic Press, 1994), ch. 3,
+  [doi:10.1016/B978-0-12-441920-9.50008-0](https://doi.org/10.1016/B978-0-12-441920-9.50008-0);
+  and K. van den Doel, "Physically based models for liquid sounds",
+  *ACM Trans. Appl. Percept.* **2**(4), 534–546 (2005),
+  [doi:10.1145/1101530.1101554](https://doi.org/10.1145/1101530.1101554),
+  who synthesised streams and rain from Minnaert bubbles. Its sources are
+  in `bubbles/README.md`.
+* **The spring keyboard.** L. Hammond's spring reverberator (US 2,230,836,
+  1941); J. Parker and S. Bilbao, "Spring reverberation: a physical
+  perspective", *Proc. DAFx-09*, and S. Bilbao and J. Parker, "A virtual
+  model of spring reverberation", *IEEE Trans. Audio Speech Lang. Process.*
+  **18**(4), 799–808 (2010),
+  [doi:10.1109/TASL.2009.2031506](https://doi.org/10.1109/TASL.2009.2031506),
+  the helix's dispersion and its chirps. The Spring Keyboard strikes the
+  springs instead of driving them; its sources are in `springs/README.md`.
+* **The wind harp.** V. Strouhal, "Ueber eine besondere Art der
+  Tonerregung", *Ann. Phys.* **241**(10), 216–251 (1878),
+  [doi:10.1002/andp.18782411005](https://doi.org/10.1002/andp.18782411005),
+  and Lord Rayleigh, "Aeolian tones", *Phil. Mag.* **29**(172), 433–444
+  (1915),
+  [doi:10.1080/14786440408635325](https://doi.org/10.1080/14786440408635325),
+  the shed vortices; M. L. Facchinetti, E. de Langre and F. Biolley,
+  "Coupling of structure and wake oscillators in vortex-induced
+  vibrations", *J. Fluids Struct.* **19**(2), 123–140 (2004),
+  [doi:10.1016/j.jfluidstructs.2003.12.004](https://doi.org/10.1016/j.jfluidstructs.2003.12.004),
+  the wake oscillator that locks onto a string's harmonic. Its sources are
+  in `windharp/README.md`.
+* **The quantum keyboard.** I. Sh. Averbukh and N. F. Perelman,
+  "Fractional revivals: universality in the long-term evolution of quantum
+  wave packets", *Phys. Lett. A* **139**(9), 449–453 (1989),
+  [doi:10.1016/0375-9601(89)90943-2](https://doi.org/10.1016/0375-9601%2889%2990943-2),
+  and J. A. Yeazell and C. R. Stroud, "Observation of fractional revivals
+  in the evolution of a Rydberg atomic wave packet", *Phys. Rev. A*
+  **43**(9), 5153–5156 (1991),
+  [doi:10.1103/PhysRevA.43.5153](https://doi.org/10.1103/PhysRevA.43.5153):
+  the collapse, the fractional revivals and the full revival each note
+  plays; its sources are in `quantum/README.md`.
 
 ## 2. Techniques Forte uses, and where they come from
 
