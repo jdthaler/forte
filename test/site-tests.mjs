@@ -459,6 +459,10 @@ test('the project-wide prior art exists and the site links to it', () => {
   assert.ok(has('docs/PRIOR_ART.md') && has('credits/index.html'));
   assert.ok(read('index.html').includes('href="credits/"'), 'landing page links to credits/');
 });
+test('the prior art credits every instrument, by its name or its README', () => {
+  const text = read('docs/PRIOR_ART.md').toLowerCase();
+  for (const i of ready) assert.ok(text.includes(i.name.toLowerCase()) || text.includes(`${i.id}/readme.md`), `docs/PRIOR_ART.md says nothing of ${i.name}`);
+});
 
 console.log('pages');
 test('instrument pages keep their presets in the controls, for the header to take', () => {
