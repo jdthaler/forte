@@ -218,7 +218,7 @@ test('the mod wheel\'s DM rebuilds a sounding pulsar\'s table, crossfaded withou
   for (let i = 0.2 * FS; i < 0.4 * FS; i++) typ = Math.max(typ, Math.abs(L[i] - L[i - 1]));
   assert.ok(jump < 1.5 * typ, `largest step ${jump} vs ${typ} before`);
 });
-test('MPE: a slide is that pulsar\'s own DM, and leaves the others alone', () => {
+test('MPE: a slide is that pulsar\'s own DM, and leaves the others alone; a bend, its binary orbit\'s Doppler shift, reaches 10 ¢', () => {
   const p = P({ dedisp: 'none', dm: 0.5 }), a = 60, b = 67, fa = tunedFreq(p, a), fb = tunedFreq(p, b);
   const [L] = render(p, 1, [[0, (e) => { e.handle({ type: 'slide', key: a, value: 5 }); e.noteOn(a, 0.8); e.noteOn(b, 0.8); }]]);
   const [L0] = render(p, 1, [[0, (e) => { e.noteOn(a, 0.8); e.noteOn(b, 0.8); }]]);
@@ -226,7 +226,7 @@ test('MPE: a slide is that pulsar\'s own DM, and leaves the others alone', () =>
   near(tone(L, 3 * fb, 0.3 * FS, FS) / tone(L0, 3 * fb, 0.3 * FS, FS), 1, 0.02, 'the other untouched');
   const [B] = render(p, 0.5, [[0, (e) => { e.handle({ type: 'noteBend', key: a, value: 1.5 }); e.noteOn(a, 0.8); }]]);
   const got = peak(B, fa, 0.2 * FS, 0.5 * FS);
-  assert.ok(Math.abs(cents(got, fa)) < 1, 'a spin does not bend');
+  assert.ok(Math.abs(cents(got, fa) - 10) < 1, `a spin does not bend; its orbit's Doppler shift goes as far as 10 ¢: ${cents(got, fa).toFixed(2)} ¢`);
 });
 test('level: a forte note peaks under 0.6, a ten-note chord stays finite, and every preset plays', () => {
   const [L, R] = note(45, P(), 1, 1);

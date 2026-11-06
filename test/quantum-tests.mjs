@@ -24,6 +24,7 @@ function test(name, fn) {
 const P = (o = {}) => ({ ...DEFAULTS, ...o });
 const cents = (a, b) => 1200 * Math.log2(a / b);
 const rel = (a, b) => Math.abs(a / b - 1);
+const same = (a, b) => a.every((v, i) => v === b[i]);
 
 // Render through the engine in 128-sample blocks (Float64 buffers), left channel; events [t, 'on', key, vel] |
 // [t, 'off', key] | [t, 'params', P] | [t, 'msg', m].
@@ -593,9 +594,26 @@ test('seeded random combinations of knob extremes at 44.1 and 48 kHz: no NaN, bo
   console.log(`        loudest of 30 (seven notes struck twice): ${worst.pk.toFixed(2)}`);
 });
 console.log('MPE');
+// A note's bend squeezes its well: every level × the ratio, so the launch's pitch with them
+test('a note struck bent (its well squeezed) launches that much higher, within 3 ¢, up to an octave; one bent down sounds as it was, and a bend of 1 changes nothing', () => {
+  for (const k of [48, 69]) for (const st of [3, 12]) {
+    const r = 2 ** (st / 12), pk = makePacket(k, P()), f0 = keyFreq(k) * r;
+    const { L } = render(P(), [[0, 'msg', { type: 'noteBend', key: k, value: r }], [0, 'on', k, 1]], 0.12);
+    const c = cents(launchPitch(L, f0, 2.5 / f0, 2.5 / f0 + 0.3 * pk.tColl / r), f0);
+    assert.ok(Math.abs(c) < 3, `key ${k} bent ${st}: ${c.toFixed(2)} ¢`);
+  }
+  const plain = note(P(), 60, 0.3).L;
+  assert.ok(same(render(P(), [[0, 'msg', { type: 'noteBend', key: 60, value: 0.5 }], [0, 'on', 60, 1]], 0.3).L, plain), 'bent down');
+  assert.ok(same(render(P(), [[0, 'msg', { type: 'noteBend', key: 60, value: 1 }], [0, 'on', 60, 1], [0.1, 'msg', { type: 'noteBend', key: 60, value: 1 }]], 0.3).L, plain), 'a bend of 1');
+});
+test('a bend while a packet rings glides its lines there and back: back at 1 its phases have moved on, its tune is the knob\'s again', () => {
+  const k = 60, f0 = keyFreq(k), pk = makePacket(k, P());
+  const { L } = render(P(), [[0, 'on', k, 1], [0.05, 'msg', { type: 'noteBend', key: k, value: 2 ** (5 / 12) }], [0.1, 'msg', { type: 'noteBend', key: k, value: 1 }]], 0.4);
+  for (const x of L) assert.ok(Number.isFinite(x));
+  assert.ok(!same(L, note(P(), k, 0.4).L), 'it moved');
+});
 // A note's slide is the noise on its own well: its own dephasing rate (the wells don't bend)
 const slide = (t, key, value) => [t, 'msg', { type: 'slide', key, value }];
-const same = (a, b) => a.every((v, i) => v === b[i]);
 test('a packet with its own dephasing (a slide before the note) sounds as the knob there, sample for sample; a packet beside it keeps the knob\'s', () => {
   const base = P({ bpm: 120, beats: 2 }), x = render(base, [slide(0, 57, 2.5), [0, 'on', 57, 1]], 1.1), k = note({ ...base, dephase: 2.5 }, 57, 1.1);
   assert.ok(same(x.L, k.L) && same(x.R, k.R), 'as the knob at Γ_φ = 2.5 s⁻¹');

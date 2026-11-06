@@ -9,6 +9,7 @@ namespace forte::tess {
 
 constexpr double OUT = 0.2;      // the output at full velocity for a dip as deep as the full scale
 constexpr double FADE_IN = 0.005, FADE_OUT = 0.01; // s: for a year with no quiet stretch between dips
+constexpr double BEND_T = 0.02; // s: a note's own bend glides this fast
 
 TessEngine::TessEngine(double fs) : Engine(fs), dcL(5, fs), dcR(5, fs) {
   spectrum.resize(TABLE);
@@ -112,6 +113,7 @@ void TessEngine::noteOn(int key, double velocity) {
   Voice &v = *slot;
   v.active = true; v.held = true; v.ending = false; v.fadeOut = false;
   v.key = key; v.vel = velocity; v.age = clock++; v.cur = 0;
+  v.bent = expr.bendOf(key);
   std::tie(v.gl, v.gr) = keyPan(key);
   build(v, v.table[0]);
   // start just before a transit begins, where the light is steady, so the first dip is the attack
@@ -137,6 +139,9 @@ void TessEngine::process(float *L, float *R, int n) {
   for (Voice &v : voices) {
     if (!v.active) continue;
     const float *t = v.table[v.cur], *u = &v == fading ? v.table[1 - v.cur] : nullptr;
+    // a second planet's tug: the transits come early or late (transit-timing variations)
+    v.bent = glideTo(v.bent, expr.bendOf(v.key), n / fs, BEND_T);
+    const double inc = v.inc * v.bent;
     for (int i = 0; i < n; i++) {
       const double x = v.phase * TABLE;
       const int j = (int)x;
@@ -151,7 +156,7 @@ void TessEngine::process(float *L, float *R, int n) {
       const double y = -v.gain * v.env * (s + (v.sigma > 0 ? v.sigma * rng.gauss() : 0)); // the light falls in a transit
       L[i] = (float)(L[i] + v.gl * y);
       R[i] = (float)(R[i] + v.gr * y);
-      v.phase += v.inc;
+      v.phase += inc;
       if (v.phase >= 1) v.phase -= 1;
       // a let-go planet's note ends when the light is steady again, after the dip it was in
       if (v.ending && !v.fadeOut && v.quietFrom >= 0 && v.phase >= v.quietFrom && v.phase <= v.quietTo) { v.active = false; break; }

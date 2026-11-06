@@ -168,9 +168,9 @@ function shift(a, b, guess) {
 }
 // Instruments whose spectrum does not stretch with the pitch (test/tuning-tests.mjs OWN), or whose
 // bend does not (the NMR keyboard's moves every line by the same hertz; the resonator piano's moves
-// its drive to another harmonic): their own suites measure
-// a note's bend
-const OWN = ['bubbles', 'stars', 'quantum', 'blackhole', 'nmr', 'resonator'];
+// its drive to another harmonic; a whistler sweeps too broad a band to find a shift in): their own
+// suites measure a note's bend
+const OWN = ['bubbles', 'quantum', 'blackhole', 'nmr', 'resonator', 'whistlers', 'ring'];
 // Instruments whose physics pulls a bent note off its ratio, as it pulls the wheel's (their own
 // suites check a note's bend against the wheel's): cents allowed
 const LOOSE = { windharp: 8, arc: 12, cellulophone: 10, telharmonium: 10 }; // the wake pulls a string toward its shedding; the arc's lag pulls its coil;

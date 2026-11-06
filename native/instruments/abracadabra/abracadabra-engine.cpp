@@ -15,6 +15,7 @@ constexpr double TAU = 2 * std::numbers::pi;
 constexpr double OUT = 0.1;          // the louder of the axion and the channel's noise, rms, at full charge
 constexpr double REL_T = 0.005;      // s: a discharged key's channel closes over this
 constexpr double STEAL_T = 0.005;    // s: a stolen voice fades with this time constant
+constexpr double BEND_T = 0.02;      // s: a note's own bend glides this fast
 constexpr double GAIN_T = 0.02;      // s: the readout's gain follows the knobs with this time constant
 constexpr double SILENT = 1e-4;      // a voice faded to this (−80 dB) is over
 constexpr double FRAME_T = 1.0 / 30; // s: how often the page hears every voice's state
@@ -141,7 +142,7 @@ void AbracadabraEngine::noteOn(int key, double velocity) {
   v = Voice{};
   v.active = true; v.held = true; v.key = key; v.vel = std::clamp(velocity, 0.0, 1.0); v.order = order; v.liftK = 1;
   v.halo = pick(MAX_WAVES, 32, 16); v.stream = pick(STREAM_WAVES, 8, 4); // Quality: fewer waves in the field
-  v.rel = 1; v.relT = REL_T;
+  v.rel = 1; v.relT = REL_T; v.bent = expr.bendOf(key);
   std::tie(v.gl, v.gr) = keyPan(key);
   // the field, carried on from when the key was last heard to now, and its first control step
   const FieldShape s = shapeOf(v);
@@ -197,7 +198,9 @@ void AbracadabraEngine::play(Voice &v, float *L, float *R, int n) {
   // one-sided density noise² per Hz
   const double w0 = TAU * std::min(f, 0.45 * fs) / fs, al = fdlibm::sin(w0) / (2 * CHANNEL_Q), a0 = 1 + al;
   const double b0 = al / a0, na1 = -2 * fdlibm::cos(w0) / a0, na2 = (1 - al) / a0, sigma = noise * std::sqrt(fs / 2);
-  const double w = TAU * f / fs, cw = fdlibm::cos(w), sw = fdlibm::sin(w);
+  // the carrier, Doppler-shifted by the Earth's speed through the halo (a note's own bend)
+  v.bent = glideTo(v.bent, expr.bendOf(v.key), n / fs, BEND_T);
+  const double w = TAU * f * v.bent / fs, cw = fdlibm::cos(w), sw = fdlibm::sin(w);
   const double relK = 1 - fdlibm::exp(-1 / (v.relT * fs));
   const double amp = std::sqrt(2.0) * sig;
   const bool focused = v.key == focus;

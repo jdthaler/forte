@@ -17,7 +17,8 @@ export const INSTRUMENT = {
   range: [KEY_LO, KEY_HI],              // MIDI keys: A0–C8
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'spin',                     // CC1: the star's rotation
-  mpe: { slide: true },                 // MPE: a note's slide spins its own star (a star can't bend)
+  mpe: { bend: 0.1, slide: true },      // MPE: a note's slide spins its own star; its bend is its orbit in a binary (a Doppler shift)
+  glide: 'its orbit in a binary, toward us or away: a Doppler shift of a few cents', // what a note's own bend does
   aftertouch: 'drives the star harder, up to twice', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'a slow lift lets the convection\'s driving die away rather than stop at once', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['flare', 'incl', 'coreRatio', 'driving', 'spin'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

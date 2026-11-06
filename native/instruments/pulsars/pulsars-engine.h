@@ -31,6 +31,7 @@ class PulsarsEngine : public Engine {
   void noteOn(int key, double velocity) override;
   void noteOff(int key, double velocity) override;
   void slide(double value, int key) override;
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // its binary orbit: a Doppler shift
   void allNotesOff() override;
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
@@ -44,7 +45,7 @@ class PulsarsEngine : public Engine {
   struct Voice {
     int key = 0, slot = -1;
     Setup setup;
-    double vel = 0, inc = 0, phase = 0;
+    double vel = 0, inc = 0, phase = 0, bent = 1; // bent: its orbit's Doppler factor (a note's own bend)
     double aPrev = 1, aNext = 1;            // the pulses' brightness (jitter), from one to the next
     double t = 0, tOff = -1;                // s since it switched on, and when it switched off
     double envL = 0, envR = 0, kL = 0, kR = 0; // each sub-band's level, and its step toward the target
@@ -60,7 +61,7 @@ class PulsarsEngine : public Engine {
   int freeSlot();
   std::array<double, p::count> P{};
   bool hasParams = false;
-  NoteExpression expr{0};
+  NoteExpression expr{0.1}; // each key's DM (slide) and its Doppler factor (bend: ±10 ¢, an orbit at a few thousand km/s)
   Rng rng;
   std::array<std::optional<Builder>, 3> builders; // High, Medium and Low's table sizes (made when first needed)
   std::array<std::unique_ptr<float[]>, kSlots> pool; // each slot's 2 tables × 2 sub-bands × (NTAB + 1), made when first used

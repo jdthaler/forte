@@ -30,6 +30,7 @@ class AbracadabraEngine : public Engine {
   void setSustain(bool on) override;
   void allNotesOff() override;
   void slide(double value, int key) override { expr.setSlide(value, key); }
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the Earth's speed through the halo: a Doppler shift
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -56,6 +57,7 @@ class AbracadabraEngine : public Engine {
     double gl = 0, gr = 0;
     double z0r = 0, z0i = 0, z1r = 0, z1i = 0; int pos = 0, b = 32; // the field at the step's ends
     double cr = 1, ci = 0;            // the carrier, e^{iωt}
+    double bent = 1;                  // its Doppler factor (a note's own bend)
     double nx1 = 0, nx2 = 0, ny1 = 0, ny2 = 0; // the channel's band-pass
   };
   double faOf(int key) const;   // the key's axion frequency (Hz): SCALE × its tuned note
@@ -70,7 +72,7 @@ class AbracadabraEngine : public Engine {
   double now = 0, toFrame = 0;
   uint32_t order = 0;
   Rng rng;
-  NoteExpression expr{0};
+  NoteExpression expr{0.1}; // each key's slide (its halo's heat) and its bend (a Doppler shift, ±10 ¢)
   std::array<KeyField, KEYS> fields;
   std::array<Voice, KEYS> voices;
   // the baseband of the last key struck, for the page's search view

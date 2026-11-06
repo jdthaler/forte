@@ -183,6 +183,16 @@ test('every key starts on its note: the sound\'s first moments (its rise and as 
     assert.ok(Math.abs(cents(f, f0)) < 10, `key ${k}: ${f.toFixed(2)} Hz vs ${f0.toFixed(2)}`);
   }
 });
+test('a note struck bent (MPE: a field line farther in or out) centres on its nose bent as far, ±2 semitones within 10 cents; a bend of 1 changes nothing', () => {
+  for (const k of [48, 69, 96]) for (const st of [2, -2]) {
+    const p = P(), tr = M.track(M.lineFor(keyF(k, p), p), p), r = 2 ** (st / 12), f0 = keyF(k, p) * r;
+    const n = 4.5 * tr.ta * FS, [x] = render(p, n / FS + 0.05, [[0, (e) => e.handle({ type: 'noteBend', key: k, value: r })], [0, (e) => e.noteOn(k, 0.8)]]);
+    const f = centroid(x, f0, 0, n);
+    assert.ok(Math.abs(cents(f, f0)) < 10, `key ${k} bent ${st}: ${f.toFixed(2)} Hz vs ${f0.toFixed(2)}`);
+  }
+  const [a] = note(60, P(), 0.5), [b] = render(P(), 0.5, [[0, (e) => e.handle({ type: 'noteBend', key: 60, value: 1 })], [0, (e) => e.noteOn(60, 0.8)]]);
+  assert.ok(a.every((v, i) => v === b[i]));
+});
 test('then it falls as the model says: the frequency arriving at each moment is the one whose delay is that moment', () => {
   for (const k of [57, 81, 100]) {
     const p = P(), L = M.lineFor(keyF(k), p), ln = M.line(L, p), tr = M.track(L, p), start = ln.nose.tau - 1.5 * tr.ta;

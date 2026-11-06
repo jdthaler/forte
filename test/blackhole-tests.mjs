@@ -422,7 +422,7 @@ test('the keyboard\'s tuning moves each black hole\'s (2,2,0) mode (the engine\'
 
 console.log('MPE');
 // A note's slide is its own black hole's spin, set at the merger (a ringdown's spin is fixed; a hole
-// doesn't bend). Events [t, fn(engine)] in 128-sample blocks; L and R.
+// Doppler-shifts as it recoils, below). Events [t, fn(engine)] in 128-sample blocks; L and R.
 function ring(params, events, sec, fs = 48000) {
   const e = new RingdownEngine(fs); e.setParams(params);
   const n = Math.round(sec * fs), L = new Float32Array(n), R = new Float32Array(n), bL = new Float32Array(128), bR = new Float32Array(128);
@@ -458,6 +458,18 @@ test('a slide while it rings changes nothing (the merger set its spin): the next
 test('slide(NaN) leaves the sound bit for bit as it was', () => {
   const p = { ...DEFAULTS, inspiral: true }, x = ring(p, [[0, slide(57, NaN)], [0, strike(57)], [0.2, slide(57, NaN)], [0.3, (e) => e.handle({ type: 'noteBend', key: 57, value: 1 })], [0.4, strike(57)]], 1);
   assert.ok(same(x, ring(p, [[0, strike(57)], [0.4, strike(57)]], 1)));
+});
+// A note's bend is the remnant's recoil, toward us or away: the whole wave Doppler-shifted, its
+// pitch and its time together, as the same note heard at a sample rate that many times slower
+test('a note struck bent (the remnant\'s recoil) is the same note Doppler-shifted, pitch and time together: as played at fs ÷ the ratio, sample for sample, with and without the inspiral; a bend of 1 changes nothing', () => {
+  const bend = (key, value) => (e) => e.handle({ type: 'noteBend', key, value });
+  for (const inspiral of [false, true]) for (const r of [2 ** (0.3 / 12), 2 ** (-0.3 / 12)]) {
+    const p = { ...DEFAULTS, inspiral }, [a] = ring(p, [[0, bend(57, r)], [0, strike(57)]], 0.5), [b] = ring(p, [[0, strike(57)]], 0.5, 48000 / r);
+    let err = 0, pk = 0;
+    for (let i = 0; i < Math.min(a.length, b.length); i++) { err = Math.max(err, Math.abs(a[i] - b[i])); pk = Math.max(pk, Math.abs(b[i])); }
+    assert.ok(pk > 0.01 && err < 1e-4 * pk, `inspiral ${inspiral}, ratio ${r.toFixed(4)}: ${err.toExponential(2)} off (peak ${pk.toFixed(3)})`);
+  }
+  assert.ok(same(ring(DEFAULTS, [[0, bend(57, 1)], [0, strike(57)], [0.2, bend(57, 1)]], 0.5), ring(DEFAULTS, [[0, strike(57)]], 0.5)));
 });
 test('slide sweeps across the whole range, sent every block while chords are struck, stay finite and no louder than the same chords at the fastest spin, at 44.1, 48 and 96 kHz', () => {
   for (const fs of [44100, 48000, 96000]) for (const inspiral of [false, true]) {

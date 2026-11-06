@@ -19,7 +19,8 @@ export const INSTRUMENT = {
   range: [21, 108],                     // MIDI keys: A0–C8
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'dephase',                  // CC1: dephasing, from its default up to its maximum
-  mpe: { slide: true },                 // MPE: a note's slide is the noise on its own well (no bend)
+  mpe: { bend: 12, way: 'up', slide: true }, // MPE: a note's slide is the noise on its own well; its bend squeezes the well
+  glide: 'squeezing the well: its levels, and the pitch, rise', // what a note's own bend does
   lift: 'the measurement that ends the note: a fast lift collapses the state at once, a slow one lets it decohere slowly', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['nbar', 'sigma', 'T1', 'ramseyDetune', 'dephase'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/quantum), built as WebAssembly. Each note's

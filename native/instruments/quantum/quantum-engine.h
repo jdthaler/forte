@@ -50,6 +50,7 @@ class QuantumEngine : public Engine {
   void allNotesOff() override;
   // a note's slide: its own well's dephasing rate (the noise on that well alone), gliding
   void slide(double value, int key) override { expr.setSlide(value, key); }
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the well squeezed: every level, so every line, higher
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // the same in double precision (the WebAssembly's hook for the tests, which render into
@@ -73,8 +74,12 @@ class QuantumEngine : public Engine {
     std::array<double, MAX_W> w{};
     std::array<int, MAX_STATES> gk{}, ga{}, gb{}, gw{};
     std::array<double, MAX_STATES> gD{}, gR{};
+    std::array<double, MAX_STATES> gA{}; // 1, or 0 for a group a bend takes past the band's top
     bool useIm = false;
     double dc = 0, rampK = 0, env = 0, gl = 0, gr = 0, r1 = 1;
+    // the well squeezed (a note's own bend): every level × bent, and the phase that has gained over
+    // the sample count, Σ(bent − 1) (exactly 0 for a voice never bent)
+    double bent = 1, warp = 0;
     double deph = 0; bool slid = false; // the dephasing rate it decoheres at (P's, or its slide's), and whether a slide moves it
     int64_t count = 0, rampEnd = 0, dcEnd = 0;
     bool released = false, quench = false, stolen = false, dead = false;
@@ -97,6 +102,7 @@ class QuantumEngine : public Engine {
     void trim(double tau);
     void rates(const QuantumEngine &eng);
     void dephase(const QuantumEngine &eng, int n);
+    void bend(const QuantumEngine &eng, int n); // the well squeezed (a note's own bend): the phasors' turns at bent
     void sync();
     template <class T> void render(T *L, T *R, int n);
     template <class T> void renderCoherent(T *L, T *R, int n);
@@ -117,7 +123,7 @@ class QuantumEngine : public Engine {
 
   std::array<double, p::count> P{};
   bool hasParams = false, sustain = false;
-  forte::NoteExpression expr{0}; // each key's slide (the wells don't bend)
+  forte::NoteExpression expr{0, 12}; // each key's slide (its noise) and bend (its well squeezed: up to an octave)
   const double fMax;
   std::array<Voice, POOL> pool{};
   std::array<double, BUF> buf{};
