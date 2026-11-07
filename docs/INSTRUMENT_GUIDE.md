@@ -602,7 +602,7 @@ native/instruments/<slug>/<slug>-instrument.cpp              its InstrumentInfo:
 native/instruments/<slug>/<slug>-web.cpp                     the model functions the views and tests call
 native/instruments/<slug>/<slug>-params.h, -info.cmake       generated from the descriptor (tools/gen-native-params.mjs)
 native/instruments/<slug>/<slug>-contract.json               generated too: what saved songs rely on (tools/contract.mjs)
-native/tests/states/<slug>-<version>.state                   what each release's plugin saved; never rewritten
+native/tests/states/<slug>-<version>.state                   what a release's plugin saved: the latest only, below 1.0
 native/instruments/<slug>/reference.json                     its sound, summarised (tools/render-reference.mjs)
 <slug>/wasm/<slug>.wasm                                      built by the wasm preset; committed
 <slug>/src/<slug>-wasm.js                                    the WebAssembly as an engine class, and the model for the views
@@ -617,8 +617,10 @@ instrument is below 1.0 and, from 1.0 on, asks for a `major` release note. Your 
 shared links (`shared/presets.js`) name the same parameters, ranges and options, so the contract
 keeps them working too; `native/tests/presets/` holds files as the site writes them, which the
 plugin tests open and write byte for byte. The plugin tests load
-every state in `native/tests/states/` into today's plugins; one that no longer loads is a break
-(before 1.0, delete it and say so in the note).
+every state in `native/tests/states/` into today's plugins; one that no longer loads is a break.
+Below 1.0 an instrument keeps only its latest release's state, which the next release replaces
+(nothing earlier has to keep working), and one that no longer loads is deleted, as the note says;
+from 1.0 every release's is kept.
 
 The descriptor's `wasm` field names the build; the shell fetches it and sends its bytes to the
 worklet, which runs it. The engine takes all the parameters and computes its own per-note data

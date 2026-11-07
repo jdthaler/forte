@@ -455,8 +455,8 @@ string alone, the bubbles' glide, a linear analysis, a board's modes), the instr
 From 1.0 an instrument's major version changes only when songs saved with its plugins or its
 presets' sound break (README). The parts that hold it: each instrument's `<slug>-contract.json`
 (generated with its parameter tables) and `tools/contract.mjs`, which the `tests` workflow uses to
-warn about a break below 1.0 and to ask for a `major` note from 1.0; the saved states of every
-release in `native/tests/states/`, which `native/tests/suite-plugin-tests.cpp` loads into today's
+warn about a break below 1.0 and to ask for a `major` note from 1.0; the saved states in
+`native/tests/states/` (each instrument's latest release's below 1.0, every release's from 1.0), which `native/tests/suite-plugin-tests.cpp` loads into today's
 plugins; and `reference.json`, which keeps the presets' sound. The Windows downloads install
 themselves too (`native/install.cmd`, `install.ps1`).
 

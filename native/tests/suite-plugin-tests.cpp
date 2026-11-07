@@ -2,7 +2,7 @@
 // with every instrument linked in as forte_add_suite() links them: its Instrument menu, a switch
 // while the audio runs, state that remembers the instrument, and up to four at once, each on its own
 // keys, as the site's Combinations page plays them. And every instrument's saved
-// states from earlier releases (states/, tools/contract.mjs), loaded into today's plugins, and
+// states from releases (states/: below 1.0 its latest release's only, tools/contract.mjs), loaded into today's plugins, and
 // your own presets: the files the site writes (presets/, shared/presets.js) open in the window,
 // and the window writes the same.
 

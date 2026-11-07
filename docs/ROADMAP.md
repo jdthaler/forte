@@ -19,8 +19,9 @@ while that is still free.
   and presets are listed in `native/instruments/<slug>/<slug>-contract.json`, which is
   generated from its descriptor. `tools/contract.mjs` says what a change breaks. The `tests`
   workflow warns about a break while an instrument is below 1.0, and from 1.0 on it asks for a
-  `major` release note. Every release keeps the state its plugins save in
-  `native/tests/states/`, and the plugin tests load all of these states into today's plugins.
+  `major` release note. Each release keeps the state its plugins save in
+  `native/tests/states/` (below 1.0 only an instrument's latest, since nothing earlier has to keep
+  working), and the plugin tests load all of these states into today's plugins.
   `reference.json` keeps each preset's sound.
 - **Windows downloads that install themselves** (`install.cmd`, `install.ps1`), matching
   `make install` on macOS and Linux.
