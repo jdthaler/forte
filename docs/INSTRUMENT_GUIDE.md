@@ -90,8 +90,8 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `registry.js`, `search.js` | the instrument list behind the landing page and the menus, with the sections and the front page's filters (`FILTERS`); `search.js` is the front page's search over it (word starts, without case or accents) |
 | `presets.js`, `user-presets.js` | your own presets and shared links. `presets.js` is the format, the same in the plugins (`native/plugin/presets.cpp`): every parameter of the contract by id, in a versioned file or in a link's fragment. `user-presets.js` adds them to the Presets menu (save, link, a sheet to play, link, save to a file, delete and open files); the shell attaches it, and a page with its own state calls `attachPresets` with how to get and set its parameters by contract id (the organ's console is `CONSOLE.get` and `CONSOLE.put`) and its `DEFAULTS`. |
 | `morph.js` | Morph, the last group of controls on every page: *From* and *To* (Default settings, the instrument's presets, your own) and a slider between them; `presets.js` `morph` is the blend (a number in a straight line, or by equal ratios on a log control, on its step; a choice or a switch halfway), and the page's `keep` stays as it is. `user-presets.js` attaches it. Choosing a preset makes it From. The plugins have the same as three parameters, Morph from, Morph to and Morph (`native/plugin/plugin.cpp`), so a song can automate it. |
-| `midi.js` | Web MIDI for every page (through the shell): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen in the MIDI menu, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling; `createInput` is one source's cleaning (a device's, which follows Octave and Transpose, or a song's, which doesn't), and `pageMIDI` the page's handler, for the songs (`songs.js`); `pageMpe` decodes MPE for a page (below) and turns it into the engine's `noteBend`, `slide` and `pressure` messages; Octave and Transpose (`keyShift`, `setShift`; the MIDI status opens a menu with them, the velocity curve and MPE: `midiMenu`) move every MIDI key as `startMIDI` cleans it, a note-off and poly pressure going where their note-on went, so a page's own MIDI handling gets them for nothing. A foot controller is `startMIDI`'s too, so every page has it: `SWITCHES` turns CC80, 81 and 82 into CC64, 66 and 67, the volume (CC7) and expression (CC11) pedals set `pedalGain`, which `chain.js` applies after the limiter, and a program change plays a preset from `#preset` (`choosePreset`); a page passes its `controllers` (`controllersOf`) so that a CC its instrument maps (an organ's CC11) stays the instrument's. The plugins do the same (`native/plugin/plugin.cpp`). |
-| `rise.js` | a Seaboard RISE's panel, at the left of the page while one is plugged in (`midi.js` opens it and hands it that input's messages): `riseModel` reads each finger's Strike, Glide, Slide, Press and Lift, the faders and the pad; `risePanel` draws them with what each moves or does here (`faders`, `mpe`, `modWheel`, `aftertouch` from the descriptor), and under *On the RISE* its own settings, read and written over SysEx. |
+| `midi.js` | Web MIDI for every page (through the shell): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen in the MIDI settings, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling; `createInput` is one source's cleaning (a device's, which follows Octave and Transpose, or a song's, which doesn't), and `pageMIDI` the page's handler, for the songs (`songs.js`); `pageMpe` decodes MPE for a page (below) and turns it into the engine's `noteBend`, `slide` and `pressure` messages; Octave and Transpose (`keyShift`, `setShift`; the MIDI status opens a menu with them, the velocity curve and MPE, in the drawer: `midiSettings`) move every MIDI key as `startMIDI` cleans it, a note-off and poly pressure going where their note-on went, so a page's own MIDI handling gets them for nothing. A foot controller is `startMIDI`'s too, so every page has it: `SWITCHES` turns CC80, 81 and 82 into CC64, 66 and 67, the volume (CC7) and expression (CC11) pedals set `pedalGain`, which `chain.js` applies after the limiter, and a program change plays a preset from `#preset` (`choosePreset`); a page passes its `controllers` (`controllersOf`) so that a CC its instrument maps (an organ's CC11) stays the instrument's. The plugins do the same (`native/plugin/plugin.cpp`). |
+| `rise.js` | a Seaboard RISE's panel, a section of the page's drawer while one is plugged in (`midi.js` opens it and hands it that input's messages): `riseModel` reads each finger's Strike, Glide, Slide, Press and Lift, the faders and the pad; `risePanel` draws them with what each moves or does here (`faders`, `mpe`, `modWheel`, `aftertouch` from the descriptor), and under *On the RISE* its own settings, read and written over SysEx. |
 | `rise-sysex.js` | the RISE's settings over SysEx, as ROLI Dashboard reads and writes them (the protocol [GRAB](https://github.com/demixme/GRAB) decoded): the identify message and its reply parsed, one setting's `3D` message, the MIDI-mode, Press, octave and transpose RPNs and NRPNs, and `forForte()`, what *Set up for Forte* sends. Bytes only: `rise.js` does the sending. |
 | `mpe.js` | MPE (MIDI Polyphonic Expression), message for message as the plugins' `forte/mpe.h`: zones from the MPE Configuration Message, member channels' bend (±48 semitones unless RPN 0 says otherwise), pressure and CC74, the Auto/On/Off mode, and `bendRatio`, a note's bend along the keyboard's tuning. |
 | `focus.js` | who gets a key press: a control reached with Tab keeps the keys it uses (Space ticks a stop, arrows move a slider); one last touched with the mouse or a finger hands them back to the instrument. Every page's key handler asks `controlOwns(e)` first. After a click or a change, `unfocus(el)` lets go of the focus only if the pointer gave it: a control reached with Tab keeps it, so Tab goes on to the next one and a screen reader keeps its place. |
@@ -386,13 +386,27 @@ and say which in the footer help.
   Perform**; the controls' bar has a toggle for each group of controls
   (each `details.group`, named by its `<summary>`; a group whose
   parameters have all moved to the keyboard bar has none, and a group the
-  page adds later gets one) and the presets (`.preset-row`, moved here
-  from `#controls`), whose menu gains "Default settings", which presses
-  the page's `#reset`. A tap on a toggle turns that view or group on or
+  page adds later gets one). A tap on a toggle turns that view or group on or
   off, and the page remembers which are on. Every group is on at first;
   with every group off, the panel keeps its toggles. Other code can add
   its own tools to either bar: `barTools('views')` or
   `barTools('controls')` from `layout.js` is the element to append to.
+- **The drawer** (`#forte-drawer`), at the left: what every instrument
+  has alike, each section folding (the browser remembers which). First the
+  presets, a button for each choice in the page's menu (`.preset-row`,
+  moved here from `#controls` and hidden; its menu gains "Default
+  settings", which presses the page's `#reset`), the one playing pressed;
+  then Morph, a Seaboard RISE's panel while one is plugged in (`rise.js`),
+  the groups every instrument has (Output, Tuning and Expression, moved
+  here from the Controls panel by their `<summary>`), and the MIDI settings
+  (`midi.js` `midiSettings`; the MIDI status opens them). Wider than 1100px
+  it is a column beside the views and the controls, its chevron folding it
+  to a rail (open at first in Discover, folded in Perform, as remembered);
+  narrower, the rail stays and the drawer opens over the views; on a phone
+  it is a sheet opened from a button at the left of the header. Over the
+  page it stops above the keys, which stay playable. Other code adds a
+  section with a `forte-drawer` event on `document` (`{ section, element }`)
+  and opens one with `{ section }`.
 - **Sharing the height.** The handle on the controls' bar's top edge (or
   the bar itself, where it has nothing to tap) drags the line between the
   views and the controls, down to nothing for either: a panel dragged
@@ -422,11 +436,13 @@ and say which in the footer help.
   size and the pedal button, which presses Space. Where they don't fit on
   one line (a phone held upright, a tablet, a narrow window) the strip
   takes a line of its own above the rest. The page's footer hints
-  (`.kb-help`: computer keys, MIDI, readouts) go behind ⌨.
+  (`.kb-help`: computer keys, MIDI, readouts) go behind ⌨, and the button
+  after ⌨ folds the keys away (and their size and range tools), leaving
+  the bar; every page remembers it alike.
 - **Perform** is for playing and for a projector: the views that are on,
   filling the screen, with no toggles and no text in them. The views' bar
   is just Discover | Perform, over their corner, and the controls' bar
-  goes: the presets and its chevron, "More controls", move to the end of
+  goes: the presets menu (from the drawer) and its chevron, "More controls", move to the end of
   the keyboard bar (not on a phone held sideways, where the bar has no
   room). The Controls panel waits behind that chevron (at the share last
   chosen; on a phone, in place of the views). The card's `.card-head`,
@@ -438,7 +454,7 @@ and say which in the footer help.
 - On phones there is no room to share: the page scrolls between the
   header and the controls and keys, which stay put, and the Controls
   panel follows the views; each bar's toggles slide sideways when they don't fit. Upright,
-  the controls' bar (with the presets) sticks just above the controls and
+  the controls' bar sticks just above the controls and
   keys until it heads the Controls panel, below the header, as it
   scrolls by. Turned
   sideways, it scrolls with the panel, and the keyboard bar keeps to one

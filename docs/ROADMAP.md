@@ -90,6 +90,8 @@ Every other idea only adds, and can come before or after 1.0.
 | A guided tour of each instrument's physics | M | Done, for the next release: *Tour* in the header, a few steps per instrument (`shared/tour.js`, `<slug>-tour.js`). |
 | Accessibility pass | M | Done, for the next release: every control named for screen readers (symbol buttons, the views' canvases, sliders' values as shown, hints read after a control's name), keyboard focus kept after Enter or Space, a focus ring everywhere, and with Reduce Motion the views step four times a second and nothing slides. The page checks fail on an unnamed control. |
 | Search and filter on the front page | S | |
+| A drawer on every instrument page | S–M | Done, for the next release: at the left of every page (a column on a desktop, folded to a rail; over the page on a tablet upright; a sheet from the header on a phone), the presets as a list, Morph, a Seaboard RISE's panel while one is plugged in, Output, Tuning, Expression and the MIDI settings. The keys fold away too, from the keyboard bar. |
+| A right-hand drawer | S–M | Decided against for now (2026-11-07): a second drawer narrows the views on every screen. The idea worth trying if it comes back: How it works docked at the right, to read while playing. |
 
 ### The plugins and the app
 
