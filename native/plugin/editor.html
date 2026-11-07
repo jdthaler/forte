@@ -7,7 +7,11 @@
      them and their folder; under Temperament, Scala files from the Tunings folder (presets.h)
      set the custom temperament. In the Forte app up to four instruments play at once, as on the
      site's Combinations page (plugin.cpp, Suite): a card under the header for each gives its keys,
-     octave, level and on/off, and picks whose controls the window shows. Above the controls, the instrument's views (the shown part's):
+     octave, level and on/off, and picks whose controls the window shows. At the left, as on the
+     site's pages (shared/layout.js), a drawer with what every instrument has alike: the presets, a
+     tap each, then Morph, Output, Tuning, Expression, MIDI and CPU, each folding; its chevron folds it
+     to a rail, and while it is open the header's Presets menu gives way to its list. The keys fold
+     away from the button at the left of their bar. Above the controls, the instrument's views (the shown part's):
      its own page from the site, served from the plugin (editor.h), in a frame that shows only them
      (shared/in-plugin.js), fed by the plugin's sound and its engine's messages; the Views button
      folds them away, and the handle under them shares the height with the controls. Opened as a
@@ -94,6 +98,45 @@
   .tools { display: flex; gap: 8px; align-items: center; color: var(--muted); }
 
   main { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 12px 14px; }
+  /* the drawer at the left, beside the views and the controls (as on the site's pages) */
+  #middle { flex: 1 1 0; min-height: 0; display: flex; }
+  #stage { flex: 1 1 0; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  #drawer { flex: none; width: clamp(220px, 24vw, 290px); min-height: 0; overflow-y: auto; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--line); }
+  #drawer[hidden] { display: none; }
+  .drawer-head { display: flex; align-items: center; gap: 8px; padding: 7px 8px 7px 12px; }
+  .drawer-head b { flex: 1; min-width: 0; font-size: 11px; font-weight: 400; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fold { display: grid; place-items: center; width: 26px; height: 24px; padding: 0; color: var(--muted); background: transparent; }
+  .fold svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  #drawer-body { padding: 0 12px 14px; }
+  #drawer-body > details { border-top: 1px solid var(--line); padding: 2px 0 6px; }
+  #drawer-body > details > summary { list-style: none; display: flex; justify-content: space-between; padding: 7px 0 5px; cursor: pointer; font-weight: 600; }
+  #drawer-body > details > summary::-webkit-details-marker { display: none; }
+  #drawer-body > details > summary::after { content: "▾"; color: var(--muted); }
+  #drawer-body > details:not([open]) > summary::after { content: "▸"; }
+  #drawer-body .param select { width: 100%; }
+  body.drawer-folded #drawer { width: 34px; overflow: hidden; cursor: pointer; }
+  body.drawer-folded #drawer:hover { background: #1b1b20; }
+  body.drawer-folded .drawer-head { flex-direction: column-reverse; justify-content: flex-end; gap: 12px; padding: 7px 4px; }
+  body.drawer-folded .drawer-head b { writing-mode: vertical-rl; transform: rotate(180deg); overflow: visible; }
+  body.drawer-folded .drawer-head .fold svg { transform: rotate(180deg); }
+  body.drawer-folded #drawer-body { display: none; }
+  body:not(.drawer-folded):has(#drawer:not([hidden])) #preset { display: none; } /* the drawer's list stands in */
+  .presets { display: grid; gap: 1px; }
+  .presets h3 { margin: 8px 0 2px; font-size: 10.5px; font-weight: 400; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+  .presets .pick { display: block; width: 100%; text-align: left; padding: 4px 8px; border-color: transparent; background: transparent; }
+  .presets .pick:hover { border-color: var(--line); background: #1f1f24; }
+  .presets .pick[aria-pressed="true"] { border-color: var(--accent); background: #2a2520; color: var(--text); font-weight: 600; }
+  .presets .acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .presets .acts button { padding: 2px 10px; border-radius: 999px; font-size: 12px; color: var(--muted); }
+  /* the keys fold away, leaving their bar */
+  #keys-btn { display: grid; place-items: center; width: 34px; padding: 2px 0; }
+  #keys-btn svg { width: 22px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linejoin: round; stroke-linecap: round; }
+  #keys-btn svg .b { fill: currentColor; stroke: none; }
+  #keys-btn svg .c { stroke-width: 1.7; transform-box: fill-box; transform-origin: center; }
+  body.keys-folded #keys-btn { color: var(--accent); border-color: var(--accent); }
+  body.keys-folded #keys-btn svg .c { transform: translate(-1.5px, -0.5px) rotate(180deg); }
+  body.keys-folded :is(#keyboard, #down, #up, #range) { display: none; }
+  body.keys-folded .kb-bar { margin-bottom: 0; }
   /* the views: the instrument's page, showing only them, above the controls; the handle on the
      controls' top edge shares the height (as the site's pages do) */
   #views-pane { flex: 0.6 1 0; min-height: 0; display: flex; background: var(--bg); border-bottom: 1px solid var(--line); }
@@ -189,9 +232,17 @@
   </div>
 </header>
 <section id="parts" hidden aria-label="The instruments, each on its own keys"></section>
+<div id="middle">
+<aside id="drawer" hidden aria-label="Presets and settings">
+  <div class="drawer-head"><b>Presets and settings</b><button id="drawer-fold" class="fold" aria-controls="drawer-body"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8 10 12.5"/></svg></button></div>
+  <div id="drawer-body"></div>
+</aside>
+<div id="stage">
 <section id="views-pane" hidden></section>
 <div id="views-grip" hidden tabindex="0" role="separator" aria-orientation="horizontal" aria-label="Share the height between the views and the controls" title="Drag to share the height between the views and the controls (double-click: as it was)"></div>
 <main><div id="groups"></div></main>
+</div>
+</div>
 <div id="save" hidden>
   <form>
     <label for="save-name">Save these settings as</label>
@@ -205,6 +256,7 @@
 <footer>
   <div id="perform"></div>
   <div class="kb-bar">
+    <button id="keys-btn" aria-controls="keyboard" aria-expanded="true" title="Hide the keys: the controls take their room"><svg viewBox="0 0 22 16" aria-hidden="true"><rect x="1.5" y="3.5" width="13" height="10" rx="1.5"/><path d="M5.8 3.5v10M10.2 3.5v10"/><rect class="b" x="4.6" y="3.5" width="2.4" height="5.5"/><rect class="b" x="9" y="3.5" width="2.4" height="5.5"/><path class="c" d="M17 7l2.5 2.5L22 7" transform="translate(-1.5 -0.5)"/></svg></button>
     <button id="down" title="Lower (←)">◀</button>
     <span id="range"></span>
     <button id="up" title="Higher (→)">▶</button>
@@ -337,6 +389,11 @@ function build() {
   });
   const root = $('#groups');
   for (const [title, list] of groups) {
+    if (DRAWER.includes(title)) { // in the drawer, each a section that folds
+      const det = section(title, title === 'Output' || title === 'Morph');
+      for (const i of list) { const [box, c] = control(i); det.appendChild(box); register(i, c); boxes.set(D.params[i].id, box); }
+      continue;
+    }
     const card = document.createElement('section');
     card.className = 'group';
     const h = document.createElement('h2');
@@ -349,6 +406,7 @@ function build() {
   // the controls a player reaches for while playing, above the keys too
   D.params.forEach((p, i) => { if (p.perform && i !== D.presets) { const [box, c] = control(i); $('#perform').appendChild(box); register(i, c); } });
   buildPresets();
+  buildDrawer();
   if (D.space === 'switch') { // Space and CC64 switch a choice (the organ's Leslie): a press flips it
     const b = $('#pedal'), [what, a, z] = D.switch;
     b.hidden = false;
@@ -508,6 +566,85 @@ function learn(m) {
   const { k, end } = learning;
   learning = null;
   rezone(k, { [end]: clamp(m, KEY_LO, KEY_HI) });
+}
+
+// ---- the drawer: what every instrument has alike, as on the site's pages (shared/layout.js) ------
+// The presets, a tap each (from the Presets menu, which stays their source and gives way to the
+// list while the drawer is open), then the groups every instrument has, in this order, each a
+// section that folds as last left; the chevron folds the drawer to a rail (a narrow window starts so).
+const DRAWER = ['Morph', 'Output', 'Tuning', 'Expression', 'MIDI', 'CPU'];
+const drawerBody = $('#drawer-body');
+const opened = () => prefs.sections ?? (prefs.sections = {});
+function section(title, open, first = false) {
+  const det = document.createElement('details'), sum = document.createElement('summary');
+  sum.textContent = title;
+  det.append(sum);
+  det.dataset.title = title;
+  det.open = opened()[title] ?? open;
+  det.addEventListener('toggle', () => { opened()[title] = det.open; keep(); });
+  // in the drawer's order, whichever comes first
+  const rank = (t) => (t === 'Presets' ? -1 : DRAWER.indexOf(t));
+  const after = [...drawerBody.children].find((c) => rank(c.dataset.title) > rank(title));
+  drawerBody.insertBefore(det, first ? drawerBody.firstChild : after ?? null);
+  $('#drawer').hidden = false;
+  return det;
+}
+const presetList = document.createElement('div');
+presetList.className = 'presets';
+function listPresets() {
+  const pick = (v, b) => { menu.dispatchEvent(new Event('focus')); menu.value = v; menu.dispatchEvent(new Event('change')); b.blur(); markPreset(); };
+  const out = [];
+  const add = (o, into) => {
+    if (o.value === '' || o.disabled) return;
+    const b = document.createElement('button');
+    b.textContent = o.textContent; b.dataset.value = o.value;
+    b.addEventListener('click', () => pick(o.value, b));
+    into.push(b);
+  };
+  for (const c of menu.children) {
+    if (c.tagName !== 'OPTGROUP') { add(c, out); continue; }
+    const items = [];
+    for (const o of c.children) add(o, items);
+    if (c === saveGroup) { const acts = document.createElement('div'); acts.className = 'acts'; acts.append(...items); out.push(acts); continue; }
+    const h = document.createElement('h3'); h.textContent = c.label;
+    out.push(h, ...items);
+  }
+  for (const b of out) if (b.tagName === 'BUTTON') b.className = 'pick';
+  presetList.replaceChildren(...out);
+  markPreset();
+}
+function markPreset() {
+  for (const b of presetList.querySelectorAll('.pick')) b.setAttribute('aria-pressed', String(menu.value !== '' && b.dataset.value === menu.value));
+}
+function buildDrawer() {
+  section('Presets', true, true).append(presetList);
+  new MutationObserver(listPresets).observe(menu, { childList: true, subtree: true });
+  // the menu's value, set by a pick, a preset of the host's or a poll: the list follows
+  const d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+  Object.defineProperty(menu, 'value', { configurable: true, get() { return d.get.call(this); }, set(x) { d.set.call(this, x); markPreset(); } });
+  menu.addEventListener('change', markPreset);
+  listPresets();
+  const fold = $('#drawer-fold');
+  const folded = (on) => {
+    document.body.classList.toggle('drawer-folded', on);
+    fold.setAttribute('aria-expanded', String(!on));
+    fold.title = on ? 'Presets and settings' : 'Fold the presets and settings away';
+    fold.setAttribute('aria-label', fold.title);
+  };
+  folded(typeof prefs.drawer === 'boolean' ? !prefs.drawer : innerWidth < 760);
+  const toggle = () => { const on = document.body.classList.contains('drawer-folded'); prefs.drawer = on; keep(); folded(!on); };
+  fold.addEventListener('click', (e) => { e.stopPropagation(); toggle(); fold.blur(); });
+  $('#drawer').addEventListener('click', (e) => { if (document.body.classList.contains('drawer-folded')) toggle(); });
+  // the keys fold away, leaving their bar
+  const keysBtn = $('#keys-btn');
+  const keysFolded = (on) => {
+    document.body.classList.toggle('keys-folded', on);
+    keysBtn.setAttribute('aria-expanded', String(!on));
+    keysBtn.title = on ? 'Show the keys' : 'Hide the keys: the controls take their room';
+    keysBtn.setAttribute('aria-label', keysBtn.title);
+  };
+  keysFolded(prefs.keys === false);
+  keysBtn.addEventListener('click', () => { const on = !document.body.classList.contains('keys-folded'); prefs.keys = !on; keep(); keysFolded(on); keysBtn.blur(); if (!on) layoutKeys(); });
 }
 
 // ---- presets: the instrument's (its Preset parameter), then your own, then saving them -----------
