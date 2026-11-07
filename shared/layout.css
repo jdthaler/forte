@@ -804,7 +804,7 @@ body[data-instrument] .forte-drawer-open { display: none; }
   body.has-drawer.drawer-over.drawer-open .forte-drawer-shade { display: block; position: absolute; z-index: 31; inset: 0; background: rgb(0 0 0 / 0.3); }
 }
 /* an instrument page in a plugin's window: no drawer (the window has its own controls) */
-html.in-plugin :is(.forte-drawer, .forte-drawer-shade, .forte-drawer-open, .forte-rise) { display: none; }
+html.in-plugin :is(.forte-drawer, .forte-drawer-shade, .forte-drawer-open, .forte-rise, .forte-fc300) { display: none; }
 html.in-plugin body.has-drawer > main { grid-template-columns: minmax(0, 1fr); }
 html.in-plugin body.has-drawer > main > * { grid-column: 1; }
 
@@ -934,3 +934,35 @@ body[data-instrument] .forte-rise .forte-fold { width: 22px; height: 22px; borde
 }
 @media (prefers-reduced-motion: reduce) { .forte-drawer { transition: none !important; } }
 }
+
+/* ---- a Roland FC-300 (shared/fc300.js): a section of the drawer, drawn as its top panel (its
+   owner's manual, p. 9), each switch lit while down, each expression pedal filled as far as its
+   toe is down, the number pedals' red and green lights as its own show a patch; then what each
+   does on the instrument, and a button that lets Forte drive it over SysEx. ------------------ */
+.forte-fc300-body { display: grid; gap: 8px; min-width: 0; padding-top: 2px; }
+.forte-fc300-art { display: block; width: 100%; height: auto; }
+.forte-fc300-art .body { fill: #2a2b2e; stroke: #4a4b50; }
+.forte-fc300-art .screen { fill: #0b120d; stroke: #3a3b40; }
+.forte-fc300-art .digits { font: 700 13px ui-monospace, Menlo, monospace; fill: #ff4a3d; letter-spacing: 0.04em; }
+.forte-fc300-art .lcd { font: 600 8px ui-monospace, Menlo, monospace; fill: #7fe08f; }
+.forte-fc300-art .pad { fill: #17181a; stroke: #55565c; stroke-width: 1; }
+.forte-fc300-art .name { font: 600 9.5px system-ui, sans-serif; fill: #b9bac0; }
+.forte-fc300-art .led { fill: #3a2422; }
+.forte-fc300-art .led.green { fill: #1f3324; }
+.forte-fc300-art .sw.on > .pad { fill: #26272b; stroke: var(--accent); stroke-width: 1.6; }
+.forte-fc300-art .sw.on > .led, .forte-fc300-art .sw.on .led:not(.red, .green) { fill: #ff4a3d; filter: drop-shadow(0 0 2px #ff4a3d); }
+.forte-fc300-art .sw.red .led.red { fill: #ff4a3d; filter: drop-shadow(0 0 2px #ff4a3d); }
+.forte-fc300-art .sw.green .led.green { fill: #4dff6a; filter: drop-shadow(0 0 2px #4dff6a); }
+.forte-fc300-art .exp .fill { fill: var(--accent); opacity: 0.25; }
+.forte-fc300-art .exp.known .fill { opacity: 0.55; }
+.forte-fc300-lcd { display: grid; padding: 4px 8px; border-radius: 4px; background: #0b120d; box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.9); font: 600 11px/1.35 ui-monospace, Menlo, monospace; color: #7fe08f; white-space: pre; overflow: hidden; }
+.forte-fc300-lcd[hidden] { display: none; }
+.forte-fc300-status, .forte-fc300-note { margin: 0; font-size: 10.5px; line-height: 1.35; color: var(--muted); }
+.forte-fc300-status { color: var(--text); }
+.forte-fc300-status:empty, .forte-fc300-note:empty { display: none; }
+.forte-fc300-legend { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 8px; font-size: 11px; line-height: 1.3; }
+.forte-fc300-legend dt { color: var(--muted); white-space: nowrap; }
+.forte-fc300-legend dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.forte-fc300-legend dd.none { color: var(--muted); }
+.forte-fc300-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.forte-fc300-buttons button { font-size: 11.5px; padding: 4px 9px; }

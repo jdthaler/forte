@@ -330,7 +330,7 @@ messages, on the pages, in the plugins and in the Forte app:
 
 | On the FC-300 | It sends | In Forte |
 |---|---|---|
-| EXP 1 | CC7, volume | turns the instrument down (heel down: silent); full until it moves |
+| EXP 1 | CC7, volume | on the pages, moves the Volume control (toe down: its default; heel down: silent); in the plugins, turns the instrument down; full until it moves |
 | EXP 2 | CC1, the mod wheel | whatever the mod wheel moves (on the Electric Grand, Tine and Reed Pianos, the tremolo) |
 | CTL 1 | CC80 | the sustain pedal (or what Space is: hold, the Leslie) |
 | CTL 2 | CC81 | the sostenuto pedal |
@@ -347,6 +347,22 @@ which the Leslie's switch wants). The FC-300 has only a 5-pin MIDI OUT, so
 it reaches a computer through a USB MIDI interface (or a keyboard's MIDI
 IN that passes it on). In a DAW, the host may take program changes for
 itself (MainStage switches patches with them).
+
+**The FC-300 in the drawer:** once a page hears the FC-300's switches, its
+drawer draws it: each switch lit while down, each expression pedal as far
+down as it is, the number pedals' lights as its own show a patch, and what
+each pedal does on that instrument. *Let Forte drive it* (the browser asks
+once to let the page talk SysEx to MIDI devices) puts it in its System
+Exclusive mode, from Roland's MIDI implementation in its manual: it then
+sends each pedal as the foot moves it, so CTL 1 and 2 are down only while
+held, as a piano's pedals are; EXP 1's toe switch puts the soft pedal down
+and the next press lifts it; ▲ and ▼ step to the next preset and the one
+before, and the number pedals choose among the five around the one playing;
+and its display shows the preset's number, its lights which pedal it is on,
+and its LCD the instrument and the preset. It sends nothing to other apps
+while Forte drives it: *Hand it back*, or switch it off and on, to play
+MainStage with it. Nothing is written to it (its own pedal settings are in a
+bulk-dump format Roland doesn't document). Pages only, in Chrome or Edge.
 
 **Latency:** play through wired headphones or speakers. Bluetooth ones
 delay every note by 100–200 ms, enough to make any instrument feel

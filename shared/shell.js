@@ -63,7 +63,7 @@ import { createChain } from './chain.js';
 import { createKeyboard } from './keyboard.js';
 import { trimGain } from './registry.js';
 import { controlOwns, unfocus } from './focus.js';
-import { startMIDI, resumeMIDI, pageMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from './midi.js';
+import { startMIDI, resumeMIDI, pageMIDI, volumePedal, pedalVolume, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from './midi.js';
 import { attachPresets } from './user-presets.js';
 import { connectQuality, qualityControl } from './quality.js';
 import { dress, faceOf } from './faces.js';
@@ -317,6 +317,9 @@ export function createShell(cfg) {
   }
   const ccs = controllersOf(cfg), ccLast = {}; // the descriptor's controllers and faders
   pageMIDI({ onMIDI, controllers: ccs }); // a song played from a MIDI file (shared/songs.js) plays it as a keyboard would
+  // a volume pedal (CC7) moves the Volume control, as the mod wheel moves its control (shared/midi.js)
+  const volumeP = cfg.chain?.volume && ALL.find((q) => q.id === cfg.chain.volume);
+  if (volumeP) volumePedal((v) => shell.setParam(volumeP.id, pedalVolume(volumeP, v)));
   function onMIDI(ev) {
     const [st, d1, d2] = ev.data, cmd = st & 0xf0;
     const { own: its, with: own } = notes.midi(ev.data);
@@ -438,12 +441,21 @@ export function createShell(cfg) {
     for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(shell.P) : false;
     for (const [note, ids] of groupNotes) note.hidden = ids.some((id) => !controls.get(id)?.wrap.hidden);
   };
+  // a control moved: the menu no longer shows a preset, unless it was one a preset keeps as it was
+  // (the volume, the room: cfg.keep) and the chosen preset doesn't set it, as a volume pedal moves it
+  const kept = new Set(cfg.keep ?? []);
+  const unchoose = (ids) => {
+    const ps = $('#preset');
+    if (!ps) return;
+    const sets = cfg.presets?.[+ps.value]?.p ?? null;
+    if (ids.some((k) => !kept.has(k) || (sets && k in sets))) ps.value = '';
+  };
   shell.setParam = (id, v, dragging = false) => {
     if (shell.P[id] === v) return;
     shell.P[id] = v;
     if (id === cfg.compass?.param) rebound();
     refresh(id, dragging); refreshVisibility(); save(); updateHelp();
-    if ($('#preset')) $('#preset').value = '';
+    unchoose([id]);
     shell.applyMix(); sendParams();
     cfg.onParam?.(id, v, shell.P, ALL.find((q) => q.id === id), dragging);
   };
@@ -453,7 +465,7 @@ export function createShell(cfg) {
     if (!ids.length) return;
     for (const k of ids) { shell.P[k] = structuredClone(changes[k]); if (k === cfg.compass?.param) rebound(); refresh(k, dragging); }
     refreshVisibility(); save(); updateHelp();
-    if ($('#preset')) $('#preset').value = '';
+    unchoose(ids);
     shell.applyMix(); sendParams();
     if (ids.length === 1) cfg.onParam?.(ids[0], shell.P[ids[0]], shell.P, ALL.find((q) => q.id === ids[0]) ?? null, dragging);
     else cfg.onParam?.('*', null, shell.P, null, dragging);
