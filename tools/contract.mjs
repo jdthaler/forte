@@ -14,13 +14,15 @@
 //
 // The saved states in native/tests/states/<slug>-<version>.state are what that instrument's
 // plugin saved at a release; native/tests/suite-plugin-tests.cpp loads every one into today's
-// plugins. They are never rewritten: one that no longer loads is a broken contract (before 1.0,
-// delete it and say so in the release note).
+// plugins. Before 1.0 only an instrument's latest release's is kept (nothing earlier has to keep
+// working): a release replaces it. From 1.0 on every release's is kept and never rewritten, and
+// one that no longer loads is a broken contract.
 //
 // Usage: node tools/contract.mjs [<ref>]      the breaks and additions since <ref> (default origin/main)
-//        node tools/contract.mjs --save-states  writes a state for each instrument whose version has none
+//        node tools/contract.mjs --save-states  writes a state for each instrument whose version has
+//                                               none, and below 1.0 deletes its earlier ones
 
-import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync, unlinkSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { byId } from '../shared/registry.js';
@@ -102,10 +104,17 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     for (const slug of readdirSync(new URL('native/instruments/', R))) {
       const reg = byId(slug), path = new URL(contractPath(slug), R);
       if (!reg?.ready || !existsSync(path)) continue; // the template has no state to keep
-      const file = new URL(`${STATES}${slug}-${reg.version}.state`, R);
+      const name = `${slug}-${reg.version}.state`, file = new URL(`${STATES}${name}`, R);
       if (existsSync(file)) continue;
       writeFileSync(file, stateOf(JSON.parse(readFileSync(path, 'utf8')), reg.version));
-      console.log(`${STATES}${slug}-${reg.version}.state`);
+      console.log(`${STATES}${name}`);
+      if (Number(reg.version.split('.')[0]) >= 1) continue; // from 1.0 on, every release's is kept
+      for (const old of readdirSync(new URL(STATES, R))) {
+        if (old !== name && old.startsWith(`${slug}-`) && /^\d+\.\d+\.\d+\.state$/.test(old.slice(slug.length + 1))) {
+          unlinkSync(new URL(`${STATES}${old}`, R));
+          console.log(`deleted ${STATES}${old}`);
+        }
+      }
     }
   } else {
     const base = args[0] ?? 'origin/main';

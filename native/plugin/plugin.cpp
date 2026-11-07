@@ -1723,10 +1723,7 @@ struct Suite : Instance {
 
   // ---- state: "forte-suite <slug>" then the first's own; with more parts, "forte-first <lo> <hi>
   // <octave> <level> <on> <part shown>", the first's keys, then for each other part "forte-part
-  // <slug> <lo> <hi> <octave> <level> <on>" and its own. Earlier releases' two parts,
-  // "forte-layer <slug> <layer|split> <split point> <part shown>" then the second's own, load as
-  // the same two parts: layered on every key, or the second below the split point and the first
-  // from there up -----------------------------------------------------------------------------------
+  // <slug> <lo> <hi> <octave> <level> <on>" and its own -------------------------------------------
   static bool write(const clap_ostream_t *s, const std::string &t) {
     for (const char *p = t.data(), *end = p + t.size(); p < end;) {
       int64_t w = s->write(s, p, (uint64_t)(end - p));
@@ -1785,7 +1782,7 @@ struct Suite : Instance {
   // where the next part's line starts in t, from `from` (npos: none)
   static size_t nextPart(const std::string &t, size_t from) {
     size_t at = std::string::npos;
-    for (const char *h : {"\nforte-first ", "\nforte-part ", "\nforte-layer "}) at = std::min(at, t.find(h, from));
+    for (const char *h : {"\nforte-first ", "\nforte-part "}) at = std::min(at, t.find(h, from));
     return at;
   }
   bool load(const clap_istream_t *s) {
@@ -1830,15 +1827,7 @@ struct Suite : Instance {
       const int j = parts();
       if (k < 0 || j >= kParts) continue; // an instrument this app doesn't have: the rest without it
       part[j] = make(k);
-      if (what == "forte-part") zone[j] = zoneFrom(line);
-      else { // forte-layer <slug> <layer|split> <split point> <part shown>, an earlier release's second
-        std::string how;
-        int split = 60, f = 1;
-        line >> how >> split >> f;
-        split = std::clamp(split, 1, 127);
-        if (how == "split") { zone[1] = Zone{0, split - 1}; zone[0] = Zone{split, 127}; }
-        shown = f == 0 ? 0 : 1;
-      }
+      zone[j] = zoneFrom(line);
       if (!body.empty()) ok = loadText(*part[j], body);
     }
     focus = std::clamp(shown, 0, parts() - 1); focused = focus;
