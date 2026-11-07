@@ -473,9 +473,10 @@ together from **All Plugins** on the front page, or one instrument from **↓ Pl
 Debian, Ubuntu, Mint and Fedora, its **.deb** or **.rpm** package; otherwise, on macOS and
 Linux, `make install` and `make verify` in the unpacked folder. They are unsigned, so a Mac needs one Terminal command (`xattr`,
 which `make install` runs) before it loads them. The download with every instrument also has the
-Forte app, one standalone that plays any of them from its Instrument menu, or two at once:
-**+** beside the menu layers a second instrument with the first, or splits the keyboard between
-them.
+Forte app, one standalone that plays any of them from its Instrument menu, or up to four at
+once, as the [Combinations](combine/) page does: **+** beside the menu adds one, and its card gives
+it its keys (the same keys layer instruments, keys apart split the keyboard), its octave, its
+level, and on or off.
 
 A plugin's window also shows the instrument's views from its page: press **Views**, beside
 the pedal, and they draw what the plugin plays, whether the notes come from the DAW, a MIDI
