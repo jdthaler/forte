@@ -1,6 +1,7 @@
 // suite-plugin-tests.cpp — the Forte app's plugin (net.jthaler.forte.suite, plugin.cpp's Suite),
 // with every instrument linked in as forte_add_suite() links them: its Instrument menu, a switch
-// while the audio runs, and state that remembers the instrument. And every instrument's saved
+// while the audio runs, state that remembers the instrument, and up to four at once, each on its own
+// keys, as the site's Combinations page plays them. And every instrument's saved
 // states from earlier releases (states/, tools/contract.mjs), loaded into today's plugins, and
 // your own presets: the files the site writes (presets/, shared/presets.js) open in the window,
 // and the window writes the same.
@@ -105,11 +106,18 @@ struct App {
     for (int i = 0; i < 512; i++) peak = std::isfinite(L[i]) && std::isfinite(R[i]) ? std::max(peak, (double)std::max(std::fabs(L[i]), std::fabs(R[i]))) : INFINITY;
     return peak;
   }
-  // the keys a part sounds, as the window's poll gives them: "keys" the part it shows, "other" the other's
-  std::vector<int> keys(const char *which = "keys") {
+  // the keys the part the window shows sounds, as its poll gives them
+  std::vector<int> keys() {
     const auto r = choc::json::parse(call("[\"poll\"]"));
     std::vector<int> k;
-    if (r.hasObjectMember(which)) for (uint32_t i = 0; i < r[which].size(); i++) k.push_back(r[which][i].get<int>());
+    for (uint32_t i = 0; i < r["keys"].size(); i++) k.push_back(r["keys"][i].get<int>());
+    return k;
+  }
+  // the keys part j sounds, where they are pressed (poll's "parts", with two parts or more)
+  std::vector<int> part(int j) {
+    const auto r = choc::json::parse(call("[\"poll\"]"));
+    std::vector<int> k;
+    if (r.hasObjectMember("parts") && (uint32_t)j < r["parts"].size()) for (uint32_t i = 0; i < r["parts"][(uint32_t)j].size(); i++) k.push_back(r["parts"][(uint32_t)j][i].get<int>());
     return k;
   }
   choc::value::Value describe() { return choc::json::parse(call("[\"describe\"]")); }
@@ -291,32 +299,37 @@ TEST("suite: switches before the host activates it, and its state remembers the 
   CHECK(!load(c, "forte-suite nonsense\n"));
 }
 
-// ---- two instruments at once: layered or split -------------------------------------------------------
-TEST("layer: a second instrument plays every key with the first; the window shows its controls, the host the first's") {
+// ---- up to four instruments at once, each on its own keys (the site's Combinations page) -----------
+TEST("parts: another instrument plays every key with the first, up to four; the window shows the newest, the host the first's") {
   App app;
   CHECK(app.call("[\"choose\", \"vibraphone\"]") == "true");
   const uint32_t count = app.params->count(app.p);
-  CHECK(app.call("[\"second\", \"nonsense\"]") == "false");
-  CHECK(app.call("[\"second\", \"organ\"]") == "true");
+  CHECK(app.describe()["most"].get<int>() == 4);
+  CHECK(app.call("[\"add\", \"nonsense\"]") == "false");
+  CHECK(app.call("[\"add\", \"organ\"]") == "true");
   app.run(512);
   auto d = app.describe();
   CHECK(d["parts"].size() == 2 && d["parts"][0]["slug"].getString() == "vibraphone" && d["parts"][1]["slug"].getString() == "organ");
-  CHECK(d["focus"].get<int>() == 1 && d["mode"].getString() == "layer" && d["slug"].getString() == "organ");
+  CHECK(d["focus"].get<int>() == 1 && d["slug"].getString() == "organ");
+  for (int j = 0; j < 2; j++) {
+    const auto p = d["parts"][(uint32_t)j];
+    CHECK(p["lo"].get<int>() == 0 && p["hi"].get<int>() == 127 && p["oct"].get<int>() == 0 && p["level"].get<double>() == 0 && p["on"].getBool());
+  }
   CHECK(app.params->count(app.p) == count); // the host still sees the vibraphone's
   CHECK(app.play({{60, true}}) >= 0);
   app.run(4096);
-  CHECK(holds(app.keys(), 60) && holds(app.keys("other"), 60));
+  CHECK(holds(app.part(0), 60) && holds(app.part(1), 60) && holds(app.keys(), 60));
   CHECK(app.run(12000) > 0.001);
   app.play({{60, false}});
-  CHECK(!holds(app.keys(), 60));
+  CHECK(!holds(app.part(0), 60) && !holds(app.part(1), 60));
   // the window's keys play both too
   app.call("[\"note\", 64, 0.8]");
   app.run(512);
-  CHECK(holds(app.keys(), 64) && holds(app.keys("other"), 64));
+  CHECK(holds(app.part(0), 64) && holds(app.part(1), 64));
   app.call("[\"note\", 64, 0]");
   app.run(512);
-  CHECK(!holds(app.keys(), 64) && !holds(app.keys("other"), 64));
-  // the Instrument menu changes the part the window shows: the second, which the host doesn't see
+  CHECK(!holds(app.part(0), 64) && !holds(app.part(1), 64));
+  // the Instrument menu changes the part the window shows, which the host doesn't see
   CHECK(app.call("[\"choose\", \"celesta\"]") == "true");
   app.run(512);
   d = app.describe();
@@ -325,93 +338,170 @@ TEST("layer: a second instrument plays every key with the first; the window show
   // and the window can show the first's controls again
   CHECK(app.call("[\"focus\", 0]") == "true" && app.slug() == "vibraphone");
   CHECK(app.call("[\"focus\", 2]") == "false");
-  // dropping the first leaves the second alone, as the first
+  // four at most
+  CHECK(app.call("[\"add\", \"tines\"]") == "true" && app.call("[\"add\", \"grand\"]") == "true");
+  CHECK(app.call("[\"add\", \"organ\"]") == "false");
+  app.run(512);
+  d = app.describe();
+  CHECK(d["parts"].size() == 4 && d["focus"].get<int>() == 3 && app.slug() == "grand");
+  CHECK(app.play({{67, true}}) >= 0);
+  app.run(512);
+  for (int j = 0; j < 4; j++) CHECK(holds(app.part(j), 67));
+  app.play({{67, false}});
+  // dropping the first leaves the rest, the next one first
   CHECK(app.call("[\"drop\", 0]") == "true");
   app.run(512);
   d = app.describe();
-  CHECK(d["parts"].size() == 1 && app.slug() == "celesta" && d["focus"].get<int>() == 0);
-  CHECK(app.call("[\"drop\", 0]") == "false");
-  CHECK(app.call("[\"second\", \"organ\"]") == "true");
-  // without the second, the first plays alone
-  CHECK(app.call("[\"second\", \"\"]") == "true");
+  CHECK(d["parts"].size() == 3 && d["parts"][0]["slug"].getString() == "celesta" && d["focus"].get<int>() == 2 && app.slug() == "grand");
+  CHECK(app.call("[\"drop\", 3]") == "false");
+  CHECK(app.call("[\"drop\", 2]") == "true" && app.call("[\"drop\", 1]") == "true");
   app.run(512);
   d = app.describe();
   CHECK(d["parts"].size() == 1 && d["focus"].get<int>() == 0 && app.slug() == "celesta");
+  CHECK(app.call("[\"drop\", 0]") == "false");
   CHECK(app.call("[\"focus\", 1]") == "false");
+  CHECK(app.call("[\"zone\", 0, 60, 127, 0, 0, true]") == "false"); // alone, it plays every key
 }
 
-TEST("split: the second plays below the split point, the first from it up; a held note ends where it began") {
+TEST("parts: a split, each key to the part whose keys it is in; moving the keys while one is held, it ends where it began") {
   App app;
   app.call("[\"choose\", \"grand\"]");
-  app.call("[\"second\", \"tines\"]");
-  CHECK(app.call("[\"arrange\", \"split\", 66]") == "true");
+  app.call("[\"add\", \"tines\"]");
+  CHECK(app.call("[\"zone\", 1, 0, 65, 0, 0, true]") == "true");
+  CHECK(app.call("[\"zone\", 0, 66, 127, 0, 0, true]") == "true");
+  CHECK(app.call("[\"zone\", 2, 0, 127, 0, 0, true]") == "false");
   app.run(512);
-  CHECK(app.describe()["mode"].getString() == "split" && app.describe()["split"].get<int>() == 66);
-  // the window shows the second (the tine piano): "keys" are its, "other" the Electric Grand's
+  auto d = app.describe();
+  CHECK(d["parts"][1]["hi"].get<int>() == 65 && d["parts"][0]["lo"].get<int>() == 66);
+  // the window shows the tine piano: "keys" are its
   app.play({{72, true}, {65, true}});
-  CHECK(holds(app.keys("other"), 72) && !holds(app.keys(), 72));
-  CHECK(holds(app.keys(), 65) && !holds(app.keys("other"), 65));
+  CHECK(holds(app.part(0), 72) && !holds(app.part(1), 72) && !holds(app.keys(), 72));
+  CHECK(holds(app.part(1), 65) && !holds(app.part(0), 65) && holds(app.keys(), 65));
   // the split moves while 65 is held: its note-off still reaches the tine piano
-  app.call("[\"arrange\", \"split\", 60]");
+  app.call("[\"zone\", 1, 0, 59, 0, 0, true]");
+  app.call("[\"zone\", 0, 60, 127, 0, 0, true]");
   app.play({{65, false}, {72, false}});
   app.run(512);
-  CHECK(!holds(app.keys(), 65) && !holds(app.keys("other"), 65) && !holds(app.keys("other"), 72));
+  CHECK(!holds(app.part(1), 65) && !holds(app.part(0), 65) && !holds(app.part(0), 72));
   app.play({{62, true}});
-  CHECK(holds(app.keys("other"), 62) && !holds(app.keys(), 62));
+  CHECK(holds(app.part(0), 62) && !holds(app.part(1), 62));
   app.play({{62, false}});
   // the window's keys too
   app.call("[\"note\", 55, 0.8]");
   app.run(512);
-  CHECK(holds(app.keys(), 55) && !holds(app.keys("other"), 55));
+  CHECK(holds(app.part(1), 55) && !holds(app.part(0), 55));
   app.call("[\"note\", 55, 0]");
   app.run(512);
-  CHECK(!holds(app.keys(), 55));
-  // swapped, the Electric Grand is below: the window still shows the tine piano, now the first
-  CHECK(app.call("[\"swap\"]") == "true");
-  app.run(512);
-  auto d = app.describe();
-  CHECK(d["parts"][0]["slug"].getString() == "tines" && d["focus"].get<int>() == 0 && app.slug() == "tines");
-  app.play({{50, true}, {70, true}});
-  CHECK(holds(app.keys("other"), 50) && holds(app.keys(), 70) && !holds(app.keys(), 50));
-  app.play({{50, false}, {70, false}});
+  CHECK(!holds(app.part(1), 55));
+  // keys out of order and past MIDI's are put right
+  app.call("[\"zone\", 1, 200, -5, 9, -99, true]");
+  d = app.describe();
+  CHECK(d["parts"][1]["lo"].get<int>() == 0 && d["parts"][1]["hi"].get<int>() == 127 && d["parts"][1]["oct"].get<int>() == 2 && d["parts"][1]["level"].get<double>() == -30);
   // both sound
   CHECK(app.play({{50, true}, {70, true}}) >= 0);
   CHECK(app.run(12000) > 0.001);
 }
 
-TEST("two parts: a note held through a swap ends; Panic, the pedal and Quality reach both; a program change the part the window shows") {
+TEST("parts: an octave moves a part's keys by 12, MIDI's and the window's, and a held one ends where it began; a part off plays nothing") {
   App app;
   app.call("[\"choose\", \"grand\"]");
-  app.call("[\"second\", \"tines\"]");
-  app.call("[\"arrange\", \"split\", 60]");
+  app.call("[\"add\", \"tines\"]");
+  CHECK(app.call("[\"zone\", 1, 0, 127, 1, 0, true]") == "true");
+  app.run(512);
+  app.play({{60, true}});
+  // the tine piano sounds C5, shown where it was pressed; the Electric Grand C4
+  CHECK(holds(app.keys(), 72) && !holds(app.keys(), 60));
+  CHECK(holds(app.part(1), 60) && holds(app.part(0), 60));
+  app.call("[\"zone\", 1, 0, 127, -1, 0, true]");
+  app.play({{60, false}});
+  app.run(512);
+  CHECK(app.keys().empty() && app.part(0).empty());
+  app.play({{60, true}});
+  CHECK(holds(app.keys(), 48));
+  app.play({{60, false}});
+  app.call("[\"note\", 62, 0.8]");
+  app.run(512);
+  CHECK(holds(app.keys(), 50) && holds(app.part(0), 62));
+  app.call("[\"zone\", 1, 0, 127, 2, 0, true]");
+  app.call("[\"note\", 62, 0]");
+  app.run(512);
+  CHECK(app.keys().empty());
+  // two octaves up from G8 is past MIDI's keys: the tine piano doesn't play it
+  app.play({{115, true}});
+  CHECK(app.keys().empty());
+  app.play({{115, false}});
+  // off, it plays nothing, and a note it was playing still ends
+  app.call("[\"zone\", 1, 0, 127, 0, 0, true]");
+  app.play({{64, true}});
+  CHECK(holds(app.keys(), 64));
+  app.call("[\"zone\", 1, 0, 127, 0, 0, false]");
+  app.play({{64, false}, {65, true}});
+  app.run(512);
+  CHECK(app.keys().empty() && holds(app.part(0), 65));
+  app.call("[\"note\", 67, 0.8]");
+  app.run(512);
+  CHECK(!holds(app.keys(), 67) && holds(app.part(0), 67));
+  CHECK(!app.describe()["parts"][1]["on"].getBool());
+}
+
+TEST("parts: a part's level, in dB, is how loud it joins the rest") {
+  // the same note, the Electric Grand at 0 dB and at −20 dB, with the tine piano off
+  auto peak = [](double level) {
+    App app;
+    app.call("[\"choose\", \"grand\"]");
+    app.call("[\"add\", \"tines\"]");
+    app.call("[\"zone\", 1, 0, 127, 0, 0, false]");
+    app.call("[\"zone\", 0, 0, 127, 0, " + std::to_string(level) + ", true]");
+    app.run(512);
+    app.play({{60, true}});
+    return app.run(24000);
+  };
+  const double loud = peak(0), soft = peak(-20);
+  CHECK(loud > 0.01);
+  CHECK(soft > 0.07 * loud && soft < 0.14 * loud);
+}
+
+TEST("parts: lead puts one first, for the host; a note held through it ends; Panic, the pedal and Quality reach them all; a program change the part shown") {
+  App app;
+  app.call("[\"choose\", \"grand\"]");
+  app.call("[\"add\", \"tines\"]");
+  app.call("[\"add\", \"vibraphone\"]");
+  app.call("[\"zone\", 0, 60, 127, 0, 0, true]");
+  app.call("[\"zone\", 1, 0, 59, 0, 0, true]");
+  app.call("[\"zone\", 2, 0, 127, 0, -6, true]");
+  app.call("[\"focus\", 1]");
   app.run(512);
   app.play({{48, true}});
-  app.call("[\"swap\"]");
+  CHECK(app.call("[\"lead\", 1]") == "true");
+  app.run(512);
+  auto d = app.describe();
+  CHECK(d["parts"][0]["slug"].getString() == "tines" && d["parts"][1]["slug"].getString() == "grand" && d["parts"][2]["slug"].getString() == "vibraphone");
+  CHECK(d["parts"][0]["hi"].get<int>() == 59 && d["parts"][1]["lo"].get<int>() == 60 && d["parts"][2]["level"].get<double>() == -6);
+  CHECK(d["focus"].get<int>() == 0 && app.slug() == "tines");
+  double first = -1;
+  CHECK(app.params->get_value(app.p, 0x7ffffffe, &first)); // the host sees the tine piano's now
   app.play({{48, false}});
   app.run(512);
-  CHECK(!holds(app.keys(), 48) && !holds(app.keys("other"), 48));
-  app.call("[\"swap\"]");
-  app.run(512);
-  // the window's pedal is both parts'
+  CHECK(app.part(0).empty() && app.part(2).empty());
+  CHECK(app.call("[\"lead\", 3]") == "false");
+  // the window's pedal is every part's
   app.call("[\"pedal\", 1]");
   app.run(512);
-  CHECK(app.call("[\"poll\"]").find("\"pedal\": true") != std::string::npos);
-  app.call("[\"focus\", 0]");
-  CHECK(app.call("[\"poll\"]").find("\"pedal\": true") != std::string::npos);
-  app.call("[\"focus\", 1]");
+  for (int j = 0; j < 3; j++) { app.call("[\"focus\", " + std::to_string(j) + "]"); CHECK(app.call("[\"poll\"]").find("\"pedal\": true") != std::string::npos); }
   app.call("[\"pedal\", 0]");
-  // Panic lets go of both parts' notes
-  app.play({{48, true}, {72, true}});
-  CHECK(holds(app.keys(), 48) && holds(app.keys("other"), 72));
+  // Panic lets go of every part's notes
+  app.play({{55, true}, {72, true}});
+  CHECK(holds(app.part(0), 55) && holds(app.part(1), 72) && holds(app.part(2), 55) && holds(app.part(2), 72));
   app.call("[\"panic\"]");
   app.run(512);
-  CHECK(app.keys().empty() && app.keys("other").empty());
-  // Quality and Octave set where the window shows the second are the first's too (the host's)
+  for (int j = 0; j < 3; j++) CHECK(app.part(j).empty());
+  // Quality and Octave set where the window shows the third are the first's too (the host's)
+  app.call("[\"focus\", 2]");
   const uint32_t quality = app.index("Quality"), octave = app.index("Octave");
   clap_param_info_t info, oInfo;
   app.params->get_info(app.p, quality, &info);
   CHECK(app.params->get_info(app.p, octave, &oInfo) && !std::strcmp(oInfo.name, "Octave"));
-  auto d = app.describe();
+  d = app.describe();
   app.call("[\"set\", " + std::to_string(paramAt(d, "quality")) + ", 2]");
   app.call("[\"set\", " + std::to_string(paramAt(d, "midiOctave")) + ", 5]"); // and Octave +1, the controller's
   app.run(512);
@@ -419,7 +509,9 @@ TEST("two parts: a note held through a swap ends; Panic, the pedal and Quality r
   CHECK(app.params->get_value(app.p, info.id, &v) && v == 2);
   CHECK(app.params->get_value(app.p, oInfo.id, &o) && o == 5);
   app.call("[\"set\", " + std::to_string(paramAt(d, "midiOctave")) + ", 4]");
-  // a program change plays the shown part's preset: the tine piano's first
+  app.call("[\"focus\", 1]");
+  // a program change plays the shown part's preset: the Electric Grand's first
+  d = app.describe();
   const int presets = d["presets"].get<int>();
   App::Ev pc{-1, false};
   pc.midi[0] = 0xc0; pc.midi[1] = 0;
@@ -429,17 +521,20 @@ TEST("two parts: a note held through a swap ends; Panic, the pedal and Quality r
   const auto p = choc::json::parse(app.call("[\"poll\"]"))["p"];
   for (uint32_t i = 0; i < p.size(); i++) if (p[i][0].get<int>() == presets) moved = p[i][1].get<double>() == 1;
   CHECK(moved);
-  double first = -1;
-  CHECK(app.params->get_value(app.p, 0x7ffffffe, &first) && first == 0); // the Electric Grand's stays
+  CHECK(app.params->get_value(app.p, 0x7ffffffe, &first) && first == 0); // the tine piano's stays
 }
 
-TEST("two parts: the state keeps both instruments, how they share the keys, the part shown and the second's values") {
+TEST("parts: the state keeps every instrument, its keys, octave, level and on/off, the part shown and each one's values") {
   std::string saved, x;
   {
     App app;
     app.call("[\"choose\", \"carillon\"]");
-    app.call("[\"second\", \"glass\"]");
-    app.call("[\"arrange\", \"split\", 57]");
+    app.call("[\"add\", \"glass\"]");
+    app.call("[\"add\", \"celesta\"]");
+    app.call("[\"zone\", 0, 57, 127, 0, 0, true]");
+    app.call("[\"zone\", 1, 0, 56, 1, -6.5, true]");
+    app.call("[\"zone\", 2, 40, 90, -2, 3, false]");
+    app.call("[\"focus\", 1]");
     app.run(512);
     const auto d = app.describe();
     const auto r = choc::json::parse(app.call("[\"set\", " + std::to_string(paramAt(d, "volume")) + ", 0.25]"));
@@ -448,29 +543,68 @@ TEST("two parts: the state keeps both instruments, how they share the keys, the 
     saved = app.saveState();
   }
   CHECK(saved.rfind("forte-suite carillon\nforte carillon ", 0) == 0);
-  CHECK(saved.find("\nforte-layer glass split 57 1\nforte glass ") != std::string::npos);
+  CHECK(saved.find("\nforte-first 57 127 0 0 1 1\nforte-part glass 0 56 1 -6.5 1\nforte glass ") != std::string::npos);
+  CHECK(saved.find("\nforte-part celesta 40 90 -2 3 0\nforte celesta ") != std::string::npos);
   App b;
+  b.call("[\"add\", \"organ\"]"); // what was there before goes
   CHECK(b.load(saved));
   b.run(512);
-  const auto d = b.describe();
-  CHECK(d["parts"].size() == 2 && d["parts"][0]["slug"].getString() == "carillon" && d["parts"][1]["slug"].getString() == "glass");
-  CHECK(d["mode"].getString() == "split" && d["split"].get<int>() == 57 && d["focus"].get<int>() == 1);
+  auto d = b.describe();
+  CHECK(d["parts"].size() == 3 && d["parts"][0]["slug"].getString() == "carillon" && d["parts"][1]["slug"].getString() == "glass" && d["parts"][2]["slug"].getString() == "celesta");
+  CHECK(d["parts"][0]["lo"].get<int>() == 57 && d["parts"][1]["hi"].get<int>() == 56 && d["parts"][1]["oct"].get<int>() == 1 && d["parts"][1]["level"].get<double>() == -6.5);
+  CHECK(d["parts"][2]["lo"].get<int>() == 40 && d["parts"][2]["oct"].get<int>() == -2 && d["parts"][2]["level"].get<double>() == 3 && !d["parts"][2]["on"].getBool());
+  CHECK(d["focus"].get<int>() == 1 && d["slug"].getString() == "glass");
   CHECK(b.call("[\"poll\"]").find("[" + std::to_string(paramAt(d, "volume")) + ", " + x + ",") != std::string::npos);
   // the first's values are the first's alone: the glass's volume is not the carillon's
   b.call("[\"focus\", 0]");
   const auto c = b.describe();
   CHECK(b.call("[\"poll\"]").find("[" + std::to_string(paramAt(c, "volume")) + ", " + x + ",") == std::string::npos);
+  // and it plays as it was: F♯3 on the glass, an octave up, not on the carillon
+  b.play({{54, true}});
+  CHECK(holds(b.part(1), 54) && !holds(b.part(0), 54));
+  b.play({{54, false}});
   // a state with one instrument puts the app back to one
   App one;
   one.call("[\"choose\", \"carillon\"]");
   one.run(512);
   const std::string single = one.saveState();
   CHECK(b.load(single));
-  CHECK(b.describe()["parts"].size() == 1);
-  // a second this app doesn't have: the first alone
+  CHECK(b.describe()["parts"].size() == 1 && b.describe()["parts"][0]["lo"].get<int>() == 0);
+  // an instrument this app doesn't have: the rest without it
   std::string other = saved;
-  other.replace(other.find("forte-layer glass"), 17, "forte-layer nonsense");
+  other.replace(other.find("forte-part glass"), 16, "forte-part nonsense");
   CHECK(b.load(other));
+  d = b.describe();
+  CHECK(d["parts"].size() == 2 && b.describe()["parts"][1]["slug"].getString() == "celesta" && d["parts"][0]["slug"].getString() == "carillon");
+}
+
+TEST("parts: a song saved with an earlier release's two instruments, layered or split, opens as the same two on the same keys") {
+  // an earlier release's state: the first's, then "forte-layer <slug> <layer|split> <split point> <part shown>" and the second's
+  auto own = [](const char *slug) {
+    App a;
+    a.call(std::string("[\"choose\", \"") + slug + "\"]");
+    a.run(512);
+    const std::string t = a.saveState();
+    return t.substr(t.find('\n') + 1);
+  };
+  const std::string carillon = own("carillon"), glass = own("glass");
+  App b;
+  CHECK(b.load("forte-suite carillon\n" + carillon + "forte-layer glass split 57 1\n" + glass));
+  b.run(512);
+  auto d = b.describe();
+  CHECK(d["parts"].size() == 2 && d["parts"][0]["slug"].getString() == "carillon" && d["parts"][1]["slug"].getString() == "glass" && d["focus"].get<int>() == 1);
+  CHECK(d["parts"][1]["lo"].get<int>() == 0 && d["parts"][1]["hi"].get<int>() == 56 && d["parts"][0]["lo"].get<int>() == 57 && d["parts"][0]["hi"].get<int>() == 127);
+  b.play({{56, true}, {57, true}});
+  CHECK(holds(b.part(1), 56) && !holds(b.part(1), 57) && holds(b.part(0), 57) && !holds(b.part(0), 56));
+  b.play({{56, false}, {57, false}});
+  CHECK(b.load("forte-suite carillon\n" + carillon + "forte-layer glass layer 60 0\n" + glass));
+  d = b.describe();
+  CHECK(d["parts"].size() == 2 && d["focus"].get<int>() == 0);
+  for (int j = 0; j < 2; j++) CHECK(d["parts"][(uint32_t)j]["lo"].get<int>() == 0 && d["parts"][(uint32_t)j]["hi"].get<int>() == 127);
+  // saved again, in today's words
+  const std::string again = b.saveState();
+  CHECK(again.find("\nforte-first 0 127 0 0 1 0\nforte-part glass 0 127 0 0 1\n") != std::string::npos && again.find("forte-layer") == std::string::npos);
+  CHECK(b.load("forte-suite carillon\n" + carillon + "forte-layer nonsense split 57 1\n" + glass));
   CHECK(b.describe()["parts"].size() == 1 && b.slug() == "carillon");
 }
 
